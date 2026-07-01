@@ -13,6 +13,8 @@ Confirmed principle (b): CBS data is bulk-ingested into our own database, never 
 3. **Schema fingerprint per sync.** Each ingestion computes a fingerprint of the table's structure (dimensions, measures, units). On mismatch with the registry: the table is marked `needs_review` and **excluded from answering** until a human (or reviewed AI session) re-maps it. Silent structural drift must never reach users — this is the redesign-risk defense.
 4. **Freshness metadata is first-class**: every sync records time and covered periods; answers surface it (see [05-data-rules.md](../05-data-rules.md)).
 
+**Assumption:** CC BY 4.0 plus CBS's documented bulk channels mean no separate permission is needed for sustained bulk ingestion; CBS fair-use guidance is checked during Phase 0 setup ([open-questions.md](../open-questions.md) #13).
+
 ## Alternatives considered
 
 1. **Live per-question CBS queries** (with caching). Rejected — violates confirmed principle (b); the notes document CBS as "berucht traag", with outages Stefan personally observed; freshness and traceability become unauditable.
@@ -21,7 +23,7 @@ Confirmed principle (b): CBS data is bulk-ingested into our own database, never 
 
 ## Consequences
 
-- We own freshness: local data can lag CBS between syncs. Mitigated by cadence metadata per table and freshness display on every answer; a stale table triggers refusal behavior, not silent serving.
+- We own freshness: local data can lag CBS between syncs. Mitigated by cadence metadata per table and freshness display on every answer; a stale table is never silently served — it carries an explicit staleness warning or triggers refusal, per the failure rules in [05-data-rules.md](../05-data-rules.md).
 - We own storage/normalization cost — trivial at 5–10 tables.
 - A local copy doubles as availability insurance when CBS is down (a selling point the notes flagged).
 

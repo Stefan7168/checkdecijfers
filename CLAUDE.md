@@ -17,10 +17,13 @@ You are working on **checkdecijfers.nl**: chat Q&A over official CBS statistics 
 
 ## Product principles (confirmed by the product owner, 2026-07-02 — binding)
 
-1. **The LLM never calculates or interprets raw CBS tables.** It parses intent and explains results computed and validated by deterministic code. Every number traceable to a database cell. (Invariants R1–R3, R5 in [docs/05-data-rules.md](docs/05-data-rules.md).)
-2. **CBS data is bulk-ingested into our own database** — never queried live from the frontend or the request path. (ADR [003](docs/decisions/003-cbs-access-layer.md).)
-3. **When data is missing, ambiguous, or stale: refuse or ask for clarification. Never guess.** A fabricated number is the worst possible bug in this product — worse than downtime.
-4. The public claim is **"every number traceable to an official CBS cell, with source and date shown"** — never absolute slogans like "0% hallucination".
+Three principles, also referenced as (a)/(b)/(c) across the docs:
+
+1. **(a) The LLM never calculates or interprets raw CBS tables.** It parses intent and explains results computed and validated by deterministic code. Every number traceable to a database cell. (Invariants R1–R3, R5, R9–R10 in [docs/05-data-rules.md](docs/05-data-rules.md).)
+2. **(b) CBS data is bulk-ingested into our own database** — never queried live from the frontend or the request path. (ADR [003](docs/decisions/003-cbs-access-layer.md).)
+3. **(c) When data is missing, ambiguous, or stale: refuse or ask for clarification. Never guess.** A fabricated number is the worst possible bug in this product — worse than downtime.
+
+**Public-claim rule** (confirmed in the same interview): the public claim is **"every number traceable to an official CBS cell, with source and date shown"** — never absolute slogans like "0% hallucination".
 
 ## Conventions
 
