@@ -1,0 +1,22 @@
+# Open questions & assumptions
+
+Every ambiguity found while writing the docs, with the assumption made so work never blocked on it. Assumptions are also marked inline (`**Assumption:**`) where they occur. Owner is Stefan unless noted.
+
+| # | Area | Question / ambiguity | Assumption made (until answered) |
+|---|---|---|---|
+| 1 | Data | Which exact CBS tables (IDs) make up the Phase 0 set? Notes cite `85552NED` (solar), `83765NED`, `86103NED`, `70072NED`, `85458NED`, `03759NED` — some may be archived/redesigned by now. | Topic list fixed in [02-user-scenarios.md](02-user-scenarios.md); exact IDs validated against the live CBS catalog at Phase 0 setup (owner: implementation session) |
+| 2 | Benchmark | Benchmark tasks reference recent periods (e.g. B1: 1-1-2025, B5: Q4 2025) — availability depends on CBS publication schedules at build time. | Tasks may shift one period back if CBS hasn't published; the *shape* of each task is the requirement, not the year |
+| 3 | Pricing | Free allowance: one-time or monthly? Notes contradict (2 one-time credits vs. 2/month vs. 3/day vs. 5/day). | Decided in Phase 2 design; docs record only "small free allowance". Prices are indicative per interview Q3(c) |
+| 4 | Pricing | Heavy-analysis credit price: notes say 3, 3–5, and 5 in different places. | Tariff classes exist (1/3/5 indicative); exact mapping decided with Phase 2 pricing config (easy to change by design, ADR 006) |
+| 5 | Legal | "Credits never expire" — confirm consumer-law/accounting wording for the terms at Phase 2. | Promise stands (interview Q3b); legal check before the pricing page ships |
+| 6 | Legal | Exact Dutch CC BY 4.0 attribution wording, and whether CBS prescribes preferred wording. | Draft wording in [05-data-rules.md](05-data-rules.md) used until legal/CBS-guideline check |
+| 7 | Branding | Final name: keep checkdecijfers.nl or rebrand (notes suggest FeitInCijfers.nl / CijferCheck.nl; also note the name-vs-professional-audience tension)? | checkdecijfers.nl is the working name everywhere (interview Q6); rebrand is a pre-launch (Phase 2) decision |
+| 8 | Marketing | Slogans "0% hallucinatiegarantie" / "De AI die niet liegt" are absolute claims. | Not used in docs; public claim standardized per interview Q5. Slogans parked pending legal/comms review |
+| 9 | Product | Sharing mechanism detail: notes contain both watermarked PNG download and Stefan's landing-page/OpenGraph idea. | Landing-page link is the primary sharing mechanism (Phase 2); watermarked static images serve social exports. Both build on the chart spec (ADR 007) |
+| 10 | Product | Interview Q7 (v1 must-haves from the feature pool) wasn't explicitly answered. | Inferred from Q1/Q4 answers: **none** are v1 must-haves; pool slotted in [06-roadmap.md](06-roadmap.md); BYO API key rejected |
+| 11 | Performance | Response-time promise: notes claim 100ms, 5s, and 10s in different places. | ~10s median for Phase 0 (honest, LLM-bound); faster claims only after caching phases deliver them |
+| 12 | Audience | Year-1 target of 250 users and €12.60/user/mo come from the notes' unvalidated P&L. | Used as *indicative* Phase 2 success markers only, labeled as such |
+| 13 | Data | Do we need CBS permission/notification for sustained bulk ingestion (fair-use expectations on the Feed)? | CC BY 4.0 + documented bulk channels imply no; confirm CBS fair-use guidance during Phase 0 ingestion setup |
+| 14 | GDPR | Retention period for question logs / audit records once accounts exist; anonymization approach. | Deferred to Phase 1 GDPR checklist ([04-architecture.md](04-architecture.md)); single-enforcement-point design already in place |
+| 15 | Execution | Stefan noted interest in build partner ship.studio. | Docs are written to be executable by any competent builder or AI session; partnership is a business decision outside doc scope |
+| 16 | Competitive | Nederland in Beeld self-reports "82+", "90+", and "167" sources in different places — figure unreliable. | Treated as positioning color only; no doc claim depends on the number |
