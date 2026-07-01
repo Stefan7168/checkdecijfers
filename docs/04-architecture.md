@@ -51,6 +51,7 @@ Each parked feature has a named seam it will attach to — future sessions shoul
 | User-facing audit trail ("Ironclad Audit Trail") | `audit_answers` already stores question→plan→result IDs→numbers; the UI is a view over it |
 | Scoop alerts | Ingestion batches record what changed per sync — an alert is a subscription over batch diffs |
 | Newsroom licenses / huisstijl | Identity seam (ADR 006) + theme object in chart spec (ADR 007) |
+| Drill-down buttons on answers | The audit record's stored query plan + registry dimension metadata: a button is a deterministic transform of the current plan (extend period, swap region, group by) that re-enters the pipeline at the query step — no new components; shares its UI mechanism with clarification options (R7) |
 | Demand-driven table onboarding (user-triggered fetch of not-yet-loaded tables) | Same `CbsSource` adapter + ingestion/validation pipeline, triggered by a user action instead of a schedule; registry `needs_review` state doubles as the review queue; size preflight rides the cost-estimation step (ADR 006) |
 | Enrichment sources (PDOK/Kadaster, RIVM, UWV, Waarstaatjegemeente, open.overheid.nl) | Additional `Source` adapters beside `CbsSource`; likely trigger for the Python split (ADR 001) |
 | Credits/billing | Ledger + pricing-config + cost-estimation step (ADR 006) |
