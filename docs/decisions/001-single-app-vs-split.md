@@ -9,7 +9,7 @@ The notes repeatedly propose Next.js frontend + a separate Python/FastAPI "orche
 
 ## Decision
 
-**One TypeScript full-stack application (Next.js) for Phase 0–1.** The deterministic data layer is TypeScript + SQL. Internally the app is strictly modular — `ingestion/`, `cbs-adapter/`, `query/`, `validation/`, `answer/`, `chart/` as separate modules with typed interfaces — so a later split extracts modules rather than untangling them. CBS ingestion runs as an out-of-band script in the same codebase (invoked manually or by a scheduled runner), never inside a request-path serverless function.
+**One TypeScript full-stack application (Next.js) for Phase 0–2** — continuation is trigger-dependent (see migration triggers below), not calendar-bound. The deterministic data layer is TypeScript + SQL. Internally the app is strictly modular — `ingestion/`, `cbs-adapter/`, `query/`, `validation/`, `answer/`, `chart/` as separate modules with typed interfaces — so a later split extracts modules rather than untangling them. CBS ingestion runs as an out-of-band script in the same codebase (invoked manually or by a scheduled runner), never inside a request-path serverless function.
 
 ## Evaluation against the kickoff's four criteria
 
@@ -17,7 +17,7 @@ The notes repeatedly propose Next.js frontend + a separate Python/FastAPI "orche
 
 **(b) Refresh workloads on serverless.** The real risk with a single serverless-deployed app. Mitigation: ingestion is a CLI/scheduled job, not a web request. At 5–10 tables (tens of MB, minutes of runtime) this runs comfortably as a scheduled job or from the operator's machine. If tables × size grows past what a scheduled TS job handles, that is a split trigger (below), not a reason to pre-build a worker fleet.
 
-**(c) Operability for one non-developer + AI sessions.** The decisive criterion. One repo, one language, one deploy, one log stream. A split doubles deployments, secrets, CORS/auth plumbing between services, and the mental model every future AI session must reconstruct.
+**(c) Operability for one non-developer + AI sessions.** The decisive criterion. One repo, one language, one deploy, one log stream. A split doubles deployments, secrets, cross-service security plumbing (CORS, service-to-service auth), and the mental model every future AI session must reconstruct.
 
 **(d) Cost.** Single app: ~€0/mo at 0 users (hobby tiers + LLM per query), ~€25–75/mo at 100 active users, ~€200–600/mo at 1,000 (LLM-dominated; see [04-architecture.md](../04-architecture.md)). A split adds €5–12/mo fixed hosting plus a second CI/CD path at every stage — small in euros, large in operational surface.
 

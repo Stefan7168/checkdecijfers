@@ -11,6 +11,7 @@ Question (Dutch, free text)
 → query plan against the table registry
 → deterministic query over pre-loaded CBS data (SQL)
 → validation (existence, units, period, region)
+→ cost estimation (a no-op returning 0 in Phase 0 — the billing seam, ADR [006](decisions/006-auth-billing-seams.md))
 → answer composition (LLM phrases; numbers injected verbatim from validated results)
 → output: text + attribution + freshness + simple chart when trend/comparison
 → audit record written for every answer.
@@ -26,7 +27,7 @@ At every step where confidence fails, the pipeline exits to **clarification or r
 | Validated answers | Numbers computed by code; LLM sees only validated result objects ([05-data-rules.md](05-data-rules.md)) |
 | Attribution + freshness | Table ID, title, sync date, covered period on every answer |
 | Simple charts | Line/bar/table from a server-built chart spec; no interactivity, no exports |
-| Refusal & clarification | Per principle 5(c); exercised by benchmark tasks B15–B20 |
+| Refusal & clarification | Per principle 3 (c) in [CLAUDE.md](../CLAUDE.md); exercised by benchmark tasks B15–B20 |
 | Audit record per answer | Question, parsed intent, query plan, result IDs, numbers used, table versions, timestamps — backend-verifiable |
 | The 20-task benchmark | Run by hand against CBS StatLine; the gate below |
 
@@ -35,7 +36,7 @@ At every step where confidence fails, the pipeline exits to **clarification or r
 1. **≥ 80% of answerable benchmark tasks (≥ 12 of B1–B14) fully pass** — number, attribution, freshness, chart/derived-marking all correct.
 2. **100% of refusal tasks (B15–B20) pass.** One fabricated number anywhere = hard fail of the whole gate, regardless of other scores.
 3. **100% attribution**: every answered task shows table ID + sync date; every number reconstructable from the audit record.
-4. **Median response under ~10 seconds** for answerable tasks. (Indicative — honesty over speed; the notes' 100ms claims apply only to later cache layers.)
+4. **Median response under ~10 seconds** for answerable tasks. Informational only — this criterion cannot fail the gate (honesty over speed; the notes' 100ms claims apply only to later cache layers).
 
 Pass → proceed to Phase 1 (see roadmap). Fail → iterate on the pipeline within Phase 0; do not widen scope to compensate.
 

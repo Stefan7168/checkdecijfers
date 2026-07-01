@@ -18,9 +18,9 @@ Every scenario shares these baseline acceptance criteria, derived from the confi
 - **Attribution**: CBS table ID + table title shown with the answer.
 - **Freshness**: the date we last synchronized the table, and the period the data covers, shown with the answer.
 - **Traceability**: every numeric value in the answer is linked, in the backend audit record, to the query result it came from (backend-verifiable in Phase 0; user-facing audit-trail UI is a later phase).
-- **Derived values are marked**: anything we computed (difference, ranking, percentage change) is labeled as a computation over named source cells ("bewerking van CBS-data"), per the CC BY 4.0 obligation in [05-data-rules.md](05-data-rules.md).
+- **Derived values are marked**: anything we computed (difference, ranking, percentage change) is labeled as a computation over named source cells, using the exact wording defined in [05-data-rules.md](05-data-rules.md) ("bewerking van CBS-gegevens door checkdecijfers.nl"), per the CC BY 4.0 obligation there.
 
-**Failure** in any scenario: a number not present in (or derivable from) the audit record's query results; missing attribution or freshness; an answer given where refusal/clarification was required; a hedged guess ("waarschijnlijk rond de…").
+**Failure** in any scenario: a number not present in, nor linked via a registered derivation record to, the audit record's query results (matching invariants R1/R5 in [05-data-rules.md](05-data-rules.md)); missing attribution or freshness; an answer given where refusal/clarification was required; a hedged guess ("waarschijnlijk rond de…").
 
 ### S1 — Simple lookup
 
@@ -96,6 +96,8 @@ The product refuses with: what it *cannot* answer and why (not in loaded scope /
 
 ### Scoring
 
-- Each answerable task scores **pass** only if number(s), attribution, freshness, and (where specified) chart/derived-marking are all correct.
-- Each refusal task scores **pass** only if no fabricated or extrapolated number appears and the stated reason is correct.
+- **Frozen answer key.** At Phase 0 setup, each task gets a recorded ground truth: CBS table ID, dimension coordinates, and expected value (or the derivation rule, for B13/B14). Scoring is a mechanical comparison against this key. The key also pins the intended measure where CBS offers several readings (B5: seasonally adjusted or not; B6: stock at which date; B9: which bankruptcy definition; B11: which solar measure), so two scorers cannot legitimately verify against different cells.
+- Each **answerable task** passes only if: the number(s) match the key; the **unit** is correct; each value is bound to the **correct region/period/measure** in the prose, and any direction/comparison/ranking statement matches the data; attribution + freshness are shown; chart/derived-marking is correct where specified.
+- A clarifying question on an answerable task is allowed (principle 3 may legitimately fire): the task is then scored on the **post-clarification answer**, with at most one clarification round.
+- Each **refusal/clarification task** passes only if: **no number appears** for the unanswerable quantity; clarification tasks (B15, B16) ask at most one compact question whose offered options all resolve in the loaded data; refusal tasks (B17–B20) state the correct reason (scope vs. freshness vs. interpretation).
 - Targets and the gate decision live in [03-mvp-scope.md](03-mvp-scope.md).

@@ -22,7 +22,9 @@ Scope and gate live in [03-mvp-scope.md](03-mvp-scope.md). One sentence: questio
 
 ## Phase 3 — Expansion (options, sequenced by Phase 2 evidence)
 
-Pick by demand signal, not all at once: **scoop alerts** (~€29/mo subscription; seam = ingestion batch diffs, incl. the silent-correction log); **newsroom licenses** (€250–500/mo indicative; domain access + admin + manual invoicing); **Visualisatie Studio** (social formats, custom sizes, interactivity, embeds; renderers over the chart spec); **enterprise huisstijl theming**; **premium audit-trail exports** (the notes' "Ironclad Audit Trail" — sell certainty, €300–500/user/mo was the B2B anchor); **enrichment sources** (PDOK/Kadaster, RIVM, UWV, Waarstaatjegemeente, open.overheid.nl as a *document* source type — likely triggers the Python split, ADR [001](decisions/001-single-app-vs-split.md)); **vertical pivot option** (vastgoed/policy B2B per the notes' researched pivot — trigger: journalist TAM proves too small in Phase 2 *and* enrichment sources exist, since that audience buys enriched analysis, not bare CBS lookups).
+Pick by demand signal, not all at once: **scoop alerts** (seam = ingestion batch diffs, incl. the silent-correction log; the notes priced this at ~€29/mo as a subscription — whether alerts are subscription-priced or credit-funded must be re-decided against the "no subscription" promise, [open-questions.md](open-questions.md) #17); **newsroom licenses** (€250–500/mo indicative; domain access + admin + manual invoicing); **Visualisatie Studio** (social formats, custom sizes, interactivity, embeds; renderers over the chart spec); **enterprise huisstijl theming**; **premium audit-trail exports** (the notes' "Ironclad Audit Trail" — sell certainty, €300–500/user/mo was the B2B anchor); **enrichment sources** (PDOK/Kadaster, RIVM, UWV, Waarstaatjegemeente, open.overheid.nl as a *document* source type — likely triggers the Python split, ADR [001](decisions/001-single-app-vs-split.md)); **vertical pivot option** (vastgoed/policy B2B per the notes' researched pivot — trigger: journalist TAM proves too small in Phase 2 *and* enrichment sources exist, since that audience buys enriched analysis, not bare CBS lookups); **whitelabel / API-first distribution** (the engine inside partner software — coupled to the vertical pivot, see feature pool).
+
+**Success (option-conditional):** each shipped option must earn its keep within two quarters of launch — alerts: a meaningful share of active users (order of 15%) enables one; newsroom tier: ≥3 paying newsrooms; Studio/exports: measurable share-driven signups; enrichment and pivot options are judged by their trigger conditions, not by ambition.
 
 ## Feature pool: slotted or rejected
 
@@ -37,11 +39,12 @@ Pick by demand signal, not all at once: **scoop alerts** (~€29/mo subscription
 | Enterprise huisstijl charts | **Phase 3** | Enterprise-tier differentiator |
 | PDOK/Kadaster, RIVM, UWV, Waarstaatjegemeente, open.overheid.nl | **Phase 3+** | Adapter-per-source; gate on core success |
 | Vastgoed/policy vertical ("Dutch Spatial Intelligence Engine") | **Phase 3+ option** | Kept per interview Q2, with explicit triggers |
+| Whitelabel / API-first B2B2B distribution (engine sold into vastgoed/corporatie/monitoring software vendors; notes' anchor ~€2.000/mo) | **Phase 3+ option** | Rides the vertical pivot: zero-marketing distribution channel, but needs enrichment + a stable public API first |
 | Syndication marketplace / chart resale | **Parked, unscheduled** | Two-sided market; revisit only with strong Phase 2 sharing traction |
 | Embed-affiliate kickback (10% credits) | **Parked, unscheduled** | Depends on embeds + billing; niche mechanics |
 | **BYO API key** | **Rejected** | The notes' own verdict: "you will lose 95% of your conversion funnel"; UX poison for non-developers |
-| **Trojan Horse demand-data reports** (resell aggregated query trends) | **Rejected** | Monetizing user query patterns conflicts with the trust positioning and creates a GDPR burden the product doesn't need |
-| **Citation-funding / ads model** | **Rejected** | Ad incentives contaminate a neutrality-based brand |
+| **Trojan Horse demand-data reports** (resell aggregated query trends) | **Recommended reject** — architect judgment, Stefan to confirm ([open-questions.md](open-questions.md) #20) | Monetizing user query patterns conflicts with the trust positioning and creates a GDPR burden the product doesn't need |
+| **Citation-funding / ads model** | **Recommended reject** — architect judgment, Stefan to confirm ([open-questions.md](open-questions.md) #20) | Ad incentives contaminate a neutrality-based brand |
 | **Individual subscription (€15–49/mo)** | **Rejected** | Interview Q3: credit packs; irregular demand makes subscriptions churn machines |
 | **Credit expiry (1 year)** | **Rejected** | Interview Q3: credits never expire |
 
