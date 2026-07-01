@@ -1,0 +1,12 @@
+# OS cruft
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Competitor research — reference material, not versioned
+Archive/
+
+# Editor/local
+*.local
+.idea/
+.vscode/
