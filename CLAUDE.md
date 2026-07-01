@@ -5,11 +5,12 @@ You are working on **checkdecijfers.nl**: chat Q&A over official CBS statistics 
 ## Reading order for a fresh session
 
 1. This file.
-2. [README.md](README.md) — one-page orientation.
-3. [docs/03-mvp-scope.md](docs/03-mvp-scope.md) — **the phase gate**; what is and isn't in scope right now.
-4. [docs/05-data-rules.md](docs/05-data-rules.md) — the invariants your change must not break.
-5. [docs/04-architecture.md](docs/04-architecture.md) + the relevant [docs/decisions/](docs/decisions/) ADRs.
-6. As needed: [docs/01-product-vision.md](docs/01-product-vision.md), [docs/02-user-scenarios.md](docs/02-user-scenarios.md), [docs/06-roadmap.md](docs/06-roadmap.md), [docs/open-questions.md](docs/open-questions.md).
+2. [docs/STATUS.md](docs/STATUS.md) — where the project stands right now: phase checklist, latest benchmark score, what's next.
+3. [README.md](README.md) — one-page orientation.
+4. [docs/03-mvp-scope.md](docs/03-mvp-scope.md) — **the phase gate**; what is and isn't in scope right now.
+5. [docs/05-data-rules.md](docs/05-data-rules.md) — the invariants your change must not break.
+6. [docs/04-architecture.md](docs/04-architecture.md) + the relevant [docs/decisions/](docs/decisions/) ADRs.
+7. As needed: [docs/01-product-vision.md](docs/01-product-vision.md), [docs/02-user-scenarios.md](docs/02-user-scenarios.md), [docs/06-roadmap.md](docs/06-roadmap.md), [docs/open-questions.md](docs/open-questions.md).
 
 ## Source of truth
 
@@ -40,6 +41,6 @@ Three principles, also referenced as (a)/(b)/(c) across the docs:
 
 1. The change violates no invariant in [docs/05-data-rules.md](docs/05-data-rules.md) — and if it touches the answer pipeline, the invariant tests prove it.
 2. The 20-task benchmark ([docs/02-user-scenarios.md](docs/02-user-scenarios.md)) still passes at or above the current gate; refusal tasks pass at 100%. No fabricated number, ever.
-3. Relevant docs updated in the same change (scope, ADRs, open-questions). Docs that lag the code are bugs.
+3. Relevant docs updated in the same change (scope, ADRs, open-questions). If the change moves project state — a phase-checklist item completed, a benchmark run, a changed "next up" — update [docs/STATUS.md](docs/STATUS.md) too, with **measured results, never aspirational ones**. Docs that lag the code are bugs.
 4. New assumptions marked and mirrored in open-questions.
 5. Explained in plain language the product owner can follow: what changed, why, how it was verified.
