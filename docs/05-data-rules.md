@@ -44,7 +44,7 @@ Order of checks per sync; any failure marks the table `needs_review` and exclude
 | Question asks for prediction/opinion/causal interpretation | Refusal of the interpretation; offer underlying descriptive stats only if in scope | B18, B19 |
 | Data exists but doesn't cover the requested period (stale/not yet published) | Freshness refusal: state freshest available period, offer it | B20 |
 | Table marked `needs_review` (failed validation / suspected redesign) | Treated as out of scope; never served | ingestion fixture test |
-| Table past its expected update cadence | Served **with an explicit staleness warning** if the requested period is covered; refused when the question implies recency (relative-time words such as "nu", "vandaag", "vorige maand", "meest recente"). **Assumption:** warn-and-serve for covered historical periods satisfies principle 3 (c) — Stefan sign-off requested, [open-questions.md](open-questions.md) #18 | clock-injected tests for **both** branches (warned-served and recency-refusal) |
+| Table past its expected update cadence | Served **with an explicit staleness warning** if the requested period is covered; refused when the question implies recency (relative-time words such as "nu", "vandaag", "vorige maand", "meest recente"). **Decided** (Stefan, 2026-07-02): warn-and-serve for covered historical periods — [open-questions.md](open-questions.md) #18, resolved | clock-injected tests for **both** branches (warned-served and recency-refusal) |
 
 ## Source attribution & CC BY 4.0 obligations
 

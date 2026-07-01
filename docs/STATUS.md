@@ -3,11 +3,12 @@
 > **Tracker, not a source of truth.** Scope and the gate are defined in [03-mvp-scope.md](03-mvp-scope.md), the benchmark in [02-user-scenarios.md](02-user-scenarios.md). This file only records progress against them. Update it whenever project state changes (see the definition of done in [CLAUDE.md](../CLAUDE.md)) — with **measured results only, never aspirational ones**.
 
 **Current phase:** Phase 0 — not started (documentation under review)
-**Last updated:** 2026-07-02 — documentation set complete, awaiting Stefan's review
+**Last updated:** 2026-07-02 — open questions #10, #18, #20 resolved by Stefan; awaiting overall doc sign-off
 
 ## Phase 0 checklist
 
-- [ ] Docs reviewed and approved by Stefan (incl. [open-questions](open-questions.md) #10, #18, #20)
+- [x] Open questions #10, #18, #20 answered by Stefan (2026-07-02 — see [open-questions.md](open-questions.md))
+- [ ] Doc-set sign-off by Stefan
 - [ ] CBS table set chosen; IDs validated against the live catalog (open-questions #1)
 - [ ] Benchmark answer key frozen ([02-user-scenarios.md](02-user-scenarios.md), Scoring)
 - [ ] Ingestion + validation pipeline with fixture tests ([05-data-rules.md](05-data-rules.md))
@@ -30,7 +31,7 @@ Gate: ≥12/14 answerable, 6/6 refusal, **zero** fabricated numbers ([03-mvp-sco
 
 ## Next up
 
-1. Stefan: review the doc set; answer open questions #18 (stale-serve behavior) and #20 (rejected business models); confirm #10.
+1. Stefan: overall doc-set sign-off (all blocking questions are answered).
 2. Then: Phase 0 build kickoff — the first implementation session starts at [CLAUDE.md](../CLAUDE.md).
 
 ## Phase history
