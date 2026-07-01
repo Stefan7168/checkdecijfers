@@ -47,7 +47,8 @@ Decided in the interview (Q3); full phasing in [06-roadmap.md](06-roadmap.md). *
 - **Credits never expire** (decided; the notes' 1-year-expiry idea solved an accounting-liability problem we won't have at this scale).
 - **Indicative prices, easy to change** (decided: working numbers, not commitments): ~€0.50/credit; packs around €15 and €39; 1 credit = simple check, 3 = analysis + visual, 5 = heavy analysis; a complete article check ≈ €3–5. A small free allowance funnels new users.
 - **Cost transparency before spend**: the user sees the credit cost of an action *before* the expensive step runs — estimate label, confirmation for heavy queries, visible tariff card. A clarifying counter-question never costs a credit.
-- **Later tiers** (Phase 3+): newsroom license (flat fee, email-domain access, ~€250–500/mo indicative), premium audit-trail exports, alerts. **Rejected**: Bring-Your-Own-API-key (kills the conversion funnel; the notes reached this conclusion themselves).
+- **Later tiers** (Phase 3+): newsroom license (flat fee, email-domain access, ~€250–500/mo indicative), premium audit-trail exports, alerts.
+- **Rejected models — kept on record so they aren't re-invented** (confirmed by Stefan, 2026-07-02): **BYO API key** (kills the conversion funnel; the notes' own verdict); **individual subscription €15–49/mo** (irregular journalist demand makes it a churn machine); **credit expiry** (contradicts "no fine print"); **Trojan-Horse demand-data reports** (reselling aggregated query trends conflicts with the trust positioning and adds a GDPR burden); **citation-funding / ads** (ad incentives contaminate a neutrality-based brand). Anyone revisiting the business model starts here before re-proposing one of these.
 
 ## Decision log (interview, 2026-07-02)
 
@@ -60,6 +61,8 @@ Decided in the interview (Q3); full phasing in [06-roadmap.md](06-roadmap.md). *
 | Q5 | Principles | **a, b, c confirmed**; public claim = "every number traceable to an official CBS cell, with source and date shown" | See [CLAUDE.md](../CLAUDE.md) for the binding principles |
 | Q6 | Naming | Keep **checkdecijfers.nl** as working name | Rebrand is a pre-launch decision, logged in [open-questions.md](open-questions.md) |
 | Q7 | Future features | Not explicitly answered — **Assumption:** no v1 must-haves (mirrored in [open-questions.md](open-questions.md) #10) | Pool preserved in roadmap; BYO API key marked rejected per the notes' own analysis |
+
+**Follow-up decisions (doc review, 2026-07-02):** stale-but-covered data is **served with an explicit staleness warning**, refused only when the question implies recency (open-questions #18, resolved); the Trojan-Horse and ads models are definitively rejected and recorded in the business-model section above (#20, resolved); no parked feature is a v1 must-have — all are preserved in [06-roadmap.md](06-roadmap.md)'s feature pool and the seams table in [04-architecture.md](04-architecture.md) (#10, resolved).
 
 ## Standing risks (recorded, monitored — not blockers)
 
