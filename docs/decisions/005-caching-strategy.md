@@ -10,7 +10,7 @@ The notes lean heavily on caching (Redis/Upstash, 24h vs 7-day TTL debates, "50 
 
 - **Phase 0: no cache layers at all.** Queries hit pre-loaded Postgres; that is already the "cache". Benchmark latency (~10s median target) is dominated by LLM calls, which a cache doesn't help until questions repeat.
 - **Phase 1–2, when repeated questions appear:** an **answer cache in Postgres** — normalized intent hash → composed answer + result IDs, invalidated by table sync version (not by wall-clock TTL). This resolves the notes' 24h-vs-7-day TTL contradiction: freshness is anchored to *data versions*, so a cached answer is valid exactly as long as its source tables are unchanged.
-- **Redis (e.g. Upstash) only on a measured trigger**, for the jobs Postgres does badly: per-user rate limiting at public launch, and hot-path latency if p95 measurably suffers under load. Not before.
+- **Redis (e.g. Upstash) only on a measured trigger**, for the jobs Postgres does badly: per-user rate limiting at public launch, and hot-path latency if p95 — the response time of the slowest 5% of requests — measurably suffers under load. Not before.
 
 ## Alternatives considered
 
@@ -27,4 +27,4 @@ The notes lean heavily on caching (Redis/Upstash, 24h vs 7-day TTL debates, "50 
 
 - Repeated-question rate > ~20% of traffic → build the Postgres answer cache.
 - Public launch (Phase 2) → rate limiting required; evaluate Redis vs. Postgres-based limiter at that point.
-- p95 answer latency > ~15s under real load → profile; add caching where the profile says, not where folklore says.
+- p95 answer latency (slowest 5% of answers) > ~15s under real load → profile; add caching where the profile says, not where folklore says.

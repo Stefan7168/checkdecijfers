@@ -15,7 +15,7 @@ A user gets, per question:
 3. **A simple chart** when the question is about a trend or comparison.
 4. **A refusal or a clarifying question** when the data is missing, ambiguous, or stale. The product never guesses.
 
-The core promise, in one sentence: **every number traceable to an official CBS cell, with source and date shown.** This is the claim we make publicly. The notes' slogans ("0% hallucinatiegarantie", "De AI die niet liegt") are marketing candidates that overpromise in absolute terms; they need legal/comms review before use (confirmed with Stefan, interview Q5).
+The core promise, in one sentence: **every number traceable to an official CBS cell, with source and date shown.** This is the claim we make publicly (interview Q5). The notes' slogans ("0% hallucinatiegarantie", "De AI die niet liegt") overpromise in absolute terms and were set aside as the public claim; whether they ever appear in marketing is Stefan's call after legal/comms review ([open-questions.md](open-questions.md) #8).
 
 Out of scope for v1 but deliberately kept alive (see [06-roadmap.md](06-roadmap.md) and the "Future-build seams" section of [04-architecture.md](04-architecture.md)): social-format exports, interactive chart studio, shareable answer pages with OpenGraph images (programmatic SEO), embeds, alerts, enterprise house-style charts.
 
@@ -59,7 +59,7 @@ Decided in the interview (Q3); full phasing in [06-roadmap.md](06-roadmap.md). *
 | Q4 | Phase 0 cut | Delegated to Claude → **confirmed thin slice** incl. refusal behavior + benchmark | Everything else is commodity work that proves nothing about the hard part |
 | Q5 | Principles | **a, b, c confirmed**; public claim = "every number traceable to an official CBS cell, with source and date shown" | See [CLAUDE.md](../CLAUDE.md) for the binding principles |
 | Q6 | Naming | Keep **checkdecijfers.nl** as working name | Rebrand is a pre-launch decision, logged in [open-questions.md](open-questions.md) |
-| Q7 | Future features | No must-haves for v1 (implicit); pool preserved in roadmap | BYO API key marked rejected per the notes' own analysis |
+| Q7 | Future features | Not explicitly answered — **Assumption:** no v1 must-haves (mirrored in [open-questions.md](open-questions.md) #10) | Pool preserved in roadmap; BYO API key marked rejected per the notes' own analysis |
 
 ## Standing risks (recorded, monitored — not blockers)
 

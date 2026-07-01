@@ -34,4 +34,4 @@ Core schema shape (sketch, refined at build time):
 ## Revisit triggers
 
 - Table catalog grows past ~50 tables or benchmark-style intent-matching misses appear → enable pgvector for table discovery.
-- Observation volume makes Postgres aggregation slow (> ~10⁸ rows) → evaluate a columnar sidecar (DuckDB) for analytics *behind the same query module*.
+- Observation volume makes Postgres aggregation slow (beyond roughly 100 million rows) → evaluate an analytics-optimized companion database (e.g. DuckDB) *behind the same query module*.
