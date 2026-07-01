@@ -45,8 +45,8 @@ Pick by demand signal, not all at once: **demand-driven table onboarding** (user
 | Syndication marketplace / chart resale | **Parked, unscheduled** | Two-sided market; revisit only with strong Phase 2 sharing traction |
 | Embed-affiliate kickback (10% credits) | **Parked, unscheduled** | Depends on embeds + billing; niche mechanics |
 | **BYO API key** | **Rejected** | The notes' own verdict: "you will lose 95% of your conversion funnel"; UX poison for non-developers |
-| **Trojan Horse demand-data reports** (resell aggregated query trends) | **Recommended reject** — architect judgment, Stefan to confirm ([open-questions.md](open-questions.md) #20) | Monetizing user query patterns conflicts with the trust positioning and creates a GDPR burden the product doesn't need |
-| **Citation-funding / ads model** | **Recommended reject** — architect judgment, Stefan to confirm ([open-questions.md](open-questions.md) #20) | Ad incentives contaminate a neutrality-based brand |
+| **Trojan Horse demand-data reports** (resell aggregated query trends) | **Rejected** (Stefan, 2026-07-02; on record in [01-product-vision.md](01-product-vision.md), Business model) | Monetizing user query patterns conflicts with the trust positioning and creates a GDPR burden the product doesn't need |
+| **Citation-funding / ads model** | **Rejected** (Stefan, 2026-07-02; on record in [01-product-vision.md](01-product-vision.md), Business model) | Ad incentives contaminate a neutrality-based brand |
 | **Individual subscription (€15–49/mo)** | **Rejected** | Interview Q3: credit packs; irregular demand makes subscriptions churn machines |
 | **Credit expiry (1 year)** | **Rejected** | Interview Q3: credits never expire |
 
