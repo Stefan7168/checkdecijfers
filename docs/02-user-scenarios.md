@@ -94,6 +94,8 @@ The product refuses with: what it *cannot* answer and why (not in loaded scope /
 | B19 | Is de criminaliteit gestegen door immigratie? | **Refuse the causal interpretation**; offer only underlying descriptive statistics if in scope, else refuse fully |
 | B20 | Wat was de inflatie van vorige maand? *(asked when the loaded CPI table does not yet cover that month)* | **Freshness refusal** — state the freshest available period and offer it |
 
+*Note: once demand-driven table onboarding ships ([06-roadmap.md](06-roadmap.md), Phase 2–3), a B17-style refusal may instead offer to fetch the missing table. Phase 0 behavior remains a flat refusal; the benchmark will be revised at that phase.*
+
 ### Scoring
 
 - **Frozen answer key.** At Phase 0 setup, each task gets a recorded ground truth: CBS table ID, dimension coordinates, and expected value (or the derivation rule, for B13/B14). Scoring is a mechanical comparison against this key. The key also pins the intended measure where CBS offers several readings (B5: seasonally adjusted or not; B6: stock at which date; B9: which bankruptcy definition; B11: which solar measure), so two scorers cannot legitimately verify against different cells.
