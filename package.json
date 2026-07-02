@@ -12,9 +12,11 @@
     "test:ingestion": "vitest run tests/ingestion",
     "test:invariants": "vitest run tests/invariants",
     "test:benchmark": "vitest run tests/benchmark",
+    "test:registry": "vitest run tests/registry",
     "benchmark:score": "node scripts/score-benchmark.mjs",
     "db:migrate": "node --env-file=.env src/db/migrate.ts",
     "ingest": "node --env-file=.env src/ingestion/cli.ts",
+    "registry:apply": "node --env-file=.env src/registry/apply.ts",
     "fixtures:capture": "node scripts/capture-cbs-fixtures.ts"
   },
   "devDependencies": {
