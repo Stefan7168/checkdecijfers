@@ -1,0 +1,46 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/83932NED/$metadata#Properties",
+ "Identifier": "83932NED",
+ "Title": "Inkomen van huishoudens; inkomensklassen, huishoudenskenmerken",
+ "Description": "Deze tabel bevat cijfers over het inkomen van particuliere huishoudens. De gegevens kunnen worden uitgesplitst naar inkomensbegrip (primair inkomen, bruto inkomen, besteedbaar inkomen, gestandaardiseerd inkomen), inkomensklassen en diverse achtergrondkenmerken van het huishouden.\r\n\r\nGegevens beschikbaar vanaf: 2011. \r\n\r\nStatus van de cijfers: \r\nDe cijfers voor 2011 t/m 2023 zijn definitief. De cijfers voor 2024 zijn voorlopig.\r\n\r\nWijzigingen per oktober 2025:\r\nCijfers over 2023 zijn definitief en voorlopige cijfers over 2024 zijn toegevoegd.\r\n\r\nWanneer komen er nieuwe cijfers?\r\nDefinitieve cijfers over 2024 en voorlopige cijfers over 2025 komen in het najaar van 2026 beschikbaar.\r\n\r\n",
+ "Language": "nl",
+ "Authority": "https://standaarden.overheid.nl/owms/terms/Centraal_Bureau_voor_de_Statistiek",
+ "Modified": "2025-10-08T00:00:00+02:00",
+ "ReleaseDate": "2025-10-08T00:00:00+02:00",
+ "ModificationDate": "2025-10-08T00:00:00+02:00",
+ "TemporalCoverage": "2011-2024",
+ "Catalog": "CBS",
+ "Publisher": "https://standaarden.overheid.nl/owms/terms/Centraal_Bureau_voor_de_Statistiek",
+ "ContactPoint": "infoservice@cbs.nl",
+ "Version": "202510080000",
+ "VersionNotes": "",
+ "VersionReason": "Actualisering",
+ "Frequency": "Per jaar",
+ "Status": "Regulier",
+ "ObservationCount": 260946,
+ "ObservationsModified": "2025-10-08T00:00:00+02:00",
+ "DatasetType": "Numeric",
+ "GraphTypes": "Table,Bar,Line",
+ "License": "https://creativecommons.org/licenses/by/4.0/",
+ "Source": "CBS.",
+ "Summary": "Gemiddeld en mediaan inkomen van particuliere huishoudens\ninkomensklassen en huishoudkenmerken",
+ "LongDescription": "INHOUDSOPGAVE\r\n\r\n1. Toelichting\r\n2. Definities en verklaring van symbolen\r\n3. Koppelingen naar relevante tabellen en artikelen\r\n4. Bronnen en methoden\r\n5. Meer informatie \r\n\r\n1. TOELICHTING\r\n\r\nDeze tabel bevat cijfers over het inkomen van particuliere huishoudens. De gegevens kunnen worden uitgesplitst naar inkomensbegrip (primair inkomen, bruto inkomen, besteedbaar inkomen, gestandaardiseerd inkomen), inkomensklassen en diverse achtergrondkenmerken van het huishouden.\r\n\r\nGegevens beschikbaar vanaf: 2011. \r\n\r\nStatus van de cijfers: \r\nDe cijfers voor 2011 t/m 2023 zijn definitief. De cijfers voor 2024 zijn voorlopig.\r\n\r\nWijzigingen per oktober 2025:\r\nCijfers over 2023 zijn definitief en voorlopige cijfers over 2024 zijn toegevoegd.\r\n\r\nWanneer komen er nieuwe cijfers?\r\nDefinitieve cijfers over 2024 en voorlopige cijfers over 2025 komen in het najaar van 2026 beschikbaar.\r\n\r\n2. DEFINITIES EN VERKLARING VAN SYMBOLEN\r\n\r\nDefinities:\r\n\r\nParticulier huishouden:\r\nEén of meer personen die samen een woonruimte bewonen en zichzelf niet-bedrijfsmatig voorzien van de dagelijkse behoeften.\r\n\r\nPrimair inkomen\r\nHet primair inkomen omvat inkomen uit arbeid, inkomen uit eigen onderneming en inkomen uit vermogen. \r\n\r\nBruto inkomen\r\nHet bruto inkomen omvat inkomen uit arbeid, inkomen uit eigen onderneming, inkomen uit vermogen, uitkering inkomensverzekeringen, uitkering sociale voorzieningen, ontvangen gebonden overdrachten en ontvangen inkomensoverdrachten.\r\n\r\nBesteedbaar inkomen\r\nHet besteedbaar inkomen bestaat uit het bruto inkomen verminderd met betaalde inkomensoverdrachten, premies inkomensverzekeringen, premies ziektekostenverzekeringen en belastingen op inkomen en vermogen.\r\n\r\nGestandaardiseerd inkomen\r\nHet gestandaardiseerd besteedbaar inkomen is het besteedbaar inkomen gecorrigeerd voor verschillen in grootte en samenstelling van het huishouden. Deze correctie vindt plaats met behulp van equivalentiefactoren. In de equivalentiefactor komen de schaalvoordelen tot uitdrukking die het gevolg zijn van het voeren van een gemeenschappelijke huishouding. Met behulp van de equivalentiefactoren worden alle inkomens herleid tot het inkomen van een eenpersoonshuishouden. Op deze wijze is het welvaartsniveau van verschillende typen huishoudens onderling vergelijkbaar gemaakt. Het gestandaardiseerd inkomen is een maat voor de welvaart van (de leden van) een huishouden.\r\n\r\nVerklaring van symbolen:\r\n\r\nniets (blanco)\t: het cijfer kan op logische gronden niet voorkomen\r\n. \t\t: het cijfer is onbekend, onvoldoende betrouwbaar of geheim\r\n*\t\t: voorlopige cijfers\r\n**\t\t: nader voorlopige cijfers\r\n\r\nDe cijfers zijn afgerond. Hierdoor kan het voorkomen, dat de som van de detailgegevens afwijkt van het totaal.\r\n\r\n3. KOPPELINGEN NAAR RELEVANTE TABELLEN EN ARTIKELEN\r\n\r\nRelevante tabellen:\r\n<a href=https://opendata.cbs.nl/statline/#/CBS/nl/dataset/83931ned>Inkomen personen; inkomensklassen</a>\r\nVoor de periode 1990-2000 en 2000-2014 zijn soortgelijke gegevens beschikbaar. Wegens verschillen in de wijze van samenstelling zijn deze niet geheel vergelijkbaar met uitkomsten van latere jaren:\r\n<a href=https://opendata.cbs.nl/statline/#/CBS/nl/dataset/70189ned>Inkomensklassen; huishoudens (1990-2000)</a>.\r\n<a href=https://opendata.cbs.nl/statline/#/CBS/nl/dataset/70958ned>Inkomensklassen; huishoudens (2000-2014)</a>.\r\n<a href=https://opendata.cbs.nl/statline/#/CBS/nl/dataset/70191ned>Inkomensgroepen; huishoudens (1990-2000)</a>.\r\n<a href=https://opendata.cbs.nl/statline/#/CBS/nl/dataset/71013ned>Inkomensgroepen; huishoudens (2000-2014)</a>.\r\n\r\nRelevante artikelen:\r\n<a href=https://www.cbs.nl/nl-nl/publicatie/2024/27/materiele-welvaart-in-nederland-2024>Materiële welvaart in Nederland</a>\r\n\r\nMeer informatie is te vinden op de themapagina <a href=https://www.cbs.nl/nl-nl/arbeid-en-inkomen/inkomen-en-bestedingen>Inkomen en bestedingen</a>.\r\n\r\n4. BRONNEN EN METHODEN\r\n\r\nDe onderzoeksmethode van deze tabel is te vinden in de onderzoeksbeschrijving <a href=https://www.cbs.nl/nl-nl/onze-diensten/methoden/onderzoeksomschrijvingen/korte-onderzoeksbeschrijvingen/integraal-inkomens-en-vermogensonderzoek>Integraal inkomens- en vermogensonderzoek</a>.\r\n\r\n5. MEER INFORMATIE\r\n\r\n<a href='https://www.cbs.nl/nl-nl/over-ons/contact/infoservice'>Infoservice</a>\r\n\r\nCopyright (c) Centraal Bureau voor de Statistiek, Den Haag/Heerlen \r\nVerveelvoudiging is toegestaan, mits CBS als bron wordt vermeld.\r\n\r\n",
+ "Provenance": [],
+ "RelatedSources": [],
+ "Distributions": [
+  {
+   "Format": "csv",
+   "MediaType": "csv",
+   "DownloadUrl": "https://datasets.cbs.nl/csv/CBS/nl/83932NED",
+   "AccessUrl": "https://dataportal.cbs.nl/detail/CBS/83932NED",
+   "Language": "nl"
+  },
+  {
+   "Format": "odata",
+   "MediaType": "odata",
+   "DownloadUrl": "https://datasets.cbs.nl/odata/v1/CBS/83932NED",
+   "AccessUrl": "https://dataportal.cbs.nl/detail/CBS/83932NED",
+   "Language": "nl"
+  }
+ ]
+}

@@ -1,0 +1,93 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/85773NED/$metadata#MeasureCodes",
+ "value": [
+  {
+   "Identifier": "M001505_2",
+   "Index": 2,
+   "Title": "Prijsindex verkoopprijzen",
+   "Description": "De Prijsindex Bestaande Koopwoningen geeft de prijsverandering weer van de voorraad van bestaande koopwoningen. De woning moet op Nederlandse grond staan en verkocht zijn aan een particulier. ",
+   "MeasureGroupId": "M001505_1",
+   "DataType": "Float",
+   "Unit": "2020=100",
+   "Decimals": 1,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "M005104",
+   "Index": 3,
+   "Title": "Ontwikkeling  t.o.v. voorgaande periode",
+   "Description": "De procentuele ontwikkeling van een bepaalde periode (maand, kwartaal, jaar) ten opzichte van dezelfde voorafgaande periode. Het CBS berekent de ontwikkeling aan de hand van niet-afgeronde indexcijfers. ",
+   "MeasureGroupId": "M001505_1",
+   "DataType": "Float",
+   "Unit": "%",
+   "Decimals": 1,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "M005355",
+   "Index": 4,
+   "Title": "Ontwikkeling  t.o.v. een jaar eerder",
+   "Description": "De procentuele ontwikkeling van een bepaalde periode (maand, kwartaal, jaar) ten opzichte van dezelfde periode in het daaraan voorafgaande jaar. Het CBS berekent de ontwikkeling aan de hand van niet-afgeronde indexcijfers.",
+   "MeasureGroupId": "M001505_1",
+   "DataType": "Float",
+   "Unit": "%",
+   "Decimals": 1,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "M001532_2",
+   "Index": 6,
+   "Title": "Verkochte woningen",
+   "Description": "Aantal verkochte woningen is het aantal geregistreerde transacties bij het Kadaster van een woning gekocht door een particulier gemeten aan het einde van verslagperiode.\r\n\r\n",
+   "MeasureGroupId": "M001532_1",
+   "DataType": "Long",
+   "Unit": "aantal",
+   "Decimals": 0,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "M005157",
+   "Index": 7,
+   "Title": "Ontwikkeling  t.o.v. voorgaande periode",
+   "Description": "De procentuele ontwikkeling van een bepaalde periode (maand, kwartaal, jaar) ten opzichte van dezelfde voorafgaande periode. Het CBS berekent de ontwikkeling aan de hand van niet-afgeronde indexcijfers. \r\n",
+   "MeasureGroupId": "M001532_1",
+   "DataType": "Float",
+   "Unit": "%",
+   "Decimals": 1,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "M005284",
+   "Index": 8,
+   "Title": "Ontwikkeling  t.o.v. een jaar eerder",
+   "Description": "De procentuele ontwikkeling van een bepaalde periode (maand, kwartaal, jaar) ten opzichte van dezelfde periode in het daaraan voorafgaande jaar. Het CBS berekent de ontwikkeling aan de hand van niet-afgeronde indexcijfers.\r\n",
+   "MeasureGroupId": "M001532_1",
+   "DataType": "Float",
+   "Unit": "%",
+   "Decimals": 1,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "M001534",
+   "Index": 9,
+   "Title": "Gemiddelde verkoopprijs",
+   "Description": "De gemiddelde verkoopprijs geeft de gemiddelde waarde weer die betaald is in een verslagperiode voor bestaande woningen die zijn aangekocht door een particulier. Deze cijfers tonen niet het verloop van de prijsontwikkeling van alle bestaande koopwoningen. Daarvoor dient u gebruik te maken van de prijsindexcijfers.\r\n\r\n",
+   "MeasureGroupId": null,
+   "DataType": "Long",
+   "Unit": "euro",
+   "Decimals": 0,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "M001535",
+   "Index": 10,
+   "Title": "Totale waarde verkoopprijzen",
+   "Description": "De totale waarde van de verkoopprijzen heeft betrekking op bestaande woningen die zijn aangekocht door een particulier. ",
+   "MeasureGroupId": null,
+   "DataType": "Long",
+   "Unit": "mln euro",
+   "Decimals": 0,
+   "PresentationType": null
+  }
+ ]
+}

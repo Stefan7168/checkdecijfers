@@ -1,0 +1,33 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/83932NED/$metadata#InkomensbegrippenCodes",
+ "value": [
+  {
+   "Identifier": "A043964",
+   "Index": 1,
+   "Title": "Primair inkomen",
+   "Description": "Het primair inkomen omvat inkomen uit arbeid, inkomen uit eigen onderneming en inkomen uit vermogen.",
+   "DimensionGroupId": null
+  },
+  {
+   "Identifier": "A043965",
+   "Index": 2,
+   "Title": "Bruto inkomen",
+   "Description": "Het bruto inkomen omvat inkomen uit arbeid, inkomen uit eigen onderneming, inkomen uit vermogen, uitkering inkomensverzekeringen, uitkering sociale voorzieningen, ontvangen gebonden overdrachten en ontvangen inkomensoverdrachten.",
+   "DimensionGroupId": null
+  },
+  {
+   "Identifier": "A043966",
+   "Index": 3,
+   "Title": "Besteedbaar inkomen",
+   "Description": "Het besteedbaar inkomen bestaat uit het bruto inkomen verminderd met betaalde inkomensoverdrachten, premies inkomensverzekeringen, premies ziektekostenverzekeringen en belastingen op inkomen en vermogen.",
+   "DimensionGroupId": null
+  },
+  {
+   "Identifier": "A043967",
+   "Index": 4,
+   "Title": "Gestandaardiseerd inkomen",
+   "Description": "Het gestandaardiseerd besteedbaar inkomen is het besteedbaar inkomen gecorrigeerd voor verschillen in grootte en samenstelling van het huishouden. Deze correctie vindt plaats met behulp van equivalentiefactoren. In de equivalentiefactor komen de schaalvoordelen tot uitdrukking die het gevolg zijn van het voeren van een gemeenschappelijke huishouding. Met behulp van de equivalentiefactoren worden alle inkomens herleid tot het inkomen van een eenpersoonshuishouden. Op deze wijze is het welvaartsniveau van verschillende typen huishoudens onderling vergelijkbaar gemaakt. Het gestandaardiseerd inkomen is een maat voor de welvaart van (de leden van) een huishouden.",
+   "DimensionGroupId": null
+  }
+ ]
+}

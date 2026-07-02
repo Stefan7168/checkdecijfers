@@ -1,0 +1,40 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/03759ned/$metadata#BurgerlijkeStaatCodes",
+ "value": [
+  {
+   "Identifier": "T001019",
+   "Index": 1,
+   "Title": "Totaal burgerlijke staat",
+   "Description": "Burgerlijke staat: \r\nFormele positie van een persoon waarbij wordt verwezen naar het huwelijk en het geregistreerd partnerschap. \r\n\r\nHuwelijk: \r\nWettelijke verbintenis tot het samenleven van twee personen. Sinds april 2001 staat het huwelijk ook open voor personen van hetzelfde geslacht. \r\n\r\nGeregistreerd partnerschap: \r\nEen op het huwelijk lijkende relatie tussen twee personen van gelijk of van verschillend geslacht, vastgelegd in een akte van de Burgerlijke Stand. Per 1 januari 1998 is in Nederland het geregistreerd partnerschap ingevoerd.",
+   "DimensionGroupId": null
+  },
+  {
+   "Identifier": "1010",
+   "Index": 2,
+   "Title": "Ongehuwd",
+   "Description": "Vanaf 2010: burgerlijke staat die aangeeft dat een persoon nog nooit een huwelijk heeft gesloten of een geregistreerd partnerschap is aangegaan.\r\n1998 tot 2010: burgerlijke staat die aangeeft dat een persoon nog nooit een huwelijk heeft gesloten of een geregistreerd partnerschap heeft.\r\nOmdat in de periode 1998 tot 2010 niet alle burgerlijke staten beschikbaar zijn in de bronbestanden die het CBS gebruikt, zijn de burgerlijke staten 'verweduwd na partnerschap' en 'gescheiden na partnerschap' in deze statistiek binnen deze periode genegeerd. Voor deze statistiek betekent dit dat de burgerlijke staat van vóór het partnerschap is gebruikt. Dat was meestal ongehuwd.\r\nTot 1998: burgerlijke staat die aangeeft dat een persoon nog nooit een huwelijk heeft gesloten.\r\n\r\nHuwelijk:\r\nWettelijke verbintenis tot het samenleven van twee personen.\r\nSinds april 2001 staat het huwelijk ook open voor personen van hetzelfde geslacht.\r\n\r\nGeregistreerd partnerschap:\r\nEen op het huwelijk lijkende relatie tussen twee personen van gelijk of van verschillend geslacht, vastgelegd in een akte van de Burgerlijke Stand. Per 1 januari 1998 is in Nederland het geregistreerd partnerschap ingevoerd.",
+   "DimensionGroupId": null
+  },
+  {
+   "Identifier": "1020",
+   "Index": 3,
+   "Title": "Gehuwd",
+   "Description": "Vanaf 1998: wettig gehuwd plus partnerschap.\r\nTot 1998: wettig gehuwd.\r\n\r\nWettig gehuwd:\r\nBurgerlijke staat die ontstaat na sluiting van een huwelijk. Inclusief personen die zijn gescheiden van tafel en bed, want zij blijven formeel gehuwd.\r\n\r\nPartnerschap:\r\nBurgerlijke staat die ontstaat na het aangaan van een geregistreerd partnerschap.\r\n\r\nHuwelijk:\r\nWettelijke verbintenis tot het samenleven van twee personen.\r\nSinds april 2001 staat het huwelijk ook open voor personen van hetzelfde geslacht.\r\n\r\nGeregistreerd partnerschap:\r\nEen op het huwelijk lijkende relatie tussen twee personen van gelijk of van verschillend geslacht, vastgelegd in een akte van de Burgerlijke Stand. Per 1 januari 1998 is in Nederland het geregistreerd partnerschap ingevoerd.",
+   "DimensionGroupId": null
+  },
+  {
+   "Identifier": "1050",
+   "Index": 4,
+   "Title": "Verweduwd",
+   "Description": "Vanaf 2010: verweduwd na wettig huwelijk plus verweduwd na partnerschap.\r\nTot 2010: verweduwd na wettig huwelijk.\r\nOmdat in de periode 1998 tot 2010 niet alle burgerlijke staten beschikbaar zijn in de bronbestanden die het CBS gebruikt, is 'verweduwd na partnerschap' in deze statistiek binnen deze periode niet meegeteld.\r\n\r\nVerweduwd na wettig huwelijk:\r\nBurgerlijke staat die ontstaat na ontbinding van een wettig huwelijk door overlijden van de partner.\r\n\r\nVerweduwd na partnerschap:\r\nBurgerlijke staat die ontstaat na ontbinding van een geregistreerd partnerschap door overlijden van de partner.\r\n\r\nHuwelijk:\r\nWettelijke verbintenis tot het samenleven van twee personen.\r\nSinds april 2001 staat het huwelijk ook open voor personen van hetzelfde geslacht.\r\n\r\nGeregistreerd partnerschap:\r\nEen op het huwelijk lijkende relatie tussen twee personen van gelijk of van verschillend geslacht, vastgelegd in een akte van de Burgerlijke Stand. Per 1 januari 1998 is in Nederland het geregistreerd partnerschap ingevoerd.",
+   "DimensionGroupId": null
+  },
+  {
+   "Identifier": "1080",
+   "Index": 5,
+   "Title": "Gescheiden",
+   "Description": "Vanaf 2010: gescheiden na wettig huwelijk plus gescheiden na partnerschap.\r\nTot 2010: gescheiden na wettig huwelijk.\r\nOmdat in de periode 1998 tot 2010 niet alle burgerlijke staten beschikbaar zijn in de bronbestanden die het CBS gebruikt, is 'gescheiden na partnerschap' in deze statistiek binnen deze periode niet meegeteld.\r\n\r\nGescheiden na wettig huwelijk:\r\nBurgerlijke staat die ontstaat na ontbinding van een wettig huwelijk door echtscheiding. Exclusief personen die zijn gescheiden van tafel en bed, want zij blijven formeel gehuwd.\r\n\r\nGescheiden na partnerschap:\r\nBurgerlijke staat die ontstaat na ontbinding van een geregistreerd partnerschap anders dan door het overlijden van de partner.\r\n\r\nHuwelijk:\r\nWettelijke verbintenis tot het samenleven van twee personen. Sinds april 2001 staat het huwelijk ook open voor personen van hetzelfde\r\ngeslacht.\r\n\r\nGeregistreerd partnerschap:\r\nEen op het huwelijk lijkende relatie tussen twee personen van gelijk of van verschillend geslacht, vastgelegd in een akte van de Burgerlijke Stand. Per 1 januari 1998 is in Nederland het geregistreerd partnerschap ingevoerd.",
+   "DimensionGroupId": null
+  }
+ ]
+}

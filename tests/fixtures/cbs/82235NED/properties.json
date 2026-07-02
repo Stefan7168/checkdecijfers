@@ -1,0 +1,84 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/82235NED/$metadata#Properties",
+ "Identifier": "82235NED",
+ "Title": "Voorraad woningen; standen en mutaties vanaf 1921",
+ "Description": "Deze tabel bevat cijfers over de veranderingen in de voorraad woningen in Nederland volgens de definities van de Basisregistratie Adressen en Gebouwen (BAG). De BAG bevat basisgegevens over alle gebouwen en adressen per gemeente in Nederland. De gemeenten zijn verantwoordelijk voor de kwaliteit van de vulling van de BAG. Vanaf verslagjaar 2012 maakt CBS voor de statistiek ‘voorraad woningen en niet-woningen’ gebruik van de BAG als bron, en vanaf 2025 worden de cijfers gebaseerd op de statistiek 'Levensloop van woningen en niet-woningen'.\r\n\r\nDe overstap naar de levensloop statistiek brengt een kleine onregelmatigheid in de begin- en eindstand met zich mee.\r\nDe eindstand voor 2024 (gebaseerd op de stopgezette voorraad tabel) was 8,274,478. De beginstand van 2025 (uit de levensloop) was 8,274,525. Het verschil is dus slechts 50 woningen, maar afgerond op duizendtallen is de eindstand 2024 dus niet gelijk aan de beginstand 2025.\r\n\r\nVóór 2012 was de statistiek over de woningvoorraad gebaseerd op het Woningregister. Bij deze overgang naar een andere bron is een methodebreuk ontstaan. Omdat er behoefte is aan doorlopende lange tijdreeksen, is er onderzoek verricht naar de aard en omvang van de methodebreuk in de woningvoorraad 2011-2012 en is deze breuk gerepareerd. Uitgangspunt bij deze breukreparatie is dat de nieuwe definities volgens de BAG leidend zijn. Gegevens over de woningvoorraad vóór 2012 sluiten in deze tabel aan bij de gegevens na 2012. \r\n\r\nVanaf 2021 is het CBS volledig overgegaan op het gebruik van BAG 2.0. Door deze overgang komen de nieuwe statussen 'verbouwing' en 'ten onrechte opgevoerd' voor panden en verblijfsobjecten beschikbaar in de BAG. Verblijfsobjecten met de nieuwe status ‘verbouwing’ worden tot de voorraad gerekend. Deze uitbreiding heeft niet geleid tot een trendbreuk in de voorraad en heeft alleen als consequentie dat de statussen waarin een verblijfsobject zich bevindt, kunnen worden verbijzonderd.\r\n\r\nVanaf januari 2026 is het onderwerp \"woningbouw\" toegevoegd aan deze tabel. Woningbouw is het totaal aan woningen dat door bouw of functiewijzigingen aan de voorraad is toegevoegd, en is de som van nieuwbouw plus 'overige toevoegingen', minus 'overige onttrekkingen'. De overstap naar de levensloop statistiek in januari 2026 betekent dat 'overige toevoegingen' nu wordt berekend als de som van toevoegingen plus functiewijzigingen (utiliteit wordt woning). Overige onttrekkingen worden nu berekend als onttrekkingen minus negatieve functiewijzigingen (woning wordt utiliteit).\r\n\r\n\r\nGegevens beschikbaar vanaf: 1921\r\n\r\nStatus van de cijfers:\r\nDe cijfers over de verslagperiode 1921 tot en met 2025 zijn definitief.\r\n\r\nWijziging per 20 maart 2026:\r\nDe cijfers van 2025 zijn definitief gemaakt.\r\n\r\nWanneer komen er nieuwe cijfers?\r\nDe voorlopige jaarcijfers worden circa 2 maanden na de verslagperiode gepubliceerd.\r\nDe definitieve jaarcijfers worden circa 3 maanden na de verslagperiode gepubliceerd.\r\n\r\n\r\n",
+ "Language": "nl",
+ "Authority": "https://standaarden.overheid.nl/owms/terms/Centraal_Bureau_voor_de_Statistiek",
+ "Modified": "2026-03-20T00:00:00+01:00",
+ "ReleaseDate": "2026-03-20T00:00:00+01:00",
+ "ModificationDate": "2026-03-20T00:00:00+01:00",
+ "TemporalCoverage": "1921-2025",
+ "Catalog": "CBS",
+ "Publisher": "https://standaarden.overheid.nl/owms/terms/Centraal_Bureau_voor_de_Statistiek",
+ "ContactPoint": "infoservice@cbs.nl",
+ "Version": "202603200000",
+ "VersionNotes": "",
+ "VersionReason": "Bijstelling",
+ "Frequency": "Tweemaal per jaar",
+ "Status": "Regulier",
+ "ObservationCount": 889,
+ "ObservationsModified": "2026-03-20T00:00:00+01:00",
+ "DatasetType": "Numeric",
+ "GraphTypes": "Table,Bar,Line",
+ "License": "https://creativecommons.org/licenses/by/4.0/",
+ "Source": "CBS.",
+ "Summary": "Voorraad woningen, begin- en eindstand, nieuwbouw, sloop, correcties,\noverige toevoegingen en overige onttrekkingen",
+ "LongDescription": "INHOUDSOPGAVE\r\n\r\n1. Toelichting\r\n2. Definities en verklaring van symbolen\r\n3. Koppelingen naar relevante tabellen en artikelen\r\n4. Bronnen en methoden\r\n5. Meer informatie \r\n\r\n\r\n1. TOELICHTING\r\n\r\nDeze tabel bevat cijfers over de veranderingen in de voorraad woningen in Nederland volgens de definities van de Basisregistratie Adressen en Gebouwen (BAG). De BAG bevat basisgegevens over alle gebouwen en adressen per gemeente in Nederland. De gemeenten zijn verantwoordelijk voor de kwaliteit van de vulling van de BAG. Vanaf verslagjaar 2012 maakt CBS voor de statistiek ‘voorraad woningen en niet-woningen’ gebruik van de BAG als bron, en vanaf 2025 worden de cijfers gebaseerd op de statistiek 'Levensloop van woningen en niet-woningen'.\r\n\r\nDe overstap naar de levensloop statistiek brengt een kleine onregelmatigheid in de begin- en eindstand met zich mee.\r\nDe eindstand voor 2024 (gebaseerd op de stopgezette voorraad tabel) was 8,274,478. De beginstand van 2025 (uit de levensloop) was 8,274,525. Het verschil is dus slechts 50 woningen, maar afgerond op duizendtallen is de eindstand 2024 dus niet gelijk aan de beginstand 2025.\r\n\r\nVóór 2012 was de statistiek over de woningvoorraad gebaseerd op het Woningregister. Bij deze overgang naar een andere bron is een methodebreuk ontstaan. Omdat er behoefte is aan doorlopende lange tijdreeksen, is er onderzoek verricht naar de aard en omvang van de methodebreuk in de woningvoorraad 2011-2012 en is deze breuk gerepareerd. Uitgangspunt bij deze breukreparatie is dat de nieuwe definities volgens de BAG leidend zijn. Gegevens over de woningvoorraad vóór 2012 sluiten in deze tabel aan bij de gegevens na 2012. \r\n\r\nVanaf 2021 is het CBS volledig overgegaan op het gebruik van BAG 2.0. Door deze overgang komen de nieuwe statussen 'verbouwing' en 'ten onrechte opgevoerd' voor panden en verblijfsobjecten beschikbaar in de BAG. Verblijfsobjecten met de nieuwe status ‘verbouwing’ worden tot de voorraad gerekend. Deze uitbreiding heeft niet geleid tot een trendbreuk in de voorraad en heeft alleen als consequentie dat de statussen waarin een verblijfsobject zich bevindt, kunnen worden verbijzonderd.\r\n\r\nVanaf januari 2026 is het onderwerp \"woningbouw\" toegevoegd aan deze tabel. Woningbouw is het totaal aan woningen dat door bouw of functiewijzigingen aan de voorraad is toegevoegd, en is de som van nieuwbouw plus 'overige toevoegingen', minus 'overige onttrekkingen'. De overstap naar de levensloop statistiek in januari 2026 betekent dat 'overige toevoegingen' nu wordt berekend als de som van toevoegingen plus functiewijzigingen (utiliteit wordt woning). Overige onttrekkingen worden nu berekend als onttrekkingen minus negatieve functiewijzigingen (woning wordt utiliteit).\r\n\r\n\r\nGegevens beschikbaar vanaf: 1921\r\n\r\nStatus van de cijfers:\r\nDe cijfers over de verslagperiode 1921 tot en met 2025 zijn definitief.\r\n\r\nWijziging per 20 maart 2026:\r\nDe cijfers van 2025 zijn definitief gemaakt.\r\n\r\nWanneer komen er nieuwe cijfers?\r\nDe voorlopige jaarcijfers worden circa 2 maanden na de verslagperiode gepubliceerd.\r\nDe definitieve jaarcijfers worden circa 3 maanden na de verslagperiode gepubliceerd.\r\n\r\n\r\n2. DEFINITIES EN VERKLARING VAN SYMBOLEN\r\n\r\nDefinities:\r\n\r\nWoning\r\nDe kleinste binnen één of meer panden gelegen en voor woon-, bedrijfsmatige of recreatieve doeleinden geschikte eenheid van gebruik die ontsloten wordt via een eigen afsluitbare toegang vanaf de openbare weg, een erf of een gedeelde verkeersruimte, en die onderwerp kan zijn van goederenrechtelijke rechtshandelingen.\r\nEen verblijfsobject heeft minimaal één adres. Een woning betreft een verblijfsobject met minimaal een woonfunctie en eventueel één of meer andere gebruiksfuncties.\r\n\r\nVerklaring van symbolen:\r\nniets (blanco)\t: het cijfer kan op logische gronden niet voorkomen\r\n. \t\t: het cijfer is onbekend, onvoldoende betrouwbaar of geheim\r\n*\t\t: voorlopige cijfers\r\n**\t\t: nader voorlopige cijfers\r\n\r\nDe cijfers van de begin- en eindstand van de woningvoorraad zijn afgerond op duizendtallen. Hierdoor kan het voorkomen, dat de som van de detailgegevens afwijkt van het totaal.\r\n\r\n\r\n3. KOPPELINGEN NAAR RELEVANTE TABELLEN EN ARTIKELEN\r\n\r\nRelevante tabellen:\r\n\r\nGegevens over de woningvoorraad vanaf 2012 zijn gebaseerd op de BAG. \r\nDe cijfers van 2012-2024 zijn afkomstig uit de tabel <a\r\nhref=\"https://opendata.cbs.nl/statline/#/CBS/nl/dataset/81955NED\" target=\"_blank\"><b>Voorraad woningen en niet-woningen; mutaties, gebruiksfunctie, regio</b></a>.\r\n\r\nVanaf 2025 worden de woningvoorraad en mutaties gebaseerd op de tabel <a href=\"https://opendata.cbs.nl/#/CBS/nl/dataset/86098NED/table\" target=\"_blank\"><b>Levensloop van woningen en niet-woningen; gebruiksfunctie, regio</b></a>. \r\n\r\nGegevens over de woningvoorraad tot 2012 is gebaseerd op andere bronnen:\r\n<a href=\"https://opendata.cbs.nl/statline/#/CBS/nl/dataset/71527NED\"\r\ntarget=\"_blank\"><b>Voorraad woningen; mutaties en bouw, 1921-2011.</b></a>\r\n\r\n<a href=\"https://opendata.cbs.nl/statline/#/CBS/nl/dataset/37263/table\"\r\ntarget=\"_blank\"><b>Veranderingen in de woningvoorraad; 1995 - 2011.</b></a>\r\n\r\n<a href=\"https://opendata.cbs.nl/statline/#/CBS/nl/dataset/7413\" target=\"_blank\"><b>Woningbouw;\r\nvoorraadmutaties, regio, 1988 – 2011.</b></a>\r\n\r\n<a href=\"https://opendata.cbs.nl/statline/#/CBS/nl/dataset/71477NED\"\r\ntarget=\"_blank\"><b>Woningvoorraad op 31 december; 1947 - 2011.</b></a>\r\n\r\nDe term woningbouw wordt verder toegelicht in <a href=\"https://www.cbs.nl/nl-nl/achtergrond/2025/05/toelichting-ontwikkeling-woningvoorraad-2024\"\r\ntarget=\"_blank\"><b>Toelichting ontwikkeling woningvoorraad 2024</b></a>.\r\n\r\nAndere tabellen over woningen zijn te vinden op StatLine\r\nonder <a href=\"https://opendata.cbs.nl/statline/#/CBS/nl/navigatieScherm/thema?themaNr=82147\" target=\"_blank\"><b>Wonen, woningen en gebouwen</b></a>.\r\n\r\nMeer informatie over woningbouw is te vinden op de themapagina <a href=\"https://www.cbs.nl/nl-nl/economie/bouwen-en-wonen\" target=\"_blank\"><b>Bouwen en wonen</b></a>.\r\n\r\n\r\n\r\n4. BRONNEN EN METHODEN\r\n\r\nTot 1 januari 2012 heeft CBS gegevens over de woningvoorraad gepubliceerd vanuit het Woningregister. Vanaf die datum baseert CBS de voorraad woningen op de BAG. Overgang van de ene naar de andere bron bracht een trendbreuk met zich mee. Voor meer informatie hierover:\r\n\r\n<a href='https://www.cbs.nl/nl-nl/deelnemers-enquetes/deelnemers-enquetes/decentrale-overheden/vastgoed-overheden/basisregistraties-adressen-en-gebouwen--bag--'>Basisregistraties Adressen en Gebouwen.</a>\r\n<a href='https://www.cbs.nl/nl-nl/onze-diensten/methoden/onderzoeksomschrijvingen/aanvullende-onderzoeksomschrijvingen/trendbreuk-woningvoorraad'>Trendbreuk woningvoorraad.</a>\r\n<a href='https://www.cbs.nl/nl-nl/onze-diensten/methoden/onderzoeksomschrijvingen/aanvullende-onderzoeksomschrijvingen/reparatie-methodebreuk-in-tijdreeksen-woningvoorraad'>Onderzoek en reparatie methodebreuk in tijdreeksen Woningvoorraad.</a>\r\n\r\nDe onderzoeksmethode van deze tabel is te vinden in de onderzoeksbeschrijving <a href='https://www.cbs.nl/nl-nl/onze-diensten/methoden/onderzoeksomschrijvingen/korte-onderzoeksbeschrijvingen/voorraad-woningen-standen-en-mutaties-vanaf-1921'>Voorraad woningen; standen en mutaties, vanaf 1921</a>.\r\n\r\nOverige informatie over de vastgoedstatistieken is te vinden op de pagina <a href='https://www.cbs.nl/nl-nl/deelnemers-enquetes/deelnemers-enquetes/decentrale-overheden/overzicht/vastgoed'>Vastgoed</a>.\r\n\r\n\r\n5. MEER INFORMATIE\r\n\r\n<a href='https://www.cbs.nl/nl-nl/over-ons/contact/infoservice'>Infoservice</a>\r\n\r\nCopyright © Centraal Bureau voor de Statistiek, Den Haag/Heerlen\r\nVerveelvoudiging is toegestaan, mits CBS als bron wordt vermeld.\r\n",
+ "Provenance": [
+  {
+   "Title": "Basisregistraties Adressen en Gebouwen.",
+   "Url": "https://www.cbs.nl/nl-nl/deelnemers-enquetes/deelnemers-enquetes/decentrale-overheden/vastgoed-overheden/basisregistraties-adressen-en-gebouwen--bag--"
+  },
+  {
+   "Title": "Trendbreuk woningvoorraad.",
+   "Url": "https://www.cbs.nl/nl-nl/onze-diensten/methoden/onderzoeksomschrijvingen/aanvullende-onderzoeksomschrijvingen/trendbreuk-woningvoorraad"
+  },
+  {
+   "Title": "Onderzoek en reparatie methodebreuk in tijdreeksen Woningvoorraad.",
+   "Url": "https://www.cbs.nl/nl-nl/onze-diensten/methoden/onderzoeksomschrijvingen/aanvullende-onderzoeksomschrijvingen/reparatie-methodebreuk-in-tijdreeksen-woningvoorraad"
+  },
+  {
+   "Title": "Voorraad woningen; standen en mutaties, vanaf 1921",
+   "Url": "https://www.cbs.nl/nl-nl/onze-diensten/methoden/onderzoeksomschrijvingen/korte-onderzoeksbeschrijvingen/voorraad-woningen-standen-en-mutaties-vanaf-1921"
+  },
+  {
+   "Title": "Vastgoed",
+   "Url": "https://www.cbs.nl/nl-nl/deelnemers-enquetes/deelnemers-enquetes/decentrale-overheden/overzicht/vastgoed"
+  }
+ ],
+ "RelatedSources": [
+  {
+   "Title": "<b>Voorraad woningen en niet-woningen; mutaties, gebruiksfunctie, regio</b>",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/dataset/81955NED\" target=\"_blank"
+  },
+  {
+   "Title": "<b>Levensloop van woningen en niet-woningen; gebruiksfunctie, regio</b>",
+   "Url": "https://opendata.cbs.nl/#/CBS/nl/dataset/86098NED/table\" target=\"_blank"
+  },
+  {
+   "Title": "<b>Wonen, woningen en gebouwen</b>",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/navigatieScherm/thema?themaNr=82147\" target=\"_blank"
+  },
+  {
+   "Title": "<b>Bouwen en wonen</b>",
+   "Url": "https://www.cbs.nl/nl-nl/economie/bouwen-en-wonen\" target=\"_blank"
+  }
+ ],
+ "Distributions": [
+  {
+   "Format": "csv",
+   "MediaType": "csv",
+   "DownloadUrl": "https://datasets.cbs.nl/csv/CBS/nl/82235NED",
+   "AccessUrl": "https://dataportal.cbs.nl/detail/CBS/82235NED",
+   "Language": "nl"
+  },
+  {
+   "Format": "odata",
+   "MediaType": "odata",
+   "DownloadUrl": "https://datasets.cbs.nl/odata/v1/CBS/82235NED",
+   "AccessUrl": "https://dataportal.cbs.nl/detail/CBS/82235NED",
+   "Language": "nl"
+  }
+ ]
+}

@@ -38,6 +38,7 @@ Three principles, also referenced as (a)/(b)/(c) across the docs:
 - Build sessions may delegate implementation to subagents for large work packages; each brief must name the specific invariants at stake, and the session reviews the result against [docs/05-data-rules.md](docs/05-data-rules.md). Green CI remains the only "done" signal regardless of who wrote the code.
 - **Delegation cost-tier rule** (owner decision, 2026-07-02): the session's own model — the most capable in play — does the *thinking*: scoping, briefs, synthesis, and the final review/judgment of delegated results. Delegated *legwork* (searches, catalog lookups, mechanical implementation, first-pass verification) runs on cheaper model tiers, explicitly pinned per subagent. Running easy fan-out tasks on the session's top-tier model is a cost bug. Express tiers by role ("cheap tier for mechanical steps"), never as hardcoded model names in reusable prompts — names go stale. When reporting delegated work, say which tier ran it.
 - The owner runs a monthly **maintenance session** with a standing agenda: dependency alerts, provider deprecation notices, spend dashboards, backup status.
+- **Process lessons** (surprises, dead ends, tool/provider quirks, things done differently next time) are appended to [docs/lessons-learned.md](docs/lessons-learned.md) at the end of each session — newest on top, evidence-backed, curated at phase gates. Product decisions don't go there; those are ADRs.
 
 ## Phase gate
 

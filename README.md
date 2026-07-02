@@ -8,7 +8,7 @@ CBS StatLine is authoritative but notoriously hard to use; general-purpose AI ch
 
 ## Status
 
-**Documentation phase — no code exists yet, by design.** This repo currently contains the product documentation set and its inputs. Next step: Phase 0 build per [docs/03-mvp-scope.md](docs/03-mvp-scope.md), after Stefan's review of these docs.
+**Phase 0 — build in progress.** The documentation set is complete and signed off; the build is working through the Phase 0 checklist. The single live tracker is [docs/STATUS.md](docs/STATUS.md) — phase checklist, benchmark scoreboard, what's next. This README deliberately doesn't duplicate it.
 
 ## Doc map
 
@@ -23,7 +23,8 @@ CBS StatLine is authoritative but notoriously hard to use; general-purpose AI ch
 | [docs/04-architecture.md](docs/04-architecture.md) | System shape, component justifications, future-build seams, GDPR reservation |
 | [docs/05-data-rules.md](docs/05-data-rules.md) | CBS data strategy, testable anti-hallucination invariants, CC BY 4.0, platform risk |
 | [docs/06-roadmap.md](docs/06-roadmap.md) | Phases 0→3; every notes-derived feature slotted or rejected |
-| [docs/decisions/](docs/decisions/) | ADRs 001–008 for every load-bearing technical choice |
+| [docs/decisions/](docs/decisions/) | ADRs 001–009 for every load-bearing technical choice |
 | [docs/open-questions.md](docs/open-questions.md) | All ambiguities + the assumptions made |
+| [docs/lessons-learned.md](docs/lessons-learned.md) | Process lessons per session — surprises, dead ends, tool quirks |
 
 Historical inputs (never authority): `checkdecijfers.nl.md` (original brainstorm), `KICKOFF_PROMPT.md` (this documentation effort's brief), `Archive/` (competitor research, untracked).

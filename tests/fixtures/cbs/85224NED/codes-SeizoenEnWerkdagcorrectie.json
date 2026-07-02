@@ -1,0 +1,19 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/85224NED/$metadata#SeizoenEnWerkdagcorrectieCodes",
+ "value": [
+  {
+   "Identifier": "A042501",
+   "Index": 1,
+   "Title": "Oorspronkelijke, ongecorrigeerde cijfers",
+   "Description": "De oorspronkelijke cijfers die niet gecorrigeerd zijn voor werkdageffecten en seizoensinvloeden.",
+   "DimensionGroupId": null
+  },
+  {
+   "Identifier": "A050903",
+   "Index": 2,
+   "Title": "Seizoengecorrigeerde cijfers",
+   "Description": "Cijfers gecorrigeerd voor seizoensinvloeden.",
+   "DimensionGroupId": null
+  }
+ ]
+}

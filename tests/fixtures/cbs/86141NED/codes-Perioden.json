@@ -1,0 +1,1725 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/86141NED/$metadata#PeriodenCodes",
+ "value": [
+  {
+   "Identifier": "2009MM12",
+   "Index": 1,
+   "Title": "2009 december",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2010MM01",
+   "Index": 2,
+   "Title": "2010 januari",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2010MM02",
+   "Index": 3,
+   "Title": "2010 februari",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2010MM03",
+   "Index": 4,
+   "Title": "2010 maart",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2010MM04",
+   "Index": 5,
+   "Title": "2010 april",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2010MM05",
+   "Index": 6,
+   "Title": "2010 mei",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2010MM06",
+   "Index": 7,
+   "Title": "2010 juni",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2010MM07",
+   "Index": 8,
+   "Title": "2010 juli",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2010MM08",
+   "Index": 9,
+   "Title": "2010 augustus",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2010MM09",
+   "Index": 10,
+   "Title": "2010 september",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2010MM10",
+   "Index": 11,
+   "Title": "2010 oktober",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2010MM11",
+   "Index": 12,
+   "Title": "2010 november",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2010MM12",
+   "Index": 13,
+   "Title": "2010 december",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2010JJ00",
+   "Index": 14,
+   "Title": "2010",
+   "Description": "",
+   "DimensionGroupId": "1",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2011MM01",
+   "Index": 15,
+   "Title": "2011 januari",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2011MM02",
+   "Index": 16,
+   "Title": "2011 februari",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2011MM03",
+   "Index": 17,
+   "Title": "2011 maart",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2011MM04",
+   "Index": 18,
+   "Title": "2011 april",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2011MM05",
+   "Index": 19,
+   "Title": "2011 mei",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2011MM06",
+   "Index": 20,
+   "Title": "2011 juni",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2011MM07",
+   "Index": 21,
+   "Title": "2011 juli",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2011MM08",
+   "Index": 22,
+   "Title": "2011 augustus",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2011MM09",
+   "Index": 23,
+   "Title": "2011 september",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2011MM10",
+   "Index": 24,
+   "Title": "2011 oktober",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2011MM11",
+   "Index": 25,
+   "Title": "2011 november",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2011MM12",
+   "Index": 26,
+   "Title": "2011 december",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2011JJ00",
+   "Index": 27,
+   "Title": "2011",
+   "Description": "",
+   "DimensionGroupId": "1",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2012MM01",
+   "Index": 28,
+   "Title": "2012 januari",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2012MM02",
+   "Index": 29,
+   "Title": "2012 februari",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2012MM03",
+   "Index": 30,
+   "Title": "2012 maart",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2012MM04",
+   "Index": 31,
+   "Title": "2012 april",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2012MM05",
+   "Index": 32,
+   "Title": "2012 mei",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2012MM06",
+   "Index": 33,
+   "Title": "2012 juni",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2012MM07",
+   "Index": 34,
+   "Title": "2012 juli",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2012MM08",
+   "Index": 35,
+   "Title": "2012 augustus",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2012MM09",
+   "Index": 36,
+   "Title": "2012 september",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2012MM10",
+   "Index": 37,
+   "Title": "2012 oktober",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2012MM11",
+   "Index": 38,
+   "Title": "2012 november",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2012MM12",
+   "Index": 39,
+   "Title": "2012 december",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2012JJ00",
+   "Index": 40,
+   "Title": "2012",
+   "Description": "",
+   "DimensionGroupId": "1",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2013MM01",
+   "Index": 41,
+   "Title": "2013 januari",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2013MM02",
+   "Index": 42,
+   "Title": "2013 februari",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2013MM03",
+   "Index": 43,
+   "Title": "2013 maart",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2013MM04",
+   "Index": 44,
+   "Title": "2013 april",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2013MM05",
+   "Index": 45,
+   "Title": "2013 mei",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2013MM06",
+   "Index": 46,
+   "Title": "2013 juni",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2013MM07",
+   "Index": 47,
+   "Title": "2013 juli",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2013MM08",
+   "Index": 48,
+   "Title": "2013 augustus",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2013MM09",
+   "Index": 49,
+   "Title": "2013 september",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2013MM10",
+   "Index": 50,
+   "Title": "2013 oktober",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2013MM11",
+   "Index": 51,
+   "Title": "2013 november",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2013MM12",
+   "Index": 52,
+   "Title": "2013 december",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2013JJ00",
+   "Index": 53,
+   "Title": "2013",
+   "Description": "",
+   "DimensionGroupId": "1",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2014MM01",
+   "Index": 54,
+   "Title": "2014 januari",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2014MM02",
+   "Index": 55,
+   "Title": "2014 februari",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2014MM03",
+   "Index": 56,
+   "Title": "2014 maart",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2014MM04",
+   "Index": 57,
+   "Title": "2014 april",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2014MM05",
+   "Index": 58,
+   "Title": "2014 mei",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2014MM06",
+   "Index": 59,
+   "Title": "2014 juni",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2014MM07",
+   "Index": 60,
+   "Title": "2014 juli",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2014MM08",
+   "Index": 61,
+   "Title": "2014 augustus",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2014MM09",
+   "Index": 62,
+   "Title": "2014 september",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2014MM10",
+   "Index": 63,
+   "Title": "2014 oktober",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2014MM11",
+   "Index": 64,
+   "Title": "2014 november",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2014MM12",
+   "Index": 65,
+   "Title": "2014 december",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2014JJ00",
+   "Index": 66,
+   "Title": "2014",
+   "Description": "",
+   "DimensionGroupId": "1",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2015MM01",
+   "Index": 67,
+   "Title": "2015 januari",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2015MM02",
+   "Index": 68,
+   "Title": "2015 februari",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2015MM03",
+   "Index": 69,
+   "Title": "2015 maart",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2015MM04",
+   "Index": 70,
+   "Title": "2015 april",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2015MM05",
+   "Index": 71,
+   "Title": "2015 mei",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2015MM06",
+   "Index": 72,
+   "Title": "2015 juni",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2015MM07",
+   "Index": 73,
+   "Title": "2015 juli",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2015MM08",
+   "Index": 74,
+   "Title": "2015 augustus",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2015MM09",
+   "Index": 75,
+   "Title": "2015 september",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2015MM10",
+   "Index": 76,
+   "Title": "2015 oktober",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2015MM11",
+   "Index": 77,
+   "Title": "2015 november",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2015MM12",
+   "Index": 78,
+   "Title": "2015 december",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2015JJ00",
+   "Index": 79,
+   "Title": "2015",
+   "Description": "",
+   "DimensionGroupId": "1",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2016MM01",
+   "Index": 80,
+   "Title": "2016 januari",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2016MM02",
+   "Index": 81,
+   "Title": "2016 februari",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2016MM03",
+   "Index": 82,
+   "Title": "2016 maart",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2016MM04",
+   "Index": 83,
+   "Title": "2016 april",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2016MM05",
+   "Index": 84,
+   "Title": "2016 mei",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2016MM06",
+   "Index": 85,
+   "Title": "2016 juni",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2016MM07",
+   "Index": 86,
+   "Title": "2016 juli",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2016MM08",
+   "Index": 87,
+   "Title": "2016 augustus",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2016MM09",
+   "Index": 88,
+   "Title": "2016 september",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2016MM10",
+   "Index": 89,
+   "Title": "2016 oktober",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2016MM11",
+   "Index": 90,
+   "Title": "2016 november",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2016MM12",
+   "Index": 91,
+   "Title": "2016 december",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2016JJ00",
+   "Index": 92,
+   "Title": "2016",
+   "Description": "",
+   "DimensionGroupId": "1",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2017MM01",
+   "Index": 93,
+   "Title": "2017 januari",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2017MM02",
+   "Index": 94,
+   "Title": "2017 februari",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2017MM03",
+   "Index": 95,
+   "Title": "2017 maart",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2017MM04",
+   "Index": 96,
+   "Title": "2017 april",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2017MM05",
+   "Index": 97,
+   "Title": "2017 mei",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2017MM06",
+   "Index": 98,
+   "Title": "2017 juni",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2017MM07",
+   "Index": 99,
+   "Title": "2017 juli",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2017MM08",
+   "Index": 100,
+   "Title": "2017 augustus",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2017MM09",
+   "Index": 101,
+   "Title": "2017 september",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2017MM10",
+   "Index": 102,
+   "Title": "2017 oktober",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2017MM11",
+   "Index": 103,
+   "Title": "2017 november",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2017MM12",
+   "Index": 104,
+   "Title": "2017 december",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2017JJ00",
+   "Index": 105,
+   "Title": "2017",
+   "Description": "",
+   "DimensionGroupId": "1",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2018MM01",
+   "Index": 106,
+   "Title": "2018 januari",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2018MM02",
+   "Index": 107,
+   "Title": "2018 februari",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2018MM03",
+   "Index": 108,
+   "Title": "2018 maart",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2018MM04",
+   "Index": 109,
+   "Title": "2018 april",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2018MM05",
+   "Index": 110,
+   "Title": "2018 mei",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2018MM06",
+   "Index": 111,
+   "Title": "2018 juni",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2018MM07",
+   "Index": 112,
+   "Title": "2018 juli",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2018MM08",
+   "Index": 113,
+   "Title": "2018 augustus",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2018MM09",
+   "Index": 114,
+   "Title": "2018 september",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2018MM10",
+   "Index": 115,
+   "Title": "2018 oktober",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2018MM11",
+   "Index": 116,
+   "Title": "2018 november",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2018MM12",
+   "Index": 117,
+   "Title": "2018 december",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2018JJ00",
+   "Index": 118,
+   "Title": "2018",
+   "Description": "",
+   "DimensionGroupId": "1",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2019MM01",
+   "Index": 119,
+   "Title": "2019 januari",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2019MM02",
+   "Index": 120,
+   "Title": "2019 februari",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2019MM03",
+   "Index": 121,
+   "Title": "2019 maart",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2019MM04",
+   "Index": 122,
+   "Title": "2019 april",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2019MM05",
+   "Index": 123,
+   "Title": "2019 mei",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2019MM06",
+   "Index": 124,
+   "Title": "2019 juni",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2019MM07",
+   "Index": 125,
+   "Title": "2019 juli",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2019MM08",
+   "Index": 126,
+   "Title": "2019 augustus",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2019MM09",
+   "Index": 127,
+   "Title": "2019 september",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2019MM10",
+   "Index": 128,
+   "Title": "2019 oktober",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2019MM11",
+   "Index": 129,
+   "Title": "2019 november",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2019MM12",
+   "Index": 130,
+   "Title": "2019 december",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2019JJ00",
+   "Index": 131,
+   "Title": "2019",
+   "Description": "",
+   "DimensionGroupId": "1",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2020MM01",
+   "Index": 132,
+   "Title": "2020 januari",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2020MM02",
+   "Index": 133,
+   "Title": "2020 februari",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2020MM03",
+   "Index": 134,
+   "Title": "2020 maart",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2020MM04",
+   "Index": 135,
+   "Title": "2020 april",
+   "Description": "De coronacrisis heeft gevolgen voor de totstandkoming van de cijfers voor deze periode. Zie de tabeltoelichting voor aanvullende informatie.",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2020MM05",
+   "Index": 136,
+   "Title": "2020 mei",
+   "Description": "De coronacrisis heeft gevolgen voor de totstandkoming van de cijfers voor deze periode. Zie de tabeltoelichting voor aanvullende informatie.",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2020MM06",
+   "Index": 137,
+   "Title": "2020 juni",
+   "Description": "De coronacrisis heeft gevolgen voor de totstandkoming van de cijfers voor deze periode. Zie de tabeltoelichting voor aanvullende informatie.",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2020MM07",
+   "Index": 138,
+   "Title": "2020 juli",
+   "Description": "De coronacrisis heeft gevolgen voor de totstandkoming van de cijfers voor deze periode. Zie de tabeltoelichting voor aanvullende informatie.",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2020MM08",
+   "Index": 139,
+   "Title": "2020 augustus",
+   "Description": "De coronacrisis heeft gevolgen voor de totstandkoming van de cijfers voor deze periode. Zie de tabeltoelichting voor aanvullende informatie.",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2020MM09",
+   "Index": 140,
+   "Title": "2020 september",
+   "Description": "De coronacrisis heeft gevolgen voor de totstandkoming van de cijfers voor deze periode. Zie de tabeltoelichting voor aanvullende informatie.",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2020MM10",
+   "Index": 141,
+   "Title": "2020 oktober",
+   "Description": "De coronacrisis heeft gevolgen voor de totstandkoming van de cijfers voor deze periode. Zie de tabeltoelichting voor aanvullende informatie.",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2020MM11",
+   "Index": 142,
+   "Title": "2020 november",
+   "Description": "De coronacrisis heeft gevolgen voor de totstandkoming van de cijfers voor deze periode. Zie de tabeltoelichting voor aanvullende informatie.",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2020MM12",
+   "Index": 143,
+   "Title": "2020 december",
+   "Description": "De coronacrisis heeft gevolgen voor de totstandkoming van de cijfers voor deze periode. Zie de tabeltoelichting voor aanvullende informatie.",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2020JJ00",
+   "Index": 144,
+   "Title": "2020",
+   "Description": "De coronacrisis heeft gevolgen voor de totstandkoming van de cijfers voor deze periode. Zie de tabeltoelichting voor aanvullende informatie.",
+   "DimensionGroupId": "1",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2021MM01",
+   "Index": 145,
+   "Title": "2021 januari",
+   "Description": "De coronacrisis heeft gevolgen voor de totstandkoming van de cijfers voor deze periode. Zie de tabeltoelichting voor aanvullende informatie.",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2021MM02",
+   "Index": 146,
+   "Title": "2021 februari",
+   "Description": "De coronacrisis heeft gevolgen voor de totstandkoming van de cijfers voor deze periode. Zie de tabeltoelichting voor aanvullende informatie.",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2021MM03",
+   "Index": 147,
+   "Title": "2021 maart",
+   "Description": "De coronacrisis heeft gevolgen voor de totstandkoming van de cijfers voor deze periode. Zie de tabeltoelichting voor aanvullende informatie.",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2021MM04",
+   "Index": 148,
+   "Title": "2021 april",
+   "Description": "De coronacrisis heeft gevolgen voor de totstandkoming van de cijfers voor deze periode. Zie de tabeltoelichting voor aanvullende informatie.",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2021MM05",
+   "Index": 149,
+   "Title": "2021 mei",
+   "Description": "De coronacrisis heeft gevolgen voor de totstandkoming van de cijfers voor deze periode. Zie de tabeltoelichting voor aanvullende informatie.",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2021MM06",
+   "Index": 150,
+   "Title": "2021 juni",
+   "Description": "De coronacrisis heeft gevolgen voor de totstandkoming van de cijfers voor deze periode. Zie de tabeltoelichting voor aanvullende informatie.",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2021MM07",
+   "Index": 151,
+   "Title": "2021 juli",
+   "Description": "De coronacrisis heeft gevolgen voor de totstandkoming van de cijfers voor deze periode. Zie de tabeltoelichting voor aanvullende informatie.",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2021MM08",
+   "Index": 152,
+   "Title": "2021 augustus",
+   "Description": "De coronacrisis heeft gevolgen voor de totstandkoming van de cijfers voor deze periode. Zie de tabeltoelichting voor aanvullende informatie.",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2021MM09",
+   "Index": 153,
+   "Title": "2021 september",
+   "Description": "De coronacrisis heeft gevolgen voor de totstandkoming van de cijfers voor deze periode. Zie de tabeltoelichting voor aanvullende informatie.",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2021MM10",
+   "Index": 154,
+   "Title": "2021 oktober",
+   "Description": "De coronacrisis heeft gevolgen voor de totstandkoming van de cijfers voor deze periode. Zie de tabeltoelichting voor aanvullende informatie.",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2021MM11",
+   "Index": 155,
+   "Title": "2021 november",
+   "Description": "De coronacrisis heeft gevolgen voor de totstandkoming van de cijfers voor deze periode. Zie de tabeltoelichting voor aanvullende informatie.",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2021MM12",
+   "Index": 156,
+   "Title": "2021 december",
+   "Description": "De coronacrisis heeft gevolgen voor de totstandkoming van de cijfers voor deze periode. Zie de tabeltoelichting voor aanvullende informatie.",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2021JJ00",
+   "Index": 157,
+   "Title": "2021",
+   "Description": "De coronacrisis heeft gevolgen voor de totstandkoming van de cijfers voor deze periode. Zie de tabeltoelichting voor aanvullende informatie.",
+   "DimensionGroupId": "1",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2022MM01",
+   "Index": 158,
+   "Title": "2022 januari",
+   "Description": "De coronacrisis heeft gevolgen voor de totstandkoming van de cijfers voor deze periode. Zie de tabeltoelichting voor aanvullende informatie.",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2022MM02",
+   "Index": 159,
+   "Title": "2022 februari",
+   "Description": "De coronacrisis heeft gevolgen voor de totstandkoming van de cijfers voor deze periode. Zie de tabeltoelichting voor aanvullende informatie.",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2022MM03",
+   "Index": 160,
+   "Title": "2022 maart",
+   "Description": "De coronacrisis heeft gevolgen voor de totstandkoming van de cijfers voor deze periode. Zie de tabeltoelichting voor aanvullende informatie.",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2022MM04",
+   "Index": 161,
+   "Title": "2022 april",
+   "Description": "De coronacrisis heeft gevolgen voor de totstandkoming van de cijfers voor deze periode. Zie de tabeltoelichting voor aanvullende informatie.",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2022MM05",
+   "Index": 162,
+   "Title": "2022 mei",
+   "Description": "De coronacrisis heeft gevolgen voor de totstandkoming van de cijfers voor deze periode. Zie de tabeltoelichting voor aanvullende informatie.",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2022MM06",
+   "Index": 163,
+   "Title": "2022 juni",
+   "Description": "De coronacrisis heeft gevolgen voor de totstandkoming van de cijfers voor deze periode. Zie de tabeltoelichting voor aanvullende informatie.",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2022MM07",
+   "Index": 164,
+   "Title": "2022 juli",
+   "Description": "De coronacrisis heeft gevolgen voor de totstandkoming van de cijfers voor deze periode. Zie de tabeltoelichting voor aanvullende informatie.",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2022MM08",
+   "Index": 165,
+   "Title": "2022 augustus",
+   "Description": "De coronacrisis heeft gevolgen voor de totstandkoming van de cijfers voor deze periode. Zie de tabeltoelichting voor aanvullende informatie.",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2022MM09",
+   "Index": 166,
+   "Title": "2022 september",
+   "Description": "De coronacrisis heeft gevolgen voor de totstandkoming van de cijfers voor deze periode. Zie de tabeltoelichting voor aanvullende informatie.",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2022MM10",
+   "Index": 167,
+   "Title": "2022 oktober",
+   "Description": "De coronacrisis heeft gevolgen voor de totstandkoming van de cijfers voor deze periode. Zie de tabeltoelichting voor aanvullende informatie.",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2022MM11",
+   "Index": 168,
+   "Title": "2022 november",
+   "Description": "De coronacrisis heeft gevolgen voor de totstandkoming van de cijfers voor deze periode. Zie de tabeltoelichting voor aanvullende informatie.",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2022MM12",
+   "Index": 169,
+   "Title": "2022 december",
+   "Description": "De coronacrisis heeft gevolgen voor de totstandkoming van de cijfers voor deze periode. Zie de tabeltoelichting voor aanvullende informatie.",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2022JJ00",
+   "Index": 170,
+   "Title": "2022",
+   "Description": "De coronacrisis heeft gevolgen voor de totstandkoming van de cijfers voor deze periode. Zie de tabeltoelichting voor aanvullende informatie.",
+   "DimensionGroupId": "1",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2023MM01",
+   "Index": 171,
+   "Title": "2023 januari",
+   "Description": "De coronacrisis heeft gevolgen voor de totstandkoming van de cijfers voor deze periode. Zie de tabeltoelichting voor aanvullende informatie.",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2023MM02",
+   "Index": 172,
+   "Title": "2023 februari",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2023MM03",
+   "Index": 173,
+   "Title": "2023 maart",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2023MM04",
+   "Index": 174,
+   "Title": "2023 april",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2023MM05",
+   "Index": 175,
+   "Title": "2023 mei",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2023MM06",
+   "Index": 176,
+   "Title": "2023 juni",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2023MM07",
+   "Index": 177,
+   "Title": "2023 juli",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2023MM08",
+   "Index": 178,
+   "Title": "2023 augustus",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2023MM09",
+   "Index": 179,
+   "Title": "2023 september",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2023MM10",
+   "Index": 180,
+   "Title": "2023 oktober",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2023MM11",
+   "Index": 181,
+   "Title": "2023 november",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2023MM12",
+   "Index": 182,
+   "Title": "2023 december",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2023JJ00",
+   "Index": 183,
+   "Title": "2023",
+   "Description": "",
+   "DimensionGroupId": "1",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2024MM01",
+   "Index": 184,
+   "Title": "2024 januari",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2024MM02",
+   "Index": 185,
+   "Title": "2024 februari",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2024MM03",
+   "Index": 186,
+   "Title": "2024 maart",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2024MM04",
+   "Index": 187,
+   "Title": "2024 april",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2024MM05",
+   "Index": 188,
+   "Title": "2024 mei",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2024MM06",
+   "Index": 189,
+   "Title": "2024 juni",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2024MM07",
+   "Index": 190,
+   "Title": "2024 juli",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2024MM08",
+   "Index": 191,
+   "Title": "2024 augustus",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2024MM09",
+   "Index": 192,
+   "Title": "2024 september",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2024MM10",
+   "Index": 193,
+   "Title": "2024 oktober",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2024MM11",
+   "Index": 194,
+   "Title": "2024 november",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2024MM12",
+   "Index": 195,
+   "Title": "2024 december",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2024JJ00",
+   "Index": 196,
+   "Title": "2024",
+   "Description": "",
+   "DimensionGroupId": "1",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2025MM01",
+   "Index": 197,
+   "Title": "2025 januari",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2025MM02",
+   "Index": 198,
+   "Title": "2025 februari",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2025MM03",
+   "Index": 199,
+   "Title": "2025 maart",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2025MM04",
+   "Index": 200,
+   "Title": "2025 april",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2025MM05",
+   "Index": 201,
+   "Title": "2025 mei",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2025MM06",
+   "Index": 202,
+   "Title": "2025 juni",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2025MM07",
+   "Index": 203,
+   "Title": "2025 juli",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2025MM08",
+   "Index": 204,
+   "Title": "2025 augustus",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2025MM09",
+   "Index": 205,
+   "Title": "2025 september",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2025MM10",
+   "Index": 206,
+   "Title": "2025 oktober",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2025MM11",
+   "Index": 207,
+   "Title": "2025 november",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2025MM12",
+   "Index": 208,
+   "Title": "2025 december",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2025JJ00",
+   "Index": 209,
+   "Title": "2025",
+   "Description": "",
+   "DimensionGroupId": "1",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2026MM01",
+   "Index": 210,
+   "Title": "2026 januari",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2026MM02",
+   "Index": 211,
+   "Title": "2026 februari",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2026MM03",
+   "Index": 212,
+   "Title": "2026 maart",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2026MM04",
+   "Index": 213,
+   "Title": "2026 april",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2026MM05",
+   "Index": 214,
+   "Title": "2026 mei",
+   "Description": "Voorlopige cijfers.",
+   "DimensionGroupId": "0",
+   "Status": "Voorlopig"
+  },
+  {
+   "Identifier": "2026MM06",
+   "Index": 215,
+   "Title": "2026 juni",
+   "Description": "Snelle raming",
+   "DimensionGroupId": "0",
+   "Status": "Voorlopig"
+  }
+ ]
+}

@@ -1,0 +1,761 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/03759ned/$metadata#LeeftijdCodes",
+ "value": [
+  {
+   "Identifier": "10000",
+   "Index": 1,
+   "Title": "Totaal",
+   "Description": "",
+   "DimensionGroupId": "1"
+  },
+  {
+   "Identifier": "10010",
+   "Index": 2,
+   "Title": "0 jaar",
+   "Description": "",
+   "DimensionGroupId": "2"
+  },
+  {
+   "Identifier": "10100",
+   "Index": 3,
+   "Title": "1 jaar",
+   "Description": "",
+   "DimensionGroupId": "2"
+  },
+  {
+   "Identifier": "10200",
+   "Index": 4,
+   "Title": "2 jaar",
+   "Description": "",
+   "DimensionGroupId": "2"
+  },
+  {
+   "Identifier": "10300",
+   "Index": 5,
+   "Title": "3 jaar",
+   "Description": "",
+   "DimensionGroupId": "2"
+  },
+  {
+   "Identifier": "10400",
+   "Index": 6,
+   "Title": "4 jaar",
+   "Description": "",
+   "DimensionGroupId": "2"
+  },
+  {
+   "Identifier": "10500",
+   "Index": 7,
+   "Title": "5 jaar",
+   "Description": "",
+   "DimensionGroupId": "2"
+  },
+  {
+   "Identifier": "10600",
+   "Index": 8,
+   "Title": "6 jaar",
+   "Description": "",
+   "DimensionGroupId": "2"
+  },
+  {
+   "Identifier": "10700",
+   "Index": 9,
+   "Title": "7 jaar",
+   "Description": "",
+   "DimensionGroupId": "2"
+  },
+  {
+   "Identifier": "10800",
+   "Index": 10,
+   "Title": "8 jaar",
+   "Description": "",
+   "DimensionGroupId": "2"
+  },
+  {
+   "Identifier": "10900",
+   "Index": 11,
+   "Title": "9 jaar",
+   "Description": "",
+   "DimensionGroupId": "2"
+  },
+  {
+   "Identifier": "11000",
+   "Index": 12,
+   "Title": "10 jaar",
+   "Description": "",
+   "DimensionGroupId": "3"
+  },
+  {
+   "Identifier": "11100",
+   "Index": 13,
+   "Title": "11 jaar",
+   "Description": "",
+   "DimensionGroupId": "3"
+  },
+  {
+   "Identifier": "11200",
+   "Index": 14,
+   "Title": "12 jaar",
+   "Description": "",
+   "DimensionGroupId": "3"
+  },
+  {
+   "Identifier": "11300",
+   "Index": 15,
+   "Title": "13 jaar",
+   "Description": "",
+   "DimensionGroupId": "3"
+  },
+  {
+   "Identifier": "11400",
+   "Index": 16,
+   "Title": "14 jaar",
+   "Description": "",
+   "DimensionGroupId": "3"
+  },
+  {
+   "Identifier": "11500",
+   "Index": 17,
+   "Title": "15 jaar",
+   "Description": "",
+   "DimensionGroupId": "3"
+  },
+  {
+   "Identifier": "11600",
+   "Index": 18,
+   "Title": "16 jaar",
+   "Description": "",
+   "DimensionGroupId": "3"
+  },
+  {
+   "Identifier": "11700",
+   "Index": 19,
+   "Title": "17 jaar",
+   "Description": "",
+   "DimensionGroupId": "3"
+  },
+  {
+   "Identifier": "11800",
+   "Index": 20,
+   "Title": "18 jaar",
+   "Description": "",
+   "DimensionGroupId": "3"
+  },
+  {
+   "Identifier": "11900",
+   "Index": 21,
+   "Title": "19 jaar",
+   "Description": "",
+   "DimensionGroupId": "3"
+  },
+  {
+   "Identifier": "12000",
+   "Index": 22,
+   "Title": "20 jaar",
+   "Description": "",
+   "DimensionGroupId": "4"
+  },
+  {
+   "Identifier": "12100",
+   "Index": 23,
+   "Title": "21 jaar",
+   "Description": "",
+   "DimensionGroupId": "4"
+  },
+  {
+   "Identifier": "12200",
+   "Index": 24,
+   "Title": "22 jaar",
+   "Description": "",
+   "DimensionGroupId": "4"
+  },
+  {
+   "Identifier": "12300",
+   "Index": 25,
+   "Title": "23 jaar",
+   "Description": "",
+   "DimensionGroupId": "4"
+  },
+  {
+   "Identifier": "12400",
+   "Index": 26,
+   "Title": "24 jaar",
+   "Description": "",
+   "DimensionGroupId": "4"
+  },
+  {
+   "Identifier": "12500",
+   "Index": 27,
+   "Title": "25 jaar",
+   "Description": "",
+   "DimensionGroupId": "4"
+  },
+  {
+   "Identifier": "12600",
+   "Index": 28,
+   "Title": "26 jaar",
+   "Description": "",
+   "DimensionGroupId": "4"
+  },
+  {
+   "Identifier": "12700",
+   "Index": 29,
+   "Title": "27 jaar",
+   "Description": "",
+   "DimensionGroupId": "4"
+  },
+  {
+   "Identifier": "12800",
+   "Index": 30,
+   "Title": "28 jaar",
+   "Description": "",
+   "DimensionGroupId": "4"
+  },
+  {
+   "Identifier": "12900",
+   "Index": 31,
+   "Title": "29 jaar",
+   "Description": "",
+   "DimensionGroupId": "4"
+  },
+  {
+   "Identifier": "13000",
+   "Index": 32,
+   "Title": "30 jaar",
+   "Description": "",
+   "DimensionGroupId": "5"
+  },
+  {
+   "Identifier": "13100",
+   "Index": 33,
+   "Title": "31 jaar",
+   "Description": "",
+   "DimensionGroupId": "5"
+  },
+  {
+   "Identifier": "13200",
+   "Index": 34,
+   "Title": "32 jaar",
+   "Description": "",
+   "DimensionGroupId": "5"
+  },
+  {
+   "Identifier": "13300",
+   "Index": 35,
+   "Title": "33 jaar",
+   "Description": "",
+   "DimensionGroupId": "5"
+  },
+  {
+   "Identifier": "13400",
+   "Index": 36,
+   "Title": "34 jaar",
+   "Description": "",
+   "DimensionGroupId": "5"
+  },
+  {
+   "Identifier": "13500",
+   "Index": 37,
+   "Title": "35 jaar",
+   "Description": "",
+   "DimensionGroupId": "5"
+  },
+  {
+   "Identifier": "13600",
+   "Index": 38,
+   "Title": "36 jaar",
+   "Description": "",
+   "DimensionGroupId": "5"
+  },
+  {
+   "Identifier": "13700",
+   "Index": 39,
+   "Title": "37 jaar",
+   "Description": "",
+   "DimensionGroupId": "5"
+  },
+  {
+   "Identifier": "13800",
+   "Index": 40,
+   "Title": "38 jaar",
+   "Description": "",
+   "DimensionGroupId": "5"
+  },
+  {
+   "Identifier": "13900",
+   "Index": 41,
+   "Title": "39 jaar",
+   "Description": "",
+   "DimensionGroupId": "5"
+  },
+  {
+   "Identifier": "14000",
+   "Index": 42,
+   "Title": "40 jaar",
+   "Description": "",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "14100",
+   "Index": 43,
+   "Title": "41 jaar",
+   "Description": "",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "14200",
+   "Index": 44,
+   "Title": "42 jaar",
+   "Description": "",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "14300",
+   "Index": 45,
+   "Title": "43 jaar",
+   "Description": "",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "14400",
+   "Index": 46,
+   "Title": "44 jaar",
+   "Description": "",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "14500",
+   "Index": 47,
+   "Title": "45 jaar",
+   "Description": "",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "14600",
+   "Index": 48,
+   "Title": "46 jaar",
+   "Description": "",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "14700",
+   "Index": 49,
+   "Title": "47 jaar",
+   "Description": "",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "14800",
+   "Index": 50,
+   "Title": "48 jaar",
+   "Description": "",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "14900",
+   "Index": 51,
+   "Title": "49 jaar",
+   "Description": "",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "15000",
+   "Index": 52,
+   "Title": "50 jaar",
+   "Description": "",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "15100",
+   "Index": 53,
+   "Title": "51 jaar",
+   "Description": "",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "15200",
+   "Index": 54,
+   "Title": "52 jaar",
+   "Description": "",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "15300",
+   "Index": 55,
+   "Title": "53 jaar",
+   "Description": "",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "15400",
+   "Index": 56,
+   "Title": "54 jaar",
+   "Description": "",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "15500",
+   "Index": 57,
+   "Title": "55 jaar",
+   "Description": "",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "15600",
+   "Index": 58,
+   "Title": "56 jaar",
+   "Description": "",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "15700",
+   "Index": 59,
+   "Title": "57 jaar",
+   "Description": "",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "15800",
+   "Index": 60,
+   "Title": "58 jaar",
+   "Description": "",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "15900",
+   "Index": 61,
+   "Title": "59 jaar",
+   "Description": "",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "16000",
+   "Index": 62,
+   "Title": "60 jaar",
+   "Description": "",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "16100",
+   "Index": 63,
+   "Title": "61 jaar",
+   "Description": "",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "16200",
+   "Index": 64,
+   "Title": "62 jaar",
+   "Description": "",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "16300",
+   "Index": 65,
+   "Title": "63 jaar",
+   "Description": "",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "16400",
+   "Index": 66,
+   "Title": "64 jaar",
+   "Description": "",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "16500",
+   "Index": 67,
+   "Title": "65 jaar",
+   "Description": "",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "16600",
+   "Index": 68,
+   "Title": "66 jaar",
+   "Description": "",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "16700",
+   "Index": 69,
+   "Title": "67 jaar",
+   "Description": "",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "16800",
+   "Index": 70,
+   "Title": "68 jaar",
+   "Description": "",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "16900",
+   "Index": 71,
+   "Title": "69 jaar",
+   "Description": "",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "17000",
+   "Index": 72,
+   "Title": "70 jaar",
+   "Description": "",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "17100",
+   "Index": 73,
+   "Title": "71 jaar",
+   "Description": "",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "17200",
+   "Index": 74,
+   "Title": "72 jaar",
+   "Description": "",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "17300",
+   "Index": 75,
+   "Title": "73 jaar",
+   "Description": "",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "17400",
+   "Index": 76,
+   "Title": "74 jaar",
+   "Description": "",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "17500",
+   "Index": 77,
+   "Title": "75 jaar",
+   "Description": "",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "17600",
+   "Index": 78,
+   "Title": "76 jaar",
+   "Description": "",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "17700",
+   "Index": 79,
+   "Title": "77 jaar",
+   "Description": "",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "17800",
+   "Index": 80,
+   "Title": "78 jaar",
+   "Description": "",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "17900",
+   "Index": 81,
+   "Title": "79 jaar",
+   "Description": "",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "18000",
+   "Index": 82,
+   "Title": "80 jaar",
+   "Description": "",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "18100",
+   "Index": 83,
+   "Title": "81 jaar",
+   "Description": "",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "18200",
+   "Index": 84,
+   "Title": "82 jaar",
+   "Description": "",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "18300",
+   "Index": 85,
+   "Title": "83 jaar",
+   "Description": "",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "18400",
+   "Index": 86,
+   "Title": "84 jaar",
+   "Description": "",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "18500",
+   "Index": 87,
+   "Title": "85 jaar",
+   "Description": "",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "18600",
+   "Index": 88,
+   "Title": "86 jaar",
+   "Description": "",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "18700",
+   "Index": 89,
+   "Title": "87 jaar",
+   "Description": "",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "18800",
+   "Index": 90,
+   "Title": "88 jaar",
+   "Description": "",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "18900",
+   "Index": 91,
+   "Title": "89 jaar",
+   "Description": "",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "19000",
+   "Index": 92,
+   "Title": "90 jaar",
+   "Description": "",
+   "DimensionGroupId": "11"
+  },
+  {
+   "Identifier": "19100",
+   "Index": 93,
+   "Title": "91 jaar",
+   "Description": "",
+   "DimensionGroupId": "11"
+  },
+  {
+   "Identifier": "19200",
+   "Index": 94,
+   "Title": "92 jaar",
+   "Description": "",
+   "DimensionGroupId": "11"
+  },
+  {
+   "Identifier": "19300",
+   "Index": 95,
+   "Title": "93 jaar",
+   "Description": "",
+   "DimensionGroupId": "11"
+  },
+  {
+   "Identifier": "19400",
+   "Index": 96,
+   "Title": "94 jaar",
+   "Description": "",
+   "DimensionGroupId": "11"
+  },
+  {
+   "Identifier": "22000",
+   "Index": 97,
+   "Title": "95 jaar of ouder",
+   "Description": "",
+   "DimensionGroupId": "13"
+  },
+  {
+   "Identifier": "19500",
+   "Index": 98,
+   "Title": "95 jaar",
+   "Description": "",
+   "DimensionGroupId": "11"
+  },
+  {
+   "Identifier": "19600",
+   "Index": 99,
+   "Title": "96 jaar",
+   "Description": "",
+   "DimensionGroupId": "11"
+  },
+  {
+   "Identifier": "19700",
+   "Index": 100,
+   "Title": "97 jaar",
+   "Description": "",
+   "DimensionGroupId": "11"
+  },
+  {
+   "Identifier": "19800",
+   "Index": 101,
+   "Title": "98 jaar",
+   "Description": "",
+   "DimensionGroupId": "11"
+  },
+  {
+   "Identifier": "19900",
+   "Index": 102,
+   "Title": "99 jaar",
+   "Description": "",
+   "DimensionGroupId": "11"
+  },
+  {
+   "Identifier": "19901",
+   "Index": 103,
+   "Title": "100 jaar",
+   "Description": "",
+   "DimensionGroupId": "12"
+  },
+  {
+   "Identifier": "19902",
+   "Index": 104,
+   "Title": "101 jaar",
+   "Description": "",
+   "DimensionGroupId": "12"
+  },
+  {
+   "Identifier": "19903",
+   "Index": 105,
+   "Title": "102 jaar",
+   "Description": "",
+   "DimensionGroupId": "12"
+  },
+  {
+   "Identifier": "19904",
+   "Index": 106,
+   "Title": "103 jaar",
+   "Description": "",
+   "DimensionGroupId": "12"
+  },
+  {
+   "Identifier": "19905",
+   "Index": 107,
+   "Title": "104 jaar",
+   "Description": "",
+   "DimensionGroupId": "12"
+  },
+  {
+   "Identifier": "22300",
+   "Index": 108,
+   "Title": "105 jaar of ouder",
+   "Description": "",
+   "DimensionGroupId": "13"
+  }
+ ]
+}

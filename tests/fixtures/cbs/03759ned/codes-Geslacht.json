@@ -1,0 +1,26 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/03759ned/$metadata#GeslachtCodes",
+ "value": [
+  {
+   "Identifier": "T001038",
+   "Index": 1,
+   "Title": "Totaal mannen en vrouwen",
+   "Description": "",
+   "DimensionGroupId": null
+  },
+  {
+   "Identifier": "3000",
+   "Index": 2,
+   "Title": "Mannen",
+   "Description": "",
+   "DimensionGroupId": null
+  },
+  {
+   "Identifier": "4000",
+   "Index": 3,
+   "Title": "Vrouwen",
+   "Description": "",
+   "DimensionGroupId": null
+  }
+ ]
+}

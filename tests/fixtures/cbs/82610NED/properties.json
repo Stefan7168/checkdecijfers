@@ -1,0 +1,84 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/82610NED/$metadata#Properties",
+ "Identifier": "82610NED",
+ "Title": "Hernieuwbare elektriciteit; productie en vermogen ",
+ "Description": "Deze tabel bevat gegevens over de Nederlandse productie van hernieuwbare elektriciteit, het aantal daarbij gebruikte installaties en het opgestelde vermogen van die installaties. Bij de productie wordt daarbij een onderscheid gemaakt naar genormaliseerd bruto productie en niet genormaliseerde bruto en netto productie. \r\n\r\nElektriciteitsproductie wordt weergegeven in miljoen kilowattuur en in percentage van het totale elektriciteitsverbruik in Nederland. De hernieuwbare elektriciteitsproductie wordt afgezet tegen het totale elektriciteitsverbruik en niet tegen de totale elektriciteitsproductie. Deze keuze vloeit voort uit Europese afspraken.\r\n\r\nDe gegevens zijn uitgesplitst naar het soort energiebron en de toegepaste techniek om de elektriciteit te verkrijgen. Daarbij wordt onderscheid gemaakt naar vier hoofdcategorieën: waterkracht, windenergie, zonnestroom en biomassa.\r\n\r\nGegevens beschikbaar vanaf: 1990.\r\n\r\nStatus van de cijfers:\r\nDe cijfers in deze tabel zijn definitief tot en met 2023 en nader voorlopig voor 2024 en 2025.\r\n\r\nWijzigingen per juni 2026:\r\nNader voorlopige cijfers over 2025 zijn toegevoegd.\r\n\r\nWijzigingen per 9 maart 2026\r\nVoorlopige cijfers over 2025 zijn toegevoegd.\r\n\r\nWijzigingen per 18 november 2025:\r\nDe cijfers over 2023 en 2024 zijn geactualiseerd.\r\n\r\nWijzigingen per 6 juni 2025:\r\nCijfers over 2024 zijn geactualiseerd.\r\n\r\nWijzigingen per 10 maart 2025:\r\nCijfers over 2024 toegevoegd.\r\n\r\nWanneer komen er nieuwe cijfers: \r\nVoorlopige cijfers over de elektriciteitsproductie van het voorafgaande jaar verschijnen elk jaar in februari. \r\nNader voorlopige cijfers over de elektriciteitsproductie van het voorafgaande jaar verschijnen elk jaar in juni. \r\nDefinitieve cijfers over de elektriciteitsproductie van het voorafgaande jaar verschijnen elk jaar in december.\r\n\r\n\r\n",
+ "Language": "nl",
+ "Authority": "https://standaarden.overheid.nl/owms/terms/Centraal_Bureau_voor_de_Statistiek",
+ "Modified": "2026-06-19T06:30:00+02:00",
+ "ReleaseDate": "2026-06-19T06:30:00+02:00",
+ "ModificationDate": "2026-06-19T00:00:00+02:00",
+ "TemporalCoverage": "1990-2025",
+ "Catalog": "CBS",
+ "Publisher": "https://standaarden.overheid.nl/owms/terms/Centraal_Bureau_voor_de_Statistiek",
+ "ContactPoint": "infoservice@cbs.nl",
+ "Version": "202606190630",
+ "VersionNotes": "",
+ "VersionReason": "Actualisering",
+ "Frequency": "Per jaar",
+ "Status": "Regulier",
+ "ObservationCount": 3863,
+ "ObservationsModified": "2026-06-19T00:00:00+02:00",
+ "DatasetType": "Numeric",
+ "GraphTypes": "Table,Bar,Line",
+ "License": "https://creativecommons.org/licenses/by/4.0/",
+ "Source": "CBS.",
+ "Summary": "Production and capacity of renewable energy\nHydro power, wind energy, solar energy, biomass",
+ "LongDescription": "INHOUDSOPGAVE\r\n\r\n1. Toelichting\r\n2. Definities en verklaring van symbolen\r\n3. Koppelingen naar relevante tabellen en artikelen.\r\n4. Bronnen en methoden.\r\n5. Meer informatie\r\n\r\n\r\n1. TOELICHTING\r\n\r\nDeze tabel bevat gegevens over de Nederlandse productie van hernieuwbare elektriciteit, het aantal daarbij gebruikte installaties en het opgestelde vermogen van die installaties. Bij de productie wordt daarbij een onderscheid gemaakt naar genormaliseerd bruto productie en niet genormaliseerde bruto en netto productie. \r\n\r\nElektriciteitsproductie wordt weergegeven in miljoen kilowattuur en in percentage van het totale elektriciteitsverbruik in Nederland. De hernieuwbare elektriciteitsproductie wordt afgezet tegen het totale elektriciteitsverbruik en niet tegen de totale elektriciteitsproductie. Deze keuze vloeit voort uit Europese afspraken.\r\n\r\nDe gegevens zijn uitgesplitst naar het soort energiebron en de toegepaste techniek om de elektriciteit te verkrijgen. Daarbij wordt onderscheid gemaakt naar vier hoofdcategorieën: waterkracht, windenergie, zonnestroom en biomassa.\r\n\r\nGegevens beschikbaar vanaf: 1990.\r\n\r\nStatus van de cijfers:\r\nDe cijfers in deze tabel zijn definitief tot en met 2023 en nader voorlopig voor 2024 en 2025.\r\n\r\nWijzigingen per juni 2026:\r\nNader voorlopige cijfers over 2025 zijn toegevoegd.\r\n\r\nWijzigingen per 9 maart 2026\r\nVoorlopige cijfers over 2025 zijn toegevoegd.\r\n\r\nWijzigingen per 18 november 2025:\r\nDe cijfers over 2023 en 2024 zijn geactualiseerd.\r\n\r\nWijzigingen per 6 juni 2025:\r\nCijfers over 2024 zijn geactualiseerd.\r\n\r\nWijzigingen per 10 maart 2025:\r\nCijfers over 2024 toegevoegd.\r\n\r\nWanneer komen er nieuwe cijfers: \r\nVoorlopige cijfers over de elektriciteitsproductie van het voorafgaande jaar verschijnen elk jaar in februari. \r\nNader voorlopige cijfers over de elektriciteitsproductie van het voorafgaande jaar verschijnen elk jaar in juni. \r\nDefinitieve cijfers over de elektriciteitsproductie van het voorafgaande jaar verschijnen elk jaar in december.\r\n\r\n\r\n2. DEFINITIES EN VERKLARING VAN SYMBOLEN\r\n\r\nDefinities:\r\n\r\nHernieuwbare elektriciteit:\r\nElektriciteit opgewekt uit wind, waterkracht, zon of biomassa. Het is elektriciteit uit bronnen die steeds opnieuw worden aangevuld.\r\n\r\nBruto/netto productie:\r\nBruto productie is de productie inclusief het eigen verbruik, netto productie is de productie exclusief het eigen verbruik. Het eigen verbruik is de elektriciteit die wordt gebruikt bij de elektriciteitsopwekking.\r\n\r\nGenormaliseerde elektriciteitsproductie:\r\nHernieuwbare elektriciteitsproductie volgens de EU-Richtlijn Hernieuwbare Energie (2018). Dit houdt in dat er wordt gecorrigeerd voor weersomstandigheden (voor waterkracht en windenergie). Ook wordt de indirecte elektriciteitsproductie uit groen gas meegenomen. Tot slot geldt vanaf verslagjaar 2021 dat elektriciteitsproductie uit vaste biomassa en biogas in installaties boven een bepaalde vermogensgrens alleen wordt meegenomen indien de gebruikte biomassa voldoet aan de duurzaamheidsregels uit de EU-Richtlijn Hernieuwbare Energie.\r\n\r\nGroen gas:\r\nGroen gas is biogas dat is opgewerkt tot aardgaskwaliteit en is geïnjecteerd in het aardgasnet.\r\n\r\nWatt:\r\nEen Watt is de fysieke eenheid van elektrisch vermogen. 1 megawatt (MW of MWe, waarbij de e staat voor elektriciteit) = 1 miljoen Watt. Een generator met een elektrisch vermogen van 1 MW kan per uur een hoeveelheid elektriciteit produceren van 1 MWh (megawattuur). \r\n\r\nVerklaring van symbolen:\r\n\r\nniets (blanco)\t: het cijfer kan op logische gronden niet voorkomen\r\n. \t\t: het cijfer is onbekend, onvoldoende betrouwbaar of geheim\r\n*\t\t: voorlopige cijfers\r\n**\t\t: nader voorlopige cijfers\r\n\r\nIn deze tabel wordt het symbool niets (blanco) ook gebruikt voor cellen die nihil zijn.\r\n\r\n\r\n3. KOPPELINGEN NAAR RELEVANTE TABELLEN EN ARTIKELEN\r\n\r\nRelevante tabellen:\r\n<a href=\"https://opendata.cbs.nl/statline/#/CBS/nl/dataset/83140NED\">Energiebalans; aanbod, omzetting en verbruik</a>.\r\n<a href=\"https://opendata.cbs.nl/statline/#/CBS/nl/dataset/83989NED\">Energiebalans; aanbod en verbruik, sector</a>.\r\n<a href=\"https://opendata.cbs.nl/statline/#/CBS/nl/dataset/86329NED\">Hernieuwbare energie; verbruik naar energiebron en techniek</a>.\r\n<a href=\"https://opendata.cbs.nl/statline/#/CBS/nl/dataset/86330NED\">Hernieuwbare warmte en koude; verbruik naar energiebron en techniek</a>.\r\n<a href=\"https://opendata.cbs.nl/statline/#/CBS/nl/dataset/85005NED\">Zonnestroom; vermogen en vermogensklasse, bedrijven en woningen, regio</a>.\r\n<a href=\"https://opendata.cbs.nl/statline/#/CBS/nl/dataset/85004NED\">Hernieuwbare energie; zonnestroom, windenergie, RES-regio</a>.\r\n\r\nRelevante artikelen:\r\nGeen.\r\n\r\nMeer informatie is te vinden op de themapagina <a href=\"https://www.cbs.nl/nl-nl/economie/industrie-en-energie\">Industrie en energie</a>.\r\n\r\n\r\n4. BRONNEN EN METHODEN\r\n\r\nDe onderzoeksmethode van deze tabel is te vinden in de onderzoeksbeschrijving <a href=\"https://www.cbs.nl/nl-nl/onze-diensten/methoden/onderzoeksomschrijvingen/korte-onderzoeksbeschrijvingen/hernieuwbare-energie\">Hernieuwbare energie</a>.\r\n\r\nDe onderzoeksmethode voor de berekening van zonnestroom is te vinden in de onderzoeksbeschrijving <a href='https://www.cbs.nl/nl-nl/onze-diensten/methoden/onderzoeksomschrijvingen/korte-onderzoeksbeschrijvingen/zonnestroom-op-regionaal-niveau'>Zonnestroom op regionaal niveau</a>.\r\n\r\n\r\n5. MEER INFORMATIE\r\n\r\n<a href=\"https://www.cbs.nl/nl-nl/over-ons/contact/infoservice\">Infoservice</a>\r\n\r\nCopyright © Centraal Bureau voor de Statistiek, Den Haag/Heerlen\r\n\r\nVerveelvoudiging is toegestaan, mits het CBS als bron wordt vermeld.",
+ "Provenance": [
+  {
+   "Title": "Hernieuwbare energie",
+   "Url": "https://www.cbs.nl/nl-nl/onze-diensten/methoden/onderzoeksomschrijvingen/korte-onderzoeksbeschrijvingen/hernieuwbare-energie"
+  },
+  {
+   "Title": "Zonnestroom op regionaal niveau",
+   "Url": "https://www.cbs.nl/nl-nl/onze-diensten/methoden/onderzoeksomschrijvingen/korte-onderzoeksbeschrijvingen/zonnestroom-op-regionaal-niveau"
+  }
+ ],
+ "RelatedSources": [
+  {
+   "Title": "Energiebalans; aanbod, omzetting en verbruik",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/dataset/83140NED"
+  },
+  {
+   "Title": "Energiebalans; aanbod en verbruik, sector",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/dataset/83989NED"
+  },
+  {
+   "Title": "Hernieuwbare energie; verbruik naar energiebron en techniek",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/dataset/86329NED"
+  },
+  {
+   "Title": "Hernieuwbare warmte en koude; verbruik naar energiebron en techniek",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/dataset/86330NED"
+  },
+  {
+   "Title": "Zonnestroom; vermogen en vermogensklasse, bedrijven en woningen, regio",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/dataset/85005NED"
+  },
+  {
+   "Title": "Hernieuwbare energie; zonnestroom, windenergie, RES-regio",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/dataset/85004NED"
+  },
+  {
+   "Title": "Industrie en energie",
+   "Url": "https://www.cbs.nl/nl-nl/economie/industrie-en-energie"
+  }
+ ],
+ "Distributions": [
+  {
+   "Format": "csv",
+   "MediaType": "csv",
+   "DownloadUrl": "https://datasets.cbs.nl/csv/CBS/nl/82610NED",
+   "AccessUrl": "https://dataportal.cbs.nl/detail/CBS/82610NED",
+   "Language": "nl"
+  },
+  {
+   "Format": "odata",
+   "MediaType": "odata",
+   "DownloadUrl": "https://datasets.cbs.nl/odata/v1/CBS/82610NED",
+   "AccessUrl": "https://dataportal.cbs.nl/detail/CBS/82610NED",
+   "Language": "nl"
+  }
+ ]
+}

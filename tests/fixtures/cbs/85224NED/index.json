@@ -1,0 +1,18 @@
+{
+ "tableId": "85224NED",
+ "capturedAt": "2026-07-02T12:11:16.187Z",
+ "source": "https://datasets.cbs.nl/odata/v1/CBS/85224NED",
+ "sliceFilter": null,
+ "sampleOnly": false,
+ "observationRows": 4046,
+ "observationPages": [
+  "observations-page-1.json"
+ ],
+ "files": {
+  "properties": "properties.json",
+  "dimensions": "dimensions.json",
+  "measure-codes": "measure-codes.json",
+  "codes-SeizoenEnWerkdagcorrectie": "codes-SeizoenEnWerkdagcorrectie.json",
+  "codes-Perioden": "codes-Perioden.json"
+ }
+}

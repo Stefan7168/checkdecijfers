@@ -1,11 +1,14 @@
 # CI gate — the owner's trust signal. "The tests pass" is a claim only CI can make
 # (CLAUDE.md conventions). Runs the three gate suites on every push:
 #   1. ingestion fixture tests   2. invariant tests   3. benchmark suite + scorer
-# Phase 0, session 1: the suites are honest scaffolds (todo-marked obligations plus
-# real doc-consistency and benchmark-structure tests). They gain teeth with their
-# respective work packages; the gate itself is live from this commit on.
+# State per work package: the ingestion suite has real teeth since WP2 (wire-level
+# corruption fixtures against an embedded Postgres, ADR 009); the invariant and
+# benchmark suites remain honest scaffolds (todo-marked obligations plus real
+# doc-consistency tests) that gain teeth with their work packages; the scorer
+# refuses to report scores until the answer key freezes.
 # Deploy-blocking on red attaches when Vercel is connected (later Phase 0 session).
-# This workflow is hermetic: no secrets, no network beyond npm.
+# This workflow is hermetic: no secrets, no network beyond npm — which is why the
+# ingestion tests run on PGlite (ADR 009), never against Supabase.
 name: CI
 
 on:

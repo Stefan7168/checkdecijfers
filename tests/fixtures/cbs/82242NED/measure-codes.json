@@ -1,0 +1,16 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/82242NED/$metadata#MeasureCodes",
+ "value": [
+  {
+   "Identifier": "M001327",
+   "Index": 2,
+   "Title": "Uitgesproken  faillissementen",
+   "Description": "Uitgesproken faillissementen\r\nHet aantal natuurlijke personen (met en zonder eenmanszaak), bedrijven en instellingen dat door uitspraak van de rechter in staat van faillissement is verklaard.\r\n\r\nFaillissement\r\nStaat waarin de rechter een juridische eenheid die heeft opgehouden te betalen kan verklaren. Het vermogen en de inkomsten van die juridische eenheid (de schuldenaar) worden dan ingenomen om de schulden af te lossen. Het faillissement kan worden uitgesproken op verzoek van een schuldeiser, de schuldenaar zelf of het Openbaar Ministerie. Nadat de inkomsten en het vermogen aan schuldeisers zijn uitgekeerd wordt het faillissement beëindigd maar is de schuldenaar vaak niet schuldenvrij. Restschulden blijven namelijk opeisbaar. Het failliet verklaren van een juridische eenheid op verzoek van een schuldeiser kan overigens alleen geschieden indien er ook sprake is van een schuld aan een andere schuldeiser.",
+   "MeasureGroupId": null,
+   "DataType": "Double",
+   "Unit": "Aantal",
+   "Decimals": 0,
+   "PresentationType": null
+  }
+ ]
+}
