@@ -6,6 +6,12 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## 2026-07-03 — WP4: table registry + alias list
+
+- **Lesson:** when the `Db` abstraction's `query()` only ever returns `{ rows }` (no `rowCount` — by design, so PGlite and pg stay interchangeable, ADR 009), don't infer "did this UPDATE match a row" from the result shape. An UPDATE without `RETURNING` always returns `rows: []` whether it matched zero rows or a thousand — a plausible-looking `if (result.rows.length === 0)` existence check is silently always-true.
+- **Evidence:** caught before committing, by tracing through the "table not yet registered" test scenario on paper rather than trusting the first draft: `src/registry/apply.ts` initially tried to detect a missing `cbs_tables` row this way, which would have made every UPDATE look like a miss. Fixed by checking existence with an explicit `select ... where id = any($1)` *before* writing anything, which also fixed a second latent bug the same rewrite caught: `canonical_measures.table_id` has a foreign key to `cbs_tables`, so a mid-loop insert against an unregistered table would throw and abort with some rows already written. The upfront check makes the whole apply all-or-nothing.
+- **Scope:** provider-quirk (Db interface), process (trace scenarios before trusting a first draft)
+
 ## 2026-07-03 — WP3: benchmark answer key frozen
 
 - **Lesson:** A previous session's CI safety rail can itself become the blocker — read the guard's actual code, not just trust its intent, before treating a documented plan as blocked. `scripts/score-benchmark.mjs` hard-failed the moment the key froze (`answer-key.json` exists), with a comment reading "implement [scoring] before freezing the key" — directly contradicting `tasks.json`'s own `frozenNote` ("frozen=true only when every answerable task has an entry") and STATUS.md's explicit session-3 plan to freeze the key well before the answer pipeline exists. Left as-is, freezing the key today would have turned CI red for every push across several future work packages.
