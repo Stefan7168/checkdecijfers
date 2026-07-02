@@ -6,6 +6,14 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## 2026-07-03 — Supabase "Automatically expose new tables" granted anon/authenticated full CRUD
+
+- **Lesson:** on a managed Postgres platform with an auto-generated public API layer (Supabase's PostgREST Data API), a project-level "expose new tables" setting can grant real privileges to unauthenticated/public roles the moment a table is created — independent of whether the app ever uses that API. Check this explicitly for any project the app doesn't intend to expose via the platform's own API, don't assume "we never call that API" means "it can't be called."
+- **Evidence:** Stefan flagged the toggle after another session mentioned it. Verified via `get_advisors` (security) + direct SQL against `information_schema.role_table_grants`: all 6 tables had `SELECT/INSERT/UPDATE/DELETE/TRUNCATE/REFERENCES/TRIGGER` granted to both `anon` and `authenticated`. Not actually exploitable in this window: Supabase's own `rls_auto_enable()` event-trigger function had already enabled RLS on every new table with zero policies, which blocks all non-owner access regardless of the underlying grants — but that's "safe because nobody has added a policy yet," not a real defense. Also found and fixed: `rls_auto_enable()` itself had `EXECUTE` granted to `PUBLIC` (Postgres's default for new functions, not something Supabase deliberately opened) — revoked, confirmed safe since event triggers fire via the engine, not through a caller's EXECUTE privilege.
+- **Fix:** `migrations/003_lock_down_api_access.sql` — revokes the grants, sets default privileges so future tables from our own migrations don't inherit them, revokes the stray function EXECUTE. Guarded with `pg_roles`/`pg_proc` existence checks so it's a safe no-op on the hermetic PGlite test database (ADR 009), which has neither Supabase's roles nor its functions. Verified with `get_advisors` before/after: went from 2 WARN + 6 INFO to 6 INFO (the intended "RLS on, no policy, fully closed" state).
+- **Residual, needs the owner:** the dashboard toggle itself isn't reachable via SQL or the Supabase management MCP tools available in this session — Stefan still needs to turn it off manually (RUNBOOK.md, Supabase account line) so *future* tables aren't re-exposed by Supabase's own platform automation, which our migration can't preempt.
+- **Scope:** provider-quirk, security
+
 ## 2026-07-03 — Supabase capacity incident, ongoing (ops awareness, not a bug)
 
 - **Lesson:** when infrastructure looks flaky, check the provider's status page before assuming a code bug — especially for the exact region a project runs in.
