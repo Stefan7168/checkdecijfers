@@ -10,3 +10,13 @@ Archive/
 *.local
 .idea/
 .vscode/
+
+# Secrets — never in git (docs/RUNBOOK.md, secrets register)
+.env
+.env.*
+!.env.example
+
+# Dependencies / build output
+node_modules/
+.next/
+coverage/

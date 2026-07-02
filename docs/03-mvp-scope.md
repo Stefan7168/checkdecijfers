@@ -22,7 +22,7 @@ At every step where confidence fails, the pipeline exits to **clarification or r
 
 | Item | Detail |
 |---|---|
-| 5–10 pre-loaded CBS tables | Bulk-ingested into our own database; topics per the benchmark assumption in [02-user-scenarios.md](02-user-scenarios.md); exact IDs validated against the live CBS catalog at setup |
+| 5–10 pre-loaded CBS tables | Bulk-ingested into our own database; topics per the benchmark assumption in [02-user-scenarios.md](02-user-scenarios.md); exact IDs validated against the live CBS catalog 2026-07-02 — the 8-table set in [07-phase0-table-set.md](07-phase0-table-set.md) |
 | Chat UI, minimal | One conversation, no history persistence requirements beyond the session |
 | Validated answers | Numbers computed by code; LLM sees only validated result objects ([05-data-rules.md](05-data-rules.md)) |
 | Attribution + freshness | Table ID, title, sync date, covered period on every answer |
