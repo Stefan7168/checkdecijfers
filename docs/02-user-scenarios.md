@@ -46,9 +46,9 @@ Daan asks: *"Hoe ontwikkelde de gemiddelde verkoopprijs van bestaande koopwoning
 
 Fleur asks: *"Hoeveel mensen zitten in de bijstand?"*
 
-Ambiguous: no period, no region, and "bijstand" maps to multiple measures (persons vs. benefits, incl./excl. AOW-age). The product asks **one compact clarifying question** offering concrete options ("Landelijk of een gemeente? Meest recente kwartaal?") and produces **no number** until resolved.
+Ambiguous: no period, no region, and "bijstand" maps to multiple measures (persons vs. benefits, incl./excl. AOW-age). The product asks **one compact clarifying question covering all unresolved axes at once** — options are combined presets that each resolve every axis (e.g. "Landelijk, meest recente kwartaal, personen tot AOW-leeftijd" / "Voor een specifieke gemeente: …") — and produces **no number** until resolved.
 
-**Accept when**: no numeric answer is given before clarification; options offered actually exist in the loaded data; after the user picks, the flow completes as S1. A clarifying question costs no credit (business-model rule, later phase).
+**Accept when**: no numeric answer is given before clarification; every offered option resolves in the loaded data; a free-text reply ("Utrecht") is parsed merged with the pending partial intent, not as a fresh question; after the user picks, the flow completes as S1; if still ambiguous after this one round, the product exits to refusal-with-guidance ([05-data-rules.md](05-data-rules.md), failure behavior) rather than asking again. A clarifying question costs no credit (business-model rule, later phase).
 
 ### S4 — Unanswerable or stale → refusal
 
@@ -57,6 +57,12 @@ Daan asks: *"Hoeveel asielzoekers kwamen er vorige maand binnen?"* (topic outsid
 The product refuses with: what it *cannot* answer and why (not in loaded scope / data only available through period X), what the nearest answerable question is, and — where applicable — the freshest period it *can* serve. No estimate, no extrapolation.
 
 **Accept when**: zero numeric claims about the unanswerable quantity; the reason is specific (scope vs. freshness); the suggested alternative is genuinely answerable.
+
+### Defined Phase 0 behaviors for two realistic question shapes
+
+**Claim checks ("klopt het dat …?").** Daan's core moment is verification-phrased — it is the product's *namesake*. **Phase 0 behavior (decided):** restate the official figures relevant to the claim, fully attributed, explicitly **without a verdict** ("Dit zijn de officiële cijfers: gemiddelde koopprijs €X in 2019, €Y in 2024"). Rendering a verdict ("nee, geen verdubbeling — de stijging was 40%") needs a claim-verification intent type plus registered claim-vs-actual derivations: slotted for Phase 1 ([06-roadmap.md](06-roadmap.md); [open-questions.md](open-questions.md) #25).
+
+**Compound questions** (two independent asks in one message) get an honest split — "één vraag tegelijk; zal ik met X beginnen?" — never a misfired ambiguity clarification. Multi-ask decomposition is a Phase 1–2 roadmap item; it is what "a complete article check" pricing ultimately sells.
 
 ## Benchmark (Phase 0 success measure)
 
@@ -98,8 +104,9 @@ The product refuses with: what it *cannot* answer and why (not in loaded scope /
 
 ### Scoring
 
-- **Frozen answer key.** At Phase 0 setup, each task gets a recorded ground truth: CBS table ID, dimension coordinates, and expected value (or the derivation rule, for B13/B14). Scoring is a mechanical comparison against this key. The key also pins the intended measure where CBS offers several readings (B5: seasonally adjusted or not; B6: stock at which date; B9: which bankruptcy definition; B11: which solar measure), so two scorers cannot legitimately verify against different cells.
+- **Frozen answer key.** At Phase 0 setup, each task gets a recorded ground truth: CBS table ID, dimension coordinates, and expected value (or the derivation rule, for B13/B14). Scoring is a mechanical comparison against this key. The key also pins the intended measure where CBS offers several readings (B5: seasonally adjusted or not; B6: stock at which date; B9: which bankruptcy definition; B11: which solar measure), so two scorers cannot legitimately verify against different cells. Key entries are pinned to a table version/sync batch and record the value's CBS status (voorlopig/definitief); at scoring time the expected value is verified against the **currently ingested cell** — when a CBS correction or revision has touched a key cell, the sync's correction log ([05-data-rules.md](05-data-rules.md)) is the *only* authorized explanation, reported as "key superseded by CBS correction (batch X)". Keys are never hand-edited to green.
 - Each **answerable task** passes only if: the number(s) match the key; the **unit** is correct; each value is bound to the **correct region/period/measure** in the prose, and any direction/comparison/ranking statement matches the data; attribution + freshness are shown; chart/derived-marking is correct where specified.
 - A clarifying question on an answerable task is allowed (principle 3 may legitimately fire): the task is then scored on the **post-clarification answer**, with at most one clarification round.
 - Each **refusal/clarification task** passes only if: **no number appears** for the unanswerable quantity; clarification tasks (B15, B16) ask at most one compact question whose offered options all resolve in the loaded data; refusal tasks (B17–B20) state the correct reason (scope vs. freshness vs. interpretation).
+- **Reported but not gate-failing** (like the latency criterion): clarification count on B1–B14, template-fallback count (R3/R9 fail-closed answers), and an un-disambiguated phrasing check — B3 and B5 re-run *without* their parenthetical disambiguators must resolve to the registry's canonical default without clarification. These catch a degenerate pipeline that passes the gate by clarifying everything or templating everything.
 - Targets and the gate decision live in [03-mvp-scope.md](03-mvp-scope.md).

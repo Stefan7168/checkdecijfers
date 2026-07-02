@@ -10,7 +10,7 @@ Confirmed principle (a): the LLM never calculates or interprets raw CBS tables. 
 
 The LLM appears in **exactly two places** in the pipeline, both behind strict, validated schemas:
 
-1. **Intent parsing** — free-text Dutch question → structured intent object (measure, region, period, comparison type, confidence). The model has *no* data access here; it maps language to the registry's vocabulary. Low confidence or multiple plausible readings → the pipeline exits to clarification, not to a guess.
+1. **Intent parsing** — free-text Dutch question → structured intent object (measure, a **dimension-filter map** — region and period plus any other dimensions the table carries, each defaulting to the registry's pinned "totaal" coordinate — comparison type, confidence). The model has *no* data access here; it maps language to the registry's vocabulary. Low confidence or multiple plausible readings → the pipeline exits to clarification, not to a guess — except **registry-internal measure variants**, which resolve to the canonical default with the chosen definition stated in the answer (canonical-default policy, [05-data-rules.md](../05-data-rules.md)).
 2. **Answer phrasing** — validated result objects + attribution metadata → short Dutch prose. The prompt contains **only** validated results and metadata, never raw table rows (invariant R2 in [05-data-rules.md](../05-data-rules.md)). A post-generation validator checks every number in the output verbatim against the result objects; mismatch → regenerate once, then fail closed to a template-rendered answer (invariant R3).
 
 Supporting choices:
@@ -30,6 +30,7 @@ Supporting choices:
 
 - Hallucination is contained structurally: the model can only mis-*parse* or mis-*phrase*, and both failure modes are caught by schema validation and the verbatim-number check — mis-parses surface as wrong-but-traceable table selections, which the benchmark measures.
 - Two narrow prompts are cheap (well under €0.02/question at current mid-tier pricing) and easy to regression-test.
+- Answer text is **deliberately non-streaming**: R3/R9 validate the full text and R8 writes the audit record before anything is shown. Do not "optimize" by streaming pre-validation LLM output — that silently breaks the invariants. Perceived latency is mitigated by streaming deterministic pipeline *stage-status* updates instead ("tabel gevonden… berekening gecontroleerd…").
 
 ## Revisit triggers
 

@@ -47,13 +47,14 @@ Each parked feature has a named seam it will attach to — future sessions shoul
 | Future feature (roadmap) | Seam that already anticipates it |
 |---|---|
 | Visualisatie Studio (social exports, sizes, interactive, huisstijl) | Chart spec: new renderers over the same spec (ADR 007) |
-| Shareable answer pages + OpenGraph (programmatic SEO) | Audit record = permanent answer snapshot to render a page from; static-image renderer over chart spec |
+| Shareable answer pages + OpenGraph (programmatic SEO) | Audit record = permanent answer snapshot to render a page from; static-image renderer over chart spec; the ingestion correction-diff log is the page-invalidation feed (correction policy: [open-questions #22](open-questions.md)) |
 | User-facing audit trail ("Ironclad Audit Trail") | `audit_answers` already stores question→plan→result IDs→numbers; the UI is a view over it |
-| Scoop alerts | Ingestion batches record what changed per sync — an alert is a subscription over batch diffs |
+| Scoop alerts | Ingestion batches record what changed per sync — an alert is a subscription over batch diffs; alert value is bounded by sync polling cadence (explicit Phase 3 design input), delivery rides the notification seam below |
+| Notifications (alerts, onboarding "table ready", owner ops-alerts) | **Notification seam**: subscription/preferences table keyed to the identity seam; delivery via the transactional-email provider that Phase 1's magic-link auth already requires; owner alerting (batch failure, `needs_review`, missed sync, health check) is its first consumer |
 | Newsroom licenses / huisstijl | Identity seam (ADR 006) + theme object in chart spec (ADR 007) |
-| Drill-down buttons on answers | The audit record's stored query plan + registry dimension metadata: a button is a deterministic transform of the current plan (extend period, swap region, group by) that re-enters the pipeline at the query step — no new components; shares its UI mechanism with clarification options (R7) |
+| Drill-down buttons on answers | The audit record's stored query plan + registry dimension metadata: a button is a deterministic transform of the current plan (extend period, swap a dimension value — region or otherwise, group by) that re-enters the pipeline at the query step — no new components; shares its UI mechanism with clarification options (R7) |
 | Demand-driven table onboarding (user-triggered fetch of not-yet-loaded tables) | Same `CbsSource` adapter + ingestion/validation pipeline, triggered by a user action instead of a schedule; registry `needs_review` state doubles as the review queue; size preflight rides the cost-estimation step (ADR 006) |
-| Enrichment sources (PDOK/Kadaster, RIVM, UWV, Waarstaatjegemeente, open.overheid.nl) | Additional `Source` adapters beside `CbsSource`; likely trigger for the Python split (ADR 001) |
+| Enrichment sources (PDOK/Kadaster, RIVM, UWV, Waarstaatjegemeente, open.overheid.nl) | Additional adapters beside `CbsSource` — but honestly: non-tabular sources (documents, geodata) need their **own** adapter interfaces and storage models (e.g. PostGIS, object store), designed at Phase 3 behind the same query-module boundary. `CbsSource` is the pattern, not the contract. Likely trigger for the Python split (ADR 001) |
 | Credits/billing | Ledger + pricing-config + cost-estimation step (ADR 006) |
 
 ## Cost picture (indicative)
