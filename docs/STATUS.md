@@ -23,7 +23,7 @@ Previously (session 3, 2026-07-03): **benchmark answer key frozen** ([benchmark/
 - [ ] Refusal & clarification behavior
 - [ ] Audit record per answer (R8)
 - [x] CI gate live (2026-07-02): GitHub Actions runs typecheck + the four gate suites on every push. State after WP4 (2026-07-03): 60 real tests + 11 `todo`-marked answer-side obligations (R1–R11) that turn into real tests with their work packages; the scorer validates the frozen key's structure (14/14 answerable entries + B20) but still reports zero scores — real scoring against audit records lands with the answer pipeline. Deploy-blocking attaches at Vercel setup
-- [ ] Provider spend caps, billing alerts, and dependency alerts set
+- [ ] Provider spend caps, billing alerts, and dependency alerts set (partial 2026-07-03: Anthropic €25/mo spend cap confirmed set; **dependency alerts** — `.github/dependabot.yml` adds weekly grouped version-update PRs, owner still to flip on Dependabot *security* alerts in repo settings; billing alerts still open)
 - [ ] Full benchmark run recorded below
 
 ## Benchmark scoreboard
@@ -36,9 +36,10 @@ Gate: ≥12/14 answerable, 6/6 refusal, **zero** fabricated numbers ([03-mvp-sco
 
 ## Next up
 
-1. Owner: authorize the PR (WP4: table registry + alias list) merge once CI is green.
-2. Owner: confirm or override the two registry-internal defaults now encoded live — B6 stock-date ([open-questions #35](open-questions.md)) and B9 bankruptcy definition ([#36](open-questions.md)). Not blocking: both are one-row updates in `src/registry/defaults.ts` + a re-run of `npm run registry:apply` if overridden.
-3. Session 5 (proposed): **intent parsing** (schema-validated, ranked candidates + confidence, R7) — the first work package that actually reads `canonical_measures`.
+1. Session 5 (proposed, next): **deterministic query + validation + registered derivations** — build this *before* intent parsing (a deliberate reorder of the checklist above). Rationale: it's the anti-hallucination core (R1/R4/R5/R9/R10/R11), needs no LLM or API key so it's fully hermetic-CI-testable, and it lets us **score B1–B14 against the frozen answer key using hand-authored intents** — proving the numbers/units/attribution/derivations before any LLM is in the loop. This session also *defines the structured-intent contract* that intent parsing must later produce.
+2. Session 6 (proposed): **intent parsing** (schema-validated, ranked candidates + confidence, R7) — now targets a proven query layer and a fixed intent contract.
+3. Owner, non-blocking: confirm or override the two registry-internal defaults now encoded live — B6 stock-date ([open-questions #35](open-questions.md)) and B9 bankruptcy definition ([#36](open-questions.md)). Both are a one-row change in `src/registry/defaults.ts` + `npm run registry:apply` if overridden.
+4. Owner, when convenient: enable **Dependabot alerts** (vulnerability notifications) under GitHub → Settings → Code security. The version-update PRs are already configured (`.github/dependabot.yml`); this toggle adds the security-alert half.
 
 ## Phase history
 
