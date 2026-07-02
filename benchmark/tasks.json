@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "source": "docs/02-user-scenarios.md — the 20-task Phase 0 benchmark. Task text is verbatim; changing it means changing the doc first.",
-  "frozen": false,
+  "frozen": true,
   "frozenNote": "frozen=true only when every answerable task has an entry in benchmark/answer-key.json (Phase 0 checklist: 'Benchmark answer key frozen'). Keys are never hand-edited to green.",
   "tasks": [
     { "id": "B1", "type": "answerable", "question": "Hoeveel inwoners had Nederland op 1 januari 2025?", "expect": "single value + attribution" },
