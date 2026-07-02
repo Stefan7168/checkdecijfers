@@ -36,6 +36,7 @@ Recommended architecture for Phase 0–2, per the ADRs in [decisions/](decisions
 | `CbsSource` adapter + ingestion script | Bulk ingestion per principle (b); isolates the SDMX migration risk; schema-fingerprint defense against table redesigns | [003](decisions/003-cbs-access-layer.md) |
 | Claude API, two narrow calls | Intent parsing + phrasing only; strict schemas; verbatim-number check | [004](decisions/004-llm-usage.md) |
 | Chart spec + dumb renderer | "Dom en voorspelbaar" viz layer; the seam for every future export format | [007](decisions/007-chart-spec-rendering.md) |
+| UI foundation (Tailwind, shadcn/ui, Recharts, zod as shared schema layer) | Recorded defaults so build sessions don't re-litigate; binds the two-surface budget rule and the no-token-streaming rule | [008](decisions/008-ui-foundation.md) |
 | **Absent on purpose:** Redis, vector DB, Python service, queue | Each has a named trigger instead of a standing cost | [005](decisions/005-caching-strategy.md), [002](decisions/002-postgres-system-of-record.md), [001](decisions/001-single-app-vs-split.md) |
 
 Components from the notes **kept as input but not adopted (yet)**: separate Python/FastAPI backend (migration target with triggers, ADR 001), Supabase-as-platform (Postgres hosting candidate only; no feature may depend on Supabase-specific behavior), Upstash Redis (trigger-based, ADR 005), pgvector (trigger-based, ADR 002), Stripe+iDEAL (Phase 2, ADR 006), Vercel AI SDK (fine as a chat-UI library at implementation time; the pipeline does not depend on it).

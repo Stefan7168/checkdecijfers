@@ -22,7 +22,7 @@ CBS StatLine is authoritative but notoriously hard to use; general-purpose AI ch
 | [docs/04-architecture.md](docs/04-architecture.md) | System shape, component justifications, future-build seams, GDPR reservation |
 | [docs/05-data-rules.md](docs/05-data-rules.md) | CBS data strategy, testable anti-hallucination invariants, CC BY 4.0, platform risk |
 | [docs/06-roadmap.md](docs/06-roadmap.md) | Phases 0→3; every notes-derived feature slotted or rejected |
-| [docs/decisions/](docs/decisions/) | ADRs 001–007 for every load-bearing technical choice |
+| [docs/decisions/](docs/decisions/) | ADRs 001–008 for every load-bearing technical choice |
 | [docs/open-questions.md](docs/open-questions.md) | All ambiguities + the assumptions made |
 
 Historical inputs (never authority): `checkdecijfers.nl.md` (original brainstorm), `KICKOFF_PROMPT.md` (this documentation effort's brief), `Archive/` (competitor research, untracked).
