@@ -3,7 +3,7 @@
 > **Tracker, not a source of truth.** Scope and the gate are defined in [03-mvp-scope.md](03-mvp-scope.md), the benchmark in [02-user-scenarios.md](02-user-scenarios.md). This file only records progress against them. Update it whenever project state changes (see the definition of done in [CLAUDE.md](../CLAUDE.md)) — with **measured results only, never aspirational ones**.
 
 **Current phase:** Phase 0 — ready to build (docs signed off; owner account setup pending)
-**Last updated:** 2026-07-02 — **doc set signed off by Stefan**; Phase 0 build unblocked ([RUNBOOK.md](RUNBOOK.md) has the path)
+**Last updated:** 2026-07-02 — doc set signed off; repo pushed to GitHub (Stefan7168/checkdecijfers, private); Phase 0 build unblocked ([RUNBOOK.md](RUNBOOK.md) has the path)
 
 ## Phase 0 checklist
 
@@ -33,8 +33,8 @@ Gate: ≥12/14 answerable, 6/6 refusal, **zero** fabricated numbers ([03-mvp-sco
 
 ## Next up
 
-1. Stefan: create the four "Now" accounts — [RUNBOOK.md](RUNBOOK.md), signup checklist (GitHub, Anthropic API + spend cap, Supabase, Vercel).
-2. Phase 0 build kickoff in a fresh chat — one work package per session ([RUNBOOK.md](RUNBOOK.md), "How work happens"). Session 1: push repo to GitHub, CI skeleton, validate CBS table IDs (open-questions #1).
+1. Stefan: create the three remaining accounts — Anthropic API (+ spend cap), Supabase, Vercel ([RUNBOOK.md](RUNBOOK.md); GitHub done, repo pushed 2026-07-02).
+2. Phase 0 build kickoff in a fresh chat — one work package per session ([RUNBOOK.md](RUNBOOK.md), "How work happens"). Session 1: CI skeleton + validate CBS table IDs against the live catalog (open-questions #1).
 
 ## Phase history
 

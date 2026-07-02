@@ -5,7 +5,8 @@ Everything **Stefan** does, phase by phase. AI sessions read [CLAUDE.md](../CLAU
 ## How work happens
 
 - **One chat session = one work package** — one or two unchecked items from [STATUS.md](STATUS.md), not a whole phase. A fresh session automatically reads CLAUDE.md and STATUS.md and knows where things stand; that is what they exist for. Phases span many sessions.
-- **Start a session like this:** *"Continue checkdecijfers.nl. Read CLAUDE.md and docs/STATUS.md, then do the next unchecked Phase 0 item: ⟨item⟩."*
+- **Start a session like this:** *"Continue checkdecijfers.nl. Read CLAUDE.md and docs/STATUS.md, then do the next unchecked Phase 0 item: ⟨item⟩. First confirm back to me: the current phase, the benchmark gate, and the work package — then start."* The confirm-back is your check that the session oriented correctly **before** it touches anything.
+- **Big work packages may be delegated:** a session can spawn implementation subagents, as long as each brief names the specific invariants at stake and the session reviews the result — "done" still means green CI, no matter who wrote the code. Don't hardcode model names in reusable prompts; they go stale.
 - **End of every session:** work committed, STATUS.md updated with measured results. If a session claims success, the proof is a green CI run — not its word (CLAUDE.md convention).
 - **You are the phase-gate backstop:** if a session proposes building something, ask "is that in the current phase?" The docs enforce it, but you can always point at [03-mvp-scope.md](03-mvp-scope.md).
 
@@ -13,7 +14,7 @@ Everything **Stefan** does, phase by phase. AI sessions read [CLAUDE.md](../CLAU
 
 ### Now — before the Phase 0 build (~30 min, all free)
 
-- [ ] **GitHub** — code hosting, the CI gate, automated dependency alerts. The repo gets pushed here in the first build session.
+- [x] **GitHub** — done 2026-07-02: repo pushed to github.com/Stefan7168/checkdecijfers (private); machine authenticated as Stefan7168.
 - [ ] **Anthropic API** (console.anthropic.com) — create an API key and **set a monthly spend cap** (suggestion: €25; Phase 0 usage is cents per benchmark run).
 - [ ] **Supabase** — managed Postgres, free tier. Nothing vendor-specific will be used (ADR [002](decisions/002-postgres-system-of-record.md)), so this stays swappable.
 - [ ] **Vercel** — hosting/deploys, free Hobby tier. ⚠ Hobby is for non-commercial use: upgrade to Pro (~€20/mo) at Phase 2, when payments go live.
@@ -58,6 +59,6 @@ Everything **Stefan** does, phase by phase. AI sessions read [CLAUDE.md](../CLAU
 
 1. **Doc sign-off** — the open checkbox in [STATUS.md](STATUS.md).
 2. **Create the four "Now" accounts** above.
-3. **Fresh chat — Phase 0, session 1:** push the repo to GitHub, CI skeleton, validate the candidate CBS table IDs (open-questions #1).
+3. **Fresh chat — Phase 0, session 1:** CI skeleton + validate the candidate CBS table IDs (open-questions #1). *(Repo already on GitHub, 2026-07-02.)*
 4. Session by session down the [STATUS.md](STATUS.md) Phase 0 checklist, until the benchmark run and the gate decision.
 5. Gate passed → Phase 1 per [06-roadmap.md](06-roadmap.md); this runbook's Phase 1 checklist activates.
