@@ -48,6 +48,7 @@ Each parked feature has a named seam it will attach to — future sessions shoul
 |---|---|
 | Visualisatie Studio (social exports, sizes, interactive, huisstijl) | Chart spec: new renderers over the same spec (ADR 007) |
 | Shareable answer pages + OpenGraph (programmatic SEO) | Audit record = permanent answer snapshot to render a page from; static-image renderer over chart spec; the ingestion correction-diff log is the page-invalidation feed (correction policy: [open-questions #22](open-questions.md)) |
+| Free browse layer (public data pages) | Pre-rendered — static generation with revalidation — from the same Postgres registry + observations; table-sync events trigger regeneration; charts reuse the spec + renderer (ADR 007); correction handling shares the page-invalidation feed (#22); **no LLM anywhere in this path** |
 | User-facing audit trail ("Ironclad Audit Trail") | `audit_answers` already stores question→plan→result IDs→numbers; the UI is a view over it |
 | Scoop alerts | Ingestion batches record what changed per sync — an alert is a subscription over batch diffs; alert value is bounded by sync polling cadence (explicit Phase 3 design input), delivery rides the notification seam below |
 | Notifications (alerts, onboarding "table ready", owner ops-alerts) | **Notification seam**: subscription/preferences table keyed to the identity seam; delivery via the transactional-email provider that Phase 1's magic-link auth already requires; owner alerting (batch failure, `needs_review`, missed sync, health check) is its first consumer |
