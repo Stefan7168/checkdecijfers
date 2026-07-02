@@ -3,7 +3,7 @@
 > **Tracker, not a source of truth.** Scope and the gate are defined in [03-mvp-scope.md](03-mvp-scope.md), the benchmark in [02-user-scenarios.md](02-user-scenarios.md). This file only records progress against them. Update it whenever project state changes (see the definition of done in [CLAUDE.md](../CLAUDE.md)) — with **measured results only, never aspirational ones**.
 
 **Current phase:** Phase 0 — not started (documentation under review)
-**Last updated:** 2026-07-02 — open questions #10, #18, #20 resolved by Stefan; awaiting overall doc sign-off
+**Last updated:** 2026-07-02 — architecture stress test (4 adversarial lenses) applied; new open questions #22–#26; awaiting overall doc sign-off
 
 ## Phase 0 checklist
 
@@ -19,6 +19,8 @@
 - [ ] Chart spec + dumb renderer (ADR [007](decisions/007-chart-spec-rendering.md))
 - [ ] Refusal & clarification behavior
 - [ ] Audit record per answer (R8)
+- [ ] CI gate live (ingestion fixtures + invariant tests + benchmark scorer on every push)
+- [ ] Provider spend caps, billing alerts, and dependency alerts set
 - [ ] Full benchmark run recorded below
 
 ## Benchmark scoreboard
@@ -27,7 +29,7 @@
 |---|---|---|---|---|---|
 | — | — | — | — | — | not yet run |
 
-Gate: ≥12/14 answerable, 6/6 refusal, **zero** fabricated numbers ([03-mvp-scope.md](03-mvp-scope.md)).
+Gate: ≥12/14 answerable, 6/6 refusal, **zero** fabricated numbers ([03-mvp-scope.md](03-mvp-scope.md)). Also reported, informational: median latency, clarification count on B1–B14, template-fallback count, un-disambiguated phrasing check ([02-user-scenarios.md](02-user-scenarios.md), Scoring).
 
 ## Next up
 

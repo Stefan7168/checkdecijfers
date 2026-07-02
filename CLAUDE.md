@@ -32,6 +32,10 @@ Three principles, also referenced as (a)/(b)/(c) across the docs:
 - Every load-bearing technical choice gets an ADR in `docs/decisions/` (context, decision, ≥2 real alternatives, trade-offs, revisit triggers). Small choices don't.
 - Mark every assumption inline (`**Assumption:** …`) and mirror it in [docs/open-questions.md](docs/open-questions.md). Never present a guess as settled.
 - Keep the module boundaries from ADR [001](docs/decisions/001-single-app-vs-split.md) (`ingestion/`, `cbs-adapter/`, `query/`, `validation/`, `answer/`, `chart/`) — they are the future split seam.
+- Database schema changes happen only via numbered, committed migration files — never ad-hoc console edits. A later session must be able to rebuild the schema from the repo alone.
+- Secrets live only in the hosting platform's environment store; a runbook doc lists each secret and its rotation steps in owner-followable language.
+- CI runs the ingestion fixtures, invariant tests, and benchmark scorer on every push and blocks deploys on red. "The tests pass" is a claim only CI can make — the owner's trust signal is a green pipeline, not a session's word.
+- The owner runs a monthly **maintenance session** with a standing agenda: dependency alerts, provider deprecation notices, spend dashboards, backup status.
 
 ## Phase gate
 
