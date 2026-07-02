@@ -30,6 +30,7 @@ At every step where confidence fails, the pipeline exits to **clarification or r
 | Refusal & clarification | Per principle 3 (c) in [CLAUDE.md](../CLAUDE.md); exercised by benchmark tasks B15–B20 |
 | Audit record per answer | Question, parsed intent, query plan, result IDs, numbers used, table versions, timestamps — backend-verifiable |
 | The 20-task benchmark | Run by hand against CBS StatLine; the gate below |
+| Ops guardrails from day one | CI runs the ingestion fixtures, invariant tests, and benchmark scorer on every push — deploys block on red (the owner's trust signal is "CI is green", not a session's word); provider spend caps + billing alerts; automated dependency alerts |
 
 ## Success criteria (the Phase 0 gate)
 
