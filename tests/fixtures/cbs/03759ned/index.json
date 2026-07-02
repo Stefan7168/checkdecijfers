@@ -1,0 +1,21 @@
+{
+ "tableId": "03759ned",
+ "capturedAt": "2026-07-02T12:11:02.089Z",
+ "source": "https://datasets.cbs.nl/odata/v1/CBS/03759ned",
+ "sliceFilter": "Geslacht eq 'T001038' and Leeftijd eq '10000' and BurgerlijkeStaat eq 'T001019' and (startswith(RegioS,'NL') or startswith(RegioS,'PV') or startswith(RegioS,'GM')) and Perioden ge '2019JJ00'",
+ "sampleOnly": false,
+ "observationRows": 13568,
+ "observationPages": [
+  "observations-page-1.json"
+ ],
+ "files": {
+  "properties": "properties.json",
+  "dimensions": "dimensions.json",
+  "measure-codes": "measure-codes.json",
+  "codes-BurgerlijkeStaat": "codes-BurgerlijkeStaat.json",
+  "codes-Geslacht": "codes-Geslacht.json",
+  "codes-Leeftijd": "codes-Leeftijd.json",
+  "codes-RegioS": "codes-RegioS.json",
+  "codes-Perioden": "codes-Perioden.json"
+ }
+}

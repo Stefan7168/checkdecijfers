@@ -9,7 +9,11 @@
     "resolveJsonModule": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "types": ["node"]
+    "types": ["node"],
+    // src runs directly under Node's native type stripping (no build step):
+    // imports carry .ts extensions, and only erasable TS syntax is allowed
+    "allowImportingTsExtensions": true,
+    "erasableSyntaxOnly": true
   },
-  "include": ["tests/**/*.ts", "scripts/**/*.ts"]
+  "include": ["src/**/*.ts", "tests/**/*.ts", "scripts/**/*.ts"]
 }

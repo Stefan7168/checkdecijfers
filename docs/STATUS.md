@@ -2,8 +2,8 @@
 
 > **Tracker, not a source of truth.** Scope and the gate are defined in [03-mvp-scope.md](03-mvp-scope.md), the benchmark in [02-user-scenarios.md](02-user-scenarios.md). This file only records progress against them. Update it whenever project state changes (see the definition of done in [CLAUDE.md](../CLAUDE.md)) — with **measured results only, never aspirational ones**.
 
-**Current phase:** Phase 0 — build in progress (session 1 done: CI skeleton + CBS table set)
-**Last updated:** 2026-07-02 — work package 1 merged to main (PR #1, CI green; owner authorized the merge). Accounts complete: Anthropic (spend cap confirmed), Supabase (`DATABASE_URL` in local `.env`), Vercel ([RUNBOOK.md](RUNBOOK.md))
+**Current phase:** Phase 0 — build in progress (session 2 done: ingestion + validation pipeline, first live ingest)
+**Last updated:** 2026-07-03 — work package 2 pushed as PR #2 (merge after green CI + owner authorization). `DATABASE_URL` verified and corrected to the IPv4 session pooler with pinned-CA TLS ([RUNBOOK.md](RUNBOOK.md), secrets register); migration 001 applied to Supabase. **First live ingest (measured 2026-07-03): all 8 tables, 641,024 rows, 0 failures, 0 corrections.** Post-ingest sanity check (measured 2026-07-03): **17/17 benchmark-cell coverage checks pass** — every cell B1–B14 + B20 needs exists in the database, and every reference value docs/07 states reproduces exactly (incl. solar 2024 = 21,822 mln kWh *NaderVoorlopig* — the R11 marker — and both ×1,000-unit cells the R10 guard covers). Database size: 230 MB of the 500 MB free tier (headroom decision: [open-questions #33](open-questions.md))
 
 ## Phase 0 checklist
 
@@ -11,7 +11,7 @@
 - [x] Doc-set sign-off by Stefan (2026-07-02)
 - [x] CBS table set chosen; IDs validated against the live catalog (2026-07-02, open-questions #1 resolved — 8 tables, all v4-reachable, every benchmark period confirmed present: [07-phase0-table-set.md](07-phase0-table-set.md))
 - [ ] Benchmark answer key frozen ([02-user-scenarios.md](02-user-scenarios.md), Scoring)
-- [ ] Ingestion + validation pipeline with fixture tests ([05-data-rules.md](05-data-rules.md))
+- [x] Ingestion + validation pipeline with fixture tests (2026-07-03: five ordered checks, quarantine, correction-diff log, idempotent syncs; the 10 inherited `todo` obligations are now 21 real fixture tests + 8 adapter tests on an embedded real-Postgres test DB (ADR [009](decisions/009-hermetic-test-database.md)); adversarial review found and fixed 2 ordering/defaulting bugs; live ingest recorded above)
 - [ ] Table registry + alias list
 - [ ] Intent parsing (schema-validated, ranked candidates + confidence)
 - [ ] Deterministic query + validation + registered derivations
@@ -19,7 +19,7 @@
 - [ ] Chart spec + dumb renderer (ADR [007](decisions/007-chart-spec-rendering.md))
 - [ ] Refusal & clarification behavior
 - [ ] Audit record per answer (R8)
-- [x] CI gate live (2026-07-02): GitHub Actions runs typecheck + the three gate suites on every push. Honest-skeleton state: 9 real tests (benchmark structure vs docs/02, doc-consistency, frozen-flag coherence) + 21 `todo`-marked obligations (R1–R11, ingestion corruption fixtures) that turn into real tests with their work packages; the scorer refuses to report scores until the key freezes. Deploy-blocking attaches at Vercel setup
+- [x] CI gate live (2026-07-02): GitHub Actions runs typecheck + the three gate suites on every push. State after WP2 (2026-07-03): 37 real tests + 11 `todo`-marked answer-side obligations (R1–R11) that turn into real tests with their work packages; the scorer refuses to report scores until the key freezes. Deploy-blocking attaches at Vercel setup
 - [ ] Provider spend caps, billing alerts, and dependency alerts set
 - [ ] Full benchmark run recorded below
 
@@ -33,7 +33,8 @@ Gate: ≥12/14 answerable, 6/6 refusal, **zero** fabricated numbers ([03-mvp-sco
 
 ## Next up
 
-1. Session 2 (proposed): ingestion + validation pipeline with fixture tests, against the 8-table set in [07-phase0-table-set.md](07-phase0-table-set.md) — including the registered slices and the catalog quirks listed there. Its first step verifies the `DATABASE_URL` connection. The answer-key freeze follows ingestion (keys pin to ingested cells, not live reads).
+1. Owner: authorize the PR #2 merge once CI is green (the WP2 gate signal).
+2. Session 3 (proposed): **freeze the benchmark answer key** — now unblocked, keys pin to the ingested cells of the 2026-07-03 sync batches ([02-user-scenarios.md](02-user-scenarios.md), Scoring). If the session has room, start the **table registry + alias list** (canonical defaults, period semantics — the registry columns already exist and are seeded).
 
 ## Phase history
 

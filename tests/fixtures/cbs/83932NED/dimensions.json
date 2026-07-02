@@ -1,0 +1,54 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/83932NED/$metadata#Dimensions",
+ "value": [
+  {
+   "Identifier": "Inkomensbegrippen",
+   "Title": "Inkomensbegrippen",
+   "Description": "",
+   "MapYear": null,
+   "ReleasePolicy": null,
+   "Kind": "Dimension",
+   "ContainsGroups": false,
+   "ContainsCodes": true,
+   "CodesUrl": "https://datasets.cbs.nl/odata/v1/CBS/83932NED/InkomensbegrippenCodes",
+   "GroupsUrl": null
+  },
+  {
+   "Identifier": "Inkomensklassen",
+   "Title": "Inkomensklassen",
+   "Description": "",
+   "MapYear": null,
+   "ReleasePolicy": null,
+   "Kind": "Dimension",
+   "ContainsGroups": true,
+   "ContainsCodes": true,
+   "CodesUrl": "https://datasets.cbs.nl/odata/v1/CBS/83932NED/InkomensklassenCodes",
+   "GroupsUrl": "https://datasets.cbs.nl/odata/v1/CBS/83932NED/InkomensklassenGroups"
+  },
+  {
+   "Identifier": "KenmerkenVanHuishoudens",
+   "Title": "Kenmerken van huishoudens",
+   "Description": "",
+   "MapYear": null,
+   "ReleasePolicy": null,
+   "Kind": "Dimension",
+   "ContainsGroups": true,
+   "ContainsCodes": true,
+   "CodesUrl": "https://datasets.cbs.nl/odata/v1/CBS/83932NED/KenmerkenVanHuishoudensCodes",
+   "GroupsUrl": "https://datasets.cbs.nl/odata/v1/CBS/83932NED/KenmerkenVanHuishoudensGroups"
+  },
+  {
+   "@odata.type": "#Cbs.Ccb.Models.TimeDimension",
+   "Identifier": "Perioden",
+   "Title": "Perioden",
+   "Description": "",
+   "MapYear": null,
+   "ReleasePolicy": true,
+   "Kind": "TimeDimension",
+   "ContainsGroups": true,
+   "ContainsCodes": true,
+   "CodesUrl": "https://datasets.cbs.nl/odata/v1/CBS/83932NED/PeriodenCodes",
+   "GroupsUrl": "https://datasets.cbs.nl/odata/v1/CBS/83932NED/PeriodenGroups"
+  }
+ ]
+}

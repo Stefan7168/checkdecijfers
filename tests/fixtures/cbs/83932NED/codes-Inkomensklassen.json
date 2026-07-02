@@ -1,0 +1,138 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/83932NED/$metadata#InkomensklassenCodes",
+ "value": [
+  {
+   "Identifier": "T001226",
+   "Index": 1,
+   "Title": "Totaal",
+   "Description": "",
+   "DimensionGroupId": "1"
+  },
+  {
+   "Identifier": "A028632",
+   "Index": 2,
+   "Title": "Inkomen: minder dan 10 000 euro",
+   "Description": "",
+   "DimensionGroupId": "3"
+  },
+  {
+   "Identifier": "A028633",
+   "Index": 3,
+   "Title": "Inkomen: 10 000 tot 20 000 euro",
+   "Description": "",
+   "DimensionGroupId": "3"
+  },
+  {
+   "Identifier": "A028634",
+   "Index": 4,
+   "Title": "Inkomen: 20 000 tot 30 000 euro",
+   "Description": "",
+   "DimensionGroupId": "3"
+  },
+  {
+   "Identifier": "A028635",
+   "Index": 5,
+   "Title": "Inkomen: 30 000 tot 40 000 euro",
+   "Description": "",
+   "DimensionGroupId": "3"
+  },
+  {
+   "Identifier": "A028636",
+   "Index": 6,
+   "Title": "Inkomen: 40 000 tot 50 000 euro",
+   "Description": "",
+   "DimensionGroupId": "3"
+  },
+  {
+   "Identifier": "A043958",
+   "Index": 7,
+   "Title": "Inkomen: 50 000 tot 100 000 euro",
+   "Description": "",
+   "DimensionGroupId": "3"
+  },
+  {
+   "Identifier": "A028662",
+   "Index": 8,
+   "Title": "Inkomen: 100 000 tot 200 000 euro",
+   "Description": "",
+   "DimensionGroupId": "3"
+  },
+  {
+   "Identifier": "A028664",
+   "Index": 9,
+   "Title": "Inkomen: 200 000 euro of meer",
+   "Description": "",
+   "DimensionGroupId": "3"
+  },
+  {
+   "Identifier": "A028702",
+   "Index": 10,
+   "Title": "Inkomen: 1e 10%-groep (laag inkomen)",
+   "Description": "De huishoudens zijn naar hoogte van hun inkomen in tien groepen (decielen) met een gelijk aantal huishoudens verdeeld. De inkomensgrenzen tussen deze tien 10%-groepen verschillen van jaar tot jaar en zijn afhankelijk van het gehanteerde inkomensbegrip. ",
+   "DimensionGroupId": "5"
+  },
+  {
+   "Identifier": "A028703",
+   "Index": 11,
+   "Title": "Inkomen: 2e 10%-groep",
+   "Description": "De huishoudens zijn naar hoogte van hun inkomen in tien groepen (decielen) met een gelijk aantal huishoudens verdeeld. De inkomensgrenzen tussen deze tien 10%-groepen verschillen van jaar tot jaar en zijn afhankelijk van het gehanteerde inkomensbegrip. ",
+   "DimensionGroupId": "5"
+  },
+  {
+   "Identifier": "A028704",
+   "Index": 12,
+   "Title": "Inkomen: 3e 10%-groep",
+   "Description": "De huishoudens zijn naar hoogte van hun inkomen in tien groepen (decielen) met een gelijk aantal huishoudens verdeeld. De inkomensgrenzen tussen deze tien 10%-groepen verschillen van jaar tot jaar en zijn afhankelijk van het gehanteerde inkomensbegrip. ",
+   "DimensionGroupId": "5"
+  },
+  {
+   "Identifier": "A028705",
+   "Index": 13,
+   "Title": "Inkomen: 4e 10%-groep",
+   "Description": "De huishoudens zijn naar hoogte van hun inkomen in tien groepen (decielen) met een gelijk aantal huishoudens verdeeld. De inkomensgrenzen tussen deze tien 10%-groepen verschillen van jaar tot jaar en zijn afhankelijk van het gehanteerde inkomensbegrip. ",
+   "DimensionGroupId": "5"
+  },
+  {
+   "Identifier": "A028706",
+   "Index": 14,
+   "Title": "Inkomen: 5e 10%-groep",
+   "Description": "De huishoudens zijn naar hoogte van hun inkomen in tien groepen (decielen) met een gelijk aantal huishoudens verdeeld. De inkomensgrenzen tussen deze tien 10%-groepen verschillen van jaar tot jaar en zijn afhankelijk van het gehanteerde inkomensbegrip. ",
+   "DimensionGroupId": "5"
+  },
+  {
+   "Identifier": "A028707",
+   "Index": 15,
+   "Title": "Inkomen: 6e 10%-groep",
+   "Description": "De huishoudens zijn naar hoogte van hun inkomen in tien groepen (decielen) met een gelijk aantal huishoudens verdeeld. De inkomensgrenzen tussen deze tien 10%-groepen verschillen van jaar tot jaar en zijn afhankelijk van het gehanteerde inkomensbegrip. ",
+   "DimensionGroupId": "5"
+  },
+  {
+   "Identifier": "A028708",
+   "Index": 16,
+   "Title": "Inkomen: 7e 10%-groep",
+   "Description": "De huishoudens zijn naar hoogte van hun inkomen in tien groepen (decielen) met een gelijk aantal huishoudens verdeeld. De inkomensgrenzen tussen deze tien 10%-groepen verschillen van jaar tot jaar en zijn afhankelijk van het gehanteerde inkomensbegrip. ",
+   "DimensionGroupId": "5"
+  },
+  {
+   "Identifier": "A028709",
+   "Index": 17,
+   "Title": "Inkomen: 8e 10%-groep",
+   "Description": "De huishoudens zijn naar hoogte van hun inkomen in tien groepen (decielen) met een gelijk aantal huishoudens verdeeld. De inkomensgrenzen tussen deze tien 10%-groepen verschillen van jaar tot jaar en zijn afhankelijk van het gehanteerde inkomensbegrip. ",
+   "DimensionGroupId": "5"
+  },
+  {
+   "Identifier": "A028710",
+   "Index": 18,
+   "Title": "Inkomen: 9e 10%-groep",
+   "Description": "De huishoudens zijn naar hoogte van hun inkomen in tien groepen (decielen) met een gelijk aantal huishoudens verdeeld. De inkomensgrenzen tussen deze tien 10%-groepen verschillen van jaar tot jaar en zijn afhankelijk van het gehanteerde inkomensbegrip. ",
+   "DimensionGroupId": "5"
+  },
+  {
+   "Identifier": "A028711",
+   "Index": 19,
+   "Title": "Inkomen: 10e 10%-groep (hoog inkomen)",
+   "Description": "De huishoudens zijn naar hoogte van hun inkomen in tien groepen (decielen) met een gelijk aantal huishoudens verdeeld. De inkomensgrenzen tussen deze tien 10%-groepen verschillen van jaar tot jaar en zijn afhankelijk van het gehanteerde inkomensbegrip. ",
+   "DimensionGroupId": "5"
+  }
+ ]
+}
