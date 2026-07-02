@@ -6,11 +6,12 @@ You are working on **checkdecijfers.nl**: chat Q&A over official CBS statistics 
 
 1. This file.
 2. [docs/STATUS.md](docs/STATUS.md) — where the project stands right now: phase checklist, latest benchmark score, what's next.
-3. [README.md](README.md) — one-page orientation.
-4. [docs/03-mvp-scope.md](docs/03-mvp-scope.md) — **the phase gate**; what is and isn't in scope right now.
-5. [docs/05-data-rules.md](docs/05-data-rules.md) — the invariants your change must not break.
-6. [docs/04-architecture.md](docs/04-architecture.md) + the relevant [docs/decisions/](docs/decisions/) ADRs.
-7. As needed: [docs/01-product-vision.md](docs/01-product-vision.md), [docs/02-user-scenarios.md](docs/02-user-scenarios.md), [docs/06-roadmap.md](docs/06-roadmap.md), [docs/open-questions.md](docs/open-questions.md).
+3. [docs/08-build-plan.md](docs/08-build-plan.md) — **the work plan**: the ordered remaining work packages with per-WP scope, invariants, design decisions, and done-definition. A build session's job is "the next WP here."
+4. [README.md](README.md) — one-page orientation.
+5. [docs/03-mvp-scope.md](docs/03-mvp-scope.md) — **the phase gate**; what is and isn't in scope right now.
+6. [docs/05-data-rules.md](docs/05-data-rules.md) — the invariants your change must not break.
+7. [docs/04-architecture.md](docs/04-architecture.md) + the relevant [docs/decisions/](docs/decisions/) ADRs.
+8. As needed: [docs/01-product-vision.md](docs/01-product-vision.md), [docs/02-user-scenarios.md](docs/02-user-scenarios.md), [docs/06-roadmap.md](docs/06-roadmap.md), [docs/open-questions.md](docs/open-questions.md).
 
 ## Source of truth
 

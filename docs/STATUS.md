@@ -36,10 +36,9 @@ Gate: ≥12/14 answerable, 6/6 refusal, **zero** fabricated numbers ([03-mvp-sco
 
 ## Next up
 
-1. Session 5 (proposed, next): **deterministic query + validation + registered derivations** — build this *before* intent parsing (a deliberate reorder of the checklist above). Rationale: it's the anti-hallucination core (R1/R4/R5/R9/R10/R11), needs no LLM or API key so it's fully hermetic-CI-testable, and it lets us **score B1–B14 against the frozen answer key using hand-authored intents** — proving the numbers/units/attribution/derivations before any LLM is in the loop. This session also *defines the structured-intent contract* that intent parsing must later produce.
-2. Session 6 (proposed): **intent parsing** (schema-validated, ranked candidates + confidence, R7) — now targets a proven query layer and a fixed intent contract.
-3. Owner, non-blocking: confirm or override the two registry-internal defaults now encoded live — B6 stock-date ([open-questions #35](open-questions.md)) and B9 bankruptcy definition ([#36](open-questions.md)). Both are a one-row change in `src/registry/defaults.ts` + `npm run registry:apply` if overridden.
-4. Owner, when convenient: enable **Dependabot alerts** (vulnerability notifications) under GitHub → Settings → Code security. The version-update PRs are already configured (`.github/dependabot.yml`); this toggle adds the security-alert half.
+1. **Next build session → WP5: deterministic query + validation + registered derivations.** The full brief and the entire remaining Phase 0 sequence now live in [08-build-plan.md](08-build-plan.md) (the work plan); STATUS just tracks which WP is active. Build order is query-before-intent on purpose — rationale in the build plan.
+2. Owner, non-blocking: confirm or override the two registry-internal defaults now encoded live — B6 stock-date ([open-questions #35](open-questions.md)) and B9 bankruptcy definition ([#36](open-questions.md)). Both are a one-row change in `src/registry/defaults.ts` + `npm run registry:apply` if overridden.
+3. Owner, when convenient: enable **Dependabot alerts** (vulnerability notifications) under GitHub → Settings → Code security. The version-update PRs are already configured (`.github/dependabot.yml`); this toggle adds the security-alert half.
 
 ## Phase history
 
