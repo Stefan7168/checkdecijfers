@@ -6,6 +6,13 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## 2026-07-03 — post-WP5 wrap-up: a stale session-start file read nearly caused a phantom "docs out of sync" fix
+
+- **Lesson:** before declaring a doc out of sync with the code (or "fixing" it), verify against git — `git diff HEAD -- <file>` plus a fresh `grep` of the on-disk file — rather than trusting a file read from the start of the session. A session's first read of a file can be stale.
+- **Evidence:** this session's opening read of [STATUS.md](STATUS.md) showed the pre-WP5 version (WP5 unchecked, "next up: WP5") even though HEAD was already the WP5 commit and `git status` was clean — disk content and the read genuinely disagreed. On that basis the session reported a bookkeeping gap to the owner and planned a STATUS rewrite; the pre-edit ground-truth check (`git show 4d3b980 -- docs/STATUS.md`, then `git diff HEAD` + `grep` of the live file) showed the WP5 commit had already done the bookkeeping correctly and the working tree matched it. Nothing needed fixing; rewriting from the stale copy would have *created* the drift it claimed to repair.
+- **Also observed, no action needed:** CI's checkout/setup-node actions (`@v4`) emit a Node 20 deprecation annotation (forced to Node 24 by GitHub since 2025-09). Harmless warning; Dependabot's github-actions updates will deliver the `@v5` bumps.
+- **Scope:** process (verify-before-fix on docs), tool-quirk (stale first read)
+
 ## 2026-07-03 — WP5: a "$top sample" fixture silently missed every benchmark cell it existed to serve
 
 - **Lesson:** a fixture captured as "the first N rows" of a large table is a sample of *whatever order the API returns*, not of what the tests need — verify a fixture's **coverage against its consumers' actual cells** before building on it, cheaply and up front. The WP2-era CPI fixture (`$top=1000`) contained only periods up to 2020MM12, so the cells B3, B4, and B20 score against simply weren't in it; every other table was covered by luck of size, which is exactly what made the gap invisible.
