@@ -49,6 +49,7 @@ Pass → proceed to Phase 1 (see roadmap). Fail → iterate on the pipeline with
 | Billing, credits, Stripe/iDEAL | Phase 2 | Business model is decided ([01-product-vision.md](01-product-vision.md)); building it before the pipeline works is waste |
 | More than ~10 tables / semantic table discovery | Phase 1–2 | Registry lookup suffices at this scale; see ADR [002](decisions/002-postgres-system-of-record.md) |
 | Drill-down buttons on answers | Phase 1–2 | Deterministic follow-up queries; additive UX that proves nothing about the hard part |
+| Free browse layer (public SEO data pages) | Phase 1 (late)–2 | No LLM in the path, but Phase 0 proves the answer pipeline, not page rendering |
 | Shareable answer pages, OpenGraph images, programmatic SEO | Phase 2 | Stefan's own idea — preserved in roadmap; needs public URLs + moderation thinking |
 | Social-format exports, interactive chart studio, embeds, huisstijl | Phase 2–3 | The "Visualisatie Studio" — seam reserved via chart-spec ADR [007](decisions/007-chart-spec-rendering.md) |
 | Scoop alerts | Phase 3 | Needs background scanning infra + accounts |
