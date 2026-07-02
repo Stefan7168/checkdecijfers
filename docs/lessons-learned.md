@@ -6,6 +6,13 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## 2026-07-03 — Supabase capacity incident, ongoing (ops awareness, not a bug)
+
+- **Lesson:** when infrastructure looks flaky, check the provider's status page before assuming a code bug — especially for the exact region a project runs in.
+- **Evidence:** status.supabase.com reports an ongoing incident (since 2026-06-30, still "Investigating/Mitigating" as of 2026-07-02 15:08 UTC): capacity issues affecting **project creation, resizing, restarts, and branch operations** across nearly every region, including **eu-central-1** (where the `checkdecijfers` project lives). Supabase's own note: existing projects are unaffected *unless restarted or resized*. Our project (`ACTIVE_HEALTHY`, created 2026-07-02, mid-incident) has ingested and queried normally throughout — no observed impact on ordinary reads/writes.
+- **Action while this is open:** avoid restarting, resizing, or pausing the Supabase project. If a connection failure looks infrastructure-related rather than code-related, check status.supabase.com first. This entry is time-bound — safe to ignore once Supabase resolves it (no fixed date; re-check status.supabase.com if anything Supabase-related misbehaves).
+- **Scope:** provider-quirk, ops
+
 ## 2026-07-03 — git identity leak (work email into a personal-project repo)
 
 - **Lesson:** check a machine's *global* `git config user.email` before the first commit in a new repo, especially a personal/private one — it silently applies unless a repo-local override exists, and nothing about writing a commit warns you whose identity it's using.
