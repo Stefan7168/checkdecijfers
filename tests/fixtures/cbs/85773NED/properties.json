@@ -1,0 +1,104 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/85773NED/$metadata#Properties",
+ "Identifier": "85773NED",
+ "Title": "Bestaande koopwoningen; verkoopprijzen prijsindex 2020=100",
+ "Description": "De prijsindex voor bestaande koopwoningen (PBK) heeft tot doel de prijsontwikkelingen van de verkochte bestaande koopwoningen weer te geven. De woning dient op Nederlands grondgebied gelegen te zijn en verkocht te zijn aan een particulier. Naast de prijsontwikkeling worden ook het aantal transacties, de gemiddelde verkoopprijs en de totale waarde van de verkoopprijzen van de verkochte woningen gepubliceerd. De prijsindexcijfers over de bestaande koopwoningen zijn gebaseerd op een integrale registratie van verkooptransacties van woningen door het Kadaster en WOZ-waarden van alle woningen in Nederland. Indexreeksen kunnen fluctueren, bijvoorbeeld wanneer het aantal transacties in een regio beperkt is. Het verdient dan aanbeveling om de lange termijn ontwikkelingen van de prijsindexcijfers te gebruiken.\r\nDe gemiddelde verkoopprijs kan een andere ontwikkeling laten zien dan de prijsindex bestaande koopwoningen. De ontwikkeling van de gemiddelde verkoopprijs is namelijk geen indicator voor de prijsontwikkeling van bestaande koopwoningen.\r\n\r\nGegevens beschikbaar vanaf: januari 1995 \r\n\r\nStatus van de cijfers:\r\nDe cijfers in deze tabel zijn direct definitief. De berekening van deze cijfers is gebaseerd op het aantal notaristransacties dat iedere maand door het Kadaster wordt vastgesteld. Een revisie van de cijfers vindt alleen bij uitzondering plaats, namelijk alleen indien er sprake is van een noemenswaardige fout buiten de gebruikelijke statistische marges. De aantallen verkochte bestaande koopwoningen kunnen op latere momenten nogmaals door het Kadaster berekend worden. Doorgaans zijn deze cijfers gelijk aan de publicatie op Statline, maar in enkele perioden verschillen ze van elkaar. Het Kadaster hanteert in deze gevallen meest actuele cijfers. Deze kunnen sinds de eerste publicatie gewijzigd zijn. Het CBS hanteert cijfers van de eerste publicatie conform bovenstaand revisiebeleid. \r\n\r\nWijzigingen per 22 juni 2026:\r\nDe cijfers over mei 2026 zijn toegevoegd.\r\n\r\nWanneer komen er nieuwe cijfers?\r\nDe nieuwe cijfers worden circa 22 dagen na verslagmaand gepubliceerd. \r\n\r\n",
+ "Language": "nl",
+ "Authority": "https://standaarden.overheid.nl/owms/terms/Centraal_Bureau_voor_de_Statistiek",
+ "Modified": "2026-06-22T06:30:00+02:00",
+ "ReleaseDate": "2026-06-22T06:30:00+02:00",
+ "ModificationDate": "2026-06-22T06:30:00+02:00",
+ "TemporalCoverage": "januari 1995 - mei 2026",
+ "Catalog": "CBS",
+ "Publisher": "https://standaarden.overheid.nl/owms/terms/Centraal_Bureau_voor_de_Statistiek",
+ "ContactPoint": "infoservice@cbs.nl",
+ "Version": "202606220630",
+ "VersionNotes": "",
+ "VersionReason": "Actualisering",
+ "Frequency": "Per maand",
+ "Status": "Regulier",
+ "ObservationCount": 4264,
+ "ObservationsModified": "2026-06-22T06:30:00+02:00",
+ "DatasetType": "Numeric",
+ "GraphTypes": "Table,Bar,Line",
+ "License": "https://creativecommons.org/licenses/by/4.0/",
+ "Source": "CBS.",
+ "Summary": "Prijsindex, aantal verkopen, ontwikkelingen en gemiddelde verkoopprijzen\nvan bestaande koopwoningen in Nederland",
+ "LongDescription": "INHOUDSOPGAVE\r\n\r\n1. Toelichting\r\n2. Definities en verklaring van symbolen\r\n3. Koppelingen naar relevante tabellen en artikelen \r\n4. Bronnen en methoden\r\n5. Meer informatie \r\n\r\n1. TOELICHTING\r\n\r\nDe prijsindex voor bestaande koopwoningen (PBK) heeft tot doel de prijsontwikkelingen van de verkochte bestaande koopwoningen weer te geven. De woning dient op Nederlands grondgebied gelegen te zijn en verkocht te zijn aan een particulier. Naast de prijsontwikkeling worden ook het aantal transacties, de gemiddelde verkoopprijs en de totale waarde van de verkoopprijzen van de verkochte woningen gepubliceerd. De prijsindexcijfers over de bestaande koopwoningen zijn gebaseerd op een integrale registratie van verkooptransacties van woningen door het Kadaster en WOZ-waarden van alle woningen in Nederland. Indexreeksen kunnen fluctueren, bijvoorbeeld wanneer het aantal transacties in een regio beperkt is. Het verdient dan aanbeveling om de lange termijn ontwikkelingen van de prijsindexcijfers te gebruiken.\r\nDe gemiddelde verkoopprijs kan een andere ontwikkeling laten zien dan de prijsindex bestaande koopwoningen. De ontwikkeling van de gemiddelde verkoopprijs is namelijk geen indicator voor de prijsontwikkeling van bestaande koopwoningen.\r\n\r\nGegevens beschikbaar vanaf: januari 1995 \r\n\r\nStatus van de cijfers:\r\nDe cijfers in deze tabel zijn direct definitief. De berekening van deze cijfers is gebaseerd op het aantal notaristransacties dat iedere maand door het Kadaster wordt vastgesteld. Een revisie van de cijfers vindt alleen bij uitzondering plaats, namelijk alleen indien er sprake is van een noemenswaardige fout buiten de gebruikelijke statistische marges. De aantallen verkochte bestaande koopwoningen kunnen op latere momenten nogmaals door het Kadaster berekend worden. Doorgaans zijn deze cijfers gelijk aan de publicatie op Statline, maar in enkele perioden verschillen ze van elkaar. Het Kadaster hanteert in deze gevallen meest actuele cijfers. Deze kunnen sinds de eerste publicatie gewijzigd zijn. Het CBS hanteert cijfers van de eerste publicatie conform bovenstaand revisiebeleid. \r\n\r\nWijzigingen per 22 juni 2026:\r\nDe cijfers over mei 2026 zijn toegevoegd.\r\n\r\nWanneer komen er nieuwe cijfers?\r\nDe nieuwe cijfers worden circa 22 dagen na verslagmaand gepubliceerd. \r\n\r\n2. DEFINITIES EN VERKLARING VAN SYMBOLEN\r\n\r\nDefinities:\r\nDe woning moet op Nederlandse grond staan en verkocht zijn aan een particulier. \r\nOnder een bestaande woning wordt een woning verstaan die zich al op de woningmarkt bevindt.\r\n\r\nVerklaring van symbolen:\r\nniets (blanco)\t: het cijfer kan op logische gronden niet voorkomen\r\n. \t\t: het cijfer is onbekend, onvoldoende betrouwbaar of geheim\r\n*\t\t: voorlopige cijfers\r\n**\t\t: nader voorlopige cijfers\r\n\r\n3. KOPPELINGEN NAAR RELEVANTE TABELLEN EN ARTIKELEN\r\n\r\nAnimatie:\r\n- <a href='https://www.cbs.nl/nl-nl/visualisaties/huizenmarkt-in-beeld'>Huizenmarkt in beeld</a>\r\n\r\nRelevante tabellen:\r\n- <a href=https://opendata.cbs.nl/#/CBS/nl/dataset/83906NED>Bestaande koopwoningen; verkoopprijzen prijsindex 2015=100</a>\r\n- <a href='https://opendata.cbs.nl/statline/#/CBS/nl/dataset/85792NED'>Bestaande koopwoningen; verkoopprijzen prijsindex 2020=100, regio</a>\r\n- <a href='https://opendata.cbs.nl/statline/#/CBS/nl/dataset/85791NED'>Bestaande koopwoningen; verkoopprijzen; woningtype; 2020=100,</a>\r\n- <a href='https://opendata.cbs.nl/statline/#/CBS/nl/dataset/85819NED'>Bestaande koopwoningen; verkoopprijzen prijsindex 2020=100, regio (COROP)</a>\r\n- <a href='https://opendata.cbs.nl/statline/#/CBS/nl/dataset/85036NED'>Gemiddelde WOZ-waarde van woningen op 1januari; eigendom, regio</a>\r\n- <a href='https://opendata.cbs.nl/statline/#/CBS/nl/dataset/86098NED'>Levensloop van woningen en niet-woningen; gebruiksfunctie, regio</a>\r\n- <a href='https://opendata.cbs.nl/statline/#/CBS/nl/dataset/83625NED'>Bestaande koopwoningen; gemiddelde verkoopprijzen, regio</a>\r\n- <a href='https://www.cbs.nl/nl-nl/maatwerk/2026/21/prijsindex-bestaande-koopwoningen--pbk---naar-gemeente'>Prijsindex-bestaande-koopwoningen--pbk---naar-gemeente</a>\r\n\r\n</a>Op kwartaalbasis publiceert Eurostat <a href='http://ec.europa.eu/eurostat/web/housing-price-statistics'>Huizenprijsindices</a> van de Europese unie, de Euro-zone, Ierland en Noorwegen. Deze huizenprijsindex omvat zowel de bestaande als de nieuwbouw koopwoningen. Aparte cijfers van Nederland zijn in deze publicatie opgenomen. \r\n\r\nVanaf 1 januari 2015 heeft het Kadaster een nieuwe methode ingevoerd voor het typeren van woningen. Uit analyse blijkt dat deze methode nauwelijks invloed heeft op de prijsindexcijfers en geen invloed heeft op het totaal aantal transacties. Meer informatie hierover is te vinden bij het Kadaster in de <a href='https://www.kadaster.nl/-/productbeschrijving-woningtypering' >Productbeschrijving Woningtypering</a>. \r\n\r\nMeer informatie is te vinden op de themapagina <a href='https://www.cbs.nl/nl-nl/economie/prijzen'>Prijzen </a>en <a href='https://www.cbs.nl/nl-nl/economie/bouwen-en-wonen'>Bouwen en wonen</a>.\r\n\r\n4. BRONNEN EN METHODEN\r\n\r\nDe onderzoeksmethode van deze tabel is te vinden in de onderzoekbeschrijving <a href='https://www.cbs.nl/nl-nl/onze-diensten/methoden/onderzoeksomschrijvingen/korte-onderzoeksbeschrijvingen/prijsindex-bestaande-koopwoningen--pbk---2020-100'>prijsindex bestaande koopwoningen</a>\r\nHet artikel “Waarom de gemiddelde koopsom geen huizenprijsindicator is” (PDF) is te vinden in de onderzoekbeschrijving van deze tabel</a> <a href='https://www.cbs.nl/nl-nl/onze-diensten/methoden/onderzoeksomschrijvingen/korte-onderzoeksbeschrijvingen/prijsindex-bestaande-koopwoningen--pbk---2020-100'>prijsindex bestaande koopwoningen</a>\r\n\r\n5. MEER INFORMATIE\r\n\r\n<a href='https://www.cbs.nl/nl-nl/over-ons/contact/infoservice'>Infoservice</a>\r\n\r\nCopyright (c) Centraal Bureau voor de Statistiek, Den Haag/Heerlen \r\nVerveelvoudiging is toegestaan, mits het CBS als bron wordt vermeld.\r\n\r\n",
+ "Provenance": [
+  {
+   "Title": "prijsindex bestaande koopwoningen",
+   "Url": "https://www.cbs.nl/nl-nl/onze-diensten/methoden/onderzoeksomschrijvingen/korte-onderzoeksbeschrijvingen/prijsindex-bestaande-koopwoningen--pbk---2020-100"
+  },
+  {
+   "Title": "prijsindex bestaande koopwoningen",
+   "Url": "https://www.cbs.nl/nl-nl/onze-diensten/methoden/onderzoeksomschrijvingen/korte-onderzoeksbeschrijvingen/prijsindex-bestaande-koopwoningen--pbk---2020-100"
+  }
+ ],
+ "RelatedSources": [
+  {
+   "Title": "Huizenmarkt in beeld",
+   "Url": "https://www.cbs.nl/nl-nl/visualisaties/huizenmarkt-in-beeld"
+  },
+  {
+   "Title": "Bestaande koopwoningen; verkoopprijzen prijsindex 2020=100, regio",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/dataset/85792NED"
+  },
+  {
+   "Title": "Bestaande koopwoningen; verkoopprijzen; woningtype; 2020=100,",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/dataset/85791NED"
+  },
+  {
+   "Title": "Bestaande koopwoningen; verkoopprijzen prijsindex 2020=100, regio (COROP)",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/dataset/85819NED"
+  },
+  {
+   "Title": "Gemiddelde WOZ-waarde van woningen op 1januari; eigendom, regio",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/dataset/85036NED"
+  },
+  {
+   "Title": "Levensloop van woningen en niet-woningen; gebruiksfunctie, regio",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/dataset/86098NED"
+  },
+  {
+   "Title": "Bestaande koopwoningen; gemiddelde verkoopprijzen, regio",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/dataset/83625NED"
+  },
+  {
+   "Title": "Prijsindex-bestaande-koopwoningen--pbk---naar-gemeente",
+   "Url": "https://www.cbs.nl/nl-nl/maatwerk/2026/21/prijsindex-bestaande-koopwoningen--pbk---naar-gemeente"
+  },
+  {
+   "Title": "Huizenprijsindices",
+   "Url": "http://ec.europa.eu/eurostat/web/housing-price-statistics"
+  },
+  {
+   "Title": "Productbeschrijving Woningtypering",
+   "Url": "https://www.kadaster.nl/-/productbeschrijving-woningtypering"
+  },
+  {
+   "Title": "Prijzen ",
+   "Url": "https://www.cbs.nl/nl-nl/economie/prijzen"
+  },
+  {
+   "Title": "Bouwen en wonen",
+   "Url": "https://www.cbs.nl/nl-nl/economie/bouwen-en-wonen"
+  }
+ ],
+ "Distributions": [
+  {
+   "Format": "csv",
+   "MediaType": "csv",
+   "DownloadUrl": "https://datasets.cbs.nl/csv/CBS/nl/85773NED",
+   "AccessUrl": "https://dataportal.cbs.nl/detail/CBS/85773NED",
+   "Language": "nl"
+  },
+  {
+   "Format": "odata",
+   "MediaType": "odata",
+   "DownloadUrl": "https://datasets.cbs.nl/odata/v1/CBS/85773NED",
+   "AccessUrl": "https://dataportal.cbs.nl/detail/CBS/85773NED",
+   "Language": "nl"
+  }
+ ]
+}

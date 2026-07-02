@@ -1,0 +1,104 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/86141NED/$metadata#Properties",
+ "Identifier": "86141NED",
+ "Title": "Consumentenprijzen; CPI 2025=100, index en mutaties",
+ "Description": "In deze tabel staan cijfers van de consumentenprijsindex (CPI). De CPI meet de prijsverandering van goederen en diensten die Nederlandse huishoudens voor de eigen consumptie aanschaffen. De tabel geeft informatie over indexcijfers, maandmutaties, jaarmutaties en wegingscoëfficiënten. De jaarmutatie van de totale bestedingen van de CPI staat bekend als de inflatie. \r\n\r\nNaast cijfers over de totale bestedingen worden ook cijfers over gedetailleerde productgroepen (bestedingscategorieën) bekendgemaakt. Van iedere productgroep is in de tabel te vinden hoeveel Nederlandse huishoudens er gemiddeld aan uitgeven in verhouding tot de totale uitgaven. Dit noemen we de wegingscoëfficiënt. De totale weging van de CPI is 100.000.\r\n\r\nIn de tabel staat ook de afgeleide CPI. Dit is de CPI waarin veranderingen in belastingen (bijvoorbeeld btw of accijns) buiten beschouwing worden gelaten. Het is daarmee een prijsindex die bij benadering weergeeft wat de prijsverandering is als de belastingtarieven niet gewijzigd waren.\r\n\r\nCijfers van de CPI worden elke maand gepubliceerd. Na afloop van elk kalenderjaar worden ook jaarcijfers bekendgemaakt. Het indexcijfer van een kalenderjaar wordt berekend als het gemiddelde van de indexcijfers van de twaalf maanden van dat jaar.\r\n\r\nGegevens beschikbaar vanaf: december 2009.\r\n\r\nStatus van de cijfers:\r\nVan elke verslagmaand worden eerst cijfers van de snelle raming gepubliceerd. Bij de snelle raming worden de maandmutaties en jaarmutaties bekendgemaakt van het totaal CPI en van een aantal hoofdgroepen (speciale aggregaten). Deze cijfers worden berekend op basis van nog onvolledige brongegevens en zijn niet geschikt om te gebruiken voor indexering. Er worden daarom bij de snelle raming geen indexcijfers gepubliceerd. De uitkomsten van de snelle raming hebben een voorlopige status.\r\n\r\nNa de snelle raming volgt de eerste publicatie van de indexcijfers en mutaties van alle bestedingscategorieën. Deze cijfers zijn ook voorlopig. Een maand later worden de cijfers over diezelfde verslagmaand definitief. Verschillen tussen de voorlopige en de definitieve cijfers komen door nagekomen brongegevens.\r\n\r\nWijzigingen ten opzichte van de vorige versie: \r\nEr zijn gegevens over een nieuwe periode toegevoegd en/of er zijn bijstellingen doorgevoerd.\r\n\r\nWanneer komen er nieuwe cijfers?\r\nDe cijfers van de snelle raming worden gepubliceerd op de laatste werkdag van de maand waarop de cijfers betrekking hebben, of kort daarna. \r\n\r\nDe nieuwe indexcijfers worden doorgaans tussen de eerste en tweede donderdag van de maand die volgt op de verslagmaand gepubliceerd. \r\n\r\nAlle publicatiemomenten van de CPI zijn beschikbaar op de publicatieplanning (zie paragraaf 3).\r\n\r\n",
+ "Language": "nl",
+ "Authority": "https://standaarden.overheid.nl/owms/terms/Centraal_Bureau_voor_de_Statistiek",
+ "Modified": "2026-07-02T00:00:00+02:00",
+ "ReleaseDate": "2026-07-02T00:00:00+02:00",
+ "ModificationDate": "2026-07-02T00:00:00+02:00",
+ "TemporalCoverage": "2009 december - 2026 juni",
+ "Catalog": "CBS",
+ "Publisher": "https://standaarden.overheid.nl/owms/terms/Centraal_Bureau_voor_de_Statistiek",
+ "ContactPoint": "infoservice@cbs.nl",
+ "Version": "202607020000",
+ "VersionNotes": "",
+ "VersionReason": "Actualisering",
+ "Frequency": "Per maand",
+ "Status": "Regulier",
+ "ObservationCount": 611030,
+ "ObservationsModified": "2026-07-02T00:00:00+02:00",
+ "DatasetType": "Numeric",
+ "GraphTypes": "Table,Bar,Line",
+ "License": "https://creativecommons.org/licenses/by/4.0/",
+ "Source": "CBS.",
+ "Summary": "Consumentenprijsindex naar consumentenbestedingen 2025=100\nPrijsindex, maandmutatie, jaarmutatie, wegingscoëfficiënt",
+ "LongDescription": "INHOUDSOPGAVE\r\n\r\n1. Toelichting\r\n2. Definities en verklaring van symbolen\r\n3. Koppelingen naar relevante tabellen en artikelen\r\n4. Bronnen en methoden\r\n5. Meer informatie\r\n\r\n1. TOELICHTING\r\n\r\nIn deze tabel staan cijfers van de consumentenprijsindex (CPI). De CPI meet de prijsverandering van goederen en diensten die Nederlandse huishoudens voor de eigen consumptie aanschaffen. De tabel geeft informatie over indexcijfers, maandmutaties, jaarmutaties en wegingscoëfficiënten. De jaarmutatie van de totale bestedingen van de CPI staat bekend als de inflatie. \r\n\r\nNaast cijfers over de totale bestedingen worden ook cijfers over gedetailleerde productgroepen (bestedingscategorieën) bekendgemaakt. Van iedere productgroep is in de tabel te vinden hoeveel Nederlandse huishoudens er gemiddeld aan uitgeven in verhouding tot de totale uitgaven. Dit noemen we de wegingscoëfficiënt. De totale weging van de CPI is 100.000.\r\n\r\nIn de tabel staat ook de afgeleide CPI. Dit is de CPI waarin veranderingen in belastingen (bijvoorbeeld btw of accijns) buiten beschouwing worden gelaten. Het is daarmee een prijsindex die bij benadering weergeeft wat de prijsverandering is als de belastingtarieven niet gewijzigd waren.\r\n\r\nCijfers van de CPI worden elke maand gepubliceerd. Na afloop van elk kalenderjaar worden ook jaarcijfers bekendgemaakt. Het indexcijfer van een kalenderjaar wordt berekend als het gemiddelde van de indexcijfers van de twaalf maanden van dat jaar.\r\n\r\nGegevens beschikbaar vanaf: december 2009.\r\n\r\nStatus van de cijfers:\r\nVan elke verslagmaand worden eerst cijfers van de snelle raming gepubliceerd. Bij de snelle raming worden de maandmutaties en jaarmutaties bekendgemaakt van het totaal CPI en van een aantal hoofdgroepen (speciale aggregaten). Deze cijfers worden berekend op basis van nog onvolledige brongegevens en zijn niet geschikt om te gebruiken voor indexering. Er worden daarom bij de snelle raming geen indexcijfers gepubliceerd. De uitkomsten van de snelle raming hebben een voorlopige status.\r\n\r\nNa de snelle raming volgt de eerste publicatie van de indexcijfers en mutaties van alle bestedingscategorieën. Deze cijfers zijn ook voorlopig. Een maand later worden de cijfers over diezelfde verslagmaand definitief. Verschillen tussen de voorlopige en de definitieve cijfers komen door nagekomen brongegevens.\r\n\r\nWijzigingen ten opzichte van de vorige versie: \r\nEr zijn gegevens over een nieuwe periode toegevoegd en/of er zijn bijstellingen doorgevoerd.\r\n\r\nWanneer komen er nieuwe cijfers?\r\nDe cijfers van de snelle raming worden gepubliceerd op de laatste werkdag van de maand waarop de cijfers betrekking hebben, of kort daarna. \r\n\r\nDe nieuwe indexcijfers worden doorgaans tussen de eerste en tweede donderdag van de maand die volgt op de verslagmaand gepubliceerd. \r\n\r\nAlle publicatiemomenten van de CPI zijn beschikbaar op de publicatieplanning (zie paragraaf 3).\r\n\r\n2. DEFINITIES EN VERKLARING VAN SYMBOLEN\r\n\r\nDefinities:\r\nConsumentenprijsindex (CPI):\r\nDe CPI meet de prijsverandering van goederen en diensten die Nederlandse huishoudens voor de eigen consumptie aanschaffen.\r\n\r\nCPI afgeleid:\r\nDe CPI afgeleid is de prijsindex waarin veranderingen in de tarieven van productgebonden belastingen (bijvoorbeeld btw en accijns op alcohol en tabak) en subsidies en van consumptiegebonden belastingen (bijvoorbeeld motorrijtuigenbelasting) buiten beschouwing worden gelaten.\r\n\r\nBestedingscategorie:\r\nIn de CPI wordt de prijsontwikkeling gemeten van een groot aantal bestedingscategorieën (productgroepen). De categorieën zijn onderverdeeld in verschillende classificatieniveaus: afdelingen, groepen, klassen, subklassen en microklassen. Verder staan er speciale samentellingen van productgroepen (speciale aggregaten) in de tabel. In de toelichting van de categorieën wordt met een afkorting tussen haakjes aangegeven of het gaat om duurzame goederen (D), semi-duurzame goederen (SD), niet-duurzame goederen (ND) of diensten (S). Verder betekent de afkorting 'n.e.g.' niet elders geclassificeerd.\r\n\r\nIndexcijfer:\r\nHet indexcijfer geeft het relatieve prijsniveau in een periode weer ten opzichte van een referentieperiode. Uit de indexcijfers van verschillende periodes kan een prijsontwikkeling worden berekend, zoals de maandmutatie en jaarmutatie.\r\n\r\nMaandmutatie:\r\nDe maandmutatie is de gemiddelde prijsontwikkeling in een maand tijd. De maandmutatie wordt gemeten als de ontwikkeling van het indexcijfer ten opzichte van de voorgaande verslagmaand.\r\n\r\nJaarmutatie:\r\nDe jaarmutatie is de gemiddelde prijsontwikkeling in een jaar tijd. De jaarmutatie wordt gemeten als de ontwikkeling van het indexcijfer ten opzichte van de overeenkomstige periode in het voorgaande verslagjaar. \r\n\r\nWegingscoëfficiënt:\r\nVan iedere bestedingscategorie is te vinden hoeveel Nederlandse huishoudens er gemiddeld aan uitgeven in verhouding tot de totale uitgaven. Dit noemen we de wegingscoëfficiënt. De totale weging van de CPI is 100.000.\r\n\r\nMaandcijfer:\r\nDe CPI wordt iedere maand gepubliceerd. Het indexcijfer geeft het gemiddelde prijsniveau van consumentenproducten in de verslagmaand weer.\r\n\r\nJaarcijfer:\r\nNa afloop van elk kalenderjaar worden jaarcijfers bekendgemaakt. Het indexcijfer van een kalenderjaar wordt berekend als het gemiddelde van de indexcijfers van de twaalf maanden van dat jaar. Het CBS publiceert in deze tabel alleen cijfers voor kalenderjaren, maar een gemiddeld indexcijfer kan op dezelfde manier ook voor elke andere aaneengesloten periode van twaalf maanden worden vastgesteld.\r\n\r\nVerklaring van symbolen:\r\nniets (blanco)\t: het cijfer kan op logische gronden niet voorkomen\r\n. \t\t        : het cijfer is onbekend, onvoldoende betrouwbaar of geheim\r\n*\t\t        : voorlopige cijfers\r\n**\t\t        : nader voorlopige cijfers\r\n\r\nIndexcijfers zijn afgerond op twee decimalen. Maandmutaties en jaarmutaties zijn afgerond op één decimaal. De wegingscoëfficiënten zijn afgerond op hele getallen.\r\n\r\n3. KOPPELINGEN NAAR RELEVANTE TABELLEN EN ARTIKELEN\r\n\r\nRelevante tabellen:\r\n<a href='https://opendata.cbs.nl/statline/#/CBS/nl/dataset/70936NED'>Consumentenprijsindex (CPI) vanaf 1963, jaarmutatie</a>\r\n<a href='https://opendata.cbs.nl/statline/#/CBS/nl/dataset/86142NED'>Consumentenprijsindex (CPI) 2025=100, bijdrage en impact</a>\r\n<a href='https://opendata.cbs.nl/statline/#/CBS/nl/dataset/71905NED'>Consumentenprijsindex (CPI) 1900=100, index en jaarmutatie</a>\r\n<a href='https://opendata.cbs.nl/statline/#/CBS/nl/dataset/86144NED'>Europees geharmoniseerde consumentenprijsindex (HICP) 2025=100, index en mutaties</a>\r\n<a href='https://opendata.cbs.nl/statline/#/CBS/nl/dataset/86146NED'>Europees geharmoniseerde consumentenprijsindex (HICP) 2025=100, index en jaarmutatie Europa</a>\r\n\r\nRelevante artikelen:\r\nHet dashboard consumentenprijzen toont grafieken over de CPI, de HICP en de inflatie: <a href='https://www.cbs.nl/nl-nl/visualisaties/dashboard-consumentenprijzen'>Dashboard consumentenprijzen</a>.   \r\n\r\nMeer informatie is te vinden op de themapagina <a href='https://www.cbs.nl/nl-nl/economie/prijzen'>Prijzen</a>.\r\n\r\nAlle publicatiemomenten van de CPI zijn beschikbaar op de <a href='https://www.cbs.nl/nl-nl/publicatieplanning'>publicatieplanning</a>.\r\n\r\n4. BRONNEN EN METHODEN\r\nDe onderzoeksmethode van de CPI is te vinden in de <a href='https://www.cbs.nl/nl-nl/onze-diensten/methoden/onderzoeksomschrijvingen/korte-onderzoeksomschrijvingen/consumentenprijsindex--cpi---2025-100'>korte onderzoeksbeschrijving CPI 2025=100</a>. \r\n\r\nMeer achtergrondinformatie over de CPI is beschikbaar in de <a href='https://www.cbs.nl/nl-nl/longread/diversen/2026/cpi-lange-onderzoeksbeschrijving'>lange onderzoeksbeschrijving CPI</a>.\r\n\r\nZie voor de classificatie die wordt gebruikt voor de indeling van het pakket goederen en diensten: <a href='https://www.cbs.nl/nl-nl/longread/diversen/2026/de-ecoicopv2-indeling'>ECOICOPv2 classificatie</a>.\r\n\r\nSnelle raming:\r\nOp de laatste werkdag van de maand waarop de cijfers betrekking hebben, of kort daarna, wordt de snelle raming gepubliceerd. Er worden maandmutaties en jaarmutaties gepubliceerd van het hoofdniveau van de CPI en van een aantal speciale aggregaten zoals diensten, energie en voeding. Daarmee wordt aangesloten op het publicatieschema van Eurostat voor de Europees geharmoniseerde consumentenprijsindex (HICP). De snelle raming wordt berekend op basis van nog onvolledige brongegevens. De snelle raming is daarom niet geschikt om te gebruiken voor indexering. \r\n\r\nNieuw referentiejaar CPI vanaf 2026:\r\nVanaf 2026 zijn de CPI en de HICP overgegaan op een nieuw referentiejaar, van 2015=100 naar 2025=100. Er is daarbij ook een update van de classificatie van goederen en diensten in gebruik genomen, die beter aansluit bij veranderde consumptiepatronen. Bovendien sluit de CPI vanaf 2026 meer aan bij de HICP. Meer informatie vindt u in het methodedocument <a href='https://www.cbs.nl/nl-nl/longread/rapportages/2026/de-consumentenprijsindex-vanaf-2026'>De consumentenprijsindex vanaf 2026</a>.\r\n\r\nCoronacrisis tussen 2020 en 2022:\r\nAls gevolg van de overheidsmaatregelen in verband met de coronacrisis is tussen 16 maart 2020 en 25 januari 2022 de verkoop van sommige goederen en diensten tijdelijk stilgelegd geweest. Hierdoor waren er voor deze goederen en diensten geen of beperkt transacties waarvan de prijzen gemeten konden worden. Deze prijzen moesten daarom worden geschat voor de berekening van de CPI. Meer informatie over de statistische implicaties van de coronacrisis op de berekening van de CPI is te vinden via de onderstaande links:\r\n\r\n<a href='https://www.cbs.nl/nl-nl/longread/diversen/2020/de-gevolgen-van-de-coronacrisis-voor-het-samenstellen-van-de-cpi'>De gevolgen van de coronacrisis voor het samenstellen van de CPI</a>\r\n<a href='https://www.cbs.nl/nl-nl/longread/rapportages/2021/de-gevolgen-van-de-coronacrisis-voor-het-wegingsschema-van-de-cpi'>De gevolgen van de coronacrisis voor het wegingsschema van de CPI</a>\r\n\r\n5. MEER INFORMATIE\r\n\r\n<a href='http://www.cbs.nl/nl-NL/menu/informatie/publiek/inlichtingen/default.htm'>Infoservice</a>\r\n\r\nCopyright © Centraal Bureau voor de Statistiek, Den Haag/Heerlen\r\nVerveelvoudiging is toegestaan, mits het CBS als bron wordt vermeld.\r\n\r\n\r\n",
+ "Provenance": [
+  {
+   "Title": "korte onderzoeksbeschrijving CPI 2025=100",
+   "Url": "https://www.cbs.nl/nl-nl/onze-diensten/methoden/onderzoeksomschrijvingen/korte-onderzoeksomschrijvingen/consumentenprijsindex--cpi---2025-100"
+  },
+  {
+   "Title": "lange onderzoeksbeschrijving CPI",
+   "Url": "https://www.cbs.nl/nl-nl/longread/diversen/2026/cpi-lange-onderzoeksbeschrijving"
+  },
+  {
+   "Title": "ECOICOPv2 classificatie",
+   "Url": "https://www.cbs.nl/nl-nl/longread/diversen/2026/de-ecoicopv2-indeling"
+  },
+  {
+   "Title": "De consumentenprijsindex vanaf 2026",
+   "Url": "https://www.cbs.nl/nl-nl/longread/rapportages/2026/de-consumentenprijsindex-vanaf-2026"
+  },
+  {
+   "Title": "De gevolgen van de coronacrisis voor het samenstellen van de CPI",
+   "Url": "https://www.cbs.nl/nl-nl/longread/diversen/2020/de-gevolgen-van-de-coronacrisis-voor-het-samenstellen-van-de-cpi"
+  },
+  {
+   "Title": "De gevolgen van de coronacrisis voor het wegingsschema van de CPI",
+   "Url": "https://www.cbs.nl/nl-nl/longread/rapportages/2021/de-gevolgen-van-de-coronacrisis-voor-het-wegingsschema-van-de-cpi"
+  }
+ ],
+ "RelatedSources": [
+  {
+   "Title": "Consumentenprijsindex (CPI) vanaf 1963, jaarmutatie",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/dataset/70936NED"
+  },
+  {
+   "Title": "Consumentenprijsindex (CPI) 2025=100, bijdrage en impact",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/dataset/86142NED"
+  },
+  {
+   "Title": "Consumentenprijsindex (CPI) 1900=100, index en jaarmutatie",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/dataset/71905NED"
+  },
+  {
+   "Title": "Europees geharmoniseerde consumentenprijsindex (HICP) 2025=100, index en mutaties",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/dataset/86144NED"
+  },
+  {
+   "Title": "Europees geharmoniseerde consumentenprijsindex (HICP) 2025=100, index en jaarmutatie Europa",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/dataset/86146NED"
+  },
+  {
+   "Title": "Dashboard consumentenprijzen",
+   "Url": "https://www.cbs.nl/nl-nl/visualisaties/dashboard-consumentenprijzen"
+  },
+  {
+   "Title": "Prijzen",
+   "Url": "https://www.cbs.nl/nl-nl/economie/prijzen"
+  },
+  {
+   "Title": "publicatieplanning",
+   "Url": "https://www.cbs.nl/nl-nl/publicatieplanning"
+  }
+ ],
+ "Distributions": [
+  {
+   "Format": "csv",
+   "MediaType": "csv",
+   "DownloadUrl": "https://datasets.cbs.nl/csv/CBS/nl/86141NED",
+   "AccessUrl": "https://dataportal.cbs.nl/detail/CBS/86141NED",
+   "Language": "nl"
+  },
+  {
+   "Format": "odata",
+   "MediaType": "odata",
+   "DownloadUrl": "https://datasets.cbs.nl/odata/v1/CBS/86141NED",
+   "AccessUrl": "https://dataportal.cbs.nl/detail/CBS/86141NED",
+   "Language": "nl"
+  }
+ ]
+}

@@ -1,0 +1,60 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/83932NED/$metadata#MeasureCodes",
+ "value": [
+  {
+   "Identifier": "1050010",
+   "Index": 4,
+   "Title": "Particuliere huishoudens",
+   "Description": "Aantal particuliere huishoudens met inkomen per 1 januari van het verslagjaar.\r\nEen particulier huishouden bestaat uit één of meer personen die samen een woonruimte bewonen en zichzelf niet-bedrijfsmatig voorzien van de dagelijkse behoeften.\r\n",
+   "MeasureGroupId": null,
+   "DataType": "Double",
+   "Unit": "x 1 000",
+   "Decimals": 1,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "1050001",
+   "Index": 5,
+   "Title": "Personen per huishouden",
+   "Description": "Gemiddeld aantal personen per particulier huishouden.",
+   "MeasureGroupId": null,
+   "DataType": "Double",
+   "Unit": "aantal",
+   "Decimals": 1,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "M006776",
+   "Index": 6,
+   "Title": "Personen met inkomen per huishouden",
+   "Description": "Gemiddeld aantal personen met inkomen per particulier huishouden.",
+   "MeasureGroupId": null,
+   "DataType": "Double",
+   "Unit": "aantal",
+   "Decimals": 1,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "M003239",
+   "Index": 7,
+   "Title": "Gemiddeld inkomen",
+   "Description": "Gemiddeld inkomen van particuliere huishoudens.",
+   "MeasureGroupId": null,
+   "DataType": "Double",
+   "Unit": "1 000 euro",
+   "Decimals": 1,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "M000935",
+   "Index": 8,
+   "Title": "Mediaan inkomen",
+   "Description": "Mediaan inkomen van particuliere huishoudens.\r\nDe mediaan is het middelste getal wanneer alle getallen van laag naar hoog worden gesorteerd.\r\n",
+   "MeasureGroupId": null,
+   "DataType": "Double",
+   "Unit": "1 000 euro",
+   "Decimals": 1,
+   "PresentationType": null
+  }
+ ]
+}

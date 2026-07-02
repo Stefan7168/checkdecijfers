@@ -1,0 +1,67 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/03759ned/$metadata#Dimensions",
+ "value": [
+  {
+   "Identifier": "BurgerlijkeStaat",
+   "Title": "Burgerlijke staat",
+   "Description": "",
+   "MapYear": null,
+   "ReleasePolicy": null,
+   "Kind": "Dimension",
+   "ContainsGroups": false,
+   "ContainsCodes": true,
+   "CodesUrl": "https://datasets.cbs.nl/odata/v1/CBS/03759ned/BurgerlijkeStaatCodes",
+   "GroupsUrl": null
+  },
+  {
+   "Identifier": "Geslacht",
+   "Title": "Geslacht",
+   "Description": "",
+   "MapYear": null,
+   "ReleasePolicy": null,
+   "Kind": "Dimension",
+   "ContainsGroups": false,
+   "ContainsCodes": true,
+   "CodesUrl": "https://datasets.cbs.nl/odata/v1/CBS/03759ned/GeslachtCodes",
+   "GroupsUrl": null
+  },
+  {
+   "Identifier": "Leeftijd",
+   "Title": "Leeftijd",
+   "Description": "",
+   "MapYear": null,
+   "ReleasePolicy": null,
+   "Kind": "Dimension",
+   "ContainsGroups": true,
+   "ContainsCodes": true,
+   "CodesUrl": "https://datasets.cbs.nl/odata/v1/CBS/03759ned/LeeftijdCodes",
+   "GroupsUrl": "https://datasets.cbs.nl/odata/v1/CBS/03759ned/LeeftijdGroups"
+  },
+  {
+   "@odata.type": "#Cbs.Ccb.Models.GeoDimension",
+   "Identifier": "RegioS",
+   "Title": "Regio's",
+   "Description": "",
+   "MapYear": "",
+   "ReleasePolicy": null,
+   "Kind": "GeoDimension",
+   "ContainsGroups": true,
+   "ContainsCodes": true,
+   "CodesUrl": "https://datasets.cbs.nl/odata/v1/CBS/03759ned/RegioSCodes",
+   "GroupsUrl": "https://datasets.cbs.nl/odata/v1/CBS/03759ned/RegioSGroups"
+  },
+  {
+   "@odata.type": "#Cbs.Ccb.Models.TimeDimension",
+   "Identifier": "Perioden",
+   "Title": "Perioden",
+   "Description": "",
+   "MapYear": null,
+   "ReleasePolicy": true,
+   "Kind": "TimeDimension",
+   "ContainsGroups": true,
+   "ContainsCodes": true,
+   "CodesUrl": "https://datasets.cbs.nl/odata/v1/CBS/03759ned/PeriodenCodes",
+   "GroupsUrl": "https://datasets.cbs.nl/odata/v1/CBS/03759ned/PeriodenGroups"
+  }
+ ]
+}

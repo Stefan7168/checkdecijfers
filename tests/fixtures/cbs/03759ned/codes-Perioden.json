@@ -1,0 +1,317 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/03759ned/$metadata#PeriodenCodes",
+ "value": [
+  {
+   "Identifier": "1988JJ00",
+   "Index": 1,
+   "Title": "1988",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "1989JJ00",
+   "Index": 2,
+   "Title": "1989",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "1990JJ00",
+   "Index": 3,
+   "Title": "1990",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "1991JJ00",
+   "Index": 4,
+   "Title": "1991",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "1992JJ00",
+   "Index": 5,
+   "Title": "1992",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "1993JJ00",
+   "Index": 6,
+   "Title": "1993",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "1994JJ00",
+   "Index": 7,
+   "Title": "1994",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "1995JJ00",
+   "Index": 8,
+   "Title": "1995",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "1996JJ00",
+   "Index": 9,
+   "Title": "1996",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "1997JJ00",
+   "Index": 10,
+   "Title": "1997",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "1998JJ00",
+   "Index": 11,
+   "Title": "1998",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "1999JJ00",
+   "Index": 12,
+   "Title": "1999",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2000JJ00",
+   "Index": 13,
+   "Title": "2000",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2001JJ00",
+   "Index": 14,
+   "Title": "2001",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2002JJ00",
+   "Index": 15,
+   "Title": "2002",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2003JJ00",
+   "Index": 16,
+   "Title": "2003",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2004JJ00",
+   "Index": 17,
+   "Title": "2004",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2005JJ00",
+   "Index": 18,
+   "Title": "2005",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2006JJ00",
+   "Index": 19,
+   "Title": "2006",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2007JJ00",
+   "Index": 20,
+   "Title": "2007",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2008JJ00",
+   "Index": 21,
+   "Title": "2008",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2009JJ00",
+   "Index": 22,
+   "Title": "2009",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2010JJ00",
+   "Index": 23,
+   "Title": "2010",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2011JJ00",
+   "Index": 24,
+   "Title": "2011",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2012JJ00",
+   "Index": 25,
+   "Title": "2012",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2013JJ00",
+   "Index": 26,
+   "Title": "2013",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2014JJ00",
+   "Index": 27,
+   "Title": "2014",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2015JJ00",
+   "Index": 28,
+   "Title": "2015",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2016JJ00",
+   "Index": 29,
+   "Title": "2016",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2017JJ00",
+   "Index": 30,
+   "Title": "2017",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2018JJ00",
+   "Index": 31,
+   "Title": "2018",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2019JJ00",
+   "Index": 32,
+   "Title": "2019",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2020JJ00",
+   "Index": 33,
+   "Title": "2020",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2021JJ00",
+   "Index": 34,
+   "Title": "2021",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2022JJ00",
+   "Index": 35,
+   "Title": "2022",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2023JJ00",
+   "Index": 36,
+   "Title": "2023",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2024JJ00",
+   "Index": 37,
+   "Title": "2024",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2025JJ00",
+   "Index": 38,
+   "Title": "2025",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2026JJ00",
+   "Index": 39,
+   "Title": "2026",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  }
+ ]
+}

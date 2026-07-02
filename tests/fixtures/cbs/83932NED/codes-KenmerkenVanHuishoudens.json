@@ -1,0 +1,362 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/83932NED/$metadata#KenmerkenVanHuishoudensCodes",
+ "value": [
+  {
+   "Identifier": "1050010",
+   "Index": 1,
+   "Title": "Particuliere huishoudens",
+   "Description": "Eén of meer personen die samen een woonruimte bewonen en zichzelf, dus niet-bedrijfsmatig, voorzien in de dagelijkse levensbehoeften.",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "1050015",
+   "Index": 2,
+   "Title": "Type: Eenpersoonshuishouden",
+   "Description": "Particulier huishouden bestaande uit één persoon.\r\n\r\nTot eenpersoonshuishoudens, ook wel alleenstaanden genoemd, worden ook personen gerekend die met anderen op eenzelfde adres wonen maar een eigen huishouding voeren. Alleenstaanden worden in alle burgerlijke staten aangetroffen; zo kunnen gehuwden na het stuklopen van hun relatie (in afwachting van een scheiding) alleen wonen.",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "A043011",
+   "Index": 3,
+   "Title": "Type: Alleenstaande onder AOW-lft",
+   "Description": "Eenpersoonshuishouden bestaande uit een persoon jonger dan de AOW-leeftijdsgrens Eenpersoonshuishouden: Particulier huishouden bestaande uit één persoon. Tot eenpersoonshuishoudens, ook wel alleenstaanden genoemd, worden ook personen gerekend die met anderen op eenzelfde adres wonen maar een eigen huishouding voeren. Alleenstaanden worden in alle burgerlijke staten aangetroffen; zo kunnen gehuwden na het stuklopen van hun relatie (in afwachting van een scheiding) alleen wonen. Algemene ouderdomswet (AOW): Een algemene, de gehele bevolking omvattende, verplichte verzekering die personen met de AOW-gerechtigde leeftijd een inkomen garandeert. In het Nederlandse sociale zekerheidsstelsel is dit een volksverzekering. De AOW-leeftijd was tot 1 januari 2013 65 jaar. Vanaf 2013 wordt de AOW-leeftijd geleidelijk verhoogd tot 67 jaar. Een verdere stijging is afhankelijk van de stijging van de gemiddelde levensverwachting. In het Nederlandse sociale zekerheidsstelsel is dit een volksverzekering.",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "A043012",
+   "Index": 4,
+   "Title": "Type: Alleenstaande vanaf AOW-lft",
+   "Description": "Eenpersoonshuishouden bestaande uit een persoon met een AOW gerechtigde leeftijd Eenpersoonshuishouden: Particulier huishouden bestaande uit één persoon. Tot eenpersoonshuishoudens, ook wel alleenstaanden genoemd, worden ook personen gerekend die met anderen op eenzelfde adres wonen maar een eigen huishouding voeren. Alleenstaanden worden in alle burgerlijke staten aangetroffen; zo kunnen gehuwden na het stuklopen van hun relatie (in afwachting van een scheiding) alleen wonen. Algemene ouderdomswet (AOW): Een algemene, de gehele bevolking omvattende, verplichte verzekering die personen met de AOW-gerechtigde leeftijd een inkomen garandeert. In het Nederlandse sociale zekerheidsstelsel is dit een volksverzekering. De AOW-leeftijd was tot 1 januari 2013 65 jaar. Vanaf 2013 wordt de AOW-leeftijd geleidelijk verhoogd tot 67 jaar. Een verdere stijging is afhankelijk van de stijging van de gemiddelde levensverwachting. In het Nederlandse sociale zekerheidsstelsel is dit een volksverzekering.",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "1016010",
+   "Index": 5,
+   "Title": "Type: Meerpersoonshuishouden",
+   "Description": "Een particulier huishouden bestaande uit twee of meer personen.",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "1050190",
+   "Index": 6,
+   "Title": "Type: Eenoudergezin",
+   "Description": "Particulier huishouden bestaande uit één ouder met één of meer thuiswonende kinderen.",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "1050195",
+   "Index": 7,
+   "Title": "Type: Eenouder, alle kinderen < 18 jr",
+   "Description": "Eenouderhuishouden met (een) minderjarig(e) thuiswonend(e) kind(eren)\r\n\r\n\r\n\r\nEenouderhuishouden:\r\n\r\nParticulier huishouden bestaande uit één ouder met één of meer thuiswonende kinderen.\r\n\r\n\r\n\r\nThuiswonend kind:\r\n\r\nPersoon ongeacht leeftijd of burgerlijke staat die een kind-ouder relatie\r\n\r\nheeft met de ouder die tot het huishouden behoort. Onder thuiswonende kinderen \r\n\r\nworden ook begrepen adoptie- en stiefkinderen maar geen pleegkinderen.",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "1050200",
+   "Index": 8,
+   "Title": "Type: Eenouder, minst. één kind >= 18 jr",
+   "Description": "Eenouderhuishouden met (een) meerderjarig(e) thuiswonend(e) kind(eren)\r\n\r\n\r\n\r\nEenouderhuishouden:\r\n\r\nParticulier huishouden bestaande uit één ouder met één of meer thuiswonende kinderen.\r\n\r\n\r\n\r\nThuiswonend kind:\r\n\r\nPersoon ongeacht leeftijd of burgerlijke staat die een kind-ouder relatie\r\n\r\nheeft met de ouder die tot het huishouden behoort. Onder thuiswonende kinderen \r\n\r\nworden ook begrepen adoptie- en stiefkinderen maar geen pleegkinderen.",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "1050055",
+   "Index": 9,
+   "Title": "Type: Paar, totaal",
+   "Description": "Meerpersoonshuishouden bestaande uit een paar met of zonder thuiswonend(e) kind(eren)\r\n\r\n\r\n\r\nMeerpersoonshuishouden:\r\n\r\nEen particulier huishouden bestaande uit twee of meer personen.\r\n\r\n\r\n\r\nPaar:\r\n\r\nTwee op basis van huwelijk, partnerschapsregistratie of samenwoonrelatie bij elkaar behorende personen.\r\n\r\n\r\n\r\nThuiswonend kind:\r\n\r\nPersoon ongeacht leeftijd of burgerlijke staat die een kind-ouder relatie heeft met één of twee tot het huishouden behorende ouders.\r\n\r\nOnder thuiswonende kinderen worden ook begrepen adoptie- en stiefkinderen maar geen pleegkinderen.",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "1017780",
+   "Index": 10,
+   "Title": "Type: Paar, zonder kind",
+   "Description": "Meerpersoonshuishouden bestaande uit een paar zonder thuiswonend(e) kind(eren)\r\n\r\n\r\n\r\nMeerpersoonshuishouden:\r\n\r\nEen particulier huishouden bestaande uit twee of meer personen.\r\n\r\n\r\n\r\nPaar:\r\n\r\nTwee op basis van huwelijk, partnerschapsregistratie of samenwoonrelatie bij elkaar behorende personen.\r\n\r\n\r\n\r\nThuiswonend kind:\r\n\r\nPersoon ongeacht leeftijd of burgerlijke staat die een kind-ouder relatie heeft met één of twee tot het huishouden behorende ouders.\r\n\r\nOnder thuiswonende kinderen worden ook begrepen adoptie- en stiefkinderen maar geen pleegkinderen.",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "1017790",
+   "Index": 11,
+   "Title": "Type: Paar, zonder kind, onder AOW-lft",
+   "Description": "Meerpersoonshuishouden bestaande uit een paar, waarvan de referentiepersoon de AOW leeftijdsgrens nog niet heeft bereikt, zonder thuiswonend(e) kind(eren)\r\n\r\n\r\n\r\nMeerpersoonshuishouden:\r\n\r\nEen particulier huishouden bestaande uit twee of meer personen.\r\n\r\n\r\n\r\nPaar:\r\n\r\nTwee op basis van huwelijk, partnerschapsregistratie of samenwoonrelatie bij elkaar behorende personen.\r\n\r\n\r\n\r\nReferentiepersoon:\r\n\r\nLid van het huishouden ten opzichte van wie de posities van de andere leden in het huishouden worden bepaald en van wie de kenmerken eventueel ook aan het huishouden worden toegekend. \r\n\r\nUit de leden van het huishouden wordt de referentiepersoon als volgt gekozen: \r\n\r\n- als er een paar is binnen het huishouden: de man;\r\n\r\n- als het paar van gelijk geslacht is: de oudste van het paar;\r\n\r\n- in een eenouderhuishouden: de ouder;\r\n\r\n- in een overig huishouden: de oudste meerderjarige man of - als deze ontbreekt - de oudste meerderjarige vrouw.\r\n\r\n\r\n\r\nAlgemene ouderdomswet (AOW):\r\n\r\nEen algemene, de gehele bevolking omvattende, verplichte verzekering die personen met de AOW-gerechtigde leeftijd een inkomen garandeert. In het Nederlandse sociale zekerheidsstelsel is dit een volksverzekering.\r\n\r\nDe AOW-leeftijd was tot 1 januari 2013 65 jaar. Vanaf 2013 wordt de AOW-leeftijd geleidelijk verhoogd tot 67 jaar. Een verdere stijging is afhankelijk van de stijging van de gemiddelde levensverwachting. In het Nederlandse sociale zekerheidsstelsel is dit een volksverzekering. \r\n\r\n\r\n\r\nThuiswonend kind:\r\n\r\nPersoon ongeacht leeftijd of burgerlijke staat die een kind-ouder relatie heeft met één of twee tot het huishouden behorende ouders.\r\n\r\nOnder thuiswonende kinderen worden ook begrepen adoptie- en stiefkinderen maar geen pleegkinderen.",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "1017800",
+   "Index": 12,
+   "Title": "Type: Paar, zonder kind, vanaf AOW-lft",
+   "Description": "Meerpersoonshuishouden bestaande uit een paar, waarvan de referentiepersoon AOW gerechtigd is, zonder thuiswonend(e) kind(eren)\r\n\r\n\r\n\r\nMeerpersoonshuishouden:\r\n\r\nEen particulier huishouden bestaande uit twee of meer personen.\r\n\r\n\r\n\r\nPaar:\r\n\r\nTwee op basis van huwelijk, partnerschapsregistratie of samenwoonrelatie bij elkaar behorende personen.\r\n\r\n\r\n\r\nReferentiepersoon:\r\n\r\nLid van het huishouden ten opzichte van wie de posities van de andere leden in het huishouden worden bepaald en van wie de kenmerken eventueel ook aan het huishouden worden toegekend. \r\n\r\nUit de leden van het huishouden wordt de referentiepersoon als volgt gekozen: \r\n\r\n- als er een paar is binnen het huishouden: de man;\r\n\r\n- als het paar van gelijk geslacht is: de oudste van het paar;\r\n\r\n- in een eenouderhuishouden: de ouder;\r\n\r\n- in een overig huishouden: de oudste meerderjarige man of - als deze ontbreekt - de oudste meerderjarige vrouw.\r\n\r\n\r\n\r\nAlgemene ouderdomswet (AOW):\r\n\r\nEen algemene, de gehele bevolking omvattende, verplichte verzekering die personen met de AOW-gerechtigde leeftijd een inkomen garandeert. In het Nederlandse sociale zekerheidsstelsel is dit een volksverzekering.\r\n\r\nDe AOW-leeftijd was tot 1 januari 2013 65 jaar. Vanaf 2013 wordt de AOW-leeftijd geleidelijk verhoogd tot 67 jaar. Een verdere stijging is afhankelijk van de stijging van de gemiddelde levensverwachting. In het Nederlandse sociale zekerheidsstelsel is dit een volksverzekering. \r\n\r\n\r\n\r\nThuiswonend kind:\r\n\r\nPersoon ongeacht leeftijd of burgerlijke staat die een kind-ouder relatie heeft met één of twee tot het huishouden behorende ouders.\r\n\r\nOnder thuiswonende kinderen worden ook begrepen adoptie- en stiefkinderen maar geen pleegkinderen.",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "1016090",
+   "Index": 13,
+   "Title": "Type: Paar, met kind(eren)",
+   "Description": "Meerpersoonshuishouden bestaande uit een paar met (een) thuiswonend(e) kind(eren)\r\n\r\n\r\n\r\nMeerpersoonshuishouden:\r\n\r\nEen particulier huishouden bestaande uit twee of meer personen.\r\n\r\n\r\n\r\nPaar:\r\n\r\nTwee op basis van huwelijk, partnerschapsregistratie of samenwoonrelatie bij elkaar behorende personen.\r\n\r\n\r\n\r\nThuiswonend kind:\r\n\r\nPersoon ongeacht leeftijd of burgerlijke staat die een kind-ouder relatie heeft met één of twee tot het huishouden behorende ouders.\r\n\r\nOnder thuiswonende kinderen worden ook begrepen adoptie- en stiefkinderen maar geen pleegkinderen.",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "1017810",
+   "Index": 14,
+   "Title": "Type: Paar, alle kinderen < 18 jr",
+   "Description": "Meerpersoonshuishouden bestaande uit een paar met alléén (een) minderjarig(e) thuiswonend(e) kind(eren)\r\n\r\n\r\n\r\nMeerpersoonshuishouden:\r\n\r\nEen particulier huishouden bestaande uit twee of meer personen.\r\n\r\n\r\n\r\nPaar:\r\n\r\nTwee op basis van huwelijk, partnerschapsregistratie of samenwoonrelatie bij elkaar behorende personen.\r\n\r\n\r\n\r\nThuiswonend kind:\r\n\r\nPersoon ongeacht leeftijd of burgerlijke staat die een kind-ouder relatie heeft met één of twee tot het huishouden behorende ouders.\r\n\r\nOnder thuiswonende kinderen worden ook begrepen adoptie- en stiefkinderen maar geen pleegkinderen.",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "1017880",
+   "Index": 15,
+   "Title": "Type: Paar, minstens één kind >= 18 jr",
+   "Description": "Meerpersoonshuishouden bestaande uit een paar met één of meer meerderjarige thuiswonende kinderen\r\n\r\n\r\n\r\nMeerpersoonshuishouden:\r\n\r\nEen particulier huishouden bestaande uit twee of meer personen.\r\n\r\n\r\n\r\nPaar:\r\n\r\nTwee op basis van huwelijk, partnerschapsregistratie of samenwoonrelatie bij elkaar behorende personen.\r\n\r\n\r\n\r\nThuiswonend kind:\r\n\r\nPersoon ongeacht leeftijd of burgerlijke staat die een kind-ouder relatie heeft met één of twee tot het huishouden behorende ouders.\r\n\r\nOnder thuiswonende kinderen worden ook begrepen adoptie- en stiefkinderen maar geen pleegkinderen.",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "1050220",
+   "Index": 16,
+   "Title": "Type: Meerpersoonshuishouden, overig",
+   "Description": "Meerpersoonshuishouden dat uitsluitend bestaat uit overige leden.\r\nMeerpersoonshuishouden:\r\nEen particulier huishouden bestaande uit twee of meer personen.\r\nOverig lid van een huishouden:\r\nPersoon die anders dan als partner, ouder in een eenouderhuishouden of als thuiswonend kind deel uitmaakt van een particulier huishouden. Te denken valt hier bijvoorbeeld aan twee broers (zussen) die samen een huishouden vormen.\r\n",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "A043959",
+   "Index": 17,
+   "Title": "Hoofdkostwinner: mannen",
+   "Description": "De hoofdkostwinner is de persoon in het huishouden met de belangrijkste sociaaleconomische positie.",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "A043960",
+   "Index": 18,
+   "Title": "Hoofdkostwinner: vrouwen",
+   "Description": "De hoofdkostwinner is de persoon in het huishouden met de belangrijkste sociaaleconomische positie.",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "A025340",
+   "Index": 19,
+   "Title": "Hoofdkostwinner: tot 25 jaar",
+   "Description": "De hoofdkostwinner is de persoon in het huishouden met de belangrijkste sociaaleconomische positie.",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "A025343",
+   "Index": 20,
+   "Title": "Hoofdkostwinner: 25 tot 45 jaar",
+   "Description": "De hoofdkostwinner is de persoon in het huishouden met de belangrijkste sociaaleconomische positie.",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "A025351",
+   "Index": 21,
+   "Title": "Hoofdkostwinner: 45 tot 65 jaar",
+   "Description": "De hoofdkostwinner is de persoon in het huishouden met de belangrijkste sociaaleconomische positie.",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "A025359",
+   "Index": 22,
+   "Title": "Hoofdkostwinner: 65 jaar of ouder",
+   "Description": "De hoofdkostwinner is de persoon in het huishouden met de belangrijkste sociaaleconomische positie.",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "A025342",
+   "Index": 23,
+   "Title": "Hoofdkostwinner: 25 tot 35 jaar",
+   "Description": "De hoofdkostwinner is de persoon in het huishouden met de belangrijkste sociaaleconomische positie.",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "A025347",
+   "Index": 24,
+   "Title": "Hoofdkostwinner: 35 tot 45 jaar",
+   "Description": "De hoofdkostwinner is de persoon in het huishouden met de belangrijkste sociaaleconomische positie.",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "A025350",
+   "Index": 25,
+   "Title": "Hoofdkostwinner: 45 tot 55 jaar",
+   "Description": "De hoofdkostwinner is de persoon in het huishouden met de belangrijkste sociaaleconomische positie.",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "A025354",
+   "Index": 26,
+   "Title": "Hoofdkostwinner: 55 tot 65 jaar",
+   "Description": "De hoofdkostwinner is de persoon in het huishouden met de belangrijkste sociaaleconomische positie.",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "A025358",
+   "Index": 27,
+   "Title": "Hoofdkostwinner: 65 tot 75 jaar",
+   "Description": "De hoofdkostwinner is de persoon in het huishouden met de belangrijkste sociaaleconomische positie.",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "A042086",
+   "Index": 28,
+   "Title": "Hoofdkostwinner: 75 tot 85 jaar",
+   "Description": "De hoofdkostwinner is de persoon in het huishouden met de belangrijkste sociaaleconomische positie.",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "A042087",
+   "Index": 29,
+   "Title": "Hoofdkostwinner: 85 jaar of ouder",
+   "Description": "De hoofdkostwinner is de persoon in het huishouden met de belangrijkste sociaaleconomische positie.",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "A025362",
+   "Index": 30,
+   "Title": "Hoofdkostwinner: Nederland",
+   "Description": "Migratieachtergrond van de hoofdkostwinner: Nederland\r\n\r\n\r\n\r\nPersoon van wie de beide ouders in Nederland zijn geboren.",
+   "DimensionGroupId": "11"
+  },
+  {
+   "Identifier": "A025363",
+   "Index": 31,
+   "Title": "Hoofdkostwinner: westers",
+   "Description": "Migratieachtergrond van de hoofdkostwinner: westers\r\n\r\n\r\n\r\nPersoon met als migratieachtergrond een van de landen in Europa (exclusief Turkije), Noord-Amerika en Oceanië, en Indonesië en Japan. \r\n\r\nOp grond van hun sociaal- economische en sociaal-culturele positie worden personen met een migratieachtergrond uit Indonesië en Japan tot de westerse migratieachtergrond gerekend. Het gaat vooral om mensen die in het voormalig Nederlands-Indië zijn geboren en werknemers van Japanse bedrijven met hun gezin.\r\n\r\n\r\n\r\nPersoon met een migratieachtergond:\r\n\r\nPersoon van wie ten minste één ouder in het buitenland is geboren.",
+   "DimensionGroupId": "11"
+  },
+  {
+   "Identifier": "A025368",
+   "Index": 32,
+   "Title": "Hoofdkostwinner: niet-westers",
+   "Description": "Migratieachtergrond van de hoofdkostwinner: niet-westers \r\nPersoon met als migratieachtergrond een van de landen in Afrika, Latijns-Amerika en Azië (exclusief Indonesië en Japan) of Turkije. Op grond van hun sociaal- economische en sociaal-culturele positie worden personen met een migratieachtergrond uit Indonesië en Japan tot de westerse migratieachtergrond gerekend. Het gaat vooral om mensen die in het voormalig Nederlands-Indië zijn geboren en werknemers van Japanse bedrijven met hun gezin. \r\nPersoon met een migratieachtergrond: Persoon van wie ten minste één ouder in het buitenland is geboren.\r\n",
+   "DimensionGroupId": "11"
+  },
+  {
+   "Identifier": "1013395",
+   "Index": 33,
+   "Title": "Bron: Inkomen als werknemer/zelfstandige",
+   "Description": "Huishoudens waarvoor het loon van werknemer of het inkomen als zelfstandige de voornaamste inkomensbron vormt.",
+   "DimensionGroupId": "12"
+  },
+  {
+   "Identifier": "1013400",
+   "Index": 34,
+   "Title": "Bron: Inkomen als werknemer",
+   "Description": "Huishoudens waarvoor het loon van werknemer de voornaamste inkomensbron vormt.",
+   "DimensionGroupId": "12"
+  },
+  {
+   "Identifier": "1013601",
+   "Index": 35,
+   "Title": "Bron: Inkomen als zelfstandige (totaal)",
+   "Description": "Huishoudens waarvoor het inkomen als zelfstandig ondernemer, directeur-grootaandeelhouder en overig zelfstandige de voornaamste inkomensbron vormt.",
+   "DimensionGroupId": "12"
+  },
+  {
+   "Identifier": "1013602",
+   "Index": 36,
+   "Title": "Bron: Inkomen als zelfstandig ondernemer",
+   "Description": "Huishoudens waarvoor het inkomen als zelfstandig ondernemer de voornaamste inkomensbron vormt.",
+   "DimensionGroupId": "12"
+  },
+  {
+   "Identifier": "1013603",
+   "Index": 37,
+   "Title": "Bron: Inkomen als dir.-grootaandeelh.",
+   "Description": "Huishoudens waarvoor het loon als directeur-grootaandeelhouder de voornaamste inkomensbron vormt.",
+   "DimensionGroupId": "12"
+  },
+  {
+   "Identifier": "1013604",
+   "Index": 38,
+   "Title": "Bron: Inkomen als overige zelfstandige",
+   "Description": "Huishoudens waarvoor overig inkomen uit arbeid (niet in dienstbetrekking) de voornaamste inkomensbron vormt.",
+   "DimensionGroupId": "12"
+  },
+  {
+   "Identifier": "1013650",
+   "Index": 39,
+   "Title": "Bron: Overdrachtsinkomen",
+   "Description": "Huishoudens waarvoor een uitkering, pensioen of studiefinanciering de voornaamste inkomensbron vormt.",
+   "DimensionGroupId": "12"
+  },
+  {
+   "Identifier": "1013700",
+   "Index": 40,
+   "Title": "Bron: Uitkering inkomensverzekering",
+   "Description": "Huishoudens waarvoor een uitkering inkomensverzekering wegens werkloosheid, ziekte, arbeidsongeschiktheid en pensioen de voornaamste inkomensbron vormt.",
+   "DimensionGroupId": "12"
+  },
+  {
+   "Identifier": "1013750",
+   "Index": 41,
+   "Title": "Bron: Uitkering werkloosheid",
+   "Description": "Huishoudens waarvoor een uitkering inkomensverzekering wegens werkloosheid de voornaamste inkomensbron vormt.",
+   "DimensionGroupId": "12"
+  },
+  {
+   "Identifier": "1013800",
+   "Index": 42,
+   "Title": "Bron: Uitkering arbeidsongeschiktheid",
+   "Description": "Huishoudens waarvoor een uitkering inkomensverzekering wegens ziekte of arbeidsongeschiktheid de voornaamste inkomensbron vormt.",
+   "DimensionGroupId": "12"
+  },
+  {
+   "Identifier": "1013850",
+   "Index": 43,
+   "Title": "Bron: Uitkering pensioen",
+   "Description": "Huishoudens waarvoor een uitkering inkomensverzekering wegens pensioen of inkomen uit vermogen de voornaamste inkomensbron vormt.",
+   "DimensionGroupId": "12"
+  },
+  {
+   "Identifier": "1013900",
+   "Index": 44,
+   "Title": "Bron: Uitkering sociale voorziening",
+   "Description": "Huishoudens waarvoor een uitkering sociale voorziening (bijstand en overige uitkering sociale voorziening) de voornaamste inkomensbron vormt.",
+   "DimensionGroupId": "12"
+  },
+  {
+   "Identifier": "1013950",
+   "Index": 45,
+   "Title": "Bron: Uitkering bijstand",
+   "Description": "Huishoudens waarvoor een uitkering sociale voorziening (bijstandsuitkering) de voornaamste inkomensbron vormt.",
+   "DimensionGroupId": "12"
+  },
+  {
+   "Identifier": "1014040",
+   "Index": 46,
+   "Title": "Bron: Uitk. sociale voorziening, overig",
+   "Description": "Huishoudens waarvoor een uitkering sociale voorziening anders dan bijstand de voornaamste inkomensbron vormt. Het betreft hier onder meer de uitkering voor oudere werklozen, voor jonggehandicapten en uitkeringen in het kader van het Bijstandsbesluit Zelfstandigen en de Toeslagenwet.",
+   "DimensionGroupId": "12"
+  },
+  {
+   "Identifier": "1014050",
+   "Index": 47,
+   "Title": "Bron: Studiefinanciering",
+   "Description": "Huishoudens waarvoor studiefinanciering de voornaamste inkomensbron vormt.",
+   "DimensionGroupId": "12"
+  },
+  {
+   "Identifier": "1014800",
+   "Index": 48,
+   "Title": "Woningbezit: eigen woning",
+   "Description": "Een huishouden woont in een eigen woning of in een gehuurde woning. Van de huishoudens die een woning huren, is bepaald of zij wel of geen huurtoeslag ontvangen hebben.\r\n",
+   "DimensionGroupId": "13"
+  },
+  {
+   "Identifier": "1014850",
+   "Index": 49,
+   "Title": "Woningbezit: huurwoning",
+   "Description": "Een huishouden woont in een eigen woning of in een gehuurde woning. Van de huishoudens die een woning huren, is bepaald of zij wel of geen huurtoeslag ontvangen hebben.\r\n",
+   "DimensionGroupId": "13"
+  },
+  {
+   "Identifier": "1014950",
+   "Index": 50,
+   "Title": "Woningbezit: huurwoning geen huurtoeslag",
+   "Description": "Een huishouden woont in een eigen woning of in een gehuurde woning. Van de huishoudens die een woning huren, is bepaald of zij wel of geen huurtoeslag ontvangen hebben.\r\n",
+   "DimensionGroupId": "13"
+  },
+  {
+   "Identifier": "1014900",
+   "Index": 51,
+   "Title": "Woningbezit: huurwoning met huurtoeslag",
+   "Description": "Een huishouden woont in een eigen woning of in een gehuurde woning. Van de huishoudens die een woning huren, is bepaald of zij wel of geen huurtoeslag ontvangen hebben.\r\n",
+   "DimensionGroupId": "13"
+  }
+ ]
+}

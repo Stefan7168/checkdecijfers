@@ -1,0 +1,110 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/82610NED/$metadata#BronTechniekCodes",
+ "value": [
+  {
+   "Identifier": "T001028",
+   "Index": 1,
+   "Title": "Totaal hernieuwbare energiebronnen",
+   "Description": "",
+   "DimensionGroupId": "2"
+  },
+  {
+   "Identifier": "E006587",
+   "Index": 2,
+   "Title": "Waterkracht",
+   "Description": "Energie, opgewekt met behulp van vallend of stromend water.",
+   "DimensionGroupId": "4"
+  },
+  {
+   "Identifier": "E006588",
+   "Index": 3,
+   "Title": "Totaal windenergie",
+   "Description": "Energie, opgewekt met een windmolen of windturbine. \r\n\r\nWindmolens staan op land of in binnenwateren of op zee.",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "E006637",
+   "Index": 4,
+   "Title": "Windenergie op land",
+   "Description": "Windenergie op land of in binnenwateren.\r\n\r\nWindmolens in binnenwateren, zoals bijvoorbeeld het IJsselmeer, worden gerekend bij windenergie op land.",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "E006638",
+   "Index": 5,
+   "Title": "Windenergie op zee",
+   "Description": "Energie afkomstig van windmolens op zee.\r\n\r\nIn het najaar van 2006 is het eerste windpark op zee in gebruik genomen.",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "E006590",
+   "Index": 6,
+   "Title": "Zonnestroom",
+   "Description": "Zonnestraling omgezet in elektriciteit.\r\n\r\nOok bekend als fotovoltaïsch opgewekte zonne-energie.",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "E006566",
+   "Index": 7,
+   "Title": "Totaal biomassa",
+   "Description": "Plantaardig of dierlijk materiaal van recente oorsprong in gebruik voor productie van energie.\r\n\r\nVoorbeelden zijn hout, mest en afval uit de voedselverwerkende industrie.",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "E006661",
+   "Index": 8,
+   "Title": "Afvalverbrandingsinstallaties",
+   "Description": "Het verbranden van afval door afvalverwerkingsinstallaties.\r\n\r\nAlleen de energie geproduceerd door het verbranden van het deel van het afval dat van planten en dieren afkomstig is telt mee bij de hernieuwbare energie.",
+   "DimensionGroupId": "11"
+  },
+  {
+   "Identifier": "E006662",
+   "Index": 9,
+   "Title": "Bij- en meestoken biomassa in centrales",
+   "Description": "Bij- en meestoken van biomassa in elektriciteitscentrales.\r\n\r\nEen voorbeeld is het meestoken van vaste biomassa in steenkolencentrales in de vorm van houtpellets. Pellets zijn geperste brokjes hout.",
+   "DimensionGroupId": "12"
+  },
+  {
+   "Identifier": "E006670",
+   "Index": 10,
+   "Title": "Biomassaketels bedrijven, WKK",
+   "Description": "Verbranden van vaste en vloeibare biomassa in biomassaketels voor decentrale elektriciteitsproductie al dan niet in combinatie met warmteproductie.\r\nDe afkorting WKK staat voor warmte-krachtkoppeling: de gecombineerde opwekking van elektriciteit (kracht) en warmte.\r\nIn deze categorie zijn ook enkele installaties opgenomen die alleen elektriciteit produceren. Het meestoken van biomassa in kolencentrales valt niet onder deze categorie; zie hiervoor 'Bij- en meestoken biomassa in centrales'.",
+   "DimensionGroupId": "13"
+  },
+  {
+   "Identifier": "E006583",
+   "Index": 11,
+   "Title": "Totaal biogas",
+   "Description": "Gas ontstaan door vergisting van organisch materiaal. Voorbeelden daarvan zijn slib uit afvalwaterzuivering, gestort afval (stortgas), groente, fruit en tuinafval (GFT), mest, mais en plantaardige reststromen uit de landbouw, agro-industrie en handel.",
+   "DimensionGroupId": "14"
+  },
+  {
+   "Identifier": "E006673",
+   "Index": 12,
+   "Title": "Biogas uit stortplaatsen",
+   "Description": "Uit het organische deel van gestort afval ontstaat stortgas. Een deel hiervan wordt nuttig gebruikt.",
+   "DimensionGroupId": "14"
+  },
+  {
+   "Identifier": "E006674",
+   "Index": 13,
+   "Title": "Biogas rioolwaterzuiveringsinstallaties",
+   "Description": "Actieve vergisting van organisch materiaal in rioolwaterzuiveringsinstallaties.",
+   "DimensionGroupId": "14"
+  },
+  {
+   "Identifier": "E006675",
+   "Index": 14,
+   "Title": "Biogas, co-vergisting van mest",
+   "Description": "Vergisting van mest in combinatie met ander plantaardig materiaal.\r\n\r\nVaak maar niet altijd uitgevoerd door landbouwbedrijven. Tot en met 2004 opgenomen bij 'Overig biogas'. Vergisting van alleen mest (monovergisting) valt ook hieronder.",
+   "DimensionGroupId": "14"
+  },
+  {
+   "Identifier": "E006586",
+   "Index": 15,
+   "Title": "Overig biogas",
+   "Description": "Biogas wat niet valt onder biogas uit stortplaatsen, biogas uit rioolwaterzuiveringsinstallaties of biogas uit co-vergisting van mest.\r\n\r\nHet gaat hierbij voornamelijk om vergisting van afval van plantaardige oorsprong in de industrie en om vergisting van groente- fruit- en tuinafval (GFT). Tot en met 2004 inclusief 'Biogas, co-vergisting van mest'.",
+   "DimensionGroupId": "14"
+  }
+ ]
+}

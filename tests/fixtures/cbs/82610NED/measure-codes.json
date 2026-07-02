@@ -1,0 +1,93 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/82610NED/$metadata#MeasureCodes",
+ "value": [
+  {
+   "Identifier": "M002416_1",
+   "Index": 3,
+   "Title": "Genormaliseerde bruto productie",
+   "Description": "Hernieuwbare, bruto elektriciteitsproductie gecorrigeerd voor weersomstandigheden en inclusief de indirecte productie uit groen gas. Vanaf 2021 wordt de elektriciteitsproductie uit vaste biomassa en biogas in installaties boven een bepaalde vermogensgrens alleen meegenomen indien de gebruikte biomassa voldoet aan de duurzaamheidsregels uit de EU-Richtlijn Hernieuwbare Energie (RED II).\r\n\r\nBruto productie is de productie inclusief het eigen verbruik. Het eigen verbruik is de elektriciteit die wordt gebruikt bij de elektriciteitsopwekking.\r\n\r\nDe genormaliseerde productie is uitgerekend volgens definities uit de EU-Richtlijn Hernieuwbare Energie. De bindende doelstellingen uit deze richtlijn spelen een belangrijke rol in het Nederlandse energiebeleid. De niet-genormaliseerde productie is de daadwerkelijke fysieke productie volgens definities uit de standaard nationale en internationale energiestatistieken.\r\n\r\nEr zijn drie verschillen tussen de genormaliseerde en niet genormaliseerde cijfers:\r\n1.\tCorrectie voor toevallige weersomstandigheden\r\n2.\tHet al dan niet meenemen van de elektriciteitsproductie uit groen gas.\r\n3.\tHet al dan niet meenemen van biomassa die niet aan de duurzaamheidscriteria uit de EU-Richtlijn Hernieuwbare Energie (RED II) voldoet\r\n\r\nNadere toelichting bij 1: De genormaliseerde productie in een bepaald jaar wordt daarbij berekend als de capaciteit in het betreffende jaar maal de gemiddelde productie per eenheid capaciteit in de afgelopen vijf jaar (voor wind) of vijftien jaar (voor waterkracht). De productie van zonnestroom is in principe ook afhankelijk van het weer. In de EU-Richtlijn is echter afgesproken om voor zonnestroom geen normalisatie toe te passen. \r\nNadere toelichting bij 2: Groen gas is biogas dat is opgewerkt tot aardgaskwaliteit en geïnjecteerd in het aardgasnet. Een (klein) gedeelte van de elektriciteitsproductie uit aardgas kan dus worden toegerekend aan groen gas. Bij de genormaliseerde cijfers is deze toerekening meegenomen, bij niet genormaliseerde cijfers is deze toerekening niet meegenomen.\r\nNadere toelichting bij 3: Vanaf 2021 wordt de elektriciteitsproductie uit vaste biomassa en biogas in installaties boven een bepaalde vermogensgrens alleen meegenomen voor de genormaliseerde elektriciteitsproductie indien de gebruikte biomassa voldoet aan de duurzaamheidsregels uit de EU-Richtlijn Hernieuwbare Energie (RED II).",
+   "MeasureGroupId": "D002158_1",
+   "DataType": "Long",
+   "Unit": "mln kWh",
+   "Decimals": 0,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "M002264_1",
+   "Index": 5,
+   "Title": "Bruto elektriciteitsproductie",
+   "Description": "Bruto elektriciteitsproductie is de productie inclusief het eigen verbruik. \r\n\r\nHet eigen verbruik is de elektriciteit die wordt gebruikt bij de elektriciteitsopwekking.",
+   "MeasureGroupId": "M002195_1",
+   "DataType": "Long",
+   "Unit": "mln kWh",
+   "Decimals": 0,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "M002417_1",
+   "Index": 6,
+   "Title": "Netto elektriciteitsproductie",
+   "Description": "Netto elektriciteitsproductie is de productie exclusief het eigen verbruik. \r\n\r\nHet eigen verbruik is de elektriciteit die wordt gebruikt bij de elektriciteitsopwekking.",
+   "MeasureGroupId": "M002195_1",
+   "DataType": "Long",
+   "Unit": "mln kWh",
+   "Decimals": 0,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "M002416_2",
+   "Index": 8,
+   "Title": "Genormaliseerde bruto productie",
+   "Description": "Hernieuwbare, bruto elektriciteitsproductie gecorrigeerd voor weersomstandigheden en inclusief de indirecte productie uit groen gas.\r\n\r\nBruto productie is de productie inclusief het eigen verbruik. Het eigen verbruik is de elektriciteit die wordt gebruikt bij de elektriciteitsopwekking.\r\n\r\nDe genormaliseerde productie is uitgerekend volgens definities uit de EU-Richtlijn Hernieuwbare Energie uit 2009. De bindende doelstellingen uit deze richtlijn spelen een belangrijke rol in het Nederlandse energiebeleid. De niet-genormaliseerde productie is de daadwerkelijke fysieke productie volgens definities uit de standaard nationale en internationale energiestatistieken.\r\n\r\nEr zijn twee verschillen tussen de genormaliseerde en niet genormaliseerde cijfers:\r\n1.\tCorrectie voor toevallige weersomstandigheden\r\n2.\tHet al dan niet meenemen van de elektriciteitsproductie uit groen gas.\r\n\r\nNadere toelichting bij 1: De genormaliseerde productie in een bepaald jaar wordt daarbij berekend als de capaciteit in het betreffende jaar maal de gemiddelde productie per eenheid capaciteit in de afgelopen vijf jaar (voor wind) of vijftien jaar (voor waterkracht). De productie van zonnestroom is in principe ook afhankelijk van het weer. In de EU-Richtlijn is echter afgesproken om voor zonnestroom geen normalisatie toe te passen. \r\nNadere toelichting bij 2: Groen gas is biogas dat is opgewerkt tot aardgaskwaliteit en geïnjecteerd in het aardgasnet. Een (klein) gedeelte van de elektriciteitsproductie uit aardgas kan dus worden toegerekend aan groen gas. Bij de genormaliseerde cijfers is deze toerekening meegenomen, bij niet genormaliseerde cijfers is deze toerekening niet meegenomen.",
+   "MeasureGroupId": "D002158_2",
+   "DataType": "Double",
+   "Unit": "in % van het verbruik",
+   "Decimals": 2,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "M002264_2",
+   "Index": 10,
+   "Title": "Bruto elektriciteitsproductie",
+   "Description": "Bruto elektriciteitsproductie is de productie inclusief het eigen verbruik. \r\n\r\nHet eigen verbruik is de elektriciteit die wordt gebruikt bij de elektriciteitsopwekking.",
+   "MeasureGroupId": "M002195_2",
+   "DataType": "Double",
+   "Unit": "in % van het verbruik",
+   "Decimals": 2,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "M002417_2",
+   "Index": 11,
+   "Title": "Netto elektriciteitsproductie",
+   "Description": "Netto elektriciteitsproductie is de productie exclusief het eigen verbruik. \r\n\r\nHet eigen verbruik is de elektriciteit die wordt gebruikt bij de elektriciteitsopwekking.",
+   "MeasureGroupId": "M002195_2",
+   "DataType": "Double",
+   "Unit": "in % van het verbruik",
+   "Decimals": 2,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "M002252_2",
+   "Index": 13,
+   "Title": "Opgestelde installaties einde van jaar",
+   "Description": "Het aantal installaties dat op 31 december van het verslagjaar in gebruik is.",
+   "MeasureGroupId": "M002252_1",
+   "DataType": "Long",
+   "Unit": "aantal",
+   "Decimals": 0,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "M002163",
+   "Index": 14,
+   "Title": "Opgesteld elektrisch vermogen einde jaar",
+   "Description": "Het elektrisch vermogen dat op 31 december van het verslagjaar in gebruik is.\r\n\r\nHet elektrisch vermogen is de hoeveelheid elektriciteit die per tijdseenheid kan worden opgewekt bij normaal gebruik van alle beschikbare installaties die elektriciteit produceren.\r\n\r\nVoor zonnestroom gaat het om het systeemvermogen. Dit is minimum van het vermogen van de panelen en het vermogen van de omvormer. ",
+   "MeasureGroupId": "M002252_1",
+   "DataType": "Long",
+   "Unit": "megawatt",
+   "Decimals": 0,
+   "PresentationType": null
+  }
+ ]
+}

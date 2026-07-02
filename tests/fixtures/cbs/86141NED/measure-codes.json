@@ -1,0 +1,82 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/86141NED/$metadata#MeasureCodes",
+ "value": [
+  {
+   "Identifier": "M000215",
+   "Index": 2,
+   "Title": "CPI",
+   "Description": "Indexcijfer dat de prijsverandering meet van goederen en diensten die Nederlandse huishoudens voor de eigen consumptie aanschaffen.",
+   "MeasureGroupId": null,
+   "DataType": "Double",
+   "Unit": "2025=100",
+   "Decimals": 2,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "M000216",
+   "Index": 3,
+   "Title": "CPI afgeleid",
+   "Description": "Consumentenprijsindex afgeleid, waarin veranderingen in de tarieven van productgebonden belastingen (bijvoorbeeld btw en accijns op alcohol en tabak) en subsidies buiten beschouwing worden gelaten.",
+   "MeasureGroupId": null,
+   "DataType": "Double",
+   "Unit": "2025=100",
+   "Decimals": 2,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "M000241",
+   "Index": 4,
+   "Title": "Maandmutatie CPI",
+   "Description": "Procentuele mutatie van de CPI t.o.v. de voorgaande maand.",
+   "MeasureGroupId": null,
+   "DataType": "Double",
+   "Unit": "%",
+   "Decimals": 1,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "M000242",
+   "Index": 5,
+   "Title": "Maandmutatie CPI afgeleid",
+   "Description": "Procentuele mutatie van de CPI afgeleid t.o.v. de voorgaande maand.",
+   "MeasureGroupId": null,
+   "DataType": "Double",
+   "Unit": "%",
+   "Decimals": 1,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "M000238",
+   "Index": 6,
+   "Title": "Jaarmutatie CPI",
+   "Description": "Procentuele mutatie van de CPI t.o.v. dezelfde periode een jaar eerder.",
+   "MeasureGroupId": null,
+   "DataType": "Double",
+   "Unit": "%",
+   "Decimals": 1,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "M000239",
+   "Index": 7,
+   "Title": "Jaarmutatie CPI afgeleid",
+   "Description": "Procentuele mutatie van de CPI afgeleid t.o.v. dezelfde periode een jaar eerder.",
+   "MeasureGroupId": null,
+   "DataType": "Double",
+   "Unit": "%",
+   "Decimals": 1,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "M000289",
+   "Index": 8,
+   "Title": "Wegingscoëfficiënt",
+   "Description": "De wegingscoëfficiënt geeft het aandeel weer (in honderdduizendsten) in de totale consumptieve uitgaven.",
+   "MeasureGroupId": null,
+   "DataType": "Long",
+   "Unit": "Coëfficiënt",
+   "Decimals": 0,
+   "PresentationType": null
+  }
+ ]
+}

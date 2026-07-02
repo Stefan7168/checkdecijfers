@@ -1,0 +1,30 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/82610NED/$metadata#Dimensions",
+ "value": [
+  {
+   "Identifier": "BronTechniek",
+   "Title": "Bron/Techniek",
+   "Description": "",
+   "MapYear": null,
+   "ReleasePolicy": null,
+   "Kind": "Dimension",
+   "ContainsGroups": true,
+   "ContainsCodes": true,
+   "CodesUrl": "https://datasets.cbs.nl/odata/v1/CBS/82610NED/BronTechniekCodes",
+   "GroupsUrl": "https://datasets.cbs.nl/odata/v1/CBS/82610NED/BronTechniekGroups"
+  },
+  {
+   "@odata.type": "#Cbs.Ccb.Models.TimeDimension",
+   "Identifier": "Perioden",
+   "Title": "Perioden",
+   "Description": "",
+   "MapYear": null,
+   "ReleasePolicy": true,
+   "Kind": "TimeDimension",
+   "ContainsGroups": true,
+   "ContainsCodes": true,
+   "CodesUrl": "https://datasets.cbs.nl/odata/v1/CBS/82610NED/PeriodenCodes",
+   "GroupsUrl": "https://datasets.cbs.nl/odata/v1/CBS/82610NED/PeriodenGroups"
+  }
+ ]
+}
