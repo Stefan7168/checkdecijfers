@@ -8,7 +8,7 @@ Everything **Stefan** does, phase by phase. AI sessions read [CLAUDE.md](../CLAU
 - **Start a session like this:** *"Continue checkdecijfers.nl. Read CLAUDE.md and docs/STATUS.md, then do the next unchecked Phase 0 item: ⟨item⟩. First confirm back to me: the current phase, the benchmark gate, and the work package — then start."* The confirm-back is your check that the session oriented correctly **before** it touches anything.
 - **Big work packages may be delegated:** a session can spawn implementation subagents, as long as each brief names the specific invariants at stake and the session reviews the result — "done" still means green CI, no matter who wrote the code. Don't hardcode model names in reusable prompts; they go stale.
 - **Delegation cost rule (your money):** the expensive model you're chatting with does the thinking — scoping, instructions, and reviewing what comes back. The legwork it farms out runs on cheaper models. If you see a session burn budget doing easy repetitive tasks on its own top-tier model, that's a bug: point at this line (and at the same rule in [CLAUDE.md](../CLAUDE.md)).
-- **End of every session:** work committed, STATUS.md updated with measured results. If a session claims success, the proof is a green CI run — not its word (CLAUDE.md convention).
+- **End of every session:** work committed, STATUS.md updated with measured results, process lessons appended to [lessons-learned.md](lessons-learned.md). If a session claims success, the proof is a green CI run — not its word (CLAUDE.md convention).
 - **You are the phase-gate backstop:** if a session proposes building something, ask "is that in the current phase?" The docs enforce it, but you can always point at [03-mvp-scope.md](03-mvp-scope.md).
 
 ## Account signup checklist
@@ -45,7 +45,7 @@ Everything **Stefan** does, phase by phase. AI sessions read [CLAUDE.md](../CLAU
 | Secret | Lives in | How to rotate (owner-followable) |
 |---|---|---|
 | `ANTHROPIC_API_KEY` | local `.env` (since 2026-07-02) + Vercel env store (at first deploy) | Anthropic console → create new key → replace in both places → delete old key |
-| `DATABASE_URL` | local `.env` (since 2026-07-02) + Vercel env store (at first deploy) | Supabase dashboard → reset database password → replace in both places |
+| `DATABASE_URL` | local `.env` (since 2026-07-02) + Vercel env store (at first deploy) | Supabase dashboard → reset database password → replace in both places. ⚠ Use the **Session pooler** connection string (Connect → Session pooler), not the direct one: the direct host is IPv6-only and doesn't work from most home networks (verified 2026-07-02). The connection is TLS-verified against Supabase's public root certificate, committed at `config/supabase-prod-ca-2021.pem` — nothing to do at rotation, it's valid to 2031 |
 | *(more added at setup)* | | |
 
 ## Your recurring duties

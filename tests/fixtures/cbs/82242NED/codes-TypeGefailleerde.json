@@ -1,0 +1,33 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/82242NED/$metadata#TypeGefailleerdeCodes",
+ "value": [
+  {
+   "Identifier": "T001243",
+   "Index": 1,
+   "Title": "Totaal rechtsvormen Nederland/buitenland",
+   "Description": "Totaal natuurlijke personen (met en zonder eenmanszaak), bedrijven en instellingen.",
+   "DimensionGroupId": null
+  },
+  {
+   "Identifier": "A041718",
+   "Index": 2,
+   "Title": "Natuurlijke personen zonder eenmanszaak",
+   "Description": "Het gaat om personen die geen eigen zaak zonder afgescheiden vermogen bezitten en die door privéschulden failliet zijn verklaard door de rechter. Daarnaast betreft het vennoten van een eveneens failliet verklaarde VOF of CV, die natuurlijk persoon zijn. Een natuurlijk persoon is een mens (individu) die in het recht als rechtssubject is erkend en daarmee drager is van wettelijke rechten en plichten.",
+   "DimensionGroupId": null
+  },
+  {
+   "Identifier": "A028820",
+   "Index": 3,
+   "Title": "Natuurlijke personen met eenmanszaak",
+   "Description": "Rechtsvorm zonder rechtspersoonlijkheid met één natuurlijke persoon als eigenaar van het bedrijf. Deze eigenaar is volledig aansprakelijk voor alle bedrijfshandelingen en vermogensaangelegenheden. Er is geen onderscheid tussen bedrijfs- en privébezittingen. Zaakschuldeisers kunnen zich verhalen op privébezittingen en privéschuldeisers kunnen zich op de bezittingen van het bedrijf verhalen. Er kunnen meerdere personen werken in de eenmanszaak; de eigenaar kan personeel in dienst hebben.",
+   "DimensionGroupId": null
+  },
+  {
+   "Identifier": "A047597",
+   "Index": 4,
+   "Title": "Bedrijven en instellingen",
+   "Description": "Totaal van samenwerkingsverbanden en rechtspersonen\r\n",
+   "DimensionGroupId": null
+  }
+ ]
+}

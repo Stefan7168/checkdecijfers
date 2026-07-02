@@ -1,0 +1,104 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/82235NED/$metadata#MeasureCodes",
+ "value": [
+  {
+   "Identifier": "D002936",
+   "Index": 1,
+   "Title": "Beginstand voorraad",
+   "Description": "Aantal aan het begin van de periode.\r\nIn sommige gevallen is vanaf 2012 in de BAG een mutatie doorgevoerd, waarbij het adresgegeven pas geldig is ná de geldigheid van de mutatie of het adresgegeven is na de peildatum ingetrokken. Deze mutatie is dan op dat moment niet adresseerbaar en wordt niet als mutatie meegenomen in de publicatie. In dat geval wijkt de eindstand af van de beginstand plus het saldo van de mutatie, of de beginstand wijkt af van de eindstand van het voorgaande jaar.",
+   "MeasureGroupId": null,
+   "DataType": "Long",
+   "Unit": "x 1 000",
+   "Decimals": 0,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "M003003",
+   "Index": 2,
+   "Title": "Nieuwbouw",
+   "Description": "Door nieuwbouw aan de voorraad toegevoegd.\r\n",
+   "MeasureGroupId": null,
+   "DataType": "Long",
+   "Unit": "aantal",
+   "Decimals": 0,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "D003028",
+   "Index": 3,
+   "Title": "Overige toevoeging",
+   "Description": "Om andere redenen dan nieuwbouw aan de voorraad toegevoegd, bijvoorbeeld splitsing, verbouw of verandering van gebruiksfunctie.\r\n",
+   "MeasureGroupId": null,
+   "DataType": "Long",
+   "Unit": "aantal",
+   "Decimals": 0,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "D003007",
+   "Index": 4,
+   "Title": "Overige onttrekking",
+   "Description": "Om andere redenen dan sloop onttrokken aan de voorraad, zoals samenvoeging of verandering van gebruiksfunctie.",
+   "MeasureGroupId": null,
+   "DataType": "Long",
+   "Unit": "aantal",
+   "Decimals": 0,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "M008372",
+   "Index": 5,
+   "Title": "Woningbouw",
+   "Description": "Nieuwbouw plus het saldo van overige toevoegingen en onttrekkingen.",
+   "MeasureGroupId": null,
+   "DataType": "Long",
+   "Unit": "aantal",
+   "Decimals": 0,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "D003024",
+   "Index": 6,
+   "Title": "Sloop",
+   "Description": "Door sloop aan de voorraad onttrokken.\t\r\n",
+   "MeasureGroupId": null,
+   "DataType": "Long",
+   "Unit": "aantal",
+   "Decimals": 0,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "D002953",
+   "Index": 7,
+   "Title": "Correctie",
+   "Description": "Saldo van negatieve en positieve (administratieve) correcties. \r\nDe administratieve correcties zijn vaak het gevolg van een dubbeltelling, zoals nieuwbouwwoningen die twee keer zijn toegevoegd. Daarnaast gaat het over eerder gesloopte woningen die niet zijn doorgegeven, of nieuwbouwwoningen die abusievelijk zijn opgenomen maar in het betreffende jaar (nog) niet zijn gebouwd.\r\nVoor de periode tot 2012 geldt dat de correcties in het betreffende jaar werden vastgesteld na afstemming met de gemeenten ten behoeve van de definitieve cijfers. \r\nVanaf 2012 vallen onder correcties op basis van de BAG:\r\n- Een mutatie die betrekking heeft op een al eerder gepubliceerde periode.\r\n- Een mutatie die een onlogische statusovergang van een verblijfsobject oplevert; bijvoorbeeld van ‘in gebruik’ naar ‘gevormd’.\r\n- Een mutatie van een verblijfsobject die al in eerdere periode(n) aan de voorraad is toegevoegd en/of onttrokken.\r\n\r\nEenmalige correcties op dubbeltellingen in 2012 en 2013:\r\nSommige woningen die in 2012 en 2013 op basis van de BAG als nieuwbouw werden afgeleid, stonden al geregistreerd in het tot 2012 gebruikte CBS-Woningregister. De woningen die van 1992 tot 2012 al zijn aangemeld als nieuwbouw zijn in de definitieve cijfers verwerkt onder 'Correctie'. \r\nWoningen die van 2010 tot 2012 in de CBS-Woningenquête al waren afgemeld vanwege sloop, doch ook als sloop zijn afgeleid uit de BAG, zijn alleen in verslagjaar 2012 opgenomen onder 'Correctie'. In 2013 was het aantal dubbel getelde sloop te gering voor het toepassen van een correctie.",
+   "MeasureGroupId": null,
+   "DataType": "Long",
+   "Unit": "aantal",
+   "Decimals": 0,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "D003021",
+   "Index": 8,
+   "Title": "Saldo voorraad",
+   "Description": "Het aantal dat aan de voorraad is toegevoegd minus het aantal dat aan de voorraad is onttrokken, plus correcties.\r\nVoor alle jaren vóór 2012 geldt dat saldo voorraad (toevoegingen minus onttrekkingen plus correcties) gelijk is aan de groei van de woningvoorraad (eindstand minus beginstand).\r\nIn sommige gevallen is vanaf 2012 in de BAG een mutatie doorgevoerd, waarbij het adresgegeven pas geldig is ná de geldigheid van de mutatie of het adresgegeven is na de peildatum ingetrokken. Deze mutatie is dan op dat moment niet adresseerbaar en wordt niet als mutatie meegenomen in de publicatie. In dat geval wijkt de eindstand af van de beginstand plus het saldo van de mutatie, of de beginstand wijkt af van de eindstand van het voorgaande jaar.",
+   "MeasureGroupId": null,
+   "DataType": "Long",
+   "Unit": "aantal",
+   "Decimals": 0,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "D002968",
+   "Index": 9,
+   "Title": "Eindstand Voorraad",
+   "Description": "Aantal in de voorraad aan het einde van de periode.\r\nIn sommige gevallen is vanaf 2012 in de BAG een mutatie doorgevoerd, waarbij het adresgegeven pas geldig is ná de geldigheid van de mutatie of het adresgegeven is na de peildatum ingetrokken. Deze mutatie is dan op dat moment niet adresseerbaar en wordt niet als mutatie meegenomen in de publicatie. In dat geval wijkt de eindstand af van de beginstand plus het saldo van de mutatie, of de beginstand wijkt af van de eindstand van het voorgaande jaar.",
+   "MeasureGroupId": null,
+   "DataType": "Long",
+   "Unit": "x 1 000",
+   "Decimals": 0,
+   "PresentationType": null
+  }
+ ]
+}

@@ -1,0 +1,20 @@
+{
+ "tableId": "83932NED",
+ "capturedAt": "2026-07-02T12:11:30.390Z",
+ "source": "https://datasets.cbs.nl/odata/v1/CBS/83932NED",
+ "sliceFilter": "Inkomensklassen eq 'T001226' and KenmerkenVanHuishoudens eq '1050010'",
+ "sampleOnly": false,
+ "observationRows": 280,
+ "observationPages": [
+  "observations-page-1.json"
+ ],
+ "files": {
+  "properties": "properties.json",
+  "dimensions": "dimensions.json",
+  "measure-codes": "measure-codes.json",
+  "codes-Inkomensbegrippen": "codes-Inkomensbegrippen.json",
+  "codes-Inkomensklassen": "codes-Inkomensklassen.json",
+  "codes-KenmerkenVanHuishoudens": "codes-KenmerkenVanHuishoudens.json",
+  "codes-Perioden": "codes-Perioden.json"
+ }
+}

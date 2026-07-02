@@ -1,0 +1,76 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/82242NED/$metadata#Properties",
+ "Identifier": "82242NED",
+ "Title": "Faillissementen; kerncijfers",
+ "Description": "Deze tabel bevat de aantallen door rechters in Nederland uitgesproken faillissementen uitgesplitst naar type gefailleerde (natuurlijke personen met en zonder eenmanszaak, bedrijven en instellingen).\r\n\r\nGegevens beschikbaar vanaf: januari 1981.\r\n\r\nStatus van de cijfers\r\nDe uitkomsten van de laatste twee maanden zijn voorlopig.\r\n \r\nWijzigingen per 12 juni 2026:\r\nDe uitkomsten over de maand mei 2026 zijn toegevoegd.\r\n\r\nWanneer komen er nieuwe cijfers?\r\nDe uitkomsten over de maand juni 2026 verschijnen naar verwachting op 10 juli 2026.\r\n\r\n\r\n",
+ "Language": "nl",
+ "Authority": "https://standaarden.overheid.nl/owms/terms/Centraal_Bureau_voor_de_Statistiek",
+ "Modified": "2026-06-12T06:30:00+02:00",
+ "ReleaseDate": "2026-06-12T06:30:00+02:00",
+ "ModificationDate": "2026-06-12T06:30:00+02:00",
+ "TemporalCoverage": "januari 1981 - mei 2026",
+ "Catalog": "CBS",
+ "Publisher": "https://standaarden.overheid.nl/owms/terms/Centraal_Bureau_voor_de_Statistiek",
+ "ContactPoint": "infoservice@cbs.nl",
+ "Version": "202606120630",
+ "VersionNotes": "",
+ "VersionReason": "Actualisering",
+ "Frequency": "Per maand",
+ "Status": "Regulier",
+ "ObservationCount": 3084,
+ "ObservationsModified": "2026-06-12T06:30:00+02:00",
+ "DatasetType": "Numeric",
+ "GraphTypes": "Table,Bar,Line",
+ "License": "https://creativecommons.org/licenses/by/4.0/",
+ "Source": "CBS.",
+ "Summary": "Uitgesproken faillissementen; kerncijfers\nNatuurlijke personen, eenmanszaken en bedrijven & instellingen",
+ "LongDescription": "INHOUDSOPGAVE\r\n\r\n1. Toelichting\r\n2. Definities en verklaring van symbolen\r\n3. Koppelingen naar relevante tabellen en artikelen\r\n4. Bronnen en methoden\r\n5. Meer informatie\r\n\r\n\r\n1. TOELICHTING\r\n\r\nDeze tabel bevat de aantallen door rechters in Nederland uitgesproken faillissementen uitgesplitst naar type gefailleerde (natuurlijke personen met en zonder eenmanszaak, bedrijven en instellingen).\r\n\r\nGegevens beschikbaar vanaf: januari 1981.\r\n\r\nStatus van de cijfers\r\nDe uitkomsten van de laatste twee maanden zijn voorlopig.\r\n \r\nWijzigingen per 12 juni 2026:\r\nDe uitkomsten over de maand mei 2026 zijn toegevoegd.\r\n\r\nWanneer komen er nieuwe cijfers?\r\nDe uitkomsten over de maand juni 2026 verschijnen naar verwachting op 10 juli 2026.\r\n\r\n\r\n2. DEFINITIES EN VERKLARING VAN SYMBOLEN\r\n\r\nDefinities:\r\n\r\nFaillissement\r\nEen rechter kan een juridische eenheid die heeft opgehouden te betalen in staat van faillissement verklaren. Het vermogen en de inkomsten van die juridische eenheid (de schuldenaar) worden dan ingenomen om de schulden af te lossen. Het faillissement kan worden uitgesproken op verzoek van een schuldeiser, de schuldenaar zelf of het Openbaar Ministerie. Nadat de inkomsten en het vermogen aan schuldeisers zijn uitgekeerd wordt het faillissement beëindigd maar is de schuldenaar vaak niet schuldenvrij. Restschulden blijven namelijk opeisbaar. Het failliet verklaren van een juridische eenheid op verzoek van een schuldeiser kan overigens alleen geschieden indien er ook sprake is van een schuld aan een andere schuldeiser. \r\n\r\nUitgesproken faillissementen.\r\nHet aantal natuurlijke personen met en zonder eenmanszaak, bedrijven of instellingen dat door uitspraak van de rechter in staat van faillissement is verklaard.\r\n\r\nNatuurlijke personen zonder eenmanszaak (particulieren)\r\nHet gaat om personen die geen eigen zaak zonder afgescheiden vermogen bezitten en die door privéschulden failliet zijn verklaard door de rechter. Daarnaast betreft het vennoten van een eveneens failliet verklaarde VOF of CV, die natuurlijk persoon zijn. Een natuurlijk persoon is een mens (individu) die in het recht als rechtssubject is erkend en daarmee drager is van wettelijke rechten en plichten.\r\n\r\nNatuurlijke personen met eenmanszaak\r\nRechtsvorm zonder rechtspersoonlijkheid met één natuurlijke persoon als eigenaar van het bedrijf. Deze eigenaar is volledig aansprakelijk voor alle bedrijfshandelingen en vermogensaangelegenheden. Er is geen onderscheid tussen bedrijfs- en privébezittingen. Zaakschuldeisers kunnen zich verhalen op privébezittingen en privéschuldeisers kunnen zich op de bezittingen van het bedrijf verhalen. Er kunnen meerdere personen werken in de eenmanszaak; de eigenaar kan personeel in dienst hebben.\r\n\r\nBedrijven en instellingen\r\nHieronder worden de volgende typen bedrijven of samenwerkingsverbanden gerekend:\r\n- Besloten vennootschap\r\n- Naamloze Vennootschap\r\n- Stichting\r\n- Vereniging\r\n- Limited of andere buitenlandse rechtspersoon\r\n- Vennootschap onder Firma\r\n- Commanditaire Vennootschap \r\n- Maatschap\r\n\r\nVerklaring van symbolen:\r\n\r\nniets (blanco)\t: het cijfer kan op logische gronden niet voorkomen\r\n. \t\t: het cijfer is onbekend, onvoldoende betrouwbaar of geheim\r\n*\t\t: voorlopige cijfers\r\n**\t\t: nader voorlopige cijfers\r\n\r\n3. KOPPELINGEN NAAR RELEVANTE TABELLEN EN ARTIKELEN\r\n\r\nRelevante tabellen:\r\n\r\nFaillissementen; kerncijfers zittingsdaggecorrigeerd zijn te vinden in: \r\n<a href=\"https://opendata.cbs.nl/statline/#/CBS/nl/dataset/83085NED\"\r\n>Uitgesproken faillissementen; zittingsdaggecorrigeerd</a>\r\n\r\nFaillissementen van bedrijven en instellingen (inclusief eenmanszaken) naar SBI 2008 zijn te vinden in: \r\n<a href=\"https://opendata.cbs.nl/statline/#/CBS/nl/dataset/82244NED\"\r\n>Uitgesproken faillissementen; bedrijven en instellingen, SBI 2008</a>\r\n\r\nFaillissementen van bedrijven en instellingen (inclusief eenmanszaken) naar regio zijn te vinden in: \r\n<a href=\"https://opendata.cbs.nl/statline/#/CBS/nl/dataset/82522NED\"\r\n>Uitgesproken faillissementen; bedrijven en instellingen, regio</a>\r\n\r\nFaillissementen van natuurlijke personen (inclusief eenmanszaken) naar regio zijn te vinden in: \r\n<a href=\"https://opendata.cbs.nl/statline/#/CBS/nl/dataset/82243NED\"\r\n>Uitgesproken faillissementen; natuurlijke personen, regio</a>\r\n\r\nFaillissementen van natuurlijke personen naar leeftijd zijn te vinden in: \r\n<a href=\"https://opendata.cbs.nl/statline/#/CBS/nl/dataset/83719NED\"\r\n>Uitgesproken faillissementen; natuurlijke personen, leeftijd</a>\r\n\r\nMaandcijfers over uitgesproken faillissementen naar rechtsvorm en regio van 1993 tot en met april 2014 zijn te vinden in: \r\n<a href='https://opendata.cbs.nl/statline/#/CBS/nl/dataset/80045NED'\r\n>Faillissementen; maandcijfers naar rechtsvorm en regio 1993 - april 2014</a>\r\n\r\n4. BRONNEN EN METHODEN\r\n\r\nBronnen\r\nDe Nederlandse Rechtbanken\r\n\r\nMethode\r\nDe onderzoeksmethode van deze tabel is te vinden in de onderzoeksbeschrijving <a href='http://www.cbs.nl/nl-NL/menu/themas/veiligheid-recht/methoden/dataverzameling/korte-onderzoeksbeschrijvingen/faillissementen'>Faillissementen</a>\r\n\r\n\r\n5. MEER INFORMATIE\r\n\r\n<a href='http://www.cbs.nl/nl-NL/menu/informatie/publiek/inlichtingen/default.htm'>Infoservice</a>\r\n\r\nCopyright © Centraal Bureau voor de Statistiek Den Haag/Heerlen\r\n\r\nVerveelvoudiging is toegestaan, mits het CBS als bron wordt vermeld.\r\n",
+ "Provenance": [
+  {
+   "Title": "Faillissementen",
+   "Url": "http://www.cbs.nl/nl-NL/menu/themas/veiligheid-recht/methoden/dataverzameling/korte-onderzoeksbeschrijvingen/faillissementen"
+  }
+ ],
+ "RelatedSources": [
+  {
+   "Title": "Uitgesproken faillissementen; zittingsdaggecorrigeerd",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/dataset/83085NED"
+  },
+  {
+   "Title": "Uitgesproken faillissementen; bedrijven en instellingen, SBI 2008",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/dataset/82244NED"
+  },
+  {
+   "Title": "Uitgesproken faillissementen; bedrijven en instellingen, regio",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/dataset/82522NED"
+  },
+  {
+   "Title": "Uitgesproken faillissementen; natuurlijke personen, regio",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/dataset/82243NED"
+  },
+  {
+   "Title": "Uitgesproken faillissementen; natuurlijke personen, leeftijd",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/dataset/83719NED"
+  },
+  {
+   "Title": "Faillissementen; maandcijfers naar rechtsvorm en regio 1993 - april 2014",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/dataset/80045NED"
+  }
+ ],
+ "Distributions": [
+  {
+   "Format": "csv",
+   "MediaType": "csv",
+   "DownloadUrl": "https://datasets.cbs.nl/csv/CBS/nl/82242NED",
+   "AccessUrl": "https://dataportal.cbs.nl/detail/CBS/82242NED",
+   "Language": "nl"
+  },
+  {
+   "Format": "odata",
+   "MediaType": "odata",
+   "DownloadUrl": "https://datasets.cbs.nl/odata/v1/CBS/82242NED",
+   "AccessUrl": "https://dataportal.cbs.nl/detail/CBS/82242NED",
+   "Language": "nl"
+  }
+ ]
+}

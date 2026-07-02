@@ -14,8 +14,8 @@ The CBS data strategy and the anti-hallucination guardrails, written as **checka
 Order of checks per sync; any failure marks the table `needs_review` and excludes it from answering — failures are loud, never silent:
 
 1. **Schema fingerprint** matches the registry (dimension names, measure codes, units). Mismatch = suspected CBS redesign.
-2. **Row plausibility**: row count within a defined tolerance of the previous sync (**Assumption:** default ±20%, per-table override in the registry — tuned during Phase 0); no empty measures. Null values carrying a CBS reason (`ValueAttribute`: confidential, impossible, not yet available) are **valid rows, not failures** — they ingest with their status so refusals can state the true reason.
-3. **Period parsing**: every CBS period code (`2024JJ00`, `2025KW04`, …) converts to a typed period; unparseable codes fail the batch.
+2. **Row plausibility**: row count within a defined tolerance of the previous sync (**Assumption:** default ±20%, per-table override in the registry — tuned during Phase 0); no empty measures; no duplicate cells (the same measure + full coordinates fetched twice = corrupted/overlapping fetch, fails the batch). Null values carrying a CBS reason (`ValueAttribute`: confidential, impossible, not yet available) are **valid rows, not failures** — they ingest with their status so refusals can state the true reason. A null value *without* a CBS reason fails the batch.
+3. **Period parsing**: every CBS period code (`2024JJ00`, `2025KW04`, …) converts to a typed period; unparseable codes fail the batch. Every observed period must also appear in the table's published period list **and carry a publication status** (Definitief / Voorlopig / NaderVoorlopig — the R11 feed); a missing status fails the batch, never defaults to definitive.
 4. **Dimension mapping**: every dimension coordinate — region, but equally Geslacht, Leeftijd, seizoenscorrectie, bestedingscategorie — resolves in `dimension_labels`; unknown codes fail the batch (new municipality codes appear via reviewed mapping updates, not silently).
 5. **Unit consistency**: units per measure unchanged vs. registry, or flagged.
 

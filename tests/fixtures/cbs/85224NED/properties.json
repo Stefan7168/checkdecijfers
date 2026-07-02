@@ -1,0 +1,84 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/85224NED/$metadata#Properties",
+ "Identifier": "85224NED",
+ "Title": "Arbeidsdeelname; kerncijfers seizoengecorrigeerd",
+ "Description": "Deze tabel bevat kwartaal- en jaarcijfers over de arbeidsdeelname in Nederland. De bevolking van 15 tot 75 jaar (exclusief de institutionele bevolking) wordt ingedeeld in de werkzame, werkloze en de niet-beroepsbevolking. De werkzame beroepsbevolking wordt verder ingedeeld op basis van de positie in de werkkring en arbeidsduur. De werkloze beroepsbevolking wordt ingedeeld naar werkloosheidsduur en de niet-beroepsbevolking naar binding met de arbeidsmarkt. Voor verschillende indelingen is een uitsplitsing naar onderwijsniveau beschikbaar.\r\nVanaf 15 februari 2022 publiceert het CBS kwartaal- en jaarcijfers over kenmerken van de beroepsbevolking op basis van een nieuwe meetmethode. Voor de onderwerpen in deze tabel zijn seizoengecorrigeerde kwartaalcijfers samengesteld die ook zijn herberekend vanaf 2013 op het niveau van de nieuwe methode.\r\n\r\nGegevens beschikbaar vanaf: 2013\r\n\r\nStatus van de cijfers:\r\nDe cijfers in deze tabel zijn definitief.  \r\n\r\nWijzigingen per 30 april 2026:\r\nDe cijfers over het 1e kwartaal 2026 zijn toegevoegd.\r\n\r\nWanneer komen er nieuwe cijfers?\r\nNieuwe cijfers worden gepubliceerd in juli 2026.\r\n\r\n",
+ "Language": "nl",
+ "Authority": "https://standaarden.overheid.nl/owms/terms/Centraal_Bureau_voor_de_Statistiek",
+ "Modified": "2026-04-30T06:30:00+02:00",
+ "ReleaseDate": "2026-04-30T06:30:00+02:00",
+ "ModificationDate": "2026-04-30T06:30:00+02:00",
+ "TemporalCoverage": "2013-2026",
+ "Catalog": "CBS",
+ "Publisher": "https://standaarden.overheid.nl/owms/terms/Centraal_Bureau_voor_de_Statistiek",
+ "ContactPoint": "infoservice@cbs.nl",
+ "Version": "202604300630",
+ "VersionNotes": "",
+ "VersionReason": "Actualisering",
+ "Frequency": "Per kwartaal",
+ "Status": "Regulier",
+ "ObservationCount": 4046,
+ "ObservationsModified": "2026-04-30T06:30:00+02:00",
+ "DatasetType": "Numeric",
+ "GraphTypes": "Table,Bar",
+ "License": "https://creativecommons.org/licenses/by/4.0/",
+ "Source": "CBS.",
+ "Summary": "Beroepsbevolking, arbeidsparticipatie, werkloosheid, \nseizoengecorrigeerd, niet-seizoengecorrigeerd",
+ "LongDescription": "INHOUDSOPGAVE\r\n\r\n1. Toelichting\r\n2. Definities en verklaring van symbolen\r\n3. Koppelingen naar relevante tabellen en artikelen\r\n4. Bronnen en methoden\r\n5. Meer informatie \r\n\r\n1. TOELICHTING\r\n\r\nDeze tabel bevat kwartaal- en jaarcijfers over de arbeidsdeelname in Nederland. De bevolking van 15 tot 75 jaar (exclusief de institutionele bevolking) wordt ingedeeld in de werkzame, werkloze en de niet-beroepsbevolking. De werkzame beroepsbevolking wordt verder ingedeeld op basis van de positie in de werkkring en arbeidsduur. De werkloze beroepsbevolking wordt ingedeeld naar werkloosheidsduur en de niet-beroepsbevolking naar binding met de arbeidsmarkt. Voor verschillende indelingen is een uitsplitsing naar onderwijsniveau beschikbaar.\r\nVanaf 15 februari 2022 publiceert het CBS kwartaal- en jaarcijfers over kenmerken van de beroepsbevolking op basis van een nieuwe meetmethode. Voor de onderwerpen in deze tabel zijn seizoengecorrigeerde kwartaalcijfers samengesteld die ook zijn herberekend vanaf 2013 op het niveau van de nieuwe methode.\r\n\r\nGegevens beschikbaar vanaf: 2013\r\n\r\nStatus van de cijfers:\r\nDe cijfers in deze tabel zijn definitief.  \r\n\r\nWijzigingen per 30 april 2026:\r\nDe cijfers over het 1e kwartaal 2026 zijn toegevoegd.\r\n\r\nWanneer komen er nieuwe cijfers?\r\nNieuwe cijfers worden gepubliceerd in juli 2026.\r\n\r\n2. DEFINITIES EN VERKLARING VAN SYMBOLEN\r\n\r\nDefinities:\r\n\r\nBeroepsbevolking:\r\nPersonen\r\n- die betaald werk hebben (werkzame beroepsbevolking), of\r\n- die geen betaald werk hebben, recent naar betaald werk hebben gezocht en daarvoor direct beschikbaar zijn (werkloze beroepsbevolking).\r\n\r\nWerkzame beroepsbevolking:\r\nPersonen die betaald werk hebben.\r\n\r\nWerkloze beroepsbevolking:\r\nPersonen zonder betaald werk, die recent naar werk hebben gezocht en daarvoor direct beschikbaar zijn.\r\n\r\nNiet-beroepsbevolking:\r\nPersonen zonder betaald werk die niet recent naar werk hebben gezocht of daarvoor niet direct beschikbaar zijn.\r\n\r\nVerklaring van symbolen:\r\n\r\nniets (blanco)\t: het cijfer kan op logische gronden niet voorkomen\r\n. \t\t: het cijfer is onbekend, onvoldoende betrouwbaar of geheim\r\n*\t\t: voorlopige cijfers\r\n**\t\t: nader voorlopige cijfers\r\n\r\nEnkele cijfers zijn afgerond op duizendtallen. Hierdoor kan het voorkomen, dat de som van de detailgegevens afwijkt van het totaal.\r\n\r\n3. KOPPELINGEN NAAR RELEVANTE TABELLEN EN ARTIKELEN\r\n\r\nRelevante tabellen:\r\n\r\nAndere tabellen over de arbeidsdeelname zijn te vinden op StatLine onder het thema <a href='https://opendata.cbs.nl/statline/#/CBS/nl/navigatieScherm/thema?themaNr=50870'>Beroepsbevolking</a>.\r\n\r\nDe cijfers in de tabel <a href='http://opendata.cbs.nl/statline/#/CBS/nl/dataset/85224NED/table?dl=67BEA'>Arbeidsdeelname, kerncijfers seizoengecorrigeerd</a> zijn vanaf 2013 herberekend om aan te sluiten op de uitkomsten vanaf 2021.\r\nDe cijfers in de tabel <a href='http://opendata.cbs.nl/statline/#/CBS/nl/dataset/80590ned/table?dl=61121'>Arbeidsdeelname en werkloosheid per maand</a> zijn vanaf 2003 herberekend.  In de overige tabellen over de arbeidsdeelname is dat niet gedaan waardoor deze niet consistent zijn met de herberekende cijfers over de periode 2003 t/m 2020 in de <a href='http://opendata.cbs.nl/statline/#/CBS/nl/dataset/80590ned/table?dl=61121'>Arbeidsdeelname en werkloosheid per maand</a> en 2013 t/m 2020 in de tabel <a href=' http://opendata.cbs.nl/statline/#/CBS/nl/dataset/85224NED/table?dl=67BEA'>Arbeidsdeelname, kerncijfers seizoengecorrigeerd</a>. \r\n\r\nRelevante artikelen:\r\n\r\nVoor meer informatie over de revisie van de cijfers over werkloosheid en de beroepsbevolking, zie het <a href='https://www.cbs.nl/nl-nl/nieuws/2021/48/meer-werklozen-maar-ook-meer-werkenden-met-nieuwe-meetmethode'>artikel van 3 december 2021</a>.\r\n\r\nMeer informatie is te vinden op de themapagina <a href='https://www.cbs.nl/nl-nl/arbeid-en-inkomen/arbeid-en-sociale-zekerheid'>Arbeid en Sociale Zekerheid</a>.\r\n\r\n4. BRONNEN EN METHODEN\r\n\r\nDe cijfers in deze tabel worden op kwartaalniveau met een structureel tijdreeksmodel berekend. Dit structurele tijdreeksmodel is gebaseerd op het model dat al sinds 2010 voor de maandcijfers over de beroepsbevolking toegepast wordt. Er wordt rekening gehouden met breuken vanwege herontwerpen en met de ontwikkelingen rond de coronacrisis. Daarnaast wordt aandacht besteed aan consistentie met de eerder gepubliceerde maandcijfers.  \r\nEen belangrijk voordeel van dit model ten opzichte van directe schattingen is dat direct en expliciet voor de breuk gecorrigeerd wordt, voor de twintig variabelen die via het model geschat worden. Bij de vroegere herontwerpen was het uitgangspunt dat voor de breuken in de kwartaalcijfers op een indirecte manier gecorrigeerd kan worden. Dit gebeurde door de maandcijfers, die voor de breuk gecorrigeerd waren, aan de weging toe te voegen. Later bleek dat deze indirecte breukcorrectie onvoldoende was. \r\nSeizoengecorrigeerde cijfers werden voor de kwartaalcijfers tot nu toe niet standaard gepubliceerd. Voor de twintig variabelen worden nu ook seizoengecorrigeerde cijfers gepubliceerd.  Bovendien houdt het model rekening met de panelstructuur van de EBB en wordt er voor panelvertekening gecorrigeerd. Het model is ook op een redelijk eenvoudige manier uitgebreid om rekening te houden met het wegvallen van de CAPI-waarneming.\r\n\r\nDe onderzoeksmethode van deze tabel is te vinden in de onderzoeksbeschrijving van de <a href='https://www.cbs.nl/nl-nl/onze-diensten/methoden/onderzoeksomschrijvingen/korte-onderzoeksbeschrijvingen/enquete-beroepsbevolking--ebb--'>Enquête beroepsbevolking (EBB)(cbs.nl)</a>.\r\n\r\nRevisie onderwijsniveau en -richting\r\nVanaf 2021 wordt voor het onderwijsniveau gepubliceerd op basis van de SOI 2021. De ISCED-F 2013 is als basis genomen voor de richtingindeling van de SOI 2021. Meer informatie over de SOI 2021 is te vinden op de pagina <a href='https://www.cbs.nl/nl-nl/onze-diensten/methoden/classificaties/onderwijs-en-beroepen/standaard-onderwijsindeling--soi--/standaard-onderwijsindeling-2021'>Standaard Onderwijsindeling 2021 (cbs.nl)</a>\r\n\r\n5. MEER INFORMATIE\r\n\r\n<a href='https://www.cbs.nl/nl-nl/over-ons/contact/infoservice'>Infoservice</a>\r\n\r\nCopyright (c) Centraal Bureau voor de Statistiek, Den Haag/Heerlen \r\nVerveelvoudiging is toegestaan, mits het CBS als bron wordt vermeld.\r\n\r\n\r\n",
+ "Provenance": [
+  {
+   "Title": "Enquête beroepsbevolking (EBB)(cbs.nl)",
+   "Url": "https://www.cbs.nl/nl-nl/onze-diensten/methoden/onderzoeksomschrijvingen/korte-onderzoeksbeschrijvingen/enquete-beroepsbevolking--ebb--"
+  },
+  {
+   "Title": "Standaard Onderwijsindeling 2021 (cbs.nl)",
+   "Url": "https://www.cbs.nl/nl-nl/onze-diensten/methoden/classificaties/onderwijs-en-beroepen/standaard-onderwijsindeling--soi--/standaard-onderwijsindeling-2021"
+  }
+ ],
+ "RelatedSources": [
+  {
+   "Title": "Beroepsbevolking",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/navigatieScherm/thema?themaNr=50870"
+  },
+  {
+   "Title": "Arbeidsdeelname, kerncijfers seizoengecorrigeerd",
+   "Url": "http://opendata.cbs.nl/statline/#/CBS/nl/dataset/85224NED/table?dl=67BEA"
+  },
+  {
+   "Title": "Arbeidsdeelname en werkloosheid per maand",
+   "Url": "http://opendata.cbs.nl/statline/#/CBS/nl/dataset/80590ned/table?dl=61121"
+  },
+  {
+   "Title": "Arbeidsdeelname en werkloosheid per maand",
+   "Url": "http://opendata.cbs.nl/statline/#/CBS/nl/dataset/80590ned/table?dl=61121"
+  },
+  {
+   "Title": "Arbeidsdeelname, kerncijfers seizoengecorrigeerd",
+   "Url": "http://opendata.cbs.nl/statline/#/CBS/nl/dataset/85224NED/table?dl=67BEA"
+  },
+  {
+   "Title": "artikel van 3 december 2021",
+   "Url": "https://www.cbs.nl/nl-nl/nieuws/2021/48/meer-werklozen-maar-ook-meer-werkenden-met-nieuwe-meetmethode"
+  },
+  {
+   "Title": "Arbeid en Sociale Zekerheid",
+   "Url": "https://www.cbs.nl/nl-nl/arbeid-en-inkomen/arbeid-en-sociale-zekerheid"
+  }
+ ],
+ "Distributions": [
+  {
+   "Format": "csv",
+   "MediaType": "csv",
+   "DownloadUrl": "https://datasets.cbs.nl/csv/CBS/nl/85224NED",
+   "AccessUrl": "https://dataportal.cbs.nl/detail/CBS/85224NED",
+   "Language": "nl"
+  },
+  {
+   "Format": "odata",
+   "MediaType": "odata",
+   "DownloadUrl": "https://datasets.cbs.nl/odata/v1/CBS/85224NED",
+   "AccessUrl": "https://dataportal.cbs.nl/detail/CBS/85224NED",
+   "Language": "nl"
+  }
+ ]
+}
