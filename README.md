@@ -16,6 +16,7 @@ CBS StatLine is authoritative but notoriously hard to use; general-purpose AI ch
 |---|---|
 | [CLAUDE.md](CLAUDE.md) | **Start here for any AI coding session** — working agreements, principles, phase gate |
 | [docs/STATUS.md](docs/STATUS.md) | Where the project stands: phase checklist, benchmark scoreboard, next up |
+| [docs/RUNBOOK.md](docs/RUNBOOK.md) | The owner's guide: accounts, secrets, recurring duties, how to run sessions |
 | [docs/01-product-vision.md](docs/01-product-vision.md) | What/why/who, positioning, business model, decision log |
 | [docs/02-user-scenarios.md](docs/02-user-scenarios.md) | Personas, scenarios with acceptance criteria, the 20-task benchmark |
 | [docs/03-mvp-scope.md](docs/03-mvp-scope.md) | Phase 0 scope, success gate, explicit non-goals |
