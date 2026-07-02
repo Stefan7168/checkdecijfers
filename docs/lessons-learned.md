@@ -6,6 +6,20 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## 2026-07-03 — WP3: benchmark answer key frozen
+
+- **Lesson:** A previous session's CI safety rail can itself become the blocker — read the guard's actual code, not just trust its intent, before treating a documented plan as blocked. `scripts/score-benchmark.mjs` hard-failed the moment the key froze (`answer-key.json` exists), with a comment reading "implement [scoring] before freezing the key" — directly contradicting `tasks.json`'s own `frozenNote` ("frozen=true only when every answerable task has an entry") and STATUS.md's explicit session-3 plan to freeze the key well before the answer pipeline exists. Left as-is, freezing the key today would have turned CI red for every push across several future work packages.
+- **Evidence:** Fixed by making the post-freeze branch validate the key's *structure* honestly (mirroring the existing skeleton-mode pattern: real checks, zero scores claimed) instead of hard-failing until scoring is implemented. Full local gate (typecheck, ingestion, invariants, benchmark incl. a new structural test, scorer) green after the fix.
+- **Scope:** process
+
+- **Lesson:** When a task says "freeze against the ingested cells," query the live database directly rather than trust even already-verified docs — and don't let a sampling `LIMIT` stand in for an exhaustive check on the exact cell you need.
+- **Evidence:** An exploratory `LIMIT 10` query over `82610NED`'s distinct measure×dims combinations didn't surface the `M002264_1`/`E006590` (Zonnestroom) pair the B11 answer key needed at all — 10 rows out of dozens of technology×measure combinations happened to miss it. A direct, unlimited, filtered query found it and confirmed the value matched docs/07 exactly. Every one of the 20 cells pinned in `benchmark/answer-key.json` was re-queried this way, not copied from the doc.
+- **Scope:** process
+
+- **Lesson:** Batch/session date labels can drift a day from the underlying UTC timestamps near a timezone boundary — worth reconciling once, explicitly, rather than either ignoring it or treating it as a data discrepancy to chase.
+- **Evidence:** STATUS.md and this session's brief both called it "the 2026-07-03 sync batches"; the actual `ingestion_batches` rows are all timestamped `2026-07-02T16:4x` UTC (the author's commit is `+07:00`, still July 2 there too). There is exactly one successful batch per table either way, so no batch-selection ambiguity — noted in the frozen key's `pinnedTo.note` and moved on.
+- **Scope:** process
+
 ## 2026-07-02 — WP2: ingestion + validation pipeline
 
 - **Lesson:** Verify a hosted database's connection string from the actual machine before building on it — Supabase's direct `db.<ref>.supabase.co` host is IPv6-only and unreachable from typical IPv4-only home networks; the fix is the Session-pooler URL (same database, same password). Derive unknowns deterministically (the pooler region came from AWS's published IP ranges) instead of probing endpoints with credentials.
