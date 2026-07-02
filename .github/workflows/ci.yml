@@ -1,7 +1,11 @@
 # CI gate — the owner's trust signal. "The tests pass" is a claim only CI can make
-# (CLAUDE.md conventions). Runs the five gate suites on every push:
+# (CLAUDE.md conventions). Runs the six gate suites on every push:
 #   1. ingestion fixture tests   2. invariant tests   3. benchmark suite + scorer
 #   4. registry tests (ADR 010)  5. query + benchmark-intent tests (WP5)
+#   6. answer/intent tests (WP6) — the parser's LLM calls replay from committed
+#      fixtures (ADR 012): still no API key, no network. The live half
+#      (recording + calibration, npm run intent:eval) spends tokens and is
+#      deliberately NOT on this gate.
 # State per work package: the ingestion suite has real teeth since WP2 (wire-level
 # corruption fixtures against an embedded Postgres, ADR 009); the registry suite
 # (WP4) checks default_coordinates/period_semantics/canonical_measures apply
@@ -45,3 +49,5 @@ jobs:
         run: npm run test:registry
       - name: Query + benchmark-intent tests
         run: npm run test:query
+      - name: Answer/intent tests (LLM replay fixtures)
+        run: npm run test:answer

@@ -14,7 +14,10 @@
     "test:benchmark": "vitest run tests/benchmark",
     "test:registry": "vitest run tests/registry",
     "test:query": "vitest run tests/query",
+    "test:answer": "vitest run tests/answer",
     "benchmark:score": "node scripts/score-benchmark.mjs",
+    "intent:eval": "node --env-file-if-exists=.env scripts/intent-eval.ts",
+    "intent:record": "node --env-file-if-exists=.env scripts/intent-eval.ts --record",
     "db:migrate": "node --env-file=.env src/db/migrate.ts",
     "ingest": "node --env-file=.env src/ingestion/cli.ts",
     "registry:apply": "node --env-file=.env src/registry/apply.ts",
@@ -28,6 +31,8 @@
     "vitest": "^3.0.0"
   },
   "dependencies": {
-    "pg": "^8.22.0"
+    "@anthropic-ai/sdk": "^0.110.0",
+    "pg": "^8.22.0",
+    "zod": "^4.4.3"
   }
 }
