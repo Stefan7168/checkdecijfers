@@ -6,6 +6,12 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## 2026-07-03 — git identity leak (work email into a personal-project repo)
+
+- **Lesson:** check a machine's *global* `git config user.email` before the first commit in a new repo, especially a personal/private one — it silently applies unless a repo-local override exists, and nothing about writing a commit warns you whose identity it's using.
+- **Evidence:** this machine's global `~/.gitconfig` was set to a work identity (`redacted-work-id <redacted-work-email>`), which ended up authoring 22 of this repo's first 25 commits — the entire doc-writing phase plus WP1 — before Stefan caught it via a different Claude Code session. Fixed with a repo-local `git config --local user.name/user.email` override plus a `git filter-branch --env-filter` history rewrite (no `git-filter-repo` available on this machine; built-in `filter-branch` was adequate for 25 commits) and a force-push. Verified byte-identical tree content before pushing (`git diff` against the pre-rewrite ref was empty) and re-ran CI green on the rewritten history before calling it done. Full recipe: [RUNBOOK.md](RUNBOOK.md), GitHub account line.
+- **Scope:** process, provider-quirk (git config inheritance)
+
 ## 2026-07-03 — WP4: table registry + alias list
 
 - **Lesson:** when the `Db` abstraction's `query()` only ever returns `{ rows }` (no `rowCount` — by design, so PGlite and pg stay interchangeable, ADR 009), don't infer "did this UPDATE match a row" from the result shape. An UPDATE without `RETURNING` always returns `rows: []` whether it matched zero rows or a thousand — a plausible-looking `if (result.rows.length === 0)` existence check is silently always-true.
