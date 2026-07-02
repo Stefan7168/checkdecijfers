@@ -9000,6 +9000,4551 @@
    "StringValue": null,
    "Bestedingscategorieen": "T001112",
    "Perioden": "2020MM12"
+  },
+  {
+   "Id": 1000,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2020MM12"
+  },
+  {
+   "Id": 1001,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 79.94,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2020JJ00"
+  },
+  {
+   "Id": 1002,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 80.42,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2020JJ00"
+  },
+  {
+   "Id": 1003,
+   "Measure": "M000241",
+   "ValueAttribute": "Impossible",
+   "Value": null,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2020JJ00"
+  },
+  {
+   "Id": 1004,
+   "Measure": "M000242",
+   "ValueAttribute": "Impossible",
+   "Value": null,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2020JJ00"
+  },
+  {
+   "Id": 1005,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 1.3,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2020JJ00"
+  },
+  {
+   "Id": 1006,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 1.2,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2020JJ00"
+  },
+  {
+   "Id": 1007,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2020JJ00"
+  },
+  {
+   "Id": 1008,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 80.03,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM01"
+  },
+  {
+   "Id": 1009,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 80.36,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM01"
+  },
+  {
+   "Id": 1010,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": -0.2,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM01"
+  },
+  {
+   "Id": 1011,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": -0.3,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM01"
+  },
+  {
+   "Id": 1012,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 1.6,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM01"
+  },
+  {
+   "Id": 1013,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 1.2,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM01"
+  },
+  {
+   "Id": 1014,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM01"
+  },
+  {
+   "Id": 1015,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 80.73,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM02"
+  },
+  {
+   "Id": 1016,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 81.05,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM02"
+  },
+  {
+   "Id": 1017,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": 0.9,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM02"
+  },
+  {
+   "Id": 1018,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": 0.9,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM02"
+  },
+  {
+   "Id": 1019,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 1.8,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM02"
+  },
+  {
+   "Id": 1020,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 1.5,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM02"
+  },
+  {
+   "Id": 1021,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM02"
+  },
+  {
+   "Id": 1022,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 80.95,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM03"
+  },
+  {
+   "Id": 1023,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 81.27,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM03"
+  },
+  {
+   "Id": 1024,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": 0.3,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM03"
+  },
+  {
+   "Id": 1025,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": 0.3,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM03"
+  },
+  {
+   "Id": 1026,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 1.9,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM03"
+  },
+  {
+   "Id": 1027,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 1.5,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM03"
+  },
+  {
+   "Id": 1028,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM03"
+  },
+  {
+   "Id": 1029,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 81.32,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM04"
+  },
+  {
+   "Id": 1030,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 81.63,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM04"
+  },
+  {
+   "Id": 1031,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": 0.5,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM04"
+  },
+  {
+   "Id": 1032,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": 0.4,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM04"
+  },
+  {
+   "Id": 1033,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 1.9,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM04"
+  },
+  {
+   "Id": 1034,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 1.5,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM04"
+  },
+  {
+   "Id": 1035,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM04"
+  },
+  {
+   "Id": 1036,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 81.39,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM05"
+  },
+  {
+   "Id": 1037,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 81.7,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM05"
+  },
+  {
+   "Id": 1038,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": 0.1,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM05"
+  },
+  {
+   "Id": 1039,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": 0.1,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM05"
+  },
+  {
+   "Id": 1040,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 2.1,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM05"
+  },
+  {
+   "Id": 1041,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 1.9,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM05"
+  },
+  {
+   "Id": 1042,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM05"
+  },
+  {
+   "Id": 1043,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 81.55,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM06"
+  },
+  {
+   "Id": 1044,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 81.86,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM06"
+  },
+  {
+   "Id": 1045,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": 0.2,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM06"
+  },
+  {
+   "Id": 1046,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": 0.2,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM06"
+  },
+  {
+   "Id": 1047,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 2,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM06"
+  },
+  {
+   "Id": 1048,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 1.9,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM06"
+  },
+  {
+   "Id": 1049,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM06"
+  },
+  {
+   "Id": 1050,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 81.97,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM07"
+  },
+  {
+   "Id": 1051,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 82.28,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM07"
+  },
+  {
+   "Id": 1052,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": 0.5,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM07"
+  },
+  {
+   "Id": 1053,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": 0.5,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM07"
+  },
+  {
+   "Id": 1054,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 1.4,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM07"
+  },
+  {
+   "Id": 1055,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 1.3,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM07"
+  },
+  {
+   "Id": 1056,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM07"
+  },
+  {
+   "Id": 1057,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 82.32,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM08"
+  },
+  {
+   "Id": 1058,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 82.64,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM08"
+  },
+  {
+   "Id": 1059,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": 0.4,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM08"
+  },
+  {
+   "Id": 1060,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": 0.4,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM08"
+  },
+  {
+   "Id": 1061,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 2.4,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM08"
+  },
+  {
+   "Id": 1062,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 2.3,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM08"
+  },
+  {
+   "Id": 1063,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM08"
+  },
+  {
+   "Id": 1064,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 82.38,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM09"
+  },
+  {
+   "Id": 1065,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 82.7,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM09"
+  },
+  {
+   "Id": 1066,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": 0.1,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM09"
+  },
+  {
+   "Id": 1067,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": 0.1,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM09"
+  },
+  {
+   "Id": 1068,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 2.7,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM09"
+  },
+  {
+   "Id": 1069,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 2.6,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM09"
+  },
+  {
+   "Id": 1070,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM09"
+  },
+  {
+   "Id": 1071,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 83.41,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM10"
+  },
+  {
+   "Id": 1072,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 83.74,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM10"
+  },
+  {
+   "Id": 1073,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": 1.3,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM10"
+  },
+  {
+   "Id": 1074,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": 1.3,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM10"
+  },
+  {
+   "Id": 1075,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 3.4,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM10"
+  },
+  {
+   "Id": 1076,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 3.3,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM10"
+  },
+  {
+   "Id": 1077,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM10"
+  },
+  {
+   "Id": 1078,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 84.15,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM11"
+  },
+  {
+   "Id": 1079,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 84.48,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM11"
+  },
+  {
+   "Id": 1080,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": 0.9,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM11"
+  },
+  {
+   "Id": 1081,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": 0.9,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM11"
+  },
+  {
+   "Id": 1082,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 5.2,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM11"
+  },
+  {
+   "Id": 1083,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 5,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM11"
+  },
+  {
+   "Id": 1084,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM11"
+  },
+  {
+   "Id": 1085,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 84.78,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM12"
+  },
+  {
+   "Id": 1086,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 85.11,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM12"
+  },
+  {
+   "Id": 1087,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": 0.7,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM12"
+  },
+  {
+   "Id": 1088,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": 0.7,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM12"
+  },
+  {
+   "Id": 1089,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 5.7,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM12"
+  },
+  {
+   "Id": 1090,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 5.6,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM12"
+  },
+  {
+   "Id": 1091,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021MM12"
+  },
+  {
+   "Id": 1092,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 82.08,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021JJ00"
+  },
+  {
+   "Id": 1093,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 82.4,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021JJ00"
+  },
+  {
+   "Id": 1094,
+   "Measure": "M000241",
+   "ValueAttribute": "Impossible",
+   "Value": null,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021JJ00"
+  },
+  {
+   "Id": 1095,
+   "Measure": "M000242",
+   "ValueAttribute": "Impossible",
+   "Value": null,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021JJ00"
+  },
+  {
+   "Id": 1096,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 2.7,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021JJ00"
+  },
+  {
+   "Id": 1097,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 2.5,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021JJ00"
+  },
+  {
+   "Id": 1098,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2021JJ00"
+  },
+  {
+   "Id": 1099,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 85.16,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM01"
+  },
+  {
+   "Id": 1100,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 86.27,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM01"
+  },
+  {
+   "Id": 1101,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": 0.4,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM01"
+  },
+  {
+   "Id": 1102,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": 1.4,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM01"
+  },
+  {
+   "Id": 1103,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 6.4,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM01"
+  },
+  {
+   "Id": 1104,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 7.4,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM01"
+  },
+  {
+   "Id": 1105,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM01"
+  },
+  {
+   "Id": 1106,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 85.71,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM02"
+  },
+  {
+   "Id": 1107,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 86.82,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM02"
+  },
+  {
+   "Id": 1108,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": 0.6,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM02"
+  },
+  {
+   "Id": 1109,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": 0.6,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM02"
+  },
+  {
+   "Id": 1110,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 6.2,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM02"
+  },
+  {
+   "Id": 1111,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 7.1,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM02"
+  },
+  {
+   "Id": 1112,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM02"
+  },
+  {
+   "Id": 1113,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 88.83,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM03"
+  },
+  {
+   "Id": 1114,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 89.95,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM03"
+  },
+  {
+   "Id": 1115,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": 3.6,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM03"
+  },
+  {
+   "Id": 1116,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": 3.6,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM03"
+  },
+  {
+   "Id": 1117,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 9.7,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM03"
+  },
+  {
+   "Id": 1118,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 10.7,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM03"
+  },
+  {
+   "Id": 1119,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM03"
+  },
+  {
+   "Id": 1120,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 89.09,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM04"
+  },
+  {
+   "Id": 1121,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 90.5,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM04"
+  },
+  {
+   "Id": 1122,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": 0.3,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM04"
+  },
+  {
+   "Id": 1123,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": 0.6,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM04"
+  },
+  {
+   "Id": 1124,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 9.6,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM04"
+  },
+  {
+   "Id": 1125,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 10.9,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM04"
+  },
+  {
+   "Id": 1126,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM04"
+  },
+  {
+   "Id": 1127,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 88.52,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM05"
+  },
+  {
+   "Id": 1128,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 89.93,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM05"
+  },
+  {
+   "Id": 1129,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": -0.6,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM05"
+  },
+  {
+   "Id": 1130,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": -0.6,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM05"
+  },
+  {
+   "Id": 1131,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 8.8,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM05"
+  },
+  {
+   "Id": 1132,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 10.1,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM05"
+  },
+  {
+   "Id": 1133,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM05"
+  },
+  {
+   "Id": 1134,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 88.52,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM06"
+  },
+  {
+   "Id": 1135,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 89.93,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM06"
+  },
+  {
+   "Id": 1136,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": 0,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM06"
+  },
+  {
+   "Id": 1137,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": 0,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM06"
+  },
+  {
+   "Id": 1138,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 8.5,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM06"
+  },
+  {
+   "Id": 1139,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 9.9,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM06"
+  },
+  {
+   "Id": 1140,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM06"
+  },
+  {
+   "Id": 1141,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 90.39,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM07"
+  },
+  {
+   "Id": 1142,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 92.53,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM07"
+  },
+  {
+   "Id": 1143,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": 2.1,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM07"
+  },
+  {
+   "Id": 1144,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": 2.9,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM07"
+  },
+  {
+   "Id": 1145,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 10.3,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM07"
+  },
+  {
+   "Id": 1146,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 12.5,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM07"
+  },
+  {
+   "Id": 1147,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM07"
+  },
+  {
+   "Id": 1148,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 92.17,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM08"
+  },
+  {
+   "Id": 1149,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 94.47,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM08"
+  },
+  {
+   "Id": 1150,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": 2,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM08"
+  },
+  {
+   "Id": 1151,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": 2.1,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM08"
+  },
+  {
+   "Id": 1152,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 12,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM08"
+  },
+  {
+   "Id": 1153,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 14.3,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM08"
+  },
+  {
+   "Id": 1154,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM08"
+  },
+  {
+   "Id": 1155,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 94.35,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM09"
+  },
+  {
+   "Id": 1156,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 96.88,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM09"
+  },
+  {
+   "Id": 1157,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": 2.4,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM09"
+  },
+  {
+   "Id": 1158,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": 2.6,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM09"
+  },
+  {
+   "Id": 1159,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 14.5,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM09"
+  },
+  {
+   "Id": 1160,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 17.1,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM09"
+  },
+  {
+   "Id": 1161,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM09"
+  },
+  {
+   "Id": 1162,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 95.36,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM10"
+  },
+  {
+   "Id": 1163,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 97.91,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM10"
+  },
+  {
+   "Id": 1164,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": 1.1,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM10"
+  },
+  {
+   "Id": 1165,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": 1.1,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM10"
+  },
+  {
+   "Id": 1166,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 14.3,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM10"
+  },
+  {
+   "Id": 1167,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 16.9,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM10"
+  },
+  {
+   "Id": 1168,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM10"
+  },
+  {
+   "Id": 1169,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 92.46,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM11"
+  },
+  {
+   "Id": 1170,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 94.71,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM11"
+  },
+  {
+   "Id": 1171,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": -3,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM11"
+  },
+  {
+   "Id": 1172,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": -3.3,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM11"
+  },
+  {
+   "Id": 1173,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 9.9,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM11"
+  },
+  {
+   "Id": 1174,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 12.1,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM11"
+  },
+  {
+   "Id": 1175,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM11"
+  },
+  {
+   "Id": 1176,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 92.9,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM12"
+  },
+  {
+   "Id": 1177,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 95.15,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM12"
+  },
+  {
+   "Id": 1178,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": 0.5,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM12"
+  },
+  {
+   "Id": 1179,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": 0.5,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM12"
+  },
+  {
+   "Id": 1180,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 9.6,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM12"
+  },
+  {
+   "Id": 1181,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 11.8,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM12"
+  },
+  {
+   "Id": 1182,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022MM12"
+  },
+  {
+   "Id": 1183,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 90.29,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022JJ00"
+  },
+  {
+   "Id": 1184,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 92.09,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022JJ00"
+  },
+  {
+   "Id": 1185,
+   "Measure": "M000241",
+   "ValueAttribute": "Impossible",
+   "Value": null,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022JJ00"
+  },
+  {
+   "Id": 1186,
+   "Measure": "M000242",
+   "ValueAttribute": "Impossible",
+   "Value": null,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022JJ00"
+  },
+  {
+   "Id": 1187,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 10,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022JJ00"
+  },
+  {
+   "Id": 1188,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 11.8,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022JJ00"
+  },
+  {
+   "Id": 1189,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2022JJ00"
+  },
+  {
+   "Id": 1190,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 91.62,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM01"
+  },
+  {
+   "Id": 1191,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 92.82,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM01"
+  },
+  {
+   "Id": 1192,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": -1.4,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM01"
+  },
+  {
+   "Id": 1193,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": -2.4,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM01"
+  },
+  {
+   "Id": 1194,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 7.6,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM01"
+  },
+  {
+   "Id": 1195,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 7.6,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM01"
+  },
+  {
+   "Id": 1196,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM01"
+  },
+  {
+   "Id": 1197,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 92.54,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM02"
+  },
+  {
+   "Id": 1198,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 93.78,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM02"
+  },
+  {
+   "Id": 1199,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": 1,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM02"
+  },
+  {
+   "Id": 1200,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": 1,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM02"
+  },
+  {
+   "Id": 1201,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 8,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM02"
+  },
+  {
+   "Id": 1202,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 8,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM02"
+  },
+  {
+   "Id": 1203,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM02"
+  },
+  {
+   "Id": 1204,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 92.74,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM03"
+  },
+  {
+   "Id": 1205,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 94,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM03"
+  },
+  {
+   "Id": 1206,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": 0.2,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM03"
+  },
+  {
+   "Id": 1207,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": 0.2,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM03"
+  },
+  {
+   "Id": 1208,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 4.4,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM03"
+  },
+  {
+   "Id": 1209,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 4.5,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM03"
+  },
+  {
+   "Id": 1210,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM03"
+  },
+  {
+   "Id": 1211,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 93.7,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM04"
+  },
+  {
+   "Id": 1212,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 94.98,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM04"
+  },
+  {
+   "Id": 1213,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": 1,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM04"
+  },
+  {
+   "Id": 1214,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": 1,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM04"
+  },
+  {
+   "Id": 1215,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 5.2,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM04"
+  },
+  {
+   "Id": 1216,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 5,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM04"
+  },
+  {
+   "Id": 1217,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM04"
+  },
+  {
+   "Id": 1218,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 93.88,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM05"
+  },
+  {
+   "Id": 1219,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 95.17,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM05"
+  },
+  {
+   "Id": 1220,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": 0.2,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM05"
+  },
+  {
+   "Id": 1221,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": 0.2,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM05"
+  },
+  {
+   "Id": 1222,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 6.1,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM05"
+  },
+  {
+   "Id": 1223,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 5.8,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM05"
+  },
+  {
+   "Id": 1224,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM05"
+  },
+  {
+   "Id": 1225,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 93.57,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM06"
+  },
+  {
+   "Id": 1226,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 94.8,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM06"
+  },
+  {
+   "Id": 1227,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": -0.3,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM06"
+  },
+  {
+   "Id": 1228,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": -0.4,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM06"
+  },
+  {
+   "Id": 1229,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 5.7,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM06"
+  },
+  {
+   "Id": 1230,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 5.4,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM06"
+  },
+  {
+   "Id": 1231,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM06"
+  },
+  {
+   "Id": 1232,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 94.53,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM07"
+  },
+  {
+   "Id": 1233,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 95.54,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM07"
+  },
+  {
+   "Id": 1234,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": 1,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM07"
+  },
+  {
+   "Id": 1235,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": 0.8,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM07"
+  },
+  {
+   "Id": 1236,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 4.6,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM07"
+  },
+  {
+   "Id": 1237,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 3.3,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM07"
+  },
+  {
+   "Id": 1238,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM07"
+  },
+  {
+   "Id": 1239,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 94.95,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM08"
+  },
+  {
+   "Id": 1240,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 95.94,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM08"
+  },
+  {
+   "Id": 1241,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": 0.4,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM08"
+  },
+  {
+   "Id": 1242,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": 0.4,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM08"
+  },
+  {
+   "Id": 1243,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 3,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM08"
+  },
+  {
+   "Id": 1244,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 1.6,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM08"
+  },
+  {
+   "Id": 1245,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM08"
+  },
+  {
+   "Id": 1246,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 94.56,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM09"
+  },
+  {
+   "Id": 1247,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 95.53,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM09"
+  },
+  {
+   "Id": 1248,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": -0.4,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM09"
+  },
+  {
+   "Id": 1249,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": -0.4,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM09"
+  },
+  {
+   "Id": 1250,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 0.2,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM09"
+  },
+  {
+   "Id": 1251,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": -1.4,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM09"
+  },
+  {
+   "Id": 1252,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM09"
+  },
+  {
+   "Id": 1253,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 94.98,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM10"
+  },
+  {
+   "Id": 1254,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 95.97,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM10"
+  },
+  {
+   "Id": 1255,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": 0.4,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM10"
+  },
+  {
+   "Id": 1256,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": 0.5,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM10"
+  },
+  {
+   "Id": 1257,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": -0.4,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM10"
+  },
+  {
+   "Id": 1258,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": -2,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM10"
+  },
+  {
+   "Id": 1259,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM10"
+  },
+  {
+   "Id": 1260,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 93.99,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM11"
+  },
+  {
+   "Id": 1261,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 94.95,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM11"
+  },
+  {
+   "Id": 1262,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": -1,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM11"
+  },
+  {
+   "Id": 1263,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": -1.1,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM11"
+  },
+  {
+   "Id": 1264,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 1.7,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM11"
+  },
+  {
+   "Id": 1265,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 0.3,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM11"
+  },
+  {
+   "Id": 1266,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM11"
+  },
+  {
+   "Id": 1267,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 94.03,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM12"
+  },
+  {
+   "Id": 1268,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 94.99,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM12"
+  },
+  {
+   "Id": 1269,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": 0,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM12"
+  },
+  {
+   "Id": 1270,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": 0,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM12"
+  },
+  {
+   "Id": 1271,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 1.2,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM12"
+  },
+  {
+   "Id": 1272,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": -0.2,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM12"
+  },
+  {
+   "Id": 1273,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023MM12"
+  },
+  {
+   "Id": 1274,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 93.76,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023JJ00"
+  },
+  {
+   "Id": 1275,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 94.87,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023JJ00"
+  },
+  {
+   "Id": 1276,
+   "Measure": "M000241",
+   "ValueAttribute": "Impossible",
+   "Value": null,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023JJ00"
+  },
+  {
+   "Id": 1277,
+   "Measure": "M000242",
+   "ValueAttribute": "Impossible",
+   "Value": null,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023JJ00"
+  },
+  {
+   "Id": 1278,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 3.8,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023JJ00"
+  },
+  {
+   "Id": 1279,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 3,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023JJ00"
+  },
+  {
+   "Id": 1280,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2023JJ00"
+  },
+  {
+   "Id": 1281,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 94.52,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM01"
+  },
+  {
+   "Id": 1282,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 95.08,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM01"
+  },
+  {
+   "Id": 1283,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": 0.5,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM01"
+  },
+  {
+   "Id": 1284,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": 0.1,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM01"
+  },
+  {
+   "Id": 1285,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 3.2,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM01"
+  },
+  {
+   "Id": 1286,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 2.4,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM01"
+  },
+  {
+   "Id": 1287,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM01"
+  },
+  {
+   "Id": 1288,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 95.14,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM02"
+  },
+  {
+   "Id": 1289,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 95.7,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM02"
+  },
+  {
+   "Id": 1290,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": 0.7,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM02"
+  },
+  {
+   "Id": 1291,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": 0.7,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM02"
+  },
+  {
+   "Id": 1292,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 2.8,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM02"
+  },
+  {
+   "Id": 1293,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 2,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM02"
+  },
+  {
+   "Id": 1294,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM02"
+  },
+  {
+   "Id": 1295,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 95.61,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM03"
+  },
+  {
+   "Id": 1296,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 96.17,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM03"
+  },
+  {
+   "Id": 1297,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": 0.5,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM03"
+  },
+  {
+   "Id": 1298,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": 0.5,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM03"
+  },
+  {
+   "Id": 1299,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 3.1,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM03"
+  },
+  {
+   "Id": 1300,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 2.3,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM03"
+  },
+  {
+   "Id": 1301,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM03"
+  },
+  {
+   "Id": 1302,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 96.23,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM04"
+  },
+  {
+   "Id": 1303,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 96.81,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM04"
+  },
+  {
+   "Id": 1304,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": 0.6,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM04"
+  },
+  {
+   "Id": 1305,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": 0.7,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM04"
+  },
+  {
+   "Id": 1306,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 2.7,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM04"
+  },
+  {
+   "Id": 1307,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 1.9,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM04"
+  },
+  {
+   "Id": 1308,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM04"
+  },
+  {
+   "Id": 1309,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 96.44,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM05"
+  },
+  {
+   "Id": 1310,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 97.01,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM05"
+  },
+  {
+   "Id": 1311,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": 0.2,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM05"
+  },
+  {
+   "Id": 1312,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": 0.2,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM05"
+  },
+  {
+   "Id": 1313,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 2.7,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM05"
+  },
+  {
+   "Id": 1314,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 1.9,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM05"
+  },
+  {
+   "Id": 1315,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM05"
+  },
+  {
+   "Id": 1316,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 96.6,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM06"
+  },
+  {
+   "Id": 1317,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 96.81,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM06"
+  },
+  {
+   "Id": 1318,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": 0.2,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM06"
+  },
+  {
+   "Id": 1319,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": -0.2,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM06"
+  },
+  {
+   "Id": 1320,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 3.2,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM06"
+  },
+  {
+   "Id": 1321,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 2.1,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM06"
+  },
+  {
+   "Id": 1322,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM06"
+  },
+  {
+   "Id": 1323,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 98.02,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM07"
+  },
+  {
+   "Id": 1324,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 98.13,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM07"
+  },
+  {
+   "Id": 1325,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": 1.5,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM07"
+  },
+  {
+   "Id": 1326,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": 1.4,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM07"
+  },
+  {
+   "Id": 1327,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 3.7,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM07"
+  },
+  {
+   "Id": 1328,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 2.7,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM07"
+  },
+  {
+   "Id": 1329,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM07"
+  },
+  {
+   "Id": 1330,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 98.33,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM08"
+  },
+  {
+   "Id": 1331,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 98.43,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM08"
+  },
+  {
+   "Id": 1332,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": 0.3,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM08"
+  },
+  {
+   "Id": 1333,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": 0.3,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM08"
+  },
+  {
+   "Id": 1334,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 3.6,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM08"
+  },
+  {
+   "Id": 1335,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 2.6,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM08"
+  },
+  {
+   "Id": 1336,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM08"
+  },
+  {
+   "Id": 1337,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 97.86,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM09"
+  },
+  {
+   "Id": 1338,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 97.96,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM09"
+  },
+  {
+   "Id": 1339,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": -0.5,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM09"
+  },
+  {
+   "Id": 1340,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": -0.5,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM09"
+  },
+  {
+   "Id": 1341,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 3.5,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM09"
+  },
+  {
+   "Id": 1342,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 2.5,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM09"
+  },
+  {
+   "Id": 1343,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM09"
+  },
+  {
+   "Id": 1344,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 98.34,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM10"
+  },
+  {
+   "Id": 1345,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 98.44,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM10"
+  },
+  {
+   "Id": 1346,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": 0.5,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM10"
+  },
+  {
+   "Id": 1347,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": 0.5,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM10"
+  },
+  {
+   "Id": 1348,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 3.5,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM10"
+  },
+  {
+   "Id": 1349,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 2.6,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM10"
+  },
+  {
+   "Id": 1350,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM10"
+  },
+  {
+   "Id": 1351,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 97.77,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM11"
+  },
+  {
+   "Id": 1352,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 97.86,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM11"
+  },
+  {
+   "Id": 1353,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": -0.6,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM11"
+  },
+  {
+   "Id": 1354,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": -0.6,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM11"
+  },
+  {
+   "Id": 1355,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 4,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM11"
+  },
+  {
+   "Id": 1356,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 3.1,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM11"
+  },
+  {
+   "Id": 1357,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM11"
+  },
+  {
+   "Id": 1358,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 97.88,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM12"
+  },
+  {
+   "Id": 1359,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 97.97,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM12"
+  },
+  {
+   "Id": 1360,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": 0.1,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM12"
+  },
+  {
+   "Id": 1361,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": 0.1,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM12"
+  },
+  {
+   "Id": 1362,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 4.1,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM12"
+  },
+  {
+   "Id": 1363,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 3.1,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM12"
+  },
+  {
+   "Id": 1364,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024MM12"
+  },
+  {
+   "Id": 1365,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 96.9,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024JJ00"
+  },
+  {
+   "Id": 1366,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 97.2,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024JJ00"
+  },
+  {
+   "Id": 1367,
+   "Measure": "M000241",
+   "ValueAttribute": "Impossible",
+   "Value": null,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024JJ00"
+  },
+  {
+   "Id": 1368,
+   "Measure": "M000242",
+   "ValueAttribute": "Impossible",
+   "Value": null,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024JJ00"
+  },
+  {
+   "Id": 1369,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 3.3,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024JJ00"
+  },
+  {
+   "Id": 1370,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 2.5,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024JJ00"
+  },
+  {
+   "Id": 1371,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2024JJ00"
+  },
+  {
+   "Id": 1372,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 97.6,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM01"
+  },
+  {
+   "Id": 1373,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 97.6,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM01"
+  },
+  {
+   "Id": 1374,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": -0.3,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM01"
+  },
+  {
+   "Id": 1375,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": -0.4,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM01"
+  },
+  {
+   "Id": 1376,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 3.3,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM01"
+  },
+  {
+   "Id": 1377,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 2.7,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM01"
+  },
+  {
+   "Id": 1378,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM01"
+  },
+  {
+   "Id": 1379,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 98.67,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM02"
+  },
+  {
+   "Id": 1380,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 98.68,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM02"
+  },
+  {
+   "Id": 1381,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": 1.1,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM02"
+  },
+  {
+   "Id": 1382,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": 1.1,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM02"
+  },
+  {
+   "Id": 1383,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 3.7,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM02"
+  },
+  {
+   "Id": 1384,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 3.1,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM02"
+  },
+  {
+   "Id": 1385,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM02"
+  },
+  {
+   "Id": 1386,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 99.09,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM03"
+  },
+  {
+   "Id": 1387,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 99.09,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM03"
+  },
+  {
+   "Id": 1388,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": 0.4,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM03"
+  },
+  {
+   "Id": 1389,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": 0.4,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM03"
+  },
+  {
+   "Id": 1390,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 3.6,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM03"
+  },
+  {
+   "Id": 1391,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 3,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM03"
+  },
+  {
+   "Id": 1392,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM03"
+  },
+  {
+   "Id": 1393,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 100.1,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM04"
+  },
+  {
+   "Id": 1394,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 100.1,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM04"
+  },
+  {
+   "Id": 1395,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": 1,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM04"
+  },
+  {
+   "Id": 1396,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": 1,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM04"
+  },
+  {
+   "Id": 1397,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 4,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM04"
+  },
+  {
+   "Id": 1398,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 3.4,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM04"
+  },
+  {
+   "Id": 1399,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM04"
+  },
+  {
+   "Id": 1400,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 99.53,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM05"
+  },
+  {
+   "Id": 1401,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 99.54,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM05"
+  },
+  {
+   "Id": 1402,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": -0.6,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM05"
+  },
+  {
+   "Id": 1403,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": -0.6,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM05"
+  },
+  {
+   "Id": 1404,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 3.2,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM05"
+  },
+  {
+   "Id": 1405,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 2.6,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM05"
+  },
+  {
+   "Id": 1406,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM05"
+  },
+  {
+   "Id": 1407,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 99.49,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM06"
+  },
+  {
+   "Id": 1408,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 99.49,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM06"
+  },
+  {
+   "Id": 1409,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": 0,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM06"
+  },
+  {
+   "Id": 1410,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": -0.1,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM06"
+  },
+  {
+   "Id": 1411,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 3,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM06"
+  },
+  {
+   "Id": 1412,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 2.8,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM06"
+  },
+  {
+   "Id": 1413,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM06"
+  },
+  {
+   "Id": 1414,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 100.87,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM07"
+  },
+  {
+   "Id": 1415,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 100.88,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM07"
+  },
+  {
+   "Id": 1416,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": 1.4,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM07"
+  },
+  {
+   "Id": 1417,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": 1.4,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM07"
+  },
+  {
+   "Id": 1418,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 2.9,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM07"
+  },
+  {
+   "Id": 1419,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 2.8,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM07"
+  },
+  {
+   "Id": 1420,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM07"
+  },
+  {
+   "Id": 1421,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 101.06,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM08"
+  },
+  {
+   "Id": 1422,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 101.07,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM08"
+  },
+  {
+   "Id": 1423,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": 0.2,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM08"
+  },
+  {
+   "Id": 1424,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": 0.2,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM08"
+  },
+  {
+   "Id": 1425,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 2.8,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM08"
+  },
+  {
+   "Id": 1426,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 2.7,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM08"
+  },
+  {
+   "Id": 1427,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM08"
+  },
+  {
+   "Id": 1428,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 100.97,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM09"
+  },
+  {
+   "Id": 1429,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 100.97,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM09"
+  },
+  {
+   "Id": 1430,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": -0.1,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM09"
+  },
+  {
+   "Id": 1431,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": -0.1,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM09"
+  },
+  {
+   "Id": 1432,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 3.2,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM09"
+  },
+  {
+   "Id": 1433,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 3.1,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM09"
+  },
+  {
+   "Id": 1434,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM09"
+  },
+  {
+   "Id": 1435,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 101.37,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM10"
+  },
+  {
+   "Id": 1436,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 101.37,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM10"
+  },
+  {
+   "Id": 1437,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": 0.4,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM10"
+  },
+  {
+   "Id": 1438,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": 0.4,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM10"
+  },
+  {
+   "Id": 1439,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 3.1,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM10"
+  },
+  {
+   "Id": 1440,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 3,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM10"
+  },
+  {
+   "Id": 1441,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM10"
+  },
+  {
+   "Id": 1442,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 100.51,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM11"
+  },
+  {
+   "Id": 1443,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 100.5,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM11"
+  },
+  {
+   "Id": 1444,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": -0.8,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM11"
+  },
+  {
+   "Id": 1445,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": -0.9,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM11"
+  },
+  {
+   "Id": 1446,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 2.8,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM11"
+  },
+  {
+   "Id": 1447,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 2.7,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM11"
+  },
+  {
+   "Id": 1448,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM11"
+  },
+  {
+   "Id": 1449,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 100.73,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM12"
+  },
+  {
+   "Id": 1450,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 100.72,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM12"
+  },
+  {
+   "Id": 1451,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": 0.2,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM12"
+  },
+  {
+   "Id": 1452,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": 0.2,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM12"
+  },
+  {
+   "Id": 1453,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 2.9,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM12"
+  },
+  {
+   "Id": 1454,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 2.8,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM12"
+  },
+  {
+   "Id": 1455,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025MM12"
+  },
+  {
+   "Id": 1456,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 100,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025JJ00"
+  },
+  {
+   "Id": 1457,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 100,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025JJ00"
+  },
+  {
+   "Id": 1458,
+   "Measure": "M000241",
+   "ValueAttribute": "Impossible",
+   "Value": null,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025JJ00"
+  },
+  {
+   "Id": 1459,
+   "Measure": "M000242",
+   "ValueAttribute": "Impossible",
+   "Value": null,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025JJ00"
+  },
+  {
+   "Id": 1460,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 3.2,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025JJ00"
+  },
+  {
+   "Id": 1461,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 2.9,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025JJ00"
+  },
+  {
+   "Id": 1462,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2025JJ00"
+  },
+  {
+   "Id": 1463,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 99.99,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2026MM01"
+  },
+  {
+   "Id": 1464,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 99.64,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2026MM01"
+  },
+  {
+   "Id": 1465,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": -0.7,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2026MM01"
+  },
+  {
+   "Id": 1466,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": -1.1,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2026MM01"
+  },
+  {
+   "Id": 1467,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 2.4,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2026MM01"
+  },
+  {
+   "Id": 1468,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 2.1,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2026MM01"
+  },
+  {
+   "Id": 1469,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2026MM01"
+  },
+  {
+   "Id": 1470,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 101.02,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2026MM02"
+  },
+  {
+   "Id": 1471,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 100.66,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2026MM02"
+  },
+  {
+   "Id": 1472,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": 1,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2026MM02"
+  },
+  {
+   "Id": 1473,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": 1,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2026MM02"
+  },
+  {
+   "Id": 1474,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 2.4,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2026MM02"
+  },
+  {
+   "Id": 1475,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 2,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2026MM02"
+  },
+  {
+   "Id": 1476,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2026MM02"
+  },
+  {
+   "Id": 1477,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 101.75,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2026MM03"
+  },
+  {
+   "Id": 1478,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 101.39,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2026MM03"
+  },
+  {
+   "Id": 1479,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": 0.7,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2026MM03"
+  },
+  {
+   "Id": 1480,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": 0.7,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2026MM03"
+  },
+  {
+   "Id": 1481,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 2.7,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2026MM03"
+  },
+  {
+   "Id": 1482,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 2.3,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2026MM03"
+  },
+  {
+   "Id": 1483,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2026MM03"
+  },
+  {
+   "Id": 1484,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 102.91,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2026MM04"
+  },
+  {
+   "Id": 1485,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 102.52,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2026MM04"
+  },
+  {
+   "Id": 1486,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": 1.1,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2026MM04"
+  },
+  {
+   "Id": 1487,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": 1.1,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2026MM04"
+  },
+  {
+   "Id": 1488,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 2.8,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2026MM04"
+  },
+  {
+   "Id": 1489,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 2.4,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2026MM04"
+  },
+  {
+   "Id": 1490,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2026MM04"
+  },
+  {
+   "Id": 1491,
+   "Measure": "M000215",
+   "ValueAttribute": "None",
+   "Value": 103.01,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2026MM05"
+  },
+  {
+   "Id": 1492,
+   "Measure": "M000216",
+   "ValueAttribute": "None",
+   "Value": 102.61,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2026MM05"
+  },
+  {
+   "Id": 1493,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": 0.1,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2026MM05"
+  },
+  {
+   "Id": 1494,
+   "Measure": "M000242",
+   "ValueAttribute": "None",
+   "Value": 0.1,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2026MM05"
+  },
+  {
+   "Id": 1495,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 3.5,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2026MM05"
+  },
+  {
+   "Id": 1496,
+   "Measure": "M000239",
+   "ValueAttribute": "None",
+   "Value": 3.1,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2026MM05"
+  },
+  {
+   "Id": 1497,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2026MM05"
+  },
+  {
+   "Id": 1498,
+   "Measure": "M000215",
+   "ValueAttribute": "Impossible",
+   "Value": null,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2026MM06"
+  },
+  {
+   "Id": 1499,
+   "Measure": "M000216",
+   "ValueAttribute": "Impossible",
+   "Value": null,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2026MM06"
+  },
+  {
+   "Id": 1500,
+   "Measure": "M000241",
+   "ValueAttribute": "None",
+   "Value": -0.6,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2026MM06"
+  },
+  {
+   "Id": 1501,
+   "Measure": "M000242",
+   "ValueAttribute": "Impossible",
+   "Value": null,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2026MM06"
+  },
+  {
+   "Id": 1502,
+   "Measure": "M000238",
+   "ValueAttribute": "None",
+   "Value": 2.9,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2026MM06"
+  },
+  {
+   "Id": 1503,
+   "Measure": "M000239",
+   "ValueAttribute": "Impossible",
+   "Value": null,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2026MM06"
+  },
+  {
+   "Id": 1504,
+   "Measure": "M000289",
+   "ValueAttribute": "None",
+   "Value": 100000,
+   "StringValue": null,
+   "Bestedingscategorieen": "T001112",
+   "Perioden": "2026MM06"
   }
  ]
 }
