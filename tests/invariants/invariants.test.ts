@@ -194,7 +194,34 @@ describe('anti-hallucination invariants — answer-side obligations (real tests 
   it.todo('R4 (WP7): every rendered answer displays table ID(s), title, last-sync date, covered period');
   it.todo('R5 (WP7): the visible derived-marking renders whenever the answer schema contains a derivation record');
   it.todo('R6 (WP8): chart specs built deterministically from validated results; renderer cannot compute or omit');
-  it.todo('R7 (WP6): ranked candidate intents with confidence; ambiguity above cutoff exits to clarification, never a best guess');
+  // R7 (WP6, real since 2026-07-03): the threshold rules are unit-proven in
+  // tests/answer/intent-policy.test.ts and the labelled ambiguous-question
+  // set regresses over recorded model output in tests/answer/intent-parse
+  // .test.ts (B15/B16 among them). The core rule is re-asserted here so the
+  // invariant suite itself keeps teeth on R7:
+  it('R7 (WP6): ambiguity or low confidence exits to clarification, never a best guess', async () => {
+    const { decide, DEFAULT_PARSER_CONFIG } = await import('../../src/answer/intent/index.ts');
+    const context = {
+      question: 'invariant probe',
+      raw: { version: 1 as const, kind: 'data_query' as const, candidates: [], unmatchedMeasureTerm: null, nearestCanonicalKeys: [], note: null },
+      model: 'probe',
+      usage: { inputTokens: 0, outputTokens: 0 },
+    };
+    const reading = (key: string, confidence: number) => ({
+      intent: { schemaVersion: 1 as const, target: { kind: 'canonical' as const, key }, period: { kind: 'codes' as const, codes: ['2024JJ00'] }, derivation: 'none' as const },
+      confidence,
+      reading: key,
+      impliedRecency: false,
+    });
+    // Low-confidence single reading → clarify.
+    expect(decide(context, [reading('cpi_yearly_inflation', 0.3)], DEFAULT_PARSER_CONFIG).kind).toBe('clarification');
+    // Two materially different plausible readings → clarify.
+    expect(
+      decide(context, [reading('cpi_yearly_inflation', 0.8), reading('average_existing_home_sale_price', 0.5)], DEFAULT_PARSER_CONFIG).kind,
+    ).toBe('clarification');
+    // One confident reading → answer.
+    expect(decide(context, [reading('cpi_yearly_inflation', 0.95)], DEFAULT_PARSER_CONFIG).kind).toBe('intent');
+  });
   it.todo('R8 (WP10): audit record (incl. final answer text + chart spec) written and reconstructable before the answer is shown');
   it.todo('R9 (WP7): prose values semantically bound to their coordinates; direction/comparison words match the pre-registered derivations; correct-prose fixtures must pass');
   it.todo('R10 (WP7): the unit displayed next to each number matches the result cell\'s unit metadata (factor-1000 and %-vs-procentpunt guards)');

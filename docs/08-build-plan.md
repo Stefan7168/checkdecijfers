@@ -26,21 +26,15 @@ Built as briefed; the brief's contract sketch is now the real, frozen contract i
 
 ---
 
-## WP6 — Intent parsing (LLM)  ← NEXT
+## WP6 — Intent parsing (LLM)  ✅ done 2026-07-03
 
-**Module:** `src/answer/` intent step (ADR [004](decisions/004-llm-usage.md): LLM confined to schema-validated roles). First WP to spend Anthropic tokens — confirm the spend cap first.
-
-**Scope:** Dutch question → **ranked candidate intents + confidence** (the WP5 contract), per **R7**: more than one candidate above cutoff, or a top candidate below threshold → clarification, never a best guess (user-facing ambiguity: region / period / materially different definitions). Registry-internal variant choice resolves to the canonical default instead, stated transparently.
-
-**Open design questions to resolve here:** confidence threshold + calibration procedure against a labelled ambiguous-question set ([open-questions #19](open-questions.md)); **how to test an LLM call in hermetic CI** (record/replay fixtures or a fake client for CI, plus a separate live-eval path that is not on the CI gate). Likely an ADR.
-
-**Invariants:** R7. Regression: B15/B16 (clarify), and B3/B5 un-disambiguated variants must resolve to the canonical default without clarifying ([02-user-scenarios.md](02-user-scenarios.md), Scoring).
-
-**Done =** the answerable tasks resolve to the right structured intent (feeding the proven WP5 layer); the clarification tasks ask exactly one compact question.
+Built as briefed; both open design questions resolved in ADR [012](decisions/012-intent-parsing-llm-harness.md): **hermetic CI** = record/replay fixtures keyed by a full-request hash behind an LLM-client seam (a changed prompt/schema/model/registry fails loudly; the live eval `npm run intent:eval` is off-gate), and **R7 thresholds** = 0.9/0.35, calibrated against a 45-case labelled set ([benchmark/intent-labelled-set.json](../benchmark/intent-labelled-set.json), resolves [open-questions #19](open-questions.md)). Done-criteria met and measured (45/45 live, zero flips over 3 repeats; [STATUS.md](STATUS.md)). Notable beyond the brief: the LLM emits registry vocabulary only (canonical keys, region *names*, structured period specs) — deterministic code owns name→code resolution and "groei in jaar X" cell selection; WP6 also classifies forecast/causal/out-of-scope/compound/smalltalk (the classification WP9 will phrase); period-policy default for present-tense questions is owner-revisable ([open-questions #40](open-questions.md)).
 
 ---
 
-## WP7 — Answer composition (LLM phrasing + guards)
+## WP7 — Answer composition (LLM phrasing + guards)  ← NEXT
+
+**Note for the implementing session:** the LLM test harness (client seam, record/replay fixtures, off-gate live eval — ADR [012](decisions/012-intent-parsing-llm-harness.md)) exists since WP6. Reuse the pattern for the phrasing call; do not invent a second harness.
 
 Phrase validated results in Dutch with numbers injected verbatim; enforce **R2** (prompt sees only validated result objects), **R3** (verbatim numbers, digit-form, one regeneration then fail closed to a template), **R9/R10** (semantic + unit binding). Includes the attribution/freshness line (**R4**) and provisional marking (**R11**). Done = B1–B14 pass end-to-end with zero fabricated numbers.
 

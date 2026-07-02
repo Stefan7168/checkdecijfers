@@ -17,6 +17,7 @@ import { DERIVED_DATA_MARKING } from '../../src/query/index.ts';
 import { CANONICAL_MEASURES } from '../../src/registry/defaults.ts';
 import type { Db } from '../../src/db/types.ts';
 import { createIngestedDb } from '../helpers/ingested-db.ts';
+import { ANSWERABLE_TASKS } from '../helpers/benchmark-intents.ts';
 
 const answerKey = JSON.parse(
   readFileSync(new URL('../../benchmark/answer-key.json', import.meta.url), 'utf8'),
@@ -26,37 +27,12 @@ const answerKey = JSON.parse(
 };
 
 // The hand-authored intents — one per answerable benchmark task, written from
-// the docs/02 task phrasings. These are the WP6 parser's target outputs.
-const INTENTS: Record<string, StructuredIntent> = {
-  // B1: Hoeveel inwoners had Nederland op 1 januari 2025?
-  B1: { schemaVersion: 1, target: { kind: 'canonical', key: 'population_on_1_january' }, regions: ['NL01'], period: { kind: 'codes', codes: ['2025JJ00'] }, derivation: 'none' },
-  // B2: Hoeveel inwoners had de gemeente Utrecht op 1 januari 2024?
-  B2: { schemaVersion: 1, target: { kind: 'canonical', key: 'population_on_1_january' }, regions: ['GM0344'], period: { kind: 'codes', codes: ['2024JJ00'] }, derivation: 'none' },
-  // B3: Wat was de inflatie (CPI, jaargemiddelde) in 2024?
-  B3: { schemaVersion: 1, target: { kind: 'canonical', key: 'cpi_yearly_inflation' }, period: { kind: 'codes', codes: ['2024JJ00'] }, derivation: 'none' },
-  // B4: Hoe ontwikkelde de inflatie zich per jaar van 2020 t/m 2024?
-  B4: { schemaVersion: 1, target: { kind: 'canonical', key: 'cpi_yearly_inflation' }, period: { kind: 'range', from: '2020JJ00', to: '2024JJ00' }, derivation: 'series' },
-  // B5: Wat was het werkloosheidspercentage in het vierde kwartaal van 2025?
-  B5: { schemaVersion: 1, target: { kind: 'canonical', key: 'unemployment_rate_seasonally_adjusted' }, period: { kind: 'codes', codes: ['2025KW04'] }, derivation: 'none' },
-  // B6: Hoeveel woningen telde Nederland in 2024?
-  B6: { schemaVersion: 1, target: { kind: 'canonical', key: 'housing_stock_start_of_year' }, period: { kind: 'codes', codes: ['2024JJ00'] }, derivation: 'none' },
-  // B7: Wat was de gemiddelde verkoopprijs van bestaande koopwoningen in 2024?
-  B7: { schemaVersion: 1, target: { kind: 'canonical', key: 'average_existing_home_sale_price' }, period: { kind: 'codes', codes: ['2024JJ00'] }, derivation: 'none' },
-  // B8: Hoe ontwikkelde de gemiddelde koopwoningprijs zich van 2019 t/m 2024?
-  B8: { schemaVersion: 1, target: { kind: 'canonical', key: 'average_existing_home_sale_price' }, period: { kind: 'range', from: '2019JJ00', to: '2024JJ00' }, derivation: 'series' },
-  // B9: Hoeveel faillissementen werden er in 2025 uitgesproken?
-  B9: { schemaVersion: 1, target: { kind: 'canonical', key: 'bankruptcies_businesses' }, period: { kind: 'codes', codes: ['2025JJ00'] }, derivation: 'none' },
-  // B10: Vergelijk het aantal inwoners van Amsterdam en Rotterdam op 1 januari 2024.
-  B10: { schemaVersion: 1, target: { kind: 'canonical', key: 'population_on_1_january' }, regions: ['GM0363', 'GM0599'], period: { kind: 'codes', codes: ['2024JJ00'] }, derivation: 'none' },
-  // B11: Hoeveel elektriciteit uit zonnestroom werd er in 2024 opgewekt?
-  B11: { schemaVersion: 1, target: { kind: 'canonical', key: 'solar_electricity_production' }, period: { kind: 'codes', codes: ['2024JJ00'] }, derivation: 'none' },
-  // B12: Wat was het gemiddelde besteedbaar inkomen van huishoudens in 2023?
-  B12: { schemaVersion: 1, target: { kind: 'canonical', key: 'average_disposable_household_income' }, period: { kind: 'codes', codes: ['2023JJ00'] }, derivation: 'none' },
-  // B13: Groeide de bevolking van Nederland in 2024, en met hoeveel?
-  B13: { schemaVersion: 1, target: { kind: 'canonical', key: 'population_on_1_january' }, regions: ['NL01'], period: { kind: 'codes', codes: ['2024JJ00', '2025JJ00'] }, derivation: 'difference' },
-  // B14: Welke van de G4-gemeenten had de meeste inwoners op 1 januari 2025?
-  B14: { schemaVersion: 1, target: { kind: 'canonical', key: 'population_on_1_january' }, regions: ['GM0363', 'GM0599', 'GM0518', 'GM0344'], period: { kind: 'codes', codes: ['2025JJ00'] }, derivation: 'max' },
-};
+// the docs/02 task phrasings. Since WP6 they live in the shared helper
+// (tests/helpers/benchmark-intents.ts) so the parser tests target literally
+// the same objects this suite proves against the frozen answer key.
+const INTENTS: Record<string, StructuredIntent> = Object.fromEntries(
+  Object.entries(ANSWERABLE_TASKS).map(([taskId, task]) => [taskId, task.intent]),
+);
 
 let db: Db;
 let close: () => Promise<void>;

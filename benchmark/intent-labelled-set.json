@@ -1,0 +1,172 @@
+{
+  "version": 1,
+  "referenceDate": "2026-08-15",
+  "note": "Labelled question set for R7 threshold calibration and parser regression (ADR 012, open-questions #19). Categories: 'variant' = registry-internal variant choice, must resolve to the canonical default WITHOUT clarifying (docs/05 canonical-default policy); 'ambiguous' = user-facing ambiguity, must exit to clarification, never a best guess; 'refusal' = must classify forecast/causal/out-of-scope/compound; 'smalltalk' = not a data question. The benchmark tasks B1-B20 and the un-disambiguated B3/B5 variants are NOT duplicated here — they come from tests/helpers/benchmark-intents.ts. referenceDate is chosen so that 'vorige maand' (2026MM07) lies beyond the loaded CPI slice (freshest: 2026MM06) — B20 must exercise the freshness refusal, not an answer. Labels are product-policy judgments; changing one is a reviewed decision, never a way to make a red run green. Label decisions so far (rationale in ADR 012): r-autos expects a measure CLARIFICATION rather than a scope refusal — for near-boundary topics both are honest (no number, topic flagged as not loaded); the crisp canonical behaviors are pinned by B15 (clarify) and B17 (scope refusal).",
+  "cases": [
+    {
+      "id": "v-inflatie-maand",
+      "category": "variant",
+      "question": "Wat was de inflatie in maart 2025?",
+      "expect": {
+        "outcome": "intent",
+        "intent": { "schemaVersion": 1, "target": { "kind": "canonical", "key": "cpi_yearly_inflation" }, "period": { "kind": "codes", "codes": ["2025MM03"] }, "derivation": "none" }
+      }
+    },
+    {
+      "id": "v-werkloosheid-nu",
+      "category": "variant",
+      "question": "Hoe hoog is de werkloosheid nu?",
+      "expect": {
+        "outcome": "intent",
+        "checks": { "canonicalKey": "unemployment_rate_seasonally_adjusted", "grain": "KW", "impliedRecency": true, "derivation": "none" }
+      }
+    },
+    {
+      "id": "v-woningen-2023",
+      "category": "variant",
+      "question": "Hoeveel woningen waren er in 2023?",
+      "expect": {
+        "outcome": "intent",
+        "intent": { "schemaVersion": 1, "target": { "kind": "canonical", "key": "housing_stock_start_of_year" }, "period": { "kind": "codes", "codes": ["2023JJ00"] }, "derivation": "none" }
+      }
+    },
+    {
+      "id": "v-faillissementen-kw1",
+      "category": "variant",
+      "question": "Hoeveel faillissementen waren er in het eerste kwartaal van 2025?",
+      "expect": {
+        "outcome": "intent",
+        "intent": { "schemaVersion": 1, "target": { "kind": "canonical", "key": "bankruptcies_businesses" }, "period": { "kind": "codes", "codes": ["2025KW01"] }, "derivation": "none" }
+      }
+    },
+    {
+      "id": "v-koopwoning-2023",
+      "category": "variant",
+      "question": "Wat kostte een bestaande koopwoning gemiddeld in 2023?",
+      "expect": {
+        "outcome": "intent",
+        "intent": { "schemaVersion": 1, "target": { "kind": "canonical", "key": "average_existing_home_sale_price" }, "period": { "kind": "codes", "codes": ["2023JJ00"] }, "derivation": "none" }
+      }
+    },
+    {
+      "id": "v-den-haag",
+      "category": "variant",
+      "question": "Hoeveel inwoners had Den Haag op 1 januari 2025?",
+      "expect": {
+        "outcome": "intent",
+        "intent": { "schemaVersion": 1, "target": { "kind": "canonical", "key": "population_on_1_january" }, "regions": ["GM0518"], "period": { "kind": "codes", "codes": ["2025JJ00"] }, "derivation": "none" }
+      }
+    },
+    {
+      "id": "v-rotterdam-2023",
+      "category": "variant",
+      "question": "Wat was het inwonertal van Rotterdam op 1 januari 2023?",
+      "expect": {
+        "outcome": "intent",
+        "intent": { "schemaVersion": 1, "target": { "kind": "canonical", "key": "population_on_1_january" }, "regions": ["GM0599"], "period": { "kind": "codes", "codes": ["2023JJ00"] }, "derivation": "none" }
+      }
+    },
+    {
+      "id": "v-bedrijven-failliet",
+      "category": "variant",
+      "question": "Hoeveel bedrijven gingen er in 2024 failliet?",
+      "expect": {
+        "outcome": "intent",
+        "intent": { "schemaVersion": 1, "target": { "kind": "canonical", "key": "bankruptcies_businesses" }, "period": { "kind": "codes", "codes": ["2024JJ00"] }, "derivation": "none" }
+      }
+    },
+    {
+      "id": "v-zonnestroom-2023",
+      "category": "variant",
+      "question": "Hoeveel zonne-energie werd er in 2023 opgewekt?",
+      "expect": {
+        "outcome": "intent",
+        "intent": { "schemaVersion": 1, "target": { "kind": "canonical", "key": "solar_electricity_production" }, "period": { "kind": "codes", "codes": ["2023JJ00"] }, "derivation": "none" }
+      }
+    },
+    {
+      "id": "a-utrecht",
+      "category": "ambiguous",
+      "question": "Hoeveel inwoners had Utrecht in 2024?",
+      "expect": { "outcome": "clarification", "axesInclude": ["region"] }
+    },
+    {
+      "id": "a-groningen-nu",
+      "category": "ambiguous",
+      "question": "Hoeveel mensen wonen er in Groningen?",
+      "expect": { "outcome": "clarification", "axesInclude": ["region"] }
+    },
+    {
+      "id": "a-nederland-geen-periode",
+      "category": "ambiguous",
+      "question": "Hoeveel inwoners had Nederland?",
+      "expect": { "outcome": "clarification", "axesInclude": ["period"] }
+    },
+    {
+      "id": "a-salaris",
+      "category": "ambiguous",
+      "question": "Wat is het gemiddelde salaris in Nederland?",
+      "expect": { "outcome": "clarification", "axesInclude": ["measure"] }
+    },
+    {
+      "id": "a-huur",
+      "category": "ambiguous",
+      "question": "Wat is de gemiddelde huurprijs in Nederland?",
+      "expect": { "outcome": "clarification", "axesInclude": ["measure"] }
+    },
+    {
+      "id": "a-mijn-gemeente",
+      "category": "ambiguous",
+      "question": "Hoeveel inwoners heeft mijn gemeente?",
+      "expect": { "outcome": "clarification", "axesInclude": ["region"] }
+    },
+    {
+      "id": "a-prijzen-gestegen",
+      "category": "ambiguous",
+      "question": "Zijn de prijzen gestegen?",
+      "expect": { "outcome": "clarification", "axesInclude": ["period"] }
+    },
+    {
+      "id": "a-woningen-amsterdam",
+      "category": "ambiguous",
+      "question": "Hoeveel woningen zijn er in Amsterdam?",
+      "expect": { "outcome": "clarification", "axesInclude": ["region"] }
+    },
+    {
+      "id": "r-huis-volgend-jaar",
+      "category": "refusal",
+      "question": "Hoeveel gaat een gemiddeld huis volgend jaar kosten?",
+      "expect": { "outcome": "refusal", "refusalKind": "forecast" }
+    },
+    {
+      "id": "r-rente-huizen",
+      "category": "refusal",
+      "question": "Stijgen de huizenprijzen door de lage rente?",
+      "expect": { "outcome": "refusal", "refusalKind": "causal" }
+    },
+    {
+      "id": "r-autos",
+      "category": "refusal",
+      "question": "Hoeveel auto's zijn er in Nederland?",
+      "expect": { "outcome": "clarification", "axesInclude": ["measure"] }
+    },
+    {
+      "id": "r-stikstof",
+      "category": "refusal",
+      "question": "Hoeveel stikstof stoot de landbouw uit?",
+      "expect": { "outcome": "refusal", "refusalKind": "out_of_scope" }
+    },
+    {
+      "id": "r-compound",
+      "category": "refusal",
+      "question": "Wat was de inflatie in 2024 en hoeveel woningen waren er toen?",
+      "expect": { "outcome": "refusal", "refusalKind": "compound" }
+    },
+    {
+      "id": "s-hallo",
+      "category": "smalltalk",
+      "question": "Hallo! Wat kun je allemaal?",
+      "expect": { "outcome": "refusal", "refusalKind": "smalltalk" }
+    }
+  ]
+}
