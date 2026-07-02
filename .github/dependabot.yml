@@ -1,0 +1,31 @@
+# Dependency alerts + update PRs (Phase 0 ops guardrail, docs/03-mvp-scope.md:
+# "automated dependency alerts"). Dependabot opens PRs for outdated/vulnerable
+# npm packages and GitHub Actions. These are the ONE sanctioned exception to the
+# build-phase "commit straight to main, no PRs" rule (CLAUDE.md): dependency
+# bumps must be reviewed before merging, never blind-merged. Grouped + weekly to
+# keep the noise low for a solo owner.
+#
+# Note: this file enables *version-update* PRs. Dependabot *security* alerts
+# (vulnerability notifications) are a separate repo toggle the owner enables once
+# under Settings -> Code security -> "Dependabot alerts" (docs/RUNBOOK.md).
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      # One grouped PR per week for all npm updates, instead of one per package.
+      npm-all:
+        patterns:
+          - "*"
+    commit-message:
+      prefix: "deps"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "ci"
