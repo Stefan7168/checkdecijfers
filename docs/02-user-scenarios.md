@@ -68,7 +68,7 @@ The product refuses with: what it *cannot* answer and why (not in loaded scope /
 
 ~20 tasks, hand-verifiable against CBS StatLine. This benchmark is the measuring stick for the Phase 0 gate in [03-mvp-scope.md](03-mvp-scope.md).
 
-**Assumption:** the benchmark assumes a Phase 0 table set covering: population (national + municipal), consumer prices (CPI), unemployment, housing stock, house prices, bankruptcies, household income, and solar energy (the notes repeatedly use `85552NED` as the solar example). The exact table IDs must be validated against the live CBS catalog during Phase 0 setup — CBS retires and replaces tables, so IDs in the notes may be stale. Mirrored in [open-questions.md](open-questions.md).
+**Assumption (resolved 2026-07-02):** the benchmark assumes a Phase 0 table set covering: population (national + municipal), consumer prices (CPI), unemployment, housing stock, house prices, bankruptcies, household income, and solar energy. The exact IDs were validated against the live CBS catalog on 2026-07-02 — see [07-phase0-table-set.md](07-phase0-table-set.md) (the notes' `85552NED` solar example indeed turned out not to exist). Mirrored in [open-questions.md](open-questions.md) #1.
 
 ### Answerable tasks (must produce a validated, attributed answer)
 

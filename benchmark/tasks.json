@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "source": "docs/02-user-scenarios.md — the 20-task Phase 0 benchmark. Task text is verbatim; changing it means changing the doc first.",
+  "frozen": false,
+  "frozenNote": "frozen=true only when every answerable task has an entry in benchmark/answer-key.json (Phase 0 checklist: 'Benchmark answer key frozen'). Keys are never hand-edited to green.",
+  "tasks": [
+    { "id": "B1", "type": "answerable", "question": "Hoeveel inwoners had Nederland op 1 januari 2025?", "expect": "single value + attribution" },
+    { "id": "B2", "type": "answerable", "question": "Hoeveel inwoners had de gemeente Utrecht op 1 januari 2024?", "expect": "single value, municipal dimension" },
+    { "id": "B3", "type": "answerable", "question": "Wat was de inflatie (CPI, jaargemiddelde) in 2024?", "expect": "single value", "undisambiguatedVariant": "Wat was de inflatie in 2024?" },
+    { "id": "B4", "type": "answerable", "question": "Hoe ontwikkelde de inflatie zich per jaar van 2020 t/m 2024?", "expect": "series + line chart", "chart": true },
+    { "id": "B5", "type": "answerable", "question": "Wat was het werkloosheidspercentage in het vierde kwartaal van 2025?", "expect": "single value, quarterly grain; answer key pins seasonally-adjusted-or-not" },
+    { "id": "B6", "type": "answerable", "question": "Hoeveel woningen telde Nederland in 2024?", "expect": "single value; answer key pins stock-at-which-date" },
+    { "id": "B7", "type": "answerable", "question": "Wat was de gemiddelde verkoopprijs van bestaande koopwoningen in 2024?", "expect": "single value" },
+    { "id": "B8", "type": "answerable", "question": "Hoe ontwikkelde de gemiddelde koopwoningprijs zich van 2019 t/m 2024?", "expect": "series + chart", "chart": true },
+    { "id": "B9", "type": "answerable", "question": "Hoeveel faillissementen werden er in 2025 uitgesproken?", "expect": "single value; answer key pins which bankruptcy definition" },
+    { "id": "B10", "type": "answerable", "question": "Vergelijk het aantal inwoners van Amsterdam en Rotterdam op 1 januari 2024.", "expect": "two cells + comparison, both attributed" },
+    { "id": "B11", "type": "answerable", "question": "Hoeveel elektriciteit uit zonnestroom werd er in 2024 opgewekt?", "expect": "single value; answer key pins which solar measure" },
+    { "id": "B12", "type": "answerable", "question": "Wat was het gemiddelde besteedbaar inkomen van huishoudens in 2023?", "expect": "single value" },
+    { "id": "B13", "type": "answerable", "question": "Groeide de bevolking van Nederland in 2024, en met hoeveel?", "expect": "derived: difference of two cells, marked as computation", "derived": "difference" },
+    { "id": "B14", "type": "answerable", "question": "Welke van de G4-gemeenten had de meeste inwoners op 1 januari 2025?", "expect": "derived: max over four cells, marked as computation", "derived": "max" },
+    { "id": "B15", "type": "clarify", "question": "Hoeveel mensen zitten in de bijstand?", "expect": "one compact clarification covering region, period, measure definition; no number before resolution" },
+    { "id": "B16", "type": "clarify", "question": "Wat is de gemiddelde huizenprijs in mijn buurt?", "expect": "clarify/refuse — region unspecified; sub-municipal grain not in scope" },
+    { "id": "B17", "type": "refuse", "reason": "scope", "question": "Hoeveel asielzoekers kwamen er vorige maand binnen?", "expect": "refuse — outside loaded table scope; say so explicitly" },
+    { "id": "B18", "type": "refuse", "reason": "forecast", "question": "Wat wordt de inflatie in 2027?", "expect": "refuse — CBS publishes realizations, not forecasts; no speculation" },
+    { "id": "B19", "type": "refuse", "reason": "causal", "question": "Is de criminaliteit gestegen door immigratie?", "expect": "refuse the causal interpretation; offer only underlying descriptive statistics if in scope" },
+    { "id": "B20", "type": "refuse", "reason": "freshness", "question": "Wat was de inflatie van vorige maand?", "condition": "asked when the loaded CPI table does not yet cover that month", "expect": "freshness refusal — state the freshest available period and offer it" }
+  ]
+}
