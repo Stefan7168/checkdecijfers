@@ -36,6 +36,7 @@ Three principles, also referenced as (a)/(b)/(c) across the docs:
 - Secrets live only in the hosting platform's environment store; a runbook doc lists each secret and its rotation steps in owner-followable language.
 - CI runs the ingestion fixtures, invariant tests, and benchmark scorer on every push and blocks deploys on red. "The tests pass" is a claim only CI can make — the owner's trust signal is a green pipeline, not a session's word.
 - Build sessions may delegate implementation to subagents for large work packages; each brief must name the specific invariants at stake, and the session reviews the result against [docs/05-data-rules.md](docs/05-data-rules.md). Green CI remains the only "done" signal regardless of who wrote the code.
+- **Delegation cost-tier rule** (owner decision, 2026-07-02): the session's own model — the most capable in play — does the *thinking*: scoping, briefs, synthesis, and the final review/judgment of delegated results. Delegated *legwork* (searches, catalog lookups, mechanical implementation, first-pass verification) runs on cheaper model tiers, explicitly pinned per subagent. Running easy fan-out tasks on the session's top-tier model is a cost bug. Express tiers by role ("cheap tier for mechanical steps"), never as hardcoded model names in reusable prompts — names go stale. When reporting delegated work, say which tier ran it.
 - The owner runs a monthly **maintenance session** with a standing agenda: dependency alerts, provider deprecation notices, spend dashboards, backup status.
 
 ## Phase gate
