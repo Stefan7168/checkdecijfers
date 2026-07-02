@@ -61,5 +61,6 @@ for (const t of answerable) {
 if (!key.tasks?.B20) fail('frozen key is missing the B20 freshness reference (Phase 0 checklist coverage: B1-B14 + B20)');
 
 console.log(`benchmark scorer: KEY FROZEN — structural validation of benchmark/answer-key.json: PASS (${answerable.length} answerable task entries + B20 freshness reference).`);
-console.log('Real scoring against audit records lands with the answer pipeline (Phase 0 checklist: query/validation, answer composition). Until then: zero scores produced, none claimed.');
+console.log('Query-layer scoring of B1-B14 + the B20 freshness refusal runs in tests/query/benchmark-intents.test.ts (WP5, hand-authored intents, hermetic).');
+console.log('Full end-to-end scoring against audit records lands with the answer pipeline (intent parsing WP6, answer composition WP7, audit records WP10). Until then this script scores nothing and claims nothing.');
 process.exit(0);

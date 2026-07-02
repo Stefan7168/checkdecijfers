@@ -1,10 +1,14 @@
 {
  "tableId": "86141NED",
- "capturedAt": "2026-07-02T12:11:11.949Z",
+ "capturedAt": "2026-07-02T19:30:19.177Z",
  "source": "https://datasets.cbs.nl/odata/v1/CBS/86141NED",
- "sliceFilter": null,
- "sampleOnly": true,
- "observationRows": 1000,
+ "sliceFilter": "Bestedingscategorieen eq 'T001112'",
+ "captureOnlySlice": {
+  "dimensionEquals": {
+   "Bestedingscategorieen": "T001112"
+  }
+ },
+ "observationRows": 1505,
  "observationPages": [
   "observations-page-1.json"
  ],

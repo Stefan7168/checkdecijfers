@@ -10,7 +10,7 @@
 
 **Status of the decisions here:** they are the *plan of record*, not frozen law. The implementing session firms them up against the code in front of it and records any deviation (with reasoning) in its ADR / lessons-learned. New load-bearing choices get an ADR per [CLAUDE.md](../CLAUDE.md).
 
-**Completed so far** (details in [STATUS.md](STATUS.md) phase history): WP1 CI skeleton + validated table set · WP2 ingestion + validation pipeline · WP3 benchmark answer key frozen · WP4 table registry + alias list.
+**Completed so far** (details in [STATUS.md](STATUS.md) phase history): WP1 CI skeleton + validated table set · WP2 ingestion + validation pipeline · WP3 benchmark answer key frozen · WP4 table registry + alias list · WP5 deterministic query + validation + registered derivations (contract in ADR [011](decisions/011-query-contract.md); two additions beyond the brief below: comparisons also pre-register a non-explicit ranking so B10's "meer dan" has an R9 binding target, and freshness refusals offer period + status but **never a value** — [open-questions #37](open-questions.md), resolved).
 
 ---
 
@@ -20,27 +20,13 @@ The runtime pipeline runs intent → query → answer ([04-architecture.md](04-a
 
 ---
 
-## WP5 — Deterministic query + validation + registered derivations  ← NEXT
+## WP5 — Deterministic query + validation + registered derivations  ✅ done 2026-07-03
 
-**Module:** `src/query/` (ADR [001](decisions/001-single-app-vs-split.md) boundary). Reads `canonical_measures` + `observations` (from WP4); no LLM anywhere in this WP.
-
-**Scope:** take a *structured intent*, resolve it to CBS coordinates, run the SQL, validate, attach attribution, apply any registered derivation, and return either a `ValidatedResult` or a typed refusal.
-
-**Defines the structured-intent contract** (the input) — a typed object that the future intent parser (WP6) must emit. Because we build query-first, WP5 *fixes* this contract. Minimal-but-sufficient for B1–B14: a `canonical_measures` key (or explicit table + measure + dims), region code(s), period(s) or a period range + grain, and a derivation kind (`none | difference | max | series`). Write it as a typed contract in `src/query/` and mark it as the intent parser's target.
-
-**Output — `ValidatedResult`:** value, unit, decimals, CBS status, the full coordinate set (region / period / dims), attribution (table id, title, our sync date, covered period), and a stable result id so every number is traceable (**R1**).
-
-**Derivations = registered functions only (R5):** `difference` (B13), `max` (B14), and pre-registered `direction` + `first/last` for every series result (**R9**, so honest trend sentences have something to bind to). Each derivation records its source result ids and carries the "bewerking van CBS-gegevens door checkdecijfers.nl" marking ([05-data-rules.md](05-data-rules.md), CC BY).
-
-**Validation + refuse-don't-guess (principle c):** existence / unit / period / region checks; when data is missing, out-of-scope, or stale, return a **typed refusal**, never a value. Distinguish "outside the loaded slice" from "not published by CBS" ([05-data-rules.md](05-data-rules.md)). Expose the freshest available period so a B20-style freshness refusal has something to offer.
-
-**Invariants at stake:** R1, R4, R5, R9, R10, R11. (R2/R3 are LLM-output checks — WP7, not here.)
-
-**Done =** score benchmark tasks **B1–B14 against [benchmark/answer-key.json](../benchmark/answer-key.json)** using hand-authored structured intents, passing in hermetic CI (PGlite + committed fixtures, ADR [009](decisions/009-hermetic-test-database.md); never against Supabase). Converts the matching `todo`-marked obligations in `tests/invariants` into real tests. Green CI is the only done-signal.
+Built as briefed; the brief's contract sketch is now the real, frozen contract in [src/query/types.ts](../src/query/types.ts) (ADR [011](decisions/011-query-contract.md) records the load-bearing choices: coordinate result-ids, the ten-kind refusal taxonomy, one-varying-axis rule, no dim overrides on canonical targets). Done-criterion met and in CI: B1–B14 reproduce the frozen key through hand-authored intents + B20 refuses with the right freshness offer, hermetically; R1/R4/R5/R9/R10/R11 query-layer invariant tests are real ([STATUS.md](STATUS.md) for measured results).
 
 ---
 
-## WP6 — Intent parsing (LLM)
+## WP6 — Intent parsing (LLM)  ← NEXT
 
 **Module:** `src/answer/` intent step (ADR [004](decisions/004-llm-usage.md): LLM confined to schema-validated roles). First WP to spend Anthropic tokens — confirm the spend cap first.
 

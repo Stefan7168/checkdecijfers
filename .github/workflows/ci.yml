@@ -1,16 +1,17 @@
 # CI gate — the owner's trust signal. "The tests pass" is a claim only CI can make
-# (CLAUDE.md conventions). Runs the four gate suites on every push:
+# (CLAUDE.md conventions). Runs the five gate suites on every push:
 #   1. ingestion fixture tests   2. invariant tests   3. benchmark suite + scorer
-#   4. registry tests (ADR 010)
+#   4. registry tests (ADR 010)  5. query + benchmark-intent tests (WP5)
 # State per work package: the ingestion suite has real teeth since WP2 (wire-level
-# corruption fixtures against an embedded Postgres, ADR 009); the invariant suite
-# remains an honest scaffold (todo-marked R1-R11 obligations) that gains teeth with
-# the answer pipeline; the benchmark suite gained a frozen answer key in WP3 (every
-# answerable task's ground truth, re-verified against the live ingest) — the scorer
-# validates that key's structure but still reports zero scores: real scoring against
-# audit records lands with the answer pipeline (query, answer composition); the
-# registry suite (WP4) checks default_coordinates/period_semantics/canonical_measures
-# apply idempotently and cross-checks canonical picks against the frozen answer key.
+# corruption fixtures against an embedded Postgres, ADR 009); the registry suite
+# (WP4) checks default_coordinates/period_semantics/canonical_measures apply
+# idempotently and cross-checks canonical picks against the frozen answer key;
+# since WP5 the query suite scores benchmark tasks B1-B14 against the frozen
+# answer key (WP3) through the deterministic query layer using hand-authored
+# structured intents, plus the B20 freshness refusal — all hermetic; the
+# invariant suite has real query-layer tests for R1/R4/R5/R9/R10/R11 and keeps
+# the answer-side obligations as named todos that gain teeth with WP6-WP10.
+# Full end-to-end scoring against audit records lands with the answer pipeline.
 # Deploy-blocking on red attaches when Vercel is connected (later Phase 0 session).
 # This workflow is hermetic: no secrets, no network beyond npm — which is why the
 # ingestion tests run on PGlite (ADR 009), never against Supabase.
@@ -42,3 +43,5 @@ jobs:
         run: npm run benchmark:score
       - name: Registry tests
         run: npm run test:registry
+      - name: Query + benchmark-intent tests
+        run: npm run test:query

@@ -13,6 +13,7 @@
     "test:invariants": "vitest run tests/invariants",
     "test:benchmark": "vitest run tests/benchmark",
     "test:registry": "vitest run tests/registry",
+    "test:query": "vitest run tests/query",
     "benchmark:score": "node scripts/score-benchmark.mjs",
     "db:migrate": "node --env-file=.env src/db/migrate.ts",
     "ingest": "node --env-file=.env src/ingestion/cli.ts",
