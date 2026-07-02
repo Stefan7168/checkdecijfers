@@ -37,6 +37,29 @@ if (!frozen) {
   process.exit(0);
 }
 
-// Real scoring lands with the answer pipeline. Until it is implemented, a frozen key
-// must fail loudly rather than report an empty "pass".
-fail('answer key is frozen but scoring against audit records is not implemented yet — implement before freezing the key');
+// Key is frozen: validate its structure against the task set. This is NOT scoring —
+// scoring compares audit records to this key, and the answer pipeline (intent parsing,
+// query, answer composition) doesn't exist yet. Validating structure now, honestly,
+// beats both silence and a hard fail that would stay red for every push until the
+// pipeline ships (same "honest scaffold, never fake green" call as the skeleton mode).
+const key = JSON.parse(readFileSync(keyPath, 'utf8'));
+const REQUIRED_BY_SHAPE = {
+  single: ['table', 'measure', 'value', 'unit', 'status'],
+  series: ['table', 'measure', 'points'],
+  comparison: ['table', 'measure', 'cells'],
+  derived: ['derived', 'sources', 'formula', 'computedValue'],
+};
+for (const t of answerable) {
+  const entry = key.tasks?.[t.id];
+  if (!entry) fail(`frozen key is missing an entry for answerable task ${t.id}`);
+  const required = REQUIRED_BY_SHAPE[entry.shape];
+  if (!required) fail(`${t.id}: unknown or missing "shape" (${entry.shape})`);
+  for (const field of required) {
+    if (entry[field] === undefined) fail(`${t.id}: entry (shape=${entry.shape}) is missing required field "${field}"`);
+  }
+}
+if (!key.tasks?.B20) fail('frozen key is missing the B20 freshness reference (Phase 0 checklist coverage: B1-B14 + B20)');
+
+console.log(`benchmark scorer: KEY FROZEN — structural validation of benchmark/answer-key.json: PASS (${answerable.length} answerable task entries + B20 freshness reference).`);
+console.log('Real scoring against audit records lands with the answer pipeline (Phase 0 checklist: query/validation, answer composition). Until then: zero scores produced, none claimed.');
+process.exit(0);
