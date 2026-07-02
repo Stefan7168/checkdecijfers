@@ -16,8 +16,8 @@ Everything **Stefan** does, phase by phase. AI sessions read [CLAUDE.md](../CLAU
 ### Now — before the Phase 0 build (~30 min, all free)
 
 - [x] **GitHub** — done 2026-07-02: repo pushed to github.com/Stefan7168/checkdecijfers (private); machine authenticated as Stefan7168.
-- [x] **Anthropic API** — account created 2026-07-02 (stefanpeek00@gmail.com); key stored in local `.env`. ⚠ Still confirm in console.anthropic.com that a **monthly spend cap** is set (suggestion: €25; Phase 0 usage is cents per benchmark run).
-- [x] **Supabase** — account created 2026-07-02 (stefanpeek00@gmail.com). Nothing vendor-specific will be used (ADR [002](decisions/002-postgres-system-of-record.md)), so this stays swappable. ⚠ Still to do: paste the connection string into `.env` as `DATABASE_URL` (dashboard → Connect → URI).
+- [x] **Anthropic API** — account created 2026-07-02 (stefanpeek00@gmail.com); key stored in local `.env`; €25 monthly spend cap confirmed set by owner (2026-07-02).
+- [x] **Supabase** — account created 2026-07-02 (stefanpeek00@gmail.com). Nothing vendor-specific will be used (ADR [002](decisions/002-postgres-system-of-record.md)), so this stays swappable. `DATABASE_URL` stored in local `.env` (2026-07-02); its first verified use comes with the ingestion session.
 - [x] **Vercel** — account created 2026-07-02. ⚠ Note: this account uses **stefanpeek01**@gmail.com (unlike the others). CLI login happens with the first deploy session. Hobby tier is for non-commercial use: upgrade to Pro (~€20/mo) at Phase 2, when payments go live.
 - [ ] Confirm you control the domain **checkdecijfers.nl** (working name; final naming is [open-questions](open-questions.md) #7 — the domain is not needed until pages go public).
 
@@ -45,7 +45,7 @@ Everything **Stefan** does, phase by phase. AI sessions read [CLAUDE.md](../CLAU
 | Secret | Lives in | How to rotate (owner-followable) |
 |---|---|---|
 | `ANTHROPIC_API_KEY` | local `.env` (since 2026-07-02) + Vercel env store (at first deploy) | Anthropic console → create new key → replace in both places → delete old key |
-| `DATABASE_URL` | local `.env` (owner still to paste) + Vercel env store (at first deploy) | Supabase dashboard → reset database password → replace in both places |
+| `DATABASE_URL` | local `.env` (since 2026-07-02) + Vercel env store (at first deploy) | Supabase dashboard → reset database password → replace in both places |
 | *(more added at setup)* | | |
 
 ## Your recurring duties
