@@ -34,7 +34,8 @@ Gate: ≥12/14 answerable, 6/6 refusal, **zero** fabricated numbers ([03-mvp-sco
 ## Next up
 
 1. Stefan: overall doc-set sign-off (all blocking questions are answered).
-2. Then: Phase 0 build kickoff — the first implementation session starts at [CLAUDE.md](../CLAUDE.md).
+2. Stefan: create the four "Now" accounts — [RUNBOOK.md](RUNBOOK.md), signup checklist.
+3. Then: Phase 0 build kickoff in a fresh chat — one work package per session ([RUNBOOK.md](RUNBOOK.md), "How work happens").
 
 ## Phase history
 
