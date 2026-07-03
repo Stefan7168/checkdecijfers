@@ -1,11 +1,12 @@
 # CI gate — the owner's trust signal. "The tests pass" is a claim only CI can make
-# (CLAUDE.md conventions). Runs the six gate suites on every push:
+# (CLAUDE.md conventions). Runs the seven gate suites on every push:
 #   1. ingestion fixture tests   2. invariant tests   3. benchmark suite + scorer
 #   4. registry tests (ADR 010)  5. query + benchmark-intent tests (WP5)
 #   6. answer/intent tests (WP6) — the parser's LLM calls replay from committed
 #      fixtures (ADR 012): still no API key, no network. The live half
 #      (recording + calibration, npm run intent:eval) spends tokens and is
 #      deliberately NOT on this gate.
+#   7. chart tests (WP8) — spec builder + dumb SVG renderer, no LLM anywhere.
 # State per work package: the ingestion suite has real teeth since WP2 (wire-level
 # corruption fixtures against an embedded Postgres, ADR 009); the registry suite
 # (WP4) checks default_coordinates/period_semantics/canonical_measures apply
@@ -16,9 +17,10 @@
 # the answer suite ALSO drives B1-B14 end-to-end (docs/02 phrasing → parser →
 # query → composed Dutch answer, both LLM calls replayed from committed
 # fixtures — ADR 012/013) and the invariant suite has real answer-side tests
-# for R1/R2/R3/R4/R5/R9/R10/R11; the remaining todos are R6 (WP8 charts) and
-# R8 (WP10 audit records). Full benchmark scoring against audit records lands
-# with WP10.
+# for R1/R2/R3/R4/R5/R9/R10/R11; since WP8 R6 is real (chart suite: B4/B8 line
+# charts against the frozen key, spec determinism, renderer provenance). The
+# remaining todo is R8 (WP10 audit records); full benchmark scoring against
+# audit records lands with WP10.
 # Deploy-blocking on red attaches when Vercel is connected (later Phase 0 session).
 # This workflow is hermetic: no secrets, no network beyond npm — which is why the
 # ingestion tests run on PGlite (ADR 009), never against Supabase.
@@ -54,3 +56,5 @@ jobs:
         run: npm run test:query
       - name: Answer/intent tests (LLM replay fixtures)
         run: npm run test:answer
+      - name: Chart tests (spec builder + dumb renderer)
+        run: npm run test:chart
