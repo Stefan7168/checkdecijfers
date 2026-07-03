@@ -1,12 +1,22 @@
 # CI gate — the owner's trust signal. "The tests pass" is a claim only CI can make
-# (CLAUDE.md conventions). Runs the seven gate suites on every push:
-#   1. ingestion fixture tests   2. invariant tests   3. benchmark suite + scorer
+# (CLAUDE.md conventions). Runs the eight gate suites + the benchmark run/score
+# pair on every push:
+#   1. ingestion fixture tests   2. invariant tests   3. benchmark suite
 #   4. registry tests (ADR 010)  5. query + benchmark-intent tests (WP5)
 #   6. answer/intent tests (WP6) — the parser's LLM calls replay from committed
 #      fixtures (ADR 012): still no API key, no network. The live half
 #      (recording + calibration, npm run intent:eval) spends tokens and is
 #      deliberately NOT on this gate.
 #   7. chart tests (WP8) — spec builder + dumb SVG renderer, no LLM anywhere.
+#   8. audit-record tests (WP10, R8) — every response writes a row that
+#      reconstructs it; fail-closed when the audit store is down (ADR 016).
+#   9. benchmark run + scorer (WP10): run-benchmark drives all 20 docs/02
+#      tasks (+ the B15/B16 reply rounds + the un-disambiguated B3/B5
+#      variants) through the AUDITED pipeline hermetically and dumps the audit
+#      records; score-benchmark scores those records against the frozen key
+#      (docs/03 gate: >=12/14 answerable, 6/6 refusal, zero fabricated
+#      numbers) and fails the push below the gate. In CI a missing dump is a
+#      failure — the gate may not silently degrade to structure-only.
 # State per work package: the ingestion suite has real teeth since WP2 (wire-level
 # corruption fixtures against an embedded Postgres, ADR 009); the registry suite
 # (WP4) checks default_coordinates/period_semantics/canonical_measures apply
@@ -18,9 +28,9 @@
 # query → composed Dutch answer, both LLM calls replayed from committed
 # fixtures — ADR 012/013) and the invariant suite has real answer-side tests
 # for R1/R2/R3/R4/R5/R9/R10/R11; since WP8 R6 is real (chart suite: B4/B8 line
-# charts against the frozen key, spec determinism, renderer provenance). The
-# remaining todo is R8 (WP10 audit records); full benchmark scoring against
-# audit records lands with WP10.
+# charts against the frozen key, spec determinism, renderer provenance); since
+# WP10 R8 is real and the invariant suite carries ZERO todos — all eleven
+# invariants are tested.
 # Deploy-blocking on red attaches when Vercel is connected (later Phase 0 session).
 # This workflow is hermetic: no secrets, no network beyond npm — which is why the
 # ingestion tests run on PGlite (ADR 009), never against Supabase.
@@ -48,8 +58,6 @@ jobs:
         run: npm run test:invariants
       - name: Benchmark structure tests
         run: npm run test:benchmark
-      - name: Benchmark scorer
-        run: npm run benchmark:score
       - name: Registry tests
         run: npm run test:registry
       - name: Query + benchmark-intent tests
@@ -58,3 +66,9 @@ jobs:
         run: npm run test:answer
       - name: Chart tests (spec builder + dumb renderer)
         run: npm run test:chart
+      - name: Audit record tests (R8)
+        run: npm run test:audit
+      - name: Benchmark run (hermetic, audited pipeline)
+        run: npm run benchmark:run
+      - name: Benchmark scorer (audit records vs frozen key)
+        run: npm run benchmark:score

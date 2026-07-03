@@ -1,0 +1,145 @@
+// The WP10 wrap layer (ADR 015 "Notes for WP10", ADR 016): the audited entry
+// points the outside world (chat UI, benchmark runner) calls. Each wraps its
+// WP9 counterpart and writes ONE audit_answers row per produced response —
+// BEFORE returning it, so nothing can be shown unrecorded (R8; ADR 004's
+// no-streaming rule exists for exactly this ordering).
+//
+// Fail-closed policy on an audit-write failure (ADR 016):
+//  - answer or clarification: the response is WITHHELD and replaced by the
+//    'internal' refusal — an unrecorded answer violates R8, and unrecorded
+//    pending state would open a clarification round the audit trail never saw.
+//    The replacement refusal is itself audited (best effort).
+//  - refusal: returned as-is with the failure appended to its internalNote —
+//    refusals carry no data values (ADR 015 decision 1), so principle (c) is
+//    not at risk, and masking one honest refusal with another helps nobody.
+import type { Db } from '../../db/types.ts';
+import { toInternalRefusal } from '../respond/refusals.ts';
+import {
+  respondToClarificationReply,
+  respondToQuestion,
+  type RespondOptions,
+} from '../respond/respond.ts';
+import type { ComposedResponse, PendingClarification, RefusalResponse } from '../respond/types.ts';
+import { LlmCallTracker } from './track.ts';
+import { buildAuditRow, insertAuditRecord, type AuditContext } from './write.ts';
+
+export interface AuditedRespondOptions extends RespondOptions {
+  /** Identity seam (ADR 006); omitted/null = anonymous. */
+  userId?: string | null;
+}
+
+export interface AuditedResponse {
+  response: ComposedResponse;
+  /** The audit_answers row id. Null ONLY when the audit write itself failed —
+   * `response` is then the fail-closed replacement (or the annotated
+   * refusal), never an unrecorded answer. */
+  auditId: number | null;
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+}
+
+function appendInternalNote(refusal: RefusalResponse, note: string): RefusalResponse {
+  return {
+    ...refusal,
+    internalNote: refusal.internalNote === null ? note : `${refusal.internalNote}\n${note}`,
+  };
+}
+
+interface WrapContext {
+  question: string;
+  referenceDate: string;
+  userId: string | null;
+  replyText: string | null;
+  pendingClarification: PendingClarification | null;
+  tracker: LlmCallTracker;
+  startedAt: number;
+}
+
+function auditContext(wrap: WrapContext): AuditContext {
+  return {
+    referenceDate: wrap.referenceDate,
+    userId: wrap.userId,
+    replyText: wrap.replyText,
+    pendingClarification: wrap.pendingClarification,
+    llmCalls: wrap.tracker.calls,
+    latencyMs: Math.max(0, Math.round(performance.now() - wrap.startedAt)),
+  };
+}
+
+async function persistOrFailClosed(
+  db: Db,
+  response: ComposedResponse,
+  wrap: WrapContext,
+): Promise<AuditedResponse> {
+  try {
+    const auditId = await insertAuditRecord(db, buildAuditRow(response, auditContext(wrap)));
+    return { response, auditId };
+  } catch (error) {
+    const note = `audit write failed: ${errorMessage(error)}`;
+    if (response.kind === 'refusal') {
+      return { response: appendInternalNote(response, note), auditId: null };
+    }
+    const refusal = toInternalRefusal(wrap.question, note);
+    try {
+      const auditId = await insertAuditRecord(db, buildAuditRow(refusal, auditContext(wrap)));
+      return { response: refusal, auditId };
+    } catch (secondError) {
+      return {
+        response: appendInternalNote(refusal, `audit write failed again: ${errorMessage(secondError)}`),
+        auditId: null,
+      };
+    }
+  }
+}
+
+export async function answerQuestionAudited(
+  db: Db,
+  question: string,
+  options: AuditedRespondOptions,
+): Promise<AuditedResponse> {
+  const tracker = new LlmCallTracker();
+  const wrap: WrapContext = {
+    question,
+    referenceDate: options.referenceDate,
+    userId: options.userId ?? null,
+    replyText: null,
+    pendingClarification: null,
+    tracker,
+    startedAt: performance.now(),
+  };
+  const response = await respondToQuestion(db, question, {
+    ...options,
+    intentClient: tracker.wrap('intent', options.intentClient),
+    answerClient: tracker.wrap('compose', options.answerClient),
+  });
+  return persistOrFailClosed(db, response, wrap);
+}
+
+export async function answerClarificationReplyAudited(
+  db: Db,
+  pending: PendingClarification,
+  reply: string,
+  options: AuditedRespondOptions,
+): Promise<AuditedResponse> {
+  const tracker = new LlmCallTracker();
+  const wrap: WrapContext = {
+    question: pending.question,
+    // THIS turn's clock (staleness runs against it). The original parse's
+    // clock travels inside the stored pending_clarification, so both are
+    // reconstructable from the row.
+    referenceDate: options.referenceDate,
+    userId: options.userId ?? null,
+    replyText: reply,
+    pendingClarification: pending,
+    tracker,
+    startedAt: performance.now(),
+  };
+  const response = await respondToClarificationReply(db, pending, reply, {
+    ...options,
+    intentClient: tracker.wrap('clarify', options.intentClient),
+    answerClient: tracker.wrap('compose', options.answerClient),
+  });
+  return persistOrFailClosed(db, response, wrap);
+}
