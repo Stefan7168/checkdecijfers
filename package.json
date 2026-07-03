@@ -6,8 +6,15 @@
   "engines": {
     "node": ">=24"
   },
+  "workspaces": [
+    "web"
+  ],
   "scripts": {
     "typecheck": "tsc --noEmit",
+    "web:dev": "npm run dev --workspace web",
+    "web:build": "npm run build --workspace web",
+    "web:test": "npm run test --workspace web",
+    "web:typecheck": "npm run typecheck --workspace web",
     "test": "vitest run",
     "test:ingestion": "vitest run tests/ingestion",
     "test:invariants": "vitest run tests/invariants",

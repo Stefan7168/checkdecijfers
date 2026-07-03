@@ -15,5 +15,16 @@ export default defineConfig({
   test: {
     testTimeout: 30_000,
     hookTimeout: 30_000,
+    // web/ is a standalone Next.js workspace (ADR 018) with its own vitest
+    // config, jsdom environment, and `npm run web:test` script — its
+    // *.test.tsx files must not be swept into this root, Node-environment run.
+    exclude: [
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/cypress/**',
+      '**/.{idea,git,cache,output,temp}/**',
+      '**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build}.config.*',
+      'web/**',
+    ],
   },
 });
