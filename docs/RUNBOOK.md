@@ -55,9 +55,13 @@ Everything that matters lives in this repository or in your own accounts
 computer or any one Claude account. A new machine needs, in order:
 
 1. **Install** (one-time): [Node.js](https://nodejs.org) **24 or newer**
-   (`node --version` to check — the project requires ≥24), git, and
-   [Claude Code](https://claude.com/claude-code). Optional but handy:
-   the GitHub CLI (`gh`) for watching CI from the terminal.
+   (`node --version` to check — the project requires ≥24), git,
+   [Claude Code](https://claude.com/claude-code), and the GitHub CLI
+   (`gh`). The CLI is not optional in practice: the repo is private, and
+   `gh auth login` (step 2) is what gives git the credentials the clone
+   in step 3 needs (measured on the 2026-07-03 bootstrap — the clone
+   worked *because* gh was signed in). It also lets you watch CI from
+   the terminal.
 2. **Sign in**: GitHub (your `Stefan7168` account — `gh auth login` walks you
    through it in the browser) and Claude Code (your Claude account).
 3. **Clone and verify — no secrets needed for this step:**
@@ -70,6 +74,14 @@ computer or any one Claude account. A new machine needs, in order:
    The whole test suite is hermetic (embedded database, recorded LLM
    fixtures), so a green run here proves the clone is complete and healthy
    before any key exists on the machine.
+   Two harmless things you may see (both observed on the 2026-07-03
+   bootstrap): `npm ci` warns about install scripts it did not run
+   (esbuild, fsevents) — expected, the suite runs green without approving
+   them; and the very first run is the slowest (everything compiles
+   cold), which can push a single test over its time limit even with the
+   raised 30s ceiling in `vitest.config.ts` — if exactly one test fails
+   on that first run, run `npm test` again before concluding anything is
+   broken (on the bootstrap the re-run was fully green, 306 passed).
 4. **Set the git identity for this clone** — it does NOT come along with a
    clone, and a machine's global default may be a different (work) identity:
    ```
@@ -86,6 +98,16 @@ computer or any one Claude account. A new machine needs, in order:
    the Anthropic console. Only the live-data scripts need `.env`
    (`db:migrate`, `ingest`, `registry:apply`, `intent:eval`/`record`,
    `answer:eval`/`record`) — day-to-day building and CI do not.
+   **Creating the file on a Mac:** duplicate `.env.example` in Finder and
+   rename the copy to exactly `.env` — a duplicate stays plain text. Do
+   NOT write it as a new TextEdit document: TextEdit's default rich-text
+   format silently saves `.env.rtf`, with formatting codes wrapped around
+   the values, which nothing can read (happened on the 2026-07-03
+   bootstrap; the session had to detect, convert and clean it). Dot-files
+   are hidden in Finder — Cmd+Shift+. shows them. Once the values are in,
+   ask a session to verify: it can live-test both credentials without
+   ever displaying them (Anthropic's model-list endpoint costs nothing;
+   the database check is a `select 1` through the pinned-CA client).
 6. **New Claude account?** Claude Code's login (subscription) and the
    project's `ANTHROPIC_API_KEY` (console.anthropic.com) are independent —
    switching Claude accounts does not invalidate the project key. Chat
