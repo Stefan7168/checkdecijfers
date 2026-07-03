@@ -31,15 +31,22 @@
 # charts against the frozen key, spec determinism, renderer provenance); since
 # WP10 R8 is real and the invariant suite carries ZERO todos — all eleven
 # invariants are tested.
-# WP12 (ADR 018): the chat UI (`web/`, an npm workspace) adds two hermetic gate
-# steps — its own typecheck and its own component test suite (jsdom, no
-# network) — plus a second job, `deploy`, gated on `gate` via `needs:` so a red
-# gate structurally blocks the deploy. `deploy` runs only on a direct push to
-# main (this repo has no PRs/branch protection — CLAUDE.md, deliberate — so a
-# `needs:` dependency is the only real deploy-blocking mechanism available).
-# It is intentionally NOT hermetic: it calls the real Vercel CLI/API. The
-# Vercel project has no git integration connected, so this job is the only
-# thing that ever deploys — nothing races it.
+# WP12 (ADR 018): the chat UI (`web/`) adds two hermetic gate steps — its own
+# typecheck and its own component test suite (jsdom, no network) — plus a
+# second job, `deploy`, gated on `gate` via `needs:` so a red gate structurally
+# blocks the deploy. `deploy` runs only on a direct push to main (this repo has
+# no PRs/branch protection — CLAUDE.md, deliberate — so a `needs:` dependency
+# is the only real deploy-blocking mechanism available). It is intentionally
+# NOT hermetic: it calls the real Vercel CLI/API. The Vercel project has no
+# git integration connected, so this job is the only thing that ever deploys —
+# nothing races it.
+# `web/` is deliberately its OWN independent npm project — its own
+# package-lock.json, its own `npm ci` step here — not an npm workspace member
+# of the root. This was a mid-session revision (ADR 018 point 9): a shared
+# workspace lockfile repeatedly fought Vercel/Turbopack's assumption that a
+# deployed Next.js app's node_modules are self-contained, causing two failed
+# real deploy attempts before this fix. `web/backend` (a symlink to `../src`)
+# is how it still reaches backend source code with zero package-level coupling.
 # This workflow's `gate` job is hermetic: no secrets, no network beyond npm —
 # which is why the ingestion tests run on PGlite (ADR 009), never against
 # Supabase, and why `gate` runs `web`'s typecheck/tests but not `next build`
@@ -83,6 +90,8 @@ jobs:
         run: npm run benchmark:run
       - name: Benchmark scorer (audit records vs frozen key)
         run: npm run benchmark:score
+      - name: Web app install (own, independent lockfile)
+        run: npm run web:ci
       - name: Web app typecheck
         run: npm run web:typecheck
       - name: Web app tests (chart wrapper, jsdom, no network)
@@ -97,8 +106,8 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 24
-          cache: npm
-      - run: npm ci
+      # No project install step here: `vercel build` installs web/'s own
+      # dependencies itself, from web/'s own package-lock.json.
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
       - name: Pull Vercel project settings and env vars
