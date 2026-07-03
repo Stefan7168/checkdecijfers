@@ -10,6 +10,9 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
+  "overrides": {
+    "postcss": "^8.5.10"
+  },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.110.0",
     "next": "16.2.10",
