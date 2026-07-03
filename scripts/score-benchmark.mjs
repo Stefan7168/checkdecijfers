@@ -18,14 +18,23 @@
 // Gate (docs/03): >= 12/14 answerable, 6/6 refusal/clarify, ZERO fabricated
 // numbers. Reported but not gate-failing (docs/02): median latency (labeled
 // hermetic — replayed fixtures measure pipeline overhead, not user-perceived
-// latency; WP11's live run measures that), clarification count on B1-B14,
+// latency; the live run measures that), clarification count on B1-B14,
 // template-fallback count, the un-disambiguated B3/B5 check.
+//
+// Usage (WP11):
+//   node scripts/score-benchmark.mjs [dumpPath] [--report reportPath]
+// Default dump: benchmark/audit-run.json (the hermetic CI pair). The live
+// pair passes benchmark/audit-run-live.json and writes the committed
+// provenance report (benchmark/live-benchmark-report.json) — the scoreboard
+// row's evidence. The report is written for FAILING runs too: an honest red
+// run is provenance, never something to suppress.
 //
 // Note for live runs (WP11+): when a key cell was superseded by a CBS
 // correction, the sync's correction log is the only authorized explanation
-// (docs/02) — hermetic runs replay frozen fixtures, so any mismatch here is a
-// pipeline bug, never a correction.
-import { readFileSync, existsSync } from 'node:fs';
+// (docs/02) — hermetic runs replay frozen fixtures, so any mismatch there is
+// a pipeline bug, never a correction.
+import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { resolve } from 'node:path';
 // Deterministic src/test helpers (type-stripped TS imports — same rules CI's
 // vitest suites apply, so the scorer and the tests can never judge by
 // different formatting or tokenization).
@@ -45,9 +54,26 @@ import { CANONICAL_MEASURES } from '../src/registry/defaults.ts';
 
 const fail = (msg) => { console.error(`SCORER FAIL: ${msg}`); process.exit(1); };
 
+// Arguments: optional dump path (default: the hermetic CI dump), optional
+// --report <path> for the committed provenance JSON (live runs).
+const argv = process.argv.slice(2);
+let dumpArg = null;
+let reportPath = null;
+for (let i = 0; i < argv.length; i++) {
+  if (argv[i] === '--report') {
+    reportPath = argv[++i];
+    if (!reportPath || reportPath.startsWith('-')) fail('--report requires a path');
+  } else if (dumpArg === null && !argv[i].startsWith('--')) {
+    dumpArg = argv[i];
+  } else {
+    fail(`unknown argument: ${argv[i]}`);
+  }
+}
+
 const tasksPath = new URL('../benchmark/tasks.json', import.meta.url);
 const keyPath = new URL('../benchmark/answer-key.json', import.meta.url);
-const dumpPath = new URL('../benchmark/audit-run.json', import.meta.url);
+const dumpPath = dumpArg === null ? new URL('../benchmark/audit-run.json', import.meta.url) : resolve(dumpArg);
+const dumpName = dumpArg ?? 'benchmark/audit-run.json';
 const { frozen, tasks } = JSON.parse(readFileSync(tasksPath, 'utf8'));
 
 // ---------------------------------------------------------------------------
@@ -97,14 +123,24 @@ if (!key.tasks?.B20) fail('frozen key is missing the B20 freshness reference');
 // ---------------------------------------------------------------------------
 if (!existsSync(dumpPath)) {
   if (process.env.CI) {
-    fail('no benchmark/audit-run.json in CI — the "Benchmark run" step must produce it before scoring (the gate may not silently degrade to structure-only).');
+    fail(`no ${dumpName} in CI — the "Benchmark run" step must produce it before scoring (the gate may not silently degrade to structure-only).`);
   }
-  console.log('benchmark scorer: structural validation PASS. No audit-run dump found —');
-  console.log('produce one with `npm run benchmark:run` (hermetic, no API key) and re-score.');
+  if (dumpArg !== null) {
+    // An explicitly named dump that doesn't exist is an error, not a
+    // structure-only pass — the caller asked to score something specific.
+    fail(`dump not found: ${dumpName} — produce it first (npm run benchmark:run / benchmark:run:live).`);
+  }
+  console.log(`benchmark scorer: structural validation PASS. No dump found at ${dumpName} —`);
+  console.log('produce one with `npm run benchmark:run` (hermetic, no API key) or `npm run benchmark:run:live` and re-score.');
+  if (reportPath) console.log('NOTE: no report written — there is no run to report on.');
   process.exit(0);
 }
 
 const dump = JSON.parse(readFileSync(dumpPath, 'utf8'));
+// Fail closed on duplicate ids: Maps are last-wins, so a duplicate task or
+// record id could silently shadow the entry that carries a violation.
+if (new Set(dump.tasks.map((t) => t.id)).size !== dump.tasks.length) fail('duplicate task id in the dump');
+if (new Set(dump.records.map((r) => r.id)).size !== dump.records.length) fail('duplicate audit-record id in the dump');
 const recordById = new Map(dump.records.map((r) => [r.id, r]));
 const runById = new Map(dump.tasks.map((t) => [t.id, t]));
 
@@ -325,10 +361,21 @@ const clarificationCountB1toB14 = tasks
   .filter((t) => t.type === 'answerable')
   .filter((t) => recordFor(t.id, runById.get(t.id).auditId).kind === 'clarification').length;
 const templateFallbacks = dump.records.filter((r) => r.answerSource === 'template').length;
-const latencies = firstTurnRecords.map((r) => r.latencyMs).sort((a, b) => a - b);
-const medianLatency = latencies.length % 2 === 1
-  ? latencies[(latencies.length - 1) / 2]
-  : Math.round((latencies[latencies.length / 2 - 1] + latencies[latencies.length / 2]) / 2);
+const median = (sorted) => (sorted.length % 2 === 1
+  ? sorted[(sorted.length - 1) / 2]
+  : Math.round((sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2));
+// docs/03 criterion 4 is scoped to ANSWERABLE tasks; the all-20 figure is
+// reported alongside for context. Both from the same first-turn records.
+const answerableLatencies = tasks
+  .filter((t) => t.type === 'answerable')
+  .map((t) => recordFor(t.id, runById.get(t.id).auditId).latencyMs)
+  .sort((a, b) => a - b);
+const latency = {
+  answerableMedianMs: median(answerableLatencies),
+  answerableMinMs: answerableLatencies[0],
+  answerableMaxMs: answerableLatencies[answerableLatencies.length - 1],
+  firstTurnMedianMs: median(firstTurnRecords.map((r) => r.latencyMs).sort((a, b) => a - b)),
+};
 
 // ---------------------------------------------------------------------------
 // Verdict (docs/03 gate: >=12/14 answerable, 6/6 refusal+clarify, 0 fabricated)
@@ -336,19 +383,67 @@ const medianLatency = latencies.length % 2 === 1
 const answerablePass = taskResults.filter((t) => t.type === 'answerable' && t.pass).length;
 const refusalPass = taskResults.filter((t) => t.type !== 'answerable' && t.pass).length;
 const gate = answerablePass >= 12 && refusalPass === 6 && fabricated === 0;
+const isLive = dump.mode === 'live';
+const latencyNote = isLive
+  ? 'live — real LLM calls + live database'
+  : `${dump.mode} — pipeline overhead only; user-perceived latency comes from the live run`;
+
+// Committed provenance (live runs; the scoreboard row's evidence). Written
+// before the exit code so failing runs are recorded too.
+if (reportPath) {
+  const report = {
+    mode: dump.mode,
+    runGeneratedAt: dump.generatedAt,
+    scoredAt: new Date().toISOString(),
+    referenceDate: dump.referenceDate,
+    clarifyReferenceDate: dump.clarifyReferenceDate,
+    promptVersions: dump.promptVersions,
+    gate: {
+      answerablePass: `${answerablePass}/14`,
+      refusalClarifyPass: `${refusalPass}/6`,
+      fabricatedNumbers: fabricated,
+      verdict: gate ? 'PASS' : 'FAIL',
+    },
+    latency,
+    informational: {
+      clarificationCountB1toB14,
+      templateFallbacks,
+      undisambiguated,
+    },
+    usage: dump.usage ?? null,
+    tasks: taskResults,
+  };
+  try {
+    writeFileSync(resolve(reportPath), `${JSON.stringify(report, null, 2)}\n`);
+  } catch (err) {
+    fail(`cannot write report to ${reportPath}: ${err.message}`);
+  }
+}
 
 console.log(`benchmark scorer: scoring ${dump.records.length} audit records (${dump.mode}, generated ${dump.generatedAt})`);
 console.log('');
 for (const t of taskResults) {
   console.log(`  ${t.pass ? 'PASS' : 'FAIL'}  ${t.id} (${t.type})${t.problems.length ? `\n        - ${t.problems.join('\n        - ')}` : ''}`);
 }
+if (isLive && taskResults.some((t) => t.problems.some((p) => p.includes('not among stored cells')))) {
+  console.log('');
+  console.log('  NOTE: a frozen-key value is missing from a stored result. On a live run the');
+  console.log('  sync correction log is the ONLY authorized explanation (docs/02, Scoring) —');
+  console.log('  check cbs correction entries for the affected table before concluding anything.');
+}
 console.log('');
 console.log(`  answerable: ${answerablePass}/14 (gate: >=12)`);
 console.log(`  refusal/clarify: ${refusalPass}/6 (gate: 6/6)`);
 console.log(`  fabricated numbers: ${fabricated} (gate: 0)`);
-console.log(`  median response: ${medianLatency} ms  [${dump.mode} — pipeline overhead only; live latency lands with WP11]`);
+console.log(`  median response, answerable tasks (docs/03 criterion): ${latency.answerableMedianMs} ms (min ${latency.answerableMinMs} / max ${latency.answerableMaxMs}); all 20 first turns: ${latency.firstTurnMedianMs} ms  [${latencyNote}]`);
 console.log(`  informational: clarifications on B1-B14: ${clarificationCountB1toB14}; template fallbacks: ${templateFallbacks}`);
 for (const u of undisambiguated) console.log(`  informational: ${u.id}: ${u.pass ? 'PASS' : 'FAIL'} (${u.note})`);
+if (isLive && dump.usage) {
+  for (const [model, u] of Object.entries(dump.usage.byModel)) {
+    console.log(`  usage: ${model}: ${u.calls} calls, ${u.inputTokens} in / ${u.outputTokens} out`);
+  }
+}
+if (reportPath) console.log(`  report written to ${reportPath}`);
 console.log('');
 console.log(`  GATE VERDICT: ${gate ? 'PASS' : 'FAIL'}`);
 if (!gate) process.exit(1);
