@@ -25,6 +25,7 @@ Everything **Stefan** does, phase by phase. AI sessions read [CLAUDE.md](../CLAU
 
 - [ ] **Transactional email provider** (e.g. Resend or Postmark; chosen with magic-link login) — also carries your owner alerts (ingestion failures, quarantines, missed syncs).
 - [ ] **Uptime monitor** (free tier, e.g. UptimeRobot) — tells you when the site is down.
+- [ ] **Rotate `ANTHROPIC_API_KEY` at go-live/first deploy** (owner decision 2026-07-03: the pre-launch key stayed in use across the machine move, bounded by the $25/mo spend cap; going live is the agreed rotation moment) — new key into local `.env` + the Vercel env store, then delete the old key in the console.
 
 ### Phase 2 — payments & public launch
 
@@ -44,7 +45,7 @@ Everything **Stefan** does, phase by phase. AI sessions read [CLAUDE.md](../CLAU
 
 | Secret | Lives in | How to rotate (owner-followable) |
 |---|---|---|
-| `ANTHROPIC_API_KEY` | local `.env` (since 2026-07-02) + Vercel env store (at first deploy) | Anthropic console → create new key → replace in both places → delete old key |
+| `ANTHROPIC_API_KEY` | local `.env` (since 2026-07-02) + Vercel env store (at first deploy) | Anthropic console → create new key → replace in both places → delete old key. ⚠ Owner decision 2026-07-03: the pre-launch key deliberately stayed in use across the machine move (the $25/mo spend cap bounds the risk) — rotation deferred to go-live/first deploy, tracked in the Phase 1 checklist above |
 | `DATABASE_URL` | local `.env` (since 2026-07-02) + Vercel env store (at first deploy) | Supabase dashboard → reset database password → replace in both places. ⚠ Use the **Session pooler** connection string (Connect → Session pooler), not the direct one: the direct host is IPv6-only and doesn't work from most home networks (verified 2026-07-02). The connection is TLS-verified against Supabase's public root certificate, committed at `config/supabase-prod-ca-2021.pem` — nothing to do at rotation, it's valid to 2031 |
 | *(more added at setup)* | | |
 
@@ -95,7 +96,10 @@ computer or any one Claude account. A new machine needs, in order:
    in the console (and confirm the monthly spend cap is set on that
    workspace), and fetch the `DATABASE_URL` from the Supabase dashboard
    (Connect → **Session pooler**). Then deactivate the old machine's key in
-   the Anthropic console. Only the live-data scripts need `.env`
+   the Anthropic console. (Or decide explicitly to keep the same key and
+   record that in the secrets register — done for the 2026-07-03 move:
+   rotation deferred to go-live, see the Phase 1 checklist.) Only the
+   live-data scripts need `.env`
    (`db:migrate`, `ingest`, `registry:apply`, `intent:eval`/`record`,
    `answer:eval`/`record`) — day-to-day building and CI do not.
    **Creating the file on a Mac:** duplicate `.env.example` in Finder and
