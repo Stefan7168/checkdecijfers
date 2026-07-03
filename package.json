@@ -19,6 +19,8 @@
     "benchmark:score": "node scripts/score-benchmark.mjs",
     "intent:eval": "node --env-file-if-exists=.env scripts/intent-eval.ts",
     "intent:record": "node --env-file-if-exists=.env scripts/intent-eval.ts --record",
+    "clarify:eval": "node --env-file-if-exists=.env scripts/clarify-eval.ts",
+    "clarify:record": "node --env-file-if-exists=.env scripts/clarify-eval.ts --record",
     "answer:eval": "node --env-file-if-exists=.env scripts/answer-eval.ts",
     "answer:record": "node --env-file-if-exists=.env scripts/answer-eval.ts --record",
     "db:migrate": "node --env-file=.env src/db/migrate.ts",

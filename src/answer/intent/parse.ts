@@ -21,9 +21,9 @@ export interface ParseQuestionOptions {
 }
 
 /** Up to this many readings are considered; the schema asks for 1–3. */
-const MAX_CANDIDATES = 3;
+export const MAX_CANDIDATES = 3;
 
-const REFUSAL_KIND_BY_QUESTION_KIND = {
+export const REFUSAL_KIND_BY_QUESTION_KIND = {
   forecast_request: 'forecast',
   causal_question: 'causal',
   out_of_scope: 'out_of_scope',

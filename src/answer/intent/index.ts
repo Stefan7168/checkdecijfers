@@ -18,3 +18,12 @@ export type { CandidateResolution } from './resolve.ts';
 export { decide, mergeResolutions, differingAxes, buildUnmatchedClarification } from './policy.ts';
 export type { OutcomeContext } from './policy.ts';
 export * from './types.ts';
+export {
+  parseClarificationReply,
+  buildClarifyRequest,
+  buildClarifySystemPrompt,
+  buildClarifyUserPayload,
+  CLARIFY_PROMPT_VERSION,
+  CLARIFY_MODE_SECTION,
+} from './clarify.ts';
+export type { ClarifyReplyOptions } from './clarify.ts';
