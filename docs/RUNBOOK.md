@@ -21,16 +21,19 @@ Everything **Stefan** does, phase by phase. AI sessions read [CLAUDE.md](../CLAU
 - [x] **Vercel** — account created 2026-07-02, login **stefanpeek01**@gmail.com (unlike the others). ✅ **2026-07-04 (WP12): live at https://checkdecijfers.vercel.app.** CLI already logged in on the build machine (no interactive step needed), project `checkdecijfers` created and linked (`stefanpeek01-3883s-projects/checkdecijfers`) — **deliberately with no Git integration connected** (Project → Settings → Git shows no repository; ADR [018](decisions/018-chat-ui-and-deploy.md) decision 7 — deploys happen only via the CI `deploy` job, so nothing races a red gate). Two project settings set via the API (no CLI/dashboard equivalent for the second one): **Root Directory = `web`**, and **"Include source files outside of the Root Directory" enabled** — Vercel's documented mechanism for a Next.js app living in a monorepo subdirectory that needs to reach sibling code (here, the backend `src/` this app imports via a symlink; full story in ADR 018 and [lessons-learned.md](lessons-learned.md), it took six deploy attempts to land on this). `ANTHROPIC_API_KEY`/`DATABASE_URL` are in the Vercel env store (Production). Owner created a Vercel access token (dashboard → Account Settings → Tokens) and set it as the GitHub Actions secret `VERCEL_TOKEN` directly from Terminal (`gh secret set`, never pasted in chat). Hobby tier is for non-commercial use: upgrade to Pro (~€20/mo) at Phase 2, when payments go live.
 - [ ] Confirm you control the domain **checkdecijfers.nl** (working name; final naming is [open-questions](open-questions.md) #7 — the domain is not needed until pages go public).
 
-### Phase 1 — accounts & private beta
+### Phase 1 — accounts, billing & private beta
 
-- [ ] **Transactional email provider** (e.g. Resend or Postmark; chosen with magic-link login) — also carries your owner alerts (ingestion failures, quarantines, missed syncs).
+**Moved up from "Phase 2" (2026-07-04):** billing was pulled forward into Phase 1 (see [06-roadmap.md](06-roadmap.md)) because the chat is going onto a real public website page imminently. The KvK/Stripe items below used to sit under a "Phase 2" heading that implied "later" — they don't mean that anymore. Status as of 2026-07-04: **not yet started, timeline undecided** ([open-questions #54](open-questions.md)) — this is the one item on this whole list that isn't a quick account signup, so start deciding on it now even if the engineering work hasn't caught up yet.
+
+- [ ] **Transactional email provider: Resend** (decided 2026-07-04, ADR [006](decisions/006-auth-billing-seams.md) — custom SMTP for Supabase Auth's magic-link emails; Supabase's own built-in sender is dev/test-only and rate-limited) — also carries your owner alerts (ingestion failures, quarantines, missed syncs).
 - [ ] **Uptime monitor** (free tier, e.g. UptimeRobot) — tells you when the site is down.
 - [ ] **Rotate `ANTHROPIC_API_KEY` at go-live/first deploy** (owner decision 2026-07-03: the pre-launch key stayed in use across the machine move, bounded by the $25/mo spend cap; going live is the agreed rotation moment) — new key into local `.env` + the Vercel env store, then delete the old key in the console.
+- [ ] **KvK registration + business bank account** — required before Stripe can pay out in the Netherlands. Start early; this is the slowest item on this list, and its timeline is still undecided ([open-questions #54](open-questions.md)).
+- [ ] **Stripe** with iDEAL enabled — can't onboard until the item above is sorted.
+- [ ] **Vercel: upgrade Hobby → Pro (~€20/mo)** before real payments go live — the Hobby tier's terms are for non-commercial use only; this can happen any time before go-live, it's the cheapest item on this list.
 
-### Phase 2 — payments & public launch
+### Phase 2 — public launch (browse layer, SEO)
 
-- [ ] **KvK registration + business bank account** — required before Stripe can pay out in the Netherlands. Start early; this is the slowest item.
-- [ ] **Stripe** with iDEAL enabled.
 - [ ] **Google Search Console** — the browse layer's SEO instrumentation.
 - [ ] Privacy-friendly analytics (e.g. Plausible) — optional, decide then.
 
