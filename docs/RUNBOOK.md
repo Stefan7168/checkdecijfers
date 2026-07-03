@@ -79,10 +79,11 @@ computer or any one Claude account. A new machine needs, in order:
    bootstrap): `npm ci` warns about install scripts it did not run
    (esbuild, fsevents) — expected, the suite runs green without approving
    them; and the very first run is the slowest (everything compiles
-   cold), which can push a single test over its time limit even with the
-   raised 30s ceiling in `vitest.config.ts` — if exactly one test fails
-   on that first run, run `npm test` again before concluding anything is
-   broken (on the bootstrap the re-run was fully green, 306 passed).
+   cold). The bootstrap's single first-run test failure was later
+   root-caused (same day, WP8) to vitest's 10s *hook* timeout on the
+   suites that boot the embedded database — fixed in `vitest.config.ts`
+   (`hookTimeout: 30_000`). If a single test still fails on a first run,
+   run `npm test` again before concluding anything is broken.
 4. **Set the git identity for this clone** — it does NOT come along with a
    clone, and a machine's global default may be a different (work) identity:
    ```

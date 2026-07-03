@@ -36,11 +36,11 @@ Built as briefed; both open design questions resolved in ADR [012](decisions/012
 
 Built as briefed; ADR [013](decisions/013-answer-composition.md) records the load-bearing choices: WP6's harness generalized into one shared seam with a second fixture set (intent fixture hashes preserved byte-identically), `claude-sonnet-5` for phrasing (mid-tier per ADR 004), values handed to the model pre-formatted, the user's question deliberately excluded from the phrasing prompt (R2 literal; open-questions #41), the R3 ladder (one regeneration → validator-clean template; null-cell results skip the LLM), attribution/marking/definition as structural fields, and factor units never expanded (#42). Done-criterion met and in CI: B1–B14 end-to-end hermetically with zero fabricated numbers; measured live 14/14 (prompt v3, repeat=2, zero fallbacks). Notable beyond the brief: an adversarial multi-agent review (23 double-confirmed findings, five executable validator bypasses) hardened the validator before commit — cardinal number-words, 'daling'/separable verbs, fullwidth digits, derivation-value binding, count collisions ([STATUS.md](STATUS.md) for measured results).
 
-## WP8 — Chart spec + dumb renderer  ← NEXT
+## WP8 — Chart spec + dumb renderer  ✅ done 2026-07-03
 
-Deterministic chart spec from validated results; pure renderer over the spec (**R6**), attribution inside the spec (ADR [007](decisions/007-chart-spec-rendering.md)). Done = B4/B8 render a correct line chart whose points equal their cells.
+Built as briefed, with one recorded deviation (ADR [014](decisions/014-chart-spec-v1-and-renderer.md)): the Phase 0 renderer is a **pure, dependency-free SVG generator**, not the Recharts client wrapper — no app exists yet to mount a client component, and `src/` runs under Node type stripping where JSX cannot be imported; the Recharts wrapper (ADR [008](decisions/008-ui-foundation.md) constraint 3, unchanged) lands with the chat-UI session over the same spec, and the SVG renderer doubles as the server-side path ADR 008 reserved for Phase 2 static images. ChartSpec v1 is versioned + zod-validated; policy: `series` → line, `comparison` → bar, `single`/`derived` → no chart. Done-criterion met and in CI (seventh gate step): B4/B8 render correct line charts whose points equal their frozen-key cells, the renderer provably adds no numbers (token-provenance check) and omits no point; R6 is a real invariant test ([STATUS.md](STATUS.md) for measured results).
 
-## WP9 — Refusal & clarification behaviour
+## WP9 — Refusal & clarification behaviour  ← NEXT
 
 The full failure-behaviour table in [05-data-rules.md](05-data-rules.md): scope / forecast / causal / freshness refusals and one-round clarification. Partly cross-cutting (WP5 gives typed refusals, WP6 gives clarification) — this WP makes B15–B20 all pass. Done = 6/6 refusal tasks pass, no guessed numbers.
 

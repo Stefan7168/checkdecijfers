@@ -12,6 +12,7 @@
 import type { ValidatedResult } from '../../query/index.ts';
 import { DERIVED_DATA_MARKING } from '../../query/index.ts';
 import type { LlmClient, LlmUsage } from '../llm/client.ts';
+import { buildAttributionLine } from './format.ts';
 import { buildPhrasingRequest, COMPOSE_PROMPT_VERSION, PHRASING_MODEL } from './prompt.ts';
 import { renderTemplateBody } from './template.ts';
 import { validateAnswerBody } from './validate.ts';
@@ -24,18 +25,6 @@ export interface ComposeOptions {
   maxTokens?: number;
 }
 
-function attributionLine(result: ValidatedResult): string {
-  const a = result.attribution;
-  const labelByCode = new Map(result.cells.map((c) => [c.periodCode, c.periodLabel]));
-  const from = labelByCode.get(a.coveredPeriods.from) ?? a.coveredPeriods.from;
-  const to = labelByCode.get(a.coveredPeriods.to) ?? a.coveredPeriods.to;
-  const period = from === to ? from : `${from} t/m ${to}`;
-  return (
-    `Bron: CBS StatLine, tabel ${a.tableId} — ${a.tableTitle}. ` +
-    `Gegevens gesynchroniseerd op ${a.syncedAt.slice(0, 10)}. Periode: ${period}. Licentie: ${a.license}.`
-  );
-}
-
 function assemble(result: ValidatedResult, body: string, source: AnswerSource, extras: {
   model: string | null;
   usage: LlmUsage;
@@ -44,7 +33,7 @@ function assemble(result: ValidatedResult, body: string, source: AnswerSource, e
   const definitionLine =
     result.attribution.definitionLabel === null ? null : `Definitie: ${result.attribution.definitionLabel}.`;
   const markingLine = result.derivations.length > 0 ? `— ${DERIVED_DATA_MARKING}` : null;
-  const attribution = attributionLine(result);
+  const attribution = buildAttributionLine(result);
   const text = [body, '', ...(definitionLine ? [definitionLine] : []), ...(markingLine ? [markingLine] : []), attribution].join('\n');
   return {
     schemaVersion: ANSWER_SCHEMA_VERSION,

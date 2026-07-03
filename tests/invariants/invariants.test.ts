@@ -286,7 +286,67 @@ describe('anti-hallucination invariants — answer-side halves, real since WP7 (
     }
   });
 
-  it.todo('R6 (WP8): chart specs built deterministically from validated results; renderer cannot compute or omit');
+  it('R6 (WP8): chart specs built deterministically from validated results; renderer cannot compute or omit', async () => {
+    const { buildChartSpec, renderChartSvg, chartSpecSchema } = await import('../../src/chart/index.ts');
+    const { findNumericTokens, normalizeForScan } = await import('../../src/answer/compose/format.ts');
+
+    // Phase 0 chart policy (ADR 014): trend and comparison results chart;
+    // lone values and derivation headlines do not.
+    expect(buildChartSpec(single)).toBeNull();
+    expect(buildChartSpec(difference)).toBeNull();
+    expect(buildChartSpec(max)).toBeNull();
+
+    for (const result of [series, comparison]) {
+      const spec = buildChartSpec(result);
+      expect(spec).not.toBeNull();
+      chartSpecSchema.parse(spec);
+      // Deterministic: same validated result → deep-equal spec.
+      expect(buildChartSpec(result)).toEqual(spec);
+      // Verbatim projection: every cell exactly once, values unchanged.
+      const points = spec!.series.flatMap((s) => s.points);
+      expect(points.map((p) => p.resultId).sort()).toEqual(result.cells.map((c) => c.resultId).sort());
+      for (const cell of result.cells) {
+        expect(points.find((p) => p.resultId === cell.resultId)!.value).toBe(cell.value);
+      }
+
+      const svg = renderChartSvg(spec!);
+      // Cannot omit: one rendered marker per point (markers carry
+      // data-result-id, value labels carry data-label-for).
+      expect(svg.match(/data-result-id="/g)).toHaveLength(points.length);
+      // Labels are bound: each point's on-chart value label must show exactly
+      // that point's display string (a swapped label is a mislabeled chart).
+      for (const point of points) {
+        if (point.value === null) continue;
+        const escaped = point.resultId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const label = svg.match(new RegExp(`data-label-for="${escaped}"[^>]*>([^<]+)<`));
+        expect(label, `no value label bound to ${point.resultId}`).not.toBeNull();
+        expect(label![1]).toBe(`${point.formattedValue}${point.provisional ? '*' : ''}`);
+      }
+      // Cannot compute: every numeric token shown is a token of a spec string.
+      const specStrings = [
+        spec!.title,
+        spec!.unit,
+        spec!.attributionLine,
+        ...Object.values(spec!.dimLabels),
+        ...(spec!.provisionalNote === null ? [] : [spec!.provisionalNote]),
+        ...spec!.nullNotes,
+        ...(spec!.definitionLine === null ? [] : [spec!.definitionLine]),
+        ...spec!.series.flatMap((s) => [
+          s.label,
+          ...s.points.flatMap((p) => [p.periodLabel, ...(p.formattedValue === null ? [] : [p.formattedValue])]),
+        ]),
+      ];
+      const allowed = new Set(
+        specStrings.flatMap((s) => findNumericTokens(normalizeForScan(s)).map((t) => t.token)),
+      );
+      const text = [...svg.matchAll(/>([^<]+)</g)].map((m) => m[1]!).join(' ');
+      for (const token of findNumericTokens(normalizeForScan(text))) {
+        expect(allowed, `renderer invented numeric token "${token.token}"`).toContain(token.token);
+      }
+      // R4 holds inside the render, not just the spec.
+      expect(text).toContain(result.attribution.tableId);
+    }
+  });
   // R7 (WP6, real since 2026-07-03): the threshold rules are unit-proven in
   // tests/answer/intent-policy.test.ts and the labelled ambiguous-question
   // set regresses over recorded model output in tests/answer/intent-parse

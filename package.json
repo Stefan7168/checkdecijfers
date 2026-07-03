@@ -15,6 +15,7 @@
     "test:registry": "vitest run tests/registry",
     "test:query": "vitest run tests/query",
     "test:answer": "vitest run tests/answer",
+    "test:chart": "vitest run tests/chart",
     "benchmark:score": "node scripts/score-benchmark.mjs",
     "intent:eval": "node --env-file-if-exists=.env scripts/intent-eval.ts",
     "intent:record": "node --env-file-if-exists=.env scripts/intent-eval.ts --record",
