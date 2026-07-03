@@ -33,3 +33,7 @@ Business rules already decided that the ledger must honor: clarifying questions 
 - Phase 1 start → choose auth provider (criteria: managed, magic-link/email-first, boring).
 - Phase 2 start → implement ledger + Stripe/iDEAL; legal check on "credits never expire" wording in the terms (logged in [open-questions.md](../open-questions.md)).
 - Newsroom tier (Phase 3) → domain-based access, admin surface, manual invoicing flow.
+
+## Update (2026-07-04)
+
+Owner decision: the "Phase 2 start" trigger above (ledger + Stripe/iDEAL) now fires early, at the reprioritized Phase 1 start — see [06-roadmap.md](../06-roadmap.md) Phase 1 and [open-questions #47](../open-questions.md). Reason: the chat is being integrated into a real, public website page imminently, which needs paid-access gating before it goes live, not after a validated beta. The four seams above are otherwise unchanged; this only moves *when* seams 2–4 get built, not their design.
