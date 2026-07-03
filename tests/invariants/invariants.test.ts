@@ -187,12 +187,105 @@ describe('anti-hallucination invariants — query-layer halves, real since WP5 (
   });
 });
 
-describe('anti-hallucination invariants — answer-side obligations (real tests land with their work package)', () => {
-  it.todo('R1 (WP7): every numeric token in a rendered answer traces to a result ID or registered derivation in the audit record');
-  it.todo('R2 (WP7): the answer-phrasing prompt serializes only ValidatedResult[] + attribution metadata, nothing else');
-  it.todo('R3 (WP7): numbers in LLM output match result objects verbatim; Dutch number/scale words rejected unless derivation-backed; fail-closed to template');
-  it.todo('R4 (WP7): every rendered answer displays table ID(s), title, last-sync date, covered period');
-  it.todo('R5 (WP7): the visible derived-marking renders whenever the answer schema contains a derivation record');
+describe('anti-hallucination invariants — answer-side halves, real since WP7 (audit-record linkage lands with WP10)', () => {
+  // A client that always fabricates — drives composeAnswer down the full
+  // fail-closed ladder. It fakes OUR failure path, not model behavior
+  // (recorded-fixture tests in tests/answer cover the real model, ADR 012);
+  // docs/05 R3 explicitly calls for seeded-mismatch tests of the guard.
+  class FabricatingClient {
+    calls = 0;
+    async complete() {
+      this.calls += 1;
+      return {
+        outputText: 'Het antwoord is ongeveer 12.345.678, oftewel twaalf miljoen.',
+        model: 'fake',
+        stopReason: 'end_turn',
+        usage: { inputTokens: 1, outputTokens: 1 },
+      };
+    }
+  }
+
+  it('R1 (WP7 half): every numeric token in a rendered answer body traces to a result cell, registered derivation, or validated metadata', async () => {
+    const { composeAnswer, scanBody } = await import('../../src/answer/compose/index.ts');
+    for (const result of allResults()) {
+      const answer = await composeAnswer(result, { client: new FabricatingClient() });
+      const tokens = scanBody(answer.body, result);
+      expect(tokens.filter((t) => t.kind === 'unbacked'), answer.body).toEqual([]);
+    }
+  });
+
+  it('R2 (WP7): the phrasing prompt serializes only whitelisted fields of ValidatedResult + attribution — no raw rows, no ids, not even the user question', async () => {
+    const { buildPhrasingPayload, buildPhrasingRequest } = await import('../../src/answer/compose/index.ts');
+    const allowedKeys = new Set([
+      'shape', 'definitionLabel', 'periodSemantics', 'cells', 'derivations',
+      'periodLabel', 'regionLabel', 'value', 'nullReason', 'unit', 'provisional',
+      'kind', 'explicit', 'direction', 'trendWord', 'monotonic', 'winnerRegion',
+      'firstPeriodLabel', 'lastPeriodLabel',
+    ]);
+    const collectKeys = (value: unknown, into: Set<string>): void => {
+      if (Array.isArray(value)) { for (const v of value) collectKeys(v, into); return; }
+      if (value !== null && typeof value === 'object') {
+        for (const [k, v] of Object.entries(value as Record<string, unknown>)) { into.add(k); collectKeys(v, into); }
+      }
+    };
+    for (const result of allResults()) {
+      const seen = new Set<string>();
+      collectKeys(buildPhrasingPayload(result), seen);
+      for (const key of seen) expect(allowedKeys.has(key), `field '${key}' leaked into the phrasing prompt`).toBe(true);
+      const request = buildPhrasingRequest(result);
+      const forbidden = [
+        ...result.cells.map((c) => c.resultId),
+        result.attribution.tableId,
+        'batchId',
+        'resultId',
+      ];
+      for (const value of forbidden) {
+        expect(request.question).not.toContain(value);
+      }
+    }
+  });
+
+  it('R3 (WP7): fabricated output survives at most one regeneration, then fails closed to the template — whose numbers come from the cells', async () => {
+    const { composeAnswer } = await import('../../src/answer/compose/index.ts');
+    const client = new FabricatingClient();
+    const answer = await composeAnswer(single, { client });
+    expect(client.calls).toBe(2);
+    expect(answer.source).toBe('template');
+    expect(answer.validation.ok).toBe(true);
+    expect(answer.attempts).toHaveLength(2);
+    expect(answer.text).not.toContain('12.345.678');
+    expect(answer.body).toContain('21.822');
+  });
+
+  it('R3 (WP7): the validator rejects Dutch number/scale word-forms unless derivation-backed', async () => {
+    const { validateAnswerBody } = await import('../../src/answer/compose/index.ts');
+    const report = validateAnswerBody('In 2024 werd bijna 22 miljard kWh zonnestroom opgewekt.', single);
+    expect(report.ok).toBe(false);
+  });
+
+  it('R4 (WP7): every rendered answer displays table ID, title, last-sync date and covered period — structurally, on every path', async () => {
+    const { composeAnswer } = await import('../../src/answer/compose/index.ts');
+    for (const result of allResults()) {
+      const answer = await composeAnswer(result, { client: new FabricatingClient() });
+      expect(answer.text).toContain(result.attribution.tableId);
+      expect(answer.text).toContain(result.attribution.tableTitle);
+      expect(answer.text).toContain(result.attribution.syncedAt.slice(0, 10));
+      expect(answer.text).toContain('CC BY 4.0');
+    }
+  });
+
+  it('R5 (WP7): the visible derived-marking renders whenever the answer carries a derivation record', async () => {
+    const { composeAnswer } = await import('../../src/answer/compose/index.ts');
+    for (const result of allResults()) {
+      const answer = await composeAnswer(result, { client: new FabricatingClient() });
+      if (result.derivations.length > 0) {
+        expect(answer.text).toContain(DERIVED_DATA_MARKING);
+      } else {
+        expect(answer.text).not.toContain(DERIVED_DATA_MARKING);
+      }
+    }
+  });
+
   it.todo('R6 (WP8): chart specs built deterministically from validated results; renderer cannot compute or omit');
   // R7 (WP6, real since 2026-07-03): the threshold rules are unit-proven in
   // tests/answer/intent-policy.test.ts and the labelled ambiguous-question
@@ -223,9 +316,46 @@ describe('anti-hallucination invariants — answer-side obligations (real tests 
     expect(decide(context, [reading('cpi_yearly_inflation', 0.95)], DEFAULT_PARSER_CONFIG).kind).toBe('intent');
   });
   it.todo('R8 (WP10): audit record (incl. final answer text + chart spec) written and reconstructable before the answer is shown');
-  it.todo('R9 (WP7): prose values semantically bound to their coordinates; direction/comparison words match the pre-registered derivations; correct-prose fixtures must pass');
-  it.todo('R10 (WP7): the unit displayed next to each number matches the result cell\'s unit metadata (factor-1000 and %-vs-procentpunt guards)');
-  it.todo('R11 (WP7): provisional (voorlopig) figures visibly marked; null-with-reason cells state their CBS reason in the answer');
+
+  it('R9 (WP7): direction words must match the pre-registered derivations — and correct prose must pass (false positives are bugs too)', async () => {
+    const { validateAnswerBody } = await import('../../src/answer/compose/index.ts');
+    const directionDerivation = series.derivations.find((d) => d.kind === 'direction');
+    expect(directionDerivation).toBeDefined();
+    if (directionDerivation?.kind !== 'direction') throw new Error('unreachable');
+    const first = series.cells[0]!;
+    const last = series.cells[series.cells.length - 1]!;
+    const fmt = (await import('../../src/answer/compose/index.ts')).formatValueNl;
+    const honest = `De inflatie ${directionDerivation.direction === 'up' ? 'steeg' : 'daalde'} van ${fmt(first.value!, first.decimals)}% in ${first.periodLabel} naar ${fmt(last.value!, last.decimals)}% in ${last.periodLabel}.`;
+    expect(validateAnswerBody(honest, series).problems).toEqual([]);
+    const dishonest = `De inflatie ${directionDerivation.direction === 'up' ? 'daalde' : 'steeg'} van ${fmt(first.value!, first.decimals)}% in ${first.periodLabel} naar ${fmt(last.value!, last.decimals)}% in ${last.periodLabel}.`;
+    expect(validateAnswerBody(dishonest, series).ok).toBe(false);
+  });
+
+  it('R9 (WP7): comparison values are bound to their own region — swapped regions fail', async () => {
+    const { validateAnswerBody, formatValueNl, baseRegionLabel } = await import('../../src/answer/compose/index.ts');
+    const [a, b] = comparison.cells;
+    const swapped = `${baseRegionLabel(a!.regionLabel!)} telde in ${a!.periodLabel} ${formatValueNl(b!.value!, b!.decimals)} inwoners. ${baseRegionLabel(b!.regionLabel!)} telde ${formatValueNl(a!.value!, a!.decimals)} inwoners.`;
+    expect(validateAnswerBody(swapped, comparison).ok).toBe(false);
+  });
+
+  it("R10 (WP7): the unit shown next to each number must match the cell's unit metadata", async () => {
+    const { validateAnswerBody, composeAnswer } = await import('../../src/answer/compose/index.ts');
+    // single = solar, unit 'mln kWh': dropping the verbatim unit must fail.
+    const cell = single.cells[0]!;
+    const bare = `In ${cell.periodLabel} werd 21.822 kWh zonnestroom opgewekt (nader voorlopig cijfer).`;
+    expect(validateAnswerBody(bare, single).ok).toBe(false);
+    const answer = await composeAnswer(single, { client: new FabricatingClient() });
+    expect(answer.body).toContain('mln kWh');
+  });
+
+  it('R11 (WP7): a shown provisional figure requires the voorlopig marking; the template renders it', async () => {
+    const { validateAnswerBody, composeAnswer } = await import('../../src/answer/compose/index.ts');
+    expect(single.cells[0]!.provisional).toBe(true);
+    const unmarked = 'In 2024 werd 21.822 mln kWh zonnestroom opgewekt.';
+    expect(validateAnswerBody(unmarked, single).ok).toBe(false);
+    const answer = await composeAnswer(single, { client: new FabricatingClient() });
+    expect(answer.text).toMatch(/voorlopig/i);
+  });
 });
 
 describe('doc consistency (keeps this scaffold honest)', () => {

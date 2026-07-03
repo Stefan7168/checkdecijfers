@@ -12,10 +12,13 @@
 # idempotently and cross-checks canonical picks against the frozen answer key;
 # since WP5 the query suite scores benchmark tasks B1-B14 against the frozen
 # answer key (WP3) through the deterministic query layer using hand-authored
-# structured intents, plus the B20 freshness refusal — all hermetic; the
-# invariant suite has real query-layer tests for R1/R4/R5/R9/R10/R11 and keeps
-# the answer-side obligations as named todos that gain teeth with WP6-WP10.
-# Full end-to-end scoring against audit records lands with the answer pipeline.
+# structured intents, plus the B20 freshness refusal — all hermetic; since WP7
+# the answer suite ALSO drives B1-B14 end-to-end (docs/02 phrasing → parser →
+# query → composed Dutch answer, both LLM calls replayed from committed
+# fixtures — ADR 012/013) and the invariant suite has real answer-side tests
+# for R1/R2/R3/R4/R5/R9/R10/R11; the remaining todos are R6 (WP8 charts) and
+# R8 (WP10 audit records). Full benchmark scoring against audit records lands
+# with WP10.
 # Deploy-blocking on red attaches when Vercel is connected (later Phase 0 session).
 # This workflow is hermetic: no secrets, no network beyond npm — which is why the
 # ingestion tests run on PGlite (ADR 009), never against Supabase.

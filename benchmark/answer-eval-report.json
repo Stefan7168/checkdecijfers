@@ -1,0 +1,240 @@
+{
+  "generatedAt": "2026-07-03T07:44:20.584Z",
+  "mode": "record",
+  "repeat": 2,
+  "model": "claude-sonnet-5",
+  "totals": {
+    "pass": 14,
+    "total": 14
+  },
+  "sources": {
+    "llm": 14,
+    "llm_retry": 0,
+    "template": 0
+  },
+  "usage": {
+    "inputTokens": 43453,
+    "outputTokens": 2131
+  },
+  "unstable": [],
+  "cases": [
+    {
+      "id": "B1",
+      "source": "llm",
+      "pass": true,
+      "problems": [],
+      "attemptProblems": [
+        []
+      ],
+      "text": "Op 1 januari 2025 telde Nederland 18.044.027 inwoners.\n\nDefinitie: bevolking op 1 januari.\nBron: CBS StatLine, tabel 03759ned — Bevolking op 1 januari en gemiddeld; geslacht, leeftijd en regio. Gegevens gesynchroniseerd op 2026-07-03. Periode: 2025. Licentie: CC BY 4.0."
+    },
+    {
+      "id": "B2",
+      "source": "llm",
+      "pass": true,
+      "problems": [],
+      "attemptProblems": [
+        []
+      ],
+      "text": "Op 1 januari 2024 telde Utrecht 374.238 inwoners.\n\nDefinitie: bevolking op 1 januari.\nBron: CBS StatLine, tabel 03759ned — Bevolking op 1 januari en gemiddeld; geslacht, leeftijd en regio. Gegevens gesynchroniseerd op 2026-07-03. Periode: 2024. Licentie: CC BY 4.0."
+    },
+    {
+      "id": "B3",
+      "source": "llm",
+      "pass": true,
+      "problems": [],
+      "attemptProblems": [
+        []
+      ],
+      "text": "De inflatie (jaarmutatie CPI, alle bestedingen) bedroeg in 2024 3,3%.\n\nDefinitie: inflatie (jaarmutatie CPI, alle bestedingen).\nBron: CBS StatLine, tabel 86141NED — Consumentenprijzen; CPI 2025=100, index en mutaties. Gegevens gesynchroniseerd op 2026-07-03. Periode: 2024. Licentie: CC BY 4.0."
+    },
+    {
+      "id": "B4",
+      "source": "llm",
+      "pass": true,
+      "problems": [],
+      "attemptProblems": [
+        []
+      ],
+      "text": "De inflatie bedroeg 1,3% in 2020 en steeg naar 2,7% in 2021 en 10,0% in 2022, waarna ze weer afnam naar 3,8% in 2023 en 3,3% in 2024. De reeks bewoog niet in een rechte lijn: na de stijging tot en met 2022 volgde een daling in de jaren daarna. Tussen 2020 en 2024 was per saldo sprake van een stijging van 2,0 procentpunt.\n\nDefinitie: inflatie (jaarmutatie CPI, alle bestedingen).\n— bewerking van CBS-gegevens door checkdecijfers.nl\nBron: CBS StatLine, tabel 86141NED — Consumentenprijzen; CPI 2025=100, index en mutaties. Gegevens gesynchroniseerd op 2026-07-03. Periode: 2020 t/m 2024. Licentie: CC BY 4.0."
+    },
+    {
+      "id": "B5",
+      "source": "llm",
+      "pass": true,
+      "problems": [],
+      "attemptProblems": [
+        []
+      ],
+      "text": "Het werkloosheidspercentage, seizoengecorrigeerd, bedroeg in het 4e kwartaal van 2025 4,0%.\n\nDefinitie: werkloosheidspercentage, seizoengecorrigeerd.\nBron: CBS StatLine, tabel 85224NED — Arbeidsdeelname; kerncijfers seizoengecorrigeerd. Gegevens gesynchroniseerd op 2026-07-03. Periode: 2025 4e kwartaal. Licentie: CC BY 4.0."
+    },
+    {
+      "id": "B6",
+      "source": "llm",
+      "pass": true,
+      "problems": [],
+      "attemptProblems": [
+        []
+      ],
+      "text": "De woningvoorraad per 1 januari 2024 bedroeg 8.204 x 1 000 woningen.\n\nDefinitie: woningvoorraad per 1 januari.\nBron: CBS StatLine, tabel 82235NED — Voorraad woningen; standen en mutaties vanaf 1921. Gegevens gesynchroniseerd op 2026-07-03. Periode: 2024. Licentie: CC BY 4.0."
+    },
+    {
+      "id": "B7",
+      "source": "llm",
+      "pass": true,
+      "problems": [],
+      "attemptProblems": [
+        []
+      ],
+      "text": "De gemiddelde verkoopprijs van bestaande koopwoningen bedroeg in 2024 450.985 euro.\n\nDefinitie: gemiddelde verkoopprijs van bestaande koopwoningen.\nBron: CBS StatLine, tabel 85773NED — Bestaande koopwoningen; verkoopprijzen prijsindex 2020=100. Gegevens gesynchroniseerd op 2026-07-03. Periode: 2024. Licentie: CC BY 4.0."
+    },
+    {
+      "id": "B8",
+      "source": "llm",
+      "pass": true,
+      "problems": [],
+      "attemptProblems": [
+        []
+      ],
+      "text": "De gemiddelde verkoopprijs van bestaande koopwoningen steeg van 307.978 euro in 2019 naar 450.985 euro in 2024, een stijging van 143.007 euro. Deze reeks bewoog niet in een rechte lijn: na een stijging tot 428.591 euro in 2022 daalde de gemiddelde verkoopprijs in 2023 naar 416.153 euro, waarna deze in 2024 weer toenam. Tussenliggende jaargemiddelden bedroegen 334.488 euro in 2020 en 386.714 euro in 2021.\n\nDefinitie: gemiddelde verkoopprijs van bestaande koopwoningen.\n— bewerking van CBS-gegevens door checkdecijfers.nl\nBron: CBS StatLine, tabel 85773NED — Bestaande koopwoningen; verkoopprijzen prijsindex 2020=100. Gegevens gesynchroniseerd op 2026-07-03. Periode: 2019 t/m 2024. Licentie: CC BY 4.0."
+    },
+    {
+      "id": "B9",
+      "source": "llm",
+      "pass": true,
+      "problems": [],
+      "attemptProblems": [
+        []
+      ],
+      "text": "In 2025 zijn er 3.226 faillissementen van bedrijven en instellingen uitgesproken.\n\nDefinitie: faillissementen van bedrijven en instellingen.\nBron: CBS StatLine, tabel 82242NED — Faillissementen; kerncijfers. Gegevens gesynchroniseerd op 2026-07-03. Periode: 2025. Licentie: CC BY 4.0."
+    },
+    {
+      "id": "B10",
+      "source": "llm",
+      "pass": true,
+      "problems": [],
+      "attemptProblems": [
+        []
+      ],
+      "text": "Op 1 januari 2024 telde Amsterdam 931.298 inwoners, tegenover 670.610 inwoners in Rotterdam. Amsterdam had daarmee de meeste inwoners van de 2 gemeenten.\n\nDefinitie: bevolking op 1 januari.\n— bewerking van CBS-gegevens door checkdecijfers.nl\nBron: CBS StatLine, tabel 03759ned — Bevolking op 1 januari en gemiddeld; geslacht, leeftijd en regio. Gegevens gesynchroniseerd op 2026-07-03. Periode: 2024. Licentie: CC BY 4.0."
+    },
+    {
+      "id": "B11",
+      "source": "llm",
+      "pass": true,
+      "problems": [],
+      "attemptProblems": [
+        []
+      ],
+      "text": "De bruto elektriciteitsproductie uit zonnestroom bedroeg in 2024 21.822 mln kWh (voorlopig cijfer).\n\nDefinitie: bruto elektriciteitsproductie uit zonnestroom.\nBron: CBS StatLine, tabel 82610NED — Hernieuwbare elektriciteit; productie en vermogen. Gegevens gesynchroniseerd op 2026-07-03. Periode: 2024. Licentie: CC BY 4.0."
+    },
+    {
+      "id": "B12",
+      "source": "llm",
+      "pass": true,
+      "problems": [],
+      "attemptProblems": [
+        []
+      ],
+      "text": "Het gemiddeld besteedbaar inkomen van huishoudens bedroeg in 2023 57,6 1 000 euro.\n\nDefinitie: gemiddeld besteedbaar inkomen van huishoudens.\nBron: CBS StatLine, tabel 83932NED — Inkomen van huishoudens; inkomensklassen, huishoudenskenmerken. Gegevens gesynchroniseerd op 2026-07-03. Periode: 2023. Licentie: CC BY 4.0."
+    },
+    {
+      "id": "B13",
+      "source": "llm",
+      "pass": true,
+      "problems": [],
+      "attemptProblems": [
+        []
+      ],
+      "text": "De bevolking van Nederland groeide van 17.942.942 inwoners op 1 januari 2024 naar 18.044.027 inwoners op 1 januari 2025. Dat is een stijging van 101.085 inwoners tussen 2024 en 2025.\n\nDefinitie: bevolking op 1 januari.\n— bewerking van CBS-gegevens door checkdecijfers.nl\nBron: CBS StatLine, tabel 03759ned — Bevolking op 1 januari en gemiddeld; geslacht, leeftijd en regio. Gegevens gesynchroniseerd op 2026-07-03. Periode: 2024 t/m 2025. Licentie: CC BY 4.0."
+    },
+    {
+      "id": "B14",
+      "source": "llm",
+      "pass": true,
+      "problems": [],
+      "attemptProblems": [
+        []
+      ],
+      "text": "Op 1 januari 2025 telde Amsterdam 934.526 inwoners, de meeste van de 4 gemeenten. Rotterdam had op 1 januari 2025 672.960 inwoners, 's-Gravenhage 568.945 inwoners en Utrecht 376.757 inwoners.\n\nDefinitie: bevolking op 1 januari.\n— bewerking van CBS-gegevens door checkdecijfers.nl\nBron: CBS StatLine, tabel 03759ned — Bevolking op 1 januari en gemiddeld; geslacht, leeftijd en regio. Gegevens gesynchroniseerd op 2026-07-03. Periode: 2025. Licentie: CC BY 4.0."
+    }
+  ],
+  "history": [
+    {
+      "generatedAt": "2026-07-03T02:35:48.109Z",
+      "mode": "record",
+      "repeat": 1,
+      "model": "claude-sonnet-5",
+      "totals": {
+        "pass": 14,
+        "total": 14
+      },
+      "sources": {
+        "llm": 12,
+        "llm_retry": 1,
+        "template": 1
+      },
+      "usage": {
+        "inputTokens": 20636,
+        "outputTokens": 1312
+      }
+    },
+    {
+      "generatedAt": "2026-07-03T02:40:40.421Z",
+      "mode": "record",
+      "repeat": 2,
+      "model": "claude-sonnet-5",
+      "totals": {
+        "pass": 14,
+        "total": 14
+      },
+      "sources": {
+        "llm": 14,
+        "llm_retry": 0,
+        "template": 0
+      },
+      "usage": {
+        "inputTokens": 34718,
+        "outputTokens": 1967
+      }
+    },
+    {
+      "generatedAt": "2026-07-03T07:41:26.963Z",
+      "mode": "record",
+      "repeat": 2,
+      "model": "claude-sonnet-5",
+      "totals": {
+        "pass": 14,
+        "total": 14
+      },
+      "sources": {
+        "llm": 11,
+        "llm_retry": 0,
+        "template": 3
+      },
+      "usage": {
+        "inputTokens": 47987,
+        "outputTokens": 2578
+      }
+    },
+    {
+      "generatedAt": "2026-07-03T07:44:20.584Z",
+      "mode": "record",
+      "repeat": 2,
+      "model": "claude-sonnet-5",
+      "totals": {
+        "pass": 14,
+        "total": 14
+      },
+      "sources": {
+        "llm": 14,
+        "llm_retry": 0,
+        "template": 0
+      },
+      "usage": {
+        "inputTokens": 43453,
+        "outputTokens": 2131
+      }
+    }
+  ]
+}

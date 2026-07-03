@@ -32,13 +32,11 @@ Built as briefed; both open design questions resolved in ADR [012](decisions/012
 
 ---
 
-## WP7 — Answer composition (LLM phrasing + guards)  ← NEXT
+## WP7 — Answer composition (LLM phrasing + guards)  ✅ done 2026-07-03
 
-**Note for the implementing session:** the LLM test harness (client seam, record/replay fixtures, off-gate live eval — ADR [012](decisions/012-intent-parsing-llm-harness.md)) exists since WP6. Reuse the pattern for the phrasing call; do not invent a second harness.
+Built as briefed; ADR [013](decisions/013-answer-composition.md) records the load-bearing choices: WP6's harness generalized into one shared seam with a second fixture set (intent fixture hashes preserved byte-identically), `claude-sonnet-5` for phrasing (mid-tier per ADR 004), values handed to the model pre-formatted, the user's question deliberately excluded from the phrasing prompt (R2 literal; open-questions #41), the R3 ladder (one regeneration → validator-clean template; null-cell results skip the LLM), attribution/marking/definition as structural fields, and factor units never expanded (#42). Done-criterion met and in CI: B1–B14 end-to-end hermetically with zero fabricated numbers; measured live 14/14 (prompt v3, repeat=2, zero fallbacks). Notable beyond the brief: an adversarial multi-agent review (23 double-confirmed findings, five executable validator bypasses) hardened the validator before commit — cardinal number-words, 'daling'/separable verbs, fullwidth digits, derivation-value binding, count collisions ([STATUS.md](STATUS.md) for measured results).
 
-Phrase validated results in Dutch with numbers injected verbatim; enforce **R2** (prompt sees only validated result objects), **R3** (verbatim numbers, digit-form, one regeneration then fail closed to a template), **R9/R10** (semantic + unit binding). Includes the attribution/freshness line (**R4**) and provisional marking (**R11**). Done = B1–B14 pass end-to-end with zero fabricated numbers.
-
-## WP8 — Chart spec + dumb renderer
+## WP8 — Chart spec + dumb renderer  ← NEXT
 
 Deterministic chart spec from validated results; pure renderer over the spec (**R6**), attribution inside the spec (ADR [007](decisions/007-chart-spec-rendering.md)). Done = B4/B8 render a correct line chart whose points equal their cells.
 
