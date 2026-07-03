@@ -8,8 +8,8 @@
 
 import { useState } from 'react';
 import { askQuestion, replyToClarification } from '../app/actions.ts';
-import type { ChartSpec } from '../../src/chart/types.ts';
-import type { PendingClarification } from '../../src/answer/respond/types.ts';
+import type { ChartSpec } from '../backend/chart/types.ts';
+import type { PendingClarification } from '../backend/answer/respond/types.ts';
 import { ChartView } from './chart.tsx';
 
 interface ChatMessage {

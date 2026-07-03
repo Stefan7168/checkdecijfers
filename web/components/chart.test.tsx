@@ -4,7 +4,7 @@
 // mirroring the checks ADR 014's SVG-renderer test suite already runs.
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { ChartSpec } from '../../src/chart/types.ts';
+import type { ChartSpec } from '../backend/chart/types.ts';
 import { buildRows, ChartView } from './chart.tsx';
 
 afterEach(cleanup);
