@@ -106,8 +106,16 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 24
-      # No project install step here: `vercel build` installs web/'s own
-      # dependencies itself, from web/'s own package-lock.json.
+          cache: npm
+      # `vercel build` installs web/'s own dependencies itself, from web/'s
+      # own package-lock.json — but web/backend (the symlink to ../src) means
+      # some of what gets compiled has its REAL path under the repo root, not
+      # under web/. Node/Turbopack resolve a symlinked file's own imports
+      # relative to that real path, so zod/pg/@anthropic-ai/sdk (declared in
+      # BOTH package.jsons, deliberately) also need root's own node_modules
+      # to exist — hence this root install, restored after a failed deploy
+      # attempt assumed it was redundant (ADR 018 point 9, attempt 5).
+      - run: npm ci
       #
       # Commands run from the repo ROOT (no --cwd web) and rely entirely on
       # the Vercel PROJECT's own settings — rootDirectory: "web" plus
