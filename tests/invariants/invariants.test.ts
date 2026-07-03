@@ -375,7 +375,62 @@ describe('anti-hallucination invariants — answer-side halves, real since WP7 (
     // One confident reading → answer.
     expect(decide(context, [reading('cpi_yearly_inflation', 0.95)], DEFAULT_PARSER_CONFIG).kind).toBe('intent');
   });
-  it.todo('R8 (WP10): audit record (incl. final answer text + chart spec) written and reconstructable before the answer is shown');
+  // R8 (WP10, real since 2026-07-03): the deep per-flow proofs live in
+  // tests/audit/audit-records.test.ts (all response kinds, reply round,
+  // tamper detection); the invariant suite re-asserts the core rule itself:
+  // an answer implies a stored record that reconstructs it, and a failing
+  // audit store means NO answer is shown.
+  it('R8 (WP10): audit record (incl. final answer text + chart spec) written and reconstructable before the answer is shown', async () => {
+    const { fileURLToPath } = await import('node:url');
+    const { ReplayLlmClient } = await import('../../src/answer/llm/client.ts');
+    const { answerQuestionAudited, loadAuditRecord, reconstructionReport } = await import(
+      '../../src/answer/audit/index.ts'
+    );
+    const { ANSWERABLE_TASKS } = await import('../helpers/benchmark-intents.ts');
+    const { loadLabelledSet } = await import('../helpers/intent-expectations.ts');
+    const options = {
+      intentClient: new ReplayLlmClient(fileURLToPath(new URL('../fixtures/llm/intent', import.meta.url))),
+      answerClient: new ReplayLlmClient(fileURLToPath(new URL('../fixtures/llm/answer', import.meta.url))),
+      referenceDate: loadLabelledSet().referenceDate,
+    };
+
+    // Answer shown => record exists, carries the final text + chart spec, and
+    // reconstructs from the stored row alone (B4: series answer WITH chart).
+    const audited = await answerQuestionAudited(db, ANSWERABLE_TASKS.B4!.question, options);
+    expect(audited.response.kind).toBe('answer');
+    if (audited.response.kind !== 'answer') throw new Error('unreachable');
+    expect(audited.auditId).not.toBeNull();
+    const record = await loadAuditRecord(db, audited.auditId!);
+    expect(record).not.toBeNull();
+    expect(record!.finalText).toBe(audited.response.text);
+    expect(record!.response.kind).toBe('answer');
+    if (record!.response.kind !== 'answer') throw new Error('unreachable');
+    expect(record!.response.chart).not.toBeNull();
+    expect(reconstructionReport(record!).problems).toEqual([]);
+
+    // Negative case IN THIS SUITE (not only in tests/audit): a tampered
+    // record must FAIL reconstruction — otherwise a gutted always-ok
+    // reconstructionReport would render the positive assertion above
+    // meaningless (adversarial-review finding, 2026-07-03).
+    const tampered = JSON.parse(JSON.stringify(record)) as typeof record & object;
+    if (tampered!.response.kind !== 'answer') throw new Error('unreachable');
+    tampered!.response.result.cells[0]!.value = (tampered!.response.result.cells[0]!.value ?? 0) + 1;
+    expect(reconstructionReport(tampered!).ok).toBe(false);
+
+    // "Before being shown": when the record cannot be written, the answer is
+    // withheld — the caller gets the fail-closed internal refusal instead.
+    const failingDb: Db = {
+      query: (text: string, params?: unknown[]) =>
+        /insert into audit_answers/i.test(text)
+          ? Promise.reject(new Error('audit store down'))
+          : db.query(text, params),
+      withTransaction: (fn) => db.withTransaction(fn),
+    };
+    const withheld = await answerQuestionAudited(failingDb, ANSWERABLE_TASKS.B4!.question, options);
+    expect(withheld.response.kind).toBe('refusal');
+    if (withheld.response.kind !== 'refusal') throw new Error('unreachable');
+    expect(withheld.response.reason).toBe('internal');
+  });
 
   it('R9 (WP7): direction words must match the pre-registered derivations — and correct prose must pass (false positives are bugs too)', async () => {
     const { validateAnswerBody } = await import('../../src/answer/compose/index.ts');
