@@ -23,6 +23,20 @@ updates:
     commit-message:
       prefix: "deps"
 
+  # web/ (the chat UI, ADR 018) is its own independent npm project — its own
+  # package-lock.json, not covered by the root entry above.
+  - package-ecosystem: "npm"
+    directory: "/web"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      npm-web-all:
+        patterns:
+          - "*"
+    commit-message:
+      prefix: "deps(web)"
+
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
