@@ -48,6 +48,56 @@ Everything **Stefan** does, phase by phase. AI sessions read [CLAUDE.md](../CLAU
 | `DATABASE_URL` | local `.env` (since 2026-07-02) + Vercel env store (at first deploy) | Supabase dashboard → reset database password → replace in both places. ⚠ Use the **Session pooler** connection string (Connect → Session pooler), not the direct one: the direct host is IPv6-only and doesn't work from most home networks (verified 2026-07-02). The connection is TLS-verified against Supabase's public root certificate, committed at `config/supabase-prod-ca-2021.pem` — nothing to do at rotation, it's valid to 2031 |
 | *(more added at setup)* | | |
 
+## Moving to a new machine (fresh clone bootstrap)
+
+Everything that matters lives in this repository or in your own accounts
+(GitHub, Supabase, Anthropic) — nothing project-critical is tied to any one
+computer or any one Claude account. A new machine needs, in order:
+
+1. **Install** (one-time): [Node.js](https://nodejs.org) **24 or newer**
+   (`node --version` to check — the project requires ≥24), git, and
+   [Claude Code](https://claude.com/claude-code). Optional but handy:
+   the GitHub CLI (`gh`) for watching CI from the terminal.
+2. **Sign in**: GitHub (your `Stefan7168` account — `gh auth login` walks you
+   through it in the browser) and Claude Code (your Claude account).
+3. **Clone and verify — no secrets needed for this step:**
+   ```
+   git clone https://github.com/Stefan7168/checkdecijfers.git
+   cd checkdecijfers
+   npm ci
+   npm run typecheck && npm test
+   ```
+   The whole test suite is hermetic (embedded database, recorded LLM
+   fixtures), so a green run here proves the clone is complete and healthy
+   before any key exists on the machine.
+4. **Set the git identity for this clone** — it does NOT come along with a
+   clone, and a machine's global default may be a different (work) identity:
+   ```
+   git config user.name "Stefan7168"
+   git config user.email "stefanpeek00@gmail.com"
+   ```
+   (Check with `git config user.email` before the first commit from a new
+   machine — a wrong identity on a commit is annoying to fix after pushing.)
+5. **Recreate `.env`** from `.env.example`, following the Secrets register
+   above. Prefer **rotation over copying**: create a fresh Anthropic API key
+   in the console (and confirm the monthly spend cap is set on that
+   workspace), and fetch the `DATABASE_URL` from the Supabase dashboard
+   (Connect → **Session pooler**). Then deactivate the old machine's key in
+   the Anthropic console. Only the live-data scripts need `.env`
+   (`db:migrate`, `ingest`, `registry:apply`, `intent:eval`/`record`,
+   `answer:eval`/`record`) — day-to-day building and CI do not.
+6. **New Claude account?** Claude Code's login (subscription) and the
+   project's `ANTHROPIC_API_KEY` (console.anthropic.com) are independent —
+   switching Claude accounts does not invalidate the project key. Chat
+   history does not transfer, and is not needed: this repo's docs are the
+   source of truth by design. Kick off exactly like any session:
+   *"Continue checkdecijfers.nl. Read CLAUDE.md, docs/STATUS.md and
+   docs/08-build-plan.md, then do the next work package."*
+7. **Not in git, by design:** `.env` (recreate per step 5) and the local
+   `Archive/` folder (competitor-research reference material — copy it over
+   manually if you still want it, or let it go; nothing in the build depends
+   on it).
+
 ## Your recurring duties
 
 - **Sign-offs** at the gates in [STATUS.md](STATUS.md).
