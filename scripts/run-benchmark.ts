@@ -1,35 +1,52 @@
-// Hermetic benchmark runner (WP10) — drives all 20 docs/02 tasks end-to-end
-// through the AUDITED pipeline (answerQuestionAudited /
-// answerClarificationReplyAudited) over the fixture-ingested PGlite database
-// with replayed LLM fixtures: no API key, no network, no Supabase. Exactly
-// what CI runs before the scorer.
+// Benchmark runner — drives all 20 docs/02 tasks end-to-end through the
+// AUDITED pipeline (answerQuestionAudited / answerClarificationReplyAudited)
+// in one of two modes sharing the SAME flow code (one code path, so the live
+// run can never silently drift from what CI proves on every push):
+//
+//   npm run benchmark:run          hermetic (WP10): fixture-ingested PGlite +
+//                                  replayed LLM fixtures. No API key, no
+//                                  network, no Supabase. What CI runs.
+//   npm run benchmark:run:live     live (WP11): the live Supabase database
+//                                  (DATABASE_URL, pinned-CA TLS) + real
+//                                  Anthropic calls (ANTHROPIC_API_KEY).
+//                                  Spends tokens; writes REAL audit_answers
+//                                  rows (kept — they are the R8 trail of the
+//                                  run). Reference dates stay pinned to the
+//                                  labelled set's clock so the frozen answer
+//                                  key still applies (ADR 017).
 //
 // This script produces the audit records and DUMPS them; it deliberately does
 // NOT score. Scoring is scripts/score-benchmark.mjs's job, reading the dump —
 // so "benchmark scoring reads the audit records" (R8, docs/05) is literally
-// the data flow, not a claim. The dump (benchmark/audit-run.json) is a
-// generated artifact, gitignored: CI regenerates it on every push, and the
-// committed provenance of a benchmark run is STATUS.md + (from WP11 on) the
-// recorded scoreboard, never this file.
-//
-//   npm run benchmark:run
+// the data flow, not a claim. Both dumps (benchmark/audit-run.json,
+// benchmark/audit-run-live.json) are generated artifacts, gitignored: the
+// committed provenance of a benchmark run is STATUS.md + the scorer's
+// --report file (live runs), never these files.
 //
 // What runs, mirroring docs/02 Scoring:
-//  - B1–B14 answerable questions (docs/02 phrasing, replayed parser).
+//  - B1–B14 answerable questions (docs/02 phrasing).
 //  - B15/B16 clarifications PLUS their one reply round (the labelled reply
 //    cases that resolve: c-b15-full → the B5 intent, c-b16-national → B7) —
-//    docs/02 scores clarify tasks on the post-clarification answer.
+//    docs/02 scores clarify tasks on the post-clarification answer. If a
+//    clarify task does NOT clarify (possible live), the reply round is
+//    skipped and the SCORER fails the task — a wrong outcome must reach the
+//    scoreboard as a scored failure, never crash the run unrecorded.
 //  - B17–B20 refusals.
 //  - The docs/02 informational checks: B3/B5 un-disambiguated variants.
 import { readFileSync, writeFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   answerClarificationReplyAudited,
   answerQuestionAudited,
   currentPromptVersions,
   loadAllAuditRecords,
+  loadAuditRecord,
 } from '../src/answer/audit/index.ts';
-import { ReplayLlmClient } from '../src/answer/llm/client.ts';
+import type { AuditRecord } from '../src/answer/audit/index.ts';
+import { AnthropicLlmClient, ReplayLlmClient, type LlmClient } from '../src/answer/llm/client.ts';
+import { connectFromEnv } from '../src/db/client.ts';
+import type { Db } from '../src/db/types.ts';
 import { freshestForCanonical } from '../src/query/index.ts';
 import { CANONICAL_MEASURES } from '../src/registry/defaults.ts';
 import { createIngestedDb } from '../tests/helpers/ingested-db.ts';
@@ -39,7 +56,19 @@ import { loadLabelledSet } from '../tests/helpers/intent-expectations.ts';
 const INTENT_FIXTURES = fileURLToPath(new URL('../tests/fixtures/llm/intent', import.meta.url));
 const ANSWER_FIXTURES = fileURLToPath(new URL('../tests/fixtures/llm/answer', import.meta.url));
 const CLARIFY_FIXTURES = fileURLToPath(new URL('../tests/fixtures/llm/clarify', import.meta.url));
-const DUMP_PATH = fileURLToPath(new URL('../benchmark/audit-run.json', import.meta.url));
+
+export interface RunBenchmarkOptions {
+  /** Real Anthropic calls + the live database. Default: hermetic replay. */
+  live?: boolean;
+  /** Dump destination override (tests). Default: the mode's benchmark/ path. */
+  dumpPath?: string;
+}
+
+function defaultDumpPath(live: boolean): string {
+  return fileURLToPath(
+    new URL(live ? '../benchmark/audit-run-live.json' : '../benchmark/audit-run.json', import.meta.url),
+  );
+}
 
 /** The labelled reply case that completes each clarify task's round
  * (benchmark/clarification-cases.json; docs/02 S3 "completes as S1"). The
@@ -68,15 +97,73 @@ interface TaskRun {
   replyCaseId?: string;
 }
 
-function respondOptions(referenceDate: string) {
+interface ModeClients {
+  intent: LlmClient;
+  clarify: LlmClient;
+  answer: LlmClient;
+}
+
+function buildClients(live: boolean): ModeClients {
+  if (live) {
+    if (!process.env.ANTHROPIC_API_KEY) {
+      throw new Error(
+        'ANTHROPIC_API_KEY is not set — the live run makes real API calls. Run via: npm run benchmark:run:live',
+      );
+    }
+    // One real client serves all three roles; the audit tracker records each
+    // call's role/model/tokens on the row regardless.
+    const real = new AnthropicLlmClient();
+    return { intent: real, clarify: real, answer: real };
+  }
   return {
-    intentClient: new ReplayLlmClient(INTENT_FIXTURES),
-    answerClient: new ReplayLlmClient(ANSWER_FIXTURES),
-    referenceDate,
+    intent: new ReplayLlmClient(INTENT_FIXTURES),
+    clarify: new ReplayLlmClient(CLARIFY_FIXTURES),
+    answer: new ReplayLlmClient(ANSWER_FIXTURES),
   };
 }
 
-async function main(): Promise<void> {
+async function buildDb(live: boolean): Promise<{ db: Db; close: () => Promise<void> }> {
+  if (live) {
+    if (!process.env.DATABASE_URL) {
+      throw new Error(
+        'DATABASE_URL is not set — the live run scores against the live database. Run via: npm run benchmark:run:live',
+      );
+    }
+    const { db, pool } = connectFromEnv();
+    return {
+      db,
+      close: async () => {
+        await pool.end();
+      },
+    };
+  }
+  const { db, close } = await createIngestedDb();
+  return { db, close };
+}
+
+/** Per-model token totals across the run's records — the spend-accounting
+ * source (live: real usage; hermetic: usage replayed from fixtures, useful
+ * only as a shape check, never as spend). */
+function aggregateUsage(records: AuditRecord[]) {
+  const byModel: Record<string, { calls: number; inputTokens: number; outputTokens: number }> = {};
+  let inputTokens = 0;
+  let outputTokens = 0;
+  for (const record of records) {
+    for (const call of record.llmCalls) {
+      const entry = (byModel[call.model] ??= { calls: 0, inputTokens: 0, outputTokens: 0 });
+      entry.calls += 1;
+      entry.inputTokens += call.inputTokens;
+      entry.outputTokens += call.outputTokens;
+      inputTokens += call.inputTokens;
+      outputTokens += call.outputTokens;
+    }
+  }
+  return { byModel, inputTokens, outputTokens };
+}
+
+export async function runBenchmark(options: RunBenchmarkOptions = {}): Promise<void> {
+  const live = options.live ?? false;
+  const dumpPath = options.dumpPath ?? defaultDumpPath(live);
   const tasksFile = JSON.parse(
     readFileSync(new URL('../benchmark/tasks.json', import.meta.url), 'utf8'),
   ) as { tasks: { id: string; type: string; reason?: string; question: string }[] };
@@ -85,7 +172,14 @@ async function main(): Promise<void> {
   ) as ClarifyCaseFile;
   const referenceDate = loadLabelledSet().referenceDate;
 
-  const { db, close } = await createIngestedDb();
+  const clients = buildClients(live);
+  const respondOptions = {
+    intentClient: clients.intent,
+    answerClient: clients.answer,
+    referenceDate,
+  };
+
+  const { db, close } = await buildDb(live);
   const runs: TaskRun[] = [];
 
   try {
@@ -99,7 +193,7 @@ async function main(): Promise<void> {
         throw new Error(`${task.id}: helper question differs from benchmark/tasks.json — fix the drift first`);
       }
 
-      const first = await answerQuestionAudited(db, question, respondOptions(referenceDate));
+      const first = await answerQuestionAudited(db, question, respondOptions);
       if (first.auditId === null) throw new Error(`${task.id}: audit write failed`);
       const run: TaskRun = {
         id: task.id,
@@ -110,20 +204,19 @@ async function main(): Promise<void> {
       if (task.type === 'refuse') run.expectedReason = task.reason;
 
       // Clarify tasks: play the one reply round (docs/02: scored on the
-      // post-clarification answer, at most one round).
+      // post-clarification answer, at most one round). A non-clarification
+      // first response (possible live) records no reply round; the scorer
+      // fails the task on both the kind and the missing round.
       const replySpec = CLARIFY_TASK_REPLY[task.id];
-      if (task.type === 'clarify' && replySpec) {
-        if (first.response.kind !== 'clarification') {
-          throw new Error(`${task.id}: expected a clarification, got ${first.response.kind}`);
-        }
+      if (task.type === 'clarify' && replySpec && first.response.kind === 'clarification') {
         const replyCase = clarifySet.cases.find((c) => c.id === replySpec.caseId);
         if (!replyCase) throw new Error(`missing clarify case ${replySpec.caseId}`);
         if (replyCase.originalQuestion !== question) {
           throw new Error(`${replySpec.caseId} originalQuestion differs from ${task.id}'s question`);
         }
         const reply = await answerClarificationReplyAudited(db, first.response.pending, replyCase.reply, {
-          intentClient: new ReplayLlmClient(CLARIFY_FIXTURES),
-          answerClient: new ReplayLlmClient(ANSWER_FIXTURES),
+          intentClient: clients.clarify,
+          answerClient: clients.answer,
           referenceDate: clarifySet.referenceDate,
         });
         if (reply.auditId === null) throw new Error(`${task.id} reply: audit write failed`);
@@ -132,19 +225,39 @@ async function main(): Promise<void> {
         run.scoreAgainst = replySpec.scoreAgainst;
       }
       runs.push(run);
+      if (live) console.log(`  ${run.id}: audit row ${run.auditId}${run.replyAuditId ? ` + reply row ${run.replyAuditId}` : ''}`);
     }
 
     // Informational (docs/02): the un-disambiguated B3/B5 variants must
     // resolve to the canonical default without clarifying.
     for (const [variantId, variant] of Object.entries(UNDISAMBIGUATED_VARIANTS)) {
-      const outcome = await answerQuestionAudited(db, variant.question, respondOptions(referenceDate));
+      const outcome = await answerQuestionAudited(db, variant.question, respondOptions);
       if (outcome.auditId === null) throw new Error(`${variantId}: audit write failed`);
       runs.push({ id: variantId, type: 'undisambiguated', question: variant.question, auditId: outcome.auditId });
+      if (live) console.log(`  ${variantId}: audit row ${outcome.auditId}`);
     }
 
     // Scoring reads THE RECORDS: everything the scorer sees comes from the
-    // audit table, not from in-memory pipeline objects.
-    const records = await loadAllAuditRecords(db);
+    // audit table, not from in-memory pipeline objects. Loaded by the ids
+    // THIS run created — the live table accumulates rows across runs (and
+    // later real traffic), so "all rows" is only correct on a fresh PGlite.
+    const auditIds = runs
+      .flatMap((run) => [run.auditId, run.replyAuditId])
+      .filter((id): id is number => id !== undefined)
+      .sort((a, b) => a - b);
+    const records: AuditRecord[] = [];
+    for (const id of auditIds) {
+      const record = await loadAuditRecord(db, id);
+      if (record === null) throw new Error(`audit row ${id} not found after writing it`);
+      records.push(record);
+    }
+    if (!live) {
+      // Fresh-database sanity: hermetically, this run's rows must be ALL rows.
+      const allCount = (await loadAllAuditRecords(db)).length;
+      if (allCount !== records.length) {
+        throw new Error(`hermetic run created ${records.length} rows but the database holds ${allCount}`);
+      }
+    }
 
     // Structured whitelist aid for the scorer's no-unbacked-numbers scan on
     // refusal texts: the freshest period per canonical measure — the same
@@ -156,23 +269,40 @@ async function main(): Promise<void> {
     }
 
     const dump = {
-      mode: 'hermetic-replay',
+      mode: live ? 'live' : 'hermetic-replay',
       generatedAt: new Date().toISOString(),
       referenceDate,
       clarifyReferenceDate: clarifySet.referenceDate,
       promptVersions: currentPromptVersions(),
       canonicalFreshestPeriods,
+      usage: aggregateUsage(records),
       tasks: runs,
       records,
     };
-    writeFileSync(DUMP_PATH, `${JSON.stringify(dump, null, 1)}\n`);
-    console.log(
-      `benchmark run (hermetic, replayed fixtures): ${runs.length} flows -> ${records.length} audit records.`,
-    );
-    console.log(`Dump written to benchmark/audit-run.json — score with: npm run benchmark:score`);
+    writeFileSync(dumpPath, `${JSON.stringify(dump, null, 1)}\n`);
+    const modeLabel = live ? 'LIVE — real LLM calls, live database' : 'hermetic, replayed fixtures';
+    console.log(`benchmark run (${modeLabel}): ${runs.length} flows -> ${records.length} audit records.`);
+    if (live) {
+      for (const [model, u] of Object.entries(dump.usage.byModel)) {
+        console.log(`  ${model}: ${u.calls} calls, ${u.inputTokens} in / ${u.outputTokens} out`);
+      }
+      console.log(`Dump written to benchmark/audit-run-live.json — score with: npm run benchmark:score:live`);
+    } else {
+      console.log(`Dump written to benchmark/audit-run.json — score with: npm run benchmark:score`);
+    }
   } finally {
-    await close();
+    try {
+      await close();
+    } catch (closeError) {
+      // Never let cleanup mask the real outcome: an earlier throw keeps
+      // propagating, a successful run stays successful.
+      console.error('warning: closing the database connection failed:', closeError);
+    }
   }
 }
 
-await main();
+// CLI entry point — skipped when the module is imported (tests drive
+// runBenchmark directly with a scratch dumpPath).
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  await runBenchmark({ live: process.argv.includes('--live') });
+}

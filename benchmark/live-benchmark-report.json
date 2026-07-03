@@ -1,0 +1,178 @@
+{
+  "mode": "live",
+  "runGeneratedAt": "2026-07-03T14:15:00.116Z",
+  "scoredAt": "2026-07-03T15:00:10.288Z",
+  "referenceDate": "2026-08-15",
+  "clarifyReferenceDate": "2026-08-15",
+  "promptVersions": {
+    "intent": 3,
+    "clarify": 1,
+    "compose": 3
+  },
+  "gate": {
+    "answerablePass": "14/14",
+    "refusalClarifyPass": "6/6",
+    "fabricatedNumbers": 0,
+    "verdict": "PASS"
+  },
+  "latency": {
+    "answerableMedianMs": 7289,
+    "answerableMinMs": 5617,
+    "answerableMaxMs": 14067,
+    "firstTurnMedianMs": 6465
+  },
+  "informational": {
+    "clarificationCountB1toB14": 0,
+    "templateFallbacks": 0,
+    "undisambiguated": [
+      {
+        "id": "B3-undisambiguated",
+        "pass": true,
+        "note": "canonical default, no clarification"
+      },
+      {
+        "id": "B5-undisambiguated",
+        "pass": true,
+        "note": "canonical default, no clarification"
+      }
+    ]
+  },
+  "usage": {
+    "byModel": {
+      "claude-haiku-4-5-20251001": {
+        "calls": 24,
+        "inputTokens": 111076,
+        "outputTokens": 2674
+      },
+      "claude-sonnet-5": {
+        "calls": 18,
+        "inputTokens": 26215,
+        "outputTokens": 1201
+      }
+    },
+    "inputTokens": 137291,
+    "outputTokens": 3875
+  },
+  "tasks": [
+    {
+      "id": "B1",
+      "type": "answerable",
+      "pass": true,
+      "problems": []
+    },
+    {
+      "id": "B2",
+      "type": "answerable",
+      "pass": true,
+      "problems": []
+    },
+    {
+      "id": "B3",
+      "type": "answerable",
+      "pass": true,
+      "problems": []
+    },
+    {
+      "id": "B4",
+      "type": "answerable",
+      "pass": true,
+      "problems": []
+    },
+    {
+      "id": "B5",
+      "type": "answerable",
+      "pass": true,
+      "problems": []
+    },
+    {
+      "id": "B6",
+      "type": "answerable",
+      "pass": true,
+      "problems": []
+    },
+    {
+      "id": "B7",
+      "type": "answerable",
+      "pass": true,
+      "problems": []
+    },
+    {
+      "id": "B8",
+      "type": "answerable",
+      "pass": true,
+      "problems": []
+    },
+    {
+      "id": "B9",
+      "type": "answerable",
+      "pass": true,
+      "problems": []
+    },
+    {
+      "id": "B10",
+      "type": "answerable",
+      "pass": true,
+      "problems": []
+    },
+    {
+      "id": "B11",
+      "type": "answerable",
+      "pass": true,
+      "problems": []
+    },
+    {
+      "id": "B12",
+      "type": "answerable",
+      "pass": true,
+      "problems": []
+    },
+    {
+      "id": "B13",
+      "type": "answerable",
+      "pass": true,
+      "problems": []
+    },
+    {
+      "id": "B14",
+      "type": "answerable",
+      "pass": true,
+      "problems": []
+    },
+    {
+      "id": "B15",
+      "type": "clarify",
+      "pass": true,
+      "problems": []
+    },
+    {
+      "id": "B16",
+      "type": "clarify",
+      "pass": true,
+      "problems": []
+    },
+    {
+      "id": "B17",
+      "type": "refuse",
+      "pass": true,
+      "problems": []
+    },
+    {
+      "id": "B18",
+      "type": "refuse",
+      "pass": true,
+      "problems": []
+    },
+    {
+      "id": "B19",
+      "type": "refuse",
+      "pass": true,
+      "problems": []
+    },
+    {
+      "id": "B20",
+      "type": "refuse",
+      "pass": true,
+      "problems": []
+    }
+  ]
+}
