@@ -38,6 +38,17 @@ export interface SeriesMeta {
 
 const COLORS = ['#2563eb', '#dc2626', '#16a34a', '#9333ea', '#d97706', '#0891b2'];
 
+// Y-axis honesty policy (open-questions #48, resolved 2026-07-04): a bar
+// encodes LENGTH, so a non-zero baseline visually lies about ratios — bars
+// must floor at zero. A line encodes POSITION, so it may zoom to show real
+// movement. Mirrors the deterministic SVG renderer's `makeScale`
+// (src/chart/render.ts), which has done this since WP8. Exported + wired into
+// the YAxis below so the tested policy IS the rendered policy (WP12 review
+// lesson: a policy that the render doesn't actually use is not a guard).
+export function yAxisDomain(kind: ChartSpec['kind']): [0 | 'auto', 'auto'] {
+  return kind === 'bar' ? [0, 'auto'] : ['auto', 'auto'];
+}
+
 export function buildRows(spec: ChartSpec): { rows: Row[]; seriesMeta: SeriesMeta[] } {
   const periodCodes = new Set<string>();
   for (const series of spec.series) {
@@ -157,7 +168,7 @@ export function ChartView({ spec }: { spec: ChartSpec }) {
             <LineChart data={rows} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="periodLabel" tick={{ fontSize: 11 }} />
-              <YAxis tick={false} width={16} />
+              <YAxis tick={false} width={16} domain={yAxisDomain(spec.kind)} />
               <Tooltip content={<ChartTooltip seriesMeta={seriesMeta} />} />
               {seriesMeta.length > 1 ? <Legend /> : null}
               {seriesMeta.map((s) => (
@@ -177,7 +188,7 @@ export function ChartView({ spec }: { spec: ChartSpec }) {
             <BarChart data={rows} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="periodLabel" tick={{ fontSize: 11 }} />
-              <YAxis tick={false} width={16} />
+              <YAxis tick={false} width={16} domain={yAxisDomain(spec.kind)} />
               <Tooltip content={<ChartTooltip seriesMeta={seriesMeta} />} />
               {seriesMeta.length > 1 ? <Legend /> : null}
               {seriesMeta.map((s) => (
