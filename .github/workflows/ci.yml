@@ -108,22 +108,31 @@ jobs:
           node-version: 24
       # No project install step here: `vercel build` installs web/'s own
       # dependencies itself, from web/'s own package-lock.json.
+      #
+      # Commands run from the repo ROOT (no --cwd web) and rely entirely on
+      # the Vercel PROJECT's own settings — rootDirectory: "web" plus
+      # sourceFilesOutsideRootDirectory: true (Vercel's documented monorepo
+      # mechanism, set via the API; no CLI equivalent exists) — to find the
+      # app and still let it reach the web/backend symlink one level up.
+      # `--cwd web` combined with a project-level rootDirectory double-applies
+      # the subdirectory (a real, reproduced bug: ADR 018 point 9) — the two
+      # are alternatives, never both.
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
       - name: Pull Vercel project settings and env vars
-        run: vercel pull --yes --environment=production --cwd web --token="$VERCEL_TOKEN"
+        run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
       - name: Build
-        run: vercel build --prod --cwd web --token="$VERCEL_TOKEN"
+        run: vercel build --prod --token="$VERCEL_TOKEN"
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
       - name: Deploy prebuilt output
-        run: vercel deploy --prebuilt --prod --cwd web --token="$VERCEL_TOKEN"
+        run: vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN"
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
