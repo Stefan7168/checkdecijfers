@@ -6,7 +6,7 @@
 // number itself.
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { askQuestion, replyToClarification } from '../app/actions.ts';
 import type { ChartSpec } from '../backend/chart/types.ts';
 import type { PendingClarification } from '../backend/answer/respond/types.ts';
@@ -24,6 +24,11 @@ export function Chat() {
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, busy]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -87,6 +92,7 @@ export function Chat() {
           </div>
         ) : null}
         {error ? <div className="text-sm text-red-600">{error}</div> : null}
+        <div ref={bottomRef} />
       </div>
       <form onSubmit={handleSubmit} className="mt-4 flex gap-2">
         <input
@@ -94,6 +100,7 @@ export function Chat() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           disabled={busy}
+          maxLength={500}
           placeholder={pending ? pending.questionNl : 'Stel een vraag…'}
           className="flex-1 rounded border border-zinc-300 px-3 py-2 text-sm disabled:bg-zinc-100"
         />

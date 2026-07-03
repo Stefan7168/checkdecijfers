@@ -4,13 +4,13 @@
     {
       "name": "web",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--workspace", "web"],
+      "runtimeArgs": ["--prefix", "web", "run", "dev"],
       "port": 3000
     },
     {
       "name": "web-prod",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "start", "--workspace", "web", "--", "-p", "3001"],
+      "runtimeArgs": ["--prefix", "web", "run", "start", "--", "-p", "3001"],
       "port": 3001
     }
   ]

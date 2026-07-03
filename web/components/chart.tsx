@@ -8,7 +8,10 @@
 // that reads a sibling `_display` field, and axis ticks are hidden entirely
 // (the SVG renderer's own choice: "gridlines are deliberately unlabeled — no
 // invented axis ticks"). `value` itself is used only for geometry (bar
-// height / line position), never rendered as text.
+// height / line position), never rendered as text. Every displayed value is
+// additionally BOUND to its source cell via `data-label-for="<resultId>"` —
+// membership alone ("the string appears somewhere in the spec") provably
+// misses swapped labels (WP8 review lesson; recurred here, WP12 review).
 'use client';
 
 import {
@@ -56,7 +59,14 @@ export function buildRows(spec: ChartSpec): { rows: Row[]; seriesMeta: SeriesMet
       row[key] = point ? point.value : null;
       row[`${key}_display`] = point ? point.formattedValue : null;
       row[`${key}_provisional`] = point ? point.provisional : false;
-      if (point) row.periodLabel = point.periodLabel;
+      // R1 traceability carried per point, so every displayed string stays
+      // BOUND to its source cell (data-label-for in the tooltip) — the WP8
+      // membership-without-binding lesson recurred in this wrapper and was
+      // caught by the WP12 adversarial review.
+      row[`${key}_resultId`] = point ? point.resultId : null;
+      // First-wins: a series with a disjoint period set must not overwrite
+      // the label another series already provided for this period code.
+      if (point && row.periodLabel === code) row.periodLabel = point.periodLabel;
     });
     return row;
   });
@@ -70,7 +80,9 @@ interface TooltipPayloadEntry {
   payload: Row;
 }
 
-function ChartTooltip({
+// Exported for direct testing: the tooltip is the one place displayed value
+// strings are assembled, so its binding contract is test-pinned (WP12 review).
+export function ChartTooltip({
   active,
   payload,
   label,
@@ -90,8 +102,13 @@ function ChartTooltip({
         const display = entry.payload[`${entry.dataKey}_display`];
         if (display == null) return null;
         const provisional = entry.payload[`${entry.dataKey}_provisional`];
+        const resultId = entry.payload[`${entry.dataKey}_resultId`];
         return (
-          <div key={entry.dataKey} style={{ color: entry.color }}>
+          <div
+            key={entry.dataKey}
+            style={{ color: entry.color }}
+            data-label-for={resultId == null ? undefined : String(resultId)}
+          >
             {labelByKey.get(entry.dataKey)}: {String(display)}
             {provisional ? ' *' : ''}
           </div>

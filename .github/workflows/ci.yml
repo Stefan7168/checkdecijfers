@@ -67,6 +67,12 @@ jobs:
         with:
           node-version: 24
           cache: npm
+          # Two independent lockfiles since web/ left the npm workspace
+          # (ADR 018) — the cache key must cover both or web/ bumps silently
+          # never refresh the cache (WP12 review).
+          cache-dependency-path: |
+            package-lock.json
+            web/package-lock.json
       - run: npm ci
       - name: Typecheck
         run: npm run typecheck
@@ -107,6 +113,9 @@ jobs:
         with:
           node-version: 24
           cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            web/package-lock.json
       # `vercel build` installs web/'s own dependencies itself, from web/'s
       # own package-lock.json — but web/backend (the symlink to ../src) means
       # some of what gets compiled has its REAL path under the repo root, not
