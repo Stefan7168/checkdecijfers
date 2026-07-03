@@ -4,10 +4,10 @@
 // real stage-status streaming) stays confined to this one file.
 'use server';
 
-import { answerClarificationReplyAudited, answerQuestionAudited } from '../../src/answer/audit/index.ts';
-import type { AuditedResponse } from '../../src/answer/audit/index.ts';
-import { AnthropicLlmClient } from '../../src/answer/llm/client.ts';
-import type { PendingClarification } from '../../src/answer/respond/types.ts';
+import { answerClarificationReplyAudited, answerQuestionAudited } from '../backend/answer/audit/index.ts';
+import type { AuditedResponse } from '../backend/answer/audit/index.ts';
+import { AnthropicLlmClient } from '../backend/answer/llm/client.ts';
+import type { PendingClarification } from '../backend/answer/respond/types.ts';
 import { getDb } from '../lib/db.ts';
 
 // The one legitimate un-pinned clock in the codebase — every other call site

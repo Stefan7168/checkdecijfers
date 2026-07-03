@@ -7,8 +7,8 @@
 // globalThis cache below exists only to survive `next dev`'s HMR, which
 // would otherwise re-evaluate this module (and open a fresh pool) on every
 // file save.
-import { connectFromEnv } from '../../src/db/client.ts';
-import type { Db } from '../../src/db/types.ts';
+import { connectFromEnv } from '../backend/db/client.ts';
+import type { Db } from '../backend/db/types.ts';
 
 let cached: Db | undefined;
 

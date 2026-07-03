@@ -23,7 +23,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import type { ChartSpec } from '../../src/chart/types.ts';
+import type { ChartSpec } from '../backend/chart/types.ts';
 
 export type Row = Record<string, string | number | boolean | null>;
 
