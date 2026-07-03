@@ -5,7 +5,7 @@
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ChartSpec } from '../backend/chart/types.ts';
-import { buildRows, ChartTooltip, ChartView } from './chart.tsx';
+import { buildRows, ChartTooltip, ChartView, yAxisDomain } from './chart.tsx';
 
 afterEach(cleanup);
 
@@ -157,6 +157,15 @@ describe('buildRows', () => {
     expect(r23[`${b}_resultId`]).toBe('cell-b-2023');
     expect(r24[`${a}_resultId`]).toBeNull();
     expect(r24[`${b}_resultId`]).toBe('cell-b-2024');
+  });
+});
+
+describe('yAxisDomain (open-questions #48 honesty policy)', () => {
+  it('floors bar charts at zero — a truncated bar lies about ratios', () => {
+    expect(yAxisDomain('bar')).toEqual([0, 'auto']);
+  });
+  it('lets line charts zoom to data — position, not area, carries the meaning', () => {
+    expect(yAxisDomain('line')).toEqual(['auto', 'auto']);
   });
 });
 
