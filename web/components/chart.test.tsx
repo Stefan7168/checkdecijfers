@@ -5,7 +5,7 @@
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ChartSpec } from '../backend/chart/types.ts';
-import { buildRows, ChartView } from './chart.tsx';
+import { buildRows, ChartTooltip, ChartView } from './chart.tsx';
 
 afterEach(cleanup);
 
@@ -128,6 +128,71 @@ describe('buildRows', () => {
     const { rows, seriesMeta } = buildRows(s);
     expect(rows[0][`${seriesMeta[0].key}_provisional`]).toBe(true);
   });
+
+  it('binds each row value to its own resultId per series, including disjoint period sets (WP8 binding lesson)', () => {
+    const s = spec({
+      series: [
+        {
+          label: 'A',
+          regionCode: null,
+          points: [
+            point({ resultId: 'cell-a-2023', periodCode: '2023JJ00', periodLabel: '2023', value: 1, formattedValue: '1,0' }),
+          ],
+        },
+        {
+          label: 'B',
+          regionCode: null,
+          points: [
+            point({ resultId: 'cell-b-2023', periodCode: '2023JJ00', periodLabel: '2023', value: 2, formattedValue: '2,0' }),
+            point({ resultId: 'cell-b-2024', periodCode: '2024JJ00', periodLabel: '2024', value: 3, formattedValue: '3,0' }),
+          ],
+        },
+      ],
+    });
+    const { rows, seriesMeta } = buildRows(s);
+    const [a, b] = seriesMeta.map((m) => m.key);
+    const r23 = rows.find((r) => r.periodCode === '2023JJ00')!;
+    const r24 = rows.find((r) => r.periodCode === '2024JJ00')!;
+    expect(r23[`${a}_resultId`]).toBe('cell-a-2023');
+    expect(r23[`${b}_resultId`]).toBe('cell-b-2023');
+    expect(r24[`${a}_resultId`]).toBeNull();
+    expect(r24[`${b}_resultId`]).toBe('cell-b-2024');
+  });
+});
+
+describe('ChartTooltip', () => {
+  it('renders each display string inside the node bound to that value\'s own resultId — binding, not just membership', () => {
+    const s = spec({
+      series: [
+        {
+          label: 'A',
+          regionCode: null,
+          points: [point({ resultId: 'cell-a-2023', periodCode: '2023JJ00', periodLabel: '2023', value: 1.1, formattedValue: '1,1' })],
+        },
+        {
+          label: 'B',
+          regionCode: null,
+          points: [point({ resultId: 'cell-b-2023', periodCode: '2023JJ00', periodLabel: '2023', value: 2.2, formattedValue: '2,2' })],
+        },
+      ],
+    });
+    const { rows, seriesMeta } = buildRows(s);
+    const payload = seriesMeta.map((m) => ({ dataKey: m.key, color: m.color, payload: rows[0] }));
+    const { container } = render(
+      <ChartTooltip active label="2023" payload={payload} seriesMeta={seriesMeta} />,
+    );
+    const nodeA = container.querySelector('[data-label-for="cell-a-2023"]');
+    const nodeB = container.querySelector('[data-label-for="cell-b-2023"]');
+    expect(nodeA).not.toBeNull();
+    expect(nodeB).not.toBeNull();
+    // The string shown in A's node is A's formattedValue — a swap (B's value
+    // rendered under A's identity) fails here even though both strings would
+    // pass a membership-only check.
+    expect(nodeA!.textContent).toContain('1,1');
+    expect(nodeA!.textContent).not.toContain('2,2');
+    expect(nodeB!.textContent).toContain('2,2');
+    expect(nodeB!.textContent).not.toContain('1,1');
+  });
 });
 
 describe('ChartView', () => {
@@ -165,5 +230,41 @@ describe('ChartView', () => {
     );
     render(<ChartView spec={spec({ kind: 'bar' })} />);
     expect(screen.getByText('Testreeks')).toBeInTheDocument();
+  });
+
+  it('every numeric token in the rendered DOM occurs verbatim in the spec\'s own strings (ADR 018 membership check)', () => {
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      },
+    );
+    const s = spec({
+      provisionalNote: 'Voorlopige cijfers (2024) zijn gemarkeerd met *.',
+      nullNotes: ['2022: geen gegevens beschikbaar (geheim).'],
+      definitionLine: 'Definitie: testdefinitie 2020.',
+    });
+    const { container } = render(<ChartView spec={s} />);
+    const specStrings = [
+      s.title,
+      s.unit,
+      s.attributionLine,
+      s.definitionLine ?? '',
+      s.provisionalNote ?? '',
+      ...s.nullNotes,
+      ...Object.keys(s.dimLabels),
+      ...Object.values(s.dimLabels),
+      ...s.series.flatMap((se) => se.points.flatMap((p) => [p.formattedValue ?? '', p.periodLabel])),
+    ].filter(Boolean);
+    const tokens = (container.textContent ?? '').match(/\d[\d.,]*/g) ?? [];
+    expect(tokens.length).toBeGreaterThan(0);
+    for (const tok of tokens) {
+      expect(
+        specStrings.some((str) => str.includes(tok)),
+        `numeric token "${tok}" in the rendered DOM has no source in the spec's own strings`,
+      ).toBe(true);
+    }
   });
 });

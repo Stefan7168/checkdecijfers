@@ -26,7 +26,13 @@ const CA_URL = new URL('../../config/supabase-prod-ca-2021.pem', import.meta.url
 // contexts (CLI scripts, CI) keep reading the file directly, where
 // import.meta.url resolution has always worked correctly.
 function loadCaCert(): string {
-  return process.env.DATABASE_CA_CERT ?? readFileSync(CA_URL, 'utf8');
+  // Fail closed (WP12 review): an empty or garbled DATABASE_CA_CERT must fall
+  // back to the committed pinned CA, never silently weaken TLS verification.
+  const fromEnv = process.env.DATABASE_CA_CERT;
+  if (fromEnv && fromEnv.includes('-----BEGIN CERTIFICATE-----')) {
+    return fromEnv;
+  }
+  return readFileSync(CA_URL, 'utf8');
 }
 
 export function createPool(databaseUrl: string): pg.Pool {

@@ -46,11 +46,11 @@ Everything **Stefan** does, phase by phase. AI sessions read [CLAUDE.md](../CLAU
 | Secret | Lives in | How to rotate (owner-followable) |
 |---|---|---|
 | `ANTHROPIC_API_KEY` | local `.env` + local `web/.env.local` (separate file, not a symlink — see note below) + Vercel env store (set 2026-07-04, WP12) | Anthropic console → create new key → replace in **all three** places → delete old key. ⚠ Owner decision 2026-07-03: the pre-launch key deliberately stayed in use across the machine move (the $25/mo spend cap bounds the risk) — rotation deferred to go-live/first deploy, tracked in the Phase 1 checklist above |
-| `DATABASE_URL` | local `.env` + local `web/.env.local` (separate file, not a symlink — see note below) + Vercel env store (set 2026-07-04, WP12) | Supabase dashboard → reset database password → replace in **all three** places. ⚠ Use the **Session pooler** connection string (Connect → Session pooler), not the direct one: the direct host is IPv6-only and doesn't work from most home networks (verified 2026-07-02). The connection is TLS-verified against Supabase's public root certificate, committed at `config/supabase-prod-ca-2021.pem` — nothing to do at rotation, it's valid to 2031 |
+| `DATABASE_URL` | local `.env` + local `web/.env.local` (separate file, not a symlink — see note below) + Vercel env store (set 2026-07-04, WP12) | Supabase dashboard → reset database password → replace in **all three** places. ⚠ Use the **Session pooler** connection string (Connect → Session pooler), not the direct one: the direct host is IPv6-only and doesn't work from most home networks (verified 2026-07-02). The connection is TLS-verified against Supabase's public root certificate, committed at `config/supabase-prod-ca-2021.pem` — nothing to do at rotation, it's valid to 2031. (The deployed web app receives that same certificate as `DATABASE_CA_CERT`, baked in automatically at build time from the committed file — not a secret, nothing to set or rotate anywhere; ADR 018) |
 | `VERCEL_TOKEN` | GitHub Actions repo secret only (set 2026-07-04 by owner, via Terminal — never in chat) | Vercel dashboard → Account Settings → Tokens → create a new one → `gh secret set VERCEL_TOKEN --repo Stefan7168/checkdecijfers` (paste when prompted) → delete the old token in the Vercel dashboard. Used only by the CI `deploy` job (ADR 018) |
 | `VERCEL_ORG_ID` / `VERCEL_PROJECT_ID` | GitHub Actions repo secrets (set 2026-07-04) | Not secret (just identifiers) — read from `web/.vercel/project.json` after `vercel link`, only changes if the Vercel project is ever recreated |
 
-**Note on `web/.env.local`:** the chat UI (`web/`, an npm workspace) is a separate Next.js project that loads its own env file rather than the root `.env` — it does **not** automatically see root's values. `web/.env.local` is gitignored, same as root `.env`. An earlier version of this file was a **symlink** to root `.env`, which seemed convenient but backfired the first time `vercel pull` wrote a Vercel-specific token *through* the symlink into the shared root file — fixed by making `web/.env.local` a real, independent copy. This means a key rotation (above) has **three** places to update, not two; there is no technical link keeping them in sync.
+**Note on `web/.env.local`:** the chat UI (`web/`, its own fully independent npm project — ADR [018](decisions/018-chat-ui-and-deploy.md), it briefly started as an npm workspace and was split mid-session) is a separate Next.js project that loads its own env file rather than the root `.env` — it does **not** automatically see root's values. `web/.env.local` is gitignored, same as root `.env`. An earlier version of this file was a **symlink** to root `.env`, which seemed convenient but backfired the first time `vercel pull` wrote a Vercel-specific token *through* the symlink into the shared root file — fixed by making `web/.env.local` a real, independent copy. This means a key rotation (above) has **three** places to update, not two; there is no technical link keeping them in sync.
 
 ## Moving to a new machine (fresh clone bootstrap)
 
@@ -73,8 +73,13 @@ computer or any one Claude account. A new machine needs, in order:
    git clone https://github.com/Stefan7168/checkdecijfers.git
    cd checkdecijfers
    npm ci
+   npm --prefix web ci
    npm run typecheck && npm test
+   npm run web:typecheck && npm run web:test
    ```
+   (The second `ci` and the `web:*` lines cover the chat UI, which since WP12
+   is its own independent npm project with its own lockfile — the root
+   install does not cover it. ADR 018.)
    The whole test suite is hermetic (embedded database, recorded LLM
    fixtures), so a green run here proves the clone is complete and healthy
    before any key exists on the machine.
