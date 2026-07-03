@@ -1,0 +1,22 @@
+{
+  "requestHash": "9bb8558debc3d29163a815f339195757",
+  "question": "GEVALIDEERDE CIJFERS:\n{\n  \"shape\": \"single\",\n  \"definitionLabel\": \"gemiddeld besteedbaar inkomen van huishoudens\",\n  \"periodSemantics\": \"Cijfer voor het genoemde inkomstenjaar. Inkomensstatistieken hebben vertraagde definitieve vaststelling (docs/07: 2023JJ00 Definitief, 2024JJ00 nog Voorlopig ten tijde van deze ingest) — status altijd meegeven, nooit aannemen dat het meest recente jaar al definitief is.\",\n  \"cells\": [\n    {\n      \"periodLabel\": \"2023\",\n      \"regionLabel\": null,\n      \"value\": \"57,6\",\n      \"unit\": \"1 000 euro\",\n      \"provisional\": false\n    }\n  ],\n  \"derivations\": []\n}\n\nSchrijf nu het antwoord.",
+  "label": "B12",
+  "recordedAt": "2026-07-03T07:44:07.669Z",
+  "request": {
+    "model": "claude-sonnet-5",
+    "maxTokens": 1024,
+    "system": "Je schrijft voor checkdecijfers.nl het antwoord op een cijfervraag, in het Nederlands, op basis van een blok GEVALIDEERDE CIJFERS (JSON).\n\nVerplichte regels:\n1. Gebruik getallen UITSLUITEND door de tekst uit het veld 'value' letterlijk over te nemen (zelfde cijfers, zelfde punten en komma's). Nooit zelf rekenen, afronden, omrekenen, optellen of schatten.\n2. Schrijf hoeveelheden altijd in cijfers, nooit in woorden — geen telwoorden ('twee', 'tien', 'zeshonderd'), geen schaalwoorden ('duizend', 'miljoen', 'miljard'), geen breuken of veelvouden ('kwart', 'helft', 'anderhalf', 'dubbel', 'verdubbeld').\n2b. Dat geldt OOK voor aantallen regio's of periodes: schrijf 'de 2 gemeenten' en 'de 4 gemeenten' — NOOIT 'de twee gemeenten' of 'de vier gemeenten'.\n3. Zet de eenheid uit het veld 'unit' DIRECT achter elk getal, letterlijk. Bij unit 'aantal' mag in plaats daarvan een passend zelfstandig naamwoord (bijvoorbeeld 'inwoners'). Eenheden met een factor zoals 'x 1 000' of '1 000 euro' altijd letterlijk direct achter het getal — nooit uitschrijven of omrekenen.\n4. Niveaus in % zijn procenten; een VERSCHIL tussen twee %-waarden heet 'procentpunt' (het veld 'unit' van de derivation geeft dit aan). Verwissel die twee nooit.\n5. Noem in dezelfde zin als elk getal de periode (periodLabel) en, indien aanwezig, de regio (regionLabel) waar het bij hoort. Bij een verschil- of veranderingswaarde: noem BEIDE periodes in dezelfde zin. Gebruik regionamen exact zoals gegeven.\n6. Een stijging/daling/'meeste'/'meer dan' mag je alleen beweren als het blok 'derivations' die richting of ranking expliciet bevat (direction, difference of max). Volg het veld 'trendWord'. Is de richting 'down' en noem je de waarde als positief getal, gebruik dan altijd een dalingswoord in dezelfde zin. Bij monotonic=false: zeg dat de reeks niet in een rechte lijn bewoog, en koppel een tussentijdse stijging of daling altijd aan het jaartal waarin die plaatsvond.\n7. Markeer elke waarde met provisional=true met '(voorlopig cijfer)', direct achter de waarde, in dezelfde zin.\n8. Waarden met value=null: noem geen getal, noem de reden uit 'nullReason'.\n9. Voeg GEEN bronvermelding, definitie- of licentieregel toe — die worden automatisch toegevoegd. Geen inleiding ('Hier is…'), geen mening, geen duiding buiten de gegeven cijfers. Lengte: 1 tot 4 zinnen.",
+    "question": "GEVALIDEERDE CIJFERS:\n{\n  \"shape\": \"single\",\n  \"definitionLabel\": \"gemiddeld besteedbaar inkomen van huishoudens\",\n  \"periodSemantics\": \"Cijfer voor het genoemde inkomstenjaar. Inkomensstatistieken hebben vertraagde definitieve vaststelling (docs/07: 2023JJ00 Definitief, 2024JJ00 nog Voorlopig ten tijde van deze ingest) — status altijd meegeven, nooit aannemen dat het meest recente jaar al definitief is.\",\n  \"cells\": [\n    {\n      \"periodLabel\": \"2023\",\n      \"regionLabel\": null,\n      \"value\": \"57,6\",\n      \"unit\": \"1 000 euro\",\n      \"provisional\": false\n    }\n  ],\n  \"derivations\": []\n}\n\nSchrijf nu het antwoord.",
+    "thinking": "disabled"
+  },
+  "response": {
+    "outputText": "Het gemiddeld besteedbaar inkomen van huishoudens bedroeg in 2023 57,6 x 1 000 euro (definitief cijfer).",
+    "model": "claude-sonnet-5",
+    "stopReason": "end_turn",
+    "usage": {
+      "inputTokens": 1429,
+      "outputTokens": 57
+    }
+  }
+}

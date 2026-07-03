@@ -1,0 +1,22 @@
+{
+  "requestHash": "7751fb1aa19cdf74586528db10f7bf52",
+  "question": "GEVALIDEERDE CIJFERS:\n{\n  \"shape\": \"single\",\n  \"definitionLabel\": \"bevolking op 1 januari\",\n  \"periodSemantics\": \"Measure-afhankelijk: voor M000352 (Bevolking op 1 januari) is dit een standcijfer per 1 januari van het genoemde jaar (B13's groei-in-2024 leunt hierop); voor M000365 (Gemiddelde bevolking) is het jaargemiddelde.\",\n  \"cells\": [\n    {\n      \"periodLabel\": \"2024\",\n      \"regionLabel\": \"Utrecht\",\n      \"value\": \"374.238\",\n      \"unit\": \"aantal\",\n      \"provisional\": false\n    }\n  ],\n  \"derivations\": []\n}\n\nSchrijf nu het antwoord.",
+  "label": "B2",
+  "recordedAt": "2026-07-03T07:43:14.730Z",
+  "request": {
+    "model": "claude-sonnet-5",
+    "maxTokens": 1024,
+    "system": "Je schrijft voor checkdecijfers.nl het antwoord op een cijfervraag, in het Nederlands, op basis van een blok GEVALIDEERDE CIJFERS (JSON).\n\nVerplichte regels:\n1. Gebruik getallen UITSLUITEND door de tekst uit het veld 'value' letterlijk over te nemen (zelfde cijfers, zelfde punten en komma's). Nooit zelf rekenen, afronden, omrekenen, optellen of schatten.\n2. Schrijf hoeveelheden altijd in cijfers, nooit in woorden — geen telwoorden ('twee', 'tien', 'zeshonderd'), geen schaalwoorden ('duizend', 'miljoen', 'miljard'), geen breuken of veelvouden ('kwart', 'helft', 'anderhalf', 'dubbel', 'verdubbeld').\n2b. Dat geldt OOK voor aantallen regio's of periodes: schrijf 'de 2 gemeenten' en 'de 4 gemeenten' — NOOIT 'de twee gemeenten' of 'de vier gemeenten'.\n3. Zet de eenheid uit het veld 'unit' DIRECT achter elk getal, letterlijk. Bij unit 'aantal' mag in plaats daarvan een passend zelfstandig naamwoord (bijvoorbeeld 'inwoners'). Eenheden met een factor zoals 'x 1 000' of '1 000 euro' altijd letterlijk direct achter het getal — nooit uitschrijven of omrekenen.\n4. Niveaus in % zijn procenten; een VERSCHIL tussen twee %-waarden heet 'procentpunt' (het veld 'unit' van de derivation geeft dit aan). Verwissel die twee nooit.\n5. Noem in dezelfde zin als elk getal de periode (periodLabel) en, indien aanwezig, de regio (regionLabel) waar het bij hoort. Bij een verschil- of veranderingswaarde: noem BEIDE periodes in dezelfde zin. Gebruik regionamen exact zoals gegeven.\n6. Een stijging/daling/'meeste'/'meer dan' mag je alleen beweren als het blok 'derivations' die richting of ranking expliciet bevat (direction, difference of max). Volg het veld 'trendWord'. Is de richting 'down' en noem je de waarde als positief getal, gebruik dan altijd een dalingswoord in dezelfde zin. Bij monotonic=false: zeg dat de reeks niet in een rechte lijn bewoog, en koppel een tussentijdse stijging of daling altijd aan het jaartal waarin die plaatsvond.\n7. Markeer elke waarde met provisional=true met '(voorlopig cijfer)', direct achter de waarde, in dezelfde zin.\n8. Waarden met value=null: noem geen getal, noem de reden uit 'nullReason'.\n9. Voeg GEEN bronvermelding, definitie- of licentieregel toe — die worden automatisch toegevoegd. Geen inleiding ('Hier is…'), geen mening, geen duiding buiten de gegeven cijfers. Lengte: 1 tot 4 zinnen.",
+    "question": "GEVALIDEERDE CIJFERS:\n{\n  \"shape\": \"single\",\n  \"definitionLabel\": \"bevolking op 1 januari\",\n  \"periodSemantics\": \"Measure-afhankelijk: voor M000352 (Bevolking op 1 januari) is dit een standcijfer per 1 januari van het genoemde jaar (B13's groei-in-2024 leunt hierop); voor M000365 (Gemiddelde bevolking) is het jaargemiddelde.\",\n  \"cells\": [\n    {\n      \"periodLabel\": \"2024\",\n      \"regionLabel\": \"Utrecht\",\n      \"value\": \"374.238\",\n      \"unit\": \"aantal\",\n      \"provisional\": false\n    }\n  ],\n  \"derivations\": []\n}\n\nSchrijf nu het antwoord.",
+    "thinking": "disabled"
+  },
+  "response": {
+    "outputText": "Op 1 januari 2024 telde Utrecht 374.238 inwoners.",
+    "model": "claude-sonnet-5",
+    "stopReason": "end_turn",
+    "usage": {
+      "inputTokens": 1394,
+      "outputTokens": 30
+    }
+  }
+}

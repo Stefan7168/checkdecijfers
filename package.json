@@ -18,6 +18,8 @@
     "benchmark:score": "node scripts/score-benchmark.mjs",
     "intent:eval": "node --env-file-if-exists=.env scripts/intent-eval.ts",
     "intent:record": "node --env-file-if-exists=.env scripts/intent-eval.ts --record",
+    "answer:eval": "node --env-file-if-exists=.env scripts/answer-eval.ts",
+    "answer:record": "node --env-file-if-exists=.env scripts/answer-eval.ts --record",
     "db:migrate": "node --env-file=.env src/db/migrate.ts",
     "ingest": "node --env-file=.env src/ingestion/cli.ts",
     "registry:apply": "node --env-file=.env src/registry/apply.ts",
