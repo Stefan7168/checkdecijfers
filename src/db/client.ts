@@ -11,14 +11,30 @@ import { readFileSync } from 'node:fs';
 import pg from 'pg';
 import type { Db } from './types.ts';
 
-const CA_PATH = new URL('../../config/supabase-prod-ca-2021.pem', import.meta.url);
+const CA_URL = new URL('../../config/supabase-prod-ca-2021.pem', import.meta.url);
+
+// The chat UI's bundled Node.js runtime (Turbopack, ADR 018) treats a
+// literal `new URL('./relative', import.meta.url)` as a CLIENT-asset
+// reference, not a server filesystem path: it rewrites the resolved URL to
+// a `/_next/static/media/...` public path that doesn't exist as a real file
+// from this process's cwd. There is no bundler-safe way to read a local
+// file at runtime through that pattern. Since this is Supabase's *public*
+// root CA (not a secret — already committed to the repo), the bundled web
+// app instead gets it via DATABASE_CA_CERT, baked in at Next's build time
+// from the same committed file (web/next.config.ts) — build time runs
+// under plain Node, unaffected by the runtime bundling quirk. Unbundled
+// contexts (CLI scripts, CI) keep reading the file directly, where
+// import.meta.url resolution has always worked correctly.
+function loadCaCert(): string {
+  return process.env.DATABASE_CA_CERT ?? readFileSync(CA_URL, 'utf8');
+}
 
 export function createPool(databaseUrl: string): pg.Pool {
   const url = new URL(databaseUrl);
   url.search = '';
   return new pg.Pool({
     connectionString: url.toString(),
-    ssl: { ca: readFileSync(CA_PATH, 'utf8') },
+    ssl: { ca: loadCaCert() },
     max: 4,
   });
 }

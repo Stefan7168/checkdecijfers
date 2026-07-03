@@ -31,9 +31,20 @@
 # charts against the frozen key, spec determinism, renderer provenance); since
 # WP10 R8 is real and the invariant suite carries ZERO todos — all eleven
 # invariants are tested.
-# Deploy-blocking on red attaches when Vercel is connected (later Phase 0 session).
-# This workflow is hermetic: no secrets, no network beyond npm — which is why the
-# ingestion tests run on PGlite (ADR 009), never against Supabase.
+# WP12 (ADR 018): the chat UI (`web/`, an npm workspace) adds two hermetic gate
+# steps — its own typecheck and its own component test suite (jsdom, no
+# network) — plus a second job, `deploy`, gated on `gate` via `needs:` so a red
+# gate structurally blocks the deploy. `deploy` runs only on a direct push to
+# main (this repo has no PRs/branch protection — CLAUDE.md, deliberate — so a
+# `needs:` dependency is the only real deploy-blocking mechanism available).
+# It is intentionally NOT hermetic: it calls the real Vercel CLI/API. The
+# Vercel project has no git integration connected, so this job is the only
+# thing that ever deploys — nothing races it.
+# This workflow's `gate` job is hermetic: no secrets, no network beyond npm —
+# which is why the ingestion tests run on PGlite (ADR 009), never against
+# Supabase, and why `gate` runs `web`'s typecheck/tests but not `next build`
+# (which fetches fonts over the network at build time; that only happens
+# inside `deploy`'s `vercel build`, downstream of a green gate).
 name: CI
 
 on:
@@ -72,3 +83,39 @@ jobs:
         run: npm run benchmark:run
       - name: Benchmark scorer (audit records vs frozen key)
         run: npm run benchmark:score
+      - name: Web app typecheck
+        run: npm run web:typecheck
+      - name: Web app tests (chart wrapper, jsdom, no network)
+        run: npm run web:test
+
+  deploy:
+    needs: gate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+      - name: Pull Vercel project settings and env vars
+        run: vercel pull --yes --environment=production --cwd web --token="$VERCEL_TOKEN"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      - name: Build
+        run: vercel build --prod --cwd web --token="$VERCEL_TOKEN"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      - name: Deploy prebuilt output
+        run: vercel deploy --prebuilt --prod --cwd web --token="$VERCEL_TOKEN"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
