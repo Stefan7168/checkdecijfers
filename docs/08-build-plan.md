@@ -40,13 +40,13 @@ Built as briefed; ADR [013](decisions/013-answer-composition.md) records the loa
 
 Built as briefed, with one recorded deviation (ADR [014](decisions/014-chart-spec-v1-and-renderer.md)): the Phase 0 renderer is a **pure, dependency-free SVG generator**, not the Recharts client wrapper — no app exists yet to mount a client component, and `src/` runs under Node type stripping where JSX cannot be imported; the Recharts wrapper (ADR [008](decisions/008-ui-foundation.md) constraint 3, unchanged) lands with the chat-UI session over the same spec, and the SVG renderer doubles as the server-side path ADR 008 reserved for Phase 2 static images. ChartSpec v1 is versioned + zod-validated; policy: `series` → line, `comparison` → bar, `single`/`derived` → no chart. Done-criterion met and in CI (seventh gate step): B4/B8 render correct line charts whose points equal their frozen-key cells, the renderer provably adds no numbers (token-provenance check) and omits no point; R6 is a real invariant test ([STATUS.md](STATUS.md) for measured results).
 
-## WP9 — Refusal & clarification behaviour  ← NEXT
+## WP9 — Refusal & clarification behaviour  ✅ done 2026-07-03
 
-The full failure-behaviour table in [05-data-rules.md](05-data-rules.md): scope / forecast / causal / freshness refusals and one-round clarification. Partly cross-cutting (WP5 gives typed refusals, WP6 gives clarification) — this WP makes B15–B20 all pass. Done = 6/6 refusal tasks pass, no guessed numbers.
+Built as briefed (ADR [015](decisions/015-refusal-clarification-composition.md) records the load-bearing choices): refusal/clarification phrasing is **deterministic templates, never an LLM**; one `ComposedResponse` envelope (answer/clarification/refusal) is the pipeline's single output — the seam WP10's audit records wrap; the clarification reply is parsed **merged with the pending partial intent** through a clarify-mode extension of the WP6 prompt (base prompt bytes untouched — the 45 intent fixtures stayed valid; own labelled reply set + fixtures + `npm run clarify:eval`, calibrated live 7/7 with zero flips ×3); still-ambiguous-after-round → refusal-with-guidance on **both** clarification shapes (parser-level and query-level `needs_clarification` — the adversarial review's HIGH catch); the docs/05 staleness row is implemented on both branches (cadence ×1.5 max-age assumption, open-questions [#43](open-questions.md)). Done-criterion met and in CI: B15–B20 pass 6/6 end-to-end hermetically, plus compound/smalltalk and the S3 completes-as-S1 flow against frozen-key answers; refusal/clarification texts carry no numeric token without a structured source ([STATUS.md](STATUS.md) for measured results).
 
-## WP10 — Audit record per answer (R8)
+## WP10 — Audit record per answer (R8)  ← NEXT
 
-One `audit_answers` row per answer/refusal: question, intent, query plan, result ids, numbers, table versions, timestamps, final text + chart spec. Done = the record *reconstructs* every answer; benchmark scorer reads these.
+One `audit_answers` row per answer/refusal: question, intent, query plan, result ids, numbers, table versions, timestamps, final text + chart spec. Done = the record *reconstructs* every answer; benchmark scorer reads these. Also record, per ADR 015's wrap-site note: the clarification-reply text + the `PendingClarification` it answered, and the three prompt-version constants (intent / clarify / compose).
 
 ## WP11 — Ops guardrails + full benchmark run
 

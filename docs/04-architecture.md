@@ -27,6 +27,8 @@ Recommended architecture for Phase 0–2, per the ADRs in [decisions/](decisions
    CbsSource adapter ◀── CBS OData v4 / bulk channels
 ```
 
+Refusal and clarification text is **deterministic templates, never an LLM** (ADR [015](decisions/015-refusal-clarification-composition.md)); a clarification opens exactly **one** reply round, whose free-text answer re-enters at step 1 merged with the pending partial intent (still-unresolved → refusal-with-guidance, never a second question).
+
 ## Components and why they earn their place
 
 | Component | Justification | ADR |

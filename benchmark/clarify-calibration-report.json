@@ -1,0 +1,46 @@
+{
+  "generatedAt": "2026-07-03T10:25:14.926Z",
+  "mode": "live",
+  "repeat": 3,
+  "referenceDate": "2026-08-15",
+  "totals": {
+    "pass": 7,
+    "total": 7
+  },
+  "usage": {
+    "inputTokens": 107064,
+    "outputTokens": 2652
+  },
+  "unstable": [],
+  "failures": [],
+  "history": [
+    {
+      "generatedAt": "2026-07-03T10:24:14.111Z",
+      "mode": "record",
+      "repeat": 1,
+      "referenceDate": "2026-08-15",
+      "totals": {
+        "pass": 7,
+        "total": 7
+      },
+      "usage": {
+        "inputTokens": 35688,
+        "outputTokens": 878
+      }
+    },
+    {
+      "generatedAt": "2026-07-03T10:25:14.926Z",
+      "mode": "live",
+      "repeat": 3,
+      "referenceDate": "2026-08-15",
+      "totals": {
+        "pass": 7,
+        "total": 7
+      },
+      "usage": {
+        "inputTokens": 107064,
+        "outputTokens": 2652
+      }
+    }
+  ]
+}

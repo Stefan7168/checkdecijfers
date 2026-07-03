@@ -143,6 +143,71 @@ function toNumber(value: unknown): number {
   return n;
 }
 
+/** Freshest period (any grain, any status) we hold for a canonical measure's
+ * pinned coordinates — the WP9 seam for refusal offers (forecast/causal
+ * offers, the still-ambiguous example) that need "the freshest we can serve"
+ * without a full StructuredIntent/period to resolve against. Reuses the same
+ * canonical-measure lookup resolve.ts's target-resolution branch performs,
+ * rather than duplicating it with a different shape.
+ *
+ * Region handling: canonical measures on a regional table (population) are
+ * asked about nationally unless the user names a place — 'NL01' is the
+ * national aggregate code already used throughout the fixtures/tests.
+ * Regionless tables use the '' convention resolve.ts/observations use
+ * throughout. Grain-agnostic (freshest across every ingested grain): callers
+ * only need "the freshest we can serve", not a specific grain's cadence. */
+export async function freshestForCanonical(
+  db: Db,
+  canonicalKey: string,
+): Promise<{ periodCode: string; status: string } | null> {
+  const cm = await db.query(
+    'select table_id, measure, dims from canonical_measures where key = $1',
+    [canonicalKey],
+  );
+  const row = cm.rows[0];
+  if (!row) return null;
+  const tableId = row.table_id as string;
+  const measure = row.measure as string;
+  const dims = (typeof row.dims === 'string' ? JSON.parse(row.dims) : row.dims) as Record<string, string>;
+
+  const table = await db.query(
+    'select expected_dimensions, default_coordinates from cbs_tables where id = $1',
+    [tableId],
+  );
+  const tableRow = table.rows[0];
+  if (!tableRow) return null;
+  const expectedDimensions = (
+    typeof tableRow.expected_dimensions === 'string'
+      ? JSON.parse(tableRow.expected_dimensions)
+      : tableRow.expected_dimensions
+  ) as { name: string; kind: string }[];
+  const defaultCoordinates = (
+    typeof tableRow.default_coordinates === 'string'
+      ? JSON.parse(tableRow.default_coordinates)
+      : (tableRow.default_coordinates ?? {})
+  ) as Record<string, string>;
+  const geoDimension = expectedDimensions.find((d) => d.kind === 'GeoDimension')?.name ?? null;
+  const regionCode = geoDimension ? 'NL01' : '';
+
+  // Observations store the FULL merged coordinate set: the table's pinned
+  // default ("totaal") coordinates overlaid with the canonical measure's
+  // semantic dims — the same precedence resolveIntent applies (resolve.ts,
+  // "default (totaal) coordinates < canonical semantic dims"). Querying with
+  // the canonical dims alone silently matches nothing (session review,
+  // 2026-07-03: the forecast/causal offers then lose their period).
+  const mergedDims = { ...defaultCoordinates, ...dims };
+
+  const result = await db.query(
+    `select period_code, status from observations
+     where table_id = $1 and measure = $2 and dims = $3::jsonb and region_code = $4
+     order by period_year desc, coalesce(period_index, 0) desc limit 1`,
+    [tableId, measure, JSON.stringify(mergedDims), regionCode],
+  );
+  const freshest = result.rows[0];
+  if (!freshest) return null;
+  return { periodCode: freshest.period_code as string, status: freshest.status as string };
+}
+
 export async function runQuery(db: Db, intent: StructuredIntent): Promise<QueryOutcome> {
   const outcome = await resolveIntent(db, intent);
   if (!outcome.ok) return outcome;
