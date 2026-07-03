@@ -3,7 +3,7 @@
 **What this is:** a fixed set of 20 example questions (owner-authored, 2026-07-04) across 10 categories, to be run against the **live** chat UI (https://checkdecijfers.vercel.app) or a local production build as a **validation pass before Phase 1 building begins**. This is distinct from the 20-task frozen *benchmark* ([02-user-scenarios.md](02-user-scenarios.md), scored in CI) — that one gates correctness on a known-good set; **this** one deliberately probes beyond the loaded slice, into ambiguous/out-of-scope territory and conversational patterns, to surface *architectural decisions* for Phase 1.
 
 **How to run (next session):**
-- Ask each question, one at a time. Each is a real LLM call against the €25/mo Anthropic cap — ~€0.20–0.40 for all 20 (WP11 measured ~€0.19 for 20 tasks). Be deliberate; no bulk retries.
+- Ask each question, one at a time. Each is a real LLM call against the €25/mo Anthropic cap — ~€0.20–0.40 for the whole set (WP11 measured ~€0.19 for 20 tasks). Be deliberate; no bulk retries. A **local production build still hits the live DB + LLM (same cost)** — the only difference from using the deployed instance is that it doesn't touch production; either is fine.
 - For each, record: **(a)** answer / clarify / refuse; **(b)** was that outcome *correct and honest* — right table/period/region, **zero fabricated numbers**, honest refusal where genuinely out of scope; **(c)** the architectural gap or Phase-1 decision it surfaces.
 - Produce a short **architecture-decision memo** at the end feeding Phase 1 planning. Do not change code without owner go.
 
