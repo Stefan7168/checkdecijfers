@@ -492,7 +492,10 @@ describe('open-range questions ("sinds 2015") clarify at the envelope level', ()
 
   it("V01's exact live parse becomes a period clarification, not an internal refusal", async () => {
     const observedLiveParse = {
-      version: 2,
+      // Observed live under raw-parse v2 (WP14); version field tracks the
+      // current contract literal — the degenerate year_range shape under test
+      // is unchanged by the v3 bump (#77 / ADR 023).
+      version: 3,
       kind: 'data_query',
       candidates: [
         {

@@ -21,8 +21,12 @@ import { CANONICAL_MEASURES } from '../../registry/defaults.ts';
  * pass V01/V28/V02); never-drop-a-named-place rule strengthened for
  * national-only measures (first WP14 stability run caught the model reading
  * "werkloosheid in Noord-Brabant" as national at 0.75 — the WP6 dropped-
- * region failure mode on a new question shape). */
-export const PROMPT_VERSION = 4;
+ * region failure mode on a new question shape).
+ * v5 (2026-07-05, #77 fix): explicit closed date ranges — date_range rule +
+ * example added, raw-parse version 3 (ADR 023; "1 januari 2022 tot en met
+ * 31 december 2022" previously fell into {"kind":"none"} and dead-ended in a
+ * clarification loop). */
+export const PROMPT_VERSION = 5;
 
 /** Period grains each canonical measure is published at. Curated from the
  * live-ingest measurement in src/registry/defaults.ts (2026-07-03) and
@@ -110,6 +114,7 @@ Rules for the topic:
 
 - Named year → {"kind":"year"}; named quarter → {"kind":"quarter"} (Q1..Q4 as 1..4); named month → {"kind":"month"} (1..12).
 - "van X tot en met Y" per year → {"kind":"year_range"}.
+- Explicit day or month BOUNDARIES ("van 1 januari 2022 tot en met 31 december 2022", "van maart 2020 tot juni 2021") → {"kind":"date_range","from":{"year":..,"month":..,"day":..},"to":{"year":..,"month":..,"day":..},"toInclusive":..}. Copy day, month and year exactly AS WRITTEN (day null when no day is named; month names become 1..12); toInclusive is true for "tot en met"/"t/m", false for bare "tot". NEVER simplify these to year_range and NEVER do date arithmetic yourself — code normalizes the boundaries and picks the granularity. Bare years ("van 2020 tot en met 2024") stay year_range; a single date ("op 1 januari 2025") stays a named year/month, not a range.
 - "sinds {jaar}" / "vanaf {jaar}" with NO end named → {"kind":"since","year":X,"quarter":null,"month":null}. A start month refines it: "sinds maart 2020" → {"kind":"since","year":2020,"quarter":null,"month":3}; a start quarter likewise ("sinds het derde kwartaal van 2023" → quarter 3). You do not know today's date — code resolves the open end to the freshest published period, never you. NEVER emit a year_range with fromYear equal to toYear for these.
 - "de afgelopen/laatste N jaar" (N of 2 or more) → {"kind":"last_n","unit":"year","n":N}; "afgelopen N kwartalen"/"afgelopen N maanden" likewise with unit "quarter"/"month". The singular "het afgelopen jaar"/"de afgelopen maand" stays {"kind":"relative", ...,"offset":-1}.
 - "nu/vandaag/huidige ... vergeleken met N jaar geleden", "hoger/lager dan N jaar geleden" → {"kind":"now_vs_ago","unit":"year","amount":N} ("maanden/kwartalen geleden" likewise). This is a comparison of TWO periods, not a range; code picks the two published periods.
@@ -134,19 +139,22 @@ Rules for the topic:
 
 # Output
 
-Emit exactly the JSON schema you were given: {"version":2,"kind":...,"candidates":[...],"unmatchedMeasureTerm":...,"nearestCanonicalKeys":[...],"note":...}. No prose outside the JSON.
+Emit exactly the JSON schema you were given: {"version":3,"kind":...,"candidates":[...],"unmatchedMeasureTerm":...,"nearestCanonicalKeys":[...],"note":...}. No prose outside the JSON.
 
 # Examples
 
 Vraag: "Hoeveel inwoners had Nederland op 1 januari 2025?"
-{"version":2,"kind":"data_query","candidates":[{"canonicalKey":"population_on_1_january","regions":[{"name":"Nederland","kind":"land"}],"period":{"kind":"year","year":2025},"derivation":"none","confidence":0.97,"reading":"bevolking van Nederland op 1 januari 2025"}],"unmatchedMeasureTerm":null,"nearestCanonicalKeys":[],"note":null}
+{"version":3,"kind":"data_query","candidates":[{"canonicalKey":"population_on_1_january","regions":[{"name":"Nederland","kind":"land"}],"period":{"kind":"year","year":2025},"derivation":"none","confidence":0.97,"reading":"bevolking van Nederland op 1 januari 2025"}],"unmatchedMeasureTerm":null,"nearestCanonicalKeys":[],"note":null}
 
 Vraag: "Hoeveel inwoners had Utrecht in 2024?"
-{"version":2,"kind":"data_query","candidates":[{"canonicalKey":"population_on_1_january","regions":[{"name":"Utrecht","kind":"onbekend"}],"period":{"kind":"year","year":2024},"derivation":"none","confidence":0.85,"reading":"bevolking van Utrecht (gemeente of provincie) in 2024"}],"unmatchedMeasureTerm":null,"nearestCanonicalKeys":[],"note":"Utrecht kan gemeente of provincie zijn; kind 'onbekend' laat code dat uitvragen"}
+{"version":3,"kind":"data_query","candidates":[{"canonicalKey":"population_on_1_january","regions":[{"name":"Utrecht","kind":"onbekend"}],"period":{"kind":"year","year":2024},"derivation":"none","confidence":0.85,"reading":"bevolking van Utrecht (gemeente of provincie) in 2024"}],"unmatchedMeasureTerm":null,"nearestCanonicalKeys":[],"note":"Utrecht kan gemeente of provincie zijn; kind 'onbekend' laat code dat uitvragen"}
 
 Vraag: "Hoe ontwikkelt de werkloosheid zich in Nederland sinds 2015?"
-{"version":2,"kind":"data_query","candidates":[{"canonicalKey":"unemployment_rate_seasonally_adjusted","regions":[{"name":"Nederland","kind":"land"}],"period":{"kind":"since","year":2015,"quarter":null,"month":null},"derivation":"series","confidence":0.95,"reading":"ontwikkeling van het werkloosheidspercentage in Nederland vanaf 2015 tot nu"}],"unmatchedMeasureTerm":null,"nearestCanonicalKeys":[],"note":null}
+{"version":3,"kind":"data_query","candidates":[{"canonicalKey":"unemployment_rate_seasonally_adjusted","regions":[{"name":"Nederland","kind":"land"}],"period":{"kind":"since","year":2015,"quarter":null,"month":null},"derivation":"series","confidence":0.95,"reading":"ontwikkeling van het werkloosheidspercentage in Nederland vanaf 2015 tot nu"}],"unmatchedMeasureTerm":null,"nearestCanonicalKeys":[],"note":null}
+
+Vraag: "Maak een grafiek van de inflatie van 1 januari 2022 tot en met 31 december 2022"
+{"version":3,"kind":"data_query","candidates":[{"canonicalKey":"cpi_yearly_inflation","regions":null,"period":{"kind":"date_range","from":{"year":2022,"month":1,"day":1},"to":{"year":2022,"month":12,"day":31},"toInclusive":true},"derivation":"series","confidence":0.95,"reading":"ontwikkeling van de inflatie over kalenderjaar 2022"}],"unmatchedMeasureTerm":null,"nearestCanonicalKeys":[],"note":null}
 
 Vraag: "Wat wordt de inflatie in 2027?"
-{"version":2,"kind":"forecast_request","candidates":[],"unmatchedMeasureTerm":null,"nearestCanonicalKeys":["cpi_yearly_inflation"],"note":"vraagt om een voorspelling"}`;
+{"version":3,"kind":"forecast_request","candidates":[],"unmatchedMeasureTerm":null,"nearestCanonicalKeys":["cpi_yearly_inflation"],"note":"vraagt om een voorspelling"}`;
 }

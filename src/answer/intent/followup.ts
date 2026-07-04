@@ -81,10 +81,10 @@ The output schema is unchanged.
 
 Voorbeeld (previous_intent: {"topicKey":"population_on_1_january","regions":[{"name":"Amsterdam","kind":"gemeente"}],"period":{"kind":"year","year":2024},"derivation":"none"}):
 Vraag: "En in Rotterdam?"
-{"version":2,"kind":"data_query","candidates":[{"canonicalKey":"population_on_1_january","regions":[{"name":"Rotterdam","kind":"gemeente"}],"period":{"kind":"year","year":2024},"derivation":"none","confidence":0.95,"reading":"bevolking van Rotterdam in 2024 (vervolg op de vorige vraag)"}],"unmatchedMeasureTerm":null,"nearestCanonicalKeys":[],"note":null}
+{"version":3,"kind":"data_query","candidates":[{"canonicalKey":"population_on_1_january","regions":[{"name":"Rotterdam","kind":"gemeente"}],"period":{"kind":"year","year":2024},"derivation":"none","confidence":0.95,"reading":"bevolking van Rotterdam in 2024 (vervolg op de vorige vraag)"}],"unmatchedMeasureTerm":null,"nearestCanonicalKeys":[],"note":null}
 
 Zelfde previous_intent, Vraag: "Hoeveel zonnestroom werd er in 2023 opgewekt?"
-Zelfstandige vraag — normal mode: {"version":2,"kind":"data_query","candidates":[{"canonicalKey":"solar_electricity_production","regions":null,"period":{"kind":"year","year":2023},"derivation":"none","confidence":0.95,"reading":"opgewekte zonnestroom in 2023"}],"unmatchedMeasureTerm":null,"nearestCanonicalKeys":[],"note":null}`;
+Zelfstandige vraag — normal mode: {"version":3,"kind":"data_query","candidates":[{"canonicalKey":"solar_electricity_production","regions":null,"period":{"kind":"year","year":2023},"derivation":"none","confidence":0.95,"reading":"opgewekte zonnestroom in 2023"}],"unmatchedMeasureTerm":null,"nearestCanonicalKeys":[],"note":null}`;
 
 export function buildFollowUpSystemPrompt(): string {
   return buildSystemPrompt() + FOLLOWUP_MODE_SECTION;

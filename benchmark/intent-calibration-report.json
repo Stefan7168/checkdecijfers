@@ -1,11 +1,11 @@
 {
-  "generatedAt": "2026-07-04T03:53:49.309Z",
-  "mode": "live",
+  "generatedAt": "2026-07-04T19:58:27.838Z",
+  "mode": "record",
   "repeat": 3,
   "referenceDate": "2026-08-15",
   "totals": {
-    "pass": 54,
-    "total": 54
+    "pass": 62,
+    "total": 62
   },
   "perCategory": [
     {
@@ -52,11 +52,16 @@
       "category": "open_range",
       "pass": 8,
       "total": 8
+    },
+    {
+      "category": "date_range",
+      "pass": 8,
+      "total": 8
     }
   ],
   "calibration": {
     "correctIntentConfidence": {
-      "count": 34,
+      "count": 40,
       "min": 0.92,
       "median": 0.95
     },
@@ -67,8 +72,8 @@
     "ambiguousAnsweredInsteadOfClarified": []
   },
   "usage": {
-    "inputTokens": 928788,
-    "outputTokens": 17734
+    "inputTokens": 1222854,
+    "outputTokens": 21274
   },
   "unstable": [],
   "failures": [],
@@ -363,6 +368,162 @@
       "usage": {
         "inputTokens": 928788,
         "outputTokens": 17734
+      }
+    },
+    {
+      "generatedAt": "2026-07-04T19:51:20.998Z",
+      "mode": "live",
+      "repeat": 1,
+      "referenceDate": "2026-08-15",
+      "totals": {
+        "pass": 61,
+        "total": 62
+      },
+      "perCategory": [
+        {
+          "category": "benchmark_answerable",
+          "pass": 14,
+          "total": 14
+        },
+        {
+          "category": "variant",
+          "pass": 11,
+          "total": 11
+        },
+        {
+          "category": "benchmark_clarify",
+          "pass": 2,
+          "total": 2
+        },
+        {
+          "category": "benchmark_refusal",
+          "pass": 3,
+          "total": 3
+        },
+        {
+          "category": "benchmark_freshness",
+          "pass": 1,
+          "total": 1
+        },
+        {
+          "category": "ambiguous",
+          "pass": 9,
+          "total": 9
+        },
+        {
+          "category": "refusal",
+          "pass": 5,
+          "total": 5
+        },
+        {
+          "category": "smalltalk",
+          "pass": 1,
+          "total": 1
+        },
+        {
+          "category": "open_range",
+          "pass": 8,
+          "total": 8
+        },
+        {
+          "category": "date_range",
+          "pass": 7,
+          "total": 8
+        }
+      ],
+      "calibration": {
+        "correctIntentConfidence": {
+          "count": 40,
+          "min": 0.92,
+          "median": 0.95
+        },
+        "wrongIntentConfidence": {
+          "count": 0,
+          "values": []
+        },
+        "ambiguousAnsweredInsteadOfClarified": []
+      },
+      "usage": {
+        "inputTokens": 407618,
+        "outputTokens": 7068
+      }
+    },
+    {
+      "generatedAt": "2026-07-04T19:58:27.838Z",
+      "mode": "record",
+      "repeat": 3,
+      "referenceDate": "2026-08-15",
+      "totals": {
+        "pass": 62,
+        "total": 62
+      },
+      "perCategory": [
+        {
+          "category": "benchmark_answerable",
+          "pass": 14,
+          "total": 14
+        },
+        {
+          "category": "variant",
+          "pass": 11,
+          "total": 11
+        },
+        {
+          "category": "benchmark_clarify",
+          "pass": 2,
+          "total": 2
+        },
+        {
+          "category": "benchmark_refusal",
+          "pass": 3,
+          "total": 3
+        },
+        {
+          "category": "benchmark_freshness",
+          "pass": 1,
+          "total": 1
+        },
+        {
+          "category": "ambiguous",
+          "pass": 9,
+          "total": 9
+        },
+        {
+          "category": "refusal",
+          "pass": 5,
+          "total": 5
+        },
+        {
+          "category": "smalltalk",
+          "pass": 1,
+          "total": 1
+        },
+        {
+          "category": "open_range",
+          "pass": 8,
+          "total": 8
+        },
+        {
+          "category": "date_range",
+          "pass": 8,
+          "total": 8
+        }
+      ],
+      "calibration": {
+        "correctIntentConfidence": {
+          "count": 40,
+          "min": 0.92,
+          "median": 0.95
+        },
+        "wrongIntentConfidence": {
+          "count": 0,
+          "values": []
+        },
+        "ambiguousAnsweredInsteadOfClarified": []
+      },
+      "usage": {
+        "inputTokens": 1222854,
+        "outputTokens": 21274
       }
     }
   ]

@@ -1,15 +1,15 @@
 {
-  "generatedAt": "2026-07-04T13:21:07.428Z",
-  "mode": "live",
-  "repeat": 3,
+  "generatedAt": "2026-07-04T20:00:29.050Z",
+  "mode": "record",
+  "repeat": 1,
   "referenceDate": "2026-08-15",
   "totals": {
     "pass": 22,
     "total": 22
   },
   "usage": {
-    "inputTokens": 447831,
-    "outputTokens": 8111
+    "inputTokens": 167757,
+    "outputTokens": 2753
   },
   "unstable": [],
   "failures": [],
@@ -96,6 +96,20 @@
       "usage": {
         "inputTokens": 447831,
         "outputTokens": 8111
+      }
+    },
+    {
+      "generatedAt": "2026-07-04T20:00:29.050Z",
+      "mode": "record",
+      "repeat": 1,
+      "referenceDate": "2026-08-15",
+      "totals": {
+        "pass": 22,
+        "total": 22
+      },
+      "usage": {
+        "inputTokens": 167757,
+        "outputTokens": 2753
       }
     }
   ]
