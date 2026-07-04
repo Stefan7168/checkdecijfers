@@ -125,6 +125,18 @@ Built as approved, supervised as required (owner confirmed the live window in-se
 
 ---
 
+## WP17 — User dashboard: question history + credit balance + per-answer cost  ✅ done 2026-07-04 (session 18)
+
+*Owner-requested in-session (not pre-briefed here): the Phase 1 "question history" roadmap item plus surfacing the already-built balance/buy-button and showing what each question cost. Scope-checked before build: "question history" is an explicit Phase 1 add ([06-roadmap.md](06-roadmap.md)); the passive after-the-fact cost display is distinct from Phase 2's pre-spend estimate→confirm transparency (owner confirmed building it now). Layout owner-specified: two columns — chat + foldable history left, balance/top-up panel right.*
+
+**The data-model piece (migration 010):** `audit_answers` gains a nullable `request_id uuid` — the billing gate's idempotency key, threaded from the wrap site exactly as `source_tag` was in WP13 — closing a real reconstruction gap: the initial debit necessarily precedes the audit row (ADR 020's debit-before-answer), so `credit_transactions.audit_answer_id` is only ever set on compensation rows, and a past question's net cost was previously not reconstructable from either side alone. `getQuestionHistory` (new `src/billing/history.ts`, read-only) joins the ledger twice (debit by request_id, compensation by audit_answer_id). `GatedResponse`'s `'ok'` variant gains `netCost`, computed in `gate.ts` exactly where compensation is decided — never independently of it. First code to join `audit_answers` (user_id text) to `credit_transactions` (user_id uuid); the uuid side is cast, the direction that cannot throw.
+
+**Done-criteria met and measured (hermetic):** 621 backend + 24 web tests green (new: 6 history tests incl. a gate-consistency pin — the REAL `chargeAndRun` against REAL pricing config, asserting history reconstructs the gate's own `netCost` for all three outcome kinds, so a price change can never silently desync charge from display; 2 chat cost-caption tests incl. a one-caption-bound-to-the-assistant-message pin), clean typecheck both sides, hermetic benchmark gate PASS (14/14, 6/6, 0 fabricated), real `next build` green. Adversarial review (4 lenses, 2 skeptics per finding, cheap tier per the delegation rule): 3 findings — 1 double-confirmed (the hardcoded-refund test gap above; fixed with the gate-consistency pin), 1 contested-fixed (caption membership-without-binding, the WP8 lesson recurring), 1 refuted with executed evidence (Testing Library getByText is exact-match, not substring). Live verification: [STATUS.md](STATUS.md) session-18 entry.
+
+**Deliberately out of scope this round:** history pagination (capped at 20 most recent), the "more widgets" right-panel ideas (owner to design later), any change to `src/answer/intent|compose`, `src/query`, `src/chart`, or the ledger's append-only guarantees.
+
+---
+
 ## WP16 (working number) — Demand-driven table onboarding, fully automated  NOT YET BRIEFED — queued after WP13/WP15, Phase 2–3
 
 *Placeholder only, added 2026-07-04 so this decision can't be missed by a session reading only this file. Not next in line — WP13 then WP15 come first — so this is deliberately not fleshed out into a full brief yet (scope/invariants/done-criteria), per the phase-gate discipline: don't over-specify work that isn't next.*

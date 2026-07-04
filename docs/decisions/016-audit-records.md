@@ -52,3 +52,7 @@ If the audit insert fails:
 - Shareable answer pages (Phase 2) → render from `response` + `reconstructionReport` as the publish-time gate; correction handling via open-questions #22.
 - Record volume/measurement needs (docs/06 caching/spend triggers) → promoted columns and the `intent_hash` index are the seam; extending them is additive.
 - Any change to the envelope's inner schemas bumps their own versions (ADR 007); a change to the row layout itself bumps `AUDIT_SCHEMA_VERSION` (records live forever, readers dispatch on it).
+
+## Addendum (2026-07-04, WP17 — user dashboard): `request_id` on the row
+
+`audit_answers` gains a nullable `request_id uuid` (migration 010), the billing gate's idempotency key, threaded from the wrap site exactly as `source_tag` was in WP13 — an input capture, not reconstruction material (like `llm_calls`, it has no independent ground truth inside the record, so the reconstructor deliberately ignores it). Purpose: the dashboard question history joins it back to `credit_transactions` to reconstruct each question's net cost — the initial debit precedes the audit row by design (ADR 020 decision 1), so `credit_transactions.audit_answer_id` alone (compensation rows only) could never answer "what did this question cost." Null on all pre-migration rows and on runner-script rows that never pass through the billing gate; nothing downstream may assume it present.

@@ -64,10 +64,11 @@ async function submit(text: string) {
  * duplicate_request / insufficient_credits, all plain scalar shapes — pass
  * silently. Those three stay fully typed against GatedResponse above; only
  * this one, deliberately, does not.) */
-function fakeAnswer(text: string): GatedResponse {
+function fakeAnswer(text: string, netCost = 20): GatedResponse {
   return {
     kind: 'ok',
     auditId: 1,
+    netCost,
     response: { kind: 'answer', text, chart: null } as unknown as ComposedResponse,
   };
 }
@@ -114,6 +115,29 @@ describe('Chat — GatedResponse branches', () => {
     render(<Chat />);
     await submit('Hoeveel inwoners heeft Nederland?');
     expect(await screen.findByText('Nederland telt 18.044.027 inwoners.')).toBeInTheDocument();
+  });
+
+  it('shows the netCost exactly once, bound to the assistant message — never on the user message', async () => {
+    askQuestion.mockResolvedValue(outcome(fakeAnswer('Nederland telt 18.044.027 inwoners.', 20)));
+    render(<Chat />);
+    await submit('Hoeveel inwoners heeft Nederland?');
+    // Exactly one caption in the whole document (the WP8 lesson: membership
+    // without binding lets a caption render on every message and still pass).
+    const captions = await screen.findAllByText('20 credits');
+    expect(captions).toHaveLength(1);
+    // ...and it sits inside the assistant's (left-aligned) message block, as
+    // a sibling of the answer bubble — not inside the user's block.
+    const assistantBlock = screen.getByText('Nederland telt 18.044.027 inwoners.').closest('.text-left');
+    expect(assistantBlock).not.toBeNull();
+    expect(assistantBlock).toContainElement(captions[0]!);
+  });
+
+  it('shows no cost caption for a non-"ok" gated outcome', async () => {
+    askQuestion.mockResolvedValue(outcome({ kind: 'duplicate_request' }));
+    render(<Chat />);
+    await submit('Wat was de inflatie in 2024?');
+    expect(await screen.findByText(/al verwerkt/)).toBeInTheDocument();
+    expect(screen.queryByText(/credits$/)).toBeNull();
   });
 });
 

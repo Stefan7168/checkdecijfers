@@ -61,7 +61,9 @@ export async function chargeAndRun(
     // failure there already replaces an answer with an internal refusal
     // before this function ever sees it), never an intermediate pipeline
     // signal. This guarantees billing always matches exactly what the user
-    // was shown.
+    // was shown. `netCost` mirrors the compensation actually applied below —
+    // never computed independently of it, so the two can't drift apart.
+    let netCost = required;
     if (result.response.kind === 'clarification') {
       const clarifyPrice = await getActionClassPrice(db, 'clarification');
       const refund = required - clarifyPrice;
@@ -71,12 +73,14 @@ export async function chargeAndRun(
       // only ever refunds, by construction.
       if (refund > 0) {
         await compensate(db, userId, debit.id, refund, result.auditId);
+        netCost = clarifyPrice;
       }
     } else if (result.response.kind !== 'answer') {
       // Every refusal reason: no value delivered, full refund.
       await compensate(db, userId, debit.id, required, result.auditId);
+      netCost = 0;
     }
-    return { kind: 'ok', ...result };
+    return { kind: 'ok', ...result, netCost };
   } catch (error) {
     await compensate(db, userId, debit.id, required, null);
     throw error;

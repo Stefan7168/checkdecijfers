@@ -55,7 +55,7 @@ describe('chargeAndRun — a real answer', () => {
       await db.query('select public.grant_signup_credits($1)', [userId]);
       const run = vi.fn(async () => fakeAudited('answer', 42));
       const result = await chargeAndRun(db, userId, randomUUID(), run);
-      expect(result.kind).toBe('ok');
+      expect(result).toMatchObject({ kind: 'ok', netCost: 20 });
       expect(run).toHaveBeenCalledTimes(1);
       expect(await getBalance(db, userId)).toBe(80); // 100 signup - 20 debit, no compensation
     });
@@ -76,7 +76,7 @@ describe('chargeAndRun — clarifications cost the flat clarification price (ope
       await db.query('select public.grant_signup_credits($1)', [userId]);
       const run = vi.fn(async () => fakeAudited('clarification', null));
       const result = await chargeAndRun(db, userId, randomUUID(), run);
-      expect(result.kind).toBe('ok');
+      expect(result).toMatchObject({ kind: 'ok', netCost: 10 });
       expect(await getBalance(db, userId)).toBe(90); // 100 - 20 debit + 10 compensation = net 10 cost
       const { rows } = await db.query(
         "select delta from credit_transactions where user_id = $1 and reason = 'compensation'",
@@ -96,7 +96,7 @@ describe('chargeAndRun — clarifications cost the flat clarification price (ope
       await db.query('select public.grant_signup_credits($1)', [userId]);
       const run = vi.fn(async () => fakeAudited('clarification', null));
       const result = await chargeAndRun(db, userId, randomUUID(), run);
-      expect(result.kind).toBe('ok');
+      expect(result).toMatchObject({ kind: 'ok', netCost: 10 });
       expect(await getBalance(db, userId)).toBe(90); // 100 - 10, no compensation needed
       const { rows } = await db.query(
         "select count(*) c from credit_transactions where user_id = $1 and reason = 'compensation'",
@@ -111,7 +111,8 @@ describe('chargeAndRun — clarifications cost the flat clarification price (ope
       const userId = randomUUID();
       await db.query('select public.grant_signup_credits($1)', [userId]);
       const run = vi.fn(async () => fakeAudited('refusal', null));
-      await chargeAndRun(db, userId, randomUUID(), run);
+      const result = await chargeAndRun(db, userId, randomUUID(), run);
+      expect(result).toMatchObject({ kind: 'ok', netCost: 0 });
       expect(await getBalance(db, userId)).toBe(100);
     });
   });
