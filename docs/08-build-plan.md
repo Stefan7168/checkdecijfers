@@ -62,9 +62,9 @@ Built as briefed (ADR [018](decisions/018-chat-ui-and-deploy.md) records the loa
 
 ---
 
-## WP13 — Phase 1 access: identity + credit ledger + pricing config + Stripe/iDEAL seams  ⏸ DRAFT — owner approval required before any build
+## WP13 — Phase 1 access: identity + credit ledger + pricing config + Stripe/iDEAL seams  ✅ APPROVED by Stefan 2026-07-05 — ready to build
 
-*Drafted 2026-07-05 (overnight validation session) per the owner's request that the brief exist as a reviewable proposal. **This is the business model — the owner's explicit escalation line. Nothing here is built until Stefan approves this brief** (and the open decisions below are made). Sources: ADR [006](decisions/006-auth-billing-seams.md) (the four seams + the 2026-07-04 updates), [06-roadmap.md](06-roadmap.md) Phase 1, [open-questions #3/#47/#53/#54](open-questions.md), and the validation memo ([validation-results-2026-07-05.md](validation-results-2026-07-05.md)).*
+*Drafted 2026-07-05 (overnight validation session); **approved by the owner the same morning, with all four open decisions made** (recorded below and in [open-questions #3/#4/#44/#54](open-questions.md)). Sources: ADR [006](decisions/006-auth-billing-seams.md) (the four seams + the 2026-07-04 updates), [06-roadmap.md](06-roadmap.md) Phase 1, [open-questions #3/#47/#53/#54](open-questions.md), and the validation memo ([validation-results-2026-07-05.md](validation-results-2026-07-05.md)).*
 
 **One sentence:** put the deployed chat behind accounts with paid credit packs — the [#47](open-questions.md) decision made real — by building ADR 006's reserved seams 1–4, without touching the answer pipeline anywhere except the already-reserved cost-estimation step.
 
@@ -79,13 +79,34 @@ Built as briefed (ADR [018](decisions/018-chat-ui-and-deploy.md) records the loa
 
 **Explicit non-goals of this WP (each has its own slot):** the anonymous-trial page ([#53](open-questions.md) — fast-follow *after* this ships, owner-sequenced); conversation memory ([#57](open-questions.md) — own WP if approved, see the validation memo's headline recommendation); CSV export ([#52](open-questions.md) — Phase 1, separate small WP); table/regional growth ([#33](open-questions.md) first); browse layer (late Phase 1).
 
-**Open decisions the owner must make at approval (not before, not by a session):**
-- Free signup credit count, and one-time vs. monthly top-up ([#3](open-questions.md)).
-- Price classes → euro amounts mapping ([#4](open-questions.md) — config-table values, changeable later by design).
-- KvK/bank-account timeline ([#54](open-questions.md)) — decides whether Stripe goes live in this WP or stays test-mode.
-- Whether conversation memory ([#57](open-questions.md)) is scheduled before or after this WP — the validation pass measured it as the biggest usability gap, but this WP is the abuse-protection prerequisite for the public page ([#47](open-questions.md)).
+**Owner decisions, made at approval (Stefan, 2026-07-05):**
+- Signup grant: **5 free credits, one-time, never refreshed** ([#3](open-questions.md), resolved).
+- Pricing: action classes **1/3/5** credits; launch packs **€5 / 10 · €10 / 25 · €30 / 100** ([#4](open-questions.md), resolved — config-table starting values, changeable by design).
+- KvK: **starts within a few months** ([#54](open-questions.md)) → Stripe stays **test mode** in this WP; going live is a config flip once the Stripe account clears. Launch-timing consequence recorded in #54 (free credits are the only credits until then).
+- Sequencing: **WP13 first, then conversation memory as WP15** ([#57](open-questions.md), resolved).
+- Scope addition: the `audit_answers` **source-tag column** (benchmark / validation / user) rides this WP's migration; existing rows 1–73 back-tagged ([#44](open-questions.md), resolved).
 
 **Done means:** signup → magic link → question → debit → answer with the ledger summing correctly, hermetically tested; Stripe webhook flows proven against Stripe's fixture events (test mode); CI green including the untouched benchmark gate; RUNBOOK updated with the new secrets (Supabase service keys, Stripe keys, Resend) in owner-followable language; an ADR recording the in-session decisions (fail-closed debit rule, exact scope boundary per the roadmap's note).
+
+---
+
+## WP14 — Open-ended period ranges in the intent contract  ✅ APPROVED by Stefan 2026-07-05 — small supervised session, before/alongside WP13
+
+*The real fix behind the validation pass's F1 ([validation-results-2026-07-05.md](validation-results-2026-07-05.md), [open-questions #55](open-questions.md)): "sinds 2015" / "afgelopen vijf jaar" should **answer** with a series, not clarify. Small but touches the WP6 LLM contract, so it runs supervised (live re-record spend), never autonomously.*
+
+**Scope:** extend `PeriodSpec` with an open-ended range (e.g. `since_year`) resolved deterministically against the loaded slice (the WP6 division of labor unchanged: the LLM says *shape*, deterministic code picks *codes*); cover the two-disjoint-periods comparison shape ("nu vergeleken met vijf jaar geleden", V02) in the same revision — one `INTENT_SCHEMA_VERSION` bump, not two; extend the labelled set with the validation pass's phrasings ("sinds X", "afgelopen N jaar", "nu vs N jaar geleden"); re-record the intent fixtures, re-run calibration per ADR [012](decisions/012-intent-parsing-llm-harness.md)'s procedure (~€0.50–1.50 live spend). The 2026-07-05 interim guard (degenerate-range → clarification) stays as the fallback for shapes the schema still can't say.
+
+**Invariants at stake:** R7 (thresholds re-checked after any prompt change), R1/R3 (series answers flow through the existing validated path — no new number sources), fixture honesty (a changed prompt/schema MUST re-record loudly, never silently replay).
+
+**Done means:** the V01/V28/V02 phrasings answer correctly live (spot-check against StatLine values); 45+ labelled cases pass with zero flips over repeats; hermetic CI green on re-recorded fixtures; ADR update recording the schema change.
+
+## WP15 — Conversation memory (structured context) + clarification-suggestion check  ✅ APPROVED by Stefan 2026-07-05 — sequenced directly after WP13
+
+*The validation memo's headline recommendation, approved: [open-questions #57](open-questions.md) (memory) + [#56](open-questions.md) (suggestion resolvability), one WP since both touch the clarification/parse flow. Brief to be firmed up by the implementing session against the code; the load-bearing design constraint is fixed now:*
+
+**Design constraint (fixed at approval):** conversational context is **structured only** — the previous turn's resolved intent (which IS the stored query plan, ADR [016](decisions/016-audit-records.md)) offered to the parser as a merge candidate, generalizing the proven WP9 clarify-reply merge. **Never raw chat history into any prompt** (reopens the R2/prompt-injection surface [#41](open-questions.md) deliberately closed). All numbers still come from the deterministic query layer; the anti-fabrication invariants are untouched by construction.
+
+**Also in scope ([#56](open-questions.md)):** low-confidence echo-clarifications dry-run their suggestion's resolvability before offering it; unservable suggestions fall back to naming what IS available (restores the docs/05 "actually available options" letter).
 
 ---
 
