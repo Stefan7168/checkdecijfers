@@ -11,13 +11,39 @@ describe('statCardData', () => {
     const response = fakeAnswerResponse({ shape: 'single', cells: [fakeCell()] });
     expect(statCardData(response)).toEqual({
       value: '3,3',
-      unit: '%',
+      unitSuffix: '%',
       measureTitle: 'Inflatie (CPI)',
       context: '2024',
       provisional: false,
       tableId: '86141NED',
       syncedDate: '2026-07-03',
     });
+  });
+
+  // WP20 adversarial-review HIGH finding: the card must follow the SHARED
+  // body-text unit conventions (displayValueUnit), pinned here per branch.
+  it("renders a bare 'aantal' count with NO unit word (body convention)", () => {
+    const response = fakeAnswerResponse({
+      shape: 'single',
+      cells: [fakeCell({ value: 18044027, decimals: 0, unit: 'aantal', measureTitle: 'Bevolking' })],
+    });
+    expect(statCardData(response)).toMatchObject({ value: '18.044.027', unitSuffix: '' });
+  });
+
+  it('parenthesizes digit-bearing factor units (the R10 ×1.000 misreading guard)', () => {
+    const response = fakeAnswerResponse({
+      shape: 'single',
+      cells: [fakeCell({ value: 8204, decimals: 0, unit: 'x 1 000' })],
+    });
+    expect(statCardData(response)).toMatchObject({ value: '8.204', unitSuffix: ' (x 1 000)' });
+  });
+
+  it('prefixes × on a bare factor unit, exactly like the body text', () => {
+    const response = fakeAnswerResponse({
+      shape: 'single',
+      cells: [fakeCell({ value: 443, decimals: 0, unit: '1 000 euro' })],
+    });
+    expect(statCardData(response)).toMatchObject({ value: '443', unitSuffix: ' (× 1 000 euro)' });
   });
 
   it('formats grouped thousands the Dutch way and joins region into the context', () => {
@@ -27,6 +53,7 @@ describe('statCardData', () => {
     });
     expect(statCardData(response)).toMatchObject({
       value: '42.100',
+      unitSuffix: ' personen',
       context: 'Rotterdam · 2023',
     });
   });

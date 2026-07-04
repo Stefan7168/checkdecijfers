@@ -6,6 +6,12 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## 2026-07-05 — Session 20 (WP20): a vitest `include` of `**/*.test.tsx` silently skipped every `.test.ts` file — a green run said nothing about tests that were never collected
+
+- **What happened:** WP20 added two pure-logic test files under `web/lib/` as `.test.ts` (no JSX, so the natural extension). `npm run web:test` came back green — but the file count (6) didn't include them: `web/vitest.config.ts` had `include: ["**/*.test.tsx"]` from the WP12 era when every web test WAS a component test. The two new files were never collected, and nothing warned. Caught only because the session compared the reported file count against the files it had just written.
+- **Rule going forward:** after adding a test FILE (not just a test case), verify the runner's reported file count went up by exactly that many — a green suite proves nothing about files the include pattern never matched. The pattern is now `**/*.test.{ts,tsx}`.
+- **Same class, worth naming:** this is the "silent cap" failure mode — tooling that bounds coverage without saying so. The fix is always to compare a count you expect against the count reported, never to trust green alone.
+
 ## 2026-07-05 — Session 20 (WP19): a connected "Supabase" MCP is not necessarily THIS project's Supabase — check `list_projects` before querying anything
 
 - **What happened:** wanting a read-only check that the two new dashboard queries work against the live schema, the session reached for the connected Supabase MCP connector. `list_projects` returned two projects named `glaibaan-*` — a completely different product of the owner's, not checkdecijfers. One inattentive `execute_sql` against the wrong org's database was avoided only because listing came first.
