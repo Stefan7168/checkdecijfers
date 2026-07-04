@@ -177,6 +177,94 @@ describe('period resolution (specs → CBS codes, clock injected)', () => {
   });
 });
 
+describe('multi-period derivations over a single-period selection clarify, never reach the query layer (validation pass 2026-07-04, V01/V28)', () => {
+  // The raw schema cannot express an open-ended range ("sinds 2015") and the
+  // prompt is deliberately date-free, so the model emits fromYear == toYear.
+  // Before this guard the shape travelled to the query layer, whose
+  // invalid_intent refusal surfaces as the catch-all internal text — an
+  // error, not a designed outcome.
+  async function loadedYearBounds(key: string): Promise<{ earliest: number; latest: number }> {
+    const canonical = await db.query('select table_id, measure from canonical_measures where key = $1', [key]);
+    const bounds = await db.query(
+      "select min(period_code) as earliest, max(period_code) as latest from observations where table_id = $1 and measure = $2 and period_grain = 'JJ'",
+      [canonical.rows[0]!.table_id, canonical.rows[0]!.measure],
+    );
+    return {
+      earliest: Number((bounds.rows[0]!.earliest as string).slice(0, 4)),
+      latest: Number((bounds.rows[0]!.latest as string).slice(0, 4)),
+    };
+  }
+
+  it('"sinds 2015" (degenerate year_range, from == to) exits to a period clarification with a loaded-data range option', async () => {
+    const failure = await failed(
+      raw('unemployment_rate_seasonally_adjusted', { kind: 'year_range', fromYear: 2015, toYear: 2015 }, [{ name: 'Nederland', kind: 'land' }]),
+    );
+    expect(failure.axis).toBe('period');
+    expect(failure.reason).toBe('period_missing');
+    // The option must resolve in the loaded data (docs/05): both ends come
+    // from the published JJ periods in the same database.
+    const { earliest, latest } = await loadedYearBounds('unemployment_rate_seasonally_adjusted');
+    expect(latest).toBeGreaterThan(2015);
+    expect(failure.options).toEqual([`${Math.max(2015, earliest)} tot en met ${latest}`]);
+  });
+
+  it('a start year BEFORE the loaded slice is clamped — the offered range must fully resolve (docs/05)', async () => {
+    const failure = await failed(
+      raw('population_on_1_january', { kind: 'year_range', fromYear: 1970, toYear: 1970 }, [{ name: 'Nederland', kind: 'land' }]),
+    );
+    expect(failure.axis).toBe('period');
+    const { earliest, latest } = await loadedYearBounds('population_on_1_january');
+    expect(earliest).toBeGreaterThan(1970);
+    expect(failure.options).toEqual([`${earliest} tot en met ${latest}`]);
+  });
+
+  it('an explicit series hint on a single year clarifies instead of erroring', async () => {
+    const failure = await failed(raw('cpi_yearly_inflation', { kind: 'year', year: 2023 }, null, 'series'));
+    expect(failure.axis).toBe('period');
+    expect(failure.reason).toBe('period_missing');
+    // A yearly single period still yields a resolvable range suggestion.
+    expect(failure.options).toHaveLength(1);
+    expect(failure.options[0]).toMatch(/^2023 tot en met \d{4}$/);
+  });
+
+  it('an explicit difference hint on a single year clarifies instead of erroring', async () => {
+    const failure = await failed(raw('cpi_yearly_inflation', { kind: 'year', year: 2023 }, null, 'difference'));
+    expect(failure.axis).toBe('period');
+    expect(failure.reason).toBe('period_missing');
+  });
+
+  it('series over the latest (single, monthly) period clarifies without inventing a yearly range option', async () => {
+    const failure = await failed(raw('cpi_yearly_inflation', { kind: 'latest' }, null, 'series'));
+    expect(failure.axis).toBe('period');
+    expect(failure.reason).toBe('period_missing');
+    // CPI's finest grain is monthly — no yearly range suggestion exists for a
+    // monthly code, and no other option may be invented.
+    expect(failure.options).toEqual([]);
+  });
+
+  it('a from == to range starting at the freshest published year offers no impossible range option', async () => {
+    const canonical = await db.query(
+      "select table_id, measure from canonical_measures where key = 'population_on_1_january'",
+    );
+    const latest = await db.query(
+      "select max(period_code) as latest from observations where table_id = $1 and measure = $2 and period_grain = 'JJ'",
+      [canonical.rows[0]!.table_id, canonical.rows[0]!.measure],
+    );
+    const year = Number((latest.rows[0]!.latest as string).slice(0, 4));
+    const failure = await failed(
+      raw('population_on_1_january', { kind: 'year_range', fromYear: year, toYear: year }, [{ name: 'Nederland', kind: 'land' }]),
+    );
+    expect(failure.axis).toBe('period');
+    expect(failure.options).toEqual([]);
+  });
+
+  it('a genuine multi-year range with an explicit series hint still resolves (the guard does not over-trigger)', async () => {
+    const result = await resolved(raw('cpi_yearly_inflation', { kind: 'year_range', fromYear: 2020, toYear: 2024 }, null, 'series'));
+    expect(result.intent.period).toEqual({ kind: 'range', from: '2020JJ00', to: '2024JJ00' });
+    expect(result.intent.derivation).toBe('series');
+  });
+});
+
 describe('curated stand-per-1-januari set cross-checks the registry prose', () => {
   it('every key in STAND_START_OF_YEAR_KEYS has JJ period semantics mentioning 1 januari', async () => {
     for (const key of STAND_START_OF_YEAR_KEYS) {

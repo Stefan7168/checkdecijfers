@@ -355,6 +355,42 @@ function normalizeDerivation(candidate: RawCandidate): RawCandidate['derivation'
   return candidate.derivation;
 }
 
+/** Structurally single-period selections: one explicit code, or a range whose
+ * ends coincide. A from<to range can still turn out sparse — completeness
+ * stays the query layer's job; this only names shapes that can NEVER be
+ * multi-period. */
+function isSinglePeriodSelection(period: IntentPeriod): boolean {
+  return period.kind === 'codes' ? period.codes.length < 2 : period.from === period.to;
+}
+
+/** Clarification option for the degenerate open-range shape: "{jaar} tot en
+ * met {laatste gepubliceerde jaar}" — offered only when the selection is a
+ * yearly period and a later published year actually exists. The start year is
+ * clamped to the earliest LOADED year, so the offered range fully resolves in
+ * the loaded data (docs/05 — "sinds 1990" on a slice that starts 2019 must
+ * offer "2019 tot en met …", never a range we cannot serve). Period CODES
+ * only, never a value (principle c). */
+async function openEndedRangeOptions(
+  db: Db,
+  canonical: CanonicalRow,
+  period: IntentPeriod,
+): Promise<string[]> {
+  const code = period.kind === 'codes' ? period.codes[0] : period.from;
+  if (!code || !/^\d{4}JJ00$/.test(code)) return [];
+  const fromYear = Number(code.slice(0, 4));
+  const bounds = await db.query(
+    "select min(period_code) as earliest, max(period_code) as latest from observations where table_id = $1 and measure = $2 and period_grain = 'JJ'",
+    [canonical.tableId, canonical.measure],
+  );
+  const parseYear = (value: unknown): number | null =>
+    typeof value === 'string' && /^\d{4}JJ00$/.test(value) ? Number(value.slice(0, 4)) : null;
+  const earliestYear = parseYear(bounds.rows[0]?.earliest);
+  const latestYear = parseYear(bounds.rows[0]?.latest);
+  if (earliestYear === null || latestYear === null) return [];
+  const effectiveFrom = Math.max(fromYear, earliestYear);
+  return latestYear > effectiveFrom ? [`${effectiveFrom} tot en met ${latestYear}`] : [];
+}
+
 const clamp01 = (n: number): number => (Number.isFinite(n) ? Math.min(1, Math.max(0, n)) : 0);
 
 export type CandidateResolution = RankedCandidate | ResolutionFailure;
@@ -400,6 +436,24 @@ export async function resolveCandidate(
   const reference = parseReferenceDate(referenceDateIso);
   const periodResolution = await resolvePeriod(db, candidate.period, canonical, reference);
   if (!periodResolution.ok) return fail(periodResolution.failure);
+
+  // A multi-period derivation over a structurally single-period selection can
+  // never execute — the query layer rejects it as invalid_intent, which
+  // surfaces as the catch-all internal refusal (validation pass 2026-07-04,
+  // V01/V28 "sinds 2015/2010"). The shape is reachable because the raw schema
+  // cannot express an open-ended range and the prompt is deliberately
+  // date-free, so the model emits fromYear == toYear. Which end year the user
+  // means is genuinely unresolved: exit to a period clarification with an
+  // option that resolves in the loaded data — ask, never guess (R7,
+  // principle c).
+  if ((derivation === 'series' || derivation === 'difference') && isSinglePeriodSelection(periodResolution.period)) {
+    return fail({
+      axis: 'period',
+      reason: 'period_missing',
+      message: `derivation "${derivation}" needs more than one period, but the question resolves to a single one`,
+      options: await openEndedRangeOptions(db, canonical, periodResolution.period),
+    });
+  }
 
   const intent: StructuredIntent = {
     schemaVersion: INTENT_SCHEMA_VERSION,

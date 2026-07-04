@@ -52,7 +52,12 @@ function failureQuestion(failure: ResolutionFailure): string {
         ? `Die cijfers zijn er alleen ${failure.options.join(' en ')} — voor welke periode wil je ze?`
         : 'Voor welke periode wil je dit weten?';
     case 'period_missing':
-      return 'Voor welke periode wil je dit weten (bijvoorbeeld een jaartal of kwartaal)?';
+      // With options (the degenerate open-range shape: "sinds 2015" resolving
+      // to a single year), name the loaded-data range suggestion; without,
+      // the question named no period at all.
+      return failure.options.length > 0
+        ? `Voor welke periode wil je dit weten — bijvoorbeeld ${joinOf(failure.options)}?`
+        : 'Voor welke periode wil je dit weten (bijvoorbeeld een jaartal of kwartaal)?';
     case 'period_invalid':
       return 'Welke periode bedoel je precies?';
     case 'unknown_canonical_key':
