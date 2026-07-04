@@ -2,7 +2,7 @@
   "requestHash": "b0ad2ef1f682c0f9b1eed241645daece",
   "question": "{\"previous_intent\":{\"topicKey\":\"population_on_1_january\",\"regions\":[{\"name\":\"Amsterdam\",\"kind\":\"gemeente\"}],\"period\":{\"kind\":\"year\",\"year\":2024},\"derivation\":\"none\"},\"question\":\"En in Rotterdam in 2022?\"}",
   "label": "f-merge-both-switch",
-  "recordedAt": "2026-07-04T12:04:00.174Z",
+  "recordedAt": "2026-07-04T13:17:52.573Z",
   "request": {
     "model": "claude-haiku-4-5",
     "maxTokens": 2048,
@@ -399,12 +399,12 @@
     }
   },
   "response": {
-    "outputText": "{\"version\":2,\"kind\":\"data_query\",\"candidates\":[{\"canonicalKey\":\"population_on_1_january\",\"regions\":[{\"name\":\"Rotterdam\",\"kind\":\"gemeente\"}],\"period\":{\"kind\":\"year\",\"year\":2022},\"derivation\":\"none\",\"confidence\":0.95,\"reading\":\"bevolking van Rotterdam in 2022 (vervolg op de vorige vraag)\"}],\"unmatchedMeasureTerm\":null,\"nearestCanonicalKeys\":[],\"note\":null}",
+    "outputText": "{\"version\":2,\"kind\":\"data_query\",\"candidates\":[{\"canonicalKey\":\"population_on_1_january\",\"regions\":[{\"name\":\"Rotterdam\",\"kind\":\"gemeente\"}],\"period\":{\"kind\":\"year\",\"year\":2022},\"derivation\":\"none\",\"confidence\":0.95,\"reading\":\"bevolking van Rotterdam in 2022 (vervolg op vorige vraag, maar ander jaar)\"}],\"unmatchedMeasureTerm\":null,\"nearestCanonicalKeys\":[],\"note\":null}",
     "model": "claude-haiku-4-5-20251001",
     "stopReason": "end_turn",
     "usage": {
       "inputTokens": 6869,
-      "outputTokens": 118
+      "outputTokens": 122
     }
   }
 }

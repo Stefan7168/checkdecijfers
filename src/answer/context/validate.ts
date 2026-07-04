@@ -39,12 +39,18 @@ const conversationContextSchema = z.strictObject({
 
 /** Every claimed region name must match a label of the topic table's geo
  * dimension (same normalization the resolver applies) — the allowlist that
- * makes the payload registry-vocabulary-only. */
-async function regionsMatchRegistry(
+ * makes the payload registry-vocabulary-only. Returns the names REWRITTEN to
+ * the matched registry label's own bytes, never the client's: normalization
+ * treats Unicode whitespace-class characters (U+FEFF and friends) as
+ * removable, so a byte-different name can normalize into the allowlist — the
+ * matched canonical label is what may enter a prompt, not the client string
+ * (adversarial-review finding, 2026-07-04: a BOM-decorated "Amsterdam﻿"
+ * survived the membership check verbatim). */
+async function regionsFromRegistry<T extends { name: string; kind: string }>(
   db: Db,
   topicKey: string,
-  regions: { name: string; kind: string }[],
-): Promise<boolean> {
+  regions: T[],
+): Promise<T[] | null> {
   const geo = await db.query(
     `select t.id as table_id, t.expected_dimensions
      from canonical_measures c join cbs_tables t on t.id = c.table_id
@@ -52,23 +58,31 @@ async function regionsMatchRegistry(
     [topicKey],
   );
   const row = geo.rows[0];
-  if (!row) return false;
+  if (!row) return null;
   const dimensions = (
     typeof row.expected_dimensions === 'string'
       ? JSON.parse(row.expected_dimensions)
       : (row.expected_dimensions ?? [])
   ) as { name: string; kind: string }[];
   const geoDimension = dimensions.find((d) => d.kind === 'GeoDimension')?.name;
-  if (!geoDimension) return false;
+  if (!geoDimension) return null;
 
   const labels = await db.query(
     'select label from dimension_labels where table_id = $1 and dimension = $2',
     [row.table_id, geoDimension],
   );
-  const known = new Set(
-    labels.rows.map((r) => normalizeRegionName(baseLabel((r.label as string).replace(/\s+/g, ' ').trim()))),
-  );
-  return regions.every((term) => known.has(normalizeRegionName(term.name)));
+  const canonicalByNormalized = new Map<string, string>();
+  for (const r of labels.rows) {
+    const canonical = baseLabel((r.label as string).replace(/\s+/g, ' ').trim());
+    canonicalByNormalized.set(normalizeRegionName(canonical), canonical);
+  }
+  const rewritten: T[] = [];
+  for (const term of regions) {
+    const canonical = canonicalByNormalized.get(normalizeRegionName(term.name));
+    if (canonical === undefined) return null;
+    rewritten.push({ ...term, name: canonical });
+  }
+  return rewritten;
 }
 
 /** Zod + registry validation of an untrusted context. Returns the validated
@@ -87,8 +101,9 @@ export async function validateConversationContext(
   }
   try {
     if (context.regions !== null) {
-      const ok = await regionsMatchRegistry(db, context.topicKey, context.regions);
-      if (!ok) return null;
+      const rewritten = await regionsFromRegistry(db, context.topicKey, context.regions);
+      if (rewritten === null) return null;
+      return { ...context, regions: rewritten } as ConversationContext;
     }
   } catch {
     // A failed registry lookup must never break the question itself.

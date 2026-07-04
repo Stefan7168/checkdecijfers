@@ -160,6 +160,26 @@ describe('validateConversationContext (the client trust boundary — fail closed
     ).toBeNull();
   });
 
+  it('rewrites region names to the matched registry label bytes — normalization-equivalent client bytes never survive', async () => {
+    // Adversarial-review finding (2026-07-04, executed): "Amsterdam" + U+FEFF
+    // passed the membership check verbatim and its BOM bytes reached the
+    // follow-up payload. The name that leaves validation must be the
+    // registry's own label, byte-for-byte — for every normalization trick
+    // (invisible whitespace-class characters, case, diacritics).
+    for (const decorated of ['Amsterdam﻿', 'aMSTERDAM', ' Amsterdam ', 'Amster dam'.replace(' ', ' ')]) {
+      const validated = await validateConversationContext(db, {
+        ...built,
+        regions: [{ name: decorated, kind: 'gemeente' }],
+      });
+      if (validated === null) continue; // rejected outright is also safe
+      expect(validated.regions![0]!.name).toBe('Amsterdam');
+      expect(JSON.stringify(validated)).not.toContain('﻿');
+    }
+    // The canonical case must positively validate AND stay byte-identical.
+    const clean = await validateConversationContext(db, built);
+    expect(clean?.regions![0]!.name).toBe('Amsterdam');
+  });
+
   it('rejects shapes the builder can never produce', async () => {
     // kind 'onbekend' (builder kinds come from CBS code prefixes)
     expect(

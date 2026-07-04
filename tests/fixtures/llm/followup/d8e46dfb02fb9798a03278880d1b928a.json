@@ -2,7 +2,7 @@
   "requestHash": "d8e46dfb02fb9798a03278880d1b928a",
   "question": "{\"previous_intent\":{\"topicKey\":\"cpi_yearly_inflation\",\"regions\":null,\"period\":{\"kind\":\"year\",\"year\":2024},\"derivation\":\"none\"},\"question\":\"En hoe ontwikkelde die zich sinds 2021?\"}",
   "label": "f-merge-since-series",
-  "recordedAt": "2026-07-04T12:04:08.695Z",
+  "recordedAt": "2026-07-04T13:18:01.694Z",
   "request": {
     "model": "claude-haiku-4-5",
     "maxTokens": 2048,

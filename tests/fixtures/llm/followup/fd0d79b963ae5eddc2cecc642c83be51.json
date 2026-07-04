@@ -2,7 +2,7 @@
   "requestHash": "fd0d79b963ae5eddc2cecc642c83be51",
   "question": "{\"previous_intent\":{\"topicKey\":\"population_on_1_january\",\"regions\":[{\"name\":\"Amsterdam\",\"kind\":\"gemeente\"}],\"period\":{\"kind\":\"year\",\"year\":2024},\"derivation\":\"none\"},\"question\":\"En de werkloosheid?\"}",
   "label": "f-merge-topic-switch-regional-frame",
-  "recordedAt": "2026-07-04T12:04:02.204Z",
+  "recordedAt": "2026-07-04T13:17:56.165Z",
   "request": {
     "model": "claude-haiku-4-5",
     "maxTokens": 2048,
@@ -399,12 +399,12 @@
     }
   },
   "response": {
-    "outputText": "{\"version\":2,\"kind\":\"data_query\",\"candidates\":[{\"canonicalKey\":\"unemployment_rate_seasonally_adjusted\",\"regions\":[{\"name\":\"Amsterdam\",\"kind\":\"gemeente\"}],\"period\":{\"kind\":\"year\",\"year\":2024},\"derivation\":\"none\",\"confidence\":0.65,\"reading\":\"werkloosheidspercentage in Amsterdam in 2024 (vervolg op vorige vraag)\"}],\"unmatchedMeasureTerm\":null,\"nearestCanonicalKeys\":[],\"note\":\"unemployment_rate_seasonally_adjusted is alleen landelijk beschikbaar; Amsterdam is een erfde regio uit de vorige vraag. Code zal dit eerlijk beantwoorden als een limiet.\"}",
+    "outputText": "{\"version\":2,\"kind\":\"data_query\",\"candidates\":[{\"canonicalKey\":\"unemployment_rate_seasonally_adjusted\",\"regions\":[{\"name\":\"Amsterdam\",\"kind\":\"gemeente\"}],\"period\":{\"kind\":\"year\",\"year\":2024},\"derivation\":\"none\",\"confidence\":0.65,\"reading\":\"werkloosheidspercentage in Amsterdam in 2024 (vervolg op vorige vraag over bevolking)\"}],\"unmatchedMeasureTerm\":null,\"nearestCanonicalKeys\":[],\"note\":\"unemployment_rate_seasonally_adjusted is alleen beschikbaar op landelijk niveau, niet per gemeente; confidence verlaagd omdat Amsterdam als regio niet past bij deze maatstaf\"}",
     "model": "claude-haiku-4-5-20251001",
     "stopReason": "end_turn",
     "usage": {
       "inputTokens": 6868,
-      "outputTokens": 167
+      "outputTokens": 166
     }
   }
 }

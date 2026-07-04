@@ -135,9 +135,19 @@ export async function replyToClarification(
   if (userId === null) {
     return { gated: { kind: 'unauthenticated' }, context: null };
   }
+  // WP15: a pending from a follow-up clarification embeds the conversational
+  // referent — client-held, so it gets the SAME registry validation as a
+  // fresh question's context before it can reach the clarify prompt. A
+  // forged/garbled one drops to a contextless reply merge (fail closed).
+  const { conversationContext: rawEmbedded, ...pendingRest } = pending;
+  const embeddedContext = await validateConversationContext(getDb(), rawEmbedded ?? null);
+  const safePending: PendingClarification = {
+    ...pendingRest,
+    ...(embeddedContext ? { conversationContext: embeddedContext } : {}),
+  };
   try {
     const gated = await chargeAndRun(getDb(), userId, requestId, () =>
-      answerClarificationReplyAudited(getDb(), pending, reply, {
+      answerClarificationReplyAudited(getDb(), safePending, reply, {
         referenceDate: referenceDate(),
         userId,
         sourceTag: 'user',

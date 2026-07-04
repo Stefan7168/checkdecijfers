@@ -25,6 +25,7 @@ export {
   buildClarifyUserPayload,
   CLARIFY_PROMPT_VERSION,
   CLARIFY_MODE_SECTION,
+  CLARIFY_CONTEXT_ADDENDUM,
 } from './clarify.ts';
 export type { ClarifyReplyOptions } from './clarify.ts';
 export {

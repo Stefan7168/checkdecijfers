@@ -2,7 +2,7 @@
   "requestHash": "63c26c5cce7cda4c1cc2f5d8a1e0d691",
   "question": "{\"previous_intent\":{\"topicKey\":\"cpi_yearly_inflation\",\"regions\":null,\"period\":{\"kind\":\"year_range\",\"fromYear\":2020,\"toYear\":2024},\"derivation\":\"series\"},\"question\":\"Uit welke CBS-tabel komt deze grafiek precies?\"}",
   "label": "f-meta-v35-source-table",
-  "recordedAt": "2026-07-04T12:04:23.659Z",
+  "recordedAt": "2026-07-04T13:18:23.790Z",
   "request": {
     "model": "claude-haiku-4-5",
     "maxTokens": 2048,

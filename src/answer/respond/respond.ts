@@ -65,7 +65,14 @@ export async function respondToIntent(
   db: Db,
   question: string,
   parse: Extract<ParseOutcome, { kind: 'intent' }>,
-  options: { answerClient: LlmClient; referenceDate: string; finalRound?: boolean },
+  options: {
+    answerClient: LlmClient;
+    referenceDate: string;
+    finalRound?: boolean;
+    /** WP15: the follow-up referent, threaded into a query-level
+     * needs_clarification's pending state so the reply merge keeps it. */
+    conversationContext?: ConversationContext | null;
+  },
 ): Promise<ComposedResponse> {
   const outcome: QueryOutcome = await runQuery(db, parse.intent);
 
@@ -89,6 +96,7 @@ export async function respondToIntent(
         questionNl: built.questionNl,
         options: built.options,
         parse,
+        conversationContext: options.conversationContext ?? null,
       });
     }
     return toRefusalResponse({ question, built: built.refusal, parse, queryRefusal: outcome });
@@ -151,13 +159,21 @@ async function respondToParseOutcome(
   db: Db,
   question: string,
   parse: ParseOutcome,
-  options: { answerClient: LlmClient; referenceDate: string },
+  options: {
+    answerClient: LlmClient;
+    referenceDate: string;
+    conversationContext?: ConversationContext | null;
+  },
 ): Promise<ComposedResponse> {
   if (parse.kind === 'refusal') {
     const built = await buildParseRefusal(db, parse);
     return toRefusalResponse({ question, built, parse, queryRefusal: null });
   }
   if (parse.kind === 'clarification') {
+    // WP15 (review finding 2026-07-04): a clarification of a FOLLOW-UP
+    // question must carry the referent into the pending state — the reply
+    // merge otherwise sees only the bare elliptical text ("En in
+    // Nederland?") and the round dead-ends in still_ambiguous.
     return toClarificationResponse({
       question,
       referenceDate: options.referenceDate,
@@ -165,6 +181,7 @@ async function respondToParseOutcome(
       questionNl: parse.question_nl,
       options: parse.options,
       parse,
+      conversationContext: options.conversationContext ?? null,
     });
   }
   return respondToIntent(db, question, parse, options);

@@ -2,7 +2,7 @@
   "requestHash": "ca067829911df41c3a94cb3e625a7f0c",
   "question": "{\"previous_intent\":{\"topicKey\":\"cpi_yearly_inflation\",\"regions\":null,\"period\":{\"kind\":\"year\",\"year\":2024},\"derivation\":\"none\"},\"question\":\"En de huizenprijzen?\"}",
   "label": "f-merge-topic-switch-national",
-  "recordedAt": "2026-07-04T12:04:07.091Z",
+  "recordedAt": "2026-07-04T13:18:00.135Z",
   "request": {
     "model": "claude-haiku-4-5",
     "maxTokens": 2048,
