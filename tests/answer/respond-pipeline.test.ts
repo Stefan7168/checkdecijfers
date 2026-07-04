@@ -13,6 +13,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { ReplayLlmClient } from '../../src/answer/llm/client.ts';
+import type { LlmClient } from '../../src/answer/llm/client.ts';
 import {
   respondToClarificationReply,
   respondToQuestion,
@@ -446,6 +447,66 @@ describe('staleness, clock-injected at the pipeline level', () => {
     if (lastCell.provisional) {
       expect(response.text).toMatch(/voorlopig cijfer/);
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The degenerate open-range shape (validation pass 2026-07-04, V01/V28): live,
+// the parser emits year_range fromYear == toYear for "sinds {jaar}" — the raw
+// schema cannot express an open end and the prompt is deliberately date-free,
+// so the model cannot know the current year. The envelope must be a period
+// CLARIFICATION with a loaded-data range option; before the resolver guard it
+// was the catch-all internal refusal (query-layer invalid_intent). The stub
+// client replays the exact RawParse observed live (audit row 36).
+// ---------------------------------------------------------------------------
+
+describe('open-range questions ("sinds 2015") clarify at the envelope level', () => {
+  function stubIntentClient(rawParse: unknown): LlmClient {
+    return {
+      complete: async () => ({
+        outputText: JSON.stringify(rawParse),
+        model: 'stub-model',
+        stopReason: 'end_turn',
+        usage: { inputTokens: 0, outputTokens: 0 },
+      }),
+    };
+  }
+
+  it("V01's exact live parse becomes a period clarification, not an internal refusal", async () => {
+    const observedLiveParse = {
+      version: 1,
+      kind: 'data_query',
+      candidates: [
+        {
+          canonicalKey: 'unemployment_rate_seasonally_adjusted',
+          regions: [{ name: 'Nederland', kind: 'land' }],
+          period: { kind: 'year_range', fromYear: 2015, toYear: 2015 },
+          derivation: 'series',
+          confidence: 0.92,
+          reading: 'ontwikkeling van werkloosheidspercentage in Nederland over de periode vanaf 2015',
+        },
+      ],
+      unmatchedMeasureTerm: null,
+      nearestCanonicalKeys: [],
+      note: null,
+    };
+    const response = await respondToQuestion(
+      db,
+      'Hoe ontwikkelt de werkloosheid zich in Nederland sinds 2015?',
+      {
+        intentClient: stubIntentClient(observedLiveParse),
+        answerClient: new ReplayLlmClient(ANSWER_FIXTURES),
+        referenceDate: REFERENCE_DATE,
+      },
+    );
+    expect(response.kind).toBe('clarification');
+    if (response.kind !== 'clarification') throw new Error('unreachable');
+    expect(response.axes).toEqual(['period']);
+    expect(response.text).toContain('Voor welke periode wil je dit weten — bijvoorbeeld 2015 tot en met ');
+    expect(response.options).toHaveLength(1);
+    expect(response.options[0]).toMatch(/^2015 tot en met \d{4}$/);
+    // Belt: the clarification text carries no unbacked numbers.
+    assertNoUnbackedNumbers(response, await whitelistForResponse(response));
   });
 });
 

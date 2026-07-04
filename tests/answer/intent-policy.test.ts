@@ -179,6 +179,15 @@ describe('R7 threshold policy (docs/05 R7, ADR 012)', () => {
     }
   });
 
+  it('period_missing WITH a range option names it in the question (open-range shape, validation pass 2026-07-04)', () => {
+    const outcome = decide(context(), [failure('period_missing', 0.9, ['2015 tot en met 2025'])], config);
+    expect(outcome.kind).toBe('clarification');
+    if (outcome.kind !== 'clarification') throw new Error('unreachable');
+    expect(outcome.question_nl).toBe('Voor welke periode wil je dit weten — bijvoorbeeld 2015 tot en met 2025?');
+    expect(outcome.options).toEqual(['2015 tot en met 2025']);
+    expect(outcome.axes).toEqual(['period']);
+  });
+
   it('unmatched measure term clarifies on ALL axes at once with loaded-topic options (B15 shape)', () => {
     const outcome = buildUnmatchedClarification(
       context({ unmatchedMeasureTerm: 'bijstand', nearestCanonicalKeys: ['unemployment_rate_seasonally_adjusted'] }),
