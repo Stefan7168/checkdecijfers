@@ -25,7 +25,16 @@ import { CANONICAL_MEASURES } from '../../registry/defaults.ts';
  * v5 (2026-07-05, #77 fix): explicit closed date ranges — date_range rule +
  * example added, raw-parse version 3 (ADR 023; "1 januari 2022 tot en met
  * 31 december 2022" previously fell into {"kind":"none"} and dead-ended in a
- * clarification loop). */
+ * clarification loop).
+ *
+ * KNOWN WORDING WART (2026-07-05, review + owner decision — ADR 023 alt 4):
+ * the v5 rule says toInclusive is "false for bare tot", but the model applies
+ * that only to DAY-precise boundaries ("tot 1 januari 2023" → exclusive ✓)
+ * and reads month-only bare "tot" ("van maart tot september") as everyday-
+ * INCLUSIVE (0.95, stable ×3) — which the owner accepted as the product
+ * behavior (pinned live by labelled case dr-kale-tot-maand-inclusief). Fix
+ * the rule text with the NEXT prompt-changing WP: prompt bytes are fixture-
+ * hashed, so a wording-only fix would force a full re-record by itself. */
 export const PROMPT_VERSION = 5;
 
 /** Period grains each canonical measure is published at. Curated from the

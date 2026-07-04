@@ -665,7 +665,7 @@
    "expect": {
     "outcome": "clarification"
    },
-   "note": "Label corrected after the first v5 probe run (2026-07-05): the model parses the date_range correctly but at confidence 0.85 — the mild-doubt band — because 'van 1 t/m 31 januari' is a genuinely odd way to ask about one month; the R7 rule-3 echo clarification ('Bedoel je ... over de periode ...?') is the calibrated policy working as designed, so the label follows the policy (WP14 precedent), not vice versa. Resolution of a single-month date_range at answerable confidence stays pinned hermetically in tests/answer/intent-resolve.test.ts."
+   "note": "Label corrected after the first v5 probe run (2026-07-05): the model parses the date_range correctly but at confidence 0.85 — the mild-doubt band — because 'van 1 t/m 31 januari' is a genuinely odd way to ask about one month; the R7 rule-3 echo clarification ('Bedoel je ... over de periode ...?') is the calibrated policy working as designed, so the label follows the policy, not vice versa — the same label-follows-policy move as ADR 019 §7's reviewed label correction in WP14 (c-b15-option-only's axis pin). Resolution of a single-month date_range at answerable confidence stays pinned hermetically in tests/answer/intent-resolve.test.ts."
   },
   {
    "id": "dr-kale-jaren-blijven-jaarreeks",
@@ -687,6 +687,28 @@
      "derivation": "series"
     }
    }
+  },
+  {
+   "id": "dr-kale-tot-maand-inclusief",
+   "category": "date_range",
+   "question": "Hoe ontwikkelde de inflatie zich van maart 2022 tot september 2022?",
+   "expect": {
+    "outcome": "intent",
+    "intent": {
+     "schemaVersion": 1,
+     "target": {
+      "kind": "canonical",
+      "key": "cpi_yearly_inflation"
+     },
+     "period": {
+      "kind": "range",
+      "from": "2022MM03",
+      "to": "2022MM09"
+     },
+     "derivation": "series"
+    }
+   },
+   "note": "Pins the month-only bare-'tot' reading end-to-end against the live model. The review (2026-07-05) demanded this shape be live-scored; the model read it INCLUSIVE (t/m september) at 0.95, stable x3, while correctly keeping day-precise 'tot 1 januari 2023' exclusive — OWNER DECISION (Stefan, 2026-07-05, in-session): accept the everyday-inclusive reading for month-only bare 'tot'. ADR 023 alternative 4 records the reversal; the prompt rule's wording fix rides the next prompt-changing WP (any registry change re-records everything anyway). If this case starts flipping toward exclusive, that ADR trigger has fired."
   }
  ]
 }

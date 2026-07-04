@@ -781,19 +781,43 @@ export async function resolveCandidate(
   const regionResolution = await resolveRegions(db, candidate, canonical, geo);
   if (!regionResolution.ok) return fail(regionResolution.failure);
 
-  const derivation = normalizeDerivation(candidate);
-  if (derivation === 'max' && regionResolution.codes.length < 2) {
-    return fail({
+  const maxNeedsRegions = (): ResolutionFailure =>
+    fail({
       axis: 'region',
       reason: 'region_unknown',
       message: 'a "meeste/hoogste" comparison needs the regions to compare named in the question',
       options: [],
     });
-  }
+
+  let derivation = normalizeDerivation(candidate);
+  if (derivation === 'max' && regionResolution.codes.length < 2) return maxNeedsRegions();
 
   const reference = parseReferenceDate(referenceDateIso);
   const periodResolution = await resolvePeriod(db, candidate.period, canonical, reference);
   if (!periodResolution.ok) return fail(periodResolution.failure);
+
+  // A date_range spanning several months was force-normalized to 'series' —
+  // but on a measure whose finest exact grain is coarser, the whole span can
+  // collapse to ONE period code ("1 januari t/m 31 december 2022" on a
+  // yearly-only measure = the single 2022 cell). The forcing was moot at that
+  // grain: fall back to the model's own hint so a plain lookup ANSWERS
+  // instead of dead-ending in the degenerate-range guard (review finding,
+  // 2026-07-05, executed live on solar_electricity_production). An explicit
+  // series/difference hint ("maak een grafiek") keeps its guard exit — one
+  // point is still not a series.
+  if (
+    candidate.period.kind === 'date_range' &&
+    derivation !== candidate.derivation &&
+    isSinglePeriodSelection(periodResolution.period)
+  ) {
+    derivation = candidate.derivation;
+    // The max guard above saw the FORCED value and let a demoted 'max' slip
+    // through — re-run it on the final derivation so a "meeste/hoogste"
+    // question without its comparison regions keeps the specific resolver
+    // clarification instead of the query layer's generic invalid_intent
+    // (executing-skeptic catch, 2026-07-05, proven with a before/after probe).
+    if (derivation === 'max' && regionResolution.codes.length < 2) return maxNeedsRegions();
+  }
 
   // A multi-period derivation over a structurally single-period selection can
   // never execute — the query layer rejects it as invalid_intent, which
