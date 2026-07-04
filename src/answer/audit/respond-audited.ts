@@ -20,12 +20,17 @@ import {
   type RespondOptions,
 } from '../respond/respond.ts';
 import type { ComposedResponse, PendingClarification, RefusalResponse } from '../respond/types.ts';
+import type { AuditSourceTag } from './types.ts';
 import { LlmCallTracker } from './track.ts';
 import { buildAuditRow, insertAuditRecord, type AuditContext } from './write.ts';
 
 export interface AuditedRespondOptions extends RespondOptions {
   /** Identity seam (ADR 006); omitted/null = anonymous. */
   userId?: string | null;
+  /** WP13, open-questions #44: omitted = 'user' (the real chat's own path).
+   * The benchmark/validation runner scripts pass 'benchmark'/'validation'
+   * explicitly. */
+  sourceTag?: AuditSourceTag;
 }
 
 export interface AuditedResponse {
@@ -51,6 +56,7 @@ interface WrapContext {
   question: string;
   referenceDate: string;
   userId: string | null;
+  sourceTag: AuditSourceTag | undefined;
   replyText: string | null;
   pendingClarification: PendingClarification | null;
   tracker: LlmCallTracker;
@@ -61,6 +67,7 @@ function auditContext(wrap: WrapContext): AuditContext {
   return {
     referenceDate: wrap.referenceDate,
     userId: wrap.userId,
+    sourceTag: wrap.sourceTag,
     replyText: wrap.replyText,
     pendingClarification: wrap.pendingClarification,
     llmCalls: wrap.tracker.calls,
@@ -104,6 +111,7 @@ export async function answerQuestionAudited(
     question,
     referenceDate: options.referenceDate,
     userId: options.userId ?? null,
+    sourceTag: options.sourceTag,
     replyText: null,
     pendingClarification: null,
     tracker,
@@ -131,6 +139,7 @@ export async function answerClarificationReplyAudited(
     // reconstructable from the row.
     referenceDate: options.referenceDate,
     userId: options.userId ?? null,
+    sourceTag: options.sourceTag,
     replyText: reply,
     pendingClarification: pending,
     tracker,

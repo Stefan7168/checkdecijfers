@@ -177,6 +177,9 @@ export async function runBenchmark(options: RunBenchmarkOptions = {}): Promise<v
     intentClient: clients.intent,
     answerClient: clients.answer,
     referenceDate,
+    // WP13, open-questions #44: every row this runner writes is a scripted
+    // benchmark run, never real user traffic.
+    sourceTag: 'benchmark' as const,
   };
 
   const { db, close } = await buildDb(live);
@@ -218,6 +221,7 @@ export async function runBenchmark(options: RunBenchmarkOptions = {}): Promise<v
           intentClient: clients.clarify,
           answerClient: clients.answer,
           referenceDate: clarifySet.referenceDate,
+          sourceTag: 'benchmark',
         });
         if (reply.auditId === null) throw new Error(`${task.id} reply: audit write failed`);
         run.replyAuditId = reply.auditId;

@@ -142,6 +142,9 @@ async function main(): Promise<void> {
         referenceDate: refDate,
         intentClient: client,
         answerClient: client,
+        // WP13, open-questions #44: this runner IS the owner's manual
+        // validation pass, never a scripted benchmark or real user traffic.
+        sourceTag: 'validation',
       });
       // Wall-clock around the WHOLE audited call, so it INCLUDES the audit-
       // row insert. The audit row's own latency_ms (R8) is measured inside,

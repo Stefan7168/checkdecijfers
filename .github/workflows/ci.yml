@@ -17,6 +17,14 @@
 #      (docs/03 gate: >=12/14 answerable, 6/6 refusal, zero fabricated
 #      numbers) and fails the push below the gate. In CI a missing dump is a
 #      failure — the gate may not silently degrade to structure-only.
+#   10. billing tests (WP13, ADR 006 seams 2-4 / ADR 020): the append-only
+#       credit ledger (structural trigger + reason/delta-sign CHECK,
+#       signup-grant idempotency), the pricing-config idempotent apply, the
+#       billing gate (debit-before-answer, compensate on any non-answer
+#       outcome or thrown error, duplicate-request dedup), and Stripe webhook
+#       signature verification + idempotency — signed with Stripe's own
+#       generateTestHeaderString against hand-authored fixtures, no network,
+#       no live Stripe account.
 # State per work package: the ingestion suite has real teeth since WP2 (wire-level
 # corruption fixtures against an embedded Postgres, ADR 009); the registry suite
 # (WP4) checks default_coordinates/period_semantics/canonical_measures apply
@@ -92,6 +100,8 @@ jobs:
         run: npm run test:chart
       - name: Audit record tests (R8)
         run: npm run test:audit
+      - name: Billing tests (credit ledger, pricing config, Stripe webhook — WP13)
+        run: npm run test:billing
       - name: Benchmark run (hermetic, audited pipeline)
         run: npm run benchmark:run
       - name: Benchmark scorer (audit records vs frozen key)

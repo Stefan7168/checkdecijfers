@@ -22,6 +22,7 @@
     "test:answer": "vitest run tests/answer",
     "test:chart": "vitest run tests/chart",
     "test:audit": "vitest run tests/audit",
+    "test:billing": "vitest run tests/billing",
     "benchmark:run": "node scripts/run-benchmark.ts",
     "benchmark:score": "node scripts/score-benchmark.mjs",
     "benchmark:run:live": "node --env-file=.env scripts/run-benchmark.ts --live",
@@ -37,6 +38,7 @@
     "db:migrate": "node --env-file=.env src/db/migrate.ts",
     "ingest": "node --env-file=.env src/ingestion/cli.ts",
     "registry:apply": "node --env-file=.env src/registry/apply.ts",
+    "pricing:apply": "node --env-file=.env src/billing/pricing-apply.ts",
     "fixtures:capture": "node scripts/capture-cbs-fixtures.ts"
   },
   "devDependencies": {
@@ -49,6 +51,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.110.0",
     "pg": "^8.22.0",
+    "stripe": "^22.3.0",
     "zod": "^4.4.3"
   }
 }

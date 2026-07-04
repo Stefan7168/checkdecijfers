@@ -10,7 +10,7 @@ import { PROMPT_VERSION } from '../intent/prompt.ts';
 import { CLARIFY_PROMPT_VERSION } from '../intent/clarify.ts';
 import { COMPOSE_PROMPT_VERSION } from '../compose/prompt.ts';
 import type { ComposedResponse, PendingClarification } from '../respond/types.ts';
-import type { AuditRecord, LlmCallRecord, PromptVersions, TableRef } from './types.ts';
+import type { AuditRecord, AuditSourceTag, LlmCallRecord, PromptVersions, TableRef } from './types.ts';
 import { AUDIT_SCHEMA_VERSION } from './types.ts';
 
 /** The three prompt-version constants in force (ADR 015 wrap-site
@@ -48,6 +48,10 @@ export function resolvedIntent(response: ComposedResponse): StructuredIntent | n
 export interface AuditContext {
   referenceDate: string;
   userId: string | null;
+  /** WP13, open-questions #44: defaults to 'user' (the real chat's own path)
+   * when the wrap site doesn't say otherwise -- runner scripts pass
+   * 'benchmark'/'validation' explicitly. */
+  sourceTag?: AuditSourceTag;
   /** Reply-round context; both null on first-turn rows. */
   replyText: string | null;
   pendingClarification: PendingClarification | null;
@@ -80,6 +84,7 @@ export function buildAuditRow(response: ComposedResponse, context: AuditContext)
   return {
     schemaVersion: AUDIT_SCHEMA_VERSION,
     userId: context.userId,
+    sourceTag: context.sourceTag ?? 'user',
     kind: response.kind,
     question: response.question,
     referenceDate: context.referenceDate,
@@ -109,23 +114,24 @@ export function buildAuditRow(response: ComposedResponse, context: AuditContext)
 export async function insertAuditRecord(db: Db, row: AuditRow): Promise<number> {
   const { rows } = await db.query(
     `insert into audit_answers (
-       schema_version, user_id, kind, question, reference_date,
+       schema_version, user_id, source_tag, kind, question, reference_date,
        reply_text, pending_clarification, response, final_text,
        intent, intent_hash, refusal_reason,
        result_ids, table_ids, tables, answer_source, chart_emitted,
        prompt_versions, llm_calls, input_tokens, output_tokens, latency_ms
      ) values (
-       $1, $2, $3, $4, $5,
-       $6, $7::jsonb, $8::jsonb, $9,
-       $10::jsonb, $11, $12,
-       array(select jsonb_array_elements_text($13::jsonb)),
+       $1, $2, $3, $4, $5, $6,
+       $7, $8::jsonb, $9::jsonb, $10,
+       $11::jsonb, $12, $13,
        array(select jsonb_array_elements_text($14::jsonb)),
-       $15::jsonb, $16, $17,
-       $18::jsonb, $19::jsonb, $20, $21, $22
+       array(select jsonb_array_elements_text($15::jsonb)),
+       $16::jsonb, $17, $18,
+       $19::jsonb, $20::jsonb, $21, $22, $23
      ) returning id`,
     [
       row.schemaVersion,
       row.userId,
+      row.sourceTag,
       row.kind,
       row.question,
       row.referenceDate,
