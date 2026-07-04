@@ -37,6 +37,9 @@ interface RawRow {
   input_tokens: number;
   output_tokens: number;
   latency_ms: number;
+  /** Nullable column added by migration 010 (dashboard question history) —
+   * to_jsonb serializes it as null on all pre-existing rows. */
+  request_id: string | null;
 }
 
 function toRecord(raw: RawRow): AuditRecord {
@@ -46,6 +49,7 @@ function toRecord(raw: RawRow): AuditRecord {
     createdAt: raw.created_at,
     userId: raw.user_id,
     sourceTag: raw.source_tag,
+    requestId: raw.request_id ?? null,
     kind: raw.kind,
     question: raw.question,
     referenceDate: raw.reference_date,

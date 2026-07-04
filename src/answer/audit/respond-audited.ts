@@ -32,6 +32,10 @@ export interface AuditedRespondOptions extends RespondOptions {
    * The benchmark/validation runner scripts pass 'benchmark'/'validation'
    * explicitly. */
   sourceTag?: AuditSourceTag;
+  /** The billing gate's idempotency key for this turn (src/billing/gate.ts) —
+   * the dashboard question-history join key back to credit_transactions.
+   * Omitted on runner scripts that don't go through the gate. */
+  requestId?: string | null;
   // conversationContext (WP15, ADR 021) is inherited from RespondOptions and
   // recorded on the audit row below — an input capture, like replyText.
 }
@@ -60,6 +64,7 @@ interface WrapContext {
   referenceDate: string;
   userId: string | null;
   sourceTag: AuditSourceTag | undefined;
+  requestId: string | null | undefined;
   replyText: string | null;
   pendingClarification: PendingClarification | null;
   conversationContext: ConversationContext | null;
@@ -72,6 +77,7 @@ function auditContext(wrap: WrapContext): AuditContext {
     referenceDate: wrap.referenceDate,
     userId: wrap.userId,
     sourceTag: wrap.sourceTag,
+    requestId: wrap.requestId,
     replyText: wrap.replyText,
     pendingClarification: wrap.pendingClarification,
     conversationContext: wrap.conversationContext,
@@ -118,6 +124,7 @@ export async function answerQuestionAudited(
     referenceDate: options.referenceDate,
     userId: options.userId ?? null,
     sourceTag: options.sourceTag,
+    requestId: options.requestId,
     replyText: null,
     pendingClarification: null,
     conversationContext,
@@ -149,6 +156,7 @@ export async function answerClarificationReplyAudited(
     referenceDate: options.referenceDate,
     userId: options.userId ?? null,
     sourceTag: options.sourceTag,
+    requestId: options.requestId,
     replyText: reply,
     pendingClarification: pending,
     // A reply merges with the pending intent — never also with a context

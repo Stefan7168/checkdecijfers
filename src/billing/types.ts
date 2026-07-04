@@ -38,7 +38,12 @@ export interface CreditPack {
  * states; these are normal return values, never exceptions, so they must
  * never be funneled through the chat's generic error handling. */
 export type GatedResponse =
-  | ({ kind: 'ok' } & AuditedResponse)
+  // netCost: the credits actually charged for THIS response after any
+  // compensation (0 on a refusal, the clarification price on a
+  // clarification, the full estimate on an answer) -- computed in
+  // src/billing/gate.ts, where the compensation amount is already known.
+  // Lets the chat UI show a per-answer cost without a second DB read.
+  | ({ kind: 'ok'; netCost: number } & AuditedResponse)
   | { kind: 'unauthenticated' }
   | { kind: 'duplicate_request' }
   | { kind: 'insufficient_credits'; balance: number; required: number };

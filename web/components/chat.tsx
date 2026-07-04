@@ -25,6 +25,9 @@ interface ChatMessage {
   role: 'user' | 'assistant';
   text: string;
   chart: ChartSpec | null;
+  /** Credits charged for this turn (GatedResponse.netCost) -- null on user
+   * messages and on any non-'ok' gated outcome (nothing was charged). */
+  cost: number | null;
 }
 
 /** GatedResponse -> the plain string this chat renders for its non-'ok'
@@ -70,7 +73,7 @@ export function Chat() {
     const text = input.trim();
     if (!text || busy) return;
 
-    setMessages((m) => [...m, { role: 'user', text, chart: null }]);
+    setMessages((m) => [...m, { role: 'user', text, chart: null, cost: null }]);
     setInput('');
     setBusy(true);
     setError(null);
@@ -84,7 +87,10 @@ export function Chat() {
       const { gated } = outcome;
 
       if (gated.kind !== 'ok') {
-        setMessages((m) => [...m, { role: 'assistant', text: gatedMessageText(gated), chart: null }]);
+        setMessages((m) => [
+          ...m,
+          { role: 'assistant', text: gatedMessageText(gated), chart: null, cost: null },
+        ]);
         // None of these kinds change the pending clarification state;
         // `finally` below still clears `busy`.
         return;
@@ -97,6 +103,7 @@ export function Chat() {
           role: 'assistant',
           text: response.text,
           chart: response.kind === 'answer' ? response.chart : null,
+          cost: gated.netCost,
         },
       ]);
       setPending(response.kind === 'clarification' ? response.pending : null);
@@ -108,7 +115,7 @@ export function Chat() {
   }
 
   return (
-    <div className="mx-auto flex h-dvh w-full max-w-2xl flex-col p-4">
+    <div className="flex h-[65vh] w-full flex-col rounded border border-zinc-200 p-4">
       <h1 className="mb-4 text-lg font-semibold">Check de Cijfers</h1>
       <div className="flex-1 space-y-3 overflow-y-auto">
         {messages.length === 0 ? (
@@ -130,6 +137,9 @@ export function Chat() {
             >
               {message.text}
             </div>
+            {message.cost !== null ? (
+              <div className="mt-0.5 text-xs text-zinc-400">{message.cost} credits</div>
+            ) : null}
             {message.chart ? <ChartView spec={message.chart} /> : null}
           </div>
         ))}

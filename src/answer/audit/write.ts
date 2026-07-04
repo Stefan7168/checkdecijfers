@@ -55,6 +55,9 @@ export interface AuditContext {
    * when the wrap site doesn't say otherwise -- runner scripts pass
    * 'benchmark'/'validation' explicitly. */
   sourceTag?: AuditSourceTag;
+  /** The billing gate's idempotency key for this turn (src/billing/gate.ts),
+   * when one exists -- the dashboard question-history join key. */
+  requestId?: string | null;
   /** Reply-round context; both null on first-turn rows. */
   replyText: string | null;
   pendingClarification: PendingClarification | null;
@@ -91,6 +94,7 @@ export function buildAuditRow(response: ComposedResponse, context: AuditContext)
     schemaVersion: AUDIT_SCHEMA_VERSION,
     userId: context.userId,
     sourceTag: context.sourceTag ?? 'user',
+    requestId: context.requestId ?? null,
     kind: response.kind,
     question: response.question,
     referenceDate: context.referenceDate,
@@ -125,7 +129,8 @@ export async function insertAuditRecord(db: Db, row: AuditRow): Promise<number> 
        reply_text, pending_clarification, conversation_context, response, final_text,
        intent, intent_hash, refusal_reason,
        result_ids, table_ids, tables, answer_source, chart_emitted,
-       prompt_versions, llm_calls, input_tokens, output_tokens, latency_ms
+       prompt_versions, llm_calls, input_tokens, output_tokens, latency_ms,
+       request_id
      ) values (
        $1, $2, $3, $4, $5, $6,
        $7, $8::jsonb, $24::jsonb, $9::jsonb, $10,
@@ -133,7 +138,8 @@ export async function insertAuditRecord(db: Db, row: AuditRow): Promise<number> 
        array(select jsonb_array_elements_text($14::jsonb)),
        array(select jsonb_array_elements_text($15::jsonb)),
        $16::jsonb, $17, $18,
-       $19::jsonb, $20::jsonb, $21, $22, $23
+       $19::jsonb, $20::jsonb, $21, $22, $23,
+       $25
      ) returning id`,
     [
       row.schemaVersion,
@@ -160,6 +166,7 @@ export async function insertAuditRecord(db: Db, row: AuditRow): Promise<number> 
       row.outputTokens,
       row.latencyMs,
       row.conversationContext === null ? null : JSON.stringify(row.conversationContext),
+      row.requestId,
     ],
   );
   const id = rows[0]?.id;

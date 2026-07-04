@@ -60,6 +60,12 @@ export interface AuditRecord {
   /** Identity seam (ADR 006): null = anonymous / benchmark runs. */
   userId: string | null;
   sourceTag: AuditSourceTag;
+  /** The billing gate's idempotency key (src/billing/gate.ts) for this turn,
+   * when one exists -- the join key back to credit_transactions that lets a
+   * past question's net cost be reconstructed (dashboard question history).
+   * Null on rows with no wrap-site billing context (e.g. benchmark/validation
+   * runs) and on all pre-existing rows. */
+  requestId: string | null;
 
   kind: ComposedResponse['kind'];
   question: string;
