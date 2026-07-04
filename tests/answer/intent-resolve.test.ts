@@ -710,5 +710,54 @@ describe('explicit date ranges (#77, ADR 023): date_range → whole months → f
       const failure = await failed(raw('cpi_yearly_inflation', dateRange(boundary(2023, 2, 29), boundary(2023, 6, 30), true), null, 'series'));
       expect(failure.reason).toBe('period_invalid');
     });
+
+    it('KW mapping covers the Q4 edges: oktober–december resolves to KW04 (review finding: only Q1/Q2 months were exercised)', async () => {
+      const result = await resolved(raw('unemployment_rate_seasonally_adjusted', dateRange(boundary(2023, 10, null), boundary(2024, 12, 31), true), null, 'series'));
+      expect(result.intent.period).toEqual({ kind: 'range', from: '2023KW04', to: '2024KW04' });
+    });
+
+    it('a cross-year KW span maps both edges correctly (juli 2024 – maart 2025)', async () => {
+      const result = await resolved(raw('unemployment_rate_seasonally_adjusted', dateRange(boundary(2024, 7, 1), boundary(2025, 3, 31), true), null, 'series'));
+      expect(result.intent.period).toEqual({ kind: 'range', from: '2024KW03', to: '2025KW01' });
+    });
+  });
+
+  describe('grain collapse (review finding, executed live): a coarse-grain measure collapsing the span to ONE code answers under the model hint, never a spurious clarification', () => {
+    it('a whole calendar year on a JJ-only measure with a "none" hint ANSWERS the single 2022 cell', async () => {
+      const result = await resolved(raw('solar_electricity_production', dateRange(boundary(2022, 1, 1), boundary(2022, 12, 31), true), null, 'none'));
+      expect(result.intent.period).toEqual({ kind: 'range', from: '2022JJ00', to: '2022JJ00' });
+      expect(result.intent.derivation).toBe('none');
+    });
+
+    it('a single whole quarter on a KW-only measure with a "none" hint ANSWERS that quarter', async () => {
+      const result = await resolved(raw('unemployment_rate_seasonally_adjusted', dateRange(boundary(2024, 1, 1), boundary(2024, 3, 31), true), null, 'none'));
+      expect(result.intent.period).toEqual({ kind: 'range', from: '2024KW01', to: '2024KW01' });
+      expect(result.intent.derivation).toBe('none');
+    });
+
+    it('an explicit series hint ("maak een grafiek") on a collapsed span still exits to the degenerate-range clarification — one point is not a series', async () => {
+      const failure = await failed(raw('solar_electricity_production', dateRange(boundary(2022, 1, 1), boundary(2022, 12, 31), true), null, 'series'));
+      expect(failure.axis).toBe('period');
+      expect(failure.reason).toBe('period_missing');
+    });
+
+    it('the demotion never touches an uncollapsed range: multi-month MM stays a forced series', async () => {
+      const result = await resolved(raw('cpi_yearly_inflation', dateRange(boundary(2022, 1, 1), boundary(2022, 12, 31), true), null, 'none'));
+      expect(result.intent.period).toEqual({ kind: 'range', from: '2022MM01', to: '2022MM12' });
+      expect(result.intent.derivation).toBe('series');
+    });
+
+    it('a demoted "max" without its comparison regions keeps the specific resolver clarification (executing-skeptic catch: the guard must re-run on the final derivation)', async () => {
+      const failure = await failed(raw('population_on_1_january', dateRange(boundary(2022, 1, 1), boundary(2022, 12, 31), true), [{ name: 'Amsterdam', kind: 'gemeente' }], 'max'));
+      expect(failure.axis).toBe('region');
+      expect(failure.reason).toBe('region_unknown');
+    });
+
+    it('a demoted "max" WITH its comparison regions executes over the collapsed single period', async () => {
+      const result = await resolved(raw('population_on_1_january', dateRange(boundary(2022, 1, 1), boundary(2022, 12, 31), true), [{ name: 'Amsterdam', kind: 'gemeente' }, { name: 'Rotterdam', kind: 'gemeente' }], 'max'));
+      expect(result.intent.period).toEqual({ kind: 'range', from: '2022JJ00', to: '2022JJ00' });
+      expect(result.intent.derivation).toBe('max');
+      expect(result.intent.regions).toEqual(['GM0363', 'GM0599']);
+    });
   });
 });

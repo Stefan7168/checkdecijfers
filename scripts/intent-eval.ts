@@ -101,12 +101,18 @@ async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const mode = args.includes('--record') ? 'record' : args.includes('--replay') ? 'replay' : 'live';
   const repeat = mode === 'replay' ? 1 : Number(args.find((a) => a.startsWith('--repeat='))?.split('=')[1] ?? '1');
+  // --only=<id-prefix>: run a subset (cheap targeted recording/stability for a
+  // new case — a base-prompt change still needs the FULL re-record, ADR 012).
+  // A filtered run never writes the report: its totals/history describe the
+  // whole set, and a subset run would silently overwrite them.
+  const only = args.find((a) => a.startsWith('--only='))?.split('=')[1] ?? null;
 
   const set = loadLabelledSet();
-  const cases = allCases(set);
+  const cases = allCases(set).filter((c) => only === null || c.id.startsWith(only));
+  if (cases.length === 0) throw new Error(`--only=${only} matches no case id`);
   const questionToId = new Map(cases.map((c) => [c.question, c.id]));
 
-  console.log(`mode=${mode} repeat=${repeat} cases=${cases.length} referenceDate=${set.referenceDate}`);
+  console.log(`mode=${mode} repeat=${repeat} cases=${cases.length}${only ? ` (--only=${only})` : ''} referenceDate=${set.referenceDate}`);
   const { db, close } = await createIngestedDb();
   const grainProblems = await crossCheckGrains(db);
   if (grainProblems.length > 0) {
@@ -216,9 +222,11 @@ async function main(): Promise<void> {
   }
   console.log(`\nusage: ${inputTokens} input / ${outputTokens} output tokens`);
 
-  if (mode !== 'replay') {
+  if (mode !== 'replay' && only === null) {
     writeFileSync(REPORT_PATH, `${JSON.stringify(report, null, 2)}\n`);
     console.log(`report written to ${REPORT_PATH}`);
+  } else if (only !== null) {
+    console.log('(--only run: report NOT written — its totals describe the whole set)');
   }
   if (report.totals.pass < report.totals.total) process.exitCode = 1;
 }
