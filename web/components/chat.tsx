@@ -245,7 +245,15 @@ export function Chat({
         ...m,
         {
           role: 'assistant',
-          kind: response.kind,
+          // WP23 review (display-honesty lens, HIGH): meta answers and
+          // smalltalk replies ride the refusal ENVELOPE by design (ADR 022 —
+          // "the text ANSWERS the question") — the refusal header would
+          // visually claim the opposite. They present as plain info.
+          kind:
+            response.kind === 'refusal' &&
+            (response.reason === 'meta' || response.reason === 'smalltalk')
+              ? 'info'
+              : response.kind,
           text: response.text,
           chart: response.kind === 'answer' ? response.chart : null,
           cost: gated.netCost,

@@ -283,21 +283,38 @@ describe('Chat — WP21 CSV export (#52)', () => {
 // the StatLine deep-link, the voorlopig pill, structural answer rendering
 // (zero loss vs the assembled text), and the empty-state example chips.
 describe('Chat — WP23 display smalls', () => {
-  function fakeRefusal(text: string): GatedResponse {
+  function fakeRefusal(text: string, reason = 'forecast'): GatedResponse {
     return {
       kind: 'ok',
       auditId: 3,
       netCost: 0,
-      response: { kind: 'refusal', text } as unknown as ComposedResponse,
+      response: { kind: 'refusal', reason, text } as unknown as ComposedResponse,
     };
   }
 
   it('renders an answer from its structural fields with zero loss: body, staleness, definition, marking, chip (#90)', async () => {
+    // The fixture's `text` mirrors the REAL production assembly (compose.ts:
+    // [body, '', definitionLine, markingLine, attribution].join('\n'), then
+    // respond.ts appends the staleness warning) — and the assertion below
+    // walks every non-empty LINE of that assembled string, so a field the
+    // production text carries that the structural rendering dropped fails
+    // here (review fix: presence-of-fixture-fields alone pinned less than
+    // the zero-loss claim said).
+    const body = 'De inflatie in 2024 was 3,3%.';
+    const definitionLine = 'Definitie: consumentenprijsindex (CPI), alle bestedingen.';
+    const markingLine = 'bewerking van CBS-gegevens door checkdecijfers.nl';
+    const attributionLine =
+      'Bron: CBS StatLine, tabel 86141NED — Consumentenprijzen; prijsindex 2015=100. Gegevens gesynchroniseerd op 2026-07-03. Licentie: CC BY 4.0.';
+    const stalenessWarning = 'Let op: deze tabel wordt normaal maandelijks bijgewerkt door CBS.';
+    const assembledText =
+      [body, '', definitionLine, markingLine, attributionLine].join('\n') + '\n\n' + stalenessWarning;
     const response = fakeAnswerResponse({
-      body: 'De inflatie in 2024 was 3,3%.',
-      definitionLine: 'Definitie: consumentenprijsindex (CPI), alle bestedingen.',
-      markingLine: 'bewerking van CBS-gegevens door checkdecijfers.nl',
-      stalenessWarning: 'Let op: deze tabel wordt normaal maandelijks bijgewerkt door CBS.',
+      body,
+      text: assembledText,
+      definitionLine,
+      markingLine,
+      attributionLine,
+      stalenessWarning,
       cells: [fakeCell()],
     });
     askQuestion.mockResolvedValue(
@@ -306,9 +323,11 @@ describe('Chat — WP23 display smalls', () => {
     render(<Chat />);
     await submit('Wat was de inflatie in 2024?');
     expect(await screen.findByText('De inflatie in 2024 was 3,3%.')).toBeInTheDocument();
-    expect(screen.getByText('Definitie: consumentenprijsindex (CPI), alle bestedingen.')).toBeInTheDocument();
-    expect(screen.getByText('bewerking van CBS-gegevens door checkdecijfers.nl')).toBeInTheDocument();
-    expect(screen.getByText('Let op: deze tabel wordt normaal maandelijks bijgewerkt door CBS.')).toBeInTheDocument();
+    // Zero loss vs the production-assembled text: every non-empty line of
+    // `text` must be visible somewhere in the rendered message.
+    for (const line of assembledText.split('\n').filter((l) => l.trim() !== '')) {
+      expect(screen.getByText(line)).toBeInTheDocument();
+    }
     // The chip carries the FULL R4 sentence, always visible (#90), plus the
     // pinned StatLine deep-link (#86) bound to the answer's own table id.
     expect(
@@ -319,6 +338,27 @@ describe('Chat — WP23 display smalls', () => {
     const link = screen.getByRole('link', { name: 'Bekijk bij CBS StatLine' });
     expect(link).toHaveAttribute('href', 'https://opendata.cbs.nl/statline/#/CBS/nl/dataset/86141NED/table');
     expect(link).toHaveAttribute('target', '_blank');
+  });
+
+  it('binds the StatLine link to the ANSWER OWN table id, not a constant (#86 binding)', async () => {
+    // A different table than the fixture default — a hardcoded-URL mutation
+    // (the membership-without-binding class) must fail here.
+    askQuestion.mockResolvedValue(
+      outcome({
+        kind: 'ok',
+        auditId: 1,
+        netCost: 20,
+        response: fakeAnswerResponse({
+          body: 'De werkloosheid was 3,8%.',
+          tableId: '85224NED',
+          cells: [fakeCell({ tableId: '85224NED' })],
+        }) as ComposedResponse,
+      }),
+    );
+    render(<Chat />);
+    await submit('Hoe hoog is de werkloosheid?');
+    const link = await screen.findByRole('link', { name: 'Bekijk bij CBS StatLine' });
+    expect(link).toHaveAttribute('href', 'https://opendata.cbs.nl/statline/#/CBS/nl/dataset/85224NED/table');
   });
 
   it('shows the amber voorlopig pill exactly when a quoted cell is provisional (#71)', async () => {
@@ -359,10 +399,36 @@ describe('Chat — WP23 display smalls', () => {
     render(<Chat />);
     await submit('Wordt de inflatie volgend jaar hoger?');
     expect(await screen.findByText('Ik kan geen voorspellingen doen.')).toBeInTheDocument();
-    expect(screen.getByText('Dit kon ik niet beantwoorden')).toBeInTheDocument();
-    expect(screen.getByText('geen antwoord = geen gok')).toBeInTheDocument();
+    // Position-bound, not just present (worktree-lens catch: a swap of the
+    // two strings between header and badge survived presence checks): the
+    // header IS the bold span, the badge IS the pill.
+    expect(screen.getByText('Dit kon ik niet beantwoorden').className).toContain('font-semibold');
+    expect(screen.getByText('geen antwoord = geen gok').className).toContain('rounded-full');
     // A refusal has no attribution chip — there is no source to cite.
     expect(screen.queryByRole('link', { name: 'Bekijk bij CBS StatLine' })).toBeNull();
+  });
+
+  it('never puts the refusal header on a META answer — the envelope is refusal-kind by design, the text ANSWERS (#84 review fix, HIGH)', async () => {
+    askQuestion.mockResolvedValue(
+      outcome(fakeRefusal('Al mijn cijfers komen rechtstreeks uit officiële tabellen van CBS StatLine.', 'meta')),
+    );
+    render(<Chat />);
+    await submit('Welke bronnen gebruik je?');
+    expect(
+      await screen.findByText('Al mijn cijfers komen rechtstreeks uit officiële tabellen van CBS StatLine.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Dit kon ik niet beantwoorden')).toBeNull();
+    expect(screen.queryByText('geen antwoord = geen gok')).toBeNull();
+  });
+
+  it('never puts the refusal header on a smalltalk reply (#84 review fix)', async () => {
+    askQuestion.mockResolvedValue(
+      outcome(fakeRefusal('Ik beantwoord vragen over officiële CBS-cijfers.', 'smalltalk')),
+    );
+    render(<Chat />);
+    await submit('Hoi!');
+    expect(await screen.findByText('Ik beantwoord vragen over officiële CBS-cijfers.')).toBeInTheDocument();
+    expect(screen.queryByText('Dit kon ik niet beantwoorden')).toBeNull();
   });
 
   it('keeps answers free of the refusal strings and the amber clarification style (#84)', async () => {
