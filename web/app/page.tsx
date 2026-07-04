@@ -8,9 +8,13 @@ export const runtime = 'nodejs';
 export const maxDuration = 30;
 
 import { redirect } from 'next/navigation';
-import { getBalance, getQuestionHistory } from '../backend/billing/index.ts';
-import { AccountPanel } from '../components/account-panel.tsx';
-import { Chat } from '../components/chat.tsx';
+import {
+  getActionClassPrice,
+  getBalance,
+  getQuestionHistory,
+  getSignupGrantCredits,
+} from '../backend/billing/index.ts';
+import { Dashboard } from '../components/dashboard.tsx';
 import { QuestionHistory } from '../components/question-history.tsx';
 import { currentUserId } from '../lib/current-user.ts';
 import { getDb } from '../lib/db.ts';
@@ -26,15 +30,22 @@ export default async function Home() {
   }
 
   const db = getDb();
-  const [balance, history] = await Promise.all([getBalance(db, userId), getQuestionHistory(db, userId)]);
+  // simplePrice + signupGrantCredits: live pricing-config reads (ADR 006 --
+  // the #69 warning threshold and #76 explainer copy must track the tables,
+  // never a hardcoded number).
+  const [balance, history, simplePrice, signupGrantCredits] = await Promise.all([
+    getBalance(db, userId),
+    getQuestionHistory(db, userId),
+    getActionClassPrice(db, 'simple'),
+    getSignupGrantCredits(db),
+  ]);
 
   return (
-    <div className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-6 p-4 lg:grid-cols-[2fr_1fr]">
-      <div className="flex flex-col gap-6">
-        <Chat />
-        <QuestionHistory items={history} />
-      </div>
-      <AccountPanel balance={balance} />
-    </div>
+    <Dashboard
+      initialBalance={balance}
+      simplePrice={simplePrice}
+      signupGrantCredits={signupGrantCredits}
+      history={<QuestionHistory items={history} />}
+    />
   );
 }
