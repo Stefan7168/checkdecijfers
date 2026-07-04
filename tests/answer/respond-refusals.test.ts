@@ -293,12 +293,53 @@ describe('meta-question templates (WP18/F3) — structural sweep over META_TEMPL
     }
   });
 
-  it('no-numbers belt-check: every meta template text is fully whitelisted from structured sources', async () => {
-    const whitelist = await fullLabelAndFreshestWhitelist();
+  it('no-numbers belt-check: every meta template text is whitelisted from ONLY the sources it may cite', async () => {
+    // NARROW whitelist (adversarial-review finding 2026-07-04, executed
+    // proof): the only period a meta text may legitimately cite is the one
+    // measure the shared offer (exampleQuestionNl) resolves — pooling all 8
+    // measures' freshest periods would pre-approve a wrong-measure
+    // substitution. The selection below mirrors exampleQuestionNl's own.
+    const offerMeasure =
+      CANONICAL_MEASURES.find((m) => m.key === 'cpi_yearly_inflation') ?? CANONICAL_MEASURES[0]!;
+    const whitelist = fullLabelWhitelist();
+    const freshest = await freshestForCanonical(db, offerMeasure.key);
+    if (freshest) {
+      for (const n of periodCodeNumbers(freshest.periodCode)) whitelist.add(n);
+    }
     for (const t of META_TEMPLATES) {
       for (const example of t.examples) {
         const built = await buildParseRefusal(db, parseRefusal('smalltalk', {}, example));
         assertNoUnbackedNumbers(built.text, whitelist, `meta template ${t.key}`);
+      }
+    }
+  });
+
+  it('content pins: each body carries its own load-bearing claim, no two templates share a body', async () => {
+    // Independent per-key fragments (NOT derived from meta.ts) close the
+    // body-binding test's blind spot: the binding test recomputes its
+    // expectation from the same table, so a body copy-pasted across two
+    // templates would pass it (adversarial-review finding 2026-07-04,
+    // session-verified: both its skeptics died on a retry cap — a dead
+    // verifier is missing coverage, never a clean pass).
+    const FRAGMENT_BY_KEY: Record<string, string> = {
+      missing_values: 'nooit zelf een schatting',
+      reliability: 'vaste programmacode',
+      freshness: 'hoe actueel het is',
+      sources: 'CBS StatLine',
+      capabilities: 'kan ik je helpen met cijfers over',
+    };
+    expect(Object.keys(FRAGMENT_BY_KEY).sort()).toEqual(META_TEMPLATES.map((t) => t.key).sort());
+    const topicsCompact = CANONICAL_MEASURES.map((m) => m.everydayTerms[0]).join(', ');
+    const bodies = META_TEMPLATES.map((t) => ({ key: t.key, body: t.buildBody({ topicsCompact }) }));
+    for (const { key, body } of bodies) {
+      // Own fragment present...
+      expect(body, `body of ${key}`).toContain(FRAGMENT_BY_KEY[key]!);
+      // ...and in NO other template's body (catches duplicated bodies).
+      for (const other of bodies) {
+        if (other.key === key) continue;
+        expect(other.body, `fragment of ${key} leaked into ${other.key}`).not.toContain(
+          FRAGMENT_BY_KEY[key]!,
+        );
       }
     }
   });

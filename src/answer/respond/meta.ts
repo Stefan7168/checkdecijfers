@@ -16,11 +16,11 @@
 //    no free interpolation: a fabricated number is structurally impossible.
 //
 // The table is EXPORTED, examples included, so the test suite sweeps every
-// template structurally (routing + order-honesty + no-numbers belt) — adding
-// a template without examples, or one whose examples an earlier template
-// shadows, fails tests by construction rather than escaping them (the
-// session-16 review lesson: a belt that enumerates by hand goes stale).
-
+// template structurally (routing + order-honesty + body-binding + content
+// pins + no-numbers belt) — adding a template without examples, or one whose
+// examples an earlier template shadows, fails tests by construction rather
+// than escaping them (the session-16 review lesson: a belt that enumerates by
+// hand goes stale).
 import { normalizeForScan } from '../compose/format.ts';
 
 export type MetaTemplateKey =
@@ -46,37 +46,25 @@ export interface MetaTemplate {
    * a stateful lastIndex would make matching order-dependent. */
   patterns: RegExp[];
   /** Real phrasings this template must catch — verbatim validation-pass
-   * questions where one exists. The test suite drives routing, order-honesty
-   * and the belt sweep off these, so every template ships with its own
-   * regression cases. */
+   * questions where one exists, plus DUAL-CUE phrasings that also touch a
+   * later template's cues (they pin the priority decision: the order-honesty
+   * test proves the intended winner wins). The test suite drives routing,
+   * order-honesty, content pins and the belt sweep off these, so every
+   * template ships with its own regression cases. */
   examples: string[];
   buildBody(ctx: MetaBodyContext): string;
 }
 
-/** Ordered, first-match-wins. Specific cues (bron, ontbrekend, bijgewerkt,
- * betrouwbaar) before the broad capabilities cues (wat kun je / help), so
- * "kun je vertellen welke bronnen je gebruikt?" lands on sources, not
- * capabilities. */
+/** Ordered, first-match-wins. Priority is a reviewed decision (ADR 022 §6,
+ * adversarial-review finding 2026-07-04): a compound question touching TWO
+ * templates' cues gets the one whose answer addresses the more safety-
+ * relevant half. Concretely: reliability ("verzin je dit?") outranks
+ * sources/freshness — "Is de bron wel betrouwbaar of verzin je die?" must get
+ * the fabrication answer, not a generic sources explanation, because
+ * deflecting a do-you-make-this-up question with an answer that ignores it is
+ * misleading by omission. missing_values goes first (its cues are the most
+ * specific); the broad capabilities cues (wat kun je / help) go last. */
 export const META_TEMPLATES: readonly MetaTemplate[] = [
-  {
-    key: 'sources',
-    patterns: [
-      /\bbron(nen)?\b/,
-      /\bstatline\b/,
-      /(uit\s+)?welke\s+(cbs-?)?tabel(len)?\b/,
-      /waar\s+(komen|komt|haal|haalt)\b.*\b(cijfers?|data|gegevens)\b/,
-      /\bvandaan\b/,
-    ],
-    examples: [
-      'Welke bronnen gebruik je naast CBS voor deze vraag?', // V38 verbatim
-      'Uit welke CBS-tabel komt deze grafiek precies?', // V35 verbatim
-      'Waar komen je cijfers vandaan?',
-    ],
-    buildBody: () =>
-      'Al mijn cijfers komen rechtstreeks uit officiële tabellen van CBS StatLine — andere bronnen gebruik ik niet. ' +
-      'Die tabellen laden we vooraf in onze eigen database, en bij elk antwoord staat uit welke CBS-tabel het cijfer komt ' +
-      'en wanneer wij die tabel voor het laatst met CBS hebben gesynchroniseerd.',
-  },
   {
     key: 'missing_values',
     patterns: [
@@ -94,23 +82,6 @@ export const META_TEMPLATES: readonly MetaTemplate[] = [
       'Ik vul nooit zelf een schatting in: liever geen antwoord dan een onbetrouwbaar antwoord.',
   },
   {
-    key: 'freshness',
-    patterns: [
-      /bijgewerkt|ververst|geactualiseerd|updat/, // bijgewerkt, update(n), geüpdatet
-      /\bactue(el|le)\b/,
-      /gesynchroniseerd|peildatum/,
-      /hoe\s+recent\b/,
-    ],
-    examples: [
-      'Wanneer zijn deze cijfers voor het laatst bijgewerkt?', // V36 verbatim
-      'Hoe actueel zijn je cijfers?',
-    ],
-    buildBody: () =>
-      'Bij elk antwoord staat een peildatum: de datum waarop wij de CBS-tabel voor het laatst hebben gesynchroniseerd, ' +
-      'plus de periode waarover het cijfer gaat. Zo zie je per antwoord precies hoe actueel het is; ' +
-      'is een cijfer voorlopig, dan staat dat erbij.',
-  },
-  {
     key: 'reliability',
     // Public-claim rule (CLAUDE.md): the claim is "elk cijfer herleidbaar
     // naar een officiële CBS-cel, met bron en peildatum" — never an absolute
@@ -125,12 +96,57 @@ export const META_TEMPLATES: readonly MetaTemplate[] = [
     examples: [
       'Hoe betrouwbaar zijn je antwoorden?',
       'Verzin je weleens cijfers?',
+      // Dual-cue pin (review finding 2026-07-04): mentions 'bron' too, but
+      // the fabrication half is the one that must be answered.
+      'Is de bron die je gebruikt wel betrouwbaar of verzin je die?',
     ],
     buildBody: () =>
       'Elk cijfer dat ik noem is herleidbaar naar een cel in een officiële CBS-tabel, met bron en peildatum erbij. ' +
       'De berekeningen worden gedaan door vaste programmacode, niet door een taalmodel — het taalmodel formuleert alleen ' +
       'de uitleg, en elke formulering wordt gecontroleerd voordat je die ziet. ' +
       'Kan ik iets niet onderbouwen, dan zeg ik dat liever eerlijk dan dat ik gok.',
+  },
+  {
+    key: 'freshness',
+    patterns: [
+      /bijgewerkt|ververst|geactualiseerd|[uü]pdat/, // bijgewerkt, update(n), geüpdatet (ü is NOT NFKC-folded to u — review finding 2026-07-04)
+      /\bactue(el|le)\b/,
+      /gesynchroniseerd|peildatum/,
+      /hoe\s+recent\b/,
+    ],
+    examples: [
+      'Wanneer zijn deze cijfers voor het laatst bijgewerkt?', // V36 verbatim
+      'Hoe actueel zijn je cijfers?',
+      'Wanneer is dit geüpdatet?', // pins the ü-diaeresis fix
+      // Dual-cue pin: 'bronnen' present, but actuality is what is asked.
+      'Zijn je bronnen actueel?',
+    ],
+    buildBody: () =>
+      'Bij elk antwoord staat een peildatum: de datum waarop wij de CBS-tabel voor het laatst hebben gesynchroniseerd, ' +
+      'plus de periode waarover het cijfer gaat. Zo zie je per antwoord precies hoe actueel het is; ' +
+      'is een cijfer voorlopig, dan staat dat erbij.',
+  },
+  {
+    key: 'sources',
+    patterns: [
+      /\bbron(nen)?\b/,
+      /\bstatline\b/,
+      /(uit\s+)?welke\s+(cbs-?)?tabel(len)?\b/,
+      /waar\s+(komen|komt|haal|haalt)\b.*\b(cijfers?|data|gegevens)\b/,
+      /\bvandaan\b/,
+    ],
+    examples: [
+      'Welke bronnen gebruik je naast CBS voor deze vraag?', // V38 verbatim
+      'Uit welke CBS-tabel komt deze grafiek precies?', // V35 verbatim
+      'Waar komen je cijfers vandaan?',
+      // Dual-cue pin: capabilities cues (kun/welke) present, but the sources
+      // half is what is asked — sources must outrank capabilities.
+      'Kun je vertellen welke bronnen je gebruikt?',
+    ],
+    buildBody: () =>
+      'Al mijn cijfers komen rechtstreeks uit officiële tabellen van CBS StatLine — andere bronnen gebruik ik niet. ' +
+      'Die tabellen laden we vooraf in onze eigen database, en bij elk antwoord staat uit welke CBS-tabel het cijfer komt ' +
+      'en wanneer wij die tabel voor het laatst met CBS hebben gesynchroniseerd.',
   },
   {
     key: 'capabilities',
