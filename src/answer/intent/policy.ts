@@ -11,6 +11,11 @@
 //      clarify with both readings as options;
 //   5. otherwise: emit the intent, ranked list attached for the audit record.
 import { CANONICAL_MEASURES } from '../../registry/defaults.ts';
+import type { EchoServability, StructuredIntent } from '../../query/index.ts';
+// Leaf module (zero imports of its own), so this intent→respond edge cannot
+// cycle; it renders period codes for clarification prose, which is exactly
+// what the echo fallback below builds (WP15/#56).
+import { periodCodeToNl } from '../respond/period-nl.ts';
 import { stableStringify } from './client.ts';
 import { isResolutionFailure, type CandidateResolution } from './resolve.ts';
 import type {
@@ -143,11 +148,89 @@ export function mergeResolutions(resolutions: CandidateResolution[]): CandidateR
   return merged;
 }
 
-export function decide(
+/** The #56 dry-run seam (WP15, ADR 021 decision 4): "would confirming this
+ * echo suggestion actually produce an answer?" — answered by the query
+ * layer's echoServability. A callback (not a db import) so this module stays
+ * free of database access; REQUIRED, not optional, so no call site can
+ * silently skip the check (tests pass stubs explicitly). */
+export type ServabilityCheck = (intent: StructuredIntent) => Promise<EchoServability>;
+
+/** Deterministic Dutch fallback when the echo suggestion is NOT servable
+ * (docs/05: options must be concrete and actually available — V22/V23
+ * measured the echo naming unloaded data). Names what IS loaded instead;
+ * carries period codes/years only, never a value (principle c). */
+function echoUnservableClarification(
+  context: OutcomeContext,
+  top: RankedCandidate,
+  verdict: Extract<EchoServability, { servable: false }>,
+): ParseOutcome {
+  const key = top.intent.target.kind === 'canonical' ? top.intent.target.key : null;
+  const label = key === null ? null : (definitionLabelByKey.get(key) ?? null);
+  const subject = label ?? 'deze cijfers';
+
+  // The suggestion is fine but incomplete (e.g. no region on a geo table):
+  // confirm it AND ask the missing axes in the same, single round (docs/05:
+  // all axes at once). Without this, confirming the echo would burn the one
+  // clarification round and dead-end in a still-ambiguous refusal.
+  if (verdict.kind === 'needs_clarification') {
+    const axes = verdict.axes ?? [];
+    const askRegion = axes.includes('region');
+    const question = askRegion
+      ? `Bedoel je ${top.reading}? Geef dan ook aan voor welke regio: heel Nederland, of een specifieke gemeente of provincie.`
+      : `Bedoel je ${top.reading}? Kun je de vraag dan iets preciezer stellen?`;
+    return {
+      kind: 'clarification',
+      ...context,
+      axes: ['measure', ...axes],
+      question_nl: question,
+      options: askRegion
+        ? ['heel Nederland (landelijk cijfer)', 'een specifieke gemeente of provincie — noem de naam']
+        : [top.reading],
+      reason: `echo suggestion resolves but is not yet servable (${verdict.kind}: ${axes.join(', ') || 'unspecified axes'})`,
+    };
+  }
+
+  // Period-shaped unservability (outside the slice, not yet published, never
+  // published, a gap): name the window we CAN serve. yearRange is gap-free by
+  // construction (dry-run applies the WP14 interior-gap discipline).
+  const range = verdict.availability.yearRange;
+  const freshest = verdict.availability.freshest;
+  if (range !== null) {
+    return {
+      kind: 'clarification',
+      ...context,
+      axes: ['period'],
+      question_nl: `Die precieze periode kan ik niet leveren — van ${subject} heb ik jaarcijfers van ${range.fromYear} tot en met ${range.toYear}. Welke periode bedoel je?`,
+      options: [`${range.fromYear} tot en met ${range.toYear}`],
+      reason: `echo suggestion is not servable (${verdict.kind}); offering the loaded year window instead`,
+    };
+  }
+  if (freshest !== null) {
+    return {
+      kind: 'clarification',
+      ...context,
+      axes: ['period'],
+      question_nl: `Die precieze periode kan ik niet leveren — het meest recente cijfer van ${subject} gaat over ${periodCodeToNl(freshest.periodCode)}. Welke periode bedoel je?`,
+      options: [periodCodeToNl(freshest.periodCode)],
+      reason: `echo suggestion is not servable (${verdict.kind}); offering the freshest loaded period instead`,
+    };
+  }
+  return {
+    kind: 'clarification',
+    ...context,
+    axes: ['measure'],
+    question_nl: `Zo kan ik dit niet leveren uit de geladen CBS-cijfers. Kun je aangeven wat je precies wilt weten over ${subject}?`,
+    options: [],
+    reason: `echo suggestion is not servable (${verdict.kind}) and no honest availability window exists`,
+  };
+}
+
+export async function decide(
   context: OutcomeContext,
   resolutions: CandidateResolution[],
   config: ParserConfig,
-): ParseOutcome {
+  servability: ServabilityCheck,
+): Promise<ParseOutcome> {
   if (resolutions.length === 0) return buildUnmatchedClarification(context);
 
   const ranked = [...mergeResolutions(resolutions)].sort((a, b) => b.confidence - a.confidence);
@@ -156,8 +239,12 @@ export function decide(
   // Rule 2: never fall through past a failed top reading.
   if (isResolutionFailure(top)) return clarificationFromFailure(context, top);
 
-  // Rule 3: a lone reading the model itself doubts → confirm, don't guess.
+  // Rule 3: a lone reading the model itself doubts → confirm, don't guess —
+  // but only offer a suggestion that would actually answer when confirmed
+  // (#56, ADR 021 decision 4): an unservable one names what IS loaded instead.
   if (top.confidence < config.answerThreshold) {
+    const verdict = await servability(top.intent);
+    if (!verdict.servable) return echoUnservableClarification(context, top, verdict);
     return {
       kind: 'clarification',
       ...context,

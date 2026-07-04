@@ -3,6 +3,7 @@
 // resolution and the threshold policy. The reference date is a caller input
 // so relative periods stay testable (clock-injected, docs/05 staleness rule).
 import type { Db } from '../../db/types.ts';
+import { echoServability } from '../../query/index.ts';
 import { buildSystemPrompt } from './prompt.ts';
 import { rawParseJsonSchema, validateRawParse } from './schema.ts';
 import { INTENT_MODEL, type IntentLlmClient, type IntentLlmRequest } from './client.ts';
@@ -77,5 +78,7 @@ export async function parseQuestion(
       .slice(0, MAX_CANDIDATES)
       .map((candidate) => resolveCandidate(db, candidate, options.referenceDate)),
   );
-  return decide(context, resolutions, options.config ?? DEFAULT_PARSER_CONFIG);
+  return decide(context, resolutions, options.config ?? DEFAULT_PARSER_CONFIG, (intent) =>
+    echoServability(db, intent),
+  );
 }

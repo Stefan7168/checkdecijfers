@@ -366,14 +366,17 @@ describe('anti-hallucination invariants — answer-side halves, real since WP7 (
       reading: key,
       impliedRecency: false,
     });
+    // The #56 servability stub: servable, so the original R7 semantics are
+    // probed unchanged (the dry-run branches have their own tests).
+    const servable = async () => ({ servable: true }) as const;
     // Low-confidence single reading → clarify.
-    expect(decide(context, [reading('cpi_yearly_inflation', 0.3)], DEFAULT_PARSER_CONFIG).kind).toBe('clarification');
+    expect((await decide(context, [reading('cpi_yearly_inflation', 0.3)], DEFAULT_PARSER_CONFIG, servable)).kind).toBe('clarification');
     // Two materially different plausible readings → clarify.
     expect(
-      decide(context, [reading('cpi_yearly_inflation', 0.8), reading('average_existing_home_sale_price', 0.5)], DEFAULT_PARSER_CONFIG).kind,
+      (await decide(context, [reading('cpi_yearly_inflation', 0.8), reading('average_existing_home_sale_price', 0.5)], DEFAULT_PARSER_CONFIG, servable)).kind,
     ).toBe('clarification');
     // One confident reading → answer.
-    expect(decide(context, [reading('cpi_yearly_inflation', 0.95)], DEFAULT_PARSER_CONFIG).kind).toBe('intent');
+    expect((await decide(context, [reading('cpi_yearly_inflation', 0.95)], DEFAULT_PARSER_CONFIG, servable)).kind).toBe('intent');
   });
   // R8 (WP10, real since 2026-07-03): the deep per-flow proofs live in
   // tests/audit/audit-records.test.ts (all response kinds, reply round,

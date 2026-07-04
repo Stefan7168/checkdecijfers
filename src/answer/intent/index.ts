@@ -16,7 +16,7 @@ export { rawParseSchema, rawParseJsonSchema, validateRawParse, CANONICAL_KEYS } 
 export { resolveCandidate, isResolutionFailure, STAND_START_OF_YEAR_KEYS, normalizeRegionName, parseReferenceDate, stepPeriodCode } from './resolve.ts';
 export type { CandidateResolution } from './resolve.ts';
 export { decide, mergeResolutions, differingAxes, buildUnmatchedClarification } from './policy.ts';
-export type { OutcomeContext } from './policy.ts';
+export type { OutcomeContext, ServabilityCheck } from './policy.ts';
 export * from './types.ts';
 export {
   parseClarificationReply,
@@ -27,3 +27,12 @@ export {
   CLARIFY_MODE_SECTION,
 } from './clarify.ts';
 export type { ClarifyReplyOptions } from './clarify.ts';
+export {
+  parseFollowUpQuestion,
+  buildFollowUpRequest,
+  buildFollowUpSystemPrompt,
+  buildFollowUpUserPayload,
+  FOLLOWUP_PROMPT_VERSION,
+  FOLLOWUP_MODE_SECTION,
+} from './followup.ts';
+export type { FollowUpOptions } from './followup.ts';

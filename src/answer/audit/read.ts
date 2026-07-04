@@ -5,6 +5,7 @@
 // reconstruction check sees.
 import type { Db } from '../../db/types.ts';
 import type { ComposedResponse, PendingClarification } from '../respond/types.ts';
+import type { ConversationContext } from '../context/types.ts';
 import type { AuditRecord } from './types.ts';
 
 interface RawRow {
@@ -18,6 +19,9 @@ interface RawRow {
   reference_date: string;
   reply_text: string | null;
   pending_clarification: PendingClarification | null;
+  /** Nullable column added by migration 009 (WP15) — to_jsonb serializes it
+   * as null on all rows once the migration ran. */
+  conversation_context: ConversationContext | null;
   response: ComposedResponse;
   final_text: string;
   intent: unknown | null;
@@ -47,6 +51,7 @@ function toRecord(raw: RawRow): AuditRecord {
     referenceDate: raw.reference_date,
     replyText: raw.reply_text,
     pendingClarification: raw.pending_clarification,
+    conversationContext: raw.conversation_context ?? null,
     response: raw.response,
     finalText: raw.final_text,
     intent: raw.intent,

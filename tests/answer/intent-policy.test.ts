@@ -19,10 +19,16 @@ import type {
   RankedCandidate,
   RawParse,
   ResolutionFailure,
+  ServabilityCheck,
 } from '../../src/answer/intent/index.ts';
-import type { StructuredIntent } from '../../src/query/index.ts';
+import type { EchoServability, StructuredIntent } from '../../src/query/index.ts';
 
 const config: ParserConfig = { answerThreshold: 0.6, runnerUpThreshold: 0.35 };
+
+/** Stub for tests that exercise the threshold rules themselves: every echo
+ * suggestion counts as servable, which is exactly the pre-WP15 behavior the
+ * original R7 pins prove. The #56 branch tests below pass real verdicts. */
+const alwaysServable: ServabilityCheck = async () => ({ servable: true });
 
 function intentOf(key: string, year: number, regions?: string[]): StructuredIntent {
   return {
@@ -71,23 +77,23 @@ function context(raw?: Partial<RawParse>): OutcomeContext {
 }
 
 describe('R7 threshold policy (docs/05 R7, ADR 012)', () => {
-  it('confident single reading above the threshold answers', () => {
-    const outcome = decide(context(), [candidate(intentOf('cpi_yearly_inflation', 2024), 0.95)], config);
+  it('confident single reading above the threshold answers', async () => {
+    const outcome = await decide(context(), [candidate(intentOf('cpi_yearly_inflation', 2024), 0.95)], config, alwaysServable);
     expect(outcome.kind).toBe('intent');
     if (outcome.kind !== 'intent') throw new Error('unreachable');
     expect(outcome.confidence).toBe(0.95);
     expect(outcome.ranked).toHaveLength(1);
   });
 
-  it('top candidate below answerThreshold clarifies — never a best guess', () => {
-    const outcome = decide(context(), [candidate(intentOf('cpi_yearly_inflation', 2024), 0.45)], config);
+  it('top candidate below answerThreshold clarifies — never a best guess', async () => {
+    const outcome = await decide(context(), [candidate(intentOf('cpi_yearly_inflation', 2024), 0.45)], config, alwaysServable);
     expect(outcome.kind).toBe('clarification');
   });
 
-  it('two materially different readings above runnerUpThreshold clarify with both as options', () => {
+  it('two materially different readings above runnerUpThreshold clarify with both as options', async () => {
     const a = candidate(intentOf('population_on_1_january', 2024, ['GM0344']), 0.8, 'gemeente Utrecht');
     const b = candidate(intentOf('population_on_1_january', 2024, ['PV26']), 0.5, 'provincie Utrecht');
-    const outcome = decide(context(), [a, b], config);
+    const outcome = await decide(context(), [a, b], config, alwaysServable);
     expect(outcome.kind).toBe('clarification');
     if (outcome.kind !== 'clarification') throw new Error('unreachable');
     expect(outcome.axes).toEqual(['region']);
@@ -95,14 +101,14 @@ describe('R7 threshold policy (docs/05 R7, ADR 012)', () => {
     expect(outcome.question_nl.match(/\?/g)).toHaveLength(1);
   });
 
-  it('a weak second reading below runnerUpThreshold does not block the answer', () => {
+  it('a weak second reading below runnerUpThreshold does not block the answer', async () => {
     const a = candidate(intentOf('cpi_yearly_inflation', 2024), 0.9);
     const b = candidate(intentOf('average_existing_home_sale_price', 2024), 0.2);
-    const outcome = decide(context(), [a, b], config);
+    const outcome = await decide(context(), [a, b], config, alwaysServable);
     expect(outcome.kind).toBe('intent');
   });
 
-  it('identical resolved intents merge into agreement, not ambiguity — without mutating inputs', () => {
+  it('identical resolved intents merge into agreement, not ambiguity — without mutating inputs', async () => {
     const a = candidate(intentOf('cpi_yearly_inflation', 2024), 0.7, 'lezing A');
     const b = candidate(intentOf('cpi_yearly_inflation', 2024), 0.9, 'lezing B');
     const merged = mergeResolutions([a, b]);
@@ -115,53 +121,54 @@ describe('R7 threshold policy (docs/05 R7, ADR 012)', () => {
     // assertion below would be vacuous (review finding, 2026-07-03).
     expect(a.confidence).toBe(0.7);
     expect(a.reading).toBe('lezing A');
-    const outcome = decide(context(), [a, b], config);
+    const outcome = await decide(context(), [a, b], config, alwaysServable);
     expect(outcome.kind).toBe('intent');
     if (outcome.kind !== 'intent') throw new Error('unreachable');
     expect(outcome.confidence).toBe(0.9);
     expect(outcome.ranked[0]!.reading).toBe('lezing B');
   });
 
-  it('pins the comparator semantics at the exact threshold boundaries', () => {
+  it('pins the comparator semantics at the exact threshold boundaries', async () => {
     // Documented rule 3: clarify strictly BELOW answerThreshold — a top
     // reading exactly AT the threshold answers. A refactor flipping < to <=
     // (or >= to > below) must fail here, not silently invert production
     // behavior at the calibrated 0.9/0.35 values (review finding, 2026-07-03).
-    const atAnswer = decide(context(), [candidate(intentOf('cpi_yearly_inflation', 2024), config.answerThreshold)], config);
+    const atAnswer = await decide(context(), [candidate(intentOf('cpi_yearly_inflation', 2024), config.answerThreshold)], config, alwaysServable);
     expect(atAnswer.kind).toBe('intent');
-    const justBelowAnswer = decide(context(), [candidate(intentOf('cpi_yearly_inflation', 2024), config.answerThreshold - 1e-9)], config);
+    const justBelowAnswer = await decide(context(), [candidate(intentOf('cpi_yearly_inflation', 2024), config.answerThreshold - 1e-9)], config, alwaysServable);
     expect(justBelowAnswer.kind).toBe('clarification');
     // Documented rule 4: a runner-up exactly AT runnerUpThreshold counts as
     // plausible ambiguity (>=, inclusive).
-    const atRunnerUp = decide(
+    const atRunnerUp = await decide(
       context(),
       [
         candidate(intentOf('cpi_yearly_inflation', 2024), 0.95),
         candidate(intentOf('average_existing_home_sale_price', 2024), config.runnerUpThreshold),
       ],
       config,
+      alwaysServable,
     );
     expect(atRunnerUp.kind).toBe('clarification');
   });
 
-  it('a failed TOP reading exits to clarification — no silent fall-through to a weaker reading', () => {
+  it('a failed TOP reading exits to clarification — no silent fall-through to a weaker reading', async () => {
     const top = failure('region_ambiguous', 0.9, ['Utrecht (gemeente)', 'Utrecht (PV)']);
     const lower = candidate(intentOf('population_on_1_january', 2024, ['NL01']), 0.5);
-    const outcome = decide(context(), [top, lower], config);
+    const outcome = await decide(context(), [top, lower], config, alwaysServable);
     expect(outcome.kind).toBe('clarification');
     if (outcome.kind !== 'clarification') throw new Error('unreachable');
     expect(outcome.axes).toEqual(['region']);
     expect(outcome.options).toEqual(['Utrecht (gemeente)', 'Utrecht (PV)']);
   });
 
-  it('a plausible FAILED runner-up still counts as ambiguity', () => {
+  it('a plausible FAILED runner-up still counts as ambiguity', async () => {
     const top = candidate(intentOf('population_on_1_january', 2024, ['NL01']), 0.8);
     const runnerUp = failure('region_ambiguous', 0.5);
-    const outcome = decide(context(), [top, runnerUp], config);
+    const outcome = await decide(context(), [top, runnerUp], config, alwaysServable);
     expect(outcome.kind).toBe('clarification');
   });
 
-  it('every clarification template asks exactly one compact question', () => {
+  it('every clarification template asks exactly one compact question', async () => {
     const reasons: ResolutionFailure['reason'][] = [
       'region_ambiguous',
       'region_unknown',
@@ -172,15 +179,15 @@ describe('R7 threshold policy (docs/05 R7, ADR 012)', () => {
       'unknown_canonical_key',
     ];
     for (const reason of reasons) {
-      const outcome = decide(context(), [failure(reason, 0.9, ['optie A', 'optie B'])], config);
+      const outcome = await decide(context(), [failure(reason, 0.9, ['optie A', 'optie B'])], config, alwaysServable);
       expect(outcome.kind).toBe('clarification');
       if (outcome.kind !== 'clarification') throw new Error('unreachable');
       expect(outcome.question_nl.match(/\?/g), `reason ${reason}`).toHaveLength(1);
     }
   });
 
-  it('period_missing WITH a range option names it in the question (open-range shape, validation pass 2026-07-04)', () => {
-    const outcome = decide(context(), [failure('period_missing', 0.9, ['2015 tot en met 2025'])], config);
+  it('period_missing WITH a range option names it in the question (open-range shape, validation pass 2026-07-04)', async () => {
+    const outcome = await decide(context(), [failure('period_missing', 0.9, ['2015 tot en met 2025'])], config, alwaysServable);
     expect(outcome.kind).toBe('clarification');
     if (outcome.kind !== 'clarification') throw new Error('unreachable');
     expect(outcome.question_nl).toBe('Voor welke periode wil je dit weten — bijvoorbeeld 2015 tot en met 2025?');
@@ -188,7 +195,7 @@ describe('R7 threshold policy (docs/05 R7, ADR 012)', () => {
     expect(outcome.axes).toEqual(['period']);
   });
 
-  it('unmatched measure term clarifies on ALL axes at once with loaded-topic options (B15 shape)', () => {
+  it('unmatched measure term clarifies on ALL axes at once with loaded-topic options (B15 shape)', async () => {
     const outcome = buildUnmatchedClarification(
       context({ unmatchedMeasureTerm: 'bijstand', nearestCanonicalKeys: ['unemployment_rate_seasonally_adjusted'] }),
     );
@@ -200,12 +207,104 @@ describe('R7 threshold policy (docs/05 R7, ADR 012)', () => {
     expect(outcome.options).toEqual(['werkloosheidspercentage, seizoengecorrigeerd']);
   });
 
-  it('differingAxes names the user-facing shape of the ambiguity', () => {
+  it('differingAxes names the user-facing shape of the ambiguity', async () => {
     const a = candidate(intentOf('cpi_yearly_inflation', 2024), 0.8);
     const b = candidate(intentOf('cpi_yearly_inflation', 2023), 0.5);
     expect(differingAxes(a, b)).toEqual(['period']);
     const c = candidate(intentOf('average_existing_home_sale_price', 2024), 0.5);
     expect(differingAxes(a, c)).toEqual(['measure']);
+  });
+});
+
+describe('#56 echo-suggestion servability (WP15, ADR 021 decision 4)', () => {
+  const noAvailability = { yearRange: null, freshest: null };
+  const unservable = (
+    kind: Extract<EchoServability, { servable: false }>['kind'],
+    availability: Extract<EchoServability, { servable: false }>['availability'],
+    axes: Extract<EchoServability, { servable: false }>['axes'] = null,
+  ): EchoServability => ({ servable: false, kind, axes, availability });
+
+  it('a servable low-confidence echo is offered exactly as before', async () => {
+    const top = candidate(intentOf('cpi_yearly_inflation', 2024), 0.45, 'de inflatie in 2024');
+    const outcome = await decide(context(), [top], config, alwaysServable);
+    expect(outcome.kind).toBe('clarification');
+    if (outcome.kind !== 'clarification') throw new Error('unreachable');
+    expect(outcome.question_nl).toBe('Bedoel je de inflatie in 2024?');
+    expect(outcome.options).toEqual(['de inflatie in 2024']);
+  });
+
+  it('servability is consulted only on the rule-3 echo path — never on confident answers or two-option ambiguity', async () => {
+    let calls = 0;
+    const counting: ServabilityCheck = async () => {
+      calls += 1;
+      return { servable: true };
+    };
+    await decide(context(), [candidate(intentOf('cpi_yearly_inflation', 2024), 0.95)], config, counting);
+    expect(calls).toBe(0);
+    await decide(
+      context(),
+      [
+        candidate(intentOf('cpi_yearly_inflation', 2024), 0.8),
+        candidate(intentOf('average_existing_home_sale_price', 2024), 0.5),
+      ],
+      config,
+      counting,
+    );
+    expect(calls).toBe(0);
+    await decide(context(), [candidate(intentOf('cpi_yearly_inflation', 2024), 0.45)], config, counting);
+    expect(calls).toBe(1);
+  });
+
+  it('an unservable echo names the loaded year window instead of the unservable suggestion (V22/V23 shape)', async () => {
+    const top = candidate(intentOf('population_on_1_january', 1970), 0.5, 'alle gemeenten vanaf 1970');
+    const verdict = unservable('outside_loaded_slice', { yearRange: { fromYear: 2019, toYear: 2026 }, freshest: null }, ['period']);
+    const outcome = await decide(context(), [top], config, async () => verdict);
+    expect(outcome.kind).toBe('clarification');
+    if (outcome.kind !== 'clarification') throw new Error('unreachable');
+    expect(outcome.question_nl).toContain('van 2019 tot en met 2026');
+    expect(outcome.question_nl.match(/\?/g)).toHaveLength(1);
+    expect(outcome.options).toEqual(['2019 tot en met 2026']);
+    // The unservable reading is NOT offered as an option (docs/05: options
+    // must be concrete and actually available).
+    expect(outcome.options).not.toContain('alle gemeenten vanaf 1970');
+    expect(outcome.axes).toEqual(['period']);
+  });
+
+  it('without a year window the fallback names the freshest loaded period (Dutch rendering, R11 offer discipline)', async () => {
+    const top = candidate(intentOf('unemployment_rate_seasonally_adjusted', 2030), 0.5, 'werkloosheid in 2030');
+    const verdict = unservable('freshness', { yearRange: null, freshest: { periodCode: '2026KW01', status: 'Voorlopig' } });
+    const outcome = await decide(context(), [top], config, async () => verdict);
+    expect(outcome.kind).toBe('clarification');
+    if (outcome.kind !== 'clarification') throw new Error('unreachable');
+    expect(outcome.question_nl).toContain('het eerste kwartaal van 2026');
+    expect(outcome.options).toEqual(['het eerste kwartaal van 2026']);
+    expect(outcome.axes).toEqual(['period']);
+  });
+
+  it('a needs_clarification verdict confirms the reading AND asks the missing region in the same single round', async () => {
+    const top = candidate(intentOf('population_on_1_january', 2024), 0.5, 'de bevolking in 2024');
+    const verdict = unservable('needs_clarification', noAvailability, ['region']);
+    const outcome = await decide(context(), [top], config, async () => verdict);
+    expect(outcome.kind).toBe('clarification');
+    if (outcome.kind !== 'clarification') throw new Error('unreachable');
+    expect(outcome.question_nl).toContain('Bedoel je de bevolking in 2024?');
+    expect(outcome.question_nl).toContain('regio');
+    expect(outcome.axes).toEqual(['measure', 'region']);
+    expect(outcome.options).toEqual([
+      'heel Nederland (landelijk cijfer)',
+      'een specifieke gemeente of provincie — noem de naam',
+    ]);
+  });
+
+  it('with no honest availability at all the fallback is a generic, option-less clarification', async () => {
+    const top = candidate(intentOf('cpi_yearly_inflation', 2024), 0.5, 'iets onduidelijks');
+    const outcome = await decide(context(), [top], config, async () => unservable('internal_inconsistency', noAvailability));
+    expect(outcome.kind).toBe('clarification');
+    if (outcome.kind !== 'clarification') throw new Error('unreachable');
+    expect(outcome.options).toEqual([]);
+    expect(outcome.question_nl.match(/\?/g)).toHaveLength(1);
+    // The doubtful reading is not echoed as if it were available.
+    expect(outcome.options).not.toContain('iets onduidelijks');
   });
 });
 
@@ -228,31 +327,31 @@ describe('raw-parse schema validation at the call site (R7)', () => {
     note: null,
   };
 
-  it('accepts a valid parse', () => {
+  it('accepts a valid parse', async () => {
     expect(validateRawParse(JSON.stringify(valid)).kind).toBe('data_query');
   });
 
-  it('rejects non-JSON output', () => {
+  it('rejects non-JSON output', async () => {
     expect(() => validateRawParse('sorry, geen JSON')).toThrow(RawParseValidationError);
   });
 
-  it('rejects a canonical key outside the registry vocabulary', () => {
+  it('rejects a canonical key outside the registry vocabulary', async () => {
     const bad = structuredClone(valid);
     bad.candidates[0]!.canonicalKey = 'made_up_measure';
     expect(() => validateRawParse(JSON.stringify(bad))).toThrow(RawParseValidationError);
   });
 
-  it('rejects unknown fields (strict objects — no smuggled content)', () => {
+  it('rejects unknown fields (strict objects — no smuggled content)', async () => {
     const bad = { ...structuredClone(valid), extra: 'field' };
     expect(() => validateRawParse(JSON.stringify(bad))).toThrow(RawParseValidationError);
   });
 
-  it('rejects the pre-WP14 version-1 contract — a stale fixture or model output must fail loudly', () => {
+  it('rejects the pre-WP14 version-1 contract — a stale fixture or model output must fail loudly', async () => {
     const stale = { ...structuredClone(valid), version: 1 };
     expect(() => validateRawParse(JSON.stringify(stale))).toThrow(RawParseValidationError);
   });
 
-  it('accepts the WP14 open-range period kinds (since / last_n / now_vs_ago)', () => {
+  it('accepts the WP14 open-range period kinds (since / last_n / now_vs_ago)', async () => {
     for (const period of [
       { kind: 'since', year: 2015, quarter: null, month: null },
       { kind: 'since', year: 2020, quarter: null, month: 3 },
@@ -265,7 +364,7 @@ describe('raw-parse schema validation at the call site (R7)', () => {
     }
   });
 
-  it('rejects a since without its nullable refinement fields — nullable, never optional (structured outputs)', () => {
+  it('rejects a since without its nullable refinement fields — nullable, never optional (structured outputs)', async () => {
     const bad = structuredClone(valid);
     bad.candidates[0]!.period = { kind: 'since', year: 2015 } as never;
     expect(() => validateRawParse(JSON.stringify(bad))).toThrow(RawParseValidationError);
@@ -273,7 +372,7 @@ describe('raw-parse schema validation at the call site (R7)', () => {
 });
 
 describe('fixture request hashing (ADR 012 replay integrity)', () => {
-  it('is insensitive to key order but sensitive to content', () => {
+  it('is insensitive to key order but sensitive to content', async () => {
     const requestA = { model: 'm', maxTokens: 1, temperature: 0, system: 's', question: 'q', jsonSchema: { a: 1, b: 2 } };
     const requestB = { jsonSchema: { b: 2, a: 1 }, question: 'q', system: 's', temperature: 0, maxTokens: 1, model: 'm' };
     expect(requestHash(requestA)).toBe(requestHash(requestB));

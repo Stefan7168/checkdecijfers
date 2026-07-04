@@ -16,6 +16,8 @@ import { buildChartSpec } from '../../chart/index.ts';
 import { composeAnswer, type ComposeOptions } from '../compose/index.ts';
 import { parseQuestion, type ParseQuestionOptions } from '../intent/parse.ts';
 import { parseClarificationReply, type ClarifyReplyOptions } from '../intent/clarify.ts';
+import { parseFollowUpQuestion } from '../intent/followup.ts';
+import type { ConversationContext } from '../context/types.ts';
 import type { ParseOutcome, ParserConfig } from '../intent/types.ts';
 import { RawParseValidationError } from '../intent/types.ts';
 import type { IntentLlmClient } from '../intent/client.ts';
@@ -44,6 +46,11 @@ export interface RespondOptions {
    * ADR 012 period policy). */
   referenceDate: string;
   parserConfig?: ParserConfig;
+  /** WP15 (ADR 021): the previous turn's resolved intent as a merge candidate
+   * for follow-up questions. MUST already be validated (context/validate.ts)
+   * — the caller owns the trust boundary; this layer treats it as vocabulary.
+   * Absent/null = a standalone first-turn parse, exactly the pre-WP15 path. */
+  conversationContext?: ConversationContext | null;
 }
 
 /** Shared downstream half once we have an 'intent' ParseOutcome: query ->
@@ -174,7 +181,14 @@ export async function respondToQuestion(
       referenceDate: options.referenceDate,
       config: options.parserConfig,
     };
-    const parse = await parseQuestion(db, question, parseOptions);
+    // WP15 (ADR 021): with a validated context, the parse runs in follow-up
+    // mode — same downstream machinery, same thresholds, same one round of
+    // clarification per question (finalRound stays a reply-turn concept).
+    const context = options.conversationContext ?? null;
+    const parse =
+      context === null
+        ? await parseQuestion(db, question, parseOptions)
+        : await parseFollowUpQuestion(db, context, question, parseOptions);
     return await respondToParseOutcome(db, question, parse, options);
   } catch (error) {
     return toInternalRefusal(question, internalNoteFor(error));
