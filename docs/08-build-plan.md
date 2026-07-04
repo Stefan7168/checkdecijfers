@@ -237,7 +237,7 @@ Built as approved, supervised as required (owner confirmed the live window in-se
 
 *Owner-approved brainstorm smalls (rows #84/#86/#90/#91/#92/#71/#75), bundled per the overnight brief (queue item 3). All display-layer: zero pipeline/prompt/schema changes, zero LLM, zero spend. #73 (follow-up chips) deliberately NOT built — judgment recorded in its row: deterministic templates alone cannot promise a servable suggestion, and an unservable chip invites a paid dead-end (the #77/#97 cost pattern); belongs with #66's servability-backed click machinery.*
 
-**The answer message is re-rendered from its structural fields** (the #90/#84 core): instead of the single pre-assembled `text` string, an answer renders `answer.body` (the bubble), then `stalenessWarning` / `definitionLine` / `markingLine` as their own small paragraphs, then the attribution as a **chip** — a visually separate bordered element carrying the FULL `attributionLine` sentence (R4 stays displayed, never behind a click) plus the #86 "Bekijk bij CBS StatLine" deep-link. Zero information loss by construction: compose.ts:37 assembles `text` from exactly these five fields, and all five render. The chip is the collapsed depth-0 of the future #70/#79/#89 drill-through (cluster brief below); `text` itself (the R8 audit string) is untouched server-side.
+**The answer message is re-rendered from its structural fields** (the #90/#84 core): instead of the single pre-assembled `text` string, an answer renders `answer.body` (the bubble), then `stalenessWarning` / `definitionLine` / `markingLine` as their own small paragraphs, then the attribution as a **chip** — a visually separate bordered element carrying the FULL `attributionLine` sentence (R4 stays displayed, never behind a click) plus the #86 "Bekijk bij CBS StatLine" deep-link. Zero information loss by construction (compose.ts assembles `text` from exactly these five fields, and all five render) — pinned by a test whose fixture text mirrors the REAL production assembly and whose assertion walks every non-empty line of it (review-strengthened: the first version pinned field presence only). One deliberate presentation reordering, named honestly: the staleness warning moves from the assembled text's END to directly under the bubble (caveat-first, consistent with #92's caveat prominence); the R4/R5/R11 rules require presence, not sequence. The refusal header/badge deliberately does NOT render for reasons `meta` and `smalltalk` (their envelope is refusal-kind by design while the text ANSWERS — ADR 022; the display-honesty lens caught the header contradicting a true meta answer, fixed same-hour and reason-pinned). The chip is the collapsed depth-0 of the future #70/#79/#89 drill-through (cluster brief below); `text` itself (the R8 audit string) is untouched server-side.
 
 **#86:** `web/lib/statline.ts` — pure URL construction to the dataset TABLE view (cell-level StatLine deep-links are unreliable; per the #86 row the link lands on the table). Table id verbatim (casing load-bearing: '03759ned'). Pinned against two real Phase-0 table URLs.
 
@@ -282,5 +282,89 @@ Built as approved, supervised as required (owner confirmed the live window in-se
 **Done means:** full local gate green (typecheck both sides, all backend suites unaffected since nothing outside `web/` changes, web tests, real `next build`); tests for the logout action, the header's presence/absence rules (stripped on `/login`), and the footer's static content; adversarial review per the house rule; #99 marked built in open-questions; STATUS updated with measured results.
 
 ---
+
+---
+
+# Briefs written by the 2026-07-05 overnight session (queue items 5–6) — build nothing here without the named prerequisite
+
+## WP25 (working number) — #65 durable error logging  BRIEF ONLY (needs a live migration → next supervised session)
+
+*Owner-decided (2026-07-04, session 18): build. Blocked tonight by the overnight brief's no-live-DDL constraint — the design needs a new table applied to production before its code deploys.*
+
+**Design (decided here so the supervised session can execute immediately):** a new `error_log` table via numbered migration (next free number at build time): `id bigserial`, `occurred_at timestamptz default now()`, `source text` (the catch site: 'askQuestion' | 'replyToClarification' | 'stripe-webhook' | 'auth-callback'), `request_id uuid null` (the client idempotency key when one exists — joins to ledger/audit when the failure happened mid-flight), `user_id uuid null`, `message text` (error message), `stack text null`, `context jsonb null` (bounded, structured — never raw question text by default: GDPR posture; the audit record already stores questions under its own retention). INSERT-only from the app (no UPDATE/DELETE grants; a structural trigger like the ledger's is overkill for logs — row-level security + owner-only access suffices, decide at build). Write sites: the catch blocks in `web/app/actions.ts` (both actions), the Stripe webhook route's catch, the auth callback. **Fail-open on logging failure** (a broken logger must never break the product path — the reverse of the audit store's fail-closed rule, deliberately: R8 withholds answers, error logging never does). Retention: owner decision at build (suggest 90 days, a scheduled purge alongside the #14 job). Access: owner-only via SQL/dashboard; no UI in v1.
+**Invariants:** zero pipeline change (catch-site instrumentation only); no prompt bytes; the fail-open rule test-pinned (a throwing logger stub must not change the action's outcome); migration hermetically tested via PGlite in CI before the supervised live apply (RUNBOOK per-migration check: zero anon/authenticated grants).
+**Why a migration is required:** Vercel log retention measured too short for root-causing (live incident 2026-07-04, #65's origin: a production error left zero trace).
+
+## #14 GDPR retention + self-service deletion — EXECUTE-READY BRIEF (urgent-flagged; needs live DDL + owner-visible product surface → next supervised session)
+
+*Owner-decided (2026-07-04, session 18): 2-year retention, self-service deletion. The four pieces from the #14 row, made concrete:*
+
+1. **Retention purge (a):** migration 012 adds nothing structural (purge is a job, not a schema change) — implement `npm run gdpr:purge` (idempotent CLI, the registry/pricing-apply precedent): `delete from audit_answers where created_at < now() - interval '2 years' and source_tag = 'user'` — ONLY user rows; benchmark/validation rows are engineering artifacts, not personal data (they carry no user_id — verify at build; if any do, scope by user_id is not null instead). Scorer safety: benchmark scoring replays hermetic dumps, never live rows (verified claim from #14's row — re-verify `benchmark:score` reads `benchmark/audit-run.json` only). Schedule: manual monthly (the maintenance session) in v1; a Vercel cron later (needs its own decision — spend/plan).
+2. **Self-service deletion (b):** a "Verwijder mijn vraaggeschiedenis" button in the account panel → server action verifying the session (`getClaims`, the WP13 rule) → `delete from audit_answers where user_id = $1 and source_tag = 'user'`. The `audit_answers.question` column is the ONE place question text lives (per 04-architecture single-enforcement-point) — a real delete here is a real GDPR delete. **Confirmation step required** (destructive, irreversible — a typed confirmation or two-step dialog; owner may veto the exact UX).
+3. **Ledger interaction (c):** deletion NEVER touches `credit_transactions` (financial records, own retention logic, append-only trigger blocks it structurally anyway) — the dashboard history view must degrade honestly: history rows join audit→ledger by request_id; after deletion the QUESTION text is gone while the ledger keeps amounts. Decide at build: hide history entries whose audit row is gone (recommended — the ledger row alone shows an amount with no question, which reads as a bug) vs show "verwijderde vraag". The #67 round-grouping degrades safely (group key vanishes with the rows).
+4. **Privacy policy (d):** SEPARATE, larger piece — not this WP; the deletion feature must not wait for it (the feature reduces exposure; the policy documents it).
+**R8 tension, named:** "audit records live forever" (docs/05) was written pre-users for benchmark/reconstruction purposes; the GDPR delete carves user rows out of that design intent — docs/05's audit-trail section needs a one-line amendment in the same change ("user rows: 2-year retention + self-service deletion per #14; benchmark/validation rows keep the live-forever property"). R8's WRITE path (every answer audited before showing) is untouched — retention governs later deletion, not the write.
+**Tests:** purge idempotence + scope (a benchmark-tagged row survives), deletion scoped to the calling user only (another user's rows untouched — the critical security pin), ledger rows untouched by both, history degradation pinned.
+
+## Phase-2-shaped design brief — the source drill-through cluster (#70 + #79 + #89 + #90-deep)
+
+*All four approved individually; the batch notes and #90's row say they are ONE design (three buttons would be three ways to say "show me the proof"). #90's chip PRESENTATION shipped in WP23 (the chip is the collapsed state); this brief is the expansion.*
+
+**One surface, three depths, all deterministic reads of data every answer already carries:**
+- Depth 0 (SHIPPED as WP23's chip): the attribution sentence + "Bekijk bij CBS StatLine" (#86).
+- Depth 1 (#89 "waarom dit antwoord"): expanding the chip shows the chosen `definitionLabel`, `periodSemantics`, and — once the #39 alternates plumbing exists — the not-chosen alternate readings with their own labels. Data: `Attribution` + `canonical_measures[].alternates` (needs the #39 threading, a small query-layer addition: alternates into `Attribution`, no new computation).
+- Depth 2 (#70 drill-through): per displayed number, the exact cell: table id, measure code+title, full coordinates (region/period/dims with labels), sync date, batch id, CBS status. Data: `ResultCell` — already client-side (WP20/21 proved it).
+- Depth 3 (#79 "bewijs dit cijfer"): the followable step list — every applied derivation (R5 records: kind, source cells, value) + null/suppressed-cell notices, rendered as "wij lazen cel X (waarde A) en cel Y (waarde B); verschil = B−A". Data: `DerivationRecord[]` verbatim; the CSV export's `cel-id` column is the same trace in file form.
+**Design decisions for the owner at the design session (#29 adjacency):** whether depths open inline (accordion under the answer) or in a side panel; whether depth 3 shows OUR internal resultId strings or only human labels (recommend labels + a "technische details" toggle); copy tone. **No new backend needed for depths 0/2/3; depth 1 needs the #39 alternates threading (small, scoped).** Every rendered value at every depth is a verbatim envelope field — zero new number sources (R1).
+
+---
+
+## #53 anonymous-trial page — FULL BRIEF, not built (the brief's build condition fails)
+
+The overnight brief allows building #53 only if every product decision is already recorded. #53's row
+explicitly records the OPPOSITE: "Not yet designed: the isolated-budget mechanism itself … and the
+per-visitor tracking method". Trial size ("2 free questions") is an idea in the row, never a decision;
+copy is unrecorded. → Full brief below; owner picks at the decision points.
+
+**WP-shape:** a separate route (`/probeer`), NOT the account-gated `/` (the #47 decision stays closed:
+this page must be unable to touch the main product's spend).
+- **Isolated budget (owner decision needed):** (a) second Anthropic API key with its own hard spend cap —
+  strongest isolation, one more secret to rotate (RUNBOOK entry), the cap is enforced by the provider;
+  (b) app-level counter (a `trial_usage` table + daily cap constant) — no new key, but OUR code is the
+  only wall. RECOMMEND (a) + a modest app-level daily counter as belt-and-suspenders; the provider cap
+  is the one wall a code bug can't breach (matches the product's fail-closed posture).
+- **Per-visitor limit (owner decision needed):** cookie (trivially bypassed, zero friction) vs
+  IP-bucketed (NAT/campus collateral) vs both-soft. The row itself accepts bypass as tolerable because
+  the blast radius is capped by the budget — RECOMMEND cookie + IP-bucket soft cap, framed as
+  friction-not-security; the BUDGET is the security.
+- **Trial size:** the row's original idea = 2 free questions/visitor. Needs confirming as THE number.
+- **Copy:** needs owner voice; must state the limit up front and the account path ("2 gratis vragen —
+  daarna gratis account met 100 credits") — numbers from live config, never hardcoded (ADR 006; the
+  signup-grant read already exists).
+- **Pipeline:** the full ordinary pipeline (a trial answer is a REAL answer — same invariants, R8 audit
+  rows with a `source_tag='trial'`? → needs a source-tag enum addition (migration!) or reuse 'user'
+  with null user_id; RECOMMEND a 'trial' tag value = one-line migration, keeps reporting clean →
+  ANOTHER reason this waits for a supervised session: live DDL).
+- **No login, no ledger:** the billing gate is bypassed on this route by construction (no user);
+  the budget isolation substitutes for it. The gate module stays untouched.
+
+## #87 historical-range chip — BRIEF, not built (fails the "cleanly testable small chip" bar for a reason the row doesn't mention)
+
+The derivation itself (min/max/rank over a series) IS cleanly testable under the hermetic gate. What
+the row understates: **for a single-value answer the required series is not fetched** — the query
+layer fetches exactly the asked cells, so "laagste sinds 2015" under a 2026-answer needs a FETCH-WINDOW
+design decision first:
+  (a) silently widen every single-cell query to its full loaded series (cost trivial locally, but the
+      audit row then stores cells the user never asked about — a shape change to R8 rows worth a
+      deliberate call, and 'fetch what was asked' minimalism dies quietly);
+  (b) opportunistic: show the chip ONLY on answers that already carry a series (series/comparison
+      results) — cheap, honest, but the row's headline case (a chip under a SINGLE number) mostly
+      won't trigger;
+  (c) a second, explicit targeted query for the chip (new query-layer entry point, pre-registered
+      derivation over its own fetched cells — clean, more surface).
+RECOMMEND (c), briefed as its own WP: new DerivationRecord kind ('series_extremes': min/max cell ids +
+values + since-boundary), R5-registered, R1-scan acceptance via the derivation record, deterministic
+chip template (no LLM), benchmark-style pins over the fixture DB. Owner sees the (a)/(b)/(c) fork
+before build — it changes what audit rows contain, which is his product's proof artifact.
 
 *When a WP completes: tick it in [STATUS.md](STATUS.md), record measured results, and — if a design decision here changed — update this file so it stays the plan of record.*
