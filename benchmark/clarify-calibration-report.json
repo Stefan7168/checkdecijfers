@@ -1,29 +1,18 @@
 {
-  "generatedAt": "2026-07-04T03:54:13.973Z",
+  "generatedAt": "2026-07-04T19:59:28.835Z",
   "mode": "record",
   "repeat": 1,
   "referenceDate": "2026-08-15",
   "totals": {
-    "pass": 6,
+    "pass": 7,
     "total": 7
   },
   "usage": {
-    "inputTokens": 43738,
-    "outputTokens": 879
+    "inputTokens": 49618,
+    "outputTokens": 852
   },
   "unstable": [],
-  "failures": [
-    {
-      "id": "c-b15-option-only",
-      "originalQuestion": "Hoeveel mensen zitten in de bijstand?",
-      "reply": "het werkloosheidspercentage",
-      "outcomeKind": "clarification",
-      "pass": false,
-      "problems": [
-        "expected clarification axes to include \"period\", got [measure]"
-      ]
-    }
-  ],
+  "failures": [],
   "history": [
     {
       "generatedAt": "2026-07-03T10:24:14.111Z",
@@ -65,6 +54,20 @@
       "usage": {
         "inputTokens": 43738,
         "outputTokens": 879
+      }
+    },
+    {
+      "generatedAt": "2026-07-04T19:59:28.835Z",
+      "mode": "record",
+      "repeat": 1,
+      "referenceDate": "2026-08-15",
+      "totals": {
+        "pass": 7,
+        "total": 7
+      },
+      "usage": {
+        "inputTokens": 49618,
+        "outputTokens": 852
       }
     }
   ]

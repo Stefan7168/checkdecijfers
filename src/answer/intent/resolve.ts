@@ -225,6 +225,87 @@ function isSaneYear(year: number): boolean {
   return Number.isInteger(year) && year >= 1900 && year <= 2100;
 }
 
+// ---------------------------------------------------------------------------
+// Explicit date ranges (#77, ADR 023)
+// ---------------------------------------------------------------------------
+
+const isLeapYear = (year: number): boolean =>
+  (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+
+/** Days in a calendar month (proleptic Gregorian) — the only calendar
+ * knowledge the pipeline needs, and it lives HERE, not in the LLM: the model
+ * copies dates verbatim, code judges them (ADR 023). */
+export function daysInMonth(year: number, month: number): number {
+  const lengths = [31, isLeapYear(year) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  return lengths[month - 1]!;
+}
+
+type DateRangeSpec = Extract<PeriodSpec, { kind: 'date_range' }>;
+
+export type DateRangeMonths =
+  /** Whole-month boundaries: inclusive month indexes (year*12 + month-1). */
+  | { kind: 'months'; fromIdx: number; toIdx: number }
+  /** Real dates, but a boundary cuts a month — CBS data is monthly at
+   * finest, so this exits to an honest period clarification, never a
+   * silently widened window. */
+  | { kind: 'misaligned' }
+  | { kind: 'invalid'; message: string };
+
+/** Normalizes a raw date_range to whole months, deterministically:
+ * validates the calendar fields (leap years included), applies the
+ * exclusive-end rule for bare "tot" (minus one day; a month-only exclusive
+ * end drops the named month), and checks that both boundaries land exactly
+ * on month edges. Pure arithmetic — shared by derivation normalization and
+ * period resolution so the two can never disagree. */
+export function dateRangeToMonths(spec: DateRangeSpec): DateRangeMonths {
+  for (const [label, b] of [['from', spec.from], ['to', spec.to]] as const) {
+    if (!isSaneYear(b.year)) return { kind: 'invalid', message: `${label} year ${b.year} is not a plausible year` };
+    if (!Number.isInteger(b.month) || b.month < 1 || b.month > 12) {
+      return { kind: 'invalid', message: `${label} month ${b.month} is not a valid month` };
+    }
+    if (b.day !== null && (!Number.isInteger(b.day) || b.day < 1 || b.day > daysInMonth(b.year, b.month))) {
+      return { kind: 'invalid', message: `${label} day ${b.day} does not exist in ${b.month}/${b.year}` };
+    }
+  }
+
+  const fromAligned = spec.from.day === null || spec.from.day === 1;
+
+  // Inclusive end month index + whether the end lands on a month edge.
+  let toIdx: number;
+  let toAligned: boolean;
+  if (spec.toInclusive) {
+    toIdx = spec.to.year * 12 + (spec.to.month - 1);
+    toAligned = spec.to.day === null || spec.to.day === daysInMonth(spec.to.year, spec.to.month);
+  } else if (spec.to.day === null) {
+    // "van maart tot juni 2021": the strict reading — juni itself excluded.
+    // The answer states its covered periods (R4), so the reading is visible,
+    // never a hidden guess.
+    toIdx = spec.to.year * 12 + (spec.to.month - 1) - 1;
+    toAligned = true;
+  } else if (spec.to.day === 1) {
+    // "tot 1 januari 2023" = through december 2022.
+    toIdx = spec.to.year * 12 + (spec.to.month - 1) - 1;
+    toAligned = true;
+  } else {
+    // "tot 20 maart" = through 19 maart. An exclusive day end can only land
+    // on a month edge via day 1 (handled above): day ≤ daysInMonth, so
+    // day − 1 always falls strictly inside the month.
+    toIdx = spec.to.year * 12 + (spec.to.month - 1);
+    toAligned = false;
+  }
+
+  if (!fromAligned || !toAligned) return { kind: 'misaligned' };
+
+  const fromIdx = spec.from.year * 12 + (spec.from.month - 1);
+  if (fromIdx > toIdx) {
+    return { kind: 'invalid', message: 'the date range is empty or runs backwards' };
+  }
+  return { kind: 'months', fromIdx, toIdx };
+}
+
+const monthIdxYear = (idx: number): number => Math.floor(idx / 12);
+const monthIdxMonth = (idx: number): number => (idx % 12) + 1;
+
 /** Steps a CBS period code by `steps` positions at its own grain (negative =
  * back): 2026KW01 −20 → 2021KW01, 2026MM06 −60 → 2021MM06. Null when the code
  * does not parse — callers fail loudly, never step a code they can't read. */
@@ -487,6 +568,64 @@ async function resolvePeriod(
         : [`${spec.year - 1}JJ00`, `${spec.year}JJ00`];
       return { ok: true, period: { kind: 'codes', codes }, impliedRecency: false };
     }
+    case 'date_range': {
+      // Explicit closed boundaries (#77, ADR 023): the model copied the dates
+      // verbatim; everything from here is arithmetic. Whole-month boundaries
+      // resolve at the FINEST published grain that expresses the range
+      // exactly — spelling out "1 januari … 31 december" signals intra-year
+      // interest, so inflation gets its 12 monthly cells, while a yearly-only
+      // measure still serves whole calendar years honestly. Anything that
+      // cuts a month exits to a period clarification, never a silently
+      // widened window (principle c).
+      const months = dateRangeToMonths(spec);
+      if (months.kind === 'invalid') return periodFailure('period_invalid', months.message);
+      if (months.kind === 'misaligned') {
+        return periodFailure(
+          'period_invalid',
+          'the date boundaries cut into a month, and the data is monthly at finest',
+        );
+      }
+      const { fromIdx, toIdx } = months;
+      const fromMonth = monthIdxMonth(fromIdx);
+      const toMonth = monthIdxMonth(toIdx);
+      if (fromIdx === toIdx) {
+        // A single whole month — expressible only at MM grain.
+        const gate = requireGrain('MM');
+        if (gate) return gate;
+        return {
+          ok: true,
+          period: { kind: 'codes', codes: [`${monthIdxYear(fromIdx)}MM${pad2(fromMonth)}`] },
+          impliedRecency: false,
+        };
+      }
+      const expressesExactly: Record<'JJ' | 'KW' | 'MM', boolean> = {
+        MM: true,
+        KW: [1, 4, 7, 10].includes(fromMonth) && [3, 6, 9, 12].includes(toMonth),
+        JJ: fromMonth === 1 && toMonth === 12,
+      };
+      const grain = (['MM', 'KW', 'JJ'] as const).find(
+        (g) => grains.has(g) && expressesExactly[g],
+      );
+      if (!grain) {
+        return periodFailure(
+          'grain_unavailable',
+          `"${canonical.definitionLabel}" is not published at a grain that can express these exact date boundaries`,
+          [...grains].sort().map((g) => GRAIN_LABEL[g] ?? g),
+        );
+      }
+      const code = (idx: number): string => {
+        const year = monthIdxYear(idx);
+        const month = monthIdxMonth(idx);
+        if (grain === 'JJ') return `${year}JJ00`;
+        if (grain === 'KW') return `${year}KW${pad2(Math.ceil(month / 3))}`;
+        return `${year}MM${pad2(month)}`;
+      };
+      return {
+        ok: true,
+        period: { kind: 'range', from: code(fromIdx), to: code(toIdx) },
+        impliedRecency: false,
+      };
+    }
     case 'relative': {
       if (!Number.isInteger(spec.offset) || spec.offset > 0 || spec.offset < -120) {
         return periodFailure('period_invalid', `relative offset ${spec.offset} is not supported (0..-120)`);
@@ -547,6 +686,14 @@ function normalizeDerivation(candidate: RawCandidate): RawCandidate['derivation'
     (candidate.period.kind === 'last_n' && candidate.period.n !== 1)
   ) {
     return 'series';
+  }
+  // An explicit date range spanning several whole months is a series by the
+  // same reasoning; a single-month or not-yet-normalizable one keeps its hint
+  // (resolution handles the invalid/misaligned exits). Shares the resolver's
+  // own normalization so the two can never disagree (ADR 023).
+  if (candidate.period.kind === 'date_range') {
+    const months = dateRangeToMonths(candidate.period);
+    if (months.kind === 'months' && months.fromIdx < months.toIdx) return 'series';
   }
   return candidate.derivation;
 }

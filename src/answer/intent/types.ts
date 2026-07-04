@@ -16,8 +16,12 @@ import type { StructuredIntent } from '../../query/index.ts';
 /** v2 (2026-07-04, WP14): open-ended period ranges — 'since', 'last_n' and
  * 'now_vs_ago' added to PeriodSpec (open-questions #55, validation pass
  * V01/V28/V02). The StructuredIntent contract is UNCHANGED: all three resolve
- * deterministically to the existing range/codes shapes. */
-export const RAW_PARSE_VERSION = 2 as const;
+ * deterministically to the existing range/codes shapes.
+ * v3 (2026-07-05, #77 fix): 'date_range' added — explicit day/month/year
+ * boundaries ("van 1 januari 2022 tot en met 31 december 2022"), copied
+ * verbatim by the model; deterministic code normalizes them to whole months
+ * and picks the grain (ADR 023). StructuredIntent again unchanged. */
+export const RAW_PARSE_VERSION = 3 as const;
 
 /** Question classification. Everything except data_query exits the pipeline
  * before any intent is built (docs/05 failure table; phrased by WP9). */
@@ -38,6 +42,14 @@ export interface RegionTerm {
   /** Place name as the user wrote it (e.g. "Den Haag", never a CBS code). */
   name: string;
   kind: RegionKind;
+}
+
+/** One end of an explicit date_range, exactly as the user wrote it. */
+export interface DateBoundary {
+  year: number;
+  month: number;
+  /** null when the phrasing names only a month ("van maart 2020 …"). */
+  day: number | null;
 }
 
 /** Structured period description. Relative kinds resolve deterministically
@@ -69,6 +81,15 @@ export type PeriodSpec =
    * (stand per 1 januari vs. flow) — a deterministic mapping in resolve.ts,
    * never the LLM's call. */
   | { kind: 'change_over_year'; year: number }
+  /** "van 1 januari 2022 tot en met 31 december 2022" / "van maart 2020 tot
+   * juni 2021" — explicit CLOSED boundaries with day/month/year named (#77,
+   * ADR 023). The model copies the boundaries AS WRITTEN (day null when no
+   * day is named) plus whether the end is inclusive ("tot en met"/"t/m") or
+   * exclusive (bare "tot") — pure language, never date arithmetic.
+   * Deterministic code normalizes to whole months, rejects boundaries that
+   * cut a month (CBS data is monthly at finest), and picks the finest
+   * published grain that expresses the range exactly. */
+  | { kind: 'date_range'; from: DateBoundary; to: DateBoundary; toInclusive: boolean }
   /** "vorige maand" / "vorig kwartaal" / "vorig jaar" — offset is negative. */
   | { kind: 'relative'; unit: 'month' | 'quarter' | 'year'; offset: number }
   /** Present tense / "nu" / "op dit moment" — freshest published period. */

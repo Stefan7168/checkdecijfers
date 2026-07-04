@@ -4,6 +4,8 @@
 // hold regardless of what any model does.
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
+  dateRangeToMonths,
+  daysInMonth,
   isResolutionFailure,
   normalizeRegionName,
   resolveCandidate,
@@ -578,5 +580,135 @@ describe('curated stand-per-1-januari set cross-checks the registry prose', () =
       const parsed = (typeof semantics === 'string' ? JSON.parse(semantics) : semantics) as Record<string, string>;
       expect(parsed.JJ, `period semantics for ${key}`).toMatch(/1 januari/);
     }
+  });
+});
+
+describe('explicit date ranges (#77, ADR 023): date_range → whole months → finest exact grain', () => {
+  const boundary = (year: number, month: number, day: number | null) => ({ year, month, day });
+  const dateRange = (
+    from: { year: number; month: number; day: number | null },
+    to: { year: number; month: number; day: number | null },
+    toInclusive: boolean,
+  ): PeriodSpec => ({ kind: 'date_range', from, to, toInclusive });
+
+  describe('daysInMonth (the calendar lives in code, never the LLM)', () => {
+    it('knows month lengths including the leap rules', () => {
+      expect(daysInMonth(2022, 1)).toBe(31);
+      expect(daysInMonth(2022, 4)).toBe(30);
+      expect(daysInMonth(2023, 2)).toBe(28);
+      expect(daysInMonth(2024, 2)).toBe(29); // divisible by 4
+      expect(daysInMonth(1900, 2)).toBe(28); // century, not by 400
+      expect(daysInMonth(2000, 2)).toBe(29); // divisible by 400
+    });
+  });
+
+  describe('dateRangeToMonths (pure normalization, shared with derivation)', () => {
+    it('the #77 phrasing: 1 januari t/m 31 december 2022 = the 12 months of 2022', () => {
+      const months = dateRangeToMonths({ kind: 'date_range', from: boundary(2022, 1, 1), to: boundary(2022, 12, 31), toInclusive: true });
+      expect(months).toEqual({ kind: 'months', fromIdx: 2022 * 12, toIdx: 2022 * 12 + 11 });
+    });
+
+    it('month-only boundaries: maart 2020 t/m juni 2021', () => {
+      const months = dateRangeToMonths({ kind: 'date_range', from: boundary(2020, 3, null), to: boundary(2021, 6, null), toInclusive: true });
+      expect(months).toEqual({ kind: 'months', fromIdx: 2020 * 12 + 2, toIdx: 2021 * 12 + 5 });
+    });
+
+    it('an exclusive day-1 end: "tot 1 januari 2023" runs through december 2022', () => {
+      const months = dateRangeToMonths({ kind: 'date_range', from: boundary(2022, 1, 1), to: boundary(2023, 1, 1), toInclusive: false });
+      expect(months).toEqual({ kind: 'months', fromIdx: 2022 * 12, toIdx: 2022 * 12 + 11 });
+    });
+
+    it('an exclusive month-only end drops the named month (strict "tot")', () => {
+      const months = dateRangeToMonths({ kind: 'date_range', from: boundary(2021, 3, null), to: boundary(2021, 6, null), toInclusive: false });
+      expect(months).toEqual({ kind: 'months', fromIdx: 2021 * 12 + 2, toIdx: 2021 * 12 + 4 });
+    });
+
+    it('inclusive leap-day end aligns in a leap year only', () => {
+      expect(dateRangeToMonths({ kind: 'date_range', from: boundary(2024, 1, 1), to: boundary(2024, 2, 29), toInclusive: true })).toEqual({ kind: 'months', fromIdx: 2024 * 12, toIdx: 2024 * 12 + 1 });
+      // 28 februari 2024 is NOT the end of the month in a leap year.
+      expect(dateRangeToMonths({ kind: 'date_range', from: boundary(2024, 1, 1), to: boundary(2024, 2, 28), toInclusive: true })).toEqual({ kind: 'misaligned' });
+      // …but it is in 2023.
+      expect(dateRangeToMonths({ kind: 'date_range', from: boundary(2023, 1, 1), to: boundary(2023, 2, 28), toInclusive: true })).toEqual({ kind: 'months', fromIdx: 2023 * 12, toIdx: 2023 * 12 + 1 });
+    });
+
+    it('boundaries that cut a month are misaligned, never widened', () => {
+      expect(dateRangeToMonths({ kind: 'date_range', from: boundary(2022, 1, 15), to: boundary(2022, 3, null), toInclusive: true })).toEqual({ kind: 'misaligned' });
+      expect(dateRangeToMonths({ kind: 'date_range', from: boundary(2022, 1, 1), to: boundary(2022, 3, 20), toInclusive: false })).toEqual({ kind: 'misaligned' });
+      expect(dateRangeToMonths({ kind: 'date_range', from: boundary(2022, 1, 1), to: boundary(2022, 3, 20), toInclusive: true })).toEqual({ kind: 'misaligned' });
+    });
+
+    it('impossible dates and empty/backwards ranges are invalid', () => {
+      expect(dateRangeToMonths({ kind: 'date_range', from: boundary(2023, 2, 29), to: boundary(2023, 6, null), toInclusive: true }).kind).toBe('invalid');
+      expect(dateRangeToMonths({ kind: 'date_range', from: boundary(2022, 13, null), to: boundary(2023, 1, null), toInclusive: true }).kind).toBe('invalid');
+      expect(dateRangeToMonths({ kind: 'date_range', from: boundary(2023, 6, null), to: boundary(2022, 1, null), toInclusive: true }).kind).toBe('invalid');
+      // "van januari 2022 tot januari 2022" (exclusive) selects nothing.
+      expect(dateRangeToMonths({ kind: 'date_range', from: boundary(2022, 1, null), to: boundary(2022, 1, null), toInclusive: false }).kind).toBe('invalid');
+      expect(dateRangeToMonths({ kind: 'date_range', from: boundary(1234, 1, null), to: boundary(2022, 1, null), toInclusive: true }).kind).toBe('invalid');
+    });
+  });
+
+  describe('resolution against the fixture database', () => {
+    it('the #77 target: inflation over calendar year 2022 = the 12 monthly cells as a series', async () => {
+      const result = await resolved(raw('cpi_yearly_inflation', dateRange(boundary(2022, 1, 1), boundary(2022, 12, 31), true), null, 'series'));
+      expect(result.intent.period).toEqual({ kind: 'range', from: '2022MM01', to: '2022MM12' });
+      expect(result.intent.derivation).toBe('series');
+      expect(result.impliedRecency).toBe(false);
+    });
+
+    it('a multi-month date_range forces series even under a "none" hint', async () => {
+      const result = await resolved(raw('cpi_yearly_inflation', dateRange(boundary(2022, 1, 1), boundary(2022, 12, 31), true), null, 'none'));
+      expect(result.intent.derivation).toBe('series');
+    });
+
+    it('the exclusive phrasing "tot 1 januari 2023" resolves identically', async () => {
+      const result = await resolved(raw('cpi_yearly_inflation', dateRange(boundary(2022, 1, 1), boundary(2023, 1, 1), false), null, 'series'));
+      expect(result.intent.period).toEqual({ kind: 'range', from: '2022MM01', to: '2022MM12' });
+    });
+
+    it('quarter-aligned boundaries on a KW-only measure resolve at KW grain', async () => {
+      const result = await resolved(raw('unemployment_rate_seasonally_adjusted', dateRange(boundary(2024, 1, 1), boundary(2025, 6, 30), true), null, 'series'));
+      expect(result.intent.period).toEqual({ kind: 'range', from: '2024KW01', to: '2025KW02' });
+    });
+
+    it('non-quarter-aligned months on a KW-only measure fail as grain_unavailable with honest options', async () => {
+      const failure = await failed(raw('unemployment_rate_seasonally_adjusted', dateRange(boundary(2024, 2, null), boundary(2024, 4, null), true), null, 'series'));
+      expect(failure.reason).toBe('grain_unavailable');
+      expect(failure.axis).toBe('period');
+      expect(failure.options).toContain('per kwartaal');
+    });
+
+    it('whole calendar years on a JJ-only measure degrade honestly to the year range', async () => {
+      const result = await resolved(raw('solar_electricity_production', dateRange(boundary(2019, 1, 1), boundary(2023, 12, 31), true), null, 'series'));
+      expect(result.intent.period).toEqual({ kind: 'range', from: '2019JJ00', to: '2023JJ00' });
+    });
+
+    it('partial-year months on a JJ-only measure fail as grain_unavailable', async () => {
+      const failure = await failed(raw('solar_electricity_production', dateRange(boundary(2020, 3, null), boundary(2021, 6, null), true), null, 'series'));
+      expect(failure.reason).toBe('grain_unavailable');
+      expect(failure.options).toContain('per jaar');
+    });
+
+    it('a single whole month resolves to that month, keeping its derivation hint', async () => {
+      const result = await resolved(raw('cpi_yearly_inflation', dateRange(boundary(2022, 1, 1), boundary(2022, 1, 31), true), null, 'none'));
+      expect(result.intent.period).toEqual({ kind: 'codes', codes: ['2022MM01'] });
+      expect(result.intent.derivation).toBe('none');
+    });
+
+    it('a single whole month under a series hint exits to the degenerate-range clarification', async () => {
+      const failure = await failed(raw('cpi_yearly_inflation', dateRange(boundary(2022, 1, 1), boundary(2022, 1, 31), true), null, 'series'));
+      expect(failure.axis).toBe('period');
+      expect(failure.reason).toBe('period_missing');
+    });
+
+    it('day boundaries that cut a month exit as period_invalid, never a widened window', async () => {
+      const failure = await failed(raw('cpi_yearly_inflation', dateRange(boundary(2022, 1, 15), boundary(2022, 3, 20), true), null, 'series'));
+      expect(failure.reason).toBe('period_invalid');
+      expect(failure.axis).toBe('period');
+    });
+
+    it('an impossible date exits as period_invalid', async () => {
+      const failure = await failed(raw('cpi_yearly_inflation', dateRange(boundary(2023, 2, 29), boundary(2023, 6, 30), true), null, 'series'));
+      expect(failure.reason).toBe('period_invalid');
+    });
   });
 });

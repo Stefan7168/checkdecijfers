@@ -46,6 +46,12 @@ const periodSpecSchema = z.discriminatedUnion('kind', [
   }),
   z.strictObject({ kind: z.literal('change_over_year'), year: z.number() }),
   z.strictObject({
+    kind: z.literal('date_range'),
+    from: z.strictObject({ year: z.number(), month: z.number(), day: z.number().nullable() }),
+    to: z.strictObject({ year: z.number(), month: z.number(), day: z.number().nullable() }),
+    toInclusive: z.boolean(),
+  }),
+  z.strictObject({
     kind: z.literal('relative'),
     unit: z.enum(['month', 'quarter', 'year']),
     offset: z.number(),
@@ -64,7 +70,7 @@ const rawCandidateSchema = z.strictObject({
 });
 
 export const rawParseSchema = z.strictObject({
-  version: z.literal(2),
+  version: z.literal(3),
   kind: z.enum([
     'data_query',
     'forecast_request',

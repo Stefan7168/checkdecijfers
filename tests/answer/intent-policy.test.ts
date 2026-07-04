@@ -71,7 +71,7 @@ function context(raw?: Partial<RawParse>): OutcomeContext {
   return {
     question: 'synthetische vraag',
     raw: {
-      version: 2,
+      version: 3,
       kind: 'data_query',
       candidates: [],
       unmatchedMeasureTerm: null,
@@ -458,7 +458,7 @@ describe('no-numbers belt-check over every policy-built clarification text (prin
 
 describe('raw-parse schema validation at the call site (R7)', () => {
   const valid = {
-    version: 2,
+    version: 3,
     kind: 'data_query',
     candidates: [
       {
@@ -494,9 +494,11 @@ describe('raw-parse schema validation at the call site (R7)', () => {
     expect(() => validateRawParse(JSON.stringify(bad))).toThrow(RawParseValidationError);
   });
 
-  it('rejects the pre-WP14 version-1 contract — a stale fixture or model output must fail loudly', async () => {
-    const stale = { ...structuredClone(valid), version: 1 };
-    expect(() => validateRawParse(JSON.stringify(stale))).toThrow(RawParseValidationError);
+  it('rejects the stale version-1 and version-2 contracts — an old fixture or model output must fail loudly', async () => {
+    for (const version of [1, 2]) {
+      const stale = { ...structuredClone(valid), version };
+      expect(() => validateRawParse(JSON.stringify(stale))).toThrow(RawParseValidationError);
+    }
   });
 
   it('accepts the WP14 open-range period kinds (since / last_n / now_vs_ago)', async () => {
@@ -516,6 +518,28 @@ describe('raw-parse schema validation at the call site (R7)', () => {
     const bad = structuredClone(valid);
     bad.candidates[0]!.period = { kind: 'since', year: 2015 } as never;
     expect(() => validateRawParse(JSON.stringify(bad))).toThrow(RawParseValidationError);
+  });
+
+  it('accepts the #77 date_range kind, day-precise and month-only (ADR 023)', async () => {
+    for (const period of [
+      { kind: 'date_range', from: { year: 2022, month: 1, day: 1 }, to: { year: 2022, month: 12, day: 31 }, toInclusive: true },
+      { kind: 'date_range', from: { year: 2020, month: 3, day: null }, to: { year: 2021, month: 6, day: null }, toInclusive: false },
+    ]) {
+      const parse = structuredClone(valid);
+      parse.candidates[0]!.period = period as never;
+      expect(validateRawParse(JSON.stringify(parse)).candidates[0]!.period).toEqual(period);
+    }
+  });
+
+  it('rejects a date_range missing toInclusive or a day field — nullable, never optional', async () => {
+    for (const period of [
+      { kind: 'date_range', from: { year: 2022, month: 1, day: 1 }, to: { year: 2022, month: 12, day: 31 } },
+      { kind: 'date_range', from: { year: 2022, month: 1 }, to: { year: 2022, month: 12, day: 31 }, toInclusive: true },
+    ]) {
+      const bad = structuredClone(valid);
+      bad.candidates[0]!.period = period as never;
+      expect(() => validateRawParse(JSON.stringify(bad))).toThrow(RawParseValidationError);
+    }
   });
 });
 
