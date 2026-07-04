@@ -15,7 +15,7 @@ Interview decisions: credit packs, credits never expire, indicative prices that 
 3. **Pricing-config seam** — credit costs per action class (simple/analysis/heavy) and pack prices live in one config table/file, never inline in code, honoring "prices must be easy to change." The pipeline includes a cost-estimation step from Phase 0 (a no-op returning 0) so the pre-spend confirmation UX (estimate → confirm → run) attaches without re-plumbing.
 4. **Payment provider** — Stripe with iDEAL enabled is the working choice for Phase 2 (iDEAL is non-negotiable for Dutch customers; the notes are unanimous). Enterprise/newsroom invoicing stays manual (e.g. Moneybird) until volume justifies more.
 
-Business rules already decided that the ledger must honor: clarifying questions cost 0 credits; cost shown before the expensive step runs; credits never expire.
+Business rules already decided that the ledger must honor: cost shown before the expensive step runs; credits never expire. (Clarifying questions were originally assumed to cost 0 credits too — reversed 2026-07-04, see Update below.)
 
 ## Alternatives considered
 
@@ -43,3 +43,7 @@ Owner decision: the "Phase 2 start" trigger above (ledger + Stripe/iDEAL) now fi
 **Supabase Auth**, resolved against the criteria above. Reasoning: already the Postgres host for this project (zero new vendor, no added cost), a first-class official Next.js App Router integration (`@supabase/ssr`) matching the Server Actions architecture already built in `web/` (ADR 018), and native magic-link/email-OTP support meeting the "boring" criterion directly. Checked against [ADR 002](002-postgres-system-of-record.md)'s vendor-neutrality commitment: that commitment is scoped to the CBS data/registry/audit layer staying swappable across Postgres hosts — it does not rule out Supabase-specific services like Auth, and this ADR's own alternatives list already named Supabase Auth as a candidate. Accepted trade-off: user identity rows live in Supabase's own `auth` schema, somewhat more vendor-tied than the core data ADR 002 protects — a normal cost of a managed auth provider, not treated as a blocker.
 
 **Must-do at setup, not discovered later:** connect a custom SMTP provider (**Resend** is the working choice) in the Supabase Auth settings before real signups begin. Supabase's built-in email sender is meant for development/testing and is tightly rate-limited — left as default, real journalists' magic-link emails could silently fail to arrive once more than a handful sign up in the same hour.
+
+## Update (2026-07-04) — clarification pricing reversed
+
+The Decision section's original business rule ("clarifying questions cost 0 credits") is superseded: a clarification round now costs the flat `clarification` action-class price, not 0 — only an outright refusal stays free. Reason: a free doorvraag let a user fish across unrelated topics (ask about an unloaded topic, get a free clarifying question, try a different topic, repeat) at real API cost with no revenue. Current values and the settlement mechanics (debit the estimated class, compensate down to the `clarification` price on a clarification outcome, down to zero on a refusal) are in [09-pricing.md](../09-pricing.md); reasoning trail in [open-questions #58](../open-questions.md).

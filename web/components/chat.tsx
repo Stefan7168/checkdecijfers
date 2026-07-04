@@ -4,18 +4,38 @@
 // ComposedResponse's own type comment says a chat UI should render — plus
 // the chart when an answer carries one. Never re-derives or reformats a
 // number itself.
+//
+// WP13 (ADR 020): every submit now carries a client-generated requestId (the
+// billing gate's idempotency key) and gets back a GatedResponse, not a bare
+// AuditedResponse — 'unauthenticated' / 'duplicate_request' /
+// 'insufficient_credits' are normal RETURN VALUES, never exceptions, so they
+// branch here explicitly and must never fall into the generic catch below.
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
 import { askQuestion, replyToClarification } from '../app/actions.ts';
 import type { ChartSpec } from '../backend/chart/types.ts';
 import type { PendingClarification } from '../backend/answer/respond/types.ts';
+import type { GatedResponse } from '../backend/billing/index.ts';
 import { ChartView } from './chart.tsx';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
   text: string;
   chart: ChartSpec | null;
+}
+
+/** GatedResponse -> the plain string this chat renders for its non-'ok'
+ * kinds. 'ok' is unwrapped by the caller (it carries the real answer). */
+function gatedMessageText(result: Exclude<GatedResponse, { kind: 'ok' }>): string {
+  switch (result.kind) {
+    case 'unauthenticated':
+      return 'Je bent niet ingelogd. Log in via /login om een vraag te stellen.';
+    case 'duplicate_request':
+      return 'Deze vraag wordt al verwerkt — even geduld.';
+    case 'insufficient_credits':
+      return `Je hebt niet genoeg credits (${result.balance} over, ${result.required} nodig). Koop credits via /credits.`;
+  }
 }
 
 export function Chat() {
@@ -41,9 +61,19 @@ export function Chat() {
     setError(null);
 
     try {
-      const { response } = pending
-        ? await replyToClarification(pending, text)
-        : await askQuestion(text);
+      const requestId = crypto.randomUUID();
+      const result = pending
+        ? await replyToClarification(pending, text, requestId)
+        : await askQuestion(text, requestId);
+
+      if (result.kind !== 'ok') {
+        setMessages((m) => [...m, { role: 'assistant', text: gatedMessageText(result), chart: null }]);
+        // None of these kinds change the pending clarification state;
+        // `finally` below still clears `busy`.
+        return;
+      }
+
+      const { response } = result;
       setMessages((m) => [
         ...m,
         {

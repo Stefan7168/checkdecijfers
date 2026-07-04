@@ -1,15 +1,26 @@
-// The chat UI's only entry point into the backend (ADR 018 decision 3): a
-// thin Server Action wrapper around the two audited functions. No business
-// logic lives here — marshaling plus two infra guards (input-length bound,
-// error logging), so a future Route Handler swap (for real stage-status
-// streaming) stays confined to this one file.
+// The chat UI's only entry point into the backend (ADR 018 decision 3, WP13
+// ADR 020): a thin Server Action wrapper around the two audited functions,
+// now gated by the billing module (src/billing/, WP13) — never the answer
+// pipeline itself. No business logic lives here beyond that gating —
+// marshaling plus two infra guards (input-length bound, error logging), so a
+// future Route Handler swap (for real stage-status streaming) stays confined
+// to this one file.
 'use server';
 
 import { answerClarificationReplyAudited, answerQuestionAudited } from '../backend/answer/audit/index.ts';
-import type { AuditedResponse } from '../backend/answer/audit/index.ts';
 import { AnthropicLlmClient } from '../backend/answer/llm/client.ts';
 import type { PendingClarification } from '../backend/answer/respond/types.ts';
+import { chargeAndRun } from '../backend/billing/index.ts';
+import type { GatedResponse } from '../backend/billing/index.ts';
+import { currentUserId } from '../lib/current-user.ts';
 import { getDb } from '../lib/db.ts';
+
+// Auth check happens HERE, inside the Server Action — not only in proxy.ts.
+// Next's own data-security guidance is explicit that a Proxy matcher is an
+// optimistic check, never the authorization boundary: a matcher change or a
+// Server Function moved to a different route can silently stop being
+// covered by Proxy without anyone noticing, so every Server Function must
+// verify itself (web/lib/current-user.ts).
 
 // The one legitimate un-pinned clock in the codebase — every other call site
 // (tests, hermetic CI, the benchmark runner) injects a fixed reference date.
@@ -39,18 +50,32 @@ function guardLength(text: string): void {
   }
 }
 
-export async function askQuestion(question: string): Promise<AuditedResponse> {
+// requestId: a client-generated UUID (crypto.randomUUID(), one per submit —
+// chat.tsx) threaded all the way into the billing gate's idempotency key
+// (credit_transactions_one_debit_per_request). Without it, a Server Action
+// re-invoked by a browser retry or a double submit would debit the same
+// logical question twice.
+export async function askQuestion(question: string, requestId: string): Promise<GatedResponse> {
   guardLength(question);
+  const userId = await currentUserId();
+  if (userId === null) {
+    return { kind: 'unauthenticated' };
+  }
   try {
-    return await answerQuestionAudited(getDb(), question, {
-      referenceDate: referenceDate(),
-      intentClient: new AnthropicLlmClient(),
-      answerClient: new AnthropicLlmClient(),
-    });
+    return await chargeAndRun(getDb(), userId, requestId, () =>
+      answerQuestionAudited(getDb(), question, {
+        referenceDate: referenceDate(),
+        userId,
+        sourceTag: 'user',
+        intentClient: new AnthropicLlmClient(),
+        answerClient: new AnthropicLlmClient(),
+      }),
+    );
   } catch (error) {
     // Vercel function logs are the owner's only visibility into production
     // infra failures (WP12 review); the client still receives Next's generic
-    // masked error, never these details.
+    // masked error, never these details. chargeAndRun has already
+    // compensated the debit before this rethrow reaches here (ADR 020).
     console.error('askQuestion failed:', error);
     throw error;
   }
@@ -59,14 +84,23 @@ export async function askQuestion(question: string): Promise<AuditedResponse> {
 export async function replyToClarification(
   pending: PendingClarification,
   reply: string,
-): Promise<AuditedResponse> {
+  requestId: string,
+): Promise<GatedResponse> {
   guardLength(reply);
+  const userId = await currentUserId();
+  if (userId === null) {
+    return { kind: 'unauthenticated' };
+  }
   try {
-    return await answerClarificationReplyAudited(getDb(), pending, reply, {
-      referenceDate: referenceDate(),
-      intentClient: new AnthropicLlmClient(),
-      answerClient: new AnthropicLlmClient(),
-    });
+    return await chargeAndRun(getDb(), userId, requestId, () =>
+      answerClarificationReplyAudited(getDb(), pending, reply, {
+        referenceDate: referenceDate(),
+        userId,
+        sourceTag: 'user',
+        intentClient: new AnthropicLlmClient(),
+        answerClient: new AnthropicLlmClient(),
+      }),
+    );
   } catch (error) {
     console.error('replyToClarification failed:', error);
     throw error;

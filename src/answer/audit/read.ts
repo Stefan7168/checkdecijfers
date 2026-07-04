@@ -12,6 +12,7 @@ interface RawRow {
   schema_version: number;
   created_at: string;
   user_id: string | null;
+  source_tag: AuditRecord['sourceTag'];
   kind: AuditRecord['kind'];
   question: string;
   reference_date: string;
@@ -40,6 +41,7 @@ function toRecord(raw: RawRow): AuditRecord {
     schemaVersion: raw.schema_version as AuditRecord['schemaVersion'],
     createdAt: raw.created_at,
     userId: raw.user_id,
+    sourceTag: raw.source_tag,
     kind: raw.kind,
     question: raw.question,
     referenceDate: raw.reference_date,

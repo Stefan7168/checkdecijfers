@@ -23,7 +23,7 @@ Order of checks per sync; any failure marks the table `needs_review` and exclude
 
 **Loud includes the operator.** Phase 0's ingestion CLI fails with a non-zero exit and a plain-language summary the owner can read. From Phase 1 (scheduled syncs, real users): batch failure, a `needs_review` transition, a missed expected sync, and an app health-check failure each **notify the owner** via the notification seam ([04-architecture.md](04-architecture.md); channel choice: [open-questions.md](open-questions.md) #23). A quarantine only the database knows about is silent, not loud.
 
-**Table onboarding rule** (Phase 1 manual growth and Phase 2–3 demand-driven onboarding alike): a table leaves `needs_review` only when it ships with 2–3 benchmark-style verification tasks — frozen-key entries added to the automated benchmark. "Mapping review" *means* passing those tasks; nothing else counts. Review throughput/SLA for user-triggered fetches: [open-questions.md](open-questions.md) #24.
+**Table onboarding rule** (Phase 1 manual growth and Phase 2–3 demand-driven onboarding alike): a table leaves `needs_review` only when it ships with 2–3 benchmark-style verification tasks — frozen-key entries added to the automated benchmark. "Mapping review" *means* passing those tasks; nothing else counts. **This is a structural/automated check, not a manual approval step** — no human click is required, as long as the frozen-key values themselves come from independent verification (structural existence + label-consistency checks, plus a cross-referenced source where available). See [open-questions.md](open-questions.md) #21 for the automated-pipeline design and its honest multi-candidate fallback for genuine definitional ambiguity. Review throughput/SLA for user-triggered fetches: [open-questions.md](open-questions.md) #24.
 
 ## Anti-hallucination invariants (answer side)
 
@@ -46,6 +46,7 @@ Order of checks per sync; any failure marks the table `needs_review` and exclude
 | Condition | Behavior | Regression test |
 |---|---|---|
 | Ambiguous intent (region/period/measure unresolved) | One compact clarifying question with concrete, *actually available* options; no numbers | B15, B16 |
+| Newly onboarded table has genuinely multiple valid CBS definitions and no established canonical default (automated verification can't resolve which one the question means) | Show each candidate's real, correctly-attributed value with its own definition label — never silently pick one, never refuse outright | new fixture/benchmark task, TBD — tracked at [open-questions.md](open-questions.md) #21 |
 | Requested data outside loaded scope | Refusal naming the scope limit + nearest answerable alternative | B17 |
 | Question asks for prediction/opinion/causal interpretation | Refusal of the interpretation; offer underlying descriptive stats only if in scope | B18, B19 |
 | Data exists but doesn't cover the requested period (stale/not yet published) | Freshness refusal: state freshest available period, offer it | B20 |

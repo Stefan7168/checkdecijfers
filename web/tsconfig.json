@@ -21,7 +21,14 @@
     ],
     "paths": {
       "@/*": ["./*"]
-    }
+    },
+    // Without this, jest-dom's matcher augmentation (toBeInTheDocument etc.)
+    // is invisible to tsc whenever the file that imports it
+    // (vitest.setup.ts) isn't itself part of the compiled set — which it
+    // wasn't, until the **/*.test.tsx exclude below was removed (WP13
+    // adversarial review: excluding test files from typecheck meant a
+    // GatedResponse mock could drift from the real type with zero warning).
+    "types": ["@testing-library/jest-dom/vitest"]
   },
   "include": [
     "next-env.d.ts",
@@ -31,5 +38,5 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules", "vitest.config.ts", "vitest.setup.ts", "**/*.test.tsx"]
+  "exclude": ["node_modules", "vitest.config.ts", "vitest.setup.ts"]
 }

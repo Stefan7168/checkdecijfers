@@ -42,12 +42,20 @@ export interface TableRef {
   syncedAt: string;
 }
 
+/** Distinguishes scripted benchmark runs, the owner's manual validation
+ * passes, and real end-user traffic (WP13, open-questions #44) -- without
+ * this, reporting/retention tooling can't tell them apart once real users
+ * exist. Defaults to 'user' (the real chat's own path); runner scripts pass
+ * 'benchmark'/'validation' explicitly. */
+export type AuditSourceTag = 'benchmark' | 'validation' | 'user';
+
 export interface AuditRecord {
   id: number;
   schemaVersion: typeof AUDIT_SCHEMA_VERSION;
   createdAt: string;
   /** Identity seam (ADR 006): null = anonymous / benchmark runs. */
   userId: string | null;
+  sourceTag: AuditSourceTag;
 
   kind: ComposedResponse['kind'];
   question: string;
