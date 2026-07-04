@@ -159,6 +159,8 @@ Built as approved, supervised as required (owner confirmed the live window in-se
 
 **What the implementing session still needs to firm up (not decided yet):** the exact structural/label-consistency check implementations, what counts as a usable "independent cross-check" source in practice, the confidence thresholds that gate auto-publish vs. the honest-disclosure fallback, and how the disclosure is composed/rendered (reuses the answer pipeline's existing verbatim-value machinery, per principle (a) — no new LLM-computation surface).
 
+**Owner confirmed wanting this built (2026-07-04, session 18)**, and two more pieces landed: the exact "we're fetching this" user-facing copy, and that this response **costs credits, not free like a refusal** — both in [open-questions #24](open-questions.md) (exact price/refund-on-failure still open). Session 18 also surfaced three related, separately-scoped items worth sequencing alongside or before this WP: explicit multi-period/multi-region auto-display ([#64](open-questions.md)), durable error logging beyond Vercel's short retention ([#65](open-questions.md)), and clickable suggestion buttons for clarifications ([#66](open-questions.md)).
+
 ---
 
 *When a WP completes: tick it in [STATUS.md](STATUS.md), record measured results, and — if a design decision here changed — update this file so it stays the plan of record.*
