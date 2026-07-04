@@ -92,7 +92,7 @@ const QUESTIONS: ValidationQuestion[] = [
   { id: 'V21', docNumber: 21, category: CATEGORIES.c5, question: 'Wat is de werkloosheid per dag in 2023?', predicted: 'refuse (frequency — CBS publishes no daily figures)' },
   { id: 'V22', docNumber: 22, category: CATEGORIES.c6, question: 'Geef een overzicht van alle gemeenten in Nederland met hun bevolking per jaar sinds 1970.', predicted: 'refuse gracefully (cell limit / outside slice), NOT an error' },
   { id: 'V23', docNumber: 23, category: CATEGORIES.c6, question: 'Toon de volledige tijdreeks van inflatie vanaf 1960 tot nu, met maandcijfers.', predicted: 'refuse (outside slice) or answer from available range' },
-  { id: 'V24', docNumber: 24, category: CATEGORIES.c6, question: 'Laat alle regio’s zien met het aantal bijstandontvangers én het gemiddelde inkomen én de woningvoorraad in één grafiek.', predicted: 'refuse (multi-measure; bijstand not loaded)' },
+  { id: 'V24', docNumber: 24, category: CATEGORIES.c6, question: "Laat alle regio's zien met het aantal bijstandontvangers én het gemiddelde inkomen én de woningvoorraad in één grafiek.", predicted: 'refuse (multi-measure; bijstand not loaded)' },
   { id: 'V25', docNumber: 25, category: CATEGORIES.c7, question: 'Is er een beleidsdocument dat uitlegt waarom de bijstandscijfers zijn veranderd in de afgelopen jaren?', predicted: 'refuse (no document layer)' },
   { id: 'V26', docNumber: 26, category: CATEGORIES.c7, question: 'Welke stukken van de Rijksoverheid gaan over het beperken van migratie?', predicted: 'refuse (no document layer)' },
   { id: 'V27', docNumber: 27, category: CATEGORIES.c7, question: 'Kun je het CBS uitleggen hoe zij hun cijfers berekenen en controleren?', predicted: 'refuse/meta (no methodology hallucination)' },
@@ -143,6 +143,10 @@ async function main(): Promise<void> {
         intentClient: client,
         answerClient: client,
       });
+      // Wall-clock around the WHOLE audited call, so it INCLUDES the audit-
+      // row insert. The audit row's own latency_ms (R8) is measured inside,
+      // BEFORE the insert — the two are deliberately different layers; when
+      // reporting, name which one you cite (review finding, 2026-07-05).
       const latencyMs = Math.round(performance.now() - startedAt);
       if (outcome.auditId === null) {
         console.warn(`  ${q.id}: AUDIT WRITE FAILED — recorded in dump, continuing`);
