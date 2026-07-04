@@ -13,7 +13,11 @@ import type { StructuredIntent } from '../../query/index.ts';
 // The LLM's output contract (raw parse) — validated by zod in schema.ts
 // ---------------------------------------------------------------------------
 
-export const RAW_PARSE_VERSION = 1 as const;
+/** v2 (2026-07-04, WP14): open-ended period ranges — 'since', 'last_n' and
+ * 'now_vs_ago' added to PeriodSpec (open-questions #55, validation pass
+ * V01/V28/V02). The StructuredIntent contract is UNCHANGED: all three resolve
+ * deterministically to the existing range/codes shapes. */
+export const RAW_PARSE_VERSION = 2 as const;
 
 /** Question classification. Everything except data_query exits the pipeline
  * before any intent is built (docs/05 failure table; phrased by WP9). */
@@ -44,6 +48,22 @@ export type PeriodSpec =
   | { kind: 'quarter'; year: number; quarter: number }
   | { kind: 'month'; year: number; month: number }
   | { kind: 'year_range'; fromYear: number; toYear: number }
+  /** "sinds 2015" / "vanaf maart 2020" — an OPEN-ENDED range (WP14, #55). The
+   * model states only the start (year, optionally refined by quarter OR
+   * month); deterministic code resolves the end to the freshest published
+   * period at the start's grain. A start before the loaded slice passes
+   * through — the query layer's slice/publication refusals stay the single
+   * honest source of that behavior. */
+  | { kind: 'since'; year: number; quarter: number | null; month: number | null }
+  /** "de afgelopen vijf jaar" / "laatste zes maanden" — the n freshest
+   * published periods at the unit's grain (n ≥ 2; the singular "afgelopen
+   * jaar" stays a relative offset). Resolved end-anchored: the range ends at
+   * the freshest published period, never at a date the model guessed. */
+  | { kind: 'last_n'; unit: 'month' | 'quarter' | 'year'; n: number }
+  /** "nu vergeleken met vijf jaar geleden" (V02) — TWO disjoint periods, not
+   * a range: the freshest published period and the one `amount` units before
+   * it, both picked by code at the finest grain that can express the unit. */
+  | { kind: 'now_vs_ago'; unit: 'month' | 'quarter' | 'year'; amount: number }
   /** "groeide/steeg/daalde ... in {year}, met hoeveel" — change DURING a year.
    * Which two cells that means depends on the measure's period semantics
    * (stand per 1 januari vs. flow) — a deterministic mapping in resolve.ts,

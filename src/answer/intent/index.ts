@@ -13,7 +13,7 @@ export {
 export type { IntentLlmClient, IntentLlmRequest, IntentLlmResponse, RecordedFixture } from './client.ts';
 export { buildSystemPrompt, PROMPT_VERSION, AVAILABLE_GRAINS, REGIONAL_KEYS } from './prompt.ts';
 export { rawParseSchema, rawParseJsonSchema, validateRawParse, CANONICAL_KEYS } from './schema.ts';
-export { resolveCandidate, isResolutionFailure, STAND_START_OF_YEAR_KEYS, normalizeRegionName, parseReferenceDate } from './resolve.ts';
+export { resolveCandidate, isResolutionFailure, STAND_START_OF_YEAR_KEYS, normalizeRegionName, parseReferenceDate, stepPeriodCode } from './resolve.ts';
 export type { CandidateResolution } from './resolve.ts';
 export { decide, mergeResolutions, differingAxes, buildUnmatchedClarification } from './policy.ts';
 export type { OutcomeContext } from './policy.ts';

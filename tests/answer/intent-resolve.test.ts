@@ -8,8 +8,10 @@ import {
   normalizeRegionName,
   resolveCandidate,
   STAND_START_OF_YEAR_KEYS,
+  stepPeriodCode,
 } from '../../src/answer/intent/index.ts';
 import type { PeriodSpec, RawCandidate, RegionTerm } from '../../src/answer/intent/index.ts';
+import { runQuery } from '../../src/query/index.ts';
 import type { Db } from '../../src/db/types.ts';
 import { createIngestedDb } from '../helpers/ingested-db.ts';
 
@@ -195,17 +197,33 @@ describe('multi-period derivations over a single-period selection clarify, never
     };
   }
 
-  it('"sinds 2015" (degenerate year_range, from == to) exits to a period clarification with a loaded-data range option', async () => {
+  it('a degenerate year_range (from == to) exits to a period clarification with a loaded-data range option', async () => {
     const failure = await failed(
-      raw('unemployment_rate_seasonally_adjusted', { kind: 'year_range', fromYear: 2015, toYear: 2015 }, [{ name: 'Nederland', kind: 'land' }]),
+      raw('cpi_yearly_inflation', { kind: 'year_range', fromYear: 2015, toYear: 2015 }, null, 'series'),
     );
     expect(failure.axis).toBe('period');
     expect(failure.reason).toBe('period_missing');
     // The option must resolve in the loaded data (docs/05): both ends come
     // from the published JJ periods in the same database.
-    const { earliest, latest } = await loadedYearBounds('unemployment_rate_seasonally_adjusted');
+    const { earliest, latest } = await loadedYearBounds('cpi_yearly_inflation');
     expect(latest).toBeGreaterThan(2015);
     expect(failure.options).toEqual([`${Math.max(2015, earliest)} tot en met ${latest}`]);
+  });
+
+  it('never offers a yearly range when the yearly cells sit at a different coordinate than the canonical reading', async () => {
+    // Unemployment's yearly cells are exclusively UN-corrected; the canonical
+    // seasonally-adjusted coordinate has no yearly series. Pre-WP14 the grain
+    // check and the range offer both ran WITHOUT the coordinate filter: the
+    // guard offered "2013 tot en met 2025" — a range that dead-ended in a
+    // no_data refusal if the user confirmed it (WP14 finding, 2026-07-04).
+    // Coordinate-aware, the yearly shape now exits at the grain gate with the
+    // honest alternative.
+    const failure = await failed(
+      raw('unemployment_rate_seasonally_adjusted', { kind: 'year_range', fromYear: 2015, toYear: 2015 }, [{ name: 'Nederland', kind: 'land' }]),
+    );
+    expect(failure.axis).toBe('period');
+    expect(failure.reason).toBe('grain_unavailable');
+    expect(failure.options).toEqual(['per kwartaal']);
   });
 
   it('a start year BEFORE the loaded slice is clamped — the offered range must fully resolve (docs/05)', async () => {
@@ -269,10 +287,10 @@ describe('multi-period derivations over a single-period selection clarify, never
     // that is rolled back (the shared test database must come out untouched —
     // WP10 lesson: probes never leave residue).
     const canonical = await db.query(
-      "select table_id, measure from canonical_measures where key = 'unemployment_rate_seasonally_adjusted'",
+      "select table_id, measure from canonical_measures where key = 'cpi_yearly_inflation'",
     );
     const { table_id, measure } = canonical.rows[0]! as { table_id: string; measure: string };
-    const { earliest, latest } = await loadedYearBounds('unemployment_rate_seasonally_adjusted');
+    const { earliest, latest } = await loadedYearBounds('cpi_yearly_inflation');
     const gapYear = earliest + 1;
     expect(gapYear).toBeLessThan(latest);
     await db.query('begin');
@@ -282,7 +300,7 @@ describe('multi-period derivations over a single-period selection clarify, never
         [table_id, measure, `${gapYear}JJ00`],
       );
       const failure = await failed(
-        raw('unemployment_rate_seasonally_adjusted', { kind: 'year_range', fromYear: earliest, toYear: earliest }, [{ name: 'Nederland', kind: 'land' }]),
+        raw('cpi_yearly_inflation', { kind: 'year_range', fromYear: earliest, toYear: earliest }, null, 'series'),
       );
       expect(failure.axis).toBe('period');
       expect(failure.options).toEqual([]);
@@ -291,9 +309,260 @@ describe('multi-period derivations over a single-period selection clarify, never
     }
     // The hole is gone: the option is offered again.
     const restored = await failed(
-      raw('unemployment_rate_seasonally_adjusted', { kind: 'year_range', fromYear: earliest, toYear: earliest }, [{ name: 'Nederland', kind: 'land' }]),
+      raw('cpi_yearly_inflation', { kind: 'year_range', fromYear: earliest, toYear: earliest }, null, 'series'),
     );
     expect(restored.options).toEqual([`${earliest} tot en met ${latest}`]);
+  });
+});
+
+describe('open-ended period ranges (WP14, open-questions #55): since / last_n / now_vs_ago', () => {
+  // Fixture-DB anchors (committed, deterministic): CPI JJ 2010–2025 and MM
+  // through 2026MM06; unemployment JJ 2013–2025 and KW through 2026KW01;
+  // population JJ through 2026JJ00 with slice floor 2019JJ00.
+
+  describe('since — the model states the start, code resolves the open end', () => {
+    it('"sinds 2015" resolves to a range ending at the freshest published year and implies recency', async () => {
+      const result = await resolved(raw('cpi_yearly_inflation', { kind: 'since', year: 2015, quarter: null, month: null }, null, 'series'));
+      expect(result.intent.period).toEqual({ kind: 'range', from: '2015JJ00', to: '2025JJ00' });
+      expect(result.intent.derivation).toBe('series');
+      expect(result.impliedRecency).toBe(true);
+    });
+
+    it('a year-only since falls back to the finest published grain when the canonical coordinate has no yearly series (V01)', async () => {
+      // CBS publishes NO seasonally-adjusted yearly unemployment — the
+      // table's yearly cells are un-corrected, a different coordinate. The
+      // honest yearly-shaped answer is the quarterly headline series from
+      // that year's first quarter.
+      const result = await resolved(
+        raw('unemployment_rate_seasonally_adjusted', { kind: 'since', year: 2015, quarter: null, month: null }, [{ name: 'Nederland', kind: 'land' }], 'series'),
+      );
+      expect(result.intent.period).toEqual({ kind: 'range', from: '2015KW01', to: '2026KW01' });
+      expect(result.intent.derivation).toBe('series');
+      expect(result.impliedRecency).toBe(true);
+    });
+
+    it('a start month refines the grain: "sinds maart 2020" runs monthly to the freshest month', async () => {
+      const result = await resolved(raw('cpi_yearly_inflation', { kind: 'since', year: 2020, quarter: null, month: 3 }));
+      expect(result.intent.period).toEqual({ kind: 'range', from: '2020MM03', to: '2026MM06' });
+    });
+
+    it('a start quarter refines the grain likewise', async () => {
+      const result = await resolved(raw('unemployment_rate_seasonally_adjusted', { kind: 'since', year: 2023, quarter: 2, month: null }));
+      expect(result.intent.period).toEqual({ kind: 'range', from: '2023KW02', to: '2026KW01' });
+    });
+
+    it('a "since" derivation hint is normalized to series even under a difference hint ("met hoeveel gestegen sinds 2015")', async () => {
+      const result = await resolved(raw('cpi_yearly_inflation', { kind: 'since', year: 2015, quarter: null, month: null }, null, 'difference'));
+      // A difference over >2 cells could never execute; the pre-registered
+      // direction derivation carries the honest net change instead.
+      expect(result.intent.derivation).toBe('series');
+    });
+
+    it('a start beyond the freshest published period fails as period_invalid, never an empty range', async () => {
+      const failure = await failed(raw('cpi_yearly_inflation', { kind: 'since', year: 2030, quarter: null, month: null }));
+      expect(failure.reason).toBe('period_invalid');
+      expect(failure.axis).toBe('period');
+    });
+
+    it('both a month and a quarter on one since is a contract violation → period_invalid', async () => {
+      const failure = await failed(raw('cpi_yearly_inflation', { kind: 'since', year: 2020, quarter: 2, month: 3 }));
+      expect(failure.reason).toBe('period_invalid');
+    });
+
+    it('a sub-year since on a yearly-only measure exits as grain_unavailable with honest options', async () => {
+      const failure = await failed(raw('population_on_1_january', { kind: 'since', year: 2020, quarter: null, month: 6 }, [{ name: 'Nederland', kind: 'land' }]));
+      expect(failure.reason).toBe('grain_unavailable');
+      expect(failure.options).toEqual(['per jaar']);
+    });
+
+    it('a since starting at the freshest published year degenerates and the existing guard clarifies', async () => {
+      // "sinds 2025" when 2025 is the freshest CPI year: range 2025..2025 is
+      // structurally single-period; the WP13-interim degenerate guard stays
+      // the fallback (docs/08 WP14 brief).
+      const failure = await failed(raw('cpi_yearly_inflation', { kind: 'since', year: 2025, quarter: null, month: null }, null, 'series'));
+      expect(failure.axis).toBe('period');
+      expect(failure.reason).toBe('period_missing');
+    });
+  });
+
+  describe('since passes out-of-slice starts THROUGH — the query layer stays the single honest source (no clamping)', () => {
+    it('"inwoners sinds 2015" resolves to 2015 despite the 2019 slice floor, and the query layer refuses outside_loaded_slice', async () => {
+      const result = await resolved(
+        raw('population_on_1_january', { kind: 'since', year: 2015, quarter: null, month: null }, [{ name: 'Nederland', kind: 'land' }], 'series'),
+      );
+      expect(result.intent.period).toEqual({ kind: 'range', from: '2015JJ00', to: '2026JJ00' });
+      const outcome = await runQuery(db, result.intent);
+      expect(outcome.ok).toBe(false);
+      if (outcome.ok) throw new Error('unreachable');
+      expect(outcome.refusal.kind).toBe('outside_loaded_slice');
+      expect(outcome.refusal.nearestAlternative).toBe('2019JJ00');
+    });
+
+    it('"werkloosheid sinds 2010" (V28) resolves honestly and the query layer refuses not_published — CBS starts this series in 2013', async () => {
+      const result = await resolved(
+        raw('unemployment_rate_seasonally_adjusted', { kind: 'since', year: 2010, quarter: null, month: null }, [{ name: 'Nederland', kind: 'land' }], 'series'),
+      );
+      expect(result.intent.period).toEqual({ kind: 'range', from: '2010KW01', to: '2026KW01' });
+      const outcome = await runQuery(db, result.intent);
+      expect(outcome.ok).toBe(false);
+      if (outcome.ok) throw new Error('unreachable');
+      expect(outcome.refusal.kind).toBe('not_published');
+    });
+
+    it('"werkloosheid sinds 2015" (V01) answers end-to-end: a full validated series with direction pre-registered', async () => {
+      const result = await resolved(
+        raw('unemployment_rate_seasonally_adjusted', { kind: 'since', year: 2015, quarter: null, month: null }, [{ name: 'Nederland', kind: 'land' }], 'series'),
+      );
+      const outcome = await runQuery(db, result.intent);
+      expect(outcome.ok).toBe(true);
+      if (!outcome.ok) throw new Error('unreachable');
+      expect(outcome.shape).toBe('series');
+      expect(outcome.cells).toHaveLength(45); // 2015KW01..2026KW01 inclusive
+      expect(outcome.cells[0]!.periodCode).toBe('2015KW01');
+      expect(outcome.cells[44]!.periodCode).toBe('2026KW01');
+      expect(outcome.derivations.some((d) => d.kind === 'direction')).toBe(true);
+    });
+  });
+
+  describe('last_n — the n freshest published periods, end-anchored', () => {
+    it('"de afgelopen vijf jaar" is the 5 freshest published years', async () => {
+      const result = await resolved(raw('cpi_yearly_inflation', { kind: 'last_n', unit: 'year', n: 5 }));
+      expect(result.intent.period).toEqual({ kind: 'range', from: '2021JJ00', to: '2025JJ00' });
+      expect(result.intent.derivation).toBe('series');
+      expect(result.impliedRecency).toBe(true);
+    });
+
+    it('quarters wrap year boundaries correctly', async () => {
+      const result = await resolved(raw('unemployment_rate_seasonally_adjusted', { kind: 'last_n', unit: 'quarter', n: 4 }));
+      expect(result.intent.period).toEqual({ kind: 'range', from: '2025KW02', to: '2026KW01' });
+    });
+
+    it('months wrap year boundaries correctly', async () => {
+      const result = await resolved(raw('cpi_yearly_inflation', { kind: 'last_n', unit: 'month', n: 8 }));
+      expect(result.intent.period).toEqual({ kind: 'range', from: '2025MM11', to: '2026MM06' });
+    });
+
+    it('n = 1 ("het afgelopen jaar") is the single freshest published period, not a window — the hint stands, no series normalization', async () => {
+      // The prompt asks for a relative offset on singular phrasings, but the
+      // model legitimately encodes last_n(1) too (observed live, 2026-07-04);
+      // both encodings converge on the same honest intent.
+      const result = await resolved(raw('bankruptcies_businesses', { kind: 'last_n', unit: 'year', n: 1 }));
+      expect(result.intent.period).toEqual({ kind: 'codes', codes: ['2025JJ00'] });
+      expect(result.intent.derivation).toBe('none');
+      expect(result.impliedRecency).toBe(true);
+    });
+
+    it('n of 0 or absurd is period_invalid', async () => {
+      expect((await failed(raw('cpi_yearly_inflation', { kind: 'last_n', unit: 'year', n: 0 }))).reason).toBe('period_invalid');
+      expect((await failed(raw('cpi_yearly_inflation', { kind: 'last_n', unit: 'year', n: -3 }))).reason).toBe('period_invalid');
+      expect((await failed(raw('cpi_yearly_inflation', { kind: 'last_n', unit: 'year', n: 2.5 }))).reason).toBe('period_invalid');
+      expect((await failed(raw('cpi_yearly_inflation', { kind: 'last_n', unit: 'year', n: 121 }))).reason).toBe('period_invalid');
+    });
+
+    it('a unit the measure is not published at exits as grain_unavailable', async () => {
+      const failure = await failed(raw('population_on_1_january', { kind: 'last_n', unit: 'quarter', n: 4 }, [{ name: 'Nederland', kind: 'land' }]));
+      expect(failure.reason).toBe('grain_unavailable');
+      expect(failure.options).toEqual(['per jaar']);
+    });
+
+    it('a year window falls back to the finest published grain when the coordinate has no yearly series', async () => {
+      // "de afgelopen vijf jaar" of unemployment = the last 20 quarters of
+      // the seasonally-adjusted series (no yearly one exists at CBS).
+      const result = await resolved(raw('unemployment_rate_seasonally_adjusted', { kind: 'last_n', unit: 'year', n: 5 }));
+      expect(result.intent.period).toEqual({ kind: 'range', from: '2021KW02', to: '2026KW01' });
+    });
+  });
+
+  describe('now_vs_ago — two disjoint periods at the finest grain that can express the unit (V02)', () => {
+    it('"inflatie nu vs 5 jaar geleden" compares the freshest month with the month 60 back', async () => {
+      const result = await resolved(raw('cpi_yearly_inflation', { kind: 'now_vs_ago', unit: 'year', amount: 5 }));
+      expect(result.intent.period).toEqual({ kind: 'codes', codes: ['2021MM06', '2026MM06'] });
+      expect(result.intent.derivation).toBe('none');
+      expect(result.impliedRecency).toBe(true);
+    });
+
+    it('keeps an explicit difference hint — "met hoeveel gestegen t.o.v. 5 jaar geleden"', async () => {
+      const result = await resolved(
+        raw('unemployment_rate_seasonally_adjusted', { kind: 'now_vs_ago', unit: 'year', amount: 5 }, null, 'difference'),
+      );
+      expect(result.intent.period).toEqual({ kind: 'codes', codes: ['2021KW01', '2026KW01'] });
+      expect(result.intent.derivation).toBe('difference');
+    });
+
+    it('a yearly-only measure compares at the year grain', async () => {
+      const result = await resolved(raw('population_on_1_january', { kind: 'now_vs_ago', unit: 'year', amount: 5 }, [{ name: 'Nederland', kind: 'land' }]));
+      expect(result.intent.period).toEqual({ kind: 'codes', codes: ['2021JJ00', '2026JJ00'] });
+    });
+
+    it('a unit finer than any published grain exits as grain_unavailable', async () => {
+      const failure = await failed(raw('population_on_1_january', { kind: 'now_vs_ago', unit: 'month', amount: 6 }, [{ name: 'Nederland', kind: 'land' }]));
+      expect(failure.reason).toBe('grain_unavailable');
+      expect(failure.options).toEqual(['per jaar']);
+    });
+
+    it('quarter units pick the finest grain that expresses quarters exactly', async () => {
+      const result = await resolved(raw('unemployment_rate_seasonally_adjusted', { kind: 'now_vs_ago', unit: 'quarter', amount: 2 }));
+      expect(result.intent.period).toEqual({ kind: 'codes', codes: ['2025KW03', '2026KW01'] });
+    });
+
+    it('non-positive or absurd amounts are period_invalid', async () => {
+      expect((await failed(raw('cpi_yearly_inflation', { kind: 'now_vs_ago', unit: 'year', amount: 0 }))).reason).toBe('period_invalid');
+      expect((await failed(raw('cpi_yearly_inflation', { kind: 'now_vs_ago', unit: 'year', amount: -5 }))).reason).toBe('period_invalid');
+      expect((await failed(raw('cpi_yearly_inflation', { kind: 'now_vs_ago', unit: 'year', amount: 121 }))).reason).toBe('period_invalid');
+    });
+
+    it('"nu vs 5 jaar geleden" answers end-to-end with both cells and an honest two-period result (V02)', async () => {
+      const result = await resolved(raw('cpi_yearly_inflation', { kind: 'now_vs_ago', unit: 'year', amount: 5 }));
+      const outcome = await runQuery(db, result.intent);
+      expect(outcome.ok).toBe(true);
+      if (!outcome.ok) throw new Error('unreachable');
+      expect(outcome.cells.map((c) => c.periodCode)).toEqual(['2021MM06', '2026MM06']);
+      expect(outcome.derivations.some((d) => d.kind === 'direction')).toBe(true);
+    });
+  });
+
+  describe('coordinate-aware grain lookups hold for EVERY canonical measure', () => {
+    it("each canonical key resolves 'latest' — the merged-dims filter matches real observations everywhere", async () => {
+      // Guards the WP14 coordinate filter against registry drift: if any
+      // measure's defaults ⊕ dims stopped matching its stored observation
+      // coordinates, its grains would silently come back empty here.
+      const keys = await db.query('select key from canonical_measures order by key');
+      expect(keys.rows.length).toBeGreaterThan(0);
+      for (const row of keys.rows) {
+        const result = await resolveCandidate(
+          db,
+          raw(row.key as string, { kind: 'latest' }),
+          REFERENCE_DATE,
+        );
+        expect(isResolutionFailure(result), `latest failed for ${row.key as string}`).toBe(false);
+      }
+    });
+  });
+
+  describe('stepPeriodCode — pure period arithmetic', () => {
+    it('steps within and across year boundaries at each grain', () => {
+      expect(stepPeriodCode('2026KW01', -1)).toBe('2025KW04');
+      expect(stepPeriodCode('2026MM01', -1)).toBe('2025MM12');
+      expect(stepPeriodCode('2026MM06', -60)).toBe('2021MM06');
+      expect(stepPeriodCode('2025JJ00', -10)).toBe('2015JJ00');
+      expect(stepPeriodCode('2025KW02', 3)).toBe('2026KW01');
+    });
+
+    it('returns null for codes it cannot read — callers must fail loudly, never step garbage', () => {
+      expect(stepPeriodCode('2025XX01', -1)).toBeNull();
+      expect(stepPeriodCode('geen code', -1)).toBeNull();
+      expect(stepPeriodCode('2025MM13', -1)).toBeNull();
+    });
+
+    it('returns null for steps it cannot apply — a fractional or NaN step must never yield a plausible-looking code', () => {
+      // Review finding 2026-07-04: without this, stepPeriodCode('2026KW01',
+      // 1.5) returned '2026KW2.5' — unreachable from current call sites
+      // (integer-guarded), but the function is exported and fail-loud is its
+      // stated contract.
+      expect(stepPeriodCode('2026KW01', 1.5)).toBeNull();
+      expect(stepPeriodCode('2026KW01', Number.NaN)).toBeNull();
+      expect(stepPeriodCode('2026KW01', Number.POSITIVE_INFINITY)).toBeNull();
+    });
   });
 });
 
