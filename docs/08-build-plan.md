@@ -62,4 +62,31 @@ Built as briefed (ADR [018](decisions/018-chat-ui-and-deploy.md) records the loa
 
 ---
 
+## WP13 — Phase 1 access: identity + credit ledger + pricing config + Stripe/iDEAL seams  ⏸ DRAFT — owner approval required before any build
+
+*Drafted 2026-07-05 (overnight validation session) per the owner's request that the brief exist as a reviewable proposal. **This is the business model — the owner's explicit escalation line. Nothing here is built until Stefan approves this brief** (and the open decisions below are made). Sources: ADR [006](decisions/006-auth-billing-seams.md) (the four seams + the 2026-07-04 updates), [06-roadmap.md](06-roadmap.md) Phase 1, [open-questions #3/#47/#53/#54](open-questions.md), and the validation memo ([validation-results-2026-07-05.md](validation-results-2026-07-05.md)).*
+
+**One sentence:** put the deployed chat behind accounts with paid credit packs — the [#47](open-questions.md) decision made real — by building ADR 006's reserved seams 1–4, without touching the answer pipeline anywhere except the already-reserved cost-estimation step.
+
+**Scope (the four ADR 006 seams, in build order):**
+
+1. **Identity** — Supabase Auth (`@supabase/ssr`, magic-link; ADR 006 Update 2). Account required before any question on the main chat ([#47](open-questions.md), resolved). The audited entry points start receiving a real `userId` (the R8 column has carried the nullable seam since WP10 — no migration needed for this half). **Setup obligation before real signups:** custom SMTP (Resend) wired into Supabase Auth — the built-in sender is dev-only rate-limited (ADR 006). Activates the docs/04 GDPR checklist (privacy policy, LLM-provider DPA, retention [#14](open-questions.md)).
+2. **Credit ledger** — `credit_transactions`, **append-only** (numbered migration): user, delta, reason (signup_grant / purchase / question_cost / compensation), related audit-row/purchase references. Balance = SUM; no mutable balance column (ADR 006 records the notes' PoC as rejected). Business rules the schema must make structural: **clarifying questions cost 0** (they already produce their own audit rows — the reason enum encodes this); **credits never expire** (no expiry columns, period); failed delivery → compensating entry, never an edit.
+3. **Pricing config** — one config table/file for credit costs per action class and pack prices (1/3/5 indicative classes, [#4](open-questions.md)); Phase 0's no-op cost estimator becomes the **single policy gate**: estimate → check balance → debit → answer, with the fail-closed rule decided in-session and recorded in the WP's ADR (recommendation: debit-before-answer with an automatic compensating entry when the pipeline returns an internal refusal — an unanswered question must never silently cost a credit).
+4. **Stripe + iDEAL** — checkout for credit packs, webhook → ledger append, **test mode only** until [#54](open-questions.md) resolves. ⚠ **External blocker, unchanged (2026-07-05): KvK registration + business bank account must exist before Stripe can pay out** — RUNBOOK's "slowest item," status still undecided by the owner. Code can be finished and verified in test mode; **the page cannot take real money until #54 closes.** Reconciliation stays manual in Phase 1 (daily auto-reconciliation is Phase 2 per the roadmap).
+
+**Invariants at stake:** the anti-fabrication pipeline is untouched — auth/billing may only attach at the audited entry points' `userId` seam and the reserved cost-estimation step (ADR 006 consequence: "later phases attach at named seams instead of refactoring the pipeline"). R8 rows carry the user. The benchmark gate must stay green throughout; ledger invariants (append-only, never-expire, clarify-costs-0, compensation-not-edit) get their own hermetic test suite.
+
+**Explicit non-goals of this WP (each has its own slot):** the anonymous-trial page ([#53](open-questions.md) — fast-follow *after* this ships, owner-sequenced); conversation memory ([#57](open-questions.md) — own WP if approved, see the validation memo's headline recommendation); CSV export ([#52](open-questions.md) — Phase 1, separate small WP); table/regional growth ([#33](open-questions.md) first); browse layer (late Phase 1).
+
+**Open decisions the owner must make at approval (not before, not by a session):**
+- Free signup credit count, and one-time vs. monthly top-up ([#3](open-questions.md)).
+- Price classes → euro amounts mapping ([#4](open-questions.md) — config-table values, changeable later by design).
+- KvK/bank-account timeline ([#54](open-questions.md)) — decides whether Stripe goes live in this WP or stays test-mode.
+- Whether conversation memory ([#57](open-questions.md)) is scheduled before or after this WP — the validation pass measured it as the biggest usability gap, but this WP is the abuse-protection prerequisite for the public page ([#47](open-questions.md)).
+
+**Done means:** signup → magic link → question → debit → answer with the ledger summing correctly, hermetically tested; Stripe webhook flows proven against Stripe's fixture events (test mode); CI green including the untouched benchmark gate; RUNBOOK updated with the new secrets (Supabase service keys, Stripe keys, Resend) in owner-followable language; an ADR recording the in-session decisions (fail-closed debit rule, exact scope boundary per the roadmap's note).
+
+---
+
 *When a WP completes: tick it in [STATUS.md](STATUS.md), record measured results, and — if a design decision here changed — update this file so it stays the plan of record.*
