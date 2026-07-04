@@ -10,6 +10,7 @@ import type { AskOutcome } from '../app/actions.ts';
 import type { GatedResponse } from '../backend/billing/index.ts';
 import type { ConversationContext } from '../backend/answer/context/index.ts';
 import type { ComposedResponse } from '../backend/answer/respond/types.ts';
+import { buildAnswerCsv } from '../lib/csv.ts';
 import { fakeAnswerResponse, fakeCell } from '../test/fake-answer.ts';
 import { Chat } from './chat.tsx';
 
@@ -197,6 +198,78 @@ describe('Chat — WP20 stat card (#80)', () => {
     await submit('Hoe ontwikkelde de inflatie zich?');
     await screen.findByText('De inflatie steeg van 2020 tot 2024.');
     expect(screen.queryByRole('button', { name: 'Download als afbeelding' })).toBeNull();
+  });
+});
+
+// WP21 (#52): unlike the PNG path (which needs real image decoding), the CSV
+// download's SUCCESS leg is fully verifiable in jsdom — the Blob's exact
+// content and the anchor's filename are asserted, not just the button.
+describe('Chat — WP21 CSV export (#52)', () => {
+  afterEach(() => {
+    // jsdom's URL lacks createObjectURL entirely; remove what a test added
+    // (the WP20 stat-card cleanup pattern).
+    delete (URL as unknown as Record<string, unknown>).createObjectURL;
+    delete (URL as unknown as Record<string, unknown>).revokeObjectURL;
+  });
+
+  it('offers "Download als CSV" under an answer and downloads exactly the built file', async () => {
+    const blobs: Blob[] = [];
+    (URL as unknown as Record<string, unknown>).createObjectURL = vi.fn((blob: Blob) => {
+      blobs.push(blob);
+      return 'blob:mock-csv';
+    });
+    const revoke = vi.fn();
+    (URL as unknown as Record<string, unknown>).revokeObjectURL = revoke;
+    const clicked: { href: string; download: string }[] = [];
+    const clickSpy = vi
+      .spyOn(HTMLAnchorElement.prototype, 'click')
+      .mockImplementation(function (this: HTMLAnchorElement) {
+        clicked.push({ href: this.href, download: this.download });
+      });
+
+    const response = fakeAnswerResponse({
+      body: 'De inflatie in 2024 was 3,3%.',
+      shape: 'single',
+      cells: [fakeCell()],
+    });
+    askQuestion.mockResolvedValue(
+      outcome({ kind: 'ok', auditId: 1, netCost: 20, response: response as ComposedResponse }),
+    );
+    render(<Chat />);
+    await submit('Wat was de inflatie in 2024?');
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Download als CSV' }));
+
+    const expected = buildAnswerCsv(response);
+    expect(clicked).toEqual([{ href: 'blob:mock-csv', download: expected.filename }]);
+    expect(blobs).toHaveLength(1);
+    // Blob.text() strips a leading BOM by spec (UTF-8 decode), so the BOM is
+    // asserted on the raw bytes and the text on the decoded remainder.
+    const bytes = new Uint8Array(await blobs[0]!.arrayBuffer());
+    expect([...bytes.slice(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
+    await expect(blobs[0]!.text()).resolves.toBe(expected.content.replace(/^\ufeff/, ''));
+    expect(blobs[0]!.type).toBe('text/csv;charset=utf-8');
+    expect(revoke).toHaveBeenCalledWith('blob:mock-csv');
+    expect(screen.queryByText('Downloaden lukte niet in deze browser.')).toBeNull();
+    clickSpy.mockRestore();
+  });
+
+  it('offers no CSV button on a non-answer (clarification) message', async () => {
+    askQuestion.mockResolvedValue(outcome(fakeClarification('Welke gemeente bedoel je?')));
+    render(<Chat />);
+    await submit('Hoeveel werklozen zijn er?');
+    expect(await screen.findByText('Welke gemeente bedoel je?')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Download als CSV' })).toBeNull();
+  });
+
+  it('shows the honest failure note when the browser API throws (jsdom default: no createObjectURL)', async () => {
+    // Deliberately NO createObjectURL stub — the call throws, the catch leg
+    // must surface the same failure copy the stat card uses.
+    askQuestion.mockResolvedValue(outcome(fakeAnswer('Nederland telt 18.044.027 inwoners.')));
+    render(<Chat />);
+    await submit('Hoeveel inwoners heeft Nederland?');
+    fireEvent.click(await screen.findByRole('button', { name: 'Download als CSV' }));
+    expect(await screen.findByText('Downloaden lukte niet in deze browser.')).toBeInTheDocument();
   });
 });
 
