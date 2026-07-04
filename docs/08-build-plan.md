@@ -84,7 +84,7 @@ Built as briefed (ADR [018](decisions/018-chat-ui-and-deploy.md) records the loa
 - Pricing: action classes **1/3/5** credits; launch packs **€5 / 10 · €10 / 25 · €30 / 100** ([#4](open-questions.md), resolved — config-table starting values, changeable by design).
 - KvK: **starts within a few months** ([#54](open-questions.md)) → Stripe stays **test mode** in this WP; going live is a config flip once the Stripe account clears. Launch-timing consequence recorded in #54 (free credits are the only credits until then).
 - Sequencing: **WP13 first, then conversation memory as WP15** ([#57](open-questions.md), resolved).
-- Scope addition: the `audit_answers` **source-tag column** (benchmark / validation / user) rides this WP's migration; existing rows 1–73 back-tagged ([#44](open-questions.md), resolved).
+- Scope addition: the `audit_answers` **source-tag column** (benchmark / validation / user) rides this WP's migration; existing rows 1–76 back-tagged ([#44](open-questions.md), resolved; rows 74–76 added after the brief was approved — WP14's live spot-check, validation-flavored).
 
 **Done means:** signup → magic link → question → debit → answer with the ledger summing correctly, hermetically tested; Stripe webhook flows proven against Stripe's fixture events (test mode); CI green including the untouched benchmark gate; RUNBOOK updated with the new secrets (Supabase service keys, Stripe keys, Resend) in owner-followable language; an ADR recording the in-session decisions (fail-closed debit rule, exact scope boundary per the roadmap's note).
 
