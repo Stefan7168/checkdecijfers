@@ -30,3 +30,4 @@ coverage/
 # benchmark/live-benchmark-report.json (scorer --report), never here
 benchmark/audit-run.json
 benchmark/audit-run-live.json
+benchmark/validation-run.json
