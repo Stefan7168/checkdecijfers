@@ -181,6 +181,12 @@ Built as approved, supervised as required (owner confirmed the live window in-se
 
 ---
 
+## WP21 (working number) — CSV/table export for answers (#52)  NEXT UP — to be briefed by the implementing session
+
+*Placeholder (added 2026-07-05, session 20) so the next session can't miss its target: the second item in the session-19 owner-delegated order (~~dashboard polish~~ → **CSV export** → anonymous trial [#53] last). The decision is already made ([open-questions #52](open-questions.md), Stefan 2026-07-04): Phase 1, CC BY 4.0 permits it; **format and placement are explicitly left to the build session.** Obvious inputs to that brief: every answer already carries its validated `ResultCell[]` client-side (WP20 proved the envelope is fully readable in the browser), the WP20 stat-card/citation pattern shows the shape of a per-answer affordance, and R4/CC BY require the attribution + derived-marking to travel INSIDE the exported file, not just beside the download link. Invariants to name in the brief: R1 (exported numbers are the validated cells verbatim — no reformatting that changes values), R4 (attribution embedded), the no-pipeline-change boundary if it can be built display-side.*
+
+---
+
 ## WP16 (working number) — Demand-driven table onboarding, fully automated  NOT YET BRIEFED — queued after WP13/WP15, Phase 2–3
 
 *Placeholder only, added 2026-07-04 so this decision can't be missed by a session reading only this file. Not next in line — WP13 then WP15 come first — so this is deliberately not fleshed out into a full brief yet (scope/invariants/done-criteria), per the phase-gate discipline: don't over-specify work that isn't next.*
