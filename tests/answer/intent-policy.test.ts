@@ -57,8 +57,18 @@ function failure(
   confidence: number,
   options: string[] = [],
 ): ResolutionFailure {
+  const axis =
+    reason === 'max_needs_regions'
+      ? 'region'
+      : reason === 'max_on_national_measure'
+        ? 'derivation'
+        : reason.startsWith('region')
+          ? 'region'
+          : reason.startsWith('period') || reason === 'grain_unavailable'
+            ? 'period'
+            : 'measure';
   return {
-    axis: reason.startsWith('region') ? 'region' : reason.startsWith('period') || reason === 'grain_unavailable' ? 'period' : 'measure',
+    axis,
     reason,
     message: `synthetic ${reason}`,
     options,
@@ -181,6 +191,8 @@ describe('R7 threshold policy (docs/05 R7, ADR 012)', () => {
       'region_ambiguous',
       'region_unknown',
       'region_on_national_measure',
+      'max_needs_regions',
+      'max_on_national_measure',
       'grain_unavailable',
       'period_missing',
       'period_invalid',
@@ -191,6 +203,30 @@ describe('R7 threshold policy (docs/05 R7, ADR 012)', () => {
       expect(outcome.kind).toBe('clarification');
       if (outcome.kind !== 'clarification') throw new Error('unreachable');
       expect(outcome.question_nl.match(/\?/g), `reason ${reason}`).toHaveLength(1);
+    }
+  });
+
+  it('the #97a max templates name the REAL gap — full-string pins (WP22)', async () => {
+    // Hardcoded literals, never derived from policy.ts (punch-a-hole honesty).
+    const needsRegions = await decide(context(), [failure('max_needs_regions', 0.9)], config, alwaysServable);
+    if (needsRegions.kind !== 'clarification') throw new Error('unreachable');
+    expect(needsRegions.question_nl).toBe(
+      'Welke gemeentes of provincies wil je met elkaar vergelijken? Noem er minstens twee in je vraag.',
+    );
+    expect(needsRegions.axes).toEqual(['region']);
+
+    const national = await decide(context(), [failure('max_on_national_measure', 0.9)], config, alwaysServable);
+    if (national.kind !== 'clarification') throw new Error('unreachable');
+    expect(national.question_nl).toBe(
+      'Deze cijfers zijn er alleen voor heel Nederland, dus regio\u2019s vergelijken kan hier niet \u2014 ' +
+        'en de periode met de hoogste of laagste waarde opzoeken kan ik nog niet. ' +
+        'Wil je in plaats daarvan het verloop over een periode zien, bijvoorbeeld per maand of per jaar?',
+    );
+    expect(national.axes).toEqual(['derivation']);
+    // Neither template may ever ask the misleading gemeente-of-provincie
+    // question — the exact live-observed #97 failure.
+    for (const outcome of [needsRegions, national]) {
+      expect(outcome.question_nl).not.toContain('Welke gemeente of provincie bedoel je');
     }
   });
 
@@ -427,6 +463,8 @@ describe('no-numbers belt-check over every policy-built clarification text (prin
       'region_ambiguous',
       'region_unknown',
       'region_on_national_measure',
+      'max_needs_regions',
+      'max_on_national_measure',
       'grain_unavailable',
       'period_missing',
       'period_invalid',

@@ -50,7 +50,7 @@ async function submit(text: string) {
   await screen.findByText(text);
 }
 
-function renderDashboard(initialBalance: number) {
+function renderDashboard(initialBalance: number, purchaseSuccess = false) {
   return render(
     <Dashboard
       initialBalance={initialBalance}
@@ -58,11 +58,43 @@ function renderDashboard(initialBalance: number) {
       clarificationPrice={10}
       signupGrantCredits={100}
       history={<div data-testid="history-slot" />}
+      purchaseSuccess={purchaseSuccess}
     />,
   );
 }
 
 const WARNING = 'Je saldo is bijna op — er is nog genoeg voor één vraag.';
+
+// WP22 (#95): the post-purchase confirmation banner — honest copy (webhook
+// credits the ledger, not the redirect), dismissible, and dismissing strips
+// the query flag so a reload cannot resurrect it.
+describe('Dashboard — purchase-success banner (#95)', () => {
+  const BANNER =
+    'Betaling gelukt — je credits worden bijgeschreven zodra Stripe de betaling bevestigt (meestal een paar seconden). Ververs daarna de pagina om je nieuwe saldo te zien.';
+
+  it('shows the banner only when the page loaded from the success redirect', () => {
+    renderDashboard(100, true);
+    expect(screen.getByText(BANNER)).toBeInTheDocument();
+    cleanup();
+    renderDashboard(100, false);
+    expect(screen.queryByText(BANNER)).toBeNull();
+  });
+
+  it('dismissing hides the banner AND strips the query flag from the URL', () => {
+    const replaceState = vi.spyOn(window.history, 'replaceState');
+    renderDashboard(100, true);
+    fireEvent.click(screen.getByRole('button', { name: 'Sluiten' }));
+    expect(screen.queryByText(BANNER)).toBeNull();
+    expect(replaceState).toHaveBeenCalledWith(null, '', window.location.pathname);
+    replaceState.mockRestore();
+  });
+
+  it('never promises a fixed crediting time (the honest "meestal" hedge)', () => {
+    renderDashboard(100, true);
+    expect(screen.getByText(/meestal een paar seconden/)).toBeInTheDocument();
+    expect(screen.queryByText(/direct bijgeschreven|onmiddellijk/)).toBeNull();
+  });
+});
 
 describe('Dashboard — live balance (#68)', () => {
   it('decrements the displayed balance by the gate\'s own netCost after an answer', async () => {

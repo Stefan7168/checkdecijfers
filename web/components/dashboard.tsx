@@ -24,6 +24,7 @@ export function Dashboard({
   clarificationPrice,
   signupGrantCredits,
   history,
+  purchaseSuccess = false,
 }: {
   initialBalance: number;
   simplePrice: number;
@@ -31,8 +32,19 @@ export function Dashboard({
   clarificationPrice: number;
   signupGrantCredits: number;
   history: ReactNode;
+  /** WP22 #95: true when the page loaded from Stripe's success redirect
+   * (?purchase=success) — shows the dismissible confirmation banner. */
+  purchaseSuccess?: boolean;
 }) {
   const [balance, setBalance] = useState(initialBalance);
+  const [showPurchaseBanner, setShowPurchaseBanner] = useState(purchaseSuccess);
+
+  // WP22 (#95): dismissing also strips the query flag, so a reload doesn't
+  // resurrect a banner the user already closed.
+  function dismissPurchaseBanner(): void {
+    setShowPurchaseBanner(false);
+    window.history.replaceState(null, '', window.location.pathname);
+  }
 
   const handleOutcome = useCallback((gated: GatedResponse) => {
     if (gated.kind === 'ok') {
@@ -45,7 +57,27 @@ export function Dashboard({
   }, []);
 
   return (
-    <div className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-6 p-4 lg:grid-cols-[2fr_1fr]">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 p-4">
+      {showPurchaseBanner ? (
+        <div className="flex items-start justify-between gap-3 rounded border border-green-300 bg-green-50 px-4 py-3 text-sm text-green-800">
+          {/* Honest copy (#95): the webhook credits the ledger, not this
+            * redirect — never promise a fixed time, and say a reload is what
+            * shows the new balance (the #68 live updates move on question
+            * outcomes, not on webhook credits). */}
+          <p>
+            Betaling gelukt — je credits worden bijgeschreven zodra Stripe de betaling bevestigt
+            (meestal een paar seconden). Ververs daarna de pagina om je nieuwe saldo te zien.
+          </p>
+          <button
+            type="button"
+            onClick={dismissPurchaseBanner}
+            className="shrink-0 text-xs text-green-700 underline"
+          >
+            Sluiten
+          </button>
+        </div>
+      ) : null}
+      <div className="grid w-full grid-cols-1 gap-6 lg:grid-cols-[2fr_1fr]">
       <div className="flex flex-col gap-6">
         <Chat
           onOutcome={handleOutcome}
@@ -54,6 +86,7 @@ export function Dashboard({
         {history}
       </div>
       <AccountPanel balance={balance} simplePrice={simplePrice} signupGrantCredits={signupGrantCredits} />
+      </div>
     </div>
   );
 }

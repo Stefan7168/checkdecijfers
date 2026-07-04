@@ -781,13 +781,29 @@ export async function resolveCandidate(
   const regionResolution = await resolveRegions(db, candidate, canonical, geo);
   if (!regionResolution.ok) return fail(regionResolution.failure);
 
+  // WP22 (#97a, live-observed 2026-07-05): a 'max' without ≥2 regions must
+  // name the REAL gap. Two distinct shapes, deliberately NOT region_unknown
+  // (that reason's template — "welke gemeente of provincie bedoel je" —
+  // belongs to genuinely unknown place names and stays byte-identical):
+  // a geo table is missing its comparison set; a national-only measure can
+  // never compare regions at all, and max-over-PERIODS ("welke maand steeg
+  // het meest") is not built (open-questions #97b) — say so, never mislead.
   const maxNeedsRegions = (): ResolutionFailure =>
-    fail({
-      axis: 'region',
-      reason: 'region_unknown',
-      message: 'a "meeste/hoogste" comparison needs the regions to compare named in the question',
-      options: [],
-    });
+    geo.geoDimension === null
+      ? fail({
+          axis: 'derivation',
+          reason: 'max_on_national_measure',
+          message:
+            `a "meeste/hoogste" comparison compares regions, but "${canonical.definitionLabel}" is national-only; ` +
+            'max-over-periods is a separate unbuilt capability (open-questions #97b)',
+          options: [],
+        })
+      : fail({
+          axis: 'region',
+          reason: 'max_needs_regions',
+          message: 'a "meeste/hoogste" comparison needs at least two regions named in the question',
+          options: [],
+        });
 
   let derivation = normalizeDerivation(candidate);
   if (derivation === 'max' && regionResolution.codes.length < 2) return maxNeedsRegions();

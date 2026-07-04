@@ -12,6 +12,7 @@ import Stripe from 'stripe';
 import { buildCheckoutSessionParams, getPack } from '../../backend/billing/index.ts';
 import { currentUserId } from '../../lib/current-user.ts';
 import { getDb } from '../../lib/db.ts';
+import { purchaseSuccessUrl } from '../../lib/purchase.ts';
 
 export async function createCheckoutSession(packId: string): Promise<{ error: string } | undefined> {
   const userId = await currentUserId();
@@ -34,7 +35,9 @@ export async function createCheckoutSession(packId: string): Promise<{ error: st
   const params = buildCheckoutSessionParams(
     pack,
     userId,
-    `${origin}/credits?purchase=success`,
+    // WP22 (#95): success returns to the main page — the dashboard IS the
+    // app; cancel stays on the pack list (only success was decided).
+    purchaseSuccessUrl(origin),
     `${origin}/credits?purchase=cancelled`,
   );
 

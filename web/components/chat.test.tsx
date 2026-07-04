@@ -10,6 +10,7 @@ import type { AskOutcome } from '../app/actions.ts';
 import type { GatedResponse } from '../backend/billing/index.ts';
 import type { ConversationContext } from '../backend/answer/context/index.ts';
 import type { ComposedResponse } from '../backend/answer/respond/types.ts';
+import { UnrecognizedActionError } from 'next/dist/client/components/unrecognized-action-error';
 import { buildAnswerCsv } from '../lib/csv.ts';
 import { fakeAnswerResponse, fakeCell } from '../test/fake-answer.ts';
 import { Chat } from './chat.tsx';
@@ -270,6 +271,52 @@ describe('Chat — WP21 CSV export (#52)', () => {
     await submit('Hoeveel inwoners heeft Nederland?');
     fireEvent.click(await screen.findByRole('button', { name: 'Download als CSV' }));
     expect(await screen.findByText('Downloaden lukte niet in deze browser.')).toBeInTheDocument();
+  });
+});
+
+// WP22 (#96a): a stale tab's first action after a deploy throws Next's
+// UnrecognizedActionError — the chat must show the honest deploy message
+// with a refresh affordance, never the misleading generic error. The test
+// rejects with the REAL Next class (imported from Next's own module) so the
+// detector's instanceof check is exercised, not mocked.
+describe('Chat — WP22 stale-deploy action failure (#96a)', () => {
+  it('shows the honest deploy copy + refresh button, never the generic error', async () => {
+    askQuestion.mockRejectedValue(
+      new UnrecognizedActionError('Server Action "709ed9" was not found on the server.'),
+    );
+    render(<Chat />);
+    await submit('Wat was de inflatie in 2024?');
+    expect(
+      await screen.findByText(/De site is net bijgewerkt, waardoor deze vraag niet is verstuurd/),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/geen credits\s+afgeschreven/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Ververs de pagina' })).toBeInTheDocument();
+    expect(
+      screen.queryByText('Er ging iets mis bij het ophalen van het antwoord. Probeer het opnieuw.'),
+    ).toBeNull();
+    // The form recovered (busy cleared) — the user can type again.
+    expect(screen.getByPlaceholderText('Stel een vraag…')).not.toBeDisabled();
+  });
+
+  it('keeps the generic copy for any other thrown error', async () => {
+    askQuestion.mockRejectedValue(new Error('network down'));
+    render(<Chat />);
+    await submit('Wat was de inflatie in 2024?');
+    expect(
+      await screen.findByText('Er ging iets mis bij het ophalen van het antwoord. Probeer het opnieuw.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/De site is net bijgewerkt/)).toBeNull();
+  });
+
+  it('clears the deploy notice on the next submit', async () => {
+    askQuestion.mockRejectedValueOnce(new UnrecognizedActionError('gone'));
+    askQuestion.mockResolvedValueOnce(outcome(fakeAnswer('Nederland telt 18.044.027 inwoners.')));
+    render(<Chat />);
+    await submit('Wat was de inflatie in 2024?');
+    expect(await screen.findByText(/De site is net bijgewerkt/)).toBeInTheDocument();
+    await submit('Hoeveel inwoners heeft Nederland?');
+    expect(await screen.findByText('Nederland telt 18.044.027 inwoners.')).toBeInTheDocument();
+    expect(screen.queryByText(/De site is net bijgewerkt/)).toBeNull();
   });
 });
 
