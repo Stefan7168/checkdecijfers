@@ -233,6 +233,30 @@ Built as approved, supervised as required (owner confirmed the live window in-se
 
 ---
 
+## WP23 — Display smalls batch: message-type styling (#84), StatLine deep-link (#86), source chip (#90-presentation), number typography (#91), chart-footer rearrangement (#92), voorlopig badge (#71), example-question chips (#75)
+
+*Owner-approved brainstorm smalls (rows #84/#86/#90/#91/#92/#71/#75), bundled per the overnight brief (queue item 3). All display-layer: zero pipeline/prompt/schema changes, zero LLM, zero spend. #73 (follow-up chips) deliberately NOT built — judgment recorded in its row: deterministic templates alone cannot promise a servable suggestion, and an unservable chip invites a paid dead-end (the #77/#97 cost pattern); belongs with #66's servability-backed click machinery.*
+
+**The answer message is re-rendered from its structural fields** (the #90/#84 core): instead of the single pre-assembled `text` string, an answer renders `answer.body` (the bubble), then `stalenessWarning` / `definitionLine` / `markingLine` as their own small paragraphs, then the attribution as a **chip** — a visually separate bordered element carrying the FULL `attributionLine` sentence (R4 stays displayed, never behind a click) plus the #86 "Bekijk bij CBS StatLine" deep-link. Zero information loss by construction: compose.ts:37 assembles `text` from exactly these five fields, and all five render. The chip is the collapsed depth-0 of the future #70/#79/#89 drill-through (cluster brief below); `text` itself (the R8 audit string) is untouched server-side.
+
+**#86:** `web/lib/statline.ts` — pure URL construction to the dataset TABLE view (cell-level StatLine deep-links are unreliable; per the #86 row the link lands on the table). Table id verbatim (casing load-bearing: '03759ned'). Pinned against two real Phase-0 table URLs.
+
+**#84:** `ChatMessage` gains `kind` ('user'/'answer'/'clarification'/'refusal'/'info'): clarifications get the amber container + a leading "?" marker; refusals get the fixed header **"Dit kon ik niet beantwoorden"** + the fixed badge **"geen antwoord = geen gok"** (both exact strings from the #84 row); answers stay neutral; gated non-'ok' kinds are 'info'.
+
+**#71:** an amber "voorlopig" pill in the answer's chip row whenever ANY quoted cell is provisional (derived at receive from `result.cells`) — the message-level generalization of the stat card's badge (which stays).
+
+**#91:** `tabular-nums` on the message list and the balance/cost surfaces (pure CSS; Tailwind's built-in utility). The "dominant key number" half of #91 is already the WP20 stat card.
+
+**#92:** chart footer rearranged in `web/components/chart.tsx`: caveats (provisionalNote + nullNotes) become amber and one step larger; the attribution line stays smallest/lightest (photo-credit style). R4 CONTENT untouched — same `attributionLine` string from the one builder; order (caveats above credit) test-pinned.
+
+**#75:** three example-question chips on the EMPTY chat state only, each a benchmark-proven answerable question; clicking FILLS the input (never auto-sends — the user sees the #82 cost line and presses Verstuur themselves; a chip must not spend credits on a click).
+
+**Invariants at stake:** R4 (the chip always shows the full attribution sentence — a snapshot test binds it, and the chip may not be collapsed-by-default-hiding-content); R5/R11 (markingLine/staleness/provisional surfaces all still render — each pinned); R1/R3 (no new number source — every rendered string is an envelope field or a registry-pinned URL); zero pipeline change; ADR 003 (the StatLine link sends the USER to CBS; our request path still never calls CBS).
+
+**Done means:** full local gate; tests (chip binding incl. href = pinned StatLine URL for the fixture's tableId, kind styling incl. both fixed refusal strings, voorlopig pill on/off, structural-fields rendering with zero loss vs a text-assembled fixture, empty-state chips fill-not-send, footer order/amber pins); adversarial review; rows #84/#86/#90/#91/#92/#71/#75 updated (+#73's judged deferral recorded); CI green watched.
+
+---
+
 ## WP16 (working number) — Demand-driven table onboarding, fully automated  NOT YET BRIEFED — queued after WP13/WP15, Phase 2–3
 
 *Placeholder only, added 2026-07-04 so this decision can't be missed by a session reading only this file. Not next in line — WP13 then WP15 come first — so this is deliberately not fleshed out into a full brief yet (scope/invariants/done-criteria), per the phase-gate discipline: don't over-specify work that isn't next.*
@@ -242,6 +266,20 @@ Built as approved, supervised as required (owner confirmed the live window in-se
 **What the implementing session still needs to firm up (not decided yet):** the exact structural/label-consistency check implementations, what counts as a usable "independent cross-check" source in practice, the confidence thresholds that gate auto-publish vs. the honest-disclosure fallback, and how the disclosure is composed/rendered (reuses the answer pipeline's existing verbatim-value machinery, per principle (a) — no new LLM-computation surface).
 
 **Owner confirmed wanting this built (2026-07-04, session 18)**, and two more pieces landed: the exact "we're fetching this" user-facing copy, and that this response **costs credits, not free like a refusal** — both in [open-questions #24](open-questions.md) (exact price/refund-on-failure still open). Session 18 also surfaced three related, separately-scoped items worth sequencing alongside or before this WP: explicit multi-period/multi-region auto-display ([#64](open-questions.md)), durable error logging beyond Vercel's short retention ([#65](open-questions.md)), and clickable suggestion buttons for clarifications ([#66](open-questions.md)).
+
+---
+
+## WP24 (working number) — site shell: header, footer, logout — placeholder, blocked only on a copy sign-off
+
+*Placeholder (added 2026-07-05/06, session boundary) from the [UX design brief](10-ux-design-brief.md) — full reasoning and evidence there; this entry is the buildable summary. Not started.*
+
+**Scope:** a new `web/components/site-header.tsx` (wordmark linking to `/`, live balance chip reusing the existing `getBalance`/#68 pattern, "Credits kopen" link, and a genuinely new "Log uit" action — a server action wrapping Supabase sign-out, redirecting to `/login`; there is currently **no sign-out affordance anywhere in the app**, verified by grep) rendered by each authenticated page (`/`, `/credits`) exactly like today's per-page `currentUserId()` guard — not centralized into `layout.tsx`. A stripped header (wordmark only) on `/login`. A new site-wide footer added directly to `web/app/layout.tsx` (no data dependency, so it costs nothing structurally): one line carrying the CBS/CC BY 4.0 attribution + a privacy link (target TBD, see below) + an "over dit project" link.
+
+**Blocked on exactly one thing:** [open-questions #99](open-questions.md)'s draft footer copy needs owner sign-off (approve as-is, edit, or reject) — the header has no open product question and can be built regardless. [#98](open-questions.md) (homepage-vs-dashboard IA) does **not** block this WP — the brief's Option A (recommended) requires zero change to today's `/` route; only Option B would reshape this WP's scope, and only if greenlit later.
+
+**Invariants at stake:** ADR 006 (no price/number literals in copy — the balance chip reads live, never hardcoded); R4/CC BY (the footer is an ADDITIONAL site-level echo, never a replacement for the existing per-answer inline attribution, which stays exactly as detailed as it is); zero pipeline/schema/LLM change (this is 100% display-layer); the privacy link either points nowhere yet (omitted) or to a placeholder — never a broken promise implying #14 is already built.
+
+**Done means:** full local gate green (typecheck both sides, all backend suites unaffected since nothing outside `web/` changes, web tests, real `next build`); tests for the logout action, the header's presence/absence rules (stripped on `/login`), and the footer's static content; adversarial review per the house rule; #99 marked built in open-questions; STATUS updated with measured results.
 
 ---
 

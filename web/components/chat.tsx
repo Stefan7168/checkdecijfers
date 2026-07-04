@@ -25,11 +25,31 @@ import { buildAnswerCsv } from '../lib/csv.ts';
 import type { AnswerCsv } from '../lib/csv.ts';
 import { statCardData } from '../lib/stat-card-data.ts';
 import type { StatCardData } from '../lib/stat-card-data.ts';
+import { statLineUrl } from '../lib/statline.ts';
 import { ChartView } from './chart.tsx';
 import { StatCard } from './stat-card.tsx';
 
+/** WP23 (#90/#84): an answer renders from its STRUCTURAL fields — body in
+ * the bubble, staleness/definition/marking as their own lines, attribution
+ * as a chip with the #86 StatLine link. Zero loss by construction: these are
+ * exactly the fields compose.ts assembles `text` from; `text` itself (the
+ * R8 audit string) is untouched server-side. */
+interface AnswerView {
+  body: string;
+  stalenessWarning: string | null;
+  definitionLine: string | null;
+  markingLine: string | null;
+  /** The full R4 attribution sentence — ALWAYS visible on the chip, never
+   * behind a click. */
+  attribution: string;
+  tableId: string;
+}
+
 interface ChatMessage {
   role: 'user' | 'assistant';
+  /** WP23 (#84): message-type styling. Null on user messages; 'info' for
+   * the gated non-'ok' kinds. */
+  kind: 'answer' | 'clarification' | 'refusal' | 'info' | null;
   text: string;
   chart: ChartSpec | null;
   /** Credits charged for this turn (GatedResponse.netCost) -- null on user
@@ -44,10 +64,20 @@ interface ChatMessage {
   /** WP21 #52: the exported data file — built once at receive time from the
    * validated envelope (csv.ts); null on non-answers. */
   csv: AnswerCsv | null;
-  /** WP20 #82: lets the cost caption add the reply price under a
-   * clarification message. */
-  isClarification: boolean;
+  /** WP23 (#90): structural answer rendering; null on non-answers. */
+  answerView: AnswerView | null;
+  /** WP23 (#71): any quoted cell is provisional — the amber pill. */
+  provisional: boolean;
 }
+
+/** WP23 (#75): clickable examples on the empty chat — each a benchmark-
+ * proven answerable shape. Clicking FILLS the input, never auto-sends: the
+ * user sees the #82 cost line and presses Verstuur themselves. */
+const EXAMPLE_QUESTIONS = [
+  'Wat was de inflatie in 2024?',
+  'Hoeveel inwoners heeft Nederland?',
+  'Maak een grafiek van de inflatie van 2020 tot en met 2024.',
+] as const;
 
 /** WP20 #82: live pricing for the pre-send cost surfaces — read from the
  * pricing tables by the page (ADR 006), threaded via Dashboard. `balance` is
@@ -173,7 +203,7 @@ export function Chat({
 
     setMessages((m) => [
       ...m,
-      { role: 'user', text, chart: null, cost: null, citation: null, card: null, csv: null, isClarification: false },
+      { role: 'user', kind: null, text, chart: null, cost: null, citation: null, card: null, csv: null, answerView: null, provisional: false },
     ]);
     setInput('');
     setBusy(true);
@@ -194,13 +224,15 @@ export function Chat({
           ...m,
           {
             role: 'assistant',
+            kind: 'info',
             text: gatedMessageText(gated),
             chart: null,
             cost: null,
             citation: null,
             card: null,
             csv: null,
-            isClarification: false,
+            answerView: null,
+            provisional: false,
           },
         ]);
         // None of these kinds change the pending clarification state;
@@ -213,13 +245,26 @@ export function Chat({
         ...m,
         {
           role: 'assistant',
+          kind: response.kind,
           text: response.text,
           chart: response.kind === 'answer' ? response.chart : null,
           cost: gated.netCost,
           citation: response.kind === 'answer' ? buildCitation(response) : null,
           card: response.kind === 'answer' ? statCardData(response) : null,
           csv: response.kind === 'answer' ? buildAnswerCsv(response) : null,
-          isClarification: response.kind === 'clarification',
+          answerView:
+            response.kind === 'answer'
+              ? {
+                  body: response.answer.body,
+                  stalenessWarning: response.stalenessWarning,
+                  definitionLine: response.answer.definitionLine,
+                  markingLine: response.answer.markingLine,
+                  attribution: response.answer.attributionLine,
+                  tableId: response.result.attribution.tableId,
+                }
+              : null,
+          provisional:
+            response.kind === 'answer' && response.result.cells.some((cell) => cell.provisional),
         },
       ]);
       setPending(response.kind === 'clarification' ? response.pending : null);
@@ -239,12 +284,25 @@ export function Chat({
   return (
     <div className="flex h-[65vh] w-full flex-col rounded border border-zinc-200 p-4">
       <h1 className="mb-4 text-lg font-semibold">Check de Cijfers</h1>
-      <div className="flex-1 space-y-3 overflow-y-auto">
+      <div className="flex-1 space-y-3 overflow-y-auto tabular-nums">
         {messages.length === 0 ? (
-          <p className="text-sm text-zinc-500">
-            Stel een vraag over officiële CBS-cijfers, bijvoorbeeld &ldquo;Wat was de inflatie in
-            2024?&rdquo;
-          </p>
+          <div>
+            <p className="text-sm text-zinc-500">
+              Stel een vraag over officiële CBS-cijfers, bijvoorbeeld:
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {EXAMPLE_QUESTIONS.map((question) => (
+                <button
+                  key={question}
+                  type="button"
+                  onClick={() => setInput(question)}
+                  className="rounded-full border border-zinc-300 px-3 py-1 text-xs text-zinc-600 hover:bg-zinc-50"
+                >
+                  {question}
+                </button>
+              ))}
+            </div>
+          </div>
         ) : null}
         {messages.map((message, i) => (
           <div
@@ -252,21 +310,78 @@ export function Chat({
             className={message.role === 'user' ? 'text-right' : 'text-left'}
           >
             {message.card ? <StatCard data={message.card} /> : null}
+            {/* WP23 (#84): a refusal announces itself — the two fixed Dutch
+              * strings from the owner-approved row. */}
+            {message.kind === 'refusal' ? (
+              <div className="mb-0.5 flex items-center gap-2 text-xs">
+                <span className="font-semibold text-zinc-700">Dit kon ik niet beantwoorden</span>
+                <span className="rounded-full bg-zinc-200 px-2 py-0.5 text-zinc-600">
+                  geen antwoord = geen gok
+                </span>
+              </div>
+            ) : null}
+            {/* WP23 (#84): decorative question marker OUTSIDE the bubble so
+              * the bubble's text content stays exactly the pipeline's. */}
+            {message.kind === 'clarification' ? (
+              <span aria-hidden className="mr-1 align-middle text-sm">
+                ❓
+              </span>
+            ) : null}
             <div
               className={
                 'inline-block max-w-full whitespace-pre-wrap rounded-lg px-3 py-2 text-sm ' +
-                (message.role === 'user' ? 'bg-blue-600 text-white' : 'bg-zinc-100 text-zinc-900')
+                (message.role === 'user'
+                  ? 'bg-blue-600 text-white'
+                  : message.kind === 'clarification'
+                    ? 'border border-amber-200 bg-amber-50 text-zinc-900'
+                    : message.kind === 'refusal'
+                      ? 'border border-zinc-200 bg-zinc-50 text-zinc-900'
+                      : 'bg-zinc-100 text-zinc-900')
               }
             >
-              {message.text}
+              {message.answerView ? message.answerView.body : message.text}
             </div>
+            {/* WP23 (#90): the structural lines an answer's text used to
+              * carry inline — nothing may be lost (R5/R11 surfaces). */}
+            {message.answerView?.stalenessWarning ? (
+              <p className="mt-1 text-sm text-amber-700">{message.answerView.stalenessWarning}</p>
+            ) : null}
+            {message.answerView?.definitionLine ? (
+              <p className="mt-1 text-xs text-zinc-600">{message.answerView.definitionLine}</p>
+            ) : null}
+            {message.answerView?.markingLine ? (
+              <p className="mt-1 text-xs text-zinc-600">{message.answerView.markingLine}</p>
+            ) : null}
+            {message.answerView ? (
+              <div className="mt-1 flex max-w-full flex-wrap items-center gap-2">
+                {/* WP23 (#71): the voorlopig pill at message level. */}
+                {message.provisional ? (
+                  <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                    voorlopig
+                  </span>
+                ) : null}
+                {/* WP23 (#90+#86): the source chip — the FULL R4 sentence,
+                  * always visible, plus the StatLine deep-link. */}
+                <span className="inline-flex max-w-full flex-wrap items-center gap-2 rounded border border-zinc-200 bg-zinc-50 px-2 py-1 text-xs text-zinc-500">
+                  <span>{message.answerView.attribution}</span>
+                  <a
+                    href={statLineUrl(message.answerView.tableId)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="shrink-0 underline"
+                  >
+                    Bekijk bij CBS StatLine
+                  </a>
+                </span>
+              </div>
+            ) : null}
             {message.cost !== null ? (
-              <div className="mt-0.5 text-xs text-zinc-400">
+              <div className="mt-0.5 text-xs text-zinc-400 tabular-nums">
                 {message.cost} credits
                 {/* WP20 #82(c): the reply's price, stated AT the clarifying
                   * question — client-side caption; the pipeline's own
                   * deterministic message text stays untouched. */}
-                {message.isClarification && pricing
+                {message.kind === 'clarification' && pricing
                   ? ` · antwoorden op de wedervraag kost ~${pricing.simple} credits`
                   : ''}
               </div>

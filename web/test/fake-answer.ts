@@ -59,6 +59,10 @@ export function fakeAnswerResponse(opts: {
   syncedAt?: string;
   attribution?: Partial<Attribution>;
   stalenessWarning?: string | null;
+  /** WP23 (#90): the structural answer lines the chat now renders. */
+  definitionLine?: string | null;
+  markingLine?: string | null;
+  attributionLine?: string;
 } = {}): AnswerResponse {
   const body = opts.body ?? 'Nederland telt 18.044.027 inwoners.';
   const attribution = fakeAttribution({
@@ -71,7 +75,14 @@ export function fakeAnswerResponse(opts: {
     text: opts.text ?? body,
     chart: null,
     stalenessWarning: opts.stalenessWarning ?? null,
-    answer: { body },
+    answer: {
+      body,
+      definitionLine: opts.definitionLine ?? null,
+      markingLine: opts.markingLine ?? null,
+      attributionLine:
+        opts.attributionLine ??
+        `Bron: CBS StatLine, tabel ${attribution.tableId} — ${attribution.tableTitle}. Gegevens gesynchroniseerd op ${attribution.syncedAt.slice(0, 10)}. Licentie: CC BY 4.0.`,
+    },
     result: {
       ok: true,
       schemaVersion: 1,

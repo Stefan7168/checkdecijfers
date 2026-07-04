@@ -87,4 +87,11 @@ describe('AccountPanel — credits explainer (#76)', () => {
     expect(screen.queryByText(/Infinity/)).toBeNull();
     expect(screen.queryByText(/vragen/)).toBeNull();
   });
+
+  // WP23 (#91): tabular figures on the balance — digits align when the
+  // number changes live (#68 updates).
+  it('sets the balance in tabular figures', () => {
+    render(<AccountPanel balance={80} simplePrice={20} signupGrantCredits={100} />);
+    expect(screen.getByText('80 credits').className).toContain('tabular-nums');
+  });
 });
