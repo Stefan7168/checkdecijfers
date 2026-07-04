@@ -20,6 +20,9 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { parseFollowUpQuestion } from '../src/answer/intent/followup.ts';
+import { parseClarificationReply } from '../src/answer/intent/clarify.ts';
+import type { PendingClarification } from '../src/answer/respond/types.ts';
+import { RESPONSE_SCHEMA_VERSION } from '../src/answer/respond/types.ts';
 import type { ConversationContext } from '../src/answer/context/types.ts';
 import {
   AnthropicLlmClient,
@@ -39,6 +42,12 @@ interface FollowUpCase {
   context: ConversationContext;
   question: string;
   expect: Expectation;
+  /** Optional REPLY LEG (adversarial-review finding, 2026-07-04): when the
+   * follow-up clarifies, the reply is parsed merged with the pending state
+   * AND the embedded referent (CLARIFY_CONTEXT_ADDENDUM path) — the chain
+   * that previously lost the referent and dead-ended in still_ambiguous. */
+  reply?: string;
+  expectAfterReply?: Expectation;
 }
 
 interface FollowUpCaseSet {
@@ -119,6 +128,50 @@ async function main(): Promise<void> {
     const mark = problems.length === 0 ? 'ok  ' : 'FAIL';
     console.log(`${mark} ${c.id.padEnd(32)} -> ${outcome.kind}`);
     for (const problem of problems) console.log(`       ${problem.replaceAll('\n', '\n       ')}`);
+
+    // Reply leg: pending built exactly as the respond layer builds it for a
+    // follow-up clarification — the case's context embedded (ADR 021).
+    if (c.reply !== undefined && c.expectAfterReply !== undefined) {
+      const replyProblems: string[] = [];
+      let replyKind = '(not run)';
+      if (outcome.kind !== 'clarification') {
+        replyProblems.push(`reply leg needs a clarification first turn, got '${outcome.kind}'`);
+      } else {
+        const pending: PendingClarification = {
+          version: RESPONSE_SCHEMA_VERSION,
+          question: c.question,
+          referenceDate: set.referenceDate,
+          axes: outcome.axes,
+          questionNl: outcome.question_nl,
+          options: outcome.options,
+          conversationContext: c.context,
+        };
+        const replyOutcomes = [];
+        for (let run = 0; run < repeat; run++) {
+          const replyOutcome = await parseClarificationReply(db, pending, c.reply, { client });
+          replyOutcomes.push(replyOutcome);
+          inputTokens += replyOutcome.usage.inputTokens;
+          outputTokens += replyOutcome.usage.outputTokens;
+        }
+        const replyOutcome = replyOutcomes[0]!;
+        replyKind = replyOutcome.kind;
+        const replyKinds = new Set(replyOutcomes.map((o) => o.kind));
+        if (replyKinds.size > 1) {
+          unstable.push(`${c.id} (reply): outcome kinds across runs: ${[...replyKinds].join(', ')}`);
+        }
+        replyProblems.push(...checkExpectation(replyOutcome, c.expectAfterReply));
+      }
+      results.push({
+        id: `${c.id} (reply)`,
+        question: c.reply,
+        outcomeKind: replyKind,
+        pass: replyProblems.length === 0,
+        problems: replyProblems,
+      });
+      const replyMark = replyProblems.length === 0 ? 'ok  ' : 'FAIL';
+      console.log(`${replyMark} ${`${c.id} (reply)`.padEnd(32)} -> ${replyKind}`);
+      for (const problem of replyProblems) console.log(`       ${problem.replaceAll('\n', '\n       ')}`);
+    }
   }
   await close();
 

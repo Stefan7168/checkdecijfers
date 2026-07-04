@@ -17,6 +17,7 @@
 // intent fixtures (54 as of WP14) hash the base prompt verbatim (ADR 012).
 import type { Db } from '../../db/types.ts';
 import { echoServability } from '../../query/index.ts';
+import type { ConversationContext } from '../context/types.ts';
 import type { PendingClarification } from '../respond/types.ts';
 import { INTENT_MODEL, type IntentLlmClient, type IntentLlmRequest } from './client.ts';
 import { MAX_CANDIDATES, REFUSAL_KIND_BY_QUESTION_KIND } from './parse.ts';
@@ -27,8 +28,14 @@ import { buildUnmatchedClarification, decide, type OutcomeContext } from './poli
 import { DEFAULT_PARSER_CONFIG, type ParseOutcome, type ParserConfig } from './types.ts';
 
 /** Bump when the clarify-mode section or reply payload shape changes
- * meaningfully — recorded in every clarify fixture and the audit record. */
-export const CLARIFY_PROMPT_VERSION = 1;
+ * meaningfully — recorded in every clarify fixture and the audit record.
+ * v2 (2026-07-04, WP15 review finding): a clarification that arose from a
+ * FOLLOW-UP question carries its conversational referent, delivered to the
+ * reply merge via CLARIFY_CONTEXT_ADDENDUM + a previous_intent payload field
+ * — BOTH added only when a context is present, so contextless reply requests
+ * stay byte-identical to v1 (the 7 committed clarify fixtures replay
+ * unchanged; proven by the replay suite). */
+export const CLARIFY_PROMPT_VERSION = 2;
 
 export interface ClarifyReplyOptions {
   client: IntentLlmClient;
@@ -61,18 +68,47 @@ Rules for this mode:
 
 The output schema is unchanged.`;
 
-export function buildClarifySystemPrompt(): string {
-  return buildSystemPrompt() + CLARIFY_MODE_SECTION;
+/** Appended AFTER the clarify-mode section, and ONLY when the pending
+ * clarification carries a conversational referent (WP15, ADR 021 — the
+ * follow-up→clarify→reply chain; review finding 2026-07-04: without this the
+ * reply merge saw only the bare elliptical follow-up text and lost the
+ * referent). Contextless requests never include these bytes, so the v1
+ * clarify fixtures stay valid. Keep this text stable: its bytes are part of
+ * every context-carrying clarify fixture hash. */
+export const CLARIFY_CONTEXT_ADDENDUM = `
+
+# Conversational referent (field "previous_intent")
+
+The original question in this round was itself a FOLLOW-UP: the payload carries an extra field previous_intent — what the turn BEFORE it resolved to, in your vocabulary (a topicKey from the vocabulary above, registry place names, a concrete period). The original question's ellipsis ("en ...?", "dit", "daar") points at it.
+
+- Merge ALL THREE sources: previous_intent supplies every axis neither the original question nor the reply changes; the original question supplies what it changed; the reply answers our clarification question.
+- The same verbatim-copy rules as always: NEVER drop or silently replace an inherited region (not even on an "alleen landelijk" topic), NEVER widen an inherited period. Report still-unresolved axes honestly; downstream code decides what happens.`;
+
+export function buildClarifySystemPrompt(context?: ConversationContext | null): string {
+  return buildSystemPrompt() + CLARIFY_MODE_SECTION + (context ? CLARIFY_CONTEXT_ADDENDUM : '');
 }
 
 /** The user-turn payload. Serialized deterministically (stable key order as
- * written) — these bytes are part of the fixture hash. */
+ * written) — these bytes are part of the fixture hash. The previous_intent
+ * key exists ONLY when the pending carries a referent: contextless payloads
+ * keep the exact v1 four-key shape. */
 export function buildClarifyUserPayload(pending: PendingClarification, reply: string): string {
+  const context = pending.conversationContext ?? null;
   return JSON.stringify({
     original_question: pending.question,
     clarification_question: pending.questionNl,
     options: pending.options,
     reply,
+    ...(context
+      ? {
+          previous_intent: {
+            topicKey: context.topicKey,
+            regions: context.regions,
+            period: context.period,
+            derivation: context.derivation,
+          },
+        }
+      : {}),
   });
 }
 
@@ -85,7 +121,7 @@ export function buildClarifyRequest(
     model: options.model ?? INTENT_MODEL,
     maxTokens: options.maxTokens ?? 2048,
     temperature: 0,
-    system: buildClarifySystemPrompt(),
+    system: buildClarifySystemPrompt(pending.conversationContext),
     question: buildClarifyUserPayload(pending, reply),
     jsonSchema: rawParseJsonSchema(),
   };

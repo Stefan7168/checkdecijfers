@@ -2,7 +2,7 @@
   "requestHash": "62738170f0163be8a3ff05c8f677e0bd",
   "question": "{\"previous_intent\":{\"topicKey\":\"cpi_yearly_inflation\",\"regions\":null,\"period\":{\"kind\":\"year\",\"year\":2024},\"derivation\":\"none\"},\"question\":\"Wanneer zijn deze cijfers voor het laatst bijgewerkt?\"}",
   "label": "f-meta-v36-last-updated",
-  "recordedAt": "2026-07-04T12:04:25.487Z",
+  "recordedAt": "2026-07-04T13:18:25.392Z",
   "request": {
     "model": "claude-haiku-4-5",
     "maxTokens": 2048,
@@ -399,12 +399,12 @@
     }
   },
   "response": {
-    "outputText": "{\"version\":2,\"kind\":\"smalltalk_or_other\",\"candidates\":[],\"unmatchedMeasureTerm\":null,\"nearestCanonicalKeys\":[],\"note\":\"meta-vraag over de bron en actualiteit van de vorige antwoord, niet een data-vraag\"}",
+    "outputText": "{\"version\":2,\"kind\":\"smalltalk_or_other\",\"candidates\":[],\"unmatchedMeasureTerm\":null,\"nearestCanonicalKeys\":[],\"note\":\"meta-vraag over de bron en actualiteit van de vorige antwoord, niet een statistiekvraag\"}",
     "model": "claude-haiku-4-5-20251001",
     "stopReason": "end_turn",
     "usage": {
       "inputTokens": 6866,
-      "outputTokens": 70
+      "outputTokens": 71
     }
   }
 }

@@ -2,7 +2,7 @@
   "requestHash": "7de643dd7b9211c90a42d976e4077a79",
   "question": "{\"previous_intent\":{\"topicKey\":\"population_on_1_january\",\"regions\":[{\"name\":\"Amsterdam\",\"kind\":\"gemeente\"}],\"period\":{\"kind\":\"year\",\"year\":2024},\"derivation\":\"none\"},\"question\":\"Wat was de inflatie in 2023?\"}",
   "label": "f-standalone-with-context",
-  "recordedAt": "2026-07-04T12:04:19.262Z",
+  "recordedAt": "2026-07-04T13:18:18.798Z",
   "request": {
     "model": "claude-haiku-4-5",
     "maxTokens": 2048,
@@ -399,12 +399,12 @@
     }
   },
   "response": {
-    "outputText": "{\"version\":2,\"kind\":\"data_query\",\"candidates\":[{\"canonicalKey\":\"cpi_yearly_inflation\",\"regions\":null,\"period\":{\"kind\":\"year\",\"year\":2023},\"derivation\":\"none\",\"confidence\":0.95,\"reading\":\"inflatie (jaarmutatie CPI) in 2023\"}],\"unmatchedMeasureTerm\":null,\"nearestCanonicalKeys\":[],\"note\":\"zelfstandige vraag — topic wisselt van bevolking naar inflatie, vorige context genegeerd\"}",
+    "outputText": "{\"version\":2,\"kind\":\"data_query\",\"candidates\":[{\"canonicalKey\":\"cpi_yearly_inflation\",\"regions\":null,\"period\":{\"kind\":\"year\",\"year\":2023},\"derivation\":\"none\",\"confidence\":0.95,\"reading\":\"inflatie (jaarmutatie CPI) in 2023\"}],\"unmatchedMeasureTerm\":null,\"nearestCanonicalKeys\":[],\"note\":\"zelfstandige vraag — topic wisselt van bevolking naar inflatie; previous_intent wordt genegeerd\"}",
     "model": "claude-haiku-4-5-20251001",
     "stopReason": "end_turn",
     "usage": {
       "inputTokens": 6872,
-      "outputTokens": 124
+      "outputTokens": 125
     }
   }
 }

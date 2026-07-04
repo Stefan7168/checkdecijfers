@@ -2,7 +2,7 @@
   "requestHash": "eeb1fbd8ef3ad5ff50cc3c554c946cc0",
   "question": "{\"previous_intent\":{\"topicKey\":\"unemployment_rate_seasonally_adjusted\",\"regions\":null,\"period\":{\"kind\":\"quarter\",\"year\":2025,\"quarter\":4},\"derivation\":\"none\"},\"question\":\"Welke bronnen gebruik je naast CBS voor deze vraag?\"}",
   "label": "f-meta-v38-other-sources",
-  "recordedAt": "2026-07-04T12:04:26.912Z",
+  "recordedAt": "2026-07-04T13:18:27.028Z",
   "request": {
     "model": "claude-haiku-4-5",
     "maxTokens": 2048,

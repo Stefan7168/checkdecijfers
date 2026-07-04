@@ -2,7 +2,7 @@
   "requestHash": "89391d96c3f341ee5225de400d7372e7",
   "question": "{\"previous_intent\":{\"topicKey\":\"population_on_1_january\",\"regions\":[{\"name\":\"Amsterdam\",\"kind\":\"gemeente\"}],\"period\":{\"kind\":\"year\",\"year\":2024},\"derivation\":\"none\"},\"question\":\"Wat wordt de inflatie in 2027?\"}",
   "label": "f-abandon-forecast",
-  "recordedAt": "2026-07-04T12:04:20.851Z",
+  "recordedAt": "2026-07-04T13:18:20.348Z",
   "request": {
     "model": "claude-haiku-4-5",
     "maxTokens": 2048,

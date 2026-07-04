@@ -15,6 +15,7 @@ import {
 import type {
   CandidateResolution,
   OutcomeContext,
+  ParseOutcome,
   ParserConfig,
   RankedCandidate,
   RawParse,
@@ -22,6 +23,13 @@ import type {
   ServabilityCheck,
 } from '../../src/answer/intent/index.ts';
 import type { EchoServability, StructuredIntent } from '../../src/query/index.ts';
+import {
+  findNumericTokens,
+  normalizeForScan,
+  numbersInText,
+  periodCodeNumbers,
+} from '../../src/answer/compose/format.ts';
+import { CANONICAL_MEASURES } from '../../src/registry/defaults.ts';
 
 const config: ParserConfig = { answerThreshold: 0.6, runnerUpThreshold: 0.35 };
 
@@ -305,6 +313,146 @@ describe('#56 echo-suggestion servability (WP15, ADR 021 decision 4)', () => {
     expect(outcome.question_nl.match(/\?/g)).toHaveLength(1);
     // The doubtful reading is not echoed as if it were available.
     expect(outcome.options).not.toContain('iets onduidelijks');
+  });
+
+  it('a needs_clarification verdict WITHOUT a region axis confirms the reading and asks for precision (the non-region branch)', async () => {
+    // Review finding, 2026-07-04: this branch was never exercised.
+    const top = candidate(intentOf('cpi_yearly_inflation', 2024), 0.5, 'de inflatie in 2024');
+    const verdict = unservable('needs_clarification', noAvailability, ['derivation']);
+    const outcome = await decide(context(), [top], config, async () => verdict);
+    expect(outcome.kind).toBe('clarification');
+    if (outcome.kind !== 'clarification') throw new Error('unreachable');
+    expect(outcome.question_nl).toBe('Bedoel je de inflatie in 2024? Kun je de vraag dan iets preciezer stellen?');
+    expect(outcome.axes).toEqual(['measure', 'derivation']);
+    expect(outcome.options).toEqual(['de inflatie in 2024']);
+  });
+});
+
+describe('no-numbers belt-check over every policy-built clarification text (principle c; review finding 2026-07-04)', () => {
+  // The compose-side R1/R3 validator never sees clarification text (it exits
+  // the pipeline before compose), so this scan is the ONLY automated defense
+  // against a future edit interpolating an unbacked value into question_nl —
+  // the review's executing skeptic proved a fabricated "(intern id 48213)"
+  // survived the entire pre-existing suite. Whitelists are built ONLY from
+  // the structured inputs each builder legitimately cites (readings, offered
+  // options, availability years/periods) — exactly the respond-refusals.test
+  // discipline applied to policy.ts.
+  function whitelistFrom(sources: { labels?: string[]; periodCodes?: string[] }): Set<number> {
+    const numbers = new Set<number>();
+    for (const label of sources.labels ?? []) {
+      for (const n of numbersInText(label)) numbers.add(n);
+    }
+    for (const code of sources.periodCodes ?? []) {
+      for (const n of periodCodeNumbers(code)) numbers.add(n);
+    }
+    return numbers;
+  }
+
+  function assertNoUnbackedNumbers(outcome: ParseOutcome, whitelist: Set<number>, label: string): void {
+    if (outcome.kind !== 'clarification') throw new Error(`${label}: expected a clarification`);
+    for (const text of [outcome.question_nl, ...outcome.options]) {
+      for (const token of findNumericTokens(normalizeForScan(text))) {
+        expect(
+          whitelist.has(token.value),
+          `${label}: unbacked number '${token.token}' (${token.value}) in ${JSON.stringify(text)}`,
+        ).toBe(true);
+      }
+    }
+  }
+
+  it('every clarification-producing branch of decide() carries only input-backed numbers', async () => {
+    const reading = 'de bevolking van Amsterdam in 2024';
+    // The fallback templates legitimately cite the registry's definition
+    // label ("bevolking op 1 januari" — its '1' is registry-sourced, not a
+    // cell value), so the label joins the whitelist exactly as
+    // respond-refusals.test.ts's fullLabelWhitelist does.
+    const definitionLabel = CANONICAL_MEASURES.find((m) => m.key === 'population_on_1_january')!.definitionLabel;
+    const top = () => candidate(intentOf('population_on_1_january', 2024), 0.5, reading);
+    const cases: { label: string; outcome: ParseOutcome; whitelist: Set<number> }[] = [];
+
+    // Rule 3, servable echo.
+    cases.push({
+      label: 'servable echo',
+      outcome: await decide(context(), [top()], config, async () => ({ servable: true })),
+      whitelist: whitelistFrom({ labels: [reading] }),
+    });
+    // #56 fallback: year window.
+    cases.push({
+      label: 'unservable year-window fallback',
+      outcome: await decide(context(), [top()], config, async () => ({
+        servable: false,
+        kind: 'outside_loaded_slice',
+        axes: ['period'],
+        availability: { yearRange: { fromYear: 2019, toYear: 2026 }, freshest: null },
+      })),
+      whitelist: whitelistFrom({ labels: [reading, definitionLabel], periodCodes: ['2019JJ00', '2026JJ00'] }),
+    });
+    // #56 fallback: freshest period.
+    cases.push({
+      label: 'unservable freshest fallback',
+      outcome: await decide(context(), [top()], config, async () => ({
+        servable: false,
+        kind: 'freshness',
+        axes: ['period'],
+        availability: { yearRange: null, freshest: { periodCode: '2026KW01', status: 'Voorlopig' } },
+      })),
+      whitelist: whitelistFrom({ labels: [reading, definitionLabel], periodCodes: ['2026KW01'] }),
+    });
+    // #56 fallback: needs_clarification, region and non-region branches.
+    for (const axes of [['region'], ['derivation']] as const) {
+      cases.push({
+        label: `needs_clarification ${axes[0]}`,
+        outcome: await decide(context(), [top()], config, async () => ({
+          servable: false,
+          kind: 'needs_clarification',
+          axes: [...axes],
+          availability: { yearRange: null, freshest: null },
+        })),
+        whitelist: whitelistFrom({ labels: [reading] }),
+      });
+    }
+    // #56 fallback: generic, no availability.
+    cases.push({
+      label: 'unservable generic fallback',
+      outcome: await decide(context(), [top()], config, async () => ({
+        servable: false,
+        kind: 'internal_inconsistency',
+        axes: null,
+        availability: { yearRange: null, freshest: null },
+      })),
+      whitelist: whitelistFrom({ labels: [reading, definitionLabel] }),
+    });
+    // Rule 2: every resolution-failure template, with numbered options.
+    const reasons: ResolutionFailure['reason'][] = [
+      'region_ambiguous',
+      'region_unknown',
+      'region_on_national_measure',
+      'grain_unavailable',
+      'period_missing',
+      'period_invalid',
+      'unknown_canonical_key',
+    ];
+    for (const reason of reasons) {
+      const options = ['2019 tot en met 2026', 'per kwartaal'];
+      cases.push({
+        label: `failure ${reason}`,
+        outcome: await decide(context(), [failure(reason, 0.9, options)], config, async () => ({ servable: true })),
+        whitelist: whitelistFrom({ labels: options }),
+      });
+    }
+    // Unmatched-measure clarification (registry definition labels).
+    const unmatchedOutcome = buildUnmatchedClarification(
+      context({ unmatchedMeasureTerm: 'bijstand', nearestCanonicalKeys: ['unemployment_rate_seasonally_adjusted'] }),
+    );
+    cases.push({
+      label: 'unmatched measure',
+      outcome: unmatchedOutcome,
+      whitelist: whitelistFrom({
+        labels: unmatchedOutcome.kind === 'clarification' ? unmatchedOutcome.options : [],
+      }),
+    });
+
+    for (const c of cases) assertNoUnbackedNumbers(c.outcome, c.whitelist, c.label);
   });
 });
 

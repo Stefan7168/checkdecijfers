@@ -2,7 +2,7 @@
   "requestHash": "c635ba5349a91f92ebe7ba16a811c73b",
   "question": "{\"previous_intent\":{\"topicKey\":\"population_on_1_january\",\"regions\":[{\"name\":\"Amsterdam\",\"kind\":\"gemeente\"}],\"period\":{\"kind\":\"year\",\"year\":2024},\"derivation\":\"none\"},\"question\":\"En alleen in de Randstad?\"}",
   "label": "f-v30-randstad",
-  "recordedAt": "2026-07-04T12:04:17.272Z",
+  "recordedAt": "2026-07-04T13:18:14.446Z",
   "request": {
     "model": "claude-haiku-4-5",
     "maxTokens": 2048,
@@ -399,12 +399,12 @@
     }
   },
   "response": {
-    "outputText": "{\"version\":2,\"kind\":\"data_query\",\"candidates\":[{\"canonicalKey\":\"population_on_1_january\",\"regions\":[{\"name\":\"Randstad\",\"kind\":\"onbekend\"}],\"period\":{\"kind\":\"year\",\"year\":2024},\"derivation\":\"none\",\"confidence\":0.85,\"reading\":\"bevolking van de Randstad in 2024 (vervolg op de vorige vraag over Amsterdam)\"}],\"unmatchedMeasureTerm\":null,\"nearestCanonicalKeys\":[],\"note\":\"Randstad is een regio-aanduiding die geen CBS-administratieve grens volgt; code zal moeten bepalen hoe dit wordt opgelost\"}",
+    "outputText": "{\"version\":2,\"kind\":\"data_query\",\"candidates\":[{\"canonicalKey\":\"population_on_1_january\",\"regions\":[{\"name\":\"Randstad\",\"kind\":\"onbekend\"}],\"period\":{\"kind\":\"year\",\"year\":2024},\"derivation\":\"none\",\"confidence\":0.85,\"reading\":\"bevolking van de Randstad in 2024 (vervolg op de vorige vraag over Amsterdam)\"}],\"unmatchedMeasureTerm\":null,\"nearestCanonicalKeys\":[],\"note\":\"Randstad is een regio-aanduiding die geen CBS-administratieve grens volgt; code zal moeten bepalen hoe dit tegen de beschikbare data aanloopt\"}",
     "model": "claude-haiku-4-5-20251001",
     "stopReason": "end_turn",
     "usage": {
       "inputTokens": 6869,
-      "outputTokens": 162
+      "outputTokens": 167
     }
   }
 }

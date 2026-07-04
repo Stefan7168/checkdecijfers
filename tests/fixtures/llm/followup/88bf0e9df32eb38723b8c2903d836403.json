@@ -2,7 +2,7 @@
   "requestHash": "88bf0e9df32eb38723b8c2903d836403",
   "question": "{\"previous_intent\":{\"topicKey\":\"unemployment_rate_seasonally_adjusted\",\"regions\":null,\"period\":{\"kind\":\"quarter\",\"year\":2025,\"quarter\":4},\"derivation\":\"none\"},\"question\":\"Waarom is dat zo gestegen?\"}",
   "label": "f-why-causal",
-  "recordedAt": "2026-07-04T12:04:22.307Z",
+  "recordedAt": "2026-07-04T13:18:22.349Z",
   "request": {
     "model": "claude-haiku-4-5",
     "maxTokens": 2048,

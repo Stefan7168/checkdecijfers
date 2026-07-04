@@ -2,7 +2,7 @@
   "requestHash": "98186cd1705e7448d17d10a34f3c8727",
   "question": "{\"previous_intent\":{\"topicKey\":\"population_on_1_january\",\"regions\":[{\"name\":\"Amsterdam\",\"kind\":\"gemeente\"}],\"period\":{\"kind\":\"year\",\"year\":2024},\"derivation\":\"none\"},\"question\":\"En hoe zat dat in 2020?\"}",
   "label": "f-merge-period-switch",
-  "recordedAt": "2026-07-04T12:03:58.655Z",
+  "recordedAt": "2026-07-04T13:17:50.816Z",
   "request": {
     "model": "claude-haiku-4-5",
     "maxTokens": 2048,

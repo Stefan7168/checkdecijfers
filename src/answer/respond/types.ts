@@ -16,6 +16,7 @@
 import type { ChartSpec } from '../../chart/index.ts';
 import type { FreshnessInfo, QueryRefusal, ValidatedResult } from '../../query/index.ts';
 import type { ComposedAnswer } from '../compose/index.ts';
+import type { ConversationContext } from '../context/types.ts';
 import type { ClarifyAxis, ParseOutcome } from '../intent/types.ts';
 
 export const RESPONSE_SCHEMA_VERSION = 1 as const;
@@ -80,6 +81,15 @@ export interface PendingClarification {
   questionNl: string;
   /** The offered options — each resolves in the loaded data. */
   options: string[];
+  /** WP15 (ADR 021, review finding 2026-07-04): when the clarification arose
+   * from a FOLLOW-UP parse, the conversational referent that gave the
+   * elliptical question its meaning ("En in Nederland?" ← unemployment) —
+   * without it, the reply merge sees only the bare follow-up text and the
+   * referent is lost. Absent/undefined on pre-WP15 pendings and on
+   * clarifications of standalone questions; client-held, so it is
+   * re-validated server-side before any use (context/validate.ts), exactly
+   * like the context on a fresh question. */
+  conversationContext?: ConversationContext | null;
 }
 
 interface ResponseBase {

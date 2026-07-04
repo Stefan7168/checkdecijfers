@@ -9,6 +9,7 @@ import { CANONICAL_MEASURES } from '../../registry/defaults.ts';
 import { freshestForCanonical, type FreshnessInfo, type QueryRefusal } from '../../query/index.ts';
 import type { Db } from '../../db/types.ts';
 import type { ClarifyAxis, ParseOutcome } from '../intent/types.ts';
+import type { ConversationContext } from '../context/types.ts';
 import { periodCodeToNl } from './period-nl.ts';
 import type { ClarificationResponse, PendingClarification, RefusalReason, RefusalResponse } from './types.ts';
 import { RESPONSE_SCHEMA_VERSION } from './types.ts';
@@ -458,6 +459,10 @@ export interface ClarificationEnvelopeInput {
   questionNl: string;
   options: string[];
   parse: ParseOutcome;
+  /** WP15 (ADR 021): set when the clarified question was a FOLLOW-UP — the
+   * referent must survive into the pending state or the reply merge loses it
+   * (adversarial-review finding, 2026-07-04). */
+  conversationContext?: ConversationContext | null;
 }
 
 export function toClarificationResponse(input: ClarificationEnvelopeInput): ClarificationResponse {
@@ -468,6 +473,10 @@ export function toClarificationResponse(input: ClarificationEnvelopeInput): Clar
     axes: input.axes,
     questionNl: input.questionNl,
     options: input.options,
+    // Only materialized when present: a contextless pending keeps the exact
+    // pre-WP15 field set (serialized state stays byte-stable for the
+    // committed clarify fixtures and stored audit rows).
+    ...(input.conversationContext ? { conversationContext: input.conversationContext } : {}),
   };
   return {
     schemaVersion: RESPONSE_SCHEMA_VERSION,
