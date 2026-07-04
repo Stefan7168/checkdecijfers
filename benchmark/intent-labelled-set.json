@@ -1,7 +1,7 @@
 {
   "version": 1,
   "referenceDate": "2026-08-15",
-  "note": "Labelled question set for R7 threshold calibration and parser regression (ADR 012, open-questions #19). Categories: 'variant' = registry-internal variant choice, must resolve to the canonical default WITHOUT clarifying (docs/05 canonical-default policy); 'ambiguous' = user-facing ambiguity, must exit to clarification, never a best guess; 'refusal' = must classify forecast/causal/out-of-scope/compound; 'smalltalk' = not a data question. The benchmark tasks B1-B20 and the un-disambiguated B3/B5 variants are NOT duplicated here — they come from tests/helpers/benchmark-intents.ts. referenceDate is chosen so that 'vorige maand' (2026MM07) lies beyond the loaded CPI slice (freshest: 2026MM06) — B20 must exercise the freshness refusal, not an answer. Labels are product-policy judgments; changing one is a reviewed decision, never a way to make a red run green. Label decisions so far (rationale in ADR 012): r-autos expects a measure CLARIFICATION rather than a scope refusal — for near-boundary topics both are honest (no number, topic flagged as not loaded); the crisp canonical behaviors are pinned by B15 (clarify) and B17 (scope refusal).",
+  "note": "Labelled question set for R7 threshold calibration and parser regression (ADR 012, open-questions #19). Categories: 'variant' = registry-internal variant choice, must resolve to the canonical default WITHOUT clarifying (docs/05 canonical-default policy); 'ambiguous' = user-facing ambiguity, must exit to clarification, never a best guess; 'refusal' = must classify forecast/causal/out-of-scope/compound; 'smalltalk' = not a data question; 'open_range' (WP14, open-questions #55) = open-ended period phrasings that must parse to since/last_n/now_vs_ago and resolve WITHOUT clarifying — the validation pass's V01/V02/V28 phrasings verbatim. The benchmark tasks B1-B20 and the un-disambiguated B3/B5 variants are NOT duplicated here — they come from tests/helpers/benchmark-intents.ts. referenceDate is chosen so that 'vorige maand' (2026MM07) lies beyond the loaded CPI slice (freshest: 2026MM06) — B20 must exercise the freshness refusal, not an answer. Labels are product-policy judgments; changing one is a reviewed decision, never a way to make a red run green. Label decisions so far (rationale in ADR 012): r-autos expects a measure CLARIFICATION rather than a scope refusal — for near-boundary topics both are honest (no number, topic flagged as not loaded); the crisp canonical behaviors are pinned by B15 (clarify) and B17 (scope refusal). WP14 label decisions (rationale in ADR 019): open-range intents label the FULL requested range even when its start predates loaded coverage (os-v28, os-inwoners-10jr) — no clamping in the parser, the query layer's slice/publication refusals stay the single honest source; V02-style 'vergeleken met' labels derivation 'none' (difference only on an explicit 'met hoeveel').",
   "cases": [
     {
       "id": "v-inflatie-maand",
@@ -167,6 +167,88 @@
       "category": "smalltalk",
       "question": "Hallo! Wat kun je allemaal?",
       "expect": { "outcome": "refusal", "refusalKind": "smalltalk" }
+    },
+    {
+      "id": "os-v01-werkloosheid-sinds-2015",
+      "category": "open_range",
+      "question": "Hoe ontwikkelt de werkloosheid zich in Nederland sinds 2015?",
+      "expect": {
+        "outcome": "intent",
+        "intent": { "schemaVersion": 1, "target": { "kind": "canonical", "key": "unemployment_rate_seasonally_adjusted" }, "period": { "kind": "range", "from": "2015KW01", "to": "2026KW01" }, "derivation": "series" },
+        "checks": { "impliedRecency": true }
+      }
+    },
+    {
+      "id": "os-v28-werkloosheid-sinds-2010",
+      "category": "open_range",
+      "question": "Wat is de werkloosheid in Nederland sinds 2010?",
+      "expect": {
+        "outcome": "intent",
+        "intent": { "schemaVersion": 1, "target": { "kind": "canonical", "key": "unemployment_rate_seasonally_adjusted" }, "period": { "kind": "range", "from": "2010KW01", "to": "2026KW01" }, "derivation": "series" }
+      }
+    },
+    {
+      "id": "os-v02-inflatie-nu-vs-5jaar",
+      "category": "open_range",
+      "question": "Wat is de huidige inflatie in Nederland vergeleken met vijf jaar geleden?",
+      "expect": {
+        "outcome": "intent",
+        "intent": { "schemaVersion": 1, "target": { "kind": "canonical", "key": "cpi_yearly_inflation" }, "period": { "kind": "codes", "codes": ["2021MM06", "2026MM06"] }, "derivation": "none" },
+        "checks": { "impliedRecency": true }
+      }
+    },
+    {
+      "id": "os-inflatie-afgelopen-5jaar",
+      "category": "open_range",
+      "question": "Wat was de inflatie in de afgelopen vijf jaar?",
+      "expect": {
+        "outcome": "intent",
+        "intent": { "schemaVersion": 1, "target": { "kind": "canonical", "key": "cpi_yearly_inflation" }, "period": { "kind": "range", "from": "2021JJ00", "to": "2025JJ00" }, "derivation": "series" }
+      }
+    },
+    {
+      "id": "os-inwoners-afgelopen-10jaar",
+      "category": "open_range",
+      "question": "Hoeveel inwoners had Nederland de afgelopen tien jaar?",
+      "expect": {
+        "outcome": "intent",
+        "intent": { "schemaVersion": 1, "target": { "kind": "canonical", "key": "population_on_1_january" }, "regions": ["NL01"], "period": { "kind": "range", "from": "2017JJ00", "to": "2026JJ00" }, "derivation": "series" }
+      }
+    },
+    {
+      "id": "os-inflatie-sinds-maart-2020",
+      "category": "open_range",
+      "question": "Hoe ontwikkelde de inflatie zich sinds maart 2020?",
+      "expect": {
+        "outcome": "intent",
+        "intent": { "schemaVersion": 1, "target": { "kind": "canonical", "key": "cpi_yearly_inflation" }, "period": { "kind": "range", "from": "2020MM03", "to": "2026MM06" }, "derivation": "series" }
+      }
+    },
+    {
+      "id": "os-werkloosheid-delta-5jaar",
+      "category": "open_range",
+      "question": "Met hoeveel procentpunt is de werkloosheid gestegen vergeleken met vijf jaar geleden?",
+      "expect": {
+        "outcome": "intent",
+        "intent": { "schemaVersion": 1, "target": { "kind": "canonical", "key": "unemployment_rate_seasonally_adjusted" }, "period": { "kind": "codes", "codes": ["2021KW01", "2026KW01"] }, "derivation": "difference" },
+        "checks": { "impliedRecency": true }
+      }
+    },
+    {
+      "id": "os-v06-noord-brabant-sinds-2015",
+      "category": "ambiguous",
+      "question": "Wat is de werkloosheid in Noord-Brabant per jaar sinds 2015?",
+      "expect": { "outcome": "clarification", "axesInclude": ["region"] }
+    },
+    {
+      "id": "os-failliet-afgelopen-jaar",
+      "category": "open_range",
+      "question": "Hoeveel bedrijven gingen er het afgelopen jaar failliet?",
+      "expect": {
+        "outcome": "intent",
+        "intent": { "schemaVersion": 1, "target": { "kind": "canonical", "key": "bankruptcies_businesses" }, "period": { "kind": "codes", "codes": ["2025JJ00"] }, "derivation": "none" },
+        "checks": { "impliedRecency": true }
+      }
     }
   ]
 }

@@ -57,7 +57,7 @@ function context(raw?: Partial<RawParse>): OutcomeContext {
   return {
     question: 'synthetische vraag',
     raw: {
-      version: 1,
+      version: 2,
       kind: 'data_query',
       candidates: [],
       unmatchedMeasureTerm: null,
@@ -211,7 +211,7 @@ describe('R7 threshold policy (docs/05 R7, ADR 012)', () => {
 
 describe('raw-parse schema validation at the call site (R7)', () => {
   const valid = {
-    version: 1,
+    version: 2,
     kind: 'data_query',
     candidates: [
       {
@@ -244,6 +244,30 @@ describe('raw-parse schema validation at the call site (R7)', () => {
 
   it('rejects unknown fields (strict objects — no smuggled content)', () => {
     const bad = { ...structuredClone(valid), extra: 'field' };
+    expect(() => validateRawParse(JSON.stringify(bad))).toThrow(RawParseValidationError);
+  });
+
+  it('rejects the pre-WP14 version-1 contract — a stale fixture or model output must fail loudly', () => {
+    const stale = { ...structuredClone(valid), version: 1 };
+    expect(() => validateRawParse(JSON.stringify(stale))).toThrow(RawParseValidationError);
+  });
+
+  it('accepts the WP14 open-range period kinds (since / last_n / now_vs_ago)', () => {
+    for (const period of [
+      { kind: 'since', year: 2015, quarter: null, month: null },
+      { kind: 'since', year: 2020, quarter: null, month: 3 },
+      { kind: 'last_n', unit: 'year', n: 5 },
+      { kind: 'now_vs_ago', unit: 'year', amount: 5 },
+    ]) {
+      const parse = structuredClone(valid);
+      parse.candidates[0]!.period = period as never;
+      expect(validateRawParse(JSON.stringify(parse)).candidates[0]!.period).toEqual(period);
+    }
+  });
+
+  it('rejects a since without its nullable refinement fields — nullable, never optional (structured outputs)', () => {
+    const bad = structuredClone(valid);
+    bad.candidates[0]!.period = { kind: 'since', year: 2015 } as never;
     expect(() => validateRawParse(JSON.stringify(bad))).toThrow(RawParseValidationError);
   });
 });

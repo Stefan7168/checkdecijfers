@@ -90,7 +90,11 @@ Built as briefed (ADR [018](decisions/018-chat-ui-and-deploy.md) records the loa
 
 ---
 
-## WP14 — Open-ended period ranges in the intent contract  ✅ APPROVED by Stefan 2026-07-05 — small supervised session, before/alongside WP13
+## WP14 — Open-ended period ranges in the intent contract  ✅ done 2026-07-04
+
+Built as briefed, supervised as required (owner confirmed each live run in-session); ADR [019](decisions/019-open-ended-period-ranges.md) records the load-bearing choices and two deviations firmed up against the code: the version that bumps is the **raw-parse contract** (v2), not `INTENT_SCHEMA_VERSION` — all three new shapes (`since`, `last_n`, `now_vs_ago`) resolve to the existing range/codes intent shapes, so the frozen WP5 contract never moved; and the two-disjoint-periods shape is the narrow `now_vs_ago` (V02's validated need), with the general absolute-pair form ("2024 vs 2019") an explicit revisit trigger. Done-criteria met and measured: labelled set 45→54 (validation-pass phrasings verbatim), **54/54 live + zero outcome flips over 3 repeats, R7 thresholds unchanged** (report history committed); full local gate green on re-recorded fixtures (54 intent + 7 clarify — the brief undercounted: clarify fixtures hash the base prompt too; the pushed pipeline remains the only "done" signal, per CLAUDE.md); V01/V28/V02 spot-checked live ([STATUS.md](STATUS.md) for results). Notable beyond the brief: a real pre-existing honesty gap found and fixed — period lookups now filter on the canonical coordinate (CBS publishes no seasonally-adjusted yearly unemployment; the interim guard had been offering an unservable range for exactly the V01/V28 questions), details in ADR 019 §4.
+
+*Original brief (approved 2026-07-05) kept below for the record:*
 
 *The real fix behind the validation pass's F1 ([validation-results-2026-07-05.md](validation-results-2026-07-05.md), [open-questions #55](open-questions.md)): "sinds 2015" / "afgelopen vijf jaar" should **answer** with a series, not clarify. Small but touches the WP6 LLM contract, so it runs supervised (live re-record spend), never autonomously.*
 

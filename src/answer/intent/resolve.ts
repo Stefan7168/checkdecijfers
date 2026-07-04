@@ -68,6 +68,16 @@ interface CanonicalRow {
   tableId: string;
   measure: string;
   definitionLabel: string;
+  /** The FULL coordinate set the canonical measure's cells sit at: the
+   * table's pinned default ("totaal") coordinates overlaid with the
+   * measure's semantic dims — the same precedence the query layer and
+   * freshestForCanonical apply. Every period/grain lookup in this file must
+   * filter on it: a grain that exists only at a DIFFERENT coordinate (CBS
+   * publishes no seasonally-adjusted YEARLY unemployment — the yearly cells
+   * are un-corrected) is not servable under the canonical definition, and
+   * promising it here would dead-end in a no_data refusal downstream
+   * (WP14 finding, 2026-07-04). */
+  mergedDims: Record<string, string>;
 }
 
 interface TableGeo {
@@ -77,16 +87,21 @@ interface TableGeo {
 
 async function fetchCanonical(db: Db, key: string): Promise<CanonicalRow | null> {
   const result = await db.query(
-    'select key, table_id, measure, definition_label from canonical_measures where key = $1',
+    `select c.key, c.table_id, c.measure, c.definition_label, c.dims, t.default_coordinates
+     from canonical_measures c join cbs_tables t on t.id = c.table_id
+     where c.key = $1`,
     [key],
   );
   const row = result.rows[0];
   if (!row) return null;
+  const parseJson = (v: unknown): Record<string, string> =>
+    v == null ? {} : ((typeof v === 'string' ? JSON.parse(v) : v) as Record<string, string>);
   return {
     key: row.key as string,
     tableId: row.table_id as string,
     measure: row.measure as string,
     definitionLabel: row.definition_label as string,
+    mergedDims: { ...parseJson(row.default_coordinates), ...parseJson(row.dims) },
   };
 }
 
@@ -209,20 +224,47 @@ function isSaneYear(year: number): boolean {
   return Number.isInteger(year) && year >= 1900 && year <= 2100;
 }
 
+/** Steps a CBS period code by `steps` positions at its own grain (negative =
+ * back): 2026KW01 −20 → 2021KW01, 2026MM06 −60 → 2021MM06. Null when the code
+ * does not parse — callers fail loudly, never step a code they can't read. */
+export function stepPeriodCode(code: string, steps: number): string | null {
+  // Fail-loud covers BOTH arguments: a fractional/NaN step would otherwise
+  // produce a plausible-looking garbage code ('2026KW2.5') — exactly the kind
+  // of silently-wrong value principle (c) exists to prevent (review finding,
+  // 2026-07-04; unreachable from current call sites, but this is exported).
+  if (!Number.isInteger(steps)) return null;
+  const match = /^(\d{4})(JJ|KW|MM)(\d{2})$/.exec(code);
+  if (!match) return null;
+  const year = Number(match[1]);
+  const grain = match[2] as 'JJ' | 'KW' | 'MM';
+  if (grain === 'JJ') return `${year + steps}JJ00`;
+  const perYear = grain === 'KW' ? 4 : 12;
+  const index = Number(match[3]);
+  if (index < 1 || index > perYear) return null;
+  const absolute = year * perYear + (index - 1) + steps;
+  const steppedYear = Math.floor(absolute / perYear);
+  const steppedIndex = ((absolute % perYear) + perYear) % perYear + 1;
+  return `${steppedYear}${grain}${pad2(steppedIndex)}`;
+}
+
+/** Grains published AT THE CANONICAL COORDINATE (mergedDims) — never the bare
+ * measure: unemployment's yearly cells exist only un-corrected, so JJ is not
+ * a grain the seasonally-adjusted canonical reading can serve (WP14). */
 async function availableGrains(db: Db, canonical: CanonicalRow): Promise<Set<string>> {
   const result = await db.query(
-    'select distinct period_grain from observations where table_id = $1 and measure = $2',
-    [canonical.tableId, canonical.measure],
+    'select distinct period_grain from observations where table_id = $1 and measure = $2 and dims = $3::jsonb',
+    [canonical.tableId, canonical.measure, JSON.stringify(canonical.mergedDims)],
   );
   return new Set(result.rows.map((r) => r.period_grain as string));
 }
 
-/** Freshest published period at one grain — a period CODE lookup only, no
- * values (a refusal or clarification never carries data, principle c). */
+/** Freshest published period at one grain, at the canonical coordinate — a
+ * period CODE lookup only, no values (a refusal or clarification never
+ * carries data, principle c). */
 async function latestPeriod(db: Db, canonical: CanonicalRow, grain: string): Promise<string | null> {
   const result = await db.query(
-    'select max(period_code) as latest from observations where table_id = $1 and measure = $2 and period_grain = $3',
-    [canonical.tableId, canonical.measure, grain],
+    'select max(period_code) as latest from observations where table_id = $1 and measure = $2 and period_grain = $3 and dims = $4::jsonb',
+    [canonical.tableId, canonical.measure, grain, JSON.stringify(canonical.mergedDims)],
   );
   return (result.rows[0]?.latest as string | null) ?? null;
 }
@@ -295,6 +337,146 @@ async function resolvePeriod(
         impliedRecency: false,
       };
     }
+    case 'since': {
+      // Open-ended range (WP14, open-questions #55): the model states the
+      // START; the END is always the freshest published period at the start's
+      // grain — never a year the (deliberately date-free) model guessed. A
+      // start before the loaded slice is NOT clamped here: the intent passes
+      // through and the query layer's outside_loaded_slice / not_published
+      // refusals stay the single honest source of that behavior (docs/05
+      // failure table; same pass-through policy as regions).
+      if (!isSaneYear(spec.year)) return periodFailure('period_invalid', `year ${spec.year} is not a plausible year`);
+      if (spec.month !== null && spec.quarter !== null) {
+        return periodFailure('period_invalid', 'a "since" period carries both a month and a quarter — at most one may refine the start year');
+      }
+      let grain: 'JJ' | 'KW' | 'MM';
+      let from: string;
+      if (spec.month !== null) {
+        if (!Number.isInteger(spec.month) || spec.month < 1 || spec.month > 12) {
+          return periodFailure('period_invalid', `month ${spec.month}/${spec.year} is not a valid month`);
+        }
+        grain = 'MM';
+        from = `${spec.year}MM${pad2(spec.month)}`;
+        const gate = requireGrain(grain);
+        if (gate) return gate;
+      } else if (spec.quarter !== null) {
+        if (!Number.isInteger(spec.quarter) || spec.quarter < 1 || spec.quarter > 4) {
+          return periodFailure('period_invalid', `quarter ${spec.quarter}/${spec.year} is not a valid quarter`);
+        }
+        grain = 'KW';
+        from = `${spec.year}KW${pad2(spec.quarter)}`;
+        const gate = requireGrain(grain);
+        if (gate) return gate;
+      } else {
+        // Year-only start: the COARSEST published grain — an annual series is
+        // the natural reading of "sinds 2015". Measures without a yearly
+        // series at the canonical coordinate (unemployment: CBS publishes no
+        // seasonally-adjusted year figures) fall back to a finer grain,
+        // starting at that year's first period; the answer states its periods
+        // explicitly (R4), so the granularity is transparent, never a guess.
+        const preferred = (['JJ', 'KW', 'MM'] as const).find((g) => grains.has(g));
+        if (!preferred) return periodFailure('period_invalid', `no published periods found for "${canonical.definitionLabel}"`);
+        grain = preferred;
+        from = grain === 'JJ' ? `${spec.year}JJ00` : grain === 'KW' ? `${spec.year}KW01` : `${spec.year}MM01`;
+      }
+      const latest = await latestPeriod(db, canonical, grain);
+      if (!latest) return periodFailure('period_invalid', `no published periods found for "${canonical.definitionLabel}"`);
+      if (from > latest) {
+        return periodFailure('period_invalid', `the requested start ${from} lies beyond the freshest published period (${latest})`);
+      }
+      return { ok: true, period: { kind: 'range', from, to: latest }, impliedRecency: true };
+    }
+    case 'last_n': {
+      // "de afgelopen N jaar/kwartalen/maanden": the N freshest PUBLISHED
+      // periods at the unit's grain, end-anchored — a range whose end no
+      // model chose. n ≥ 2: the singular "afgelopen jaar" is a relative
+      // offset, and n = 1 would be a degenerate range.
+      if (!Number.isInteger(spec.n) || spec.n < 1 || spec.n > 120) {
+        return periodFailure('period_invalid', `a window of ${spec.n} ${spec.unit}s is not supported (1..120)`);
+      }
+      // The COARSEST grain that can express the unit exactly, falling back to
+      // finer grains when the natural one is not published at the canonical
+      // coordinate ("afgelopen vijf jaar" of unemployment = the last 20
+      // quarters of the seasonally-adjusted series — CBS has no yearly one).
+      const preference: Record<typeof spec.unit, ('JJ' | 'KW' | 'MM')[]> = {
+        year: ['JJ', 'KW', 'MM'],
+        quarter: ['KW', 'MM'],
+        month: ['MM'],
+      };
+      const grain = preference[spec.unit].find((g) => grains.has(g));
+      if (!grain) {
+        return periodFailure(
+          'grain_unavailable',
+          `"${canonical.definitionLabel}" is not published at a grain that can express a window of ${spec.unit}s`,
+          [...grains].sort().map((g) => GRAIN_LABEL[g] ?? g),
+        );
+      }
+      const unitSteps: Record<'JJ' | 'KW' | 'MM', Partial<Record<typeof spec.unit, number>>> = {
+        JJ: { year: 1 },
+        KW: { year: 4, quarter: 1 },
+        MM: { year: 12, quarter: 3, month: 1 },
+      };
+      const stepsPerUnit = unitSteps[grain][spec.unit];
+      if (!stepsPerUnit) return periodFailure('period_invalid', `grain ${grain} cannot express unit "${spec.unit}"`);
+      const latest = await latestPeriod(db, canonical, grain);
+      if (!latest) return periodFailure('period_invalid', `no published periods found for "${canonical.definitionLabel}"`);
+      // n = 1 ("het afgelopen jaar"): not a window but the single freshest
+      // published period at the unit's grain — the same transparent-default
+      // pattern as 'latest', period stated in the answer. The prompt asks for
+      // a relative offset on singular phrasings, but the model legitimately
+      // encodes it this way too (observed live, 2026-07-04, confidence 0.92);
+      // both encodings must converge on the same honest intent — prompt rules
+      // are the primary control, the deterministic resolver the hard floor
+      // (ADR 012).
+      if (spec.n === 1) {
+        return { ok: true, period: { kind: 'codes', codes: [latest] }, impliedRecency: true };
+      }
+      const from = stepPeriodCode(latest, -(spec.n * stepsPerUnit - 1));
+      if (!from) return periodFailure('period_invalid', `freshest period code "${latest}" cannot be stepped — data needs review`);
+      return { ok: true, period: { kind: 'range', from, to: latest }, impliedRecency: true };
+    }
+    case 'now_vs_ago': {
+      // "nu vergeleken met N jaar geleden" (V02): TWO disjoint periods — the
+      // freshest published period and the one exactly `amount` units earlier,
+      // both at the finest published grain that can express the unit exactly
+      // (a year is 12 months / 4 quarters / 1 year; a month only ever a
+      // month). Emitted as two codes, ascending — the existing difference /
+      // series machinery does the rest (StructuredIntent unchanged).
+      if (!Number.isInteger(spec.amount) || spec.amount < 1 || spec.amount > 120) {
+        return periodFailure('period_invalid', `a comparison ${spec.amount} ${spec.unit}s back is not supported (1..120)`);
+      }
+      const expressible: Record<typeof spec.unit, ('JJ' | 'KW' | 'MM')[]> = {
+        month: ['MM'],
+        quarter: ['MM', 'KW'],
+        year: ['MM', 'KW', 'JJ'],
+      };
+      const grain = (['MM', 'KW', 'JJ'] as const).find(
+        (g) => expressible[spec.unit].includes(g) && grains.has(g),
+      );
+      if (!grain) {
+        return periodFailure(
+          'grain_unavailable',
+          `"${canonical.definitionLabel}" is not published at a grain that can express "${spec.amount} ${spec.unit}(s) ago"`,
+          [...grains].sort().map((g) => GRAIN_LABEL[g] ?? g),
+        );
+      }
+      const latest = await latestPeriod(db, canonical, grain);
+      if (!latest) return periodFailure('period_invalid', `no published periods found for "${canonical.definitionLabel}"`);
+      const steps: Record<'JJ' | 'KW' | 'MM', Partial<Record<typeof spec.unit, number>>> = {
+        MM: { month: 1, quarter: 3, year: 12 },
+        KW: { quarter: 1, year: 4 },
+        JJ: { year: 1 },
+      };
+      const stepsPerUnit = steps[grain][spec.unit];
+      if (!stepsPerUnit) {
+        // Unreachable by construction (grain ∈ expressible[unit]) — fail
+        // loudly rather than step by NaN if the two tables ever drift.
+        return periodFailure('period_invalid', `grain ${grain} cannot express unit "${spec.unit}"`);
+      }
+      const past = stepPeriodCode(latest, -(spec.amount * stepsPerUnit));
+      if (!past) return periodFailure('period_invalid', `freshest period code "${latest}" cannot be stepped — data needs review`);
+      return { ok: true, period: { kind: 'codes', codes: [past, latest] }, impliedRecency: true };
+    }
     case 'change_over_year': {
       if (!isSaneYear(spec.year)) return periodFailure('period_invalid', `year ${spec.year} is not a plausible year`);
       const grainGate = requireGrain('JJ');
@@ -351,7 +533,20 @@ async function resolvePeriod(
 function normalizeDerivation(candidate: RawCandidate): RawCandidate['derivation'] {
   // The period spec is the stronger signal than the LLM's derivation hint.
   if (candidate.period.kind === 'change_over_year') return 'difference';
-  if (candidate.period.kind === 'year_range') return 'series';
+  // Open-ended and last-n windows are series by construction, same as an
+  // explicit year range — even under a 'difference' hint ("met hoeveel
+  // gestegen sinds 2015"): the pre-registered direction derivation carries
+  // the honest net change, while a difference over >2 cells could never
+  // execute. Exceptions: last_n with n = 1 is a single period, not a window
+  // (its hint stands); now_vs_ago keeps its hint too — none and difference
+  // are both meaningful over exactly two periods.
+  if (
+    candidate.period.kind === 'year_range' ||
+    candidate.period.kind === 'since' ||
+    (candidate.period.kind === 'last_n' && candidate.period.n !== 1)
+  ) {
+    return 'series';
+  }
   return candidate.derivation;
 }
 
@@ -378,9 +573,14 @@ async function openEndedRangeOptions(
   const code = period.kind === 'codes' ? period.codes[0] : period.from;
   if (!code || !/^\d{4}JJ00$/.test(code)) return [];
   const fromYear = Number(code.slice(0, 4));
+  // Bounds at the canonical COORDINATE, like every other period lookup here:
+  // pre-WP14 these queries ran unfiltered, so for unemployment (whose yearly
+  // cells exist only un-corrected) the guard offered "2013 tot en met 2025" —
+  // a range that dead-ended in a no_data refusal if the user confirmed it
+  // (WP14 finding, 2026-07-04).
   const bounds = await db.query(
-    "select min(period_code) as earliest, max(period_code) as latest from observations where table_id = $1 and measure = $2 and period_grain = 'JJ'",
-    [canonical.tableId, canonical.measure],
+    "select min(period_code) as earliest, max(period_code) as latest from observations where table_id = $1 and measure = $2 and period_grain = 'JJ' and dims = $3::jsonb",
+    [canonical.tableId, canonical.measure, JSON.stringify(canonical.mergedDims)],
   );
   const parseYear = (value: unknown): number | null =>
     typeof value === 'string' && /^\d{4}JJ00$/.test(value) ? Number(value.slice(0, 4)) : null;
@@ -394,8 +594,8 @@ async function openEndedRangeOptions(
   // the query layer's completeness check would refuse it after the user
   // confirmed. Offer nothing rather than a range we cannot serve.
   const window = await db.query(
-    "select count(distinct period_code) as n from observations where table_id = $1 and measure = $2 and period_grain = 'JJ' and period_code between $3 and $4",
-    [canonical.tableId, canonical.measure, `${effectiveFrom}JJ00`, `${latestYear}JJ00`],
+    "select count(distinct period_code) as n from observations where table_id = $1 and measure = $2 and period_grain = 'JJ' and dims = $5::jsonb and period_code between $3 and $4",
+    [canonical.tableId, canonical.measure, `${effectiveFrom}JJ00`, `${latestYear}JJ00`, JSON.stringify(canonical.mergedDims)],
   );
   if (Number(window.rows[0]?.n) !== latestYear - effectiveFrom + 1) return [];
   return [`${effectiveFrom} tot en met ${latestYear}`];

@@ -70,7 +70,7 @@ class GarbageClient implements LlmClient {
 
 function rawDataQuery(candidate: Record<string, unknown>): RawParse {
   return {
-    version: 1,
+    version: 2,
     kind: 'data_query',
     candidates: [candidate as never],
     unmatchedMeasureTerm: null,

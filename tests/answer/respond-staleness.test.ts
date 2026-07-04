@@ -35,7 +35,7 @@ function stubIntentOutcome(overrides: Partial<Extract<ParseOutcome, { kind: 'int
     kind: 'intent',
     question: 'Wat is de inflatie nu?',
     raw: {
-      version: 1,
+      version: 2,
       kind: 'data_query',
       candidates: [],
       unmatchedMeasureTerm: null,

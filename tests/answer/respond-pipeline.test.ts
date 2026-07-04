@@ -452,12 +452,17 @@ describe('staleness, clock-injected at the pipeline level', () => {
 
 // ---------------------------------------------------------------------------
 // The degenerate open-range shape (validation pass 2026-07-04, V01/V28): live,
-// the parser emits year_range fromYear == toYear for "sinds {jaar}" — the raw
-// schema cannot express an open end and the prompt is deliberately date-free,
-// so the model cannot know the current year. The envelope must be a period
-// CLARIFICATION with a loaded-data range option; before the resolver guard it
-// was the catch-all internal refusal (query-layer invalid_intent). The stub
-// client replays the exact RawParse observed live (audit row 36).
+// pre-v4 parsers emitted year_range fromYear == toYear for "sinds {jaar}" —
+// the v1 raw schema could not express an open end. Since WP14 the live model
+// says {kind:'since'} and V01 ANSWERS (tests/answer/intent-resolve.test.ts);
+// this test pins the FALLBACK: should a degenerate shape still arrive (the
+// stub replays the v1-era parse observed live in audit row 36, version field
+// updated), the envelope must be an honest CLARIFICATION, never the catch-all
+// internal refusal it produced before the 2026-07-05 resolver guard. With the
+// WP14 coordinate-aware grain gate the degenerate yearly shape on
+// unemployment now exits even earlier — naming the real constraint (the
+// canonical seasonally-adjusted series has no yearly grain) instead of
+// offering a range that could not be served (ADR 019 §4).
 // ---------------------------------------------------------------------------
 
 describe('open-range questions ("sinds 2015") clarify at the envelope level', () => {
@@ -474,7 +479,7 @@ describe('open-range questions ("sinds 2015") clarify at the envelope level', ()
 
   it("V01's exact live parse becomes a period clarification, not an internal refusal", async () => {
     const observedLiveParse = {
-      version: 1,
+      version: 2,
       kind: 'data_query',
       candidates: [
         {
@@ -502,9 +507,8 @@ describe('open-range questions ("sinds 2015") clarify at the envelope level', ()
     expect(response.kind).toBe('clarification');
     if (response.kind !== 'clarification') throw new Error('unreachable');
     expect(response.axes).toEqual(['period']);
-    expect(response.text).toContain('Voor welke periode wil je dit weten — bijvoorbeeld 2015 tot en met ');
-    expect(response.options).toHaveLength(1);
-    expect(response.options[0]).toMatch(/^2015 tot en met \d{4}$/);
+    expect(response.text).toContain('Die cijfers zijn er alleen per kwartaal');
+    expect(response.options).toEqual(['per kwartaal']);
     // Belt: the clarification text carries no unbacked numbers.
     assertNoUnbackedNumbers(response, await whitelistForResponse(response));
   });

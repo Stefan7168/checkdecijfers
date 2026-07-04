@@ -15,8 +15,14 @@ import { CANONICAL_MEASURES } from '../../registry/defaults.ts';
  * an explicit present/recency signal, past tense or baseline-less change
  * questions are 'none' — first calibration run caught all three (ADR 012).
  * v3 (2026-07-03): causal_question takes precedence over out_of_scope (B19,
- * second calibration run). */
-export const PROMPT_VERSION = 3;
+ * second calibration run).
+ * v4 (2026-07-04, WP14): open-ended period ranges — since / last_n /
+ * now_vs_ago rules added, raw-parse version 2 (open-questions #55; validation
+ * pass V01/V28/V02); never-drop-a-named-place rule strengthened for
+ * national-only measures (first WP14 stability run caught the model reading
+ * "werkloosheid in Noord-Brabant" as national at 0.75 — the WP6 dropped-
+ * region failure mode on a new question shape). */
+export const PROMPT_VERSION = 4;
 
 /** Period grains each canonical measure is published at. Curated from the
  * live-ingest measurement in src/registry/defaults.ts (2026-07-03) and
@@ -25,7 +31,10 @@ export const PROMPT_VERSION = 3;
 export const AVAILABLE_GRAINS: Record<string, ('JJ' | 'KW' | 'MM')[]> = {
   population_on_1_january: ['JJ'],
   cpi_yearly_inflation: ['JJ', 'MM'],
-  unemployment_rate_seasonally_adjusted: ['JJ', 'KW'],
+  // KW only: the table also carries yearly cells, but exclusively
+  // UN-corrected — CBS publishes no seasonally-adjusted year figures, so the
+  // canonical coordinate has no JJ grain (WP14 finding, 2026-07-04).
+  unemployment_rate_seasonally_adjusted: ['KW'],
   housing_stock_start_of_year: ['JJ'],
   average_existing_home_sale_price: ['JJ', 'KW', 'MM'],
   bankruptcies_businesses: ['JJ', 'KW', 'MM'],
@@ -95,22 +104,26 @@ Rules for the topic:
 - G4 / "de vier grote steden" = the gemeenten Amsterdam, Rotterdam, Den Haag, Utrecht.
 - Self-referential places ("mijn gemeente", "mijn buurt", "bij ons", "hier") ARE region references: emit them verbatim as a region term with kind 'onbekend' — never drop them, never substitute Nederland. Code will ask which place is meant.
 - regions: null ONLY when the question names no place at all. For measures that are "alleen landelijk", a question without a place is complete; still record any place the user DID name (code handles the mismatch honestly).
+- NEVER drop or silently replace a named place — not even when the vocabulary says the measure is "alleen landelijk". Emit the place exactly as written, with your normal confidence: naming a region on a national-only measure does NOT make the reading doubtful, it makes it a question code answers with an honest limit. Reading such a question as if it asked about heel Nederland is wrong.
 
 # Periods
 
 - Named year → {"kind":"year"}; named quarter → {"kind":"quarter"} (Q1..Q4 as 1..4); named month → {"kind":"month"} (1..12).
 - "van X tot en met Y" per year → {"kind":"year_range"}.
+- "sinds {jaar}" / "vanaf {jaar}" with NO end named → {"kind":"since","year":X,"quarter":null,"month":null}. A start month refines it: "sinds maart 2020" → {"kind":"since","year":2020,"quarter":null,"month":3}; a start quarter likewise ("sinds het derde kwartaal van 2023" → quarter 3). You do not know today's date — code resolves the open end to the freshest published period, never you. NEVER emit a year_range with fromYear equal to toYear for these.
+- "de afgelopen/laatste N jaar" (N of 2 or more) → {"kind":"last_n","unit":"year","n":N}; "afgelopen N kwartalen"/"afgelopen N maanden" likewise with unit "quarter"/"month". The singular "het afgelopen jaar"/"de afgelopen maand" stays {"kind":"relative", ...,"offset":-1}.
+- "nu/vandaag/huidige ... vergeleken met N jaar geleden", "hoger/lager dan N jaar geleden" → {"kind":"now_vs_ago","unit":"year","amount":N} ("maanden/kwartalen geleden" likewise). This is a comparison of TWO periods, not a range; code picks the two published periods.
 - "groeide/steeg/daalde ... in {jaar}" + "met hoeveel" → {"kind":"change_over_year","year":X} with derivation "difference". Which two published values define that change is decided by code, not by you.
 - "vorige maand" → {"kind":"relative","unit":"month","offset":-1}; "vorig kwartaal"/"vorig jaar" likewise. You do not know today's date — never convert relative words to absolute periods yourself.
-- {"kind":"latest"} ONLY on an explicit present/recency signal: present tense about the current state ("is", "heeft", "zijn er", "wonen er") or words like "nu", "op dit moment", "meest recente".
+- {"kind":"latest"} ONLY on an explicit present/recency signal: present tense about the current state ("is", "heeft", "zijn er", "wonen er") or words like "nu", "op dit moment", "meest recente" — and only when no since/afgelopen/geleden phrase gives a wider window.
 - {"kind":"none"} when there is no period signal: a past-tense question without a named period ("Hoeveel inwoners had Nederland?"), or a change/direction question without a named year or baseline ("Zijn de prijzen gestegen?" — gestegen sinds wanneer?). Code will ask; never guess a year and never treat these as "latest".
 
 # Derivations (field "derivation")
 
 - "none": plain lookup, or a comparison of named regions ("vergelijk A en B").
-- "difference": explicit change-with-amount question (pairs with change_over_year).
+- "difference": explicit change-with-amount question (pairs with change_over_year). For now_vs_ago: "difference" only when the question asks the SIZE of the change ("met hoeveel"), otherwise "none".
 - "max": "welke ... de meeste/hoogste" over named regions.
-- "series": development over a period range ("hoe ontwikkelde ... zich").
+- "series": development over a period range ("hoe ontwikkelde ... zich") — the natural pairing for since and last_n periods.
 
 # Candidates and confidence
 
@@ -121,16 +134,19 @@ Rules for the topic:
 
 # Output
 
-Emit exactly the JSON schema you were given: {"version":1,"kind":...,"candidates":[...],"unmatchedMeasureTerm":...,"nearestCanonicalKeys":[...],"note":...}. No prose outside the JSON.
+Emit exactly the JSON schema you were given: {"version":2,"kind":...,"candidates":[...],"unmatchedMeasureTerm":...,"nearestCanonicalKeys":[...],"note":...}. No prose outside the JSON.
 
 # Examples
 
 Vraag: "Hoeveel inwoners had Nederland op 1 januari 2025?"
-{"version":1,"kind":"data_query","candidates":[{"canonicalKey":"population_on_1_january","regions":[{"name":"Nederland","kind":"land"}],"period":{"kind":"year","year":2025},"derivation":"none","confidence":0.97,"reading":"bevolking van Nederland op 1 januari 2025"}],"unmatchedMeasureTerm":null,"nearestCanonicalKeys":[],"note":null}
+{"version":2,"kind":"data_query","candidates":[{"canonicalKey":"population_on_1_january","regions":[{"name":"Nederland","kind":"land"}],"period":{"kind":"year","year":2025},"derivation":"none","confidence":0.97,"reading":"bevolking van Nederland op 1 januari 2025"}],"unmatchedMeasureTerm":null,"nearestCanonicalKeys":[],"note":null}
 
 Vraag: "Hoeveel inwoners had Utrecht in 2024?"
-{"version":1,"kind":"data_query","candidates":[{"canonicalKey":"population_on_1_january","regions":[{"name":"Utrecht","kind":"onbekend"}],"period":{"kind":"year","year":2024},"derivation":"none","confidence":0.85,"reading":"bevolking van Utrecht (gemeente of provincie) in 2024"}],"unmatchedMeasureTerm":null,"nearestCanonicalKeys":[],"note":"Utrecht kan gemeente of provincie zijn; kind 'onbekend' laat code dat uitvragen"}
+{"version":2,"kind":"data_query","candidates":[{"canonicalKey":"population_on_1_january","regions":[{"name":"Utrecht","kind":"onbekend"}],"period":{"kind":"year","year":2024},"derivation":"none","confidence":0.85,"reading":"bevolking van Utrecht (gemeente of provincie) in 2024"}],"unmatchedMeasureTerm":null,"nearestCanonicalKeys":[],"note":"Utrecht kan gemeente of provincie zijn; kind 'onbekend' laat code dat uitvragen"}
+
+Vraag: "Hoe ontwikkelt de werkloosheid zich in Nederland sinds 2015?"
+{"version":2,"kind":"data_query","candidates":[{"canonicalKey":"unemployment_rate_seasonally_adjusted","regions":[{"name":"Nederland","kind":"land"}],"period":{"kind":"since","year":2015,"quarter":null,"month":null},"derivation":"series","confidence":0.95,"reading":"ontwikkeling van het werkloosheidspercentage in Nederland vanaf 2015 tot nu"}],"unmatchedMeasureTerm":null,"nearestCanonicalKeys":[],"note":null}
 
 Vraag: "Wat wordt de inflatie in 2027?"
-{"version":1,"kind":"forecast_request","candidates":[],"unmatchedMeasureTerm":null,"nearestCanonicalKeys":["cpi_yearly_inflation"],"note":"vraagt om een voorspelling"}`;
+{"version":2,"kind":"forecast_request","candidates":[],"unmatchedMeasureTerm":null,"nearestCanonicalKeys":["cpi_yearly_inflation"],"note":"vraagt om een voorspelling"}`;
 }

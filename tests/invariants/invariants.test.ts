@@ -356,7 +356,7 @@ describe('anti-hallucination invariants — answer-side halves, real since WP7 (
     const { decide, DEFAULT_PARSER_CONFIG } = await import('../../src/answer/intent/index.ts');
     const context = {
       question: 'invariant probe',
-      raw: { version: 1 as const, kind: 'data_query' as const, candidates: [], unmatchedMeasureTerm: null, nearestCanonicalKeys: [], note: null },
+      raw: { version: 2 as const, kind: 'data_query' as const, candidates: [], unmatchedMeasureTerm: null, nearestCanonicalKeys: [], note: null },
       model: 'probe',
       usage: { inputTokens: 0, outputTokens: 0 },
     };

@@ -57,13 +57,23 @@ function buildClient(mode: string, labelFor: (question: string) => string | null
 /** The prompt's curated grain claims may not contradict the database: a grain
  * present in observations but missing from AVAILABLE_GRAINS means the prompt
  * under-promises reality — fail loudly. (The fixture DB can legitimately hold
- * FEWER grains than claimed; that direction is reported, not fatal.) */
+ * FEWER grains than claimed; that direction is reported, not fatal.)
+ * Checked AT THE CANONICAL COORDINATE (table defaults ⊕ measure dims), same
+ * as the resolver: a grain that exists only at a different coordinate — the
+ * un-corrected yearly unemployment cells — is not a grain the canonical
+ * reading can serve (WP14). */
 async function crossCheckGrains(db: Db): Promise<string[]> {
   const problems: string[] = [];
   for (const measure of CANONICAL_MEASURES) {
+    const table = await db.query('select default_coordinates from cbs_tables where id = $1', [
+      measure.tableId,
+    ]);
+    const parseJson = (v: unknown): Record<string, string> =>
+      v == null ? {} : ((typeof v === 'string' ? JSON.parse(v) : v) as Record<string, string>);
+    const mergedDims = { ...parseJson(table.rows[0]?.default_coordinates), ...(measure.dims ?? {}) };
     const result = await db.query(
-      'select distinct period_grain from observations where table_id = $1 and measure = $2',
-      [measure.tableId, measure.measure],
+      'select distinct period_grain from observations where table_id = $1 and measure = $2 and dims = $3::jsonb',
+      [measure.tableId, measure.measure, JSON.stringify(mergedDims)],
     );
     const inDb = new Set(result.rows.map((r) => r.period_grain as string));
     const claimed = new Set<string>(AVAILABLE_GRAINS[measure.key] ?? []);
