@@ -215,14 +215,33 @@ describe('R7 threshold policy (docs/05 R7, ADR 012)', () => {
     );
     expect(needsRegions.axes).toEqual(['region']);
 
+    // WITH a checked range option (the resolver's gap-free loaded window):
+    const nationalWithOption = await decide(
+      context(),
+      [failure('max_on_national_measure', 0.9, ['2015 tot en met 2025'])],
+      config,
+      alwaysServable,
+    );
+    if (nationalWithOption.kind !== 'clarification') throw new Error('unreachable');
+    expect(nationalWithOption.question_nl).toBe(
+      'Deze cijfers zijn er alleen voor heel Nederland, dus regio\u2019s vergelijken kan hier niet \u2014 ' +
+        'en de periode met de hoogste of laagste waarde opzoeken kan ik nog niet. ' +
+        'Wil je in plaats daarvan het verloop zien, bijvoorbeeld van 2015 tot en met 2025?',
+    );
+    expect(nationalWithOption.axes).toEqual(['derivation']);
+    expect(nationalWithOption.options).toEqual(['2015 tot en met 2025']);
+
+    // WITHOUT one (no clean window): generic, still names the real gap,
+    // never a grain the measure may not have (adversarial-review catch).
     const national = await decide(context(), [failure('max_on_national_measure', 0.9)], config, alwaysServable);
     if (national.kind !== 'clarification') throw new Error('unreachable');
     expect(national.question_nl).toBe(
       'Deze cijfers zijn er alleen voor heel Nederland, dus regio\u2019s vergelijken kan hier niet \u2014 ' +
         'en de periode met de hoogste of laagste waarde opzoeken kan ik nog niet. ' +
-        'Wil je in plaats daarvan het verloop over een periode zien, bijvoorbeeld per maand of per jaar?',
+        'Wil je in plaats daarvan het verloop over een periode zien?',
     );
     expect(national.axes).toEqual(['derivation']);
+    expect(national.question_nl).not.toContain('per maand');
     // Neither template may ever ask the misleading gemeente-of-provincie
     // question — the exact live-observed #97 failure.
     for (const outcome of [needsRegions, national]) {

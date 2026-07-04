@@ -139,6 +139,29 @@ describe('region resolution (names → CBS codes, never by the LLM)', () => {
     const failure = await failed(raw('cpi_yearly_inflation', { kind: 'year', year: 2024 }, null, 'max'));
     expect(failure.reason).toBe('max_on_national_measure');
     expect(failure.axis).toBe('derivation');
+    // The offer is a CHECKED range option — the measure's own gap-free
+    // loaded JJ window, computed like the degenerate-range guard's
+    // (adversarial-review fix: never a hardcoded grain the measure may not
+    // have). Expectation derived from the fixture DB itself, the
+    // loadedYearBounds pattern below.
+    const canonical = await db.query('select table_id, measure from canonical_measures where key = $1', ['cpi_yearly_inflation']);
+    const bounds = await db.query(
+      "select min(period_code) as earliest, max(period_code) as latest from observations where table_id = $1 and measure = $2 and period_grain = 'JJ'",
+      [canonical.rows[0]!.table_id, canonical.rows[0]!.measure],
+    );
+    const earliest = Number(String(bounds.rows[0]!.earliest).slice(0, 4));
+    const latest = Number(String(bounds.rows[0]!.latest).slice(0, 4));
+    expect(failure.options).toEqual([`${earliest} tot en met ${latest}`]);
+  });
+
+  it('"meeste" on a national measure WITHOUT a clean JJ window offers nothing rather than an unservable range (#97a review fix, both legs)', async () => {
+    // Seasonally-adjusted unemployment has NO yearly cells at its canonical
+    // coordinate (the WP14 finding: JJ exists only un-corrected), so the
+    // checked-option builder must come back empty and the template stays
+    // generic — never a range (or grain) the measure cannot serve.
+    const failure = await failed(raw('unemployment_rate_seasonally_adjusted', { kind: 'quarter', year: 2025, quarter: 1 }, null, 'max'));
+    expect(failure.reason).toBe('max_on_national_measure');
+    expect(failure.options).toEqual([]);
   });
 });
 
