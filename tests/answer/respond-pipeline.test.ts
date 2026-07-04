@@ -329,7 +329,15 @@ describe('the clarification round: respondToQuestion -> respondToClarificationRe
         expect(reply.kind).toBe('refusal');
         if (reply.kind !== 'refusal') throw new Error('unreachable');
         if (c.expect.refusalKind) {
-          const expectedReason = c.expect.refusalKind === 'smalltalk' ? 'smalltalk' : c.expect.refusalKind;
+          // WP18 (F3): the case label pins the PARSER outcome (refusalKind
+          // 'smalltalk'); the composed reason may be 'meta' when the reply is
+          // a genuinely meta question the deterministic router recognizes.
+          // c-b15-smalltalk-abandon asks what the system can do — pinned to
+          // the capabilities template deliberately (ADR 022).
+          const META_REASON_BY_CASE: Record<string, string> = {
+            'c-b15-smalltalk-abandon': 'meta',
+          };
+          const expectedReason = META_REASON_BY_CASE[c.id] ?? c.expect.refusalKind;
           expect(reply.reason).toBe(expectedReason);
         }
       }
@@ -372,10 +380,15 @@ describe('compound + smalltalk questions (labelled set)', () => {
     assertNoUnbackedNumbers(compoundResponse, await whitelistForResponse(compoundResponse));
   });
 
-  it('s-hallo: refusal reason "smalltalk"', () => {
+  it('s-hallo: "Wat kun je allemaal?" routes to the meta capabilities template (WP18/F3), no numbers', async () => {
     expect(smalltalkResponse.kind).toBe('refusal');
     if (smalltalkResponse.kind !== 'refusal') throw new Error('unreachable');
-    expect(smalltalkResponse.reason).toBe('smalltalk');
+    // Pre-WP18 this was the generic smalltalk deflection; the question
+    // genuinely asks what the product can do, so the deterministic router
+    // now answers it with the capabilities template (reason 'meta').
+    expect(smalltalkResponse.reason).toBe('meta');
+    expect(smalltalkResponse.text).toMatch(/kan ik je helpen met cijfers over/);
+    assertNoUnbackedNumbers(smalltalkResponse, await whitelistForResponse(smalltalkResponse));
   });
 });
 

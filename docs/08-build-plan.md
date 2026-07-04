@@ -137,6 +137,20 @@ Built as approved, supervised as required (owner confirmed the live window in-se
 
 ---
 
+## WP18 — F3 meta-question templates (deterministic post-classification router)  ✅ done 2026-07-04 (session 19)
+
+*Owner delegated sequencing this session ("proceed, you are the expert"); the session picked F3 first of the remaining Phase 1 adds — reasoning in [STATUS.md](STATUS.md). The fix behind the validation pass's F3: genuinely meta questions ("welke bronnen gebruik je?", "hoe ga je om met ontbrekende waarden?", "wat kun je?") got the identical blunt smalltalk deflection.*
+
+**The design (ADR [022](decisions/022-meta-question-templates.md)):** an ordered, exported `META_TEMPLATES` table (`src/answer/respond/meta.ts`) of five deterministic product-behaviour templates (sources, missing values, freshness, reliability, capabilities) with embedded example phrasings; `buildSmalltalkRefusal` consults the router **only inside the LLM's smalltalk classification** — a data question can never be hijacked, so a misroute can only swap one true product statement for another (the structural safety argument). New `RefusalReason` value `'meta'`; envelope stays refusal-kind (answer-kind would demand R8 byte-identical re-derivation with `ValidatedResult` backing meta answers don't have); billing untouched (non-answers refund in full — product help is free); no migration (`refusal_reason` is unconstrained text); zero web changes (UI branches on kind only); **zero LLM-request bytes touched — all 54 intent + 7 clarify + 18 follow-up fixtures replay byte-identically, zero live spend.** The reliability template is the public-claim rule verbatim in spirit ("elk cijfer herleidbaar naar een officiële CBS-cel"), never an absolute slogan.
+
+**Invariants at stake:** the ADR 015 deterministic-templates rule (no LLM anywhere in the path — held by construction); the no-numbers belt over every new template (swept structurally: the tests iterate the exported table itself, so a future template is belt-checked automatically or fails — the session-16 stale-enumeration lesson applied); fixture honesty (post-parse routing only); R8 (refusal rows keep structural reconstruction — verified against reconstruct.ts before build).
+
+**Done-criteria met and measured (hermetic):** see [STATUS.md](STATUS.md) session-19 entry for the full gate numbers and the adversarial-review scoreboard. Notable first-contact catches: the order-honesty test caught a Dutch stem-alternation bug (`ontbreekt` vs `ontbrekende`) on its first run; the pipeline test caught that a clarify-reply's smalltalk classification belongs to the REPLY text while `ParseOutcome.question` echoes the original — fixed with an explicit `metaMatchText` at the reply call site.
+
+**Deliberately out of scope:** referent-aware meta answers (V35/V36 "deze grafiek" naming the actual previous table — needs WP15 context integration, revisit trigger in ADR 022); pricing/credits meta questions (digits; template set stays static-safe in v1); any prompt/schema change.
+
+---
+
 ## WP16 (working number) — Demand-driven table onboarding, fully automated  NOT YET BRIEFED — queued after WP13/WP15, Phase 2–3
 
 *Placeholder only, added 2026-07-04 so this decision can't be missed by a session reading only this file. Not next in line — WP13 then WP15 come first — so this is deliberately not fleshed out into a full brief yet (scope/invariants/done-criteria), per the phase-gate discipline: don't over-specify work that isn't next.*
