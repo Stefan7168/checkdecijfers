@@ -31,7 +31,8 @@ export function AccountPanel({
     <div className="flex flex-col gap-3 rounded border border-zinc-200 p-4">
       <div>
         <p className="text-xs text-zinc-500">Saldo</p>
-        <p className="text-2xl font-semibold">{balance} credits</p>
+        {/* WP23 (#91): tabular figures — digits align, FT/NRC-style. */}
+        <p className="text-2xl font-semibold tabular-nums">{balance} credits</p>
       </div>
       {lowBalance ? (
         <p role="status" className="rounded bg-amber-50 px-3 py-2 text-sm text-amber-800">

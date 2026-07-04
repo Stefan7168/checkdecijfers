@@ -160,6 +160,32 @@ describe('buildRows', () => {
   });
 });
 
+// WP23 (#92): caveats read like caveats, the credit reads like a photo
+// credit — amber + larger for provisional/null notes, smallest/lightest for
+// the attribution, caveats ABOVE the credit. Content untouched (same strings
+// from the one builder, R4); these pins keep the presentation from silently
+// reverting.
+describe('ChartView — footer arrangement (#92)', () => {
+  it('renders caveats amber and larger, the attribution smallest, caveats first', () => {
+    const s = spec({
+      provisionalNote: 'Voorlopige cijfers zijn gemarkeeerd met *.',
+      nullNotes: ['2022: geen gegevens beschikbaar (geheim).'],
+    });
+    const { container } = render(<ChartView spec={s} />);
+    const caveat = screen.getByText('Voorlopige cijfers zijn gemarkeeerd met *.');
+    expect(caveat.className).toContain('text-amber-700');
+    expect(caveat.className).toContain('text-sm');
+    const nullNote = screen.getByText('2022: geen gegevens beschikbaar (geheim).');
+    expect(nullNote.className).toContain('text-amber-700');
+    const credit = screen.getByText(s.attributionLine);
+    expect(credit.className).toContain('text-xs');
+    expect(credit.className).toContain('text-zinc-400');
+    // Order: the caveat precedes the credit in the DOM.
+    const all: HTMLElement[] = [...container.querySelectorAll('p')];
+    expect(all.indexOf(caveat)).toBeLessThan(all.indexOf(credit));
+  });
+});
+
 describe('yAxisDomain (open-questions #48 honesty policy)', () => {
   it('floors bar charts at zero — a truncated bar lies about ratios', () => {
     expect(yAxisDomain('bar')).toEqual([0, 'auto']);

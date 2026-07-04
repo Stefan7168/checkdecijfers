@@ -198,9 +198,13 @@ export function ChartView({ spec }: { spec: ChartSpec }) {
           )}
         </ResponsiveContainer>
       </div>
-      {spec.provisionalNote ? <p className="mt-2 text-xs text-zinc-600">{spec.provisionalNote}</p> : null}
+      {/* WP23 (#92): caveats read like caveats — amber and a step larger than
+        * the source credit, which stays smallest/lightest (photo-credit
+        * style). Content untouched: same strings from the same one builder
+        * (R4); only presentation changes here. */}
+      {spec.provisionalNote ? <p className="mt-2 text-sm text-amber-700">{spec.provisionalNote}</p> : null}
       {spec.nullNotes.map((note) => (
-        <p key={note} className="text-xs text-zinc-600">
+        <p key={note} className="text-sm text-amber-700">
           {note}
         </p>
       ))}

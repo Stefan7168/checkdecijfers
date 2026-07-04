@@ -279,6 +279,118 @@ describe('Chat — WP21 CSV export (#52)', () => {
 // with a refresh affordance, never the misleading generic error. The test
 // rejects with the REAL Next class (imported from Next's own module) so the
 // detector's instanceof check is exercised, not mocked.
+// WP23 (#84/#86/#90/#91/#71/#75): message-type styling, the source chip with
+// the StatLine deep-link, the voorlopig pill, structural answer rendering
+// (zero loss vs the assembled text), and the empty-state example chips.
+describe('Chat — WP23 display smalls', () => {
+  function fakeRefusal(text: string): GatedResponse {
+    return {
+      kind: 'ok',
+      auditId: 3,
+      netCost: 0,
+      response: { kind: 'refusal', text } as unknown as ComposedResponse,
+    };
+  }
+
+  it('renders an answer from its structural fields with zero loss: body, staleness, definition, marking, chip (#90)', async () => {
+    const response = fakeAnswerResponse({
+      body: 'De inflatie in 2024 was 3,3%.',
+      definitionLine: 'Definitie: consumentenprijsindex (CPI), alle bestedingen.',
+      markingLine: 'bewerking van CBS-gegevens door checkdecijfers.nl',
+      stalenessWarning: 'Let op: deze tabel wordt normaal maandelijks bijgewerkt door CBS.',
+      cells: [fakeCell()],
+    });
+    askQuestion.mockResolvedValue(
+      outcome({ kind: 'ok', auditId: 1, netCost: 20, response: response as ComposedResponse }),
+    );
+    render(<Chat />);
+    await submit('Wat was de inflatie in 2024?');
+    expect(await screen.findByText('De inflatie in 2024 was 3,3%.')).toBeInTheDocument();
+    expect(screen.getByText('Definitie: consumentenprijsindex (CPI), alle bestedingen.')).toBeInTheDocument();
+    expect(screen.getByText('bewerking van CBS-gegevens door checkdecijfers.nl')).toBeInTheDocument();
+    expect(screen.getByText('Let op: deze tabel wordt normaal maandelijks bijgewerkt door CBS.')).toBeInTheDocument();
+    // The chip carries the FULL R4 sentence, always visible (#90), plus the
+    // pinned StatLine deep-link (#86) bound to the answer's own table id.
+    expect(
+      screen.getByText(
+        'Bron: CBS StatLine, tabel 86141NED — Consumentenprijzen; prijsindex 2015=100. Gegevens gesynchroniseerd op 2026-07-03. Licentie: CC BY 4.0.',
+      ),
+    ).toBeInTheDocument();
+    const link = screen.getByRole('link', { name: 'Bekijk bij CBS StatLine' });
+    expect(link).toHaveAttribute('href', 'https://opendata.cbs.nl/statline/#/CBS/nl/dataset/86141NED/table');
+    expect(link).toHaveAttribute('target', '_blank');
+  });
+
+  it('shows the amber voorlopig pill exactly when a quoted cell is provisional (#71)', async () => {
+    askQuestion.mockResolvedValueOnce(
+      outcome({
+        kind: 'ok',
+        auditId: 1,
+        netCost: 20,
+        response: fakeAnswerResponse({
+          body: 'Serie-antwoord met voorlopige cijfers.',
+          cells: [fakeCell(), fakeCell({ resultId: 'X', provisional: true, status: 'Voorlopig' })],
+        }) as ComposedResponse,
+      }),
+    );
+    render(<Chat />);
+    await submit('Hoe ontwikkelde de inflatie zich?');
+    expect(await screen.findByText('voorlopig')).toBeInTheDocument();
+    cleanup();
+
+    askQuestion.mockResolvedValueOnce(outcome(fakeAnswer('Definitief antwoord zonder voorbehoud.')));
+    render(<Chat />);
+    await submit('Wat was de inflatie in 2023?');
+    await screen.findByText('Definitief antwoord zonder voorbehoud.');
+    expect(screen.queryByText('voorlopig')).toBeNull();
+  });
+
+  it('styles a clarification amber and repeats no fixed refusal strings (#84)', async () => {
+    askQuestion.mockResolvedValue(outcome(fakeClarification('Welke gemeente bedoel je?')));
+    render(<Chat />);
+    await submit('Hoeveel werklozen zijn er?');
+    const bubble = await screen.findByText('Welke gemeente bedoel je?');
+    expect(bubble.className).toContain('bg-amber-50');
+    expect(screen.queryByText('Dit kon ik niet beantwoorden')).toBeNull();
+  });
+
+  it('announces a refusal with the two fixed strings (#84)', async () => {
+    askQuestion.mockResolvedValue(outcome(fakeRefusal('Ik kan geen voorspellingen doen.')));
+    render(<Chat />);
+    await submit('Wordt de inflatie volgend jaar hoger?');
+    expect(await screen.findByText('Ik kan geen voorspellingen doen.')).toBeInTheDocument();
+    expect(screen.getByText('Dit kon ik niet beantwoorden')).toBeInTheDocument();
+    expect(screen.getByText('geen antwoord = geen gok')).toBeInTheDocument();
+    // A refusal has no attribution chip — there is no source to cite.
+    expect(screen.queryByRole('link', { name: 'Bekijk bij CBS StatLine' })).toBeNull();
+  });
+
+  it('keeps answers free of the refusal strings and the amber clarification style (#84)', async () => {
+    askQuestion.mockResolvedValue(outcome(fakeAnswer('Nederland telt 18.044.027 inwoners.')));
+    render(<Chat />);
+    await submit('Hoeveel inwoners heeft Nederland?');
+    const bubble = await screen.findByText('Nederland telt 18.044.027 inwoners.');
+    expect(bubble.className).not.toContain('bg-amber-50');
+    expect(screen.queryByText('Dit kon ik niet beantwoorden')).toBeNull();
+    expect(screen.queryByText('geen antwoord = geen gok')).toBeNull();
+  });
+
+  it('offers example chips on the empty chat that FILL the input, never send (#75)', async () => {
+    render(<Chat />);
+    const chip = screen.getByRole('button', { name: 'Wat was de inflatie in 2024?' });
+    fireEvent.click(chip);
+    expect(screen.getByPlaceholderText('Stel een vraag…')).toHaveValue('Wat was de inflatie in 2024?');
+    expect(askQuestion).not.toHaveBeenCalled();
+  });
+
+  it('hides the example chips once a conversation exists (#75)', async () => {
+    askQuestion.mockResolvedValue(outcome(fakeAnswer('Nederland telt 18.044.027 inwoners.')));
+    render(<Chat />);
+    await submit('Hoeveel inwoners heeft Nederland?');
+    expect(screen.queryByRole('button', { name: 'Wat was de inflatie in 2024?' })).toBeNull();
+  });
+});
+
 describe('Chat — WP22 stale-deploy action failure (#96a)', () => {
   it('shows the honest deploy copy + refresh button, never the generic error', async () => {
     askQuestion.mockRejectedValue(
@@ -296,6 +408,28 @@ describe('Chat — WP22 stale-deploy action failure (#96a)', () => {
     ).toBeNull();
     // The form recovered (busy cleared) — the user can type again.
     expect(screen.getByPlaceholderText('Stel een vraag…')).not.toBeDisabled();
+  });
+
+  it('the refresh button really reloads (worktree-lens catch: onClick was unbound)', async () => {
+    // vi.spyOn(window.location, 'reload') throws in jsdom (non-configurable
+    // property) — full-object replacement is the working idiom, proven by
+    // the WP22 review's executing lens.
+    const original = window.location;
+    const reload = vi.fn();
+    Object.defineProperty(window, 'location', {
+      value: { ...original, reload },
+      configurable: true,
+      writable: true,
+    });
+    try {
+      askQuestion.mockRejectedValue(new UnrecognizedActionError('gone'));
+      render(<Chat />);
+      await submit('Wat was de inflatie in 2024?');
+      fireEvent.click(await screen.findByRole('button', { name: 'Ververs de pagina' }));
+      expect(reload).toHaveBeenCalledTimes(1);
+    } finally {
+      Object.defineProperty(window, 'location', { value: original, configurable: true, writable: true });
+    }
   });
 
   it('keeps the generic copy for any other thrown error', async () => {
