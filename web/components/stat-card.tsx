@@ -60,9 +60,6 @@ export function StatCard({ data }: { data: StatCardData }) {
     image.src = svgUrl;
   }
 
-  // '%' hugs the number (CBS style); other units get a space.
-  const unitText = data.unit === '%' ? '%' : ` ${data.unit}`;
-
   return (
     <div className="mb-2 inline-block max-w-full">
       <svg
@@ -72,7 +69,7 @@ export function StatCard({ data }: { data: StatCardData }) {
         viewBox="0 0 600 315"
         xmlns="http://www.w3.org/2000/svg"
         role="img"
-        aria-label={`${data.measureTitle}: ${data.value}${unitText}`}
+        aria-label={`${data.measureTitle}: ${data.value}${data.unitSuffix}`}
         className="h-auto w-full max-w-[420px] rounded border border-zinc-200"
       >
         <rect x="0" y="0" width="600" height="315" fill="#ffffff" />
@@ -89,9 +86,13 @@ export function StatCard({ data }: { data: StatCardData }) {
         ) : null}
         <text x="32" y="170" fontFamily={FONT} fontSize="76" fontWeight="700" fill="#18181b">
           {data.value}
-          <tspan fontSize="30" fontWeight="400" fill="#52525b">
-            {unitText}
-          </tspan>
+          {/* unitSuffix carries the shared body convention verbatim
+            * (stat-card-data.ts) — '' for a bare 'aantal' count. */}
+          {data.unitSuffix !== '' ? (
+            <tspan fontSize="30" fontWeight="400" fill="#52525b">
+              {data.unitSuffix}
+            </tspan>
+          ) : null}
         </text>
         {data.context !== '' ? (
           <text x="32" y="218" fontFamily={FONT} fontSize="22" fill="#52525b">

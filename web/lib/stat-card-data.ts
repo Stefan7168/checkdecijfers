@@ -4,13 +4,25 @@
 // null and the chat renders no card. The number is formatted by the SHARED
 // formatValueNl (R3: one formatter, no drift with answer text or charts);
 // nothing here computes or rounds a value itself.
+//
+// Unit conventions (WP20 adversarial-review HIGH finding): the card must
+// render units exactly as the answer body does — '%' hugging, 'aantal' bare,
+// digit-bearing factor units parenthesized (the R10 ×1.000 misreading
+// guard). Rather than duplicating those rules, `unitSuffix` is DERIVED from
+// the shared displayValueUnit itself (the full rendering minus the formatted
+// value), so the card structurally cannot drift from the body convention.
+// template.ts and its imports (validate.ts → format.ts) are pure modules —
+// verified leaf-chain, safe in the client bundle.
 import { formatValueNl } from '../backend/answer/compose/format.ts';
+import { displayValueUnit } from '../backend/answer/compose/template.ts';
 import type { AnswerResponse } from '../backend/answer/respond/types.ts';
 
 export interface StatCardData {
   /** Dutch-formatted value, straight from formatValueNl. */
   value: string;
-  unit: string;
+  /** What follows the value, per the shared body convention: '%' | '' (a
+   * bare 'aantal' count) | ' (× 1 000)' (factor guard) | ' eenheid'. */
+  unitSuffix: string;
   measureTitle: string;
   /** "regio · periode" context line (region omitted on national tables). */
   context: string;
@@ -25,9 +37,10 @@ export function statCardData(response: AnswerResponse): StatCardData | null {
   if (result.shape !== 'single' || result.cells.length !== 1) return null;
   const cell = result.cells[0]!;
   if (cell.value === null) return null;
+  const value = formatValueNl(cell.value, cell.decimals);
   return {
-    value: formatValueNl(cell.value, cell.decimals),
-    unit: cell.unit,
+    value,
+    unitSuffix: displayValueUnit(cell.value, cell.decimals, cell.unit).slice(value.length),
     measureTitle: cell.measureTitle,
     context: [cell.regionLabel, cell.periodLabel].filter((part) => part !== null && part !== '').join(' · '),
     provisional: cell.provisional,
