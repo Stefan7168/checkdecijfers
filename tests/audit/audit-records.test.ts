@@ -15,6 +15,7 @@ import { ReplayLlmClient, stableStringify } from '../../src/answer/llm/client.ts
 import { PROMPT_VERSION } from '../../src/answer/intent/prompt.ts';
 import { CLARIFY_PROMPT_VERSION } from '../../src/answer/intent/clarify.ts';
 import { COMPOSE_PROMPT_VERSION } from '../../src/answer/compose/prompt.ts';
+import { FOLLOWUP_PROMPT_VERSION } from '../../src/answer/intent/followup.ts';
 import {
   answerClarificationReplyAudited,
   answerQuestionAudited,
@@ -156,12 +157,13 @@ describe('answer flows write reconstructable records', () => {
     expect(flows.get('B1')!.record.chartEmitted).toBe(false);
   });
 
-  it('prompt versions record the three exported constants (ADR 015 obligation)', () => {
+  it('prompt versions record the four exported constants (ADR 015 obligation; followup since WP15/ADR 021)', () => {
     for (const [taskId, { record }] of flows) {
       expect(record.promptVersions, taskId).toEqual({
         intent: PROMPT_VERSION,
         clarify: CLARIFY_PROMPT_VERSION,
         compose: COMPOSE_PROMPT_VERSION,
+        followup: FOLLOWUP_PROMPT_VERSION,
       });
     }
   });
@@ -355,7 +357,115 @@ describe('the clarification-reply round records the ADR 015 wrap-site context', 
     expect(roles).toContain('clarify');
     expect(roles).toContain('compose');
     expect(roles).not.toContain('intent');
+    expect(record.conversationContext).toBeNull();
     expect(reconstructionReport(record).problems).toEqual([]);
+  });
+});
+
+describe('WP15: the offered conversation context is a recorded input (ADR 021 decision 3)', () => {
+  const context: import('../../src/answer/context/index.ts').ConversationContext = {
+    version: 1,
+    topicKey: 'population_on_1_january',
+    regions: [{ name: 'Amsterdam', kind: 'gemeente' }],
+    period: { kind: 'year', year: 2024 },
+    derivation: 'none',
+  };
+
+  it('happy path, end-to-end over recorded fixtures: a follow-up turn answers with the frozen key (B7), records the offered context, and reconstructs', async () => {
+    // f-merge-topic-switch-national (benchmark/followup-cases.json): previous
+    // turn was inflation 2024; "En de huizenprijzen?" merges to exactly B7's
+    // intent (average home price, 2024) — so the composed answer replays from
+    // the same committed compose fixture the clarify-round e2e uses.
+    const followupSet = JSON.parse(
+      readFileSync(new URL('../../benchmark/followup-cases.json', import.meta.url), 'utf8'),
+    ) as { referenceDate: string; cases: { id: string; context: unknown; question: string }[] };
+    const c = followupSet.cases.find((x) => x.id === 'f-merge-topic-switch-national')!;
+    const audited = await answerQuestionAudited(db, c.question, {
+      intentClient: new ReplayLlmClient(fileURLToPath(new URL('../fixtures/llm/followup', import.meta.url))),
+      answerClient: new ReplayLlmClient(ANSWER_FIXTURES),
+      referenceDate: followupSet.referenceDate,
+      conversationContext: c.context as import('../../src/answer/context/index.ts').ConversationContext,
+    });
+    expect(audited.response.kind).toBe('answer');
+    if (audited.response.kind !== 'answer') throw new Error('unreachable');
+    const problems = checkComposedAnswer('B7', answerKey.tasks.B7!, audited.response.answer);
+    expect(problems, problems.join('\n')).toEqual([]);
+
+    const record = await mustLoad(audited.auditId);
+    expect(record.conversationContext).toEqual(c.context);
+    expect(record.replyText).toBeNull();
+    const roles = record.llmCalls.map((x) => x.role);
+    expect(roles).toContain('followup');
+    expect(roles).toContain('compose');
+    expect(roles).not.toContain('intent');
+    expect(reconstructionReport(record).problems).toEqual([]);
+  });
+
+  it('a follow-up turn records the offered context verbatim and reconstructs — even on the fail-closed path', async () => {
+    // No follow-up fixture exists for this synthetic question: the replay
+    // client throws, respondToQuestion fails closed to the internal refusal —
+    // and the row must STILL record that a context was offered (input
+    // capture, like replyText), with no 'intent'-labelled call recorded (the
+    // wrap site labels a context-offered parse 'followup'). The happy-path
+    // twin of this pin lands with the recorded fixtures.
+    const audited = await answerQuestionAudited(db, 'En in Rotterdam? (audit-pin, geen fixture)', {
+      ...respondOptions(),
+      conversationContext: context,
+    });
+    expect(audited.response.kind).toBe('refusal');
+    if (audited.response.kind !== 'refusal') throw new Error('unreachable');
+    expect(audited.response.reason).toBe('internal');
+    const record = await mustLoad(audited.auditId);
+    expect(record.conversationContext).toEqual(context);
+    expect(record.replyText).toBeNull();
+    expect(record.llmCalls.map((c) => c.role)).not.toContain('intent');
+    expect(reconstructionReport(record).problems).toEqual([]);
+  });
+
+  it('the database CHECK rejects a context on a reply row (one merge candidate per parse)', async () => {
+    // Hand-build a reply-shaped row that ALSO claims a conversation context —
+    // the wrap site can never produce this; the constraint is the belt.
+    const flow = await answerQuestionAudited(db, ANSWERABLE_TASKS.B1!.question, respondOptions());
+    const record = await mustLoad(flow.auditId);
+    const { buildAuditRow, insertAuditRecord } = await import('../../src/answer/audit/index.ts');
+    const row = buildAuditRow(record.response, {
+      referenceDate: REFERENCE_DATE,
+      userId: null,
+      replyText: 'een reply',
+      pendingClarification: {
+        version: 1,
+        question: 'v',
+        referenceDate: REFERENCE_DATE,
+        axes: ['measure'],
+        questionNl: 'v?',
+        options: [],
+      },
+      conversationContext: context,
+      llmCalls: [],
+      latencyMs: 1,
+    });
+    await expect(insertAuditRecord(db, row)).rejects.toThrow(/context_never_on_reply_rows/);
+  });
+
+  it('reconstruction flags a context on a reply row (the row-level mirror of the CHECK)', async () => {
+    const flow = await answerQuestionAudited(db, ANSWERABLE_TASKS.B1!.question, respondOptions());
+    const record = await mustLoad(flow.auditId);
+    const tampered: AuditRecord = {
+      ...record,
+      replyText: 'een reply',
+      pendingClarification: {
+        version: 1,
+        question: 'v',
+        referenceDate: REFERENCE_DATE,
+        axes: ['measure'],
+        questionNl: 'v?',
+        options: [],
+      },
+      conversationContext: context,
+    };
+    expect(reconstructionReport(tampered).problems).toContain(
+      'conversation_context must be null on clarification-reply rows',
+    );
   });
 });
 

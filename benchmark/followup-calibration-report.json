@@ -1,0 +1,74 @@
+{
+  "generatedAt": "2026-07-04T12:06:39.854Z",
+  "mode": "live",
+  "repeat": 3,
+  "referenceDate": "2026-08-15",
+  "totals": {
+    "pass": 18,
+    "total": 18
+  },
+  "usage": {
+    "inputTokens": 370857,
+    "outputTokens": 6474
+  },
+  "unstable": [],
+  "failures": [],
+  "history": [
+    {
+      "generatedAt": "2026-07-04T12:00:10.887Z",
+      "mode": "record",
+      "repeat": 1,
+      "referenceDate": "2026-08-15",
+      "totals": {
+        "pass": 17,
+        "total": 18
+      },
+      "usage": {
+        "inputTokens": 121405,
+        "outputTokens": 2189
+      }
+    },
+    {
+      "generatedAt": "2026-07-04T12:02:25.921Z",
+      "mode": "record",
+      "repeat": 1,
+      "referenceDate": "2026-08-15",
+      "totals": {
+        "pass": 17,
+        "total": 18
+      },
+      "usage": {
+        "inputTokens": 122773,
+        "outputTokens": 2163
+      }
+    },
+    {
+      "generatedAt": "2026-07-04T12:04:31.338Z",
+      "mode": "record",
+      "repeat": 1,
+      "referenceDate": "2026-08-15",
+      "totals": {
+        "pass": 18,
+        "total": 18
+      },
+      "usage": {
+        "inputTokens": 123619,
+        "outputTokens": 2144
+      }
+    },
+    {
+      "generatedAt": "2026-07-04T12:06:39.854Z",
+      "mode": "live",
+      "repeat": 3,
+      "referenceDate": "2026-08-15",
+      "totals": {
+        "pass": 18,
+        "total": 18
+      },
+      "usage": {
+        "inputTokens": 370857,
+        "outputTokens": 6474
+      }
+    }
+  ]
+}

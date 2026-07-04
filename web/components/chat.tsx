@@ -14,7 +14,9 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { askQuestion, replyToClarification } from '../app/actions.ts';
+import type { AskOutcome } from '../app/actions.ts';
 import type { ChartSpec } from '../backend/chart/types.ts';
+import type { ConversationContext } from '../backend/answer/context/index.ts';
 import type { PendingClarification } from '../backend/answer/respond/types.ts';
 import type { GatedResponse } from '../backend/billing/index.ts';
 import { ChartView } from './chart.tsx';
@@ -41,10 +43,23 @@ function gatedMessageText(result: Exclude<GatedResponse, { kind: 'ok' }>): strin
 export function Chat() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [pending, setPending] = useState<PendingClarification | null>(null);
+  // WP15 (ADR 021): the structured referent carried between turns. Held
+  // exactly like `pending` (client-held React state, sent back verbatim on
+  // the next submit) but updated only on an 'ok' outcome that itself
+  // produced a context — any other outcome (a gated non-'ok' kind, or an
+  // 'ok' response with no honest referent, e.g. a clarification) leaves the
+  // held context untouched, so a smalltalk/refusal detour never erases it.
+  const [context, setContext] = useState<ConversationContext | null>(null);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  function applyOutcome(outcome: AskOutcome): void {
+    if (outcome.gated.kind === 'ok' && outcome.context !== null) {
+      setContext(outcome.context);
+    }
+  }
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -62,18 +77,20 @@ export function Chat() {
 
     try {
       const requestId = crypto.randomUUID();
-      const result = pending
+      const outcome = pending
         ? await replyToClarification(pending, text, requestId)
-        : await askQuestion(text, requestId);
+        : await askQuestion(text, requestId, context);
+      applyOutcome(outcome);
+      const { gated } = outcome;
 
-      if (result.kind !== 'ok') {
-        setMessages((m) => [...m, { role: 'assistant', text: gatedMessageText(result), chart: null }]);
+      if (gated.kind !== 'ok') {
+        setMessages((m) => [...m, { role: 'assistant', text: gatedMessageText(gated), chart: null }]);
         // None of these kinds change the pending clarification state;
         // `finally` below still clears `busy`.
         return;
       }
 
-      const { response } = result;
+      const { response } = gated;
       setMessages((m) => [
         ...m,
         {

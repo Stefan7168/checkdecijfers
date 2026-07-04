@@ -29,6 +29,8 @@ Recommended architecture for Phase 0–2, per the ADRs in [decisions/](decisions
 
 Refusal and clarification text is **deterministic templates, never an LLM** (ADR [015](decisions/015-refusal-clarification-composition.md)); a clarification opens exactly **one** reply round, whose free-text answer re-enters at step 1 merged with the pending partial intent (still-unresolved → refusal-with-guidance, never a second question).
 
+Since WP15 (ADR [021](decisions/021-conversation-memory-structured-context.md)): a follow-up question re-enters at step 1 with the **previous turn's resolved intent** — the stored query plan, mapped back to registry vocabulary and validated server-side — offered as a structured merge candidate ("En in Rotterdam?" inherits topic and period). Never raw chat history in any prompt. Step 1's low-confidence echo suggestions are also **dry-run through steps 2–4** before being offered (#56): an unservable suggestion is replaced by a clarification naming what is actually loaded.
+
 ## Components and why they earn their place
 
 | Component | Justification | ADR |

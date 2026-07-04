@@ -58,8 +58,9 @@ export function normalizeRegionName(name: string): string {
 }
 
 /** CBS disambiguates colliding names with a trailing parenthetical:
- * "Utrecht (gemeente)", "Utrecht (PV)". The base name is what users say. */
-function baseLabel(label: string): string {
+ * "Utrecht (gemeente)", "Utrecht (PV)". The base name is what users say.
+ * Exported for the WP15 context builder (code→name round-trip, ADR 021). */
+export function baseLabel(label: string): string {
   return label.replace(/\s*\([^)]*\)\s*$/, '');
 }
 

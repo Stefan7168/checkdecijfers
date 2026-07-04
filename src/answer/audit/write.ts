@@ -8,19 +8,22 @@ import type { StructuredIntent } from '../../query/index.ts';
 import { stableStringify } from '../llm/client.ts';
 import { PROMPT_VERSION } from '../intent/prompt.ts';
 import { CLARIFY_PROMPT_VERSION } from '../intent/clarify.ts';
+import { FOLLOWUP_PROMPT_VERSION } from '../intent/followup.ts';
 import { COMPOSE_PROMPT_VERSION } from '../compose/prompt.ts';
 import type { ComposedResponse, PendingClarification } from '../respond/types.ts';
+import type { ConversationContext } from '../context/types.ts';
 import type { AuditRecord, AuditSourceTag, LlmCallRecord, PromptVersions, TableRef } from './types.ts';
 import { AUDIT_SCHEMA_VERSION } from './types.ts';
 
-/** The three prompt-version constants in force (ADR 015 wrap-site
- * obligation) — recorded on every row, whether or not the matching call ran;
- * llmCalls says what actually ran. */
+/** The prompt-version constants in force (ADR 015 wrap-site obligation) —
+ * recorded on every row, whether or not the matching call ran; llmCalls says
+ * what actually ran. `followup` since WP15 (ADR 021). */
 export function currentPromptVersions(): PromptVersions {
   return {
     intent: PROMPT_VERSION,
     clarify: CLARIFY_PROMPT_VERSION,
     compose: COMPOSE_PROMPT_VERSION,
+    followup: FOLLOWUP_PROMPT_VERSION,
   };
 }
 
@@ -55,6 +58,9 @@ export interface AuditContext {
   /** Reply-round context; both null on first-turn rows. */
   replyText: string | null;
   pendingClarification: PendingClarification | null;
+  /** WP15 (ADR 021): the validated context OFFERED to this turn's parse;
+   * null on standalone and reply turns. */
+  conversationContext: ConversationContext | null;
   llmCalls: LlmCallRecord[];
   latencyMs: number;
 }
@@ -90,6 +96,7 @@ export function buildAuditRow(response: ComposedResponse, context: AuditContext)
     referenceDate: context.referenceDate,
     replyText: context.replyText,
     pendingClarification: context.pendingClarification,
+    conversationContext: context.conversationContext,
     response,
     finalText: response.text,
     intent,
@@ -115,13 +122,13 @@ export async function insertAuditRecord(db: Db, row: AuditRow): Promise<number> 
   const { rows } = await db.query(
     `insert into audit_answers (
        schema_version, user_id, source_tag, kind, question, reference_date,
-       reply_text, pending_clarification, response, final_text,
+       reply_text, pending_clarification, conversation_context, response, final_text,
        intent, intent_hash, refusal_reason,
        result_ids, table_ids, tables, answer_source, chart_emitted,
        prompt_versions, llm_calls, input_tokens, output_tokens, latency_ms
      ) values (
        $1, $2, $3, $4, $5, $6,
-       $7, $8::jsonb, $9::jsonb, $10,
+       $7, $8::jsonb, $24::jsonb, $9::jsonb, $10,
        $11::jsonb, $12, $13,
        array(select jsonb_array_elements_text($14::jsonb)),
        array(select jsonb_array_elements_text($15::jsonb)),
@@ -152,6 +159,7 @@ export async function insertAuditRecord(db: Db, row: AuditRow): Promise<number> 
       row.inputTokens,
       row.outputTokens,
       row.latencyMs,
+      row.conversationContext === null ? null : JSON.stringify(row.conversationContext),
     ],
   );
   const id = rows[0]?.id;

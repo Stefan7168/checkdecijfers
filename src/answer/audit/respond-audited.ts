@@ -20,6 +20,7 @@ import {
   type RespondOptions,
 } from '../respond/respond.ts';
 import type { ComposedResponse, PendingClarification, RefusalResponse } from '../respond/types.ts';
+import type { ConversationContext } from '../context/types.ts';
 import type { AuditSourceTag } from './types.ts';
 import { LlmCallTracker } from './track.ts';
 import { buildAuditRow, insertAuditRecord, type AuditContext } from './write.ts';
@@ -31,6 +32,8 @@ export interface AuditedRespondOptions extends RespondOptions {
    * The benchmark/validation runner scripts pass 'benchmark'/'validation'
    * explicitly. */
   sourceTag?: AuditSourceTag;
+  // conversationContext (WP15, ADR 021) is inherited from RespondOptions and
+  // recorded on the audit row below — an input capture, like replyText.
 }
 
 export interface AuditedResponse {
@@ -59,6 +62,7 @@ interface WrapContext {
   sourceTag: AuditSourceTag | undefined;
   replyText: string | null;
   pendingClarification: PendingClarification | null;
+  conversationContext: ConversationContext | null;
   tracker: LlmCallTracker;
   startedAt: number;
 }
@@ -70,6 +74,7 @@ function auditContext(wrap: WrapContext): AuditContext {
     sourceTag: wrap.sourceTag,
     replyText: wrap.replyText,
     pendingClarification: wrap.pendingClarification,
+    conversationContext: wrap.conversationContext,
     llmCalls: wrap.tracker.calls,
     latencyMs: Math.max(0, Math.round(performance.now() - wrap.startedAt)),
   };
@@ -107,6 +112,7 @@ export async function answerQuestionAudited(
   options: AuditedRespondOptions,
 ): Promise<AuditedResponse> {
   const tracker = new LlmCallTracker();
+  const conversationContext = options.conversationContext ?? null;
   const wrap: WrapContext = {
     question,
     referenceDate: options.referenceDate,
@@ -114,12 +120,15 @@ export async function answerQuestionAudited(
     sourceTag: options.sourceTag,
     replyText: null,
     pendingClarification: null,
+    conversationContext,
     tracker,
     startedAt: performance.now(),
   };
   const response = await respondToQuestion(db, question, {
     ...options,
-    intentClient: tracker.wrap('intent', options.intentClient),
+    // 'followup' when a context is offered (the parse runs in follow-up mode,
+    // WP15/ADR 021) — llm_calls stays honest about which prompt actually ran.
+    intentClient: tracker.wrap(conversationContext === null ? 'intent' : 'followup', options.intentClient),
     answerClient: tracker.wrap('compose', options.answerClient),
   });
   return persistOrFailClosed(db, response, wrap);
@@ -142,11 +151,15 @@ export async function answerClarificationReplyAudited(
     sourceTag: options.sourceTag,
     replyText: reply,
     pendingClarification: pending,
+    // A reply merges with the pending intent — never also with a context
+    // (one merge candidate per parse, ADR 021 decision 1).
+    conversationContext: null,
     tracker,
     startedAt: performance.now(),
   };
   const response = await respondToClarificationReply(db, pending, reply, {
     ...options,
+    conversationContext: null,
     intentClient: tracker.wrap('clarify', options.intentClient),
     answerClient: tracker.wrap('compose', options.answerClient),
   });

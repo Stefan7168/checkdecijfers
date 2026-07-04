@@ -108,6 +108,11 @@ function checkEnvelopeIntegrity(record: AuditRecord, problems: string[]): void {
   if ((record.replyText === null) !== (record.pendingClarification === null)) {
     problems.push('reply_text and pending_clarification must be set together');
   }
+  // WP15 (ADR 021): a context is offered only on question turns — a reply
+  // merge never also takes one (one merge candidate per parse).
+  if (record.conversationContext !== null && record.replyText !== null) {
+    problems.push('conversation_context must be null on clarification-reply rows');
+  }
 }
 
 function checkAnswerReconstruction(record: AuditRecord, problems: string[]): void {

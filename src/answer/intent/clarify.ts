@@ -13,9 +13,10 @@
 // honestly what the merged parse is.
 //
 // HASH-STABILITY: this module APPENDS a mode section to the WP6 system prompt
-// builder's output. It must never modify prompt.ts's bytes — the 45 recorded
-// intent fixtures hash the base prompt verbatim (ADR 012).
+// builder's output. It must never modify prompt.ts's bytes — the recorded
+// intent fixtures (54 as of WP14) hash the base prompt verbatim (ADR 012).
 import type { Db } from '../../db/types.ts';
+import { echoServability } from '../../query/index.ts';
 import type { PendingClarification } from '../respond/types.ts';
 import { INTENT_MODEL, type IntentLlmClient, type IntentLlmRequest } from './client.ts';
 import { MAX_CANDIDATES, REFUSAL_KIND_BY_QUESTION_KIND } from './parse.ts';
@@ -129,5 +130,9 @@ export async function parseClarificationReply(
       .slice(0, MAX_CANDIDATES)
       .map((candidate) => resolveCandidate(db, candidate, pending.referenceDate)),
   );
-  return decide(context, resolutions, options.config ?? DEFAULT_PARSER_CONFIG);
+  // The #56 servability check applies on reply turns too — decide() is the
+  // shared seam, so an unservable echo can never be offered from either path.
+  return decide(context, resolutions, options.config ?? DEFAULT_PARSER_CONFIG, (intent) =>
+    echoServability(db, intent),
+  );
 }

@@ -8,6 +8,8 @@
 'use server';
 
 import { answerClarificationReplyAudited, answerQuestionAudited } from '../backend/answer/audit/index.ts';
+import { buildConversationContext, validateConversationContext } from '../backend/answer/context/index.ts';
+import type { ConversationContext } from '../backend/answer/context/index.ts';
 import { AnthropicLlmClient } from '../backend/answer/llm/client.ts';
 import type { PendingClarification } from '../backend/answer/respond/types.ts';
 import { chargeAndRun } from '../backend/billing/index.ts';
@@ -50,27 +52,69 @@ function guardLength(text: string): void {
   }
 }
 
+// WP15 (ADR 021): what the chat gets back on every submit — the billing
+// envelope unchanged, plus the structured context the CLIENT should hold and
+// send back on the next question. `context` is null whenever the response
+// leaves no honest referent (clarifications, parse-level refusals, a gated
+// non-'ok' outcome) — the caller (chat.tsx) must then keep whatever context
+// it already held, never overwrite it with null (ADR 021 decision 1: a
+// smalltalk/refusal detour must not erase the referent).
+export interface AskOutcome {
+  gated: GatedResponse;
+  context: ConversationContext | null;
+}
+
+/** gated.kind === 'ok' -> the context handed to the NEXT turn, built from
+ * this turn's own response; every other kind -> null (nothing was produced
+ * to derive a referent from). Deterministic, server-side only — the client
+ * never constructs a ConversationContext itself.
+ *
+ * Fail-open on the build itself: by the time this runs the answer is already
+ * produced, audited AND debited — a context-derivation hiccup may cost the
+ * NEXT turn its referent, never the user this turn's paid answer. */
+async function outcomeContext(gated: GatedResponse): Promise<ConversationContext | null> {
+  if (gated.kind !== 'ok') return null;
+  try {
+    return await buildConversationContext(getDb(), gated.response);
+  } catch (error) {
+    console.error('conversation-context build failed (answer still returned):', error);
+    return null;
+  }
+}
+
 // requestId: a client-generated UUID (crypto.randomUUID(), one per submit —
 // chat.tsx) threaded all the way into the billing gate's idempotency key
 // (credit_transactions_one_debit_per_request). Without it, a Server Action
 // re-invoked by a browser retry or a double submit would debit the same
 // logical question twice.
-export async function askQuestion(question: string, requestId: string): Promise<GatedResponse> {
+//
+// rawContext: the client-held ConversationContext from a PRIOR turn, sent
+// back verbatim (untrusted — see web/backend/answer/context/validate.ts).
+// Validated BEFORE the billing gate even runs: a garbage context must
+// degrade to a standalone parse, never affect gating or throw.
+export async function askQuestion(
+  question: string,
+  requestId: string,
+  rawContext?: unknown,
+): Promise<AskOutcome> {
   guardLength(question);
   const userId = await currentUserId();
   if (userId === null) {
-    return { kind: 'unauthenticated' };
+    return { gated: { kind: 'unauthenticated' }, context: null };
   }
+  const conversationContext = await validateConversationContext(getDb(), rawContext ?? null);
   try {
-    return await chargeAndRun(getDb(), userId, requestId, () =>
+    const gated = await chargeAndRun(getDb(), userId, requestId, () =>
       answerQuestionAudited(getDb(), question, {
         referenceDate: referenceDate(),
         userId,
         sourceTag: 'user',
+        conversationContext,
         intentClient: new AnthropicLlmClient(),
         answerClient: new AnthropicLlmClient(),
       }),
     );
+    return { gated, context: await outcomeContext(gated) };
   } catch (error) {
     // Vercel function logs are the owner's only visibility into production
     // infra failures (WP12 review); the client still receives Next's generic
@@ -85,14 +129,14 @@ export async function replyToClarification(
   pending: PendingClarification,
   reply: string,
   requestId: string,
-): Promise<GatedResponse> {
+): Promise<AskOutcome> {
   guardLength(reply);
   const userId = await currentUserId();
   if (userId === null) {
-    return { kind: 'unauthenticated' };
+    return { gated: { kind: 'unauthenticated' }, context: null };
   }
   try {
-    return await chargeAndRun(getDb(), userId, requestId, () =>
+    const gated = await chargeAndRun(getDb(), userId, requestId, () =>
       answerClarificationReplyAudited(getDb(), pending, reply, {
         referenceDate: referenceDate(),
         userId,
@@ -101,6 +145,7 @@ export async function replyToClarification(
         answerClient: new AnthropicLlmClient(),
       }),
     );
+    return { gated, context: await outcomeContext(gated) };
   } catch (error) {
     console.error('replyToClarification failed:', error);
     throw error;
