@@ -30,4 +30,4 @@ Multi-agent orchestration and workflows are **explicitly authorized** for this r
 
 STATUS.md session entry with **measured results only** (test counts, benchmark score, CI run ids, live spend = €0 expected); build-plan entries updated; open-questions rows marked built/decided with dates; lessons-learned entry if anything surprised you; this brief's checkboxes ticked with a one-line outcome each; everything committed, pushed, CI green and **watched to completion**; finish with a summary the owner can read over coffee: what shipped, what's briefed, what's blocked on him (keep that last list short and decision-shaped).
 
-**Still open for the owner himself (not automatable):** confirm the WP20 "Download als afbeelding" click actually saves a PNG and "Kopieer als citaat" fills the clipboard — the two paths tests can't reach.
+**~~Still open for the owner himself~~ — DONE (owner confirmed 2026-07-05, before this brief runs):** both the WP20 "Download als afbeelding" PNG save and "Kopieer als citaat" clipboard copy work in a real browser. Nothing pending from him on WP20.
