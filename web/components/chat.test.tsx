@@ -10,6 +10,7 @@ import type { AskOutcome } from '../app/actions.ts';
 import type { GatedResponse } from '../backend/billing/index.ts';
 import type { ConversationContext } from '../backend/answer/context/index.ts';
 import type { ComposedResponse } from '../backend/answer/respond/types.ts';
+import { fakeAnswerResponse, fakeCell } from '../test/fake-answer.ts';
 import { Chat } from './chat.tsx';
 
 // jsdom does not implement scrollIntoView (pre-existing chat.tsx effect,
@@ -56,20 +57,31 @@ async function submit(text: string) {
 }
 
 /** A real ComposedAnswer/ValidatedResult has many more fields than chat.tsx
- * ever reads (it only renders `.text` and, for an answer, `.chart`) — this
- * helper keeps that narrow read-surface honest with one documented, isolated
- * cast, rather than leaving every GatedResponse literal in the test body
- * untyped (the exact gap the WP13 review found: an untyped mock lets a
- * field-name typo on the kinds that DON'T need this cast — unauthenticated /
- * duplicate_request / insufficient_credits, all plain scalar shapes — pass
- * silently. Those three stay fully typed against GatedResponse above; only
- * this one, deliberately, does not.) */
+ * ever reads (since WP20: `.text`, `.chart`, `answer.body` and the
+ * result fields citation/stat-card extraction touch) — the shared
+ * fake-answer fixture keeps that narrow read-surface honest with one
+ * documented, isolated cast, rather than leaving every GatedResponse literal
+ * in the test body untyped (the exact gap the WP13 review found: an untyped
+ * mock lets a field-name typo on the kinds that DON'T need this cast —
+ * unauthenticated / duplicate_request / insufficient_credits, all plain
+ * scalar shapes — pass silently. Those three stay fully typed against
+ * GatedResponse above; only the envelope, deliberately, does not.) */
 function fakeAnswer(text: string, netCost = 20): GatedResponse {
   return {
     kind: 'ok',
     auditId: 1,
     netCost,
-    response: { kind: 'answer', text, chart: null } as unknown as ComposedResponse,
+    response: fakeAnswerResponse({ body: text }) as ComposedResponse,
+  };
+}
+
+/** Minimal clarification 'ok' outcome — chat.tsx reads kind/text/pending. */
+function fakeClarification(text: string, netCost = 10): GatedResponse {
+  return {
+    kind: 'ok',
+    auditId: 2,
+    netCost,
+    response: { kind: 'clarification', text, pending: { questionNl: text } } as unknown as ComposedResponse,
   };
 }
 
@@ -138,6 +150,84 @@ describe('Chat — GatedResponse branches', () => {
     await submit('Wat was de inflatie in 2024?');
     expect(await screen.findByText(/al verwerkt/)).toBeInTheDocument();
     expect(screen.queryByText(/credits$/)).toBeNull();
+  });
+});
+
+describe('Chat — WP20 citation copy (#78)', () => {
+  it('offers "Kopieer als citaat" under an answer and copies the built citation', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    askQuestion.mockResolvedValue(outcome(fakeAnswer('Nederland telt 18.044.027 inwoners.')));
+    render(<Chat />);
+    await submit('Hoeveel inwoners heeft Nederland?');
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Kopieer als citaat' }));
+    expect(await screen.findByText('Gekopieerd!')).toBeInTheDocument();
+    expect(writeText).toHaveBeenCalledWith(
+      'Nederland telt 18.044.027 inwoners. (CBS StatLine, tabel 86141NED, gesynchroniseerd 3 juli 2026)',
+    );
+  });
+
+  it('offers no citation button on a non-answer (clarification) message', async () => {
+    askQuestion.mockResolvedValue(outcome(fakeClarification('Welke gemeente bedoel je?')));
+    render(<Chat />);
+    await submit('Hoeveel werklozen zijn er?');
+    expect(await screen.findByText('Welke gemeente bedoel je?')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Kopieer als citaat' })).toBeNull();
+  });
+});
+
+describe('Chat — WP20 stat card (#80)', () => {
+  it('renders the card for a single-cell answer, with the download button', async () => {
+    const response = fakeAnswerResponse({
+      body: 'De inflatie in 2024 was 3,3%.',
+      shape: 'single',
+      cells: [fakeCell()],
+    });
+    askQuestion.mockResolvedValue(outcome({ kind: 'ok', auditId: 1, netCost: 20, response: response as ComposedResponse }));
+    render(<Chat />);
+    await submit('Wat was de inflatie in 2024?');
+    expect(await screen.findByText('3,3')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Download als afbeelding' })).toBeInTheDocument();
+  });
+
+  it('renders no card for a series answer', async () => {
+    askQuestion.mockResolvedValue(outcome(fakeAnswer('De inflatie steeg van 2020 tot 2024.')));
+    render(<Chat />);
+    await submit('Hoe ontwikkelde de inflatie zich?');
+    await screen.findByText('De inflatie steeg van 2020 tot 2024.');
+    expect(screen.queryByRole('button', { name: 'Download als afbeelding' })).toBeNull();
+  });
+});
+
+describe('Chat — WP20 cost transparency (#82)', () => {
+  const pricing = { simple: 20, clarification: 10, balance: 100 };
+
+  it('shows the pre-send cost line with live prices and balance', () => {
+    render(<Chat pricing={pricing} />);
+    expect(
+      screen.getByText(
+        'Een vraag kost ~20 credits · saldo: 100 credits. Stel ik eerst een verduidelijkingsvraag, dan kost die 10 credits en krijg je de rest terug.',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('repeats the reply price at the clarification message itself', async () => {
+    askQuestion.mockResolvedValue(outcome(fakeClarification('Welke gemeente bedoel je?')));
+    render(<Chat pricing={pricing} />);
+    await submit('Hoeveel werklozen zijn er?');
+    expect(
+      await screen.findByText('10 credits · antwoorden op de wedervraag kost ~20 credits'),
+    ).toBeInTheDocument();
+  });
+
+  it('renders none of the cost surfaces without the pricing prop', async () => {
+    askQuestion.mockResolvedValue(outcome(fakeClarification('Welke gemeente bedoel je?')));
+    render(<Chat />);
+    await submit('Hoeveel werklozen zijn er?');
+    expect(screen.queryByText(/saldo/)).toBeNull();
+    expect(await screen.findByText('10 credits')).toBeInTheDocument();
+    expect(screen.queryByText(/wedervraag kost/)).toBeNull();
   });
 });
 
