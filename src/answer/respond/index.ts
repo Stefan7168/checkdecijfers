@@ -13,6 +13,8 @@ export {
   toInternalRefusal,
 } from './refusals.ts';
 export type { BuiltRefusal, QueryRefusalOutcome } from './refusals.ts';
+export { META_TEMPLATES, matchMetaTemplate, normalizeMetaQuestion } from './meta.ts';
+export type { MetaTemplate, MetaTemplateKey, MetaBodyContext } from './meta.ts';
 export { maxAgeDaysForCadence, checkStaleness } from './staleness.ts';
 export type { StalenessCheck } from './staleness.ts';
 export { periodCodeToNl } from './period-nl.ts';

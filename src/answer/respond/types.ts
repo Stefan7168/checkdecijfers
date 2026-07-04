@@ -40,6 +40,13 @@ export type RefusalReason =
   | 'compound'
   /** Not a statistics question; the reply explains what the product does. */
   | 'smalltalk'
+  /** WP18 (F3): a genuinely meta question about the product itself (bronnen,
+   * werkwijze, actualiteit, betrouwbaarheid, mogelijkheden), recognized by the
+   * deterministic post-classification router (meta.ts, ADR 022) inside the
+   * smalltalk bucket. Delivered through the refusal envelope because it is
+   * not a data answer (no cells, no attribution) — but the text ANSWERS the
+   * question with a product-behaviour template instead of deflecting. */
+  | 'meta'
   /** Data exists but not yet for the requested period (B20): the wording
    * states the freshest available period + status (R11), NEVER a value. */
   | 'freshness'

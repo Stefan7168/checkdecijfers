@@ -10,6 +10,7 @@ import { freshestForCanonical, type FreshnessInfo, type QueryRefusal } from '../
 import type { Db } from '../../db/types.ts';
 import type { ClarifyAxis, ParseOutcome } from '../intent/types.ts';
 import type { ConversationContext } from '../context/types.ts';
+import { matchMetaTemplate } from './meta.ts';
 import { periodCodeToNl } from './period-nl.ts';
 import type { ClarificationResponse, PendingClarification, RefusalReason, RefusalResponse } from './types.ts';
 import { RESPONSE_SCHEMA_VERSION } from './types.ts';
@@ -161,10 +162,29 @@ function buildCompoundRefusal(): BuiltRefusal {
   };
 }
 
-async function buildSmalltalkRefusal(db: Db): Promise<BuiltRefusal> {
+/** WP18 (F3): the smalltalk bucket is where the LLM classifies BOTH greetings
+ * and genuinely meta questions about the product ("welke bronnen gebruik
+ * je?"). A deterministic post-classification router (meta.ts, ADR 022) gives
+ * the meta questions a truthful product-behaviour answer — reason 'meta' —
+ * while everything unmatched keeps the generic template below. Both paths
+ * share the example-question offer, so every digit in either text stays
+ * whitelistable from the same structured sources (labels + freshest period). */
+async function buildSmalltalkRefusal(db: Db, question: string): Promise<BuiltRefusal> {
+  const offer = `Vraag bijvoorbeeld: ${await exampleQuestionNl(db)}`;
+  const template = matchMetaTemplate(question);
+  if (template) {
+    const body = template.buildBody({ topicsCompact: loadedTopicsCompact() });
+    return {
+      reason: 'meta',
+      text: assertNotAQuestion(joinParts([body, offer])),
+      offer,
+      guidance: null,
+      freshness: null,
+      internalNote: null,
+    };
+  }
   const body =
     'Ik beantwoord vragen over officiële CBS-cijfers en geef elk antwoord met bron en peildatum.';
-  const offer = `Vraag bijvoorbeeld: ${await exampleQuestionNl(db)}`;
   return {
     reason: 'smalltalk',
     text: assertNotAQuestion(joinParts([body, offer])),
@@ -177,10 +197,17 @@ async function buildSmalltalkRefusal(db: Db): Promise<BuiltRefusal> {
 
 /** Every parse-side refusal kind, per ParseOutcome's refusalKind union — the
  * `never` fallback below makes a new union member a compile error, matching
- * the brief's exhaustiveness requirement. */
+ * the brief's exhaustiveness requirement.
+ *
+ * `metaMatchText` (WP18): the text the meta router matches against. Defaults
+ * to outcome.question — correct for fresh and follow-up questions. On a
+ * clarify REPLY the outcome's question field deliberately echoes the ORIGINAL
+ * question (clarify.ts), while the smalltalk classification belongs to the
+ * reply — the reply call site passes the reply text explicitly. */
 export async function buildParseRefusal(
   db: Db,
   outcome: Extract<ParseOutcome, { kind: 'refusal' }>,
+  metaMatchText?: string,
 ): Promise<BuiltRefusal> {
   switch (outcome.refusalKind) {
     case 'forecast':
@@ -192,7 +219,7 @@ export async function buildParseRefusal(
     case 'compound':
       return buildCompoundRefusal();
     case 'smalltalk':
-      return buildSmalltalkRefusal(db);
+      return buildSmalltalkRefusal(db, metaMatchText ?? outcome.question);
     default: {
       const _exhaustive: never = outcome.refusalKind;
       throw new Error(`internal: unhandled parse refusalKind ${String(_exhaustive)}`);

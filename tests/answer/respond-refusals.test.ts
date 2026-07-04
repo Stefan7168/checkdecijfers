@@ -9,6 +9,8 @@ import {
   buildParseRefusal,
   buildQueryRefusal,
   buildStillAmbiguousRefusal,
+  matchMetaTemplate,
+  META_TEMPLATES,
 } from '../../src/answer/respond/index.ts';
 import type { BuiltRefusal } from '../../src/answer/respond/index.ts';
 import type { ParseOutcome } from '../../src/answer/intent/types.ts';
@@ -53,10 +55,13 @@ function baseRaw(overrides: Partial<ParseOutcome['raw']> = {}): ParseOutcome['ra
 function parseRefusal(
   refusalKind: (typeof REFUSAL_KIND_BY_QUESTION_KIND)[keyof typeof REFUSAL_KIND_BY_QUESTION_KIND],
   rawOverrides: Partial<ParseOutcome['raw']> = {},
+  // 'test question' matches no meta pattern by design: the default keeps
+  // every pre-WP18 assertion exercising the GENERIC smalltalk template.
+  question = 'test question',
 ): Extract<ParseOutcome, { kind: 'refusal' }> {
   return {
     kind: 'refusal',
-    question: 'test question',
+    question,
     raw: baseRaw({ kind: 'out_of_scope', ...rawOverrides }),
     model: 'stub',
     usage: { inputTokens: 0, outputTokens: 0 },
@@ -245,6 +250,73 @@ describe('buildParseRefusal — exhaustive over every ParseOutcome.refusalKind',
       );
       assertNoUnbackedNumbers(built.text, whitelist, `parse refusal ${kind}`);
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// WP18 (F3) meta-question templates — every check below iterates the EXPORTED
+// META_TEMPLATES table itself, so a template added later is swept
+// automatically (routing, order-honesty, body-binding, no-numbers belt) or
+// fails these tests by construction. The session-16 review lesson: a
+// hand-enumerated belt goes stale the day a branch is added.
+// ---------------------------------------------------------------------------
+
+describe('meta-question templates (WP18/F3) — structural sweep over META_TEMPLATES', () => {
+  it('every template ships with at least two example phrasings', () => {
+    for (const t of META_TEMPLATES) {
+      expect(t.examples.length, `template ${t.key}`).toBeGreaterThanOrEqual(2);
+    }
+  });
+
+  it('order-honesty: every example routes to its OWN template, never a shadowing earlier one', () => {
+    for (const t of META_TEMPLATES) {
+      for (const example of t.examples) {
+        const matched = matchMetaTemplate(example);
+        expect(matched?.key, `example ${JSON.stringify(example)} of template ${t.key}`).toBe(t.key);
+      }
+    }
+  });
+
+  it('every example builds reason "meta" with text BOUND to its template body (WP8 lesson: membership is not binding)', async () => {
+    const topicsCompact = CANONICAL_MEASURES.map((m) => m.everydayTerms[0]).join(', ');
+    for (const t of META_TEMPLATES) {
+      for (const example of t.examples) {
+        const built = await buildParseRefusal(db, parseRefusal('smalltalk', {}, example));
+        expect(built.reason, `example ${JSON.stringify(example)}`).toBe('meta');
+        expect(built.offer).toMatch(/Vraag bijvoorbeeld/);
+        // Exact binding: the produced text IS this template's body + the
+        // shared offer — not merely "contains a recognizable fragment".
+        expect(built.text).toBe(`${t.buildBody({ topicsCompact })} ${built.offer}`);
+        // Refusal-envelope rule: never ends in '?' (no pending state).
+        expect(built.text.trimEnd().endsWith('?')).toBe(false);
+      }
+    }
+  });
+
+  it('no-numbers belt-check: every meta template text is fully whitelisted from structured sources', async () => {
+    const whitelist = await fullLabelAndFreshestWhitelist();
+    for (const t of META_TEMPLATES) {
+      for (const example of t.examples) {
+        const built = await buildParseRefusal(db, parseRefusal('smalltalk', {}, example));
+        assertNoUnbackedNumbers(built.text, whitelist, `meta template ${t.key}`);
+      }
+    }
+  });
+
+  it('greetings and non-meta smalltalk fall through to the generic template (reason "smalltalk")', async () => {
+    const nonMeta = ['hallo', 'Goedemorgen!', 'dank je wel', 'test question', 'fijne dag verder'];
+    for (const q of nonMeta) {
+      expect(matchMetaTemplate(q), `matchMetaTemplate(${JSON.stringify(q)})`).toBeNull();
+      const built = await buildParseRefusal(db, parseRefusal('smalltalk', {}, q));
+      expect(built.reason, q).toBe('smalltalk');
+      expect(built.text).toMatch(/Ik beantwoord vragen over officiële CBS-cijfers/);
+    }
+  });
+
+  it('zero-width characters cannot dodge the router (session-16 normalization lesson)', () => {
+    // U+200B inside 'bronnen' — normalization must strip it before matching.
+    const dodged = 'welke bro​nnen gebruik je?';
+    expect(matchMetaTemplate(dodged)?.key).toBe('sources');
   });
 });
 

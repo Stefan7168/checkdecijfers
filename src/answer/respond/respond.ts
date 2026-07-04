@@ -230,7 +230,10 @@ export async function respondToClarificationReply(
     const parse = await parseClarificationReply(db, pending, reply, clarifyOptions);
 
     if (parse.kind === 'refusal') {
-      const built = await buildParseRefusal(db, parse);
+      // WP18: parse.question echoes the ORIGINAL question here (clarify.ts);
+      // a smalltalk classification belongs to the REPLY (the abandon rule),
+      // so the meta router must match the reply text, not the original.
+      const built = await buildParseRefusal(db, parse, reply);
       return toRefusalResponse({ question: pending.question, built, parse, queryRefusal: null });
     }
     if (parse.kind === 'clarification') {
