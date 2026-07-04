@@ -1,6 +1,12 @@
 // User dashboard: past questions, foldable (docs/06-roadmap.md Phase 1
 // "question history"). Server Component -- native <details>/<summary> needs
 // no client JS for the fold/unfold interaction.
+//
+// WP19 (open-questions #67): a collapsed clarification round arrives as ONE
+// entry (grouped in src/billing/history.ts) whose `clarification` field
+// carries the exchange -- rendered inside the fold as what we asked, what the
+// user replied, then the final outcome, so the round never looks like the
+// same question answered twice.
 import type { QuestionHistoryEntry } from '../backend/billing/index.ts';
 
 const SNIPPET_LENGTH = 120;
@@ -39,6 +45,18 @@ export function QuestionHistory({ items }: { items: QuestionHistoryEntry[] }) {
             </span>
             <div className="mt-0.5 truncate text-xs text-zinc-500">{snippet(item.finalText)}</div>
           </summary>
+          {item.clarification ? (
+            <div className="mt-2 flex flex-col gap-1 border-l-2 border-zinc-200 pl-2 text-sm">
+              <div>
+                <span className="text-xs text-zinc-500">Verduidelijkingsvraag</span>
+                <div className="whitespace-pre-wrap text-zinc-700">{item.clarification.text}</div>
+              </div>
+              <div>
+                <span className="text-xs text-zinc-500">Jouw antwoord</span>
+                <div className="whitespace-pre-wrap text-zinc-700">{item.clarification.reply}</div>
+              </div>
+            </div>
+          ) : null}
           <div className="mt-2 whitespace-pre-wrap text-sm text-zinc-700">{item.finalText}</div>
         </details>
       ))}

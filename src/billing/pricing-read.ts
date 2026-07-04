@@ -30,3 +30,18 @@ export async function getPack(db: Db, packId: string): Promise<CreditPack | null
   const row = rows[0];
   return row === undefined ? null : toPack(row);
 }
+
+/** The signup-grant amount, read from the live singleton (migration 005) --
+ * the same row public.grant_signup_credits() itself reads, so what the
+ * dashboard's credits explainer says a new account receives (WP19,
+ * open-questions #76) can never drift from what the trigger actually grants.
+ * Never the SIGNUP_GRANT_CREDITS seed constant (ADR 006: the live table is
+ * the runtime source of truth, editable by a plain UPDATE). */
+export async function getSignupGrantCredits(db: Db): Promise<number> {
+  const { rows } = await db.query('select credits from signup_grant_config');
+  const row = rows[0];
+  if (row === undefined) {
+    throw new Error('signup_grant_config is empty -- migration 005 seeds exactly one row');
+  }
+  return Number(row.credits);
+}

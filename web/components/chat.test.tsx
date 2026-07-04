@@ -141,6 +141,31 @@ describe('Chat — GatedResponse branches', () => {
   });
 });
 
+describe('Chat — WP19 onOutcome reporting (open-questions #68)', () => {
+  it('reports the gated outcome exactly once per submit, for ok and non-ok kinds alike', async () => {
+    const onOutcome = vi.fn();
+    const answer = fakeAnswer('Nederland telt 18.044.027 inwoners.');
+    askQuestion.mockResolvedValueOnce(outcome(answer));
+    askQuestion.mockResolvedValueOnce(outcome({ kind: 'insufficient_credits', balance: 5, required: 20 }));
+    render(<Chat onOutcome={onOutcome} />);
+
+    await submit('Hoeveel inwoners heeft Nederland?');
+    expect(onOutcome).toHaveBeenCalledTimes(1);
+    expect(onOutcome).toHaveBeenNthCalledWith(1, answer);
+
+    await submit('Wat was de inflatie in 2024?');
+    expect(onOutcome).toHaveBeenCalledTimes(2);
+    expect(onOutcome).toHaveBeenNthCalledWith(2, { kind: 'insufficient_credits', balance: 5, required: 20 });
+  });
+
+  it('works without onOutcome (the prop is optional; existing call sites unaffected)', async () => {
+    askQuestion.mockResolvedValue(outcome(fakeAnswer('Nederland telt 18.044.027 inwoners.')));
+    render(<Chat />);
+    await submit('Hoeveel inwoners heeft Nederland?');
+    expect(await screen.findByText('Nederland telt 18.044.027 inwoners.')).toBeInTheDocument();
+  });
+});
+
 describe('Chat — WP15 conversation context propagation (ADR 021)', () => {
   it('sends the context from a prior "ok" outcome as the next askQuestion call', async () => {
     const context = fakeContext();

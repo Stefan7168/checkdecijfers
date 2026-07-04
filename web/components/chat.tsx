@@ -43,7 +43,10 @@ function gatedMessageText(result: Exclude<GatedResponse, { kind: 'ok' }>): strin
   }
 }
 
-export function Chat() {
+// onOutcome (WP19, open-questions #68): reports every submit's GatedResponse
+// to the parent so the dashboard can move the displayed balance without a
+// reload. Pure notification -- the chat itself never derives balance state.
+export function Chat({ onOutcome }: { onOutcome?: (gated: GatedResponse) => void } = {}) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [pending, setPending] = useState<PendingClarification | null>(null);
   // WP15 (ADR 021): the structured referent carried between turns. Held
@@ -85,6 +88,7 @@ export function Chat() {
         : await askQuestion(text, requestId, context);
       applyOutcome(outcome);
       const { gated } = outcome;
+      onOutcome?.(gated);
 
       if (gated.kind !== 'ok') {
         setMessages((m) => [

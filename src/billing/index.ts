@@ -21,7 +21,7 @@ export { chargeAndRun } from './gate.ts';
 export { getQuestionHistory } from './history.ts';
 export type { QuestionHistoryEntry } from './history.ts';
 export { ACTION_CLASS_PRICES, CREDIT_PACKS, SIGNUP_GRANT_CREDITS } from './pricing-defaults.ts';
-export { getActivePacks, getPack } from './pricing-read.ts';
+export { getActivePacks, getPack, getSignupGrantCredits } from './pricing-read.ts';
 export { buildCheckoutSessionParams } from './stripe-checkout.ts';
 export { handleStripeEvent } from './stripe-webhook.ts';
 export type { StripeWebhookResult } from './stripe-webhook.ts';

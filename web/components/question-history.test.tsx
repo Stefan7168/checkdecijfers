@@ -16,6 +16,7 @@ function entry(overrides: Partial<QuestionHistoryEntry> = {}): QuestionHistoryEn
     finalText: 'Nederland telt 18.044.027 inwoners.',
     createdAt: '2026-07-04T14:19:31.199Z',
     creditsCharged: 20,
+    clarification: null,
     ...overrides,
   };
 }
@@ -45,5 +46,37 @@ describe('QuestionHistory', () => {
   it('omits the credits label when creditsCharged is null (a row with no attributable debit)', () => {
     render(<QuestionHistory items={[entry({ creditsCharged: null })]} />);
     expect(screen.queryByText(/credits/)).toBeNull();
+  });
+
+  // WP19 (open-questions #67): a collapsed clarification round renders as ONE
+  // item -- original question, the exchange inside the fold, final outcome.
+  it('renders a collapsed clarification round as one item with the full exchange', () => {
+    render(
+      <QuestionHistory
+        items={[
+          entry({
+            kind: 'answer',
+            question: 'Hoeveel inwoners heeft de gemeente?',
+            finalText: 'Amsterdam telt 931.298 inwoners.',
+            creditsCharged: 30,
+            clarification: { text: 'Welke gemeente bedoel je?', reply: 'Amsterdam' },
+          }),
+        ]}
+      />,
+    );
+    // One entry, one summary line -- never two rows for the same question.
+    expect(screen.getAllByRole('group')).toHaveLength(1);
+    expect(screen.getByText('Hoeveel inwoners heeft de gemeente?')).toBeInTheDocument();
+    expect(screen.getByText('Welke gemeente bedoel je?')).toBeInTheDocument();
+    expect(screen.getByText('Amsterdam')).toBeInTheDocument();
+    // The round's TOTAL, shown once on the summary line.
+    expect(screen.getByText(/30 credits/)).toBeInTheDocument();
+    expect(screen.getAllByText('Amsterdam telt 931.298 inwoners.').length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('renders no exchange block when clarification is null', () => {
+    render(<QuestionHistory items={[entry()]} />);
+    expect(screen.queryByText('Verduidelijkingsvraag')).toBeNull();
+    expect(screen.queryByText('Jouw antwoord')).toBeNull();
   });
 });
