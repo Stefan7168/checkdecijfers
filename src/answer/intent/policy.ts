@@ -57,12 +57,18 @@ function failureQuestion(failure: ResolutionFailure): string {
     // question mark (the one-compact-question pin).
     case 'max_needs_regions':
       return 'Welke gemeentes of provincies wil je met elkaar vergelijken? Noem er minstens twee in je vraag.';
-    case 'max_on_national_measure':
-      return (
+    case 'max_on_national_measure': {
+      // With a checked range option (the gap-free loaded window, computed by
+      // the resolver — adversarial-review fix: never name a grain the
+      // measure may not have), invite exactly that servable reply; without
+      // one, stay generic.
+      const lead =
         'Deze cijfers zijn er alleen voor heel Nederland, dus regio’s vergelijken kan hier niet — ' +
-        'en de periode met de hoogste of laagste waarde opzoeken kan ik nog niet. ' +
-        'Wil je in plaats daarvan het verloop over een periode zien, bijvoorbeeld per maand of per jaar?'
-      );
+        'en de periode met de hoogste of laagste waarde opzoeken kan ik nog niet. ';
+      return failure.options.length > 0
+        ? `${lead}Wil je in plaats daarvan het verloop zien, bijvoorbeeld van ${joinOf(failure.options)}?`
+        : `${lead}Wil je in plaats daarvan het verloop over een periode zien?`;
+    }
     case 'grain_unavailable':
       return failure.options.length > 0
         ? `Die cijfers zijn er alleen ${failure.options.join(' en ')} — voor welke periode wil je ze?`

@@ -716,11 +716,17 @@ function isSinglePeriodSelection(period: IntentPeriod): boolean {
 async function openEndedRangeOptions(
   db: Db,
   canonical: CanonicalRow,
-  period: IntentPeriod,
+  /** null = no user-named floor: offer the full gap-free loaded window
+   * (WP22 #97a review fix — the max-on-national guard has no resolved
+   * period yet when it fires). */
+  period: IntentPeriod | null,
 ): Promise<string[]> {
-  const code = period.kind === 'codes' ? period.codes[0] : period.from;
-  if (!code || !/^\d{4}JJ00$/.test(code)) return [];
-  const fromYear = Number(code.slice(0, 4));
+  let fromYear = 0;
+  if (period !== null) {
+    const code = period.kind === 'codes' ? period.codes[0] : period.from;
+    if (!code || !/^\d{4}JJ00$/.test(code)) return [];
+    fromYear = Number(code.slice(0, 4));
+  }
   // Bounds at the canonical COORDINATE, like every other period lookup here:
   // pre-WP14 these queries ran unfiltered, so for unemployment (whose yearly
   // cells exist only un-corrected) the guard offered "2013 tot en met 2025" —
@@ -788,7 +794,7 @@ export async function resolveCandidate(
   // a geo table is missing its comparison set; a national-only measure can
   // never compare regions at all, and max-over-PERIODS ("welke maand steeg
   // het meest") is not built (open-questions #97b) — say so, never mislead.
-  const maxNeedsRegions = (): ResolutionFailure =>
+  const maxNeedsRegions = async (): Promise<ResolutionFailure> =>
     geo.geoDimension === null
       ? fail({
           axis: 'derivation',
@@ -796,7 +802,12 @@ export async function resolveCandidate(
           message:
             `a "meeste/hoogste" comparison compares regions, but "${canonical.definitionLabel}" is national-only; ` +
             'max-over-periods is a separate unbuilt capability (open-questions #97b)',
-          options: [],
+          // A CHECKED, servable range option (adversarial-review catch: the
+          // first draft hardcoded "per maand of per jaar" — grains 4 of the
+          // 7 national-only measures don't have, the #56 unservable-
+          // suggestion sin). Same gap-free-window builder as the degenerate-
+          // range guard; empty when no clean window exists.
+          options: await openEndedRangeOptions(db, canonical, null),
         })
       : fail({
           axis: 'region',
@@ -806,7 +817,7 @@ export async function resolveCandidate(
         });
 
   let derivation = normalizeDerivation(candidate);
-  if (derivation === 'max' && regionResolution.codes.length < 2) return maxNeedsRegions();
+  if (derivation === 'max' && regionResolution.codes.length < 2) return await maxNeedsRegions();
 
   const reference = parseReferenceDate(referenceDateIso);
   const periodResolution = await resolvePeriod(db, candidate.period, canonical, reference);
@@ -832,7 +843,7 @@ export async function resolveCandidate(
     // question without its comparison regions keeps the specific resolver
     // clarification instead of the query layer's generic invalid_intent
     // (executing-skeptic catch, 2026-07-05, proven with a before/after probe).
-    if (derivation === 'max' && regionResolution.codes.length < 2) return maxNeedsRegions();
+    if (derivation === 'max' && regionResolution.codes.length < 2) return await maxNeedsRegions();
   }
 
   // A multi-period derivation over a structurally single-period selection can
