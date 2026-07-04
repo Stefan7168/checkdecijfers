@@ -40,7 +40,12 @@ export function QuestionHistory({ items }: { items: QuestionHistoryEntry[] }) {
           <summary className="cursor-pointer text-sm">
             <span className="font-medium">{item.question}</span>
             <span className="ml-2 text-xs text-zinc-400">
-              {item.creditsCharged !== null ? `${item.creditsCharged} credits · ` : ''}
+              {/* A collapsed round's number is the SUM of two turns -- say so
+                * (adversarial-review finding: unlabeled, it reads as one
+                * answer's price). */}
+              {item.creditsCharged !== null
+                ? `${item.creditsCharged} credits${item.clarification !== null ? ' totaal' : ''} · `
+                : ''}
               {formatDate(item.createdAt)}
             </span>
             <div className="mt-0.5 truncate text-xs text-zinc-500">{snippet(item.finalText)}</div>

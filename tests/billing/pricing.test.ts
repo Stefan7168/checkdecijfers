@@ -3,7 +3,7 @@
 import { describe, expect, it } from 'vitest';
 import { applyPricingDefaults } from '../../src/billing/pricing-apply.ts';
 import { ACTION_CLASS_PRICES, CREDIT_PACKS, SIGNUP_GRANT_CREDITS } from '../../src/billing/pricing-defaults.ts';
-import { getActivePacks, getPack } from '../../src/billing/pricing-read.ts';
+import { getActivePacks, getPack, getSignupGrantCredits } from '../../src/billing/pricing-read.ts';
 import { createTestDb } from '../helpers/pglite-db.ts';
 
 describe('pricing defaults (ADR 006 seam 3)', () => {
@@ -109,6 +109,33 @@ describe('pricing-read — the live table is the runtime source of truth', () =>
       await db.query('update credit_packs set active = false where id = $1', [target.id]);
       expect((await getActivePacks(db)).map((p) => p.id)).not.toContain(target.id);
       expect(await getPack(db, target.id)).toBeNull();
+    } finally {
+      await close();
+    }
+  });
+
+  // WP19 (open-questions #76) — adversarial-review finding: the function had
+  // zero direct coverage, and an executed probe showed a column-name typo in
+  // its query would pass every suite. Both tests bind it to the LIVE table.
+  it('getSignupGrantCredits reads the live singleton, tracking a plain UPDATE (ADR 006)', async () => {
+    const { db, close } = await createTestDb();
+    try {
+      await applyPricingDefaults(db);
+      expect(await getSignupGrantCredits(db)).toBe(SIGNUP_GRANT_CREDITS);
+      // Not just the seeded constant: a manual UPDATE (the documented tuning
+      // path) must be what the dashboard explainer then reports.
+      await db.query('update signup_grant_config set credits = 250');
+      expect(await getSignupGrantCredits(db)).toBe(250);
+    } finally {
+      await close();
+    }
+  });
+
+  it('getSignupGrantCredits fails loud on an empty config table, never a silent default', async () => {
+    const { db, close } = await createTestDb();
+    try {
+      await db.query('delete from signup_grant_config');
+      await expect(getSignupGrantCredits(db)).rejects.toThrow(/signup_grant_config is empty/);
     } finally {
       await close();
     }

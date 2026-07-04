@@ -95,6 +95,18 @@ describe('Dashboard — live balance (#68)', () => {
     renderDashboard(100);
     expect(screen.getByTestId('history-slot')).toBeInTheDocument();
   });
+
+  // Adversarial-review finding: the deliberate no-op kinds were untested --
+  // a probe that zeroed the balance on these kinds passed every test.
+  // Nothing was charged and no balance was reported: the display must not move.
+  for (const gated of [{ kind: 'unauthenticated' }, { kind: 'duplicate_request' }] as const) {
+    it(`leaves the balance untouched on kind "${gated.kind}"`, async () => {
+      askQuestion.mockResolvedValue(outcome(gated));
+      renderDashboard(100);
+      await submit('Wat was de inflatie in 2024?');
+      expect(screen.getByText('100 credits')).toBeInTheDocument();
+    });
+  }
 });
 
 describe('Dashboard — the warning reacts to the LIVE balance (#69 x #68)', () => {

@@ -6,6 +6,16 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## 2026-07-05 — Session 20 (WP19): a connected "Supabase" MCP is not necessarily THIS project's Supabase — check `list_projects` before querying anything
+
+- **What happened:** wanting a read-only check that the two new dashboard queries work against the live schema, the session reached for the connected Supabase MCP connector. `list_projects` returned two projects named `glaibaan-*` — a completely different product of the owner's, not checkdecijfers. One inattentive `execute_sql` against the wrong org's database was avoided only because listing came first.
+- **Rule going forward:** MCP connectors are account-scoped, not repo-scoped — always confirm the project list matches the repo before the first query. For this repo the reliable path is the one the repo itself ships: `node --env-file=.env` + `connectFromEnv()` from `src/db/client.ts`, printing only the values needed (never secrets). That path verified `signup_grant_config` (1 row, 100) and the prices (simple 20, clarification 10) in seconds.
+
+## 2026-07-05 — Session 20 (WP19): review-workflow executing skeptics may get a worktree at the WRONG commit — they must verify HEAD before probing
+
+- **What happened:** the adversarial review ran as a scripted workflow with executing skeptics in isolated worktrees. Two skeptics found their worktree checked out at the pre-WP commit (512482b) instead of the WP19 commit under review (3390e41) — probing there would have "confirmed" findings against code that didn't contain the change. Both skeptics caught it themselves (`git log --oneline | grep WP19`, then `git checkout <commit> -- .`) because the finding prompts named the commit under review.
+- **Rule going forward:** every executing-reviewer brief must state the exact commit under review and require the reviewer to verify `git log -1` matches before executing anything; and the session must clean up the leftover worktrees afterwards (5 this time — `git worktree remove --force` + branch deletion) BEFORE re-measuring any test counts, per the session-19 quadrupled-counts lesson (applied successfully this session: counts were re-measured only after cleanup).
+
 ## 2026-07-04 — Session 19 (WP18): punch-a-hole experiments in the MAIN working tree destroy uncommitted work when reverted with `git checkout`
 
 - **What happened:** to prove a new content-pin test had teeth, the session injected a deliberate defect into `src/answer/respond/meta.ts`, watched the test fail (good), then reverted with `git checkout <file>` — which restores the last COMMITTED version. The file also held ~40 lines of uncommitted adversarial-review fixes (template reordering, a regex fix, new pinned examples); all were silently wiped and had to be rewritten from context. Caught immediately because the harness diffs files after writes, but the loss was real.

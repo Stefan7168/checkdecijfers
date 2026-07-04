@@ -69,14 +69,18 @@ describe('QuestionHistory', () => {
     expect(screen.getByText('Hoeveel inwoners heeft de gemeente?')).toBeInTheDocument();
     expect(screen.getByText('Welke gemeente bedoel je?')).toBeInTheDocument();
     expect(screen.getByText('Amsterdam')).toBeInTheDocument();
-    // The round's TOTAL, shown once on the summary line.
-    expect(screen.getByText(/30 credits/)).toBeInTheDocument();
+    // The round's TOTAL, shown once on the summary line and LABELED as a
+    // total (review finding: unlabeled it reads as one answer's price).
+    expect(screen.getByText(/30 credits totaal/)).toBeInTheDocument();
     expect(screen.getAllByText('Amsterdam telt 931.298 inwoners.').length).toBeGreaterThanOrEqual(1);
   });
 
-  it('renders no exchange block when clarification is null', () => {
+  it('renders no exchange block and no "totaal" label when clarification is null', () => {
     render(<QuestionHistory items={[entry()]} />);
     expect(screen.queryByText('Verduidelijkingsvraag')).toBeNull();
     expect(screen.queryByText('Jouw antwoord')).toBeNull();
+    // Binding both ways: a single-turn answer's price must NOT be labeled
+    // as a total.
+    expect(screen.queryByText(/totaal/)).toBeNull();
   });
 });
