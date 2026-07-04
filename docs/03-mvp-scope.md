@@ -26,7 +26,7 @@ At every step where confidence fails, the pipeline exits to **clarification or r
 | Chat UI, minimal | One conversation, no history persistence requirements beyond the session |
 | Validated answers | Numbers computed by code; LLM sees only validated result objects ([05-data-rules.md](05-data-rules.md)) |
 | Attribution + freshness | Table ID, title, sync date, covered period on every answer |
-| Simple charts | Line/bar/table from a server-built chart spec; no interactivity, no exports |
+| Simple charts | Line/bar/table from a server-built chart spec; no interactivity, no exports *(chart/image export stays out of Phase 0; the Phase 1 CSV **data** export shipped later under [open-questions #52](open-questions.md) / WP21, and WP20's stat-card PNG under #80 — this row described Phase 0 truthfully when frozen)* |
 | Refusal & clarification | Per principle 3 (c) in [CLAUDE.md](../CLAUDE.md); exercised by benchmark tasks B15–B20 |
 | Audit record per answer | Question, parsed intent, query plan, result IDs, numbers used, table versions, timestamps — backend-verifiable |
 | The 20-task benchmark | Run by hand against CBS StatLine; the gate below |

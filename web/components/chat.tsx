@@ -20,6 +20,8 @@ import type { ConversationContext } from '../backend/answer/context/index.ts';
 import type { PendingClarification } from '../backend/answer/respond/types.ts';
 import type { GatedResponse } from '../backend/billing/index.ts';
 import { buildCitation } from '../lib/citation.ts';
+import { buildAnswerCsv } from '../lib/csv.ts';
+import type { AnswerCsv } from '../lib/csv.ts';
 import { statCardData } from '../lib/stat-card-data.ts';
 import type { StatCardData } from '../lib/stat-card-data.ts';
 import { ChartView } from './chart.tsx';
@@ -38,6 +40,9 @@ interface ChatMessage {
   /** WP20 #80: single-number card data; null unless the answer is a
    * single-cell result (stat-card-data.ts decides). */
   card: StatCardData | null;
+  /** WP21 #52: the exported data file — built once at receive time from the
+   * validated envelope (csv.ts); null on non-answers. */
+  csv: AnswerCsv | null;
   /** WP20 #82: lets the cost caption add the reply price under a
    * clarification message. */
   isClarification: boolean;
@@ -50,6 +55,39 @@ export interface ChatPricing {
   simple: number;
   clarification: number;
   balance: number;
+}
+
+/** WP21 #52: downloads the pre-built CSV as a client-side Blob — no server
+ * round-trip, nothing stored. Mirrors the stat card's failure honesty. */
+function DownloadCsvButton({ csv }: { csv: AnswerCsv }) {
+  const [failed, setFailed] = useState(false);
+  return (
+    <>
+      <button
+        type="button"
+        className="text-xs text-zinc-400 underline"
+        onClick={() => {
+          try {
+            const url = URL.createObjectURL(
+              new Blob([csv.content], { type: 'text/csv;charset=utf-8' }),
+            );
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = csv.filename;
+            link.click();
+            URL.revokeObjectURL(url);
+          } catch {
+            setFailed(true);
+          }
+        }}
+      >
+        Download als CSV
+      </button>
+      {failed ? (
+        <span className="text-xs text-red-600">Downloaden lukte niet in deze browser.</span>
+      ) : null}
+    </>
+  );
 }
 
 /** WP20 #78: copies the citation; flips to a transient confirmation. */
@@ -128,7 +166,7 @@ export function Chat({
 
     setMessages((m) => [
       ...m,
-      { role: 'user', text, chart: null, cost: null, citation: null, card: null, isClarification: false },
+      { role: 'user', text, chart: null, cost: null, citation: null, card: null, csv: null, isClarification: false },
     ]);
     setInput('');
     setBusy(true);
@@ -153,6 +191,7 @@ export function Chat({
             cost: null,
             citation: null,
             card: null,
+            csv: null,
             isClarification: false,
           },
         ]);
@@ -171,6 +210,7 @@ export function Chat({
           cost: gated.netCost,
           citation: response.kind === 'answer' ? buildCitation(response) : null,
           card: response.kind === 'answer' ? statCardData(response) : null,
+          csv: response.kind === 'answer' ? buildAnswerCsv(response) : null,
           isClarification: response.kind === 'clarification',
         },
       ]);
@@ -217,9 +257,10 @@ export function Chat({
                   : ''}
               </div>
             ) : null}
-            {message.citation !== null ? (
-              <div className="mt-0.5">
-                <CopyCitationButton citation={message.citation} />
+            {message.citation !== null || message.csv !== null ? (
+              <div className="mt-0.5 flex flex-wrap items-center gap-3">
+                {message.citation !== null ? <CopyCitationButton citation={message.citation} /> : null}
+                {message.csv !== null ? <DownloadCsvButton csv={message.csv} /> : null}
               </div>
             ) : null}
             {message.chart ? <ChartView spec={message.chart} /> : null}
