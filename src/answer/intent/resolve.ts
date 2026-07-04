@@ -388,7 +388,17 @@ async function openEndedRangeOptions(
   const latestYear = parseYear(bounds.rows[0]?.latest);
   if (earliestYear === null || latestYear === null) return [];
   const effectiveFrom = Math.max(fromYear, earliestYear);
-  return latestYear > effectiveFrom ? [`${effectiveFrom} tot en met ${latestYear}`] : [];
+  if (latestYear <= effectiveFrom) return [];
+  // min/max alone cannot see interior gaps (review finding, 2026-07-05): a
+  // missing year inside the window would make the offered range unservable —
+  // the query layer's completeness check would refuse it after the user
+  // confirmed. Offer nothing rather than a range we cannot serve.
+  const window = await db.query(
+    "select count(distinct period_code) as n from observations where table_id = $1 and measure = $2 and period_grain = 'JJ' and period_code between $3 and $4",
+    [canonical.tableId, canonical.measure, `${effectiveFrom}JJ00`, `${latestYear}JJ00`],
+  );
+  if (Number(window.rows[0]?.n) !== latestYear - effectiveFrom + 1) return [];
+  return [`${effectiveFrom} tot en met ${latestYear}`];
 }
 
 const clamp01 = (n: number): number => (Number.isFinite(n) ? Math.min(1, Math.max(0, n)) : 0);

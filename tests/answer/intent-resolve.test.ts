@@ -263,6 +263,38 @@ describe('multi-period derivations over a single-period selection clarify, never
     expect(result.intent.period).toEqual({ kind: 'range', from: '2020JJ00', to: '2024JJ00' });
     expect(result.intent.derivation).toBe('series');
   });
+
+  it('an interior gap in the loaded years suppresses the range option — never offer a range we cannot serve', async () => {
+    // Punch a one-year hole inside the loaded window, inside a transaction
+    // that is rolled back (the shared test database must come out untouched —
+    // WP10 lesson: probes never leave residue).
+    const canonical = await db.query(
+      "select table_id, measure from canonical_measures where key = 'unemployment_rate_seasonally_adjusted'",
+    );
+    const { table_id, measure } = canonical.rows[0]! as { table_id: string; measure: string };
+    const { earliest, latest } = await loadedYearBounds('unemployment_rate_seasonally_adjusted');
+    const gapYear = earliest + 1;
+    expect(gapYear).toBeLessThan(latest);
+    await db.query('begin');
+    try {
+      await db.query(
+        'delete from observations where table_id = $1 and measure = $2 and period_code = $3',
+        [table_id, measure, `${gapYear}JJ00`],
+      );
+      const failure = await failed(
+        raw('unemployment_rate_seasonally_adjusted', { kind: 'year_range', fromYear: earliest, toYear: earliest }, [{ name: 'Nederland', kind: 'land' }]),
+      );
+      expect(failure.axis).toBe('period');
+      expect(failure.options).toEqual([]);
+    } finally {
+      await db.query('rollback');
+    }
+    // The hole is gone: the option is offered again.
+    const restored = await failed(
+      raw('unemployment_rate_seasonally_adjusted', { kind: 'year_range', fromYear: earliest, toYear: earliest }, [{ name: 'Nederland', kind: 'land' }]),
+    );
+    expect(restored.options).toEqual([`${earliest} tot en met ${latest}`]);
+  });
 });
 
 describe('curated stand-per-1-januari set cross-checks the registry prose', () => {
