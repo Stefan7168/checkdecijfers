@@ -21,11 +21,14 @@ import { Chat } from './chat.tsx';
 export function Dashboard({
   initialBalance,
   simplePrice,
+  clarificationPrice,
   signupGrantCredits,
   history,
 }: {
   initialBalance: number;
   simplePrice: number;
+  /** WP20 #82: the live 'clarification' price, for the pre-send hint. */
+  clarificationPrice: number;
   signupGrantCredits: number;
   history: ReactNode;
 }) {
@@ -44,7 +47,10 @@ export function Dashboard({
   return (
     <div className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-6 p-4 lg:grid-cols-[2fr_1fr]">
       <div className="flex flex-col gap-6">
-        <Chat onOutcome={handleOutcome} />
+        <Chat
+          onOutcome={handleOutcome}
+          pricing={{ simple: simplePrice, clarification: clarificationPrice, balance }}
+        />
         {history}
       </div>
       <AccountPanel balance={balance} simplePrice={simplePrice} signupGrantCredits={signupGrantCredits} />

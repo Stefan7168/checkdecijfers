@@ -33,10 +33,11 @@ export default async function Home() {
   // simplePrice + signupGrantCredits: live pricing-config reads (ADR 006 --
   // the #69 warning threshold and #76 explainer copy must track the tables,
   // never a hardcoded number).
-  const [balance, history, simplePrice, signupGrantCredits] = await Promise.all([
+  const [balance, history, simplePrice, clarificationPrice, signupGrantCredits] = await Promise.all([
     getBalance(db, userId),
     getQuestionHistory(db, userId),
     getActionClassPrice(db, 'simple'),
+    getActionClassPrice(db, 'clarification'),
     getSignupGrantCredits(db),
   ]);
 
@@ -44,6 +45,7 @@ export default async function Home() {
     <Dashboard
       initialBalance={balance}
       simplePrice={simplePrice}
+      clarificationPrice={clarificationPrice}
       signupGrantCredits={signupGrantCredits}
       history={<QuestionHistory items={history} />}
     />

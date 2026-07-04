@@ -165,6 +165,22 @@ Built as approved, supervised as required (owner confirmed the live window in-se
 
 ---
 
+## WP20 — Brainstorm-batch-2 smalls: citation copy (#78), stat card + PNG (#80), pre-send cost transparency (#82)
+
+*The three small top-5 items from the owner-filtered second brainstorm ([open-questions #78–#93](open-questions.md)), owner-authorized for immediate execution alongside their recording (2026-07-05). All display-layer: zero pipeline/LLM/schema changes, zero live spend. The two heavier top-5 items (#79 proof-button — to be designed together with #70/#90; #81 revision gauge — needs new revision statistics, brief with #88) are deliberately NOT in this WP.*
+
+**#78 — citation copy:** a pure builder (`web/lib/citation.ts`) assembles the quote from the validated `answer.body` verbatim plus structured `Attribution` fields (table id, sync date in Dutch long form) — **never a recomposed sentence**; appends "voorlopige cijfers" when any quoted cell is provisional and the exact `DERIVED_DATA_MARKING` constant when derivations are present (imported from the `types.ts` leaf, not the query barrel — the WP13 Turbopack-barrel lesson). A "Kopieer als citaat" button under every answer message copies it (`navigator.clipboard`), with a transient "Gekopieerd!" state.
+
+**#80 — stat card + PNG:** `web/components/stat-card.tsx` renders a compact SVG card (600×315 viewBox — social-media ratio) for answers with `result.shape === 'single'`, exactly one cell and a non-null value: big number via the SHARED `formatValueNl` (R3 — no second formatter), unit, measure/region/period labels (deterministic display truncation only), an amber "voorlopig" badge when the cell is provisional (partial delivery of #71), and the compact source line. **Display and download render from the ONE same SVG node** (serialize → canvas 2× → PNG) so the exported image can never drift from what was shown.
+
+**#82 — cost transparency:** `page.tsx` additionally reads the live `clarification` price; `Dashboard` threads `{simple, clarification, balance}` into `Chat` (balance = the live #68 state, so the pre-send line moves with it). At the send button: "Kost ~{simple} credits · saldo {balance}"; a static hint that a clarification round costs `{clarification}` with the rest refunded (the honest v1 of the brainstorm's (b) — a confidence-conditional hint is impossible pre-parse, recorded in #82); under a clarification message the existing cost caption gains "· antwoorden kost ~{simple} credits" (client-side caption — the pipeline's deterministic message text is untouched). All three surfaces render only when the pricing prop is present.
+
+**Invariants at stake:** no LLM and no pipeline-module change anywhere (all `web/` + one pure web lib; the only backend imports are the `format.ts`/`types.ts` leaf modules, type-erased or constant-only); every rendered number traces to the validated envelope, the shared formatter, or the live pricing config (ADR 006 — no price literals); the citation contains ONLY validated body text + structured attribution (no new number-bearing prose, R1/R3); card and PNG share one render source; fixtures untouched.
+
+**Done means:** full local gate green (nine suites + hermetic benchmark + web tests + typecheck both + real `next build`); tests pin the citation string bindings (incl. provisional + marking variants), card rendering/absence rules and value formatting, the three cost surfaces (present with the prop, absent without, live-balance coupling); adversarial review per the house rule; #78/#80/#82 marked built; CI green.
+
+---
+
 ## WP16 (working number) — Demand-driven table onboarding, fully automated  NOT YET BRIEFED — queued after WP13/WP15, Phase 2–3
 
 *Placeholder only, added 2026-07-04 so this decision can't be missed by a session reading only this file. Not next in line — WP13 then WP15 come first — so this is deliberately not fleshed out into a full brief yet (scope/invariants/done-criteria), per the phase-gate discipline: don't over-specify work that isn't next.*

@@ -8,6 +8,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AskOutcome } from '../app/actions.ts';
 import type { GatedResponse } from '../backend/billing/index.ts';
 import type { ComposedResponse } from '../backend/answer/respond/types.ts';
+import { fakeAnswerResponse } from '../test/fake-answer.ts';
 import { Dashboard } from './dashboard.tsx';
 
 Element.prototype.scrollIntoView = vi.fn();
@@ -31,14 +32,15 @@ function outcome(gated: GatedResponse): AskOutcome {
   return { gated, context: null };
 }
 
-/** Same documented narrow-cast helper as chat.test.tsx: the components under
- * test only read `.text`/`.chart` off the response. */
+/** Same documented narrow-cast discipline as chat.test.tsx, via the shared
+ * WP20 fixture (chat.tsx now also reads answer.body + result fields for the
+ * citation/card). */
 function fakeAnswer(text: string, netCost: number): GatedResponse {
   return {
     kind: 'ok',
     auditId: 1,
     netCost,
-    response: { kind: 'answer', text, chart: null } as unknown as ComposedResponse,
+    response: fakeAnswerResponse({ body: text }) as ComposedResponse,
   };
 }
 
@@ -53,6 +55,7 @@ function renderDashboard(initialBalance: number) {
     <Dashboard
       initialBalance={initialBalance}
       simplePrice={20}
+      clarificationPrice={10}
       signupGrantCredits={100}
       history={<div data-testid="history-slot" />}
     />,
@@ -107,6 +110,19 @@ describe('Dashboard — live balance (#68)', () => {
       expect(screen.getByText('100 credits')).toBeInTheDocument();
     });
   }
+});
+
+describe('Dashboard — the pre-send cost line tracks the LIVE balance (#82 x #68, WP20)', () => {
+  it('moves the saldo in the cost line after a charge, without a reload', async () => {
+    askQuestion.mockResolvedValue(outcome(fakeAnswer('Nederland telt 18.044.027 inwoners.', 20)));
+    renderDashboard(100);
+    expect(screen.getByText(/saldo: 100 credits/)).toBeInTheDocument();
+
+    await submit('Hoeveel inwoners heeft Nederland?');
+    await screen.findByText('Nederland telt 18.044.027 inwoners.');
+    expect(screen.getByText(/saldo: 80 credits/)).toBeInTheDocument();
+    expect(screen.queryByText(/saldo: 100 credits/)).toBeNull();
+  });
 });
 
 describe('Dashboard — the warning reacts to the LIVE balance (#69 x #68)', () => {
