@@ -13,7 +13,22 @@
 // question verbatim (response->'pending'->>'questionNl'). A round is
 // structurally at most those two rows: respondToClarificationReply converts
 // any residual ambiguity into a still_ambiguous REFUSAL, never a second
-// clarification.
+// clarification. (The schema itself does not forbid a hypothetical
+// kind='clarification' row with reply_text set; such a row would take the
+// reply branch below and never re-open -- bounded degradation, no crash.)
+//
+// LIMITATION (adversarial-review verdict, WP19): the pairing is a VALUE-MATCH
+// over fields the client influences (the pending is client-held; only its
+// embedded conversationContext is rewritten server-side), not a stored row
+// link. Two simultaneously-open clarifications with byte-identical
+// (question, questionNl) -- e.g. the same ambiguous question in two tabs --
+// can therefore swap partners in the display, leaving the second reply as a
+// standalone entry (test-pinned as intended degradation). This is
+// display-only, strictly per-user (the where clause scopes to one user_id),
+// and cost-safe: each row's creditsCharged joins the ledger on that row's
+// OWN request_id, never through the pairing. A guaranteed link would need a
+// schema + PendingClarification change -- deliberately not done for a
+// display concern; revisit if real users hit it.
 import type { Db } from '../db/types.ts';
 
 export interface QuestionHistoryEntry {

@@ -312,6 +312,37 @@ describe('getQuestionHistory — clarification-round grouping', () => {
     });
   });
 
+  // Pins the DOCUMENTED value-match limitation (history.ts header): two
+  // identical open clarifications that BOTH get answered degrade gracefully
+  // -- one collapsed round, one standalone clarify, one standalone reply --
+  // never a crash, never a double-attached reply, costs untouched.
+  it('degrades to standalone entries when two identical open rounds are both answered', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      const firstClarifyId = await insertAuditRow(db, userId, {
+        kind: 'clarification', question: QUESTION, finalText: QUESTION_NL, requestId: null, offeredQuestionNl: QUESTION_NL,
+      });
+      await insertAuditRow(db, userId, {
+        kind: 'clarification', question: QUESTION, finalText: QUESTION_NL, requestId: null, offeredQuestionNl: QUESTION_NL,
+      });
+      await insertAuditRow(db, userId, {
+        kind: 'answer', question: QUESTION, finalText: 'antwoord A', requestId: null, replyText: 'Amsterdam', repliedQuestionNl: QUESTION_NL,
+      });
+      await insertAuditRow(db, userId, {
+        kind: 'answer', question: QUESTION, finalText: 'antwoord R', requestId: null, replyText: 'Rotterdam', repliedQuestionNl: QUESTION_NL,
+      });
+
+      const history = await getQuestionHistory(db, userId);
+      expect(history).toHaveLength(3);
+      // Exactly one collapsed round; each reply attached at most once.
+      expect(history.filter((h) => h.clarification !== null)).toHaveLength(1);
+      // The second reply stands alone (newest first), the first stranded
+      // clarification stays honestly visible as unanswered.
+      expect(history[0]).toMatchObject({ kind: 'answer', finalText: 'antwoord R', clarification: null });
+      expect(history[2]).toMatchObject({ id: firstClarifyId, kind: 'clarification', clarification: null });
+    });
+  });
+
   it('caps ENTRIES, not rows: a collapsed round counts once against the limit', async () => {
     await withDb(async (db) => {
       const userId = randomUUID();

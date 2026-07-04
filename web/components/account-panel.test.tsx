@@ -73,4 +73,18 @@ describe('AccountPanel — credits explainer (#76)', () => {
       ),
     ).toBeInTheDocument();
   });
+
+  // Adversarial-review finding: the simplePrice > 0 guards were untested --
+  // an executed probe showed removing them puts "zo'n Infinity vragen" and a
+  // spurious warning on screen. A misconfigured price of 0 must degrade to
+  // shorter copy and no warning, never garbage arithmetic.
+  it('a simplePrice of 0 shows no warning and no question-count clause (no Infinity)', () => {
+    renderPanel({ balance: 10, simplePrice: 0 });
+    expect(screen.queryByText(WARNING)).toBeNull();
+    expect(
+      screen.getByText('Bij aanmelding krijg je eenmalig 100 credits. Een gewone vraag kost 0 credits.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Infinity/)).toBeNull();
+    expect(screen.queryByText(/vragen/)).toBeNull();
+  });
 });
