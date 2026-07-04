@@ -12,6 +12,7 @@
 // branch here explicitly and must never fall into the generic catch below.
 'use client';
 
+import { unstable_isUnrecognizedActionError } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { askQuestion, replyToClarification } from '../app/actions.ts';
 import type { AskOutcome } from '../app/actions.ts';
@@ -147,6 +148,12 @@ export function Chat({
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // WP22 (#96a): a fresh deploy invalidates Server Action ids in already-open
+  // tabs -- the first submit then fails with Next's UnrecognizedActionError
+  // (live-observed 2026-07-05, Vercel logs: POST / 404 "Failed to find Server
+  // Action"). That case gets its own honest message + refresh affordance
+  // instead of the misleading generic error.
+  const [staleDeploy, setStaleDeploy] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   function applyOutcome(outcome: AskOutcome): void {
@@ -171,6 +178,7 @@ export function Chat({
     setInput('');
     setBusy(true);
     setError(null);
+    setStaleDeploy(false);
 
     try {
       const requestId = crypto.randomUUID();
@@ -215,8 +223,14 @@ export function Chat({
         },
       ]);
       setPending(response.kind === 'clarification' ? response.pending : null);
-    } catch {
-      setError('Er ging iets mis bij het ophalen van het antwoord. Probeer het opnieuw.');
+    } catch (err) {
+      if (unstable_isUnrecognizedActionError(err)) {
+        // Structurally true no-charge claim: the action never ran, and the
+        // debit lives inside it (the billing gate is the action's first step).
+        setStaleDeploy(true);
+      } else {
+        setError('Er ging iets mis bij het ophalen van het antwoord. Probeer het opnieuw.');
+      }
     } finally {
       setBusy(false);
     }
@@ -272,6 +286,20 @@ export function Chat({
           </div>
         ) : null}
         {error ? <div className="text-sm text-red-600">{error}</div> : null}
+        {staleDeploy ? (
+          <div className="text-sm text-amber-700">
+            De site is net bijgewerkt, waardoor deze vraag niet is verstuurd (er zijn geen credits
+            afgeschreven).{' '}
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="font-medium underline"
+            >
+              Ververs de pagina
+            </button>{' '}
+            en stel je vraag daarna opnieuw.
+          </div>
+        ) : null}
         <div ref={bottomRef} />
       </div>
       <form onSubmit={handleSubmit} className="mt-4 flex gap-2">

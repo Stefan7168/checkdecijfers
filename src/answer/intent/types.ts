@@ -152,6 +152,16 @@ export interface ResolutionFailure {
     | 'region_ambiguous'
     | 'region_unknown'
     | 'region_on_national_measure'
+    /** WP22 (#97a): a max/"meeste" ask on a GEO table without ≥2 named
+     * regions — the real gap is the comparison set, so the question asks for
+     * regions to COMPARE; it must never reuse region_unknown's "welke
+     * gemeente bedoel je" (that template belongs to unknown place names). */
+    | 'max_needs_regions'
+    /** WP22 (#97a): a max/"meeste" ask on a national-only measure — regional
+     * comparison is impossible here AND max-over-periods is not built yet
+     * (open-questions #97b); the clarification names that real gap instead
+     * of asking gemeente-of-provincie on a measure without regions. */
+    | 'max_on_national_measure'
     | 'grain_unavailable'
     | 'period_invalid'
     | 'period_missing';

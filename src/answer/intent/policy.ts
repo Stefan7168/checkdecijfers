@@ -52,6 +52,17 @@ function failureQuestion(failure: ResolutionFailure): string {
       return 'Welke gemeente of provincie bedoel je precies, of wil je het cijfer voor heel Nederland?';
     case 'region_on_national_measure':
       return 'Die cijfers heb ik alleen voor heel Nederland, niet per gemeente of buurt — wil je het landelijke cijfer?';
+    // WP22 (#97a): the max/"meeste" gaps name their REAL cause. Both texts
+    // deliberately carry no digits (the no-numbers belt) and exactly one
+    // question mark (the one-compact-question pin).
+    case 'max_needs_regions':
+      return 'Welke gemeentes of provincies wil je met elkaar vergelijken? Noem er minstens twee in je vraag.';
+    case 'max_on_national_measure':
+      return (
+        'Deze cijfers zijn er alleen voor heel Nederland, dus regio’s vergelijken kan hier niet — ' +
+        'en de periode met de hoogste of laagste waarde opzoeken kan ik nog niet. ' +
+        'Wil je in plaats daarvan het verloop over een periode zien, bijvoorbeeld per maand of per jaar?'
+      );
     case 'grain_unavailable':
       return failure.options.length > 0
         ? `Die cijfers zijn er alleen ${failure.options.join(' en ')} — voor welke periode wil je ze?`

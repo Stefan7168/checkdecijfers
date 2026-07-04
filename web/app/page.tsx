@@ -18,12 +18,18 @@ import { Dashboard } from '../components/dashboard.tsx';
 import { QuestionHistory } from '../components/question-history.tsx';
 import { currentUserId } from '../lib/current-user.ts';
 import { getDb } from '../lib/db.ts';
+import { PURCHASE_PARAM, PURCHASE_SUCCESS_VALUE } from '../lib/purchase.ts';
 
-export default async function Home() {
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ [PURCHASE_PARAM]?: string }>;
+}) {
   // Belt-and-suspenders (WP13 precedent, /credits/page.tsx): proxy.ts already
   // redirects unauthenticated visits away from "/", but a proxy matcher is
   // an optimistic check, never the authorization boundary for the balance/
   // history reads below.
+  const { [PURCHASE_PARAM]: purchase } = await searchParams;
   const userId = await currentUserId();
   if (userId === null) {
     redirect('/login');
@@ -48,6 +54,7 @@ export default async function Home() {
       clarificationPrice={clarificationPrice}
       signupGrantCredits={signupGrantCredits}
       history={<QuestionHistory items={history} />}
+      purchaseSuccess={purchase === PURCHASE_SUCCESS_VALUE}
     />
   );
 }

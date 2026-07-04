@@ -119,6 +119,26 @@ describe('region resolution (names → CBS codes, never by the LLM)', () => {
   it('"meeste" without named regions cannot resolve (no silent max-over-everything)', async () => {
     const failure = await failed(raw('population_on_1_january', { kind: 'year', year: 2025 }, null, 'max'));
     expect(failure.axis).toBe('region');
+    // WP22 (#97a): its OWN reason — the gap is the comparison set; the
+    // region_unknown template ("welke gemeente bedoel je") stays reserved
+    // for genuinely unknown place names (the test above pins that path).
+    expect(failure.reason).toBe('max_needs_regions');
+  });
+
+  it('"meeste" with only ONE named region still asks for the comparison set (#97a)', async () => {
+    const failure = await failed(
+      raw('population_on_1_january', { kind: 'year', year: 2025 }, [{ name: 'Amsterdam', kind: 'gemeente' }], 'max'),
+    );
+    expect(failure.axis).toBe('region');
+    expect(failure.reason).toBe('max_needs_regions');
+  });
+
+  it('"meeste" on a NATIONAL-only measure names the real gap, never gemeente-of-provincie (#97a, live-observed)', async () => {
+    // The #97 reproduction shape: "de maand in 2024 waar de inflatie het
+    // meest steeg" — the model tags `max`; inflation has no regional split.
+    const failure = await failed(raw('cpi_yearly_inflation', { kind: 'year', year: 2024 }, null, 'max'));
+    expect(failure.reason).toBe('max_on_national_measure');
+    expect(failure.axis).toBe('derivation');
   });
 });
 
@@ -750,7 +770,11 @@ describe('explicit date ranges (#77, ADR 023): date_range → whole months → f
     it('a demoted "max" without its comparison regions keeps the specific resolver clarification (executing-skeptic catch: the guard must re-run on the final derivation)', async () => {
       const failure = await failed(raw('population_on_1_january', dateRange(boundary(2022, 1, 1), boundary(2022, 12, 31), true), [{ name: 'Amsterdam', kind: 'gemeente' }], 'max'));
       expect(failure.axis).toBe('region');
-      expect(failure.reason).toBe('region_unknown');
+      // WP22 (#97a) sharpened the guard's reason from region_unknown to its
+      // own max_needs_regions — the guard-intent this test pins (a specific
+      // resolver clarification, never the query layer's generic
+      // invalid_intent) is unchanged.
+      expect(failure.reason).toBe('max_needs_regions');
     });
 
     it('a demoted "max" WITH its comparison regions executes over the collapsed single period', async () => {
