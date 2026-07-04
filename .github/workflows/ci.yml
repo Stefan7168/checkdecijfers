@@ -164,3 +164,17 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      # A green deploy proves the BUILD succeeded, not that the app runs:
+      # on 2026-07-04 a deploy whose middleware was compiled with empty
+      # NEXT_PUBLIC_* values went green while every route returned 500
+      # (lessons-learned). This step makes that failure class loud: the
+      # deployed app must actually serve a page. -L follows the auth
+      # redirect to /login; anything but a final 200 fails the job.
+      - name: Post-deploy smoke check (the app must serve, not just build)
+        run: |
+          sleep 10
+          for path in / /login; do
+            status=$(curl -sL -o /dev/null -w "%{http_code}" --max-time 30 "https://checkdecijfers.vercel.app${path}")
+            echo "GET ${path} -> ${status} (after redirects)"
+            test "$status" = "200"
+          done
