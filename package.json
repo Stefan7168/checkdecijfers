@@ -23,6 +23,7 @@
     "test:chart": "vitest run tests/chart",
     "test:audit": "vitest run tests/audit",
     "test:billing": "vitest run tests/billing",
+    "test:catalog": "vitest run tests/catalog",
     "benchmark:run": "node scripts/run-benchmark.ts",
     "benchmark:score": "node scripts/score-benchmark.mjs",
     "benchmark:run:live": "node --env-file=.env scripts/run-benchmark.ts --live",
@@ -39,11 +40,15 @@
     "followup:record": "node --env-file-if-exists=.env scripts/followup-eval.ts --record",
     "answer:eval": "node --env-file-if-exists=.env scripts/answer-eval.ts",
     "answer:record": "node --env-file-if-exists=.env scripts/answer-eval.ts --record",
+    "tablefinder:eval": "node --env-file-if-exists=.env scripts/tablefinder-eval.ts",
+    "tablefinder:record": "node --env-file-if-exists=.env scripts/tablefinder-eval.ts --record",
     "db:migrate": "node --env-file=.env src/db/migrate.ts",
     "ingest": "node --env-file=.env src/ingestion/cli.ts",
+    "catalog:refresh": "node --env-file=.env src/catalog/cli.ts",
     "registry:apply": "node --env-file=.env src/registry/apply.ts",
     "pricing:apply": "node --env-file=.env src/billing/pricing-apply.ts",
-    "fixtures:capture": "node scripts/capture-cbs-fixtures.ts"
+    "fixtures:capture": "node scripts/capture-cbs-fixtures.ts",
+    "fixtures:capture:catalog": "node scripts/capture-cbs-fixtures.ts --catalog"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.3",

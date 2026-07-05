@@ -102,6 +102,8 @@ jobs:
         run: npm run test:audit
       - name: Billing tests (credit ledger, pricing config, Stripe webhook — WP13)
         run: npm run test:billing
+      - name: Catalog tests (table discovery — FTS recall + rerank allowlist, WP16)
+        run: npm run test:catalog
       - name: Benchmark run (hermetic, audited pipeline)
         run: npm run benchmark:run
       - name: Benchmark scorer (audit records vs frozen key)
