@@ -304,6 +304,15 @@ export async function runQuery(db: Db, intent: StructuredIntent): Promise<QueryO
   // omitted: prose then has nothing to bind direction words to and the
   // phrasing layer must fail closed (R9), which is the honest outcome.
   const allValuesPresent = cells.every((c) => c.value !== null);
+  // Pre-registration stays UNCONDITIONAL for multi-period results — the #64
+  // review weighed gating it for non-contiguous 'none' selections and
+  // reverted: now_vs_ago (WP14/V02) produces the same disjoint shape for a
+  // question that literally asks the comparison, and endpoint direction
+  // prose ("gestegen van A naar B") is true, derivation-bound and the
+  // B13/V02 house convention. The genuinely new dishonesty channel — a
+  // LINE implying the unsampled hole — is closed in chart/build.ts instead;
+  // the residual monotonic-describes-the-sample seam (pre-existing since
+  // WP14) is recorded at open-questions #100 for the next prompt-touching WP.
   if (q.periodCodes.length > 1 && allValuesPresent) {
     const direction = deriveDirection(cells);
     if (direction.ok) derivations.push(direction.record);

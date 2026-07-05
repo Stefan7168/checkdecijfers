@@ -3,7 +3,7 @@
 // determinism — hermetic against the fixture-ingested PGlite database
 // (ADR 009). The benchmark scoring itself lives in benchmark-intents.test.ts.
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { enumeratePeriods, runQuery } from '../../src/query/index.ts';
+import { enumeratePeriods, runQuery, contiguousPeriodCodes } from '../../src/query/index.ts';
 import type { QueryRefusal, ResultCell, StructuredIntent } from '../../src/query/index.ts';
 import { deriveDifference, deriveDirection, deriveMax } from '../../src/query/derivations.ts';
 import { parsePeriodCode } from '../../src/ingestion/periods.ts';
@@ -43,6 +43,28 @@ async function expectRefusal(
   expect(outcome.refusal.kind).toBe(kind);
   return outcome.refusal;
 }
+
+describe('contiguousPeriodCodes (pure — the #64 enumeration gate)', () => {
+  it('adjacent years are contiguous; a skipped year is not', () => {
+    expect(contiguousPeriodCodes(['2020JJ00', '2021JJ00'])).toBe(true);
+    expect(contiguousPeriodCodes(['2020JJ00', '2022JJ00'])).toBe(false);
+    expect(contiguousPeriodCodes(['2022JJ00', '2020JJ00', '2021JJ00'])).toBe(true);
+  });
+
+  it('quarter and month runs wrap year boundaries correctly', () => {
+    expect(contiguousPeriodCodes(['2024KW04', '2025KW01'])).toBe(true);
+    expect(contiguousPeriodCodes(['2024KW04', '2025KW02'])).toBe(false);
+    expect(contiguousPeriodCodes(['2024MM12', '2025MM01'])).toBe(true);
+    expect(contiguousPeriodCodes(['2024MM11', '2025MM01'])).toBe(false);
+  });
+
+  it('duplicates dedupe; singletons and empties are trivially contiguous; mixed grains are not', () => {
+    expect(contiguousPeriodCodes(['2020JJ00', '2020JJ00', '2021JJ00'])).toBe(true);
+    expect(contiguousPeriodCodes(['2020JJ00'])).toBe(true);
+    expect(contiguousPeriodCodes([])).toBe(true);
+    expect(contiguousPeriodCodes(['2020JJ00', '2020KW01'])).toBe(false);
+  });
+});
 
 describe('period range enumeration (pure)', () => {
   const p = (code: string) => parsePeriodCode(code)!;
@@ -116,6 +138,62 @@ describe('derivation semantics (pure — the independent oracle for what these w
 });
 
 describe('resolution and results', () => {
+  it('serves an explicit multi-code selection without a derivation as an ordinary series (#64 contract pin)', async () => {
+    // The #64 policy merge (intent-policy.test.ts) emits exactly this shape
+    // for "in Rotterdam in 2020 en in 2022" — the contract has accepted it
+    // since WP5 (codes = an explicit selection); this pin keeps the merge's
+    // one dependency from silently regressing.
+    const outcome = await runQuery(
+      db,
+      intent({
+        target: { kind: 'canonical', key: 'population_on_1_january' },
+        regions: ['GM0599'],
+        period: { kind: 'codes', codes: ['2020JJ00', '2022JJ00'] },
+        derivation: 'none',
+      }),
+    );
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) throw new Error('unreachable');
+    expect(outcome.shape).toBe('series');
+    expect(outcome.cells.map((c) => c.periodCode)).toEqual(['2020JJ00', '2022JJ00']);
+    expect(outcome.cells.every((c) => c.value !== null)).toBe(true);
+    // Endpoint pre-registration stays (the #64 review's reverted gate —
+    // reasoning in run.ts): direction here means NET endpoint movement,
+    // the same record now_vs_ago (V02) has carried since WP14. The line
+    // chart is the channel that gets gated instead (tests/chart).
+    expect(outcome.derivations.map((d) => d.kind).sort()).toEqual(['direction', 'first_last']);
+  });
+
+  it('a CONTIGUOUS none-selection keeps the R9 trend pre-registration (adjacent years leave no hole)', async () => {
+    const outcome = await runQuery(
+      db,
+      intent({
+        target: { kind: 'canonical', key: 'population_on_1_january' },
+        regions: ['GM0599'],
+        period: { kind: 'codes', codes: ['2020JJ00', '2021JJ00'] },
+        derivation: 'none',
+      }),
+    );
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) throw new Error('unreachable');
+    expect(outcome.derivations.map((d) => d.kind).sort()).toEqual(['direction', 'first_last']);
+  });
+
+  it('a DIFFERENCE over disjoint periods keeps its records — the gate is none-only (now_vs_ago unchanged)', async () => {
+    const outcome = await runQuery(
+      db,
+      intent({
+        target: { kind: 'canonical', key: 'population_on_1_january' },
+        regions: ['NL01'],
+        period: { kind: 'codes', codes: ['2019JJ00', '2024JJ00'] },
+        derivation: 'difference',
+      }),
+    );
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) throw new Error('unreachable');
+    expect(outcome.derivations.map((d) => d.kind).sort()).toEqual(['difference', 'direction', 'first_last']);
+  });
+
   it('is deterministic: the same intent twice yields identical results', async () => {
     const q = intent({
       target: { kind: 'canonical', key: 'cpi_yearly_inflation' },

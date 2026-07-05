@@ -93,6 +93,35 @@ describe('buildChartSpec — shapes and policy', () => {
   });
 });
 
+describe('buildChartSpec — the #64 non-contiguous enumeration gate', () => {
+  it('draws NO chart for a series with a hole in its own periods (a line would imply the unseen year)', () => {
+    const result = makeResult('series', [
+      makeCell({ periodCode: '2020JJ00' }),
+      makeCell({ periodCode: '2022JJ00' }),
+    ]);
+    expect(buildChartSpec(result)).toBeNull();
+  });
+
+  it('still charts a gap-free series (adjacent years, the B4/B8 class)', () => {
+    const result = makeResult('series', [
+      makeCell({ periodCode: '2020JJ00' }),
+      makeCell({ periodCode: '2021JJ00' }),
+      makeCell({ periodCode: '2022JJ00' }),
+    ]);
+    const spec = buildChartSpec(result);
+    expect(spec).not.toBeNull();
+    expect(spec!.kind).toBe('line');
+  });
+
+  it('leaves comparisons untouched (one period, several regions — no period hole possible)', () => {
+    const result = makeResult('comparison', [
+      makeCell({ regionCode: 'GM0363' }),
+      makeCell({ regionCode: 'GM0599' }),
+    ]);
+    expect(buildChartSpec(result)).not.toBeNull();
+  });
+});
+
 describe('buildChartSpec — honesty fields', () => {
   it('R11: any provisional cell sets the note and marks exactly its point', () => {
     const cells = [
