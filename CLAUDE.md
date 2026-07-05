@@ -17,6 +17,13 @@ You are working on **checkdecijfers.nl**: chat Q&A over official CBS statistics 
 
 **`docs/` is the source of truth. `checkdecijfers.nl.md` is historical input — never authority.** If the brainstorm notes and the docs disagree, the docs win. If you find a real gap in the docs, update the docs (and `docs/open-questions.md`) rather than quietly following the notes.
 
+**Doc freshness — no stale docs** (added session 23, 2026-07-05, after a fresh session was confused by buried/contradictory framing and mis-stated a settled decision to the owner):
+
+- **[docs/STATUS.md](docs/STATUS.md) is the plan of record.** A fresh session reads it first (reading order above) and treats its **top block — current priorities + current state — as authoritative** over any older phrasing anywhere else. If a lower doc contradicts STATUS's top block, STATUS wins and the lower doc is a bug to fix now.
+- **Source-of-truth precedence when docs conflict:** STATUS (current state/priorities) → [08-build-plan](docs/08-build-plan.md) (the WP + its spec) → [ADRs](docs/decisions/) (the decision + rationale) → [06-roadmap](docs/06-roadmap.md) / [03-mvp-scope](docs/03-mvp-scope.md) (phasing/scope) → `checkdecijfers.nl.md` (never authority). The higher one wins; the lower must be corrected in the same change, never silently followed.
+- **A doc that contradicts a newer decision is a bug — not merely one that lags the code.** When a decision changes, update *every* place it is stated in the same change, and **grep the repo for the OLD framing** to catch stale copies. A decision stated in one doc and contradicted in another is exactly what confuses the next session.
+- **Before telling the owner something "isn't how it works" or "isn't decided," check the docs + memory for a recorded decision first.** A recorded owner decision outranks a session's from-memory summary — re-derive from the source, never restate the opposite from a compressed recollection. (This rule exists because session 23 mis-stated the on-demand-CBS-fetch decision (WP16) from a collapsed summary of principle (b); see [lessons-learned.md](docs/lessons-learned.md).)
+
 ## Product principles (confirmed by the product owner, 2026-07-02 — binding)
 
 Three principles, also referenced as (a)/(b)/(c) across the docs:
@@ -50,6 +57,6 @@ Three principles, also referenced as (a)/(b)/(c) across the docs:
 
 1. The change violates no invariant in [docs/05-data-rules.md](docs/05-data-rules.md) — and if it touches the answer pipeline, the invariant tests prove it.
 2. The 20-task benchmark ([docs/02-user-scenarios.md](docs/02-user-scenarios.md)) still passes at or above the current gate; refusal tasks pass at 100%. No fabricated number, ever.
-3. Relevant docs updated in the same change (scope, ADRs, open-questions). If the change moves project state — a phase-checklist item completed, a benchmark run, a changed "next up" — update [docs/STATUS.md](docs/STATUS.md) too, with **measured results, never aspirational ones**. Docs that lag the code are bugs.
+3. Relevant docs updated in the same change (scope, ADRs, open-questions). If the change moves project state — a phase-checklist item completed, a benchmark run, a changed "next up" — update [docs/STATUS.md](docs/STATUS.md) too, with **measured results, never aspirational ones**. Docs that lag the code are bugs. When a decision changes, update **every** place it is stated and grep for the old framing (see *Source of truth → Doc freshness*) — a doc that contradicts a newer decision is a bug that confuses the next session.
 4. New assumptions marked and mirrored in open-questions.
 5. Explained in plain language the product owner can follow: what changed, why, how it was verified.
