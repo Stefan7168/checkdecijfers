@@ -52,7 +52,7 @@ interface BatteryQuestion {
 /** Compact, gradeable summary of one turn's envelope — the fields the memo
  * scores on. The FULL envelope is kept too, for anything the summary misses. */
 function summarize(response: AuditedResponse['response']): Record<string, unknown> {
-  const r = response as Record<string, unknown>;
+  const r = response as unknown as Record<string, unknown>;
   return {
     kind: r.kind,
     refusalReason: r.kind === 'refusal' ? (r.reason ?? null) : null,
@@ -145,12 +145,12 @@ async function main(): Promise<void> {
           contextError,
           response: t2.outcome.response,
         };
-        t2Label = ` | followup: ${(t2.outcome.response as Record<string, unknown>).kind}${contextBuilt ? ' (ctx)' : ' (NO ctx)'}`;
+        t2Label = ` | followup: ${(t2.outcome.response as unknown as Record<string, unknown>).kind}${contextBuilt ? ' (ctx)' : ' (NO ctx)'}`;
       }
 
       runs.push(record);
-      const k1 = (t1.outcome.response as Record<string, unknown>).kind;
-      const reason = (t1.outcome.response as Record<string, unknown>).reason;
+      const k1 = (t1.outcome.response as unknown as Record<string, unknown>).kind;
+      const reason = (t1.outcome.response as unknown as Record<string, unknown>).reason;
       console.log(`  ${q.id} [${q.segment}] ${k1}${reason ? `/${reason}` : ''}${t2Label} (${t1.latencyMs} ms)`);
     }
   } finally {
