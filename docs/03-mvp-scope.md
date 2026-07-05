@@ -47,7 +47,7 @@ Pass → proceed to Phase 1 (see roadmap). Fail → iterate on the pipeline with
 |---|---|---|
 | Accounts / auth | Phase 1 | Commodity; proves nothing about answer quality |
 | Billing, credits, Stripe/iDEAL | Phase 2 | Business model is decided ([01-product-vision.md](01-product-vision.md)); building it before the pipeline works is waste |
-| More than ~10 tables / semantic table discovery | Phase 1–2 | Registry lookup suffices at this scale; see ADR [002](decisions/002-postgres-system-of-record.md) |
+| More than ~10 tables / semantic table discovery | Phase 1–2 | Registry lookup suffices at this scale; see ADR [002](decisions/002-postgres-system-of-record.md). **Note: semantic/catalog table discovery is now WP16 (priority #1) — [08-build-plan.md](08-build-plan.md).** |
 | Drill-down buttons on answers | Phase 1–2 | Deterministic follow-up queries; additive UX that proves nothing about the hard part |
 | Free browse layer (public SEO data pages) | Phase 1 (late)–2 | No LLM in the path, but Phase 0 proves the answer pipeline, not page rendering |
 | Shareable answer pages, OpenGraph images, programmatic SEO | Phase 2 | Stefan's own idea — preserved in roadmap; needs public URLs + moderation thinking |
@@ -55,7 +55,7 @@ Pass → proceed to Phase 1 (see roadmap). Fail → iterate on the pipeline with
 | Scoop alerts | Phase 3 | Needs background scanning infra + accounts |
 | Newsroom/enterprise licenses | Phase 3 | Needs billing + admin surface |
 | User-facing audit-trail UI | Phase 2+ | Phase 0 keeps audit records backend-verifiable only |
-| Enrichment sources (PDOK/Kadaster, RIVM, UWV, …) | Phase 3+ | Separate ingestion adapters; CBS-only until core proven |
+| Enrichment sources (PDOK/Kadaster, RIVM, UWV, …) = new data sources beyond CBS | **Reprioritized to build priority #2 (owner, session 23, 2026-07-05) — right after WP16, no longer Phase 3+; still not in Phase 0.** | Separate ingestion adapters; broadens the claim from "CBS cell" to "official sources" ([open-questions #102](open-questions.md)) |
 | Answer caching / Redis / rate limiting | Phase 1–2, trigger-based | ADR [005](decisions/005-caching-strategy.md) |
 | Non-Dutch UI | Not planned | Product copy is Dutch by convention |
 
