@@ -257,15 +257,30 @@ Built as approved, supervised as required (owner confirmed the live window in-se
 
 ---
 
-## WP16 (working number) — Demand-driven table onboarding, fully automated  NOT YET BRIEFED — queued after WP13/WP15, Phase 2–3
+## WP16 — On-demand CBS fetch when data is missing (demand-driven table onboarding)  ▶ TOP PRIORITY (owner, session 23) — EXECUTE-READY BRIEF; Fable-authorized on the hard sub-parts
 
-*Placeholder only, added 2026-07-04 so this decision can't be missed by a session reading only this file. Not next in line — WP13 then WP15 come first — so this is deliberately not fleshed out into a full brief yet (scope/invariants/done-criteria), per the phase-gate discipline: don't over-specify work that isn't next.*
+*Owner reprioritized this to #1 (Stefan, session 23, 2026-07-05): "dit verdient de voorrang… nummer 1, het allerergste wat we gaan doen; als het ingewikkeld is moet Fable dat doen." It was Phase 2-3; it is now the next big build, ahead of WP26. The design has been decided across multiple sessions ([open-questions #21](open-questions.md)/[#24](open-questions.md), roadmap feature pool) — this brief makes it execute-ready. This entry is now the source of truth; do not describe missing-data behaviour as a flat refusal.*
 
-**The decision, already made and design-complete (Stefan, 2026-07-04):** when a user asks about a topic in a CBS table that isn't loaded yet, the table is fetched and verified **fully automatically — no manual approval click, ever, on the happy path.** Full reasoning, the automated verification design (structural existence check + label-consistency check + independent cross-check), and the honest multi-candidate fallback for genuine unresolved ambiguity are in [open-questions #21](open-questions.md) and [#24](open-questions.md) (SLA); the standing rule it satisfies is [05-data-rules.md](05-data-rules.md)'s "Table onboarding rule" and its new failure-behavior row; the feature-pool entry is in [06-roadmap.md](06-roadmap.md).
+**The behaviour (owner design):** when a question needs data that isn't in our database, DON'T dead-end — **fetch the needed CBS table from the CBS API, run it through the full ingestion+validation pipeline, store it, then answer from our own database.** Because this takes time, the user is told **"je tabel wordt voorbereid"**, and — owner's UX — **gets an email when it's ready and sees on the dashboard that their question is being worked on.** A refusal becomes "we halen het voor je op."
 
-**What the implementing session still needs to firm up (not decided yet):** the exact structural/label-consistency check implementations, what counts as a usable "independent cross-check" source in practice, the confidence thresholds that gate auto-publish vs. the honest-disclosure fallback, and how the disclosure is composed/rendered (reuses the answer pipeline's existing verbatim-value machinery, per principle (a) — no new LLM-computation surface).
+**The guardrail that makes this safe (principle b / ADR 003 — NOT a contradiction of the fetch):** CBS is called in the FETCH+INGEST step, never in the answer path. The number always flows CBS API → validation pipeline → our DB → answer; a raw API response is never piped into an answer. On-demand fetch and the anti-hallucination promise both hold — that is the whole reason it goes through ingestion rather than a live lookup.
 
-**Owner confirmed wanting this built (2026-07-04, session 18)**, and two more pieces landed: the exact "we're fetching this" user-facing copy, and that this response **costs credits, not free like a refusal** — both in [open-questions #24](open-questions.md) (exact price/refund-on-failure still open). Session 18 also surfaced three related, separately-scoped items worth sequencing alongside or before this WP: explicit multi-period/multi-region auto-display ([#64](open-questions.md)), durable error logging beyond Vercel's short retention ([#65](open-questions.md)), and clickable suggestion buttons for clarifications ([#66](open-questions.md)).
+**Only-after-verification (the anti-fabrication gate, [#21](open-questions.md) + docs/05 table-onboarding rule):** a freshly-fetched table becomes answerable ONLY after automated verification passes — structural existence check + label-consistency check against CBS's own published labels + an independent cross-check against a second reference figure where available. High confidence on all three auto-publishes with **zero human click**; genuine multi-definition ambiguity yields an honest **multi-candidate** answer (every candidate with its definition label), never a silent pick or a bare refusal. A check, not a manual approval.
+
+**This is an EPIC, not one WP — its hard sub-parts (likely separate build sessions; Fable on the hard ones per the owner):**
+1. **Table discovery / CBS-catalog search** — the hardest part: map a user topic we don't have ("bijstand", "criminaliteit") to the right CBS table id(s) out of CBS's full catalog. Likely pulls the pgvector trigger (ADR [002](decisions/002-postgres-system-of-record.md)). A wrong table is a principle-(c) risk — the verification gate below is the backstop.
+2. **Async fetch+ingest job + "pending question" state** — the fetch can take minutes, so it cannot be a synchronous chat turn: a background job, a pending-question record, and the notification surface (email + dashboard "wordt aan gewerkt"). New infra.
+3. **Slice-sizing for a newly-fetched table** — a freshly-requested table can be huge; a sensible ingestion slice must be chosen (an unsolved manual judgment today — flagged in the data-layer review). Needs a rule or a safe default.
+4. **The automated three-check verification** (above) — the anti-fabrication gate; reuses the existing ingestion validation pipeline (schema fingerprint, plausibility, period parsing, dimension mapping, unit consistency — docs/05).
+5. **Answer-on-arrival + credit handling** — once verified+stored, answer the pending question; this response **costs credits, not free like a refusal** ([#24](open-questions.md); exact price + refund-on-verification-failure still open).
+
+**Invariants at stake:** principle (b) (CBS only in the fetch/ingest step, never the answer path); principle (c) (the verification gate — never auto-publish a table we can't verify; honest multi-candidate on ambiguity, never a guess); principle (a) (no new LLM-computation surface — disclosure/answer reuse the verbatim-value machinery); the full ingestion validation pipeline applies to every fetched table; R8 audit covers both the pending state and the eventual answer.
+
+**Hard build facts:** needs **live DDL** (fetched tables land in the production DB) → supervised, never autonomous; needs **async job + notification infra** (the auth email provider is already enabled); rate/credit-gated. **Fable-authorized on the hard sub-parts (owner, session 23).**
+
+**Open design sub-decisions to settle per sub-part:** the catalog-search mechanism + its confidence threshold; the auto-publish vs multi-candidate-disclosure confidence thresholds; the slice-sizing rule; the exact credit price + refund-on-verification-failure; the email/dashboard copy and pending-state UX.
+
+**Done means (per sub-part):** full local gate green; the automated verification pinned (a verifiable table auto-publishes, a genuinely-ambiguous one yields the multi-candidate answer, an unverifiable one refuses honestly — never a fabricated cell); the async flow + notification tested; migrations hermetically tested before the supervised live apply; adversarial review per the house rule; docs/05 table-onboarding row + roadmap updated; STATUS updated with measured results.
 
 ---
 
@@ -284,6 +299,8 @@ Built as approved, supervised as required (owner confirmed the live window in-se
 ---
 
 ## WP26 (working number) — end the paid dead-end: clickable pre-verified clarification options (#66) + answer-first for structural defaults (#72)
+
+**▶ Re-sequenced (owner, session 23): tier-3.** The owner set data coverage as priorities #1 (WP16 on-demand fetch) and #2 (new sources); WP26 is the tier-3 answer-quality item — safelist settled and ready to build, but sequenced **after** the data work.
 
 *Owner-chosen (Stefan, 2026-07-05, session 23): build [#72](open-questions.md) and [#66](open-questions.md) **together as one WP**. Full design, the principle-(c) line, the safelist, and the deferred-pricing decision are in ADR [024](decisions/024-answer-first-defaults-and-clickable-options.md); this entry is the buildable summary. Not started. The direction is blessed; the **safelist (below) and pricing-deferral await the owner's read-back of ADR 024** before execution.*
 

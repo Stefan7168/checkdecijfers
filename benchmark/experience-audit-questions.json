@@ -1,0 +1,1251 @@
+{
+ "coverage": {
+  "measures": [
+   {
+    "everyday_terms": [
+     "inwoners",
+     "bevolking",
+     "inwonertal",
+     "inwoneraantal"
+    ],
+    "definition_label": "bevolking op 1 januari (canonical measure M000352; alternate M000365 Gemiddelde bevolking/jaargemiddelde available but not default)",
+    "table_id": "03759ned",
+    "geo": "land (NL), provincie, and gemeente all present in the loaded slice — RegioS prefixes NL/PV/GM were ingested; NOT sub-municipal (wijk/buurt) — that grain is out of scope entirely",
+    "grains": "JJ only (yearly), floor 2019JJ00 (slice periodFloor); live data actually spans 1988-2026 upstream but only >=2019 was ingested",
+    "notable_limits": "Only the totaal/totaal/totaal slice was ingested (Geslacht=T001038, Leeftijd=10000, BurgerlijkeStaat=T001019) — no breakdowns by sex, age, or marital status are available, even though CBS publishes them; RegioS codes have trailing-space padding handled at ingestion. 'Bevolking op 1 januari' is a snapshot stock figure, not an annual average, for the default measure."
+   },
+   {
+    "everyday_terms": [
+     "inflatie",
+     "cpi",
+     "consumentenprijzen",
+     "prijsstijging"
+    ],
+    "definition_label": "inflatie (jaarmutatie CPI, alle bestedingen) — measure M000238; alternate M000215 CPI indexniveau (2025=100) available, not a mutation percentage",
+    "table_id": "86141NED",
+    "geo": "national only (no regional breakdown in this table)",
+    "grains": "JJ and MM both loaded; monthly coverage 2009MM12-2026MM06 (per docs/07 measured facts)",
+    "notable_limits": "Index base is 2025=100 — NOT comparable to the older 2015=100 series (83131NED, stopgezet/discontinued 2026-03-10, of which 86141NED is the successor); jaarmutatie (%) is continuous across the base change, index levels are not. Latest month can be Voorlopig (snelle raming) — e.g. 2026MM06 was voorlopig at slice-freeze time, latest Definitief month was 2026MM04. Only the 'Alle bestedingen' (T001112) category was set as default coordinate — sub-category breakdowns exist upstream but Alle bestedingen is what 'inflatie' resolves to by default."
+   },
+   {
+    "everyday_terms": [
+     "werkloosheid",
+     "werkloosheidspercentage",
+     "werkloosheidscijfer"
+    ],
+    "definition_label": "werkloosheidspercentage, seizoengecorrigeerd (measure M001906, dim SeizoenEnWerkdagcorrectie=A050903 = seasonally adjusted, the canonical default); alternate A042501 = ongecorrigeerde (unadjusted) cijfers",
+    "table_id": "85224NED",
+    "geo": "national only",
+    "grains": "JJ (jaargemiddelde over de vier kwartalen) and KW (kwartaalcijfer) both loaded, 2013-2026KW01. NO monthly grain — monthly unemployment lives in a different table (80590ned) that is NOT loaded, out of scope",
+    "notable_limits": "The table title says 'seizoengecorrigeerd' but actually carries BOTH seasonally-adjusted and unadjusted series as a dimension value — the registry pins seasonally-adjusted as the default for the bare term 'werkloosheid'. No monthly series available at all (common user expectation to check)."
+   },
+   {
+    "everyday_terms": [
+     "woningen",
+     "woningvoorraad",
+     "aantal woningen"
+    ],
+    "definition_label": "woningvoorraad per 1 januari (measure D002936, Beginstand voorraad); alternate D002968 = stand per 31 december (Eindstand Voorraad)",
+    "table_id": "82235NED",
+    "geo": "national only, no provincie/gemeente breakdown",
+    "grains": "JJ only, 1921-2025 (tiny table, no KW/MM)",
+    "notable_limits": "Unit is '× 1000' — raw cell values must be multiplied by 1,000 to get actual dwelling counts (e.g. 8,204 means ~8.20M woningen). Series stitches a discontinued source (81955NED, 2012-2024) with a new one (86098NED, 2025+) — a ~50-unit discontinuity exists at the 2024/2025 boundary. Default measure is a 1-January stock figure (Assumption, open-questions #35) — the 31-December alternate exists but is not what bare 'woningvoorraad' resolves to."
+   },
+   {
+    "everyday_terms": [
+     "koopwoningprijs",
+     "huizenprijs",
+     "verkoopprijs woningen",
+     "huizenmarkt"
+    ],
+    "definition_label": "gemiddelde verkoopprijs van bestaande koopwoningen (measure M001534); alternate M001505_2 = prijsindex verkoopprijzen (market index, not composition-adjusted average)",
+    "table_id": "85773NED",
+    "geo": "national only — no provincie/gemeente breakdown, and definitely no wijk/buurt ('mijn buurt' is explicitly the canned refuse/clarify example, B16)",
+    "grains": "JJ, KW, and MM all loaded; monthly coverage jan 1995-mei 2026(ish); new monthly figures ~22 days after month-end",
+    "notable_limits": "This is the AVERAGE sale price, not composition-adjusted for the mix of homes sold — CBS's own official market gauge is the separate price index (M001505_2, the alternate), so phrasing must not imply this average tracks 'the market' 1:1. No regional breakdown exists in this table at all — any city/neighborhood house-price question must refuse or clarify to a national-only answer."
+   },
+   {
+    "everyday_terms": [
+     "faillissementen",
+     "faillissementencijfer"
+    ],
+    "definition_label": "faillissementen van bedrijven en instellingen (measure M001327, dim TypeGefailleerde=A047597 = businesses/institutions only, the canonical default); alternate T001243 = totaal rechtsvormen (incl. particuliere faillissementen/personal bankruptcies)",
+    "table_id": "82242NED",
+    "geo": "national only",
+    "grains": "JJ, KW, MM all loaded; monthly since 1981, true yearly totals (not a derived 12-month sum)",
+    "notable_limits": "Default excludes personal/private bankruptcies (particulieren) — only bedrijven en instellingen. A bare 'faillissementen' question resolving to the wrong total (e.g. asking for 'alle faillissementen incl particulieren') needs the alternate. JJ/KW/MM are true totals (sums), not averages."
+   },
+   {
+    "everyday_terms": [
+     "besteedbaar inkomen",
+     "huishoudinkomen"
+    ],
+    "definition_label": "gemiddeld besteedbaar inkomen van huishoudens (measure M003239, dim Inkomensbegrippen=A043966 = besteedbaar/disposable); alternates A043964 primair inkomen, A043965 bruto inkomen, A043967 gestandaardiseerd inkomen",
+    "table_id": "83932NED",
+    "geo": "national only in the loaded slice (dims KenmerkenVanHuishoudens=1050010 'alle particuliere huishoudens' and Inkomensklassen=T001226 'totaal' are pinned — no breakdown by household type, income bracket, or region is available)",
+    "grains": "JJ only, 2011-2024",
+    "notable_limits": "Unit is '× 1000 euro' (e.g. cell value 57.6 = €57,600). Income statistics have delayed finalization: 2023JJ00 was Definitief, 2024JJ00 was still Voorlopig at slice time — never assume the most recent year is final. Only the totaal-slice (all households, all income classes combined) was ingested; no breakdown by household composition or income bracket is queryable even though CBS publishes it."
+   },
+   {
+    "everyday_terms": [
+     "zonnestroom",
+     "zonne-energie",
+     "elektriciteit uit zonnepanelen",
+     "zonnepanelen"
+    ],
+    "definition_label": "bruto elektriciteitsproductie uit zonnestroom (measure M002264_1, dim BronTechniek=E006590 Zonnestroom)",
+    "table_id": "82610NED",
+    "geo": "national only",
+    "grains": "JJ only, 1990-2025",
+    "notable_limits": "Unit is mln kWh (a production total, not an average). Most recent year (2024JJ00 at slice time) was status NaderVoorlopig, not yet Definitief (expected ~Nov 2026) — R11 requires the answer to explicitly carry a 'voorlopig cijfer' marking for the latest year. This table covers production only — solar capacity/vermogen (a different measure, in a different table 85005NED) is NOT loaded."
+   }
+  ],
+  "answerable_examples": [
+   "Hoeveel inwoners had Nederland op 1 januari 2025? (03759ned, national, JJ 2025 — matches B1 exactly)",
+   "Hoeveel inwoners had de gemeente Utrecht op 1 januari 2024? (03759ned, gemeente-level, matches B2)",
+   "Vergelijk het aantal inwoners van Amsterdam en Rotterdam op 1 januari 2024. (03759ned, two gemeente cells, matches B10)",
+   "Wat was de inflatie in 2024? (86141NED, JJ, jaarmutatie CPI — matches B3/B4)",
+   "Wat is het werkloosheidspercentage in het laatste kwartaal van 2025? (85224NED, KW 2025KW04, seasonally-adjusted default — matches B5)",
+   "Hoeveel woningen stonden er begin 2024 in Nederland? (82235NED, national JJ, 1-januari stock — matches B6)",
+   "Wat was de gemiddelde verkoopprijs van bestaande koopwoningen in 2024? (85773NED, national JJ — matches B7/B8)",
+   "Hoeveel faillissementen van bedrijven waren er in 2025? (82242NED, national JJ, businesses-only default — matches B9)",
+   "Wat was het gemiddeld besteedbaar inkomen van huishoudens in 2023? (83932NED, national JJ, Definitief year — matches B12)",
+   "Hoeveel elektriciteit werd er in 2024 opgewekt uit zonnestroom? (82610NED, national JJ, though must carry a voorlopig-cijfer disclaimer)",
+   "Groeide de bevolking van Nederland in 2024, en met hoeveel? (03759ned, derived difference of two yearly cells — matches B13)",
+   "Welke van de G4-gemeenten had de meeste inwoners op 1 januari 2025? (03759ned, derived max over four cells — matches B14)"
+  ],
+  "just_out_of_reach": [
+   "Hoeveel inwoners had Nederland in 2018 (of eerder)? — before the 2019JJ00 slice floor; population data exists upstream at CBS but was not ingested for years <2019, should refuse on scope (not fabricate from unloaded years)",
+   "Hoeveel inwoners had Nederland per 1 juli 2024 (of enig ander niet-1-januari moment)? — only the 1-januari snapshot measure is loaded as default; mid-year population figures are not available",
+   "Wat is de werkloosheid in juni 2026 (een specifieke maand)? — 85224NED has no monthly grain at all, only KW and JJ; should refuse/redirect to quarterly",
+   "Wat is de gemiddelde huizenprijs in mijn buurt/wijk? — 85773NED is national-only, no sub-municipal or even provincial breakdown; canonical clarify/refuse case (B16)",
+   "Wat is de woningvoorraad van de provincie Utrecht (of enige gemeente)? — 82235NED is national-only, no regional dimension at all",
+   "Wat was het besteedbaar inkomen van eenpersoonshuishoudens (of enige andere huishoudensvorm/inkomensklasse)? — 83932NED slice pins totaal-huishoudens/totaal-inkomensklasse only; per-type or per-bracket breakdowns are not queryable even though CBS publishes them",
+   "Wat wordt de inflatie in 2027? — CBS publishes realized figures only, no forecasts; must refuse, not extrapolate (matches B18)",
+   "Wat is de inflatie voor woninghuur specifiek (of een andere bestedingscategorie)? — only the 'Alle bestedingen' (T001112) coordinate was set as default; other CPI sub-categories are not part of the registered default though they may exist in the raw table",
+   "Hoeveel faillissementen van particulieren (natuurlijke personen) waren er in 2025? — default measure excludes particulieren; the totaal-alternate exists but is not what a bare question resolves to, so this should surface the alternate/ask rather than silently answer businesses-only",
+   "Wat is de solar-capaciteit (vermogen, niet productie) in 2025? — 82610NED holds production (bruto elektriciteitsproductie) only; capacity/vermogen is a different table (85005NED) not loaded"
+  ],
+  "genuinely_absent_topics": [
+   "bijstand / sociale uitkeringen (welfare/benefits) — explicitly the canned clarify example B15, no table loaded",
+   "asielzoekers / migratie / immigratie statistics — explicitly the canned refuse example B17/B19, no table loaded",
+   "criminaliteit / veiligheid (crime statistics) — canned refuse example B19, not loaded",
+   "onderwijs (education: school enrollment, exam results, diploma stats)",
+   "zorg / gezondheid (healthcare: life expectancy, hospital admissions, disease prevalence)",
+   "arbeidsmarkt beyond the single seasonally-adjusted unemployment rate — no wages/lonen, no vacatures (job vacancies), no arbeidsparticipatie breakdowns by sex/age/sector",
+   "klimaat / broeikasgassen / CO2-uitstoot (emissions, beyond the narrow solar-electricity-production slice)",
+   "energie beyond solar production — no gas (aardgas), no total electricity mix, no energy prices",
+   "verkeer / mobiliteit (traffic, transport statistics)",
+   "toerisme (tourism, overnight stays)",
+   "bedrijvigheid / ondernemingen counts beyond bankruptcies (no general business-formation or business-count statistics)",
+   "regionale kerncijfers broadly (the 325-column 70072NED was explicitly rejected for Phase 0)",
+   "population breakdowns by sex, age, marital status, or origin/migration background (only the totaal/totaal/totaal slice of 03759ned is loaded; a dedicated origin table 85458NED was considered and rejected)",
+   "sub-municipal geography (wijk/buurt) for any topic — out of scope entirely, not just for house prices",
+   "any monthly unemployment series",
+   "verkiezingen / politiek (elections)"
+  ]
+ },
+ "count": 110,
+ "questions": [
+  {
+   "id": "A001",
+   "segment": "core-simple",
+   "persona": "curious-citizen",
+   "probes": "phrasing-trust, coverage-wall",
+   "question": "Hoeveel inwoners heeft Nederland op dit moment?",
+   "followup": null,
+   "good_outcome": "A clean answer using the latest loaded 1-januari year (2026 if ingested, else 2025), clearly stating it's a 1-januari snapshot and which date it refers to — not a live/real-time count. Should not refuse just because 'dit moment' is vague; should interpret it as 'most recent available' and say so.",
+   "answerable_today": "yes"
+  },
+  {
+   "id": "A002",
+   "segment": "core-simple",
+   "persona": "researcher",
+   "probes": "phrasing-trust, needless-clarify",
+   "question": "Wat is het inwonertal van Rotterdam per 1 januari 2025?",
+   "followup": null,
+   "good_outcome": "A clean gemeente-level answer for Rotterdam, 2025, with source (03759ned) and date shown. No clarification needed since gemeente + exact date are both given.",
+   "answerable_today": "yes"
+  },
+  {
+   "id": "A003",
+   "segment": "core-simple",
+   "persona": "curious-citizen",
+   "probes": "phrasing-trust, parse-robustness",
+   "question": "hoeveel procent inflatie hadden we vorig jaar",
+   "followup": null,
+   "good_outcome": "A clean answer for 2025 jaarmutatie CPI (relative to today 2026-07-05, 'vorig jaar' = 2025), phrased back casually, sourced to 86141NED. Should correctly resolve the relative year without asking the user to restate it as an absolute year.",
+   "answerable_today": "yes"
+  },
+  {
+   "id": "A004",
+   "segment": "core-simple",
+   "persona": "journalist-on-deadline",
+   "probes": "phrasing-trust, parse-robustness",
+   "question": "Wat was de inflatie in Nederland in 2024, even voor een artikel dat ik aan het schrijven ben?",
+   "followup": null,
+   "good_outcome": "A clean, quotable answer: the 2024 jaarmutatie CPI figure with source/date, ignoring the conversational aside about the article rather than treating it as something needing clarification.",
+   "answerable_today": "yes"
+  },
+  {
+   "id": "A005",
+   "segment": "core-simple",
+   "persona": "journalist-on-deadline",
+   "probes": "phrasing-trust, coverage-wall",
+   "question": "Wat was het werkloosheidspercentage in het laatste kwartaal van 2025?",
+   "followup": null,
+   "good_outcome": "A clean answer for 2025KW04, seasonally adjusted (the default), with a brief note that this is the seasonally-adjusted figure. Matches canned example B5 almost verbatim, so this should be a clean instant answer.",
+   "answerable_today": "yes"
+  },
+  {
+   "id": "A006",
+   "segment": "core-simple",
+   "persona": "curious-citizen",
+   "probes": "phrasing-trust, follow-up-memory",
+   "question": "Is de werkloosheid nu hoger of lager dan het kwartaal ervoor?",
+   "followup": "En hoe was dat vergeleken met een jaar eerder?",
+   "good_outcome": "A clean derived comparison between the two most recent loaded quarters (e.g. 2026KW01 vs 2025KW04), stating both figures and the direction of change, sourced and dated. Should not refuse merely because no explicit period was named — 'nu' should resolve to the latest available quarter.",
+   "answerable_today": "yes"
+  },
+  {
+   "id": "A007",
+   "segment": "core-simple",
+   "persona": "researcher",
+   "probes": "phrasing-trust, needless-clarify",
+   "question": "Hoeveel woningen stonden er begin 2024 in Nederland?",
+   "followup": null,
+   "good_outcome": "A clean national-level answer for 1-januari-2024 dwelling stock, with the unit correctly converted from '×1000' to an actual count (e.g. 'ruim 8,2 miljoen woningen'), sourced to 82235NED. Matches canned example B6, so should be clean with no clarification.",
+   "answerable_today": "yes"
+  },
+  {
+   "id": "A008",
+   "segment": "core-simple",
+   "persona": "curious-citizen",
+   "probes": "phrasing-trust, coverage-wall",
+   "question": "wat kost een huis gemiddeld in nederland op dit moment",
+   "followup": null,
+   "good_outcome": "A clean answer using the latest loaded month or quarter of the average sale price (85773NED), clearly stating this is the average (not composition-adjusted) sale price and the period it covers, so the user isn't misled into thinking it's a live market index or 'the' house price.",
+   "answerable_today": "yes"
+  },
+  {
+   "id": "A009",
+   "segment": "core-simple",
+   "persona": "researcher",
+   "probes": "phrasing-trust, needless-clarify",
+   "question": "Wat was de gemiddelde verkoopprijs van een koopwoning in het derde kwartaal van 2024?",
+   "followup": null,
+   "good_outcome": "A clean quarterly answer (2024KW03) from 85773NED, national level, with source and date — no clarification needed since the quarter is stated explicitly.",
+   "answerable_today": "yes"
+  },
+  {
+   "id": "A010",
+   "segment": "core-simple",
+   "persona": "journalist-on-deadline",
+   "probes": "phrasing-trust, coverage-wall",
+   "question": "Hoeveel bedrijven zijn er in 2025 failliet gegaan?",
+   "followup": null,
+   "good_outcome": "A clean answer for 2025 total business bankruptcies (82242NED, businesses/institutions default, excluding particulieren), with a brief clarifying note that this excludes personal bankruptcies so the journalist doesn't misquote it as 'all faillissementen'.",
+   "answerable_today": "yes"
+  },
+  {
+   "id": "A011",
+   "segment": "core-simple",
+   "persona": "researcher",
+   "probes": "phrasing-trust, needless-clarify",
+   "question": "Wat was het gemiddeld besteedbaar inkomen van huishoudens in 2023?",
+   "followup": null,
+   "good_outcome": "A clean answer for 2023 (Definitief at slice time), stated in real euros (converted from the raw ×1000 unit), sourced to 83932NED. Matches canned example B12 — should be a clean instant answer with no clarification needed.",
+   "answerable_today": "yes"
+  },
+  {
+   "id": "A012",
+   "segment": "core-simple",
+   "persona": "curious-citizen",
+   "probes": "phrasing-trust, coverage-wall",
+   "question": "Hoeveel zonne-energie werd er vorig jaar opgewekt in Nederland?",
+   "followup": null,
+   "good_outcome": "A clean answer resolving 'vorig jaar' to 2025 if loaded, otherwise falling back to the latest available year (2024) with an explicit statement of which year is being reported and a 'voorlopig cijfer' disclaimer since the latest year's status is not yet Definitief. Should not silently substitute years without flagging it.",
+   "answerable_today": "edge"
+  },
+  {
+   "id": "A013",
+   "segment": "messy-phrasing",
+   "persona": "curious-citizen",
+   "probes": "parse-robustness (abbreviated city name 'R'dam', colloquial contraction 'd'r', casual filler)",
+   "question": "hoeveel mensen wonen d'r nou eigenlijk in R'dam? even snel checken",
+   "followup": null,
+   "good_outcome": "Clean answer: bevolking Rotterdam op 1 januari (meest recente jaar), with the snapshot-date caveat, sourced to 03759ned — the system correctly resolves 'R'dam' to gemeente Rotterdam.",
+   "answerable_today": "yes"
+  },
+  {
+   "id": "A014",
+   "segment": "messy-phrasing",
+   "persona": "journalist-on-deadline",
+   "probes": "parse-robustness (very terse, 'ff' textspeak, vague 'dit jaar' needs current-year resolution), coverage-wall if current year incomplete",
+   "question": "die inflatie ff checken, wat was die ook alweer dit jaar",
+   "followup": null,
+   "good_outcome": "Since 2026 has no full-year jaarmutatie yet, a good answer clarifies it's giving the latest available month's jaarmutatie (or asks which period) rather than silently guessing what 'dit jaar' means.",
+   "answerable_today": "edge"
+  },
+  {
+   "id": "A015",
+   "segment": "messy-phrasing",
+   "persona": "curious-citizen",
+   "probes": "phrasing-trust (verbose, run-on, references a vague external claim), needless-clarify risk",
+   "question": "wat kost een huis gemiddeld nu voor in nl, heb ergens gelezen dat het weer duurder wordt",
+   "followup": null,
+   "good_outcome": "Clean answer: latest available gemiddelde verkoopprijs bestaande koopwoningen (national, most recent month/quarter/year), sourced with date — should not get distracted by the 'heb ergens gelezen dat' aside or ask unneeded clarifying questions.",
+   "answerable_today": "yes"
+  },
+  {
+   "id": "A016",
+   "segment": "messy-phrasing",
+   "persona": "curious-citizen",
+   "probes": "parse-robustness ('ofzo' hedge, casual 'weet je dat toevallig' framing, 'vorig jaar' relative-date resolution)",
+   "question": "hoeveel bedrijven gingen er nou failliet vorig jaar ofzo, weet je dat toevallig",
+   "followup": null,
+   "good_outcome": "Clean answer resolving 'vorig jaar' to 2025 (given today's date 2026-07-05), giving the businesses-only faillissementen total for 2025 with source, ideally noting the businesses-only scope.",
+   "answerable_today": "yes"
+  },
+  {
+   "id": "A017",
+   "segment": "messy-phrasing",
+   "persona": "researcher",
+   "probes": "coverage-wall (asks for a specific month; only KW/JJ grain exists), graceful-refusal",
+   "question": "werkloosheid in juni ongeveer, hoe zit dat precies",
+   "followup": null,
+   "good_outcome": "Honest refusal/redirect: explain no monthly unemployment series is loaded, offer the quarterly figure (e.g. 2026KW01 or KW02 once available) as the closest available alternative instead of silently fabricating or rounding a monthly number.",
+   "answerable_today": "no"
+  },
+  {
+   "id": "A018",
+   "segment": "messy-phrasing",
+   "persona": "curious-citizen",
+   "probes": "parse-robustness (colloquial 'gezinnen' for huishoudens, 'vorig jaar' resolves to 2024 which was still Voorlopig), phrasing-trust",
+   "question": "wat was het inkomen van gezinnen vorig jaar gemiddeld, in duizenden euro's ofzo",
+   "followup": null,
+   "good_outcome": "Clean answer: gemiddeld besteedbaar inkomen huishoudens 2024, explicitly marked as voorlopig cijfer (not yet definitief) — must not present it as final.",
+   "answerable_today": "yes"
+  },
+  {
+   "id": "A019",
+   "segment": "messy-phrasing",
+   "persona": "curious-citizen",
+   "probes": "parse-robustness (shorthand 'vs', gamified 'wie wint' framing needing translation to 'which has more'), follow-up-memory setup",
+   "question": "amsterdam vs rotterdam qua inwoners, wie wint dit jaar",
+   "followup": null,
+   "good_outcome": "Clean derived comparison answer using the most recent 1-januari figures for both gemeentes, correctly interpreting 'wie wint' as 'which city has more inhabitants', with source and date.",
+   "answerable_today": "yes"
+  },
+  {
+   "id": "A020",
+   "segment": "messy-phrasing",
+   "persona": "claim-debunker",
+   "probes": "parse-robustness (skeptical/debunking tone, vague 'dat nou echt zoveel' referencing an unstated claim, 'laatst' = most recent year)",
+   "question": "zonnepanelen leverden dat nou echt zoveel stroom op laatst, heb je daar cijfers over",
+   "followup": null,
+   "good_outcome": "Clean answer: bruto elektriciteitsproductie uit zonnestroom for the most recent available year, explicitly flagged as (nader)voorlopig since the latest year isn't Definitief yet — should not treat 'echt zoveel' as needing a value judgment, just supply the number with context.",
+   "answerable_today": "yes"
+  },
+  {
+   "id": "A021",
+   "segment": "messy-phrasing",
+   "persona": "researcher",
+   "probes": "parse-robustness (dialect/informal 'dees jaar', implicit year-over-year framing that maps directly onto jaarmutatie CPI), coverage-wall if 2026 full year isn't done yet",
+   "question": "hoeveel procent duurder is alles geworden dees jaar tov vorig jaar",
+   "followup": null,
+   "good_outcome": "If asking about full-year 2026 vs 2025, a good answer clarifies that 2026 isn't complete yet and offers the latest available monthly jaarmutatie (e.g. 2026MM04 definitief) as the closest real figure, rather than fabricating a full-year 2026 number.",
+   "answerable_today": "edge"
+  },
+  {
+   "id": "A022",
+   "segment": "messy-phrasing",
+   "persona": "researcher",
+   "probes": "parse-robustness ('laatste stand die je hebt' = ask for most recent data point, needs unit conversion awareness for ×1000), phrasing-trust",
+   "question": "voorraad woningen in nl, laatste stand die je hebt, hoeveel is dat precies",
+   "followup": null,
+   "good_outcome": "Clean answer with the most recent 1-januari woningvoorraad figure, correctly converted from the ×1000 unit to an actual dwelling count (e.g. 'ongeveer 8,2 miljoen woningen'), with source/date.",
+   "answerable_today": "yes"
+  },
+  {
+   "id": "A023",
+   "segment": "messy-phrasing",
+   "persona": "curious-citizen",
+   "probes": "parse-robustness (self-correcting parenthetical disambiguating gemeente vs provincie, 'ongeveer nu' relative-recency)",
+   "question": "utrecht (de stad hè, niet de provincie) hoeveel inwoners ongeveer nu",
+   "followup": null,
+   "good_outcome": "Clean answer: gemeente Utrecht (not provincie Utrecht) bevolking op 1 januari of the most recent available year, correctly honoring the explicit gemeente/provincie disambiguation the user already gave.",
+   "answerable_today": "yes"
+  },
+  {
+   "id": "A024",
+   "segment": "messy-phrasing",
+   "persona": "journalist-on-deadline",
+   "probes": "graceful-refusal (asks for a forecast, garbled/uncertain phrasing 'te wezen', self-doubting tail 'of hebben ze dat nog niet' already hints at the right answer)",
+   "question": "wat zat er nou ook alweer voor inflatie te wezen volgend jaar volgens het cbs, of hebben ze dat nog niet",
+   "followup": null,
+   "good_outcome": "Honest refusal: CBS publishes realized/historical inflation figures only, not forecasts for future years — should confirm the user's own hedge ('hebben ze dat nog niet') rather than inventing a projected number.",
+   "answerable_today": "no"
+  },
+  {
+   "id": "A025",
+   "segment": "region-default",
+   "persona": "curious-citizen",
+   "probes": "coverage-wall, phrasing-trust",
+   "question": "Hoeveel woningen zijn er in Nederland?",
+   "followup": null,
+   "good_outcome": "A clean national answer from 82235NED (woningvoorraad per 1 januari, most recent year, unit x1000 note applied) with source/date shown. No region was asked so none should be demanded back; this is a baseline control for the segment since 'Nederland' is already explicit.",
+   "answerable_today": "yes"
+  },
+  {
+   "id": "A026",
+   "segment": "region-default",
+   "persona": "curious-citizen",
+   "probes": "coverage-wall, needless-clarify",
+   "question": "wat is de werkloosheid nu?",
+   "followup": null,
+   "good_outcome": "A clean national answer: latest available quarter (seasonally adjusted, the default), clearly labeled as national since 85224NED has no regional breakdown anyway. Should not ask 'which region' since none exists, and should not ask 'which month' since only KW/JJ exist.",
+   "answerable_today": "yes"
+  },
+  {
+   "id": "A027",
+   "segment": "region-default",
+   "persona": "curious-citizen",
+   "probes": "region-default, needless-clarify",
+   "question": "hoeveel inwoners heeft nederland",
+   "followup": null,
+   "good_outcome": "A clean national answer for the latest 1-januari year in 03759ned. Since this is one of the few measures where regional breakdowns DO exist (province/gemeente), a good experience could optionally mention that provincie/gemeente figures are available too, but must not withhold or force a clarification before answering nationally.",
+   "answerable_today": "yes"
+  },
+  {
+   "id": "A028",
+   "segment": "region-default",
+   "persona": "journalist-on-deadline",
+   "probes": "region-default, phrasing-trust",
+   "question": "Wat is de gemiddelde verkoopprijs van een huis?",
+   "followup": null,
+   "good_outcome": "A clean national answer from 85773NED (most recent year/quarter available) explicitly labeled 'landelijk gemiddelde' since this table has no regional breakdown at all. Should proactively flag that no city/regional figure exists rather than waiting for the user to ask and hit a wall later.",
+   "answerable_today": "yes"
+  },
+  {
+   "id": "A029",
+   "segment": "region-default",
+   "persona": "researcher",
+   "probes": "region-default, needless-clarify",
+   "question": "Hoeveel faillissementen waren er?",
+   "followup": null,
+   "good_outcome": "A clean national answer (82242NED, businesses/institutions default, most recent full year) with the period made explicit since none was given. Should not ask for a region since faillissementen data is national-only, but SHOULD clarify or state the assumed period and the businesses-only scope.",
+   "answerable_today": "edge"
+  },
+  {
+   "id": "A030",
+   "segment": "region-default",
+   "persona": "curious-citizen",
+   "probes": "region-default, phrasing-trust",
+   "question": "wat is het besteedbaar inkomen van een huishouden",
+   "followup": null,
+   "good_outcome": "A clean national answer from 83932NED (most recent Definitief year, e.g. 2023), labeled as the national average across all households. No region exists to ask about, and should flag that it's an average, not 'a household's' individual figure.",
+   "answerable_today": "yes"
+  },
+  {
+   "id": "A031",
+   "segment": "region-default",
+   "persona": "curious-citizen",
+   "probes": "region-default, coverage-wall",
+   "question": "hoeveel elektriciteit komt er uit zonnepanelen",
+   "followup": null,
+   "good_outcome": "A clean national answer from 82610NED (most recent year, with the required voorlopig-cijfer disclaimer if latest year isn't Definitief yet). No region exists in this table so none should be requested.",
+   "answerable_today": "yes"
+  },
+  {
+   "id": "A032",
+   "segment": "region-default",
+   "persona": "claim-debunker",
+   "probes": "region-default, phrasing-trust",
+   "question": "Is de inflatie nu hoog of laag?",
+   "followup": null,
+   "good_outcome": "A clean national answer citing the latest jaarmutatie CPI figure (with month/quarter and Definitief/Voorlopig status), avoiding a subjective 'hoog/laag' verdict but giving the number and maybe historical comparison. Inflation is inherently national so no region question should arise.",
+   "answerable_today": "yes"
+  },
+  {
+   "id": "A033",
+   "segment": "region-default",
+   "persona": "researcher",
+   "probes": "coverage-wall, graceful-refusal",
+   "question": "hoeveel woningen zijn er in nederland per provincie",
+   "followup": null,
+   "good_outcome": "An honest refusal: 82235NED (woningvoorraad) has no provincial breakdown at all, unlike population. The answer should clarify that only a national total is available and not silently return the national figure as if it answered the provincial ask, nor fabricate a provincial split.",
+   "answerable_today": "no"
+  },
+  {
+   "id": "A034",
+   "segment": "region-default",
+   "persona": "journalist-on-deadline",
+   "probes": "coverage-wall, graceful-refusal",
+   "question": "wat is de werkloosheid per provincie",
+   "followup": null,
+   "good_outcome": "An honest refusal explaining 85224NED is national-only (no regional dimension exists), pointing to what IS available (national seasonally-adjusted rate by quarter) rather than silently substituting the national figure for the requested provincial breakdown.",
+   "answerable_today": "no"
+  },
+  {
+   "id": "A035",
+   "segment": "region-default",
+   "persona": "researcher",
+   "probes": "coverage-wall, graceful-refusal",
+   "question": "huizenprijzen per provincie graag",
+   "followup": null,
+   "good_outcome": "An honest refusal/clarification: 85773NED has no regional breakdown whatsoever (matches canned case B16), so the response should say clearly that only a national average exists and offer that instead of quietly answering with the national number unlabeled.",
+   "answerable_today": "no"
+  },
+  {
+   "id": "A036",
+   "segment": "region-default",
+   "persona": "journalist-on-deadline",
+   "probes": "coverage-wall, graceful-refusal",
+   "question": "Hoeveel faillissementen waren er in de provincie Noord-Holland?",
+   "followup": null,
+   "good_outcome": "An honest refusal stating 82242NED carries national figures only, no provincial/gemeente breakdown is loaded, rather than returning the national total as if it were Noord-Holland-specific.",
+   "answerable_today": "no"
+  },
+  {
+   "id": "A037",
+   "segment": "edge-of-coverage",
+   "persona": "researcher",
+   "probes": "coverage-wall, graceful-refusal-with-window",
+   "question": "Hoeveel inwoners had Amsterdam in 2010?",
+   "followup": null,
+   "good_outcome": "An honest refusal explaining that gemeente-level population data is only loaded from 2019 onward, with an offer to answer for Amsterdam from 2019JJ00 onward or point out where pre-2019 CBS figures could be sourced directly.",
+   "answerable_today": "no"
+  },
+  {
+   "id": "A038",
+   "segment": "edge-of-coverage",
+   "persona": "curious-citizen",
+   "probes": "coverage-wall, phrasing-trust",
+   "question": "Wat was het inwoneraantal van Rotterdam in 2015?",
+   "followup": null,
+   "good_outcome": "Refuse cleanly on the pre-2019 floor, state the earliest available year (2019) is servable, and ask if the user wants that instead rather than silently substituting a different year.",
+   "answerable_today": "no"
+  },
+  {
+   "id": "A039",
+   "segment": "edge-of-coverage",
+   "persona": "journalist-on-deadline",
+   "probes": "coverage-wall, grain-mismatch-refusal",
+   "question": "Kun je de inflatie per week voor me opzoeken van de afgelopen maand?",
+   "followup": null,
+   "good_outcome": "Refuse weekly inflation outright (CBS/CPI has no weekly grain at all, not even upstream) and offer the finest available grain, monthly, for the requested period instead of guessing or interpolating.",
+   "answerable_today": "no"
+  },
+  {
+   "id": "A040",
+   "segment": "edge-of-coverage",
+   "persona": "journalist-on-deadline",
+   "probes": "coverage-wall, grain-mismatch-refusal",
+   "question": "Wat is de dagelijkse werkloosheid deze week?",
+   "followup": null,
+   "good_outcome": "Refuse a daily/weekly unemployment figure (does not exist even at CBS), explain the finest loaded grain is quarterly, and offer the latest quarter's seasonally-adjusted rate instead.",
+   "answerable_today": "no"
+  },
+  {
+   "id": "A041",
+   "segment": "edge-of-coverage",
+   "persona": "researcher",
+   "probes": "coverage-wall, follow-up-memory, needless-clarify",
+   "question": "Sinds wanneer heeft Almere eigenlijk inwonersdata bij jullie? Kan ik ook 2005 opvragen?",
+   "followup": "Oke, geef me dan het inwonertal van Almere voor 2019 en 2024.",
+   "good_outcome": "State plainly that the loaded slice starts at 2019JJ00 for all gemeenten including Almere, so 2005 is not available, and offer 2019 as the earliest servable year without needing further clarification about which gemeente.",
+   "answerable_today": "edge"
+  },
+  {
+   "id": "A042",
+   "segment": "edge-of-coverage",
+   "persona": "curious-citizen",
+   "probes": "coverage-wall, regional-scope-refusal",
+   "question": "Hoeveel woningen waren er in gemeente Utrecht in 2020?",
+   "followup": null,
+   "good_outcome": "Refuse because the woningvoorraad table (82235NED) is national-only with no gemeente/provincie breakdown at all — clarify that only a Netherlands-wide figure for 2020 can be given, not a per-gemeente one, regardless of year.",
+   "answerable_today": "no"
+  },
+  {
+   "id": "A043",
+   "segment": "edge-of-coverage",
+   "persona": "journalist-on-deadline",
+   "probes": "coverage-wall, regional-scope-refusal",
+   "question": "Wat was de gemiddelde huizenprijs in Den Haag in 2022?",
+   "followup": null,
+   "good_outcome": "Refuse the city-level breakdown (85773NED has no regional dimension whatsoever) and offer the national average sale price for 2022 as the closest servable alternative, framed clearly as national not local.",
+   "answerable_today": "no"
+  },
+  {
+   "id": "A044",
+   "segment": "edge-of-coverage",
+   "persona": "researcher",
+   "probes": "coverage-wall, false-positive-check",
+   "question": "Hoeveel faillissementen waren er in 2010 in Nederland?",
+   "followup": null,
+   "good_outcome": "This is actually within the loaded window (faillissementen monthly data goes back to 1981) — a clean answer with the businesses-only default clarified, since a naive audit might assume 2010 is 'too old' by analogy to population data but it isn't for this table.",
+   "answerable_today": "yes"
+  },
+  {
+   "id": "A045",
+   "segment": "edge-of-coverage",
+   "persona": "researcher",
+   "probes": "coverage-wall, graceful-refusal-with-window",
+   "question": "Wat was het besteedbaar inkomen van huishoudens in 2008?",
+   "followup": null,
+   "good_outcome": "Refuse cleanly since the income table (83932NED) only starts at 2011, and state 2011 as the earliest servable year rather than silently answering with an unavailable figure or vague non-answer.",
+   "answerable_today": "no"
+  },
+  {
+   "id": "A046",
+   "segment": "edge-of-coverage",
+   "persona": "curious-citizen",
+   "probes": "coverage-wall, graceful-refusal-with-window",
+   "question": "Hoeveel zonnestroom werd er opgewekt in 1985?",
+   "followup": null,
+   "good_outcome": "Refuse since the solar production table (82610NED) only starts at 1990, and offer 1990 as the earliest available year instead of leaving the user with just a flat 'no'.",
+   "answerable_today": "no"
+  },
+  {
+   "id": "A047",
+   "segment": "edge-of-coverage",
+   "persona": "researcher",
+   "probes": "coverage-wall, edge-boundary-precision",
+   "question": "Kan ik de werkloosheid van 2012 krijgen, per kwartaal?",
+   "followup": null,
+   "good_outcome": "Refuse just outside the loaded window since the unemployment table (85224NED) starts at 2013, clarify 2013 is the earliest quarter available, and ask if that's acceptable instead of fabricating 2012 figures.",
+   "answerable_today": "no"
+  },
+  {
+   "id": "A048",
+   "segment": "edge-of-coverage",
+   "persona": "claim-debunker",
+   "probes": "coverage-wall, graceful-refusal-with-window",
+   "question": "Wat was de CPI-inflatie in december 2008?",
+   "followup": null,
+   "good_outcome": "Refuse since the loaded monthly CPI series (86141NED) only starts December 2009, point to the discontinued predecessor table (83131NED) as the reason it isn't loaded, and offer the earliest servable month instead of silently answering from a wrong source.",
+   "answerable_today": "no"
+  },
+  {
+   "id": "A049",
+   "segment": "followup-chains",
+   "persona": "curious-citizen",
+   "probes": "follow-up-memory: does it recall the topic (bevolking) and default measure so 'en Utrecht' resolves geo, not measure",
+   "question": "Hoeveel inwoners had Nederland op 1 januari 2025?",
+   "followup": "En hoeveel in Utrecht?",
+   "good_outcome": "A clean answer: national population on 1 January 2025 from 03759ned with source/date shown.",
+   "answerable_today": "yes"
+  },
+  {
+   "id": "A050",
+   "segment": "followup-chains",
+   "persona": "journalist-on-deadline",
+   "probes": "follow-up-memory: bare 'en 2020?' must be understood as still-inflation, still-yearly, just swap the year",
+   "question": "Wat was de inflatie in 2023?",
+   "followup": "En in 2020?",
+   "good_outcome": "Clean answer: 2023 jaarmutatie CPI (86141NED, JJ) with source/date.",
+   "answerable_today": "yes"
+  },
+  {
+   "id": "A051",
+   "segment": "followup-chains",
+   "persona": "researcher",
+   "probes": "follow-up-memory: 'per maand' should trigger a scope-aware refusal referencing the earlier quarterly answer, not a fabricated monthly number",
+   "question": "Wat is het werkloosheidspercentage in het laatste kwartaal van 2025?",
+   "followup": "Heb je dat ook per maand?",
+   "good_outcome": "First turn: clean quarterly answer (85224NED, 2025KW04, seasonally adjusted). Second turn: honest refusal explaining no monthly grain exists for this measure, offering the quarterly/yearly alternative already given.",
+   "answerable_today": "yes"
+  },
+  {
+   "id": "A052",
+   "segment": "followup-chains",
+   "persona": "journalist-on-deadline",
+   "probes": "follow-up-memory: chart-generation request referencing 'dat' (the prior series) — tests whether it can turn the same answered fact into a time series/chart or must clarify scope",
+   "question": "Wat was de gemiddelde verkoopprijs van bestaande koopwoningen in 2024?",
+   "followup": "Zet dat in een grafiek.",
+   "good_outcome": "First turn: clean national JJ 2024 answer (85773NED). Second turn: either a chart of the yearly/monthly series it already has loaded, or a clear clarification about what time range/grain to chart — not a fabricated or unrelated chart.",
+   "answerable_today": "yes"
+  },
+  {
+   "id": "A053",
+   "segment": "followup-chains",
+   "persona": "journalist-on-deadline",
+   "probes": "follow-up-memory: 'en particulieren' tests whether it remembers the prior default (bedrijven-only) and correctly flags the alternate measure rather than conflating totals",
+   "question": "Hoeveel faillissementen van bedrijven waren er in 2025?",
+   "followup": "En hoeveel faillissementen van particulieren?",
+   "good_outcome": "First turn: clean answer (82242NED, JJ 2025, bedrijven en instellingen). Second turn: clarification that personal/particuliere bankruptcies are a different measure (totaal rechtsvormen alternate) it can look up separately, not a silent reuse of the first number.",
+   "answerable_today": "yes"
+  },
+  {
+   "id": "A054",
+   "segment": "followup-chains",
+   "persona": "researcher",
+   "probes": "follow-up-memory: 'en de provincies' after a national derived-difference answer tests whether it can re-run the same derived computation at provincie grain using memory of the metric and years involved",
+   "question": "Groeide de bevolking van Nederland in 2024, en met hoeveel?",
+   "followup": "En per provincie?",
+   "good_outcome": "First turn: clean derived difference between 2024 and 2025 1-January population cells (03759ned). Second turn: either a clean per-provincie growth breakdown reusing the same method, or a clarification asking which provincies/how many to list.",
+   "answerable_today": "yes"
+  },
+  {
+   "id": "A055",
+   "segment": "followup-chains",
+   "persona": "curious-citizen",
+   "probes": "follow-up-memory: after a refusal, does 'en voor heel Nederland dan' correctly pivot to the answerable national figure instead of repeating the refusal or hallucinating a neighborhood number",
+   "question": "Wat is de gemiddelde huizenprijs in mijn buurt?",
+   "followup": "En voor heel Nederland dan?",
+   "good_outcome": "First turn: honest refusal — 85773NED is national-only, no wijk/buurt or even provincie breakdown exists. Second turn: clean national JJ answer once the user narrows scope.",
+   "answerable_today": "edge"
+  },
+  {
+   "id": "A056",
+   "segment": "followup-chains",
+   "persona": "researcher",
+   "probes": "follow-up-memory: 'en van eenpersoonshuishoudens' tests whether it remembers the 2023/totaal-context and correctly explains that this breakdown isn't in the ingested slice, rather than guessing a plausible-sounding lower figure",
+   "question": "Wat was het gemiddeld besteedbaar inkomen van huishoudens in 2023?",
+   "followup": "En van eenpersoonshuishoudens?",
+   "good_outcome": "First turn: clean answer (83932NED, JJ 2023, Definitief, totaal huishoudens). Second turn: honest refusal explaining only the all-households totaal slice is loaded, no breakdown by household type is queryable.",
+   "answerable_today": "yes"
+  },
+  {
+   "id": "A057",
+   "segment": "followup-chains",
+   "persona": "claim-debunker",
+   "probes": "follow-up-memory: 'en het jaar daarvoor' requires remembering the metric (zonnestroom productie) and shifting the year by one, plus consistently carrying the voorlopig-cijfer caveat if relevant",
+   "question": "Hoeveel elektriciteit werd er in 2024 opgewekt uit zonnestroom?",
+   "followup": "En het jaar daarvoor?",
+   "good_outcome": "First turn: clean answer with a voorlopig-cijfer caveat for 2024 (82610NED, JJ). Second turn: clean answer for 2023 (likely Definitief), correctly reusing the same measure/table without re-asking basic clarifying questions.",
+   "answerable_today": "yes"
+  },
+  {
+   "id": "A058",
+   "segment": "followup-chains",
+   "persona": "journalist-on-deadline",
+   "probes": "follow-up-memory: 'en op een rijtje van hoog naar laag' tests whether it can reuse the four already-fetched cells to produce a ranked list instead of re-deriving or dropping context",
+   "question": "Welke van de G4-gemeenten had de meeste inwoners op 1 januari 2025?",
+   "followup": "Zet ze even op een rijtje van hoog naar laag.",
+   "good_outcome": "First turn: clean answer naming the largest G4 city with its population figure (03759ned). Second turn: a clean ranked list of all four G4 cities reusing the same already-fetched data, sourced and dated.",
+   "answerable_today": "yes"
+  },
+  {
+   "id": "A059",
+   "segment": "comparisons-rankings",
+   "persona": "researcher",
+   "probes": "multi-region comparison path, three gemeente cells in one query",
+   "question": "Vergelijk het aantal inwoners van Utrecht, Groningen en Maastricht op 1 januari 2025.",
+   "followup": null,
+   "good_outcome": "A clean answer showing all three gemeente population figures for 2025JJ00 side by side, each with source/date, since all three are ordinary gemeente-level cells in the loaded 03759ned slice.",
+   "answerable_today": "yes"
+  },
+  {
+   "id": "A060",
+   "segment": "comparisons-rankings",
+   "persona": "curious-citizen",
+   "probes": "superlative/max over provincie-level cells, plus 'dit moment' phrasing needing a clarify-to-latest-year",
+   "question": "Welke provincie heeft de meeste inwoners op dit moment?",
+   "followup": null,
+   "good_outcome": "A clean ranking answer over all provincie cells for the latest loaded year (1 januari 2025 or 2026 if present), naming the top province with its figure and explicitly stating the reference date since 'dit moment' isn't a real-time figure.",
+   "answerable_today": "yes"
+  },
+  {
+   "id": "A061",
+   "segment": "comparisons-rankings",
+   "persona": "journalist-on-deadline",
+   "probes": "period-peak / max over 12 monthly cells within a year",
+   "question": "In welke maand van 2024 was de inflatie het hoogst?",
+   "followup": null,
+   "good_outcome": "A clean answer naming the peak month and its jaarmutatie percentage, derived by comparing all 12 monthly 2024 cells in 86141NED, with source and status (Definitief/Voorlopig) shown.",
+   "answerable_today": "yes"
+  },
+  {
+   "id": "A062",
+   "segment": "comparisons-rankings",
+   "persona": "journalist-on-deadline",
+   "probes": "known regional-breakdown gap for house prices, dressed as a comparison request",
+   "question": "Vergelijk de gemiddelde koopwoningprijs in Utrecht, Groningen en Limburg met elkaar.",
+   "followup": null,
+   "good_outcome": "An honest refusal/clarification explaining that 85773NED only has a national average sale price with no provincial or municipal breakdown, so this specific regional comparison cannot be made — pointing to the national figure as the only available alternative.",
+   "answerable_today": "no"
+  },
+  {
+   "id": "A063",
+   "segment": "comparisons-rankings",
+   "persona": "researcher",
+   "probes": "derived ranking over a computed growth metric (difference across years) for multiple gemeente cells simultaneously",
+   "question": "Welke van de vier grote steden had de hoogste bevolkingsgroei tussen 2020 en 2024?",
+   "followup": null,
+   "good_outcome": "A clean answer computing the 2020 to 2024 population change for Amsterdam, Rotterdam, Den Haag and Utrecht and ranking them, since both years fall within the loaded 2019+ slice and gemeente-level data exists for all four.",
+   "answerable_today": "yes"
+  },
+  {
+   "id": "A064",
+   "segment": "comparisons-rankings",
+   "persona": "researcher",
+   "probes": "period-peak over quarterly cells plus year-over-year comparison, testing whether the derived-max path handles a compound ask",
+   "question": "Was de werkloosheid dit jaar hoger dan vorig jaar, en in welk kwartaal was het verschil het grootst?",
+   "followup": null,
+   "good_outcome": "A clean answer comparing 2025 and 2026 jaargemiddelde/kwartaal figures from 85224NED (seasonally adjusted default) and identifying the quarter with the largest gap, with the caveat that only KW and JJ grains exist (no monthly).",
+   "answerable_today": "yes"
+  },
+  {
+   "id": "A065",
+   "segment": "comparisons-rankings",
+   "persona": "claim-debunker",
+   "probes": "geo-breakdown gap for a national-only table, phrased as a ranking request",
+   "question": "Welke gemeente in Nederland had de meeste faillissementen in 2025?",
+   "followup": null,
+   "good_outcome": "An honest refusal explaining that 82242NED (faillissementen) has no regional breakdown at all — only a national total is available — and offering the national 2025 figure instead.",
+   "answerable_today": "no"
+  },
+  {
+   "id": "A066",
+   "segment": "comparisons-rankings",
+   "persona": "researcher",
+   "probes": "period-peak (min) over quarterly cells spanning multiple years, tests whether the ranking path handles an open-ended multi-year window",
+   "question": "In welk kwartaal van de afgelopen jaren was de werkloosheid het laagst?",
+   "followup": null,
+   "good_outcome": "A clean answer scanning the available 2013-2026KW01 quarterly series in 85224NED and naming the lowest quarter with its value, or if 'afgelopen jaren' is ambiguous about the window, a single clarifying question about which years to include before answering.",
+   "answerable_today": "edge"
+  },
+  {
+   "id": "A067",
+   "segment": "comparisons-rankings",
+   "persona": "curious-citizen",
+   "probes": "geo-breakdown gap for income data, phrased as a two-city comparison",
+   "question": "Vergelijk het besteedbaar inkomen van Amsterdam en Rotterdam in 2023.",
+   "followup": null,
+   "good_outcome": "An honest refusal clarifying that 83932NED (besteedbaar inkomen) is national-only with no gemeente breakdown, so a city-to-city comparison isn't possible — offering the national 2023 figure as the closest available answer.",
+   "answerable_today": "no"
+  },
+  {
+   "id": "A068",
+   "segment": "comparisons-rankings",
+   "persona": "researcher",
+   "probes": "period-peak over year-to-year differences (derived growth ranking) within a single national series",
+   "question": "Welk jaar sinds 2019 had de hoogste woningvoorraad-groei?",
+   "followup": null,
+   "good_outcome": "A clean answer computing year-over-year woningvoorraad changes from 82235NED for each year since 2019 and naming the year with the largest increase, flagging the ~2024/2025 source-discontinuity as a caveat if it affects the comparison.",
+   "answerable_today": "yes"
+  },
+  {
+   "id": "A069",
+   "segment": "out-of-coverage",
+   "persona": "journalist-on-deadline",
+   "probes": "graceful-refusal, coverage-wall",
+   "question": "Hoeveel mensen zitten er in de bijstand in Nederland?",
+   "followup": null,
+   "good_outcome": "An honest refusal stating bijstand/sociale uitkeringen data is not loaded in checkdecijfers.nl, with a pointer to CBS StatLine or the relevant CBS table as the place to look instead — not a dead-end 'ik weet het niet'.",
+   "answerable_today": "no"
+  },
+  {
+   "id": "A070",
+   "segment": "out-of-coverage",
+   "persona": "curious-citizen",
+   "probes": "graceful-refusal, coverage-wall",
+   "question": "Is de criminaliteit in Nederland de afgelopen jaren gestegen of gedaald?",
+   "followup": null,
+   "good_outcome": "Clear refusal explaining crime statistics aren't part of the ingested tables, with a suggestion to check CBS/politie crime figures directly rather than a vague non-answer.",
+   "answerable_today": "no"
+  },
+  {
+   "id": "A071",
+   "segment": "out-of-coverage",
+   "persona": "researcher",
+   "probes": "graceful-refusal, coverage-wall",
+   "question": "Wat is het slagingspercentage van het VWO dit jaar?",
+   "followup": null,
+   "good_outcome": "Refusal noting education/exam statistics are outside current coverage, ideally naming CBS or DUO as the source to check, rather than attempting to guess a plausible-sounding number.",
+   "answerable_today": "no"
+  },
+  {
+   "id": "A072",
+   "segment": "out-of-coverage",
+   "persona": "journalist-on-deadline",
+   "probes": "graceful-refusal, coverage-wall",
+   "question": "Hoeveel asielzoekers heeft Nederland dit jaar opgevangen?",
+   "followup": null,
+   "good_outcome": "Explicit refusal (this is a canned example topic) stating asylum/migration data isn't loaded, pointing to CBS or IND as the authoritative source — no fabricated figure under any framing.",
+   "answerable_today": "no"
+  },
+  {
+   "id": "A073",
+   "segment": "out-of-coverage",
+   "persona": "curious-citizen",
+   "probes": "graceful-refusal, coverage-wall",
+   "question": "Wat zijn de gemiddelde zorgkosten per Nederlander per jaar?",
+   "followup": null,
+   "good_outcome": "Honest refusal noting healthcare cost statistics aren't in the loaded dataset, with a suggestion to check CBS/Zorginstituut/RIVM directly instead of leaving the user empty-handed.",
+   "answerable_today": "no"
+  },
+  {
+   "id": "A074",
+   "segment": "out-of-coverage",
+   "persona": "claim-debunker",
+   "probes": "graceful-refusal, coverage-wall",
+   "question": "Hoe hoog was de CO2-uitstoot van Nederland vorig jaar vergeleken met 10 jaar geleden?",
+   "followup": null,
+   "good_outcome": "Refusal clarifying that only solar-electricity production is loaded, not broader emissions/climate data, and pointing to CBS/RIVM emissions statistics as the place to verify this claim.",
+   "answerable_today": "no"
+  },
+  {
+   "id": "A075",
+   "segment": "out-of-coverage",
+   "persona": "journalist-on-deadline",
+   "probes": "graceful-refusal, coverage-wall",
+   "question": "Hoeveel verkeersdoden vielen er dit jaar in Nederland?",
+   "followup": null,
+   "good_outcome": "Clean refusal stating traffic/road-safety statistics are not part of the current data coverage, ideally pointing to CBS or Rijkswaterstaat/SWOV as the correct source.",
+   "answerable_today": "no"
+  },
+  {
+   "id": "A076",
+   "segment": "out-of-coverage",
+   "persona": "researcher",
+   "probes": "graceful-refusal, coverage-wall",
+   "question": "Hoeveel toeristen bezochten Amsterdam afgelopen jaar?",
+   "followup": null,
+   "good_outcome": "Refusal noting tourism/overnight-stay statistics aren't loaded and this table also wouldn't be city-level even if it existed, pointing to CBS tourism tables as the place to check.",
+   "answerable_today": "no"
+  },
+  {
+   "id": "A077",
+   "segment": "out-of-coverage",
+   "persona": "curious-citizen",
+   "probes": "graceful-refusal, coverage-wall",
+   "question": "Wat verdient een gemiddelde verpleegkundige per maand?",
+   "followup": null,
+   "good_outcome": "Honest refusal explaining wage/sector-level salary statistics aren't in scope (only household disposable income is), with a pointer to CBS loonstatistieken as the place to look this up.",
+   "answerable_today": "no"
+  },
+  {
+   "id": "A078",
+   "segment": "out-of-coverage",
+   "persona": "claim-debunker",
+   "probes": "graceful-refusal, phrasing-trust",
+   "question": "Klopt het dat de bijstandsuitkeringen dit jaar zijn verhoogd met 5%?",
+   "followup": null,
+   "good_outcome": "Refusal to verify the claim because benefits/uitkeringen data isn't loaded, explicitly saying it can't confirm or deny the 5% figure rather than guessing whether it sounds plausible.",
+   "answerable_today": "no"
+  },
+  {
+   "id": "A079",
+   "segment": "out-of-coverage",
+   "persona": "curious-citizen",
+   "probes": "graceful-refusal, coverage-wall",
+   "question": "Zijn er dit jaar meer inbraken geweest dan vorig jaar?",
+   "followup": null,
+   "good_outcome": "Refusal stating burglary/crime statistics are outside current coverage, with a redirect to CBS Veiligheidsmonitor or politie.nl figures.",
+   "answerable_today": "no"
+  },
+  {
+   "id": "A080",
+   "segment": "out-of-coverage",
+   "persona": "researcher",
+   "probes": "graceful-refusal, coverage-wall",
+   "question": "Hoeveel procent van de jongeren rookt tegenwoordig?",
+   "followup": null,
+   "good_outcome": "Refusal noting health/lifestyle survey statistics aren't part of the loaded tables, pointing toward CBS gezondheidsenquête or RIVM as the correct source rather than a flat 'no'.",
+   "answerable_today": "no"
+  },
+  {
+   "id": "A081",
+   "segment": "out-of-coverage",
+   "persona": "journalist-on-deadline",
+   "probes": "graceful-refusal, coverage-wall, follow-up-memory",
+   "question": "Wat is het gemiddelde salaris in de bouwsector vergeleken met de zorgsector?",
+   "followup": "En wat is dan wel het gemiddeld besteedbaar inkomen van huishoudens in Nederland?",
+   "good_outcome": "Clear refusal explaining sector-level wage comparisons aren't available (only household disposable income is loaded, nationally, with no sector breakdown), with a pointer to CBS loonstatistieken by sector.",
+   "answerable_today": "no"
+  },
+  {
+   "id": "A082",
+   "segment": "out-of-coverage",
+   "persona": "curious-citizen",
+   "probes": "graceful-refusal, coverage-wall",
+   "question": "Hoeveel elektrische auto's rijden er inmiddels rond in Nederland?",
+   "followup": null,
+   "good_outcome": "Refusal noting vehicle/mobility statistics aren't loaded (this product only covers population, inflation, unemployment, housing, bankruptcies, income, and solar production), with a pointer to RDW or CBS mobiliteit figures.",
+   "answerable_today": "no"
+  },
+  {
+   "id": "A083",
+   "segment": "claim-check",
+   "persona": "journalist-on-deadline",
+   "probes": "coverage-wall, phrasing-trust",
+   "question": "Klopt het dat de werkloosheid dit jaar is gestegen ten opzichte van vorig jaar?",
+   "followup": null,
+   "good_outcome": "A clean answer comparing the seasonally-adjusted werkloosheidspercentage across two comparable periods (e.g. most recent quarter vs same quarter last year, or jaargemiddelde vs jaargemiddelde), stating both figures, the direction/magnitude of change, and explicitly noting these are seasonally-adjusted quarterly/yearly figures (85224NED) rather than assuming a specific unstated timeframe — ideally asking which two periods to compare if 'dit jaar' is ambiguous given only KW/JJ grains exist.",
+   "answerable_today": "yes"
+  },
+  {
+   "id": "A084",
+   "segment": "claim-check",
+   "persona": "claim-debunker",
+   "probes": "coverage-wall, phrasing-trust",
+   "question": "Een politicus zei dat huizen dit jaar 10% duurder zijn geworden dan vorig jaar, klopt dat?",
+   "followup": null,
+   "good_outcome": "A clean answer computing the year-over-year percentage change in the average verkoopprijs (85773NED) between the two named years/periods and stating whether 10% is close to, matches, or diverges from the actual computed change — with the caveat that this is the average sale price (not composition-adjusted), so it may not perfectly reflect 'the market' claim as commonly meant.",
+   "answerable_today": "yes"
+  },
+  {
+   "id": "A085",
+   "segment": "claim-check",
+   "persona": "curious-citizen",
+   "probes": "coverage-wall, phrasing-trust",
+   "question": "Is het waar dat de bevolking van Nederland vorig jaar met meer dan 100.000 mensen is gegroeid?",
+   "followup": null,
+   "good_outcome": "A clean answer computing the difference between two consecutive 1-januari population snapshots (03759ned) and confirming or denying the 100,000 threshold with the actual computed number, noting this is a snapshot-to-snapshot difference (stock figures), not a mid-year growth rate.",
+   "answerable_today": "yes"
+  },
+  {
+   "id": "A086",
+   "segment": "claim-check",
+   "persona": "journalist-on-deadline",
+   "probes": "coverage-wall, follow-up-memory",
+   "question": "klopt het dat er dit jaar meer bedrijven failliet zijn gegaan dan vorig jaar?",
+   "followup": "En hoeveel waren dat er dan precies in elk van die jaren?",
+   "good_outcome": "A clean answer comparing yearly faillissementen totals (82242NED, businesses-only default) between the two years, being explicit that this compares bedrijven en instellingen only and excludes particuliere faillissementen, since a claim about 'meer bedrijven' framed broadly could otherwise mislead if the questioner meant all bankruptcies.",
+   "answerable_today": "yes"
+  },
+  {
+   "id": "A087",
+   "segment": "claim-check",
+   "persona": "claim-debunker",
+   "probes": "coverage-wall, phrasing-trust",
+   "question": "Iemand beweert dat het besteedbaar inkomen van huishoudens al jaren niet meer stijgt, klopt dat?",
+   "followup": null,
+   "good_outcome": "A clean answer showing the trend in gemiddeld besteedbaar inkomen (83932NED) over recent available years (2011-2024), stating whether it has risen, fallen, or stagnated, while flagging that 2024 is still a Voorlopig (provisional) figure so any claim resting heavily on the latest year should be treated cautiously.",
+   "answerable_today": "yes"
+  },
+  {
+   "id": "A088",
+   "segment": "claim-check",
+   "persona": "researcher",
+   "probes": "coverage-wall, graceful-refusal",
+   "question": "klopt het dat de inflatie in Nederland hoger is dan in de rest van Europa?",
+   "followup": null,
+   "good_outcome": "An honest helpful refusal: the product only has Dutch CPI jaarmutatie (86141NED), no other-country or EU-average inflation data is loaded, so it should state clearly it can confirm/report the Dutch figure but cannot compare it to 'the rest of Europe' since no international data source is ingested — pointing the user to Eurostat/CBS internationaal as the place to check that comparison themselves, not fabricating or guessing at foreign figures.",
+   "answerable_today": "no"
+  },
+  {
+   "id": "A089",
+   "segment": "claim-check",
+   "persona": "claim-debunker",
+   "probes": "graceful-refusal, coverage-wall",
+   "question": "Een Kamerlid zei dat het aantal daklozen enorm is toegenomen, kan dat kloppen volgens de cijfers?",
+   "followup": null,
+   "good_outcome": "An honest refusal stating that homelessness/dakloosheid statistics are not a topic covered by this product at all (not in the loaded measures — closest adjacent absent topics are bijstand/sociale uitkeringen), and suggesting the user check CBS StatLine or CBS's dakloosheid-specific publications directly rather than the tool inventing or approximating an answer.",
+   "answerable_today": "no"
+  },
+  {
+   "id": "A090",
+   "segment": "claim-check",
+   "persona": "curious-citizen",
+   "probes": "coverage-wall, phrasing-trust",
+   "question": "klopt dat we dit jaar een recordaantal woningen hebben in Nederland?",
+   "followup": null,
+   "good_outcome": "A clean answer looking at the woningvoorraad time series (82235NED, 1921-2025) and confirming whether the most recent year is indeed the highest value in the series (which, given a generally growing housing stock, it very likely structurally is), stating the actual count and flagging the 2024/2025 discontinuity from the source-table stitch so the 'record' framing isn't overstated as a smooth trend.",
+   "answerable_today": "yes"
+  },
+  {
+   "id": "A091",
+   "segment": "claim-check",
+   "persona": "journalist-on-deadline",
+   "probes": "coverage-wall, graceful-refusal, phrasing-trust",
+   "question": "is het waar dat de werkloosheid vorige maand flink is gedaald?",
+   "followup": null,
+   "good_outcome": "An honest refusal/clarification: no monthly unemployment grain exists in the loaded table (85224NED only has KW/JJ), so the tool should say it cannot check a specific month's figure and offer the most recent quarterly figure instead as the closest available comparison, rather than silently substituting quarter-for-month or guessing.",
+   "answerable_today": "no"
+  },
+  {
+   "id": "A092",
+   "segment": "claim-check",
+   "persona": "claim-debunker",
+   "probes": "graceful-refusal, coverage-wall",
+   "question": "klopt het dat asielinstroom de woningnood veroorzaakt, kun je dat checken met cijfers?",
+   "followup": null,
+   "good_outcome": "An honest refusal explaining this is a causal claim spanning two topics, one of which (asielzoekers/migratie) is explicitly out of scope entirely and not loaded at all, and even the woningvoorraad data that IS loaded cannot establish causation — the tool should decline to adjudicate the causal claim and clarify it can at most report the national woningvoorraad trend in isolation, pointing elsewhere for migration figures and for any causal analysis.",
+   "answerable_today": "no"
+  },
+  {
+   "id": "A093",
+   "segment": "claim-check",
+   "persona": "researcher",
+   "probes": "coverage-wall, phrasing-trust",
+   "question": "zonnepanelen zouden nu al een groot deel van onze stroom leveren, klopt dat beeld?",
+   "followup": null,
+   "good_outcome": "A partial/honest answer: the tool can report the absolute bruto elektriciteitsproductie uit zonnestroom (82610NED, mln kWh, most recent year likely NaderVoorlopig) but cannot compute 'een groot deel van onze stroom' as a share of total electricity because total electricity mix/consumption is a genuinely absent topic — so it should give the solar production figure with its voorlopig-cijfer caveat and explicitly say it cannot state what percentage of total Dutch electricity that represents.",
+   "answerable_today": "edge"
+  },
+  {
+   "id": "A094",
+   "segment": "claim-check",
+   "persona": "curious-citizen",
+   "probes": "phrasing-trust, coverage-wall",
+   "question": "Klopt het dat Rotterdam sneller groeit dan Amsterdam qua inwoners?",
+   "followup": null,
+   "good_outcome": "A clean answer comparing year-over-year (or over a chosen multi-year span) population growth rates for the two gemeenten using consecutive 1-januari snapshots from 03759ned, stating both growth figures/percentages and which is larger — if the user doesn't specify a period, the tool should either pick a sensible recent default (e.g. latest available year vs prior year) and say so, or ask which years to compare.",
+   "answerable_today": "yes"
+  },
+  {
+   "id": "A095",
+   "segment": "interpretation-opinion",
+   "persona": "curious-citizen",
+   "probes": "graceful-refusal, offers-underlying-stats",
+   "question": "Is de woningmarkt in 2024 verbeterd of verslechterd voor starters?",
+   "followup": null,
+   "good_outcome": "An honest refusal to render a value judgment ('verbeterd/verslechterd' is an interpretation, not something CBS or this tool assesses), paired with an offer of the descriptive stats it can give: the average sale price trend (85773NED, JJ/KW/MM) year over year, so the user can judge for themselves. Should NOT silently pick a side or imply a verdict.",
+   "answerable_today": "edge"
+  },
+  {
+   "id": "A096",
+   "segment": "interpretation-opinion",
+   "persona": "journalist-on-deadline",
+   "probes": "graceful-refusal, causation-vs-description",
+   "question": "Waarom stijgt de inflatie zo hard de laatste tijd?",
+   "followup": null,
+   "good_outcome": "A clear refusal to explain causes (this product parses CBS numbers, it doesn't do economic causal analysis), immediately followed by the descriptive number it can supply: the jaarmutatie CPI trend over recent months/years (86141NED) so the journalist can see the pattern themselves, with a pointer that 'why' questions need an economist or CBS's own analytical commentary, not this tool.",
+   "answerable_today": "no"
+  },
+  {
+   "id": "A097",
+   "segment": "interpretation-opinion",
+   "persona": "curious-citizen",
+   "probes": "graceful-refusal, forecast-boundary, coverage-wall",
+   "question": "Hoeveel inwoners heeft Nederland in 2050?",
+   "followup": null,
+   "good_outcome": "A firm refusal to forecast (CBS publishes realized/measured figures only in this dataset; population prognoses are a separate CBS product not ingested here) rather than extrapolating a trend line itself, plus an offer of the most recent actual figure (2025 or 2026 population) as the closest real answer, and ideally a pointer that CBS's Bevolkingsprognose exists elsewhere but is out of scope for this tool.",
+   "answerable_today": "no"
+  },
+  {
+   "id": "A098",
+   "segment": "interpretation-opinion",
+   "persona": "researcher",
+   "probes": "graceful-refusal, forecast-boundary, phrasing-trust",
+   "question": "Gaat de werkloosheid dit jaar nog verder oplopen denk je?",
+   "followup": null,
+   "good_outcome": "A refusal to predict or speculate ('denk je' invites an opinion this tool must not give), with an offer of the actual seasonally-adjusted unemployment trend over the last few quarters (85224NED, KW grain) so the researcher can extrapolate themselves if they choose, making clear CBS publishes no forecast in this data.",
+   "answerable_today": "edge"
+  },
+  {
+   "id": "A099",
+   "segment": "interpretation-opinion",
+   "persona": "journalist-on-deadline",
+   "probes": "graceful-refusal, opinion-vs-description",
+   "question": "Is het aantal faillissementen dit jaar zorgwekkend te noemen?",
+   "followup": null,
+   "good_outcome": "A refusal to characterize the figure as 'zorgwekkend' (a value judgment outside the tool's role), paired with the actual yearly/quarterly bankruptcy totals (82242NED) and how they compare to recent prior years, letting the journalist draw their own conclusion with real numbers in hand.",
+   "answerable_today": "edge"
+  },
+  {
+   "id": "A100",
+   "segment": "interpretation-opinion",
+   "persona": "researcher",
+   "probes": "graceful-refusal, forecast-boundary, causation",
+   "question": "Wordt het besteedbaar inkomen van huishoudens de komende jaren hoger, denk je, met de huidige cao-afspraken?",
+   "followup": null,
+   "good_outcome": "A refusal to forecast or reason about causal drivers like cao-afspraken (outside CBS-cell scope and outside what this tool does), offering instead the historical trend of average disposable household income 2011-2024 (83932NED) as the only thing it can ground an answer in, explicitly flagging that 2024 is still Voorlopig.",
+   "answerable_today": "no"
+  },
+  {
+   "id": "A101",
+   "segment": "interpretation-opinion",
+   "persona": "claim-debunker",
+   "probes": "graceful-refusal, causation-vs-description",
+   "question": "Komt de stijging van de huizenprijzen door de rente of door woningtekort, wat is de belangrijkste oorzaak?",
+   "followup": null,
+   "good_outcome": "A clean refusal to adjudicate causal drivers (rente vs. woningtekort is an economic-analysis question, not a CBS-cell lookup), with an offer of the raw descriptive numbers it can supply — the average sale price series over time (85773NED) — so the user can pair it with outside analysis themselves, without the tool fabricating a causal claim.",
+   "answerable_today": "no"
+  },
+  {
+   "id": "A102",
+   "segment": "interpretation-opinion",
+   "persona": "curious-citizen",
+   "probes": "graceful-refusal, scope-mismatch, coverage-wall",
+   "question": "Is Nederland de afgelopen jaren sociaaleconomisch vooruitgegaan of achteruitgegaan?",
+   "followup": null,
+   "good_outcome": "An honest refusal on two grounds: this is a broad value judgment, and 'sociaaleconomische vooruitgang' spans far more indicators than this tool covers (only 7 narrow measures are loaded). Good experience clarifies what it *can* offer — e.g. trends in income, unemployment, or inflation individually — rather than attempting a composite verdict or silently picking one indicator to stand in for the whole question.",
+   "answerable_today": "no"
+  },
+  {
+   "id": "A103",
+   "segment": "meta-trust",
+   "persona": "journalist-on-deadline",
+   "probes": "meta-template quality, source transparency",
+   "question": "Welke bronnen gebruiken jullie precies voor deze cijfers?",
+   "followup": null,
+   "good_outcome": "A clean answer naming CBS (StatLine) as the sole data source, listing that each answer shows the specific table ID (e.g. 03759ned) and cell it came from, and clarifying that the LLM never invents numbers — it only phrases results computed from ingested CBS tables. Should not claim other sources (news, EU stats) are used since only CBS tables listed in the coverage map are loaded.",
+   "answerable_today": "yes"
+  },
+  {
+   "id": "A104",
+   "segment": "meta-trust",
+   "persona": "researcher",
+   "probes": "meta-template quality, recency/staleness explanation",
+   "question": "Hoe actueel zijn de cijfers die ik hier krijg?",
+   "followup": null,
+   "good_outcome": "A clean, honest answer explaining that currency varies per topic — e.g. inflatie monthly data through mid-2026 (latest month sometimes still voorlopig), population/income yearly with a lag, house prices monthly with ~22-day delay — and that every individual answer states the period and whether it's definitief or voorlopig, rather than giving one blanket 'up to date' claim.",
+   "answerable_today": "yes"
+  },
+  {
+   "id": "A105",
+   "segment": "meta-trust",
+   "persona": "claim-debunker",
+   "probes": "graceful trust-building explanation, distinguishing from generic LLM hallucination risk",
+   "question": "Hoe weet ik nou zeker dat dit klopt en dat je niet gewoon iets verzint?",
+   "followup": null,
+   "good_outcome": "A clean answer explaining the architecture: the AI only interprets the question, every number is looked up from a database populated directly from official CBS tables (never calculated or guessed by the LLM), and each answer cites the exact CBS table, cell, and date so the user can verify it themselves on CBS StatLine. Should avoid absolute slogans like '0% hallucination' per the product's own public-claim rule.",
+   "answerable_today": "yes"
+  },
+  {
+   "id": "A106",
+   "segment": "meta-trust",
+   "persona": "researcher",
+   "probes": "coverage-wall / honest refusal for out-of-scope feature",
+   "question": "Kan ik deze data ook downloaden, bijvoorbeeld als Excel of CSV?",
+   "followup": null,
+   "good_outcome": "An honest refusal or clarification: export/download is not a current feature (exports are a designated later-phase item per the MVP scope), but the answer should point the user to the underlying CBS table/StatLine page so they can download the full dataset there themselves, rather than silently ignoring the question or pretending to attach a file.",
+   "answerable_today": "no"
+  },
+  {
+   "id": "A107",
+   "segment": "meta-trust",
+   "persona": "researcher",
+   "probes": "scope honesty, avoiding invented coverage",
+   "question": "Gebruik je ook data van Eurostat of het CPB naast CBS?",
+   "followup": null,
+   "good_outcome": "A clean, direct answer that the product currently uses only CBS (StatLine) data — no Eurostat, CPB, or other institutes — so any question needing non-CBS sources falls outside what it can answer, stated plainly rather than vaguely implied.",
+   "answerable_today": "yes"
+  },
+  {
+   "id": "A108",
+   "segment": "meta-trust",
+   "persona": "curious-citizen",
+   "probes": "meta-template quality, explaining update cadence / determinism",
+   "question": "Als ik dezelfde vraag morgen stel, krijg ik dan hetzelfde antwoord?",
+   "followup": null,
+   "good_outcome": "A clean answer clarifying that the underlying number for a fixed historical period won't change day to day (data is bulk-ingested periodically, not live-queried), but that a 'voorlopig' figure for a recent period may later be revised to 'definitief' by CBS, and the next ingestion refresh would then reflect that revision — so the same question can yield an updated number after a revision, which is exactly what the voorlopig/definitief marking is for.",
+   "answerable_today": "yes"
+  },
+  {
+   "id": "A109",
+   "segment": "meta-trust",
+   "persona": "curious-citizen",
+   "probes": "meta-template quality, avoiding false authority/affiliation claims",
+   "question": "Wie heeft deze tool gemaakt en is dit een officieel CBS-product?",
+   "followup": null,
+   "good_outcome": "A clean, honest answer stating this is an independent product (checkdecijfers.nl) built on top of publicly available CBS data via their official statistics database, and explicitly NOT an official CBS product or endorsed by CBS — avoiding any implication of official affiliation.",
+   "answerable_today": "yes"
+  },
+  {
+   "id": "A110",
+   "segment": "meta-trust",
+   "persona": "journalist-on-deadline",
+   "probes": "graceful-refusal explanation, meta-honesty about coverage limits",
+   "question": "Wat doe je als de cijfers die ik nodig heb niet in je database zitten?",
+   "followup": null,
+   "good_outcome": "A clean answer describing the refusal behavior itself: when a topic, region, or breakdown isn't loaded (e.g. sub-municipal data, monthly unemployment, asielzoekers/migratie, crime stats), the product says so honestly rather than guessing or extrapolating, and where possible suggests the closest available alternative (e.g. national-level figure instead of a neighborhood one) — matching the 'refuse or ask for clarification, never guess' principle.",
+   "answerable_today": "yes"
+  }
+ ]
+}
