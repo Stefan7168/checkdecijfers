@@ -7,7 +7,11 @@
 // to this one file.
 'use server';
 
-import { answerClarificationReplyAudited, answerQuestionAudited } from '../backend/answer/audit/index.ts';
+import {
+  answerClarificationReplyAudited,
+  answerQuestionAudited,
+  deleteUserQuestionHistory,
+} from '../backend/answer/audit/index.ts';
 import { buildConversationContext, validateConversationContext } from '../backend/answer/context/index.ts';
 import type { ConversationContext } from '../backend/answer/context/index.ts';
 import { AnthropicLlmClient } from '../backend/answer/llm/client.ts';
@@ -162,4 +166,25 @@ export async function replyToClarification(
     console.error('replyToClarification failed:', error);
     throw error;
   }
+}
+
+// #14 (GDPR): self-service "Verwijder mijn vraaggeschiedenis" (WP14,
+// docs/08-build-plan.md). THE CRITICAL SECURITY PIN: the user id scoping this
+// delete comes ONLY from currentUserId()'s server-side, getClaims()-verified
+// session — never from a client-supplied argument — so this action can only
+// ever redact the CALLING user's own rows, by construction (there is no
+// parameter here a caller could substitute another user's id into).
+//
+// Redacts rather than physically deletes (src/answer/audit/retention.ts):
+// the ledger (credit_transactions) is NEVER touched, by construction (this
+// function calls nothing in src/billing/); the owner-decided UX is a
+// "verwijderde vraag" placeholder row that keeps its credit amount visible
+// (web/components/question-history.tsx renders the redacted sentinel).
+export async function deleteMyQuestionHistory(): Promise<{ deletedCount: number }> {
+  const userId = await currentUserId();
+  if (userId === null) {
+    throw new Error('not authenticated');
+  }
+  const redacted = await deleteUserQuestionHistory(getDb(), userId);
+  return { deletedCount: redacted.length };
 }

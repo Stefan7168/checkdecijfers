@@ -7,6 +7,7 @@
 // hardcoded in copy) -- so the warning threshold and the explainer track a
 // price or grant change automatically.
 import Link from 'next/link';
+import { DeleteHistoryButton } from './delete-history-button.tsx';
 
 export function AccountPanel({
   balance,
@@ -51,6 +52,12 @@ export function AccountPanel({
             ? '.'
             : ` — ${signupGrantCredits} credits zijn dus goed voor zo'n ${grantQuestions} vragen.`)}
       </p>
+      {/* #14 (GDPR self-service deletion): own row, visually separated from
+        * the buy-credits flow above -- a destructive account action, not
+        * part of the purchase funnel. */}
+      <div className="border-t border-zinc-200 pt-3">
+        <DeleteHistoryButton />
+      </div>
     </div>
   );
 }

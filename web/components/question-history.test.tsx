@@ -17,6 +17,7 @@ function entry(overrides: Partial<QuestionHistoryEntry> = {}): QuestionHistoryEn
     createdAt: '2026-07-04T14:19:31.199Z',
     creditsCharged: 20,
     clarification: null,
+    isDeleted: false,
     ...overrides,
   };
 }
@@ -82,5 +83,78 @@ describe('QuestionHistory', () => {
     // Binding both ways: a single-turn answer's price must NOT be labeled
     // as a total.
     expect(screen.queryByText(/totaal/)).toBeNull();
+  });
+
+  // #14 (GDPR self-service deletion + retention purge): a redacted row must
+  // render as a "verwijderde vraag" placeholder -- never hidden (the row
+  // itself, and its credit amount, must stay visible), never leaking the
+  // original question or answer text.
+  describe('deleted-question placeholder (#14)', () => {
+    it('shows the placeholder label instead of the question, keeps the credit amount visible', () => {
+      render(
+        <QuestionHistory
+          items={[
+            entry({
+              question: 'Deze vraag is verwijderd.',
+              finalText: 'Deze vraag is verwijderd.',
+              creditsCharged: 20,
+              isDeleted: true,
+            }),
+          ]}
+        />,
+      );
+      expect(screen.getByText('Verwijderde vraag')).toBeInTheDocument();
+      expect(screen.getByText(/20 credits/)).toBeInTheDocument();
+      // The row still expands to an honest "text is gone" note, never the
+      // literal redaction sentinel and never silence.
+      expect(screen.getByText('De tekst van deze vraag is verwijderd.')).toBeInTheDocument();
+    });
+
+    it('never renders the raw redaction sentinel text as if it were real content', () => {
+      render(
+        <QuestionHistory
+          items={[
+            entry({
+              question: 'Deze vraag is verwijderd.',
+              finalText: 'Deze vraag is verwijderd.',
+              isDeleted: true,
+            }),
+          ]}
+        />,
+      );
+      // The sentinel string must not appear verbatim anywhere in the
+      // rendered output -- only the distinct placeholder copy should.
+      expect(screen.queryByText('Deze vraag is verwijderd.', { exact: true })).toBeNull();
+    });
+
+    it('renders no clarification exchange for a deleted round, even if one was recorded', () => {
+      render(
+        <QuestionHistory
+          items={[
+            entry({
+              question: 'Deze vraag is verwijderd.',
+              finalText: 'Deze vraag is verwijderd.',
+              clarification: { text: 'Welke gemeente bedoel je?', reply: 'Amsterdam' },
+              isDeleted: true,
+            }),
+          ]}
+        />,
+      );
+      expect(screen.queryByText('Welke gemeente bedoel je?')).toBeNull();
+      expect(screen.queryByText('Amsterdam')).toBeNull();
+    });
+
+    it('a non-deleted row renders normally alongside a deleted one', () => {
+      render(
+        <QuestionHistory
+          items={[
+            entry({ id: 1, question: 'Deze vraag is verwijderd.', finalText: 'Deze vraag is verwijderd.', isDeleted: true }),
+            entry({ id: 2, question: 'Hoeveel inwoners heeft Nederland?', isDeleted: false }),
+          ]}
+        />,
+      );
+      expect(screen.getByText('Verwijderde vraag')).toBeInTheDocument();
+      expect(screen.getByText('Hoeveel inwoners heeft Nederland?')).toBeInTheDocument();
+    });
   });
 });
