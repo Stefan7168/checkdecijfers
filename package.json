@@ -28,6 +28,7 @@
     "benchmark:run:live": "node --env-file=.env scripts/run-benchmark.ts --live",
     "benchmark:score:live": "node scripts/score-benchmark.mjs benchmark/audit-run-live.json --report benchmark/live-benchmark-report.json",
     "validation:run": "node --env-file=.env scripts/run-validation-pass.ts",
+    "audit:experience": "node --env-file=.env scripts/run-experience-audit.ts",
     "audit:verify": "node --env-file=.env scripts/verify-audit-rows.ts",
     "intent:eval": "node --env-file-if-exists=.env scripts/intent-eval.ts",
     "intent:record": "node --env-file-if-exists=.env scripts/intent-eval.ts --record",
