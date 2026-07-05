@@ -84,6 +84,62 @@ async function captureTable(id: string, slice: CbsSlice | undefined): Promise<vo
   console.log(`${id}: ${rows} observation rows, ${pageFiles.length} page(s)${filter ? ' [sliced]' : ''}${captureSlice ? ' [capture-slice]' : ''}`);
 }
 
+// ---- catalog fixture (WP16 table finder) ----------------------------------
+// A BOUNDED, topical sample of the real v4 Datasets catalog (not the full
+// ~4,858 rows) so the recall/rerank tests run on genuine wire data but stay
+// small. Written to tests/fixtures/cbs/_catalog.json. Reproduces the manual
+// capture from session 24: a spread of topics + every Phase-0 registered id.
+const CATALOG_SELECT = 'Identifier,Title,Description,Status,DatasetType,Language,Modified';
+const CATALOG_FIXTURE_TOPICS = [
+  'bijstand',
+  'werkloos',
+  'inflatie',
+  'consumentenprijzen',
+  'woningen',
+  'koopwoningen',
+  'bevolking',
+  'faillissementen',
+  'zonnestroom',
+  'inkomen',
+  'criminaliteit',
+  'misdrijven',
+];
+
+async function captureCatalog(): Promise<void> {
+  const byId = new Map<string, unknown>();
+  const add = (rows: any[]) => {
+    for (const row of rows) byId.set(row.Identifier, row);
+  };
+  for (const topic of CATALOG_FIXTURE_TOPICS) {
+    const params = new URLSearchParams({
+      $select: CATALOG_SELECT,
+      $filter: `contains(Title,'${topic}')`,
+      $top: '6',
+    });
+    add((await fetchJson(`${BASE}/Datasets?${params}`)).value);
+  }
+  // Every registered id explicitly, so recall/rerank tests can assert on them.
+  const idFilter = PHASE0_TABLES.map((t) => `Identifier eq '${t.id}'`).join(' or ');
+  const idParams = new URLSearchParams({ $select: CATALOG_SELECT, $filter: idFilter });
+  add((await fetchJson(`${BASE}/Datasets?${idParams}`)).value);
+
+  const rows = [...byId.values()].sort((a: any, b: any) =>
+    a.Identifier < b.Identifier ? -1 : a.Identifier > b.Identifier ? 1 : 0,
+  );
+  const doc = {
+    '@odata.context': `${BASE}/$metadata#Datasets(${CATALOG_SELECT})`,
+    value: rows,
+  };
+  writeFileSync(join(OUT, '_catalog.json'), JSON.stringify(doc, null, 0) + '\n');
+  console.log(`catalog fixture: ${rows.length} rows -> tests/fixtures/cbs/_catalog.json`);
+}
+
+if (process.argv.includes('--catalog')) {
+  await captureCatalog();
+  console.log('Catalog capture complete.');
+  process.exit(0);
+}
+
 const requested = process.argv.slice(2);
 const unknown = requested.filter((id) => !PHASE0_TABLES.some((t) => t.id === id));
 if (unknown.length > 0) {

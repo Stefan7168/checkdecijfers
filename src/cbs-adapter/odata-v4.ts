@@ -3,12 +3,31 @@
 // see docs/07-phase0-table-set.md "Catalog quirks" for the casing and
 // trailing-space rules this module must respect (never case-normalize a
 // table ID; parsing trims codes, this module does not).
-import type { CbsCode, CbsObservationRow, CbsSlice, CbsSource, CbsTableSchema } from './types.ts';
-import { parseCodes, parseDimensions, parseMeasures, parseObservationsPage } from './parse-v4.ts';
+import type {
+  CbsCatalogEntry,
+  CbsCode,
+  CbsObservationRow,
+  CbsSlice,
+  CbsSource,
+  CbsTableSchema,
+} from './types.ts';
+import {
+  parseCatalogPage,
+  parseCodes,
+  parseDimensions,
+  parseMeasures,
+  parseObservationsPage,
+} from './parse-v4.ts';
 
 const BASE = 'https://datasets.cbs.nl/odata/v1/CBS';
 const FETCH_ATTEMPTS = 3;
 const RETRY_BACKOFF_MS = 1500;
+
+// Fields pulled for the catalog mirror. Explicit $select keeps the payload lean
+// (drops Distributions/VersionNotes/ObservationCount we don't use) and pins the
+// contract. Description is the blurb; NEVER use $search (a measured v4 no-op —
+// HTTP 200 + irrelevant results, docs/07 / WP16 brief).
+const CATALOG_SELECT = 'Identifier,Title,Description,Status,DatasetType,Language,Modified';
 
 /**
  * Builds the OData $filter expression for a registered slice.
@@ -79,6 +98,22 @@ export class ODataV4Source implements CbsSource {
   async fetchCodeList(tableId: string, dimension: string): Promise<CbsCode[]> {
     const raw = await this.fetchJson(`${BASE}/${tableId}/${dimension}Codes`);
     return parseCodes(raw);
+  }
+
+  async fetchCatalog(): Promise<CbsCatalogEntry[]> {
+    const params = new URLSearchParams({ $select: CATALOG_SELECT });
+    // The listing currently returns all ~4,858 rows in one response (no
+    // @odata.nextLink, measured 2026-07-05); the loop follows nextLink anyway
+    // so a future CBS-side paging change can't silently truncate the catalog.
+    let url: string | null = `${BASE}/Datasets?${params.toString()}`;
+    const all: CbsCatalogEntry[] = [];
+    while (url) {
+      const raw = await this.fetchJson(url);
+      const { entries, nextLink } = parseCatalogPage(raw);
+      all.push(...entries);
+      url = nextLink;
+    }
+    return all;
   }
 
   async *fetchObservations(

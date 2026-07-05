@@ -1,0 +1,554 @@
+{
+"@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/$metadata#Datasets(Identifier,Title,Description,Status,DatasetType,Language,Modified)",
+"value": [
+{
+"Identifier": "00375ned",
+"Description": "\nDeze tabel bevat vruchtbaarheidscijfers (aantal kinderen per vrouw)\nnaar leeftijd per geboortegeneratie van de vrouw.\n\nIn deze tabel zijn de gegevens uit te splitsen naar de volgende kenmerken:\nLevendgeborenen naar rangnummer uit de moeder.\nTotale vruchtbaarheidscijfers naar rangnummer uit de moeder.\n\nGegevens beschikbaar vanaf: 1935-2020\nFrequentie: stopgezet per 18 december 2008\n\nStatus van de cijfers\nAlle in de tabel opgenomen cijfers zijn berekende prognosecijfers.\n\nWijzigingen ten opzichte van de vorige versie\n13 december 2006.\nDe prognose is bijgesteld op basis van de meest recente inzichten, de \nprognoseperiode loopt nu van 2006 tot 2050.\n\nWanneer komen er nieuwe cijfers?\nIn december 2008 komt de nieuwe bevolkingsprognose uit. \n",
+"Language": "nl",
+"Title": "Prognose bevolking; vruchtbaarheid van generaties vrouwen, 2006 - 2050",
+"Modified": "2006-12-15T02:00:00+01:00",
+"Status": "Gediscontinueerd",
+"DatasetType": "Numeric"
+},
+{
+"Identifier": "03726ned",
+"Description": "\nDe korte-termijnprognose is een actualisering van de lange-termijnprognose 2002-2050 op basis van inmiddels beschikbaar gekomen waarnemingen. Deze prognose voor de lange termijn is begin 2003 gepubliceerd. In de korte-termijnprognose zijn de cijfers tot 1 januari 2009 geactualiseerd. \nVoor de periode na 2009 wordt verwezen naar cijfers van lange-termijnprognose.\n\nGegevens beschikbaar: 2003 tot en met 2009.\n\nStatus van de cijfers:\nDe gegevens in deze tabel zijn definitief.\n\nWijzigingen per 30 april 2018:\nGeen, deze tabel is stopgezet.\n\nWanneer komen er nieuwe cijfers?\nNiet meer van toepassing.\n",
+"Language": "nl",
+"Title": "Prognose bevolking; kerncijfers, 2003 - 2009",
+"Modified": "2018-04-30T02:00:00+02:00",
+"Status": "Gediscontinueerd",
+"DatasetType": "Numeric"
+},
+{
+"Identifier": "03745",
+"Description": "\nDeze tabel bevat gegevens over de geregistreerde werkloosheid per landsdeel en voor het totaal van de vier grootste gemeenten in Nederland.\n\nGegevens beschikbaar vanaf 1e kwartaal 1989 tot en met derde kwartaal 2014.\n\nStatus van de cijfers\nCijfers op basis van de EBB zijn altijd definitief.\n\nWijzigingen per 9 april 2015:\nGeen, deze tabel is stopgezet.\n\nWijzigingen per 20 november 2014:\nDe gegevens van het tweede en derde kwartaal 2014 zijn toegevoegd.\n\nWanneer komen er nieuwe cijfers?\nDeze tabel is stopgezet. De actualisering van 20 november 2014 was de laatste actualisering van deze tabel. Met ingang van 2015 is het CBS namelijk overgestapt op de internationale definitie van werkloosheid. Deze overstap maakt onderdeel uit van de strategie om zoveel mogelijk aan te sluiten bij internationale definities en daarmee onderlinge vergelijkbaarheid mogelijk te maken en verwarring te voorkomen. De cijfers volgens de nationale definitie worden voorlopig nog voortgezet zoals ook de cijfers over geregistreerde werkloosheid zijn voortgezet toen werd overgestapt op de nationale definitie van werkloosheid. Met de overgang op de internationale definitie, worden de cijfers over de geregistreerde werkloosheid stopgezet om verwarring als gevolg van te vele definities te voorkomen. Cijfers over het aantal ingeschreven werkzoekenden bij het UWV-werkbedrijf zijn wel nog beschikbaar, zie de link in paragraaf 3.\n",
+"Language": "nl",
+"Title": "Geregistreerde werkloosheid; landsdeel 1989-2014 derde kwartaal",
+"Modified": "2015-04-09T02:00:00+02:00",
+"Status": "Gediscontinueerd",
+"DatasetType": "Numeric"
+},
+{
+"Identifier": "03756mpp",
+"Description": "Inputindexcijfers (1995=100) van bouwkosten totaal, looncomponent \nen materiaalcomponent\n1995 - 2004; januari 1995 - december 2004\nGewijzigd op 09 maart 2005.\nVerschijningsfrequentie: Stopgezet.",
+"Language": "nl",
+"Title": "Bouwkosten van woningen; Inputindexcijfers 1995=100",
+"Modified": "2005-03-09T11:47:00+01:00",
+"Status": "Gediscontinueerd",
+"DatasetType": "Text"
+},
+{
+"Identifier": "03759ned",
+"Description": "Deze tabel bevat cijfers over de bevolking op 1 januari en de gemiddelde bevolking van Nederland. Deze gegevens kunnen worden uitgesplitst naar geslacht, leeftijd, burgerlijke staat en regio (landsdeel, provincie, COROP-gebied, gemeente).\r\n\r\nGegevens beschikbaar vanaf: 1988\r\n\r\nStatus van de cijfers:\r\nAlle cijfers in de tabel zijn definitief. \r\n\r\nWijzigingen per 23 juni 2026:\r\nDefinitieve cijfers van 1 januari 2026 en de gemiddelde cijfers over 2025 zijn toegevoegd. \r\n\r\nWanneer komen er nieuwe cijfers?\r\nIn het tweede kwartaal van 2027 worden de cijfers van 1 januari 2027 en de gemiddelde cijfers over 2026 in deze publicatie opgenomen.  \r\n \r\n",
+"Language": "nl",
+"Title": "Bevolking op 1 januari en gemiddeld; geslacht, leeftijd en regio",
+"Modified": "2026-06-23T00:00:00+02:00",
+"Status": "Regulier",
+"DatasetType": "Numeric"
+},
+{
+"Identifier": "03766ned",
+"Description": "\nDeze tabel bevat cijfers over:\nDe bevolkingsomvang\nDrie leeftijdsgroepen 0 tot 20 jaar, 20 tot 65 jaar en 65 jaar en ouder\nDe demografische druk\nHet aantal levendgeborenen\nHet totaal vruchtbaarheidscijfer\nHet aantal overledenen\nDe levensverwachting bij geboorte van mannen en vrouwen\nDe immigratie, emigratie en het migratiesaldo\n\nGegevens beschikbaar vanaf: 2006\nFrequentie: stopgezet per 18 december 2008\n\nStatus van de cijfers\nAlle in de tabel opgenomen cijfers zijn berekende prognosecijfers.\n\nWijzigingen ten opzichte van de vorige versie\n13 december 2006.\nDe prognose is bijgesteld op basis van de meest recente inzichten, de \nprognoseperiode loopt nu van 2006 tot 2050.\n\nWanneer komen er nieuwe cijfers?\nIn december 2008 komt de nieuwe bevolkingsprognose uit. \n",
+"Language": "nl",
+"Title": "Prognose bevolking; kerncijfers, 2006 - 2050",
+"Modified": "2007-02-13T02:00:00+01:00",
+"Status": "Gediscontinueerd",
+"DatasetType": "Numeric"
+},
+{
+"Identifier": "03778ned",
+"Description": "\nDeze tabel bevat landelijke prognosecijfers van de \neerste en tweede generatie allochtonen.\nIn deze tabel worden ook prognose-intervallen gepresenteerd.\n\nGegevens beschikbaar vanaf: 2007\nFrequentie: om het jaar\n\nStatus van de cijfers\nAlle in de tabel opgenomen cijfers zijn berekende prognosecijfers.\n\nWijzigingen ten opzichte van de vorige versie\n13 december 2006.\nDe prognose is bijgesteld op basis van de meest recente inzichten, de \nprognoseperiode loopt nu van 2007 tot 2050.\n\nWanneer komen er nieuwe cijfers?\nWegens langere doorloop van werkzaamheden uit 2008 en tijdelijk \nverminderde capaciteit zullen de cijfers in deze tabel, niet zoals \neerder hier gemeld in december 2008 maar, in de 2e helft van 2009 worden \naangevuld.\n",
+"Language": "nl",
+"Title": "Prognose allochtonen; intervallen allochtone bevolking, 1 januari 2007-2050",
+"Modified": "2007-02-13T02:00:00+01:00",
+"Status": "Gediscontinueerd",
+"DatasetType": "Numeric"
+},
+{
+"Identifier": "37132mpp",
+"Description": "Prijsindexcijfers en mutaties, in - en exclusief BTW, \nvan de bouwkosten van nieuwe woningen.\n1995 - 2004; Kw I 1995 - Kw IV 2004\nGewijzigd op 29 juni 2005.\nVerschijningsfrequentie: Stopgezet.",
+"Language": "nl",
+"Title": "Prijsindexcijfers bouwkosten van nieuwe woningen.",
+"Modified": "2005-06-29T11:30:00+02:00",
+"Status": "Gediscontinueerd",
+"DatasetType": "Numeric"
+},
+{
+"Identifier": "37140ned",
+"Description": "\nDe korte-termijnprognose is een actualisering van de lange-termijnprognose \n2002-2050 op basis van inmiddels beschikbaar gekomen waarnemingen. \nDeze prognose voor de lange termijn is begin 2003 gepubliceerd. In de \nkorte-termijnprognose zijn de cijfers tot 1 januari 2009 geactualiseerd. \nVoor de periode na 2009 wordt verwezen naar cijfers van \nlange-termijnprognose. \n\nGegevens beschikbaar vanaf 2003\nFrequentie: stopgezet\n\nInfoservice: <a \nhref=\"http://www.cbs.nl/infoservice\">http://www.cbs.nl/infoservice</a>\nCopyright (c) Centraal Bureau voor de Statistiek\nVerveelvoudiging is toegestaan, mits het CBS als bron wordt vermeld.\n",
+"Language": "nl",
+"Title": "Prognose bevolking; geslacht, leeftijd, 1 januari 2004 - 2009",
+"Modified": "2003-12-05T09:51:00+01:00",
+"Status": "Gediscontinueerd",
+"DatasetType": "Numeric"
+},
+{
+"Identifier": "37174ned",
+"Description": "\nDeze tabel bevat cijfers over:\nGemiddeld aantal kinderen per vrouw per geboortegeneratie.\nPercentage vrouwen naar kindertal per geboortegeneratie.\nGemiddelde leeftijd van de moeder bij de geboorte van het eerste \nkind per geboortegeneratie.\n\nGegevens beschikbaar vanaf: geboortegeneraties 1935-2020\nFrequentie: stopgezet per 18 december 2008\n\nStatus van de cijfers\nDe geboortegeneraties 1935-1955 zijn volledig gebaseerd op waarnemingen.\nDe geboortegeneraties vanaf 1956 zijn gebaseerd op waarnemingen en \nprognosecijfers.\n\nWijzigingen ten opzichte van de vorige versie\n13 december 2006.\nDe prognose is bijgesteld op basis van de meest recente inzichten, de \nprognoseperiode loopt nu van 2006 tot 2050.\n\nWanneer komen er nieuwe cijfers?\nIn december 2008 komt de nieuwe bevolkingsprognose uit. \n",
+"Language": "nl",
+"Title": "Prognose bevolking; kerncijfers vruchtbaarheid, 2006 - 2050",
+"Modified": "2007-02-13T11:26:00+01:00",
+"Status": "Gediscontinueerd",
+"DatasetType": "Numeric"
+},
+{
+"Identifier": "37321abs",
+"Description": "\nDe tabel geeft inzicht in het aantal nieuwe uitkeringen (instroom) en het aantal beëindigde uitkeringen (uitstroom) in het kader van de Algemene bijstandswet (ABW) en de Wet werk en bijstand (WWB), die per 1 januari 2004 in de plaats is gekomen van de ABW, in de verslagperiode.  \n\nDe gegevens zijn uitgesplitst naar de volgende persoons- en uitkeringskenmerken:\n- geslacht;\n- leeftijd;\n- burgerlijke staat;\n- leefvorm;\n- aantal ten laste komende kinderen.\n\nGegevens beschikbaar van 2000 tot en met 2004.\n \nStatus van de cijfers: \nde cijfers in deze tabel zijn definitief.\n\nWijzigingen per 10 oktober 2012\nGeen, deze tabel is stopgezet.\n\nWanneer komen er nieuwe cijfers?\nNiet van toepassing. Zie paragraaf 3 voor andere cijfers over standen en stromen van bijstandsuitkeringen.\n\n",
+"Language": "nl",
+"Title": "Algemene bijstand; nieuwe en beëindigde bijstandsuitkeringen, 2000-2004",
+"Modified": "2015-04-30T02:00:00+02:00",
+"Status": "Gediscontinueerd",
+"DatasetType": "Numeric"
+},
+{
+"Identifier": "37397rrh",
+"Description": "\nDe regionale rekeningen voor huishoudens in deze publicatie beschrijven de primaire en de secundaire verdeling van de inkomensrekening van de sector huishoudens. De huishoudens zijn ingedeeld in een tiental typen.\nDe transacties zijn binnen de primaire- en de secundaire inkomensverdeling uitgesplitst naar middelen en bestedingen (inkomsten en uitgaven). \n\n\nGegevens beschikbaar: 1995-2009\n\nStatus van de cijfers:\nJaren 1995-2008 definitief\nJaar 2009 nader voorlopig. Aangezien deze tabel is stopgezet worden de gegevens van 2009 niet meer definitief gemaakt.\n\nWijzigingen per 19 november 2013:\nGeen, deze tabel is stop gezet.\n\nWanneer komen er nieuwe cijfers?\nNiet meer van toepassing\n\nIs er een opvolger?\nDeze tabel wordt opgevolgd door Transacties van de sector huishoudens; regionaal. Zie  paragraaf 3.\n\n",
+"Language": "nl",
+"Title": "Regionale rekeningen; inkomensrekening van huishoudens 1995-2009",
+"Modified": "2013-11-21T02:00:00+01:00",
+"Status": "Gediscontinueerd",
+"DatasetType": "Numeric"
+},
+{
+"Identifier": "37470abu",
+"Description": "\n\nDe tabel geeft inzicht in het aantal huishoudens met een uitkering die is \ntoegekend in het kader van de Algemene bijstandswet (Abw), de Wet werk \nen bijstand (WWB) of de inkomensvoorziening op grond van de\nWet Investeren in Jongeren (WIJ). De Abw is per 1 januari 2004 vervangen \ndoor de WWB. Met ingang van 1 oktober 2009 is naast de WWB de WIJ van \nkracht geworden. \nHet aantal huishoudens is uitgesplitst naar verschillende regionale\nindelingen.\n\n\nDe gegevens zijn uitgesplitst naar de volgende persoons- en \nuitkeringskenmerken:\n- geslacht;\n- leeftijd;\n- burgerlijke staat;\n- leefvorm;\n- huisvesting;\n- aantal ten laste komende kinderen;\n- inkomstenbron;\n- duur van de uitkering.\n\nLet op: \nDe uitkomsten geven niet het aantal personen weer dat afhankelijk is van \neen bijstandsuitkering, maar het aantal huishoudens waaraan een uitkering\nis toegekend. Dit is met name van belang bij huishoudens van (echt)paren.\nHoewel bij (echt)paren beide partners voor gelijke delen recht hebben op \nde uitkering, is er toch sprake van één uitkering en worden tot januari\n2005 alleen de kenmerken van degene die de uitkering daadwerkelijk heeft\naangevraagd in beschouwing genomen. Bij de cijfers vanaf januari 2005 is\ner voor gekozen om bij het toedelen van uitkeringen aan (echt)paren \nconsequent de persoonskenmerken over te nemen van de oudste persoon van \nhet (echt)paar.\n\n\nGegevens beschikbaar vanaf: januari 1998. \n\nStatus van de cijfers: \nDe cijfers hebben zowel een voorlopig (vanaf augustus 2010) als definitief\nkarakter (tot augustus 2010).\n\nWijzigingen per 30 november 2010:\nToegevoegd zijn de voorlopige cijfers september 2010.\n\nWanneer komen er nieuwe cijfers: \nde tabel is met ingang van 24 december 2010 stopgezet.\n\n",
+"Language": "nl",
+"Title": "Algemene bijstandsuitkeringen; leeftijd, gemeentegrootteklasse, 1998 - 2010",
+"Modified": "2010-11-30T09:30:00+01:00",
+"Status": "Gediscontinueerd",
+"DatasetType": "Numeric"
+},
+{
+"Identifier": "37542",
+"Description": "\nDeze tabel bevat gegevens over door de politie geregistreerde \ncriminaliteit, de gehoorde verdachten en de opgehelderde misdrijven. De \ncijfers worden gegeven naar soort misdrijf, gemeentegrootte en \ngrootteklasse van de gemeenten waar de misdrijven zijn gepleegd.\n\nHet soort misdrijf wordt gepresenteerd in een aantal hoofdgroepen.\n\nVoor de indeling van de gemeenten wordt uitgegaan van de indeling \nin het jaar volgend op het verslagjaar. De reden hiervoor is dat de \nberichtgeving de jaargrens overschrijdt en een gedeelte \nvan de gegevens geen informatie over de 'oude' gemeenten bevat.\n\nOm de grootteklassen van gemeenten onderling beter vergelijkbaar te maken, \nwordt de geregistreerde criminaliteit gerelateerd aan de bevolkingsomvang \nvan 12-79 jaar in die klasse.\nDe naar gemeentegrootte gepresenteerde cijfers zijn steeds exclusief de \ngegevens van de Koninklijke Marechaussee en van de landelijke politie- \ndiensten omdat die niet naar afzonderlijke gemeenten verbijzonderd kunnen \nworden.\nVoor de indeling van de gemeenten wordt uitgegaan van de indeling in het \njaar volgend op het verslagjaar. \n\nDe tabel is stopgezet op 7 juli 2010.\nOver de geregistreerde criminaliteit is een nieuwe reeks vanaf 2005 \nopgenomen in de tabel: Gereg.criminaliteit; misdrijven naar soort misdrijf \nen politieregio.\n\nInfoservice: \n<a href=\"http://www.cbs.nl/infoservice\">http://www.cbs.nl/infoservice</a>\n\nCopyright (c) Centraal Bureau voor de Statistiek, Voorburg 2005\n\nBronvermelding is verplicht, verveelvoudiging voor eigen gebruik of intern \ngebruik is toegestaan.\n",
+"Language": "nl",
+"Title": "Geregistreerde criminaliteit; gemeentegrootte en soort misdrijf, 1994-2007",
+"Modified": "2010-07-07T02:00:00+02:00",
+"Status": "Gediscontinueerd",
+"DatasetType": "Numeric"
+},
+{
+"Identifier": "37548",
+"Description": "\nIn deze tabel worden cijfers gepubliceerd over:\n- het aantal nieuwbouwwoningen waarvoor een ‘omgevingsvergunningen met activiteit bouwen’ (voorheen bouwvergunningen) is verleend;\n- het aantal nog gereed te komen nieuwbouwwoningen.\n- het aantal gereedgekomen nieuwbouwwoningen.\n\nDeze gegevens worden uitgesplitst naar de volgende kenmerken:\n- regio: landsdelen, provincies, COROP-gebieden, stadsgewesten, grootstedelijke agglomeraties en gemeenten;\n- opdrachtgevers;\n- eigendomsvorm.\n\nEn voor de gereedgekomen woningen: \n- woninggrootte aantal kamers;\n- woningtype eengezins- en meergezinswoningen.\n\nGegevens beschikbaar van 1995 tot en met 2011.\n\nStatus van de cijfers: \nDe cijfers in deze tabel zijn definitief.\n\nWanneer komen er nieuwe cijfers?\nDeze tabel is stopgezet per 29 maart 2013.\n\nReden van stopzetting:\nDeze tabel is na de verslagperiode 2011 niet meer geactualiseerd met cijfers over gereedgekomen nieuwbouwwoningen. \nDeze cijfers komen vanaf januari 2012 uit de Basisregistraties Adressen en Gebouwen (BAG) en zullen in mei 2013 worden gepubliceerd in nieuwe tabellen.\nDe cijfers over vergunningen voor nieuwbouwwoningen worden voortgezet in een nieuwe tabel 'Nieuwbouwwoningen, vergunningen' (zie ook paragraaf 3)\n\n",
+"Language": "nl",
+"Title": "Nieuwbouwwoningen; bouwvergunningen, gereedgekomen, 1995-2012",
+"Modified": "2018-04-10T02:00:00+02:00",
+"Status": "Gediscontinueerd",
+"DatasetType": "Numeric"
+},
+{
+"Identifier": "37590tak",
+"Description": "\nDeze publicatie bevat gegevens over het macro-economisch productieproces \nper regio. Hier worden van verschillende bedrijfseenheden de productie, \nhet verbruik, de toegevoegde waarde, de componenten van de toegevoegde \nwaarde en het arbeidsvolume weergegeven. \n\nDe gegevens in deze publicatie zijn geclassificeerd naar regio en volgens\nde Standaard Bedrijfsindeling (SBI '93). Bij de regionale indeling kan \ngekozen worden uit de verschillende landsdelen (Noord-, Oost-, West- en \nZuid-Nederland), provincies en (uitgesplitste) COROP-gebieden.\n\nDe cijfers zijn afkomstig uit de regionale rekeningen, de kwantitatieve \nbeschrijving van de economische ontwikkeling van de verschillende regio's\nbinnen een land. Doordat de cijfers aansluiten op de nationale rekeningen\ngeven zij een gecoördineerde beschrijving van de regionale economie en \nzijn ze bij uitstek geschikt voor de vergelijking van de resultaten van \nde verscheidene regio's.\n\nDe bedragen in deze publicatie zijn uitsluitend in lopende prijzen.\n\n\nStatus van de cijfers\nDe cijfers tot en met 2007 zijn definitief. Het meest recente jaar heeft\nnog een voorlopig karakter. \n\nWijzigingen ten opzichte van de vorige versie\nGewijzigd per: 23 december 2011.\nFrequentie: stopgezet.\nGegevens zijn beschikbaar vanaf 1995 tot en met 2008.\n\nReden stopzetting:\nDe herziening van de bedrijfsindeling die in de tabellen van de regionale\nrekeningen wordt gebruikt. De regionale rekeningen zijn hiermee overgegaan\nvan de SBI '93 naar de SBI 2008. \n\n\nRelease policy\nBinnen 2 en 3 jaar na afloop van een verslagjaar worden respectievelijk \nde voorlopige en definitieve cijfers gepubliceerd. \n\n",
+"Language": "nl",
+"Title": "Regionale rekeningen; Productie en inkomensvorming naar bedrijfstakken",
+"Modified": "2010-10-14T02:00:00+02:00",
+"Status": "Gediscontinueerd",
+"DatasetType": "Numeric"
+},
+{
+"Identifier": "37599",
+"Description": "Besteedbaar inkomen en inkomensverdelingen van personen en huishoudens\nPer gemeente (1 - 1- 2000), COROP-gebied, provincie, landsdeel, stads-\n1999\nGewijzigd op 02 juli 2004.\nVerschijningsfrequentie: Eenmalig.",
+"Language": "nl",
+"Title": "Regionale inkomensverdeling 1999, kerncijfers.",
+"Modified": "2004-07-02T11:23:00+02:00",
+"Status": "Gediscontinueerd",
+"DatasetType": "Numeric"
+},
+{
+"Identifier": "37610",
+"Description": "\nIn deze tabel worden op basis van de Wet Waardering Onroerende Zaken (WOZ) gegevens over de waarde per 1 januari van alle onroerende zaken (WOZ-objecten) gepubliceerd. De cijfers worden uitgesplitst naar waarde van de WOZ-objecten woningen en niet-woningen en de gemiddelde woningwaarde. De cijfers zijn verder uitgesplitst naar landsdeel, provincie, COROP-gebied en gemeente.\n\nMet ingang van verslagjaar 2016 publiceert CBS geen gegevens meer over grootstedelijke agglomeraties en stadsgewesten. \nDoor diverse maatschappelijke ontwikkelingen zijn de filosofie en methode die ten grondslag liggen aan de afbakening niet langer actueel. \nDaarnaast blijkt dat andere instanties, afhankelijk van het toepassingsgebied, een afwijkende indeling van grootstedelijke agglomeraties en stadsgewesten hanteren, waardoor er niet meer gesproken kan worden van één standaard.\n\nVoor gemeenten waar een gemeentelijke herindeling heeft plaatsgevonden, zijn de cijfers tussen de jaren niet goed vergelijkbaar. \n\nGegevens beschikbaar van 1997 tot en met 2020.\n\nStatus van de cijfers:\nHet betreft de stand per 1 januari. \n\nDe cijfers tot en met 2017 zijn definitief.\nDe cijfers van 2018 zijn nader voorlopig.\nDe cijfers van 2019 en 2020 zijn voorlopig.\nAangezien deze tabel is stopgezet, worden de gegevens niet meer definitief gemaakt. \nDe voorlopige en nader voorlopige cijfers geven de waarden volgens de oorspronkelijke WOZ-beschikking weer. In de definitieve cijfers zijn de wijzigingen als gevolg van bezwaar en beroep verwerkt. \n\nWijzigingen per 11 maart 2022:\nGeen, deze tabel is stopgezet.\n\nWanneer komen er nieuwe cijfers?\nNiet meer van toepassing. \nDeze tabel wordt opgevolgd door Gemiddelde WOZ-waarde van woningen op 1 januari; eigendom, regio. Zie paragraaf 3.\n\n",
+"Language": "nl",
+"Title": "Waarde onroerende zaken van woningen en niet-woningen 1997-2020",
+"Modified": "2022-03-11T02:00:00+01:00",
+"Status": "Gediscontinueerd",
+"DatasetType": "Numeric"
+},
+{
+"Identifier": "37631mpp",
+"Description": "Herbouwkosten van woningen, indices en mutaties op basis \nvan 1990=100 of 1995=100\nJanuari 1990 - december 2003\nGewijzigd op 26 januari 2004.\nVerschijningsfrequentie: Stopgezet.",
+"Language": "nl",
+"Title": "Indexcijfers herbouwkosten van woningen",
+"Modified": "2004-01-26T13:16:00+01:00",
+"Status": "Gediscontinueerd",
+"DatasetType": "Numeric"
+},
+{
+"Identifier": "37662",
+"Description": "\nDeze tabel beschrijft de sociaal-economische situatie van huishoudens en personen, voorzover deze samenhangt met het inkomen, de besteding van het inkomen en het vermogen. In deze tabel komen de volgende onderwerpen aan bod:\n- Inkomens van natuurlijke personen\n- Vermogens van natuurlijke personen\n- Successie (verkrijgingen)\n- Verbruik per huishouden\n- Bezit van duurzame consumptiegoederen\n\nGegevens beschikbaar van 1900 tot en met 1998\n\nStatus van de cijfers: \nDe cijfers voor de jaren 1900 tot en met 1998 in deze tabel zijn definitief. \n\nWijzigingen per 10 april 2018:\nGeen, deze tabel is stopgezet. \n\nWanneer komen er nieuwe cijfers?\nNiet meer van toepassing\n",
+"Language": "nl",
+"Title": "Historie inkomen, vermogen en consumptie; 1900-1998",
+"Modified": "2018-04-10T02:00:00+02:00",
+"Status": "Gediscontinueerd",
+"DatasetType": "Numeric"
+},
+{
+"Identifier": "37707",
+"Description": "Bijzondere bijstand aan huishoudens met een minimum inkomen naar\nsamenstelling huishouden, sociaal - economische categorie en leeftijd \n1999 - 2000\nGewijzigd op 26 april 2004.\nVerschijningsfrequentie: Stopgezet.",
+"Language": "nl",
+"Title": "Bijzondere bijstand aan huishoudens met minimum inkomen",
+"Modified": "2004-04-26T12:58:00+02:00",
+"Status": "Gediscontinueerd",
+"DatasetType": "Numeric"
+},
+{
+"Identifier": "37914",
+"Description": "\nDeze tabel bevat gegevens over de niet seizoensgecorrigeerde geregistreerde\nwerkloosheid en de seizoensgecorrigeerde geregistreerde werkloosheid. \n\nGegevens beschikbaar vanaf: Dec. 1988/feb. 1989\n\nStatus van de cijfers\nCijfers op basis van de EBB zijn altijd definitief.\n\nWijzigingen per 1 december 2010:\nIn juli 2010 heeft het CBS een nieuwe methode ingevoerd voor het maken van \nde werkloosheidscijfers. Met deze nieuwe methode is het CBS voor het eerst \nin staat om maandcijfers te maken over de werkloosheid. Om de kwartaal- en \njaarcijfers uit de EBB te laten aansluiten op deze nieuwe \nwerkloosheidscijfers, is een verbetering van de weging doorgevoerd. Dit \nbetekent dat alle kwartaal- en jaarcijfers op basis van de EBB vanaf 2001 \nzijn herzien. De jaren vóór 2001 zijn niet gereviseerd en betreffen de \neerder gepubliceerde cijfers. Voor de tabellen over de geregistreerde \nwerkloosheid betekent deze nieuwe methode dat het niet meer mogelijk is om \nmaandcijfers op basis van driemaandsgemiddelden te publiceren zoals \nvoorheen gebruikelijk was. Tabellen, zoals deze tabel, die nog \ndriemaandsgemiddelden over de geregistreerde werkloosheid bevatten, zijn \ndaarom stopgezet en worden voortgezet in nieuwe tabellen waarin vanaf \npublicatiejaar 2001 kwartaalcijfers worden gepubliceerd. \n\nWanneer komen er nieuwe cijfers?\nDeze tabel is stopgezet.\n",
+"Language": "nl",
+"Title": "Geregistreerde werkloosheid; Dec'88/Febr'89- April 2010/Juni 2010",
+"Modified": "2010-12-01T02:00:00+01:00",
+"Status": "Gediscontinueerd",
+"DatasetType": "Numeric"
+},
+{
+"Identifier": "37920",
+"Description": "\nDe gegevens over woonlasten van huurders van huurwoningen zijn afkomstig\nuit het Woningbehoeftenonderzoek (WBO). In het WBO onderzoekt het CBS de \nhuidige, vorige en gewenste huisvestingssituatie van huishoudens en \npersonen. Het WBO wordt uitgevoerd in opdracht van het \nMinisterie van Volkshuisvesting, Ruimtelijke Ordening en Milieubeheer \n(VROM), dat de gegevens gebruikt voor de voorbereiding en evaluatie van \nhet volkshuisvestingsbeleid.\n\nGegevens beschikbaar vanaf: 1998\nFrequentie: stopgezet\n\nStatus van de cijfers\nDefinitief.\n",
+"Language": "nl",
+"Title": "Woonlasten van huurwoningen, vanaf 1998",
+"Modified": "2002-03-27T09:04:00+01:00",
+"Status": "Gediscontinueerd",
+"DatasetType": "Mixed"
+},
+{
+"Identifier": "37932",
+"Description": "\nDeze tabel bevat gegevens over door de politie geregistreerde \ncriminaliteit, de gehoorde verdachten en de opgehelderde misdrijven. De \ncijfers worden gegeven naar soort misdrijf en de politieregio waarin het \nmisdrijf is gepleegd. De aangifte kan in een andere regio hebben\nplaatsgevonden. De cijfers over gehoorde verdachten worden ook naar \ngeslacht gegeven.\n\nHet soort misdrijf wordt gepresenteerd in een aantal hoofd- en subgroepen.\n\nDe geregistreerde misdrijven en gehoorde verdachten worden gerelateerd \naan de bevolkingsomvang van 12-79 jaar.\nDe gegevens op landelijk niveau zijn inclusief de gegevens van de \nKoninklijke Marechaussee en van de landelijke politiediensten.\nVoor de indeling van de gemeenten wordt uitgegaan van de indeling in het \njaar volgend op het verslagjaar.  \n\nDe tabel is stopgezet op 7 juli 2010.\nOver de geregistreerde criminaliteit is een nieuwe reeks vanaf 2005 \nopgenomen in de tabel: Gereg.criminaliteit; misdrijven naar soort misdrijf \nen politieregio.\n\nInfoservice:\n<a href=\"http://www.cbs.nl/infoservice\">http://www.cbs.nl/infoservice</a>\n\nCopyright (c) Centraal Bureau voor de \nStatistiek, Voorburg 2005\n\nBronvermelding is verplicht, verveelvoudiging \nvoor eigen gebruik of intern \ngebruik is toegestaan.              \n",
+"Language": "nl",
+"Title": "Geregistreerde criminaliteit; politieregio en soort misdrijf, 1994-2007",
+"Modified": "2010-07-07T02:00:00+02:00",
+"Status": "Gediscontinueerd",
+"DatasetType": "Numeric"
+},
+{
+"Identifier": "37948",
+"Description": "\nDeze tabel bevat gegevens over de historie van de geregistreerde \nwerkloosheid. De cijfers zijn niet gecorrigeerd voor seizoensinvloeden. Tot\nen met 1988 betreft het maandcijfers; vanaf 1989 driemaandsgemiddelden \nopgenomen onder de middelste maand.\n\nGegevens beschikbaar vanaf: januari 1952\n\nStatus van de cijfers\nCijfers op basis van de EBB zijn altijd definitief.\n\nWijzigingen per 1 december 2010:\nIn juli 2010 heeft het CBS een nieuwe methode ingevoerd voor het maken van \nde werkloosheidscijfers. Met deze nieuwe methode is het CBS voor het eerst \nin staat om maandcijfers te maken over de werkloosheid. Om de kwartaal- en \njaarcijfers uit de EBB te laten aansluiten op deze nieuwe \nwerkloosheidscijfers, is een verbetering van de weging doorgevoerd. Dit \nbetekent dat alle kwartaal- en jaarcijfers op basis van de EBB vanaf 2001 \nzijn herzien. De jaren vóór 2001 zijn niet gereviseerd en betreffen de \neerder gepubliceerde cijfers. Voor de tabellen over de geregistreerde \nwerkloosheid betekent deze nieuwe methode dat het niet meer mogelijk is om \nmaandcijfers op basis van driemaandsgemiddelden te publiceren zoals \nvoorheen gebruikelijk was. Tabellen, zoals deze tabel, die nog \ndriemaandsgemiddelden over de geregistreerde werkloosheid bevatten, zijn \ndaarom stopgezet en worden voortgezet in nieuwe tabellen waarin vanaf \npublicatiejaar 2001 kwartaalcijfers worden gepubliceerd. \n\nWanneer komen er nieuwe cijfers?\nDeze tabel is stopgezet.\n",
+"Language": "nl",
+"Title": "Geregistreerde werkloosheid; Januari 1952 - April 2010/Juni 2010",
+"Modified": "2010-12-01T02:00:00+01:00",
+"Status": "Gediscontinueerd",
+"DatasetType": "Numeric"
+},
+{
+"Identifier": "37955ned",
+"Description": "\n\nDe tabel geeft inzicht in het aantal huishoudens met een uitkering die is \ntoegekend in het kader van de Algemene bijstandswet (Abw), de Wet werk \nen bijstand (WWB) of de inkomensvoorziening op grond van de Wet Investeren\nin Jongeren (WIJ). De Abw is per 1 januari 2004 vervangen door de WWB. \nMet ingang van 1 oktober 2009 is naast de WWB de WIJ van kracht geworden. \nHet aantal huishoudens is uitgesplitst naar verschillende regionale\nindelingen.\n\nDe gegevens zijn uitgesplitst naar de volgende persoons- en \nuitkeringskenmerken:\n- geslacht;\n- leeftijd;\n- burgerlijke staat;\n- leefvorm;\n- huisvesting;\n- aantal ten laste komende kinderen;\n- inkomstenbron;\n- duur van de uitkering.\n\nLet op: \nDe uitkomsten geven niet het aantal personen weer dat afhankelijk is van \neen bijstandsuitkering, maar het aantal huishoudens waaraan een uitkering\nis toegekend. Dit is met name van belang bij huishoudens van (echt)paren.\nHoewel bij (echt)paren beide partners voor gelijke delen recht hebben op \nde uitkering, is er toch sprake van één uitkering en worden tot januari\n2005 alleen de kenmerken van degene die de uitkering daadwerkelijk heeft\naangevraagd in beschouwing genomen. Bij de cijfers vanaf januari 2005 is\ner voor gekozen om bij het toedelen van uitkeringen aan (echt)paren \nconsequent de persoonskenmerken over te nemen van de oudste persoon van \nhet (echt)paar.\n\n\nGegevens beschikbaar vanaf: januari 1998. \n\nStatus van de cijfers:\nDe cijfers hebben zowel een voorlopig (vanaf augustus 2010) als definitief\nkarakter (tot augustus 2010).\n\nPresentatie van de cijfers:\nMet ingang van 2005 wordt de tabel ook geactualiseerd als nog niet van alle\ngemeenten een opgave is ontvangen over een nieuwe verslagperiode. De \nuitkomsten op landelijk niveau zijn in geval van non-respons bijgeschat.\nDe publicatie van de hogere regionale indelingen (met uitzondering van de \nlandelijke cijfers) kan pas plaatsvinden wanneer de uitkomsten van alle \ngemeenten bekend zijn. \n\nWijzigingen per 30 november 2010: \nToegevoegd zijn de voorlopige cijfers september 2010.\n\nWanneer komen er nieuwe cijfers: \nde tabel is met ingang van 24 december 2010 stopgezet.\n\n",
+"Language": "nl",
+"Title": "Algemene bijstandsuitkeringen; geslacht, leeftijd, regio, 1998 - 2010",
+"Modified": "2010-11-30T09:30:00+01:00",
+"Status": "Gediscontinueerd",
+"DatasetType": "Numeric"
+},
+{
+"Identifier": "37957",
+"Description": "\nGegevens beschikbaar voor de jaren 1997-2004\n\nStatus van de cijfers: definitief\n\nWijziging per 10 januari 2017:\nTabel is stopgezet\n\nWijzigingen ten opzichte van de vorige versie tekstuele aanpassingen in titels, onderwerpen, categorieën en toelichtingen\n\nWanneer komen er nieuwe cijfers?\nStopgezet.\n",
+"Language": "nl",
+"Title": "Slachtofferschap van criminaliteit naar kenmerken, 1997-2004",
+"Modified": "2017-01-10T02:00:00+01:00",
+"Status": "Gediscontinueerd",
+"DatasetType": "Numeric"
+},
+{
+"Identifier": "70050ned",
+"Description": "Besteedbaar inkomen; inkomensverdelingen van personen en huishoudens\nPer gemeente (1 - 1- 2001), COROP-gebied, provincie, landsdeel, stads-\n2000\nGewijzigd op 02 juli 2004.\nVerschijningsfrequentie: Eenmalig.",
+"Language": "nl",
+"Title": "Regionale inkomensverdeling 2000, kerncijfers.",
+"Modified": "2004-07-02T11:31:00+02:00",
+"Status": "Gediscontinueerd",
+"DatasetType": "Numeric"
+},
+{
+"Identifier": "70171ned",
+"Description": "\nDeze tabel bevat een deel van de uitkomsten van de maandelijkse statistiek verleende bouwvergunningen. In deze tabel worden de volgende gegevens over bouwvergunningen (nu geheten 'omgevingsvergunning met activiteit bouwen') voor huur- en koopwoningen gepubliceerd:\n- de gemiddelde bouwsom en inhoud per woning;\n- gemiddelde bouwsom per kubieke meter;\n- het aantal woningen;\n- de gemiddelde projectgrootte in aantal woningen.\n\nDe uitkomsten over de periode 1990 tot 2002 hebben betrekking op verleende bouwvergunningen met een bouwsom vanaf 45 duizend euro. Vanaf 2002 is de ondergrens verhoogd naar 50 duizend euro.\n\nDeze gegevens worden verder uitgesplitst naar landsdelen en provincies.\n\nGegevens beschikbaar van 1990 tot en met 2016.\n\nStatus van de cijfers:\nDe cijfers zijn definitief.\n\nWijzigingen per 8 mei 2017:\nGeen, deze tabel is stopgezet. Met ingang van verslagjaar 2017 wordt een andere methodiek gebruikt voor de publicaties, waarin: \n- De cijfers van gemeenten met non-respons worden geschat.\n- Nagekomen opgaven van gemeenten over voorgaande perioden worden verwerkt in de cijfers van de maand waarin de vergunning is verleend.\n- Ook voorlopige cijfers worden gepubliceerd.\n- Twaalf maanden na publicatie de cijfers definitief worden vastgesteld.\n\nWanneer komen er nieuwe cijfers?\nNiet meer van toepassing. Deze tabel wordt opgevolgd door nieuwe tabellen met herberekende cijfers van verleende bouwvergunningen vanaf 2012. Zie paragraaf 3.\n\n",
+"Language": "nl",
+"Title": "Bouwvergunningen; huur- en koopwoningen, bouwkosten, inhoud 1990-2016",
+"Modified": "2017-05-08T02:00:00+02:00",
+"Status": "Gediscontinueerd",
+"DatasetType": "Numeric"
+},
+{
+"Identifier": "70801NED",
+"Description": "\n\nHet CBS stelt een vijftal \"onderliggende\" reeksen consumentenprijsindices \nsamen. Deze reeksen worden samengesteld uitgaande van de gewone of de \nafgeleide CPI voor alle huishoudens. Daarbij worden wisselend enkele \nartikelgroepen verwijderd die op korte termijn een sterk fluctuerend \nprijsniveau kennen en/of waarvan de prijzen sterk worden beïnvloed door \noverheidsmaatregelen. Het weglaten van dit soort componenten uit de CPI \nleidt tot inflatiemaatstaven die een beeld geven van de \nlangetermijnontwikkeling van de inflatie. \n\nOnderliggende reeksen zijn alleen bedoeld voor analysedoeleinden. \n\nGegevens beschikbaar vanaf: januari 2001\nFrequentie: maandelijks\n\nWijzigingen ten opzichte van de vorige versie: er zijn gegevens over een \nnieuwe periode toegevoegd en/of bijstellingen doorgevoerd conform de \nreleasepolicy zoals beschreven onder punt 4. \n\nInfoservice: <a \nhref=\"http://www.cbs.nl/infoservice\">http://www.cbs.nl/infoservice</a>\n\nCopyright (c) Centraal Bureau voor de Statistiek\n\nBronvermelding is verplicht, verveelvoudiging voor eigen gebruik of \nintern gebruik is toegestaan.\n",
+"Language": "nl",
+"Title": "Consumentenprijzen; onderliggende inflatie 2000 = 100",
+"Modified": "2007-02-14T12:29:00+01:00",
+"Status": "Gediscontinueerd",
+"DatasetType": "Numeric"
+},
+{
+"Identifier": "70871ned",
+"Description": "\nDeze tabel bevat gegevens over door de politie geregistreerde \ncriminaliteit, de gehoorde verdachten en de opgehelderde misdrijven. \nDe cijfers worden gegeven naar soort misdrijf. De cijfers over gehoorde \nverdachten worden gegeven naar het geslacht en de meer- en minderjarigheid \nvan de verdachte.\n\nDe geregistreerde misdrijven, opgehelderde misdrijven en gehoorde \nverdachten worden gerelateerd aan de bevolkingsomvang van 12-79 jaar.\n\nVoor de indeling van de gemeenten wordt uitgegaan van de indeling in het \njaar volgend op het verslagjaar.  \n\nDe tabel is stopgezet op 7 juli 2010.\nOver de geregistreerde criminaliteit is een nieuwe reeks vanaf 2005 \nopgenomen in de tabel: Gereg.criminaliteit; misdrijven naar soort misdrijf \nen politieregio.\n\nInfoservice: \n<a href=\"http://www.cbs.nl/infoservice\">http://www.cbs.nl/infoservice</a>\n\nCopyright (c) Centraal Bureau voor de Statistiek, Voorburg 2005\n\nBronvermelding is verplicht, verveelvoudiging voor eigen gebruik of intern \ngebruik is toegestaan.\n",
+"Language": "nl",
+"Title": "Geregistreerde criminaliteit; soort misdrijf, 1999-2007",
+"Modified": "2010-07-07T02:00:00+02:00",
+"Status": "Gediscontinueerd",
+"DatasetType": "Numeric"
+},
+{
+"Identifier": "70967ned",
+"Description": "\nHet CBS verzamelt vanuit verschillende registraties gegevens over personen \nin Nederland. Deze tabel bevat informatie over niet-Nederlandse immigranten\nin de leeftijd van 16 tot 65 jaar die zich in de periode 1999 tot en met \n2003 in Nederland hebben gevestigd. De informatie bestaat uit gegevens over\nhet migratiemotief, jaar van vestiging, geslacht en de belangrijkste \ninkomstenbron. In de tabel worden de belangrijkste inkomstenbronnen per \nmigratiemotief uitgedrukt als percentage van de totale (geselecteerde) \ngroep met dat migratiemotief. \n\nGegevens beschikbaar vanaf: 1999\nFrequentie: stopgezet\n\nStatus van de cijfers\nAlle in de tabel opgenomen cijfers zijn definitief.\n\n",
+"Language": "nl",
+"Title": "Algemene bijstandsuitkeringen; leeftijd, gemeentegrootteklasse, 1998 - 2010",
+"Modified": "2009-04-08T02:00:00+02:00",
+"Status": "Gediscontinueerd",
+"DatasetType": "Numeric"
+},
+{
+"Identifier": "71099ned",
+"Description": "\nDeze tabel bevat de Europees geharmoniseerde consumentenprijsindex (HICP) voor Nederland, de EU en de Eurozone. Deze prijsindex geeft het prijsverloop weer van een pakket goederen en diensten dat een gemiddeld huishouden in een EU-land aanschaft. De samenstelling van het pakket goederen en diensten maakt een vergelijking mogelijk van het prijsverloop van consumentengoederen en -diensten tussen EU-landen. Van de indices staan ook de jaar-op-jaar ontwikkelingen in deze tabel.\n\nGegevens beschikbaar van 1996 tot en met 2015\n\nStatus van de cijfers:\nDe cijfers in deze tabel zijn definitief.\n\nWijzigingen per 16 juni 2016\nGeen, deze tabel is stop gezet\n\nWijzigingen per 10 maart 2016:\nEurostat heeft cijfers voor de EU en de Eurozone aangepast.\n\nWijzigingen per 11 februari 2016:\nAan deze tabel worden per 11 februari 2016 geen nieuwe periodes meer toegevoegd. De tabel wordt uitsluitend nog geactualiseerd voor de voorlopige cijfers.  Nieuwe periodes worden per deze datum toegevoegd aan de nieuwe tabel: <a href='http://statline.cbs.nl/StatWeb/publication/?VW=T&DM=SLNL&PA=83135NED'>Europese inflatie; Nederland, eurozone en Europese Unie 2015 = 100 </a>.\n\nWijzigingen per 10 december\nDoor nagekomen informatie over de huren is de HICP voor Nederland in oktober naar beneden bijgesteld.\n\nHICP reeksen kunnen worden aangepast volgens de regels vastgesteld in Commission Regulation (EC) No 1921/2001 van 28 september 2001. De gepubliceerde HICP data kunnen worden gereviseerd als gevolg van fouten, nieuwe of verbeterde informatie, en veranderingen in het systeem van geharmoniseerde regels. De HICP reeksen worden gereviseerd en gepubliceerd door Eurostat. Het CBS neemt de nieuwe publicatiecijfers over. \n\nWanneer komen er nieuwe cijfers?\nDeze tabel wordt opgevolgd door Europese inflatie; Nederland, eurozone en Europese Unie 2015 = 100. Zie paragraaf 3.\n\n",
+"Language": "nl",
+"Title": "Consumentenprijzen; inflatie Europa 2005 = 100 (HICP), 1996 - 2015",
+"Modified": "2016-06-16T02:00:00+02:00",
+"Status": "Gediscontinueerd",
+"DatasetType": "Numeric"
+},
+{
+"Identifier": "71193ned",
+"Description": "Verdachtenpercentages en verdeling van gepleegde misdrijven.\nGeslacht, leeftijd, herkomst, generatie, aard misdrijf, woongemeente.\n1999 - 2006*\nGewijzigd op 18 november 2011.\nVerschijningsfrequentie: Stopgezet.",
+"Language": "nl",
+"Title": "Verdachten en misdrijven; herkomstgroepering en woongemeente, 1999 - 2006",
+"Modified": "2009-05-01T02:00:00+02:00",
+"Status": "Gediscontinueerd",
+"DatasetType": "Numeric"
+},
+{
+"Identifier": "71313ned",
+"Description": "\nDeze tabel bevat de zogenaamde onderliggende reeksen. De onderliggende reeksen zijn gelijk aan de consumentenprijsindex (CPI) of afgeleide CPI exclusief de invloed van enkele productgroepen die sterk in prijs fluctueren of grotendeels door de overheid gereguleerd zijn. Behalve de index staat ook de inflatie van de verschillende reeksen in de tabel. \n\n\nGegevens beschikbaar vanaf: januari 2006 tot en met december 2015\n\nStatus van de cijfers: \nDe gegevens zijn definitief.\n\nWijzigingen per 16 juni 2016:\nDeze tabel is gestopt per 16 juni 2016. \n\nWijzigingen per 10 december 2015:\nPer 1 oktober is door de rijksoverheid het puntenstelsel voor de woninghuren aangepast. Als gevolg hiervan zijn de huren van een beperkt aantal woningen gedaald, waardoor ook de gemiddelde huren daalden. Het effect van deze huurdaling op de prijsindexcijfers van de huur en toegerekende huur kon niet eerder bepaald worden, omdat de woningcorporaties pas in november de omvang van de huuraanpassingen bekend maakten. De cijfers van de groepen 04100 ‘Werkelijke huur’ en 04200 ‘Toegerekende huur eigen woning’ van oktober 2015 zijn daarom aangepast. \n\nDe cijfers voor de groepen 061100 ‘Zelfzorggeneesmiddelen, 061200 ‘Andere medische producten’, 072200 ‘Autobrandstoffen’ en 083000 ‘Telefoon, fax- en internetdiensten’van juni tot en met september 2015 zijn bijgesteld. Dit heeft geen gevolgen voor de gepubliceerde indexcijfers op hoofdniveau.\n\nDe afgeleide CPI is over de maand augustus  2015 0,01 indexpunt naar beneden bijgesteld.\n\n\n",
+"Language": "nl",
+"Title": "Consumentenprijzen; onderliggende inflatie 2006=100, 2006 – 2015",
+"Modified": "2016-06-16T02:00:00+02:00",
+"Status": "Gediscontinueerd",
+"DatasetType": "Numeric"
+},
+{
+"Identifier": "71404ned",
+"Description": "\nIn deze tabel vindt u een overzicht van preventiemaatregelen tegen criminaliteit op basis van de VeiligheidsMonitor Rijk (VMR). Het gaat over maatregelen tegen inbraak, fietsendiefstal, autodiefstal en overige maatregelen. \n\nHet gaat steeds om gegevens over de bevolking van 15 jaar of ouder, tenzij anders vermeld. Opgenomen zijn de landelijke cijfers en de cijfers per politieregio.\nDoor wijziging in vraagstelling, onderzoeksopzet en/of context zijn de VMR-gegevens niet vergelijkbaar met gegevens uit andere bronnen, zoals de Integrale VeiligheidsMonitor (IVM, vanaf 2008) en eerdere veiligheids- en/of slachtofferenquêtes. \n\nDeze enquête is uitgevoerd in het eerste kwartaal van de jaren 2005 t/m 2008.\n\nGegevens beschikbaar: 2005 tot en met 2008\n\nDeze tabel is stopgezet per 15-3-2013 en voortgezet als “Preventiemaatregelen tegen criminaliteit; politieregio (IVM)”. Zie ook paragraaf 3.\n\nStatus van de cijfers: definitief\n\nWijzigingen per 20 mei 2010:\nDoor een administratieve fout zijn de cijfers van 'Inbraakpreventie -schaalscore' in een eerdere versie van deze tabel niet correct gepresenteerd. Op 20 mei 2010 zijn de betreffende gegevens van alle jaren (2005-2008) gecorrigeerd.\n\nWanneer komen er nieuwe cijfers?\nDeze tabel is stopgezet per 15-3-2013. \n",
+"Language": "nl",
+"Title": "Preventiemaatregelen in verband met criminaliteit (VMR 2005-2008)",
+"Modified": "2013-03-15T02:00:00+01:00",
+"Status": "Gediscontinueerd",
+"DatasetType": "Numeric"
+},
+{
+"Identifier": "71428ned",
+"Description": "\nDe gegevens in deze tabel zijn gebaseerd op de Enquête \nberoepsbevolking (EBB). De EBB is een onderzoek dat door het CBS \nwordt uitgevoerd om informatie te verzamelen over de relatie tussen \nmens en arbeidsmarkt. Hierbij worden kenmerken van personen in verband \ngebracht met hun huidige dan wel toekomstige positie op de arbeidsmarkt.\n\nDe gegevens in deze tabel hebben betrekking op werkloosheidsduur. \nWerkloosheidsduur betreft het aantal maanden dat een persoon werkloos \nis. Op basis van de Enquête beroepsbevolking is vastgesteld welke \npersonen behoren tot de werkloze beroepsbevolking en sinds welke \nmaand deze personen werkloos zijn. De maand wanneer een persoon \nwerkloos is geworden, is gebaseerd op de maand van de laatste baan \n(van 12 uur per week of meer van langer dan één jaar) of de maand \nvan zoeken naar werk (van 12 uur of meer per week) of het moment \nvan schoolverlaten.\n\nDe cijfers over het aantal langdurig werklozen zijn het resultaat van een \neerste studie \nnaar de mogelijkheden om te komen tot een afbakening van langdurig \nwerkloosheid. Van de werklozen in de Enquête Beroepsbevolking (EBB) is \nbekend wanneer ze zijn gestopt in de laatste baan, wanneer ze zijn gaan \nzoeken naar werk en het moment van schoolverlaten. Met deze gegevens kan \nworden achterhaald wanneer iemand werkloos is geworden; dit is de \nstartdatum van werkloosheid. De werkloosheidsduur is het aantal maanden \ntussen de startdatum van werkloosheid tot en met de enqûetedatum. Deze \nstudie maakt deel uit van een langer lopend onderzoek naar \nwerkloosheidsduur in Nederland. Deze cijfers hebben daarom een voorlopig \nkarakter en kunnen in een later stadium worden bijgesteld. \n\nVanwege een nieuwe weegmethode van de EBB zijn alle EBB \ntabellen stopgezet en verplaatst naar het archief. In plaats \nhiervan worden nieuwe tabellen gemaakt. \nIn deze nieuwe tabellen zijn de cijfers met een \nnieuwe weegmethode gecorrigeerd tot en met 2001. Vanaf 2001 \nis het daarnaast ook mogelijk om voor een beperkte set van \nvariabelen kwartaalcijfers te publiceren. De jaren voor 2001 \nzijn niet gecorrigeerd en betreffen de eerder gepubliceerde \ncijfers. Een uitgebreide beschrijving van de nieuwe weegmethode \nvan de EBB is te vinden op de themapagina.\n\nGegevens beschikbaar vanaf: 2001\n\nFrequentie: stopgezet\n\nStatus van de cijfers\nDe cijfers in deze publicatie zijn voorlopig.\n\nWanneer komen er nieuwe cijfers?\nStopgezet.\n",
+"Language": "nl",
+"Title": "Werklozen; werkloosheidsduur, 2001-2007",
+"Modified": "2017-01-06T02:00:00+01:00",
+"Status": "Gediscontinueerd",
+"DatasetType": "Numeric"
+},
+{
+"Identifier": "71533ned",
+"Description": "\nIn deze tabel worden de ontwikkelingen van de verkoopprijzen van \nbestaande koopwoningen weergegeven. Naast de prijsindexcijfers worden ook \naantallen verkochte woningen gepubliceerd, de gemiddelde verkoopprijs en \nde totale waarde van de verkoopprijzen van deze woningen. \nDe prijsindexcijfers over de bestaande koopwoningen zijn gebaseerd op een \nintegrale registratie van verkooptransacties van woningen door het \nKadaster en WOZ-waarden van alle woningen in Nederland.\nIndexreeksen kunnen fluctueren, bijvoorbeeld wanneer het aantal \ntransacties van een bepaald woningtype in een provincie beperkt is. Het \nverdient dan aanbeveling om de lange termijn ontwikkelingen van de \nprijsindexcijfers te gebruiken. \nDe gemiddelde verkoopprijs kan een andere ontwikkeling laten zien dan de \nprijsindex bestaande koopwoningen. De ontwikkeling van de gemiddelde \nverkoopprijs is namelijk geen indicator voor de prijsontwikkeling van \nbestaande koopwoningen. Zie voor meer informatie hierover het onder punt 3 \ngenoemde artikel \"Waarom de gemiddelde koopsom geen huizenprijsindicator \nis\".\n\nDe gegevens zijn beschikbaar vanaf: januari 1995 - december 2012.\n\nStatus van de cijfers:\nDe cijfers in deze tabel zijn definitief.\n\nWanneer komen er nieuwe cijfers?\nDeze tabel is stopgezet per 8-3-2013 en wordt voorgezet als Bestaande koopwoningen; regio; verkoopprijzen prijsindex 2010 = 100 en Bestaande koopwoningen; woningtype; verkoopprijzen prijsindex 2010 = 100. Zie ook paragraaf 3.\n\n",
+"Language": "nl",
+"Title": "Bestaande koopwoningen naar woningtype en regio; 2005 = 100; 1995-2012",
+"Modified": "2013-03-13T02:00:00+01:00",
+"Status": "Gediscontinueerd",
+"DatasetType": "Numeric"
+},
+{
+"Identifier": "72019ned",
+"Description": "\nDe gegevens in deze tabel zijn gebaseerd op de Enquête \nberoepsbevolking (EBB). De EBB is een onderzoek dat door het CBS \nwordt uitgevoerd om informatie te verzamelen over de relatie tussen \nmens en arbeidsmarkt. Hierbij worden kenmerken van personen in verband \ngebracht met hun huidige dan wel toekomstige positie op de arbeidsmarkt.\n\nDe gegevens in deze tabel hebben betrekking op werkloosheidsduur. \nWerkloosheidsduur betreft het aantal maanden dat een persoon werkloos \nis. Op basis van de Enquête beroepsbevolking is vastgesteld welke \npersonen behoren tot de werkloze beroepsbevolking en sinds welke \nmaand deze personen werkloos zijn. De maand wanneer een persoon \nwerkloos is geworden, is gebaseerd op de maand van de laatste baan \n(van 12 uur per week of meer van langer dan één jaar) of de maand \nvan zoeken naar werk (van 12 uur of meer per week) of het moment \nvan schoolverlaten.\n\nDe cijfers over het aantal langdurig werklozen zijn het resultaat van een \neerste studie naar de mogelijkheden om te komen tot een afbakening van \nlangdurig werkloosheid. Van de werklozen in de Enquête Beroepsbevolking \n(EBB) is bekend wanneer ze zijn gestopt in de laatste baan, wanneer ze zijn\n \ngaan zoeken naar werk en het moment van schoolverlaten. Met deze gegevens \nkan worden achterhaald wanneer iemand werkloos is geworden; dit is de \nstartdatum van werkloosheid. De werkloosheidsduur is het aantal maanden \ntussen de startdatum van werkloosheid tot en met de enqûetedatum. Deze \nstudie maakt deel uit van een langer lopend onderzoek naar \nwerkloosheidsduur in Nederland. Deze cijfers hebben daarom een voorlopig \nkarakter en kunnen in een later stadium worden bijgesteld. \n\nVanwege een nieuwe weegmethode van de EBB zijn alle EBB tabellen\nstopgezet en verplaatst naar het archief. In plaats hiervan worden\nnieuwe tabellen gemaakt waarvan deze tabel er één is. In deze nieuwe\ntabellen zijn de cijfers met een nieuwe weegmethode gecorrigeerd tot\nen met 2001. Vanaf 2001 is het daarnaast ook mogelijk om voor een\nbeperkte set van variabelen kwartaalcijfers te publiceren.\nDe jaren voor 2001 zijn niet gecorrigeerd en betreffen de eerder\ngepubliceerde cijfers. Een uitgebreide beschrijving van de nieuwe\nweegmethode van de EBB is te vinden op de themapagina.\n\nGegevens beschikbaar vanaf: 2001\n\nFrequentie: stopgezet\n\nWijzigingen ten opzichte van de vorige versie:\nDeze tabel is stopgezet en voortgezet in een vernieuwde tabel \nWerkloze beroepsbevolking; werkloosheidsduur kenmerk.\nAanleiding hiervoor zijn nieuwe, nauwkeuriger cijfers over \nwerkloosheidsduur. Daarbij is gecorrigeerd voor afrondfouten \nin de zoekduur van werklozen. Daarnaast wordt bij de \nbepaling van de werkloosheidsduur geen rekening meer \ngehouden met het moment van schoolverlaten van werklozen. \nDe oude tabellen over de werkloosheidsduur van werklozen \nzijn stopgezet en verplaatst naar het archief. \nHet gaat om de tabellen;\n- Werklozen; werkloosheidsduur\n- Langdurig werklozen; kenmerken\n- Langdurig werklozen; regio.\n\nWanneer komen er nieuwe cijfers?\nStopgezet.\n",
+"Language": "nl",
+"Title": "Werklozen; werkloosheidsduur",
+"Modified": "2009-04-14T02:00:00+02:00",
+"Status": "Gediscontinueerd",
+"DatasetType": "Numeric"
+},
+{
+"Identifier": "7435fail",
+"Description": "Deze publicatie geeft een overzicht van de uitgesproken faillissementen\nnaar bedrijfsactiviteiten.\n\nGegevens beschikbaar vanaf 1993 tot en met 1999.\n\nFrequentie: \nstopgezet\n\n ",
+"Language": "nl",
+"Title": "Uitgesproken faillissementen naar bedrijfsactiviteit 1993 - 1999",
+"Modified": "2019-01-22T02:00:00+01:00",
+"Status": "Gediscontinueerd",
+"DatasetType": "Numeric"
+},
+{
+"Identifier": "80158ned",
+"Description": "\nDeze tabel bevat een overzicht van alle faillissementen die in de verslagperiode in Nederland zijn uitgesproken. In de tabel wordt het aantal faillissementen ingedeeld naar bedrijfsactiviteit volgens de Standaard Bedrijfsindeling 2008 (SBI 2008). Ook worden de faillissementen (totaal en per bedrijfstak) uitgesplitst naar rechtsvorm. De aantallen worden niet gecorrigeerd voor uitspraken die later zijn vernietigd.\n\nGegevens beschikbaar vanaf: januari 1993 - april 2014\n\nStatus van de cijfers\nAlle cijfers in deze tabel zijn definitief.\n\nWijzigingen per 9 juli 2014:\nGeen, deze tabel is stopgezet. Actuele informatie over de faillissementen bevindt zich op statline onder het thema, Bedrijven/Bedrijvendemografie/Faillissementen. \n\nWanneer komen er nieuwe cijfers?\nNiet van toepassing.\n\n",
+"Language": "nl",
+"Title": "Uitgesproken faillissementen; rechtsvorm en SBI 2008, jan. 1993-april 2014",
+"Modified": "2017-09-06T02:00:00+02:00",
+"Status": "Gediscontinueerd",
+"DatasetType": "Numeric"
+},
+{
+"Identifier": "80330ned",
+"Description": "\nIn deze tabel worden de ontwikkelingen van de verkoopprijzen van \nbestaande koopwoningen weergegeven per COROP gebied en 25 Grootste \ngemeenten (meer dan 100.000 inwoners op 01-01-2005). Naast de \nprijsindexcijfers worden ook aantallen verkochte woningen gepubliceerd, de \ngemiddelde verkoopprijs en de totale waarde van de verkoopprijzen van deze \nwoningen.\nDe prijsindexcijfers over de bestaande koopwoningen zijn gebaseerd op een \nintegrale registratie van verkooptransacties van woningen door het \nKadaster en WOZ-waarden van alle woningen in Nederland.\nIndexreeksen kunnen fluctueren, bijvoorbeeld wanneer het aantal \ntransacties in een regio beperkt is. Het verdient dan aanbeveling om de \nlange termijn ontwikkelingen van de prijsindexcijfers te gebruiken. \nDe gemiddelde verkoopprijs kan een andere ontwikkeling laten zien dan de \nprijsindex bestaande koopwoningen. De ontwikkeling van de gemiddelde \nverkoopprijs is echter geen indicator voor de prijsontwikkeling van \nbestaande koopwoningen. Zie voor meer informatie het onder punt 3 genoemde \nartikel \"Waarom de gemiddelde koopsom geen huizenprijsindicator is\".\n\nDe gegevens zijn beschikbaar vanaf: januari 1995.\n\nStatus van de cijfers:\nDe cijfers in deze tabel zijn definitief.\n\nWanneer komen er nieuwe cijfers?\nDeze tabel is stopgezet per 8-3-2013 en wordt voortgezet als Bestaande koopwoningen; regio; verkoopprijzen prijsindex 2010 = 100. Zie ook paragraaf 3.\n\n",
+"Language": "nl",
+"Title": "Bestaande koopwoningen naar COROP en grote gemeenten; 2005=100; 1995-2012",
+"Modified": "2013-03-13T02:00:00+01:00",
+"Status": "Gediscontinueerd",
+"DatasetType": "Numeric"
+},
+{
+"Identifier": "80344ned",
+"Description": "\nDeze tabel bevat uitkomsten over misdrijven die door de politie zijn geregistreerd. Behalve de absolute aantallen misdrijven zijn in de tabel ook de aantallen misdrijven per 1000 inwoners in de betreffende gemeente of regio opgenomen. Daarnaast bevat de tabel het aantal misdrijven dat inmiddels is opgehelderd en het aantal verdachten dat bij deze misdrijven is geregistreerd. De cijfers zijn uitgesplitst naar gemeente van plegen, politieregio, soort misdrijf en jaar van melden. \nHet kan voorkomen dat de gemeente van plegen binnen een regio niet bekend is. Onbekende gemeenten binnen de regio worden niet apart vermeld, maar zijn wel meegeteld in het totaal van de regio. \n\nBij het bekijken van de gegevens zijn een aantal punten van belang. De gegevens per gemeente worden voor alle jaren gepresenteerd volgens de gemeentelijke indeling van 1 januari 2013. Als het CBS van mening is dat de cijfers per 1000 inwoners geen verantwoorde conclusie toelaat bij de vergelijking tussen gemeenten of regio's, dan is de betreffende cel leeg gelaten. Het delict komt dan te weinig voor en/of de betreffende gemeente of regio is qua inwoneraantal te klein voor een onderlinge vergelijking.\nIn de periode 2008-2009 zijn de politieregio’s overgegaan naar het registratiesysteem Basisvoorziening Handhaving (BVH).  Deze overgang kan aanleiding zijn voor onverwachte fluctuaties in de gegevens in deze periode.\n\nIn regio Rotterdam-Rijnmond is het aantal geregistreerde vernielingen in 2010 relatief sterker gedaald ten opzichte van 2009 dan in andere regio's. Voor heel Nederland daalt het aantal vernielingen met 16%, voor Rotterdam-Rijnmond met 49%. De daling van vernielingen in 2010 is het gevolg van twee beleidsinitiatieven in de Politieregio Rotterdam-Rijnmond:\n1. Met de gemeenten binnen de regio Rotterdam-Rijnmond zijn voor 2010 nadere afspraken gemaakt over het aangeven vernielingen in het publieke domein. Hierdoor nam het aantal geclusterde aangiften van beschadigingen in het publiek domein toe. Als gevolg hiervan daalde vooral in de gemeenten Spijkenisse en Brielle het aantal geregistreerde vernielingen.\n2. Uit analyse van internetaangiften van vernieling (in totaal 7.900) bleek dat het in 6.700 gevallen ging om baldadigheid. Omdat baldadigheid een overtreding en geen misdrijf is, zijn deze gevallen uit de registratie van aangegeven misdrijven gelaten. Dit is in 2010 gedaan om de opsporingscapaciteit zo efficiënt mogelijk te benutten en te richten op de juiste zaken. Hierdoor daalde ook het aantal geregistreerde vernielingen. In 2011 is overigens volgens landelijk beleid baldadigheid weer geregistreerd onder vernieling. \nDe totale daling van het aantal geregistreerde vernielingen in regio Rotterdam-Rijnmond in 2010 was 49%. Het geschatte aandeel hierin als gevolg van de afspraken met het bestuur is 10%. De overige 39% is het gevolg van het onder punt 2 vermelde beleidsinitiatief.\n\nGegevens beschikbaar van 2005 tot en met 2012.\n\nStatus van de cijfers\nDe cijfers over de jaren 2005-2010 zijn definitief. \nDe cijfers over 2011 zijn nader voorlopig.\nDe cijfers over 2012 zijn voorlopig. \nAangezien deze tabel is stopgezet, worden de cijfers over 2011 en 2012 niet meer definitief gemaakt.\n\nWijzigingen per 28 maart 2014\nGeen, deze tabel is stopgezet.\n\nWanneer komen er nieuwe cijfers?\nNiet meer van toepassing.\n\nDeze tabel wordt opgevolgd door Geregistreerde criminaliteit; soort misdrijf, regio (indeling 2014). Zie paragraaf 3.\n\n",
+"Language": "nl",
+"Title": "Geregistreerde criminaliteit; regio (indeling 2013) 2005-2012",
+"Modified": "2014-09-03T02:00:00+02:00",
+"Status": "Gediscontinueerd",
+"DatasetType": "Numeric"
+},
+{
+"Identifier": "80479ned",
+"Description": "\nDeze tabel bevat maand-, kwartaal- en jaarcijfers over de arbeidsdeelname en werkloosheid in Nederland op basis van de definitie van de beroepsbevolking die tot 2015 centraal stond in de berichtgeving door het CBS. De bevolking van 15 tot 65 jaar (exclusief de institutionele bevolking) wordt hiervoor ingedeeld in de werkzame, de werkloze en de niet-beroepsbevolking. De verschillende groepen worden verder onderscheiden naar geslacht en leeftijd. Naast de oorspronkelijke maandcijfers over de beroepsbevolking kunt u in de tabel ook maandcijfers vinden die zijn gecorrigeerd voor seizoensinvloeden.\n\nGegevens beschikbaar van 2003 tot en met 2020.\n\nStatus van de cijfers: \nDe cijfers in deze tabel zijn definitief\n\nWijzigingen per 17 juni 2021:\nGeen, deze tabel is stopgezet.\n\nWanneer komen er nieuwe cijfers?\nNiet meer van toepassing.\n",
+"Language": "nl",
+"Title": "Arbeidsdeelname en werkloosheid per maand (12-uursgrens), 2003-2020",
+"Modified": "2021-06-17T06:30:00+02:00",
+"Status": "Gediscontinueerd",
+"DatasetType": "Numeric"
+},
+{
+"Identifier": "80724ned",
+"Description": "Deze tabel geeft inzicht in het aantal uitkeringen op grond van de Wet werk en bijstand (WWB). De WWB is per 1 januari 2004 in de plaats gekomen van de Algemene bijstandswet (Abw). \n\nPer 1 januari 2012 zijn de Wet investeren in jongeren (WIJ) en de Wet werk en inkomen kunstenaars (WWIK) ingetrokken. Personen tot 27 jaar en kunstenaars kunnen in aanmerking komen voor een WWB-uitkering.\n\nDe gegevens zijn uitgesplitst naar de volgende kenmerken:\n- geslacht;\n- leeftijd;\n- regio;\n- leefvorm;\n- uitkeringsduur.\n\nEen WWB-uitkering is bedoeld voor huishoudens. Hoewel voor (echt)paren geldt dat beide partners voor gelijke delen recht hebben op de uitkering, is er toch sprake van één uitkering.  \nTot januari 2005 werden bij uitkeringen aan (echt)paren door het CBS alleen de kenmerken in beschouwing genomen van degene die door de gemeente als aanvrager werd beschouwd. \nBij de cijfers vanaf januari 2005 worden bij het toedelen van uitkeringen aan (echt)paren, de kenmerken overgenomen van de oudste persoon van het(echt)paar.\n\nGegevens beschikbaar vanaf: januari 1998\n\nStatus van de cijfers: tot en met december 2012 definitief.\n\nWijzigingen per 26 april 2013: de cijfers over 2012 zijn nu definitief vastgesteld.\n\nWanneer komen er nieuwe cijfers? De tabel is stopgezet. \nVanaf 2013 is informatie over bijstandsuitkeringen gesplitst in informatie over uitkeringen en informatie over  personen met een uitkering. Het accent ligt daarbij meer op personen met een uitkering. \nInformatie over uitkeringen blijft wel beschikbaar, maar is ontdaan van persoonskenmerken als geslacht en leeftijd.\nDe informatie uit deze tabel is gesplitst over twee tabellen:\n- voor informatie over bijstandsuitkeringen: tabel WWB-uitkeringen; uitkeringsgrondslag, regio's\n- voor informatie over personen met een bijstandsuitkering: tabel Personen met WWB; persoonskenmerken.\n",
+"Language": "nl",
+"Title": "Algemene bijstand; uitkeringen op grond van de WWB, 1998-2012",
+"Modified": "2013-06-14T02:00:00+02:00",
+"Status": "Gediscontinueerd",
+"DatasetType": "Numeric"
+},
+{
+"Identifier": "81776NED",
+"Description": "\nDeze tabel laat zien welke woningen in een bepaalde regio een zuinig of een onzuinig energielabel hebben gekregen. Het energielabel geeft aan hoe zuinig de woning is. Het label wordt uitgedrukt in een letter variërend van A tot en met G, waarbij A++ het zuinigste label is en G het meest onzuinige label. \n\nDe labels zijn geclusterd. De zogeheten groene energielabels zijn A++, A+, A en B. De labels C en D nemen een middenpositie in. De energielabels E, F, en G zijn onzuinige labels. \n\nGegevens beschikbaar over 2011.\n\nStatus van de cijfers:\nDe cijfers in deze tabel zijn definitief.\n\nWijzigingen per 28 november 2016: \n\nGeen. De tabel is stopgezet.\n\nWanneer komen er nieuwe cijfers?\n\nNiet meer van toepassing.\n",
+"Language": "nl",
+"Title": "Energielabels van huur- en koopwoningen naar regio in 2011",
+"Modified": "2016-11-28T02:00:00+01:00",
+"Status": "Gediscontinueerd",
+"DatasetType": "Numeric"
+},
+{
+"Identifier": "81884NED",
+"Description": "\nDeze tabel geeft de prijsontwikkelingen weer van de voorraad van bestaande koopwoningen. Ook worden het aantal transacties, de gemiddelde verkoopprijs en de totale waarde van de verkoopprijzen van de verkochte woningen gepubliceerd. De prijsindexcijfers over de bestaande koopwoningen zijn gebaseerd op een integrale registratie van verkooptransacties van woningen door het Kadaster en WOZ-waarden van alle woningen in Nederland. Indexreeksen kunnen fluctueren, bijvoorbeeld wanneer het aantal transacties in een regio beperkt is. Het verdient dan aanbeveling om de lange termijn ontwikkelingen van de prijsindexcijfers te gebruiken.\nDe gemiddelde verkoopprijs kan een andere ontwikkeling laten zien dan de prijsindex bestaande koopwoningen. De ontwikkeling van de gemiddelde verkoopprijs is namelijk geen indicator voor de prijsontwikkeling van bestaande koopwoningen.\n\nGegevens beschikbaar van: januari 1995 tot december 2017 \n\nStatus van de cijfers:\nDe cijfers in deze tabel zijn definitief.\n\nWijzigingen per 21 februari 2018:\nGeen, de tabel is stopgezet. Deze tabel wordt opgevolgd door de tabel Bestaande koopwoningen; verkoopprijzen prijsindex 2015 = 100. Zie paragraaf 3\n\nWanneer komen er nieuwe cijfers:\nNiet meer van toepassing.\n",
+"Language": "nl",
+"Title": "Bestaande koopwoningen; verkoopprijzen prijsindex 2010=100   1995-2017",
+"Modified": "2018-02-21T08:00:00+01:00",
+"Status": "Gediscontinueerd",
+"DatasetType": "Numeric"
+},
+{
+"Identifier": "81885NED",
+"Description": "\nDeze tabel geeft de prijsontwikkelingen weer van de voorraad van bestaande koopwoningen per regio. Ook worden het aantal transacties, de gemiddelde verkoopprijs en de totale waarde van de verkoopprijzen van de verkochte woningen gepubliceerd. De prijsindexcijfers over de bestaande koopwoningen zijn gebaseerd op een integrale registratie van verkooptransacties van woningen door het Kadaster en WOZ-waarden van alle woningen in Nederland. Indexreeksen kunnen fluctueren, bijvoorbeeld wanneer het aantal transacties in een regio beperkt is. Het verdient dan aanbeveling om de lange termijn ontwikkelingen van de prijsindexcijfers te gebruiken.\nDe gemiddelde verkoopprijs kan een andere ontwikkeling laten zien dan de prijsindex bestaande koopwoningen. De ontwikkeling van de gemiddelde verkoopprijs is namelijk geen indicator voor de prijsontwikkeling van bestaande koopwoningen.\n\nGegevens beschikbaar vanaf: 1e kwartaal 1995 tot en met 2017\n\nStatus van de cijfers:\nDe cijfers in deze tabel zijn definitief.\n\nWijzigingen per 20 april 2018:\nGeen, de tabel is stopgezet. Deze tabel wordt opgevolgd door de tabel Bestaande koopwoningen; regio; verkoopprijzen prijsindex 2015=100. Zie paragraaf 3.\n\nWanneer komen er nieuwe cijfers?\nNiet meer van toepassing.\n",
+"Language": "nl",
+"Title": "Bestaande koopwoningen; regio; verkoopprijzen prijsindex 2010=100;1995-2017",
+"Modified": "2018-04-20T08:00:00+02:00",
+"Status": "Gediscontinueerd",
+"DatasetType": "Numeric"
+},
+{
+"Identifier": "81997NED",
+"Description": "Deze tabel bevat gegevens over geregistreerde en aangehouden verdachten van een in het verslagjaar geregistreerd misdrijf, onderscheiden naar leeftijd, geslacht en recidive.\r\n\r\nDe tabel laat het aantal verdachten van misdrijven per bevolkingsgroep in absolute en relatieve cijfers zien. Het relatieve cijfer is berekend per 10 000 personen van de geselecteerde bevolkingsgroep. Van personen die geen inwoner zijn van Nederland ontbreken vaak persoonsgegevens. Deze personen zijn wel meegeteld in de absolute cijfers, maar niet in de relatieve.\r\nEen persoon die binnen een verslagjaar meer dan 1 keer is geregistreerd of aangehouden, wordt slechts 1 keer meegeteld in het totaal aantal verdachten. \r\n\r\nGegevens over geregistreerde verdachten zijn beschikbaar vanaf 2005.\r\nDoor het verdwijnen van de Herkenningsdienstsystemen (HKS) zijn cijfers over aangehouden verdachten beschikbaar van 2005 tot en met 2014.\r\n\r\n\r\nStatus van de cijfers:\r\nDe cijfers tot en met 2020 zijn definitief. De cijfers over 2021 en 2022 zijn voorlopig. Voorlopige cijfers geven een onderschatting van het definitieve aantal verdachten. Het voorlopige aantal verdachten in het meest recente jaar is enkele procenten lager dan het definitieve aantal.\r\n\r\nWijzigingen per februari 2024:\r\nDeze tabel is stopgezet. In 2024 zijn nieuwe Statlinetabellen over geregistreerde verdachten gepubliceerd. De cijfers in de nieuwe tabellen wijken iets af van de cijfers in deze tabel omdat in de nieuwe tabel cijfers over ontbrekende verdachten, geregistreerd door de Koninklijke Marechaussee, niet meer worden bijgeschat. Daarnaast is het ontdubbelen van verdachten voor de jaren 2020 t/m 2022 verbeterd en zijn de meest recente jaren geactualiseerd. In de nieuwe tabellen worden alleen cijfers over geregistreerde verdachten gepresenteerd en niet meer over aangehouden verdachten.\r\n  \r\nWanneer komen er nieuwe cijfers beschikbaar:\r\nDeze tabel is stopgezet. \r\n\r\n\r\n",
+"Language": "nl",
+"Title": "Verdachten van misdrijven; leeftijd, geslacht en recidive 1999-2022",
+"Modified": "2024-02-16T00:00:00+01:00",
+"Status": "Gediscontinueerd",
+"DatasetType": "Numeric"
+},
+{
+"Identifier": "82235NED",
+"Description": "Deze tabel bevat cijfers over de veranderingen in de voorraad woningen in Nederland volgens de definities van de Basisregistratie Adressen en Gebouwen (BAG). De BAG bevat basisgegevens over alle gebouwen en adressen per gemeente in Nederland. De gemeenten zijn verantwoordelijk voor de kwaliteit van de vulling van de BAG. Vanaf verslagjaar 2012 maakt CBS voor de statistiek ‘voorraad woningen en niet-woningen’ gebruik van de BAG als bron, en vanaf 2025 worden de cijfers gebaseerd op de statistiek 'Levensloop van woningen en niet-woningen'.\r\n\r\nDe overstap naar de levensloop statistiek brengt een kleine onregelmatigheid in de begin- en eindstand met zich mee.\r\nDe eindstand voor 2024 (gebaseerd op de stopgezette voorraad tabel) was 8,274,478. De beginstand van 2025 (uit de levensloop) was 8,274,525. Het verschil is dus slechts 50 woningen, maar afgerond op duizendtallen is de eindstand 2024 dus niet gelijk aan de beginstand 2025.\r\n\r\nVóór 2012 was de statistiek over de woningvoorraad gebaseerd op het Woningregister. Bij deze overgang naar een andere bron is een methodebreuk ontstaan. Omdat er behoefte is aan doorlopende lange tijdreeksen, is er onderzoek verricht naar de aard en omvang van de methodebreuk in de woningvoorraad 2011-2012 en is deze breuk gerepareerd. Uitgangspunt bij deze breukreparatie is dat de nieuwe definities volgens de BAG leidend zijn. Gegevens over de woningvoorraad vóór 2012 sluiten in deze tabel aan bij de gegevens na 2012. \r\n\r\nVanaf 2021 is het CBS volledig overgegaan op het gebruik van BAG 2.0. Door deze overgang komen de nieuwe statussen 'verbouwing' en 'ten onrechte opgevoerd' voor panden en verblijfsobjecten beschikbaar in de BAG. Verblijfsobjecten met de nieuwe status ‘verbouwing’ worden tot de voorraad gerekend. Deze uitbreiding heeft niet geleid tot een trendbreuk in de voorraad en heeft alleen als consequentie dat de statussen waarin een verblijfsobject zich bevindt, kunnen worden verbijzonderd.\r\n\r\nVanaf januari 2026 is het onderwerp \"woningbouw\" toegevoegd aan deze tabel. Woningbouw is het totaal aan woningen dat door bouw of functiewijzigingen aan de voorraad is toegevoegd, en is de som van nieuwbouw plus 'overige toevoegingen', minus 'overige onttrekkingen'. De overstap naar de levensloop statistiek in januari 2026 betekent dat 'overige toevoegingen' nu wordt berekend als de som van toevoegingen plus functiewijzigingen (utiliteit wordt woning). Overige onttrekkingen worden nu berekend als onttrekkingen minus negatieve functiewijzigingen (woning wordt utiliteit).\r\n\r\n\r\nGegevens beschikbaar vanaf: 1921\r\n\r\nStatus van de cijfers:\r\nDe cijfers over de verslagperiode 1921 tot en met 2025 zijn definitief.\r\n\r\nWijziging per 20 maart 2026:\r\nDe cijfers van 2025 zijn definitief gemaakt.\r\n\r\nWanneer komen er nieuwe cijfers?\r\nDe voorlopige jaarcijfers worden circa 2 maanden na de verslagperiode gepubliceerd.\r\nDe definitieve jaarcijfers worden circa 3 maanden na de verslagperiode gepubliceerd.\r\n\r\n\r\n",
+"Language": "nl",
+"Title": "Voorraad woningen; standen en mutaties vanaf 1921",
+"Modified": "2026-03-20T00:00:00+01:00",
+"Status": "Regulier",
+"DatasetType": "Numeric"
+},
+{
+"Identifier": "82242NED",
+"Description": "Deze tabel bevat de aantallen door rechters in Nederland uitgesproken faillissementen uitgesplitst naar type gefailleerde (natuurlijke personen met en zonder eenmanszaak, bedrijven en instellingen).\r\n\r\nGegevens beschikbaar vanaf: januari 1981.\r\n\r\nStatus van de cijfers\r\nDe uitkomsten van de laatste twee maanden zijn voorlopig.\r\n \r\nWijzigingen per 12 juni 2026:\r\nDe uitkomsten over de maand mei 2026 zijn toegevoegd.\r\n\r\nWanneer komen er nieuwe cijfers?\r\nDe uitkomsten over de maand juni 2026 verschijnen naar verwachting op 10 juli 2026.\r\n\r\n\r\n",
+"Language": "nl",
+"Title": "Faillissementen; kerncijfers",
+"Modified": "2026-06-12T06:30:00+02:00",
+"Status": "Regulier",
+"DatasetType": "Numeric"
+},
+{
+"Identifier": "82610NED",
+"Description": "Deze tabel bevat gegevens over de Nederlandse productie van hernieuwbare elektriciteit, het aantal daarbij gebruikte installaties en het opgestelde vermogen van die installaties. Bij de productie wordt daarbij een onderscheid gemaakt naar genormaliseerd bruto productie en niet genormaliseerde bruto en netto productie. \r\n\r\nElektriciteitsproductie wordt weergegeven in miljoen kilowattuur en in percentage van het totale elektriciteitsverbruik in Nederland. De hernieuwbare elektriciteitsproductie wordt afgezet tegen het totale elektriciteitsverbruik en niet tegen de totale elektriciteitsproductie. Deze keuze vloeit voort uit Europese afspraken.\r\n\r\nDe gegevens zijn uitgesplitst naar het soort energiebron en de toegepaste techniek om de elektriciteit te verkrijgen. Daarbij wordt onderscheid gemaakt naar vier hoofdcategorieën: waterkracht, windenergie, zonnestroom en biomassa.\r\n\r\nGegevens beschikbaar vanaf: 1990.\r\n\r\nStatus van de cijfers:\r\nDe cijfers in deze tabel zijn definitief tot en met 2023 en nader voorlopig voor 2024 en 2025.\r\n\r\nWijzigingen per juni 2026:\r\nNader voorlopige cijfers over 2025 zijn toegevoegd.\r\n\r\nWijzigingen per 9 maart 2026\r\nVoorlopige cijfers over 2025 zijn toegevoegd.\r\n\r\nWijzigingen per 18 november 2025:\r\nDe cijfers over 2023 en 2024 zijn geactualiseerd.\r\n\r\nWijzigingen per 6 juni 2025:\r\nCijfers over 2024 zijn geactualiseerd.\r\n\r\nWijzigingen per 10 maart 2025:\r\nCijfers over 2024 toegevoegd.\r\n\r\nWanneer komen er nieuwe cijfers: \r\nVoorlopige cijfers over de elektriciteitsproductie van het voorafgaande jaar verschijnen elk jaar in februari. \r\nNader voorlopige cijfers over de elektriciteitsproductie van het voorafgaande jaar verschijnen elk jaar in juni. \r\nDefinitieve cijfers over de elektriciteitsproductie van het voorafgaande jaar verschijnen elk jaar in december.\r\n\r\n\r\n",
+"Language": "nl",
+"Title": "Hernieuwbare elektriciteit; productie en vermogen ",
+"Modified": "2026-06-19T06:30:00+02:00",
+"Status": "Regulier",
+"DatasetType": "Numeric"
+},
+{
+"Identifier": "83901NED",
+"Description": "\nDeze tabel bevat cijfers over vermogens-, vernieling en openbare orde- en geweldsmisdrijven die door de politie zijn geregistreerd. Behalve absolute aantallen zijn van enkele typen misdrijven ook de aantallen per 1000 inwoners opgenomen. De cijfers zijn uitgesplitst naar gemeente van plegen, wijk en buurt. Misdrijven waarvan de pleeglocatie niet aan een buurt is toe te kennen, worden in deze tabel niet meegeteld.\n\nGegevens beschikbaar over: 2017\n\nStatus van de cijfers:\nDe cijfers zijn definitief.\n\nWijzigingen per 15 maart 2018:\nBij de regioaanduiding zijn de codering en indelingswijziging toegevoegd.\n\nWanneer komen er nieuwe cijfers?\nEr komen geen nieuwe cijfers in deze tabel. Door herindelingen is het voor veel buurten niet mogelijk ze van jaar op jaar te vergelijken. Maart 2019 komt er een nieuwe tabel met cijfers over 2018. \n\n",
+"Language": "nl",
+"Title": "Geregistreerde misdrijven; wijken en buurten 2017",
+"Modified": "2019-02-12T02:00:00+01:00",
+"Status": "Regulier",
+"DatasetType": "Mixed"
+},
+{
+"Identifier": "83903NED",
+"Description": "\nDeze tabel bevat gegevens over vermogens-, vernieling en openbare orde- en geweldsmisdrijven die door de politie zijn geregistreerd en geografisch in een buurt in te delen zijn. Behalve de absolute aantallen misdrijven zijn in de tabel van enkele typen misdrijven ook de aantallen per 1000 inwoners opgenomen. Misdrijven waarvan de pleeglocatie aan een buurt is toe te kennen worden in deze tabel niet meegeteld. \n\nGegevens beschikbaar over: 2016.\n\nStatus van de cijfers:\nDe cijfers zijn definitief.\n\nWijzigingen per 15 maart 2018:\nBij de regioaanduiding zijn de codering en indelingswijziging toegevoegd.\n\nWanneer komen er nieuwe cijfers?\nEr komen geen nieuwe cijfers in deze tabel. Door herindelingen is het voor veel buurten niet mogelijk ze van jaar op jaar te vergelijken. Maart 2019 komt er een nieuwe tabel met cijfers over 2018. \n\n",
+"Language": "nl",
+"Title": "Geregistreerde misdrijven; wijken en buurten 2016",
+"Modified": "2018-03-15T02:00:00+01:00",
+"Status": "Regulier",
+"DatasetType": "Mixed"
+},
+{
+"Identifier": "83932NED",
+"Description": "Deze tabel bevat cijfers over het inkomen van particuliere huishoudens. De gegevens kunnen worden uitgesplitst naar inkomensbegrip (primair inkomen, bruto inkomen, besteedbaar inkomen, gestandaardiseerd inkomen), inkomensklassen en diverse achtergrondkenmerken van het huishouden.\r\n\r\nGegevens beschikbaar vanaf: 2011. \r\n\r\nStatus van de cijfers: \r\nDe cijfers voor 2011 t/m 2023 zijn definitief. De cijfers voor 2024 zijn voorlopig.\r\n\r\nWijzigingen per oktober 2025:\r\nCijfers over 2023 zijn definitief en voorlopige cijfers over 2024 zijn toegevoegd.\r\n\r\nWanneer komen er nieuwe cijfers?\r\nDefinitieve cijfers over 2024 en voorlopige cijfers over 2025 komen in het najaar van 2026 beschikbaar.\r\n\r\n",
+"Language": "nl",
+"Title": "Inkomen van huishoudens; inkomensklassen, huishoudenskenmerken",
+"Modified": "2025-10-08T00:00:00+02:00",
+"Status": "Regulier",
+"DatasetType": "Numeric"
+},
+{
+"Identifier": "83943NED",
+"Description": "Deze tabel gaat over rechtbankstrafzaken die zijn ingeschreven bij een parket, waarover het Openbaar Ministerie (OM) een beslissing heeft genomen en die zijn afgedaan door de rechter in eerste aanleg. De gegevens zijn uit te splitsen naar soort verdachte, type misdrijf, leeftijd op het moment van plegen en sociaal-economische categorie. De door het OM genomen beslissingen zijn onderverdeeld naar de soort beslissing. De afdoeningen door de rechter zijn onderverdeeld naar soort eindbeslissing en soort sanctie. De zaken die door de rechter ter zitting bij een andere zaak zijn gevoegd, zijn niet als afdoening meegeteld. De sociaal-economische categorie wordt bepaald voor de maand waarin respectievelijk de zaak instroomt, er een beslissing van het OM in de zaak is of waarin de rechter in eerste aanleg de zaak afdoet. Het is mogelijk dat personen jonger dan 65 een pensioenuitkering als sociaal-economische categorie hebben. Hieronder vallen namelijk ook wezenuitkeringen en uitkeringen van spaarvormen (een soort lijfrenten) die ouders voor hun kinderen hebben afgesloten. De tabel betreft persoonsgegevens over het thema vervolging en berechting. De persoonsgegevens hebben betrekking op kenmerken van de verdachte/veroordeelde in een zaak. De cijfers betreffen daarmee ook de gerelateerde zaken. De tabel is niet uniek op persoonsniveau. Ten eerste kunnen personen in deze tabel in een jaar meerdere keren voorkomen als zij verdachte/veroordeelde zijn in meerdere zaken in dat jaar. Zo kan een persoon bijvoorbeeld verdachte zijn in meerdere zaken die in een jaar instromen bij het OM. Ten tweede is het mogelijk dat de zaak van een persoon binnen een jaar in meerdere fases wordt geteld; bijvoorbeeld als de zaak in hetzelfde jaar instroomt bij het OM als dat het OM een beslissing neemt in de zaak. \r\n\r\nGegevens beschikbaar vanaf 2001 tot en met 2021.\r\n\r\nStatus van de cijfers:\r\nDe cijfers zijn definitief.\r\n\r\nWijzigingen per april 2024.\r\nDeze tabel is stopgezet per april 2024 en wordt vervangen door de tabel Vervolging en berechting misdrijven, persoonskenmerken, zie paragraaf 3.\r\n\r\nWanneer komen er nieuwe cijfers?\r\nEr komen geen nieuwe cijfers de tabel is stopgezet.\r\n\r\n\r\n",
+"Language": "nl",
+"Title": "Vervolging en berechting misdrijven; sociaal-economische cat. 2001-2021",
+"Modified": "2024-04-12T00:00:00+02:00",
+"Status": "Gediscontinueerd",
+"DatasetType": "Numeric"
+},
+{
+"Identifier": "83944NED",
+"Description": "Deze tabel gaat over rechtbankstrafzaken die zijn ingeschreven bij een parket, waarover het Openbaar Ministerie (OM) een beslissing heeft genomen en zaken die zijn afgedaan door de rechter in eerste aanleg. De gegevens zijn uit te splitsen naar soort verdachte, migratieachtergrond en leeftijd op het moment van plegen van het strafbare feit. De door het OM genomen beslissingen zijn onderverdeeld naar de soort beslissing. De afdoeningen door de rechter zijn onderverdeeld naar soort eindbeslissing en soort sanctie. De zaken die door de rechter ter zitting bij een andere zaak zijn gevoegd, zijn niet als afdoening meegeteld.\r\nDe tabel betreft persoonsgegevens over het thema vervolging en berechting. De persoonsgegevens hebben betrekking op kenmerken van de verdachte/veroordeelde in een zaak. De cijfers betreffen daarmee ook de gerelateerde zaken. De tabel is niet uniek op persoonsniveau. Ten eerste kunnen personen in deze tabel in een jaar meerdere keren voorkomen als zij verdachte/veroordeelde zijn in meerdere zaken in dat jaar. Zo kan een persoon bijvoorbeeld verdachte zijn in meerdere zaken die in een jaar instromen bij het OM. Ten tweede is het mogelijk dat de zaak van een persoon binnen een jaar in meerdere fases wordt geteld; bijvoorbeeld als de zaak in hetzelfde jaar instroomt bij het OM als dat het OM een beslissing neemt in de zaak.   \r\nGegevens beschikbaar vanaf 2001 tot en met 2022.\r\n\r\nHet CBS gaat over op een nieuwe indeling van de bevolking naar herkomst. Voortaan is meer bepalend waar iemand zelf geboren is, naast waar iemands ouders geboren zijn. Daarbij wordt het woord migratieachtergrond niet meer gebruikt. De hoofdindeling westers/niet-westers wordt vervangen door een indeling op basis van werelddelen en veelvoorkomende immigratielanden. Deze indeling wordt geleidelijk ingevoerd in tabellen en publicaties met bevolking naar herkomst. Er kan worden besloten dat de herkomstindeling komt te vervallen voor een StatLinetabel.\r\n\r\nStatus van de cijfers:\r\nDe cijfers zijn definitief.\r\n\r\nWijzigingen per april 2024.\r\nDeze tabel is stopgezet per april 2024 en wordt vervangen door de tabel Vervolging en berechting misdrijven, persoonskenmerken, zie paragraaf 3.\r\n\r\nWanneer komen er nieuwe cijfers?\r\nEr komen geen nieuwe cijfers, de tabel is stopgezet.\r\n\r\n",
+"Language": "nl",
+"Title": "Vervolging en berechting misdrijven; persoonsgegevens 2001-2022",
+"Modified": "2024-04-12T00:00:00+02:00",
+"Status": "Gediscontinueerd",
+"DatasetType": "Numeric"
+},
+{
+"Identifier": "85004NED",
+"Description": "Deze tabel bevat cijfers over het opgestelde vermogen en de productie (opgewekte elektriciteit, mln kWh) van windenergie op land en zonnestroom, vanaf 2018. Voor zonnestroom betreft dit het paneelvermogen. De gegevens zijn exclusief de in zee opgestelde windmolens.\r\n\r\nIn het klimaatakkoord is de volgende doelstelling opgenomen: tenminste (weersafhankelijke) 35 TWh hernieuwbare energieopwekking op land in 2030.\r\nDeze opgave heeft betrekking op wind- en zonnestroominstallaties > 15 kilowattpiek (kWp). In de Regionale Energie Strategie (RES) wordt het regionale aandeel voor de landelijke opgave zo concreet mogelijk uitgewerkt. Om de voortgang van deze doelstelling te kunnen monitoren is in de tabel een extra uitsplitsing van de zonnestroominstallaties opgenomen: klein (<= 15 kWp) en groot (>15 kWp) vermogen.\r\n\r\nDe cijfers zijn uit te splitsen naar provincie, RES en subRES-regio. De regionale indeling is steeds gebaseerd op de gemeentelijke indeling van het betreffende jaar. De installaties per 31-12-2019 worden dus weergegeven in de regio-indeling van 2019, en die per 31-12-2020 in de regio-indeling van 2020, enzovoort.\r\n\r\nDeze tabel is tot stand gekomen in het kader van Vivet (verbetering van de informatievoorziening van de energietransitie) en wordt gefinancierd door het ministerie van Economische Zaken en Klimaat.\r\n\r\nGegevens beschikbaar vanaf: 2018\r\n\r\nStatus van de cijfers:\r\nDeze tabel bevat definitieve cijfers tot en met 2023 en nader voorlopige cijfers over 2024.\r\n\r\nWijzigingen per juni 2026:\r\nGeen. Cijfers over 2025 zijn vertraagd en verschijnen in november 2026.\r\n\r\nDe wijzigingen per november 2025:\r\nDefinitieve cijfers over 2023 en nader voorlopige cijfers over 2024 zijn toegevoegd.\r\n\r\nWijzigingen per 15 november 2024:\r\nVoor zonnestroom is verduidelijkt dat het in deze tabel om paneelvermogen gaat en de eenheid van paneelvermogen is gewijzigd naar megawattpiek (MWp) in plaats van megawatt (MW). Verder wordt voor windenergie de elektriciteitsproductie nu gepubliceerd inclusief eigen verbruik van de windmolens, deze wijkt ongeveer 2% af ten opzichte van voorgaande publicaties. Dit is teruggelegd tot en met 2021. Verder zijn er meer windmolens afgesloten in 2021 dan voorheen gedacht, dit heeft ook uitwerking op het opgestelde vermogen van 2022 en 2023 en daarmee ook op de genormaliseerde productie. Voor zonnestroom zijn de cijfers in 2021 onveranderd. De cijfers van 2021 en 2022 zijn definitief, de cijfers van 2023 zijn nader voorlopig.\r\n\r\nWanneer komen er nieuwe cijfers:\r\nNader voorlopige cijfers over het voorafgaande jaar verschijnen elk jaar in juni. Deze cijfers worden daarna bijgesteld in december en blijven nader voorlopig.\r\nDefinitieve cijfers verschijnen in november in tweede jaar na het verslagjaar.\r\n\r\n\r\n",
+"Language": "nl",
+"Title": "Hernieuwbare energie; zonnestroom, windenergie, RES-regio",
+"Modified": "2026-06-19T00:00:00+02:00",
+"Status": "Regulier",
+"DatasetType": "Numeric"
+},
+{
+"Identifier": "85224NED",
+"Description": "Deze tabel bevat kwartaal- en jaarcijfers over de arbeidsdeelname in Nederland. De bevolking van 15 tot 75 jaar (exclusief de institutionele bevolking) wordt ingedeeld in de werkzame, werkloze en de niet-beroepsbevolking. De werkzame beroepsbevolking wordt verder ingedeeld op basis van de positie in de werkkring en arbeidsduur. De werkloze beroepsbevolking wordt ingedeeld naar werkloosheidsduur en de niet-beroepsbevolking naar binding met de arbeidsmarkt. Voor verschillende indelingen is een uitsplitsing naar onderwijsniveau beschikbaar.\r\nVanaf 15 februari 2022 publiceert het CBS kwartaal- en jaarcijfers over kenmerken van de beroepsbevolking op basis van een nieuwe meetmethode. Voor de onderwerpen in deze tabel zijn seizoengecorrigeerde kwartaalcijfers samengesteld die ook zijn herberekend vanaf 2013 op het niveau van de nieuwe methode.\r\n\r\nGegevens beschikbaar vanaf: 2013\r\n\r\nStatus van de cijfers:\r\nDe cijfers in deze tabel zijn definitief.  \r\n\r\nWijzigingen per 30 april 2026:\r\nDe cijfers over het 1e kwartaal 2026 zijn toegevoegd.\r\n\r\nWanneer komen er nieuwe cijfers?\r\nNieuwe cijfers worden gepubliceerd in juli 2026.\r\n\r\n",
+"Language": "nl",
+"Title": "Arbeidsdeelname; kerncijfers seizoengecorrigeerd",
+"Modified": "2026-04-30T06:30:00+02:00",
+"Status": "Regulier",
+"DatasetType": "Numeric"
+},
+{
+"Identifier": "85773NED",
+"Description": "De prijsindex voor bestaande koopwoningen (PBK) heeft tot doel de prijsontwikkelingen van de verkochte bestaande koopwoningen weer te geven. De woning dient op Nederlands grondgebied gelegen te zijn en verkocht te zijn aan een particulier. Naast de prijsontwikkeling worden ook het aantal transacties, de gemiddelde verkoopprijs en de totale waarde van de verkoopprijzen van de verkochte woningen gepubliceerd. De prijsindexcijfers over de bestaande koopwoningen zijn gebaseerd op een integrale registratie van verkooptransacties van woningen door het Kadaster en WOZ-waarden van alle woningen in Nederland. Indexreeksen kunnen fluctueren, bijvoorbeeld wanneer het aantal transacties in een regio beperkt is. Het verdient dan aanbeveling om de lange termijn ontwikkelingen van de prijsindexcijfers te gebruiken.\r\nDe gemiddelde verkoopprijs kan een andere ontwikkeling laten zien dan de prijsindex bestaande koopwoningen. De ontwikkeling van de gemiddelde verkoopprijs is namelijk geen indicator voor de prijsontwikkeling van bestaande koopwoningen.\r\n\r\nGegevens beschikbaar vanaf: januari 1995 \r\n\r\nStatus van de cijfers:\r\nDe cijfers in deze tabel zijn direct definitief. De berekening van deze cijfers is gebaseerd op het aantal notaristransacties dat iedere maand door het Kadaster wordt vastgesteld. Een revisie van de cijfers vindt alleen bij uitzondering plaats, namelijk alleen indien er sprake is van een noemenswaardige fout buiten de gebruikelijke statistische marges. De aantallen verkochte bestaande koopwoningen kunnen op latere momenten nogmaals door het Kadaster berekend worden. Doorgaans zijn deze cijfers gelijk aan de publicatie op Statline, maar in enkele perioden verschillen ze van elkaar. Het Kadaster hanteert in deze gevallen meest actuele cijfers. Deze kunnen sinds de eerste publicatie gewijzigd zijn. Het CBS hanteert cijfers van de eerste publicatie conform bovenstaand revisiebeleid. \r\n\r\nWijzigingen per 22 juni 2026:\r\nDe cijfers over mei 2026 zijn toegevoegd.\r\n\r\nWanneer komen er nieuwe cijfers?\r\nDe nieuwe cijfers worden circa 22 dagen na verslagmaand gepubliceerd. \r\n\r\n",
+"Language": "nl",
+"Title": "Bestaande koopwoningen; verkoopprijzen prijsindex 2020=100",
+"Modified": "2026-06-22T06:30:00+02:00",
+"Status": "Regulier",
+"DatasetType": "Numeric"
+},
+{
+"Identifier": "86141NED",
+"Description": "In deze tabel staan cijfers van de consumentenprijsindex (CPI). De CPI meet de prijsverandering van goederen en diensten die Nederlandse huishoudens voor de eigen consumptie aanschaffen. De tabel geeft informatie over indexcijfers, maandmutaties, jaarmutaties en wegingscoëfficiënten. De jaarmutatie van de totale bestedingen van de CPI staat bekend als de inflatie. \r\n\r\nNaast cijfers over de totale bestedingen worden ook cijfers over gedetailleerde productgroepen (bestedingscategorieën) bekendgemaakt. Van iedere productgroep is in de tabel te vinden hoeveel Nederlandse huishoudens er gemiddeld aan uitgeven in verhouding tot de totale uitgaven. Dit noemen we de wegingscoëfficiënt. De totale weging van de CPI is 100.000.\r\n\r\nIn de tabel staat ook de afgeleide CPI. Dit is de CPI waarin veranderingen in belastingen (bijvoorbeeld btw of accijns) buiten beschouwing worden gelaten. Het is daarmee een prijsindex die bij benadering weergeeft wat de prijsverandering is als de belastingtarieven niet gewijzigd waren.\r\n\r\nCijfers van de CPI worden elke maand gepubliceerd. Na afloop van elk kalenderjaar worden ook jaarcijfers bekendgemaakt. Het indexcijfer van een kalenderjaar wordt berekend als het gemiddelde van de indexcijfers van de twaalf maanden van dat jaar.\r\n\r\nGegevens beschikbaar vanaf: december 2009.\r\n\r\nStatus van de cijfers:\r\nVan elke verslagmaand worden eerst cijfers van de snelle raming gepubliceerd. Bij de snelle raming worden de maandmutaties en jaarmutaties bekendgemaakt van het totaal CPI en van een aantal hoofdgroepen (speciale aggregaten). Deze cijfers worden berekend op basis van nog onvolledige brongegevens en zijn niet geschikt om te gebruiken voor indexering. Er worden daarom bij de snelle raming geen indexcijfers gepubliceerd. De uitkomsten van de snelle raming hebben een voorlopige status.\r\n\r\nNa de snelle raming volgt de eerste publicatie van de indexcijfers en mutaties van alle bestedingscategorieën. Deze cijfers zijn ook voorlopig. Een maand later worden de cijfers over diezelfde verslagmaand definitief. Verschillen tussen de voorlopige en de definitieve cijfers komen door nagekomen brongegevens.\r\n\r\nWijzigingen ten opzichte van de vorige versie: \r\nEr zijn gegevens over een nieuwe periode toegevoegd en/of er zijn bijstellingen doorgevoerd.\r\n\r\nWanneer komen er nieuwe cijfers?\r\nDe cijfers van de snelle raming worden gepubliceerd op de laatste werkdag van de maand waarop de cijfers betrekking hebben, of kort daarna. \r\n\r\nDe nieuwe indexcijfers worden doorgaans tussen de eerste en tweede donderdag van de maand die volgt op de verslagmaand gepubliceerd. \r\n\r\nAlle publicatiemomenten van de CPI zijn beschikbaar op de publicatieplanning (zie paragraaf 3).\r\n\r\n",
+"Language": "nl",
+"Title": "Consumentenprijzen; CPI 2025=100, index en mutaties",
+"Modified": "2026-07-02T00:00:00+02:00",
+"Status": "Regulier",
+"DatasetType": "Numeric"
+}
+]
+}

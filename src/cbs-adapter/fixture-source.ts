@@ -3,10 +3,23 @@
 // code, not a second hand-written shape). Fixtures are captured by
 // scripts/capture-cbs-fixtures.ts into tests/fixtures/cbs/<tableId>/,
 // manifest shape: tests/fixtures/cbs/82235NED/index.json.
-import { readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import type { CbsCode, CbsObservationRow, CbsSlice, CbsSource, CbsTableSchema } from './types.ts';
-import { parseCodes, parseDimensions, parseMeasures, parseObservationsPage } from './parse-v4.ts';
+import type {
+  CbsCatalogEntry,
+  CbsCode,
+  CbsObservationRow,
+  CbsSlice,
+  CbsSource,
+  CbsTableSchema,
+} from './types.ts';
+import {
+  parseCatalogPage,
+  parseCodes,
+  parseDimensions,
+  parseMeasures,
+  parseObservationsPage,
+} from './parse-v4.ts';
 export { sliceToFilter } from './odata-v4.ts';
 
 interface FixtureIndex {
@@ -67,6 +80,15 @@ export function loadFixtureDocsTree(dir: string): Record<string, FixtureDocs> {
   return result;
 }
 
+/** Global (non-per-table) catalog fixture — the raw Datasets response captured
+ *  as `_catalog.json` under `dir`. Returns null when absent so a source built
+ *  without it simply has no catalog (fetchCatalog then throws, like docsFor). */
+export function loadCatalogFixture(dir: string): unknown | null {
+  const path = join(dir, '_catalog.json');
+  if (!existsSync(path)) return null;
+  return JSON.parse(readFileSync(path, 'utf8'));
+}
+
 function matchesEquals(coordinates: Record<string, string>, dimensionEquals?: Record<string, string>): boolean {
   if (!dimensionEquals) return true;
   return Object.entries(dimensionEquals).every(([dim, code]) => coordinates[dim] === code);
@@ -116,8 +138,9 @@ function isFixtureDocs(value: FixtureDocs | Record<string, FixtureDocs>): value 
 export class FixtureSource implements CbsSource {
   private readonly single: FixtureDocs | null;
   private readonly tables: Record<string, FixtureDocs>;
+  private readonly catalogRaw: unknown | null;
 
-  constructor(docs: FixtureDocs | Record<string, FixtureDocs>) {
+  constructor(docs: FixtureDocs | Record<string, FixtureDocs>, catalogRaw?: unknown) {
     if (isFixtureDocs(docs)) {
       this.single = docs;
       this.tables = {};
@@ -125,6 +148,7 @@ export class FixtureSource implements CbsSource {
       this.single = null;
       this.tables = docs;
     }
+    this.catalogRaw = catalogRaw ?? null;
   }
 
   private docsFor(tableId: string): FixtureDocs {
@@ -170,5 +194,18 @@ export class FixtureSource implements CbsSource {
       const { rows } = parseObservationsPage(page, dimensionNames);
       yield rows.filter((row) => matchesSlice(row, slice));
     }
+  }
+
+  async fetchCatalog(): Promise<CbsCatalogEntry[]> {
+    if (this.catalogRaw === null) {
+      throw new Error(
+        'FixtureSource has no captured catalog fixture (pass loadCatalogFixture(dir) as the second constructor arg)',
+      );
+    }
+    // A captured fixture is a bounded snapshot (one page, no live nextLink to
+    // follow) — parse the one document through the same parse code the live
+    // adapter uses (ADR 003).
+    const { entries } = parseCatalogPage(this.catalogRaw);
+    return entries;
   }
 }

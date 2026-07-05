@@ -1,0 +1,13 @@
+{
+  "note": "Seed topic→table labelled set for the WP16 table finder (sub-part 1). Every expected tableId MUST exist in tests/fixtures/cbs/_catalog.json, the hermetic catalog the eval's recall runs over, so record→replay stays consistent. Several cases have a Regulier answer that ranks BELOW discontinued keyword-matches in raw recall — they test the rerank's 'prefer current tables' rule. This is a starter set; expand it during live calibration of DEFAULT_FIND_TABLE_CONFIG.highConfidence.",
+  "cases": [
+    { "id": "huizenprijzen", "topic": "huizenprijzen", "expect": { "kind": "confident", "tableId": "85773NED" } },
+    { "id": "inflatie", "topic": "inflatie", "expect": { "kind": "confident", "tableId": "86141NED" } },
+    { "id": "werkloosheid", "topic": "werkloosheid", "expect": { "kind": "confident", "tableId": "85224NED" } },
+    { "id": "faillissementen", "topic": "faillissementen", "expect": { "kind": "confident", "tableId": "82242NED" } },
+    { "id": "zonnepanelen", "topic": "hoeveel stroom leveren zonnepanelen", "expect": { "kind": "confident", "tableId": "82610NED" } },
+    { "id": "bevolking", "topic": "hoeveel inwoners heeft nederland", "expect": { "kind": "confident", "tableId": "03759ned" } },
+    { "id": "woningvoorraad", "topic": "aantal woningen in nederland", "expect": { "kind": "confident", "tableId": "82235NED" } },
+    { "id": "onbekend", "topic": "gemiddelde schoenmaat van nederlanders", "expect": { "kind": "none" } }
+  ]
+}

@@ -4,6 +4,7 @@
 // this exact code (ADR 003). Every required field is checked and throws a
 // descriptive Error when absent (docs/05-data-rules.md: loud, never silent).
 import type {
+  CbsCatalogEntry,
   CbsCode,
   CbsDimension,
   CbsDimensionKind,
@@ -34,6 +35,17 @@ function requireString(row: Record<string, unknown>, field: string, resource: st
     throw new Error(`CBS ${resource} row is missing required field '${field}': ${JSON.stringify(row)}`);
   }
   return value;
+}
+
+/** A string field that may be absent/null/empty — returns null in those cases,
+ *  never throws. For catalog metadata where a missing blurb or status is a
+ *  tolerable gap, not a corrupt row (unlike the required-field discipline). A
+ *  non-string wire value is treated as absent (null), not silently stringified —
+ *  "tolerable gap" semantics, never a silent reshape of unexpected data. */
+function optionalString(row: Record<string, unknown>, field: string): string | null {
+  const value = row[field];
+  if (typeof value !== 'string') return null;
+  return value.length === 0 ? null : value;
 }
 
 /** Parses Dimensions: [{ Identifier, Title, Kind }]. */
@@ -93,6 +105,40 @@ export function parseCodes(raw: unknown): CbsCode[] {
     const index = indexRaw === null || indexRaw === undefined ? null : indexRaw;
     return { code, title, dimensionGroup, status, index };
   });
+}
+
+/**
+ * Parses one Datasets catalog page into entries + the next page link (or null).
+ * Wire shape: [{ Identifier, Title, Description?, Status?, DatasetType?,
+ * Language?, Modified? }]. Identifier + Title are required (a row without them
+ * is corrupt and throws, loud never silent); everything else is tolerated-when-
+ * absent metadata. The Identifier is NEVER trimmed/normalized — it is the exact
+ * id the data endpoints require and its casing is load-bearing (quirk #1).
+ */
+export function parseCatalogPage(
+  raw: unknown,
+): { entries: CbsCatalogEntry[]; nextLink: string | null } {
+  const rows = asValueArray(raw, 'Datasets');
+  const entries = rows.map((entry) => {
+    const row = entry as Record<string, unknown>;
+    const tableId = requireString(row, 'Identifier', 'Datasets');
+    const title = requireString(row, 'Title', 'Datasets');
+    return {
+      tableId,
+      title,
+      summary: optionalString(row, 'Description') ?? '',
+      status: optionalString(row, 'Status'),
+      datasetType: optionalString(row, 'DatasetType'),
+      language: optionalString(row, 'Language'),
+      modified: optionalString(row, 'Modified'),
+    };
+  });
+
+  const rawObj = raw as Record<string, unknown>;
+  const nextLinkRaw = rawObj['@odata.nextLink'];
+  const nextLink = typeof nextLinkRaw === 'string' ? nextLinkRaw : null;
+
+  return { entries, nextLink };
 }
 
 /**
