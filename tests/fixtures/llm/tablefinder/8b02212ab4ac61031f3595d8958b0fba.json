@@ -1,0 +1,55 @@
+{
+  "requestHash": "8b02212ab4ac61031f3595d8958b0fba",
+  "question": "Onderwerp van de gebruiker: \"faillissementen\"\n\nKandidaat-tabellen:\n1. id=80158ned | status=Gediscontinueerd | type=Numeric\n   titel: Uitgesproken faillissementen; rechtsvorm en SBI 2008, jan. 1993-april 2014\n   omschrijving: Deze tabel bevat een overzicht van alle faillissementen die in de verslagperiode in Nederland zijn uitgesproken. In de tabel wordt het aantal faillissementen ingedeeld naar bedrijfsactiviteit volgens de Standaard Bedrijfsindeling 2008 (SBI …\n2. id=7435fail | status=Gediscontinueerd | type=Numeric\n   titel: Uitgesproken faillissementen naar bedrijfsactiviteit 1993 - 1999\n   omschrijving: Deze publicatie geeft een overzicht van de uitgesproken faillissementen naar bedrijfsactiviteiten. Gegevens beschikbaar vanaf 1993 tot en met 1999. Frequentie: stopgezet\n3. id=82242NED | status=Regulier | type=Numeric\n   titel: Faillissementen; kerncijfers\n   omschrijving: Deze tabel bevat de aantallen door rechters in Nederland uitgesproken faillissementen uitgesplitst naar type gefailleerde (natuurlijke personen met en zonder eenmanszaak, bedrijven en instellingen). Gegevens beschikbaar vanaf: januari 1981.…",
+  "label": null,
+  "recordedAt": "2026-07-05T15:00:40.717Z",
+  "request": {
+    "model": "claude-haiku-4-5",
+    "maxTokens": 1024,
+    "temperature": 0,
+    "system": "Je bent een classificatie-hulp voor checkdecijfers.nl, een dienst die vragen beantwoordt met officiële CBS-cijfers. Je krijgt een ONDERWERP van een gebruiker (Nederlands) en een genummerde lijst KANDIDAAT-TABELLEN uit de CBS-catalogus. Kies de tabel die dit onderwerp het best kan beantwoorden.\n\nRegels:\n- Kies precies één table_id, LETTERLIJK overgenomen uit de lijst (inclusief hoofd-/kleine letters). Verzin nooit een id dat niet in de lijst staat.\n- confidence is een getal tussen 0 en 1 en moet eerlijk zijn. Past geen enkele kandidaat duidelijk bij het onderwerp, kies dan de dichtstbijzijnde maar geef een LAGE confidence (onder 0,5). Alleen bij een duidelijke, ondubbelzinnige match geef je een hoge confidence.\n- Geef de voorkeur aan tabellen met status \"Regulier\" (actueel bijgehouden) boven \"Gediscontinueerd\" of \"Vervallen\", TENZIJ het onderwerp expliciet om oude/historische cijfers vraagt.\n- Geef de voorkeur aan de meest directe, landelijke tabel over een niche- of deelonderwerp.\n- alternativeIds: tot 3 andere table_ids UIT DE LIJST die ook zouden kunnen passen (om eventueel aan de gebruiker voor te leggen). Laat leeg als de keuze duidelijk is.\n- reading: één korte Nederlandse zin die je keuze uitlegt.\n- version is altijd 1.\n\nAntwoord uitsluitend met JSON volgens het opgegeven schema.",
+    "question": "Onderwerp van de gebruiker: \"faillissementen\"\n\nKandidaat-tabellen:\n1. id=80158ned | status=Gediscontinueerd | type=Numeric\n   titel: Uitgesproken faillissementen; rechtsvorm en SBI 2008, jan. 1993-april 2014\n   omschrijving: Deze tabel bevat een overzicht van alle faillissementen die in de verslagperiode in Nederland zijn uitgesproken. In de tabel wordt het aantal faillissementen ingedeeld naar bedrijfsactiviteit volgens de Standaard Bedrijfsindeling 2008 (SBI …\n2. id=7435fail | status=Gediscontinueerd | type=Numeric\n   titel: Uitgesproken faillissementen naar bedrijfsactiviteit 1993 - 1999\n   omschrijving: Deze publicatie geeft een overzicht van de uitgesproken faillissementen naar bedrijfsactiviteiten. Gegevens beschikbaar vanaf 1993 tot en met 1999. Frequentie: stopgezet\n3. id=82242NED | status=Regulier | type=Numeric\n   titel: Faillissementen; kerncijfers\n   omschrijving: Deze tabel bevat de aantallen door rechters in Nederland uitgesproken faillissementen uitgesplitst naar type gefailleerde (natuurlijke personen met en zonder eenmanszaak, bedrijven en instellingen). Gegevens beschikbaar vanaf: januari 1981.…",
+    "jsonSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "number",
+          "const": 1
+        },
+        "tableId": {
+          "type": "string"
+        },
+        "confidence": {
+          "type": "number"
+        },
+        "reading": {
+          "type": "string"
+        },
+        "alternativeIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "version",
+        "tableId",
+        "confidence",
+        "reading",
+        "alternativeIds"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "response": {
+    "outputText": "{\"version\":1,\"tableId\":\"82242NED\",\"confidence\":0.92,\"reading\":\"Dit is de meest actuele tabel met kerncijfers over faillissementen in Nederland, met reguliere updates en gegevens vanaf 1981.\",\"alternativeIds\":[\"80158ned\",\"7435fail\"]}",
+    "model": "claude-haiku-4-5-20251001",
+    "stopReason": "end_turn",
+    "usage": {
+      "inputTokens": 1087,
+      "outputTokens": 75
+    }
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "requestHash": "092da80b0ad80c6cef2e52785c597c05",
+  "question": "Onderwerp van de gebruiker: \"hoeveel stroom leveren zonnepanelen\"\n\nKandidaat-tabellen:\n1. id=85004NED | status=Regulier | type=Numeric\n   titel: Hernieuwbare energie; zonnestroom, windenergie, RES-regio\n   omschrijving: Deze tabel bevat cijfers over het opgestelde vermogen en de productie (opgewekte elektriciteit, mln kWh) van windenergie op land en zonnestroom, vanaf 2018. Voor zonnestroom betreft dit het paneelvermogen. De gegevens zijn exclusief de in z…\n2. id=82610NED | status=Regulier | type=Numeric\n   titel: Hernieuwbare elektriciteit; productie en vermogen \n   omschrijving: Deze tabel bevat gegevens over de Nederlandse productie van hernieuwbare elektriciteit, het aantal daarbij gebruikte installaties en het opgestelde vermogen van die installaties. Bij de productie wordt daarbij een onderscheid gemaakt naar g…",
+  "label": null,
+  "recordedAt": "2026-07-05T15:00:42.370Z",
+  "request": {
+    "model": "claude-haiku-4-5",
+    "maxTokens": 1024,
+    "temperature": 0,
+    "system": "Je bent een classificatie-hulp voor checkdecijfers.nl, een dienst die vragen beantwoordt met officiële CBS-cijfers. Je krijgt een ONDERWERP van een gebruiker (Nederlands) en een genummerde lijst KANDIDAAT-TABELLEN uit de CBS-catalogus. Kies de tabel die dit onderwerp het best kan beantwoorden.\n\nRegels:\n- Kies precies één table_id, LETTERLIJK overgenomen uit de lijst (inclusief hoofd-/kleine letters). Verzin nooit een id dat niet in de lijst staat.\n- confidence is een getal tussen 0 en 1 en moet eerlijk zijn. Past geen enkele kandidaat duidelijk bij het onderwerp, kies dan de dichtstbijzijnde maar geef een LAGE confidence (onder 0,5). Alleen bij een duidelijke, ondubbelzinnige match geef je een hoge confidence.\n- Geef de voorkeur aan tabellen met status \"Regulier\" (actueel bijgehouden) boven \"Gediscontinueerd\" of \"Vervallen\", TENZIJ het onderwerp expliciet om oude/historische cijfers vraagt.\n- Geef de voorkeur aan de meest directe, landelijke tabel over een niche- of deelonderwerp.\n- alternativeIds: tot 3 andere table_ids UIT DE LIJST die ook zouden kunnen passen (om eventueel aan de gebruiker voor te leggen). Laat leeg als de keuze duidelijk is.\n- reading: één korte Nederlandse zin die je keuze uitlegt.\n- version is altijd 1.\n\nAntwoord uitsluitend met JSON volgens het opgegeven schema.",
+    "question": "Onderwerp van de gebruiker: \"hoeveel stroom leveren zonnepanelen\"\n\nKandidaat-tabellen:\n1. id=85004NED | status=Regulier | type=Numeric\n   titel: Hernieuwbare energie; zonnestroom, windenergie, RES-regio\n   omschrijving: Deze tabel bevat cijfers over het opgestelde vermogen en de productie (opgewekte elektriciteit, mln kWh) van windenergie op land en zonnestroom, vanaf 2018. Voor zonnestroom betreft dit het paneelvermogen. De gegevens zijn exclusief de in z…\n2. id=82610NED | status=Regulier | type=Numeric\n   titel: Hernieuwbare elektriciteit; productie en vermogen \n   omschrijving: Deze tabel bevat gegevens over de Nederlandse productie van hernieuwbare elektriciteit, het aantal daarbij gebruikte installaties en het opgestelde vermogen van die installaties. Bij de productie wordt daarbij een onderscheid gemaakt naar g…",
+    "jsonSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "number",
+          "const": 1
+        },
+        "tableId": {
+          "type": "string"
+        },
+        "confidence": {
+          "type": "number"
+        },
+        "reading": {
+          "type": "string"
+        },
+        "alternativeIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "version",
+        "tableId",
+        "confidence",
+        "reading",
+        "alternativeIds"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "response": {
+    "outputText": "{\"version\":1,\"tableId\":\"85004NED\",\"confidence\":0.92,\"reading\":\"Deze tabel bevat specifieke gegevens over zonnestroom-productie (opgewekte elektriciteit in mln kWh) en het opgestelde vermogen van zonnepanelen in Nederland.\",\"alternativeIds\":[\"82610NED\"]}",
+    "model": "claude-haiku-4-5-20251001",
+    "stopReason": "end_turn",
+    "usage": {
+      "inputTokens": 965,
+      "outputTokens": 84
+    }
+  }
+}

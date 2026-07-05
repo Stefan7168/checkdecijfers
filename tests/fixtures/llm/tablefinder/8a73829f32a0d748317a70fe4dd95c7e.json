@@ -1,0 +1,55 @@
+{
+  "requestHash": "8a73829f32a0d748317a70fe4dd95c7e",
+  "question": "Onderwerp van de gebruiker: \"inflatie\"\n\nKandidaat-tabellen:\n1. id=71099ned | status=Gediscontinueerd | type=Numeric\n   titel: Consumentenprijzen; inflatie Europa 2005 = 100 (HICP), 1996 - 2015\n   omschrijving: Deze tabel bevat de Europees geharmoniseerde consumentenprijsindex (HICP) voor Nederland, de EU en de Eurozone. Deze prijsindex geeft het prijsverloop weer van een pakket goederen en diensten dat een gemiddeld huishouden in een EU-land aans…\n2. id=70801NED | status=Gediscontinueerd | type=Numeric\n   titel: Consumentenprijzen; onderliggende inflatie 2000 = 100\n   omschrijving: Het CBS stelt een vijftal \"onderliggende\" reeksen consumentenprijsindices samen. Deze reeksen worden samengesteld uitgaande van de gewone of de afgeleide CPI voor alle huishoudens. Daarbij worden wisselend enkele artikelgroepen verwijderd d…\n3. id=71313ned | status=Gediscontinueerd | type=Numeric\n   titel: Consumentenprijzen; onderliggende inflatie 2006=100, 2006 – 2015\n   omschrijving: Deze tabel bevat de zogenaamde onderliggende reeksen. De onderliggende reeksen zijn gelijk aan de consumentenprijsindex (CPI) of afgeleide CPI exclusief de invloed van enkele productgroepen die sterk in prijs fluctueren of grotendeels door …\n4. id=86141NED | status=Regulier | type=Numeric\n   titel: Consumentenprijzen; CPI 2025=100, index en mutaties\n   omschrijving: In deze tabel staan cijfers van de consumentenprijsindex (CPI). De CPI meet de prijsverandering van goederen en diensten die Nederlandse huishoudens voor de eigen consumptie aanschaffen. De tabel geeft informatie over indexcijfers, maandmut…",
+  "label": null,
+  "recordedAt": "2026-07-05T15:00:35.541Z",
+  "request": {
+    "model": "claude-haiku-4-5",
+    "maxTokens": 1024,
+    "temperature": 0,
+    "system": "Je bent een classificatie-hulp voor checkdecijfers.nl, een dienst die vragen beantwoordt met officiële CBS-cijfers. Je krijgt een ONDERWERP van een gebruiker (Nederlands) en een genummerde lijst KANDIDAAT-TABELLEN uit de CBS-catalogus. Kies de tabel die dit onderwerp het best kan beantwoorden.\n\nRegels:\n- Kies precies één table_id, LETTERLIJK overgenomen uit de lijst (inclusief hoofd-/kleine letters). Verzin nooit een id dat niet in de lijst staat.\n- confidence is een getal tussen 0 en 1 en moet eerlijk zijn. Past geen enkele kandidaat duidelijk bij het onderwerp, kies dan de dichtstbijzijnde maar geef een LAGE confidence (onder 0,5). Alleen bij een duidelijke, ondubbelzinnige match geef je een hoge confidence.\n- Geef de voorkeur aan tabellen met status \"Regulier\" (actueel bijgehouden) boven \"Gediscontinueerd\" of \"Vervallen\", TENZIJ het onderwerp expliciet om oude/historische cijfers vraagt.\n- Geef de voorkeur aan de meest directe, landelijke tabel over een niche- of deelonderwerp.\n- alternativeIds: tot 3 andere table_ids UIT DE LIJST die ook zouden kunnen passen (om eventueel aan de gebruiker voor te leggen). Laat leeg als de keuze duidelijk is.\n- reading: één korte Nederlandse zin die je keuze uitlegt.\n- version is altijd 1.\n\nAntwoord uitsluitend met JSON volgens het opgegeven schema.",
+    "question": "Onderwerp van de gebruiker: \"inflatie\"\n\nKandidaat-tabellen:\n1. id=71099ned | status=Gediscontinueerd | type=Numeric\n   titel: Consumentenprijzen; inflatie Europa 2005 = 100 (HICP), 1996 - 2015\n   omschrijving: Deze tabel bevat de Europees geharmoniseerde consumentenprijsindex (HICP) voor Nederland, de EU en de Eurozone. Deze prijsindex geeft het prijsverloop weer van een pakket goederen en diensten dat een gemiddeld huishouden in een EU-land aans…\n2. id=70801NED | status=Gediscontinueerd | type=Numeric\n   titel: Consumentenprijzen; onderliggende inflatie 2000 = 100\n   omschrijving: Het CBS stelt een vijftal \"onderliggende\" reeksen consumentenprijsindices samen. Deze reeksen worden samengesteld uitgaande van de gewone of de afgeleide CPI voor alle huishoudens. Daarbij worden wisselend enkele artikelgroepen verwijderd d…\n3. id=71313ned | status=Gediscontinueerd | type=Numeric\n   titel: Consumentenprijzen; onderliggende inflatie 2006=100, 2006 – 2015\n   omschrijving: Deze tabel bevat de zogenaamde onderliggende reeksen. De onderliggende reeksen zijn gelijk aan de consumentenprijsindex (CPI) of afgeleide CPI exclusief de invloed van enkele productgroepen die sterk in prijs fluctueren of grotendeels door …\n4. id=86141NED | status=Regulier | type=Numeric\n   titel: Consumentenprijzen; CPI 2025=100, index en mutaties\n   omschrijving: In deze tabel staan cijfers van de consumentenprijsindex (CPI). De CPI meet de prijsverandering van goederen en diensten die Nederlandse huishoudens voor de eigen consumptie aanschaffen. De tabel geeft informatie over indexcijfers, maandmut…",
+    "jsonSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "number",
+          "const": 1
+        },
+        "tableId": {
+          "type": "string"
+        },
+        "confidence": {
+          "type": "number"
+        },
+        "reading": {
+          "type": "string"
+        },
+        "alternativeIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "version",
+        "tableId",
+        "confidence",
+        "reading",
+        "alternativeIds"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "response": {
+    "outputText": "{\"version\":1,\"tableId\":\"86141NED\",\"confidence\":0.95,\"reading\":\"Dit is de actuele, regelmatig bijgewerkte tabel met de consumentenprijsindex (CPI) die inflatie meet voor Nederlandse huishoudens.\",\"alternativeIds\":[\"71099ned\",\"70801NED\"]}",
+    "model": "claude-haiku-4-5-20251001",
+    "stopReason": "end_turn",
+    "usage": {
+      "inputTokens": 1238,
+      "outputTokens": 78
+    }
+  }
+}

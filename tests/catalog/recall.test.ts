@@ -34,8 +34,16 @@ describe('expandTopicTerms (alias hints)', () => {
     expect(expandTopicTerms('huizenprijzen')).toContain('koopwoningen');
   });
 
+  it('bridges population + housing-stock phrasings (session-25 measured gaps)', () => {
+    // "hoeveel inwoners heeft nederland" → the CBS "Bevolking" vocabulary.
+    expect(expandTopicTerms('hoeveel inwoners heeft nederland')).toContain('bevolking');
+    // "aantal woningen" → the housing STOCK vocabulary (distinct from prices).
+    expect(expandTopicTerms('aantal woningen in nederland')).toContain('voorraad woningen');
+  });
+
   it('returns just the topic when no hint fires', () => {
-    expect(expandTopicTerms('bevolkingsomvang')).toEqual(['bevolkingsomvang']);
+    // 'schoenmaat' maps to nothing (mirrors the labelled-set "onbekend" case).
+    expect(expandTopicTerms('schoenmaat')).toEqual(['schoenmaat']);
   });
 });
 
@@ -63,6 +71,18 @@ describe('recallCandidates', () => {
   it('finds the house-price table via the huizenprijzen → koopwoningen alias', async () => {
     const got = await recallCandidates(db, 'huizenprijzen', { limit: 10 });
     expect(got.some((c) => c.tableId === '85773NED')).toBe(true);
+  });
+
+  it('finds the Bevolking table for a plain "hoeveel inwoners" question (session-25 gap)', async () => {
+    // Without the alias this AND-ed common words to zero recall; the OR-ed
+    // "bevolking" term now surfaces 03759ned.
+    const got = await recallCandidates(db, 'hoeveel inwoners heeft nederland', { limit: 20 });
+    expect(got.some((c) => c.tableId === '03759ned')).toBe(true);
+  });
+
+  it('finds the housing-STOCK table (not just price tables) for "aantal woningen" (session-25 gap)', async () => {
+    const got = await recallCandidates(db, 'aantal woningen in nederland', { limit: 20 });
+    expect(got.some((c) => c.tableId === '82235NED')).toBe(true);
   });
 
   it('respects the shortlist limit', async () => {

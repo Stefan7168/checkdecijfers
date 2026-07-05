@@ -67,6 +67,22 @@ export const ALIAS_HINTS: AliasHint[] = [
     expansions: ['zonnestroom', 'zonne-energie', 'hernieuwbare elektriciteit'],
     note: 'Colloquial "zonnepanelen" ↔ CBS "zonnestroom" (measured recall gap, session 24).',
   },
+  {
+    triggers: ['inwoner', 'bevolking', 'hoeveel mensen wonen'],
+    expansions: ['bevolking', 'inwoners', 'bevolkingsomvang'],
+    note:
+      'Everyday "inwoners / hoeveel mensen wonen er" ↔ CBS "Bevolking" tables. Measured ' +
+      'recall gap (session 25): "hoeveel inwoners heeft nederland" AND-ed common words to ' +
+      'zero recall; the OR-ed "bevolking" term surfaces 03759ned.',
+  },
+  {
+    triggers: ['woningvoorraad', 'aantal woningen', 'hoeveel woningen', 'voorraad woningen'],
+    expansions: ['woningvoorraad', 'voorraad woningen', 'woningen'],
+    note:
+      'Everyday "aantal woningen" ↔ CBS "Voorraad woningen" stock table (82235NED) — distinct ' +
+      'from the "koopwoningen; verkoopprijzen" PRICE tables the huizenprijs hint targets. ' +
+      'Measured recall gap (session 25): a bare "aantal woningen" recalled only price tables.',
+  },
 ];
 
 /**
