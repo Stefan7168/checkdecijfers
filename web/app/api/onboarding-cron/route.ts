@@ -5,7 +5,10 @@
 // Server Action can't be triggered that way.
 //
 // This route is the ONLY thing that ever runs the job: the Vercel Cron entry
-// in web/vercel.json points here every 2 minutes (design §3). It fetches from
+// in web/vercel.json points here DAILY (a Vercel-Hobby-plan limit rejected a
+// minutes-level schedule at deploy time; the trigger cadence decision that
+// makes the acknowledgment's 'kwestie van minuten' promise true is #113 and
+// gates ONBOARDING_ENABLED). It fetches from
 // CBS (out-of-band, never the request path — principle b) and spends live LLM
 // tokens on the delivery re-run's parse+compose (normal per-question spend,
 // already funded by the user's 100-credit onboarding debit).

@@ -71,6 +71,10 @@ describe('onboarding-cron vercel config', () => {
     };
     const cron = (vercelJson.crons ?? []).find((c) => c.path === '/api/onboarding-cron');
     expect(cron).toBeDefined();
-    expect(cron!.schedule).toBe('*/2 * * * *');
+    // Daily, not minutes: Vercel Hobby rejects sub-daily cron expressions AT
+    // DEPLOY TIME (learned from a failed deploy, session 27). This is the
+    // BACKSTOP sweep; the real trigger cadence is an open decision (#113)
+    // that must be resolved before ONBOARDING_ENABLED flips on.
+    expect(cron!.schedule).toBe('0 6 * * *');
   });
 });
