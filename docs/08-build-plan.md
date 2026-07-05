@@ -351,7 +351,9 @@ Built as approved, supervised as required (owner confirmed the live window in-se
 **Invariants:** zero pipeline change (catch-site instrumentation only); no prompt bytes; the fail-open rule test-pinned (a throwing logger stub must not change the action's outcome); migration hermetically tested via PGlite in CI before the supervised live apply (RUNBOOK per-migration check: zero anon/authenticated grants).
 **Why a migration is required:** Vercel log retention measured too short for root-causing (live incident 2026-07-04, #65's origin: a production error left zero trace).
 
-## #14 GDPR retention + self-service deletion — EXECUTE-READY BRIEF (urgent-flagged; needs live DDL + owner-visible product surface → next supervised session)
+## #14 GDPR retention + self-service deletion — ▶ FRONT OF PLAN (owner moved it here, session 23) — EXECUTE-READY
+
+*Reprioritized to do-now by the owner (Stefan, session 23, 2026-07-05): "zet dat maar vooraan in ons plan." Correction to the earlier tag: this is **code-only, no new schema** — the retention purge is a scheduled DELETE job and self-service deletion is a DELETE query (item 1 below already says "adds nothing structural"). A supervised session is wanted for the destructive-delete UX decision and for running the purge against production, not for DDL.*
 
 *Owner-decided (2026-07-04, session 18): 2-year retention, self-service deletion. The four pieces from the #14 row, made concrete:*
 
