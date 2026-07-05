@@ -134,7 +134,7 @@ function roundKey(question: string, questionNl: string): string {
 export async function getQuestionHistory(
   db: Db,
   userId: string,
-  { limit = 20 }: { limit?: number } = {},
+  { limit = 20, includeOnboarding = false }: { limit?: number; includeOnboarding?: boolean } = {},
 ): Promise<QuestionHistoryEntry[]> {
   const { rows } = await db.query(
     `select
@@ -268,7 +268,15 @@ export async function getQuestionHistory(
   // twice. failed/unanswerable requests likewise have no answer/refusal body
   // worth showing (the fetch itself never got far enough), so they get their
   // own honest "failed, refunded" entry here too.
-  const onboardingRows = await listRequestsForHistory(db, userId);
+  // Gated on the caller opting in (the web layer passes ONBOARDING_ENABLED,
+  // the same master switch that gates the finder): while the feature is
+  // dormant this function must be byte-identical to pre-WP16 and, critically,
+  // must never touch pending_table_requests -- the table does not exist until
+  // migration 012's supervised live apply. The unconditional version of this
+  // call 500'd the production dashboard for every logged-in user (session-27
+  // incident: 'relation "pending_table_requests" does not exist', GET / 500;
+  // the CI smoke check only covers /login, so it stayed green).
+  const onboardingRows = includeOnboarding ? await listRequestsForHistory(db, userId) : [];
   for (const row of onboardingRows) {
     if (row.status === 'delivered') continue;
     entries.push({
