@@ -30,6 +30,7 @@
     "validation:run": "node --env-file=.env scripts/run-validation-pass.ts",
     "audit:experience": "node --env-file=.env scripts/run-experience-audit.ts",
     "audit:verify": "node --env-file=.env scripts/verify-audit-rows.ts",
+    "gdpr:purge": "node --env-file=.env scripts/gdpr-purge.ts",
     "intent:eval": "node --env-file-if-exists=.env scripts/intent-eval.ts",
     "intent:record": "node --env-file-if-exists=.env scripts/intent-eval.ts --record",
     "clarify:eval": "node --env-file-if-exists=.env scripts/clarify-eval.ts",

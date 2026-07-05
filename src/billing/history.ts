@@ -29,7 +29,19 @@
 // OWN request_id, never through the pairing. A guaranteed link would need a
 // schema + PendingClarification change -- deliberately not done for a
 // display concern; revisit if real users hit it.
+//
+// #14 (GDPR retention + self-service deletion, WP14): a redacted row (the
+// purge CLI or the self-service delete action, both src/answer/audit/
+// retention.ts) keeps its id and credit trail but overwrites question/
+// final_text with the REDACTED_QUESTION_TEXT sentinel -- never removes the
+// row (removing it would violate credit_transactions.audit_answer_id's FK
+// for any clarification/refusal row a compensation entry points at, and
+// would also drop the ledger-joinable id the #67 round-grouping and the
+// dashboard's per-answer cost display both depend on). `isDeleted` is
+// derived HERE, once, from the sentinel match, so the UI never needs to know
+// the redaction implementation -- it just renders the placeholder branch.
 import type { Db } from '../db/types.ts';
+import { REDACTED_QUESTION_TEXT } from '../answer/audit/retention.ts';
 
 export interface QuestionHistoryEntry {
   id: number;
@@ -49,6 +61,12 @@ export interface QuestionHistoryEntry {
   /** Set only on a collapsed clarification round: what we asked (the clarify
    * row's full rendered text) and what the user replied. */
   clarification: { text: string; reply: string } | null;
+  /** #14: true when this row (or, for a collapsed round, either constituent
+   * row) was redacted by the purge or self-service deletion -- the
+   * "verwijderde vraag" placeholder case (owner decision, session 23): the
+   * credit amount above still reflects what was charged; only the question
+   * text is gone. */
+  isDeleted: boolean;
 }
 
 interface HistoryRow {
@@ -69,6 +87,13 @@ interface HistoryRow {
  * round actually cost, so any unattributable side nulls the whole total. */
 function sumCosts(a: number | null, b: number | null): number | null {
   return a === null || b === null ? null : a + b;
+}
+
+/** #14: a row is "deleted" iff its question text is exactly the redaction
+ * sentinel (src/answer/audit/retention.ts) -- the one place this project's
+ * redaction and its dashboard rendering agree on what "deleted" means. */
+function isRedacted(question: string): boolean {
+  return question === REDACTED_QUESTION_TEXT;
 }
 
 /** The pairing signature a reply row shares with the clarification row it
@@ -155,6 +180,10 @@ export async function getQuestionHistory(
         match.entry.finalText = row.finalText;
         match.entry.creditsCharged = sumCosts(match.entry.creditsCharged, row.creditsCharged);
         match.entry.clarification = { text: clarifyText, reply: row.replyText };
+        // Either side of a collapsed round can be independently redacted (the
+        // purge/self-service action touches whole rows, not rounds) -- the
+        // round is a placeholder if EITHER constituent row is.
+        match.entry.isDeleted = match.entry.isDeleted || isRedacted(row.question);
         match.sortAt = row.createdAt;
         match.sortId = row.id;
         // One reply closes the round; a second reply to the same pending
@@ -176,6 +205,7 @@ export async function getQuestionHistory(
         createdAt: row.createdAt,
         creditsCharged: row.creditsCharged,
         clarification: null,
+        isDeleted: isRedacted(row.question),
       },
       sortAt: row.createdAt,
       sortId: row.id,

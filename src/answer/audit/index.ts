@@ -18,3 +18,10 @@ export type { ReconstructionReport } from './reconstruct.ts';
 export { answerQuestionAudited, answerClarificationReplyAudited } from './respond-audited.ts';
 export type { AuditedRespondOptions, AuditedResponse } from './respond-audited.ts';
 export { LlmCallTracker } from './track.ts';
+export {
+  REDACTED_QUESTION_TEXT,
+  deleteUserQuestionHistory,
+  purgeExpiredQuestionHistory,
+  twoYearsBefore,
+} from './retention.ts';
+export type { RedactedRow } from './retention.ts';
