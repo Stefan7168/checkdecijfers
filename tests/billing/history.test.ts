@@ -371,6 +371,51 @@ describe('getQuestionHistory — clarification-round grouping', () => {
 // compensate) rather than hand-set ledger rows, for the same
 // consistency-not-arithmetic reason as the rest of this file.
 describe('getQuestionHistory — onboarding queue (WP16 sub-part 2)', () => {
+  it('DEFAULT (master switch off) hides queue entries — dashboard byte-identical pre-WP16', async () => {
+    await withDb(async (db) => {
+      await applyPricingDefaults(db);
+      const userId = randomUUID();
+      await db.query('select public.grant_signup_credits($1)', [userId]);
+      const requestId = randomUUID();
+      const debit = await reserveOnboardingDebit(db, userId, requestId, 100);
+      if (debit.kind !== 'debited') throw new Error(`expected debited, got ${debit.kind}`);
+      await createPendingRequest(db, {
+        userId,
+        requestId,
+        questionText: 'q',
+        topicTerm: 't',
+        tableId: '82610NED',
+        finderConfidence: 0.9,
+        debitTransactionId: debit.entry.id,
+      });
+      // No includeOnboarding -> the pending row must NOT surface.
+      expect(await getQuestionHistory(db, userId)).toHaveLength(0);
+    });
+  });
+
+  it('DEFAULT never queries pending_table_requests (session-27 production-incident pin)', async () => {
+    // The exact pre-migration production shape: the table does not exist on
+    // prod until migration 012's supervised apply, and the unconditional
+    // merge 500'd the logged-in dashboard (GET / 500, 'relation
+    // "pending_table_requests" does not exist'). Pin the gate mechanically:
+    // a db that throws on any touch of that table must not disturb the
+    // default call, and must fail the opted-in call.
+    await withDb(async (db) => {
+      const guarded: typeof db = {
+        query: (text: string, params?: unknown[]) =>
+          text.includes('pending_table_requests')
+            ? Promise.reject(new Error('relation "pending_table_requests" does not exist'))
+            : db.query(text, params),
+        withTransaction: (fn) => db.withTransaction(fn),
+      };
+      const userId = randomUUID();
+      await expect(getQuestionHistory(guarded, userId)).resolves.toEqual([]);
+      await expect(
+        getQuestionHistory(guarded, userId, { includeOnboarding: true }),
+      ).rejects.toThrow('pending_table_requests');
+    });
+  });
+
   it('shows an in-flight (pending) request with source "onboarding" and net 100', async () => {
     await withDb(async (db) => {
       await applyPricingDefaults(db);
@@ -389,7 +434,7 @@ describe('getQuestionHistory — onboarding queue (WP16 sub-part 2)', () => {
         debitTransactionId: debit.entry.id,
       });
 
-      const history = await getQuestionHistory(db, userId);
+      const history = await getQuestionHistory(db, userId, { includeOnboarding: true });
       expect(history).toHaveLength(1);
       expect(history[0]).toMatchObject({
         source: 'onboarding',
@@ -432,7 +477,7 @@ describe('getQuestionHistory — onboarding queue (WP16 sub-part 2)', () => {
       const deliveryAuditId = Number(rows[0]!.id);
       await finalizeDelivered(db, pending.id, { deliveryAuditAnswerId: deliveryAuditId });
 
-      const history = await getQuestionHistory(db, userId);
+      const history = await getQuestionHistory(db, userId, { includeOnboarding: true });
       // Exactly ONE entry for this question -- the onboarding-queue merge
       // must skip a 'delivered' row (it's already represented here).
       expect(history).toHaveLength(1);
@@ -467,7 +512,7 @@ describe('getQuestionHistory — onboarding queue (WP16 sub-part 2)', () => {
       await compensate(db, userId, debit.entry.id, 100, null);
       await finalizeFailed(db, pending.id, 'Onverwachte fout bij het ophalen: ECONNRESET');
 
-      const history = await getQuestionHistory(db, userId);
+      const history = await getQuestionHistory(db, userId, { includeOnboarding: true });
       expect(history).toHaveLength(1);
       expect(history[0]).toMatchObject({
         source: 'onboarding',
@@ -505,7 +550,7 @@ describe('getQuestionHistory — onboarding queue (WP16 sub-part 2)', () => {
         debitTransactionId: debit.entry.id,
       });
 
-      const history = await getQuestionHistory(db, userId);
+      const history = await getQuestionHistory(db, userId, { includeOnboarding: true });
       expect(history).toHaveLength(2);
       expect(history.map((h) => h.question).sort()).toEqual(['gewone vraag', 'onboarding vraag'].sort());
       expect(history.find((h) => h.question === 'gewone vraag')?.source).toBe('audit');

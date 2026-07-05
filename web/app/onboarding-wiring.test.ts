@@ -37,6 +37,16 @@ describe('WP16 sub-part 2 onboarding-trigger wiring (source pins)', () => {
     expect(gateIdx).toBeLessThan(finderIdx);
   });
 
+  it('gates the dashboard history read on the SAME master switch (session-27 incident pin)', () => {
+    // The ungated merge 500'd the production dashboard while migration 012
+    // was (correctly) not yet applied — the read path must ride the same
+    // ONBOARDING_ENABLED switch as the finder injection.
+    const page = read('page.tsx');
+    expect(page).toContain(
+      "getQuestionHistory(db, userId, { includeOnboarding: process.env.ONBOARDING_ENABLED === '1' })",
+    );
+  });
+
   it('runs the money orchestration after chargeAndRun, only on onboarding_pending', () => {
     expect(source).toContain('maybeTriggerOnboarding(');
     expect(source).toContain("response.reason !== 'onboarding_pending'");

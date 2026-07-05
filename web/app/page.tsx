@@ -41,7 +41,10 @@ export default async function Home({
   // never a hardcoded number).
   const [balance, history, simplePrice, clarificationPrice, signupGrantCredits] = await Promise.all([
     getBalance(db, userId),
-    getQuestionHistory(db, userId),
+    // includeOnboarding rides the same master switch as the finder injection
+    // (actions.ts): while ONBOARDING_ENABLED is unset, the history read never
+    // touches the not-yet-migrated pending_table_requests table.
+    getQuestionHistory(db, userId, { includeOnboarding: process.env.ONBOARDING_ENABLED === '1' }),
     getActionClassPrice(db, 'simple'),
     getActionClassPrice(db, 'clarification'),
     getSignupGrantCredits(db),
