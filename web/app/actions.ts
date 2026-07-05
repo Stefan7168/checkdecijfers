@@ -127,11 +127,20 @@ export async function askQuestion(
         // an 'onboarding_pending' acknowledgment instead of the B15
         // clarification. Absent everywhere else (benchmark, tests, the reply
         // action below), so the unmatched exit stays byte-identical there.
-        tableFinder: buildOnboardingFinder({
-          db: getDb(),
-          userId,
-          rerankClient: new AnthropicLlmClient(),
-        }),
+        // Gated on ONBOARDING_ENABLED='1' so "dormant until the supervised
+        // live step" is mechanical, not aspirational: until the RUNBOOK step
+        // applies migrations 012+013 and sets the env vars, production
+        // behaves byte-identically pre-WP16 — no finder, no per-question
+        // rerank spend, no path that can touch the not-yet-migrated tables.
+        ...(process.env.ONBOARDING_ENABLED === '1'
+          ? {
+              tableFinder: buildOnboardingFinder({
+                db: getDb(),
+                userId,
+                rerankClient: new AnthropicLlmClient(),
+              }),
+            }
+          : {}),
       }),
     );
     // WP16 sub-part 2 (ADR 026, design §2): if the pipeline acknowledged an

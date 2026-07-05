@@ -83,6 +83,27 @@ describe('buildOnboardingFinder — the production TableFinder closure (WP16 sub
     expect(await finder(CONFIDENT_TOPIC)).toBeNull();
   });
 
+  it('an already-pending lookup throw → null (session-27 review: the catch covers the WHOLE finder)', async () => {
+    // The exact pre-migration production shape: findTable succeeds against the
+    // catalog, then findActiveRequest hits a missing pending_table_requests
+    // relation. The finder's contract says ANY failure degrades to the plain
+    // B15 clarification — money-safe because duplicate protection is
+    // structural (unique index + debit dedup), never a double charge.
+    const brokenDb: typeof db = {
+      query: (text: string, params?: unknown[]) =>
+        text.includes('pending_table_requests')
+          ? Promise.reject(new Error('relation "pending_table_requests" does not exist'))
+          : db.query(text, params),
+      withTransaction: (fn) => db.withTransaction(fn),
+    };
+    const finder = buildOnboardingFinder({
+      db: brokenDb,
+      userId: randomUUID(),
+      rerank: stubPickFirst(0.95),
+    });
+    expect(await finder(CONFIDENT_TOPIC)).toBeNull();
+  });
+
   it('an active job for this (user, table) → alreadyPending true (no second fetch)', async () => {
     const userId = await fundedUser(db);
     // First, resolve the confident pick so we know the table id to pre-queue.

@@ -49,26 +49,31 @@ export function buildOnboardingFinder(deps: OnboardingFinderDeps): TableFinder {
     });
   return async (term: string): Promise<OnboardingRouting | null> => {
     // findTable never throws for a normal miss (it routes recall-empty → none
-    // and rerank errors → disclose), but wrap defensively: ANY failure here
-    // must degrade to the plain B15 clarification, never block the answer turn
-    // or fabricate an onboarding trigger (principle c).
-    let outcome;
+    // and rerank errors → disclose), but wrap defensively: ANY failure here —
+    // including the already-pending lookup — must degrade to the plain B15
+    // clarification, never block the answer turn or fabricate an onboarding
+    // trigger (principle c). Swallowing an already-pending lookup failure is
+    // money-safe: duplicate protection is structural (the one-active-per-
+    // (user,table) unique index + the per-request debit dedup), so a missed
+    // check degrades to the no-second-charge duplicate path, never a double
+    // debit. (Session-27 review: the first version caught only findTable,
+    // contradicting this comment's own "ANY failure" contract.)
     try {
-      outcome = await findTable(deps.db, term, { rerank });
+      const outcome = await findTable(deps.db, term, { rerank });
+      if (outcome.kind !== 'confident') return null;
+
+      // Confident pick → does this user already have an active fetch for this
+      // exact table? If so, the acknowledgment says "already being fetched"
+      // and NO new debit happens (alreadyPending → the action never triggers).
+      const active = await findActiveRequest(deps.db, deps.userId, outcome.pick.tableId);
+      return {
+        tableId: outcome.pick.tableId,
+        topicTerm: term,
+        confidence: outcome.confidence,
+        alreadyPending: active !== null,
+      };
     } catch {
       return null;
     }
-    if (outcome.kind !== 'confident') return null;
-
-    // Confident pick → does this user already have an active fetch for this
-    // exact table? If so, the acknowledgment says "already being fetched" and
-    // NO new debit happens (alreadyPending → the web action never triggers).
-    const active = await findActiveRequest(deps.db, deps.userId, outcome.pick.tableId);
-    return {
-      tableId: outcome.pick.tableId,
-      topicTerm: term,
-      confidence: outcome.confidence,
-      alreadyPending: active !== null,
-    };
   };
 }

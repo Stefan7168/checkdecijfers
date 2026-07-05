@@ -25,6 +25,18 @@ describe('WP16 sub-part 2 onboarding-trigger wiring (source pins)', () => {
     expect(occurrences).toBe(1);
   });
 
+  it('gates the finder on ONBOARDING_ENABLED so dormant is mechanical (session-27 review)', () => {
+    // Until the RUNBOOK supervised live step (migrations 012+013, env vars)
+    // flips this on, production must behave byte-identically pre-WP16: no
+    // finder, no per-question rerank spend, no path touching the
+    // not-yet-migrated tables. The gate must guard the SAME expression the
+    // injection pin above asserts (the conditional spread reads before it).
+    const gateIdx = source.indexOf("process.env.ONBOARDING_ENABLED === '1'");
+    const finderIdx = source.indexOf('tableFinder: buildOnboardingFinder(');
+    expect(gateIdx).toBeGreaterThan(-1);
+    expect(gateIdx).toBeLessThan(finderIdx);
+  });
+
   it('runs the money orchestration after chargeAndRun, only on onboarding_pending', () => {
     expect(source).toContain('maybeTriggerOnboarding(');
     expect(source).toContain("response.reason !== 'onboarding_pending'");
