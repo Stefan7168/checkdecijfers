@@ -23,7 +23,7 @@ Empirically measured this session (public read-only GETs against `datasets.cbs.n
 
 ### 2. The catalog is a separate, bulk-refreshed mirror (`cbs_catalog`), never live-queried (principle b)
 
-`migrations/011_cbs_catalog.sql` adds `cbs_catalog` — **structurally separate** from `cbs_tables` (WP16: "don't conflate or repurpose columns"): it is "known to CBS, not yet ingested" vs `cbs_tables`'s "registered + ingested", no FK between them. Discovery is added as a new `CbsSource.fetchCatalog()` method (real in `odata-v4.ts`, replayed from a captured fixture in `fixture-source.ts`), keeping the ADR [003](003-cbs-access-layer.md) isolation seam — **this closes ADR 003's own revisit trigger #3** ("catalog ambitions outgrow manual onboarding"). The mirror is refreshed on a schedule (`catalog:refresh` CLI); the request path only ever reads our own table.
+`migrations/011_cbs_catalog.sql` adds `cbs_catalog` — **structurally separate** from `cbs_tables` (WP16: "don't conflate or repurpose columns"): it is "known to CBS, not yet ingested" vs `cbs_tables`'s "registered + ingested", no FK between them. Discovery is added as a new `CbsSource.fetchCatalog()` method (real in `odata-v4.ts`, replayed from a captured fixture in `fixture-source.ts`), keeping the ADR [003](003-cbs-access-layer.md) isolation seam — **this closes ADR 003's own revisit trigger #3** ("catalog ambitions outgrow manual onboarding"). The mirror is bulk-refreshed via the `catalog:refresh` CLI — the cadence is an open operational choice ([#106](../open-questions.md)); for now it runs by hand in a maintenance session. The request path only ever reads our own table.
 
 ### 3. The rerank is a variant of the ADR-004 intent role, run on the small/fast tier — NOT Fable
 

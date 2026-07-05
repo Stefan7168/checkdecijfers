@@ -5,6 +5,11 @@
 -- path). This closes ADR 003 revisit trigger #3 ("catalog ambitions outgrow
 -- manual table onboarding").
 --
+-- No GRANT/RLS statements needed here: migration 003's ALTER DEFAULT PRIVILEGES
+-- + auto-RLS mechanism locks every later table in this schema automatically
+-- (anon/authenticated get nothing). Live-verified on production per the RUNBOOK
+-- per-migration grants/RLS check (2026-07-05): 0 grants, RLS on, 0 policies.
+--
 -- DELIBERATELY SEPARATE from cbs_tables (docs/08-build-plan.md WP16: "Don't
 -- conflate or repurpose columns"): cbs_catalog is "known to CBS, not yet
 -- ingested"; cbs_tables is "registered + ingested". No FK between them — a
