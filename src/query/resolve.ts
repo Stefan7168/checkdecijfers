@@ -79,6 +79,27 @@ export function periodKey(p: ParsedPeriod): number {
   return p.year * 100 + (p.index ?? 0);
 }
 
+/** True when the (deduplicated) codes form a gap-free run at their grain —
+ * false the moment any period between first and last is absent. The #64
+ * enumeration gate (run.ts + chart/build.ts): a plain 'none' selection of
+ * NON-contiguous periods ("in 2020 en in 2022") is an explicit enumeration,
+ * and neither trend pre-registration nor a connected line may imply the
+ * unseen periods in the hole. Mixed/unparseable grains return false —
+ * fail toward claiming less, never more. */
+export function contiguousPeriodCodes(codes: string[]): boolean {
+  const unique = [...new Set(codes)];
+  if (unique.length < 2) return true;
+  const parsed: ParsedPeriod[] = [];
+  for (const code of unique) {
+    const p = parsePeriodCode(code);
+    if (!p || p.grain !== (parsed[0]?.grain ?? p.grain)) return false;
+    parsed.push(p);
+  }
+  parsed.sort((a, b) => periodKey(a) - periodKey(b));
+  const full = enumeratePeriods(parsed[0]!, parsed[parsed.length - 1]!);
+  return full.length === parsed.length;
+}
+
 /** Enumerates the inclusive range from..to at one grain, ascending. */
 export function enumeratePeriods(from: ParsedPeriod, to: ParsedPeriod): string[] {
   const codes: string[] = [];

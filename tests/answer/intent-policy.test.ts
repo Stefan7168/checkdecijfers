@@ -6,6 +6,7 @@ import {
   buildUnmatchedClarification,
   decide,
   differingAxes,
+  mergeExplicitPeriodEnumeration,
   mergeResolutions,
   requestHash,
   stableStringify,
@@ -77,9 +78,9 @@ function failure(
   };
 }
 
-function context(raw?: Partial<RawParse>): OutcomeContext {
+function context(raw?: Partial<RawParse>, question = 'synthetische vraag'): OutcomeContext {
   return {
-    question: 'synthetische vraag',
+    question,
     raw: {
       version: 3,
       kind: 'data_query',
@@ -93,6 +94,131 @@ function context(raw?: Partial<RawParse>): OutcomeContext {
     usage: { inputTokens: 0, outputTokens: 0 },
   };
 }
+
+describe('#64 explicit period enumeration (owner decision 2026-07-04; built session 22)', () => {
+  const rotterdam2020 = candidate(intentOf('population_on_1_january', 2020, ['GM0599']), 0.95, 'Rotterdam in 2020');
+  const rotterdam2022 = candidate(intentOf('population_on_1_january', 2022, ['GM0599']), 0.9, 'Rotterdam in 2022');
+  const QUESTION = 'Hoeveel mensen wonen er in Rotterdam in 2020 en in 2022?';
+
+  it('merges the live-observed shape into one multi-code intent instead of clarifying', async () => {
+    const outcome = await decide(context(undefined, QUESTION), [rotterdam2020, rotterdam2022], config, alwaysServable);
+    expect(outcome.kind).toBe('intent');
+    if (outcome.kind !== 'intent') throw new Error('unreachable');
+    expect(outcome.intent.period).toEqual({ kind: 'codes', codes: ['2020JJ00', '2022JJ00'] });
+    expect(outcome.intent.regions).toEqual(['GM0599']);
+    expect(outcome.intent.derivation).toBe('none');
+    // Weakest-source confidence: a shaky enumeration must not inherit the
+    // strongest reading's certainty.
+    expect(outcome.confidence).toBe(0.9);
+    expect(outcome.ranked[0]!.reading).toBe('expliciet genoemde jaren: 2020 en 2022');
+  });
+
+  it('never merges readings that differ on REGION — that is interpretation ambiguity (Utrecht)', async () => {
+    const gemeente = candidate(intentOf('population_on_1_january', 2024, ['GM0344']), 0.8, 'gemeente Utrecht');
+    const provincie = candidate(intentOf('population_on_1_january', 2024, ['PV26']), 0.5, 'provincie Utrecht');
+    const outcome = await decide(context(undefined, 'Hoeveel inwoners had Utrecht in 2024?'), [gemeente, provincie], config, alwaysServable);
+    expect(outcome.kind).toBe('clarification');
+  });
+
+  it('never merges a year the question does not contain (a model-invented period cannot ride along)', async () => {
+    const outcome = await decide(
+      context(undefined, 'Hoeveel mensen wonen er in Rotterdam in 2020 en het jaar erna?'),
+      [rotterdam2020, rotterdam2022],
+      config,
+      alwaysServable,
+    );
+    expect(outcome.kind).toBe('clarification');
+  });
+
+  it('never merges when any reading carries a derivation', async () => {
+    const withSeries = { ...rotterdam2022, intent: { ...rotterdam2022.intent, derivation: 'series' as const } };
+    const outcome = await decide(context(undefined, QUESTION), [rotterdam2020, withSeries], config, alwaysServable);
+    expect(outcome.kind).toBe('clarification');
+  });
+
+  it('never merges non-yearly codes in v1 (KW enumerations keep clarifying)', async () => {
+    const q1 = { ...rotterdam2020, intent: { ...rotterdam2020.intent, period: { kind: 'codes' as const, codes: ['2024KW01'] } } };
+    const q3 = { ...rotterdam2022, intent: { ...rotterdam2022.intent, period: { kind: 'codes' as const, codes: ['2024KW03'] } } };
+    const outcome = await decide(context(undefined, 'eerste en derde kwartaal 2024?'), [q1, q3], config, alwaysServable);
+    expect(outcome.kind).toBe('clarification');
+  });
+
+  it('rejects a CROSS-YEAR quarter enumeration at the merge itself — the review-proven corruption shape (a widened grain regex would collapse quarters into fabricated year codes)', () => {
+    // Direct unit call: both years appear in the question, so ONLY the JJ
+    // regex stands between these quarters and two invented 2023JJ00/2024JJ00
+    // codes. The executing lens proved the old same-year KW fixture masked
+    // this behind the distinct-years guard.
+    const kw2023 = { ...rotterdam2020, intent: { ...rotterdam2020.intent, period: { kind: 'codes' as const, codes: ['2023KW04'] } } };
+    const kw2024 = { ...rotterdam2022, intent: { ...rotterdam2022.intent, period: { kind: 'codes' as const, codes: ['2024KW01'] } } };
+    expect(mergeExplicitPeriodEnumeration('vierde kwartaal 2023 en eerste kwartaal 2024?', [kw2023, kw2024])).toBeNull();
+  });
+
+  it('never merges across TOPICS — different canonical keys with different named years (review gap)', async () => {
+    const bevolking = candidate(intentOf('population_on_1_january', 2020), 0.9, 'bevolking in 2020');
+    const inflatie = candidate(intentOf('cpi_yearly_inflation', 2022), 0.85, 'inflatie in 2022');
+    const outcome = await decide(
+      context(undefined, 'Wat was de bevolking in 2020 en de inflatie in 2022?'),
+      [bevolking, inflatie],
+      config,
+      alwaysServable,
+    );
+    expect(outcome.kind).toBe('clarification');
+  });
+
+  it('never merges across REGIONS when the years ALSO differ — isolates the regions guard (review gap: the Utrecht case was masked by same-year)', async () => {
+    const amsterdam2020 = candidate(intentOf('population_on_1_january', 2020, ['GM0363']), 0.9, 'Amsterdam in 2020');
+    const rotterdam2022b = candidate(intentOf('population_on_1_january', 2022, ['GM0599']), 0.85, 'Rotterdam in 2022');
+    const outcome = await decide(
+      context(undefined, 'Hoeveel inwoners had Amsterdam in 2020 en Rotterdam in 2022?'),
+      [amsterdam2020, rotterdam2022b],
+      config,
+      alwaysServable,
+    );
+    expect(outcome.kind).toBe('clarification');
+  });
+
+  it('a sub-threshold stray year never joins the enumeration (the runnerUp filter, pinned)', async () => {
+    const stray1990 = candidate(intentOf('population_on_1_january', 1990, ['GM0599']), 0.2, 'Rotterdam in 1990');
+    const outcome = await decide(
+      context(undefined, 'Hoeveel mensen wonen er in Rotterdam in 2020 en in 2022? (1990 was anders)'),
+      [rotterdam2020, rotterdam2022, stray1990],
+      config,
+      alwaysServable,
+    );
+    expect(outcome.kind).toBe('intent');
+    if (outcome.kind !== 'intent') throw new Error('unreachable');
+    expect(outcome.intent.period).toEqual({ kind: 'codes', codes: ['2020JJ00', '2022JJ00'] });
+    expect(outcome.confidence).toBe(0.9);
+  });
+
+  it('direct-call defense layers hold standalone: single candidate and duplicate years return null', () => {
+    expect(mergeExplicitPeriodEnumeration('in 2020?', [rotterdam2020])).toBeNull();
+    const dup = { ...rotterdam2022, intent: { ...rotterdam2020.intent } };
+    expect(mergeExplicitPeriodEnumeration('in 2020 en 2020?', [rotterdam2020, dup])).toBeNull();
+  });
+
+  it('merges three named years, sorted', () => {
+    const y1 = candidate(intentOf('cpi_yearly_inflation', 2024), 0.9, '2024');
+    const y2 = candidate(intentOf('cpi_yearly_inflation', 2020), 0.95, '2020');
+    const y3 = candidate(intentOf('cpi_yearly_inflation', 2022), 0.92, '2022');
+    const merged = mergeExplicitPeriodEnumeration('inflatie in 2020, 2022 en 2024?', [y1, y2, y3]);
+    expect(merged).not.toBeNull();
+    expect(merged!.intent.period).toEqual({ kind: 'codes', codes: ['2020JJ00', '2022JJ00', '2024JJ00'] });
+    expect(merged!.confidence).toBe(0.9);
+    expect(merged!.reading).toBe('expliciet genoemde jaren: 2020, 2022 en 2024');
+  });
+
+  it('a shaky enumeration still confirms first (rule 3 applies at the merged, weakest confidence)', async () => {
+    const weak2020 = candidate(intentOf('population_on_1_january', 2020, ['GM0599']), 0.55, 'Rotterdam in 2020');
+    const weak2022 = candidate(intentOf('population_on_1_january', 2022, ['GM0599']), 0.5, 'Rotterdam in 2022');
+    const outcome = await decide(context(undefined, QUESTION), [weak2020, weak2022], config, alwaysServable);
+    expect(outcome.kind).toBe('clarification');
+    if (outcome.kind !== 'clarification') throw new Error('unreachable');
+    // The confirm offers the MERGED reading — confirming it resolves the
+    // enumeration, not one arbitrary half of it.
+    expect(outcome.options).toEqual(['expliciet genoemde jaren: 2020 en 2022']);
+  });
+});
 
 describe('R7 threshold policy (docs/05 R7, ADR 012)', () => {
   it('confident single reading above the threshold answers', async () => {

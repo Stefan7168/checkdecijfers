@@ -17,6 +17,7 @@
 import type { ChartPoint, ChartSeries, ChartSpec } from './types.ts';
 import { CHART_SPEC_VERSION } from './types.ts';
 import type { ResultCell, ValidatedResult } from '../query/index.ts';
+import { contiguousPeriodCodes } from '../query/index.ts';
 import { buildAttributionLine, formatValueNl } from '../answer/compose/format.ts';
 
 /** R11 note rendered with any chart containing non-definitive points. */
@@ -48,6 +49,15 @@ function nullNote(cell: ResultCell, multiRegion: boolean): string {
 
 export function buildChartSpec(result: ValidatedResult): ChartSpec | null {
   if (result.shape !== 'series' && result.shape !== 'comparison') return null;
+  // #64 (session 22, review fix): a non-contiguous explicit enumeration
+  // draws NO chart — a connected line across skipped periods would imply a
+  // continuity nobody sampled (the R6 renderer draws exactly what the spec
+  // says, so the spec must never say it). Genuine ranges are gap-free by
+  // the WP14 completeness discipline and chart as always. A per-period BAR
+  // presentation for enumerations is a possible follow-up, not v1.
+  if (result.shape === 'series' && !contiguousPeriodCodes(result.cells.map((c) => c.periodCode))) {
+    return null;
+  }
   const kind = result.shape === 'series' ? 'line' : 'bar';
 
   // One unit per chart (R10). The query layer already refuses mixed units

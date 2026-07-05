@@ -242,6 +242,63 @@ function echoUnservableClarification(
   };
 }
 
+/** #64 (owner decision 2026-07-04, built session 22): a question that
+ * EXPLICITLY names several absolute periods ("in Rotterdam in 2020 en in
+ * 2022") is an enumeration, not an ambiguity — R7's rule 4 exists for
+ * competing INTERPRETATIONS, and the owner decision reads enumerations out
+ * of it. When every plausible reading agrees on everything except a
+ * single-code yearly period, each period is absolute and pairwise distinct,
+ * and every named year literally appears in the question text, the readings
+ * merge into ONE multi-code intent — which the query contract already
+ * serves as an ordinary series (verified empirically against the fixture
+ * DB before this was built). Deliberately narrow v1, each condition closing
+ * a wrong-merge class:
+ *  - JJ single-code periods only (the live-observed shape; KW/MM
+ *    enumerations keep clarifying until measured need);
+ *  - derivation 'none' on every reading (difference/max enumerations have
+ *    their own semantics);
+ *  - identical target AND regions (Utrecht gemeente-vs-provincie differs on
+ *    the REGION axis and therefore never merges — that IS interpretation
+ *    ambiguity);
+ *  - every year's digits present in the question (the honest test of "the
+ *    user themselves named it"; a model-invented year cannot merge).
+ * The merged reading then faces rules 3/5 like any other candidate — at the
+ * WEAKEST source confidence, so a shaky enumeration still confirms first. */
+export function mergeExplicitPeriodEnumeration(
+  question: string,
+  candidates: RankedCandidate[],
+): RankedCandidate | null {
+  if (candidates.length < 2) return null;
+  const first = candidates[0]!;
+  const years: number[] = [];
+  for (const candidate of candidates) {
+    if (candidate.intent.derivation !== 'none') return null;
+    if (stableStringify(candidate.intent.target) !== stableStringify(first.intent.target)) return null;
+    if (stableStringify(candidate.intent.regions ?? []) !== stableStringify(first.intent.regions ?? [])) {
+      return null;
+    }
+    const period = candidate.intent.period;
+    if (period.kind !== 'codes' || period.codes.length !== 1) return null;
+    const match = /^(\d{4})JJ00$/.exec(period.codes[0]!);
+    if (!match) return null;
+    const year = Number(match[1]);
+    if (!question.includes(String(year))) return null;
+    years.push(year);
+  }
+  if (new Set(years).size !== years.length) return null;
+  const sorted = [...years].sort((a, b) => a - b);
+  return {
+    intent: { ...first.intent, period: { kind: 'codes', codes: sorted.map((y) => `${y}JJ00`) } },
+    confidence: Math.min(...candidates.map((c) => c.confidence)),
+    reading: `expliciet genoemde jaren: ${
+      sorted.length === 2
+        ? sorted.join(' en ')
+        : `${sorted.slice(0, -1).join(', ')} en ${sorted[sorted.length - 1]}`
+    }`,
+    impliedRecency: false,
+  };
+}
+
 export async function decide(
   context: OutcomeContext,
   resolutions: CandidateResolution[],
@@ -255,6 +312,20 @@ export async function decide(
 
   // Rule 2: never fall through past a failed top reading.
   if (isResolutionFailure(top)) return clarificationFromFailure(context, top);
+
+  // Rule 2.5 (#64): an explicit enumeration of named absolute periods merges
+  // into one multi-code intent instead of firing rule 4 — then re-enters the
+  // rules as a single candidate (one-level recursion: a lone candidate can
+  // never merge again), so rule 3's confirm-when-doubting still applies at
+  // the weakest source confidence.
+  const plausible = ranked.filter((candidate) => candidate.confidence >= config.runnerUpThreshold);
+  if (
+    plausible.length >= 2 &&
+    plausible.every((candidate): candidate is RankedCandidate => !isResolutionFailure(candidate))
+  ) {
+    const enumerated = mergeExplicitPeriodEnumeration(context.question, plausible);
+    if (enumerated) return decide(context, [enumerated], config, servability);
+  }
 
   // Rule 3: a lone reading the model itself doubts → confirm, don't guess —
   // but only offer a suggestion that would actually answer when confirmed
