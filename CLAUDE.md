@@ -39,7 +39,7 @@ Three principles, also referenced as (a)/(b)/(c) across the docs:
 - **English** for code, comments, docs, commit messages. **Dutch** only for product copy / UI text (and benchmark task phrasing).
 - Every load-bearing technical choice gets an ADR in `docs/decisions/` (context, decision, ≥2 real alternatives, trade-offs, revisit triggers). Small choices don't.
 - Mark every assumption inline (`**Assumption:** …`) and mirror it in [docs/open-questions.md](docs/open-questions.md). Never present a guess as settled.
-- Keep the module boundaries from ADR [001](docs/decisions/001-single-app-vs-split.md) (`ingestion/`, `cbs-adapter/`, `query/`, `validation/`, `answer/`, `chart/`) — they are the future split seam.
+- Keep the module boundaries from ADR [001](docs/decisions/001-single-app-vs-split.md) (`ingestion/`, `cbs-adapter/`, `catalog/`, `registry/`, `query/`, `answer/`, `chart/`, `billing/`, with `db/` as the shared client beneath them — the as-built list per ADR 001's 2026-07-05 update; validation never became a directory, it lives as `validate.ts` files inside the owning modules) — they are the future split seam.
 - Database schema changes happen only via numbered, committed migration files — never ad-hoc console edits. A later session must be able to rebuild the schema from the repo alone.
 - Secrets live only in the hosting platform's environment store; a runbook doc lists each secret and its rotation steps in owner-followable language.
 - CI runs the ingestion fixtures, invariant tests, and benchmark scorer on every push and blocks deploys on red. "The tests pass" is a claim only CI can make — the owner's trust signal is a green pipeline, not a session's word.

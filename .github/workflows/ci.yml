@@ -1,5 +1,5 @@
 # CI gate — the owner's trust signal. "The tests pass" is a claim only CI can make
-# (CLAUDE.md conventions). Runs the eight gate suites + the benchmark run/score
+# (CLAUDE.md conventions). Runs the gate suites below + the benchmark run/score
 # pair on every push:
 #   1. ingestion fixture tests   2. invariant tests   3. benchmark suite
 #   4. registry tests (ADR 010)  5. query + benchmark-intent tests (WP5)
@@ -25,6 +25,10 @@
 #       signature verification + idempotency — signed with Stripe's own
 #       generateTestHeaderString against hand-authored fixtures, no network,
 #       no live Stripe account.
+#   11. catalog tests (WP16 sub-part 1, ADR 025): cbs_catalog ingest/prune,
+#       Stage-1 FTS recall + alias hints, the rerank hard-allowlist validator,
+#       findTable routing, and the end-to-end replay test — the rerank's LLM
+#       call replays from committed fixtures, still no API key, no network.
 # State per work package: the ingestion suite has real teeth since WP2 (wire-level
 # corruption fixtures against an embedded Postgres, ADR 009); the registry suite
 # (WP4) checks default_coordinates/period_semantics/canonical_measures apply
