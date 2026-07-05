@@ -100,7 +100,7 @@ The product refuses with: what it *cannot* answer and why (not in loaded scope /
 | B19 | Is de criminaliteit gestegen door immigratie? | **Refuse the causal interpretation**; offer only underlying descriptive statistics if in scope, else refuse fully |
 | B20 | Wat was de inflatie van vorige maand? *(asked when the loaded CPI table does not yet cover that month)* | **Freshness refusal** — state the freshest available period and offer it |
 
-*Note: once demand-driven table onboarding ships ([06-roadmap.md](06-roadmap.md), Phase 2–3), a B17-style refusal may instead offer to fetch the missing table. Phase 0 behavior remains a flat refusal; the benchmark will be revised at that phase.*
+*Note: on-demand CBS fetch for missing tables (WP16) is now the owner's **#1 build priority** (session 23, 2026-07-05 — [08-build-plan.md](08-build-plan.md)), not a Phase-2-3 option. Until it ships, a B17-style refusal stays a flat refusal; once it ships, such a refusal instead offers to fetch + verify the missing table, and the benchmark is revised then.*
 
 ### Scoring
 
