@@ -1,4 +1,6 @@
-# WP16 sub-part 2 — continuity brief (LIVING DOCUMENT — update at every milestone)
+# WP16 sub-part 2 — continuity brief (✅ BUILD COMPLETE + MERGED 2026-07-06 — historical; only the RUNBOOK supervised live step remains)
+
+> **Closed out session 27:** all build stages, the gate, the adversarial review, and the final Fable review completed; the branch was squash-merged to `main` (stage history preserved in the [handoff log](2026-07-06-wp16-sub2-handoff-log.md)); the `wp16-sub2` branch + worktree were removed. The ONLY remaining work is the owner-supervised live step — checklist in [RUNBOOK.md](../RUNBOOK.md). The text below is the brief as it stood during the build.
 
 **Purpose:** the owner has ~5% Fable budget left. This file lets ANY session — any model tier — pick up the WP16 sub-part 2 build mid-flight without Fable and without prior context. The Fable-grade thinking is already frozen in the [canonical design](2026-07-06-wp16-sub2-design.md); what remains is execution, which deliberately does NOT need the top tier. Read this file, then the design, then act.
 

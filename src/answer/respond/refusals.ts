@@ -12,7 +12,13 @@ import type { ClarifyAxis, ParseOutcome } from '../intent/types.ts';
 import type { ConversationContext } from '../context/types.ts';
 import { matchMetaTemplate } from './meta.ts';
 import { periodCodeToNl } from './period-nl.ts';
-import type { ClarificationResponse, PendingClarification, RefusalReason, RefusalResponse } from './types.ts';
+import type {
+  ClarificationResponse,
+  OnboardingEnvelope,
+  PendingClarification,
+  RefusalReason,
+  RefusalResponse,
+} from './types.ts';
 import { RESPONSE_SCHEMA_VERSION } from './types.ts';
 
 /** What refusals/clarifications need beyond the reason/text — the structured
@@ -24,6 +30,11 @@ export interface BuiltRefusal {
   guidance: string | null;
   freshness: FreshnessInfo | null;
   internalNote: string | null;
+  /** WP16 sub-part 2 (ADR 026): set only by buildOnboardingRefusal for the
+   * 'onboarding_pending' reason; every other builder leaves it undefined, and
+   * toRefusalResponse defaults it to null (the envelope field is present-only
+   * on that one reason). */
+  onboarding?: OnboardingEnvelope | null;
 }
 
 const definitionLabelByKey = new Map(CANONICAL_MEASURES.map((m) => [m.key, m.definitionLabel]));
@@ -192,6 +203,61 @@ async function buildSmalltalkRefusal(db: Db, question: string): Promise<BuiltRef
     guidance: null,
     freshness: null,
     internalNote: null,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Onboarding acknowledgments (WP16 sub-part 2, ADR 026) — the finder found a
+// confident CBS table for an unloaded topic; we've triggered the on-demand
+// fetch job. These ride the refusal envelope (like 'meta') but ANSWER: they
+// acknowledge that the fetch is underway and invite the user to keep going.
+// Nothing is refused and no data value exists yet, so principle (c) is not at
+// stake — and the two strings deliberately carry NO digits, keeping the
+// no-unbacked-numbers belt trivially satisfied.
+// ---------------------------------------------------------------------------
+
+/** Owner-approved VERBATIM Dutch copy (design 2026-07-06-wp16-sub2 §2). This
+ * one deliberately ENDS IN '?' and so is NOT passed through assertNotAQuestion:
+ * that guard exists because a data refusal must not create false pending
+ * clarification state, and this acknowledgment creates none — it opens no
+ * clarification round (no PendingClarification is ever built for it). It is a
+ * conversational info message, not a refusal-with-guidance. Keep byte-exact:
+ * the reconstruct round-trip and the answer tests pin it. */
+export const ONBOARDING_PENDING_TEXT =
+  'Dat onderwerp staat nog niet in onze database. We vragen de cijfers nu automatisch op bij het CBS en controleren ze — meestal een kwestie van minuten. Je krijgt een e-mail zodra je vraag beantwoord kan worden. Heb je ondertussen nog een andere vraag?';
+
+/** Owner-approved VERBATIM Dutch copy (design §2): the SAME (user, table) is
+ * already being fetched — no new debit, no second queue entry. Does not end in
+ * '?', but skips assertNotAQuestion for symmetry with its sibling above. */
+export const ONBOARDING_ALREADY_PENDING_TEXT =
+  'Deze cijfers worden al voor je opgehaald bij het CBS. Je krijgt een e-mail zodra je vraag beantwoord kan worden.';
+
+/** The onboarding acknowledgment builder (design §2). `already` picks between
+ * the two verbatim copies; only the first-ask ('onboarding_pending') carries
+ * the structured `onboarding` envelope the web action triggers on. */
+export function buildOnboardingRefusal(
+  onboarding: OnboardingEnvelope,
+  already: boolean,
+): BuiltRefusal {
+  if (already) {
+    return {
+      reason: 'onboarding_already_pending',
+      text: ONBOARDING_ALREADY_PENDING_TEXT,
+      offer: null,
+      guidance: null,
+      freshness: null,
+      internalNote: null,
+      onboarding: null,
+    };
+  }
+  return {
+    reason: 'onboarding_pending',
+    text: ONBOARDING_PENDING_TEXT,
+    offer: null,
+    guidance: null,
+    freshness: null,
+    internalNote: null,
+    onboarding,
   };
 }
 
@@ -476,6 +542,10 @@ export function toRefusalResponse(input: RefusalEnvelopeInput): RefusalResponse 
     parse: input.parse,
     queryRefusal: input.queryRefusal,
     internalNote: input.built.internalNote,
+    // WP16 sub-part 2 (ADR 026): present-only on the 'onboarding_pending'
+    // reason; null everywhere else (?? handles every non-onboarding builder,
+    // which leaves the field undefined).
+    onboarding: input.built.onboarding ?? null,
   };
 }
 
@@ -531,5 +601,6 @@ export function toInternalRefusal(question: string, internalNote: string): Refus
     parse: null,
     queryRefusal: null,
     internalNote,
+    onboarding: null,
   };
 }

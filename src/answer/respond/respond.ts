@@ -23,6 +23,7 @@ import { RawParseValidationError } from '../intent/types.ts';
 import type { IntentLlmClient } from '../intent/client.ts';
 import type { LlmClient } from '../llm/client.ts';
 import {
+  buildOnboardingRefusal,
   buildParseRefusal,
   buildQueryRefusal,
   buildStillAmbiguousRefusal,
@@ -31,6 +32,8 @@ import {
   toInternalRefusal,
   toRefusalResponse,
 } from './refusals.ts';
+import type { TableFinder } from '../intent/policy.ts';
+import type { OnboardedMeasure } from '../intent/prompt.ts';
 import { checkStaleness } from './staleness.ts';
 import type { AnswerResponse, ClarificationResponse, ComposedResponse, PendingClarification } from './types.ts';
 import { RESPONSE_SCHEMA_VERSION } from './types.ts';
@@ -51,6 +54,19 @@ export interface RespondOptions {
    * — the caller owns the trust boundary; this layer treats it as vocabulary.
    * Absent/null = a standalone first-turn parse, exactly the pre-WP15 path. */
   conversationContext?: ConversationContext | null;
+  /** WP16 sub-part 2 (ADR 026): OPTIONAL table-finder. Wired ONLY by
+   * web/app/actions.ts's askQuestion dependency construction; absent
+   * everywhere else (benchmark, tests, CLI, replyToClarification) → the
+   * unmatched exit stays the byte-identical B15 clarification. When present,
+   * a confident finder pick routes an unloaded topic to the on-demand fetch
+   * acknowledgment ('onboarding_pending' / 'onboarding_already_pending'). */
+  tableFinder?: TableFinder;
+  /** WP16 sub-part 2 (ADR 026, design §3.6): OPTIONAL on-demand-onboarded
+   * measures appended to the parser vocabulary. Passed ONLY by the onboarding
+   * job's delivery re-run (src/ingestion/onboarding.ts) so the just-onboarded
+   * measure is parseable; absent/empty everywhere else → byte-identical
+   * Phase-0 prompt (fixtures + benchmark unaffected). */
+  extraCanonicalMeasures?: OnboardedMeasure[];
 }
 
 /** Shared downstream half once we have an 'intent' ParseOutcome: query ->
@@ -169,6 +185,18 @@ async function respondToParseOutcome(
     const built = await buildParseRefusal(db, parse);
     return toRefusalResponse({ question, built, parse, queryRefusal: null });
   }
+  if (parse.kind === 'onboarding') {
+    // WP16 sub-part 2 (ADR 026): the finder confidently picked a CBS table for
+    // an unloaded topic. Ride the refusal envelope with the acknowledgment
+    // copy; the structured `onboarding` field travels out so the web action
+    // can trigger the fetch + 100-credit debit (that money lives OUTSIDE this
+    // module). alreadyPending → the no-new-fetch copy + no envelope field.
+    const built = buildOnboardingRefusal(
+      { tableId: parse.tableId, topicTerm: parse.topicTerm, confidence: parse.confidence },
+      parse.alreadyPending,
+    );
+    return toRefusalResponse({ question, built, parse, queryRefusal: null });
+  }
   if (parse.kind === 'clarification') {
     // WP15 (review finding 2026-07-04): a clarification of a FOLLOW-UP
     // question must carry the referent into the pending state — the reply
@@ -197,6 +225,14 @@ export async function respondToQuestion(
       client: options.intentClient,
       referenceDate: options.referenceDate,
       config: options.parserConfig,
+      // WP16 sub-part 2 (ADR 026): threaded into BOTH the standalone and
+      // follow-up parse (parseFollowUpQuestion accepts the same field) so an
+      // unmatched topic on either turn can route to onboarding when a finder
+      // is injected. Undefined when absent → B15 unchanged.
+      tableFinder: options.tableFinder,
+      // WP16 sub-part 2 delivery vocabulary (design §3.6): undefined/empty →
+      // byte-identical Phase-0 prompt.
+      extraCanonicalMeasures: options.extraCanonicalMeasures,
     };
     // WP15 (ADR 021): with a validated context, the parse runs in follow-up
     // mode — same downstream machinery, same thresholds, same one round of
@@ -234,6 +270,19 @@ export async function respondToClarificationReply(
       // a smalltalk classification belongs to the REPLY (the abandon rule),
       // so the meta router must match the reply text, not the original.
       const built = await buildParseRefusal(db, parse, reply);
+      return toRefusalResponse({ question: pending.question, built, parse, queryRefusal: null });
+    }
+    if (parse.kind === 'onboarding') {
+      // WP16 sub-part 2 (ADR 026): unreachable in production — clarifyOptions
+      // above deliberately injects NO tableFinder, so a reply-turn unmatched
+      // exit stays the byte-identical B15 clarification (a reply-turn
+      // onboarding trigger is a separate, unmade decision). Handled here for
+      // type exhaustiveness and to stay correct-by-construction if the finder
+      // is ever wired into this path: same acknowledgment as a fresh turn.
+      const built = buildOnboardingRefusal(
+        { tableId: parse.tableId, topicTerm: parse.topicTerm, confidence: parse.confidence },
+        parse.alreadyPending,
+      );
       return toRefusalResponse({ question: pending.question, built, parse, queryRefusal: null });
     }
     if (parse.kind === 'clarification') {

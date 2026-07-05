@@ -18,6 +18,11 @@ import { AnthropicLlmClient } from '../backend/answer/llm/client.ts';
 import type { PendingClarification } from '../backend/answer/respond/types.ts';
 import { chargeAndRun } from '../backend/billing/index.ts';
 import type { GatedResponse } from '../backend/billing/index.ts';
+import { buildOnboardingFinder } from '../backend/ingestion/onboarding-finder.ts';
+import {
+  onboardingPrice,
+  triggerOnboarding,
+} from '../backend/ingestion/onboarding-trigger.ts';
 import { currentUserId } from '../lib/current-user.ts';
 import { getDb } from '../lib/db.ts';
 
@@ -117,9 +122,31 @@ export async function askQuestion(
         conversationContext,
         intentClient: new AnthropicLlmClient(),
         answerClient: new AnthropicLlmClient(),
+        // WP16 sub-part 2 (ADR 026): the table finder is injected ONLY here —
+        // an unloaded topic the finder confidently maps to a CBS table becomes
+        // an 'onboarding_pending' acknowledgment instead of the B15
+        // clarification. Absent everywhere else (benchmark, tests, the reply
+        // action below), so the unmatched exit stays byte-identical there.
+        tableFinder: buildOnboardingFinder({
+          db: getDb(),
+          userId,
+          rerankClient: new AnthropicLlmClient(),
+        }),
       }),
     );
-    return { gated, context: await outcomeContext(gated) };
+    // WP16 sub-part 2 (ADR 026, design §2): if the pipeline acknowledged an
+    // onboarding fetch, the gate already fully refunded the 20-credit question
+    // debit (net 0). Now do the MONEY for the fetch — the 100-credit debit +
+    // queue row — atomically, OUTSIDE the answer module. This step never
+    // fabricates: it only reads a refusal the pipeline already produced and
+    // audited, and its own failure degrades to leaving the acknowledgment
+    // shown with the fetch not started.
+    const finalGated = await maybeTriggerOnboarding(gated, {
+      userId,
+      requestId,
+      question,
+    });
+    return { gated: finalGated, context: await outcomeContext(finalGated) };
   } catch (error) {
     // Vercel function logs are the owner's only visibility into production
     // infra failures (WP12 review); the client still receives Next's generic
@@ -127,6 +154,62 @@ export async function askQuestion(
     // compensated the debit before this rethrow reaches here (ADR 020).
     console.error('askQuestion failed:', error);
     throw error;
+  }
+}
+
+// WP16 sub-part 2 (ADR 026, design §2): the money orchestration for an
+// on-demand fetch. Runs AFTER chargeAndRun so the question debit is already
+// refunded (the acknowledgment is a refusal → gate refund → net 0), then
+// charges the 100-credit onboarding cost and queues the fetch in ONE
+// transaction (triggerOnboarding). Only fires on an 'ok' gated result whose
+// response is the 'onboarding_pending' refusal carrying the structured
+// onboarding envelope — every other gated shape (insufficient/duplicate/
+// unauthenticated, or any non-onboarding response) passes through untouched.
+async function maybeTriggerOnboarding(
+  gated: GatedResponse,
+  ctx: { userId: string; requestId: string; question: string },
+): Promise<GatedResponse> {
+  if (gated.kind !== 'ok') return gated;
+  const response = gated.response;
+  if (
+    response.kind !== 'refusal' ||
+    response.reason !== 'onboarding_pending' ||
+    response.onboarding === null
+  ) {
+    // 'onboarding_already_pending' also lands here and passes through: the
+    // pipeline already knew a fetch is in flight, so there is NO new debit —
+    // the turn nets 0 (gate refunded the question debit), the acknowledgment
+    // shows as-is. Asking twice must not cost twice (design §2/§5).
+    return gated;
+  }
+
+  const result = await triggerOnboarding(getDb(), {
+    userId: ctx.userId,
+    requestId: ctx.requestId,
+    questionText: ctx.question,
+    tableId: response.onboarding.tableId,
+    topicTerm: response.onboarding.topicTerm,
+    finderConfidence: response.onboarding.confidence,
+    ackAuditAnswerId: gated.auditId,
+  });
+
+  switch (result.kind) {
+    case 'started':
+      // Show the acknowledgment; the caption must read the 100-credit fetch
+      // cost, not the refunded question turn's 0 (design §2/§5).
+      return { ...gated, netCost: await onboardingPrice(getDb()) };
+    case 'duplicate':
+      // A concurrent/retried trigger already debited (or an active job already
+      // exists under another request): no second charge. Show the
+      // acknowledgment again; the turn nets 0.
+      return { ...gated, netCost: 0 };
+    case 'insufficient':
+      // Not enough credits for the fetch. Show the EXISTING insufficient-
+      // credits UI with required: 100. The audited acknowledgment exists but
+      // is not rendered (documented decision, design §2): nothing fabricated,
+      // the fetch never started, and the ledger already nets 0 for the turn
+      // (gate refunded the question debit; no onboarding debit happened).
+      return { kind: 'insufficient_credits', balance: result.balance, required: result.required };
   }
 }
 

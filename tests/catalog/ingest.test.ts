@@ -19,6 +19,7 @@ function catalogOnlySource(entries: CbsCatalogEntry[]): CbsSource {
     fetchObservations: () => {
       throw new Error('unused');
     },
+    fetchObservationCount: () => Promise.reject(new Error('unused')),
     fetchCatalog: () => Promise.resolve(entries),
   };
 }

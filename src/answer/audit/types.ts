@@ -50,8 +50,12 @@ export interface TableRef {
  * passes, and real end-user traffic (WP13, open-questions #44) -- without
  * this, reporting/retention tooling can't tell them apart once real users
  * exist. Defaults to 'user' (the real chat's own path); runner scripts pass
- * 'benchmark'/'validation' explicitly. */
-export type AuditSourceTag = 'benchmark' | 'validation' | 'user';
+ * 'benchmark'/'validation' explicitly.
+ * 'onboarding_delivery' (WP16 sub-part 2, ADR 026): the fetch job's delivery
+ * re-run — a real answer, but produced out-of-band by the cron job rather than
+ * a live chat turn, so it is tagged distinctly for reporting/retention. The DB
+ * CHECK is widened to match in migration 013. */
+export type AuditSourceTag = 'benchmark' | 'validation' | 'user' | 'onboarding_delivery';
 
 export interface AuditRecord {
   id: number;

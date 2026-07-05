@@ -24,7 +24,7 @@ import { MAX_CANDIDATES, REFUSAL_KIND_BY_QUESTION_KIND } from './parse.ts';
 import { buildSystemPrompt } from './prompt.ts';
 import { rawParseJsonSchema, validateRawParse } from './schema.ts';
 import { resolveCandidate } from './resolve.ts';
-import { buildUnmatchedClarification, decide, type OutcomeContext } from './policy.ts';
+import { resolveUnmatched, decide, type OutcomeContext, type TableFinder } from './policy.ts';
 import { DEFAULT_PARSER_CONFIG, type ParseOutcome, type ParserConfig } from './types.ts';
 
 /** Bump when the clarify-mode section or reply payload shape changes
@@ -42,6 +42,14 @@ export interface ClarifyReplyOptions {
   config?: ParserConfig;
   model?: string;
   maxTokens?: number;
+  /** WP16 sub-part 2 (ADR 026): OPTIONAL table-finder for the unmatched exit,
+   * kept uniform with the other two call sites. NOT wired in production today
+   * (web/app/actions.ts injects it only into askQuestion, not
+   * replyToClarification — a reply-turn onboarding trigger is a separate
+   * decision), so a reply that still names an unmatched topic keeps its
+   * byte-identical B15 behavior. Threaded here so the seam stays consistent
+   * and a future decision can enable it without touching this module. */
+  tableFinder?: TableFinder;
 }
 
 /** The clarify-mode instruction, appended verbatim to the WP6 system prompt
@@ -159,7 +167,7 @@ export async function parseClarificationReply(
     };
   }
 
-  if (raw.candidates.length === 0) return buildUnmatchedClarification(context);
+  if (raw.candidates.length === 0) return resolveUnmatched(context, options.tableFinder);
 
   const resolutions = await Promise.all(
     raw.candidates
@@ -168,7 +176,11 @@ export async function parseClarificationReply(
   );
   // The #56 servability check applies on reply turns too — decide() is the
   // shared seam, so an unservable echo can never be offered from either path.
-  return decide(context, resolutions, options.config ?? DEFAULT_PARSER_CONFIG, (intent) =>
-    echoServability(db, intent),
+  return decide(
+    context,
+    resolutions,
+    options.config ?? DEFAULT_PARSER_CONFIG,
+    (intent) => echoServability(db, intent),
+    options.tableFinder,
   );
 }

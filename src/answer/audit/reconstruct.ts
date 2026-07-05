@@ -80,6 +80,22 @@ function checkEnvelopeIntegrity(record: AuditRecord, problems: string[]): void {
   if (record.refusalReason !== expectedReason) {
     problems.push('refusal_reason differs from the envelope');
   }
+  // WP16 sub-part 2 (ADR 026): the onboarding envelope field is present-only
+  // on the 'onboarding_pending' reason — it carries the CBS table the fetch
+  // was triggered for. A row whose reason says a fetch started but whose
+  // envelope has no target (or vice versa) is internally inconsistent and
+  // must not reconstruct. No FK / no data value, so this is a shape check
+  // (like the reply_text/pending pairing above), not a numeric one. Only
+  // refusal envelopes carry the field at all (the type system forbids it
+  // elsewhere), so answers/clarifications need no check here.
+  if (response.kind === 'refusal') {
+    const shouldHaveOnboarding = response.reason === 'onboarding_pending';
+    if (shouldHaveOnboarding !== (response.onboarding !== null)) {
+      problems.push(
+        `onboarding envelope field ${response.onboarding !== null ? 'present' : 'absent'} does not match reason '${response.reason}'`,
+      );
+    }
+  }
   const expectedResultIds =
     response.kind === 'answer' ? response.result.cells.map((c) => c.resultId) : [];
   if (stableStringify(record.resultIds) !== stableStringify(expectedResultIds)) {

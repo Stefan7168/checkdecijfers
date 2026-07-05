@@ -3,7 +3,14 @@
 // debit/compensate primitives gate.ts relies on.
 import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-import { compensate, debitQuestion, getActionClassPrice, getBalance, reserveDebit } from '../../src/billing/ledger.ts';
+import {
+  compensate,
+  debitQuestion,
+  getActionClassPrice,
+  getBalance,
+  reserveDebit,
+  reserveOnboardingDebit,
+} from '../../src/billing/ledger.ts';
 import { applyPricingDefaults } from '../../src/billing/pricing-apply.ts';
 import type { Db } from '../../src/db/types.ts';
 import { createTestDb } from '../helpers/pglite-db.ts';
@@ -137,7 +144,10 @@ describe('credit_transactions_validate_compensation (migration 008, adversarial-
            values ($1, 5, 'compensation', $2, 'wrong reason target')`,
           [userId, grantId],
         ),
-      ).rejects.toThrow(/must reverse a question_cost row/);
+        // Migration 013 widened the allowlist to {question_cost, onboarding_cost}
+        // (WP16 sub-part 2) — a signup_grant is still correctly rejected, but the
+        // error text now names both permitted reasons.
+      ).rejects.toThrow(/must reverse a question_cost or onboarding_cost row/);
     });
   });
 
@@ -364,6 +374,153 @@ describe('compensate — idempotent per debit', () => {
       expect(first).not.toBeNull();
       expect(second).toBeNull();
       expect(await getBalance(db, userId)).toBe(0);
+    });
+  });
+});
+
+describe('reserveOnboardingDebit — the onboarding sibling of reserveDebit (WP16 sub-part 2, migration 012)', () => {
+  it('debits exactly the requested amount when balance is sufficient', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      await db.query('update signup_grant_config set credits = 150');
+      await db.query('select public.grant_signup_credits($1)', [userId]); // +150
+      const result = await reserveOnboardingDebit(db, userId, randomUUID(), 100);
+      expect(result.kind).toBe('debited');
+      expect(await getBalance(db, userId)).toBe(50);
+    });
+  });
+
+  it('returns "insufficient" for a balance strictly below the requirement', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      await db.query('update signup_grant_config set credits = 50');
+      await db.query('select public.grant_signup_credits($1)', [userId]); // +50, need 100
+      const result = await reserveOnboardingDebit(db, userId, randomUUID(), 100);
+      expect(result).toEqual({ kind: 'insufficient', balance: 50 });
+      expect(await getBalance(db, userId)).toBe(50); // untouched
+    });
+  });
+
+  it('a repeated requestId returns "duplicate", never a second debit', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      await db.query('update signup_grant_config set credits = 250');
+      await db.query('select public.grant_signup_credits($1)', [userId]); // +250
+      const requestId = randomUUID();
+      const first = await reserveOnboardingDebit(db, userId, requestId, 100);
+      const second = await reserveOnboardingDebit(db, userId, requestId, 100);
+      expect(first.kind).toBe('debited');
+      expect(second).toEqual({ kind: 'duplicate' });
+      expect(await getBalance(db, userId)).toBe(150); // debited once, not twice
+    });
+  });
+
+  it('a question_cost debit and an onboarding debit for the SAME (user, requestId) coexist — different reasons, not a conflict', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      await db.query('update signup_grant_config set credits = 250');
+      await db.query('select public.grant_signup_credits($1)', [userId]); // +250
+      const requestId = randomUUID();
+      const questionDebit = await reserveDebit(db, userId, requestId, 20);
+      const onboardingDebit = await reserveOnboardingDebit(db, userId, requestId, 100);
+      expect(questionDebit.kind).toBe('debited');
+      expect(onboardingDebit.kind).toBe('debited');
+      expect(await getBalance(db, userId)).toBe(130); // 250 - 20 - 100
+    });
+  });
+
+  it('rejects insertion of a positive-delta onboarding row at the raw SQL level (delta-sign CHECK, belt-and-braces)', async () => {
+    await withDb(async (db) => {
+      await expect(
+        db.query(
+          `insert into credit_transactions (user_id, delta, reason, request_id, note)
+           values ($1, 100, 'onboarding_cost', $2, 'bad sign')`,
+          [randomUUID(), randomUUID()],
+        ),
+      ).rejects.toThrow();
+    });
+  });
+
+  // Design §2's three pinned end-state nets: exact ledger shape per outcome.
+  describe('pinned ledger end-states (design §2)', () => {
+    it('happy path: -20 (question debit) +20 (gate compensation) -100 (onboarding) = net -100', async () => {
+      await withDb(async (db) => {
+        const userId = randomUUID();
+        await db.query('update signup_grant_config set credits = 300');
+        await db.query('select public.grant_signup_credits($1)', [userId]); // +300
+        const requestId = randomUUID();
+
+        const questionDebit = await reserveDebit(db, userId, requestId, 20);
+        expect(questionDebit.kind).toBe('debited');
+        // The gate's own refusal-envelope path fully refunds the 20 (ADR 022
+        // precedent, design §0.2) — simulated here via the same compensate()
+        // primitive gate.ts calls, since gate.ts itself is byte-untouched.
+        const refund = await compensate(db, userId, (questionDebit as { entry: { id: number } }).entry.id, 20, null);
+        expect(refund).not.toBeNull();
+
+        const onboardingDebit = await reserveOnboardingDebit(db, userId, requestId, 100);
+        expect(onboardingDebit.kind).toBe('debited');
+
+        expect(await getBalance(db, userId)).toBe(200); // 300 - 20 + 20 - 100
+      });
+    });
+
+    it('insufficient at trigger: -20 (question debit) +20 (gate compensation) = net 0, onboarding never lands', async () => {
+      await withDb(async (db) => {
+        const userId = randomUUID();
+        // Exactly enough for the 20-credit question debit, nothing left for
+        // the 100-credit onboarding debit.
+        await db.query('update signup_grant_config set credits = 20');
+        await db.query('select public.grant_signup_credits($1)', [userId]); // +20
+        const requestId = randomUUID();
+
+        const questionDebit = await reserveDebit(db, userId, requestId, 20);
+        expect(questionDebit.kind).toBe('debited');
+        const refund = await compensate(db, userId, (questionDebit as { entry: { id: number } }).entry.id, 20, null);
+        expect(refund).not.toBeNull();
+
+        const onboardingDebit = await reserveOnboardingDebit(db, userId, requestId, 100);
+        expect(onboardingDebit).toEqual({ kind: 'insufficient', balance: 20 });
+
+        expect(await getBalance(db, userId)).toBe(20); // 20 - 20 + 20, onboarding never touched it
+      });
+    });
+
+    it('verification failure later: -20 +20 -100 +100 (compensation) = net 0', async () => {
+      await withDb(async (db) => {
+        const userId = randomUUID();
+        await db.query('update signup_grant_config set credits = 300');
+        await db.query('select public.grant_signup_credits($1)', [userId]); // +300
+        const requestId = randomUUID();
+
+        const questionDebit = await reserveDebit(db, userId, requestId, 20);
+        const questionRefund = await compensate(
+          db,
+          userId,
+          (questionDebit as { entry: { id: number } }).entry.id,
+          20,
+          null,
+        );
+        expect(questionRefund).not.toBeNull();
+
+        const onboardingDebit = await reserveOnboardingDebit(db, userId, requestId, 100);
+        expect(onboardingDebit.kind).toBe('debited');
+        // Delivery later fails verification (§3 step 7/8): the job refunds
+        // the 100 via the existing compensate() primitive. CORE-2's migration
+        // 013 widened the validate-compensation trigger (migration 008) to
+        // accept reversing an 'onboarding_cost' debit too — so this refund now
+        // SUCCEEDS (SCAFFOLD asserted the pre-013 throw here to surface the
+        // gap; CORE-2 closed it, and this test now pins the fix).
+        const onboardingRefund = await compensate(
+          db,
+          userId,
+          (onboardingDebit as { entry: { id: number } }).entry.id,
+          100,
+          null,
+        );
+        expect(onboardingRefund).not.toBeNull();
+        expect(await getBalance(db, userId)).toBe(300); // 300 -20 +20 -100 +100
+      });
     });
   });
 });

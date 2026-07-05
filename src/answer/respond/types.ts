@@ -66,10 +66,41 @@ export type RefusalReason =
   /** Still ambiguous after the one clarification round: refusal-with-guidance,
    * never a second question (docs/05 failure table). */
   | 'still_ambiguous'
+  /** WP16 sub-part 2 (ADR 026): the topic matched no loaded measure, but the
+   * table finder confidently identified a CBS table that can answer it, so we
+   * have TRIGGERED an on-demand fetch+verify+store job (the 100-credit debit
+   * happens in the web action, outside the answer module — src/billing must
+   * not leak in here). The text ACKNOWLEDGES that and invites another question
+   * while the job runs; like 'meta', it rides the refusal envelope but ANSWERS
+   * (nothing is refused, nothing is fabricated — no data value exists yet).
+   * Carries the structured `onboarding` field below so the web action knows
+   * which table to fetch and how confident the finder was. */
+  | 'onboarding_pending'
+  /** WP16 sub-part 2: the SAME (user, table) already has an active
+   * pending/running onboarding job — asking again must not queue a second
+   * fetch or cost a second debit. A plain acknowledgment; no `onboarding`
+   * field (the web action never triggers on this reason). */
+  | 'onboarding_already_pending'
   /** Loud internal problems (data gap, failed derivation, inconsistency,
    * invalid intent, unparseable LLM output) — an honest "cannot answer this
    * reliably right now", never a partial or guessed answer. */
   | 'internal';
+
+/** WP16 sub-part 2 (ADR 026): the structured onboarding payload the web
+ * action needs to trigger the fetch+verify+store job — the finder's confident
+ * pick, verbatim. Present ONLY on an 'onboarding_pending' refusal; null on
+ * every other refusal (including 'onboarding_already_pending', which triggers
+ * nothing). Carries NO data value — only catalog identifiers and the finder's
+ * confidence — so principle (c) is not at risk here. */
+export interface OnboardingEnvelope {
+  /** The CBS table id the finder confidently picked (verbatim casing — it is
+   * the API id, fed straight into the ingestion pipeline). */
+  tableId: string;
+  /** The unmatched topic term the finder matched on (raw.unmatchedMeasureTerm). */
+  topicTerm: string;
+  /** The finder's 0..1 confidence in the pick (>= the 0.8 confident floor). */
+  confidence: number;
+}
 
 /** Serializable state of the one open clarification round — handed back on
  * the user's next message (respondToClarificationReply) so the reply is
@@ -155,6 +186,13 @@ export interface RefusalResponse extends ResponseBase {
    * caught error message behind an 'internal' refusal. NEVER rendered to the
    * user; `text` is the only user-facing surface. */
   internalNote: string | null;
+  /** WP16 sub-part 2 (ADR 026): the structured onboarding payload, set ONLY on
+   * an 'onboarding_pending' refusal (null on every other refusal). The web
+   * action (web/app/actions.ts) reads it to trigger the fetch+verify+store
+   * job and 100-credit debit — that money orchestration lives OUTSIDE the
+   * answer module (the gate.ts "wraps from the OUTSIDE" boundary), so this
+   * field is the only thing the answer pipeline hands out for it. */
+  onboarding: OnboardingEnvelope | null;
 }
 
 export type ComposedResponse = AnswerResponse | ClarificationResponse | RefusalResponse;

@@ -6,7 +6,10 @@
 // changes.
 import type { AuditedResponse } from '../answer/audit/index.ts';
 
-export type LedgerReason = 'signup_grant' | 'purchase' | 'question_cost' | 'compensation';
+// 'onboarding_cost' added WP16 sub-part 2 (migration 012, ADR 026): the
+// 100-credit debit that funds an on-demand CBS table onboarding, alongside
+// 'question_cost' as a negative-delta, request_id-scoped reason.
+export type LedgerReason = 'signup_grant' | 'purchase' | 'question_cost' | 'compensation' | 'onboarding_cost';
 
 /** Phase 1 note (docs/08-build-plan.md WP13, open-questions #4): every
  * current ANSWER is 'simple' -- no code path yet produces 'analysis'/'heavy'.
