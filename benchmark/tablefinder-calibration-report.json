@@ -1,0 +1,230 @@
+{
+  "generatedAt": "2026-07-05T15:00:46.249Z",
+  "mode": "record",
+  "totals": {
+    "pass": 8,
+    "total": 8
+  },
+  "results": [
+    {
+      "id": "huizenprijzen",
+      "kind": "confident",
+      "pick": "85773NED",
+      "confidence": 0.95,
+      "pass": true,
+      "problems": []
+    },
+    {
+      "id": "inflatie",
+      "kind": "confident",
+      "pick": "86141NED",
+      "confidence": 0.95,
+      "pass": true,
+      "problems": []
+    },
+    {
+      "id": "werkloosheid",
+      "kind": "confident",
+      "pick": "85224NED",
+      "confidence": 0.85,
+      "pass": true,
+      "problems": []
+    },
+    {
+      "id": "faillissementen",
+      "kind": "confident",
+      "pick": "82242NED",
+      "confidence": 0.92,
+      "pass": true,
+      "problems": []
+    },
+    {
+      "id": "zonnepanelen",
+      "kind": "confident",
+      "pick": "85004NED",
+      "confidence": 0.92,
+      "pass": true,
+      "problems": []
+    },
+    {
+      "id": "bevolking",
+      "kind": "confident",
+      "pick": "03759ned",
+      "confidence": 0.95,
+      "pass": true,
+      "problems": []
+    },
+    {
+      "id": "woningvoorraad",
+      "kind": "confident",
+      "pick": "82235NED",
+      "confidence": 0.95,
+      "pass": true,
+      "problems": []
+    },
+    {
+      "id": "onbekend",
+      "kind": "none",
+      "pick": null,
+      "confidence": null,
+      "pass": true,
+      "problems": []
+    }
+  ],
+  "history": [
+    {
+      "generatedAt": "2026-07-05T14:52:01.483Z",
+      "mode": "record",
+      "totals": {
+        "pass": 5,
+        "total": 8
+      },
+      "results": [
+        {
+          "id": "huizenprijzen",
+          "kind": "confident",
+          "pick": "85773NED",
+          "confidence": 0.95,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "inflatie",
+          "kind": "confident",
+          "pick": "86141NED",
+          "confidence": 0.95,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "werkloosheid",
+          "kind": "confident",
+          "pick": "85224NED",
+          "confidence": 0.85,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "faillissementen",
+          "kind": "confident",
+          "pick": "82242NED",
+          "confidence": 0.92,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "zonnepanelen",
+          "kind": "confident",
+          "pick": "85004NED",
+          "confidence": 0.85,
+          "pass": false,
+          "problems": [
+            "expected pick 82610NED, got 85004NED (conf 0.85)"
+          ]
+        },
+        {
+          "id": "bevolking",
+          "kind": "none",
+          "pick": null,
+          "confidence": null,
+          "pass": false,
+          "problems": [
+            "expected kind confident, got none"
+          ]
+        },
+        {
+          "id": "woningvoorraad",
+          "kind": "disclose",
+          "pick": null,
+          "confidence": null,
+          "pass": false,
+          "problems": [
+            "expected kind confident, got disclose"
+          ]
+        },
+        {
+          "id": "onbekend",
+          "kind": "none",
+          "pick": null,
+          "confidence": null,
+          "pass": true,
+          "problems": []
+        }
+      ]
+    },
+    {
+      "generatedAt": "2026-07-05T15:00:46.249Z",
+      "mode": "record",
+      "totals": {
+        "pass": 8,
+        "total": 8
+      },
+      "results": [
+        {
+          "id": "huizenprijzen",
+          "kind": "confident",
+          "pick": "85773NED",
+          "confidence": 0.95,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "inflatie",
+          "kind": "confident",
+          "pick": "86141NED",
+          "confidence": 0.95,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "werkloosheid",
+          "kind": "confident",
+          "pick": "85224NED",
+          "confidence": 0.85,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "faillissementen",
+          "kind": "confident",
+          "pick": "82242NED",
+          "confidence": 0.92,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "zonnepanelen",
+          "kind": "confident",
+          "pick": "85004NED",
+          "confidence": 0.92,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "bevolking",
+          "kind": "confident",
+          "pick": "03759ned",
+          "confidence": 0.95,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "woningvoorraad",
+          "kind": "confident",
+          "pick": "82235NED",
+          "confidence": 0.95,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "onbekend",
+          "kind": "none",
+          "pick": null,
+          "confidence": null,
+          "pass": true,
+          "problems": []
+        }
+      ]
+    }
+  ]
+}

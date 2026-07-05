@@ -39,9 +39,9 @@ export interface RerankResult {
 export type RerankFn = (topic: string, shortlist: CatalogCandidate[]) => Promise<RerankResult>;
 
 /** Confidence routing knobs. DEFAULT_FIND_TABLE_CONFIG is deliberately
- *  conservative (favour disclosure over auto-proceed) and NOT yet calibrated —
- *  calibration against a labelled topic→table set is the supervised follow-up
- *  step (mirrors ADR 012's R7 calibration procedure for intent parsing). */
+ *  conservative (favour disclosure over auto-proceed). Calibrated live against
+ *  the labelled topic→table set (mirrors ADR 012's R7 calibration procedure for
+ *  intent parsing) — see the session-25 measurement note on highConfidence. */
 export interface FindTableConfig {
   /** At or above this confidence a single pick auto-proceeds to the fetch+verify
    *  gate; below it the finder discloses candidates instead of picking. */
@@ -49,7 +49,16 @@ export interface FindTableConfig {
 }
 
 export const DEFAULT_FIND_TABLE_CONFIG: FindTableConfig = {
-  // Conservative placeholder — favour disclosure. To be calibrated live.
+  // 0.8 — calibrated live (session 25, benchmark/tablefinder-labelled-set.json).
+  // Measured honestly: 7 correct confident picks clustered at 0.85–0.95, floor
+  // 0.85 (werkloosheid, stable across two runs); 0.8 sits 0.05 below that floor,
+  // so every correct pick auto-proceeds. The DISCLOSE side is NOT yet directly
+  // measured — the current labelled set has no disclose-expected case (see
+  // open-questions: add one), so 0.8 is a conservative confident-FLOOR value,
+  // not a measured confident/disclose midpoint. Re-check on the live 4,858-row
+  // mirror in sub-part 2 as the set grows (escalation ladder in rerank.ts).
+  // Failure direction is safe: a pick dipping below 0.8 DISCLOSES (find.ts),
+  // never emits a wrong table — a UX degrade, not a fabricated-number risk.
   highConfidence: 0.8,
 };
 
