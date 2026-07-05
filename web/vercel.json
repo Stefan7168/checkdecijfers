@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/onboarding-cron",
-      "schedule": "*/2 * * * *"
+      "schedule": "0 6 * * *"
     }
   ]
 }
