@@ -101,6 +101,52 @@ function clarificationFromFailure(
   };
 }
 
+/** WP16 sub-part 2 (ADR 026): the injected table-finder seam. A callback (NOT
+ * a db import, mirroring ServabilityCheck above) so this leaf module stays
+ * free of database and catalog access — the closure that implements it
+ * (constructed in web/app/actions.ts) owns the findTable call, the confidence
+ * routing, AND the per-user already-pending check (it has db + userId there).
+ * OPTIONAL by design: absent → today's B15 clarification, byte-identical (the
+ * load-bearing pin, §0.1). Returns null when the finder did NOT confidently
+ * pick a table (recall empty, low confidence, rerank error, or a throw the
+ * closure swallowed) — the caller then falls back to buildUnmatchedClarification. */
+export interface OnboardingRouting {
+  tableId: string;
+  topicTerm: string;
+  confidence: number;
+  /** true → an active job already exists for this (user, table). */
+  alreadyPending: boolean;
+}
+export type TableFinder = (term: string) => Promise<OnboardingRouting | null>;
+
+/** The unmatched-measure exit, finder-aware (WP16 sub-part 2). With no finder
+ * (or a finder that doesn't confidently route) it returns EXACTLY
+ * buildUnmatchedClarification's output — the B15 pin holds by construction.
+ * With a confident routing it emits the 'onboarding' ParseOutcome the respond
+ * layer turns into the acknowledgment. The finder is consulted only when the
+ * raw parse actually carries an unmatched term (the real B15 shape); a null
+ * unmatchedMeasureTerm never triggers a fetch (nothing to search for). */
+export async function resolveUnmatched(
+  context: OutcomeContext,
+  finder: TableFinder | undefined,
+): Promise<ParseOutcome> {
+  const term = context.raw.unmatchedMeasureTerm;
+  if (finder && term !== null) {
+    const routing = await finder(term);
+    if (routing) {
+      return {
+        kind: 'onboarding',
+        ...context,
+        tableId: routing.tableId,
+        topicTerm: routing.topicTerm,
+        confidence: routing.confidence,
+        alreadyPending: routing.alreadyPending,
+      };
+    }
+  }
+  return buildUnmatchedClarification(context);
+}
+
 /** B15 shape: the topic term matched nothing loaded. Measure is unresolved,
  * and without a measure neither region nor period can resolve — the one
  * clarification round names all axes at once (docs/05 failure table). */
@@ -304,8 +350,14 @@ export async function decide(
   resolutions: CandidateResolution[],
   config: ParserConfig,
   servability: ServabilityCheck,
+  /** WP16 sub-part 2 (ADR 026): OPTIONAL — when present and the outcome is the
+   * unmatched-measure exit, the finder can route to the onboarding trigger.
+   * Absent → the plain B15 clarification, byte-identical (the load-bearing
+   * pin). Only the resolutions-empty branch consults it; every other decision
+   * path is a normal clarification/intent that has nothing to onboard. */
+  finder?: TableFinder,
 ): Promise<ParseOutcome> {
-  if (resolutions.length === 0) return buildUnmatchedClarification(context);
+  if (resolutions.length === 0) return resolveUnmatched(context, finder);
 
   const ranked = [...mergeResolutions(resolutions)].sort((a, b) => b.confidence - a.confidence);
   const top = ranked[0]!;
@@ -324,6 +376,8 @@ export async function decide(
     plausible.every((candidate): candidate is RankedCandidate => !isResolutionFailure(candidate))
   ) {
     const enumerated = mergeExplicitPeriodEnumeration(context.question, plausible);
+    // The enumerated recursion is a resolved single candidate, never the
+    // unmatched exit — the finder is irrelevant there, so it is not threaded.
     if (enumerated) return decide(context, [enumerated], config, servability);
   }
 

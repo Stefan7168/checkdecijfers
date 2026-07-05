@@ -26,7 +26,7 @@ WP16 sub-part 1 (table discovery) is built and live-calibrated (ADR [025](025-cb
 
 ## Consequences
 
-- Sub-part 2 needs one new migration (a `pending_table_requests` table — number TBD at build time, applied live in a supervised step, same pattern as migration 011) and one new Vercel Cron entry (first cron config in this repo — needs a `vercel.ts`/`vercel.json` `crons` array).
+- Sub-part 2 needs one new migration (a `pending_table_requests` table, applied live in a supervised step, same pattern as migration 011) and one new Vercel Cron entry (first cron config in this repo). **As built (session 27, 2026-07-06): TWO migrations — 012 (the table + widening the ledger's reason/delta-sign/request-id CHECKs for `onboarding_cost`) and 013 (widening migration 008's compensation trigger, which only allowed reversing `question_cost` — a gap the build surfaced with a test asserting the throw — plus the `source_tag` CHECK for `onboarding_delivery`); the cron config landed in `web/vercel.json` (the Vercel project's rootDirectory is `web/`).**
 - The fetch job is genuinely out-of-band (a cron-invoked route, never the request path) — principle (b) holds by construction, same argument as ADR 001/003.
 - Pricing reuses existing infrastructure (the `heavy` action-class price) rather than adding a new row — zero ledger schema change for pricing.
 - Verification is honestly scoped to what the pipeline can actually check today; the gap to a "genuine second source" is tracked, not hidden.

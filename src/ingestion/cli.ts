@@ -99,10 +99,7 @@ export async function runCli(argv: string[], deps: Deps): Promise<number> {
   }
 
   // sync: auto-register missing seed tables first (trust-on-first-use event).
-  const targetIds = args.all ? PHASE0_TABLES.map((t) => t.id) : args.tableIds;
-  const seedTables = args.all
-    ? PHASE0_TABLES
-    : PHASE0_TABLES.filter((t) => targetIds.includes(t.id));
+  const seedTables = args.all ? PHASE0_TABLES : PHASE0_TABLES.filter((t) => args.tableIds.includes(t.id));
 
   try {
     const registered = await registerTables(db, source, seedTables);
@@ -113,6 +110,16 @@ export async function runCli(argv: string[], deps: Deps): Promise<number> {
     console.error(`Auto-registration before sync failed: ${err instanceof Error ? err.message : String(err)}`);
     return 1;
   }
+
+  // #110a (WP16 sub-part 2, design §6): `--all` targets every table this
+  // database actually knows about (cbs_tables, the REGISTERED set — which now
+  // includes on-demand-onboarded tables from CORE-2's job, not just the
+  // Phase 0 seeds), not the hardcoded PHASE0_TABLES list. Before this fix,
+  // `sync --all` after WP16's onboarding job ran would silently skip every
+  // onboarded table — a live drift risk the design doc's own §8 gap analysis
+  // flagged. The seed auto-registration above still runs first unconditionally
+  // so a brand-new database still bootstraps from nothing.
+  const targetIds = args.all ? (await db.query('select id from cbs_tables')).rows.map((r) => String(r.id)) : args.tableIds;
 
   let allSucceeded = true;
   for (const tableId of targetIds) {

@@ -100,6 +100,66 @@ export async function reserveDebit(
   });
 }
 
+/** Idempotent onboarding debit: a repeated (userId, requestId) is a no-op
+ * (returns null), mirroring debitQuestion's contract for the new
+ * 'onboarding_cost' reason (migration 012, WP16 sub-part 2). Kept as its own
+ * function rather than parameterizing debitQuestion's reason: debitQuestion is
+ * a hot path called on every question, and this design deliberately does not
+ * touch it (design §2's "do NOT parameterize the existing hot reserveDebit"
+ * applies equally to its debit primitive).
+ *
+ * Exported (WP16 sub-part 2 CORE-1) because the onboarding TRIGGER must do the
+ * debit AND the pending-row insert in ONE transaction (design §0.3), and this
+ * project's withTransaction cannot nest — so triggerOnboarding composes the
+ * advisory-lock + getBalance + this debit primitive itself inside its single
+ * tx, instead of calling reserveOnboardingDebit (which opens its own tx). The
+ * standalone reserveOnboardingDebit stays for direct/tested single-use. */
+export async function debitOnboarding(
+  db: Db,
+  userId: string,
+  requestId: string,
+  credits: number,
+): Promise<LedgerEntry | null> {
+  const { rows } = await db.query(
+    `insert into credit_transactions (user_id, delta, reason, request_id, note)
+     values ($1, $2, 'onboarding_cost', $3, 'on-demand CBS table onboarding debit')
+     on conflict (user_id, request_id) where reason = 'onboarding_cost' do nothing
+     returning id`,
+    [userId, -credits, requestId],
+  );
+  const row = rows[0];
+  return row === undefined ? null : { id: Number(row.id) };
+}
+
+export type ReserveOnboardingDebitResult =
+  | { kind: 'debited'; entry: LedgerEntry }
+  | { kind: 'insufficient'; balance: number }
+  | { kind: 'duplicate' };
+
+/** The onboarding sibling of reserveDebit (design §2, CORE-1's
+ * triggerOnboarding calls this): same per-user advisory-lock
+ * check-and-debit pattern, applied to the 100-credit 'onboarding_cost' reason
+ * instead of 'question_cost'. Kept as a separate function rather than a
+ * parameterized reserveDebit for the same reason debitOnboarding is separate
+ * from debitQuestion above — reserveDebit is the hot path, untouched by this
+ * design. */
+export async function reserveOnboardingDebit(
+  db: Db,
+  userId: string,
+  requestId: string,
+  required: number,
+): Promise<ReserveOnboardingDebitResult> {
+  return db.withTransaction(async (tx) => {
+    await tx.query('select pg_advisory_xact_lock(hashtext($1))', [userId]);
+    const balance = await getBalance(tx, userId);
+    if (balance < required) {
+      return { kind: 'insufficient', balance };
+    }
+    const entry = await debitOnboarding(tx, userId, requestId, required);
+    return entry === null ? { kind: 'duplicate' } : { kind: 'debited', entry };
+  });
+}
+
 /** Idempotent compensation: a repeated call for the same debitId is a no-op —
  * a structural backstop (gate.ts's own request_id dedup on the debit is the
  * primary defense against re-entry; this protects against the gate itself

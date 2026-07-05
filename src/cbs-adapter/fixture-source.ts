@@ -26,6 +26,10 @@ interface FixtureIndex {
   tableId: string;
   observationPages: string[];
   files: Record<string, string>;
+  /** Row count the capture recorded (scripts/capture-cbs-fixtures.ts). Present
+   * on every committed manifest; optional here so a hand-built fixture without
+   * it degrades to "count unavailable" rather than crashing. */
+  observationRows?: number;
 }
 
 export interface FixtureDocs {
@@ -34,6 +38,10 @@ export interface FixtureDocs {
   measureCodes: unknown;
   codes: Record<string, unknown>;
   observationPages: unknown[];
+  /** The manifest's recorded observation count (WP16 sub-part 2 §4) — the
+   * fixture stand-in for the live $count endpoint. null when the manifest did
+   * not record one. */
+  observationRows: number | null;
 }
 
 /** Reads index.json in `dir` and loads every raw document it references. */
@@ -67,6 +75,7 @@ export function loadFixtureDocs(dir: string): FixtureDocs {
     measureCodes: readJson(measureCodesFile),
     codes,
     observationPages,
+    observationRows: typeof index.observationRows === 'number' ? index.observationRows : null,
   };
 }
 
@@ -194,6 +203,14 @@ export class FixtureSource implements CbsSource {
       const { rows } = parseObservationsPage(page, dimensionNames);
       yield rows.filter((row) => matchesSlice(row, slice));
     }
+  }
+
+  async fetchObservationCount(tableId: string): Promise<number | null> {
+    // The manifest's recorded row count is the fixture stand-in for the live
+    // $count endpoint (WP16 sub-part 2 §4). null when the manifest recorded
+    // none — the slice estimator falls back to the cardinality product,
+    // exactly as it would on a live 404.
+    return this.docsFor(tableId).observationRows;
   }
 
   async fetchCatalog(): Promise<CbsCatalogEntry[]> {

@@ -15,8 +15,16 @@
 // from a barrel pulls the whole barrel's module graph into Turbopack's
 // resolution, even code paths a consumer never executes.
 export type { ActionClass, ActionClassPrice, CreditPack, GatedResponse, LedgerReason } from './types.ts';
-export { compensate, debitQuestion, getActionClassPrice, getBalance, reserveDebit } from './ledger.ts';
-export type { LedgerEntry, ReserveDebitResult } from './ledger.ts';
+export {
+  compensate,
+  debitOnboarding,
+  debitQuestion,
+  getActionClassPrice,
+  getBalance,
+  reserveDebit,
+  reserveOnboardingDebit,
+} from './ledger.ts';
+export type { LedgerEntry, ReserveDebitResult, ReserveOnboardingDebitResult } from './ledger.ts';
 export { chargeAndRun } from './gate.ts';
 export { getQuestionHistory } from './history.ts';
 export type { QuestionHistoryEntry } from './history.ts';

@@ -20,11 +20,11 @@ import type { Db } from '../../db/types.ts';
 import { echoServability } from '../../query/index.ts';
 import type { ConversationContext } from '../context/types.ts';
 import { INTENT_MODEL, type IntentLlmClient, type IntentLlmRequest } from './client.ts';
-import { MAX_CANDIDATES, REFUSAL_KIND_BY_QUESTION_KIND } from './parse.ts';
-import { buildSystemPrompt } from './prompt.ts';
+import { MAX_CANDIDATES, REFUSAL_KIND_BY_QUESTION_KIND, extraKeysOf } from './parse.ts';
+import { buildSystemPrompt, type OnboardedMeasure } from './prompt.ts';
 import { rawParseJsonSchema, validateRawParse } from './schema.ts';
 import { resolveCandidate } from './resolve.ts';
-import { buildUnmatchedClarification, decide, type OutcomeContext } from './policy.ts';
+import { resolveUnmatched, decide, type OutcomeContext, type TableFinder } from './policy.ts';
 import { DEFAULT_PARSER_CONFIG, type ParseOutcome, type ParserConfig } from './types.ts';
 
 /** Bump when the follow-up mode section or payload shape changes
@@ -49,6 +49,14 @@ export interface FollowUpOptions {
   config?: ParserConfig;
   model?: string;
   maxTokens?: number;
+  /** WP16 sub-part 2 (ADR 026): OPTIONAL table-finder, same seam as
+   * ParseQuestionOptions — a follow-up whose topic matches nothing loaded can
+   * also route to the on-demand fetch trigger. Absent → B15, byte-identical. */
+  tableFinder?: TableFinder;
+  /** WP16 sub-part 2 (ADR 026): OPTIONAL onboarded measures appended to the
+   * vocabulary, same seam as ParseQuestionOptions. Absent/empty → byte-
+   * identical follow-up prompt (fixtures unaffected). */
+  extraCanonicalMeasures?: OnboardedMeasure[];
 }
 
 /** The follow-up-mode instruction, appended verbatim to the WP6 system prompt
@@ -86,8 +94,8 @@ Vraag: "En in Rotterdam?"
 Zelfde previous_intent, Vraag: "Hoeveel zonnestroom werd er in 2023 opgewekt?"
 Zelfstandige vraag — normal mode: {"version":3,"kind":"data_query","candidates":[{"canonicalKey":"solar_electricity_production","regions":null,"period":{"kind":"year","year":2023},"derivation":"none","confidence":0.95,"reading":"opgewekte zonnestroom in 2023"}],"unmatchedMeasureTerm":null,"nearestCanonicalKeys":[],"note":null}`;
 
-export function buildFollowUpSystemPrompt(): string {
-  return buildSystemPrompt() + FOLLOWUP_MODE_SECTION;
+export function buildFollowUpSystemPrompt(extra: OnboardedMeasure[] = []): string {
+  return buildSystemPrompt(extra) + FOLLOWUP_MODE_SECTION;
 }
 
 /** The user-turn payload. Serialized deterministically (stable key order as
@@ -107,15 +115,15 @@ export function buildFollowUpUserPayload(context: ConversationContext, question:
 export function buildFollowUpRequest(
   context: ConversationContext,
   question: string,
-  options: Pick<FollowUpOptions, 'model' | 'maxTokens'> = {},
+  options: Pick<FollowUpOptions, 'model' | 'maxTokens' | 'extraCanonicalMeasures'> = {},
 ): IntentLlmRequest {
   return {
     model: options.model ?? INTENT_MODEL,
     maxTokens: options.maxTokens ?? 2048,
     temperature: 0,
-    system: buildFollowUpSystemPrompt(),
+    system: buildFollowUpSystemPrompt(options.extraCanonicalMeasures ?? []),
     question: buildFollowUpUserPayload(context, question),
-    jsonSchema: rawParseJsonSchema(),
+    jsonSchema: rawParseJsonSchema(extraKeysOf(options.extraCanonicalMeasures)),
   };
 }
 
@@ -132,7 +140,7 @@ export async function parseFollowUpQuestion(
 ): Promise<ParseOutcome> {
   const request = buildFollowUpRequest(context, question, options);
   const response = await options.client.complete(request);
-  const raw = validateRawParse(response.outputText);
+  const raw = validateRawParse(response.outputText, extraKeysOf(options.extraCanonicalMeasures));
 
   const outcomeContext: OutcomeContext = {
     question,
@@ -150,14 +158,18 @@ export async function parseFollowUpQuestion(
     };
   }
 
-  if (raw.candidates.length === 0) return buildUnmatchedClarification(outcomeContext);
+  if (raw.candidates.length === 0) return resolveUnmatched(outcomeContext, options.tableFinder);
 
   const resolutions = await Promise.all(
     raw.candidates
       .slice(0, MAX_CANDIDATES)
       .map((candidate) => resolveCandidate(db, candidate, options.referenceDate)),
   );
-  return decide(outcomeContext, resolutions, options.config ?? DEFAULT_PARSER_CONFIG, (intent) =>
-    echoServability(db, intent),
+  return decide(
+    outcomeContext,
+    resolutions,
+    options.config ?? DEFAULT_PARSER_CONFIG,
+    (intent) => echoServability(db, intent),
+    options.tableFinder,
   );
 }

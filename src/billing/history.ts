@@ -42,13 +42,29 @@
 // the redaction implementation -- it just renders the placeholder branch.
 import type { Db } from '../db/types.ts';
 import { REDACTED_QUESTION_TEXT } from '../answer/audit/retention.ts';
+import { listRequestsForHistory, type PendingRequestStatus } from '../ingestion/onboarding-store.ts';
 
 export interface QuestionHistoryEntry {
+  /** Scoped to `source`, NOT globally unique across the two source tables
+   * (audit_answers vs pending_table_requests both use bigint identity
+   * sequences that can coincide) -- the dashboard's React key is
+   * `${source}-${id}`, never `id` alone (WP16 sub-part 2, design
+   * §5-dashboard). */
   id: number;
+  /** Which table this entry's identity (`id`) refers to. Every entry from
+   * getQuestionHistory's original audit-row scan is 'audit'; a request still
+   * in flight (no answer/refusal audit row exists yet to represent it) is
+   * 'onboarding' -- WP16 sub-part 2. A delivered/refunded onboarding request
+   * is represented by its own delivery audit row instead (source: 'audit',
+   * with `onboarding` set below) so it is never listed twice. */
+  source: 'audit' | 'onboarding';
   /** Final outcome of the entry -- for a collapsed round, the REPLY row's
    * kind ('answer' | 'refusal'); a clarification the user never answered
-   * stays kind 'clarification'. */
-  kind: 'answer' | 'clarification' | 'refusal';
+   * stays kind 'clarification'. WP16 sub-part 2: an onboarding request still
+   * queued (pending/running) is its own kind, 'onboarding_pending' --
+   * distinct from 'refusal' because nothing was refused, the fetch just
+   * hasn't finished (mirrors the chat-turn presentation, #84/ADR 026). */
+  kind: 'answer' | 'clarification' | 'refusal' | 'onboarding_pending';
   question: string;
   finalText: string;
   createdAt: string;
@@ -56,7 +72,9 @@ export interface QuestionHistoryEntry {
    * both turns for a collapsed round. Null if the cost cannot be honestly
    * attributed: a row predating migration 010 (no request_id), or a round
    * where EITHER side is unattributable (a partial sum must never be
-   * presented as the round's total). */
+   * presented as the round's total). For an onboarding entry this is the
+   * real ledger net (100 while in flight or delivered, 0 once refunded) --
+   * never a hardcoded guess (WP16 sub-part 2). */
   creditsCharged: number | null;
   /** Set only on a collapsed clarification round: what we asked (the clarify
    * row's full rendered text) and what the user replied. */
@@ -67,6 +85,12 @@ export interface QuestionHistoryEntry {
    * credit amount above still reflects what was charged; only the question
    * text is gone. */
   isDeleted: boolean;
+  /** WP16 sub-part 2 (design §5-dashboard): set only on an onboarding-queue
+   * entry (source: 'onboarding') -- the failed/unanswerable case needs its
+   * own honest text, since there is no answer/refusal body to show (the
+   * fetch itself never got far enough to produce one). Null for every
+   * ordinary audit-row entry. */
+  onboarding: { status: PendingRequestStatus; topicTerm: string; failureSummary: string | null } | null;
 }
 
 interface HistoryRow {
@@ -122,8 +146,20 @@ export async function getQuestionHistory(
        a.reply_text,
        a.pending_clarification->>'questionNl' as replied_question_nl,
        a.response->'pending'->>'questionNl' as offered_question_nl,
-       case when debit.id is null then null
-            else -coalesce(debit.delta, 0) - coalesce(comp.delta, 0)
+       case
+         -- WP16 sub-part 2 (design §5-dashboard): an onboarding DELIVERY row
+         -- was never charged its own question_cost debit (the 100-credit
+         -- onboarding_cost debit already covers it, from the earlier
+         -- trigger turn) -- report that 100 here instead, so the delivered
+         -- answer's dashboard entry shows its real cost rather than null.
+         -- Scoped to source_tag = 'onboarding_delivery' so this can never
+         -- fan out against the SAME request_id's own question_cost debit
+         -- (the trigger turn's acknowledgment row, tagged 'user', is a
+         -- different audit row and takes the branch below instead).
+         when a.source_tag = 'onboarding_delivery' then
+           case when onboarding_debit.id is null then null else -onboarding_debit.delta end
+         when debit.id is null then null
+         else -coalesce(debit.delta, 0) - coalesce(comp.delta, 0)
        end as credits_charged
      from audit_answers a
      left join credit_transactions debit
@@ -137,6 +173,10 @@ export async function getQuestionHistory(
      left join credit_transactions comp
        on comp.audit_answer_id = a.id
       and comp.reason = 'compensation'
+     left join credit_transactions onboarding_debit
+       on onboarding_debit.user_id::text = a.user_id
+      and onboarding_debit.request_id = a.request_id
+      and onboarding_debit.reason = 'onboarding_cost'
      where a.user_id = $1
      -- id as the tie-breaker: two questions asked close enough together can
      -- share a created_at timestamp (observed under PGlite's clock
@@ -197,6 +237,7 @@ export async function getQuestionHistory(
     const grouped: Grouped = {
       entry: {
         id: row.id,
+        source: 'audit',
         kind: row.kind,
         question: row.question,
         finalText: row.finalText,
@@ -206,6 +247,7 @@ export async function getQuestionHistory(
         creditsCharged: row.creditsCharged,
         clarification: null,
         isDeleted: isRedacted(row.question),
+        onboarding: null,
       },
       sortAt: row.createdAt,
       sortId: row.id,
@@ -214,6 +256,41 @@ export async function getQuestionHistory(
     if (row.kind === 'clarification' && row.offeredQuestionNl !== null && row.replyText === null) {
       open.set(roundKey(row.question, row.offeredQuestionNl), grouped);
     }
+  }
+
+  // WP16 sub-part 2 (design §5-dashboard): fold the onboarding queue into the
+  // same timeline. A request still in flight (pending/running) has no
+  // answer/refusal audit row yet -- it needs its own synthesized entry so the
+  // user sees "wordt voorbereid" rather than the question simply vanishing
+  // until the job finishes. A delivered request's answer already came
+  // through the audit-row scan above (with its real cost, via the query's
+  // onboarding_debit join) -- skip it here to avoid listing the same question
+  // twice. failed/unanswerable requests likewise have no answer/refusal body
+  // worth showing (the fetch itself never got far enough), so they get their
+  // own honest "failed, refunded" entry here too.
+  const onboardingRows = await listRequestsForHistory(db, userId);
+  for (const row of onboardingRows) {
+    if (row.status === 'delivered') continue;
+    entries.push({
+      entry: {
+        id: row.id,
+        source: 'onboarding',
+        kind: 'onboarding_pending',
+        question: row.questionText,
+        // No pipeline-produced text exists for an in-flight or failed
+        // request -- the dashboard component (not this module) owns the
+        // actual Dutch copy per status, matching the #84 deterministic-
+        // template convention (never an LLM-authored string here).
+        finalText: '',
+        createdAt: row.createdAt.toISOString(),
+        creditsCharged: row.netCredits,
+        clarification: null,
+        isDeleted: false,
+        onboarding: { status: row.status, topicTerm: row.topicTerm, failureSummary: row.failureSummary },
+      },
+      sortAt: (row.finishedAt ?? row.createdAt).toISOString(),
+      sortId: row.id,
+    });
   }
 
   return entries

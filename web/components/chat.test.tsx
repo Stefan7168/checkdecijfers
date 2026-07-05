@@ -431,6 +431,57 @@ describe('Chat — WP23 display smalls', () => {
     expect(screen.queryByText('Dit kon ik niet beantwoorden')).toBeNull();
   });
 
+  // WP16 sub-part 2 (ADR 026): the onboarding acknowledgment rides the refusal
+  // envelope but ANSWERS ("we're fetching it") — like meta/smalltalk it must
+  // NOT show the refusal header or the geen-gok badge, and the caption shows
+  // the 100-credit fetch cost the web action put on netCost.
+  it('renders an onboarding_pending acknowledgment as plain info with the 100-credit caption', async () => {
+    const ack =
+      'Dat onderwerp staat nog niet in onze database. We vragen de cijfers nu automatisch op bij het CBS en controleren ze — meestal een kwestie van minuten. Je krijgt een e-mail zodra je vraag beantwoord kan worden. Heb je ondertussen nog een andere vraag?';
+    askQuestion.mockResolvedValue(
+      outcome({
+        kind: 'ok',
+        auditId: 7,
+        netCost: 100,
+        response: {
+          kind: 'refusal',
+          reason: 'onboarding_pending',
+          text: ack,
+          onboarding: { tableId: '82610NED', topicTerm: 'zonnestroom', confidence: 0.91 },
+        } as unknown as ComposedResponse,
+      }),
+    );
+    render(<Chat />);
+    await submit('Hoeveel zonnestroom werd er opgewekt in 2024?');
+    expect(await screen.findByText(ack)).toBeInTheDocument();
+    expect(screen.queryByText('Dit kon ik niet beantwoorden')).toBeNull();
+    expect(screen.queryByText('geen antwoord = geen gok')).toBeNull();
+    expect(await screen.findByText('100 credits')).toBeInTheDocument();
+  });
+
+  it('renders an onboarding_already_pending acknowledgment as plain info, no header', async () => {
+    const ack =
+      'Deze cijfers worden al voor je opgehaald bij het CBS. Je krijgt een e-mail zodra je vraag beantwoord kan worden.';
+    askQuestion.mockResolvedValue(
+      outcome({
+        kind: 'ok',
+        auditId: 8,
+        netCost: 0,
+        response: {
+          kind: 'refusal',
+          reason: 'onboarding_already_pending',
+          text: ack,
+          onboarding: null,
+        } as unknown as ComposedResponse,
+      }),
+    );
+    render(<Chat />);
+    await submit('Hoeveel zonnestroom werd er opgewekt in 2024?');
+    expect(await screen.findByText(ack)).toBeInTheDocument();
+    expect(screen.queryByText('Dit kon ik niet beantwoorden')).toBeNull();
+    expect(screen.queryByText('geen antwoord = geen gok')).toBeNull();
+  });
+
   it('keeps answers free of the refusal strings and the amber clarification style (#84)', async () => {
     askQuestion.mockResolvedValue(outcome(fakeAnswer('Nederland telt 18.044.027 inwoners.')));
     render(<Chat />);

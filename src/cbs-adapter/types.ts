@@ -97,6 +97,15 @@ export interface CbsSource {
   /** Observations page by page, server-side filtered to the slice when given. */
   fetchObservations(tableId: string, slice?: CbsSlice): AsyncIterable<CbsObservationRow[]>;
   /**
+   * Total observation-cell count for a table (WP16 sub-part 2, ADR 026, slice
+   * estimation §4). Returns null when the count cannot be determined (v4
+   * $count 404/error, or a fixture that did not capture a row count) — the
+   * caller then falls back to the dimension-cardinality product estimate.
+   * Never throws for a plain "count unavailable"; a real network failure on
+   * the LIVE source still throws (the caller's job wraps the whole attempt).
+   */
+  fetchObservationCount(tableId: string): Promise<number | null>;
+  /**
    * The full CBS dataset catalog (metadata only), for table discovery (WP16).
    * Bulk-refreshed on a schedule into our own DB and searched locally — never
    * called on the request path (principle b / ADR 003). e.g. fetchCatalog()

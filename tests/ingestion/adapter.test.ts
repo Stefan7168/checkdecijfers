@@ -220,3 +220,56 @@ describe('adapter parsing (real captured wire data)', () => {
     }
   });
 });
+
+describe('fetchObservationCount (WP16 sub-part 2 §4)', () => {
+  it('FixtureSource returns the manifest observationRows count', async () => {
+    // 82235NED's committed manifest records observationRows: 889.
+    const source = new FixtureSource(loadFixtureDocs(fixturePath('82235NED')));
+    expect(await source.fetchObservationCount('82235NED')).toBe(889);
+  });
+
+  it('ODataV4Source parses the $count body as an integer', async () => {
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url.endsWith('/Observations/$count')) {
+        return { ok: true, status: 200, statusText: 'OK', text: async () => '123456' };
+      }
+      throw new Error(`unexpected request: ${url}`);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    try {
+      expect(await new ODataV4Source().fetchObservationCount('T')).toBe(123456);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('ODataV4Source returns null on a 404 (count unavailable, never a throw)', async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: false,
+      status: 404,
+      statusText: 'Not Found',
+      text: async () => 'not found',
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+    try {
+      expect(await new ODataV4Source().fetchObservationCount('T')).toBeNull();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('ODataV4Source returns null on a non-integer body (never a fabricated size)', async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      text: async () => '<html>not a count</html>',
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+    try {
+      expect(await new ODataV4Source().fetchObservationCount('T')).toBeNull();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+});

@@ -249,9 +249,16 @@ export function Chat({
           // smalltalk replies ride the refusal ENVELOPE by design (ADR 022 —
           // "the text ANSWERS the question") — the refusal header would
           // visually claim the opposite. They present as plain info.
+          // WP16 sub-part 2 (ADR 026): the onboarding acknowledgments ride the
+          // same envelope and ANSWER too ("we're fetching it") — nothing was
+          // refused, so the "Dit kon ik niet beantwoorden" header + geen-gok
+          // badge must NOT show; render as plain info like meta/smalltalk.
           kind:
             response.kind === 'refusal' &&
-            (response.reason === 'meta' || response.reason === 'smalltalk')
+            (response.reason === 'meta' ||
+              response.reason === 'smalltalk' ||
+              response.reason === 'onboarding_pending' ||
+              response.reason === 'onboarding_already_pending')
               ? 'info'
               : response.kind,
           text: response.text,

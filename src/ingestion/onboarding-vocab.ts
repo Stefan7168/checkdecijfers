@@ -1,0 +1,209 @@
+// Auto-generated registry vocabulary for an on-demand-onboarded table (WP16
+// sub-part 2, ADR 026, design §3.6). After the fetch job registers + syncs a
+// discovered table, this derives canonical_measures rows from the ingested CBS
+// measure metadata so the delivery re-run can actually resolve a question
+// against the new table.
+//
+// SAFETY (design §8 risk 1): this NEVER produces a number. It only inserts
+// vocabulary rows; the delivery re-run then flows through the FULL existing
+// pipeline (parse → resolve → query → validate → compose → audit). A bad
+// vocabulary row can only yield a refusal/clarification → refund, never a wrong
+// figure — the delivery-must-answer gate (§0.4) is the containment. R10 spirit:
+// definition labels are CBS's OWN measure titles, verbatim, never invented.
+//
+// v1 SCOPE (recorded as a deviation in the HANDOFF): only measures whose
+// ingested observations sit at the EMPTY coordinate (dims = {}) are registered.
+// A measure that exists only at a non-'totaal' sub-coordinate cannot be
+// answered under a {} default without guessing which sub-code is the "total"
+// (principle c) — so it is skipped here rather than registered to a
+// coordinate that would dead-end in a refund. The delivery-must-answer gate
+// makes this honest: an un-registerable measure simply isn't offered.
+import type { Db } from '../db/types.ts';
+import type { OnboardedMeasure } from '../answer/intent/prompt.ts';
+import type { CanonicalMeasure } from '../registry/types.ts';
+
+/** Key prefix for auto-onboarded canonical measures — namespaced by table +
+ * measure so it can never collide with a curated Phase-0 key (design §3.6). */
+export function onboardedKey(tableId: string, measureCode: string): string {
+  return `onboarded:${tableId}:${measureCode}`;
+}
+
+interface UnitMeta {
+  unit: string;
+  decimals: number;
+  title: string;
+}
+
+/** What one measure looks like in the ingested observations of a table: which
+ * grains it has AT THE EMPTY COORDINATE, whether the table has a geo axis, and
+ * whether ANY row for this measure sits at dims = {}. Only measures with an
+ * empty-coordinate presence are registerable (see v1 scope above). */
+interface MeasureShape {
+  measure: string;
+  grains: ('JJ' | 'KW' | 'MM')[];
+  hasEmptyDims: boolean;
+  regional: boolean;
+}
+
+async function measureShapes(db: Db, tableId: string): Promise<MeasureShape[]> {
+  // Grains present at the empty coordinate (dims = {}), per measure — this is
+  // exactly the coordinate resolve.ts's availableGrains/latestPeriod query when
+  // default_coordinates and canonical dims are both empty.
+  const grainRows = await db.query(
+    `select measure, period_grain
+       from observations
+      where table_id = $1 and dims = '{}'::jsonb
+      group by measure, period_grain`,
+    [tableId],
+  );
+  const grainsByMeasure = new Map<string, Set<'JJ' | 'KW' | 'MM'>>();
+  for (const r of grainRows.rows) {
+    const m = r.measure as string;
+    let set = grainsByMeasure.get(m);
+    if (!set) {
+      set = new Set();
+      grainsByMeasure.set(m, set);
+    }
+    set.add(r.period_grain as 'JJ' | 'KW' | 'MM');
+  }
+
+  // Does this table carry a geo dimension at all? (For the prompt's regio line
+  // and — future — regional onboarding. v1 registers measures at dims={} only;
+  // a geo table's non-national rows aren't offered under a {} default.)
+  const geoRow = await db.query(
+    `select expected_dimensions from cbs_tables where id = $1`,
+    [tableId],
+  );
+  const expected = geoRow.rows[0]?.expected_dimensions;
+  const dims = (typeof expected === 'string' ? JSON.parse(expected) : expected) as
+    | { name: string; kind: string }[]
+    | undefined;
+  const regional = (dims ?? []).some((d) => d.kind === 'GeoDimension');
+
+  // Every measure the units metadata names — even those with NO empty-dims
+  // presence, so the caller can log which were skipped.
+  const unitsRow = await db.query(`select units from cbs_tables where id = $1`, [tableId]);
+  const unitsRaw = unitsRow.rows[0]?.units;
+  const units = (typeof unitsRaw === 'string' ? JSON.parse(unitsRaw) : unitsRaw) as
+    | Record<string, UnitMeta>
+    | undefined;
+
+  const shapes: MeasureShape[] = [];
+  for (const measure of Object.keys(units ?? {})) {
+    const grains = [...(grainsByMeasure.get(measure) ?? new Set<'JJ' | 'KW' | 'MM'>())].sort();
+    shapes.push({
+      measure,
+      grains,
+      hasEmptyDims: grains.length > 0,
+      regional,
+    });
+  }
+  return shapes;
+}
+
+export interface RegisterVocabularyInput {
+  tableId: string;
+  /** The unmatched topic term the finder matched on — added to every
+   * registered measure's everydayTerms so the parser maps the user's word onto
+   * a key. */
+  topicTerm: string;
+}
+
+export interface RegisterVocabularyResult {
+  /** The onboarded measures registered — passed to the delivery re-run as the
+   * parser's extra vocabulary (empty → nothing to answer, delivery refunds). */
+  onboarded: OnboardedMeasure[];
+  /** Measure codes skipped because they had no empty-coordinate presence
+   * (v1 scope). Diagnostic only. */
+  skippedMeasures: string[];
+}
+
+/**
+ * Inserts a canonical_measures row per registerable measure of `tableId`, and
+ * ensures cbs_tables.default_coordinates is a concrete {} (the resolver joins
+ * on it and treats null as {} already, but an explicit {} keeps the row honest
+ * about "no incidental totaal coordinate pinned"). Idempotent: re-running for
+ * the same table upserts the same rows (ON CONFLICT (key)), so a job retry
+ * after a partial run is safe.
+ *
+ * Returns the OnboardedMeasure list for the delivery prompt. NEVER reads or
+ * writes an observation value.
+ */
+export async function registerOnboardingVocabulary(
+  db: Db,
+  input: RegisterVocabularyInput,
+): Promise<RegisterVocabularyResult> {
+  const { tableId, topicTerm } = input;
+  const shapes = await measureShapes(db, tableId);
+
+  const unitsRow = await db.query(`select units from cbs_tables where id = $1`, [tableId]);
+  const unitsRaw = unitsRow.rows[0]?.units;
+  const units = (typeof unitsRaw === 'string' ? JSON.parse(unitsRaw) : unitsRaw) as
+    | Record<string, UnitMeta>
+    | undefined;
+
+  const onboarded: OnboardedMeasure[] = [];
+  const skippedMeasures: string[] = [];
+
+  // Pin default_coordinates to an explicit {} so the resolver's
+  // default_coordinates ∪ canonical.dims merge is a well-defined {} (the
+  // answerable empty-coordinate shape). Never overwrites a real pin — an
+  // onboarded table has none by construction (the registry-defaults apply step
+  // only runs for the curated Phase-0 set).
+  await db.query(
+    `update cbs_tables set default_coordinates = coalesce(default_coordinates, '{}'::jsonb), updated_at = now()
+      where id = $1`,
+    [tableId],
+  );
+
+  for (const shape of shapes) {
+    if (!shape.hasEmptyDims) {
+      skippedMeasures.push(shape.measure);
+      continue;
+    }
+    const meta = units?.[shape.measure];
+    // CBS's own title is the definition label (R10 spirit — verbatim, never
+    // invented). Fall back to the code if the units metadata lacks a title.
+    const title = meta?.title ?? shape.measure;
+    const key = onboardedKey(tableId, shape.measure);
+    const canonical: CanonicalMeasure = {
+      key,
+      tableId,
+      measure: shape.measure,
+      measureTitle: title,
+      dims: {},
+      definitionLabel: title,
+      // The user's own term + the CBS title give the parser two handles onto
+      // this key. Deduped, non-empty.
+      everydayTerms: [...new Set([topicTerm, title].filter((t) => t.length > 0))],
+    };
+
+    await db.query(
+      `insert into canonical_measures
+         (key, table_id, measure, measure_title, dims, definition_label, everyday_terms, alternates, notes, updated_at)
+       values ($1, $2, $3, $4, '{}'::jsonb, $5, $6, null, $7, now())
+       on conflict (key) do update set
+         table_id = excluded.table_id,
+         measure = excluded.measure,
+         measure_title = excluded.measure_title,
+         dims = excluded.dims,
+         definition_label = excluded.definition_label,
+         everyday_terms = excluded.everyday_terms,
+         notes = excluded.notes,
+         updated_at = now()`,
+      [
+        key,
+        tableId,
+        shape.measure,
+        title,
+        title,
+        canonical.everydayTerms,
+        `on-demand onboarded from topic "${topicTerm}" (WP16 sub-part 2)`,
+      ],
+    );
+
+    onboarded.push({ measure: canonical, grains: shape.grains, regional: shape.regional });
+  }
+
+  return { onboarded, skippedMeasures };
+}

@@ -15,8 +15,8 @@ export { buildSystemPrompt, PROMPT_VERSION, AVAILABLE_GRAINS, REGIONAL_KEYS } fr
 export { rawParseSchema, rawParseJsonSchema, validateRawParse, CANONICAL_KEYS } from './schema.ts';
 export { resolveCandidate, isResolutionFailure, STAND_START_OF_YEAR_KEYS, normalizeRegionName, parseReferenceDate, stepPeriodCode, daysInMonth, dateRangeToMonths } from './resolve.ts';
 export type { CandidateResolution, DateRangeMonths } from './resolve.ts';
-export { decide, mergeResolutions, differingAxes, buildUnmatchedClarification, mergeExplicitPeriodEnumeration } from './policy.ts';
-export type { OutcomeContext, ServabilityCheck } from './policy.ts';
+export { decide, mergeResolutions, differingAxes, buildUnmatchedClarification, resolveUnmatched, mergeExplicitPeriodEnumeration } from './policy.ts';
+export type { OutcomeContext, ServabilityCheck, TableFinder, OnboardingRouting } from './policy.ts';
 export * from './types.ts';
 export {
   parseClarificationReply,

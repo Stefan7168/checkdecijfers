@@ -15,8 +15,10 @@ import { describe, expect, it } from 'vitest';
 import type { AuditedResponse } from '../../src/answer/audit/index.ts';
 import { chargeAndRun } from '../../src/billing/gate.ts';
 import { getQuestionHistory } from '../../src/billing/history.ts';
+import { compensate, reserveOnboardingDebit } from '../../src/billing/ledger.ts';
 import { applyPricingDefaults } from '../../src/billing/pricing-apply.ts';
 import type { Db } from '../../src/db/types.ts';
+import { createPendingRequest, finalizeDelivered, finalizeFailed } from '../../src/ingestion/onboarding-store.ts';
 import { createTestDb } from '../helpers/pglite-db.ts';
 
 async function withDb(fn: (db: Db) => Promise<void>): Promise<void> {
@@ -358,6 +360,156 @@ describe('getQuestionHistory — clarification-round grouping', () => {
       const history = await getQuestionHistory(db, userId, { limit: 3 });
       expect(history.map((h) => h.question)).toEqual(['nieuwste', QUESTION, 'oudste']);
       expect(history[1]).toMatchObject({ kind: 'answer', clarification: { reply: 'Amsterdam', text: QUESTION_NL } });
+    });
+  });
+});
+
+// WP16 sub-part 2 (design §5-dashboard, ADR 026): the on-demand CBS table
+// onboarding queue folded into the same dashboard timeline. Three states
+// (pending, delivered, failed/refunded) -- each exercised through the REAL
+// primitives (reserveOnboardingDebit, createPendingRequest, finalize*,
+// compensate) rather than hand-set ledger rows, for the same
+// consistency-not-arithmetic reason as the rest of this file.
+describe('getQuestionHistory — onboarding queue (WP16 sub-part 2)', () => {
+  it('shows an in-flight (pending) request with source "onboarding" and net 100', async () => {
+    await withDb(async (db) => {
+      await applyPricingDefaults(db);
+      const userId = randomUUID();
+      await db.query('select public.grant_signup_credits($1)', [userId]);
+      const requestId = randomUUID();
+      const debit = await reserveOnboardingDebit(db, userId, requestId, 100);
+      if (debit.kind !== 'debited') throw new Error(`expected debited, got ${debit.kind}`);
+      await createPendingRequest(db, {
+        userId,
+        requestId,
+        questionText: 'hoeveel zonnestroom werd er opgewekt in 2024',
+        topicTerm: 'zonnestroom',
+        tableId: '82610NED',
+        finderConfidence: 0.91,
+        debitTransactionId: debit.entry.id,
+      });
+
+      const history = await getQuestionHistory(db, userId);
+      expect(history).toHaveLength(1);
+      expect(history[0]).toMatchObject({
+        source: 'onboarding',
+        kind: 'onboarding_pending',
+        question: 'hoeveel zonnestroom werd er opgewekt in 2024',
+        creditsCharged: 100,
+        onboarding: { status: 'pending', topicTerm: 'zonnestroom', failureSummary: null },
+      });
+    });
+  });
+
+  it('shows a DELIVERED request as an ordinary answer entry with its real 100-credit cost, not twice', async () => {
+    await withDb(async (db) => {
+      await applyPricingDefaults(db);
+      const userId = randomUUID();
+      await db.query('select public.grant_signup_credits($1)', [userId]);
+      const requestId = randomUUID();
+      const debit = await reserveOnboardingDebit(db, userId, requestId, 100);
+      if (debit.kind !== 'debited') throw new Error(`expected debited, got ${debit.kind}`);
+      const pending = await createPendingRequest(db, {
+        userId,
+        requestId,
+        questionText: 'hoeveel zonnestroom werd er opgewekt in 2024',
+        topicTerm: 'zonnestroom',
+        tableId: '82610NED',
+        finderConfidence: 0.91,
+        debitTransactionId: debit.entry.id,
+      });
+      // The job's delivery re-run: same request_id, tagged 'onboarding_delivery'
+      // (src/ingestion/onboarding.ts DELIVERY_SOURCE_TAG) -- NOT run through
+      // chargeAndRun (design §3.7: "not through the gate, the 100 already
+      // covers it"), so inserted directly as respond-audited.ts would.
+      const { rows } = await db.query(
+        `insert into audit_answers
+           (schema_version, user_id, source_tag, kind, question, reference_date, response, final_text, prompt_versions, latency_ms, request_id)
+         values (1, $1, 'onboarding_delivery', 'answer', $2, '2024-01-01', '{}'::jsonb, $3, '{}'::jsonb, 100, $4)
+         returning id`,
+        [userId, 'hoeveel zonnestroom werd er opgewekt in 2024', 'In 2024 werd 8.204 GWh zonnestroom opgewekt.', requestId],
+      );
+      const deliveryAuditId = Number(rows[0]!.id);
+      await finalizeDelivered(db, pending.id, { deliveryAuditAnswerId: deliveryAuditId });
+
+      const history = await getQuestionHistory(db, userId);
+      // Exactly ONE entry for this question -- the onboarding-queue merge
+      // must skip a 'delivered' row (it's already represented here).
+      expect(history).toHaveLength(1);
+      expect(history[0]).toMatchObject({
+        id: deliveryAuditId,
+        source: 'audit',
+        kind: 'answer',
+        finalText: 'In 2024 werd 8.204 GWh zonnestroom opgewekt.',
+        creditsCharged: 100,
+        onboarding: null,
+      });
+    });
+  });
+
+  it('shows a failed/refunded request with net 0 and the plain-language failure summary', async () => {
+    await withDb(async (db) => {
+      await applyPricingDefaults(db);
+      const userId = randomUUID();
+      await db.query('select public.grant_signup_credits($1)', [userId]);
+      const requestId = randomUUID();
+      const debit = await reserveOnboardingDebit(db, userId, requestId, 100);
+      if (debit.kind !== 'debited') throw new Error(`expected debited, got ${debit.kind}`);
+      const pending = await createPendingRequest(db, {
+        userId,
+        requestId,
+        questionText: 'q',
+        topicTerm: 'niet-bestaand-onderwerp',
+        tableId: 'AAAA',
+        finderConfidence: 0.85,
+        debitTransactionId: debit.entry.id,
+      });
+      await compensate(db, userId, debit.entry.id, 100, null);
+      await finalizeFailed(db, pending.id, 'Onverwachte fout bij het ophalen: ECONNRESET');
+
+      const history = await getQuestionHistory(db, userId);
+      expect(history).toHaveLength(1);
+      expect(history[0]).toMatchObject({
+        source: 'onboarding',
+        kind: 'onboarding_pending',
+        creditsCharged: 0,
+        onboarding: {
+          status: 'failed',
+          failureSummary: 'Onverwachte fout bij het ophalen: ECONNRESET',
+        },
+      });
+    });
+  });
+
+  it('does not let an onboarding entry collide in React-key space with an unrelated audit row sharing the same numeric id', async () => {
+    await withDb(async (db) => {
+      await applyPricingDefaults(db);
+      const userId = randomUUID();
+      await db.query('select public.grant_signup_credits($1)', [userId]);
+      // An ordinary answered question, unrelated to onboarding.
+      await insertAuditRow(db, userId, { kind: 'answer', question: 'gewone vraag', finalText: 'x', requestId: null });
+      // A pending onboarding request -- pending_table_requests' own identity
+      // sequence starts independently, so id collisions with audit_answers
+      // are structurally possible; the two entries must both survive intact
+      // (distinguished by `source`, per the type's own doc comment).
+      const requestId = randomUUID();
+      const debit = await reserveOnboardingDebit(db, userId, requestId, 100);
+      if (debit.kind !== 'debited') throw new Error(`expected debited, got ${debit.kind}`);
+      await createPendingRequest(db, {
+        userId,
+        requestId,
+        questionText: 'onboarding vraag',
+        topicTerm: 't',
+        tableId: 'AAAA',
+        finderConfidence: 0.9,
+        debitTransactionId: debit.entry.id,
+      });
+
+      const history = await getQuestionHistory(db, userId);
+      expect(history).toHaveLength(2);
+      expect(history.map((h) => h.question).sort()).toEqual(['gewone vraag', 'onboarding vraag'].sort());
+      expect(history.find((h) => h.question === 'gewone vraag')?.source).toBe('audit');
+      expect(history.find((h) => h.question === 'onboarding vraag')?.source).toBe('onboarding');
     });
   });
 });

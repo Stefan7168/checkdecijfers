@@ -209,6 +209,23 @@ export type ParseOutcome =
       kind: 'refusal';
       refusalKind: 'forecast' | 'causal' | 'out_of_scope' | 'compound' | 'smalltalk';
       note: string | null;
+    })
+  /** WP16 sub-part 2 (ADR 026): the unmatched-measure exit, but the injected
+   * table finder confidently identified a CBS table that can answer the topic
+   * — so instead of the B15 clarification we route to the on-demand
+   * fetch+verify+store trigger. Produced ONLY when a finder dep is present and
+   * returns a routing (absent finder → the plain 'clarification' outcome from
+   * buildUnmatchedClarification, byte-identical — the load-bearing pin). The
+   * respond layer turns this into the 'onboarding_pending' /
+   * 'onboarding_already_pending' refusal; the web action does the money. */
+  | (OutcomeBase & {
+      kind: 'onboarding';
+      tableId: string;
+      topicTerm: string;
+      confidence: number;
+      /** true → this (user, table) already has an active job: the acknowledgment
+       * says so and NO new debit happens. false → first ask: trigger the job. */
+      alreadyPending: boolean;
     });
 
 // ---------------------------------------------------------------------------

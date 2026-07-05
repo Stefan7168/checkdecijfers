@@ -11,6 +11,7 @@ afterEach(cleanup);
 function entry(overrides: Partial<QuestionHistoryEntry> = {}): QuestionHistoryEntry {
   return {
     id: 1,
+    source: 'audit',
     kind: 'answer',
     question: 'Hoeveel inwoners heeft Nederland?',
     finalText: 'Nederland telt 18.044.027 inwoners.',
@@ -18,6 +19,7 @@ function entry(overrides: Partial<QuestionHistoryEntry> = {}): QuestionHistoryEn
     creditsCharged: 20,
     clarification: null,
     isDeleted: false,
+    onboarding: null,
     ...overrides,
   };
 }
@@ -155,6 +157,152 @@ describe('QuestionHistory', () => {
       );
       expect(screen.getByText('Verwijderde vraag')).toBeInTheDocument();
       expect(screen.getByText('Hoeveel inwoners heeft Nederland?')).toBeInTheDocument();
+    });
+  });
+
+  // WP16 sub-part 2 (design §5-dashboard, ADR 026): the on-demand CBS table
+  // onboarding queue folded into the same history list -- pending/running
+  // renders amber "wordt voorbereid" (mirrors the #84 amber clarification
+  // style), delivered rides the ordinary answer branch above (nothing new to
+  // test here — it's just entry() with source: 'audit'), failed/unanswerable
+  // renders an honest refunded state.
+  describe('onboarding queue entries (WP16 sub-part 2)', () => {
+    function onboardingEntry(overrides: Partial<QuestionHistoryEntry> = {}): QuestionHistoryEntry {
+      return entry({
+        source: 'onboarding',
+        kind: 'onboarding_pending',
+        question: 'hoeveel zonnestroom werd er opgewekt in 2024',
+        finalText: '',
+        creditsCharged: 100,
+        onboarding: { status: 'pending', topicTerm: 'zonnestroom', failureSummary: null },
+        ...overrides,
+      });
+    }
+
+    it('renders a pending request as "Wordt voorbereid" naming the topic, cost 100', () => {
+      render(<QuestionHistory items={[onboardingEntry()]} />);
+      expect(screen.getByText('hoeveel zonnestroom werd er opgewekt in 2024')).toBeInTheDocument();
+      expect(screen.getByText('Wordt voorbereid')).toBeInTheDocument();
+      // The topic name appears both in the summary body copy and (as part of
+      // the question) in the collapsed body -- assert presence, not
+      // uniqueness (same convention as the rest of this file).
+      expect(screen.getAllByText(/zonnestroom/).length).toBeGreaterThanOrEqual(1);
+      // Sign convention matches every other entry's creditsCharged
+      // (src/billing/history.ts): a positive "amount actually charged", not
+      // a signed ledger delta -- so this must read "100 credits", not "-100".
+      expect(screen.getByText(/^100 credits/)).toBeInTheDocument();
+    });
+
+    it('renders a running request the same as pending -- both are "in flight" to the user', () => {
+      render(
+        <QuestionHistory
+          items={[onboardingEntry({ onboarding: { status: 'running', topicTerm: 'zonnestroom', failureSummary: null } })]}
+        />,
+      );
+      expect(screen.getByText('Wordt voorbereid')).toBeInTheDocument();
+    });
+
+    it('renders a failed request as an honest refunded state, net 0, with the plain-language reason', () => {
+      render(
+        <QuestionHistory
+          items={[
+            onboardingEntry({
+              creditsCharged: 0,
+              onboarding: {
+                status: 'failed',
+                topicTerm: 'zonnestroom',
+                failureSummary: 'Het inladen van tabel 82610NED bij het CBS is mislukt (stap: fetch).',
+              },
+            }),
+          ]}
+        />,
+      );
+      expect(screen.getByText('Kon niet worden opgehaald')).toBeInTheDocument();
+      expect(screen.getByText(/Het inladen van tabel 82610NED bij het CBS is mislukt/)).toBeInTheDocument();
+      expect(screen.getByText(/De credits zijn teruggestort/)).toBeInTheDocument();
+      expect(screen.getByText(/0 credits/)).toBeInTheDocument();
+    });
+
+    it('renders an unanswerable request the same as failed -- both are an honest non-delivery', () => {
+      render(
+        <QuestionHistory
+          items={[
+            onboardingEntry({
+              creditsCharged: 0,
+              onboarding: {
+                status: 'unanswerable',
+                topicTerm: 'zonnestroom',
+                failureSummary: 'De vraag kon niet betrouwbaar worden beantwoord met de opgehaalde cijfers.',
+              },
+            }),
+          ]}
+        />,
+      );
+      expect(screen.getByText('Kon niet worden opgehaald')).toBeInTheDocument();
+      expect(screen.getByText(/niet betrouwbaar worden beantwoord/)).toBeInTheDocument();
+    });
+
+    it('does not apply the amber pending styling to a failed/refunded entry', () => {
+      const { container } = render(
+        <QuestionHistory
+          items={[
+            onboardingEntry({
+              creditsCharged: 0,
+              onboarding: { status: 'failed', topicTerm: 'zonnestroom', failureSummary: 'mislukt' },
+            }),
+          ]}
+        />,
+      );
+      expect(container.querySelector('.bg-amber-50')).toBeNull();
+    });
+
+    it('applies the amber pending styling to a pending entry', () => {
+      const { container } = render(<QuestionHistory items={[onboardingEntry()]} />);
+      expect(container.querySelector('.bg-amber-50')).not.toBeNull();
+    });
+
+    it('a delivered onboarding answer renders through the ORDINARY answer branch, not the onboarding branch', () => {
+      // A delivered request never reaches QuestionHistory as an
+      // onboarding-sourced entry (history.ts skips it) -- it arrives exactly
+      // like any other answered question. Regression guard: it must never
+      // show the amber box or the onboarding labels.
+      render(
+        <QuestionHistory
+          items={[
+            entry({
+              source: 'audit',
+              kind: 'answer',
+              question: 'hoeveel zonnestroom werd er opgewekt in 2024',
+              finalText: 'In 2024 werd 8.204 GWh zonnestroom opgewekt.',
+              creditsCharged: 100,
+              onboarding: null,
+            }),
+          ]}
+        />,
+      );
+      // Short text legitimately appears twice (collapsed snippet + full text,
+      // same as the non-onboarding case tested above) -- assert presence.
+      expect(screen.getAllByText('In 2024 werd 8.204 GWh zonnestroom opgewekt.').length).toBeGreaterThanOrEqual(1);
+      expect(screen.queryByText('Wordt voorbereid')).toBeNull();
+      expect(screen.queryByText('Kon niet worden opgehaald')).toBeNull();
+    });
+
+    it('keys onboarding and audit entries independently even if their numeric ids collide', () => {
+      // pending_table_requests.id and audit_answers.id are independent bigint
+      // sequences -- id=1 on both is a real possible collision, not a
+      // contrived one. Both entries must render (a naive `key={item.id}`
+      // would not crash React here since content differs, but this pins the
+      // fix at the presence level regardless).
+      render(
+        <QuestionHistory
+          items={[
+            entry({ id: 1, source: 'audit', question: 'gewone vraag' }),
+            onboardingEntry({ id: 1, question: 'onboarding vraag' }),
+          ]}
+        />,
+      );
+      expect(screen.getByText('gewone vraag')).toBeInTheDocument();
+      expect(screen.getByText('onboarding vraag')).toBeInTheDocument();
     });
   });
 });

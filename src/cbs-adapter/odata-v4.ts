@@ -116,6 +116,53 @@ export class ODataV4Source implements CbsSource {
     return all;
   }
 
+  /**
+   * GET {base}/{tableId}/Observations/$count → a bare integer body (OData v4
+   * $count endpoint). Used for slice sizing (WP16 sub-part 2 §4) BEFORE any
+   * ingest — it is metadata about the table's size, not a data cell, so it is
+   * fine on this out-of-band job path (principle b holds: the job is
+   * cron-invoked, never the request path).
+   *
+   * **Assumption (design §4, mark inline):** the v4 API supports `$count` on
+   * the Observations set and returns a plain integer body. Not re-verified live
+   * this session; if a table 404s or returns a non-integer body, this returns
+   * null (the slice estimator falls back to the dimension-cardinality product)
+   * rather than throwing — a missing count must never block or fabricate a
+   * size. A genuine network failure (all retries exhausted) still throws, like
+   * every other fetch here; the job wraps the whole size step.
+   */
+  async fetchObservationCount(tableId: string): Promise<number | null> {
+    const url = `${BASE}/${tableId}/Observations/$count`;
+    let lastError: unknown;
+    for (let attempt = 1; attempt <= FETCH_ATTEMPTS; attempt++) {
+      try {
+        const res = await fetch(url, { headers: { Accept: 'text/plain' } });
+        if (res.ok) {
+          const body = (await res.text()).trim();
+          const n = Number(body);
+          // A non-integer body ($count unsupported → HTML/JSON, or an empty
+          // body) → treat as "count unavailable", never a fabricated size.
+          return Number.isInteger(n) && n >= 0 ? n : null;
+        }
+        // 404 / not-supported: count unavailable, fall back to the estimate.
+        if (res.status === 404) return null;
+        lastError = new Error(
+          `CBS OData $count request failed: ${res.status} ${res.statusText} for ${url}`,
+        );
+      } catch (err) {
+        lastError = err;
+      }
+      if (attempt < FETCH_ATTEMPTS) {
+        await new Promise((resolve) => setTimeout(resolve, RETRY_BACKOFF_MS * attempt));
+      }
+    }
+    throw new Error(
+      `CBS OData $count request failed after ${FETCH_ATTEMPTS} attempts for ${url}: ${
+        lastError instanceof Error ? lastError.message : String(lastError)
+      }`,
+    );
+  }
+
   async *fetchObservations(
     tableId: string,
     slice?: CbsSlice,

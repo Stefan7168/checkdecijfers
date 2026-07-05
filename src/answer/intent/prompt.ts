@@ -8,6 +8,7 @@
 // in resolve.ts — so the prompt bytes are stable across days (prompt cache,
 // fixture hashes).
 import { CANONICAL_MEASURES } from '../../registry/defaults.ts';
+import type { CanonicalMeasure } from '../../registry/types.ts';
 
 /** Bump when the prompt's structure or rules change meaningfully — recorded
  * in the audit record (R8, WP10) and in every fixture.
@@ -65,29 +66,53 @@ const GRAIN_WORDS: Record<string, string> = {
   MM: 'maand',
 };
 
-function vocabularyTable(): string {
-  return CANONICAL_MEASURES.map((m) => {
-    const grains = (AVAILABLE_GRAINS[m.key] ?? ['JJ']).map((g) => GRAIN_WORDS[g]).join(', ');
-    const region = REGIONAL_KEYS.has(m.key)
-      ? 'landelijk + provincies + gemeenten'
-      : 'alleen landelijk (geen regio-uitsplitsing)';
-    const alternates = (m.alternates ?? [])
-      .map((a) => a.label)
-      .join('; ');
-    return [
-      `- key: ${m.key}`,
-      `  definitie: ${m.definitionLabel}`,
-      `  alledaagse termen: ${m.everydayTerms.join(', ')}`,
-      `  grains: ${grains}`,
-      `  regio: ${region}`,
-      alternates ? `  NIET te verwarren met (andere lezing, niet deze key): ${alternates}` : null,
-    ]
-      .filter((line) => line !== null)
-      .join('\n');
-  }).join('\n');
+/** A canonical measure onboarded on demand (WP16 sub-part 2), carrying its own
+ * measured grains and regional flag — the static AVAILABLE_GRAINS / REGIONAL_KEYS
+ * maps below cover only the Phase-0 set, so an onboarded measure supplies them
+ * itself (derived from the freshly-ingested observations, not guessed). */
+export interface OnboardedMeasure {
+  measure: CanonicalMeasure;
+  grains: ('JJ' | 'KW' | 'MM')[];
+  regional: boolean;
 }
 
-export function buildSystemPrompt(): string {
+function renderVocabularyEntry(
+  m: CanonicalMeasure,
+  grainCodes: ('JJ' | 'KW' | 'MM')[],
+  regional: boolean,
+): string {
+  const grains = (grainCodes.length > 0 ? grainCodes : ['JJ']).map((g) => GRAIN_WORDS[g]).join(', ');
+  const region = regional
+    ? 'landelijk + provincies + gemeenten'
+    : 'alleen landelijk (geen regio-uitsplitsing)';
+  const alternates = (m.alternates ?? []).map((a) => a.label).join('; ');
+  return [
+    `- key: ${m.key}`,
+    `  definitie: ${m.definitionLabel}`,
+    `  alledaagse termen: ${m.everydayTerms.join(', ')}`,
+    `  grains: ${grains}`,
+    `  regio: ${region}`,
+    alternates ? `  NIET te verwarren met (andere lezing, niet deze key): ${alternates}` : null,
+  ]
+    .filter((line) => line !== null)
+    .join('\n');
+}
+
+/** The Phase-0 vocabulary, plus any on-demand-onboarded measures. `extra`
+ * defaults to empty → the rendered bytes are IDENTICAL to before WP16 sub-part
+ * 2 (the recorded LLM fixtures + benchmark stay valid by construction — a
+ * fixture is keyed on a hash of the whole system prompt). Only the delivery
+ * re-run (and, in production, a real chat turn after an onboard has landed
+ * rows) passes a non-empty `extra`. */
+function vocabularyTable(extra: OnboardedMeasure[] = []): string {
+  const phase0 = CANONICAL_MEASURES.map((m) =>
+    renderVocabularyEntry(m, AVAILABLE_GRAINS[m.key] ?? ['JJ'], REGIONAL_KEYS.has(m.key)),
+  );
+  const onboarded = extra.map((o) => renderVocabularyEntry(o.measure, o.grains, o.regional));
+  return [...phase0, ...onboarded].join('\n');
+}
+
+export function buildSystemPrompt(extra: OnboardedMeasure[] = []): string {
   return `You are the intent parser of checkdecijfers.nl, a Dutch fact-checking product over official CBS statistics. You receive ONE Dutch user question and emit ONE JSON object describing what is being asked. You never answer the question, never compute, never estimate, and never invent data — downstream deterministic code does everything with your parse.
 
 # Question kinds (field "kind")
@@ -103,7 +128,7 @@ Only data_query carries candidates; every other kind has an empty candidates arr
 
 # The vocabulary (the ONLY measures you may reference)
 
-${vocabularyTable()}
+${vocabularyTable(extra)}
 
 Rules for the topic:
 - Everyday terms map to their key: this is the registry's canonical default. Do NOT lower confidence merely because the user did not spell out the technical definition ("werkloosheid" → unemployment_rate_seasonally_adjusted is the intended reading).
