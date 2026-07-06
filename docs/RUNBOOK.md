@@ -153,9 +153,11 @@ computer or any one Claude account. A new machine needs, in order:
    it over manually if you still want it, or let it go; nothing in the build
    depends on it).
 
-## WP16 sub-part 2 — the supervised live step (owner present; NOT yet done)
+## WP16 sub-part 2 — the supervised live step (owner present; ✅ DONE 2026-07-06, session 28)
 
-The on-demand-fetch code is built and merged (2026-07-06, hermetic — full detail in [STATUS.md](STATUS.md)), but it is dormant in production until this checklist runs, in order, in one supervised session:
+**✅ COMPLETED 2026-07-06 (session 28, owner present). On-demand CBS fetch is LIVE in production.** All steps below ran successfully; both paths were verified live — a DELIVERED answer (consumentenvertrouwen → CBS table 83694NED, full CC BY attribution, 100 credits kept) and an UNANSWERABLE + full refund (bijstand → 85615NED, ledger compensation +100). The kick is proven live (jobs finished seconds after the trigger, not at the 06:00 UTC backstop). **Go-live bug caught + fixed pre-flight (before any credit was spent): `/api/onboarding-cron` was missing from `web/proxy.ts`'s `PUBLIC_PATH_PREFIXES`, so the session proxy 307'd it to /login before its own CRON_SECRET auth ran — the kick/cron would have silently never executed (commit `42b275b`, + `web/proxy.test.ts`).** Owner-flagged follow-up: the bijstand question must answer — finder mis-picked a flow table over a stock table ([#111](open-questions.md), elevated). The checklist is kept below as the record + the template for any future supervised live step.
+
+The on-demand-fetch code was built and merged (2026-07-06, hermetic — full detail in [STATUS.md](STATUS.md)); it was dormant in production until this checklist ran, in order, in one supervised session:
 
 1. **Apply migrations 012 + 013** to production: `npm run db:migrate` from the repo root (it applies only what's missing). Then the standard per-migration check: `pending_table_requests` must show 0 `anon`/`authenticated` grants + RLS on (the migration-011 procedure above, same queries).
 2. **Set `CRON_SECRET`, `RESEND_API_KEY` and `ONBOARDING_ENABLED=1`** in the Vercel env store (rows in the secrets register above) and **redeploy** (env edits never apply to a running deployment). `ONBOARDING_ENABLED` is the master switch: until it is `1`, the deployed app behaves exactly as before WP16 sub-part 2 (the finder is never constructed), so steps 1–2 can be done safely in any order — nothing is user-visible until the flag flips.
