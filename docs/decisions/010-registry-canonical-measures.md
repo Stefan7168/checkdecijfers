@@ -39,3 +39,7 @@ Two things are getting conflated in "canonical default" and need separating:
 
 - The table catalog grows past what a hand-maintained `canonical_measures` table can hold legibly (same ~50-table trigger as ADR 002's pgvector reconsideration).
 - Intent-parser accuracy on concept selection needs a second, deterministic signal (e.g. exact-string fast path before the LLM call) — `everyday_terms` is already there to seed it.
+
+## As-built addendum (2026-07-06, session 29 — #115 lever b)
+
+`canonical_measures` gained one **nullable** column, `definition_text` (migration 014), carrying the FULL verbatim CBS measure `Description` (its meaning + any scale). Distinct from `definition_label`, which stays the short concept phrase that doubles as the answer's sentence *subject* — a paragraph can't live there. **The decision was a dedicated column, NOT widening `definition_label` to nullable** (the shape first sketched): that keeps every seed row (`definition_text` NULL) and thus every benchmark answer byte-identical by construction, while on-demand-onboarded measures store CBS's real definition for their "Definitie:" line. Populated only by onboarding (`src/ingestion/onboarding-vocab.ts` → `cleanCbsDefinition`, which keeps the whole blurb verbatim, never trimming to a block — a live-caught fix); seed rows leave it NULL. Rationale + the deploy-order-safe read (gated on the `onboarded:` key prefix so the hot seed path never touches the new column) in [open-questions #115](../open-questions.md).
