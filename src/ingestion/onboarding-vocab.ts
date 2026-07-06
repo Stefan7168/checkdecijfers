@@ -37,26 +37,34 @@ interface UnitMeta {
 }
 
 /**
- * Distil a CBS measure `Description` into the one-paragraph definition the answer
- * shows, WITHOUT rewriting a single word (principle a — CBS's own text or nothing):
- *   1. take only the FIRST block (CBS appends related-concept glossary blocks
- *      separated by a blank line — e.g. faillissementen's "Faillissement: Staat
- *      waarin ..."; those are not this measure's definition, so drop them);
+ * Distil a CBS measure `Description` into the definition the answer shows,
+ * WITHOUT rewriting a single word (principle a — CBS's own text or nothing):
+ *   1. keep the WHOLE blurb — NEVER drop a block. The real definition (and its
+ *      scale) can live in a LATER block after a short preamble, e.g.
+ *      consumentenvertrouwen opens "Indicator van het Consumentenvertrouwen. Dit
+ *      is de oorspronkelijke, niet-gecorrigeerde reeks.\n\nDe indicator kan een
+ *      waarde aannemen van -100 tot +100 ...". An earlier "first block only" cut
+ *      dropped exactly that substance — caught in live verification (#115). CBS
+ *      may append related-concept glossary blocks too; keeping them is verbatim
+ *      CBS text and better than risking the definition itself.
  *   2. drop a leading line that merely echoes the measure title (CBS often opens
- *      with the title verbatim, e.g. "Uitgesproken faillissementen\n Het aantal
- *      ...") — it would read as a stutter next to the answer's own subject;
- *   3. collapse internal whitespace/newlines to single spaces so it renders as a
- *      clean sentence in the bubble.
+ *      with the title verbatim, e.g. "Uitgesproken faillissementen\nHet aantal
+ *      ...") — it would read as a stutter next to the answer's own subject.
+ *   3. collapse internal whitespace/newlines to single spaces so it renders as
+ *      one flowing paragraph.
  * Returns null when nothing usable remains (no blurb, or it was only the title
  * echo) — the composer then omits the "Definitie:" line entirely.
  */
 export function cleanCbsDefinition(description: string, title: string): string | null {
-  const firstBlock = description.replace(/\r\n/g, '\n').split(/\n[ \t]*\n/)[0] ?? '';
-  const lines = firstBlock.split('\n').map((l) => l.trim()).filter((l) => l.length > 0);
   // Trailing sentence punctuation is ignored when matching against the title, so
   // a leading line like "Consumentenvertrouwen." is still recognized as the title
   // echo and stripped (review finding: exact equality missed a punctuated echo).
   const norm = (s: string) => s.replace(/\s+/g, ' ').trim().replace(/[.!?]+$/, '').trim().toLowerCase();
+  const lines = description
+    .replace(/\r\n/g, '\n')
+    .split('\n')
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0);
   if (lines.length > 1 && norm(lines[0]!) === norm(title)) {
     lines.shift();
   }
