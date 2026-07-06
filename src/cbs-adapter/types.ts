@@ -18,6 +18,12 @@ export interface CbsMeasure {
   title: string;
   unit: string;
   decimals: number;
+  /** CBS 'Description' — the full definition blurb for this measure, verbatim;
+   * '' when CBS omits it. Carried so an on-demand-onboarded measure can show a
+   * REAL definition (its meaning, its scale) instead of only its short title
+   * (#115 lever b). NEVER rewritten — CBS's own words or nothing (principle a,
+   * R10 spirit). */
+  description: string;
 }
 
 export interface CbsTableSchema {

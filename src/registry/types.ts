@@ -35,6 +35,13 @@ export interface CanonicalMeasure {
   /** Semantic (non-totaal) dimension coordinates that define this concept. */
   dims: Record<string, string>;
   definitionLabel: string;
+  /** The full, verbatim CBS measure definition (its meaning + any scale), shown
+   * as the answer's "Definitie:" line. NULL/absent for the curated Phase-0 set
+   * (whose short definitionLabel already reads as a clean definition) and for
+   * any onboarded measure CBS publishes no usable blurb for — the composer then
+   * omits the line. Populated only by on-demand onboarding, from CBS's own words
+   * (#115 lever b, migration 014). Principle (a): never invented. */
+  definitionText?: string | null;
   everydayTerms: string[];
   alternates?: CanonicalMeasureAlternate[];
   notes?: string;

@@ -8,6 +8,7 @@ import { FixtureSource, loadFixtureDocs } from '../../src/cbs-adapter/fixture-so
 import { registerTables, syncTable } from '../../src/ingestion/pipeline.ts';
 import type { Phase0Table } from '../../src/ingestion/registry-seed.ts';
 import {
+  cleanCbsDefinition,
   onboardedKey,
   registerOnboardingVocabulary,
 } from '../../src/ingestion/onboarding-vocab.ts';
@@ -55,13 +56,37 @@ describe('registerOnboardingVocabulary', () => {
 
       // The rows are actually in canonical_measures (resolve.ts reads them).
       const key = onboardedKey(TABLE, 'D002936');
-      const row = await db.query('select key, table_id, measure, definition_label from canonical_measures where key = $1', [key]);
+      const row = await db.query('select key, table_id, measure, definition_label, definition_text from canonical_measures where key = $1', [key]);
       expect(row.rows).toHaveLength(1);
       expect(row.rows[0]!.table_id).toBe(TABLE);
       expect(row.rows[0]!.measure).toBe('D002936');
+      // #115 lever b: the REAL CBS definition (from the measure's Description) is
+      // stored in definition_text — CBS's own words, verbatim — so the onboarded
+      // answer can show a genuine "Definitie:" line, not just the title.
+      expect(row.rows[0]!.definition_text).toContain('Aantal aan het begin van de periode.');
     });
   });
 
+  it('stores NULL definition_text when the measure has no CBS blurb (composer omits the line)', async () => {
+    await withIngested(async (db) => {
+      // Blank out one measure's stored Description, then re-register: a measure
+      // CBS gives no usable definition for must land NULL, not an empty/echoed
+      // line — the composer then omits "Definitie:" rather than repeating the
+      // title (the old circular case, #115 lever a).
+      await db.query(
+        `update cbs_tables
+            set units = jsonb_set(units, '{D002936,description}', '""'::jsonb)
+          where id = $1`,
+        [TABLE],
+      );
+      await registerOnboardingVocabulary(db, { tableId: TABLE, topicTerm: 'x' });
+      const row = await db.query(
+        'select definition_text from canonical_measures where key = $1',
+        [onboardedKey(TABLE, 'D002936')],
+      );
+      expect(row.rows[0]!.definition_text).toBeNull();
+    });
+  });
   it('is idempotent — re-running upserts the same rows without error', async () => {
     await withIngested(async (db) => {
       const first = await registerOnboardingVocabulary(db, { tableId: TABLE, topicTerm: 'x' });
@@ -84,5 +109,49 @@ describe('registerOnboardingVocabulary', () => {
       const parsed = typeof dc === 'string' ? JSON.parse(dc) : dc;
       expect(parsed).toEqual({});
     });
+  });
+});
+
+describe('cleanCbsDefinition (#115 lever b — CBS words or nothing, never invented)', () => {
+  it('keeps a single definition block intact, including a scale sentence', () => {
+    // The real consumentenvertrouwen case: one paragraph carrying the meaning
+    // AND the −100..+100 scale — nothing is dropped from a single block.
+    const desc =
+      'Het consumentenvertrouwen is een indicator van het vertrouwen van consumenten. ' +
+      'De indicator kan een waarde aannemen van -100 (iedereen negatief) tot +100 (iedereen positief).';
+    expect(cleanCbsDefinition(desc, 'Consumentenvertrouwen')).toBe(desc);
+  });
+
+  it('drops appended related-concept glossary blocks (keeps only the first block)', () => {
+    // CBS appends extra concept blocks separated by a blank line; those are not
+    // this measure's definition. Faillissementen-shaped input.
+    const desc =
+      'Uitgesproken faillissementen\r\nHet aantal eenheden dat failliet is verklaard.\r\n\r\n' +
+      'Faillissement\r\nStaat waarin de rechter een eenheid failliet verklaart.';
+    const cleaned = cleanCbsDefinition(desc, 'Uitgesproken faillissementen');
+    expect(cleaned).toBe('Het aantal eenheden dat failliet is verklaard.');
+    expect(cleaned).not.toContain('Staat waarin de rechter');
+  });
+
+  it('strips a leading line that merely echoes the measure title', () => {
+    const cleaned = cleanCbsDefinition('Beginstand voorraad\r\nAantal aan het begin van de periode.', 'Beginstand voorraad');
+    expect(cleaned).toBe('Aantal aan het begin van de periode.');
+  });
+
+  it('strips a title-echo line even when it carries trailing punctuation (review edge case)', () => {
+    // Exact equality missed "Consumentenvertrouwen." vs title "Consumentenvertrouwen";
+    // the match now ignores trailing sentence punctuation.
+    expect(cleanCbsDefinition('Consumentenvertrouwen.\r\nHet vertrouwen van consumenten.', 'Consumentenvertrouwen')).toBe(
+      'Het vertrouwen van consumenten.',
+    );
+    // and a blurb that is ONLY the punctuated title -> null (no line at all).
+    expect(cleanCbsDefinition('Consumentenvertrouwen.', 'Consumentenvertrouwen')).toBeNull();
+  });
+
+  it('returns null for an empty blurb or one that is only the title echo', () => {
+    expect(cleanCbsDefinition('', 'Consumentenvertrouwen')).toBeNull();
+    expect(cleanCbsDefinition('   ', 'Consumentenvertrouwen')).toBeNull();
+    expect(cleanCbsDefinition('Consumentenvertrouwen', 'Consumentenvertrouwen')).toBeNull();
+    expect(cleanCbsDefinition('consumentenvertrouwen', 'Consumentenvertrouwen')).toBeNull();
   });
 });

@@ -333,6 +333,7 @@ export async function runQuery(db: Db, intent: StructuredIntent): Promise<QueryO
     coveredPeriods: { from: q.periodCodes[0]!, to: q.periodCodes[q.periodCodes.length - 1]! },
     license: 'CC BY 4.0',
     definitionLabel: q.definitionLabel,
+    definitionText: q.definitionText,
     periodSemantics: q.table.periodSemantics?.[q.grain] ?? null,
   };
 

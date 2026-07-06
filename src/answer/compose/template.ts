@@ -38,6 +38,13 @@ export function displayValueUnit(value: number, decimals: number, unit: string):
     const factor = trimmed.startsWith('x ') || trimmed.startsWith('× ') ? trimmed : `× ${trimmed}`;
     return `${formatted} (${factor})`;
   }
+  // A long descriptive unit phrase (3+ words — e.g. an onboarded measure's
+  // "gemiddelde saldo van de deelvragen") reads as a run-on when jammed straight
+  // after the number; set it off in parentheses (#115 lever c). Short units
+  // ('euro', 'mln kWh') stay bare. Verbatim — the unit is never reworded (R10,
+  // principle a). No Phase-0 measure has such a unit, so seed answers are
+  // unchanged (benchmark-proven).
+  if (trimmed.split(/\s+/).length >= 3) return `${formatted} (${trimmed})`;
   return `${formatted} ${trimmed}`;
 }
 

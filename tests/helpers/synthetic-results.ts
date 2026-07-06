@@ -50,6 +50,7 @@ export function makeResult(spec: {
   cells: ResultCell[];
   derivations?: DerivationRecord[];
   definitionLabel?: string | null;
+  definitionText?: string | null;
   periodSemantics?: string | null;
 }): ValidatedResult {
   const cells = spec.cells;
@@ -67,6 +68,7 @@ export function makeResult(spec: {
       coveredPeriods: { from: cells[0]!.periodCode, to: cells[cells.length - 1]!.periodCode },
       license: 'CC BY 4.0',
       definitionLabel: spec.definitionLabel ?? null,
+      definitionText: spec.definitionText ?? null,
       periodSemantics: spec.periodSemantics ?? null,
     },
     intent: {

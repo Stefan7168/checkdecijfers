@@ -50,7 +50,7 @@ async function fetchAllObservations(
 function unitsFromMeasures(measures: CbsMeasure[]): RegistryUnits {
   const units: RegistryUnits = {};
   for (const m of measures) {
-    units[m.code] = { unit: m.unit, decimals: m.decimals, title: m.title };
+    units[m.code] = { unit: m.unit, decimals: m.decimals, title: m.title, description: m.description };
   }
   return units;
 }

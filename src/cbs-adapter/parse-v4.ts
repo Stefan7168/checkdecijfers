@@ -79,7 +79,8 @@ export function parseMeasures(raw: unknown): CbsMeasure[] {
       );
     }
     const decimals = decimalsRaw === null || decimalsRaw === undefined ? 0 : decimalsRaw;
-    return { code, title, unit, decimals };
+    const description = optionalString(row, 'Description') ?? '';
+    return { code, title, unit, decimals, description };
   });
 }
 

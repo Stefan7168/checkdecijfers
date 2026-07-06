@@ -38,6 +38,9 @@ describe('adapter parsing (real captured wire data)', () => {
     expect(measure).toBeDefined();
     expect(measure?.unit).toBe('x 1 000');
     expect(measure?.decimals).toBe(0);
+    // #115 lever b: the CBS 'Description' blurb is captured verbatim (it drives
+    // the onboarded answer's real "Definitie:" line), not dropped on the floor.
+    expect(measure?.description).toContain('Aantal aan het begin van de periode.');
   });
 
   it('parseCodes of 82235NED codes-Perioden has 2024JJ00 with status, codes trimmed', async () => {

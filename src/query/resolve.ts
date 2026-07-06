@@ -39,6 +39,7 @@ export interface ResolvedQuery {
   grain: PeriodGrain;
   derivation: IntentDerivation;
   definitionLabel: string | null;
+  definitionText: string | null;
   table: {
     title: string;
     version: number;
@@ -262,9 +263,21 @@ export async function resolveIntent(db: Db, intent: StructuredIntent): Promise<R
   let semanticDims: Record<string, string>;
   let explicitDims: Record<string, string>;
   let definitionLabel: string | null;
+  let definitionText: string | null;
   if (intent.target.kind === 'canonical') {
+    // definition_text (the real CBS blurb, #115 lever b, migration 014) is read
+    // ONLY for on-demand-onboarded keys. This keeps the HOT seed-table path off
+    // the new column entirely: a curated Phase-0 key never selects it, so the
+    // dominant answer path cannot break if 014 is not yet applied (deploy-order
+    // safe — the #114 class the review flagged). And the read is self-consistent:
+    // an `onboarded:` key can only EXIST once onboarding-vocab.ts inserted it,
+    // which requires the column — so this branch never hits a missing column.
+    const onboarded = intent.target.key.startsWith('onboarded:');
+    const cols = onboarded
+      ? 'table_id, measure, measure_title, dims, definition_label, definition_text'
+      : 'table_id, measure, measure_title, dims, definition_label';
     const result = await db.query(
-      'select table_id, measure, measure_title, dims, definition_label from canonical_measures where key = $1',
+      `select ${cols} from canonical_measures where key = $1`,
       [intent.target.key],
     );
     const row = result.rows[0];
@@ -276,12 +289,14 @@ export async function resolveIntent(db: Db, intent: StructuredIntent): Promise<R
     semanticDims = parseJsonb(row.dims, {});
     explicitDims = {};
     definitionLabel = row.definition_label as string;
+    definitionText = onboarded ? ((row.definition_text as string | null) ?? null) : null;
   } else {
     tableId = intent.target.tableId;
     measure = intent.target.measure;
     semanticDims = {};
     explicitDims = intent.target.dims ?? {};
     definitionLabel = null;
+    definitionText = null;
   }
 
   const table = await fetchTable(db, tableId);
@@ -403,6 +418,7 @@ export async function resolveIntent(db: Db, intent: StructuredIntent): Promise<R
       grain,
       derivation: intent.derivation,
       definitionLabel,
+      definitionText,
       table: {
         title: table.title,
         version: table.version,

@@ -12,7 +12,7 @@
 import type { ValidatedResult } from '../../query/index.ts';
 import { DERIVED_DATA_MARKING } from '../../query/index.ts';
 import type { LlmClient, LlmUsage } from '../llm/client.ts';
-import { buildAttributionLine } from './format.ts';
+import { buildAttributionLine, buildDefinitionLine } from './format.ts';
 import { buildPhrasingRequest, COMPOSE_PROMPT_VERSION, PHRASING_MODEL } from './prompt.ts';
 import { renderTemplateBody } from './template.ts';
 import { validateAnswerBody } from './validate.ts';
@@ -30,23 +30,13 @@ function assemble(result: ValidatedResult, body: string, source: AnswerSource, e
   usage: LlmUsage;
   attempts: ComposeAttempt[];
 }): ComposedAnswer {
-  // Suppress a CIRCULAR "Definitie:" line — one that is merely the measure's own
-  // title, which the source line already carries. This is the on-demand onboarded
-  // case: onboarding-vocab.ts stores an onboarded measure's definitionLabel AS the
-  // CBS measure title verbatim (no curated definition exists), so rendering it as a
-  // "Definitie:" repeats the name and reads as broken (#115). A curated SEED
-  // definition (a real phrase, ≠ the title) still renders. Compare whitespace-
-  // normalized but CASE-SENSITIVE: the seed 'population' measure's title vs
-  // definition differ only in case ('Bevolking op 1 januari' vs 'bevolking op 1
-  // januari'), so a case-insensitive test would wrongly drop a real seed line.
-  const definitionLabel = result.attribution.definitionLabel;
-  const measureTitle = result.cells[0]?.measureTitle ?? null;
-  const isCircular =
-    definitionLabel !== null &&
-    measureTitle !== null &&
-    definitionLabel.replace(/\s+/g, ' ').trim() === measureTitle;
-  const definitionLine =
-    definitionLabel === null || isCircular ? null : `Definitie: ${definitionLabel}.`;
+  // The "Definitie:" line — built by the single shared source of truth in
+  // format.ts (buildDefinitionLine), which audit/reconstruct.ts also uses to
+  // RE-DERIVE it for R8 verification, so the two can never drift (#115 review).
+  // It prefers a real captured CBS definition (definitionText, lever b) and
+  // otherwise falls back to the short definitionLabel with the circular-title
+  // suppression (lever a).
+  const definitionLine = buildDefinitionLine(result);
   const markingLine = result.derivations.length > 0 ? `— ${DERIVED_DATA_MARKING}` : null;
   const attribution = buildAttributionLine(result);
   const text = [body, '', ...(definitionLine ? [definitionLine] : []), ...(markingLine ? [markingLine] : []), attribution].join('\n');
