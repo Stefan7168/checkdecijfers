@@ -162,3 +162,7 @@ ladder engaged live: one retry + one template on v1, three templates on v2).
   open-questions #41 with a sanitization design first.
 - Monthly maintenance session re-runs `npm run answer:eval` when anything
   provider-side changes.
+
+## As-built addendum (2026-07-06, session 29 — #115 levers b/c)
+
+The "Definitie:" line is now built by **one shared function, `buildDefinitionLine(result)` in `compose/format.ts`** — the single source of truth used BOTH to compose the line and to RE-DERIVE it for R8 audit verification (`audit/reconstruct.ts`), so the composer and the verifier can never drift (a drift the #115 review caught: reconstruct had kept the old, `definitionText`-blind logic). Priority: a real captured CBS definition (`attribution.definitionText`, onboarded measures, ADR [010](010-registry-canonical-measures.md)) → else the short `definitionLabel`, suppressed when it merely echoes the measure title (the circular onboarded case). The line is still assembled **deterministically, after the LLM** — the phrasing model never sees or writes it, and `definitionText` is deliberately NOT added to the `PhrasingPayload` (so recorded fixtures stay byte-identical). Lever (c): `displayValueUnit` (template path) now parenthesizes a 3+-word descriptive unit ("gemiddelde saldo van de deelvragen") — a no-op for every Phase-0 unit, so the benchmark is unchanged.
