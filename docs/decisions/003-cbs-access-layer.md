@@ -32,3 +32,16 @@ Confirmed principle (b): CBS data is bulk-ingested into our own database, never 
 - CBS re-activates the SDMX/.Stat migration or announces v3/v4 deprecation dates → schedule the second adapter implementation.
 - A mid-year redesign hits a loaded table (expect this) → verify the fingerprint defense worked; tune if it paged a human too late.
 - Catalog ambitions outgrow manual table onboarding → invest in adapter-level catalog sync.
+
+## CBS data channels — as-built reference (verified from code, session 28)
+
+CBS exposes several delivery channels; this project **consumes exactly one — the OData v4 API** — and never the others from the request path. The decision above anticipated a v3-bulk-feed fallback; today only the v4 adapter exists in code (`src/cbs-adapter/odata-v4.ts`).
+
+- **OData v4 API — `https://datasets.cbs.nl/odata/v1/CBS`** ✅ *the one we use* (`odata-v4.ts`, `const BASE`). Two endpoints:
+  - `/Datasets` — the full ~4,858-table **catalog** (the list of every CBS table). Mirrored into our own `cbs_catalog` (migration 011) so the table-finder searches OUR copy, never CBS live (principle b; ADR [025](025-cbs-catalog-table-discovery.md)).
+  - `/{tableId}/Observations` (+ `/$count`) — per-table **data** (the cells), ingested on onboarding with the 150k-cell slice cap.
+- **OData v3 / "Cube" feed — `https://opendata.cbs.nl/ODataApi/odata`** — the older API (TableInfos, TypedDataSet, dimension code-lists); the **v3 *bulk* feed remains the documented fallback** (decision 1) but is not implemented. The v3 *query* API's 10k-cell cap is why it is banned. Only ever hit ad-hoc by a human/session for a one-off metadata lookup.
+- **StatLine (web portal)** — only the DESTINATION of the user-facing "Bekijk bij CBS" deep-link (#86 / WP23); our request path never touches it.
+- **Bulk CSV download** — not used; we fetch targeted Observations via the API, not whole-table file downloads.
+
+**Relevance to the finder ([#111](../open-questions.md) stock-vs-flow):** the `/Datasets` catalog carries mainly *title + description* per table — that is all the finder matches on today. A table's **measures + dimensions** (stock vs flow, total vs breakdown) live in the per-table metadata on the *same* v4 API — that is the extra signal the finder-precision work must pull in.
