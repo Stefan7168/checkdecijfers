@@ -122,15 +122,31 @@ describe('cleanCbsDefinition (#115 lever b — CBS words or nothing, never inven
     expect(cleanCbsDefinition(desc, 'Consumentenvertrouwen')).toBe(desc);
   });
 
-  it('drops appended related-concept glossary blocks (keeps only the first block)', () => {
-    // CBS appends extra concept blocks separated by a blank line; those are not
-    // this measure's definition. Faillissementen-shaped input.
+  it('keeps a LATER block that holds the real definition/scale — never stops at a preamble (#115 live-verified)', () => {
+    // The real consumentenvertrouwen shape: a short preamble in block 1, the
+    // actual definition + the −100..+100 scale in block 2. A "first block only"
+    // cut dropped the substance the owner asked for — this must NOT happen.
+    const desc =
+      'Indicator van het Consumentenvertrouwen. Dit is de oorspronkelijke, niet-gecorrigeerde reeks.\r\n\r\n' +
+      'De indicator kan een waarde aannemen van -100 tot +100.';
+    const cleaned = cleanCbsDefinition(desc, 'Consumentenvertrouwen');
+    expect(cleaned).toContain('-100 tot +100'); // the scale survives
+    expect(cleaned).toBe(
+      'Indicator van het Consumentenvertrouwen. Dit is de oorspronkelijke, niet-gecorrigeerde reeks. ' +
+        'De indicator kan een waarde aannemen van -100 tot +100.',
+    );
+  });
+
+  it('keeps appended CBS glossary blocks too (verbatim CBS text > risking the definition)', () => {
+    // Faillissementen-shaped: title echo + definition, then a related-concept
+    // block. The title echo is stripped; everything else CBS wrote is kept.
     const desc =
       'Uitgesproken faillissementen\r\nHet aantal eenheden dat failliet is verklaard.\r\n\r\n' +
       'Faillissement\r\nStaat waarin de rechter een eenheid failliet verklaart.';
     const cleaned = cleanCbsDefinition(desc, 'Uitgesproken faillissementen');
-    expect(cleaned).toBe('Het aantal eenheden dat failliet is verklaard.');
-    expect(cleaned).not.toContain('Staat waarin de rechter');
+    expect(cleaned).toBe(
+      'Het aantal eenheden dat failliet is verklaard. Faillissement Staat waarin de rechter een eenheid failliet verklaart.',
+    );
   });
 
   it('strips a leading line that merely echoes the measure title', () => {
