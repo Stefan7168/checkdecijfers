@@ -64,3 +64,43 @@ describe('WP16 sub-part 2 onboarding-trigger wiring (source pins)', () => {
     expect(source).toContain('netCost: 0');
   });
 });
+
+describe('#113 kick-on-trigger wiring (source pins)', () => {
+  const source = read('actions.ts');
+
+  it('imports after from next/server and kickOnboardingJob from the lib', () => {
+    expect(source).toContain("import { after } from 'next/server';");
+    expect(source).toContain("import { kickOnboardingJob } from '../lib/onboarding-kick.ts';");
+  });
+
+  // Slice the maybeTriggerOnboarding switch body by its case labels so each
+  // assertion is scoped to exactly one case block — a bare source.toContain
+  // could not tell 'started' from 'duplicate' from 'insufficient'.
+  const sliceCase = (label: string, next: string | null): string => {
+    const start = source.indexOf(`case '${label}':`);
+    expect(start).toBeGreaterThan(-1);
+    const end = next === null ? source.length : source.indexOf(`case '${next}':`, start);
+    return source.slice(start, end === -1 ? source.length : end);
+  };
+
+  it("fires the kick inside BOTH the 'started' and 'duplicate' cases, POST-response", () => {
+    expect(sliceCase('started', 'duplicate')).toContain('after(() => kickOnboardingJob());');
+    expect(sliceCase('duplicate', 'insufficient')).toContain('after(() => kickOnboardingJob());');
+  });
+
+  it("does NOT fire the kick in the 'insufficient' case (nothing was queued)", () => {
+    expect(sliceCase('insufficient', null)).not.toContain('kickOnboardingJob');
+  });
+
+  it('fires the kick(s) AFTER the triggerOnboarding commit (post-commit by construction)', () => {
+    const commitIdx = source.indexOf('triggerOnboarding(getDb()');
+    const firstKickIdx = source.indexOf('after(() => kickOnboardingJob());');
+    expect(commitIdx).toBeGreaterThan(-1);
+    expect(firstKickIdx).toBeGreaterThan(commitIdx);
+  });
+
+  it('fires the kick exactly twice (started + duplicate), never elsewhere', () => {
+    const occurrences = source.split('kickOnboardingJob()').length - 1;
+    expect(occurrences).toBe(2);
+  });
+});

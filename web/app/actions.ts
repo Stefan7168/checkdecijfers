@@ -7,6 +7,8 @@
 // to this one file.
 'use server';
 
+import { after } from 'next/server';
+
 import {
   answerClarificationReplyAudited,
   answerQuestionAudited,
@@ -25,6 +27,7 @@ import {
 } from '../backend/ingestion/onboarding-trigger.ts';
 import { currentUserId } from '../lib/current-user.ts';
 import { getDb } from '../lib/db.ts';
+import { kickOnboardingJob } from '../lib/onboarding-kick.ts';
 
 // Auth check happens HERE, inside the Server Action — not only in proxy.ts.
 // Next's own data-security guidance is explicit that a Proxy matcher is an
@@ -204,10 +207,22 @@ async function maybeTriggerOnboarding(
 
   switch (result.kind) {
     case 'started':
+      // #113 kick-on-trigger: the row just committed — fire the cron route so
+      // the delivery re-run starts within minutes (the "kwestie van minuten"
+      // promise), not at the daily 06:00 UTC backstop sweep. after() runs the
+      // kick POST-RESPONSE, so it is strictly post-commit AND can never delay
+      // or alter this returned GatedResponse; kickOnboardingJob is fail-soft
+      // (it cannot throw), so a failed kick just degrades to the backstop.
+      after(() => kickOnboardingJob());
       // Show the acknowledgment; the caption must read the 100-credit fetch
       // cost, not the refunded question turn's 0 (design §2/§5).
       return { ...gated, netCost: await onboardingPrice(getDb()) };
     case 'duplicate':
+      // #113 kick-on-trigger: an active row already exists — a re-ask is the
+      // natural user retry channel if an earlier kick failed, and the cron
+      // route's claim logic makes a redundant kick a harmless {"claimed":0}.
+      // Same post-response, fail-soft guarantees as 'started'.
+      after(() => kickOnboardingJob());
       // A concurrent/retried trigger already debited (or an active job already
       // exists under another request): no second charge. Show the
       // acknowledgment again; the turn nets 0.
