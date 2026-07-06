@@ -161,4 +161,29 @@ describe('structural lines (assembled, never LLM-written)', () => {
     expect(answer.definitionLine).toBe('Definitie: werkloosheidspercentage, seizoengecorrigeerd.');
     expect(answer.text).toContain('werkloosheidspercentage, seizoengecorrigeerd');
   });
+
+  it('suppresses a CIRCULAR definition line — onboarded case, definitionLabel === the measure title (#115)', async () => {
+    // On-demand onboarded measures store the CBS measure title AS the
+    // definitionLabel (src/ingestion/onboarding-vocab.ts) — rendering it as a
+    // "Definitie:" just repeats the name and reads as broken. The title is
+    // already in the source line, so the circular line must be dropped.
+    const circular: ValidatedResult = {
+      ...populationSingle,
+      attribution: {
+        ...populationSingle.attribution,
+        definitionLabel: populationSingle.cells[0]!.measureTitle,
+      },
+    };
+    const answer = await composeAnswer(circular, { client: new ThrowingClient() });
+    expect(answer.definitionLine).toBeNull();
+    expect(answer.text).not.toContain('Definitie:');
+  });
+
+  it('KEEPS a seed definition that differs from its title only in CASE (case-sensitivity is load-bearing)', async () => {
+    // populationSingle: definitionLabel 'bevolking op 1 januari' vs measureTitle
+    // 'Bevolking op 1 januari' — a case-INsensitive circular test would wrongly
+    // drop this real seed line. The suppression must compare case-sensitively.
+    const answer = await composeAnswer(populationSingle, { client: new ThrowingClient() });
+    expect(answer.definitionLine).toBe('Definitie: bevolking op 1 januari.');
+  });
 });
