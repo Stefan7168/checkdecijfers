@@ -62,11 +62,13 @@ Three principles, also referenced as (a)/(b)/(c) across the docs:
 5. Explained in plain language the product owner can follow: what changed, why, how it was verified.
 6. **Before ending the session, without being asked: append process lessons to [docs/lessons-learned.md](docs/lessons-learned.md) (if there are any — build sessions almost always have some) and save/update the relevant memory files.** This item was previously stated only in Conventions and got missed in practice because it wasn't on this checklist — state explicitly, unprompted, at the end of a build session that this step was done (or that there was nothing lesson-worthy this time). The owner should never have to ask for this. **When the owner signals the session is ending, run the full Session wrap-up ritual below — not a partial pass.**
 
-## Session wrap-up (end-of-conversation ritual) — BINDING, RUN IN FULL
+## Session wrap-up (end-of-conversation ritual) — run in full when triggered
 
-**Trigger.** When the owner signals the session is ending — e.g. *"we're wrapping up"*, *"end of conversation"*, *"let's close this"*, *"we're moving to a new session"*, *"the context window is getting small / running low on context"*, *"you know what to do"* — run the COMPLETE close-out below **before you stop**. Do not do a partial pass; do not wait to be asked twice (the owner had to ask three times on 2026-07-06 — that must never recur). The `/wrap-session` command runs this same list.
+**Scope — read this first.** This section governs the SESSION's thoroughness, nothing more. The owner is always in charge: an instruction from the owner in the moment overrides this entirely (skip it, defer it, do only part — that is the rule), and it never overrides safety or plain good judgment. It only ever runs when the owner signals a wrap-up; it takes no destructive or outward-facing action on its own. "Run in full" is about the session actually finishing the checklist, not about the checklist having any authority over the owner.
 
-**Discipline.** Reproduce the checklist as a literal list in your reply and mark each item ✅ done / ⏭️ N/A (with a one-line reason). **Never declare the session wrapped until every item is ✅ or ⏭️.** If unsure whether a doc applies, open it and check — don't assume.
+**Trigger.** When the owner signals the session is ending — e.g. *"we're wrapping up"*, *"end of conversation"*, *"let's close this"*, *"we're moving to a new session"*, *"the context window is getting small / running low on context"*, *"you know what to do"* — run the COMPLETE close-out below **before you stop** (unless the owner says otherwise). Don't do a partial pass and don't wait to be asked twice (the owner had to ask three times on 2026-07-06 — that must never recur). The `/wrap-session` command runs this same list.
+
+**Discipline.** Reproduce the checklist as a literal list in your reply and mark each item ✅ done / ⏭️ N/A (with a one-line reason). Don't declare the session wrapped until every item is ✅ or ⏭️. If unsure whether a doc applies, open it and check — don't assume.
 
 1. **Lessons** — append this session's process lessons to [docs/lessons-learned.md](docs/lessons-learned.md) (newest on top), or state there were none.
 2. **Memory** — save/update the relevant memory files **and** the `MEMORY.md` index line.
