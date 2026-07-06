@@ -13,7 +13,28 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
-const PUBLIC_PATH_PREFIXES = ['/login', '/auth/callback', '/api/stripe/webhook'];
+// Paths reachable WITHOUT a Supabase session. Each entry here authenticates
+// itself (or needs no auth): /login + /auth/callback are the auth flow;
+// /api/stripe/webhook verifies Stripe's signature; /api/onboarding-cron
+// verifies its own CRON_SECRET Bearer (503 unset / 401 wrong) — it is called
+// by Vercel Cron and by the app's own kick (web/lib/onboarding-kick.ts), NEITHER
+// of which carries a user session cookie, so the session-redirect must NOT
+// swallow it (a redirect would 307 the cron caller to /login and the job would
+// silently never run — caught live at the WP16 go-live, session 28).
+const PUBLIC_PATH_PREFIXES = [
+  '/login',
+  '/auth/callback',
+  '/api/stripe/webhook',
+  '/api/onboarding-cron',
+];
+
+/** True when `pathname` may be reached without a Supabase session. Exported so
+ * the allowlist decision — the layer the route-handler tests can't see — is
+ * unit-tested directly (proxy.test.ts); the WP16 go-live regression was a
+ * missing entry here, not a bug in the redirect wiring below. */
+export function isPublicPath(pathname: string): boolean {
+  return PUBLIC_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+}
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -45,7 +66,7 @@ export async function proxy(request: NextRequest) {
   // getClaims() validates the JWT (locally via WebCrypto, or against the
   // Auth server) rather than trusting an unverified session cookie.
   const { data } = await supabase.auth.getClaims();
-  const isPublic = PUBLIC_PATH_PREFIXES.some((prefix) => request.nextUrl.pathname.startsWith(prefix));
+  const isPublic = isPublicPath(request.nextUrl.pathname);
 
   if (!data?.claims && !isPublic) {
     const url = request.nextUrl.clone();
