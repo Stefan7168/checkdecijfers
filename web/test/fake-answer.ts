@@ -42,6 +42,7 @@ export function fakeAttribution(overrides: Partial<Attribution> = {}): Attributi
     coveredPeriods: { from: '2024JJ00', to: '2024JJ00' },
     license: 'CC BY 4.0',
     definitionLabel: null,
+    definitionText: null,
     periodSemantics: null,
     ...overrides,
   };
