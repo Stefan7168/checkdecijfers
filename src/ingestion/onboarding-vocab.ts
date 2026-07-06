@@ -32,6 +32,37 @@ interface UnitMeta {
   unit: string;
   decimals: number;
   title: string;
+  /** Verbatim CBS measure blurb, when captured at ingest (#115 lever b). */
+  description?: string;
+}
+
+/**
+ * Distil a CBS measure `Description` into the one-paragraph definition the answer
+ * shows, WITHOUT rewriting a single word (principle a — CBS's own text or nothing):
+ *   1. take only the FIRST block (CBS appends related-concept glossary blocks
+ *      separated by a blank line — e.g. faillissementen's "Faillissement: Staat
+ *      waarin ..."; those are not this measure's definition, so drop them);
+ *   2. drop a leading line that merely echoes the measure title (CBS often opens
+ *      with the title verbatim, e.g. "Uitgesproken faillissementen\n Het aantal
+ *      ...") — it would read as a stutter next to the answer's own subject;
+ *   3. collapse internal whitespace/newlines to single spaces so it renders as a
+ *      clean sentence in the bubble.
+ * Returns null when nothing usable remains (no blurb, or it was only the title
+ * echo) — the composer then omits the "Definitie:" line entirely.
+ */
+export function cleanCbsDefinition(description: string, title: string): string | null {
+  const firstBlock = description.replace(/\r\n/g, '\n').split(/\n[ \t]*\n/)[0] ?? '';
+  const lines = firstBlock.split('\n').map((l) => l.trim()).filter((l) => l.length > 0);
+  // Trailing sentence punctuation is ignored when matching against the title, so
+  // a leading line like "Consumentenvertrouwen." is still recognized as the title
+  // echo and stripped (review finding: exact equality missed a punctuated echo).
+  const norm = (s: string) => s.replace(/\s+/g, ' ').trim().replace(/[.!?]+$/, '').trim().toLowerCase();
+  if (lines.length > 1 && norm(lines[0]!) === norm(title)) {
+    lines.shift();
+  }
+  const cleaned = lines.join(' ').replace(/\s+/g, ' ').trim();
+  if (cleaned.length === 0 || norm(cleaned) === norm(title)) return null;
+  return cleaned;
 }
 
 /** What one measure looks like in the ingested observations of a table: which
@@ -162,9 +193,15 @@ export async function registerOnboardingVocabulary(
       continue;
     }
     const meta = units?.[shape.measure];
-    // CBS's own title is the definition label (R10 spirit — verbatim, never
-    // invented). Fall back to the code if the units metadata lacks a title.
+    // CBS's own title is the short label / sentence subject (R10 spirit —
+    // verbatim, never invented). Fall back to the code if the units metadata
+    // lacks a title.
     const title = meta?.title ?? shape.measure;
+    // The REAL definition (its meaning + any scale) is CBS's own measure blurb,
+    // distilled to its first block — shown as the answer's "Definitie:" line
+    // (#115 lever b). null when CBS published no usable blurb → the composer
+    // omits the line rather than repeating the title (the old circular case).
+    const definitionText = cleanCbsDefinition(meta?.description ?? '', title);
     const key = onboardedKey(tableId, shape.measure);
     const canonical: CanonicalMeasure = {
       key,
@@ -173,6 +210,7 @@ export async function registerOnboardingVocabulary(
       measureTitle: title,
       dims: {},
       definitionLabel: title,
+      definitionText,
       // The user's own term + the CBS title give the parser two handles onto
       // this key. Deduped, non-empty.
       everydayTerms: [...new Set([topicTerm, title].filter((t) => t.length > 0))],
@@ -180,14 +218,15 @@ export async function registerOnboardingVocabulary(
 
     await db.query(
       `insert into canonical_measures
-         (key, table_id, measure, measure_title, dims, definition_label, everyday_terms, alternates, notes, updated_at)
-       values ($1, $2, $3, $4, '{}'::jsonb, $5, $6, null, $7, now())
+         (key, table_id, measure, measure_title, dims, definition_label, definition_text, everyday_terms, alternates, notes, updated_at)
+       values ($1, $2, $3, $4, '{}'::jsonb, $5, $6, $7, null, $8, now())
        on conflict (key) do update set
          table_id = excluded.table_id,
          measure = excluded.measure,
          measure_title = excluded.measure_title,
          dims = excluded.dims,
          definition_label = excluded.definition_label,
+         definition_text = excluded.definition_text,
          everyday_terms = excluded.everyday_terms,
          notes = excluded.notes,
          updated_at = now()`,
@@ -197,6 +236,7 @@ export async function registerOnboardingVocabulary(
         shape.measure,
         title,
         title,
+        definitionText,
         canonical.everydayTerms,
         `on-demand onboarded from topic "${topicTerm}" (WP16 sub-part 2)`,
       ],

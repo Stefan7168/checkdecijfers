@@ -1,0 +1,15 @@
+-- 014 — carry a REAL CBS definition for on-demand-onboarded measures (#115 lever b).
+--
+-- canonical_measures.definition_label doubles as the answer's sentence SUBJECT
+-- ("Consumentenvertrouwen was in 2024 ..."), so it cannot also hold a full CBS
+-- definition paragraph. This adds a dedicated, NULLABLE column for the verbatim
+-- CBS measure Description (cleaned to its first block), which the answer composer
+-- renders as the "Definitie:" line.
+--
+-- Seed (Phase-0) canonical_measures rows leave this NULL and render exactly as
+-- before — no seed answer changes, so the benchmark cannot regress (proven
+-- hermetically before this migration is applied). Only on-demand-onboarded rows
+-- populate it, from the freshly-ingested CBS metadata (src/ingestion/onboarding-vocab.ts).
+-- Principle (a): the text is CBS's own words, never invented; NULL when CBS
+-- publishes no usable definition.
+alter table canonical_measures add column definition_text text;

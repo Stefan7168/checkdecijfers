@@ -11,6 +11,8 @@ import {
   renderTemplateBody,
   validateAnswerBody,
 } from '../../src/answer/compose/index.ts';
+import { displayValueUnit } from '../../src/answer/compose/template.ts';
+import { buildDefinitionLine } from '../../src/answer/compose/format.ts';
 import type { LlmClient, LlmRequest, LlmResponse } from '../../src/answer/llm/client.ts';
 import {
   cpiSeries,
@@ -185,5 +187,84 @@ describe('structural lines (assembled, never LLM-written)', () => {
     // drop this real seed line. The suppression must compare case-sensitively.
     const answer = await composeAnswer(populationSingle, { client: new ThrowingClient() });
     expect(answer.definitionLine).toBe('Definitie: bevolking op 1 januari.');
+  });
+
+  it('renders the REAL CBS definition (attribution.definitionText) as the Definitie line — onboarded quality (#115 lever b)', async () => {
+    const def =
+      'Het consumentenvertrouwen is een indicator van het vertrouwen van consumenten. ' +
+      'De indicator kan een waarde aannemen van -100 tot +100.';
+    const onboarded: ValidatedResult = {
+      ...populationSingle,
+      attribution: { ...populationSingle.attribution, definitionText: def },
+    };
+    const answer = await composeAnswer(onboarded, { client: new ThrowingClient() });
+    expect(answer.definitionLine).toBe(`Definitie: ${def}`);
+    // the scale — the exact context that was missing — is now in the answer.
+    expect(answer.text).toContain('-100 tot +100');
+  });
+
+  it('the real definition WINS over a circular definitionLabel (definitionText priority, #115 b beats a)', async () => {
+    const onboarded: ValidatedResult = {
+      ...populationSingle,
+      attribution: {
+        ...populationSingle.attribution,
+        definitionLabel: populationSingle.cells[0]!.measureTitle, // would be circular
+        definitionText: 'Aantal inwoners op 1 januari van het jaar.',
+      },
+    };
+    const answer = await composeAnswer(onboarded, { client: new ThrowingClient() });
+    expect(answer.definitionLine).toBe('Definitie: Aantal inwoners op 1 januari van het jaar.');
+  });
+
+  it('appends a terminal period to a definition blurb that lacks one (never alters CBS words)', async () => {
+    const onboarded: ValidatedResult = {
+      ...populationSingle,
+      attribution: { ...populationSingle.attribution, definitionText: 'Aantal inwoners op 1 januari' },
+    };
+    const answer = await composeAnswer(onboarded, { client: new ThrowingClient() });
+    expect(answer.definitionLine).toBe('Definitie: Aantal inwoners op 1 januari.');
+  });
+});
+
+describe('buildDefinitionLine — single source of truth shared by compose + audit-reconstruct (#115 review)', () => {
+  // compose.ts BUILDS the "Definitie:" line and audit/reconstruct.ts RE-DERIVES
+  // it for R8 verification, both via THIS function — so they cannot drift (the
+  // review caught reconstruct using the old, definitionText-blind logic).
+  it('prefers a real CBS definition (definitionText), with a terminal period ensured', () => {
+    const r: ValidatedResult = {
+      ...populationSingle,
+      attribution: { ...populationSingle.attribution, definitionText: 'Aantal inwoners op 1 januari' },
+    };
+    expect(buildDefinitionLine(r)).toBe('Definitie: Aantal inwoners op 1 januari.');
+  });
+  it('falls back to the seed definitionLabel when there is no definitionText', () => {
+    expect(buildDefinitionLine(unemploymentSingle)).toBe('Definitie: werkloosheidspercentage, seizoengecorrigeerd.');
+  });
+  it('suppresses a circular label (== the measure title) and yields null', () => {
+    const r: ValidatedResult = {
+      ...populationSingle,
+      attribution: { ...populationSingle.attribution, definitionLabel: populationSingle.cells[0]!.measureTitle },
+    };
+    expect(buildDefinitionLine(r)).toBeNull();
+  });
+});
+
+describe('displayValueUnit — #115 lever c: long descriptive units set off in parentheses', () => {
+  it('parenthesizes a 3+-word descriptive unit phrase (the onboarded run-on)', () => {
+    expect(displayValueUnit(-24, 0, 'gemiddelde saldo van de deelvragen')).toBe(
+      '-24 (gemiddelde saldo van de deelvragen)',
+    );
+  });
+
+  it('leaves short units bare — no Phase-0/seed regression', () => {
+    expect(displayValueUnit(3.3, 1, '%')).toBe('3,3%');
+    expect(displayValueUnit(1000, 0, 'aantal')).toBe('1.000');
+    expect(displayValueUnit(450, 0, 'euro')).toBe('450 euro');
+    expect(displayValueUnit(120, 0, 'mln kWh')).toBe('120 mln kWh'); // 2 words → bare
+  });
+
+  it('keeps factor units (with digits) in the existing factor-paren form, not the descriptive branch', () => {
+    expect(displayValueUnit(8204, 0, 'x 1 000')).toBe('8.204 (x 1 000)');
+    expect(displayValueUnit(57, 0, '1 000 euro')).toBe('57 (× 1 000 euro)');
   });
 });

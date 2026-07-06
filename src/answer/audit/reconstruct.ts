@@ -23,7 +23,7 @@
 import { DERIVED_DATA_MARKING } from '../../query/index.ts';
 import type { ValidatedResult } from '../../query/index.ts';
 import { buildChartSpec, chartSpecSchema } from '../../chart/index.ts';
-import { buildAttributionLine } from '../compose/format.ts';
+import { buildAttributionLine, buildDefinitionLine } from '../compose/format.ts';
 import { validateAnswerBody } from '../compose/validate.ts';
 import { stableStringify } from '../llm/client.ts';
 import { ANSWER_SCHEMA_VERSION } from '../compose/types.ts';
@@ -153,11 +153,11 @@ function checkAnswerReconstruction(record: AuditRecord, problems: string[]): voi
     problems.push('attribution line does not re-derive from the stored attribution');
   }
 
-  // Structural lines re-derive from stored fields (same rules as compose.ts).
-  const definitionLine =
-    result.attribution.definitionLabel === null
-      ? null
-      : `Definitie: ${result.attribution.definitionLabel}.`;
+  // Structural lines re-derive from stored fields via the SAME shared builder
+  // compose.ts uses (buildDefinitionLine) — so a real onboarded definition
+  // (definitionText, #115 b) and the circular-title suppression (#115 a) both
+  // re-derive byte-identically instead of drifting from the composer.
+  const definitionLine = buildDefinitionLine(result);
   if (answer.definitionLine !== definitionLine) {
     problems.push('definition line does not re-derive from the stored attribution');
   }

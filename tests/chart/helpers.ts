@@ -50,6 +50,7 @@ export function makeResult(
       coveredPeriods: { from, to },
       license: 'CC BY 4.0',
       definitionLabel: null,
+      definitionText: null,
       periodSemantics: null,
       ...attribution,
     },

@@ -158,6 +158,12 @@ export interface Attribution {
    * was used ("werkloosheidspercentage, seizoengecorrigeerd") — the R7
    * transparent-default policy. Null for explicit targets. */
   definitionLabel: string | null;
+  /** The FULL verbatim CBS definition of the measure (its meaning + any scale),
+   * shown as the answer's "Definitie:" line. Populated only for on-demand-
+   * onboarded measures whose CBS blurb was captured (#115 lever b); null for the
+   * curated Phase-0 set and explicit targets, whose short definitionLabel already
+   * reads as its own definition. */
+  definitionText: string | null;
   /** What a period code means for this table + grain (registry
    * period_semantics: stand per 1 januari vs. jaargemiddelde). */
   periodSemantics: string | null;
