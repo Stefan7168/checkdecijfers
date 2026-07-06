@@ -60,4 +60,23 @@ Three principles, also referenced as (a)/(b)/(c) across the docs:
 3. Relevant docs updated in the same change (scope, ADRs, open-questions). If the change moves project state — a phase-checklist item completed, a benchmark run, a changed "next up" — update [docs/STATUS.md](docs/STATUS.md) too, with **measured results, never aspirational ones**. Docs that lag the code are bugs. When a decision changes, update **every** place it is stated and grep for the old framing (see *Source of truth → Doc freshness*) — a doc that contradicts a newer decision is a bug that confuses the next session.
 4. New assumptions marked and mirrored in open-questions.
 5. Explained in plain language the product owner can follow: what changed, why, how it was verified.
-6. **Before ending the session, without being asked: append process lessons to [docs/lessons-learned.md](docs/lessons-learned.md) (if there are any — build sessions almost always have some) and save/update the relevant memory files.** This item was previously stated only in Conventions and got missed in practice because it wasn't on this checklist — state explicitly, unprompted, at the end of a build session that this step was done (or that there was nothing lesson-worthy this time). The owner should never have to ask for this.
+6. **Before ending the session, without being asked: append process lessons to [docs/lessons-learned.md](docs/lessons-learned.md) (if there are any — build sessions almost always have some) and save/update the relevant memory files.** This item was previously stated only in Conventions and got missed in practice because it wasn't on this checklist — state explicitly, unprompted, at the end of a build session that this step was done (or that there was nothing lesson-worthy this time). The owner should never have to ask for this. **When the owner signals the session is ending, run the full Session wrap-up ritual below — not a partial pass.**
+
+## Session wrap-up (end-of-conversation ritual) — BINDING, RUN IN FULL
+
+**Trigger.** When the owner signals the session is ending — e.g. *"we're wrapping up"*, *"end of conversation"*, *"let's close this"*, *"we're moving to a new session"*, *"the context window is getting small / running low on context"*, *"you know what to do"* — run the COMPLETE close-out below **before you stop**. Do not do a partial pass; do not wait to be asked twice (the owner had to ask three times on 2026-07-06 — that must never recur). The `/wrap-session` command runs this same list.
+
+**Discipline.** Reproduce the checklist as a literal list in your reply and mark each item ✅ done / ⏭️ N/A (with a one-line reason). **Never declare the session wrapped until every item is ✅ or ⏭️.** If unsure whether a doc applies, open it and check — don't assume.
+
+1. **Lessons** — append this session's process lessons to [docs/lessons-learned.md](docs/lessons-learned.md) (newest on top), or state there were none.
+2. **Memory** — save/update the relevant memory files **and** the `MEMORY.md` index line.
+3. **The FULL doc set → final MEASURED state** (not just the trackers — this is the step that was skipped and caused the rework). Update every one that applies:
+   - [docs/STATUS.md](docs/STATUS.md) — the "Last updated" entry **and** the "NEXT SESSION STARTS HERE" / top-priority block.
+   - [docs/open-questions.md](docs/open-questions.md) — the rows this session touched.
+   - [docs/08-build-plan.md](docs/08-build-plan.md) — mark the WP/follow-up done; flag what's now next.
+   - [docs/RUNBOOK.md](docs/RUNBOOK.md) — any new operational procedure or gotcha (a supervised step, a script, a "plain sync won't do X, `--rebaseline` will" trap).
+   - The **ADR(s)** the change touched (schema → the registry/data ADR; composition/pipeline → the answer ADRs) with an as-built note, **and** [docs/04-architecture.md](docs/04-architecture.md) capability rows.
+4. **Stale-doc sweep** — `grep -rn` across `docs/` for the OLD framing of anything changed this session; fix every hit. Scope it to *every doc that mentions the thing*, not just the ones you edited.
+5. **Clean state** — `git status` clean + fully pushed; `git worktree list` shows no stray worktrees; CI green on every commit (a red-then-fixed commit is fine — say so).
+6. **Cleanup** — delete one-off scratch/verify scripts, keep the reusable ones committed; spin off out-of-scope hygiene as task chips.
+7. **Next-session prompt** — when asked (or when it clearly helps), hand a ready-to-paste kickoff: STATUS-first reading order, current state (live/money-path caveat), the single next priority + its binding constraints/owner steers, model-tier/live-DDL/spend coordination notes, the #118 git-workflow reminder, and the tracked-but-not-focus residuals.
