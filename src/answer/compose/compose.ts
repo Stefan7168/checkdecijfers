@@ -30,8 +30,23 @@ function assemble(result: ValidatedResult, body: string, source: AnswerSource, e
   usage: LlmUsage;
   attempts: ComposeAttempt[];
 }): ComposedAnswer {
+  // Suppress a CIRCULAR "Definitie:" line — one that is merely the measure's own
+  // title, which the source line already carries. This is the on-demand onboarded
+  // case: onboarding-vocab.ts stores an onboarded measure's definitionLabel AS the
+  // CBS measure title verbatim (no curated definition exists), so rendering it as a
+  // "Definitie:" repeats the name and reads as broken (#115). A curated SEED
+  // definition (a real phrase, ≠ the title) still renders. Compare whitespace-
+  // normalized but CASE-SENSITIVE: the seed 'population' measure's title vs
+  // definition differ only in case ('Bevolking op 1 januari' vs 'bevolking op 1
+  // januari'), so a case-insensitive test would wrongly drop a real seed line.
+  const definitionLabel = result.attribution.definitionLabel;
+  const measureTitle = result.cells[0]?.measureTitle ?? null;
+  const isCircular =
+    definitionLabel !== null &&
+    measureTitle !== null &&
+    definitionLabel.replace(/\s+/g, ' ').trim() === measureTitle;
   const definitionLine =
-    result.attribution.definitionLabel === null ? null : `Definitie: ${result.attribution.definitionLabel}.`;
+    definitionLabel === null || isCircular ? null : `Definitie: ${definitionLabel}.`;
   const markingLine = result.derivations.length > 0 ? `— ${DERIVED_DATA_MARKING}` : null;
   const attribution = buildAttributionLine(result);
   const text = [body, '', ...(definitionLine ? [definitionLine] : []), ...(markingLine ? [markingLine] : []), attribution].join('\n');
