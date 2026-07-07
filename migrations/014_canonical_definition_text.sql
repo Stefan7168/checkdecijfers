@@ -3,8 +3,10 @@
 -- canonical_measures.definition_label doubles as the answer's sentence SUBJECT
 -- ("Consumentenvertrouwen was in 2024 ..."), so it cannot also hold a full CBS
 -- definition paragraph. This adds a dedicated, NULLABLE column for the verbatim
--- CBS measure Description (cleaned to its first block), which the answer composer
--- renders as the "Definitie:" line.
+-- CBS measure Description (the WHOLE blurb, only a leading title-echo line
+-- stripped — an earlier "first block only" cut dropped the scale sentence and
+-- was fixed live in 776e645; this comment is updated to match, session-30
+-- review), which the answer composer renders as the "Definitie:" line.
 --
 -- Seed (Phase-0) canonical_measures rows leave this NULL and render exactly as
 -- before — no seed answer changes, so the benchmark cannot regress (proven
