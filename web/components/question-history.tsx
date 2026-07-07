@@ -32,7 +32,16 @@
 // audit row, with its real 100-credit cost via the ledger join CORE-2/this
 // stage wired in history.ts -- rendered by the existing answer branch below,
 // unchanged.
+// #115 residual (the definition expander): an answer entry whose stored
+// envelope exposed structured fields (entry.answerParts, src/billing/
+// history.ts) renders them as separate elements -- body prominent, a LONG
+// CBS definition folded behind a native <details> "Meer over deze meting"
+// (its scale sentence stays visible, web/lib/definition-display.ts), the R4
+// attribution ALWAYS fully visible (the #90 convention: never behind a
+// click). Entries without answerParts (refusals, clarifications, legacy
+// rows) render the finalText blob exactly as before -- zero-loss fallback.
 import type { QuestionHistoryEntry } from '../backend/billing/index.ts';
+import { splitDefinitionForDisplay } from '../lib/definition-display.ts';
 
 /** Dutch, deterministic, owner-readable -- no LLM involved in producing any
  * of this (CLAUDE.md: Dutch product copy is always a fixed template). */
@@ -70,6 +79,36 @@ const SNIPPET_LENGTH = 120;
 function snippet(text: string): string {
   const collapsed = text.replace(/\s+/g, ' ').trim();
   return collapsed.length > SNIPPET_LENGTH ? `${collapsed.slice(0, SNIPPET_LENGTH)}…` : collapsed;
+}
+
+/** The structured answer view (#115): each envelope field as its own element,
+ * so a long definition can fold without touching the body, marking or
+ * attribution. Only rendered when history.ts vouched for zero loss (body +
+ * attribution both present in the stored envelope). */
+function AnswerBody({ parts }: { parts: NonNullable<QuestionHistoryEntry['answerParts']> }) {
+  const definition = parts.definitionLine === null ? null : splitDefinitionForDisplay(parts.definitionLine);
+  return (
+    <div className="mt-2 flex flex-col gap-1.5 text-sm text-zinc-700">
+      <p className="whitespace-pre-wrap">{parts.body}</p>
+      {parts.stalenessWarning === null ? null : (
+        <p className="text-xs text-amber-800">{parts.stalenessWarning}</p>
+      )}
+      {definition === null ? null : (
+        <>
+          {definition.inline === null ? null : <p className="text-xs text-zinc-500">{definition.inline}</p>}
+          {definition.folded === null ? null : (
+            <details className="text-xs text-zinc-500">
+              <summary className="cursor-pointer font-medium text-zinc-600">Meer over deze meting</summary>
+              <p className="mt-1 whitespace-pre-wrap">{definition.folded}</p>
+            </details>
+          )}
+        </>
+      )}
+      {parts.markingLine === null ? null : <p className="text-xs text-zinc-500">{parts.markingLine}</p>}
+      {/* The R4 attribution sentence: always fully visible (#90), smallest. */}
+      <p className="text-xs text-zinc-400">{parts.attributionLine}</p>
+    </div>
+  );
 }
 
 function formatDate(iso: string): string {
@@ -162,7 +201,11 @@ export function QuestionHistory({ items }: { items: QuestionHistoryEntry[] }) {
                     </div>
                   </div>
                 ) : null}
-                <div className="mt-2 whitespace-pre-wrap text-sm text-zinc-700">{item.finalText}</div>
+                {item.answerParts !== null ? (
+                  <AnswerBody parts={item.answerParts} />
+                ) : (
+                  <div className="mt-2 whitespace-pre-wrap text-sm text-zinc-700">{item.finalText}</div>
+                )}
               </>
             )}
           </details>
