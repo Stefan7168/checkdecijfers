@@ -29,6 +29,7 @@ for p in \
   "wrap up" "wrapping up" "wrap it up" "wrap this up" "wrap things up" \
   "end of conversation" "end this conversation" "close this conversation" \
   "close the conversation" "closing this conversation" "closing the conversation" \
+  "let's close this" "lets close this" "let’s close this" "close this session" \
   "moving to a new session" "move to a new session" "new claude code session" \
   "new claude co-session" "claude co-session" "running low on context" \
   "low on context" "you know what to do" "round off" "round up the session" \

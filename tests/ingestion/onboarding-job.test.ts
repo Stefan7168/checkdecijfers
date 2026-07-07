@@ -384,3 +384,83 @@ describe('runOnboardingJob — piggyback', () => {
     }
   });
 });
+
+// Session-30 review follow-ups (both double-confirmed by the adversarial
+// verify pass): the refund amount must be the STORED debit, and one poisoned
+// exhausted row must never wedge the whole queue.
+describe('runOnboardingJob — refund reverses the STORED debit, never the live price', () => {
+  it('a heavy-class reprice between debit and refund still refunds exactly what was debited', async () => {
+    const h = await harness(throwingSource());
+    try {
+      const { userId, pendingId } = await queueRequest(h.db, 'q', 't');
+      // The owner reprices 'heavy' AFTER the debit, BEFORE the job runs (the
+      // ADR 026 pricing seam — deliberately easy to change). The queued row
+      // was debited 100; a refund that re-read the price would compensate
+      // 150 → net +50 minted on a FAILED onboarding.
+      await h.db.query(`update action_class_prices set credits = 150 where action_class = 'heavy'`);
+
+      const summary = await runOnboardingJob(h.deps());
+      expect(summary.processed).toEqual({ id: pendingId, tableId: TABLE, outcome: 'failed' });
+
+      // 150 grant − 100 debit + exactly 100 back = 150. Not 200.
+      expect(await getBalance(h.db, userId)).toBe(150);
+      // The refund email states the true amount.
+      expect(h.notified[0]!.refundedCredits).toBe(100);
+    } finally {
+      await h.close();
+    }
+  });
+});
+
+describe('runOnboardingJob — a poisoned exhausted row never wedges the queue', () => {
+  it('refund throw on one exhausted row: the job still claims another pending row; the poisoned row is retried next run', async () => {
+    const h = await harness();
+    try {
+      // Row A: exhausted (stale running at the attempt cap).
+      const a = await queueRequest(h.db, 'vraag A', 'tA');
+      await h.db.query(
+        `update pending_table_requests set status = 'running', attempt_count = $1,
+           claimed_at = now() - ($2 || ' milliseconds')::interval * 2
+         where id = $3`,
+        [MAX_ATTEMPTS, STALE_RUNNING_MS, a.pendingId],
+      );
+      // Row B: an ordinary pending row behind it.
+      const b = await queueRequest(h.db, 'vraag B', 'tB');
+
+      // A db that fails EXACTLY row A's compensation insert — the shape of a
+      // transient ledger error (or the migration-013 guard missing). The
+      // refund runs inside failAndRefund's TRANSACTION (refund + finalize are
+      // atomic by design), so the poison must wrap the TX client recursively
+      // — poisoning only the outer handle never reaches the refund, and the
+      // rollback is exactly what keeps row A retryable.
+      const poison = (target: Db): Db => ({
+        query: (text: string, params?: unknown[]) =>
+          /insert into credit_transactions/i.test(text) && (params ?? []).includes(a.debitId)
+            ? Promise.reject(new Error('boom: transient ledger failure'))
+            : target.query(text, params),
+        withTransaction: (fn) => target.withTransaction((tx) => fn(poison(tx))),
+      });
+      const poisoned = poison(h.db);
+
+      // The job must NOT throw (the route would 500), and step 2 must still
+      // claim row B — one poisoned row may not stall the whole queue.
+      const summary = await runOnboardingJob(h.deps({ db: poisoned }));
+      expect(summary.capExhausted).toContain(a.pendingId);
+      expect(summary.processed!.id).toBe(b.pendingId);
+      expect(summary.processed!.outcome).toBe('delivered');
+
+      // Row A is still 'running' at the cap: NOT lost, NOT silently failed
+      // without its refund — the next invocation re-selects it.
+      const rowA = await getPendingRequest(h.db, a.pendingId);
+      expect(rowA!.status).toBe('running');
+
+      // Next run (ledger healthy again): row A is failed + refunded in full.
+      await runOnboardingJob(h.deps());
+      const rowAAfter = await getPendingRequest(h.db, a.pendingId);
+      expect(rowAAfter!.status).toBe('failed');
+      expect(await getBalance(h.db, a.userId)).toBe(150);
+    } finally {
+      await h.close();
+    }
+  });
+});
