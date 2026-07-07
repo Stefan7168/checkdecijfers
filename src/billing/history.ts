@@ -91,6 +91,24 @@ export interface QuestionHistoryEntry {
    * fetch itself never got far enough to produce one). Null for every
    * ordinary audit-row entry. */
   onboarding: { status: PendingRequestStatus; topicTerm: string; failureSummary: string | null } | null;
+  /** #115 residual (the definition expander): the answer's structural display
+   * fields, read VERBATIM from the stored ComposedResponse envelope
+   * (response->'answer'->..., the same fields compose.ts assembled finalText
+   * from) -- so the dashboard can render the core answer prominently and fold
+   * a long CBS definition behind an expander instead of showing the whole
+   * blob as one wall of text. Set only when the row is an answer whose stored
+   * envelope carries both `body` and `attributionLine` (the zero-loss rule:
+   * a structured view may never drop the R4 attribution sentence); null
+   * otherwise (refusals, clarifications, redacted rows, rows predating the
+   * envelope) -- the dashboard then falls back to rendering `finalText`,
+   * which stays the complete blob on every entry (email/audit unchanged). */
+  answerParts: {
+    body: string;
+    definitionLine: string | null;
+    markingLine: string | null;
+    attributionLine: string;
+    stalenessWarning: string | null;
+  } | null;
 }
 
 interface HistoryRow {
@@ -105,6 +123,8 @@ interface HistoryRow {
   repliedQuestionNl: string | null;
   /** questionNl this row OFFERED (kind='clarification' rows only). */
   offeredQuestionNl: string | null;
+  /** #115: the stored answer envelope's display fields (answer rows only). */
+  answerParts: QuestionHistoryEntry['answerParts'];
 }
 
 /** null-safe round total: a partial sum would silently understate what the
@@ -146,6 +166,14 @@ export async function getQuestionHistory(
        a.reply_text,
        a.pending_clarification->>'questionNl' as replied_question_nl,
        a.response->'pending'->>'questionNl' as offered_question_nl,
+       -- #115 (definition expander): the answer envelope's own display
+       -- fields, verbatim as compose.ts assembled them. ->> on a refusal/
+       -- clarification envelope (or a redacted sentinel) is simply null.
+       a.response->'answer'->>'body' as answer_body,
+       a.response->'answer'->>'definitionLine' as answer_definition_line,
+       a.response->'answer'->>'markingLine' as answer_marking_line,
+       a.response->'answer'->>'attributionLine' as answer_attribution_line,
+       a.response->>'stalenessWarning' as answer_staleness_warning,
        case
          -- WP16 sub-part 2 (design §5-dashboard): an onboarding DELIVERY row
          -- was never charged its own question_cost debit (the 100-credit
@@ -178,6 +206,24 @@ export async function getQuestionHistory(
       and onboarding_debit.request_id = a.request_id
       and onboarding_debit.reason = 'onboarding_cost'
      where a.user_id = $1
+     ${
+       // #115/review dedupe: an onboarding trigger writes BOTH an
+       // acknowledgment refusal row ("wordt voorbereid", net 0) AND a
+       // pending_table_requests row for the same question -- without this
+       // exclusion the dashboard lists that question twice with two
+       // different credit captions (0 and 100). The queue row (or, once
+       // delivered, the delivery audit row) is the entry that represents
+       // the request, so the ack row it LINKS to (ack_audit_answer_id, a
+       // stored row link -- never a text match) is excluded from the base
+       // scan. A re-ask's 'already pending' ack has no queue row pointing
+       // at it and honestly stays its own entry. Interpolated only when the
+       // caller opted in: while ONBOARDING_ENABLED is off this query must
+       // never touch pending_table_requests -- the table does not exist
+       // until migration 012 (the session-27 GET / 500 incident).
+       includeOnboarding
+         ? 'and not exists (select 1 from pending_table_requests p where p.ack_audit_answer_id = a.id)'
+         : ''
+     }
      -- id as the tie-breaker: two questions asked close enough together can
      -- share a created_at timestamp (observed under PGlite's clock
      -- resolution in tests), and "most recent first" should still mean
@@ -196,6 +242,23 @@ export async function getQuestionHistory(
     replyText: row.reply_text === null ? null : String(row.reply_text),
     repliedQuestionNl: row.replied_question_nl === null ? null : String(row.replied_question_nl),
     offeredQuestionNl: row.offered_question_nl === null ? null : String(row.offered_question_nl),
+    // #115: only an answer row with BOTH body and attribution qualifies for
+    // the structured display (zero-loss rule) -- anything else renders the
+    // finalText blob exactly as before.
+    answerParts:
+      row.kind === 'answer' &&
+      row.answer_body !== null &&
+      row.answer_attribution_line !== null &&
+      !isRedacted(String(row.question))
+        ? {
+            body: String(row.answer_body),
+            definitionLine: row.answer_definition_line === null ? null : String(row.answer_definition_line),
+            markingLine: row.answer_marking_line === null ? null : String(row.answer_marking_line),
+            attributionLine: String(row.answer_attribution_line),
+            stalenessWarning:
+              row.answer_staleness_warning === null ? null : String(row.answer_staleness_warning),
+          }
+        : null,
   }));
 
   // Group oldest -> newest so a reply always sees its clarification first.
@@ -218,6 +281,9 @@ export async function getQuestionHistory(
         const clarifyText = match.entry.finalText;
         match.entry.kind = row.kind;
         match.entry.finalText = row.finalText;
+        // #115: a collapsed round's outcome is the REPLY row's answer -- its
+        // structured fields travel with its finalText.
+        match.entry.answerParts = row.answerParts;
         match.entry.creditsCharged = sumCosts(match.entry.creditsCharged, row.creditsCharged);
         match.entry.clarification = { text: clarifyText, reply: row.replyText };
         // Either side of a collapsed round can be independently redacted (the
@@ -248,6 +314,7 @@ export async function getQuestionHistory(
         clarification: null,
         isDeleted: isRedacted(row.question),
         onboarding: null,
+        answerParts: row.answerParts,
       },
       sortAt: row.createdAt,
       sortId: row.id,
@@ -295,6 +362,7 @@ export async function getQuestionHistory(
         clarification: null,
         isDeleted: false,
         onboarding: { status: row.status, topicTerm: row.topicTerm, failureSummary: row.failureSummary },
+        answerParts: null,
       },
       sortAt: (row.finishedAt ?? row.createdAt).toISOString(),
       sortId: row.id,

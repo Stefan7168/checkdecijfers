@@ -20,8 +20,32 @@ function entry(overrides: Partial<QuestionHistoryEntry> = {}): QuestionHistoryEn
     clarification: null,
     isDeleted: false,
     onboarding: null,
+    answerParts: null,
     ...overrides,
   };
+}
+
+/** #115: a structured answer entry as history.ts exposes it — a long CBS
+ * definition (folds behind the expander) with its scale sentence visible. */
+const LONG_DEFINITION_LINE =
+  'Definitie: Het consumentenvertrouwen geeft weer hoe consumenten het economisch klimaat en hun eigen ' +
+  'financiële situatie beoordelen, gemeten in het maandelijkse Consumenten Conjunctuuronderzoek onder een ' +
+  'steekproef van huishoudens, als het gemiddelde saldo van de positieve en negatieve antwoorden. ' +
+  'De indicator kan een waarde aannemen van -100 (iedereen antwoordt negatief) tot +100 (iedereen antwoordt positief).';
+
+function onboardedAnswerEntry(): QuestionHistoryEntry {
+  return entry({
+    question: 'Wat was het consumentenvertrouwen in 2024?',
+    finalText: 'volledige blob (fallback, niet gerenderd wanneer answerParts er is)',
+    creditsCharged: 100,
+    answerParts: {
+      body: 'Consumentenvertrouwen was in 2024 -24 (gemiddelde saldo van de deelvragen).',
+      definitionLine: LONG_DEFINITION_LINE,
+      markingLine: null,
+      attributionLine: 'Bron: CBS StatLine, tabel 83694NED — Consumentenvertrouwen. Licentie: CC BY 4.0.',
+      stalenessWarning: null,
+    },
+  });
 }
 
 describe('QuestionHistory', () => {
@@ -304,5 +328,61 @@ describe('QuestionHistory', () => {
       expect(screen.getByText('gewone vraag')).toBeInTheDocument();
       expect(screen.getByText('onboarding vraag')).toBeInTheDocument();
     });
+  });
+});
+
+// #115 residual: the definition expander. An answer entry with structured
+// parts renders the body prominently, folds the long CBS definition behind
+// "Meer over deze meting" (scale sentence visible), and ALWAYS shows the full
+// R4 attribution sentence (#90: never behind a click).
+describe('QuestionHistory — structured answer parts (#115)', () => {
+  it('renders body, visible scale sentence, folded definition and the full attribution', () => {
+    render(<QuestionHistory items={[onboardedAnswerEntry()]} />);
+    // The core answer, prominent.
+    expect(
+      screen.getByText('Consumentenvertrouwen was in 2024 -24 (gemiddelde saldo van de deelvragen).'),
+    ).toBeInTheDocument();
+    // The scale sentence stays visible OUTSIDE the fold, verbatim.
+    expect(
+      screen.getByText(
+        'De indicator kan een waarde aannemen van -100 (iedereen antwoordt negatief) tot +100 (iedereen antwoordt positief).',
+      ),
+    ).toBeInTheDocument();
+    // The expander exists and carries the WHOLE definition.
+    expect(screen.getByText('Meer over deze meting')).toBeInTheDocument();
+    expect(screen.getByText(LONG_DEFINITION_LINE.slice('Definitie: '.length))).toBeInTheDocument();
+    // The R4 attribution: fully visible, never folded (#90).
+    expect(
+      screen.getByText('Bron: CBS StatLine, tabel 83694NED — Consumentenvertrouwen. Licentie: CC BY 4.0.'),
+    ).toBeInTheDocument();
+    // The blob is NOT double-rendered when the structured view is active
+    // (it remains the collapsed-summary snippet's source only).
+    expect(
+      screen.queryAllByText('volledige blob (fallback, niet gerenderd wanneer answerParts er is)').length,
+    ).toBeLessThanOrEqual(1);
+  });
+
+  it('keeps a short curated definition inline with no expander (seed answers unchanged)', () => {
+    const item = onboardedAnswerEntry();
+    item.answerParts = {
+      ...item.answerParts!,
+      definitionLine: 'Definitie: inwoners op 1 januari.',
+    };
+    render(<QuestionHistory items={[item]} />);
+    expect(screen.getByText('Definitie: inwoners op 1 januari.')).toBeInTheDocument();
+    expect(screen.queryByText('Meer over deze meting')).toBeNull();
+  });
+
+  it('renders a staleness warning when the envelope carries one', () => {
+    const item = onboardedAnswerEntry();
+    item.answerParts = { ...item.answerParts!, stalenessWarning: 'Let op: deze cijfers zijn ouder dan verwacht.' };
+    render(<QuestionHistory items={[item]} />);
+    expect(screen.getByText('Let op: deze cijfers zijn ouder dan verwacht.')).toBeInTheDocument();
+  });
+
+  it('falls back to the finalText blob when answerParts is null (legacy/refusal rows)', () => {
+    render(<QuestionHistory items={[entry({ finalText: 'gewone blob-weergave' })]} />);
+    expect(screen.getAllByText('gewone blob-weergave').length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByText('Meer over deze meting')).toBeNull();
   });
 });
