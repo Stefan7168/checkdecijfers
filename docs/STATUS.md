@@ -20,27 +20,27 @@
   - **Second creative-brainstorm batch (2026-07-05, owner-filtered, rows [#78–#93](open-questions.md)):** top-5 = citation-copy button (#78), "bewijs dit cijfer" audit exposure (#79, brief first — merge with #70/#90), stat card + PNG download (#80), revision-risk gauge (#81, LARGE — needs revision statistics, brief with #88), pre-send cost transparency (#82); plus batch questions (#83), message-type styling (#84), honest waiting-steps (#85, real steps blocked on the ADR 018 streaming seam), CBS deep-link (#86), historical-range chip (#87, real R5 derivation), revision awareness (#88), "waarom dit antwoord" (#89), source chip (#90), number typography (#91), chart-footer rearrangement (#92); **three ideas explicitly REJECTED by the owner (#93: watch-list, pattern-encoding, comparison card)**. Owner authorized immediate execution alongside recording — **the three small top-5 items (#78/#80/#82) were built the same day as WP20 (session 20, entry below)**; CSV export [#52] stays next in the standing order after that
   
   **KvK is deliberately parked until the website is finished (owner decision 2026-07-04, [#54](open-questions.md)) — do not raise it as a next step.**
-**⚡ NEXT-MODEL HANDOFF (2026-07-07, session-30 close — read this first, then the block below):**
+**⚡ NEXT-MODEL HANDOFF (updated 2026-07-08, session-30 close — read this first, then the block below):**
 
-- **Repo state (3 sentences):** Production is LIVE (`ONBOARDING_ENABLED=1`, real credits move; the owner is the only user). Four gate-green fix PRs ([#13](https://github.com/Stefan7168/checkdecijfers/pull/13)–[#16](https://github.com/Stefan7168/checkdecijfers/pull/16)) await owner review/merge; `main` holds only session-30 docs. The #111 finder design is GATED on the owner's model-tier answer (dossier: [session-briefs/2026-07-07-111-problem-dossier.md](session-briefs/2026-07-07-111-problem-dossier.md)) — do NOT start it unprompted.
-- **Tidying / small-task checklist** (each = own branch + PR per #118; never push code to `main`):
-  - [ ] #119 — idempotency check at job claim (deliver→finalize crash window; fix sketch in [open-questions #119](open-questions.md))
-  - [ ] #120 — GDPR retention: cover onboarding data (brief in [open-questions #120](open-questions.md); task chip `task_16f26281` exists)
-  - [ ] #116 — delivery email needs a link back to the app (small; `src/ingestion/onboarding-notify.ts`)
-  - [ ] After the PRs merge: delete the four fix branches; note #13+#16 both touch `web/app/actions.ts` (separate hunks — auto-merges)
-  - [ ] #121, #112-calibration, #117/#74 — need the OWNER first (decision / live spend); do not build
-- **Executor prompts (copy-paste one to the next model):**
+- **Repo state (3 sentences):** Production is LIVE (`ONBOARDING_ENABLED=1`, real credits move; the owner is the only user), and all session-30 fix PRs (#13–#16) are **MERGED + DEPLOYED** (CI gate+deploy green — incl. the validator fix that heals the live answer's R8 audit trail). `main` additionally carries four FROZEN designs: **WP27** (#111 finder fit-gate, adversarially review-amended), **WP28** (Google SSO), **WP29** (follow-up chips #73), **WP30a/b** (multi-source waist; **WP30c first-source choice DEFERRED by the owner — CBS-first, see [#123](open-questions.md)**). Nothing is blocked on an owner decision except WP30c and the WP26 safelist read-back.
+- **Build queue** (each = own branch + PR per #118; never push code to `main`):
+  - [ ] **WP27** — the owner's top priority; stages A–C hermetic, stage D supervised (owner present). Brief: [session-briefs/2026-07-07-111-design.md](session-briefs/2026-07-07-111-design.md)
+  - [ ] **WP28** — Google SSO; autonomous-safe; owner dashboard steps in the brief §4. Brief: [session-briefs/2026-07-08-google-sso-brief.md](session-briefs/2026-07-08-google-sso-brief.md)
+  - [ ] **WP29** — follow-up chips; hermetic, autonomous-safe. Brief: [session-briefs/2026-07-08-follow-up-chips-brief.md](session-briefs/2026-07-08-follow-up-chips-brief.md)
+  - [ ] **WP30a/b** — after WP27; pre-build adversarial design review first (the WP27 pattern). ADR: [030](decisions/030-multi-source-architecture.md)
+  - [ ] Smalls: #119 (job claim idempotency), #120 (GDPR onboarding data; chip `task_16f26281`), #116 (email chat-link) — briefs in [open-questions.md](open-questions.md)
+- **Executor prompts (copy-paste one):**
 
   ```text
-  Continue checkdecijfers.nl. Read CLAUDE.md, then docs/STATUS.md top block. Fix open-questions #119: add an idempotency check when the onboarding job claims a row — if an audit_answers row with source_tag='onboarding_delivery' already exists for that request_id, finalizeDelivered instead of re-running delivery (src/ingestion/onboarding.ts). Pin the crash-window replay hermetically in tests/ingestion/onboarding-job.test.ts. Branch + PR per #118. Run the STATUS verification block before opening the PR.
+  Continue checkdecijfers.nl. Read CLAUDE.md, then docs/STATUS.md top block. Build WP27 stage A per docs/session-briefs/2026-07-07-111-design.md — follow it literally; the invariants block names what may not change. Branch + PR per #118. Stage A's merge needs the supervised fixture-record step: prepare everything, then flag the owner. Run the STATUS verification block before opening the PR.
   ```
 
   ```text
-  Continue checkdecijfers.nl. Read CLAUDE.md, then docs/STATUS.md top block. Fix open-questions #120: widen deleteUserQuestionHistory + purgeExpiredQuestionHistory (src/answer/audit/retention.ts) to also redact source_tag='onboarding_delivery' audit rows AND pending_table_requests.question_text/topic_term (UPDATE with the existing sentinel, never DELETE; keep the #14 pins: calling-user-only, ledger untouched, benchmark rows untouched, idempotent). Extend tests/audit/retention.test.ts. Branch + PR per #118. Run the STATUS verification block before opening the PR.
+  Continue checkdecijfers.nl. Read CLAUDE.md, then docs/STATUS.md top block. Build WP28 per docs/session-briefs/2026-07-08-google-sso-brief.md — follow it literally (three files + tests; the "must NOT touch" list is binding). Branch + PR per #118. Run the STATUS verification block before opening the PR.
   ```
 
   ```text
-  Continue checkdecijfers.nl. Read CLAUDE.md, then docs/STATUS.md top block. Fix open-questions #116: the delivery/refund email (src/ingestion/onboarding-notify.ts) must include a link to https://checkdecijfers.vercel.app so the user can open their dashboard. Dutch copy, deterministic template, no LLM. Extend tests/ingestion/onboarding-notify.test.ts. Branch + PR per #118. Run the STATUS verification block before opening the PR.
+  Continue checkdecijfers.nl. Read CLAUDE.md, then docs/STATUS.md top block. Build WP29 per docs/session-briefs/2026-07-08-follow-up-chips-brief.md — follow it literally (servability-gate every chip; zero prompt bytes). Branch + PR per #118. Run the STATUS verification block before opening the PR.
   ```
 
 - **Verification block (run for EVERY change, from repo root; ALL must pass before a PR):**
