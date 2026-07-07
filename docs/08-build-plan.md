@@ -318,6 +318,18 @@ Built as approved, supervised as required (owner confirmed the live window in-se
 
 ---
 
+## WP27 — finder shape-fit gate + candidate fallback (#111)  ▶ DESIGN FROZEN (session 30, Fable, owner-authorized) — execute-ready
+
+The stock-vs-flow finder-precision fix. **Canonical design: [session-briefs/2026-07-07-111-design.md](session-briefs/2026-07-07-111-design.md); decisions + alternatives: ADR [027](decisions/027-finder-shape-fit-gate.md); evidence: the [problem dossier](session-briefs/2026-07-07-111-problem-dossier.md).** Shape: question-aware rerank (prompt v2) + an in-job measure-fit gate (metadata-only `fetchTableSchema` + closed-choice Haiku fit check with a hard allowlist) + try-next-candidate before any refund (migration 015 carries `candidate_ids`). Measurement FIRST: extend the tablefinder labelled set (bijstand stock + flow + a disclose case) and seed a measure-fit labelled set before writing product code. Build hermetically (stages 0–3), then the supervised live step (stage 4: migration 015, fixture recording ~cents, threshold calibration, the live bijstand acceptance test). Per #118: autonomous build ⇒ branch + PR + owner review.
+
+## WP28 — Google SSO next to the magic link (owner request, 2026-07-08)  ▶ DESIGN FROZEN — execute-ready, autonomous-safe, independent of WP27
+
+"Doorgaan met Google" on the login page via Supabase Auth's built-in provider. **Design: ADR [028](decisions/028-google-sso.md); literal execute brief (written for a smaller executor): [session-briefs/2026-07-08-google-sso-brief.md](session-briefs/2026-07-08-google-sso-brief.md).** Three files (new `signInWithGoogle` action, the button, tests incl. the callback/proxy cross-pin); the existing `/auth/callback`, proxy allowlist, signup-grant trigger and all of `src/` are byte-untouched. Provider config = owner RUNBOOK steps (Google Cloud + Supabase dashboards; secrets never enter the repo); fail-soft until configured, magic link unaffected. The live round trip + the one-account/one-grant linking check (ADR 028 D2) are the owner's post-merge acceptance test.
+
+## WP29 — follow-up suggestion chips under an answer (#73, owner request 2026-07-08)  ▶ DESIGN FROZEN — execute-ready, hermetic, autonomous-safe
+
+The owner's "give users ideas, provoke the next question" ask = brainstorm #73, previously deferred until suggestions could be SERVABILITY-backed. **Design: ADR [029](decisions/029-follow-up-suggestion-chips.md); literal execute brief: [session-briefs/2026-07-08-follow-up-chips-brief.md](session-briefs/2026-07-08-follow-up-chips-brief.md).** Four deterministic generators (adjacent period / trend / region variant / same-table topic) over the answered intent + registry, every chip gated through the `echoServability` dry-run (the recorded #73 blocker, now the design's core rule), max 3, zero LLM, zero prompt bytes, `suggestions` as a structural envelope field (R8 `text` byte-untouched). v1 click = FILL the input (the #75 convention, #82 cost line stays the money surface — no new charged entry point); v2 = the WP26 Mechanism-A handler swap once that ships (designed-in seam). Independent of WP27/WP28.
+
 ## WP24 (working number) — site shell: header, footer, logout — placeholder, blocked only on a copy sign-off
 
 *Placeholder (added 2026-07-05/06, session boundary) from the [UX design brief](10-ux-design-brief.md) — full reasoning and evidence there; this entry is the buildable summary. Not started.*
