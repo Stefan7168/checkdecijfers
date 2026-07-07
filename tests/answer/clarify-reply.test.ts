@@ -210,3 +210,103 @@ describe('fail-closed catch-all (the pipeline never throws, never serves a parti
     expect(response.internalNote).toContain('boom');
   });
 });
+
+// #112: once live turns load the onboarded vocabulary, a clarification's
+// pending candidates can carry an 'onboarded:' key — the reply merge must
+// accept exactly the same extra keys the first turn's parse did, or the round
+// dead-ends in a paid internal refusal the user did nothing to deserve.
+describe('#112: the reply merge accepts onboarded vocabulary keys', () => {
+  const ONBOARDED_KEY = 'onboarded:TESTNED:M000001';
+
+  /** A minimal OnboardedMeasure — enough for prompt + schema; resolution is
+   * backed by a cloned registry row (below), mirroring how a real onboarded
+   * measure exists in canonical_measures by the time a reply turn sees it. */
+  const EXTRA = [
+    {
+      measure: {
+        key: ONBOARDED_KEY,
+        tableId: 'TESTNED',
+        measure: 'M000001',
+        measureTitle: 'Testmaat',
+        dims: {},
+        definitionLabel: 'Testmaat',
+        everydayTerms: ['testmaat'],
+      },
+      grains: ['JJ' as const],
+      regional: false,
+    },
+  ];
+
+  it('absent/empty extra vocabulary keeps the clarify request byte-identical (fixtures stay valid)', async () => {
+    const { buildClarifyRequest } = await import('../../src/answer/intent/clarify.ts');
+    const bare = buildClarifyRequest(PENDING, 'Utrecht');
+    const explicitEmpty = buildClarifyRequest(PENDING, 'Utrecht', { extraCanonicalMeasures: [] });
+    expect(explicitEmpty.system).toBe(bare.system);
+    expect(JSON.stringify(explicitEmpty.jsonSchema)).toBe(JSON.stringify(bare.jsonSchema));
+  });
+
+  it('an onboarded measure extends BOTH the vocabulary prompt and the key schema', async () => {
+    const { buildClarifyRequest } = await import('../../src/answer/intent/clarify.ts');
+    const request = buildClarifyRequest(PENDING, 'Utrecht', { extraCanonicalMeasures: EXTRA });
+    expect(request.system).toContain(ONBOARDED_KEY);
+    expect(JSON.stringify(request.jsonSchema)).toContain(ONBOARDED_KEY);
+  });
+
+  it('a reply parse onto an onboarded key VALIDATES with the vocabulary — and throws without it', async () => {
+    const raw = rawDataQuery({
+      canonicalKey: ONBOARDED_KEY,
+      regions: null,
+      period: { kind: 'year', year: 2024 },
+      derivation: 'none',
+      confidence: 0.95,
+      reading: 'testmaat in 2024',
+    });
+    // Without the extra vocabulary the key fails schema validation — the
+    // mutation proof that threading extraCanonicalMeasures is load-bearing.
+    await expect(parseClarificationReply(db, PENDING, 'testmaat', { client: new CannedClient(raw) })).rejects.toThrow(
+      /canonicalKey|invalid/i,
+    );
+    // With it, the parse validates and resolves (the registry row exists —
+    // cloned below — so this is the real reply-turn path, not a stub).
+    await db.query(
+      `insert into cbs_tables (id, title, platform, expected_dimensions, default_coordinates, units, status, last_sync_at)
+       select 'TESTNED', title, platform, expected_dimensions, '{}'::jsonb, units, status, last_sync_at
+         from cbs_tables where id = (select table_id from canonical_measures where key = 'population_on_1_january')
+       on conflict (id) do nothing`,
+    );
+    await db.query(
+      `insert into canonical_measures (key, table_id, measure, measure_title, dims, definition_label, everyday_terms, updated_at)
+       values ($1, 'TESTNED', 'M000001', 'Testmaat', '{}'::jsonb, 'Testmaat', $2, now())
+       on conflict (key) do nothing`,
+      [ONBOARDED_KEY, ['testmaat']],
+    );
+    const outcome = await parseClarificationReply(db, PENDING, 'testmaat', {
+      client: new CannedClient(raw),
+      extraCanonicalMeasures: EXTRA,
+    });
+    // The key parsed + resolved against the registry row: whatever the policy
+    // decides downstream, it is an honest ParseOutcome — never the schema
+    // throw the missing vocabulary produced above.
+    expect(['intent', 'clarification', 'refusal']).toContain(outcome.kind);
+  });
+
+  it('respondToClarificationReply threads the vocabulary through (no paid internal dead-end)', async () => {
+    const raw = rawDataQuery({
+      canonicalKey: ONBOARDED_KEY,
+      regions: null,
+      period: { kind: 'year', year: 2024 },
+      derivation: 'none',
+      confidence: 0.95,
+      reading: 'testmaat in 2024',
+    });
+    const response = await respondToClarificationReply(db, PENDING, 'testmaat', {
+      ...options(new CannedClient(raw)),
+      extraCanonicalMeasures: EXTRA,
+    });
+    // Without respond.ts's threading this would be reason 'internal'
+    // (RawParseValidationError) — the exact paid dead-end #112 forbids.
+    if (response.kind === 'refusal') {
+      expect(response.reason).not.toBe('internal');
+    }
+  });
+});

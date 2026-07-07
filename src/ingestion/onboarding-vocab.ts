@@ -225,6 +225,12 @@ export async function registerOnboardingVocabulary(
     };
 
     await db.query(
+      // everyday_terms UNIONS with what an earlier onboarding of the same
+      // table already learned (first-occurrence order kept, so re-running with
+      // the SAME term is byte-stable): a re-onboard from a NEW synonym must
+      // ADD that synonym, never erase the old one — a plain
+      // `excluded.everyday_terms` overwrite silently unlearned the previous
+      // term, so the previously-answerable phrasing regressed (#112).
       `insert into canonical_measures
          (key, table_id, measure, measure_title, dims, definition_label, definition_text, everyday_terms, alternates, notes, updated_at)
        values ($1, $2, $3, $4, '{}'::jsonb, $5, $6, $7, null, $8, now())
@@ -235,7 +241,15 @@ export async function registerOnboardingVocabulary(
          dims = excluded.dims,
          definition_label = excluded.definition_label,
          definition_text = excluded.definition_text,
-         everyday_terms = excluded.everyday_terms,
+         everyday_terms = (
+           select array_agg(t order by ord)
+             from (
+               select distinct on (t) t, ord
+                 from unnest(canonical_measures.everyday_terms || excluded.everyday_terms)
+                      with ordinality as u(t, ord)
+                order by t, ord
+             ) dedup
+         ),
          notes = excluded.notes,
          updated_at = now()`,
       [
@@ -254,4 +268,92 @@ export async function registerOnboardingVocabulary(
   }
 
   return { onboarded, skippedMeasures };
+}
+
+/**
+ * Read-only counterpart of registerOnboardingVocabulary: loads EVERY
+ * previously-onboarded measure (key prefix 'onboarded:') back into the
+ * OnboardedMeasure shape the intent parser's `extraCanonicalMeasures` channel
+ * expects — so a fresh LIVE chat turn recognizes an already-onboarded topic
+ * and answers it at the normal question price instead of re-triggering the
+ * full 100-credit onboarding flow (#112, the go-live money bug).
+ *
+ * Grains and the regional flag are re-derived from the SAME sources
+ * registration used (observations at the empty coordinate; the table's
+ * expected_dimensions) — measured from ingested data, never guessed. A
+ * measure whose empty-coordinate observations have since disappeared (e.g. a
+ * narrower re-sync) is skipped, mirroring registration's own "an
+ * un-registerable measure simply isn't offered" rule — offering it would
+ * only dead-end in a refusal.
+ *
+ * Ordering is pinned (by key) so the rendered prompt bytes are deterministic
+ * for a given registry state. Returns [] when nothing is onboarded — the
+ * caller then passes an empty extra list and the prompt stays byte-identical
+ * to the calibrated Phase-0 one.
+ */
+export async function loadOnboardedVocabulary(db: Db): Promise<OnboardedMeasure[]> {
+  const { rows } = await db.query(
+    `select key, table_id, measure, measure_title, definition_label, definition_text, everyday_terms
+       from canonical_measures
+      where key like 'onboarded:%'
+      order by key`,
+  );
+  if (rows.length === 0) return [];
+
+  const tableIds = [...new Set(rows.map((r) => String(r.table_id)))];
+
+  const grainRows = await db.query(
+    `select table_id, measure, period_grain
+       from observations
+      where table_id = any($1) and dims = '{}'::jsonb
+      group by table_id, measure, period_grain`,
+    [tableIds],
+  );
+  const grainsByTableMeasure = new Map<string, Set<'JJ' | 'KW' | 'MM'>>();
+  for (const r of grainRows.rows) {
+    const k = `${r.table_id} ${r.measure}`;
+    let set = grainsByTableMeasure.get(k);
+    if (!set) {
+      set = new Set();
+      grainsByTableMeasure.set(k, set);
+    }
+    set.add(r.period_grain as 'JJ' | 'KW' | 'MM');
+  }
+
+  const dimRows = await db.query(
+    `select id, expected_dimensions from cbs_tables where id = any($1)`,
+    [tableIds],
+  );
+  const regionalByTable = new Map<string, boolean>();
+  for (const r of dimRows.rows) {
+    const expected = r.expected_dimensions;
+    const dims = (typeof expected === 'string' ? JSON.parse(expected) : expected) as
+      | { name: string; kind: string }[]
+      | undefined;
+    regionalByTable.set(String(r.id), (dims ?? []).some((d) => d.kind === 'GeoDimension'));
+  }
+
+  const onboarded: OnboardedMeasure[] = [];
+  for (const row of rows) {
+    const tableId = String(row.table_id);
+    const grains = [
+      ...(grainsByTableMeasure.get(`${tableId} ${row.measure}`) ?? new Set<'JJ' | 'KW' | 'MM'>()),
+    ].sort();
+    if (grains.length === 0) continue; // no empty-coordinate presence anymore — not offerable
+    onboarded.push({
+      measure: {
+        key: String(row.key),
+        tableId,
+        measure: String(row.measure),
+        measureTitle: String(row.measure_title),
+        dims: {},
+        definitionLabel: String(row.definition_label),
+        definitionText: row.definition_text === null ? null : String(row.definition_text),
+        everydayTerms: (row.everyday_terms as string[]) ?? [],
+      },
+      grains,
+      regional: regionalByTable.get(tableId) ?? false,
+    });
+  }
+  return onboarded;
 }
