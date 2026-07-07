@@ -424,3 +424,91 @@ describe('R1 answer half: token classification', () => {
     expect(tokens.filter((t) => t.kind === 'unbacked')).toEqual([]);
   });
 });
+
+// Session-30 review: the two validator blind spots the WP16 go-live exposed
+// (the FIRST live onboarded answer was a negative value with a long
+// descriptive unit — a shape no Phase-0 seed table has).
+describe('negative cell values (session-30 review — the live -24 consumentenvertrouwen case)', () => {
+  const LONG_UNIT = 'gemiddelde saldo van de deelvragen';
+  const confidenceSingle = makeResult({
+    shape: 'single',
+    cells: [
+      makeCell({
+        table: '83694NED',
+        measure: 'M1',
+        measureTitle: 'Consumentenvertrouwen',
+        region: null,
+        periodCode: '2024JJ00',
+        periodLabel: '2024',
+        value: -24,
+        unit: LONG_UNIT,
+        decimals: 0,
+      }),
+    ],
+    definitionLabel: 'Consumentenvertrouwen',
+  });
+
+  it('the live answer body VALIDATES: sign matched to the cell, long unit adjacent', () => {
+    // The exact body shape production served (and stored — R8 re-validation
+    // runs THIS validator over THIS body, audit/reconstruct.ts).
+    const body = 'Consumentenvertrouwen was in 2024 -24 (gemiddelde saldo van de deelvragen).';
+    const report = validateAnswerBody(body, confidenceSingle);
+    expect(report.problems).toEqual([]);
+    expect(report.ok).toBe(true);
+  });
+
+  it('a sign-DROPPED display (24 for the -24 cell) fails R3 — never serve a wrong sign', () => {
+    const body = 'Consumentenvertrouwen was in 2024 24 (gemiddelde saldo van de deelvragen).';
+    const report = validateAnswerBody(body, confidenceSingle);
+    expect(report.ok).toBe(false);
+    expect(report.problems.join(' ')).toContain('24');
+  });
+
+  it('a wrong-sign display (-24 for a +24 cell) fails R3', () => {
+    const positive = makeResult({
+      shape: 'single',
+      cells: [
+        makeCell({
+          table: 'T', measure: 'M', measureTitle: 'Testmaat',
+          region: null, periodCode: '2024JJ00', periodLabel: '2024',
+          value: 24, unit: '%', decimals: 0,
+        }),
+      ],
+    });
+    expect(validateAnswerBody('Testmaat was in 2024 -24%.', positive).ok).toBe(false);
+  });
+
+  it('tokenizer: a sign is captured only when standalone — ranges and compounds unchanged', () => {
+    expect(findNumericTokens('van 2019-2024').map((t) => t.value)).toEqual([2019, 2024]);
+    expect(findNumericTokens('was -24 punten').map((t) => t.value)).toEqual([-24]);
+    expect(findNumericTokens('een top-3 notering').map((t) => t.value)).toEqual([3]);
+    expect(findNumericTokens('de CO2 uitstoot').map((t) => t.value)).toEqual([2]);
+    expect(findNumericTokens('(-3,5)').map((t) => t.value)).toEqual([-3.5]);
+    expect(findNumericTokens('-18.044.027').map((t) => t.value)).toEqual([-18044027]);
+  });
+
+  it('R10 long unit: the phrase must still START next to the value — a distant unit fails', () => {
+    const body =
+      'Consumentenvertrouwen was in 2024 -24 en dat is echt opvallend veel lager dan ooit ' +
+      'tevoren gemeten (gemiddelde saldo van de deelvragen).';
+    const report = validateAnswerBody(body, confidenceSingle);
+    expect(report.ok).toBe(false);
+    expect(report.problems.join(' ')).toContain('R10');
+  });
+
+  it('R10 long digit-bearing unit gets the same extended window (factor branch)', () => {
+    const longFactorUnit = 'aantal per 1 000 inwoners van 15 tot 65 jaar';
+    const result = makeResult({
+      shape: 'single',
+      cells: [
+        makeCell({
+          table: 'T', measure: 'M', measureTitle: 'Testmaat',
+          region: null, periodCode: '2024JJ00', periodLabel: '2024',
+          value: 42, unit: longFactorUnit, decimals: 0,
+        }),
+      ],
+    });
+    const body = `Testmaat was in 2024 42 (${longFactorUnit}).`;
+    expect(validateAnswerBody(body, result).problems).toEqual([]);
+  });
+});
