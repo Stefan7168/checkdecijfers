@@ -6,9 +6,13 @@
 // labels; it never invents a value and never touches an observation.
 //
 // PREREQUISITES (run in order): migration that adds the field is applied to the
-// target DB, and the table has been RE-SYNCED with current code so its
+// target DB, and the table has been RE-SYNCED **with --rebaseline** so its
 // cbs_tables.units carry the new source data (for #115: `npm run ingest -- sync
-// <tableId>` captures the CBS measure Description into units.description first).
+// <tableId> --rebaseline` captures the CBS measure Description into
+// units.description). A PLAIN sync does NOT rewrite units — only a rebaseline
+// does (#34a, learned live in session 29: the metadata never updated on the
+// first plain-sync attempt) — so without the flag this script silently
+// backfills NULL/stale values.
 //
 // Usage:  node --env-file=.env scripts/onboarding-reregister.ts <tableId> <topicTerm>
 // Example: node --env-file=.env scripts/onboarding-reregister.ts 83694NED consumentenvertrouwen

@@ -18,7 +18,7 @@
 // widened compensate's guard to accept the onboarding_cost debit). It never
 // invents billing logic.
 import type { CbsSource } from '../cbs-adapter/types.ts';
-import { compensate, getActionClassPrice } from '../billing/ledger.ts';
+import { compensate } from '../billing/ledger.ts';
 import type { Db } from '../db/types.ts';
 import { answerQuestionAudited } from '../answer/audit/respond-audited.ts';
 import type { AuditedRespondOptions } from '../answer/audit/respond-audited.ts';
@@ -86,16 +86,32 @@ export interface OnboardingJobSummary {
  * (compensate's related_transaction_id dedup). Best-effort-safe: a refund
  * failure is logged and re-thrown ONLY to the per-row finalizer, which has
  * already put the row terminal — a refund that fails is a loud operator
- * problem, never a silently-kept charge. Returns the credits refunded (or the
- * price even if the compensation was a dedup no-op — the amount is the same). */
+ * problem, never a silently-kept charge. Returns the credits refunded.
+ *
+ * The amount is the STORED debit's own delta, never a fresh price read: the
+ * debit and the refund run in different invocations, minutes to a day apart,
+ * and the 'heavy' class can be legitimately repriced in between (the ADR 026
+ * pricing seam). Re-reading the price here minted or destroyed credits on a
+ * reprice — debit 100, refund 150, net +50 on a FAILED onboarding, with the
+ * dashboard then showing a negative charge (session-30 review, money lens,
+ * double-confirmed). The synchronous gate never had this bug: it debits and
+ * compensates the same in-memory value within one turn. */
 async function refundOnboarding(
   db: Db,
   row: PendingTableRequest,
   auditAnswerId: number | null,
 ): Promise<number> {
-  const price = await getActionClassPrice(db, 'heavy');
-  await compensate(db, row.userId, row.debitTransactionId, price, auditAnswerId);
-  return price;
+  const { rows } = await db.query('select delta from credit_transactions where id = $1', [
+    row.debitTransactionId,
+  ]);
+  if (rows.length === 0) {
+    // Structurally unreachable (debit_transaction_id is a FK into the
+    // ledger) — but a refund path must fail LOUD, never guess an amount.
+    throw new Error(`onboarding refund: debit transaction ${row.debitTransactionId} not found`);
+  }
+  const amount = -Number(rows[0]!.delta);
+  await compensate(db, row.userId, row.debitTransactionId, amount, auditAnswerId);
+  return amount;
 }
 
 /** True when the table is already registered AND has at least one successful
@@ -292,13 +308,25 @@ export async function runOnboardingJob(deps: OnboardingJobDeps): Promise<Onboard
   for (const id of exhaustedIds) {
     // These rows are still 'running' (reclaimStaleRunning leaves them for us):
     // load the full row so we can refund + notify, then finalize failed.
-    const row = await getPendingRequest(db, id);
-    if (!row) continue;
-    await failAndRefund(
-      deps,
-      row,
-      `Het ophalen is na ${MAX_ATTEMPTS} pogingen gestopt (steeds vastgelopen). De credits zijn teruggestort.`,
-    );
+    // Per-row isolation, mirroring processOneRow's own catch-all: one
+    // un-refundable row (a transient DB error mid-refund, a migration-013-
+    // missing guard throw) must not wedge the whole queue. Without this the
+    // throw escaped the job, the route 500'd, and step 2 never claimed ANY
+    // other pending row on any later invocation — the poisoned row was
+    // re-selected forever (session-30 review, double-confirmed). The failed
+    // row itself stays 'running' at the cap, so the NEXT invocation retries
+    // exactly this refund (compensate is idempotent) — retried, not lost.
+    try {
+      const row = await getPendingRequest(db, id);
+      if (!row) continue;
+      await failAndRefund(
+        deps,
+        row,
+        `Het ophalen is na ${MAX_ATTEMPTS} pogingen gestopt (steeds vastgelopen). De credits zijn teruggestort.`,
+      );
+    } catch (error) {
+      console.error(`onboarding job: exhausted row ${id} could not be failed+refunded (queue continues):`, error);
+    }
   }
 
   // Step 2 — claim ONE pending row (FOR UPDATE SKIP LOCKED).
