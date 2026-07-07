@@ -20,8 +20,9 @@ import { echoServability } from '../../query/index.ts';
 import type { ConversationContext } from '../context/types.ts';
 import type { PendingClarification } from '../respond/types.ts';
 import { INTENT_MODEL, type IntentLlmClient, type IntentLlmRequest } from './client.ts';
-import { MAX_CANDIDATES, REFUSAL_KIND_BY_QUESTION_KIND } from './parse.ts';
+import { MAX_CANDIDATES, REFUSAL_KIND_BY_QUESTION_KIND, extraKeysOf } from './parse.ts';
 import { buildSystemPrompt } from './prompt.ts';
+import type { OnboardedMeasure } from './prompt.ts';
 import { rawParseJsonSchema, validateRawParse } from './schema.ts';
 import { resolveCandidate } from './resolve.ts';
 import { resolveUnmatched, decide, type OutcomeContext, type TableFinder } from './policy.ts';
@@ -50,6 +51,14 @@ export interface ClarifyReplyOptions {
    * byte-identical B15 behavior. Threaded here so the seam stays consistent
    * and a future decision can enable it without touching this module. */
   tableFinder?: TableFinder;
+  /** #112: the on-demand-onboarded vocabulary, threaded into the reply merge
+   * exactly as parse.ts/followup.ts thread it into the first turn. Without
+   * this, a clarification whose pending candidates carry an 'onboarded:' key
+   * (possible once live turns load the onboarded vocabulary) would fail the
+   * reply-turn schema validation — a fail-closed refund, but a paid dead-end
+   * the user did nothing to deserve. Empty/absent → prompt + schema bytes
+   * identical to the recorded clarify fixtures. */
+  extraCanonicalMeasures?: OnboardedMeasure[];
 }
 
 /** The clarify-mode instruction, appended verbatim to the WP6 system prompt
@@ -92,8 +101,11 @@ The original question in this round was itself a FOLLOW-UP: the payload carries 
 - Merge ALL THREE sources: previous_intent supplies every axis neither the original question nor the reply changes; the original question supplies what it changed; the reply answers our clarification question.
 - The same verbatim-copy rules as always: NEVER drop or silently replace an inherited region (not even on an "alleen landelijk" topic), NEVER widen an inherited period. Report still-unresolved axes honestly; downstream code decides what happens.`;
 
-export function buildClarifySystemPrompt(context?: ConversationContext | null): string {
-  return buildSystemPrompt() + CLARIFY_MODE_SECTION + (context ? CLARIFY_CONTEXT_ADDENDUM : '');
+export function buildClarifySystemPrompt(
+  context?: ConversationContext | null,
+  extra: OnboardedMeasure[] = [],
+): string {
+  return buildSystemPrompt(extra) + CLARIFY_MODE_SECTION + (context ? CLARIFY_CONTEXT_ADDENDUM : '');
 }
 
 /** The user-turn payload. Serialized deterministically (stable key order as
@@ -123,15 +135,15 @@ export function buildClarifyUserPayload(pending: PendingClarification, reply: st
 export function buildClarifyRequest(
   pending: PendingClarification,
   reply: string,
-  options: Pick<ClarifyReplyOptions, 'model' | 'maxTokens'> = {},
+  options: Pick<ClarifyReplyOptions, 'model' | 'maxTokens' | 'extraCanonicalMeasures'> = {},
 ): IntentLlmRequest {
   return {
     model: options.model ?? INTENT_MODEL,
     maxTokens: options.maxTokens ?? 2048,
     temperature: 0,
-    system: buildClarifySystemPrompt(pending.conversationContext),
+    system: buildClarifySystemPrompt(pending.conversationContext, options.extraCanonicalMeasures ?? []),
     question: buildClarifyUserPayload(pending, reply),
-    jsonSchema: rawParseJsonSchema(),
+    jsonSchema: rawParseJsonSchema(extraKeysOf(options.extraCanonicalMeasures)),
   };
 }
 
@@ -149,7 +161,7 @@ export async function parseClarificationReply(
 ): Promise<ParseOutcome> {
   const request = buildClarifyRequest(pending, reply, options);
   const response = await options.client.complete(request);
-  const raw = validateRawParse(response.outputText);
+  const raw = validateRawParse(response.outputText, extraKeysOf(options.extraCanonicalMeasures));
 
   const context: OutcomeContext = {
     question: pending.question,

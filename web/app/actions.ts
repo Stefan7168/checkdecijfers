@@ -25,6 +25,8 @@ import {
   onboardingPrice,
   triggerOnboarding,
 } from '../backend/ingestion/onboarding-trigger.ts';
+import { loadOnboardedVocabulary } from '../backend/ingestion/onboarding-vocab.ts';
+import type { OnboardedMeasure } from '../backend/answer/intent/prompt.ts';
 import { currentUserId } from '../lib/current-user.ts';
 import { getDb } from '../lib/db.ts';
 import { kickOnboardingJob } from '../lib/onboarding-kick.ts';
@@ -61,6 +63,24 @@ const MAX_INPUT_LENGTH = 2000;
 function guardLength(text: string): void {
   if (text.length > MAX_INPUT_LENGTH) {
     throw new Error(`input rejected: ${text.length} chars exceeds ${MAX_INPUT_LENGTH}`);
+  }
+}
+
+// #112 (the go-live money bug): a fresh chat turn must KNOW what has already
+// been onboarded, or re-asking an answered topic re-triggers the full
+// 100-credit onboarding instead of answering at the normal question price.
+// Rides the SAME master switch as the finder and the history read (the
+// session-27 incident rule: while dormant, no code path may touch
+// onboarding-owned state) and fails SOFT: a load failure degrades this turn
+// to the Phase-0 vocabulary — worst case is exactly yesterday's behavior
+// (the finder path), never a blocked or unanswered turn.
+async function onboardedVocabulary(): Promise<OnboardedMeasure[]> {
+  if (process.env.ONBOARDING_ENABLED !== '1') return [];
+  try {
+    return await loadOnboardedVocabulary(getDb());
+  } catch (error) {
+    console.error('onboarded-vocabulary load failed (turn continues with Phase-0 vocabulary):', error);
+    return [];
   }
 }
 
@@ -115,6 +135,9 @@ export async function askQuestion(
     return { gated: { kind: 'unauthenticated' }, context: null };
   }
   const conversationContext = await validateConversationContext(getDb(), rawContext ?? null);
+  // #112: loaded BEFORE the billing gate — the load is read-only and must
+  // never run (or fail) inside the charged section.
+  const extraVocabulary = await onboardedVocabulary();
   try {
     const gated = await chargeAndRun(getDb(), userId, requestId, () =>
       answerQuestionAudited(getDb(), question, {
@@ -125,6 +148,12 @@ export async function askQuestion(
         conversationContext,
         intentClient: new AnthropicLlmClient(),
         answerClient: new AnthropicLlmClient(),
+        // #112: the already-onboarded vocabulary, so a repeat question on an
+        // onboarded topic parses onto its 'onboarded:' key and answers
+        // directly (normal price) — the finder below only sees topics the
+        // parse could NOT match. [] while the switch is off or nothing is
+        // onboarded → prompt bytes identical to the calibrated Phase-0 one.
+        extraCanonicalMeasures: extraVocabulary,
         // WP16 sub-part 2 (ADR 026): the table finder is injected ONLY here —
         // an unloaded topic the finder confidently maps to a CBS table becomes
         // an 'onboarding_pending' acknowledgment instead of the B15
@@ -257,6 +286,8 @@ export async function replyToClarification(
     ...pendingRest,
     ...(embeddedContext ? { conversationContext: embeddedContext } : {}),
   };
+  // #112: same pre-gate load as askQuestion (read-only, fail-soft).
+  const extraVocabulary = await onboardedVocabulary();
   try {
     const gated = await chargeAndRun(getDb(), userId, requestId, () =>
       answerClarificationReplyAudited(getDb(), safePending, reply, {
@@ -266,6 +297,12 @@ export async function replyToClarification(
         requestId,
         intentClient: new AnthropicLlmClient(),
         answerClient: new AnthropicLlmClient(),
+        // #112: the reply merge must accept the same onboarded keys the first
+        // turn could have parsed into the pending's candidates — without this
+        // the round dead-ends in an internal refusal (paid dead-end). Still
+        // NO tableFinder here: a reply-turn onboarding trigger stays an
+        // unmade decision.
+        extraCanonicalMeasures: extraVocabulary,
       }),
     );
     return { gated, context: await outcomeContext(gated) };
