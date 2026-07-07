@@ -62,10 +62,13 @@ export interface RespondOptions {
    * acknowledgment ('onboarding_pending' / 'onboarding_already_pending'). */
   tableFinder?: TableFinder;
   /** WP16 sub-part 2 (ADR 026, design §3.6): OPTIONAL on-demand-onboarded
-   * measures appended to the parser vocabulary. Passed ONLY by the onboarding
+   * measures appended to the parser vocabulary. Passed by the onboarding
    * job's delivery re-run (src/ingestion/onboarding.ts) so the just-onboarded
-   * measure is parseable; absent/empty everywhere else → byte-identical
-   * Phase-0 prompt (fixtures + benchmark unaffected). */
+   * measure is parseable, and — #112 — by web/app/actions.ts's live chat
+   * turns (loadOnboardedVocabulary) so an ALREADY-onboarded topic answers at
+   * the normal question price instead of re-triggering the 100-credit
+   * onboarding. Absent/empty everywhere else (benchmark, tests, CLI) →
+   * byte-identical Phase-0 prompt (fixtures + benchmark unaffected). */
   extraCanonicalMeasures?: OnboardedMeasure[];
 }
 
@@ -262,6 +265,12 @@ export async function respondToClarificationReply(
     const clarifyOptions: ClarifyReplyOptions = {
       client: options.intentClient,
       config: options.parserConfig,
+      // #112: the reply merge must accept the same onboarded keys the first
+      // turn's parse could have put in the pending's candidates — without
+      // this, an 'onboarded:' key fails the reply-turn schema validation and
+      // the round dead-ends in an internal refusal. Empty/absent → clarify
+      // prompt + schema bytes unchanged (fixtures stay valid).
+      extraCanonicalMeasures: options.extraCanonicalMeasures,
     };
     const parse = await parseClarificationReply(db, pending, reply, clarifyOptions);
 
