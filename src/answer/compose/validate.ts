@@ -246,6 +246,21 @@ function checkUnitAdjacency(body: string, token: ClassifiedToken, unit: string):
   const window = windowAround(body, token.index, token.token.length);
   const label = `'${token.token}'`;
 
+  // A unit PHRASE longer than the suffix window could never fit inside it —
+  // the #115 onboarded case ('gemiddelde saldo van de deelvragen', 34 chars
+  // vs the 24-char window) made every such answer fail R10 structurally
+  // (session-30 review). Extending the window by the phrase's own length
+  // preserves the actual adjacency rule — the unit must START within
+  // UNIT_SUFFIX chars after its value — for every unit length; short units
+  // keep the exact pre-existing window (byte-identical behavior).
+  const phraseWindow =
+    unit.trim().length >= UNIT_SUFFIX
+      ? body.slice(
+          Math.max(0, token.index - UNIT_PREFIX),
+          token.index + token.token.length + UNIT_SUFFIX + unit.trim().length,
+        )
+      : window;
+
   if (/^aantal$/i.test(unit.trim())) return [];
 
   if (unit.trim() === '%') {
@@ -280,13 +295,13 @@ function checkUnitAdjacency(body: string, token: ClassifiedToken, unit: string):
     // Factor units ('x 1 000', '1 000 euro'): the verbatim factor string must
     // sit next to the value — the ×1.000 misreading guard.
     const variants = unitMaskPhrases(unit);
-    if (!variants.some((v) => containsPhrase(window, v))) {
+    if (!variants.some((v) => containsPhrase(phraseWindow, v))) {
       problems.push(`R10: bij ${label} ontbreekt de letterlijke eenheid '${unit}' (factor-eenheid mag nooit wegvallen)`);
     }
     return problems;
   }
 
-  if (!containsPhrase(window, unit.trim())) {
+  if (!containsPhrase(phraseWindow, unit.trim())) {
     problems.push(`R10: bij ${label} ontbreekt de eenheid '${unit}'`);
   }
   return problems;
