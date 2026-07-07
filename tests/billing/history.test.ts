@@ -53,10 +53,15 @@ async function insertAuditRow(
     offeredQuestionNl?: string;
     replyText?: string;
     repliedQuestionNl?: string;
+    /** #115: extra envelope fields merged into the stored response JSON --
+     * e.g. { answer: { body, ... } } as the real AnswerResponse stores them. */
+    envelope?: Record<string, unknown>;
   },
 ): Promise<number> {
-  const response =
-    opts.offeredQuestionNl === undefined ? {} : { pending: { questionNl: opts.offeredQuestionNl } };
+  const response = {
+    ...(opts.offeredQuestionNl === undefined ? {} : { pending: { questionNl: opts.offeredQuestionNl } }),
+    ...(opts.envelope ?? {}),
+  };
   const pendingClarification =
     opts.repliedQuestionNl === undefined ? null : { question: opts.question, questionNl: opts.repliedQuestionNl };
   const { rows } = await db.query(
@@ -555,6 +560,174 @@ describe('getQuestionHistory — onboarding queue (WP16 sub-part 2)', () => {
       expect(history.map((h) => h.question).sort()).toEqual(['gewone vraag', 'onboarding vraag'].sort());
       expect(history.find((h) => h.question === 'gewone vraag')?.source).toBe('audit');
       expect(history.find((h) => h.question === 'onboarding vraag')?.source).toBe('onboarding');
+    });
+  });
+});
+
+// #115 residual (the definition expander): answer entries expose the stored
+// envelope's own display fields (response->'answer'->...), so the dashboard
+// can render the body prominently and fold a long definition -- while
+// finalText stays the complete blob on every entry (the zero-loss fallback).
+describe('getQuestionHistory — structured answer parts (#115)', () => {
+  const ENVELOPE = {
+    answer: {
+      body: 'Consumentenvertrouwen was in 2024 -24 (gemiddelde saldo van de deelvragen).',
+      definitionLine: 'Definitie: Het consumentenvertrouwen geeft weer hoe consumenten denken.',
+      markingLine: null,
+      attributionLine: 'Bron: CBS StatLine, tabel 83694NED — Consumentenvertrouwen. Licentie: CC BY 4.0.',
+    },
+    stalenessWarning: null,
+  };
+
+  it("exposes the stored envelope's display fields on an answer entry, verbatim", async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      await insertAuditRow(db, userId, {
+        kind: 'answer',
+        question: 'Wat was het consumentenvertrouwen in 2024?',
+        finalText: 'blob',
+        requestId: null,
+        envelope: ENVELOPE,
+      });
+      const [entry] = await getQuestionHistory(db, userId);
+      expect(entry!.answerParts).toEqual({
+        body: ENVELOPE.answer.body,
+        definitionLine: ENVELOPE.answer.definitionLine,
+        markingLine: null,
+        attributionLine: ENVELOPE.answer.attributionLine,
+        stalenessWarning: null,
+      });
+      // The blob survives untouched next to the parts (zero-loss fallback).
+      expect(entry!.finalText).toBe('blob');
+    });
+  });
+
+  it('null answerParts on refusals, on legacy rows without the envelope, and when attribution is missing', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      await insertAuditRow(db, userId, {
+        kind: 'refusal',
+        question: 'r',
+        finalText: 'weigering',
+        requestId: null,
+        envelope: ENVELOPE, // even WITH answer fields, a refusal never exposes parts
+      });
+      await insertAuditRow(db, userId, { kind: 'answer', question: 'legacy', finalText: 'x', requestId: null });
+      await insertAuditRow(db, userId, {
+        kind: 'answer',
+        question: 'zonder bron',
+        finalText: 'x',
+        requestId: null,
+        // Body without attributionLine: the zero-loss rule refuses the
+        // structured view rather than render an answer missing its R4 line.
+        envelope: { answer: { body: 'iets' } },
+      });
+      const history = await getQuestionHistory(db, userId);
+      expect(history).toHaveLength(3);
+      for (const entry of history) expect(entry.answerParts).toBeNull();
+    });
+  });
+
+  it("a collapsed clarification round carries the REPLY row's answerParts", async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      const questionNl = 'Welke gemeente bedoel je?';
+      await insertAuditRow(db, userId, {
+        kind: 'clarification',
+        question: 'Hoeveel inwoners heeft de gemeente?',
+        finalText: questionNl,
+        requestId: null,
+        offeredQuestionNl: questionNl,
+      });
+      await insertAuditRow(db, userId, {
+        kind: 'answer',
+        question: 'Hoeveel inwoners heeft de gemeente?',
+        finalText: 'Amsterdam telt 931.298 inwoners.',
+        requestId: null,
+        replyText: 'Amsterdam',
+        repliedQuestionNl: questionNl,
+        envelope: ENVELOPE,
+      });
+      const history = await getQuestionHistory(db, userId);
+      expect(history).toHaveLength(1);
+      expect(history[0]!.clarification).not.toBeNull();
+      expect(history[0]!.answerParts?.body).toBe(ENVELOPE.answer.body);
+    });
+  });
+});
+
+// Review finding (session 30): every onboarding trigger wrote BOTH an
+// acknowledgment refusal row and a queue row for the same question -- the
+// dashboard showed the question twice with two credit captions (0 and 100).
+// The base scan now excludes an audit row a pending_table_requests row LINKS
+// to as its acknowledgment (ack_audit_answer_id, a stored row link).
+describe('getQuestionHistory — onboarding acknowledgment dedupe', () => {
+  async function seedTriggeredOnboarding(db: Db, userId: string) {
+    await applyPricingDefaults(db);
+    await db.query('select public.grant_signup_credits($1)', [userId]);
+    const requestId = randomUUID();
+    // The ack refusal row the trigger turn wrote (net 0 after compensation).
+    const ackAuditId = await insertAuditRow(db, userId, {
+      kind: 'refusal',
+      question: 'hoeveel zonnestroom werd er opgewekt in 2024',
+      finalText: 'Je vraag wordt voorbereid.',
+      requestId,
+    });
+    const debit = await reserveOnboardingDebit(db, userId, requestId, 100);
+    if (debit.kind !== 'debited') throw new Error(`expected debited, got ${debit.kind}`);
+    await createPendingRequest(db, {
+      userId,
+      requestId,
+      questionText: 'hoeveel zonnestroom werd er opgewekt in 2024',
+      topicTerm: 'zonnestroom',
+      tableId: '82610NED',
+      finderConfidence: 0.91,
+      debitTransactionId: debit.entry.id,
+      ackAuditAnswerId: ackAuditId,
+    });
+    return ackAuditId;
+  }
+
+  it('shows ONE entry per triggered onboarding, not the ack row + the queue row', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      await seedTriggeredOnboarding(db, userId);
+      const history = await getQuestionHistory(db, userId, { includeOnboarding: true });
+      expect(history).toHaveLength(1);
+      expect(history[0]).toMatchObject({
+        source: 'onboarding',
+        kind: 'onboarding_pending',
+        question: 'hoeveel zonnestroom werd er opgewekt in 2024',
+        creditsCharged: 100,
+      });
+    });
+  });
+
+  it('a re-ask acknowledgment (no queue row links to it) honestly stays its own entry', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      await seedTriggeredOnboarding(db, userId);
+      // The user asked again while the fetch was in flight: an
+      // 'already pending' ack row exists, but no queue row points at it.
+      await insertAuditRow(db, userId, {
+        kind: 'refusal',
+        question: 'en, is consumentenvertrouwen er al?',
+        finalText: 'Je vraag wordt al voorbereid.',
+        requestId: randomUUID(),
+      });
+      const history = await getQuestionHistory(db, userId, { includeOnboarding: true });
+      expect(history).toHaveLength(2);
+      expect(history.map((h) => h.source).sort()).toEqual(['audit', 'onboarding']);
+    });
+  });
+
+  it('with the master switch OFF the ack row still shows (the question never vanishes)', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      const ackAuditId = await seedTriggeredOnboarding(db, userId);
+      const history = await getQuestionHistory(db, userId);
+      expect(history).toHaveLength(1);
+      expect(history[0]).toMatchObject({ id: ackAuditId, source: 'audit', kind: 'refusal' });
     });
   });
 });
