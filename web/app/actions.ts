@@ -220,7 +220,9 @@ async function maybeTriggerOnboarding(
     case 'duplicate':
       // #113 kick-on-trigger: an active row already exists — a re-ask is the
       // natural user retry channel if an earlier kick failed, and the cron
-      // route's claim logic makes a redundant kick a harmless {"claimed":0}.
+      // route's claim logic makes a redundant kick harmless (its summary then
+      // reports "processed": null — the route returns OnboardingJobSummary,
+      // not a "claimed" count; comment fixed in the session-30 review).
       // Same post-response, fail-soft guarantees as 'started'.
       after(() => kickOnboardingJob());
       // A concurrent/retried trigger already debited (or an active job already

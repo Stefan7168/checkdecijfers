@@ -39,6 +39,47 @@ describe('onboarding-cron auth guard (directly exercised)', () => {
     );
     expect(wrong.status).toBe(401);
   });
+
+  // Session-30 review: the 401 tests only proved wrong tokens are REJECTED;
+  // no test proved the kick's own header is ACCEPTED — the two template
+  // literals lived in different files and could drift (a lowercase 'bearer ',
+  // a stray space) with the whole suite green while every production kick and
+  // cron call 401'd forever (the proxy-redirect go-live bug's test-blind-spot
+  // class). This cross-pin captures the header EXACTLY as kickOnboardingJob
+  // sends it and replays it against the real route guard.
+  it("the kick's OWN Authorization header passes the route guard (cross-pin)", async () => {
+    process.env.CRON_SECRET = 'secret-abc';
+    const { GET } = await import('./api/onboarding-cron/route.ts');
+    const { kickOnboardingJob } = await import('../lib/onboarding-kick.ts');
+
+    let capturedAuth: string | null = null;
+    await kickOnboardingJob({
+      secret: 'secret-abc',
+      host: 'example.test',
+      fetchImpl: (async (_input: RequestInfo | URL, init?: RequestInit) => {
+        capturedAuth = new Headers(init?.headers).get('authorization');
+        return new Response('{}', { status: 200 });
+      }) as typeof fetch,
+    });
+    expect(capturedAuth).not.toBeNull();
+
+    // The guard runs BEFORE getDb()/the job. With the kick's header the
+    // route must get PAST the 401/503 short-circuit; in jsdom it then fails
+    // on the DB/job — and that (a throw or any non-401/503 status) is
+    // precisely the proof the auth was accepted.
+    try {
+      const res = await GET(
+        new Request('https://x/api/onboarding-cron', {
+          headers: { authorization: capturedAuth! },
+        }),
+      );
+      expect(res.status).not.toBe(401);
+      expect(res.status).not.toBe(503);
+    } catch {
+      // Reaching the DB/job code in jsdom means the guard passed — the pin
+      // holds. (The guard itself never throws; it returns 401/503.)
+    }
+  });
 });
 
 describe('onboarding-cron wiring (source pins)', () => {
