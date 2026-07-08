@@ -41,13 +41,13 @@ export interface OnboardingFinderDeps {
 export function buildOnboardingFinder(deps: OnboardingFinderDeps): TableFinder {
   const rerank: RerankFn =
     deps.rerank ??
-    ((topic, shortlist) => {
+    ((query, shortlist) => {
       if (!deps.rerankClient) {
         throw new Error('buildOnboardingFinder: rerankClient is required when no rerank fn is provided');
       }
-      return rerankShortlist(topic, shortlist, { client: deps.rerankClient });
+      return rerankShortlist(query, shortlist, { client: deps.rerankClient });
     });
-  return async (term: string): Promise<OnboardingRouting | null> => {
+  return async (term: string, question: string): Promise<OnboardingRouting | null> => {
     // findTable never throws for a normal miss (it routes recall-empty → none
     // and rerank errors → disclose), but wrap defensively: ANY failure here —
     // including the already-pending lookup — must degrade to the plain B15
@@ -59,7 +59,9 @@ export function buildOnboardingFinder(deps: OnboardingFinderDeps): TableFinder {
     // debit. (Session-27 review: the first version caught only findTable,
     // contradicting this comment's own "ANY failure" contract.)
     try {
-      const outcome = await findTable(deps.db, term, { rerank });
+      // Recall runs on the TERM; the rerank prompt additionally sees the full
+      // QUESTION (WP27 stage A — the stock-vs-flow signal, ADR 027 D3a).
+      const outcome = await findTable(deps.db, { topic: term, question }, { rerank });
       if (outcome.kind !== 'confident') return null;
 
       // Confident pick → does this user already have an active fetch for this

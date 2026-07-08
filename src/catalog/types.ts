@@ -19,6 +19,17 @@ export interface CatalogCandidate {
   rank: number;
 }
 
+/** What the finder ranks against (WP27 stage A, ADR 027 D3a): the parser's
+ *  unmatched TOPIC term drives Stage-1 recall; the user's FULL question is
+ *  threaded into the Stage-2 rerank prompt so the question's shape (stock vs
+ *  flow, level vs change, price vs index) is visible to the pick — topic-word
+ *  overlap alone is exactly the signal that misled the live bijstand pick.
+ *  Harnesses without a distinct question pass the topic as both. */
+export interface FindTableQuery {
+  topic: string;
+  question: string;
+}
+
 /** Stage-2 rerank output AFTER schema validation + the hard allowlist check.
  *  Every id here is guaranteed to be one of the shortlist ids that were sent. */
 export interface RerankResult {
@@ -33,10 +44,10 @@ export interface RerankResult {
   alternativeIds: string[];
 }
 
-/** Ranks a recall shortlist against the topic (Stage 2). Injected into the
+/** Ranks a recall shortlist against the query (Stage 2). Injected into the
  *  orchestrator so its routing is unit-testable without the live LLM harness;
  *  in production it is a closure over rerankShortlist(client, …). */
-export type RerankFn = (topic: string, shortlist: CatalogCandidate[]) => Promise<RerankResult>;
+export type RerankFn = (query: FindTableQuery, shortlist: CatalogCandidate[]) => Promise<RerankResult>;
 
 /** Confidence routing knobs. DEFAULT_FIND_TABLE_CONFIG is deliberately
  *  conservative (favour disclosure over auto-proceed). Calibrated live against
@@ -74,6 +85,11 @@ export type FindTableOutcome =
       pick: CatalogCandidate;
       confidence: number;
       reading: string;
+      /** The rerank's allowlist-sanitized runner-up ids (WP27 stage A/B, ADR
+       *  027): before this widening they were dropped INSIDE the confident
+       *  branch, so sub-part 2 had no try-next-candidate data. Order preserved;
+       *  never contains the pick; possibly empty. */
+      alternativeIds: string[];
       /** Full shortlist, for the audit trail / logging. */
       candidates: CatalogCandidate[];
     }

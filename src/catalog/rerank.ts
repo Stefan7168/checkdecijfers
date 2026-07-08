@@ -6,7 +6,7 @@
 import type { LlmClient, LlmRequest } from '../answer/llm/client.ts';
 import { buildRerankSystemPrompt, serializeShortlist } from './rerank-prompt.ts';
 import { rerankJsonSchema, validateRerankOutput } from './rerank-schema.ts';
-import type { CatalogCandidate, RerankResult } from './types.ts';
+import type { CatalogCandidate, FindTableQuery, RerankResult } from './types.ts';
 
 /**
  * Small/fast tier, same as INTENT_MODEL (ADR 004 "model per task" + the
@@ -27,7 +27,7 @@ export interface RerankOptions {
 }
 
 export function buildRerankRequest(
-  topic: string,
+  query: FindTableQuery,
   shortlist: CatalogCandidate[],
   options: Pick<RerankOptions, 'model' | 'maxTokens'> = {},
 ): LlmRequest {
@@ -41,7 +41,7 @@ export function buildRerankRequest(
     maxTokens: options.maxTokens ?? 1024,
     temperature: 0,
     system: buildRerankSystemPrompt(),
-    question: serializeShortlist(topic, shortlist),
+    question: serializeShortlist(query, shortlist),
     jsonSchema: rerankJsonSchema(),
   };
 }
@@ -53,11 +53,11 @@ export function buildRerankRequest(
  * table (principle c).
  */
 export async function rerankShortlist(
-  topic: string,
+  query: FindTableQuery,
   shortlist: CatalogCandidate[],
   options: RerankOptions,
 ): Promise<RerankResult> {
-  const request = buildRerankRequest(topic, shortlist, options);
+  const request = buildRerankRequest(query, shortlist, options);
   const response = await options.client.complete(request);
   return validateRerankOutput(
     response.outputText,
