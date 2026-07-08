@@ -117,7 +117,10 @@ export interface OnboardingRouting {
   /** true → an active job already exists for this (user, table). */
   alreadyPending: boolean;
 }
-export type TableFinder = (term: string) => Promise<OnboardingRouting | null>;
+/** WP27 stage A (ADR 027 D3a): the finder receives the FULL question alongside
+ * the unmatched term — the question's shape (stock vs flow) is signal the term
+ * alone discards. The closure threads it into the Stage-2 rerank prompt. */
+export type TableFinder = (term: string, question: string) => Promise<OnboardingRouting | null>;
 
 /** The unmatched-measure exit, finder-aware (WP16 sub-part 2). With no finder
  * (or a finder that doesn't confidently route) it returns EXACTLY
@@ -132,7 +135,7 @@ export async function resolveUnmatched(
 ): Promise<ParseOutcome> {
   const term = context.raw.unmatchedMeasureTerm;
   if (finder && term !== null) {
-    const routing = await finder(term);
+    const routing = await finder(term, context.question);
     if (routing) {
       return {
         kind: 'onboarding',

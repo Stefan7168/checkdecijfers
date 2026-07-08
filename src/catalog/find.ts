@@ -1,7 +1,8 @@
-// The table finder (WP16 sub-part 1): topic → routing decision. Composes
-// Stage-1 recall (deterministic FTS) and Stage-2 rerank (injected — so this
-// routing is unit-testable without the LLM harness), then applies conservative
-// confidence routing:
+// The table finder (WP16 sub-part 1, question-aware since WP27 stage A):
+// query → routing decision. Composes Stage-1 recall (deterministic FTS over
+// the TOPIC term) and Stage-2 rerank (injected, sees the FULL question — so
+// this routing is unit-testable without the LLM harness), then applies
+// conservative confidence routing:
 //   recall empty        → none      (we can't even find a candidate)
 //   confident pick       → confident (→ sub-part 2 fetch+verify gate)
 //   low conf / rerank err → disclose (→ #21/#39 multi-candidate, BEFORE any ingest)
@@ -13,6 +14,7 @@ import {
   type CatalogCandidate,
   type FindTableConfig,
   type FindTableOutcome,
+  type FindTableQuery,
   type RerankFn,
 } from './types.ts';
 
@@ -30,10 +32,10 @@ export interface FindTableOptions {
 
 export async function findTable(
   db: Db,
-  topic: string,
+  query: FindTableQuery,
   options: FindTableOptions,
 ): Promise<FindTableOutcome> {
-  const shortlist = await recallCandidates(db, topic, options.recall ?? {});
+  const shortlist = await recallCandidates(db, query.topic, options.recall ?? {});
   if (shortlist.length === 0) {
     return { kind: 'none', reason: 'no_recall' };
   }
@@ -43,7 +45,7 @@ export async function findTable(
 
   let result;
   try {
-    result = await options.rerank(topic, shortlist);
+    result = await options.rerank(query, shortlist);
   } catch {
     // Malformed / off-allowlist / model error → never a pick; disclose honestly.
     return { kind: 'disclose', candidates: shortlist.slice(0, DISCLOSE_LIMIT), reason: 'rerank_error' };
@@ -62,6 +64,11 @@ export async function findTable(
       pick,
       confidence: result.confidence,
       reading: result.reading,
+      // WP27: the runner-ups now SURVIVE the confident branch — they become
+      // the try-next-candidate chain (ADR 027). validateRerankOutput already
+      // allowlist-sanitizes; re-filtering against the shortlist here also
+      // guards stub reranks that ignore the allowlist (like the pick above).
+      alternativeIds: result.alternativeIds.filter((id) => id !== pick.tableId && byId.has(id)),
       candidates: shortlist,
     };
   }

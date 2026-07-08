@@ -26,6 +26,10 @@ const SET_PATH = fileURLToPath(new URL('../../benchmark/tablefinder-labelled-set
 interface LabelledCase {
   id: string;
   topic: string;
+  /** The user's full question (WP27 stage A) — threaded into the rerank
+   *  prompt. Absent on the older cases: the replay falls back to the topic,
+   *  mirroring scripts/tablefinder-eval.ts so record→replay hashes match. */
+  question?: string;
   expect: { kind: 'confident' | 'disclose' | 'none'; tableId?: string };
 }
 
@@ -47,8 +51,8 @@ describe('table finder — end-to-end replay against the labelled set', () => {
   for (const c of set.cases) {
     it(`${c.id}: "${c.topic}" → ${c.expect.kind}${c.expect.tableId ? ` ${c.expect.tableId}` : ''}`, async () => {
       const client = new ReplayLlmClient(FIXTURES_DIR);
-      const outcome = await findTable(db, c.topic, {
-        rerank: (topic, shortlist) => rerankShortlist(topic, shortlist, { client }),
+      const outcome = await findTable(db, { topic: c.topic, question: c.question ?? c.topic }, {
+        rerank: (query, shortlist) => rerankShortlist(query, shortlist, { client }),
       });
 
       expect(outcome.kind).toBe(c.expect.kind);

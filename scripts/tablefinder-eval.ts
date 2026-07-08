@@ -32,6 +32,9 @@ const REPORT_PATH = fileURLToPath(new URL('../benchmark/tablefinder-calibration-
 interface LabelledCase {
   id: string;
   topic: string;
+  /** The user's full question (WP27 stage A) — threaded into the rerank
+   *  prompt. Absent on the older cases: the eval falls back to the topic. */
+  question?: string;
   expect: { kind: 'confident' | 'disclose' | 'none'; tableId?: string };
 }
 
@@ -76,8 +79,8 @@ async function main(): Promise<void> {
   const results: Array<{ id: string; kind: string; pick: string | null; confidence: number | null; pass: boolean; problems: string[] }> = [];
 
   for (const c of set.cases) {
-    const outcome = await findTable(db, c.topic, {
-      rerank: (topic, shortlist) => rerankShortlist(topic, shortlist, { client }),
+    const outcome = await findTable(db, { topic: c.topic, question: c.question ?? c.topic }, {
+      rerank: (query, shortlist) => rerankShortlist(query, shortlist, { client }),
     });
     const problems = checkExpectation(outcome, c.expect);
     const pick = outcome.kind === 'confident' ? outcome.pick.tableId : null;

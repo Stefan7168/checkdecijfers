@@ -1,0 +1,17 @@
+{
+ "tableId": "37789ksz",
+ "capturedAt": "2026-07-08T08:06:25.307Z",
+ "source": "https://datasets.cbs.nl/odata/v1/CBS/37789ksz",
+ "sliceFilter": null,
+ "captureOnlySlice": null,
+ "observationRows": 6470,
+ "observationPages": [
+  "observations-page-1.json"
+ ],
+ "files": {
+  "properties": "properties.json",
+  "dimensions": "dimensions.json",
+  "measure-codes": "measure-codes.json",
+  "codes-Perioden": "codes-Perioden.json"
+ }
+}

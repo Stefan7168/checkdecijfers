@@ -49,6 +49,19 @@ The rerank is a **closed multiple-choice over a supplied shortlist** with a hard
 - **Hermetic now / supervised deferred.** Shipped in session 24, all hermetic (€0 LLM spend, no live DDL): the migration file, the adapter method + a real captured catalog fixture, ingest, recall, rerank scaffolding + the allowlist validator, the orchestrator + routing, and their tests. **Deferred to a supervised step (owner-authorized) — now DONE except the last item, see the next bullet:** applying migration 011 to production, the real catalog bulk-refresh, recording the rerank replay fixtures against the labelled set (real Haiku spend), and calibrating `highConfidence` were all done in session 25; only wiring `findTable` into the answer flow remains (sub-part 2).
 - **Supervised step DONE (session 25, owner present) — measured.** Migration 011 applied to production; the RUNBOOK per-migration grants/RLS check confirmed `cbs_catalog` locked by inheritance (0 `anon`/`authenticated` grants, RLS enabled, 0 policies — live-verified, not assumed). Real `catalog:refresh` mirrored **4,858 rows** (Numeric 4,473 / Mixed 309 / Text 76; Regulier 1,277 / Gediscontinueerd 3,559 / Vervallen 22 — the discontinued-dominant reality that makes the "prefer Regulier" rerank rule load-bearing), and production Dutch FTS recall was exercised live (all 8 registered tables present; "inflatie"/"huizenprijzen"/"faillissementen" top-5 raw recall is all-discontinued — Stage-2 does the real work). `tablefinder:record` run live (Haiku): first pass 5/8; the 3 misses were one **mislabel** (zonnepanelen — the rerank's `85004NED` "zonnestroom-productie" beats the seed's general-renewables `82610NED`, verified from CBS metadata + adversarial review) and two **Stage-1 recall gaps** (bevolking, woningvoorraad — fixed with alias hints); re-record → **8/8**. `highConfidence` **calibrated to 0.8**: confident floor 0.85 (measured, stable), failure-safe (below-0.8 → disclose, never a wrong table). An **end-to-end replay test** now pins the finder on the gate (`tests/catalog/find-replay.test.ts`, hermetic, €0). **Honesty note (review catch):** the confident/disclose boundary is *not* directly measured — the labelled set has no disclose-expected case — so 0.8 is a confident-floor value; a disclose case + a live-mirror re-check are owed in sub-part 2 ([#104](../open-questions.md)). **Operational quirk recorded:** node/undici couldn't reach CBS from the calibration host (IPv6 black-hole; curl worked) — an IPv4-force preload let the unmodified CLI run ([lessons-learned](../lessons-learned.md)).
 
+## As-built amendment (2026-07-08, session 31 — WP27 stage A, ADR 027 A2)
+
+**Stage-1 recall is now Regulier-first** (`RECALL_REGULIER_SLOTS` 20 + `RECALL_HISTORIC_SLOTS` 4,
+shortlist 24; membership per status class by FTS rank, final order pure relevance). This narrows
+the session-25 note "Stage-2 does the real work": that holds only when the right table IS on the
+shortlist. Measured on the live mirror (WP27 pre-build): the "bijstand" top-20 held 14 discontinued
+tables and the only v1-deliverable stock table (`37789ksz`) sat at overall position 51 — the rerank
+can never rank what recall never shows. The quota fixes shortlist MEMBERSHIP generically; the
+rerank prompt keeps the Regulier-vs-historisch judgement. Full evidence + the owner decision in ADR
+[027](027-finder-shape-fit-gate.md)'s Amendments section. The prompt itself became question-aware
+in the same change (v2 — decision 3's "same narrow role" shape is unchanged: still a closed
+shortlist choice with the hard allowlist).
+
 ## Revisit triggers
 
 - Keyword recall measurably misses relevant tables → add pgvector as an additive recall signal into the same shortlist (ADR 002).

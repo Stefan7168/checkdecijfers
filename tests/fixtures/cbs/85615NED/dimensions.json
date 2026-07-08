@@ -1,0 +1,66 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/85615NED/$metadata#Dimensions",
+ "value": [
+  {
+   "Identifier": "GeboortelandOuders",
+   "Title": "Geboorteland (ouders)",
+   "Description": "",
+   "MapYear": null,
+   "ReleasePolicy": null,
+   "Kind": "Dimension",
+   "ContainsGroups": false,
+   "ContainsCodes": true,
+   "CodesUrl": "https://datasets.cbs.nl/odata/v1/CBS/85615NED/GeboortelandOudersCodes",
+   "GroupsUrl": null
+  },
+  {
+   "Identifier": "Geslacht",
+   "Title": "Geslacht",
+   "Description": "",
+   "MapYear": null,
+   "ReleasePolicy": null,
+   "Kind": "Dimension",
+   "ContainsGroups": false,
+   "ContainsCodes": true,
+   "CodesUrl": "https://datasets.cbs.nl/odata/v1/CBS/85615NED/GeslachtCodes",
+   "GroupsUrl": null
+  },
+  {
+   "Identifier": "Herkomstland",
+   "Title": "Herkomstland",
+   "Description": "",
+   "MapYear": null,
+   "ReleasePolicy": null,
+   "Kind": "Dimension",
+   "ContainsGroups": false,
+   "ContainsCodes": true,
+   "CodesUrl": "https://datasets.cbs.nl/odata/v1/CBS/85615NED/HerkomstlandCodes",
+   "GroupsUrl": null
+  },
+  {
+   "Identifier": "Leeftijd",
+   "Title": "Leeftijd",
+   "Description": "",
+   "MapYear": null,
+   "ReleasePolicy": null,
+   "Kind": "Dimension",
+   "ContainsGroups": false,
+   "ContainsCodes": true,
+   "CodesUrl": "https://datasets.cbs.nl/odata/v1/CBS/85615NED/LeeftijdCodes",
+   "GroupsUrl": null
+  },
+  {
+   "@odata.type": "#Cbs.Ccb.Models.TimeDimension",
+   "Identifier": "Perioden",
+   "Title": "Perioden",
+   "Description": "",
+   "MapYear": null,
+   "ReleasePolicy": true,
+   "Kind": "TimeDimension",
+   "ContainsGroups": true,
+   "ContainsCodes": true,
+   "CodesUrl": "https://datasets.cbs.nl/odata/v1/CBS/85615NED/PeriodenCodes",
+   "GroupsUrl": "https://datasets.cbs.nl/odata/v1/CBS/85615NED/PeriodenGroups"
+  }
+ ]
+}

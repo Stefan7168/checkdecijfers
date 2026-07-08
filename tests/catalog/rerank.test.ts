@@ -122,8 +122,12 @@ describe('serializeShortlist', () => {
     { tableId: '81884NED', title: 'Oude reeks', summary: 'x'.repeat(400), status: 'Gediscontinueerd', datasetType: 'Numeric', rank: 0.4 },
   ];
 
-  it('lists every candidate id, title, status and type with the topic', () => {
-    const payload = serializeShortlist('huizenprijzen', shortlist);
+  it('lists every candidate id, title, status and type with the question AND the topic (WP27)', () => {
+    const payload = serializeShortlist(
+      { topic: 'huizenprijzen', question: 'Hoe duur zijn koopwoningen nu?' },
+      shortlist,
+    );
+    expect(payload).toContain('Volledige vraag van de gebruiker: "Hoe duur zijn koopwoningen nu?"');
     expect(payload).toContain('Onderwerp van de gebruiker: "huizenprijzen"');
     expect(payload).toContain('id=85773NED');
     expect(payload).toContain('status=Regulier');
@@ -134,16 +138,23 @@ describe('serializeShortlist', () => {
   });
 
   it('truncates a long description with an ellipsis (token budget)', () => {
-    const payload = serializeShortlist('x', shortlist);
+    const payload = serializeShortlist({ topic: 'x', question: 'x' }, shortlist);
     expect(payload).toContain('…');
     // no single omschrijving line longer than the budget + a little framing
     const longest = Math.max(...payload.split('\n').map((l) => l.length));
     expect(longest).toBeLessThan(300);
   });
 
-  it('the system prompt forbids inventing ids and prefers current tables', () => {
+  it('the system prompt forbids inventing ids, prefers current tables, and judges on the QUESTION', () => {
     const sys = buildRerankSystemPrompt();
     expect(sys).toMatch(/Verzin nooit een id/);
     expect(sys).toMatch(/Regulier/);
+    // WP27 (ADR 027 D3a): the question-shape rule — stock vs flow must be judged
+    // from the full question, not topic-word overlap.
+    expect(sys).toMatch(/VOLLEDIGE VRAAG/);
+    expect(sys).toMatch(/instroom/);
+    // The output-schema literal stays version 1 (RERANK_SCHEMA_VERSION) even
+    // though the prompt is v2 — the two versions are different contracts.
+    expect(sys).toMatch(/version is altijd 1/);
   });
 });

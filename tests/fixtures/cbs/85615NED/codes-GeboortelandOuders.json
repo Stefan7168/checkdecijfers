@@ -1,0 +1,47 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/85615NED/$metadata#GeboortelandOudersCodes",
+ "value": [
+  {
+   "Identifier": "T001638",
+   "Index": 1,
+   "Title": "Totaal",
+   "Description": "",
+   "DimensionGroupId": null
+  },
+  {
+   "Identifier": "A051735",
+   "Index": 2,
+   "Title": "Geboren in Nederland",
+   "Description": "",
+   "DimensionGroupId": null
+  },
+  {
+   "Identifier": "A051736",
+   "Index": 3,
+   "Title": "Geboren buiten Nederland",
+   "Description": "",
+   "DimensionGroupId": null
+  },
+  {
+   "Identifier": "A051760",
+   "Index": 4,
+   "Title": "Geboren in NL, ouders in NL",
+   "Description": "Persoon en beide ouders zijn geboren in Nederland.",
+   "DimensionGroupId": null
+  },
+  {
+   "Identifier": "A051742",
+   "Index": 5,
+   "Title": "Geboren in NL, ouder(s) buiten NL",
+   "Description": "In Nederland geboren persoon met één of twee in het buitenland geboren ouders.",
+   "DimensionGroupId": null
+  },
+  {
+   "Identifier": "A052139",
+   "Index": 6,
+   "Title": "Onbekend",
+   "Description": "",
+   "DimensionGroupId": null
+  }
+ ]
+}

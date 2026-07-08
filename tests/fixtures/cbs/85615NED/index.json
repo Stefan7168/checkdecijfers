@@ -1,0 +1,19 @@
+{
+ "tableId": "85615NED",
+ "capturedAt": "2026-07-08T08:06:28.740Z",
+ "source": "https://datasets.cbs.nl/odata/v1/CBS/85615NED",
+ "sliceFilter": null,
+ "captureOnlySlice": null,
+ "observationRows": 181440,
+ "observationPages": [],
+ "files": {
+  "properties": "properties.json",
+  "dimensions": "dimensions.json",
+  "measure-codes": "measure-codes.json",
+  "codes-GeboortelandOuders": "codes-GeboortelandOuders.json",
+  "codes-Geslacht": "codes-Geslacht.json",
+  "codes-Herkomstland": "codes-Herkomstland.json",
+  "codes-Leeftijd": "codes-Leeftijd.json",
+  "codes-Perioden": "codes-Perioden.json"
+ }
+}

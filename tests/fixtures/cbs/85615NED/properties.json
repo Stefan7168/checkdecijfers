@@ -1,0 +1,104 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/85615NED/$metadata#Properties",
+ "Identifier": "85615NED",
+ "Title": "Personen met bijstand; (Her)instromers en uitstromers",
+ "Description": "Deze tabel geeft inzicht in de dynamiek in de bijstand. De tabel toont het aantal instroommomenten van personen tot de AOW-gerechtigde leeftijd in de verslagperiode, waaronder het aantal personen dat binnen een jaar opnieuw is ingestroomd in de bijstand (WWB, Participatiewet), en het aantal uitstroommomenten van personen met een bijstandsuitkering. De aantallen zijn uitgesplitst naar de persoonskenmerken geslacht, leeftijd, herkomstland en wel of niet geboren in Nederland.\r\n\r\nGegevens beschikbaar vanaf: 1e kwartaal 2012\r\n\r\nHet CBS gaat over op een nieuwe indeling van de bevolking naar herkomst. Voortaan is meer bepalend waar iemand zelf geboren is, naast waar iemands ouders geboren zijn. Daarbij wordt het woord migratieachtergrond niet meer gebruikt. De voorheen gebruikte hoofdindeling westers/niet-westers wordt daarbij vervangen door een indeling op basis van werelddelen en/of veelvoorkomende immigratielanden. In deze tabel is dat doorgevoerd.\r\n\r\nBij de update in augustus 2024 is een onterechte wijziging in de methodiek doorgevoerd. Hierdoor zijn de cijfers voor het totaal aantal personen met bijstand voor de perioden 2012Q1 t/m 2024Q1  met maximaal 160 personen overschat. De cijfers zijn in februari 2025 gecorrigeerd.   \r\n\r\nStatus van de cijfers:\r\nDe cijfers tot en met het 4e kwartaal van 2025 zijn definitief. \r\n\r\nWijzigingen per 12 juni 2026:\r\nToegevoegd zijn de definitieve cijfers van het 4e kwartaal 2025.\r\n\r\nEr was een fout geconstateerd in de tellingen bij kruisingen waarbij Geboorteland ouders wordt gebruikt. Deze is ontstaan bij de invoering van de nieuwe herkomstindeling in juli 2024. Per december 2025 is deze fout hersteld en voor alle kwartalen in de tabel gecorrigeerd.\r\n\r\nWanneer komen er nieuwe cijfers?\r\nNieuwe cijfers komen in augustus 2026.\r\n\r\n",
+ "Language": "nl",
+ "Authority": "https://standaarden.overheid.nl/owms/terms/Centraal_Bureau_voor_de_Statistiek",
+ "Modified": "2026-06-12T00:00:00+02:00",
+ "ReleaseDate": "2026-06-12T00:00:00+02:00",
+ "ModificationDate": "2026-06-12T00:00:00+02:00",
+ "TemporalCoverage": "2012 kwartaal 1 t/m 2025 kwartaal 4",
+ "Catalog": "CBS",
+ "Publisher": "https://standaarden.overheid.nl/owms/terms/Centraal_Bureau_voor_de_Statistiek",
+ "ContactPoint": "infoservice@cbs.nl",
+ "Version": "202606120000",
+ "VersionNotes": "",
+ "VersionReason": "Actualisering",
+ "Frequency": "Per kwartaal",
+ "Status": "Regulier",
+ "ObservationCount": 181440,
+ "ObservationsModified": "2026-06-12T00:00:00+02:00",
+ "DatasetType": "Numeric",
+ "GraphTypes": "Table,Bar,Line",
+ "License": "https://creativecommons.org/licenses/by/4.0/",
+ "Source": "CBS.",
+ "Summary": "Personen met een bijstandsuitkering\nGeslacht, leeftijd, herkomstland, geboorteland (ouders)",
+ "LongDescription": "INHOUDSOPGAVE\r\n\r\n1. Toelichting\r\n2. Definities en verklaring van symbolen\r\n3. Koppelingen naar relevante tabellen en artikelen\r\n4. Bronnen en methoden\r\n5. Meer informatie \r\n\r\n1. TOELICHTING\r\n\r\nDeze tabel geeft inzicht in de dynamiek in de bijstand. De tabel toont het aantal instroommomenten van personen tot de AOW-gerechtigde leeftijd in de verslagperiode, waaronder het aantal personen dat binnen een jaar opnieuw is ingestroomd in de bijstand (WWB, Participatiewet), en het aantal uitstroommomenten van personen met een bijstandsuitkering. De aantallen zijn uitgesplitst naar de persoonskenmerken geslacht, leeftijd, herkomstland en wel of niet geboren in Nederland.\r\n\r\nGegevens beschikbaar vanaf: 1e kwartaal 2012\r\n\r\nHet CBS gaat over op een nieuwe indeling van de bevolking naar herkomst. Voortaan is meer bepalend waar iemand zelf geboren is, naast waar iemands ouders geboren zijn. Daarbij wordt het woord migratieachtergrond niet meer gebruikt. De voorheen gebruikte hoofdindeling westers/niet-westers wordt daarbij vervangen door een indeling op basis van werelddelen en/of veelvoorkomende immigratielanden. In deze tabel is dat doorgevoerd.\r\n\r\nBij de update in augustus 2024 is een onterechte wijziging in de methodiek doorgevoerd. Hierdoor zijn de cijfers voor het totaal aantal personen met bijstand voor de perioden 2012Q1 t/m 2024Q1  met maximaal 160 personen overschat. De cijfers zijn in februari 2025 gecorrigeerd.   \r\n\r\nStatus van de cijfers:\r\nDe cijfers tot en met het 4e kwartaal van 2025 zijn definitief. \r\n\r\nWijzigingen per 12 juni 2026:\r\nToegevoegd zijn de definitieve cijfers van het 4e kwartaal 2025.\r\n\r\nEr was een fout geconstateerd in de tellingen bij kruisingen waarbij Geboorteland ouders wordt gebruikt. Deze is ontstaan bij de invoering van de nieuwe herkomstindeling in juli 2024. Per december 2025 is deze fout hersteld en voor alle kwartalen in de tabel gecorrigeerd.\r\n\r\nWanneer komen er nieuwe cijfers?\r\nNieuwe cijfers komen in augustus 2026.\r\n\r\n2. DEFINITIES EN VERKLARING VAN SYMBOLEN\r\n\r\nDefinities:\r\n\r\nBijstandsuitkeringssituatie\r\nDe situatie waarbij een persoon een bijstandsuitkering ontvangt.\r\n\r\nBijstandsuitkering\r\nEen uitkering in het kader van de Wet werk en bijstand (WWB, tot 2015) of de Participatiewet (vanaf 2015). \r\n\r\nDuur van de uitkeringssituatie\r\nDe periode (gemeten in dagen en weergegeven in duurklassen) dat een persoon de bijstandsuitkering ontvangt.\r\n\r\nLet op: \r\nBij de interpretatie van de duurklassen moet rekening gehouden worden met de effecten van de introductie en beëindiging van de WIJ (Wet investeren in jongeren).\r\n\r\nDe WIJ was van kracht vanaf 1 oktober 2009 tot 1 januari 2012 en had betrekking op jongeren tot 27 jaar met een bijstandsuitkering. Er gold een overgangsrecht tot 1 juli 2010 voor de zittende bijstandsgevallen. Dit waren jongeren die op 30 september 2009 een bijstandsuitkering ontvingen krachtens de Wet werk en bijstand (WWB). Op 1 juli 2010 moesten gemeenten aan deze categorie personen een nieuwe aanvangsdatum WIJ toewijzen (de duurteller werd weer op nul gezet). Als gevolg hiervan wordt de duur van de uitkering voor deze groep onderschat, ondanks dat deze wijziging niet door elke gemeente consequent is doorgevoerd.\r\n\r\nEenzelfde werkwijze werd doorgevoerd bij stopzetting van de WIJ. Op 1 januari 2012 kregen de jongeren die direct aansluitend op de WIJ een uitkering krachtens de WWB ontvingen, een nieuwe aanvangsdatum WWB toegewezen ondanks dat er feitelijk wel sprake was van een doorlopende bijstandsuitkering. Ook hier werd de duurteller dus weer op nul gezet. Ook voor deze groep van jongeren geldt dus dat de duren worden onderschat. Iemand die bijvoorbeeld al twee jaar in de WIJ zat valt in het eerste kwartaal van 2012 in de duurcategorie \"nul tot zes maanden”. Pas als alle genoemde gevallen in de hoogste duurklasse vallen (“vijf jaar of langer”) is dit artefact niet meer zichtbaar, wat zeker het geval is vanaf 1 januari 2017.\r\n\r\nWet Werk en Bijstand (WWB, tot 2015), Participatiewet (vanaf 2015)\r\n\r\nDe wet die in Nederland de ondersteuning bij arbeidsinschakeling en bijstand regelt voor mensen die weinig of geen ander inkomen (waaronder andere uitkeringen) hebben en ook weinig of geen vermogen bezitten.\r\n\r\nAlvorens een uitkering toegewezen te krijgen moet men ingeschreven staan bij het Uitvoeringsinstituut werknemersverzekeringen (UWV).\r\n\r\nDe gemeenten voeren de wet uit en bepalen, binnen de wettelijke grenzen, hun eigen beleid. De WWB is per 2015 opgegaan in de Participatiewet.\r\n\r\nInstromers (inclusief herinstromers binnen een jaar)\r\nHet aantal instroommomenten in de bijstand in de verslagperiode van personen in het kader van de Participatiewet of de WWB.\r\n\r\nHerinstromers (binnen een jaar)\r\nHet aantal personen dat in de verslagperiode opnieuw is ingestroomd in de bijstand in het kader van de Participatiewet of de WWB en dat binnen een jaar voorafgaand aan het instroommoment deze uitkering al een keer ontving.\r\n\r\nUitstromers\r\nHet aantal uitstroommomenten vanuit de bijstand in de verslagperiode van personen in het kader van de Participatiewet of de WWB.\r\n\r\nHerkomstland\r\nKenmerk dat weergeeft in welk land iemand geboren is of waar diens ouders geboren zijn. De herkomst van personen die in het buitenland zijn geboren wordt bepaald door hun eigen geboorteland. Bij personen die in Nederland geboren zijn, wordt de herkomst bepaald door het geboorteland van de ouders. Wanneer beide ouders in het buitenland zijn geboren, is het geboorteland van de moeder leidend in het bepalen van de herkomst. De geboortegegevens van de moeder zijn vaker bekend dan die van de vader. Wanneer de moeder in Nederland is geboren of het geboorteland van de moeder onbekend is, dan wordt het geboorteland van de vader gebruikt.\r\n\r\nGeboorteland\r\nHet land waar een persoon geboren is.\r\n\r\nAOW-gerechtigde leeftijd (AOW-leeftijd)\r\nDe AOW-gerechtigde leeftijd of AOW-leeftijd is de leeftijd waarop het AOW-pensioen ingaat. Tot 2013 was dit 65 jaar. Hierna is de AOW-leeftijd gekoppeld aan de levensverwachting.\r\nDe AOW-leeftijd is tot en met 2029 als volgt:\r\n2013: 65 jaar en 1 maand\r\n2014: 65 jaar en 2 maanden\r\n2015: 65 jaar en 3 maanden\r\n2016: 65 jaar en 6 maanden\r\n2017: 65 jaar en 9 maanden\r\n2018: 66 jaar\r\n2019-2021: 66 jaar en 4 maanden\r\n2022: 66 jaar en 7 maanden\r\n2023: 66 jaar en 10 maanden\r\n2024 - 2027: 67 jaar \r\n2028-2029: 67 jaar en 3 maanden.\r\n\r\nVerklaring van symbolen:\r\n\r\nniets (blanco) : een cijfer kan op logische gronden niet voorkomen\r\n. : het cijfer is onbekend, onvoldoende betrouwbaar of geheim\r\n* : voorlopige cijfers\r\n** : nader voorlopige cijfers\r\n\r\nDe cijfers zijn afgerond op veelvouden van 10. Hierdoor kan het voorkomen, dat de som van de detailgegevens afwijkt van het totaal.\r\n\r\n3. KOPPELINGEN NAAR RELEVANTE TABELLEN EN ARTIKELEN\r\n\r\nRelevante tabellen:\r\nMeer informatie over personen met een bijstandsuitkering, waaronder ook naar duur, is te vinden in de onderstaande tabellen:\r\n\r\n<a href='https://opendata.cbs.nl/statline/#/CBS/nl/dataset/85585NED'>Personen met bijstand; duur van de lopende uitkeringssituatie</a>\r\n<a href='https://opendata.cbs.nl/statline/#/CBS/nl/dataset/85617NED'>Personen met bijstand; duur van de beëindigde uitkeringssituatie</a>\r\n<a href='https://opendata.cbs.nl/statline/#/CBS/nl/dataset/82662NED'>Personen met bijstand; (her)instroom en uitstroom 2008–2023</a>\r\n\r\nDit is de voorganger van de huidige tabel. De methode is ongewijzigd, maar de uitsplitsing naar Migratieachtergrond is vervangen door uitsplitsingen naar Herkomstland en Geboorteland (ouders). Zowel in deze oude tabel als in de huidige tabel zijn de verslagperiodes 2012kw1 t/m 2023kw2 opgenomen, zodat de verschillen zichtbaar gemaakt kunnen worden.\r\nTen behoeve van de huidige tabel zijn alle cijfers opnieuw bepaald. Hierbij zijn ook meer recentere gegevens gebruikt uit de Basisregistratie Personen. Hierdoor kunnen er kleine verschillen zijn tussen deze oude tabel en de huidige tabel.\r\n\r\nInformatie over het aantal bijstandsuitkeringen naar uitkeringsgrondslag en regio is te vinden in de tabel <a href='https://opendata.cbs.nl/statline/#/CBS/nl/dataset/82015NED'>Bijstandsuitkeringen; uitkeringsgrondslag, regio's</a>.\r\n\r\nInformatie over uitkeringen of het aantal personen met een uitkering per maand voor andere uitkeringssoorten is te vinden in:\r\n\r\n<a href='https://opendata.cbs.nl/statline/#/CBS/nl/dataset/37789KSZ'>Sociale zekerheid; kerncijfers, uitkeringen naar uitkeringssoort</a>\r\n<a href='https://opendata.cbs.nl/statline/#/CBS/nl/dataset/85692NED'>Personen met een uitkering; kenmerken uitkeringsontvangers</a>\r\n<a href='https://opendata.cbs.nl/statline/#/CBS/nl/dataset/80794NED'>Personen met een uitkering; uitkeringsontvangers per regio</a>\r\n<a href='https://opendata.cbs.nl/statline/#/CBS/nl/dataset/86113NED'>Personen met een uitkering; soort uitkering, wijken en buurten 2025</a>\r\n\r\nInformatie over (personen met) bijstandsuitkeringen is te vinden in de <a href='https://www.cbs.nl/nl-nl/arbeid-en-inkomen/arbeid-en-sociale-zekerheid/bus-tabellen'>BUS-tabellen</a>.\r\n\r\nMeer informatie op StatLine over sociale zekerheid is te vinden op de themapagina <a href='https://www.cbs.nl/nl-nl/arbeid-en-inkomen/arbeid-en-sociale-zekerheid'>Arbeid en sociale zekerheid</a>.\r\n\r\nRelevante artikelen:\r\n\r\nOnderzocht is de samenhang van bijstandsafhankelijkheid en verschillende achtergrondkenmerken. De kans dat iemand gebruikmaakt van bijstand hangt samen met bijvoorbeeld het opleidingsniveau, zorggebruik, type huishouden, het volgen van een studie en het ontvangen van een andere uitkering. De verschillen naar geboorteland en herkomstland worden na het corrigeren voor deze achtergrondkenmerken kleiner, maar blijven wel aanwezig. Klik <a href='https://www.cbs.nl/nl-nl/longread/statistische-trends/2023/verschillen-in-bijstandsafhankelijkheid-tussen-herkomstgroepen'>hier</a> voor meer informatie.\r\n\r\n4. BRONNEN EN METHODEN\r\n\r\nHet totaal aantal personen dat op peildatum een bijstandsuitkering ontvangt kan in geringe mate verschillen van de totaalcijfers in andere StatLinetabellen over personen met een bijstandsuitkering. Bij de totstandkoming van de cijfers worden de bijstandsgegevens gekoppeld met persoonsinformatie uit de Basisregistratie Personen (BRP) - voorheen Gemeentelijke Basis Administratie (GBA). Dit gebeurt voor de verschillende statistieken echter niet op hetzelfde moment en daardoor mogelijk niet met dezelfde versie van de BRP. Het gevolg hiervan is dat door onder andere leeftijdswijzigingen of overlijdens de totalen van elkaar kunnen verschillen. \r\n\r\nDe onderzoeksmethode van deze tabel is te vinden in de onderzoeksbeschrijving <a href='https://www.cbs.nl/nl-nl/onze-diensten/methoden/onderzoeksomschrijvingen/korte-onderzoeksbeschrijvingen/bijstandsuitkeringenstatistiek--bus--'>Bijstandsuitkeringenstatistiek (BUS)</a>.\r\n\r\nDe beschrijving van de Bijstandsuitkeringenstatistiek vindt u bij <a href='https://www.cbs.nl/nl-nl/onze-diensten/methoden/onderzoeksomschrijvingen/aanvullende-onderzoeksomschrijvingen/kwaliteitsrapport-bijstandsuitkeringenstatistiek--bus--'>Kwaliteitsrapport Bijstandsuitkeringenstatistiek (BUS)</a>.\r\n\r\nDe beschrijving van de wijzigingen in de Bijstandsuitkeringenstatistiek vanaf 2013 vindt u bij Wijzigingen in de <a href='https://www.cbs.nl/nl-nl/onze-diensten/methoden/onderzoeksomschrijvingen/aanvullende-onderzoeksomschrijvingen/wijzigingen-in-de-bijstandsuitkeringenstatistiek-in-2013'>Bijstandsuitkeringenstatistiek in 2013</a>.\r\nDe cijfers zijn gebaseerd op de registraties van gemeenten.\r\n\r\n5. MEER INFORMATIE\r\n\r\n<a href='https://www.cbs.nl/nl-nl/over-ons/contact/infoservice'>Infoservice</a>\r\n\r\nCopyright (c) Centraal Bureau voor de Statistiek, Den Haag/Heerlen \r\nVerveelvoudiging is toegestaan, mits het CBS als bron wordt vermeld.\r\n",
+ "Provenance": [
+  {
+   "Title": "Bijstandsuitkeringenstatistiek (BUS)",
+   "Url": "https://www.cbs.nl/nl-nl/onze-diensten/methoden/onderzoeksomschrijvingen/korte-onderzoeksbeschrijvingen/bijstandsuitkeringenstatistiek--bus--"
+  },
+  {
+   "Title": "Kwaliteitsrapport Bijstandsuitkeringenstatistiek (BUS)",
+   "Url": "https://www.cbs.nl/nl-nl/onze-diensten/methoden/onderzoeksomschrijvingen/aanvullende-onderzoeksomschrijvingen/kwaliteitsrapport-bijstandsuitkeringenstatistiek--bus--"
+  },
+  {
+   "Title": "Bijstandsuitkeringenstatistiek in 2013",
+   "Url": "https://www.cbs.nl/nl-nl/onze-diensten/methoden/onderzoeksomschrijvingen/aanvullende-onderzoeksomschrijvingen/wijzigingen-in-de-bijstandsuitkeringenstatistiek-in-2013"
+  }
+ ],
+ "RelatedSources": [
+  {
+   "Title": "Personen met bijstand; duur van de lopende uitkeringssituatie",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/dataset/85585NED"
+  },
+  {
+   "Title": "Personen met bijstand; duur van de beëindigde uitkeringssituatie",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/dataset/85617NED"
+  },
+  {
+   "Title": "Personen met bijstand; (her)instroom en uitstroom 2008–2023",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/dataset/82662NED"
+  },
+  {
+   "Title": "Bijstandsuitkeringen; uitkeringsgrondslag, regio's",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/dataset/82015NED"
+  },
+  {
+   "Title": "Sociale zekerheid; kerncijfers, uitkeringen naar uitkeringssoort",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/dataset/37789KSZ"
+  },
+  {
+   "Title": "Personen met een uitkering; kenmerken uitkeringsontvangers",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/dataset/85692NED"
+  },
+  {
+   "Title": "Personen met een uitkering; uitkeringsontvangers per regio",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/dataset/80794NED"
+  },
+  {
+   "Title": "Personen met een uitkering; soort uitkering, wijken en buurten 2025",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/dataset/86113NED"
+  },
+  {
+   "Title": "BUS-tabellen",
+   "Url": "https://www.cbs.nl/nl-nl/arbeid-en-inkomen/arbeid-en-sociale-zekerheid/bus-tabellen"
+  },
+  {
+   "Title": "Arbeid en sociale zekerheid",
+   "Url": "https://www.cbs.nl/nl-nl/arbeid-en-inkomen/arbeid-en-sociale-zekerheid"
+  },
+  {
+   "Title": "hier",
+   "Url": "https://www.cbs.nl/nl-nl/longread/statistische-trends/2023/verschillen-in-bijstandsafhankelijkheid-tussen-herkomstgroepen"
+  }
+ ],
+ "Distributions": [
+  {
+   "Format": "csv",
+   "MediaType": "csv",
+   "DownloadUrl": "https://datasets.cbs.nl/csv/CBS/nl/85615NED",
+   "AccessUrl": "https://dataportal.cbs.nl/detail/CBS/85615NED",
+   "Language": "nl"
+  },
+  {
+   "Format": "odata",
+   "MediaType": "odata",
+   "DownloadUrl": "https://datasets.cbs.nl/odata/v1/CBS/85615NED",
+   "AccessUrl": "https://dataportal.cbs.nl/detail/CBS/85615NED",
+   "Language": "nl"
+  }
+ ]
+}
