@@ -35,8 +35,23 @@ interface LabelledCase {
   /** The user's full question (WP27 stage A) — threaded into the rerank
    *  prompt. Absent on the older cases: the eval falls back to the topic. */
   question?: string;
-  expect: { kind: 'confident' | 'disclose' | 'none'; tableId?: string };
+  /** confident expectations: `tableId` pins the exact pick; `chainContains`
+   *  pins the CANDIDATE CHAIN instead — pick + alternativeIds under Stage B's
+   *  cap (the fit gate walks that chain, so chain membership IS the
+   *  system-level success condition); `notPick` pins a known mis-pick class
+   *  out of the top spot. */
+  expect: {
+    kind: 'confident' | 'disclose' | 'none';
+    tableId?: string;
+    chainContains?: string;
+    notPick?: string;
+  };
 }
+
+/** Stage B's candidate cap (ADR 027: pick first, then alternatives, cap 3).
+ *  The chainContains check applies the SAME cap so a table at position 4
+ *  can never satisfy a labelled expectation the job would not act on. */
+const CANDIDATE_CAP = 3;
 
 function buildClient(mode: string): LlmClient {
   if (mode === 'replay') return new ReplayLlmClient(FIXTURES_DIR);
@@ -52,9 +67,20 @@ function checkExpectation(outcome: FindTableOutcome, expect: LabelledCase['expec
     problems.push(`expected kind ${expect.kind}, got ${outcome.kind}`);
     return problems;
   }
-  if (expect.kind === 'confident' && outcome.kind === 'confident' && expect.tableId) {
-    if (outcome.pick.tableId !== expect.tableId) {
+  if (expect.kind === 'confident' && outcome.kind === 'confident') {
+    if (expect.tableId && outcome.pick.tableId !== expect.tableId) {
       problems.push(`expected pick ${expect.tableId}, got ${outcome.pick.tableId} (conf ${outcome.confidence})`);
+    }
+    if (expect.notPick && outcome.pick.tableId === expect.notPick) {
+      problems.push(`pick must NOT be ${expect.notPick} (the pinned mis-pick class)`);
+    }
+    if (expect.chainContains) {
+      const chain = [outcome.pick.tableId, ...outcome.alternativeIds].slice(0, CANDIDATE_CAP);
+      if (!chain.includes(expect.chainContains)) {
+        problems.push(
+          `expected ${expect.chainContains} in the candidate chain (cap ${CANDIDATE_CAP}), got [${chain.join(', ')}]`,
+        );
+      }
     }
   }
   if (expect.kind === 'disclose' && outcome.kind === 'disclose' && expect.tableId) {

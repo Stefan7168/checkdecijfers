@@ -30,8 +30,19 @@ interface LabelledCase {
    *  prompt. Absent on the older cases: the replay falls back to the topic,
    *  mirroring scripts/tablefinder-eval.ts so record→replay hashes match. */
   question?: string;
-  expect: { kind: 'confident' | 'disclose' | 'none'; tableId?: string };
+  /** See scripts/tablefinder-eval.ts: `chainContains` pins the candidate
+   *  chain (pick + alternativeIds, Stage-B cap 3) instead of the exact pick;
+   *  `notPick` pins a known mis-pick class out of the top spot. */
+  expect: {
+    kind: 'confident' | 'disclose' | 'none';
+    tableId?: string;
+    chainContains?: string;
+    notPick?: string;
+  };
 }
+
+/** Stage B's candidate cap (ADR 027) — keep in lockstep with the eval. */
+const CANDIDATE_CAP = 3;
 
 const set = JSON.parse(readFileSync(SET_PATH, 'utf8')) as { cases: LabelledCase[] };
 
@@ -56,8 +67,13 @@ describe('table finder — end-to-end replay against the labelled set', () => {
       });
 
       expect(outcome.kind).toBe(c.expect.kind);
-      if (c.expect.kind === 'confident' && outcome.kind === 'confident' && c.expect.tableId) {
-        expect(outcome.pick.tableId).toBe(c.expect.tableId);
+      if (c.expect.kind === 'confident' && outcome.kind === 'confident') {
+        if (c.expect.tableId) expect(outcome.pick.tableId).toBe(c.expect.tableId);
+        if (c.expect.notPick) expect(outcome.pick.tableId).not.toBe(c.expect.notPick);
+        if (c.expect.chainContains) {
+          const chain = [outcome.pick.tableId, ...outcome.alternativeIds].slice(0, CANDIDATE_CAP);
+          expect(chain).toContain(c.expect.chainContains);
+        }
         // Calibrated floor: every labelled confident pick clears the threshold.
         expect(outcome.confidence).toBeGreaterThanOrEqual(0.8);
       }

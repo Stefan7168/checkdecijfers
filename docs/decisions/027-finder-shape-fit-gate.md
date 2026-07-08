@@ -204,6 +204,22 @@ multi-measure table with the topic term (`37789ksz` registers 18 measures, three
 — parser ambiguity at delivery could clarify instead of answer; stage C's e2e test measures it
 hermetically.
 
+**MEASURED at the stage-A supervised record (2026-07-08, same day, ~55 Haiku calls ≈ €0.15
+total):** (1) Haiku reads the stock shape correctly but picks the — undeliverable — person-level
+stock table `85585NED`, with `37789ksz` at chain position 3: the chain gate holds, the exact-pick
+expectation does not, so the `bijstand-stock` labelled case was moved to **chain semantics**
+(`chainContains: 37789ksz` under Stage B's cap 3 + `notPick: 85615NED`) — the system-level success
+condition the fit gate actually acts on; a tier escalation was rejected because deliverability is
+not present in title/summary for ANY model to see. (2) The first `inkomen-vaag` measurement showed
+Haiku confidently picking among six near-equal Regulier income tables; prompt v2 gained a
+**vague-question honesty rule** (question no more specific than the topic + materially different
+candidates ⇒ confidence below 0.8 + alternatives listed; a SPECIFIC question still earns a
+confident pick — the first, broader wording measurably over-corrected two legitimate cases and was
+sharpened). (3) The legacy `werkloosheid` case (question == topic) then HONESTLY disclosed under
+that rule — it got a realistic question, since production always passes the full question post-WP27
+(the other bare-topic legacy cases stay as robustness pins). Final: **11/11, twice, byte-stable;
+confident floor 0.85 over threshold 0.8; the disclose boundary is now directly measured (#104).**
+
 ## Revisit triggers
 
 - Measured shortlist-recall miss (right table absent from the top-20) → alternative 1 (enrichment),

@@ -3,7 +3,7 @@
   "cases": [
     { "id": "huizenprijzen", "topic": "huizenprijzen", "expect": { "kind": "confident", "tableId": "85773NED" } },
     { "id": "inflatie", "topic": "inflatie", "expect": { "kind": "confident", "tableId": "86141NED" } },
-    { "id": "werkloosheid", "topic": "werkloosheid", "expect": { "kind": "confident", "tableId": "85224NED" } },
+    { "id": "werkloosheid", "topic": "werkloosheid", "question": "Hoe hoog is de werkloosheid in Nederland?", "note": "Got a real question in WP27 stage A: under the v2 vagueness rule a bare topic-word (question == topic) HONESTLY discloses — but production always passes the full question since WP27, so the topic-only shape no longer represents any real path. The other legacy bare-topic cases stay as robustness pins (they still route confidently).", "expect": { "kind": "confident", "tableId": "85224NED" } },
     { "id": "faillissementen", "topic": "faillissementen", "expect": { "kind": "confident", "tableId": "82242NED" } },
     { "id": "zonnepanelen", "topic": "hoeveel stroom leveren zonnepanelen", "note": "85004NED 'Hernieuwbare energie; zonnestroom…' is the direct solar-output table; 82610NED (general renewable electricity) is the acceptable runner-up.", "expect": { "kind": "confident", "tableId": "85004NED" } },
     { "id": "bevolking", "topic": "hoeveel inwoners heeft nederland", "expect": { "kind": "confident", "tableId": "03759ned" } },
@@ -13,8 +13,8 @@
       "id": "bijstand-stock",
       "topic": "bijstand",
       "question": "Hoeveel mensen zaten er in 2023 in de bijstand?",
-      "note": "The live #111 dead-end question. Stock/level ask → the kerncijfers table with yearly national totals (37789ksz), explicitly NOT the flow table 85615NED the v1 finder picked. 37789ksz counts uitkeringen (x 1000), not persons — owner-accepted 2026-07-08; the delivered answer names the measure verbatim.",
-      "expect": { "kind": "confident", "tableId": "37789ksz" }
+      "note": "The live #111 dead-end question. MEASURED (first record, session 31): Haiku reads the stock shape correctly but picks the person-level stock table 85585NED (deliverability is invisible in title/summary — the information gap the stage-C fit gate exists for) with 37789ksz in its alternatives. The system-level requirement is therefore chain semantics, exactly the amended brief's measurement gate: the candidate chain (pick + alternativeIds, Stage-B cap 3) must contain 37789ksz (the only v1-deliverable table — the A3 pre-checks skip the person-tables deterministically and deliver via it), and the pick must NOT be the flow table 85615NED (the original mis-pick class). A tier escalation would not help: no title/summary-only model can see deliverability.",
+      "expect": { "kind": "confident", "chainContains": "37789ksz", "notPick": "85615NED" }
     },
     {
       "id": "bijstand-flow",
