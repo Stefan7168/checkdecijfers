@@ -21,6 +21,16 @@ export interface PendingTableRequest {
   topicTerm: string;
   tableId: string;
   finderConfidence: number;
+  /** WP27 stage B (ADR 027 D2a): the finder's candidate chain (pick first,
+   * then sanitized alternativeIds, cap 3). [] on legacy rows AND on rows read
+   * from a pre-migration-015 schema — both mean the same thing to stage C's
+   * job: exactly today's path, no fit gate (ADR 027 D2c). */
+  candidateIds: string[];
+  /** WP27 stage C's accepted fit — null until the fit gate accepts a
+   * candidate. The job then ingests (resolvedTableId ?? tableId). tableId
+   * itself is NEVER mutated: it stays the finder's original pick, the
+   * (user, table) dedupe identity (ADR 027 D2a). */
+  resolvedTableId: string | null;
   status: PendingRequestStatus;
   claimedAt: Date | null;
   attemptCount: number;
@@ -41,6 +51,13 @@ interface PendingRequestRow {
   topic_term: string;
   table_id: string;
   finder_confidence: number | string;
+  /** OPTIONAL (`?`) deliberately: `select *` on a pre-migration-015 schema
+   * returns rows without these keys — the deploy-order-safety window between
+   * the stage-B code deploy and stage D's supervised migration apply. jsonb
+   * arrives parsed (pg and PGlite both parse json/jsonb by default), but
+   * fromRow still tolerates a string for driver-config robustness. */
+  candidate_ids?: unknown;
+  resolved_table_id?: string | null;
   status: PendingRequestStatus;
   claimed_at: string | null;
   attempt_count: number;
@@ -53,6 +70,17 @@ interface PendingRequestRow {
   finished_at: string | null;
 }
 
+/** candidate_ids column → string[]. null/undefined (pre-015 schema or an
+ * explicit null) → [] — indistinguishable from a legacy row ON PURPOSE: both
+ * must take today's no-fit-gate path (ADR 027 D2c). Anything non-array after
+ * parsing also degrades to [] (defensive; the column's writers only ever
+ * store a JSON string array). */
+function candidateIdsFromColumn(value: unknown): string[] {
+  if (value === null || value === undefined) return [];
+  const parsed = typeof value === 'string' ? JSON.parse(value) : value;
+  return Array.isArray(parsed) ? parsed.map(String) : [];
+}
+
 function fromRow(row: PendingRequestRow): PendingTableRequest {
   return {
     id: Number(row.id),
@@ -62,6 +90,8 @@ function fromRow(row: PendingRequestRow): PendingTableRequest {
     topicTerm: row.topic_term,
     tableId: row.table_id,
     finderConfidence: Number(row.finder_confidence),
+    candidateIds: candidateIdsFromColumn(row.candidate_ids),
+    resolvedTableId: row.resolved_table_id ?? null,
     status: row.status,
     claimedAt: row.claimed_at === null ? null : new Date(row.claimed_at),
     attemptCount: row.attempt_count,
@@ -82,6 +112,11 @@ export interface CreatePendingRequestInput {
   topicTerm: string;
   tableId: string;
   finderConfidence: number;
+  /** WP27 stage B: the finder's candidate chain to persist. REQUIRED — an
+   * optional carrier is how a chain link gets silently skipped (PR-#17
+   * review). Callers without a chain (none exist in production; some tests)
+   * must say [] explicitly, which is the legacy no-fit-gate path. */
+  candidateIds: string[];
   debitTransactionId: number;
   ackAuditAnswerId?: number | null;
 }
@@ -98,23 +133,58 @@ export interface CreatePendingRequestInput {
  * 'onboarding_already_pending' refusal reason — never a silent second queue
  * entry. */
 export async function createPendingRequest(db: Db, input: CreatePendingRequestInput): Promise<PendingTableRequest> {
-  const { rows } = await db.query(
-    `insert into pending_table_requests
-       (user_id, request_id, question_text, topic_term, table_id, finder_confidence,
-        debit_transaction_id, ack_audit_answer_id)
-     values ($1, $2, $3, $4, $5, $6, $7, $8)
-     returning *`,
-    [
-      input.userId,
-      input.requestId,
-      input.questionText,
-      input.topicTerm,
-      input.tableId,
-      input.finderConfidence,
-      input.debitTransactionId,
-      input.ackAuditAnswerId ?? null,
-    ],
+  // WP27 stage B deploy-order safety: migration 015 is FILE-ONLY until stage
+  // D's supervised live step, so this code runs against the pre-015 production
+  // schema for a while. An INSERT naming a missing column is a statement error
+  // that would abort the WHOLE money transaction (debit included), so probe
+  // for the column first — a SELECT can never abort the tx. No caching: the
+  // probe is one trivial catalog read per onboarding trigger (a rare,
+  // 100-credit event), and cache staleness across the stage-D migration would
+  // buy nothing but a test-only reset hook. When the column is absent the
+  // chain is dropped for that row — it reads back as [] = the legacy
+  // no-fit-gate path, exactly what those rows must do (ADR 027 D2c).
+  const probe = await db.query(
+    `select 1 from pg_attribute
+     where attrelid = 'pending_table_requests'::regclass
+       and attname = 'candidate_ids' and not attisdropped`,
   );
+  const hasCandidateColumn = probe.rows.length > 0;
+  const { rows } = hasCandidateColumn
+    ? await db.query(
+        `insert into pending_table_requests
+           (user_id, request_id, question_text, topic_term, table_id, finder_confidence,
+            candidate_ids, debit_transaction_id, ack_audit_answer_id)
+         values ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9)
+         returning *`,
+        [
+          input.userId,
+          input.requestId,
+          input.questionText,
+          input.topicTerm,
+          input.tableId,
+          input.finderConfidence,
+          JSON.stringify(input.candidateIds),
+          input.debitTransactionId,
+          input.ackAuditAnswerId ?? null,
+        ],
+      )
+    : await db.query(
+        `insert into pending_table_requests
+           (user_id, request_id, question_text, topic_term, table_id, finder_confidence,
+            debit_transaction_id, ack_audit_answer_id)
+         values ($1, $2, $3, $4, $5, $6, $7, $8)
+         returning *`,
+        [
+          input.userId,
+          input.requestId,
+          input.questionText,
+          input.topicTerm,
+          input.tableId,
+          input.finderConfidence,
+          input.debitTransactionId,
+          input.ackAuditAnswerId ?? null,
+        ],
+      );
   return fromRow(rows[0] as unknown as PendingRequestRow);
 }
 

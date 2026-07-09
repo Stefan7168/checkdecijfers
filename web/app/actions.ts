@@ -231,6 +231,9 @@ async function maybeTriggerOnboarding(
     tableId: response.onboarding.tableId,
     topicTerm: response.onboarding.topicTerm,
     finderConfidence: response.onboarding.confidence,
+    // WP27 stage B: the candidate chain rides the envelope into the trigger —
+    // the last in-memory link before pending_table_requests.candidate_ids.
+    candidateIds: response.onboarding.candidateIds,
     ackAuditAnswerId: gated.auditId,
   });
 

@@ -49,6 +49,10 @@ const confidentFinder: TableFinder = async (term) => ({
   topicTerm: term,
   confidence: 0.91,
   alreadyPending: false,
+  // WP27 stage B: pick first, then a sanitized alternative — the shape the
+  // real finder constructs (onboarding-finder.ts), so the tests below prove
+  // the chain is CARRIED, not rebuilt, by every link.
+  candidateIds: ['82610NED', '70072NED'],
 });
 
 describe('resolveUnmatched — the finder-aware unmatched exit (WP16 sub-part 2)', () => {
@@ -69,6 +73,8 @@ describe('resolveUnmatched — the finder-aware unmatched exit (WP16 sub-part 2)
     expect(outcome.topicTerm).toBe('zonnestroom');
     expect(outcome.confidence).toBe(0.91);
     expect(outcome.alreadyPending).toBe(false);
+    // WP27 stage B: the candidate chain is carried verbatim (pick first).
+    expect(outcome.candidateIds).toEqual(['82610NED', '70072NED']);
     // The OutcomeBase fields still ride along for the audit record.
     expect(outcome.question).toBe(B15_CONTEXT.question);
     expect(outcome.raw).toBe(B15_CONTEXT.raw);
@@ -80,6 +86,7 @@ describe('resolveUnmatched — the finder-aware unmatched exit (WP16 sub-part 2)
       topicTerm: term,
       confidence: 0.9,
       alreadyPending: true,
+      candidateIds: ['82610NED'],
     });
     const outcome = await resolveUnmatched(B15_CONTEXT, finder);
     expect(outcome.kind).toBe('onboarding');
@@ -97,7 +104,7 @@ describe('resolveUnmatched — the finder-aware unmatched exit (WP16 sub-part 2)
     let called = false;
     const spyFinder: TableFinder = async (term) => {
       called = true;
-      return { tableId: 'X', topicTerm: term, confidence: 1, alreadyPending: false };
+      return { tableId: 'X', topicTerm: term, confidence: 1, alreadyPending: false, candidateIds: ['X'] };
     };
     // context() defaults unmatchedMeasureTerm to null.
     const outcome = await resolveUnmatched(context(), spyFinder);
@@ -122,7 +129,7 @@ describe('resolveUnmatched — the finder-aware unmatched exit (WP16 sub-part 2)
 describe('onboarding acknowledgment copy — VERBATIM, owner-approved (design §2)', () => {
   it('onboarding_pending text is byte-exact and carries the envelope', () => {
     const built = buildOnboardingRefusal(
-      { tableId: '82610NED', topicTerm: 'zonnestroom', confidence: 0.91 },
+      { tableId: '82610NED', topicTerm: 'zonnestroom', confidence: 0.91, candidateIds: ['82610NED', '70072NED'] },
       false,
     );
     expect(built.reason).toBe('onboarding_pending');
@@ -130,14 +137,19 @@ describe('onboarding acknowledgment copy — VERBATIM, owner-approved (design §
       'Dat onderwerp staat nog niet in onze database. We vragen de cijfers nu automatisch op bij het CBS en controleren ze — meestal een kwestie van minuten. Je krijgt een e-mail zodra je vraag beantwoord kan worden. Heb je ondertussen nog een andere vraag?',
     );
     expect(built.text).toBe(ONBOARDING_PENDING_TEXT);
-    expect(built.onboarding).toEqual({ tableId: '82610NED', topicTerm: 'zonnestroom', confidence: 0.91 });
+    expect(built.onboarding).toEqual({
+      tableId: '82610NED',
+      topicTerm: 'zonnestroom',
+      confidence: 0.91,
+      candidateIds: ['82610NED', '70072NED'],
+    });
     // No unbacked numbers: the copy carries NO digit at all.
     expect(/[0-9]/.test(built.text)).toBe(false);
   });
 
   it('onboarding_already_pending text is byte-exact and carries NO envelope', () => {
     const built = buildOnboardingRefusal(
-      { tableId: '82610NED', topicTerm: 'zonnestroom', confidence: 0.91 },
+      { tableId: '82610NED', topicTerm: 'zonnestroom', confidence: 0.91, candidateIds: ['82610NED', '70072NED'] },
       true,
     );
     expect(built.reason).toBe('onboarding_already_pending');
@@ -151,20 +163,25 @@ describe('onboarding acknowledgment copy — VERBATIM, owner-approved (design §
 
   it('toRefusalResponse propagates the onboarding envelope onto the response', () => {
     const built = buildOnboardingRefusal(
-      { tableId: '82610NED', topicTerm: 'zonnestroom', confidence: 0.91 },
+      { tableId: '82610NED', topicTerm: 'zonnestroom', confidence: 0.91, candidateIds: ['82610NED', '70072NED'] },
       false,
     );
     const response = toRefusalResponse({ question: 'q', built, parse: null, queryRefusal: null });
     expect(response.kind).toBe('refusal');
     expect(response.reason).toBe('onboarding_pending');
-    expect(response.onboarding).toEqual({ tableId: '82610NED', topicTerm: 'zonnestroom', confidence: 0.91 });
+    expect(response.onboarding).toEqual({
+      tableId: '82610NED',
+      topicTerm: 'zonnestroom',
+      confidence: 0.91,
+      candidateIds: ['82610NED', '70072NED'],
+    });
     // The acknowledgment deliberately opens no clarification round.
     expect(response.text).toBe(ONBOARDING_PENDING_TEXT);
   });
 
   it('the already-pending response carries a null onboarding field', () => {
     const built = buildOnboardingRefusal(
-      { tableId: '82610NED', topicTerm: 'zonnestroom', confidence: 0.91 },
+      { tableId: '82610NED', topicTerm: 'zonnestroom', confidence: 0.91, candidateIds: ['82610NED', '70072NED'] },
       true,
     );
     const response = toRefusalResponse({ question: 'q', built, parse: null, queryRefusal: null });
@@ -180,6 +197,7 @@ describe('onboarding acknowledgment copy — VERBATIM, owner-approved (design §
       topicTerm: 't',
       confidence: 0.9,
       alreadyPending: false,
+      candidateIds: ['X'],
     };
     expect(routing.alreadyPending).toBe(false);
     expect(ONBOARDING_PENDING_TEXT.trimEnd().endsWith('?')).toBe(true);

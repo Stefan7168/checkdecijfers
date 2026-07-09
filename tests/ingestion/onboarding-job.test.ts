@@ -146,6 +146,7 @@ async function queueRequest(
     topicTerm,
     tableId: TABLE,
     finderConfidence: 0.9,
+    candidateIds: [],
     debitTransactionId: debit.entry.id,
   });
   return { userId, requestId, pendingId: row.id, debitId: debit.entry.id };
