@@ -53,6 +53,15 @@ describe('WP16 sub-part 2 onboarding-trigger wiring (source pins)', () => {
     expect(source).toContain('triggerOnboarding(getDb()');
   });
 
+  it('WP27 stage B: hands the candidate chain from the envelope into the trigger', () => {
+    // The web action is a CARRIER link of the candidate chain (brief § Stage
+    // B: skipping one strands the data) — the envelope's candidateIds must
+    // reach TriggerOnboardingInput verbatim. The type system forces the field
+    // to exist; this pins that it is fed from the ENVELOPE, not rebuilt or
+    // stubbed here.
+    expect(source).toContain('candidateIds: response.onboarding.candidateIds');
+  });
+
   it('maps the three trigger results to the pinned gated shapes/costs', () => {
     // started → 100-credit caption; insufficient → the existing UI shape with
     // required 100; duplicate → net 0.

@@ -116,6 +116,13 @@ export interface OnboardingRouting {
   confidence: number;
   /** true → an active job already exists for this (user, table). */
   alreadyPending: boolean;
+  /** WP27 stage B (ADR 027 D2a): the finder's candidate chain — the confident
+   * pick first, then its allowlist-sanitized alternativeIds, cap 3. CONSTRUCTED
+   * in src/ingestion/onboarding-finder.ts (the one building link — PR-#17
+   * review); every carrier from here to pending_table_requests.candidate_ids
+   * only passes it along, so stage C's fit gate can try candidate 2 when
+   * candidate 1 misfits. Always non-empty on a real routing (pick is first). */
+  candidateIds: string[];
 }
 /** WP27 stage A (ADR 027 D3a): the finder receives the FULL question alongside
  * the unmatched term — the question's shape (stock vs flow) is signal the term
@@ -144,6 +151,9 @@ export async function resolveUnmatched(
         topicTerm: routing.topicTerm,
         confidence: routing.confidence,
         alreadyPending: routing.alreadyPending,
+        // WP27 stage B: carried verbatim — this outcome is the second link of
+        // the candidate chain (finder → HERE → envelope → trigger → store).
+        candidateIds: routing.candidateIds,
       };
     }
   }

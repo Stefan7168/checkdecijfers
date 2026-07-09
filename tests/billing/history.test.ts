@@ -391,6 +391,7 @@ describe('getQuestionHistory — onboarding queue (WP16 sub-part 2)', () => {
         topicTerm: 't',
         tableId: '82610NED',
         finderConfidence: 0.9,
+        candidateIds: [],
         debitTransactionId: debit.entry.id,
       });
       // No includeOnboarding -> the pending row must NOT surface.
@@ -436,6 +437,7 @@ describe('getQuestionHistory — onboarding queue (WP16 sub-part 2)', () => {
         topicTerm: 'zonnestroom',
         tableId: '82610NED',
         finderConfidence: 0.91,
+        candidateIds: [],
         debitTransactionId: debit.entry.id,
       });
 
@@ -466,6 +468,7 @@ describe('getQuestionHistory — onboarding queue (WP16 sub-part 2)', () => {
         topicTerm: 'zonnestroom',
         tableId: '82610NED',
         finderConfidence: 0.91,
+        candidateIds: [],
         debitTransactionId: debit.entry.id,
       });
       // The job's delivery re-run: same request_id, tagged 'onboarding_delivery'
@@ -512,6 +515,7 @@ describe('getQuestionHistory — onboarding queue (WP16 sub-part 2)', () => {
         topicTerm: 'niet-bestaand-onderwerp',
         tableId: 'AAAA',
         finderConfidence: 0.85,
+        candidateIds: [],
         debitTransactionId: debit.entry.id,
       });
       await compensate(db, userId, debit.entry.id, 100, null);
@@ -552,6 +556,7 @@ describe('getQuestionHistory — onboarding queue (WP16 sub-part 2)', () => {
         topicTerm: 't',
         tableId: 'AAAA',
         finderConfidence: 0.9,
+        candidateIds: [],
         debitTransactionId: debit.entry.id,
       });
 
@@ -682,6 +687,7 @@ describe('getQuestionHistory — onboarding acknowledgment dedupe', () => {
       topicTerm: 'zonnestroom',
       tableId: '82610NED',
       finderConfidence: 0.91,
+      candidateIds: [],
       debitTransactionId: debit.entry.id,
       ackAuditAnswerId: ackAuditId,
     });

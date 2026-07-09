@@ -195,7 +195,12 @@ async function respondToParseOutcome(
     // can trigger the fetch + 100-credit debit (that money lives OUTSIDE this
     // module). alreadyPending → the no-new-fetch copy + no envelope field.
     const built = buildOnboardingRefusal(
-      { tableId: parse.tableId, topicTerm: parse.topicTerm, confidence: parse.confidence },
+      {
+        tableId: parse.tableId,
+        topicTerm: parse.topicTerm,
+        confidence: parse.confidence,
+        candidateIds: parse.candidateIds,
+      },
       parse.alreadyPending,
     );
     return toRefusalResponse({ question, built, parse, queryRefusal: null });
@@ -289,7 +294,12 @@ export async function respondToClarificationReply(
       // type exhaustiveness and to stay correct-by-construction if the finder
       // is ever wired into this path: same acknowledgment as a fresh turn.
       const built = buildOnboardingRefusal(
-        { tableId: parse.tableId, topicTerm: parse.topicTerm, confidence: parse.confidence },
+        {
+          tableId: parse.tableId,
+          topicTerm: parse.topicTerm,
+          confidence: parse.confidence,
+          candidateIds: parse.candidateIds,
+        },
         parse.alreadyPending,
       );
       return toRefusalResponse({ question: pending.question, built, parse, queryRefusal: null });
