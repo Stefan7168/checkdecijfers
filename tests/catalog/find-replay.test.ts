@@ -15,7 +15,7 @@ import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ReplayLlmClient } from '../../src/answer/llm/client.ts';
 import { FixtureSource, loadCatalogFixture } from '../../src/cbs-adapter/fixture-source.ts';
-import { ingestCatalog, findTable, rerankShortlist } from '../../src/catalog/index.ts';
+import { ingestCatalog, findTable, rerankShortlist, DEFAULT_FIND_TABLE_CONFIG } from '../../src/catalog/index.ts';
 import { createTestDb } from '../helpers/pglite-db.ts';
 import type { Db } from '../../src/db/types.ts';
 
@@ -74,8 +74,11 @@ describe('table finder — end-to-end replay against the labelled set', () => {
           const chain = [outcome.pick.tableId, ...outcome.alternativeIds].slice(0, CANDIDATE_CAP);
           expect(chain).toContain(c.expect.chainContains);
         }
-        // Calibrated floor: every labelled confident pick clears the threshold.
-        expect(outcome.confidence).toBeGreaterThanOrEqual(0.8);
+        // Calibrated floor: every labelled confident pick clears the ROUTING
+        // threshold. Referencing the config constant (not a hardcoded 0.8)
+        // keeps this assertion and findTable's routing in lockstep if the
+        // threshold is ever recalibrated (PR-#17 review, split finding).
+        expect(outcome.confidence).toBeGreaterThanOrEqual(DEFAULT_FIND_TABLE_CONFIG.highConfidence);
       }
       if (c.expect.kind === 'disclose' && outcome.kind === 'disclose' && c.expect.tableId) {
         expect(outcome.candidates.some((cand) => cand.tableId === c.expect.tableId)).toBe(true);
