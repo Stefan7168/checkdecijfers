@@ -1,13 +1,34 @@
 {
-  "note": "Seed topic→table labelled set for the WP16 table finder (sub-part 1). Every expected tableId MUST exist in tests/fixtures/cbs/_catalog.json, the hermetic catalog the eval's recall runs over, so record→replay stays consistent. Several cases have a Regulier answer that ranks BELOW discontinued keyword-matches in raw recall — they test the rerank's 'prefer current tables' rule. This is a starter set; expand it during live calibration of DEFAULT_FIND_TABLE_CONFIG.highConfidence. Session-25 live calibration: 8/8 on this set. Correct confident picks measured 0.85–0.95 (floor 0.85, stable across two runs); threshold 0.8 sits 0.05 below that floor and is failure-safe (a below-0.8 pick DISCLOSES, never a wrong table). IMPORTANT GAP: this set has NO disclose-expected case yet, so the confident/disclose boundary is NOT directly measured — 0.8 is a confident-floor value, not a measured midpoint; add a genuinely-ambiguous disclose case in sub-part 2 (open-questions). zonnepanelen relabelled 82610NED→85004NED (85004NED is the specific 'zonnestroom-productie' table; 82610NED is the aggregate-renewables table — verified from the CBS Description and independently confirmed in adversarial review, not taken from the model's confidence). bevolking + woningvoorraad recall gaps fixed via alias hints (aliases.ts).",
+  "note": "Labelled topic→table set for the WP16 table finder, extended in WP27 stage A (question-aware rerank, ADR 027). Every expected tableId MUST exist in tests/fixtures/cbs/_catalog.json, the hermetic catalog the eval's recall runs over, so record→replay stays consistent. Cases may carry an optional 'question' (the user's full question, threaded into the rerank prompt); the eval harnesses fall back to the topic when it is absent. Several cases have a Regulier answer that ranks BELOW discontinued keyword-matches in raw recall — they test the rerank's 'prefer current tables' rule ON TOP of the WP27 Regulier-first recall quota (amendment A2). Session-25 live calibration: 8/8 on the original set; correct confident picks measured 0.85–0.95 (floor 0.85), threshold 0.8 failure-safe (a below-0.8 pick DISCLOSES, never a wrong table). WP27 additions: bijstand-stock/bijstand-flow are the stock-vs-flow discriminator pair from the live #111 dead-end — the stock case expects 37789ksz ('Sociale zekerheid; kerncijfers', owner decision 2026-07-08: the ONLY v1-deliverable table for a year-explicit national bijstand question; it counts UITKERINGEN, not persons, and the answer names that measure verbatim) and must NOT land on 85615NED (flows). inkomen-vaag is the genuinely-ambiguous disclose-expected case that closes the #104 gap (the confident/disclose boundary is now directly measured). zonnepanelen relabelled 82610NED→85004NED in session 25 (verified from CBS metadata, not model confidence).",
   "cases": [
     { "id": "huizenprijzen", "topic": "huizenprijzen", "expect": { "kind": "confident", "tableId": "85773NED" } },
     { "id": "inflatie", "topic": "inflatie", "expect": { "kind": "confident", "tableId": "86141NED" } },
-    { "id": "werkloosheid", "topic": "werkloosheid", "expect": { "kind": "confident", "tableId": "85224NED" } },
+    { "id": "werkloosheid", "topic": "werkloosheid", "question": "Hoe hoog is de werkloosheid in Nederland?", "note": "Got a real question in WP27 stage A: under the v2 vagueness rule a bare topic-word (question == topic) HONESTLY discloses — but production always passes the full question since WP27, so the topic-only shape no longer represents any real path. The other legacy bare-topic cases stay as robustness pins (they still route confidently).", "expect": { "kind": "confident", "tableId": "85224NED" } },
     { "id": "faillissementen", "topic": "faillissementen", "expect": { "kind": "confident", "tableId": "82242NED" } },
     { "id": "zonnepanelen", "topic": "hoeveel stroom leveren zonnepanelen", "note": "85004NED 'Hernieuwbare energie; zonnestroom…' is the direct solar-output table; 82610NED (general renewable electricity) is the acceptable runner-up.", "expect": { "kind": "confident", "tableId": "85004NED" } },
     { "id": "bevolking", "topic": "hoeveel inwoners heeft nederland", "expect": { "kind": "confident", "tableId": "03759ned" } },
     { "id": "woningvoorraad", "topic": "aantal woningen in nederland", "expect": { "kind": "confident", "tableId": "82235NED" } },
-    { "id": "onbekend", "topic": "gemiddelde schoenmaat van nederlanders", "expect": { "kind": "none" } }
+    { "id": "onbekend", "topic": "gemiddelde schoenmaat van nederlanders", "expect": { "kind": "none" } },
+    {
+      "id": "bijstand-stock",
+      "topic": "bijstand",
+      "question": "Hoeveel mensen zaten er in 2023 in de bijstand?",
+      "note": "The live #111 dead-end question. MEASURED (first record, session 31): Haiku reads the stock shape correctly but picks the person-level stock table 85585NED (deliverability is invisible in title/summary — the information gap the stage-C fit gate exists for) with 37789ksz in its alternatives. The system-level requirement is therefore chain semantics, exactly the amended brief's measurement gate: the candidate chain (pick + alternativeIds, Stage-B cap 3) must contain 37789ksz (the only v1-deliverable table — the A3 pre-checks skip the person-tables deterministically and deliver via it), and the pick must NOT be the flow table 85615NED (the original mis-pick class). A tier escalation would not help: no title/summary-only model can see deliverability.",
+      "expect": { "kind": "confident", "chainContains": "37789ksz", "notPick": "85615NED" }
+    },
+    {
+      "id": "bijstand-flow",
+      "topic": "bijstand",
+      "question": "Hoeveel mensen stroomden er in 2023 de bijstand in?",
+      "note": "Flow-phrased twin of bijstand-stock: same topic term, opposite shape — the question, not the topic, must decide.",
+      "expect": { "kind": "confident", "tableId": "85615NED" }
+    },
+    {
+      "id": "inkomen-vaag",
+      "topic": "inkomen",
+      "question": "Wat zijn de cijfers over inkomen?",
+      "note": "Genuinely ambiguous (mean/median, household/person, distribution/regional) — a human would ask back. Closes the #104 gap: the first disclose-expected case, so the confident/disclose boundary is directly measured.",
+      "expect": { "kind": "disclose" }
+    }
   ]
 }

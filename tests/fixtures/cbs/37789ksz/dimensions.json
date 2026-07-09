@@ -1,0 +1,18 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/37789ksz/$metadata#Dimensions",
+ "value": [
+  {
+   "@odata.type": "#Cbs.Ccb.Models.TimeDimension",
+   "Identifier": "Perioden",
+   "Title": "Perioden",
+   "Description": "Verslagperioden aan het eind waarvan de sociale zekerheidsuitkeringen niet waren beëindigd, de zogeheten lopende uitkeringen.",
+   "MapYear": null,
+   "ReleasePolicy": true,
+   "Kind": "TimeDimension",
+   "ContainsGroups": true,
+   "ContainsCodes": true,
+   "CodesUrl": "https://datasets.cbs.nl/odata/v1/CBS/37789ksz/PeriodenCodes",
+   "GroupsUrl": "https://datasets.cbs.nl/odata/v1/CBS/37789ksz/PeriodenGroups"
+  }
+ ]
+}

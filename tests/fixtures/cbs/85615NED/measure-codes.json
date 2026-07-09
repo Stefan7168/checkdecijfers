@@ -1,0 +1,38 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/85615NED/$metadata#MeasureCodes",
+ "value": [
+  {
+   "Identifier": "M001874",
+   "Index": 5,
+   "Title": "Instromers",
+   "Description": "Instromers\r\nHet aantal instroommomenten in de bijstand in de verslagperiode van personen in het kader van de Participatiewet of de WWB. Dit aantal is inclusief de herinstromers binnen 1 jaar.\r\n\r\nParticipatiewet\r\nDe Participatiewet regelt in Nederland de ondersteuning bij arbeidsinschakeling en het verlenen van bijstand door gemeenten voor mensen die weinig of geen ander inkomen (waaronder andere uitkeringen) hebben en ook weinig of geen vermogen.\r\n\r\nWerk gaat voor inkomen: oogmerk is om mensen met of zonder arbeidsbeperking zo snel mogelijk weer aan een betaalde baan te krijgen.\r\n\r\nDe gemeenten voeren de wet uit en bepalen, binnen de wettelijke grenzen, hun eigen beleid.\r\n\r\nDe Participatiewet vervangt sinds 1 januari 2015 de Wet werk en bijstand (WWB), de Wet Sociale Werkvoorziening (WSW) en een groot deel van de Wet werk en arbeidsondersteuning jonggehandicapten (wet Wajong).\r\n\r\nWWB\r\nWettelijke sociale voorziening die op 1 januari 2004 in werking is getreden ter vervanging van de Algemene bijstandswet (Abw), de Wet inschakeling werkzoekenden (WIW) en het Besluit In- en Doorstroombanen (ID-banen).\r\nDe wet is per 1 januari 2015 vervangen door de Participatiewet.\r\n",
+   "MeasureGroupId": null,
+   "DataType": "Long",
+   "Unit": "aantal",
+   "Decimals": 0,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "M001980",
+   "Index": 6,
+   "Title": "(Her)instromers binnen een jaar",
+   "Description": "Het aantal personen dat in de verslagperiode opnieuw is ingestroomd in de bijstand in het kader van de Participatiewet of de WWB en dat binnen een jaar voorafgaand aan het instroommoment deze uitkering al een keer ontving.",
+   "MeasureGroupId": null,
+   "DataType": "Long",
+   "Unit": "aantal",
+   "Decimals": 0,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "M001940",
+   "Index": 7,
+   "Title": "Uitstromers",
+   "Description": "Het aantal uitstroommomenten vanuit de bijstand in de verslagperiode van personen in het kader van de Participatiewet of de WWB.",
+   "MeasureGroupId": null,
+   "DataType": "Long",
+   "Unit": "aantal",
+   "Decimals": 0,
+   "PresentationType": null
+  }
+ ]
+}

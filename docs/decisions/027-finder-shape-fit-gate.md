@@ -150,6 +150,76 @@ job e2e tests.
   resolves independently against its OWN question (two debits for two genuinely different questions
   is correct behavior; the dedupe continues to key on the unchanged original pick).
 
+## Amendments A1–A3 (2026-07-08, session 31 — owner-approved, driven by pre-build MEASUREMENTS)
+
+The stage-A build session measured the frozen design against live CBS metadata + a hermetic PGlite
+run of the real recall code over the full live 4,858-row catalog (€0 — public metadata only) and
+found three facts the design review had not surfaced. The owner approved three amendments the same
+day (all general, none per-topic — the session-28 steer holds):
+
+**Measured facts.** (i) *No live person-level bijstand stock table is v1-deliverable*: every one
+(`85585NED`, `82016NED`, `85692NED`) carries person-characteristic dimensions — so ingestion stores
+no `dims = '{}'` rows and `registerOnboardingVocabulary` registers ZERO measures (this, not the
+measure-fit judgment, is what actually killed the live bijstand attempt) — and none has yearly
+codes, so the year-explicit question fails `requireGrain('JJ')` even after a perfect pick. The only
+table that can deliver *"Hoeveel mensen zaten er in 2023 in de bijstand?"* is **`37789ksz`**
+("Sociale zekerheid; kerncijfers, uitkeringen naar uitkeringssoort": Regulier, time-only dimension,
+JJ+MM grains, 2023JJ00 = 390.2 ×1000 "Totaal bijstandsuitkeringen"). (ii) *The raw recall top-20
+buries the answer*: for "bijstand"+aliases, 14 of 20 slots were discontinued tables and `37789ksz`
+sat at overall position **51** (18th of 27 Regulier matches) — Stage 2 can only choose among what
+Stage 1 shows, so no prompt or fit improvement could ever reach it. (iii) *A measure-honest fit
+gate accepts undeliverable tables*: `85585NED` genuinely HAS a fitting measure ("Personen met
+bijstand", aantal) — D3b's closed measure choice would accept it, ingest it, register zero vocab,
+and refund WITHOUT trying the next candidate.
+
+**A1 — the bijstand-stock target is `37789ksz`.** The labelled case, the fixture captures and the
+stage-D acceptance test all point at it. Nuance the owner explicitly accepted: it counts
+UITKERINGEN (benefits; a couple = one benefit), not persons — the answer names CBS's measure title
+verbatim, so it stays honest. Person-level tables become deliverable only via the #111(b)
+delivery-coverage widening (a later WP).
+
+**A2 — Regulier-first recall quotas** (`src/catalog/recall.ts`): the shortlist is now selected as
+up to `RECALL_REGULIER_SLOTS` (20) current tables by FTS rank plus `RECALL_HISTORIC_SLOTS` (4)
+strongest non-Regulier matches (total 24); either class fills the other's unused slots, and the
+merged shortlist stays ordered by pure relevance — the quota decides membership, not order.
+Topic-agnostic by construction; explicitly-historical questions keep candidates plus the rerank
+prompt's "TENZIJ historisch" rule. This supersedes ADR 025's "Stage-2 does the real work" for the
+measured discontinued-crowding case: Stage 2 cannot rank what Stage 1 never shows.
+
+**A3 — deterministic deliverability pre-checks in the fit gate** (stage C, before the Haiku
+measure-fit, from metadata the job already fetches): (a) a candidate whose dimensions are not
+time-only is v1-undeliverable (no `dims='{}'` rows will exist — exactly #111's recorded v1 scope);
+(b) a question naming a bare year requires JJ period codes on the candidate. Either failure records
+an `undeliverable` verdict (grouped with `geen` for D2b's end states — the table WAS inspected) and
+advances to the next candidate. Fail direction unchanged: at worst an honest refund, never a wrong
+figure; the checks are code, not model judgment.
+
+**Residual risk, deliberately measurement-gated:** even with A1–A3, the acceptance question only
+answers if the question-aware rerank puts `37789ksz` in the candidate chain (pick or top-3
+alternatives) — its title contains no "bijstand" (weight-B description match only). This is
+measured at the stage-A supervised record step; if Haiku cannot do it reliably, the recorded
+escalation ladder (D4 → Sonnet) is the next step, not a redesign. A second discovered risk is
+recorded as open-questions #124: the vocabulary step tags EVERY registered measure of a
+multi-measure table with the topic term (`37789ksz` registers 18 measures, three bijstand-titled)
+— parser ambiguity at delivery could clarify instead of answer; stage C's e2e test measures it
+hermetically.
+
+**MEASURED at the stage-A supervised record (2026-07-08, same day, ~55 Haiku calls ≈ €0.15
+total):** (1) Haiku reads the stock shape correctly but picks the — undeliverable — person-level
+stock table `85585NED`, with `37789ksz` at chain position 3: the chain gate holds, the exact-pick
+expectation does not, so the `bijstand-stock` labelled case was moved to **chain semantics**
+(`chainContains: 37789ksz` under Stage B's cap 3 + `notPick: 85615NED`) — the system-level success
+condition the fit gate actually acts on; a tier escalation was rejected because deliverability is
+not present in title/summary for ANY model to see. (2) The first `inkomen-vaag` measurement showed
+Haiku confidently picking among six near-equal Regulier income tables; prompt v2 gained a
+**vague-question honesty rule** (question no more specific than the topic + materially different
+candidates ⇒ confidence below 0.8 + alternatives listed; a SPECIFIC question still earns a
+confident pick — the first, broader wording measurably over-corrected two legitimate cases and was
+sharpened). (3) The legacy `werkloosheid` case (question == topic) then HONESTLY disclosed under
+that rule — it got a realistic question, since production always passes the full question post-WP27
+(the other bare-topic legacy cases stay as robustness pins). Final: **11/11, twice, byte-stable;
+confident floor 0.85 over threshold 0.8; the disclose boundary is now directly measured (#104).**
+
 ## Revisit triggers
 
 - Measured shortlist-recall miss (right table absent from the top-20) → alternative 1 (enrichment),

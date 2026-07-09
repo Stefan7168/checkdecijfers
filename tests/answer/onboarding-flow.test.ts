@@ -104,6 +104,19 @@ describe('resolveUnmatched — the finder-aware unmatched exit (WP16 sub-part 2)
     expect(called).toBe(false);
     expect(outcome.kind).toBe('clarification');
   });
+
+  it('passes the FULL question to the finder alongside the term (WP27 stage A, ADR 027 D3a)', async () => {
+    let seenTerm: string | null = null;
+    let seenQuestion: string | null = null;
+    const spyFinder: TableFinder = async (term, question) => {
+      seenTerm = term;
+      seenQuestion = question;
+      return null;
+    };
+    await resolveUnmatched(B15_CONTEXT, spyFinder);
+    expect(seenTerm).toBe('zonnestroom');
+    expect(seenQuestion).toBe(B15_CONTEXT.question);
+  });
 });
 
 describe('onboarding acknowledgment copy — VERBATIM, owner-approved (design §2)', () => {

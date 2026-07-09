@@ -1,0 +1,40 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/85615NED/$metadata#HerkomstlandCodes",
+ "value": [
+  {
+   "Identifier": "T001040",
+   "Index": 1,
+   "Title": "Totaal",
+   "Description": "",
+   "DimensionGroupId": null
+  },
+  {
+   "Identifier": "1012600",
+   "Index": 2,
+   "Title": "Nederland",
+   "Description": "",
+   "DimensionGroupId": null
+  },
+  {
+   "Identifier": "H007933",
+   "Index": 3,
+   "Title": "Europa (exclusief Nederland)",
+   "Description": "De landen Armenië, Azerbeidzjan, Georgië, Kazachstan, Kirgizië, Oezbekistan, Tadzjikistan, Turkmenistan en Turkije vallen binnen deze indeling onder Azië.",
+   "DimensionGroupId": null
+  },
+  {
+   "Identifier": "H008859",
+   "Index": 4,
+   "Title": "Buiten Europa",
+   "Description": "",
+   "DimensionGroupId": null
+  },
+  {
+   "Identifier": "2012659",
+   "Index": 5,
+   "Title": "Onbekend herkomstland",
+   "Description": "",
+   "DimensionGroupId": null
+  }
+ ]
+}
