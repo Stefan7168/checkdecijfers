@@ -175,9 +175,15 @@ async function captureCatalog(): Promise<void> {
 
 // Surgical catalog add (WP27 stage A): fetch the named ids' live catalog rows
 // and MERGE them into the existing _catalog.json — every already-present row
-// stays byte-identical (a full --catalog re-capture would churn Modified
-// timestamps and topic-sample membership, shifting recall for unrelated
-// labelled cases). Usage: --catalog-add <id> [<id> ...]
+// keeps its VALUES semantically identical (a full --catalog re-capture would
+// churn Modified timestamps and topic-sample membership, shifting recall for
+// unrelated labelled cases). Honesty note (PR-#17 review): the merge
+// round-trips the whole file through JSON.parse/stringify, so the FILE
+// FORMATTING normalizes to this script's own compact one-line form — the
+// first --catalog-add run (session 31) therefore rewrote the legacy
+// pretty-printed file wholesale; verify row preservation semantically (parse
+// + compare per Identifier), never by eyeballing the git diff.
+// Usage: --catalog-add <id> [<id> ...]
 async function catalogAdd(ids: string[]): Promise<void> {
   const path = join(OUT, '_catalog.json');
   const existing = JSON.parse(readFileSync(path, 'utf8')) as { '@odata.context': string; value: any[] };

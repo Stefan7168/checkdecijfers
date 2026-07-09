@@ -40,7 +40,13 @@ export interface FixtureDocs {
   observationPages: unknown[];
   /** The manifest's recorded observation count (WP16 sub-part 2 §4) — the
    * fixture stand-in for the live $count endpoint. null when the manifest did
-   * not record one. */
+   * not record one. CAVEAT (WP27 stage A): for a SCHEMA-ONLY capture
+   * (capture-cbs-fixtures.ts FIXTURE_ONLY_TABLES with observations:false,
+   * e.g. 85615NED) this is the REAL live $count while observationPages is
+   * empty — so fetchObservationCount reports thousands of rows where
+   * fetchObservations yields zero. Correct for metadata-only consumers (the
+   * WP27 fit gate); ingesting such a fixture dies with a misleading
+   * "sync fetched 0 rows" plausibility refusal. */
   observationRows: number | null;
 }
 
@@ -209,7 +215,9 @@ export class FixtureSource implements CbsSource {
     // The manifest's recorded row count is the fixture stand-in for the live
     // $count endpoint (WP16 sub-part 2 §4). null when the manifest recorded
     // none — the slice estimator falls back to the cardinality product,
-    // exactly as it would on a live 404.
+    // exactly as it would on a live 404. NB for schema-only fixtures this is
+    // the real live count while fetchObservations yields zero rows — see the
+    // FixtureDocs.observationRows caveat (WP27 stage A).
     return this.docsFor(tableId).observationRows;
   }
 
