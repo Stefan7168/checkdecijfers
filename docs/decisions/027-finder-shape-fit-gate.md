@@ -220,6 +220,32 @@ that rule — it got a realistic question, since production always passes the fu
 (the other bare-topic legacy cases stay as robustness pins). Final: **11/11, twice, byte-stable;
 confident floor 0.85 over threshold 0.8; the disclose boundary is now directly measured (#104).**
 
+## As built — stage B (2026-07-10, session 32, [PR #18](https://github.com/Stefan7168/checkdecijfers/pull/18))
+
+Stage A merged + deployed as [PR #17](https://github.com/Stefan7168/checkdecijfers/pull/17)
+(2026-07-09, merge `478a852`). Stage B landed per the brief's letter — `candidateIds` (pick first,
+then sanitized `alternativeIds`, cap 3) constructed in `onboarding-finder.ts` and carried as a
+REQUIRED field through routing → parse outcome → envelope (both respond.ts sites) → web action →
+trigger → store; migration `015_candidate_chain.sql` committed as a FILE (applied by PGlite/CI
+only; production waits for stage D). Two as-built notes beyond the letter:
+
+1. **`fit_note text` ships in 015 now** — stage C's spec pins it to the *"same migration"*, and
+   completing 015 at creation avoids editing a merged migration file later. Stage C therefore
+   touches no schema.
+2. **Deploy-order safety is code, not luck (D2c made real):** stage B deploys on merge while
+   production still runs the pre-015 schema. `createPendingRequest` probes `pg_attribute` for
+   `candidate_ids` before naming it in the INSERT (a SELECT cannot abort the money tx) and falls
+   back to the legacy INSERT — rows created in that window read back `[]`, i.e. exactly the D2c
+   legacy path. Without this, the design's "either deploy order is safe" claim is false and every
+   live onboarding trigger in the window would error. Pinned by drop-the-columns tests at store
+   and trigger level; `fromRow` defaults absent columns (`[]` / `null`).
+
+Invariants diff-proven on the PR: `src/billing/` untouched, zero prompt/fixture bytes, `table_id`
+never mutated. A 5-lens pre-PR adversarial review (dual refute-by-default skeptics) found the
+money/chain/deploy/byte lenses clean; its one confirmed finding (the live respond.ts construction
+site had zero pipeline-level coverage — mutation-verified) was closed with a B15+injected-finder
+pipeline test whose exact-envelope assertion kills the mutation.
+
 ## Revisit triggers
 
 - Measured shortlist-recall miss (right table absent from the top-20) → alternative 1 (enrichment),
