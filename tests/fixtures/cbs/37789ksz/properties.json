@@ -1,0 +1,108 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/37789ksz/$metadata#Properties",
+ "Identifier": "37789ksz",
+ "Title": "Sociale zekerheid; kerncijfers, uitkeringen naar uitkeringssoort",
+ "Description": "Deze tabel geeft een actueel overzicht van de belangrijkste statistische cijfers over de sociale zekerheid. \r\nDe cijfers hebben betrekking op uitkeringen in het kader van arbeidsongeschiktheid, werkloosheid, bijstand, ouderen, nabestaanden en \r\nkinderbijslag (de volksverzekeringen AOW, Anw en AKW).\r\n\r\nGegevens beschikbaar vanaf: januari 1998. \r\n\r\nStatus van de cijfers\r\nDe cijfers van de drie meest recente maanden zijn voorlopig, de cijfers van de daaraan voorafgaande maanden zijn definitief.\r\nBij de bijstand zijn de drie meest recente maanden gebaseerd op een raming. Na drie maanden worden de voorlopige cijfers overschreven door definitieve cijfers. \r\nDe maand- en kwartaalcijfers zijn ultimo standcijfers, de jaarcijfers zijn gemiddelden.\r\n\r\nWijzigingen per 30 juni 2026\r\nToegevoegd zijn:\r\n- de voorlopige cijfers van april 2026\r\nDefinitief geworden zijn:\r\n- de cijfers van januari 2026\r\n\r\nWanneer komen er nieuwe cijfers?\r\nNieuwe cijfers komen in juli 2026.\r\n\r\n",
+ "Language": "nl",
+ "Authority": "https://standaarden.overheid.nl/owms/terms/Centraal_Bureau_voor_de_Statistiek",
+ "Modified": "2026-06-30T00:00:00+02:00",
+ "ReleaseDate": "2026-06-30T00:00:00+02:00",
+ "ModificationDate": "2026-06-30T00:00:00+02:00",
+ "TemporalCoverage": "1998 januari - 2026 april",
+ "Catalog": "CBS",
+ "Publisher": "https://standaarden.overheid.nl/owms/terms/Centraal_Bureau_voor_de_Statistiek",
+ "ContactPoint": "infoservice@cbs.nl",
+ "Version": "202606300000",
+ "VersionNotes": "",
+ "VersionReason": "Actualisering bijzonder",
+ "Frequency": "Per maand",
+ "Status": "Regulier",
+ "ObservationCount": 6470,
+ "ObservationsModified": "2026-06-30T00:00:00+02:00",
+ "DatasetType": "Numeric",
+ "GraphTypes": "Table,Bar,Line",
+ "License": "https://creativecommons.org/licenses/by/4.0/",
+ "Source": "CBS.",
+ "Summary": "Kerncijfers sociale zekerheid.\nTotaal aantal uitkeringen",
+ "LongDescription": "INHOUDSOPGAVE\r\n\r\n1. Toelichting\r\n2. Definities en verklaring van symbolen\r\n3. Koppelingen naar relevante tabellen en artikelen\r\n4. Bronnen en methoden\r\n5. Meer informatie\r\n\r\n1. TOELICHTING\r\n\r\nDeze tabel geeft een actueel overzicht van de belangrijkste statistische cijfers over de sociale zekerheid. \r\nDe cijfers hebben betrekking op uitkeringen in het kader van arbeidsongeschiktheid, werkloosheid, bijstand, ouderen, nabestaanden en \r\nkinderbijslag (de volksverzekeringen AOW, Anw en AKW).\r\n\r\nGegevens beschikbaar vanaf: januari 1998. \r\n\r\nStatus van de cijfers\r\nDe cijfers van de drie meest recente maanden zijn voorlopig, de cijfers van de daaraan voorafgaande maanden zijn definitief.\r\nBij de bijstand zijn de drie meest recente maanden gebaseerd op een raming. Na drie maanden worden de voorlopige cijfers overschreven door definitieve cijfers. \r\nDe maand- en kwartaalcijfers zijn ultimo standcijfers, de jaarcijfers zijn gemiddelden.\r\n\r\nWijzigingen per 30 juni 2026\r\nToegevoegd zijn:\r\n- de voorlopige cijfers van april 2026\r\nDefinitief geworden zijn:\r\n- de cijfers van januari 2026\r\n\r\nWanneer komen er nieuwe cijfers?\r\nNieuwe cijfers komen in juli 2026.\r\n\r\n2. DEFINITIES EN VERKLARING VAN SYMBOLEN\r\n\r\nDefinities:\r\n\r\nArbeidsongeschiktheidsuitkeringen\r\nUitkeringen op grond van \r\n- de Wet op de arbeidsongeschiktheidsverzekering (WAO); \r\n- de Wet werk en arbeidsondersteuning jonggehandicapten (Wet wajong);\r\n- de Wet arbeidsongeschiktheidsverzekering zelfstandigen (WAZ);\r\n- de Wet werk en inkomen naar arbeidsvermogen (WIA).\r\n\r\nWerkloosheidsuitkeringen\r\n- Uitkeringen op grond van de Werkloosheidswet (WW); \r\n- Uitkeringen op grond van de Wet inkomensvoorziening oudere werklozen (IOW).\r\n\r\nBijstands- en bijstandsgerelateerde uitkeringen\r\nUitkeringen op grond van \r\n- de Wet werk en bijstand (t/m 2014), de Participatiewet (vanaf 2015);\r\n- de wet Inkomensvoorziening oudere en gedeeltelijk arbeidsongeschikte werkloze werknemers (IOAW); \r\n- de wet Inkomensvoorziening oudere zelfstandigen en gedeeltelijk arbeidsongeschikte gewezen zelfstandigen (IOAZ). \r\n\r\nVolksverzekering\r\nWettelijke regeling die onder nadere voorwaarden alle ingezetenen aanspraak op een sociale uitkering geeft.\r\nVolksverzekeringen zijn o.a. de Algemene ouderdomswet (AOW), de Algemene nabestaandenwet (Anw), de Algemene kinderbijslagwet (AKW) en de Wet Langdurige Zorg (WLZ). \r\nIn deze tabel worden de uitkeringen getoond op grond van de\r\n- Algemene ouderdomswet (AOW);\r\n- Algemene nabestaandenwet (Anw);\r\n- Algemene kinderbijslagwet (AKW). \r\n\r\nVerklaring van symbolen:\r\n\r\nniets (blanco): het cijfer kan op logische gronden niet voorkomen\r\n. : het cijfer is onbekend, onvoldoende betrouwbaar of geheim\r\n*: voorlopige cijfers\r\n**: nader voorlopige cijfers\r\n\r\nZowel de bijstandscijfers gebaseerd op de raming als de definitieve bijstandscijfers kennen een mate van onzekerheid. \r\nDeze onzekerheidsmarge is voor de geraamde cijfers groter dan voor de definitieve.\r\nAfhankelijk van de (sub)populatie worden de geraamde cijfers afgerond op 10-, 100- of 1000-tallen.\r\nDe definitieve cijfers worden afgerond op 10-tallen.\r\nAls gevolg van de afrondingen kan het voorkomen dat de som van de detailgegevens afwijkt van het totaal.\r\n\r\n3. KOPPELINGEN NAAR RELEVANTE TABELLEN EN ARTIKELEN\r\n\r\nRelevante tabellen:\r\n\r\nInformatie over het aantal Bijstandsuitkeringen per maand naar grondslag en regio is te vinden in de tabel <a href='https://opendata.cbs.nl/statline/#/CBS/nl/dataset/82015NED'>Bijstandsuitkeringen; uitkeringsgrondslag, regio's</a>.\r\nInformatie over het aantal seizoengecorrigeerde werkloosheidsuitkeringen is te vinden in de tabel <a href='https://opendata.cbs.nl/statline/#/CBS/nl/dataset/85554NED'>Personen met WW-uitkering, seizoensgecorrigeerd; persoonskenmerken en regio</a>.\r\nInformatie over het aantal personen met een arbeidsongeschiktheids-, werkloosheids- of AOW-uitkering per maand is te vinden in de tabel <a href='https://opendata.cbs.nl/#/CBS/nl/dataset/85692NED'>Personen met een uitkering; kenmerken uitkeringsontvangers.</a>\r\n\r\nMeer informatie is te vinden op de themapagina <a href='https://www.cbs.nl/nl-nl/arbeid-en-inkomen/arbeid-en-sociale-zekerheid'>Arbeid en sociale zekerheid</a>.\r\n\r\nRelevant artikel:\r\n\r\nInformatie over de wijzigingen in de Bijstandsstatistiek kunt u vinden in <a href='https://www.cbs.nl/nl-nl/onze-diensten/methoden/onderzoeksomschrijvingen/aanvullende-onderzoeksomschrijvingen/wijzigingen-in-de-bijstandsuitkeringenstatistiek-in-2013'>Wijzigingen in de Bijstandsuitkeringenstatistiek in 2013</a>.\r\n\r\n4. BRONNEN EN METHODEN\r\n\r\nDe onderzoeksmethode van de arbeidsongeschiktheid is te vinden in de onderzoeksbeschrijving <a href='https://www.cbs.nl/nl-nl/onze-diensten/methoden/onderzoeksomschrijvingen/korte-onderzoeksbeschrijvingen/arbeidsongeschiktheidsuitkeringen'>Arbeidsongeschiktheidsuitkeringen</a>.\r\nDe uitgebreide beschrijving van de Arbeidsongeschiktheidsuitkeringenstatistiek staat in <a href='https://www.cbs.nl/nl-nl/onze-diensten/methoden/onderzoeksomschrijvingen/aanvullende-onderzoeksbeschrijvingen/kwaliteitsrapport-arbeidsongeschiktheidsuitkeringenstatistiek--aus--'>Kwaliteitsrapport Arbeidsongeschiktheidsuitkeringenstatistiek (AUS)</a>.\r\nDe onderzoeksmethode van de werkloosheid is te vinden in de onderzoeksbeschrijving <a href='https://www.cbs.nl/nl-nl/onze-diensten/methoden/onderzoeksomschrijvingen/korte-onderzoeksbeschrijvingen/ww-uitkeringen'>WW-uitkeringen</a>.\r\nDe uitgebreide beschrijving van de Werkloosheidsuitkeringenstatistiek staat in <a href='https://www.cbs.nl/nl-nl/onze-diensten/methoden/onderzoeksomschrijvingen/aanvullende-onderzoeksbeschrijvingen/kwaliteitsrapport-werkloosheidsuitkeringenstatistiek--wus--'>Kwaliteitsrapport Werkloosheidsuitkeringenstatistiek (WUS)</a>.\r\nDe beschrijving van het onderzoek <a href='https://www.cbs.nl/nl-nl/onze-diensten/methoden/onderzoeksomschrijvingen/korte-onderzoeksbeschrijvingen/bijstandsuitkeringenstatistiek--bus--'>Bijstandsuitkeringenstatistiek (BUS)</a>  vindt u op de CBS website bij het thema <a href='https://www.cbs.nl/nl-nl/arbeid-en-inkomen/arbeid-en-sociale-zekerheid'>Arbeid en sociale zekerheid</a>.\r\nDe uitgebreide beschrijving van de Bijstandsuitkeringenstatistiek staat in <a href='https://www.cbs.nl/nl-nl/onze-diensten/methoden/onderzoeksomschrijvingen/aanvullende-onderzoeksbeschrijvingen/kwaliteitsrapport-bijstandsuitkeringenstatistiek--bus--'>Kwaliteitsrapport Bijstandsuitkeringen Statistiek (BUS)</a>.\r\nDe onderzoeksmethode van de AOW-uitkeringen is te vinden in de onderzoeksbeschrijving <a href='https://www.cbs.nl/nl-nl/onze-diensten/methoden/onderzoeksomschrijvingen/korte-onderzoeksbeschrijvingen/aow-uitkeringen'>AOW-uitkeringenstatistiek</a>.\r\nDe uitgebreide beschrijving van de AOW-uitkeringenstatistiek is te vinden in <a href='https://www.cbs.nl/nl-nl/longread/rapportages/2021/kwaliteitsrapport-algemene-ouderdomswet-uitkeringenstatistiek--aow--'>Kwaliteitsrapport Algemene Ouderdomswet uitkeringenstatistiek (AOW)</a>.\r\n\r\nDe gegevens in de tabel zijn gedeeltelijk afkomstig uit het <a href='https://www.cbs.nl/nl-nl/onze-diensten/methoden/onderzoeksomschrijvingen/korte-onderzoeksbeschrijvingen/stelsel-van-sociaal-statistische-bestanden--ssb--'>Stelsel van Sociaal-statistische Bestanden (SSB)</a>.\r\n\r\nVoor gegevens over Algemene ouderdomswet (AOW) geldt dit vanaf 2014, voor gegevens over Arbeidsongeschiktheidswet (AO) vanaf 2010 en voor gegevens over Werkloosheidswet (WW) vanaf 2013.\r\n\r\n5. MEER INFORMATIE\r\n\r\n<a href='https://www.cbs.nl/nl-nl/over-ons/contact/infoservice'>Infoservice</a>\r\n\r\nCopyright (c) Centraal Bureau voor de Statistiek, Den Haag/Heerlen \r\nVerveelvoudiging is toegestaan, mits het CBS als bron wordt vermeld.\r\n",
+ "Provenance": [
+  {
+   "Title": "Arbeidsongeschiktheidsuitkeringen",
+   "Url": "https://www.cbs.nl/nl-nl/onze-diensten/methoden/onderzoeksomschrijvingen/korte-onderzoeksbeschrijvingen/arbeidsongeschiktheidsuitkeringen"
+  },
+  {
+   "Title": "Kwaliteitsrapport Arbeidsongeschiktheidsuitkeringenstatistiek (AUS)",
+   "Url": "https://www.cbs.nl/nl-nl/onze-diensten/methoden/onderzoeksomschrijvingen/aanvullende-onderzoeksbeschrijvingen/kwaliteitsrapport-arbeidsongeschiktheidsuitkeringenstatistiek--aus--"
+  },
+  {
+   "Title": "WW-uitkeringen",
+   "Url": "https://www.cbs.nl/nl-nl/onze-diensten/methoden/onderzoeksomschrijvingen/korte-onderzoeksbeschrijvingen/ww-uitkeringen"
+  },
+  {
+   "Title": "Kwaliteitsrapport Werkloosheidsuitkeringenstatistiek (WUS)",
+   "Url": "https://www.cbs.nl/nl-nl/onze-diensten/methoden/onderzoeksomschrijvingen/aanvullende-onderzoeksbeschrijvingen/kwaliteitsrapport-werkloosheidsuitkeringenstatistiek--wus--"
+  },
+  {
+   "Title": "Bijstandsuitkeringenstatistiek (BUS)",
+   "Url": "https://www.cbs.nl/nl-nl/onze-diensten/methoden/onderzoeksomschrijvingen/korte-onderzoeksbeschrijvingen/bijstandsuitkeringenstatistiek--bus--"
+  },
+  {
+   "Title": "Arbeid en sociale zekerheid",
+   "Url": "https://www.cbs.nl/nl-nl/arbeid-en-inkomen/arbeid-en-sociale-zekerheid"
+  },
+  {
+   "Title": "Kwaliteitsrapport Bijstandsuitkeringen Statistiek (BUS)",
+   "Url": "https://www.cbs.nl/nl-nl/onze-diensten/methoden/onderzoeksomschrijvingen/aanvullende-onderzoeksbeschrijvingen/kwaliteitsrapport-bijstandsuitkeringenstatistiek--bus--"
+  },
+  {
+   "Title": "AOW-uitkeringenstatistiek",
+   "Url": "https://www.cbs.nl/nl-nl/onze-diensten/methoden/onderzoeksomschrijvingen/korte-onderzoeksbeschrijvingen/aow-uitkeringen"
+  },
+  {
+   "Title": "Kwaliteitsrapport Algemene Ouderdomswet uitkeringenstatistiek (AOW)",
+   "Url": "https://www.cbs.nl/nl-nl/longread/rapportages/2021/kwaliteitsrapport-algemene-ouderdomswet-uitkeringenstatistiek--aow--"
+  },
+  {
+   "Title": "Stelsel van Sociaal-statistische Bestanden (SSB)",
+   "Url": "https://www.cbs.nl/nl-nl/onze-diensten/methoden/onderzoeksomschrijvingen/korte-onderzoeksbeschrijvingen/stelsel-van-sociaal-statistische-bestanden--ssb--"
+  }
+ ],
+ "RelatedSources": [
+  {
+   "Title": "Bijstandsuitkeringen; uitkeringsgrondslag, regio's",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/dataset/82015NED"
+  },
+  {
+   "Title": "Personen met WW-uitkering, seizoensgecorrigeerd; persoonskenmerken en regio",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/dataset/85554NED"
+  },
+  {
+   "Title": "Personen met een uitkering; kenmerken uitkeringsontvangers.",
+   "Url": "https://opendata.cbs.nl/#/CBS/nl/dataset/85692NED"
+  },
+  {
+   "Title": "Arbeid en sociale zekerheid",
+   "Url": "https://www.cbs.nl/nl-nl/arbeid-en-inkomen/arbeid-en-sociale-zekerheid"
+  },
+  {
+   "Title": "Wijzigingen in de Bijstandsuitkeringenstatistiek in 2013",
+   "Url": "https://www.cbs.nl/nl-nl/onze-diensten/methoden/onderzoeksomschrijvingen/aanvullende-onderzoeksomschrijvingen/wijzigingen-in-de-bijstandsuitkeringenstatistiek-in-2013"
+  }
+ ],
+ "Distributions": [
+  {
+   "Format": "csv",
+   "MediaType": "csv",
+   "DownloadUrl": "https://datasets.cbs.nl/csv/CBS/nl/37789ksz",
+   "AccessUrl": "https://dataportal.cbs.nl/detail/CBS/37789ksz",
+   "Language": "nl"
+  },
+  {
+   "Format": "odata",
+   "MediaType": "odata",
+   "DownloadUrl": "https://datasets.cbs.nl/odata/v1/CBS/37789ksz",
+   "AccessUrl": "https://dataportal.cbs.nl/detail/CBS/37789ksz",
+   "Language": "nl"
+  }
+ ]
+}

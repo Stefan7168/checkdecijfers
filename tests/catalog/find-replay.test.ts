@@ -15,7 +15,7 @@ import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ReplayLlmClient } from '../../src/answer/llm/client.ts';
 import { FixtureSource, loadCatalogFixture } from '../../src/cbs-adapter/fixture-source.ts';
-import { ingestCatalog, findTable, rerankShortlist } from '../../src/catalog/index.ts';
+import { ingestCatalog, findTable, rerankShortlist, DEFAULT_FIND_TABLE_CONFIG } from '../../src/catalog/index.ts';
 import { createTestDb } from '../helpers/pglite-db.ts';
 import type { Db } from '../../src/db/types.ts';
 
@@ -26,8 +26,23 @@ const SET_PATH = fileURLToPath(new URL('../../benchmark/tablefinder-labelled-set
 interface LabelledCase {
   id: string;
   topic: string;
-  expect: { kind: 'confident' | 'disclose' | 'none'; tableId?: string };
+  /** The user's full question (WP27 stage A) — threaded into the rerank
+   *  prompt. Absent on the older cases: the replay falls back to the topic,
+   *  mirroring scripts/tablefinder-eval.ts so record→replay hashes match. */
+  question?: string;
+  /** See scripts/tablefinder-eval.ts: `chainContains` pins the candidate
+   *  chain (pick + alternativeIds, Stage-B cap 3) instead of the exact pick;
+   *  `notPick` pins a known mis-pick class out of the top spot. */
+  expect: {
+    kind: 'confident' | 'disclose' | 'none';
+    tableId?: string;
+    chainContains?: string;
+    notPick?: string;
+  };
 }
+
+/** Stage B's candidate cap (ADR 027) — keep in lockstep with the eval. */
+const CANDIDATE_CAP = 3;
 
 const set = JSON.parse(readFileSync(SET_PATH, 'utf8')) as { cases: LabelledCase[] };
 
@@ -47,15 +62,23 @@ describe('table finder — end-to-end replay against the labelled set', () => {
   for (const c of set.cases) {
     it(`${c.id}: "${c.topic}" → ${c.expect.kind}${c.expect.tableId ? ` ${c.expect.tableId}` : ''}`, async () => {
       const client = new ReplayLlmClient(FIXTURES_DIR);
-      const outcome = await findTable(db, c.topic, {
-        rerank: (topic, shortlist) => rerankShortlist(topic, shortlist, { client }),
+      const outcome = await findTable(db, { topic: c.topic, question: c.question ?? c.topic }, {
+        rerank: (query, shortlist) => rerankShortlist(query, shortlist, { client }),
       });
 
       expect(outcome.kind).toBe(c.expect.kind);
-      if (c.expect.kind === 'confident' && outcome.kind === 'confident' && c.expect.tableId) {
-        expect(outcome.pick.tableId).toBe(c.expect.tableId);
-        // Calibrated floor: every labelled confident pick clears the threshold.
-        expect(outcome.confidence).toBeGreaterThanOrEqual(0.8);
+      if (c.expect.kind === 'confident' && outcome.kind === 'confident') {
+        if (c.expect.tableId) expect(outcome.pick.tableId).toBe(c.expect.tableId);
+        if (c.expect.notPick) expect(outcome.pick.tableId).not.toBe(c.expect.notPick);
+        if (c.expect.chainContains) {
+          const chain = [outcome.pick.tableId, ...outcome.alternativeIds].slice(0, CANDIDATE_CAP);
+          expect(chain).toContain(c.expect.chainContains);
+        }
+        // Calibrated floor: every labelled confident pick clears the ROUTING
+        // threshold. Referencing the config constant (not a hardcoded 0.8)
+        // keeps this assertion and findTable's routing in lockstep if the
+        // threshold is ever recalibrated (PR-#17 review, split finding).
+        expect(outcome.confidence).toBeGreaterThanOrEqual(DEFAULT_FIND_TABLE_CONFIG.highConfidence);
       }
       if (c.expect.kind === 'disclose' && outcome.kind === 'disclose' && c.expect.tableId) {
         expect(outcome.candidates.some((cand) => cand.tableId === c.expect.tableId)).toBe(true);

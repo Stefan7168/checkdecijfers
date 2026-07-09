@@ -1,0 +1,203 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/37789ksz/$metadata#MeasureCodes",
+ "value": [
+  {
+   "Identifier": "D000198_2",
+   "Index": 2,
+   "Title": "Totaal arbeidsongeschiktheidsuitkeringen",
+   "Description": "Het totaal aantal uitkeringen op grond van de arbeidsongeschiktheidswetten (WAO, WAZ, Wajong, WIA).",
+   "MeasureGroupId": "D000198_1",
+   "DataType": "Double",
+   "Unit": "x 1000",
+   "Decimals": 1,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "D000287",
+   "Index": 3,
+   "Title": "WAO-uitkeringen",
+   "Description": "Het aantal uitkeringen op grond van de Wet op de arbeidsongeschiktheidsverzekering (WAO).\r\nHet gaat om uitkeringen die in de verslagperiode niet waren beëindigd (lopende uitkeringen).\r\n\r\nDe WAO geeft werknemers die voor 1 januari 2004 arbeidsongeschikt zijn geworden recht op een uitkering, zolang zij minimaal 15% arbeidsongeschikt zijn.\r\nMet ingang van 29 december 2005 is de WAO vervangen door de wet Werk en inkomen naar arbeidsvermogen (WIA).\r\nDe WAO blijft bestaan voor mensen die al een WAO-uitkering hebben en mensen die binnen 5 jaar na het beëindigen van de WAO-uitkering opnieuw arbeidsongeschikt worden door dezelfde oorzaak.\r\nDe uitkering wordt stopgezet bij het bereiken van de AOW-gerechtigde leeftijd.\r\n",
+   "MeasureGroupId": "D000198_1",
+   "DataType": "Double",
+   "Unit": "x 1000",
+   "Decimals": 1,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "D000286",
+   "Index": 4,
+   "Title": "Wajong-uitkeringen",
+   "Description": "Het aantal uitkeringen op grond van de Wet werk en arbeidsondersteuning jonggehandicapten (Wet wajong).\r\nHet gaat om uitkeringen die in de verslagperiode niet waren beëindigd (lopende uitkeringen).\r\n\r\nMet ingang van 1 januari 2010 is de Wet arbeidsongeschiktheidsvoorziening jonggehandicapten (Wajong) veranderd in de Wet werk en arbeidsondersteuning jonggehandicapten (Wet wajong).\r\nUitgangspunt bij de \"oude\" Wajong was dat jongeren met een ziekte of handicap recht hadden op een uitkering.\r\nDoor de invoering van de nieuwe regeling is dat veranderd en hebben deze jongeren in de eerste plaats recht op het vinden en houden van werk. Daaraan gekoppeld kunnen ze een inkomensondersteuning krijgen.\r\nDe 'oude' Wajong blijft gelden voor jongeren die voor 1 januari 2010 een uitkering hebben aangevraagd.\r\nDe uitkering wordt stopgezet bij het bereiken van de AOW-gerechtigde leeftijd.",
+   "MeasureGroupId": "D000198_1",
+   "DataType": "Double",
+   "Unit": "x 1000",
+   "Decimals": 1,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "D000288",
+   "Index": 5,
+   "Title": "WAZ-uitkeringen",
+   "Description": "Het aantal uitkeringen op grond van de Wet arbeidsongeschiktheidsverzekering zelfstandigen (WAZ).\r\nHet gaat om uitkeringen die in de verslagperiode niet waren beëindigd (lopende uitkeringen).\r\n\r\nDe WAZ is een verplichte verzekering tegen de financiële gevolgen van (langdurige) arbeidsongeschiktheid voor zelfstandigen, beroepsbeoefenaren, directeuren-grootaandeelhouders en meewerkende echtgenoten.\r\nPer 1 augustus 2004 is de WAZ afgeschaft. Bovengenoemde personen zijn voortaan aangewezen op particuliere verzekering voor (langdurige) arbeidsongeschiktheid.\r\nDe WAZ blijft gelden voor personen die al een uitkering hebben.\r\nDe uitkering wordt stopgezet bij het bereiken van de AOW-gerechtigde leeftijd.",
+   "MeasureGroupId": "D000198_1",
+   "DataType": "Double",
+   "Unit": "x 1000",
+   "Decimals": 1,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "D000295_2",
+   "Index": 7,
+   "Title": "Totaal WIA-uitkeringen",
+   "Description": "Het totaal aantal uitkeringen op grond van de WIA (regelingen IVA en WGA).",
+   "MeasureGroupId": "D000295_1",
+   "DataType": "Double",
+   "Unit": "x 1000",
+   "Decimals": 1,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "D000236",
+   "Index": 8,
+   "Title": "IVA-uitkeringen",
+   "Description": "Het aantal uitkeringen op grond van de regeling Inkomensvoorziening volledig arbeidsongeschikten (IVA).\r\n\r\nDe IVA regelt een loonvervangende uitkering voor werknemers die volledig en duurzaam arbeidsongeschikt zijn.",
+   "MeasureGroupId": "D000295_1",
+   "DataType": "Double",
+   "Unit": "x 1000",
+   "Decimals": 1,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "D000292",
+   "Index": 9,
+   "Title": "WGA-uitkeringen",
+   "Description": "Het aantal uitkeringen in het kader van de regeling Werkhervatting gedeeltelijk arbeidsgeschikten (WGA).\r\n\r\nDe WGA regelt een aanvulling op het met arbeid verdiende inkomen of een minimumuitkering als men niet of niet voldoende werkt.",
+   "MeasureGroupId": "D000295_1",
+   "DataType": "Double",
+   "Unit": "x 1000",
+   "Decimals": 1,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "D007076_2",
+   "Index": 11,
+   "Title": "Niet-seizoengecorrigeerd",
+   "Description": "Het aantal - niet voor seizoensinvloeden gecorrigeerde - uitkeringen op grond van de Werkloosheidswet (WW).",
+   "MeasureGroupId": "D007076_1",
+   "DataType": "Double",
+   "Unit": "x 1000",
+   "Decimals": 1,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "M006400",
+   "Index": 12,
+   "Title": "Seizoengecorrigeerd",
+   "Description": "Het aantal - voor seizoensinvloeden gecorrigeerde - uitkeringen op grond van de Werkloosheidswet (WW).\r\nGedurende het lopende jaar gaat het om voorlopige gegevens.",
+   "MeasureGroupId": "D007076_1",
+   "DataType": "Double",
+   "Unit": "x 1000",
+   "Decimals": 1,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "D000235",
+   "Index": 13,
+   "Title": "IOW-uitkeringen",
+   "Description": "Het aantal uitkeringen op grond van de Wet inkomensvoorziening oudere werklozen (IOW).\r\nHet gaat om uitkeringen die aan het einde van de verslagperiode niet waren beëindigd (lopende uitkeringen).\r\n\r\nDe IOW geeft oudere werklozen en oudere gedeeltelijk gehandicapten na afloop van hun WW-uitkering respectievelijk (loongerelateerde) WGA-uitkering recht op een vervolguitkering.\r\nDe wet is in werking getreden per 1 december 2009.",
+   "MeasureGroupId": "D007076_1",
+   "DataType": "Double",
+   "Unit": "x 1000",
+   "Decimals": 1,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "D000203_2",
+   "Index": 16,
+   "Title": "Totaal bijstandsuitkeringen",
+   "Description": "Het totaal aantal uitkeringen op grond van de Wet werk en bijstand (t/m 2014), Participatiewet (vanaf 2015).",
+   "MeasureGroupId": "D000203_1",
+   "DataType": "Double",
+   "Unit": "x 1000",
+   "Decimals": 1,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "90210",
+   "Index": 17,
+   "Title": "Bijstandsuitkeringen tot de AOW-leeftijd",
+   "Description": "Het aantal bijstandsuitkeringen aan personen die jonger zijn dan de AOW-gerechtigde leeftijd.\r\n\r\nDe AOW-leeftijd is de leeftijd waarop het AOW-pensioen ingaat. De AOW-leeftijd is tot en met 2029 als volgt:\r\nTot 2013: 65 jaar\r\n2013: 65 jaar en 1 maand\r\n2014: 65 jaar en 2 maanden\r\n2015: 65 jaar en 3 maanden\r\n2016: 65 jaar en 6 maanden\r\n2017: 65 jaar en 9 maanden\r\n2018: 66 jaar\r\n2019-2021: 66 jaar en 4 maanden\r\n2022: 66 jaar en 7 maanden\r\n2023: 66 jaar en 10 maanden\r\n2024 - 2027: 67 jaar\r\n2028-2029 67 jaar en 3 maanden.\r\n\r\n",
+   "MeasureGroupId": "D000203_1",
+   "DataType": "Double",
+   "Unit": "x 1000",
+   "Decimals": 1,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "90200",
+   "Index": 18,
+   "Title": "Bijstandsuitkeringen vanaf AOW-leeftijd",
+   "Description": "Het aantal bijstandsuitkeringen aan personen die de AOW-gerechtigde leeftijd hebben.\r\n\r\nDe AOW-leeftijd is de leeftijd waarop het AOW-pensioen ingaat. De AOW-leeftijd is tot en met 2029 als volgt:\r\nTot 2013: 65 jaar\r\n2013: 65 jaar en 1 maand\r\n2014: 65 jaar en 2 maanden\r\n2015: 65 jaar en 3 maanden\r\n2016: 65 jaar en 6 maanden\r\n2017: 65 jaar en 9 maanden\r\n2018: 66 jaar\r\n2019-2021: 66 jaar en 4 maanden\r\n2022: 66 jaar en 7 maanden\r\n2023: 66 jaar en 10 maanden\r\n2024 - 2027: 67 jaar\r\n2028-2029 67 jaar en 3 maanden.\r\n\r\n",
+   "MeasureGroupId": "D000203_1",
+   "DataType": "Double",
+   "Unit": "x 1000",
+   "Decimals": 1,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "D000233",
+   "Index": 19,
+   "Title": "IOAW-uitkeringen",
+   "Description": "Het aantal uitkeringen op grond van de Wet inkomensvoorziening oudere en gedeeltelijk arbeidsongeschikte werkloze werknemers (IOAW).\r\n\r\nDe IOAW biedt oudere en gedeeltelijk arbeidsongeschikte werknemers een inkomensgarantie op het niveau van het sociaal minimum of het niveau van het laatst genoten loon.\r\nDe wet wordt op termijn afgesloten. Alleen personen geboren voor 1 januari 1965 kunnen nog inde IOAW instromen.\r\nDe uitkering wordt stopgezet bij het bereiken van de AOW-gerechtigde leeftijd. \r\n",
+   "MeasureGroupId": "D000202",
+   "DataType": "Double",
+   "Unit": "x 1000",
+   "Decimals": 1,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "D003284",
+   "Index": 20,
+   "Title": "IOAZ-uitkeringen",
+   "Description": "Het aantal uitkeringen op grond van de Wet inkomensvoorziening oudere zelfstandigen en gedeeltelijk arbeidsongeschikte gewezen zelfstandigen (IOAZ).\r\n\r\nDe IOAZ biedt oudere en gedeeltelijk arbeidsongeschikte gewezen zelfstandigen een inkomensgarantie op het niveau van het sociaal minimum.\r\nDe uitkering wordt stopgezet bij het bereiken van de AOW-gerechtigde leeftijd. \r\n",
+   "MeasureGroupId": "D000202",
+   "DataType": "Double",
+   "Unit": "x 1000",
+   "Decimals": 1,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "D000194",
+   "Index": 22,
+   "Title": "AOW-uitkeringen",
+   "Description": "Het aantal uitkeringen op grond van de Algemene ouderdomswet (AOW).\r\n\r\nDe AOW-leeftijd is de leeftijd waarop het AOW-pensioen ingaat. De AOW-leeftijd is tot en met 2029 als volgt:\r\nTot 2013: 65 jaar\r\n2013: 65 jaar en 1 maand\r\n2014: 65 jaar en 2 maanden\r\n2015: 65 jaar en 3 maanden\r\n2016: 65 jaar en 6 maanden\r\n2017: 65 jaar en 9 maanden\r\n2018: 66 jaar\r\n2019-2021: 66 jaar en 4 maanden\r\n2022: 66 jaar en 7 maanden\r\n2023: 66 jaar en 10 maanden\r\n2024 - 2027: 67 jaar\r\n2028-2029 67 jaar en 3 maanden.\r\n\r\n",
+   "MeasureGroupId": "M000276",
+   "DataType": "Double",
+   "Unit": "x 1000",
+   "Decimals": 1,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "D000192",
+   "Index": 23,
+   "Title": "Anw-uitkeringen",
+   "Description": "Het aantal uitkeringen op grond van de Algemene nabestaandenwet (Anw).\r\n\r\nDe Anw regelt het recht op uitkering voor nabestaanden, halfwezen en wezen. Er bestaat alleen recht op een Anw-uitkering als de overledene op de dag van overlijden voor de Anw verzekerd was.\r\nHet gaat om uitkeringen die aan het eind van de verslagperiode niet waren beëindigd, de zogeheten lopende uitkeringen.\r\nPer 1 juli 2013 is door een wetswijziging het recht op een halfwezenuitkering vervallen. Vanaf 1 juli 2013 ontvangt een overgebleven ouder met een kind jonger dan 18 jaar een hogere nabestaandenuitkering. Voor wie dan al een halfwezenuitkering had, gaat de wijziging per 1 oktober 2013 in.\r\n\r\n \r\n",
+   "MeasureGroupId": "M000276",
+   "DataType": "Double",
+   "Unit": "x 1000",
+   "Decimals": 1,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "D001690",
+   "Index": 24,
+   "Title": "AKW-gerechtigden",
+   "Description": "Het aantal AKW-gerechtigden op grond van de Algemene kinderbijslagwet (AKW). \r\n\r\nDe AKW regelt een financiële tegemoetkoming voor verzekerden die kinderen (tot 18 jaar) verzorgen en opvoeden.\r\nHet gaat om uitkeringen die aan het eind van de verslagperiode niet waren beëindigd, de zogeheten lopende uitkeringen.\r\nDe AKW is een kwartaalstatistiek. Het betreft cijfers over de vier verslagkwartalen. Jaarlijks wordt ook het jaargemiddelde berekend van de 4 kwartalen.\r\n",
+   "MeasureGroupId": "M000276",
+   "DataType": "Double",
+   "Unit": "x 1000",
+   "Decimals": 1,
+   "PresentationType": null
+  }
+ ]
+}

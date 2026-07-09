@@ -10,7 +10,7 @@ import { randomUUID } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { FixtureSource, loadCatalogFixture } from '../../src/cbs-adapter/fixture-source.ts';
 import { ingestCatalog } from '../../src/catalog/ingest.ts';
-import type { CatalogCandidate, RerankFn, RerankResult } from '../../src/catalog/types.ts';
+import type { CatalogCandidate, FindTableQuery, RerankFn, RerankResult } from '../../src/catalog/types.ts';
 import type { Db } from '../../src/db/types.ts';
 import { reserveOnboardingDebit } from '../../src/billing/ledger.ts';
 import { buildOnboardingFinder } from '../../src/ingestion/onboarding-finder.ts';
@@ -21,7 +21,7 @@ const FIXTURES_DIR = fileURLToPath(new URL('../fixtures/cbs', import.meta.url));
 
 /** Picks shortlist[0] with a given confidence (findTable's own test stub). */
 function stubPickFirst(confidence: number): RerankFn {
-  return (_topic: string, shortlist: CatalogCandidate[]): Promise<RerankResult> =>
+  return (_query: FindTableQuery, shortlist: CatalogCandidate[]): Promise<RerankResult> =>
     Promise.resolve({
       tableId: shortlist[0]!.tableId,
       confidence,
@@ -31,6 +31,7 @@ function stubPickFirst(confidence: number): RerankFn {
 }
 
 const CONFIDENT_TOPIC = 'huizenprijzen';
+const QUESTION = 'Hoe duur zijn koopwoningen op dit moment?';
 
 async function fundedUser(db: Db): Promise<string> {
   const userId = randomUUID();
@@ -53,7 +54,7 @@ describe('buildOnboardingFinder — the production TableFinder closure (WP16 sub
 
   it('confident pick → routing carrying the picked table + confidence, alreadyPending false', async () => {
     const finder = buildOnboardingFinder({ db, userId: randomUUID(), rerank: stubPickFirst(0.95) });
-    const routing = await finder(CONFIDENT_TOPIC);
+    const routing = await finder(CONFIDENT_TOPIC, QUESTION);
     expect(routing).not.toBeNull();
     expect(routing!.confidence).toBe(0.95);
     expect(routing!.tableId).toBeTruthy();
@@ -61,14 +62,24 @@ describe('buildOnboardingFinder — the production TableFinder closure (WP16 sub
     expect(routing!.alreadyPending).toBe(false);
   });
 
+  it('threads the FULL question into the rerank query (WP27 stage A, ADR 027 D3a)', async () => {
+    let seen: FindTableQuery | null = null;
+    const capturing: RerankFn = (query, shortlist) => {
+      seen = query;
+      return stubPickFirst(0.95)(query, shortlist);
+    };
+    await buildOnboardingFinder({ db, userId: randomUUID(), rerank: capturing })(CONFIDENT_TOPIC, QUESTION);
+    expect(seen).toEqual({ topic: CONFIDENT_TOPIC, question: QUESTION });
+  });
+
   it('below the confident floor → null (discloses in real UX, never onboards)', async () => {
     const finder = buildOnboardingFinder({ db, userId: randomUUID(), rerank: stubPickFirst(0.4) });
-    expect(await finder(CONFIDENT_TOPIC)).toBeNull();
+    expect(await finder(CONFIDENT_TOPIC, QUESTION)).toBeNull();
   });
 
   it('recall miss → null', async () => {
     const finder = buildOnboardingFinder({ db, userId: randomUUID(), rerank: stubPickFirst(0.95) });
-    expect(await finder('volstrekt onbekend kwark xyzzy')).toBeNull();
+    expect(await finder('volstrekt onbekend kwark xyzzy', 'Wat is kwark xyzzy?')).toBeNull();
   });
 
   it('a rerank throw → null (degrades to B15, never blocks the turn)', async () => {
@@ -80,7 +91,7 @@ describe('buildOnboardingFinder — the production TableFinder closure (WP16 sub
     // findTable itself catches the rerank throw and DISCLOSES → the finder maps
     // disclose to null. (Belt: even if findTable ever rethrew, the finder's own
     // try/catch returns null.)
-    expect(await finder(CONFIDENT_TOPIC)).toBeNull();
+    expect(await finder(CONFIDENT_TOPIC, QUESTION)).toBeNull();
   });
 
   it('an already-pending lookup throw → null (session-27 review: the catch covers the WHOLE finder)', async () => {
@@ -101,13 +112,13 @@ describe('buildOnboardingFinder — the production TableFinder closure (WP16 sub
       userId: randomUUID(),
       rerank: stubPickFirst(0.95),
     });
-    expect(await finder(CONFIDENT_TOPIC)).toBeNull();
+    expect(await finder(CONFIDENT_TOPIC, QUESTION)).toBeNull();
   });
 
   it('an active job for this (user, table) → alreadyPending true (no second fetch)', async () => {
     const userId = await fundedUser(db);
     // First, resolve the confident pick so we know the table id to pre-queue.
-    const probe = await buildOnboardingFinder({ db, userId, rerank: stubPickFirst(0.95) })(CONFIDENT_TOPIC);
+    const probe = await buildOnboardingFinder({ db, userId, rerank: stubPickFirst(0.95) })(CONFIDENT_TOPIC, QUESTION);
     expect(probe).not.toBeNull();
     const requestId = randomUUID();
     const debit = await reserveOnboardingDebit(db, userId, requestId, 100);
@@ -123,14 +134,14 @@ describe('buildOnboardingFinder — the production TableFinder closure (WP16 sub
     });
     // Now the SAME user asking again sees alreadyPending.
     const finder = buildOnboardingFinder({ db, userId, rerank: stubPickFirst(0.95) });
-    const routing = await finder(CONFIDENT_TOPIC);
+    const routing = await finder(CONFIDENT_TOPIC, QUESTION);
     expect(routing).not.toBeNull();
     expect(routing!.alreadyPending).toBe(true);
   });
 
   it('a DIFFERENT user with no active job → alreadyPending false (per-user, not global)', async () => {
     const userA = await fundedUser(db);
-    const probe = await buildOnboardingFinder({ db, userId: userA, rerank: stubPickFirst(0.95) })(CONFIDENT_TOPIC);
+    const probe = await buildOnboardingFinder({ db, userId: userA, rerank: stubPickFirst(0.95) })(CONFIDENT_TOPIC, QUESTION);
     const requestId = randomUUID();
     const debit = await reserveOnboardingDebit(db, userA, requestId, 100);
     if (debit.kind !== 'debited') throw new Error('setup debit failed');
@@ -144,7 +155,7 @@ describe('buildOnboardingFinder — the production TableFinder closure (WP16 sub
       debitTransactionId: debit.entry.id,
     });
     const userB = randomUUID();
-    const routing = await buildOnboardingFinder({ db, userId: userB, rerank: stubPickFirst(0.95) })(CONFIDENT_TOPIC);
+    const routing = await buildOnboardingFinder({ db, userId: userB, rerank: stubPickFirst(0.95) })(CONFIDENT_TOPIC, QUESTION);
     expect(routing!.alreadyPending).toBe(false);
   });
 });

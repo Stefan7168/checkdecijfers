@@ -7,7 +7,7 @@
 // sample turned out to cut off after 2020MM12, silently missing them (WP5).
 // Refresh: node scripts/capture-cbs-fixtures.ts [tableId ...]
 //          (network required; not CI; no args = all Phase 0 tables)
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { CbsSlice } from '../src/cbs-adapter/types.ts';
@@ -24,6 +24,18 @@ const CAPTURE_SLICES: Record<string, CbsSlice> = {
 };
 const MAX_PAGES = 20;
 
+// Fixture-only tables (WP27 stage A): captured for the finder/fit tests but
+// NOT Phase-0-registered. 37789ksz (the bijstand-stock kerncijfers table,
+// owner decision 2026-07-08) gets full observations — Stage C's e2e delivery
+// test ingests it. 85615NED (the flow table of the live #111 mis-pick) gets
+// schema docs + the real $count only: the fit gate must reject it for the
+// stock question, so its observations are never read — and at full size they
+// would bloat the fixture for nothing.
+const FIXTURE_ONLY_TABLES: { id: string; observations: boolean }[] = [
+  { id: '37789ksz', observations: true },
+  { id: '85615NED', observations: false },
+];
+
 async function fetchJson(url: string): Promise<any> {
   for (let attempt = 1; ; attempt++) {
     const res = await fetch(url, { headers: { Accept: 'application/json' } });
@@ -33,7 +45,11 @@ async function fetchJson(url: string): Promise<any> {
   }
 }
 
-async function captureTable(id: string, slice: CbsSlice | undefined): Promise<void> {
+async function captureTable(
+  id: string,
+  slice: CbsSlice | undefined,
+  options: { skipObservations?: boolean } = {},
+): Promise<void> {
   const dir = join(OUT, id);
   mkdirSync(dir, { recursive: true });
   const files: Record<string, string> = {};
@@ -48,6 +64,29 @@ async function captureTable(id: string, slice: CbsSlice | undefined): Promise<vo
   save('measure-codes.json', await fetchJson(`${BASE}/${id}/MeasureCodes`));
   for (const dim of dimensions.value) {
     save(`codes-${dim.Identifier}.json`, await fetchJson(`${BASE}/${id}/${dim.Identifier}Codes`));
+  }
+
+  // Schema-only capture (WP27 fixture-only tables): the manifest still records
+  // the REAL live $count — fetchObservationCount replays honestly — but no
+  // observation pages are stored (this table's cells are never read in tests).
+  if (options.skipObservations) {
+    const countRes = await fetch(`${BASE}/${id}/Observations/$count`, {
+      headers: { Accept: 'text/plain' },
+    });
+    if (!countRes.ok) throw new Error(`${countRes.status} for ${id}/Observations/$count`);
+    const count = Number((await countRes.text()).trim());
+    save('index.json', {
+      tableId: id,
+      capturedAt: new Date().toISOString(),
+      source: `${BASE}/${id}`,
+      sliceFilter: null,
+      captureOnlySlice: null,
+      observationRows: count,
+      observationPages: [],
+      files,
+    });
+    console.log(`${id}: schema-only capture (live count ${count}, 0 pages stored)`);
+    return;
   }
 
   // Registered slice and capture-only slice both narrow the fetch; combining
@@ -134,20 +173,65 @@ async function captureCatalog(): Promise<void> {
   console.log(`catalog fixture: ${rows.length} rows -> tests/fixtures/cbs/_catalog.json`);
 }
 
+// Surgical catalog add (WP27 stage A): fetch the named ids' live catalog rows
+// and MERGE them into the existing _catalog.json — every already-present row
+// keeps its VALUES semantically identical (a full --catalog re-capture would
+// churn Modified timestamps and topic-sample membership, shifting recall for
+// unrelated labelled cases). Honesty note (PR-#17 review): the merge
+// round-trips the whole file through JSON.parse/stringify, so the FILE
+// FORMATTING normalizes to this script's own compact one-line form — the
+// first --catalog-add run (session 31) therefore rewrote the legacy
+// pretty-printed file wholesale; verify row preservation semantically (parse
+// + compare per Identifier), never by eyeballing the git diff.
+// Usage: --catalog-add <id> [<id> ...]
+async function catalogAdd(ids: string[]): Promise<void> {
+  const path = join(OUT, '_catalog.json');
+  const existing = JSON.parse(readFileSync(path, 'utf8')) as { '@odata.context': string; value: any[] };
+  const byId = new Map<string, unknown>(existing.value.map((row) => [row.Identifier, row]));
+  const idFilter = ids.map((id) => `Identifier eq '${id}'`).join(' or ');
+  const params = new URLSearchParams({ $select: CATALOG_SELECT, $filter: idFilter });
+  const fetched = (await fetchJson(`${BASE}/Datasets?${params}`)).value as any[];
+  const missing = ids.filter((id) => !fetched.some((row) => row.Identifier === id));
+  if (missing.length > 0) throw new Error(`--catalog-add: not found in the live catalog: ${missing.join(', ')}`);
+  for (const row of fetched) byId.set(row.Identifier, row);
+  const rows = [...byId.values()].sort((a: any, b: any) =>
+    a.Identifier < b.Identifier ? -1 : a.Identifier > b.Identifier ? 1 : 0,
+  );
+  writeFileSync(path, JSON.stringify({ ...existing, value: rows }, null, 0) + '\n');
+  console.log(`catalog fixture: +${fetched.length} row(s) merged, ${rows.length} total -> tests/fixtures/cbs/_catalog.json`);
+}
+
 if (process.argv.includes('--catalog')) {
   await captureCatalog();
   console.log('Catalog capture complete.');
   process.exit(0);
 }
 
+const addIdx = process.argv.indexOf('--catalog-add');
+if (addIdx !== -1) {
+  const ids = process.argv.slice(addIdx + 1);
+  if (ids.length === 0) {
+    console.error('--catalog-add needs at least one table id');
+    process.exit(1);
+  }
+  await catalogAdd(ids);
+  process.exit(0);
+}
+
 const requested = process.argv.slice(2);
-const unknown = requested.filter((id) => !PHASE0_TABLES.some((t) => t.id === id));
+const capturable = [
+  ...PHASE0_TABLES.map((t) => ({ id: t.id, slice: t.slice, skipObservations: false })),
+  ...FIXTURE_ONLY_TABLES.map((t) => ({ id: t.id, slice: undefined, skipObservations: !t.observations })),
+];
+const unknown = requested.filter((id) => !capturable.some((t) => t.id === id));
 if (unknown.length > 0) {
-  console.error(`Unknown table id(s): ${unknown.join(', ')} — must be one of: ${PHASE0_TABLES.map((t) => t.id).join(', ')}`);
+  console.error(`Unknown table id(s): ${unknown.join(', ')} — must be one of: ${capturable.map((t) => t.id).join(', ')}`);
   process.exit(1);
 }
-const toCapture = requested.length > 0 ? PHASE0_TABLES.filter((t) => requested.includes(t.id)) : PHASE0_TABLES;
+// No args = the Phase-0 set (the historical default); fixture-only tables are
+// captured by naming them explicitly.
+const toCapture = requested.length > 0 ? capturable.filter((t) => requested.includes(t.id)) : capturable.filter((t) => PHASE0_TABLES.some((p) => p.id === t.id));
 for (const table of toCapture) {
-  await captureTable(table.id, table.slice);
+  await captureTable(table.id, table.slice, { skipObservations: table.skipObservations });
 }
 console.log('Capture complete.');

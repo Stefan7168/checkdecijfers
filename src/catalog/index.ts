@@ -1,7 +1,13 @@
 // CBS-catalog table discovery (WP16 sub-part 1). Public surface: the catalog
 // mirror ingest, Stage-1 recall, Stage-2 rerank, and the findTable orchestrator.
 export { ingestCatalog, type CatalogIngestResult } from './ingest.ts';
-export { recallCandidates, RECALL_LIMIT, type RecallOptions } from './recall.ts';
+export {
+  recallCandidates,
+  RECALL_LIMIT,
+  RECALL_REGULIER_SLOTS,
+  RECALL_HISTORIC_SLOTS,
+  type RecallOptions,
+} from './recall.ts';
 export {
   ALIAS_HINTS,
   expandTopicTerms,
@@ -32,4 +38,5 @@ export {
   type RerankFn,
   type FindTableConfig,
   type FindTableOutcome,
+  type FindTableQuery,
 } from './types.ts';
