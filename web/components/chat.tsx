@@ -68,6 +68,11 @@ interface ChatMessage {
   answerView: AnswerView | null;
   /** WP23 (#71): any quoted cell is provisional — the amber pill. */
   provisional: boolean;
+  /** WP29 (#73, ADR 029): servability-gated follow-up chips under an answer.
+   * Every text passed the server-side dry-run gate this request; clicking
+   * FILLS the input (the #75 convention — never sends). [] on user messages
+   * and non-answers. */
+  suggestions: string[];
 }
 
 /** WP23 (#75): clickable examples on the empty chat — each a benchmark-
@@ -203,7 +208,7 @@ export function Chat({
 
     setMessages((m) => [
       ...m,
-      { role: 'user', kind: null, text, chart: null, cost: null, citation: null, card: null, csv: null, answerView: null, provisional: false },
+      { role: 'user', kind: null, text, chart: null, cost: null, citation: null, card: null, csv: null, answerView: null, provisional: false, suggestions: [] },
     ]);
     setInput('');
     setBusy(true);
@@ -233,6 +238,7 @@ export function Chat({
             csv: null,
             answerView: null,
             provisional: false,
+            suggestions: [],
           },
         ]);
         // None of these kinds change the pending clarification state;
@@ -280,6 +286,10 @@ export function Chat({
               : null,
           provisional:
             response.kind === 'answer' && response.result.cells.some((cell) => cell.provisional),
+          // WP29: `?? []` guards the deploy-window skew only (an old server
+          // process serving a new client bundle omits the field); a current
+          // server always sets it.
+          suggestions: response.kind === 'answer' ? (response.suggestions ?? []) : [],
         },
       ]);
       setPending(response.kind === 'clarification' ? response.pending : null);
@@ -408,6 +418,24 @@ export function Chat({
               </div>
             ) : null}
             {message.chart ? <ChartView spec={message.chart} /> : null}
+            {/* WP29 (#73, ADR 029 D3): follow-up chips — styled exactly like
+              * the #75 example chips, and the click handler IS the #75
+              * behavior verbatim: fill the input, never send. The user sees
+              * the pre-send cost line (#82) and presses Verstuur themselves. */}
+            {message.suggestions.length > 0 ? (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {message.suggestions.map((question) => (
+                  <button
+                    key={question}
+                    type="button"
+                    onClick={() => setInput(question)}
+                    className="rounded-full border border-zinc-300 px-3 py-1 text-xs text-zinc-600 hover:bg-zinc-50"
+                  >
+                    {question}
+                  </button>
+                ))}
+              </div>
+            ) : null}
           </div>
         ))}
         {busy ? (
