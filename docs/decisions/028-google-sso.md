@@ -18,6 +18,14 @@ page. Fail-soft still holds (no crash, no session, magic link untouched); the in
 covers server-side failures (missing env / Supabase client error). The RUNBOOK owner-steps section
 documents this so the owner isn't surprised before completing the dashboard config. The D2 linking
 verification remains the owner's post-merge live step (open-questions [#122](../open-questions.md)).
+One precision on the trade-offs' "no shared failure mode" line, raised by the pre-PR review: the two
+buttons DO share the single `busy` flag (brief-mandated, anti-double-submit), so while a Google
+action call is in flight both doors are disabled. This does not couple the doors to Google's
+availability — the awaited call reaches only OUR server, where `signInWithOAuth` merely builds the
+authorize URL (measured 9ms, no Google/Supabase network dependency); a stall there means the app
+itself is unreachable, which stalls the magic link equally. Error paths reset `busy` (tested), so
+"no shared failure mode" holds where it matters: a broken/unconfigured Google provider never blocks
+the magic-link door beyond the millisecond-scale action round trip.
 
 ## Context
 

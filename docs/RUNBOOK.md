@@ -87,6 +87,24 @@ computer or any one Claude account. A new machine needs, in order:
    the terminal.
 2. **Sign in**: GitHub (your `Stefan7168` account — `gh auth login` walks you
    through it in the browser) and Claude Code (your Claude account).
+   **Multi-account gotchas (previously only in AI session memory — recorded
+   here 2026-07-10 ahead of the laptop/account switch):**
+   - **GitHub:** the machine may hold several gh accounts (work ones like
+     `redacted-work-org`). The repo is private under `Stefan7168`; any other
+     account 404s on it. If git ever says "Repository not found", run
+     `gh auth switch -u Stefan7168`. To make this clone immune to the active
+     gh account, set the repo-local credential helper once:
+     ```
+     git config --local credential.helper ""
+     git config --local --add credential.helper '!gh auth git-credential'
+     ```
+     (This is how the 2026-07 machine was set up; it does not travel with a
+     clone — redo it on every new machine.)
+   - **Browser / Google:** ALL browser work for this project — Google Cloud
+     Console, Supabase, Vercel dashboards, and any AI-session browser
+     automation — runs under your PERSONAL Google identity: the Chrome
+     profile named **'Personal'** (owner steer 2026-07-10). Work profiles
+     risk parking OAuth projects/credentials under the wrong identity.
 3. **Clone and verify — no secrets needed for this step:**
    ```
    git clone https://github.com/Stefan7168/checkdecijfers.git
@@ -147,12 +165,24 @@ computer or any one Claude account. A new machine needs, in order:
    source of truth by design. Kick off exactly like any session:
    *"Continue checkdecijfers.nl. Read CLAUDE.md, docs/STATUS.md and
    docs/08-build-plan.md, then do the next work package."*
+   **Also gone with the old account/machine (and fine, by design):**
+   - **The AI's per-project memory directory** (session-to-session notes on
+     the old machine). As of 2026-07-10 its entire durable content is
+     mirrored in this repo (the gh/Chrome account quirks above, project
+     state in STATUS.md) — and the CLAUDE.md convention now requires every
+     future session to keep it that way, so losing memory loses nothing.
+   - **MCP connectors** (Supabase, Vercel, etc. hooked into Claude) are
+     account-tied conveniences; reconnect them on the new account if you
+     want them, but no project workflow depends on them — sessions work
+     through the repo's own CLIs and `gh`.
 7. **Not in git, by design:** `.env` (recreate per step 5), `web/.env.local`
-   (same two values, copied — not symlinked, see the secrets register note
-   above; only needed to run the chat UI locally with `npm run web:dev`) and
-   the local `Archive/` folder (competitor-research reference material — copy
-   it over manually if you still want it, or let it go; nothing in the build
-   depends on it).
+   (recreate: the two `NEXT_PUBLIC_SUPABASE_*` values copied from the
+   committed `web/.env.production` **plus `NEXT_PUBLIC_APP_URL=http://localhost:3000`**
+   — `next dev` does NOT read `.env.production`, measured session 34; only
+   needed to run the chat UI locally with `npm run web:dev`) and the local
+   `Archive/` folder (competitor-research reference material — copy it over
+   manually if you still want it, or let it go; nothing in the build depends
+   on it).
 
 ## WP16 sub-part 2 — the supervised live step (owner present; ✅ DONE 2026-07-06, session 28)
 
