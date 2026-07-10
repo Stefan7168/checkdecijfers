@@ -1,0 +1,376 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/85554NED/$metadata#RegioSCodes",
+ "value": [
+  {
+   "Identifier": "NL01",
+   "Index": 1,
+   "Title": "Nederland",
+   "Description": "Grenswijziging per 01-01-2018:\r\n- Ontvangen van Buitenland (NL98), 16 hectare met 0 woningen en 0 inwoners\r\n... Eijsden-Margraten (GM1903) ontvangt van Buitenland (GM0998), 16 hectare met 0 woningen en 0 inwoners\r\nGrenswijziging per 01-01-2018:\r\n- Over naar Buitenland (NL98), 5 hectare met 0 woningen en 0 inwoners\r\n... Over van Eijsden-Margraten (GM1903) naar Buitenland (GM0998), 5 hectare met 0 woningen en 0 inwoners\r\n\r\n",
+   "DimensionGroupId": "NL"
+  },
+  {
+   "Identifier": "PV20",
+   "Index": 2,
+   "Title": "Groningen (PV)",
+   "Description": "PV = Provincie\r\n\r\nBestuurlijke onderverdeling van het Nederlands grondgebied. Sinds het instellen van de provincie Flevoland per 1 januari 1986 telt Nederland 12 provincies.\r\n\r\nGrenswijziging per 01-01-2021:\r\n- Over naar Fryslân (PV21), 25 hectare met 0 woningen en 0 inwoners\r\n... Over van Het Hogeland (GM1966) naar Schiermonnikoog (GM0088), 25 hectare met 0 woningen en 0 inwoners\r\n\r\n",
+   "DimensionGroupId": "PV"
+  },
+  {
+   "Identifier": "PV21",
+   "Index": 3,
+   "Title": "Fryslân (PV)",
+   "Description": "PV = Provincie\r\n\r\nBestuurlijke onderverdeling van het Nederlands grondgebied. Sinds het instellen van de provincie Flevoland per 1 januari 1986 telt Nederland 12 provincies.\r\n\r\nVanaf 01-01-2020 hanteert het CBS de Friese naam (Fryslân) voor de provincie Friesland. Bij actualisering van tabellen wordt deze taalwijziging doorgevoerd. Stopgezette tabellen worden niet meer aangepast.\r\n\r\nGrenswijziging per 01-01-2021:\r\n- Ontvangen van Groningen (PV20), 25 hectare met 0 woningen en 0 inwoners\r\n... Schiermonnikoog (GM0088) ontvangt van Het Hogeland (GM1966), 25 hectare met 0 woningen en 0 inwoners\r\n\r\n",
+   "DimensionGroupId": "PV"
+  },
+  {
+   "Identifier": "PV22",
+   "Index": 4,
+   "Title": "Drenthe (PV)",
+   "Description": "PV = Provincie\r\n\r\nBestuurlijke onderverdeling van het Nederlands grondgebied. Sinds het instellen van de provincie Flevoland per 1 januari 1986 telt Nederland 12 provincies.\r\n\r\n",
+   "DimensionGroupId": "PV"
+  },
+  {
+   "Identifier": "PV23",
+   "Index": 5,
+   "Title": "Overijssel (PV)",
+   "Description": "PV = Provincie\r\n\r\nBestuurlijke onderverdeling van het Nederlands grondgebied. Sinds het instellen van de provincie Flevoland per 1 januari 1986 telt Nederland 12 provincies.\r\n\r\n",
+   "DimensionGroupId": "PV"
+  },
+  {
+   "Identifier": "PV24",
+   "Index": 6,
+   "Title": "Flevoland (PV)",
+   "Description": "PV = Provincie\r\n\r\nBestuurlijke onderverdeling van het Nederlands grondgebied. Sinds het instellen van de provincie Flevoland per 1 januari 1986 telt Nederland 12 provincies.\r\n\r\n",
+   "DimensionGroupId": "PV"
+  },
+  {
+   "Identifier": "PV25",
+   "Index": 7,
+   "Title": "Gelderland (PV)",
+   "Description": "PV = Provincie\r\n\r\nBestuurlijke onderverdeling van het Nederlands grondgebied. Sinds het instellen van de provincie Flevoland per 1 januari 1986 telt Nederland 12 provincies.\r\n\r\nGrenswijziging per 01-01-2016:\r\n- Ontvangen van Limburg (PV31), 0 hectare met 0 woningen en 5 inwoners\r\n... Berg en Dal (GM1945) ontvangt van Mook en Middelaar (GM0944), 0 hectare met 0 woningen en 5 inwoners\r\n\r\n",
+   "DimensionGroupId": "PV"
+  },
+  {
+   "Identifier": "PV26",
+   "Index": 8,
+   "Title": "Utrecht (PV)",
+   "Description": "PV = Provincie\r\n\r\nBestuurlijke onderverdeling van het Nederlands grondgebied. Sinds het instellen van de provincie Flevoland per 1 januari 1986 telt Nederland 12 provincies.\r\n\r\nGrenswijziging per 01-01-2019:\r\n- Ontvangen van Zuid-Holland (PV28), 10721 hectare met 14649 woningen en 35268 inwoners\r\n... Vijfheerenlanden (GM1961) ontvangt van het opgeheven Leerdam (GM0545), 3376 hectare met 8988 woningen en 21248 inwoners\r\n... Vijfheerenlanden (GM1961) ontvangt van het opgeheven Zederik (GM0707), 7345 hectare met 5661 woningen en 14020 inwoners\r\n\r\n",
+   "DimensionGroupId": "PV"
+  },
+  {
+   "Identifier": "PV27",
+   "Index": 9,
+   "Title": "Noord-Holland (PV)",
+   "Description": "PV = Provincie\r\n\r\nBestuurlijke onderverdeling van het Nederlands grondgebied. Sinds het instellen van de provincie Flevoland per 1 januari 1986 telt Nederland 12 provincies.\r\n\r\nGrenswijziging per 01-01-2013:\r\n- Ontvangen van Zuid-Holland (PV28), 2 hectare met 0 woningen en 0 inwoners\r\n... Bloemendaal (GM0377) ontvangt van Hillegom (GM0534), 2 hectare met 0 woningen en 0 inwoners\r\n\r\n",
+   "DimensionGroupId": "PV"
+  },
+  {
+   "Identifier": "PV28",
+   "Index": 10,
+   "Title": "Zuid-Holland (PV)",
+   "Description": "PV = Provincie\r\n\r\nBestuurlijke onderverdeling van het Nederlands grondgebied. Sinds het instellen van de provincie Flevoland per 1 januari 1986 telt Nederland 12 provincies.\r\n\r\nGrenswijziging per 01-01-2019:\r\n- Over naar Utrecht (PV26), 10721 hectare met 14649 woningen en 35268 inwoners\r\n... Leerdam (GM0545) wordt opgeheven en gaat over naar Vijfheerenlanden (GM1961), 3376 hectare met 8988 woningen en 21248 inwoners\r\n... Zederik (GM0707) wordt opgeheven en gaat over naar Vijfheerenlanden (GM1961), 7345 hectare met 5661 woningen en 14020 inwoners\r\n\r\nGrenswijziging per 01-01-2013:\r\n- Over naar Noord-Holland (PV27), 2 hectare met 0 woningen en 0 inwoners\r\n... Over van Hillegom (GM0534) naar Bloemendaal (GM0377), 2 hectare met 0 woningen en 0 inwoners\r\n\r\n",
+   "DimensionGroupId": "PV"
+  },
+  {
+   "Identifier": "PV29",
+   "Index": 11,
+   "Title": "Zeeland (PV)",
+   "Description": "PV = Provincie\r\n\r\nBestuurlijke onderverdeling van het Nederlands grondgebied. Sinds het instellen van de provincie Flevoland per 1 januari 1986 telt Nederland 12 provincies.\r\n\r\n",
+   "DimensionGroupId": "PV"
+  },
+  {
+   "Identifier": "PV30",
+   "Index": 12,
+   "Title": "Noord-Brabant (PV)",
+   "Description": "PV = Provincie\r\n\r\nBestuurlijke onderverdeling van het Nederlands grondgebied. Sinds het instellen van de provincie Flevoland per 1 januari 1986 telt Nederland 12 provincies.\r\n\r\n",
+   "DimensionGroupId": "PV"
+  },
+  {
+   "Identifier": "PV31",
+   "Index": 13,
+   "Title": "Limburg (PV)",
+   "Description": "PV = Provincie\r\n\r\nBestuurlijke onderverdeling van het Nederlands grondgebied. Sinds het instellen van de provincie Flevoland per 1 januari 1986 telt Nederland 12 provincies.\r\n\r\nGrenswijziging per 01-01-2018:\r\n- Ontvangen van Buitenland (PV98), 16 hectare met 0 woningen en 0 inwoners\r\n... Eijsden-Margraten (GM1903) ontvangt van Buitenland (GM0998), 16 hectare met 0 woningen en 0 inwoners\r\nGrenswijziging per 01-01-2018:\r\n- Over naar Buitenland (PV98), 5 hectare met 0 woningen en 0 inwoners\r\n... Over van Eijsden-Margraten (GM1903) naar Buitenland (GM0998), 5 hectare met 0 woningen en 0 inwoners\r\n\r\nGrenswijziging per 01-01-2016:\r\n- Over naar Gelderland (PV25), 0 hectare met 0 woningen en 5 inwoners\r\n... Over van Mook en Middelaar (GM0944) naar Berg en Dal (GM1945), 0 hectare met 0 woningen en 5 inwoners\r\n\r\n",
+   "DimensionGroupId": "PV"
+  },
+  {
+   "Identifier": "PV99",
+   "Index": 14,
+   "Title": "Niet in te delen (PV)",
+   "Description": "PV = Provincie\r\n\r\nBestuurlijke onderverdeling van het Nederlands grondgebied. Sinds het instellen van de provincie Flevoland per 1 januari 1986 telt Nederland 12 provincies.\r\n\r\nNiet in te delen: door een gebrek aan informatie of door onjuiste informatie is een toedeling aan een bepaalde provincie niet altijd mogelijk.\r\n\r\n",
+   "DimensionGroupId": "PV"
+  },
+  {
+   "Identifier": "AM01",
+   "Index": 15,
+   "Title": "Groningen (AM)",
+   "Description": "AM = Arbeidsmarktregio\r\n\r\nEen indeling in regio's van waaruit gemeenten en het Uitvoeringsinstituut Werknemersverzekeringen (UWV) de dienstverlening aan werkgevers en werkzoekenden vormgeven. Het is een regionaal niveau tussen gemeenten en provincies in. Deze indeling is van onderop, door gemeenten zelf, tot stand gekomen. De indeling is op 1 januari 2016 herzien en telt vanaf die datum 35 gebieden.\r\n\r\n",
+   "DimensionGroupId": "AM"
+  },
+  {
+   "Identifier": "AM02",
+   "Index": 16,
+   "Title": "Friesland (AM)",
+   "Description": "AM = Arbeidsmarktregio\r\n\r\nEen indeling in regio's van waaruit gemeenten en het Uitvoeringsinstituut Werknemersverzekeringen (UWV) de dienstverlening aan werkgevers en werkzoekenden vormgeven. Het is een regionaal niveau tussen gemeenten en provincies in. Deze indeling is van onderop, door gemeenten zelf, tot stand gekomen. De indeling is op 1 januari 2016 herzien en telt vanaf die datum 35 gebieden.\r\n\r\n",
+   "DimensionGroupId": "AM"
+  },
+  {
+   "Identifier": "AM03",
+   "Index": 17,
+   "Title": "Drenthe (AM)",
+   "Description": "AM = Arbeidsmarktregio\r\n\r\nEen indeling in regio's van waaruit gemeenten en het Uitvoeringsinstituut Werknemersverzekeringen (UWV) de dienstverlening aan werkgevers en werkzoekenden vormgeven. Het is een regionaal niveau tussen gemeenten en provincies in. Deze indeling is van onderop, door gemeenten zelf, tot stand gekomen. De indeling is op 1 januari 2016 herzien en telt vanaf die datum 35 gebieden.\r\n\r\n",
+   "DimensionGroupId": "AM"
+  },
+  {
+   "Identifier": "AM04",
+   "Index": 18,
+   "Title": "IJsselvechtstreek (AM)",
+   "Description": "AM = Arbeidsmarktregio\r\n\r\nEen indeling in regio's van waaruit gemeenten en het Uitvoeringsinstituut Werknemersverzekeringen (UWV) de dienstverlening aan werkgevers en werkzoekenden vormgeven. Het is een regionaal niveau tussen gemeenten en provincies in. Deze indeling is van onderop, door gemeenten zelf, tot stand gekomen. De indeling is op 1 januari 2016 herzien en telt vanaf die datum 35 gebieden.\r\n\r\nNaamswijziging per 01-01-2016,\r\nnieuwe naam: Regio Zwolle (AM36)\r\n\r\n",
+   "DimensionGroupId": "AM"
+  },
+  {
+   "Identifier": "AM05",
+   "Index": 19,
+   "Title": "Twente (AM)",
+   "Description": "AM = Arbeidsmarktregio\r\n\r\nEen indeling in regio's van waaruit gemeenten en het Uitvoeringsinstituut Werknemersverzekeringen (UWV) de dienstverlening aan werkgevers en werkzoekenden vormgeven. Het is een regionaal niveau tussen gemeenten en provincies in. Deze indeling is van onderop, door gemeenten zelf, tot stand gekomen. De indeling is op 1 januari 2016 herzien en telt vanaf die datum 35 gebieden.\r\n\r\n",
+   "DimensionGroupId": "AM"
+  },
+  {
+   "Identifier": "AM06",
+   "Index": 20,
+   "Title": "Stedendriehoek en Noordwest Veluwe (AM)",
+   "Description": "AM = Arbeidsmarktregio\r\n\r\nEen indeling in regio's van waaruit gemeenten en het Uitvoeringsinstituut Werknemersverzekeringen (UWV) de dienstverlening aan werkgevers en werkzoekenden vormgeven. Het is een regionaal niveau tussen gemeenten en provincies in. Deze indeling is van onderop, door gemeenten zelf, tot stand gekomen. De indeling is op 1 januari 2016 herzien en telt vanaf die datum 35 gebieden.\r\n\r\n",
+   "DimensionGroupId": "AM"
+  },
+  {
+   "Identifier": "AM07",
+   "Index": 21,
+   "Title": "Midden-Gelderland (AM)",
+   "Description": "AM = Arbeidsmarktregio\r\n\r\nEen indeling in regio's van waaruit gemeenten en het Uitvoeringsinstituut Werknemersverzekeringen (UWV) de dienstverlening aan werkgevers en werkzoekenden vormgeven. Het is een regionaal niveau tussen gemeenten en provincies in. Deze indeling is van onderop, door gemeenten zelf, tot stand gekomen. De indeling is op 1 januari 2016 herzien en telt vanaf die datum 35 gebieden.\r\n\r\n",
+   "DimensionGroupId": "AM"
+  },
+  {
+   "Identifier": "AM08",
+   "Index": 22,
+   "Title": "Rijk van Nijmegen (AM)",
+   "Description": "AM = Arbeidsmarktregio\r\n\r\nEen indeling in regio's van waaruit gemeenten en het Uitvoeringsinstituut Werknemersverzekeringen (UWV) de dienstverlening aan werkgevers en werkzoekenden vormgeven. Het is een regionaal niveau tussen gemeenten en provincies in. Deze indeling is van onderop, door gemeenten zelf, tot stand gekomen. De indeling is op 1 januari 2016 herzien en telt vanaf die datum 35 gebieden.\r\n\r\n",
+   "DimensionGroupId": "AM"
+  },
+  {
+   "Identifier": "AM09",
+   "Index": 23,
+   "Title": "Achterhoek (AM)",
+   "Description": "AM = Arbeidsmarktregio\r\n\r\nEen indeling in regio's van waaruit gemeenten en het Uitvoeringsinstituut Werknemersverzekeringen (UWV) de dienstverlening aan werkgevers en werkzoekenden vormgeven. Het is een regionaal niveau tussen gemeenten en provincies in. Deze indeling is van onderop, door gemeenten zelf, tot stand gekomen. De indeling is op 1 januari 2016 herzien en telt vanaf die datum 35 gebieden.\r\n\r\n",
+   "DimensionGroupId": "AM"
+  },
+  {
+   "Identifier": "AM10",
+   "Index": 24,
+   "Title": "Rivierenland (AM)",
+   "Description": "AM = Arbeidsmarktregio\r\n\r\nEen indeling in regio's van waaruit gemeenten en het Uitvoeringsinstituut Werknemersverzekeringen (UWV) de dienstverlening aan werkgevers en werkzoekenden vormgeven. Het is een regionaal niveau tussen gemeenten en provincies in. Deze indeling is van onderop, door gemeenten zelf, tot stand gekomen. De indeling is op 1 januari 2016 herzien en telt vanaf die datum 35 gebieden.\r\n\r\n",
+   "DimensionGroupId": "AM"
+  },
+  {
+   "Identifier": "AM11",
+   "Index": 25,
+   "Title": "Flevoland (AM)",
+   "Description": "AM = Arbeidsmarktregio\r\n\r\nEen indeling in regio's van waaruit gemeenten en het Uitvoeringsinstituut Werknemersverzekeringen (UWV) de dienstverlening aan werkgevers en werkzoekenden vormgeven. Het is een regionaal niveau tussen gemeenten en provincies in. Deze indeling is van onderop, door gemeenten zelf, tot stand gekomen. De indeling is op 1 januari 2016 herzien en telt vanaf die datum 35 gebieden.\r\n\r\n",
+   "DimensionGroupId": "AM"
+  },
+  {
+   "Identifier": "AM12",
+   "Index": 26,
+   "Title": "Gooi en Vechtstreek (AM)",
+   "Description": "AM = Arbeidsmarktregio\r\n\r\nEen indeling in regio's van waaruit gemeenten en het Uitvoeringsinstituut Werknemersverzekeringen (UWV) de dienstverlening aan werkgevers en werkzoekenden vormgeven. Het is een regionaal niveau tussen gemeenten en provincies in. Deze indeling is van onderop, door gemeenten zelf, tot stand gekomen. De indeling is op 1 januari 2016 herzien en telt vanaf die datum 35 gebieden.\r\n\r\n",
+   "DimensionGroupId": "AM"
+  },
+  {
+   "Identifier": "AM13",
+   "Index": 27,
+   "Title": "Midden-Utrecht (AM)",
+   "Description": "AM = Arbeidsmarktregio\r\n\r\nEen indeling in regio's van waaruit gemeenten en het Uitvoeringsinstituut Werknemersverzekeringen (UWV) de dienstverlening aan werkgevers en werkzoekenden vormgeven. Het is een regionaal niveau tussen gemeenten en provincies in. Deze indeling is van onderop, door gemeenten zelf, tot stand gekomen. De indeling is op 1 januari 2016 herzien en telt vanaf die datum 35 gebieden.\r\n\r\n",
+   "DimensionGroupId": "AM"
+  },
+  {
+   "Identifier": "AM14",
+   "Index": 28,
+   "Title": "Amersfoort (AM)",
+   "Description": "AM = Arbeidsmarktregio\r\n\r\nEen indeling in regio's van waaruit gemeenten en het Uitvoeringsinstituut Werknemersverzekeringen (UWV) de dienstverlening aan werkgevers en werkzoekenden vormgeven. Het is een regionaal niveau tussen gemeenten en provincies in. Deze indeling is van onderop, door gemeenten zelf, tot stand gekomen. De indeling is op 1 januari 2016 herzien en telt vanaf die datum 35 gebieden.\r\n\r\n",
+   "DimensionGroupId": "AM"
+  },
+  {
+   "Identifier": "AM15",
+   "Index": 29,
+   "Title": "Noord-Holland Noord (AM)",
+   "Description": "AM = Arbeidsmarktregio\r\n\r\nEen indeling in regio's van waaruit gemeenten en het Uitvoeringsinstituut Werknemersverzekeringen (UWV) de dienstverlening aan werkgevers en werkzoekenden vormgeven. Het is een regionaal niveau tussen gemeenten en provincies in. Deze indeling is van onderop, door gemeenten zelf, tot stand gekomen. De indeling is op 1 januari 2016 herzien en telt vanaf die datum 35 gebieden.\r\n\r\n",
+   "DimensionGroupId": "AM"
+  },
+  {
+   "Identifier": "AM16",
+   "Index": 30,
+   "Title": "Zuid-Kennemerland (AM)",
+   "Description": "AM = Arbeidsmarktregio\r\n\r\nEen indeling in regio's van waaruit gemeenten en het Uitvoeringsinstituut Werknemersverzekeringen (UWV) de dienstverlening aan werkgevers en werkzoekenden vormgeven. Het is een regionaal niveau tussen gemeenten en provincies in. Deze indeling is van onderop, door gemeenten zelf, tot stand gekomen. De indeling is op 1 januari 2016 herzien en telt vanaf die datum 35 gebieden.\r\n\r\nNaamswijziging per 01-01-2016,\r\nnieuwe naam: Zuid-Kennemerland en IJmond (AM37)\r\n\r\n",
+   "DimensionGroupId": "AM"
+  },
+  {
+   "Identifier": "AM17",
+   "Index": 31,
+   "Title": "Zaanstreek/Waterland (AM)",
+   "Description": "AM = Arbeidsmarktregio\r\n\r\nEen indeling in regio's van waaruit gemeenten en het Uitvoeringsinstituut Werknemersverzekeringen (UWV) de dienstverlening aan werkgevers en werkzoekenden vormgeven. Het is een regionaal niveau tussen gemeenten en provincies in. Deze indeling is van onderop, door gemeenten zelf, tot stand gekomen. De indeling is op 1 januari 2016 herzien en telt vanaf die datum 35 gebieden.\r\n\r\n",
+   "DimensionGroupId": "AM"
+  },
+  {
+   "Identifier": "AM18",
+   "Index": 32,
+   "Title": "Groot Amsterdam (AM)",
+   "Description": "AM = Arbeidsmarktregio\r\n\r\nEen indeling in regio's van waaruit gemeenten en het Uitvoeringsinstituut Werknemersverzekeringen (UWV) de dienstverlening aan werkgevers en werkzoekenden vormgeven. Het is een regionaal niveau tussen gemeenten en provincies in. Deze indeling is van onderop, door gemeenten zelf, tot stand gekomen. De indeling is op 1 januari 2016 herzien en telt vanaf die datum 35 gebieden.\r\n\r\n",
+   "DimensionGroupId": "AM"
+  },
+  {
+   "Identifier": "AM19",
+   "Index": 33,
+   "Title": "Holland Rijnland (AM)",
+   "Description": "AM = Arbeidsmarktregio\r\n\r\nEen indeling in regio's van waaruit gemeenten en het Uitvoeringsinstituut Werknemersverzekeringen (UWV) de dienstverlening aan werkgevers en werkzoekenden vormgeven. Het is een regionaal niveau tussen gemeenten en provincies in. Deze indeling is van onderop, door gemeenten zelf, tot stand gekomen. De indeling is op 1 januari 2016 herzien en telt vanaf die datum 35 gebieden.\r\n\r\n",
+   "DimensionGroupId": "AM"
+  },
+  {
+   "Identifier": "AM20",
+   "Index": 34,
+   "Title": "Midden-Holland (AM)",
+   "Description": "AM = Arbeidsmarktregio\r\n\r\nEen indeling in regio's van waaruit gemeenten en het Uitvoeringsinstituut Werknemersverzekeringen (UWV) de dienstverlening aan werkgevers en werkzoekenden vormgeven. Het is een regionaal niveau tussen gemeenten en provincies in. Deze indeling is van onderop, door gemeenten zelf, tot stand gekomen. De indeling is op 1 januari 2016 herzien en telt vanaf die datum 35 gebieden.\r\n\r\n",
+   "DimensionGroupId": "AM"
+  },
+  {
+   "Identifier": "AM21",
+   "Index": 35,
+   "Title": "Haaglanden (AM)",
+   "Description": "AM = Arbeidsmarktregio\r\n\r\nEen indeling in regio's van waaruit gemeenten en het Uitvoeringsinstituut Werknemersverzekeringen (UWV) de dienstverlening aan werkgevers en werkzoekenden vormgeven. Het is een regionaal niveau tussen gemeenten en provincies in. Deze indeling is van onderop, door gemeenten zelf, tot stand gekomen. De indeling is op 1 januari 2016 herzien en telt vanaf die datum 35 gebieden.\r\n\r\n",
+   "DimensionGroupId": "AM"
+  },
+  {
+   "Identifier": "AM22",
+   "Index": 36,
+   "Title": "Rijnmond (AM)",
+   "Description": "AM = Arbeidsmarktregio\r\n\r\nEen indeling in regio's van waaruit gemeenten en het Uitvoeringsinstituut Werknemersverzekeringen (UWV) de dienstverlening aan werkgevers en werkzoekenden vormgeven. Het is een regionaal niveau tussen gemeenten en provincies in. Deze indeling is van onderop, door gemeenten zelf, tot stand gekomen. De indeling is op 1 januari 2016 herzien en telt vanaf die datum 35 gebieden.\r\n\r\n",
+   "DimensionGroupId": "AM"
+  },
+  {
+   "Identifier": "AM23",
+   "Index": 37,
+   "Title": "Drechtsteden (AM)",
+   "Description": "AM = Arbeidsmarktregio\r\n\r\nEen indeling in regio's van waaruit gemeenten en het Uitvoeringsinstituut Werknemersverzekeringen (UWV) de dienstverlening aan werkgevers en werkzoekenden vormgeven. Het is een regionaal niveau tussen gemeenten en provincies in. Deze indeling is van onderop, door gemeenten zelf, tot stand gekomen. De indeling is op 1 januari 2016 herzien en telt vanaf die datum 35 gebieden.\r\n\r\n",
+   "DimensionGroupId": "AM"
+  },
+  {
+   "Identifier": "AM24",
+   "Index": 38,
+   "Title": "Zeeland (AM)",
+   "Description": "AM = Arbeidsmarktregio\r\n\r\nEen indeling in regio's van waaruit gemeenten en het Uitvoeringsinstituut Werknemersverzekeringen (UWV) de dienstverlening aan werkgevers en werkzoekenden vormgeven. Het is een regionaal niveau tussen gemeenten en provincies in. Deze indeling is van onderop, door gemeenten zelf, tot stand gekomen. De indeling is op 1 januari 2016 herzien en telt vanaf die datum 35 gebieden.\r\n\r\n",
+   "DimensionGroupId": "AM"
+  },
+  {
+   "Identifier": "AM25",
+   "Index": 39,
+   "Title": "West-Brabant (AM)",
+   "Description": "AM = Arbeidsmarktregio\r\n\r\nEen indeling in regio's van waaruit gemeenten en het Uitvoeringsinstituut Werknemersverzekeringen (UWV) de dienstverlening aan werkgevers en werkzoekenden vormgeven. Het is een regionaal niveau tussen gemeenten en provincies in. Deze indeling is van onderop, door gemeenten zelf, tot stand gekomen. De indeling is op 1 januari 2016 herzien en telt vanaf die datum 35 gebieden.\r\n\r\n",
+   "DimensionGroupId": "AM"
+  },
+  {
+   "Identifier": "AM26",
+   "Index": 40,
+   "Title": "Midden-Brabant (AM)",
+   "Description": "AM = Arbeidsmarktregio\r\n\r\nEen indeling in regio's van waaruit gemeenten en het Uitvoeringsinstituut Werknemersverzekeringen (UWV) de dienstverlening aan werkgevers en werkzoekenden vormgeven. Het is een regionaal niveau tussen gemeenten en provincies in. Deze indeling is van onderop, door gemeenten zelf, tot stand gekomen. De indeling is op 1 januari 2016 herzien en telt vanaf die datum 35 gebieden.\r\n\r\n",
+   "DimensionGroupId": "AM"
+  },
+  {
+   "Identifier": "AM27",
+   "Index": 41,
+   "Title": "Noordoost-Brabant (AM)",
+   "Description": "AM = Arbeidsmarktregio\r\n\r\nEen indeling in regio's van waaruit gemeenten en het Uitvoeringsinstituut Werknemersverzekeringen (UWV) de dienstverlening aan werkgevers en werkzoekenden vormgeven. Het is een regionaal niveau tussen gemeenten en provincies in. Deze indeling is van onderop, door gemeenten zelf, tot stand gekomen. De indeling is op 1 januari 2016 herzien en telt vanaf die datum 35 gebieden.\r\n\r\n",
+   "DimensionGroupId": "AM"
+  },
+  {
+   "Identifier": "AM28",
+   "Index": 42,
+   "Title": "Zuidoost-Brabant (AM)",
+   "Description": "AM = Arbeidsmarktregio\r\n\r\nEen indeling in regio's van waaruit gemeenten en het Uitvoeringsinstituut Werknemersverzekeringen (UWV) de dienstverlening aan werkgevers en werkzoekenden vormgeven. Het is een regionaal niveau tussen gemeenten en provincies in. Deze indeling is van onderop, door gemeenten zelf, tot stand gekomen. De indeling is op 1 januari 2016 herzien en telt vanaf die datum 35 gebieden.\r\n\r\n",
+   "DimensionGroupId": "AM"
+  },
+  {
+   "Identifier": "AM29",
+   "Index": 43,
+   "Title": "Noord-Limburg (AM)",
+   "Description": "AM = Arbeidsmarktregio\r\n\r\nEen indeling in regio's van waaruit gemeenten en het Uitvoeringsinstituut Werknemersverzekeringen (UWV) de dienstverlening aan werkgevers en werkzoekenden vormgeven. Het is een regionaal niveau tussen gemeenten en provincies in. Deze indeling is van onderop, door gemeenten zelf, tot stand gekomen. De indeling is op 1 januari 2016 herzien en telt vanaf die datum 35 gebieden.\r\n\r\n",
+   "DimensionGroupId": "AM"
+  },
+  {
+   "Identifier": "AM30",
+   "Index": 44,
+   "Title": "Zuid-Limburg (AM)",
+   "Description": "AM = Arbeidsmarktregio\r\n\r\nEen indeling in regio's van waaruit gemeenten en het Uitvoeringsinstituut Werknemersverzekeringen (UWV) de dienstverlening aan werkgevers en werkzoekenden vormgeven. Het is een regionaal niveau tussen gemeenten en provincies in. Deze indeling is van onderop, door gemeenten zelf, tot stand gekomen. De indeling is op 1 januari 2016 herzien en telt vanaf die datum 35 gebieden.\r\n\r\n",
+   "DimensionGroupId": "AM"
+  },
+  {
+   "Identifier": "AM31",
+   "Index": 45,
+   "Title": "Food Valley (AM)",
+   "Description": "AM = Arbeidsmarktregio\r\n\r\nEen indeling in regio's van waaruit gemeenten en het Uitvoeringsinstituut Werknemersverzekeringen (UWV) de dienstverlening aan werkgevers en werkzoekenden vormgeven. Het is een regionaal niveau tussen gemeenten en provincies in. Deze indeling is van onderop, door gemeenten zelf, tot stand gekomen. De indeling is op 1 januari 2016 herzien en telt vanaf die datum 35 gebieden.\r\n\r\nNaamswijziging per 01-01-2017,\r\nnieuwe naam: FoodValley (AM38)\r\n\r\n",
+   "DimensionGroupId": "AM"
+  },
+  {
+   "Identifier": "AM32",
+   "Index": 46,
+   "Title": "Helmond-De Peel (AM)",
+   "Description": "AM = Arbeidsmarktregio\r\n\r\nEen indeling in regio's van waaruit gemeenten en het Uitvoeringsinstituut Werknemersverzekeringen (UWV) de dienstverlening aan werkgevers en werkzoekenden vormgeven. Het is een regionaal niveau tussen gemeenten en provincies in. Deze indeling is van onderop, door gemeenten zelf, tot stand gekomen. De indeling is op 1 januari 2016 herzien en telt vanaf die datum 35 gebieden.\r\n\r\n",
+   "DimensionGroupId": "AM"
+  },
+  {
+   "Identifier": "AM33",
+   "Index": 47,
+   "Title": "Midden-Limburg (AM)",
+   "Description": "AM = Arbeidsmarktregio\r\n\r\nEen indeling in regio's van waaruit gemeenten en het Uitvoeringsinstituut Werknemersverzekeringen (UWV) de dienstverlening aan werkgevers en werkzoekenden vormgeven. Het is een regionaal niveau tussen gemeenten en provincies in. Deze indeling is van onderop, door gemeenten zelf, tot stand gekomen. De indeling is op 1 januari 2016 herzien en telt vanaf die datum 35 gebieden.\r\n\r\n",
+   "DimensionGroupId": "AM"
+  },
+  {
+   "Identifier": "AM34",
+   "Index": 48,
+   "Title": "Zuid-Holland Centraal (AM)",
+   "Description": "AM = Arbeidsmarktregio\r\n\r\nEen indeling in regio's van waaruit gemeenten en het Uitvoeringsinstituut Werknemersverzekeringen (UWV) de dienstverlening aan werkgevers en werkzoekenden vormgeven. Het is een regionaal niveau tussen gemeenten en provincies in. Deze indeling is van onderop, door gemeenten zelf, tot stand gekomen. De indeling is op 1 januari 2016 herzien en telt vanaf die datum 35 gebieden.\r\n\r\n",
+   "DimensionGroupId": "AM"
+  },
+  {
+   "Identifier": "AM35",
+   "Index": 49,
+   "Title": "Gorinchem (AM)",
+   "Description": "AM = Arbeidsmarktregio\r\n\r\nEen indeling in regio's van waaruit gemeenten en het Uitvoeringsinstituut Werknemersverzekeringen (UWV) de dienstverlening aan werkgevers en werkzoekenden vormgeven. Het is een regionaal niveau tussen gemeenten en provincies in. Deze indeling is van onderop, door gemeenten zelf, tot stand gekomen. De indeling is op 1 januari 2016 herzien en telt vanaf die datum 35 gebieden.\r\n\r\n",
+   "DimensionGroupId": "AM"
+  },
+  {
+   "Identifier": "AM36",
+   "Index": 50,
+   "Title": "Regio Zwolle (AM)",
+   "Description": "AM = Arbeidsmarktregio\r\n\r\nEen indeling in regio's van waaruit gemeenten en het Uitvoeringsinstituut Werknemersverzekeringen (UWV) de dienstverlening aan werkgevers en werkzoekenden vormgeven. Het is een regionaal niveau tussen gemeenten en provincies in. Deze indeling is van onderop, door gemeenten zelf, tot stand gekomen. De indeling is op 1 januari 2016 herzien en telt vanaf die datum 35 gebieden.\r\n\r\nNaamswijziging per 01-01-2016,\r\noude naam: IJsselvechtstreek (AM04)\r\n\r\n",
+   "DimensionGroupId": "AM"
+  },
+  {
+   "Identifier": "AM37",
+   "Index": 51,
+   "Title": "Zuid-Kennemerland en IJmond (AM)",
+   "Description": "AM = Arbeidsmarktregio\r\n\r\nEen indeling in regio's van waaruit gemeenten en het Uitvoeringsinstituut Werknemersverzekeringen (UWV) de dienstverlening aan werkgevers en werkzoekenden vormgeven. Het is een regionaal niveau tussen gemeenten en provincies in. Deze indeling is van onderop, door gemeenten zelf, tot stand gekomen. De indeling is op 1 januari 2016 herzien en telt vanaf die datum 35 gebieden.\r\n\r\nNaamswijziging per 01-01-2016,\r\noude naam: Zuid-Kennemerland (AM16)\r\n\r\n",
+   "DimensionGroupId": "AM"
+  },
+  {
+   "Identifier": "AM38",
+   "Index": 52,
+   "Title": "FoodValley (AM)",
+   "Description": "AM = Arbeidsmarktregio\r\n\r\nEen indeling in regio's van waaruit gemeenten en het Uitvoeringsinstituut Werknemersverzekeringen (UWV) de dienstverlening aan werkgevers en werkzoekenden vormgeven. Het is een regionaal niveau tussen gemeenten en provincies in. Deze indeling is van onderop, door gemeenten zelf, tot stand gekomen. De indeling is op 1 januari 2016 herzien en telt vanaf die datum 35 gebieden.\r\n\r\nNaamswijziging per 01-01-2017,\r\noude naam: Food Valley (AM31)\r\n\r\n",
+   "DimensionGroupId": "AM"
+  },
+  {
+   "Identifier": "AM99",
+   "Index": 53,
+   "Title": "Niet in te delen (AM)",
+   "Description": "AM = Arbeidsmarktregio\r\n\r\nEen indeling in regio's van waaruit gemeenten en het Uitvoeringsinstituut Werknemersverzekeringen (UWV) de dienstverlening aan werkgevers en werkzoekenden vormgeven. Het is een regionaal niveau tussen gemeenten en provincies in. Deze indeling is van onderop, door gemeenten zelf, tot stand gekomen. De indeling is op 1 januari 2016 herzien en telt vanaf die datum 35 gebieden.\r\n\r\nNiet in te delen: door een gebrek aan informatie of door onjuiste informatie is een toedeling aan een bepaalde arbeidsmarktregio niet altijd mogelijk.\r\n\r\n",
+   "DimensionGroupId": "AM"
+  }
+ ]
+}

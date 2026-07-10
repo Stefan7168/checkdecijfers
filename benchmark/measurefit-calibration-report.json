@@ -1,0 +1,152 @@
+{
+  "generatedAt": "2026-07-10T09:35:32.354Z",
+  "mode": "record",
+  "totals": {
+    "pass": 6,
+    "total": 6
+  },
+  "calibration": {
+    "acceptThreshold": 0.8,
+    "correctAcceptFloor": 0.95,
+    "wrongCodeCeiling": null
+  },
+  "results": [
+    {
+      "id": "bijstand-stock-flowtabel",
+      "expected": "geen",
+      "verdict": "geen",
+      "confidence": 0.95,
+      "reading": "De tabel bevat alleen instroom- en uitstroomcijfers, niet het totale aantal personen in bijstand op een moment. De vraag vraagt om een stand (hoeveel mensen zaten erin), niet een stroom (hoeveel kwamen erin of gingen eruit).",
+      "jobAccepts": false,
+      "pass": true,
+      "problems": []
+    },
+    {
+      "id": "bijstand-stock-kerncijfers",
+      "expected": "D000203_2",
+      "verdict": "D000203_2",
+      "confidence": 0.95,
+      "reading": "Maat D000203_2 meet het totaal aantal bijstandsuitkeringen op grond van de Participatiewet (vanaf 2015), wat direct aansluit op de vraag naar het aantal mensen in bijstand in 2023.",
+      "jobAccepts": true,
+      "pass": true,
+      "problems": []
+    },
+    {
+      "id": "benzine-euro95",
+      "expected": "A047220",
+      "verdict": "A047220",
+      "confidence": 0.95,
+      "reading": "Deze maat meet de pompprijs van Benzine Euro95 in euro per liter, inclusief accijns en btw, wat precies overeenkomt met de vraag naar de kostprijs van een liter Euro95 benzine.",
+      "jobAccepts": true,
+      "pass": true,
+      "problems": []
+    },
+    {
+      "id": "ww-uitkering-stand",
+      "expected": "D001908",
+      "verdict": "D001908",
+      "confidence": 0.95,
+      "reading": "Deze maat meet het aantal personen met een WW-uitkering (seizoengecorrigeerd), wat direct aansluit op de vraag naar hoeveel mensen in 2023 een WW-uitkering hadden.",
+      "jobAccepts": true,
+      "pass": true,
+      "problems": []
+    },
+    {
+      "id": "faillissementen-bedrijven",
+      "expected": "geen",
+      "verdict": "geen",
+      "confidence": 0.95,
+      "reading": "De vraag vraagt naar het aantal failliete bedrijven, maar deze tabel meet alleen ontslagen werknemers door faillissement, niet het aantal bedrijven zelf.",
+      "jobAccepts": false,
+      "pass": true,
+      "problems": []
+    },
+    {
+      "id": "huurwoningen-aantal",
+      "expected": "geen",
+      "verdict": "geen",
+      "confidence": 0.95,
+      "reading": "De tabel bevat alleen percentages voor huurverhogingen, niet het totale aantal huurwoningen in Nederland.",
+      "jobAccepts": false,
+      "pass": true,
+      "problems": []
+    }
+  ],
+  "history": [
+    {
+      "generatedAt": "2026-07-10T09:35:32.354Z",
+      "mode": "record",
+      "totals": {
+        "pass": 6,
+        "total": 6
+      },
+      "calibration": {
+        "acceptThreshold": 0.8,
+        "correctAcceptFloor": 0.95,
+        "wrongCodeCeiling": null
+      },
+      "results": [
+        {
+          "id": "bijstand-stock-flowtabel",
+          "expected": "geen",
+          "verdict": "geen",
+          "confidence": 0.95,
+          "reading": "De tabel bevat alleen instroom- en uitstroomcijfers, niet het totale aantal personen in bijstand op een moment. De vraag vraagt om een stand (hoeveel mensen zaten erin), niet een stroom (hoeveel kwamen erin of gingen eruit).",
+          "jobAccepts": false,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "bijstand-stock-kerncijfers",
+          "expected": "D000203_2",
+          "verdict": "D000203_2",
+          "confidence": 0.95,
+          "reading": "Maat D000203_2 meet het totaal aantal bijstandsuitkeringen op grond van de Participatiewet (vanaf 2015), wat direct aansluit op de vraag naar het aantal mensen in bijstand in 2023.",
+          "jobAccepts": true,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "benzine-euro95",
+          "expected": "A047220",
+          "verdict": "A047220",
+          "confidence": 0.95,
+          "reading": "Deze maat meet de pompprijs van Benzine Euro95 in euro per liter, inclusief accijns en btw, wat precies overeenkomt met de vraag naar de kostprijs van een liter Euro95 benzine.",
+          "jobAccepts": true,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "ww-uitkering-stand",
+          "expected": "D001908",
+          "verdict": "D001908",
+          "confidence": 0.95,
+          "reading": "Deze maat meet het aantal personen met een WW-uitkering (seizoengecorrigeerd), wat direct aansluit op de vraag naar hoeveel mensen in 2023 een WW-uitkering hadden.",
+          "jobAccepts": true,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "faillissementen-bedrijven",
+          "expected": "geen",
+          "verdict": "geen",
+          "confidence": 0.95,
+          "reading": "De vraag vraagt naar het aantal failliete bedrijven, maar deze tabel meet alleen ontslagen werknemers door faillissement, niet het aantal bedrijven zelf.",
+          "jobAccepts": false,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "huurwoningen-aantal",
+          "expected": "geen",
+          "verdict": "geen",
+          "confidence": 0.95,
+          "reading": "De tabel bevat alleen percentages voor huurverhogingen, niet het totale aantal huurwoningen in Nederland.",
+          "jobAccepts": false,
+          "pass": true,
+          "problems": []
+        }
+      ]
+    }
+  ]
+}

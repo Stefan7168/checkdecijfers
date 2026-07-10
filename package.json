@@ -43,6 +43,8 @@
     "answer:record": "node --env-file-if-exists=.env scripts/answer-eval.ts --record",
     "tablefinder:eval": "node --env-file-if-exists=.env scripts/tablefinder-eval.ts",
     "tablefinder:record": "node --env-file-if-exists=.env scripts/tablefinder-eval.ts --record",
+    "measurefit:eval": "node --env-file-if-exists=.env scripts/measurefit-eval.ts",
+    "measurefit:record": "node --env-file-if-exists=.env scripts/measurefit-eval.ts --record",
     "db:migrate": "node --env-file=.env src/db/migrate.ts",
     "ingest": "node --env-file=.env src/ingestion/cli.ts",
     "catalog:refresh": "node --env-file=.env src/catalog/cli.ts",

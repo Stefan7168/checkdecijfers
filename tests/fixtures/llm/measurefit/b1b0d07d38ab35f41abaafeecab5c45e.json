@@ -1,0 +1,48 @@
+{
+  "requestHash": "b1b0d07d38ab35f41abaafeecab5c45e",
+  "question": "Volledige vraag van de gebruiker: \"Hoeveel bedrijven gingen er in 2023 failliet?\"\nTabel: 84826NED — Ontslagen werknemers door faillissement; geslacht, leeftijd, bedrijfstak\n\nMaten in deze tabel:\n1. measureCode=M007726 | eenheid=x 1000\n   titel: Ontslagen werknemers \n   omschrijving: Werknemers van wie het dienstverband is beëindigd als gevolg van faillissement van de werkgever.",
+  "label": null,
+  "recordedAt": "2026-07-10T09:35:30.625Z",
+  "request": {
+    "model": "claude-haiku-4-5",
+    "maxTokens": 1024,
+    "temperature": 0,
+    "system": "Je bent een controle-hulp voor checkdecijfers.nl, een dienst die vragen beantwoordt met officiële CBS-cijfers. Je krijgt de VOLLEDIGE VRAAG van een gebruiker (Nederlands) en de MATENLIJST van één CBS-tabel (code, titel, eenheid en omschrijving per maat). Beoordeel of één van deze maten de vraag direct kan beantwoorden.\n\nRegels:\n- Kies precies één measureCode, LETTERLIJK overgenomen uit de lijst (inclusief hoofd-/kleine letters), OF antwoord 'geen'. Verzin nooit een code die niet in de lijst staat.\n- Let op wat voor soort cijfer de vraag nodig heeft: een stand of totaal aantal op een moment (\"hoeveel mensen zitten er in ...\"), een in- of uitstroom of verandering (\"hoeveel kwamen erbij\"), een prijs, een index, een percentage. Een maat die het verkeerde soort cijfer meet (bijvoorbeeld instroom terwijl de vraag om het totale aantal vraagt), beantwoordt de vraag NIET.\n- Antwoord 'geen' wanneer geen enkele maat het gevraagde soort cijfer meet. Een eerlijke afwijzing is beter dan een maat die er alleen qua onderwerp op lijkt — de dienst probeert daarna een andere tabel.\n- Geef bij twijfel tussen een totaalmaat en een deelmaat (een uitsplitsing naar leeftijd, geslacht of iets dergelijks) de voorkeur aan de totaalmaat.\n- confidence is een getal tussen 0 en 1 en moet eerlijk zijn: hoog alleen bij een duidelijke, ondubbelzinnige match tussen wat de vraag vraagt en wat de maat meet. Ook een 'geen'-antwoord krijgt een eerlijke confidence.\n- reading: één korte Nederlandse zin die je oordeel uitlegt.\n- version is altijd 1.\n\nAntwoord uitsluitend met JSON volgens het opgegeven schema.",
+    "question": "Volledige vraag van de gebruiker: \"Hoeveel bedrijven gingen er in 2023 failliet?\"\nTabel: 84826NED — Ontslagen werknemers door faillissement; geslacht, leeftijd, bedrijfstak\n\nMaten in deze tabel:\n1. measureCode=M007726 | eenheid=x 1000\n   titel: Ontslagen werknemers \n   omschrijving: Werknemers van wie het dienstverband is beëindigd als gevolg van faillissement van de werkgever.",
+    "jsonSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "number",
+          "const": 1
+        },
+        "measureCode": {
+          "type": "string"
+        },
+        "confidence": {
+          "type": "number"
+        },
+        "reading": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "version",
+        "measureCode",
+        "confidence",
+        "reading"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "response": {
+    "outputText": "{\"version\": 1, \"measureCode\": \"geen\", \"confidence\": 0.95, \"reading\": \"De vraag vraagt naar het aantal failliete bedrijven, maar deze tabel meet alleen ontslagen werknemers door faillissement, niet het aantal bedrijven zelf.\"}",
+    "model": "claude-haiku-4-5-20251001",
+    "stopReason": "end_turn",
+    "usage": {
+      "inputTokens": 889,
+      "outputTokens": 70
+    }
+  }
+}

@@ -39,12 +39,18 @@ export const MEASURE_FIT_SCHEMA_VERSION = 1;
  * question. Kept out of the allowlist check by construction. */
 export const MEASURE_FIT_NONE = 'geen';
 
-/** Acceptance threshold — ⚠ PRE-CALIBRATION PLACEHOLDER. Stage D calibrates
- * this from benchmark/measurefit-labelled-set.json (new, seeded there) before
- * the gate carries live traffic; until then 0.8 mirrors the finder's
- * conservative confident floor. Failure direction is safe: a too-strict
- * threshold advances to the next candidate and at worst ends in an honest
- * refund — never a wrong table served (principle c). */
+/** Acceptance threshold — CALIBRATED 2026-07-10 (WP27 stage D, supervised):
+ * kept at 0.8, same "calibrated, not moved" outcome as the finder's session-25
+ * calibration. Measured on benchmark/measurefit-labelled-set.json (6/6
+ * correct, live Haiku record): correct-accept floor 0.95 (uniform across all
+ * three accept cases — margin 0.15 above this threshold); the wrong-code
+ * ceiling is UNMEASURED (the model made zero wrong picks on the seed set), so
+ * raising the threshold would be a guess, not a calibration. Failure direction
+ * is safe both ways: a too-strict threshold advances to the next candidate and
+ * at worst ends in an honest refund (never a wrong table served, principle c);
+ * a hypothetical wrong accept still faces the independent delivery gate
+ * (fit_note is diagnostics-only, defense in depth). Full measurements:
+ * benchmark/measurefit-calibration-report.json. */
 export const DEFAULT_MEASURE_FIT_CONFIG = {
   acceptThreshold: 0.8,
 };

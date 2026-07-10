@@ -1,0 +1,72 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/80416ned/$metadata#Properties",
+ "Identifier": "80416ned",
+ "Title": "Pompprijzen motorbrandstoffen; brandstofsoort, per dag",
+ "Description": "Deze tabel bevat pompprijzen van motorbrandstoffen. Er worden gewogen gemiddelde dagprijzen gepubliceerd van benzine Euro95, dieselolie en lpg inclusief btw en accijns. Deze dagprijzen worden eens per week gepubliceerd. \r\n\r\nGegevens beschikbaar vanaf:\r\n1 januari 2006\r\n\r\nStatus van de cijfers:\r\nDe gepubliceerde prijzen zijn direct definitief.\r\n\r\nWijzigingen tov de vorige periode: \r\nEr zijn nieuwe cijfers toegevoegd.\r\n\r\nWanneer komen er nieuwe cijfers?\r\nDagprijzen tot en met maandag verschijnen de daaropvolgende donderdag. Indien er vanwege omstandigheden, zoals feestdagen, niet op donderdag gepubliceerd kan worden, wordt er op de eerst volgende werkdag gepubliceerd.\r\n\r\n",
+ "Language": "nl",
+ "Authority": "https://standaarden.overheid.nl/owms/terms/Centraal_Bureau_voor_de_Statistiek",
+ "Modified": "2026-07-09T00:00:00+02:00",
+ "ReleaseDate": "2026-07-09T00:00:00+02:00",
+ "ModificationDate": "2026-07-09T00:00:00+02:00",
+ "TemporalCoverage": "1 januari 2006 - 6 juli 2026",
+ "Catalog": "CBS",
+ "Publisher": "https://standaarden.overheid.nl/owms/terms/Centraal_Bureau_voor_de_Statistiek",
+ "ContactPoint": "infoservice@cbs.nl",
+ "Version": "202607090000",
+ "VersionNotes": "",
+ "VersionReason": "Actualisering",
+ "Frequency": "Per week",
+ "Status": "Regulier",
+ "ObservationCount": 22476,
+ "ObservationsModified": "2026-07-09T00:00:00+02:00",
+ "DatasetType": "Numeric",
+ "GraphTypes": "Table,Bar,Line",
+ "License": "https://creativecommons.org/licenses/by/4.0/",
+ "Source": "CBS, Travelcard BV ",
+ "Summary": "Gemiddelde prijzen motorbrandstoffen: Benzine Euro95, Diesel en Lpg\nPompprijzen per dag",
+ "LongDescription": "INHOUDSOPGAVE\r\n\r\n1. Toelichting\r\n2. Definities en verklaring van symbolen\r\n3. Koppelingen naar relevante tabellen en artikelen\r\n4. Bronnen en methoden\r\n5. Meer informatie\r\n\r\n1. TOELICHTING\r\n\r\nDeze tabel bevat pompprijzen van motorbrandstoffen. Er worden gewogen gemiddelde dagprijzen gepubliceerd van benzine Euro95, dieselolie en lpg inclusief btw en accijns. Deze dagprijzen worden eens per week gepubliceerd. \r\n\r\nGegevens beschikbaar vanaf:\r\n1 januari 2006\r\n\r\nStatus van de cijfers:\r\nDe gepubliceerde prijzen zijn direct definitief.\r\n\r\nWijzigingen tov de vorige periode: \r\nEr zijn nieuwe cijfers toegevoegd.\r\n\r\nWanneer komen er nieuwe cijfers?\r\nDagprijzen tot en met maandag verschijnen de daaropvolgende donderdag. Indien er vanwege omstandigheden, zoals feestdagen, niet op donderdag gepubliceerd kan worden, wordt er op de eerst volgende werkdag gepubliceerd.\r\n\r\n2. DEFINITIES EN VERKLARING VAN SYMBOLEN\r\n\r\nVerklaring van symbolen:\r\n\r\nniets (blanco)\t: het cijfer kan op logische gronden niet voorkomen\r\n. \t\t: het cijfer is onbekend, onvoldoende betrouwbaar of geheim\r\n*\t\t: voorlopige cijfers\r\n**\t\t: nader voorlopige cijfers\r\n\r\n3. KOPPELINGEN NAAR RELEVANTE TABELLEN EN ARTIKELEN\r\n\r\nRelevante tabellen:\r\n\r\nPompprijzen naar locatie van het tankstation, per maand, vindt u in de tabel: <a href=\"https://opendata.cbs.nl/statline/#/CBS/nl/dataset/81567ned\">Pompprijzen motorbrandstoffen; locatie tankstation, brandstofsoort</a>.\r\n\r\nDe consumentenprijsindex vindt u in de tabel: \r\n<a href=\"https://opendata.cbs.nl/#/CBS/nl/dataset/86141NED\">Consumentenprijzen; prijsindex 2025=100</a>.\r\n\r\nGemiddelde prijzen van consumentenartikelen vanaf 2000 tot en met 2018 vindt u in de tabel: \r\n<a href=\"https://opendata.cbs.nl/statline/#/CBS/nl/dataset/80346NED\">Consumentenprijzen; gemiddelde prijzen consumentenartikelen, 2000 - 2018</a>.\r\n\r\nAdviesprijzen van motorbrandstoffen vanaf 1913 tot en met 2009 vindt u in de tabel: \r\n<a href=\"https://opendata.cbs.nl/statline/#/CBS/nl/dataset/7521\">Motorbrandstoffen; adviesprijzen</a>.\r\n\r\n4. BRONNEN- EN METHODEN\r\n\r\nDe beschrijving van het onderzoek is te vinden bij:\r\n<a href=\"https://www.cbs.nl/nl-nl/onze-diensten/methoden/onderzoeksomschrijvingen/korte-onderzoeksbeschrijvingen/consumentenprijzen-motorbrandstoffen\"> Consumentenprijzen; motorbrandstoffen</a>.\r\n\r\nDe geleverde data zijn afkomstig van vrijwel alle tankstations (bemand en onbemand, langs de snelweg of lokaal) in Nederland. De brondata worden aan het CBS geleverd door Travelcard BV, een leverancier van tankpassen voor de zakelijke rijder. \r\n\r\nMeer informatie over Travelcard BV vindt u op de website: \r\n<a href=\"http://www.travelcard.nl/\">Travelcard BV </a>.\r\n\r\nOm de gemiddelde prijzen te bepalen worden de tankstations per brandstoftype ingedeeld naar merk en locatie. Iedere groep uit deze indeling krijgt een vast gewicht, dat gebaseerd is op verschillende bronnen. De gewichten van de groepen worden jaarlijks per 1 januari aangepast.\r\n\r\n5. MEER INFORMATIE\r\n\r\n<a href='https://www.cbs.nl/nl-nl/over-ons/contact/infoservice'>Infoservice</a>\r\n\r\nCopyright © Centraal Bureau voor de Statistiek , Den Haag/Heerlen\r\nVerveelvoudiging is toegestaan, mits CBS/Travelcard als bron wordt vermeld.\r\n",
+ "Provenance": [
+  {
+   "Title": " Consumentenprijzen; motorbrandstoffen",
+   "Url": "https://www.cbs.nl/nl-nl/onze-diensten/methoden/onderzoeksomschrijvingen/korte-onderzoeksbeschrijvingen/consumentenprijzen-motorbrandstoffen"
+  },
+  {
+   "Title": "Travelcard BV ",
+   "Url": "http://www.travelcard.nl/"
+  }
+ ],
+ "RelatedSources": [
+  {
+   "Title": "Pompprijzen motorbrandstoffen; locatie tankstation, brandstofsoort",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/dataset/81567ned"
+  },
+  {
+   "Title": "Consumentenprijzen; prijsindex 2025=100",
+   "Url": "https://opendata.cbs.nl/#/CBS/nl/dataset/86141NED"
+  },
+  {
+   "Title": "Consumentenprijzen; gemiddelde prijzen consumentenartikelen, 2000 - 2018",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/dataset/80346NED"
+  },
+  {
+   "Title": "Motorbrandstoffen; adviesprijzen",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/dataset/7521"
+  }
+ ],
+ "Distributions": [
+  {
+   "Format": "csv",
+   "MediaType": "csv",
+   "DownloadUrl": "https://datasets.cbs.nl/csv/CBS/nl/80416ned",
+   "AccessUrl": "https://dataportal.cbs.nl/detail/CBS/80416ned",
+   "Language": "nl"
+  },
+  {
+   "Format": "odata",
+   "MediaType": "odata",
+   "DownloadUrl": "https://datasets.cbs.nl/odata/v1/CBS/80416ned",
+   "AccessUrl": "https://dataportal.cbs.nl/detail/CBS/80416ned",
+   "Language": "nl"
+  }
+ ]
+}

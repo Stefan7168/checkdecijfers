@@ -1,0 +1,30 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/83163NED/$metadata#Dimensions",
+ "value": [
+  {
+   "Identifier": "SoortVerhuur",
+   "Title": "Soort verhuur",
+   "Description": "",
+   "MapYear": null,
+   "ReleasePolicy": null,
+   "Kind": "Dimension",
+   "ContainsGroups": false,
+   "ContainsCodes": true,
+   "CodesUrl": "https://datasets.cbs.nl/odata/v1/CBS/83163NED/SoortVerhuurCodes",
+   "GroupsUrl": null
+  },
+  {
+   "@odata.type": "#Cbs.Ccb.Models.TimeDimension",
+   "Identifier": "Perioden",
+   "Title": "Perioden",
+   "Description": "",
+   "MapYear": null,
+   "ReleasePolicy": true,
+   "Kind": "TimeDimension",
+   "ContainsGroups": true,
+   "ContainsCodes": true,
+   "CodesUrl": "https://datasets.cbs.nl/odata/v1/CBS/83163NED/PeriodenCodes",
+   "GroupsUrl": "https://datasets.cbs.nl/odata/v1/CBS/83163NED/PeriodenGroups"
+  }
+ ]
+}

@@ -1,0 +1,88 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/85554NED/$metadata#Properties",
+ "Identifier": "85554NED",
+ "Title": "Personen met WW-uitkering, seizoengecorrigeerd; persoonskenmerken en regio",
+ "Description": "Deze tabel geeft inzicht in het aantal personen met een uitkering op grond van de Werkloosheidswet (WW) waarbij voor seizoeninvloeden is gecorrigeerd. Het gaat hierbij alleen om ontslagwerkloosheid.\r\nDe gegevens zijn uitgesplitst naar de volgende kenmerken:\r\n- geslacht;\r\n- leeftijd;\r\n- regio.\r\nDe cijfers hebben betrekking op de laatste dag van de verslagmaand. De tabel bevat betrouwbaarheidsmarges, omdat de cijfers een mate van onzekerheid kennen.\r\n\r\nGegevens beschikbaar vanaf: januari 2013. \r\nOver het jaar 2013 zijn geen cijfers van arbeidsmarktregio’s beschikbaar.\r\n\r\nStatus van de cijfers: \r\nDe cijfers vanaf januari 2013 zijn nader voorlopig met uitzondering van de laatste drie maanden, die zijn voorlopig.\r\n\r\nWijzigingen per 30 juni 2026:\r\n- de cijfers van januari 2026 zijn nader voorlopig geworden.\r\n- toegevoegd zijn de voorlopige cijfers van april 2026. \r\n\r\nWanneer komen er nieuwe cijfers?\r\nNieuwe cijfers komen in juli 2026.\r\n\r\n",
+ "Language": "nl",
+ "Authority": "https://standaarden.overheid.nl/owms/terms/Centraal_Bureau_voor_de_Statistiek",
+ "Modified": "2026-06-30T00:00:00+02:00",
+ "ReleaseDate": "2026-06-30T00:00:00+02:00",
+ "ModificationDate": "2026-06-30T00:00:00+02:00",
+ "TemporalCoverage": "januari 2013 t/m april 2026",
+ "Catalog": "CBS",
+ "Publisher": "https://standaarden.overheid.nl/owms/terms/Centraal_Bureau_voor_de_Statistiek",
+ "ContactPoint": "infoservice@cbs.nl",
+ "Version": "202606300000",
+ "VersionNotes": "",
+ "VersionReason": "Actualisering",
+ "Frequency": "Per maand",
+ "Status": "Regulier",
+ "ObservationCount": 305280,
+ "ObservationsModified": "2026-06-30T00:00:00+02:00",
+ "DatasetType": "Numeric",
+ "GraphTypes": "Table,Bar,Line,Map",
+ "License": "https://creativecommons.org/licenses/by/4.0/",
+ "Source": "CBS.",
+ "Summary": "Personen met een werkloosheidsuitkering; seizoengecorrigeerd\ngeslacht, leeftijd, regio",
+ "LongDescription": "INHOUDSOPGAVE\r\n\r\n1. Toelichting\r\n2. Definities en verklaring van symbolen\r\n3. Koppelingen naar relevante tabellen en artikelen\r\n4. Bronnen en methoden\r\n5. Meer informatie \r\n\r\n1. TOELICHTING\r\n\r\nDeze tabel geeft inzicht in het aantal personen met een uitkering op grond van de Werkloosheidswet (WW) waarbij voor seizoeninvloeden is gecorrigeerd. Het gaat hierbij alleen om ontslagwerkloosheid.\r\nDe gegevens zijn uitgesplitst naar de volgende kenmerken:\r\n- geslacht;\r\n- leeftijd;\r\n- regio.\r\nDe cijfers hebben betrekking op de laatste dag van de verslagmaand. De tabel bevat betrouwbaarheidsmarges, omdat de cijfers een mate van onzekerheid kennen.\r\n\r\nGegevens beschikbaar vanaf: januari 2013. \r\nOver het jaar 2013 zijn geen cijfers van arbeidsmarktregio’s beschikbaar.\r\n\r\nStatus van de cijfers: \r\nDe cijfers vanaf januari 2013 zijn nader voorlopig met uitzondering van de laatste drie maanden, die zijn voorlopig.\r\n\r\nWijzigingen per 30 juni 2026:\r\n- de cijfers van januari 2026 zijn nader voorlopig geworden.\r\n- toegevoegd zijn de voorlopige cijfers van april 2026. \r\n\r\nWanneer komen er nieuwe cijfers?\r\nNieuwe cijfers komen in juli 2026.\r\n\r\n2. DEFINITIES EN VERKLARING VAN SYMBOLEN\r\n\r\nDefinities:\r\n\r\nWerkloosheidswet\r\nDe wet heeft tot doel werknemers te verzekeren tegen de financiële gevolgen van werkloosheid. De duur van de uitkering is afhankelijk van het arbeidsverleden van de verzekerde. Het Uitvoeringsinstituut Werknemersverzekeringen (UWV) beoordeelt of men voor een WW-uitkering in aanmerking komt.\r\n\r\nAOW-gerechtigde leeftijd (AOW-leeftijd) \r\nDe AOW-gerechtigde leeftijd (AOW-leeftijd) is de leeftijd waarop het AOW-pensioen ingaat.\r\nTot 2013 was de AOW-leeftijd 65 jaar. Hierna is de AOW-leeftijd gekoppeld aan de levensverwachting. De AOW-leeftijd is tot en met 2030 als volgt:\r\n2013: 65 jaar en 1 maand\r\n2014: 65 jaar en 2 maanden\r\n2015: 65 jaar en 3 maanden\r\n2016: 65 jaar en 6 maanden\r\n2017: 65 jaar en 9 maanden\r\n2018: 66 jaar \r\n2019-2021: 66 jaar en 4 maanden\r\n2022: 66 jaar en 7 maanden\r\n2023: 66 jaar en 10 maanden\r\n2024-2027: 67 jaar\r\n2028-2030: 67 jaar en 3 maanden.\r\n\r\nRegio\r\nGeografisch of bestuurlijk gebied.\r\n\r\nVerklaring van symbolen:\r\n\r\nniets (blanco) : het cijfer kan op logische gronden niet voorkomen\r\n. : het cijfer is onbekend, onvoldoende betrouwbaar of geheim\r\n* : voorlopige cijfers\r\n** : nader voorlopige cijfers\r\n\r\nAlle cijfers kennen een mate van onzekerheid. De cijfers zijn afgerond op 10-tallen. Als gevolg van de afrondingen kan het voorkomen, dat de som van de detailgegevens afwijkt van het totaal.\r\n\r\n3. KOPPELINGEN NAAR RELEVANTE TABELLEN EN ARTIKELEN\r\n\r\nRelevante tabellen:\r\n<a href='https://opendata.cbs.nl/statline/#/CBS/nl/dataset/84556NED'>Personen met ww-uitkering, seizoengecorrigeerd; persoonskenmerken en regio 2013-2023</a>\r\n<a href='https://opendata.cbs.nl/statline/#/CBS/nl/dataset/37789KSZ'>Sociale zekerheid; kerncijfers, uitkeringen naar uitkeringssoort</a>\r\n<a href='https://opendata.cbs.nl/statline/#/CBS/nl/dataset/85692NED'>Personen met een uitkering; kenmerken uitkeringsontvangers</a>\r\n<a href='https://opendata.cbs.nl/statline/#/CBS/nl/dataset/80794NED'>Personen met een uitkering; uitkeringsontvangers per regio</a>\r\n<a href='https://opendata.cbs.nl/statline/#/CBS/nl/dataset/86003NED'>Personen met een uitkering; soort uitkering, wijken en buurten 2024</a>\r\n<a href='https://opendata.cbs.nl/statline/#/CBS/nl/dataset/86113NED'>Personen met een uitkering; soort uitkering, wijken en buurten 2025</a>\r\n\r\nMeer informatie is te vinden op de themapagina <a href='https://www.cbs.nl/nl-nl/arbeid-en-inkomen/arbeid-en-sociale-zekerheid'>Arbeid en sociale zekerheid</a>.\r\n\r\n4. BRONNEN EN METHODEN\r\n\r\nDe korte onderzoeksbeschrijving staat in <a href='https://www.cbs.nl/nl-nl/onze-diensten/methoden/onderzoeksomschrijvingen/korte-onderzoeksbeschrijvingen/werkloosheidsuitkeringenstatistiek'> Werkloosheidsuitkeringenstatistiek</a>.\r\n\r\nDe beschrijving van de Werkloosheidsuitkeringenstatistiek staat in <a href='https://www.cbs.nl/nl-nl/longread/rapportages/2023/kwaliteitsrapport-werkloosheidsuitkeringenstatistiek--wus--'>Kwaliteitsrapport Werkloosheidsuitkeringenstatistiek (WUS)</a>.\r\n\r\nDe gegevens in de tabel zijn afkomstig uit het <a href='https://www.cbs.nl/nl-nl/onze-diensten/methoden/onderzoeksomschrijvingen/korte-onderzoeksbeschrijvingen/stelsel-van-sociaal-statistische-bestanden--ssb--'>Stelsel van Sociaal-statistische Bestanden (SSB)</a>.\r\n\r\n5. MEER INFORMATIE\r\n\r\n<a href='https://www.cbs.nl/nl-nl/over-ons/contact/infoservice'>Infoservice</a>\r\n\r\nCopyright (c) Centraal Bureau voor de Statistiek, Den Haag/Heerlen \r\nVerveelvoudiging is toegestaan, mits het CBS als bron wordt vermeld.\r\n",
+ "Provenance": [
+  {
+   "Title": " Werkloosheidsuitkeringenstatistiek",
+   "Url": "https://www.cbs.nl/nl-nl/onze-diensten/methoden/onderzoeksomschrijvingen/korte-onderzoeksbeschrijvingen/werkloosheidsuitkeringenstatistiek"
+  },
+  {
+   "Title": "Kwaliteitsrapport Werkloosheidsuitkeringenstatistiek (WUS)",
+   "Url": "https://www.cbs.nl/nl-nl/longread/rapportages/2023/kwaliteitsrapport-werkloosheidsuitkeringenstatistiek--wus--"
+  },
+  {
+   "Title": "Stelsel van Sociaal-statistische Bestanden (SSB)",
+   "Url": "https://www.cbs.nl/nl-nl/onze-diensten/methoden/onderzoeksomschrijvingen/korte-onderzoeksbeschrijvingen/stelsel-van-sociaal-statistische-bestanden--ssb--"
+  }
+ ],
+ "RelatedSources": [
+  {
+   "Title": "Personen met ww-uitkering, seizoengecorrigeerd; persoonskenmerken en regio 2013-2023",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/dataset/84556NED"
+  },
+  {
+   "Title": "Sociale zekerheid; kerncijfers, uitkeringen naar uitkeringssoort",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/dataset/37789KSZ"
+  },
+  {
+   "Title": "Personen met een uitkering; kenmerken uitkeringsontvangers",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/dataset/85692NED"
+  },
+  {
+   "Title": "Personen met een uitkering; uitkeringsontvangers per regio",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/dataset/80794NED"
+  },
+  {
+   "Title": "Personen met een uitkering; soort uitkering, wijken en buurten 2024",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/dataset/86003NED"
+  },
+  {
+   "Title": "Personen met een uitkering; soort uitkering, wijken en buurten 2025",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/dataset/86113NED"
+  },
+  {
+   "Title": "Arbeid en sociale zekerheid",
+   "Url": "https://www.cbs.nl/nl-nl/arbeid-en-inkomen/arbeid-en-sociale-zekerheid"
+  }
+ ],
+ "Distributions": [
+  {
+   "Format": "csv",
+   "MediaType": "csv",
+   "DownloadUrl": "https://datasets.cbs.nl/csv/CBS/nl/85554NED",
+   "AccessUrl": "https://dataportal.cbs.nl/detail/CBS/85554NED",
+   "Language": "nl"
+  },
+  {
+   "Format": "odata",
+   "MediaType": "odata",
+   "DownloadUrl": "https://datasets.cbs.nl/odata/v1/CBS/85554NED",
+   "AccessUrl": "https://dataportal.cbs.nl/detail/CBS/85554NED",
+   "Language": "nl"
+  }
+ ]
+}

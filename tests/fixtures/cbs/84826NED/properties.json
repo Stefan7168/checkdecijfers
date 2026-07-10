@@ -1,0 +1,72 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/84826NED/$metadata#Properties",
+ "Identifier": "84826NED",
+ "Title": "Ontslagen werknemers door faillissement; geslacht, leeftijd, bedrijfstak",
+ "Description": "Deze tabel bevat cijfers over het aantal werknemers dat als gevolg van een faillissement is ontslagen. De gegevens kunnen worden uitgesplitst naar geslacht, leeftijdsklasse en Standaard Bedrijfsindeling 2008 (SBI 2008). De gegevens hebben betrekking op werknemers die behoorden tot de leeftijdscategorie 15 tot 75 jaar op het moment van ontslag en van wie het dienstverband werd beëindigd als gevolg van een faillissement.\r\n\r\nGegevens beschikbaar vanaf: 2015 \r\n\r\nStatus van de cijfers: \r\nDe cijfers in deze tabel zijn definitief.\r\n\r\nWijzigingen per 13 februari 2026:\r\nCijfers over 2024 zijn toegevoegd.\r\n\r\nWanneer komen er nieuwe cijfers?\r\nOnregelmatig.\r\n\r\n",
+ "Language": "nl",
+ "Authority": "https://standaarden.overheid.nl/owms/terms/Centraal_Bureau_voor_de_Statistiek",
+ "Modified": "2026-02-13T00:00:00+01:00",
+ "ReleaseDate": "2026-02-13T00:00:00+01:00",
+ "ModificationDate": "2025-12-19T00:00:00+01:00",
+ "TemporalCoverage": "2015-2024",
+ "Catalog": "CBS",
+ "Publisher": "https://standaarden.overheid.nl/owms/terms/Centraal_Bureau_voor_de_Statistiek",
+ "ContactPoint": "infoservice@cbs.nl",
+ "Version": "202602130000",
+ "VersionNotes": "",
+ "VersionReason": "Verbetering",
+ "Frequency": "Per jaar",
+ "Status": "Regulier",
+ "ObservationCount": 3587,
+ "ObservationsModified": "2025-12-19T00:00:00+01:00",
+ "DatasetType": "Numeric",
+ "GraphTypes": "Table,Bar,Line",
+ "License": "https://creativecommons.org/licenses/by/4.0/",
+ "Source": "CBS.",
+ "Summary": "ontslagen werknemers\ngeslacht, leeftijd, bedrijfstakken/branches, perioden",
+ "LongDescription": "INHOUDSOPGAVE\r\n\r\n1. Toelichting\r\n2. Definities en verklaring van symbolen\r\n3. Koppelingen naar relevante tabellen en artikelen\r\n4. Bronnen en methoden\r\n5. Meer informatie \r\n\r\n1. TOELICHTING\r\n\r\nDeze tabel bevat cijfers over het aantal werknemers dat als gevolg van een faillissement is ontslagen. De gegevens kunnen worden uitgesplitst naar geslacht, leeftijdsklasse en Standaard Bedrijfsindeling 2008 (SBI 2008). De gegevens hebben betrekking op werknemers die behoorden tot de leeftijdscategorie 15 tot 75 jaar op het moment van ontslag en van wie het dienstverband werd beëindigd als gevolg van een faillissement.\r\n\r\nGegevens beschikbaar vanaf: 2015 \r\n\r\nStatus van de cijfers: \r\nDe cijfers in deze tabel zijn definitief.\r\n\r\nWijzigingen per 13 februari 2026:\r\nCijfers over 2024 zijn toegevoegd.\r\n\r\nWanneer komen er nieuwe cijfers?\r\nOnregelmatig.\r\n\r\n2. DEFINITIES EN VERKLARING VAN SYMBOLEN\r\n\r\nDefinities:\r\n\r\nFaillissement\r\nEen rechter kan een juridische eenheid die heeft opgehouden te betalen in staat van faillissement verklaren. Het vermogen en de inkomsten van die juridische eenheid (de schuldenaar) worden dan ingenomen om de schulden af te lossen. Het faillissement kan worden uitgesproken op verzoek van een schuldeiser, de schuldenaar zelf of het Openbaar Ministerie. Als het faillissement is uitgesproken, zal de rechtbank direct een curator benoemen. De curator kan vervolgens arbeidsovereenkomsten opzeggen.\r\n\r\nWerknemer\r\nEen persoon die in een arbeidsovereenkomst afspraken met een economische eenheid maakt om arbeid te verrichten waartegenover een financiële beloning staat. \r\n\r\nStandaard Bedrijfsindeling 2008 (SBI 2008)\r\nDe Nederlandse hiërarchische indeling van economische activiteiten die door het CBS wordt gebruikt om bedrijfseenheden in te delen naar hun hoofdactiviteit. De SBI 2008 is de versie die vanaf 2008 gebruikt wordt.\r\n“Bedrijfstak” of “branche” zijn gangbare termen voor groepen van bedrijven met dezelfde hoofdactiviteit. Het CBS hanteert voor de indeling van bedrijven naar hoofdactiviteit de zogenoemde Standaard Bedrijfsindeling (SBI). Bedrijven in een bedrijfstak of branche kunnen naast deze activiteit ook andere activiteiten (nevenactiviteiten) uitoefenen.\r\nDe SBI 2008 kent meerdere niveaus die aangegeven worden door maximaal vijf cijfers. Het niveau van vier cijfers komt vrijwel overeen met de indeling van de Europese Unie (NACE). De eerste twee cijfers komen overeen met die van de indeling van Verenigde Naties  (ISIC).\r\n\r\nVerklaring van symbolen:\r\n\r\nniets (blanco): het cijfer kan op logische gronden niet voorkomen\r\n. : het cijfer is onbekend, onvoldoende betrouwbaar of geheim\r\n*: voorlopige cijfers\r\n**: nader voorlopige cijfers\r\n\r\n3. KOPPELINGEN NAAR RELEVANTE TABELLEN EN ARTIKELEN\r\n\r\nRelevante tabellen:\r\n\r\nMeer cijfers over faillissementen in de StatLinetabellen:\r\n<a href='https://opendata.cbs.nl/statline/#/CBS/nl/dataset/82242NED'>Faillissementen; kerncijfers</a>\r\n<a href='https://opendata.cbs.nl/statline/#/CBS/nl/dataset/82244NED'>Faillissementen; bedrijven en instellingen, SBI 2008</a>\r\n<a href='https://opendata.cbs.nl/statline/#/CBS/nl/dataset/84034NED'>Faillissementen; bedrijfsleeftijd en werkzame personen 2015-2022</a>\r\n\r\nMeer informatie over ontslagen werknemers is te vinden in de StatLinetabel:\r\n<a href='https://opendata.cbs.nl/#/CBS/nl/dataset/86205NED/table?dl=CEE3D'>Ontslagen werknemers door faillissement; bedrijfsgrootte</a>\r\n\r\n4. BRONNEN EN METHODEN\r\n\r\nBronnen\r\nDe gebruikte gegevens zijn afkomstig van de Nederlandse Rechtbanken, de Polisadministratie van de Belastingdienst en het Uitvoeringsinstituut Werknemersverzekeringen (UWV) en het <a href='https://www.cbs.nl/nl-nl/onze-diensten/methoden/begrippen/algemeen-bedrijven-register--abr--'>Algemeen Bedrijven Register (ABR)</a> van het CBS.\r\n\r\nMethode\r\nDe onderzoeksmethode van deze tabel is te vinden in de onderzoeksbeschrijving <a href='https://www.cbs.nl/nl-nl/onze-diensten/methoden/onderzoeksomschrijvingen/korte-onderzoeksbeschrijvingen/faillissementsontslag'>Faillissementsontslag</a>.\r\n\r\n5. MEER INFORMATIE\r\n\r\n<a href='https://www.cbs.nl/nl-nl/over-ons/contact/infoservice'>Infoservice</a>\r\n\r\nCopyright (c) Centraal Bureau voor de Statistiek, Den Haag/Heerlen \r\nVerveelvoudiging is toegestaan, mits het CBS als bron wordt vermeld.",
+ "Provenance": [
+  {
+   "Title": "Algemeen Bedrijven Register (ABR)",
+   "Url": "https://www.cbs.nl/nl-nl/onze-diensten/methoden/begrippen/algemeen-bedrijven-register--abr--"
+  },
+  {
+   "Title": "Faillissementsontslag",
+   "Url": "https://www.cbs.nl/nl-nl/onze-diensten/methoden/onderzoeksomschrijvingen/korte-onderzoeksbeschrijvingen/faillissementsontslag"
+  }
+ ],
+ "RelatedSources": [
+  {
+   "Title": "Faillissementen; kerncijfers",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/dataset/82242NED"
+  },
+  {
+   "Title": "Faillissementen; bedrijven en instellingen, SBI 2008",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/dataset/82244NED"
+  },
+  {
+   "Title": "Faillissementen; bedrijfsleeftijd en werkzame personen 2015-2022",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/dataset/84034NED"
+  },
+  {
+   "Title": "Ontslagen werknemers door faillissement; bedrijfsgrootte",
+   "Url": "https://opendata.cbs.nl/#/CBS/nl/dataset/86205NED/table?dl=CEE3D"
+  }
+ ],
+ "Distributions": [
+  {
+   "Format": "csv",
+   "MediaType": "csv",
+   "DownloadUrl": "https://datasets.cbs.nl/csv/CBS/nl/84826NED",
+   "AccessUrl": "https://dataportal.cbs.nl/detail/CBS/84826NED",
+   "Language": "nl"
+  },
+  {
+   "Format": "odata",
+   "MediaType": "odata",
+   "DownloadUrl": "https://datasets.cbs.nl/odata/v1/CBS/84826NED",
+   "AccessUrl": "https://dataportal.cbs.nl/detail/CBS/84826NED",
+   "Language": "nl"
+  }
+ ]
+}
