@@ -103,6 +103,10 @@ describe('onboarding-cron wiring (source pins)', () => {
     expect(source).toContain('new AnthropicLlmClient()');
     expect(source).toContain('productionNotifier(');
   });
+
+  it('WP27 stage C: wires the measure-fit client into the job (the gate would otherwise end every chained row all-errored)', () => {
+    expect(source).toContain('fitClient: new AnthropicLlmClient()');
+  });
 });
 
 describe('onboarding-cron vercel config', () => {

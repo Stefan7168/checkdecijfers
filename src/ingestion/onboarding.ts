@@ -18,6 +18,7 @@
 // widened compensate's guard to accept the onboarding_cost debit). It never
 // invents billing logic.
 import type { CbsSource } from '../cbs-adapter/types.ts';
+import type { LlmClient } from '../answer/llm/client.ts';
 import { compensate } from '../billing/ledger.ts';
 import type { Db } from '../db/types.ts';
 import { answerQuestionAudited } from '../answer/audit/respond-audited.ts';
@@ -25,6 +26,14 @@ import type { AuditedRespondOptions } from '../answer/audit/respond-audited.ts';
 import { registerTables, syncTable } from './pipeline.ts';
 import type { Phase0Table } from './registry-seed.ts';
 import { estimateSlice, fetchCount } from './onboarding-slice.ts';
+import {
+  DEFAULT_MEASURE_FIT_CONFIG,
+  hasOnlyTimeDimensions,
+  hasYearlyPeriodCodes,
+  measureFit,
+  questionNamesBareYear,
+  type MeasureFitFn,
+} from './onboarding-fit.ts';
 import { registerOnboardingVocabulary } from './onboarding-vocab.ts';
 import type { NotifyFn } from './onboarding-notify.ts';
 import {
@@ -35,6 +44,7 @@ import {
   getPendingRequest,
   reclaimStaleRunning,
   recordSliceNote,
+  setResolvedTable,
   type PendingTableRequest,
 } from './onboarding-store.ts';
 
@@ -68,6 +78,17 @@ export interface OnboardingJobDeps {
    * the job is clock-testable (docs/05 staleness rule), exactly like the chat
    * action's referenceDate(). */
   referenceDate: string;
+  /** WP27 stage C: LLM client for the measure-fit check (the Haiku pin lives
+   * in onboarding-fit.ts — ADR 027 D4). Required in production (the cron
+   * route passes it); ignored when `fit` is injected directly. When BOTH are
+   * absent and a fit-gated row arrives, the gate's closure throws → that
+   * candidate records 'errored' → all-errored ends the row failed+refunded
+   * (honest infra failure, never a guessed fit). */
+  fitClient?: LlmClient;
+  /** Measure-fit fn override (tests — routing is provable without the LLM
+   * harness, exactly like OnboardingFinderDeps.rerank). Defaults to the
+   * production closure over measureFit(fitClient). */
+  fit?: MeasureFitFn;
 }
 
 export interface OnboardingJobSummary {
@@ -155,6 +176,97 @@ async function registerAndSync(
   return { ok: true };
 }
 
+/** WP27 stage C (ADR 027 D2): one fit-gate pass over the row's candidate
+ * chain. Metadata only (R1): per candidate it reads fetchTableSchema (and,
+ * for a bare-year question, the time dimension's code list) — never a cell.
+ * Amendment A3's deterministic pre-checks run BEFORE any LLM call; either
+ * failure is a VERDICT ('undeliverable', groups with 'geen' — advance), while
+ * a schema/code-list/LLM throw is an ERROR (also advance, but counted
+ * separately: all-errored must end 'failed' with the honest infra message,
+ * never "geen passende maat" — D2b). */
+type FitGateOutcome =
+  | { kind: 'accepted'; tableId: string }
+  | { kind: 'no_fit'; summary: string }
+  | { kind: 'all_errored'; summary: string };
+
+async function runFitGate(deps: OnboardingJobDeps, row: PendingTableRequest): Promise<FitGateOutcome> {
+  const { db, source } = deps;
+  const fit: MeasureFitFn =
+    deps.fit ??
+    ((question, schema) => {
+      if (!deps.fitClient) {
+        // Fail loud, per candidate: recorded as 'errored' below, so a
+        // misconfigured deployment ends all-errored → failed + refunded —
+        // an honest infra failure, never a skipped-gate wrong table.
+        throw new Error('onboarding job: fitClient is required when no fit fn is provided');
+      }
+      return measureFit(question, schema, { client: deps.fitClient });
+    });
+
+  let errored = 0;
+  for (const candidate of row.candidateIds) {
+    let schema;
+    try {
+      schema = await source.fetchTableSchema(candidate);
+    } catch {
+      errored += 1;
+      continue;
+    }
+
+    // A3(a) — time-only dimensions, BEFORE any LLM call: a breakdown/geo
+    // dimension means the v1 ingest stores no dims='{}' rows and the
+    // vocabulary registers ZERO measures (the actual live #111 failure) — a
+    // measure-honest fit would accept it and the row would still die at
+    // delivery. 'undeliverable' verdict → next candidate.
+    if (!hasOnlyTimeDimensions(schema)) continue;
+
+    // A3(b) — a bare-year question needs whole-year (JJ) period codes
+    // (requireGrain('JJ') refuses otherwise). Code list fetched lazily, only
+    // when the question actually names a year (metadata read, R1-safe).
+    if (questionNamesBareYear(row.questionText)) {
+      const timeDim = schema.dimensions.find((d) => d.kind === 'TimeDimension')!;
+      let codes;
+      try {
+        codes = await source.fetchCodeList(candidate, timeDim.name);
+      } catch {
+        errored += 1;
+        continue;
+      }
+      if (!hasYearlyPeriodCodes(codes)) continue;
+    }
+
+    // The measure-fit check (Haiku, closed choice + 'geen', hard allowlist).
+    let verdict;
+    try {
+      verdict = await fit(row.questionText, schema);
+    } catch {
+      // Throw/invalid output → 'errored', next (D2b) — never a fit, never a
+      // misfit.
+      errored += 1;
+      continue;
+    }
+    if (verdict.measureCode !== null && verdict.confidence >= DEFAULT_MEASURE_FIT_CONFIG.acceptThreshold) {
+      // Accepted: record on the DB row AND the in-memory object (D2a) so a
+      // reclaimed retry resumes at ingest — never a second fit loop.
+      await setResolvedTable(db, row, candidate, `${verdict.measureCode}: ${verdict.reading}`);
+      return { kind: 'accepted', tableId: candidate };
+    }
+    // 'geen' (or under-threshold) → next candidate.
+  }
+
+  if (errored === row.candidateIds.length) {
+    return {
+      kind: 'all_errored',
+      summary:
+        'Onverwachte fout bij het ophalen: geen van de kandidaat-tabellen kon bij het CBS worden gecontroleerd.',
+    };
+  }
+  return {
+    kind: 'no_fit',
+    summary: 'Geen van de onderzochte tabellen bevat een maat die deze vraag beantwoordt.',
+  };
+}
+
 /**
  * Processes ONE claimed row end-to-end. The whole body is wrapped so that ANY
  * throw becomes a terminal 'failed' + refund + notify — the row can never be
@@ -166,20 +278,45 @@ async function processOneRow(
 ): Promise<'delivered' | 'unanswerable' | 'failed'> {
   const { db, source } = deps;
   try {
+    // WP27 stage C (ADR 027 D2) — decide WHICH table this row ingests:
+    //  - resolvedTableId set → a reclaimed retry after an accepted fit:
+    //    resume at ingest deterministically, never re-run the fit loop (D2a).
+    //  - empty candidateIds → legacy row: EXACTLY the pre-WP27 path — no fit
+    //    gate, no gate schema fetch, no fit LLM (D2c). This is also every
+    //    production row until stage D applies migration 015 (pre-015 the
+    //    stage-B probe drops the chain, so rows read back []), which keeps
+    //    the gate mechanically dormant — and spend-free — until the
+    //    owner-supervised live step.
+    //  - otherwise → the fit gate picks the first candidate whose measures
+    //    answer the question, or ends the row honestly (D2b).
+    let targetTableId = row.resolvedTableId ?? row.tableId;
+    if (row.resolvedTableId === null && row.candidateIds.length > 0) {
+      const gate = await runFitGate(deps, row);
+      if (gate.kind === 'all_errored') {
+        return await failAndRefund(deps, row, gate.summary);
+      }
+      if (gate.kind === 'no_fit') {
+        return await unanswerableAndRefund(deps, row, gate.summary);
+      }
+      targetTableId = gate.tableId;
+    }
+
     // Step 3 — piggyback: skip fetch/ingest if the table is already synced.
-    if (!(await alreadyIngested(db, row.tableId))) {
+    // From here on every step reads targetTableId (resolved ?? original);
+    // row.tableId itself stays the untouched dedupe identity (D2a).
+    if (!(await alreadyIngested(db, targetTableId))) {
       // Step 4 — size + slice.
-      const schema = await source.fetchTableSchema(row.tableId);
+      const schema = await source.fetchTableSchema(targetTableId);
       const codeLists: Record<string, Awaited<ReturnType<CbsSource['fetchCodeList']>>> = {};
       for (const dim of schema.dimensions) {
-        codeLists[dim.name] = await source.fetchCodeList(row.tableId, dim.name);
+        codeLists[dim.name] = await source.fetchCodeList(targetTableId, dim.name);
       }
-      const count = await fetchCount(source, row.tableId);
+      const count = await fetchCount(source, targetTableId);
       const estimate = estimateSlice(schema, codeLists, count);
       await recordSliceNote(db, row.id, estimate.note);
 
       // Step 5 — register + sync (existing validators run inside).
-      const synced = await registerAndSync(db, source, row.tableId, estimate.slice ?? undefined);
+      const synced = await registerAndSync(db, source, targetTableId, estimate.slice ?? undefined);
       if (!synced.ok) {
         return await failAndRefund(deps, row, synced.summary);
       }
@@ -188,7 +325,7 @@ async function processOneRow(
     // Step 6 — vocabulary: derive canonical_measures from the ingested measure
     // metadata. Its output is the delivery re-run's extra parser vocabulary.
     const vocab = await registerOnboardingVocabulary(db, {
-      tableId: row.tableId,
+      tableId: targetTableId,
       topicTerm: row.topicTerm,
     });
     if (vocab.onboarded.length === 0) {
@@ -197,7 +334,7 @@ async function processOneRow(
       return await unanswerableAndRefund(
         deps,
         row,
-        `De opgehaalde tabel ${row.tableId} bevat geen maat die we onder deze vraag konden aanbieden.`,
+        `De opgehaalde tabel ${targetTableId} bevat geen maat die we onder deze vraag konden aanbieden.`,
       );
     }
 
