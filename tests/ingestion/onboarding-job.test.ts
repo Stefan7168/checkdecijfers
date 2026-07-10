@@ -17,8 +17,19 @@ import type { CbsSource } from '../../src/cbs-adapter/types.ts';
 import { getBalance, reserveOnboardingDebit } from '../../src/billing/ledger.ts';
 import { applyPricingDefaults } from '../../src/billing/pricing-apply.ts';
 import type { LlmClient, LlmResponse } from '../../src/answer/llm/client.ts';
+import { ReplayLlmClient } from '../../src/answer/llm/client.ts';
 import type { RawParse } from '../../src/answer/intent/types.ts';
-import { createPendingRequest, getPendingRequest } from '../../src/ingestion/onboarding-store.ts';
+import {
+  createPendingRequest,
+  findActiveRequest,
+  getPendingRequest,
+  setResolvedTable,
+} from '../../src/ingestion/onboarding-store.ts';
+import {
+  DEFAULT_MEASURE_FIT_CONFIG,
+  type MeasureFitFn,
+  type MeasureFitResult,
+} from '../../src/ingestion/onboarding-fit.ts';
 import { onboardedKey } from '../../src/ingestion/onboarding-vocab.ts';
 import {
   MAX_ATTEMPTS,
@@ -31,6 +42,7 @@ import type { Db } from '../../src/db/types.ts';
 import { createTestDb } from '../helpers/pglite-db.ts';
 
 const FIXTURES = fileURLToPath(new URL('../fixtures/cbs', import.meta.url));
+const DELIVERY_PARSE_FIXTURES = fileURLToPath(new URL('../fixtures/llm/onboarding-delivery', import.meta.url));
 
 // 82235NED (housing stock): Perioden-only, national — its observations sit at
 // dims = {} and region_code = '', the answerable empty-coordinate shape, so an
@@ -44,17 +56,38 @@ function fixtureSource(): CbsSource {
   return new FixtureSource(loadFixtureDocs(`${FIXTURES}/${TABLE}`));
 }
 
+// WP27 stage C: the bijstand candidate-chain family (stage-A captures). NOTE
+// 85615NED is SCHEMA-ONLY (metadata + real $count, ZERO observation pages) —
+// correct for the metadata-only fit gate, but any test that lets the job
+// INGEST it dies with a misleading "sync fetched 0 rows … refusing to ingest"
+// (brief § Stage C executor notes). The fit gate must route past it.
+const STOCK_TABLE = '37789ksz';
+const STOCK_MEASURE = 'D000203_2'; // "Totaal bijstandsuitkeringen"; 2023JJ00 = 390.2 in the fixture
+const FLOWS_TABLE = '85615NED';
+const BIJSTAND_QUESTION = 'Hoeveel mensen zaten er in 2023 in de bijstand?';
+
+/** Record-form FixtureSource serving the whole candidate family (brief §
+ * Stage C: "FixtureSource with the Record<tableId, docs> form serving BOTH
+ * bijstand tables from Stage A's captures"). */
+function bijstandSource(): CbsSource {
+  return new FixtureSource({
+    [TABLE]: loadFixtureDocs(`${FIXTURES}/${TABLE}`),
+    [STOCK_TABLE]: loadFixtureDocs(`${FIXTURES}/${STOCK_TABLE}`),
+    [FLOWS_TABLE]: loadFixtureDocs(`${FIXTURES}/${FLOWS_TABLE}`),
+  });
+}
+
 /** Intent stub: emits a single confident candidate for the onboarded key. The
  * job passes the onboarded measures as extra vocabulary, so this key is legal
  * at schema validation and resolves against the freshly-registered
  * canonical_measures row. */
-function intentStub(year: number): LlmClient {
+function intentStub(year: number, table: string = TABLE, measure: string = MEASURE): LlmClient {
   const raw: RawParse = {
     version: 3,
     kind: 'data_query',
     candidates: [
       {
-        canonicalKey: onboardedKey(TABLE, MEASURE),
+        canonicalKey: onboardedKey(table, measure),
         regions: null,
         period: { kind: 'year', year },
         derivation: 'none',
@@ -127,11 +160,14 @@ async function harness(source: CbsSource = fixtureSource()): Promise<Harness & {
 }
 
 /** Grants a user 150 credits, debits the 100-credit onboarding cost, and
- * queues a pending row for TABLE — the exact state triggerOnboarding leaves. */
+ * queues a pending row — the exact state triggerOnboarding leaves. Defaults
+ * to the legacy shape (TABLE, no candidate chain); WP27 stage-C tests pass
+ * `tableId` (the finder's pick, the dedupe identity) + `candidateIds`. */
 async function queueRequest(
   db: Db,
   question: string,
   topicTerm: string,
+  opts: { tableId?: string; candidateIds?: string[] } = {},
 ): Promise<{ userId: string; requestId: string; pendingId: number; debitId: number }> {
   const userId = randomUUID();
   const requestId = randomUUID();
@@ -144,13 +180,47 @@ async function queueRequest(
     requestId,
     questionText: question,
     topicTerm,
-    tableId: TABLE,
+    tableId: opts.tableId ?? TABLE,
     finderConfidence: 0.9,
-    candidateIds: [],
+    candidateIds: opts.candidateIds ?? [],
     debitTransactionId: debit.entry.id,
   });
   return { userId, requestId, pendingId: row.id, debitId: debit.entry.id };
 }
+
+/** A recording MeasureFitFn: scripted verdict (or throw) per table id, and a
+ * call log so tests can pin exactly WHICH candidates reached the LLM step
+ * (A3's "skipped WITHOUT a fit-LLM call" is an assertion on this log). */
+function fitScript(
+  script: Record<string, MeasureFitResult | 'throw'>,
+): { fit: MeasureFitFn; calls: string[] } {
+  const calls: string[] = [];
+  return {
+    calls,
+    fit: async (_question, schema) => {
+      calls.push(schema.tableId);
+      const verdict = script[schema.tableId];
+      if (verdict === undefined) throw new Error(`fitScript: unscripted table ${schema.tableId}`);
+      if (verdict === 'throw') throw new Error(`fitScript: scripted throw for ${schema.tableId}`);
+      return verdict;
+    },
+  };
+}
+
+/** A fit fn for tests where the gate must never run (legacy rows, resumed
+ * rows) — reaching it is the failure. */
+function throwingFit(): MeasureFitFn {
+  return async () => {
+    throw new Error('fit gate must not run for this row');
+  };
+}
+
+const FIT_GEEN: MeasureFitResult = { measureCode: null, confidence: 0.9, reading: 'geen passende maat' };
+const FIT_ACCEPT_STOCK: MeasureFitResult = {
+  measureCode: STOCK_MEASURE,
+  confidence: 0.95,
+  reading: 'telt het totale aantal bijstandsuitkeringen',
+};
 
 describe('runOnboardingJob — success (the full delivered path)', () => {
   it('registers, syncs, registers vocab, and DELIVERS an answer from the fixture cell; ledger nets −100', async () => {
@@ -460,6 +530,416 @@ describe('runOnboardingJob — a poisoned exhausted row never wedges the queue',
       const rowAAfter = await getPendingRequest(h.db, a.pendingId);
       expect(rowAAfter!.status).toBe('failed');
       expect(await getBalance(h.db, a.userId)).toBe(150);
+    } finally {
+      await h.close();
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// WP27 stage C — the measure-fit gate (ADR 027 D2, brief § Stage C tests)
+// ---------------------------------------------------------------------------
+
+describe('runOnboardingJob — fit gate: candidate fallback (WP27 stage C)', () => {
+  it('candidate 1 misfits (fit verdict geen) → candidate 2 DELIVERS; resolved_table_id set, table_id untouched', async () => {
+    const h = await harness(bijstandSource());
+    try {
+      const script = fitScript({ [TABLE]: FIT_GEEN, [STOCK_TABLE]: FIT_ACCEPT_STOCK });
+      const { userId, pendingId } = await queueRequest(h.db, BIJSTAND_QUESTION, 'bijstand', {
+        tableId: TABLE, // the finder's (wrong) pick, candidate 1
+        candidateIds: [TABLE, STOCK_TABLE],
+      });
+
+      const summary = await runOnboardingJob(
+        h.deps({ fit: script.fit, intentClient: intentStub(2023, STOCK_TABLE, STOCK_MEASURE) }),
+      );
+      expect(summary.processed!.outcome).toBe('delivered');
+      // Both candidates are time-only with JJ codes → both reach the fit LLM,
+      // in chain order.
+      expect(script.calls).toEqual([TABLE, STOCK_TABLE]);
+
+      const row = await getPendingRequest(h.db, pendingId);
+      expect(row!.status).toBe('delivered');
+      // D2a: the fit choice lives in resolved_table_id; the dedupe identity
+      // is untouched.
+      expect(row!.resolvedTableId).toBe(STOCK_TABLE);
+      expect(row!.tableId).toBe(TABLE);
+
+      // fit_note diagnostics: measure code + the model's one-line reading.
+      const note = await h.db.query('select fit_note from pending_table_requests where id = $1', [
+        pendingId,
+      ]);
+      expect(note.rows[0]!.fit_note).toBe(
+        `${STOCK_MEASURE}: telt het totale aantal bijstandsuitkeringen`,
+      );
+
+      // The delivered number is the STOCK table's fixture cell (390.2 for
+      // 2023JJ00), through the full validated pipeline.
+      const audit = await h.db.query('select final_text from audit_answers where id = $1', [
+        row!.deliveryAuditAnswerId,
+      ]);
+      expect(audit.rows[0]!.final_text as string).toContain((390.2).toLocaleString('nl-NL'));
+
+      // Delivered → the 100-credit debit stands.
+      expect(await getBalance(h.db, userId)).toBe(50);
+    } finally {
+      await h.close();
+    }
+  });
+
+  it('A3(a): a breakdown-dimension candidate (85615NED) is skipped undeliverable WITHOUT a fit-LLM call — the live #111 shape', async () => {
+    const h = await harness(bijstandSource());
+    try {
+      // The measured live behavior (ADR 027 § Amendments): the finder picks a
+      // person-level table whose deliverability no model can see from
+      // title/summary; the chain must route past it deterministically.
+      const script = fitScript({ [STOCK_TABLE]: FIT_ACCEPT_STOCK });
+      const { pendingId } = await queueRequest(h.db, BIJSTAND_QUESTION, 'bijstand', {
+        tableId: FLOWS_TABLE,
+        candidateIds: [FLOWS_TABLE, STOCK_TABLE],
+      });
+
+      const summary = await runOnboardingJob(
+        h.deps({ fit: script.fit, intentClient: intentStub(2023, STOCK_TABLE, STOCK_MEASURE) }),
+      );
+      expect(summary.processed!.outcome).toBe('delivered');
+      // THE A3 pin: the flows table never reached the LLM step (its breakdown
+      // dimensions failed the deterministic pre-check) — and was never
+      // ingested (schema-only fixture: ingesting it would die loudly).
+      expect(script.calls).toEqual([STOCK_TABLE]);
+
+      const row = await getPendingRequest(h.db, pendingId);
+      expect(row!.resolvedTableId).toBe(STOCK_TABLE);
+      expect(row!.tableId).toBe(FLOWS_TABLE);
+      // Only the stock table was registered/ingested.
+      const tables = await h.db.query(
+        `select id from cbs_tables where id in ($1, $2)`,
+        [FLOWS_TABLE, STOCK_TABLE],
+      );
+      expect(tables.rows.map((r) => r.id)).toEqual([STOCK_TABLE]);
+    } finally {
+      await h.close();
+    }
+  });
+
+  it('A3(b): a bare-year question skips a time-only candidate lacking JJ codes, without a fit-LLM call', async () => {
+    // A synthetic quarters-only candidate isolates pre-check (b) from (a):
+    // time-only dims (passes a) but no whole-year codes (fails b).
+    const base = bijstandSource();
+    const KW_ONLY = 'KWONLY01';
+    const overlay: CbsSource = {
+      fetchTableSchema: async (tableId) =>
+        tableId === KW_ONLY
+          ? {
+              tableId: KW_ONLY,
+              title: 'Kwartaalcijfers zonder jaartotalen',
+              dimensions: [{ name: 'Perioden', kind: 'TimeDimension' }],
+              measures: [{ code: 'M0001', title: 'Iets per kwartaal', unit: 'aantal', decimals: 0, description: '' }],
+            }
+          : base.fetchTableSchema(tableId),
+      fetchCodeList: async (tableId, dimension) =>
+        tableId === KW_ONLY
+          ? [
+              { code: '2023KW01', title: '2023 1e kwartaal', dimensionGroup: null, status: null, index: null },
+              { code: '2023KW02', title: '2023 2e kwartaal', dimensionGroup: null, status: null, index: null },
+            ]
+          : base.fetchCodeList(tableId, dimension),
+      fetchObservations: base.fetchObservations.bind(base),
+      fetchObservationCount: base.fetchObservationCount.bind(base),
+      fetchCatalog: base.fetchCatalog.bind(base),
+    };
+    const h = await harness(overlay);
+    try {
+      const script = fitScript({ [STOCK_TABLE]: FIT_ACCEPT_STOCK });
+      const { pendingId } = await queueRequest(h.db, BIJSTAND_QUESTION, 'bijstand', {
+        tableId: KW_ONLY,
+        candidateIds: [KW_ONLY, STOCK_TABLE],
+      });
+
+      const summary = await runOnboardingJob(
+        h.deps({ fit: script.fit, intentClient: intentStub(2023, STOCK_TABLE, STOCK_MEASURE) }),
+      );
+      expect(summary.processed!.outcome).toBe('delivered');
+      expect(script.calls).toEqual([STOCK_TABLE]);
+      const row = await getPendingRequest(h.db, pendingId);
+      expect(row!.resolvedTableId).toBe(STOCK_TABLE);
+    } finally {
+      await h.close();
+    }
+  });
+
+  it("all candidates 'geen' → unanswerable with the scoped message + full refund", async () => {
+    const h = await harness(bijstandSource());
+    try {
+      const script = fitScript({ [TABLE]: FIT_GEEN, [STOCK_TABLE]: FIT_GEEN });
+      const { userId, pendingId } = await queueRequest(h.db, BIJSTAND_QUESTION, 'bijstand', {
+        tableId: TABLE,
+        candidateIds: [TABLE, STOCK_TABLE],
+      });
+
+      const summary = await runOnboardingJob(h.deps({ fit: script.fit }));
+      expect(summary.processed!.outcome).toBe('unanswerable');
+
+      const row = await getPendingRequest(h.db, pendingId);
+      expect(row!.status).toBe('unanswerable');
+      expect(row!.failureSummary).toBe(
+        'Geen van de onderzochte tabellen bevat een maat die deze vraag beantwoordt.',
+      );
+      expect(row!.resolvedTableId).toBeNull();
+      // Full refund; notify says unanswerable.
+      expect(await getBalance(h.db, userId)).toBe(150);
+      expect(h.notified[0]!.outcome).toBe('unanswerable');
+    } finally {
+      await h.close();
+    }
+  });
+
+  it('ALL candidates errored (schema fetch throws) → failed with the honest infra message, never "geen passende maat" (D2b)', async () => {
+    const h = await harness(throwingSource());
+    try {
+      const { userId, pendingId } = await queueRequest(h.db, BIJSTAND_QUESTION, 'bijstand', {
+        tableId: TABLE,
+        candidateIds: [TABLE, STOCK_TABLE],
+      });
+
+      const summary = await runOnboardingJob(h.deps({ fit: throwingFit() }));
+      expect(summary.processed!.outcome).toBe('failed');
+
+      const row = await getPendingRequest(h.db, pendingId);
+      expect(row!.status).toBe('failed');
+      expect(row!.failureSummary).toBe(
+        'Onverwachte fout bij het ophalen: geen van de kandidaat-tabellen kon bij het CBS worden gecontroleerd.',
+      );
+      expect(await getBalance(h.db, userId)).toBe(150);
+      expect(h.notified[0]!.outcome).toBe('failed');
+    } finally {
+      await h.close();
+    }
+  });
+
+  it('fit ERROR on candidate 1 (throw), accept on candidate 2 → delivered (an error is not a verdict)', async () => {
+    const h = await harness(bijstandSource());
+    try {
+      const script = fitScript({ [TABLE]: 'throw', [STOCK_TABLE]: FIT_ACCEPT_STOCK });
+      const { pendingId } = await queueRequest(h.db, BIJSTAND_QUESTION, 'bijstand', {
+        tableId: TABLE,
+        candidateIds: [TABLE, STOCK_TABLE],
+      });
+
+      const summary = await runOnboardingJob(
+        h.deps({ fit: script.fit, intentClient: intentStub(2023, STOCK_TABLE, STOCK_MEASURE) }),
+      );
+      expect(summary.processed!.outcome).toBe('delivered');
+      expect(script.calls).toEqual([TABLE, STOCK_TABLE]);
+      const row = await getPendingRequest(h.db, pendingId);
+      expect(row!.resolvedTableId).toBe(STOCK_TABLE);
+    } finally {
+      await h.close();
+    }
+  });
+
+  it('a verdict EXACTLY at the acceptance threshold is ACCEPTED — the boundary is inclusive (>=)', async () => {
+    // Stage-C adversarial review finding (mutation-confirmed by both
+    // skeptics): no test supplied confidence === acceptThreshold, so >= vs >
+    // was unpinned — exactly the line where accept-vs-honest-refund is
+    // decided. References the CONSTANT (not a literal) so stage D's
+    // recalibration keeps this boundary pinned at whatever the calibrated
+    // value becomes.
+    const h = await harness(bijstandSource());
+    try {
+      const script = fitScript({
+        [STOCK_TABLE]: {
+          measureCode: STOCK_MEASURE,
+          confidence: DEFAULT_MEASURE_FIT_CONFIG.acceptThreshold,
+          reading: 'precies op de drempel',
+        },
+      });
+      const { pendingId } = await queueRequest(h.db, BIJSTAND_QUESTION, 'bijstand', {
+        tableId: STOCK_TABLE,
+        candidateIds: [STOCK_TABLE],
+      });
+      const summary = await runOnboardingJob(
+        h.deps({ fit: script.fit, intentClient: intentStub(2023, STOCK_TABLE, STOCK_MEASURE) }),
+      );
+      // With a single candidate, a >-mutation would reject it → unanswerable;
+      // the inclusive boundary must deliver.
+      expect(summary.processed!.outcome).toBe('delivered');
+      const row = await getPendingRequest(h.db, pendingId);
+      expect(row!.resolvedTableId).toBe(STOCK_TABLE);
+    } finally {
+      await h.close();
+    }
+  });
+
+  it('an under-threshold accept counts as geen: measure named but confidence below the threshold → next candidate', async () => {
+    const h = await harness(bijstandSource());
+    try {
+      const script = fitScript({
+        [TABLE]: { measureCode: MEASURE, confidence: 0.5, reading: 'zou kunnen' },
+        [STOCK_TABLE]: FIT_ACCEPT_STOCK,
+      });
+      const { pendingId } = await queueRequest(h.db, BIJSTAND_QUESTION, 'bijstand', {
+        tableId: TABLE,
+        candidateIds: [TABLE, STOCK_TABLE],
+      });
+      const summary = await runOnboardingJob(
+        h.deps({ fit: script.fit, intentClient: intentStub(2023, STOCK_TABLE, STOCK_MEASURE) }),
+      );
+      expect(summary.processed!.outcome).toBe('delivered');
+      const row = await getPendingRequest(h.db, pendingId);
+      expect(row!.resolvedTableId).toBe(STOCK_TABLE);
+    } finally {
+      await h.close();
+    }
+  });
+});
+
+describe('runOnboardingJob — fit gate: legacy rows and resumed rows (D2a/D2c)', () => {
+  it('legacy row ([]) on an already-synced table: NO source call, NO fit call — the byte-identical today-path pin', async () => {
+    // First a normal delivering run syncs the table…
+    const h = await harness();
+    try {
+      await queueRequest(h.db, 'hoeveel woningen in 2024', 'woningvoorraad');
+      const first = await runOnboardingJob(h.deps());
+      expect(first.processed!.outcome).toBe('delivered');
+
+      // …then a SECOND legacy request for the same table runs with a source
+      // whose EVERY method throws and a fit that throws if consulted: the
+      // piggyback path must deliver without touching either (the brief's
+      // throwing-source guard — the fit gate added no hidden metadata read to
+      // the legacy path).
+      const dead: CbsSource = {
+        fetchTableSchema: () => Promise.reject(new Error('legacy path must not fetch schema')),
+        fetchCodeList: () => Promise.reject(new Error('legacy path must not fetch code lists')),
+        fetchObservations: (() => {
+          throw new Error('legacy path must not fetch observations');
+        }) as never,
+        fetchObservationCount: () => Promise.reject(new Error('legacy path must not count')),
+        fetchCatalog: (() => {
+          throw new Error('legacy path must not fetch the catalog');
+        }) as never,
+      };
+      const { pendingId } = await queueRequest(h.db, 'hoeveel woningen in 2024 nogmaals', 'woningvoorraad');
+      const summary = await runOnboardingJob(h.deps({ source: dead, fit: throwingFit() }));
+      expect(summary.processed).toEqual({ id: pendingId, tableId: TABLE, outcome: 'delivered' });
+      const row = await getPendingRequest(h.db, pendingId);
+      expect(row!.resolvedTableId).toBeNull();
+      expect(row!.candidateIds).toEqual([]);
+    } finally {
+      await h.close();
+    }
+  });
+
+  it('reclaim-after-accept resumes at ingest: resolved_table_id is honored, the fit loop NEVER re-runs, no second table ingested', async () => {
+    const h = await harness(bijstandSource());
+    try {
+      // Simulate the post-accept crash state a reclaim leaves behind: the
+      // row is pending again, candidate chain present, resolved_table_id
+      // already recorded by the crashed attempt (setResolvedTable committed
+      // before the crash).
+      const userId = randomUUID();
+      const requestId = randomUUID();
+      await h.db.query('update signup_grant_config set credits = 150');
+      await h.db.query('select public.grant_signup_credits($1)', [userId]);
+      const debit = await reserveOnboardingDebit(h.db, userId, requestId, 100);
+      if (debit.kind !== 'debited') throw new Error(`setup: ${debit.kind}`);
+      const row = await createPendingRequest(h.db, {
+        userId,
+        requestId,
+        questionText: BIJSTAND_QUESTION,
+        topicTerm: 'bijstand',
+        tableId: FLOWS_TABLE,
+        finderConfidence: 0.9,
+        candidateIds: [FLOWS_TABLE, STOCK_TABLE],
+        debitTransactionId: debit.entry.id,
+      });
+      await setResolvedTable(h.db, row, STOCK_TABLE, `${STOCK_MEASURE}: eerdere poging`);
+
+      const summary = await runOnboardingJob(
+        h.deps({ fit: throwingFit(), intentClient: intentStub(2023, STOCK_TABLE, STOCK_MEASURE) }),
+      );
+      expect(summary.processed!.outcome).toBe('delivered');
+
+      // Only the resolved table was ingested; the flows table never was.
+      const tables = await h.db.query(`select id from cbs_tables where id in ($1, $2)`, [
+        FLOWS_TABLE,
+        STOCK_TABLE,
+      ]);
+      expect(tables.rows.map((r) => r.id)).toEqual([STOCK_TABLE]);
+    } finally {
+      await h.close();
+    }
+  });
+
+  it('re-ask during running: the dedupe pins on the UNCHANGED table_id, not the resolved one', async () => {
+    const h = await harness(bijstandSource());
+    try {
+      const { pendingId } = await queueRequest(h.db, BIJSTAND_QUESTION, 'bijstand', {
+        tableId: FLOWS_TABLE,
+        candidateIds: [FLOWS_TABLE, STOCK_TABLE],
+      });
+      const row = await getPendingRequest(h.db, pendingId);
+      await setResolvedTable(h.db, row!, STOCK_TABLE, 'fit accepted');
+
+      // A re-ask routes on the finder's pick (the ORIGINAL table_id): the
+      // active-row lookup must still find this row — asking twice must not
+      // queue or charge twice (ADR 027 D2a: identity never mutated).
+      const active = await findActiveRequest(h.db, row!.userId, FLOWS_TABLE);
+      expect(active).not.toBeNull();
+      expect(active!.id).toBe(pendingId);
+      expect(active!.resolvedTableId).toBe(STOCK_TABLE);
+    } finally {
+      await h.close();
+    }
+  });
+});
+
+describe('runOnboardingJob — the #124 measurement e2e (REAL parser replay, WP27 stage C)', () => {
+  it('the 37789ksz delivery parse ANSWERS across 18 same-tagged measures — R7 rule 4 does not fire (measured 2026-07-10)', async () => {
+    // The brief's known measurement question: onboarding-vocab tags EVERY
+    // registered 37789ksz measure with the topic term ('bijstand', 18
+    // measures, three bijstand-titled) — would the delivery parse clarify
+    // (→ unanswerable + refund despite a perfect fit-gate pass) instead of
+    // answering? MEASURED via a recorded REAL Haiku parse (scripts/
+    // onboarding-delivery-record.ts, owner-approved spend): it answers,
+    // resolving "Totaal bijstandsuitkeringen" directly. This replay pins that
+    // measured behavior into CI; a prompt/vocab change that breaks it fails
+    // here loudly (the replay client throws on a hash miss → re-record).
+    const h = await harness(bijstandSource());
+    try {
+      const script = fitScript({
+        [STOCK_TABLE]: { measureCode: STOCK_MEASURE, confidence: 0.95, reading: 'record-script accept' },
+      });
+      const { userId, pendingId } = await queueRequest(h.db, BIJSTAND_QUESTION, 'bijstand', {
+        tableId: FLOWS_TABLE,
+        candidateIds: [FLOWS_TABLE, STOCK_TABLE],
+      });
+
+      const summary = await runOnboardingJob(
+        h.deps({
+          fit: script.fit,
+          intentClient: new ReplayLlmClient(DELIVERY_PARSE_FIXTURES),
+        }),
+      );
+      expect(summary.processed!.outcome).toBe('delivered');
+
+      const row = await getPendingRequest(h.db, pendingId);
+      expect(row!.status).toBe('delivered');
+      expect(row!.resolvedTableId).toBe(STOCK_TABLE);
+
+      // The owner's acceptance shape (stage D re-verifies this LIVE): the
+      // stock number from the fixture cell, CBS's measure named verbatim
+      // (owner decision A1: it counts uitkeringen, not persons).
+      const audit = await h.db.query('select final_text from audit_answers where id = $1', [
+        row!.deliveryAuditAnswerId,
+      ]);
+      const text = audit.rows[0]!.final_text as string;
+      expect(text).toContain('Totaal bijstandsuitkeringen');
+      expect(text).toContain((390.2).toLocaleString('nl-NL'));
+      expect(text).toContain('37789ksz');
+
+      // Delivered → the debit stands (150 − 100).
+      expect(await getBalance(h.db, userId)).toBe(50);
     } finally {
       await h.close();
     }

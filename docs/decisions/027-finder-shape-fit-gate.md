@@ -246,6 +246,35 @@ money/chain/deploy/byte lenses clean; its one confirmed finding (the live respon
 site had zero pipeline-level coverage — mutation-verified) was closed with a B15+injected-finder
 pipeline test whose exact-envelope assertion kills the mutation.
 
+## As built — stage C (2026-07-10, session 32, [PR #21](https://github.com/Stefan7168/checkdecijfers/pull/21))
+
+Stage B merged + deployed the same day ([PR #18](https://github.com/Stefan7168/checkdecijfers/pull/18),
+merge `d8e02b5`). Stage C landed per the brief's pseudocode: `src/ingestion/onboarding-fit.ts`
+(fit prompt/schema/validator/version constants mirroring `rerank-*.ts`; Haiku per D4; hard
+allowlist over the table's OWN measure codes + `'geen'`), amendment A3's deterministic pre-checks
+BEFORE any LLM call (time-only dims; JJ codes for bare-year questions), and the gate driven from
+`processOneRow` (resolved → resume, never re-fit — D2a; `[]` → byte-identical legacy path — D2c;
+loop with errored-vs-verdict accounting — D2b: all-errored → `failed` with the honest infra
+message, any real verdict → `unanswerable` with the scoped message). `setResolvedTable` writes DB
+row + in-memory object; `fit_note` is diagnostics only. As-built notes:
+
+1. **Acceptance threshold 0.8 is a documented PRE-CALIBRATION placeholder** — stage D calibrates
+   it from `benchmark/measurefit-labelled-set.json` (new, seeded there); the boundary is
+   inclusive (`>=`) and PINNED by a test that references the constant (adversarial-review
+   finding, mutation-confirmed: the comparator was previously unpinned at exactly the threshold).
+2. **The #124 risk was MEASURED and does not materialize**: a real recorded Haiku delivery parse
+   (owner-approved spend, `scripts/onboarding-delivery-record.ts`) of the bijstand question over
+   all 18 tagged `37789ksz` measures resolves "Totaal bijstandsuitkeringen" directly — no rule-4
+   clarification; delivered "Totaal bijstandsuitkeringen was in 2023 390,2 (x 1000)". Pinned as a
+   hermetic replay e2e on the CI gate.
+3. **Production dormancy is mechanical**: until stage D applies migration 015, every production
+   row's chain reads back `[]` (the stage-B probe) → legacy path → the fit gate cannot run and
+   the fit LLM cannot spend. The cron route's new `fitClient` is inert for legacy rows.
+
+Review: 5 lenses (money+terminal-state, brief-letter, safety, deploy-dormancy, test-mutation-
+resistance), dual skeptics — four lenses clean, two raw findings refuted, one confirmed (the
+threshold boundary above), fixed in-session.
+
 ## Revisit triggers
 
 - Measured shortlist-recall miss (right table absent from the top-20) → alternative 1 (enrichment),

@@ -59,6 +59,11 @@ export async function GET(request: Request): Promise<Response> {
       source: new ODataV4Source(),
       intentClient: new AnthropicLlmClient(),
       answerClient: new AnthropicLlmClient(),
+      // WP27 stage C: the measure-fit gate's client (Haiku pin in
+      // onboarding-fit.ts). Dormant — and spend-free — until stage D applies
+      // migration 015: pre-015 every row's candidate chain reads back [] (the
+      // stage-B probe), which takes the legacy no-fit-gate path.
+      fitClient: new AnthropicLlmClient(),
       notify: productionNotifier(db),
       referenceDate: referenceDate(),
     });
