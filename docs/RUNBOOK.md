@@ -179,6 +179,14 @@ The on-demand-fetch code was built and merged (2026-07-06, hermetic — full det
 
 **Standing rule — owner-run CBS fetches from a local network:** if node times out reaching `datasets.cbs.nl` while `curl` works, it's the known IPv6 black-hole; prefix the CLI with the committed preload: `node --import ./scripts/force-ipv4.mjs <cli> [...args]` (works for `catalog:refresh`, `ingest sync`, fixture captures, `measurefit:record`). Don't debug the app — it's the network. The deploy host is unaffected.
 
+## WP28 Google SSO — owner configuration steps (owner present; ⏳ PENDING — do after the WP28 PR merges)
+
+The "Doorgaan met Google" button shipped in the WP28 PR (ADR [028](decisions/028-google-sso.md)) but stays non-functional until you complete these dashboard steps. Nothing breaks in the meantime: the magic link keeps working unchanged, and the code is deploy-order-safe (D4). **What "not configured yet" looks like (measured in the build session):** clicking the button sends the browser to Supabase's authorize URL, Supabase rejects the disabled provider and bounces back to `/login?error=auth` — the user just lands on the login page again, without an inline message. The inline Dutch error copy only appears for server-side failures (missing env, Supabase client error). So don't be surprised by the silent bounce before you finish these steps.
+
+1. **Google Cloud Console** (any Google account, free): create a project → "OAuth consent screen" (External, app name checkdecijfers, your e-mail) → "Credentials" → "Create credentials → OAuth client ID" → type **Web application** → Authorized redirect URI: `https://<project-ref>.supabase.co/auth/v1/callback` (the exact value is shown in step 2's Supabase screen — copy it from there). Save the **Client ID** and **Client secret**.
+2. **Supabase dashboard** → Authentication → Sign In / Providers → Google → Enable, paste Client ID + secret → Save. (Secrets live ONLY here — never in the repo or Vercel.)
+3. **Live verification (owner present — the [#122](open-questions.md) empirical check, mandatory):** log in with Google using an e-mail that ALREADY has a magic-link account → in Supabase: Authentication → Users must show ONE user (now with two identities), and the ledger must show NO second `signup_grant` row for it (one read-only SQL check — the ADR 028 D2 empirical verification). Then a fresh-e-mail Google login → new user, exactly one grant.
+
 ## Your recurring duties
 
 - **Sign-offs** at the gates in [STATUS.md](STATUS.md).
