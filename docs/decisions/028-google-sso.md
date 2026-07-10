@@ -1,7 +1,31 @@
 # ADR 028 — Google SSO alongside the magic link (owner request, 2026-07-08)
 
 **Status:** accepted (design frozen session 30; owner-requested addition to the live product).
-Build not started — execute brief: [session-briefs/2026-07-08-google-sso-brief.md](../session-briefs/2026-07-08-google-sso-brief.md) (WP28).
+Execute brief: [session-briefs/2026-07-08-google-sso-brief.md](../session-briefs/2026-07-08-google-sso-brief.md) (WP28).
+
+**As-built (session 34, 2026-07-10, autonomous per #118 — branch `wp28-google-sso`):** built exactly per
+the brief — `signInWithGoogle` Server Action (the brief's literal code), the "Doorgaan met Google"
+button below a divider sharing the single `busy` state, and the test set incl. the #113 cross-pin
+(the action's `redirectTo` path and `isPublicPath('/auth/callback')` proven consistent in one test).
+The callback route, proxy, `current-user`, `src/` and migrations are byte-untouched as designed.
+The client button follows Next's documented `unstable_rethrow` pattern so a NEXT_REDIRECT control-flow
+throw is never rendered as an inline error. **One D4 claim refined by measurement (dev-server round
+trip, build session):** server-side `signInWithOAuth` only *builds* the authorize URL — it does not
+validate that the provider is enabled. Pre-configuration, the button therefore does NOT show the
+inline error copy; the browser round-trips to Supabase, which rejects the disabled provider and
+bounces to `/login?error=auth` (the callback's existing no-code path) — a silent return to the login
+page. Fail-soft still holds (no crash, no session, magic link untouched); the inline Dutch copy
+covers server-side failures (missing env / Supabase client error). The RUNBOOK owner-steps section
+documents this so the owner isn't surprised before completing the dashboard config. The D2 linking
+verification remains the owner's post-merge live step (open-questions [#122](../open-questions.md)).
+One precision on the trade-offs' "no shared failure mode" line, raised by the pre-PR review: the two
+buttons DO share the single `busy` flag (brief-mandated, anti-double-submit), so while a Google
+action call is in flight both doors are disabled. This does not couple the doors to Google's
+availability — the awaited call reaches only OUR server, where `signInWithOAuth` merely builds the
+authorize URL (measured 9ms, no Google/Supabase network dependency); a stall there means the app
+itself is unreachable, which stalls the magic link equally. Error paths reset `busy` (tested), so
+"no shared failure mode" holds where it matters: a broken/unconfigured Google provider never blocks
+the magic-link door beyond the millisecond-scale action round trip.
 
 ## Context
 
@@ -48,8 +72,10 @@ inline error style and NEVER affects the magic-link path (independent buttons, i
 executed via a RUNBOOK checklist.** Client ID/secret are pasted into Supabase's Google-provider
 settings (they never enter the repo, `.env`, or Vercel — consistent with the secrets convention).
 No new app env vars (`NEXT_PUBLIC_APP_URL` already exists). Until the owner completes the dashboard
-steps, the button fails soft with the standard error copy while magic link keeps working — the
-provider config is therefore NOT a deploy-order hazard.
+steps, the button fails soft while magic link keeps working — the provider config is therefore NOT a
+deploy-order hazard. *(As-built refinement, measured: pre-configuration the failure surfaces as a
+silent bounce back to `/login?error=auth` via Supabase's authorize endpoint, not as the inline error
+copy — see the as-built note above and the RUNBOOK WP28 section.)*
 
 **D5 — Testing: hermetic for our code, a supervised live checklist for the round trip.** The OAuth
 dance itself (Google ↔ Supabase) cannot be exercised hermetically; our code CAN be: the new action
