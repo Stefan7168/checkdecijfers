@@ -33,6 +33,13 @@ export interface TriggerOnboardingInput {
   topicTerm: string;
   /** The finder's 0..1 confidence in the pick. */
   finderConfidence: number;
+  /** WP27 stage B (ADR 027 D2a): the finder's candidate chain (pick first,
+   * then sanitized alternativeIds, cap 3) — persisted on the pending row for
+   * stage C's fit gate. REQUIRED, not optional: an optional carrier is exactly
+   * how a chain link gets silently skipped (PR-#17 review). The trigger only
+   * CARRIES it; debit amount, idempotency keys and refund semantics are
+   * untouched (the money invariant). */
+  candidateIds: string[];
   /** The acknowledgment's audit_answers row id, when it was recorded. Stored
    * on the pending row for the dashboard join; null when the audit write
    * failed (the acknowledgment still shows, per respond-audited's fail-closed
@@ -99,6 +106,7 @@ export async function triggerOnboarding(
         topicTerm: input.topicTerm,
         tableId: input.tableId,
         finderConfidence: input.finderConfidence,
+        candidateIds: input.candidateIds,
         debitTransactionId: debit.id,
         ackAuditAnswerId: input.ackAuditAnswerId,
       });

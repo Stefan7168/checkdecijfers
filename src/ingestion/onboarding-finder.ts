@@ -73,6 +73,13 @@ export function buildOnboardingFinder(deps: OnboardingFinderDeps): TableFinder {
         topicTerm: term,
         confidence: outcome.confidence,
         alreadyPending: active !== null,
+        // WP27 stage B (ADR 027 D2a): THE constructing link of the candidate
+        // chain — pick first, then the rerank's allowlist-sanitized
+        // alternativeIds (never contain the pick, order preserved), cap 3.
+        // Every link downstream only CARRIES this list; skip this line and
+        // candidate_ids stays [] in production even though everything
+        // typechecks (PR-#17 review, session 31).
+        candidateIds: [outcome.pick.tableId, ...outcome.alternativeIds].slice(0, 3),
       };
     } catch {
       return null;

@@ -52,6 +52,7 @@ describe('createPendingRequest', () => {
         topicTerm: 'zonnestroom',
         tableId: '82610NED',
         finderConfidence: 0.91,
+        candidateIds: ['82610NED', '70072NED', '37789ksz'],
         debitTransactionId: debitId,
       });
       expect(row.status).toBe('pending');
@@ -60,6 +61,59 @@ describe('createPendingRequest', () => {
       expect(row.debitTransactionId).toBe(debitId);
       expect(row.ackAuditAnswerId).toBeNull();
       expect(row.finishedAt).toBeNull();
+      // WP27 stage B: the candidate chain persists verbatim (pick first, order
+      // preserved) and the fit-gate columns start unset (stage C fills them).
+      expect(row.candidateIds).toEqual(['82610NED', '70072NED', '37789ksz']);
+      expect(row.resolvedTableId).toBeNull();
+    });
+  });
+
+  it('WP27 stage B: the chain round-trips through a fresh read (fromRow, not just returning *)', async () => {
+    await withDb(async (db) => {
+      const { userId, requestId, debitId } = await setupDebitedUser(db);
+      await createPendingRequest(db, {
+        userId,
+        requestId,
+        questionText: 'q',
+        topicTerm: 't',
+        tableId: '82610NED',
+        finderConfidence: 0.9,
+        candidateIds: ['82610NED', '70072NED'],
+        debitTransactionId: debitId,
+      });
+      const read = await findActiveRequest(db, userId, '82610NED');
+      expect(read!.candidateIds).toEqual(['82610NED', '70072NED']);
+      expect(read!.resolvedTableId).toBeNull();
+    });
+  });
+
+  it('WP27 stage B deploy-order safety: inserts + reads on a PRE-migration-015 schema (chain → [])', async () => {
+    // Migration 015 is file-only until stage D: production runs this code
+    // against the old schema for a while. The probe must route to the legacy
+    // INSERT (a missing-column statement error would abort the caller's money
+    // tx), and fromRow must default the absent columns.
+    await withDb(async (db) => {
+      await db.query(
+        `alter table pending_table_requests
+           drop column candidate_ids, drop column resolved_table_id, drop column fit_note`,
+      );
+      const { userId, requestId, debitId } = await setupDebitedUser(db);
+      const row = await createPendingRequest(db, {
+        userId,
+        requestId,
+        questionText: 'q',
+        topicTerm: 't',
+        tableId: '82610NED',
+        finderConfidence: 0.9,
+        candidateIds: ['82610NED', '70072NED'],
+        debitTransactionId: debitId,
+      });
+      expect(row.status).toBe('pending');
+      expect(row.candidateIds).toEqual([]);
+      expect(row.resolvedTableId).toBeNull();
+      const read = await findActiveRequest(db, userId, '82610NED');
+      expect(read!.candidateIds).toEqual([]);
+      expect(read!.resolvedTableId).toBeNull();
     });
   });
 
@@ -73,6 +127,7 @@ describe('createPendingRequest', () => {
         topicTerm: 't1',
         tableId: '82610NED',
         finderConfidence: 0.9,
+        candidateIds: [],
         debitTransactionId: debitId,
       });
 
@@ -86,6 +141,7 @@ describe('createPendingRequest', () => {
           topicTerm: 't1',
           tableId: '82610NED',
           finderConfidence: 0.9,
+          candidateIds: [],
           debitTransactionId: second.entry.id,
         }),
       ).rejects.toThrow();
@@ -104,6 +160,7 @@ describe('findActiveRequest', () => {
         topicTerm: 't',
         tableId: '82610NED',
         finderConfidence: 0.9,
+        candidateIds: [],
         debitTransactionId: debitId,
       });
       const found = await findActiveRequest(db, userId, '82610NED');
@@ -122,6 +179,7 @@ describe('findActiveRequest', () => {
         topicTerm: 't',
         tableId: '82610NED',
         finderConfidence: 0.9,
+        candidateIds: [],
         debitTransactionId: debitId,
       });
       await finalizeFailed(db, row.id, 'fetch failed: timeout');
@@ -161,6 +219,7 @@ describe('claimOnePending — single-threaded claim behavior', () => {
         topicTerm: 'ta',
         tableId: 'AAAA',
         finderConfidence: 0.9,
+        candidateIds: [],
         debitTransactionId: a.debitId,
       });
 
@@ -187,6 +246,7 @@ describe('claimOnePending — single-threaded claim behavior', () => {
         topicTerm: 'ta',
         tableId: 'AAAA',
         finderConfidence: 0.9,
+        candidateIds: [],
         debitTransactionId: a.debitId,
       });
       await finalizeFailed(db, rowA.id, 'nope');
@@ -204,6 +264,7 @@ describe('claimOnePending — single-threaded claim behavior', () => {
         topicTerm: 't',
         tableId: 'OLD1',
         finderConfidence: 0.9,
+        candidateIds: [],
         debitTransactionId: a.debitId,
       });
       const second = await reserveOnboardingDebit(db, a.userId, randomUUID(), 100);
@@ -215,6 +276,7 @@ describe('claimOnePending — single-threaded claim behavior', () => {
         topicTerm: 't',
         tableId: 'NEW1',
         finderConfidence: 0.9,
+        candidateIds: [],
         debitTransactionId: second.entry.id,
       });
 
@@ -265,6 +327,7 @@ describe('reclaimStaleRunning', () => {
         topicTerm: 't',
         tableId: 'AAAA',
         finderConfidence: 0.9,
+        candidateIds: [],
         debitTransactionId: a.debitId,
       });
       await db.query(
@@ -292,6 +355,7 @@ describe('reclaimStaleRunning', () => {
         topicTerm: 't',
         tableId: 'AAAA',
         finderConfidence: 0.9,
+        candidateIds: [],
         debitTransactionId: a.debitId,
       });
       await db.query(`update pending_table_requests set status = 'running', claimed_at = now() where id = $1`, [row.id]);
@@ -312,6 +376,7 @@ describe('reclaimStaleRunning', () => {
         topicTerm: 't',
         tableId: 'AAAA',
         finderConfidence: 0.9,
+        candidateIds: [],
         debitTransactionId: a.debitId,
       });
       await db.query(
@@ -344,6 +409,7 @@ describe('finalize* transitions', () => {
         topicTerm: 't',
         tableId: 'AAAA',
         finderConfidence: 0.9,
+        candidateIds: [],
         debitTransactionId: a.debitId,
       });
       await finalizeDelivered(db, row.id, { deliveryAuditAnswerId: 42 });
@@ -364,6 +430,7 @@ describe('finalize* transitions', () => {
         topicTerm: 't',
         tableId: 'AAAA',
         finderConfidence: 0.9,
+        candidateIds: [],
         debitTransactionId: a.debitId,
       });
       await finalizeUnanswerable(db, row.id, 'the re-run produced a clarification, not an answer');
@@ -383,6 +450,7 @@ describe('finalize* transitions', () => {
         topicTerm: 't',
         tableId: 'AAAA',
         finderConfidence: 0.9,
+        candidateIds: [],
         debitTransactionId: a.debitId,
       });
       await finalizeFailed(db, row.id, 'CBS fetch threw: ECONNRESET');
@@ -402,6 +470,7 @@ describe('finalize* transitions', () => {
         topicTerm: 't',
         tableId: 'AAAA',
         finderConfidence: 0.9,
+        candidateIds: [],
         debitTransactionId: a.debitId,
       });
       await finalizeDelivered(db, row.id, { deliveryAuditAnswerId: 1 });
@@ -421,6 +490,7 @@ describe('recordSliceNote', () => {
         topicTerm: 't',
         tableId: 'AAAA',
         finderConfidence: 0.9,
+        candidateIds: [],
         debitTransactionId: a.debitId,
       });
       await db.query(`update pending_table_requests set status = 'running' where id = $1`, [row.id]);
@@ -445,6 +515,7 @@ describe('listRequestsForHistory', () => {
         topicTerm: 'zonnestroom',
         tableId: '82610NED',
         finderConfidence: 0.91,
+        candidateIds: [],
         debitTransactionId: a.debitId,
       });
       const history = await listRequestsForHistory(db, a.userId);
@@ -473,6 +544,7 @@ describe('listRequestsForHistory', () => {
         topicTerm: 't',
         tableId: 'AAAA',
         finderConfidence: 0.9,
+        candidateIds: [],
         debitTransactionId: a.debitId,
       });
       await finalizeDelivered(db, row.id, { deliveryAuditAnswerId: 42 });
@@ -497,6 +569,7 @@ describe('listRequestsForHistory', () => {
         topicTerm: 't',
         tableId: 'AAAA',
         finderConfidence: 0.9,
+        candidateIds: [],
         debitTransactionId: a.debitId,
       });
       await compensate(db, a.userId, a.debitId, 100, null);
@@ -521,6 +594,7 @@ describe('listRequestsForHistory', () => {
         topicTerm: 't',
         tableId: 'AAAA',
         finderConfidence: 0.9,
+        candidateIds: [],
         debitTransactionId: a.debitId,
       });
       await compensate(db, a.userId, a.debitId, 100, null);
@@ -542,6 +616,7 @@ describe('listRequestsForHistory', () => {
         topicTerm: 't1',
         tableId: 'AAAA',
         finderConfidence: 0.9,
+        candidateIds: [],
         debitTransactionId: a.debitId,
       });
       const second = await reserveOnboardingDebit(db, a.userId, randomUUID(), 100);
@@ -553,6 +628,7 @@ describe('listRequestsForHistory', () => {
         topicTerm: 't2',
         tableId: 'BBBB',
         finderConfidence: 0.9,
+        candidateIds: [],
         debitTransactionId: second.entry.id,
       });
       await createPendingRequest(db, {
@@ -562,6 +638,7 @@ describe('listRequestsForHistory', () => {
         topicTerm: 't3',
         tableId: 'CCCC',
         finderConfidence: 0.9,
+        candidateIds: [],
         debitTransactionId: other.debitId,
       });
 

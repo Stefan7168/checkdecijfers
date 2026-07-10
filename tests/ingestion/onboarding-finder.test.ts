@@ -60,6 +60,34 @@ describe('buildOnboardingFinder — the production TableFinder closure (WP16 sub
     expect(routing!.tableId).toBeTruthy();
     expect(routing!.topicTerm).toBe(CONFIDENT_TOPIC);
     expect(routing!.alreadyPending).toBe(false);
+    // WP27 stage B: no alternatives from the rerank → the chain is exactly
+    // the pick (never empty on a confident routing).
+    expect(routing!.candidateIds).toEqual([routing!.tableId]);
+  });
+
+  it('WP27 stage B: constructs the candidate chain — pick first, then sanitized alternatives, cap 3', async () => {
+    // THE constructing link (PR-#17 review): candidateIds is BUILT here, not
+    // carried — [pick, ...alternativeIds].slice(0, 3). The stub hands back
+    // every other shortlist id as an alternative so the cap must bind.
+    let seenShortlist: CatalogCandidate[] = [];
+    const stubWithAlternatives: RerankFn = (_query, shortlist) => {
+      seenShortlist = shortlist;
+      return Promise.resolve({
+        tableId: shortlist[0]!.tableId,
+        confidence: 0.95,
+        reading: 'stub',
+        alternativeIds: shortlist.slice(1).map((c) => c.tableId),
+      });
+    };
+    const finder = buildOnboardingFinder({ db, userId: randomUUID(), rerank: stubWithAlternatives });
+    const routing = await finder(CONFIDENT_TOPIC, QUESTION);
+    expect(routing).not.toBeNull();
+    // Guard: the fixture must offer enough candidates for the cap to bind —
+    // if this fails the catalog fixture shrank, not the finder.
+    expect(seenShortlist.length).toBeGreaterThanOrEqual(4);
+    expect(routing!.candidateIds).toEqual(seenShortlist.slice(0, 3).map((c) => c.tableId));
+    expect(routing!.candidateIds[0]).toBe(routing!.tableId);
+    expect(routing!.candidateIds).toHaveLength(3);
   });
 
   it('threads the FULL question into the rerank query (WP27 stage A, ADR 027 D3a)', async () => {
@@ -130,6 +158,7 @@ describe('buildOnboardingFinder — the production TableFinder closure (WP16 sub
       topicTerm: CONFIDENT_TOPIC,
       tableId: probe!.tableId,
       finderConfidence: 0.95,
+      candidateIds: [],
       debitTransactionId: debit.entry.id,
     });
     // Now the SAME user asking again sees alreadyPending.
@@ -152,6 +181,7 @@ describe('buildOnboardingFinder — the production TableFinder closure (WP16 sub
       topicTerm: CONFIDENT_TOPIC,
       tableId: probe!.tableId,
       finderConfidence: 0.95,
+      candidateIds: [],
       debitTransactionId: debit.entry.id,
     });
     const userB = randomUUID();

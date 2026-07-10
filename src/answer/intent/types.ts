@@ -226,6 +226,11 @@ export type ParseOutcome =
       /** true → this (user, table) already has an active job: the acknowledgment
        * says so and NO new debit happens. false → first ask: trigger the job. */
       alreadyPending: boolean;
+      /** WP27 stage B (ADR 027 D2a): the finder's candidate chain (pick first,
+       * then sanitized alternativeIds, cap 3) — carried verbatim from
+       * OnboardingRouting toward the OnboardingEnvelope so the trigger can
+       * persist it for stage C's fit gate. */
+      candidateIds: string[];
     });
 
 // ---------------------------------------------------------------------------
