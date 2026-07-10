@@ -162,6 +162,15 @@ export interface AnswerResponse extends ResponseBase {
   /** Audit seams (R8): the full parse and query outcomes. */
   parse: ParseOutcome;
   result: ValidatedResult;
+  /** WP29 (#73, ADR 029 D4): servability-gated follow-up chip texts — a
+   * STRUCTURAL field assembled post-compose like `chart`, so the R8-audited
+   * `text` string is byte-untouched. [] when no candidate survived the
+   * dry-run gate (the UI then renders no chip block). Every chip passed the
+   * echoServability dry-run in THIS request; copy is a deterministic Dutch
+   * template over registry labels (no LLM, no numbers, no claims —
+   * suggestions.ts). ADDITIVE: pre-WP29 audit rows lack the field; readers
+   * treat absence as [] (reconstruct.ts checks only the fields it names). */
+  suggestions: string[];
 }
 
 export interface ClarificationResponse extends ResponseBase {

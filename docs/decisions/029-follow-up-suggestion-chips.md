@@ -1,7 +1,53 @@
 # ADR 029 — Follow-up suggestion chips under an answer (#73, owner request 2026-07-08)
 
-**Status:** accepted (design frozen session 30). Build not started — execute brief:
-[session-briefs/2026-07-08-follow-up-chips-brief.md](../session-briefs/2026-07-08-follow-up-chips-brief.md) (WP29).
+**Status:** accepted (design frozen session 30); **BUILT as WP29 (session 35, 2026-07-11,
+autonomous, branch `wp29-follow-up-chips` per #118)** — execute brief:
+[session-briefs/2026-07-08-follow-up-chips-brief.md](../session-briefs/2026-07-08-follow-up-chips-brief.md).
+
+## As-built note (WP29, 2026-07-11)
+
+Built exactly per D1–D4; the deliberate micro-refinements, all inside the design:
+
+- **`src/answer/respond/suggestions.ts`** — `buildSuggestions(intent, result, check)`: the four
+  D1 generators in fixed priority, each candidate dry-run through the injected `ServabilityCheck`
+  (the same callback type policy.ts uses; respondToIntent constructs it as a closure over
+  `echoServability`). Cap 3 (`MAX_SUGGESTIONS`). Whole-body fail-open to `[]` PLUS a second
+  fail-open belt at the respond.ts call site — a suggestions hiccup can never cost the paid answer.
+- **The dry-run IS the loadedness check** (no db access in the module): generator 1 probes
+  next-then-previous neighbor; generator 2 probes a five-period window ending at the answered
+  period, then the three-period minimum (the "≥3 loaded" floor) — a window the dry-run accepts is
+  gap-free by runQuery's own completeness pass. Generator 2 is skipped when the answer already IS
+  a series (the chip would re-ask the answered question).
+- **Inclusive ranges say "tot en met"** (not the brief's "van X tot Y" sketch): matches the #75
+  example chip and policy.ts's own range options, and removes the exclusive-"tot" re-parse
+  ambiguity D3 accepts as residual risk.
+- **Region variant**: regional ⟺ the answered intent carries region codes (resolveRegions emits
+  none for national-only measures). Sub-national answer → the national figure (intent region
+  `NL01`, CBS's standard country code — dry-run-gated, so a table with a different code just drops
+  the chip); national answer → the G4 gemeente comparison (stable CBS codes, copy says "Den Haag",
+  the parser's own alias resolves it). Copy for every generator names the answered regions
+  explicitly (D3's fully-explicit rule), via the cells' own CBS labels.
+- **Generator 4 never fires on the Phase-0 seed** (every seeded table carries exactly one
+  canonical measure) — pinned by test with an injected sibling registry; it activates when a
+  table gains a second canonical measure.
+- **Envelope**: `AnswerResponse.suggestions: string[]` (required, default `[]`), assembled
+  post-compose in `respondToIntent` — the ONE construction site both entry points share, so
+  first-turn and clarification-reply answers get chips identically. `text` byte-identity is
+  pinned by test (B3 golden, sync-date spliced from the structural field). Additive for R8:
+  reconstruct.ts checks only fields it names; pre-WP29 rows simply lack the field.
+- **Web**: chips render under the answer in `chat.tsx` with the #75 classes and the #75 handler
+  verbatim (`setInput(question)` — fill, never send); empty `suggestions` renders nothing.
+  `?? []` guards only the deploy-window skew (old server, new client).
+- Verified: full gate green (backend suite incl. 12 new tests, benchmark 14/14 + 6/6 +
+  0 fabricated, web suite incl. 2 new chip tests, both typechecks); prompt/fixture files
+  byte-untouched in the PR diff.
+- **Adversarial review (5 lenses × dual refuting skeptics, 2026-07-11):** the three
+  heavyweight lenses CLEAN (R7 servability gating, R8/audit byte-discipline, money/entry-points);
+  one generator finding refuted by both skeptics (sameTopic plural-template wording —
+  unreachable on the Phase-0 seed, activates only with a future second measure per table);
+  one CONFIRMED test-adequacy gap — no pin proved suggestions also ride the warn-and-serve
+  STALE answer branch (a mutant skipping chips on stale answers passed the whole gate) —
+  closed same session with a mutation-verified test (the mutant now fails exactly that pin).
 
 ## Context
 
