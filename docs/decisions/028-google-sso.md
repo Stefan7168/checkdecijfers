@@ -16,8 +16,14 @@ inline error copy; the browser round-trips to Supabase, which rejects the disabl
 bounces to `/login?error=auth` (the callback's existing no-code path) — a silent return to the login
 page. Fail-soft still holds (no crash, no session, magic link untouched); the inline Dutch copy
 covers server-side failures (missing env / Supabase client error). The RUNBOOK owner-steps section
-documents this so the owner isn't surprised before completing the dashboard config. The D2 linking
-verification remains the owner's post-merge live step (open-questions [#122](../open-questions.md)).
+documents this so the owner isn't surprised before completing the dashboard config. **D2 is now
+VERIFIED (2026-07-10, same day, owner present, live production — open-questions [#122](../open-questions.md) RESOLVED):**
+same-e-mail Google login linked to the EXISTING user (identities `[email]` → `[email, google]`, user
+count and grant count unchanged — no duplicate grant), and a fresh-e-mail Google login created
+exactly ONE new user with exactly ONE +100 grant. Config as-executed (incl. Google's secret-shown-
+once gotcha and the "missing OAuth secret" 400 signature) is in the RUNBOOK WP28 section. The
+consent screen shows the raw Supabase project domain — owner wants the product domain there once
+[#7](../open-questions.md) lands (recorded on that row; also a revisit trigger below).
 One precision on the trade-offs' "no shared failure mode" line, raised by the pre-PR review: the two
 buttons DO share the single `busy` flag (brief-mandated, anti-double-submit), so while a Google
 action call is in flight both doors are disabled. This does not couple the doors to Google's
