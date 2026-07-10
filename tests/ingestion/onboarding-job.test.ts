@@ -25,7 +25,11 @@ import {
   getPendingRequest,
   setResolvedTable,
 } from '../../src/ingestion/onboarding-store.ts';
-import type { MeasureFitFn, MeasureFitResult } from '../../src/ingestion/onboarding-fit.ts';
+import {
+  DEFAULT_MEASURE_FIT_CONFIG,
+  type MeasureFitFn,
+  type MeasureFitResult,
+} from '../../src/ingestion/onboarding-fit.ts';
 import { onboardedKey } from '../../src/ingestion/onboarding-vocab.ts';
 import {
   MAX_ATTEMPTS,
@@ -727,6 +731,39 @@ describe('runOnboardingJob — fit gate: candidate fallback (WP27 stage C)', () 
       );
       expect(summary.processed!.outcome).toBe('delivered');
       expect(script.calls).toEqual([TABLE, STOCK_TABLE]);
+      const row = await getPendingRequest(h.db, pendingId);
+      expect(row!.resolvedTableId).toBe(STOCK_TABLE);
+    } finally {
+      await h.close();
+    }
+  });
+
+  it('a verdict EXACTLY at the acceptance threshold is ACCEPTED — the boundary is inclusive (>=)', async () => {
+    // Stage-C adversarial review finding (mutation-confirmed by both
+    // skeptics): no test supplied confidence === acceptThreshold, so >= vs >
+    // was unpinned — exactly the line where accept-vs-honest-refund is
+    // decided. References the CONSTANT (not a literal) so stage D's
+    // recalibration keeps this boundary pinned at whatever the calibrated
+    // value becomes.
+    const h = await harness(bijstandSource());
+    try {
+      const script = fitScript({
+        [STOCK_TABLE]: {
+          measureCode: STOCK_MEASURE,
+          confidence: DEFAULT_MEASURE_FIT_CONFIG.acceptThreshold,
+          reading: 'precies op de drempel',
+        },
+      });
+      const { pendingId } = await queueRequest(h.db, BIJSTAND_QUESTION, 'bijstand', {
+        tableId: STOCK_TABLE,
+        candidateIds: [STOCK_TABLE],
+      });
+      const summary = await runOnboardingJob(
+        h.deps({ fit: script.fit, intentClient: intentStub(2023, STOCK_TABLE, STOCK_MEASURE) }),
+      );
+      // With a single candidate, a >-mutation would reject it → unanswerable;
+      // the inclusive boundary must deliver.
+      expect(summary.processed!.outcome).toBe('delivered');
       const row = await getPendingRequest(h.db, pendingId);
       expect(row!.resolvedTableId).toBe(STOCK_TABLE);
     } finally {
