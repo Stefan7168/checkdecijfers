@@ -1,0 +1,72 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/83163NED/$metadata#Properties",
+ "Identifier": "83163NED",
+ "Title": "Huurverhoging woningen; soort verhuur",
+ "Description": "Deze tabel bevat cijfers over de gemiddelde huurverhoging (in- en exclusief huurharmonisatie) van gereguleerde woningen (uitgesplitst naar soort verhuurder), middenhuurwoningen en geliberaliseerde huurwoningen. \r\n\r\nGegevens beschikbaar vanaf: 2015\r\n\r\nStatus van de cijfers: \r\nDe voorlopige uitkomsten worden in augustus gepubliceerd en hebben betrekking op de huurverhoging die in juli is doorgevoerd. Bij de publicatie in september worden de uitkomsten definitief. Verschillen tussen het voorlopige en het definitieve cijfer komen door nieuw bronmateriaal.\r\n\r\nWijzigingen per 5 september 2025:\r\nDe definitieve cijfers van 2025 zijn gepubliceerd.\r\n\r\nWijzigingen per 12 augustus 2025:\r\nDe categorie Middenhuur is toegevoegd aan de dimensie Soort verhuur.\r\n\r\nWanneer komen er nieuwe cijfers?\r\nDe voorlopige cijfers van 2026 worden in augustus 2026 gepubliceerd.\r\n\r\n",
+ "Language": "nl",
+ "Authority": "https://standaarden.overheid.nl/owms/terms/Centraal_Bureau_voor_de_Statistiek",
+ "Modified": "2025-09-05T06:30:00+02:00",
+ "ReleaseDate": "2025-09-05T06:30:00+02:00",
+ "ModificationDate": "2025-09-05T06:30:00+02:00",
+ "TemporalCoverage": "2015 - 2025",
+ "Catalog": "CBS",
+ "Publisher": "https://standaarden.overheid.nl/owms/terms/Centraal_Bureau_voor_de_Statistiek",
+ "ContactPoint": "infoservice@cbs.nl",
+ "Version": "202509050630",
+ "VersionNotes": "",
+ "VersionReason": "Bijstelling",
+ "Frequency": "Per jaar",
+ "Status": "Regulier",
+ "ObservationCount": 130,
+ "ObservationsModified": "2025-09-05T06:30:00+02:00",
+ "DatasetType": "Numeric",
+ "GraphTypes": "Table,Bar",
+ "License": "https://creativecommons.org/licenses/by/4.0/",
+ "Source": "CBS.",
+ "Summary": "De gemiddelde verhoging van de woninghuur naar soort verhuurder;\nGeliberaliseerde en gereguleerde verhuur (sociale en overige verhuurders)",
+ "LongDescription": "INHOUDSOPGAVE\r\n\r\n1. Toelichting\r\n2. Definities en verklaring van symbolen\r\n3. Koppelingen naar relevante tabellen en artikelen\r\n4. Bronnen en methoden\r\n5. Meer informatie \r\n\r\n1. TOELICHTING\r\n\r\nDeze tabel bevat cijfers over de gemiddelde huurverhoging (in- en exclusief huurharmonisatie) van gereguleerde woningen (uitgesplitst naar soort verhuurder), middenhuurwoningen en geliberaliseerde huurwoningen. \r\n\r\nGegevens beschikbaar vanaf: 2015\r\n\r\nStatus van de cijfers: \r\nDe voorlopige uitkomsten worden in augustus gepubliceerd en hebben betrekking op de huurverhoging die in juli is doorgevoerd. Bij de publicatie in september worden de uitkomsten definitief. Verschillen tussen het voorlopige en het definitieve cijfer komen door nieuw bronmateriaal.\r\n\r\nWijzigingen per 5 september 2025:\r\nDe definitieve cijfers van 2025 zijn gepubliceerd.\r\n\r\nWijzigingen per 12 augustus 2025:\r\nDe categorie Middenhuur is toegevoegd aan de dimensie Soort verhuur.\r\n\r\nWanneer komen er nieuwe cijfers?\r\nDe voorlopige cijfers van 2026 worden in augustus 2026 gepubliceerd.\r\n\r\n2. DEFINITIES EN VERKLARING VAN SYMBOLEN\r\n\r\nDefinities:\r\nHuurverhoging:\r\nDe huurverhoging in deze tabel is de gemiddelde verandering van de huur in een jaar tijd. De Rijksoverheid bepaalt elk jaar hoeveel de huur maximaal verhoogd mag worden. Voor actuele informatie over de maximale huurstijging zie: <a href='https://www.rijksoverheid.nl/onderwerpen/huurverhoging'>Rijksoverheid; huurverhoging</a>.\r\n\r\nHuurharmonisatie: \r\nBij wisseling van huurder mag de huurprijs van een woning meer stijgen dan de voor dat jaar geldende maximale huurverhoging. Dit wordt huurharmonisatie genoemd. Deze verhoging staat los van de jaarlijkse huuraanpassing per 1 juli en kan op elk moment worden toegepast. De huurprijs na harmonisatie mag de maximaal toegestane huur op basis van het waarderingsstelsel van het Ministerie van Binnenlandse Zaken en Koninkrijksrelaties niet overschrijden.\r\n\r\nGereguleerde huurcontracten:\r\nEen gereguleerde huurwoning is een sociale huurwoning. Een woning is een gereguleerde huurwoning wanneer de huur bij aanvang van het huurcontract onder of op de op dat moment geldende grens ligt. Ook het aantal WWS-punten speelt een rol. \r\n\r\nMiddenhuurcontracten:\r\nMet ingang van 1 juli 2024 is de Wet betaalbare huur van kracht gegaan. Hiermee is er een nieuwe categorie huurwoning toegevoegd aan de bestaande categorieën: middenhuurwoningen. Een middenhuurwoning is een huurwoning waarvan het huurcontract is ingegaan na 1 juli 2024 en waarbij de huur bij aanvang van het huurcontract tussen de voor deze categorie bepaalde onder- en bovengrens ligt. Ook het aantal WWS-punten speelt een rol. \r\n\r\nGeliberaliseerde huurcontracten:\r\nEen huurcontract is geliberaliseerd als de huur bij het aanvangen van het contract boven een zekere grens ligt. Deze grens was tot 1 juli 2024 de liberalisatiegrens, hierna geldt dat de huur bij aanvang van het contract boven de maximale grens voor middenhuurwoningen moet liggen. De geliberaliseerde huurwoningen behoren tot de 'vrije sector'. Hierbij heeft een verhuurder meer vrijheid bij het bepalen van de huurprijs. Ook het aantal WWS-punten speelt een rol. Voor actuele informatie over de huursectoren, zie <a href='https://www.rijksoverheid.nl/onderwerpen/huurwoning-zoeken/vraag-en-antwoord/wat-is-het-verschil-tussen-een-sociale-huurwoning-een-middenhuurwoning-en-een-huurwoning-in-de-vrije-sector'>Rijksoverheid</a>.\r\n\r\nSociale verhuurders:\r\nOnder de groep sociale verhuurders wordt verstaan alle toegelaten instellingen (woningbouwvereniging, woningstichting, woningcorporatie). Tot en met 1 juli 2024 werd de overheid hier ook toe gerekend. \r\n\r\nOverige verhuurders:\r\nOnder de groep overige verhuurders vallen: bedrijven, particulieren, institutionele beleggers, niet-commerciële instellingen en (na 1 juli 2024) de overheid.\r\n\r\nRenovatie:\r\nRenovatie is het herstellen en wanneer nodig gedeeltelijk vernieuwen van een bestaand pand, waardoor het weer bruikbaar wordt naar de huidige maatstaven en normen.\r\nEen huurstijging door renovatie wordt niet meegenomen in de berekening van de huurontwikkeling. Ook hier geldt dat de nieuwe huurprijs de maximaal toegestane huur niet mag overschrijden.\r\n\r\nVerklaring van symbolen:\r\nniets (blanco)\t: het cijfer kan op logische gronden niet voorkomen\r\n. \t\t: het cijfer is onbekend, onvoldoende betrouwbaar of geheim\r\n*\t\t: voorlopige cijfers\r\n**\t\t: nader voorlopige cijfers\r\n\r\n3. KOPPELINGEN NAAR RELEVANTE TABELLEN EN ARTIKELEN\r\n\r\nRelevante tabellen:\r\nMeer tabellen over de verhoging van de woninghuur zijn te vinden in StatLine onder het thema <a href='https://opendata.cbs.nl/#/CBS/nl/navigatieScherm/thema?themaNr=83388'>Huurverhoging woningen</a>.\r\n\r\nDe Nederlandse consumentenprijsindex is te vinden in de volgende tabel:\r\n<a href='https://opendata.cbs.nl/statline/#/CBS/nl/dataset/83131NED'>Consumentenprijzen; prijsindex 2015 = 100</a>.\r\n\r\nRelevante artikelen:\r\nDe regels voor de jaarlijkse huurverhoging worden door de overheid gepubliceerd, zie: <a href='https://www.rijksoverheid.nl/onderwerpen/huurverhoging'>Rijksoverheid; huurverhoging</a>.\r\n\r\nWilt u weten hoe u uw huurverhoging kunt berekenen, ga naar de <a href='https://www.cbs.nl/nl-nl/onze-diensten/huurverhoging-berekenen'>indexeringsmodule huurprijsaanpassing</a>.\r\n\r\nMeer informatie is te vinden op de themapagina <a href='https://www.cbs.nl/nl-nl/economie/prijzen'>Prijzen</a>.\r\n\r\n4. BRONNEN EN METHODEN\r\n\r\nDe onderzoeksmethode van deze tabel is te vinden in de onderzoeksbeschrijving <a href='http://www.cbs.nl/nl-NL/menu/themas/prijzen/methoden/dataverzameling/korte-onderzoeksbeschrijvingen/gemiddelde-verhoging-woninghuur.htm'>Gemiddelde verhoging woninghuur</a>.\r\n\r\n5. MEER INFORMATIE\r\n\r\n<a href='https://www.cbs.nl/nl-nl/over-ons/contact/infoservice'>Infoservice</a>\r\n\r\nCopyright (c) Centraal Bureau voor de Statistiek, Den Haag/Heerlen \r\nVerveelvoudiging is toegestaan, mits het CBS als bron wordt vermeld.\r\n",
+ "Provenance": [
+  {
+   "Title": "Gemiddelde verhoging woninghuur",
+   "Url": "http://www.cbs.nl/nl-NL/menu/themas/prijzen/methoden/dataverzameling/korte-onderzoeksbeschrijvingen/gemiddelde-verhoging-woninghuur.htm"
+  }
+ ],
+ "RelatedSources": [
+  {
+   "Title": "Huurverhoging woningen",
+   "Url": "https://opendata.cbs.nl/#/CBS/nl/navigatieScherm/thema?themaNr=83388"
+  },
+  {
+   "Title": "Consumentenprijzen; prijsindex 2015 = 100",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/dataset/83131NED"
+  },
+  {
+   "Title": "Rijksoverheid; huurverhoging",
+   "Url": "https://www.rijksoverheid.nl/onderwerpen/huurverhoging"
+  },
+  {
+   "Title": "indexeringsmodule huurprijsaanpassing",
+   "Url": "https://www.cbs.nl/nl-nl/onze-diensten/huurverhoging-berekenen"
+  },
+  {
+   "Title": "Prijzen",
+   "Url": "https://www.cbs.nl/nl-nl/economie/prijzen"
+  }
+ ],
+ "Distributions": [
+  {
+   "Format": "csv",
+   "MediaType": "csv",
+   "DownloadUrl": "https://datasets.cbs.nl/csv/CBS/nl/83163NED",
+   "AccessUrl": "https://dataportal.cbs.nl/detail/CBS/83163NED",
+   "Language": "nl"
+  },
+  {
+   "Format": "odata",
+   "MediaType": "odata",
+   "DownloadUrl": "https://datasets.cbs.nl/odata/v1/CBS/83163NED",
+   "AccessUrl": "https://dataportal.cbs.nl/detail/CBS/83163NED",
+   "Language": "nl"
+  }
+ ]
+}

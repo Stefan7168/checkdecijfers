@@ -138,10 +138,12 @@ describe('serializeMeasureList / buildMeasureFitRequest — metadata only (R1), 
     expect(request.system).not.toMatch(/\b20\d{2}\b/);
   });
 
-  it('the acceptance threshold is the documented pre-calibration placeholder', () => {
-    // Stage D calibrates from benchmark/measurefit-labelled-set.json; until
-    // then the value must stay at the finder's conservative 0.8 floor. A
-    // recalibration should change ONE constant, and this test, knowingly.
+  it('the acceptance threshold is the stage-D calibrated value', () => {
+    // Calibrated 2026-07-10 (WP27 stage D) from
+    // benchmark/measurefit-labelled-set.json: kept at 0.8 — measured
+    // correct-accept floor 0.95, wrong-code ceiling unmeasured (zero wrong
+    // picks), so the conservative floor stands. A recalibration should change
+    // ONE constant, this test, and the fit-replay floor assertion, knowingly.
     expect(DEFAULT_MEASURE_FIT_CONFIG.acceptThreshold).toBe(0.8);
   });
 });

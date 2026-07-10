@@ -1,0 +1,93 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/83163NED/$metadata#PeriodenCodes",
+ "value": [
+  {
+   "Identifier": "2015JJ00",
+   "Index": 1,
+   "Title": "2015",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2016JJ00",
+   "Index": 2,
+   "Title": "2016",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2017JJ00",
+   "Index": 3,
+   "Title": "2017",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2018JJ00",
+   "Index": 4,
+   "Title": "2018",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2019JJ00",
+   "Index": 5,
+   "Title": "2019",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2020JJ00",
+   "Index": 6,
+   "Title": "2020",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2021JJ00",
+   "Index": 7,
+   "Title": "2021",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2022JJ00",
+   "Index": 8,
+   "Title": "2022",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2023JJ00",
+   "Index": 9,
+   "Title": "2023",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2024JJ00",
+   "Index": 10,
+   "Title": "2024",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2025JJ00",
+   "Index": 11,
+   "Title": "2025",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  }
+ ]
+}

@@ -1,0 +1,47 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/83163NED/$metadata#SoortVerhuurCodes",
+ "value": [
+  {
+   "Identifier": "T001549",
+   "Index": 1,
+   "Title": "Totaal",
+   "Description": "Totaal betreft een samentelling van geliberaliseerde en gereguleerde huur (verhuurd door: sociale verhuurders en overige verhuurders). Na 1 juli 2024 worden ook middenhuurwoningen in het totaal geteld.\r\n",
+   "DimensionGroupId": null
+  },
+  {
+   "Identifier": "A048269",
+   "Index": 2,
+   "Title": "Geliberaliseerde verhuur",
+   "Description": "Een huurcontract is geliberaliseerd als de huur bij het afsluiten van het contract boven een zekere grens ligt. De geliberaliseerde huurwoningen behoren tot de 'vrije sector'. Hierbij heeft een verhuurder meer vrijheid bij het bepalen van de huurprijs. Het puntensysteem voor huurwoningen en de maximale huurprijzen zijn hiervoor niet van toepassing.\r\n",
+   "DimensionGroupId": null
+  },
+  {
+   "Identifier": "A053178",
+   "Index": 3,
+   "Title": "Middenhuur",
+   "Description": "Een huurcontract is een middenhuurcontract als het contract is ingegaan na 1 juli 2024 en wanneer de aanvangshuur (huur bij aanvang van het huurcontract) tussen de voor deze categorie bepaalde onder- en bovengrens ligt. \r\n",
+   "DimensionGroupId": null
+  },
+  {
+   "Identifier": "A049497",
+   "Index": 4,
+   "Title": "Totaal; gereguleerd",
+   "Description": "Een gereguleerde huurwoning is een sociale huurwoning. Een woning is een gereguleerde huurwoning wanneer de aanvangshuur (huur bij aanvang van het huurcontract) onder de op dat moment geldende grens ligt.\r\n",
+   "DimensionGroupId": null
+  },
+  {
+   "Identifier": "A049498",
+   "Index": 5,
+   "Title": "Sociale verhuurders; gereguleerd",
+   "Description": "Onder de groep sociale verhuurders wordt verstaan alle toegelaten instellingen (woningbouwvereniging, woningstichting, woningcorporatie). Een gereguleerde huurwoning is een sociale huurwoning. Een woning is een gereguleerde huurwoning wanneer de aanvangshuur (huur bij aanvang van het huurcontract) onder de op dat moment geldende grens ligt.\r\n",
+   "DimensionGroupId": null
+  },
+  {
+   "Identifier": "A049499",
+   "Index": 6,
+   "Title": "Overige verhuurders; gereguleerd",
+   "Description": "Onder de groep overige verhuurders vallen: bedrijven, particulieren, institutionele beleggers, niet-commerciële instellingen en de overheid. Een gereguleerde huurwoning is een sociale huurwoning. Een woning is een gereguleerde huurwoning wanneer de aanvangshuur (huur bij aanvang van het huurcontract) onder de op dat moment geldende grens ligt.\r\n",
+   "DimensionGroupId": null
+  }
+ ]
+}

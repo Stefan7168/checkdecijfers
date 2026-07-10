@@ -34,6 +34,14 @@ const MAX_PAGES = 20;
 const FIXTURE_ONLY_TABLES: { id: string; observations: boolean }[] = [
   { id: '37789ksz', observations: true },
   { id: '85615NED', observations: false },
+  // WP27 stage D — measure-fit calibration set (schema-only, like 85615NED):
+  // onboarding-plausible tables whose measure lists exercise both sides of
+  // the fit verdict (benchmark/measurefit-labelled-set.json). Their
+  // observations are never read; the fit gate is metadata-only (R1).
+  { id: '80416ned', observations: false },
+  { id: '85554NED', observations: false },
+  { id: '84826NED', observations: false },
+  { id: '83163NED', observations: false },
 ];
 
 async function fetchJson(url: string): Promise<any> {

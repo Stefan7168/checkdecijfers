@@ -1,0 +1,67 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/85554NED/$metadata#Dimensions",
+ "value": [
+  {
+   "Identifier": "Geslacht",
+   "Title": "Geslacht",
+   "Description": "",
+   "MapYear": null,
+   "ReleasePolicy": null,
+   "Kind": "Dimension",
+   "ContainsGroups": false,
+   "ContainsCodes": true,
+   "CodesUrl": "https://datasets.cbs.nl/odata/v1/CBS/85554NED/GeslachtCodes",
+   "GroupsUrl": null
+  },
+  {
+   "Identifier": "Leeftijd",
+   "Title": "Leeftijd",
+   "Description": "",
+   "MapYear": null,
+   "ReleasePolicy": null,
+   "Kind": "Dimension",
+   "ContainsGroups": false,
+   "ContainsCodes": true,
+   "CodesUrl": "https://datasets.cbs.nl/odata/v1/CBS/85554NED/LeeftijdCodes",
+   "GroupsUrl": null
+  },
+  {
+   "Identifier": "Marges",
+   "Title": "Marges",
+   "Description": "",
+   "MapYear": null,
+   "ReleasePolicy": null,
+   "Kind": "Dimension",
+   "ContainsGroups": false,
+   "ContainsCodes": true,
+   "CodesUrl": "https://datasets.cbs.nl/odata/v1/CBS/85554NED/MargesCodes",
+   "GroupsUrl": null
+  },
+  {
+   "@odata.type": "#Cbs.Ccb.Models.GeoDimension",
+   "Identifier": "RegioS",
+   "Title": "Regio's",
+   "Description": "",
+   "MapYear": "2013",
+   "ReleasePolicy": null,
+   "Kind": "GeoDimension",
+   "ContainsGroups": true,
+   "ContainsCodes": true,
+   "CodesUrl": "https://datasets.cbs.nl/odata/v1/CBS/85554NED/RegioSCodes",
+   "GroupsUrl": "https://datasets.cbs.nl/odata/v1/CBS/85554NED/RegioSGroups"
+  },
+  {
+   "@odata.type": "#Cbs.Ccb.Models.TimeDimension",
+   "Identifier": "Perioden",
+   "Title": "Perioden",
+   "Description": "",
+   "MapYear": null,
+   "ReleasePolicy": true,
+   "Kind": "TimeDimension",
+   "ContainsGroups": true,
+   "ContainsCodes": true,
+   "CodesUrl": "https://datasets.cbs.nl/odata/v1/CBS/85554NED/PeriodenCodes",
+   "GroupsUrl": "https://datasets.cbs.nl/odata/v1/CBS/85554NED/PeriodenGroups"
+  }
+ ]
+}

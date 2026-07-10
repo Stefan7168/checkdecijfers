@@ -1,0 +1,15 @@
+{
+ "tableId": "80416ned",
+ "capturedAt": "2026-07-10T09:27:00.298Z",
+ "source": "https://datasets.cbs.nl/odata/v1/CBS/80416ned",
+ "sliceFilter": null,
+ "captureOnlySlice": null,
+ "observationRows": 22476,
+ "observationPages": [],
+ "files": {
+  "properties": "properties.json",
+  "dimensions": "dimensions.json",
+  "measure-codes": "measure-codes.json",
+  "codes-Perioden": "codes-Perioden.json"
+ }
+}

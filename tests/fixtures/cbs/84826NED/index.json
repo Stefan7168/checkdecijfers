@@ -1,0 +1,18 @@
+{
+ "tableId": "84826NED",
+ "capturedAt": "2026-07-10T09:27:05.474Z",
+ "source": "https://datasets.cbs.nl/odata/v1/CBS/84826NED",
+ "sliceFilter": null,
+ "captureOnlySlice": null,
+ "observationRows": 3587,
+ "observationPages": [],
+ "files": {
+  "properties": "properties.json",
+  "dimensions": "dimensions.json",
+  "measure-codes": "measure-codes.json",
+  "codes-BedrijfstakkenBranchesSBI2008": "codes-BedrijfstakkenBranchesSBI2008.json",
+  "codes-Geslacht": "codes-Geslacht.json",
+  "codes-Leeftijd": "codes-Leeftijd.json",
+  "codes-Perioden": "codes-Perioden.json"
+ }
+}
