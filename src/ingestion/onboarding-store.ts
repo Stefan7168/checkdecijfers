@@ -316,6 +316,32 @@ export async function recordSliceNote(db: Db, id: number, sliceNote: string): Pr
   await db.query(`update pending_table_requests set slice_note = $2 where id = $1`, [id, sliceNote]);
 }
 
+/** WP27 stage C (ADR 027 D2a): records the fit gate's ACCEPTED candidate on
+ * the row — the DB row AND the in-memory object the job keeps using, so a
+ * reclaimed retry resumes at ingest with this table (never a second fit
+ * loop) and the current invocation reads the same truth it just wrote.
+ * `table_id` is NEVER touched: it stays the finder's original pick, the
+ * (user, table) dedupe identity. `fit_note` is diagnostics only (measure code
+ * + one-line reading); delivery never consumes it.
+ *
+ * No pre-015 column probe here (unlike createPendingRequest): this function
+ * is only reachable for a row whose candidateIds is non-empty, which on a
+ * pre-015 schema never happens (the create-side probe drops the chain, so
+ * such rows read back [] = the legacy path that bypasses the fit gate). */
+export async function setResolvedTable(
+  db: Db,
+  row: PendingTableRequest,
+  resolvedTableId: string,
+  fitNote: string,
+): Promise<void> {
+  await db.query(`update pending_table_requests set resolved_table_id = $2, fit_note = $3 where id = $1`, [
+    row.id,
+    resolvedTableId,
+    fitNote,
+  ]);
+  row.resolvedTableId = resolvedTableId;
+}
+
 /** One user's onboarding request, shaped for the dashboard history join
  * (design §5-dashboard). `netCredits` is read straight from the ledger here
  * (not recomputed by the caller) so history.ts never needs to know

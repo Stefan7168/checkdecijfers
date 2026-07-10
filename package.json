@@ -34,6 +34,7 @@
     "gdpr:purge": "node --env-file=.env scripts/gdpr-purge.ts",
     "intent:eval": "node --env-file-if-exists=.env scripts/intent-eval.ts",
     "intent:record": "node --env-file-if-exists=.env scripts/intent-eval.ts --record",
+    "onboarding-delivery:record": "node --env-file=.env scripts/onboarding-delivery-record.ts",
     "clarify:eval": "node --env-file-if-exists=.env scripts/clarify-eval.ts",
     "clarify:record": "node --env-file-if-exists=.env scripts/clarify-eval.ts --record",
     "followup:eval": "node --env-file-if-exists=.env scripts/followup-eval.ts",
