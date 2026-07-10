@@ -1,0 +1,16 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/85554NED/$metadata#MeasureCodes",
+ "value": [
+  {
+   "Identifier": "D001908",
+   "Index": 5,
+   "Title": "Personen met een werkloosheidsuitkering",
+   "Description": "Personen met een uitkering op grond van de Werkloosheidswet (WW) waarbij voor seizoeninvloeden is gecorrigeerd.\r\n\r\nSeizoengecorrigeerd wil zeggen dat de maandcijfers geschoond zijn voor een jaarlijks terugkerend patroon van verschillen die normaal voor de tijd van het jaar zijn. Voor de jaarcijfers zijn geen seizoengecorrigeerde cijfers beschikbaar omdat binnen ieder afzonderlijk jaar dezelfde seizoeninvloeden een rol spelen.\r\n",
+   "MeasureGroupId": null,
+   "DataType": "Long",
+   "Unit": "aantal",
+   "Decimals": 0,
+   "PresentationType": "Absolute"
+  }
+ ]
+}

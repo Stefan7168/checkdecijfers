@@ -1,0 +1,18 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/80416ned/$metadata#Dimensions",
+ "value": [
+  {
+   "@odata.type": "#Cbs.Ccb.Models.TimeDimension",
+   "Identifier": "Perioden",
+   "Title": "Perioden",
+   "Description": "",
+   "MapYear": null,
+   "ReleasePolicy": false,
+   "Kind": "TimeDimension",
+   "ContainsGroups": true,
+   "ContainsCodes": true,
+   "CodesUrl": "https://datasets.cbs.nl/odata/v1/CBS/80416ned/PeriodenCodes",
+   "GroupsUrl": "https://datasets.cbs.nl/odata/v1/CBS/80416ned/PeriodenGroups"
+  }
+ ]
+}

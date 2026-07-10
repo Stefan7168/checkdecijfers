@@ -1,0 +1,38 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/80416ned/$metadata#MeasureCodes",
+ "value": [
+  {
+   "Identifier": "A047220",
+   "Index": 1,
+   "Title": "Benzine Euro95",
+   "Description": "Loodvrije motorbenzine met een octaangetal van 95. \r\nPompprijs inclusief accijns en btw.",
+   "MeasureGroupId": null,
+   "DataType": "Double",
+   "Unit": "euro/liter",
+   "Decimals": 3,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "A047219",
+   "Index": 2,
+   "Title": "Diesel",
+   "Description": "Brandstof voor dieselmotoren in het wegverkeer, ook wel bekend als autodiesel, autogasolie of autodieselolie (ADO). \r\nPompprijs inclusief accijns en btw.",
+   "MeasureGroupId": null,
+   "DataType": "Double",
+   "Unit": "euro/liter",
+   "Decimals": 3,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "A047221",
+   "Index": 3,
+   "Title": "Lpg",
+   "Description": "Lpg (Liquefied Petroleum Gas), wordt ook wel autogas genoemd en\r\nbestaat uit propaan en butaan.\r\nPompprijs inclusief accijns en btw.",
+   "MeasureGroupId": null,
+   "DataType": "Double",
+   "Unit": "euro/liter",
+   "Decimals": 3,
+   "PresentationType": null
+  }
+ ]
+}

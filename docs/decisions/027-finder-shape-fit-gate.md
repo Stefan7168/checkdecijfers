@@ -258,7 +258,8 @@ loop with errored-vs-verdict accounting — D2b: all-errored → `failed` with t
 message, any real verdict → `unanswerable` with the scoped message). `setResolvedTable` writes DB
 row + in-memory object; `fit_note` is diagnostics only. As-built notes:
 
-1. **Acceptance threshold 0.8 is a documented PRE-CALIBRATION placeholder** — stage D calibrates
+1. **Acceptance threshold 0.8 is a documented PRE-CALIBRATION placeholder** (✅ done — stage D
+   below calibrated it: kept at 0.8, measured) — stage D calibrates
    it from `benchmark/measurefit-labelled-set.json` (new, seeded there); the boundary is
    inclusive (`>=`) and PINNED by a test that references the constant (adversarial-review
    finding, mutation-confirmed: the comparator was previously unpinned at exactly the threshold).
@@ -274,6 +275,37 @@ row + in-memory object; `fit_note` is diagnostics only. As-built notes:
 Review: 5 lenses (money+terminal-state, brief-letter, safety, deploy-dormancy, test-mutation-
 resistance), dual skeptics — four lenses clean, two raw findings refuted, one confirmed (the
 threshold boundary above), fixed in-session.
+
+## As built — stage D (2026-07-10, session 33 — owner-supervised live step, [PR #22](https://github.com/Stefan7168/checkdecijfers/pull/22))
+
+Executed per the brief's § Stage D, owner present and confirming before every live action:
+
+1. **Migration 015 applied to production** (`npm run db:migrate`), per-migration check clean:
+   0 `anon`/`authenticated` grants, RLS on, all three columns with correct types/defaults
+   (`candidate_ids` → `'[]'`), every index — including the `pending_one_active_per_user_table`
+   dedupe — untouched. The pre-015 session-28 bijstand row reads back `candidate_ids: []`
+   (the D2c legacy path), live-confirmed.
+2. **Threshold CALIBRATED — kept at 0.8** ("calibrated, not moved", the finder's session-25
+   precedent). `benchmark/measurefit-labelled-set.json` seeded per the brief: 6 cases (3 accept /
+   3 `geen`) over both bijstand tables + 4 new onboarding-plausible schema-only fixtures
+   (`80416ned` pump prices, `85554NED` WW, `84826NED` wrong-entity trap, `83163NED` wrong-kind
+   trap), labels verified from live CBS measure lists. Live Haiku record (single run, temp 0):
+   **6/6 correct, every verdict at confidence 0.95** — correct-accept floor 0.95 (uniform, margin
+   0.15 above the threshold), wrong-code ceiling UNMEASURED (zero wrong picks), so raising the
+   threshold would be a guess, not a calibration. Hermetic replay e2e now on the gate
+   (`tests/ingestion/fit-replay.test.ts`), accept cases pinned `>=` the constant.
+3. **The owner's live acceptance test PASSED — #111 closes.** The dead-end question *"Hoeveel
+   mensen zaten er in 2023 in de bijstand?"* ANSWERED in production: *"Het totaal aantal
+   bijstandsuitkeringen kwam in 2023 uit op 390,2 x 1000"* (audit answer 240; measure
+   `D000203_2` named verbatim per amendment A1; CBS definition + CC BY attribution). Mechanics
+   live-verified on row 4: finder pick `37789ksz` at 0.85 on the real 4,858-row mirror, chain
+   `["37789ksz","85585NED","85692NED"]` recorded, fit gate accepted candidate 1 (`fit_note` =
+   D000203_2 + a sound Dutch stock-vs-flow reading), kick claimed the job **2 seconds** after the
+   trigger (not the daily backstop), question → delivered answer in **88 seconds**, 100 credits
+   debited and KEPT (no refund — ledger-verified).
+
+Operational addition: `scripts/force-ipv4.mjs` is now committed (the lessons-learned IPv4-force
+preload, 3rd recurrence = standing requirement for owner-run CBS fetches; RUNBOOK line added).
 
 ## Revisit triggers
 
