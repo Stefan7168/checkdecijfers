@@ -29,7 +29,7 @@ function recordFor(response: RefusalResponse): AuditRecord {
 
 function onboardingResponse(already: boolean): RefusalResponse {
   const built = buildOnboardingRefusal(
-    { tableId: '82610NED', topicTerm: 'zonnestroom', confidence: 0.91 },
+    { tableId: '82610NED', topicTerm: 'zonnestroom', confidence: 0.91, candidateIds: ['82610NED'] },
     already,
   );
   return toRefusalResponse({ question: 'hoeveel zonnestroom in 2024', built, parse: null, queryRefusal: null });
@@ -69,6 +69,7 @@ describe('onboarding acknowledgment audit round-trip (WP16 sub-part 2, R8)', () 
       tableId: 'X',
       topicTerm: 't',
       confidence: 1,
+      candidateIds: ['X'],
     };
     const report = reconstructionReport(tampered);
     expect(report.ok).toBe(false);

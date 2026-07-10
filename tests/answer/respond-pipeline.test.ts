@@ -25,6 +25,7 @@ import {
   numbersInText,
   periodCodeNumbers,
 } from '../../src/answer/compose/format.ts';
+import type { TableFinder } from '../../src/answer/intent/policy.ts';
 import { CANONICAL_MEASURES } from '../../src/registry/defaults.ts';
 import { freshestForCanonical, runQuery } from '../../src/query/index.ts';
 import type { Db } from '../../src/db/types.ts';
@@ -240,6 +241,44 @@ describe('B15-B20 end-to-end (respondToQuestion, replayed fixtures)', () => {
     // values.
     expect(JSON.stringify(response)).not.toContain(String(key.freshestAvailable.value));
     expect(JSON.stringify(response)).not.toContain(String(key.freshestDefinitief.value));
+  });
+
+  it('WP27 stage B: an injected finder routes B15 to onboarding_pending with the candidate chain carried VERBATIM (the live respond.ts construction site)', async () => {
+    // Pins the ONE construction site no other test drives (stage-B
+    // adversarial review, mutation-confirmed: corrupting respond.ts's
+    // `candidateIds: parse.candidateIds` to `[]` passed all 954 tests before
+    // this one). Drives the REAL pipeline: B15's replayed intent parse yields
+    // the unmatched term (the finder runs post-parse, so the recorded intent
+    // fixture replays byte-identically — no prompt change), the injected
+    // finder returns a confident routing, and respondToParseOutcome's LIVE
+    // onboarding branch must hand the chain to the envelope untouched.
+    let seenTerm: string | null = null;
+    const finder: TableFinder = async (term) => {
+      seenTerm = term;
+      return {
+        tableId: '82610NED',
+        topicTerm: term,
+        confidence: 0.91,
+        alreadyPending: false,
+        candidateIds: ['82610NED', '70072NED', '37789ksz'],
+      };
+    };
+    const response = await respondToQuestion(db, REFUSAL_TASK_QUESTIONS.B15!, {
+      ...respondOptions(),
+      tableFinder: finder,
+    });
+    expect(response.kind).toBe('refusal');
+    if (response.kind !== 'refusal') throw new Error('unreachable');
+    expect(response.reason).toBe('onboarding_pending');
+    expect(seenTerm).not.toBeNull();
+    // The exact-object assertion is the mutation kill: a dropped, reordered,
+    // or rebuilt chain at the respond.ts site fails here.
+    expect(response.onboarding).toEqual({
+      tableId: '82610NED',
+      topicTerm: seenTerm,
+      confidence: 0.91,
+      candidateIds: ['82610NED', '70072NED', '37789ksz'],
+    });
   });
 });
 

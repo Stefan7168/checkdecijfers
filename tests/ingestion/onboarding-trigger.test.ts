@@ -38,6 +38,9 @@ function input(userId: string, overrides: Partial<Parameters<typeof triggerOnboa
     tableId: '82610NED',
     topicTerm: 'zonnestroom',
     finderConfidence: 0.91,
+    // WP27 stage B: pick first, then a sanitized alternative — the shape the
+    // finder constructs; the 'started' test asserts the round-trip.
+    candidateIds: ['82610NED', '70072NED'],
     ackAuditAnswerId: null,
     ...overrides,
   };
@@ -64,6 +67,32 @@ describe('triggerOnboarding — charge + queue, atomically (WP16 sub-part 2)', (
       expect(active).not.toBeNull();
       expect(active!.debitTransactionId).toBe(result.debitTransactionId);
       expect(active!.status).toBe('pending');
+      // WP27 stage B: the candidate chain is persisted and reads back verbatim
+      // (pick first); the fit-gate columns start unset.
+      expect(active!.candidateIds).toEqual(['82610NED', '70072NED']);
+      expect(active!.resolvedTableId).toBeNull();
+    });
+  });
+
+  it('WP27 stage B deploy-order safety: a PRE-migration-015 schema still triggers (chain dropped, not the tx)', async () => {
+    // Between the stage-B code deploy and stage D's supervised migration
+    // apply, production runs this code against a schema WITHOUT the candidate
+    // columns. The store probes before naming the column, so the money tx
+    // must succeed — the chain is dropped for that row and it reads back as
+    // [] = the legacy no-fit-gate path (ADR 027 D2c).
+    await withDb(async (db) => {
+      await db.query(
+        `alter table pending_table_requests
+           drop column candidate_ids, drop column resolved_table_id, drop column fit_note`,
+      );
+      const userId = await fundedUser(db, 150);
+      const result = await triggerOnboarding(db, input(userId));
+      expect(result.kind).toBe('started');
+      expect(await getBalance(db, userId)).toBe(50);
+      const active = await findActiveRequest(db, userId, '82610NED');
+      expect(active).not.toBeNull();
+      expect(active!.candidateIds).toEqual([]);
+      expect(active!.resolvedTableId).toBeNull();
     });
   });
 

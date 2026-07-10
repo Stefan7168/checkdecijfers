@@ -100,6 +100,15 @@ export interface OnboardingEnvelope {
   topicTerm: string;
   /** The finder's 0..1 confidence in the pick (>= the 0.8 confident floor). */
   confidence: number;
+  /** WP27 stage B (ADR 027 D2a): the finder's candidate chain — pick first,
+   * then its allowlist-sanitized alternativeIds, cap 3. Carries only catalog
+   * IDENTIFIERS (like the rest of this envelope, no data values — principle
+   * (c) stays unthreatened); the web action hands it to triggerOnboarding so
+   * stage C's fit gate can fall through to candidate 2 when candidate 1
+   * misfits. Old audit rows predate this field — every reader treats it as
+   * additive (the audit response is stored as plain JSON, reconstruct checks
+   * only envelope presence, never its exact fields). */
+  candidateIds: string[];
 }
 
 /** Serializable state of the one open clarification round — handed back on
