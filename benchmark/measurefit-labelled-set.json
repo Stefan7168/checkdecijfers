@@ -1,0 +1,47 @@
+{
+  "note": "Labelled question+table→measure set for the WP27 stage-C measure-fit gate (ADR 027 D1/D4), seeded in stage D per session-brief 2026-07-07-111-design § Stage D. Every tableId MUST have a schema fixture under tests/fixtures/cbs/<tableId>/ (schema-only capture is enough — the fit gate is metadata-only, R1) so record→replay stays byte-identical. 'expect.measure' is either a measure code copied verbatim from the table's own list, or 'geen' (the model must reject the table). The eval calls measureFit() DIRECTLY — the A3 deterministic pre-checks are deliberately bypassed, because this set measures the MODEL's stock/flow/kind judgment as defense-in-depth behind them (85615NED, for example, is A3-skipped in the real job, but the fit model must ALSO reject it on its own). Three accept cases and three geen cases so both sides of the acceptThreshold are measured. Labels verified from live CBS measure lists on 2026-07-10, never from model output.",
+  "cases": [
+    {
+      "id": "bijstand-stock-flowtabel",
+      "question": "Hoeveel mensen zaten er in 2023 in de bijstand?",
+      "tableId": "85615NED",
+      "note": "The live #111 mis-pick class: a flow table (Instromers/(Her)instromers/Uitstromers) offered the stock question. Every measure is the wrong KIND of number — the honest verdict is 'geen', the fit gate then advances to the next candidate.",
+      "expect": { "measure": "geen" }
+    },
+    {
+      "id": "bijstand-stock-kerncijfers",
+      "question": "Hoeveel mensen zaten er in 2023 in de bijstand?",
+      "tableId": "37789ksz",
+      "note": "The owner's acceptance-test table (decision A1, 2026-07-08). 18 measures, three bijstand-titled (totaal / tot AOW-leeftijd / vanaf AOW-leeftijd) — the prompt's totaal-over-deelmaat preference must pick the total.",
+      "expect": { "measure": "D000203_2" }
+    },
+    {
+      "id": "benzine-euro95",
+      "question": "Wat kostte een liter Euro95 benzine in 2024?",
+      "tableId": "80416ned",
+      "note": "Time-only-dimension pump-price table (A3-deliverable). Three sibling fuel measures — the question names the fuel, the model must pick the matching one.",
+      "expect": { "measure": "A047220" }
+    },
+    {
+      "id": "ww-uitkering-stand",
+      "question": "Hoeveel mensen hadden in 2023 een WW-uitkering?",
+      "tableId": "85554NED",
+      "note": "Single count measure ('Personen met een werkloosheidsuitkering') matching a stock question — the easy accept anchor.",
+      "expect": { "measure": "D001908" }
+    },
+    {
+      "id": "faillissementen-bedrijven",
+      "question": "Hoeveel bedrijven gingen er in 2023 failliet?",
+      "tableId": "84826NED",
+      "note": "Topic-adjacent trap: the table counts ONTSLAGEN WERKNEMERS through bankruptcies (x 1000), not bankrupt companies — same topic word, wrong entity. Honest verdict: 'geen'.",
+      "expect": { "measure": "geen" }
+    },
+    {
+      "id": "huurwoningen-aantal",
+      "question": "Hoeveel huurwoningen telt Nederland?",
+      "tableId": "83163NED",
+      "note": "Wrong-kind trap: the table carries only percentage measures (huurverhoging incl/excl harmonisatie) against a count question. Honest verdict: 'geen'.",
+      "expect": { "measure": "geen" }
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/85554NED/$metadata#MargesCodes",
+ "value": [
+  {
+   "Identifier": "MW00000",
+   "Index": 1,
+   "Title": "Waarde",
+   "Description": "",
+   "DimensionGroupId": null
+  },
+  {
+   "Identifier": "MOG0095",
+   "Index": 2,
+   "Title": "Ondergrens 95%-interval",
+   "Description": "Dit is de ondergrens van het interval waarvan met 95% zekerheid verwacht wordt dat de werkelijke waarde er binnen ligt.",
+   "DimensionGroupId": null
+  },
+  {
+   "Identifier": "MBG0095",
+   "Index": 3,
+   "Title": "Bovengrens 95%-interval",
+   "Description": "Dit is de bovengrens van het interval waarvan met 95% zekerheid verwacht wordt dat de werkelijke waarde er binnen ligt.",
+   "DimensionGroupId": null
+  }
+ ]
+}

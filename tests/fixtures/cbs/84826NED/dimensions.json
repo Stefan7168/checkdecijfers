@@ -1,0 +1,54 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/84826NED/$metadata#Dimensions",
+ "value": [
+  {
+   "Identifier": "BedrijfstakkenBranchesSBI2008",
+   "Title": "Bedrijfstakken/branches (SBI 2008)",
+   "Description": "",
+   "MapYear": null,
+   "ReleasePolicy": null,
+   "Kind": "Dimension",
+   "ContainsGroups": true,
+   "ContainsCodes": true,
+   "CodesUrl": "https://datasets.cbs.nl/odata/v1/CBS/84826NED/BedrijfstakkenBranchesSBI2008Codes",
+   "GroupsUrl": "https://datasets.cbs.nl/odata/v1/CBS/84826NED/BedrijfstakkenBranchesSBI2008Groups"
+  },
+  {
+   "Identifier": "Geslacht",
+   "Title": "Geslacht",
+   "Description": "",
+   "MapYear": null,
+   "ReleasePolicy": null,
+   "Kind": "Dimension",
+   "ContainsGroups": false,
+   "ContainsCodes": true,
+   "CodesUrl": "https://datasets.cbs.nl/odata/v1/CBS/84826NED/GeslachtCodes",
+   "GroupsUrl": null
+  },
+  {
+   "Identifier": "Leeftijd",
+   "Title": "Leeftijd",
+   "Description": "",
+   "MapYear": null,
+   "ReleasePolicy": null,
+   "Kind": "Dimension",
+   "ContainsGroups": false,
+   "ContainsCodes": true,
+   "CodesUrl": "https://datasets.cbs.nl/odata/v1/CBS/84826NED/LeeftijdCodes",
+   "GroupsUrl": null
+  },
+  {
+   "@odata.type": "#Cbs.Ccb.Models.TimeDimension",
+   "Identifier": "Perioden",
+   "Title": "Perioden",
+   "Description": "",
+   "MapYear": null,
+   "ReleasePolicy": false,
+   "Kind": "TimeDimension",
+   "ContainsGroups": true,
+   "ContainsCodes": true,
+   "CodesUrl": "https://datasets.cbs.nl/odata/v1/CBS/84826NED/PeriodenCodes",
+   "GroupsUrl": "https://datasets.cbs.nl/odata/v1/CBS/84826NED/PeriodenGroups"
+  }
+ ]
+}

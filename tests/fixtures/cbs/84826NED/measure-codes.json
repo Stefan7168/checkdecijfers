@@ -1,0 +1,16 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/84826NED/$metadata#MeasureCodes",
+ "value": [
+  {
+   "Identifier": "M007726",
+   "Index": 4,
+   "Title": "Ontslagen werknemers ",
+   "Description": "Werknemers van wie het dienstverband is beëindigd als gevolg van faillissement van de werkgever.",
+   "MeasureGroupId": null,
+   "DataType": "Double",
+   "Unit": "x 1000",
+   "Decimals": 1,
+   "PresentationType": null
+  }
+ ]
+}
