@@ -155,8 +155,10 @@ export function parseFactorUnit(unit: string): number | null {
 
 /** #125a (ADR 031): the exact expanded figure for a pure-factor-unit cell —
  * "390,2 x 1000" also states "= 390.200". EXACT arithmetic only: IEEE-754
- * float multiplication is not exact (390.2 * 1000 = 390200.00000000006), so
- * the value is scaled to an integer via its declared decimals first. Only
+ * float multiplication is not always exact (16.1 * 1000 =
+ * 16100.000000000002; 96 of the 9,999 one-decimal values below 1000 multiply
+ * inexactly by 1000), so the value is scaled to an integer via its declared
+ * decimals first. Only
  * integer-valued expansions are registered in v1; anything the guards cannot
  * prove exact refuses, and the answer simply renders as today (fail-open —
  * a missing nicety, never a wrong number). */
