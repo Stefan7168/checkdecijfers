@@ -88,11 +88,21 @@ function checkEnvelopeIntegrity(record: AuditRecord, problems: string[]): void {
   // (like the reply_text/pending pairing above), not a numeric one. Only
   // refusal envelopes carry the field at all (the type system forbids it
   // elsewhere), so answers/clarifications need no check here.
+  //
+  // `?? null` (A1 discipline, found live 2026-07-12 re-running the owed
+  // verification): rows stored before the compose-side `input.built.onboarding
+  // ?? null` normalization existed (refusals.ts) never serialize the key at
+  // all for non-onboarding_pending reasons — `undefined` at runtime, and
+  // `undefined !== null` is `true` in JS, so the un-normalized read here
+  // falsely reported "present" on ~73 real historical rows across nearly
+  // every refusal reason. Confirmed empirically: the stored envelope's
+  // top-level `onboarding` key is genuinely absent on those rows.
   if (response.kind === 'refusal') {
     const shouldHaveOnboarding = response.reason === 'onboarding_pending';
-    if (shouldHaveOnboarding !== (response.onboarding !== null)) {
+    const onboarding = response.onboarding ?? null;
+    if (shouldHaveOnboarding !== (onboarding !== null)) {
       problems.push(
-        `onboarding envelope field ${response.onboarding !== null ? 'present' : 'absent'} does not match reason '${response.reason}'`,
+        `onboarding envelope field ${onboarding !== null ? 'present' : 'absent'} does not match reason '${response.reason}'`,
       );
     }
   }

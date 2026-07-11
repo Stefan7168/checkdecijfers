@@ -12,10 +12,26 @@
 // silent, not loud). This is the committed, re-runnable backing for any
 // "rows X–Y reconstruct clean" claim in the docs (review finding 2026-07-05:
 // a measured claim needs an artifact or a command someone else can run).
+//
+// GDPR-REDACTED ROWS ARE SKIPPED, LOUDLY, NOT SILENTLY (found 2026-07-12,
+// re-running the owed A1 check post-WP30b/WP128): retention.ts's
+// redactMatchingRows deliberately overwrites `response` with a stripped
+// sentinel shape (REDACTED_QUESTION_TEXT + `redacted: true`, no `.answer`/
+// `.result` at all) — reconstructionReport was never taught this shape and
+// crashes on it (`response.answer` is undefined). Whether "reconstructs"
+// should mean anything different for a row whose content was deliberately
+// erased is a real design question (recorded: open-questions — reconstruction
+// semantics for redacted rows), not one to settle under a live migration
+// window. Skipping here is scoped to THIS script only; reconstructionReport
+// itself (and the benchmark gate that trusts it) is untouched.
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 import { loadAuditRecord, reconstructionReport } from '../src/answer/audit/index.ts';
 import { connectFromEnv } from '../src/db/client.ts';
+
+function isRedacted(response: unknown): boolean {
+  return typeof response === 'object' && response !== null && (response as { redacted?: unknown }).redacted === true;
+}
 
 function parseIdArg(value: string | undefined, name: string): number {
   const n = Number(value);
@@ -33,12 +49,17 @@ async function main(): Promise<void> {
 
   const { db, pool } = connectFromEnv();
   let ok = 0;
+  let skippedRedacted = 0;
   const problems: string[] = [];
   try {
     for (let id = from; id <= to; id++) {
       const record = await loadAuditRecord(db, id);
       if (record === null) {
         problems.push(`row ${id}: not found`);
+        continue;
+      }
+      if (isRedacted(record.response)) {
+        skippedRedacted++;
         continue;
       }
       const report = reconstructionReport(record);
@@ -57,7 +78,8 @@ async function main(): Promise<void> {
   }
 
   const total = to - from + 1;
-  console.log(`audit rows ${from}-${to}: ${ok}/${total} reconstruct clean`);
+  console.log(`audit rows ${from}-${to}: ${ok}/${total - skippedRedacted} reconstruct clean` +
+    (skippedRedacted > 0 ? ` (${skippedRedacted} GDPR-redacted row(s) skipped, not checked — see the module header)` : ''));
   if (problems.length > 0) {
     for (const p of problems) console.error(`  PROBLEM: ${p}`);
     process.exitCode = 1;
