@@ -28,3 +28,12 @@ export function parsePeriodCode(code: string): ParsedPeriod | null {
   // MM
   return index >= 1 && index <= 12 ? { grain: 'MM', year, index } : null;
 }
+
+/** Exact inverse of parsePeriodCode (WP30b, conformance family F2): the
+ * canonical-grammar round-trip an adapter's period mapping must survive —
+ * parse(encode(p)) and encode(parse(code)) are both identities on valid
+ * input. JJ encodes its null index as '00'. */
+export function encodePeriodCode(p: ParsedPeriod): string {
+  const index = p.grain === 'JJ' ? 0 : (p.index ?? 0);
+  return `${String(p.year).padStart(4, '0')}${p.grain}${String(index).padStart(2, '0')}`;
+}

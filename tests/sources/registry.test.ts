@@ -2,7 +2,15 @@
 // proving the consolidation is byte-identical to the pre-WP30a literals, for
 // the 'cbs' key AND for an absent source (every pre-WP30a stored row).
 import { describe, expect, it } from 'vitest';
-import { CBS_SOURCE_KEY, resolveSource, SOURCES } from '../../src/sources/registry.ts';
+import {
+  CBS_SOURCE_KEY,
+  isProvisionalStatus,
+  resolveSource,
+  resolveSourceForTable,
+  SOURCES,
+  sourceKeyForTableId,
+} from '../../src/sources/registry.ts';
+import { fakeSourceInfo } from '../helpers/fake-source-info.ts';
 import { nullReasonText, renderTemplateBody } from '../../src/answer/compose/index.ts';
 import { buildAttributionLine } from '../../src/answer/compose/format.ts';
 import { buildChartSpec } from '../../src/chart/index.ts';
@@ -49,6 +57,52 @@ describe('the cbs entry pins the exact pre-WP30a literals', () => {
 
   it('A6: the catalog-lifecycle current set (field only in WP30a)', () => {
     expect(cbs.currentCatalogStatuses).toEqual(['Regulier']);
+  });
+
+  it('WP30b: the definitive statuses — exactly the old run.ts literal', () => {
+    expect(cbs.definitiveStatuses).toEqual(['Definitief']);
+  });
+});
+
+describe('WP30b: sourceKeyForTableId (the D4 rule as code)', () => {
+  it('bare legacy ids belong to cbs', () => {
+    expect(sourceKeyForTableId('37789ksz')).toBe('cbs');
+    expect(sourceKeyForTableId('85773NED')).toBe('cbs');
+  });
+
+  it("'<key>:<native-id>' derives the key (prefix before the FIRST colon)", () => {
+    expect(sourceKeyForTableId('politie:47022NED')).toBe('politie');
+    expect(sourceKeyForTableId('a:b:c')).toBe('a');
+  });
+
+  it('a leading colon derives the EMPTY key (malformed — matches the SQL derivation)', () => {
+    expect(sourceKeyForTableId(':oops')).toBe('');
+  });
+
+  it('resolveSourceForTable: bare → the cbs entry; unknown prefix → cbs fallback (A1 display direction)', () => {
+    expect(resolveSourceForTable('82235NED')).toBe(SOURCES[CBS_SOURCE_KEY]);
+    expect(resolveSourceForTable('nonexistent:x')).toBe(SOURCES[CBS_SOURCE_KEY]);
+  });
+});
+
+describe('WP30b: isProvisionalStatus (the ONE provisional rule, registry-driven)', () => {
+  const cbs = resolveSource(undefined);
+
+  it('byte-identical to the old status !== \'Definitief\' for every CBS status', () => {
+    expect(isProvisionalStatus(cbs, 'Definitief')).toBe(false);
+    expect(isProvisionalStatus(cbs, 'Voorlopig')).toBe(true);
+    expect(isProvisionalStatus(cbs, 'NaderVoorlopig')).toBe(true);
+  });
+
+  it('fail-safe direction: an unknown status is MARKED provisional, never silently definitive', () => {
+    expect(isProvisionalStatus(cbs, 'Onbekend')).toBe(true);
+    expect(isProvisionalStatus(cbs, '')).toBe(true);
+  });
+
+  it('is genuinely registry-driven: a source with definitiveStatuses [\'Final\'] marks \'Definitief\' provisional', () => {
+    const fake = fakeSourceInfo({ definitiveStatuses: ['Final'] });
+    expect(isProvisionalStatus(fake, 'Final')).toBe(false);
+    expect(isProvisionalStatus(fake, 'Definitief')).toBe(true);
   });
 });
 

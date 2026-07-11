@@ -1,0 +1,23 @@
+{
+  "sourceKey": "cbs",
+  "tables": [
+    { "tableId": "03759ned" },
+    { "tableId": "37789ksz" },
+    { "tableId": "80416ned", "schemaOnly": true },
+    { "tableId": "82235NED" },
+    { "tableId": "82242NED" },
+    { "tableId": "82610NED" },
+    { "tableId": "83163NED", "schemaOnly": true },
+    { "tableId": "83932NED" },
+    { "tableId": "84826NED", "schemaOnly": true },
+    { "tableId": "85224NED" },
+    { "tableId": "85554NED", "schemaOnly": true },
+    { "tableId": "85615NED", "schemaOnly": true },
+    { "tableId": "85773NED" },
+    { "tableId": "86141NED" }
+  ],
+  "declaredPeriodStatuses": ["Definitief", "Voorlopig", "NaderVoorlopig"],
+  "declaredValueAttributes": ["None", "Impossible", "Confidential", "NotAvailable"],
+  "declaredCatalogStatuses": ["Regulier", "Gediscontinueerd", "Vervallen"],
+  "declaredDatasetTypes": ["Numeric", "Mixed", "Text"]
+}

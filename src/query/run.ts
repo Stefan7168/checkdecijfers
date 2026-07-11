@@ -6,7 +6,7 @@
 // no rendering path can drop it (R4). No LLM anywhere (WP5).
 import type { Db } from '../db/types.ts';
 import { parsePeriodCode } from '../ingestion/periods.ts';
-import { CBS_SOURCE_KEY } from '../sources/registry.ts';
+import { CBS_SOURCE_KEY, isProvisionalStatus, resolveSourceForTable } from '../sources/registry.ts';
 import { deriveDifference, deriveDirection, deriveFirstLast, deriveMax, deriveUnitExpansion } from './derivations.ts';
 import { normalizeLabel, periodKey, resolveIntent, type ResolvedQuery } from './resolve.ts';
 import type {
@@ -74,7 +74,13 @@ async function fetchFreshness(
   const params = [q.tableId, q.measure, JSON.stringify(q.dims), regionCode, q.grain];
   const order = ' order by period_year desc, coalesce(period_index, 0) desc limit 1';
   const available = await db.query(base + order, params);
-  const definitief = await db.query(base + ` and status = 'Definitief'` + order, params);
+  // WP30b: "definitive" per the table's source registry entry (for CBS
+  // exactly ['Definitief'] — byte-identical result). Own params array so the
+  // sibling query above never sees the extra parameter.
+  const definitief = await db.query(base + ` and status = any($6::text[])` + order, [
+    ...params,
+    resolveSourceForTable(q.tableId).definitiveStatuses,
+  ]);
   return {
     freshestAvailable: available.rows[0]
       ? { periodCode: available.rows[0].period_code as string, status: available.rows[0].status as string }
@@ -270,7 +276,10 @@ export async function runQuery(db: Db, intent: StructuredIntent): Promise<QueryO
         unit: row.unit,
         decimals: toNumber(row.decimals),
         status,
-        provisional: status !== 'Definitief',
+        // WP30b: the table's source declares which verbatim statuses count as
+        // definitive; anything else is marked (fail-safe, principle c).
+        // Byte-identical to the old `status !== 'Definitief'` for CBS cells.
+        provisional: isProvisionalStatus(resolveSourceForTable(q.tableId), status),
         valueAttribute: row.value_attribute,
         batchId: toNumber(row.batch_id),
       });
