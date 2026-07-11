@@ -772,4 +772,25 @@ describe('Chat — WP128 feedback buttons (#128)', () => {
     expect(screen.queryByRole('button', { name: 'Nuttig antwoord' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Niet nuttig' })).toBeNull();
   });
+
+  it('an answer reached via the CLARIFICATION-REPLY path gets buttons too (both entry paths share the anchor)', async () => {
+    askQuestion.mockResolvedValue(outcome(fakeClarification('Welke periode bedoel je?')));
+    replyToClarification.mockResolvedValue(outcome(fakeAnswer('In 2024 was het 3,3%.')));
+    submitAnswerFeedback.mockResolvedValue({ ok: true });
+    render(<Chat />);
+    await submit('Wat was de inflatie?');
+    await screen.findByText('Welke periode bedoel je?');
+    // While a clarification is pending the input's placeholder IS the
+    // clarifying question (chat.tsx) — the submit helper's default one is gone.
+    fireEvent.change(screen.getByPlaceholderText('Welke periode bedoel je?'), {
+      target: { value: '2024' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Verstuur' }));
+    await screen.findByText('In 2024 was het 3,3%.');
+    const up = screen.getByRole('button', { name: 'Nuttig antwoord' });
+    fireEvent.click(up);
+    await screen.findByText('Bedankt voor je feedback.');
+    // The anchor is the reply-path answer's auditId (fakeAnswer -> 1).
+    expect(submitAnswerFeedback).toHaveBeenCalledWith(1, 'up', undefined);
+  });
 });

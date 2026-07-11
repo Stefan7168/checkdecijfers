@@ -53,6 +53,11 @@ describe('upsertAnswerFeedback — the guarded write', () => {
     await withDb(async (db) => {
       const auditId = await insertAuditRow(db, { userId: 'user-1' });
       expect(await upsertAnswerFeedback(db, { auditAnswerId: auditId, userId: 'user-1', verdict: 'up' })).toBe(true);
+      const { rows: firstStamps } = await db.query(
+        `select created_at from answer_feedback where audit_answer_id = $1`,
+        [auditId],
+      );
+      const firstStamp = new Date(firstStamps[0]!.created_at as string).getTime();
       // Change of heart: 👍 → 👎 with text — same row, overwritten.
       expect(
         await upsertAnswerFeedback(db, {
@@ -66,6 +71,16 @@ describe('upsertAnswerFeedback — the guarded write', () => {
       expect(rows).toHaveLength(1);
       expect(rows[0]!.verdict).toBe('down');
       expect(rows[0]!.feedback_text).toBe('te vaag');
+      // created_at refreshed on the verdict change (last write wins — the
+      // F1 claim, asserted against the first write's timestamp).
+      const { rows: stamps } = await db.query(
+        `select created_at from answer_feedback where audit_answer_id = $1`,
+        [auditId],
+      );
+      const secondStamp = new Date(stamps[0]!.created_at as string).getTime();
+      expect(secondStamp).toBeGreaterThanOrEqual(firstStamp);
+      const { rows: countAfter } = await db.query(`select count(*)::int as n from answer_feedback`);
+      expect(countAfter[0]!.n).toBe(1);
     });
   });
 
@@ -105,14 +120,15 @@ describe('upsertAnswerFeedback — the guarded write', () => {
     await withDb(async (db) => {
       await db.query('drop index answer_feedback_by_user');
       await db.query('drop table answer_feedback');
-      // The helper itself throws (a plain query error)…
+      // The helper itself throws (a plain query error) — an as-built
+      // deviation from the frozen brief's "helper returns false" wording,
+      // recorded there: the ACTION's whole-body try/catch is the fail-soft
+      // guarantee, pinned for real in web/app/actions-feedback.test.ts. The
+      // REDACTION paths however must keep working without the table — see
+      // the retention pin below.
       await expect(
         upsertAnswerFeedback(db, { auditAnswerId: 1, userId: 'user-1', verdict: 'up' }),
       ).rejects.toThrow();
-      // …which is exactly what the server action's whole-body try/catch turns
-      // into { ok: false } (pinned in web/app tests); the REDACTION paths
-      // however must keep working without the table — see the retention pin
-      // below.
     });
   });
 });
