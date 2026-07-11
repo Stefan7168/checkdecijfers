@@ -5,12 +5,13 @@ import { describe, expect, it } from 'vitest';
 import { encodePeriodCode, parsePeriodCode } from '../../src/ingestion/periods.ts';
 
 describe('encodePeriodCode ∘ parsePeriodCode round-trip', () => {
-  it('parse→encode is the identity on every valid code shape', () => {
+  it('parse→encode is the identity on every valid code shape (incl. the sub-1000-year zero-padding edge)', () => {
     const codes: string[] = [];
-    for (const year of [1900, 1921, 2019, 2024, 2025]) {
-      codes.push(`${year}JJ00`);
-      for (let q = 1; q <= 4; q++) codes.push(`${year}KW${String(q).padStart(2, '0')}`);
-      for (let m = 1; m <= 12; m++) codes.push(`${year}MM${String(m).padStart(2, '0')}`);
+    for (const year of [75, 999, 1900, 1921, 2019, 2024, 2025]) {
+      const y = String(year).padStart(4, '0');
+      codes.push(`${y}JJ00`);
+      for (let q = 1; q <= 4; q++) codes.push(`${y}KW${String(q).padStart(2, '0')}`);
+      for (let m = 1; m <= 12; m++) codes.push(`${y}MM${String(m).padStart(2, '0')}`);
     }
     for (const code of codes) {
       const parsed = parsePeriodCode(code);
@@ -22,6 +23,7 @@ describe('encodePeriodCode ∘ parsePeriodCode round-trip', () => {
   it('encode→parse is the identity on parsed shapes (JJ null index encodes as 00)', () => {
     const shapes = [
       { grain: 'JJ' as const, year: 2024, index: null },
+      { grain: 'JJ' as const, year: 75, index: null }, // encodes as 0075JJ00
       { grain: 'KW' as const, year: 2024, index: 4 },
       { grain: 'MM' as const, year: 1999, index: 12 },
     ];

@@ -173,6 +173,35 @@ describe('F0 — registry-entry coherence failures', () => {
     expect(families(report)).toContain('F0_registry');
   });
 
+  it('empty displayName / empty attributionLabel / missing license', async () => {
+    expect(families(await run({ info: fakeSourceInfo({ displayName: '  ' }) }))).toContain('F0_registry');
+    expect(families(await run({ info: fakeSourceInfo({ attributionLabel: '' }) }))).toContain('F0_registry');
+    expect(
+      families(await run({ info: fakeSourceInfo({ license: '' as unknown as SourceInfo['license'] }) })),
+    ).toContain('F0_registry');
+  });
+
+  it('provisionalDisplay keyed on an undeclared period status', async () => {
+    const report = await run({
+      info: fakeSourceInfo({ provisionalDisplay: { Herzien: ' (herzien cijfer)' } }),
+    });
+    expect(families(report)).toContain('F0_registry');
+  });
+
+  it('empty definitiveStatuses, and definitiveStatuses outside the declared vocabulary', async () => {
+    expect(families(await run({ info: fakeSourceInfo({ definitiveStatuses: [] }) }))).toContain('F0_registry');
+    expect(families(await run({ info: fakeSourceInfo({ definitiveStatuses: ['Vastgesteld'] }) }))).toContain(
+      'F0_registry',
+    );
+  });
+
+  it('nullReasonLabels keyed on an undeclared value attribute', async () => {
+    const report = await run({
+      info: fakeSourceInfo({ nullReasonLabels: { Missing: 'door FAKE niet geleverd', Geheim: 'geheim' } }),
+    });
+    expect(families(report)).toContain('F0_registry');
+  });
+
   it('empty currentCatalogStatuses', async () => {
     const report = await run({ info: fakeSourceInfo({ currentCatalogStatuses: [] }) });
     expect(families(report)).toContain('F0_registry');
@@ -235,6 +264,37 @@ describe('F1 — replay + D4 id discipline failures', () => {
     expect(f1.some((f) => f.tableId === 'cbs:sneaky')).toBe(true);
   });
 
+  it('empty schema title and zero measures both fail', async () => {
+    const noTitle = baseTable();
+    noTitle.schema = { ...noTitle.schema, title: '   ' };
+    expect(families(await run({ table: noTitle }))).toContain('F1_replay');
+
+    const noMeasures = baseTable();
+    noMeasures.schema = { ...noMeasures.schema, measures: [] };
+    expect(families(await run({ table: noMeasures }))).toContain('F1_replay');
+  });
+
+  it('an empty code list for a dimension', async () => {
+    const table = baseTable();
+    table.codes['RegioS'] = [];
+    expect(families(await run({ table }))).toContain('F1_replay');
+  });
+
+  it('a throwing fetchObservationCount is reported, not crashed on', async () => {
+    class CountThrows extends FakeSource {
+      override async fetchObservationCount(): Promise<number | null> {
+        throw new Error('count endpoint exploded');
+      }
+    }
+    const report = await runSourceConformance(
+      new CountThrows({ 'fake:t1': baseTable() }, baseCatalog()),
+      baseManifest(),
+      fakeSourceInfo(),
+    );
+    expect(families(report)).toContain('F1_replay');
+    expect(report.failures.some((f) => f.summary.includes('count endpoint exploded'))).toBe(true);
+  });
+
   it('zero and two TimeDimensions both fail (the A7 exactly-one contract)', async () => {
     const zero = baseTable();
     zero.schema = {
@@ -289,6 +349,12 @@ describe('F3 — value-attribute completeness (R11)', () => {
     manifest.declaredValueAttributes = ['None', 'Missing', 'Vertrouwelijk'];
     expect(families(await run({ table, manifest }))).toContain('F3_statuses');
   });
+
+  it('an undeclared value attribute on a NON-null cell is still a completeness failure', async () => {
+    const table = baseTable();
+    table.rows = [row('2023JJ00', 5, 'Bijzonder'), row('2024JJ00', null, 'Missing')];
+    expect(families(await run({ table }))).toContain('F3_statuses');
+  });
 });
 
 describe('F5 — the five validators still bite through the harness', () => {
@@ -318,14 +384,24 @@ describe('F5 — the five validators still bite through the harness', () => {
     expect(sliced.failures).toEqual([]);
   });
 
-  it('schemaOnly skips every row-dependent check (the WP27 metadata-only capture pattern)', async () => {
+  it('schemaOnly (a TRUE metadata-only capture) skips the row + period-grammar families', async () => {
     const table = baseTable();
-    // rows deliberately corrupted — must not matter for a schemaOnly table
-    table.rows = [row('2024JJ00', null, 'None'), row('2024JJ00', null, 'None')];
+    table.rows = []; // genuinely metadata-only
+    // daily codes — unservable grammar; would fail F2 on a servable table
+    table.codes['Perioden'] = [code('20060101', null), code('20060102', null)];
     const manifest = baseManifest();
     manifest.tables = [{ tableId: 'fake:t1', schemaOnly: true }];
     const report = await run({ table, manifest });
     expect(report.failures).toEqual([]);
+  });
+
+  it('schemaOnly is VERIFIED, not trusted: a table whose adapter yields rows may not dodge the row families', async () => {
+    const table = baseTable(); // carries 2 real rows
+    const manifest = baseManifest();
+    manifest.tables = [{ tableId: 'fake:t1', schemaOnly: true }];
+    const report = await run({ table, manifest });
+    const f1 = report.failures.filter((f) => f.family === 'F1_replay');
+    expect(f1.some((f) => f.summary.includes('schemaOnly'))).toBe(true);
   });
 });
 
@@ -344,16 +420,47 @@ describe('F4 — catalog-lifecycle completeness (A6)', () => {
 });
 
 describe('manifest shape validation is loud', () => {
+  const valid = () => ({
+    sourceKey: 'x',
+    tables: [{ tableId: 't' }] as unknown[],
+    declaredPeriodStatuses: [] as unknown[],
+    declaredValueAttributes: [] as unknown[],
+    declaredCatalogStatuses: [] as unknown[],
+    declaredDatasetTypes: [] as unknown[],
+  });
+
   it('rejects a manifest missing sourceKey, with empty tables, or with non-string vocab entries', () => {
     expect(() => validateManifestShape({}, 'x.json')).toThrow(/sourceKey/);
+    expect(() => validateManifestShape({ ...valid(), tables: [] }, 'x.json')).toThrow(/tables/);
+    expect(() => validateManifestShape({ ...valid(), declaredPeriodStatuses: [1] }, 'x.json')).toThrow(
+      /declaredPeriodStatuses/,
+    );
+  });
+
+  it('rejects authoring typos: unknown keys on the manifest, a table entry, or a slice', () => {
+    expect(() => validateManifestShape({ ...valid(), declaredPeriodStatusses: [] }, 'x.json')).toThrow(
+      /unknown key/,
+    );
     expect(() =>
-      validateManifestShape({ sourceKey: 'x', tables: [], declaredPeriodStatuses: [], declaredValueAttributes: [], declaredCatalogStatuses: [], declaredDatasetTypes: [] }, 'x.json'),
-    ).toThrow(/tables/);
+      validateManifestShape({ ...valid(), tables: [{ tableId: 't', schemaonly: true }] }, 'x.json'),
+    ).toThrow(/unknown key/);
+    expect(() =>
+      validateManifestShape({ ...valid(), tables: [{ tableId: 't', slice: { periodfloor: '2000JJ00' } }] }, 'x.json'),
+    ).toThrow(/unknown slice key/);
+  });
+
+  it('rejects wrongly-typed schemaOnly and slice fields', () => {
+    expect(() =>
+      validateManifestShape({ ...valid(), tables: [{ tableId: 't', schemaOnly: 'yes' }] }, 'x.json'),
+    ).toThrow(/schemaOnly/);
+    expect(() =>
+      validateManifestShape({ ...valid(), tables: [{ tableId: 't', slice: { periodFloor: 42 } }] }, 'x.json'),
+    ).toThrow(/periodFloor/);
     expect(() =>
       validateManifestShape(
-        { sourceKey: 'x', tables: [{ tableId: 't' }], declaredPeriodStatuses: [1], declaredValueAttributes: [], declaredCatalogStatuses: [], declaredDatasetTypes: [] },
+        { ...valid(), tables: [{ tableId: 't', slice: { dimensionPrefixes: { RegioS: 'NL' } } }] },
         'x.json',
       ),
-    ).toThrow(/declaredPeriodStatuses/);
+    ).toThrow(/dimensionPrefixes/);
   });
 });
