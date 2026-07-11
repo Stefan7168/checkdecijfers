@@ -1,7 +1,8 @@
 # ADR 031 — Registered unit-expansion derivation for pure factor units (#125a, owner decision 2026-07-11)
 
-**Status:** accepted (2026-07-11) — **BUILT (session 36, 2026-07-11, branch
-`wp125a-unit-expansion`, PR per #118 pending owner review).** As-built notes are folded in
+**Status:** accepted (2026-07-11) — **BUILT + MERGED + DEPLOYED (session 36, 2026-07-11,
+[PR #25](https://github.com/Stefan7168/checkdecijfers/pull/25), merge `cb8f580`, main gate +
+deploy green — LIVE).** As-built notes are folded in
 below at the D-points they refine (the two extra D4 belts from the completed adversarial
 design review; the corrected IEEE example in Context §3; the marking-line and model-computed-
 expansion trade-offs made explicit). Implements the owner's in-chat display convention for
