@@ -8,11 +8,12 @@ import { ingestCatalog } from './ingest.ts';
 if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).href) {
   const { connectFromEnv } = await import('../db/client.ts');
   const { applyMigrations } = await import('../db/migrate.ts');
-  const { ODataV4Source } = await import('../cbs-adapter/odata-v4.ts');
+  const { adapterFor } = await import('../sources/adapters.ts');
+  const { CBS_SOURCE_KEY } = await import('../sources/registry.ts');
   const { db, pool } = connectFromEnv();
   try {
     await applyMigrations(db);
-    const result = await ingestCatalog(db, new ODataV4Source());
+    const result = await ingestCatalog(db, adapterFor(CBS_SOURCE_KEY));
     console.log(
       `Catalog refresh: fetched ${result.fetched}, upserted ${result.upserted}, pruned ${result.pruned}.`,
     );

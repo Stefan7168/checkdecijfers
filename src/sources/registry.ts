@@ -33,18 +33,27 @@ export interface SourceInfo {
   /** A2: verbatim per-cell status → display suffix. Two-tier for CBS. A
    * provisional cell whose status is absent here renders the generic
    * ' (voorlopig cijfer)' (the pre-WP30a behavior, unchanged); which cells
-   * COUNT as provisional stays run.ts's rule (status !== 'Definitief') —
-   * byte-identical in WP30a, adapter-contract material in WP30b. */
+   * COUNT as provisional is `definitiveStatuses` below via
+   * isProvisionalStatus (WP30b — byte-identical to the old
+   * status !== 'Definitief' rule for every CBS cell). */
   provisionalDisplay: Readonly<Record<string, string>>;
+  /** WP30b (ADR 030 § WP30a as-built item 4 note): the verbatim per-cell
+   * statuses that count as DEFINITIVE. Everything else is provisional — the
+   * fail-safe direction: a status we cannot vouch for is marked
+   * ' (voorlopig cijfer)', never silently presented as definitive
+   * (principle c). Consumed by isProvisionalStatus and run.ts's
+   * freshest-Definitief freshness query. */
+  definitiveStatuses: readonly string[];
   /** R11: verbatim valueAttribute → owner-approved Dutch null reason.
    * Unknown attributes render "door <displayName> gemarkeerd als '<attr>'" —
    * naming the raw marker rather than guessing a meaning. */
   nullReasonLabels: Readonly<Record<string, string>>;
-  /** A6 (field only in WP30a): the catalog-lifecycle statuses that count as
-   * "current" for the finder's Regulier-first shortlist quota. recall.ts
-   * keeps its literal 'Regulier' until WP30b wires this in with the
-   * conformance contract test — wiring it now would touch fixture-load-
-   * bearing ranking SQL for zero observable benefit. */
+  /** A6: the catalog-lifecycle statuses that count as "current" for the
+   * finder's current-first shortlist quota. Consulted per row's source by
+   * recall.ts via buildIsCurrentPredicate (src/catalog/current-status.ts) —
+   * wired in WP30b, byte-identical to the old 'Regulier' literal for every
+   * CBS row (pinned; find-replay's request hashes prove the shortlist never
+   * moved). */
   currentCatalogStatuses: readonly string[];
 }
 
@@ -65,6 +74,7 @@ export const SOURCES: Readonly<Record<string, SourceInfo>> = {
       Voorlopig: ' (voorlopig cijfer)',
       NaderVoorlopig: ' (nader voorlopig cijfer)',
     },
+    definitiveStatuses: ['Definitief'],
     nullReasonLabels: {
       Impossible: 'deze waarde kan volgens CBS niet voorkomen',
       Confidential: 'door CBS niet gepubliceerd (vertrouwelijk)',
@@ -80,4 +90,34 @@ export const SOURCES: Readonly<Record<string, SourceInfo>> = {
  * before WP30b's conformance contract registers one. */
 export function resolveSource(key: string | undefined): SourceInfo {
   return (key !== undefined ? SOURCES[key] : undefined) ?? SOURCES[CBS_SOURCE_KEY]!;
+}
+
+/** The ADR 030 D4 rule as code: a table id owns its source identity via its
+ * prefix — `'<sourcekey>:<native-id>'` for every non-CBS source, bare legacy
+ * ids for CBS. The prefix is everything before the FIRST ':' (a native id may
+ * itself contain colons). Pure derivation only — resolution (incl. the A1
+ * unknown-key fallback) stays resolveSource's job. Migration 016's CHECK
+ * makes this convention a database fact; the WP30b conformance harness (F1)
+ * makes it an adapter-contract fact. */
+export function sourceKeyForTableId(tableId: string): string {
+  // NB a leading ':' derives the EMPTY key (unknown → display falls back to
+  // cbs via resolveSource, ranking treats it as not-current, conformance F1
+  // rejects it) — deliberately identical to the SQL derivation in
+  // src/catalog/current-status.ts, pinned by test.
+  const colon = tableId.indexOf(':');
+  return colon >= 0 ? tableId.slice(0, colon) : CBS_SOURCE_KEY;
+}
+
+/** resolveSource by table id (D4 + A1 in one step). */
+export function resolveSourceForTable(tableId: string): SourceInfo {
+  return resolveSource(sourceKeyForTableId(tableId));
+}
+
+/** WP30b: THE provisional rule — a cell is provisional unless its verbatim
+ * status is one the source declares definitive. Fail-safe direction: an
+ * unknown/new status is MARKED provisional, never silently definitive
+ * (principle c). Byte-identical to the pre-WP30b `status !== 'Definitief'`
+ * for every CBS cell. */
+export function isProvisionalStatus(info: SourceInfo, status: string): boolean {
+  return !info.definitiveStatuses.includes(status);
 }

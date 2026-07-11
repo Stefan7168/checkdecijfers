@@ -144,11 +144,12 @@ export async function runCli(argv: string[], deps: Deps): Promise<number> {
 if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).href) {
   const { connectFromEnv } = await import('../db/client.ts');
   const { applyMigrations } = await import('../db/migrate.ts');
-  const { ODataV4Source } = await import('../cbs-adapter/odata-v4.ts');
+  const { adapterFor } = await import('../sources/adapters.ts');
+  const { CBS_SOURCE_KEY } = await import('../sources/registry.ts');
   const { db, pool } = connectFromEnv();
   try {
     await applyMigrations(db);
-    const code = await runCli(process.argv.slice(2), { db, source: new ODataV4Source() });
+    const code = await runCli(process.argv.slice(2), { db, source: adapterFor(CBS_SOURCE_KEY) });
     process.exit(code);
   } finally {
     await pool.end();

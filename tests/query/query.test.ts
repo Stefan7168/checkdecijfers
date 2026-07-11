@@ -482,6 +482,18 @@ describe('typed refusals: period availability', () => {
     expect(r.freshness?.freshestAvailable).not.toHaveProperty('value');
   });
 
+  it('WP30b pin: freshestDefinitief matches the pre-change behavior on a table where it DIFFERS from freshest available (the registry-driven any($6::text[]) SQL)', async () => {
+    // 82610NED fixture: 2024/2025 are NaderVoorlopig, 2023 is the freshest
+    // Definitief — the sharp case where the old `status = 'Definitief'`
+    // literal and the new definitiveStatuses array param must agree exactly.
+    const r = await expectRefusal(
+      intent({ target: { kind: 'canonical', key: 'solar_electricity_production' }, period: { kind: 'codes', codes: ['2031JJ00'] } }),
+      'freshness',
+    );
+    expect(r.freshness?.freshestAvailable).toEqual({ periodCode: '2025JJ00', status: 'NaderVoorlopig' });
+    expect(r.freshness?.freshestDefinitief).toEqual({ periodCode: '2023JJ00' });
+  });
+
   it('a range reaching past the freshest year refuses as freshness (all-or-nothing, no partial series)', async () => {
     const r = await expectRefusal(
       intent({

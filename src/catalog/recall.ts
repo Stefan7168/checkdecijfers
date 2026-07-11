@@ -7,6 +7,7 @@
 import type { Db } from '../db/types.ts';
 import type { CatalogCandidate } from './types.ts';
 import { ALIAS_HINTS, expandTopicTerms, type AliasHint } from './aliases.ts';
+import { buildIsCurrentPredicate } from './current-status.ts';
 
 /** Regulier-first shortlist quotas (WP27 amendment A2, owner-approved
  *  2026-07-08). MEASURED driver: on the live 4,858-row mirror the raw top-20
@@ -50,18 +51,21 @@ export async function recallCandidates(
   // lexemes ("algemene bijstand" → algemene & bijstand); across terms we OR
   // (||) so any single alias expansion can match. Built once in a CTE and
   // reused for both the match filter and ts_rank so ranking sees the same
-  // query. The window ranks per status class (Regulier vs the rest) so the
-  // quota merge below can select per class without a second round-trip.
+  // query. The window ranks per status class (current vs the rest — WP30b/A6:
+  // "current" per the row's OWN source registry entry, for CBS exactly the
+  // old `status = 'Regulier'`, output byte-identical) so the quota merge
+  // below can select per class without a second round-trip.
   const orParts = terms.map((_, i) => `plainto_tsquery('dutch', $${i + 1})`).join(' || ');
   const limitParam = `$${terms.length + 1}`;
+  const isCurrent = buildIsCurrentPredicate(undefined, terms.length + 2);
   const sql = `
     with q as (select (${orParts}) as tsq),
     ranked as (
       select table_id, title, summary, status, dataset_type,
              ts_rank(cbs_catalog.tsv, q.tsq) as rank,
-             (coalesce(status, '') = 'Regulier') as is_regulier,
+             (${isCurrent.sql}) as is_current,
              row_number() over (
-               partition by (coalesce(status, '') = 'Regulier')
+               partition by (${isCurrent.sql})
                order by ts_rank(cbs_catalog.tsv, q.tsq) desc, table_id
              ) as class_pos
         from cbs_catalog, q
@@ -69,12 +73,12 @@ export async function recallCandidates(
          and (dataset_type is null or dataset_type <> 'Text')
          and (language is null or language = 'nl')
     )
-    select table_id, title, summary, status, dataset_type, rank, is_regulier
+    select table_id, title, summary, status, dataset_type, rank, is_current
       from ranked
      where class_pos <= ${limitParam}
-     order by is_regulier desc, class_pos
+     order by is_current desc, class_pos
   `;
-  const { rows } = await db.query(sql, [...terms, limit]);
+  const { rows } = await db.query(sql, [...terms, limit, ...isCurrent.params]);
   const toCandidate = (r: Record<string, unknown>): CatalogCandidate => ({
     tableId: r.table_id as string,
     title: r.title as string,
@@ -83,8 +87,8 @@ export async function recallCandidates(
     datasetType: (r.dataset_type as string | null) ?? null,
     rank: Number(r.rank),
   });
-  const regulier = rows.filter((r) => r.is_regulier === true).map(toCandidate);
-  const historic = rows.filter((r) => r.is_regulier !== true).map(toCandidate);
+  const regulier = rows.filter((r) => r.is_current === true).map(toCandidate);
+  const historic = rows.filter((r) => r.is_current !== true).map(toCandidate);
 
   // Quota merge (amendment A2): reserve the historic slots only when the
   // caller's limit has room beyond the Regulier quota (the default 24 does;

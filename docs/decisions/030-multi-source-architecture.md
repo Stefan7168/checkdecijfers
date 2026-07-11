@@ -195,3 +195,63 @@ field (the targeted pre-review test round had missed exactly that file) — fixe
 + an A1 absent-source pin added there.** run.ts's provisional BOOLEAN rule
 (`status !== 'Definitief'`) is deliberately untouched (byte-identity); making it
 registry-driven is WP30b adapter-contract material.
+
+## WP30b as-built (session 37, 2026-07-11 — the conformance harness + guide session, per A5)
+
+Built from the frozen [WP30b executor brief](../session-briefs/2026-07-11-wp30b-brief.md), which
+was itself produced by a completed pre-build adversarial design review (46 agents, 6 lenses ×
+dual skeptics; 20 raw findings → 2 confirmed, 2 split, 16 killed; amendments ⟨B1⟩–⟨B7⟩ recorded
+there). What landed:
+
+1. **The conformance harness (D6 as amended by A5/A6)** — `src/sources/conformance.ts`, pure and
+   hermetic: families F0 (registry-entry coherence) / F1 (fixture replay through the REAL parse
+   code + the D4 id discipline + exactly-one-TimeDimension per A7) / F2 (period-grammar
+   round-trip via the new `encodePeriodCode` inverse + declared statuses) / F3
+   (value-attribute/null-reason completeness, R11) / F4 (catalog-lifecycle completeness, A6) /
+   F5 (the five ingestion validators, registration semantics — `unitsFromMeasures` exported from
+   pipeline.ts, one derivation). Driven by per-source manifests
+   (`tests/fixtures/<key>/conformance.json`; CBS: all 14 fixture tables, 5 schemaOnly, no
+   slices — measured unnecessary). Discovery-driven CBS run + a 23-case
+   harness-can-fail suite (the tamper-test discipline).
+2. **The A6 recall wiring** — `src/catalog/current-status.ts` builds the per-row is-current SQL
+   (simple CASE over the D4 prefix-derived source key, statuses as `::text[]` params, unknown →
+   `else false`); recall.ts consults it in place of both `'Regulier'` literals. Byte-identity
+   proven by the unchanged recall suite + the hash-pinned find-replay suite; the SQL↔TS
+   derivation agreement is pinned over edge ids.
+3. **The registry-driven provisional rule** — `SourceInfo.definitiveStatuses` (CBS
+   `['Definitief']`), `isProvisionalStatus`, `sourceKeyForTableId`/`resolveSourceForTable`
+   (pure, in the leaf registry); run.ts:273 and the freshestDefinitief SQL
+   (`= any($6::text[])`, own params array) consult it. R8-safe by construction (`provisional`
+   is stored per cell; reconstruct never recomputes — verified).
+4. **The routing seam, review-scoped (⟨B1⟩)** — `src/sources/adapters.ts` (`SourceAdapter` alias
+   per A5 + `adapterFor` with the loud-throw fetch fail-direction); ONLY the two owner-run CLIs
+   wired through it. **The onboarding-cron route is byte-untouched** — its literal-scan wiring
+   pin stays literal; WP30c wires the money path when routing has a real second target.
+5. **The guide** — [docs/how-to-add-a-source.md](../how-to-add-a-source.md), incl. the verified
+   **known WP30c wiring points** (the un-scoped catalog prune wipe at ingest.ts:66, the
+   `language='nl'` finder filter, compose's `resolveSource(undefined)`, the cron-route adapter,
+   the missing region-taxonomy family, the A4 prompt sweep).
+
+**As-built deviations from the frozen brief (both measured in-session):** (a) F2's code-list
+grammar check is scoped to SERVABLE (non-schemaOnly) tables — first harness run caught CBS's own
+80416ned carrying 7,492 DAILY period codes (the D2 daily-grain revisit case, kept in fixtures as
+a fit-gate specimen; unservable by the pipeline's own gates, so not a conformance failure);
+observed-data checks are unconditional. (b) The F1 id check enforces BOTH D4 directions
+explicitly (bare ⇒ cbs and cbs ⇒ bare — a `'cbs:'`-prefixed id is malformed), which the brief's
+single-equation form missed.
+
+**Post-build diff review (session 37): 3 mid-tier lenses ran; the dual heavy-tier skeptic layer
+was LOST to a provider session limit (all 14 skeptic agents errored), so the session model
+applied the refutation judgment directly to the 7 raw findings — 6 accepted + fixed in-session,
+1 resolved as documentation:** schemaOnly is now VERIFIED not trusted (a schemaOnly table whose
+adapter yields rows fails F1 — the dodge the review named); ~10 failure-suite gaps closed (every
+F0/F1/F3 sub-check now has a failing test); the frozen brief's freshestDefinitief regression pin
+added (tests/query — the sharp case where freshest available ≠ freshest definitief on 82610NED);
+manifest validation rejects unknown keys and wrongly-typed `schemaOnly`/`slice` (authoring-typo
+safety); the sub-1000-year padding edge added to the encode round-trip; the stale WP30a-era
+`currentCatalogStatuses` comment corrected. The judged-to-docs finding: F5's fingerprint/unit
+stages are self-consistent BY CONSTRUCTION in the harness (both sides derive from the same
+fetched schema) — the honesty note now says so explicitly instead of gaining optional
+manifest-baseline machinery; **recorded residual: a future source's manifest MAY want an
+optional expected-dimensions baseline (design it with WP30c if its author wants a pinned
+shape).**
