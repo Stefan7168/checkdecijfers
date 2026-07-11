@@ -168,7 +168,7 @@ notation (#125a's `parseFactorUnit` parses CBS's factor spellings) and region-LA
 bullet — both fail open (missed nicety / dropped chip, never a wrong number), revisit at WP30c
 with the first real adapter.
 
-## WP30a as-built (session 36, 2026-07-11 — same session as the review; branch `wp30a-source-registry`, PR per #118)
+## WP30a as-built (session 36, 2026-07-11 — same session as the review; [PR #26](https://github.com/Stefan7168/checkdecijfers/pull/26) merged `7864271`, main gate + deploy green — LIVE)
 
 Built literally per the [executor brief](../session-briefs/2026-07-11-wp30a-brief.md), with
 four recorded as-built refinements:
