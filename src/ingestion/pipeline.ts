@@ -47,7 +47,10 @@ async function fetchAllObservations(
   return rows;
 }
 
-function unitsFromMeasures(measures: CbsMeasure[]): RegistryUnits {
+/** Exported for the WP30b conformance harness (src/sources/conformance.ts),
+ * which derives registration-time expectations exactly like registerTables
+ * does — one derivation, no second copy to drift. */
+export function unitsFromMeasures(measures: CbsMeasure[]): RegistryUnits {
   const units: RegistryUnits = {};
   for (const m of measures) {
     units[m.code] = { unit: m.unit, decimals: m.decimals, title: m.title, description: m.description };
