@@ -173,7 +173,7 @@ full detail + the two remaining known historical-versioning anomalies (rows 76 a
 bugs, not fixed tonight) in [open-questions #133](open-questions.md). **Final measured result:
 213/215 checkable rows reconstruct clean** (25 GDPR-redacted rows structurally skipped by the
 script, per #133). **(b) ✅ DONE** — grants/RLS on `answer_feedback` LIVE-VERIFIED: 0 anon/authenticated grants, RLS enabled, 0 policies (migration-003 auto-lockdown confirmed working on this table too).
-**(c)** the owner's live 👍/👎 click test — the ONE remaining step.
+**(c)** the owner's live 👍/👎 click test — the ONE remaining step. *(Session 38, 2026-07-12: the click test did NOT happen — the session ended on context right after state-sync. Pre-test baseline verified read-only: `answer_feedback` reachable on production, exactly 0 rows; the owner's two clicks must appear as the table's first two rows.)*
 
 **Script usage** (kept for the next time a range needs re-checking):
 `node --env-file=.env scripts/verify-audit-rows.ts <fromId> <toId>` (NOT `npm run audit:verify --`
