@@ -50,12 +50,26 @@ Everything **Stefan** does, phase by phase. AI sessions read [CLAUDE.md](../CLAU
 - **Secrets:** you create keys; a session tells you exactly where to paste them (local `.env` + the hosting platform's env store). Never in git, never in chat with third parties. Tracked in the register below.
 - **Never needed:** your passwords, your email inbox, payment credentials.
 
+## Provider logins (which account owns what — for dashboard access + secret rotation)
+
+A fresh machine needs to know which login owns each provider to rotate a secret or read a dashboard. The four core ones are recorded in the checklist above; **three are NOT yet written down and only the owner can supply them — fill these in before/at the machine switch:**
+
+| Provider | Login | Notes |
+|---|---|---|
+| GitHub | `Stefan7168` / personal-gmail-1-redacted | repo owner; other gh accounts 404 on the private repo |
+| Anthropic (API) | personal-gmail-1-redacted | console.anthropic.com; €25/mo cap + alert set |
+| Supabase | personal-gmail-1-redacted, org **"stefan"** | ⚠ a second empty org "Stefan7324" exists on this login AND a second Supabase account (glaibaan) is often the browser's active session — always confirm org "stefan" |
+| Vercel | personal-gmail-2-redacted | **different email from the others**; project `checkdecijfers` |
+| **Resend** | ⚠ **NOT RECORDED — owner to fill in** | transactional email (magic-link SMTP + onboarding notifies); dashboard at resend.com |
+| **Stripe** | ⚠ **NOT RECORDED — owner to fill in** | test-mode; the key posts to the "GlaiBaan sandbox" (`acct_1TpJfCATKgdSn8Uc`) nested under this login — record the login email |
+| **Namecheap** (domain/DNS) | ⚠ **NOT RECORDED — owner to fill in** | holds `checkdecijfers.nl` DNS (Resend DKIM/SPF/MX/DMARC records) |
+
 ## Secrets register (filled in during Phase 0 setup)
 
 | Secret | Lives in | How to rotate (owner-followable) |
 |---|---|---|
-| `ANTHROPIC_API_KEY` | local `.env` + local `web/.env.local` (separate file, not a symlink — see note below) + Vercel env store (set 2026-07-04, WP12) | Anthropic console → create new key → replace in **all three** places → delete old key. ⚠ Owner decision 2026-07-03: the pre-launch key deliberately stayed in use across the machine move (the $25/mo spend cap bounds the risk) — rotation deferred to go-live/first deploy, tracked in the Phase 1 checklist above |
-| `DATABASE_URL` | local `.env` + local `web/.env.local` (separate file, not a symlink — see note below) + Vercel env store (set 2026-07-04, WP12) | Supabase dashboard → reset database password → replace in **all three** places. ⚠ Use the **Session pooler** connection string (Connect → Session pooler), not the direct one: the direct host is IPv6-only and doesn't work from most home networks (verified 2026-07-02). The connection is TLS-verified against Supabase's public root certificate, committed at `config/supabase-prod-ca-2021.pem` — nothing to do at rotation, it's valid to 2031. (The deployed web app receives that same certificate as `DATABASE_CA_CERT`, baked in automatically at build time from the committed file — not a secret, nothing to set or rotate anywhere; ADR 018) |
+| `ANTHROPIC_API_KEY` | root `.env` (live-data scripts) + Vercel env store (production, set 2026-07-04, WP12). ⚠ NOT in `web/.env.local` (verified 2026-07-11 — that file carries only the three `NEXT_PUBLIC_*` values); add it there too ONLY if you run the chat UI's full answer pipeline locally, since `next dev` reads `web/.env.local`, not root `.env` | Anthropic console → create new key → replace in **both** stores (root `.env` + Vercel; and `web/.env.local` too if you added it there) → delete old key. ⚠ Owner decision 2026-07-03: the pre-launch key deliberately stayed in use across the machine move (the $25/mo spend cap bounds the risk) — rotation deferred to go-live/first deploy, tracked in the Phase 1 checklist above |
+| `DATABASE_URL` | root `.env` (live-data scripts) + Vercel env store (production, set 2026-07-04, WP12). ⚠ NOT in `web/.env.local` (verified 2026-07-11 — same as ANTHROPIC_API_KEY above; add there only for local full-pipeline web dev) | Supabase dashboard → reset database password → replace in **both** stores (root `.env` + Vercel; and `web/.env.local` too if you added it there). ⚠ Use the **Session pooler** connection string (Connect → Session pooler), not the direct one: the direct host is IPv6-only and doesn't work from most home networks (verified 2026-07-02). The connection is TLS-verified against Supabase's public root certificate, committed at `config/supabase-prod-ca-2021.pem` — nothing to do at rotation, it's valid to 2031. (The deployed web app receives that same certificate as `DATABASE_CA_CERT`, baked in automatically at build time from the committed file — not a secret, nothing to set or rotate anywhere; ADR 018) |
 | `VERCEL_TOKEN` | GitHub Actions repo secret only (set 2026-07-04 by owner, via Terminal — never in chat) | Vercel dashboard → Account Settings → Tokens → create a new one → `gh secret set VERCEL_TOKEN --repo Stefan7168/checkdecijfers` (paste when prompted) → delete the old token in the Vercel dashboard. Used only by the CI `deploy` job (ADR 018) |
 | `VERCEL_ORG_ID` / `VERCEL_PROJECT_ID` | GitHub Actions repo secrets (set 2026-07-04) | Not secret (just identifiers) — read from `web/.vercel/project.json` after `vercel link`, only changes if the Vercel project is ever recreated |
 | `NEXT_PUBLIC_SUPABASE_URL` | `web/.env.local` (local dev) + **`web/.env.production`, committed to git** (production builds — moved out of the Vercel env store 2026-07-04, see note below the table) | Not secret (public project URL) — Supabase dashboard → Project Settings → API Keys → Project URL. `NEXT_PUBLIC_` vars are baked into the client bundle by Next.js at build time; that's expected here |
@@ -69,7 +83,7 @@ Everything **Stefan** does, phase by phase. AI sessions read [CLAUDE.md](../CLAU
 
 **Note on `NEXT_PUBLIC_*` vars and the Vercel env store (2026-07-04, production outage post-mortem):** this Vercel team enforces the **sensitive environment-variables policy** — every env var added to the project becomes write-only, no matter how it is added (dashboard or CLI; verified against the API: every var reports `type: sensitive`). Write-only is fine for real runtime secrets (`DATABASE_URL`, `ANTHROPIC_API_KEY`, `STRIPE_*` — Vercel injects them into the running functions), but it is **fatally incompatible with `NEXT_PUBLIC_*`** vars: those must be readable at *build* time, and our builds run in GitHub Actions via `vercel pull`, which receives sensitive values as **empty strings**. Result: the middleware was compiled with empty Supabase credentials and every route returned Internal Server Error — while the deploy job stayed green (a build succeeding says nothing about the app running; the CI deploy job now ends with a post-deploy smoke check for exactly this). The three public values therefore live in **`web/.env.production`, committed to git on purpose** (they ship in every browser bundle by design — same reasoning as the committed CA certificate, ADR 018). Never add a `NEXT_PUBLIC_` var to the Vercel env store expecting CI builds to see it, and never put a real secret in `web/.env.production`.
 
-**Note on `web/.env.local`:** the chat UI (`web/`, its own fully independent npm project — ADR [018](decisions/018-chat-ui-and-deploy.md), it briefly started as an npm workspace and was split mid-session) is a separate Next.js project that loads its own env file rather than the root `.env` — it does **not** automatically see root's values. `web/.env.local` is gitignored, same as root `.env`. An earlier version of this file was a **symlink** to root `.env`, which seemed convenient but backfired the first time `vercel pull` wrote a Vercel-specific token *through* the symlink into the shared root file — fixed by making `web/.env.local` a real, independent copy. This means a key rotation (above) has **three** places to update, not two; there is no technical link keeping them in sync.
+**Note on `web/.env.local`:** the chat UI (`web/`, its own fully independent npm project — ADR [018](decisions/018-chat-ui-and-deploy.md), it briefly started as an npm workspace and was split mid-session) is a separate Next.js project that loads its own env file rather than the root `.env` — it does **not** automatically see root's values. `web/.env.local` is gitignored, same as root `.env`. An earlier version of this file was a **symlink** to root `.env`, which seemed convenient but backfired the first time `vercel pull` wrote a Vercel-specific token *through* the symlink into the shared root file — fixed by making `web/.env.local` a real, independent copy. Which secret lives where is per-row above — do NOT assume "all three": as of 2026-07-11 (verified) `web/.env.local` holds ONLY the three `NEXT_PUBLIC_*` values; `ANTHROPIC_API_KEY` and `DATABASE_URL` live in root `.env` + Vercel (two places), and only need to be added to `web/.env.local` if you run the chat UI's full answer pipeline locally. There is no technical link keeping any of these in sync — follow the per-secret "Lives in" column at rotation time.
 
 ## Moving to a new machine (fresh clone bootstrap)
 
@@ -84,7 +98,13 @@ computer or any one Claude account. A new machine needs, in order:
    `gh auth login` (step 2) is what gives git the credentials the clone
    in step 3 needs (measured on the 2026-07-03 bootstrap — the clone
    worked *because* gh was signed in). It also lets you watch CI from
-   the terminal.
+   the terminal. **Optional but recommended for incident response:** the
+   **Vercel CLI** (`npm i -g vercel`, then `vercel login` as
+   personal-gmail-2-redacted and `vercel link` to project `checkdecijfers`) —
+   the supervised-live-step playbooks below tell you to run `vercel logs`
+   as the first move when a deploy misbehaves, and that needs the CLI
+   installed + linked. Not needed for building or CI (those use
+   `VERCEL_TOKEN` in GitHub Actions).
 2. **Sign in**: GitHub (your `Stefan7168` account — `gh auth login` walks you
    through it in the browser) and Claude Code (your Claude account).
    **Multi-account gotchas (previously only in AI session memory — recorded
