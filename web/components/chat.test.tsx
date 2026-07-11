@@ -508,6 +508,62 @@ describe('Chat — WP23 display smalls', () => {
   });
 });
 
+// WP29 (#73, ADR 029): follow-up chips under an answer — the server-gated
+// `suggestions` field renders as chips with the #75 fill-don't-send behavior.
+describe('Chat — WP29 follow-up suggestion chips (#73)', () => {
+  /** An 'ok' outcome whose answer carries server-gated suggestions. */
+  function answerWithSuggestions(body: string, suggestions: string[]): GatedResponse {
+    return {
+      kind: 'ok',
+      auditId: 3,
+      netCost: 20,
+      response: fakeAnswerResponse({ body, suggestions }) as ComposedResponse,
+    };
+  }
+
+  it('renders the chips under an answer; clicking FILLS the input and never sends (the #75 handler verbatim)', async () => {
+    askQuestion.mockResolvedValue(
+      outcome(
+        answerWithSuggestions('De inflatie bedroeg in 2024 3,3%.', [
+          'Wat was inflatie (jaarmutatie CPI, alle bestedingen) in 2025?',
+          'Hoe ontwikkelde inflatie (jaarmutatie CPI, alle bestedingen) zich van 2020 tot en met 2024?',
+        ]),
+      ),
+    );
+    render(<Chat />);
+    await submit('Wat was de inflatie in 2024?');
+
+    const chip = await screen.findByRole('button', {
+      name: 'Wat was inflatie (jaarmutatie CPI, alle bestedingen) in 2025?',
+    });
+    expect(
+      screen.getByRole('button', {
+        name: 'Hoe ontwikkelde inflatie (jaarmutatie CPI, alle bestedingen) zich van 2020 tot en met 2024?',
+      }),
+    ).toBeInTheDocument();
+
+    fireEvent.click(chip);
+    expect(screen.getByPlaceholderText('Stel een vraag…')).toHaveValue(
+      'Wat was inflatie (jaarmutatie CPI, alle bestedingen) in 2025?',
+    );
+    // Fill, never send: only the original submit reached the server action.
+    expect(askQuestion).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders NO chip block when suggestions is empty (zero survivors of the server gate)', async () => {
+    askQuestion.mockResolvedValue(
+      outcome(answerWithSuggestions('De inflatie bedroeg in 2024 3,3%.', [])),
+    );
+    render(<Chat />);
+    await submit('Wat was de inflatie in 2024?');
+    await screen.findByText('De inflatie bedroeg in 2024 3,3%.');
+    // The only buttons left are the form + per-answer action buttons — no
+    // rounded suggestion chip carries a question.
+    expect(screen.queryByRole('button', { name: /Wat was .*\?/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Hoe ontwikkelde .*\?/ })).toBeNull();
+  });
+});
+
 describe('Chat — WP22 stale-deploy action failure (#96a)', () => {
   it('shows the honest deploy copy + refresh button, never the generic error', async () => {
     askQuestion.mockRejectedValue(

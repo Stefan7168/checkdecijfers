@@ -18,4 +18,5 @@ export type { MetaTemplate, MetaTemplateKey, MetaBodyContext } from './meta.ts';
 export { maxAgeDaysForCadence, checkStaleness } from './staleness.ts';
 export type { StalenessCheck } from './staleness.ts';
 export { periodCodeToNl } from './period-nl.ts';
+export { buildSuggestions, MAX_SUGGESTIONS } from './suggestions.ts';
 export * from './types.ts';

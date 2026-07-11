@@ -64,6 +64,8 @@ export function fakeAnswerResponse(opts: {
   definitionLine?: string | null;
   markingLine?: string | null;
   attributionLine?: string;
+  /** WP29 (#73): servability-gated follow-up chip texts the chat renders. */
+  suggestions?: string[];
 } = {}): AnswerResponse {
   const body = opts.body ?? 'Nederland telt 18.044.027 inwoners.';
   const attribution = fakeAttribution({
@@ -76,6 +78,7 @@ export function fakeAnswerResponse(opts: {
     text: opts.text ?? body,
     chart: null,
     stalenessWarning: opts.stalenessWarning ?? null,
+    suggestions: opts.suggestions ?? [],
     answer: {
       body,
       definitionLine: opts.definitionLine ?? null,

@@ -11,7 +11,7 @@
 // rethrows to the caller and never serves a partial/guessed answer
 // (principle c).
 import type { Db } from '../../db/types.ts';
-import { runQuery, type QueryOutcome, type ValidatedResult } from '../../query/index.ts';
+import { echoServability, runQuery, type QueryOutcome, type ValidatedResult } from '../../query/index.ts';
 import { buildChartSpec } from '../../chart/index.ts';
 import { composeAnswer, type ComposeOptions } from '../compose/index.ts';
 import { parseQuestion, type ParseQuestionOptions } from '../intent/parse.ts';
@@ -35,6 +35,7 @@ import {
 import type { TableFinder } from '../intent/policy.ts';
 import type { OnboardedMeasure } from '../intent/prompt.ts';
 import { checkStaleness } from './staleness.ts';
+import { buildSuggestions } from './suggestions.ts';
 import type { AnswerResponse, ClarificationResponse, ComposedResponse, PendingClarification } from './types.ts';
 import { RESPONSE_SCHEMA_VERSION } from './types.ts';
 
@@ -160,6 +161,21 @@ export async function respondToIntent(
   const chart = buildChartSpec(result);
   const text = staleness.stale ? `${answer.text}\n\n${staleness.warning}` : answer.text;
 
+  // WP29 (#73, ADR 029): follow-up chips, servability-gated through the same
+  // dry-run primitive policy.ts uses (a closure over db, mirroring parse.ts's
+  // construction). FAIL-OPEN belt on top of buildSuggestions' own: a
+  // suggestions hiccup may never cost the user the paid answer — the same
+  // rule web/app/actions.ts applies to outcomeContext. Assembled
+  // post-compose: `text` above is already final and stays byte-untouched.
+  let suggestions: string[] = [];
+  try {
+    suggestions = await buildSuggestions(parse.intent, result, (candidate) =>
+      echoServability(db, candidate),
+    );
+  } catch {
+    suggestions = [];
+  }
+
   const response: AnswerResponse = {
     schemaVersion: RESPONSE_SCHEMA_VERSION,
     question,
@@ -170,6 +186,7 @@ export async function respondToIntent(
     stalenessWarning: staleness.stale ? staleness.warning : null,
     parse,
     result,
+    suggestions,
   };
   return response;
 }
