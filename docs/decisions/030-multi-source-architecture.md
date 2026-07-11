@@ -101,3 +101,69 @@ Revisit only if a chosen source demands tooling TypeScript genuinely lacks.
 - Two+ sources covering the SAME statistic → the #39/#21 multi-reading disclosure design (already
   anticipated there), plus cross-source verification (ADR 026's deferred "genuine second source"
   check becomes possible — worth doing at WP30c).
+
+## Amendments from the pre-build adversarial design review (session 36, 2026-07-11 — 48 agents: 6 mid-tier lenses × dual heavy-tier skeptics; 21 raw findings → 3 confirmed blockers, 2 contested upheld by the session model, 16 killed)
+
+**A1 — Absent `source` defaults to the `'cbs'` registry entry, everywhere, forever (R8).** The
+review's strongest finding, confirmed independently by TWO lenses (dual-upheld both times):
+`audit_answers.response` holds the FULL envelope as frozen jsonb — every row written before WP30a
+has an `attribution` object with NO `source` key, and `reconstruct.ts` re-derives the attribution
+line (and stored chart specs, incl. the null-note) from that stored JSON byte-for-byte. Any
+builder that consolidates onto `Attribution.source` therefore MUST treat an absent/undefined
+`source` as the `'cbs'` registry entry — old rows re-derive byte-identically forever. Pinned by:
+(a) a regression test constructing a pre-WP30a-shaped `Attribution` (no `source` field) that must
+reconstruct clean, and (b) the supervised step re-running `scripts/verify-audit-rows.ts` against
+real production rows.
+
+**A2 — `provisionalStatuses` is a MAP, not a set.** Today's display is two-tier
+(`template.ts` `provisionalSuffix`: `NaderVoorlopig` → ' (nader voorlopig cijfer)', otherwise
+' (voorlopig cijfer)') — a flat set cannot reproduce it byte-identically. The registry field
+becomes `provisionalDisplay: Record<verbatimStatus, suffix>` (CBS:
+`{ Voorlopig: ' (voorlopig cijfer)', NaderVoorlopig: ' (nader voorlopig cijfer)' }`); a status
+absent from the map is not provisional. D2's honesty rule stands: verbatim labels, no invented
+certainty either way.
+
+**A3 — Two D3 sites the enumeration missed, now in scope:** the chart null-cell note
+(`src/chart/build.ts:47`, literal `'… ${valueAttribute} (CBS).'` — STORED in `ChartSpec.nullNotes`
+and R8-re-derived, so it inherits A1's fallback rule) and the stat-card footer (needs a source
+field on `StatCardData` — additive plumbing). Chart-spec typing: `Attribution.source` rides as an
+OPTIONAL additive field; `CHART_SPEC_VERSION` stays 1 (old stored specs re-derive via A1; nothing
+existing changes shape).
+
+**A4 — WP30a touches ZERO LLM request bytes — made explicit.** D3's "intent-prompt provenance
+prose / meta 'sources' template become registry-driven enumerations" is DEFERRED to WP30c (where
+the owner-signed wording change re-records fixtures anyway). In WP30a the intent prompt is
+byte-untouched and the meta template may only be restructured if its output is proven
+byte-identical (the killed-findings' residual risk, closed by making the constraint explicit).
+The fixture-replay suite green IS the proof, as with #125a.
+
+**A5 — Scope split confirmed: WP30a and WP30b are SEPARATE sessions; the `Cbs*`/`cbs-adapter/`
+rename is DEFERRED (alias only if WP30b's guide needs a neutral name).** Measured rename blast
+radius: `CbsSource` 13 files/41 occurrences, full `Cbs*` family 21 files, import path 31 files —
+diff noise that buys nothing hermetic now. D6 correction: the harness runs the FIVE existing
+validators (schema fingerprint, row plausibility, period parsing, dimension mapping, unit
+consistency — the ADR said four), plus the four contract-test families and the per-source
+fixture manifest, per the review's scope-harness inventory (recorded in the WP30a executor brief).
+
+**A6 — The registry also carries the CATALOG-lifecycle "current" vocabulary (delta-audit
+finding, dual-upheld).** WP27 stage A (post-dossier) made `cbs_catalog.status = 'Regulier'` a
+LOAD-BEARING recall-ranking key (`src/catalog/recall.ts` — the 20-current/4-historic shortlist
+quota that fixed #111), and that is a DIFFERENT vocabulary (per-table lifecycle:
+Regulier/Gediscontinueerd/Vervallen) than D2's per-cell observation statuses. The registry
+therefore also carries a per-source `currentCatalogStatuses` set, and recall's partition
+consults it for the row's source instead of the literal `'Regulier'`. The D6 harness gains a
+matching contract test (an adapter must declare its catalog-lifecycle mapping; fixtures
+containing an undeclared status fail). Build timing: the registry FIELD lands in WP30a (CBS
+entry only, recall output byte-identical); the recall-consultation wiring + contract test land
+in WP30b (recall.ts is fixture-load-bearing — touching it in WP30a buys nothing).
+
+**A7 — Delta deferrals, recorded explicitly (post-dossier code, all fail-open or byte-frozen):**
+the two NEW CBS-branded LLM prompts (rerank v2 `src/catalog/rerank-prompt.ts`, fit gate
+`src/ingestion/onboarding-fit.ts`) are fixture-hash-frozen → WP30c's owner-signed wording sweep
+(per A4, zero LLM bytes before that); the fit gate's deliverability pre-checks key on CBS
+OData's `CbsDimensionKind` enum — an adapter-contract point for WP30b's guide (a source's
+schema mapping must populate the same kind vocabulary); D2 gains a recorded gap-note: UNIT
+notation (#125a's `parseFactorUnit` parses CBS's factor spellings) and region-LABEL formatting
+(WP29's `baseLabel` strips CBS's parenthetical suffix) are source-native grammars WITHOUT a D2
+bullet — both fail open (missed nicety / dropped chip, never a wrong number), revisit at WP30c
+with the first real adapter.
