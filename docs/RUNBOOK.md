@@ -87,6 +87,18 @@ A fresh machine needs to know which login owns each provider to rotate a secret 
 
 **Note on `web/.env.local`:** the chat UI (`web/`, its own fully independent npm project — ADR [018](decisions/018-chat-ui-and-deploy.md), it briefly started as an npm workspace and was split mid-session) is a separate Next.js project that loads its own env file rather than the root `.env` — it does **not** automatically see root's values. `web/.env.local` is gitignored, same as root `.env`. An earlier version of this file was a **symlink** to root `.env`, which seemed convenient but backfired the first time `vercel pull` wrote a Vercel-specific token *through* the symlink into the shared root file — fixed by making `web/.env.local` a real, independent copy. Which secret lives where is per-row above — do NOT assume "all three": as of 2026-07-11 (verified) `web/.env.local` holds ONLY the three `NEXT_PUBLIC_*` values; `ANTHROPIC_API_KEY` and `DATABASE_URL` live in root `.env` + Vercel (two places), and only need to be added to `web/.env.local` if you run the chat UI's full answer pipeline locally. There is no technical link keeping any of these in sync — follow the per-secret "Lives in" column at rotation time.
 
+## ⚠ History rewritten 2026-07-12 (#132) — old clones are POISON, re-clone instead
+
+The public repo's full git history was rewritten on 2026-07-12 (owner-approved: commit authors →
+the GitHub noreply address, personal identifiers scrubbed from all old file versions — the
+[#132](open-questions.md) record has the measured proof). Consequence: **any clone made before
+that date (e.g. on the previous laptop) carries the OLD history. Never commit or push from such a
+clone — it would resurrect the scrubbed identifiers. Delete it and `git clone` fresh.** The
+build machine's local safety bundle (`~/checkdecijfers-pre-rewrite-2026-07-12.bundle`) contains
+the old history on purpose (rollback insurance); the owner deletes it when satisfied. Commit
+identity for every clone: the noreply address in the fresh-clone step below — never a personal
+e-mail (the repo is public).
+
 ## Adding a data source (WP30c and later)
 
 The step-by-step recipe lives in [docs/how-to-add-a-source.md](how-to-add-a-source.md) (WP30b,
