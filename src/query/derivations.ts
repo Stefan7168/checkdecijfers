@@ -137,6 +137,75 @@ export function deriveDirection(cells: ResultCell[]): DerivationResult {
   };
 }
 
+/** A PURE numeric factor unit ('x 1 000', 'x 1000', '× 1.000'): an optional
+ * x/× prefix, then one digit group with space/dot thousands-grouping, and
+ * NOTHING else. Units containing any other character are structurally
+ * excluded — '1 000 euro' (a factor with a currency word) is out of v1 scope,
+ * and rate units ('aantal per 1 000 inwoners') can never match (ADR 031 D1).
+ * Returns the factor as a positive safe integer, or null when the unit is not
+ * a pure factor. */
+export function parseFactorUnit(unit: string): number | null {
+  const trimmed = unit.trim();
+  const match = /^[x×]?[\s ]*(\d{1,3}(?:[\s .]\d{3})*|\d+)$/.exec(trimmed);
+  if (!match) return null;
+  const factor = Number.parseInt(match[1]!.replace(/[\s .]/g, ''), 10);
+  if (!Number.isSafeInteger(factor) || factor < 10) return null;
+  return factor;
+}
+
+/** #125a (ADR 031): the exact expanded figure for a pure-factor-unit cell —
+ * "390,2 x 1000" also states "= 390.200". EXACT arithmetic only: IEEE-754
+ * float multiplication is not always exact (16.1 * 1000 =
+ * 16100.000000000002; 96 of the 9,999 one-decimal values below 1000 multiply
+ * inexactly by 1000), so the value is scaled to an integer via its declared
+ * decimals first. Only
+ * integer-valued expansions are registered in v1; anything the guards cannot
+ * prove exact refuses, and the answer simply renders as today (fail-open —
+ * a missing nicety, never a wrong number). */
+export function deriveUnitExpansion(cell: ResultCell): DerivationResult {
+  const factor = parseFactorUnit(cell.unit);
+  if (factor === null) {
+    return refuse(`unit '${cell.unit}' is not a pure numeric factor unit`);
+  }
+  if (cell.value === null) {
+    return refuse(`source cell ${cell.resultId} has no value (CBS reason: ${cell.valueAttribute}) — cannot expand it`);
+  }
+  const decimals = cell.decimals;
+  if (!Number.isInteger(decimals) || decimals < 0 || decimals > 6) {
+    return refuse(`decimals ${decimals} outside the exact-arithmetic range — refusing to expand`);
+  }
+  const pow = 10 ** decimals;
+  const scaled = Math.round(cell.value * pow);
+  // The scaled value must reconstruct the cell value exactly — a value
+  // carrying more precision than its declared decimals cannot be expanded
+  // honestly.
+  if (!Number.isSafeInteger(scaled) || scaled / pow !== cell.value) {
+    return refuse(`value ${cell.value} does not scale exactly at ${decimals} decimals — refusing to expand`);
+  }
+  const expandedScaled = scaled * factor;
+  if (!Number.isSafeInteger(expandedScaled)) {
+    return refuse(`expansion of ${cell.value} × ${factor} exceeds exact integer range — refusing to expand`);
+  }
+  if (expandedScaled % pow !== 0) {
+    return refuse(`expansion of ${cell.value} × ${factor} is not integer-valued — v1 registers integer expansions only`);
+  }
+  return {
+    ok: true,
+    record: {
+      kind: 'unit_expansion',
+      explicit: false,
+      sourceResultIds: [cell.resultId],
+      // The expanded figure is a bare count — 'aantal' is the validator's
+      // existing no-unit-word-required convention (ADR 031 D1). The verbatim
+      // factor string next to the SOURCE value stays R10-enforced.
+      unit: 'aantal',
+      marking: DERIVED_DATA_MARKING,
+      factor,
+      value: expandedScaled / pow,
+    },
+  };
+}
+
 /** Pre-registered on every series (R9): the endpoints, so "van X naar Y"
  * sentences bind to named cells. */
 export function deriveFirstLast(cells: ResultCell[]): DerivationResult {

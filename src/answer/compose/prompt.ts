@@ -85,7 +85,14 @@ export function buildPhrasingPayload(result: ValidatedResult): PhrasingPayload {
       unit: cell.unit,
       provisional: cell.provisional,
     })),
-    derivations: result.derivations.map((d) => {
+    // unit_expansion records are display-only and NEVER serialized to the
+    // model (ADR 031 D3): the model must not phrase the expansion itself
+    // (double-render risk, and rule 3 forbids it converting units), and the
+    // filter keeps every payload byte-identical to the pre-#125a form — so
+    // every recorded LLM fixture keeps its request hash and replays.
+    derivations: result.derivations
+      .filter((d): d is Exclude<typeof d, { kind: 'unit_expansion' }> => d.kind !== 'unit_expansion')
+      .map((d) => {
       switch (d.kind) {
         case 'difference':
           return {
