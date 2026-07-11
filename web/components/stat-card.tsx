@@ -100,7 +100,7 @@ export function StatCard({ data }: { data: StatCardData }) {
           </text>
         ) : null}
         <text x="32" y="284" fontFamily={FONT} fontSize="15" fill="#a1a1aa">
-          {`CBS StatLine · tabel ${data.tableId} · gesynchroniseerd ${data.syncedDate} · checkdecijfers.nl`}
+          {`${data.sourceLabel} · tabel ${data.tableId} · gesynchroniseerd ${data.syncedDate} · checkdecijfers.nl`}
         </text>
       </svg>
       <div className="mt-1">

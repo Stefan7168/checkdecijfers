@@ -12,6 +12,10 @@ export interface AnswerKey {
 }
 
 interface KeyEntry {
+  /** Source-registry key (WP30a, ADR 030): provenance metadata, default
+   * 'cbs'. Not read by the scorer — it exists so WP30c tasks over a second
+   * source declare theirs. */
+  source?: string;
   shape: string;
   table: string;
   /** B10-style comparative expectation, e.g. "Amsterdam > Rotterdam". */

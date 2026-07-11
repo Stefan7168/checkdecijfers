@@ -19,6 +19,7 @@ import { CHART_SPEC_VERSION } from './types.ts';
 import type { ResultCell, ValidatedResult } from '../query/index.ts';
 import { contiguousPeriodCodes } from '../query/index.ts';
 import { buildAttributionLine, formatValueNl } from '../answer/compose/format.ts';
+import { resolveSource } from '../sources/registry.ts';
 
 /** R11 note rendered with any chart containing non-definitive points. */
 export const PROVISIONAL_NOTE = 'Voorlopige cijfers zijn gemarkeerd met *.' as const;
@@ -38,13 +39,16 @@ function toPoint(cell: ResultCell): ChartPoint {
 }
 
 /** The honest-gap line for a null-valued cell: period (and region when the
- * chart has several), plus the CBS reason verbatim. */
-function nullNote(cell: ResultCell, multiRegion: boolean): string {
+ * chart has several), plus the source's reason verbatim. The source name
+ * comes from the registry (WP30a, ADR 030 A3 — this stored, R8-re-derived
+ * string was missing from D3's original site list); absent source resolves
+ * to 'cbs' (A1), keeping old stored specs byte-identical. */
+function nullNote(cell: ResultCell, multiRegion: boolean, sourceName: string): string {
   const where =
     multiRegion && cell.regionLabel !== null
       ? `${cell.periodLabel} (${cell.regionLabel})`
       : cell.periodLabel;
-  return `Geen waarde voor ${where}: ${cell.valueAttribute} (CBS).`;
+  return `Geen waarde voor ${where}: ${cell.valueAttribute} (${sourceName}).`;
 }
 
 export function buildChartSpec(result: ValidatedResult): ChartSpec | null {
@@ -122,7 +126,9 @@ export function buildChartSpec(result: ValidatedResult): ChartSpec | null {
     unit: units[0]!,
     series,
     provisionalNote: anyProvisional ? PROVISIONAL_NOTE : null,
-    nullNotes: result.cells.filter((c) => c.value === null).map((c) => nullNote(c, multiRegion)),
+    nullNotes: result.cells
+      .filter((c) => c.value === null)
+      .map((c) => nullNote(c, multiRegion, resolveSource(result.attribution.source).displayName)),
     definitionLine:
       result.attribution.definitionLabel === null
         ? null

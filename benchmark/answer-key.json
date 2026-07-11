@@ -17,6 +17,7 @@
   },
   "tasks": {
     "B1": {
+      "source": "cbs",
       "shape": "single",
       "table": "03759ned", "measure": "M000352", "measureTitle": "Bevolking op 1 januari",
       "region": { "code": "NL01", "label": "Nederland" },
@@ -25,6 +26,7 @@
       "value": 18044027, "unit": "aantal", "decimals": 0, "status": "Definitief", "valueAttribute": "None"
     },
     "B2": {
+      "source": "cbs",
       "shape": "single",
       "table": "03759ned", "measure": "M000352", "measureTitle": "Bevolking op 1 januari",
       "region": { "code": "GM0344", "label": "Utrecht (gemeente)" },
@@ -33,6 +35,7 @@
       "value": 374238, "unit": "aantal", "decimals": 0, "status": "Definitief", "valueAttribute": "None"
     },
     "B3": {
+      "source": "cbs",
       "shape": "single",
       "table": "86141NED", "measure": "M000238", "measureTitle": "Jaarmutatie CPI",
       "region": null,
@@ -42,6 +45,7 @@
       "note": "Base-year break: index levels are 2025=100, not comparable with the discontinued 83131NED (2015=100) series. Jaarmutatie (%) is continuous across the break — this cell is unaffected."
     },
     "B4": {
+      "source": "cbs",
       "shape": "series",
       "table": "86141NED", "measure": "M000238", "measureTitle": "Jaarmutatie CPI",
       "region": null,
@@ -56,6 +60,7 @@
       ]
     },
     "B5": {
+      "source": "cbs",
       "shape": "single",
       "table": "85224NED", "measure": "M001906", "measureTitle": "Werkloosheidspercentage",
       "region": null,
@@ -71,6 +76,7 @@
       }
     },
     "B6": {
+      "source": "cbs",
       "shape": "single",
       "table": "82235NED", "measure": "D002936", "measureTitle": "Beginstand voorraad",
       "region": null,
@@ -86,6 +92,7 @@
       }
     },
     "B7": {
+      "source": "cbs",
       "shape": "single",
       "table": "85773NED", "measure": "M001534", "measureTitle": "Gemiddelde verkoopprijs",
       "region": null,
@@ -95,6 +102,7 @@
       "note": "CBS: this average is not composition-adjusted (the official market gauge is the price index M001505_2). The benchmark asks for the average sale price, which is exactly this cell — phrasing should not present it as 'the market'."
     },
     "B8": {
+      "source": "cbs",
       "shape": "series",
       "table": "85773NED", "measure": "M001534", "measureTitle": "Gemiddelde verkoopprijs",
       "region": null,
@@ -110,6 +118,7 @@
       ]
     },
     "B9": {
+      "source": "cbs",
       "shape": "single",
       "table": "82242NED", "measure": "M001327", "measureTitle": "Uitgesproken faillissementen",
       "region": null,
@@ -124,6 +133,7 @@
       }
     },
     "B10": {
+      "source": "cbs",
       "shape": "comparison",
       "table": "03759ned", "measure": "M000352", "measureTitle": "Bevolking op 1 januari",
       "period": "2024JJ00",
@@ -135,6 +145,7 @@
       "direction": "Amsterdam > Rotterdam"
     },
     "B11": {
+      "source": "cbs",
       "shape": "single",
       "table": "82610NED", "measure": "M002264_1", "measureTitle": "Bruto elektriciteitsproductie",
       "region": null,
@@ -144,6 +155,7 @@
       "note": "Invariant R11 applies: this value is NaderVoorlopig (definitief expected ~Nov 2026) — the answer and chart spec must carry the 'voorlopig cijfer' marking."
     },
     "B12": {
+      "source": "cbs",
       "shape": "single",
       "table": "83932NED", "measure": "M003239", "measureTitle": "Gemiddeld inkomen",
       "region": null,
@@ -153,6 +165,7 @@
       "note": "R10 factor-1,000 guard: 57.6 x 1,000 euro = EUR 57,600. Inkomensbegrippen pinned to A043966 (Besteedbaar inkomen), matching the task wording 'besteedbaar inkomen' exactly — not a canonical-default choice, no ambiguity."
     },
     "B13": {
+      "source": "cbs",
       "shape": "derived",
       "derived": "difference",
       "table": "03759ned", "measure": "M000352", "measureTitle": "Bevolking op 1 januari",
@@ -168,6 +181,7 @@
       "expect": "Groeide met 101.085 inwoners in 2024 (van 17.942.942 op 1-1-2024 naar 18.044.027 op 1-1-2025) — bewerking van CBS-gegevens door checkdecijfers.nl."
     },
     "B14": {
+      "source": "cbs",
       "shape": "derived",
       "derived": "max",
       "table": "03759ned", "measure": "M000352", "measureTitle": "Bevolking op 1 januari",
@@ -185,6 +199,7 @@
       "winner": { "code": "GM0363", "label": "Amsterdam" }
     },
     "B20": {
+      "source": "cbs",
       "shape": "freshnessReference",
       "table": "86141NED", "measure": "M000238", "measureTitle": "Jaarmutatie CPI",
       "region": null,

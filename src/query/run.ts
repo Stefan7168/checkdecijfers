@@ -6,6 +6,7 @@
 // no rendering path can drop it (R4). No LLM anywhere (WP5).
 import type { Db } from '../db/types.ts';
 import { parsePeriodCode } from '../ingestion/periods.ts';
+import { CBS_SOURCE_KEY } from '../sources/registry.ts';
 import { deriveDifference, deriveDirection, deriveFirstLast, deriveMax, deriveUnitExpansion } from './derivations.ts';
 import { normalizeLabel, periodKey, resolveIntent, type ResolvedQuery } from './resolve.ts';
 import type {
@@ -338,6 +339,9 @@ export async function runQuery(db: Db, intent: StructuredIntent): Promise<QueryO
     tableId: q.tableId,
     tableTitle: q.table.title,
     tableVersion: q.table.version,
+    // WP30a: everything registered today IS CBS; adapters for source #2
+    // will carry their key through registration (ADR 030 D4/D5, WP30c).
+    source: CBS_SOURCE_KEY,
     syncedAt: q.table.lastSyncAt,
     coveredPeriods: { from: q.periodCodes[0]!, to: q.periodCodes[q.periodCodes.length - 1]! },
     license: 'CC BY 4.0',

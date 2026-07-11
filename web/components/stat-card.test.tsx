@@ -16,6 +16,7 @@ function data(overrides: Partial<StatCardData> = {}): StatCardData {
     context: 'Rotterdam · 2023',
     provisional: false,
     tableId: '82931NED',
+    sourceLabel: 'CBS StatLine',
     syncedDate: '2026-07-03',
     ...overrides,
   };

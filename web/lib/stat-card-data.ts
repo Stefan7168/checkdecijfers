@@ -16,6 +16,7 @@
 import { formatValueNl } from '../backend/answer/compose/format.ts';
 import { displayValueUnit } from '../backend/answer/compose/template.ts';
 import type { AnswerResponse } from '../backend/answer/respond/types.ts';
+import { resolveSource } from '../backend/sources/registry.ts';
 
 export interface StatCardData {
   /** Dutch-formatted value, straight from formatValueNl. */
@@ -28,6 +29,9 @@ export interface StatCardData {
   context: string;
   provisional: boolean;
   tableId: string;
+  /** The registry-resolved attribution label ('CBS StatLine') for the card
+   * footer (WP30a, ADR 030 A3 — StatCardData carried no source before). */
+  sourceLabel: string;
   /** ISO date part of the sync timestamp (rendered on the card verbatim). */
   syncedDate: string;
 }
@@ -45,6 +49,7 @@ export function statCardData(response: AnswerResponse): StatCardData | null {
     context: [cell.regionLabel, cell.periodLabel].filter((part) => part !== null && part !== '').join(' · '),
     provisional: cell.provisional,
     tableId: result.attribution.tableId,
+    sourceLabel: resolveSource(result.attribution.source).attributionLabel,
     syncedDate: result.attribution.syncedAt.slice(0, 10),
   };
 }

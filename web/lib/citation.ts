@@ -11,6 +11,7 @@
 // module graph into Turbopack's resolution.
 import type { AnswerResponse } from '../backend/answer/respond/types.ts';
 import { DERIVED_DATA_MARKING } from '../backend/query/types.ts';
+import { resolveSource } from '../backend/sources/registry.ts';
 
 /** Dutch long date ("3 juli 2026") in the product's own timezone, matching
  * question-history's date convention. */
@@ -26,7 +27,9 @@ function formatDateNl(iso: string): string {
 export function buildCitation(response: AnswerResponse): string {
   const attribution = response.result.attribution;
   const flags: string[] = [
-    `CBS StatLine, tabel ${attribution.tableId}`,
+    // WP30a (ADR 030 D3): the label resolves via the source registry —
+    // absent source (historical envelopes) → 'cbs' (A1), byte-identical.
+    `${resolveSource(attribution.source).attributionLabel}, tabel ${attribution.tableId}`,
     `gesynchroniseerd ${formatDateNl(attribution.syncedAt)}`,
   ];
   if (response.result.cells.some((cell) => cell.provisional)) {
