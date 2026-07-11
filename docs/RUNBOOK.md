@@ -91,6 +91,16 @@ Everything that matters lives in this repository or in your own accounts
 (GitHub, Supabase, Anthropic) — nothing project-critical is tied to any one
 computer or any one Claude account. A new machine needs, in order:
 
+> **Returning to a PREVIOUSLY-used machine instead?** (measured, session 36,
+> the 2026-07-11 switch-back): the old clone may be stale or even gutted —
+> session 36 found every tracked file deleted from the working tree with
+> `.git` intact. Recovery is three git commands, no re-clone: `git stash push`
+> (restores all files AND keeps the deletion state as a poppable undo — also
+> the move when a permission classifier misreads `git restore .` as
+> destructive), `git fetch origin`, `git merge --ff-only origin/main`. Then
+> read STATUS as usual. ⚠ The machine's local AI memory files predate the
+> switch — where they contradict STATUS, STATUS wins (the doc-freshness rule).
+
 1. **Install** (one-time): [Node.js](https://nodejs.org) **24 or newer**
    (`node --version` to check — the project requires ≥24), git,
    [Claude Code](https://claude.com/claude-code), and the GitHub CLI

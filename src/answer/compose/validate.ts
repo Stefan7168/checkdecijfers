@@ -75,6 +75,10 @@ function derivationNumbers(d: DerivationRecord): number[] {
       return [d.netChange];
     case 'first_last':
       return [];
+    case 'unit_expansion':
+      // The exact expanded figure ("= 390.200") — backed so the display
+      // splice's token classifies as derivation, never unbacked (ADR 031 D5).
+      return [d.value];
   }
 }
 
@@ -214,7 +218,9 @@ const EQUALITY_CLAIM = /\b(?:ongeveer\s+|vrijwel\s+|nagenoeg\s+)?(?:evenveel|eve
 // '€ 450.985' style. A wide symmetric window let one distant unit word vouch
 // for several values at once (adversarial-review finding, 2026-07-03).
 const UNIT_PREFIX = 10;
-const UNIT_SUFFIX = 24;
+/** Exported for the #125a display splice (expand.ts): the expansion anchors
+ * on the same window this validator proved the unit phrase sits in. */
+export const UNIT_SUFFIX = 24;
 
 function windowAround(text: string, index: number, length: number): string {
   return text.slice(Math.max(0, index - UNIT_PREFIX), index + length + UNIT_SUFFIX);
@@ -383,7 +389,9 @@ function derivationSourceCells(d: DerivationRecord, cellsById: Map<string, Resul
       ? [d.subtrahendResultId, d.minuendResultId]
       : d.kind === 'direction' || d.kind === 'first_last'
         ? [d.firstResultId, d.lastResultId]
-        : [d.winnerResultId];
+        : d.kind === 'unit_expansion'
+          ? d.sourceResultIds
+          : [d.winnerResultId];
   return ids.map((id) => cellsById.get(id)).filter((c): c is ResultCell => c !== undefined);
 }
 

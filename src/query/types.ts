@@ -141,6 +141,20 @@ export type DerivationRecord =
       kind: 'first_last';
       firstResultId: string;
       lastResultId: string;
+    })
+  | (DerivationBase & {
+      /** Pure numeric factor units ('x 1 000', 'x 1000'): the exact expanded
+       * figure shown ALONGSIDE the verbatim CBS notation — the owner-decided
+       * "uitgerekend erbij" display (#125a, ADR 031). One record per source
+       * cell; `unit` is 'aantal' (the expansion is a bare count — the verbatim
+       * factor string next to the SOURCE value stays R10-enforced, unchanged).
+       * Never explicit; never serialized into the phrasing payload (D3). */
+      kind: 'unit_expansion';
+      /** The unit's numeric factor, as a positive integer. */
+      factor: number;
+      /** source cell value × factor, exact (integer-scaled, never float
+       * multiplication) and integer-valued by construction (ADR 031 D1). */
+      value: number;
     });
 
 /** R4: what every answer must display, carried in the result so no rendering

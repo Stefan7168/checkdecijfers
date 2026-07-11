@@ -12,6 +12,7 @@
 import type { ValidatedResult } from '../../query/index.ts';
 import { DERIVED_DATA_MARKING } from '../../query/index.ts';
 import type { LlmClient, LlmUsage } from '../llm/client.ts';
+import { applyUnitExpansions } from './expand.ts';
 import { buildAttributionLine, buildDefinitionLine } from './format.ts';
 import { buildPhrasingRequest, COMPOSE_PROMPT_VERSION, PHRASING_MODEL } from './prompt.ts';
 import { renderTemplateBody } from './template.ts';
@@ -25,11 +26,17 @@ export interface ComposeOptions {
   maxTokens?: number;
 }
 
-function assemble(result: ValidatedResult, body: string, source: AnswerSource, extras: {
+function assemble(result: ValidatedResult, rawBody: string, source: AnswerSource, extras: {
   model: string | null;
   usage: LlmUsage;
   attempts: ComposeAttempt[];
 }): ComposedAnswer {
+  // #125a (ADR 031 D4): once the body is settled — validated LLM prose or the
+  // by-construction-valid template — splice the registered unit expansions in
+  // ("390,2 x 1000 (= 390.200)"). The helper re-validates the spliced body and
+  // falls back to the untouched one on any doubt; the SPLICED body is what
+  // gets stored, so R8 reconstruction re-validates exactly what was shown.
+  const body = applyUnitExpansions(rawBody, result);
   // The "Definitie:" line — built by the single shared source of truth in
   // format.ts (buildDefinitionLine), which audit/reconstruct.ts also uses to
   // RE-DERIVE it for R8 verification, so the two can never drift (#115 review).

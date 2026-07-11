@@ -11,6 +11,7 @@ export {
   PHRASING_MODEL,
 } from './prompt.ts';
 export type { PhrasingPayload, PhrasingRequestOptions } from './prompt.ts';
+export { applyUnitExpansions } from './expand.ts';
 export { renderTemplateBody, displayValueUnit, nullReasonText } from './template.ts';
 export { validateAnswerBody, scanBody, splitSentences, baseRegionLabel } from './validate.ts';
 export type { ClassifiedToken, TokenKind } from './validate.ts';
