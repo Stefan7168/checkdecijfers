@@ -13,6 +13,8 @@ import {
   answerClarificationReplyAudited,
   answerQuestionAudited,
   deleteUserQuestionHistory,
+  FEEDBACK_TEXT_MAX_LENGTH,
+  upsertAnswerFeedback,
 } from '../backend/answer/audit/index.ts';
 import { buildConversationContext, validateConversationContext } from '../backend/answer/context/index.ts';
 import type { ConversationContext } from '../backend/answer/context/index.ts';
@@ -336,4 +338,46 @@ export async function deleteMyQuestionHistory(): Promise<{ deletedCount: number 
   }
   const redacted = await deleteUserQuestionHistory(getDb(), userId);
   return { deletedCount: redacted.length };
+}
+
+// WP128 (#128): 👍/👎 on an answer + optional free text on 👎. FAIL-SOFT
+// EVERYWHERE — deliberately UNLIKE deleteMyQuestionHistory above (which
+// throws on unauth): feedback must never break or block anything, so the
+// ENTIRE body sits in one try/catch and every path (unauthenticated,
+// malformed/attacker-controlled input, db error incl. the missing table in
+// the pre-migration-017 deploy window, ownership miss) returns { ok: false }.
+// Free feature: no billing gate, no charged entry point — this function
+// calls no billing function. The ownership + kind + source_tag guard lives
+// in the insert statement itself (src/answer/audit/feedback.ts): feedback
+// can only attach to the CALLING user's own user-tagged answer rows.
+export async function submitAnswerFeedback(
+  auditId: number,
+  verdict: 'up' | 'down',
+  feedbackText?: string,
+): Promise<{ ok: boolean }> {
+  try {
+    const userId = await currentUserId();
+    if (userId === null) return { ok: false };
+    // Server Action arguments are attacker-controlled — validate as unknown.
+    if (verdict !== 'up' && verdict !== 'down') return { ok: false };
+    if (typeof auditId !== 'number' || !Number.isSafeInteger(auditId) || auditId <= 0) {
+      return { ok: false };
+    }
+    if (
+      feedbackText !== undefined &&
+      (typeof feedbackText !== 'string' || feedbackText.length > FEEDBACK_TEXT_MAX_LENGTH)
+    ) {
+      return { ok: false };
+    }
+    const ok = await upsertAnswerFeedback(getDb(), {
+      auditAnswerId: auditId,
+      userId,
+      verdict,
+      feedbackText: feedbackText ?? null,
+    });
+    return { ok };
+  } catch (err) {
+    console.error('answer feedback write failed', err);
+    return { ok: false };
+  }
 }

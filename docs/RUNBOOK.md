@@ -161,12 +161,18 @@ owner-signed public-claim wording) are at the top of that guide, and its "known 
 points" section lists the verified landmines (e.g. the catalog-refresh prune wipe) that must be
 fixed WITH the first second source.
 
-## WP30a supervised live step — apply migration 016 (source columns; owner present)
+## Supervised live step — apply migrations 016 + 017 (owner present; one window)
 
-Pending since session 36 (2026-07-11). No urgency: WP30a code reads NOTHING from these
-columns (identity comes from the code-level source registry), so production is correct
-without them — they only need to exist before a SECOND source can ever register (WP30c).
-Bundle this with any future supervised window:
+Pending: 016 since session 36, 017 since WP128 (session 37-continued). `npm run db:migrate`
+applies BOTH in order. Mild urgency since WP128 merged: until 017 exists on production, the
+deployed feedback buttons fail SOFT by design (a click shows "Feedback kon niet worden
+opgeslagen." — nothing breaks), so the window should follow the WP128 deploy soon-ish rather
+than someday. After the migrate: **(a)** re-run `npm run audit:verify` (the A1 re-run owed
+since WP30a — old audit rows must reconstruct clean against real production rows); **(b)**
+live-check grants/RLS on `answer_feedback` (the migration-003 auto-lockdown should cover it —
+verify, don't assume: 0 anon/authenticated grants, RLS on); **(c)** the owner clicks 👍 on one
+real answer and 👎-with-text on another, then a session verifies both rows landed
+(read-only select). The 016 notes below still apply:
 
 1. `npm run db:migrate` against production (adds `source` + the id-shape CHECK to
    `cbs_tables` and `cbs_catalog`; widens the `platform` check). Additive; no FK/index/data

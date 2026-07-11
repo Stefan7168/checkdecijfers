@@ -29,19 +29,25 @@ Element.prototype.scrollIntoView = vi.fn();
 // instead of `gated`) would pass both `web:typecheck` and, if chat.tsx
 // happened not to render the mismatched field, `web:test` too. Both gaps
 // stay closed here: the mock is pinned to AskOutcome.
-const { askQuestion, replyToClarification } = vi.hoisted(() => ({
+const { askQuestion, replyToClarification, submitAnswerFeedback } = vi.hoisted(() => ({
   askQuestion: vi.fn<(question: string, requestId: string, rawContext?: unknown) => Promise<AskOutcome>>(),
   replyToClarification: vi.fn<(pending: unknown, reply: string, requestId: string) => Promise<AskOutcome>>(),
+  // WP128: FeedbackButtons (rendered by Chat) imports this from the same
+  // mocked module — typed against the real action's signature.
+  submitAnswerFeedback:
+    vi.fn<(auditId: number, verdict: 'up' | 'down', feedbackText?: string) => Promise<{ ok: boolean }>>(),
 }));
 vi.mock('../app/actions.ts', () => ({
   askQuestion,
   replyToClarification,
+  submitAnswerFeedback,
 }));
 
 afterEach(() => {
   cleanup();
   askQuestion.mockReset();
   replyToClarification.mockReset();
+  submitAnswerFeedback.mockReset();
 });
 
 /** Wraps a GatedResponse into the AskOutcome shape, with no context —
@@ -729,5 +735,62 @@ describe('Chat — WP15 conversation context propagation (ADR 021)', () => {
     await submit('En Rotterdam?');
     // Still the FIRST context — the gated non-'ok' outcome changed nothing.
     expect(askQuestion).toHaveBeenNthCalledWith(3, 'En Rotterdam?', expect.any(String), context);
+  });
+});
+
+describe('Chat — WP128 feedback buttons (#128)', () => {
+  it('an answer with an auditId renders both feedback buttons, wired to the real-module action', async () => {
+    askQuestion.mockResolvedValue(outcome(fakeAnswer('Het antwoord is 42.')));
+    submitAnswerFeedback.mockResolvedValue({ ok: true });
+    render(<Chat />);
+    await submit('Hoeveel?');
+    await screen.findByText('Het antwoord is 42.');
+    const up = screen.getByRole('button', { name: 'Nuttig antwoord' });
+    expect(screen.getByRole('button', { name: 'Niet nuttig' })).toBeTruthy();
+    fireEvent.click(up);
+    await screen.findByText('Bedankt voor je feedback.');
+    // The anchor is the fakeAnswer's auditId (1) — the store's write key.
+    expect(submitAnswerFeedback).toHaveBeenCalledWith(1, 'up', undefined);
+  });
+
+  it('an answer whose audit write failed (auditId null) renders NO feedback buttons', async () => {
+    const gated = fakeAnswer('Antwoord zonder audit.');
+    (gated as { auditId: number | null }).auditId = null;
+    askQuestion.mockResolvedValue(outcome(gated));
+    render(<Chat />);
+    await submit('Hoeveel?');
+    await screen.findByText('Antwoord zonder audit.');
+    expect(screen.queryByRole('button', { name: 'Nuttig antwoord' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Niet nuttig' })).toBeNull();
+  });
+
+  it('a clarification renders NO feedback buttons (answers only)', async () => {
+    askQuestion.mockResolvedValue(outcome(fakeClarification('Welke periode bedoel je?')));
+    render(<Chat />);
+    await submit('Hoeveel?');
+    await screen.findByText('Welke periode bedoel je?');
+    expect(screen.queryByRole('button', { name: 'Nuttig antwoord' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Niet nuttig' })).toBeNull();
+  });
+
+  it('an answer reached via the CLARIFICATION-REPLY path gets buttons too (both entry paths share the anchor)', async () => {
+    askQuestion.mockResolvedValue(outcome(fakeClarification('Welke periode bedoel je?')));
+    replyToClarification.mockResolvedValue(outcome(fakeAnswer('In 2024 was het 3,3%.')));
+    submitAnswerFeedback.mockResolvedValue({ ok: true });
+    render(<Chat />);
+    await submit('Wat was de inflatie?');
+    await screen.findByText('Welke periode bedoel je?');
+    // While a clarification is pending the input's placeholder IS the
+    // clarifying question (chat.tsx) — the submit helper's default one is gone.
+    fireEvent.change(screen.getByPlaceholderText('Welke periode bedoel je?'), {
+      target: { value: '2024' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Verstuur' }));
+    await screen.findByText('In 2024 was het 3,3%.');
+    const up = screen.getByRole('button', { name: 'Nuttig antwoord' });
+    fireEvent.click(up);
+    await screen.findByText('Bedankt voor je feedback.');
+    // The anchor is the reply-path answer's auditId (fakeAnswer -> 1).
+    expect(submitAnswerFeedback).toHaveBeenCalledWith(1, 'up', undefined);
   });
 });

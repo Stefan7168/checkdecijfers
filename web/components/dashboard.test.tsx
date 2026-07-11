@@ -13,19 +13,27 @@ import { Dashboard } from './dashboard.tsx';
 
 Element.prototype.scrollIntoView = vi.fn();
 
-const { askQuestion, replyToClarification } = vi.hoisted(() => ({
+const { askQuestion, replyToClarification, submitAnswerFeedback } = vi.hoisted(() => ({
   askQuestion: vi.fn<(question: string, requestId: string, rawContext?: unknown) => Promise<AskOutcome>>(),
   replyToClarification: vi.fn<(pending: unknown, reply: string, requestId: string) => Promise<AskOutcome>>(),
+  // WP128: Chat (rendered by Dashboard) mounts FeedbackButtons on answers,
+  // which imports this from the mocked module — the export must exist here
+  // even though no dashboard test clicks it (vitest errors on ACCESS of an
+  // undefined mock export).
+  submitAnswerFeedback:
+    vi.fn<(auditId: number, verdict: 'up' | 'down', feedbackText?: string) => Promise<{ ok: boolean }>>(),
 }));
 vi.mock('../app/actions.ts', () => ({
   askQuestion,
   replyToClarification,
+  submitAnswerFeedback,
 }));
 
 afterEach(() => {
   cleanup();
   askQuestion.mockReset();
   replyToClarification.mockReset();
+  submitAnswerFeedback.mockReset();
 });
 
 function outcome(gated: GatedResponse): AskOutcome {

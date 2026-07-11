@@ -81,13 +81,37 @@ export interface RedactedRow {
   kind: 'answer' | 'clarification' | 'refusal';
 }
 
-async function redactMatchingRows(db: Db, whereClause: string, params: unknown[]): Promise<RedactedRow[]> {
+/** WP128: the paired answer_feedback hard-delete a caller wants to run in the
+ * SAME transaction as its redaction, feedback-delete FIRST (frozen-brief F3,
+ * a three-lens review convergence: a crash between the two steps must never
+ * leave feedback text behind an already-redacted row). */
+interface FeedbackDelete {
+  sql: string;
+  params: unknown[];
+}
+
+async function redactMatchingRows(
+  db: Db,
+  whereClause: string,
+  params: unknown[],
+  feedbackDelete?: FeedbackDelete,
+): Promise<RedactedRow[]> {
   // Single statement: select the rows to redact (id + kind, to build the
   // per-kind envelope) and update them, atomically, so a concurrent read
   // between "find" and "redact" can't observe a half-redacted row. Postgres
   // has no UPDATE ... RETURNING-before-image, so this runs as SELECT ... FOR
   // UPDATE followed by UPDATE inside one transaction instead.
   return db.withTransaction(async (tx) => {
+    if (feedbackDelete) {
+      // Guarded on table existence: migration 017 may not be applied yet (the
+      // deploy window) — and then no feedback can exist, by construction. The
+      // guard must be a check, not a catch: an error inside a transaction
+      // aborts the whole redaction.
+      const { rows: reg } = await tx.query(`select to_regclass('public.answer_feedback') as t`);
+      if (reg[0]?.t != null) {
+        await tx.query(feedbackDelete.sql, feedbackDelete.params);
+      }
+    }
     const { rows } = await tx.query(
       `select id, kind from audit_answers where ${whereClause} for update`,
       params,
@@ -140,7 +164,13 @@ async function redactMatchingRows(db: Db, whereClause: string, params: unknown[]
  * interpolation of userId). Idempotent: redacting an already-redacted row is
  * a harmless no-op (same target values written again). */
 export async function deleteUserQuestionHistory(db: Db, userId: string): Promise<RedactedRow[]> {
-  return redactMatchingRows(db, `user_id = $1 and source_tag = 'user'`, [userId]);
+  return redactMatchingRows(db, `user_id = $1 and source_tag = 'user'`, [userId], {
+    // WP128: "wis de inhoud volledig" extends to the user's feedback text —
+    // hard DELETE (nothing references answer_feedback; the ledger has no
+    // feedback FK), same-parameter scoping as the redaction itself.
+    sql: `delete from answer_feedback where user_id = $1`,
+    params: [userId],
+  });
 }
 
 /** Retention purge (#14 piece 1): every source_tag='user' row older than the
@@ -149,7 +179,14 @@ export async function deleteUserQuestionHistory(db: Db, userId: string): Promise
  * testable against a fixed clock, mirroring the rest of the codebase's
  * reference-date discipline (web/app/actions.ts's referenceDate()). */
 export async function purgeExpiredQuestionHistory(db: Db, cutoff: Date): Promise<RedactedRow[]> {
-  return redactMatchingRows(db, `source_tag = 'user' and created_at < $1`, [cutoff.toISOString()]);
+  return redactMatchingRows(db, `source_tag = 'user' and created_at < $1`, [cutoff.toISOString()], {
+    // WP128: feedback attached to purged answers goes with them — scoped by
+    // the SAME cutoff + source_tag window the redaction uses (the feedback
+    // row's own age is irrelevant; it inherits its answer's retention).
+    sql: `delete from answer_feedback where audit_answer_id in
+            (select id from audit_answers where source_tag = 'user' and created_at < $1)`,
+    params: [cutoff.toISOString()],
+  });
 }
 
 /** Two-year retention window (#14, open-questions #14: "Decided … 2-year
