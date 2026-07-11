@@ -87,6 +87,37 @@ A fresh machine needs to know which login owns each provider to rotate a secret 
 
 **Note on `web/.env.local`:** the chat UI (`web/`, its own fully independent npm project — ADR [018](decisions/018-chat-ui-and-deploy.md), it briefly started as an npm workspace and was split mid-session) is a separate Next.js project that loads its own env file rather than the root `.env` — it does **not** automatically see root's values. `web/.env.local` is gitignored, same as root `.env`. An earlier version of this file was a **symlink** to root `.env`, which seemed convenient but backfired the first time `vercel pull` wrote a Vercel-specific token *through* the symlink into the shared root file — fixed by making `web/.env.local` a real, independent copy. Which secret lives where is per-row above — do NOT assume "all three": as of 2026-07-11 (verified) `web/.env.local` holds ONLY the three `NEXT_PUBLIC_*` values; `ANTHROPIC_API_KEY` and `DATABASE_URL` live in root `.env` + Vercel (two places), and only need to be added to `web/.env.local` if you run the chat UI's full answer pipeline locally. There is no technical link keeping any of these in sync — follow the per-secret "Lives in" column at rotation time.
 
+## Route B drill (#132) — repo delete + recreate, STAGED and ready
+
+**Why:** GitHub permanently serves the pre-rewrite history via read-only `refs/pull/N/head` refs
+(measured: delete AND overwrite pushes are rejected, "deny updating a hidden ref"; official docs
+confirm only GitHub Support — or deleting the repo — clears them). Route B kills those refs with
+the repo. **Prepared 2026-07-12:** all 89 PR links in the docs are already neutralized to plain
+text (PR numbers ≤27 refer to the pre-2026-07-12 repo instance — historical labels, like the
+pre-rewrite commit SHAs); the clean history lives on this machine AND on the current origin.
+
+**Execution sequence (session drives, owner present; ~20 min; production/Vercel is untouched
+throughout — the site deploys via CI tokens, not via any GitHub linkage):**
+
+1. Preconditions: working tree clean, `git log origin/main..main` empty, no open PRs worth saving.
+2. Capture the two non-secret Vercel IDs: `cd web && npx vercel link --yes` → read
+   `.vercel/project.json` (orgId, projectId). Fallback: Vercel dashboard → project/team Settings.
+3. **OWNER GO in-chat** → `gh repo delete Stefan7168/checkdecijfers --yes` (the gh token holds
+   `delete_repo` scope).
+4. `gh repo create Stefan7168/checkdecijfers --public` (empty — no README/gitignore).
+5. `gh secret set VERCEL_ORG_ID` + `VERCEL_PROJECT_ID` (values from step 2).
+6. `git push -u origin main` from this machine (same remote URL — nothing to reconfigure).
+   The gate runs green; the deploy job FAILS once (no token yet) — expected.
+7. **Owner:** Vercel dashboard → Account Settings → Tokens → create a fresh token →
+   `gh secret set VERCEL_TOKEN` from your own terminal (value never in chat) → session reruns
+   the deploy job.
+8. Re-enable Dependabot: `gh api -X PUT repos/Stefan7168/checkdecijfers/vulnerability-alerts`
+   and `.../automated-security-fixes` (dependabot.yml rides the repo; weekly PRs resume).
+9. Verify the POINT of it all: `git ls-remote origin 'refs/pull/*'` → **empty**; the Actions
+   runs API serves only the noreply address; a fresh clone is clean (the #132 audit method).
+10. Close #132; the support ticket becomes unnecessary; the old-machine warning below STANDS
+    (its clone predates even the rewrite).
+
 ## ⚠ History rewritten 2026-07-12 (#132) — old clones are POISON, re-clone instead
 
 The public repo's full git history was rewritten on 2026-07-12 (owner-approved: commit authors →
@@ -266,7 +297,7 @@ The on-demand-fetch code was built and merged (2026-07-06, hermetic — full det
 
 ## WP27 stage D — the supervised live step (owner present; ✅ DONE 2026-07-10, session 33)
 
-**✅ COMPLETED 2026-07-10 (session 33, owner present, [PR #22](https://github.com/Stefan7168/checkdecijfers/pull/22)). The finder→chain→fit-gate machinery is LIVE and PROVEN in production — #111 closed on the owner's live acceptance.** The checklist below ran in order, each live action owner-confirmed first; kept as the record + the template for future supervised live steps:
+**✅ COMPLETED 2026-07-10 (session 33, owner present, PR #22). The finder→chain→fit-gate machinery is LIVE and PROVEN in production — #111 closed on the owner's live acceptance.** The checklist below ran in order, each live action owner-confirmed first; kept as the record + the template for future supervised live steps:
 
 1. **Precondition verified**: PR #21 merged, gate+deploy green on `main` (CI job breakdown checked, not just the run status), working tree clean.
 2. **Migration 015 applied** (`npm run db:migrate` — applies only what's missing), then the standard per-migration check (the migration-011 queries): `pending_table_requests` showed 0 `anon`/`authenticated` grants, RLS on, all three new columns with correct defaults, every index (incl. the dedupe partial unique) untouched. The pre-015 legacy row read back `candidate_ids: []` — the designed legacy path, live-confirmed.
@@ -279,7 +310,7 @@ The on-demand-fetch code was built and merged (2026-07-06, hermetic — full det
 
 ## WP28 Google SSO — owner configuration steps (✅ ALL DONE 2026-07-10, session 34 — Google SSO is LIVE and #122-verified; kept as the record + troubleshooting reference)
 
-The "Doorgaan met Google" button is **merged + deployed** ([PR #23](https://github.com/Stefan7168/checkdecijfers/pull/23), merge `e8b09be`, gate + deploy green, 2026-07-10) **and fully configured + live-verified the same day** — all three steps below are done; they are kept as the record and for troubleshooting. The magic link is unchanged throughout (two independent doors, D4). **What "not configured yet" looks like (measured in the build session):** clicking the button sends the browser to Supabase's authorize URL, Supabase rejects the disabled provider and bounces back to `/login?error=auth` — the user just lands on the login page again, without an inline message. The inline Dutch error copy only appears for server-side failures (missing env, Supabase client error). So don't be surprised by the silent bounce before you finish these steps.
+The "Doorgaan met Google" button is **merged + deployed** (PR #23, merge `e8b09be`, gate + deploy green, 2026-07-10) **and fully configured + live-verified the same day** — all three steps below are done; they are kept as the record and for troubleshooting. The magic link is unchanged throughout (two independent doors, D4). **What "not configured yet" looks like (measured in the build session):** clicking the button sends the browser to Supabase's authorize URL, Supabase rejects the disabled provider and bounces back to `/login?error=auth` — the user just lands on the login page again, without an inline message. The inline Dutch error copy only appears for server-side failures (missing env, Supabase client error). So don't be surprised by the silent bounce before you finish these steps.
 
 **⚠ TWO-SUPABASE-ACCOUNTS QUIRK (discovered 2026-07-10, session 34 — the reason steps 2–3 paused):** you have (at least) two Supabase accounts. **checkdecijfers lives in the account with org "stefan"** (`emycswhsinjqdjhzlzmx` — the account the project's Supabase MCP connector is authorized to); your browser is often logged into the OTHER account (org "glaibaan") because of parallel GlaiBaan work, and that account CANNOT see the checkdecijfers project — the dashboard silently bounces to the glaibaan org. Before any checkdecijfers dashboard step, check the org name in the top-left breadcrumb; if it says "glaibaan", you're in the wrong account. To avoid disturbing a parallel GlaiBaan session, do checkdecijfers dashboard work in an **incognito window** (separate login, nothing else touched) or log out/in when the other work is idle. The Supabase MCP connector is unaffected either way (its own auth, org "stefan").
 

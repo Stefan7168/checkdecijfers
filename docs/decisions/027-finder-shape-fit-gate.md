@@ -220,9 +220,9 @@ that rule — it got a realistic question, since production always passes the fu
 (the other bare-topic legacy cases stay as robustness pins). Final: **11/11, twice, byte-stable;
 confident floor 0.85 over threshold 0.8; the disclose boundary is now directly measured (#104).**
 
-## As built — stage B (2026-07-10, session 32, [PR #18](https://github.com/Stefan7168/checkdecijfers/pull/18))
+## As built — stage B (2026-07-10, session 32, PR #18)
 
-Stage A merged + deployed as [PR #17](https://github.com/Stefan7168/checkdecijfers/pull/17)
+Stage A merged + deployed as PR #17
 (2026-07-09, merge `478a852`). Stage B landed per the brief's letter — `candidateIds` (pick first,
 then sanitized `alternativeIds`, cap 3) constructed in `onboarding-finder.ts` and carried as a
 REQUIRED field through routing → parse outcome → envelope (both respond.ts sites) → web action →
@@ -246,9 +246,9 @@ money/chain/deploy/byte lenses clean; its one confirmed finding (the live respon
 site had zero pipeline-level coverage — mutation-verified) was closed with a B15+injected-finder
 pipeline test whose exact-envelope assertion kills the mutation.
 
-## As built — stage C (2026-07-10, session 32, [PR #21](https://github.com/Stefan7168/checkdecijfers/pull/21))
+## As built — stage C (2026-07-10, session 32, PR #21)
 
-Stage B merged + deployed the same day ([PR #18](https://github.com/Stefan7168/checkdecijfers/pull/18),
+Stage B merged + deployed the same day (PR #18,
 merge `d8e02b5`). Stage C landed per the brief's pseudocode: `src/ingestion/onboarding-fit.ts`
 (fit prompt/schema/validator/version constants mirroring `rerank-*.ts`; Haiku per D4; hard
 allowlist over the table's OWN measure codes + `'geen'`), amendment A3's deterministic pre-checks
@@ -276,7 +276,7 @@ Review: 5 lenses (money+terminal-state, brief-letter, safety, deploy-dormancy, t
 resistance), dual skeptics — four lenses clean, two raw findings refuted, one confirmed (the
 threshold boundary above), fixed in-session.
 
-## As built — stage D (2026-07-10, session 33 — owner-supervised live step, [PR #22](https://github.com/Stefan7168/checkdecijfers/pull/22))
+## As built — stage D (2026-07-10, session 33 — owner-supervised live step, PR #22)
 
 Executed per the brief's § Stage D, owner present and confirming before every live action:
 
