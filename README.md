@@ -8,7 +8,7 @@ CBS StatLine is authoritative but notoriously hard to use; general-purpose AI ch
 
 ## Status
 
-**Phase 0 — build in progress.** The documentation set is complete and signed off; the build is working through the Phase 0 checklist. The single live tracker is [docs/STATUS.md](docs/STATUS.md) — phase checklist, benchmark scoreboard, what's next. This README deliberately doesn't duplicate it.
+**Phase 1 — LIVE in production.** Phase 0 is complete; the product is deployed and handling real credits (the owner is the only user so far). Google SSO + magic-link auth, the credit ledger, on-demand CBS table onboarding, and follow-up suggestion chips are all live. The single live tracker is [docs/STATUS.md](docs/STATUS.md) — read its top block first — with the phase checklist, benchmark scoreboard, and what's next. This README deliberately doesn't duplicate it.
 
 ## Doc map
 
