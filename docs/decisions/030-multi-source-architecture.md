@@ -167,3 +167,31 @@ notation (#125a's `parseFactorUnit` parses CBS's factor spellings) and region-LA
 (WP29's `baseLabel` strips CBS's parenthetical suffix) are source-native grammars WITHOUT a D2
 bullet — both fail open (missed nicety / dropped chip, never a wrong number), revisit at WP30c
 with the first real adapter.
+
+## WP30a as-built (session 36, 2026-07-11 — same session as the review; branch `wp30a-source-registry`, PR per #118)
+
+Built literally per the [executor brief](../session-briefs/2026-07-11-wp30a-brief.md), with
+four recorded as-built refinements:
+
+1. **No `adapterFactory` in the registry.** `src/sources/registry.ts` is a PURE LEAF: it is
+   client-bundled (citation, stat-card, chat link import it via `web/lib`), and an adapter
+   import would drag the whole `cbs-adapter/` graph into the browser bundle (the stat-card
+   leaf-chain discipline). Adapter construction stays at the few node-only call sites until
+   WP30b/c gives routing a second target. Supersedes D3's original field list.
+2. **The chart spec carries NO `source` field** — the null-note and attribution strings
+   resolve at BUILD time (A1 fallback covers stored results without the key), so stored specs
+   re-derive byte-identically and `CHART_SPEC_VERSION` stays 1 with zero schema edits.
+   Supersedes A3's "optional additive field" wording — carrying the key bought nothing.
+3. **`Attribution.license` keeps reading the STORED field** (never the registry) — an old
+   row's line re-derives from its own bytes, not from live config.
+4. **`statusSuffixNl` in `src/answer/respond/refusals.ts` consolidated too** — the diff
+   review surfaced it as a THIRD independent copy of the two-tier provisional wording (its
+   skeptics killed the finding on a technicality; the session model upheld the substance:
+   D3's whole point is one authority). Byte-identical: map lookup, `''` outside the map.
+
+**Post-build diff review (11 agents, 3 lenses × dual skeptics): 1 confirmed blocker — a
+stale strict-`toEqual` in `web/lib/stat-card-data.test.ts` missing the new `sourceLabel`
+field (the targeted pre-review test round had missed exactly that file) — fixed in-session
++ an A1 absent-source pin added there.** run.ts's provisional BOOLEAN rule
+(`status !== 'Definitief'`) is deliberately untouched (byte-identity); making it
+registry-driven is WP30b adapter-contract material.
