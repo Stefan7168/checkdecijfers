@@ -196,7 +196,7 @@ field (the targeted pre-review test round had missed exactly that file) — fixe
 (`status !== 'Definitief'`) is deliberately untouched (byte-identity); making it
 registry-driven is WP30b adapter-contract material.
 
-## WP30b as-built (session 37, 2026-07-11 — the conformance harness + guide session, per A5)
+## WP30b as-built (session 37, 2026-07-11/12 — the conformance harness + guide session, per A5; [PR #27](https://github.com/Stefan7168/checkdecijfers/pull/27) merged `f6bcf26` on the owner's in-chat approval, main gate + deploy green — LIVE)
 
 Built from the frozen [WP30b executor brief](../session-briefs/2026-07-11-wp30b-brief.md), which
 was itself produced by a completed pre-build adversarial design review (46 agents, 6 lenses ×
