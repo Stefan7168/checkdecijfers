@@ -87,36 +87,57 @@ A fresh machine needs to know which login owns each provider to rotate a secret 
 
 **Note on `web/.env.local`:** the chat UI (`web/`, its own fully independent npm project — ADR [018](decisions/018-chat-ui-and-deploy.md), it briefly started as an npm workspace and was split mid-session) is a separate Next.js project that loads its own env file rather than the root `.env` — it does **not** automatically see root's values. `web/.env.local` is gitignored, same as root `.env`. An earlier version of this file was a **symlink** to root `.env`, which seemed convenient but backfired the first time `vercel pull` wrote a Vercel-specific token *through* the symlink into the shared root file — fixed by making `web/.env.local` a real, independent copy. Which secret lives where is per-row above — do NOT assume "all three": as of 2026-07-11 (verified) `web/.env.local` holds ONLY the three `NEXT_PUBLIC_*` values; `ANTHROPIC_API_KEY` and `DATABASE_URL` live in root `.env` + Vercel (two places), and only need to be added to `web/.env.local` if you run the chat UI's full answer pipeline locally. There is no technical link keeping any of these in sync — follow the per-secret "Lives in" column at rotation time.
 
-## Route B drill (#132) — repo delete + recreate, STAGED and ready
+## Route B drill (#132) — TWO-PHASE, reversible: rename-private first, delete only weeks later
 
 **Why:** GitHub permanently serves the pre-rewrite history via read-only `refs/pull/N/head` refs
 (measured: delete AND overwrite pushes are rejected, "deny updating a hidden ref"; official docs
-confirm only GitHub Support — or deleting the repo — clears them). Route B kills those refs with
-the repo. **Prepared 2026-07-12:** all 89 PR links in the docs are already neutralized to plain
-text (PR numbers ≤27 refer to the pre-2026-07-12 repo instance — historical labels, like the
-pre-rewrite commit SHAs); the clean history lives on this machine AND on the current origin.
+confirm only GitHub Support — or removing the repo — clears them). **Upgraded after the owner's
+pre-mortem request (2026-07-12): NOTHING is destroyed on day one.** Phase 1 renames the old repo
+to `checkdecijfers-pre-rewrite-archief` and flips it PRIVATE — the PII is off the public internet
+the moment that lands, while everything still exists as rollback. A new public repo under the
+original name then takes over (research-verified: a new repo takes priority over the rename
+redirect — GitHub docs + community, links in #132). Phase 2 (a LATER maintenance session, after
+the new repo is proven) deletes the private archive — the only irreversible step, deliberately
+weeks away. **Rollback at any point in phase 1 (~2 min): delete the new repo, rename the archive
+back, flip public — the exact pre-operation state returns (the redirect resurfaces on deletion,
+which is why the archive must eventually go or stay private forever).**
 
-**Execution sequence (session drives, owner present; ~20 min; production/Vercel is untouched
-throughout — the site deploys via CI tokens, not via any GitHub linkage):**
+**Pre-mortem results (2026-07-12, all measured read-only):** forks 0 / stars 0 (RE-CHECK at
+T-0 — a fork would keep the old history alive publicly and route B would NOT help); branch
+protection none, rulesets 0, deploy keys 0, webhooks 0, issues 0, collaborators 1; the two
+GitHub "environments" (Preview/Production) are EMPTY shells (0 secrets, 0 rules — old
+Vercel-integration residue, nothing to migrate); ci.yml uses no GITHUB_TOKEN and no GitHub
+environment refs (deploy = VERCEL_TOKEN only); the Vercel CLI is logged in on this machine
+(whoami verified); production serving is fully decoupled from GitHub — the site stays up during
+the whole operation, worst case is one red deploy job to rerun. Docs prepared: all 89 PR links
+neutralized (PR numbers ≤27 = the pre-2026-07-12 repo instance, historical labels like the
+pre-rewrite SHAs). What NO route fixes: the ~9 days of prior public exposure and any search-engine
+caches of old PR pages (they 404 over time) — the addresses stay treated as harvested (#132).
 
-1. Preconditions: working tree clean, `git log origin/main..main` empty, no open PRs worth saving.
-2. Capture the two non-secret Vercel IDs: `cd web && npx vercel link --yes` → read
-   `.vercel/project.json` (orgId, projectId). Fallback: Vercel dashboard → project/team Settings.
-3. **OWNER GO in-chat** → `gh repo delete Stefan7168/checkdecijfers --yes` (the gh token holds
-   `delete_repo` scope).
-4. `gh repo create Stefan7168/checkdecijfers --public` (empty — no README/gitignore).
-5. `gh secret set VERCEL_ORG_ID` + `VERCEL_PROJECT_ID` (values from step 2).
-6. `git push -u origin main` from this machine (same remote URL — nothing to reconfigure).
-   The gate runs green; the deploy job FAILS once (no token yet) — expected.
-7. **Owner:** Vercel dashboard → Account Settings → Tokens → create a fresh token →
-   `gh secret set VERCEL_TOKEN` from your own terminal (value never in chat) → session reruns
-   the deploy job.
-8. Re-enable Dependabot: `gh api -X PUT repos/Stefan7168/checkdecijfers/vulnerability-alerts`
+**Execution (session drives, owner present; ~20 min):**
+
+0. Prep, non-destructive: owner creates a fresh Vercel token (dashboard → Account Settings →
+   Tokens) and keeps it ready in his password manager; session captures the two non-secret IDs
+   (`cd web && npx vercel link --yes` → `.vercel/project.json`; fallback: dashboard) and
+   re-checks forks == 0.
+1. **OWNER GO in-chat** → rename: `gh api -X PATCH repos/Stefan7168/checkdecijfers -f
+   name=checkdecijfers-pre-rewrite-archief` → flip private: `-F private=true`. (PII now
+   non-public. Reversible.)
+2. `gh repo create Stefan7168/checkdecijfers --public` (empty).
+3. `gh secret set VERCEL_ORG_ID` + `VERCEL_PROJECT_ID`; **owner** runs
+   `gh secret set VERCEL_TOKEN --repo Stefan7168/checkdecijfers` from his own terminal (paste
+   hidden, value never in chat).
+4. `git push -u origin main` (same remote URL) → CI gate + deploy green in one go.
+5. Re-enable Dependabot: `gh api -X PUT repos/Stefan7168/checkdecijfers/vulnerability-alerts`
    and `.../automated-security-fixes` (dependabot.yml rides the repo; weekly PRs resume).
-9. Verify the POINT of it all: `git ls-remote origin 'refs/pull/*'` → **empty**; the Actions
-   runs API serves only the noreply address; a fresh clone is clean (the #132 audit method).
-10. Close #132; the support ticket becomes unnecessary; the old-machine warning below STANDS
-    (its clone predates even the rewrite).
+6. Verify the POINT of it all: `git ls-remote origin 'refs/pull/*'` → **empty**; the Actions
+   runs API serves only the noreply address; a fresh clone is clean (the #132 audit method);
+   the live site still answers.
+7. Record in #132; the support ticket becomes unnecessary. **Phase 2 goes on the monthly
+   maintenance agenda: delete `checkdecijfers-pre-rewrite-archief` once the new repo has been
+   green for weeks** (`gh repo delete` — token holds the scope). The old-machine warning below
+   STANDS (its clone predates even the rewrite); the local bundle
+   `~/checkdecijfers-pre-rewrite-2026-07-12.bundle` remains the owner's last-resort copy.
 
 ## ⚠ History rewritten 2026-07-12 (#132) — old clones are POISON, re-clone instead
 
