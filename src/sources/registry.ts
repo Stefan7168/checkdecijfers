@@ -48,11 +48,12 @@ export interface SourceInfo {
    * Unknown attributes render "door <displayName> gemarkeerd als '<attr>'" —
    * naming the raw marker rather than guessing a meaning. */
   nullReasonLabels: Readonly<Record<string, string>>;
-  /** A6 (field only in WP30a): the catalog-lifecycle statuses that count as
-   * "current" for the finder's Regulier-first shortlist quota. recall.ts
-   * keeps its literal 'Regulier' until WP30b wires this in with the
-   * conformance contract test — wiring it now would touch fixture-load-
-   * bearing ranking SQL for zero observable benefit. */
+  /** A6: the catalog-lifecycle statuses that count as "current" for the
+   * finder's current-first shortlist quota. Consulted per row's source by
+   * recall.ts via buildIsCurrentPredicate (src/catalog/current-status.ts) —
+   * wired in WP30b, byte-identical to the old 'Regulier' literal for every
+   * CBS row (pinned; find-replay's request hashes prove the shortlist never
+   * moved). */
   currentCatalogStatuses: readonly string[];
 }
 

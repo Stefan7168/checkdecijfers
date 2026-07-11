@@ -239,3 +239,19 @@ a fit-gate specimen; unservable by the pipeline's own gates, so not a conformanc
 observed-data checks are unconditional. (b) The F1 id check enforces BOTH D4 directions
 explicitly (bare ⇒ cbs and cbs ⇒ bare — a `'cbs:'`-prefixed id is malformed), which the brief's
 single-equation form missed.
+
+**Post-build diff review (session 37): 3 mid-tier lenses ran; the dual heavy-tier skeptic layer
+was LOST to a provider session limit (all 14 skeptic agents errored), so the session model
+applied the refutation judgment directly to the 7 raw findings — 6 accepted + fixed in-session,
+1 resolved as documentation:** schemaOnly is now VERIFIED not trusted (a schemaOnly table whose
+adapter yields rows fails F1 — the dodge the review named); ~10 failure-suite gaps closed (every
+F0/F1/F3 sub-check now has a failing test); the frozen brief's freshestDefinitief regression pin
+added (tests/query — the sharp case where freshest available ≠ freshest definitief on 82610NED);
+manifest validation rejects unknown keys and wrongly-typed `schemaOnly`/`slice` (authoring-typo
+safety); the sub-1000-year padding edge added to the encode round-trip; the stale WP30a-era
+`currentCatalogStatuses` comment corrected. The judged-to-docs finding: F5's fingerprint/unit
+stages are self-consistent BY CONSTRUCTION in the harness (both sides derive from the same
+fetched schema) — the honesty note now says so explicitly instead of gaining optional
+manifest-baseline machinery; **recorded residual: a future source's manifest MAY want an
+optional expected-dimensions baseline (design it with WP30c if its author wants a pinned
+shape).**

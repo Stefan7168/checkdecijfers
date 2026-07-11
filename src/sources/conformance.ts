@@ -11,13 +11,17 @@
 // parse-v4 code). Failure summaries are plain language in the validate.ts
 // style, so the owner can read what a candidate source got wrong.
 //
-// Honesty note (review amendment B5): family F5 runs the validators with
-// SELF-derived expectations (unitsFromMeasures + the fetched schema — exactly
-// registerTables' trust-on-first-use registration semantics). That proves the
-// pipeline's gates ACCEPT the adapter's shapes; it is NOT drift detection,
-// which remains sync-time work against a stored registry. F5's real bite:
-// period parseability + publication/status coverage, no reason-less nulls, no
-// duplicate cells, coordinate↔code-list closure.
+// Honesty note (review amendment B5, sharpened by the post-build review):
+// family F5 runs the validators with SELF-derived expectations
+// (unitsFromMeasures + the fetched schema — exactly registerTables'
+// trust-on-first-use registration semantics). The fingerprint and
+// unit-consistency stages are therefore self-consistent BY CONSTRUCTION here
+// — both sides derive from the same fetched schema, so within the harness
+// they only prove those validators RUN over the adapter's shapes without
+// rejecting; their real comparative work (drift detection) happens at sync
+// time against the stored registry. F5's actual bite is the other three:
+// period parseability + publication/status coverage, no reason-less nulls,
+// no duplicate cells, coordinate↔code-list closure.
 import type { CbsCode, CbsObservationRow, CbsSlice, CbsTableSchema } from '../cbs-adapter/types.ts';
 import { computeFingerprint } from '../ingestion/fingerprint.ts';
 import { encodePeriodCode, parsePeriodCode } from '../ingestion/periods.ts';
@@ -97,11 +101,64 @@ export function validateManifestShape(raw: unknown, path: string): SourceConform
   };
   if (typeof raw !== 'object' || raw === null) fail('not a JSON object');
   const m = raw as Record<string, unknown>;
+
+  // Unknown keys are authoring typos (`schemaonly`, `declaredPeriodStatusses`,
+  // …) that would otherwise silently weaken the contract — reject them loudly.
+  const KNOWN_ROOT = new Set([
+    'sourceKey',
+    'tables',
+    'declaredPeriodStatuses',
+    'declaredValueAttributes',
+    'declaredCatalogStatuses',
+    'declaredDatasetTypes',
+  ]);
+  for (const key of Object.keys(m)) {
+    if (!KNOWN_ROOT.has(key)) fail(`unknown key '${key}'`);
+  }
+
   if (typeof m.sourceKey !== 'string' || m.sourceKey.length === 0) fail('sourceKey must be a non-empty string');
   if (!Array.isArray(m.tables) || m.tables.length === 0) fail('tables must be a non-empty array');
+  const KNOWN_TABLE = new Set(['tableId', 'schemaOnly', 'slice']);
+  const KNOWN_SLICE = new Set(['dimensionEquals', 'dimensionPrefixes', 'periodFloor']);
   for (const t of m.tables as unknown[]) {
     if (typeof t !== 'object' || t === null || typeof (t as Record<string, unknown>).tableId !== 'string') {
       fail('every tables[] entry needs a string tableId');
+    }
+    const entry = t as Record<string, unknown>;
+    for (const key of Object.keys(entry)) {
+      if (!KNOWN_TABLE.has(key)) fail(`unknown key '${key}' on table '${entry.tableId as string}'`);
+    }
+    if (entry.schemaOnly !== undefined && typeof entry.schemaOnly !== 'boolean') {
+      fail(`schemaOnly on table '${entry.tableId as string}' must be a boolean`);
+    }
+    if (entry.slice !== undefined) {
+      const slice = entry.slice;
+      if (typeof slice !== 'object' || slice === null) fail(`slice on table '${entry.tableId as string}' must be an object`);
+      const s = slice as Record<string, unknown>;
+      for (const key of Object.keys(s)) {
+        if (!KNOWN_SLICE.has(key)) fail(`unknown slice key '${key}' on table '${entry.tableId as string}'`);
+      }
+      if (s.periodFloor !== undefined && typeof s.periodFloor !== 'string') {
+        fail(`slice.periodFloor on table '${entry.tableId as string}' must be a string`);
+      }
+      if (
+        s.dimensionEquals !== undefined &&
+        (typeof s.dimensionEquals !== 'object' ||
+          s.dimensionEquals === null ||
+          Object.values(s.dimensionEquals).some((v) => typeof v !== 'string'))
+      ) {
+        fail(`slice.dimensionEquals on table '${entry.tableId as string}' must map dimension names to strings`);
+      }
+      if (
+        s.dimensionPrefixes !== undefined &&
+        (typeof s.dimensionPrefixes !== 'object' ||
+          s.dimensionPrefixes === null ||
+          Object.values(s.dimensionPrefixes).some(
+            (v) => !Array.isArray(v) || v.some((p) => typeof p !== 'string'),
+          ))
+      ) {
+        fail(`slice.dimensionPrefixes on table '${entry.tableId as string}' must map dimension names to string arrays`);
+      }
     }
   }
   for (const key of [
@@ -317,6 +374,22 @@ async function checkTable(
     // ingestion pipeline's own period gate refuses it at sync time), so F2's
     // grammar contract does not apply; only the row-free registration-shape
     // gates run.
+    //
+    // The flag is VERIFIED, not trusted (post-build review): a table whose
+    // adapter actually yields observation rows may not dodge the row-level
+    // families by declaring itself schemaOnly.
+    let observed = 0;
+    for await (const page of adapter.fetchObservations(id, spec.slice)) observed += page.length;
+    if (observed > 0) {
+      add(
+        'F1_replay',
+        `the manifest declares this table schemaOnly, but the adapter returned ${observed} observation ` +
+          `row(s) — either the manifest is wrong or the fixture is not a true metadata-only capture. ` +
+          `Row-level checks may not be skipped for a table that carries data.`,
+        id,
+      );
+      return;
+    }
     runRowFreeValidators(schema, add, id);
     return;
   }
