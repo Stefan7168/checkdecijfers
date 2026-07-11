@@ -161,25 +161,24 @@ owner-signed public-claim wording) are at the top of that guide, and its "known 
 points" section lists the verified landmines (e.g. the catalog-refresh prune wipe) that must be
 fixed WITH the first second source.
 
-## Supervised live step — apply migrations 016 + 017 (owner present; one window)
+## Supervised live step — migrations 016 + 017 applied (2026-07-12, session 37-continued, owner present)
 
-Pending: 016 since session 36, 017 since WP128 (session 37-continued). `npm run db:migrate`
-applies BOTH in order. Mild urgency since WP128 merged: until 017 exists on production, the
-deployed feedback buttons fail SOFT by design (a click shows "Feedback kon niet worden
-opgeslagen." — nothing breaks), so the window should follow the WP128 deploy soon-ish rather
-than someday. After the migrate: **(a)** re-run `npm run audit:verify` (the A1 re-run owed
-since WP30a — old audit rows must reconstruct clean against real production rows); **(b)**
-live-check grants/RLS on `answer_feedback` (the migration-003 auto-lockdown should cover it —
-verify, don't assume: 0 anon/authenticated grants, RLS on); **(c)** the owner clicks 👍 on one
-real answer and 👎-with-text on another, then a session verifies both rows landed
-(read-only select). The 016 notes below still apply:
+**✅ DONE.** `npm run db:migrate` applied both 016 and 017 to production in one run
+(`Applied 2 migration(s): 016_source_column.sql, 017_answer_feedback.sql`) — additive, no
+FK/index/data change on either. **(a) The A1 re-verification found + fixed TWO real bugs live**
+(`node scripts/verify-audit-rows.ts 1 240`, the full historical range): `buildDefinitionLine`
+and the onboarding-envelope consistency check both crashed on real historical rows missing a
+key added by a later session (`?? null` fix, same A1 discipline as `attribution.source`) —
+full detail + the two remaining known historical-versioning anomalies (rows 76 and 227, not
+bugs, not fixed tonight) in [open-questions #133](open-questions.md). **Final measured result:
+213/215 checkable rows reconstruct clean** (25 GDPR-redacted rows structurally skipped by the
+script, per #133). **(b) ✅ DONE** — grants/RLS on `answer_feedback` LIVE-VERIFIED: 0 anon/authenticated grants, RLS enabled, 0 policies (migration-003 auto-lockdown confirmed working on this table too).
+**(c)** the owner's live 👍/👎 click test — the ONE remaining step.
 
-1. `npm run db:migrate` against production (adds `source` + the id-shape CHECK to
-   `cbs_tables` and `cbs_catalog`; widens the `platform` check). Additive; no FK/index/data
-   change; the per-migration check should come back clean.
-2. **The A1 verification (ADR 030):** re-run `node scripts/verify-audit-rows.ts` against the
-   real production audit rows — every historical row (stored WITHOUT `attribution.source`)
-   must still reconstruct clean. This is the live mirror of `tests/audit/source-r8.test.ts`.
+**Script usage** (kept for the next time a range needs re-checking):
+`node --env-file=.env scripts/verify-audit-rows.ts <fromId> <toId>` (NOT `npm run audit:verify --`
+— the `--` passthrough breaks direct `node` invocation; use `npm run audit:verify -- <from> <to>`
+OR call the script directly without `--`).
 
 ## Moving to a new machine (fresh clone bootstrap)
 
