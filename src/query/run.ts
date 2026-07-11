@@ -6,7 +6,7 @@
 // no rendering path can drop it (R4). No LLM anywhere (WP5).
 import type { Db } from '../db/types.ts';
 import { parsePeriodCode } from '../ingestion/periods.ts';
-import { deriveDifference, deriveDirection, deriveFirstLast, deriveMax } from './derivations.ts';
+import { deriveDifference, deriveDirection, deriveFirstLast, deriveMax, deriveUnitExpansion } from './derivations.ts';
 import { normalizeLabel, periodKey, resolveIntent, type ResolvedQuery } from './resolve.ts';
 import type {
   Attribution,
@@ -322,6 +322,15 @@ export async function runQuery(db: Db, intent: StructuredIntent): Promise<QueryO
   if (q.regionCodes.length > 1 && q.derivation !== 'max' && allValuesPresent) {
     const comparison = deriveMax(cells, false);
     if (comparison.ok) derivations.push(comparison.record);
+  }
+  // #125a (ADR 031): every non-null cell with a PURE numeric factor unit
+  // ('x 1 000') pre-registers its exact expanded figure, so the display layer
+  // can state "= 390.200" alongside the verbatim notation and R1/R3 have a
+  // record to back that token. A refusal (non-factor unit, inexact) is simply
+  // omitted — the answer then renders as before (fail-open display nicety).
+  for (const cell of cells) {
+    const expansion = deriveUnitExpansion(cell);
+    if (expansion.ok) derivations.push(expansion.record);
   }
 
   // --- Attribution (R4), carried in the result itself --------------------------
