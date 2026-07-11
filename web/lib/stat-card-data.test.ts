@@ -16,8 +16,15 @@ describe('statCardData', () => {
       context: '2024',
       provisional: false,
       tableId: '86141NED',
+      sourceLabel: 'CBS StatLine',
       syncedDate: '2026-07-03',
     });
+  });
+
+  it('A1 (WP30a): an attribution without a source key resolves the cbs label', () => {
+    const response = fakeAnswerResponse({ shape: 'single', cells: [fakeCell()] });
+    delete (response.result.attribution as { source?: string }).source;
+    expect(statCardData(response)!.sourceLabel).toBe('CBS StatLine');
   });
 
   // WP20 adversarial-review HIGH finding: the card must follow the SHARED
