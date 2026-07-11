@@ -1,11 +1,14 @@
 # ADR 031 — Registered unit-expansion derivation for pure factor units (#125a, owner decision 2026-07-11)
 
-**Status:** accepted (this session, 2026-07-11) — implements the owner's in-chat display
-convention for [open-questions #125](../open-questions.md) part (a): **"uitgerekend erbij"** —
-the expanded figure ALONGSIDE CBS's verbatim notation (the "390,2 × 1.000 (= 390.200)" shape).
-The "390,2 duizend" rewording was explicitly NOT chosen, so R10's verbatim-unit rule stands
-unmodified. Part (b) of #125 (mensen-vs-uitkeringen headline bridging) is OUT of scope here —
-WP26 lane.
+**Status:** accepted (2026-07-11) — **BUILT (session 36, 2026-07-11, branch
+`wp125a-unit-expansion`, PR per #118 pending owner review).** As-built notes are folded in
+below at the D-points they refine (the two extra D4 belts from the completed adversarial
+design review; the corrected IEEE example in Context §3; the marking-line and model-computed-
+expansion trade-offs made explicit). Implements the owner's in-chat display convention for
+[open-questions #125](../open-questions.md) part (a): **"uitgerekend erbij"** — the expanded
+figure ALONGSIDE CBS's verbatim notation (the "390,2 × 1.000 (= 390.200)" shape). The "390,2
+duizend" rewording was explicitly NOT chosen, so R10's verbatim-unit rule stands unmodified.
+Part (b) of #125 (mensen-vs-uitkeringen headline bridging) is OUT of scope here — WP26 lane.
 
 ## Context
 
@@ -28,9 +31,11 @@ Binding constraints discovered in recon, which shape the whole design:
    re-derived. So the display must hang **only off the stored DerivationRecord**: rows written
    before this change carry no record → they re-validate and re-assemble byte-identically.
    (This is the owner-recorded design hint on #125.)
-3. **Exactness.** IEEE-754 float multiplication is NOT exact (`390.2 * 1000 =
-   390200.00000000006`). "Exact multiplication" (the decided convention) requires integer-scaled
-   arithmetic, not `value * factor`.
+3. **Exactness.** IEEE-754 float multiplication is NOT always exact: 96 of the 9,999
+   one-decimal values below 1000 multiply inexactly by 1000 (`16.1 * 1000 =
+   16100.000000000002`; measured sweep, session 36 — the ADR's original example `390.2 * 1000`
+   happens to round exactly, but the class is real). "Exact multiplication" (the decided
+   convention) therefore requires integer-scaled arithmetic, not `value * factor`.
 4. **Rate units must never expand.** `aantal per 1 000 inwoners…` contains a factor-looking
    digit group but is a rate; expanding it would be flatly wrong.
 
@@ -86,6 +91,15 @@ settled — so the LLM path and the template path get the identical mechanism an
   `normalizeForScan(body) !== body` (index safety); one insertion per anchor occurrence, claimed
   by the nearest preceding token (a window generously shared by two values expands only the
   nearest); after splicing, the body is **re-validated** and any problem discards the splice.
+- **Two belts added at the pre-build adversarial design review (2026-07-11, as-built):**
+  *(1) misattribution belt* — a phrase occurrence with ANOTHER numeric token between the anchor
+  and itself is never claimed: R10's shared suffix window lets a bare value be vouched by a
+  neighbour's factor string, and without this belt an anchor whose neighbour lacks a record
+  could splice ITS expansion next to the neighbour's value ("… 400,5 x 1000 (= 390.200)") — a
+  misleading display that survives re-validation because the token is record-backed.
+  *(2) double-render belt* — if the body already shows the expanded figure as a token (a model
+  that computed it despite prompt rule 1 — which now VALIDATES, since the record backs it),
+  the splice skips that record instead of printing the same figure twice.
 - The spliced body is what gets stored (R8). Reconstruction needs no new logic for it: the body
   is a stored part; re-validation passes because the stored result carries the record.
 
@@ -141,6 +155,17 @@ unaffected; its stored text gains the expansion, which the same run's audit re-v
   only cell values do. Recorded as a residual on #125.
 - A body the belts skip (abnormal normalization, contested anchor) silently renders as today.
   Fail-open is the right direction here: absence of a nicety, never a wrong number.
+- **The CC BY marking line renders whenever the record is registered — even when a belt skipped
+  the visible expansion** (weighed at the design review, 2026-07-11, and accepted): the marking
+  states that a registered bewerking exists on the stored result, which is true; it follows the
+  exact pre-existing pattern of the pre-registered direction/first_last records (every
+  multi-period answer already carries the marking whether or not prose shows a derived figure),
+  and over-attributing to CBS is conservative. Tying the marking to splice success instead
+  would make it depend on body content and open an R8 drift surface (reconstruct re-derives the
+  marking from stored derivations alone).
+- **A model-computed expansion now validates.** Pre-#125a a self-computed "390.200" was
+  unbacked and R3-rejected; with the record registered it is backed and passes. Deliberate: the
+  figure is exact and traceable. The double-render belt (D4) keeps the splice from doubling it.
 
 ## Revisit triggers
 

@@ -11,10 +11,15 @@ import { defineConfig } from 'vitest/config';
 // beforeAll (invariants, benchmark-intents, benchmark-charts) exceed the 10s
 // hook default under the same parallel load — the very first fresh-clone
 // `npm test` on 2026-07-03 flaked exactly here.
+//
+// Raised 30s → 60s (#125a, 2026-07-11): the suite kept growing (two more
+// db-booting files that session) and benchmark-charts/cli.test started
+// hitting the 30s ceiling on a busy machine — twice in one session, both
+// solo-green in ~1.5s. Same class, same fix as above.
 export default defineConfig({
   test: {
-    testTimeout: 30_000,
-    hookTimeout: 30_000,
+    testTimeout: 60_000,
+    hookTimeout: 60_000,
     // web/ is a standalone Next.js workspace (ADR 018) with its own vitest
     // config, jsdom environment, and `npm run web:test` script — its
     // *.test.tsx files must not be swept into this root, Node-environment run.
