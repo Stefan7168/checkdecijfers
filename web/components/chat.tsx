@@ -25,7 +25,7 @@ import { buildAnswerCsv } from '../lib/csv.ts';
 import type { AnswerCsv } from '../lib/csv.ts';
 import { statCardData } from '../lib/stat-card-data.ts';
 import type { StatCardData } from '../lib/stat-card-data.ts';
-import { statLineUrl } from '../lib/statline.ts';
+import { sourceLinkLabel, sourceTableUrl } from '../lib/statline.ts';
 import { ChartView } from './chart.tsx';
 import { StatCard } from './stat-card.tsx';
 
@@ -43,6 +43,9 @@ interface AnswerView {
    * behind a click. */
   attribution: string;
   tableId: string;
+  /** Source-registry key for the deep link + label (WP30a); absent on
+   * answers stored before WP30a → resolves to 'cbs' (A1). */
+  source?: string;
 }
 
 interface ChatMessage {
@@ -282,6 +285,7 @@ export function Chat({
                   markingLine: response.answer.markingLine,
                   attribution: response.answer.attributionLine,
                   tableId: response.result.attribution.tableId,
+                  source: response.result.attribution.source,
                 }
               : null,
           provisional:
@@ -389,14 +393,16 @@ export function Chat({
                   * always visible, plus the StatLine deep-link. */}
                 <span className="inline-flex max-w-full flex-wrap items-center gap-2 rounded border border-zinc-200 bg-zinc-50 px-2 py-1 text-xs text-zinc-500">
                   <span>{message.answerView.attribution}</span>
-                  <a
-                    href={statLineUrl(message.answerView.tableId)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="shrink-0 underline"
-                  >
-                    Bekijk bij CBS StatLine
-                  </a>
+                  {sourceTableUrl(message.answerView.source, message.answerView.tableId) !== null ? (
+                    <a
+                      href={sourceTableUrl(message.answerView.source, message.answerView.tableId)!}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="shrink-0 underline"
+                    >
+                      {sourceLinkLabel(message.answerView.source)}
+                    </a>
+                  ) : null}
                 </span>
               </div>
             ) : null}

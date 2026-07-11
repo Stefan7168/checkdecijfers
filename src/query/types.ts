@@ -163,6 +163,11 @@ export interface Attribution {
   tableId: string;
   tableTitle: string;
   tableVersion: number;
+  /** WP30a (ADR 030 D3): the source-registry KEY ('cbs'). OPTIONAL and
+   * additive: audit rows stored before WP30a carry no key at all, and every
+   * consumer resolves via resolveSource(), whose absent→'cbs' fallback (A1)
+   * keeps those rows re-deriving byte-identically forever (R8). */
+  source?: string;
   /** Our last successful sync of this table (ISO timestamp). */
   syncedAt: string;
   /** The period span the cells cover, as CBS codes (equal for single-period). */

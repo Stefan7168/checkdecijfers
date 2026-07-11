@@ -6,24 +6,26 @@
 // wrong. docs/02 reports the template-fallback count.
 import type { DerivationRecord, ResultCell, ValidatedResult } from '../../query/index.ts';
 import { formatValueNl } from './format.ts';
+import { resolveSource } from '../../sources/registry.ts';
 import { baseRegionLabel } from './validate.ts';
 
-/** CBS ValueAttribute → owner-approved Dutch reason (R11: a null cell states
- * its reason, never renders as a bare gap). Unknown attributes fall back to
- * naming the raw CBS marker rather than guessing a meaning. */
-const NULL_REASONS: Record<string, string> = {
-  Impossible: 'deze waarde kan volgens CBS niet voorkomen',
-  Confidential: 'door CBS niet gepubliceerd (vertrouwelijk)',
-  NotAvailable: 'door CBS (nog) niet beschikbaar gesteld',
-};
-
+/** ValueAttribute → owner-approved Dutch reason (R11: a null cell states its
+ * reason, never renders as a bare gap) — the wording lives in the SOURCE
+ * REGISTRY (WP30a, ADR 030 D3/A2); unknown attributes fall back to naming
+ * the raw marker rather than guessing a meaning. These two helpers receive a
+ * CELL, which carries no source key, so they resolve the default ('cbs')
+ * entry — byte-identical today; per-cell source routing arrives with the
+ * first real adapter (WP30c), when cells can differ in source at all. */
 export function nullReasonText(valueAttribute: string): string {
-  return NULL_REASONS[valueAttribute] ?? `door CBS gemarkeerd als '${valueAttribute}'`;
+  const info = resolveSource(undefined);
+  return info.nullReasonLabels[valueAttribute] ?? `door ${info.displayName} gemarkeerd als '${valueAttribute}'`;
 }
 
 function provisionalSuffix(cell: ResultCell): string {
   if (!cell.provisional) return '';
-  return cell.status === 'NaderVoorlopig' ? ' (nader voorlopig cijfer)' : ' (voorlopig cijfer)';
+  // A2: the two-tier CBS wording comes from the registry map; a provisional
+  // status outside the map keeps the generic suffix (pre-WP30a behavior).
+  return resolveSource(undefined).provisionalDisplay[cell.status] ?? ' (voorlopig cijfer)';
 }
 
 /** Value + unit, R10-safe: '%' attaches, 'aantal' renders bare, factor units

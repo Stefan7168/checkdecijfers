@@ -6,6 +6,7 @@
 // and QueryRefusal, neither of which carries a cell value, so a fabricated
 // number is structurally impossible here, not just avoided by convention.
 import { CANONICAL_MEASURES } from '../../registry/defaults.ts';
+import { resolveSource } from '../../sources/registry.ts';
 import { freshestForCanonical, type FreshnessInfo, type QueryRefusal } from '../../query/index.ts';
 import type { Db } from '../../db/types.ts';
 import type { ClarifyAxis, ParseOutcome } from '../intent/types.ts';
@@ -39,15 +40,15 @@ export interface BuiltRefusal {
 
 const definitionLabelByKey = new Map(CANONICAL_MEASURES.map((m) => [m.key, m.definitionLabel]));
 
-/** R11: state the CBS status inline whenever a freshest-available period is
- * offered — 'voorlopig cijfer' / 'nader voorlopig cijfer' / nothing for
- * Definitief. Exported: respond.ts's staleness recency-refusal offers a
+/** R11: state the source's status inline whenever a freshest-available
+ * period is offered — the wording comes from the SOURCE REGISTRY (WP30a:
+ * this was the third independent copy of the two-tier suffix; D3's whole
+ * point is one authority), nothing for statuses outside the map
+ * (Definitief). Exported: respond.ts's staleness recency-refusal offers a
  * period the same way and must mark it the same way (adversarial-review
  * finding, 2026-07-03: that offer omitted the marker). */
 export function statusSuffixNl(status: string): string {
-  if (status === 'Voorlopig') return ' (voorlopig cijfer)';
-  if (status === 'NaderVoorlopig') return ' (nader voorlopig cijfer)';
-  return '';
+  return resolveSource(undefined).provisionalDisplay[status] ?? '';
 }
 
 function periodWithStatusNl(period: { periodCode: string; status: string }): string {
