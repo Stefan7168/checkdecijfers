@@ -27,6 +27,7 @@ import { statCardData } from '../lib/stat-card-data.ts';
 import type { StatCardData } from '../lib/stat-card-data.ts';
 import { sourceLinkLabel, sourceTableUrl } from '../lib/statline.ts';
 import { ChartView } from './chart.tsx';
+import { FeedbackButtons } from './feedback-buttons.tsx';
 import { StatCard } from './stat-card.tsx';
 
 /** WP23 (#90/#84): an answer renders from its STRUCTURAL fields — body in
@@ -76,6 +77,11 @@ interface ChatMessage {
    * FILLS the input (the #75 convention — never sends). [] on user messages
    * and non-answers. */
   suggestions: string[];
+  /** WP128 (#128): the audit_answers row id this answer was stored under —
+   * the anchor the feedback buttons write against. Transient CLIENT state
+   * only (it rides the action result OUTSIDE the R8-stored envelope). Null
+   * on user messages, non-answers, and when the audit write failed. */
+  auditId: number | null;
 }
 
 /** WP23 (#75): clickable examples on the empty chat — each a benchmark-
@@ -211,7 +217,7 @@ export function Chat({
 
     setMessages((m) => [
       ...m,
-      { role: 'user', kind: null, text, chart: null, cost: null, citation: null, card: null, csv: null, answerView: null, provisional: false, suggestions: [] },
+      { role: 'user', kind: null, text, chart: null, cost: null, citation: null, card: null, csv: null, answerView: null, provisional: false, suggestions: [], auditId: null },
     ]);
     setInput('');
     setBusy(true);
@@ -242,6 +248,7 @@ export function Chat({
             answerView: null,
             provisional: false,
             suggestions: [],
+            auditId: null,
           },
         ]);
         // None of these kinds change the pending clarification state;
@@ -294,6 +301,9 @@ export function Chat({
           // process serving a new client bundle omits the field); a current
           // server always sets it.
           suggestions: response.kind === 'answer' ? (response.suggestions ?? []) : [],
+          // WP128: the feedback anchor — only real answers get buttons; the
+          // `?? null` guards the same deploy-window skew as suggestions.
+          auditId: response.kind === 'answer' ? (gated.auditId ?? null) : null,
         },
       ]);
       setPending(response.kind === 'clarification' ? response.pending : null);
@@ -405,6 +415,14 @@ export function Chat({
                   ) : null}
                 </span>
               </div>
+            ) : null}
+            {/* WP128 (#128): feedback buttons — only real answers with a
+              * stored audit row get them; refusals, clarifications, info
+              * messages and answers whose audit write failed (auditId null)
+              * do not. Self-contained child: its state and its fail-soft
+              * behavior can never affect the answer display above. */}
+            {message.kind === 'answer' && message.auditId !== null ? (
+              <FeedbackButtons auditId={message.auditId} />
             ) : null}
             {message.cost !== null ? (
               <div className="mt-0.5 text-xs text-zinc-400 tabular-nums">

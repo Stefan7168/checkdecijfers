@@ -25,3 +25,5 @@ export {
   twoYearsBefore,
 } from './retention.ts';
 export type { RedactedRow } from './retention.ts';
+export { FEEDBACK_TEXT_MAX_LENGTH, upsertAnswerFeedback } from './feedback.ts';
+export type { AnswerFeedbackInput } from './feedback.ts';
