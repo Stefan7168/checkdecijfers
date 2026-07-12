@@ -206,25 +206,41 @@ export async function getThreadRows(db: Db, userId: string, threadId: number): P
        -- must reproduce byte-for-byte. A turn's net is EVERY debit on its
        -- (user_id, request_id) — the 'question_cost' debit AND, on a web-opted
        -- turn, the SEPARATE 'websearch_cost' add-on debit (migration 018, ADR
-       -- 032) — minus every compensation that reversed one of those debits.
+       -- 032), AND, on an on-demand-onboarding trigger turn, the SEPARATE
+       -- 100-credit 'onboarding_cost' debit (WP16 sub-part 2, ADR 026) —
+       -- minus every compensation that reversed one of those debits.
        -- Each debit is independently refundable: a KEPT add-on stands with no
        -- compensation and lifts netCost by +10 (settleWebAddon bumps netCost in
        -- memory only — the debit is the sole persisted trace, so replay MUST
        -- net it or the resumed cost silently drops the add-on); a refunded one
        -- carries its own compensation row (related_transaction_id -> the web
-       -- debit). Aggregated as correlated subqueries, NOT extra LEFT JOINs:
-       -- two debits plus up to two compensations would multiply the row
-       -- (cartesian product) under a join. Null ONLY when the turn has no
-       -- attributable debit at all (a pre-migration-010 row, or a benchmark/
-       -- validation turn). NB history.ts's dashboard join still nets the base
-       -- debit only — a separate, reviewed change; do not read across.
+       -- debit). The onboarding case is the same shape: the ACK turn's
+       -- question_cost debit is fully refunded (nets 0) while its separate
+       -- onboarding_cost debit stands (maybeTriggerOnboarding overrides the LIVE
+       -- netCost to 100), so replay MUST net onboarding_cost too or the resumed
+       -- ack bubble silently drops to "0 credits" for a turn the user paid 100
+       -- (bug found by adversarial review, 2026-07-13). A later verification
+       -- failure refunds it via a compensation on the onboarding debit, netting
+       -- it back to 0 — the same debit-minus-compensation rule. No double-count:
+       -- the onboarding DELIVERY row (source_tag 'onboarding_delivery', which the
+       -- dashboard attributes the 100 to) is a background cron re-run and is
+       -- NEVER thread-attached (attachThread runs only on the live chat turn),
+       -- so it never appears in this thread scan — the ACK row is the sole
+       -- in-thread carrier of that request_id's onboarding_cost. Aggregated as
+       -- correlated subqueries, NOT extra LEFT JOINs: several debits plus their
+       -- compensations would multiply the row (cartesian product) under a join.
+       -- Null ONLY when the turn has no attributable debit at all (a
+       -- pre-migration-010 row, or a benchmark/validation turn). NB history.ts's
+       -- dashboard shows onboarding on the DELIVERY row + excludes the ack row
+       -- (the opposite surface), so the two files handle onboarding by design
+       -- differently — a separate, reviewed change; do not read across.
        case
          when not exists (
            select 1
            from credit_transactions d
            where d.user_id::text = a.user_id
              and d.request_id = a.request_id
-             and d.reason in ('question_cost', 'websearch_cost')
+             and d.reason in ('question_cost', 'websearch_cost', 'onboarding_cost')
          ) then null
          else
            coalesce((
@@ -232,7 +248,7 @@ export async function getThreadRows(db: Db, userId: string, threadId: number): P
              from credit_transactions d
              where d.user_id::text = a.user_id
                and d.request_id = a.request_id
-               and d.reason in ('question_cost', 'websearch_cost')
+               and d.reason in ('question_cost', 'websearch_cost', 'onboarding_cost')
            ), 0)
            - coalesce((
              select sum(c.delta)
@@ -243,7 +259,7 @@ export async function getThreadRows(db: Db, userId: string, threadId: number): P
                  from credit_transactions d
                  where d.user_id::text = a.user_id
                    and d.request_id = a.request_id
-                   and d.reason in ('question_cost', 'websearch_cost')
+                   and d.reason in ('question_cost', 'websearch_cost', 'onboarding_cost')
                )
            ), 0)
        end as credits_charged
