@@ -6,6 +6,21 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+- **A new envelope field OR ledger debit-reason must be propagated to EVERY consumer — the
+  "second read/net site" is the recurring blind spot** (session 43, 2026-07-13; found by two
+  independent adversarial hunts in ONE autonomous session). Instance A: #134(a) added
+  `RefusalResponse.suggestions` and updated the LIVE read (`chat.tsx`) but not the WP135
+  thread-RESUME read (`src/threads/replay.ts buildAssistantPart`, hardcoded `kind === 'answer'`)
+  — a resumed thread silently dropped the retry chip. Instance B: `getThreadRows`' `credits_charged`
+  SQL (`src/threads/index.ts`) netted only `('question_cost','websearch_cost')` and omitted the
+  live `onboarding_cost` debit — a resumed onboarding ack turn showed "0 credits" for a turn the
+  user paid 100. **This is the THIRD time this exact credits-net SQL has under-reported by
+  hardcoding a debit-reason list** (WP135 build itself missed `websearch_cost` — see the dual-review
+  entry below). **Lesson: when adding a structural envelope field, grep for every render/replay read
+  site (live receive path AND thread replay AND the audit reconstruct); when adding a ledger
+  `reason`, grep for every cost-netting site (`getThreadRows` AND `history.ts` AND the gate). A
+  hardcoded field/reason list is a propagation bug waiting for the next addition — the adversarial
+  "enumerate every field/reason × every consumer" lens catches these cheaply.**
 - **The CI gate enumerates test suites — and three whole test dirs were silently OFF it**
   (session 41, 2026-07-12, found while wiring `tests/threads` in): `tests/db`, `tests/sources`
   and `tests/websearch` (the WP129+130 pins!) existed and passed locally but were never in

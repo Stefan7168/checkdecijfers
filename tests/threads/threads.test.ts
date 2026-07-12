@@ -17,7 +17,7 @@ import {
   validateThreadOwnership,
 } from '../../src/threads/index.ts';
 import { chargeAndRun } from '../../src/billing/gate.ts';
-import { compensate, debitWebSearch, getActionClassPrice } from '../../src/billing/ledger.ts';
+import { compensate, debitOnboarding, debitWebSearch, getActionClassPrice } from '../../src/billing/ledger.ts';
 import { applyPricingDefaults } from '../../src/billing/pricing-apply.ts';
 import type { Db } from '../../src/db/types.ts';
 import { createTestDb } from '../helpers/pglite-db.ts';
@@ -412,6 +412,74 @@ describe('getThreadRows — thread turns + ledger cost (pin 1)', () => {
       const rows = await getThreadRows(db, userId, threadId);
       expect(rows).toHaveLength(1);
       expect(rows[0]!.creditsCharged).toBe(gated.netCost);
+    });
+  });
+
+  it('ONBOARDING trigger: the ack turn nets its standing onboarding_cost debit = the live 100 (regression: replay showed 0)', async () => {
+    await withDb(async (db) => {
+      await applyPricingDefaults(db);
+      const userId = randomUUID();
+      await db.query('update signup_grant_config set credits = 200');
+      await db.query('select public.grant_signup_credits($1)', [userId]);
+      const threadId = await createThread(db, userId);
+      const requestId = randomUUID();
+      // The acknowledgment turn is a REFUSAL (onboarding_pending): the gate
+      // fully refunds its question_cost (net 0), and a SEPARATE 100-credit
+      // onboarding_cost debit stands on the SAME requestId (maybeTriggerOnboarding
+      // overrides the LIVE netCost to 100). Replay must net that 100 or the
+      // resumed ack bubble silently drops to "0 credits".
+      const auditId = await insertRow(db, userId, {
+        kind: 'refusal',
+        question: 'Hoeveel mensen zitten in de bijstand?',
+        finalText: 'Dat onderwerp staat nog niet in onze database…',
+        threadId,
+        requestId,
+      });
+      const gated = await chargeAndRun(db, userId, requestId, async (): Promise<AuditedResponse> => ({
+        response: { kind: 'refusal', reason: 'onboarding_pending', question: 'x', text: 'x' } as unknown as AuditedResponse['response'],
+        auditId,
+      }));
+      if (gated.kind !== 'ok') throw new Error(`expected ok, got ${gated.kind}`);
+      expect(gated.netCost).toBe(0); // the refusal refunded the base question cost
+      const onboardingFee = 100; // the WP16 "heavy" onboarding fee (ADR 026)
+      const debit = await debitOnboarding(db, userId, requestId, onboardingFee);
+      expect(debit).not.toBeNull();
+
+      const rows = await getThreadRows(db, userId, threadId);
+      expect(rows).toHaveLength(1);
+      expect(rows[0]!.creditsCharged).toBe(onboardingFee);
+    });
+  });
+
+  it('ONBOARDING refunded (verification failed): the onboarding_cost compensation nets it back to 0', async () => {
+    await withDb(async (db) => {
+      await applyPricingDefaults(db);
+      const userId = randomUUID();
+      await db.query('update signup_grant_config set credits = 200');
+      await db.query('select public.grant_signup_credits($1)', [userId]);
+      const threadId = await createThread(db, userId);
+      const requestId = randomUUID();
+      const auditId = await insertRow(db, userId, {
+        kind: 'refusal',
+        question: 'Hoeveel mensen zitten in de bijstand?',
+        finalText: 'Dat onderwerp staat nog niet in onze database…',
+        threadId,
+        requestId,
+      });
+      const gated = await chargeAndRun(db, userId, requestId, async (): Promise<AuditedResponse> => ({
+        response: { kind: 'refusal', reason: 'onboarding_pending', question: 'x', text: 'x' } as unknown as AuditedResponse['response'],
+        auditId,
+      }));
+      if (gated.kind !== 'ok') throw new Error(`expected ok, got ${gated.kind}`);
+      const onboardingFee = 100;
+      const debit = await debitOnboarding(db, userId, requestId, onboardingFee);
+      // A later verification failure refunds the fee via a compensation on the
+      // onboarding debit — the same debit-minus-compensation rule nets it to 0.
+      await compensate(db, userId, debit!.id, onboardingFee, auditId);
+
+      const rows = await getThreadRows(db, userId, threadId);
+      expect(rows).toHaveLength(1);
+      expect(rows[0]!.creditsCharged).toBe(0);
     });
   });
 
