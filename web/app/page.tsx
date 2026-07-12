@@ -23,6 +23,8 @@ import {
 } from '../backend/billing/index.ts';
 import { Dashboard } from '../components/dashboard.tsx';
 import { QuestionHistory } from '../components/question-history.tsx';
+import { Workspace } from '../components/workspace.tsx';
+import { listThreads } from '../backend/threads/index.ts';
 import { currentUserId } from '../lib/current-user.ts';
 import { getDb } from '../lib/db.ts';
 import { PURCHASE_PARAM, PURCHASE_SUCCESS_VALUE } from '../lib/purchase.ts';
@@ -50,6 +52,37 @@ export default async function Home({
   // go-live) — AND the websearch prop is absent, so the chat renders no chips
   // and behaves byte-identically to today (deploy-order-safe).
   const websearchEnabled = process.env.WEBSEARCH_ENABLED === '1';
+
+  // WP135 (ADR 033 D7): dormant behind WORKSPACE_ENABLED (the WP129 pattern).
+  // Flag ON → the chat workspace + site shell. Flag OFF → today's <Dashboard>,
+  // rendered byte-identically below (no new props, no thread reads). The
+  // workspace branch does NOT read the question history (it moved to
+  // /geschiedenis, ⟨A5⟩).
+  if (process.env.WORKSPACE_ENABLED === '1') {
+    // Threads read server-side (like every other page read), handed to the
+    // workspace as initialThreads — no client fetch-on-mount.
+    const [wsBalance, wsSimplePrice, wsClarificationPrice, wsThreads, wsWebAddonPrice] =
+      await Promise.all([
+        getBalance(db, userId),
+        getActionClassPrice(db, 'simple'),
+        getActionClassPrice(db, 'clarification'),
+        listThreads(db, userId),
+        websearchEnabled ? getActionClassPrice(db, 'web_addon') : Promise.resolve(null),
+      ]);
+    return (
+      <Workspace
+        initialBalance={wsBalance}
+        simplePrice={wsSimplePrice}
+        clarificationPrice={wsClarificationPrice}
+        initialThreads={wsThreads}
+        purchaseSuccess={purchase === PURCHASE_SUCCESS_VALUE}
+        {...(websearchEnabled && wsWebAddonPrice !== null
+          ? { websearch: { enabled: true as const, addonPrice: wsWebAddonPrice } }
+          : {})}
+      />
+    );
+  }
+
   // simplePrice + signupGrantCredits: live pricing-config reads (ADR 006 --
   // the #69 warning threshold and #76 explainer copy must track the tables,
   // never a hardcoded number).

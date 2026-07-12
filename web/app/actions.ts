@@ -7,6 +7,7 @@
 // to this one file.
 'use server';
 
+import { redirect } from 'next/navigation';
 import { after } from 'next/server';
 
 import {
@@ -43,9 +44,24 @@ import {
 } from '../backend/ingestion/onboarding-trigger.ts';
 import { loadOnboardedVocabulary } from '../backend/ingestion/onboarding-vocab.ts';
 import type { OnboardedMeasure } from '../backend/answer/intent/prompt.ts';
+// WP135 (ADR 033): the chat-thread entity (Stage A). A NEW top-level backend
+// module reached through the web/backend → ../src symlink. Thread attach is a
+// POST-HOC UPDATE on audit rows (never touches the answer pipeline or the
+// ledger); replay + context rebuild are existing deterministic code (zero LLM).
+import {
+  attachOrCreateThread,
+  getThreadRows,
+  listThreads,
+  validateThreadOwnership,
+} from '../backend/threads/index.ts';
+import type { ThreadSummary } from '../backend/threads/index.ts';
+import { rebuildContext, replayParts } from '../backend/threads/replay.ts';
+import { assembleMessages } from '../lib/replay-assemble.ts';
+import type { ChatMessage } from '../lib/replay-assemble.ts';
 import { currentUserId } from '../lib/current-user.ts';
 import { getDb } from '../lib/db.ts';
 import { kickOnboardingJob } from '../lib/onboarding-kick.ts';
+import { createClient } from '../lib/supabase-server.ts';
 
 // Auth check happens HERE, inside the Server Action — not only in proxy.ts.
 // Next's own data-security guidance is explicit that a Proxy matcher is an
@@ -131,6 +147,35 @@ async function onboardedVocabulary(): Promise<OnboardedMeasure[]> {
 export interface AskOutcome {
   gated: GatedResponse;
   context: ConversationContext | null;
+  /** WP135 (ADR 033 D1): the thread this turn attached to — lazily created on
+   * the first completed question of a fresh chat, or the resumed thread's id.
+   * Null when the caller sent no rawThreadId (Dashboard/benchmark/runner paths,
+   * byte-identical to today) or when nothing was attachable (a failed attach
+   * degrades to a threadless-but-audited answer). The client adopts it for the
+   * next turn and captures it alongside a pending clarification (⟨A6⟩). */
+  threadId: number | null;
+}
+
+// WP135 ⟨A1⟩: the ONLY thread write from the request path — a post-hoc UPDATE
+// after the pipeline returns, run ONLY on a gated-ok outcome carrying an audit
+// id (insufficient_credits, duplicate_request, the ⟨W4⟩ early return, and thrown
+// exceptions never reach here — so a thread is created lazily, never empty).
+// attachOrCreateThread THROWS on a non-attachable row; a failed attach must
+// never block or roll back an already-audited answer, so it degrades to a
+// threadless (logged) answer. Called only when the caller is thread-aware
+// (rawThreadId !== undefined); the Dashboard/benchmark path never is.
+async function attachThread(
+  settled: GatedResponse,
+  userId: string,
+  validatedThreadId: number | null,
+): Promise<number | null> {
+  if (settled.kind !== 'ok' || settled.auditId === null) return null;
+  try {
+    return await attachOrCreateThread(getDb(), userId, validatedThreadId, settled.auditId);
+  } catch (error) {
+    console.error('thread attach failed (answer still returned, threadless):', error);
+    return null;
+  }
 }
 
 /** gated.kind === 'ok' -> the context handed to the NEXT turn, built from
@@ -166,12 +211,23 @@ export async function askQuestion(
   requestId: string,
   rawContext?: unknown,
   rawSelection?: unknown,
+  // WP135 ⟨A1⟩: the client's active thread id (null on a fresh chat, a number
+  // to continue one). ABSENT (undefined) ⇒ the caller is not thread-aware
+  // (Dashboard/benchmark/runner) and NO thread work happens at all — today's
+  // behavior byte-identical; benchmark rows keep thread_id NULL.
+  rawThreadId?: unknown,
 ): Promise<AskOutcome> {
   guardLength(question);
   const userId = await currentUserId();
   if (userId === null) {
-    return { gated: { kind: 'unauthenticated' }, context: null };
+    return { gated: { kind: 'unauthenticated' }, context: null, threadId: null };
   }
+  // ⟨A1⟩ READ-ONLY ownership check (never an INSERT); a forged/foreign id
+  // coerces to null → a fresh thread, never a cross-attach, never a leak.
+  const threadAware = rawThreadId !== undefined;
+  const validatedThreadId = threadAware
+    ? await validateThreadOwnership(getDb(), userId, rawThreadId)
+    : null;
   const conversationContext = await validateConversationContext(getDb(), rawContext ?? null);
   // WP129+130 (#129, ADR 032): validate the untrusted selection payload BEFORE
   // the gate (never throws; forced undefined while the flag is off).
@@ -190,7 +246,9 @@ export async function askQuestion(
     const required = simplePrice + webAddonPrice;
     const balance = await getBalance(getDb(), userId);
     if (balance < required) {
-      return { gated: { kind: 'insufficient_credits', balance, required }, context: null };
+      // ⟨W4⟩/⟨A1⟩ early return: no gate, no audit id ⇒ no thread (lazy by
+      // construction — an empty thread is never created here).
+      return { gated: { kind: 'insufficient_credits', balance, required }, context: null, threadId: null };
     }
   }
   // #112: loaded BEFORE the billing gate — the load is read-only and must
@@ -284,7 +342,10 @@ export async function askQuestion(
     // keep the +10 iff a cited web section shipped on an audited 'ok' turn,
     // else refund the taken debit (a no-op when none was taken).
     const settled = await settleWebAddon(finalGated, webDebitHolder.entry, webAddonPrice, userId);
-    return { gated: settled, context: await outcomeContext(settled) };
+    // WP135 ⟨A1⟩: attach the audited answer to its thread (created lazily if
+    // this is a fresh chat). Only runs on a gated-ok outcome with an audit id.
+    const threadId = threadAware ? await attachThread(settled, userId, validatedThreadId) : null;
+    return { gated: settled, context: await outcomeContext(settled), threadId };
   } catch (error) {
     // WP129+130 (ADR 032): a web debit taken before the pipeline threw is
     // compensated here (the base question debit is already compensated inside
@@ -414,12 +475,22 @@ export async function replyToClarification(
   reply: string,
   requestId: string,
   rawSelection?: unknown,
+  // WP135 ⟨A6⟩: the threadId the CLIENT captured ALONGSIDE `pending` at question
+  // time (stored together in chat state), NOT the sidebar's current active
+  // thread — so a reply always attaches to its originating thread. On
+  // ownership-validation failure it attaches to a fresh thread, never
+  // cross-attaches. ABSENT ⇒ not thread-aware (byte-identical to today).
+  rawThreadId?: unknown,
 ): Promise<AskOutcome> {
   guardLength(reply);
   const userId = await currentUserId();
   if (userId === null) {
-    return { gated: { kind: 'unauthenticated' }, context: null };
+    return { gated: { kind: 'unauthenticated' }, context: null, threadId: null };
   }
+  const threadAware = rawThreadId !== undefined;
+  const validatedThreadId = threadAware
+    ? await validateThreadOwnership(getDb(), userId, rawThreadId)
+    : null;
   // WP15: a pending from a follow-up clarification embeds the conversational
   // referent — client-held, so it gets the SAME registry validation as a
   // fresh question's context before it can reach the clarify prompt. A
@@ -442,7 +513,7 @@ export async function replyToClarification(
     const required = simplePrice + webAddonPrice;
     const balance = await getBalance(getDb(), userId);
     if (balance < required) {
-      return { gated: { kind: 'insufficient_credits', balance, required }, context: null };
+      return { gated: { kind: 'insufficient_credits', balance, required }, context: null, threadId: null };
     }
   }
   // #112: same pre-gate load as askQuestion (read-only, fail-soft).
@@ -488,7 +559,10 @@ export async function replyToClarification(
     // ⟨W3⟩ Settlement — no maybeTriggerOnboarding on the reply path (no finder),
     // so the gated object IS final; keep-or-refund the add-on the same way.
     const settled = await settleWebAddon(gated, webDebitHolder.entry, webAddonPrice, userId);
-    return { gated: settled, context: await outcomeContext(settled) };
+    // WP135 ⟨A6⟩: attach the reply to the CAPTURED thread (validatedThreadId),
+    // lazily creating one on ownership-validation failure — never a cross-attach.
+    const threadId = threadAware ? await attachThread(settled, userId, validatedThreadId) : null;
+    return { gated: settled, context: await outcomeContext(settled), threadId };
   } catch (error) {
     // WP129+130 (ADR 032): compensate a taken web debit before rethrowing (the
     // base debit is already compensated inside chargeAndRun — ADR 020).
@@ -561,4 +635,66 @@ export async function submitAnswerFeedback(
     console.error('answer feedback write failed', err);
     return { ok: false };
   }
+}
+
+// WP135 (ADR 033 D1/D2): the sidebar's thread list — the CALLING user's threads
+// only, most-recent-activity first, titles derived at read time (a fully
+// redacted thread is filtered out). Auth via currentUserId() (getClaims), like
+// deleteMyQuestionHistory. Fail-soft: unauth or a read error returns [] (the
+// page is auth-guarded regardless), so a hiccup empties the sidebar rather than
+// breaking the workspace.
+export async function listMyThreads(): Promise<ThreadSummary[]> {
+  try {
+    const userId = await currentUserId();
+    if (userId === null) return [];
+    return await listThreads(getDb(), userId);
+  } catch (error) {
+    console.error('listMyThreads failed:', error);
+    return [];
+  }
+}
+
+/** WP135 (ADR 033 D3): a resumed thread's replayed messages + its next-turn
+ * conversation context. An empty result (never an error) for a thread not owned
+ * by the caller. */
+export interface LoadedThread {
+  threadId: number | null;
+  messages: ChatMessage[];
+  context: ConversationContext | null;
+}
+
+// Resume = deterministic replay of the thread's stored envelopes (zero LLM) +
+// the registry-REVALIDATED conversation context. Ownership is validated first;
+// a thread not owned by the caller (or unknown, or a forged id) returns the
+// empty result — never an error that could leak a thread's existence (the
+// ADR-021 fail-safe). validateConversationContext runs against the LIVE
+// registry here (brief §3), so a stale referent degrades honestly on the next
+// turn rather than answering from a moved-on registry.
+export async function loadMyThread(rawThreadId: unknown): Promise<LoadedThread> {
+  const empty: LoadedThread = { threadId: null, messages: [], context: null };
+  try {
+    const userId = await currentUserId();
+    if (userId === null) return empty;
+    const threadId = await validateThreadOwnership(getDb(), userId, rawThreadId);
+    if (threadId === null) return empty;
+    const rows = await getThreadRows(getDb(), userId, threadId);
+    const messages = assembleMessages(replayParts(rows));
+    const rebuilt = await rebuildContext(getDb(), rows);
+    const context = await validateConversationContext(getDb(), rebuilt);
+    return { threadId, messages, context };
+  } catch (error) {
+    console.error('loadMyThread failed:', error);
+    return empty;
+  }
+}
+
+// WP135 (ADR 033 D6, WP24 absorbed): the genuinely-new "Log uit" action — clear
+// the Supabase session, then send the browser to /login. Separate from the
+// magic-link sign-in (login/actions.ts); this file gains it only because the
+// account menu the workspace shell renders needs it. NO UI reaches it while
+// WORKSPACE_ENABLED is off (⟨A5⟩): the shell that surfaces it does not render.
+export async function signOut(): Promise<void> {
+  const supabase = await createClient();
+  await supabase.auth.signOut();
+  redirect('/login'); // next/navigation — throws NEXT_REDIRECT, never returns
 }

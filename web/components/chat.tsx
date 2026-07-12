@@ -16,7 +16,6 @@ import { unstable_isUnrecognizedActionError } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { askQuestion, replyToClarification } from '../app/actions.ts';
 import type { AskOutcome } from '../app/actions.ts';
-import type { ChartSpec } from '../backend/chart/types.ts';
 import type { ConversationContext } from '../backend/answer/context/index.ts';
 import type { PendingClarification } from '../backend/answer/respond/types.ts';
 import type { GatedResponse } from '../backend/billing/index.ts';
@@ -31,72 +30,21 @@ import { buildCitation } from '../lib/citation.ts';
 import { buildAnswerCsv } from '../lib/csv.ts';
 import type { AnswerCsv } from '../lib/csv.ts';
 import { statCardData } from '../lib/stat-card-data.ts';
-import type { StatCardData } from '../lib/stat-card-data.ts';
+// WP135 (ADR 033 ⟨A3⟩): the ChatMessage/AnswerView shape and the meta/smalltalk
+// kind reclassification live in a shared pure leaf so thread replay
+// (web/lib/replay-assemble.ts, called from a Server Action) reconstructs the
+// SAME messages this live path appends — byte-identity by construction.
+import type { ChatMessage } from '../lib/chat-message.ts';
+import { messageKind } from '../lib/chat-message.ts';
+// WP135 (ADR 033 D4): the right-pane dock derives its tabs from these same
+// messages; Chat renders an in-flow reference chip (instead of the inline
+// visual) when the dock is active, using the SAME id scheme the dock does.
+import type { DockVisual } from '../lib/dock-visuals.ts';
+import { deriveVisuals, messageHasVisual, visualId } from '../lib/dock-visuals.ts';
 import { sourceLinkLabel, sourceTableUrl } from '../lib/statline.ts';
 import { ChartView } from './chart.tsx';
 import { FeedbackButtons } from './feedback-buttons.tsx';
 import { StatCard } from './stat-card.tsx';
-
-/** WP23 (#90/#84): an answer renders from its STRUCTURAL fields — body in
- * the bubble, staleness/definition/marking as their own lines, attribution
- * as a chip with the #86 StatLine link. Zero loss by construction: these are
- * exactly the fields compose.ts assembles `text` from; `text` itself (the
- * R8 audit string) is untouched server-side. */
-interface AnswerView {
-  body: string;
-  stalenessWarning: string | null;
-  definitionLine: string | null;
-  markingLine: string | null;
-  /** The full R4 attribution sentence — ALWAYS visible on the chip, never
-   * behind a click. */
-  attribution: string;
-  tableId: string;
-  /** Source-registry key for the deep link + label (WP30a); absent on
-   * answers stored before WP30a → resolves to 'cbs' (A1). */
-  source?: string;
-}
-
-interface ChatMessage {
-  role: 'user' | 'assistant';
-  /** WP23 (#84): message-type styling. Null on user messages; 'info' for
-   * the gated non-'ok' kinds. */
-  kind: 'answer' | 'clarification' | 'refusal' | 'info' | null;
-  text: string;
-  chart: ChartSpec | null;
-  /** Credits charged for this turn (GatedResponse.netCost) -- null on user
-   * messages and on any non-'ok' gated outcome (nothing was charged). */
-  cost: number | null;
-  /** WP20 #78: the ready-to-paste quote — built once at receive time from
-   * the validated answer envelope; null on non-answers. */
-  citation: string | null;
-  /** WP20 #80: single-number card data; null unless the answer is a
-   * single-cell result (stat-card-data.ts decides). */
-  card: StatCardData | null;
-  /** WP21 #52: the exported data file — built once at receive time from the
-   * validated envelope (csv.ts); null on non-answers. */
-  csv: AnswerCsv | null;
-  /** WP23 (#90): structural answer rendering; null on non-answers. */
-  answerView: AnswerView | null;
-  /** WP23 (#71): any quoted cell is provisional — the amber pill. */
-  provisional: boolean;
-  /** WP29 (#73, ADR 029): servability-gated follow-up chips under an answer.
-   * Every text passed the server-side dry-run gate this request; clicking
-   * FILLS the input (the #75 convention — never sends). [] on user messages
-   * and non-answers. */
-  suggestions: string[];
-  /** WP128 (#128): the audit_answers row id this answer was stored under —
-   * the anchor the feedback buttons write against. Transient CLIENT state
-   * only (it rides the action result OUTSIDE the R8-stored envelope). Null
-   * on user messages, non-answers, and when the audit write failed. */
-  auditId: number | null;
-  /** WP129+130 (#130, ADR 032): the unverified-web augmentation outcome for
-   * THIS turn, read from `gated.response.webSection ?? null` (the deploy-skew
-   * guard pattern). Rendered BELOW everything else in the bubble, keyed on
-   * this FIELD VALUE (never message.kind) — an 'ok' section shows the findings
-   * block, a 'failed' section one honest line, null nothing. Null on user
-   * messages, non-'ok' gated outcomes, and turns that owed no web attempt. */
-  webSection: WebSection | null;
-}
 
 /** WP23 (#75): clickable examples on the empty chat — each a benchmark-
  * proven answerable shape. Clicking FILLS the input, never auto-sends: the
@@ -260,16 +208,65 @@ function gatedMessageText(result: Exclude<GatedResponse, { kind: 'ok' }>): strin
 export function Chat({
   onOutcome,
   pricing,
-}: { onOutcome?: (gated: GatedResponse) => void; pricing?: ChatPricing } = {}) {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  // WP135 (ADR 033): workspace wiring. ALL optional — a prop-less / Dashboard
+  // call site is byte-identical to today (no threadId ever leaves the client,
+  // the dock never engages, the reset effect no-ops). `onThreadId`'s PRESENCE
+  // is the "thread-aware" signal: only then does a submit carry the 5th
+  // rawThreadId argument, so the Dashboard/test call sites keep their exact 3-
+  // and 4-argument shapes.
+  dockMode = false,
+  initialMessages,
+  initialContext = null,
+  threadId: initialThreadId = null,
+  loadNonce = 0,
+  onThreadId,
+  onVisualsChange,
+  activeVisualId = null,
+  onActivateVisual,
+}: {
+  onOutcome?: (gated: GatedResponse) => void;
+  pricing?: ChatPricing;
+  /** ≥ lg AND the workspace is active: visuals move to the right-pane dock and
+   * render here as an in-flow reference chip instead (each visual exactly
+   * once). Below lg / on the Dashboard this is false and visuals render inline
+   * exactly as today. */
+  dockMode?: boolean;
+  /** Replay/reset seed for messages (a loaded thread, or [] for nieuwe chat). */
+  initialMessages?: ChatMessage[];
+  initialContext?: ConversationContext | null;
+  /** The thread this chat starts in (null ⇒ a fresh chat; a real id ⇒ resumed). */
+  threadId?: number | null;
+  /** Bumped by the workspace on nieuwe-chat / thread-switch to (re)apply the
+   * seed above and clear pending — selection chips deliberately survive. */
+  loadNonce?: number;
+  /** Reports the current thread id after a lazy create / resume (workspace
+   * sidebar highlight + refresh). Its presence turns thread-awareness on. */
+  onThreadId?: (threadId: number | null) => void;
+  /** Reports the dockable visuals derived from the messages (the dock's tabs). */
+  onVisualsChange?: (visuals: DockVisual[]) => void;
+  /** The dock tab currently active (styles the matching reference chip). */
+  activeVisualId?: string | null;
+  /** A reference chip click activates its dock tab. */
+  onActivateVisual?: (visualId: string) => void;
+} = {}) {
+  const threadAware = onThreadId !== undefined;
+  const [messages, setMessages] = useState<ChatMessage[]>(initialMessages ?? []);
   const [pending, setPending] = useState<PendingClarification | null>(null);
+  // WP135 (ADR 033 D1): the thread this chat is currently in — seeded from the
+  // prop, updated to the server's attached thread id after a completed turn,
+  // and sent as askQuestion's 5th argument (only when thread-aware).
+  const [threadId, setThreadId] = useState<number | null>(initialThreadId ?? null);
+  // ⟨A6⟩: the threadId captured ALONGSIDE `pending` at question time — a reply
+  // attaches to ITS clarification's originating thread, never the sidebar's
+  // currently-active one. Cleared with pending on a thread switch.
+  const [capturedThreadId, setCapturedThreadId] = useState<number | null>(null);
   // WP15 (ADR 021): the structured referent carried between turns. Held
   // exactly like `pending` (client-held React state, sent back verbatim on
   // the next submit) but updated only on an 'ok' outcome that itself
   // produced a context — any other outcome (a gated non-'ok' kind, or an
   // 'ok' response with no honest referent, e.g. a clarification) leaves the
   // held context untouched, so a smalltalk/refusal detour never erases it.
-  const [context, setContext] = useState<ConversationContext | null>(null);
+  const [context, setContext] = useState<ConversationContext | null>(initialContext ?? null);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -296,6 +293,10 @@ export function Chat({
   const nothingSelected =
     websearch !== undefined && selectedSources.size === 0 && !webSelected;
   const bottomRef = useRef<HTMLDivElement>(null);
+  // WP135 (ADR 033 D5, ⟨A6⟩): the reset effect below fires on every loadNonce
+  // change (nieuwe chat / thread switch); this ref skips the mount run, whose
+  // seed the useState initializers already applied.
+  const seededRef = useRef(true);
 
   function toggleSource(key: string): void {
     setSelectedSources((prev) => {
@@ -315,6 +316,35 @@ export function Chat({
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, busy]);
+
+  // WP135 (ADR 033 D5): nieuwe chat = the ADR-021 explicit reset; a thread
+  // switch = the same reset seeded with the loaded thread (⟨A6⟩: an abandoned
+  // clarification stays abandoned, exactly like a page reload). Keyed on
+  // loadNonce ONLY — the seed props change together with it, and selection
+  // chips (selectedSources/webSelected) are deliberately NOT touched, so they
+  // survive. The mount run is skipped (the initializers already seeded state).
+  useEffect(() => {
+    if (seededRef.current) {
+      seededRef.current = false;
+      return;
+    }
+    setMessages(initialMessages ?? []);
+    setContext(initialContext ?? null);
+    setThreadId(initialThreadId ?? null);
+    setPending(null);
+    setCapturedThreadId(null);
+    setInput('');
+    setError(null);
+    setStaleDeploy(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadNonce]);
+
+  // WP135 (ADR 033 D4): report the dockable visuals derived from the messages
+  // so the workspace can render the dock and its tabs; a no-op without the
+  // callback (the Dashboard / test call sites).
+  useEffect(() => {
+    onVisualsChange?.(deriveVisuals(messages));
+  }, [messages, onVisualsChange]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -339,14 +369,33 @@ export function Chat({
       const selection = websearch
         ? { sources: [...selectedSources], web: webSelected }
         : undefined;
-      const outcome = pending
-        ? websearch
-          ? await replyToClarification(pending, text, requestId, selection)
-          : await replyToClarification(pending, text, requestId)
-        : websearch
-          ? await askQuestion(text, requestId, context, selection)
-          : await askQuestion(text, requestId, context);
+      // WP135 ⟨A1⟩/⟨A6⟩: thread-aware call sites (the workspace) carry the 5th
+      // rawThreadId argument — the current thread for a question, the CAPTURED
+      // thread for a reply. Non-thread-aware call sites (Dashboard, tests) omit
+      // it, keeping their exact 3-/4-argument shapes byte-identical.
+      let outcome: AskOutcome;
+      if (pending) {
+        outcome = threadAware
+          ? await replyToClarification(pending, text, requestId, selection, capturedThreadId)
+          : websearch
+            ? await replyToClarification(pending, text, requestId, selection)
+            : await replyToClarification(pending, text, requestId);
+      } else {
+        outcome = threadAware
+          ? await askQuestion(text, requestId, context, selection, threadId)
+          : websearch
+            ? await askQuestion(text, requestId, context, selection)
+            : await askQuestion(text, requestId, context);
+      }
       applyOutcome(outcome);
+      // WP135 ⟨A1⟩: adopt the server's attached thread (lazy-created on the
+      // first completed turn) so the next turn attaches to it, and report it up
+      // for the sidebar highlight/refresh. A failed attach returns null and the
+      // chat simply stays threadless.
+      if (threadAware && outcome.threadId !== null) {
+        setThreadId(outcome.threadId);
+        onThreadId?.(outcome.threadId);
+      }
       const { gated } = outcome;
       onOutcome?.(gated);
 
@@ -387,14 +436,7 @@ export function Chat({
           // same envelope and ANSWER too ("we're fetching it") — nothing was
           // refused, so the "Dit kon ik niet beantwoorden" header + geen-gok
           // badge must NOT show; render as plain info like meta/smalltalk.
-          kind:
-            response.kind === 'refusal' &&
-            (response.reason === 'meta' ||
-              response.reason === 'smalltalk' ||
-              response.reason === 'onboarding_pending' ||
-              response.reason === 'onboarding_already_pending')
-              ? 'info'
-              : response.kind,
+          kind: messageKind(response),
           text: response.text,
           chart: response.kind === 'answer' ? response.chart : null,
           cost: gated.netCost,
@@ -429,7 +471,16 @@ export function Chat({
           webSection: response.webSection ?? null,
         },
       ]);
-      setPending(response.kind === 'clarification' ? response.pending : null);
+      // ⟨A6⟩: capture the thread this clarification attached to, alongside
+      // `pending`, so the reply binds to it regardless of any later sidebar
+      // switch (which clears both via the loadNonce reset).
+      if (response.kind === 'clarification') {
+        setPending(response.pending);
+        setCapturedThreadId(outcome.threadId);
+      } else {
+        setPending(null);
+        setCapturedThreadId(null);
+      }
     } catch (err) {
       if (unstable_isUnrecognizedActionError(err)) {
         // Structurally true no-charge claim: the action never ran, and the
@@ -466,12 +517,28 @@ export function Chat({
             </div>
           </div>
         ) : null}
-        {messages.map((message, i) => (
+        {messages.map((message, i) => {
+          // WP135 ⟨A7⟩: a redacted row replays as ONE muted placeholder — no
+          // user+assistant sentinel pair, no envelope (the chat-side isDeleted
+          // posture).
+          if (message.role === 'redacted') {
+            return (
+              <div key={i} className="text-left">
+                <p className="text-sm italic text-zinc-400">Deze vraag is verwijderd.</p>
+              </div>
+            );
+          }
+          // WP135 (ADR 033 D4): in dock mode a message's single visual moves to
+          // the right pane and is replaced here by an in-flow reference chip —
+          // each visual renders EXACTLY ONCE. Below lg the visuals render inline
+          // exactly as today.
+          const docked = dockMode && messageHasVisual(message);
+          return (
           <div
             key={i}
             className={message.role === 'user' ? 'text-right' : 'text-left'}
           >
-            {message.card ? <StatCard data={message.card} /> : null}
+            {!dockMode && message.card ? <StatCard data={message.card} /> : null}
             {/* WP23 (#84): a refusal announces itself — the two fixed Dutch
               * strings from the owner-approved row. */}
             {message.kind === 'refusal' ? (
@@ -564,7 +631,25 @@ export function Chat({
                 {message.csv !== null ? <DownloadCsvButton csv={message.csv} /> : null}
               </div>
             ) : null}
-            {message.chart ? <ChartView spec={message.chart} /> : null}
+            {!dockMode && message.chart ? <ChartView spec={message.chart} /> : null}
+            {/* WP135 (ADR 033 D4): the in-flow reference chip standing in for a
+              * docked visual — clicking activates its dock tab ("in het paneel").
+              * The web section still renders below this (ADR 032). */}
+            {docked ? (
+              <button
+                type="button"
+                onClick={() => onActivateVisual?.(visualId(i))}
+                aria-pressed={activeVisualId === visualId(i)}
+                className={
+                  'mt-2 inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs ' +
+                  (activeVisualId === visualId(i)
+                    ? 'border-zinc-500 bg-zinc-200 text-zinc-900'
+                    : 'border-zinc-300 text-zinc-600 hover:bg-zinc-50')
+                }
+              >
+                {message.chart !== null ? 'Grafiek' : 'Kaart'} in het paneel →
+              </button>
+            ) : null}
             {/* WP29 (#73, ADR 029 D3): follow-up chips — styled exactly like
               * the #75 example chips, and the click handler IS the #75
               * behavior verbatim: fill the input, never send. The user sees
@@ -590,7 +675,8 @@ export function Chat({
               * it. The separation IS the honesty model. */}
             {message.webSection ? <WebSectionView section={message.webSection} /> : null}
           </div>
-        ))}
+          );
+        })}
         {busy ? (
           <div className="text-left text-sm text-zinc-500">
             {/* WP129+130 go-live feedback (owner, 2026-07-12): with the Internet
