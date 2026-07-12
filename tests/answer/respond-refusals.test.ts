@@ -6,13 +6,19 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Db } from '../../src/db/types.ts';
 import { createIngestedDb } from '../helpers/ingested-db.ts';
 import {
+  buildNoSourcesRefusal,
   buildParseRefusal,
   buildQueryRefusal,
   buildStillAmbiguousRefusal,
+  buildWebOnlyRefusal,
   matchMetaTemplate,
   META_TEMPLATES,
+  respondToClarificationReply,
+  respondToQuestion,
+  RESPONSE_SCHEMA_VERSION,
 } from '../../src/answer/respond/index.ts';
-import type { BuiltRefusal } from '../../src/answer/respond/index.ts';
+import type { BuiltRefusal, PendingClarification } from '../../src/answer/respond/index.ts';
+import type { LlmClient } from '../../src/answer/llm/client.ts';
 import type { ParseOutcome } from '../../src/answer/intent/types.ts';
 import { REFUSAL_KIND_BY_QUESTION_KIND } from '../../src/answer/intent/parse.ts';
 import { freshestForCanonical } from '../../src/query/index.ts';
@@ -553,6 +559,94 @@ describe('buildQueryRefusal — exhaustive over every QueryRefusal.refusal.kind'
 // ---------------------------------------------------------------------------
 // Still-ambiguous-after-round (final round: refusal-with-guidance)
 // ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Source-selection pre-parse belt (WP129+130, #129/#130, ADR 032) — a
+// deselected-CBS turn refuses DETERMINISTICALLY, before any parse/LLM.
+// ---------------------------------------------------------------------------
+
+describe('source-selection refusal builders (WP129+130)', () => {
+  it('buildNoSourcesRefusal: reason no_sources, digit-free, never ends in a question', () => {
+    const built = buildNoSourcesRefusal();
+    expect(built.reason).toBe('no_sources');
+    expect([...numbersInText(built.text)]).toHaveLength(0);
+    expect(built.text.trimEnd().endsWith('?')).toBe(false);
+  });
+
+  it('buildWebOnlyRefusal: reason web_only, digit-free, never ends in a question', () => {
+    const built = buildWebOnlyRefusal();
+    expect(built.reason).toBe('web_only');
+    expect([...numbersInText(built.text)]).toHaveLength(0);
+    expect(built.text.trimEnd().endsWith('?')).toBe(false);
+  });
+});
+
+describe('source-selection pre-parse belt — no LLM invoked, both entry points', () => {
+  /** A spy client that would FAIL the test if the pipeline ever reached an LLM
+   * call — the pre-parse belt must short-circuit before any parse. */
+  function spyClient(): { client: LlmClient; calls: () => number } {
+    let calls = 0;
+    const client: LlmClient = {
+      async complete() {
+        calls += 1;
+        throw new Error('LLM must not be called on a deselected-CBS turn');
+      },
+    };
+    return { client, calls: () => calls };
+  }
+
+  function options(client: LlmClient, sourceSelection: { sources: string[]; web: boolean }) {
+    return {
+      intentClient: client,
+      answerClient: client,
+      referenceDate: '2025-01-01',
+      sourceSelection,
+    };
+  }
+
+  it('respondToQuestion + no sources at all ⇒ no_sources refusal, zero LLM calls', async () => {
+    const { client, calls } = spyClient();
+    const response = await respondToQuestion(db, 'wat is de inflatie?', options(client, { sources: [], web: false }));
+    expect(response.kind).toBe('refusal');
+    if (response.kind !== 'refusal') throw new Error('unreachable');
+    expect(response.reason).toBe('no_sources');
+    expect(calls()).toBe(0);
+  });
+
+  it('respondToQuestion + CBS deselected but Internet kept ⇒ web_only refusal, zero LLM calls', async () => {
+    const { client, calls } = spyClient();
+    const response = await respondToQuestion(db, 'wat is de inflatie?', options(client, { sources: [], web: true }));
+    expect(response.kind).toBe('refusal');
+    if (response.kind !== 'refusal') throw new Error('unreachable');
+    expect(response.reason).toBe('web_only');
+    expect(calls()).toBe(0);
+  });
+
+  it('respondToQuestion + an unknown non-CBS source + Internet ⇒ web_only (CBS is what gates a verified answer)', async () => {
+    const { client, calls } = spyClient();
+    const response = await respondToQuestion(db, 'wat is de inflatie?', options(client, { sources: ['weer'], web: true }));
+    if (response.kind !== 'refusal') throw new Error('unreachable');
+    expect(response.reason).toBe('web_only');
+    expect(calls()).toBe(0);
+  });
+
+  it('respondToClarificationReply + no sources ⇒ no_sources refusal carrying the ORIGINAL question, zero LLM calls', async () => {
+    const { client, calls } = spyClient();
+    const pending: PendingClarification = {
+      version: RESPONSE_SCHEMA_VERSION,
+      question: 'Hoeveel mensen zitten in de bijstand?',
+      referenceDate: '2025-01-01',
+      axes: ['region'],
+      questionNl: 'Voor welke regio?',
+      options: ['heel Nederland'],
+    };
+    const response = await respondToClarificationReply(db, pending, 'heel Nederland', options(client, { sources: [], web: false }));
+    if (response.kind !== 'refusal') throw new Error('unreachable');
+    expect(response.reason).toBe('no_sources');
+    expect(response.question).toBe(pending.question);
+    expect(calls()).toBe(0);
+  });
+});
 
 describe('buildStillAmbiguousRefusal', () => {
   it('names what stayed unresolved and gives ONE concrete example question, no pending', async () => {

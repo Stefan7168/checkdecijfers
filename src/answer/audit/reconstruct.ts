@@ -32,6 +32,9 @@ import type { AnswerResponse } from '../respond/types.ts';
 import type { AuditRecord } from './types.ts';
 import { AUDIT_SCHEMA_VERSION } from './types.ts';
 import { intentHash, resolvedIntent } from './write.ts';
+// WP129+130 (ADR 032): the ⟨W3⟩ skip-list is shared with src/websearch/attach.ts
+// (the pure leaf) so reconstruct check (d) can never drift from the owed-check.
+import { WEBSEARCH_SKIP_REASONS } from '../../websearch/types.ts';
 
 export interface ReconstructionReport {
   ok: boolean;
@@ -130,6 +133,48 @@ function checkEnvelopeIntegrity(record: AuditRecord, problems: string[]): void {
     }
   } else if (record.tables.length > 0 || record.tableIds.length > 0) {
     problems.push('non-answer row carries table references');
+  }
+  // WP129+130 (#129/#130, ADR 032): the source-selection state and the
+  // unverified-web section ride the envelope as additive structural fields,
+  // stored VERBATIM (R8) with `?? null` reads (A1 — pre-WP rows serialize
+  // neither key). Reconstruction REPLAYS the stored bytes; it never re-derives
+  // the section (the web is non-deterministic). Four shape checks — no numeric
+  // check (the web section is deliberately outside R1–R11's scope):
+  const sourceSelection = response.sourceSelection ?? null;
+  const webSection = response.webSection ?? null;
+  // (a) a section can exist only when the web channel was actually selected.
+  if (webSection !== null && sourceSelection?.web !== true) {
+    problems.push('webSection is present but sourceSelection.web is not true');
+  }
+  // (b) clarification turns never carry a web section (the call is skipped).
+  if (response.kind === 'clarification' && webSection !== null) {
+    problems.push('webSection must be null on clarification rows');
+  }
+  // (c) an ok section carries 1..4 findings, each with >= 1 citation.
+  if (webSection !== null && webSection.status === 'ok') {
+    if (webSection.findings.length < 1 || webSection.findings.length > 4) {
+      problems.push(
+        `webSection ok must carry 1..4 findings, found ${webSection.findings.length}`,
+      );
+    }
+    if (webSection.findings.some((f) => f.citations.length === 0)) {
+      problems.push('webSection ok finding carries no citation');
+    }
+  }
+  // (d) ⟨W6⟩ owed-but-unrecorded is a tamper: a web-selected non-clarification
+  // turn that is not a skip-list refusal MUST carry a section (attach records
+  // even the no-client case as `not_configured`, so a null here is a lie).
+  // NB the ⟨W1⟩ audit-fail strip produces a SHOWN refusal with null webSection
+  // but NO stored row at all — nothing for reconstruct to check, so no conflict.
+  const owed =
+    sourceSelection?.web === true &&
+    response.kind !== 'clarification' &&
+    !(
+      response.kind === 'refusal' &&
+      (WEBSEARCH_SKIP_REASONS as readonly string[]).includes(response.reason)
+    );
+  if (owed && webSection === null) {
+    problems.push('a web attempt was owed (sourceSelection.web) but no webSection is recorded');
   }
   if ((record.replyText === null) !== (record.pendingClarification === null)) {
     problems.push('reply_text and pending_clarification must be set together');

@@ -518,6 +518,46 @@ export async function buildStillAmbiguousRefusal(
 }
 
 // ---------------------------------------------------------------------------
+// Source-selection pre-parse refusals (WP129+130, #129/#130, ADR 032) — the
+// deterministic server belt behind the #129 source-tags chips. Neither takes a
+// data value (principle c stays structural), both are digit-free, and neither
+// ends in '?'. Emitted at the TOP of respondToQuestion / respondToClarification
+// Reply, before any parse/LLM, so a deselected-sources turn costs no LLM call.
+// ---------------------------------------------------------------------------
+
+/** ALL sources deselected (client also disables send; this is the server
+ * belt). Owner-decided copy (ADR 032 pricing table row "All sources
+ * deselected"). In the ⟨W3⟩ skip-list ⇒ no web attempt ⇒ full refund ⇒ net 0. */
+export function buildNoSourcesRefusal(): BuiltRefusal {
+  const body = 'Geen bronnen geselecteerd — selecteer minstens één bron om een antwoord te krijgen.';
+  return {
+    reason: 'no_sources',
+    text: assertNotAQuestion(body),
+    offer: null,
+    guidance: null,
+    freshness: null,
+    internalNote: null,
+  };
+}
+
+/** CBS deselected but the "Internet" chip kept — the web-only mode (ADR 032
+ * decision 3/Q4). The refusal names the honest consequence (no verified answer)
+ * and points below to the unverified-web section attachWebAugmentation renders.
+ * NOT in the skip-list: this reason is exactly where the web section belongs. */
+export function buildWebOnlyRefusal(): BuiltRefusal {
+  const body =
+    'Je hebt CBS-data uitgeschakeld voor deze vraag, dus ik geef geen geverifieerd antwoord. Hieronder staan alleen onbevestigde resultaten van het web.';
+  return {
+    reason: 'web_only',
+    text: assertNotAQuestion(body),
+    offer: null,
+    guidance: null,
+    freshness: null,
+    internalNote: null,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Envelope assembly helpers (respond.ts calls these to build the final
 // ComposedResponse variants; kept here so refusal wording and envelope
 // shape stay next to each other)

@@ -19,12 +19,19 @@ export {
   compensate,
   debitOnboarding,
   debitQuestion,
+  debitWebSearch,
   getActionClassPrice,
   getBalance,
   reserveDebit,
   reserveOnboardingDebit,
+  reserveWebSearchDebit,
 } from './ledger.ts';
-export type { LedgerEntry, ReserveDebitResult, ReserveOnboardingDebitResult } from './ledger.ts';
+export type {
+  LedgerEntry,
+  ReserveDebitResult,
+  ReserveOnboardingDebitResult,
+  ReserveWebSearchDebitResult,
+} from './ledger.ts';
 export { chargeAndRun } from './gate.ts';
 export { getQuestionHistory } from './history.ts';
 export type { QuestionHistoryEntry } from './history.ts';
