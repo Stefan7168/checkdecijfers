@@ -2,7 +2,7 @@
 
 **What this is:** the single, current-state reference for what things cost — action classes, credit packs, the signup grant. **Not** the decision history (that's [open-questions.md](open-questions.md) #3/#4/#58, which keeps the "was X, revised to Y, because Z" trail); **not** the schema (that's migrations [005](../migrations/005_credit_ledger.sql)/[006](../migrations/006_pricing_config.sql)); **not** the design rationale for *why* billing works this way at all (that's ADR [006](decisions/006-auth-billing-seams.md)). This doc exists so a later session — or Stefan — can see "what does X cost right now" without reconstructing it from three files' worth of superseded numbers.
 
-**Status: target values for WP13, not yet built.** `src/billing/` doesn't exist yet; nothing here is live. Values below are what the implementing session should encode in `src/billing/pricing-defaults.ts` and apply via `pricing:apply`.
+**Status: LIVE since WP13 (2026-07-04).** `src/billing/pricing-defaults.ts` encodes these values; `npm run pricing:apply` syncs them to `action_class_prices`/`credit_packs`. (This line previously still said "not yet built" — corrected 2026-07-12, session 40, per the doc-freshness rule.)
 
 **All values are starting points, not frozen law** (ADR 006: "prices must be easy to change") — a config-table row edit, not a code change.
 
@@ -13,7 +13,8 @@
 | `clarification` | **10** | Live — every doorvraag (clarification round) costs this, flat |
 | `simple` | **20** | Live — every current pipeline *answer* is `simple`; no classifier exists yet for the two rows below |
 | `analysis` | **60** | Inert placeholder — forward compatibility for a later classifier (drill-down / comparison-heavy questions) |
-| `heavy` | **100** | Inert placeholder — forward compatibility (multi-table / claim-verification questions) |
+| `heavy` | **100** | Charged by the WP16 on-demand table onboarding (ADR 026: the fetch rides this tier); otherwise no classifier assigns it |
+| `web_addon` | **10** | WP129+130 (ADR [032](decisions/032-websearch-augmentation.md), Q2): the per-question web-search add-on when the "Internet" chip is on. NOT a question class — a separate `websearch_cost` ledger debit next to the question's own, auto-refunded when no web section is delivered. Dormant until the supervised go-live sets `WEBSEARCH_ENABLED=1` |
 
 **An outright refusal costs 0 credits, always** — it is not a class; there is nothing to price because there is nothing to explore (see settlement policy below).
 
@@ -29,6 +30,29 @@ The billing gate is a reservation pattern, not "charge after success":
    - **Refusal:** compensate the full amount back, net cost 0.
 
 **Structural invariant:** the `clarification` price must never exceed the cheapest answer-class price (10 ≤ 20 today), or a compensation row would need a non-positive delta — which the ledger's CHECK constraint (migration 005) forbids by design. Keep this in mind if `simple`'s price ever drops below 10.
+
+## Web-search add-on (WP129+130 — net cost per mode)
+
+The +10 add-on rides its own settlement (kept **iff** a web section with ≥1 cited finding was
+delivered AND the turn has an audit row; every other outcome — API error, no findings, timeout,
+insufficient balance at reserve time, audit-write failure — auto-refunds via the existing
+compensation mechanism, with an honest one-liner in the chat). Worked-out net costs, per the
+frozen brief's ledger end-states:
+
+| Mode | Net cost | Notes |
+|---|---|---|
+| CBS + Internet, answer + web ok | **30** | 20 question + 10 add-on |
+| CBS + Internet, answer + web failed | **20** | add-on auto-refunded |
+| CBS + Internet, CBS refuses + web ok | **10** | question refunded (existing rule), add-on kept |
+| Internet only (CBS deselected) + web ok | **10** | the `web_only` refusal refunds the base automatically |
+| Clarification round with Internet on | **10** | flat clarification price; the web call is skipped — the reply turn charges the add-on if it answers |
+| Onboarding acknowledgment with Internet on | **100** | the fetch price only; onboarding turns never run the web call (skip-list) |
+| No sources selected | **0** | deterministic refusal, full refund |
+
+**Transient-hold caveat (honest, mechanical):** ANY web-opted turn needs a balance of **≥ 30**
+at submit time — the untouched billing gate always holds the base 20 before the pipeline runs,
+and the 10-credit web reserve happens before that hold is refunded. Web-only therefore *nets*
+10 but *requires* 30 available. The chat UI's cost line states this.
 
 ## Signup grant
 

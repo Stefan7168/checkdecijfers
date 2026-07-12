@@ -180,6 +180,36 @@ script, per #133). **(b) ✅ DONE** — grants/RLS on `answer_feedback` LIVE-VER
 — the `--` passthrough breaks direct `node` invocation; use `npm run audit:verify -- <from> <to>`
 OR call the script directly without `--`).
 
+## WP129+130 web search — the supervised go-live (owner present; NOT YET RUN)
+
+The code ships DORMANT: until every step below is done, production behaves byte-identically to
+pre-WP129+130 (no chips, no web calls, no new charges — the `WEBSEARCH_ENABLED` flag pattern,
+same as `ONBOARDING_ENABLED` was). Steps, in order, owner present:
+
+1. **Apply migration 018** — `npm run db:migrate` (adds the `websearch_cost` ledger reason +
+   its idempotency index, widens the compensation trigger, adds the `web_addon` action class to
+   the pricing CHECK). Additive only; no data change.
+2. **Apply pricing** — `npm run pricing:apply` (inserts the `web_addon` = 10 credits row).
+   Verify read-only: `select * from action_class_prices;` should now show five rows.
+3. **Set the flag** — in Vercel: add env var `WEBSEARCH_ENABLED=1` (Production), then redeploy.
+   Also confirm the plan's function-duration ceiling accepts `maxDuration = 90` (current Vercel
+   default ceiling is 300s — fine as of 2026-07).
+4. **Live smoke test (~€0.05 API spend):** ask one real question with the Internet chip ON.
+   Expect: normal CBS answer, then the bordered "Van het web (niet door checkdecijfers
+   geverifieerd)" block with ≤4 one-sentence findings and domain-only links; cost caption 30.
+   Verify the ledger read-only: one `question_cost` −20, one `websearch_cost` −10, no
+   compensation. Then ask one question with the CBS chip OFF (web-only): expect the honest
+   "geen geverifieerd antwoord" line + the web block; net cost 10 (the −20 base auto-refunded).
+5. **Orphan check (also a monthly-maintenance query):** a platform-killed request can in theory
+   leave a `websearch_cost` debit without its settlement (documented accepted residual, ≤10
+   credits per occurrence). Read-only:
+   `select d.id, d.created_at, d.delta from credit_transactions d where d.reason = 'websearch_cost' and not exists (select 1 from credit_transactions c where c.reason = 'compensation' and c.related_transaction_id = d.id) order by d.created_at desc;`
+   — every row here should correspond to a turn whose chat actually showed a web section; a row
+   without one is an orphan the owner refunds by asking a session to run `compensate` for it.
+
+Rollback at any point: unset `WEBSEARCH_ENABLED` and redeploy — the feature goes fully dormant
+(migration 018 and the pricing row are harmless to leave in place).
+
 ## Moving to a new machine (fresh clone bootstrap)
 
 Everything that matters lives in this repository or in your own accounts
