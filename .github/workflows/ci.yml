@@ -108,6 +108,14 @@ jobs:
         run: npm run test:billing
       - name: Catalog tests (table discovery — FTS recall + rerank allowlist, WP16)
         run: npm run test:catalog
+      - name: DB tests (shared client + migration harness)
+        run: npm run test:db
+      - name: Sources tests (source registry + conformance harness, WP30a/b)
+        run: npm run test:sources
+      - name: Websearch tests (WP129+130 pins)
+        run: npm run test:websearch
+      - name: Threads tests (chat workspace threads + replay, WP135)
+        run: npm run test:threads
       - name: Benchmark run (hermetic, audited pipeline)
         run: npm run benchmark:run
       - name: Benchmark scorer (audit records vs frozen key)
