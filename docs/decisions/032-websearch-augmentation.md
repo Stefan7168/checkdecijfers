@@ -1,6 +1,6 @@
 # ADR 032 — Web search as a separated, unverified augmentation channel (#130)
 
-**Status:** PROPOSED — the *direction* is owner-confirmed (2026-07-11, session 36, in-chat: "De aanbevelingen: we kunnen alles vastleggen"); the *details* (copy, pricing, section shape, failure behavior) await the ~30-minute owner interview (sheet: [session-briefs/2026-07-12-websearch-interview-sheet.md](../session-briefs/2026-07-12-websearch-interview-sheet.md)). Nothing in this ADR is build-authorized until that interview closes the open points.
+**Status:** ✅ ACCEPTED (2026-07-12, session 39, owner in-chat) — direction confirmed 2026-07-11 (session 36); all ten detail points from the interview sheet confirmed the same session as this ADR was drafted (owner reviewed the four highest-weight points explicitly — pricing, web-only mode, failure/refund, domain policy — then said "Go with your defaults" for all ten). Full answers: [session-briefs/2026-07-12-websearch-interview-sheet.md](../session-briefs/2026-07-12-websearch-interview-sheet.md). Build-authorized; the remaining step is a frozen executor brief (WP27/WP30b pattern — pre-build adversarial review before the build), not another owner decision.
 
 **Date:** 2026-07-12 (session 39; cost research executed per the owner's "best en voordeligst" ask)
 
@@ -16,14 +16,19 @@ The owner-confirmed resolution: **the separation IS the honesty model.** The val
 
 Web search is **not** an ADR-030-waist source (it has no tables/cells to register); it is a separate augmentation channel. WP30c (structured source #2, #123) stays an independent lane.
 
-## Decision (direction — owner-confirmed; details open)
+## Decision (direction + all details owner-confirmed, session 39)
 
-1. **Separated section, per-section honesty claims.** The answer page gets two zones: the validated CBS body (unchanged machinery, unchanged public claim) and an unverified-web section (own styling, own disclaimer, per-claim source links, no numbers promoted into charts/attribution).
-2. **Technique: Anthropic's native `web_search` server-side tool** — owner-confirmed preference, now cost-verified (below). One extra Claude API call per web-opted question; the tool executes searches server-side and returns results **with citations always enabled** (the API enforces citation plumbing; cited text/title/URL do not count as tokens). Per-claim source links — exactly what the section design needs — come out of the box.
-3. **Opt-in per question via the #129 source-tags chip** = the natural cost gate. No chip selected → no web call, no web cost. Deselecting ALL sources → honest refusal ("geen bronnen geselecteerd"), never a guess.
-4. **Zero bytes change in the existing validated pipeline.** Intent-parse and compose prompts stay byte-identical; the web call is a NEW, self-contained LLM call with its own prompt (allowed because this WP says so — the standing zero-prompt-bytes rule protects the *existing* pipeline). Fixtures do not re-record.
-5. **Audit/R8:** the web section is stored **verbatim** in the audit row as an additive envelope field (with its citations), per the A1 discipline: `?? null` reads + an absent-key regression test. Reconstruction of a web section = replay of the stored bytes, never re-derivation (the web is non-deterministic; re-searching cannot reproduce it). The #129 selection state rides the audit record so R8 reconstructs *what was searched*.
-6. **Conversation memory:** the web section does NOT enter the structured conversation context (ADR 021) in v1 — follow-ups reason over the validated CBS facts only. (Also avoids the API's `encrypted_content` multi-turn replay requirement entirely: each web call is single-shot.)
+1. **Separated section, per-section honesty claims.** The answer page gets two zones: the validated CBS body (unchanged machinery, unchanged public claim) and an unverified-web section (own styling, own disclaimer, per-claim source links, no numbers promoted into charts/attribution). Header copy (Q1): **"Van het web (niet door checkdecijfers geverifieerd)"**.
+2. **Technique: Anthropic's native `web_search` server-side tool** — owner-confirmed preference, cost-verified (below). One extra Claude API call per web-opted question, capped `max_uses: 3` (Q9); the tool executes searches server-side and returns results **with citations always enabled** (the API enforces citation plumbing; cited text/title/URL do not count as tokens). `user_location` set to Nederland, no domain allowlist (Q7).
+3. **Opt-in per question via the #129 source-tags chip**, labelled **"Internet"** (Q8) = the natural cost gate. No chip selected → no web call, no web cost. Deselecting ALL sources → honest refusal ("geen bronnen geselecteerd"), never a guess. Deselecting CBS but keeping Internet → **the product answers with ONLY the unverified-web section** (Q4) — the section's own disclaimer carries the honesty, the public claim does not apply to that answer.
+4. **Pricing (Q2): +10 credits** on top of the normal question price when the web chip is selected — rides the existing debit mechanism, no new ledger primitive.
+5. **Section shape (Q3):** max ~4 short findings, each one sentence + a **domain-name-only** source link (no raw URL), in a visually distinct bordered block below the validated CBS body; never numbers in bold, never a chart.
+6. **When CBS refuses but Internet is selected (Q5):** the refusal text is untouched; the web section may still render below it (the user paid for the web add-on independently of the CBS outcome).
+7. **Web-call failure (Q6):** fail-soft — a one-line honest note ("De webzoekopdracht is niet gelukt — geen extra kosten") and an **automatic refund** of the web add-on credits via the existing compensation mechanism. The CBS answer always ships regardless.
+8. **Zero bytes change in the existing validated pipeline.** Intent-parse and compose prompts stay byte-identical; the web call is a NEW, self-contained LLM call with its own prompt (allowed because this WP says so — the standing zero-prompt-bytes rule protects the *existing* pipeline). Fixtures do not re-record.
+9. **Audit/R8:** the web section is stored **verbatim** in the audit row as an additive envelope field (with its citations), per the A1 discipline: `?? null` reads + an absent-key regression test. Reconstruction of a web section = replay of the stored bytes, never re-derivation (the web is non-deterministic; re-searching cannot reproduce it). The #129 selection state rides the audit record so R8 reconstructs *what was searched*.
+10. **Conversation memory:** the web section does NOT enter the structured conversation context (ADR 021) in v1 — follow-ups reason over the validated CBS facts only. (Also avoids the API's `encrypted_content` multi-turn replay requirement entirely: each web call is single-shot.)
+11. **Build sequencing (Q10):** #129 (source chips UI) and #130 (web channel) build TOGETHER as one WP, chips first then the web channel, in the same branch/PR per #118.
 
 ## Cost verification (measured 2026-07-12 — the "best en voordeligst" answer)
 
@@ -51,20 +56,20 @@ Useful tool knobs confirmed in the docs: `max_uses` (hard cost cap per request),
 3. **Own scraping** — owner-rejected for v1; highest maintenance, highest legal/robots.txt surface, no citation machinery.
 4. **Blend web findings into the validated body** — rejected outright: it would put unvalidatable claims behind the public claim; the worst possible bug class (principle c).
 
-## Constraints (binding on the build, whatever the interview decides)
+## Constraints (binding on the build)
 
 - Web findings never enter: the validated body, any validator input, `attribution`, chart data, or the benchmark's fabrication scoring. The 20-task benchmark runs with web search OFF and must stay green unchanged.
-- The web call is fail-soft: any error → the CBS answer ships exactly as today (the section is absent or carries an honest failure note — interview point Q6).
+- The web call is fail-soft: any error → the CBS answer ships exactly as today, plus the Q6 honest note + automatic refund.
 - The new envelope field ships with `?? null` reads + an absent-key regression test (standing A1 rule; four prior R8 bugs in this class — see #133).
-- Displaying the section MUST include the source citations (also an Anthropic display requirement for end-user-facing search output).
-- Money path: whether and how credits are charged for the web add-on is an owner pricing decision (interview Q2); the billing gate/ledger primitives are not modified — a web charge, if any, rides the existing debit mechanism.
+- Displaying the section MUST include the source citations (also an Anthropic display requirement for end-user-facing search output), domain-name-only per Q3.
+- Money path: +10 credits (Q2), rides the existing debit mechanism; billing gate/ledger primitives are not modified.
 
 ## Revisit triggers
 
-- Native web_search quality disappoints on Dutch-language queries → evaluate option 2.
+- Native web_search quality disappoints on Dutch-language queries → evaluate option 2 (search API + own pipeline).
 - Anthropic pricing changes materially from $10/1K.
 - A second augmentation-channel candidate appears (e.g. news APIs) → generalize the section mechanism, don't fork it.
 
-## Open points — closed only by the owner interview
+## Status: ready for the frozen executor brief
 
-See the [interview sheet](../session-briefs/2026-07-12-websearch-interview-sheet.md): exact Dutch copy (header, disclaimer, failure note), credits pricing, section shape/length, web-only questions (CBS deselected), refund semantics on partial failure, domain policy, and the #129 chip label.
+All owner decisions are closed (interview sheet, above). The next step is the WP27/WP30b pattern: a pre-build adversarial review producing a frozen executor brief, then the build on its own branch + PR (per #118 — this touches core-product/money-path code, so autonomous sessions merge nothing without owner review even though this decision itself was made owner-present).

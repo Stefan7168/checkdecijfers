@@ -173,7 +173,7 @@ full detail + the two remaining known historical-versioning anomalies (rows 76 a
 bugs, not fixed tonight) in [open-questions #133](open-questions.md). **Final measured result:
 213/215 checkable rows reconstruct clean** (25 GDPR-redacted rows structurally skipped by the
 script, per #133). **(b) ✅ DONE** — grants/RLS on `answer_feedback` LIVE-VERIFIED: 0 anon/authenticated grants, RLS enabled, 0 policies (migration-003 auto-lockdown confirmed working on this table too).
-**(c)** the owner's live 👍/👎 click test — the ONE remaining step. *(Session 38, 2026-07-12: the click test did NOT happen — the session ended on context right after state-sync. Pre-test baseline verified read-only: `answer_feedback` reachable on production, exactly 0 rows; the owner's two clicks must appear as the table's first two rows.)*
+**(c)** the owner's live 👍/👎 click test — ✅ DONE (session 39, 2026-07-12, owner in-chat). Baseline verified read-only at 0 rows (sessions 38+39); the owner then asked real questions on production and clicked feedback on two real answers. Read-only verification (`select audit_answer_id, verdict, feedback_text from answer_feedback order by created_at asc`) confirmed exactly the expected shape: row 1 (audit_answer_id 242) verdict='down' with feedback_text set ("Dit is een test. Ik heb aangeklikt dat deze antwoord 'duimpje omlaag' is."); row 2 (audit_answer_id 243) verdict='up' with feedback_text null. **WP128 is now fully complete — no remaining steps.**
 
 **Script usage** (kept for the next time a range needs re-checking):
 `node --env-file=.env scripts/verify-audit-rows.ts <fromId> <toId>` (NOT `npm run audit:verify --`

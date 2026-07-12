@@ -41,6 +41,7 @@ import {
   finalizeDelivered,
   finalizeFailed,
   finalizeUnanswerable,
+  findDeliveredAnswerAuditId,
   getPendingRequest,
   reclaimStaleRunning,
   recordSliceNote,
@@ -267,6 +268,36 @@ async function runFitGate(deps: OnboardingJobDeps, row: PendingTableRequest): Pr
   };
 }
 
+/** #119 (delivery idempotency, design brief change 2) — shared crash-recovery
+ * finalize. Called once a prior attempt's answer-kind audit row has been
+ * found (findDeliveredAnswerAuditId, onboarding-store.ts — ⟨F1⟩'s kind='answer'
+ * guard lives there). Finalizes the row exactly like the normal step-7
+ * success branch below and sends the SAME 'delivered' notify shape — from the
+ * user's view this is still exactly-once, because the crash that stranded
+ * this row happened BEFORE the first notify ever fired (notify runs strictly
+ * after finalize on every path, never before). Shared by both re-entry
+ * points a crashed row can take: processOneRow's claim-time check, and
+ * runOnboardingJob's exhausted-attempt check — the latter existing
+ * specifically so a crash row that hits MAX_ATTEMPTS is finalized-delivered
+ * instead of falling into failAndRefund, which would refund a 100-credit
+ * charge for an answer the user already received (user keeps answer +
+ * refund — a real, if tiny, money leak the original #119 sketch missed). */
+async function recoverDelivered(
+  deps: OnboardingJobDeps,
+  row: PendingTableRequest,
+  deliveryAuditAnswerId: number,
+): Promise<void> {
+  await finalizeDelivered(deps.db, row.id, { deliveryAuditAnswerId });
+  await deps.notify({
+    userId: row.userId,
+    questionText: row.questionText,
+    topicTerm: row.topicTerm,
+    outcome: 'delivered',
+    failureSummary: null,
+    refundedCredits: null,
+  });
+}
+
 /**
  * Processes ONE claimed row end-to-end. The whole body is wrapped so that ANY
  * throw becomes a terminal 'failed' + refund + notify — the row can never be
@@ -278,6 +309,25 @@ async function processOneRow(
 ): Promise<'delivered' | 'unanswerable' | 'failed'> {
   const { db, source } = deps;
   try {
+    // #119 — crash recovery, FIRST thing in the try block, before ANY
+    // ingest/fit/delivery work: a PREVIOUS attempt at this exact row may have
+    // already run step 7 below (answerQuestionAudited), written a real
+    // answer-kind onboarding_delivery audit row, and then crashed BEFORE
+    // finalizeDelivered ran and BEFORE the notify fired. The 20-minute stale
+    // reclaim (design §3 step 1) then re-queues this row for another attempt.
+    // Re-running the whole pipeline from here would ingest/vocab/deliver a
+    // SECOND time: a second onboarding_delivery audit row, a second "Goed
+    // nieuws" email, and a dashboard that (per open-questions #119) reads as
+    // 200 credits charged for one question. The answer already exists and was
+    // never shown to the user (notify always runs strictly after finalize),
+    // so finalize + notify exactly once, right here, and STOP — never re-enter
+    // the pipeline for a row that already has a real answer on record.
+    const recovered = await findDeliveredAnswerAuditId(db, row.requestId);
+    if (recovered !== null) {
+      await recoverDelivered(deps, row, recovered);
+      return 'delivered';
+    }
+
     // WP27 stage C (ADR 027 D2) — decide WHICH table this row ingests:
     //  - resolvedTableId set → a reclaimed retry after an accepted fit:
     //    resume at ingest deterministically, never re-run the fit loop (D2a).
@@ -456,6 +506,20 @@ export async function runOnboardingJob(deps: OnboardingJobDeps): Promise<Onboard
     try {
       const row = await getPendingRequest(db, id);
       if (!row) continue;
+      // #119 — same crash-recovery check as processOneRow's claim-time entry
+      // (recoverDelivered, above), but for the OTHER re-entry point a crashed
+      // row can take: one that crashed between the delivery audit write and
+      // finalizeDelivered, then got reclaimed enough times to hit
+      // MAX_ATTEMPTS instead of being re-claimed promptly. Without this check
+      // such a row would fall straight into failAndRefund below and refund a
+      // 100-credit charge for an answer the user ALREADY received — the user
+      // keeps the answer AND the refund. Finalize-delivered instead; never
+      // refund a delivered answer.
+      const recovered = await findDeliveredAnswerAuditId(db, row.requestId);
+      if (recovered !== null) {
+        await recoverDelivered(deps, row, recovered);
+        continue;
+      }
       await failAndRefund(
         deps,
         row,

@@ -270,6 +270,53 @@ export async function claimOnePending(db: Db): Promise<PendingTableRequest | nul
   return row === undefined ? null : fromRow(row as unknown as PendingRequestRow);
 }
 
+/** #119 (delivery idempotency, design brief change 2): does a DELIVERED
+ * answer already exist for this onboarding request? The job's two crash
+ * re-entry points (processOneRow's claim-time check, runOnboardingJob's
+ * exhausted-attempt check) call this BEFORE doing any pipeline work, so a row
+ * whose PREVIOUS attempt already wrote the delivery audit row but crashed
+ * before finalizeDelivered ran can be finalized-and-notified instead of
+ * re-processed (finalizeDelivered + notify, never a second pipeline run).
+ *
+ * `kind = 'answer'` is LOAD-BEARING (⟨F1⟩, pre-build review — two lenses
+ * converged on this before it shipped): answerQuestionAudited writes an
+ * `onboarding_delivery` audit row for EVERY outcome kind, not just answers —
+ * src/answer/audit/respond-audited.ts's persistOrFailClosed always inserts a
+ * row before returning (R8's no-streaming guarantee), whether the response is
+ * an 'answer', a 'refusal', or a 'clarification'. A bare existence check
+ * (dropping the kind filter) would let a crashed REFUSAL re-entry be
+ * "recovered" as delivered: the row would be marked delivered pointing at a
+ * refusal's audit row, the 100 credits would NEVER be refunded (the recovery
+ * path never refunds — it assumes success), and the user would get a false
+ * "Goed nieuws, je cijfers staan klaar" email for a question that was never
+ * actually answered. That is strictly worse than the double-delivery bug this
+ * helper exists to fix. Only a `kind = 'answer'` row is proof an answer was
+ * ever produced.
+ *
+ * `order by id asc`: if a historical double-delivery already happened (the
+ * exact bug #119 closes off going forward — a crash before this fix shipped
+ * could have left two onboarding_delivery answer rows for one request_id),
+ * resolving to the FIRST one is deterministic and matches what the user
+ * actually saw first, never a later duplicate re-run.
+ *
+ * This reads audit_answers — a table src/answer/audit/ owns, not
+ * pending_table_requests — but the read is a single factual lookup with zero
+ * decision-making (the caller decides what to do with the id); the module's
+ * money-free "thin store" boundary (top-of-file comment) stays intact, same
+ * as listRequestsForHistory already reading credit_transactions for the same
+ * reason. */
+export async function findDeliveredAnswerAuditId(db: Db, requestId: string): Promise<number | null> {
+  const { rows } = await db.query(
+    `select id from audit_answers
+     where source_tag = 'onboarding_delivery' and kind = 'answer' and request_id = $1
+     order by id asc
+     limit 1`,
+    [requestId],
+  );
+  const row = rows[0];
+  return row === undefined ? null : Number(row.id);
+}
+
 export interface FinalizeDeliveredInput {
   deliveryAuditAnswerId: number;
 }

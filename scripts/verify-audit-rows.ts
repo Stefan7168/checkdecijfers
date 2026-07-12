@@ -13,20 +13,39 @@
 // "rows X–Y reconstruct clean" claim in the docs (review finding 2026-07-05:
 // a measured claim needs an artifact or a command someone else can run).
 //
-// GDPR-REDACTED ROWS ARE SKIPPED, LOUDLY, NOT SILENTLY (found 2026-07-12,
-// re-running the owed A1 check post-WP30b/WP128): retention.ts's
-// redactMatchingRows deliberately overwrites `response` with a stripped
-// sentinel shape (REDACTED_QUESTION_TEXT + `redacted: true`, no `.answer`/
-// `.result` at all) — reconstructionReport was never taught this shape and
-// crashes on it (`response.answer` is undefined). Whether "reconstructs"
-// should mean anything different for a row whose content was deliberately
-// erased is a real design question (recorded: open-questions — reconstruction
-// semantics for redacted rows), not one to settle under a live migration
-// window. Skipping here is scoped to THIS script only; reconstructionReport
-// itself (and the benchmark gate that trusts it) is untouched.
+// RECONSTRUCTION POLICY (#133, resolved 2026-07-12, session 39 — supersedes
+// the 2026-07-12 "GDPR-redacted rows are skipped" note this header used to
+// carry; see open-questions #133 and ADR 016's as-built addendum for the full
+// policy record):
+//
+//  - Historical-behavior divergence: reconstructionReport verifies under
+//    TODAY's deterministic builder rules, never a row's own historical rule.
+//    A row whose builder rule legitimately changed since it was written (a
+//    safety fix like #64's non-contiguous-series chart gate or #115-lever-a's
+//    circular-title suppression) is not a bug — it is a documented, PINNED
+//    exception in src/answer/audit/known-divergences.ts, never a blanket
+//    "old rows don't have to reconstruct" skip. A row NOT in that register
+//    still fails today exactly as before; a row IN the register whose
+//    problems don't match its pinned substrings ALSO still fails.
+//  - GDPR-redacted rows: no longer skipped. redactionIntegrityReport (the
+//    module that owns the sentinel shape, src/answer/audit/retention.ts)
+//    verifies a redacted row matches EXACTLY the shape redactMatchingRows
+//    writes — no more, no less. A leftover `answer`/`result`/`chart` key, a
+//    non-sentinel question/finalText, or an unpaired reply_text/
+//    pending_clarification is a real, reported PROBLEM (exit 1), not a skip.
+//
+// reconstructionReport itself (and the benchmark gate that trusts it) is
+// UNTOUCHED by any of this — the policy above governs only this diagnostic
+// script's interpretation of reconstructionReport's output.
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
-import { loadAuditRecord, reconstructionReport } from '../src/answer/audit/index.ts';
+import {
+  KNOWN_DIVERGENCES,
+  classifyKnownDivergence,
+  loadAuditRecord,
+  reconstructionReport,
+  redactionIntegrityReport,
+} from '../src/answer/audit/index.ts';
 import { connectFromEnv } from '../src/db/client.ts';
 
 function isRedacted(response: unknown): boolean {
@@ -49,8 +68,11 @@ async function main(): Promise<void> {
 
   const { db, pool } = connectFromEnv();
   let ok = 0;
-  let skippedRedacted = 0;
+  let knownDivergent = 0;
+  let redactedTotal = 0;
+  let redactedOk = 0;
   const problems: string[] = [];
+  const notes: string[] = [];
   try {
     for (let id = from; id <= to; id++) {
       const record = await loadAuditRecord(db, id);
@@ -58,15 +80,49 @@ async function main(): Promise<void> {
         problems.push(`row ${id}: not found`);
         continue;
       }
+
       if (isRedacted(record.response)) {
-        skippedRedacted++;
+        redactedTotal++;
+        const report = redactionIntegrityReport(record);
+        if (report.ok) {
+          redactedOk++;
+        } else {
+          for (const p of report.problems) problems.push(`row ${id} (redacted, ${record.kind}): ${p}`);
+        }
         continue;
       }
+
       const report = reconstructionReport(record);
-      if (report.ok) {
+      const entry = KNOWN_DIVERGENCES.find((d) => d.id === id);
+
+      if (entry === undefined) {
+        if (report.ok) {
+          ok++;
+        } else {
+          for (const p of report.problems) problems.push(`row ${id} (${record.kind}): ${p}`);
+        }
+        continue;
+      }
+
+      // A register-listed row runs the same reconstructionReport as any
+      // other, then classifies its problems (if any) against the entry's
+      // pinned substrings — the register narrows tolerance, it never widens
+      // it (see known-divergences.ts's module header).
+      const classification = classifyKnownDivergence(report.problems, entry);
+      if (classification === 'stale') {
+        // problems.length === 0: the row reconstructs clean now — a
+        // housekeeping NOTE (the register entry can be pruned), not an error.
         ok++;
+        notes.push(`row ${id}: known-divergences.ts entry is STALE — reconstructs clean now (cause: ${entry.cause})`);
+      } else if (classification === 'matches') {
+        knownDivergent++;
+        notes.push(`row ${id} (${record.kind}): known, pinned divergence — ${entry.cause}`);
       } else {
-        for (const p of report.problems) problems.push(`row ${id} (${record.response.kind}): ${p}`);
+        for (const p of report.problems) {
+          problems.push(
+            `row ${id} (${record.kind}): ${p} [register entry for row ${entry.id} did not cover this problem]`,
+          );
+        }
       }
     }
   } finally {
@@ -77,9 +133,17 @@ async function main(): Promise<void> {
     }
   }
 
-  const total = to - from + 1;
-  console.log(`audit rows ${from}-${to}: ${ok}/${total - skippedRedacted} reconstruct clean` +
-    (skippedRedacted > 0 ? ` (${skippedRedacted} GDPR-redacted row(s) skipped, not checked — see the module header)` : ''));
+  const checked = to - from + 1 - redactedTotal;
+  let summary = `audit rows ${from}-${to}: ${ok}/${checked} reconstruct clean`;
+  if (knownDivergent > 0) {
+    summary += `, ${knownDivergent} known divergence(s) (pinned in known-divergences.ts)`;
+  }
+  if (redactedTotal > 0) {
+    summary += `, ${redactedOk}/${redactedTotal} redacted row(s) redaction-verified`;
+  }
+  console.log(summary);
+
+  for (const n of notes) console.log(`  NOTE: ${n}`);
   if (problems.length > 0) {
     for (const p of problems) console.error(`  PROBLEM: ${p}`);
     process.exitCode = 1;
