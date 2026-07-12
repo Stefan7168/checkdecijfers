@@ -24,11 +24,24 @@
 // "the credit amount stays, the question text is gone" describes. No schema
 // change: every column touched already exists (migrations 004/010).
 //
-// Scope, both callers: source_tag = 'user' ONLY. A benchmark or validation row
-// must never be touched (docs/05 audit-trail section: those rows still "live
-// forever" — they are this project's own regression fixtures, not a real
-// user's personal data). This is enforced by a `where source_tag = 'user'`
-// clause on every statement in this module, never trusted to a caller.
+// Scope, both callers (#120): source_tag in ('user', 'onboarding_delivery').
+// The delivery answer row an on-demand-onboarding job writes (source_tag =
+// 'onboarding_delivery') carries the verbatim question + intent + answer, so it
+// is a real user's personal data the retention seam must cover too — widened in
+// session 39 from the original source_tag='user'-ONLY scope. A benchmark or
+// validation row must STILL never be touched (docs/05 audit-trail section:
+// those rows "live forever" — this project's own regression fixtures, not a
+// real user's personal data), which is exactly why the scope stays an explicit
+// allowlist (never `!= 'benchmark'`). The single shared `AUDIT_SCOPE` fragment
+// below is the ONE place this allowlist is written — both WHERE clauses, the
+// purge's feedback subselect, AND the dry-run count reference it, never a
+// hand-copied clause, and it is never trusted to a caller.
+//
+// Beyond audit_answers, both callers ALSO redact the user's pending onboarding
+// requests (#120): pending_table_requests.question_text/topic_term/
+// failure_summary are the SECOND place a question's free text is stored
+// (migration 012's deliberate re-entry copy, re-run verbatim at delivery). The
+// same-transaction pending leg keeps that promise honest — see redactMatchingRows.
 import type { Db } from '../../db/types.ts';
 import { stableStringify } from '../llm/client.ts';
 import type { AuditRecord } from './types.ts';
@@ -38,6 +51,22 @@ import type { AuditRecord } from './types.ts';
  * the dashboard (web/components/question-history.tsx) can detect a redacted
  * row by exact match, without a new column. */
 export const REDACTED_QUESTION_TEXT = 'Deze vraag is verwijderd.' as const;
+
+/** #120: the single source of truth for WHICH audit_answers rows this module's
+ * retention touches. An explicit ALLOWLIST, deliberately not a `!= 'benchmark'`
+ * denylist: benchmark/validation rows are regression fixtures that live forever,
+ * while 'onboarding_delivery' rows (the on-demand-onboarding delivery answer,
+ * carrying the verbatim question + intent + answer) ARE personal data — added
+ * to the scope in session 39. Every scoped statement in this module — the
+ * self-service WHERE, the purge WHERE, the purge's answer_feedback subselect,
+ * and the ⟨F2⟩ dry-run count — is built from THIS fragment, so the scope can
+ * only ever widen in one place. */
+const AUDIT_SCOPE = `source_tag in ('user', 'onboarding_delivery')` as const;
+
+/** #120: the purge's age predicate, shared by the pending-table redaction leg
+ * AND the dry-run count so preview and apply can never drift (⟨F2⟩). `$1` is
+ * always the cutoff ISO string in both callers. */
+const PENDING_PURGE_WHERE = `created_at < $1` as const;
 
 /** Redacted response envelope stored in place of the original. Keeps `kind`
  * and `schemaVersion` (both already promoted to their own columns and
@@ -92,11 +121,24 @@ interface FeedbackDelete {
   params: unknown[];
 }
 
+/** #120: the paired pending_table_requests redaction a caller runs in the SAME
+ * transaction as its audit-row redaction — the second write point for a
+ * question's free text (migration 012). UNLIKE the feedback delete, this runs
+ * WITHOUT a to_regclass existence guard (⟨F3⟩): pending_table_requests has
+ * existed since migration 012 (not a deploy-window table like answer_feedback),
+ * so guarding it on another table's existence could only silently skip a real
+ * GDPR leg. */
+interface PendingRedaction {
+  sql: string;
+  params: unknown[];
+}
+
 async function redactMatchingRows(
   db: Db,
   whereClause: string,
   params: unknown[],
   feedbackDelete?: FeedbackDelete,
+  pendingRedaction?: PendingRedaction,
 ): Promise<RedactedRow[]> {
   // Single statement: select the rows to redact (id + kind, to build the
   // per-kind envelope) and update them, atomically, so a concurrent read
@@ -155,40 +197,118 @@ async function redactMatchingRows(
         ],
       );
     }
+    // #120: the pending_table_requests leg runs LAST — after the audit-row
+    // updates — and UNguarded (see PendingRedaction). It redacts the free-text
+    // columns of the caller's/expired pending onboarding requests in this same
+    // transaction, so a crash can never leave the question text behind in one
+    // store while it is gone from the other.
+    if (pendingRedaction) {
+      await tx.query(pendingRedaction.sql, pendingRedaction.params);
+    }
     return targets;
   });
 }
 
-/** Self-service deletion (#14 piece 2): every source_tag='user' row belonging
- * to THIS user, any age. THE CRITICAL SECURITY SCOPE: the where clause binds
- * user_id as a parameter — there is no code path in this function that can
- * touch a different user's rows, by construction (no dynamic SQL, no string
- * interpolation of userId). Idempotent: redacting an already-redacted row is
- * a harmless no-op (same target values written again). */
+/** Self-service deletion (#14 piece 2): every in-scope audit row (AUDIT_SCOPE:
+ * source_tag in ('user', 'onboarding_delivery')) belonging to THIS user, any
+ * age, PLUS the user's pending_table_requests free text (#120). THE CRITICAL
+ * SECURITY SCOPE: every where clause binds user_id as a parameter — there is no
+ * code path in this function that can touch a different user's rows, by
+ * construction (no dynamic SQL, no string interpolation of userId). Idempotent:
+ * redacting an already-redacted row is a harmless no-op (same target values
+ * written again). */
 export async function deleteUserQuestionHistory(db: Db, userId: string): Promise<RedactedRow[]> {
-  return redactMatchingRows(db, `user_id = $1 and source_tag = 'user'`, [userId], {
-    // WP128: "wis de inhoud volledig" extends to the user's feedback text —
-    // hard DELETE (nothing references answer_feedback; the ledger has no
-    // feedback FK), same-parameter scoping as the redaction itself.
-    sql: `delete from answer_feedback where user_id = $1`,
-    params: [userId],
-  });
+  return redactMatchingRows(
+    db,
+    `user_id = $1 and ${AUDIT_SCOPE}`,
+    [userId],
+    {
+      // WP128: "wis de inhoud volledig" extends to the user's feedback text —
+      // hard DELETE (nothing references answer_feedback; the ledger has no
+      // feedback FK), same-parameter scoping as the redaction itself.
+      sql: `delete from answer_feedback where user_id = $1`,
+      params: [userId],
+    },
+    {
+      // #120: this user's pending onboarding requests carry the question text a
+      // SECOND time (migration 012's re-entry copy). Redact its free-text
+      // columns in the same transaction, scoped by the SAME bound user_id (no
+      // dynamic SQL — the critical cross-user pin holds here too). ALL statuses
+      // are redacted, including pending/running: a GDPR erasure is not a
+      // job-state change, and the in-flight race (a running job's in-memory copy
+      // still delivers, its post-redaction delivery row caught by the next
+      // deletion/purge) is a documented, accepted residual. Money/status/id
+      // columns are untouched — the same skeleton posture as the audit rows.
+      sql: `update pending_table_requests set
+              question_text = $2,
+              topic_term = $2,
+              failure_summary = case when failure_summary is null then null else $2 end
+            where user_id = $1`,
+      params: [userId, REDACTED_QUESTION_TEXT],
+    },
+  );
 }
 
-/** Retention purge (#14 piece 1): every source_tag='user' row older than the
- * given cutoff, across ALL users — the scheduled 2-year sweep. `cutoff` is
- * an injected Date (never `new Date()` inside this function) so the purge is
- * testable against a fixed clock, mirroring the rest of the codebase's
- * reference-date discipline (web/app/actions.ts's referenceDate()). */
+/** Retention purge (#14 piece 1): every in-scope audit row (AUDIT_SCOPE:
+ * source_tag in ('user', 'onboarding_delivery')) older than the given cutoff,
+ * across ALL users — the scheduled 2-year sweep — PLUS pending_table_requests
+ * rows older than the cutoff (#120). `cutoff` is an injected Date (never
+ * `new Date()` inside this function) so the purge is testable against a fixed
+ * clock, mirroring the rest of the codebase's reference-date discipline
+ * (web/app/actions.ts's referenceDate()). */
 export async function purgeExpiredQuestionHistory(db: Db, cutoff: Date): Promise<RedactedRow[]> {
-  return redactMatchingRows(db, `source_tag = 'user' and created_at < $1`, [cutoff.toISOString()], {
-    // WP128: feedback attached to purged answers goes with them — scoped by
-    // the SAME cutoff + source_tag window the redaction uses (the feedback
-    // row's own age is irrelevant; it inherits its answer's retention).
-    sql: `delete from answer_feedback where audit_answer_id in
-            (select id from audit_answers where source_tag = 'user' and created_at < $1)`,
-    params: [cutoff.toISOString()],
-  });
+  const cutoffIso = cutoff.toISOString();
+  return redactMatchingRows(
+    db,
+    `${AUDIT_SCOPE} and created_at < $1`,
+    [cutoffIso],
+    {
+      // WP128: feedback attached to purged answers goes with them — scoped by
+      // the SAME cutoff + AUDIT_SCOPE window the redaction uses (the feedback
+      // row's own age is irrelevant; it inherits its answer's retention).
+      sql: `delete from answer_feedback where audit_answer_id in
+            (select id from audit_answers where ${AUDIT_SCOPE} and created_at < $1)`,
+      params: [cutoffIso],
+    },
+    {
+      // #120: pending onboarding requests older than the cutoff, scoped by the
+      // SAME age predicate the audit purge uses (PENDING_PURGE_WHERE, `$1` =
+      // cutoff). ALL statuses redacted (see deleteUserQuestionHistory for the
+      // accepted in-flight-race rationale).
+      sql: `update pending_table_requests set
+              question_text = $2,
+              topic_term = $2,
+              failure_summary = case when failure_summary is null then null else $2 end
+            where ${PENDING_PURGE_WHERE}`,
+      params: [cutoffIso, REDACTED_QUESTION_TEXT],
+    },
+  );
+}
+
+/** ⟨F2⟩ Dry-run preview for scripts/gdpr-purge.ts: how many rows a `--apply` run
+ * WOULD redact, counted from the EXACT same scope fragments the purge itself
+ * uses — `AUDIT_SCOPE` for audit rows, `PENDING_PURGE_WHERE` for pending rows —
+ * so a read-only preview can never drift from what apply actually does. The
+ * equivalence test pins `auditRows` === the redacted `RedactedRow[]` length and
+ * `pendingRows` === the count of pending rows the purge turned into the
+ * sentinel. Two COUNT queries only, never a write. */
+export async function countPurgeableQuestionHistory(
+  db: Db,
+  cutoff: Date,
+): Promise<{ auditRows: number; pendingRows: number }> {
+  const cutoffIso = cutoff.toISOString();
+  const { rows: audit } = await db.query(
+    `select count(*)::int as n from audit_answers where ${AUDIT_SCOPE} and created_at < $1`,
+    [cutoffIso],
+  );
+  const { rows: pending } = await db.query(
+    `select count(*)::int as n from pending_table_requests where ${PENDING_PURGE_WHERE}`,
+    [cutoffIso],
+  );
+  return {
+    auditRows: Number(audit[0]?.n ?? 0),
+    pendingRows: Number(pending[0]?.n ?? 0),
+  };
 }
 
 /** Two-year retention window (#14, open-questions #14: "Decided … 2-year
