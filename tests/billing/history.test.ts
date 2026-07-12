@@ -1,7 +1,10 @@
 // getQuestionHistory (src/billing/history.ts, migration 010): reconstructs a
 // past question's net cost by joining audit_answers.request_id back to the
-// credit ledger — the debit (by request_id) and any compensation (by
-// audit_answer_id), exactly mirroring src/billing/gate.ts's own arithmetic.
+// credit ledger — EVERY request-scoped debit (the base 'question_cost' debit
+// and, on a web-opted turn, the separate 'websearch_cost' add-on, migration
+// 018) minus every compensation that reversed one of those debits (matched by
+// related_transaction_id), exactly mirroring src/billing/gate.ts's own
+// arithmetic and src/threads/index.ts getThreadRows' replay netting.
 //
 // The core pin here is CONSISTENCY, not arithmetic: the first test drives the
 // REAL chargeAndRun (with real pricing config) and asserts history reports the
@@ -15,7 +18,7 @@ import { describe, expect, it } from 'vitest';
 import type { AuditedResponse } from '../../src/answer/audit/index.ts';
 import { chargeAndRun } from '../../src/billing/gate.ts';
 import { getQuestionHistory } from '../../src/billing/history.ts';
-import { compensate, reserveOnboardingDebit } from '../../src/billing/ledger.ts';
+import { compensate, debitWebSearch, getActionClassPrice, reserveOnboardingDebit } from '../../src/billing/ledger.ts';
 import { applyPricingDefaults } from '../../src/billing/pricing-apply.ts';
 import type { Db } from '../../src/db/types.ts';
 import { createPendingRequest, finalizeDelivered, finalizeFailed } from '../../src/ingestion/onboarding-store.ts';
@@ -734,6 +737,147 @@ describe('getQuestionHistory — onboarding acknowledgment dedupe', () => {
       const history = await getQuestionHistory(db, userId);
       expect(history).toHaveLength(1);
       expect(history[0]).toMatchObject({ id: ackAuditId, source: 'audit', kind: 'refusal' });
+    });
+  });
+});
+
+// WP129+130 (ADR 032, migration 018): the +10 web-search add-on is a SEPARATE
+// 'websearch_cost' debit on the SAME (user, request) as the base question. The
+// dashboard's creditsCharged must net it exactly as the live chat / thread
+// replay (src/threads/index.ts getThreadRows) do — a KEPT add-on lifts the
+// shown cost by +10, a refunded one nets back out. Before this fix the join
+// read only the base debit + compensation, so a kept-web turn showed e.g. 20
+// while the user paid 30. Driven through the REAL primitives (chargeAndRun,
+// debitWebSearch, compensate), the consistency-not-arithmetic posture of this
+// whole file.
+describe('getQuestionHistory — web-search add-on (WP129+130, migration 018)', () => {
+  const QUESTION = 'Hoeveel inwoners heeft de gemeente?';
+  const QUESTION_NL = 'Welke gemeente bedoel je?';
+
+  it('KEPT web add-on: creditsCharged = base question cost + the +10 add-on', async () => {
+    await withDb(async (db) => {
+      await applyPricingDefaults(db);
+      const userId = randomUUID();
+      // Fund the 30-credit transient (20 question + 10 add-on) in both modes.
+      await db.query('update signup_grant_config set credits = 100');
+      await db.query('select public.grant_signup_credits($1)', [userId]);
+      const requestId = randomUUID();
+      const auditId = await insertAuditRow(db, userId, {
+        kind: 'answer',
+        question: 'Hoeveel inwoners heeft Nederland? (met internet)',
+        finalText: 'testantwoord',
+        requestId,
+      });
+      // Base question turn: an answer, no refund → gate's netCost is the full
+      // 'simple' price.
+      const gated = await chargeAndRun(db, userId, requestId, async (): Promise<AuditedResponse> => ({
+        response: { kind: 'answer', question: 'x', text: 'testantwoord' } as unknown as AuditedResponse['response'],
+        auditId,
+      }));
+      if (gated.kind !== 'ok') throw new Error(`expected ok, got ${gated.kind}`);
+      // The web add-on debit rides the SAME requestId (migration 018) and is
+      // KEPT (a cited web section was delivered) — no compensation.
+      const webPrice = await getActionClassPrice(db, 'web_addon');
+      const webDebit = await debitWebSearch(db, userId, requestId, webPrice);
+      expect(webDebit).not.toBeNull();
+
+      const history = await getQuestionHistory(db, userId);
+      const entry = history.find((h) => h.id === auditId);
+      expect(entry).toBeDefined();
+      // The dashboard shows what the user actually paid: base + add-on, the
+      // same caption settleWebAddon's KEEP branch produced live.
+      expect(entry!.creditsCharged).toBe(gated.netCost + webPrice);
+    });
+  });
+
+  it('REFUNDED web add-on: the +10 nets back out; creditsCharged = the base cost only', async () => {
+    await withDb(async (db) => {
+      await applyPricingDefaults(db);
+      const userId = randomUUID();
+      await db.query('update signup_grant_config set credits = 100');
+      await db.query('select public.grant_signup_credits($1)', [userId]);
+      const requestId = randomUUID();
+      const auditId = await insertAuditRow(db, userId, {
+        kind: 'answer',
+        question: 'Hoeveel inwoners heeft Nederland? (internet, geen web-sectie)',
+        finalText: 'testantwoord',
+        requestId,
+      });
+      const gated = await chargeAndRun(db, userId, requestId, async (): Promise<AuditedResponse> => ({
+        response: { kind: 'answer', question: 'x', text: 'testantwoord' } as unknown as AuditedResponse['response'],
+        auditId,
+      }));
+      if (gated.kind !== 'ok') throw new Error(`expected ok, got ${gated.kind}`);
+      // The add-on was taken then refunded (no web section delivered):
+      // settleWebAddon compensate()s the web debit against this row's audit id.
+      const webPrice = await getActionClassPrice(db, 'web_addon');
+      const webDebit = await debitWebSearch(db, userId, requestId, webPrice);
+      const refund = await compensate(db, userId, webDebit!.id, webPrice, auditId);
+      expect(refund).not.toBeNull();
+
+      const history = await getQuestionHistory(db, userId);
+      const entry = history.find((h) => h.id === auditId);
+      expect(entry).toBeDefined();
+      // The compensation reverses the add-on debit, so the dashboard nets back
+      // to the base question cost — exactly what the live caption showed.
+      expect(entry!.creditsCharged).toBe(gated.netCost);
+    });
+  });
+
+  it('collapsed round where the REPLY turn carried a KEPT web add-on: total = clarify + reply + add-on, no double-count', async () => {
+    await withDb(async (db) => {
+      await applyPricingDefaults(db);
+      const userId = randomUUID();
+      await db.query('update signup_grant_config set credits = 200');
+      await db.query('select public.grant_signup_credits($1)', [userId]);
+
+      // Turn 1: the clarification (no web add-on), real gate.
+      const clarifyRequestId = randomUUID();
+      const clarifyAuditId = await insertAuditRow(db, userId, {
+        kind: 'clarification',
+        question: QUESTION,
+        finalText: QUESTION_NL,
+        requestId: clarifyRequestId,
+        offeredQuestionNl: QUESTION_NL,
+      });
+      const clarifyGated = await chargeAndRun(db, userId, clarifyRequestId, async (): Promise<AuditedResponse> => ({
+        response: { kind: 'clarification', question: QUESTION, text: QUESTION_NL } as unknown as AuditedResponse['response'],
+        auditId: clarifyAuditId,
+      }));
+      if (clarifyGated.kind !== 'ok') throw new Error(`expected ok, got ${clarifyGated.kind}`);
+
+      // Turn 2: the reply/answer, which carried a KEPT web add-on on its OWN
+      // request_id (the add-on belongs to exactly this turn).
+      const replyRequestId = randomUUID();
+      const replyAuditId = await insertAuditRow(db, userId, {
+        kind: 'answer',
+        question: QUESTION,
+        finalText: 'Amsterdam telt 931.298 inwoners.',
+        requestId: replyRequestId,
+        replyText: 'Amsterdam',
+        repliedQuestionNl: QUESTION_NL,
+      });
+      const replyGated = await chargeAndRun(db, userId, replyRequestId, async (): Promise<AuditedResponse> => ({
+        response: { kind: 'answer', question: QUESTION, text: 'Amsterdam telt 931.298 inwoners.' } as unknown as AuditedResponse['response'],
+        auditId: replyAuditId,
+      }));
+      if (replyGated.kind !== 'ok') throw new Error(`expected ok, got ${replyGated.kind}`);
+      const webPrice = await getActionClassPrice(db, 'web_addon');
+      const webDebit = await debitWebSearch(db, userId, replyRequestId, webPrice);
+      expect(webDebit).not.toBeNull();
+
+      const history = await getQuestionHistory(db, userId);
+      expect(history).toHaveLength(1);
+      const [entry] = history;
+      expect(entry).toMatchObject({
+        kind: 'answer',
+        clarification: { text: QUESTION_NL, reply: 'Amsterdam' },
+      });
+      // The round total sums each turn's OWN request-scoped net exactly once:
+      // the clarify net + (the reply's base net + the kept add-on). The web
+      // debit is attributed to the reply turn's request_id alone, so it is
+      // never double-counted across the pair.
+      expect(entry!.creditsCharged).toBe(clarifyGated.netCost + replyGated.netCost + webPrice);
     });
   });
 });
