@@ -37,6 +37,7 @@ Three principles, also referenced as (a)/(b)/(c) across the docs:
 ## Conventions
 
 - **English** for code, comments, docs, commit messages. **Dutch** only for product copy / UI text (and benchmark task phrasing).
+- **`AGENTS.md` is always a symlink to its directory's `CLAUDE.md`** (root and `web/`; decided session 42, [open-questions #136](docs/open-questions.md)). One text, two names: Claude Code reads `CLAUDE.md`, tools like OpenAI Codex read `AGENTS.md` through the symlink — the AGENTS.md standard's own recommended compatibility pattern, and the repo already ships a committed symlink (`web/backend → ../src`, ADR 018). Never replace either symlink with a copy (it drifts) or a one-line pointer (a pointer relies on the tool choosing to follow it; a symlink doesn't).
 - Every load-bearing technical choice gets an ADR in `docs/decisions/` (context, decision, ≥2 real alternatives, trade-offs, revisit triggers). Small choices don't.
 - Mark every assumption inline (`**Assumption:** …`) and mirror it in [docs/open-questions.md](docs/open-questions.md). Never present a guess as settled.
 - Keep the module boundaries from ADR [001](docs/decisions/001-single-app-vs-split.md) (`ingestion/`, `cbs-adapter/`, `catalog/`, `registry/`, `query/`, `answer/`, `chart/`, `billing/`, with `db/` as the shared client beneath them — the as-built list per ADR 001's 2026-07-05 update; validation never became a directory, it lives as `validate.ts` files inside the owning modules) — they are the future split seam.
