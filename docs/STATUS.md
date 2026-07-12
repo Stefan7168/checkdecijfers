@@ -21,7 +21,7 @@
 - **(3) PR 35 post-merge main CI verified green** (`963fc66`) — the session-41 loose end is closed.
 - **(4) #136 recorded AND resolved: `AGENTS.md` = committed symlink to `CLAUDE.md` in both dirs** (`ccd6f3d`; new CLAUDE.md Conventions
   bullet; web/CLAUDE.md now holds the Next-16 warning with the dead bundled-docs pointer rephrased). RESIDUAL: owner runs one Codex session
-  to confirm it reads the agreements through the symlink (owner: "Codex zoekt het later uit"). Chip task_f54d2672 dismissed (superseded).
+  to confirm it reads the agreements through the symlink (owner: "Codex zoekt het later uit"). Chip task_f54d2672 dismissed (superseded). Its CI run (`ccd6f3d`) was in_progress at close — expected green (docs+symlink only); next session confirms (PR-35 precedent).
 - **(5) Next per the stack: #134(a) refusal period-suggestion chips OR WP26 (supervised).** Residuals unchanged: #132 route B ~2026-07-19
   (forks==0 is the T-0 go/no-go), #131 L1 lane, WP30c (#123), chips format.ts NUL (task_e718f60d) + wrapup-hook false-positive
   (task_6f27827b — fires on kickoffs quoting "NEXT SESSION STARTS HERE"; ignore on a session's FIRST message).
