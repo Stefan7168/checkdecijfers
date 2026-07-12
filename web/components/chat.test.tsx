@@ -857,6 +857,28 @@ describe('Chat — WP129+130 source chips (#129)', () => {
     expect(screen.getByRole('button', { name: 'Verstuur' })).toBeDisabled();
     expect(screen.getByText('Selecteer minstens één bron.')).toBeInTheDocument();
   });
+
+  it('sends the selection payload on the CLARIFICATION-REPLY path too (post-build review: the pending+websearch leg)', async () => {
+    // The brief's "sent on EVERY submit (both actions)" claim: the reply turn
+    // carries the same chips state as the question turn — a dropped 4th arg or
+    // a swapped ternary branch in chat.tsx's submit would silently skip the
+    // web add-on on clarification replies despite the Internet chip being on.
+    askQuestion.mockResolvedValue(outcome(fakeClarification('Welke periode bedoel je?')));
+    replyToClarification.mockResolvedValue(outcome(fakeAnswer('In 2024 was het 3,3%.')));
+    render(<Chat pricing={pricing} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Internet' })); // web on before the question
+    await submit('Wat was de inflatie?');
+    await screen.findByText('Welke periode bedoel je?');
+    fireEvent.change(screen.getByPlaceholderText('Welke periode bedoel je?'), {
+      target: { value: '2024' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Verstuur' }));
+    await screen.findByText('In 2024 was het 3,3%.');
+    expect(replyToClarification).toHaveBeenCalledWith(expect.anything(), '2024', expect.any(String), {
+      sources: ['cbs'],
+      web: true,
+    });
+  });
 });
 
 describe('Chat — WP129+130 cost-line variants (⟨W4⟩)', () => {
@@ -940,6 +962,39 @@ describe('Chat — WP129+130 web section rendering (#130)', () => {
     await submit('Vraag?');
     const header = await screen.findByText('Van het web (niet door checkdecijfers geverifieerd)');
     expect(within(header.parentElement!).getAllByRole('listitem')).toHaveLength(4);
+  });
+
+  it('renders one domain link per citation on a multi-citation finding (⟨W9⟩ — by-design shape)', async () => {
+    // The client can legitimately emit ONE finding carrying several citations
+    // (a single cited text block with multiple sources — pinned backend-side in
+    // tests/websearch/client.test.ts). The UI must render every link, each
+    // domain-only with the full URL in href.
+    askQuestion.mockResolvedValue(
+      outcome(
+        answerWithSection(
+          'Antwoord.',
+          okSection({
+            findings: [
+              {
+                text: 'Bevinding met twee bronnen.',
+                citations: [
+                  { url: 'https://www.cbs.nl/a', title: null },
+                  { url: 'https://nos.nl/b', title: 'NOS' },
+                ],
+              },
+            ],
+          }),
+        ),
+      ),
+    );
+    render(<Chat />);
+    await submit('Vraag?');
+    const header = await screen.findByText('Van het web (niet door checkdecijfers geverifieerd)');
+    const item = within(header.parentElement!).getByRole('listitem');
+    const links = within(item).getAllByRole('link');
+    expect(links.map((l) => l.textContent)).toEqual(['cbs.nl', 'nos.nl']);
+    expect(links[0]).toHaveAttribute('href', 'https://www.cbs.nl/a');
+    expect(links[1]).toHaveAttribute('href', 'https://nos.nl/b');
   });
 
   it('shows the insufficient-balance failure note', async () => {

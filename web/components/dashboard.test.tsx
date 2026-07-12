@@ -77,6 +77,33 @@ function renderDashboard(initialBalance: number, purchaseSuccess = false) {
 
 const WARNING = 'Je saldo is bijna op — er is nog genoeg voor één vraag.';
 
+// WP129+130 (#129, post-build review): the ONE integration point connecting
+// page.tsx's flag-gated price read to the rendered chips — Dashboard must
+// thread the websearch prop into Chat's pricing prop, and its ABSENCE must
+// leave the chat chip-free (the dormancy guarantee at the component seam).
+describe('Dashboard — WP129+130 websearch prop threading', () => {
+  it('threads the websearch prop into Chat: chips render (CBS pre-checked, Internet off)', () => {
+    render(
+      <Dashboard
+        initialBalance={100}
+        simplePrice={20}
+        clarificationPrice={10}
+        signupGrantCredits={100}
+        history={<div data-testid="history-slot" />}
+        websearch={{ enabled: true, addonPrice: 10 }}
+      />,
+    );
+    expect(screen.getByRole('button', { name: 'CBS data', pressed: true })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Internet', pressed: false })).toBeInTheDocument();
+  });
+
+  it('renders NO chips when the websearch prop is absent (flag off ⇒ byte-identical UI)', () => {
+    renderDashboard(100);
+    expect(screen.queryByRole('button', { name: 'CBS data' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Internet' })).toBeNull();
+  });
+});
+
 // WP22 (#95): the post-purchase confirmation banner — honest copy (webhook
 // credits the ledger, not the redirect), dismissible, and dismissing strips
 // the query flag so a reload cannot resurrect it.
