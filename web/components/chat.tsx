@@ -593,7 +593,14 @@ export function Chat({
         ))}
         {busy ? (
           <div className="text-left text-sm text-zinc-500">
-            Bezig met het doorzoeken van CBS-cijfers…
+            {/* WP129+130 go-live feedback (owner, 2026-07-12): with the Internet
+              * chip on, the wait covers the web search too — say so honestly.
+              * Web-only (CBS deselected) names only the web. */}
+            {websearch && webSelected && selectedSources.size > 0
+              ? 'Bezig met het doorzoeken van CBS-cijfers en het web…'
+              : websearch && webSelected
+                ? 'Bezig met het doorzoeken van het web…'
+                : 'Bezig met het doorzoeken van CBS-cijfers…'}
           </div>
         ) : null}
         {error ? <div className="text-sm text-red-600">{error}</div> : null}

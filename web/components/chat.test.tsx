@@ -858,6 +858,42 @@ describe('Chat — WP129+130 source chips (#129)', () => {
     expect(screen.getByText('Selecteer minstens één bron.')).toBeInTheDocument();
   });
 
+  it('the busy indicator names CBS én het web when the Internet chip is on (go-live owner feedback 2026-07-12)', async () => {
+    let resolveAsk!: (v: AskOutcome) => void;
+    askQuestion.mockReturnValue(new Promise<AskOutcome>((r) => { resolveAsk = r; }));
+    render(<Chat pricing={pricing} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Internet' }));
+    fireEvent.change(screen.getByPlaceholderText('Stel een vraag…'), { target: { value: 'Vraag?' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Verstuur' }));
+    expect(
+      await screen.findByText('Bezig met het doorzoeken van CBS-cijfers en het web…'),
+    ).toBeInTheDocument();
+    resolveAsk(outcome(fakeAnswer('Klaar.')));
+    await screen.findByText('Klaar.');
+  });
+
+  it('the busy indicator names only het web in web-only mode, and only CBS with Internet off', async () => {
+    let resolveAsk!: (v: AskOutcome) => void;
+    askQuestion.mockReturnValue(new Promise<AskOutcome>((r) => { resolveAsk = r; }));
+    render(<Chat pricing={pricing} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Internet' })); // web on
+    fireEvent.click(screen.getByRole('button', { name: 'CBS data' })); // cbs off
+    fireEvent.change(screen.getByPlaceholderText('Stel een vraag…'), { target: { value: 'Vraag?' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Verstuur' }));
+    expect(await screen.findByText('Bezig met het doorzoeken van het web…')).toBeInTheDocument();
+    resolveAsk(outcome(fakeAnswer('Klaar.')));
+    await screen.findByText('Klaar.');
+    // Internet back off ⇒ the pre-WP copy, byte-identical.
+    fireEvent.click(screen.getByRole('button', { name: 'CBS data' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Internet' }));
+    askQuestion.mockReturnValue(new Promise<AskOutcome>(() => {}));
+    fireEvent.change(screen.getByPlaceholderText('Stel een vraag…'), { target: { value: 'Nog een?' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Verstuur' }));
+    expect(
+      await screen.findByText('Bezig met het doorzoeken van CBS-cijfers…'),
+    ).toBeInTheDocument();
+  });
+
   it('sends the selection payload on the CLARIFICATION-REPLY path too (post-build review: the pending+websearch leg)', async () => {
     // The brief's "sent on EVERY submit (both actions)" claim: the reply turn
     // carries the same chips state as the question turn — a dropped 4th arg or

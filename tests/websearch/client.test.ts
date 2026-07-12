@@ -228,7 +228,7 @@ describe('AnthropicWebSearchClient — finding shaping', () => {
 });
 
 describe('AnthropicWebSearchClient — tool-param pin', () => {
-  it('sends the WEBSEARCH_MODEL constant, the web_search_20260209 tool, max_uses/NL location, and the per-request timeout', async () => {
+  it('sends the WEBSEARCH_MODEL constant, the BASIC web_search_20250305 tool, max_uses/NL location, and the per-request timeout', async () => {
     const { sdk, captures } = fakeSdk(
       message({ content: [textBlock('x', [{ url: 'https://x.nl', title: 't' }])] }),
     );
@@ -237,9 +237,15 @@ describe('AnthropicWebSearchClient — tool-param pin', () => {
     const { params, opts } = captures[0]!;
     expect(params.model).toBe(WEBSEARCH_MODEL);
     expect(params.max_tokens).toBe(WEBSEARCH_MAX_TOKENS);
+    // The go-live correction (ADR 032 as-built, measured 2026-07-12): the
+    // 20260209 filtering variant returns citation-less text blocks on
+    // claude-sonnet-5 → every call ended no_findings. The BASIC variant is
+    // the one that satisfies the per-claim-citation honesty requirement —
+    // this pin exists so a well-meaning "upgrade back to the newer variant"
+    // fails loudly and re-reads the measurement first.
     expect(params.tools).toEqual([
       {
-        type: 'web_search_20260209',
+        type: 'web_search_20250305',
         name: 'web_search',
         max_uses: WEBSEARCH_MAX_USES,
         user_location: { type: 'approximate', country: 'NL' },
