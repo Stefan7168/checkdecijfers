@@ -16,11 +16,18 @@ on top.
   live `onboarding_cost` debit — a resumed onboarding ack turn showed "0 credits" for a turn the
   user paid 100. **This is the THIRD time this exact credits-net SQL has under-reported by
   hardcoding a debit-reason list** (WP135 build itself missed `websearch_cost` — see the dual-review
-  entry below). **Lesson: when adding a structural envelope field, grep for every render/replay read
-  site (live receive path AND thread replay AND the audit reconstruct); when adding a ledger
-  `reason`, grep for every cost-netting site (`getThreadRows` AND `history.ts` AND the gate). A
-  hardcoded field/reason list is a propagation bug waiting for the next addition — the adversarial
-  "enumerate every field/reason × every consumer" lens catches these cheaply.**
+  entry below). Instance C (a sibling shape, second hunt): `processOneRow`'s step-8 catch
+  (`src/ingestion/onboarding.ts`) unconditionally refunded a DELIVERED onboarding answer when
+  `finalizeDelivered` threw — it was the ONE re-entry path (of three) missing the
+  `findDeliveredAnswerAuditId` recovery guard its two siblings already had. Same meta-shape: a
+  guard/field/reason that N-1 paths share, and the Nth (newest) path forgot. **Lesson: when adding a
+  structural envelope field, grep for every render/replay read site (live receive path AND thread
+  replay AND the audit reconstruct); when adding a ledger `reason`, grep for every cost-netting site
+  (`getThreadRows` AND `history.ts` AND the gate); when N code paths need the SAME guard (recovery,
+  refund, ownership), enumerate ALL of them — a hardcoded list or a per-path guard is a propagation
+  bug waiting for the next addition. The adversarial "enumerate every field/reason/path × every
+  consumer" lens catches these cheaply (it found all three tonight, 0 false positives on the
+  confirmed set).**
 - **The CI gate enumerates test suites — and three whole test dirs were silently OFF it**
   (session 41, 2026-07-12, found while wiring `tests/threads` in): `tests/db`, `tests/sources`
   and `tests/websearch` (the WP129+130 pins!) existed and passed locally but were never in

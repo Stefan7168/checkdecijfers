@@ -9,22 +9,25 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
-**▶ NEXT SESSION STARTS HERE (2026-07-13, session 42 FINAL — WP135 supervised go-live; owner present throughout).**
+**▶ NEXT SESSION STARTS HERE (2026-07-13, session 43 FINAL — #134(a) + an autonomous overnight run; owner approved + merged all 4 PRs).**
 
-- **(1) WP135 chat workspace is LIVE IN PRODUCTION.** Supervised go-live RUN session 42 per RUNBOOK § "WP135 chat workspace" (now the
-  as-executed record): migration 019 applied (exactly one), guarded FK + grants/RLS live-verified (0 anon/authenticated grants, RLS on,
-  0 policies), `WORKSPACE_ENABLED=1` + CI-gated redeploy (`ae604db`, gate+deploy green), owner smoke tests PASS (2 threads, 1+3 audit rows,
-  zero orphans, live credits chip, chart dock, resume identical). GDPR spot-check (step 5) skipped — optional. Rollback: unset flag + redeploy.
-- **(2) Go-live finding fixed + LIVE same session:** logout pending state (`5ba3fb8`, `useFormStatus` "Bezig…"; full verification block green —
-  backend 1250/1250, web 302/302, benchmark 14/14 + 6/6 + 0 fabricated, real `next build`). Cosmetic residual: `/login`'s stripped header
-  doesn't render in prod (statically prerendered route; sensitive env empty at build) — harmless; fix rides any later /login work.
-- **(3) PR 35 post-merge main CI verified green** (`963fc66`) — the session-41 loose end is closed.
-- **(4) #136 recorded AND resolved: `AGENTS.md` = committed symlink to `CLAUDE.md` in both dirs** (`ccd6f3d`; new CLAUDE.md Conventions
-  bullet; web/CLAUDE.md now holds the Next-16 warning with the dead bundled-docs pointer rephrased). RESIDUAL: owner runs one Codex session
-  to confirm it reads the agreements through the symlink (owner: "Codex zoekt het later uit"). Chip task_f54d2672 dismissed (superseded). Its CI run went GREEN before session close (gate+deploy) — verified, nothing left to confirm.
-- **(5) Next per the stack: #134(a) refusal period-suggestion chips OR WP26 (supervised).** Residuals unchanged: #132 route B ~2026-07-19
-  (forks==0 is the T-0 go/no-go), #131 L1 lane, WP30c (#123), chips format.ts NUL (task_e718f60d) + wrapup-hook false-positive
-  (task_6f27827b — fires on kickoffs quoting "NEXT SESSION STARTS HERE"; ignore on a session's FIRST message).
+- **(1) #134(a) refusal period-suggestion chips — BUILT + MERGED + LIVE** (PR #36, squash `97c696b`). ONE servability-gated retry chip on
+  freshness / period-axis `outside_loaded_slice` refusals (canonical + region-less v1), reusing the WP29/ADR 029 mechanism, fill-don't-send (#75),
+  zero LLM / zero prompt bytes. Adversarial review (6 lenses) found + fixed 1 real bug: the thread-RESUME path (`replay.ts`) dropped the chip while
+  the live turn showed it. Full gate green (backend 1263, web 305, benchmark 14/14 + 6/6 + 0 fabricated).
+- **(2) TWO live money-path bugs found by autonomous adversarial hunts + fixed + LIVE:** PR #38 (`72f4f4f`) — `getThreadRows` omitted
+  `onboarding_cost`, so a RESUMED onboarding turn showed "0 credits" for a turn the user paid 100 (display bug). PR #39 (`a395fa8`) — a DELIVERED
+  onboarding answer was wrongly REFUNDED + marked 'failed' if `finalizeDelivered` threw (the step-8 catch missed the `findDeliveredAnswerAuditId`
+  guard its 2 sibling re-entry paths already had — a company-side leak). Both mutation-verified + adversarial-fix-reviewed (SHIP); no DDL / no env flip.
+- **(3) wrapup-hook false-positive fixed + on main** (PR #37 `33b7a7d`, task_6f27827b): suppresses the wrap-up signal on a session's FIRST message
+  via a `session_id` sentinel, backward-compatible (absent id → old behavior).
+- **(4) All 4 PRs MERGED + DEPLOYED to production** (owner "Continue, agreed to all"); final main CI gate + deploy GREEN, post-deploy smoke check
+  PASS, prod serves (HTTP 307 healthy redirect). Autonomous session → branch + PR + owner-merge per [#118](open-questions.md)(b). Process lesson
+  recorded (both money bugs = the same "second read/net site not updated" class).
+- **(5) Next — owner decisions:** **#134(b)** (`not_published` alternative — the earliest-loaded-floor idea + a too-old-vs-mid-gap classification,
+  needs an owner call), **#137/#138** (v2 range/regional chips — now buildable since #36 is merged), **WP26** (safelist read-back), **#121**
+  (fail-closed template rung), **#131** (multilingual L1), **WP30c** (source choice). Tracked-not-focus: #132 route B ~2026-07-19 (forks==0 T-0),
+  #104/#112 (need live-LLM spend), format.ts NUL (task_e718f60d), /login header cosmetic.
 
 
 **▶ TOP PRIORITY STACK — owner decision, session 23 (2026-07-05); this ORDER overrides the "decision-gated" framing below.** The owner set an explicit
