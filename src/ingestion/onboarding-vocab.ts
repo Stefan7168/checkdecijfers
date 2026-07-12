@@ -21,6 +21,7 @@
 import type { Db } from '../db/types.ts';
 import type { OnboardedMeasure } from '../answer/intent/prompt.ts';
 import type { CanonicalMeasure } from '../registry/types.ts';
+import { REDACTED_QUESTION_TEXT } from '../answer/audit/retention.ts';
 
 /** Key prefix for auto-onboarded canonical measures — namespaced by table +
  * measure so it can never collide with a curated Phase-0 key (design §3.6). */
@@ -173,6 +174,20 @@ export async function registerOnboardingVocabulary(
   input: RegisterVocabularyInput,
 ): Promise<RegisterVocabularyResult> {
   const { tableId, topicTerm } = input;
+
+  // ⟨F4⟩ (#120 GDPR belt): a pending onboarding row whose topic_term was redacted
+  // (self-service deletion / 2-year purge set it to REDACTED_QUESTION_TEXT) and
+  // is then claimed by the job must NOT write the sentinel into the shared
+  // canonical_measures vocabulary — that sentinel would become an everydayTerm
+  // the parser could match. Return the empty-onboarded result WITHOUT any write:
+  // the job's existing `vocab.onboarded.length === 0` check then flows this row
+  // into unanswerableAndRefund (a redacted-then-claimed request refuses + refunds,
+  // fail-safe). The skeptics judged this scenario non-materializing today, but
+  // both confirmed it is mechanically reachable, so the belt ships anyway.
+  if (topicTerm === REDACTED_QUESTION_TEXT) {
+    return { onboarded: [], skippedMeasures: [] };
+  }
+
   const shapes = await measureShapes(db, tableId);
 
   const unitsRow = await db.query(`select units from cbs_tables where id = $1`, [tableId]);

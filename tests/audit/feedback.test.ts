@@ -5,6 +5,7 @@
 // other users' feedback untouched, ledger byte-untouched), and the
 // pre-migration deploy window (missing table → soft false / redaction still
 // works). Hermetic on PGlite (ADR 009).
+import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import {
   FEEDBACK_TEXT_MAX_LENGTH,
@@ -146,16 +147,22 @@ describe('normalizeFeedbackText', () => {
 describe('GDPR interplay (frozen-brief F3 — same transaction, feedback first)', () => {
   it('deleteUserQuestionHistory hard-deletes the caller’s feedback and ONLY the caller’s', async () => {
     await withDb(async (db) => {
-      const mine = await insertAuditRow(db, { userId: 'user-1' });
-      const theirs = await insertAuditRow(db, { userId: 'user-2' });
-      await upsertAnswerFeedback(db, { auditAnswerId: mine, userId: 'user-1', verdict: 'down', feedbackText: 'privé' });
-      await upsertAnswerFeedback(db, { auditAnswerId: theirs, userId: 'user-2', verdict: 'up' });
+      // #120: deleteUserQuestionHistory now also redacts pending_table_requests,
+      // whose user_id is uuid-typed (migration 012). The caller's id must be a
+      // real uuid, so the placeholder 'user-1'/'user-2' ids became randomUUID()
+      // here (production always passes a getClaims() uuid).
+      const user1 = randomUUID();
+      const user2 = randomUUID();
+      const mine = await insertAuditRow(db, { userId: user1 });
+      const theirs = await insertAuditRow(db, { userId: user2 });
+      await upsertAnswerFeedback(db, { auditAnswerId: mine, userId: user1, verdict: 'down', feedbackText: 'privé' });
+      await upsertAnswerFeedback(db, { auditAnswerId: theirs, userId: user2, verdict: 'up' });
 
-      await deleteUserQuestionHistory(db, 'user-1');
+      await deleteUserQuestionHistory(db, user1);
 
       const rows = await feedbackRows(db);
       expect(rows).toHaveLength(1);
-      expect(rows[0]!.user_id).toBe('user-2');
+      expect(rows[0]!.user_id).toBe(user2);
     });
   });
 
@@ -176,10 +183,12 @@ describe('GDPR interplay (frozen-brief F3 — same transaction, feedback first)'
 
   it('both paths stay idempotent with feedback in play', async () => {
     await withDb(async (db) => {
-      const mine = await insertAuditRow(db, { userId: 'user-1' });
-      await upsertAnswerFeedback(db, { auditAnswerId: mine, userId: 'user-1', verdict: 'down' });
-      await deleteUserQuestionHistory(db, 'user-1');
-      const second = await deleteUserQuestionHistory(db, 'user-1');
+      // #120: uuid user id required (deleteUserQuestionHistory's new pending leg).
+      const user1 = randomUUID();
+      const mine = await insertAuditRow(db, { userId: user1 });
+      await upsertAnswerFeedback(db, { auditAnswerId: mine, userId: user1, verdict: 'down' });
+      await deleteUserQuestionHistory(db, user1);
+      const second = await deleteUserQuestionHistory(db, user1);
       expect(second.length).toBeGreaterThanOrEqual(1); // same rows re-redacted, harmless
       expect(await feedbackRows(db)).toHaveLength(0);
     });
@@ -187,10 +196,12 @@ describe('GDPR interplay (frozen-brief F3 — same transaction, feedback first)'
 
   it('the ledger stays byte-untouched by a deletion that also removes feedback', async () => {
     await withDb(async (db) => {
-      const mine = await insertAuditRow(db, { userId: 'user-1' });
-      await upsertAnswerFeedback(db, { auditAnswerId: mine, userId: 'user-1', verdict: 'down' });
+      // #120: uuid user id required (deleteUserQuestionHistory's new pending leg).
+      const user1 = randomUUID();
+      const mine = await insertAuditRow(db, { userId: user1 });
+      await upsertAnswerFeedback(db, { auditAnswerId: mine, userId: user1, verdict: 'down' });
       const before = await db.query('select * from credit_transactions order by id');
-      await deleteUserQuestionHistory(db, 'user-1');
+      await deleteUserQuestionHistory(db, user1);
       const after = await db.query('select * from credit_transactions order by id');
       expect(after.rows).toEqual(before.rows);
     });
@@ -198,10 +209,13 @@ describe('GDPR interplay (frozen-brief F3 — same transaction, feedback first)'
 
   it('pre-migration window: redaction still works when answer_feedback does not exist (the to_regclass guard)', async () => {
     await withDb(async (db) => {
-      const mine = await insertAuditRow(db, { userId: 'user-1' });
+      // #120: uuid user id required (deleteUserQuestionHistory's new pending leg,
+      // which runs UNguarded and so must still work with answer_feedback gone).
+      const user1 = randomUUID();
+      const mine = await insertAuditRow(db, { userId: user1 });
       await db.query('drop index answer_feedback_by_user');
       await db.query('drop table answer_feedback');
-      const redacted = await deleteUserQuestionHistory(db, 'user-1');
+      const redacted = await deleteUserQuestionHistory(db, user1);
       expect(redacted.map((r) => r.id)).toContain(mine);
       const { rows } = await db.query('select question from audit_answers where id = $1', [mine]);
       expect(rows[0]!.question).toBe('Deze vraag is verwijderd.');

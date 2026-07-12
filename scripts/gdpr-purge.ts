@@ -1,5 +1,5 @@
 // GDPR retention purge (#14, docs/08-build-plan.md WP14): redacts every
-// source_tag='user' audit_answers row older than the 2-year retention window
+// personal-data audit_answers row older than the 2-year retention window
 // (docs/05-data-rules.md audit-trail section). Deterministic code only — no
 // LLM calls, no live pipeline invocation.
 //
@@ -13,12 +13,23 @@
 // and re-running it is always safe (never double-charges, never touches the
 // ledger, never widens scope).
 //
-// Scope, enforced in retention.ts (never trusted to this script): ONLY
-// source_tag = 'user' rows. benchmark/validation rows are this project's own
-// regression fixtures and are never touched, regardless of age.
+// Scope, enforced in retention.ts (never trusted to this script), #120:
+// audit_answers rows with source_tag in ('user', 'onboarding_delivery') — the
+// user's own questions AND the on-demand-onboarding delivery answers (both
+// personal data). benchmark/validation rows are this project's own regression
+// fixtures and are never touched, regardless of age. The purge ALSO redacts the
+// free text of expired pending_table_requests rows (question_text/topic_term/
+// failure_summary) in the SAME transaction — the second place a question's text
+// is stored (migration 012). The dry run's counts come from
+// countPurgeableQuestionHistory, which reuses the purge's OWN scope fragments
+// (⟨F2⟩) so preview and apply can never disagree.
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
-import { purgeExpiredQuestionHistory, twoYearsBefore } from '../src/answer/audit/index.ts';
+import {
+  countPurgeableQuestionHistory,
+  purgeExpiredQuestionHistory,
+  twoYearsBefore,
+} from '../src/answer/audit/index.ts';
 import { connectFromEnv } from '../src/db/client.ts';
 
 async function main(): Promise<void> {
@@ -28,16 +39,15 @@ async function main(): Promise<void> {
   const { db, pool } = connectFromEnv();
   try {
     if (!apply) {
-      // Dry run: reuse the exact same selection the real purge would use, but
-      // roll back instead of relying on redactMatchingRows' commit — a
-      // read-only preview must never be able to write, even accidentally.
-      const { rows } = await db.query(
-        `select count(*)::int as n from audit_answers where source_tag = 'user' and created_at < $1`,
-        [cutoff.toISOString()],
-      );
-      const n = Number(rows[0]?.n ?? 0);
+      // Dry run: ⟨F2⟩ counts come from countPurgeableQuestionHistory, which is
+      // built on the purge's OWN scope fragments — no second hand-written WHERE
+      // clause that could silently drift from what --apply redacts. Read-only:
+      // two COUNT queries, never a write.
+      const { auditRows, pendingRows } = await countPurgeableQuestionHistory(db, cutoff);
       console.log(
-        `DRY RUN — cutoff ${cutoff.toISOString()}: ${n} source_tag='user' row(s) older than 2 years would be redacted.`,
+        `DRY RUN — cutoff ${cutoff.toISOString()}: ${auditRows} audit_answers row(s) ` +
+          `(source_tag user + onboarding_delivery) and ${pendingRows} pending_table_requests ` +
+          `row(s) older than 2 years would be redacted.`,
       );
       console.log('Re-run with --apply to actually redact them.');
       return;
@@ -45,7 +55,8 @@ async function main(): Promise<void> {
 
     const redacted = await purgeExpiredQuestionHistory(db, cutoff);
     console.log(
-      `Applied — cutoff ${cutoff.toISOString()}: redacted ${redacted.length} source_tag='user' row(s).`,
+      `Applied — cutoff ${cutoff.toISOString()}: redacted ${redacted.length} audit_answers row(s) ` +
+        `(source_tag user + onboarding_delivery).`,
     );
     if (redacted.length > 0) {
       const byKind = redacted.reduce<Record<string, number>>((acc, r) => {
@@ -54,6 +65,14 @@ async function main(): Promise<void> {
       }, {});
       console.log(`  by kind: ${JSON.stringify(byKind)}`);
     }
+    // #120: the expired pending_table_requests rows were redacted in the SAME
+    // transaction as the audit rows above (purgeExpiredQuestionHistory's pending
+    // leg). Its count isn't in the RedactedRow[] return, so we note it here so
+    // an operator reading the log knows the pending store was covered too.
+    console.log(
+      '  note: expired pending_table_requests free text (question_text/topic_term/' +
+        'failure_summary) was redacted in the same transaction.',
+    );
   } finally {
     try {
       await pool.end();

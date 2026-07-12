@@ -22,6 +22,7 @@ export {
   REDACTED_QUESTION_TEXT,
   deleteUserQuestionHistory,
   purgeExpiredQuestionHistory,
+  countPurgeableQuestionHistory,
   twoYearsBefore,
 } from './retention.ts';
 export type { RedactedRow } from './retention.ts';

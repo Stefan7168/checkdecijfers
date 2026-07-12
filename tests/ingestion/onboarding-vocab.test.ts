@@ -13,6 +13,7 @@ import {
   onboardedKey,
   registerOnboardingVocabulary,
 } from '../../src/ingestion/onboarding-vocab.ts';
+import { REDACTED_QUESTION_TEXT } from '../../src/answer/audit/retention.ts';
 import type { Db } from '../../src/db/types.ts';
 import { createTestDb } from '../helpers/pglite-db.ts';
 
@@ -109,6 +110,38 @@ describe('registerOnboardingVocabulary', () => {
       const dc = row.rows[0]!.default_coordinates;
       const parsed = typeof dc === 'string' ? JSON.parse(dc) : dc;
       expect(parsed).toEqual({});
+    });
+  });
+});
+
+describe('⟨F4⟩ #120 redaction belt — a sentinel topicTerm never enters the shared vocabulary', () => {
+  it('returns the empty-onboarded result WITHOUT any canonical_measures write when topicTerm is the redaction sentinel', async () => {
+    await withIngested(async (db) => {
+      // A pending onboarding row whose topic_term was redacted (self-service
+      // deletion / 2-year purge → REDACTED_QUESTION_TEXT) and then claimed must
+      // flow into the job's empty-vocab → unanswerableAndRefund path, never write
+      // the sentinel into the shared canonical_measures vocabulary (where it
+      // would become a parser-matchable everydayTerm).
+      const result = await registerOnboardingVocabulary(db, {
+        tableId: TABLE,
+        topicTerm: REDACTED_QUESTION_TEXT,
+      });
+
+      expect(result.onboarded).toEqual([]);
+      expect(result.skippedMeasures).toEqual([]);
+
+      // Zero writes: no onboarded rows landed in the shared vocabulary.
+      const count = await db.query(
+        'select count(*)::int as n from canonical_measures where key like $1',
+        [`onboarded:${TABLE}:%`],
+      );
+      expect(Number(count.rows[0]!.n)).toBe(0);
+      // And the sentinel text is nowhere in canonical_measures at all.
+      const sentinel = await db.query(
+        'select count(*)::int as n from canonical_measures where $1 = any(everyday_terms)',
+        [REDACTED_QUESTION_TEXT],
+      );
+      expect(Number(sentinel.rows[0]!.n)).toBe(0);
     });
   });
 });
