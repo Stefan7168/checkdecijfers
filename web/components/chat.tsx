@@ -223,6 +223,7 @@ export function Chat({
   onVisualsChange,
   activeVisualId = null,
   onActivateVisual,
+  onBusyChange,
 }: {
   onOutcome?: (gated: GatedResponse) => void;
   pricing?: ChatPricing;
@@ -248,6 +249,11 @@ export function Chat({
   activeVisualId?: string | null;
   /** A reference chip click activates its dock tab. */
   onActivateVisual?: (visualId: string) => void;
+  /** WP135 (blocker fix): reports the in-flight state up so the workspace can
+   * disable the sidebar's thread-switch / nieuwe-chat controls while a submit
+   * is running — the UX belt that keeps a switch from racing an in-flight
+   * response (the generation guard below is the correctness backstop). */
+  onBusyChange?: (busy: boolean) => void;
 } = {}) {
   const threadAware = onThreadId !== undefined;
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages ?? []);
@@ -297,6 +303,13 @@ export function Chat({
   // change (nieuwe chat / thread switch); this ref skips the mount run, whose
   // seed the useState initializers already applied.
   const seededRef = useRef(true);
+  // WP135 (blocker fix): the submit generation. Bumped by the reset effect on
+  // every nieuwe-chat / thread-switch, so an in-flight submit can detect — after
+  // its await — that the chat has since been reset to a DIFFERENT thread and
+  // discard all of its state updates, rather than landing a stale response in
+  // the newly displayed thread. Captured at submit start; re-checked after the
+  // action resolves.
+  const generationRef = useRef(0);
 
   function toggleSource(key: string): void {
     setSelectedSources((prev) => {
@@ -328,6 +341,10 @@ export function Chat({
       seededRef.current = false;
       return;
     }
+    // Bump the generation FIRST: a submit that was already in flight when this
+    // reset landed will, after its await, see a changed generation and discard
+    // its (now stale) updates instead of clobbering the thread we just seeded.
+    generationRef.current += 1;
     setMessages(initialMessages ?? []);
     setContext(initialContext ?? null);
     setThreadId(initialThreadId ?? null);
@@ -338,6 +355,13 @@ export function Chat({
     setStaleDeploy(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadNonce]);
+
+  // WP135 (blocker fix): report the in-flight state up so the workspace can
+  // disable the sidebar's switch controls while a submit runs (a no-op without
+  // the callback — the Dashboard / test call sites).
+  useEffect(() => {
+    onBusyChange?.(busy);
+  }, [busy, onBusyChange]);
 
   // WP135 (ADR 033 D4): report the dockable visuals derived from the messages
   // so the workspace can render the dock and its tabs; a no-op without the
@@ -350,6 +374,12 @@ export function Chat({
     e.preventDefault();
     const text = input.trim();
     if (!text || busy || nothingSelected) return;
+
+    // WP135 (blocker fix): the generation this submit belongs to. If a
+    // nieuwe-chat / thread-switch bumps it while the action is in flight, the
+    // response below is stale — it must NOT append to (or re-thread) whatever
+    // thread is now displayed. Re-checked after the await.
+    const submitGeneration = generationRef.current;
 
     setMessages((m) => [
       ...m,
@@ -387,6 +417,14 @@ export function Chat({
             ? await askQuestion(text, requestId, context, selection)
             : await askQuestion(text, requestId, context);
       }
+      // WP135 (blocker fix): the chat was reset to a DIFFERENT thread while this
+      // action was in flight (the reset effect bumped the generation). Discard
+      // EVERYTHING this stale submit would apply — no message append, no
+      // setThreadId, no onThreadId (sidebar refresh/highlight), no onOutcome —
+      // so the late response never lands in the newly displayed thread. `finally`
+      // still clears busy (busy stayed true throughout, so no second submit could
+      // have begun on the new thread).
+      if (generationRef.current !== submitGeneration) return;
       applyOutcome(outcome);
       // WP135 ⟨A1⟩: adopt the server's attached thread (lazy-created on the
       // first completed turn) so the next turn attaches to it, and report it up
@@ -482,6 +520,9 @@ export function Chat({
         setCapturedThreadId(null);
       }
     } catch (err) {
+      // WP135 (blocker fix): same generation guard for the failure path — a
+      // stale submit's error must not paint over the thread now displayed.
+      if (generationRef.current !== submitGeneration) return;
       if (unstable_isUnrecognizedActionError(err)) {
         // Structurally true no-charge claim: the action never ran, and the
         // debit lives inside it (the billing gate is the action's first step).

@@ -182,12 +182,16 @@ export async function listThreads(db: Db, userId: string, limit = 50): Promise<T
 
 /** A thread's turns for replay/resume: every audit row in the thread (created_at
  * asc, id asc), full envelope + the per-row net cost from the SAME
- * debit/compensation ledger join src/billing/history.ts implements (mind the
- * cast: audit_answers.user_id is TEXT, credit_transactions.user_id is uuid —
- * cast the uuid side to text, as history.ts does). Redacted rows are INCLUDED
- * (a partially-redacted thread shows its live rows + placeholders on replay);
- * the replay layer detects them by the sentinel. Scoped to `userId` (defense in
- * depth even after validateThreadOwnership — loadMyThread reads this directly). */
+ * debit/compensation ledger arithmetic src/billing/history.ts implements — but
+ * EXTENDED (⟨A3⟩, unlike history.ts's dashboard join) to net the 'websearch_cost'
+ * add-on debit as well as the base 'question_cost' debit, so a resumed web turn
+ * shows the same cost the live chat showed (gated.netCost including a kept +10).
+ * Mind the cast: audit_answers.user_id is TEXT, credit_transactions.user_id is
+ * uuid — cast the uuid side to text, as history.ts does. Redacted rows are
+ * INCLUDED (a partially-redacted thread shows its live rows + placeholders on
+ * replay); the replay layer detects them by the sentinel. Scoped to `userId`
+ * (defense in depth even after validateThreadOwnership — loadMyThread reads this
+ * directly). */
 export async function getThreadRows(db: Db, userId: string, threadId: number): Promise<ThreadRow[]> {
   const { rows } = await db.query(
     `select
@@ -198,24 +202,52 @@ export async function getThreadRows(db: Db, userId: string, threadId: number): P
        a.reply_text,
        a.created_at,
        a.response,
-       -- Same arithmetic as src/billing/history.ts: the question_cost debit
-       -- (joined by request_id) minus any compensation (joined by
-       -- audit_answer_id). Null when the row has no attributable debit (a
-       -- pre-migration-010 row, or a benchmark/validation turn). An
-       -- onboarding-delivery row never appears here (it has thread_id NULL), so
-       -- history.ts's onboarding_delivery branch is not replicated.
+       -- ⟨A3⟩ per-row net cost = the LIVE gated.netCost caption a resumed turn
+       -- must reproduce byte-for-byte. A turn's net is EVERY debit on its
+       -- (user_id, request_id) — the 'question_cost' debit AND, on a web-opted
+       -- turn, the SEPARATE 'websearch_cost' add-on debit (migration 018, ADR
+       -- 032) — minus every compensation that reversed one of those debits.
+       -- Each debit is independently refundable: a KEPT add-on stands with no
+       -- compensation and lifts netCost by +10 (settleWebAddon bumps netCost in
+       -- memory only — the debit is the sole persisted trace, so replay MUST
+       -- net it or the resumed cost silently drops the add-on); a refunded one
+       -- carries its own compensation row (related_transaction_id -> the web
+       -- debit). Aggregated as correlated subqueries, NOT extra LEFT JOINs:
+       -- two debits plus up to two compensations would multiply the row
+       -- (cartesian product) under a join. Null ONLY when the turn has no
+       -- attributable debit at all (a pre-migration-010 row, or a benchmark/
+       -- validation turn). NB history.ts's dashboard join still nets the base
+       -- debit only — a separate, reviewed change; do not read across.
        case
-         when debit.id is null then null
-         else -coalesce(debit.delta, 0) - coalesce(comp.delta, 0)
+         when not exists (
+           select 1
+           from credit_transactions d
+           where d.user_id::text = a.user_id
+             and d.request_id = a.request_id
+             and d.reason in ('question_cost', 'websearch_cost')
+         ) then null
+         else
+           coalesce((
+             select -sum(d.delta)
+             from credit_transactions d
+             where d.user_id::text = a.user_id
+               and d.request_id = a.request_id
+               and d.reason in ('question_cost', 'websearch_cost')
+           ), 0)
+           - coalesce((
+             select sum(c.delta)
+             from credit_transactions c
+             where c.reason = 'compensation'
+               and c.related_transaction_id in (
+                 select d.id
+                 from credit_transactions d
+                 where d.user_id::text = a.user_id
+                   and d.request_id = a.request_id
+                   and d.reason in ('question_cost', 'websearch_cost')
+               )
+           ), 0)
        end as credits_charged
      from audit_answers a
-     left join credit_transactions debit
-       on debit.user_id::text = a.user_id
-      and debit.request_id = a.request_id
-      and debit.reason = 'question_cost'
-     left join credit_transactions comp
-       on comp.audit_answer_id = a.id
-      and comp.reason = 'compensation'
      where a.thread_id = $1
        and a.user_id = $2
      order by a.created_at asc, a.id asc`,

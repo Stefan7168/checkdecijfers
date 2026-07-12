@@ -17,6 +17,7 @@ import {
   validateThreadOwnership,
 } from '../../src/threads/index.ts';
 import { chargeAndRun } from '../../src/billing/gate.ts';
+import { compensate, debitWebSearch, getActionClassPrice } from '../../src/billing/ledger.ts';
 import { applyPricingDefaults } from '../../src/billing/pricing-apply.ts';
 import type { Db } from '../../src/db/types.ts';
 import { createTestDb } from '../helpers/pglite-db.ts';
@@ -335,6 +336,79 @@ describe('getThreadRows — thread turns + ledger cost (pin 1)', () => {
       }));
       if (gated.kind !== 'ok') throw new Error(`expected ok, got ${gated.kind}`);
 
+      const rows = await getThreadRows(db, userId, threadId);
+      expect(rows).toHaveLength(1);
+      expect(rows[0]!.creditsCharged).toBe(gated.netCost);
+    });
+  });
+
+  it('KEPT web add-on: creditsCharged nets BOTH debits = the live netCost incl. the +10', async () => {
+    await withDb(async (db) => {
+      await applyPricingDefaults(db);
+      const userId = randomUUID();
+      // Fund enough for the 30-credit transient (20 question + 10 add-on).
+      await db.query('update signup_grant_config set credits = 100');
+      await db.query('select public.grant_signup_credits($1)', [userId]);
+      const threadId = await createThread(db, userId);
+      const requestId = randomUUID();
+      const auditId = await insertRow(db, userId, {
+        kind: 'answer',
+        question: 'Hoeveel inwoners heeft Nederland? (met internet)',
+        finalText: 'testantwoord',
+        threadId,
+        requestId,
+      });
+      // Base question turn: an answer, no refund → gate's netCost is the full
+      // 'simple' price.
+      const gated = await chargeAndRun(db, userId, requestId, async (): Promise<AuditedResponse> => ({
+        response: { kind: 'answer', question: 'x', text: 'testantwoord' } as unknown as AuditedResponse['response'],
+        auditId,
+      }));
+      if (gated.kind !== 'ok') throw new Error(`expected ok, got ${gated.kind}`);
+      // The web add-on debit rides on the SAME requestId (migration 018) and is
+      // KEPT (a web section with cited findings was delivered) — no compensation.
+      const webPrice = await getActionClassPrice(db, 'web_addon');
+      const webDebit = await debitWebSearch(db, userId, requestId, webPrice);
+      expect(webDebit).not.toBeNull();
+
+      // settleWebAddon's KEEP branch bumps the live caption by +webPrice; replay
+      // must reconstruct exactly that from the two standing debits.
+      const liveNetCost = gated.netCost + webPrice;
+      const rows = await getThreadRows(db, userId, threadId);
+      expect(rows).toHaveLength(1);
+      expect(rows[0]!.creditsCharged).toBe(liveNetCost);
+    });
+  });
+
+  it('REFUNDED web add-on: the +10 nets back out; creditsCharged = the base netCost only', async () => {
+    await withDb(async (db) => {
+      await applyPricingDefaults(db);
+      const userId = randomUUID();
+      await db.query('update signup_grant_config set credits = 100');
+      await db.query('select public.grant_signup_credits($1)', [userId]);
+      const threadId = await createThread(db, userId);
+      const requestId = randomUUID();
+      const auditId = await insertRow(db, userId, {
+        kind: 'answer',
+        question: 'Hoeveel inwoners heeft Nederland? (internet, geen web-sectie)',
+        finalText: 'testantwoord',
+        threadId,
+        requestId,
+      });
+      const gated = await chargeAndRun(db, userId, requestId, async (): Promise<AuditedResponse> => ({
+        response: { kind: 'answer', question: 'x', text: 'testantwoord' } as unknown as AuditedResponse['response'],
+        auditId,
+      }));
+      if (gated.kind !== 'ok') throw new Error(`expected ok, got ${gated.kind}`);
+      // The add-on was taken then refunded (no web section delivered):
+      // settleWebAddon compensate()s the web debit against this row's audit id.
+      const webPrice = await getActionClassPrice(db, 'web_addon');
+      const webDebit = await debitWebSearch(db, userId, requestId, webPrice);
+      const refund = await compensate(db, userId, webDebit!.id, webPrice, auditId);
+      expect(refund).not.toBeNull();
+
+      // The compensation reverses the add-on debit, so replay nets back to the
+      // base question cost — exactly what the live caption showed.
       const rows = await getThreadRows(db, userId, threadId);
       expect(rows).toHaveLength(1);
       expect(rows[0]!.creditsCharged).toBe(gated.netCost);

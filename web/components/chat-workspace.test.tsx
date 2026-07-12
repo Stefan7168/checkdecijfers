@@ -5,15 +5,17 @@
 //    moves (an inline card ⇄ an "in het paneel" reference chip), rendered once.
 //  - Test 13: a reply binds to the thread captured at question time; a thread
 //    switch (loadNonce bump) clears the pending clarification.
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AskOutcome } from '../app/actions.ts';
 import type { GatedResponse } from '../backend/billing/index.ts';
 import type { ConversationContext } from '../backend/answer/context/index.ts';
 import type { ComposedResponse } from '../backend/answer/respond/types.ts';
+import type { ThreadSummary } from '../backend/threads/index.ts';
 import type { WebSection } from '../backend/websearch/types.ts';
 import { fakeAnswerResponse, fakeCell } from '../test/fake-answer.ts';
 import { Chat } from './chat.tsx';
+import { ThreadSidebar } from './thread-sidebar.tsx';
 
 Element.prototype.scrollIntoView = vi.fn();
 
@@ -223,5 +225,124 @@ describe('Chat — WP135 onVisualsChange reporting', () => {
     expect(last).toHaveLength(1);
     expect(last[0].kind).toBe('card');
     expect(last[0].label).toBe('Kaart 1');
+  });
+});
+
+// The blocker: a submit in flight when the workspace switches thread (or starts
+// a nieuwe chat) must NOT land its late response in the newly displayed thread.
+describe('Chat — WP135 stale-submit generation guard (blocker fix)', () => {
+  it('a thread switch mid-flight discards the late response — no message, no threadId snap-back', async () => {
+    const onThreadId = vi.fn();
+    // Leave the action PENDING so the switch lands while it is in flight.
+    let resolveAsk!: (o: AskOutcome) => void;
+    askQuestion.mockReturnValueOnce(
+      new Promise<AskOutcome>((resolve) => {
+        resolveAsk = resolve;
+      }),
+    );
+    const { rerender } = render(
+      <Chat
+        onThreadId={onThreadId}
+        onVisualsChange={vi.fn()}
+        loadNonce={0}
+        initialMessages={[]}
+        initialContext={null}
+        threadId={null}
+      />,
+    );
+    fireEvent.change(screen.getByPlaceholderText('Stel een vraag…'), {
+      target: { value: 'Wat was de inflatie?' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Verstuur' }));
+    // The in-flight thread's user bubble is on screen; the action has not resolved.
+    await screen.findByText('Wat was de inflatie?');
+
+    // The workspace switches to thread 99 (a loadNonce bump) mid-flight — this
+    // resets the chat and bumps the generation.
+    rerender(
+      <Chat
+        onThreadId={onThreadId}
+        onVisualsChange={vi.fn()}
+        loadNonce={1}
+        initialMessages={[]}
+        initialContext={null}
+        threadId={99}
+      />,
+    );
+    await waitFor(() => expect(screen.queryByText('Wat was de inflatie?')).toBeNull());
+
+    // The stale action now resolves with an answer bound to the ORIGINAL thread (5).
+    await act(async () => {
+      resolveAsk(outcome(fakeAnswer('In 2024 was het 3,3%.'), null, 5));
+      await Promise.resolve();
+    });
+
+    // Discarded: no answer appended to the newly displayed thread, and no
+    // threadId snap-back (onThreadId never fires for the stale submit).
+    expect(screen.queryByText('In 2024 was het 3,3%.')).toBeNull();
+    expect(onThreadId).not.toHaveBeenCalled();
+  });
+
+  it('reports busy up (onBusyChange) so the workspace can gate the sidebar', async () => {
+    const onBusyChange = vi.fn();
+    let resolveAsk!: (o: AskOutcome) => void;
+    askQuestion.mockReturnValueOnce(
+      new Promise<AskOutcome>((resolve) => {
+        resolveAsk = resolve;
+      }),
+    );
+    render(<Chat onThreadId={vi.fn()} onVisualsChange={vi.fn()} onBusyChange={onBusyChange} />);
+    fireEvent.change(screen.getByPlaceholderText('Stel een vraag…'), {
+      target: { value: 'Wat was de inflatie?' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Verstuur' }));
+    await waitFor(() => expect(onBusyChange).toHaveBeenLastCalledWith(true));
+    await act(async () => {
+      resolveAsk(outcome(fakeAnswer('In 2024 was het 3,3%.'), null, 1));
+      await Promise.resolve();
+    });
+    await waitFor(() => expect(onBusyChange).toHaveBeenLastCalledWith(false));
+  });
+});
+
+// The UX belt: the sidebar's switch controls are inert while a submit runs.
+describe('ThreadSidebar — WP135 disabled while a submit is in flight (blocker fix)', () => {
+  const threads: ThreadSummary[] = [{ id: 1, title: 'Eerste gesprek', lastActivityAt: new Date().toISOString() }];
+
+  it('disables Nieuwe chat + thread rows when busy, and re-enables them when idle', () => {
+    const onSelect = vi.fn();
+    const onNewChat = vi.fn();
+    const { rerender } = render(
+      <ThreadSidebar
+        threads={threads}
+        activeThreadId={null}
+        collapsed={false}
+        busy
+        onSelect={onSelect}
+        onNewChat={onNewChat}
+        onToggleCollapse={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole('button', { name: 'Nieuwe chat' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Eerste gesprek' })).toBeDisabled();
+    // A click on a disabled control is a no-op — no switch can start mid-flight.
+    fireEvent.click(screen.getByRole('button', { name: 'Nieuwe chat' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Eerste gesprek' }));
+    expect(onNewChat).not.toHaveBeenCalled();
+    expect(onSelect).not.toHaveBeenCalled();
+
+    rerender(
+      <ThreadSidebar
+        threads={threads}
+        activeThreadId={null}
+        collapsed={false}
+        busy={false}
+        onSelect={onSelect}
+        onNewChat={onNewChat}
+        onToggleCollapse={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole('button', { name: 'Nieuwe chat' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Eerste gesprek' })).toBeEnabled();
   });
 });

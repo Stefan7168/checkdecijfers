@@ -62,6 +62,12 @@ export function Workspace({
   const [activeVisualId, setActiveVisualId] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showPurchaseBanner, setShowPurchaseBanner] = useState(purchaseSuccess);
+  // WP135 (blocker fix): the chat reports its in-flight state here so the
+  // sidebar's thread-switch / nieuwe-chat controls are disabled while a submit
+  // runs — a switch mid-flight would otherwise reset the chat and let the late
+  // response land in the wrong thread (the chat's own generation guard is the
+  // correctness backstop; this is the UX belt).
+  const [chatBusy, setChatBusy] = useState(false);
   // Tracks the dock-visual count across reports so a NEW visual becomes active
   // (updated in handleVisualsChange, an event handler — never in an effect).
   const prevVisualCount = useRef(0);
@@ -182,6 +188,7 @@ export function Workspace({
             threads={threads}
             activeThreadId={activeThreadId}
             collapsed={sidebarCollapsed}
+            busy={chatBusy}
             onSelect={(id) => void selectThread(id)}
             onNewChat={startNewChat}
             onToggleCollapse={() => setSidebarCollapsed((collapsed) => !collapsed)}
@@ -206,6 +213,7 @@ export function Workspace({
             onVisualsChange={handleVisualsChange}
             activeVisualId={activeVisualId}
             onActivateVisual={activateVisual}
+            onBusyChange={setChatBusy}
           />
         </div>
 
