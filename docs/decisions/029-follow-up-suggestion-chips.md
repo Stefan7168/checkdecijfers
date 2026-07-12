@@ -3,6 +3,48 @@
 **Status:** accepted (design frozen session 30); **BUILT as WP29 (session 35, 2026-07-11,
 autonomous, branch `wp29-follow-up-chips` per #118)** — execute brief:
 [session-briefs/2026-07-08-follow-up-chips-brief.md](../session-briefs/2026-07-08-follow-up-chips-brief.md).
+**EXTENDED with a refusal-side variant for [#134](../open-questions.md)(a) (session 43, 2026-07-13,
+branch `feat/134a-refusal-period-chips`) — see the second as-built note below.**
+
+## As-built note (#134(a) refusal-side variant, 2026-07-13)
+
+The same mechanism, applied to period-coverage REFUSALS instead of answers — because a refusal
+already computes a concrete boundary period we CAN serve, so the "give the user a working next
+step" idea (this ADR's whole point) applies there too.
+
+- **`buildRefusalSuggestions(queryRefusal, check)`** (suggestions.ts) — emits ONE dry-run-gated
+  retry chip on exactly two `QueryRefusal` kinds: `freshness` (offer `freshestAvailable`) and
+  **period-axis** `outside_loaded_slice` (offer `nearestAlternative` = the slice floor). Gated to
+  a canonical target (a registry `definitionLabel` to name) and — **region-less v1** — a
+  region-less intent: a refusal has no cells, so there is no honest cell-derived region wording,
+  and naming a region from its code is the guess the answer-path generators refuse (drop-never-
+  guess). The candidate is `{same target, no regions, period:codes[boundary], derivation:none}`;
+  `check` (the same `echoServability` closure) proves it resolves in loaded data before the chip
+  surfaces (R7 "actually available"). Copy reuses the adjacent-period template verbatim
+  (`Wat was {label} in {periodNl}?`). Whole body fail-open to `[]`, plus the respond.ts belt.
+- **Deliberately excluded:** the DIMENSION `outside_loaded_slice` (axis `measure`, whose
+  `nearestAlternative` is a dimension coordinate, never a period) and `not_published` (no boundary
+  is computed — the genuinely hard [#134](../open-questions.md)(b) half; stays prose-only). v2
+  enhancements (range/trend retry chip, regional chip) tracked as [#137](../open-questions.md)/
+  [#138](../open-questions.md).
+- **Envelope**: `RefusalResponse.suggestions: string[]` (mirror of the answer field), set only by
+  `respondToIntent`'s query-refusal site via `toRefusalResponse`'s new optional input (`?? []`
+  everywhere else). R8-safe: reconstruct.ts never reads `suggestions` — the refusal `text` is the
+  only reconstructed surface and stays byte-identical. **Benchmark unaffected**: only B20
+  (freshness) among the refuse tasks is a target reason, and the scorer's fabrication scan reads
+  `finalText` only, not `suggestions` (14/14 + 6/6 + 0 fabricated verified).
+- **Web — TWO read sites** (the adversarial review caught that the second was missed): (1) the
+  LIVE turn — `chat.tsx` reads `suggestions` for `refusal` responses too; and (2) the WP135
+  thread-RESUME replay — `src/threads/replay.ts` `buildAssistantPart` was widened from
+  `kind === 'answer'` to `answer || refusal`, or a reopened thread would silently drop the retry
+  chip while the live turn showed it (a stored-envelope-vs-render parity gap, WP135 being live in
+  prod). Both feed the same kind-agnostic chip render + #75 fill-don't-send handler. Regression
+  tests: `tests/threads/replay.test.ts` (mutation-verified) + `web/lib/replay-assemble.test.ts`.
+- Verified: full gate green (backend suite incl. 14 new chip/replay tests, benchmark 14/14 + 6/6 +
+  0 fabricated, web suite incl. 3 new refusal-chip/replay tests, both typechecks, real `next build`);
+  zero prompt/fixture bytes changed. **Adversarial multi-lens review (6 lenses × refuting skeptics,
+  2026-07-13): the ONLY confirmed finding was the replay-parity gap above (found independently by 3
+  lenses, 0 false positives) — fixed + regression-pinned before the PR.**
 
 ## As-built note (WP29, 2026-07-11)
 

@@ -568,6 +568,11 @@ export interface RefusalEnvelopeInput {
   built: BuiltRefusal;
   parse: ParseOutcome | null;
   queryRefusal: QueryRefusal | null;
+  /** #134(a) (ADR 029, refusal-side variant): servability-gated retry chips —
+   * set ONLY by respondToIntent's query-refusal site (freshness /
+   * outside_loaded_slice). Every other call site omits it → [] (the answer
+   * pipeline's refusal chips exist only where a boundary period is computed). */
+  suggestions?: string[];
 }
 
 export function toRefusalResponse(input: RefusalEnvelopeInput): RefusalResponse {
@@ -587,6 +592,9 @@ export function toRefusalResponse(input: RefusalEnvelopeInput): RefusalResponse 
     // reason; null everywhere else (?? handles every non-onboarding builder,
     // which leaves the field undefined).
     onboarding: input.built.onboarding ?? null,
+    // #134(a): additive structural field; [] on every refusal but the two
+    // period-coverage kinds the caller gates on. Never touches `text` (R8).
+    suggestions: input.suggestions ?? [],
   };
 }
 
@@ -643,5 +651,6 @@ export function toInternalRefusal(question: string, internalNote: string): Refus
     queryRefusal: null,
     internalNote,
     onboarding: null,
+    suggestions: [],
   };
 }

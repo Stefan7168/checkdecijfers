@@ -10,13 +10,19 @@
 import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { ReplayLlmClient } from '../../src/answer/llm/client.ts';
+import type { LlmClient, LlmResponse } from '../../src/answer/llm/client.ts';
 import type { ServabilityCheck } from '../../src/answer/intent/policy.ts';
-import { respondToQuestion } from '../../src/answer/respond/index.ts';
-import { buildSuggestions, MAX_SUGGESTIONS } from '../../src/answer/respond/suggestions.ts';
+import { respondToIntent, respondToQuestion } from '../../src/answer/respond/index.ts';
+import {
+  buildRefusalSuggestions,
+  buildSuggestions,
+  MAX_SUGGESTIONS,
+} from '../../src/answer/respond/suggestions.ts';
 import { CANONICAL_MEASURES } from '../../src/registry/defaults.ts';
 import type { CanonicalMeasure } from '../../src/registry/types.ts';
 import { echoServability, runQuery, INTENT_SCHEMA_VERSION } from '../../src/query/index.ts';
-import type { StructuredIntent, ValidatedResult } from '../../src/query/index.ts';
+import type { QueryRefusal, RefusalKind, StructuredIntent, ValidatedResult } from '../../src/query/index.ts';
+import type { ParseOutcome } from '../../src/answer/intent/types.ts';
 import type { Db } from '../../src/db/types.ts';
 import { createIngestedDb } from '../helpers/ingested-db.ts';
 
@@ -267,5 +273,191 @@ describe('the envelope: suggestions ride the response, text is byte-untouched (R
       'Wat was inflatie (jaarmutatie CPI, alle bestedingen) in 2025?',
       'Hoe ontwikkelde inflatie (jaarmutatie CPI, alle bestedingen) zich van 2020 tot en met 2024?',
     ]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// #134(a) (ADR 029, refusal-side variant): buildRefusalSuggestions — ONE
+// servability-gated retry chip on a period-coverage refusal. Same harness as
+// above: hand-built QueryRefusal fed to the generator, real fixture db + real
+// dry-run for the positive cases (what these accept is what production serves),
+// stub checks for the gate/fail-open, and a respondToIntent wiring test proving
+// the chip rides the refusal envelope while the R8-audited text stays clean.
+// ---------------------------------------------------------------------------
+
+/** The CPI slice in the fixture db is 2010..2025 (probed): asking > 2025 →
+ * freshness (freshestAvailable 2025); < 2010 → not_published (no chip — the
+ * deferred #134 (b) case); the outside_loaded_slice PERIOD refusal is
+ * exercised via a hand-built QueryRefusal whose boundary (2010) is genuinely
+ * loaded, so the real dry-run serves it. */
+const CPI = 'cpi_yearly_inflation';
+const CPI_LABEL = 'inflatie (jaarmutatie CPI, alle bestedingen)';
+
+function cpiIntent(regions?: string[]): StructuredIntent {
+  return {
+    schemaVersion: INTENT_SCHEMA_VERSION,
+    target: { kind: 'canonical', key: CPI },
+    ...(regions && regions.length > 0 ? { regions } : {}),
+    period: { kind: 'codes', codes: ['2027JJ00'] },
+    derivation: 'none',
+  };
+}
+
+function refusalOf(
+  kind: RefusalKind,
+  overrides: Partial<QueryRefusal['refusal']> = {},
+  intent: StructuredIntent = cpiIntent(),
+): QueryRefusal {
+  return {
+    ok: false,
+    refusal: { kind, message: `stub ${kind}`, ...overrides },
+    intent,
+  };
+}
+
+class ThrowingAnswerClient implements LlmClient {
+  calls = 0;
+  async complete(): Promise<LlmResponse> {
+    this.calls += 1;
+    throw new Error('composeAnswer must not run on a refusal turn');
+  }
+}
+
+describe('buildRefusalSuggestions — the period-coverage retry chip (real db + real dry-run)', () => {
+  it('freshness: offers the freshest-available period as a one-click retry', async () => {
+    const refusal = refusalOf('freshness', {
+      axis: 'period',
+      freshness: { freshestAvailable: { periodCode: '2025JJ00', status: 'Definitief' }, freshestDefinitief: null },
+      nearestAlternative: '2025JJ00',
+    });
+    expect(await buildRefusalSuggestions(refusal, realCheck())).toEqual([
+      `Wat was ${CPI_LABEL} in 2025?`,
+    ]);
+  });
+
+  it('outside_loaded_slice (period axis): offers the loaded-slice floor', async () => {
+    const refusal = refusalOf('outside_loaded_slice', { axis: 'period', nearestAlternative: '2010JJ00' });
+    expect(await buildRefusalSuggestions(refusal, realCheck())).toEqual([
+      `Wat was ${CPI_LABEL} in 2010?`,
+    ]);
+  });
+
+  it('chip copy carries no digit but the period year — never a data value (principle a/c belt)', async () => {
+    const refusal = refusalOf('freshness', {
+      axis: 'period',
+      freshness: { freshestAvailable: { periodCode: '2025JJ00', status: 'Definitief' }, freshestDefinitief: null },
+    });
+    const chips = await buildRefusalSuggestions(refusal, realCheck());
+    expect(chips).toHaveLength(1);
+    for (const token of chips[0]!.match(/\d+(?:[.,]\d+)?/g) ?? []) {
+      expect(/^\d{4}$/.test(token), `token '${token}'`).toBe(true);
+    }
+  });
+});
+
+describe('buildRefusalSuggestions — the gates and fail-open (stub checks)', () => {
+  it('the DIMENSION outside_loaded_slice (axis=measure) is NOT a period chip — even with an always-servable check', async () => {
+    // resolve.ts:383 refuses a pinned dimension coordinate on axis 'measure';
+    // its nearestAlternative is a coordinate, never a period. Must drop.
+    const refusal = refusalOf('outside_loaded_slice', { axis: 'measure', nearestAlternative: 'A048710' });
+    expect(await buildRefusalSuggestions(refusal, async () => SERVABLE)).toEqual([]);
+  });
+
+  it('a non-target reason (not_published — the deferred #134 (b) case) never chips', async () => {
+    const refusal = refusalOf('not_published', { axis: 'period', nearestAlternative: '2010JJ00' });
+    expect(await buildRefusalSuggestions(refusal, async () => SERVABLE)).toEqual([]);
+  });
+
+  it('a region-carrying intent yields no chip (region-less v1: no cells → no honest region wording)', async () => {
+    const refusal = refusalOf(
+      'freshness',
+      { axis: 'period', freshness: { freshestAvailable: { periodCode: '2025JJ00', status: 'Definitief' }, freshestDefinitief: null } },
+      cpiIntent(['GM0363']),
+    );
+    expect(await buildRefusalSuggestions(refusal, async () => SERVABLE)).toEqual([]);
+  });
+
+  it('a non-canonical (explicit) target yields no chip (no registry label to name)', async () => {
+    const explicit: StructuredIntent = {
+      schemaVersion: INTENT_SCHEMA_VERSION,
+      target: { kind: 'explicit', tableId: '86141NED', measure: 'M000001' },
+      period: { kind: 'codes', codes: ['2027JJ00'] },
+      derivation: 'none',
+    };
+    const refusal = refusalOf('freshness', { axis: 'period', nearestAlternative: '2025JJ00' }, explicit);
+    expect(await buildRefusalSuggestions(refusal, async () => SERVABLE)).toEqual([]);
+  });
+
+  it('R7 gate: a boundary the dry-run rejects never chips (a retry that would dead-end is not offered)', async () => {
+    const refusal = refusalOf('freshness', {
+      axis: 'period',
+      freshness: { freshestAvailable: { periodCode: '2025JJ00', status: 'Definitief' }, freshestDefinitief: null },
+    });
+    expect(await buildRefusalSuggestions(refusal, async () => NOT_SERVABLE)).toEqual([]);
+  });
+
+  it('no computed boundary (freshness without a payload / outside_loaded_slice without nearestAlternative) → []', async () => {
+    expect(await buildRefusalSuggestions(refusalOf('freshness', { axis: 'period' }), async () => SERVABLE)).toEqual([]);
+    expect(await buildRefusalSuggestions(refusalOf('outside_loaded_slice', { axis: 'period' }), async () => SERVABLE)).toEqual([]);
+  });
+
+  it('fail-open: a throwing check yields [] — never an exception on the refusal path', async () => {
+    const refusal = refusalOf('freshness', {
+      axis: 'period',
+      freshness: { freshestAvailable: { periodCode: '2025JJ00', status: 'Definitief' }, freshestDefinitief: null },
+    });
+    const check: ServabilityCheck = async () => {
+      throw new Error('dry-run exploded');
+    };
+    expect(await buildRefusalSuggestions(refusal, check)).toEqual([]);
+  });
+});
+
+describe('the refusal envelope: the retry chip rides alongside, text is byte-untouched (R8)', () => {
+  function stubIntent(codes: string[]): Extract<ParseOutcome, { kind: 'intent' }> {
+    return {
+      kind: 'intent',
+      question: 'stub',
+      raw: { version: 3, kind: 'data_query', candidates: [], unmatchedMeasureTerm: null, nearestCanonicalKeys: [], note: null },
+      model: 'stub',
+      usage: { inputTokens: 0, outputTokens: 0 },
+      intent: {
+        schemaVersion: INTENT_SCHEMA_VERSION,
+        target: { kind: 'canonical', key: CPI },
+        period: { kind: 'codes', codes },
+        derivation: 'none',
+      },
+      confidence: 0.97,
+      impliedRecency: false,
+      ranked: [],
+    };
+  }
+
+  it('CPI 2027 refuses (freshness) AND carries the 2025 retry chip — the real respondToIntent wiring, no LLM reached', async () => {
+    const answerClient = new ThrowingAnswerClient();
+    const response = await respondToIntent(db, 'Wat was de inflatie in 2027?', stubIntent(['2027JJ00']), {
+      answerClient,
+      referenceDate: '2026-08-15',
+    });
+    expect(response.kind).toBe('refusal');
+    if (response.kind !== 'refusal') throw new Error('unreachable');
+    expect(response.reason).toBe('freshness');
+    expect(response.suggestions).toEqual([`Wat was ${CPI_LABEL} in 2025?`]);
+    // R8: the audited text is the refusal prose, unchanged — the chip never
+    // leaks into it (it rides the structural field only).
+    expect(response.text.length).toBeGreaterThan(0);
+    expect(response.text).not.toContain(`Wat was ${CPI_LABEL} in 2025?`);
+    expect(answerClient.calls).toBe(0);
+  });
+
+  it('CPI 1990 refuses (not_published) and carries NO chip — the deferred (b) case stays prose-only', async () => {
+    const response = await respondToIntent(db, 'Wat was de inflatie in 1990?', stubIntent(['1990JJ00']), {
+      answerClient: new ThrowingAnswerClient(),
+      referenceDate: '2026-08-15',
+    });
+    expect(response.kind).toBe('refusal');
+    if (response.kind !== 'refusal') throw new Error('unreachable');
+    expect(response.reason).toBe('not_published');
+    expect(response.suggestions).toEqual([]);
   });
 });

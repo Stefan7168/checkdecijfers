@@ -94,6 +94,21 @@ describe('assembleMessages — ⟨A3⟩ meta refusal reclassifies to info', () =
     expect(assistantMsg!.citation).toBeNull();
     expect(assistantMsg!.auditId).toBeNull();
   });
+
+  it('#134(a): a replayed period-coverage refusal carries its retry chip into the assembled message (parity with the live turn)', () => {
+    const response = {
+      kind: 'refusal',
+      reason: 'freshness',
+      text: 'Zo recent heb ik de cijfers nog niet — de meest recente periode is 2025.',
+      suggestions: ['Wat was inflatie in 2025?'],
+      webSection: null,
+    } as unknown as ComposedResponse;
+    const [, assistantMsg] = assembleMessages(replayParts([row({ kind: 'refusal', response })]));
+    expect(assistantMsg!.kind).toBe('refusal');
+    // The retry chip survives the full replay→assemble chain (regression: replay
+    // dropped refusal suggestions, so a resumed thread lost the chip).
+    expect(assistantMsg!.suggestions).toEqual(['Wat was inflatie in 2025?']);
+  });
 });
 
 describe('assembleMessages — ⟨A7⟩ redacted row is one placeholder', () => {
