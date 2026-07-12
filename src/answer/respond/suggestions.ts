@@ -275,6 +275,11 @@ export async function buildSuggestions(
  * period instead of guessing one — turning the refusal's existing "vanaf X" /
  * "voor X direct" prose into a one-click retry.
  *
+ * #137: for an `outside_loaded_slice` refusal whose ASK was a RANGE partly below
+ * the floor, the chip prefers the WORKING sub-range [floor, originalTo] as a
+ * trend question (the "probeer 2010–2024" shape), falling back to the single
+ * floor period when that window isn't fully servable.
+ *
  * Region-less v1 (drop-never-guess): a refusal carries no cells, so there is no
  * honest cell-derived region wording — a region-carrying intent yields no chip
  * (the regional case is deferred, #134 v2). The dry-run IS the loadedness proof
@@ -310,6 +315,42 @@ export async function buildRefusalSuggestions(
         ? (r.freshness?.freshestAvailable?.periodCode ?? r.nearestAlternative ?? null)
         : (r.nearestAlternative ?? null);
     if (boundary === null) return [];
+
+    // #137 (range-ask retry): when an `outside_loaded_slice` refusal came from a
+    // RANGE ask partly below our slice floor, offer the WORKING sub-range
+    // [floor, originalTo] as a trend chip (the owner's "probeer 2010–2024"
+    // shape) rather than a single floor year. Only for outside_loaded_slice — a
+    // range retry is meaningless for a "too recent" freshness refusal. The
+    // dry-run is the SOLE validity gate (the module's design philosophy): a
+    // backwards / mixed-grain / above-the-ceiling / gappy window resolves to NOT
+    // servable (runQuery REFUSES it in resolve.ts — it never throws), so we
+    // cleanly fall through to the single-period floor chip below. Skip the
+    // degenerate floor===to case (its copy would read "van X tot en met X").
+    // Wrapped in its own try so even an unexpected throw keeps the single-period
+    // fallback rather than the outer catch swallowing the whole turn's chip.
+    if (
+      r.kind === 'outside_loaded_slice' &&
+      intent.period.kind === 'range' &&
+      intent.period.to !== boundary
+    ) {
+      try {
+        const rangeCandidate: StructuredIntent = {
+          schemaVersion: INTENT_SCHEMA_VERSION,
+          target: intent.target,
+          period: { kind: 'range', from: boundary, to: intent.period.to },
+          derivation: 'series',
+        };
+        if ((await check(rangeCandidate)).servable) {
+          return [
+            `Hoe ontwikkelde ${label} zich van ${periodCodeToNl(boundary)} ` +
+              `tot en met ${periodCodeToNl(intent.period.to)}?`,
+          ];
+        }
+      } catch {
+        // fall through to the single-period chip
+      }
+    }
+
     const candidate: StructuredIntent = {
       schemaVersion: INTENT_SCHEMA_VERSION,
       target: intent.target,

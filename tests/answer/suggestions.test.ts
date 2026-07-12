@@ -355,6 +355,99 @@ describe('buildRefusalSuggestions — the period-coverage retry chip (real db + 
   });
 });
 
+/** A CPI intent whose ASK was a period RANGE — the #137 range-chip input. The
+ * fixture CPI slice is 2010..2025 (probed): [2010,2024] serves; 2050 is above
+ * the ceiling; anything < 2010 is unloaded. */
+function cpiRangeIntent(from: string, to: string): StructuredIntent {
+  return {
+    schemaVersion: INTENT_SCHEMA_VERSION,
+    target: { kind: 'canonical', key: CPI },
+    period: { kind: 'range', from, to },
+    derivation: 'series',
+  };
+}
+
+describe('buildRefusalSuggestions — #137 range-ask retry chip (real db + real dry-run)', () => {
+  it('outside_loaded_slice from a RANGE partly below the floor: offers the WORKING sub-range as a trend chip', async () => {
+    // Ask 2001–2024, floor 2010 → the clamped window [2010,2024] serves gap-free.
+    const refusal = refusalOf(
+      'outside_loaded_slice',
+      { axis: 'period', nearestAlternative: '2010JJ00' },
+      cpiRangeIntent('2001JJ00', '2024JJ00'),
+    );
+    expect(await buildRefusalSuggestions(refusal, realCheck())).toEqual([
+      `Hoe ontwikkelde ${CPI_LABEL} zich van 2010 tot en met 2024?`,
+    ]);
+  });
+
+  it('range whose upper bound is ABOVE the loaded ceiling falls back to the single floor chip (the dry-run refuses the window)', async () => {
+    // Ask 2001–2050; [2010,2050] is not gap-free (2050 unloaded) → single-period.
+    const refusal = refusalOf(
+      'outside_loaded_slice',
+      { axis: 'period', nearestAlternative: '2010JJ00' },
+      cpiRangeIntent('2001JJ00', '2050JJ00'),
+    );
+    expect(await buildRefusalSuggestions(refusal, realCheck())).toEqual([
+      `Wat was ${CPI_LABEL} in 2010?`,
+    ]);
+  });
+
+  it('a whole-range-below-floor (backwards clamp) falls back to the single floor chip', async () => {
+    // Ask 2001–2005, both below the 2010 floor → [2010,2005] runs backwards, the
+    // dry-run refuses it → the single floor chip, never a broken "van 2010 tot 2005".
+    const refusal = refusalOf(
+      'outside_loaded_slice',
+      { axis: 'period', nearestAlternative: '2010JJ00' },
+      cpiRangeIntent('2001JJ00', '2005JJ00'),
+    );
+    expect(await buildRefusalSuggestions(refusal, realCheck())).toEqual([
+      `Wat was ${CPI_LABEL} in 2010?`,
+    ]);
+  });
+
+  it('the range variant is outside_loaded_slice-only: a freshness refusal with a range ask still gives the single-period chip', async () => {
+    const refusal = refusalOf(
+      'freshness',
+      {
+        axis: 'period',
+        freshness: { freshestAvailable: { periodCode: '2025JJ00', status: 'Definitief' }, freshestDefinitief: null },
+      },
+      cpiRangeIntent('2001JJ00', '2030JJ00'),
+    );
+    expect(await buildRefusalSuggestions(refusal, realCheck())).toEqual([
+      `Wat was ${CPI_LABEL} in 2025?`,
+    ]);
+  });
+
+  it('degenerate floor===to is skipped (no "van X tot en met X"): the single-period chip is offered', async () => {
+    const refusal = refusalOf(
+      'outside_loaded_slice',
+      { axis: 'period', nearestAlternative: '2024JJ00' },
+      cpiRangeIntent('2001JJ00', '2024JJ00'),
+    );
+    expect(await buildRefusalSuggestions(refusal, realCheck())).toEqual([
+      `Wat was ${CPI_LABEL} in 2024?`,
+    ]);
+  });
+
+  it('the range attempt is throw-isolated: a THROW in the range dry-run still yields the single-period chip, never [] (adversarial-review pin)', async () => {
+    // The real dry-run REFUSES a malformed range rather than throwing, so this
+    // stub forces the range branch to throw to prove its inner try/catch keeps
+    // the single-period fallback (a mutant merging it into the outer catch would
+    // return [] here). The single-period candidate is 'codes'-kind → SERVABLE.
+    const check: ServabilityCheck = async (intent) => {
+      if (intent.period.kind === 'range') throw new Error('range dry-run exploded');
+      return SERVABLE;
+    };
+    const refusal = refusalOf(
+      'outside_loaded_slice',
+      { axis: 'period', nearestAlternative: '2010JJ00' },
+      cpiRangeIntent('2001JJ00', '2024JJ00'),
+    );
+    expect(await buildRefusalSuggestions(refusal, check)).toEqual([`Wat was ${CPI_LABEL} in 2010?`]);
+  });
+});
+
 describe('buildRefusalSuggestions — the gates and fail-open (stub checks)', () => {
   it('the DIMENSION outside_loaded_slice (axis=measure) is NOT a period chip — even with an always-servable check', async () => {
     // resolve.ts:383 refuses a pinned dimension coordinate on axis 'measure';
