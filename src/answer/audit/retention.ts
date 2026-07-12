@@ -30,6 +30,8 @@
 // user's personal data). This is enforced by a `where source_tag = 'user'`
 // clause on every statement in this module, never trusted to a caller.
 import type { Db } from '../../db/types.ts';
+import { stableStringify } from '../llm/client.ts';
+import type { AuditRecord } from './types.ts';
 
 /** The exact Dutch copy shown in place of a deleted question's text — the
  * "verwijderde vraag" placeholder (owner decision, session 23). Exported so
@@ -196,4 +198,149 @@ export function twoYearsBefore(now: Date): Date {
   const cutoff = new Date(now);
   cutoff.setUTCFullYear(cutoff.getUTCFullYear() - 2);
   return cutoff;
+}
+
+// ---------------------------------------------------------------------------
+// #133(b) — redaction integrity (verify-audit-rows.ts's redacted-row check)
+// ---------------------------------------------------------------------------
+//
+// reconstructionReport (reconstruct.ts) verifies that a LIVE row's stored
+// promoted columns and rendered text re-derive from its own stored envelope.
+// A redacted row fails every one of those checks by design — redactMatchingRows
+// above deliberately OVERWRITES the envelope with a sentinel shape that no
+// longer carries the original answer/result/chart at all, so there is nothing
+// left to "re-derive" (`response.answer` is `undefined` on a redacted answer
+// row, which is exactly why the pre-#133 verify script had to skip these rows
+// instead of running reconstructionReport on them).
+//
+// A redacted row still has a correctness question, just a DIFFERENT one: did
+// the redaction itself write EXACTLY the sentinel shape this module defines —
+// no more, no less? `redactionIntegrityReport` answers that, reading the
+// EXACT shapes `redactedResponse`/`redactedPendingClarification` above write
+// (single source of truth: this module owns both the writer and the checker,
+// so they can never drift apart the way a duplicated shape definition could).
+
+/** Compares one redacted sub-object (`response` or `pending_clarification`)
+ * against its expected sentinel shape. Two distinct failure modes, both real
+ * redaction bugs, reported distinctly:
+ *  - a MISSING/WRONG expected key: the sentinel itself wasn't written
+ *    correctly (e.g. `kind` still says something else, or `redacted` isn't
+ *    `true`).
+ *  - an EXTRA key that isn't part of the sentinel: content the redaction was
+ *    supposed to strip is still sitting in the jsonb blob — the "leftover
+ *    `answer`/`result`/`chart` key = failed redaction" failure mode #133
+ *    calls out by name, so the offending key name(s) are reported explicitly
+ *    rather than a generic "shape mismatch" string.
+ *
+ * Deliberately NOT a plain `JSON.stringify(actual) === JSON.stringify(expected)`
+ * check: key ORDER must never matter here (a future Postgres/driver version
+ * reordering jsonb keys on read must never fail this check on its own), which
+ * is why comparison goes key-by-key through `stableStringify` (the same
+ * canonicalizing serializer reconstruct.ts uses) instead of comparing raw
+ * JSON text.
+ */
+function redactedShapeProblems(actual: unknown, expected: Record<string, unknown>, label: string): string[] {
+  const problems: string[] = [];
+  if (typeof actual !== 'object' || actual === null || Array.isArray(actual)) {
+    problems.push(`${label} is not a plain redacted-shape object (found: ${stableStringify(actual)})`);
+    return problems;
+  }
+  const actualObj = actual as Record<string, unknown>;
+  const expectedKeys = Object.keys(expected);
+  const extraKeys = Object.keys(actualObj).filter((key) => !expectedKeys.includes(key));
+  if (extraKeys.length > 0) {
+    problems.push(
+      `${label} carries unexpected key(s) not part of the redacted sentinel shape: ${extraKeys.join(', ')} — ` +
+        'a leftover key means the original content was not fully stripped',
+    );
+  }
+  for (const key of expectedKeys) {
+    if (stableStringify(actualObj[key]) !== stableStringify(expected[key])) {
+      problems.push(`${label}.${key} does not match the redacted sentinel value`);
+    }
+  }
+  return problems;
+}
+
+/** #133(b) — does a GDPR-redacted row match the EXACT sentinel shape THIS
+ * module writes? The redacted-row counterpart to `reconstructionReport`: same
+ * `{ok, problems}` shape, same "run this against a live row and trust an
+ * empty problems array" contract, same job (does the stored row match what a
+ * correct producer would have written) — but checking `redactMatchingRows`'s
+ * own output against itself, since a redacted row has no original content
+ * left to independently re-derive.
+ *
+ * Checks (every one required, per the #133 design brief):
+ *  - `question` / `finalText` === REDACTED_QUESTION_TEXT.
+ *  - `response` deep-equals `redactedResponse(record.kind)` with NO extra
+ *    keys (see `redactedShapeProblems`).
+ *  - `intent` / `intentHash` / `conversationContext` are all `null` — the
+ *    promoted query-plan columns the "wis de inhoud volledig" owner decision
+ *    (session 23) requires cleared.
+ *  - `resultIds` / `tableIds` / `tables` are all empty arrays.
+ *  - `replyText` is `null` OR exactly `REDACTED_QUESTION_TEXT`, and
+ *    `pendingClarification` is `null` OR deep-equals
+ *    `redactedPendingClarification()` with no extra keys — AND the two
+ *    nullnesses must PAIR (the `reply_round_complete` CHECK constraint,
+ *    migration 004, requires `reply_text is null` to equal
+ *    `pending_clarification is null`; a redaction that broke the pairing
+ *    would never have made it past that constraint, but this re-checks it
+ *    from the read side too, defense in depth).
+ *
+ * Never throws: called in a loop over live database rows
+ * (`scripts/verify-audit-rows.ts`) where one malformed/corrupt row must be
+ * reported as a problem, not abort the whole run.
+ */
+export function redactionIntegrityReport(record: AuditRecord): { ok: boolean; problems: string[] } {
+  const problems: string[] = [];
+  try {
+    if (record.question !== REDACTED_QUESTION_TEXT) {
+      problems.push(`question is not the redaction sentinel (found: ${stableStringify(record.question)})`);
+    }
+    if (record.finalText !== REDACTED_QUESTION_TEXT) {
+      problems.push(`final_text is not the redaction sentinel (found: ${stableStringify(record.finalText)})`);
+    }
+
+    problems.push(...redactedShapeProblems(record.response, redactedResponse(record.kind), 'response'));
+
+    if (record.intent !== null) problems.push('intent is not null');
+    if (record.intentHash !== null) problems.push('intent_hash is not null');
+    if (record.conversationContext !== null) problems.push('conversation_context is not null');
+    if (record.resultIds.length !== 0) problems.push('result_ids is not an empty array');
+    if (record.tableIds.length !== 0) problems.push('table_ids is not an empty array');
+    if (record.tables.length !== 0) problems.push('tables is not an empty array');
+
+    const replyIsNull = record.replyText === null;
+    if (!replyIsNull && record.replyText !== REDACTED_QUESTION_TEXT) {
+      problems.push(
+        `reply_text is neither null nor the redaction sentinel (found: ${stableStringify(record.replyText)})`,
+      );
+    }
+
+    const pendingIsNull = record.pendingClarification === null;
+    if (!pendingIsNull) {
+      problems.push(
+        ...redactedShapeProblems(
+          record.pendingClarification,
+          redactedPendingClarification(),
+          'pending_clarification',
+        ),
+      );
+    }
+
+    // reply_round_complete (migration 004's CHECK constraint), re-checked
+    // from the read side: the two columns' nullability must match exactly.
+    if (replyIsNull !== pendingIsNull) {
+      problems.push(
+        'reply_text and pending_clarification are not paired (would violate the reply_round_complete constraint)',
+      );
+    }
+  } catch (error) {
+    // A malformed/corrupt row is a PROBLEM to report, never a crash that
+    // takes down a loop over live rows (scripts/verify-audit-rows.ts).
+    problems.push(
+      `redaction-integrity check crashed on a malformed record: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+  return { ok: problems.length === 0, problems };
 }
