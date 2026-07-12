@@ -68,13 +68,14 @@ export interface QuestionHistoryEntry {
   question: string;
   finalText: string;
   createdAt: string;
-  /** Net credits actually charged (debit minus any refund) -- summed over
-   * both turns for a collapsed round. Null if the cost cannot be honestly
-   * attributed: a row predating migration 010 (no request_id), or a round
-   * where EITHER side is unattributable (a partial sum must never be
-   * presented as the round's total). For an onboarding entry this is the
-   * real ledger net (100 while in flight or delivered, 0 once refunded) --
-   * never a hardcoded guess (WP16 sub-part 2). */
+  /** Net credits actually charged: EVERY request-scoped debit (the base
+   * question_cost debit plus a KEPT websearch_cost add-on, migration 018) minus
+   * any refund -- summed over both turns for a collapsed round. Null if the
+   * cost cannot be honestly attributed: a row predating migration 010 (no
+   * request_id), or a round where EITHER side is unattributable (a partial sum
+   * must never be presented as the round's total). For an onboarding entry this
+   * is the real ledger net (100 while in flight or delivered, 0 once refunded)
+   * -- never a hardcoded guess (WP16 sub-part 2). */
   creditsCharged: number | null;
   /** Set only on a collapsed clarification round: what we asked (the clarify
    * row's full rendered text) and what the user replied. */
@@ -186,22 +187,63 @@ export async function getQuestionHistory(
          -- different audit row and takes the branch below instead).
          when a.source_tag = 'onboarding_delivery' then
            case when onboarding_debit.id is null then null else -onboarding_debit.delta end
-         when debit.id is null then null
-         else -coalesce(debit.delta, 0) - coalesce(comp.delta, 0)
+         -- Ordinary question turn: net EVERY request-scoped debit -- the base
+         -- 'question_cost' debit AND, on a web-opted turn, the SEPARATE
+         -- 'websearch_cost' add-on debit (migration 018, WP129+130 / ADR 032)
+         -- -- minus every compensation that reversed one of those debits. This
+         -- is the SAME netting src/threads/index.ts getThreadRows applies for
+         -- replay: a KEPT add-on stands with no compensation and lifts the
+         -- shown cost by +10 (settleWebAddon bumps the LIVE netCost in memory
+         -- only -- the debit is its sole persisted trace, so the dashboard MUST
+         -- net it or it silently drops the add-on the user actually paid for);
+         -- a refunded add-on carries its own compensation row
+         -- (related_transaction_id -> the web debit) that nets back out. Each
+         -- debit is independently refundable, so the base question refund and
+         -- the web add-on refund coexist for one turn as two distinct
+         -- compensations (migration 018's one-compensation-per-debit index).
+         -- Written as correlated subqueries, NOT extra LEFT JOINs: two debits
+         -- plus up to two compensations would multiply the row (a cartesian
+         -- product) under a join, double-counting the cost. Compensations are
+         -- matched by related_transaction_id (the structural ledger link, FK +
+         -- validation-trigger enforced), never by audit_answer_id -- the web
+         -- refund's audit_answer_id points at this same row too, so an
+         -- audit-id match would have needed a SUM anyway. Null ONLY when the
+         -- turn has no attributable debit at all (a pre-migration-010 row with
+         -- no request_id).
+         when not exists (
+           select 1
+           from credit_transactions d
+           where d.user_id::text = a.user_id
+             and d.request_id = a.request_id
+             and d.reason in ('question_cost', 'websearch_cost')
+         ) then null
+         else
+           coalesce((
+             select -sum(d.delta)
+             from credit_transactions d
+             where d.user_id::text = a.user_id
+               and d.request_id = a.request_id
+               and d.reason in ('question_cost', 'websearch_cost')
+           ), 0)
+           - coalesce((
+             select sum(c.delta)
+             from credit_transactions c
+             where c.reason = 'compensation'
+               and c.related_transaction_id in (
+                 select d.id
+                 from credit_transactions d
+                 where d.user_id::text = a.user_id
+                   and d.request_id = a.request_id
+                   and d.reason in ('question_cost', 'websearch_cost')
+               )
+           ), 0)
        end as credits_charged
      from audit_answers a
-     left join credit_transactions debit
+     left join credit_transactions onboarding_debit
        -- credit_transactions.user_id is uuid; audit_answers.user_id is text
        -- (migration 004 predates the auth provider, ADR 006) -- cast the
        -- uuid side rather than the text side, since a text->uuid cast can
        -- fail at runtime on a malformed value while uuid->text never does.
-       on debit.user_id::text = a.user_id
-      and debit.request_id = a.request_id
-      and debit.reason = 'question_cost'
-     left join credit_transactions comp
-       on comp.audit_answer_id = a.id
-      and comp.reason = 'compensation'
-     left join credit_transactions onboarding_debit
        on onboarding_debit.user_id::text = a.user_id
       and onboarding_debit.request_id = a.request_id
       and onboarding_debit.reason = 'onboarding_cost'
