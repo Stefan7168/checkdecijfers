@@ -74,7 +74,7 @@ Three principles, also referenced as (a)/(b)/(c) across the docs:
 1. **Lessons** — append this session's process lessons to [docs/lessons-learned.md](docs/lessons-learned.md) (newest on top), or state there were none.
 2. **Memory** — save/update the relevant memory files **and** the `MEMORY.md` index line.
 3. **The FULL doc set → final MEASURED state** (not just the trackers — this is the step that was skipped and caused the rework). Update every one that applies:
-   - [docs/STATUS.md](docs/STATUS.md) — the "Last updated" entry **and** the "NEXT SESSION STARTS HERE" / top-priority block.
+   - [docs/STATUS.md](docs/STATUS.md) — update the lean top block ("NEXT SESSION STARTS HERE" + top-priority stack; hard-wrap at ~150 chars, no kilobyte-long lines) **and PREPEND the full "Last updated" session entry to [docs/status-archive.md](docs/status-archive.md)** (the verbatim session log, newest on top — since session 41 the entries live ONLY in the archive, never in STATUS.md itself).
    - [docs/open-questions.md](docs/open-questions.md) — the rows this session touched.
    - [docs/08-build-plan.md](docs/08-build-plan.md) — mark the WP/follow-up done; flag what's now next.
    - [docs/RUNBOOK.md](docs/RUNBOOK.md) — any new operational procedure or gotcha (a supervised step, a script, a "plain sync won't do X, `--rebaseline` will" trap).
