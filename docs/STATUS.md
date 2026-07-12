@@ -26,9 +26,10 @@
   ([status-archive.md](status-archive.md), open-questions-archive.md, build-plan-archive.md); "Executor guardrails" (binding, sized for
   mid-tier models) sit on top of [08-build-plan.md](08-build-plan.md). Wrap-up convention: PREPEND the session entry to the archive, keep
   this file lean and hard-wrapped.
-- **(4) In flight at session end:** the dashboard creditsCharged fix (same websearch-omission as the replay one, pre-existing, in
-  `src/billing/history.ts`) — chip task_7de27dc7, branch `fix/dashboard-websearch-creditscharged`; if unmerged, it is the first small item
-  for a next session (own PR, owner review).
+- **(4) ✅ Dashboard creditsCharged fix MERGED at session close (owner in-chat "Akkoord", 2026-07-12 23:46, merge `963fc66`):** the
+  pre-existing websearch-omission in `src/billing/history.ts` — full local gate was green (benchmark PASS) and the PR's CI runs were green;
+  the post-merge main CI run completes after this session's model sunset — a next session verifies it (expected green; docs-only delta
+  since the PR's green preview run).
 - **(5) Residuals unchanged:** #132 route B ~2026-07-19 (plain-text PR refs in docs, forks==0 is the T-0 go/no-go), #134(a) refusal
   period-suggestion chips, WP26 (supervised), #131 L1 lane, WP30c ([#123](open-questions.md)), chips format.ts NUL (task_e718f60d) +
   wrapup-hook false-positive (task_6f27827b; it fires on kickoffs quoting "NEXT SESSION STARTS HERE" — ignore it on a session's FIRST
