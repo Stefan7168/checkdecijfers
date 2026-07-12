@@ -213,6 +213,20 @@ D1/D2 posture); "attachAuditRow lacks ownership re-verification" (the UPDATE's W
 `user_id`); state-resync and SSR-breakpoint concerns (executor implementation detail, no spec
 change needed).
 
+## As-built (session 41, 2026-07-12 — built the same session, owner present)
+
+Implemented exactly per the frozen brief + A1–A7; merged to `main` on the owner's explicit
+in-chat instruction, DORMANT behind `WORKSPACE_ENABLED` (go-live = the owner-supervised step in
+RUNBOOK § "WP135 chat workspace"). Measured: 24 new backend tests (`tests/threads/`), 41 new web
+tests (299 web total), benchmark 14/14 + 6/6 + 0 fabricated GATE PASS, real `next build` green.
+Post-build review (22 agents) confirmed 2 blockers, fixed same session: (1) `getThreadRows`'s
+credits-join initially omitted the separate `websearch_cost` debit — replayed cost captions now
+net base + add-on debits minus their compensations (the same pre-existing omission in the
+dashboard's `history.ts` was spun off as its own reviewed fix, chip task_7de27dc7); (2) a stale
+in-flight submit could land in the wrong thread after a sidebar switch — generation guard +
+sidebar disabled while busy. D1's module note: `src/threads/` recorded in ADR 001's as-built
+list. The ADR 001 seam holds: threads are a web-app domain module, not an answer-pipeline one.
+
 ## Revisit triggers
 
 - Per-thread deletion ask from the owner or an external user → build the deferred D2 leg.

@@ -224,6 +224,39 @@ same as `ONBOARDING_ENABLED` was). Steps, in order, owner present:
 Rollback at any point: unset `WEBSEARCH_ENABLED` and redeploy — the feature goes fully dormant
 (migration 018 and the pricing row are harmless to leave in place).
 
+## WP135 chat workspace — the supervised go-live (NOT yet run; owner present required)
+
+The workspace (conversation sidebar + right-pane dock + site shell) ships DORMANT behind
+`WORKSPACE_ENABLED`: until every step below is done, production behaves byte-identically to
+pre-WP135 on every route (`/`, `/credits`, `/login`; `/geschiedenis` redirects to `/`). Built
+session 41 (2026-07-12) per ADR 033 + the frozen brief; merged only after owner PR review.
+Steps, in order, owner present:
+
+1. **Apply migration 019** — `npm run db:migrate` (adds `chat_threads` — id/user/timestamps
+   only, NO text columns by design — and nullable `audit_answers.thread_id`). Additive only.
+2. **Verify the guarded FK exists on prod** (CI is structurally blind to it — the hermetic test
+   DB has no `auth` schema). Read-only:
+   `select conname from pg_constraint where conrelid = 'chat_threads'::regclass;`
+   — expect `chat_threads_user_id_fkey` (plus the PK). Also confirm grants/RLS inherited
+   locked: 0 anon/authenticated grants, RLS on, 0 policies (the migration-003 posture, same
+   check as 011/018).
+3. **Set the flag** — in Vercel: add env var `WORKSPACE_ENABLED=1` (Production), then redeploy.
+4. **Live smoke test (€0 extra spend beyond one normal question):** (a) ask a question → answer
+   lands, sidebar shows the conversation (title = your question), credits chip in the top nav
+   updates live; (b) ask a chart question → the visual docks right with a tab, the message shows
+   the "in het paneel" chip, the web section (if any) stays IN the conversation; (c) "nieuwe
+   chat" → fresh conversation, old one clickable in the sidebar, resuming shows the identical
+   transcript incl. cost captions; (d) "Log uit" works and `/login` shows the stripped header.
+   Verify read-only: `select id, user_id, created_at, last_activity_at from chat_threads;` —
+   one row per conversation, no orphans (a row with zero `audit_answers.thread_id` references
+   is a bug, not expected).
+5. **GDPR spot-check:** press "Verwijder mijn vraaggeschiedenis" on a THROWAWAY conversation
+   day only if you want to test it — a fully-redacted conversation must disappear from the
+   sidebar (the dashboard keeps its "verwijderde vraag" placeholder, unchanged posture).
+
+Rollback at any point: unset `WORKSPACE_ENABLED` and redeploy — fully dormant again (migration
+019 is harmless to leave in place; threads simply stop being written or read).
+
 ## Moving to a new machine (fresh clone bootstrap)
 
 Everything that matters lives in this repository or in your own accounts
