@@ -180,7 +180,21 @@ script, per #133). **(b) ✅ DONE** — grants/RLS on `answer_feedback` LIVE-VER
 — the `--` passthrough breaks direct `node` invocation; use `npm run audit:verify -- <from> <to>`
 OR call the script directly without `--`).
 
-## WP129+130 web search — the supervised go-live (owner present; NOT YET RUN)
+## WP129+130 web search — the supervised go-live (✅ RUN 2026-07-12, session 40, owner present)
+
+**As-executed record:** all five steps ran 2026-07-12. Migration 018 applied clean; pricing
+verified (5 rows incl. `web_addon`=10); flag set via `vercel env add` + empty-commit redeploy
+(gate+deploy green). **The first smoke test FAILED honestly** — web section "niet gelukt", add-on
+auto-refunded, cost 20 — and the audit row's stored `webSection` (R8 paying off) + one local
+diagnostic call (~€0,05) found the measured root cause: the `web_search_20260209` filtering
+variant returns citation-less text blocks on `claude-sonnet-5`, which the extraction rightly
+rejects. Fixed same window (commit `6e23fb2`): basic `web_search_20250305` variant (4 cited
+findings on the same question), per-path `console.error` logging (the failure had been invisible
+in Vercel logs), and the owner-requested busy-indicator copy ("…CBS-cijfers en het web…"). The
+re-run smoke tests PASSED both modes, ledger-verified: CBS+web = −20 −10 kept (row 247, 4
+findings); web-only = −20 +20 −10 ⇒ net 10 (row 248, reason `web_only`, 4 findings); orphan
+query returned exactly the two delivered-section debits, zero orphans. Full detail: ADR 032
+§ Go-live correction.
 
 The code ships DORMANT: until every step below is done, production behaves byte-identically to
 pre-WP129+130 (no chips, no web calls, no new charges — the `WEBSEARCH_ENABLED` flag pattern,
