@@ -44,10 +44,26 @@ export type NotifyFn = (event: OnboardingNotifyEvent) => Promise<void>;
 
 const FROM_ADDRESS = 'noreply@mail.checkdecijfers.nl';
 
+/** Normalizes an app origin for the deep-link paragraph: strip any trailing
+ * slashes, then append exactly one, so 'https://x.nl' and 'https://x.nl/'
+ * both produce '{origin}/' (#116). */
+function dashboardUrl(appOrigin: string): string {
+  return `${appOrigin.replace(/\/+$/, '')}/`;
+}
+
 /** Deterministic Dutch bodies. No digits appear in these templates (nothing to
  * fabricate), and they never quote a data value — they point the user back to
- * the chat, where the audited answer lives. */
-export function buildEmail(to: string, event: OnboardingNotifyEvent): OnboardingEmail {
+ * the chat, where the audited answer lives.
+ *
+ * `appOrigin` (#116) is optional and fail-soft: when null (the default), a
+ * body is byte-identical to the pre-#116 template — no origin, no link. When
+ * given, a final paragraph is appended pointing back at the dashboard root
+ * (a per-answer deep link stays future work — see open-questions #116). */
+export function buildEmail(
+  to: string,
+  event: OnboardingNotifyEvent,
+  appOrigin: string | null = null,
+): OnboardingEmail {
   const topic = event.topicTerm;
   switch (event.outcome) {
     case 'delivered':
@@ -57,7 +73,8 @@ export function buildEmail(to: string, event: OnboardingNotifyEvent): Onboarding
         text:
           `Goed nieuws! We hebben de cijfers over "${topic}" opgehaald bij het CBS en gecontroleerd. ` +
           `Je vraag is beantwoord — open de chat om het antwoord te bekijken.\n\n` +
-          `Je vraag was: "${event.questionText}"`,
+          `Je vraag was: "${event.questionText}"` +
+          (appOrigin !== null ? `\n\nBekijk je antwoord: ${dashboardUrl(appOrigin)}` : ''),
       };
     case 'unanswerable': {
       const refund = event.refundedCredits === null ? 'De credits zijn' : `De ${event.refundedCredits} credits zijn`;
@@ -68,7 +85,8 @@ export function buildEmail(to: string, event: OnboardingNotifyEvent): Onboarding
           `We hebben cijfers over "${topic}" opgehaald bij het CBS, maar je vraag konden we er niet ` +
           `betrouwbaar mee beantwoorden. ${refund} volledig teruggestort.\n\n` +
           `Je vraag was: "${event.questionText}"\n` +
-          (event.failureSummary ? `\nToelichting: ${event.failureSummary}` : ''),
+          (event.failureSummary ? `\nToelichting: ${event.failureSummary}` : '') +
+          (appOrigin !== null ? `\n\nBekijk de status in je dashboard: ${dashboardUrl(appOrigin)}` : ''),
       };
     }
     case 'failed': {
@@ -80,7 +98,8 @@ export function buildEmail(to: string, event: OnboardingNotifyEvent): Onboarding
           `Het is helaas niet gelukt om de cijfers over "${topic}" op te halen bij het CBS. ` +
           `${refund} volledig teruggestort.\n\n` +
           `Je vraag was: "${event.questionText}"\n` +
-          (event.failureSummary ? `\nToelichting: ${event.failureSummary}` : ''),
+          (event.failureSummary ? `\nToelichting: ${event.failureSummary}` : '') +
+          (appOrigin !== null ? `\n\nBekijk de status in je dashboard: ${dashboardUrl(appOrigin)}` : ''),
       };
     }
   }
@@ -107,6 +126,10 @@ export interface NotifierDeps {
    * (used when RESEND_API_KEY is unset — the production factory below returns a
    * no-op notifier in that case). */
   sendEmail: SendEmailFn;
+  /** The deployed app's origin (#116), threaded into buildEmail's deep-link
+   * paragraph. Null degrades to link-less bodies (fail-soft — same posture as
+   * a missing RESEND_API_KEY: no origin, no link, never a throw). */
+  appOrigin: string | null;
 }
 
 /** Builds the NotifyFn the job calls. Every step is best-effort: no recipient,
@@ -122,7 +145,7 @@ export function buildOnboardingNotifier(deps: NotifierDeps): NotifyFn {
         );
         return;
       }
-      await deps.sendEmail(buildEmail(to, event));
+      await deps.sendEmail(buildEmail(to, event, deps.appOrigin));
     } catch (error) {
       // Best-effort: the dashboard is the record. Log loudly, never throw.
       console.error(`onboarding notify failed (outcome=${event.outcome}):`, error);
@@ -157,9 +180,17 @@ export function resendSendEmail(apiKey: string): SendEmailFn {
 }
 
 /** Production notifier factory: reads RESEND_API_KEY from the environment. When
- * unset, returns a notifier that logs + skips (best-effort, design §3). */
+ * unset, returns a notifier that logs + skips (best-effort, design §3).
+ *
+ * Also reads NEXT_PUBLIC_APP_URL (#116, same `?? null` read pattern as the
+ * RESEND_API_KEY check above) and threads it through as the deep-link
+ * origin. The deploy sets NEXT_PUBLIC_APP_URL (web/.env.production);
+ * server-side process.env reads of it work in this route's Node runtime —
+ * web/app/credits/actions.ts:34 already relies on the same pattern. Unset →
+ * appOrigin is null → buildEmail's link-less, fail-soft default. */
 export function productionNotifier(db: Db): NotifyFn {
   const apiKey = process.env.RESEND_API_KEY;
+  const appOrigin = process.env.NEXT_PUBLIC_APP_URL ?? null;
   if (!apiKey) {
     return async (event: OnboardingNotifyEvent): Promise<void> => {
       console.log(
@@ -167,5 +198,5 @@ export function productionNotifier(db: Db): NotifyFn {
       );
     };
   }
-  return buildOnboardingNotifier({ db, sendEmail: resendSendEmail(apiKey) });
+  return buildOnboardingNotifier({ db, sendEmail: resendSendEmail(apiKey), appOrigin });
 }
