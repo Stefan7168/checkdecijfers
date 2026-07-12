@@ -24,9 +24,16 @@ step" idea (this ADR's whole point) applies there too.
   (`Wat was {label} in {periodNl}?`). Whole body fail-open to `[]`, plus the respond.ts belt.
 - **Deliberately excluded:** the DIMENSION `outside_loaded_slice` (axis `measure`, whose
   `nearestAlternative` is a dimension coordinate, never a period) and `not_published` (no boundary
-  is computed — the genuinely hard [#134](../open-questions.md)(b) half; stays prose-only). v2
-  enhancements (range/trend retry chip, regional chip) tracked as [#137](../open-questions.md)/
-  [#138](../open-questions.md).
+  is computed — the genuinely hard [#134](../open-questions.md)(b) half; stays prose-only). Regional
+  chip still deferred ([#138](../open-questions.md)).
+- **[#137](../open-questions.md) range chip (session 43, PR #40):** for a range-ask
+  `outside_loaded_slice` refusal, the chip prefers the clamped WORKING sub-range `[floor, originalTo]`
+  as a trend question ("Hoe ontwikkelde {label} zich van {floor} tot en met {to}?" — the owner's
+  "probeer 2010–2024" shape), falling back to the single-period floor chip when that window isn't
+  fully servable. The `echoServability` dry-run is the SOLE validity gate — no manual grain/order
+  compare (runQuery refuses a backwards/mixed-grain/above-ceiling/gappy range, never throws), only
+  the degenerate `floor===to` is guarded; the range attempt is throw-isolated so it can never cost
+  the single-period fallback. Still outside_loaded_slice-only, canonical + region-less.
 - **Envelope**: `RefusalResponse.suggestions: string[]` (mirror of the answer field), set only by
   `respondToIntent`'s query-refusal site via `toRefusalResponse`'s new optional input (`?? []`
   everywhere else). R8-safe: reconstruct.ts never reads `suggestions` — the refusal `text` is the
