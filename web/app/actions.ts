@@ -20,8 +20,22 @@ import { buildConversationContext, validateConversationContext } from '../backen
 import type { ConversationContext } from '../backend/answer/context/index.ts';
 import { AnthropicLlmClient } from '../backend/answer/llm/client.ts';
 import type { PendingClarification } from '../backend/answer/respond/types.ts';
-import { chargeAndRun } from '../backend/billing/index.ts';
-import type { GatedResponse } from '../backend/billing/index.ts';
+import {
+  chargeAndRun,
+  compensate,
+  getActionClassPrice,
+  getBalance,
+  reserveWebSearchDebit,
+} from '../backend/billing/index.ts';
+import type { GatedResponse, LedgerEntry } from '../backend/billing/index.ts';
+// WP129+130 (#130, ADR 032): the Anthropic web-search client is constructed
+// HERE (server-only) and injected into the audited pipeline — the barrel is
+// the intended construction seam (its own comment says so). SourceSelection is
+// the validated structural payload; SOURCES gives the known registry keys the
+// untrusted client payload is filtered against.
+import { AnthropicWebSearchClient } from '../backend/websearch/index.ts';
+import type { SourceSelection } from '../backend/websearch/index.ts';
+import { SOURCES } from '../backend/sources/registry.ts';
 import { buildOnboardingFinder } from '../backend/ingestion/onboarding-finder.ts';
 import {
   onboardingPrice,
@@ -66,6 +80,27 @@ function guardLength(text: string): void {
   if (text.length > MAX_INPUT_LENGTH) {
     throw new Error(`input rejected: ${text.length} chars exceeds ${MAX_INPUT_LENGTH}`);
   }
+}
+
+// WP129+130 (#129, ADR 032): the source-tags selection is UNTRUSTED client
+// input (a Server Action argument — attacker-controlled, like every other one
+// here). It is coerced to a SourceSelection BEFORE the billing gate and NEVER
+// throws: any malformed shape degrades to `undefined` (the legacy no-selection
+// behavior, byte-identical to a pre-WP submit). `sources` is filtered to KNOWN
+// registry keys (Object.keys(SOURCES)) — an unknown key is dropped, never
+// trusted; `web` is coerced to a strict boolean. When WEBSEARCH_ENABLED !== '1'
+// the whole selection is FORCED to undefined (the server belt behind the
+// dormant UI): a crafted payload cannot reach the web path while the feature is
+// dormant, so `selection?.web === true` anywhere below already implies the flag
+// is on.
+function validateSelection(raw: unknown): SourceSelection | undefined {
+  if (process.env.WEBSEARCH_ENABLED !== '1') return undefined;
+  if (raw === null || typeof raw !== 'object') return undefined;
+  const obj = raw as { sources?: unknown; web?: unknown };
+  if (!Array.isArray(obj.sources)) return undefined;
+  const known = new Set(Object.keys(SOURCES));
+  const sources = obj.sources.filter((s): s is string => typeof s === 'string' && known.has(s));
+  return { sources, web: obj.web === true };
 }
 
 // #112 (the go-live money bug): a fresh chat turn must KNOW what has already
@@ -130,6 +165,7 @@ export async function askQuestion(
   question: string,
   requestId: string,
   rawContext?: unknown,
+  rawSelection?: unknown,
 ): Promise<AskOutcome> {
   guardLength(question);
   const userId = await currentUserId();
@@ -137,9 +173,33 @@ export async function askQuestion(
     return { gated: { kind: 'unauthenticated' }, context: null };
   }
   const conversationContext = await validateConversationContext(getDb(), rawContext ?? null);
+  // WP129+130 (#129, ADR 032): validate the untrusted selection payload BEFORE
+  // the gate (never throws; forced undefined while the flag is off).
+  const selection = validateSelection(rawSelection);
+  // ⟨W4⟩ Upfront affordability (UX only, race-tolerated): a web-opted turn
+  // transiently needs simple + web_addon = 30 in BOTH modes — the untouched
+  // gate holds the base 20 before the pipeline, and the web reserve of 10
+  // happens INSIDE it, before the refund posts, so 30 must be AVAILABLE even
+  // though web-only NETS 10. (`selection?.web === true` implies the flag is on
+  // — validateSelection forces undefined otherwise.) The race with the gate is
+  // tolerated by the reserve closure's honest skip (insufficient_balance
+  // section, no charge).
+  const webAddonPrice = selection?.web === true ? await getActionClassPrice(getDb(), 'web_addon') : 0;
+  if (selection?.web === true) {
+    const simplePrice = await getActionClassPrice(getDb(), 'simple');
+    const required = simplePrice + webAddonPrice;
+    const balance = await getBalance(getDb(), userId);
+    if (balance < required) {
+      return { gated: { kind: 'insufficient_credits', balance, required }, context: null };
+    }
+  }
   // #112: loaded BEFORE the billing gate — the load is read-only and must
   // never run (or fail) inside the charged section.
   const extraVocabulary = await onboardedVocabulary();
+  // WP129+130 (#130, ADR 032): the taken web debit lives in this holder so the
+  // settlement (and the catch) below can keep-or-refund it. The reserve()
+  // closure sets it INSIDE the pipeline (debit-before-spend).
+  const webDebitHolder: { entry: LedgerEntry | null } = { entry: null };
   try {
     const gated = await chargeAndRun(getDb(), userId, requestId, () =>
       answerQuestionAudited(getDb(), question, {
@@ -156,6 +216,37 @@ export async function askQuestion(
         // parse could NOT match. [] while the switch is off or nothing is
         // onboarded → prompt bytes identical to the calibrated Phase-0 one.
         extraCanonicalMeasures: extraVocabulary,
+        // WP129+130 (#129, ADR 032): the validated selection rides the audited
+        // options as a STRUCTURAL input (never prompt text) — respond* uses it
+        // for the web-only / no-sources pre-parse belt, and attach uses it to
+        // decide whether a web attempt is owed. Absent ⇒ byte-identical.
+        ...(selection !== undefined ? { sourceSelection: selection } : {}),
+        // WP129+130 (#130, ADR 032): the web client + reserve() closure are
+        // constructed ONLY when WEBSEARCH_ENABLED='1' AND the Internet chip is
+        // selected — the ONBOARDING_ENABLED dormancy pattern: until the RUNBOOK
+        // go-live sets the flag + applies migration 018, no path constructs the
+        // Anthropic web client or touches the websearch_cost ledger row, so
+        // production behaves byte-identically pre-WP129+130. The closure debits
+        // INSIDE the pipeline (debit-before-spend) and stashes the taken entry
+        // in webDebitHolder for the settlement below.
+        ...(process.env.WEBSEARCH_ENABLED === '1' && selection?.web === true
+          ? {
+              webClient: new AnthropicWebSearchClient(),
+              webBilling: {
+                reserve: async (): Promise<boolean> => {
+                  const reserved = await reserveWebSearchDebit(getDb(), userId, requestId, webAddonPrice);
+                  if (reserved.kind === 'debited') {
+                    webDebitHolder.entry = reserved.entry;
+                    return true;
+                  }
+                  // insufficient (a race the upfront check tolerates) or
+                  // duplicate (unreachable — the base gate short-circuits a
+                  // duplicate requestId before run() executes): honest skip.
+                  return false;
+                },
+              },
+            }
+          : {}),
         // WP16 sub-part 2 (ADR 026): the table finder is injected ONLY here —
         // an unloaded topic the finder confidently maps to a CBS table becomes
         // an 'onboarding_pending' acknowledgment instead of the B15
@@ -189,12 +280,21 @@ export async function askQuestion(
       requestId,
       question,
     });
-    return { gated: finalGated, context: await outcomeContext(finalGated) };
+    // ⟨W3⟩ Web add-on settlement on the FINAL gated object (post-onboarding) —
+    // keep the +10 iff a cited web section shipped on an audited 'ok' turn,
+    // else refund the taken debit (a no-op when none was taken).
+    const settled = await settleWebAddon(finalGated, webDebitHolder.entry, webAddonPrice, userId);
+    return { gated: settled, context: await outcomeContext(settled) };
   } catch (error) {
+    // WP129+130 (ADR 032): a web debit taken before the pipeline threw is
+    // compensated here (the base question debit is already compensated inside
+    // chargeAndRun before this rethrow reaches us — ADR 020). Then rethrow.
+    if (webDebitHolder.entry !== null) {
+      await compensate(getDb(), userId, webDebitHolder.entry.id, webAddonPrice, null);
+    }
     // Vercel function logs are the owner's only visibility into production
     // infra failures (WP12 review); the client still receives Next's generic
-    // masked error, never these details. chargeAndRun has already
-    // compensated the debit before this rethrow reaches here (ADR 020).
+    // masked error, never these details.
     console.error('askQuestion failed:', error);
     throw error;
   }
@@ -273,10 +373,47 @@ async function maybeTriggerOnboarding(
   }
 }
 
+// ⟨W3⟩/⟨W1⟩ (WP129+130, ADR 032): the web add-on settlement. Runs AFTER the
+// pipeline (and, for askQuestion, AFTER maybeTriggerOnboarding) on the FINAL
+// gated object. The +10 add-on is KEPT iff a web section with >= 1 cited
+// finding was actually DELIVERED on an AUDITED 'ok' turn:
+//   finalGated.kind === 'ok'
+//   && finalGated.response.webSection?.status === 'ok'
+//   && finalGated.auditId !== null   (the ⟨W1⟩ belt — a refusal shipped
+//                                     UNRECORDED by persistOrFailClosed's
+//                                     fail-closed branch has auditId null and
+//                                     its webSection stripped; paid, unverified
+//                                     web content must never be kept unrecorded)
+// then netCost gains the add-on price. EVERY other shape with a TAKEN web debit
+// ⇒ compensate() the debit — the money invariant: netCost mirrors the
+// compensation actually applied, never drifting from the append-only ledger.
+// (With the ⟨W3⟩ skip-list an onboarding turn can no longer carry a web debit,
+// but the rule is stated generally so it stays correct if that ever changes.)
+// A null holder (no web debit taken) ⇒ nothing to settle.
+async function settleWebAddon(
+  finalGated: GatedResponse,
+  webDebit: LedgerEntry | null,
+  price: number,
+  userId: string,
+): Promise<GatedResponse> {
+  if (webDebit === null) return finalGated;
+  const keep =
+    finalGated.kind === 'ok' &&
+    finalGated.response.webSection?.status === 'ok' &&
+    finalGated.auditId !== null;
+  if (keep) {
+    return { ...finalGated, netCost: finalGated.netCost + price };
+  }
+  const auditId = finalGated.kind === 'ok' ? finalGated.auditId : null;
+  await compensate(getDb(), userId, webDebit.id, price, auditId);
+  return finalGated;
+}
+
 export async function replyToClarification(
   pending: PendingClarification,
   reply: string,
   requestId: string,
+  rawSelection?: unknown,
 ): Promise<AskOutcome> {
   guardLength(reply);
   const userId = await currentUserId();
@@ -293,8 +430,24 @@ export async function replyToClarification(
     ...pendingRest,
     ...(embeddedContext ? { conversationContext: embeddedContext } : {}),
   };
+  // WP129+130 (#129, ADR 032): same untrusted-selection validation + ⟨W4⟩
+  // upfront affordability (30 in both web modes) as askQuestion. A reply turn
+  // that resolves to an ANSWER or a data-shaped refusal owes the web attempt
+  // and charges the +10 (a clarification outcome here means still-ambiguous →
+  // refusal, so the round is over — attach's own kind-check handles the skip).
+  const selection = validateSelection(rawSelection);
+  const webAddonPrice = selection?.web === true ? await getActionClassPrice(getDb(), 'web_addon') : 0;
+  if (selection?.web === true) {
+    const simplePrice = await getActionClassPrice(getDb(), 'simple');
+    const required = simplePrice + webAddonPrice;
+    const balance = await getBalance(getDb(), userId);
+    if (balance < required) {
+      return { gated: { kind: 'insufficient_credits', balance, required }, context: null };
+    }
+  }
   // #112: same pre-gate load as askQuestion (read-only, fail-soft).
   const extraVocabulary = await onboardedVocabulary();
+  const webDebitHolder: { entry: LedgerEntry | null } = { entry: null };
   try {
     const gated = await chargeAndRun(getDb(), userId, requestId, () =>
       answerClarificationReplyAudited(getDb(), safePending, reply, {
@@ -310,10 +463,38 @@ export async function replyToClarification(
         // NO tableFinder here: a reply-turn onboarding trigger stays an
         // unmade decision.
         extraCanonicalMeasures: extraVocabulary,
+        // WP129+130 (#129/#130, ADR 032): the validated selection + web wiring,
+        // identical to askQuestion (the reply turn carries the same chips and
+        // charges the +10 if it answers/refuses with data). Absent ⇒ byte-
+        // identical to today.
+        ...(selection !== undefined ? { sourceSelection: selection } : {}),
+        ...(process.env.WEBSEARCH_ENABLED === '1' && selection?.web === true
+          ? {
+              webClient: new AnthropicWebSearchClient(),
+              webBilling: {
+                reserve: async (): Promise<boolean> => {
+                  const reserved = await reserveWebSearchDebit(getDb(), userId, requestId, webAddonPrice);
+                  if (reserved.kind === 'debited') {
+                    webDebitHolder.entry = reserved.entry;
+                    return true;
+                  }
+                  return false;
+                },
+              },
+            }
+          : {}),
       }),
     );
-    return { gated, context: await outcomeContext(gated) };
+    // ⟨W3⟩ Settlement — no maybeTriggerOnboarding on the reply path (no finder),
+    // so the gated object IS final; keep-or-refund the add-on the same way.
+    const settled = await settleWebAddon(gated, webDebitHolder.entry, webAddonPrice, userId);
+    return { gated: settled, context: await outcomeContext(settled) };
   } catch (error) {
+    // WP129+130 (ADR 032): compensate a taken web debit before rethrowing (the
+    // base debit is already compensated inside chargeAndRun — ADR 020).
+    if (webDebitHolder.entry !== null) {
+      await compensate(getDb(), userId, webDebitHolder.entry.id, webAddonPrice, null);
+    }
     console.error('replyToClarification failed:', error);
     throw error;
   }

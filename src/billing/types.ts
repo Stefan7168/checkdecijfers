@@ -9,7 +9,17 @@ import type { AuditedResponse } from '../answer/audit/index.ts';
 // 'onboarding_cost' added WP16 sub-part 2 (migration 012, ADR 026): the
 // 100-credit debit that funds an on-demand CBS table onboarding, alongside
 // 'question_cost' as a negative-delta, request_id-scoped reason.
-export type LedgerReason = 'signup_grant' | 'purchase' | 'question_cost' | 'compensation' | 'onboarding_cost';
+// 'websearch_cost' added WP129+130 (migration 018, ADR 032): the +10-credit
+// add-on for a web-search-augmented turn — a sibling negative-delta,
+// request_id-scoped reason, one per (user, request), reversible by a
+// compensation exactly like the other two debits.
+export type LedgerReason =
+  | 'signup_grant'
+  | 'purchase'
+  | 'question_cost'
+  | 'compensation'
+  | 'onboarding_cost'
+  | 'websearch_cost';
 
 /** Phase 1 note (docs/08-build-plan.md WP13, open-questions #4): every
  * current ANSWER is 'simple' -- no code path yet produces 'analysis'/'heavy'.
@@ -18,8 +28,14 @@ export type LedgerReason = 'signup_grant' | 'purchase' | 'question_cost' | 'comp
  * (open-questions #58): a doorvraag round is priced separately from a real
  * answer -- never free like an outright refusal -- but its price must never
  * exceed 'simple' (the ledger's CHECK constraint forbids a non-positive
- * compensation delta; see src/billing/gate.ts). */
-export type ActionClass = 'simple' | 'analysis' | 'heavy' | 'clarification';
+ * compensation delta; see src/billing/gate.ts).
+ *
+ * 'web_addon' (WP129+130, migration 018, ADR 032): NOT an answer class — the
+ * price of the web-search add-on, read by web/app/actions.ts when the
+ * "Internet" chip is on and charged as a separate 'websearch_cost' debit. It
+ * is well below 'simple', so the clarification-price trigger (migration 008,
+ * which only relates 'clarification' to 'simple') is unaffected. */
+export type ActionClass = 'simple' | 'analysis' | 'heavy' | 'clarification' | 'web_addon';
 
 export interface ActionClassPrice {
   actionClass: ActionClass;

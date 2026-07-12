@@ -6,10 +6,12 @@ import { describe, expect, it } from 'vitest';
 import {
   compensate,
   debitQuestion,
+  debitWebSearch,
   getActionClassPrice,
   getBalance,
   reserveDebit,
   reserveOnboardingDebit,
+  reserveWebSearchDebit,
 } from '../../src/billing/ledger.ts';
 import { applyPricingDefaults } from '../../src/billing/pricing-apply.ts';
 import type { Db } from '../../src/db/types.ts';
@@ -145,9 +147,10 @@ describe('credit_transactions_validate_compensation (migration 008, adversarial-
           [userId, grantId],
         ),
         // Migration 013 widened the allowlist to {question_cost, onboarding_cost}
-        // (WP16 sub-part 2) — a signup_grant is still correctly rejected, but the
-        // error text now names both permitted reasons.
-      ).rejects.toThrow(/must reverse a question_cost or onboarding_cost row/);
+        // (WP16 sub-part 2), and migration 018 widened it again to add
+        // 'websearch_cost' (WP129+130) — a signup_grant is still correctly
+        // rejected, but the error text now names all three permitted reasons.
+      ).rejects.toThrow(/must reverse a question_cost, onboarding_cost or websearch_cost row/);
     });
   });
 
@@ -525,6 +528,175 @@ describe('reserveOnboardingDebit — the onboarding sibling of reserveDebit (WP1
   });
 });
 
+describe('debitWebSearch / reserveWebSearchDebit — the web add-on sibling (WP129+130, migration 018)', () => {
+  it('debitWebSearch is idempotent per (user, request): a repeated requestId returns null, never a second charge', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      const requestId = randomUUID();
+      const first = await debitWebSearch(db, userId, requestId, 10);
+      const second = await debitWebSearch(db, userId, requestId, 10);
+      expect(first).not.toBeNull();
+      expect(second).toBeNull();
+      expect(await getBalance(db, userId)).toBe(-10);
+    });
+  });
+
+  it('reserveWebSearchDebit debits, reports insufficient, and dedups a repeated requestId', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      await db.query('update signup_grant_config set credits = 30');
+      await db.query('select public.grant_signup_credits($1)', [userId]); // +30
+      const requestId = randomUUID();
+      const first = await reserveWebSearchDebit(db, userId, requestId, 10);
+      expect(first.kind).toBe('debited');
+      expect(await getBalance(db, userId)).toBe(20);
+      // Repeated requestId → duplicate, never a second debit.
+      const second = await reserveWebSearchDebit(db, userId, requestId, 10);
+      expect(second).toEqual({ kind: 'duplicate' });
+      expect(await getBalance(db, userId)).toBe(20);
+      // Spend down to below 10, then a fresh requestId is insufficient.
+      await reserveDebit(db, userId, randomUUID(), 15); // balance -> 5
+      const third = await reserveWebSearchDebit(db, userId, randomUUID(), 10);
+      expect(third).toEqual({ kind: 'insufficient', balance: 5 });
+    });
+  });
+
+  it('a question_cost and a websearch_cost debit for the SAME (user, requestId) coexist — different reasons, not a conflict', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      await db.query('update signup_grant_config set credits = 100');
+      await db.query('select public.grant_signup_credits($1)', [userId]); // +100
+      const requestId = randomUUID();
+      const questionDebit = await reserveDebit(db, userId, requestId, 20);
+      const webDebit = await reserveWebSearchDebit(db, userId, requestId, 10);
+      expect(questionDebit.kind).toBe('debited');
+      expect(webDebit.kind).toBe('debited');
+      expect(await getBalance(db, userId)).toBe(70); // 100 - 20 - 10
+    });
+  });
+
+  it('a compensation against a websearch_cost debit inserts (trigger widened) and is idempotent', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      const debit = await debitWebSearch(db, userId, randomUUID(), 10);
+      const first = await compensate(db, userId, debit!.id, 10, null);
+      const second = await compensate(db, userId, debit!.id, 10, null);
+      expect(first).not.toBeNull();
+      expect(second).toBeNull(); // one-compensation-per-debit
+      expect(await getBalance(db, userId)).toBe(0);
+    });
+  });
+
+  // ADR 032's worked-out per-mode ledger end-states (work item 6, a–g) —
+  // exercised at the LEDGER/GATE primitive level (gate.ts + actions.ts settle
+  // through exactly these calls; both are byte-untouched / executor B's slice,
+  // so the settlement wiring itself is pinned by web/app/actions tests). The
+  // BASE 20 debit and its refund are the untouched gate's; the +10 web debit
+  // and its refund are the new siblings.
+  describe('pinned ledger end-states (ADR 032 work item 6)', () => {
+    async function fundedUser(db: Db, credits: number): Promise<string> {
+      const userId = randomUUID();
+      await db.query('update signup_grant_config set credits = $1', [credits]);
+      await db.query('select public.grant_signup_credits($1)', [userId]);
+      return userId;
+    }
+
+    it('(a) CBS answer + web ok: -20 -10 = net -30', async () => {
+      await withDb(async (db) => {
+        const userId = await fundedUser(db, 100);
+        const rid = randomUUID();
+        await reserveDebit(db, userId, rid, 20); // answer: kept
+        await reserveWebSearchDebit(db, userId, rid, 10); // web ok: kept
+        expect(await getBalance(db, userId)).toBe(70);
+      });
+    });
+
+    it('(b) CBS answer + web failed: -20 -10 +10 = net -20', async () => {
+      await withDb(async (db) => {
+        const userId = await fundedUser(db, 100);
+        const rid = randomUUID();
+        await reserveDebit(db, userId, rid, 20);
+        const web = await reserveWebSearchDebit(db, userId, rid, 10);
+        // Failed section ⇒ compensate the web debit (settlement rule).
+        await compensate(db, userId, (web as { entry: { id: number } }).entry.id, 10, null);
+        expect(await getBalance(db, userId)).toBe(80); // 100 -20 -10 +10
+      });
+    });
+
+    it('(c) non-skip-list refusal (e.g. forecast) + web ok: -20 +20 -10 = net -10', async () => {
+      await withDb(async (db) => {
+        const userId = await fundedUser(db, 100);
+        const rid = randomUUID();
+        const q = await reserveDebit(db, userId, rid, 20);
+        await compensate(db, userId, (q as { entry: { id: number } }).entry.id, 20, null); // refusal: full refund
+        await reserveWebSearchDebit(db, userId, rid, 10); // web ok kept
+        expect(await getBalance(db, userId)).toBe(90); // 100 -20 +20 -10
+      });
+    });
+
+    it('(d) clarification + web selected: -20 +10 (refund to clarify) and NO web rows', async () => {
+      await withDb(async (db) => {
+        const userId = await fundedUser(db, 100);
+        const rid = randomUUID();
+        const q = await reserveDebit(db, userId, rid, 20);
+        // Clarification ⇒ refund the difference down to clarify (20-10). The web
+        // call is SKIPPED on clarification, so the reserve NEVER fires.
+        await compensate(db, userId, (q as { entry: { id: number } }).entry.id, 10, null);
+        expect(await getBalance(db, userId)).toBe(90); // 100 -20 +10
+        const { rows } = await db.query(
+          "select count(*) c from credit_transactions where user_id = $1 and reason = 'websearch_cost'",
+          [userId],
+        );
+        expect(Number(rows[0]!.c)).toBe(0);
+      });
+    });
+
+    it('(e) web_only refusal + web ok: -20 +20 -10 = net -10', async () => {
+      await withDb(async (db) => {
+        const userId = await fundedUser(db, 100);
+        const rid = randomUUID();
+        const q = await reserveDebit(db, userId, rid, 20);
+        await compensate(db, userId, (q as { entry: { id: number } }).entry.id, 20, null); // refusal: full refund
+        await reserveWebSearchDebit(db, userId, rid, 10); // web ok kept
+        expect(await getBalance(db, userId)).toBe(90);
+      });
+    });
+
+    it('(f) no_sources refusal: -20 +20 = net 0, NO web rows', async () => {
+      await withDb(async (db) => {
+        const userId = await fundedUser(db, 100);
+        const rid = randomUUID();
+        const q = await reserveDebit(db, userId, rid, 20);
+        await compensate(db, userId, (q as { entry: { id: number } }).entry.id, 20, null);
+        expect(await getBalance(db, userId)).toBe(100);
+        const { rows } = await db.query(
+          "select count(*) c from credit_transactions where user_id = $1 and reason = 'websearch_cost'",
+          [userId],
+        );
+        expect(Number(rows[0]!.c)).toBe(0);
+      });
+    });
+
+    it('(g) insufficient at reserve (race): -20 only, web skipped, NO websearch_cost row', async () => {
+      await withDb(async (db) => {
+        // Enough for the question (20) but not the web (10) at reserve time —
+        // the upfront ≥30 check passed, then balance dropped (race).
+        const userId = await fundedUser(db, 25);
+        const rid = randomUUID();
+        await reserveDebit(db, userId, rid, 20); // balance -> 5
+        const web = await reserveWebSearchDebit(db, userId, rid, 10);
+        expect(web).toEqual({ kind: 'insufficient', balance: 5 });
+        expect(await getBalance(db, userId)).toBe(5); // only -20 landed
+        const { rows } = await db.query(
+          "select count(*) c from credit_transactions where user_id = $1 and reason = 'websearch_cost'",
+          [userId],
+        );
+        expect(Number(rows[0]!.c)).toBe(0);
+      });
+    });
+  });
+});
+
 describe('getActionClassPrice', () => {
   it('reads the configured price once pricing-apply has run', async () => {
     await withDb(async (db) => {
@@ -533,6 +705,7 @@ describe('getActionClassPrice', () => {
       expect(await getActionClassPrice(db, 'analysis')).toBe(60);
       expect(await getActionClassPrice(db, 'heavy')).toBe(100);
       expect(await getActionClassPrice(db, 'clarification')).toBe(10);
+      expect(await getActionClassPrice(db, 'web_addon')).toBe(10); // WP129+130
     });
   });
 

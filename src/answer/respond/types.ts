@@ -18,6 +18,11 @@ import type { FreshnessInfo, QueryRefusal, ValidatedResult } from '../../query/i
 import type { ComposedAnswer } from '../compose/index.ts';
 import type { ConversationContext } from '../context/types.ts';
 import type { ClarifyAxis, ParseOutcome } from '../intent/types.ts';
+// WP129+130 (ADR 032): the source-selection state and the unverified-web
+// section ride the envelope as additive structural fields. Imported from the
+// PURE LEAF (never the module barrel) so the Anthropic SDK never enters this
+// widely-consumed types graph.
+import type { SourceSelection, WebSection } from '../../websearch/types.ts';
 
 export const RESPONSE_SCHEMA_VERSION = 1 as const;
 
@@ -81,6 +86,16 @@ export type RefusalReason =
    * fetch or cost a second debit. A plain acknowledgment; no `onboarding`
    * field (the web action never triggers on this reason). */
   | 'onboarding_already_pending'
+  /** WP129+130 (#129, ADR 032): ALL sources deselected — a deterministic
+   * pre-parse refusal (server belt behind the client's disabled send). No LLM,
+   * no web attempt (in the ⟨W3⟩ skip-list). Rides the normal gate ⇒ full
+   * refund ⇒ net 0. */
+  | 'no_sources'
+  /** WP129+130 (#129/#130, ADR 032): CBS deselected but the "Internet" chip
+   * kept — the web-only mode. A deterministic pre-parse refusal (no verified
+   * CBS answer) with the unverified-web section rendered below it; NOT in the
+   * skip-list (this reason is exactly where the web section belongs). */
+  | 'web_only'
   /** Loud internal problems (data gap, failed derivation, inconsistency,
    * invalid intent, unparseable LLM output) — an honest "cannot answer this
    * reliably right now", never a partial or guessed answer. */
@@ -144,8 +159,23 @@ interface ResponseBase {
   /** The original user question, verbatim (audit; R8). */
   question: string;
   /** The full user-facing Dutch message, assembled deterministically from the
-   * structured fields below — the single string a chat UI renders. */
+   * structured fields below — the single string a chat UI renders. NEVER
+   * contains any web-derived text (WP129+130: `webSection` is the only carrier
+   * of unverified web content, kept strictly separate). */
   text: string;
+  /** WP129+130 (#129, ADR 032): the source-selection state this turn ran
+   * under — an additive STRUCTURAL field (like WP16 `onboarding`), set ONLY by
+   * attachWebAugmentation (src/websearch/attach.ts). Rides the audit envelope
+   * so R8 reconstructs what was searched. Absent on every pre-WP row and on
+   * every turn with no selection ⇒ readers use `?? null` (A1). */
+  sourceSelection?: SourceSelection | null;
+  /** WP129+130 (#130, ADR 032): the unverified-web augmentation section, stored
+   * VERBATIM and replayed on reconstruction — never re-derived (the web is
+   * non-deterministic). Additive; set ONLY by attachWebAugmentation. Absent on
+   * pre-WP rows and whenever no web attempt was owed ⇒ `?? null` (A1). Its text
+   * NEVER enters `text`, any validator input, attribution, chart data, or the
+   * benchmark's fabrication scoring — the separation IS the honesty model. */
+  webSection?: WebSection | null;
 }
 
 export interface AnswerResponse extends ResponseBase {

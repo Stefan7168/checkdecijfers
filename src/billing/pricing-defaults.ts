@@ -26,6 +26,11 @@ export const ACTION_CLASS_PRICES: ActionClassPrice[] = [
   { actionClass: 'simple', credits: 20 },
   { actionClass: 'analysis', credits: 60 },
   { actionClass: 'heavy', credits: 100 },
+  // WP129+130 (ADR 032 decision 4): the +10-credit add-on charged when the
+  // "Internet" source chip is on. A SEPARATE 'websearch_cost' ledger debit
+  // (migration 018), not part of any answer class — priced here so it stays a
+  // one-line code diff like every other price. See docs/09-pricing.md.
+  { actionClass: 'web_addon', credits: 10 },
 ];
 
 // Owner decision (2026-07-04, open-questions #4): launch packs, credits

@@ -55,7 +55,11 @@ describe('migration 013 — compensation may reverse an onboarding_cost debit', 
            values ($1, 5, 'compensation', $2, 'bad target')`,
           [userId, Number(rows[0]!.id)],
         ),
-      ).rejects.toThrow(/must reverse a question_cost or onboarding_cost row/);
+        // The guard function is later replaced by migration 018 (WP129+130),
+        // which widens the allowlist to add 'websearch_cost' — all migrations
+        // run in these hermetic tests, so the message names all three permitted
+        // reasons. A signup_grant is still correctly rejected either way.
+      ).rejects.toThrow(/must reverse a question_cost, onboarding_cost or websearch_cost row/);
     });
   });
 });

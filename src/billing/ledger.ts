@@ -160,6 +160,63 @@ export async function reserveOnboardingDebit(
   });
 }
 
+/** Idempotent web-search add-on debit: a repeated (userId, requestId) is a
+ * no-op (returns null), mirroring debitOnboarding's contract for the new
+ * 'websearch_cost' reason (migration 018, WP129+130 / ADR 032). Kept as its
+ * own function rather than parameterizing debitQuestion's reason for the same
+ * reason debitOnboarding is separate: debitQuestion is the hot path, untouched
+ * by this design. Reserved lazily by web/app/actions.ts right before the web
+ * API call (debit-before-spend); refunded via compensate() UNCHANGED (keyed on
+ * this debit's own id, so the base question refund and the web add-on refund
+ * coexist for one turn — each reverses a distinct debit row). */
+export async function debitWebSearch(
+  db: Db,
+  userId: string,
+  requestId: string,
+  credits: number,
+): Promise<LedgerEntry | null> {
+  const { rows } = await db.query(
+    `insert into credit_transactions (user_id, delta, reason, request_id, note)
+     values ($1, $2, 'websearch_cost', $3, 'web search add-on debit')
+     on conflict (user_id, request_id) where reason = 'websearch_cost' do nothing
+     returning id`,
+    [userId, -credits, requestId],
+  );
+  const row = rows[0];
+  return row === undefined ? null : { id: Number(row.id) };
+}
+
+export type ReserveWebSearchDebitResult =
+  | { kind: 'debited'; entry: LedgerEntry }
+  | { kind: 'insufficient'; balance: number }
+  | { kind: 'duplicate' };
+
+/** The web-search sibling of reserveDebit (WP129+130 / ADR 032): same per-user
+ * advisory-lock check-and-debit pattern, applied to the 10-credit
+ * 'websearch_cost' reason instead of 'question_cost'. web/app/actions.ts's web
+ * billing closure calls this INSIDE the pipeline (after the base gate already
+ * held the 20-credit question debit), so a web-opted turn transiently needs a
+ * balance of 30 in both modes — see ADR 032's worked-out pricing table. Kept a
+ * separate function rather than a parameterized reserveDebit for the same
+ * reason debitWebSearch is separate from debitQuestion above — reserveDebit is
+ * the hot path, untouched by this design. */
+export async function reserveWebSearchDebit(
+  db: Db,
+  userId: string,
+  requestId: string,
+  required: number,
+): Promise<ReserveWebSearchDebitResult> {
+  return db.withTransaction(async (tx) => {
+    await tx.query('select pg_advisory_xact_lock(hashtext($1))', [userId]);
+    const balance = await getBalance(tx, userId);
+    if (balance < required) {
+      return { kind: 'insufficient', balance };
+    }
+    const entry = await debitWebSearch(tx, userId, requestId, required);
+    return entry === null ? { kind: 'duplicate' } : { kind: 'debited', entry };
+  });
+}
+
 /** Idempotent compensation: a repeated call for the same debitId is a no-op —
  * a structural backstop (gate.ts's own request_id dedup on the debit is the
  * primary defense against re-entry; this protects against the gate itself

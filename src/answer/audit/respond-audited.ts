@@ -21,6 +21,12 @@ import {
 } from '../respond/respond.ts';
 import type { ComposedResponse, PendingClarification, RefusalResponse } from '../respond/types.ts';
 import type { ConversationContext } from '../context/types.ts';
+// WP129+130 (ADR 032): the web-attach seam runs between respond and
+// persistOrFailClosed so the stored row carries the section (stored-before-
+// shown, R8). Imported DIRECTLY (attach.ts type-imports client.ts) — no
+// Anthropic SDK enters this graph; actions.ts constructs the real client.
+import { attachWebAugmentation, type WebBilling } from '../../websearch/attach.ts';
+import type { WebSearchClient } from '../../websearch/client.ts';
 import type { AuditSourceTag } from './types.ts';
 import { LlmCallTracker } from './track.ts';
 import { buildAuditRow, insertAuditRecord, type AuditContext } from './write.ts';
@@ -38,6 +44,16 @@ export interface AuditedRespondOptions extends RespondOptions {
   requestId?: string | null;
   // conversationContext (WP15, ADR 021) is inherited from RespondOptions and
   // recorded on the audit row below — an input capture, like replyText.
+  // sourceSelection (WP129+130, ADR 032) is likewise inherited from
+  // RespondOptions and flows through respond*, then to attachWebAugmentation.
+  /** WP129+130 (#130, ADR 032): the web-search client + the reserve() closure,
+   * wired ONLY by web/app/actions.ts when the flag is on AND the Internet chip
+   * is selected. Absent everywhere else (benchmark, tests, CLI) → attach
+   * records `not_configured` if a turn OWES a web attempt, otherwise a null
+   * section (⟨W6⟩). Kept as an injected pair so this module never imports
+   * billing/db and the benchmark constructs zero web machinery. */
+  webClient?: WebSearchClient;
+  webBilling?: WebBilling;
 }
 
 export interface AuditedResponse {
@@ -97,7 +113,17 @@ async function persistOrFailClosed(
   } catch (error) {
     const note = `audit write failed: ${errorMessage(error)}`;
     if (response.kind === 'refusal') {
-      return { response: appendInternalNote(response, note), auditId: null };
+      // ⟨W1⟩ (WP129+130, ADR 032): this branch ships the refusal UNRECORDED
+      // (auditId null, no retry — its ADR-016 rationale "refusals carry no data
+      // values" predates this WP). A refusal can now carry a billed, unverified
+      // web section; shown-and-kept without a stored row would break R8 and
+      // leave paid web content unaudited. Strip the section to null (the
+      // settlement step then refunds the add-on automatically). sourceSelection
+      // may stay — it carries no fetched content.
+      const annotated = appendInternalNote(response, note);
+      const stripped =
+        (annotated.webSection ?? null) !== null ? { ...annotated, webSection: null } : annotated;
+      return { response: stripped, auditId: null };
     }
     const refusal = toInternalRefusal(wrap.question, note);
     try {
@@ -138,7 +164,16 @@ export async function answerQuestionAudited(
     intentClient: tracker.wrap(conversationContext === null ? 'intent' : 'followup', options.intentClient),
     answerClient: tracker.wrap('compose', options.answerClient),
   });
-  return persistOrFailClosed(db, response, wrap);
+  // WP129+130 (ADR 032): attach the web section BEFORE persisting, so the
+  // stored row carries it verbatim (R8) and latencyMs honestly includes web
+  // time. Both keys are always set (A1). No selection/client/billing (the
+  // benchmark, tests, CLI) ⇒ both keys null, zero web machinery.
+  const augmented = await attachWebAugmentation(response, {
+    selection: options.sourceSelection,
+    client: options.webClient,
+    billing: options.webBilling,
+  });
+  return persistOrFailClosed(db, augmented, wrap);
 }
 
 export async function answerClarificationReplyAudited(
@@ -171,5 +206,14 @@ export async function answerClarificationReplyAudited(
     intentClient: tracker.wrap('clarify', options.intentClient),
     answerClient: tracker.wrap('compose', options.answerClient),
   });
-  return persistOrFailClosed(db, response, wrap);
+  // WP129+130 (ADR 032): same attach seam on the reply turn. A 'clarification'
+  // outcome here means the round is OVER (still-ambiguous → refusal), so a web
+  // attempt may legitimately be owed; attach's own kind-check handles the
+  // clarification-skip case.
+  const augmented = await attachWebAugmentation(response, {
+    selection: options.sourceSelection,
+    client: options.webClient,
+    billing: options.webBilling,
+  });
+  return persistOrFailClosed(db, augmented, wrap);
 }

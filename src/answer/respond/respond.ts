@@ -23,10 +23,12 @@ import { RawParseValidationError } from '../intent/types.ts';
 import type { IntentLlmClient } from '../intent/client.ts';
 import type { LlmClient } from '../llm/client.ts';
 import {
+  buildNoSourcesRefusal,
   buildOnboardingRefusal,
   buildParseRefusal,
   buildQueryRefusal,
   buildStillAmbiguousRefusal,
+  buildWebOnlyRefusal,
   statusSuffixNl,
   toClarificationResponse,
   toInternalRefusal,
@@ -34,9 +36,17 @@ import {
 } from './refusals.ts';
 import type { TableFinder } from '../intent/policy.ts';
 import type { OnboardedMeasure } from '../intent/prompt.ts';
+import { CBS_SOURCE_KEY } from '../../sources/registry.ts';
+import type { SourceSelection } from '../../websearch/types.ts';
 import { checkStaleness } from './staleness.ts';
 import { buildSuggestions } from './suggestions.ts';
-import type { AnswerResponse, ClarificationResponse, ComposedResponse, PendingClarification } from './types.ts';
+import type {
+  AnswerResponse,
+  ClarificationResponse,
+  ComposedResponse,
+  PendingClarification,
+  RefusalResponse,
+} from './types.ts';
 import { RESPONSE_SCHEMA_VERSION } from './types.ts';
 
 export interface RespondOptions {
@@ -71,6 +81,31 @@ export interface RespondOptions {
    * onboarding. Absent/empty everywhere else (benchmark, tests, CLI) →
    * byte-identical Phase-0 prompt (fixtures + benchmark unaffected). */
   extraCanonicalMeasures?: OnboardedMeasure[];
+  /** WP129+130 (#129/#130, ADR 032): the #129 source-tags selection, a
+   * STRUCTURAL input (never prompt text). Present only when the web action
+   * wires it (flag on). When CBS is not selected it drives the deterministic
+   * pre-parse refusal below (web_only / no_sources); otherwise it is inert to
+   * the parse and rides through to the audit envelope via attachWebAugmentation.
+   * Absent everywhere else (benchmark, tests, CLI) → byte-identical pre-WP path.
+   */
+  sourceSelection?: SourceSelection;
+}
+
+/** WP129+130 (#129/#130, ADR 032): the source-selection pre-parse belt. When
+ * CBS is not among the selected sources, no verified answer is possible: the
+ * web-only mode ('web_only', with the web section rendered below by
+ * attachWebAugmentation) if the Internet chip is on, else the empty-selection
+ * refusal ('no_sources'). Emitted BEFORE any parse/LLM (zero prompt bytes, zero
+ * cost). Absent selection (the benchmark/tests/CLI default) ⇒ null, byte-
+ * identical to the pre-WP path. */
+function sourceSelectionRefusal(
+  question: string,
+  selection: SourceSelection | undefined,
+): RefusalResponse | null {
+  if (selection === undefined) return null;
+  if (selection.sources.includes(CBS_SOURCE_KEY)) return null;
+  const built = selection.web ? buildWebOnlyRefusal() : buildNoSourcesRefusal();
+  return toRefusalResponse({ question, built, parse: null, queryRefusal: null });
 }
 
 /** Shared downstream half once we have an 'intent' ParseOutcome: query ->
@@ -246,6 +281,10 @@ export async function respondToQuestion(
   options: RespondOptions,
 ): Promise<ComposedResponse> {
   try {
+    // WP129+130 (#129/#130): the source-selection belt runs FIRST — a
+    // deselected-CBS turn refuses deterministically without any LLM call.
+    const preParse = sourceSelectionRefusal(question, options.sourceSelection);
+    if (preParse !== null) return preParse;
     const parseOptions: ParseQuestionOptions = {
       client: options.intentClient,
       referenceDate: options.referenceDate,
@@ -284,6 +323,11 @@ export async function respondToClarificationReply(
   options: RespondOptions,
 ): Promise<ComposedResponse> {
   try {
+    // WP129+130 (#129/#130): the same belt on the reply turn (the chips persist
+    // across turns); the refusal carries the ORIGINAL question, like every
+    // reply-turn refusal here.
+    const preParse = sourceSelectionRefusal(pending.question, options.sourceSelection);
+    if (preParse !== null) return preParse;
     const clarifyOptions: ClarifyReplyOptions = {
       client: options.intentClient,
       config: options.parserConfig,
