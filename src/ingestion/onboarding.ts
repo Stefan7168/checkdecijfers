@@ -424,7 +424,27 @@ async function processOneRow(
     return await unanswerableAndRefund(deps, row, summary, delivered.auditId);
   } catch (error) {
     // Step 8 — any throw: terminal fail + refund + notify. The row NEVER stays
-    // running because of an escaped exception.
+    // running because of an escaped exception (design §3.8) — EXCEPT a throw
+    // that lands AFTER the delivery already succeeded.
+    //
+    // #119 (extended 2026-07-13, adversarial-review finding): step 7
+    // (answerQuestionAudited) COMMITS the delivery audit row BEFORE
+    // finalizeDelivered (above) runs, so a throw from that finalize (or any
+    // later step) means the answer is delivered AND paid-for. Refunding it here
+    // would hand the user their answer AND their 100 credits back — the exact
+    // money leak the two OTHER re-entry points already guard against (this
+    // function's claim-time recovery check + runOnboardingJob's exhausted-
+    // attempt check). Re-check the same way and RECOVER instead of refunding.
+    // If recovery itself throws (the same transient DB error), the exception
+    // escapes and the row stays 'running' for the 20-minute stale reclaim to
+    // retry the top-of-try recovery — degrading to the existing crash-recovery
+    // path, never a wrong refund. A genuine failure (no delivery row on record)
+    // still terminally fails + refunds below, exactly as before.
+    const recovered = await findDeliveredAnswerAuditId(db, row.requestId);
+    if (recovered !== null) {
+      await recoverDelivered(deps, row, recovered);
+      return 'delivered';
+    }
     const summary = `Onverwachte fout bij het ophalen: ${
       error instanceof Error ? error.message : String(error)
     }`;

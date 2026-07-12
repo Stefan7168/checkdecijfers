@@ -549,6 +549,53 @@ describe('runOnboardingJob — a poisoned exhausted row never wedges the queue',
   });
 });
 
+describe('runOnboardingJob — a DELIVERED answer is never refunded even if finalize throws (adversarial-review 2026-07-13)', () => {
+  it('finalizeDelivered throws AFTER the delivery commit: the catch RECOVERS (no refund), never fails+refunds a delivered answer', async () => {
+    const h = await harness();
+    try {
+      const { userId, pendingId } = await queueRequest(h.db, 'hoeveel woningen in 2024', 'woningvoorraad');
+      expect(await getBalance(h.db, userId)).toBe(50); // 150 grant − 100 onboarding debit
+
+      // A db that makes finalizeDelivered's UPDATE throw the FIRST time (the
+      // step-7 finalize, right AFTER the delivery audit row already committed)
+      // and succeed the SECOND time (the step-8 catch's recovery finalize).
+      // Models a transient DB error on exactly that one statement. Without the
+      // fix, the catch would fall into failAndRefund and refund a delivered,
+      // paid-for answer (user keeps the answer AND the 100 credits).
+      let finalizeThrows = 1;
+      const poison = (target: Db): Db => ({
+        query: (text: string, params?: unknown[]) =>
+          /update pending_table_requests\s+set status = 'delivered'/i.test(text) && finalizeThrows-- > 0
+            ? Promise.reject(new Error('boom: transient finalize failure'))
+            : target.query(text, params),
+        withTransaction: (fn) => target.withTransaction((tx) => fn(poison(tx))),
+      });
+
+      const summary = await runOnboardingJob(h.deps({ db: poison(h.db) }));
+
+      // Recovered as DELIVERED — not failed, not refunded.
+      expect(summary.processed).toEqual({ id: pendingId, tableId: TABLE, outcome: 'delivered' });
+      const row = await getPendingRequest(h.db, pendingId);
+      expect(row!.status).toBe('delivered');
+      expect(row!.deliveryAuditAnswerId).not.toBeNull();
+
+      // The 100 STANDS: balance still 50, ZERO compensations (the bug posted one).
+      expect(await getBalance(h.db, userId)).toBe(50);
+      const comp = await h.db.query(
+        "select count(*)::int as n from credit_transactions where user_id = $1 and reason = 'compensation'",
+        [userId],
+      );
+      expect(Number(comp.rows[0]!.n)).toBe(0);
+
+      // Exactly one 'delivered' notify (recovery sends the same shape); no 'failed'.
+      expect(h.notified.filter((e) => e.outcome === 'delivered')).toHaveLength(1);
+      expect(h.notified.some((e) => e.outcome === 'failed')).toBe(false);
+    } finally {
+      await h.close();
+    }
+  });
+});
+
 // ---------------------------------------------------------------------------
 // WP27 stage C — the measure-fit gate (ADR 027 D2, brief § Stage C tests)
 // ---------------------------------------------------------------------------
