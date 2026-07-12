@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { getActivePacks, getBalance } from '../../backend/billing/index.ts';
 import { currentUserId } from '../../lib/current-user.ts';
 import { getDb } from '../../lib/db.ts';
+import { SiteHeader } from '../../components/site-header.tsx';
 import { BuyButton } from './buy-button.tsx';
 
 export default async function CreditsPage({
@@ -20,8 +21,15 @@ export default async function CreditsPage({
   const [balance, packs] = await Promise.all([getBalance(db, userId), getActivePacks(db)]);
   const { purchase } = await searchParams;
 
+  // WP135 (ADR 033 ⟨A5⟩): the shell rides the SAME WORKSPACE_ENABLED flag as the
+  // workspace. Flag off ⇒ NO header, byte-identical to today; flag on ⇒ the
+  // site header like every other authenticated page.
+  const showShell = process.env.WORKSPACE_ENABLED === '1';
+
   return (
-    <div className="mx-auto flex w-full max-w-md flex-col gap-4 p-4">
+    <>
+      {showShell ? <SiteHeader balance={balance} /> : null}
+      <div className="mx-auto flex w-full max-w-md flex-col gap-4 p-4">
       <h1 className="text-lg font-semibold">Credits — Check de Cijfers</h1>
       <p className="text-sm text-zinc-700">
         Je huidige saldo: <strong>{balance}</strong> credits.
@@ -39,7 +47,8 @@ export default async function CreditsPage({
             <BuyButton packId={pack.id} />
           </div>
         ))}
+        </div>
       </div>
-    </div>
+    </>
   );
 }

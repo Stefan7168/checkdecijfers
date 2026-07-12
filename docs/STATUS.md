@@ -9,21 +9,30 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
-**▶ NEXT SESSION STARTS HERE (2026-07-12, session 40 GO-LIVE FINAL — merge AND supervised go-live both completed owner-present): (1) WP129+130 IS
-FULLY LIVE AND VERIFIED. PR 33 merged `e410ea2` (owner in-chat approval), migration 018 + `pricing:apply` applied to prod, `WEBSEARCH_ENABLED=1` set,
-and the smoke tests PASSED both modes, ledger-verified: CBS+web answer with 4 cited findings (audit row 247, net 30) and web-only refusal+section (row
-248, reason `web_only`, net 10 — the ratified pricing consequence confirmed live); orphan query clean. ⚠ The go-live included a MEASURED correction
-(commit `6e23fb2`, ADR 032 § Go-live correction): the `web_search_20260209` filtering variant returns CITATION-LESS text blocks on sonnet-5 (first
-smoke test failed honestly: auto-refund worked exactly as designed) — production runs the basic `web_search_20250305` variant (`WEBSEARCH_TOOL_TYPE`,
-pinned against unmeasured upgrade-back), with per-path failure logging and the owner-requested busy-indicator copy ("…CBS-cijfers en het web…"). (2)
-#135 DESIGN ROUND DONE (session 41, 2026-07-12, owner present): ADR [033](decisions/033-chat-workspace-redesign.md) ACCEPTED — the owner interview
-locked all four open choices (2-year retention riding #14 — `chat_threads` stores NO text, titles derived read-time; resume = read AND continue with
-ADR-021 revalidation; WP24 shell ABSORBED into WP135 — top nav + logout + #99 footer minus privacy link; per-thread delete DEFERRED). Build shape:
-migration 019 (`chat_threads` + `audit_answers.thread_id`), dormant behind `WORKSPACE_ENABLED` (WP129 pattern), zero prompt bytes, message-envelope
-rendering pinned byte-identical, web section NEVER docks (ADR 032). NEXT: frozen executor brief + pre-build adversarial review, then build on a branch
-+ PR per #118(b) — NO merge without owner review; live DDL + flag flip = a later owner-supervised go-live step. WP135 buildable summary in
-[08-build-plan.md](08-build-plan.md). (3) Residuals unchanged: #132 route B ~2026-07-19 (plain-text PR refs, forks==0 T-0), #131 L1 lane, WP30c
-(#123), chips (format.ts NUL task_e718f60d, wrapup-hook task_6f27827b, STATUS-prune task_b5980ec1).**
+**▶ NEXT SESSION STARTS HERE (2026-07-12 LATE, session 41 FINAL — the last Fable session; owner present throughout).**
+
+- **⚠ MODEL CHANGE: Fable is GONE as of 2026-07-12 23:59.** The top tier is now Opus: design/briefs/synthesis/final review on Opus,
+  fan-out/mechanical work on cheaper tiers. The cost-tier rule itself is unchanged (roles, never model names).
+- **(1) WP135 chat workspace is BUILT and on `main`, DORMANT behind `WORKSPACE_ENABLED` (unset in prod — every route byte-identical to
+  pre-WP135).** Full pattern ran: ADR [033](decisions/033-chat-workspace-redesign.md) (owner interview locked: 2-year retention riding #14,
+  no-text `chat_threads`, resume with ADR-021 revalidation, WP24 shell absorbed, per-thread delete deferred) → frozen brief (pre-build review
+  62 agents → amendments A1–A7) → staged build (backend/web/gate: benchmark 14/14 + 6/6 + 0 fabricated PASS, 24+41 new tests) → post-build
+  review (22 agents → 2 confirmed blockers FIXED: websearch add-on missing from the replay credits-join; thread-switch race). Merged to main
+  on the owner's explicit in-chat instruction (#118(a), owner present). **NEXT OWNER STEP: the supervised go-live — RUNBOOK § "WP135 chat
+  workspace" (migration 019, the FK verification CI structurally cannot see, `WORKSPACE_ENABLED=1`, smoke tests, GDPR spot-check).**
+- **(2) CI gate repaired:** `tests/db`, `tests/sources`, `tests/websearch` (the WP129+130 pins) were never on the enumerated gate; now wired
+  in, plus `tests/threads`. Lesson recorded.
+- **(3) Boot-set restructure (owner-directed):** STATUS.md, open-questions.md and 08-build-plan.md now have verbatim archive twins
+  ([status-archive.md](status-archive.md), open-questions-archive.md, build-plan-archive.md); "Executor guardrails" (binding, sized for
+  mid-tier models) sit on top of [08-build-plan.md](08-build-plan.md). Wrap-up convention: PREPEND the session entry to the archive, keep
+  this file lean and hard-wrapped.
+- **(4) In flight at session end:** the dashboard creditsCharged fix (same websearch-omission as the replay one, pre-existing, in
+  `src/billing/history.ts`) — chip task_7de27dc7, branch `fix/dashboard-websearch-creditscharged`; if unmerged, it is the first small item
+  for a next session (own PR, owner review).
+- **(5) Residuals unchanged:** #132 route B ~2026-07-19 (plain-text PR refs in docs, forks==0 is the T-0 go/no-go), #134(a) refusal
+  period-suggestion chips, WP26 (supervised), #131 L1 lane, WP30c ([#123](open-questions.md)), chips format.ts NUL (task_e718f60d) +
+  wrapup-hook false-positive (task_6f27827b; it fires on kickoffs quoting "NEXT SESSION STARTS HERE" — ignore it on a session's FIRST
+  message). The full session-40 WP129+130 go-live record lives in [status-archive.md](status-archive.md) (its "Last updated" entry).**
 
 
 **▶ TOP PRIORITY STACK — owner decision, session 23 (2026-07-05); this ORDER overrides the "decision-gated" framing below.** The owner set an explicit

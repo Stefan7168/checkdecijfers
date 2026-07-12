@@ -60,8 +60,14 @@ afterEach(() => {
 /** Wraps a GatedResponse into the AskOutcome shape, with no context —
  * the common case for the pre-existing gated-branch tests below (none of
  * them exercise WP15 context propagation). */
-function outcome(gated: GatedResponse, context: ConversationContext | null = null): AskOutcome {
-  return { gated, context };
+function outcome(
+  gated: GatedResponse,
+  context: ConversationContext | null = null,
+  threadId: number | null = null,
+): AskOutcome {
+  // WP135: AskOutcome gained threadId; these pre-existing tests are not
+  // thread-aware (no onThreadId), so it defaults to null.
+  return { gated, context, threadId };
 }
 
 async function submit(text: string) {

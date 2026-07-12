@@ -6,6 +6,37 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+- **The CI gate enumerates test suites — and three whole test dirs were silently OFF it**
+  (session 41, 2026-07-12, found while wiring `tests/threads` in): `tests/db`, `tests/sources`
+  and `tests/websearch` (the WP129+130 pins!) existed and passed locally but were never in
+  `ci.yml`, so CI never enforced them. Fixed on the WP135 branch (4 suites added). **Lesson: a
+  new test directory is not on the gate until package.json AND ci.yml say so, in the same
+  commit — and an enumerated gate needs an occasional `ls tests/` vs `ci.yml` audit.**
+- **The dual adversarial-review pattern paid for itself twice in one WP** (session 41, WP135):
+  pre-build (62 agents) killed 7 real DESIGN flaws before any code existed — orphan-thread
+  creation ordered before the billing gate, a replay layer that physically could not reach the
+  web-side builders it needed (the `web/backend → ../src` symlink direction), migration DDL
+  promised in a comment but absent (invisible to PGlite CI: no `auth` schema there). Post-build
+  (22 agents) confirmed 2 more in the real diff — the replay credits-join omitted the SEPARATE
+  `websearch_cost` ledger row (a money-display bug on a number-honesty product), and a
+  thread-switch race landing stale answers in the wrong conversation. The same-session test
+  suite caught none of these, because it shares the design's blind spots. **Lesson: the review
+  rounds are not overhead; budget them into every core WP.**
+- **Boot-set economics: archive twins beat clever summarizing** (session 41, owner-directed):
+  STATUS.md (266 KB → 22 KB), then open-questions.md + 08-build-plan.md got the same treatment
+  — historical content moves VERBATIM (script-asserted byte-identical) to an archive file; the
+  lean file keeps current truth + a pointer; references get a grep sweep. Zero information
+  loss, no judgment calls about what "matters", roughly 100k tokens per fresh session saved.
+  **Lesson: never summarize plan-of-record content to save tokens — move it verbatim and point
+  at it.**
+- **Fable sunset (2026-07-12 23:59) — the last ~5% was spent on direction, not execution**
+  (owner call): the session switched to orchestration-only (all execution on Opus/cheap-tier
+  agents) and spent its remaining premium tokens on judging review survivors, freezing the
+  brief, and hardening the plan for less-capable successors (the executor guardrails now on
+  top of [08-build-plan.md](08-build-plan.md)). **Lesson: when a scarce tier is about to
+  vanish, its last tokens buy judgment and guardrails, never legwork — and tier language in
+  docs stays role-based ("top tier"), never model names.**
+
 ## Session 40 (2026-07-12) — the WP129+130 build: the most principle-touching WP, shipped dormant behind a flag
 
 - **The multi-lens pre-build review caught a blocker the session model's own first-hand reading missed — by triple convergence.** Three of seven lenses (r8-audit-bytes, principle-separation, scope-tests) independently confirmed the same defect: `persistOrFailClosed`'s refusal branch ships the ORIGINAL refusal unrecorded when the audit insert fails (existing, tested, CORRECT behavior — justified by "refusals carry no data values"), and this WP would have invalidated that rationale by attaching paid web content to refusals — shown, billed, and auditless. The session model's own reading of the same files had caught only the adjacent settlement-ordering issue, not this one. Evidence for keeping the expensive review pattern precisely on WPs that CHANGE the assumptions old code was built on: the defect lived in the interaction between untouched-correct old code and the new design — the blind spot single-reader review is worst at.
