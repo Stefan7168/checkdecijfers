@@ -9,7 +9,7 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
-**▶ NEXT SESSION STARTS HERE (2026-07-13, session 43 FINAL — #134(a) + an autonomous overnight run; owner approved + merged all 4 PRs).**
+**▶ NEXT SESSION STARTS HERE (2026-07-13, session 43 FINAL — #134(a) + an autonomous overnight run + the #137 range-chip follow-on; owner approved + merged 5 PRs).**
 
 - **(1) #134(a) refusal period-suggestion chips — BUILT + MERGED + LIVE** (PR #36, squash `97c696b`). ONE servability-gated retry chip on
   freshness / period-axis `outside_loaded_slice` refusals (canonical + region-less v1), reusing the WP29/ADR 029 mechanism, fill-don't-send (#75),
@@ -24,9 +24,13 @@
 - **(4) All 4 PRs MERGED + DEPLOYED to production** (owner "Continue, agreed to all"); final main CI gate + deploy GREEN, post-deploy smoke check
   PASS, prod serves (HTTP 307 healthy redirect). Autonomous session → branch + PR + owner-merge per [#118](open-questions.md)(b). Process lesson
   recorded (both money bugs = the same "second read/net site not updated" class).
+- **(4b) #137 range-chip follow-on — BUILT + MERGED + LIVE** (PR #40, squash `db34700`; owner "merge"). For a range-ask `outside_loaded_slice`
+  refusal, the chip now offers the clamped WORKING sub-range as a trend question (the "probeer 2010–2024" shape), falling back to the single-period
+  floor chip when unservable — the `echoServability` dry-run is the sole validity gate. 6 tests (2 mutation-verified) + adversarial review SHIP; full
+  gate + prod deploy green.
 - **(5) Next — owner decisions:** **#134(b)** (`not_published` alternative — the earliest-loaded-floor idea + a too-old-vs-mid-gap classification,
-  needs an owner call), **#137/#138** (v2 range/regional chips — now buildable since #36 is merged), **WP26** (safelist read-back), **#121**
-  (fail-closed template rung), **#131** (multilingual L1), **WP30c** (source choice). Tracked-not-focus: #132 route B ~2026-07-19 (forks==0 T-0),
+  needs an owner call), **#138** (v2 regional refusal chip — needs a code→region-label source on the refusal path), **WP26** (safelist read-back),
+  **#121** (fail-closed template rung), **#131** (multilingual L1), **WP30c** (source choice). Tracked-not-focus: #132 route B ~2026-07-19 (forks==0 T-0),
   #104/#112 (need live-LLM spend), format.ts NUL (task_e718f60d), /login header cosmetic.
 
 
