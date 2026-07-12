@@ -70,9 +70,9 @@ Useful tool knobs confirmed in the docs: `max_uses` (hard cost cap per request),
 - Anthropic pricing changes materially from $10/1K.
 - A second augmentation-channel candidate appears (e.g. news APIs) → generalize the section mechanism, don't fork it.
 
-## Status: BUILT (session 40, 2026-07-12 — branch `wp129-130-websearch`, PR pending owner review per #118)
+## Status: MERGED + DEPLOYED — LIVE (session 40, 2026-07-12 — branch `wp129-130-websearch`, PR 33 merged `e410ea2` on owner in-chat approval; supervised go-live RUN the same day: migration 018 + pricing + `WEBSEARCH_ENABLED=1`, smoke tests ledger-verified both modes, tool-variant correction to `web_search_20250305` en route — see § Go-live correction below)
 
-All owner decisions closed (interview sheet); the pre-build adversarial review ran (39 agents, 7 lenses × dual refuting skeptics — record in the [frozen brief](../session-briefs/2026-07-12-wp129-130-brief.md) § Review record) and the build followed the frozen brief. Ships DORMANT behind `WEBSEARCH_ENABLED` (go-live: RUNBOOK).
+All owner decisions closed (interview sheet); the pre-build adversarial review ran (39 agents, 7 lenses × dual refuting skeptics — record in the [frozen brief](../session-briefs/2026-07-12-wp129-130-brief.md) § Review record) and the build followed the frozen brief. Shipped DORMANT behind `WEBSEARCH_ENABLED`, then went LIVE the same day (supervised go-live RUN, `WEBSEARCH_ENABLED=1`; § Go-live correction below + RUNBOOK as-executed). Rollback stays: unset the flag + redeploy.
 
 ## As-built note (WP129+130, session 40)
 
