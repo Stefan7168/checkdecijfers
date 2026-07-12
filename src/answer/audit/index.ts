@@ -23,7 +23,14 @@ export {
   deleteUserQuestionHistory,
   purgeExpiredQuestionHistory,
   twoYearsBefore,
+  redactionIntegrityReport,
 } from './retention.ts';
 export type { RedactedRow } from './retention.ts';
 export { FEEDBACK_TEXT_MAX_LENGTH, upsertAnswerFeedback } from './feedback.ts';
 export type { AnswerFeedbackInput } from './feedback.ts';
+// #133(a): the known-divergence register — re-exported alongside
+// reconstructionReport/redactionIntegrityReport since scripts/verify-audit-rows.ts
+// (the established import path for scripts) imports everything audit-related
+// through this index.
+export { KNOWN_DIVERGENCES, classifyKnownDivergence } from './known-divergences.ts';
+export type { KnownDivergence } from './known-divergences.ts';
