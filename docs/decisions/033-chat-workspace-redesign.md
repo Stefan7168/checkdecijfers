@@ -172,6 +172,47 @@ text — satisfied structurally: threads store none), cross-user isolation (new 
 separation (web section never docks), WP29/chips + feedback + cost-line byte-identity, ledger
 untouched by anything in this WP.
 
+## Pre-build adversarial review (2026-07-12, session 41) — brief FROZEN v2
+
+The WP30a/30b pattern ran against the executor brief: **62 agents** — 6 mid-tier lenses
+(GDPR/cross-user, R8/replay, UI byte-identity, schema/migration, rollout/shell, ADR-021 trust
+boundary) produced 28 raw findings; each was attacked by dual heavy-tier skeptics → **10
+confirmed / 3 split / 15 killed**. The session judged the survivors into seven amendments,
+folded into the frozen brief (cross-marked ⟨A1⟩–⟨A7⟩ there):
+
+- **⟨A1⟩ Lazy thread creation was self-contradictory:** the drafted `ensureThread` inserted a
+  row BEFORE the billing gate, so insufficient-credits/duplicate/exception turns would orphan
+  empty threads — violating D1. Split into read-only `validateThreadOwnership` + atomic
+  `attachOrCreateThread` that only runs on a gated-ok outcome with an audit id.
+- **⟨A2⟩ Migration 019's guarded `auth.users` FK was a comment, not DDL** (found independently
+  by three lenses) — now verbatim DO-block DDL, plus a PR-checklist line because the hermetic
+  PGlite harness has no `auth` schema and CI is structurally blind to a missing FK.
+- **⟨A3⟩ Replay could not reconstruct a full `ChatMessage` from src-side code:** `web/backend`
+  is the `../src` symlink; `citation`/`csv`/`card` builders and the kind-reclassification live
+  in `web/lib`/`chat.tsx`, and the cost caption comes from the ledger, not the envelope. The
+  brief now splits replay into src-side structural parts + web-side assembly reusing the SAME
+  live-path functions (kind-reclassification extracted to one shared helper), and
+  `getThreadRows` gains the history.ts ledger join for `creditsCharged`. This is also what
+  makes D4's "tabs reconstruct for free" actually true.
+- **⟨A4⟩ Clarification-round replay would duplicate the original question** (a reply row's
+  `question` column echoes the original — the exact WP19 dashboard trap): one user-turn per
+  row, `reply_text` overriding `question`; message-count pin added.
+- **⟨A5⟩ The shell leaked past the flag:** header/signOut//geschiedenis would have shipped live
+  on `/credits`//`login`//`geschiedenis` pre-flip. The flag now gates every WP135 surface;
+  flag-off byte-identity is pinned for all routes.
+- **⟨A6⟩ A clarification reply could attach to the wrong thread** after a sidebar switch:
+  replies now carry the threadId captured with `pending` at question time, and a thread switch
+  clears `pending` (same as "nieuwe chat").
+- **⟨A7⟩ Redacted rows would render as a two-bubble sentinel echo and could CRASH the context
+  rebuild** (`resolvedIntent` throws on a redacted 'answer' envelope — kind preserved, `result`
+  gone): replay emits one placeholder message; the rebuild walk skips redacted rows before
+  calling the builder. Both pinned.
+
+Notable kills (for the record): "chat_threads rows are never purged" (by design — no text, the
+D1/D2 posture); "attachAuditRow lacks ownership re-verification" (the UPDATE's WHERE binds
+`user_id`); state-resync and SSR-breakpoint concerns (executor implementation detail, no spec
+change needed).
+
 ## Revisit triggers
 
 - Per-thread deletion ask from the owner or an external user → build the deferred D2 leg.
