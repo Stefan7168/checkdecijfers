@@ -9,7 +9,7 @@ Reproduce the checklist as a literal list in your reply and mark each item ✅ d
 The checklist (see CLAUDE.md for the authoritative version):
 1. Lessons → `docs/lessons-learned.md`.
 2. Memory files + the `MEMORY.md` index line.
-3. The FULL doc set to the final measured state — NOT just the trackers: `docs/STATUS.md` (Last-updated + NEXT-SESSION block), `docs/open-questions.md`, `docs/08-build-plan.md`, `docs/RUNBOOK.md`, the touched ADR(s) (as-built notes) + `docs/04-architecture.md`.
+3. The FULL doc set to the final measured state — NOT just the trackers: `docs/STATUS.md` (lean top block: NEXT-SESSION + priority stack, hard-wrapped ~150 chars) + PREPEND the session's Last-updated entry to `docs/status-archive.md` (verbatim log, newest on top), `docs/open-questions.md`, `docs/08-build-plan.md`, `docs/RUNBOOK.md`, the touched ADR(s) (as-built notes) + `docs/04-architecture.md`.
 4. Stale-doc sweep: `grep -rn` across `docs/` for the OLD framing of anything changed this session; fix every hit.
 5. Clean state: `git status` clean + pushed; `git worktree list` no strays; CI green per commit.
 6. Cleanup: delete one-off scratch scripts, keep reusable ones; spin off out-of-scope hygiene as task chips.
