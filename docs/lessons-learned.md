@@ -37,6 +37,19 @@ on top.
   vanish, its last tokens buy judgment and guardrails, never legwork — and tier language in
   docs stays role-based ("top tier"), never model names.**
 
+## 2026-07-13 (session 42) — WP135 go-live + #136 symlink convention
+
+- **Verify env-flag flips on a RUNTIME route, never a static one.** `/login` is statically prerendered; sensitive env vars are empty at
+  build, so its HTML said "flag off" while the flag was live on every dynamic route. The reliable signal was behavioural: unauthenticated
+  `/geschiedenis` redirecting to `/login` (flag on) vs `/` (flag off). Corollary: any static page gated on a sensitive env var will never
+  show the gated UI in prod (the `/login` stripped-header residual).
+- **Check the provenance of a pasted "second opinion" before weighing it.** The owner pasted a review attributed to another model that was
+  verbatim this session's own task-chip prompt. Saying so, then genuinely re-analysing, found both recorded #136 options inferior to a
+  mechanism-free third (AGENTS.md = symlink to CLAUDE.md) — the agents.md standard's own migration pattern, with `web/backend → ../src`
+  as in-repo precedent. Lesson: when two options both carry hidden costs, look for the option that removes the mechanism entirely.
+- **`vercel link` silently (re)writes `web/.env.local`** (a `VERCEL_OIDC_TOKEN` only; gitignored, harmless) — check env files after CLI
+  link operations before anything that loads them.
+
 ## Session 40 (2026-07-12) — the WP129+130 build: the most principle-touching WP, shipped dormant behind a flag
 
 - **The multi-lens pre-build review caught a blocker the session model's own first-hand reading missed — by triple convergence.** Three of seven lenses (r8-audit-bytes, principle-separation, scope-tests) independently confirmed the same defect: `persistOrFailClosed`'s refusal branch ships the ORIGINAL refusal unrecorded when the audit insert fails (existing, tested, CORRECT behavior — justified by "refusals carry no data values"), and this WP would have invalidated that rationale by attaching paid web content to refusals — shown, billed, and auditless. The session model's own reading of the same files had caught only the adjacent settlement-ordering issue, not this one. Evidence for keeping the expensive review pattern precisely on WPs that CHANGE the assumptions old code was built on: the defect lived in the interaction between untouched-correct old code and the new design — the blind spot single-reader review is worst at.

@@ -251,3 +251,10 @@ language; the owner selected the recommended option on all four:
    in the build brief; byte-level copy gets a final look at PR review.
 4. **Per-thread delete in v1** → **defer** to a fast-follow residual; v1 keeps the existing
    delete-all button, relocated to the account menu.
+
+## As-built addendum — supervised go-live (session 42, 2026-07-13)
+
+Go-live RUN per RUNBOOK § "WP135 chat workspace" (as-executed record there): migration 019 applied, guarded FK + grants/RLS live-verified,
+`WORKSPACE_ENABLED=1`, owner smoke tests PASS (threads/dock/resume). Two go-live findings: the logout button needed a pending state
+(`5ba3fb8`, `useFormStatus` — the D6 shell's one UX gap); `/login`'s stripped header does not render in prod because that route is
+statically prerendered and sensitive env vars are empty at build (cosmetic; the D6 shell is otherwise live). GDPR spot-check deferred (optional).

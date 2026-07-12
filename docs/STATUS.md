@@ -9,31 +9,22 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
-**▶ NEXT SESSION STARTS HERE (2026-07-12 LATE, session 41 FINAL — the last Fable session; owner present throughout).**
+**▶ NEXT SESSION STARTS HERE (2026-07-13, session 42 FINAL — WP135 supervised go-live; owner present throughout).**
 
-- **⚠ MODEL CHANGE: Fable is GONE as of 2026-07-12 23:59.** The top tier is now Opus: design/briefs/synthesis/final review on Opus,
-  fan-out/mechanical work on cheaper tiers. The cost-tier rule itself is unchanged (roles, never model names).
-- **(1) WP135 chat workspace is BUILT and on `main`, DORMANT behind `WORKSPACE_ENABLED` (unset in prod — every route byte-identical to
-  pre-WP135).** Full pattern ran: ADR [033](decisions/033-chat-workspace-redesign.md) (owner interview locked: 2-year retention riding #14,
-  no-text `chat_threads`, resume with ADR-021 revalidation, WP24 shell absorbed, per-thread delete deferred) → frozen brief (pre-build review
-  62 agents → amendments A1–A7) → staged build (backend/web/gate: benchmark 14/14 + 6/6 + 0 fabricated PASS, 24+41 new tests) → post-build
-  review (22 agents → 2 confirmed blockers FIXED: websearch add-on missing from the replay credits-join; thread-switch race). Merged to main
-  on the owner's explicit in-chat instruction (#118(a), owner present). **NEXT OWNER STEP: the supervised go-live — RUNBOOK § "WP135 chat
-  workspace" (migration 019, the FK verification CI structurally cannot see, `WORKSPACE_ENABLED=1`, smoke tests, GDPR spot-check).**
-- **(2) CI gate repaired:** `tests/db`, `tests/sources`, `tests/websearch` (the WP129+130 pins) were never on the enumerated gate; now wired
-  in, plus `tests/threads`. Lesson recorded.
-- **(3) Boot-set restructure (owner-directed):** STATUS.md, open-questions.md and 08-build-plan.md now have verbatim archive twins
-  ([status-archive.md](status-archive.md), open-questions-archive.md, build-plan-archive.md); "Executor guardrails" (binding, sized for
-  mid-tier models) sit on top of [08-build-plan.md](08-build-plan.md). Wrap-up convention: PREPEND the session entry to the archive, keep
-  this file lean and hard-wrapped.
-- **(4) ✅ Dashboard creditsCharged fix MERGED at session close (owner in-chat "Akkoord", 2026-07-12 23:46, merge `963fc66`):** the
-  pre-existing websearch-omission in `src/billing/history.ts` — full local gate was green (benchmark PASS) and the PR's CI runs were green;
-  the post-merge main CI run completes after this session's model sunset — a next session verifies it (expected green; docs-only delta
-  since the PR's green preview run).
-- **(5) Residuals unchanged:** #132 route B ~2026-07-19 (plain-text PR refs in docs, forks==0 is the T-0 go/no-go), #134(a) refusal
-  period-suggestion chips, WP26 (supervised), #131 L1 lane, WP30c ([#123](open-questions.md)), chips format.ts NUL (task_e718f60d) +
-  wrapup-hook false-positive (task_6f27827b; it fires on kickoffs quoting "NEXT SESSION STARTS HERE" — ignore it on a session's FIRST
-  message). The full session-40 WP129+130 go-live record lives in [status-archive.md](status-archive.md) (its "Last updated" entry).**
+- **(1) WP135 chat workspace is LIVE IN PRODUCTION.** Supervised go-live RUN session 42 per RUNBOOK § "WP135 chat workspace" (now the
+  as-executed record): migration 019 applied (exactly one), guarded FK + grants/RLS live-verified (0 anon/authenticated grants, RLS on,
+  0 policies), `WORKSPACE_ENABLED=1` + CI-gated redeploy (`ae604db`, gate+deploy green), owner smoke tests PASS (2 threads, 1+3 audit rows,
+  zero orphans, live credits chip, chart dock, resume identical). GDPR spot-check (step 5) skipped — optional. Rollback: unset flag + redeploy.
+- **(2) Go-live finding fixed + LIVE same session:** logout pending state (`5ba3fb8`, `useFormStatus` "Bezig…"; full verification block green —
+  backend 1250/1250, web 302/302, benchmark 14/14 + 6/6 + 0 fabricated, real `next build`). Cosmetic residual: `/login`'s stripped header
+  doesn't render in prod (statically prerendered route; sensitive env empty at build) — harmless; fix rides any later /login work.
+- **(3) PR 35 post-merge main CI verified green** (`963fc66`) — the session-41 loose end is closed.
+- **(4) #136 recorded AND resolved: `AGENTS.md` = committed symlink to `CLAUDE.md` in both dirs** (`ccd6f3d`; new CLAUDE.md Conventions
+  bullet; web/CLAUDE.md now holds the Next-16 warning with the dead bundled-docs pointer rephrased). RESIDUAL: owner runs one Codex session
+  to confirm it reads the agreements through the symlink (owner: "Codex zoekt het later uit"). Chip task_f54d2672 dismissed (superseded).
+- **(5) Next per the stack: #134(a) refusal period-suggestion chips OR WP26 (supervised).** Residuals unchanged: #132 route B ~2026-07-19
+  (forks==0 is the T-0 go/no-go), #131 L1 lane, WP30c (#123), chips format.ts NUL (task_e718f60d) + wrapup-hook false-positive
+  (task_6f27827b — fires on kickoffs quoting "NEXT SESSION STARTS HERE"; ignore on a session's FIRST message).
 
 
 **▶ TOP PRIORITY STACK — owner decision, session 23 (2026-07-05); this ORDER overrides the "decision-gated" framing below.** The owner set an explicit

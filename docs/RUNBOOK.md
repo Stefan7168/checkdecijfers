@@ -224,7 +224,16 @@ same as `ONBOARDING_ENABLED` was). Steps, in order, owner present:
 Rollback at any point: unset `WEBSEARCH_ENABLED` and redeploy — the feature goes fully dormant
 (migration 018 and the pricing row are harmless to leave in place).
 
-## WP135 chat workspace — the supervised go-live (NOT yet run; owner present required)
+## WP135 chat workspace — the supervised go-live (✅ RUN 2026-07-13, session 42, owner present)
+
+**As-executed record (2026-07-13, session 42):** all steps ran clean, owner supervising. Migration 019 applied (exactly one);
+FK `chat_threads_user_id_fkey` + lockdown live-verified (0 anon/authenticated grants, RLS on, 0 policies; `audit_answers_thread_id_fkey`
+present); `WORKSPACE_ENABLED=1` via `vercel env add` + empty-commit CI redeploy (`ae604db`, gate+deploy green). ⚠ Verify a flag flip on a
+RUNTIME route: `/login` HTML is a FALSE NEGATIVE (statically prerendered; sensitive env vars are empty at build) — the real signal:
+unauthenticated `/geschiedenis` 307s to `/login` (flag on) vs `/` (flag off). Smoke tests PASS (2 threads, 1+3 audit rows, zero orphans,
+live credits chip, chart dock, resume identical). Logout worked but gave no pending feedback → fixed same session (`5ba3fb8`, live).
+Cosmetic residual: `/login`'s stripped header does not render in prod while that route is static — harmless. Step 5 (GDPR spot-check)
+deliberately skipped (optional, owner's call). Rollback unchanged: unset the flag + redeploy.
 
 The workspace (conversation sidebar + right-pane dock + site shell) ships DORMANT behind
 `WORKSPACE_ENABLED`: until every step below is done, production behaves byte-identically to
