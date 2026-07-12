@@ -10,10 +10,31 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
+import { useFormStatus } from 'react-dom';
 import { signOut } from '../app/actions.ts';
 import { DeleteHistoryButton } from './delete-history-button.tsx';
 
 const WORDMARK = 'Check de Cijfers';
+
+// The logout submit button, split out so useFormStatus can read the pending
+// state of its parent <form action={signOut}> and give feedback during the
+// sign-out round-trip. Without it the click shows nothing while Supabase signs
+// out + redirects, so it feels like a no-op (owner smoke-test finding, WP135
+// go-live). "Bezig…" + disabled:opacity-60 match the DeleteHistoryButton
+// convention in this same menu.
+function LogoutButton() {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      aria-disabled={pending}
+      className="text-left text-zinc-700 hover:text-zinc-900 disabled:opacity-60"
+    >
+      {pending ? 'Bezig…' : 'Log uit'}
+    </button>
+  );
+}
 
 export function SiteHeader({
   balance,
@@ -71,11 +92,11 @@ export function SiteHeader({
               className="absolute right-0 z-10 mt-1 flex w-56 flex-col gap-2 rounded border border-zinc-200 bg-white p-3 text-sm shadow-lg"
             >
               {/* The genuinely-new logout: a server action via a form so it
-                * works without client JS wiring and can redirect server-side. */}
+                * works without client JS wiring and can redirect server-side.
+                * The submit lives in <LogoutButton/> so useFormStatus can show a
+                * pending state during the round-trip (owner smoke-test finding). */}
               <form action={signOut}>
-                <button type="submit" className="text-left text-zinc-700 hover:text-zinc-900">
-                  Log uit
-                </button>
+                <LogoutButton />
               </form>
               <div className="border-t border-zinc-200 pt-2">
                 <DeleteHistoryButton />
