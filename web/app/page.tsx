@@ -3,9 +3,16 @@
 // set explicitly as insurance since the DB pool (pg) and the pinned-CA
 // filesystem read cannot run on the Edge runtime.
 export const runtime = 'nodejs';
-// Measured live latency (WP11): median 6.5s, max ~14s. 30s leaves margin for
-// LLM API variance without approaching Hobby-tier ceilings.
-export const maxDuration = 30;
+// Measured live latency (WP11): median 6.5s, max ~14s.
+// ⟨W2⟩ (WP129+130, ADR 032): raised 30 → 90. When the "Internet" chip is on,
+// the web-search call (WEBSEARCH_TIMEOUT_MS = 45s) stacks ON TOP of the CBS
+// pipeline INSIDE the same Server Action invocation. A 30s ceiling could kill
+// the invocation between the web reserve and the settlement — orphaning a
+// 10-credit debit AND skipping the audit write. 14s + 45s + margin fits in 90s;
+// Vercel's current default ceiling is 300s on all plans (re-verify against the
+// deployed plan in the RUNBOOK go-live step). Unconditional — a ceiling is not
+// a hold, and a static segment-config export cannot be flag-conditional.
+export const maxDuration = 90;
 
 import { redirect } from 'next/navigation';
 import {
@@ -36,19 +43,28 @@ export default async function Home({
   }
 
   const db = getDb();
+  // WP129+130 (#129/#130, ADR 032): the web-search add-on price is read ONLY
+  // when the flag is on (the ONBOARDING_ENABLED dormancy pattern). Flag off ⇒
+  // the read never runs — so getActionClassPrice('web_addon') can never throw
+  // pre-`pricing:apply` (migration 018 seeds the row only in the supervised
+  // go-live) — AND the websearch prop is absent, so the chat renders no chips
+  // and behaves byte-identically to today (deploy-order-safe).
+  const websearchEnabled = process.env.WEBSEARCH_ENABLED === '1';
   // simplePrice + signupGrantCredits: live pricing-config reads (ADR 006 --
   // the #69 warning threshold and #76 explainer copy must track the tables,
   // never a hardcoded number).
-  const [balance, history, simplePrice, clarificationPrice, signupGrantCredits] = await Promise.all([
-    getBalance(db, userId),
-    // includeOnboarding rides the same master switch as the finder injection
-    // (actions.ts): while ONBOARDING_ENABLED is unset, the history read never
-    // touches the not-yet-migrated pending_table_requests table.
-    getQuestionHistory(db, userId, { includeOnboarding: process.env.ONBOARDING_ENABLED === '1' }),
-    getActionClassPrice(db, 'simple'),
-    getActionClassPrice(db, 'clarification'),
-    getSignupGrantCredits(db),
-  ]);
+  const [balance, history, simplePrice, clarificationPrice, signupGrantCredits, webAddonPrice] =
+    await Promise.all([
+      getBalance(db, userId),
+      // includeOnboarding rides the same master switch as the finder injection
+      // (actions.ts): while ONBOARDING_ENABLED is unset, the history read never
+      // touches the not-yet-migrated pending_table_requests table.
+      getQuestionHistory(db, userId, { includeOnboarding: process.env.ONBOARDING_ENABLED === '1' }),
+      getActionClassPrice(db, 'simple'),
+      getActionClassPrice(db, 'clarification'),
+      getSignupGrantCredits(db),
+      websearchEnabled ? getActionClassPrice(db, 'web_addon') : Promise.resolve(null),
+    ]);
 
   return (
     <Dashboard
@@ -58,6 +74,9 @@ export default async function Home({
       signupGrantCredits={signupGrantCredits}
       history={<QuestionHistory items={history} />}
       purchaseSuccess={purchase === PURCHASE_SUCCESS_VALUE}
+      {...(websearchEnabled && webAddonPrice !== null
+        ? { websearch: { enabled: true as const, addonPrice: webAddonPrice } }
+        : {})}
     />
   );
 }

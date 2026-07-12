@@ -25,6 +25,7 @@ export function Dashboard({
   signupGrantCredits,
   history,
   purchaseSuccess = false,
+  websearch,
 }: {
   initialBalance: number;
   simplePrice: number;
@@ -35,6 +36,11 @@ export function Dashboard({
   /** WP22 #95: true when the page loaded from Stripe's success redirect
    * (?purchase=success) — shows the dismissible confirmation banner. */
   purchaseSuccess?: boolean;
+  /** WP129+130 (#129/#130, ADR 032): present ONLY when WEBSEARCH_ENABLED='1'
+   * (page.tsx reads the add-on price behind the flag). Threaded into Chat's
+   * `pricing` prop — its presence is what renders the source chips + the
+   * "Internet" chip; absent ⇒ the chat is byte-identical to today. */
+  websearch?: { enabled: true; addonPrice: number };
 }) {
   const [balance, setBalance] = useState(initialBalance);
   const [showPurchaseBanner, setShowPurchaseBanner] = useState(purchaseSuccess);
@@ -81,7 +87,14 @@ export function Dashboard({
       <div className="flex flex-col gap-6">
         <Chat
           onOutcome={handleOutcome}
-          pricing={{ simple: simplePrice, clarification: clarificationPrice, balance }}
+          pricing={{
+            simple: simplePrice,
+            clarification: clarificationPrice,
+            balance,
+            // WP129+130: the add-on price + enabled flag ride the pricing prop
+            // (its existing shape), so Chat gets one prop; absent ⇒ no chips.
+            ...(websearch ? { websearch } : {}),
+          }}
         />
         {history}
       </div>

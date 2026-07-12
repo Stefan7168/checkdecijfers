@@ -14,8 +14,12 @@ import { Dashboard } from './dashboard.tsx';
 Element.prototype.scrollIntoView = vi.fn();
 
 const { askQuestion, replyToClarification, submitAnswerFeedback } = vi.hoisted(() => ({
-  askQuestion: vi.fn<(question: string, requestId: string, rawContext?: unknown) => Promise<AskOutcome>>(),
-  replyToClarification: vi.fn<(pending: unknown, reply: string, requestId: string) => Promise<AskOutcome>>(),
+  // WP129+130: additive optional `rawSelection` 4th arg (the sibling-mock rule);
+  // dashboard tests never pass a websearch prop, so the chat stays on 3-arg calls.
+  askQuestion:
+    vi.fn<(question: string, requestId: string, rawContext?: unknown, rawSelection?: unknown) => Promise<AskOutcome>>(),
+  replyToClarification:
+    vi.fn<(pending: unknown, reply: string, requestId: string, rawSelection?: unknown) => Promise<AskOutcome>>(),
   // WP128: Chat (rendered by Dashboard) mounts FeedbackButtons on answers,
   // which imports this from the mocked module — the export must exist here
   // even though no dashboard test clicks it (vitest errors on ACCESS of an

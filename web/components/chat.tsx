@@ -20,6 +20,13 @@ import type { ChartSpec } from '../backend/chart/types.ts';
 import type { ConversationContext } from '../backend/answer/context/index.ts';
 import type { PendingClarification } from '../backend/answer/respond/types.ts';
 import type { GatedResponse } from '../backend/billing/index.ts';
+// WP129+130 (#129/#130, ADR 032): the source registry drives the chips (one
+// per registered source, label "<displayName> data"); WebSection is the
+// unverified-web outcome the message renders below the CBS body. Both are
+// imported from PURE LEAVES (registry.ts / websearch/types.ts) — never a
+// barrel that pulls the Anthropic SDK into the client bundle.
+import { SOURCES } from '../backend/sources/registry.ts';
+import type { WebSection } from '../backend/websearch/types.ts';
 import { buildCitation } from '../lib/citation.ts';
 import { buildAnswerCsv } from '../lib/csv.ts';
 import type { AnswerCsv } from '../lib/csv.ts';
@@ -82,6 +89,13 @@ interface ChatMessage {
    * only (it rides the action result OUTSIDE the R8-stored envelope). Null
    * on user messages, non-answers, and when the audit write failed. */
   auditId: number | null;
+  /** WP129+130 (#130, ADR 032): the unverified-web augmentation outcome for
+   * THIS turn, read from `gated.response.webSection ?? null` (the deploy-skew
+   * guard pattern). Rendered BELOW everything else in the bubble, keyed on
+   * this FIELD VALUE (never message.kind) — an 'ok' section shows the findings
+   * block, a 'failed' section one honest line, null nothing. Null on user
+   * messages, non-'ok' gated outcomes, and turns that owed no web attempt. */
+  webSection: WebSection | null;
 }
 
 /** WP23 (#75): clickable examples on the empty chat — each a benchmark-
@@ -100,6 +114,73 @@ export interface ChatPricing {
   simple: number;
   clarification: number;
   balance: number;
+  /** WP129+130 (#129/#130, ADR 032): present ONLY when WEBSEARCH_ENABLED='1'
+   * (page.tsx reads addonPrice behind the flag, Dashboard threads it here).
+   * Its PRESENCE is what renders the source chips + the "Internet" chip and
+   * makes the selection ride every submit; absent ⇒ no chips, no selection
+   * payload, byte-identical to today. addonPrice drives the ⟨W4⟩ cost line. */
+  websearch?: { enabled: true; addonPrice: number };
+}
+
+/** WP129+130 (#130, ADR 032): the header on the unverified-web block — a fixed
+ * constant so the disclaimer copy is one reviewable source (owner-approved,
+ * Q1/Q3). */
+const WEB_SECTION_HEADER = 'Van het web (niet door checkdecijfers geverifieerd)';
+
+/** Citation links render DOMAIN-ONLY (Q3): the hostname minus a leading
+ * `www.`. The URL is already http(s)-filtered server-side (src/websearch/
+ * client.ts); a parse failure falls back to the raw string rather than
+ * throwing (defensive — the client should never emit a non-URL here). */
+function citationDomain(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return url;
+  }
+}
+
+/** WP129+130 (#130, ADR 032): the unverified-web section, rendered strictly
+ * SEPARATE from and BELOW the validated CBS body — the separation IS the
+ * honesty model. Injection stance (ADR 032 decision 10): web-derived strings
+ * are UNTRUSTED — they render as PLAIN, React-escaped text only (never
+ * markdown/HTML), are length-capped server-side, and the only links come from
+ * the API's own citation URLs (http/https filtered server-side), shown
+ * domain-only with rel="noopener noreferrer". Web content structurally never
+ * reaches any other prompt (single-shot call) — this block is its only surface. */
+function WebSectionView({ section }: { section: WebSection }) {
+  if (section.status === 'failed') {
+    // One honest line; the settlement already refunded the add-on (⟨W4⟩/Q6).
+    const line =
+      section.code === 'insufficient_balance'
+        ? 'De webzoekopdracht is niet uitgevoerd (onvoldoende saldo) — geen extra kosten.'
+        : 'De webzoekopdracht is niet gelukt — geen extra kosten.';
+    return <p className="mt-2 text-xs text-zinc-500">{line}</p>;
+  }
+  return (
+    <div className="mt-2 max-w-full rounded border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs text-zinc-600">
+      <p className="mb-1 font-medium text-zinc-500">{WEB_SECTION_HEADER}</p>
+      <ul className="space-y-1">
+        {section.findings.slice(0, 4).map((finding, i) => (
+          <li key={i}>
+            {finding.text}
+            {finding.citations.map((citation, j) => (
+              <span key={j}>
+                {' '}
+                <a
+                  href={citation.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline"
+                >
+                  {citationDomain(citation.url)}
+                </a>
+              </span>
+            ))}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 }
 
 /** WP21 #52: downloads the pre-built CSV as a client-side Blob — no server
@@ -198,7 +279,32 @@ export function Chat({
   // Action"). That case gets its own honest message + refresh affordance
   // instead of the misleading generic error.
   const [staleDeploy, setStaleDeploy] = useState(false);
+  // WP129+130 (#129, ADR 032): the source-tags selection. Chips render (and a
+  // selection payload rides every submit) ONLY when the websearch prop is
+  // present — flag off ⇒ this whole block is inert and the calls stay 3-arg,
+  // byte-identical to today. Registry sources are PRE-checked; the "Internet"
+  // channel defaults OFF (the cost gate). State is per-session and persists
+  // across turns (owner's tag mental model).
+  const websearch = pricing?.websearch;
+  const [selectedSources, setSelectedSources] = useState<Set<string>>(
+    () => new Set(Object.keys(SOURCES)),
+  );
+  const [webSelected, setWebSelected] = useState(false);
+  // All-deselected (no registry source AND no web) ⇒ send is disabled + an
+  // inline hint; the server has its own deterministic belt (no_sources refusal)
+  // regardless, but the client should never let an unanswerable turn submit.
+  const nothingSelected =
+    websearch !== undefined && selectedSources.size === 0 && !webSelected;
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  function toggleSource(key: string): void {
+    setSelectedSources((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
 
   function applyOutcome(outcome: AskOutcome): void {
     if (outcome.gated.kind === 'ok' && outcome.context !== null) {
@@ -213,11 +319,11 @@ export function Chat({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const text = input.trim();
-    if (!text || busy) return;
+    if (!text || busy || nothingSelected) return;
 
     setMessages((m) => [
       ...m,
-      { role: 'user', kind: null, text, chart: null, cost: null, citation: null, card: null, csv: null, answerView: null, provisional: false, suggestions: [], auditId: null },
+      { role: 'user', kind: null, text, chart: null, cost: null, citation: null, card: null, csv: null, answerView: null, provisional: false, suggestions: [], auditId: null, webSection: null },
     ]);
     setInput('');
     setBusy(true);
@@ -226,9 +332,20 @@ export function Chat({
 
     try {
       const requestId = crypto.randomUUID();
+      // WP129+130 (#129, ADR 032): the selection is a STRUCTURAL payload (never
+      // prompt text), sent on EVERY submit only when chips are shown. When the
+      // websearch prop is absent the calls stay exactly 3-arg — no 4th argument
+      // is passed, so pre-WP behavior (and its tests) are byte-identical.
+      const selection = websearch
+        ? { sources: [...selectedSources], web: webSelected }
+        : undefined;
       const outcome = pending
-        ? await replyToClarification(pending, text, requestId)
-        : await askQuestion(text, requestId, context);
+        ? websearch
+          ? await replyToClarification(pending, text, requestId, selection)
+          : await replyToClarification(pending, text, requestId)
+        : websearch
+          ? await askQuestion(text, requestId, context, selection)
+          : await askQuestion(text, requestId, context);
       applyOutcome(outcome);
       const { gated } = outcome;
       onOutcome?.(gated);
@@ -249,6 +366,7 @@ export function Chat({
             provisional: false,
             suggestions: [],
             auditId: null,
+            webSection: null,
           },
         ]);
         // None of these kinds change the pending clarification state;
@@ -304,6 +422,11 @@ export function Chat({
           // WP128: the feedback anchor — only real answers get buttons; the
           // `?? null` guards the same deploy-window skew as suggestions.
           auditId: response.kind === 'answer' ? (gated.auditId ?? null) : null,
+          // WP129+130 (#130, ADR 032): the web section rides EVERY response kind
+          // (answer/clarification/refusal) — set from the envelope for all of
+          // them. `?? null` guards the deploy-window skew (an old server bundle
+          // omits the field); it renders keyed on this value, never the kind.
+          webSection: response.webSection ?? null,
         },
       ]);
       setPending(response.kind === 'clarification' ? response.pending : null);
@@ -460,6 +583,12 @@ export function Chat({
                 ))}
               </div>
             ) : null}
+            {/* WP129+130 (#130, ADR 032): the unverified-web section — LAST in
+              * the bubble, BELOW the validated CBS body / refusal text and every
+              * other structural block. Keyed on the FIELD VALUE (never the
+              * message kind): any message carrying a non-null webSection renders
+              * it. The separation IS the honesty model. */}
+            {message.webSection ? <WebSectionView section={message.webSection} /> : null}
           </div>
         ))}
         {busy ? (
@@ -484,6 +613,54 @@ export function Chat({
         ) : null}
         <div ref={bottomRef} />
       </div>
+      {/* WP129+130 (#129, ADR 032): the source-tags chips — one per registered
+        * source (label "<displayName> data", PRE-checked) plus the "Internet"
+        * channel (default OFF). Toggle buttons carry aria-pressed; selected
+        * chips get the FeedbackButtons active-state styling + a trailing ✕
+        * affordance (aria-hidden, so the accessible name stays the label). Only
+        * shown when the websearch prop is present — a lone CBS chip is the
+        * choice-noise the owner rejected. */}
+      {websearch ? (
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          {Object.keys(SOURCES).map((key) => {
+            const active = selectedSources.has(key);
+            return (
+              <button
+                key={key}
+                type="button"
+                aria-pressed={active}
+                onClick={() => toggleSource(key)}
+                className={
+                  'rounded-full border px-3 py-1 text-xs ' +
+                  (active
+                    ? 'border-zinc-500 bg-zinc-200 text-zinc-900'
+                    : 'border-zinc-300 text-zinc-600 hover:bg-zinc-50')
+                }
+              >
+                {`${SOURCES[key]!.displayName} data`}
+                {active ? <span aria-hidden="true"> ✕</span> : null}
+              </button>
+            );
+          })}
+          <button
+            type="button"
+            aria-pressed={webSelected}
+            onClick={() => setWebSelected((v) => !v)}
+            className={
+              'rounded-full border px-3 py-1 text-xs ' +
+              (webSelected
+                ? 'border-zinc-500 bg-zinc-200 text-zinc-900'
+                : 'border-zinc-300 text-zinc-600 hover:bg-zinc-50')
+            }
+          >
+            Internet
+            {webSelected ? <span aria-hidden="true"> ✕</span> : null}
+          </button>
+        </div>
+      ) : null}
+      {nothingSelected ? (
+        <p className="mt-1 text-xs text-red-600">Selecteer minstens één bron.</p>
+      ) : null}
       <form onSubmit={handleSubmit} className="mt-4 flex gap-2">
         <input
           type="text"
@@ -496,7 +673,7 @@ export function Chat({
         />
         <button
           type="submit"
-          disabled={busy || !input.trim()}
+          disabled={busy || !input.trim() || nothingSelected}
           className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
         >
           Verstuur
@@ -505,11 +682,22 @@ export function Chat({
       {/* WP20 #82(a)+(b): pre-send cost line from LIVE pricing + the live
         * balance, and the honest static clarification hint (a
         * confidence-conditional hint is impossible before the parse runs —
-        * open-questions #82). */}
+        * open-questions #82).
+        * ⟨W4⟩ (WP129+130, ADR 032): three variants when the Internet chip is on.
+        * The numbers state the TRUE transient hold and are honest about the
+        * per-mode net (web-only nets ~10 but 30 is reserved): CBS + internet ⇒
+        * "~30 credits (waarvan 10 voor internet)"; web-only ⇒ "~10 credits (er
+        * wordt tijdelijk 30 gereserveerd)"; internet off / no websearch prop ⇒
+        * unchanged. */}
       {pricing ? (
         <p className="mt-1 text-xs text-zinc-400">
-          {`Een vraag kost ~${pricing.simple} credits · saldo: ${pricing.balance} credits. ` +
-            `Stel ik eerst een verduidelijkingsvraag, dan kost die ${pricing.clarification} credits en krijg je de rest terug.`}
+          {websearch && webSelected && selectedSources.size > 0
+            ? `Een vraag kost ~${pricing.simple + websearch.addonPrice} credits (waarvan ${websearch.addonPrice} voor internet) · saldo: ${pricing.balance} credits. ` +
+              `Stel ik eerst een verduidelijkingsvraag, dan kost die ${pricing.clarification} credits en krijg je de rest terug.`
+            : websearch && webSelected
+              ? `Een vraag kost ~${websearch.addonPrice} credits (er wordt tijdelijk ${pricing.simple + websearch.addonPrice} gereserveerd) · saldo: ${pricing.balance} credits.`
+              : `Een vraag kost ~${pricing.simple} credits · saldo: ${pricing.balance} credits. ` +
+                `Stel ik eerst een verduidelijkingsvraag, dan kost die ${pricing.clarification} credits en krijg je de rest terug.`}
         </p>
       ) : null}
     </div>

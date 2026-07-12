@@ -4,12 +4,13 @@
 // WP15 (ADR 021): askQuestion/replyToClarification now return an AskOutcome
 // ({ gated, context }), not a bare GatedResponse — the chat must hold the
 // context across turns and thread it back as askQuestion's third argument.
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AskOutcome } from '../app/actions.ts';
 import type { GatedResponse } from '../backend/billing/index.ts';
 import type { ConversationContext } from '../backend/answer/context/index.ts';
 import type { ComposedResponse } from '../backend/answer/respond/types.ts';
+import type { WebSection } from '../backend/websearch/types.ts';
 import { UnrecognizedActionError } from 'next/dist/client/components/unrecognized-action-error';
 import { buildAnswerCsv } from '../lib/csv.ts';
 import { fakeAnswerResponse, fakeCell } from '../test/fake-answer.ts';
@@ -30,8 +31,14 @@ Element.prototype.scrollIntoView = vi.fn();
 // happened not to render the mismatched field, `web:test` too. Both gaps
 // stay closed here: the mock is pinned to AskOutcome.
 const { askQuestion, replyToClarification, submitAnswerFeedback } = vi.hoisted(() => ({
-  askQuestion: vi.fn<(question: string, requestId: string, rawContext?: unknown) => Promise<AskOutcome>>(),
-  replyToClarification: vi.fn<(pending: unknown, reply: string, requestId: string) => Promise<AskOutcome>>(),
+  // WP129+130: the additive optional `rawSelection` 4th arg is included so the
+  // 4-arg call sites (chips path) typecheck; the pre-WP 3-arg assertions below
+  // still pass unchanged (the chat only passes a 4th arg when a websearch prop
+  // is present — the sibling-mock rule).
+  askQuestion:
+    vi.fn<(question: string, requestId: string, rawContext?: unknown, rawSelection?: unknown) => Promise<AskOutcome>>(),
+  replyToClarification:
+    vi.fn<(pending: unknown, reply: string, requestId: string, rawSelection?: unknown) => Promise<AskOutcome>>(),
   // WP128: FeedbackButtons (rendered by Chat) imports this from the same
   // mocked module — typed against the real action's signature.
   submitAnswerFeedback:
@@ -792,5 +799,206 @@ describe('Chat — WP128 feedback buttons (#128)', () => {
     await screen.findByText('Bedankt voor je feedback.');
     // The anchor is the reply-path answer's auditId (fakeAnswer -> 1).
     expect(submitAnswerFeedback).toHaveBeenCalledWith(1, 'up', undefined);
+  });
+});
+
+// WP129+130 (#129/#130, ADR 032): the source-tags chips + the unverified-web
+// section. The chips render (and a selection payload rides every submit) ONLY
+// when the websearch prop is present; the section renders keyed on the FIELD
+// VALUE, below everything else.
+describe('Chat — WP129+130 source chips (#129)', () => {
+  const pricing = { simple: 20, clarification: 10, balance: 100, websearch: { enabled: true as const, addonPrice: 10 } };
+
+  it('renders no chips without the websearch prop (byte-identical to today)', () => {
+    render(<Chat pricing={{ simple: 20, clarification: 10, balance: 100 }} />);
+    expect(screen.queryByRole('button', { name: 'CBS data' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Internet' })).toBeNull();
+  });
+
+  it('renders CBS pre-checked and Internet off when the websearch prop is present', () => {
+    render(<Chat pricing={pricing} />);
+    expect(screen.getByRole('button', { name: 'CBS data', pressed: true })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Internet', pressed: false })).toBeInTheDocument();
+  });
+
+  it('toggles the chips (aria-pressed) on click', () => {
+    render(<Chat pricing={pricing} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Internet' }));
+    expect(screen.getByRole('button', { name: 'Internet', pressed: true })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'CBS data' }));
+    expect(screen.getByRole('button', { name: 'CBS data', pressed: false })).toBeInTheDocument();
+  });
+
+  it('sends the selection payload as the 4th arg on submit (default: cbs, web:false)', async () => {
+    askQuestion.mockResolvedValue(outcome(fakeAnswer('Nederland telt 18.044.027 inwoners.')));
+    render(<Chat pricing={pricing} />);
+    await submit('Hoeveel inwoners heeft Nederland?');
+    expect(askQuestion).toHaveBeenCalledWith('Hoeveel inwoners heeft Nederland?', expect.any(String), null, {
+      sources: ['cbs'],
+      web: false,
+    });
+  });
+
+  it('reflects the Internet toggle in the sent payload', async () => {
+    askQuestion.mockResolvedValue(outcome(fakeAnswer('Nederland telt 18.044.027 inwoners.')));
+    render(<Chat pricing={pricing} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Internet' }));
+    await submit('Hoeveel inwoners heeft Nederland?');
+    expect(askQuestion).toHaveBeenCalledWith('Hoeveel inwoners heeft Nederland?', expect.any(String), null, {
+      sources: ['cbs'],
+      web: true,
+    });
+  });
+
+  it('disables send + shows the hint when everything is deselected', () => {
+    render(<Chat pricing={pricing} />);
+    fireEvent.click(screen.getByRole('button', { name: 'CBS data' })); // deselect the only source
+    fireEvent.change(screen.getByPlaceholderText('Stel een vraag…'), { target: { value: 'iets' } });
+    expect(screen.getByRole('button', { name: 'Verstuur' })).toBeDisabled();
+    expect(screen.getByText('Selecteer minstens één bron.')).toBeInTheDocument();
+  });
+});
+
+describe('Chat — WP129+130 cost-line variants (⟨W4⟩)', () => {
+  const pricing = { simple: 20, clarification: 10, balance: 100, websearch: { enabled: true as const, addonPrice: 10 } };
+
+  it('shows the base line when Internet is off', () => {
+    render(<Chat pricing={pricing} />);
+    expect(screen.getByText(/Een vraag kost ~20 credits · saldo: 100 credits/)).toBeInTheDocument();
+  });
+
+  it('CBS + internet: "~30 credits (waarvan 10 voor internet)"', () => {
+    render(<Chat pricing={pricing} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Internet' }));
+    expect(screen.getByText(/~30 credits \(waarvan 10 voor internet\)/)).toBeInTheDocument();
+  });
+
+  it('web-only: "~10 credits (er wordt tijdelijk 30 gereserveerd)"', () => {
+    render(<Chat pricing={pricing} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Internet' })); // web on
+    fireEvent.click(screen.getByRole('button', { name: 'CBS data' })); // cbs off
+    expect(screen.getByText(/~10 credits \(er wordt tijdelijk 30 gereserveerd\)/)).toBeInTheDocument();
+  });
+});
+
+describe('Chat — WP129+130 web section rendering (#130)', () => {
+  function okSection(overrides: Partial<Extract<WebSection, { status: 'ok' }>> = {}): WebSection {
+    return {
+      status: 'ok',
+      findings: [
+        { text: 'Een bevinding van het web.', citations: [{ url: 'https://www.example.nl/pad', title: null }] },
+      ],
+      model: 'claude-sonnet-5',
+      searches: 1,
+      usage: { inputTokens: 10, outputTokens: 5 },
+      promptVersion: 1,
+      ...overrides,
+    };
+  }
+
+  function answerWithSection(body: string, webSection: WebSection): GatedResponse {
+    return {
+      kind: 'ok',
+      auditId: 1,
+      netCost: 30,
+      response: { ...fakeAnswerResponse({ body }), webSection } as unknown as ComposedResponse,
+    };
+  }
+
+  function refusalWithSection(text: string, reason: string, webSection: WebSection): GatedResponse {
+    return {
+      kind: 'ok',
+      auditId: 3,
+      netCost: 10,
+      response: { kind: 'refusal', reason, text, webSection } as unknown as ComposedResponse,
+    };
+  }
+
+  it('renders the header, finding, and a DOMAIN-ONLY anchor with the safe rel attrs', async () => {
+    askQuestion.mockResolvedValue(outcome(answerWithSection('Nederland telt 18.044.027 inwoners.', okSection())));
+    render(<Chat />);
+    await submit('Hoeveel inwoners heeft Nederland?');
+    const header = await screen.findByText('Van het web (niet door checkdecijfers geverifieerd)');
+    const block = header.parentElement!;
+    expect(block).toHaveTextContent('Een bevinding van het web.');
+    // Domain-only (www stripped), full URL in href, opened safely.
+    const link = within(block).getByRole('link', { name: 'example.nl' });
+    expect(link).toHaveAttribute('href', 'https://www.example.nl/pad');
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+  });
+
+  it('caps the rendered findings at 4', async () => {
+    const findings = Array.from({ length: 6 }, (_, i) => ({
+      text: `Bevinding ${i}.`,
+      citations: [{ url: `https://bron${i}.nl/x`, title: null }],
+    }));
+    askQuestion.mockResolvedValue(
+      outcome(answerWithSection('Antwoord.', okSection({ findings }))),
+    );
+    render(<Chat />);
+    await submit('Vraag?');
+    const header = await screen.findByText('Van het web (niet door checkdecijfers geverifieerd)');
+    expect(within(header.parentElement!).getAllByRole('listitem')).toHaveLength(4);
+  });
+
+  it('shows the insufficient-balance failure note', async () => {
+    askQuestion.mockResolvedValue(
+      outcome(answerWithSection('Antwoord.', { status: 'failed', code: 'insufficient_balance' })),
+    );
+    render(<Chat />);
+    await submit('Vraag?');
+    expect(
+      await screen.findByText('De webzoekopdracht is niet uitgevoerd (onvoldoende saldo) — geen extra kosten.'),
+    ).toBeInTheDocument();
+  });
+
+  it('shows the generic failure note for every other code (incl. not_configured)', async () => {
+    askQuestion.mockResolvedValue(
+      outcome(answerWithSection('Antwoord.', { status: 'failed', code: 'not_configured' })),
+    );
+    render(<Chat />);
+    await submit('Vraag?');
+    expect(
+      await screen.findByText('De webzoekopdracht is niet gelukt — geen extra kosten.'),
+    ).toBeInTheDocument();
+  });
+
+  it('renders the section BELOW a refusal (Q5 coexistence)', async () => {
+    askQuestion.mockResolvedValue(
+      outcome(refusalWithSection('Ik kan geen voorspellingen doen.', 'forecast', okSection())),
+    );
+    render(<Chat />);
+    await submit('Wordt de inflatie volgend jaar hoger?');
+    expect(await screen.findByText('Ik kan geen voorspellingen doen.')).toBeInTheDocument();
+    expect(screen.getByText('Dit kon ik niet beantwoorden')).toBeInTheDocument();
+    expect(screen.getByText('Van het web (niet door checkdecijfers geverifieerd)')).toBeInTheDocument();
+  });
+
+  it('renders the section under a web_only refusal (the web-only mode)', async () => {
+    askQuestion.mockResolvedValue(
+      outcome(
+        refusalWithSection(
+          'Je hebt CBS-data uitgeschakeld voor deze vraag, dus ik geef geen geverifieerd antwoord.',
+          'web_only',
+          okSection(),
+        ),
+      ),
+    );
+    render(<Chat />);
+    await submit('Iets zonder CBS.');
+    expect(
+      await screen.findByText(/Je hebt CBS-data uitgeschakeld voor deze vraag/),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Van het web (niet door checkdecijfers geverifieerd)')).toBeInTheDocument();
+  });
+
+  it('renders NOTHING web-shaped when webSection is absent (the ?? null deploy-skew guard)', async () => {
+    // fakeAnswer's response carries no webSection field → ?? null → no block.
+    askQuestion.mockResolvedValue(outcome(fakeAnswer('Nederland telt 18.044.027 inwoners.')));
+    render(<Chat />);
+    await submit('Hoeveel inwoners heeft Nederland?');
+    await screen.findByText('Nederland telt 18.044.027 inwoners.');
+    expect(screen.queryByText('Van het web (niet door checkdecijfers geverifieerd)')).toBeNull();
   });
 });
