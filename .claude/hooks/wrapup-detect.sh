@@ -8,19 +8,38 @@ set -uo pipefail
 
 input="$(cat)"
 
-extract() {
+# Pull a named top-level string field out of the hook's JSON stdin ($2 = field).
+extract_field() {
   if command -v jq >/dev/null 2>&1; then
-    printf '%s' "$1" | jq -r '.prompt // ""' 2>/dev/null
+    printf '%s' "$1" | jq -r --arg f "$2" '.[$f] // ""' 2>/dev/null
   else
-    printf '%s' "$1" | python3 -c 'import sys,json
+    printf '%s' "$1" | FIELD="$2" python3 -c 'import sys,json,os
 try:
-    print(json.load(sys.stdin).get("prompt",""))
+    print(json.load(sys.stdin).get(os.environ["FIELD"],""))
 except Exception:
     pass' 2>/dev/null
   fi
 }
 
-prompt="$(extract "$input" | tr '[:upper:]' '[:lower:]')"
+session_id="$(extract_field "$input" "session_id")"
+
+# First-message suppression (task_6f27827b, owner-flagged 2026-07-13): a wrap-up
+# signal on a session's FIRST prompt is ALWAYS a false positive — a fresh session
+# has nothing to wrap up, and kickoff prompts routinely quote STATUS.md's
+# "▶ NEXT SESSION STARTS HERE" block (which trips the "next session" pairing
+# below). Suppress exactly once per session, keyed by session_id via a machine-
+# local marker. If session_id is absent (older CLI) or the marker cannot be
+# managed, fall through to normal detection — never worse than before.
+if [ -n "$session_id" ]; then
+  marker_dir="${TMPDIR:-/tmp}/ccd-wrapup-hook"
+  marker="${marker_dir}/seen-$(printf '%s' "$session_id" | tr -c 'A-Za-z0-9_.-' '_')"
+  if mkdir -p "$marker_dir" 2>/dev/null && [ ! -e "$marker" ]; then
+    : > "$marker" 2>/dev/null || true
+    exit 0
+  fi
+fi
+
+prompt="$(extract_field "$input" "prompt" | tr '[:upper:]' '[:lower:]')"
 [ -z "$prompt" ] && exit 0
 
 match=0
