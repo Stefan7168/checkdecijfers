@@ -22,6 +22,7 @@ import type { RawParse } from '../../src/answer/intent/types.ts';
 import {
   createPendingRequest,
   findActiveRequest,
+  findDeliveredAnswerAuditId,
   getPendingRequest,
   setResolvedTable,
 } from '../../src/ingestion/onboarding-store.ts';
@@ -186,6 +187,18 @@ async function queueRequest(
     debitTransactionId: debit.entry.id,
   });
   return { userId, requestId, pendingId: row.id, debitId: debit.entry.id };
+}
+
+/** #119 tests: a byte-comparable snapshot of a user's ledger rows — mirrors
+ * tests/audit/retention.test.ts's own ledgerRows idiom, used there for the
+ * same "a redaction/recovery path must never touch credit_transactions"
+ * pin. */
+async function ledgerRows(db: Db, userId: string) {
+  const { rows } = await db.query(
+    `select id, delta, reason, related_transaction_id, audit_answer_id from credit_transactions where user_id = $1 order by id`,
+    [userId],
+  );
+  return rows;
 }
 
 /** A recording MeasureFitFn: scripted verdict (or throw) per table id, and a
@@ -939,6 +952,271 @@ describe('runOnboardingJob — the #124 measurement e2e (REAL parser replay, WP2
       expect(text).toContain('37789ksz');
 
       // Delivered → the debit stands (150 − 100).
+      expect(await getBalance(h.db, userId)).toBe(50);
+    } finally {
+      await h.close();
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// #119 — delivery idempotency (the deliver→finalize crash window, session-39
+// design brief change 2). The deliver→finalize pair is deliberately NOT a
+// transaction (the pipeline call must not run inside a tx — same posture as
+// chargeAndRun, gate.ts); the recovery check is what makes the crash window
+// safe instead. These tests simulate the exact crash state the window leaves
+// behind (audit row written, row still 'running', finalize never ran, notify
+// never fired) and pin both re-entry points: the claim path and the
+// exhausted-attempts path.
+// ---------------------------------------------------------------------------
+
+/** #119: an LLM client that must never be consulted — a recovered row must
+ * finalize + notify WITHOUT re-entering the pipeline. If the recovery check
+ * regresses, the re-run either trips this throw or (if the pipeline maps the
+ * throw to a refusal) lands on a non-delivered outcome — every assertion
+ * downstream fails loudly either way. */
+function mustNotRunClient(): LlmClient {
+  return {
+    async complete(): Promise<LlmResponse> {
+      throw new Error('#119: the pipeline must not re-run for a recovered row');
+    },
+  };
+}
+
+/** #119 test (c): a REAL forecast_request parse — the pipeline turns it into a
+ * refusal (CBS publishes realizations, not forecasts), so the delivery re-run
+ * writes an honest REFUSAL-kind onboarding_delivery audit row through the
+ * real audit write path (persistOrFailClosed records every outcome kind —
+ * exactly why ⟨F1⟩'s kind='answer' filter exists). */
+function forecastIntentStub(): LlmClient {
+  const raw: RawParse = {
+    version: 3,
+    kind: 'forecast_request',
+    candidates: [],
+    unmatchedMeasureTerm: null,
+    nearestCanonicalKeys: [],
+    note: 'vraagt om een voorspelling',
+  };
+  return {
+    async complete(): Promise<LlmResponse> {
+      return {
+        outputText: JSON.stringify(raw),
+        model: 'stub-intent',
+        stopReason: 'end_turn',
+        usage: { inputTokens: 0, outputTokens: 0 },
+      };
+    },
+  };
+}
+
+/** #119: put a row back into the exact crash-window state — the delivery
+ * audit row (if any) already exists from the earlier run, but the row is
+ * 'running', stale, unfinalized, and the notify never fired (the caller
+ * clears the notified array). */
+async function simulatePreFinalizeCrash(db: Db, pendingId: number, attemptCount = 0): Promise<void> {
+  await db.query(
+    `update pending_table_requests
+     set status = 'running',
+         claimed_at = now() - ($1 || ' milliseconds')::interval * 2,
+         attempt_count = $2,
+         delivery_audit_answer_id = null,
+         finished_at = null
+     where id = $3`,
+    [STALE_RUNNING_MS, attemptCount, pendingId],
+  );
+}
+
+describe('runOnboardingJob — #119 delivery idempotency (crash between audit write and finalize)', () => {
+  it('(a) crash recovery at claim: finalizes onto the ORIGINAL audit row — one audit row total, one notify, ledger byte-identical, pipeline never re-runs', async () => {
+    const h = await harness();
+    try {
+      const { userId, requestId, pendingId } = await queueRequest(
+        h.db,
+        'hoeveel woningen waren er in 2024',
+        'woningvoorraad',
+      );
+      // A real delivered run first — the answer + its audit row now exist.
+      const first = await runOnboardingJob(h.deps());
+      expect(first.processed!.outcome).toBe('delivered');
+      const delivered = await getPendingRequest(h.db, pendingId);
+      const originalAuditId = delivered!.deliveryAuditAnswerId;
+      expect(originalAuditId).not.toBeNull();
+
+      // Simulate the crash BETWEEN the audit write and finalizeDelivered:
+      // the row reverts to stale-'running', unfinalized, and the delivered
+      // notify from the first run "never happened" (cleared) — notify runs
+      // after finalize on every path, so a real crash in the window fires no
+      // email.
+      await simulatePreFinalizeCrash(h.db, pendingId);
+      h.notified.length = 0;
+      const ledgerBefore = await ledgerRows(h.db, userId);
+
+      // Recovery run. The intent client throws if consulted: recovery must
+      // finalize + notify WITHOUT re-entering the pipeline.
+      const summary = await runOnboardingJob(h.deps({ intentClient: mustNotRunClient() }));
+      expect(summary.reclaimed).toContain(pendingId);
+      expect(summary.processed).toEqual({ id: pendingId, tableId: TABLE, outcome: 'delivered' });
+
+      // Finalized onto the ORIGINAL audit row — never a fresh one.
+      const row = await getPendingRequest(h.db, pendingId);
+      expect(row!.status).toBe('delivered');
+      expect(row!.deliveryAuditAnswerId).toBe(originalAuditId);
+      expect(row!.finishedAt).not.toBeNull();
+
+      // EXACTLY ONE onboarding_delivery audit row for this request in total —
+      // the double-audit-row (dashboard "200 charged") symptom is gone.
+      const audits = await h.db.query(
+        `select count(*)::int as n from audit_answers
+         where source_tag = 'onboarding_delivery' and request_id = $1`,
+        [requestId],
+      );
+      expect(Number(audits.rows[0]!.n)).toBe(1);
+
+      // Exactly one notify (the user never got the crashed attempt's email).
+      expect(h.notified).toHaveLength(1);
+      expect(h.notified[0]!.outcome).toBe('delivered');
+
+      // The ledger is byte-identical across the recovery run: no refund, no
+      // second debit, nothing — recovery is a pure finalize + notify.
+      expect(await ledgerRows(h.db, userId)).toEqual(ledgerBefore);
+      expect(await getBalance(h.db, userId)).toBe(50);
+    } finally {
+      await h.close();
+    }
+  });
+
+  it('(b) exhausted-path recovery: a crash row at MAX_ATTEMPTS is finalized delivered, NOT refunded as failed', async () => {
+    const h = await harness();
+    try {
+      const { userId, pendingId } = await queueRequest(
+        h.db,
+        'hoeveel woningen waren er in 2024',
+        'woningvoorraad',
+      );
+      const first = await runOnboardingJob(h.deps());
+      expect(first.processed!.outcome).toBe('delivered');
+      const originalAuditId = (await getPendingRequest(h.db, pendingId))!.deliveryAuditAnswerId;
+
+      // Same crash state, but the row has burned through the attempt cap —
+      // reclaimStaleRunning reports it exhausted instead of re-queueing it.
+      await simulatePreFinalizeCrash(h.db, pendingId, MAX_ATTEMPTS);
+      h.notified.length = 0;
+      const ledgerBefore = await ledgerRows(h.db, userId);
+
+      const summary = await runOnboardingJob(h.deps({ intentClient: mustNotRunClient() }));
+      expect(summary.capExhausted).toContain(pendingId);
+
+      // Delivered, NOT failed: without the recovery check this row fell into
+      // failAndRefund — refunding 100 credits for an answer the user already
+      // received (answer + refund, the money leak the #119 sketch missed).
+      const row = await getPendingRequest(h.db, pendingId);
+      expect(row!.status).toBe('delivered');
+      expect(row!.deliveryAuditAnswerId).toBe(originalAuditId);
+
+      // NO compensation row was written; the debit stands.
+      const compensations = await h.db.query(
+        "select count(*)::int as n from credit_transactions where user_id = $1 and reason = 'compensation'",
+        [userId],
+      );
+      expect(Number(compensations.rows[0]!.n)).toBe(0);
+      expect(await ledgerRows(h.db, userId)).toEqual(ledgerBefore);
+      expect(await getBalance(h.db, userId)).toBe(50);
+
+      // The delivered notify (the crashed attempt never sent one).
+      expect(h.notified).toHaveLength(1);
+      expect(h.notified[0]!.outcome).toBe('delivered');
+    } finally {
+      await h.close();
+    }
+  });
+
+  it('(c) ⟨F1⟩ crashed-refusal regression: a refusal-kind onboarding_delivery row is NEVER recovered as delivered', async () => {
+    // Construction: drive the delivery re-run to a REAL refusal through the
+    // real pipeline + real audit write path (a forecast_request parse → the
+    // 'forecast' refusal), then reset the row to the crash-window state. This
+    // is the honest shape of the ⟨F1⟩ hazard: refusal/clarification delivery
+    // attempts ALSO write onboarding_delivery audit rows; a bare existence
+    // check would "recover" this row as delivered — a permanent, unrefunded
+    // 100-credit charge plus a false "Goed nieuws" email.
+    const h = await harness();
+    try {
+      const { userId, requestId, pendingId } = await queueRequest(
+        h.db,
+        'wat wordt de woningvoorraad in 2030',
+        'woningvoorraad',
+      );
+      const first = await runOnboardingJob(h.deps({ intentClient: forecastIntentStub() }));
+      expect(first.processed!.outcome).toBe('unanswerable');
+
+      // Precondition: the refusal-kind onboarding_delivery audit row exists
+      // for this request_id — the exact row a kind-less check would trip on.
+      const refusalRows = await h.db.query(
+        `select kind from audit_answers
+         where source_tag = 'onboarding_delivery' and request_id = $1`,
+        [requestId],
+      );
+      expect(refusalRows.rows.map((r) => r.kind)).toEqual(['refusal']);
+
+      // THE ⟨F1⟩ PIN, helper level: the refusal row must be invisible to the
+      // recovery lookup — only kind='answer' is proof an answer was produced.
+      expect(await findDeliveredAnswerAuditId(h.db, requestId)).toBeNull();
+
+      // Now the crash-window state around that refusal row, and re-run.
+      await simulatePreFinalizeCrash(h.db, pendingId);
+      h.notified.length = 0;
+
+      const summary = await runOnboardingJob(h.deps({ intentClient: forecastIntentStub() }));
+      // Reprocessed NORMALLY (the re-run refuses again → unanswerable), never
+      // recovered-as-delivered off the refusal row.
+      expect(summary.processed!.outcome).toBe('unanswerable');
+
+      const row = await getPendingRequest(h.db, pendingId);
+      expect(row!.status).toBe('unanswerable');
+      // delivery_audit_answer_id must never point at a row whose kind is not
+      // 'answer' — here it must simply stay null.
+      expect(row!.deliveryAuditAnswerId).toBeNull();
+
+      // No 'delivered' notify may ever fire without an answer-kind row.
+      expect(h.notified.some((e) => e.outcome === 'delivered')).toBe(false);
+
+      // Money stays honest across both runs: exactly ONE compensation
+      // (compensate is idempotent on the same debit), full refund, never a
+      // kept charge and never a double refund.
+      const compensations = await h.db.query(
+        "select count(*)::int as n from credit_transactions where user_id = $1 and reason = 'compensation'",
+        [userId],
+      );
+      expect(Number(compensations.rows[0]!.n)).toBe(1);
+      expect(await getBalance(h.db, userId)).toBe(150);
+    } finally {
+      await h.close();
+    }
+  });
+
+  it('(d) no false positive: a fresh pending row with no prior audit rows processes normally — the check never fires on first attempts', async () => {
+    const h = await harness();
+    try {
+      const { userId, requestId, pendingId } = await queueRequest(
+        h.db,
+        'hoeveel woningen waren er in 2024',
+        'woningvoorraad',
+      );
+      // Nothing to recover: no audit row of any kind exists for this request.
+      expect(await findDeliveredAnswerAuditId(h.db, requestId)).toBeNull();
+
+      // First attempt runs the FULL pipeline exactly as before #119 (R8's
+      // audit-before-shown ordering on genuine first attempts is unchanged).
+      const summary = await runOnboardingJob(h.deps());
+      expect(summary.processed).toEqual({ id: pendingId, tableId: TABLE, outcome: 'delivered' });
+
+      const row = await getPendingRequest(h.db, pendingId);
+      expect(row!.status).toBe('delivered');
+      expect(row!.deliveryAuditAnswerId).not.toBeNull();
+      // The freshly written answer row is exactly what the helper now finds.
+      expect(await findDeliveredAnswerAuditId(h.db, requestId)).toBe(row!.deliveryAuditAnswerId);
+
+      expect(h.notified).toHaveLength(1);
+      expect(h.notified[0]!.outcome).toBe('delivered');
       expect(await getBalance(h.db, userId)).toBe(50);
     } finally {
       await h.close();
