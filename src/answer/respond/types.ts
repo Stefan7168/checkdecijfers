@@ -241,6 +241,17 @@ export interface RefusalResponse extends ResponseBase {
    * answer module (the gate.ts "wraps from the OUTSIDE" boundary), so this
    * field is the only thing the answer pipeline hands out for it. */
   onboarding: OnboardingEnvelope | null;
+  /** #134(a) (ADR 029, refusal-side variant): servability-gated retry chips on
+   * a period-coverage refusal — a STRUCTURAL sibling of AnswerResponse's field,
+   * assembled AFTER the refusal text so the R8-audited `text` is byte-untouched.
+   * Non-empty ONLY on a 'freshness' / 'outside_loaded_slice' (period-axis)
+   * refusal whose boundary period dry-runs as servable (suggestions.ts
+   * buildRefusalSuggestions); `[]` on every other refusal. Copy is a
+   * deterministic Dutch question over a registry label + a proven-loaded period
+   * code (no LLM, no numbers-as-claims). ADDITIVE: pre-#134 audit rows lack the
+   * field; readers treat absence as [] (reconstruct.ts never reads it — the
+   * refusal text is the only reconstructed surface). */
+  suggestions: string[];
 }
 
 export type ComposedResponse = AnswerResponse | ClarificationResponse | RefusalResponse;

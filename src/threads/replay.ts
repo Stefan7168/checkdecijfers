@@ -13,7 +13,7 @@ import type { Db } from '../db/types.ts';
 import { REDACTED_QUESTION_TEXT } from '../answer/audit/retention.ts';
 import { buildConversationContext } from '../answer/context/build.ts';
 import type { ConversationContext } from '../answer/context/types.ts';
-import type { AnswerResponse, ComposedResponse } from '../answer/respond/types.ts';
+import type { AnswerResponse, ComposedResponse, RefusalResponse } from '../answer/respond/types.ts';
 import type { ChartSpec } from '../chart/index.ts';
 import type { WebSection } from '../websearch/types.ts';
 import type { ThreadRow } from './index.ts';
@@ -106,7 +106,15 @@ function buildAssistantPart(row: ThreadRow): ReplayAssistantPart {
     finalText: row.finalText,
     answerView: extractAnswerView(response),
     chart: response.kind === 'answer' ? ((response as AnswerResponse).chart ?? null) : null,
-    suggestions: response.kind === 'answer' ? ((response as AnswerResponse).suggestions ?? []) : [],
+    // WP29 + #134(a): answers AND period-coverage refusals carry the structural
+    // `suggestions` field — a resumed thread must replay both, mirroring the
+    // live read in chat.tsx (dropping the refusal retry chip on resume was a
+    // parity gap the #134(a) adversarial review caught: this second read site
+    // was missed when chat.tsx was widened). `?? []` = A1 absent-key discipline.
+    suggestions:
+      response.kind === 'answer' || response.kind === 'refusal'
+        ? ((response as AnswerResponse | RefusalResponse).suggestions ?? [])
+        : [],
     // Additive envelope fields (A1 absent-key discipline): `?? null` reads.
     webSection: response.webSection ?? null,
     provisional: computeProvisional(response),

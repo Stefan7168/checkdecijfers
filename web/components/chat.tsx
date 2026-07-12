@@ -495,10 +495,16 @@ export function Chat({
               : null,
           provisional:
             response.kind === 'answer' && response.result.cells.some((cell) => cell.provisional),
-          // WP29: `?? []` guards the deploy-window skew only (an old server
-          // process serving a new client bundle omits the field); a current
-          // server always sets it.
-          suggestions: response.kind === 'answer' ? (response.suggestions ?? []) : [],
+          // WP29 + #134(a): `?? []` guards the deploy-window skew only (an old
+          // server process serving a new client bundle omits the field); a
+          // current server always sets it. Answers carry follow-up chips;
+          // period-coverage refusals (freshness / outside_loaded_slice) carry a
+          // one-click retry chip — both ride the same structural field and the
+          // same kind-agnostic render + #75 fill-don't-send handler below.
+          suggestions:
+            response.kind === 'answer' || response.kind === 'refusal'
+              ? (response.suggestions ?? [])
+              : [],
           // WP128: the feedback anchor — only real answers get buttons; the
           // `?? null` guards the same deploy-window skew as suggestions.
           auditId: response.kind === 'answer' ? (gated.auditId ?? null) : null,

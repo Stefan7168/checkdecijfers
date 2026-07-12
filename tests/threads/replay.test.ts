@@ -199,6 +199,44 @@ describe('replayParts — R8 + zero-loss answerView (pin 2)', () => {
       'user', 'assistant', 'user', 'assistant', 'user', 'assistant',
     ]);
   });
+
+  it('#134(a): a resumed REFUSAL row replays its retry chip — parity with the live turn (regression: replay dropped refusal suggestions)', () => {
+    const answerRow = mkRow({
+      id: 1,
+      kind: 'answer',
+      question: 'a',
+      response: answerEnvelopeWithView({ question: 'a', finalText: 'a', suggestions: ['Wat was X in 2024?'] }),
+    });
+    // A period-coverage refusal with a stored retry chip (freshness/outside_slice
+    // — what #134(a) writes) plus a clarification (no suggestions field at all).
+    const refusalRow = mkRow({
+      id: 2,
+      kind: 'refusal',
+      question: 'b',
+      response: {
+        schemaVersion: 1,
+        kind: 'refusal',
+        question: 'b',
+        text: 'Zo recent heb ik de cijfers nog niet — de meest recente periode is 2025.',
+        reason: 'freshness',
+        suggestions: ['Wat was inflatie in 2025?'],
+      },
+    });
+    const clarifyRow = mkRow({
+      id: 3,
+      kind: 'clarification',
+      question: 'c',
+      response: { schemaVersion: 1, kind: 'clarification', question: 'c', text: 'welke regio?', axes: ['region'], options: [] },
+    });
+
+    const [, aAnswer, , aRefusal, , aClarify] = replayParts([answerRow, refusalRow, clarifyRow]);
+    // The answer chip survives resume (pre-existing behaviour, still holds).
+    expect((aAnswer as ReplayAssistantPart).suggestions).toEqual(['Wat was X in 2024?']);
+    // The refusal retry chip survives resume — the regression this fixes.
+    expect((aRefusal as ReplayAssistantPart).suggestions).toEqual(['Wat was inflatie in 2025?']);
+    // A clarification carries no suggestions field → [] (unchanged).
+    expect((aClarify as ReplayAssistantPart).suggestions).toEqual([]);
+  });
 });
 
 describe('replayParts — ⟨A4⟩ clarification round (pin 11)', () => {

@@ -583,6 +583,56 @@ describe('Chat — WP29 follow-up suggestion chips (#73)', () => {
   });
 });
 
+// #134(a) (ADR 029, refusal-side variant): a period-coverage refusal
+// (freshness / outside_loaded_slice) carries the SAME structural `suggestions`
+// field as an answer — the kind-agnostic chip render + #75 fill-don't-send
+// handler must surface it under the refusal, not just under answers.
+describe('Chat — #134(a) period-coverage refusal retry chip', () => {
+  function refusalWithSuggestions(text: string, suggestions: string[]): GatedResponse {
+    return {
+      kind: 'ok',
+      auditId: 4,
+      netCost: 0,
+      response: { kind: 'refusal', reason: 'freshness', text, suggestions } as unknown as ComposedResponse,
+    };
+  }
+
+  it('renders the retry chip under a freshness refusal; clicking FILLS the input and never sends (#75)', async () => {
+    askQuestion.mockResolvedValue(
+      outcome(
+        refusalWithSuggestions(
+          'Zo recent heb ik de cijfers over inflatie nog niet — de meest recente periode waarvoor ik een cijfer heb is 2025.',
+          ['Wat was inflatie (jaarmutatie CPI, alle bestedingen) in 2025?'],
+        ),
+      ),
+    );
+    render(<Chat />);
+    await submit('Wat was de inflatie in 2027?');
+
+    const chip = await screen.findByRole('button', {
+      name: 'Wat was inflatie (jaarmutatie CPI, alle bestedingen) in 2025?',
+    });
+    fireEvent.click(chip);
+    expect(screen.getByPlaceholderText('Stel een vraag…')).toHaveValue(
+      'Wat was inflatie (jaarmutatie CPI, alle bestedingen) in 2025?',
+    );
+    // Fill, never send: only the original submit reached the server action.
+    expect(askQuestion).toHaveBeenCalledTimes(1);
+  });
+
+  it('a refusal with no retry chip renders no suggestion button (the deferred (b) / non-target case)', async () => {
+    askQuestion.mockResolvedValue(
+      outcome(
+        refusalWithSuggestions('CBS heeft voor inflatie (nog) geen cijfer over deze periode gepubliceerd.', []),
+      ),
+    );
+    render(<Chat />);
+    await submit('Wat was de inflatie in 1990?');
+    await screen.findByText('CBS heeft voor inflatie (nog) geen cijfer over deze periode gepubliceerd.');
+    expect(screen.queryByRole('button', { name: /Wat was .*\?/ })).toBeNull();
+  });
+});
+
 describe('Chat — WP22 stale-deploy action failure (#96a)', () => {
   it('shows the honest deploy copy + refresh button, never the generic error', async () => {
     askQuestion.mockRejectedValue(

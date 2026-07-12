@@ -23,7 +23,7 @@
 // brief's "van X tot Y" sketch left the inclusivity wording to the repo
 // convention).
 import { INTENT_SCHEMA_VERSION } from '../../query/index.ts';
-import type { StructuredIntent, ValidatedResult } from '../../query/index.ts';
+import type { QueryRefusal, StructuredIntent, ValidatedResult } from '../../query/index.ts';
 import type { ServabilityCheck } from '../intent/policy.ts';
 import { baseLabel, stepPeriodCode } from '../intent/resolve.ts';
 import { CANONICAL_MEASURES } from '../../registry/defaults.ts';
@@ -49,6 +49,12 @@ const G4 = [
   { code: 'GM0518', name: 'Den Haag' },
   { code: 'GM0344', name: 'Utrecht' },
 ];
+
+/** Registry definitionLabel by canonical key — the label a refusal chip names
+ * (a refusal has no ValidatedResult, so it cannot use the answer path's
+ * cell-derived attribution.definitionLabel; this is the same label refusals.ts
+ * uses in the prose it complements). */
+const definitionLabelByKey = new Map(CANONICAL_MEASURES.map((m) => [m.key, m.definitionLabel]));
 
 /** Dutch listing: "A", "A en B", "A, B en C". */
 function joinNl(items: string[]): string {
@@ -256,6 +262,66 @@ export async function buildSuggestions(
   } catch {
     // Fail-open (ADR 029): chips are decoration on a paid answer — never let
     // their failure surface as an error or block the response.
+    return [];
+  }
+}
+
+/** #134(a) (ADR 029, refusal-side variant): ONE servability-gated retry chip on
+ * a period-coverage refusal — the two query-refusal kinds that already compute
+ * a concrete boundary period we CAN serve: `freshness` (offer the freshest
+ * available period) and `outside_loaded_slice` on the PERIOD axis (offer the
+ * loaded-slice floor). The chip re-asks the SAME canonical measure at that
+ * boundary, so a click (fill-don't-send, #75) lands the user on a working
+ * period instead of guessing one — turning the refusal's existing "vanaf X" /
+ * "voor X direct" prose into a one-click retry.
+ *
+ * Region-less v1 (drop-never-guess): a refusal carries no cells, so there is no
+ * honest cell-derived region wording — a region-carrying intent yields no chip
+ * (the regional case is deferred, #134 v2). The dry-run IS the loadedness proof
+ * (EchoServability carries no cell values by construction — the same no-numbers
+ * guarantee the answer-path generators have); an unservable boundary drops the
+ * chip. FAIL-OPEN: any throw returns [] so a chip hiccup never costs the user
+ * the (refunded) refusal turn. Returns 0 or 1 chip. */
+export async function buildRefusalSuggestions(
+  refusal: QueryRefusal,
+  check: ServabilityCheck,
+): Promise<string[]> {
+  try {
+    const r = refusal.refusal;
+    // Only the two period-coverage kinds that know a concrete boundary, and
+    // only on the PERIOD axis — the dimension outside_loaded_slice carries a
+    // dimension COORDINATE in nearestAlternative (resolve.ts, axis 'measure'),
+    // never a period, so it must not become a period chip.
+    if (r.kind !== 'freshness' && r.kind !== 'outside_loaded_slice') return [];
+    if (r.axis !== 'period') return [];
+    // Canonical target only — a registry definitionLabel to name in the chip
+    // (mirrors the answer path's label===null skip; drop-never-guess).
+    const intent = refusal.intent;
+    if (intent.target.kind !== 'canonical') return [];
+    const label = definitionLabelByKey.get(intent.target.key);
+    if (label === undefined) return [];
+    // Region-less v1: no cells → no honest region wording.
+    if ((intent.regions ?? []).length > 0) return [];
+    // The boundary the refusal already computed: freshest-available for
+    // freshness, the loaded-slice floor (nearestAlternative) for the period
+    // outside_loaded_slice.
+    const boundary =
+      r.kind === 'freshness'
+        ? (r.freshness?.freshestAvailable?.periodCode ?? r.nearestAlternative ?? null)
+        : (r.nearestAlternative ?? null);
+    if (boundary === null) return [];
+    const candidate: StructuredIntent = {
+      schemaVersion: INTENT_SCHEMA_VERSION,
+      target: intent.target,
+      period: { kind: 'codes', codes: [boundary] },
+      derivation: 'none',
+    };
+    // The dry-run proves the boundary period resolves in loaded data (R7 /
+    // docs/05 "actually available" rule) — a refusal must never offer a retry
+    // it cannot then serve.
+    if (!(await check(candidate)).servable) return [];
+    return [`Wat was ${label} in ${periodCodeToNl(boundary)}?`];
+  } catch {
     return [];
   }
 }
