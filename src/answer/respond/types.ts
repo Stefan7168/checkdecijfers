@@ -244,9 +244,10 @@ export interface RefusalResponse extends ResponseBase {
   /** #134(a) (ADR 029, refusal-side variant): servability-gated retry chips on
    * a period-coverage refusal — a STRUCTURAL sibling of AnswerResponse's field,
    * assembled AFTER the refusal text so the R8-audited `text` is byte-untouched.
-   * Non-empty ONLY on a 'freshness' / 'outside_loaded_slice' (period-axis)
-   * refusal whose boundary period dry-runs as servable (suggestions.ts
-   * buildRefusalSuggestions); `[]` on every other refusal. Copy is a
+   * Non-empty ONLY on a 'freshness' / 'outside_loaded_slice' / too-old
+   * 'not_published' (period-axis) refusal whose boundary period dry-runs as
+   * servable (suggestions.ts buildRefusalSuggestions); `[]` on every other
+   * refusal (incl. a mid-gap not_published, which carries no boundary). Copy is a
    * deterministic Dutch question over a registry label + a proven-loaded period
    * code (no LLM, no numbers-as-claims). ADDITIVE: pre-#134 audit rows lack the
    * field; readers treat absence as [] (reconstruct.ts never reads it — the

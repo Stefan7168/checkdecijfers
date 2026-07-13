@@ -155,10 +155,11 @@ export async function respondToIntent(
       });
     }
     // #134(a) (ADR 029, refusal-side variant): a period-coverage refusal
-    // (freshness / outside_loaded_slice) may carry ONE servability-gated retry
-    // chip pointing at the boundary period we CAN serve. Gated inside
-    // buildRefusalSuggestions (only those two kinds, period axis, canonical +
-    // region-less), dry-run through the SAME primitive the answer path uses.
+    // (freshness / outside_loaded_slice / #134(b) too-old not_published) may
+    // carry ONE servability-gated retry chip pointing at the boundary period we
+    // CAN serve. Gated inside buildRefusalSuggestions (those kinds, period axis,
+    // canonical + region-less), dry-run through the SAME primitive the answer
+    // path uses.
     // FAIL-OPEN belt (mirrors the answer path): a chip hiccup must never turn
     // an honest refusal into an internal error.
     let suggestions: string[] = [];

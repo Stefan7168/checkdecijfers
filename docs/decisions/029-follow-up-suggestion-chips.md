@@ -4,7 +4,9 @@
 autonomous, branch `wp29-follow-up-chips` per #118)** — execute brief:
 [session-briefs/2026-07-08-follow-up-chips-brief.md](../session-briefs/2026-07-08-follow-up-chips-brief.md).
 **EXTENDED with a refusal-side variant for [#134](../open-questions.md)(a) (session 43, 2026-07-13,
-branch `feat/134a-refusal-period-chips`) — see the second as-built note below.**
+branch `feat/134a-refusal-period-chips`) — see the second as-built note below. FURTHER EXTENDED with
+the [#134](../open-questions.md)(b) too-old `not_published` chip (session 44, 2026-07-13, branch
+`feat/134b-not-published-too-old-chip`, awaiting owner merge) — see the fourth as-built note.**
 
 ## As-built note (#134(a) refusal-side variant, 2026-07-13)
 
@@ -22,10 +24,10 @@ step" idea (this ADR's whole point) applies there too.
   `check` (the same `echoServability` closure) proves it resolves in loaded data before the chip
   surfaces (R7 "actually available"). Copy reuses the adjacent-period template verbatim
   (`Wat was {label} in {periodNl}?`). Whole body fail-open to `[]`, plus the respond.ts belt.
-- **Deliberately excluded:** the DIMENSION `outside_loaded_slice` (axis `measure`, whose
-  `nearestAlternative` is a dimension coordinate, never a period) and `not_published` (no boundary
-  is computed — the genuinely hard [#134](../open-questions.md)(b) half; stays prose-only). Regional
-  chip still deferred ([#138](../open-questions.md)).
+- **Deliberately excluded (in this note):** the DIMENSION `outside_loaded_slice` (axis `measure`,
+  whose `nearestAlternative` is a dimension coordinate, never a period). `not_published` was excluded
+  here (no boundary computed) but is now handled for the too-old sub-case — the [#134](../open-questions.md)(b)
+  half, see the fourth as-built note below. Regional chip still deferred ([#138](../open-questions.md)).
 - **[#137](../open-questions.md) range chip (session 43, PR #40):** for a range-ask
   `outside_loaded_slice` refusal, the chip prefers the clamped WORKING sub-range `[floor, originalTo]`
   as a trend question ("Hoe ontwikkelde {label} zich van {floor} tot en met {to}?" — the owner's
@@ -52,6 +54,43 @@ step" idea (this ADR's whole point) applies there too.
   zero prompt/fixture bytes changed. **Adversarial multi-lens review (6 lenses × refuting skeptics,
   2026-07-13): the ONLY confirmed finding was the replay-parity gap above (found independently by 3
   lenses, 0 false positives) — fixed + regression-pinned before the PR.**
+
+## As-built note (#134(b) too-old not_published chip, 2026-07-13)
+
+The [#134](../open-questions.md)(b) half — the owner's own "inflatie 2001" case. A `not_published`
+refusal (CBS never published the asked period for this table) is now given the SAME retry chip as
+the period `outside_loaded_slice`, but ONLY when the ask is too OLD. Owner decision (2026-07-13, two
+questions): (1) range-aware like #137 (a range ask → the clamped working sub-range, a single-year
+ask → the earliest year); (2) a MID-GAP not_published (a hole between served periods) stays
+PROSE-ONLY — there is no single honest "try this" target, and picking a side would be the guess
+principle (c) forbids.
+
+- **Where the boundary is computed:** `src/query/run.ts` — a new `earliestAvailablePeriod(db, q,
+  regionCode)` (the mirror of `fetchFreshness`, at the ASKED grain) plus a too-old classification in
+  `diagnoseMissing`: it sets `nearestAlternative` = that earliest period **only** when
+  `requestedKey < periodKey(earliest)`. A mid-gap (requested ≥ earliest) or a grain-mismatch
+  (nothing at the asked grain → `earliest === null`) leaves it unset → no chip → prose. Same-grain
+  deliberately (a yearly ask gets a yearly floor); cross-grain offers are a deferred v2.
+- **Chip builder:** `suggestions.ts buildRefusalSuggestions` adds `not_published` to the allowed
+  kinds and to the #137 range branch — it then shares the `outside_loaded_slice` path verbatim
+  (single-period `{codes:[boundary]}`, or the clamped `[boundary, originalTo]` trend for a range
+  ask), the `echoServability` dry-run the SOLE validity gate. No new charging surface, fill-don't-send
+  (#75) preserved.
+- **R8 / benchmark:** the refusal TEXT is byte-identical (`buildNotPublishedRefusal` ignores
+  `nearestAlternative`); reconstruct never reads `suggestions`. Benchmark unaffected (no refuse task
+  is a too-old not_published). Web needs no change — the chip block + resume replay are already
+  reason-agnostic (they render any refusal carrying `suggestions`, verified by the second-read-site
+  lens).
+- **Adversarial review (5 lenses × refute-verify, 2026-07-13):** the ONLY confirmed finding was a
+  test-coverage gap — no committed fixture has a natural same-grain interior hole, so the too-old
+  guard's discriminating comparison could be weakened to `earliest !== null` with the suite staying
+  green. CLOSED by `tests/query/not-published-midgap.test.ts`: an isolated ingest with one interior
+  year surgically deleted drives the real `diagnoseMissing` and asserts the mid-gap carries NO
+  boundary (teeth-proven — the reviewer's exact mutation fails it). The other four lenses
+  (correctness, money-path/dead-end, R8/audit, web/thread-resume) found nothing.
+- Verified: full gate green (backend 1280, web 305, benchmark 14/14 + 6/6 + 0 fabricated, both
+  typechecks, real `next build`); zero prompt/fixture bytes changed. Branch
+  `feat/134b-not-published-too-old-chip`, awaiting owner merge (#118b).
 
 ## As-built note (WP29, 2026-07-11)
 

@@ -91,6 +91,30 @@ async function fetchFreshness(
   };
 }
 
+/** #134(b): the EARLIEST period we hold for these exact coordinates AT THE
+ * REQUESTED GRAIN — the mirror of fetchFreshness's freshestAvailable. Used to
+ * classify a too-OLD not_published ask (before our earliest served period,
+ * e.g. "inflatie 2001" when our CPI slice starts 2010) so the refusal can offer
+ * that floor as a retry boundary (suggestions.ts). Same-grain deliberately: a
+ * yearly ask gets a yearly floor, a quarterly ask a quarterly one — a
+ * grain-mismatch not_published (asking a quarter of a yearly-only table) finds
+ * nothing at that grain → null → no boundary → stays prose (the safe default;
+ * cross-grain retry offers are a deferred v2). Null when we hold nothing here. */
+async function earliestAvailablePeriod(
+  db: Db,
+  q: ResolvedQuery,
+  regionCode: string,
+): Promise<string | null> {
+  const res = await db.query(
+    `select period_code from observations
+     where table_id = $1 and measure = $2 and dims = $3::jsonb
+       and region_code = $4 and period_grain = $5
+     order by period_year asc, coalesce(period_index, 0) asc limit 1`,
+    [q.tableId, q.measure, JSON.stringify(q.dims), regionCode, q.grain],
+  );
+  return res.rows[0] ? (res.rows[0].period_code as string) : null;
+}
+
 /** Why is a requested cell missing? Ordered diagnosis producing the refusal
  * kind docs/05's failure table requires: freshness (beyond what we can serve,
  * with the freshest period offered) / not_published (CBS never published it) /
@@ -128,11 +152,24 @@ async function diagnoseMissing(
       [q.tableId],
     );
     const grainList = grains.rows.map((r) => r.period_grain as string).join(', ') || 'none ingested';
+    // #134(b): a too-OLD not_published ask (the requested period is before our
+    // earliest served period at this grain — the owner's "inflatie 2001" case)
+    // can honestly offer that earliest period as a retry boundary, exactly like
+    // the outside_loaded_slice floor. A MID-GAP not_published (a hole between
+    // served periods) gets NO boundary: there is no single honest "try this"
+    // target, so the refusal stays prose-only (owner decision 2026-07-13). The
+    // chip builder (suggestions.ts) dry-run-gates this boundary like any other.
+    // The too-old vs mid-gap split is pinned end to end (against a seeded
+    // interior gap) by tests/query/not-published-midgap.test.ts — do NOT weaken
+    // the `requestedKey < earliest` comparison to just `earliest !== null`.
+    const earliest = await earliestAvailablePeriod(db, q, regionCode);
+    const tooOld =
+      earliest !== null && requestedKey < periodKey(parsePeriodCode(earliest)!);
     return refuse(
       q.intent,
       'not_published',
       `CBS has not published period ${missingPeriod} for table "${q.tableId}" (grains with data: ${grainList})`,
-      { axis: 'period', freshness },
+      { axis: 'period', freshness, ...(tooOld ? { nearestAlternative: earliest } : {}) },
     );
   }
 
