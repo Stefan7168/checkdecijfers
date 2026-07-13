@@ -9,8 +9,14 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
-**▶ NEXT SESSION STARTS HERE (2026-07-13, session 44 — #134(b) too-old not_published retry chip; owner approved + merged 1 PR).**
+**▶ NEXT SESSION STARTS HERE (2026-07-13, session 44 — #134(b) too-old not_published retry chip + an authorization/ownership security hunt that found + fixed an open redirect; owner approved + merged 2 PRs).**
 
+- **Authorization/ownership security hunt — CLEAN, + 1 open-redirect fix LIVE** (PR #42, squash `4e2a2fd`; owner "Ja, merge + deploy"). A 5-lens
+  adversarial hunt (server-action ownership scoping, API-route forgery/replay, data-layer SQL user-scoping, RLS defense-in-depth, GDPR-redaction
+  completeness) found **ZERO** cross-user data/money/privacy breaks — the auth/ownership model is clean. The ONLY surfaced issue (out of that class):
+  an open redirect on the magic-link callback — `${origin}${next}` with a raw `next` let `?next=@evil.com` / `?next=.evil.com` redirect off-site
+  after a successful login (LOW severity: needs the victim's own valid one-time code; leaks no data/money). FIXED ([#139](open-questions.md)): new
+  `web/lib/safe-redirect.ts` resolves `next` against our origin and accepts only same-origin (9 tests, both sides). Web-only; gate + prod deploy green.
 - **#134(b) too-old not_published chip — BUILT + MERGED + LIVE** (PR #41, squash `12518eb`; owner "Ja, merge + deploy"). A too-OLD `not_published`
   refusal (asked period before our earliest served period — the owner's "inflatie 2001" case) now carries the same retry chip as period
   `outside_loaded_slice`: RANGE-AWARE like #137 (range ask → clamped working sub-range "van 2010 tot en met 2024"; single-year ask → earliest year);

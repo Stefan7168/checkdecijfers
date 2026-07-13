@@ -6,6 +6,19 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+- **A REFUTED verdict in a SCOPED hunt can still be a real bug OUTSIDE the scope — read the refuted
+  findings, don't discard them** (session 44, 2026-07-13, the authorization/ownership security hunt).
+  The hunt was scoped to "can user A reach user B's data/money?" and returned `{confirmed:[]}` — the
+  auth/ownership model is genuinely clean (5 lenses, 32–53 real file reads each). But one lens
+  surfaced an open redirect on the magic-link callback, and the verifier REFUTED it — correctly, FOR
+  THE OWNERSHIP SCOPE (it leaks no data/money). Reading the refuted finding (not just the empty
+  confirmed bucket) showed it was still a real, if low-severity, security bug worth fixing (`?next=@evil.com`
+  → off-site phishing after login). **Lesson: `REFUTED` in a scoped adversarial pass means "not an
+  instance of THIS class," not "not a bug" — always read the refuted list; the out-of-scope reals are
+  exactly what a narrowly-scoped hunt would otherwise drop on the floor.** Corollary: I also
+  independently repro'd the exploit + verified the fix with the Node URL parser before shipping —
+  never fix a security finding on a subagent's word alone. (The uniform pipeline-stage return shape,
+  the fix from the entry below, worked this time — the finding + verdict aggregated correctly.)
 - **A Workflow pipeline stage that can return EITHER an object OR an array will silently corrupt
   your aggregation — and the summary will LIE** (session 44, 2026-07-13, the #134(b) adversarial
   review). The review workflow's second pipeline stage returned `{lens, verified: []}` for a finder
