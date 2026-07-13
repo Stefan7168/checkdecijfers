@@ -6,6 +6,18 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+- **A dry-run gate you ALREADY have can replace bespoke validation — lean on it** (session 43,
+  2026-07-13, #137 range chip). The recorded #137 sketch called for grain-aware period comparison
+  (floor < to across JJ/KW/MM) + a second copy template. But `runQuery` already REFUSES a backwards
+  / mixed-grain / above-ceiling / gappy range (never throws) and `echoServability` surfaces that as
+  `servable:false` — so the range chip just builds the candidate and lets the dry-run decide, with
+  only the degenerate `floor===to` guarded (its copy would read "van X tot en met X"). Zero bespoke
+  comparison; a whole class of grain-edge bugs designed out. **Lesson: before hand-rolling validation
+  for a candidate you're about to dry-run anyway, check whether the dry-run already rejects the
+  invalid cases — the real gate is usually stricter and more correct than a pre-check.** Corollary
+  (adversarial review): the dry-run's own robustness means the real DB can't exercise the branch's
+  error path (a throw), so that path needs a STUB-check test to pin its isolation — which the review
+  flagged and we closed.
 - **A new envelope field OR ledger debit-reason must be propagated to EVERY consumer — the
   "second read/net site" is the recurring blind spot** (session 43, 2026-07-13; found by two
   independent adversarial hunts in ONE autonomous session). Instance A: #134(a) added
