@@ -222,7 +222,10 @@ tests (299 web total), benchmark 14/14 + 6/6 + 0 fabricated GATE PASS, real `nex
 Post-build review (22 agents) confirmed 2 blockers, fixed same session: (1) `getThreadRows`'s
 credits-join initially omitted the separate `websearch_cost` debit — replayed cost captions now
 net base + add-on debits minus their compensations (the same pre-existing omission in the
-dashboard's `history.ts` was spun off as its own reviewed fix, chip task_7de27dc7); (2) a stale
+dashboard's `history.ts` was spun off as its own reviewed fix, chip task_7de27dc7; **and session 43
+(PR #38 `72f4f4f`) found + fixed a THIRD sibling omission in this SAME join — `onboarding_cost`, so
+a resumed on-demand-onboarding turn showed "0 credits" for a turn the user paid 100 — the recurring
+"hardcoded debit-reason list" blind spot, see lessons-learned**); (2) a stale
 in-flight submit could land in the wrong thread after a sidebar switch — generation guard +
 sidebar disabled while busy. D1's module note: `src/threads/` recorded in ADR 001's as-built
 list. The ADR 001 seam holds: threads are a web-app domain module, not an answer-pipeline one.
