@@ -267,18 +267,26 @@ export async function buildSuggestions(
 }
 
 /** #134(a) (ADR 029, refusal-side variant): ONE servability-gated retry chip on
- * a period-coverage refusal — the two query-refusal kinds that already compute
- * a concrete boundary period we CAN serve: `freshness` (offer the freshest
- * available period) and `outside_loaded_slice` on the PERIOD axis (offer the
- * loaded-slice floor). The chip re-asks the SAME canonical measure at that
- * boundary, so a click (fill-don't-send, #75) lands the user on a working
- * period instead of guessing one — turning the refusal's existing "vanaf X" /
- * "voor X direct" prose into a one-click retry.
+ * a period-coverage refusal — the query-refusal kinds that compute a concrete
+ * boundary period we CAN serve: `freshness` (offer the freshest available
+ * period), `outside_loaded_slice` on the PERIOD axis (offer the loaded-slice
+ * floor), and `not_published` on the PERIOD axis (#134(b), below). The chip
+ * re-asks the SAME canonical measure at that boundary, so a click
+ * (fill-don't-send, #75) lands the user on a working period instead of guessing
+ * one — turning the refusal's prose into a one-click retry.
  *
  * #137: for an `outside_loaded_slice` refusal whose ASK was a RANGE partly below
  * the floor, the chip prefers the WORKING sub-range [floor, originalTo] as a
  * trend question (the "probeer 2010–2024" shape), falling back to the single
  * floor period when that window isn't fully servable.
+ *
+ * #134(b): a `not_published` refusal is handled identically to the period
+ * outside_loaded_slice — but ONLY the too-OLD sub-case, which run.ts marks by
+ * setting `nearestAlternative` to our earliest served period (the owner's
+ * "inflatie 2001" case: offer our earliest year, or the clamped working
+ * sub-range for a range ask). A MID-GAP not_published carries no boundary and
+ * gets no chip — it stays prose-only (owner decision 2026-07-13). Range-aware
+ * like #137, since the owner's canonical example was a range.
  *
  * Region-less v1 (drop-never-guess): a refusal carries no cells, so there is no
  * honest cell-derived region wording — a region-carrying intent yields no chip
@@ -293,11 +301,16 @@ export async function buildRefusalSuggestions(
 ): Promise<string[]> {
   try {
     const r = refusal.refusal;
-    // Only the two period-coverage kinds that know a concrete boundary, and
-    // only on the PERIOD axis — the dimension outside_loaded_slice carries a
-    // dimension COORDINATE in nearestAlternative (resolve.ts, axis 'measure'),
-    // never a period, so it must not become a period chip.
-    if (r.kind !== 'freshness' && r.kind !== 'outside_loaded_slice') return [];
+    // Only the period-coverage kinds that know a concrete boundary, and only on
+    // the PERIOD axis — the dimension outside_loaded_slice carries a dimension
+    // COORDINATE in nearestAlternative (resolve.ts, axis 'measure'), never a
+    // period, so it must not become a period chip. not_published (#134(b)):
+    // ONLY the too-old sub-case reaches here with a boundary — run.ts sets
+    // nearestAlternative solely when the ask is before our earliest served
+    // period; a mid-gap not_published carries none → drops below (prose-only).
+    if (r.kind !== 'freshness' && r.kind !== 'outside_loaded_slice' && r.kind !== 'not_published') {
+      return [];
+    }
     if (r.axis !== 'period') return [];
     // Canonical target only — a registry definitionLabel to name in the chip
     // (mirrors the answer path's label===null skip; drop-never-guess).
@@ -329,7 +342,7 @@ export async function buildRefusalSuggestions(
     // Wrapped in its own try so even an unexpected throw keeps the single-period
     // fallback rather than the outer catch swallowing the whole turn's chip.
     if (
-      r.kind === 'outside_loaded_slice' &&
+      (r.kind === 'outside_loaded_slice' || r.kind === 'not_published') &&
       intent.period.kind === 'range' &&
       intent.period.to !== boundary
     ) {

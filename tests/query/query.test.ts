@@ -453,22 +453,26 @@ describe('typed refusals: clarification and scope (docs/05 failure table)', () =
 });
 
 describe('typed refusals: period availability', () => {
-  it('a period CBS never published refuses as not_published', async () => {
-    // CPI 2025=100 series does not reach back to 1900.
+  it('a too-old period CBS never published refuses as not_published AND offers the earliest-served floor (#134(b))', async () => {
+    // CPI 2025=100 series does not reach back to 1900; the fixture slice starts
+    // 2010, so the too-old ask carries 2010 as the retry boundary the chip uses.
     const r = await expectRefusal(
       intent({ target: { kind: 'canonical', key: 'cpi_yearly_inflation' }, period: { kind: 'codes', codes: ['1900JJ00'] } }),
       'not_published',
     );
     expect(r.axis).toBe('period');
+    expect(r.nearestAlternative).toBe('2010JJ00');
   });
 
-  it('a grain the table does not publish refuses as not_published, naming available grains', async () => {
-    // Housing stock is yearly only.
+  it('a grain the table does not publish refuses as not_published, naming available grains — and carries NO floor (#134(b): nothing at the asked grain)', async () => {
+    // Housing stock is yearly only. Asking a quarter finds no earliest at grain
+    // KW, so the too-old classification cannot fire — the refusal stays prose.
     const r = await expectRefusal(
       intent({ target: { kind: 'canonical', key: 'housing_stock_start_of_year' }, period: { kind: 'codes', codes: ['2024KW01'] } }),
       'not_published',
     );
     expect(r.message).toContain('JJ');
+    expect(r.nearestAlternative).toBeUndefined();
   });
 
   it('a period beyond the freshest available refuses as freshness, offering period + status but no value', async () => {

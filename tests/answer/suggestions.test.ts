@@ -286,10 +286,11 @@ describe('the envelope: suggestions ride the response, text is byte-untouched (R
 // ---------------------------------------------------------------------------
 
 /** The CPI slice in the fixture db is 2010..2025 (probed): asking > 2025 →
- * freshness (freshestAvailable 2025); < 2010 → not_published (no chip — the
- * deferred #134 (b) case); the outside_loaded_slice PERIOD refusal is
- * exercised via a hand-built QueryRefusal whose boundary (2010) is genuinely
- * loaded, so the real dry-run serves it. */
+ * freshness (freshestAvailable 2025); < 2010 → not_published, and since #134(b)
+ * that too-OLD not_published carries the earliest-served floor (2010) as a chip
+ * boundary too (run.ts sets nearestAlternative); the outside_loaded_slice PERIOD
+ * refusal is exercised via a hand-built QueryRefusal whose boundary (2010) is
+ * genuinely loaded, so the real dry-run serves it. */
 const CPI = 'cpi_yearly_inflation';
 const CPI_LABEL = 'inflatie (jaarmutatie CPI, alle bestedingen)';
 
@@ -448,6 +449,41 @@ describe('buildRefusalSuggestions — #137 range-ask retry chip (real db + real 
   });
 });
 
+describe('buildRefusalSuggestions — #134(b) too-old not_published chip (real db + real dry-run)', () => {
+  it('a too-old SINGLE-period not_published: offers the earliest-served floor', async () => {
+    // The owner's "inflatie 2001" shape asked as one year: run.ts set the 2010
+    // floor as nearestAlternative; the real dry-run serves 2010.
+    const refusal = refusalOf('not_published', { axis: 'period', nearestAlternative: '2010JJ00' });
+    expect(await buildRefusalSuggestions(refusal, realCheck())).toEqual([
+      `Wat was ${CPI_LABEL} in 2010?`,
+    ]);
+  });
+
+  it('a too-old RANGE not_published (the owner\'s literal "inflatie 2001–2024"): offers the WORKING sub-range as a trend chip', async () => {
+    const refusal = refusalOf(
+      'not_published',
+      { axis: 'period', nearestAlternative: '2010JJ00' },
+      cpiRangeIntent('2001JJ00', '2024JJ00'),
+    );
+    expect(await buildRefusalSuggestions(refusal, realCheck())).toEqual([
+      `Hoe ontwikkelde ${CPI_LABEL} zich van 2010 tot en met 2024?`,
+    ]);
+  });
+
+  it('a too-old range whose upper bound is above the loaded ceiling falls back to the single floor chip', async () => {
+    // Ask 2001–2050; [2010,2050] is not gap-free (2050 unloaded) → single-period,
+    // exactly like the #137 outside_loaded_slice sibling (shared code path).
+    const refusal = refusalOf(
+      'not_published',
+      { axis: 'period', nearestAlternative: '2010JJ00' },
+      cpiRangeIntent('2001JJ00', '2050JJ00'),
+    );
+    expect(await buildRefusalSuggestions(refusal, realCheck())).toEqual([
+      `Wat was ${CPI_LABEL} in 2010?`,
+    ]);
+  });
+});
+
 describe('buildRefusalSuggestions — the gates and fail-open (stub checks)', () => {
   it('the DIMENSION outside_loaded_slice (axis=measure) is NOT a period chip — even with an always-servable check', async () => {
     // resolve.ts:383 refuses a pinned dimension coordinate on axis 'measure';
@@ -456,8 +492,16 @@ describe('buildRefusalSuggestions — the gates and fail-open (stub checks)', ()
     expect(await buildRefusalSuggestions(refusal, async () => SERVABLE)).toEqual([]);
   });
 
-  it('a non-target reason (not_published — the deferred #134 (b) case) never chips', async () => {
-    const refusal = refusalOf('not_published', { axis: 'period', nearestAlternative: '2010JJ00' });
+  it('a MID-GAP not_published (no nearestAlternative — a hole between served periods) stays prose-only: no chip', async () => {
+    // #134(b): run.ts sets nearestAlternative ONLY for the too-old case; a
+    // mid-gap not_published carries none, so even an always-servable check
+    // yields no chip — there is no single honest "try this" target.
+    const refusal = refusalOf('not_published', { axis: 'period' });
+    expect(await buildRefusalSuggestions(refusal, async () => SERVABLE)).toEqual([]);
+  });
+
+  it('a too-old not_published on a NON-period axis never chips (defensive: the boundary is only a period on the period axis)', async () => {
+    const refusal = refusalOf('not_published', { axis: 'measure', nearestAlternative: '2010JJ00' });
     expect(await buildRefusalSuggestions(refusal, async () => SERVABLE)).toEqual([]);
   });
 
@@ -526,6 +570,25 @@ describe('the refusal envelope: the retry chip rides alongside, text is byte-unt
     };
   }
 
+  function stubRangeIntent(from: string, to: string): Extract<ParseOutcome, { kind: 'intent' }> {
+    return {
+      kind: 'intent',
+      question: 'stub',
+      raw: { version: 3, kind: 'data_query', candidates: [], unmatchedMeasureTerm: null, nearestCanonicalKeys: [], note: null },
+      model: 'stub',
+      usage: { inputTokens: 0, outputTokens: 0 },
+      intent: {
+        schemaVersion: INTENT_SCHEMA_VERSION,
+        target: { kind: 'canonical', key: CPI },
+        period: { kind: 'range', from, to },
+        derivation: 'series',
+      },
+      confidence: 0.97,
+      impliedRecency: false,
+      ranked: [],
+    };
+  }
+
   it('CPI 2027 refuses (freshness) AND carries the 2025 retry chip — the real respondToIntent wiring, no LLM reached', async () => {
     const answerClient = new ThrowingAnswerClient();
     const response = await respondToIntent(db, 'Wat was de inflatie in 2027?', stubIntent(['2027JJ00']), {
@@ -543,7 +606,10 @@ describe('the refusal envelope: the retry chip rides alongside, text is byte-unt
     expect(answerClient.calls).toBe(0);
   });
 
-  it('CPI 1990 refuses (not_published) and carries NO chip — the deferred (b) case stays prose-only', async () => {
+  it('CPI 1990 refuses (not_published, too old) AND carries the 2010 floor chip — #134(b), the real respondToIntent wiring end to end', async () => {
+    // The whole point of #134(b): this exercises run.ts diagnoseMissing setting
+    // nearestAlternative for the too-old case → suggestions.ts → the chip. If
+    // run.ts left it unset this would be [] (the old, pre-#134(b) behavior).
     const response = await respondToIntent(db, 'Wat was de inflatie in 1990?', stubIntent(['1990JJ00']), {
       answerClient: new ThrowingAnswerClient(),
       referenceDate: '2026-08-15',
@@ -551,6 +617,22 @@ describe('the refusal envelope: the retry chip rides alongside, text is byte-unt
     expect(response.kind).toBe('refusal');
     if (response.kind !== 'refusal') throw new Error('unreachable');
     expect(response.reason).toBe('not_published');
-    expect(response.suggestions).toEqual([]);
+    expect(response.suggestions).toEqual([`Wat was ${CPI_LABEL} in 2010?`]);
+    // R8: the audited text is the not_published prose, unchanged — the chip
+    // rides the structural field only, never leaking into the reconstructed text.
+    expect(response.text.length).toBeGreaterThan(0);
+    expect(response.text).not.toContain(`Wat was ${CPI_LABEL} in 2010?`);
+  });
+
+  it('CPI 1990 asked as a RANGE (1990–2024) carries the clamped working-range trend chip — #134(b) range shape end to end', async () => {
+    const response = await respondToIntent(db, 'Wat was de inflatie tussen 1990 en 2024?', stubRangeIntent('1990JJ00', '2024JJ00'), {
+      answerClient: new ThrowingAnswerClient(),
+      referenceDate: '2026-08-15',
+    });
+    expect(response.kind).toBe('refusal');
+    if (response.kind !== 'refusal') throw new Error('unreachable');
+    expect(response.reason).toBe('not_published');
+    expect(response.suggestions).toEqual([`Hoe ontwikkelde ${CPI_LABEL} zich van 2010 tot en met 2024?`]);
+    expect(response.text).not.toContain('2010 tot en met 2024');
   });
 });

@@ -570,8 +570,9 @@ export interface RefusalEnvelopeInput {
   queryRefusal: QueryRefusal | null;
   /** #134(a) (ADR 029, refusal-side variant): servability-gated retry chips —
    * set ONLY by respondToIntent's query-refusal site (freshness /
-   * outside_loaded_slice). Every other call site omits it → [] (the answer
-   * pipeline's refusal chips exist only where a boundary period is computed). */
+   * outside_loaded_slice / too-old not_published, #134(b)). Every other call
+   * site omits it → [] (the answer pipeline's refusal chips exist only where a
+   * boundary period is computed). */
   suggestions?: string[];
 }
 
