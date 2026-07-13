@@ -9,29 +9,22 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
-**▶ NEXT SESSION STARTS HERE (2026-07-13, session 43 FINAL — #134(a) + an autonomous overnight run + the #137 range-chip follow-on; owner approved + merged 5 PRs).**
+**▶ NEXT SESSION STARTS HERE (2026-07-13, session 44 — #134(b) too-old not_published retry chip; owner approved + merged 1 PR).**
 
-- **(1) #134(a) refusal period-suggestion chips — BUILT + MERGED + LIVE** (PR #36, squash `97c696b`). ONE servability-gated retry chip on
-  freshness / period-axis `outside_loaded_slice` refusals (canonical + region-less v1), reusing the WP29/ADR 029 mechanism, fill-don't-send (#75),
-  zero LLM / zero prompt bytes. Adversarial review (6 lenses) found + fixed 1 real bug: the thread-RESUME path (`replay.ts`) dropped the chip while
-  the live turn showed it. Full gate green (backend 1263, web 305, benchmark 14/14 + 6/6 + 0 fabricated).
-- **(2) TWO live money-path bugs found by autonomous adversarial hunts + fixed + LIVE:** PR #38 (`72f4f4f`) — `getThreadRows` omitted
-  `onboarding_cost`, so a RESUMED onboarding turn showed "0 credits" for a turn the user paid 100 (display bug). PR #39 (`a395fa8`) — a DELIVERED
-  onboarding answer was wrongly REFUNDED + marked 'failed' if `finalizeDelivered` threw (the step-8 catch missed the `findDeliveredAnswerAuditId`
-  guard its 2 sibling re-entry paths already had — a company-side leak). Both mutation-verified + adversarial-fix-reviewed (SHIP); no DDL / no env flip.
-- **(3) wrapup-hook false-positive fixed + on main** (PR #37 `33b7a7d`, task_6f27827b): suppresses the wrap-up signal on a session's FIRST message
-  via a `session_id` sentinel, backward-compatible (absent id → old behavior).
-- **(4) All 4 PRs MERGED + DEPLOYED to production** (owner "Continue, agreed to all"); final main CI gate + deploy GREEN, post-deploy smoke check
-  PASS, prod serves (HTTP 307 healthy redirect). Autonomous session → branch + PR + owner-merge per [#118](open-questions.md)(b). Process lesson
-  recorded (both money bugs = the same "second read/net site not updated" class).
-- **(4b) #137 range-chip follow-on — BUILT + MERGED + LIVE** (PR #40, squash `db34700`; owner "merge"). For a range-ask `outside_loaded_slice`
-  refusal, the chip now offers the clamped WORKING sub-range as a trend question (the "probeer 2010–2024" shape), falling back to the single-period
-  floor chip when unservable — the `echoServability` dry-run is the sole validity gate. 6 tests (2 mutation-verified) + adversarial review SHIP; full
-  gate + prod deploy green.
-- **(5) Next — owner decisions:** **#134(b)** (`not_published` alternative — the earliest-loaded-floor idea + a too-old-vs-mid-gap classification,
-  needs an owner call), **#138** (v2 regional refusal chip — needs a code→region-label source on the refusal path), **WP26** (safelist read-back),
-  **#121** (fail-closed template rung), **#131** (multilingual L1), **WP30c** (source choice). Tracked-not-focus: #132 route B ~2026-07-19 (forks==0 T-0),
-  #104/#112 (need live-LLM spend), format.ts NUL (task_e718f60d), /login header cosmetic.
+- **#134(b) too-old not_published chip — BUILT + MERGED + LIVE** (PR #41, squash `12518eb`; owner "Ja, merge + deploy"). A too-OLD `not_published`
+  refusal (asked period before our earliest served period — the owner's "inflatie 2001" case) now carries the same retry chip as period
+  `outside_loaded_slice`: RANGE-AWARE like #137 (range ask → clamped working sub-range "van 2010 tot en met 2024"; single-year ask → earliest year);
+  a MID-GAP not_published stays PROSE-ONLY (owner decision — no single honest "try this" target). Query layer `run.ts` computes the earliest-served
+  floor (`earliestAvailablePeriod`, at the asked grain) + a too-old-vs-mid-gap classification that sets `nearestAlternative` only when
+  `requestedKey < earliest`; `suggestions.ts` shares the `outside_loaded_slice` path verbatim, `echoServability` the sole gate. Refusal text
+  byte-identical (R8 untouched), zero prompt/fixture bytes. Adversarial review (5 lenses × refute-verify): only 1 finding — a test-coverage gap on
+  the guard (no fixture has a natural interior hole) → CLOSED by a seeded-gap end-to-end test (`tests/query/not-published-midgap.test.ts`,
+  mutation-proven: the reviewer's exact mutation fails it). Full gate + prod deploy green (backend 1280, web 305, benchmark 14/14 + 6/6 + 0
+  fabricated, real next build; prod HTTP 307 healthy). Branch + PR + owner-merge per [#118](open-questions.md)(b).
+- **Next — owner decisions:** **#138** (v2 regional refusal chip — needs a code→region-label source on the refusal path), **WP26** (answer-first
+  defaults + clickable clarify options, safelist read-back), **#121** (fail-closed template rung), **#131** (multilingual L1), **WP30c** (source
+  choice). Tracked-not-focus: #132 route B ~2026-07-19 (forks==0 T-0), #104/#112 (need live-LLM spend), format.ts NUL (task_e718f60d), /login
+  header cosmetic.
 
 
 **▶ TOP PRIORITY STACK — owner decision, session 23 (2026-07-05); this ORDER overrides the "decision-gated" framing below.** The owner set an explicit

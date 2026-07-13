@@ -6,6 +6,40 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+- **A Workflow pipeline stage that can return EITHER an object OR an array will silently corrupt
+  your aggregation — and the summary will LIE** (session 44, 2026-07-13, the #134(b) adversarial
+  review). The review workflow's second pipeline stage returned `{lens, verified: []}` for a finder
+  with no findings but `parallel([...])` (a raw ARRAY of verdicts) for a finder WITH findings. The
+  post-loop `for (const r of results) { if (!r.verified) continue; ... }` skipped every array (arrays
+  have no `.verified`), so the ONE real finding + its verifier verdict were dropped — the workflow
+  returned `{confirmed:[], refuted:[]}`, reading as a clean review when it wasn't. **Caught only by
+  reading `journal.jsonl` (the tool result's own diagnostics literally say "Read this file BEFORE
+  diagnosing — do not assume agents returned non-empty results"), not by trusting the empty summary.**
+  Lessons: (1) make every pipeline stage return the SAME shape (wrap the array branch in an object
+  too), or normalize before aggregating; (2) when `agent_count`/`agents_empty_result` in the usage
+  block don't add up to "all clean" (here 6 agents, 4 empty ⇒ 2 non-empty ⇒ something WAS found),
+  distrust an empty final result and read the journal.
+- **To pin a code branch NO fixture can reach naturally, SEED the condition in an isolated ingest —
+  and PROVE the test has teeth with the exact mutation** (session 44, 2026-07-13, #134(b)). Every
+  committed CBS fixture series is gap-free at its native grain, so the too-old-vs-MID-GAP
+  `not_published` split could never be exercised end-to-end — the adversarial review showed the
+  guard's discriminating comparison could be deleted with the whole suite staying green. Fix:
+  `tests/query/not-published-midgap.test.ts` spins its OWN `createIngestedDb()` (isolated ⇒ no
+  cross-test contamination), surgically `delete`s one interior year's dimension_label + observations
+  to manufacture a genuine mid-gap, and drives the REAL `runQuery`/`diagnoseMissing`. Then I applied
+  the reviewer's exact mutation (`requestedKey < earliest` → `earliest !== null`), confirmed the test
+  went RED, and reverted — a coverage test you haven't watched fail is a coverage test you don't know
+  works. **Lesson: a gap-free fixture set is itself a coverage blind spot for "hole in the middle"
+  logic; seed the hole in an isolated db rather than assume the branch is safe, and mutation-prove it.**
+- **Lead an owner design decision with the concrete scenario (a picture), not the mechanism**
+  (session 44, 2026-07-13). My first attempt asked the owner to choose the "retry-chip vorm" using
+  the internal framing (freshness/outside_loaded_slice/not_published, boundary computation) — the
+  non-developer owner replied "wat is dit nou, in welke situatie? Ik heb zo weinig context." A
+  timeline visual (our data 2010–2025 in green; too-old / mid-gap / too-recent zones; what each ask
+  produces) + his own "inflatie 2001" example made the SAME choice obvious in one pass, and he even
+  refined a second sub-decision. **Lesson: when the product owner must make a design call, show the
+  user-visible situation first (concrete example, ideally a diagram); the code-shape framing is for
+  the commit, not the question.**
 - **A dry-run gate you ALREADY have can replace bespoke validation — lean on it** (session 43,
   2026-07-13, #137 range chip). The recorded #137 sketch called for grain-aware period comparison
   (floor < to across JJ/KW/MM) + a second copy template. But `runQuery` already REFUSES a backwards
