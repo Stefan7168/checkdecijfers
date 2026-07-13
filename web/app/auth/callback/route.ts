@@ -4,6 +4,7 @@
 // request from an email client, which cannot invoke a Server Action.
 import { NextResponse } from 'next/server';
 import { createClient } from '../../../lib/supabase-server.ts';
+import { safeRedirectUrl } from '../../../lib/safe-redirect.ts';
 
 export async function GET(request: Request): Promise<Response> {
   const { searchParams, origin } = new URL(request.url);
@@ -14,9 +15,12 @@ export async function GET(request: Request): Promise<Response> {
     const supabase = await createClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
-      return NextResponse.redirect(`${origin}${next}`);
+      // `next` is caller-controlled — resolve it to a guaranteed same-origin
+      // URL so it can never redirect off-site after a successful login
+      // (open-redirect hardening; see lib/safe-redirect.ts).
+      return NextResponse.redirect(safeRedirectUrl(next, origin));
     }
     console.error('exchangeCodeForSession failed:', error);
   }
-  return NextResponse.redirect(`${origin}/login?error=auth`);
+  return NextResponse.redirect(new URL('/login?error=auth', origin));
 }
