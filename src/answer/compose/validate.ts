@@ -96,12 +96,27 @@ interface AllowedNumbers {
    * same anchors (see metadataEcho), closing the "digit buried in metadata
    * prose whitelists a coincidental fabrication" hole. */
   metadataAnchors: MetadataNumberAnchor[];
-  countNumbers: number[];
+  /** Structural counts, AXIS-BOUND (#142): each count may only be echoed next
+   * to its OWN axis's structure noun — the pooled version let "in 4
+   * gemeenten" ground as 'count' when 4 was the PERIOD count of a
+   * single-region result (a wrong-axis claim, hunt-confirmed). */
+  countEntries: { value: number; nouns: RegExp }[];
   /** Letter-words of the result's own unit strings ("mln kWh" → mln/kwh) —
    * part of the quantity-noun veto in periodEcho (#141): a period number
    * immediately followed by the result's own unit word is a value claim. */
   unitWords: Set<string>;
 }
+
+// #142 axis noun sets (typographic apostrophe variants included — prose may
+// carry either). 'vergeleken' may sit between the number and its noun
+// (template max: "Van de 4 vergeleken regio's"). Deliberately ONLY the
+// granularities the product actually serves: adding 'wijken'/'buurten' here
+// let a body describe a 4-GEMEENTE comparison as "4 vergeleken wijken"
+// (review-confirmed bypass — the intent schema has no wijk/buurt kind and
+// the policy refuses buurt-level questions outright).
+const REGION_COUNT_NOUNS = /^\s{0,3}(?:vergeleken\s{1,3})?(?:gemeenten?|regio's|regio’s|provincies|steden)\b/i;
+const PERIOD_COUNT_NOUNS = /^\s{0,3}(?:vergeleken\s{1,3})?(?:perioden|periodes|jaren|kwartalen|maanden)\b/i;
+const CELL_COUNT_NOUNS = /^\s{0,3}(?:vergeleken\s{1,3})?(?:waarden|cijfers|cellen)\b/i;
 
 function buildAllowedNumbers(result: ValidatedResult): AllowedNumbers {
   const periodNumbers: number[] = [];
@@ -136,13 +151,13 @@ function buildAllowedNumbers(result: ValidatedResult): AllowedNumbers {
     }
   }
 
-  const countNumbers = [
-    result.cells.length,
-    new Set(result.cells.map((c) => c.regionCode)).size,
-    new Set(result.cells.map((c) => c.periodCode)).size,
+  const countEntries = [
+    { value: result.cells.length, nouns: CELL_COUNT_NOUNS },
+    { value: new Set(result.cells.map((c) => c.regionCode)).size, nouns: REGION_COUNT_NOUNS },
+    { value: new Set(result.cells.map((c) => c.periodCode)).size, nouns: PERIOD_COUNT_NOUNS },
   ];
 
-  return { periodNumbers, periodLabels: [...periodLabels], metadataAnchors, countNumbers, unitWords };
+  return { periodNumbers, periodLabels: [...periodLabels], metadataAnchors, countEntries, unitWords };
 }
 
 /** Common Dutch connector/function words that carry no real binding on their
@@ -380,10 +395,11 @@ export function scanBody(body: string, result: ValidatedResult): ClassifiedToken
   // immediately followed by a structure noun — a bare integer that happens to
   // equal the cell count is otherwise a data claim (adversarial-review
   // finding, 2026-07-03: 'gemiddeld 4 personen per woning' passed as count).
-  const countContext = (index: number, length: number): boolean =>
-    /^\s*(?:vergeleken\s+)?(?:gemeenten?|regio's|regio’s|provincies|steden|perioden|periodes|jaren|kwartalen|maanden|waarden|cijfers|cellen)\b/i.test(
-      masked.slice(index + length, index + length + 40),
-    );
+  // Since #142 the noun must belong to the SAME axis as the count it echoes
+  // ("in 4 gemeenten" in a single-region 4-period result is a wrong-axis
+  // claim, not a structural mention).
+  const countContext = (index: number, length: number, nouns: RegExp): boolean =>
+    nouns.test(masked.slice(index + length, index + length + 40));
 
   return findNumericTokens(masked).map((token) => {
     // The body-side context of this token (the alnum runs touching it) — the
@@ -434,8 +450,9 @@ export function scanBody(body: string, result: ValidatedResult): ClassifiedToken
     }
     if (
       Number.isInteger(token.value) &&
-      allowed.countNumbers.some((n) => eq(n, token.value)) &&
-      countContext(token.index, token.token.length)
+      allowed.countEntries.some(
+        (entry) => eq(entry.value, token.value) && countContext(token.index, token.token.length, entry.nouns),
+      )
     ) {
       return { ...token, kind: 'count' as const, cells: [], derivation: null, matchedAbsolute: false };
     }

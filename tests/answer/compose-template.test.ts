@@ -20,6 +20,8 @@ import {
   housingSingle,
   incomeSingle,
   inflationDrop,
+  makeCell,
+  makeResult,
   nullCellSingle,
   populationComparison,
   populationDifference,
@@ -266,5 +268,44 @@ describe('displayValueUnit — #115 lever c: long descriptive units set off in p
   it('keeps factor units (with digits) in the existing factor-paren form, not the descriptive branch', () => {
     expect(displayValueUnit(8204, 0, 'x 1 000')).toBe('8.204 (x 1 000)');
     expect(displayValueUnit(57, 0, '1 000 euro')).toBe('57 (× 1 000 euro)');
+  });
+});
+
+// #143 (session-44 data-integrity hunt, MEDIUM): an index-BASE unit
+// ("2015=100") declares the reference year of an index, it is not a factor —
+// the old digit-unit branch prefixed '×' ("118,3 (× 2015=100)"), implying a
+// multiplication that isn't real. parseFactorUnit (query/derivations.ts)
+// already structurally excludes '=' units from #125a expansion; this aligns
+// the display side.
+describe('#143: an index-base unit ("2015=100") renders as a label, never a ×-factor', () => {
+  const cpiIndex = makeResult({
+    shape: 'single',
+    definitionLabel: 'CPI indexniveau',
+    cells: [
+      makeCell({
+        table: '86141NED', measure: 'M1', measureTitle: 'CPI indexniveau',
+        region: null, periodCode: '2024JJ00', periodLabel: '2024', value: 118.3, unit: '2015=100', decimals: 1,
+      }),
+    ],
+  });
+
+  it('displayValueUnit shows the base declaration without a multiplication sign', () => {
+    expect(displayValueUnit(118.3, 1, '2015=100')).toBe('118,3 (2015=100)');
+    // Factor units keep their × behavior (the ×1.000 guard is untouched).
+    expect(displayValueUnit(8204, 0, 'x 1 000')).toBe('8.204 (x 1 000)');
+  });
+
+  it('the full template body over a base-unit cell renders ×-free and passes the validator', () => {
+    const body = renderTemplateBody(cpiIndex);
+    expect(body).toContain('118,3 (2015=100)');
+    expect(body).not.toContain('×');
+    expect(validateAnswerBody(body, cpiIndex).problems).toEqual([]);
+  });
+
+  it('R8 backward compatibility: a STORED body in the OLD "(× 2015=100)" form still re-validates', () => {
+    // reconstruct.ts re-validates stored bodies under TODAY's rules; a row
+    // rendered before this fix must not start failing (review test-gap pin).
+    const oldForm = 'CPI indexniveau was in 2024 118,3 (× 2015=100).';
+    expect(validateAnswerBody(oldForm, cpiIndex).problems).toEqual([]);
   });
 });

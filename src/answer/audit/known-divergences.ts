@@ -76,12 +76,22 @@ export const KNOWN_DIVERGENCES: KnownDivergence[] = [
   {
     id: 227,
     kind: 'answer',
-    expectProblemsContaining: ['definition line does not re-derive from the stored attribution'],
+    expectProblemsContaining: [
+      'definition line does not re-derive from the stored attribution',
+      // Structural CASCADE of the same fact, not a second divergence:
+      // checkAnswerReconstruction re-assembles `text` from the RE-DERIVED
+      // definitionLine, so whenever the definition line legitimately
+      // diverges, the reassembly check diverges with it by construction
+      // (surfaced 2026-07-16 by the #141 full-range `audit:verify -- 1 252`;
+      // the entry as first recorded listed only the definition-line string).
+      'answer text does not re-assemble from its stored parts',
+    ],
     cause:
       "row stored before the #115-lever-a circular-title suppression existed (same day, later session): " +
       "today's buildDefinitionLine now suppresses a definition line that merely repeats the answer's own " +
       "title, so a fresh re-derivation legitimately differs from the definition line the row stored and " +
-      'the user actually saw.',
+      'the user actually saw — and, by construction, so does the answer text reassembled from that ' +
+      're-derived line.',
     recordedDate: '2026-07-12',
   },
 ];
