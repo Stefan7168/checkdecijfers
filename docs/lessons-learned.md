@@ -6,6 +6,40 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+- **A two-sided context gate must apply its veto on EVERY exit path — the one un-vetoed shortcut IS
+  the bypass** (session 45, 2026-07-16, the #141 fix's own review round). The v1 temporal gate had a
+  clean quantity-noun veto on the before-marker path, but `TEMPORAL_AFTER` short-circuited `return
+  true` BEFORE the veto — and its bare-colon leg required no before-context at all, so "daarnaast
+  2025: extra gemeenten" passed while the veto sat unreachable one line below (confirmed CRITICAL by
+  two independent lenses + skeptics, executable repro). The #140 pattern held exactly: every
+  adversarial round finds the narrower bypass, and it hides in the path you *didn't* constrain, not
+  the one you did. Fix shape worth reusing: an exemption keyed on punctuation (":") must bind BOTH
+  sides (list-context before + value/'geen waarde' after), never one. Same round, same class: the
+  veto's word-extraction required whitespace, so a hyphen glued the noun past it ("2024-gemeenten");
+  and regex `\b` against a `.slice()` window treats the cut as a word boundary — cap whitespace
+  bridges (\s{0,3}) so no marker can sit at the window edge. Test-teeth corollary: a dynamic check
+  whose test example is ALSO covered by a static list ("kwh" in both unitWords and the noun regex)
+  is untested — prove it with a word only the dynamic path knows ('saldo').
+- **Corpus-first allowlist design beats iterate-on-review: extract every REAL context before writing
+  the first regex** (session 45, 2026-07-16, #141). Before designing the temporal-context rule I
+  extracted every year/small-int context from all 63 validator-scanned bodies (LLM answer fixtures +
+  benchmark audit-run + experience-audit, attribution lines stripped — scan scope only). The
+  allowlist fell out as a small closed set, and the full suite then caught the only two misses
+  (template null-form "Voor 2024", regional list labels) in ONE run each — versus #140's four
+  fix-versions × four review rounds when the rule was designed from reasoning and corrected by
+  review. The review round still earned its keep (the colon-leg bypass above was a design error no
+  corpus shows), but false-POSITIVE hunting is far cheaper against a measured corpus than against a
+  reviewer's imagination. Corollary: fixture corpora lie in scope — `finalText` includes structural
+  lines the validator never scans; measure against what the code actually validates.
+- **A tree-MUTATING review lens must be serialized after every reader and run against COMMITTED
+  state — caught pre-launch this time** (session 45, 2026-07-16). The first workflow draft ran a
+  mutation-probe lens (temporarily edits validate.ts, runs vitest, reverts) in the same parallel
+  pipeline as four read-only lenses, while the fix was still UNCOMMITTED — its `git checkout`
+  restore would have ERASED the work, and concurrent readers would have probed a mutated tree (the
+  session-32/36 shared-tree class, now as silent result-corruption instead of timeouts). Stopped the
+  run, committed first, moved the mutation lens to its own strictly-later phase, resumed from cache.
+  Rule of thumb: before launching a workflow, ask which agent WRITES to the tree; anything that does
+  runs alone, last, against a commit it can restore to.
 - **The wrap-up ritual failed the owner twice in one session in two distinct ways — both now fixed in
   the mechanism, not just "I'll do better"** (session 44, 2026-07-16). (1) I wrote the WRONG DATE
   (2026-07-13) into every session-44 doc from memory; the session had actually spanned to 2026-07-16
