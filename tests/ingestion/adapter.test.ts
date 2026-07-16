@@ -222,6 +222,42 @@ describe('adapter parsing (real captured wire data)', () => {
       vi.unstubAllGlobals();
     }
   });
+
+  it('#156 ODataV4Source: reuses caller-supplied dimension names, skipping the redundant /Dimensions fetch', async () => {
+    const pageResponse = {
+      value: [{ Id: 0, Measure: 'M1', ValueAttribute: 'None', Value: 7, StringValue: null, Perioden: '2020JJ00' }],
+    };
+    const requestedUrls: string[] = [];
+    const fetchMock = vi.fn(async (url: string) => {
+      requestedUrls.push(url);
+      let body: unknown;
+      if (url.endsWith('/Dimensions')) body = { value: [{ Identifier: 'Perioden', Title: 'Perioden', Kind: 'TimeDimension' }] };
+      else if (url.includes('/Observations')) body = pageResponse;
+      else throw new Error(`unexpected hermetic-stub request: ${url}`);
+      return { ok: true, status: 200, statusText: 'OK', json: async () => body };
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    try {
+      const source = new ODataV4Source();
+      const pages: unknown[][] = [];
+      // The caller (the ingestion pipeline) hands in the already-validated
+      // dimension names, so the adapter must NOT re-fetch /Dimensions.
+      for await (const page of source.fetchObservations('TESTTABLE', undefined, ['Perioden'])) {
+        pages.push(page as unknown[]);
+      }
+
+      // The passed names were actually USED (Perioden resolved as a coordinate).
+      expect(pages).toHaveLength(1);
+      const row = pages[0]![0] as { value: number; coordinates: Record<string, string> };
+      expect(row.value).toBe(7);
+      expect(row.coordinates.Perioden).toBe('2020JJ00');
+      // The redundant /Dimensions fetch is gone.
+      expect(requestedUrls.some((u) => u.endsWith('/Dimensions'))).toBe(false);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
 });
 
 describe('fetchObservationCount (WP16 sub-part 2 §4)', () => {

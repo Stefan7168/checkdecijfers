@@ -100,8 +100,18 @@ export interface CbsSource {
   fetchTableSchema(tableId: string): Promise<CbsTableSchema>;
   /** Code list for one dimension, e.g. fetchCodeList('03759ned', 'RegioS'). */
   fetchCodeList(tableId: string, dimension: string): Promise<CbsCode[]>;
-  /** Observations page by page, server-side filtered to the slice when given. */
-  fetchObservations(tableId: string, slice?: CbsSlice): AsyncIterable<CbsObservationRow[]>;
+  /** Observations page by page, server-side filtered to the slice when given.
+   * #156 (session-47 ingestion hunt): `dimensionNames` lets a caller that has
+   * ALREADY fetched + validated the schema (the ingestion pipeline) hand the
+   * dimension names in, so the adapter parses observations against the SAME
+   * validated dimension set instead of re-fetching /Dimensions independently (a
+   * redundant HTTP call and a TOCTOU: two live fetches could disagree). Omitted
+   * ⇒ the adapter fetches them itself (the standalone/harness path), unchanged. */
+  fetchObservations(
+    tableId: string,
+    slice?: CbsSlice,
+    dimensionNames?: string[],
+  ): AsyncIterable<CbsObservationRow[]>;
   /**
    * Total observation-cell count for a table (WP16 sub-part 2, ADR 026, slice
    * estimation §4). Returns null when the count cannot be determined (v4

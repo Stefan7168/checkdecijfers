@@ -202,11 +202,18 @@ export class FixtureSource implements CbsSource {
     return parseCodes(raw);
   }
 
-  async *fetchObservations(tableId: string, slice?: CbsSlice): AsyncIterable<CbsObservationRow[]> {
+  async *fetchObservations(
+    tableId: string,
+    slice?: CbsSlice,
+    dimensionNames?: string[],
+  ): AsyncIterable<CbsObservationRow[]> {
     const docs = this.docsFor(tableId);
-    const dimensionNames = parseDimensions(docs.dimensions).map((d) => d.name);
+    // #156: match the interface — prefer the caller's validated dimension names
+    // when given (the fixture docs are local, so there was never a TOCTOU here,
+    // but keeping the two adapters signature- and behavior-aligned matters).
+    const dimNames = dimensionNames ?? parseDimensions(docs.dimensions).map((d) => d.name);
     for (const page of docs.observationPages) {
-      const { rows } = parseObservationsPage(page, dimensionNames);
+      const { rows } = parseObservationsPage(page, dimNames);
       yield rows.filter((row) => matchesSlice(row, slice));
     }
   }
