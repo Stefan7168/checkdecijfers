@@ -71,3 +71,7 @@ Coördinatie: een parallelle "spar"-sessie draaide s47 docs-only op de marketing
 loopt, fetch/rebase vóór elke push en blijf van elkaars oppervlak. Restpunten (tracked): #132 route B
 ~2026-07-19 (forks==0 = T-0 go/no-go — check dit als de sessie op/na 19 juli draait), #104/#112 (vergen
 live-LLM-spend), /login-header cosmetisch, en de maandelijkse onderhoudssessie-agenda.
+
+---
+
+**Addendum (2026-07-17, session 48 itself, owner in-chat):** the "per-merge explicit akkoord / a terse *Continue* is not approval" rule above is **superseded for owner-present sessions** — the owner issued a standing authorization to push/merge directly without per-change approval (recorded in CLAUDE.md git-workflow bullet + open-questions #118). Verification block, CI gate, supervised live-DDL/spend/env-flips, and branch+PR for autonomous sessions are unchanged. Also note: open-questions **#158–163** (spar captures + owner-approved strategy rebalance) postdate this brief — where this brief's "recommended next" (owner-stack or fresh hunt) diverges from #163 (market contact over further hunts; distribution-surfaces-first; coverage sprint), **#163 wins**.
