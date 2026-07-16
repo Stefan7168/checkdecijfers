@@ -283,7 +283,9 @@ in order, owner present:
 2. **Add the CI replay leg** — ask the session to add the replay test over the recorded fixtures
    (the eval's `--replay` mode is the manual equivalent) so the calibrated behavior is pinned
    hermetically on the gate from then on.
-3. **OWNER DECISION — `SEMANTIC_CHECK_FAILMODE`** (ADR 034 §5 presents both): what happens when
+3. **OWNER DECISION — `SEMANTIC_CHECK_FAILMODE`** (ADR 034 §5 presents both; the owner deliberately
+   DEFERRED this choice to this step — 2026-07-16, in-chat — so it is made with the measured eval
+   results from step 1 in hand): what happens when
    the CHECKER ITSELF fails (API outage — never a judgment)?
    - unset / anything else → **fail-open**: serve the answer (it already passed the full
      deterministic validator), record the skip on the audit row. Recommended in the brief.

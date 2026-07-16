@@ -6,6 +6,38 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+- **MEASURE the brief's scoping assumption before building on it — ours inverted 100% vs 0% under
+  the corpus** (session 46, 2026-07-16, #144). The design brief assumed "most answers skip the
+  [semantic-checker] call"; the naive soft-token definition it implied triggered on **100%** of the
+  18 stored legit benchmark bodies ("Op 1 januari 2025 telde…", "bedroeg in 2024 3,3%" all matched
+  the marker-before leg). One measurement script + one corpus extraction (all 78 real texts) turned
+  that into two domain-grounded refinements (date-form echoes hard; corpus-screened year
+  continuations hard) with a measured **0%** legit-trigger rate while both residual shapes still
+  fire. Same lesson as #141's corpus-first design, now at the SCOPING level: a brief's quantitative
+  assumption ("most", "rare") is a hypothesis to measure on day one, not a constraint to inherit.
+  Corollary that made the refinement safe at all: check the failure DIRECTION first — a wrong entry
+  in this narrowing can only SKIP a double-check (yesterday's live posture), never accept a rejected
+  number, which is why a corpus-derived allowlist was admissible here where #142's accept-side
+  allowlist was an attack surface.
+- **The carve-out you add for precision is where the next bypass lives — third confirmation, now
+  measurable in advance** (session 46, 2026-07-16, the #144 review round). The adversarial review's
+  only CRITICAL (dual-confirmed, executed repro) was in the date-form exception I added the same
+  day: it checked only the single word touching the number, so a fabricated count riding a
+  month-name COMPOUND ("nog 31 januari-meldingen extra", "1 januari overzicht") was hard-classified
+  and the checker never fired. #140 (metadata anchors), #141 (bare-colon leg) and now #144
+  (date-form leg): every review round found its bypass in the newest EXEMPTION, not in the rule
+  proper. Standing rule: when you write a carve-out, spend the review budget there first, and write
+  the carve-out to require the FULL structural form (here: month + year-or-punctuation), never a
+  single-token neighborhood.
+- **`[skip ci]` on a PR-branch TIP suppresses the whole PR gate — GitHub skips both the push AND
+  pull_request runs for that head commit** (session 46, 2026-07-16). The docs-only tail commit
+  followed the repo's [skip ci] convention and PR #47 opened with NO CI runs at all — on a repo
+  whose merge rule is "green gate or no merge". Fixed by amending the tip without the marker.
+  Rule: [skip ci] is for main-bound docs pushes only; the last commit before opening/updating a PR
+  must never carry it. Related same-session flake note: two web cron-route tests timed out ONLY
+  while the full backend suite ran concurrently (environment setup 487s under load) — run
+  verification legs serially; a timeout during a parallel run is load, not regression, but prove it
+  with a solo rerun before trusting either conclusion.
 - **Diagnose a tracked "bug" before fixing it — it may be deliberate behavior in a hostile ENCODING**
   (session 45, 2026-07-16, the format.ts "NUL residual", PR #46). The tracked complaint was "format.ts
   contains a NUL byte, grep treats it as binary." The byte turned out to be LOAD-BEARING on four sites
