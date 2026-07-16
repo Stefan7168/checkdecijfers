@@ -82,6 +82,15 @@ export const TABLE_REGISTRY_DEFAULTS: TableRegistryDefaults[] = [
       JJ: 'Jaartotaal: productie/vermogen voor het genoemde jaar (bijv. Bruto elektriciteitsproductie is een jaartotaal, geen jaargemiddelde).',
     },
   },
+  {
+    // Coverage sprint table #1 (docs/11-coverage-table-set.md). Monthly-only
+    // grain (measured 2026-07-17: all 483 period keys are YYYYMMnn, v3+v4).
+    tableId: '83693NED',
+    defaultCoordinates: {},
+    periodSemantics: {
+      MM: 'Seizoengecorrigeerd saldo voor de genoemde kalendermaand (gemeten in de eerste helft van die maand; CBS publiceert het cijfer rond de 22e van dezelfde maand). Geen jaar- of kwartaalreeks in deze tabel.',
+    },
+  },
 ];
 
 export const CANONICAL_MEASURES: CanonicalMeasure[] = [
@@ -163,6 +172,39 @@ export const CANONICAL_MEASURES: CanonicalMeasure[] = [
     definitionLabel: 'bruto elektriciteitsproductie uit zonnestroom',
     everydayTerms: ['zonnestroom', 'zonne-energie', 'elektriciteit uit zonnepanelen', 'zonnepanelen'],
     notes: 'Not a canonical-default choice: "zonnestroom" names the BronTechniek directly (Zonnestroom = E006590), no ambiguity to resolve.',
+  },
+  {
+    key: 'consumer_confidence_seasonally_adjusted',
+    tableId: '83693NED',
+    measure: 'M001093',
+    measureTitle: 'Consumentenvertrouwen',
+    dims: {},
+    definitionLabel: 'consumentenvertrouwen, seizoengecorrigeerd',
+    everydayTerms: ['consumentenvertrouwen', 'vertrouwen van consumenten', 'consumentenvertrouwenscijfer'],
+    notes:
+      'Canonical-default choice mirroring the werkloosheid precedent (docs/05-data-rules.md canonical defaults): the everyday term maps to the SEASONALLY ADJUSTED headline series (83693NED), not the uncorrected sibling table 83694NED. CBS itself leads its persbericht with this corrected figure. Coverage sprint #163(3), docs/11-coverage-table-set.md.',
+  },
+  {
+    key: 'economic_climate_seasonally_adjusted',
+    tableId: '83693NED',
+    measure: 'D001095',
+    measureTitle: 'Economisch klimaat',
+    dims: {},
+    definitionLabel: 'oordeel economisch klimaat (deelindicator consumentenvertrouwen), seizoengecorrigeerd',
+    everydayTerms: ['economisch klimaat', 'oordeel economisch klimaat'],
+    notes:
+      'Sub-indicator of consumentenvertrouwen (same CBS persbericht family); own key so the persberichtdag question shapes answer deterministically instead of routing to the WP16 finder. Not a canonical-default choice: the term names the measure directly.',
+  },
+  {
+    key: 'willingness_to_buy_seasonally_adjusted',
+    tableId: '83693NED',
+    measure: 'M001128',
+    measureTitle: 'Koopbereidheid',
+    dims: {},
+    definitionLabel: 'koopbereidheid (deelindicator consumentenvertrouwen), seizoengecorrigeerd',
+    everydayTerms: ['koopbereidheid'],
+    notes:
+      'Sub-indicator of consumentenvertrouwen (same CBS persbericht family); own key so the persberichtdag question shapes answer deterministically instead of routing to the WP16 finder. Not a canonical-default choice: the term names the measure directly.',
   },
   {
     key: 'average_disposable_household_income',

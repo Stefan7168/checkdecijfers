@@ -54,6 +54,11 @@ export const AVAILABLE_GRAINS: Record<string, ('JJ' | 'KW' | 'MM')[]> = {
   bankruptcies_businesses: ['JJ', 'KW', 'MM'],
   average_disposable_household_income: ['JJ'],
   solar_electricity_production: ['JJ'],
+  // Coverage sprint (docs/11-coverage-table-set.md): 83693NED is monthly-only —
+  // all 483 period keys are YYYYMMnn (measured live v3+v4, 2026-07-17).
+  consumer_confidence_seasonally_adjusted: ['MM'],
+  economic_climate_seasonally_adjusted: ['MM'],
+  willingness_to_buy_seasonally_adjusted: ['MM'],
 };
 
 /** The only Phase 0 measure with a regional dimension (03759ned: national,

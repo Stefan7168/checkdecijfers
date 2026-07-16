@@ -12,7 +12,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { FixtureSource, loadFixtureDocs } from '../../src/cbs-adapter/fixture-source.ts';
 import { runCli } from '../../src/ingestion/cli.ts';
 import { registerTables } from '../../src/ingestion/pipeline.ts';
-import { PHASE0_TABLES } from '../../src/ingestion/registry-seed.ts';
+import { PHASE0_TABLES, SEED_TABLES } from '../../src/ingestion/registry-seed.ts';
 import type { Db } from '../../src/db/types.ts';
 import { createTestDb } from '../helpers/pglite-db.ts';
 
@@ -56,7 +56,7 @@ function buildTwoTableSource(): FixtureSource {
 }
 
 /** Directly inserts a minimal cbs_tables row (bypassing registerTables/any
- * CbsSource call) for every PHASE0 seed OTHER than the ones this test's
+ * CbsSource call) for every curated seed (Phase 0 + coverage) OTHER than the ones this test's
  * FixtureSource actually has docs for. registerTables' auto-registration
  * step skips any id already present in cbs_tables (pipeline.ts:
  * `if (existingIds.has(table.id)) continue`), so this keeps the "other
@@ -64,7 +64,7 @@ function buildTwoTableSource(): FixtureSource {
  * fixture — the test can then focus solely on #110a's actual claim without
  * every unrelated PHASE0 seed needing a captured fixture. */
 async function fakeRegisterOtherSeeds(db: Db, excludeIds: string[]): Promise<void> {
-  const others = PHASE0_TABLES.filter((t) => !excludeIds.includes(t.id));
+  const others = SEED_TABLES.filter((t) => !excludeIds.includes(t.id));
   for (const seed of others) {
     await db.query(
       `insert into cbs_tables (id, title, expected_dimensions, units, update_cadence)

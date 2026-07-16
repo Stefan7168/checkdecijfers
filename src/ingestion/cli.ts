@@ -3,7 +3,7 @@
 // the owner can read). Commands: register, sync.
 import type { CbsSource } from '../cbs-adapter/types.ts';
 import type { Db } from '../db/types.ts';
-import { PHASE0_TABLES } from './registry-seed.ts';
+import { SEED_TABLES } from './registry-seed.ts';
 import { registerTables, syncTable } from './pipeline.ts';
 import type { Correction, SyncResult } from './types.ts';
 
@@ -84,10 +84,10 @@ export async function runCli(argv: string[], deps: Deps): Promise<number> {
   if (args.command === 'register') {
     const start = Date.now();
     try {
-      const registered = await registerTables(db, source, PHASE0_TABLES);
+      const registered = await registerTables(db, source, SEED_TABLES);
       const duration = ((Date.now() - start) / 1000).toFixed(1);
       if (registered.length === 0) {
-        console.log(`All ${PHASE0_TABLES.length} Phase 0 table(s) were already registered. Nothing to do.`);
+        console.log(`All ${SEED_TABLES.length} seed table(s) were already registered. Nothing to do.`);
       } else {
         console.log(`Registered ${registered.length} table(s) in ${duration}s: ${registered.join(', ')}.`);
       }
@@ -99,7 +99,7 @@ export async function runCli(argv: string[], deps: Deps): Promise<number> {
   }
 
   // sync: auto-register missing seed tables first (trust-on-first-use event).
-  const seedTables = args.all ? PHASE0_TABLES : PHASE0_TABLES.filter((t) => args.tableIds.includes(t.id));
+  const seedTables = args.all ? SEED_TABLES : SEED_TABLES.filter((t) => args.tableIds.includes(t.id));
 
   try {
     const registered = await registerTables(db, source, seedTables);

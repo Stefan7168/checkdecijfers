@@ -1,0 +1,80 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/83693NED/$metadata#Properties",
+ "Identifier": "83693NED",
+ "Title": "Consumentenvertrouwen, economisch klimaat en koopbereidheid; gecorrigeerd",
+ "Description": "Deze tabel bevat de (seizoen)gecorrigeerde gegevens over de opvattingen en verwachtingen van Nederlandse consumenten ten aanzien van de algemene economische ontwikkelingen en de eigen financiële situatie. Op basis van deze gegevens wordt de indicator consumentenvertrouwen en de deelindicatoren economisch klimaat en koopbereidheid berekend. De statistiek 'Consumenten Conjunctuuronderzoek' komt tot stand met medefinanciering door de Europese Commissie.\r\n\r\nGegevens beschikbaar vanaf: april 1986 \r\n\r\nStatus van de cijfers\r\nDe cijfers tot en met december 2023 zijn definitief. Jaarlijks worden in februari de maanden januari tot en met december van afgelopen twee jaar bijgesteld. Daarmee worden de cijfers van twee jaar eerder definitief. De cijfers van een jaar eerder blijven voorlopig. De bijstellingen van de cijfers zijn doorgaans gering.\r\n\r\nWijzigingen per 22 juni 2026.\r\nDe cijfers van juni 2026 zijn toegevoegd.\r\n\r\nWanneer komen er nieuwe cijfers?\r\nDe nieuwe maandcijfers verschijnen op 23 juli 2026.\r\n\r\n",
+ "Language": "nl",
+ "Authority": "https://standaarden.overheid.nl/owms/terms/Centraal_Bureau_voor_de_Statistiek",
+ "Modified": "2026-06-22T06:30:00+02:00",
+ "ReleaseDate": "2026-06-22T06:30:00+02:00",
+ "ModificationDate": "2026-06-22T06:30:00+02:00",
+ "TemporalCoverage": "april 1986 - juni 2026",
+ "Catalog": "CBS",
+ "Publisher": "https://standaarden.overheid.nl/owms/terms/Centraal_Bureau_voor_de_Statistiek",
+ "ContactPoint": "infoservice@cbs.nl",
+ "Version": "202606220630",
+ "VersionNotes": "",
+ "VersionReason": "Actualisering",
+ "Frequency": "Per maand",
+ "Status": "Regulier",
+ "ObservationCount": 3864,
+ "ObservationsModified": "2026-06-22T06:30:00+02:00",
+ "DatasetType": "Numeric",
+ "GraphTypes": "Table,Bar,Line",
+ "License": "https://creativecommons.org/licenses/by/4.0/",
+ "Source": "CBS.",
+ "Summary": "Verwachtingen van Nederlandse consumenten, gecorrigeerd, over\nalgemene economische ontwikkelingen en de eigen financiële situatie ",
+ "LongDescription": "\r\nINHOUDSOPGAVE\r\n\r\n1. Toelichting\r\n2. Definities en verklaring van symbolen\r\n3. Koppelingen naar relevante tabellen en artikelen\r\n4. Bronnen en methoden\r\n5. Meer informatie \r\n\r\n1. TOELICHTING\r\n\r\nDeze tabel bevat de (seizoen)gecorrigeerde gegevens over de opvattingen en verwachtingen van Nederlandse consumenten ten aanzien van de algemene economische ontwikkelingen en de eigen financiële situatie. Op basis van deze gegevens wordt de indicator consumentenvertrouwen en de deelindicatoren economisch klimaat en koopbereidheid berekend. De statistiek 'Consumenten Conjunctuuronderzoek' komt tot stand met medefinanciering door de Europese Commissie.\r\n\r\nGegevens beschikbaar vanaf: april 1986 \r\n\r\nStatus van de cijfers\r\nDe cijfers tot en met december 2023 zijn definitief. Jaarlijks worden in februari de maanden januari tot en met december van afgelopen twee jaar bijgesteld. Daarmee worden de cijfers van twee jaar eerder definitief. De cijfers van een jaar eerder blijven voorlopig. De bijstellingen van de cijfers zijn doorgaans gering.\r\n\r\nWijzigingen per 22 juni 2026.\r\nDe cijfers van juni 2026 zijn toegevoegd.\r\n\r\nWanneer komen er nieuwe cijfers?\r\nDe nieuwe maandcijfers verschijnen op 23 juli 2026.\r\n\r\n2. DEFINITIES EN VERKLARING VAN SYMBOLEN\r\n\r\nDefinities:\r\nHet consumentenvertrouwen is een indicator die informatie geeft over het vertrouwen en opvattingen van consumenten ten aanzien van de ontwikkelingen van de Nederlandse economie en hun eigen financiële situatie. Samen met de deelindicatoren economisch klimaat en koopbereidheid dragen deze bij aan de voorspelling van korte termijn schommelingen van de particuliere consumptie, met in het bijzonder de vraag naar en de aanschaf van duurzame consumptiegoederen.\r\n\r\nDe indicator van het consumentenvertrouwen is het gemiddelde van de saldi van de percentages van positieve en negatieve antwoorden op de vragen over de economische situatie in de afgelopen en komende 12 maanden, de financiële situatie van het huishouden in de afgelopen en komende 12 maanden en of het een gunstige tijd is om grote aankopen te doen.\r\n\r\nDe indicator van het economisch klimaat is het gemiddelde van de saldi van het percentage van positieve en negatieve antwoorden op de vragen over de economische situatie in de afgelopen en komende 12 maanden.\r\n\r\nDe indicator van de koopbereidheid is het gemiddelde van de saldi van de percentages van positieve en negatieve antwoorden op de vragen over de financiële situatie van het huishouden in de afgelopen en komende 12 maanden en of het een gunstige tijd is om grote aankopen te doen.\r\n\r\nDe indicatoren kunnen een waarde aannemen van -100 (iedereen antwoordt negatief) tot +100 (iedereen antwoordt positief). Bij een waarde van 0 is het aandeel pessimisten gelijk aan het aandeel optimisten.\r\n\r\nDe indicatoren zijn gecorrigeerd voor seizoensinvloeden en steekproefruis. \r\n\r\nVerklaring van symbolen:\r\n\r\nniets (blanco)\t: het cijfer kan op logische gronden niet voorkomen\r\n. \t\t: het cijfer is onbekend, onvoldoende betrouwbaar of geheim\r\n*\t\t: voorlopige cijfers\r\n**\t\t: nader voorlopige cijfers\r\n\r\n3. KOPPELINGEN NAAR RELEVANTE TABELLEN EN ARTIKELEN\r\n\r\nRelevante tabellen:\r\n\r\n<a href='https://opendata.cbs.nl/statline/#/CBS/nl/dataset/83694NED'>Consumentenvertrouwen; ongecorrigeerd</a>\r\n\r\n<a href='https://opendata.cbs.nl/statline/#/CBS/nl/dataset/83976ned'>Consumentenvertrouwen; persoonskenmerken</a>\r\n\r\n<a href='https://opendata.cbs.nl/statline/#/CBS/nl/dataset/83977ned'>Consumentenvertrouwen; huishoudenkenmerken</a>\r\n\r\n<a href='https://opendata.cbs.nl/statline/#/CBS/nl/dataset/83978ned'>Consumentenvertrouwen; regionale kenmerken</a>\r\n\r\n<a href='https://opendata.cbs.nl/statline/#/CBS/nl/dataset/7388pcr'>Consumentenvertrouwen; 1972-2016</a>\r\n\r\nRelevante artikelen:\r\nMaandelijks verschijnt een artikel over het consumentenvertrouwen in het <a href='https://www.cbs.nl/nl-nl/dossier/dossier-conjunctuur'>Conjunctuurbericht</a>.\r\n\r\nMeer informatie is te vinden op de themapagina <a href='https://www.cbs.nl/nl-nl/arbeid-en-inkomen/inkomen-en-bestedingen'>Inkomen en bestedingen</a>.\r\n\r\n4. BRONNEN EN METHODEN\r\n\r\nDe onderzoeksmethode van deze tabel is te vinden in de onderzoeksbeschrijving <a href='https://www.cbs.nl/nl-nl/deelnemers-enquetes/personen/overzicht/onderzoek-consumentenvertrouwen'>Consumenten Conjunctuuronderzoek (CCO)</a>.\r\n\r\n5. MEER INFORMATIE\r\n\r\n<a href='https://www.cbs.nl/nl-nl/over-ons/contact/infoservice'>Infoservice</a>\r\n\r\nCopyright (c) Centraal Bureau voor de Statistiek, Den Haag/Heerlen \r\nVerveelvoudiging is toegestaan, mits CBS als bron wordt vermeld.\r\n",
+ "Provenance": [
+  {
+   "Title": "Consumenten Conjunctuuronderzoek (CCO)",
+   "Url": "https://www.cbs.nl/nl-nl/deelnemers-enquetes/personen/overzicht/onderzoek-consumentenvertrouwen"
+  }
+ ],
+ "RelatedSources": [
+  {
+   "Title": "Consumentenvertrouwen; ongecorrigeerd",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/dataset/83694NED"
+  },
+  {
+   "Title": "Consumentenvertrouwen; persoonskenmerken",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/dataset/83976ned"
+  },
+  {
+   "Title": "Consumentenvertrouwen; huishoudenkenmerken",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/dataset/83977ned"
+  },
+  {
+   "Title": "Consumentenvertrouwen; regionale kenmerken",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/dataset/83978ned"
+  },
+  {
+   "Title": "Consumentenvertrouwen; 1972-2016",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/dataset/7388pcr"
+  },
+  {
+   "Title": "Conjunctuurbericht",
+   "Url": "https://www.cbs.nl/nl-nl/dossier/dossier-conjunctuur"
+  },
+  {
+   "Title": "Inkomen en bestedingen",
+   "Url": "https://www.cbs.nl/nl-nl/arbeid-en-inkomen/inkomen-en-bestedingen"
+  }
+ ],
+ "Distributions": [
+  {
+   "Format": "csv",
+   "MediaType": "csv",
+   "DownloadUrl": "https://datasets.cbs.nl/csv/CBS/nl/83693NED",
+   "AccessUrl": "https://dataportal.cbs.nl/detail/CBS/83693NED",
+   "Language": "nl"
+  },
+  {
+   "Format": "odata",
+   "MediaType": "odata",
+   "DownloadUrl": "https://datasets.cbs.nl/odata/v1/CBS/83693NED",
+   "AccessUrl": "https://dataportal.cbs.nl/detail/CBS/83693NED",
+   "Language": "nl"
+  }
+ ]
+}

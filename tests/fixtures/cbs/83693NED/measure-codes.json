@@ -1,0 +1,93 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/83693NED/$metadata#MeasureCodes",
+ "value": [
+  {
+   "Identifier": "M001093",
+   "Index": 1,
+   "Title": "Consumentenvertrouwen",
+   "Description": "Indicator van het Consumentenvertrouwen. Dit is de (seizoens)gecorrigeerde reeks.\r\n\r\nHet consumentenvertrouwen is een indicator die informatie geeft over het vertrouwen en opvattingen van consumenten ten aanzien van de ontwikkelingen van de Nederlandse economie en hun eigen financiële situatie. Samen met de deelindicatoren economisch klimaat en koopbereidheid dragen deze bij aan de voorspelling van korte termijn schommelingen van de particuliere consumptie, met in het bijzonder de vraag naar en de aanschaf van duurzame consumptiegoederen.\r\n\r\nDe indicator van het consumentenvertrouwen is het gemiddelde van de saldi van de percentages van positieve en negatieve antwoorden op de vragen over de economische situatie in de afgelopen en komende 12 maanden, de financiële situatie van het huishouden in de afgelopen en komende 12 maanden en of het een gunstige tijd is om grote aankopen te doen. De indicator kan een waarde aannemen van -100 (iedereen antwoordt negatief) tot +100 (iedereen antwoordt positief). Bij een waarde van 0 is het aandeel pessimisten gelijk aan het aandeel optimisten.\r\n\r\n\r\n\r\n",
+   "MeasureGroupId": null,
+   "DataType": "Long",
+   "Unit": "gemiddelde saldo van de deelvragen",
+   "Decimals": 0,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "D001095",
+   "Index": 2,
+   "Title": "Economisch klimaat",
+   "Description": "Indicator van het Economisch klimaat. Dit is de (seizoens)gecorrigeerde reeks.\r\n\r\nHet economisch klimaat is een indicator die informatie geeft over de opvattingen van consumenten ten aanzien van de ontwikkelingen van de Nederlandse economie. Samen met de indicatoren van het consumentenvertrouwen en de koopbereidheid dragen deze bij aan de voorspelling van korte termijn schommelingen van de particuliere consumptie, met in het bijzonder de vraag naar en de aanschaf van duurzame consumptiegoederen.\r\n\r\nDe indicator van het economisch klimaat is het gemiddelde van de saldi van het percentage van positieve en negatieve antwoorden op de vragen over de economische situatie in de afgelopen en komende 12 maanden. De indicator kan een waarde aannemen van -100 (iedereen antwoordt negatief) tot +100 (iedereen antwoordt positief). Bij een waarde van 0 is het aandeel pessimisten gelijk aan het aandeel optimisten.\r\n",
+   "MeasureGroupId": null,
+   "DataType": "Long",
+   "Unit": "gemiddelde saldo van de deelvragen",
+   "Decimals": 0,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "M001128",
+   "Index": 3,
+   "Title": "Koopbereidheid",
+   "Description": "Indicator van de koopbereidheid. Dit is de (seizoens)gecorrigeerde reeks.\r\n\r\nDe koopbereidheid is een indicator die informatie geeft over de opvattingen van consumenten ten aanzien van hun eigen financiële situatie. Samen met de indicatoren van het consumentenvertrouwen en het economisch klimaat dragen deze bij aan de voorspelling van korte termijn schommelingen van de particuliere consumptie, met in het bijzonder de vraag naar en de aanschaf van duurzame consumptiegoederen.\r\n\r\nDe indicator van de koopbereidheid is het gemiddelde van de saldi van de percentages van positieve en negatieve antwoorden op de vragen over de financiële situatie van het huishouden in de afgelopen en komende 12 maanden en of het een gunstige tijd is om grote aankopen te doen.\r\nDe indicator kan een waarde aannemen van -100 (iedereen antwoordt negatief) tot +100 (iedereen antwoordt positief). Bij een waarde van 0 is het aandeel pessimisten gelijk aan het aandeel optimisten. \r\n\r\n\r\n",
+   "MeasureGroupId": null,
+   "DataType": "Long",
+   "Unit": "gemiddelde saldo van de deelvragen",
+   "Decimals": 0,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "M001099",
+   "Index": 4,
+   "Title": "Economische situatie laatste 12 maanden",
+   "Description": "Saldo van het percentage van positieve en negatieve antwoorden op de vraag: Wat vindt u van de algemene economische situatie in Nederland over de afgelopen 12 maanden?\r\n Het saldo is middels een tijdreeksmodel gecorrigeerd voor (seizoens)effecten waarbij gebruik wordt gemaakt van de informatie uit de hele tijdreeks. De indicator kan een waarde aannemen van -100 (iedereen antwoordt negatief) tot +100 (iedereen antwoordt positief). Bij een waarde van 0 is het aandeel pessimisten gelijk aan het aandeel optimisten.\r\n\r\n\r\n",
+   "MeasureGroupId": null,
+   "DataType": "Long",
+   "Unit": "saldo positieve en negatieve antwoorden",
+   "Decimals": 0,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "M001098",
+   "Index": 5,
+   "Title": "Economische situatie komende 12 maanden",
+   "Description": "Saldo van het percentage van positieve en negatieve antwoorden op de vraag: Wat verwacht u van de algemene economische situatie in Nederland over de komende 12 maanden?  Het saldo is middels een tijdreeksmodel gecorrigeerd voor (seizoens)effecten waarbij gebruik wordt gemaakt van de informatie uit de hele tijdreeks. De indicator kan een waarde aannemen van -100 (iedereen antwoordt negatief) tot +100 (iedereen antwoordt positief). Bij een waarde van 0 is het aandeel pessimisten gelijk aan het aandeel optimisten.\r\n\r\n\r\n",
+   "MeasureGroupId": null,
+   "DataType": "Long",
+   "Unit": "saldo positieve en negatieve antwoorden",
+   "Decimals": 0,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "D001113",
+   "Index": 6,
+   "Title": "Financiële situatie laatste 12 maanden",
+   "Description": "Saldo van het percentage van positieve en negatieve antwoorden op de vraag: Wat vindt u van uw financiële situatie van uw huishouden voor de afgelopen 12 maanden? Het saldo is middels een tijdreeksmodel gecorrigeerd voor (seizoens)effecten waarbij gebruik wordt gemaakt van de informatie uit de hele tijdreeks. De indicator kan een waarde aannemen van -100 (iedereen antwoordt negatief) tot +100 (iedereen antwoordt positief). Bij een waarde van 0 is het aandeel pessimisten gelijk aan het aandeel optimisten.\r\n\r\n\r\n",
+   "MeasureGroupId": null,
+   "DataType": "Long",
+   "Unit": "saldo positieve en negatieve antwoorden",
+   "Decimals": 0,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "D001115",
+   "Index": 7,
+   "Title": "Financiële situatie komende 12 maanden",
+   "Description": "Saldo van het percentage van positieve en negatieve antwoorden op de vraag: Wat verwacht u van uw financiële situatie van uw huishouden voor de komende 12 maanden? Het saldo is middels een tijdreeksmodel gecorrigeerd voor (seizoens)effecten waarbij gebruik wordt gemaakt van de informatie uit de hele tijdreeks. De indicator kan een waarde aannemen van -100 (iedereen antwoordt negatief) tot +100 (iedereen antwoordt positief). Bij een waarde van 0 is het aandeel pessimisten gelijk aan het aandeel optimisten.\r\n\r\n",
+   "MeasureGroupId": null,
+   "DataType": "Long",
+   "Unit": "saldo positieve en negatieve antwoorden",
+   "Decimals": 0,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "D001122",
+   "Index": 8,
+   "Title": "Gunstige tijd voor grote aankopen",
+   "Description": "Saldo van het percentage van positieve en negatieve antwoorden op de vraag: Als u naar de algemene economische situatie kijkt, vindt u het dan een gunstige of ongunstige tijd voor grote aankopen, zoals meubels, elektronica, etc.? Het saldo is middels een tijdreeksmodel gecorrigeerd voor (seizoens)effecten waarbij gebruik wordt gemaakt van de informatie uit de hele tijdreeks. De indicator kan een waarde aannemen van -100 (iedereen antwoordt negatief) tot +100 (iedereen antwoordt positief). Bij een waarde van 0 is het aandeel pessimisten gelijk aan het aandeel optimisten.\r\n",
+   "MeasureGroupId": null,
+   "DataType": "Long",
+   "Unit": "saldo positieve en negatieve antwoorden",
+   "Decimals": 0,
+   "PresentationType": null
+  }
+ ]
+}

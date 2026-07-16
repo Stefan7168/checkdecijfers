@@ -84,3 +84,24 @@ export const PHASE0_TABLES: Phase0Table[] = [
     servesTasks: ['B11'],
   },
 ];
+
+// Coverage-sprint table set — configuration mirror of docs/11-coverage-table-set.md
+// (owner strategy #163(3), sprint brief docs/session-briefs/2026-07-17-coverage-sprint-brief.md).
+// Same seed shape and same authority rule as PHASE0_TABLES above: the doc is the
+// authority, this file must follow it. servesTasks references the coverage
+// verification tasks (CC*) in benchmark/coverage-key.json — the docs/05
+// table-onboarding rule's 2-3 frozen-key tasks per table.
+export const COVERAGE_TABLES: Phase0Table[] = [
+  {
+    // Consumer confidence, seasonally adjusted — tiny (483 months × 8 measures =
+    // 3,864 obs, measured v3+v4 2026-07-17), monthly-only grain, no geo dimension,
+    // full ingest. Do NOT conflate with the uncorrected sibling 83694NED.
+    id: '83693NED',
+    updateCadence: 'monthly (published ~the 22nd of the measured month itself, e.g. June figures on 22 June)',
+    servesTasks: ['CC1', 'CC2', 'CC3', 'CC4'],
+  },
+];
+
+// Every curated seed table (Phase 0 + coverage sprint) — what `ingest register`
+// registers and the fixture-capture script accepts.
+export const SEED_TABLES: Phase0Table[] = [...PHASE0_TABLES, ...COVERAGE_TABLES];

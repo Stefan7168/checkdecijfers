@@ -1,12 +1,12 @@
 // Registry work package tests (ADR 010): hermetic (PGlite, no network — ADR 009),
-// registers the 8 Phase 0 tables from fixture docs (schema only, no observations
+// registers every curated seed table (8 Phase 0 + coverage sprint) from fixture docs (schema only, no observations
 // needed) then applies src/registry/defaults.ts and checks the result.
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { FixtureSource, loadFixtureDocsTree } from '../../src/cbs-adapter/fixture-source.ts';
 import { registerTables } from '../../src/ingestion/pipeline.ts';
-import { PHASE0_TABLES } from '../../src/ingestion/registry-seed.ts';
+import { SEED_TABLES } from '../../src/ingestion/registry-seed.ts';
 import { applyRegistryDefaults } from '../../src/registry/apply.ts';
 import { CANONICAL_MEASURES, TABLE_REGISTRY_DEFAULTS } from '../../src/registry/defaults.ts';
 import type { Db } from '../../src/db/types.ts';
@@ -18,7 +18,7 @@ async function registeredDb(): Promise<{ db: Db; close(): Promise<void> }> {
   const { db, close } = await createTestDb();
   const docsTree = loadFixtureDocsTree(FIXTURES_DIR);
   const source = new FixtureSource(docsTree);
-  await registerTables(db, source, PHASE0_TABLES);
+  await registerTables(db, source, SEED_TABLES);
   return { db, close };
 }
 
@@ -35,7 +35,7 @@ describe('registry defaults (ADR 010)', () => {
     const { db, close } = await createTestDb(); // no registerTables call — empty cbs_tables
     try {
       const result = await applyRegistryDefaults(db);
-      expect(result.tablesMissing.length).toBe(PHASE0_TABLES.length);
+      expect(result.tablesMissing.length).toBe(SEED_TABLES.length);
       expect(result.tablesUpdated).toEqual([]);
       expect(result.canonicalMeasuresUpserted).toEqual([]);
       const cm = await db.query('select count(*) c from canonical_measures');
@@ -50,7 +50,7 @@ describe('registry defaults (ADR 010)', () => {
     try {
       const result = await applyRegistryDefaults(db);
       expect(result.tablesMissing).toEqual([]);
-      expect(result.tablesUpdated.sort()).toEqual(PHASE0_TABLES.map((t) => t.id).sort());
+      expect(result.tablesUpdated.sort()).toEqual(SEED_TABLES.map((t) => t.id).sort());
 
       for (const entry of TABLE_REGISTRY_DEFAULTS) {
         const row = await cbsTable(db, entry.tableId);
@@ -71,7 +71,7 @@ describe('registry defaults (ADR 010)', () => {
 
       const rows = await db.query('select key, table_id, measure, dims, definition_label, everyday_terms from canonical_measures order by key');
       expect(rows.rows).toHaveLength(CANONICAL_MEASURES.length);
-      const registeredIds = new Set(PHASE0_TABLES.map((t) => t.id));
+      const registeredIds = new Set(SEED_TABLES.map((t) => t.id));
       for (const row of rows.rows) {
         expect(registeredIds.has(row.table_id as string), `${row.key} -> ${row.table_id}`).toBe(true);
         expect((row.everyday_terms as string[]).length, `${row.key} everydayTerms`).toBeGreaterThan(0);

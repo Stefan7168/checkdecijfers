@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "source": "Coverage-sprint verification tasks (docs/05-data-rules.md table-onboarding rule: 2-3 frozen-key benchmark-style tasks per newly onboarded table). Task ids CC* to keep the Phase-0 benchmark (B1-B20, benchmark/answer-key.json) and its 14/14 + 6/6 gate counts untouched. Scored hermetically by tests/query/coverage-key.test.ts over the committed fixtures; the honesty rule from answer-key.json applies unchanged: keys are never edited to green.",
+  "frozenAt": "2026-07-17",
+  "pinnedTo": {
+    "note": "Values independently verified on 2026-07-17 by re-querying BOTH live CBS platforms before freezing: OData v4 (datasets.cbs.nl .../Observations) and OData v3 (opendata.cbs.nl .../TypedDataSet) returned identical values for every cell below. The committed fixture capture (tests/fixtures/cbs/83693NED, captured the same day, 3,864 observation rows) is the replay source the tests run against.",
+    "tables": {
+      "83693NED": {
+        "title": "Consumentenvertrouwen, economisch klimaat en koopbereidheid; gecorrigeerd",
+        "capturedAt": "2026-07-17"
+      }
+    }
+  },
+  "tasks": {
+    "CC1": {
+      "question": "Wat is het consumentenvertrouwen in juni 2026?",
+      "source": "cbs",
+      "shape": "single",
+      "table": "83693NED",
+      "measure": "M001093",
+      "measureTitle": "Consumentenvertrouwen",
+      "period": "2026MM06",
+      "dims": {},
+      "value": -39,
+      "unit": "gemiddelde saldo van de deelvragen",
+      "decimals": 0,
+      "status": "Definitief",
+      "valueAttribute": "None"
+    },
+    "CC2": {
+      "question": "Wat was het consumentenvertrouwen in februari 2013?",
+      "source": "cbs",
+      "shape": "single",
+      "table": "83693NED",
+      "measure": "M001093",
+      "measureTitle": "Consumentenvertrouwen",
+      "period": "2013MM02",
+      "dims": {},
+      "value": -41,
+      "unit": "gemiddelde saldo van de deelvragen",
+      "decimals": 0,
+      "status": "Definitief",
+      "valueAttribute": "None",
+      "note": "Historical-depth check deep in the 1986-2026 series (the pre-2022 record low), so a truncated or shifted ingest cannot pass on recent rows alone."
+    },
+    "CC3": {
+      "question": "Wat is de koopbereidheid in juni 2026?",
+      "source": "cbs",
+      "shape": "single",
+      "table": "83693NED",
+      "measure": "M001128",
+      "measureTitle": "Koopbereidheid",
+      "period": "2026MM06",
+      "dims": {},
+      "value": -22,
+      "unit": "gemiddelde saldo van de deelvragen",
+      "decimals": 0,
+      "status": "Definitief",
+      "valueAttribute": "None"
+    },
+    "CC4": {
+      "question": "Wat was het consumentenvertrouwen in 2025 (jaarcijfer)?",
+      "source": "cbs",
+      "shape": "refusal",
+      "table": "83693NED",
+      "measure": "M001093",
+      "period": "2025JJ00",
+      "refusalKind": "not_published",
+      "note": "83693NED publishes ONLY a monthly grain (all 483 period keys are YYYYMMnn, measured v3+v4 2026-07-17). A year-figure ask must refuse value-free (principle c / R11), never average months into a fabricated year number."
+    }
+  }
+}

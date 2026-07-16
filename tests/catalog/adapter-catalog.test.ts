@@ -38,7 +38,7 @@ describe('parseCatalogPage (real captured catalog wire data)', () => {
     expect(ids).toContain('86141NED'); // uppercase 'NED'
   });
 
-  it('all 8 Phase-0 registered ids are present in the fixture', () => {
+  it('every curated seed id (8 Phase-0 + coverage sprint) is present in the fixture', () => {
     const { entries } = parseCatalogPage(loadCatalogFixture(FIXTURES_DIR));
     const ids = new Set(entries.map((e) => e.tableId));
     for (const id of [
@@ -50,6 +50,7 @@ describe('parseCatalogPage (real captured catalog wire data)', () => {
       '82242NED',
       '83932NED',
       '82610NED',
+      '83693NED', // coverage sprint #1 (docs/11-coverage-table-set.md)
     ]) {
       expect(ids.has(id)).toBe(true);
     }

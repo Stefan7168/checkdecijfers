@@ -12,7 +12,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { CbsSlice } from '../src/cbs-adapter/types.ts';
 import { sliceToFilter } from '../src/cbs-adapter/odata-v4.ts';
-import { PHASE0_TABLES } from '../src/ingestion/registry-seed.ts';
+import { SEED_TABLES } from '../src/ingestion/registry-seed.ts';
 
 const BASE = 'https://datasets.cbs.nl/odata/v1/CBS';
 const OUT = fileURLToPath(new URL('../tests/fixtures/cbs', import.meta.url));
@@ -166,7 +166,7 @@ async function captureCatalog(): Promise<void> {
     add((await fetchJson(`${BASE}/Datasets?${params}`)).value);
   }
   // Every registered id explicitly, so recall/rerank tests can assert on them.
-  const idFilter = PHASE0_TABLES.map((t) => `Identifier eq '${t.id}'`).join(' or ');
+  const idFilter = SEED_TABLES.map((t) => `Identifier eq '${t.id}'`).join(' or ');
   const idParams = new URLSearchParams({ $select: CATALOG_SELECT, $filter: idFilter });
   add((await fetchJson(`${BASE}/Datasets?${idParams}`)).value);
 
@@ -228,7 +228,7 @@ if (addIdx !== -1) {
 
 const requested = process.argv.slice(2);
 const capturable = [
-  ...PHASE0_TABLES.map((t) => ({ id: t.id, slice: t.slice, skipObservations: false })),
+  ...SEED_TABLES.map((t) => ({ id: t.id, slice: t.slice, skipObservations: false })),
   ...FIXTURE_ONLY_TABLES.map((t) => ({ id: t.id, slice: undefined, skipObservations: !t.observations })),
 ];
 const unknown = requested.filter((id) => !capturable.some((t) => t.id === id));
@@ -236,9 +236,9 @@ if (unknown.length > 0) {
   console.error(`Unknown table id(s): ${unknown.join(', ')} — must be one of: ${capturable.map((t) => t.id).join(', ')}`);
   process.exit(1);
 }
-// No args = the Phase-0 set (the historical default); fixture-only tables are
-// captured by naming them explicitly.
-const toCapture = requested.length > 0 ? capturable.filter((t) => requested.includes(t.id)) : capturable.filter((t) => PHASE0_TABLES.some((p) => p.id === t.id));
+// No args = the full curated seed set (Phase 0 + coverage); fixture-only tables
+// are captured by naming them explicitly.
+const toCapture = requested.length > 0 ? capturable.filter((t) => requested.includes(t.id)) : capturable.filter((t) => SEED_TABLES.some((p) => p.id === t.id));
 for (const table of toCapture) {
   await captureTable(table.id, table.slice, { skipObservations: table.skipObservations });
 }
