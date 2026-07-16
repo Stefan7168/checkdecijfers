@@ -326,7 +326,7 @@ export async function loadOnboardedVocabulary(db: Db): Promise<OnboardedMeasure[
   );
   const grainsByTableMeasure = new Map<string, Set<'JJ' | 'KW' | 'MM'>>();
   for (const r of grainRows.rows) {
-    const k = `${r.table_id} ${r.measure}`;
+    const k = `${r.table_id}\u0000${r.measure}`;
     let set = grainsByTableMeasure.get(k);
     if (!set) {
       set = new Set();
@@ -352,7 +352,7 @@ export async function loadOnboardedVocabulary(db: Db): Promise<OnboardedMeasure[
   for (const row of rows) {
     const tableId = String(row.table_id);
     const grains = [
-      ...(grainsByTableMeasure.get(`${tableId} ${row.measure}`) ?? new Set<'JJ' | 'KW' | 'MM'>()),
+      ...(grainsByTableMeasure.get(`${tableId}\u0000${row.measure}`) ?? new Set<'JJ' | 'KW' | 'MM'>()),
     ].sort();
     if (grains.length === 0) continue; // no empty-coordinate presence anymore — not offerable
     onboarded.push({
