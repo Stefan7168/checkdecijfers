@@ -163,9 +163,16 @@ describe('askQuestion — WP135 cross-user isolation ⟨A1⟩', () => {
 });
 
 describe('replyToClarification — WP135 ⟨A6⟩ captured-thread binding', () => {
+  // A complete, legitimate pending — every field within actions.ts's
+  // guardPending bound (referenceDate/axes/options are required on a real
+  // PendingClarification; the minimal cast used to skip them).
   const pending = {
+    version: 1,
     question: 'oorspronkelijk',
+    referenceDate: '2026-07-16',
+    axes: ['period'],
     questionNl: 'Welke periode?',
+    options: ['2023', '2024'],
   } as unknown as PendingClarification;
 
   it('validates the CAPTURED thread id and attaches the reply to it', async () => {

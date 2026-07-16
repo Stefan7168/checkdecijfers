@@ -253,8 +253,19 @@ describe('askQuestion — ⟨W3⟩/⟨W1⟩ web add-on settlement (final gated o
   });
 });
 
+// A complete, legitimate pending (the shape respond-audited.ts actually
+// produces) — every field within the guardPending bound.
+const validPending: PendingClarification = {
+  version: 1,
+  question: 'oorspronkelijk',
+  referenceDate: '2026-07-16',
+  axes: ['period'],
+  questionNl: 'Welke periode?',
+  options: ['2023', '2024'],
+} as unknown as PendingClarification;
+
 describe('replyToClarification — the reply turn carries the same selection + settlement', () => {
-  const pending = { question: 'oorspronkelijk', questionNl: 'Welke periode?' } as unknown as PendingClarification;
+  const pending = validPending;
 
   it('validates the selection and keeps the +10 on a cited answered reply', async () => {
     driveGate(fakeAnswer(okSection), 7, 20);
@@ -272,5 +283,49 @@ describe('replyToClarification — the reply turn carries the same selection + s
     const { gated } = await replyToClarification(pending, '2024', 'rid', { sources: [], web: true });
     expect(gated).toEqual({ kind: 'insufficient_credits', balance: 10, required: 30 });
     expect(billing.chargeAndRun).not.toHaveBeenCalled();
+  });
+});
+
+describe('replyToClarification — pending input bound (untrusted client payload)', () => {
+  // Mirror actions.ts's guardPending bounds — a 'use server' module can only
+  // export async functions, so the constants can't be imported here.
+  const MAX_INPUT_LENGTH = 2000;
+  const MAX_PENDING_OPTIONS = 20;
+  const huge = 'x'.repeat(MAX_INPUT_LENGTH + 1);
+
+  // Each oversized/malformed field must be rejected BEFORE the gate — no debit,
+  // no LLM call, no audit row for a rejected payload.
+  const rejected: Array<[string, PendingClarification]> = [
+    ['oversized question', { ...validPending, question: huge }],
+    ['oversized questionNl', { ...validPending, questionNl: huge }],
+    ['oversized options entry', { ...validPending, options: ['2023', huge] }],
+    ['over-long options array', { ...validPending, options: Array(MAX_PENDING_OPTIONS + 1).fill('x') }],
+    ['over-long axes array', { ...validPending, axes: Array(MAX_PENDING_OPTIONS + 1).fill('period') as unknown as PendingClarification['axes'] }],
+    ['non-string question', { ...validPending, question: { toString: () => huge } as unknown as string }],
+    ['non-array options', { ...validPending, options: 'not-an-array' as unknown as string[] }],
+  ];
+
+  for (const [label, pending] of rejected) {
+    it(`rejects ${label} before charging or calling the pipeline`, async () => {
+      driveGate(fakeAnswer(), 7, 20);
+      await expect(replyToClarification(pending, '2024', 'rid')).rejects.toThrow(/pending\./);
+      expect(billing.chargeAndRun).not.toHaveBeenCalled();
+      expect(audit.answerClarificationReplyAudited).not.toHaveBeenCalled();
+    });
+  }
+
+  it('lets a normal-size pending through to the gate unchanged', async () => {
+    driveGate(fakeAnswer(), 7, 20);
+    const { gated } = await replyToClarification(validPending, '2024', 'rid');
+    expect(gated.kind).toBe('ok');
+    expect(billing.chargeAndRun).toHaveBeenCalledTimes(1);
+  });
+
+  it('allows a field exactly at the MAX_INPUT_LENGTH boundary', async () => {
+    driveGate(fakeAnswer(), 7, 20);
+    const atLimit = 'x'.repeat(MAX_INPUT_LENGTH);
+    const { gated } = await replyToClarification({ ...validPending, questionNl: atLimit }, '2024', 'rid');
+    expect(gated.kind).toBe('ok');
+    expect(billing.chargeAndRun).toHaveBeenCalledTimes(1);
   });
 });
