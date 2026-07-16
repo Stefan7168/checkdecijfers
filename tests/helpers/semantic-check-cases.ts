@@ -83,7 +83,33 @@ export const SEMANTIC_CHECK_CASES: SemanticCheckCase[] = [
     body: 'In 2024 bedroeg het percentage 4,0%. Het lukte pas na 2024 sessies.',
     result: percentage,
   },
+  {
+    id: 'F4-month-compound-count',
+    note: "review-confirmed bypass class: a fabricated count riding a month-name compound ('31 januari-meldingen')",
+    expected: 'fabricated',
+    body: "Er waren op 31 januari 2024 5.000 auto's. Daarnaast registreerde de dienst nog 31 januari-meldingen extra.",
+    result: () =>
+      makeResult({
+        shape: 'single',
+        cells: [
+          makeCell({ periodCode: '2024JJ00', periodLabel: '2024', value: 5000, unit: 'aantal', measureTitle: 'Aantal op 31 januari' }),
+        ],
+      }),
+  },
   // --- legit residual-shaped phrasings (the false-positive guard) ---
+  {
+    id: 'C5-date-echo-without-year',
+    note: "legit peildatum echo WITHOUT a trailing year ('per 1 januari telde …') — soft since the compound-bypass fix; must clear",
+    expected: 'clear',
+    body: 'Per 1 januari telde Nederland in 2024 3.618 inwoners.',
+    result: () =>
+      makeResult({
+        shape: 'single',
+        cells: [
+          makeCell({ periodCode: '2024JJ00', periodLabel: '2024', value: 3618, unit: 'aantal', measureTitle: 'Bevolking op 1 januari' }),
+        ],
+      }),
+  },
   {
     id: 'C1-unscreened-verb',
     note: "legit temporal year followed by an un-screened word ('volgens') — must clear",

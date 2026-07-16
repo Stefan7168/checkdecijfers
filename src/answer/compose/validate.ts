@@ -229,14 +229,16 @@ function metadataEcho(
   );
 }
 
-/** #144 soft-scope refinement: a metadata echo whose BODY-side next word is a
- * month name matching the anchor ("op 1 januari" — the CBS peildatum form) is
- * a DATE, structurally temporal like a period-label echo: "<digit> <maand>"
- * has no quantity reading in Dutch, so it is not residual-prone. Everything
- * else (bracket coordinates "45 jaar", income classes, index bases) keeps the
- * #140 ceiling and stays soft. */
-function isDateFormEcho(anchor: MetadataNumberAnchor, ctx: { after: string }): boolean {
-  return MONTH_NAME_SET.has(anchor.after) && ctx.after === anchor.after;
+/** #144 soft-scope refinement: a metadata echo reads as a DATE — hard, like a
+ * period-label echo — only when the body-side month name matches the anchor
+ * AND is followed by a year or by punctuation/end ("op 1 januari 2025 telde",
+ * "per 1 januari."). "<digit> <maand> <jaar|leesteken>" has no quantity
+ * reading in Dutch; a month followed by anything else stays soft (see
+ * DATE_FORM_AFTER — the compound-noun bypass). Everything non-date (bracket
+ * coordinates "45 jaar", income classes, index bases) keeps the #140 ceiling
+ * and stays soft. */
+function isDateFormEcho(anchor: MetadataNumberAnchor, ctx: { after: string }, after: string): boolean {
+  return MONTH_NAME_SET.has(anchor.after) && ctx.after === anchor.after && DATE_FORM_AFTER.test(after);
 }
 
 // ---------------------------------------------------------------------------
@@ -281,6 +283,20 @@ const MONTH_NAMES = '(?:januari|februari|maart|april|mei|juni|juli|augustus|sept
 
 const MONTH_NAME_SET = new Set(
   'januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december'.split('|'),
+);
+
+/** What may follow the month name for a metadata echo to read as a DATE: a
+ * year, or punctuation/end of text. A letter word or a hyphen-glued
+ * continuation after the month can carry a counted NOUN ("31
+ * januari-meldingen", "1 januari overzicht" — a fabricated count riding a
+ * month-name compound; adversarial-review-confirmed CRITICAL bypass of the
+ * v1 single-adjacent-word rule, 2026-07-16), so those stay soft and trigger
+ * the checker. Whitespace bridges capped (\s{0,3}) per the #141 anti-fake-\b
+ * discipline; the leading separator run mirrors adjacentAlnum's ≤4 rule.
+ * Used by isDateFormEcho (metadata-echo section above). */
+const DATE_FORM_AFTER = new RegExp(
+  `^[^\\p{L}\\p{N}]{0,4}${MONTH_NAMES}(?:\\s{1,3}(?:19|20)\\d{2}(?![\\p{L}\\p{N}])|\\s{0,3}(?:$|[^\\p{L}\\p{N}\\s-]))`,
+  'iu',
 );
 
 /** #144 soft-scope refinement, corpus-derived (2026-07-16, 78 corpus texts:
@@ -497,13 +513,14 @@ export function scanBody(body: string, result: ValidatedResult): ClassifiedToken
       }
       const gluedAnchor = metadataEcho(token.value, ctx, allowed.metadataAnchors);
       if (gluedAnchor !== null) {
+        const gluedAfter = masked.slice(token.index + token.token.length, token.index + token.token.length + 48);
         return {
           ...token,
           kind: 'metadata' as const,
           cells: [],
           derivation: null,
           matchedAbsolute: false,
-          soft: !isDateFormEcho(gluedAnchor, ctx),
+          soft: !isDateFormEcho(gluedAnchor, ctx, gluedAfter),
         };
       }
       return { ...token, kind: 'unbacked' as const, cells: [], derivation: null, matchedAbsolute: false, soft: false };
@@ -536,15 +553,18 @@ export function scanBody(body: string, result: ValidatedResult): ClassifiedToken
     if (anchor !== null) {
       // A metadata echo sits at the #140 ceiling (legit descriptor echo and
       // fabrication-beside-the-same-word are textually identical) — EXCEPT
-      // the date form ("op 1 januari"), which has no quantity reading and is
-      // as hard as a period-label echo (#144 soft-scope refinement).
+      // the date form ("op 1 januari 2025", "per 1 januari."), which has no
+      // quantity reading and is as hard as a period-label echo (#144
+      // soft-scope refinement; the month must be followed by a year or
+      // punctuation — see DATE_FORM_AFTER).
+      const after = masked.slice(token.index + token.token.length, token.index + token.token.length + 48);
       return {
         ...token,
         kind: 'metadata' as const,
         cells: [],
         derivation: null,
         matchedAbsolute: false,
-        soft: !isDateFormEcho(anchor, ctx),
+        soft: !isDateFormEcho(anchor, ctx, after),
       };
     }
     if (

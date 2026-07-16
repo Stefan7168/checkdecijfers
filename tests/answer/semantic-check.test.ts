@@ -90,7 +90,7 @@ describe('findSuspectTokens: only the two proven residual shapes are suspects', 
     expect(fabricated.map((s) => `${s.token}:${s.kind}`)).toEqual(['65:metadata']);
   });
 
-  it('the date-form metadata echo ("op 1 januari") is HARD — no quantity reading exists', () => {
+  it('the date-form metadata echo ("op 1 januari 2024", "per 1 januari.") is HARD — no quantity reading exists', () => {
     const result = makeResult({
       shape: 'single',
       cells: [
@@ -106,6 +106,50 @@ describe('findSuspectTokens: only the two proven residual shapes are suspects', 
     const body = 'Op 1 januari 2024 telde Nederland 3.618 inwoners.';
     expect(scanBody(body, result).find((t) => t.value === 1)?.kind).toBe('metadata');
     expect(findSuspectTokens(body, result)).toEqual([]);
+    // Month followed by sentence end / punctuation is also a date.
+    expect(findSuspectTokens('Nederland telde in 2024 3.618 inwoners, gemeten per 1 januari.', result)).toEqual([]);
+  });
+
+  it('REVIEW-CONFIRMED BYPASS (closed): a month-name COMPOUND after the echo is NOT a date — it stays suspect', () => {
+    // The v1 rule looked only at the single word touching the number, so a
+    // fabricated COUNT riding a month-name compound noun ("31
+    // januari-meldingen", "1 januari overzicht") was hard-classified and the
+    // checker never fired. Now: date-form requires a year or punctuation
+    // after the month.
+    const population = makeResult({
+      shape: 'single',
+      cells: [
+        makeCell({
+          periodCode: '2025JJ00',
+          periodLabel: '2025',
+          value: 18044027,
+          unit: 'aantal',
+          measureTitle: 'Bevolking op 1 januari',
+        }),
+      ],
+    });
+    const spaced = findSuspectTokens(
+      'Nederland telde op 1 januari 2025 18.044.027 inwoners. Het CBS bracht daarnaast 1 januari overzicht extra uit.',
+      population,
+    );
+    expect(spaced.map((s) => `${s.token}:${s.kind}`)).toEqual(['1:metadata']);
+    const dienst = makeResult({
+      shape: 'single',
+      cells: [
+        makeCell({
+          periodCode: '2024JJ00',
+          periodLabel: '2024',
+          value: 5000,
+          unit: 'aantal',
+          measureTitle: 'Aantal op 31 januari',
+        }),
+      ],
+    });
+    const hyphenated = findSuspectTokens(
+      "Er waren op 31 januari 2024 5.000 auto's. Daarnaast registreerde de dienst nog 31 januari-meldingen extra.",
+      dienst,
+    );
+    expect(hyphenated.map((s) => `${s.token}:${s.kind}`)).toEqual(['31:metadata']);
   });
 
   it('a year with NO letter continuation ("in 2024 3,3%"-shape) is HARD', () => {
