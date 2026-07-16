@@ -9,7 +9,22 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
-**▶ NEXT SESSION STARTS HERE (session 44, spanning 2026-07-13 → 2026-07-16 across a usage-limit interruption — #134(b) not_published chip + an auth/ownership hunt + open-redirect fix on 07-13; the #140 CRITICAL validator fabrication-hole fix on 07-16; owner approved + merged 3 PRs, 5 residuals tracked).**
+**▶ NEXT SESSION STARTS HERE (session 45, 2026-07-16 — #141 HIGH period-exemption fabrication hole FIXED + MERGED + LIVE, PR #44 squash `d192775`;
+merge in-chat DELEGATED by the owner to the session's judgment, #118(b) precedent).**
+
+- **#141 — the period-exemption fabrication hole (HIGH, the #140 twin) — ✅ FIXED + MERGED + LIVE (PR [#44](https://github.com/Stefan7168/checkdecijfers/pull/44),
+  squash `d192775`, 2026-07-16; main gate ✓ + deploy ✓ run 29489131899, prod HTTP 307).** The validator exempted ANY integer equal to ANY covered-period
+  number — years AND the KW/MM sequence numbers 1–12 (a fabricated "2025 gemeenten" or a bare "4 punten" in a Q4 answer passed as backed). Fix = a body-side
+  TEMPORAL-CONTEXT gate (`periodEcho`/`gluedPeriodEcho`), designed from the measured corpus (all 63 validated fixture/benchmark/experience-audit bodies):
+  verbatim label echo, temporal markers before + a hyphen-proof quantity-noun veto after, a TWO-SIDED list-label form, CBS label order/spans after; sequence
+  numbers only in grain form. **Adversarial review (5 lenses × refute-verify, 16 agents on the cheap tier) confirmed 1 CRITICAL v1 bypass (un-vetoed bare-colon
+  leg, "daarnaast 2025: extra gemeenten") — closed + pinned**, plus 3 defensive hardenings (hyphen veto, whitespace-bridge cap ≤3 vs window-edge fake `\b`,
+  unitWords test teeth) and 1 adopted refuted-FP ("In heel 2025"). Measured: backend 1303/1303, benchmark 14/14 + 6/6 + 0 fabricated, web 314/314 + real next
+  build, **ALL 252 stored prod audit rows re-validate clean** (`npm run audit:verify -- 1 252`). Residuals documented in validate.ts + [#141](open-questions.md)
+  (row): temporal marker + un-listed noun = the [#144](open-questions.md) ceiling; list-label mimic admits no fabricated magnitude. Surfaced pre-existing,
+  out-of-scope: audit row 227's register entry misses its cascade problem (audit:verify exits non-zero) → task chip `task_54165972`.
+
+**Session 44 (2026-07-13 → 2026-07-16, 3 PRs merged; full entries in [status-archive.md](status-archive.md)):**
 
 - **Data-integrity hunt → CRITICAL validator fabrication hole, LARGELY FIXED (v3) + LIVE** (PR #43, squash `882c808`; owner "Ja, merge + deploy").
   The anti-fabrication validator (`src/answer/compose/validate.ts`) exempted ANY body number equal to ANY digit buried in a result's metadata prose,
@@ -20,7 +35,7 @@
   and a fabrication ("bestaat al 45 jaar") are word-for-word identical; the strict "both-sides for all sources" rule that would close it BROKE 4 legit
   answers (measured). **KNOWN BOUNDED RESIDUAL [#144](open-questions.md)** (a fabrication == the answer's own descriptor number, next to its word) needs
   a SEMANTIC check → tracked. Owner chose to ship the big narrowing now + track. Full suite + benchmark green (1289), prod HTTP 307. Same hunt tracked:
-  **[#141](open-questions.md) (HIGH — same class on the PERIOD exemption), [#142](open-questions.md)/[#143](open-questions.md) (MEDIUM).**
+  **[#141](open-questions.md) (HIGH — same class on the PERIOD exemption; ✅ since FIXED, session 45, PR #44), [#142](open-questions.md)/[#143](open-questions.md) (MEDIUM).**
 - **Authorization/ownership security hunt — CLEAN, + 1 open-redirect fix LIVE** (PR #42, squash `4e2a2fd`; owner "Ja, merge + deploy"). A 5-lens
   adversarial hunt (server-action ownership scoping, API-route forgery/replay, data-layer SQL user-scoping, RLS defense-in-depth, GDPR-redaction
   completeness) found **ZERO** cross-user data/money/privacy breaks — the auth/ownership model is clean. The ONLY surfaced issue (out of that class):
@@ -37,10 +52,10 @@
   the guard (no fixture has a natural interior hole) → CLOSED by a seeded-gap end-to-end test (`tests/query/not-published-midgap.test.ts`,
   mutation-proven: the reviewer's exact mutation fails it). Full gate + prod deploy green (backend 1280, web 305, benchmark 14/14 + 6/6 + 0
   fabricated, real next build; prod HTTP 307 healthy). Branch + PR + owner-merge per [#118](open-questions.md)(b).
-- **Next — data-integrity follow-ups from the session-44 hunt (core promise, buildable, no owner decision needed):** **[#141](open-questions.md)
-  (HIGH — the SAME fabrication class on the validator's PERIOD exemption; broader than #140's residual, worth doing next)**, [#144](open-questions.md)
-  (semantic-level check to close #140's bounded residual), [#142](open-questions.md)/[#143](open-questions.md) (MEDIUM — count mis-attribution +
-  index-base "×" format). A fresh security/bug hunt on another surface (billing-gate, GDPR) is also always available.
+- **Next — data-integrity follow-ups (core promise, buildable, no owner decision needed):** **[#144](open-questions.md) (the semantic-level check —
+  now the shared real close for BOTH #140's residual and #141's temporal-marker+un-listed-noun residual)**, [#142](open-questions.md)/[#143](open-questions.md)
+  (MEDIUM — count mis-attribution + index-base "×" format; #142's seam is cleaner post-#141), the row-227 register-gap chip (`task_54165972`).
+  A fresh security/bug hunt on another surface (billing-gate, GDPR) is also always available.
 - **Next — owner decisions:** **#138** (v2 regional refusal chip — needs a code→region-label source on the refusal path), **WP26** (answer-first
   defaults + clickable clarify options, safelist read-back), **#121** (fail-closed template rung), **#131** (multilingual L1), **WP30c** (source
   choice). Tracked-not-focus: #132 route B ~2026-07-19 (forks==0 T-0), #104/#112 (need live-LLM spend), format.ts NUL (task_e718f60d), /login
