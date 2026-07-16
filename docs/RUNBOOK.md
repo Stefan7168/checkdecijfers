@@ -266,7 +266,23 @@ Steps, in order, owner present:
 Rollback at any point: unset `WORKSPACE_ENABLED` and redeploy — fully dormant again (migration
 019 is harmless to leave in place; threads simply stop being written or read).
 
-## #144 semantic checker — the supervised go-live (NOT yet run; owner present)
+## #144 semantic checker — the supervised go-live (✅ RUN 2026-07-16, session 46, owner present)
+
+**As-executed record:** all five steps ran 2026-07-16, same session as the build+merge. Calibration
+run 1 (prompt v1) measured **8/9 — FN on F4**, the month-compound residual ("nog 31
+januari-meldingen extra"): the model read "31 januari" as a date, the same trap the deterministic
+layer had (review CRITICAL). Prompt v2 teaches the DATE_FORM_AFTER rule + the compound example →
+**9/9, FP=0 FN=0 flips=0, at record AND --repeat=3** (history in
+benchmark/semantic-check-eval-report.json). Replay leg added to the gate
+(tests/answer/semantic-check-replay.test.ts, commit 8eef383, gate+deploy ✓). Owner decided at the
+flip (in-chat): **fail-open + ADMIN ALERT** — src/answer/audit/alerts.ts e-mails the owner per
+fail-open skip (audit row, user, question, error, meaning; commit deabbfb). Env vars set via
+vercel CLI (SEMANTIC_CHECK_ENABLED=1 + ADMIN_ALERT_EMAIL; FAILMODE deliberately unset =
+fail-open); the deabbfb deploy (run 29513127181, gate+deploy ✓, prod 307) was the flip. Live
+smoke: owner asked a real chat question → audit row 253 carries semanticCheck
+`skipped_no_suspects` (prompt v2, zero extra LLM calls — llm_calls shows intent+compose only),
+pre-#144 row 252 has no key (A1), and `npm run audit:verify -- 253 253` exits 0.
+
 
 The code ships DORMANT (ADR [034](decisions/034-semantic-fabrication-check.md)): until every step
 below is done, production behaves byte-identically to pre-#144 — no extra LLM calls, no spend, no
