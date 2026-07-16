@@ -693,3 +693,155 @@ describe('#140: metadata numbers are exempt only beside their source anchor (fab
     expect(scanBody('want in 2024 was het hoog', guided).find((t) => t.value === 2024)?.kind).toBe('unbacked');
   });
 });
+
+// #141 (session-44 data-integrity hunt, follow-up to #140): the PERIOD twin of
+// the metadata hole. scanBody exempted ANY integer equal to ANY number a
+// covered period contributes — years, but also the quarter/month sequence
+// numbers of KW/MM results — with NO context: "2025 gemeenten" (a fabricated
+// count) or "steeg met 4 punten" (in a Q4 result) passed as 'period'. Period
+// labels carry no anchor word of their own, so the fix is a TEMPORAL-CONTEXT
+// gate on the body side (periodEcho/gluedPeriodEcho): verbatim label echo,
+// temporal marker before, list label / label order / span continuation after,
+// with a quantity-noun veto behind temporal prepositions.
+describe('#141: period numbers are exempt only in temporal context (fabrication hole)', () => {
+  it('a fabricated count equal to the covered YEAR ("2025 gemeenten bij") FAILS R3', () => {
+    const body = 'Het werkloosheidspercentage was in 2025 4e kwartaal 4,0%. Er kwamen 2025 gemeenten bij.';
+    const report = validateAnswerBody(body, unemploymentSingle);
+    expect(report.ok).toBe(false);
+    expect(report.problems.some((p) => p.includes("'2025'"))).toBe(true);
+  });
+
+  it('a bare fabricated value equal to the covered year classifies unbacked ("bedroeg 2024")', () => {
+    expect(scanBody('het aantal bedroeg 2024', housingSingle).find((t) => t.value === 2024)?.kind).toBe('unbacked');
+    expect(scanBody('een stijging van 2024', housingSingle).find((t) => t.value === 2024)?.kind).toBe('unbacked');
+    expect(scanBody('steeg met 2024', housingSingle).find((t) => t.value === 2024)?.kind).toBe('unbacked');
+  });
+
+  it('a fabricated QUARTER-sequence number ("steeg met 4 punten" in a Q4 result) is no longer laundered as period', () => {
+    // A Q4 cell whose VALUE is not 4 — the 4 in periodNumbers comes only from
+    // KW04; before the fix a fabricated bare "4" grounded as 'period'.
+    const q4 = makeResult({
+      shape: 'single',
+      definitionLabel: 'werkloosheidspercentage, seizoengecorrigeerd',
+      cells: [
+        makeCell({
+          table: '85224NED', measure: 'M001906', measureTitle: 'Werkloosheidspercentage',
+          region: null, periodCode: '2025KW04', periodLabel: '2025 4e kwartaal', value: 3.8, unit: '%', decimals: 1,
+        }),
+      ],
+    });
+    expect(scanBody('het percentage steeg met 4 punten', q4).find((t) => t.value === 4)?.kind).toBe('unbacked');
+    // The glued multiplier form is not an ordinal grain form.
+    expect(scanBody('dat is 4x zo hoog', q4).find((t) => t.value === 4)?.kind).toBe('unbacked');
+  });
+
+  it('a fabricated MONTH-sequence number in a monthly result is no longer laundered as period', () => {
+    const monthly = makeResult({
+      shape: 'single',
+      definitionLabel: 'uitgesproken faillissementen',
+      cells: [
+        makeCell({
+          table: '82242NED', measure: 'M1', measureTitle: 'Uitgesproken faillissementen',
+          region: null, periodCode: '2026MM05', periodLabel: '2026 mei', value: 326, unit: 'aantal', decimals: 0,
+        }),
+      ],
+    });
+    // 2026MM05 puts 5 in periodNumbers; a fabricated count "5 bedrijven" must not pass.
+    expect(scanBody('waarvan 5 bedrijven in de bouw', monthly).find((t) => t.value === 5)?.kind).toBe('unbacked');
+    // Both legit temporal orders for the month stay exempt: prose order and CBS label order.
+    expect(scanBody('in mei 2026 waren het er 326', monthly).find((t) => t.value === 2026)?.kind).toBe('period');
+    expect(scanBody('in 2026 mei waren het er 326', monthly).find((t) => t.value === 2026)?.kind).toBe('period');
+  });
+
+  it('a temporal preposition does not launder a quantity: "in 2024 gemeenten" / the result\'s own unit word FAIL', () => {
+    expect(scanBody('in 2024 gemeenten steeg het aantal', housingSingle).find((t) => t.value === 2024)?.kind).toBe('unbacked');
+    // solarSingle's unit is 'mln kWh' — its own unit word right after the year is a value claim.
+    expect(scanBody('in 2024 kwh werd opgewekt', solarSingle).find((t) => t.value === 2024)?.kind).toBe('unbacked');
+  });
+
+  it('every corpus-measured temporal phrasing still grounds as period (no false positives)', () => {
+    const cpi = cpiSeries();
+    for (const [body, value] of [
+      ['de inflatie bedroeg in 2024 3,3%', 2024],
+      ['van 2020 tot en met 2024 in Nederland', 2020],
+      ['van 2020 tot en met 2024 in Nederland', 2024],
+      ['tussen 2020 en 2024 steeg de inflatie', 2020],
+      ['tussen 2020 en 2024 steeg de inflatie', 2024],
+      ['in 2020 en 2021 bedroeg de inflatie', 2021],
+      ['de reeks 2020-2024 laat een stijging zien', 2020],
+      ['de reeks 2020-2024 laat een stijging zien', 2024],
+      ['sinds 2020 is de inflatie gestegen', 2020],
+      ['eind 2024 lag het niveau hoger', 2024],
+      ['ten opzichte van 2020 is dat meer', 2020],
+      ['vergeleken met 2023 daalde de inflatie', 2023],
+      ['per periode: 2020: 1,3%; 2021: 2,7%', 2020],
+      ['per periode: 2020: 1,3%; 2021: 2,7%', 2021],
+    ] as const) {
+      expect(scanBody(body, cpi).find((t) => t.value === value)?.kind, `${body} [${value}]`).toBe('period');
+    }
+  });
+
+  it('quarter-label phrasings stay exempt: glued ordinal, label echo, label order, "kwartaal van"', () => {
+    const q = makeResult({
+      shape: 'series',
+      definitionLabel: 'werkloosheidspercentage, seizoengecorrigeerd',
+      cells: [
+        makeCell({
+          table: '85224NED', measure: 'M001906', measureTitle: 'Werkloosheidspercentage',
+          region: null, periodCode: '2025KW01', periodLabel: '2025 1e kwartaal', value: 3.8, unit: '%', decimals: 1,
+        }),
+        makeCell({
+          table: '85224NED', measure: 'M001906', measureTitle: 'Werkloosheidspercentage',
+          region: null, periodCode: '2026KW01', periodLabel: '2026 1e kwartaal', value: 4.0, unit: '%', decimals: 1,
+        }),
+      ],
+    });
+    const body = 'Het werkloosheidspercentage steeg van 3,8% in 2025 1e kwartaal naar 4,0% in 2026 1e kwartaal.';
+    const tokens = scanBody(body, q);
+    expect(tokens.filter((t) => t.value === 2025 || t.value === 2026).every((t) => t.kind === 'period')).toBe(true);
+    expect(tokens.filter((t) => t.value === 1).every((t) => t.kind === 'period')).toBe(true);
+    expect(scanBody('in het 1e kwartaal van 2026 was het 4,0%', q).find((t) => t.value === 2026)?.kind).toBe('period');
+    expect(scanBody('in kwartaal 1 van 2026', q).find((t) => t.value === 1)?.kind).toBe('period');
+  });
+
+  it('the period fall-through now reaches the count branch: "van de 4 gemeenten" in a Q4 comparison counts', () => {
+    const regions = [
+      { code: 'GM0363', label: 'Amsterdam (gemeente)' },
+      { code: 'GM0599', label: 'Rotterdam (gemeente)' },
+      { code: 'GM0518', label: "'s-Gravenhage (gemeente)" },
+      { code: 'GM0344', label: 'Utrecht (gemeente)' },
+    ];
+    const q4comparison = makeResult({
+      shape: 'comparison',
+      definitionLabel: 'werkloosheidspercentage',
+      cells: regions.map((region, i) =>
+        makeCell({
+          // Values 3,1–3,4: no cell equals the bare 4, so the token can only
+          // ground via period (blocked without temporal context) or count.
+          table: '85224NED', measure: 'M001906', measureTitle: 'Werkloosheidspercentage',
+          region, periodCode: '2025KW04', periodLabel: '2025 4e kwartaal', value: 3.1 + i / 10, unit: '%', decimals: 1,
+        }),
+      ),
+    });
+    // 4 is BOTH the KW04 sequence number and the region count: without temporal
+    // context it may no longer ground as 'period', and the count branch (with
+    // its structure noun) must catch the honest structural mention instead.
+    expect(scanBody('het gemiddelde van de 4 gemeenten', q4comparison).find((t) => t.value === 4)?.kind).toBe('count');
+  });
+
+  it('a year failing the temporal gate still falls through to a genuine metadata anchor', () => {
+    const revisedIn2015 = makeResult({
+      shape: 'single',
+      cells: [
+        makeCell({
+          table: 'T', measure: 'M', measureTitle: 'Testmaat',
+          region: null, periodCode: '2015JJ00', periodLabel: '2015', value: 42, unit: '%', decimals: 0,
+        }),
+      ],
+      definitionLabel: 'prijspeil 2015 herzien',
+    });
+    // "cijfer 2015 herzien": no temporal context (before "cijfer"), but the
+    // definitionLabel anchor "2015 herzien" legitimately echoes → metadata.
+    expect(scanBody('cijfer 2015 herzien', revisedIn2015).find((t) => t.value === 2015)?.kind).toBe('metadata');
+  });
+});
