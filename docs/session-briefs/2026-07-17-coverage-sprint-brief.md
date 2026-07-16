@@ -20,7 +20,7 @@ already have), 31/7 + 11/8 inflatie (86141NED), 30/7 kwartaalbericht arbeidsmark
 | 5 | Consumptie huishoudens — 6 aug | `85937NED` | Consumptieve bestedingen huishoudens; NR, 2021=100 | v3 (v4 unverified) | 4 | Brand-new post-revision table (supersedes 82608NED). Slice: totals + goods/services split, monthly keys only; headline `VolumemutatiesKoopdaggecorrigeerd_3` on A047812 |
 | 6 | Internationale handel — 11 aug | `85429NED` | Internationale goederenhandel; grensoverschrijding | both | 5 | Slice: Landen T001047 × SITC T001082 (totaal×totaal, = CBS's own default); headline in-/uitvoerwaarde + jaarmutaties. Methodology break 2020/2021; suppressed cells at fine granularity (not in our slice) |
 | 7 | Huizenprijzen regio — 11 aug | `85792NED` | Bestaande koopwoningen; prijsindex 2020=100, regio | v3 (v4 unverified) | 4 | ⚠ SEE CAVEAT below: only NL + 12 provincies + 4 grote gemeenten — no full-gemeente price index exists anywhere |
-| 8 | Werkloosheid maand — 20 aug | `80590NED` | Arbeidsdeelname en werkloosheid per maand | **v3-ONLY (confirmed absent from v4)** | 4 | Slice: Geslacht totaal × Leeftijd 15–75, MONTHLY keys only (mixed-grain Perioden trap); headline `Seizoengecorrigeerd_8` (werkloosheidspercentage, = CBS's own default slice) |
+| 8 | Werkloosheid maand — 20 aug | `80590ned` | Arbeidsdeelname en werkloosheid per maand | **both — ⚠ v4 ONLY under the LOWERCASE id `80590ned` (uppercase 404s; docs/07 quirk #1). The earlier "v3-ONLY" verdict was the casing trap — REFUTED by the 2026-07-17 overnight validation, see [coverage-tables-2-9-measured-specs.md](2026-07-17-coverage-tables-2-9-measured-specs.md)** | 4 | Slice: Geslacht totaal × Leeftijd 15–75, MONTHLY keys only (mixed-grain Perioden trap); headline `Seizoengecorrigeerd_8` (werkloosheidspercentage, = CBS's own default slice) |
 
 ## Two load-bearing findings
 
@@ -30,7 +30,7 @@ already have), 31/7 + 11/8 inflatie (86141NED), 30/7 kwartaalbericht arbeidsmark
    ([#160](../open-questions.md)b) for house prices likely runs on **`83625NED`** (gemiddelde verkoopprijzen per regio/gemeente,
    yearly, Regulier) instead of a price index — add as candidate #9 after its own metadata validation. Population (03759ned,
    loaded) already has gemeente granularity for lokale-hoek cards today.
-2. **80590NED is v3-only** — this breaks [07-phase0-table-set.md](../07-phase0-table-set.md)'s "OData v4 alone suffices"
+2. ~~**80590NED is v3-only**~~ **REFUTED (2026-07-17 overnight validation): v4 serves it under the LOWERCASE id `80590ned`** — the original scout hit docs/07 catalog quirk #1 (uppercase lookups 404/return empty for old lowercase tables). ADR-003's v3 path stays un-needed. Original claim kept for the record: it was said to break [07-phase0-table-set.md](../07-phase0-table-set.md)'s "OData v4 alone suffices"
    conclusion for the first time. ADR [003](../decisions/003-cbs-access-layer.md) budgeted a v3 fallback path that was never
    needed; building table #8 requires it (an adapter work item, not a redesign).
 

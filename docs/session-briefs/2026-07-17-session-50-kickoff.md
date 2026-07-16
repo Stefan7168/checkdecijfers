@@ -10,14 +10,14 @@ Volg de STAANDE PROCEDURE in [RUNBOOK.md](../RUNBOOK.md) ("adding a curated cove
 tabel-#1-template, sessie 49) en de brief [2026-07-17-coverage-sprint-brief.md](2026-07-17-coverage-sprint-brief.md);
 per-tabel-record spiegelen in [11-coverage-table-set.md](../11-coverage-table-set.md).
 
-**Tabel-specifiek (uit de brief, ONGEVERIFIEERD tot je het live meet):**
-- `85880NED`: slice top-aggregaten (skip ~110 detailtopics), SoortMutaties A045299 (YoY volume, headline) + A045300
-  (QoQ); mixed-grain Perioden → maand/kwartaalpatroon checken vóór ingest-config.
-- `85770NED`: slice Afzetgebieden A044074 (totaal) [+ A044077 invoer]; ⚠ de ProdCom-totaalcode is NOG NIET geverifieerd
-  — verificatiepunt (a) uit de brief, eerst live checken.
-- ⚠ **v3-namen-val (sessie-49-les):** de briefs "headline"-identifiers (`BrutoBinnenlandsProduct_2`, `JaarmutatiePPI_3`)
-  zijn waarschijnlijk v3-KOLOMnamen — hervalideer ALLES tegen v4 `MeasureCodes` op `datasets.cbs.nl` vóór registry-rijen
-  (tabel #1: `Consumentenvertrouwen_1` bleek M001093). Basisjaar-breuken (2021=100) in registry-notes (R11/#26).
+**Tabel-specifiek — ✅ ALLES AL GEMETEN (s49-overnight, 8 agents, v3+v4 kruisgecheckt): volg
+[coverage-tables-2-9-measured-specs.md](2026-07-17-coverage-tables-2-9-measured-specs.md)** — v4-maatcodes,
+geverifieerde slices (beide met bestaande CbsSlice-mechanismen — géén adapterwijziging nodig), frozen-key-kandidaten
+(op de bouwdag HERMETEN vóór bevriezing), en de vier open verificatiepunten (a)-(d) RESOLVED. Kern: #2 `85880NED`
+headline `M002782_1`, slice = dimensionPrefixes op SoortMutaties ['A045299','A045300'] (36.820 obs); #3 `85770NED`
+headline `M003288`, ProdCom-totaal = `A052584`, slice 654 obs dicht. Basisjaar-breuken (2021=100) + de
+85429NED-methodebreuk in registry-notes (R11/#26). ⚠ `80590NED` bleek NIET v3-only (lowercase-id-val, quirk #1) —
+het ADR-003-v3-pad is van tafel.
 
 **Regels (ongewijzigd):** #118-revisie = owner-aanwezig pusht/merged direct; volledig verificatieblok vóór elke
 code-push **inclusief de automatische `/code-review` low-effort pass (#118-aanvulling 17-07)**; live DDL / echte

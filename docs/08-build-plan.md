@@ -37,7 +37,7 @@ vocab-overlap trim + LLM-free live verify (−39, juni 2026; JJ ask refuses `not
 [benchmark/coverage-key.json](../benchmark/coverage-key.json), scored on the gate by `tests/query/coverage-key.test.ts` (docs/05 onboarding rule).
 **NEXT: tables #2 `85880NED` (BBP) + #3 `85770NED` (PPI) before 30/7 — in ONE build session with ONE combined vocab change + ONE fixture re-record
 (the [#164](open-questions.md) sprint constraint: every vocab addition invalidates all ~93 intent/followup/clarify/delivery LLM fixtures).**
-Table 8 (`80590NED`) additionally needs ADR [003](decisions/003-cbs-access-layer.md)'s budgeted v3 access path (first table not on v4). Fresh
+~~Table 8 needs ADR-003's v3 path~~ REFUTED by the 2026-07-17 overnight validation: `80590ned` IS on v4 under its lowercase id (docs/07 quirk #1) — no v3 path needed; measured build specs for #2-#9: [session-briefs/2026-07-17-coverage-tables-2-9-measured-specs.md](session-briefs/2026-07-17-coverage-tables-2-9-measured-specs.md). Fresh
 hunts are PAUSED per #163(1); the owner-stack items (#138/WP26/#121/#131/WP30c) queue behind the sprint.
 
 ---

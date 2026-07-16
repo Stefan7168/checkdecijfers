@@ -21,12 +21,18 @@ registry:apply 9 tables / 11 keys; #165 vocab-overlap trim 115/115 rows; LLM-fre
 #118 owner addition — automatic `/code-review` LOW before every code push, now in CLAUDE.md + build-plan rule 2 (commit `09b6191`). ▶ NEXT =
 SPRINT TABLES #2 `85880NED` (BBP flash) + #3 `85770NED` (PPI) BEFORE 30/7, in ONE session with ONE combined vocab change + re-record (#164);
 kickoff: [session-briefs/2026-07-17-session-50-kickoff.md](session-briefs/2026-07-17-session-50-kickoff.md). Owner dates: 22/7 06:30
-persberichtdag-generale (sync `85773NED` that morning), 23/7 06:30 sync `83693NED` (juli-cijfer), #132 route B on/after 19/7. Re-validate the
-brief's identifiers against v4 MeasureCodes first — the `Consumentenvertrouwen_1` v3-name trap (docs/11 quirk #1).)**
+persberichtdag-generale (sync `85773NED` that morning), 23/7 06:30 sync `83693NED` (juli-cijfer), #132 route B on/after 19/7.
+OVERNIGHT ADDENDUM (same session, owner asleep, autonomous rules): (1) **#166 already-curated guard DESIGNED + BUILT on branch, [PR #54](https://github.com/Stefan7168/checkdecijfers/pull/54)
+AWAITS OWNER REVIEW** (merge = approval per #118(b); money function byte-untouched; backend 1354/1354 + full block green + /code-review low 0 findings);
+(2) **tables #2-#9 fully MEASURED** (8 agents, v3+v4 cross-checked): execute-ready specs in
+[session-briefs/2026-07-17-coverage-tables-2-9-measured-specs.md](session-briefs/2026-07-17-coverage-tables-2-9-measured-specs.md) — all four brief
+open-points RESOLVED (PPI-totaal = A052584; 85937NED + 85792NED are on v4; 84106NED supersession mutual; 83625NED FIT as table #9), NO adapter
+changes needed for any table, and **"80590NED v3-only" is REFUTED** (v4 works with the lowercase id `80590ned` — docs/07 quirk #1; ADR-003's v3
+path is off the table).)**
 
 **Session 48 (2026-07-17 — the parallel owner-"spar" strategy session, docs-only: ELEVEN owner decisions #153-upd/#158–#163 + the #118
 standing-push revision; #153 proefrit executed (wbn.nl ❌ −4% claimed vs +13,7% CBS-measured); coverage sprint scouted + briefed (8 gap tables,
-two load-bearing finds: no full-gemeente price index anywhere; 80590NED is v3-only). Full entry in [status-archive.md](status-archive.md).)**
+two load-bearing finds: no full-gemeente price index anywhere [CONFIRMED s49]; "80590NED is v3-only" [REFUTED s49 overnight — v4 works with the lowercase id, docs/07 quirk #1]). Full entry in [status-archive.md](status-archive.md).)**
 
 **Session 47 (2026-07-16→17 — THREE adversarial security/data-integrity hunts (each 4-6 lenses, dual-verified, Sonnet
 fan-out) + a frontend-render scout. THREE fixes merged+live, each on an EXPLICIT owner word (#118b). (1) BILLING/MONEY-PATH: NO live credit-
