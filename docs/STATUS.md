@@ -9,11 +9,14 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
-**▶ NEXT SESSION STARTS HERE (session 47, 2026-07-16→17 — BILLING/MONEY-PATH adversarial hunt (6 lenses, dual-verified): NO live credit-conservation
-bug — the ledger/gate/refund path is sound. One reachable-today gap FIXED + MERGED + LIVE ([#145], PR #48 squash `7e42656`, owner "Go" per #118(b)):
-`guardPending` bounds the untrusted reply-turn `pending` to the existing spend belt. 5 latent/low items tracked NOT built: [#146] Stripe payment_status
-gate (dormant, card-only; pre-delayed-method RUNBOOK gate added — iDEAL confirmed IMMEDIATE, not the trigger), [#147] compensation-amount DB guard,
-[#148] onboarding netCost reprice (display-only), [#149] requestId UUID validation, [#150] stale-reclaim footgun guard. See open-questions #145-150.)**
+**▶ NEXT SESSION STARTS HERE (session 47, 2026-07-16→17 — TWO adversarial security hunts, TWO fixes merged+live. (1) BILLING/MONEY-PATH (6 lenses):
+NO live credit-conservation bug; one reachable-today gap FIXED+MERGED+LIVE ([#145], PR #48 squash `7e42656`) — `guardPending` bounds the untrusted
+reply-turn `pending`. (2) GDPR-REDACTION (4 lenses): a real HIGH leak the inline scout MISSED — `pending_table_requests.fit_note` (LLM sentence
+paraphrasing the question) + topic-disclosing table-ids survived erasure; FIXED+MERGED+LIVE ([#151], PR #49 squash `af287e1`) — cleared on redaction
+(fit_note all rows, table-ids terminal rows only). Cross-user + derived-surface lenses CLEAN. Tracked NOT built: [#146] Stripe payment_status gate
+(dormant, card-only; RUNBOOK pre-delayed-method gate added), [#147] compensation-amount DB guard, [#148] onboarding netCost reprice, [#149] requestId
+UUID, [#150] stale-reclaim footgun, [#152] answer_feedback insert race (self-healing). ⚠ [#151] is FORWARD-ONLY: pre-deploy prod rows still carry
+unredacted fit_note/table-ids until a purge/re-deletion — a one-off backfill sweep is a worthwhile supervised step. See open-questions #145-152.)**
 
 **Session 46 (2026-07-16 — #144 DONE END-TO-END in ONE session:** built + adversarially reviewed + merged (PR #47, squash `94b90e4`, owner in-chat
 approval per #118(b)) + the supervised go-live EXECUTED (calibration, fail-open+admin-alert decision, flag flip, live smoke). The semantic checker is
@@ -47,8 +50,9 @@ the #144 design brief was written there and executed by session 46.
 **Session 44 (2026-07-13 → 2026-07-16, 3 PRs merged: #134(b) too-old retry chip PR #41 `12518eb`, auth/ownership hunt CLEAN + open-redirect fix
 PR #42 `4e2a2fd`, the #140 validator narrowing PR #43 `882c808`; full entries in [status-archive.md](status-archive.md)).**
 
-- **Next — pick:** a fresh security/bug hunt on the GDPR-redaction surface (auth/ownership CLEAN s44, data-integrity CLOSED s44-46, billing/money-path
-  hunted CLEAN s47 — no live conservation bug), or the owner stack below. Optional billing follow-ups #146-150 tracked (all low/latent).
+- **Next — pick:** a fresh security/bug hunt on an un-hunted surface (hunted so far: auth/ownership CLEAN s44, data-integrity CLOSED s44-46,
+  billing/money-path CLEAN s47, GDPR-redaction s47 → found+fixed #151; candidate next surfaces: the ingestion/validation chain, the auth/session
+  layer), or the owner stack below. Tracked follow-ups #146-150 (billing) + #152 (GDPR feedback race) all low/latent; #151 backfill sweep = supervised.
 - **Next — owner decisions:** **#138** (v2 regional refusal chip — needs a code→region-label source on the refusal path), **WP26** (answer-first
   defaults + clickable clarify options, safelist read-back), **#121** (fail-closed template rung), **#131** (multilingual L1), **WP30c** (source
   choice). Tracked-not-focus: #132 route B ~2026-07-19 (forks==0 T-0), #104/#112 (need live-LLM spend; format.ts NUL ✅ fixed s45 PR #46), /login
