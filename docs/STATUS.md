@@ -9,7 +9,7 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
-**▶ NEXT SESSION STARTS HERE (2026-07-13, session 44 — #134(b) not_published chip; an auth/ownership hunt + open-redirect fix; and a data-integrity hunt that LARGELY-fixed a CRITICAL validator fabrication hole; owner approved + merged 3 PRs, 5 residuals tracked).**
+**▶ NEXT SESSION STARTS HERE (session 44, spanning 2026-07-13 → 2026-07-16 across a usage-limit interruption — #134(b) not_published chip + an auth/ownership hunt + open-redirect fix on 07-13; the #140 CRITICAL validator fabrication-hole fix on 07-16; owner approved + merged 3 PRs, 5 residuals tracked).**
 
 - **Data-integrity hunt → CRITICAL validator fabrication hole, LARGELY FIXED (v3) + LIVE** (PR #43, squash `882c808`; owner "Ja, merge + deploy").
   The anti-fabrication validator (`src/answer/compose/validate.ts`) exempted ANY body number equal to ANY digit buried in a result's metadata prose,

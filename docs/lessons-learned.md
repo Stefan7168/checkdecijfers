@@ -7,7 +7,7 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 on top.
 
 - **Some safety properties can't be achieved DETERMINISTICALLY — recognize the ceiling, ship the
-  narrowing, and track the residual instead of iterating forever** (session 44, 2026-07-13, the #140
+  narrowing, and track the residual instead of iterating forever** (session 44, 2026-07-16, the #140
   validator fabrication hole). The anti-fabrication validator exempts a body number as a "metadata
   echo" so the LLM can repeat definition/label numbers ("op 1 januari"). Four fix versions × four
   adversarial-review rounds each found a real bypass (lone stopword "in 2024"; bare-numeral anchors on
@@ -25,7 +25,7 @@ on top.
   (4) a genuine safety-vs-quality tradeoff on the core promise is the OWNER's call, not a unilateral
   one — bring it to them with the measured options.
 - **Adversarial-review subagents leave throwaway `*.test.ts` probes behind that POLLUTE the next full
-  suite run** (session 44, 2026-07-13). The #140 review agents wrote real vitest files (`zzdel_*`,
+  suite run** (session 44, 2026-07-16). The #140 review agents wrote real vitest files (`zzdel_*`,
   `__scratch_*`) against the live validator to prove exploits; several didn't self-delete despite the
   instruction, and a stray one made `npm test` report a spurious "1 failed" (then "8 failed") that
   looked like a real regression until I traced it to the scratch file. **Lesson:** before trusting a

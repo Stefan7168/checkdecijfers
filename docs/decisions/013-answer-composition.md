@@ -129,7 +129,7 @@ verbatim-checked. Known accepted limitation: the hermetic e2e suite replays
 only first-attempt-pass fixtures; the retry and template paths are proven by
 seeded-fault unit tests (a live model cannot be made to fail on demand).
 
-**Metadata-echo hardening (session 44, 2026-07-13, #140).** The R3 scan lets a
+**Metadata-echo hardening (session 44, 2026-07-16, #140).** The R3 scan lets a
 body number ground as `metadata` when it echoes a number in the result's own
 metadata (a definition/label number the LLM legitimately repeats, e.g. the "1"
 in "op 1 januari"). The original rule pooled EVERY digit anywhere in metadata
