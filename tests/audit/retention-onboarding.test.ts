@@ -15,6 +15,7 @@ import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import {
   REDACTED_QUESTION_TEXT,
+  REDACTED_TABLE_ID,
   countPurgeableQuestionHistory,
   deleteUserQuestionHistory,
   purgeExpiredQuestionHistory,
@@ -79,6 +80,10 @@ async function insertPendingRow(
     failureSummary?: string | null;
     status?: 'pending' | 'running' | 'delivered' | 'failed' | 'unanswerable';
     createdAt?: string;
+    // #151: the migration-015 columns the redaction now covers.
+    fitNote?: string | null;
+    candidateIds?: string[];
+    resolvedTableId?: string | null;
   },
 ): Promise<number> {
   const requestId = randomUUID();
@@ -86,8 +91,10 @@ async function insertPendingRow(
   const { rows } = await db.query(
     `insert into pending_table_requests
        (user_id, request_id, question_text, topic_term, table_id, finder_confidence,
-        debit_transaction_id, status, failure_summary, created_at)
-     values ($1, $2, $3, $4, $5, 0.9, $6, $7, $8, coalesce($9::timestamptz, now()))
+        debit_transaction_id, status, failure_summary, created_at,
+        fit_note, candidate_ids, resolved_table_id)
+     values ($1, $2, $3, $4, $5, 0.9, $6, $7, $8, coalesce($9::timestamptz, now()),
+        $10, $11::jsonb, $12)
      returning id`,
     [
       opts.userId,
@@ -99,6 +106,9 @@ async function insertPendingRow(
       opts.status ?? 'pending',
       opts.failureSummary === undefined ? null : opts.failureSummary,
       opts.createdAt ?? null,
+      opts.fitNote === undefined ? null : opts.fitNote,
+      JSON.stringify(opts.candidateIds ?? []),
+      opts.resolvedTableId === undefined ? null : opts.resolvedTableId,
     ],
   );
   return Number(rows[0]!.id);
@@ -106,7 +116,8 @@ async function insertPendingRow(
 
 async function loadPending(db: Db, id: number) {
   const { rows } = await db.query(
-    `select id, user_id, table_id, status, question_text, topic_term, failure_summary
+    `select id, user_id, table_id, status, question_text, topic_term, failure_summary,
+            fit_note, candidate_ids, resolved_table_id
      from pending_table_requests where id = $1`,
     [id],
   );
@@ -118,6 +129,9 @@ async function loadPending(db: Db, id: number) {
     question_text: string;
     topic_term: string;
     failure_summary: string | null;
+    fit_note: string | null;
+    candidate_ids: unknown;
+    resolved_table_id: string | null;
   };
 }
 
@@ -207,6 +221,117 @@ describe('#120 pending_table_requests leg — THE CRITICAL CROSS-USER PIN', () =
         expect(row.question_text).toBe(REDACTED_QUESTION_TEXT);
         expect(row.topic_term).toBe(REDACTED_QUESTION_TEXT);
       }
+    });
+  });
+});
+
+describe('#151 fit_note + table-identity redaction (session-47 GDPR hunt)', () => {
+  const FIT_NOTE = 'D000203_2: deze maat meet het aantal bijstandsuitkeringen in 2023.';
+
+  it('self-service: a TERMINAL row clears fit_note AND the topic-disclosing table identity', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      const id = await insertPendingRow(db, {
+        userId,
+        tableId: '85004NED',
+        status: 'delivered',
+        fitNote: FIT_NOTE,
+        candidateIds: ['85004NED', '85005NED'],
+        resolvedTableId: '85004NED',
+      });
+
+      await deleteUserQuestionHistory(db, userId);
+
+      const row = await loadPending(db, id);
+      // Free text gone.
+      expect(row.question_text).toBe(REDACTED_QUESTION_TEXT);
+      expect(row.fit_note).toBe(REDACTED_QUESTION_TEXT);
+      // Table identity gone (terminal row): the CBS ids that disclose the topic.
+      expect(row.table_id).toBe(REDACTED_TABLE_ID);
+      expect(JSON.stringify(row.candidate_ids)).toBe('[]');
+      expect(row.resolved_table_id).toBeNull();
+    });
+  });
+
+  it('self-service: an IN-FLIGHT (running) row clears fit_note but KEEPS its table id (the job still needs it)', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      const id = await insertPendingRow(db, {
+        userId,
+        tableId: '85004NED',
+        status: 'running',
+        fitNote: FIT_NOTE,
+        candidateIds: ['85004NED', '85005NED'],
+        resolvedTableId: '85004NED',
+      });
+
+      await deleteUserQuestionHistory(db, userId);
+
+      const row = await loadPending(db, id);
+      // Free text is still erased on an in-flight row (diagnostic, not job-needed).
+      expect(row.fit_note).toBe(REDACTED_QUESTION_TEXT);
+      expect(row.question_text).toBe(REDACTED_QUESTION_TEXT);
+      // …but the table identity survives so the running job can finish its fetch
+      // (the documented in-flight residual — swept by the next deletion/purge).
+      expect(row.table_id).toBe('85004NED');
+      expect(JSON.stringify(row.candidate_ids)).toBe('["85004NED","85005NED"]');
+      expect(row.resolved_table_id).toBe('85004NED');
+    });
+  });
+
+  it('a null fit_note stays null after redaction (the case-when branch, never the sentinel)', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      const id = await insertPendingRow(db, { userId, tableId: '85004NED', status: 'failed', fitNote: null });
+
+      await deleteUserQuestionHistory(db, userId);
+
+      expect((await loadPending(db, id)).fit_note).toBeNull();
+    });
+  });
+
+  it('purge: an OLD terminal row clears fit_note + table identity too', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      const cutoff = twoYearsBefore(NOW);
+      const id = await insertPendingRow(db, {
+        userId,
+        tableId: '85004NED',
+        status: 'unanswerable',
+        fitNote: FIT_NOTE,
+        candidateIds: ['85004NED'],
+        resolvedTableId: '85004NED',
+        createdAt: new Date(cutoff.getTime() - 1000).toISOString(),
+      });
+
+      await purgeExpiredQuestionHistory(db, cutoff);
+
+      const row = await loadPending(db, id);
+      expect(row.fit_note).toBe(REDACTED_QUESTION_TEXT);
+      expect(row.table_id).toBe(REDACTED_TABLE_ID);
+      expect(row.resolved_table_id).toBeNull();
+    });
+  });
+
+  it('cross-user: another user’s terminal row keeps fit_note AND table identity byte-for-byte', async () => {
+    await withDb(async (db) => {
+      const userA = randomUUID();
+      const userB = randomUUID();
+      const theirs = await insertPendingRow(db, {
+        userId: userB,
+        tableId: '99999NED',
+        status: 'delivered',
+        fitNote: 'hun fit note',
+        candidateIds: ['99999NED'],
+        resolvedTableId: '99999NED',
+      });
+
+      await deleteUserQuestionHistory(db, userA);
+
+      const row = await loadPending(db, theirs);
+      expect(row.fit_note).toBe('hun fit note');
+      expect(row.table_id).toBe('99999NED');
+      expect(row.resolved_table_id).toBe('99999NED');
     });
   });
 });
