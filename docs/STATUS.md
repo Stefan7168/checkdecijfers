@@ -31,7 +31,7 @@ the #142/#143/row-227 follow-up trio (PR #45 `6291dfc`); merges in-chat DELEGATE
   unitWords test teeth) and 1 adopted refuted-FP ("In heel 2025"). Measured: backend 1303/1303, benchmark 14/14 + 6/6 + 0 fabricated, web 314/314 + real next
   build, **ALL 252 stored prod audit rows re-validate clean** (`npm run audit:verify -- 1 252`). Residuals documented in validate.ts + [#141](open-questions.md)
   (row): temporal marker + un-listed noun = the [#144](open-questions.md) ceiling; list-label mimic admits no fabricated magnitude. Surfaced pre-existing,
-  out-of-scope: audit row 227's register entry misses its cascade problem (audit:verify exits non-zero) → task chip `task_54165972`.
+  out-of-scope: audit row 227's register entry misses its cascade problem (audit:verify exits non-zero) → fixed same-session in PR #45 (chip withdrawn).
 
 **Session 44 (2026-07-13 → 2026-07-16, 3 PRs merged; full entries in [status-archive.md](status-archive.md)):**
 
