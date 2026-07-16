@@ -152,6 +152,26 @@ stored answers (measured: 4 R8-reconstruct regressions). Closing the residual
 needs a semantic-level pass; tracked as #144. Still a large narrowing of the
 original hole, fail-closed elsewhere.
 
+**Period-exemption hardening (session 45, 2026-07-16, #141, PR #44).** The
+period twin of the metadata hole: the R3 scan exempted ANY integer equal to
+ANY number a covered period contributes — years, but also KW/MM sequence
+numbers (1–12) and period-label digits — with no context ("2025 gemeenten",
+"steeg met 4 punten" in a Q4 result). Period labels carry no anchor word, so
+the metadata-echo mechanism does not transpose; the fix is a body-side
+TEMPORAL-CONTEXT gate (`periodEcho`/`gluedPeriodEcho`, validate.ts) designed
+from the measured phrasing corpus: verbatim label echo, temporal markers
+before (with a quantity-noun veto immediately after, hyphen-proof), a
+two-sided list-label form (list context before + value/'geen waarde' after
+the colon), CBS label order/spans after; sequence numbers only in grain
+form. The adversarial review round confirmed one critical bypass in the
+first version (an un-vetoed bare-colon leg) — closed and pinned; whitespace
+bridges are capped so a context-window edge can never fabricate a word
+boundary. Accepted residuals (documented in the code): temporal marker +
+un-listed noun (the #144 ceiling again) and the textually-identical
+list-label mimic (which admits no fabricated magnitude). Measured: 1303
+backend tests green, benchmark gate PASS, and all 252 stored production
+audit rows re-validate clean under the stricter rule.
+
 **Measured (2026-07-03, live, prompt v3, repeat=2):** 14/14 benchmark
 answers pass with zero regenerations, zero template fallbacks, zero
 fabricated numbers, stable verdicts across repeats
