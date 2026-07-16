@@ -172,6 +172,17 @@ list-label mimic (which admits no fabricated magnitude). Measured: 1303
 backend tests green, benchmark gate PASS, and all 252 stored production
 audit rows re-validate clean under the stricter rule.
 
+**Count/display follow-ups (same day, #142/#143, PR #45).** Count exemptions
+are AXIS-BOUND (`countEntries`, validate.ts): each structural count (cells /
+distinct regions / distinct periods) only grounds next to its OWN axis's
+noun set — the pooled version let "in 4 gemeenten" pass when 4 was the
+period count; the review round killed a v1 widening ('wijken'/'buurten'
+named granularities the product does not serve — allowlists follow the
+domain model, not linguistic completeness). Display side: an index-base
+unit ("2015=100") renders as a plain label, never an "×"-factor
+(template.ts displayValueUnit; parseFactorUnit already excluded '=' units
+from #125a expansion, now pinned; the old stored "×"-form stays R8-valid).
+
 **Measured (2026-07-03, live, prompt v3, repeat=2):** 14/14 benchmark
 answers pass with zero regenerations, zero template fallbacks, zero
 fabricated numbers, stable verdicts across repeats

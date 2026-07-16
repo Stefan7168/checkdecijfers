@@ -6,6 +6,15 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+- **Diagnose a tracked "bug" before fixing it — it may be deliberate behavior in a hostile ENCODING**
+  (session 45, 2026-07-16, the format.ts "NUL residual", PR #46). The tracked complaint was "format.ts
+  contains a NUL byte, grep treats it as binary." The byte turned out to be LOAD-BEARING on four sites
+  in three files: the maskPhrases mask character and two compound-key join separators — deleting or
+  space-replacing it would have changed validator/ingest semantics. The right fix was purely lexical:
+  write the same character as a `\u0000` escape (byte-identical at runtime, text-clean source), plus a
+  comment so nobody "simplifies" it back to a raw byte. Rule of thumb: when the complaint is about a
+  FILE property (binary, encoding, line endings), assume the content is intentional until proven
+  otherwise, and fix the representation, not the value.
 - **Ground an allowlist in the DOMAIN MODEL, not in linguistic completeness — the words you add "for
   completeness" are the attack surface** (session 45, 2026-07-16, the #142 review round). Writing the
   axis-bound count-noun sets I added 'wijken'/'buurten' to the region nouns because they are natural

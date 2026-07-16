@@ -9,8 +9,14 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
-**▶ NEXT SESSION STARTS HERE (session 45, 2026-07-16 — TWO PRs merged + LIVE: #141 HIGH period-exemption fabrication hole (PR #44 `d192775`) and
-the #142/#143/row-227 follow-up trio (PR #45 `6291dfc`); merges in-chat DELEGATED by the owner to the session's judgment, #118(b) precedent).**
+**▶ NEXT SESSION STARTS HERE (session 45, 2026-07-16 — THREE PRs merged + LIVE, all data-integrity: #141 HIGH period-exemption fabrication hole
+(PR #44 `d192775`), the #142/#143/row-227 follow-up trio (PR #45 `6291dfc`), and the format.ts raw-NUL cleanup (PR #46 `f909e66`); merges in-chat
+DELEGATED by the owner to the session's judgment, #118(b) precedent. The session-44 hunt list is now fully closed except #144 — brief ready.)**
+
+- **format.ts NUL residual — ✅ FIXED + MERGED + LIVE (PR [#46](https://github.com/Stefan7168/checkdecijfers/pull/46), squash `f909e66`, 2026-07-16;
+  gate ✓ + deploy ✓, prod HTTP 307).** The four raw NUL bytes in three source files were DELIBERATE runtime values (maskPhrases mask char; two
+  compound-key separators) written as raw bytes — grep classified the files as binary. Now `\u0000` escapes: byte-identical runtime (compose +
+  ingestion suites 283/283 pin the behavior), text-clean source, guard comment at the mask site. Repo sweep: zero raw NULs left in tracked .ts.
 
 - **#142 + #143 + row-227 register — ✅ ALL FIXED + MERGED + LIVE (PR [#45](https://github.com/Stefan7168/checkdecijfers/pull/45), squash `6291dfc`,
   2026-07-16; gate ✓ + deploy ✓, prod HTTP 307).** #142: count exemptions AXIS-BOUND (a wrong-axis "in 4 gemeenten" no longer grounds; review confirmed
