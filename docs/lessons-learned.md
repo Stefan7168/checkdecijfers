@@ -6,6 +6,39 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+- **Spar-side concurrency protocol that worked — and the one gap it found** (session 48, 2026-07-17,
+  the parallel owner-spar session; complements s47's `4f0c3fe` addendum). What worked from the
+  second-session side: (1) READ the other session's transcript before splitting territory (its
+  in-flight findings named the surfaces to avoid); (2) claim shared identifiers explicitly — a
+  cross-session note "row #153 taken, yours start at #154" prevented an append collision git could
+  not have merged; (3) "queued capture" — when the other session's UNCOMMITTED wrap-up sat in the
+  shared tree, hold ALL repo writes until its push lands (an edit+add in that window would have
+  swept its half-finished work into our commit); (4) a 60-second git-fetch Monitor emitting one
+  line per new origin/main commit, with built-in duplicate-row-number and own-row-intact checks =
+  near-zero-cost collision detection (it consumes no tokens while idle). Zero collisions across two
+  concurrently-writing sessions in one shared tree — but use a worktree next time (#163(6)).
+- **A search agent's citation is not a source — fetch the original before judging** (session 48,
+  the #153 fact-check proefrit). All three verdicts were issued only after WebFetching the actual
+  articles: the wbn.nl quote proved REAL (and then refuted by CBS 82242NED — claimed −4%, measured
+  +13,7%), but had the quote been agent-fabricated we would have publicly "corrected" a claim
+  nobody made. Now a standing step 1 in the #153 format. Same class, same session: man-man.nl's
+  headline attributed a *forecast* to CBS (CBS does not forecast) while every digit in the piece
+  was exact — claim-verification must cover attribution, not just numbers.
+- **Measured-only catalog scouting scales and self-reports its own gaps** (session 48, the
+  coverage-sprint scout). 8 cheap-tier agents validated 8 release-tables in ~5.5 min wall-clock,
+  each instructed MEASURED-ONLY + a confidence score + alternates-with-reasons. The honesty
+  instructions did the real work: two load-bearing NEGATIVE findings surfaced (no full-gemeente
+  price index exists; 80590NED is v3-only) plus per-table caveats (unverified ProdCom total code,
+  v4-availability gaps) that a naive "find me the table id" prompt would have papered over.
+  Reusable pattern for any table-selection work.
+- **An owner spar session is a high-yield decision harvester — if capture discipline holds**
+  (session 48). One conversation produced 11 recorded decisions/rows including two
+  rejections-with-reasons that now cannot resurface. What made it safe: a scratchpad capture-draft
+  as the queue (decisions survive context loss until the repo write is safe), repo writes only at
+  coordination-safe moments (see the concurrency lesson), and checking recorded decisions BEFORE
+  responding to owner recollections (the "Brandfetch is already live" claim was actually idea-bank
+  #61, not built — the CLAUDE.md check-first rule earning its keep).
+
 - **A targeted inline scout misses what a systematic column-by-column lens catches — the
   "later migration adds a PII column, the redaction list is never updated" blind spot** (session
   47, 2026-07-16→17, the GDPR-redaction hunt). Before the hunt I hand-checked the "obvious" PII

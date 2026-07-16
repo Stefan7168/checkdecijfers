@@ -6,7 +6,7 @@
 2. Never build without **(a)** an execute-ready WP section/brief naming scope + invariants + done-definition, and **(b)** the FULL verification block green BEFORE any PR or merge: `npm ci` (root + web), typecheck (root + web), all backend suites, the web suite, `benchmark:run` + `benchmark:score` = 14/14 + 6/6 + 0 fabricated, and a real next build — run serially, exit codes checked. Green CI is the only "done".
 3. Zero prompt bytes unless the WP explicitly authorizes them; never re-record LLM fixtures as a side effect.
 4. Live DDL, real API spend, and env-flag flips happen ONLY in an owner-supervised step — never autonomously.
-5. Core-product or money-path code goes on its own branch + PR; merge ONLY on the owner's explicit in-chat approval ([open-questions #118](open-questions.md)).
+5. Core-product or money-path code goes on its own branch + PR; merge ONLY on the owner's explicit in-chat approval ([open-questions #118](open-questions.md)). **Revised (owner, 2026-07-17, #118): in OWNER-PRESENT sessions this per-merge approval is replaced by a standing authorization — push/merge directly once the full verification block (rule 2) is green. Branch+PR+approval remains binding for AUTONOMOUS sessions; rule 4 (supervised live DDL/spend/env) is unchanged.**
 6. On missing or ambiguous data/requirements: refuse or ask the owner. A guess presented as settled is this product's worst bug (principle (c)).
 7. Design trade-offs beyond the brief: stop and write the question to the owner; do not decide silently.
 8. Big files — [STATUS.md](STATUS.md), [open-questions.md](open-questions.md) and this build plan — each have an archive twin ([status-archive.md](status-archive.md), [open-questions-archive.md](open-questions-archive.md), [build-plan-archive.md](build-plan-archive.md)): read the lean file, and grep the archive only when a specific number/WP is missing from it.
@@ -24,6 +24,15 @@
 **Status of the decisions here:** they are the *plan of record*, not frozen law. The implementing session firms them up against the code in front of it and records any deviation (with reasoning) in its ADR / lessons-learned. New load-bearing choices get an ADR per [CLAUDE.md](../CLAUDE.md).
 
 **Completed so far** (details in [STATUS.md](STATUS.md) phase history): WP1 CI skeleton + validated table set · WP2 ingestion + validation pipeline · WP3 benchmark answer key frozen · WP4 table registry + alias list · WP5 deterministic query + validation + registered derivations (contract in ADR [011](decisions/011-query-contract.md); two additions beyond the brief below: comparisons also pre-register a non-explicit ranking so B10's "meer dan" has an R9 binding target, and freshness refusals offer period + status but **never a value** — [open-questions #37](open-questions.md), resolved).
+
+---
+
+**▶ NEXT UP (2026-07-17, session 48): the COVERAGE SPRINT** — owner-approved strategy [#163](open-questions.md)(3): onboard the 8 validated
+publication-calendar gap tables via the curated route ([how-to-add-a-source.md](how-to-add-a-source.md), NOT the WP16 fit-gate). Execute-ready
+brief with build order, slices and caveats: [session-briefs/2026-07-17-coverage-sprint-brief.md](session-briefs/2026-07-17-coverage-sprint-brief.md).
+First target `83693NED` (consumentenvertrouwen) BEFORE its 23 July 06:30 release. Table 8 (`80590NED`) additionally needs ADR
+[003](decisions/003-cbs-access-layer.md)'s budgeted v3 access path (first table not on v4). Fresh hunts are PAUSED per #163(1); the owner-stack
+items (#138/WP26/#121/#131/WP30c) queue behind the sprint.
 
 ---
 

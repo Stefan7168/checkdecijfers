@@ -9,7 +9,24 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
-**▶ NEXT SESSION STARTS HERE (session 47, 2026-07-16→17 — THREE adversarial security/data-integrity hunts (each 4-6 lenses, dual-verified, Sonnet
+**▶ NEXT SESSION STARTS HERE (session 48, 2026-07-17 — the parallel owner-"spar" session that became the strategy session; docs-only, ran
+CONCURRENTLY with session 47 in one shared working tree, zero collisions. ELEVEN owner decisions captured: #153-update (fact-check content: tone =
+verification framing; content angle "AI-generated numbers news that nobody checks — we do"), #158 Studio interaction model (incl. watermark
+WARN-BUT-ALLOW, owner choice against session advice, risk + revisit triggers recorded), #159 gallery = ALL charts + pins on top (revises #60),
+#160 marketing batch (persberichtdag-service, own-social/@CBS first; REJECTED: journalism-school free access), #161 admin publication radar,
+#162 slot-filling experiment, #163 STRATEGY REBALANCE (market contact over further hunts — hunts PAUSED; distribution-surfaces-first; coverage
+sprint; advice #5 credits-friction REJECTED). #153 proefrit EXECUTED with live-verified verdicts (NOS ✓ exact; man-man 🟡 figures exact but
+forecast misattributed to CBS; wbn.nl ❌ claimed −4% vs CBS-measured +13,7% — likely AI-generated news). GOVERNANCE: #118 owner revision —
+owner-present sessions push/merge directly, NO per-merge approval (verification block + CI gate + supervised live-DDL/spend/env UNCHANGED;
+autonomous sessions keep branch+PR). ▶ NEXT = BUILD THE COVERAGE SPRINT: execute-ready brief in
+[session-briefs/2026-07-17-coverage-sprint-brief.md](session-briefs/2026-07-17-coverage-sprint-brief.md) — 8 calendar-gap tables validated live;
+FIRST TARGET `83693NED` (consumentenvertrouwen, smallest) BEFORE its 23 July 06:30 release; then 85880NED+85770NED before 30/7. Scout findings:
+NO full-gemeente house-price index exists (lokale hoek → 83625NED avg prices, candidate #9); `80590NED` is v3-ONLY — first table needing
+ADR-003's budgeted v3 path. Owner dates: 22/7 06:30 = first persberichtdag generale (data already loaded, 85773NED); #132 route B check on/after
+19/7. s48 commits (all docs, [skip ci]): `6050d7f` `2bf9d6f` `4394739` `68f93eb` `0f7fc2f` + wrap; full gate independently re-run green against
+merged main `4394739` by s47's post-wrap verification (backend 1346/1346, benchmark 14/14 + 6/6 + 0 fabricated, prod 307).)**
+
+**Session 47 (2026-07-16→17 — THREE adversarial security/data-integrity hunts (each 4-6 lenses, dual-verified, Sonnet
 fan-out) + a frontend-render scout. THREE fixes merged+live, each on an EXPLICIT owner word (#118b). (1) BILLING/MONEY-PATH: NO live credit-
 conservation bug; one reachable-today gap FIXED ([#145], PR #48 `7e42656`) — `guardPending` bounds the untrusted reply-turn `pending`. (2) GDPR-
 REDACTION: a real HIGH leak the inline scout MISSED — `pending_table_requests.fit_note` (LLM sentence paraphrasing the question) + topic-disclosing
@@ -53,13 +70,14 @@ the #144 design brief was written there and executed by session 46.
 **Session 44 (2026-07-13 → 2026-07-16, 3 PRs merged: #134(b) too-old retry chip PR #41 `12518eb`, auth/ownership hunt CLEAN + open-redirect fix
 PR #42 `4e2a2fd`, the #140 validator narrowing PR #43 `882c808`; full entries in [status-archive.md](status-archive.md)).**
 
-- **Next — pick:** a fresh security/bug hunt on an un-hunted surface (hunted so far: auth/ownership CLEAN s44, data-integrity CLOSED s44-46,
-  billing/money-path CLEAN s47, GDPR-redaction s47 → found+fixed #151; candidate next surfaces: the ingestion/validation chain, the auth/session
-  layer), or the owner stack below. Tracked follow-ups #146-150 (billing) + #152 (GDPR feedback race) all low/latent; #151 backfill sweep = supervised.
-- **Next — owner decisions:** **#138** (v2 regional refusal chip — needs a code→region-label source on the refusal path), **WP26** (answer-first
-  defaults + clickable clarify options, safelist read-back), **#121** (fail-closed template rung), **#131** (multilingual L1), **WP30c** (source
-  choice). Tracked-not-focus: #132 route B ~2026-07-19 (forks==0 T-0), #104/#112 (need live-LLM spend; format.ts NUL ✅ fixed s45 PR #46), /login
-  header cosmetic.
+- **Next — the coverage sprint ([#163](open-questions.md)(3), owner-approved 2026-07-17):** build order, validated slices and caveats in
+  [session-briefs/2026-07-17-coverage-sprint-brief.md](session-briefs/2026-07-17-coverage-sprint-brief.md); first target `83693NED` before 23/7.
+  **Fresh hunts are PAUSED per #163(1)** — un-hunted surfaces (auth/session-flow, answer-composition/LLM-harness) stay listed for when hunts
+  resume. Tracked follow-ups #146-150 + #152 low/latent; #151 backfill sweep = supervised; #154 = a design WP, owner's call on priority.
+- **Next — owner decisions (queue behind the sprint per #163):** **#138** (v2 regional refusal chip — needs a code→region-label source), **WP26**
+  (answer-first defaults + clickable clarify options — aligns with #163(1) market contact), **#121** (fail-closed template rung), **#131**
+  (multilingual L1), **WP30c** (source choice), **#162** (slot-filling experiment — ADR-grade if the A/B wins). Tracked-not-focus: #132 route B
+  ~2026-07-19 (check on/after 19 juli), #104/#112 (need live-LLM spend), /login header cosmetic.
 
 
 **▶ TOP PRIORITY STACK — owner decision, session 23 (2026-07-05); this ORDER overrides the "decision-gated" framing below.** The owner set an explicit
