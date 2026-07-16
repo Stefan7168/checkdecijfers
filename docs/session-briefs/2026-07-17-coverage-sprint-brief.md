@@ -13,7 +13,7 @@ already have), 31/7 + 11/8 inflatie (86141NED), 30/7 kwartaalbericht arbeidsmark
 
 | # | Release (2026) | Table | Title (short) | Platform | Conf. | Slice / notes |
 |---|---|---|---|---|---|---|
-| 1 | Consumentenvertrouwen — 23 jul | `83693NED` | Consumentenvertrouwen; gecorrigeerd | both | 5 | Tiny (3,864 obs), full ingest, 8 measures; headline `Consumentenvertrouwen_1`. Do NOT conflate with uncorrected sibling 83694NED |
+| 1 | Consumentenvertrouwen — 23 jul | `83693NED` | Consumentenvertrouwen; gecorrigeerd | both | 5 | **✅ DONE END-TO-END session 49 (2026-07-17): live in prod, batch 15; record in [11-coverage-table-set.md](../11-coverage-table-set.md).** Tiny (3,864 obs), full ingest, 8 measures. ⚠ session-49 correction: `Consumentenvertrouwen_1` was the v3 COLUMN name — the v4 measure codes the pipeline stores are `M001093`/`D001095`/`M001128`; re-validate every identifier in this table against v4 `MeasureCodes` before writing registry rows (same likely applies to the headline identifiers quoted for tables #2-#8 below). Do NOT conflate with uncorrected sibling 83694NED (vocab overlap resolved, [#165](../open-questions.md)) |
 | 2 | BBP flash — 30 jul | `85880NED` | Bbp, productie en bestedingen; kwartalen, mutaties | both | 5 | Slice: top-level aggregates only (skip ~110 detail topics), SoortMutaties A045299 (YoY volume, the headline) + A045300 (QoQ); headline `BrutoBinnenlandsProduct_2` |
 | 3 | Producentenprijzen — 30 jul | `85770NED` | PPI; afzet-/invoer-/verbruiksprijzen, 2021=100 | both | 5 | Slice: Afzetgebieden A044074 (totaal) [+ A044077 invoer]; headline `JaarmutatiePPI_3`. ⚠ total-ProdCom code NOT yet verified — confirm before ingestion config |
 | 4 | Omzet detailhandel — 3 aug | `85828NED` | Handel en diensten; omzet/productie, 2021=100 | both | 5 | Merged 9-in-1 table — MUST slice: branch 371600 ("47 Detailhandel") + direct subgroups, MONTHLY period keys only; headline `Ongecorrigeerd_4` (omzet YoY) |
@@ -38,6 +38,9 @@ already have), 31/7 + 11/8 inflatie (86141NED), 30/7 kwartaalbericht arbeidsmark
 
 - **Curated onboarding per [how-to-add-a-source.md](../how-to-add-a-source.md)** (registry rows, reviewed slices, aliases,
   fixtures) — NOT the WP16 on-demand fit-gate; a deliberate sprint deserves deterministic, reviewed slices.
+- **Session-49 finding ([#164](../open-questions.md)): every vocabulary (aliases) addition invalidates ALL ~93 intent/followup/clarify/delivery
+  LLM replay fixtures at once** (prompt-hash design, ADR 012) → each build session groups its tables into ONE vocab change + ONE re-record
+  (`intent:record`/`followup:record`/`clarify:record`/`onboarding-delivery:record`, Haiku-tier, sub-euro) + eval-verify (table-#1 template: 63/63 ×3 stable).
 - Mixed-grain `Perioden` dimensions (80590NED, 85828NED, 85937NED, 85880NED) must be filtered by key pattern at ingestion —
   never ingest month+quarter+year rows into one undifferentiated column.
 - Base-year/methodology breaks (2021=100 rebases on PPI/detailhandel/consumptie; intl-trade break 2020/2021) must land in

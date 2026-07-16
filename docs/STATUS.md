@@ -9,22 +9,24 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
-**▶ NEXT SESSION STARTS HERE (session 48, 2026-07-17 — the parallel owner-"spar" session that became the strategy session; docs-only, ran
-CONCURRENTLY with session 47 in one shared working tree, zero collisions. ELEVEN owner decisions captured: #153-update (fact-check content: tone =
-verification framing; content angle "AI-generated numbers news that nobody checks — we do"), #158 Studio interaction model (incl. watermark
-WARN-BUT-ALLOW, owner choice against session advice, risk + revisit triggers recorded), #159 gallery = ALL charts + pins on top (revises #60),
-#160 marketing batch (persberichtdag-service, own-social/@CBS first; REJECTED: journalism-school free access), #161 admin publication radar,
-#162 slot-filling experiment, #163 STRATEGY REBALANCE (market contact over further hunts — hunts PAUSED; distribution-surfaces-first; coverage
-sprint; advice #5 credits-friction REJECTED). #153 proefrit EXECUTED with live-verified verdicts (NOS ✓ exact; man-man 🟡 figures exact but
-forecast misattributed to CBS; wbn.nl ❌ claimed −4% vs CBS-measured +13,7% — likely AI-generated news). GOVERNANCE: #118 owner revision —
-owner-present sessions push/merge directly, NO per-merge approval (verification block + CI gate + supervised live-DDL/spend/env UNCHANGED;
-autonomous sessions keep branch+PR). ▶ NEXT = BUILD THE COVERAGE SPRINT: execute-ready brief in
-[session-briefs/2026-07-17-coverage-sprint-brief.md](session-briefs/2026-07-17-coverage-sprint-brief.md) — 8 calendar-gap tables validated live;
-FIRST TARGET `83693NED` (consumentenvertrouwen, smallest) BEFORE its 23 July 06:30 release; then 85880NED+85770NED before 30/7. Scout findings:
-NO full-gemeente house-price index exists (lokale hoek → 83625NED avg prices, candidate #9); `80590NED` is v3-ONLY — first table needing
-ADR-003's budgeted v3 path. Owner dates: 22/7 06:30 = first persberichtdag generale (data already loaded, 85773NED); #132 route B check on/after
-19/7. s48 commits (all docs, [skip ci]): `6050d7f` `2bf9d6f` `4394739` `68f93eb` `0f7fc2f` + wrap; full gate independently re-run green against
-merged main `4394739` by s47's post-wrap verification (backend 1346/1346, benchmark 14/14 + 6/6 + 0 fabricated, prod 307).)**
+**▶ NEXT SESSION STARTS HERE (session 49, 2026-07-17 — COVERAGE-SPRINT TABLE #1 DONE END-TO-END: `83693NED` consumentenvertrouwen is LIVE in
+production, six days before its 23-July 06:30 release. Curated onboarding per the sprint brief: seed/registry/3 canonical keys (headline +
+economisch klimaat + koopbereidheid; headline = werkloosheid-precedent canonical default, seizoengecorrigeerd) + fixtures + frozen verification
+tasks CC1–CC4 ([benchmark/coverage-key.json](../benchmark/coverage-key.json), values cross-checked on BOTH CBS platforms, scored on the gate).
+Build commit `c4134bc`, CI run 29536621797 gate+deploy green; verification block: backend 1351/1351, web 323/323, benchmark 14/14 + 6/6 + 0
+fabricated GATE PASS, real build, /code-review low = 0 findings. Live step (owner pre-approved): sync batch 15 = 3,864 cells / 0 corrections;
+registry:apply 9 tables / 11 keys; #165 vocab-overlap trim 115/115 rows; LLM-free prod verify −39 (juni 2026, Definitief) + JJ-ask →
+`not_published`. THREE sprint-wide finds recorded: #164 any vocab addition invalidates all ~93 LLM replay fixtures (re-record template proven:
+63/63 intent ×3 stable, 22/22 followup, 7/7 clarify); #165 done; #166 self-onboarding guard gap (owner design decision, money-path). GOVERNANCE:
+#118 owner addition — automatic `/code-review` LOW before every code push, now in CLAUDE.md + build-plan rule 2 (commit `09b6191`). ▶ NEXT =
+SPRINT TABLES #2 `85880NED` (BBP flash) + #3 `85770NED` (PPI) BEFORE 30/7, in ONE session with ONE combined vocab change + re-record (#164);
+kickoff: [session-briefs/2026-07-17-session-50-kickoff.md](session-briefs/2026-07-17-session-50-kickoff.md). Owner dates: 22/7 06:30
+persberichtdag-generale (sync `85773NED` that morning), 23/7 06:30 sync `83693NED` (juli-cijfer), #132 route B on/after 19/7. Re-validate the
+brief's identifiers against v4 MeasureCodes first — the `Consumentenvertrouwen_1` v3-name trap (docs/11 quirk #1).)**
+
+**Session 48 (2026-07-17 — the parallel owner-"spar" strategy session, docs-only: ELEVEN owner decisions #153-upd/#158–#163 + the #118
+standing-push revision; #153 proefrit executed (wbn.nl ❌ −4% claimed vs +13,7% CBS-measured); coverage sprint scouted + briefed (8 gap tables,
+two load-bearing finds: no full-gemeente price index anywhere; 80590NED is v3-only). Full entry in [status-archive.md](status-archive.md).)**
 
 **Session 47 (2026-07-16→17 — THREE adversarial security/data-integrity hunts (each 4-6 lenses, dual-verified, Sonnet
 fan-out) + a frontend-render scout. THREE fixes merged+live, each on an EXPLICIT owner word (#118b). (1) BILLING/MONEY-PATH: NO live credit-
@@ -71,7 +73,9 @@ the #144 design brief was written there and executed by session 46.
 PR #42 `4e2a2fd`, the #140 validator narrowing PR #43 `882c808`; full entries in [status-archive.md](status-archive.md)).**
 
 - **Next — the coverage sprint ([#163](open-questions.md)(3), owner-approved 2026-07-17):** build order, validated slices and caveats in
-  [session-briefs/2026-07-17-coverage-sprint-brief.md](session-briefs/2026-07-17-coverage-sprint-brief.md); first target `83693NED` before 23/7.
+  [session-briefs/2026-07-17-coverage-sprint-brief.md](session-briefs/2026-07-17-coverage-sprint-brief.md); per-table measured record in
+  [11-coverage-table-set.md](11-coverage-table-set.md). **Table #1 `83693NED` ✅ DONE + LIVE (session 49); next = #2 `85880NED` + #3 `85770NED`
+  before 30/7 as ONE batch (#164 re-record constraint).**
   **Fresh hunts are PAUSED per #163(1)** — un-hunted surfaces (auth/session-flow, answer-composition/LLM-harness) stay listed for when hunts
   resume. Tracked follow-ups #146-150 + #152 low/latent; #151 backfill sweep = supervised; #154 = a design WP, owner's call on priority.
 - **Next — owner decisions (queue behind the sprint per #163):** **#138** (v2 regional refusal chip — needs a code→region-label source), **WP26**

@@ -43,3 +43,19 @@ Two things are getting conflated in "canonical default" and need separating:
 ## As-built addendum (2026-07-06, session 29 — #115 lever b)
 
 `canonical_measures` gained one **nullable** column, `definition_text` (migration 014), carrying the FULL verbatim CBS measure `Description` (its meaning + any scale). Distinct from `definition_label`, which stays the short concept phrase that doubles as the answer's sentence *subject* — a paragraph can't live there. **The decision was a dedicated column, NOT widening `definition_label` to nullable** (the shape first sketched): that keeps every seed row (`definition_text` NULL) and thus every benchmark answer byte-identical by construction, while on-demand-onboarded measures store CBS's real definition for their "Definitie:" line. Populated only by onboarding (`src/ingestion/onboarding-vocab.ts` → `cleanCbsDefinition`, which keeps the whole blurb verbatim, never trimming to a block — a live-caught fix); seed rows leave it NULL. Rationale + the deploy-order-safe read (gated on the `onboarded:` key prefix so the hot seed path never touches the new column) in [open-questions #115](../open-questions.md).
+
+## As-built addendum (2026-07-17, session 49 — coverage sprint table #1)
+
+The coverage sprint ([open-questions #163](../open-questions.md)(3)) added the first post-Phase-0 CURATED
+entries: table `83693NED` with **three canonical measures on one table** (`consumer_confidence_seasonally_adjusted`,
+`economic_climate_seasonally_adjusted`, `willingness_to_buy_seasonally_adjusted`) — the Phase-0 one-key-per-table
+shape was incidental, never a rule; each CBS-persbericht figure that users ask for by name earns its own key.
+The headline key repeats the werkloosheid canonical-default pattern (everyday term → the seasonally-adjusted
+series, stated in `definitionLabel`); the prod vocab overlap with the WP16-onboarded uncorrected sibling
+`83694NED` was resolved by trimming the sibling's auto-derived terms ([#165](../open-questions.md)). Two
+operational facts this addendum pins for future adds: (1) any `CANONICAL_MEASURES` change re-hashes every
+intent/followup/clarify/delivery LLM replay fixture ([#164](../open-questions.md) — budget a re-record);
+(2) `AVAILABLE_GRAINS` in `src/answer/intent/prompt.ts` is a SEPARATE hand-maintained map — omitting the new
+key silently advertises `['JJ']` to the LLM, wrong for a monthly-only table. Verification-task convention for
+curated adds: frozen `CC*` tasks in `benchmark/coverage-key.json`, scored hermetically by
+`tests/query/coverage-key.test.ts` (the docs/05 onboarding rule), leaving B1–B20 and its gate counts untouched.

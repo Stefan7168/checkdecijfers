@@ -6,6 +6,11 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+- **A catalog/scout brief can quote v3 COLUMN names as "the headline measure" — always re-validate against v4 `MeasureCodes` before writing registry rows.** (session 49, 2026-07-17) The sprint brief said headline `Consumentenvertrouwen_1`; the v4 codes the pipeline actually stores are `M001093`/`D001095`/`M001128`. The kickoff's "hervalideer identifiers live vóór registry-rijen" rule caught it at cost ~one curl; uncaught it would have produced a registry row for a measure that doesn't exist and a first-sync `dimension_mapping`/`unit_consistency` quarantine. Same trap likely applies to the headline identifiers quoted for sprint tables #2–#8 (brief annotated).
+- **Validate against the host the adapter actually calls.** (session 49, 2026-07-17) A scout tested `odata4.cbs.nl` (found it TLS-connecting but dropping every request — scary-looking, wasted a full agent) while the repo's v4 base is `datasets.cbs.nl` (`odata-v4.ts:22`), which worked fine. The prompt named the wrong host from prose memory; one grep for `BASE =` first would have prevented it.
+- **Any curated `CANONICAL_MEASURES` change invalidates ALL ~93 intent/followup/clarify/delivery LLM replay fixtures at once** (session 49, 2026-07-17) (prompt-hash-everything design, ADR 012 — working as intended). Now recorded as sprint constraint [#164](open-questions.md): group sprint tables into ONE vocab change + ONE re-record per session. The proven re-record template: clear the four fixture dirs FIRST (the record scripts do NOT delete stale hash files — orphans linger and pollute the diff), then `intent:record`/`followup:record`/`clarify:record`/`onboarding-delivery:record` + `intent:eval -- --repeat=3`; measured result 63/63 ×3 zero flips, sub-euro Haiku spend.
+- **WP16's v1 vocabulary auto-derivation tags EVERY measure of an onboarded table with the topic term** (session 49, 2026-07-17) — prod carried 115 near-duplicate "consumentenvertrouwen" vocab lines from the single onboarded 83694NED, silently riding every live intent prompt since session 28. Surfaced while resolving the curated-vs-onboarded term overlap ([#165](open-questions.md), trim executed); feeds the [#166](open-questions.md) design and the [#112](open-questions.md) extended-vocab measurement.
+- **Owner instructions can arrive cross-project — check memory before re-deriving.** (session 49, 2026-07-17) The "automatic /code-review low before every push" rule arrived here in-chat, but the memory file from another project's session (same day) already recorded it with "mirror into this repo's CLAUDE.md at the next owner-present session" — the write-through happened exactly as that note planned. Memory-first saved a duplicate-file mistake (the Write collision was the tell).
 - **Spar-side concurrency protocol that worked — and the one gap it found** (session 48, 2026-07-17,
   the parallel owner-spar session; complements s47's `4f0c3fe` addendum). What worked from the
   second-session side: (1) READ the other session's transcript before splitting territory (its
@@ -358,6 +363,7 @@ on top.
   top of [08-build-plan.md](08-build-plan.md)). **Lesson: when a scarce tier is about to
   vanish, its last tokens buy judgment and guardrails, never legwork — and tier language in
   docs stays role-based ("top tier"), never model names.**
+
 
 ## 2026-07-13 (session 42) — WP135 go-live + #136 symlink convention
 
