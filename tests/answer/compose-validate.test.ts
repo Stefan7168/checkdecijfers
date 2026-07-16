@@ -911,3 +911,33 @@ describe('#141: period numbers are exempt only in temporal context (fabrication 
     expect(scanBody('cijfer 2015 herzien', revisedIn2015).find((t) => t.value === 2015)?.kind).toBe('metadata');
   });
 });
+
+// #142 (session-44 data-integrity hunt, MEDIUM): count exemptions are now
+// AXIS-BOUND. countNumbers pooled the cell/region/period counts and any
+// structure noun accepted any of them — so "in 4 gemeenten" grounded as
+// 'count' when 4 was the PERIOD count of a single-region result: a
+// wrong-axis structural claim (no invented magnitude, but a false statement
+// about the data's shape).
+describe('#142: count numbers are exempt only next to their OWN axis noun', () => {
+  it('a wrong-axis noun no longer grounds as count ("5 gemeenten" over a 5-period single-region series)', () => {
+    const cpi = cpiSeries(); // 5 periods, 1 (national) region, 5 cells
+    expect(scanBody('de inflatie steeg in 5 gemeenten', cpi).find((t) => t.value === 5)?.kind).toBe('unbacked');
+    expect(validateAnswerBody('De inflatie was in 2024 3,3% en steeg in 5 gemeenten.', cpi).ok).toBe(false);
+  });
+
+  it('right-axis mentions still ground as count: periods, cells and regions each bind their own noun', () => {
+    const cpi = cpiSeries();
+    expect(scanBody('gemeten over 5 jaren', cpi).find((t) => t.value === 5)?.kind).toBe('count');
+    expect(scanBody('de 5 waarden hierboven', cpi).find((t) => t.value === 5)?.kind).toBe('count');
+    expect(scanBody('het inwonertal van de 2 gemeenten', populationComparison()).find((t) => t.value === 2)?.kind).toBe('count');
+  });
+
+  it('granularities the product does not serve never count: "2 wijken"/"2 buurten" over a gemeente comparison FAIL', () => {
+    // Review-confirmed bypass of the first #142 version: 'wijken'/'buurten'
+    // sat in REGION_COUNT_NOUNS while no result can be at that granularity
+    // (intent schema has no wijk/buurt kind; policy refuses buurt questions)
+    // — a body could describe a gemeente comparison as a wijk comparison.
+    expect(scanBody('het inwonertal van de 2 wijken', populationComparison()).find((t) => t.value === 2)?.kind).toBe('unbacked');
+    expect(scanBody('het inwonertal van de 2 buurten', populationComparison()).find((t) => t.value === 2)?.kind).toBe('unbacked');
+  });
+});

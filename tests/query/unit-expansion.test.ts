@@ -24,6 +24,8 @@ describe('parseFactorUnit — pure numeric factor units only (D1)', () => {
   it('rejects any unit that is not a pure factor', () => {
     expect(parseFactorUnit('1 000 euro')).toBeNull(); // B12 — out of v1 scope
     expect(parseFactorUnit('aantal per 1 000 inwoners')).toBeNull(); // a RATE
+    expect(parseFactorUnit('2015=100')).toBeNull(); // index BASE, not a factor (#143 pin)
+    expect(parseFactorUnit('2021 = 100')).toBeNull(); // spaced base variant (#143 pin)
     expect(parseFactorUnit('%')).toBeNull();
     expect(parseFactorUnit('aantal')).toBeNull();
     expect(parseFactorUnit('euro')).toBeNull();

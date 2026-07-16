@@ -37,6 +37,11 @@ export function displayValueUnit(value: number, decimals: number, unit: string):
   if (trimmed === '%') return `${formatted}%`;
   if (/^aantal$/i.test(trimmed)) return formatted;
   if (/\d/.test(trimmed)) {
+    // An index-BASE declaration ("2015=100") is a label, never a factor
+    // (#143): an '×' prefix would claim a multiplication that isn't real.
+    // parseFactorUnit (query/derivations.ts) already excludes '=' units from
+    // expansion for the same reason — this keeps the display side consistent.
+    if (trimmed.includes('=')) return `${formatted} (${trimmed})`;
     const factor = trimmed.startsWith('x ') || trimmed.startsWith('× ') ? trimmed : `× ${trimmed}`;
     return `${formatted} (${factor})`;
   }

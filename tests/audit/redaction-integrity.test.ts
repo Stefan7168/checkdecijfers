@@ -26,6 +26,7 @@ import {
   redactionIntegrityReport,
   loadAuditRecord,
   classifyKnownDivergence,
+  KNOWN_DIVERGENCES,
 } from '../../src/answer/audit/index.ts';
 import type { AuditRecord, KnownDivergence } from '../../src/answer/audit/index.ts';
 import type { Db } from '../../src/db/types.ts';
@@ -291,5 +292,25 @@ describe('classifyKnownDivergence — pure, no DB', () => {
 
   it("'stale' when problems is empty — the row reconstructs clean now", () => {
     expect(classifyKnownDivergence([], entry)).toBe('stale');
+  });
+
+  // Review test-gap pin (2026-07-16): the REAL register entries were only
+  // exercised via the live-DB audit:verify script, never hermetically. Pin
+  // the actual row-227 entry: its exact production problem pair classifies
+  // as the documented divergence, and anything extra still fails loudly.
+  it('the REAL row-227 entry matches its exact production problem pair — and nothing more', () => {
+    const row227 = KNOWN_DIVERGENCES.find((e) => e.id === 227)!;
+    expect(row227).toBeDefined();
+    const productionPair = [
+      'definition line does not re-derive from the stored attribution',
+      'answer text does not re-assemble from its stored parts',
+    ];
+    expect(classifyKnownDivergence(productionPair, row227)).toBe('matches');
+    // The definition-line divergence alone (pre-cascade shape) still matches.
+    expect(classifyKnownDivergence([productionPair[0]!], row227)).toBe('matches');
+    // Any UNRELATED problem on row 227 still fails the row, loudly.
+    expect(
+      classifyKnownDivergence([...productionPair, 'chart spec does not re-derive from the stored result'], row227),
+    ).toBe('unexpected');
   });
 });
