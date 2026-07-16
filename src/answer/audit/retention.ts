@@ -52,6 +52,20 @@ import type { AuditRecord } from './types.ts';
  * row by exact match, without a new column. */
 export const REDACTED_QUESTION_TEXT = 'Deze vraag is verwijderd.' as const;
 
+/** #151 (session-47 GDPR hunt): the sentinel written into pending_table_requests
+ * table-identity columns (table_id / resolved_table_id) on a TERMINAL row when
+ * its owner erases their history. A CBS table id (e.g. '85004NED') is a public
+ * catalog lookup key that discloses the TOPIC the user asked about — the same
+ * class of data audit_answers.table_ids is already cleared for (redactMatchingRows
+ * below, "reveal WHAT the user asked about … even after the question text is
+ * gone"). `table_id` is NOT NULL, so it needs a non-null sentinel rather than a
+ * null; a distinct 'REDACTED' value (never a real CBS id) is unmistakably a
+ * redaction marker. Only terminal rows are cleared — a pending/running row's
+ * in-flight job still needs its real table_id/resolved_table_id to finish the
+ * fetch (the documented in-flight residual: a redacted-while-running row's
+ * identity is swept by the next deletion/purge once it terminates). */
+export const REDACTED_TABLE_ID = 'REDACTED' as const;
+
 /** #120: the single source of truth for WHICH audit_answers rows this module's
  * retention touches. An explicit ALLOWLIST, deliberately not a `!= 'benchmark'`
  * denylist: benchmark/validation rows are regression fixtures that live forever,
@@ -67,6 +81,30 @@ const AUDIT_SCOPE = `source_tag in ('user', 'onboarding_delivery')` as const;
  * AND the dry-run count so preview and apply can never drift (⟨F2⟩). `$1` is
  * always the cutoff ISO string in both callers. */
 const PENDING_PURGE_WHERE = `created_at < $1` as const;
+
+/** #151 (session-47 GDPR hunt): the ONE place the pending_table_requests
+ * redaction SET clause is written — both legs (self-service + purge) apply it,
+ * so the scope can only ever widen in one place (same discipline as AUDIT_SCOPE).
+ * `$2` = REDACTED_QUESTION_TEXT (free text), `$3` = REDACTED_TABLE_ID (the
+ * terminal-row table-id sentinel). Two tiers:
+ *  - question_text / topic_term / failure_summary / fit_note — cleared on EVERY
+ *    in-scope row: all four are free text about the user's question (fit_note is
+ *    the fit-gate LLM's Dutch sentence explaining the pick — it paraphrases the
+ *    topic/period), and none is needed by an in-flight job (diagnostic only).
+ *  - candidate_ids / resolved_table_id / table_id — the CBS-catalog identifiers
+ *    that disclose the TOPIC (the same class audit_answers.table_ids is cleared
+ *    for). Cleared ONLY on a TERMINAL row: a pending/running row's background job
+ *    still needs its real table id to finish the fetch, so its identity is swept
+ *    by the next deletion/purge once it terminates (the documented in-flight
+ *    residual, extended to these columns). */
+const PENDING_REDACTION_SET = `
+        question_text = $2,
+        topic_term = $2,
+        failure_summary = case when failure_summary is null then null else $2 end,
+        fit_note = case when fit_note is null then null else $2 end,
+        candidate_ids = case when status in ('delivered', 'failed', 'unanswerable') then '[]'::jsonb else candidate_ids end,
+        resolved_table_id = case when status in ('delivered', 'failed', 'unanswerable') then null else resolved_table_id end,
+        table_id = case when status in ('delivered', 'failed', 'unanswerable') then $3 else table_id end` as const;
 
 /** Redacted response envelope stored in place of the original. Keeps `kind`
  * and `schemaVersion` (both already promoted to their own columns and
@@ -230,21 +268,17 @@ export async function deleteUserQuestionHistory(db: Db, userId: string): Promise
       params: [userId],
     },
     {
-      // #120: this user's pending onboarding requests carry the question text a
-      // SECOND time (migration 012's re-entry copy). Redact its free-text
-      // columns in the same transaction, scoped by the SAME bound user_id (no
-      // dynamic SQL — the critical cross-user pin holds here too). ALL statuses
-      // are redacted, including pending/running: a GDPR erasure is not a
-      // job-state change, and the in-flight race (a running job's in-memory copy
-      // still delivers, its post-redaction delivery row caught by the next
-      // deletion/purge) is a documented, accepted residual. Money/status/id
-      // columns are untouched — the same skeleton posture as the audit rows.
-      sql: `update pending_table_requests set
-              question_text = $2,
-              topic_term = $2,
-              failure_summary = case when failure_summary is null then null else $2 end
+      // #120/#151: this user's pending onboarding requests carry the question a
+      // SECOND time (migration 012's re-entry copy) PLUS the fit-gate LLM note
+      // and the topic-disclosing CBS table identity (migration 015). Redact them
+      // in the same transaction, scoped by the SAME bound user_id (no dynamic SQL
+      // — the critical cross-user pin holds here too), via the shared
+      // PENDING_REDACTION_SET. Free text is cleared on ALL statuses; the table
+      // identity only on TERMINAL rows (a running job still needs it — the
+      // documented in-flight residual). Money/status/skeleton columns untouched.
+      sql: `update pending_table_requests set ${PENDING_REDACTION_SET}
             where user_id = $1`,
-      params: [userId, REDACTED_QUESTION_TEXT],
+      params: [userId, REDACTED_QUESTION_TEXT, REDACTED_TABLE_ID],
     },
   );
 }
@@ -271,16 +305,14 @@ export async function purgeExpiredQuestionHistory(db: Db, cutoff: Date): Promise
       params: [cutoffIso],
     },
     {
-      // #120: pending onboarding requests older than the cutoff, scoped by the
-      // SAME age predicate the audit purge uses (PENDING_PURGE_WHERE, `$1` =
-      // cutoff). ALL statuses redacted (see deleteUserQuestionHistory for the
-      // accepted in-flight-race rationale).
-      sql: `update pending_table_requests set
-              question_text = $2,
-              topic_term = $2,
-              failure_summary = case when failure_summary is null then null else $2 end
+      // #120/#151: pending onboarding requests older than the cutoff, scoped by
+      // the SAME age predicate the audit purge uses (PENDING_PURGE_WHERE, `$1` =
+      // cutoff), via the SAME shared PENDING_REDACTION_SET as the self-service
+      // leg — free text on all statuses, table identity on terminal rows only
+      // (see deleteUserQuestionHistory for the in-flight-race rationale).
+      sql: `update pending_table_requests set ${PENDING_REDACTION_SET}
             where ${PENDING_PURGE_WHERE}`,
-      params: [cutoffIso, REDACTED_QUESTION_TEXT],
+      params: [cutoffIso, REDACTED_QUESTION_TEXT, REDACTED_TABLE_ID],
     },
   );
 }
