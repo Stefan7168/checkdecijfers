@@ -1,6 +1,6 @@
 # ADR 034 — The semantic fabrication check: an additive, reject-only second LLM pass over residual-prone answer bodies (#144)
 
-**Status:** accepted, 2026-07-16 (session 46) — **built flag-dormant; the go-live (fixture recording + calibration + flag flip) is an owner-supervised RUNBOOK step.** The fail-open-vs-fail-closed choice on checker errors is an **OPEN OWNER DECISION** (§5), configured at flag-flip time.
+**Status:** accepted, 2026-07-16 (session 46) — **built + merged (PR #47); go-live executed the same day, owner-supervised (see §5-resolution and the RUNBOOK as-executed record).** The fail-open-vs-fail-closed choice was decided by the owner at the flag flip: **fail-open WITH an admin alert** (§5).
 
 **Relates to:** open-questions [#144](../open-questions.md) (the design brief:
 [session-briefs/2026-07-16-144-semantic-check-brief.md](../session-briefs/2026-07-16-144-semantic-check-brief.md)), ADR [013](013-answer-composition.md) §6 (both hardening addenda — the two proven deterministic ceilings), ADR [012](012-intent-parsing-llm-harness.md) (harness + record/replay), ADR [016](016-audit-records.md) (R8), ADR [004](004-llm-usage.md) (LLM role confinement — this ADR adds the third confined role).
@@ -51,7 +51,9 @@ When the checker CALL itself fails (API outage, malformed output — never a jud
 - **fail_open (recommended in the brief):** serve the answer — it already passed the FULL deterministic validator; the checker is defense-in-depth. An Anthropic outage does not degrade every residual-shaped answer to a template. The skip is recorded on the audit row (`status: 'error'`, honest and queryable).
 - **fail_closed:** treat the error as a rejection → regeneration, then template. Maximal core-promise posture: no answer ships whose residual-prone tokens went unjudged — at the cost that a checker outage turns residual-shaped answers into template answers (correct but uglier; note the regeneration rung ALSO needs the checker, so a hard outage lands on the template).
 
-The trade-off is availability-vs-belt on a live money-path product; per the #140 lesson ("a genuine safety-vs-quality tradeoff on the core promise is the OWNER's call"), this ADR deliberately does not decide it.
+The trade-off is availability-vs-belt on a live money-path product; per the #140 lesson ("a genuine safety-vs-quality tradeoff on the core promise is the OWNER's call"), this ADR deliberately left it to the owner at the flag flip.
+
+**RESOLVED (owner, 2026-07-16, in-chat, with the measured 9/9 FP=0 FN=0 ×3 eval in hand): fail-open, PLUS an ADMIN ALERT on every fail-open skip** — "wel met melding richting mij (admin) dat deze fout zich heeft voorgedaan, wat het heeft betekend, voor welke user en welke vraag." Implemented as `src/answer/audit/alerts.ts` + one hook in `respond-audited.ts` (the shared site all three answer paths pass, AFTER the audit write): a served answer whose stored checker record has status `'error'` fires a fail-soft owner e-mail via the existing Resend channel (`ADMIN_ALERT_EMAIL`; the `console.error` line is the floor when e-mail is unconfigured) carrying the audit row id, user id, question, the error, and the plain-language meaning. An alert failure is logged and never affects the response; the hook is inert whenever no checker record is stored (flag off, benchmark, tests). Under fail_closed no alert exists by construction (an errored body is never served) — the alert is the fail-open companion.
 
 ## Decision 6 — Hermetic CI now, live calibration in the supervised step (the ADR 012 split)
 

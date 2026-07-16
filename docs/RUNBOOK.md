@@ -283,16 +283,15 @@ in order, owner present:
 2. **Add the CI replay leg** — ask the session to add the replay test over the recorded fixtures
    (the eval's `--replay` mode is the manual equivalent) so the calibrated behavior is pinned
    hermetically on the gate from then on.
-3. **OWNER DECISION — `SEMANTIC_CHECK_FAILMODE`** (ADR 034 §5 presents both; the owner deliberately
-   DEFERRED this choice to this step — 2026-07-16, in-chat — so it is made with the measured eval
-   results from step 1 in hand): what happens when
-   the CHECKER ITSELF fails (API outage — never a judgment)?
-   - unset / anything else → **fail-open**: serve the answer (it already passed the full
-     deterministic validator), record the skip on the audit row. Recommended in the brief.
-   - `closed` → **fail-closed**: no answer ships unjudged; a checker outage degrades
-     residual-shaped answers to template answers.
-4. **Set the flags** — in Vercel: `SEMANTIC_CHECK_ENABLED=1` (Production) + the FAILMODE choice,
-   then redeploy (gate + deploy green).
+3. **OWNER DECISION — `SEMANTIC_CHECK_FAILMODE` — ✅ DECIDED (owner, 2026-07-16, in-chat, eval
+   results in hand): FAIL-OPEN + ADMIN ALERT.** `SEMANTIC_CHECK_FAILMODE` stays UNSET (fail-open
+   default: serve the deterministically-validated answer, record the skip). Every fail-open skip
+   e-mails the owner (ADR 034 §5-resolution: audit row, user, question, error, meaning) via
+   `src/answer/audit/alerts.ts` — requires `ADMIN_ALERT_EMAIL` (below); without it the
+   `console.error` line in Vercel logs is the floor.
+4. **Set the env vars** — in Vercel (Production): `SEMANTIC_CHECK_ENABLED=1` +
+   `ADMIN_ALERT_EMAIL=<owner e-mail>` (NOT `SEMANTIC_CHECK_FAILMODE` — unset = the decided
+   fail-open), then redeploy (gate + deploy green).
 5. **Live smoke test (~cents):** ask one real question whose answer is residual-shaped (e.g. one
    that phrases a bracket like "personen van 45 tot 65 jaar") and one plain question. Verify
    read-only on the audit rows: the plain answer's envelope has `semanticCheck` status

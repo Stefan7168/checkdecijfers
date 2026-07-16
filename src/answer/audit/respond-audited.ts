@@ -28,6 +28,7 @@ import type { ConversationContext } from '../context/types.ts';
 import { attachWebAugmentation, type WebBilling } from '../../websearch/attach.ts';
 import type { WebSearchClient } from '../../websearch/client.ts';
 import type { AuditSourceTag } from './types.ts';
+import { maybeAlertSemanticCheckSkip } from './alerts.ts';
 import { LlmCallTracker } from './track.ts';
 import { buildAuditRow, insertAuditRecord, type AuditContext } from './write.ts';
 
@@ -183,7 +184,11 @@ export async function answerQuestionAudited(
     client: options.webClient,
     billing: options.webBilling,
   });
-  return persistOrFailClosed(db, augmented, wrap);
+  const audited = await persistOrFailClosed(db, augmented, wrap);
+  // #144 (ADR 034 §5, owner decision 2026-07-16): the fail-open skip alert —
+  // fail-soft, after the audit write, never affecting the response.
+  await maybeAlertSemanticCheckSkip(audited, wrap.userId);
+  return audited;
 }
 
 export async function answerClarificationReplyAudited(
@@ -234,5 +239,8 @@ export async function answerClarificationReplyAudited(
     client: options.webClient,
     billing: options.webBilling,
   });
-  return persistOrFailClosed(db, augmented, wrap);
+  const audited = await persistOrFailClosed(db, augmented, wrap);
+  // #144 (ADR 034 §5): same fail-open skip alert on the reply turn.
+  await maybeAlertSemanticCheckSkip(audited, wrap.userId);
+  return audited;
 }
