@@ -6,6 +6,22 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+- **The wrap-up ritual failed the owner twice in one session in two distinct ways — both now fixed in
+  the mechanism, not just "I'll do better"** (session 44, 2026-07-16). (1) I wrote the WRONG DATE
+  (2026-07-13) into every session-44 doc from memory; the session had actually spanned to 2026-07-16
+  (usage-limit interruption), and I only caught it because the owner pushed for certainty. (2) The
+  `.claude/hooks/wrapup-detect.sh` signal detector was ENGLISH-ONLY — the owner wraps in Dutch ("dit
+  gesprek wordt afgerond / naar een nieuwe Claude code sessie"), so his preferred one-sentence trigger
+  silently did NOT fire the ritual; it only fired this session because he happened to type "wrap up
+  this chat" in English. **Fixes (durable, in the repo):** a **GOLDEN RULE** in CLAUDE.md + the
+  `/wrap-session` command + the hook reminder — verify every date/PR#/SHA/status/count against reality
+  (`date`, `git log --date=short`, `gh pr list`, `gh run view`, `curl` prod, `grep`) BEFORE writing it,
+  never from memory — plus a mandatory **FINAL SELF-AUDIT** step (re-read your own STATUS/archive/memory
+  edits and cross-check every fact); and Dutch wrap-up phrases added to the hook (tested: the owner's
+  exact sentence now fires, controls stay silent). **Lesson: when a checklist keeps letting the same
+  class of error through, harden the MECHANISM (the hook, the command, a forced verification step), not
+  your intentions — a beautifully-formatted wrap-up full of remembered-but-wrong facts is worse than
+  none, and a ritual the owner can't reliably trigger in his own language isn't a ritual.**
 - **Some safety properties can't be achieved DETERMINISTICALLY — recognize the ceiling, ship the
   narrowing, and track the residual instead of iterating forever** (session 44, 2026-07-16, the #140
   validator fabrication hole). The anti-fabrication validator exempts a body number as a "metadata

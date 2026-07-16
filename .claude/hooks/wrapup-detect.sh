@@ -43,7 +43,9 @@ prompt="$(extract_field "$input" "prompt" | tr '[:upper:]' '[:lower:]')"
 [ -z "$prompt" ] && exit 0
 
 match=0
-# Strong, unambiguous wrap-up phrases:
+# Strong, unambiguous wrap-up phrases (English + the owner's Dutch — he wraps in
+# Dutch; the English-only list silently missed "dit gesprek wordt afgerond / naar
+# een nieuwe Claude code sessie", added session 44, 2026-07-16):
 for p in \
   "wrap up" "wrapping up" "wrap it up" "wrap this up" "wrap things up" \
   "end of conversation" "end this conversation" "close this conversation" \
@@ -52,9 +54,24 @@ for p in \
   "moving to a new session" "move to a new session" "new claude code session" \
   "new claude co-session" "claude co-session" "running low on context" \
   "low on context" "you know what to do" "round off" "round up the session" \
-  "wrap up the session" "wrap up this session"; do
+  "wrap up the session" "wrap up this session" \
+  "wordt afgerond" "wordt afgesloten" "gesprek afronden" "gesprek afsluiten" \
+  "sessie afronden" "sessie afsluiten" "chat afronden" "chat afsluiten" \
+  "afsluitritueel" "afsluit ritueel" "rond de sessie af" "rond dit gesprek af" \
+  "ronden we af" "sessie af" "we ronden" "nieuwe claude code sessie" \
+  "nieuwe claude-sessie" "nieuwe claude sessie" "naar een nieuwe sessie" \
+  "naar een nieuwe chat" "schone chat" "verse chat" "je weet het drill" \
+  "je kent de drill"; do
   case "$prompt" in *"$p"*) match=1 ;; esac
 done
+# Dutch "nieuwe sessie/chat/gesprek" only when paired with a wrap/close/switch cue
+# (mirrors the English "next session" pairing, avoids planning-context false hits):
+case "$prompt" in
+  *"nieuwe sessie"*|*"nieuwe chat"*|*"nieuw gesprek"*|*"andere sessie"*)
+    case "$prompt" in
+      *afrond*|*afgerond*|*afsluit*|*afgesloten*|*"naar "*|*over*|*schoon*|*"geen context"*) match=1 ;;
+    esac ;;
+esac
 # "context window" only when paired with a shrinking signal (avoid false positives):
 case "$prompt" in
   *"context window"*)
@@ -74,12 +91,14 @@ esac
 
 cat <<'REMINDER'
 [SESSION WRAP-UP SIGNAL DETECTED] The owner is signaling the session is ending. Before responding, run the COMPLETE "Session wrap-up (end-of-conversation ritual)" defined in CLAUDE.md — not a partial pass, do not wait to be asked twice. Reproduce the checklist as a literal list in your reply and mark each item ✅ done / ⏭️ N/A (with a one-line reason). Do NOT declare the session wrapped until every item is ✅ or ⏭️:
+GOLDEN RULE (see CLAUDE.md): verify EVERY date/PR#/SHA/status/count against reality (date; git log --date=short; gh pr list; gh run view; curl prod; grep the code) BEFORE writing it into a doc — never from memory.
 1. Lessons → docs/lessons-learned.md (newest on top), or state there were none.
 2. Memory files + the MEMORY.md index line.
-3. The FULL doc set to the final MEASURED state — NOT just the trackers: docs/STATUS.md (Last-updated + NEXT-SESSION block), docs/open-questions.md, docs/08-build-plan.md, docs/RUNBOOK.md, every touched ADR (as-built note) + docs/04-architecture.md.
+3. The FULL doc set to the final MEASURED state — NOT just the trackers: docs/STATUS.md (Last-updated + NEXT-SESSION block), docs/status-archive.md (prepend the session entry), docs/open-questions.md, docs/08-build-plan.md, docs/RUNBOOK.md, README.md (+ web/README.md if touched), every touched ADR (as-built note) + docs/04-architecture.md.
 4. Stale-doc sweep: grep -rn across docs/ for the OLD framing of anything changed this session; fix every hit (every doc that mentions it, not just the ones you edited).
 5. Clean state: git status clean + fully pushed; git worktree list (no strays); CI green per commit.
-6. Cleanup: delete one-off scratch/verify scripts, keep the reusable ones; spin off out-of-scope hygiene as task chips.
-7. Next-session prompt when asked (or when it clearly helps).
+6. Cleanup: delete one-off scratch/verify scripts (incl. zzdel_*/__scratch* review-agent test files); spin off out-of-scope hygiene as task chips.
+7. Next-session prompt: paste-ready kickoff AND a durable copy saved to docs/session-briefs/<date>-session-<n>-kickoff.md.
+8. FINAL SELF-AUDIT (last): re-read your own STATUS/archive/memory/lessons edits and cross-check every date/PR#/SHA/count/status against the verified sources; fix mismatches; only then declare wrapped.
 REMINDER
 exit 0
