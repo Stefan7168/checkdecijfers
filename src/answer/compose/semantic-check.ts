@@ -32,8 +32,14 @@ import { SEMANTIC_CHECK_SCHEMA_VERSION } from './types.ts';
 export const SEMANTIC_CHECK_MODEL = 'claude-haiku-4-5';
 
 /** Bump when the prompt's structure or rules change meaningfully — recorded
- * on the audit record and in every fixture (a bump re-keys fixture hashes). */
-export const SEMANTIC_CHECK_PROMPT_VERSION = 1;
+ * on the audit record and in every fixture (a bump re-keys fixture hashes).
+ * v2 (2026-07-16, calibration run 1): the month-compound rule + example —
+ * the v1 prompt cleared "nog 31 januari-meldingen extra" (the review-found
+ * residual shape) because the model read "31 januari" as a date; v2 teaches
+ * the same rule the deterministic DATE_FORM_AFTER gate applies: a number
+ * before a month name is a date only when a year or punctuation follows the
+ * month. Measured: v1 = 8/9 (FN=1 on F4); v2 must be 9/9 to flip the flag. */
+export const SEMANTIC_CHECK_PROMPT_VERSION = 2;
 
 /** The R2-style payload — validated fields only: the body (our own validated
  * LLM prose), the formatted value strings (the only legal quantities), the
@@ -196,11 +202,14 @@ export function buildSemanticCheckSystemPrompt(): string {
     "- fabricated=false: het getal verwijst naar een periode (jaartal, kwartaal, maand) uit 'periods', of is een letterlijke echo van een getal uit een omschrijving in 'descriptors' (bijvoorbeeld een leeftijdsgrens of peildatum), in dezelfde rol als in die omschrijving.",
     '- fabricated=true: het getal wordt gebruikt als hoeveelheid, aantal, bedrag, duur, factor of andere meetwaarde van zichzelf.',
     '',
+    "Let op bij maandnamen: een getal direct vóór een maandnaam is alleen een DATUM wanneer op de maand een jaartal of leesteken volgt (\"op 31 januari 2024\", \"per 1 januari.\"). Volgt er een samenstelling of een ander naamwoord (\"31 januari-meldingen\", \"1 januari overzicht\"), dan telt het getal dat naamwoord en is het een hoeveelheid.",
+    '',
     'Voorbeelden:',
     "- \"het aantal mensen van 45 tot 65 jaar\" terwijl '45 tot 65 jaar' een leeftijdsgroep in 'descriptors' is → 45 en 65 zijn omschrijvingsecho's → fabricated=false",
     '- "de regeling bestaat al 45 jaar" → 45 is een duur, een eigen hoeveelheid → fabricated=true',
     '- "in 2024 steeg de werkloosheid" → 2024 is een jaartal → fabricated=false',
     '- "na 2024 pogingen werd het doel gehaald" → 2024 is hier een aantal → fabricated=true',
+    '- "de dienst registreerde nog 31 januari-meldingen" → 31 telt de samenstelling \'januari-meldingen\' (een soort melding), geen datum → fabricated=true',
     '',
     'Twijfel = fabricated=true: een onterechte afkeuring kost alleen een nieuwe generatie; een doorgelaten verzonnen getal breekt de kernbelofte van het product.',
     '',
