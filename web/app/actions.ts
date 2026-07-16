@@ -99,6 +99,49 @@ function guardLength(text: string): void {
   }
 }
 
+// The same spend belt, applied to the PendingClarification a reply turn carries.
+// `pending` is client-held and sent back verbatim (like rawContext/rawSelection)
+// — attacker-controlled, and its type is not enforced at runtime. Its
+// question/questionNl/options flow VERBATIM into the clarify LLM prompt
+// (src/answer/intent/clarify.ts buildClarifyUserPayload), yet guardLength above
+// only bounds the top-level `reply`/`question` args — so without this belt an
+// oversized (or array-stuffed) pending drives an unbounded prompt to the model
+// at the SAME flat 'simple'/'clarification' price, a cost-asymmetry drain on the
+// owner's real API spend (found session 47, billing-path hunt). Bounds every
+// prompt-bound field to the same MAX_INPUT_LENGTH ceiling and caps the option/
+// axis lists, and — like guardLength — THROWS before the billing gate debits, so
+// a rejected payload costs no credit, no LLM call and writes no audit row (R8
+// governs produced responses). Throw, not degrade: a legitimate pending is
+// server-generated and always well under the bound, and chat.tsx already catches
+// the rejected action and shows its normal retry message. Real rate limiting
+// stays Phase 1–2 (docs/03 non-goals, ADR 005) — this only closes the belt gap.
+const MAX_PENDING_OPTIONS = 20;
+
+function guardPending(pending: PendingClarification): void {
+  for (const [field, value] of [
+    ['question', pending.question],
+    ['questionNl', pending.questionNl],
+    ['referenceDate', pending.referenceDate],
+  ] as const) {
+    if (typeof value !== 'string' || value.length > MAX_INPUT_LENGTH) {
+      throw new Error(`pending.${field} rejected: not a string within ${MAX_INPUT_LENGTH} chars`);
+    }
+  }
+  for (const [field, arr] of [
+    ['options', pending.options],
+    ['axes', pending.axes],
+  ] as const) {
+    if (!Array.isArray(arr) || arr.length > MAX_PENDING_OPTIONS) {
+      throw new Error(`pending.${field} rejected: not an array within ${MAX_PENDING_OPTIONS} entries`);
+    }
+  }
+  for (const opt of pending.options) {
+    if (typeof opt !== 'string' || opt.length > MAX_INPUT_LENGTH) {
+      throw new Error(`pending.options entry rejected: not a string within ${MAX_INPUT_LENGTH} chars`);
+    }
+  }
+}
+
 // WP129+130 (#129, ADR 032): the source-tags selection is UNTRUSTED client
 // input (a Server Action argument — attacker-controlled, like every other one
 // here). It is coerced to a SourceSelection BEFORE the billing gate and NEVER
@@ -505,6 +548,11 @@ export async function replyToClarification(
   rawThreadId?: unknown,
 ): Promise<AskOutcome> {
   guardLength(reply);
+  // Session 47 (billing-path hunt): bound the untrusted, client-held `pending`
+  // to the same spend belt as `reply`/`question` — its prompt-bound fields
+  // reach the clarify LLM at a flat price, so an oversized one must be rejected
+  // BEFORE the gate debits, no charge, no LLM call.
+  guardPending(pending);
   const userId = await currentUserId();
   if (userId === null) {
     return { gated: { kind: 'unauthenticated' }, context: null, threadId: null };
