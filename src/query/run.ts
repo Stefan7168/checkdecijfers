@@ -215,11 +215,19 @@ export async function freshestForCanonical(
   const dims = (typeof row.dims === 'string' ? JSON.parse(row.dims) : row.dims) as Record<string, string>;
 
   const table = await db.query(
-    'select expected_dimensions, default_coordinates from cbs_tables where id = $1',
+    'select expected_dimensions, default_coordinates, status from cbs_tables where id = $1',
     [tableId],
   );
   const tableRow = table.rows[0];
   if (!tableRow) return null;
+  // #155 (session-47 ingestion hunt): the value path refuses a quarantined
+  // table (resolve.ts, 'table_quarantined') before serving any number, but this
+  // freshness-METADATA helper is called OUTSIDE that gate (refusals.ts forecast/
+  // causal offers, dry-run.ts echoServability). Without this check a
+  // needs_review table's freshest-period label could surface in a refusal/offer
+  // — never a value, but still referencing a table we flagged as broken. Treat a
+  // quarantined table as "no freshness to offer", mirroring the value-path gate.
+  if (tableRow.status !== 'active') return null;
   const expectedDimensions = (
     typeof tableRow.expected_dimensions === 'string'
       ? JSON.parse(tableRow.expected_dimensions)

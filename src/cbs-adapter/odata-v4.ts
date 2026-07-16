@@ -166,9 +166,14 @@ export class ODataV4Source implements CbsSource {
   async *fetchObservations(
     tableId: string,
     slice?: CbsSlice,
+    dimensionNames?: string[],
   ): AsyncIterable<CbsObservationRow[]> {
-    const dimensionsRaw = await this.fetchJson(`${BASE}/${tableId}/Dimensions`);
-    const dimensionNames = parseDimensions(dimensionsRaw).map((d) => d.name);
+    // #156: reuse the caller's already-validated dimension names when given (the
+    // ingestion pipeline passes schema.dimensions); only fetch /Dimensions here
+    // when no caller supplied them, so one validated dimension set governs the
+    // whole sync (no redundant fetch, no two-fetch TOCTOU).
+    const dimNames =
+      dimensionNames ?? parseDimensions(await this.fetchJson(`${BASE}/${tableId}/Dimensions`)).map((d) => d.name);
 
     const filter = sliceToFilter(slice);
     const params = new URLSearchParams();
@@ -178,7 +183,7 @@ export class ODataV4Source implements CbsSource {
 
     while (url) {
       const raw = await this.fetchJson(url);
-      const { rows, nextLink } = parseObservationsPage(raw, dimensionNames);
+      const { rows, nextLink } = parseObservationsPage(raw, dimNames);
       yield rows;
       url = nextLink;
     }

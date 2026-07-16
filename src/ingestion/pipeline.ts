@@ -39,9 +39,13 @@ async function fetchAllObservations(
   source: CbsSource,
   tableId: string,
   slice: Phase0Table['slice'],
+  // #156 (session-47 ingestion hunt): the dimension names from the schema this
+  // sync ALREADY fetched + validated, so the adapter parses observations against
+  // that same set instead of re-fetching /Dimensions (redundant call + TOCTOU).
+  dimensionNames: string[],
 ): Promise<CbsObservationRow[]> {
   const rows: CbsObservationRow[] = [];
-  for await (const page of source.fetchObservations(tableId, slice)) {
+  for await (const page of source.fetchObservations(tableId, slice, dimensionNames)) {
     rows.push(...page);
   }
   return rows;
@@ -226,7 +230,12 @@ export const syncTable: SyncTableFn = async (db, source, tableId, options = {}) 
   try {
     schema = await source.fetchTableSchema(tableId);
     codeLists = await fetchAllCodeLists(source, tableId, schema.dimensions);
-    observationRows = await fetchAllObservations(source, tableId, registry.slice ?? undefined);
+    observationRows = await fetchAllObservations(
+      source,
+      tableId,
+      registry.slice ?? undefined,
+      schema.dimensions.map((d) => d.name),
+    );
   } catch (err) {
     const summary = `Fetching table "${tableId}" from CBS failed: ${err instanceof Error ? err.message : String(err)}.`;
     await failBatch(db, batchId, tableId, 'fetch', summary, null, null, false);
