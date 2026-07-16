@@ -189,3 +189,47 @@ describe('buildOnboardingFinder — the production TableFinder closure (WP16 sub
     expect(routing!.alreadyPending).toBe(false);
   });
 });
+
+describe('#166 — the pre-charge already-ingested guard', () => {
+  let db: Db;
+  let close: () => Promise<void>;
+
+  beforeEach(async () => {
+    ({ db, close } = await createTestDb());
+    await ingestCatalog(db, new FixtureSource({}, loadCatalogFixture(FIXTURES_DIR)));
+  });
+  afterEach(async () => {
+    await close();
+  });
+
+  async function fakeTableRow(tableId: string, synced: boolean): Promise<void> {
+    await db.query(
+      `insert into cbs_tables (id, title, expected_dimensions, units, update_cadence, last_sync_at)
+       values ($1, $2, '[]'::jsonb, '{}'::jsonb, 'test', $3)`,
+      [tableId, `fake row for #166 test (${tableId})`, synced ? new Date().toISOString() : null],
+    );
+  }
+
+  it('a confident pick on an already-ingested table → null (falls back to B15, no charge path)', async () => {
+    const finder = buildOnboardingFinder({ db, userId: randomUUID(), rerank: stubPickFirst(0.95) });
+    // Learn which table this catalog+stub combination picks, then make that
+    // exact table "already held" (registered active + synced — the job's own
+    // alreadyIngested predicate, shared since #166).
+    const routing = await finder(CONFIDENT_TOPIC, QUESTION);
+    expect(routing).not.toBeNull();
+    await fakeTableRow(routing!.tableId, true);
+
+    expect(await finder(CONFIDENT_TOPIC, QUESTION)).toBeNull();
+  });
+
+  it('registered but never synced (last_sync_at null) → still routes: the guard keys on held DATA, not registration', async () => {
+    const finder = buildOnboardingFinder({ db, userId: randomUUID(), rerank: stubPickFirst(0.95) });
+    const routing = await finder(CONFIDENT_TOPIC, QUESTION);
+    expect(routing).not.toBeNull();
+    await fakeTableRow(routing!.tableId, false);
+
+    const again = await finder(CONFIDENT_TOPIC, QUESTION);
+    expect(again).not.toBeNull();
+    expect(again!.tableId).toBe(routing!.tableId);
+  });
+});

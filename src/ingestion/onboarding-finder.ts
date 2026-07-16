@@ -16,6 +16,7 @@ import { findTable } from '../catalog/find.ts';
 import { rerankShortlist } from '../catalog/rerank.ts';
 import type { RerankFn } from '../catalog/types.ts';
 import type { Db } from '../db/types.ts';
+import { alreadyIngested } from './onboarding.ts';
 import { findActiveRequest } from './onboarding-store.ts';
 
 export interface OnboardingFinderDeps {
@@ -63,6 +64,17 @@ export function buildOnboardingFinder(deps: OnboardingFinderDeps): TableFinder {
       // QUESTION (WP27 stage A — the stock-vs-flow signal, ADR 027 D3a).
       const outcome = await findTable(deps.db, { topic: term, question }, { rerank });
       if (outcome.kind !== 'confident') return null;
+
+      // #166 pre-charge guard: a confident pick on a table we ALREADY hold
+      // (registered active + synced — the job's own alreadyIngested predicate,
+      // shared so the two notions can't drift) must never route to onboarding:
+      // there is nothing to fetch, so a 100-credit "we halen het voor je op"
+      // charge would bill the user for data already in the database (the
+      // coverage sprint makes this reachable: a synonym miss onto a curated
+      // table like 83693NED). Returning null falls back to the plain B15
+      // clarification, which names the loaded topics — the user re-asks with
+      // a listed term and pays the normal question price only.
+      if (await alreadyIngested(deps.db, outcome.pick.tableId)) return null;
 
       // Confident pick → does this user already have an active fetch for this
       // exact table? If so, the acknowledgment says "already being fetched"

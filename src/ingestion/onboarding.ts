@@ -142,10 +142,27 @@ async function refundOnboarding(
 }
 
 /** True when the table is already registered AND has at least one successful
- * sync (last_sync_at set) — design §3 step 3's piggyback check. */
-async function alreadyIngested(db: Db, tableId: string): Promise<boolean> {
+ * sync (last_sync_at set) — design §3 step 3's piggyback check. EXPORTED since
+ * #166: the onboarding finder uses the SAME predicate as its pre-charge guard
+ * (a confident pick on an already-ingested table must clarify, never charge) —
+ * one definition, no drift between the trigger-side and job-side notions of
+ * "we already hold this data". */
+export async function alreadyIngested(db: Db, tableId: string): Promise<boolean> {
   const { rows } = await db.query(
     `select 1 from cbs_tables where id = $1 and status = 'active' and last_sync_at is not null`,
+    [tableId],
+  );
+  return rows.length > 0;
+}
+
+/** True when the table carries CURATED vocabulary — a canonical_measures row
+ * whose key is NOT 'onboarded:'-prefixed (the two write paths' structural
+ * marker: src/registry/defaults.ts short keys vs onboarding-vocab.ts
+ * auto-derived keys). #166 job-side belt: when this holds, Step 6 must not
+ * auto-derive parallel `onboarded:<id>:*` rows next to the curated keys. */
+export async function hasCuratedVocabulary(db: Db, tableId: string): Promise<boolean> {
+  const { rows } = await db.query(
+    `select 1 from canonical_measures where table_id = $1 and key not like 'onboarded:%' limit 1`,
     [tableId],
   );
   return rows.length > 0;
@@ -359,7 +376,8 @@ async function processOneRow(
     // Step 3 — piggyback: skip fetch/ingest if the table is already synced.
     // From here on every step reads targetTableId (resolved ?? original);
     // row.tableId itself stays the untouched dedupe identity (D2a).
-    if (!(await alreadyIngested(db, targetTableId))) {
+    const ingestedAlready = await alreadyIngested(db, targetTableId);
+    if (!ingestedAlready) {
       // Step 4 — size + slice.
       const schema = await source.fetchTableSchema(targetTableId);
       const codeLists: Record<string, Awaited<ReturnType<CbsSource['fetchCodeList']>>> = {};
@@ -379,18 +397,41 @@ async function processOneRow(
 
     // Step 6 — vocabulary: derive canonical_measures from the ingested measure
     // metadata. Its output is the delivery re-run's extra parser vocabulary.
-    const vocab = await registerOnboardingVocabulary(db, {
-      tableId: targetTableId,
-      topicTerm: row.topicTerm,
-    });
-    if (vocab.onboarded.length === 0) {
-      // Nothing registerable → the delivery re-run can't ever answer. Honest
-      // refund, not a fabricated attempt.
-      return await unanswerableAndRefund(
-        deps,
-        row,
-        `De opgehaalde tabel ${targetTableId} bevat geen maat die we onder deze vraag konden aanbieden.`,
-      );
+    // #166 belt: a table that already carries CURATED vocabulary (registry
+    // defaults) skips auto-derivation entirely — running it would create
+    // parallel `onboarded:<id>:*` rows next to the curated keys (the exact
+    // duplicate-vocab pollution #165 had to clean up in prod). The delivery
+    // re-run then parses with extra=[] — the curated vocabulary is already in
+    // the standard prompt, so a question those terms cover answers normally;
+    // one that doesn't clarifies → unanswerable + refund (honest, principle c).
+    // Reachable only through the trigger-vs-curation race (the finder guard
+    // returns null for an already-ingested pick) or a pre-guard pending row.
+    let extraVocabulary: Awaited<ReturnType<typeof registerOnboardingVocabulary>>['onboarded'] = [];
+    if (await hasCuratedVocabulary(db, targetTableId)) {
+      const skipNote = `Tabel ${targetTableId} heeft al beheerde vocabulaire (curated); automatische vocabulaire-afleiding overgeslagen (#166).`;
+      if (ingestedAlready) {
+        // slice_note is free on this path (steps 4-5 were skipped) — record
+        // the skip durably for the dashboard/diagnostics.
+        await recordSliceNote(db, row.id, skipNote);
+      } else {
+        // Steps 4-5 just wrote the real slice-estimate note; don't clobber it.
+        console.log(`[onboarding ${row.id}] ${skipNote}`);
+      }
+    } else {
+      const vocab = await registerOnboardingVocabulary(db, {
+        tableId: targetTableId,
+        topicTerm: row.topicTerm,
+      });
+      if (vocab.onboarded.length === 0) {
+        // Nothing registerable → the delivery re-run can't ever answer. Honest
+        // refund, not a fabricated attempt.
+        return await unanswerableAndRefund(
+          deps,
+          row,
+          `De opgehaalde tabel ${targetTableId} bevat geen maat die we onder deze vraag konden aanbieden.`,
+        );
+      }
+      extraVocabulary = vocab.onboarded;
     }
 
     // Step 7 — delivery: re-run the ORIGINAL question through the full normal
@@ -407,7 +448,7 @@ async function processOneRow(
       // #144 (ADR 034): same reject-only checker as a live chat turn — absent
       // when the flag is dormant.
       ...(deps.semanticCheck ? { semanticCheck: deps.semanticCheck } : {}),
-      extraCanonicalMeasures: vocab.onboarded,
+      extraCanonicalMeasures: extraVocabulary,
     });
 
     if (delivered.response.kind === 'answer' && delivered.auditId !== null) {
