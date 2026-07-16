@@ -68,7 +68,7 @@ the #142/#143/row-227 follow-up trio (PR #45 `6291dfc`); merges in-chat DELEGATE
   row-227 register gap are all ✅ fixed (PR #45). A fresh security/bug hunt on another surface (billing-gate, GDPR) is also always available.
 - **Next — owner decisions:** **#138** (v2 regional refusal chip — needs a code→region-label source on the refusal path), **WP26** (answer-first
   defaults + clickable clarify options, safelist read-back), **#121** (fail-closed template rung), **#131** (multilingual L1), **WP30c** (source
-  choice). Tracked-not-focus: #132 route B ~2026-07-19 (forks==0 T-0), #104/#112 (need live-LLM spend), format.ts NUL (task_e718f60d), /login
+  choice). Tracked-not-focus: #132 route B ~2026-07-19 (forks==0 T-0), #104/#112 (need live-LLM spend; format.ts NUL ✅ fixed s45 PR #46), /login
   header cosmetic.
 
 
