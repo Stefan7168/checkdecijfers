@@ -9,8 +9,17 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
-**▶ NEXT SESSION STARTS HERE (session 45, 2026-07-16 — #141 HIGH period-exemption fabrication hole FIXED + MERGED + LIVE, PR #44 squash `d192775`;
-merge in-chat DELEGATED by the owner to the session's judgment, #118(b) precedent).**
+**▶ NEXT SESSION STARTS HERE (session 45, 2026-07-16 — TWO PRs merged + LIVE: #141 HIGH period-exemption fabrication hole (PR #44 `d192775`) and
+the #142/#143/row-227 follow-up trio (PR #45 `6291dfc`); merges in-chat DELEGATED by the owner to the session's judgment, #118(b) precedent).**
+
+- **#142 + #143 + row-227 register — ✅ ALL FIXED + MERGED + LIVE (PR [#45](https://github.com/Stefan7168/checkdecijfers/pull/45), squash `6291dfc`,
+  2026-07-16; gate ✓ + deploy ✓, prod HTTP 307).** #142: count exemptions AXIS-BOUND (a wrong-axis "in 4 gemeenten" no longer grounds; review confirmed
+  + killed a v1 bypass — 'wijken'/'buurten' described granularities the product doesn't serve). #143: index-base unit "2015=100" renders as a label,
+  never an "×"-factor (old stored form stays R8-valid, pinned; parseFactorUnit '='-exclusion pinned). Row 227: the register entry now covers its
+  structural reassembly CASCADE → `npm run audit:verify -- 1 252` exits 0 again + the real entry is pinned hermetically in CI. Measured: CI gate
+  1310 backend + 314 web, benchmark 14/14 + 6/6 + 0 fabricated, real next build, all 252 stored prod rows re-validate clean. **#144 design brief
+  written: [session-briefs/2026-07-16-144-semantic-check-brief.md](session-briefs/2026-07-16-144-semantic-check-brief.md)** (recommended shape:
+  additive reject-only LLM checker; R8 verdict-storage + fail-open-vs-closed = the owner decisions; do NOT start at the tail of a long session).
 
 - **#141 — the period-exemption fabrication hole (HIGH, the #140 twin) — ✅ FIXED + MERGED + LIVE (PR [#44](https://github.com/Stefan7168/checkdecijfers/pull/44),
   squash `d192775`, 2026-07-16; main gate ✓ + deploy ✓ run 29489131899, prod HTTP 307).** The validator exempted ANY integer equal to ANY covered-period
@@ -35,7 +44,7 @@ merge in-chat DELEGATED by the owner to the session's judgment, #118(b) preceden
   and a fabrication ("bestaat al 45 jaar") are word-for-word identical; the strict "both-sides for all sources" rule that would close it BROKE 4 legit
   answers (measured). **KNOWN BOUNDED RESIDUAL [#144](open-questions.md)** (a fabrication == the answer's own descriptor number, next to its word) needs
   a SEMANTIC check → tracked. Owner chose to ship the big narrowing now + track. Full suite + benchmark green (1289), prod HTTP 307. Same hunt tracked:
-  **[#141](open-questions.md) (HIGH — same class on the PERIOD exemption; ✅ since FIXED, session 45, PR #44), [#142](open-questions.md)/[#143](open-questions.md) (MEDIUM).**
+  **[#141](open-questions.md) (HIGH; ✅ since FIXED, session 45, PR #44), [#142](open-questions.md)/[#143](open-questions.md) (MEDIUM; ✅ since FIXED, session 45, PR #45).**
 - **Authorization/ownership security hunt — CLEAN, + 1 open-redirect fix LIVE** (PR #42, squash `4e2a2fd`; owner "Ja, merge + deploy"). A 5-lens
   adversarial hunt (server-action ownership scoping, API-route forgery/replay, data-layer SQL user-scoping, RLS defense-in-depth, GDPR-redaction
   completeness) found **ZERO** cross-user data/money/privacy breaks — the auth/ownership model is clean. The ONLY surfaced issue (out of that class):
@@ -52,10 +61,11 @@ merge in-chat DELEGATED by the owner to the session's judgment, #118(b) preceden
   the guard (no fixture has a natural interior hole) → CLOSED by a seeded-gap end-to-end test (`tests/query/not-published-midgap.test.ts`,
   mutation-proven: the reviewer's exact mutation fails it). Full gate + prod deploy green (backend 1280, web 305, benchmark 14/14 + 6/6 + 0
   fabricated, real next build; prod HTTP 307 healthy). Branch + PR + owner-merge per [#118](open-questions.md)(b).
-- **Next — data-integrity follow-ups (core promise, buildable, no owner decision needed):** **[#144](open-questions.md) (the semantic-level check —
-  now the shared real close for BOTH #140's residual and #141's temporal-marker+un-listed-noun residual)**, [#142](open-questions.md)/[#143](open-questions.md)
-  (MEDIUM — count mis-attribution + index-base "×" format; #142's seam is cleaner post-#141), the row-227 register-gap chip (`task_54165972`).
-  A fresh security/bug hunt on another surface (billing-gate, GDPR) is also always available.
+- **Next — data-integrity follow-up (core promise):** **[#144](open-questions.md) — the semantic-level check, the shared real close for BOTH #140's
+  residual and #141's temporal-marker+un-listed-noun residual. DESIGN BRIEF READY:
+  [session-briefs/2026-07-16-144-semantic-check-brief.md](session-briefs/2026-07-16-144-semantic-check-brief.md) — needs a FRESH session (new LLM
+  surface: own ADR, fixture recording = small real spend, R8 verdict-storage design; fail-open-vs-closed = owner decision).** #142/#143 and the
+  row-227 register gap are all ✅ fixed (PR #45). A fresh security/bug hunt on another surface (billing-gate, GDPR) is also always available.
 - **Next — owner decisions:** **#138** (v2 regional refusal chip — needs a code→region-label source on the refusal path), **WP26** (answer-first
   defaults + clickable clarify options, safelist read-back), **#121** (fail-closed template rung), **#131** (multilingual L1), **WP30c** (source
   choice). Tracked-not-focus: #132 route B ~2026-07-19 (forks==0 T-0), #104/#112 (need live-LLM spend), format.ts NUL (task_e718f60d), /login
