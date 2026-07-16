@@ -9,9 +9,15 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
-**▶ NEXT SESSION STARTS HERE (session 46, 2026-07-16 — #144 DONE END-TO-END in ONE session: built + adversarially reviewed + merged (PR #47,
-squash `94b90e4`, owner in-chat approval per #118(b)) + the supervised go-live EXECUTED (calibration, fail-open+admin-alert decision, flag flip,
-live smoke). The semantic checker is LIVE and ACTIVE in production; the whole session-44 data-integrity hunt list is now CLOSED.)**
+**▶ NEXT SESSION STARTS HERE (session 47, 2026-07-16→17 — BILLING/MONEY-PATH adversarial hunt (6 lenses, dual-verified): NO live credit-conservation
+bug — the ledger/gate/refund path is sound. One reachable-today gap FIXED + MERGED + LIVE ([#145], PR #48 squash `7e42656`, owner "Go" per #118(b)):
+`guardPending` bounds the untrusted reply-turn `pending` to the existing spend belt. 5 latent/low items tracked NOT built: [#146] Stripe payment_status
+gate (dormant, card-only; pre-delayed-method RUNBOOK gate added — iDEAL confirmed IMMEDIATE, not the trigger), [#147] compensation-amount DB guard,
+[#148] onboarding netCost reprice (display-only), [#149] requestId UUID validation, [#150] stale-reclaim footgun guard. See open-questions #145-150.)**
+
+**Session 46 (2026-07-16 — #144 DONE END-TO-END in ONE session:** built + adversarially reviewed + merged (PR #47, squash `94b90e4`, owner in-chat
+approval per #118(b)) + the supervised go-live EXECUTED (calibration, fail-open+admin-alert decision, flag flip, live smoke). The semantic checker is
+LIVE and ACTIVE in production; the whole session-44 data-integrity hunt list is now CLOSED.)
 
 - **#144 — the semantic fabrication check — ✅ DONE END-TO-END (ADR [034](decisions/034-semantic-fabrication-check.md); PR
   [#47](https://github.com/Stefan7168/checkdecijfers/pull/47) squash `94b90e4` + go-live commits `8eef383`/`deabbfb`; all gates + deploys green,
@@ -41,8 +47,8 @@ the #144 design brief was written there and executed by session 46.
 **Session 44 (2026-07-13 → 2026-07-16, 3 PRs merged: #134(b) too-old retry chip PR #41 `12518eb`, auth/ownership hunt CLEAN + open-redirect fix
 PR #42 `4e2a2fd`, the #140 validator narrowing PR #43 `882c808`; full entries in [status-archive.md](status-archive.md)).**
 
-- **Next — pick:** a fresh security/bug hunt on another surface (billing-gate, GDPR), or the owner stack below. All #140-class data-integrity
-  work is closed.
+- **Next — pick:** a fresh security/bug hunt on the GDPR-redaction surface (auth/ownership CLEAN s44, data-integrity CLOSED s44-46, billing/money-path
+  hunted CLEAN s47 — no live conservation bug), or the owner stack below. Optional billing follow-ups #146-150 tracked (all low/latent).
 - **Next — owner decisions:** **#138** (v2 regional refusal chip — needs a code→region-label source on the refusal path), **WP26** (answer-first
   defaults + clickable clarify options, safelist read-back), **#121** (fail-closed template rung), **#131** (multilingual L1), **WP30c** (source
   choice). Tracked-not-focus: #132 route B ~2026-07-19 (forks==0 T-0), #104/#112 (need live-LLM spend; format.ts NUL ✅ fixed s45 PR #46), /login
