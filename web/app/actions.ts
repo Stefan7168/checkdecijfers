@@ -20,6 +20,7 @@ import {
 import { buildConversationContext, validateConversationContext } from '../backend/answer/context/index.ts';
 import type { ConversationContext } from '../backend/answer/context/index.ts';
 import { AnthropicLlmClient } from '../backend/answer/llm/client.ts';
+import type { SemanticCheckOptions } from '../backend/answer/compose/index.ts';
 import type { PendingClarification } from '../backend/answer/respond/types.ts';
 import {
   chargeAndRun,
@@ -117,6 +118,24 @@ function validateSelection(raw: unknown): SourceSelection | undefined {
   const known = new Set(Object.keys(SOURCES));
   const sources = obj.sources.filter((s): s is string => typeof s === 'string' && known.has(s));
   return { sources, web: obj.web === true };
+}
+
+// #144 (ADR 034): the semantic checker's construction seam — DORMANT until the
+// owner-supervised go-live sets SEMANTIC_CHECK_ENABLED='1' (fixture-recorded
+// calibration first; the RUNBOOK step). SEMANTIC_CHECK_FAILMODE carries the
+// recorded owner decision on checker-call failures: 'closed' → a checker error
+// rejects the body down the R3 ladder (template fallback); anything else →
+// fail open (the body already passed the FULL deterministic validator — the
+// checker is defense-in-depth, not the primary gate). While dormant, no path
+// constructs the client and zero extra LLM calls or spend exist.
+function semanticCheckOptions(): { semanticCheck: SemanticCheckOptions } | Record<string, never> {
+  if (process.env.SEMANTIC_CHECK_ENABLED !== '1') return {};
+  return {
+    semanticCheck: {
+      client: new AnthropicLlmClient(),
+      mode: process.env.SEMANTIC_CHECK_FAILMODE === 'closed' ? 'fail_closed' : 'fail_open',
+    },
+  };
 }
 
 // #112 (the go-live money bug): a fresh chat turn must KNOW what has already
@@ -268,6 +287,9 @@ export async function askQuestion(
         conversationContext,
         intentClient: new AnthropicLlmClient(),
         answerClient: new AnthropicLlmClient(),
+        // #144 (ADR 034): the reject-only semantic checker — dormant until the
+        // supervised go-live sets the env flags (see semanticCheckOptions).
+        ...semanticCheckOptions(),
         // #112: the already-onboarded vocabulary, so a repeat question on an
         // onboarded topic parses onto its 'onboarded:' key and answers
         // directly (normal price) — the finder below only sees topics the
@@ -528,6 +550,8 @@ export async function replyToClarification(
         requestId,
         intentClient: new AnthropicLlmClient(),
         answerClient: new AnthropicLlmClient(),
+        // #144 (ADR 034): same checker seam on the reply turn.
+        ...semanticCheckOptions(),
         // #112: the reply merge must accept the same onboarded keys the first
         // turn could have parsed into the pending's candidates — without this
         // the round dead-ends in an internal refusal (paid dead-end). Still

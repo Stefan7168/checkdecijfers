@@ -266,6 +266,42 @@ Steps, in order, owner present:
 Rollback at any point: unset `WORKSPACE_ENABLED` and redeploy — fully dormant again (migration
 019 is harmless to leave in place; threads simply stop being written or read).
 
+## #144 semantic checker — the supervised go-live (NOT yet run; owner present)
+
+The code ships DORMANT (ADR [034](decisions/034-semantic-fabrication-check.md)): until every step
+below is done, production behaves byte-identically to pre-#144 — no extra LLM calls, no spend, no
+behavior change (the `SEMANTIC_CHECK_ENABLED` flag pattern, same as `ONBOARDING_ENABLED` /
+`WEBSEARCH_ENABLED`). No migration needed (the verdict rides the existing envelope jsonb). Steps,
+in order, owner present:
+
+1. **Record the calibration fixtures (small real spend, ~7 Haiku calls ≈ cents):**
+   `npm run semantic-check:record`. Then the stability run:
+   `npm run semantic-check:eval -- --repeat=3`. **Gate: FP=0, FN=0, flips=0** — a false positive
+   on a legit body or a missed seeded fabrication is a flag-flip BLOCKER (ADR 034 §6); fix the
+   prompt/labelled set first and re-record. The report history lands in
+   `benchmark/semantic-check-eval-report.json` (commit it).
+2. **Add the CI replay leg** — ask the session to add the replay test over the recorded fixtures
+   (the eval's `--replay` mode is the manual equivalent) so the calibrated behavior is pinned
+   hermetically on the gate from then on.
+3. **OWNER DECISION — `SEMANTIC_CHECK_FAILMODE`** (ADR 034 §5 presents both): what happens when
+   the CHECKER ITSELF fails (API outage — never a judgment)?
+   - unset / anything else → **fail-open**: serve the answer (it already passed the full
+     deterministic validator), record the skip on the audit row. Recommended in the brief.
+   - `closed` → **fail-closed**: no answer ships unjudged; a checker outage degrades
+     residual-shaped answers to template answers.
+4. **Set the flags** — in Vercel: `SEMANTIC_CHECK_ENABLED=1` (Production) + the FAILMODE choice,
+   then redeploy (gate + deploy green).
+5. **Live smoke test (~cents):** ask one real question whose answer is residual-shaped (e.g. one
+   that phrases a bracket like "personen van 45 tot 65 jaar") and one plain question. Verify
+   read-only on the audit rows: the plain answer's envelope has `semanticCheck` status
+   `skipped_no_suspects` (zero checker calls), the residual-shaped one status `ok` with verdicts,
+   and `llm_calls` shows the `semantic_check` role. Then
+   `npm run audit:verify -- <that row> <that row>` → exit 0.
+
+Rollback at any point: unset `SEMANTIC_CHECK_ENABLED` and redeploy — fully dormant again; stored
+verdicts on already-written rows stay valid for R8 (the reconstructor checks them whenever the
+key is present, flag state irrelevant).
+
 ## Moving to a new machine (fresh clone bootstrap)
 
 Everything that matters lives in this repository or in your own accounts

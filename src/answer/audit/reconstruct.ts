@@ -24,9 +24,10 @@ import { DERIVED_DATA_MARKING } from '../../query/index.ts';
 import type { ValidatedResult } from '../../query/index.ts';
 import { buildChartSpec, chartSpecSchema } from '../../chart/index.ts';
 import { buildAttributionLine, buildDefinitionLine } from '../compose/format.ts';
+import { findSuspectTokens } from '../compose/semantic-check.ts';
 import { validateAnswerBody } from '../compose/validate.ts';
 import { stableStringify } from '../llm/client.ts';
-import { ANSWER_SCHEMA_VERSION } from '../compose/types.ts';
+import { ANSWER_SCHEMA_VERSION, SEMANTIC_CHECK_SCHEMA_VERSION } from '../compose/types.ts';
 import { RESPONSE_SCHEMA_VERSION } from '../respond/types.ts';
 import type { AnswerResponse } from '../respond/types.ts';
 import type { AuditRecord } from './types.ts';
@@ -236,6 +237,71 @@ function checkAnswerReconstruction(record: AuditRecord, problems: string[]): voi
     response.stalenessWarning === null ? answer.text : `${answer.text}\n\n${response.stalenessWarning}`;
   if (response.text !== finalText) {
     problems.push('response text does not re-assemble from answer text + staleness warning');
+  }
+
+  // #144 (ADR 034): the semantic-check verdict is RECORDED, never re-derived
+  // — an LLM judgment has no deterministic ground truth inside the record
+  // (the same policy that keeps llm_calls out of reconstruction). What IS
+  // deterministic is its SCOPE: the suspect list is a pure function of the
+  // stored body + result, so a verdict claiming a different scope, a status
+  // inconsistent with that scope, or a fabricated=true verdict riding a
+  // SERVED body all fail loudly. Absent key (`?? null`, A1) = feature off /
+  // pre-#144 row — nothing to check.
+  const semanticCheck = answer.semanticCheck ?? null;
+  if (semanticCheck !== null) {
+    if (answer.source === 'template') {
+      problems.push('semanticCheck present on a template body — the checker never runs on templates');
+    }
+    if (semanticCheck.schemaVersion !== SEMANTIC_CHECK_SCHEMA_VERSION) {
+      problems.push(
+        `semanticCheck schemaVersion ${semanticCheck.schemaVersion} is not the v${SEMANTIC_CHECK_SCHEMA_VERSION} this reconstructor handles`,
+      );
+    } else {
+      const expectedSuspects = findSuspectTokens(answer.body, result);
+      if (stableStringify(semanticCheck.suspects) !== stableStringify(expectedSuspects)) {
+        problems.push('semanticCheck suspects do not re-derive from the stored body and result');
+      }
+      if (semanticCheck.status === 'skipped_no_suspects') {
+        if (expectedSuspects.length !== 0) {
+          problems.push('semanticCheck says skipped_no_suspects but the stored body has residual-prone tokens');
+        }
+        if (semanticCheck.verdicts !== null || semanticCheck.model !== null || semanticCheck.error !== null) {
+          problems.push('semanticCheck skipped_no_suspects must carry no verdicts, model or error');
+        }
+      } else if (semanticCheck.status === 'ok') {
+        if (expectedSuspects.length === 0) {
+          problems.push('semanticCheck says the checker ran (ok) but the stored body has no residual-prone tokens');
+        }
+        if (semanticCheck.model === null) {
+          problems.push("semanticCheck 'ok' without the model that judged");
+        }
+        if (semanticCheck.verdicts === null) {
+          problems.push("semanticCheck 'ok' without recorded verdicts");
+        } else {
+          const ids = [...semanticCheck.verdicts.map((v) => v.id)].sort((a, b) => a - b);
+          if (ids.length !== expectedSuspects.length || ids.some((id, i) => id !== i)) {
+            problems.push('semanticCheck verdicts do not cover the suspects exactly once');
+          }
+          if (semanticCheck.verdicts.some((v) => v.fabricated)) {
+            problems.push('a served body carries a fabricated=true semantic verdict — rejected bodies are never served');
+          }
+        }
+      } else if (semanticCheck.status === 'error') {
+        // A served body with a checker error can only exist under fail_open;
+        // fail_closed drops such a body down the ladder before assemble.
+        if (semanticCheck.mode !== 'fail_open') {
+          problems.push("semanticCheck status 'error' on a served body requires fail_open mode");
+        }
+        if (semanticCheck.verdicts !== null || semanticCheck.model !== null) {
+          problems.push("semanticCheck 'error' must carry no verdicts or model");
+        }
+        if (semanticCheck.error === null) {
+          problems.push("semanticCheck 'error' without the error message");
+        }
+      } else {
+        problems.push(`unknown semanticCheck status '${String((semanticCheck as { status: unknown }).status)}'`);
+      }
+    }
   }
 
   // R6+R8: the chart the user saw is exactly what the stored result produces

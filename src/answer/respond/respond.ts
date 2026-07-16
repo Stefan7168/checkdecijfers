@@ -56,6 +56,11 @@ export interface RespondOptions {
   /** LLM client for answer phrasing (ADR 013's harness — same interface,
    * different model/fixtures). */
   answerClient: LlmClient;
+  /** #144 (ADR 034): OPTIONAL additive reject-only semantic checker over
+   * residual-prone LLM bodies. Wired ONLY when the env flag is on
+   * (web/app/actions.ts); absent everywhere else (benchmark, tests, CLI) →
+   * byte-identical pre-#144 behavior, zero extra LLM calls. */
+  semanticCheck?: ComposeOptions['semanticCheck'];
   /** YYYY-MM-DD "today" — injected, never the wall clock (docs/05 staleness,
    * ADR 012 period policy). */
   referenceDate: string;
@@ -127,6 +132,8 @@ export async function respondToIntent(
     /** WP15: the follow-up referent, threaded into a query-level
      * needs_clarification's pending state so the reply merge keeps it. */
     conversationContext?: ConversationContext | null;
+    /** #144 (ADR 034): threaded through to composeAnswer; absent = off. */
+    semanticCheck?: ComposeOptions['semanticCheck'];
   },
 ): Promise<ComposedResponse> {
   const outcome: QueryOutcome = await runQuery(db, parse.intent);
@@ -208,7 +215,10 @@ export async function respondToIntent(
     });
   }
 
-  const answer = await composeAnswer(result, { client: options.answerClient } satisfies ComposeOptions);
+  const answer = await composeAnswer(result, {
+    client: options.answerClient,
+    ...(options.semanticCheck ? { semanticCheck: options.semanticCheck } : {}),
+  } satisfies ComposeOptions);
   const chart = buildChartSpec(result);
   const text = staleness.stale ? `${answer.text}\n\n${staleness.warning}` : answer.text;
 
@@ -250,6 +260,8 @@ async function respondToParseOutcome(
     answerClient: LlmClient;
     referenceDate: string;
     conversationContext?: ConversationContext | null;
+    /** #144 (ADR 034): rides through to respondToIntent → composeAnswer. */
+    semanticCheck?: ComposeOptions['semanticCheck'];
   },
 ): Promise<ComposedResponse> {
   if (parse.kind === 'refusal') {

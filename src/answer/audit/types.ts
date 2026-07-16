@@ -17,9 +17,11 @@ export const AUDIT_SCHEMA_VERSION = 1 as const;
 /** One LLM call made while producing the response — the "model IDs used" half
  * of docs/05's requirement (the prompt-version half is PromptVersions). */
 export interface LlmCallRecord {
-  /** Which pipeline role made the call (ADR 004's two confined roles, plus
-   * the clarify- and follow-up-mode variants of intent parsing — WP9/WP15). */
-  role: 'intent' | 'clarify' | 'followup' | 'compose';
+  /** Which pipeline role made the call (ADR 004's confined roles: intent
+   * parsing — plus its clarify- and follow-up-mode variants, WP9/WP15 —
+   * answer phrasing, and since #144/ADR 034 the reject-only semantic
+   * checker). */
+  role: 'intent' | 'clarify' | 'followup' | 'compose' | 'semantic_check';
   /** The model that answered, as reported by the API response. */
   model: string;
   inputTokens: number;

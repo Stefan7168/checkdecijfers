@@ -73,6 +73,11 @@ export interface OnboardingJobDeps {
   /** Intent + answer LLM clients for the delivery re-run (design §3.7). */
   intentClient: AuditedRespondOptions['intentClient'];
   answerClient: AuditedRespondOptions['answerClient'];
+  /** #144 (ADR 034): OPTIONAL semantic checker for the delivery re-run — a
+   * delivered onboarding answer is exactly as user-visible as a live turn, so
+   * the cron route wires it behind the SAME env flags the chat action uses.
+   * Absent (tests, dormant flag) → byte-identical pre-#144 behavior. */
+  semanticCheck?: AuditedRespondOptions['semanticCheck'];
   /** Best-effort email notifier (design §3). */
   notify: NotifyFn;
   /** 'today' for the delivery re-run's relative-period resolution. Injected so
@@ -399,6 +404,9 @@ async function processOneRow(
       requestId: row.requestId,
       intentClient: deps.intentClient,
       answerClient: deps.answerClient,
+      // #144 (ADR 034): same reject-only checker as a live chat turn — absent
+      // when the flag is dormant.
+      ...(deps.semanticCheck ? { semanticCheck: deps.semanticCheck } : {}),
       extraCanonicalMeasures: vocab.onboarded,
     });
 

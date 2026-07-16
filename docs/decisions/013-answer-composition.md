@@ -172,6 +172,19 @@ list-label mimic (which admits no fabricated magnitude). Measured: 1303
 backend tests green, benchmark gate PASS, and all 252 stored production
 audit rows re-validate clean under the stricter rule.
 
+**The semantic close for both residuals (session 46, 2026-07-16, #144, ADR
+[034](034-semantic-fabrication-check.md)).** The two accepted residuals above
+(the metadata-echo ceiling and the temporal-marker+un-listed-noun ceiling) now
+have their designed close: an additive, REJECT-ONLY cheap-tier LLM checker
+that runs only when a validated body actually leaned on a residual-prone
+exemption (`ClassifiedToken.soft`; corpus-measured scope — 0% of stored legit
+bodies trigger, both residual shapes do). A fabricated verdict takes the same
+R3 ladder rung a deterministic failure would. The validator's own
+accept/reject behavior is byte-identical; built flag-dormant, live after the
+owner-supervised calibration step (fixture recording + FP/FN eval + flag
+flip). Details, R8 verdict storage and the fail-open-vs-closed owner decision:
+ADR 034.
+
 **Count/display follow-ups (same day, #142/#143, PR #45).** Count exemptions
 are AXIS-BOUND (`countEntries`, validate.ts): each structural count (cells /
 distinct regions / distinct periods) only grounds next to its OWN axis's

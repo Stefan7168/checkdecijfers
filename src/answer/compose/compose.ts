@@ -15,21 +15,33 @@ import type { LlmClient, LlmUsage } from '../llm/client.ts';
 import { applyUnitExpansions } from './expand.ts';
 import { buildAttributionLine, buildDefinitionLine } from './format.ts';
 import { buildPhrasingRequest, COMPOSE_PROMPT_VERSION, PHRASING_MODEL } from './prompt.ts';
+import { runSemanticCheck, type SemanticCheckOptions, type SemanticCheckOutcome } from './semantic-check.ts';
 import { renderTemplateBody } from './template.ts';
 import { validateAnswerBody } from './validate.ts';
-import type { AnswerSource, ComposeAttempt, ComposedAnswer } from './types.ts';
+import type { AnswerSource, ComposeAttempt, ComposedAnswer, SemanticCheckRecord } from './types.ts';
 import { ANSWER_SCHEMA_VERSION } from './types.ts';
 
 export interface ComposeOptions {
   client: LlmClient;
   model?: string;
   maxTokens?: number;
+  /** #144 (ADR 034): the additive, reject-only semantic checker. Absent = off
+   * (benchmark, tests, CLI — zero behavior and zero envelope-byte changes).
+   * When present, an LLM body that passed the deterministic validator but
+   * leaned on a residual-prone exemption gets one cheap-tier second read; a
+   * fabricated verdict drops down the SAME R3 ladder (regenerate, then
+   * template). The checker can only reject — never approve (principle a). */
+  semanticCheck?: SemanticCheckOptions;
 }
 
 function assemble(result: ValidatedResult, rawBody: string, source: AnswerSource, extras: {
   model: string | null;
   usage: LlmUsage;
   attempts: ComposeAttempt[];
+  /** #144: the checker's verdict on THIS served body — the key is only
+   * serialized when the checker actually ran its gate (feature on, LLM body),
+   * so pre-feature envelopes stay byte-identical (A1). */
+  semanticCheck?: SemanticCheckRecord;
 }): ComposedAnswer {
   // #125a (ADR 031 D4): once the body is settled — validated LLM prose or the
   // by-construction-valid template — splice the registered unit expansions in
@@ -60,6 +72,7 @@ function assemble(result: ValidatedResult, rawBody: string, source: AnswerSource
     usage: extras.usage,
     attempts: extras.attempts,
     validation: validateAnswerBody(body, result),
+    ...(extras.semanticCheck !== undefined ? { semanticCheck: extras.semanticCheck } : {}),
   };
 }
 
@@ -86,14 +99,36 @@ export async function composeAnswer(result: ValidatedResult, options: ComposeOpt
         usage.outputTokens += response.usage.outputTokens;
         const body = response.outputText.trim();
         const validation = validateAnswerBody(body, result);
-        attempts.push({ kind, ok: validation.ok, problems: validation.problems, error: null });
-        if (validation.ok) {
-          return assemble(result, body, kind, {
-            model: response.model,
-            usage,
-            attempts,
-          });
+        if (!validation.ok) {
+          attempts.push({ kind, ok: false, problems: validation.problems, error: null });
+          continue;
         }
+        // #144 (ADR 034): the semantic second pass — only when configured, and
+        // runSemanticCheck itself only calls the LLM when the body leaned on a
+        // residual-prone exemption (most answers skip the call). A rejection
+        // takes the SAME ladder rung a deterministic failure would; the
+        // verdict is stored only with the body it cleared. The check runs on
+        // the SPLICED body — the exact string assemble() stores as
+        // answer.body (applyUnitExpansions is deterministic and idempotent:
+        // its double-render belt skips an already-present figure) — so R8 can
+        // re-derive the suspect list from the stored row byte-exactly.
+        let check: SemanticCheckOutcome | null = null;
+        if (options.semanticCheck) {
+          check = await runSemanticCheck(applyUnitExpansions(body, result), result, options.semanticCheck);
+          usage.inputTokens += check.usage.inputTokens;
+          usage.outputTokens += check.usage.outputTokens;
+          if (check.reject) {
+            attempts.push({ kind, ok: false, problems: check.problems, error: null });
+            continue;
+          }
+        }
+        attempts.push({ kind, ok: true, problems: validation.problems, error: null });
+        return assemble(result, body, kind, {
+          model: response.model,
+          usage,
+          attempts,
+          ...(check !== null ? { semanticCheck: check.record } : {}),
+        });
       } catch (error) {
         attempts.push({
           kind,

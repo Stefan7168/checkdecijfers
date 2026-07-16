@@ -163,6 +163,16 @@ export async function answerQuestionAudited(
     // WP15/ADR 021) — llm_calls stays honest about which prompt actually ran.
     intentClient: tracker.wrap(conversationContext === null ? 'intent' : 'followup', options.intentClient),
     answerClient: tracker.wrap('compose', options.answerClient),
+    // #144 (ADR 034): the checker's calls are tracked like every other role —
+    // token counts land in llm_calls; the verdict itself rides the envelope.
+    ...(options.semanticCheck
+      ? {
+          semanticCheck: {
+            ...options.semanticCheck,
+            client: tracker.wrap('semantic_check', options.semanticCheck.client),
+          },
+        }
+      : {}),
   });
   // WP129+130 (ADR 032): attach the web section BEFORE persisting, so the
   // stored row carries it verbatim (R8) and latencyMs honestly includes web
@@ -205,6 +215,15 @@ export async function answerClarificationReplyAudited(
     conversationContext: null,
     intentClient: tracker.wrap('clarify', options.intentClient),
     answerClient: tracker.wrap('compose', options.answerClient),
+    // #144 (ADR 034): same tracking on the reply turn.
+    ...(options.semanticCheck
+      ? {
+          semanticCheck: {
+            ...options.semanticCheck,
+            client: tracker.wrap('semantic_check', options.semanticCheck.client),
+          },
+        }
+      : {}),
   });
   // WP129+130 (ADR 032): same attach seam on the reply turn. A 'clarification'
   // outcome here means the round is OVER (still-ambiguous → refusal), so a web

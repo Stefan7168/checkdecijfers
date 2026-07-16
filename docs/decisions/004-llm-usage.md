@@ -37,3 +37,7 @@ Supporting choices:
 - LLM spend > ~€50/mo → enable prompt caching, re-evaluate model tiers.
 - Intent-parsing accuracy on the benchmark < the Phase 0 gate → consider richer registry aliases first, embeddings second (ADR [002](002-postgres-system-of-record.md)), bigger model last.
 - Accounts launch (Phase 1) → execute the GDPR seam (DPA, retention, anonymization of logged questions).
+
+## As-built addendum (2026-07-16, session 46 — #144/ADR 034): a third confined role, reject-only
+
+The pipeline gains a THIRD LLM call site: the **semantic fabrication checker** (ADR [034](034-semantic-fabrication-check.md)), a cheap-tier second pass over answer bodies whose deterministic validation leaned on a residual-prone exemption (the two proven deterministic ceilings, ADR 013 §6). It does not weaken this ADR's confinement — it is confinement's mirror image: where roles 1 and 2 may only *propose* (vocabulary, prose) and deterministic code decides, role 3 may only **veto**. It can never approve a number into an answer (a cleared token was already deterministically exempted), never sees raw rows or the user's question, and its schema-forced verdict is validated at the call site like the other two roles. Flag-dormant until the owner-supervised calibration step; behavior with the flag off is byte-identical to the two-role pipeline.
