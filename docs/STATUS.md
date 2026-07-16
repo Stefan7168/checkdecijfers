@@ -28,7 +28,12 @@ AWAITS OWNER REVIEW** (merge = approval per #118(b); money function byte-untouch
 [session-briefs/2026-07-17-coverage-tables-2-9-measured-specs.md](session-briefs/2026-07-17-coverage-tables-2-9-measured-specs.md) — all four brief
 open-points RESOLVED (PPI-totaal = A052584; 85937NED + 85792NED are on v4; 84106NED supersession mutual; 83625NED FIT as table #9), NO adapter
 changes needed for any table, and **"80590NED v3-only" is REFUTED** (v4 works with the lowercase id `80590ned` — docs/07 quirk #1; ADR-003's v3
-path is off the table).)**
+path is off the table); (3) **table #3 `85770NED` (PPI) PREPPED end-to-end minus vocabulary on [PR #55](https://github.com/Stefan7168/checkdecijfers/pull/55)**
+(seed slice 654 obs dense + fixtures + frozen CC8-CC10 via explicit intents — zero prompt bytes, the 93 LLM fixtures stay valid; full block green,
+/code-review low 0 findings) — **session 50 = review/merge PRs #54+#55, then the vocab batch (canonical keys + AVAILABLE_GRAINS + ONE re-record,
+owner spend-go) + live steps**; (4) **table #2 `85880NED` DESCOPED pending an owner/session-50 slice decision** — the hermetic validator refuted the
+lean slice (26/210 measures zero rows under the 2 headline flavors → row_plausibility quarantine, working as designed); measured options (full
+ingest ~99,676 obs + ~18MB fixture vs a small CbsSlice measure-allowlist extension) in the specs doc.)**
 
 **Session 48 (2026-07-17 — the parallel owner-"spar" strategy session, docs-only: ELEVEN owner decisions #153-upd/#158–#163 + the #118
 standing-push revision; #153 proefrit executed (wbn.nl ❌ −4% claimed vs +13,7% CBS-measured); coverage sprint scouted + briefed (8 gap tables,

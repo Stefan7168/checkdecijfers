@@ -8,11 +8,19 @@ and one wrong platform verdict. All four open verification points (a)–(d) are 
 
 ## Headline conclusions
 
-1. **Zero adapter changes are strictly required for any table.** The two "needs-decision" measurements
-   dissolve into existing mechanisms (see per-table notes): mixed-grain Perioden are already first-class
-   (`period_grain` per row, like 85773NED/82242NED since Phase 0), and 85880NED's measure explosion is
-   contained by a `dimensionPrefixes` slice with FULL codes (startswith == equality when no code extends
-   another — verified for SoortMutaties).
+1. **Zero adapter changes needed for tables #3-#9** — mixed-grain Perioden are already first-class
+   (`period_grain` per row, like 85773NED/82242NED since Phase 0) and "pick these N codes" slices work via
+   `dimensionPrefixes` with FULL codes (startswith == equality when no code extends another).
+   **⚠ Table #2 (85880NED) is the ONE exception — REFUTED by the hermetic validator during the overnight
+   prep:** the lean 2-flavor slice leaves 26 of the 210 registered measures with ZERO fetched rows (they
+   exist only under the other SoortMutaties flavors) → `row_plausibility` correctly quarantines.
+   **Session-50/owner decision needed, options measured:** (a) FULL ingest, no slice — ~99,676 obs in prod
+   (smaller than the loaded CPI table) but an ~18MB committed fixture (the sliced capture was already
+   6.4MB; note the CPI fixture avoids this via a capture-time slice, a pattern that does NOT help here
+   because the INGEST slice itself is the problem); (b) a small `CbsSlice` measure-allowlist extension
+   (v4 accepts `Measure eq` in `$filter`, verified live) + registration/units filtered to the allowlist —
+   the lean 36,820-obs path the brief intended; (c) descope the detail measures question entirely and
+   revisit. Table #2 was DESCOPED from the overnight prep-PR; CC5-CC7 reserved.
 2. **`80590NED` is NOT v3-only — the v4 host serves it under the LOWERCASE identifier `80590ned`**
    (uppercase 404s; docs/07 catalog quirk #1, which the session-48 scout didn't apply). The ADR-003 v3 path
    is NOT needed for the sprint. Seed id must be `80590ned`.
@@ -27,11 +35,12 @@ and one wrong platform verdict. All four open verification points (a)–(d) are 
 ### #2 `85880NED` — BBP flash (release ~30/7, flash = 30 days after quarter-end)
 - v4 ✓ Regulier; 99,676 obs; dims: SoortMutaties (Dimension, 5 codes) × Perioden (TimeDimension, 156 codes:
   125 KW + 31 JJ; 10 recent periods Voorlopig incl. 2026KW01). 210 measures (99 top-level + 111 detail).
-- **Slice: `dimensionPrefixes: { SoortMutaties: ['A045299', 'A045300'] }`** (Volume YoY = headline + Volume
-  QoQ; full codes as "prefixes" = exact-match OR, verified safe: no code extends another) → 36,820 obs, all
-  210 measures ride along (dormant; vocabulary only exposes the headline). Alternative if the owner wants a
-  lean ingest: extend `CbsSlice` with a measure allowlist (v4 accepts `Measure eq` in `$filter`, verified) —
-  NOT needed for correctness.
+- **Slice: ⚠ UNRESOLVED — the 2-flavor slice (`dimensionPrefixes: { SoortMutaties: ['A045299','A045300'] }`,
+  36,820 obs) was REFUTED by the hermetic validator during the overnight prep** (26 of the 210 registered
+  measures have zero rows under those flavors → `row_plausibility` quarantines, correctly). Owner/session-50
+  decision between the measured options in headline conclusion 1: full ingest (~99,676 obs, ~18MB fixture) vs
+  a small `CbsSlice` measure-allowlist extension (v4 accepts `Measure eq` in `$filter`, verified live) vs
+  descope. CC5-CC7 reserved for this table.
 - Headline measure: **`M002782_1`** "Bruto binnenlands product" (%; the title exists on 4 codes — pin by CODE).
 - Canonical key sketch: `gdp_growth_yoy_volume` (M002782_1, dims {SoortMutaties: 'A045299'}, terms
   'economische groei', 'bbp', 'bruto binnenlands product'; alternate dims A045300 'kwartaal-op-kwartaal').

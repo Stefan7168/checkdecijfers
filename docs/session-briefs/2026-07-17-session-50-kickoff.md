@@ -3,12 +3,18 @@
 Ga verder met checkdecijfers.nl. Lees eerst CLAUDE.md, dan docs/STATUS.md — het ▶-blok (sessie 49) is leidend.
 Productie is LIVE en verwerkt echt geld; Stefan (geen developer) is de enige gebruiker — leg alles uit in gewone taal.
 
-**De klus: dekkingssprint tabellen #2 `85880NED` (BBP flash, release 30/7) + #3 `85770NED` (PPI, release 30/7) — SAMEN
-in deze ene sessie, met ÉÉN gecombineerde vocab-wijziging + ÉÉN fixture-heropname** (sprint-constraint
-[#164](../open-questions.md): elke vocab-toevoeging invalideert alle ~93 intent/followup/clarify/delivery-fixtures).
-Volg de STAANDE PROCEDURE in [RUNBOOK.md](../RUNBOOK.md) ("adding a curated coverage-sprint table" — het bewezen
-tabel-#1-template, sessie 49) en de brief [2026-07-17-coverage-sprint-brief.md](2026-07-17-coverage-sprint-brief.md);
-per-tabel-record spiegelen in [11-coverage-table-set.md](../11-coverage-table-set.md).
+**De klus, in volgorde:**
+1. **Review + merge de twee wachtende PRs** (owner-besluit): [PR #54](https://github.com/Stefan7168/checkdecijfers/pull/54)
+   (#166-guard, geld-pad, gate groen) en [PR #55](https://github.com/Stefan7168/checkdecijfers/pull/55) (tabel #3
+   `85770NED` PPI volledig geprept ZONDER vocabulaire — CC8-CC10 draaien al op de poort).
+2. **Beslis tabel #2 `85880NED` (BBP, release 30/7):** de lean slice is door de validator weerlegd (26/210 maten nul
+   rijen) — kies: volle ingest (~99.676 cellen, ~18MB fixture) óf een kleine CbsSlice-measure-allowlist-uitbreiding
+   óf descope; gemeten opties in de specs (conclusie 1). Bouw daarna tabel #2 per het RUNBOOK-template.
+3. **De vocab-batch voor #2+#3 samen: canonieke sleutels + AVAILABLE_GRAINS + ÉÉN fixture-heropname** (sprint-
+   constraint [#164](../open-questions.md); heropname = sub-euro Haiku-spend, meld en vraag akkoord zoals sessie 49)
+   + CC8-CC10 omwijzen van explicit- naar canonical-intents; dan verificatieblok + live prod-stap (sync + registry:apply).
+Volg de STAANDE PROCEDURE in [RUNBOOK.md](../RUNBOOK.md) ("adding a curated coverage-sprint table") en spiegel
+per-tabel-records in [11-coverage-table-set.md](../11-coverage-table-set.md).
 
 **Tabel-specifiek — ✅ ALLES AL GEMETEN (s49-overnight, 8 agents, v3+v4 kruisgecheckt): volg
 [coverage-tables-2-9-measured-specs.md](2026-07-17-coverage-tables-2-9-measured-specs.md)** — v4-maatcodes,
