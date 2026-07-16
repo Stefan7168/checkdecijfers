@@ -215,13 +215,27 @@ function metadataEcho(
 // experience-audit body, 2026-07-16): fail-closed, a rejected rare phrasing
 // costs one regeneration, a tolerated fabrication breaks the core promise.
 //
-// KNOWN ACCEPTED RESIDUAL (mirrors the #140/#144 deterministic ceiling): a
-// fabrication that BOTH follows a temporal marker AND precedes a noun outside
-// the quantity-noun list ("na 2024 pogingen") still passes — listing every
-// Dutch noun is unbounded; the semantic-level pass tracked as #144 is the
-// real close. Rare LEGIT phrasings outside the corpus ("Q4 2025", a year as
-// bare sentence subject) are rejected → regenerate/template: quality cost,
-// never a wrong number.
+// KNOWN ACCEPTED RESIDUALS (mirror the #140/#144 deterministic ceiling):
+// (a) a fabrication that BOTH follows a temporal marker AND precedes a noun
+// outside the quantity-noun list ("na 2024 pogingen") still passes — listing
+// every Dutch noun is unbounded; the semantic-level pass tracked as #144 is
+// the real close. (b) a fabricated clause that exactly mimics the LIST-LABEL
+// shape ("; 2025: geen waarde") is word-for-word identical to the legit
+// template line and cannot be separated deterministically — but the shape
+// admits no fabricated MAGNITUDE (a digit after the colon is itself scanned
+// and must be backed; a wrong-year label over a real value is caught by R9
+// period binding). Rare LEGIT phrasings outside the corpus ("Q4 2025", a
+// year as bare sentence subject) are rejected → regenerate/template: quality
+// cost, never a wrong number.
+//
+// Adversarial-review hardenings (2026-07-16, 5-lens + refute-verify round):
+// the first version's bare-colon TEMPORAL_AFTER leg exempted "daarnaast
+// 2025: extra gemeenten" (confirmed critical bypass — the list-label legs
+// now ALSO require list context BEFORE the token and a value/'geen waarde'
+// AFTER the colon); the noun veto now fires through a hyphen ("2024-
+// gemeenten"); and every whitespace bridge is capped (\s{0,3}) so a
+// window-slice boundary can never fabricate a word boundary for \b (the
+// 46-spaces probe).
 
 const MONTH_NAMES = '(?:januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december)';
 
@@ -233,33 +247,50 @@ const MONTH_NAMES = '(?:januari|februari|maart|april|mei|juni|juli|augustus|sept
  * 2024"); "van" only counts led by a temporal noun, "naar"/"tot"/"en" only
  * led by another period number. "voor" IS listed — the template's own null
  * branch opens with it ("Voor 2024 in Aduard is er geen waarde") and the
- * quantity-noun veto still blocks "voor 2024 banen". */
+ * quantity-noun veto still blocks "voor 2024 banen". "heel/geheel" is listed:
+ * "in heel 2025" is idiomatic Dutch annual-total prose, and 'heel' only ever
+ * reads temporally directly before a year. Whitespace bridges are capped at
+ * 3 so a marker must genuinely sit next to the number (also the anti-fake-\b
+ * guard: a marker can then never start exactly at the 48-char window edge —
+ * that would need a 45+-char marker). */
 const TEMPORAL_BEFORE = new RegExp(
   '(?:' +
-    `\\b(?:in|tussen|sinds|vanaf|sedert|na|voor|gedurende|rond|omstreeks|eind|einde|ultimo|begin|medio|halverwege|jaar|kalenderjaar|vóór|${MONTH_NAMES})` +
-    '|\\btot\\s+en\\s+met|\\bt/m' +
-    '|\\bten\\s+opzichte\\s+van|\\bt\\.o\\.v\\.|\\bvergeleken\\s+met' +
-    '|\\b(?:kwartaal|kwartalen|maand|maanden|halfjaar|periode|jaren)\\s+van' +
-    `|\\b(?:19|20)\\d{2}(?:\\s+${MONTH_NAMES}|\\s+[1-4]e\\s+kwartaal)?\\s+(?:en|tot(?:\\s+en\\s+met)?|t/m|naar)` +
-    "|\\b(?:19|20)\\d{2}\\s*[-–/]\\s*'?" +
-    ')\\s*$',
+    `\\b(?:in|tussen|sinds|vanaf|sedert|na|voor|gedurende|rond|omstreeks|eind|einde|ultimo|begin|medio|halverwege|jaar|kalenderjaar|vóór|heel|geheel|${MONTH_NAMES})` +
+    '|\\btot\\s{1,3}en\\s{1,3}met|\\bt/m' +
+    '|\\bten\\s{1,3}opzichte\\s{1,3}van|\\bt\\.o\\.v\\.|\\bvergeleken\\s{1,3}met' +
+    '|\\b(?:kwartaal|kwartalen|maand|maanden|halfjaar|periode|jaren)\\s{1,3}van' +
+    `|\\b(?:19|20)\\d{2}(?:\\s{1,3}${MONTH_NAMES}|\\s{1,3}[1-4]e\\s{1,3}kwartaal)?\\s{1,3}(?:en|tot(?:\\s{1,3}en\\s{1,3}met)?|t/m|naar)` +
+    "|\\b(?:19|20)\\d{2}\\s{0,3}[-–/]\\s{0,3}'?" +
+    ')\\s{0,3}$',
   'iu',
 );
 
 /** Does the text STARTING right after a period number mark it as temporal?
- * A list label ("2024: 7.815"), the template's regional list label ("2024 in
- * Amsterdam: 931.298" — the colon is the discriminator), the CBS label order
- * ("2026 mei", "2025 4e kwartaal"), or a span/range continuation onto
- * another year. */
+ * The CBS label order ("2026 mei", "2025 4e kwartaal") or a span/range
+ * continuation onto another year. NOTE: the list-label colon forms live in
+ * LIST_LABEL_AFTER + LIST_CONTEXT_BEFORE, NOT here — a bare un-vetoed ':'
+ * leg here was a confirmed review bypass ("daarnaast 2025: extra
+ * gemeenten"). */
 const TEMPORAL_AFTER = new RegExp(
-  '^\\s*(?:' +
-    ':' +
-    '|in\\s+[^:;.\\n]{1,40}:' +
-    `|${MONTH_NAMES}\\b` +
-    '|[1-4]e\\s+kwartaal\\b' +
-    "|(?:tot(?:\\s+en\\s+met)?|t/m|en|naar)\\s+'?(?:19|20)\\d{2}\\b" +
-    "|[-–/]\\s*'?\\d{2,4}\\b" +
+  '^\\s{0,3}(?:' +
+    `${MONTH_NAMES}\\b` +
+    '|[1-4]e\\s{1,3}kwartaal\\b' +
+    "|(?:tot(?:\\s{1,3}en\\s{1,3}met)?|t/m|en|naar)\\s{1,3}'?(?:19|20)\\d{2}\\b" +
+    "|[-–/]\\s{0,3}'?\\d{2,4}\\b" +
     ')',
+  'iu',
+);
+
+/** The list-label exemption ("2024: 7.815", "2024 in Aduard: geen waarde —
+ * …", "…per periode: 2019: 7.815 (x 1 000); 2020: …") needs BOTH sides: the
+ * year must OPEN a list item (body start, or right after ';' / ':' / a line
+ * break — never mid-clause), and the colon must introduce a VALUE (itself
+ * scanned and R3-checked) or the template's literal 'geen waarde'. This is
+ * what keeps "daarnaast 2025: extra gemeenten" (review bypass) out while the
+ * template's own list lines pass by construction. */
+const LIST_CONTEXT_BEFORE = /(?:^|[;:\n])\s{0,3}$/;
+const LIST_LABEL_AFTER = new RegExp(
+  "^\\s{0,3}(?:in\\s{1,3}[^:;.\\n]{1,40}\\s{0,3})?:\\s{0,3}(?:-?\\d|geen\\s{1,3}waarde\\b)",
   'iu',
 );
 
@@ -267,8 +298,10 @@ const TEMPORAL_AFTER = new RegExp(
  * "in 2024 gemeenten steeg het aantal" reads temporally up to the year but
  * claims a count. Structure nouns (countContext's list), person/thing nouns
  * CBS answers actually count, units and scale words. Checked as the token's
- * IMMEDIATE next word (whitespace only — "2024, gemeenten" is not a claim),
- * together with the result's own unit words (AllowedNumbers.unitWords). */
+ * IMMEDIATE next word — across whitespace or a hyphen ("2024-gemeenten",
+ * review hardening), but not across a comma ("2024, gemeenten" is clause
+ * structure, not a claim) — together with the result's own unit words
+ * (AllowedNumbers.unitWords). */
 const QUANTITY_NOUN_AFTER = new RegExp(
   '^(?:' +
     "euro|cent|dollar|procent\\w*|punt|punten|gemeente|gemeenten|regio's|provincies|steden|wijken|buurten" +
@@ -285,11 +318,11 @@ const YEAR_SHAPED = /^(?:19|20)\d{2}$/;
 
 /** A sub-year sequence number (the 4 of Q4, a month 1–12) is temporal only
  * directly after its own grain word — everything else is a data claim. */
-const SUBYEAR_BEFORE = /\b(?:kwartaal|kwartalen|maand|maanden)\s*$/i;
+const SUBYEAR_BEFORE = /\b(?:kwartaal|kwartalen|maand|maanden)\s{0,3}$/i;
 
 /** Glued-ordinal form ('4e kwartaal', '1ste maand'): the ordinal marker the
  * token is glued to must lead straight into a grain word. */
-const ORDINAL_TEMPORAL_AFTER = /^(?:e|de|ste)\s+(?:kwartaal|kwartalen|maand|maanden|halfjaar)\b/iu;
+const ORDINAL_TEMPORAL_AFTER = /^(?:e|de|ste)\s{1,3}(?:kwartaal|kwartalen|maand|maanden|halfjaar)\b/iu;
 
 /** Token sits inside a VERBATIM occurrence of a cell's period label ("2025 4e
  * kwartaal", a future "2019/'20") — always temporal. The label must be longer
@@ -315,9 +348,12 @@ function periodEcho(masked: string, token: { index: number; token: string }, all
   const before = masked.slice(Math.max(0, token.index - 48), token.index);
   const after = masked.slice(end, end + 48);
   if (!YEAR_SHAPED.test(token.token)) return SUBYEAR_BEFORE.test(before);
+  // List-label form: BOTH sides must fit (review hardening — a one-sided
+  // colon exemption was a confirmed bypass).
+  if (LIST_CONTEXT_BEFORE.test(before) && LIST_LABEL_AFTER.test(after)) return true;
   if (TEMPORAL_AFTER.test(after)) return true;
   if (!TEMPORAL_BEFORE.test(before)) return false;
-  const nextWord = after.match(/^\s+(\p{L}+)/u)?.[1]?.toLowerCase() ?? '';
+  const nextWord = after.match(/^(?:\s{1,3}|\s{0,3}[-–]\s{0,3})(\p{L}+)/u)?.[1]?.toLowerCase() ?? '';
   return nextWord === '' || (!QUANTITY_NOUN_AFTER.test(nextWord) && !allowed.unitWords.has(nextWord));
 }
 

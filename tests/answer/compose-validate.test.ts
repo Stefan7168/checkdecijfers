@@ -829,6 +829,72 @@ describe('#141: period numbers are exempt only in temporal context (fabrication 
     expect(scanBody('het gemiddelde van de 4 gemeenten', q4comparison).find((t) => t.value === 4)?.kind).toBe('count');
   });
 
+  // Adversarial-review round (2026-07-16): the first version's TEMPORAL_AFTER
+  // had a bare ':' leg with no before-context and no noun veto — a CONFIRMED
+  // critical bypass ("daarnaast 2025: extra gemeenten"). The list-label form
+  // now requires list context BEFORE the year AND a value/'geen waarde' after
+  // the colon (LIST_CONTEXT_BEFORE + LIST_LABEL_AFTER).
+  it('review bypass closed: a mid-clause "2025: <claim>" no longer launders a fabricated year', () => {
+    const body =
+      'De bevolking op 1 januari in Nederland was in 2025 18.044.027 inwoners. ' +
+      'Er kwamen daarnaast 2025: extra gemeenten bij.';
+    const report = validateAnswerBody(body, populationSingle);
+    expect(report.ok).toBe(false);
+    expect(scanBody('Er kwamen daarnaast 2025: extra gemeenten bij.', populationSingle).find((t) => t.value === 2025)?.kind).toBe('unbacked');
+    expect(scanBody('Er kwamen daarnaast 2025 in Almere: extra woningen bij.', populationSingle).find((t) => t.value === 2025)?.kind).toBe('unbacked');
+  });
+
+  it('legit list labels still pass: body-start, per-periode, regional and geen-waarde forms', () => {
+    const cpi = cpiSeries();
+    expect(scanBody('2020: 1,3%; 2021: 2,7%', cpi).find((t) => t.value === 2020)?.kind).toBe('period');
+    const comparison = scanBody('Bevolking op 1 januari: 2024 in Amsterdam: 931.298; 2024 in Rotterdam: 670.610.', populationComparison());
+    expect(comparison.filter((t) => t.value === 2024).every((t) => t.kind === 'period')).toBe(true);
+    expect(
+      scanBody('Bevolking per periode: 2024 in Aduard: geen waarde — deze waarde kan volgens CBS niet voorkomen.', nullCellSingle)
+        .find((t) => t.value === 2024)?.kind,
+    ).toBe('period');
+  });
+
+  it('review hardening: the quantity-noun veto fires through a hyphen, but a negative value after a year stays clean', () => {
+    expect(scanBody('in 2024-gemeenten kwam dat vaker voor', housingSingle).find((t) => t.value === 2024)?.kind).toBe('unbacked');
+    // The consumentenvertrouwen shape: a negative CELL value directly after the
+    // year must not be read as a hyphen-glued noun.
+    const sentiment = makeResult({
+      shape: 'single',
+      definitionLabel: null,
+      cells: [
+        makeCell({
+          table: '83694NED', measure: 'M1', measureTitle: 'Consumentenvertrouwen',
+          region: null, periodCode: '2024JJ00', periodLabel: '2024', value: -24, unit: 'gemiddelde saldo van de deelvragen', decimals: 0,
+        }),
+      ],
+    });
+    expect(scanBody('Consumentenvertrouwen was in 2024 -24', sentiment).find((t) => t.value === 2024)?.kind).toBe('period');
+    // Dynamic unitWords veto (mutation-review test gap): 'saldo' is NOT on the
+    // static noun list — only the result's own unit words can veto it.
+    expect(scanBody('in 2024 saldo van iets', sentiment).find((t) => t.value === 2024)?.kind).toBe('unbacked');
+  });
+
+  it('review hardening: whitespace bridges are capped — a window-edge fake word boundary cannot exempt', () => {
+    const body = `${'q'.repeat(46)}in${' '.repeat(46)}2024 zaken.`;
+    expect(scanBody(body, housingSingle).find((t) => t.value === 2024)?.kind).toBe('unbacked');
+  });
+
+  it('idiomatic annual-total prose "In heel 2025" validates (owner-facing quality, corpus-adjacent)', () => {
+    const bankruptcies = makeResult({
+      shape: 'single',
+      definitionLabel: 'faillissementen van bedrijven en instellingen',
+      cells: [
+        makeCell({
+          table: '82242NED', measure: 'M1', measureTitle: 'Uitgesproken faillissementen',
+          region: null, periodCode: '2025JJ00', periodLabel: '2025', value: 3226, unit: 'aantal', decimals: 0,
+        }),
+      ],
+    });
+    expect(validateAnswerBody('In heel 2025 werden in totaal 3.226 faillissementen uitgesproken.', bankruptcies).problems).toEqual([]);
+    expect(scanBody('in heel 2025', bankruptcies).find((t) => t.value === 2025)?.kind).toBe('period');
+  });
+
   it('a year failing the temporal gate still falls through to a genuine metadata anchor', () => {
     const revisedIn2015 = makeResult({
       shape: 'single',
