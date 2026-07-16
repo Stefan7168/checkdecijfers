@@ -6,6 +6,16 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+- **The LLM judge falls into the SAME semantic trap the deterministic rule did — put every
+  review-found bypass in the labelled set BEFORE recording** (session 46, 2026-07-16, the #144
+  go-live calibration). Calibration run 1 (prompt v1) scored 8/9: the one miss was F4, the
+  month-compound fabrication ("nog 31 januari-meldingen extra") — Haiku read "31 januari" as a
+  date, exactly the misreading the adversarial review had just found in the deterministic
+  date-form carve-out. Because the review's bypass had been added to the labelled set as a case,
+  the calibration CAUGHT the prompt gap before the flag flip; prompt v2 (teaching the same
+  year-or-punctuation rule the code got) measured 9/9 ×3. Rule: a confirmed bypass is not closed
+  until it exists three times — as a code fix, as a pinned regression test, AND as a labelled
+  calibration case for any LLM layer that judges the same shape.
 - **MEASURE the brief's scoping assumption before building on it — ours inverted 100% vs 0% under
   the corpus** (session 46, 2026-07-16, #144). The design brief assumed "most answers skip the
   [semantic-checker] call"; the naive soft-token definition it implied triggered on **100%** of the

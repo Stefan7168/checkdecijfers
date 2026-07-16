@@ -9,76 +9,40 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
-**▶ NEXT SESSION STARTS HERE (session 45, 2026-07-16 — THREE PRs merged + LIVE, all data-integrity: #141 HIGH period-exemption fabrication hole
-(PR #44 `d192775`), the #142/#143/row-227 follow-up trio (PR #45 `6291dfc`), and the format.ts raw-NUL cleanup (PR #46 `f909e66`); merges in-chat
-DELEGATED by the owner to the session's judgment, #118(b) precedent. The session-44 hunt list is now fully closed except #144 — brief ready.)**
+**▶ NEXT SESSION STARTS HERE (session 46, 2026-07-16 — #144 DONE END-TO-END in ONE session: built + adversarially reviewed + merged (PR #47,
+squash `94b90e4`, owner in-chat approval per #118(b)) + the supervised go-live EXECUTED (calibration, fail-open+admin-alert decision, flag flip,
+live smoke). The semantic checker is LIVE and ACTIVE in production; the whole session-44 data-integrity hunt list is now CLOSED.)**
 
-- **format.ts NUL residual — ✅ FIXED + MERGED + LIVE (PR [#46](https://github.com/Stefan7168/checkdecijfers/pull/46), squash `f909e66`, 2026-07-16;
-  gate ✓ + deploy ✓, prod HTTP 307).** The four raw NUL bytes in three source files were DELIBERATE runtime values (maskPhrases mask char; two
-  compound-key separators) written as raw bytes — grep classified the files as binary. Now `\u0000` escapes: byte-identical runtime (compose +
-  ingestion suites 283/283 pin the behavior), text-clean source, guard comment at the mask site. Repo sweep: zero raw NULs left in tracked .ts.
+- **#144 — the semantic fabrication check — ✅ DONE END-TO-END (ADR [034](decisions/034-semantic-fabrication-check.md); PR
+  [#47](https://github.com/Stefan7168/checkdecijfers/pull/47) squash `94b90e4` + go-live commits `8eef383`/`deabbfb`; all gates + deploys green,
+  prod HTTP 307).** The additive REJECT-ONLY cheap-tier LLM checker over validated bodies that leaned on a residual-prone exemption
+  (`ClassifiedToken.soft`) — the shared close for the #140 (descriptor-echo) and #141 (temporal-marker+un-listed-noun) deterministic ceilings.
+  Corpus-MEASURED scope (the brief's "most answers skip the call" assumption inverted: naive = 100% trigger on the 18 stored legit bodies →
+  shipped = 0%, while both residual shapes still fire); a fabricated verdict takes the same R3 ladder (regenerate → template); verdict stored on
+  the envelope, recorded-not-rederived, its SCOPE re-derived by R8 with tamper teeth; checker calls = `llm_calls` role `semantic_check`; wired on
+  all three answer paths (question, reply, onboarding delivery). **Adversarial review (5 lenses × dual refute-verify + a SERIALIZED mutation
+  probe, 26 agents, cheap tier): 1 CRITICAL confirmed with executed repro + closed same day (the date-form compound-noun bypass — "nog 31
+  januari-meldingen extra" skipped the checker gate; DATE_FORM_AFTER now requires a year/punctuation after the month), 2 refuted-but-adopted
+  hardenings (maxTokens scales with suspects; treat-as-data covers all payload fields), mutation probe 5/5 RED, flag-off byte-neutrality 0
+  findings.** **Go-live (owner present): calibration run 1 (prompt v1) = 8/9 — FN on the month-compound case, the model fell into the SAME trap
+  the code had; prompt v2 (teaches the DATE_FORM_AFTER rule) = 9/9 FP=0 FN=0 flips=0, also at --repeat=3; replay leg pins the calibrated behavior
+  on the gate (`tests/answer/semantic-check-replay.test.ts`, commit `8eef383`). Owner decisions in-chat: merge ✓; FAIL-OPEN + ADMIN ALERT per
+  skip (`src/answer/audit/alerts.ts` → e-mail via Resend to ADMIN_ALERT_EMAIL with audit row/user/question/error/meaning, console.error as the
+  floor; SEMANTIC_CHECK_FAILMODE deliberately unset). Env flags set via vercel CLI; the flip-deploy (`deabbfb`, run 29513127181) gate+deploy ✓;
+  live smoke: owner question → audit row 253 carries `skipped_no_suspects` (prompt v2, ZERO extra LLM calls), pre-#144 row 252 has no key (A1),
+  `npm run audit:verify -- 253 253` exit 0.** Merge-block verification: backend 1333/1333, web 314/314 (solo re-run; 2 parallel-load flakes),
+  benchmark 14/14 + 6/6 + 0 fabricated, real next build, `audit:verify -- 1 252` exit 0 (225/227 + the 2 pre-existing pinned divergences).
 
-- **#142 + #143 + row-227 register — ✅ ALL FIXED + MERGED + LIVE (PR [#45](https://github.com/Stefan7168/checkdecijfers/pull/45), squash `6291dfc`,
-  2026-07-16; gate ✓ + deploy ✓, prod HTTP 307).** #142: count exemptions AXIS-BOUND (a wrong-axis "in 4 gemeenten" no longer grounds; review confirmed
-  + killed a v1 bypass — 'wijken'/'buurten' described granularities the product doesn't serve). #143: index-base unit "2015=100" renders as a label,
-  never an "×"-factor (old stored form stays R8-valid, pinned; parseFactorUnit '='-exclusion pinned). Row 227: the register entry now covers its
-  structural reassembly CASCADE → `npm run audit:verify -- 1 252` exits 0 again + the real entry is pinned hermetically in CI. Measured: CI gate
-  1310 backend + 314 web, benchmark 14/14 + 6/6 + 0 fabricated, real next build, all 252 stored prod rows re-validate clean. **#144 design brief
-  written: [session-briefs/2026-07-16-144-semantic-check-brief.md](session-briefs/2026-07-16-144-semantic-check-brief.md)** (recommended shape:
-  additive reject-only LLM checker; R8 verdict-storage + fail-open-vs-closed = the owner decisions; do NOT start at the tail of a long session).
+**Session 45 (2026-07-16, THREE PRs merged + LIVE, all data-integrity; full entries in [status-archive.md](status-archive.md)):** #141 HIGH
+period-exemption hole (PR #44 `d192775`), the #142/#143/row-227 trio (PR #45 `6291dfc`), format.ts raw-NUL cleanup (PR #46 `f909e66`); merges
+that session in-chat DELEGATED (#118(b) precedent — NOT automatically renewed; session 46 asked and received explicit per-merge approval);
+the #144 design brief was written there and executed by session 46.
 
-- **#141 — the period-exemption fabrication hole (HIGH, the #140 twin) — ✅ FIXED + MERGED + LIVE (PR [#44](https://github.com/Stefan7168/checkdecijfers/pull/44),
-  squash `d192775`, 2026-07-16; main gate ✓ + deploy ✓ run 29489131899, prod HTTP 307).** The validator exempted ANY integer equal to ANY covered-period
-  number — years AND the KW/MM sequence numbers 1–12 (a fabricated "2025 gemeenten" or a bare "4 punten" in a Q4 answer passed as backed). Fix = a body-side
-  TEMPORAL-CONTEXT gate (`periodEcho`/`gluedPeriodEcho`), designed from the measured corpus (all 63 validated fixture/benchmark/experience-audit bodies):
-  verbatim label echo, temporal markers before + a hyphen-proof quantity-noun veto after, a TWO-SIDED list-label form, CBS label order/spans after; sequence
-  numbers only in grain form. **Adversarial review (5 lenses × refute-verify, 16 agents on the cheap tier) confirmed 1 CRITICAL v1 bypass (un-vetoed bare-colon
-  leg, "daarnaast 2025: extra gemeenten") — closed + pinned**, plus 3 defensive hardenings (hyphen veto, whitespace-bridge cap ≤3 vs window-edge fake `\b`,
-  unitWords test teeth) and 1 adopted refuted-FP ("In heel 2025"). Measured: backend 1303/1303, benchmark 14/14 + 6/6 + 0 fabricated, web 314/314 + real next
-  build, **ALL 252 stored prod audit rows re-validate clean** (`npm run audit:verify -- 1 252`). Residuals documented in validate.ts + [#141](open-questions.md)
-  (row): temporal marker + un-listed noun = the [#144](open-questions.md) ceiling; list-label mimic admits no fabricated magnitude. Surfaced pre-existing,
-  out-of-scope: audit row 227's register entry misses its cascade problem (audit:verify exits non-zero) → fixed same-session in PR #45 (chip withdrawn).
+**Session 44 (2026-07-13 → 2026-07-16, 3 PRs merged: #134(b) too-old retry chip PR #41 `12518eb`, auth/ownership hunt CLEAN + open-redirect fix
+PR #42 `4e2a2fd`, the #140 validator narrowing PR #43 `882c808`; full entries in [status-archive.md](status-archive.md)).**
 
-**Session 44 (2026-07-13 → 2026-07-16, 3 PRs merged; full entries in [status-archive.md](status-archive.md)):**
-
-- **Data-integrity hunt → CRITICAL validator fabrication hole, LARGELY FIXED (v3) + LIVE** (PR #43, squash `882c808`; owner "Ja, merge + deploy").
-  The anti-fabrication validator (`src/answer/compose/validate.ts`) exempted ANY body number equal to ANY digit buried in a result's metadata prose,
-  with NO context — a hallucinated value coinciding with a period-code year ("2024" in "2024JJ00") or index base ("100" in "(2015=100)") passed as
-  "backed" (R8 reconstruct couldn't catch it either). **This wide-open hole was live in main.** Fix (`metadataEcho`): a body number is exempted only
-  when it reappears next to the same source word through a DISTINCTIVE anchor (letter-bearing, non-stopword; a bare numeral never anchors), or both
-  sides match; periodSemantics is STRICT. FOUR fix versions × FOUR review rounds. **Deterministic ceiling hit** — a legit echo ("mensen van 45 jaar")
-  and a fabrication ("bestaat al 45 jaar") are word-for-word identical; the strict "both-sides for all sources" rule that would close it BROKE 4 legit
-  answers (measured). **KNOWN BOUNDED RESIDUAL [#144](open-questions.md)** (a fabrication == the answer's own descriptor number, next to its word) needs
-  a SEMANTIC check → tracked. Owner chose to ship the big narrowing now + track. Full suite + benchmark green (1289), prod HTTP 307. Same hunt tracked:
-  **[#141](open-questions.md) (HIGH; ✅ since FIXED, session 45, PR #44), [#142](open-questions.md)/[#143](open-questions.md) (MEDIUM; ✅ since FIXED, session 45, PR #45).**
-- **Authorization/ownership security hunt — CLEAN, + 1 open-redirect fix LIVE** (PR #42, squash `4e2a2fd`; owner "Ja, merge + deploy"). A 5-lens
-  adversarial hunt (server-action ownership scoping, API-route forgery/replay, data-layer SQL user-scoping, RLS defense-in-depth, GDPR-redaction
-  completeness) found **ZERO** cross-user data/money/privacy breaks — the auth/ownership model is clean. The ONLY surfaced issue (out of that class):
-  an open redirect on the magic-link callback — `${origin}${next}` with a raw `next` let `?next=@evil.com` / `?next=.evil.com` redirect off-site
-  after a successful login (LOW severity: needs the victim's own valid one-time code; leaks no data/money). FIXED ([#139](open-questions.md)): new
-  `web/lib/safe-redirect.ts` resolves `next` against our origin and accepts only same-origin (9 tests, both sides). Web-only; gate + prod deploy green.
-- **#134(b) too-old not_published chip — BUILT + MERGED + LIVE** (PR #41, squash `12518eb`; owner "Ja, merge + deploy"). A too-OLD `not_published`
-  refusal (asked period before our earliest served period — the owner's "inflatie 2001" case) now carries the same retry chip as period
-  `outside_loaded_slice`: RANGE-AWARE like #137 (range ask → clamped working sub-range "van 2010 tot en met 2024"; single-year ask → earliest year);
-  a MID-GAP not_published stays PROSE-ONLY (owner decision — no single honest "try this" target). Query layer `run.ts` computes the earliest-served
-  floor (`earliestAvailablePeriod`, at the asked grain) + a too-old-vs-mid-gap classification that sets `nearestAlternative` only when
-  `requestedKey < earliest`; `suggestions.ts` shares the `outside_loaded_slice` path verbatim, `echoServability` the sole gate. Refusal text
-  byte-identical (R8 untouched), zero prompt/fixture bytes. Adversarial review (5 lenses × refute-verify): only 1 finding — a test-coverage gap on
-  the guard (no fixture has a natural interior hole) → CLOSED by a seeded-gap end-to-end test (`tests/query/not-published-midgap.test.ts`,
-  mutation-proven: the reviewer's exact mutation fails it). Full gate + prod deploy green (backend 1280, web 305, benchmark 14/14 + 6/6 + 0
-  fabricated, real next build; prod HTTP 307 healthy). Branch + PR + owner-merge per [#118](open-questions.md)(b).
-- **Next — data-integrity follow-up (core promise):** **[#144](open-questions.md) — ✅ DONE END-TO-END (session 46, 2026-07-16,
-  PR [#47](https://github.com/Stefan7168/checkdecijfers/pull/47), squash `94b90e4`, owner in-chat "Ja, merge"; ADR
-  [034](decisions/034-semantic-fabrication-check.md)) **and since the same evening FULLY LIVE + ACTIVE** (flag on): the additive REJECT-ONLY
-  semantic checker over residual-prone bodies, per the design brief.** Deterministic suspect gate (`ClassifiedToken.soft`; corpus-measured 0% trigger on legit bodies, both residual shapes
-  trigger); same R3 ladder on a fabricated verdict; verdict on the envelope, recorded-not-rederived, scope re-derived by R8 (tamper-tested).
-  Adversarial review (5 lenses × dual refute-verify + serialized mutation probe, 26 agents): 1 CRITICAL bypass confirmed+closed (date-form
-  compound-noun), 2 hardenings adopted, mutation probe 5/5 RED. **Go-live EXECUTED same session (owner present): calibration
-  9/9 FP=0 FN=0 ×3 (prompt v2 — run 1 caught an FN on the month-compound residual, fixed via the DATE_FORM_AFTER prompt rule), replay leg on the
-  gate (8eef383), owner decision = FAIL-OPEN + ADMIN ALERT per skip (alerts.ts, ADMIN_ALERT_EMAIL; deabbfb), flags set, flip-deploy run
-  29513127181 gate+deploy ✓ prod 307, live smoke row 253 = `skipped_no_suspects` + audit:verify exit 0. #144 is DONE end-to-end; the checker
-  is LIVE and ACTIVE in production.**
-  #142/#143 and the row-227 register gap are all ✅ fixed (PR #45). A fresh security/bug hunt on another surface (billing-gate, GDPR) is also available.
+- **Next — pick:** a fresh security/bug hunt on another surface (billing-gate, GDPR), or the owner stack below. All #140-class data-integrity
+  work is closed.
 - **Next — owner decisions:** **#138** (v2 regional refusal chip — needs a code→region-label source on the refusal path), **WP26** (answer-first
   defaults + clickable clarify options, safelist read-back), **#121** (fail-closed template rung), **#131** (multilingual L1), **WP30c** (source
   choice). Tracked-not-focus: #132 route B ~2026-07-19 (forks==0 T-0), #104/#112 (need live-LLM spend; format.ts NUL ✅ fixed s45 PR #46), /login
