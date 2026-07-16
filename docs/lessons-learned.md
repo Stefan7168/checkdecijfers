@@ -6,6 +6,33 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+- **Some safety properties can't be achieved DETERMINISTICALLY — recognize the ceiling, ship the
+  narrowing, and track the residual instead of iterating forever** (session 44, 2026-07-13, the #140
+  validator fabrication hole). The anti-fabrication validator exempts a body number as a "metadata
+  echo" so the LLM can repeat definition/label numbers ("op 1 januari"). Four fix versions × four
+  adversarial-review rounds each found a real bypass (lone stopword "in 2024"; bare-numeral anchors on
+  CBS space-grouped "20 000 tot 30 000 euro" / index "(2015=100)"; lone generic noun "45 jaar").
+  Chasing 100% led to a "both-sides for ALL sources" rule that DID close everything — and broke 4
+  legit stored answers (measured R8 regressions). The root truth: a legit coordinate echo ("mensen van
+  45 jaar") and a fabricated reuse ("bestaat al 45 jaar") are word-for-word IDENTICAL, so no
+  deterministic text rule can separate them — the tightest rule that catches the fabrication also
+  rejects the legit answer. **Lessons:** (1) when successive reviews keep finding a NARROWER version of
+  the same class, that's a signal you're approaching a fundamental ceiling, not just missing a case;
+  (2) PROVE a stricter rule is too strict by running the full suite (both-sides → 4 real failures), not
+  by reasoning; (3) on a live product, shipping a large NARROWING now (v3: closes period-codes, index
+  bases, bracket numerals, connectors) beats leaving the wide-open hole live while chasing perfect —
+  "reduce live risk now, track the rest" ([#144](open-questions.md) = the semantic-level follow-up);
+  (4) a genuine safety-vs-quality tradeoff on the core promise is the OWNER's call, not a unilateral
+  one — bring it to them with the measured options.
+- **Adversarial-review subagents leave throwaway `*.test.ts` probes behind that POLLUTE the next full
+  suite run** (session 44, 2026-07-13). The #140 review agents wrote real vitest files (`zzdel_*`,
+  `__scratch_*`) against the live validator to prove exploits; several didn't self-delete despite the
+  instruction, and a stray one made `npm test` report a spurious "1 failed" (then "8 failed") that
+  looked like a real regression until I traced it to the scratch file. **Lesson:** before trusting a
+  full-suite result while any review/hunt workflow is or was running, `find tests -name 'zzdel_*' -o
+  -name '__scratch*' -o -name '_repro*' | xargs rm` first; better, STOP the workflow before the final
+  gate run so it can't create more mid-collection. Tell the probe agents to name files `zzdel_*` (easy
+  to sweep) — and still sweep, because "delete it after" is not reliably obeyed.
 - **A REFUTED verdict in a SCOPED hunt can still be a real bug OUTSIDE the scope — read the refuted
   findings, don't discard them** (session 44, 2026-07-13, the authorization/ownership security hunt).
   The hunt was scoped to "can user A reach user B's data/money?" and returned `{confirmed:[]}` — the

@@ -129,6 +129,29 @@ verbatim-checked. Known accepted limitation: the hermetic e2e suite replays
 only first-attempt-pass fixtures; the retry and template paths are proven by
 seeded-fault unit tests (a live model cannot be made to fail on demand).
 
+**Metadata-echo hardening (session 44, 2026-07-13, #140).** The R3 scan lets a
+body number ground as `metadata` when it echoes a number in the result's own
+metadata (a definition/label number the LLM legitimately repeats, e.g. the "1"
+in "op 1 januari"). The original rule pooled EVERY digit anywhere in metadata
+prose and exempted any body number equal to one with NO context — so a
+hallucinated value coinciding with a buried digit (the "2024" in a "2024JJ00"
+period code, the "100" in "(2015=100)") passed as backed (a fabrication hole;
+found + reproduced by the session-44 data-integrity hunt). Fixed
+(`metadataEcho`, validate.ts): a body number is exempted only when it reappears
+next to the SAME source word through a DISTINCTIVE anchor (letter-bearing,
+non-stopword — a bare numeral never anchors) on one side, or the same word on
+both sides; `periodSemantics` guidance prose is STRICT (both sides). Four
+adversarial-review rounds hardened it. **Deterministic ceiling (accepted,
+bounded residual — [open-questions #144](../open-questions.md)):** a fabricated
+number that EQUALS one of the result's own descriptor-coordinate numbers (an
+age/income-bracket value, "1 januari") next to that descriptor's own word can
+still pass, because the legit coordinate echo and such a fabrication are
+word-for-word identical — no deterministic text rule separates them, and the
+strict "both-sides for ALL sources" variant that would catch it breaks legit
+stored answers (measured: 4 R8-reconstruct regressions). Closing the residual
+needs a semantic-level pass; tracked as #144. Still a large narrowing of the
+original hole, fail-closed elsewhere.
+
 **Measured (2026-07-03, live, prompt v3, repeat=2):** 14/14 benchmark
 answers pass with zero regenerations, zero template fallbacks, zero
 fabricated numbers, stable verdicts across repeats

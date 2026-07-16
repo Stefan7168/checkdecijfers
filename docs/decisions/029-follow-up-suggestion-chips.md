@@ -5,8 +5,8 @@ autonomous, branch `wp29-follow-up-chips` per #118)** — execute brief:
 [session-briefs/2026-07-08-follow-up-chips-brief.md](../session-briefs/2026-07-08-follow-up-chips-brief.md).
 **EXTENDED with a refusal-side variant for [#134](../open-questions.md)(a) (session 43, 2026-07-13,
 branch `feat/134a-refusal-period-chips`) — see the second as-built note below. FURTHER EXTENDED with
-the [#134](../open-questions.md)(b) too-old `not_published` chip (session 44, 2026-07-13, branch
-`feat/134b-not-published-too-old-chip`, awaiting owner merge) — see the fourth as-built note.**
+the [#134](../open-questions.md)(b) too-old `not_published` chip (session 44, 2026-07-13, PR #41
+`12518eb`, MERGED + LIVE) — see the fourth as-built note.**
 
 ## As-built note (#134(a) refusal-side variant, 2026-07-13)
 
@@ -89,8 +89,8 @@ principle (c) forbids.
   boundary (teeth-proven — the reviewer's exact mutation fails it). The other four lenses
   (correctness, money-path/dead-end, R8/audit, web/thread-resume) found nothing.
 - Verified: full gate green (backend 1280, web 305, benchmark 14/14 + 6/6 + 0 fabricated, both
-  typechecks, real `next build`); zero prompt/fixture bytes changed. Branch
-  `feat/134b-not-published-too-old-chip`, awaiting owner merge (#118b).
+  typechecks, real `next build`); zero prompt/fixture bytes changed. PR #41
+  (squash `12518eb`), MERGED + LIVE.
 
 ## As-built note (WP29, 2026-07-11)
 

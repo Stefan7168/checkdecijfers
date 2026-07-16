@@ -9,8 +9,18 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
-**▶ NEXT SESSION STARTS HERE (2026-07-13, session 44 — #134(b) too-old not_published retry chip + an authorization/ownership security hunt that found + fixed an open redirect; owner approved + merged 2 PRs).**
+**▶ NEXT SESSION STARTS HERE (2026-07-13, session 44 — #134(b) not_published chip; an auth/ownership hunt + open-redirect fix; and a data-integrity hunt that LARGELY-fixed a CRITICAL validator fabrication hole; owner approved + merged 3 PRs, 5 residuals tracked).**
 
+- **Data-integrity hunt → CRITICAL validator fabrication hole, LARGELY FIXED (v3) + LIVE** (PR #43, squash `882c808`; owner "Ja, merge + deploy").
+  The anti-fabrication validator (`src/answer/compose/validate.ts`) exempted ANY body number equal to ANY digit buried in a result's metadata prose,
+  with NO context — a hallucinated value coinciding with a period-code year ("2024" in "2024JJ00") or index base ("100" in "(2015=100)") passed as
+  "backed" (R8 reconstruct couldn't catch it either). **This wide-open hole was live in main.** Fix (`metadataEcho`): a body number is exempted only
+  when it reappears next to the same source word through a DISTINCTIVE anchor (letter-bearing, non-stopword; a bare numeral never anchors), or both
+  sides match; periodSemantics is STRICT. FOUR fix versions × FOUR review rounds. **Deterministic ceiling hit** — a legit echo ("mensen van 45 jaar")
+  and a fabrication ("bestaat al 45 jaar") are word-for-word identical; the strict "both-sides for all sources" rule that would close it BROKE 4 legit
+  answers (measured). **KNOWN BOUNDED RESIDUAL [#144](open-questions.md)** (a fabrication == the answer's own descriptor number, next to its word) needs
+  a SEMANTIC check → tracked. Owner chose to ship the big narrowing now + track. Full suite + benchmark green (1289), prod HTTP 307. Same hunt tracked:
+  **[#141](open-questions.md) (HIGH — same class on the PERIOD exemption), [#142](open-questions.md)/[#143](open-questions.md) (MEDIUM).**
 - **Authorization/ownership security hunt — CLEAN, + 1 open-redirect fix LIVE** (PR #42, squash `4e2a2fd`; owner "Ja, merge + deploy"). A 5-lens
   adversarial hunt (server-action ownership scoping, API-route forgery/replay, data-layer SQL user-scoping, RLS defense-in-depth, GDPR-redaction
   completeness) found **ZERO** cross-user data/money/privacy breaks — the auth/ownership model is clean. The ONLY surfaced issue (out of that class):
@@ -27,6 +37,10 @@
   the guard (no fixture has a natural interior hole) → CLOSED by a seeded-gap end-to-end test (`tests/query/not-published-midgap.test.ts`,
   mutation-proven: the reviewer's exact mutation fails it). Full gate + prod deploy green (backend 1280, web 305, benchmark 14/14 + 6/6 + 0
   fabricated, real next build; prod HTTP 307 healthy). Branch + PR + owner-merge per [#118](open-questions.md)(b).
+- **Next — data-integrity follow-ups from the session-44 hunt (core promise, buildable, no owner decision needed):** **[#141](open-questions.md)
+  (HIGH — the SAME fabrication class on the validator's PERIOD exemption; broader than #140's residual, worth doing next)**, [#144](open-questions.md)
+  (semantic-level check to close #140's bounded residual), [#142](open-questions.md)/[#143](open-questions.md) (MEDIUM — count mis-attribution +
+  index-base "×" format). A fresh security/bug hunt on another surface (billing-gate, GDPR) is also always available.
 - **Next — owner decisions:** **#138** (v2 regional refusal chip — needs a code→region-label source on the refusal path), **WP26** (answer-first
   defaults + clickable clarify options, safelist read-back), **#121** (fail-closed template rung), **#131** (multilingual L1), **WP30c** (source
   choice). Tracked-not-focus: #132 route B ~2026-07-19 (forks==0 T-0), #104/#112 (need live-LLM spend), format.ts NUL (task_e718f60d), /login
