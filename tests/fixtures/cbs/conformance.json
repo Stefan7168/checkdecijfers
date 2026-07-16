@@ -14,6 +14,7 @@
     { "tableId": "85224NED" },
     { "tableId": "85554NED", "schemaOnly": true },
     { "tableId": "85615NED", "schemaOnly": true },
+    { "tableId": "85770NED" },
     { "tableId": "85773NED" },
     { "tableId": "86141NED" }
   ],

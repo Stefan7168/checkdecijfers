@@ -1,0 +1,3680 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/85770NED/$metadata#AlleProdComCoderingenCodes",
+ "value": [
+  {
+   "Identifier": "A052584",
+   "Index": 1,
+   "Title": "B-E Nijverheid (geen bouw) en energie",
+   "Description": "Nijverheid (geen bouw) en energie",
+   "DimensionGroupId": "1"
+  },
+  {
+   "Identifier": "A012446",
+   "Index": 2,
+   "Title": "B Winning van delfstoffen",
+   "Description": "Winning van delfstoffen",
+   "DimensionGroupId": "3"
+  },
+  {
+   "Identifier": "A012447",
+   "Index": 3,
+   "Title": "05 Steenkool en bruinkool",
+   "Description": "Steenkool en bruinkool",
+   "DimensionGroupId": "3"
+  },
+  {
+   "Identifier": "A012448",
+   "Index": 4,
+   "Title": "051 Steenkool",
+   "Description": "Steenkool",
+   "DimensionGroupId": "4"
+  },
+  {
+   "Identifier": "A012449",
+   "Index": 5,
+   "Title": "052 Bruinkool",
+   "Description": "Bruinkool",
+   "DimensionGroupId": "5"
+  },
+  {
+   "Identifier": "A012450",
+   "Index": 6,
+   "Title": "06 Ruwe aardolie en aardgas",
+   "Description": "Ruwe aardolie en aardgas",
+   "DimensionGroupId": "3"
+  },
+  {
+   "Identifier": "A012451",
+   "Index": 7,
+   "Title": "061 Ruwe aardolie en aardgascondensaat",
+   "Description": "Ruwe aardolie en aardgascondensaat",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "A012452",
+   "Index": 8,
+   "Title": "06101 Ruwe aardolie en ruwe olie uit...",
+   "Description": "Ruwe aardolie en ruwe olie uit bitumineuze mineralen",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "A012454",
+   "Index": 9,
+   "Title": "062 Aardgas; vloeibaar gemaakt of gas...",
+   "Description": "Aardgas; vloeibaar gemaakt of gasvormig",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "A012455",
+   "Index": 10,
+   "Title": "07 Metaalertsen",
+   "Description": "Metaalertsen",
+   "DimensionGroupId": "3"
+  },
+  {
+   "Identifier": "A012456",
+   "Index": 11,
+   "Title": "071 IJzererts",
+   "Description": "IJzererts",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "A012458",
+   "Index": 12,
+   "Title": "072 Non-ferrometaalertsen",
+   "Description": "Non-ferrometaalertsen",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "A012459",
+   "Index": 13,
+   "Title": "0729 Andere non-ferrometaalertsen en...",
+   "Description": "Andere non-ferrometaalertsen en concentraten daarvan",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "A012466",
+   "Index": 14,
+   "Title": "08 Andere delfstoffen",
+   "Description": "Andere delfstoffen",
+   "DimensionGroupId": "3"
+  },
+  {
+   "Identifier": "A012467",
+   "Index": 15,
+   "Title": "081 Steen, zand en klei",
+   "Description": "Steen, zand en klei",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "A012468",
+   "Index": 16,
+   "Title": "0811 Bouw- en siersteen, kalksteen, g...",
+   "Description": "Bouw- en siersteen, kalksteen, gips, krijt en leisteen",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "A012481",
+   "Index": 17,
+   "Title": "0812 Grind, zand, klei en kaolien",
+   "Description": "Grind, zand, klei en kaolien",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "A052585",
+   "Index": 18,
+   "Title": "08121000 Grind en zand",
+   "Description": "Grind en zand",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "A012482",
+   "Index": 19,
+   "Title": "081211 Natuurlijk zand",
+   "Description": "Natuurlijk zand",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "A012483",
+   "Index": 20,
+   "Title": "08121150 Kiezelzand (kwartszand of in...",
+   "Description": "Kiezelzand (kwartszand of industrieel zand)",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "A012484",
+   "Index": 21,
+   "Title": "08121190 Zand voor de bouw (excl. met...",
+   "Description": "Zand voor de bouw (excl. metaalhoudend zand van GN 26)",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "A052586",
+   "Index": 22,
+   "Title": "08121200 Grind, keistenen, vuurstenen...",
+   "Description": "Grind, keistenen, vuurstenen en rolstenen; steenslag voor de vervaardiging van beton, voor de wegenbouw en voor ander gebruik in de bouw",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "A012485",
+   "Index": 23,
+   "Title": "08121210 Grind, keistenen, vuurstenen...",
+   "Description": "Grind, keistenen, vuurstenen en rolstenen",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "A012486",
+   "Index": 24,
+   "Title": "08121230 Steenslag voor de vervaardig...",
+   "Description": "Steenslag voor de vervaardiging van beton, voor de wegenbouw en voor ander gebruik in de bouw",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "A012495",
+   "Index": 25,
+   "Title": "089 Overige delfstoffen",
+   "Description": "Overige delfstoffen",
+   "DimensionGroupId": "11"
+  },
+  {
+   "Identifier": "A012496",
+   "Index": 26,
+   "Title": "0891 Mineralen voor de chemische en k...",
+   "Description": "Mineralen voor de chemische en kunstmestindustrie",
+   "DimensionGroupId": "11"
+  },
+  {
+   "Identifier": "A012500",
+   "Index": 27,
+   "Title": "0893 Zout en zuiver natriumchloride;...",
+   "Description": "Zout en zuiver natriumchloride; zeewater",
+   "DimensionGroupId": "11"
+  },
+  {
+   "Identifier": "A012502",
+   "Index": 28,
+   "Title": "0899 Andere delfstoffen, n.e.g",
+   "Description": "Andere delfstoffen, n.e.g",
+   "DimensionGroupId": "11"
+  },
+  {
+   "Identifier": "A012507",
+   "Index": 29,
+   "Title": "C Industriële producten",
+   "Description": "Industriële producten",
+   "DimensionGroupId": "13"
+  },
+  {
+   "Identifier": "A012508",
+   "Index": 30,
+   "Title": "10 Voedingsmiddelen",
+   "Description": "Voedingsmiddelen",
+   "DimensionGroupId": "13"
+  },
+  {
+   "Identifier": "A012509",
+   "Index": 31,
+   "Title": "101 Verduurzaamd vlees en vleesproducten",
+   "Description": "Verduurzaamd vlees en vleesproducten",
+   "DimensionGroupId": "14"
+  },
+  {
+   "Identifier": "A012510",
+   "Index": 32,
+   "Title": "1011 Vlees, verwerkt en verduurzaamd",
+   "Description": "Vlees, verwerkt en verduurzaamd",
+   "DimensionGroupId": "14"
+  },
+  {
+   "Identifier": "A052587",
+   "Index": 33,
+   "Title": "10111000 Vlees van runderen en varken...",
+   "Description": "Vlees van runderen en varkens; vers of gekoeld",
+   "DimensionGroupId": "14"
+  },
+  {
+   "Identifier": "A012511",
+   "Index": 34,
+   "Title": "101111 Vlees van runderen; vers of ge...",
+   "Description": "Vlees van runderen; vers of gekoeld",
+   "DimensionGroupId": "14"
+  },
+  {
+   "Identifier": "A012514",
+   "Index": 35,
+   "Title": "101112 Vlees van varkens; vers of gek...",
+   "Description": "Vlees van varkens; vers of gekoeld",
+   "DimensionGroupId": "14"
+  },
+  {
+   "Identifier": "A012541",
+   "Index": 36,
+   "Title": "1012 Vlees van gevogelte; verwerkt en...",
+   "Description": "Vlees van gevogelte; verwerkt en verduurzaamd",
+   "DimensionGroupId": "14"
+  },
+  {
+   "Identifier": "A012560",
+   "Index": 37,
+   "Title": "1013 Producten van vlees of van vlees...",
+   "Description": "Producten van vlees of van vlees van gevogelte",
+   "DimensionGroupId": "14"
+  },
+  {
+   "Identifier": "A012580",
+   "Index": 38,
+   "Title": "102 Vis, schaaldieren en weekdieren,...",
+   "Description": "Vis, schaaldieren en weekdieren, verwerkt en verduurzaamd",
+   "DimensionGroupId": "15"
+  },
+  {
+   "Identifier": "A012616",
+   "Index": 39,
+   "Title": "103 Groenten en fruit; verwerkt en ve...",
+   "Description": "Groenten en fruit; verwerkt en verduurzaamd",
+   "DimensionGroupId": "16"
+  },
+  {
+   "Identifier": "A012617",
+   "Index": 40,
+   "Title": "1031 Aardappelen; verwerkt en verduur...",
+   "Description": "Aardappelen; verwerkt en verduurzaamd",
+   "DimensionGroupId": "16"
+  },
+  {
+   "Identifier": "A012624",
+   "Index": 41,
+   "Title": "1032 Groente- en fruitsappen",
+   "Description": "Groente- en fruitsappen",
+   "DimensionGroupId": "16"
+  },
+  {
+   "Identifier": "A012637",
+   "Index": 42,
+   "Title": "1039 Groenten en fruit, op andere wij...",
+   "Description": "Groenten en fruit, op andere wijze verwerkt en verduurzaamd",
+   "DimensionGroupId": "16"
+  },
+  {
+   "Identifier": "A012638",
+   "Index": 43,
+   "Title": "10391 Groenten, andere dan aardappele...",
+   "Description": "Groenten, andere dan aardappelen; verwerkt en verduurzaamd",
+   "DimensionGroupId": "16"
+  },
+  {
+   "Identifier": "A012669",
+   "Index": 44,
+   "Title": "104 Plantaardige en dierlijke oliën e...",
+   "Description": "Plantaardige en dierlijke oliën en vetten",
+   "DimensionGroupId": "17"
+  },
+  {
+   "Identifier": "A012670",
+   "Index": 45,
+   "Title": "1041 Oliën en vetten",
+   "Description": "Oliën en vetten",
+   "DimensionGroupId": "17"
+  },
+  {
+   "Identifier": "A012671",
+   "Index": 46,
+   "Title": "10411 Dierlijke oliën en vetten, alsm...",
+   "Description": "Dierlijke oliën en vetten, alsmede fracties daarvan, ruw",
+   "DimensionGroupId": "17"
+  },
+  {
+   "Identifier": "A012675",
+   "Index": 47,
+   "Title": "10412 Plantaardige oliën, ruw",
+   "Description": "Plantaardige oliën, ruw",
+   "DimensionGroupId": "17"
+  },
+  {
+   "Identifier": "A012687",
+   "Index": 48,
+   "Title": "10414 Perskoeken en andere vaste afva...",
+   "Description": "Perskoeken en andere vaste afvallen van plantaardige oliën en vetten; meel van oliehoudende zaden en vruchten",
+   "DimensionGroupId": "17"
+  },
+  {
+   "Identifier": "A012707",
+   "Index": 49,
+   "Title": "1042 Margarine en andere spijsvetten",
+   "Description": "Margarine en andere spijsvetten",
+   "DimensionGroupId": "17"
+  },
+  {
+   "Identifier": "A012710",
+   "Index": 50,
+   "Title": "105 Zuivelproducten",
+   "Description": "Zuivelproducten",
+   "DimensionGroupId": "18"
+  },
+  {
+   "Identifier": "A012711",
+   "Index": 51,
+   "Title": "1051 Kaas en andere zuivelproducten",
+   "Description": "Kaas en andere zuivelproducten",
+   "DimensionGroupId": "18"
+  },
+  {
+   "Identifier": "A012712",
+   "Index": 52,
+   "Title": "10511 Verwerkte vloeibare melk en room",
+   "Description": "Verwerkte vloeibare melk en room",
+   "DimensionGroupId": "18"
+  },
+  {
+   "Identifier": "A012721",
+   "Index": 53,
+   "Title": "10512 Melk in vaste vorm",
+   "Description": "Melk in vaste vorm",
+   "DimensionGroupId": "18"
+  },
+  {
+   "Identifier": "A012726",
+   "Index": 54,
+   "Title": "10513 Boter en zuivelpasta's",
+   "Description": "Boter en zuivelpasta's",
+   "DimensionGroupId": "18"
+  },
+  {
+   "Identifier": "A012730",
+   "Index": 55,
+   "Title": "10514 Kaas en wrongel",
+   "Description": "Kaas en wrongel",
+   "DimensionGroupId": "18"
+  },
+  {
+   "Identifier": "A012734",
+   "Index": 56,
+   "Title": "10515 Andere zuivelproducten",
+   "Description": "Andere zuivelproducten",
+   "DimensionGroupId": "18"
+  },
+  {
+   "Identifier": "A012735",
+   "Index": 57,
+   "Title": "105151 Melk en room, ingedikt of met...",
+   "Description": "Melk en room, ingedikt of met toegevoegde suikers of andere zoetstoffen, andere dan in vaste vorm",
+   "DimensionGroupId": "18"
+  },
+  {
+   "Identifier": "A012738",
+   "Index": 58,
+   "Title": "105152 Yoghurt en andere gegiste of a...",
+   "Description": "Yoghurt en andere gegiste of aangezuurde melk of room",
+   "DimensionGroupId": "18"
+  },
+  {
+   "Identifier": "A012748",
+   "Index": 59,
+   "Title": "1052 Consumptie-ijs",
+   "Description": "Consumptie-ijs",
+   "DimensionGroupId": "18"
+  },
+  {
+   "Identifier": "A012749",
+   "Index": 60,
+   "Title": "10521000 Consumptie-ijs (inclusief so...",
+   "Description": "Consumptie-ijs (inclusief sorbets en ijslolly's en exclusief mengsels en basisproducten voor de vervaardiging van consumptie-ijs)",
+   "DimensionGroupId": "18"
+  },
+  {
+   "Identifier": "A012750",
+   "Index": 61,
+   "Title": "106 Maalderijproducten, zetmeel en ze...",
+   "Description": "Maalderijproducten, zetmeel en zetmeelproducten",
+   "DimensionGroupId": "19"
+  },
+  {
+   "Identifier": "A012751",
+   "Index": 62,
+   "Title": "1061 Maalderijproducten",
+   "Description": "Maalderijproducten",
+   "DimensionGroupId": "19"
+  },
+  {
+   "Identifier": "A012752",
+   "Index": 63,
+   "Title": "10611 Halfwitte en volwitte rijst; ge...",
+   "Description": "Halfwitte en volwitte rijst; gedopte rijst; breukrijst",
+   "DimensionGroupId": "19"
+  },
+  {
+   "Identifier": "A012756",
+   "Index": 64,
+   "Title": "10612 Meel van granen of van groenten...",
+   "Description": "Meel van granen of van groenten, alsmede mengsels daarvan",
+   "DimensionGroupId": "19"
+  },
+  {
+   "Identifier": "A012775",
+   "Index": 65,
+   "Title": "1062 Zetmeel en zetmeelproducten",
+   "Description": "Zetmeel en zetmeelproducten",
+   "DimensionGroupId": "19"
+  },
+  {
+   "Identifier": "A052588",
+   "Index": 66,
+   "Title": "10621000 Zetmeel; glucose en glucoses...",
+   "Description": "Zetmeel; glucose en glucosestroop; fructose en fructosestroop; invertsuiker; suiker en suikerstropen, n.e.g.",
+   "DimensionGroupId": "19"
+  },
+  {
+   "Identifier": "A052589",
+   "Index": 67,
+   "Title": "10621100 Zetmeel",
+   "Description": "Zetmeel",
+   "DimensionGroupId": "19"
+  },
+  {
+   "Identifier": "A012776",
+   "Index": 68,
+   "Title": "1062111 Zetmeel",
+   "Description": "Zetmeel",
+   "DimensionGroupId": "19"
+  },
+  {
+   "Identifier": "A012785",
+   "Index": 69,
+   "Title": "106213 Glucose en glucosestroop; fruc...",
+   "Description": "Glucose en glucosestroop; fructose en fructosestroop; invertsuiker; suiker en suikerstropen, n.e.g",
+   "DimensionGroupId": "19"
+  },
+  {
+   "Identifier": "A012793",
+   "Index": 70,
+   "Title": "107 Bakkerijproducten en deegwaren",
+   "Description": "Bakkerijproducten en deegwaren",
+   "DimensionGroupId": "20"
+  },
+  {
+   "Identifier": "A012794",
+   "Index": 71,
+   "Title": "1071 Brood en vers banketbakkerswerk",
+   "Description": "Brood en vers banketbakkerswerk",
+   "DimensionGroupId": "20"
+  },
+  {
+   "Identifier": "A012797",
+   "Index": 72,
+   "Title": "1072 Beschuit, biscuit en ander houdb...",
+   "Description": "Beschuit, biscuit en ander houdbaar banketbakkerswerk",
+   "DimensionGroupId": "20"
+  },
+  {
+   "Identifier": "A012810",
+   "Index": 73,
+   "Title": "1073 Macaroni, noedels, koeskoes en d...",
+   "Description": "Macaroni, noedels, koeskoes en dergelijke deegwaren",
+   "DimensionGroupId": "20"
+  },
+  {
+   "Identifier": "A012814",
+   "Index": 74,
+   "Title": "108 Andere voedingsmiddelen",
+   "Description": "Andere voedingsmiddelen",
+   "DimensionGroupId": "21"
+  },
+  {
+   "Identifier": "A012815",
+   "Index": 75,
+   "Title": "1081 Suiker",
+   "Description": "Suiker",
+   "DimensionGroupId": "21"
+  },
+  {
+   "Identifier": "A012823",
+   "Index": 76,
+   "Title": "1082 Cacao, chocolade en suikerwerk",
+   "Description": "Cacao, chocolade en suikerwerk",
+   "DimensionGroupId": "21"
+  },
+  {
+   "Identifier": "A012824",
+   "Index": 77,
+   "Title": "10821 Cacaopasta, ook indien ontvet;...",
+   "Description": "Cacaopasta, ook indien ontvet; cacaoboter, cacaovet en cacao-olie; cacaopoeder",
+   "DimensionGroupId": "21"
+  },
+  {
+   "Identifier": "A012825",
+   "Index": 78,
+   "Title": "10821100 Cacaopasta, ook indien ontvet",
+   "Description": "Cacaopasta, ook indien ontvet",
+   "DimensionGroupId": "21"
+  },
+  {
+   "Identifier": "A012826",
+   "Index": 79,
+   "Title": "10821200 Cacaoboter, cacaovet en caca...",
+   "Description": "Cacaoboter, cacaovet en cacao-olie",
+   "DimensionGroupId": "21"
+  },
+  {
+   "Identifier": "A012829",
+   "Index": 80,
+   "Title": "10822 Chocolade en suikerwerk",
+   "Description": "Chocolade en suikerwerk",
+   "DimensionGroupId": "21"
+  },
+  {
+   "Identifier": "A012830",
+   "Index": 81,
+   "Title": "108221 Chocolade en andere bereidinge...",
+   "Description": "Chocolade en andere bereidingen voor menselijke consumptie die cacao bevatten (andere dan gezoet cacaopoeder), in grote verpakkingen",
+   "DimensionGroupId": "21"
+  },
+  {
+   "Identifier": "A012835",
+   "Index": 82,
+   "Title": "108222 Chocolade en andere bereidinge...",
+   "Description": "Chocolade en andere bereidingen voor menselijke consumptie die cacao bevatten (andere dan gezoet cacaopoeder), andere dan die in grote verpakkingen",
+   "DimensionGroupId": "21"
+  },
+  {
+   "Identifier": "A012859",
+   "Index": 83,
+   "Title": "1083 Thee en koffie",
+   "Description": "Thee en koffie",
+   "DimensionGroupId": "21"
+  },
+  {
+   "Identifier": "A012860",
+   "Index": 84,
+   "Title": "10831 Thee en koffie",
+   "Description": "Thee en koffie",
+   "DimensionGroupId": "21"
+  },
+  {
+   "Identifier": "A012861",
+   "Index": 85,
+   "Title": "108311 Cafeïnevrije koffie en gebrand...",
+   "Description": "Cafeïnevrije koffie en gebrande koffie",
+   "DimensionGroupId": "21"
+  },
+  {
+   "Identifier": "A012865",
+   "Index": 86,
+   "Title": "108312 Koffiesurrogaten; extracten, e...",
+   "Description": "Koffiesurrogaten; extracten, essences en concentraten, van koffie of van koffiesurrogaten; bolsters en schillen, van koffie",
+   "DimensionGroupId": "21"
+  },
+  {
+   "Identifier": "A012871",
+   "Index": 87,
+   "Title": "1084 Specerijen, sauzen en kruiderijen",
+   "Description": "Specerijen, sauzen en kruiderijen",
+   "DimensionGroupId": "21"
+  },
+  {
+   "Identifier": "A012880",
+   "Index": 88,
+   "Title": "1085 Bereide maaltijden en schotels",
+   "Description": "Bereide maaltijden en schotels",
+   "DimensionGroupId": "21"
+  },
+  {
+   "Identifier": "A012887",
+   "Index": 89,
+   "Title": "1086 Gehomogeniseerde voedingsprepara...",
+   "Description": "Gehomogeniseerde voedingspreparaten en dieetvoeding",
+   "DimensionGroupId": "21"
+  },
+  {
+   "Identifier": "A012893",
+   "Index": 90,
+   "Title": "1089 Andere voedingsmiddelen, n.e.g",
+   "Description": "Andere voedingsmiddelen, n.e.g",
+   "DimensionGroupId": "21"
+  },
+  {
+   "Identifier": "A012894",
+   "Index": 91,
+   "Title": "10891 Bereide soep, eiproducten, gist...",
+   "Description": "Bereide soep, eiproducten, gist en andere voedingsmiddelen; extracten en sappen van vlees, van vis of van ongewervelde waterdieren",
+   "DimensionGroupId": "21"
+  },
+  {
+   "Identifier": "A012895",
+   "Index": 92,
+   "Title": "10891100 Preparaten voor soep of voor...",
+   "Description": "Preparaten voor soep of voor bouillon; bereide soep en bouillon",
+   "DimensionGroupId": "21"
+  },
+  {
+   "Identifier": "A012896",
+   "Index": 93,
+   "Title": "108912 Vogeleieren uit de schaal en e...",
+   "Description": "Vogeleieren uit de schaal en eigeel, vers of verduurzaamd; vogeleieren in de schaal, verduurzaamd of gekookt; ovoalbumine",
+   "DimensionGroupId": "21"
+  },
+  {
+   "Identifier": "A012909",
+   "Index": 94,
+   "Title": "109 Bereide diervoeders",
+   "Description": "Bereide diervoeders",
+   "DimensionGroupId": "22"
+  },
+  {
+   "Identifier": "A012910",
+   "Index": 95,
+   "Title": "1091 Bereide veevoeders",
+   "Description": "Bereide veevoeders",
+   "DimensionGroupId": "22"
+  },
+  {
+   "Identifier": "A012917",
+   "Index": 96,
+   "Title": "1092 Bereide voeders voor huisdieren",
+   "Description": "Bereide voeders voor huisdieren",
+   "DimensionGroupId": "22"
+  },
+  {
+   "Identifier": "A012920",
+   "Index": 97,
+   "Title": "11 Dranken",
+   "Description": "Dranken",
+   "DimensionGroupId": "13"
+  },
+  {
+   "Identifier": "A012921",
+   "Index": 98,
+   "Title": "1101 Gedistilleerde alcoholhoudende d...",
+   "Description": "Gedistilleerde alcoholhoudende dranken",
+   "DimensionGroupId": "23"
+  },
+  {
+   "Identifier": "A012930",
+   "Index": 99,
+   "Title": "1102 Wijn van druiven",
+   "Description": "Wijn van druiven",
+   "DimensionGroupId": "23"
+  },
+  {
+   "Identifier": "A012944",
+   "Index": 100,
+   "Title": "1103 Cider en andere vruchtenwijnen",
+   "Description": "Cider en andere vruchtenwijnen",
+   "DimensionGroupId": "23"
+  },
+  {
+   "Identifier": "A012946",
+   "Index": 101,
+   "Title": "1104 Andere niet-gedistilleerde gegis...",
+   "Description": "Andere niet-gedistilleerde gegiste dranken",
+   "DimensionGroupId": "23"
+  },
+  {
+   "Identifier": "A012948",
+   "Index": 102,
+   "Title": "1105 Bier",
+   "Description": "Bier",
+   "DimensionGroupId": "23"
+  },
+  {
+   "Identifier": "A012952",
+   "Index": 103,
+   "Title": "1106 Mout",
+   "Description": "Mout",
+   "DimensionGroupId": "23"
+  },
+  {
+   "Identifier": "A012955",
+   "Index": 104,
+   "Title": "1107 Frisdranken, mineraalwater en an...",
+   "Description": "Frisdranken, mineraalwater en ander gebotteld water",
+   "DimensionGroupId": "23"
+  },
+  {
+   "Identifier": "A012961",
+   "Index": 105,
+   "Title": "12 Tabaksproducten",
+   "Description": "Tabaksproducten",
+   "DimensionGroupId": "13"
+  },
+  {
+   "Identifier": "A012962",
+   "Index": 106,
+   "Title": "12001 Tabaksproducten, met uitzonderi...",
+   "Description": "Tabaksproducten, met uitzondering van afvallen van tabak",
+   "DimensionGroupId": "24"
+  },
+  {
+   "Identifier": "A012963",
+   "Index": 107,
+   "Title": "120011 Sigaren, cigarillo's en sigare...",
+   "Description": "Sigaren, cigarillo's en sigaretten, van tabak of van tabakssurrogaten",
+   "DimensionGroupId": "24"
+  },
+  {
+   "Identifier": "A012965",
+   "Index": 108,
+   "Title": "12001150 Sigaretten, tabak bevattend",
+   "Description": "Sigaretten, tabak bevattend",
+   "DimensionGroupId": "24"
+  },
+  {
+   "Identifier": "A012967",
+   "Index": 109,
+   "Title": "120019 Andere tabak en tabakssurrogat...",
+   "Description": "Andere tabak en tabakssurrogaten, tot verbruik bereid; gehomogeniseerde en gereconstitueerde tabak; tabaksextracten en tabakssausen",
+   "DimensionGroupId": "24"
+  },
+  {
+   "Identifier": "A012970",
+   "Index": 110,
+   "Title": "13 Textiel",
+   "Description": "Textiel",
+   "DimensionGroupId": "13"
+  },
+  {
+   "Identifier": "A012971",
+   "Index": 111,
+   "Title": "131 Textielgarens",
+   "Description": "Textielgarens",
+   "DimensionGroupId": "25"
+  },
+  {
+   "Identifier": "A013014",
+   "Index": 112,
+   "Title": "132 Textielweefsels",
+   "Description": "Textielweefsels",
+   "DimensionGroupId": "26"
+  },
+  {
+   "Identifier": "A013051",
+   "Index": 113,
+   "Title": "133 Veredeld textiel",
+   "Description": "Veredeld textiel",
+   "DimensionGroupId": "27"
+  },
+  {
+   "Identifier": "A013098",
+   "Index": 114,
+   "Title": "139 Andere textielproducten",
+   "Description": "Andere textielproducten",
+   "DimensionGroupId": "28"
+  },
+  {
+   "Identifier": "A013099",
+   "Index": 115,
+   "Title": "1391 Brei- en haakwerk aan het stuk",
+   "Description": "Brei- en haakwerk aan het stuk",
+   "DimensionGroupId": "28"
+  },
+  {
+   "Identifier": "A013103",
+   "Index": 116,
+   "Title": "1392 Geconfectioneerde artikelen van...",
+   "Description": "Geconfectioneerde artikelen van textiel, met uitzondering van kleding",
+   "DimensionGroupId": "28"
+  },
+  {
+   "Identifier": "A013104",
+   "Index": 117,
+   "Title": "13921 Geconfectioneerde artikelen van...",
+   "Description": "Geconfectioneerde artikelen van textiel voor huishoudelijk gebruik",
+   "DimensionGroupId": "28"
+  },
+  {
+   "Identifier": "A013128",
+   "Index": 118,
+   "Title": "13922 Andere geconfectioneerde artike...",
+   "Description": "Andere geconfectioneerde artikelen van textiel",
+   "DimensionGroupId": "28"
+  },
+  {
+   "Identifier": "A013149",
+   "Index": 119,
+   "Title": "1393 Tapijten",
+   "Description": "Tapijten",
+   "DimensionGroupId": "28"
+  },
+  {
+   "Identifier": "A013155",
+   "Index": 120,
+   "Title": "1394 Koord, bindgaren, touw en netten",
+   "Description": "Koord, bindgaren, touw en netten",
+   "DimensionGroupId": "28"
+  },
+  {
+   "Identifier": "A013170",
+   "Index": 121,
+   "Title": "1395 Gebonden textielvlies en artikel...",
+   "Description": "Gebonden textielvlies en artikelen van gebonden textielvlies, met uitzondering van kleding",
+   "DimensionGroupId": "28"
+  },
+  {
+   "Identifier": "A013176",
+   "Index": 122,
+   "Title": "1396 Ander technisch en industrieel t...",
+   "Description": "Ander technisch en industrieel textiel",
+   "DimensionGroupId": "28"
+  },
+  {
+   "Identifier": "A013188",
+   "Index": 123,
+   "Title": "1399 Andere textielproducten, n.e.g",
+   "Description": "Andere textielproducten, n.e.g",
+   "DimensionGroupId": "28"
+  },
+  {
+   "Identifier": "A013200",
+   "Index": 124,
+   "Title": "14 Kleding",
+   "Description": "Kleding",
+   "DimensionGroupId": "13"
+  },
+  {
+   "Identifier": "A013201",
+   "Index": 125,
+   "Title": "141 Kleding, met uitzondering van bon...",
+   "Description": "Kleding, met uitzondering van bontkleding",
+   "DimensionGroupId": "29"
+  },
+  {
+   "Identifier": "A013202",
+   "Index": 126,
+   "Title": "1411 Kleding van leder",
+   "Description": "Kleding van leder",
+   "DimensionGroupId": "29"
+  },
+  {
+   "Identifier": "A013204",
+   "Index": 127,
+   "Title": "1412 Werk- en bedrijfskleding",
+   "Description": "Werk- en bedrijfskleding",
+   "DimensionGroupId": "29"
+  },
+  {
+   "Identifier": "A013215",
+   "Index": 128,
+   "Title": "1413 Andere bovenkleding",
+   "Description": "Andere bovenkleding",
+   "DimensionGroupId": "29"
+  },
+  {
+   "Identifier": "A013261",
+   "Index": 129,
+   "Title": "1414 Onderkleding",
+   "Description": "Onderkleding",
+   "DimensionGroupId": "29"
+  },
+  {
+   "Identifier": "A013285",
+   "Index": 130,
+   "Title": "1419 Andere kleding en kledingtoebehoren",
+   "Description": "Andere kleding en kledingtoebehoren",
+   "DimensionGroupId": "29"
+  },
+  {
+   "Identifier": "A013320",
+   "Index": 131,
+   "Title": "142 Artikelen van bont",
+   "Description": "Artikelen van bont",
+   "DimensionGroupId": "30"
+  },
+  {
+   "Identifier": "A013323",
+   "Index": 132,
+   "Title": "143 Gebreide en gehaakte kleding",
+   "Description": "Gebreide en gehaakte kleding",
+   "DimensionGroupId": "31"
+  },
+  {
+   "Identifier": "A013324",
+   "Index": 133,
+   "Title": "1431 Gebreide en gehaakte kousen en s...",
+   "Description": "Gebreide en gehaakte kousen en sokken",
+   "DimensionGroupId": "31"
+  },
+  {
+   "Identifier": "A013330",
+   "Index": 134,
+   "Title": "1439 Andere gebreide en gehaakte kleding",
+   "Description": "Andere gebreide en gehaakte kleding",
+   "DimensionGroupId": "31"
+  },
+  {
+   "Identifier": "A013341",
+   "Index": 135,
+   "Title": "15 Leder en producten van leder",
+   "Description": "Leder en producten van leder",
+   "DimensionGroupId": "13"
+  },
+  {
+   "Identifier": "A013342",
+   "Index": 136,
+   "Title": "151 Leder, gelooid of anderszins bere...",
+   "Description": "Leder, gelooid of anderszins bereid; koffers, tassen, zadel- en tuigmakerswerk; bereid en geverfd bont",
+   "DimensionGroupId": "32"
+  },
+  {
+   "Identifier": "A013343",
+   "Index": 137,
+   "Title": "1511 Leder, gelooid of anderszins ber...",
+   "Description": "Leder, gelooid of anderszins bereid; bereid en geverfd bont",
+   "DimensionGroupId": "32"
+  },
+  {
+   "Identifier": "A013359",
+   "Index": 138,
+   "Title": "1512 Koffers, tassen en dergelijke, z...",
+   "Description": "Koffers, tassen en dergelijke, zadel- en tuigmakerswerk",
+   "DimensionGroupId": "32"
+  },
+  {
+   "Identifier": "A013369",
+   "Index": 139,
+   "Title": "152 Schoeisel",
+   "Description": "Schoeisel",
+   "DimensionGroupId": "33"
+  },
+  {
+   "Identifier": "A013394",
+   "Index": 140,
+   "Title": "16 Hout, houtwaren en kurkwaren, met...",
+   "Description": "Hout, houtwaren en kurkwaren, met uitzondering van meubelen; vlechtwerk en mandenmakerswerk",
+   "DimensionGroupId": "13"
+  },
+  {
+   "Identifier": "A013395",
+   "Index": 141,
+   "Title": "161 Hout, gezaagd en geschaafd",
+   "Description": "Hout, gezaagd en geschaafd",
+   "DimensionGroupId": "34"
+  },
+  {
+   "Identifier": "A013415",
+   "Index": 142,
+   "Title": "162 Houtwaren en kurkwaren, vlechtwer...",
+   "Description": "Houtwaren en kurkwaren, vlechtwerk en mandenmakerswerk",
+   "DimensionGroupId": "35"
+  },
+  {
+   "Identifier": "A013416",
+   "Index": 143,
+   "Title": "1621 Fineerplaten en panelen op basis...",
+   "Description": "Fineerplaten en panelen op basis van hout",
+   "DimensionGroupId": "35"
+  },
+  {
+   "Identifier": "A013436",
+   "Index": 144,
+   "Title": "1622 Panelen voor parketvloeren",
+   "Description": "Panelen voor parketvloeren",
+   "DimensionGroupId": "35"
+  },
+  {
+   "Identifier": "A013439",
+   "Index": 145,
+   "Title": "1623 Ander schrijn- en timmerwerk voo...",
+   "Description": "Ander schrijn- en timmerwerk voor bouwwerken",
+   "DimensionGroupId": "35"
+  },
+  {
+   "Identifier": "A052590",
+   "Index": 146,
+   "Title": "16231000 Vensters, vensterdeuren, als...",
+   "Description": "Vensters, vensterdeuren, alsmede kozijnen daarvoor; deuren en kozijnen daarvoor, alsmede drempels, van hout; schrijn- en timmerwerk voor bouwwerken, van hout, n.e.g.",
+   "DimensionGroupId": "35"
+  },
+  {
+   "Identifier": "A013440",
+   "Index": 147,
+   "Title": "162311 Vensters, vensterdeuren, alsme...",
+   "Description": "Vensters, vensterdeuren, alsmede kozijnen daarvoor; deuren en kozijnen daarvoor, alsmede drempels, van hout",
+   "DimensionGroupId": "35"
+  },
+  {
+   "Identifier": "A013441",
+   "Index": 148,
+   "Title": "16231110 Vensters en vensterdeuren, a...",
+   "Description": "Vensters en vensterdeuren, alsmede kozijnen daarvoor, van hout",
+   "DimensionGroupId": "35"
+  },
+  {
+   "Identifier": "A013442",
+   "Index": 149,
+   "Title": "16231150 Deuren (incl. kozijnen daarv...",
+   "Description": "Deuren (incl. kozijnen daarvoor, alsmede drempels), van hout",
+   "DimensionGroupId": "35"
+  },
+  {
+   "Identifier": "A013444",
+   "Index": 150,
+   "Title": "16231900 Schrijn- en timmerwerk voor...",
+   "Description": "Schrijn- en timmerwerk voor bouwwerken, van hout, n.e.g",
+   "DimensionGroupId": "35"
+  },
+  {
+   "Identifier": "A013446",
+   "Index": 151,
+   "Title": "1624 Houten verpakkingsmiddelen",
+   "Description": "Houten verpakkingsmiddelen",
+   "DimensionGroupId": "35"
+  },
+  {
+   "Identifier": "A013452",
+   "Index": 152,
+   "Title": "1629 Andere houtwaren; kurkwaren, vle...",
+   "Description": "Andere houtwaren; kurkwaren, vlechtwerk en mandenmakerswerk",
+   "DimensionGroupId": "35"
+  },
+  {
+   "Identifier": "A013469",
+   "Index": 153,
+   "Title": "17 Papier en papierwaren",
+   "Description": "Papier en papierwaren",
+   "DimensionGroupId": "13"
+  },
+  {
+   "Identifier": "A013470",
+   "Index": 154,
+   "Title": "171 Pulp, papier en karton",
+   "Description": "Pulp, papier en karton",
+   "DimensionGroupId": "36"
+  },
+  {
+   "Identifier": "A013471",
+   "Index": 155,
+   "Title": "1711 Pulp",
+   "Description": "Pulp",
+   "DimensionGroupId": "36"
+  },
+  {
+   "Identifier": "A013476",
+   "Index": 156,
+   "Title": "1712 Papier en karton",
+   "Description": "Papier en karton",
+   "DimensionGroupId": "36"
+  },
+  {
+   "Identifier": "A052591",
+   "Index": 157,
+   "Title": "17121000 Krantenpapier, op rollen of ...",
+   "Description": "Krantenpapier, op rollen of in bladen",
+   "DimensionGroupId": "36"
+  },
+  {
+   "Identifier": "A013477",
+   "Index": 158,
+   "Title": "17121100 Krantenpapier, op rollen of...",
+   "Description": "Krantenpapier, op rollen of in bladen",
+   "DimensionGroupId": "36"
+  },
+  {
+   "Identifier": "A013534",
+   "Index": 159,
+   "Title": "172 Papier- en kartonwaren",
+   "Description": "Papier- en kartonwaren",
+   "DimensionGroupId": "37"
+  },
+  {
+   "Identifier": "A013535",
+   "Index": 160,
+   "Title": "1721 Gegolfd papier en golfkarton en...",
+   "Description": "Gegolfd papier en golfkarton en verpakkingsmateriaal van papier of van karton",
+   "DimensionGroupId": "37"
+  },
+  {
+   "Identifier": "A013543",
+   "Index": 161,
+   "Title": "1722 Huishoudelijke en sanitaire papi...",
+   "Description": "Huishoudelijke en sanitaire papierwaren",
+   "DimensionGroupId": "37"
+  },
+  {
+   "Identifier": "A013544",
+   "Index": 162,
+   "Title": "17221 Huishoudelijke en sanitaire pap...",
+   "Description": "Huishoudelijke en sanitaire papierwaren",
+   "DimensionGroupId": "37"
+  },
+  {
+   "Identifier": "A052592",
+   "Index": 163,
+   "Title": "17221200 Maandverbanden en tampons va...",
+   "Description": "Maandverbanden en tampons van papier, van cellulosewatten, enz.",
+   "DimensionGroupId": "37"
+  },
+  {
+   "Identifier": "A013550",
+   "Index": 164,
+   "Title": "17221220 Maandverbanden en tampons va...",
+   "Description": "Maandverbanden en tampons van papier, van cellulosewatten, enz",
+   "DimensionGroupId": "37"
+  },
+  {
+   "Identifier": "A013556",
+   "Index": 165,
+   "Title": "1723 Kantoorbenodigdheden van papier",
+   "Description": "Kantoorbenodigdheden van papier",
+   "DimensionGroupId": "37"
+  },
+  {
+   "Identifier": "A013573",
+   "Index": 166,
+   "Title": "1724 Behangpapier",
+   "Description": "Behangpapier",
+   "DimensionGroupId": "37"
+  },
+  {
+   "Identifier": "A013576",
+   "Index": 167,
+   "Title": "1729 Andere papier- en kartonwaren",
+   "Description": "Andere papier- en kartonwaren",
+   "DimensionGroupId": "37"
+  },
+  {
+   "Identifier": "A013589",
+   "Index": 168,
+   "Title": "18 Drukwerk, diensten i.v.m. drukwerk...",
+   "Description": "Drukwerk, diensten i.v.m. drukwerk; reproductie van opgenomen media",
+   "DimensionGroupId": "13"
+  },
+  {
+   "Identifier": "A013590",
+   "Index": 169,
+   "Title": "181 Drukwerk en diensten in verband m...",
+   "Description": "Drukwerk en diensten in verband met drukwerk",
+   "DimensionGroupId": "38"
+  },
+  {
+   "Identifier": "A013591",
+   "Index": 170,
+   "Title": "1811 Kranten",
+   "Description": "Kranten",
+   "DimensionGroupId": "38"
+  },
+  {
+   "Identifier": "A013593",
+   "Index": 171,
+   "Title": "1812 Andere drukwerk",
+   "Description": "Andere drukwerk",
+   "DimensionGroupId": "38"
+  },
+  {
+   "Identifier": "A013611",
+   "Index": 172,
+   "Title": "1813 Prepress- en premediadiensten",
+   "Description": "Prepress- en premediadiensten",
+   "DimensionGroupId": "38"
+  },
+  {
+   "Identifier": "A013615",
+   "Index": 173,
+   "Title": "1814 Bindwerk en aanverwante diensten",
+   "Description": "Bindwerk en aanverwante diensten",
+   "DimensionGroupId": "38"
+  },
+  {
+   "Identifier": "A013619",
+   "Index": 174,
+   "Title": "182 Reproductie van opgenomen media",
+   "Description": "Reproductie van opgenomen media",
+   "DimensionGroupId": "39"
+  },
+  {
+   "Identifier": "A013629",
+   "Index": 175,
+   "Title": "19 Cokes en geraffineerde aardoliepro...",
+   "Description": "Cokes en geraffineerde aardolieproducten",
+   "DimensionGroupId": "13"
+  },
+  {
+   "Identifier": "A013630",
+   "Index": 176,
+   "Title": "191 Cokesovenproducten",
+   "Description": "Cokesovenproducten",
+   "DimensionGroupId": "40"
+  },
+  {
+   "Identifier": "A013631",
+   "Index": 177,
+   "Title": "19101 Cokes en halfcokes, van steenko...",
+   "Description": "Cokes en halfcokes, van steenkool, van bruinkool of van turf; retortenkool",
+   "DimensionGroupId": "40"
+  },
+  {
+   "Identifier": "A013632",
+   "Index": 178,
+   "Title": "19102 Teer uit steenkool, uit bruinko...",
+   "Description": "Teer uit steenkool, uit bruinkool of uit turf, en andere minerale teersoorten",
+   "DimensionGroupId": "40"
+  },
+  {
+   "Identifier": "A013633",
+   "Index": 179,
+   "Title": "19103000 Pek en pekcokes",
+   "Description": "Pek en pekcokes",
+   "DimensionGroupId": "40"
+  },
+  {
+   "Identifier": "A013634",
+   "Index": 180,
+   "Title": "192 Geraffineerde aardolieproducten",
+   "Description": "Geraffineerde aardolieproducten",
+   "DimensionGroupId": "41"
+  },
+  {
+   "Identifier": "A013635",
+   "Index": 181,
+   "Title": "19202 Stookolie en benzine; smeerolie",
+   "Description": "Stookolie en benzine; smeerolie",
+   "DimensionGroupId": "41"
+  },
+  {
+   "Identifier": "A013636",
+   "Index": 182,
+   "Title": "192021 Motorbenzine, vliegtuigbenzine...",
+   "Description": "Motorbenzine, vliegtuigbenzine daaronder begrepen",
+   "DimensionGroupId": "41"
+  },
+  {
+   "Identifier": "A013637",
+   "Index": 183,
+   "Title": "192022 Lichte reactiemotorbrandstof",
+   "Description": "Lichte reactiemotorbrandstof",
+   "DimensionGroupId": "41"
+  },
+  {
+   "Identifier": "A013638",
+   "Index": 184,
+   "Title": "192023 Lichte oliën en preparaten, va...",
+   "Description": "Lichte oliën en preparaten, van aardolie, n.e.g",
+   "DimensionGroupId": "41"
+  },
+  {
+   "Identifier": "A013639",
+   "Index": 185,
+   "Title": "192024 Kerosine",
+   "Description": "Kerosine",
+   "DimensionGroupId": "41"
+  },
+  {
+   "Identifier": "A013640",
+   "Index": 186,
+   "Title": "192025 Reactiemotorbrandstof van het...",
+   "Description": "Reactiemotorbrandstof van het kerosinetype",
+   "DimensionGroupId": "41"
+  },
+  {
+   "Identifier": "A013641",
+   "Index": 187,
+   "Title": "192026 Gasoliën",
+   "Description": "Gasoliën",
+   "DimensionGroupId": "41"
+  },
+  {
+   "Identifier": "A013642",
+   "Index": 188,
+   "Title": "192027 Halfzware oliën en preparaten,...",
+   "Description": "Halfzware oliën en preparaten, van aardolie, n.e.g",
+   "DimensionGroupId": "41"
+  },
+  {
+   "Identifier": "A013643",
+   "Index": 189,
+   "Title": "192028 Stookolie, n.e.g",
+   "Description": "Stookolie, n.e.g",
+   "DimensionGroupId": "41"
+  },
+  {
+   "Identifier": "A013644",
+   "Index": 190,
+   "Title": "192029 Smeerolie en zware preparaten...",
+   "Description": "Smeerolie en zware preparaten van aardolie, n.e.g",
+   "DimensionGroupId": "41"
+  },
+  {
+   "Identifier": "A013645",
+   "Index": 191,
+   "Title": "19203 Gasvormige koolwaterstoffen, me...",
+   "Description": "Gasvormige koolwaterstoffen, met uitzondering van aardgas",
+   "DimensionGroupId": "41"
+  },
+  {
+   "Identifier": "A013646",
+   "Index": 192,
+   "Title": "19204 Andere aardolieproducten",
+   "Description": "Andere aardolieproducten",
+   "DimensionGroupId": "41"
+  },
+  {
+   "Identifier": "A013647",
+   "Index": 193,
+   "Title": "20 Chemische producten",
+   "Description": "Chemische producten",
+   "DimensionGroupId": "13"
+  },
+  {
+   "Identifier": "A013648",
+   "Index": 194,
+   "Title": "201 Chemische basisproducten, kunstme...",
+   "Description": "Chemische basisproducten, kunstmeststoffen en stikstofverbindingen, kunststoffen en synthetische rubber in primaire vormen",
+   "DimensionGroupId": "42"
+  },
+  {
+   "Identifier": "A013649",
+   "Index": 195,
+   "Title": "2011 Industriële gassen",
+   "Description": "Industriële gassen",
+   "DimensionGroupId": "42"
+  },
+  {
+   "Identifier": "A013660",
+   "Index": 196,
+   "Title": "2012 Kleurstoffen en pigmenten",
+   "Description": "Kleurstoffen en pigmenten",
+   "DimensionGroupId": "42"
+  },
+  {
+   "Identifier": "A013686",
+   "Index": 197,
+   "Title": "2013 Andere anorganische chemische ba...",
+   "Description": "Andere anorganische chemische basisproducten",
+   "DimensionGroupId": "42"
+  },
+  {
+   "Identifier": "A013687",
+   "Index": 198,
+   "Title": "20132 Chemische elementen, n.e.g.; an...",
+   "Description": "Chemische elementen, n.e.g.; anorganische zuren en verbindingen daarvan",
+   "DimensionGroupId": "42"
+  },
+  {
+   "Identifier": "A013725",
+   "Index": 199,
+   "Title": "20134 Sulfiden, sulfaten; nitraten, f...",
+   "Description": "Sulfiden, sulfaten; nitraten, fosfaten en carbonaten",
+   "DimensionGroupId": "42"
+  },
+  {
+   "Identifier": "A013752",
+   "Index": 200,
+   "Title": "20136 Andere anorganische chemische b...",
+   "Description": "Andere anorganische chemische basisproducten",
+   "DimensionGroupId": "42"
+  },
+  {
+   "Identifier": "A013766",
+   "Index": 201,
+   "Title": "2014 Andere organische chemische basi...",
+   "Description": "Andere organische chemische basisproducten",
+   "DimensionGroupId": "42"
+  },
+  {
+   "Identifier": "A013767",
+   "Index": 202,
+   "Title": "20141 Koolwaterstoffen en derivaten d...",
+   "Description": "Koolwaterstoffen en derivaten daarvan",
+   "DimensionGroupId": "42"
+  },
+  {
+   "Identifier": "A013768",
+   "Index": 203,
+   "Title": "201411 Acyclische koolwaterstoffen",
+   "Description": "Acyclische koolwaterstoffen",
+   "DimensionGroupId": "42"
+  },
+  {
+   "Identifier": "A013770",
+   "Index": 204,
+   "Title": "20141130 Ethyleen",
+   "Description": "Ethyleen",
+   "DimensionGroupId": "42"
+  },
+  {
+   "Identifier": "A013771",
+   "Index": 205,
+   "Title": "20141140 Propyleen",
+   "Description": "Propyleen",
+   "DimensionGroupId": "42"
+  },
+  {
+   "Identifier": "A013777",
+   "Index": 206,
+   "Title": "201412 Cyclische koolwaterstoffen",
+   "Description": "Cyclische koolwaterstoffen",
+   "DimensionGroupId": "42"
+  },
+  {
+   "Identifier": "A052593",
+   "Index": 207,
+   "Title": "20141220 Benzeen; styreen",
+   "Description": "Benzeen; styreen",
+   "DimensionGroupId": "42"
+  },
+  {
+   "Identifier": "A013780",
+   "Index": 208,
+   "Title": "20141223 Benzeen",
+   "Description": "Benzeen",
+   "DimensionGroupId": "42"
+  },
+  {
+   "Identifier": "A013785",
+   "Index": 209,
+   "Title": "20141250 Styreen",
+   "Description": "Styreen",
+   "DimensionGroupId": "42"
+  },
+  {
+   "Identifier": "A013805",
+   "Index": 210,
+   "Title": "20142 Alcoholen, fenolen en fenolalco...",
+   "Description": "Alcoholen, fenolen en fenolalcoholen, alsmede halogeen-, sulfo-, nitro-, en nitrosoderivaten daarvan; industriële vetalcoholen",
+   "DimensionGroupId": "42"
+  },
+  {
+   "Identifier": "A013826",
+   "Index": 211,
+   "Title": "20143 Industriële eenwaardige vetzure...",
+   "Description": "Industriële eenwaardige vetzuren; carbonzuren en derivaten daarvan",
+   "DimensionGroupId": "42"
+  },
+  {
+   "Identifier": "A013861",
+   "Index": 212,
+   "Title": "20144 Organische verbindingen met sti...",
+   "Description": "Organische verbindingen met stikstofhoudende groepen",
+   "DimensionGroupId": "42"
+  },
+  {
+   "Identifier": "A013887",
+   "Index": 213,
+   "Title": "20145 Organische zwavelverbindingen e...",
+   "Description": "Organische zwavelverbindingen en andere organische verbindingen van niet-metalen of van metalen; heterocyclische verbindingen, n.e.g",
+   "DimensionGroupId": "42"
+  },
+  {
+   "Identifier": "A013900",
+   "Index": 214,
+   "Title": "20146 Ethers, organische peroxiden, e...",
+   "Description": "Ethers, organische peroxiden, epoxiden, acetalen en hemiacetalen; andere organische verbindingen",
+   "DimensionGroupId": "42"
+  },
+  {
+   "Identifier": "A013901",
+   "Index": 215,
+   "Title": "201461 Verbindingen met aldehydegroepen",
+   "Description": "Verbindingen met aldehydegroepen",
+   "DimensionGroupId": "42"
+  },
+  {
+   "Identifier": "A013913",
+   "Index": 216,
+   "Title": "201462 Ketonen en chinonen",
+   "Description": "Ketonen en chinonen",
+   "DimensionGroupId": "42"
+  },
+  {
+   "Identifier": "A013924",
+   "Index": 217,
+   "Title": "201463 Ethers, organische peroxiden,...",
+   "Description": "Ethers, organische peroxiden, epoxiden, acetalen, hemiacetalen, alsmede derivaten daarvan",
+   "DimensionGroupId": "42"
+  },
+  {
+   "Identifier": "A013936",
+   "Index": 218,
+   "Title": "201464 Enzymen en andere organische v...",
+   "Description": "Enzymen en andere organische verbindingen, n.e.g",
+   "DimensionGroupId": "42"
+  },
+  {
+   "Identifier": "A013940",
+   "Index": 219,
+   "Title": "20147 Organische chemische basisprodu...",
+   "Description": "Organische chemische basisproducten, n.e.g",
+   "DimensionGroupId": "42"
+  },
+  {
+   "Identifier": "A013953",
+   "Index": 220,
+   "Title": "2015 Meststoffen en stikstofverbindingen",
+   "Description": "Meststoffen en stikstofverbindingen",
+   "DimensionGroupId": "42"
+  },
+  {
+   "Identifier": "A013954",
+   "Index": 221,
+   "Title": "20151 Salpeterzuur; nitreerzuren; amm...",
+   "Description": "Salpeterzuur; nitreerzuren; ammoniak",
+   "DimensionGroupId": "42"
+  },
+  {
+   "Identifier": "A013987",
+   "Index": 222,
+   "Title": "2016 Kunststoffen in primaire vormen",
+   "Description": "Kunststoffen in primaire vormen",
+   "DimensionGroupId": "42"
+  },
+  {
+   "Identifier": "A013988",
+   "Index": 223,
+   "Title": "20161 Polymeren van ethyleen, in prim...",
+   "Description": "Polymeren van ethyleen, in primaire vormen",
+   "DimensionGroupId": "42"
+  },
+  {
+   "Identifier": "A013994",
+   "Index": 224,
+   "Title": "20162 Polymeren van styreen, in prima...",
+   "Description": "Polymeren van styreen, in primaire vormen",
+   "DimensionGroupId": "42"
+  },
+  {
+   "Identifier": "A014000",
+   "Index": 225,
+   "Title": "20163 Polymeren van vinylchloride of...",
+   "Description": "Polymeren van vinylchloride of van andere halogeenolefinen, in primaire vormen",
+   "DimensionGroupId": "42"
+  },
+  {
+   "Identifier": "A014007",
+   "Index": 226,
+   "Title": "20164 Polyacetalen, andere polyethers...",
+   "Description": "Polyacetalen, andere polyethers en epoxyharsen, in primaire vormen; polycarbonaten, alkydharsen, polyallylesters en andere polyesters, in primaire vormen",
+   "DimensionGroupId": "42"
+  },
+  {
+   "Identifier": "A014019",
+   "Index": 227,
+   "Title": "20165 Andere kunststoffen in primaire...",
+   "Description": "Andere kunststoffen in primaire vormen; ionenwisselaars",
+   "DimensionGroupId": "42"
+  },
+  {
+   "Identifier": "A014020",
+   "Index": 228,
+   "Title": "201651 Polymeren van propyleen of van...",
+   "Description": "Polymeren van propyleen of van andere olefinen, in primaire vormen",
+   "DimensionGroupId": "42"
+  },
+  {
+   "Identifier": "A014023",
+   "Index": 229,
+   "Title": "201652 Polymeren van vinylacetaat of...",
+   "Description": "Polymeren van vinylacetaat of van andere vinylesters, en andere vinylpolymeren, in primaire vormen",
+   "DimensionGroupId": "42"
+  },
+  {
+   "Identifier": "A014027",
+   "Index": 230,
+   "Title": "201653 Acrylpolymeren in primaire vormen",
+   "Description": "Acrylpolymeren in primaire vormen",
+   "DimensionGroupId": "42"
+  },
+  {
+   "Identifier": "A014030",
+   "Index": 231,
+   "Title": "201654 Polyamiden in primaire vormen",
+   "Description": "Polyamiden in primaire vormen",
+   "DimensionGroupId": "42"
+  },
+  {
+   "Identifier": "A014033",
+   "Index": 232,
+   "Title": "201655 Ureumharsen, thio-ureumharsen...",
+   "Description": "Ureumharsen, thio-ureumharsen en melamineharsen, in primaire vormen",
+   "DimensionGroupId": "42"
+  },
+  {
+   "Identifier": "A014036",
+   "Index": 233,
+   "Title": "201656 Andere aminoharsen, fenolharse...",
+   "Description": "Andere aminoharsen, fenolharsen en polyurethanen, in primaire vormen",
+   "DimensionGroupId": "42"
+  },
+  {
+   "Identifier": "A014040",
+   "Index": 234,
+   "Title": "20165700 Siliconen in primaire vormen",
+   "Description": "Siliconen in primaire vormen",
+   "DimensionGroupId": "42"
+  },
+  {
+   "Identifier": "A014041",
+   "Index": 235,
+   "Title": "201659 Andere kunststoffen in primair...",
+   "Description": "Andere kunststoffen in primaire vormen, n.e.g",
+   "DimensionGroupId": "42"
+  },
+  {
+   "Identifier": "A014046",
+   "Index": 236,
+   "Title": "2017 Synthetische rubber in primaire...",
+   "Description": "Synthetische rubber in primaire vormen",
+   "DimensionGroupId": "42"
+  },
+  {
+   "Identifier": "A014049",
+   "Index": 237,
+   "Title": "202 Pesticiden en andere chemische pr...",
+   "Description": "Pesticiden en andere chemische producten ten behoeve van de landbouw",
+   "DimensionGroupId": "43"
+  },
+  {
+   "Identifier": "A014050",
+   "Index": 238,
+   "Title": "20201 Pesticiden en andere chemische...",
+   "Description": "Pesticiden en andere chemische producten ten behoeve van de landbouw",
+   "DimensionGroupId": "43"
+  },
+  {
+   "Identifier": "A014056",
+   "Index": 239,
+   "Title": "202012 Onkruidbestrijdingsmiddelen",
+   "Description": "Onkruidbestrijdingsmiddelen",
+   "DimensionGroupId": "43"
+  },
+  {
+   "Identifier": "A014069",
+   "Index": 240,
+   "Title": "202015 Schimmelwerende middelen",
+   "Description": "Schimmelwerende middelen",
+   "DimensionGroupId": "43"
+  },
+  {
+   "Identifier": "A014078",
+   "Index": 241,
+   "Title": "203 Verf, vernis en dergelijke, druki...",
+   "Description": "Verf, vernis en dergelijke, drukinkt en mastiek",
+   "DimensionGroupId": "44"
+  },
+  {
+   "Identifier": "A014079",
+   "Index": 242,
+   "Title": "20301 Verf en vernis op basis van pol...",
+   "Description": "Verf en vernis op basis van polymeren",
+   "DimensionGroupId": "44"
+  },
+  {
+   "Identifier": "A014088",
+   "Index": 243,
+   "Title": "20302 Andere verf en vernis en soortg...",
+   "Description": "Andere verf en vernis en soortgelijke producten; verf voor kunstschilders en drukinkt",
+   "DimensionGroupId": "44"
+  },
+  {
+   "Identifier": "A014104",
+   "Index": 244,
+   "Title": "203024 Drukinkt",
+   "Description": "Drukinkt",
+   "DimensionGroupId": "44"
+  },
+  {
+   "Identifier": "A014107",
+   "Index": 245,
+   "Title": "204 Zeep en wasmiddelen, poets- en re...",
+   "Description": "Zeep en wasmiddelen, poets- en reinigingsmiddelen; parfums en toiletartikelen",
+   "DimensionGroupId": "45"
+  },
+  {
+   "Identifier": "A014108",
+   "Index": 246,
+   "Title": "2041 Zeep en wasmiddelen, poets- en r...",
+   "Description": "Zeep en wasmiddelen, poets- en reinigingsmiddelen",
+   "DimensionGroupId": "45"
+  },
+  {
+   "Identifier": "A014130",
+   "Index": 247,
+   "Title": "2042 Parfums en toiletartikelen",
+   "Description": "Parfums en toiletartikelen",
+   "DimensionGroupId": "45"
+  },
+  {
+   "Identifier": "A014150",
+   "Index": 248,
+   "Title": "205 Andere chemische producten",
+   "Description": "Andere chemische producten",
+   "DimensionGroupId": "46"
+  },
+  {
+   "Identifier": "A014151",
+   "Index": 249,
+   "Title": "2051 Kruit en springstoffen",
+   "Description": "Kruit en springstoffen",
+   "DimensionGroupId": "46"
+  },
+  {
+   "Identifier": "A014159",
+   "Index": 250,
+   "Title": "2052 Lijm",
+   "Description": "Lijm",
+   "DimensionGroupId": "46"
+  },
+  {
+   "Identifier": "A014164",
+   "Index": 251,
+   "Title": "2053 Etherische oliën",
+   "Description": "Etherische oliën",
+   "DimensionGroupId": "46"
+  },
+  {
+   "Identifier": "A014170",
+   "Index": 252,
+   "Title": "2059 Andere chemische producten, n.e.g",
+   "Description": "Andere chemische producten, n.e.g",
+   "DimensionGroupId": "46"
+  },
+  {
+   "Identifier": "A014225",
+   "Index": 253,
+   "Title": "206 Synthetische of kunstmatige vezels",
+   "Description": "Synthetische of kunstmatige vezels",
+   "DimensionGroupId": "47"
+  },
+  {
+   "Identifier": "A014251",
+   "Index": 254,
+   "Title": "21 Farmaceutische basisproducten en f...",
+   "Description": "Farmaceutische basisproducten en farmaceutische bereidingen",
+   "DimensionGroupId": "13"
+  },
+  {
+   "Identifier": "A014252",
+   "Index": 255,
+   "Title": "211 Farmaceutische basisproducten",
+   "Description": "Farmaceutische basisproducten",
+   "DimensionGroupId": "48"
+  },
+  {
+   "Identifier": "A014280",
+   "Index": 256,
+   "Title": "212 Farmaceutische bereidingen",
+   "Description": "Farmaceutische bereidingen",
+   "DimensionGroupId": "49"
+  },
+  {
+   "Identifier": "A014281",
+   "Index": 257,
+   "Title": "21201 Geneesmiddelen",
+   "Description": "Geneesmiddelen",
+   "DimensionGroupId": "49"
+  },
+  {
+   "Identifier": "A014295",
+   "Index": 258,
+   "Title": "21202 Andere farmaceutische bereidingen",
+   "Description": "Andere farmaceutische bereidingen",
+   "DimensionGroupId": "49"
+  },
+  {
+   "Identifier": "A014296",
+   "Index": 259,
+   "Title": "212021 Sera en vaccins",
+   "Description": "Sera en vaccins",
+   "DimensionGroupId": "49"
+  },
+  {
+   "Identifier": "A014305",
+   "Index": 260,
+   "Title": "212024 Hechtpleisters, catgut en derg...",
+   "Description": "Hechtpleisters, catgut en dergelijke; tassen, dozen, trommels en dergelijke voor eerste hulp bij ongevallen",
+   "DimensionGroupId": "49"
+  },
+  {
+   "Identifier": "A014310",
+   "Index": 261,
+   "Title": "22 Werken van rubber of kunststof",
+   "Description": "Werken van rubber of kunststof",
+   "DimensionGroupId": "13"
+  },
+  {
+   "Identifier": "A014311",
+   "Index": 262,
+   "Title": "221 Werken van rubber",
+   "Description": "Werken van rubber",
+   "DimensionGroupId": "50"
+  },
+  {
+   "Identifier": "A014312",
+   "Index": 263,
+   "Title": "2211 Luchtbanden en binnenbanden, van...",
+   "Description": "Luchtbanden en binnenbanden, van rubber; loopvlakvernieuwing",
+   "DimensionGroupId": "50"
+  },
+  {
+   "Identifier": "A052594",
+   "Index": 264,
+   "Title": "22111000 Nieuwe luchtbanden van rubbe...",
+   "Description": "Nieuwe luchtbanden van rubber voor personenauto's",
+   "DimensionGroupId": "50"
+  },
+  {
+   "Identifier": "A014313",
+   "Index": 265,
+   "Title": "22111100 Nieuwe luchtbanden van rubbe...",
+   "Description": "Nieuwe luchtbanden van rubber voor personenauto's",
+   "DimensionGroupId": "50"
+  },
+  {
+   "Identifier": "A014326",
+   "Index": 266,
+   "Title": "2219 Andere werken van rubber",
+   "Description": "Andere werken van rubber",
+   "DimensionGroupId": "50"
+  },
+  {
+   "Identifier": "A014365",
+   "Index": 267,
+   "Title": "222 Werken van kunststof",
+   "Description": "Werken van kunststof",
+   "DimensionGroupId": "51"
+  },
+  {
+   "Identifier": "A014366",
+   "Index": 268,
+   "Title": "2221 Platen, vellen, buizen en profie...",
+   "Description": "Platen, vellen, buizen en profielen, van kunststof",
+   "DimensionGroupId": "51"
+  },
+  {
+   "Identifier": "A014367",
+   "Index": 269,
+   "Title": "22211 Monofilament waarvan de grootst...",
+   "Description": "Monofilament waarvan de grootste afmeting van de dwarsdoorsnede meer bedraagt dan 1 mm, alsmede staven en profielen, van kunststof",
+   "DimensionGroupId": "51"
+  },
+  {
+   "Identifier": "A014371",
+   "Index": 270,
+   "Title": "22212 Buizen, slangen en hulpstukken...",
+   "Description": "Buizen, slangen en hulpstukken daarvoor, van kunststof",
+   "DimensionGroupId": "51"
+  },
+  {
+   "Identifier": "A052595",
+   "Index": 271,
+   "Title": "22212100 Stijve buizen en slangen, va...",
+   "Description": "Stijve buizen en slangen, van polymeren van vinylchloride",
+   "DimensionGroupId": "51"
+  },
+  {
+   "Identifier": "A052596",
+   "Index": 272,
+   "Title": "22212150 Stijve buizen en slangen, va...",
+   "Description": "Stijve buizen en slangen, van polymeren van vinylchloride",
+   "DimensionGroupId": "51"
+  },
+  {
+   "Identifier": "A014375",
+   "Index": 273,
+   "Title": "22212157 Stijve buizen en slangen van...",
+   "Description": "Stijve buizen en slangen van polymeren van vinylchloride",
+   "DimensionGroupId": "51"
+  },
+  {
+   "Identifier": "A014381",
+   "Index": 274,
+   "Title": "22213 Platen, vellen, foliën, stroken...",
+   "Description": "Platen, vellen, foliën, stroken en strippen, van kunststof, niet gecombineerd met andere stoffen, niet op een drager",
+   "DimensionGroupId": "51"
+  },
+  {
+   "Identifier": "A014405",
+   "Index": 275,
+   "Title": "22214 Andere platen, vellen, foliën,...",
+   "Description": "Andere platen, vellen, foliën, stroken en strippen, van kunststof",
+   "DimensionGroupId": "51"
+  },
+  {
+   "Identifier": "A014416",
+   "Index": 276,
+   "Title": "2222 Verpakkingsmateriaal van kunststof",
+   "Description": "Verpakkingsmateriaal van kunststof",
+   "DimensionGroupId": "51"
+  },
+  {
+   "Identifier": "A014428",
+   "Index": 277,
+   "Title": "2223 Uitrustingsstukken voor gebouwen...",
+   "Description": "Uitrustingsstukken voor gebouwen, van kunststof",
+   "DimensionGroupId": "51"
+  },
+  {
+   "Identifier": "A052597",
+   "Index": 278,
+   "Title": "22231000 Vloerbedekking en wand- en p...",
+   "Description": "Vloerbedekking en wand- en plafondbekleding, van kunststof, op rollen of in tegels",
+   "DimensionGroupId": "51"
+  },
+  {
+   "Identifier": "A014429",
+   "Index": 279,
+   "Title": "222311 Vloerbedekking en wand- en pla...",
+   "Description": "Vloerbedekking en wand- en plafondbekleding, van kunststof, op rollen of in tegels",
+   "DimensionGroupId": "51"
+  },
+  {
+   "Identifier": "A014443",
+   "Index": 280,
+   "Title": "2229 Andere werken van kunststof",
+   "Description": "Andere werken van kunststof",
+   "DimensionGroupId": "51"
+  },
+  {
+   "Identifier": "A014479",
+   "Index": 281,
+   "Title": "23 Andere niet-metaalhoudende mineral...",
+   "Description": "Andere niet-metaalhoudende minerale producten",
+   "DimensionGroupId": "13"
+  },
+  {
+   "Identifier": "A014480",
+   "Index": 282,
+   "Title": "231 Glas en glaswerk",
+   "Description": "Glas en glaswerk",
+   "DimensionGroupId": "52"
+  },
+  {
+   "Identifier": "A014481",
+   "Index": 283,
+   "Title": "2311 Vlakglas",
+   "Description": "Vlakglas",
+   "DimensionGroupId": "52"
+  },
+  {
+   "Identifier": "A014490",
+   "Index": 284,
+   "Title": "2312 Gevormd en bewerkt vlakglas",
+   "Description": "Gevormd en bewerkt vlakglas",
+   "DimensionGroupId": "52"
+  },
+  {
+   "Identifier": "A014500",
+   "Index": 285,
+   "Title": "2313 Holglas",
+   "Description": "Holglas",
+   "DimensionGroupId": "52"
+  },
+  {
+   "Identifier": "A014519",
+   "Index": 286,
+   "Title": "2314 Glasvezels",
+   "Description": "Glasvezels",
+   "DimensionGroupId": "52"
+  },
+  {
+   "Identifier": "A014537",
+   "Index": 287,
+   "Title": "2319 Ander bewerkt glas, technisch gl...",
+   "Description": "Ander bewerkt glas, technisch glaswerk daaronder begrepen",
+   "DimensionGroupId": "52"
+  },
+  {
+   "Identifier": "A014551",
+   "Index": 288,
+   "Title": "232 Vuurvaste producten",
+   "Description": "Vuurvaste producten",
+   "DimensionGroupId": "53"
+  },
+  {
+   "Identifier": "A014564",
+   "Index": 289,
+   "Title": "233 Producten voor de bouw, van klei",
+   "Description": "Producten voor de bouw, van klei",
+   "DimensionGroupId": "54"
+  },
+  {
+   "Identifier": "A014565",
+   "Index": 290,
+   "Title": "2331 Keramische tegels en plavuizen",
+   "Description": "Keramische tegels en plavuizen",
+   "DimensionGroupId": "54"
+  },
+  {
+   "Identifier": "A014576",
+   "Index": 291,
+   "Title": "2332 Bakstenen, tegels en producten v...",
+   "Description": "Bakstenen, tegels en producten voor de bouw, van gebakken klei",
+   "DimensionGroupId": "54"
+  },
+  {
+   "Identifier": "A014582",
+   "Index": 292,
+   "Title": "234 Andere keramische producten",
+   "Description": "Andere keramische producten",
+   "DimensionGroupId": "55"
+  },
+  {
+   "Identifier": "A014583",
+   "Index": 293,
+   "Title": "2341 Huishoudelijk en sieraardewerk",
+   "Description": "Huishoudelijk en sieraardewerk",
+   "DimensionGroupId": "55"
+  },
+  {
+   "Identifier": "A014592",
+   "Index": 294,
+   "Title": "2342 Artikelen voor sanitair gebruik,...",
+   "Description": "Artikelen voor sanitair gebruik, van keramische stoffen",
+   "DimensionGroupId": "55"
+  },
+  {
+   "Identifier": "A014595",
+   "Index": 295,
+   "Title": "2343 Isolatoren en isolerende werkstu...",
+   "Description": "Isolatoren en isolerende werkstukken, van keramische stoffen",
+   "DimensionGroupId": "55"
+  },
+  {
+   "Identifier": "A014603",
+   "Index": 296,
+   "Title": "2344 Ander technisch aardewerk",
+   "Description": "Ander technisch aardewerk",
+   "DimensionGroupId": "55"
+  },
+  {
+   "Identifier": "A014607",
+   "Index": 297,
+   "Title": "2349 Andere keramische producten",
+   "Description": "Andere keramische producten",
+   "DimensionGroupId": "55"
+  },
+  {
+   "Identifier": "A014613",
+   "Index": 298,
+   "Title": "235 Cement, kalk en gips",
+   "Description": "Cement, kalk en gips",
+   "DimensionGroupId": "56"
+  },
+  {
+   "Identifier": "A014614",
+   "Index": 299,
+   "Title": "2351 Cement",
+   "Description": "Cement",
+   "DimensionGroupId": "56"
+  },
+  {
+   "Identifier": "A014618",
+   "Index": 300,
+   "Title": "2352 Kalk en gips",
+   "Description": "Kalk en gips",
+   "DimensionGroupId": "56"
+  },
+  {
+   "Identifier": "A014625",
+   "Index": 301,
+   "Title": "236 Werken van beton, cement en gips",
+   "Description": "Werken van beton, cement en gips",
+   "DimensionGroupId": "57"
+  },
+  {
+   "Identifier": "A014626",
+   "Index": 302,
+   "Title": "2361 Werken van beton voor de bouw",
+   "Description": "Werken van beton voor de bouw",
+   "DimensionGroupId": "57"
+  },
+  {
+   "Identifier": "A052598",
+   "Index": 303,
+   "Title": "23611000 Tegels en dergelijke artikel...",
+   "Description": "Tegels en dergelijke artikelen en geprefabriceerde bouwelementen van cement, beton of kunststeen",
+   "DimensionGroupId": "57"
+  },
+  {
+   "Identifier": "A052599",
+   "Index": 304,
+   "Title": "23611100 Tegels en dergelijke artikel...",
+   "Description": "Tegels en dergelijke artikelen, van cement, beton of kunststeen",
+   "DimensionGroupId": "57"
+  },
+  {
+   "Identifier": "A014628",
+   "Index": 305,
+   "Title": "23611150 Tegels en dergelijke artikel...",
+   "Description": "Tegels en dergelijke artikelen, van cement, beton of kunststeen",
+   "DimensionGroupId": "57"
+  },
+  {
+   "Identifier": "A014629",
+   "Index": 306,
+   "Title": "23611200 Geprefabriceerde bouwelement...",
+   "Description": "Geprefabriceerde bouwelementen van cement, beton of kunststeen",
+   "DimensionGroupId": "57"
+  },
+  {
+   "Identifier": "A014631",
+   "Index": 307,
+   "Title": "2362 Werken van gips voor de bouw",
+   "Description": "Werken van gips voor de bouw",
+   "DimensionGroupId": "57"
+  },
+  {
+   "Identifier": "A014634",
+   "Index": 308,
+   "Title": "2363 Stortklaar beton",
+   "Description": "Stortklaar beton",
+   "DimensionGroupId": "57"
+  },
+  {
+   "Identifier": "A014636",
+   "Index": 309,
+   "Title": "2364 Mortel",
+   "Description": "Mortel",
+   "DimensionGroupId": "57"
+  },
+  {
+   "Identifier": "A014638",
+   "Index": 310,
+   "Title": "2365 Vezelcement",
+   "Description": "Vezelcement",
+   "DimensionGroupId": "57"
+  },
+  {
+   "Identifier": "A014645",
+   "Index": 311,
+   "Title": "2369 Andere werken van beton, gips en...",
+   "Description": "Andere werken van beton, gips en cement",
+   "DimensionGroupId": "57"
+  },
+  {
+   "Identifier": "A014646",
+   "Index": 312,
+   "Title": "23691 Andere werken van beton, gips e...",
+   "Description": "Andere werken van beton, gips en cement",
+   "DimensionGroupId": "57"
+  },
+  {
+   "Identifier": "A052600",
+   "Index": 313,
+   "Title": "23691900 Buizen van cement, beton of ...",
+   "Description": "Buizen van cement, beton of kunststeen",
+   "DimensionGroupId": "57"
+  },
+  {
+   "Identifier": "A014648",
+   "Index": 314,
+   "Title": "23691930 Buizen van cement, beton of...",
+   "Description": "Buizen van cement, beton of kunststeen",
+   "DimensionGroupId": "57"
+  },
+  {
+   "Identifier": "A014650",
+   "Index": 315,
+   "Title": "237 Gehouwen, bewerkte en afgewerkte...",
+   "Description": "Gehouwen, bewerkte en afgewerkte natuursteen",
+   "DimensionGroupId": "58"
+  },
+  {
+   "Identifier": "A014657",
+   "Index": 316,
+   "Title": "239 Andere niet-metaalhoudende minera...",
+   "Description": "Andere niet-metaalhoudende minerale producten",
+   "DimensionGroupId": "59"
+  },
+  {
+   "Identifier": "A014658",
+   "Index": 317,
+   "Title": "2391 Schuur-, slijp- en polijstmiddelen",
+   "Description": "Schuur-, slijp- en polijstmiddelen",
+   "DimensionGroupId": "59"
+  },
+  {
+   "Identifier": "A014668",
+   "Index": 318,
+   "Title": "2399 Andere niet-metaalhoudende miner...",
+   "Description": "Andere niet-metaalhoudende minerale producten, n.e.g",
+   "DimensionGroupId": "59"
+  },
+  {
+   "Identifier": "A052601",
+   "Index": 319,
+   "Title": "23991000 Bitumineuze mengsels van nat...",
+   "Description": "Bitumineuze mengsels van natuurlijke of kunstmatige steen, met bitumen, natuurlijk asfalt of dergelijke stoffen als bindmiddel",
+   "DimensionGroupId": "59"
+  },
+  {
+   "Identifier": "A014674",
+   "Index": 320,
+   "Title": "239913 Bitumineuze mengsels van natuu...",
+   "Description": "Bitumineuze mengsels van natuurlijke of kunstmatige steen, met bitumen, natuurlijk asfalt of dergelijke stoffen als bindmiddel",
+   "DimensionGroupId": "59"
+  },
+  {
+   "Identifier": "A014686",
+   "Index": 321,
+   "Title": "24 Metalen in primaire vorm",
+   "Description": "Metalen in primaire vorm",
+   "DimensionGroupId": "13"
+  },
+  {
+   "Identifier": "A014687",
+   "Index": 322,
+   "Title": "241 IJzer en staal en ferrolegeringen...",
+   "Description": "IJzer en staal en ferrolegeringen, in primaire vormen",
+   "DimensionGroupId": "60"
+  },
+  {
+   "Identifier": "A014688",
+   "Index": 323,
+   "Title": "24101 Primaire materialen van ijzer e...",
+   "Description": "Primaire materialen van ijzer en staal",
+   "DimensionGroupId": "60"
+  },
+  {
+   "Identifier": "A014699",
+   "Index": 324,
+   "Title": "24102 Ruwstaal",
+   "Description": "Ruwstaal",
+   "DimensionGroupId": "60"
+  },
+  {
+   "Identifier": "A014709",
+   "Index": 325,
+   "Title": "24103 Gewalste platte producten van s...",
+   "Description": "Gewalste platte producten van staal, enkel warm gewalst",
+   "DimensionGroupId": "60"
+  },
+  {
+   "Identifier": "A014727",
+   "Index": 326,
+   "Title": "24104 Gewalste platte producten van s...",
+   "Description": "Gewalste platte producten van staal, enkel koudgewalst, met een breedte van=600 mm",
+   "DimensionGroupId": "60"
+  },
+  {
+   "Identifier": "A014733",
+   "Index": 327,
+   "Title": "24105 Gewalste platte producten van s...",
+   "Description": "Gewalste platte producten van staal, geplateerd of bekleed, en gewalste platte producten van sneldraaistaal of van siliciumstaal (transformatorstaal)",
+   "DimensionGroupId": "60"
+  },
+  {
+   "Identifier": "A014746",
+   "Index": 328,
+   "Title": "24106 Walsdraad en warm bewerkte stav...",
+   "Description": "Walsdraad en warm bewerkte staven, van staal",
+   "DimensionGroupId": "60"
+  },
+  {
+   "Identifier": "A052602",
+   "Index": 329,
+   "Title": "24106200 Warmgewalste staven voor het...",
+   "Description": "Warmgewalste staven voor het wapenen van beton",
+   "DimensionGroupId": "60"
+  },
+  {
+   "Identifier": "A014752",
+   "Index": 330,
+   "Title": "24106210 Warmgewalste staven voor het...",
+   "Description": "Warmgewalste staven voor het wapenen van beton",
+   "DimensionGroupId": "60"
+  },
+  {
+   "Identifier": "A014771",
+   "Index": 331,
+   "Title": "24107 Door warm bewerken verkregen op...",
+   "Description": "Door warm bewerken verkregen open profielen van staal, damwandprofielen van staal, en bestanddelen van spoorbanen, van staal",
+   "DimensionGroupId": "60"
+  },
+  {
+   "Identifier": "A014772",
+   "Index": 332,
+   "Title": "241071 Open profielen, enkel warm gew...",
+   "Description": "Open profielen, enkel warm gewalst, warm getrokken of warm geperst, van niet-gelegeerd staal",
+   "DimensionGroupId": "60"
+  },
+  {
+   "Identifier": "A014773",
+   "Index": 333,
+   "Title": "24107110 U-profielen met een lijfhoog...",
+   "Description": "U-profielen met een lijfhoogte van >= 80 mm (van niet-gelegeerd staal)",
+   "DimensionGroupId": "60"
+  },
+  {
+   "Identifier": "A014774",
+   "Index": 334,
+   "Title": "24107120 I-profielen met een lijfhoog...",
+   "Description": "I-profielen met een lijfhoogte van >= 80 mm (van niet-gelegeerd staal)",
+   "DimensionGroupId": "60"
+  },
+  {
+   "Identifier": "A014775",
+   "Index": 335,
+   "Title": "24107130 H-profielen met een lijfhoog...",
+   "Description": "H-profielen met een lijfhoogte van >= 80 mm (van niet-gelegeerd staal)",
+   "DimensionGroupId": "60"
+  },
+  {
+   "Identifier": "A014776",
+   "Index": 336,
+   "Title": "24107140 Andere open profielen, enkel...",
+   "Description": "Andere open profielen, enkel warm gewalst, warm getrokken of warm geperst, van niet gelegeerd staal",
+   "DimensionGroupId": "60"
+  },
+  {
+   "Identifier": "A014782",
+   "Index": 337,
+   "Title": "242 Buizen, pijpen, holle profielen e...",
+   "Description": "Buizen, pijpen, holle profielen en fittings daarvoor, van staal",
+   "DimensionGroupId": "61"
+  },
+  {
+   "Identifier": "A014814",
+   "Index": 338,
+   "Title": "243 Andere producten van de eerste ve...",
+   "Description": "Andere producten van de eerste verwerking van staal",
+   "DimensionGroupId": "62"
+  },
+  {
+   "Identifier": "A014815",
+   "Index": 339,
+   "Title": "2431 Koudgetrokken staven",
+   "Description": "Koudgetrokken staven",
+   "DimensionGroupId": "62"
+  },
+  {
+   "Identifier": "A014828",
+   "Index": 340,
+   "Title": "2432 Koudgewalst bandstaal",
+   "Description": "Koudgewalst bandstaal",
+   "DimensionGroupId": "62"
+  },
+  {
+   "Identifier": "A014829",
+   "Index": 341,
+   "Title": "24321 Koudgewalste platte producten v...",
+   "Description": "Koudgewalste platte producten van staal, niet bekleed, met een breedte van < 600 mm",
+   "DimensionGroupId": "62"
+  },
+  {
+   "Identifier": "A014841",
+   "Index": 342,
+   "Title": "24322 Koudgewalste platte producten v...",
+   "Description": "Koudgewalste platte producten van staal, geplateerd of bekleed, met een breedte van < 600 mm",
+   "DimensionGroupId": "62"
+  },
+  {
+   "Identifier": "A014848",
+   "Index": 343,
+   "Title": "2433 Producten verkregen door koudver...",
+   "Description": "Producten verkregen door koudvervormen of koudfelsen",
+   "DimensionGroupId": "62"
+  },
+  {
+   "Identifier": "A014855",
+   "Index": 344,
+   "Title": "2434 Koudgetrokken draad",
+   "Description": "Koudgetrokken draad",
+   "DimensionGroupId": "62"
+  },
+  {
+   "Identifier": "A014861",
+   "Index": 345,
+   "Title": "244 Edelmetalen en andere non-ferrome...",
+   "Description": "Edelmetalen en andere non-ferrometalen, in primaire vormen",
+   "DimensionGroupId": "63"
+  },
+  {
+   "Identifier": "A014862",
+   "Index": 346,
+   "Title": "2441 Edelmetalen",
+   "Description": "Edelmetalen",
+   "DimensionGroupId": "63"
+  },
+  {
+   "Identifier": "A014874",
+   "Index": 347,
+   "Title": "2442 Aluminium",
+   "Description": "Aluminium",
+   "DimensionGroupId": "63"
+  },
+  {
+   "Identifier": "A014875",
+   "Index": 348,
+   "Title": "24421 Ruw aluminium; aluminiumoxide",
+   "Description": "Ruw aluminium; aluminiumoxide",
+   "DimensionGroupId": "63"
+  },
+  {
+   "Identifier": "A014881",
+   "Index": 349,
+   "Title": "24422 Halffabrikaten van aluminium of...",
+   "Description": "Halffabrikaten van aluminium of van aluminiumlegeringen",
+   "DimensionGroupId": "63"
+  },
+  {
+   "Identifier": "A014893",
+   "Index": 350,
+   "Title": "2443 Lood, zink en tin",
+   "Description": "Lood, zink en tin",
+   "DimensionGroupId": "63"
+  },
+  {
+   "Identifier": "A014905",
+   "Index": 351,
+   "Title": "2444 Koper",
+   "Description": "Koper",
+   "DimensionGroupId": "63"
+  },
+  {
+   "Identifier": "A014906",
+   "Index": 352,
+   "Title": "24441 Ruw koper; kopersteen of ruwste...",
+   "Description": "Ruw koper; kopersteen of ruwsteen; cementkoper",
+   "DimensionGroupId": "63"
+  },
+  {
+   "Identifier": "A014911",
+   "Index": 353,
+   "Title": "24442 Halffabrikaten van koper of van...",
+   "Description": "Halffabrikaten van koper of van koperlegeringen",
+   "DimensionGroupId": "63"
+  },
+  {
+   "Identifier": "A014921",
+   "Index": 354,
+   "Title": "2445 Andere non-ferrometalen",
+   "Description": "Andere non-ferrometalen",
+   "DimensionGroupId": "63"
+  },
+  {
+   "Identifier": "A014938",
+   "Index": 355,
+   "Title": "245 Gietwerk van metalen",
+   "Description": "Gietwerk van metalen",
+   "DimensionGroupId": "64"
+  },
+  {
+   "Identifier": "A014939",
+   "Index": 356,
+   "Title": "2451 Gietwerk van ijzer",
+   "Description": "Gietwerk van ijzer",
+   "DimensionGroupId": "64"
+  },
+  {
+   "Identifier": "A052603",
+   "Index": 357,
+   "Title": "24511000 Gietwerk van gietijzer",
+   "Description": "Gietwerk van gietijzer  ",
+   "DimensionGroupId": "64"
+  },
+  {
+   "Identifier": "A014942",
+   "Index": 358,
+   "Title": "245112 Gietwerk van nodulair gietijzer",
+   "Description": "Gietwerk van nodulair gietijzer",
+   "DimensionGroupId": "64"
+  },
+  {
+   "Identifier": "A014956",
+   "Index": 359,
+   "Title": "2452 Gietwerk van staal",
+   "Description": "Gietwerk van staal",
+   "DimensionGroupId": "64"
+  },
+  {
+   "Identifier": "A014963",
+   "Index": 360,
+   "Title": "2453 Gietwerk van lichte metalen",
+   "Description": "Gietwerk van lichte metalen",
+   "DimensionGroupId": "64"
+  },
+  {
+   "Identifier": "A014969",
+   "Index": 361,
+   "Title": "2454 Gietwerk van andere non-ferromet...",
+   "Description": "Gietwerk van andere non-ferrometalen",
+   "DimensionGroupId": "64"
+  },
+  {
+   "Identifier": "A014975",
+   "Index": 362,
+   "Title": "25 Werken van metaal, andere dan mach...",
+   "Description": "Werken van metaal, andere dan machines, toestellen en werktuigen",
+   "DimensionGroupId": "13"
+  },
+  {
+   "Identifier": "A014976",
+   "Index": 363,
+   "Title": "251 Metalen constructiewerken",
+   "Description": "Metalen constructiewerken",
+   "DimensionGroupId": "65"
+  },
+  {
+   "Identifier": "A014977",
+   "Index": 364,
+   "Title": "2511 Metalen constructiewerken en del...",
+   "Description": "Metalen constructiewerken en delen daarvan",
+   "DimensionGroupId": "65"
+  },
+  {
+   "Identifier": "A014988",
+   "Index": 365,
+   "Title": "2512 Deuren en ramen, van metaal",
+   "Description": "Deuren en ramen, van metaal",
+   "DimensionGroupId": "65"
+  },
+  {
+   "Identifier": "A014991",
+   "Index": 366,
+   "Title": "252 Tanks, reservoirs en verpakkingsm...",
+   "Description": "Tanks, reservoirs en verpakkingsmiddelen, van metaal",
+   "DimensionGroupId": "66"
+  },
+  {
+   "Identifier": "A014992",
+   "Index": 367,
+   "Title": "2521 Radiatoren en ketels, voor centr...",
+   "Description": "Radiatoren en ketels, voor centrale verwarming",
+   "DimensionGroupId": "66"
+  },
+  {
+   "Identifier": "A014996",
+   "Index": 368,
+   "Title": "2529 Andere tanks, reservoirs en verp...",
+   "Description": "Andere tanks, reservoirs en verpakkingsmiddelen, van metaal",
+   "DimensionGroupId": "66"
+  },
+  {
+   "Identifier": "A015003",
+   "Index": 369,
+   "Title": "253 Stoomketels (stoomgeneratoren), a...",
+   "Description": "Stoomketels (stoomgeneratoren), andere dan heetwaterketels voor centrale verwarming",
+   "DimensionGroupId": "67"
+  },
+  {
+   "Identifier": "A015020",
+   "Index": 370,
+   "Title": "255 Smeden, persen, stampen en profie...",
+   "Description": "Smeden, persen, stampen en profielwalsen van metaal; poedermetallurgie",
+   "DimensionGroupId": "68"
+  },
+  {
+   "Identifier": "A015047",
+   "Index": 371,
+   "Title": "256 Oppervlaktebehandelde en verspane...",
+   "Description": "Oppervlaktebehandelde en verspanend bewerkte metalen",
+   "DimensionGroupId": "69"
+  },
+  {
+   "Identifier": "A015048",
+   "Index": 372,
+   "Title": "2561 Oppervlaktebehandelde metalen",
+   "Description": "Oppervlaktebehandelde metalen",
+   "DimensionGroupId": "69"
+  },
+  {
+   "Identifier": "A015060",
+   "Index": 373,
+   "Title": "2562 Verspanend bewerkte metalen",
+   "Description": "Verspanend bewerkte metalen",
+   "DimensionGroupId": "69"
+  },
+  {
+   "Identifier": "A015069",
+   "Index": 374,
+   "Title": "257 Messenmakerswerk, gereedschap en...",
+   "Description": "Messenmakerswerk, gereedschap en ijzerwaren",
+   "DimensionGroupId": "70"
+  },
+  {
+   "Identifier": "A015070",
+   "Index": 375,
+   "Title": "2571 Messenmakerswerk",
+   "Description": "Messenmakerswerk",
+   "DimensionGroupId": "70"
+  },
+  {
+   "Identifier": "A015086",
+   "Index": 376,
+   "Title": "2572 Hang- en sluitwerk",
+   "Description": "Hang- en sluitwerk",
+   "DimensionGroupId": "70"
+  },
+  {
+   "Identifier": "A015104",
+   "Index": 377,
+   "Title": "2573 Gereedschap",
+   "Description": "Gereedschap",
+   "DimensionGroupId": "70"
+  },
+  {
+   "Identifier": "A015190",
+   "Index": 378,
+   "Title": "259 Andere werken van metaal",
+   "Description": "Andere werken van metaal",
+   "DimensionGroupId": "71"
+  },
+  {
+   "Identifier": "A015191",
+   "Index": 379,
+   "Title": "2591 Stalen vaten en dergelijke",
+   "Description": "Stalen vaten en dergelijke",
+   "DimensionGroupId": "71"
+  },
+  {
+   "Identifier": "A015194",
+   "Index": 380,
+   "Title": "2592 Verpakkingsmiddelen van licht me...",
+   "Description": "Verpakkingsmiddelen van licht metaal",
+   "DimensionGroupId": "71"
+  },
+  {
+   "Identifier": "A015207",
+   "Index": 381,
+   "Title": "2593 Werken van draad; kettingen en v...",
+   "Description": "Werken van draad; kettingen en veren",
+   "DimensionGroupId": "71"
+  },
+  {
+   "Identifier": "A015248",
+   "Index": 382,
+   "Title": "2594 Bouten, schroeven, moeren en and...",
+   "Description": "Bouten, schroeven, moeren en andere bevestigingsmiddelen",
+   "DimensionGroupId": "71"
+  },
+  {
+   "Identifier": "A015275",
+   "Index": 383,
+   "Title": "2599 Andere werken van metaal, n.e.g",
+   "Description": "Andere werken van metaal, n.e.g",
+   "DimensionGroupId": "71"
+  },
+  {
+   "Identifier": "A015276",
+   "Index": 384,
+   "Title": "25991 Werken van metaal voor gebruik...",
+   "Description": "Werken van metaal voor gebruik in badkamers of in keukens",
+   "DimensionGroupId": "71"
+  },
+  {
+   "Identifier": "A015295",
+   "Index": 385,
+   "Title": "25992 Andere werken van onedel metaal",
+   "Description": "Andere werken van onedel metaal",
+   "DimensionGroupId": "71"
+  },
+  {
+   "Identifier": "A015343",
+   "Index": 386,
+   "Title": "26 Informaticaproducten, elektronisch...",
+   "Description": "Informaticaproducten, elektronische en optische producten",
+   "DimensionGroupId": "13"
+  },
+  {
+   "Identifier": "A015344",
+   "Index": 387,
+   "Title": "261 Elektronische onderdelen en print...",
+   "Description": "Elektronische onderdelen en printplaten",
+   "DimensionGroupId": "72"
+  },
+  {
+   "Identifier": "A015345",
+   "Index": 388,
+   "Title": "2611 Elektronische onderdelen",
+   "Description": "Elektronische onderdelen",
+   "DimensionGroupId": "72"
+  },
+  {
+   "Identifier": "A015355",
+   "Index": 389,
+   "Title": "26113 Elektronische geïntegreerde sch...",
+   "Description": "Elektronische geïntegreerde schakelingen",
+   "DimensionGroupId": "72"
+  },
+  {
+   "Identifier": "A015371",
+   "Index": 390,
+   "Title": "2612 Elektronische printplaten",
+   "Description": "Elektronische printplaten",
+   "DimensionGroupId": "72"
+  },
+  {
+   "Identifier": "A015377",
+   "Index": 391,
+   "Title": "262 Computers en randapparatuur",
+   "Description": "Computers en randapparatuur",
+   "DimensionGroupId": "73"
+  },
+  {
+   "Identifier": "A015392",
+   "Index": 392,
+   "Title": "263 Communicatieapparatuur",
+   "Description": "Communicatieapparatuur",
+   "DimensionGroupId": "74"
+  },
+  {
+   "Identifier": "A015393",
+   "Index": 393,
+   "Title": "26301 Zendtoestellen voor radio of vo...",
+   "Description": "Zendtoestellen voor radio of voor televisie; televisiecamera's",
+   "DimensionGroupId": "74"
+  },
+  {
+   "Identifier": "A015396",
+   "Index": 394,
+   "Title": "26301300 Televisiecamera's",
+   "Description": "Televisiecamera's",
+   "DimensionGroupId": "74"
+  },
+  {
+   "Identifier": "A015397",
+   "Index": 395,
+   "Title": "26302 Elektrische toestellen voor lij...",
+   "Description": "Elektrische toestellen voor lijntelefonie of voor lijntelegrafie; videofoontoestellen",
+   "DimensionGroupId": "74"
+  },
+  {
+   "Identifier": "A015415",
+   "Index": 396,
+   "Title": "264 Consumentenelektronica",
+   "Description": "Consumentenelektronica",
+   "DimensionGroupId": "75"
+  },
+  {
+   "Identifier": "A015420",
+   "Index": 397,
+   "Title": "26402 Ontvangtoestellen voor televisi...",
+   "Description": "Ontvangtoestellen voor televisie, ook indien met ingebouwd ontvangtoestel voor radio-omroep of toestel voor het opnemen of het weergeven van geluid of van beelden",
+   "DimensionGroupId": "75"
+  },
+  {
+   "Identifier": "A015446",
+   "Index": 398,
+   "Title": "265 Meet-, controle- en navigatie-ins...",
+   "Description": "Meet-, controle- en navigatie-instrumenten en -apparatuur; uurwerken",
+   "DimensionGroupId": "76"
+  },
+  {
+   "Identifier": "A015447",
+   "Index": 399,
+   "Title": "2651 Meet-, controle- en navigatie-in...",
+   "Description": "Meet-, controle- en navigatie-instrumenten en -apparatuur",
+   "DimensionGroupId": "76"
+  },
+  {
+   "Identifier": "A015529",
+   "Index": 400,
+   "Title": "2652 Klokken en horloges",
+   "Description": "Klokken en horloges",
+   "DimensionGroupId": "76"
+  },
+  {
+   "Identifier": "A015546",
+   "Index": 401,
+   "Title": "266 Bestralingsapparatuur en elektrom...",
+   "Description": "Bestralingsapparatuur en elektromedische en elektrotherapeutische apparatuur",
+   "DimensionGroupId": "77"
+  },
+  {
+   "Identifier": "A015558",
+   "Index": 402,
+   "Title": "267 Optische instrumenten en foto- en...",
+   "Description": "Optische instrumenten en foto- en filmapparatuur",
+   "DimensionGroupId": "78"
+  },
+  {
+   "Identifier": "A015559",
+   "Index": 403,
+   "Title": "26701 Foto- en filmapparatuur, alsmed...",
+   "Description": "Foto- en filmapparatuur, alsmede delen daarvan",
+   "DimensionGroupId": "78"
+  },
+  {
+   "Identifier": "A015571",
+   "Index": 404,
+   "Title": "26702 Andere optische instrumenten en...",
+   "Description": "Andere optische instrumenten en delen daarvan",
+   "DimensionGroupId": "78"
+  },
+  {
+   "Identifier": "A015585",
+   "Index": 405,
+   "Title": "268 Magnetische en optische dragers",
+   "Description": "Magnetische en optische dragers",
+   "DimensionGroupId": "79"
+  },
+  {
+   "Identifier": "A015590",
+   "Index": 406,
+   "Title": "27 Elektrische apparatuur",
+   "Description": "Elektrische apparatuur",
+   "DimensionGroupId": "13"
+  },
+  {
+   "Identifier": "A015591",
+   "Index": 407,
+   "Title": "271 Elektromotoren, elektrische gener...",
+   "Description": "Elektromotoren, elektrische generatoren, elektrische transformatoren en schakel- en verdeelinrichtingen voor elektrische stroom",
+   "DimensionGroupId": "80"
+  },
+  {
+   "Identifier": "A015592",
+   "Index": 408,
+   "Title": "2711 Elektromotoren, elektrische gene...",
+   "Description": "Elektromotoren, elektrische generatoren en elektrische transformatoren",
+   "DimensionGroupId": "80"
+  },
+  {
+   "Identifier": "A015646",
+   "Index": 409,
+   "Title": "2712 Schakel- en verdeelinrichtingen...",
+   "Description": "Schakel- en verdeelinrichtingen voor elektrische stroom",
+   "DimensionGroupId": "80"
+  },
+  {
+   "Identifier": "A015670",
+   "Index": 410,
+   "Title": "272 Batterijen en accumulatoren",
+   "Description": "Batterijen en accumulatoren",
+   "DimensionGroupId": "81"
+  },
+  {
+   "Identifier": "A015679",
+   "Index": 411,
+   "Title": "273 Kabels en schakelaars, stekkers,...",
+   "Description": "Kabels en schakelaars, stekkers, stopcontacten en dergelijke",
+   "DimensionGroupId": "82"
+  },
+  {
+   "Identifier": "A015680",
+   "Index": 412,
+   "Title": "2731 Optischevezelkabel",
+   "Description": "Optischevezelkabel",
+   "DimensionGroupId": "82"
+  },
+  {
+   "Identifier": "A015683",
+   "Index": 413,
+   "Title": "2732 Ander draad en andere kabels voo...",
+   "Description": "Ander draad en andere kabels voor elektronisch en elektrisch gebruik",
+   "DimensionGroupId": "82"
+  },
+  {
+   "Identifier": "A015691",
+   "Index": 414,
+   "Title": "2733 Schakelaars, stekkers, stopconta...",
+   "Description": "Schakelaars, stekkers, stopcontacten en dergelijke",
+   "DimensionGroupId": "82"
+  },
+  {
+   "Identifier": "A015702",
+   "Index": 415,
+   "Title": "274 Elektrische verlichtingsbenodigdh...",
+   "Description": "Elektrische verlichtingsbenodigdheden",
+   "DimensionGroupId": "83"
+  },
+  {
+   "Identifier": "A015727",
+   "Index": 416,
+   "Title": "275 Huishoudapparaten",
+   "Description": "Huishoudapparaten",
+   "DimensionGroupId": "84"
+  },
+  {
+   "Identifier": "A015728",
+   "Index": 417,
+   "Title": "2751 Elektrische huishoudapparaten",
+   "Description": "Elektrische huishoudapparaten",
+   "DimensionGroupId": "84"
+  },
+  {
+   "Identifier": "A015729",
+   "Index": 418,
+   "Title": "27511 Koelkasten en vrieskasten; wasm...",
+   "Description": "Koelkasten en vrieskasten; wasmachines; elektrisch verwarmde dekens; ventilatoren",
+   "DimensionGroupId": "84"
+  },
+  {
+   "Identifier": "A015740",
+   "Index": 419,
+   "Title": "27512 Andere elektrische huishoudappa...",
+   "Description": "Andere elektrische huishoudapparaten, n.e.g",
+   "DimensionGroupId": "84"
+  },
+  {
+   "Identifier": "A015772",
+   "Index": 420,
+   "Title": "27513 Delen van elektrische huishouda...",
+   "Description": "Delen van elektrische huishoudapparaten",
+   "DimensionGroupId": "84"
+  },
+  {
+   "Identifier": "A015777",
+   "Index": 421,
+   "Title": "2752 Niet-elektrische huishoudapparaten",
+   "Description": "Niet-elektrische huishoudapparaten",
+   "DimensionGroupId": "84"
+  },
+  {
+   "Identifier": "A015778",
+   "Index": 422,
+   "Title": "27521 Kook- en verwarmingstoestellen...",
+   "Description": "Kook- en verwarmingstoestellen voor huishoudelijk gebruik, niet elektrisch",
+   "DimensionGroupId": "84"
+  },
+  {
+   "Identifier": "A015789",
+   "Index": 423,
+   "Title": "27522000 Delen van kachels, keukenfor...",
+   "Description": "Delen van kachels, keukenfornuizen, bordenwarmers en dergelijke niet-elektrische huishoudapparaten",
+   "DimensionGroupId": "84"
+  },
+  {
+   "Identifier": "A015790",
+   "Index": 424,
+   "Title": "279 Andere elektrische apparatuur",
+   "Description": "Andere elektrische apparatuur",
+   "DimensionGroupId": "85"
+  },
+  {
+   "Identifier": "A015801",
+   "Index": 425,
+   "Title": "27903 Elektrische machines voor het s...",
+   "Description": "Elektrische machines voor het solderen of voor het lassen; machines, apparaten en toestellen voor het oppervlakteharden of voor het warm verspuiten",
+   "DimensionGroupId": "85"
+  },
+  {
+   "Identifier": "A015835",
+   "Index": 426,
+   "Title": "28 Machines, apparaten en werktuigen,...",
+   "Description": "Machines, apparaten en werktuigen, n.e.g",
+   "DimensionGroupId": "13"
+  },
+  {
+   "Identifier": "A015836",
+   "Index": 427,
+   "Title": "281 Machines en apparaten voor algeme...",
+   "Description": "Machines en apparaten voor algemeen gebruik",
+   "DimensionGroupId": "86"
+  },
+  {
+   "Identifier": "A015837",
+   "Index": 428,
+   "Title": "2811 Motoren en turbines, met uitzond...",
+   "Description": "Motoren en turbines, met uitzondering van motoren voor luchtvaartuigen, motorvoertuigen en fietsen",
+   "DimensionGroupId": "86"
+  },
+  {
+   "Identifier": "A015864",
+   "Index": 429,
+   "Title": "2812 Hydraulische en pneumatische app...",
+   "Description": "Hydraulische en pneumatische apparatuur",
+   "DimensionGroupId": "86"
+  },
+  {
+   "Identifier": "A015879",
+   "Index": 430,
+   "Title": "2813 Andere pompen en compressoren",
+   "Description": "Andere pompen en compressoren",
+   "DimensionGroupId": "86"
+  },
+  {
+   "Identifier": "A015921",
+   "Index": 431,
+   "Title": "2814 Overige kranen en dergelijke art...",
+   "Description": "Overige kranen en dergelijke artikelen",
+   "DimensionGroupId": "86"
+  },
+  {
+   "Identifier": "A015944",
+   "Index": 432,
+   "Title": "2815 Lagers, getande overbrengingen e...",
+   "Description": "Lagers, getande overbrengingen en drijfwerkelementen",
+   "DimensionGroupId": "86"
+  },
+  {
+   "Identifier": "A015973",
+   "Index": 433,
+   "Title": "282 Andere machines en apparaten voor...",
+   "Description": "Andere machines en apparaten voor algemeen gebruik",
+   "DimensionGroupId": "87"
+  },
+  {
+   "Identifier": "A015974",
+   "Index": 434,
+   "Title": "2821 Ovens en branders",
+   "Description": "Ovens en branders",
+   "DimensionGroupId": "87"
+  },
+  {
+   "Identifier": "A015989",
+   "Index": 435,
+   "Title": "2822 Hef- en hijsmachines en -toestel...",
+   "Description": "Hef- en hijsmachines en -toestellen; machines en toestellen voor het hanteren van goederen",
+   "DimensionGroupId": "87"
+  },
+  {
+   "Identifier": "A016031",
+   "Index": 436,
+   "Title": "2823 Kantoormachines en -toestellen (...",
+   "Description": "Kantoormachines en -toestellen (met uitzondering van computers en randapparatuur)",
+   "DimensionGroupId": "87"
+  },
+  {
+   "Identifier": "A016041",
+   "Index": 437,
+   "Title": "2824 Mechanisch aangedreven handgeree...",
+   "Description": "Mechanisch aangedreven handgereedschap",
+   "DimensionGroupId": "87"
+  },
+  {
+   "Identifier": "A016042",
+   "Index": 438,
+   "Title": "28241 Elektromechanisch handgereedsch...",
+   "Description": "Elektromechanisch handgereedschap; ander draagbaar mechanisch aangedreven handgereedschap",
+   "DimensionGroupId": "87"
+  },
+  {
+   "Identifier": "A016059",
+   "Index": 439,
+   "Title": "28242 Delen van mechanisch aangedreve...",
+   "Description": "Delen van mechanisch aangedreven handgereedschap",
+   "DimensionGroupId": "87"
+  },
+  {
+   "Identifier": "A016062",
+   "Index": 440,
+   "Title": "2825 Machines en apparaten voor de ko...",
+   "Description": "Machines en apparaten voor de koeltechniek en voor klimaatregeling, voor niet-huishoudelijk gebruik",
+   "DimensionGroupId": "87"
+  },
+  {
+   "Identifier": "A016084",
+   "Index": 441,
+   "Title": "28253 Delen van machines, apparaten e...",
+   "Description": "Delen van machines, apparaten en toestellen voor de koel- en vriestechniek en van warmtepompen",
+   "DimensionGroupId": "87"
+  },
+  {
+   "Identifier": "A016090",
+   "Index": 442,
+   "Title": "2829 Andere machines en apparaten voo...",
+   "Description": "Andere machines en apparaten voor algemeen gebruik, n.e.g",
+   "DimensionGroupId": "87"
+  },
+  {
+   "Identifier": "A016136",
+   "Index": 443,
+   "Title": "283 Machines en werktuigen voor de la...",
+   "Description": "Machines en werktuigen voor de landbouw en de bosbouw",
+   "DimensionGroupId": "88"
+  },
+  {
+   "Identifier": "A016144",
+   "Index": 444,
+   "Title": "28303 Machines en werktuigen voor bod...",
+   "Description": "Machines en werktuigen voor bodembewerking",
+   "DimensionGroupId": "88"
+  },
+  {
+   "Identifier": "A016163",
+   "Index": 445,
+   "Title": "28305 Machines en toestellen voor het...",
+   "Description": "Machines en toestellen voor het oogsten",
+   "DimensionGroupId": "88"
+  },
+  {
+   "Identifier": "A016183",
+   "Index": 446,
+   "Title": "28306 Mechanische toestellen voor het...",
+   "Description": "Mechanische toestellen voor het spuiten, verspreiden of verstuiven van vloeistoffen of van poeder, voor de land- of tuinbouw",
+   "DimensionGroupId": "88"
+  },
+  {
+   "Identifier": "A016188",
+   "Index": 447,
+   "Title": "28307 Aanhangwagens en opleggers voor...",
+   "Description": "Aanhangwagens en opleggers voor landbouwdoeleinden, zelfladend of zelflossend",
+   "DimensionGroupId": "88"
+  },
+  {
+   "Identifier": "A016204",
+   "Index": 448,
+   "Title": "284 Machines voor het vormen van meta...",
+   "Description": "Machines voor het vormen van metaal en gereedschapswerktuigen",
+   "DimensionGroupId": "89"
+  },
+  {
+   "Identifier": "A016205",
+   "Index": 449,
+   "Title": "2841 Machines voor het vormen van metaal",
+   "Description": "Machines voor het vormen van metaal",
+   "DimensionGroupId": "89"
+  },
+  {
+   "Identifier": "A016267",
+   "Index": 450,
+   "Title": "2849 Andere gereedschapswerktuigen",
+   "Description": "Andere gereedschapswerktuigen",
+   "DimensionGroupId": "89"
+  },
+  {
+   "Identifier": "A016268",
+   "Index": 451,
+   "Title": "28491 Gereedschapswerktuigen voor het...",
+   "Description": "Gereedschapswerktuigen voor het bewerken van steen, van hout en van dergelijke harde stoffen",
+   "DimensionGroupId": "89"
+  },
+  {
+   "Identifier": "A016285",
+   "Index": 452,
+   "Title": "28492 Gereedschaphouders",
+   "Description": "Gereedschaphouders",
+   "DimensionGroupId": "89"
+  },
+  {
+   "Identifier": "A016297",
+   "Index": 453,
+   "Title": "289 Andere machines, apparaten en wer...",
+   "Description": "Andere machines, apparaten en werktuigen voor specifiek gebruik",
+   "DimensionGroupId": "90"
+  },
+  {
+   "Identifier": "A016298",
+   "Index": 454,
+   "Title": "2891 Machines en toestellen voor ijze...",
+   "Description": "Machines en toestellen voor ijzer- en staalfabrieken",
+   "DimensionGroupId": "90"
+  },
+  {
+   "Identifier": "A016305",
+   "Index": 455,
+   "Title": "2892 Machines en toestellen voor de w...",
+   "Description": "Machines en toestellen voor de winning van delfstoffen en voor de bouwnijverheid",
+   "DimensionGroupId": "90"
+  },
+  {
+   "Identifier": "A016335",
+   "Index": 456,
+   "Title": "2893 Machines en toestellen voor de v...",
+   "Description": "Machines en toestellen voor de vervaardiging van voedings- en genotmiddelen",
+   "DimensionGroupId": "90"
+  },
+  {
+   "Identifier": "A016359",
+   "Index": 457,
+   "Title": "2894 Machines en toestellen voor de v...",
+   "Description": "Machines en toestellen voor de vervaardiging van textiel, kleding en leder",
+   "DimensionGroupId": "90"
+  },
+  {
+   "Identifier": "A016394",
+   "Index": 458,
+   "Title": "2895 Machines en toestellen voor de v...",
+   "Description": "Machines en toestellen voor de vervaardiging van papier of van karton",
+   "DimensionGroupId": "90"
+  },
+  {
+   "Identifier": "A016409",
+   "Index": 459,
+   "Title": "2896 Machines en toestellen voor de k...",
+   "Description": "Machines en toestellen voor de kunststof- en rubberindustrie",
+   "DimensionGroupId": "90"
+  },
+  {
+   "Identifier": "A016424",
+   "Index": 460,
+   "Title": "2899 Andere machines, apparaten en we...",
+   "Description": "Andere machines, apparaten en werktuigen voor specifiek gebruik, n.e.g",
+   "DimensionGroupId": "90"
+  },
+  {
+   "Identifier": "A016464",
+   "Index": 461,
+   "Title": "29 Auto's, aanhangwagens en opleggers",
+   "Description": "Auto's, aanhangwagens en opleggers",
+   "DimensionGroupId": "13"
+  },
+  {
+   "Identifier": "A016465",
+   "Index": 462,
+   "Title": "291 Auto's",
+   "Description": "Auto's",
+   "DimensionGroupId": "91"
+  },
+  {
+   "Identifier": "A016466",
+   "Index": 463,
+   "Title": "29101 Zuigermotoren van de soort gebr...",
+   "Description": "Zuigermotoren van de soort gebruikt voor auto's en motorfietsen",
+   "DimensionGroupId": "91"
+  },
+  {
+   "Identifier": "A016480",
+   "Index": 464,
+   "Title": "29104 Auto's voor goederenvervoer",
+   "Description": "Auto's voor goederenvervoer",
+   "DimensionGroupId": "91"
+  },
+  {
+   "Identifier": "A016492",
+   "Index": 465,
+   "Title": "292 Carrosserieën voor auto's; aanhan...",
+   "Description": "Carrosserieën voor auto's; aanhangwagens en opleggers",
+   "DimensionGroupId": "92"
+  },
+  {
+   "Identifier": "A016493",
+   "Index": 466,
+   "Title": "29201 Carrosserieën voor auto's",
+   "Description": "Carrosserieën voor auto's",
+   "DimensionGroupId": "92"
+  },
+  {
+   "Identifier": "A016496",
+   "Index": 467,
+   "Title": "29202 Aanhangwagens en opleggers; con...",
+   "Description": "Aanhangwagens en opleggers; containers en dergelijke laadkisten",
+   "DimensionGroupId": "92"
+  },
+  {
+   "Identifier": "A016504",
+   "Index": 468,
+   "Title": "29203 Delen van aanhangwagens, oplegg...",
+   "Description": "Delen van aanhangwagens, opleggers en andere voertuigen zonder eigen beweegkracht",
+   "DimensionGroupId": "92"
+  },
+  {
+   "Identifier": "A016509",
+   "Index": 469,
+   "Title": "293 Delen en toebehoren van auto's",
+   "Description": "Delen en toebehoren van auto's",
+   "DimensionGroupId": "93"
+  },
+  {
+   "Identifier": "A016510",
+   "Index": 470,
+   "Title": "2931 Elektrische en elektronische ben...",
+   "Description": "Elektrische en elektronische benodigdheden voor auto's",
+   "DimensionGroupId": "93"
+  },
+  {
+   "Identifier": "A016524",
+   "Index": 471,
+   "Title": "2932 Andere delen en toebehoren van a...",
+   "Description": "Andere delen en toebehoren van auto's",
+   "DimensionGroupId": "93"
+  },
+  {
+   "Identifier": "A016540",
+   "Index": 472,
+   "Title": "30 Andere transportmiddelen",
+   "Description": "Andere transportmiddelen",
+   "DimensionGroupId": "13"
+  },
+  {
+   "Identifier": "A016541",
+   "Index": 473,
+   "Title": "301 Schepen",
+   "Description": "Schepen",
+   "DimensionGroupId": "94"
+  },
+  {
+   "Identifier": "A016542",
+   "Index": 474,
+   "Title": "3011 Schepen en drijvend materieel",
+   "Description": "Schepen en drijvend materieel",
+   "DimensionGroupId": "94"
+  },
+  {
+   "Identifier": "A016565",
+   "Index": 475,
+   "Title": "3012 Plezier- en sportvaartuigen",
+   "Description": "Plezier- en sportvaartuigen",
+   "DimensionGroupId": "94"
+  },
+  {
+   "Identifier": "A016570",
+   "Index": 476,
+   "Title": "302 Rollend materieel voor spoorwegen",
+   "Description": "Rollend materieel voor spoorwegen",
+   "DimensionGroupId": "95"
+  },
+  {
+   "Identifier": "A016583",
+   "Index": 477,
+   "Title": "303 Lucht- en ruimtevaartuigen en toe...",
+   "Description": "Lucht- en ruimtevaartuigen en toestellen in verband daarmee",
+   "DimensionGroupId": "96"
+  },
+  {
+   "Identifier": "A016603",
+   "Index": 478,
+   "Title": "309 Transportmiddelen, n.e.g",
+   "Description": "Transportmiddelen, n.e.g",
+   "DimensionGroupId": "97"
+  },
+  {
+   "Identifier": "A016604",
+   "Index": 479,
+   "Title": "3091 Motorfietsen",
+   "Description": "Motorfietsen",
+   "DimensionGroupId": "97"
+  },
+  {
+   "Identifier": "A016613",
+   "Index": 480,
+   "Title": "3092 Fietsen en invalidenwagens",
+   "Description": "Fietsen en invalidenwagens",
+   "DimensionGroupId": "97"
+  },
+  {
+   "Identifier": "A016626",
+   "Index": 481,
+   "Title": "3099 Andere transportmiddelen, n.e.g",
+   "Description": "Andere transportmiddelen, n.e.g",
+   "DimensionGroupId": "97"
+  },
+  {
+   "Identifier": "A016628",
+   "Index": 482,
+   "Title": "31 Meubelen",
+   "Description": "Meubelen",
+   "DimensionGroupId": "13"
+  },
+  {
+   "Identifier": "A052604",
+   "Index": 483,
+   "Title": "31001000 Delen van stoelen, banken en...",
+   "Description": "Delen van stoelen, banken en andere zitmeubelen",
+   "DimensionGroupId": "98"
+  },
+  {
+   "Identifier": "A016639",
+   "Index": 484,
+   "Title": "31001400 Delen van zitmeubelen (excl....",
+   "Description": "Delen van zitmeubelen (excl. van de soort gebruikt in luchtvaartuigen)",
+   "DimensionGroupId": "98"
+  },
+  {
+   "Identifier": "A016643",
+   "Index": 485,
+   "Title": "3101 Kantoor- en winkelmeubelen",
+   "Description": "Kantoor- en winkelmeubelen",
+   "DimensionGroupId": "98"
+  },
+  {
+   "Identifier": "A016650",
+   "Index": 486,
+   "Title": "3102 Keukenmeubelen",
+   "Description": "Keukenmeubelen",
+   "DimensionGroupId": "98"
+  },
+  {
+   "Identifier": "A016652",
+   "Index": 487,
+   "Title": "3103 Matrassen",
+   "Description": "Matrassen",
+   "DimensionGroupId": "98"
+  },
+  {
+   "Identifier": "A016658",
+   "Index": 488,
+   "Title": "3109 Andere meubelen",
+   "Description": "Andere meubelen",
+   "DimensionGroupId": "98"
+  },
+  {
+   "Identifier": "A052605",
+   "Index": 489,
+   "Title": "31091000 Meubelen van hout voor slaap...",
+   "Description": "Meubelen van hout voor slaapkamers",
+   "DimensionGroupId": "98"
+  },
+  {
+   "Identifier": "A052606",
+   "Index": 490,
+   "Title": "31091200 Meubelen van hout voor slaap...",
+   "Description": "Meubelen van hout voor slaapkamers",
+   "DimensionGroupId": "98"
+  },
+  {
+   "Identifier": "A016660",
+   "Index": 491,
+   "Title": "31091230 Meubelen van hout voor slaap...",
+   "Description": "Meubelen van hout voor slaapkamers",
+   "DimensionGroupId": "98"
+  },
+  {
+   "Identifier": "A016665",
+   "Index": 492,
+   "Title": "32 Andere industrieproducten",
+   "Description": "Andere industrieproducten",
+   "DimensionGroupId": "13"
+  },
+  {
+   "Identifier": "A016666",
+   "Index": 493,
+   "Title": "321 Edelstenen, sieraden en dergelijk...",
+   "Description": "Edelstenen, sieraden en dergelijke artikelen",
+   "DimensionGroupId": "99"
+  },
+  {
+   "Identifier": "A016667",
+   "Index": 494,
+   "Title": "3211 Munten",
+   "Description": "Munten",
+   "DimensionGroupId": "99"
+  },
+  {
+   "Identifier": "A016669",
+   "Index": 495,
+   "Title": "3212 Sieraden en dergelijke artikelen",
+   "Description": "Sieraden en dergelijke artikelen",
+   "DimensionGroupId": "99"
+  },
+  {
+   "Identifier": "A016677",
+   "Index": 496,
+   "Title": "3213 Imitatiesieraden en dergelijke a...",
+   "Description": "Imitatiesieraden en dergelijke artikelen",
+   "DimensionGroupId": "99"
+  },
+  {
+   "Identifier": "A016679",
+   "Index": 497,
+   "Title": "322 Muziekinstrumenten",
+   "Description": "Muziekinstrumenten",
+   "DimensionGroupId": "100"
+  },
+  {
+   "Identifier": "A016692",
+   "Index": 498,
+   "Title": "323 Sportartikelen",
+   "Description": "Sportartikelen",
+   "DimensionGroupId": "101"
+  },
+  {
+   "Identifier": "A016706",
+   "Index": 499,
+   "Title": "324 Spellen en speelgoed",
+   "Description": "Spellen en speelgoed",
+   "DimensionGroupId": "102"
+  },
+  {
+   "Identifier": "A016722",
+   "Index": 500,
+   "Title": "325 Medische en tandheelkundige instr...",
+   "Description": "Medische en tandheelkundige instrumenten en benodigdheden",
+   "DimensionGroupId": "103"
+  },
+  {
+   "Identifier": "A016766",
+   "Index": 501,
+   "Title": "329 Industrieproducten, n.e.g",
+   "Description": "Industrieproducten, n.e.g",
+   "DimensionGroupId": "104"
+  },
+  {
+   "Identifier": "A016767",
+   "Index": 502,
+   "Title": "3291 Borstelwaren",
+   "Description": "Borstelwaren",
+   "DimensionGroupId": "104"
+  },
+  {
+   "Identifier": "A016781",
+   "Index": 503,
+   "Title": "3299 Andere industrieproducten, n.e.g",
+   "Description": "Andere industrieproducten, n.e.g",
+   "DimensionGroupId": "104"
+  },
+  {
+   "Identifier": "A016782",
+   "Index": 504,
+   "Title": "32991 Veiligheidshoofddeksels; pennen...",
+   "Description": "Veiligheidshoofddeksels; pennen en potloden; schrijf- en tekenborden, handstempels; inktlinten voor schrijfmachines, stempelkussens",
+   "DimensionGroupId": "104"
+  },
+  {
+   "Identifier": "A016830",
+   "Index": 505,
+   "Title": "33 Reparatie en installatie van machi...",
+   "Description": "Reparatie en installatie van machines, apparaten en werktuigen",
+   "DimensionGroupId": "13"
+  },
+  {
+   "Identifier": "A052607",
+   "Index": 506,
+   "Title": "331 Reparatie van machines en apparatuur",
+   "Description": "Reparatie van producten van metaal, machines en apparatuur",
+   "DimensionGroupId": "105"
+  },
+  {
+   "Identifier": "A016831",
+   "Index": 507,
+   "Title": "3311 Reparatie van producten van metaal",
+   "Description": "Reparatie van producten van metaal",
+   "DimensionGroupId": "105"
+  },
+  {
+   "Identifier": "A016835",
+   "Index": 508,
+   "Title": "3312 Reparatie van machines",
+   "Description": "Reparatie van machines",
+   "DimensionGroupId": "105"
+  },
+  {
+   "Identifier": "A016854",
+   "Index": 509,
+   "Title": "3313 Reparatie van elektronische en o...",
+   "Description": "Reparatie van elektronische en optische apparatuur",
+   "DimensionGroupId": "105"
+  },
+  {
+   "Identifier": "A016860",
+   "Index": 510,
+   "Title": "3314 Reparatie van elektrische appara...",
+   "Description": "Reparatie van elektrische apparatuur",
+   "DimensionGroupId": "105"
+  },
+  {
+   "Identifier": "A016864",
+   "Index": 511,
+   "Title": "3315 Reparatie en onderhoud van schepen",
+   "Description": "Reparatie en onderhoud van schepen",
+   "DimensionGroupId": "105"
+  },
+  {
+   "Identifier": "A016867",
+   "Index": 512,
+   "Title": "3316 Reparatie en onderhoud van lucht...",
+   "Description": "Reparatie en onderhoud van lucht- en ruimtevaartuigen",
+   "DimensionGroupId": "105"
+  },
+  {
+   "Identifier": "A016869",
+   "Index": 513,
+   "Title": "3317 Reparatie en onderhoud van ander...",
+   "Description": "Reparatie en onderhoud van andere transportmiddelen",
+   "DimensionGroupId": "105"
+  },
+  {
+   "Identifier": "A016871",
+   "Index": 514,
+   "Title": "3319 Reparatie van andere apparatuur",
+   "Description": "Reparatie van andere apparatuur",
+   "DimensionGroupId": "105"
+  },
+  {
+   "Identifier": "A016873",
+   "Index": 515,
+   "Title": "3320 Installatie van industriële mach...",
+   "Description": "Installatie van industriële machines, toestellen en werktuigen",
+   "DimensionGroupId": "106"
+  },
+  {
+   "Identifier": "A016899",
+   "Index": 516,
+   "Title": "D Elektriciteit, gas, stoom en warmte",
+   "Description": "Elektriciteit, gas, stoom en warmte",
+   "DimensionGroupId": "108"
+  },
+  {
+   "Identifier": "A016900",
+   "Index": 517,
+   "Title": "35 Elektriciteit, gas, stoom en gekoe...",
+   "Description": "35 Elektriciteit, gas, stoom en gekoelde lucht",
+   "DimensionGroupId": "108"
+  },
+  {
+   "Identifier": "A016901",
+   "Index": 518,
+   "Title": "351 Elektriciteit; transmissie en dis...",
+   "Description": "351 Elektriciteit; transmissie en distributie van elektriciteit",
+   "DimensionGroupId": "109"
+  },
+  {
+   "Identifier": "A016902",
+   "Index": 519,
+   "Title": "352 Fabrieksgas; distributie van gasv...",
+   "Description": "352 Fabrieksgas; distributie van gasvormige brandstoffen via leidingen",
+   "DimensionGroupId": "110"
+  },
+  {
+   "Identifier": "A016903",
+   "Index": 520,
+   "Title": "353 Stoom en gekoelde lucht; distribu...",
+   "Description": "353 Stoom en gekoelde lucht; distributie van stoom en gekoelde lucht",
+   "DimensionGroupId": "111"
+  },
+  {
+   "Identifier": "A016904",
+   "Index": 521,
+   "Title": "E Distributie van water, afval- en af...",
+   "Description": "Distributie van water, afval- en afvalwaterbeheer, sanering",
+   "DimensionGroupId": "113"
+  },
+  {
+   "Identifier": "A016905",
+   "Index": 522,
+   "Title": "36 Water",
+   "Description": "Water",
+   "DimensionGroupId": "113"
+  },
+  {
+   "Identifier": "A016906",
+   "Index": 523,
+   "Title": "36001 Natuurlijk water",
+   "Description": "Natuurlijk water",
+   "DimensionGroupId": "114"
+  },
+  {
+   "Identifier": "A016907",
+   "Index": 524,
+   "Title": "360011 Drinkbaar water",
+   "Description": "Drinkbaar water",
+   "DimensionGroupId": "114"
+  },
+  {
+   "Identifier": "A016908",
+   "Index": 525,
+   "Title": "360012 Niet-drinkbaar water",
+   "Description": "Niet-drinkbaar water",
+   "DimensionGroupId": "114"
+  }
+ ]
+}

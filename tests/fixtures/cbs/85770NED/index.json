@@ -1,0 +1,19 @@
+{
+ "tableId": "85770NED",
+ "capturedAt": "2026-07-16T23:11:50.768Z",
+ "source": "https://datasets.cbs.nl/odata/v1/CBS/85770NED",
+ "sliceFilter": "AlleProdComCoderingen eq 'A052584' and (startswith(Afzetgebieden,'A044074') or startswith(Afzetgebieden,'A044077'))",
+ "captureOnlySlice": null,
+ "observationRows": 654,
+ "observationPages": [
+  "observations-page-1.json"
+ ],
+ "files": {
+  "properties": "properties.json",
+  "dimensions": "dimensions.json",
+  "measure-codes": "measure-codes.json",
+  "codes-Afzetgebieden": "codes-Afzetgebieden.json",
+  "codes-AlleProdComCoderingen": "codes-AlleProdComCoderingen.json",
+  "codes-Perioden": "codes-Perioden.json"
+ }
+}

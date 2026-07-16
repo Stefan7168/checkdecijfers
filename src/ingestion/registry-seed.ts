@@ -100,6 +100,18 @@ export const COVERAGE_TABLES: Phase0Table[] = [
     updateCadence: 'monthly (published ~the 22nd of the measured month itself, e.g. June figures on 22 June)',
     servesTasks: ['CC1', 'CC2', 'CC3', 'CC4'],
   },
+  {
+    // Producer prices (PPI) — slice: total ProdCom aggregate (A052584, measured
+    // 2026-07-17) × totaal-afzet + invoer (full codes as exact-match prefixes)
+    // → 654 obs, 100% dense. Mixed MM+JJ grains; last 5 months Voorlopig.
+    id: '85770NED',
+    slice: {
+      dimensionEquals: { AlleProdComCoderingen: 'A052584' },
+      dimensionPrefixes: { Afzetgebieden: ['A044074', 'A044077'] },
+    },
+    updateCadence: 'monthly (at latest the 30th day after the measured month)',
+    servesTasks: ['CC8', 'CC9', 'CC10'],
+  },
 ];
 
 // Every curated seed table (Phase 0 + coverage sprint) — what `ingest register`
