@@ -13,9 +13,12 @@ import type { DerivationRecord, ResultCell, ValidatedResult } from '../../query/
 import {
   findNumericTokens,
   maskPhrases,
+  type MetadataNumberAnchor,
+  metadataNumberAnchors,
   normalizeForScan,
   numbersInText,
   periodCodeNumbers,
+  tokenContext,
   unitMaskPhrases,
 } from './format.ts';
 import type { AnswerValidationReport } from './types.ts';
@@ -84,7 +87,11 @@ function derivationNumbers(d: DerivationRecord): number[] {
 
 interface AllowedNumbers {
   periodNumbers: number[];
-  metadataNumbers: number[];
+  /** Metadata numbers WITH their source-side context anchors — a body number
+   * is exempted as a metadata echo only when it reappears next to one of the
+   * same anchors (see metadataEcho), closing the "digit buried in metadata
+   * prose whitelists a coincidental fabrication" hole. */
+  metadataAnchors: MetadataNumberAnchor[];
   countNumbers: number[];
 }
 
@@ -97,13 +104,21 @@ function buildAllowedNumbers(result: ValidatedResult): AllowedNumbers {
   periodNumbers.push(...periodCodeNumbers(result.attribution.coveredPeriods.from));
   periodNumbers.push(...periodCodeNumbers(result.attribution.coveredPeriods.to));
 
-  const metadataNumbers: number[] = [];
-  metadataNumbers.push(...numbersInText(result.attribution.definitionLabel));
-  metadataNumbers.push(...numbersInText(result.attribution.periodSemantics));
+  // periodSemantics IS a source — for onboarded/explicit results definitionLabel
+  // can be null and the "1 januari"-type descriptor lives only here — but it is
+  // internal guidance prose ("(B13's groei-in-2024 leunt hierop)", M-codes,
+  // revision years), so its anchors are STRICT (both sides must match): a single
+  // guidance word never exempts. Label sources are lenient (single distinctive
+  // word binds).
+  const metadataAnchors: MetadataNumberAnchor[] = [];
+  metadataAnchors.push(...metadataNumberAnchors(result.attribution.definitionLabel));
+  metadataAnchors.push(...metadataNumberAnchors(result.attribution.periodSemantics, true));
   for (const cell of result.cells) {
-    metadataNumbers.push(...numbersInText(cell.measureTitle));
-    metadataNumbers.push(...numbersInText(cell.regionLabel));
-    for (const label of Object.values(cell.dimLabels)) metadataNumbers.push(...numbersInText(label));
+    metadataAnchors.push(...metadataNumberAnchors(cell.measureTitle));
+    metadataAnchors.push(...metadataNumberAnchors(cell.regionLabel));
+    for (const label of Object.values(cell.dimLabels)) {
+      metadataAnchors.push(...metadataNumberAnchors(label));
+    }
   }
 
   const countNumbers = [
@@ -112,7 +127,61 @@ function buildAllowedNumbers(result: ValidatedResult): AllowedNumbers {
     new Set(result.cells.map((c) => c.periodCode)).size,
   ];
 
-  return { periodNumbers, metadataNumbers, countNumbers };
+  return { periodNumbers, metadataAnchors, countNumbers };
+}
+
+/** Common Dutch connector/function words that carry no real binding on their
+ * own: a body number sitting next to one could coincidentally match an
+ * unrelated metadata occurrence (the fix-review's "in 2024" bypass, where
+ * "2024" from "groei-in-2024" was anchored by the stopword "in"). A
+ * single-sided anchor match THROUGH a stopword therefore does not exempt. */
+const ANCHOR_STOPWORDS = new Set([
+  'in', 'op', 'de', 'het', 'een', 'en', 'van', 'per', 'met', 'tot', 'voor',
+  'bij', 'is', 'dit', 'dat', 'te', 'of', 'aan', 'om', 'als', 'uit', 'over',
+  'naar', 'door', 'was', 'zijn', 'nog', 'ook', 'the',
+]);
+
+/** A binding anchor must be a real WORD: non-empty, containing a letter (a bare
+ * digit run like "2015" or "000" is never distinctive — the fix-review showed
+ * CBS's space-grouped labels "20 000 tot 30 000" and index bases "(2015=100)"
+ * let a numeral anchor launder a fabricated number), and not a common stopword. */
+function isBindingAnchor(word: string): boolean {
+  return word !== '' && /\p{L}/u.test(word) && !ANCHOR_STOPWORDS.has(word);
+}
+
+/** A body number counts as a metadata echo only when its value matches a
+ * metadata number AND it reappears in the body next to the SAME word it sat
+ * beside in the source, through a DISTINCTIVE (letter-bearing, non-stopword)
+ * word on at least one side, OR the same word on BOTH sides. A bare
+ * coincidence, a single common stopword ("in 2024"), or a bare-numeral anchor
+ * ("2015=100" / "20 000") never exempts. periodSemantics (`strict`) guidance
+ * prose additionally requires BOTH sides to match — a single guidance word
+ * ("2024 leunt") never exempts. `ctx` is the body token's before/after runs.
+ *
+ * KNOWN BOUNDED RESIDUAL (open-questions #140): a fabricated number that equals
+ * one of the RESULT's OWN descriptor numbers (an age/income-bracket coordinate,
+ * "1 januari") AND is placed next to that descriptor's own distinctive word can
+ * still be exempted — the legit coordinate echo and such a fabrication are
+ * textually identical, so a deterministic validator cannot separate them.
+ * Making the rule strict enough to catch it (both-sides for ALL sources) breaks
+ * legit single-sided echoes in real stored answers (measured: 4 R8 reconstruct
+ * regressions). This is a major narrowing of the original "any metadata digit
+ * exempts" hole, not a full close; the residual is tracked for a later
+ * semantic-level fix. */
+function metadataEcho(
+  value: number,
+  ctx: { before: string; after: string },
+  anchors: MetadataNumberAnchor[],
+): boolean {
+  return anchors.some((a) => {
+    if (!eq(a.value, value)) return false;
+    const beforeMatch = a.before !== '' && a.before === ctx.before;
+    const afterMatch = a.after !== '' && a.after === ctx.after;
+    if (a.strict) return beforeMatch && afterMatch && (isBindingAnchor(a.before) || isBindingAnchor(a.after));
+    if (beforeMatch && isBindingAnchor(a.before)) return true;
+    if (afterMatch && isBindingAnchor(a.after)) return true;
+    return beforeMatch && afterMatch;
+  });
 }
 
 /** Classify every numeric token in a body against the validated result — the
@@ -134,6 +203,10 @@ export function scanBody(body: string, result: ValidatedResult): ClassifiedToken
     );
 
   return findNumericTokens(masked).map((token) => {
+    // The body-side context of this token (the alnum runs touching it) — the
+    // metadata-echo check binds a whitelisted metadata number to the same word
+    // it sat beside in the source, so a coincidental fabrication is not exempt.
+    const ctx = tokenContext(masked, token.index, token.token.length);
     // A digit run glued to a letter ('4e kwartaal', '1e') is an ordinal or
     // embedded marker, never a standalone value: it may only ground as
     // period/metadata (found live: the '4' in periodLabel '2025 4e kwartaal'
@@ -143,7 +216,7 @@ export function scanBody(body: string, result: ValidatedResult): ClassifiedToken
       if (Number.isInteger(token.value) && allowed.periodNumbers.some((n) => eq(n, token.value))) {
         return { ...token, kind: 'period' as const, cells: [], derivation: null, matchedAbsolute: false };
       }
-      if (allowed.metadataNumbers.some((n) => eq(n, token.value))) {
+      if (metadataEcho(token.value, ctx, allowed.metadataAnchors)) {
         return { ...token, kind: 'metadata' as const, cells: [], derivation: null, matchedAbsolute: false };
       }
       return { ...token, kind: 'unbacked' as const, cells: [], derivation: null, matchedAbsolute: false };
@@ -165,7 +238,7 @@ export function scanBody(body: string, result: ValidatedResult): ClassifiedToken
     if (Number.isInteger(token.value) && allowed.periodNumbers.some((n) => eq(n, token.value))) {
       return { ...token, kind: 'period' as const, cells: [], derivation: null, matchedAbsolute: false };
     }
-    if (allowed.metadataNumbers.some((n) => eq(n, token.value))) {
+    if (metadataEcho(token.value, ctx, allowed.metadataAnchors)) {
       return { ...token, kind: 'metadata' as const, cells: [], derivation: null, matchedAbsolute: false };
     }
     if (

@@ -512,3 +512,184 @@ describe('negative cell values (session-30 review — the live -24 consumentenve
     expect(validateAnswerBody(body, result).problems).toEqual([]);
   });
 });
+
+// #140 (session-44 data-integrity hunt): the metadata-number whitelist bypass.
+// buildAllowedNumbers pooled every DIGIT found anywhere in metadata prose
+// (definitionLabel, periodSemantics, measureTitle, regionLabel, dimLabels) and
+// exempted any body number equal to one — with NO context. A fabricated value
+// that merely COINCIDED with a digit buried in that prose (e.g. the "2024"
+// inside a "2024JJ00" period code) passed every check. The fix binds the
+// exemption to the number's SOURCE anchor: the body number must reappear next
+// to the same word it sat beside in the metadata (same pattern as countContext).
+describe('#140: metadata numbers are exempt only beside their source anchor (fabrication hole)', () => {
+  const incomeWith2024InSemantics = makeResult({
+    shape: 'single',
+    cells: [
+      makeCell({
+        table: '83932NED', measure: 'M1', measureTitle: 'Gemiddeld besteedbaar inkomen',
+        region: null, periodCode: '2023JJ00', periodLabel: '2023',
+        value: 57.6, unit: '1 000 euro', decimals: 1,
+      }),
+    ],
+    definitionLabel: 'gemiddeld besteedbaar inkomen van huishoudens',
+    // Real-shape internal guidance: the digits 2023/2024 sit inside period codes.
+    periodSemantics: 'Cijfer voor het genoemde inkomstenjaar; 2023JJ00 Definitief, 2024JJ00 nog Voorlopig.',
+  });
+
+  it('a fabricated "2024 euro" (2024 buried in the "2024JJ00" of periodSemantics) now FAILS R3', () => {
+    const body =
+      'Het gemiddeld besteedbaar inkomen van huishoudens was in 2023 57,6 (1 000 euro). ' +
+      'Per persoon is dat ongeveer 2024 euro.';
+    const report = validateAnswerBody(body, incomeWith2024InSemantics);
+    expect(report.ok).toBe(false);
+    expect(report.problems.some((p) => p.includes("'2024'"))).toBe(true);
+  });
+
+  it("the bare fabricated '2024' classifies as unbacked, not metadata", () => {
+    const token = scanBody('ongeveer 2024 euro', incomeWith2024InSemantics).find((t) => t.value === 2024);
+    expect(token?.kind).toBe('unbacked');
+  });
+
+  it('a GENUINE metadata echo still validates — "op 1 januari" keeps the "1" exempt (no false positive)', () => {
+    // populationSingle's definition/semantics carry "1 januari"; the "1" beside
+    // "januari" must still ground as metadata, or every population answer breaks.
+    const report = validateAnswerBody(
+      'De bevolking op 1 januari in Nederland was in 2025 18.044.027 inwoners.',
+      populationSingle,
+    );
+    expect(report.problems).toEqual([]);
+    expect(scanBody('op 1 januari', populationSingle).find((t) => t.value === 1)?.kind).toBe('metadata');
+  });
+
+  it('the anchor is context-specific: the same number beside a DIFFERENT word is not exempted', () => {
+    const ageShareResult = makeResult({
+      shape: 'single',
+      cells: [
+        makeCell({
+          table: 'T', measure: 'M', measureTitle: 'Testmaat',
+          region: null, periodCode: '2024JJ00', periodLabel: '2024',
+          value: 5, unit: '%', decimals: 0,
+        }),
+      ],
+      definitionLabel: 'aandeel van 65 jaar en ouder', // "65" anchored to "jaar"
+    });
+    // Echoing "65 jaar" (distinctive after-word) → metadata; a fabricated count
+    // "65 gemeenten" (no matching neighbour) → unbacked.
+    expect(scanBody('vanaf 65 jaar', ageShareResult).find((t) => t.value === 65)?.kind).toBe('metadata');
+    expect(scanBody('er zijn 65 gemeenten', ageShareResult).find((t) => t.value === 65)?.kind).toBe('unbacked');
+  });
+
+  // The fix-review of the first (single-anchor) attempt found it too weak: the
+  // real 03759ned periodSemantics contains "groei-in-2024", so "2024" was
+  // anchored by the stopword "in" and a fabricated "in 2024" re-passed. Two
+  // hardenings: periodSemantics is no longer a source, and a single-sided anchor
+  // match must go through a DISTINCTIVE (non-stopword) word.
+  it('the fix-review exploit is closed: a fabricated "in 2024" (2024 buried in periodSemantics "groei-in-2024") FAILS', () => {
+    const populationGuidance = makeResult({
+      shape: 'single',
+      cells: [
+        makeCell({
+          table: '03759ned', measure: 'M000352', measureTitle: 'Bevolking op 1 januari',
+          region: null, periodCode: '2025JJ00', periodLabel: '2025',
+          value: 18044027, unit: 'aantal', decimals: 0,
+        }),
+      ],
+      definitionLabel: 'bevolking op 1 januari',
+      periodSemantics:
+        "Measure-afhankelijk: voor M000352 (Bevolking op 1 januari) is dit een standcijfer per 1 januari van " +
+        "het genoemde jaar (B13's groei-in-2024 leunt hierop); voor M000365 (Gemiddelde bevolking) is het jaargemiddelde.",
+    });
+    const body =
+      'De bevolking op 1 januari in Nederland was in 2025 18.044.027 inwoners. ' +
+      'Dat is opvallend, want in 2024 was de instroom nog nooit zo hoog.';
+    const report = validateAnswerBody(body, populationGuidance);
+    expect(report.ok).toBe(false);
+    expect(report.problems.some((p) => p.includes("'2024'"))).toBe(true);
+  });
+
+  it('a single stopword anchor ("in") never exempts on its own; a distinctive after-word does', () => {
+    const revised = makeResult({
+      shape: 'single',
+      cells: [
+        makeCell({
+          table: 'T', measure: 'M', measureTitle: 'Testmaat',
+          region: null, periodCode: '2024JJ00', periodLabel: '2024',
+          value: 5, unit: '%', decimals: 0,
+        }),
+      ],
+      definitionLabel: 'percentage in 2015 herzien', // "2015": before "in" (stopword), after "herzien"
+    });
+    // Reusing only the common "in" next to a fabricated 2015 → unbacked.
+    expect(scanBody('dat was in 2015 anders', revised).find((t) => t.value === 2015)?.kind).toBe('unbacked');
+    // Echoing the distinctive "2015 herzien" → metadata.
+    expect(scanBody('cijfer 2015 herzien', revised).find((t) => t.value === 2015)?.kind).toBe('metadata');
+  });
+
+  // The v2 fix-review found the single-anchor+stopword version STILL too weak on
+  // two shapes: (a) a bare digit-run counted as a "distinctive" anchor, so CBS's
+  // space-grouped labels ("20 000 tot 30 000 euro") and index bases ("(2015=100)")
+  // let a numeral anchor launder a fabrication; (b) fully dropping periodSemantics
+  // broke a legit "per 1 januari" echo when definitionLabel is null (onboarded/
+  // explicit targets). Fix: an anchor must contain a LETTER, and periodSemantics
+  // is kept but STRICT (both-side phrase echo only).
+  it('a bare digit-run is not a binding anchor: a CBS bracket label "20 000 tot 30 000 euro" cannot launder a fabricated "20 000"', () => {
+    const income = makeResult({
+      shape: 'single',
+      cells: [
+        makeCell({
+          table: '83932NED', measure: 'M1', measureTitle: 'Gemiddeld inkomen',
+          region: null, periodCode: '2023JJ00', periodLabel: '2023',
+          value: 57.6, unit: '1 000 euro', decimals: 1,
+        }),
+      ],
+      definitionLabel: 'gemiddeld besteedbaar inkomen van huishoudens',
+    });
+    income.cells[0]!.dimLabels = { Inkomensklassen: 'Inkomen: 20 000 tot 30 000 euro' }; // real CBS Title
+    const body = 'Het inkomen was in 2023 57,6 (1 000 euro). Sommige huishoudens gaven echter 20 000 euro uit.';
+    const report = validateAnswerBody(body, income);
+    expect(report.ok).toBe(false);
+    expect(report.problems.some((p) => p.includes("'20'"))).toBe(true);
+  });
+
+  it('an index base "(2015=100)" cannot launder a fabricated "100" via the numeral "2015"', () => {
+    const cpi = makeResult({
+      shape: 'single',
+      cells: [
+        makeCell({
+          table: '86141NED', measure: 'M1', measureTitle: 'CPI indexniveau (2015=100)',
+          region: null, periodCode: '2024JJ00', periodLabel: '2024',
+          value: 118.3, unit: 'punten', decimals: 1,
+        }),
+      ],
+      definitionLabel: 'CPI indexniveau',
+    });
+    expect(scanBody('In 2015 100 asielzoekers kwamen aan', cpi).find((t) => t.value === 100)?.kind).toBe('unbacked');
+    expect(validateAnswerBody('De CPI was in 2024 118,3 punten. In 2015 100 asielzoekers kwamen aan.', cpi).ok).toBe(false);
+  });
+
+  it('periodSemantics is kept but STRICT: a null-definitionLabel "per 1 januari" echo validates, "in 2024/2024 leunt" does not', () => {
+    const nullDef = makeResult({
+      shape: 'single',
+      cells: [
+        makeCell({
+          table: '82235NED', measure: 'D1', measureTitle: 'Beginstand voorraad',
+          region: null, periodCode: '2024JJ00', periodLabel: '2024',
+          value: 8100000, unit: 'aantal', decimals: 0,
+        }),
+      ],
+      definitionLabel: null,
+      periodSemantics: 'Beginstand voorraad = stand per 1 januari van het genoemde jaar.',
+    });
+    // The genuine full-phrase echo "per 1 januari" (both sides match) validates.
+    expect(validateAnswerBody('De woningvoorraad per 1 januari was in 2024 8.100.000.', nullDef).ok).toBe(true);
+    expect(scanBody('per 1 januari', nullDef).find((t) => t.value === 1)?.kind).toBe('metadata');
+    // A guidance number reachable only through one side stays unbacked.
+    const guided = makeResult({
+      shape: 'single',
+      cells: [makeCell({ table: 'T', measure: 'M', measureTitle: 'Testmaat', region: null, periodCode: '2025JJ00', periodLabel: '2025', value: 5, unit: '%', decimals: 0 })],
+      definitionLabel: null,
+      periodSemantics: "B13's groei-in-2024 leunt hierop.",
+    });
+    expect(scanBody('want in 2024 was het hoog', guided).find((t) => t.value === 2024)?.kind).toBe('unbacked');
+  });
+});
