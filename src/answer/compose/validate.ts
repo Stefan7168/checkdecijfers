@@ -66,6 +66,19 @@ export interface ClassifiedToken {
    * ("daalde met 12.438" for netChange -12438) — the direction-word check
    * must then confirm the sign in prose. */
   matchedAbsolute: boolean;
+  /** #144 (ADR 034): true when the exemption that grounded this token is one
+   * of the two proven RESIDUAL-PRONE legs at the deterministic ceiling — a
+   * metadata echo (#140 residual: a fabrication equal to the result's own
+   * descriptor number, next to that descriptor's word, is textually identical
+   * to the legit echo) or a period grounded ONLY through the temporal-marker-
+   * before path (#141 residual: "na 2024 <un-listed noun>" passes the closed
+   * quantity-noun veto). Purely informational — classification and the
+   * validator verdict are byte-identical with or without it; the semantic
+   * checker uses it to decide whether a second LLM pass is warranted. Hard
+   * legs (verbatim label echo, two-sided list-label, CBS label order/span
+   * after, grain forms, cells, derivations, axis-bound counts) are never
+   * soft. */
+  soft: boolean;
 }
 
 function derivationNumbers(d: DerivationRecord): number[] {
@@ -202,16 +215,30 @@ function metadataEcho(
   value: number,
   ctx: { before: string; after: string },
   anchors: MetadataNumberAnchor[],
-): boolean {
-  return anchors.some((a) => {
-    if (!eq(a.value, value)) return false;
-    const beforeMatch = a.before !== '' && a.before === ctx.before;
-    const afterMatch = a.after !== '' && a.after === ctx.after;
-    if (a.strict) return beforeMatch && afterMatch && (isBindingAnchor(a.before) || isBindingAnchor(a.after));
-    if (beforeMatch && isBindingAnchor(a.before)) return true;
-    if (afterMatch && isBindingAnchor(a.after)) return true;
-    return beforeMatch && afterMatch;
-  });
+): MetadataNumberAnchor | null {
+  return (
+    anchors.find((a) => {
+      if (!eq(a.value, value)) return false;
+      const beforeMatch = a.before !== '' && a.before === ctx.before;
+      const afterMatch = a.after !== '' && a.after === ctx.after;
+      if (a.strict) return beforeMatch && afterMatch && (isBindingAnchor(a.before) || isBindingAnchor(a.after));
+      if (beforeMatch && isBindingAnchor(a.before)) return true;
+      if (afterMatch && isBindingAnchor(a.after)) return true;
+      return beforeMatch && afterMatch;
+    }) ?? null
+  );
+}
+
+/** #144 soft-scope refinement: a metadata echo reads as a DATE — hard, like a
+ * period-label echo — only when the body-side month name matches the anchor
+ * AND is followed by a year or by punctuation/end ("op 1 januari 2025 telde",
+ * "per 1 januari."). "<digit> <maand> <jaar|leesteken>" has no quantity
+ * reading in Dutch; a month followed by anything else stays soft (see
+ * DATE_FORM_AFTER — the compound-noun bypass). Everything non-date (bracket
+ * coordinates "45 jaar", income classes, index bases) keeps the #140 ceiling
+ * and stays soft. */
+function isDateFormEcho(anchor: MetadataNumberAnchor, ctx: { after: string }, after: string): boolean {
+  return MONTH_NAME_SET.has(anchor.after) && ctx.after === anchor.after && DATE_FORM_AFTER.test(after);
 }
 
 // ---------------------------------------------------------------------------
@@ -253,6 +280,53 @@ function metadataEcho(
 // 46-spaces probe).
 
 const MONTH_NAMES = '(?:januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december)';
+
+const MONTH_NAME_SET = new Set(
+  'januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december'.split('|'),
+);
+
+/** What may follow the month name for a metadata echo to read as a DATE: a
+ * year, or punctuation/end of text. A letter word or a hyphen-glued
+ * continuation after the month can carry a counted NOUN ("31
+ * januari-meldingen", "1 januari overzicht" — a fabricated count riding a
+ * month-name compound; adversarial-review-confirmed CRITICAL bypass of the
+ * v1 single-adjacent-word rule, 2026-07-16), so those stay soft and trigger
+ * the checker. Whitespace bridges capped (\s{0,3}) per the #141 anti-fake-\b
+ * discipline; the leading separator run mirrors adjacentAlnum's ≤4 rule.
+ * Used by isDateFormEcho (metadata-echo section above). */
+const DATE_FORM_AFTER = new RegExp(
+  `^[^\\p{L}\\p{N}]{0,4}${MONTH_NAMES}(?:\\s{1,3}(?:19|20)\\d{2}(?![\\p{L}\\p{N}])|\\s{0,3}(?:$|[^\\p{L}\\p{N}\\s-]))`,
+  'iu',
+);
+
+/** #144 soft-scope refinement, corpus-derived (2026-07-16, 78 corpus texts:
+ * benchmark bodies + experience-audit answers + recorded answer fixtures):
+ * every letter-word the REAL phrasing corpus puts directly after a temporal-
+ * marker-grounded year. All are verbs, connectors or adverbs — none has a
+ * counted-noun reading, so "marker + year + <this word>" is genuinely
+ * temporal and NOT residual-prone. Everything outside this closed set (a
+ * potential un-listed noun — the "na 2024 pogingen" #141 residual) stays
+ * suspect and triggers the #144 semantic checker.
+ *
+ * SAFETY ASYMMETRY (why this list is allowed to exist despite the #142
+ * allowlist lesson): an entry here NEVER changes the deterministic verdict —
+ * it only decides whether the additive semantic checker double-checks. A
+ * wrong entry degrades one answer to today's exact live posture
+ * (deterministically validated, unchecked); it can never accept a number the
+ * validator rejected. Grow it from the semantic-check eval's measured misses,
+ * never from linguistic completeness. */
+const SAFE_YEAR_CONTINUATIONS = new Set([
+  'telde', // "Op 1 januari 2025 telde Nederland …"
+  'en', // "1,3% in 2020 en 3,3% in 2024"
+  'naar', // "van 307.978 euro in 2019 naar 450.985 euro"
+  'werden', // "In 2025 werden in totaal 3.226 faillissementen …"
+  'bedroeg', // "per 1 januari 2024 bedroeg 8.204 x 1 000"
+  'liep', // "na 2,7% in 2021 liep de inflatie op"
+  'daalde', // "in 2022 daalde de gemiddelde verkoopprijs"
+  'weer', // "waarna deze in 2024 weer opliep"
+  'uit', // "kwam in het 4e kwartaal van 2025 uit op 4,0%"
+  'gemiddeld', // "bedroeg in 2020 gemiddeld 1,3%"
+]);
 
 /** Does the text ENDING at a period number mark it as temporal? Multiword
  * chains matched right-to-left from the token ("tot en met", "ten opzichte
@@ -356,24 +430,42 @@ function insidePeriodLabel(masked: string, index: number, length: number, labels
   });
 }
 
-/** The #141 gate: may this periodNumbers-matching token ground as 'period'? */
-function periodEcho(masked: string, token: { index: number; token: string }, allowed: AllowedNumbers): boolean {
+/** Which leg of the #141 gate grounded a period token. Only 'before_prone'
+ * (temporal marker before + a continuation word OUTSIDE both the quantity-
+ * noun veto and the corpus-derived safe set — the "na 2024 pogingen" shape)
+ * is residual-prone (#144 soft): every other leg is either a structural echo
+ * a fabrication cannot usefully mimic, or a form with no quantity reading
+ * ("in 2024 3,3%" — no letter word follows; "in 2022 daalde" — a corpus-
+ * screened verb/connector follows). */
+type PeriodEchoLeg = 'label' | 'subyear' | 'list' | 'after' | 'before_safe' | 'before_prone';
+
+/** The #141 gate: may this periodNumbers-matching token ground as 'period'?
+ * Returns the leg that grounded it, or null. The boolean accept/reject
+ * behavior is EXACTLY the pre-#144 rule — the leg name is additive info. */
+function periodEcho(masked: string, token: { index: number; token: string }, allowed: AllowedNumbers): PeriodEchoLeg | null {
   const end = token.index + token.token.length;
-  if (insidePeriodLabel(masked, token.index, token.token.length, allowed.periodLabels)) return true;
+  if (insidePeriodLabel(masked, token.index, token.token.length, allowed.periodLabels)) return 'label';
   const before = masked.slice(Math.max(0, token.index - 48), token.index);
   const after = masked.slice(end, end + 48);
-  if (!YEAR_SHAPED.test(token.token)) return SUBYEAR_BEFORE.test(before);
+  if (!YEAR_SHAPED.test(token.token)) return SUBYEAR_BEFORE.test(before) ? 'subyear' : null;
   // List-label form: BOTH sides must fit (review hardening — a one-sided
   // colon exemption was a confirmed bypass).
-  if (LIST_CONTEXT_BEFORE.test(before) && LIST_LABEL_AFTER.test(after)) return true;
-  if (TEMPORAL_AFTER.test(after)) return true;
-  if (!TEMPORAL_BEFORE.test(before)) return false;
+  if (LIST_CONTEXT_BEFORE.test(before) && LIST_LABEL_AFTER.test(after)) return 'list';
+  if (TEMPORAL_AFTER.test(after)) return 'after';
+  if (!TEMPORAL_BEFORE.test(before)) return null;
   const nextWord = after.match(/^(?:\s{1,3}|\s{0,3}[-–]\s{0,3})(\p{L}+)/u)?.[1]?.toLowerCase() ?? '';
-  return nextWord === '' || (!QUANTITY_NOUN_AFTER.test(nextWord) && !allowed.unitWords.has(nextWord));
+  if (nextWord !== '' && (QUANTITY_NOUN_AFTER.test(nextWord) || allowed.unitWords.has(nextWord))) return null;
+  // No letter word after the year (a value, punctuation or the body end
+  // follows — "bedroeg in 2024 3,3%") leaves no noun for a count to bind to:
+  // no quantity reading exists, so the exemption is not residual-prone. A
+  // corpus-screened continuation ("in 2022 daalde") likewise. Anything else
+  // is the #144 residual shape.
+  return nextWord === '' || SAFE_YEAR_CONTINUATIONS.has(nextWord) ? 'before_safe' : 'before_prone';
 }
 
 /** The glued variant (digits glued to letters, '4e'/'1ste'): only the ordinal
- * grain form or a verbatim label echo is temporal — '4x zo hoog' is not. */
+ * grain form or a verbatim label echo is temporal — '4x zo hoog' is not.
+ * Both legs are structural echoes, never residual-prone. */
 function gluedPeriodEcho(masked: string, token: { index: number; token: string }, allowed: AllowedNumbers): boolean {
   const end = token.index + token.token.length;
   return (
@@ -417,36 +509,63 @@ export function scanBody(body: string, result: ValidatedResult): ClassifiedToken
         allowed.periodNumbers.some((n) => eq(n, token.value)) &&
         gluedPeriodEcho(masked, token, allowed)
       ) {
-        return { ...token, kind: 'period' as const, cells: [], derivation: null, matchedAbsolute: false };
+        return { ...token, kind: 'period' as const, cells: [], derivation: null, matchedAbsolute: false, soft: false };
       }
-      if (metadataEcho(token.value, ctx, allowed.metadataAnchors)) {
-        return { ...token, kind: 'metadata' as const, cells: [], derivation: null, matchedAbsolute: false };
+      const gluedAnchor = metadataEcho(token.value, ctx, allowed.metadataAnchors);
+      if (gluedAnchor !== null) {
+        const gluedAfter = masked.slice(token.index + token.token.length, token.index + token.token.length + 48);
+        return {
+          ...token,
+          kind: 'metadata' as const,
+          cells: [],
+          derivation: null,
+          matchedAbsolute: false,
+          soft: !isDateFormEcho(gluedAnchor, ctx, gluedAfter),
+        };
       }
-      return { ...token, kind: 'unbacked' as const, cells: [], derivation: null, matchedAbsolute: false };
+      return { ...token, kind: 'unbacked' as const, cells: [], derivation: null, matchedAbsolute: false, soft: false };
     }
     const cells = result.cells.filter((c) => c.value !== null && eq(c.value, token.value));
     if (cells.length > 0) {
-      return { ...token, kind: 'cell' as const, cells, derivation: null, matchedAbsolute: false };
+      return { ...token, kind: 'cell' as const, cells, derivation: null, matchedAbsolute: false, soft: false };
     }
     for (const d of result.derivations) {
       for (const value of derivationNumbers(d)) {
         if (eq(value, token.value)) {
-          return { ...token, kind: 'derivation' as const, cells: [], derivation: d, matchedAbsolute: false };
+          return { ...token, kind: 'derivation' as const, cells: [], derivation: d, matchedAbsolute: false, soft: false };
         }
         if (eq(Math.abs(value), token.value) && value < 0) {
-          return { ...token, kind: 'derivation' as const, cells: [], derivation: d, matchedAbsolute: true };
+          return { ...token, kind: 'derivation' as const, cells: [], derivation: d, matchedAbsolute: true, soft: false };
         }
       }
     }
-    if (
-      Number.isInteger(token.value) &&
-      allowed.periodNumbers.some((n) => eq(n, token.value)) &&
-      periodEcho(masked, token, allowed)
-    ) {
-      return { ...token, kind: 'period' as const, cells: [], derivation: null, matchedAbsolute: false };
+    if (Number.isInteger(token.value) && allowed.periodNumbers.some((n) => eq(n, token.value))) {
+      const leg = periodEcho(masked, token, allowed);
+      if (leg !== null) {
+        // Only the marker-before + un-screened-continuation shape sits at the
+        // deterministic ceiling ("na 2024 <un-listed noun>", the #141
+        // residual) — every other leg is a structural echo or a form with no
+        // quantity reading (#144 soft flag; see PeriodEchoLeg).
+        return { ...token, kind: 'period' as const, cells: [], derivation: null, matchedAbsolute: false, soft: leg === 'before_prone' };
+      }
     }
-    if (metadataEcho(token.value, ctx, allowed.metadataAnchors)) {
-      return { ...token, kind: 'metadata' as const, cells: [], derivation: null, matchedAbsolute: false };
+    const anchor = metadataEcho(token.value, ctx, allowed.metadataAnchors);
+    if (anchor !== null) {
+      // A metadata echo sits at the #140 ceiling (legit descriptor echo and
+      // fabrication-beside-the-same-word are textually identical) — EXCEPT
+      // the date form ("op 1 januari 2025", "per 1 januari."), which has no
+      // quantity reading and is as hard as a period-label echo (#144
+      // soft-scope refinement; the month must be followed by a year or
+      // punctuation — see DATE_FORM_AFTER).
+      const after = masked.slice(token.index + token.token.length, token.index + token.token.length + 48);
+      return {
+        ...token,
+        kind: 'metadata' as const,
+        cells: [],
+        derivation: null,
+        matchedAbsolute: false,
+        soft: !isDateFormEcho(anchor, ctx, after),
+      };
     }
     if (
       Number.isInteger(token.value) &&
@@ -454,9 +573,9 @@ export function scanBody(body: string, result: ValidatedResult): ClassifiedToken
         (entry) => eq(entry.value, token.value) && countContext(token.index, token.token.length, entry.nouns),
       )
     ) {
-      return { ...token, kind: 'count' as const, cells: [], derivation: null, matchedAbsolute: false };
+      return { ...token, kind: 'count' as const, cells: [], derivation: null, matchedAbsolute: false, soft: false };
     }
-    return { ...token, kind: 'unbacked' as const, cells: [], derivation: null, matchedAbsolute: false };
+    return { ...token, kind: 'unbacked' as const, cells: [], derivation: null, matchedAbsolute: false, soft: false };
   });
 }
 

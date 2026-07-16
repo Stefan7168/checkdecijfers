@@ -59,6 +59,20 @@ export async function GET(request: Request): Promise<Response> {
       source: new ODataV4Source(),
       intentClient: new AnthropicLlmClient(),
       answerClient: new AnthropicLlmClient(),
+      // #144 (ADR 034): the delivery re-run gets the SAME reject-only semantic
+      // checker as a live chat turn, behind the same dormant env flags — a
+      // delivered onboarding answer is exactly as user-visible.
+      ...(process.env.SEMANTIC_CHECK_ENABLED === '1'
+        ? {
+            semanticCheck: {
+              client: new AnthropicLlmClient(),
+              mode:
+                process.env.SEMANTIC_CHECK_FAILMODE === 'closed'
+                  ? ('fail_closed' as const)
+                  : ('fail_open' as const),
+            },
+          }
+        : {}),
       // WP27 stage C: the measure-fit gate's client (Haiku pin in
       // onboarding-fit.ts). Dormant — and spend-free — until stage D applies
       // migration 015: pre-015 every row's candidate chain reads back [] (the

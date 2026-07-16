@@ -67,11 +67,14 @@ DELEGATED by the owner to the session's judgment, #118(b) precedent. The session
   the guard (no fixture has a natural interior hole) → CLOSED by a seeded-gap end-to-end test (`tests/query/not-published-midgap.test.ts`,
   mutation-proven: the reviewer's exact mutation fails it). Full gate + prod deploy green (backend 1280, web 305, benchmark 14/14 + 6/6 + 0
   fabricated, real next build; prod HTTP 307 healthy). Branch + PR + owner-merge per [#118](open-questions.md)(b).
-- **Next — data-integrity follow-up (core promise):** **[#144](open-questions.md) — the semantic-level check, the shared real close for BOTH #140's
-  residual and #141's temporal-marker+un-listed-noun residual. DESIGN BRIEF READY:
-  [session-briefs/2026-07-16-144-semantic-check-brief.md](session-briefs/2026-07-16-144-semantic-check-brief.md) — needs a FRESH session (new LLM
-  surface: own ADR, fixture recording = small real spend, R8 verdict-storage design; fail-open-vs-closed = owner decision).** #142/#143 and the
-  row-227 register gap are all ✅ fixed (PR #45). A fresh security/bug hunt on another surface (billing-gate, GDPR) is also always available.
+- **Next — data-integrity follow-up (core promise):** **[#144](open-questions.md) — ✅ BUILT flag-dormant (session 46, 2026-07-16, branch
+  `feat/144-semantic-check`, ADR [034](decisions/034-semantic-fabrication-check.md)): the additive REJECT-ONLY semantic checker over residual-prone
+  bodies, per the design brief.** Deterministic suspect gate (`ClassifiedToken.soft`; corpus-measured 0% trigger on legit bodies, both residual shapes
+  trigger); same R3 ladder on a fabricated verdict; verdict on the envelope, recorded-not-rederived, scope re-derived by R8 (tamper-tested).
+  Adversarial review (5 lenses × dual refute-verify + serialized mutation probe, 26 agents): 1 CRITICAL bypass confirmed+closed (date-form
+  compound-noun), 2 hardenings adopted, mutation probe 5/5 RED. **Remaining: owner merge (#118b) + the supervised go-live (RUNBOOK § "#144 semantic
+  checker": fixture recording = small real spend, FP=FN=0 eval gate, `SEMANTIC_CHECK_FAILMODE` = the fail-open-vs-closed OWNER decision, flag flip).**
+  #142/#143 and the row-227 register gap are all ✅ fixed (PR #45). A fresh security/bug hunt on another surface (billing-gate, GDPR) is also available.
 - **Next — owner decisions:** **#138** (v2 regional refusal chip — needs a code→region-label source on the refusal path), **WP26** (answer-first
   defaults + clickable clarify options, safelist read-back), **#121** (fail-closed template rung), **#131** (multilingual L1), **WP30c** (source
   choice). Tracked-not-focus: #132 route B ~2026-07-19 (forks==0 T-0), #104/#112 (need live-LLM spend; format.ts NUL ✅ fixed s45 PR #46), /login
