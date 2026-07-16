@@ -6,6 +6,17 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+- **Ground an allowlist in the DOMAIN MODEL, not in linguistic completeness — the words you add "for
+  completeness" are the attack surface** (session 45, 2026-07-16, the #142 review round). Writing the
+  axis-bound count-noun sets I added 'wijken'/'buurten' to the region nouns because they are natural
+  Dutch region words — but the product serves NO wijk/buurt granularity (the intent schema has no such
+  kind; the policy refuses buurt questions outright), so the only way "4 vergeleken wijken" can appear
+  in a body is an LLM mislabeling gemeente/national data — and my addition made the validator accept
+  exactly that (review-confirmed: the two new nouns were the ONLY new attack surface in the diff).
+  Check every allowlist entry against what the system can actually produce/serve (schema enums, policy
+  copy, the corpus), not against what is plausible language. Same round: a dynamic check whose test
+  example is also covered by a static list is effectively untested — prove dynamic paths with inputs
+  only they accept.
 - **A two-sided context gate must apply its veto on EVERY exit path — the one un-vetoed shortcut IS
   the bypass** (session 45, 2026-07-16, the #141 fix's own review round). The v1 temporal gate had a
   clean quantity-noun veto on the before-marker path, but `TEMPORAL_AFTER` short-circuited `return
