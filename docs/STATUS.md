@@ -9,14 +9,17 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
-**▶ NEXT SESSION STARTS HERE (session 47, 2026-07-16→17 — TWO adversarial security hunts, TWO fixes merged+live. (1) BILLING/MONEY-PATH (6 lenses):
-NO live credit-conservation bug; one reachable-today gap FIXED+MERGED+LIVE ([#145], PR #48 squash `7e42656`) — `guardPending` bounds the untrusted
-reply-turn `pending`. (2) GDPR-REDACTION (4 lenses): a real HIGH leak the inline scout MISSED — `pending_table_requests.fit_note` (LLM sentence
-paraphrasing the question) + topic-disclosing table-ids survived erasure; FIXED+MERGED+LIVE ([#151], PR #49 squash `af287e1`) — cleared on redaction
-(fit_note all rows, table-ids terminal rows only). Cross-user + derived-surface lenses CLEAN. Tracked NOT built: [#146] Stripe payment_status gate
-(dormant, card-only; RUNBOOK pre-delayed-method gate added), [#147] compensation-amount DB guard, [#148] onboarding netCost reprice, [#149] requestId
-UUID, [#150] stale-reclaim footgun, [#152] answer_feedback insert race (self-healing). ⚠ [#151] is FORWARD-ONLY: pre-deploy prod rows still carry
-unredacted fit_note/table-ids until a purge/re-deletion — a one-off backfill sweep is a worthwhile supervised step. See open-questions #145-152.)**
+**▶ NEXT SESSION STARTS HERE (session 47, 2026-07-16→17 — THREE adversarial security/data-integrity hunts (each 4-6 lenses, dual-verified, Sonnet
+fan-out) + a frontend-render scout. THREE fixes merged+live, each on an EXPLICIT owner word (#118b). (1) BILLING/MONEY-PATH: NO live credit-
+conservation bug; one reachable-today gap FIXED ([#145], PR #48 `7e42656`) — `guardPending` bounds the untrusted reply-turn `pending`. (2) GDPR-
+REDACTION: a real HIGH leak the inline scout MISSED — `pending_table_requests.fit_note` (LLM sentence paraphrasing the question) + topic-disclosing
+table-ids survived erasure; FIXED ([#151], PR #49 `af287e1`; fit_note all rows, table-ids terminal only). (3) INGESTION/DATA-INTEGRITY: quarantine
+ENFORCEMENT on the value path is airtight (`resolve.ts:306` refuses a needs_review table before any cell is served); two hardenings FIXED ([#155]
+freshestForCanonical status gate + [#156] one validated dimension set per sync, PR #50 `b654010`). CLEAN lenses: money-conservation, cross-user,
+derived-surface, frontend XSS/injection. Tracked NOT built: [#146] Stripe payment_status (dormant, card-only; RUNBOOK pre-delayed-method gate added),
+[#147]-[#150] billing low/latent, [#152] feedback insert-race (self-healing), [#154] retained-cell false-fresh date (MEDIUM-HIGH, a DESIGN WP — the
+finder's batch_id sketch is flawed), [#157] a/b deliberately dropped. ⚠ [#151] is FORWARD-ONLY: pre-deploy prod rows keep unredacted fit_note/table-
+ids until a purge/re-deletion — a one-off backfill is a supervised step. See open-questions #145-157.)**
 
 **Session 46 (2026-07-16 — #144 DONE END-TO-END in ONE session:** built + adversarially reviewed + merged (PR #47, squash `94b90e4`, owner in-chat
 approval per #118(b)) + the supervised go-live EXECUTED (calibration, fail-open+admin-alert decision, flag flip, live smoke). The semantic checker is

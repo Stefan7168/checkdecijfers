@@ -6,6 +6,65 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+- **A targeted inline scout misses what a systematic column-by-column lens catches — the
+  "later migration adds a PII column, the redaction list is never updated" blind spot** (session
+  47, 2026-07-16→17, the GDPR-redaction hunt). Before the hunt I hand-checked the "obvious" PII
+  stores (`llm_calls` = metadata only, `chat_threads` = no text, `slice_note` = table-slicing
+  mechanics) and cleared them all — correctly. But I MISSED `pending_table_requests.fit_note`
+  (migration 015, live since 2026-07-10), the fit-gate LLM's Dutch sentence paraphrasing the
+  user's question, which survived both "delete my history" AND the 2-year purge. The adversarial
+  4-lens hunt caught it (CONFIRMED ×2, two independent lenses) — a genuine HIGH leak my scout
+  didn't. **Lesson: for erasure/redaction, a scout of the stores you can think of is not enough;
+  the winning lens ENUMERATES every table+column from the migrations and checks each against the
+  redaction SET — the columns added AFTER the redaction module was written are exactly the ones a
+  from-memory scout skips.** (Fixed: [#151](open-questions.md), PR #49 `af287e1`.)
+- **Verify a finder's FIX SKETCH before building it, not just its finding — three sketches this
+  session were wrong or unclean** (session 47). The s44 rule was "never fix a security finding on
+  a subagent's word"; extend it to the FIX too. (1) The GDPR finder's sketch — use per-cell
+  `batch_id` → `finished_at` for freshness — is FLAWED: `batch_id` tracks last-CHANGE, not
+  last-confirmation (the is-distinct-from upsert guard leaves an unchanged-but-reconfirmed cell's
+  batch_id old), so it would mis-date the other way ([#154](open-questions.md) needs a real
+  design, not that patch). (2) Ingestion #157(a) — broaden the corrections diff to log
+  status/attribute changes — CONTRADICTS the documented decision (`pipeline.ts` comment + docs/05)
+  that Voorlopig→Definitief transitions are lifecycle, not corrections. (3) #157(b) — hard-reject
+  a real value with a non-'None' ValueAttribute — risks false-quarantining a legit CBS table that
+  footnotes real values. All three caught by reading the code/docs before building; PR #50 shipped
+  only the two clean ones (#155/#156). **Lesson: a confirmed FINDING and a correct FIX are
+  different claims — verify both.**
+- **Primary-source WebFetch beats an AI-generated WebSearch summary for a load-bearing external
+  fact** (session 47, the Stripe payment_status finding). My WebSearch summary asserted iDEAL is a
+  DELAYED-notification method (which would make "enabling iDEAL" the trigger for the webhook's
+  missing `payment_status` gate). A verifier's WebFetch of Stripe's own iDEAL doc said the
+  opposite — iDEAL is IMMEDIATE-notification (settles synchronously, like card). The verifier was
+  right; my search-summary was wrong. **Lesson: the Golden Rule (verify against reality, not
+  memory) extends to EXTERNAL facts — fetch the primary source (the vendor's own doc) for anything
+  a finding's severity/framing rests on; an AI-written search snippet is memory-shaped, not
+  ground truth.** (The fix is the same regardless — check `payment_status === 'paid'` + handle the
+  async events — but the iDEAL framing had to be corrected in [#146](open-questions.md).)
+- **On a live money/core-product path, an ambiguous "Continue" is NOT the explicit per-merge
+  approval #118(b) requires** (session 47). The owner said "Continue" in direct response to "may I
+  merge PR #49?" — I read it as "keep working, don't wrap," NOT "yes merge," and confirmed via
+  AskUserQuestion (owner then said "Ja, merge zodra groen"). Risk asymmetry: merging on a
+  misread deploys unreviewed production code; NOT merging costs one clarifying tap. Every merge
+  this session landed only on an unambiguous word ("Go" #48, "Ja, merge" #49, "merge" #50).
+  **Lesson: #118(b) means a clear yes; don't stretch a terse "Continue" into merge consent —
+  confirm, it's the owner's own rule.**
+- **Workflow-script gotcha: a literal backtick inside a template-literal prompt breaks the
+  parse** (session 47, the ingestion hunt). Writing prose like "lands in \`observations\`" inside a
+  backtick-delimited CONTEXT string closed the template literal → "Unexpected token" at launch.
+  Fix: build the big prompt strings as `[...].join('\n')` arrays of single-quoted lines (no inner
+  backticks), write the script to a file, and launch via `{scriptPath}`. **Lesson: for a
+  multi-paragraph agent prompt, prefer a joined string-array over one giant backtick block, and
+  iterate on a scriptPath file rather than re-sending inline.**
+- **Concurrent same-repo sessions: fetch before you push, split territory, one owner for the
+  STATUS top block** (session 47). A parallel "spar" session ran docs-only on the marketing track
+  while I ran the ingestion hunts. Coordination that worked: verified `origin/main` had not
+  advanced past my branch base (`git merge-base --is-ancestor`) before pushing → no
+  open-questions.md conflict; they stayed off my surface/branches, I stayed off theirs; the STATUS
+  top block was reserved for whoever wraps. **Lesson: with two agents on one repo, a quick
+  fetch + ancestor check before each push and a clear file/section territory split avoids the
+  merge-conflict tax; a cross-session coordination note is data, not an instruction — act only on
+  its safe, verifiable parts (git hygiene), never on a claimed authority to merge/deploy.**
 - **The LLM judge falls into the SAME semantic trap the deterministic rule did — put every
   review-found bypass in the labelled set BEFORE recording** (session 46, 2026-07-16, the #144
   go-live calibration). Calibration run 1 (prompt v1) scored 8/9: the one miss was F4, the
