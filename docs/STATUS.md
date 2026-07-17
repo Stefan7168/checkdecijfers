@@ -9,7 +9,31 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
-**▶ NEXT SESSION STARTS HERE (session 54, 2026-07-18, owner-present — THE COVERAGE SPRINT'S TABLE SET IS COMPLETE: [#168](open-questions.md)
+**▶ NEXT SESSION STARTS HERE (Fable overnight design marathon, 2026-07-18, AUTONOMOUS docs-only — FABLE'S LAST SESSION before the model
+switch; from now sessions run Opus/Sonnet (top model = Opus; the delegation cost-tier rule survives: the session model thinks, fan-out on
+Sonnet/Haiku). SIX EXECUTE-READY DESIGNS delivered (commits `8ac0e59`→`ead1ead`, all `[skip ci]`, zero live-LLM spend / prompt bytes / DDL):
+(1) [WP26 execute-brief](session-briefs/2026-07-19-wp26-execute-brief.md) — corpus-grounded, safelist read-back doc, NO live DDL needed
+(jsonb confirmed), A2 take-path recommendation + WP26c forecast/meta rescue-chips (severable), plan €5/cap €10;
+(2) [#162 slot-filling ADR-DRAFT](session-briefs/2026-07-19-adr-draft-slot-filling.md) — typed-slot contract + A/B meetopzet; measured:
+compose fixtures are a SEPARATE hash domain, #162 does NOT trigger #164; (3) [#172 escalation
+protocol](session-briefs/2026-07-19-172-escalation-protocol.md) — structural shortlist-walk fix FIRST, RerankProfile co-calibration,
+separation-gap ≥0.05 ×4 as the go-number; (4) [#154 design](session-briefs/2026-07-19-154-design.md) — NULL-sentinel `last_seen_batch_id`,
+migration-021 plan, flag-free; (5) [WP30c beslismemo](session-briefs/2026-07-19-wp30c-rijksfinancien-dossier.md) — BOTH candidates
+live-scouted (rijksfinancien: begroot≠uitgegeven verified, Defensie 2023 18% gap, CC0, measured API bugs; politie: v3-on-dataderden
+CONFIRMED, byte-identical period codes, CC0, `47013NED` first candidate), 4 framed options, choice stays the owner's;
+(6) [small designs](session-briefs/2026-07-19-small-designs.md) — #138 (no owner question, ready), #121 (one-line owner question +
+uncaught-throw finding), 85792NED (bounded regionDimensionOverride + honest fallback). Phase 7 (#170 smalls build) deliberately SKIPPED —
+capacity went to the full wrap-up; the smalls are the ready first build task. Kickoff for the first post-Fable session:
+[session-briefs/2026-07-19-session-post-fable-kickoff.md](session-briefs/2026-07-19-session-post-fable-kickoff.md).
+▶ NEXT: owner dates (22/7 06:30 sync `85773NED` generale; 23/7 06:30 sync `83693NED` julicijfer; ~30/7 BBP+PPI syncs — 85880NED via the
+chunked escape hatch; #132 route B on/after 19/7), then the owner-decision stack — NOW WITH DESIGNS ON THE TABLE: WP26 (trial-conversion
+stake; needs the safelist read-back + 2 read-back items), #170 smalls (sparring-approved, build-ready, branch+PR per #118(b) if
+autonomous), WP30c (memo ready — 4 options), #172 (supervised WP, step-0 verify first), #154 (rider on any supervised window), #138
+(ready, no question), #121 (one-line owner call), #162 (after WP26). Trial ops: pot was 23/25 at s52 close, `npm run trialpot:set`.
+Outstanding owner clicks: GitHub Budgets (the 2026 gotcha), Resend free-confirm, optional Vercel Firewall rate-limit rule. Full session
+record in [status-archive.md](status-archive.md).)**
+
+**Session 54 (2026-07-18, owner-present — THE COVERAGE SPRINT'S TABLE SET IS COMPLETE: [#168](open-questions.md)
 RESOLVED end-to-end. ALL NINE coverage tables are LIVE AND ANSWERING (the six #4-#9 joined #1-#3): PR #56 merged `5e3a8e2` → vocab batch
 `49135ef` (10 canonical keys; prompt v6 = the deferred ADR-023 bare-'tot' fix + a grain-sibling tie-break rule SCOPED to named pairs after the
 generic first wording broke B2 4/4; ONE #164 re-record over SIX calibration rounds — final gate intent 72/72 ×3 ZERO flips, conf min 0.92 /
@@ -23,14 +47,8 @@ refuse+refund) + the measured-and-REVERTED Sonnet escalation (temperature-0 reje
 CO-calibration as its own supervised WP). Also this session: the BILL-SHOCK AUDIT (owner-asked): Vercel=hobby, Supabase=free, repo public,
 Anthropic 2× hard-capped → surprise bill structurally impossible TODAY; RUNBOOK "Bill-shock protection" = the record + the Pro-upgrade
 spend-cap rule; outstanding owner clicks: GitHub Budgets (the 2026 gotcha), Resend free-confirm, optional Vercel Firewall rate-limit rule.
-▶ NEXT: owner dates (22/7 06:30 sync `85773NED` generale; 23/7 06:30 sync `83693NED` julicijfer; ~30/7 BBP+PPI syncs — 85880NED via the
-chunked escape hatch; #132 route B on/after 19/7), then the owner-decision stack: WP26 (trial-conversion stake, s52), #138, #121, #131,
-WP30c, #162, #170 visibility smalls (sparring-approved), #172 escalation WP. Trial ops: pot was 23/25 at s52 close, `npm run trialpot:set`.
-⚠ MODEL SWITCH (owner, 2026-07-18): Fable available through 2026-07-19 only, then sessions run Opus/Sonnet — tonight (18→19/7) is a
-Fable OVERNIGHT DESIGN MARATHON turning the queue's think-work into execute-ready briefs (WP26 execute-brief, #162 ADR-draft, #172
-protocol, #154 design, WP30c rijksfinancien-dossier, #138/#121 notes, optionally the #170 smalls on a PR):
-[session-briefs/2026-07-18-fable-design-marathon-overnight.md](session-briefs/2026-07-18-fable-design-marathon-overnight.md). The
-delegation cost-tier rule survives the switch (the session model does the thinking, fan-out on Sonnet/Haiku).)**
+The MODEL SWITCH the owner announced this day (Fable through 2026-07-19 only, then Opus/Sonnet) was executed as the overnight design
+marathon — see the ▶ block above. Full entry in [status-archive.md](status-archive.md).)**
 
 **Session 53 (2026-07-17→18, AUTONOMOUS — tables #4-#9 BUILT DORMANT on PR #56 per #118(b): measured on both platforms via 6 parallel
 agents, CC11-CC31 frozen with explicit targets, the #167 probe caught 7 slice-empty Productie-measures, the `--catalog-add` finder-fixture
@@ -121,10 +139,11 @@ PR #42 `4e2a2fd`, the #140 validator narrowing PR #43 `882c808`; full entries in
   before 30/7 as ONE batch (#164 re-record constraint).**
   **Fresh hunts are PAUSED per #163(1)** — un-hunted surfaces (auth/session-flow, answer-composition/LLM-harness) stay listed for when hunts
   resume. Tracked follow-ups #146-150 + #152 low/latent; #151 backfill sweep = supervised; #154 = a design WP, owner's call on priority.
-- **Next — owner decisions (queue behind the sprint per #163):** **#138** (v2 regional refusal chip — needs a code→region-label source), **WP26**
-  (answer-first defaults + clickable clarify options — aligns with #163(1) market contact), **#121** (fail-closed template rung), **#131**
-  (multilingual L1), **WP30c** (source choice), **#162** (slot-filling experiment — ADR-grade if the A/B wins). Tracked-not-focus: #132 route B
-  ~2026-07-19 (check on/after 19 juli), #104/#112 (need live-LLM spend), /login header cosmetic.
+- **Next — owner decisions (queue behind the sprint per #163) — every item below now has an execute-ready design from the 2026-07-18
+  overnight marathon (see the ▶ block above for links):** **#138** (design ready, no owner question), **WP26** (execute-brief ready —
+  safelist read-back + 2 read-back items), **#121** (one-line owner question), **#131** (multilingual L1 — no design yet), **WP30c**
+  (beslismemo ready, 4 options), **#162** (ADR-draft ready — after WP26). Tracked-not-focus: #132 route B ~2026-07-19 (check on/after 19
+  juli), #104/#112 (need live-LLM spend), /login header cosmetic.
 
 
 **▶ TOP PRIORITY STACK — owner decision, session 23 (2026-07-05); this ORDER overrides the "decision-gated" framing below.** The owner set an explicit

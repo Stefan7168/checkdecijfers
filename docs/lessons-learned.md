@@ -6,6 +6,37 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Fable overnight design marathon (2026-07-18, autonomous, docs-only — six execute-ready designs, €0 product-LLM spend)
+
+- **Verify a brief's stated constraint the same way you verify a finder's fix sketch — the marathon brief itself
+  carried a wrong one.** The brief asserted the #162 slot-filling experiment would trigger "#164-heropname"
+  (prompt-byte change → ~93-fixture re-record). Measured: the compose prompt is a SEPARATE hash domain (15 answer
+  fixtures, own `COMPOSE_PROMPT_VERSION`); #164's trigger is intent-side vocabulary only, and old+new compose
+  fixtures can coexist per request-hash — which is precisely what an A/B needs. A design that had trusted the brief
+  would have budgeted a ~€10 re-record that doesn't exist and missed the free-coexistence property. The s47 rule
+  ("verify a finder's FIX SKETCH, not just its finding") extends to briefs and to your own prior sessions' framings.
+- **The per-phase marathon discipline worked: fan-out extraction (Sonnet/Haiku Explore agents, "report raw findings
+  with file:line"), synthesis by the session model, ONE finished doc committed before the next phase starts.** Six
+  phases produced six committed designs with per-phase open-questions pointers in the same commit; context stayed
+  bounded because each phase's agent reports were consumed immediately into a deliverable instead of accumulating.
+  The raw-findings prompt shape (verbatim quotes + file:line, "your final message is data for a design synthesis,
+  not user-facing prose") made agent output directly citable — no re-reading of sources during synthesis.
+- **Read-only live scouting before a source decision pays for itself in one night.** The politie hypothesis
+  (StatLine-derden = CBS v3 infra) was CONFIRMED by calls, and rijksfinancien yielded three product-shaping API bugs
+  a build session would have hit blind: the O1/O2 phase filter silently returns the OWB+JV union, empty results
+  return HTTP 404 instead of `200 []`, and unfiltered year queries run 43–57s with mid-JSON truncation under short
+  timeouts. "Geen claim zonder call" is cheaper as a dossier discipline than as a build-session surprise. (Bonus
+  quirk: politie.nl's FAQ 403s the WebFetch tool but serves plain curl with a browser User-Agent.)
+- **Designing against measured code surfaces real adjacent bugs — record them in the design, not just the finding
+  list.** Two found this night while writing notes: the ADR-013 template rung can THROW uncaught (non-null
+  assertions sit outside the LLM-attempt try/catch — no rung below, no handler above), and the
+  `region_on_national_measure` clarify text is factually wrong for 85792NED (the table HAS regional cells; the geo
+  path just can't see a plain-Dimension RegioS). Both went into the phase-6 doc with their fixes.
+- **An autonomous overnight's last context belongs to the mandatory wrap-up, not an optional build phase.** Phase 7
+  (the #170 smalls) was deliberately skipped: the brief's own priority ("liever twee smalls af dan vier half";
+  full ritual on low context) makes finished-designs + complete handoff worth more than half-verified code on a
+  branch the owner must review anyway. The smalls hand off as the next session's ready first task instead.
+
 ## Sparring session (2026-07-18, owner-present, parallel to s54 — competitive analysis, no build)
 
 - **Read what a competitor SHIPS, not what they claim — shipped artifacts refute marketing in minutes.**

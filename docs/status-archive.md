@@ -1,5 +1,98 @@
 # STATUS archive — the session log
 
+**Last updated: 2026-07-18 (Fable overnight design marathon, AUTONOMOUS, docs-only — Fable's LAST session before the
+model switch to Opus/Sonnet. Six execute-ready design docs delivered per the marathon brief
+[session-briefs/2026-07-18-fable-design-marathon-overnight.md](session-briefs/2026-07-18-fable-design-marathon-overnight.md),
+phases 1–6 COMPLETE, phase 7 (#170 smalls build) deliberately SKIPPED — capacity reserved for the full wrap-up ritual
+per the brief's own priority. Commits `8ac0e59` → `ead1ead` + wrap-up, all `[skip ci]` docs-only, zero live-LLM spend,
+zero prompt bytes, zero DDL/syncs/env-flips. Deliverables named `2026-07-19-*` per the brief; wall-clock session date
+2026-07-18, verified.)**
+
+- **Phase 1 — WP26 execute-brief** (`8ac0e59`,
+  [session-briefs/2026-07-19-wp26-execute-brief.md](session-briefs/2026-07-19-wp26-execute-brief.md)): corpus-grounded
+  against the s23 audit's raw run (measured split of the "20 of 56": 10 clarify + 10 refuse; WP26 mechanisms touch
+  ~13 of 20 — the 7 meta-trust refusals are a #103-lane gap, named so nobody expects WP26 to move them), the s52
+  trial-smoke refusals (BOTH measured as parse-side kind-misfires: the forecast guard is a date-free LLM judgment
+  with no DB check, s54-measured intermittent on 2026-periods; "consumentenvertrouwen" → meta template), and the s54
+  relabels as drift evidence. Safelist as an owner READ-BACK doc (Dutch, per-entry R7 transparency). Mechanism A:
+  full-intents-only option payload (refines ADR 024's axis-patch idea), `pending_clarification` jsonb confirmed
+  sufficient → **NO live DDL** (ADR 024's flagged assumption resolved), and a take-path fork for owner read-back:
+  **A2 recommended** (deterministic option-label match INSIDE `replyToClarification` — no new entry point, also
+  rescues typed replies that equal an option) vs ADR-024-as-written A1. **WP26c decided into scope, severable:**
+  deterministic rescue chips on forecast/meta kind-misfires (ADR-023 date parse + `nearestCanonicalKeys` +
+  `freshestForCanonical` + dry-run; refusal text unchanged, chip = escape hatch). Calibration: zero #164 impact
+  (zero prompt bytes), targeted `--only` records, plan €5 / cap €10, frozen-pins list (B15/B16, s54 relabels,
+  72/72 replay). Assumption to verify at build step 1: 83625NED has an NL-level row.
+- **Phase 2 — #162 slot-filling ADR-DRAFT** (`a32dc91`,
+  [session-briefs/2026-07-19-adr-draft-slot-filling.md](session-briefs/2026-07-19-adr-draft-slot-filling.md), promote
+  to docs/decisions/ only after owner read-back + a measured A/B win): typed-placeholder contract (closed slot menu;
+  value slots fill via `formatValueNl`+`displayValueUnit` → R10/R11 become filler-owned structural; period labels
+  must be slots; zero-digit + word-form + R9-direction checks stay first-line pre/post-fill), defense-layer table
+  (R3 digit-match becomes a second-line belt; #144 unnecessary on the slot path — both residual shapes need a digit
+  the model cannot emit), R8 gains byte-identical re-fill re-derivation, ladder = new first rung over the unchanged
+  template floor. A/B meetopzet: 34 questions (B1–B14 ×3 + 20 audit-drawn ×2, ~€0.50), hard gates (zero template
+  falls, legacy validator passes every filled body), deciding metric = blind pairwise Dutch-quality judge (≥60%
+  win-or-tie, zero grammar-error losses) + owner read of the worst 5 pairs; rollback = flag off with legacy fixtures
+  never leaving the repo. **Measured correction to the marathon brief: compose fixtures are a SEPARATE hash domain —
+  #162 does NOT trigger #164; old+new fixture sets coexist per request-hash (exactly what an A/B needs).**
+- **Phase 3 — #172 escalation protocol** (`8cf39aa`,
+  [session-briefs/2026-07-19-172-escalation-protocol.md](session-briefs/2026-07-19-172-escalation-protocol.md)):
+  reframed around the recorded s31 lesson (deliverability is invisible in the rerank's input → no tier escalation
+  helps) — **step 0 = structural fix first**: extend the ADR-027 fit-gate walk past the model chain into the Stage-1
+  FTS shortlist (deterministic order, cap ~6, drift-proof; verify hermetically that 37789ksz is IN the bijstand
+  shortlist, €0). Then `RerankProfile` = {model, params, threshold, calibration report} as ONE unit; params matrix
+  (Haiku temperature:0 / Sonnet omit-temperature + thinking:'disabled' / never port params across families);
+  eval-tooling fix: distinguish model-disclose from fail-safe-disclose (the s54 masking trap). Go-number: separation
+  gap = min(correct-confident) − max(should-disclose) **≥ 0.05 in EVERY one of ×4 rounds** (s54 Sonnet measured ≤ 0
+  → correctly no-go), threshold at gap midpoint. Labelled-set chain-case harvest procedure (measured, not invented),
+  `walkContains: '37789ksz'` restore as the WP's done-tripwire, monthly live drift canary (~cents), plan €5 / cap
+  €10, supervised.
+- **Phase 4 — #154 design** (`cdae9e1`,
+  [session-briefs/2026-07-19-154-design.md](session-briefs/2026-07-19-154-design.md)): truth model = last-changed
+  (`batch_id`, exists) / last-CONFIRMED (missing — the honest per-cell date) / table `last_sync_at`; the two coincide
+  for every present cell → **track ABSENCE, not presence**: migration 021 adds NULL-sentinel `last_seen_batch_id`
+  (NULL = present in the latest sync = today's behavior; writes ∝ anomalies, never a full-table rewrite),
+  mark-on-absence (only-when-NULL, provable-batch rule with a conservative lower-bound for the transition window) +
+  clear-on-reappearance (one OR-term on the upsert guard). Displayed date = MIN over cells' effective dates →
+  staleness fires naturally on exactly the class that today slips the net. Flag-free, deploy-order-safe, 6 pinning
+  tests incl. the s47 repro; one session, €0 LLM.
+- **Phase 5 — WP30c beslismemo, LIVE-scouted** (`c303f3c`,
+  [session-briefs/2026-07-19-wp30c-rijksfinancien-dossier.md](session-briefs/2026-07-19-wp30c-rijksfinancien-dossier.md)):
+  **rijksfinancien.nl measured** — CC0, OpenAPI + static per-year-per-phase files; the begroot≠uitgegeven story
+  verified with real numbers (Defensie 2023: OWB 8.140.313 vs JV 9.637.811 ×€1.000 = 18% gap; `StandVB/Realisatie/
+  Verschil` three-way in one row); gotchas measured: live-API O1/O2 filter silently returns the OWB+JV union (use
+  static files), 404-on-empty, 43–57s unfiltered queries, article renumbering self-documented in
+  `Conversietabellen_compleet.xlsx` (6.37→20.37), unit mismatch (×€1.000 vs whole euros), `_incl`/`_excl` semantics
+  unresolved. **data.politie.nl measured — the infrastructure hypothesis CONFIRMED**: OData v3 on
+  `dataderden.cbs.nl` (CBS-built), 12 tables, CC0 (not CC-BY), byte-identical period grammar (F2 passes by
+  construction), same padding quirk, same IPv6 fix; deltas: v3 resources + `$format=json`, ODataApi/ODataFeed
+  `$skip` split, 10.000-row cap, new `GeoDetail` dimension kind, `RE` region family, unresolvable internal catalog
+  URLs; first table `47013NED` (4,16M rows, monthly ~15th). Seam map onto the live WP30a/b waist (F0–F5), per-source
+  frozen-key form (PC*/RF* siblings of coverage-key.json, two independent reads before freezing), effort/spend per
+  option incl. the #164 batch constraint. Four framed options (politie / rijksfinancien / wait / sequenced-both) —
+  **no decision taken; owner's choice, deliberately.** Prinsjesdag 2026-09-15 named as the content deadline if
+  option 2 tempts.
+- **Phase 6 — small designs** (`ead1ead`,
+  [session-briefs/2026-07-19-small-designs.md](session-briefs/2026-07-19-small-designs.md)): **#138** — reuse
+  `regionTermsFor` (WP15, metadata-only `dimension_labels`, fail-closed) via a second injected label-closure in
+  `buildRefusalSuggestions`; no owner question, ~half a session, €0. **#121** — the owner question sharpened to one
+  line (recommendation: serve + admin-alert + R8 marker, because a template `ok:false` indicates a VALIDATOR blind
+  spot, not a lying answer — the template is fabrication-incapable by construction) + an adjacent finding to fix
+  either way: the template rung can THROW uncaught (non-null assertions outside the try/catch) → wrap + honest
+  `internal` refusal as the true floor. **85792NED** — recommendation: bounded option 2 + 3: a curated per-table
+  `regionDimensionOverride: 'RegioS'` registry marker (codes ARE standard GM/PV/LD/NL codes; labels already in
+  `dimension_labels`) + a two-reading clarification to 83625NED for gemeenten outside the 21 (index ≠ price level,
+  never a silent swap); costs a #164 batch (REGIONAL_KEYS lives in prompt.ts) → ride the next vocab window; interim:
+  the `region_on_national_measure` clarify text is measurably wrong for this one table.
+- **Phase 7 — deliberately skipped** (the #170 smalls build): the brief's own rule ("liever twee smalls af dan vier
+  half"; wrap-up in full when context runs low) — six finished designs + a complete handoff beat half-verified code
+  on a branch. The smalls are the ready first task in the post-Fable kickoff.
+- **Wrap-up:** 5 lessons appended; memory updated (`feedback_model_tier_allocation` per the brief + current-state);
+  open-questions rows #66/#72/#121/#123/#138/#154/#162/#172 all carry same-commit pointers to their design docs;
+  ADR 024 + 08-build-plan pointer notes; kickoff saved as
+  [session-briefs/2026-07-19-session-post-fable-kickoff.md](session-briefs/2026-07-19-session-post-fable-kickoff.md).
+  Clean tree, all pushed, no worktrees, no CI runs expected (docs-only `[skip ci]`).
+
 **Last updated: 2026-07-18 (session 54, owner-present — the coverage sprint's TABLE SET COMPLETED: [#168](open-questions.md) resolved
 end-to-end; ALL NINE coverage tables LIVE and answering. Plus the owner-asked BILL-SHOCK AUDIT. Commits `7dd37c1` (audit docs), merge
 `5e3a8e2` (PR #56), `49135ef` (vocab batch); CI gate+deploy green on both code pushes.)**
