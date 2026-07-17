@@ -25,7 +25,9 @@ added — the six tables answer NOTHING in production yet (dormant by design). �
 → (3) live syncs ×6 + `registry:apply` AFTER verified deploy + LLM-free spot-checks.** Owner dates stay: 22/7 06:30 sync `85773NED`, 23/7
 06:30 sync `83693NED`, ~30/7 BBP+PPI syncs (85880NED needs the chunked escape hatch), #132 route B on/after 19/7. Trial ops: pot was 23/25 at
 s52 close, `npm run trialpot:set -- <n>` refills/closes. WP26 keeps its trial-conversion stake (s52 note) — owner's call whether it jumps the
-queue.)**
+queue. **Bill-shock audit DONE (2026-07-18, owner-asked): measured — Vercel=hobby, Supabase=free, repo public, Anthropic 2× hard-capped → a
+surprise bill is structurally impossible TODAY; RUNBOOK "Bill-shock protection" section = the record + the welded-in Pro-upgrade spend-cap
+rule. Outstanding owner clicks: GitHub Budgets check (the 2026 gotcha), Resend free-confirm, optional free Vercel Firewall rate-limit rule.**)**
 
 **Session 52 (2026-07-17 — PRODUCT-AF DELIVERED: (a) "Ontdek Nederland in grafieken" LIVE on `/` (`752af59`, ADR
 [035](decisions/035-homepage-discovery-charts.md)); (b) the #53 anonymous trial pot (`9317acb`, ADR [036](decisions/036-anonymous-trial-pot.md))

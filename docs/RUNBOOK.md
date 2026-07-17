@@ -36,7 +36,7 @@ Everything **Stefan** does, phase by phase. AI sessions read [CLAUDE.md](../CLAU
 - [ ] **Rotate `ANTHROPIC_API_KEY` at go-live/first deploy** (owner decision 2026-07-03: the pre-launch key stayed in use across the machine move, bounded by the $25/mo spend cap; going live is the agreed rotation moment) — new key into local `.env` + the Vercel env store, then delete the old key in the console.
 - [ ] **KvK registration + business bank account** — required before Stripe can pay out in the Netherlands (real money; test mode above needs none of this). **Timing decided (Stefan, 2026-07-04, session 18): starts only when the website is completely finished — deliberately parked, not "start early." Sessions: do not raise this as a next step or blocker until Stefan says the site is done** ([open-questions #54](open-questions.md)).
 - [ ] **Stripe live mode** with iDEAL enabled — can't flip from test to live mode until the item above is sorted; a config change (new keys), not new code. **⚠ GATE before enabling any DELAYED-notification payment method (SEPA Direct Debit, Bacs/ACH, bank transfer, vouchers — NOT card or iDEAL, both of which settle synchronously): the webhook (`src/billing/stripe-webhook.ts`) currently credits on `checkout.session.completed` with NO `payment_status` check and subscribes to no async settlement event, so it would credit a payment that hasn't settled and can still fail ([open-questions #146](open-questions.md), session-47 hunt). Enabling such a method is "just a Dashboard toggle, no code" — which is exactly the trap. BEFORE flipping one on: (1) in `handleStripeEvent` only credit when `session.payment_status === 'paid'`; (2) subscribe the webhook destination to `checkout.session.async_payment_succeeded` (credit then) + `checkout.session.async_payment_failed` (no-op/log). Dormant + safe today because the account is card-only.**
-- [ ] **Vercel: upgrade Hobby → Pro (~€20/mo)** before real payments go live — the Hobby tier's terms are for non-commercial use only; this can happen any time before go-live, it's the cheapest item on this list.
+- [ ] **Vercel: upgrade Hobby → Pro (~€20/mo)** before real payments go live — the Hobby tier's terms are for non-commercial use only; this can happen any time before go-live, it's the cheapest item on this list. **⚠ INSEPARABLE from the upgrade (same sitting, before any announcement): configure Spend Management with a monthly amount AND the opt-in "Pause production deployment" auto-action** — on Pro without that, on-demand usage is unlimited and bill-shock becomes possible for the first time (see the "Bill-shock protection" section below; audited 2026-07-18).
 
 ### Phase 2 — public launch (browse layer, SEO)
 
@@ -89,6 +89,53 @@ A fresh machine needs to know which login owns each provider to rotate a secret 
 **Note on `NEXT_PUBLIC_*` vars and the Vercel env store (2026-07-04, production outage post-mortem):** this Vercel team enforces the **sensitive environment-variables policy** — every env var added to the project becomes write-only, no matter how it is added (dashboard or CLI; verified against the API: every var reports `type: sensitive`). Write-only is fine for real runtime secrets (`DATABASE_URL`, `ANTHROPIC_API_KEY`, `STRIPE_*` — Vercel injects them into the running functions), but it is **fatally incompatible with `NEXT_PUBLIC_*`** vars: those must be readable at *build* time, and our builds run in GitHub Actions via `vercel pull`, which receives sensitive values as **empty strings**. Result: the middleware was compiled with empty Supabase credentials and every route returned Internal Server Error — while the deploy job stayed green (a build succeeding says nothing about the app running; the CI deploy job now ends with a post-deploy smoke check for exactly this). The three public values therefore live in **`web/.env.production`, committed to git on purpose** (they ship in every browser bundle by design — same reasoning as the committed CA certificate, ADR 018). Never add a `NEXT_PUBLIC_` var to the Vercel env store expecting CI builds to see it, and never put a real secret in `web/.env.production`.
 
 **Note on `web/.env.local`:** the chat UI (`web/`, its own fully independent npm project — ADR [018](decisions/018-chat-ui-and-deploy.md), it briefly started as an npm workspace and was split mid-session) is a separate Next.js project that loads its own env file rather than the root `.env` — it does **not** automatically see root's values. `web/.env.local` is gitignored, same as root `.env`. An earlier version of this file was a **symlink** to root `.env`, which seemed convenient but backfired the first time `vercel pull` wrote a Vercel-specific token *through* the symlink into the shared root file — fixed by making `web/.env.local` a real, independent copy. Which secret lives where is per-row above — do NOT assume "all three": as of 2026-07-11 (verified) `web/.env.local` holds ONLY the three `NEXT_PUBLIC_*` values; `ANTHROPIC_API_KEY` and `DATABASE_URL` live in root `.env` + Vercel (two places), and only need to be added to `web/.env.local` if you run the chat UI's full answer pipeline locally. There is no technical link keeping any of these in sync — follow the per-secret "Lives in" column at rotation time.
+
+## Bill-shock protection — per-provider spend limits (audited 2026-07-18, session 54; owner asked after "woke up to a huge Vercel bill" stories)
+
+**Measured conclusion first: on today's setup a surprise bill is structurally impossible.** The horror stories are
+Vercel **Pro** teams with on-demand usage and NO spend cap configured — we are not that. Every provider was checked
+against the live account (not from memory) on 2026-07-18; billing-rule claims verified against current official
+docs the same day (sources in the session archive entry).
+
+| Provider | Measured state (2026-07-18) | Can it bill us today? | Hard limit |
+|---|---|---|---|
+| Vercel | plan **hobby** (API-verified) | **No** — Hobby has no billing cycle at all; hitting a limit PAUSES the resource (~30 days), never charges. Verified: vercel.com/docs/plans/hobby | The plan itself is the cap |
+| Anthropic (main key) | €25/mo workspace cap + billing alert (set 2026-07-02/04) | Only up to the cap — API pauses at the cap, no overage | ✅ set |
+| Anthropic (trial key) | SEPARATE workspace with its own hard cap (owner-created, #53 go-live) | Only up to that cap | ✅ set |
+| Supabase | org "stefan" plan **free** (API-verified) | **No** — Free needs no card; risk is pause-after-1-week-inactivity, not money | The plan itself is the cap |
+| GitHub | repo **PUBLIC** (verified) → Actions minutes free/unlimited on standard runners | **⚠ Only via the 2026 gotcha below** | Owner check below |
+| Resend | Free tier (3,000/mo, 100/day, no overage fee) | **No** if no card is on file — quota just stops sending | Owner confirm below |
+| Stripe | test-mode sandbox; fee-per-transaction model | No (it takes fees from payments, it never bills usage) | n/a |
+| Namecheap | fixed yearly domain fee | No usage component | n/a |
+
+**App-level spend brakes that already exist (for the record):** anonymous trial = deterministic pot +
+2 questions/visitor + 5/day/IP on a hard-capped separate key; authenticated chat = credits-gated; the cron route is
+`CRON_SECRET`-gated fail-closed; the homepage charts are LLM-free behind a 30-min cache. Runaway LLM spend is
+bounded twice (app logic + Anthropic hard caps).
+
+### Owner actions (the only three things a session cannot click)
+
+1. **GitHub — the one real 2026 change (do this one):** GitHub replaced the old "$0 spending limit by default"
+   with **Budgets** (~Nov 2025). If a payment method is on file, metered overage now auto-bills UNLESS a budget
+   with **"Stop usage when budget limit is reached"** exists. Our Actions are free (public repo), but check once:
+   github.com/settings/billing → if a payment method is on file, create a Budget covering metered products at €0
+   (or a few €) WITH the stop-toggle ON; if no payment method exists, nothing can bill and you're done.
+2. **Resend:** resend.com dashboard → Billing: confirm plan = Free and no card on file. (Free cannot bill; this
+   just confirms we're on Free.)
+3. **Vercel (optional, free, availability-belt not money-belt):** the Hobby risk is the SITE PAUSING if bots burn
+   the included allotment. Free mitigations on Hobby: Firewall → Configure → New Rule → action **Rate Limit**
+   (Hobby: 1 rule/project — suggested: path starts with `/api/` → ~60 req/min per IP → deny) and **Attack
+   Challenge Mode** as the panic button (blocked traffic doesn't count toward usage). Monthly usage glance:
+   dashboard → Usage (also on the maintenance-session standing agenda under "spend dashboards").
+
+### ⚠ STANDING RULE — the day Hobby → Pro happens (the launch checklist item)
+
+The moment we upgrade for real payments, the no-bill guarantee DISAPPEARS: on Pro, new teams get spend
+*notifications* by default but usage continues unless a hard limit is manually configured. **In the SAME sitting
+as the upgrade, before any announcement:** Team Settings → Billing → **Spend Management** → set a monthly amount
+(suggestion: €40) → **enable the automatic "Pause production deployment" action** (it is OPT-IN — a notification
+alone does not stop anything). If Supabase ever goes Pro: its **Spend Cap** (org Billing → Cost Control) is ON by
+default — leave it ON. This rule is also welded into the Phase-1 checklist item above.
 
 ## Route B drill (#132) — TWO-PHASE, reversible: rename-private first, delete only weeks later
 
