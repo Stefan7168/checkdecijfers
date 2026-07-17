@@ -29,6 +29,15 @@ queue. **Bill-shock audit DONE (2026-07-18, owner-asked): measured — Vercel=ho
 surprise bill is structurally impossible TODAY; RUNBOOK "Bill-shock protection" section = the record + the welded-in Pro-upgrade spend-cap
 rule. Outstanding owner clicks: GitHub Budgets check (the 2026 gotcha), Resend free-confirm, optional free Vercel Firewall rate-limit rule.**)**
 
+**Sparring session (2026-07-18, owner-present, parallel to the s54 build session — NO build, docs-only `203a371`/`fab0433`: competitive
+teardown of nederlandinbeeld.org + aidscope.co.uk; verdienmodel doubt addressed (access ≠ answers) with a parked LLM-benchmark test
+[#169](open-questions.md); four visibility smalls owner-approved [#170](open-questions.md); API/MCP + transparency + correlation ideas
+parked with rationale [#171](open-questions.md); rijksfinancien.nl added as second-source candidate [#123](open-questions.md), DNB on the
+long-term roadmap list. Architecture sketches + analysis in
+[session-briefs/2026-07-18-sparring-competitive-analysis.md](session-briefs/2026-07-18-sparring-competitive-analysis.md) +
+[…-parked-ideas-architecture-sketches.md](session-briefs/2026-07-18-parked-ideas-architecture-sketches.md). Priority stack UNTOUCHED —
+#168 remains the single next owner-present build step. Full entry in [status-archive.md](status-archive.md).)**
+
 **Session 52 (2026-07-17 — PRODUCT-AF DELIVERED: (a) "Ontdek Nederland in grafieken" LIVE on `/` (`752af59`, ADR
 [035](decisions/035-homepage-discovery-charts.md)); (b) the #53 anonymous trial pot (`9317acb`, ADR [036](decisions/036-anonymous-trial-pot.md))
 BUILT + supervised go-live RUN same day — THE TRIAL IS LIVE on `/` (pot 23/25 after smoke; ops via `npm run trialpot:set`). ⚠ WP26 stake

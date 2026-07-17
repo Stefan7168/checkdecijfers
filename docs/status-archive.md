@@ -1,5 +1,39 @@
 # STATUS archive — the session log
 
+**Last updated: 2026-07-18 (sparring session, owner-present, PARALLEL to the s54 build session — competitive analysis, NO build.
+Docs-only commits `203a371` + `fab0433` + the wrap commit; [skip ci] throughout, priority stack untouched.)**
+
+- **Deep teardown of nederlandinbeeld.org** (from its shipped bundles, /technische-opbouw page and llms.txt): Lovable/Cursor/Claude-built
+  Vite+React+shadcn/Recharts+Supabase stack; CBS via scheduled edge-function syncs (GitHub Actions + a Mac-mini OpenClaw agent);
+  historical data baked into the bundle, live tiles from Supabase. Smoking guns recorded: public `/v1/ask` returns
+  `gemini-3-flash`-generated numbers with document-title sources; per-page Grok "verificatie" leaves a "Niet verifieerbaar" claim
+  published; "Veiligelanders" tab vs their "alleen CBS-definities" claim; €46,1 mld = own gross methodology. Correlaties page analyzed
+  as the cautionary example (hand-picked pairs, r over tiny aggregates). Patterns worth copying harvested (badges, llms.txt,
+  annotations, download-with-attribution, datablinde-vlekken, MCP demand signal).
+- **Deep teardown of aidscope.co.uk**: no backend — static JSON from FCDO official statistics; "Woke/Waste" scores are PUBLISHED
+  deterministic rules, explicitly owned as editorial, with a reconciliation & limitations section. Lessons: show-your-workings as UI,
+  reconciliation notes build trust, deterministic ≠ neutral, polished data sites are commodity — the moat is the refreshed validated
+  pipeline + guarantees.
+- **Verdienmodel doubt (owner) addressed head-on**: access ≠ answers (silent definition choices, no refusals); real market = users for
+  whom a wrong number has a cost; API/MCP flips the LLM threat into the market. Measurement designed (20-task benchmark vs bare
+  ChatGPT/Gemini/Grok) — owner: "later, wel noteren" → [#169](open-questions.md).
+- **Owner decisions via structured Q&A**: all four visibility smalls approved as candidates ([#170](open-questions.md)); all three big
+  ideas parked with rationale ([#171](open-questions.md)); rijksfinancien.nl added to the [#123](open-questions.md) candidate list
+  (begroot≠uitgegeven trap = our strength), DNB → long-term roadmap list (API behind eHerkenning→KvK, ~11/230+ datasets); second-source
+  choice stays DEFERRED ("eerst doorgaan met CBS", 2026-07-08).
+- **Architecture sketches written same-day at owner request** (code-grounded, non-ADR):
+  [session-briefs/2026-07-18-parked-ideas-architecture-sketches.md](session-briefs/2026-07-18-parked-ideas-architecture-sketches.md) —
+  every idea is a layer over the existing deterministic engine; suggested pickup order recorded (badges+llms.txt → caveats (settle #121)
+  → annotations → download-in-OG-WP → API/MCP → correlation-after-second-source).
+- **Full analysis:** [session-briefs/2026-07-18-sparring-competitive-analysis.md](session-briefs/2026-07-18-sparring-competitive-analysis.md)
+  (incl. §7 addendum: draft-for-review social pattern, #103 cross-source example "uitgaven per leerling", politie journalistic
+  reinforcement). Wrap-up ran parallel-session-safe: docs-only staging by explicit path; the s54 session's 146 uncommitted files
+  untouched; handoff note for s54 in
+  [session-briefs/2026-07-18-sparring-wrapup-handoff.md](session-briefs/2026-07-18-sparring-wrapup-handoff.md). Session wrapped by
+  "Primo" (owner-side).
+
+--- session 53 below (history) ---
+
 **Last updated: 2026-07-17→18 (session 53 — AUTONOMOUS coverage-sprint prep: tables #4-#9 BUILT DORMANT on
 [PR #56](https://github.com/Stefan7168/checkdecijfers/pull/56) (branch `coverage-tables-4-9-prep`, commit `9daacfc`), per #118(b):
 branch+PR, zero LLM spend, no prompt-byte changes, no live syncs. Vocabulary deliberately NOT added (#164) — the owner-present remainder is

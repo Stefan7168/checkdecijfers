@@ -6,6 +6,30 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Sparring session (2026-07-18, owner-present, parallel to s54 — competitive analysis, no build)
+
+- **Read what a competitor SHIPS, not what they claim — shipped artifacts refute marketing in minutes.**
+  Technique that worked: curl the SPA bundle, list the code-split chunks, fetch the data/API chunks, grep for
+  URLs/strings. Evidence it pays: nederlandinbeeld.org claims "cijfers 1:1 doorgegeven zonder AI-interpretatie",
+  but its public `/v1/ask` response carries `meta.model: google/gemini-3-flash-preview` generating the numbers,
+  and its "neutrale terminologie"-claim coexists with a "Veiligelanders" tab; aidscope.co.uk looked LLM-scored
+  but its static JSON + methodology page revealed fully published deterministic rules. Total cost: a handful of
+  curl+grep calls — far cheaper and more reliable than browsing or search summaries.
+- **The in-app browser pane is the wrong tool for SPA teardown research.** First `navigate` was denied, scrolls
+  timed out twice, screenshots went stale after clicks; every load-bearing fact in this session came from
+  curl/WebFetch on the shipped assets instead. Pattern going forward: browser pane for LOOKING at a page
+  (design, screenshots), asset-fetch for KNOWING what it does.
+- **Shared-checkout discipline when another session is mid-flight: stage by explicit path, never `git add -A`,
+  and check `git status --short docs/` (your surface) is clean BEFORE editing.** This session pushed 3 doc
+  commits from a working tree carrying 146 uncommitted files belonging to the concurrent s54 vocab-batch
+  session — zero entanglement because every commit named its files explicitly and row numbering was checked
+  against the highest existing open-questions row first.
+- **A structured owner Q&A (a few questions, each with context + a recommended option) converts a sparring
+  harvest into recorded decisions in one pass.** Four decisions (#169 test parked, #170 all four smalls
+  approved, #171 all three parked, #123 candidate added) landed in one round instead of a long free-form
+  back-and-forth; the owner explicitly asked for "makkelijke tekst met context" — that phrasing request is
+  itself the reusable template.
+
 ## Session 53 (2026-07-17, autonomous prep — coverage tables #4-#9 built dormant)
 
 - **`--catalog-add` is NOT spend-free in effect: it can force a tablefinder re-record.** Merging the six new
