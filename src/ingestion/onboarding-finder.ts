@@ -16,6 +16,7 @@ import { findTable } from '../catalog/find.ts';
 import { rerankShortlist } from '../catalog/rerank.ts';
 import type { RerankFn } from '../catalog/types.ts';
 import type { Db } from '../db/types.ts';
+import { alreadyIngested } from './onboarding.ts';
 import { findActiveRequest } from './onboarding-store.ts';
 
 export interface OnboardingFinderDeps {
@@ -64,6 +65,29 @@ export function buildOnboardingFinder(deps: OnboardingFinderDeps): TableFinder {
       const outcome = await findTable(deps.db, { topic: term, question }, { rerank });
       if (outcome.kind !== 'confident') return null;
 
+      // #166 pre-charge guard: a confident pick on a table we ALREADY hold
+      // (registered active + synced — the job's own alreadyIngested predicate,
+      // shared so the two notions can't drift) must never route to onboarding:
+      // there is nothing to fetch, so a 100-credit "we halen het voor je op"
+      // charge would bill the user for data already in the database (the
+      // coverage sprint makes this reachable: a synonym miss onto a curated
+      // table like 83693NED). Returning null falls back to the plain B15
+      // clarification, which names the loaded topics — the user re-asks with
+      // a listed term and pays the normal question price only.
+      if (await alreadyIngested(deps.db, outcome.pick.tableId)) return null;
+
+      // #166 guard, second leg (session-50 review finding): the fit gate
+      // downstream resolves over the WHOLE candidate chain, not just the pick
+      // (runFitGate iterates candidateIds and takes the first structural fit)
+      // — so an already-held ALTERNATE would let a charged job skip the fetch
+      // and deliver from data we already hold: the exact charge #166 exists to
+      // kill, one link later. Screen the alternates with the same predicate,
+      // BEFORE the cap, so up to 3 genuinely onboardable candidates survive.
+      const onboardableAlternates: string[] = [];
+      for (const id of outcome.alternativeIds) {
+        if (!(await alreadyIngested(deps.db, id))) onboardableAlternates.push(id);
+      }
+
       // Confident pick → does this user already have an active fetch for this
       // exact table? If so, the acknowledgment says "already being fetched"
       // and NO new debit happens (alreadyPending → the action never triggers).
@@ -75,11 +99,12 @@ export function buildOnboardingFinder(deps: OnboardingFinderDeps): TableFinder {
         alreadyPending: active !== null,
         // WP27 stage B (ADR 027 D2a): THE constructing link of the candidate
         // chain — pick first, then the rerank's allowlist-sanitized
-        // alternativeIds (never contain the pick, order preserved), cap 3.
-        // Every link downstream only CARRIES this list; skip this line and
-        // candidate_ids stays [] in production even though everything
-        // typechecks (PR-#17 review, session 31).
-        candidateIds: [outcome.pick.tableId, ...outcome.alternativeIds].slice(0, 3),
+        // alternativeIds (never contain the pick, order preserved; since #166
+        // filtered to not-yet-ingested tables), cap 3. Every link downstream
+        // only CARRIES this list; skip this line and candidate_ids stays []
+        // in production even though everything typechecks (PR-#17 review,
+        // session 31).
+        candidateIds: [outcome.pick.tableId, ...onboardableAlternates].slice(0, 3),
       };
     } catch {
       return null;

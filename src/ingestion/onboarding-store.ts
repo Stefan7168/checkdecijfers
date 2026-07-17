@@ -363,6 +363,17 @@ export async function recordSliceNote(db: Db, id: number, sliceNote: string): Pr
   await db.query(`update pending_table_requests set slice_note = $2 where id = $1`, [id, sliceNote]);
 }
 
+/** Like recordSliceNote, but never overwrites an existing note. #166's Step-6
+ * belt uses this for its skip marker: on a reclaimed retry the row may already
+ * carry attempt 1's REAL slice-estimate note (steps 4-5 ran, then the process
+ * died before Step 6), and the diagnostic skip marker must never clobber it. */
+export async function recordSliceNoteIfEmpty(db: Db, id: number, sliceNote: string): Promise<void> {
+  await db.query(
+    `update pending_table_requests set slice_note = $2 where id = $1 and slice_note is null`,
+    [id, sliceNote],
+  );
+}
+
 /** WP27 stage C (ADR 027 D2a): records the fit gate's ACCEPTED candidate on
  * the row — the DB row AND the in-memory object the job keeps using, so a
  * reclaimed retry resumes at ingest with this table (never a second fit

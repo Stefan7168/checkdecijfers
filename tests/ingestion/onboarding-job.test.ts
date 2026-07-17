@@ -32,6 +32,7 @@ import {
   type MeasureFitResult,
 } from '../../src/ingestion/onboarding-fit.ts';
 import { onboardedKey } from '../../src/ingestion/onboarding-vocab.ts';
+import { registerTables } from '../../src/ingestion/pipeline.ts';
 import {
   MAX_ATTEMPTS,
   STALE_RUNNING_MS,
@@ -463,6 +464,119 @@ describe('runOnboardingJob — piggyback', () => {
       // delivers straight from the already-ingested cells.
       const summary = await runOnboardingJob(h.deps({ intentClient: intentStub(2023) }));
       expect(summary.processed).toEqual({ id: pendingId, tableId: TABLE, outcome: 'delivered' });
+    } finally {
+      await h.close();
+    }
+  });
+});
+
+describe('#166 — curated-vocab belt: Step 6 never creates onboarded:* rows next to curated keys', () => {
+  /** Intent stub emitting the CURATED key (a real CANONICAL_MEASURES constant,
+   * so it is legal at schema validation with extra=[] — the belt's whole
+   * point: the standard vocabulary carries the table). */
+  function curatedIntentStub(year: number): LlmClient {
+    const raw: RawParse = {
+      version: 3,
+      kind: 'data_query',
+      candidates: [
+        {
+          canonicalKey: 'housing_stock_start_of_year',
+          regions: null,
+          period: { kind: 'year', year },
+          derivation: 'none',
+          confidence: 0.97,
+          reading: `curated measure for ${year}`,
+        } as never,
+      ],
+      unmatchedMeasureTerm: null,
+      nearestCanonicalKeys: [],
+      note: null,
+    };
+    return {
+      async complete(): Promise<LlmResponse> {
+        return {
+          outputText: JSON.stringify(raw),
+          model: 'stub-intent',
+          stopReason: 'end_turn',
+          usage: { inputTokens: 0, outputTokens: 0 },
+        };
+      },
+    };
+  }
+
+  it('an already-synced table WITH curated vocabulary: delivery succeeds via the standard vocabulary, zero onboarded:* rows created, skip noted (#166)', async () => {
+    const h = await harness();
+    try {
+      // Run 1 onboards + syncs 82235NED the normal way (creates onboarded rows).
+      await queueRequest(h.db, 'hoeveel woningen in 2024', 'woningvoorraad');
+      const first = await runOnboardingJob(h.deps());
+      expect(first.processed?.outcome).toBe('delivered');
+
+      // Reshape into the coverage-sprint state (the 83693NED scenario): the
+      // table is synced, carries ONLY curated vocabulary, no onboarded rows.
+      await h.db.query(`delete from canonical_measures where key like 'onboarded:${TABLE}:%'`);
+      await h.db.query(
+        `insert into canonical_measures (key, table_id, measure, measure_title, dims, definition_label, everyday_terms)
+         values ('housing_stock_start_of_year', $1, $2, 'Beginstand voorraad', '{}'::jsonb, 'woningvoorraad per 1 januari', array['woningen','woningvoorraad'])`,
+        [TABLE, MEASURE],
+      );
+
+      // Run 2: a different user's pending row for the same table (the
+      // pre-guard / race remnant the belt exists for).
+      const { pendingId } = await queueRequest(h.db, 'hoeveel woningen in 2023', 'woningvoorraad');
+      const summary = await runOnboardingJob(h.deps({ intentClient: curatedIntentStub(2023) }));
+      expect(summary.processed).toEqual({ id: pendingId, tableId: TABLE, outcome: 'delivered' });
+
+      // The belt: NO onboarded:* rows were re-created next to the curated key…
+      const dup = await h.db.query(
+        `select count(*)::int n from canonical_measures where key like 'onboarded:${TABLE}:%'`,
+      );
+      expect(Number(dup.rows[0]!.n)).toBe(0);
+      // …and the skip is durably recorded on the pending row (steps 4-5 were
+      // skipped, so slice_note was free — no estimate note to clobber).
+      const note = await h.db.query(
+        `select slice_note from pending_table_requests where id = $1`,
+        [pendingId],
+      );
+      expect(String(note.rows[0]!.slice_note)).toContain('#166');
+    } finally {
+      await h.close();
+    }
+  });
+
+  it('registered-with-curated-vocab but NOT yet synced: the fresh-sync path also skips auto-derivation and never clobbers the real slice-estimate note (session-50 review)', async () => {
+    const h = await harness();
+    try {
+      // The pre-guard edge state: the table is REGISTERED (e.g. via the ingest
+      // CLI) and registry:apply already installed curated vocabulary, but the
+      // first sync never ran (last_sync_at null) — the finder guard still
+      // routes such a table, and Steps 4-5 run for real inside the job.
+      await registerTables(h.db, fixtureSource(), [
+        { id: TABLE, updateCadence: 'test', servesTasks: [] },
+      ]);
+      await h.db.query(
+        `insert into canonical_measures (key, table_id, measure, measure_title, dims, definition_label, everyday_terms)
+         values ('housing_stock_start_of_year', $1, $2, 'Beginstand voorraad', '{}'::jsonb, 'woningvoorraad per 1 januari', array['woningen','woningvoorraad'])`,
+        [TABLE, MEASURE],
+      );
+
+      const { pendingId } = await queueRequest(h.db, 'hoeveel woningen in 2024', 'woningvoorraad');
+      const summary = await runOnboardingJob(h.deps({ intentClient: curatedIntentStub(2024) }));
+      expect(summary.processed).toEqual({ id: pendingId, tableId: TABLE, outcome: 'delivered' });
+
+      // The belt held on the fresh-sync path too: no onboarded:* rows…
+      const dup = await h.db.query(
+        `select count(*)::int n from canonical_measures where key like 'onboarded:${TABLE}:%'`,
+      );
+      expect(Number(dup.rows[0]!.n)).toBe(0);
+      // …and the REAL slice-estimate note Steps 4-5 wrote survives: the skip
+      // marker write is conditional (recordSliceNoteIfEmpty), never a clobber.
+      const note = await h.db.query(
+        `select slice_note from pending_table_requests where id = $1`,
+        [pendingId],
+      );
+      expect(note.rows[0]!.slice_note).not.toBeNull();
+      expect(String(note.rows[0]!.slice_note)).not.toContain('#166');
     } finally {
       await h.close();
     }
