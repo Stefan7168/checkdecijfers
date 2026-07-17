@@ -52,3 +52,13 @@ Phase 0's deterministic core, LLM parsing/composition, chart spec, refusal/clari
 - Median live latency regresses meaningfully past WP11's baseline → build real stage-status streaming via the named Route Handler path.
 - Concurrent Phase 1 users show DB pool queuing → revisit the transaction-mode pooler question for the web app specifically.
 - A genuine need to share more than backend *source* between root and `web/` (e.g. a shared npm package, not just the `web/backend` symlink) → revisit whether npm workspaces are worth reattempting, now with the specific Vercel/Turbopack failure mode on record.
+
+## As-built addendum (2026-07-17, session 51 — the "ugly is acceptable" era ended)
+
+The WP12-era visual minimalism this ADR records ("minimal, ugly is acceptable", docs/03 Phase-0 framing) is
+SUPERSEDED for looks — not for structure — by the owner's session-51 product-finish pivot: the papier-en-inkt
+editorial huisstijl ([12-huisstijl.md](../12-huisstijl.md), design tokens in `web/app/globals.css`) now styles
+every surface, `/` serves a PUBLIC landing to logged-out visitors ([#98](../open-questions.md) resolved;
+`proxy.ts` allowlists `/` exact-match), and a site-wide footer carries the CBS/CC BY line. Everything
+structural in this ADR (independent `web/` project, server actions, non-streaming spinner, no regenerate)
+stands unchanged.
