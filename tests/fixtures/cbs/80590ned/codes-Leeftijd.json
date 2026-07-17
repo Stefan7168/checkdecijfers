@@ -1,0 +1,33 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/80590ned/$metadata#LeeftijdCodes",
+ "value": [
+  {
+   "Identifier": "52052",
+   "Index": 1,
+   "Title": "15 tot 75 jaar",
+   "Description": "",
+   "DimensionGroupId": null
+  },
+  {
+   "Identifier": "53050",
+   "Index": 2,
+   "Title": "15 tot 25 jaar",
+   "Description": "",
+   "DimensionGroupId": null
+  },
+  {
+   "Identifier": "53310",
+   "Index": 3,
+   "Title": "25 tot 45 jaar",
+   "Description": "",
+   "DimensionGroupId": null
+  },
+  {
+   "Identifier": "53825",
+   "Index": 4,
+   "Title": "45 tot 75 jaar",
+   "Description": "",
+   "DimensionGroupId": null
+  }
+ ]
+}

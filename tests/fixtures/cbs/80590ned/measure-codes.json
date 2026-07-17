@@ -1,0 +1,159 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/80590ned/$metadata#MeasureCodes",
+ "value": [
+  {
+   "Identifier": "3000790_2",
+   "Index": 4,
+   "Title": "Niet-seizoengecorrigeerd",
+   "Description": "",
+   "MeasureGroupId": "3000790_1",
+   "DataType": "Double",
+   "Unit": "x 1000",
+   "Decimals": 0,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "D002308",
+   "Index": 5,
+   "Title": "Seizoengecorrigeerd",
+   "Description": "Seizoengecorrigeerd wil zeggen dat de maandcijfers geschoond zijn voor een jaarlijks terugkerend patroon van verschillen die normaal voor de tijd van het jaar zijn. Voor de jaarcijfers zijn geen seizoengecorrigeerde cijfers beschikbaar omdat binnen ieder afzonderlijk jaar dezelfde seizoeninvloeden een rol spelen.",
+   "MeasureGroupId": "3000790_1",
+   "DataType": "Double",
+   "Unit": "x 1000",
+   "Decimals": 0,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "3000795_2",
+   "Index": 7,
+   "Title": "Niet-seizoengecorrigeerd",
+   "Description": "",
+   "MeasureGroupId": "3000795_1",
+   "DataType": "Double",
+   "Unit": "x 1000",
+   "Decimals": 0,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "D006409",
+   "Index": 8,
+   "Title": "Seizoengecorrigeerd",
+   "Description": "Seizoengecorrigeerd wil zeggen dat de maandcijfers geschoond zijn voor een jaarlijks terugkerend patroon van verschillen die normaal voor de tijd van het jaar zijn. Voor de jaarcijfers zijn geen seizoengecorrigeerde cijfers beschikbaar omdat binnen ieder afzonderlijk jaar dezelfde seizoeninvloeden een rol spelen.",
+   "MeasureGroupId": "3000795_1",
+   "DataType": "Double",
+   "Unit": "x 1000",
+   "Decimals": 0,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "3000800_2",
+   "Index": 10,
+   "Title": "Niet-seizoengecorrigeerd",
+   "Description": "",
+   "MeasureGroupId": "3000800_1",
+   "DataType": "Double",
+   "Unit": "x 1000",
+   "Decimals": 0,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "D001875",
+   "Index": 11,
+   "Title": "Seizoengecorrigeerd",
+   "Description": "Seizoengecorrigeerd wil zeggen dat de maandcijfers geschoond zijn voor een jaarlijks terugkerend patroon van verschillen die normaal voor de tijd van het jaar zijn. Voor de jaarcijfers zijn geen seizoengecorrigeerde cijfers beschikbaar omdat binnen ieder afzonderlijk jaar dezelfde seizoeninvloeden een rol spelen.",
+   "MeasureGroupId": "3000800_1",
+   "DataType": "Double",
+   "Unit": "x 1000",
+   "Decimals": 0,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "M001906_2",
+   "Index": 13,
+   "Title": "Niet-seizoengecorrigeerd",
+   "Description": "",
+   "MeasureGroupId": "M001906_1",
+   "DataType": "Double",
+   "Unit": "%",
+   "Decimals": 1,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "M004210",
+   "Index": 14,
+   "Title": "Seizoengecorrigeerd",
+   "Description": "Seizoengecorrigeerd wil zeggen dat de maandcijfers geschoond zijn voor een jaarlijks terugkerend patroon van verschillen die normaal voor de tijd van het jaar zijn. Voor de jaarcijfers zijn geen seizoengecorrigeerde cijfers beschikbaar omdat binnen ieder afzonderlijk jaar dezelfde seizoeninvloeden een rol spelen.",
+   "MeasureGroupId": "M001906_1",
+   "DataType": "Double",
+   "Unit": "%",
+   "Decimals": 1,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "3000810_2",
+   "Index": 16,
+   "Title": "Niet-seizoengecorrigeerd",
+   "Description": "",
+   "MeasureGroupId": "3000810_1",
+   "DataType": "Double",
+   "Unit": "x 1000",
+   "Decimals": 0,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "D006394",
+   "Index": 17,
+   "Title": "Seizoengecorrigeerd",
+   "Description": "Seizoengecorrigeerd wil zeggen dat de maandcijfers geschoond zijn voor een jaarlijks terugkerend patroon van verschillen die normaal voor de tijd van het jaar zijn. Voor de jaarcijfers zijn geen seizoengecorrigeerde cijfers beschikbaar omdat binnen ieder afzonderlijk jaar dezelfde seizoeninvloeden een rol spelen.",
+   "MeasureGroupId": "3000810_1",
+   "DataType": "Double",
+   "Unit": "x 1000",
+   "Decimals": 0,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "M001731_2",
+   "Index": 19,
+   "Title": "Niet-seizoengecorrigeerd",
+   "Description": "",
+   "MeasureGroupId": "M001731_1",
+   "DataType": "Double",
+   "Unit": "%",
+   "Decimals": 1,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "M006335",
+   "Index": 20,
+   "Title": "Seizoengecorrigeerd",
+   "Description": "Het aandeel van de seizoengecorrigeerde (werkzame en werkloze) beroepsbevolking in de potentiële beroepsbevolking. Voor de jaarcijfers zijn geen seizoengecorrigeerde cijfers beschikbaar omdat binnen ieder afzonderlijk jaar dezelfde seizoeninvloeden een rol spelen.",
+   "MeasureGroupId": "M001731_1",
+   "DataType": "Double",
+   "Unit": "%",
+   "Decimals": 1,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "M001796_2",
+   "Index": 22,
+   "Title": "Niet-seizoengecorrigeerd",
+   "Description": "",
+   "MeasureGroupId": "M001796_1",
+   "DataType": "Double",
+   "Unit": "%",
+   "Decimals": 1,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "M005036",
+   "Index": 23,
+   "Title": "Seizoengecorrigeerd",
+   "Description": "Het aandeel van de seizoengecorrigeerde werkzame beroepsbevolking in de potentiële beroepsbevolking. Voor de jaarcijfers zijn geen seizoengecorrigeerde cijfers beschikbaar omdat binnen ieder afzonderlijk jaar dezelfde seizoeninvloeden een rol spelen.",
+   "MeasureGroupId": "M001796_1",
+   "DataType": "Double",
+   "Unit": "%",
+   "Decimals": 1,
+   "PresentationType": null
+  }
+ ]
+}

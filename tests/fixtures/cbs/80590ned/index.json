@@ -1,0 +1,19 @@
+{
+ "tableId": "80590ned",
+ "capturedAt": "2026-07-17T16:30:06.176Z",
+ "source": "https://datasets.cbs.nl/odata/v1/CBS/80590ned",
+ "sliceFilter": "Geslacht eq 'T001038' and Leeftijd eq '52052'",
+ "captureOnlySlice": null,
+ "observationRows": 5586,
+ "observationPages": [
+  "observations-page-1.json"
+ ],
+ "files": {
+  "properties": "properties.json",
+  "dimensions": "dimensions.json",
+  "measure-codes": "measure-codes.json",
+  "codes-Geslacht": "codes-Geslacht.json",
+  "codes-Leeftijd": "codes-Leeftijd.json",
+  "codes-Perioden": "codes-Perioden.json"
+ }
+}

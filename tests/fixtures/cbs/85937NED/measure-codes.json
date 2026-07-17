@@ -1,0 +1,71 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/85937NED/$metadata#MeasureCodes",
+ "value": [
+  {
+   "Identifier": "M001288_1",
+   "Index": 3,
+   "Title": "Indexcijfer",
+   "Description": "Een indexcijfer geeft de verhouding weer tussen de waarde van een bepaalde variabele in een bepaalde periode en de waarde van diezelfde variabele in de basisperiode.",
+   "MeasureGroupId": "M001297",
+   "DataType": "Float",
+   "Unit": "2021=100",
+   "Decimals": 1,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "M000282",
+   "Index": 4,
+   "Title": "Volumemutaties",
+   "Description": "De mutatie van het volume (voor prijs gecorrigeerde waarde) ten opzichte van dezelfde periode een jaar eerder.",
+   "MeasureGroupId": "M001297",
+   "DataType": "Float",
+   "Unit": "%",
+   "Decimals": 1,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "M005269",
+   "Index": 5,
+   "Title": "Volumemutaties, koopdaggecorrigeerd",
+   "Description": "Voor koopdagen gecorrigeerde mutatie van het volume ten opzichte van dezelfde periode een jaar eerder.",
+   "MeasureGroupId": "M001297",
+   "DataType": "Float",
+   "Unit": "%",
+   "Decimals": 1,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "M001288_2",
+   "Index": 7,
+   "Title": "Indexcijfers",
+   "Description": "Een indexcijfer geeft de verhouding weer tussen de waarde van een bepaalde variabele in een bepaalde periode en de waarde van diezelfde variabele in de basisperiode.",
+   "MeasureGroupId": "M002086",
+   "DataType": "Float",
+   "Unit": "2021=100",
+   "Decimals": 1,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "M000285",
+   "Index": 8,
+   "Title": "Waardemutaties",
+   "Description": "De mutatie van de waarde ten opzichte van dezelfde periode een jaar eerder.",
+   "MeasureGroupId": "M002086",
+   "DataType": "Float",
+   "Unit": "%",
+   "Decimals": 1,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "M000261",
+   "Index": 9,
+   "Title": "Prijsmutaties",
+   "Description": "De mutatie van de prijs ten opzichte van dezelfde periode een jaar eerder.",
+   "MeasureGroupId": null,
+   "DataType": "Float",
+   "Unit": "%",
+   "Decimals": 1,
+   "PresentationType": null
+  }
+ ]
+}

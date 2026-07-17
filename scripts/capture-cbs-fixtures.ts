@@ -32,6 +32,19 @@ const CAPTURE_SLICES: Record<string, CbsSlice> = {
   // network (measured; ~45 min for the full table) — the floor also keeps
   // recapture practical.
   '85880NED': { periodFloor: '2020JJ00' },
+  // Coverage-sprint tables #4/#5/#7/#9 (2026-07-17): live ingest keeps the
+  // registered slice (or the full table) with full history; the FIXTURES keep
+  // a period floor so gate time stays sane (createIngestedDb re-ingests every
+  // fixture in 27 test files + 5 scripts). Floors are chosen so every CC
+  // frozen-key cell (benchmark/coverage-key.json) stays inside the fixture:
+  // #4 12,096 of 46,442 sliced obs; #5 8,208 of 34,048; #7 5,208 of 26,208;
+  // #9 8,195 of 23,095 (floor 2015 — its depth CC pins 2015JJ00). Tables #6
+  // (1,132-obs slice) and #8 (5,586-obs slice) are captured whole — their
+  // depth CCs pin 2015/2014 cells.
+  '85828NED': { periodFloor: '2020JJ00' },
+  '85937NED': { periodFloor: '2020JJ00' },
+  '85792NED': { periodFloor: '2020JJ00' },
+  '83625NED': { periodFloor: '2015JJ00' },
 };
 const MAX_PAGES = 20;
 

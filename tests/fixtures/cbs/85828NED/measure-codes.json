@@ -1,0 +1,236 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/85828NED/$metadata#MeasureCodes",
+ "value": [
+  {
+   "Identifier": "A042501_1",
+   "Index": 5,
+   "Title": "Ongecorrigeerd",
+   "Description": "Uitkomsten die niet gecorrigeerd zijn voor kalender- en/of seizoeneffecten.",
+   "MeasureGroupId": "M001288_1",
+   "DataType": "Float",
+   "Unit": "2021 = 100",
+   "Decimals": 1,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "A052581_1",
+   "Index": 6,
+   "Title": "Kalendergecorrigeerd",
+   "Description": "Elke periode van een reeks bevat een ander aantal werk- of koopdagen, schrikkeldagen en feestdagen. Door te corrigeren voor deze verschillen in samenstelling worden uitkomsten beter vergelijkbaar door de tijd. Een andere samenstelling van kalenderdagen heeft hierdoor geen invloed op de jaar-op-jaar ontwikkelingen. Als gevolg hiervan wordt de trend in ontwikkelingen zuiverder.",
+   "MeasureGroupId": "M001288_1",
+   "DataType": "Float",
+   "Unit": "2021 = 100",
+   "Decimals": 1,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "A050903_1",
+   "Index": 7,
+   "Title": "Seizoengecorrigeerd",
+   "Description": "Door de reeks te corrigeren voor jaarlijks terugkerende patronen worden de uitkomsten beter vergelijkbaar met de voorgaande maanden. Hierdoor zijn waarneembare seizoeneffecten niet van invloed op de maand-op-maand ontwikkelingen, waardoor een omslag in de ontwikkeling van de omzet sneller wordt vastgesteld dan wanneer er geen seizoencorrectie zou plaatsvinden.\r\n\r\nBinnen het CBS worden de uitkomsten bij seizoencorrectie, naast voor seizoeneffecten, ook gecorrigeerd voor kalendereffecten, zoals werk- of koopdagen, schrikkeldagen en feestdagen.\r\n",
+   "MeasureGroupId": "M001288_1",
+   "DataType": "Float",
+   "Unit": "2021 = 100",
+   "Decimals": 1,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "A042501_2",
+   "Index": 9,
+   "Title": "Ongecorrigeerd",
+   "Description": "Uitkomsten die niet gecorrigeerd zijn voor kalender- en/of seizoeneffecten.",
+   "MeasureGroupId": "M000245_1",
+   "DataType": "Float",
+   "Unit": "%",
+   "Decimals": 1,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "A052581_2",
+   "Index": 10,
+   "Title": "Kalendergecorrigeerd",
+   "Description": "Elke periode van een reeks bevat een ander aantal werk- of koopdagen, schrikkeldagen en feestdagen. Door te corrigeren voor deze verschillen in samenstelling worden uitkomsten beter vergelijkbaar door de tijd. Een andere samenstelling van kalenderdagen heeft hierdoor geen invloed op de jaar-op-jaar ontwikkelingen. Als gevolg hiervan wordt de trend in ontwikkelingen zuiverder.",
+   "MeasureGroupId": "M000245_1",
+   "DataType": "Float",
+   "Unit": "%",
+   "Decimals": 1,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "A042501_3",
+   "Index": 12,
+   "Title": "Ongecorrigeerd",
+   "Description": "Uitkomsten die niet gecorrigeerd zijn voor kalender- en/of seizoeneffecten.",
+   "MeasureGroupId": "M000247_1",
+   "DataType": "Float",
+   "Unit": "%",
+   "Decimals": 1,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "A050903_2",
+   "Index": 13,
+   "Title": "Seizoengecorrigeerd",
+   "Description": "Door de reeks te corrigeren voor jaarlijks terugkerende patronen worden de uitkomsten beter vergelijkbaar met de voorgaande maanden. Hierdoor zijn waarneembare seizoeneffecten niet van invloed op de maand-op-maand ontwikkelingen, waardoor een omslag in de ontwikkeling van de omzet sneller wordt vastgesteld dan wanneer er geen seizoencorrectie zou plaatsvinden.\r\n\r\nBinnen het CBS worden de uitkomsten bij seizoencorrectie, naast voor seizoeneffecten, ook gecorrigeerd voor kalendereffecten, zoals werk- of koopdagen, schrikkeldagen en feestdagen.\r\n",
+   "MeasureGroupId": "M000247_1",
+   "DataType": "Float",
+   "Unit": "%",
+   "Decimals": 1,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "A042501_4",
+   "Index": 16,
+   "Title": "Ongecorrigeerd",
+   "Description": "Uitkomsten die niet gecorrigeerd zijn voor kalender- en/of seizoeneffecten.",
+   "MeasureGroupId": "M001288_2",
+   "DataType": "Float",
+   "Unit": "2021 = 100",
+   "Decimals": 1,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "A052581_3",
+   "Index": 17,
+   "Title": "Kalendergecorrigeerd",
+   "Description": "Elke periode van een reeks bevat een ander aantal werk- of koopdagen, schrikkeldagen en feestdagen. Door te corrigeren voor deze verschillen in samenstelling worden uitkomsten beter vergelijkbaar door de tijd. Een andere samenstelling van kalenderdagen heeft hierdoor geen invloed op de jaar-op-jaarontwikkelingen. Als gevolg hiervan wordt de trend in ontwikkelingen zuiverder.",
+   "MeasureGroupId": "M001288_2",
+   "DataType": "Float",
+   "Unit": "2021 = 100",
+   "Decimals": 1,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "A050903_3",
+   "Index": 18,
+   "Title": "Seizoengecorrigeerd",
+   "Description": "Door de reeks te corrigeren voor jaarlijks terugkerende patronen worden de uitkomsten beter vergelijkbaar met de voorgaande maanden. Hierdoor zijn waarneembare seizoeneffecten niet van invloed op de maand-op-maand-ontwikkelingen, waardoor een omslag in de stijging of daling van de omzet sneller worden vastgesteld dan wanneer er geen seizoencorrectie zou plaatsvinden.\r\n\r\nBinnen het CBS worden de uitkomsten bij seizoencorrectie, naast voor seizoeneffecten, ook gecorrigeerd voor kalendereffecten, zoals werk- of koopdagen, schrikkeldagen en feestdagen.\r\n",
+   "MeasureGroupId": "M001288_2",
+   "DataType": "Float",
+   "Unit": "2021 = 100",
+   "Decimals": 1,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "A042501_5",
+   "Index": 20,
+   "Title": "Ongecorrigeerd",
+   "Description": "Uitkomsten die niet gecorrigeerd zijn voor kalender- en/of seizoeneffecten.",
+   "MeasureGroupId": "A045301",
+   "DataType": "Float",
+   "Unit": "%",
+   "Decimals": 1,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "A052581_4",
+   "Index": 21,
+   "Title": "Kalendergecorrigeerd",
+   "Description": "Elke periode van een reeks bevat een ander aantal werk- of koopdagen, schrikkeldagen en feestdagen. Door te corrigeren voor deze verschillen in samenstelling worden uitkomsten beter vergelijkbaar door de tijd. Een andere samenstelling van kalenderdagen heeft hierdoor geen invloed op de jaar-op-jaarontwikkelingen. Als gevolg hiervan wordt de trend in ontwikkelingen zuiverder.",
+   "MeasureGroupId": "A045301",
+   "DataType": "Float",
+   "Unit": "%",
+   "Decimals": 1,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "A042501_6",
+   "Index": 23,
+   "Title": "Ongecorrigeerd",
+   "Description": "Uitkomsten die niet gecorrigeerd zijn voor kalender- en/of seizoeneffecten.",
+   "MeasureGroupId": "A045302",
+   "DataType": "Float",
+   "Unit": "%",
+   "Decimals": 1,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "A050903_4",
+   "Index": 24,
+   "Title": "Seizoengecorrigeerd",
+   "Description": "Door de reeks te corrigeren voor jaarlijks terugkerende patronen worden de uitkomsten beter vergelijkbaar met de voorgaande maanden. Hierdoor zijn waarneembare seizoeneffecten niet van invloed op de maand-op-maand-ontwikkelingen, waardoor een omslag in de stijging of daling van de omzet sneller worden vastgesteld dan wanneer er geen seizoencorrectie zou plaatsvinden.\r\n\r\nBinnen het CBS worden de uitkomsten bij seizoencorrectie, naast voor seizoeneffecten, ook gecorrigeerd voor kalendereffecten, zoals werk- of koopdagen, schrikkeldagen en feestdagen.\r\n",
+   "MeasureGroupId": "A045302",
+   "DataType": "Float",
+   "Unit": "%",
+   "Decimals": 1,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "A042501_7",
+   "Index": 27,
+   "Title": "Ongecorrigeerd",
+   "Description": "Uitkomsten die niet gecorrigeerd zijn voor kalender- en/of seizoeneffecten.",
+   "MeasureGroupId": "M001288_3",
+   "DataType": "Float",
+   "Unit": "2021 = 100",
+   "Decimals": 1,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "A052581_5",
+   "Index": 28,
+   "Title": "Kalendergecorrigeerd",
+   "Description": "Elke periode van een reeks bevat een ander aantal werk- of koopdagen, schrikkeldagen en feestdagen. Door te corrigeren voor deze verschillen in samenstelling worden uitkomsten beter vergelijkbaar door de tijd. Een andere samenstelling van kalenderdagen heeft hierdoor geen invloed op de jaar-op-jaar ontwikkelingen. Als gevolg hiervan wordt de trend in ontwikkelingen zuiverder.",
+   "MeasureGroupId": "M001288_3",
+   "DataType": "Float",
+   "Unit": "2021 = 100",
+   "Decimals": 1,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "A050903_5",
+   "Index": 29,
+   "Title": "Seizoengecorrigeerd",
+   "Description": "Door de reeks te corrigeren voor jaarlijks terugkerende patronen worden de uitkomsten beter vergelijkbaar met de voorgaande maanden. Hierdoor zijn waarneembare seizoeneffecten niet van invloed op de maand-op-maand ontwikkelingen, waardoor een omslag in de ontwikkeling van de omzet sneller wordt vastgesteld dan wanneer er geen seizoencorrectie zou plaatsvinden.\r\n\r\nBinnen het CBS worden de uitkomsten bij seizoencorrectie, naast voor seizoeneffecten, ook gecorrigeerd voor kalendereffecten, zoals werk- of koopdagen, schrikkeldagen en feestdagen.\r\n",
+   "MeasureGroupId": "M001288_3",
+   "DataType": "Float",
+   "Unit": "2021 = 100",
+   "Decimals": 1,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "A042501_8",
+   "Index": 31,
+   "Title": "Ongecorrigeerd",
+   "Description": "Uitkomsten die niet gecorrigeerd zijn voor kalender- en/of seizoeneffecten.",
+   "MeasureGroupId": "M000245_2",
+   "DataType": "Float",
+   "Unit": "%",
+   "Decimals": 1,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "A052581_6",
+   "Index": 32,
+   "Title": "Kalendergecorrigeerd",
+   "Description": "Elke periode van een reeks bevat een ander aantal werk- of koopdagen, schrikkeldagen en feestdagen. Door te corrigeren voor deze verschillen in samenstelling worden uitkomsten beter vergelijkbaar door de tijd. Een andere samenstelling van kalenderdagen heeft hierdoor geen invloed op de jaar-op-jaar ontwikkelingen. Als gevolg hiervan wordt de trend in ontwikkelingen zuiverder.",
+   "MeasureGroupId": "M000245_2",
+   "DataType": "Float",
+   "Unit": "%",
+   "Decimals": 1,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "A042501_9",
+   "Index": 34,
+   "Title": "Ongecorrigeerd",
+   "Description": "Uitkomsten die niet gecorrigeerd zijn voor kalender- en/of seizoeneffecten.",
+   "MeasureGroupId": "M000247_2",
+   "DataType": "Float",
+   "Unit": "%",
+   "Decimals": 1,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "A050903_6",
+   "Index": 35,
+   "Title": "Seizoengecorrigeerd",
+   "Description": "Door de reeks te corrigeren voor jaarlijks terugkerende patronen worden de uitkomsten beter vergelijkbaar met de voorgaande maanden. Hierdoor zijn waarneembare seizoeneffecten niet van invloed op de maand-op-maand ontwikkelingen, waardoor een omslag in de ontwikkeling van de omzet sneller wordt vastgesteld dan wanneer er geen seizoencorrectie zou plaatsvinden.\r\n\r\nBinnen het CBS worden de uitkomsten bij seizoencorrectie, naast voor seizoeneffecten, ook gecorrigeerd voor kalendereffecten, zoals werk- of koopdagen, schrikkeldagen en feestdagen.\r\n",
+   "MeasureGroupId": "M000247_2",
+   "DataType": "Float",
+   "Unit": "%",
+   "Decimals": 1,
+   "PresentationType": null
+  }
+ ]
+}

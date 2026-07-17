@@ -1,0 +1,30 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/85828NED/$metadata#Dimensions",
+ "value": [
+  {
+   "Identifier": "BedrijfstakkenBranchesSBI2008",
+   "Title": "Bedrijfstakken/branches (SBI 2008)",
+   "Description": "",
+   "MapYear": null,
+   "ReleasePolicy": null,
+   "Kind": "Dimension",
+   "ContainsGroups": true,
+   "ContainsCodes": true,
+   "CodesUrl": "https://datasets.cbs.nl/odata/v1/CBS/85828NED/BedrijfstakkenBranchesSBI2008Codes",
+   "GroupsUrl": "https://datasets.cbs.nl/odata/v1/CBS/85828NED/BedrijfstakkenBranchesSBI2008Groups"
+  },
+  {
+   "@odata.type": "#Cbs.Ccb.Models.TimeDimension",
+   "Identifier": "Perioden",
+   "Title": "Perioden",
+   "Description": "",
+   "MapYear": null,
+   "ReleasePolicy": true,
+   "Kind": "TimeDimension",
+   "ContainsGroups": true,
+   "ContainsCodes": true,
+   "CodesUrl": "https://datasets.cbs.nl/odata/v1/CBS/85828NED/PeriodenCodes",
+   "GroupsUrl": "https://datasets.cbs.nl/odata/v1/CBS/85828NED/PeriodenGroups"
+  }
+ ]
+}

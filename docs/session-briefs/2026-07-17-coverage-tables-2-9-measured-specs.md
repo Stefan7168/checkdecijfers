@@ -72,6 +72,15 @@ and one wrong platform verdict. All four open verification points (a)–(d) are 
 - R11 note: observation ValueAttribute is uniformly 'None' — provisional status lives ONLY on Perioden
   Status (standard for our pipeline).
 
+**▶ s53 BUILD-DAY NOTE (2026-07-17): tables #4-#9 are BUILT (prep branch, [11-coverage-table-set.md](../11-coverage-table-set.md)
+is now the per-table authority; open-questions #168 tracks the staged vocab batch). Build-day amendments to the
+specs below: (#4) the #167 probe found 7 SLICE-EMPTY measures — the whole Productie family exists table-wide but
+has zero rows for the retail branches → curated `excludeMeasures`; (#5) Voorlopig starts at 2021, not 2022 (and
+CBS's own prose says 2022-2025 — trust PeriodenCodes Status, not prose); (#8) the seasonal-adjusted JJ gap is
+rows WITH null+'Impossible', NOT absent rows ("v4 laat die rijen weg" below is wrong) — served as honest nulls
+per R11; (#9) row-dense but opgeheven gemeenten carry null+'Impossible' after their dissolution. All frozen-key
+candidates below re-measured on build day: every value confirmed exactly on both platforms.**
+
 ### #4 `85828NED` — omzet detailhandel (release ma 3/8, "eerste werkdag van de tweede maand na verslagmaand")
 - v4 ✓ Regulier; merged 9-in-1; dims: BedrijfstakkenBranchesSBI2008 (109) × Perioden (448: 317 MM + 105 KW +
   26 JJ, mixed; 2026-periods Voorlopig). 21 measures.
