@@ -45,6 +45,7 @@ import {
   getPendingRequest,
   reclaimStaleRunning,
   recordSliceNote,
+  recordSliceNoteIfEmpty,
   setResolvedTable,
   type PendingTableRequest,
 } from './onboarding-store.ts';
@@ -376,8 +377,7 @@ async function processOneRow(
     // Step 3 — piggyback: skip fetch/ingest if the table is already synced.
     // From here on every step reads targetTableId (resolved ?? original);
     // row.tableId itself stays the untouched dedupe identity (D2a).
-    const ingestedAlready = await alreadyIngested(db, targetTableId);
-    if (!ingestedAlready) {
+    if (!(await alreadyIngested(db, targetTableId))) {
       // Step 4 — size + slice.
       const schema = await source.fetchTableSchema(targetTableId);
       const codeLists: Record<string, Awaited<ReturnType<CbsSource['fetchCodeList']>>> = {};
@@ -409,14 +409,12 @@ async function processOneRow(
     let extraVocabulary: Awaited<ReturnType<typeof registerOnboardingVocabulary>>['onboarded'] = [];
     if (await hasCuratedVocabulary(db, targetTableId)) {
       const skipNote = `Tabel ${targetTableId} heeft al beheerde vocabulaire (curated); automatische vocabulaire-afleiding overgeslagen (#166).`;
-      if (ingestedAlready) {
-        // slice_note is free on this path (steps 4-5 were skipped) — record
-        // the skip durably for the dashboard/diagnostics.
-        await recordSliceNote(db, row.id, skipNote);
-      } else {
-        // Steps 4-5 just wrote the real slice-estimate note; don't clobber it.
-        console.log(`[onboarding ${row.id}] ${skipNote}`);
-      }
+      // Durable diagnostic where the note slot is free; a real slice-estimate
+      // note (steps 4-5 this attempt, OR a previous attempt that died before
+      // Step 6 — the reclaimed-retry case, session-50 review) is never
+      // clobbered: the conditional write is a no-op then, console is the floor.
+      console.log(`[onboarding ${row.id}] ${skipNote}`);
+      await recordSliceNoteIfEmpty(db, row.id, skipNote);
     } else {
       const vocab = await registerOnboardingVocabulary(db, {
         tableId: targetTableId,

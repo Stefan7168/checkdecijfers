@@ -76,6 +76,18 @@ export function buildOnboardingFinder(deps: OnboardingFinderDeps): TableFinder {
       // a listed term and pays the normal question price only.
       if (await alreadyIngested(deps.db, outcome.pick.tableId)) return null;
 
+      // #166 guard, second leg (session-50 review finding): the fit gate
+      // downstream resolves over the WHOLE candidate chain, not just the pick
+      // (runFitGate iterates candidateIds and takes the first structural fit)
+      // — so an already-held ALTERNATE would let a charged job skip the fetch
+      // and deliver from data we already hold: the exact charge #166 exists to
+      // kill, one link later. Screen the alternates with the same predicate,
+      // BEFORE the cap, so up to 3 genuinely onboardable candidates survive.
+      const onboardableAlternates: string[] = [];
+      for (const id of outcome.alternativeIds) {
+        if (!(await alreadyIngested(deps.db, id))) onboardableAlternates.push(id);
+      }
+
       // Confident pick → does this user already have an active fetch for this
       // exact table? If so, the acknowledgment says "already being fetched"
       // and NO new debit happens (alreadyPending → the action never triggers).
@@ -87,11 +99,12 @@ export function buildOnboardingFinder(deps: OnboardingFinderDeps): TableFinder {
         alreadyPending: active !== null,
         // WP27 stage B (ADR 027 D2a): THE constructing link of the candidate
         // chain — pick first, then the rerank's allowlist-sanitized
-        // alternativeIds (never contain the pick, order preserved), cap 3.
-        // Every link downstream only CARRIES this list; skip this line and
-        // candidate_ids stays [] in production even though everything
-        // typechecks (PR-#17 review, session 31).
-        candidateIds: [outcome.pick.tableId, ...outcome.alternativeIds].slice(0, 3),
+        // alternativeIds (never contain the pick, order preserved; since #166
+        // filtered to not-yet-ingested tables), cap 3. Every link downstream
+        // only CARRIES this list; skip this line and candidate_ids stays []
+        // in production even though everything typechecks (PR-#17 review,
+        // session 31).
+        candidateIds: [outcome.pick.tableId, ...onboardableAlternates].slice(0, 3),
       };
     } catch {
       return null;

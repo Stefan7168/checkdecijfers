@@ -16,14 +16,22 @@ path is not touched, it just becomes unreachable for held tables).
    B15 clarification**, which already names the loaded topics. No acknowledgment, no trigger, no debit —
    structurally. Registered-but-never-synced tables still route (the guard keys on held DATA, not
    registration). Any guard failure degrades to `null` via the closure's existing catch (money-safe).
+   **Second leg (session-50 pre-merge review, adversarially confirmed HIGH):** the WP27 fit gate (live
+   since session 33) resolves over the WHOLE candidate chain, not just the pick — so an already-held
+   ALTERNATE in `candidateIds` would let a charged job skip the fetch and deliver from data we already
+   hold (the pick fails the structural fit, the gate falls through to the held alternate). The finder now
+   screens the alternates with the SAME `alreadyIngested` predicate, before the cap-3, so a charged
+   onboarding can only ever resolve to a genuinely new table; if no un-held candidate fits, the job ends
+   unanswerable + honest refund as before.
 2. **Job-side belt in Step 6** (`src/ingestion/onboarding.ts`): when the target table carries CURATED
    vocabulary (a `canonical_measures` row whose key is not `onboarded:`-prefixed), skip auto-derivation;
    the delivery re-run parses with `extraCanonicalMeasures: []` — the curated vocabulary is already in the
    standard prompt, so covered questions deliver normally and uncovered ones end unanswerable + refund
    (honest, principle c). Reachable only via the trigger-vs-curation race or a pre-guard pending row. The
-   skip is recorded on `slice_note` when steps 4-5 were skipped (else console — never clobbers a real
-   slice-estimate note). Retries for genuinely onboarded tables are unaffected (they carry only
-   `onboarded:*` keys).
+   skip marker is written to `slice_note` only when the slot is empty (`recordSliceNoteIfEmpty`, session-50
+   review: a reclaimed retry may re-enter Step 6 after an earlier attempt already wrote the REAL
+   slice-estimate note — never clobber it; console is the diagnostic floor). Retries for genuinely
+   onboarded tables are unaffected (they carry only `onboarded:*` keys).
 
 **Answer to the design question posed to the owner** (chosen pending review — the merge IS the approval per
 #118(b)): route to the **normal clarification at trigger time** (option a), NOT "run the paid onboarding but
@@ -37,6 +45,9 @@ this PR.
 owner-caused only) keeps the old behavior once — charged, then delivered from existing data via the belt.
 
 **Tests (hermetic, on the gate):** finder guard fires on an ingested pick / does NOT fire on a
-registered-unsynced pick (`tests/ingestion/onboarding-finder.test.ts`); end-to-end job run on a synced table
+registered-unsynced pick / screens a held ALTERNATE out of the candidate chain with the chain re-filling
+before the cap (`tests/ingestion/onboarding-finder.test.ts`); end-to-end job run on a synced table
 with only curated vocab delivers with zero `onboarded:*` rows created and the skip noted
-(`tests/ingestion/onboarding-job.test.ts`, the exact 83693NED scenario).
+(`tests/ingestion/onboarding-job.test.ts`, the exact 83693NED scenario); the fresh-sync curated path
+(registered + curated vocab, first sync inside the job) delivers with zero `onboarded:*` rows and the
+real slice-estimate note preserved (same file, session-50 review coverage).

@@ -32,6 +32,7 @@ import {
   type MeasureFitResult,
 } from '../../src/ingestion/onboarding-fit.ts';
 import { onboardedKey } from '../../src/ingestion/onboarding-vocab.ts';
+import { registerTables } from '../../src/ingestion/pipeline.ts';
 import {
   MAX_ATTEMPTS,
   STALE_RUNNING_MS,
@@ -538,6 +539,44 @@ describe('#166 — curated-vocab belt: Step 6 never creates onboarded:* rows nex
         [pendingId],
       );
       expect(String(note.rows[0]!.slice_note)).toContain('#166');
+    } finally {
+      await h.close();
+    }
+  });
+
+  it('registered-with-curated-vocab but NOT yet synced: the fresh-sync path also skips auto-derivation and never clobbers the real slice-estimate note (session-50 review)', async () => {
+    const h = await harness();
+    try {
+      // The pre-guard edge state: the table is REGISTERED (e.g. via the ingest
+      // CLI) and registry:apply already installed curated vocabulary, but the
+      // first sync never ran (last_sync_at null) — the finder guard still
+      // routes such a table, and Steps 4-5 run for real inside the job.
+      await registerTables(h.db, fixtureSource(), [
+        { id: TABLE, updateCadence: 'test', servesTasks: [] },
+      ]);
+      await h.db.query(
+        `insert into canonical_measures (key, table_id, measure, measure_title, dims, definition_label, everyday_terms)
+         values ('housing_stock_start_of_year', $1, $2, 'Beginstand voorraad', '{}'::jsonb, 'woningvoorraad per 1 januari', array['woningen','woningvoorraad'])`,
+        [TABLE, MEASURE],
+      );
+
+      const { pendingId } = await queueRequest(h.db, 'hoeveel woningen in 2024', 'woningvoorraad');
+      const summary = await runOnboardingJob(h.deps({ intentClient: curatedIntentStub(2024) }));
+      expect(summary.processed).toEqual({ id: pendingId, tableId: TABLE, outcome: 'delivered' });
+
+      // The belt held on the fresh-sync path too: no onboarded:* rows…
+      const dup = await h.db.query(
+        `select count(*)::int n from canonical_measures where key like 'onboarded:${TABLE}:%'`,
+      );
+      expect(Number(dup.rows[0]!.n)).toBe(0);
+      // …and the REAL slice-estimate note Steps 4-5 wrote survives: the skip
+      // marker write is conditional (recordSliceNoteIfEmpty), never a clobber.
+      const note = await h.db.query(
+        `select slice_note from pending_table_requests where id = $1`,
+        [pendingId],
+      );
+      expect(note.rows[0]!.slice_note).not.toBeNull();
+      expect(String(note.rows[0]!.slice_note)).not.toContain('#166');
     } finally {
       await h.close();
     }
