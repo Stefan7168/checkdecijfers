@@ -1,14 +1,18 @@
 // The public face of checkdecijfers.nl — what a logged-out visitor sees at '/'
 // (session-51 owner decision: the homepage IS the product, not a bare login
-// redirect). Server component, fully static: NO data reads, NO LLM, NO
-// chargeable entry point. The example answer below is a REAL, live-verified
-// CBS cell (frozen verification task CC1: consumentenvertrouwen juni 2026 =
-// −39, Definitief, tabel 83693NED — re-verified LLM-free on production
-// 2026-07-17) rendered in the product's real answer shape; refresh it
-// CONSCIOUSLY when the frozen key ever changes, never invent one (principle a).
-// The anonymous-trial chat on this page is #53's build (own reviewed change,
-// money path) — until then the CTA routes to /login.
+// redirect). Server component: NO LLM, NO chargeable entry point. The ONLY
+// data reads are the deterministic Ontdek discovery charts (session 52,
+// ADR 035 — cached, fail-safe, LLM-free; they amend the original "no data
+// reads" framing of #98, see the reconciled row). The example answer below is
+// a REAL, live-verified CBS cell (frozen verification task CC1:
+// consumentenvertrouwen juni 2026 = −39, Definitief, tabel 83693NED —
+// re-verified LLM-free on production 2026-07-17) rendered in the product's
+// real answer shape; refresh it CONSCIOUSLY when the frozen key ever changes,
+// never invent one (principle a). The anonymous-trial chat on this page is
+// #53's build (own reviewed change, money path) — until then the CTA routes
+// to /login.
 import Link from 'next/link';
+import { OntdekSectie } from './ontdek.tsx';
 import { SiteHeader } from './site-header.tsx';
 
 const EXAMPLE_QUESTION = 'Wat is het consumentenvertrouwen in juni 2026?';
@@ -98,6 +102,9 @@ export function Landing() {
             </li>
           </ol>
         </section>
+
+        {/* Free discovery charts — deterministic, LLM-free (ADR 035) */}
+        <OntdekSectie />
 
         {/* Credits, plainly */}
         <section className="py-12">

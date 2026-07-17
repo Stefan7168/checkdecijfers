@@ -42,8 +42,9 @@ export default async function Home({
   const userId = await currentUserId();
   if (userId === null) {
     // Session-51 owner decision: '/' is the product's public face. A
-    // logged-out visitor gets the static landing (no data reads, no
-    // chargeable entry point) instead of a context-free login redirect;
+    // logged-out visitor gets the landing (no chargeable entry point; its
+    // only data reads are the cached, fail-safe Ontdek discovery charts —
+    // session 52, ADR 035) instead of a context-free login redirect;
     // proxy.ts allowlists '/' exact-match to let them reach it.
     return <Landing />;
   }

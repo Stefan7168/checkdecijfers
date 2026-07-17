@@ -35,6 +35,7 @@ vi.mock('../components/dashboard.tsx', () => ({ Dashboard: () => <div data-testi
 vi.mock('../components/workspace.tsx', () => ({ Workspace: () => <div data-testid="workspace" /> }));
 vi.mock('../components/question-history.tsx', () => ({ QuestionHistory: () => <div data-testid="history" /> }));
 vi.mock('../components/site-header.tsx', () => ({ SiteHeader: () => <div data-testid="site-header" /> }));
+vi.mock('../components/landing.tsx', () => ({ Landing: () => <div data-testid="landing" /> }));
 vi.mock('./login/login-form.tsx', () => ({ LoginForm: () => <div data-testid="login-form" /> }));
 
 import { redirect } from 'next/navigation';
@@ -81,6 +82,20 @@ describe('WP135 dormancy — flag OFF renders today, byte-identical (⟨A5⟩)',
   it('/geschiedenis redirects to /', async () => {
     await expect(GeschiedenisPage()).rejects.toThrow('REDIRECT:/');
     expect(redirect).toHaveBeenCalledWith('/');
+  });
+});
+
+describe('public landing (session 51/52 — #98 resolved + ADR 035)', () => {
+  it('/ renders the Landing for a logged-out visitor, flag-independent, no dashboard reads', async () => {
+    currentUserId.mockResolvedValue(null);
+    for (const flag of ['0', '1']) {
+      vi.stubEnv('WORKSPACE_ENABLED', flag);
+      render(await Home({ searchParams: emptySearch }));
+      expect(screen.getByTestId('landing')).toBeInTheDocument();
+      expect(screen.queryByTestId('dashboard')).toBeNull();
+      expect(screen.queryByTestId('workspace')).toBeNull();
+      cleanup();
+    }
   });
 });
 

@@ -41,6 +41,13 @@ Order of checks per sync; any failure marks the table `needs_review` and exclude
 | **R10** | The **unit** shown with each value matches the result object's unit metadata — guarding factor-1,000 misreadings ("443 euro" vs. "×1.000 euro") and %-vs-procentpunt confusion. | Answer schema carries a unit per value; the R3 validator checks the unit words adjacent to each matched number against that metadata. "Unit correct" is an explicit benchmark pass criterion. |
 | **R11** | **Provisional figures are marked**: when a value's CBS status is not definitive (voorlopig / nader voorlopig), the answer and chart spec say so ("voorlopig cijfer"); null-with-reason cells state their CBS reason instead of appearing missing. | Status is a required field on result objects (observations schema, ADR [002](decisions/002-postgres-system-of-record.md)); snapshot test asserts the marking renders whenever status ≠ definitief; ingestion fixture covers null-with-attribute cells. |
 
+**Scope note on "answer" in R1/R8 (session 52, 2026-07-17, ADR [035](decisions/035-homepage-discovery-charts.md) D4):** these
+rows govern responses to a user question through the answer pipeline. The curated homepage discovery charts ("Ontdek Nederland
+in grafieken") are NOT answers: no audit row is written per anonymous page view. Their honesty guarantees come from the shared
+machinery instead — specs are built by the same `runQuery` → `buildChartSpec` path (R6), carry per-point resultIds (R1's
+traceability handle, structurally in the spec), and render R4/R7/R11 through the same ChartView. If view-level audit for public
+surfaces is ever wanted, that is a new owner decision (flagged in ADR 035 D4).
+
 ## Failure behavior (confirmed principle: refuse, don't guess)
 
 | Condition | Behavior | Regression test |

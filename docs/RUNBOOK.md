@@ -520,3 +520,6 @@ in every prod browser bundle) — fetch them via the Supabase MCP (`get_project_
 project `vqvohfqapjfdpbojtezx`) and append to `web/.env.local` (gitignored). Without them the middleware
 crashes on every request ("Your project's URL and Key are required"). Logged-in pages additionally need
 DATABASE_URL (a secret — supervised only); logged-out surfaces (landing, /login) render without it.
+Session-52 note: without DATABASE_URL the landing's "Ontdek Nederland in grafieken" section degrades to
+nothing by design (the ADR 035 fail-safe) — locally you see the landing minus the charts; the charts
+themselves are verified hermetically on the gate (`tests/chart/curated.test.ts`) and visually on production.
