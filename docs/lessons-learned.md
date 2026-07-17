@@ -30,6 +30,41 @@ on top.
   back-and-forth; the owner explicitly asked for "makkelijke tekst met context" — that phrasing request is
   itself the reusable template.
 
+## Session 54 (2026-07-18, owner-present — vocab batch + go-live of tables #4-#9; bill-shock audit)
+
+- **A real #164 calibration loop costs ~€2/round and you will need several: budget ~€10, not "sub-euro".** Six
+  record rounds + ×3 evals + finder rounds landed at ~€10-12 (Haiku tier). Every round was evidence-driven (a
+  regression found, a fix, a re-measure) — the loop is the DESIGNED process, but the standing "sub-euro"
+  phrasing in the RUNBOOK/briefs undersold it and is now corrected in the archive record.
+- **Generic period-words in a topic rule bleed into every question.** The first grain-sibling tie-break wording
+  ("month names take the monthly-series key") flipped the unrelated benchmark case B2 ("...op 1 januari 2024",
+  population) to a region clarification 4/4. Scoping the rule to EXPLICITLY NAMED key pairs fixed it instantly.
+  Prompt rules about periods must name their subjects; prompt.ts carries the do-not-regeneralize warning.
+- **The date-free intent prompt reads 2026-periods as forecast INTERMITTENTLY** (three of nine new labelled
+  cases flipped). Labelled ROUTING cases should use clearly-past periods; the hermetic CC tasks pin the
+  fresh-year cells instead. (The existing corpus already followed this convention silently — now it's written.)
+- **ADR 025's "escalation is a one-line change" did not survive its first firing.** Two compounding surprises:
+  (1) Sonnet 5 rejects `temperature: 0` — every rerank call API-errored and the FAIL-SAFE made it look like the
+  model disclosed 9/11 (a fail-safe can mask an integration error as model behavior; check for pick/confidence
+  being null); (2) confidence thresholds are MODEL-CALIBRATED — Sonnet's correct-pick range (0.60-0.88)
+  overlaps its should-disclose range against Haiku's 0.8 floor. Escalation = params + threshold co-calibration
+  (#172), executed-and-reverted with the full measurement recorded.
+- **Frozen behavior pins catch exactly what they were designed for:** B16's options-non-empty assertion caught a
+  PRE-EXISTING empty-options branch (region_unknown) the very first time a self-referential place routed onto a
+  geo key. The "regression" was a latent gap made reachable — fixing the branch improved population asks too.
+- **Never race a test re-run against a still-running verification block:** the concurrent audit re-run flaked
+  itself AND the block's audit+db suites (down to content-independent migration-scan tests) through embedded-
+  Postgres contention. Serial means serial — wait, then re-run solo.
+- **Bistable labelled cases: pin the label to the majority side + the committed fixture, with the measurement in
+  the note.** r-autos (refusal↔clarification) and f-v29 flipped repeatedly; chasing the preferred outcome via
+  re-records just moves the flake to the live eval. Both-honest cases get the stable side + a bistability note.
+- **Vocab growth changes behavior at a distance — the measured collateral list for 10 new keys:** a follow-up
+  ("En de huizenprijzen?") started clarifying between two house-price keys (fixed: the plural term added to the
+  canonical default); a date-range case re-routed to the finer-grain sibling (relabelled, better product); an
+  age-suffix in one definitionLabel destabilized breakdown follow-ups (dropped); the finder preferred the
+  fresher unemployment table (production-moot via the #166 held-screen). Assume nothing stays put; the labelled
+  sets are the only instrument that sees it.
+
 ## Session 53 (2026-07-17, autonomous prep — coverage tables #4-#9 built dormant)
 
 - **`--catalog-add` is NOT spend-free in effect: it can force a tablefinder re-record.** Merging the six new

@@ -1,5 +1,57 @@
 # STATUS archive — the session log
 
+**Last updated: 2026-07-18 (session 54, owner-present — the coverage sprint's TABLE SET COMPLETED: [#168](open-questions.md) resolved
+end-to-end; ALL NINE coverage tables LIVE and answering. Plus the owner-asked BILL-SHOCK AUDIT. Commits `7dd37c1` (audit docs), merge
+`5e3a8e2` (PR #56), `49135ef` (vocab batch); CI gate+deploy green on both code pushes.)**
+
+- **Bill-shock audit (owner asked after "woke up to a huge Vercel bill" stories; measured, sources verified same-day by a research agent):**
+  Vercel = **hobby** (API-verified; no billing cycle exists — limits pause, never charge), Supabase = **free**, repo **PUBLIC** (Actions
+  free), Anthropic 2× hard-capped (main €25/mo + separate trial workspace) → a surprise bill is structurally impossible TODAY. The one real
+  2026 gotcha: GitHub replaced the $0-default spending limit with Budgets (~Nov 2025) — with a card on file, metered overage now AUTO-BILLS
+  unless a stop-budget is set. RUNBOOK "Bill-shock protection" section = the full record + the STANDING RULE welded into the Phase-1
+  checklist: the day Hobby→Pro happens, Spend Management (amount + the OPT-IN "Pause production deployment" action) is configured in the
+  same sitting. Outstanding owner clicks: GitHub Budgets check, Resend free-confirm, optional free Vercel Firewall rate-limit rule (1 rule/
+  project on Hobby; Attack Challenge Mode = the panic button).
+- **#168 step 1:** PR #56 squash-merged `5e3a8e2` (owner delegated in-chat "doorgaan met de bouw"; #118 standing authorization), gate+deploy
+  green — the dormant tables deployed.
+- **#168 step 2 — the vocab batch (`49135ef`), SIX calibration rounds, every turn evidence-driven:** 10 canonical keys (retail/supermarkt-
+  omzet, consumptie, in-/uitvoerwaarde + CBS-jaarmutaties, huizenprijsindex-regio, maandwerkloosheid, verkoopprijs-per-gemeente REGIONAL) +
+  AVAILABLE_GRAINS (incl. 80590ned JJ — the honest-null grain the eval's grain-claim check rightly demanded) + REGIONAL_KEYS. **Prompt v6:**
+  (a) the ADR-023 bare-'tot' wording fix, deferred since 2026-07-05 to "the next prompt-changing WP" — executed, dr-cases stable ×3;
+  (b) the grain-sibling tie-break rule — first written generically, which broke benchmark B2 4/4 (generic period-words in a topic rule bleed
+  into every question), then SCOPED to explicitly named key pairs → B2 green; warning recorded in prompt.ts. **Calibration finds along the
+  way:** 2026-periods intermittently read as forecast by the date-free prompt (labelled cases moved to clearly-past periods — CC tasks pin
+  the 2026 cells hermetically instead); 'huizenprijzen' (plural) added to the 85773NED key after the bare plural clarified on a follow-up;
+  the monthly key's '(15-75 jaar)' suffix destabilized breakdown follow-ups and was dropped (quarterly sibling never names it either).
+  **Three reasoned relabels** (measured, never green-making): dr-kw-only-kwartaalgrenzen KW→MM (month-precise boundaries take the monthly
+  series now it exists; bare-term asks stay quarterly — #165 held), r-autos back to clarification (bistable both ways; original policy
+  choice; matches the committed fixture), f-v29-age-breakdown → out_of_scope refusal (stable majority after the vocab shifted the balance;
+  WP26-adjacent conservatism, tracked). **B16 catch:** the frozen options-non-empty pin caught a PRE-EXISTING gap the moment 'mijn buurt'
+  first routed onto a geo key — region_unknown clarifications now carry the two choice labels their template already asks (production
+  improvement for population asks too); the audit WP15 happy path re-pointed to a new followup case (f-merge-topic-switch-average-price)
+  because the old one now honestly clarifies. **Final gate: intent 72/72 ×3 ZERO flips (conf min 0.92 / median 0.95), followup 23/23,
+  clarify 7/7, onboarding-delivery 1/1, tablefinder 11/11 live + 11/11 hermetic replay.**
+- **#172 opened (the tablefinder part):** on a byte-identical rerank prompt, Haiku now stably (4/4) drops the only v1-deliverable table
+  `37789ksz` from the bijstand-stock chain (upstream model drift — NOT the batch; the #111 class degrades to honest refuse-and-refund). The
+  ADR-025 ladder fired and was executed: Sonnet first API-errored on every call (`temperature: 0` rejected — fail-safe disclosed 9/11; the
+  compose caller's `thinking: 'disabled'` is the fix), then measured properly: richer chains (37789ksz back in the alternatives) but a MUDDY
+  confidence distribution vs the Haiku-calibrated 0.8 floor (correct picks 0.60-0.88 overlapping should-disclose 0.60-0.62) → REVERTED to
+  the proven Haiku config; adopting Sonnet = model+threshold CO-calibration, its own supervised WP. Finder labels: werkloosheid → 80590ned
+  (production-moot — both tables curated, the #166 held-screen catches the route pre-charge), bijstand-stock's chainContains assertion
+  weakened WITH a restore instruction. ADR 025 as-built note records the whole firing.
+- **#168 step 3 — live (owner-present, announced):** deploy live-verified (HTTP 200, Ontdek present) → syncs ×6: batches 19-24, exactly the
+  measured row counts (46,442 / 34,048 / 1,132 / 26,208 / 5,586 / 23,095 = 136,511 rows), **0 corrections, 0 quarantines** — 85828NED's
+  7-measure exclusion proved itself live; the chunked escape hatch was never needed → `registry:apply` (17 tables / 26 canonical keys,
+  AFTER the verified deploy per #166 finding 8) → **10 LLM-free spot-checks ALL exact:** 1.8 / −0.6 / 1.8 / 70810 / 10.8 / 153.6 / 3.8 via
+  `spot-check-canonical.ts` + the regional key via an inline runQuery probe (NL01 2025 → 479.527; Amsterdam 2025 → 630.621; Amsterdam 2015 →
+  303.925; regionLabels resolve through the real GeoDimension).
+- **Verification both pushes:** typecheck; 14 backend suites — 1,422 tests green (audit+db re-run SOLO after self-inflicted parallel-load
+  contention: never race a re-run against a running block); hermetic benchmark 14/14 + 6/6 + 0 fabricated PASS; web 361 + typecheck + real
+  build; `/code-review` low ×2: none. **Measured LLM spend: ~€10-12** (six record rounds + ×3 evals + finder rounds, Haiku tier; one Sonnet
+  probe) — the "sub-euro" #164 estimate does not survive a real calibration loop; recorded as a lesson.
+- Docs same-change: docs/11 (vocab-batch section + per-table vocab lines), ADR 023 + 025 as-built notes, staged-brief "UITGEVOERD" header,
+  open-questions #168 RESOLVED + #172 NEW, build-plan sprint row COMPLETED, RUNBOOK bill-shock section + Phase-1 weld.
+
 **Last updated: 2026-07-18 (sparring session, owner-present, PARALLEL to the s54 build session — competitive analysis, NO build.
 Docs-only commits `203a371` + `fab0433` + the wrap commit; [skip ci] throughout, priority stack untouched.)**
 

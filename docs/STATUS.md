@@ -9,25 +9,27 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
-**▶ NEXT SESSION STARTS HERE (session 53, 2026-07-17→18, AUTONOMOUS — coverage tables #4-#9 BUILT DORMANT on
-[PR #56](https://github.com/Stefan7168/checkdecijfers/pull/56), branch `coverage-tables-4-9-prep`, per #118(b): branch+PR, zero LLM spend,
-no live syncs. All six tables (85828NED omzet detailhandel, 85937NED consumptie, 85429NED goederenhandel, 85792NED huizenprijzen-regio,
-80590ned maandwerkloosheid, 83625NED verkoopprijs-per-gemeente) live-measured on BOTH CBS platforms (6 parallel cheap-tier agents), seeds +
-registry defaults + floored fixtures (+7.8MB) + **CC11-CC31 frozen with EXPLICIT targets** (every value v3+v4+fixture-byte-verified; incl. a
-`no_data` methodebreuk-refusal pin CC21 and a new `null_cell` shape CC28 for 80590ned's JJ null+'Impossible'). Headline finds: the #167 probe
-caught **7 SLICE-EMPTY Productie-measures on 85828NED** (would have quarantined the first live sync — mechanism extended, RUNBOOK/docs-11
-updated); the `--catalog-add` merge **flipped 4/11 finder-replay cases to failure-safe disclose** (shortlist shift → fixture hash-miss) —
-REVERTED from the PR, scheduled with the owner-present tablefinder re-record; prod routing unaffected. Verification: 14 backend suites serial
-1,412 tests + web 361 green, hermetic benchmark 14/14 + 6/6 + 0 fabricated PASS, real build, /code-review low (none). **NO vocabulary was
-added — the six tables answer NOTHING in production yet (dormant by design). ▶ NEXT (session 54, owner-present, ONE step, tracker
-[#168](open-questions.md)): (1) review + merge PR #56 → (2) the staged vocab batch + ONE #164 re-record + `--catalog-add` +
-`tablefinder:record` (draaiboek: [session-briefs/2026-07-17-coverage-4-9-vocab-batch-staged.md](session-briefs/2026-07-17-coverage-4-9-vocab-batch-staged.md))
-→ (3) live syncs ×6 + `registry:apply` AFTER verified deploy + LLM-free spot-checks.** Owner dates stay: 22/7 06:30 sync `85773NED`, 23/7
-06:30 sync `83693NED`, ~30/7 BBP+PPI syncs (85880NED needs the chunked escape hatch), #132 route B on/after 19/7. Trial ops: pot was 23/25 at
-s52 close, `npm run trialpot:set -- <n>` refills/closes. WP26 keeps its trial-conversion stake (s52 note) — owner's call whether it jumps the
-queue. **Bill-shock audit DONE (2026-07-18, owner-asked): measured — Vercel=hobby, Supabase=free, repo public, Anthropic 2× hard-capped → a
-surprise bill is structurally impossible TODAY; RUNBOOK "Bill-shock protection" section = the record + the welded-in Pro-upgrade spend-cap
-rule. Outstanding owner clicks: GitHub Budgets check (the 2026 gotcha), Resend free-confirm, optional free Vercel Firewall rate-limit rule.**)**
+**▶ NEXT SESSION STARTS HERE (session 54, 2026-07-18, owner-present — THE COVERAGE SPRINT'S TABLE SET IS COMPLETE: [#168](open-questions.md)
+RESOLVED end-to-end. ALL NINE coverage tables are LIVE AND ANSWERING (the six #4-#9 joined #1-#3): PR #56 merged `5e3a8e2` → vocab batch
+`49135ef` (10 canonical keys; prompt v6 = the deferred ADR-023 bare-'tot' fix + a grain-sibling tie-break rule SCOPED to named pairs after the
+generic first wording broke B2 4/4; ONE #164 re-record over SIX calibration rounds — final gate intent 72/72 ×3 ZERO flips, conf min 0.92 /
+median 0.95, followup 23/23, clarify 7/7, tablefinder 11/11 live + hermetic; three reasoned relabels with measured rationale; the B16
+region_unknown options gap fixed — clarifications now carry choice labels) → live syncs ×6 (batches 19-24, 136,511 rows, 0 corrections, 0
+quarantines — 85828NED's excludeMeasures proved itself live, no chunk hatch needed) + registry:apply (17 tables / 26 keys) AFTER verified
+deploy + 10 LLM-free spot-checks ALL exact incl. the regional key (NL01 479.527 / Amsterdam 630.621 & 303.925). Measured LLM spend ~€10-12
+(calibration loops multiply — NOT sub-euro; within the €25 cap). ⚠ NEW TRACKER [#172](open-questions.md): finder-chain regression
+(bijstand-stock lost 37789ksz from the Haiku chain on a byte-identical prompt — upstream drift; the class is honest-but-undeliverable via
+refuse+refund) + the measured-and-REVERTED Sonnet escalation (temperature-0 rejection + muddy confidence distribution; needs model+threshold
+CO-calibration as its own supervised WP). Also this session: the BILL-SHOCK AUDIT (owner-asked): Vercel=hobby, Supabase=free, repo public,
+Anthropic 2× hard-capped → surprise bill structurally impossible TODAY; RUNBOOK "Bill-shock protection" = the record + the Pro-upgrade
+spend-cap rule; outstanding owner clicks: GitHub Budgets (the 2026 gotcha), Resend free-confirm, optional Vercel Firewall rate-limit rule.
+▶ NEXT: owner dates (22/7 06:30 sync `85773NED` generale; 23/7 06:30 sync `83693NED` julicijfer; ~30/7 BBP+PPI syncs — 85880NED via the
+chunked escape hatch; #132 route B on/after 19/7), then the owner-decision stack: WP26 (trial-conversion stake, s52), #138, #121, #131,
+WP30c, #162, #170 visibility smalls (sparring-approved), #172 escalation WP. Trial ops: pot was 23/25 at s52 close, `npm run trialpot:set`.)**
+
+**Session 53 (2026-07-17→18, AUTONOMOUS — tables #4-#9 BUILT DORMANT on PR #56 per #118(b): measured on both platforms via 6 parallel
+agents, CC11-CC31 frozen with explicit targets, the #167 probe caught 7 slice-empty Productie-measures, the `--catalog-add` finder-fixture
+trap found and scheduled. Superseded same-day by session 54's go-live above; full entry in [status-archive.md](status-archive.md).)**
 
 **Sparring session (2026-07-18, owner-present, parallel to the s54 build session — NO build, docs-only `203a371`/`fab0433`: competitive
 teardown of nederlandinbeeld.org + aidscope.co.uk; verdienmodel doubt addressed (access ≠ answers) with a parked LLM-benchmark test
