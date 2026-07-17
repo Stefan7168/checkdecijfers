@@ -6,6 +6,30 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 52 (2026-07-17) — Ontdek-grafieken + #53 trial pot (dormant)
+
+- **A kickoff's implementation sketch is a hypothesis, not a decision — measure it against the real job
+  before building.** The session-52 kickoff (and the #53 row) named the pure SVG renderer
+  (`src/chart/render.ts`) for the homepage charts; measuring it against 24-month windows showed it is
+  built for ≤8-point benchmark charts (a label on EVERY point at fixed font sizes, footer wrap hardcoded
+  at 100 chars — which at 640px viewBox already overflows), so the build used the product's existing
+  huisstijl ChartView instead — deviation + reasons recorded in ADR 035 D2, renderer left untouched as the
+  static-image seam. STATUS's decision framing ("via src/chart/") was satisfied; only the sketch changed.
+- **Run the adversarial review BEFORE marking an ADR "accepted-as-built" — ADR promises are review
+  targets.** The #53 review caught, through FOUR independent lenses, that ADR 036 D4's promised 90-day
+  `trial_questions` sweep was never built while every doc already said "BUILT DORMANT, only go-live
+  remains" — a GDPR-priority gap that would have shipped as "done". Writing the design doc and the build
+  in one session makes promised-but-unbuilt drift easy; the review pattern (find → adversarially verify)
+  went 12 confirmed / 0 refuted and every finding was real. Same pattern earlier caught a served-answer-
+  discarding throw (`attachTrialAudit` inside the outer try) and a cache-poisoning transient-skip in the
+  Ontdek build (4/4 confirmed).
+- **Verify a fail-safe cache on the SECOND request.** The first prod load after the Ontdek deploy showed
+  the section absent — correct behavior (cold instance, empty cache, stale-over-nothing degraded to "no
+  section"), but it reads as "the feature didn't deploy" during verification. Reload before diagnosing.
+- **Browser-pane screenshots go blank/stale after JS `scrollIntoView`** (two sessions' tabs, repeatable;
+  native scroll timed out too). Workaround that works: `resize_window` to a tall viewport (e.g. 1280×2760)
+  on a FRESH tab + one screenshot of the whole page after `navigate`.
+
 - **The "black void" login was a HALF-theme: the scaffold's auto-dark media query flipped the body while
   every component stayed light.** (session 51) Rule going forward: a theme exists only if BOTH halves are
   designed — the huisstijl pins `color-scheme: light` until a real dark counterpart is built
