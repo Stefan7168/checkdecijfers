@@ -18,12 +18,16 @@ fabricated GATE PASS, real build, /code-review low = 0 findings. Live step (owne
 registry:apply 9 tables / 11 keys; #165 vocab-overlap trim 115/115 rows; LLM-free prod verify −39 (juni 2026, Definitief) + JJ-ask →
 `not_published`. THREE sprint-wide finds recorded: #164 any vocab addition invalidates all ~93 LLM replay fixtures (re-record template proven:
 63/63 intent ×3 stable, 22/22 followup, 7/7 clarify); #165 done; #166 guard BUILT+MERGED session 50 (PR #54 + follow-up hardening). GOVERNANCE:
-#118 owner addition — automatic `/code-review` LOW before every code push, now in CLAUDE.md + build-plan rule 2 (commit `09b6191`). ▶ NEXT =
+#118 owner addition — automatic `/code-review` LOW before every code push, now in CLAUDE.md + build-plan rule 2 (commit `09b6191`).
+PARALLEL REVIEW SESSION (17/7, owner-present, alongside s50): max-review of PR #54 → 12 findings, ALL dispatched in s50's `c7f6063`
+([findings brief](session-briefs/2026-07-17-pr54-max-review-findings.md)); dependabot #51–#53 MERGED — #53's deploy went RED (Next 16.x
+rejects TypeScript 7 in `next build`; gate can't catch it) → `eec3973` pins TS ^5 root+web + dependabot TS-major ignore, gate+deploy GREEN
+(run 29569012407), prod never affected. TS-7 lift condition: dependabot.yml comment + RUNBOOK maintenance note. ▶ NEXT =
 SPRINT TABLES #2 `85880NED` (BBP flash) + #3 `85770NED` (PPI) BEFORE 30/7, in ONE session with ONE combined vocab change + re-record (#164);
 kickoff: [session-briefs/2026-07-17-session-50-kickoff.md](session-briefs/2026-07-17-session-50-kickoff.md). Owner dates: 22/7 06:30
 persberichtdag-generale (sync `85773NED` that morning), 23/7 06:30 sync `83693NED` (juli-cijfer), #132 route B on/after 19/7.
 OVERNIGHT ADDENDUM (same session, owner asleep, autonomous rules): (1) **#166 already-curated guard DESIGNED + BUILT on branch, [PR #54](https://github.com/Stefan7168/checkdecijfers/pull/54)
-AWAITS OWNER REVIEW** (merge = approval per #118(b); money function byte-untouched; backend 1354/1354 + full block green + /code-review low 0 findings);
+— since MERGED session 50 + follow-up-hardened `c7f6063` after the parallel max-review** (money function byte-untouched; backend 1354/1354 + full block green + /code-review low 0 findings);
 (2) **tables #2-#9 fully MEASURED** (8 agents, v3+v4 cross-checked): execute-ready specs in
 [session-briefs/2026-07-17-coverage-tables-2-9-measured-specs.md](session-briefs/2026-07-17-coverage-tables-2-9-measured-specs.md) — all four brief
 open-points RESOLVED (PPI-totaal = A052584; 85937NED + 85792NED are on v4; 84106NED supersession mutual; 83625NED FIT as table #9), NO adapter
