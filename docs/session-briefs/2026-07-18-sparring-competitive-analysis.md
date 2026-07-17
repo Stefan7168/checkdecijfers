@@ -116,3 +116,18 @@ in the API today. Added to the roadmap enrichment list with that note.
 
 Current priority stack is untouched by this session: tables #4–#9 go-live steps ([#168](../open-questions.md)) remain
 the single next owner-present build step.
+
+## 7. Addendum (same-day sweep — items discussed but missed in the first recording)
+
+- **Draft-for-review pattern for any future social presence** (from the NiB OpenClaw discussion): an agent may fetch
+  mentions, categorize, and DRAFT replies, but a human always approves before anything publishes — the same philosophy
+  as our #118(b) autonomous-work rule, applied to communication. Feature-pool note, no row of its own.
+- **Cross-source computed answers** get their first concrete example from today's source work: "uitgaven per leerling"
+  = rijksfinancien.nl euros ÷ CBS pupil counts. Already tracked as the multi-source paid add-on idea at
+  [#103](../open-questions.md); this example is the demo candidate when that row activates.
+- **Journalistic reinforcement of the data.politie.nl candidacy** (relevant to the deferred [#123](../open-questions.md)
+  choice): NiB's traffic concentrates on veiligheid topics — the neutral, cell-traceable version of exactly those
+  questions is the gap a politie adapter fills; safety is also the bread-and-butter of local/regional newsrooms.
+- **Architecture sketches for the whole harvest** were worked out same-day at the owner's request:
+  [2026-07-18-parked-ideas-architecture-sketches.md](2026-07-18-parked-ideas-architecture-sketches.md) — design
+  sketches only (ADRs follow when a WP is picked up), including a suggested pickup order once the stack clears.
