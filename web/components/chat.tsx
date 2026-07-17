@@ -102,11 +102,11 @@ function WebSectionView({ section }: { section: WebSection }) {
       section.code === 'insufficient_balance'
         ? 'De webzoekopdracht is niet uitgevoerd (onvoldoende saldo) — geen extra kosten.'
         : 'De webzoekopdracht is niet gelukt — geen extra kosten.';
-    return <p className="mt-2 text-xs text-zinc-500">{line}</p>;
+    return <p className="mt-2 text-xs text-ink-muted">{line}</p>;
   }
   return (
-    <div className="mt-2 max-w-full rounded border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs text-zinc-600">
-      <p className="mb-1 font-medium text-zinc-500">{WEB_SECTION_HEADER}</p>
+    <div className="mt-2 max-w-full rounded border border-line bg-paper-sunken px-3 py-2 text-xs text-ink-soft">
+      <p className="mb-1 font-medium text-ink-muted">{WEB_SECTION_HEADER}</p>
       <ul className="space-y-1">
         {section.findings.slice(0, 4).map((finding, i) => (
           <li key={i}>
@@ -139,7 +139,7 @@ function DownloadCsvButton({ csv }: { csv: AnswerCsv }) {
     <>
       <button
         type="button"
-        className="text-xs text-zinc-400 underline"
+        className="text-xs text-ink-muted underline"
         onClick={() => {
           try {
             const url = URL.createObjectURL(
@@ -158,7 +158,7 @@ function DownloadCsvButton({ csv }: { csv: AnswerCsv }) {
         Download als CSV
       </button>
       {failed ? (
-        <span className="text-xs text-red-600">Downloaden lukte niet in deze browser.</span>
+        <span className="text-xs text-danger">Downloaden lukte niet in deze browser.</span>
       ) : null}
     </>
   );
@@ -170,7 +170,7 @@ function CopyCitationButton({ citation }: { citation: string }) {
   return (
     <button
       type="button"
-      className="text-xs text-zinc-400 underline"
+      className="text-xs text-ink-muted underline"
       onClick={async () => {
         try {
           await navigator.clipboard.writeText(citation);
@@ -542,12 +542,12 @@ export function Chat({
   }
 
   return (
-    <div className="flex h-[65vh] w-full flex-col rounded border border-zinc-200 p-4">
+    <div className="flex h-[65vh] w-full flex-col rounded border border-line p-4">
       <h1 className="mb-4 text-lg font-semibold">Check de Cijfers</h1>
-      <div className="flex-1 space-y-3 overflow-y-auto tabular-nums">
+      <div className="flex-1 space-y-3 overflow-y-auto tnum">
         {messages.length === 0 ? (
           <div>
-            <p className="text-sm text-zinc-500">
+            <p className="text-sm text-ink-muted">
               Stel een vraag over officiële CBS-cijfers, bijvoorbeeld:
             </p>
             <div className="mt-2 flex flex-wrap gap-2">
@@ -556,7 +556,7 @@ export function Chat({
                   key={question}
                   type="button"
                   onClick={() => setInput(question)}
-                  className="rounded-full border border-zinc-300 px-3 py-1 text-xs text-zinc-600 hover:bg-zinc-50"
+                  className="rounded-full border border-line-strong px-3 py-1 text-xs text-ink-soft hover:bg-paper-sunken"
                 >
                   {question}
                 </button>
@@ -571,7 +571,7 @@ export function Chat({
           if (message.role === 'redacted') {
             return (
               <div key={i} className="text-left">
-                <p className="text-sm italic text-zinc-400">Deze vraag is verwijderd.</p>
+                <p className="text-sm italic text-ink-muted">Deze vraag is verwijderd.</p>
               </div>
             );
           }
@@ -590,8 +590,8 @@ export function Chat({
               * strings from the owner-approved row. */}
             {message.kind === 'refusal' ? (
               <div className="mb-0.5 flex items-center gap-2 text-xs">
-                <span className="font-semibold text-zinc-700">Dit kon ik niet beantwoorden</span>
-                <span className="rounded-full bg-zinc-200 px-2 py-0.5 text-zinc-600">
+                <span className="font-semibold text-ink-soft">Dit kon ik niet beantwoorden</span>
+                <span className="rounded-full bg-paper-sunken px-2 py-0.5 text-ink-soft">
                   geen antwoord = geen gok
                 </span>
               </div>
@@ -607,12 +607,12 @@ export function Chat({
               className={
                 'inline-block max-w-full whitespace-pre-wrap rounded-lg px-3 py-2 text-sm ' +
                 (message.role === 'user'
-                  ? 'bg-blue-600 text-white'
+                  ? 'bg-paper-sunken text-ink'
                   : message.kind === 'clarification'
-                    ? 'border border-amber-200 bg-amber-50 text-zinc-900'
+                    ? 'border border-line-strong bg-warn-soft text-ink'
                     : message.kind === 'refusal'
-                      ? 'border border-zinc-200 bg-zinc-50 text-zinc-900'
-                      : 'bg-zinc-100 text-zinc-900')
+                      ? 'border border-line bg-paper-sunken text-ink'
+                      : 'border border-line bg-paper-raised text-ink')
               }
             >
               {message.answerView ? message.answerView.body : message.text}
@@ -620,25 +620,26 @@ export function Chat({
             {/* WP23 (#90): the structural lines an answer's text used to
               * carry inline — nothing may be lost (R5/R11 surfaces). */}
             {message.answerView?.stalenessWarning ? (
-              <p className="mt-1 text-sm text-amber-700">{message.answerView.stalenessWarning}</p>
+              <p className="mt-1 text-sm text-warn">{message.answerView.stalenessWarning}</p>
             ) : null}
             {message.answerView?.definitionLine ? (
-              <p className="mt-1 text-xs text-zinc-600">{message.answerView.definitionLine}</p>
+              <p className="mt-1 text-xs text-ink-muted">{message.answerView.definitionLine}</p>
             ) : null}
             {message.answerView?.markingLine ? (
-              <p className="mt-1 text-xs text-zinc-600">{message.answerView.markingLine}</p>
+              <p className="mt-1 text-xs text-ink-muted">{message.answerView.markingLine}</p>
             ) : null}
             {message.answerView ? (
-              <div className="mt-1 flex max-w-full flex-wrap items-center gap-2">
+              <div className="mt-1 flex max-w-full flex-wrap items-center gap-2 border-t border-line pt-1">
                 {/* WP23 (#71): the voorlopig pill at message level. */}
                 {message.provisional ? (
-                  <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                  <span className="rounded-full bg-warn-soft px-2 py-0.5 text-xs font-medium text-warn">
                     voorlopig
                   </span>
                 ) : null}
                 {/* WP23 (#90+#86): the source chip — the FULL R4 sentence,
-                  * always visible, plus the StatLine deep-link. */}
-                <span className="inline-flex max-w-full flex-wrap items-center gap-2 rounded border border-zinc-200 bg-zinc-50 px-2 py-1 text-xs text-zinc-500">
+                  * always visible, plus the StatLine deep-link. Huisstijl rule 7:
+                  * attribution stays quiet — text-xs text-ink-muted. */}
+                <span className="inline-flex max-w-full flex-wrap items-center gap-2 text-xs text-ink-muted">
                   <span>{message.answerView.attribution}</span>
                   {sourceTableUrl(message.answerView.source, message.answerView.tableId) !== null ? (
                     <a
@@ -662,7 +663,7 @@ export function Chat({
               <FeedbackButtons auditId={message.auditId} />
             ) : null}
             {message.cost !== null ? (
-              <div className="mt-0.5 text-xs text-zinc-400 tabular-nums">
+              <div className="mt-0.5 text-xs text-ink-muted tnum">
                 {message.cost} credits
                 {/* WP20 #82(c): the reply's price, stated AT the clarifying
                   * question — client-side caption; the pipeline's own
@@ -690,8 +691,8 @@ export function Chat({
                 className={
                   'mt-2 inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs ' +
                   (activeVisualId === visualId(i)
-                    ? 'border-zinc-500 bg-zinc-200 text-zinc-900'
-                    : 'border-zinc-300 text-zinc-600 hover:bg-zinc-50')
+                    ? 'border-line-strong bg-paper-sunken text-ink'
+                    : 'border-line-strong text-ink-soft hover:bg-paper-sunken')
                 }
               >
                 {message.chart !== null ? 'Grafiek' : 'Kaart'} in het paneel →
@@ -708,7 +709,7 @@ export function Chat({
                     key={question}
                     type="button"
                     onClick={() => setInput(question)}
-                    className="rounded-full border border-zinc-300 px-3 py-1 text-xs text-zinc-600 hover:bg-zinc-50"
+                    className="rounded-full border border-line-strong px-3 py-1 text-xs text-ink-soft hover:bg-paper-sunken"
                   >
                     {question}
                   </button>
@@ -725,7 +726,7 @@ export function Chat({
           );
         })}
         {busy ? (
-          <div className="text-left text-sm text-zinc-500">
+          <div className="text-left text-sm text-ink-muted">
             {/* WP129+130 go-live feedback (owner, 2026-07-12): with the Internet
               * chip on, the wait covers the web search too — say so honestly.
               * Web-only (CBS deselected) names only the web. */}
@@ -736,9 +737,9 @@ export function Chat({
                 : 'Bezig met het doorzoeken van CBS-cijfers…'}
           </div>
         ) : null}
-        {error ? <div className="text-sm text-red-600">{error}</div> : null}
+        {error ? <div className="text-sm text-danger">{error}</div> : null}
         {staleDeploy ? (
-          <div className="text-sm text-amber-700">
+          <div className="text-sm text-warn">
             De site is net bijgewerkt, waardoor deze vraag niet is verstuurd (er zijn geen credits
             afgeschreven).{' '}
             <button
@@ -773,8 +774,8 @@ export function Chat({
                 className={
                   'rounded-full border px-3 py-1 text-xs ' +
                   (active
-                    ? 'border-zinc-500 bg-zinc-200 text-zinc-900'
-                    : 'border-zinc-300 text-zinc-600 hover:bg-zinc-50')
+                    ? 'border-line-strong bg-paper-sunken text-ink'
+                    : 'border-line-strong text-ink-soft hover:bg-paper-sunken')
                 }
               >
                 {`${SOURCES[key]!.displayName} data`}
@@ -789,8 +790,8 @@ export function Chat({
             className={
               'rounded-full border px-3 py-1 text-xs ' +
               (webSelected
-                ? 'border-zinc-500 bg-zinc-200 text-zinc-900'
-                : 'border-zinc-300 text-zinc-600 hover:bg-zinc-50')
+                ? 'border-line-strong bg-paper-sunken text-ink'
+                : 'border-line-strong text-ink-soft hover:bg-paper-sunken')
             }
           >
             Internet
@@ -799,7 +800,7 @@ export function Chat({
         </div>
       ) : null}
       {nothingSelected ? (
-        <p className="mt-1 text-xs text-red-600">Selecteer minstens één bron.</p>
+        <p className="mt-1 text-xs text-danger">Selecteer minstens één bron.</p>
       ) : null}
       <form onSubmit={handleSubmit} className="mt-4 flex gap-2">
         <input
@@ -809,12 +810,12 @@ export function Chat({
           disabled={busy}
           maxLength={500}
           placeholder={pending ? pending.questionNl : 'Stel een vraag…'}
-          className="flex-1 rounded border border-zinc-300 px-3 py-2 text-sm disabled:bg-zinc-100"
+          className="flex-1 rounded-md border border-line-strong bg-paper-raised px-3 py-2 text-sm text-ink placeholder:text-ink-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:bg-paper-sunken"
         />
         <button
           type="submit"
           disabled={busy || !input.trim() || nothingSelected}
-          className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-50"
         >
           Verstuur
         </button>
@@ -830,7 +831,7 @@ export function Chat({
         * wordt tijdelijk 30 gereserveerd)"; internet off / no websearch prop ⇒
         * unchanged. */}
       {pricing ? (
-        <p className="mt-1 text-xs text-zinc-400">
+        <p className="mt-1 text-xs text-ink-muted">
           {websearch && webSelected && selectedSources.size > 0
             ? `Een vraag kost ~${pricing.simple + websearch.addonPrice} credits (waarvan ${websearch.addonPrice} voor internet) · saldo: ${pricing.balance} credits. ` +
               `Stel ik eerst een verduidelijkingsvraag, dan kost die ${pricing.clarification} credits en krijg je de rest terug.`

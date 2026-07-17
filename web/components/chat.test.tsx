@@ -409,7 +409,7 @@ describe('Chat — WP23 display smalls', () => {
     render(<Chat />);
     await submit('Hoeveel werklozen zijn er?');
     const bubble = await screen.findByText('Welke gemeente bedoel je?');
-    expect(bubble.className).toContain('bg-amber-50');
+    expect(bubble.className).toContain('bg-warn-soft');
     expect(screen.queryByText('Dit kon ik niet beantwoorden')).toBeNull();
   });
 
@@ -506,7 +506,7 @@ describe('Chat — WP23 display smalls', () => {
     render(<Chat />);
     await submit('Hoeveel inwoners heeft Nederland?');
     const bubble = await screen.findByText('Nederland telt 18.044.027 inwoners.');
-    expect(bubble.className).not.toContain('bg-amber-50');
+    expect(bubble.className).not.toContain('bg-warn-soft');
     expect(screen.queryByText('Dit kon ik niet beantwoorden')).toBeNull();
     expect(screen.queryByText('geen antwoord = geen gok')).toBeNull();
   });

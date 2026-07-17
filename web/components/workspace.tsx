@@ -167,7 +167,7 @@ export function Workspace({
     <div className="flex min-h-screen flex-col">
       <SiteHeader balance={balance} />
       {showPurchaseBanner ? (
-        <div className="mx-4 mt-4 flex items-start justify-between gap-3 rounded border border-green-300 bg-green-50 px-4 py-3 text-sm text-green-800">
+        <div className="mx-4 mt-4 flex items-start justify-between gap-3 rounded border border-line-strong bg-paper-sunken px-4 py-3 text-sm text-ok">
           <p>
             Betaling gelukt — je credits worden bijgeschreven zodra Stripe de betaling bevestigt
             (meestal een paar seconden). Ververs daarna de pagina om je nieuwe saldo te zien.
@@ -175,7 +175,7 @@ export function Workspace({
           <button
             type="button"
             onClick={dismissPurchaseBanner}
-            className="shrink-0 text-xs text-green-700 underline"
+            className="shrink-0 text-xs text-ok underline"
           >
             Sluiten
           </button>
@@ -224,8 +224,8 @@ export function Workspace({
         ) : null}
       </div>
 
-      <section id="over-dit-project" className="mx-4 mt-6 max-w-2xl text-sm text-zinc-600">
-        <h2 className="mb-1 font-semibold text-zinc-800">Over dit project</h2>
+      <section id="over-dit-project" className="mx-4 mt-6 max-w-2xl text-sm text-ink-soft">
+        <h2 className="mb-1 font-semibold text-ink">Over dit project</h2>
         <p>
           Check de Cijfers beantwoordt vragen over officiële cijfers van het CBS. Elk getal wordt
           door vaste, controleerbare code berekend en gecontroleerd; het taalmodel begrijpt alleen
@@ -235,7 +235,7 @@ export function Workspace({
         </p>
       </section>
 
-      <footer className="mx-4 mb-4 mt-6 border-t border-zinc-200 pt-3 text-xs text-zinc-400">
+      <footer className="mx-4 mb-4 mt-6 border-t border-line pt-3 text-xs text-ink-muted">
         {FOOTER_PREFIX}
         <a href="#over-dit-project" className="underline">
           {FOOTER_ABOUT_LABEL}

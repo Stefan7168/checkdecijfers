@@ -36,7 +36,18 @@ export interface SeriesMeta {
   color: string;
 }
 
-const COLORS = ['#2563eb', '#dc2626', '#16a34a', '#9333ea', '#d97706', '#0891b2'];
+// Huisstijl palette (docs/12-huisstijl.md): the primary series takes the one
+// accent; subsequent series fall back to the other semantic tokens rather than
+// introducing new hex colors. CSS var() strings are valid SVG stroke/fill
+// values, so the same tokens app/globals.css defines drive the chart.
+const COLORS = [
+  'var(--accent)',
+  'var(--danger)',
+  'var(--ok)',
+  'var(--accent-strong)',
+  'var(--warn)',
+  'var(--ink-soft)',
+];
 
 // Y-axis honesty policy (open-questions #48, resolved 2026-07-04): a bar
 // encodes LENGTH, so a non-zero baseline visually lies about ratios — bars
@@ -107,8 +118,8 @@ export function ChartTooltip({
   if (!active || !payload || payload.length === 0) return null;
   const labelByKey = new Map(seriesMeta.map((s) => [s.key, s.label]));
   return (
-    <div className="rounded border border-zinc-300 bg-white px-3 py-2 text-sm shadow">
-      <div className="font-medium">{label}</div>
+    <div className="rounded-md border border-line-strong bg-paper-raised px-3 py-2 text-sm shadow-sm">
+      <div className="font-medium text-ink">{label}</div>
       {payload.map((entry) => {
         const display = entry.payload[`${entry.dataKey}_display`];
         if (display == null) return null;
@@ -154,20 +165,20 @@ export function ChartView({ spec }: { spec: ChartSpec }) {
   const dimEntries = Object.entries(spec.dimLabels);
 
   return (
-    <div className="mt-3 rounded border border-zinc-200 bg-white p-3">
-      <div className="text-sm font-semibold">{spec.title}</div>
+    <div className="mt-3 rounded-lg border border-line bg-paper-raised p-3">
+      <div className="text-sm font-semibold text-ink">{spec.title}</div>
       {dimEntries.length > 0 ? (
-        <div className="text-xs text-zinc-500">
+        <div className="text-xs text-ink-muted">
           {dimEntries.map(([k, v]) => `${k}: ${v}`).join(' · ')}
         </div>
       ) : null}
-      <div className="text-xs text-zinc-500">{spec.unit}</div>
+      <div className="text-xs text-ink-muted">{spec.unit}</div>
       <div className="h-64 w-full">
         <ResponsiveContainer width="100%" height="100%">
           {spec.kind === 'line' ? (
             <LineChart data={rows} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="periodLabel" tick={{ fontSize: 11 }} />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" />
+              <XAxis dataKey="periodLabel" tick={{ fontSize: 11, fill: 'var(--ink-muted)' }} />
               <YAxis tick={false} width={16} domain={yAxisDomain(spec.kind)} />
               <Tooltip content={<ChartTooltip seriesMeta={seriesMeta} />} />
               {seriesMeta.length > 1 ? <Legend /> : null}
@@ -186,8 +197,8 @@ export function ChartView({ spec }: { spec: ChartSpec }) {
             </LineChart>
           ) : (
             <BarChart data={rows} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="periodLabel" tick={{ fontSize: 11 }} />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" />
+              <XAxis dataKey="periodLabel" tick={{ fontSize: 11, fill: 'var(--ink-muted)' }} />
               <YAxis tick={false} width={16} domain={yAxisDomain(spec.kind)} />
               <Tooltip content={<ChartTooltip seriesMeta={seriesMeta} />} />
               {seriesMeta.length > 1 ? <Legend /> : null}
@@ -198,18 +209,18 @@ export function ChartView({ spec }: { spec: ChartSpec }) {
           )}
         </ResponsiveContainer>
       </div>
-      {/* WP23 (#92): caveats read like caveats — amber and a step larger than
+      {/* WP23 (#92): caveats read like caveats — warn and a step larger than
         * the source credit, which stays smallest/lightest (photo-credit
         * style). Content untouched: same strings from the same one builder
         * (R4); only presentation changes here. */}
-      {spec.provisionalNote ? <p className="mt-2 text-sm text-amber-700">{spec.provisionalNote}</p> : null}
+      {spec.provisionalNote ? <p className="mt-2 text-sm text-warn">{spec.provisionalNote}</p> : null}
       {spec.nullNotes.map((note) => (
-        <p key={note} className="text-sm text-amber-700">
+        <p key={note} className="text-sm text-warn">
           {note}
         </p>
       ))}
-      {spec.definitionLine ? <p className="mt-2 text-xs text-zinc-600">{spec.definitionLine}</p> : null}
-      <p className="mt-1 text-xs text-zinc-400">{spec.attributionLine}</p>
+      {spec.definitionLine ? <p className="mt-2 text-xs text-ink-muted">{spec.definitionLine}</p> : null}
+      <p className="mt-1 text-xs text-ink-muted">{spec.attributionLine}</p>
     </div>
   );
 }

@@ -24,9 +24,13 @@ describe('proxy isPublicPath allowlist', () => {
     expect(isPublicPath('/auth/callback')).toBe(true);
   });
 
+  it('the homepage is public (session-51 owner decision: landing for logged-out visitors) — EXACT match only', () => {
+    expect(isPublicPath('/')).toBe(true);
+  });
+
   it('keeps protected paths private (the guard still guards)', () => {
-    expect(isPublicPath('/')).toBe(false);
     expect(isPublicPath('/credits')).toBe(false);
+    expect(isPublicPath('/geschiedenis')).toBe(false);
     // A different API route is NOT blanket-public — only the explicit entries.
     expect(isPublicPath('/api/something-else')).toBe(false);
   });

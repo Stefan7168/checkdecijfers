@@ -88,25 +88,25 @@ function snippet(text: string): string {
 function AnswerBody({ parts }: { parts: NonNullable<QuestionHistoryEntry['answerParts']> }) {
   const definition = parts.definitionLine === null ? null : splitDefinitionForDisplay(parts.definitionLine);
   return (
-    <div className="mt-2 flex flex-col gap-1.5 text-sm text-zinc-700">
+    <div className="mt-2 flex flex-col gap-1.5 text-sm text-ink-soft">
       <p className="whitespace-pre-wrap">{parts.body}</p>
       {parts.stalenessWarning === null ? null : (
-        <p className="text-xs text-amber-800">{parts.stalenessWarning}</p>
+        <p className="text-xs text-warn">{parts.stalenessWarning}</p>
       )}
       {definition === null ? null : (
         <>
-          {definition.inline === null ? null : <p className="text-xs text-zinc-500">{definition.inline}</p>}
+          {definition.inline === null ? null : <p className="text-xs text-ink-muted">{definition.inline}</p>}
           {definition.folded === null ? null : (
-            <details className="text-xs text-zinc-500">
-              <summary className="cursor-pointer font-medium text-zinc-600">Meer over deze meting</summary>
+            <details className="text-xs text-ink-muted">
+              <summary className="cursor-pointer font-medium text-ink-soft">Meer over deze meting</summary>
               <p className="mt-1 whitespace-pre-wrap">{definition.folded}</p>
             </details>
           )}
         </>
       )}
-      {parts.markingLine === null ? null : <p className="text-xs text-zinc-500">{parts.markingLine}</p>}
+      {parts.markingLine === null ? null : <p className="text-xs text-ink-muted">{parts.markingLine}</p>}
       {/* The R4 attribution sentence: always fully visible (#90), smallest. */}
-      <p className="text-xs text-zinc-400">{parts.attributionLine}</p>
+      <p className="text-xs text-ink-muted">{parts.attributionLine}</p>
     </div>
   );
 }
@@ -124,12 +124,12 @@ function formatDate(iso: string): string {
 
 export function QuestionHistory({ items }: { items: QuestionHistoryEntry[] }) {
   if (items.length === 0) {
-    return <p className="text-sm text-zinc-500">Nog geen eerdere vragen.</p>;
+    return <p className="text-sm text-ink-muted">Nog geen eerdere vragen.</p>;
   }
 
   return (
     <div className="flex flex-col gap-2">
-      <h2 className="text-sm font-semibold text-zinc-700">Eerdere vragen</h2>
+      <h2 className="text-sm font-semibold text-ink-soft">Eerdere vragen</h2>
       {items.map((item) => {
         // WP16 sub-part 2: an onboarding-queue entry (pending/running/failed/
         // unanswerable) has no answer/refusal body -- its own render branch,
@@ -145,31 +145,31 @@ export function QuestionHistory({ items }: { items: QuestionHistoryEntry[] }) {
               // alone is not unique across the merged list.
               key={`${item.source}-${item.id}`}
               className={
-                'rounded border p-2 ' + (inFlight ? 'border-amber-200 bg-amber-50' : 'border-zinc-200')
+                'rounded-lg border p-2 ' + (inFlight ? 'border-warn bg-warn-soft' : 'border-line')
               }
             >
               <summary className="cursor-pointer text-sm">
                 <span className="font-medium">{item.question}</span>
-                <span className="ml-2 text-xs text-zinc-400">
+                <span className="ml-2 text-xs text-ink-muted">
                   {item.creditsCharged !== null ? `${item.creditsCharged} credits · ` : ''}
                   {formatDate(item.createdAt)}
                 </span>
-                <div className={'mt-0.5 text-xs font-medium ' + (inFlight ? 'text-amber-800' : 'text-zinc-500')}>
+                <div className={'mt-0.5 text-xs font-medium ' + (inFlight ? 'text-warn' : 'text-ink-muted')}>
                   {label}
                 </div>
               </summary>
-              <p className={'mt-2 text-sm ' + (inFlight ? 'text-amber-900' : 'text-zinc-700')}>{body}</p>
+              <p className={'mt-2 text-sm ' + (inFlight ? 'text-warn' : 'text-ink-soft')}>{body}</p>
             </details>
           );
         }
 
         return (
-          <details key={`${item.source}-${item.id}`} className="rounded border border-zinc-200 p-2">
+          <details key={`${item.source}-${item.id}`} className="rounded-lg border border-line p-2">
             <summary className="cursor-pointer text-sm">
-              <span className={item.isDeleted ? 'italic text-zinc-400' : 'font-medium'}>
+              <span className={item.isDeleted ? 'italic text-ink-muted' : 'font-medium'}>
                 {item.isDeleted ? 'Verwijderde vraag' : item.question}
               </span>
-              <span className="ml-2 text-xs text-zinc-400">
+              <span className="ml-2 text-xs text-ink-muted">
                 {/* A collapsed round's number is the SUM of two turns -- say so
                   * (adversarial-review finding: unlabeled, it reads as one
                   * answer's price). The credit amount survives deletion
@@ -180,31 +180,31 @@ export function QuestionHistory({ items }: { items: QuestionHistoryEntry[] }) {
                 {formatDate(item.createdAt)}
               </span>
               {item.isDeleted ? null : (
-                <div className="mt-0.5 truncate text-xs text-zinc-500">{snippet(item.finalText)}</div>
+                <div className="mt-0.5 truncate text-xs text-ink-muted">{snippet(item.finalText)}</div>
               )}
             </summary>
             {item.isDeleted ? (
-              <p className="mt-2 text-sm italic text-zinc-400">
+              <p className="mt-2 text-sm italic text-ink-muted">
                 De tekst van deze vraag is verwijderd.
               </p>
             ) : (
               <>
                 {item.clarification ? (
-                  <div className="mt-2 flex flex-col gap-1 border-l-2 border-zinc-200 pl-2 text-sm">
+                  <div className="mt-2 flex flex-col gap-1 border-l-2 border-line pl-2 text-sm">
                     <div>
-                      <span className="text-xs text-zinc-500">Verduidelijkingsvraag</span>
-                      <div className="whitespace-pre-wrap text-zinc-700">{item.clarification.text}</div>
+                      <span className="text-xs text-ink-muted">Verduidelijkingsvraag</span>
+                      <div className="whitespace-pre-wrap text-ink-soft">{item.clarification.text}</div>
                     </div>
                     <div>
-                      <span className="text-xs text-zinc-500">Jouw antwoord</span>
-                      <div className="whitespace-pre-wrap text-zinc-700">{item.clarification.reply}</div>
+                      <span className="text-xs text-ink-muted">Jouw antwoord</span>
+                      <div className="whitespace-pre-wrap text-ink-soft">{item.clarification.reply}</div>
                     </div>
                   </div>
                 ) : null}
                 {item.answerParts !== null ? (
                   <AnswerBody parts={item.answerParts} />
                 ) : (
-                  <div className="mt-2 whitespace-pre-wrap text-sm text-zinc-700">{item.finalText}</div>
+                  <div className="mt-2 whitespace-pre-wrap text-sm text-ink-soft">{item.finalText}</div>
                 )}
               </>
             )}

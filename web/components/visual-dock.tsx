@@ -24,7 +24,7 @@ export function VisualDock({
     visuals.find((visual) => visual.id === activeVisualId) ?? visuals[visuals.length - 1]!;
 
   return (
-    <aside className="flex h-full flex-col gap-2 rounded border border-zinc-200 p-3">
+    <aside className="flex h-full flex-col gap-2 rounded-lg border border-line bg-paper-raised p-3">
       <div role="tablist" aria-label="Visualisaties" className="flex flex-wrap gap-1">
         {visuals.map((visual) => {
           const selected = visual.id === active.id;
@@ -38,13 +38,13 @@ export function VisualDock({
               className={
                 'max-w-full truncate rounded-full border px-3 py-1 text-xs ' +
                 (selected
-                  ? 'border-zinc-500 bg-zinc-200 text-zinc-900'
-                  : 'border-zinc-300 text-zinc-600 hover:bg-zinc-50')
+                  ? 'border-line-strong bg-paper-sunken text-ink'
+                  : 'border-line-strong text-ink-soft hover:bg-paper-sunken')
               }
               title={`${visual.label} · ${visual.question}`}
             >
               {visual.label}
-              {visual.question !== '' ? <span className="text-zinc-400"> · {visual.question}</span> : null}
+              {visual.question !== '' ? <span className="text-ink-muted"> · {visual.question}</span> : null}
             </button>
           );
         })}

@@ -65,7 +65,7 @@ export function Dashboard({
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 p-4">
       {showPurchaseBanner ? (
-        <div className="flex items-start justify-between gap-3 rounded border border-green-300 bg-green-50 px-4 py-3 text-sm text-green-800">
+        <div className="flex items-start justify-between gap-3 rounded-lg border border-line bg-paper-sunken px-4 py-3 text-sm text-ok">
           {/* Honest copy (#95): the webhook credits the ledger, not this
             * redirect — never promise a fixed time, and say a reload is what
             * shows the new balance (the #68 live updates move on question
@@ -77,7 +77,7 @@ export function Dashboard({
           <button
             type="button"
             onClick={dismissPurchaseBanner}
-            className="shrink-0 text-xs text-green-700 underline"
+            className="shrink-0 text-xs text-ok underline"
           >
             Sluiten
           </button>

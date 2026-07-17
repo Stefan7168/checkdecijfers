@@ -14,7 +14,6 @@ export const runtime = 'nodejs';
 // a hold, and a static segment-config export cannot be flag-conditional.
 export const maxDuration = 90;
 
-import { redirect } from 'next/navigation';
 import {
   getActionClassPrice,
   getBalance,
@@ -26,6 +25,7 @@ import { QuestionHistory } from '../components/question-history.tsx';
 import { Workspace } from '../components/workspace.tsx';
 import { listThreads } from '../backend/threads/index.ts';
 import { currentUserId } from '../lib/current-user.ts';
+import { Landing } from '../components/landing.tsx';
 import { getDb } from '../lib/db.ts';
 import { PURCHASE_PARAM, PURCHASE_SUCCESS_VALUE } from '../lib/purchase.ts';
 
@@ -41,7 +41,11 @@ export default async function Home({
   const { [PURCHASE_PARAM]: purchase } = await searchParams;
   const userId = await currentUserId();
   if (userId === null) {
-    redirect('/login');
+    // Session-51 owner decision: '/' is the product's public face. A
+    // logged-out visitor gets the static landing (no data reads, no
+    // chargeable entry point) instead of a context-free login redirect;
+    // proxy.ts allowlists '/' exact-match to let them reach it.
+    return <Landing />;
   }
 
   const db = getDb();

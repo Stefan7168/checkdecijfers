@@ -33,6 +33,11 @@ const PUBLIC_PATH_PREFIXES = [
  * unit-tested directly (proxy.test.ts); the WP16 go-live regression was a
  * missing entry here, not a bug in the redirect wiring below. */
 export function isPublicPath(pathname: string): boolean {
+  // '/' is public since session 51 (owner decision: the homepage is the
+  // product's public face — logged-out visitors see the landing, page.tsx
+  // renders the dashboard only for a session). EXACT match only: a
+  // startsWith('/') entry would open every route.
+  if (pathname === '/') return true;
   return PUBLIC_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 }
 

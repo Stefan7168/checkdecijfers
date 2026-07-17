@@ -510,3 +510,13 @@ The "Doorgaan met Google" button is **merged + deployed** (PR #23, merge `e8b09b
 3. **Fresh chat — Phase 0, session 1:** CI skeleton + validate the candidate CBS table IDs (open-questions #1). *(Repo already on GitHub, 2026-07-02.)*
 4. Session by session down the [STATUS.md](STATUS.md) Phase 0 checklist, until the benchmark run and the gate decision.
 5. Gate passed → Phase 1 per [06-roadmap.md](06-roadmap.md); this runbook's Phase 1 checklist activates.
+
+## Local web dev server (session 51, for visual work)
+
+`npm --prefix web run dev` (or the `.claude/launch.json` "web" entry) needs TWO env vars in `web/.env.local`
+that `vercel env pull` does NOT deliver (all Vercel vars are Production-scoped, Development is empty):
+`NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. Both are PUBLIC client values (they ship
+in every prod browser bundle) — fetch them via the Supabase MCP (`get_project_url` / `get_publishable_keys`,
+project `vqvohfqapjfdpbojtezx`) and append to `web/.env.local` (gitignored). Without them the middleware
+crashes on every request ("Your project's URL and Key are required"). Logged-in pages additionally need
+DATABASE_URL (a secret — supervised only); logged-out surfaces (landing, /login) render without it.

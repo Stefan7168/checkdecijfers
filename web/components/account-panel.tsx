@@ -29,24 +29,24 @@ export function AccountPanel({
   const grantQuestions = simplePrice > 0 ? Math.floor(signupGrantCredits / simplePrice) : null;
 
   return (
-    <div className="flex flex-col gap-3 rounded border border-zinc-200 p-4">
+    <div className="flex flex-col gap-3 rounded-lg border border-line bg-paper-raised p-4">
       <div>
-        <p className="text-xs text-zinc-500">Saldo</p>
+        <p className="text-xs text-ink-muted">Saldo</p>
         {/* WP23 (#91): tabular figures — digits align, FT/NRC-style. */}
-        <p className="text-2xl font-semibold tabular-nums">{balance} credits</p>
+        <p className="font-display tnum text-2xl font-semibold">{balance} credits</p>
       </div>
       {lowBalance ? (
-        <p role="status" className="rounded bg-amber-50 px-3 py-2 text-sm text-amber-800">
+        <p role="status" className="rounded-md bg-warn-soft px-3 py-2 text-sm text-warn">
           Je saldo is bijna op — er is nog genoeg voor één vraag.
         </p>
       ) : null}
       <Link
         href="/credits"
-        className="rounded bg-blue-600 px-4 py-2 text-center text-sm font-medium text-white"
+        className="rounded-md bg-accent px-4 py-2 text-center text-sm font-medium text-white hover:bg-accent-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
       >
         Credits kopen
       </Link>
-      <p className="text-xs text-zinc-500">
+      <p className="text-xs text-ink-muted">
         {`Bij aanmelding krijg je eenmalig ${signupGrantCredits} credits. Een gewone vraag kost ${simplePrice} credits` +
           (grantQuestions === null
             ? '.'
@@ -55,7 +55,7 @@ export function AccountPanel({
       {/* #14 (GDPR self-service deletion): own row, visually separated from
         * the buy-credits flow above -- a destructive account action, not
         * part of the purchase funnel. */}
-      <div className="border-t border-zinc-200 pt-3">
+      <div className="border-t border-line pt-3">
         <DeleteHistoryButton />
       </div>
     </div>

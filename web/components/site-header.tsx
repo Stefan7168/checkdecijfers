@@ -29,7 +29,7 @@ function LogoutButton() {
       type="submit"
       disabled={pending}
       aria-disabled={pending}
-      className="text-left text-zinc-700 hover:text-zinc-900 disabled:opacity-60"
+      className="text-left text-ink-soft hover:text-ink disabled:opacity-60"
     >
       {pending ? 'Bezig…' : 'Log uit'}
     </button>
@@ -49,8 +49,8 @@ export function SiteHeader({
 
   if (stripped) {
     return (
-      <header className="flex items-center border-b border-zinc-200 px-4 py-3">
-        <Link href="/" className="text-base font-semibold text-zinc-900">
+      <header className="flex items-center border-b border-line-strong px-4 py-3">
+        <Link href="/" className="font-display text-base font-semibold text-ink">
           {WORDMARK}
         </Link>
       </header>
@@ -58,22 +58,22 @@ export function SiteHeader({
   }
 
   return (
-    <header className="flex items-center justify-between border-b border-zinc-200 px-4 py-3">
-      <Link href="/" className="text-base font-semibold text-zinc-900">
+    <header className="flex items-center justify-between border-b border-line-strong px-4 py-3">
+      <Link href="/" className="font-display text-base font-semibold text-ink">
         {WORDMARK}
       </Link>
       <div className="flex items-center gap-3 text-sm">
         {/* ADR 006: the balance is read live and passed in — never a hardcoded
-          * number. tabular-nums so digits align (the #91 FT/NRC convention). */}
+          * number. .tnum so digits align (the #91 FT/NRC convention). */}
         {balance !== undefined ? (
-          <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs tabular-nums text-zinc-700">
+          <span className="tnum rounded-full bg-paper-sunken px-3 py-1 text-xs text-ink-soft">
             {balance} credits
           </span>
         ) : null}
-        <Link href="/credits" className="text-zinc-600 hover:text-zinc-900">
+        <Link href="/credits" className="text-ink-muted hover:text-ink">
           Credits kopen
         </Link>
-        <Link href="/geschiedenis" className="text-zinc-600 hover:text-zinc-900">
+        <Link href="/geschiedenis" className="text-ink-muted hover:text-ink">
           Geschiedenis
         </Link>
         <div className="relative">
@@ -82,14 +82,14 @@ export function SiteHeader({
             aria-haspopup="menu"
             aria-expanded={menuOpen}
             onClick={() => setMenuOpen((open) => !open)}
-            className="rounded border border-zinc-300 px-3 py-1 text-xs text-zinc-700 hover:bg-zinc-50"
+            className="rounded border border-line-strong px-3 py-1 text-xs text-ink-soft hover:bg-paper-sunken"
           >
             Account
           </button>
           {menuOpen ? (
             <div
               role="menu"
-              className="absolute right-0 z-10 mt-1 flex w-56 flex-col gap-2 rounded border border-zinc-200 bg-white p-3 text-sm shadow-lg"
+              className="absolute right-0 z-10 mt-1 flex w-56 flex-col gap-2 rounded border border-line bg-paper-raised p-3 text-sm shadow-sm"
             >
               {/* The genuinely-new logout: a server action via a form so it
                 * works without client JS wiring and can redirect server-side.
@@ -98,7 +98,7 @@ export function SiteHeader({
               <form action={signOut}>
                 <LogoutButton />
               </form>
-              <div className="border-t border-zinc-200 pt-2">
+              <div className="border-t border-line pt-2">
                 <DeleteHistoryButton />
               </div>
             </div>

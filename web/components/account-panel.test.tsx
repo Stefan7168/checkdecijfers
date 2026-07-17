@@ -92,6 +92,6 @@ describe('AccountPanel — credits explainer (#76)', () => {
   // number changes live (#68 updates).
   it('sets the balance in tabular figures', () => {
     render(<AccountPanel balance={80} simplePrice={20} signupGrantCredits={100} />);
-    expect(screen.getByText('80 credits').className).toContain('tabular-nums');
+    expect(screen.getByText('80 credits').className).toContain('tnum');
   });
 });

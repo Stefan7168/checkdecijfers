@@ -51,8 +51,8 @@ export function FeedbackButtons({
   const buttonClass = (active: boolean) =>
     'rounded-full border px-2 py-0.5 text-xs ' +
     (active
-      ? 'border-zinc-500 bg-zinc-200 text-zinc-900'
-      : 'border-zinc-300 text-zinc-600 hover:bg-zinc-50');
+      ? 'border-line-strong bg-paper-sunken text-ink'
+      : 'border-line-strong text-ink-soft hover:bg-paper-sunken');
 
   return (
     <div className="mt-1">
@@ -78,10 +78,10 @@ export function FeedbackButtons({
           👎
         </button>
         {status === 'thanks' ? (
-          <span className="text-xs text-zinc-500">Bedankt voor je feedback.</span>
+          <span className="text-xs text-ink-muted">Bedankt voor je feedback.</span>
         ) : null}
         {status === 'failed' ? (
-          <span className="text-xs text-zinc-500">Feedback kon niet worden opgeslagen.</span>
+          <span className="text-xs text-ink-muted">Feedback kon niet worden opgeslagen.</span>
         ) : null}
       </div>
       {panelOpen ? (
@@ -92,14 +92,14 @@ export function FeedbackButtons({
             placeholder="Wat kon beter? (optioneel)"
             maxLength={2000}
             rows={3}
-            className="w-full rounded border border-zinc-300 p-2 text-sm"
+            className="w-full rounded-md border border-line-strong bg-paper-raised p-2 text-sm text-ink placeholder:text-ink-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
           />
           <div className="flex gap-2">
             <button
               type="button"
               disabled={busy}
               onClick={() => send('down', text.trim() === '' ? undefined : text)}
-              className="rounded bg-zinc-700 px-3 py-1 text-xs text-white disabled:opacity-50"
+              className="rounded-md bg-accent px-3 py-1 text-xs text-white hover:bg-accent-strong disabled:opacity-50"
             >
               Verstuur feedback
             </button>
@@ -107,7 +107,7 @@ export function FeedbackButtons({
               type="button"
               disabled={busy}
               onClick={() => send('down')}
-              className="rounded border border-zinc-300 px-3 py-1 text-xs text-zinc-600 hover:bg-zinc-50"
+              className="rounded-md border border-line-strong bg-paper-raised px-3 py-1 text-xs text-ink hover:bg-paper-sunken"
             >
               Overslaan
             </button>

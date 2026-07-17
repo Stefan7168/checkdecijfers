@@ -6,6 +6,24 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+- **The "black void" login was a HALF-theme: the scaffold's auto-dark media query flipped the body while
+  every component stayed light.** (session 51) Rule going forward: a theme exists only if BOTH halves are
+  designed — the huisstijl pins `color-scheme: light` until a real dark counterpart is built
+  ([12-huisstijl.md](12-huisstijl.md)).
+- **Parallel restyling works when agents get DISJOINT file sets + a written style contract, not taste.**
+  (session 51) Five Sonnet agents restyled five surfaces simultaneously in ONE working tree against
+  [12-huisstijl.md](12-huisstijl.md) — zero conflicts, 178 partial-run tests green, presentational test
+  assertions updated only where the redesign was the direct target (each documented in its report).
+  Copy/behavior changes were forbidden and none occurred.
+- **`vercel env pull` can deliver an EMPTY dev env: every project var is Production-scoped here.** (session
+  51) Local web dev needs the two PUBLIC Supabase client values appended to `web/.env.local` by hand —
+  procedure + rationale in the RUNBOOK ("Local web dev server"). The middleware crashes on every request
+  without them, which looks like a broken app rather than missing env.
+- **Marketing/example content on public pages must be REAL verified cells, not fresh prose numbers.**
+  (session 51) The landing's example answer reuses frozen key CC1 (consumentenvertrouwen juni 2026 = −39,
+  live-verified same day) with its real attribution shape, and the code comment says to refresh it
+  consciously — principle (a) applies to the shop window too.
+
 - **CBS's UNFILTERED v4 Observations stream can be pathologically slow per connection (~6KB/s, mid-body
   terminations) while PARALLEL filtered connections each get full bandwidth.** (session 50, 2026-07-17,
   85880NED) The single-stream live sync died at the fetch stage after 3×~45-min attempts ("terminated");

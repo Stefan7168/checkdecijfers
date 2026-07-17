@@ -173,13 +173,13 @@ describe('ChartView — footer arrangement (#92)', () => {
     });
     const { container } = render(<ChartView spec={s} />);
     const caveat = screen.getByText('Voorlopige cijfers zijn gemarkeeerd met *.');
-    expect(caveat.className).toContain('text-amber-700');
+    expect(caveat.className).toContain('text-warn');
     expect(caveat.className).toContain('text-sm');
     const nullNote = screen.getByText('2022: geen gegevens beschikbaar (geheim).');
-    expect(nullNote.className).toContain('text-amber-700');
+    expect(nullNote.className).toContain('text-warn');
     const credit = screen.getByText(s.attributionLine);
     expect(credit.className).toContain('text-xs');
-    expect(credit.className).toContain('text-zinc-400');
+    expect(credit.className).toContain('text-ink-muted');
     // Order: the caveat precedes the credit in the DOM.
     const all: HTMLElement[] = [...container.querySelectorAll('p')];
     expect(all.indexOf(caveat)).toBeLessThan(all.indexOf(credit));

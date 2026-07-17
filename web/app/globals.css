@@ -1,26 +1,87 @@
 @import "tailwindcss";
 
+/* ---------------------------------------------------------------------------
+ * Check de Cijfers — redactionele huisstijl ("papier & inkt")
+ * Owner decision session 51 (2026-07-17): editorial direction — serif display
+ * headings, tabular figures for every number, warm paper background, ink text,
+ * ONE trustworthy ink-blue accent. Light-first by design: the previous
+ * scaffold's auto-dark media query produced the half-dark "black void" login;
+ * a real dark counterpart is a tracked follow-up, not a default.
+ * ------------------------------------------------------------------------- */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: light;
+
+  /* paper & ink */
+  --paper: #faf8f5;        /* page background — warm off-white */
+  --paper-raised: #ffffff; /* cards, panels, chat bubbles */
+  --paper-sunken: #f3efe9; /* wells, zebra rows, input backgrounds */
+  --ink: #1c1917;          /* primary text */
+  --ink-soft: #44403c;     /* secondary text */
+  --ink-muted: #78716c;    /* captions, metadata, placeholders */
+  --line: #e5e0d8;         /* hairlines, borders */
+  --line-strong: #d6cfc4;  /* emphasized rules (masthead, table header) */
+
+  /* the one accent — trustworthy ink-blue */
+  --accent: #1e40af;
+  --accent-strong: #1e3a8a; /* hover/active */
+  --accent-soft: #eef2fc;   /* selected states / washes behind accent text */
+
+  /* semantic — used sparingly */
+  --ok: #166534;
+  --warn: #92400e;          /* "voorlopig" badge, low balance */
+  --warn-soft: #fdf3e3;
+  --danger: #b91c1c;
+
+  --background: var(--paper);
+  --foreground: var(--ink);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+
+  /* the palette as Tailwind utilities (bg-paper, text-ink, border-line, …) */
+  --color-paper: var(--paper);
+  --color-paper-raised: var(--paper-raised);
+  --color-paper-sunken: var(--paper-sunken);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-muted: var(--ink-muted);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-soft: var(--accent-soft);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-danger: var(--danger);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-serif: var(--font-newsreader);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+/* Editorial display type: serif headings are the house style, site-wide. */
+h1,
+h2,
+h3,
+.font-display {
+  font-family: var(--font-newsreader), Georgia, serif;
+  letter-spacing: -0.01em;
+}
+
+/* Every number in this product lines up: tabular figures are the house rule
+ * (#91, owner-approved) — global instead of per-component. */
+.tnum,
+table,
+[data-numeric] {
+  font-variant-numeric: tabular-nums;
 }

@@ -32,7 +32,7 @@ export default async function GeschiedenisPage() {
     <>
       <SiteHeader balance={balance} />
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 p-4">
-        <h1 className="text-lg font-semibold">Geschiedenis — Check de Cijfers</h1>
+        <h1 className="text-lg">Geschiedenis — Check de Cijfers</h1>
         <QuestionHistory items={history} />
       </div>
     </>

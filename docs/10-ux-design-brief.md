@@ -1,6 +1,6 @@
 # UX design brief — site shell (navigation/footer), dashboard, homepage/chatbox
 
-**Status:** brief for owner decision, not yet built. Written 2026-07-05/06 (session 21/22 boundary), from reading the current app as it stands, not from a redesign wishlist.
+**Status:** LARGELY BUILT — shell (header/footer/logout) via WP135 + session 51; #98 RESOLVED session 51 (`/` = public landing, see open-questions); visual design (explicitly out of scope here) landed as the papier-en-inkt huisstijl, [12-huisstijl.md](12-huisstijl.md). Kept as the design rationale record. Written 2026-07-05/06 (session 21/22 boundary), from reading the current app as it stands, not from a redesign wishlist.
 
 ## How to use this document
 

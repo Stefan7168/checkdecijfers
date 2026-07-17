@@ -48,7 +48,7 @@ export function LoginForm() {
   }
 
   if (sent) {
-    return <p className="text-sm text-zinc-700">Check je e-mail voor de inloglink.</p>;
+    return <p className="text-sm text-ink">Check je e-mail voor de inloglink.</p>;
   }
 
   return (
@@ -60,27 +60,27 @@ export function LoginForm() {
           required
           placeholder="jij@voorbeeld.nl"
           disabled={busy}
-          className="rounded border border-zinc-300 px-3 py-2 text-sm disabled:bg-zinc-100"
+          className="rounded-md border border-line-strong bg-paper-raised px-3 py-2 text-sm text-ink placeholder:text-ink-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:bg-paper-sunken"
         />
         <button
           type="submit"
           disabled={busy}
-          className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-50"
         >
           Stuur inloglink
         </button>
-        {error ? <p className="text-sm text-red-600">{error}</p> : null}
+        {error ? <p className="text-sm text-danger">{error}</p> : null}
       </form>
-      <div className="flex items-center gap-3 text-xs text-zinc-400" aria-hidden="true">
-        <span className="h-px flex-1 bg-zinc-200" />
+      <div className="flex items-center gap-3 text-xs text-ink-muted" aria-hidden="true">
+        <span className="h-px flex-1 bg-line" />
         of
-        <span className="h-px flex-1 bg-zinc-200" />
+        <span className="h-px flex-1 bg-line" />
       </div>
       <button
         type="button"
         disabled={busy}
         onClick={handleGoogleClick}
-        className="rounded border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 disabled:opacity-50"
+        className="rounded-md border border-line-strong bg-paper-raised px-4 py-2 text-sm font-medium text-ink hover:bg-paper-sunken focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-50"
       >
         Doorgaan met Google
       </button>

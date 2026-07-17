@@ -277,12 +277,12 @@ describe('QuestionHistory', () => {
           ]}
         />,
       );
-      expect(container.querySelector('.bg-amber-50')).toBeNull();
+      expect(container.querySelector('.bg-warn-soft')).toBeNull();
     });
 
     it('applies the amber pending styling to a pending entry', () => {
       const { container } = render(<QuestionHistory items={[onboardingEntry()]} />);
-      expect(container.querySelector('.bg-amber-50')).not.toBeNull();
+      expect(container.querySelector('.bg-warn-soft')).not.toBeNull();
     });
 
     it('a delivered onboarding answer renders through the ORDINARY answer branch, not the onboarding branch', () => {
