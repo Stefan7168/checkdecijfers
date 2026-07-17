@@ -331,7 +331,7 @@ deploy `2609435`; pot seeded 25). Live smoke, measured: two anonymous questions 
 audit rows 255/256 (`source_tag='anonymous_trial'`, `user_id` NULL, `npm run audit:verify -- 255 255` = 1/1
 clean), both trial_questions rows audit-linked, pot 25→23, visitor counter 2→1→0 with the used-up login
 nudge, closed→open flip after `trialpot:set` WITHOUT a deploy (the auto-re-enable fail-safe, proven).
-Owner-side check: Anthropic console → the trial workspace shows the calls; the main workspace shows none.
+Owner-side check (only the owner can see the console): verify the trial workspace shows the smoke calls' spend and the main workspace shows none — asked at go-live, confirm/annotate here.
 Answer-quality note (NOT a trial bug — main-pipeline behavior): both casually-phrased smoke questions drew
 honest conservative refusals rather than answers ("Wat was de inflatie in juni 2026?" → the forecast guard;
 "Wat is het consumentenvertrouwen?" → the meta template) — the WP26 clarify-policy/answer-first theme now
