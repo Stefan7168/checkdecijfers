@@ -11,7 +11,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { FixtureSource, loadFixtureDocs } from '../../src/cbs-adapter/fixture-source.ts';
 import { runCli } from '../../src/ingestion/cli.ts';
 import { registerTables, syncTable } from '../../src/ingestion/pipeline.ts';
-import { PHASE0_TABLES } from '../../src/ingestion/registry-seed.ts';
+import { PHASE0_TABLES, SEED_TABLES } from '../../src/ingestion/registry-seed.ts';
 import type { Db } from '../../src/db/types.ts';
 import { createTestDb } from '../helpers/pglite-db.ts';
 
@@ -883,6 +883,64 @@ describe('doc consistency (keeps this scaffold honest)', () => {
     const dataRules = readFileSync(new URL('../../docs/05-data-rules.md', import.meta.url), 'utf8');
     for (const check of ['Schema fingerprint', 'Row plausibility', 'Period parsing', 'Dimension mapping', 'Unit consistency']) {
       expect(dataRules, `validation check "${check}" missing from docs`).toContain(check);
+    }
+  });
+});
+
+describe('#167 — curated phantom-measure exclusion (Phase0Table.excludeMeasures, session 50)', () => {
+  it('85880NED full ingest succeeds WITH the curated exclusion: 17 metadata-only measures skipped, headline registered, 22,230 fixture rows in', async () => {
+    const { db, close } = await createTestDb();
+    try {
+      const source = new FixtureSource(await loadDocs('85880NED'));
+      const seed = SEED_TABLES.find((t) => t.id === '85880NED');
+      if (!seed) throw new Error('85880NED missing from SEED_TABLES');
+      expect(seed.excludeMeasures).toHaveLength(17);
+
+      await registerTables(db, source, [seed]);
+      const sync = await syncTable(db, source, '85880NED');
+      expect(sync.outcome).toBe('succeeded');
+
+      const row = (await db.query(`select units, status from cbs_tables where id = $1`, ['85880NED'])).rows[0]!;
+      expect(row.status).toBe('active');
+      const units = (typeof row.units === 'string' ? JSON.parse(row.units) : row.units) as Record<string, unknown>;
+      // 210 MeasureCodes entries minus the 17 phantoms.
+      expect(Object.keys(units)).toHaveLength(193);
+      for (const code of seed.excludeMeasures ?? []) {
+        expect(units[code], `phantom ${code} must not be registered`).toBeUndefined();
+      }
+      // The measure the canonical keys pin stays served.
+      expect(units['M002782_1']).toBeDefined();
+
+      const n = await db.query(`select count(*)::int c from observations where table_id = $1`, ['85880NED']);
+      expect(Number(n.rows[0]!.c)).toBe(22230);
+    } finally {
+      await close();
+    }
+  });
+
+  it('strictness unchanged WITHOUT a curated list: a metadata-only measure on an unexcluded table still quarantines at row_plausibility', async () => {
+    const { db, close } = await createTestDb();
+    try {
+      const docs = clone(await loadDocs('82235NED'));
+      const measureDocs = (docs.measureCodes as { value: Record<string, unknown>[] }).value;
+      // Wire-shaped phantom: clone a REAL entry so the parser accepts it, then
+      // give it a code no observation row carries.
+      const phantom = structuredClone(measureDocs[0]!);
+      phantom.Identifier = 'M999999';
+      phantom.Title = 'Spookmaat (testfixture)';
+      measureDocs.push(phantom);
+      const source = new FixtureSource(docs);
+
+      await registerTables(db, source, [table('82235NED')]);
+      const sync = await syncTable(db, source, '82235NED');
+      expect(sync.outcome).toBe('failed');
+      expect(sync.failureStage).toBe('row_plausibility');
+      expect(sync.failureSummary).toContain('M999999');
+
+      const row = (await db.query('select status from cbs_tables where id = $1', ['82235NED'])).rows[0]!;
+      expect(row.status).toBe('needs_review');
+    } finally {
+      await close();
     }
   });
 });

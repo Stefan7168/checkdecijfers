@@ -102,6 +102,18 @@ export const TABLE_REGISTRY_DEFAULTS: TableRegistryDefaults[] = [
       JJ: 'Jaargemiddelde over de genoemde kalenderjaar-maanden.',
     },
   },
+  {
+    // Coverage sprint table #2 (specs doc 2026-07-17; owner slice decision =
+    // full ingest, session 50). The SoortMutaties flavor (volume/waarde/prijs ×
+    // jaar-op-jaar/periode-op-periode) is semantic content pinned per canonical
+    // key — there is no meaningful table-wide default coordinate.
+    tableId: '85880NED',
+    defaultCoordinates: {},
+    periodSemantics: {
+      KW: 'Procentuele verandering in het genoemde kwartaal, t.o.v. hetzelfde kwartaal een jaar eerder (jaar-op-jaarmaten) of het voorgaande kwartaal (kwartaal-op-kwartaalmaten). Eerste raming (flash) ~30 dagen na kwartaaleinde; recente kwartalen zijn Voorlopig en worden later bijgesteld.',
+      JJ: 'Procentuele verandering in het genoemde kalenderjaar t.o.v. het voorgaande jaar (beide mutatiesoorten vallen op jaarbasis samen).',
+    },
+  },
 ];
 
 export const CANONICAL_MEASURES: CanonicalMeasure[] = [
@@ -231,5 +243,77 @@ export const CANONICAL_MEASURES: CanonicalMeasure[] = [
       { dims: { Inkomensbegrippen: 'A043967' }, label: 'gestandaardiseerd inkomen' },
     ],
     notes: 'Not a canonical-default choice: "besteedbaar inkomen" names the Inkomensbegrip directly, no ambiguity to resolve.',
+  },
+  {
+    // Coverage sprint table #2 (85880NED BBP flash, session 50, 2026-07-17).
+    // Canonical default: the everyday "economische groei"/"bbp" ask maps to
+    // CBS's own persbericht headline — VOLUME growth vs the same period a year
+    // earlier (A045299). The measure title exists on FOUR codes in this table;
+    // M002782_1 is pinned by CODE (specs doc conclusion 3 — never map by title).
+    key: 'gdp_growth_yoy_volume',
+    tableId: '85880NED',
+    measure: 'M002782_1',
+    measureTitle: 'Bruto binnenlands product',
+    dims: { SoortMutaties: 'A045299' },
+    definitionLabel: 'economische groei: bbp-volumegroei t.o.v. een jaar eerder',
+    everydayTerms: ['economische groei', 'bbp', 'bruto binnenlands product', 'groei van de economie'],
+    alternates: [
+      { dims: { SoortMutaties: 'A045300' }, label: 'groei t.o.v. het voorgaande kwartaal (eigen key: gdp_growth_qoq_volume)' },
+      { dims: { SoortMutaties: 'A045301' }, label: 'waardegroei (nominaal, niet voor inflatie gecorrigeerd)' },
+    ],
+    notes:
+      'Flash estimate ~30 dagen na kwartaaleinde; recente kwartalen Voorlopig en worden bij de tweede raming bijgesteld (R11). Full ingest (owner decision session 50) — de waarde-/prijssmaken en de inkomenskant-maten zitten in de tabel maar hebben (nog) geen eigen vocabulaire.',
+  },
+  {
+    key: 'gdp_growth_qoq_volume',
+    tableId: '85880NED',
+    measure: 'M002782_1',
+    measureTitle: 'Bruto binnenlands product',
+    dims: { SoortMutaties: 'A045300' },
+    definitionLabel: 'bbp-volumegroei t.o.v. het voorgaande kwartaal (kwartaal-op-kwartaal)',
+    everydayTerms: ['kwartaal-op-kwartaalgroei', 'groei ten opzichte van het vorige kwartaal'],
+    alternates: [{ dims: { SoortMutaties: 'A045299' }, label: 'groei t.o.v. een jaar eerder (de headline; eigen key: gdp_growth_yoy_volume)' }],
+    notes:
+      'Op jaarperiodes (JJ) vallen beide mutatiesoorten samen: t.o.v. het voorgaande jaar. Not a canonical-default choice: de term benoemt de kwartaal-op-kwartaallezing direct.',
+  },
+  {
+    // Coverage sprint table #3 (85770NED PPI, session 50, 2026-07-17).
+    // Canonical default: "producentenprijzen"/"ppi" maps to CBS's persbericht
+    // headline — the YEAR-ON-YEAR mutation for totaal afzet × ProdCom-totaal
+    // (A052584, the hierarchy root). Registered slice carries exactly totaal
+    // afzet + invoer.
+    key: 'producer_prices_yoy',
+    tableId: '85770NED',
+    measure: 'M003288',
+    measureTitle: 'Jaarmutatie PPI',
+    dims: { Afzetgebieden: 'A044074', AlleProdComCoderingen: 'A052584' },
+    definitionLabel: 'producentenprijzen (afzet totaal): verandering t.o.v. een jaar eerder',
+    everydayTerms: ['producentenprijzen', 'ppi', 'afzetprijzen industrie'],
+    alternates: [
+      { dims: { Afzetgebieden: 'A044077', AlleProdComCoderingen: 'A052584' }, label: 'invoerprijzen (eigen key: import_prices_yoy)' },
+    ],
+    notes:
+      'Index 2021=100 (basisjaarbreuk t.o.v. oudere PPI-reeksen — R11/#26); de jaarmutatie ontbreekt in het eerste seriejaar (geen basisjaar, afwezige cellen); laatste ~5 maanden Voorlopig.',
+  },
+  {
+    key: 'import_prices_yoy',
+    tableId: '85770NED',
+    measure: 'M003288',
+    measureTitle: 'Jaarmutatie PPI',
+    dims: { Afzetgebieden: 'A044077', AlleProdComCoderingen: 'A052584' },
+    definitionLabel: 'invoerprijzen industrie (import): verandering t.o.v. een jaar eerder',
+    everydayTerms: ['invoerprijzen', 'importprijzen'],
+    notes: 'Zelfde maat als producer_prices_yoy maar voor het afzetgebied invoer (A044077). Not a canonical-default choice: de term benoemt de invoerlezing direct.',
+  },
+  {
+    key: 'producer_price_index_level',
+    tableId: '85770NED',
+    measure: 'M003367',
+    measureTitle: 'Producentenprijsindex (PPI)',
+    dims: { Afzetgebieden: 'A044074', AlleProdComCoderingen: 'A052584' },
+    definitionLabel: 'producentenprijsindex (niveau, 2021=100), afzet totaal',
+    everydayTerms: ['producentenprijsindex'],
+    notes:
+      'Het indexNIVEAU (2021=100), volledig dicht (geen ontbrekende cellen). De alledaagse vraag "wat deden de producentenprijzen" hoort bij producer_prices_yoy; deze key is voor expliciete indexstand-vragen.',
   },
 ];

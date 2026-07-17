@@ -5,7 +5,7 @@ import type { CbsCode, CbsDimension, CbsMeasure, CbsObservationRow, CbsSource } 
 import type { Db } from '../db/types.ts';
 import { computeFingerprint } from './fingerprint.ts';
 import { parsePeriodCode } from './periods.ts';
-import type { Phase0Table } from './registry-seed.ts';
+import { SEED_TABLES, type Phase0Table } from './registry-seed.ts';
 import type { Correction, RegisterTablesFn, SyncOptions, SyncResult, SyncTableFn } from './types.ts';
 import {
   checkDimensionMapping,
@@ -81,7 +81,10 @@ export const registerTables: RegisterTablesFn = async (db, source, tables) => {
     const expectedDimensions = [...schema.dimensions]
       .map((d) => ({ name: d.name, kind: d.kind }))
       .sort((a, b) => a.name.localeCompare(b.name));
-    const units = unitsFromMeasures(schema.measures);
+    // #167: curated phantom-measure exclusion — registered units carry only
+    // the measures that actually publish data (see Phase0Table.excludeMeasures).
+    const excluded = new Set(table.excludeMeasures ?? []);
+    const units = unitsFromMeasures(schema.measures.filter((m) => !excluded.has(m.code)));
 
     await db.withTransaction(async (tx) => {
       await tx.query(
@@ -255,6 +258,22 @@ export const syncTable: SyncTableFn = async (db, source, tableId, options = {}) 
     };
   }
 
+  // #167: curated phantom-measure exclusion (session 50). CBS metadata can
+  // list measures that carry ZERO observations table-wide (85880NED: 17 of
+  // 210) — those entries would trip the per-measure plausibility check and
+  // unit consistency on a fully healthy ingest. A seed's excludeMeasures
+  // (measured + documented per code) is treated as not-published throughout
+  // the sync: dropped from the served measure set, and any fetched row for
+  // them discarded. The schema FINGERPRINT below deliberately stays
+  // UNFILTERED, so a CBS change to the phantom set still fails the drift
+  // check loudly and forces a re-measure.
+  const excludedMeasures = new Set(SEED_TABLES.find((t) => t.id === tableId)?.excludeMeasures ?? []);
+  const servedMeasures =
+    excludedMeasures.size === 0 ? schema.measures : schema.measures.filter((m) => !excludedMeasures.has(m.code));
+  if (excludedMeasures.size > 0) {
+    observationRows = observationRows.filter((row) => !excludedMeasures.has(row.measure));
+  }
+
   const periodDim = findDimension(schema.dimensions, 'TimeDimension');
   const geoDim = findDimension(schema.dimensions, 'GeoDimension');
 
@@ -273,7 +292,7 @@ export const syncTable: SyncTableFn = async (db, source, tableId, options = {}) 
     expectedDimensions = [...schema.dimensions]
       .map((d) => ({ name: d.name, kind: d.kind }))
       .sort((a, b) => a.name.localeCompare(b.name));
-    registryUnits = unitsFromMeasures(schema.measures);
+    registryUnits = unitsFromMeasures(servedMeasures);
     schemaFingerprintToCompare = null; // fresh baseline: nothing to compare yet
     rebaselined = true;
   }
@@ -392,7 +411,7 @@ export const syncTable: SyncTableFn = async (db, source, tableId, options = {}) 
     };
   }
 
-  const stage5 = checkUnitConsistency(schema.measures, registryUnits);
+  const stage5 = checkUnitConsistency(servedMeasures, registryUnits);
   if (!stage5.ok) {
     await failBatch(db, batchId, tableId, stage5.stage, stage5.summary, observationRows.length, fingerprint, true);
     return {

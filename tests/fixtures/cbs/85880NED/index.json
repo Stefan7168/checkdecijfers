@@ -1,0 +1,20 @@
+{
+ "tableId": "85880NED",
+ "capturedAt": "2026-07-17T09:13:21.544Z",
+ "source": "https://datasets.cbs.nl/odata/v1/CBS/85880NED",
+ "sliceFilter": "Perioden ge '2020JJ00'",
+ "captureOnlySlice": {
+  "periodFloor": "2020JJ00"
+ },
+ "observationRows": 22230,
+ "observationPages": [
+  "observations-page-1.json"
+ ],
+ "files": {
+  "properties": "properties.json",
+  "dimensions": "dimensions.json",
+  "measure-codes": "measure-codes.json",
+  "codes-SoortMutaties": "codes-SoortMutaties.json",
+  "codes-Perioden": "codes-Perioden.json"
+ }
+}

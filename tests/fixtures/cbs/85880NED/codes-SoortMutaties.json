@@ -1,0 +1,40 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/85880NED/$metadata#SoortMutatiesCodes",
+ "value": [
+  {
+   "Identifier": "A045299",
+   "Index": 1,
+   "Title": "Volume, t.o.v. zelfde periode vorig jaar",
+   "Description": "Kwartalen: procentuele volumeverandering ten opzichte van het overeenkomstige kwartaal van het voorgaande jaar.\r\nJaren: procentuele volumeverandering ten opzichte van het voorgaande jaar.",
+   "DimensionGroupId": null
+  },
+  {
+   "Identifier": "A045300",
+   "Index": 2,
+   "Title": "Volume, t.o.v. voorgaande periode",
+   "Description": "Kwartalen: procentuele volumeverandering ten opzichte van het voorgaande kwartaal.\r\nJaren: procentuele volumeverandering ten opzichte van het voorgaande jaar.",
+   "DimensionGroupId": null
+  },
+  {
+   "Identifier": "A045301",
+   "Index": 3,
+   "Title": "Waarde, t.o.v. zelfde periode vorig jaar",
+   "Description": "Kwartalen: procentuele waardeverandering ten opzichte van het overeenkomstige kwartaal van het voorgaande jaar.\r\nJaren: procentuele waardeverandering ten opzichte van het voorgaande jaar.",
+   "DimensionGroupId": null
+  },
+  {
+   "Identifier": "A045302",
+   "Index": 4,
+   "Title": "Waarde, t.o.v. voorgaande periode",
+   "Description": "Kwartalen: procentuele waardeverandering ten opzichte van het voorgaande kwartaal.\r\nJaren: procentuele waardeverandering ten opzichte van het voorgaande jaar.",
+   "DimensionGroupId": null
+  },
+  {
+   "Identifier": "A045303",
+   "Index": 5,
+   "Title": "Prijs, t.o.v. zelfde periode vorig jaar",
+   "Description": "Kwartalen: procentuele prijsverandering ten opzichte van het overeenkomstige kwartaal van het voorgaande jaar.\r\nJaren: procentuele prijsverandering ten opzichte van het voorgaande jaar.",
+   "DimensionGroupId": null
+  }
+ ]
+}

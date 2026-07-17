@@ -407,12 +407,13 @@
        "2026MM06"
       ]
      },
-     "derivation": "none"
+     "derivation": "difference"
     },
     "checks": {
      "impliedRecency": true
     }
-   }
+   },
+   "note": "Re-labelled 'none' -> 'difference' (session 50, 2026-07-17): after the coverage-sprint #2/#3 vocabulary batch the model STABLY reads the compare-ask as the registered difference derivation (2x record, 0.92 conf). Verified BETTER product behavior before re-labelling: 'difference' is the B13-registered two-period delta (both cells shown + CC BY-marked derived value), never a refusal."
   },
   {
    "id": "os-inflatie-afgelopen-5jaar",

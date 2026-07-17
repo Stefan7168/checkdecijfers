@@ -1,0 +1,72 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/85880NED/$metadata#Properties",
+ "Identifier": "85880NED",
+ "Title": "Bbp, productie en bestedingen; kwartalen, mutaties, nationale rekeningen",
+ "Description": "\n\nDeze tabel bevat kwartaal- en jaargegevens over de productiecomponenten, de bestedingencategorieën en de inkomensbestanddelen van het bruto binnenlands product van Nederland. De volumeontwikkeling van het bruto binnenlands product is de maatstaf voor de economische groei van een land. Het is in de nationale rekeningen en dus ook in de kwartaalrekeningen gebruikelijk om het bruto binnenlands product vanuit drie gezichtspunten te benaderen, vanuit de productie, vanuit de bestedingen en vanuit het inkomen. \n\nDaarnaast wordt in deze tabel ook de opbouw van het nationaal vorderingensaldo vanuit het bbp weergegeven en zijn er detailgegevens van variabelen uit de eerste vier onderwerpen beschikbaar. Deze zijn te vinden onder Aanvullende detailgegevens. De gegevens worden weergegeven in de procentuele waarde-, volume- en prijsontwikkeling ten opzichte van dezelfde periode in het voorgaande jaar en ten opzichte van de vorige periode.\n\nGegevens beschikbaar vanaf 1995.\n\nStatus van de cijfers:\nDe jaargegevens in de periode 1995-2024 zijn definitief. Kwartaalgegevens vanaf 2024 hebben de status voorlopig.\n\nWijzigingen per 1 juli 2026:\nDe gegevens van de tweede raming van het eerste kwartaal van 2026 zijn toegevoegd aan deze tabel. Conform revisiebeleid zijn de tijdreeksen van de sectorrekeningen gereviseerd (jaarlijkse revisie).\n\nCorrectie per 26 september 2025:\nIn de vorige versie werden onjuiste seizoengecorrigeerde cijfers van de beloning van werknemers opgenomen in deze tabel. In deze versie is dat hersteld.\n\nWanneer komen er nieuwe cijfers?\nDe resultaten van de eerste berekening, de zogenoemde flashraming, worden binnen 30 dagen na afloop van een verslagkwartaal bekend gemaakt. Vervolgens wordt 85 dagen na afloop van het kwartaal de reguliere raming gepubliceerd. Bij de tweede raming van het vierde kwartaal worden de gegevens van de voorgaande drie kwartalen van dat jaar herzien. Als in juni (nieuwe) jaarcijfers beschikbaar komen, dan worden de kwartaalcijfers opnieuw herzien zodat ze aansluiten op die jaarcijfers. Hiernaast kunnen er tussentijdse actualisaties plaatsvinden om eind maart en eind september de meest actuele gegevens over de overheid aan de Europese Commissie te verstrekken. De gegevens over de kwartalen worden aangesloten op de bijgestelde jaarcijfers.\n\n",
+ "Language": "nl",
+ "Authority": "https://standaarden.overheid.nl/owms/terms/Centraal_Bureau_voor_de_Statistiek",
+ "Modified": "2026-07-01T06:30:00+02:00",
+ "ReleaseDate": "2026-07-01T06:30:00+02:00",
+ "ModificationDate": "2026-07-01T06:30:00+02:00",
+ "TemporalCoverage": "1995 - 2025, KwI 1995 - KwI 2026",
+ "Catalog": "CBS",
+ "Publisher": "https://standaarden.overheid.nl/owms/terms/Centraal_Bureau_voor_de_Statistiek",
+ "ContactPoint": "infoservice@cbs.nl",
+ "Version": "202607010955",
+ "VersionNotes": "Conform revisiebeleid zijn de tijdreeksen van de sectorrekeningen gereviseerd (jaarlijkse revisie).",
+ "VersionReason": "Revisie",
+ "Frequency": "Per kwartaal",
+ "Status": "Regulier",
+ "ObservationCount": 99676,
+ "ObservationsModified": "2026-07-01T06:30:00+02:00",
+ "DatasetType": "Numeric",
+ "GraphTypes": "Table,Bar,Line",
+ "License": "https://creativecommons.org/licenses/by/4.0/",
+ "Source": "CBS.",
+ "Summary": "Productie, bestedingen, inkomen, economische relaties met het\nbuitenland en aanvullende detailgegevens High Value Dataset – Statistiek",
+ "LongDescription": "\r\nINHOUDSOPGAVE\r\n\r\n1. Toelichting\r\n2. Definities en verklaring van symbolen\r\n3. Koppelingen naar relevante tabellen en artikelen\r\n4. Bronnen en methoden\r\n5. Meer informatie \r\n\r\n\r\n1. TOELICHTING\r\n\r\n\r\nDeze tabel bevat kwartaal- en jaargegevens over de productiecomponenten, de bestedingencategorieën en de inkomensbestanddelen van het bruto binnenlands product van Nederland. De volumeontwikkeling van het bruto binnenlands product is de maatstaf voor de economische groei van een land. Het is in de nationale rekeningen en dus ook in de kwartaalrekeningen gebruikelijk om het bruto binnenlands product vanuit drie gezichtspunten te benaderen, vanuit de productie, vanuit de bestedingen en vanuit het inkomen. \r\n\r\nDaarnaast wordt in deze tabel ook de opbouw van het nationaal vorderingensaldo vanuit het bbp weergegeven en zijn er detailgegevens van variabelen uit de eerste vier onderwerpen beschikbaar. Deze zijn te vinden onder Aanvullende detailgegevens. De gegevens worden weergegeven in de procentuele waarde-, volume- en prijsontwikkeling ten opzichte van dezelfde periode in het voorgaande jaar en ten opzichte van de vorige periode.\r\n\r\nGegevens beschikbaar vanaf 1995.\r\n\r\nStatus van de cijfers:\r\nDe jaargegevens in de periode 1995-2024 zijn definitief. Kwartaalgegevens vanaf 2024 hebben de status voorlopig.\r\n\r\nWijzigingen per 1 juli 2026:\r\nDe gegevens van de tweede raming van het eerste kwartaal van 2026 zijn toegevoegd aan deze tabel. Conform revisiebeleid zijn de tijdreeksen van de sectorrekeningen gereviseerd (jaarlijkse revisie).\r\n\r\nCorrectie per 26 september 2025:\r\nIn de vorige versie werden onjuiste seizoengecorrigeerde cijfers van de beloning van werknemers opgenomen in deze tabel. In deze versie is dat hersteld.\r\n\r\nWanneer komen er nieuwe cijfers?\r\nDe resultaten van de eerste berekening, de zogenoemde flashraming, worden binnen 30 dagen na afloop van een verslagkwartaal bekend gemaakt. Vervolgens wordt 85 dagen na afloop van het kwartaal de reguliere raming gepubliceerd. Bij de tweede raming van het vierde kwartaal worden de gegevens van de voorgaande drie kwartalen van dat jaar herzien. Als in juni (nieuwe) jaarcijfers beschikbaar komen, dan worden de kwartaalcijfers opnieuw herzien zodat ze aansluiten op die jaarcijfers. Hiernaast kunnen er tussentijdse actualisaties plaatsvinden om eind maart en eind september de meest actuele gegevens over de overheid aan de Europese Commissie te verstrekken. De gegevens over de kwartalen worden aangesloten op de bijgestelde jaarcijfers.\r\n\r\n\r\n2. DEFINITIES EN VERKLARING VAN SYMBOLEN\r\n\r\nDefinities:\r\nHet bruto binnenlands product (bbp)\r\nHet bruto binnenlands product (bbp) is een maat voor de omvang van de economie. De verandering van het volume van het bbp in een bepaalde tijdsperiode is een maat voor de groei (of krimp) van de economie. Het bruto binnenlands product tegen marktprijzen is het eindresultaat van de productieve activiteiten van ingezeten productie-eenheden. Het kan op drie manieren worden gedefinieerd:\r\n- vanuit het oogpunt van de productie: het bbp is de som van de bruto toegevoegde waarde van alle institutionele sectoren of bedrijfstakken en het saldo van productgebonden belastingen en subsidies (die niet aan sectoren en bedrijfstakken worden toegerekend). Het is eveneens de sluitpost van de productierekening van de totale economie;\r\n- vanuit het oogpunt van de bestedingen: het bbp is de som van de finale bestedingen aan goederen en diensten door ingezeten institutionele eenheden (consumptie en bruto-investeringen) en het saldo van uitvoer en invoer van goederen en diensten;\r\n- vanuit het oogpunt van het inkomen: het bbp is de som van de bestedingen in de inkomensvormingsrekening van de totale economie (beloning van werknemers, belastingen op productie en invoer exclusief subsidies, bruto-exploitatieoverschot en gemengd inkomen van de totale economie).\r\nDoor het bbp te verminderen met het verbruik van vaste activa, wordt het netto binnenlands product (nbp) tegen marktprijzen verkregen.\r\n\r\nNationaal vorderingen saldo\r\nHet nationaal vorderingensaldo is het saldo van middelen en bestedingen op de lopende rekening en de kapitaalrekening van de gezamenlijke binnenlandse sectoren. In de financiële rekening van Nederland geeft het saldo aan voor welk bedrag nieuwe leningen zijn aangegaan met het buitenland en/of financiële activa zijn verkocht (bij een tekort) of voor welk bedrag schulden zijn afgelost aan het buitenland en/of financiële activa zijn gekocht (bij een overschot). Het vorderingensaldo is dan ook in theorie gelijk aan de mutatie van de saldo van vorderingen en schulden ten opzichte van het buitenland. In praktijk bestaat er echter een statistisch verschil tussen die twee.\r\n\r\nSeizoencorrectie\r\nOm een zo goed mogelijk beeld te geven van de conjuncturele stand van zaken wordt de groei voor een aantal variabelen ten opzichte van het voorgaande kwartaal berekend. Hierbij wordt standaard gecorrigeerd voor seizoen- en eventuele werkdageffecten.\r\nBij het uitkomen van nieuwe kwartaalcijfers wordt deze seizoen- en werkdagcorrectie steeds opnieuw doorgerekend. Dit leidt doorgaans tot geringe bijstellingen van eerder geraamde cijfers, maar incidenteel tot meer substantiële bijstellingen.\r\n\r\nStandaard Bedrijfsindeling 2008 (SBI 2008):\r\nDe Nederlandse hiërarchische indeling van economische activiteiten die door het CBS wordt gebruikt om bedrijfseenheden in te delen naar hun hoofdactiviteit. De SBI 2008 is de versie die vanaf 2008 gebruikt wordt.\r\n\r\n'Bedrijfstak' of 'branche' zijn gangbare termen voor groepen van bedrijven met dezelfde hoofdactiviteit. Het CBS hanteert voor de indeling van bedrijven naar hoofdactiviteit de zogenoemde Standaard Bedrijfsindeling (SBI). Bedrijven in een bedrijfstak of branche kunnen naast deze activiteit ook andere activiteiten (nevenactiviteiten) uitoefenen.\r\nDe SBI 2008 kent meerdere niveaus die aangegeven worden door maximaal vijf cijfers. Het niveau van vier cijfers komt vrijwel overeen met de indeling van de Europese Unie (NACE). De eerste twee cijfers komen overeen met die van de indeling van Verenigde Naties (ISIC).\r\n\r\nVerklaring van symbolen:\r\n\r\nniets (blanco)\t: het cijfer kan op logische gronden niet voorkomen\r\n. \t\t: het cijfer is onbekend, onvoldoende betrouwbaar of geheim\r\n*\t\t: voorlopige cijfers\r\n**\t\t: nader voorlopige cijfers\r\n\r\n\r\n3. KOPPELINGEN NAAR RELEVANTE TABELLEN EN ARTIKELEN\r\n\r\nRelevante tabellen:\r\nDeze tabel bevat gegevens die aansluiten op de meest recente revisie van de nationale rekeningen. Gegevens vóór revisie zijn te vinden in tabel <a href='https://opendata.cbs.nl/Statline/#/CBS/nl/dataset/84106NED'>Bbp, productie en bestedingen; kwartalen, mutaties, na, 1995- 2024-I</a>.\r\n\r\nRelevante artikelen:\r\nInformatie over <a href='https://www.cbs.nl/nl-nl/longread/diversen/2024/revisiepublicatie-nationale-rekeningen-verslagjaar-2021'>de revisie 2021 van de nationale rekeningen</a>.\r\nInformatie over <a href='https://www.cbs.nl/nl-nl/economie/macro-economie/update-statline-na-revisie-macro-economische-cijfers'>de update Statlinetabellen van de nationale rekeningen na revisie 2021</a>.\r\nInformatie over <a href='https://www.cbs.nl/nl-nl/economie/macro-economie/bijstellingen-nationale-rekeningen-algemeen-overzicht'>het publicatie- en revisiebeleid en de bijstellingen van de nationale rekeningen</a>.\r\n\r\nMeer informatie is te vinden op de themapagina <a href='https://www.cbs.nl/nl-nl/economie/macro-economie'>Macro-economie</a>.\r\n\r\n\r\n4. BRONNEN EN METHODEN\r\n\r\nDe onderzoeksmethode van deze tabel is te vinden in de onderzoeksbeschrijving <a href='https://www.cbs.nl/nl-nl/onze-diensten/methoden/onderzoeksomschrijvingen/korte-onderzoeksbeschrijvingen/kwartaalrekeningen'>kwartaalrekeningen</a>.\r\n\r\n\r\n5. MEER INFORMATIE\r\n\r\n<a href='https://www.cbs.nl/nl-nl/over-ons/contact/infoservice'>Infoservice</a>\r\n\r\nCopyright (c) Centraal Bureau voor de Statistiek, Den Haag/Heerlen \r\nVerveelvoudiging is toegestaan, mits CBS als bron wordt vermeld.",
+ "Provenance": [
+  {
+   "Title": "kwartaalrekeningen",
+   "Url": "https://www.cbs.nl/nl-nl/onze-diensten/methoden/onderzoeksomschrijvingen/korte-onderzoeksbeschrijvingen/kwartaalrekeningen"
+  }
+ ],
+ "RelatedSources": [
+  {
+   "Title": "Bbp, productie en bestedingen; kwartalen, mutaties, na, 1995- 2024-I",
+   "Url": "https://opendata.cbs.nl/Statline/#/CBS/nl/dataset/84106NED"
+  },
+  {
+   "Title": "de revisie 2021 van de nationale rekeningen",
+   "Url": "https://www.cbs.nl/nl-nl/longread/diversen/2024/revisiepublicatie-nationale-rekeningen-verslagjaar-2021"
+  },
+  {
+   "Title": "de update Statlinetabellen van de nationale rekeningen na revisie 2021",
+   "Url": "https://www.cbs.nl/nl-nl/economie/macro-economie/update-statline-na-revisie-macro-economische-cijfers"
+  },
+  {
+   "Title": "het publicatie- en revisiebeleid en de bijstellingen van de nationale rekeningen",
+   "Url": "https://www.cbs.nl/nl-nl/economie/macro-economie/bijstellingen-nationale-rekeningen-algemeen-overzicht"
+  },
+  {
+   "Title": "Macro-economie",
+   "Url": "https://www.cbs.nl/nl-nl/economie/macro-economie"
+  }
+ ],
+ "Distributions": [
+  {
+   "Format": "csv",
+   "MediaType": "csv",
+   "DownloadUrl": "https://datasets.cbs.nl/csv/CBS/nl/85880NED",
+   "AccessUrl": "https://dataportal.cbs.nl/detail/CBS/85880NED",
+   "Language": "nl"
+  },
+  {
+   "Format": "odata",
+   "MediaType": "odata",
+   "DownloadUrl": "https://datasets.cbs.nl/odata/v1/CBS/85880NED",
+   "AccessUrl": "https://dataportal.cbs.nl/detail/CBS/85880NED",
+   "Language": "nl"
+  }
+ ]
+}

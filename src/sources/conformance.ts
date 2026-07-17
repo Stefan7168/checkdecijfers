@@ -26,6 +26,7 @@ import type { CbsCode, CbsObservationRow, CbsSlice, CbsTableSchema } from '../cb
 import { computeFingerprint } from '../ingestion/fingerprint.ts';
 import { encodePeriodCode, parsePeriodCode } from '../ingestion/periods.ts';
 import { unitsFromMeasures } from '../ingestion/pipeline.ts';
+import { SEED_TABLES } from '../ingestion/registry-seed.ts';
 import {
   checkDimensionMapping,
   checkPeriodParsing,
@@ -480,8 +481,15 @@ async function checkTable(
   }
 
   // F5: the five ingestion validators, registration semantics (see the
-  // honesty note in the module header).
-  const registryUnits = unitsFromMeasures(schema.measures);
+  // honesty note in the module header). #167: exactly like the pipeline, a
+  // seed's curated phantom-measure exclusion is applied before the
+  // per-measure checks (units, plausibility, unit consistency) — while the
+  // schema FINGERPRINT stays unfiltered, same reasoning as syncTable: a CBS
+  // change to the phantom set must still fail loudly.
+  const excludedMeasures = new Set(SEED_TABLES.find((t) => t.id === id)?.excludeMeasures ?? []);
+  const servedMeasures =
+    excludedMeasures.size === 0 ? schema.measures : schema.measures.filter((m) => !excludedMeasures.has(m.code));
+  const registryUnits = unitsFromMeasures(servedMeasures);
   const expectedDimensions = [...schema.dimensions]
     .map((d) => ({ name: d.name, kind: d.kind as string }))
     .sort((a, b) => a.name.localeCompare(b.name));
@@ -496,7 +504,7 @@ async function checkTable(
     checkRowPlausibility(rows, registryUnits, null, 0.2),
     checkPeriodParsing(rows, timeDim.name, periodCodes),
     checkDimensionMapping(rows, schema.dimensions, registryUnits, storedLabels, codeLists, false),
-    checkUnitConsistency(schema.measures, registryUnits),
+    checkUnitConsistency(servedMeasures, registryUnits),
   ];
   for (const result of stages) {
     if (!result.ok) add('F5_validators', `${result.stage}: ${result.summary}`, id);

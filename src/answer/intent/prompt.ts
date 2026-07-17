@@ -59,6 +59,15 @@ export const AVAILABLE_GRAINS: Record<string, ('JJ' | 'KW' | 'MM')[]> = {
   consumer_confidence_seasonally_adjusted: ['MM'],
   economic_climate_seasonally_adjusted: ['MM'],
   willingness_to_buy_seasonally_adjusted: ['MM'],
+  // Coverage sprint tables #2 + #3 (session 50, measured 2026-07-17): 85880NED
+  // M002782_1 has 121 KW + 30 JJ cells per mutation flavor (live v4 count);
+  // 85770NED carries 101 MM + 8 JJ cells per measure×afzetgebied (committed
+  // fixture count, 100% of the slice).
+  gdp_growth_yoy_volume: ['JJ', 'KW'],
+  gdp_growth_qoq_volume: ['JJ', 'KW'],
+  producer_prices_yoy: ['JJ', 'MM'],
+  import_prices_yoy: ['JJ', 'MM'],
+  producer_price_index_level: ['JJ', 'MM'],
 };
 
 /** The only Phase 0 measure with a regional dimension (03759ned: national,

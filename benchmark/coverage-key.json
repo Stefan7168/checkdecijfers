@@ -3,7 +3,7 @@
   "source": "Coverage-sprint verification tasks (docs/05-data-rules.md table-onboarding rule: 2-3 frozen-key benchmark-style tasks per newly onboarded table). Task ids CC* to keep the Phase-0 benchmark (B1-B20, benchmark/answer-key.json) and its 14/14 + 6/6 gate counts untouched. Scored hermetically by tests/query/coverage-key.test.ts over the committed fixtures; the honesty rule from answer-key.json applies unchanged: keys are never edited to green.",
   "frozenAt": "2026-07-17",
   "pinnedTo": {
-    "note": "Values independently verified on 2026-07-17 by re-querying BOTH live CBS platforms before freezing: OData v4 (datasets.cbs.nl .../Observations) and OData v3 (opendata.cbs.nl .../TypedDataSet) returned identical values for every cell below. The committed fixture capture (tests/fixtures/cbs/83693NED, captured the same day, 3,864 observation rows) is the replay source the tests run against. Table #3 (85770NED, session-49 overnight prep): same double-platform verification on 2026-07-17 (specs doc 2026-07-17-coverage-tables-2-9-measured-specs.md); its CC tasks use EXPLICIT targets (tableId+measure+dims) because the canonical vocabulary lands with the session-50 batch (#164) — re-point them at canonical keys then. Task ids CC5-CC7 are RESERVED for 85880NED (descoped from the overnight prep: its lean slice fails the zero-rows-per-measure plausibility check — 26 of 210 measures exist only under other SoortMutaties flavors — so table #2 needs the session-50 slice decision first; see the specs doc).",
+    "note": "Values independently verified on 2026-07-17 by re-querying BOTH live CBS platforms before freezing: OData v4 (datasets.cbs.nl .../Observations) and OData v3 (opendata.cbs.nl .../TypedDataSet) returned identical values for every cell below. The committed fixture captures (captured the same day) are the replay source the tests run against. Table #3 (85770NED): frozen in the session-49 overnight prep with EXPLICIT targets; RE-POINTED to canonical keys in the session-50 vocab batch (frozen values unchanged). Table #2 (85880NED, session 50): FULL ingest (owner decision — the lean 2-flavor slice was refuted by the hermetic validator: 26 of 210 measures exist only under other SoortMutaties flavors); CC5-CC7 frozen after build-day re-measurement on both platforms (v4=v3 exact: 1.4 / -1.1 / 0.2).",
     "tables": {
       "83693NED": {
         "title": "Consumentenvertrouwen, economisch klimaat en koopbereidheid; gecorrigeerd",
@@ -11,6 +11,10 @@
       },
       "85770NED": {
         "title": "Producentenprijzen (PPI); afzet-, invoer-, verbruiksprijzen, index 2021=100",
+        "capturedAt": "2026-07-17"
+      },
+      "85880NED": {
+        "title": "Bbp, productie en bestedingen; kwartalen, mutaties, nationale rekeningen",
         "capturedAt": "2026-07-17"
       }
     }
@@ -71,6 +75,60 @@
       "period": "2025JJ00",
       "refusalKind": "not_published",
       "note": "83693NED publishes ONLY a monthly grain (all 483 period keys are YYYYMMnn, measured v3+v4 2026-07-17). A year-figure ask must refuse value-free (principle c / R11), never average months into a fabricated year number."
+    },
+    "CC5": {
+      "question": "Hoe hard groeide de Nederlandse economie in het eerste kwartaal van 2026?",
+      "source": "cbs",
+      "shape": "single",
+      "table": "85880NED",
+      "measure": "M002782_1",
+      "measureTitle": "Bruto binnenlands product",
+      "period": "2026KW01",
+      "dims": {
+        "SoortMutaties": "A045299"
+      },
+      "value": 1.4,
+      "unit": "%",
+      "decimals": 1,
+      "status": "Voorlopig",
+      "valueAttribute": "None",
+      "note": "Headline GDP flash: volume growth vs the same quarter a year earlier (canonical default for 'economische groei'). Re-measured on both platforms on build day 2026-07-17. Flash figures are Voorlopig — R11."
+    },
+    "CC6": {
+      "question": "Hoeveel kromp de economie in het vierde kwartaal van 2023?",
+      "source": "cbs",
+      "shape": "single",
+      "table": "85880NED",
+      "measure": "M002782_1",
+      "measureTitle": "Bruto binnenlands product",
+      "period": "2023KW04",
+      "dims": {
+        "SoortMutaties": "A045299"
+      },
+      "value": -1.1,
+      "unit": "%",
+      "decimals": 1,
+      "status": "Definitief",
+      "valueAttribute": "None",
+      "note": "Historical negative-growth check deep in the series (Definitief)."
+    },
+    "CC7": {
+      "question": "Wat was de groei ten opzichte van het vorige kwartaal in het eerste kwartaal van 2026?",
+      "source": "cbs",
+      "shape": "single",
+      "table": "85880NED",
+      "measure": "M002782_1",
+      "measureTitle": "Bruto binnenlands product",
+      "period": "2026KW01",
+      "dims": {
+        "SoortMutaties": "A045300"
+      },
+      "value": 0.2,
+      "unit": "%",
+      "decimals": 1,
+      "status": "Voorlopig",
+      "valueAttribute": "None",
+      "note": "Second SoortMutaties flavor (quarter-on-quarter, own canonical key gdp_growth_qoq_volume) — pins that the full ingest really carries multiple flavors and the keys pin them by dims."
     },
     "CC8": {
       "question": "Wat was de jaarmutatie van de producentenprijzen (afzet totaal) in mei 2026?",

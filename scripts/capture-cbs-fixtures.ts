@@ -21,6 +21,17 @@ const OUT = fileURLToPath(new URL('../tests/fixtures/cbs', import.meta.url));
 // only carries the headline "alle bestedingen" series the benchmark uses).
 const CAPTURE_SLICES: Record<string, CbsSlice> = {
   '86141NED': { dimensionEquals: { Bestedingscategorieen: 'T001112' } },
+  // 85880NED (coverage sprint #2) is ingested IN FULL live (owner decision
+  // session 50 — the lean SoortMutaties slice was validator-refuted); the
+  // FIXTURE keeps only 2020+ (22,230 of 99,676 obs, measured 2026-07-17):
+  // all 210 measures and all 5 mutation flavors stay covered (row_plausibility
+  // holds) and every CC5-CC7 frozen cell is included, while the fixture stays
+  // ~4MB instead of ~18MB — 27 test files + 5 scripts ingest this fixture via
+  // createIngestedDb, so fixture size multiplies straight into gate time.
+  // NB the unfiltered Observations stream serves at ~6KB/s from a local
+  // network (measured; ~45 min for the full table) — the floor also keeps
+  // recapture practical.
+  '85880NED': { periodFloor: '2020JJ00' },
 };
 const MAX_PAGES = 20;
 

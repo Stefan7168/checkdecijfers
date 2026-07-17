@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-07-16T21:25:12.393Z",
+  "generatedAt": "2026-07-17T09:39:16.569Z",
   "mode": "live",
   "repeat": 3,
   "referenceDate": "2026-08-15",
   "totals": {
-    "pass": 63,
+    "pass": 62,
     "total": 63
   },
   "perCategory": [
@@ -40,7 +40,7 @@
     },
     {
       "category": "refusal",
-      "pass": 5,
+      "pass": 4,
       "total": 5
     },
     {
@@ -72,11 +72,25 @@
     "ambiguousAnsweredInsteadOfClarified": []
   },
   "usage": {
-    "inputTokens": 1309116,
-    "outputTokens": 21648
+    "inputTokens": 1448031,
+    "outputTokens": 21636
   },
-  "unstable": [],
-  "failures": [],
+  "unstable": [
+    "r-autos: outcome kinds across runs: refusal, clarification"
+  ],
+  "failures": [
+    {
+      "id": "r-autos",
+      "category": "refusal",
+      "question": "Hoeveel auto's zijn er in Nederland?",
+      "outcomeKind": "refusal",
+      "topRawConfidence": null,
+      "pass": false,
+      "problems": [
+        "expected outcome \"clarification\", got \"refusal\" (out_of_scope)"
+      ]
+    }
+  ],
   "history": [
     {
       "generatedAt": "2026-07-04T03:34:49.700Z",
@@ -680,6 +694,250 @@
       "usage": {
         "inputTokens": 1309116,
         "outputTokens": 21648
+      }
+    },
+    {
+      "generatedAt": "2026-07-17T09:26:22.533Z",
+      "mode": "record",
+      "repeat": 1,
+      "referenceDate": "2026-08-15",
+      "totals": {
+        "pass": 62,
+        "total": 63
+      },
+      "perCategory": [
+        {
+          "category": "benchmark_answerable",
+          "pass": 14,
+          "total": 14
+        },
+        {
+          "category": "variant",
+          "pass": 11,
+          "total": 11
+        },
+        {
+          "category": "benchmark_clarify",
+          "pass": 2,
+          "total": 2
+        },
+        {
+          "category": "benchmark_refusal",
+          "pass": 3,
+          "total": 3
+        },
+        {
+          "category": "benchmark_freshness",
+          "pass": 1,
+          "total": 1
+        },
+        {
+          "category": "ambiguous",
+          "pass": 9,
+          "total": 9
+        },
+        {
+          "category": "refusal",
+          "pass": 5,
+          "total": 5
+        },
+        {
+          "category": "smalltalk",
+          "pass": 1,
+          "total": 1
+        },
+        {
+          "category": "open_range",
+          "pass": 7,
+          "total": 8
+        },
+        {
+          "category": "date_range",
+          "pass": 9,
+          "total": 9
+        }
+      ],
+      "calibration": {
+        "correctIntentConfidence": {
+          "count": 40,
+          "min": 0.92,
+          "median": 0.95
+        },
+        "wrongIntentConfidence": {
+          "count": 1,
+          "values": [
+            {
+              "id": "os-v02-inflatie-nu-vs-5jaar",
+              "confidence": 0.92
+            }
+          ]
+        },
+        "ambiguousAnsweredInsteadOfClarified": []
+      },
+      "usage": {
+        "inputTokens": 482677,
+        "outputTokens": 7187
+      }
+    },
+    {
+      "generatedAt": "2026-07-17T09:30:15.330Z",
+      "mode": "record",
+      "repeat": 1,
+      "referenceDate": "2026-08-15",
+      "totals": {
+        "pass": 62,
+        "total": 63
+      },
+      "perCategory": [
+        {
+          "category": "benchmark_answerable",
+          "pass": 14,
+          "total": 14
+        },
+        {
+          "category": "variant",
+          "pass": 11,
+          "total": 11
+        },
+        {
+          "category": "benchmark_clarify",
+          "pass": 2,
+          "total": 2
+        },
+        {
+          "category": "benchmark_refusal",
+          "pass": 3,
+          "total": 3
+        },
+        {
+          "category": "benchmark_freshness",
+          "pass": 1,
+          "total": 1
+        },
+        {
+          "category": "ambiguous",
+          "pass": 9,
+          "total": 9
+        },
+        {
+          "category": "refusal",
+          "pass": 5,
+          "total": 5
+        },
+        {
+          "category": "smalltalk",
+          "pass": 1,
+          "total": 1
+        },
+        {
+          "category": "open_range",
+          "pass": 7,
+          "total": 8
+        },
+        {
+          "category": "date_range",
+          "pass": 9,
+          "total": 9
+        }
+      ],
+      "calibration": {
+        "correctIntentConfidence": {
+          "count": 40,
+          "min": 0.92,
+          "median": 0.95
+        },
+        "wrongIntentConfidence": {
+          "count": 1,
+          "values": [
+            {
+              "id": "os-v02-inflatie-nu-vs-5jaar",
+              "confidence": 0.92
+            }
+          ]
+        },
+        "ambiguousAnsweredInsteadOfClarified": []
+      },
+      "usage": {
+        "inputTokens": 482677,
+        "outputTokens": 7210
+      }
+    },
+    {
+      "generatedAt": "2026-07-17T09:39:16.569Z",
+      "mode": "live",
+      "repeat": 3,
+      "referenceDate": "2026-08-15",
+      "totals": {
+        "pass": 62,
+        "total": 63
+      },
+      "perCategory": [
+        {
+          "category": "benchmark_answerable",
+          "pass": 14,
+          "total": 14
+        },
+        {
+          "category": "variant",
+          "pass": 11,
+          "total": 11
+        },
+        {
+          "category": "benchmark_clarify",
+          "pass": 2,
+          "total": 2
+        },
+        {
+          "category": "benchmark_refusal",
+          "pass": 3,
+          "total": 3
+        },
+        {
+          "category": "benchmark_freshness",
+          "pass": 1,
+          "total": 1
+        },
+        {
+          "category": "ambiguous",
+          "pass": 9,
+          "total": 9
+        },
+        {
+          "category": "refusal",
+          "pass": 4,
+          "total": 5
+        },
+        {
+          "category": "smalltalk",
+          "pass": 1,
+          "total": 1
+        },
+        {
+          "category": "open_range",
+          "pass": 8,
+          "total": 8
+        },
+        {
+          "category": "date_range",
+          "pass": 9,
+          "total": 9
+        }
+      ],
+      "calibration": {
+        "correctIntentConfidence": {
+          "count": 41,
+          "min": 0.92,
+          "median": 0.95
+        },
+        "wrongIntentConfidence": {
+          "count": 0,
+          "values": []
+        },
+        "ambiguousAnsweredInsteadOfClarified": []
+      },
+      "usage": {
+        "inputTokens": 1448031,
+        "outputTokens": 21636
       }
     }
   ]

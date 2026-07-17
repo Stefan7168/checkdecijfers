@@ -52,6 +52,7 @@ describe('parseCatalogPage (real captured catalog wire data)', () => {
       '82610NED',
       '83693NED', // coverage sprint #1 (docs/11-coverage-table-set.md)
       '85770NED', // coverage sprint #3
+      '85880NED', // coverage sprint #2
     ]) {
       expect(ids.has(id)).toBe(true);
     }

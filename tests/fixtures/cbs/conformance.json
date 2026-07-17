@@ -16,6 +16,7 @@
     { "tableId": "85615NED", "schemaOnly": true },
     { "tableId": "85770NED" },
     { "tableId": "85773NED" },
+    { "tableId": "85880NED" },
     { "tableId": "86141NED" }
   ],
   "declaredPeriodStatuses": ["Definitief", "Voorlopig", "NaderVoorlopig"],

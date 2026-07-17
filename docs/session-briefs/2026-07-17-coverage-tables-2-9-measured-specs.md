@@ -21,6 +21,11 @@ and one wrong platform verdict. All four open verification points (a)–(d) are 
    (v4 accepts `Measure eq` in `$filter`, verified live) + registration/units filtered to the allowlist —
    the lean 36,820-obs path the brief intended; (c) descope the detail measures question entirely and
    revisit. Table #2 was DESCOPED from the overnight prep-PR; CC5-CC7 reserved.
+   **▶ RESOLVED (owner, session 50, 2026-07-17): option (a) FULL ingest.** And the "capture-time slice does
+   NOT help here" note above proved too broad: it holds for option (b) (where the INGEST slice is the
+   problem), but under FULL ingest a capture-only `periodFloor: '2020JJ00'` keeps all 210 measures + all 5
+   flavors covered at 22,230 obs (~4MB fixture) — built that way (see 11-coverage-table-set.md #2 and
+   `scripts/capture-cbs-fixtures.ts` CAPTURE_SLICES).
 2. **`80590NED` is NOT v3-only — the v4 host serves it under the LOWERCASE identifier `80590ned`**
    (uppercase 404s; docs/07 catalog quirk #1, which the session-48 scout didn't apply). The ADR-003 v3 path
    is NOT needed for the sprint. Seed id must be `80590ned`.

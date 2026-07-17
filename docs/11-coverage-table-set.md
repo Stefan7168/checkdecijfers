@@ -13,6 +13,8 @@ should expect newer periods, not different history.
 | # | Topic | Table | Title | Platform | Status | Size | Serves |
 |---|---|---|---|---|---|---|---|
 | 1 | Consumer confidence | `83693NED` | Consumentenvertrouwen, economisch klimaat en koopbereidheid; gecorrigeerd | both | Regulier | v4: 3,864 obs — full ingest | CC1–CC4 ([benchmark/coverage-key.json](../benchmark/coverage-key.json)) |
+| 2 | GDP flash (economische groei) | `85880NED` | Bbp, productie en bestedingen; kwartalen, mutaties, nationale rekeningen | both | Regulier | v4: 99,676 obs — FULL ingest (owner decision s50; lean slice validator-refuted) | CC5–CC7 |
+| 3 | Producer prices (PPI) | `85770NED` | Producentenprijzen (PPI); afzet-, invoer-, verbruiksprijzen, index 2021=100 | both | Regulier | v4 slice: ProdCom-totaal × afzet totaal+invoer = 654 obs, 100% dense | CC8–CC10 |
 
 ## Verification-task convention (docs/05 table-onboarding rule)
 
@@ -51,6 +53,57 @@ independently re-queried from BOTH live CBS platforms before freezing; keys neve
 - **Reference values (frozen into CC1–CC3; v3+v4 cross-checked 2026-07-17):** 2026MM06 consumentenvertrouwen
   **−39**, economisch klimaat −64, koopbereidheid **−22**; 2013MM02 consumentenvertrouwen **−41** (pre-2022 record
   low); series start 1986MM04 = +2.
+
+### `85880NED` — GDP flash, quarterly mutations (sprint #2; measured 2026-07-17, built session 50)
+
+- **Shape:** two dimensions — `SoortMutaties` (Dimension, 5 codes: volume/waarde j-o-j en p-o-p + prijs j-o-j; all
+  five are PERCENT MUTATIONS, there is no level flavor) × `Perioden` (TimeDimension, 156 codes: 125 KW + 31 JJ;
+  ~10 recent periods `Voorlopig` incl. `2026KW01`). 210 measures (99 top-level + 111 detail) = **99,676 obs**
+  (v4 count, re-measured on build day; smaller than the loaded CPI table).
+- **Slice decision (owner, session 50): FULL ingest, deliberately NO slice.** The brief's lean 2-flavor slice
+  (`SoortMutaties` A045299+A045300, 36,820 obs) was REFUTED by the hermetic validator during the s49 overnight
+  prep: 26 of the 210 measures exist ONLY under the value/price flavors (income-side value-only concepts — lonen,
+  winst — have no volume variant) → `row_plausibility` quarantines, working as designed. Alternatives measured in
+  [session-briefs/2026-07-17-coverage-tables-2-9-measured-specs.md](session-briefs/2026-07-17-coverage-tables-2-9-measured-specs.md)
+  (a `CbsSlice` measure-allowlist extension was the runner-up; rejected for touching the invariant-critical
+  ingest mechanism on a vocab-batch day). The specs' "~18MB fixture" cost was avoided with the 86141NED
+  capture-only-slice pattern: the FIXTURE keeps 2020+ only (`periodFloor: '2020JJ00'`, 22,230 obs measured,
+  ~4MB) — all 210 measures and all 5 flavors stay covered so the hermetic full-ingest replay still proves
+  row_plausibility, and every CC5–CC7 cell is included; LIVE ingest is genuinely unsliced. (Load-bearing:
+  27 test files + 5 scripts rebuild the ingested DB per run, so fixture size multiplies straight into gate
+  time; and the unfiltered v4 Observations stream serves at ~6KB/s from the local network — see
+  `scripts/capture-cbs-fixtures.ts` CAPTURE_SLICES.)
+- **Headline measure:** `M002782_1` "Bruto binnenlands product" (%; the title exists on FOUR codes — pin by CODE,
+  specs conclusion 3: v3→v4 suffix numbering is NOT parallel). Grains per flavor: 121 KW + 30 JJ cells (measured
+  live v4 on build day).
+- **Canonical measures (registry, session-50 vocab batch):** `gdp_growth_yoy_volume` (M002782_1 ×
+  A045299; canonical default for "economische groei"/"bbp" — CBS's persbericht headline) and
+  `gdp_growth_qoq_volume` (M002782_1 × A045300; own key because alternates are prompt-hints, not resolvable
+  targets). Value/price flavors and income-side detail measures are ingested but deliberately have no vocabulary
+  yet.
+- **Cadence:** flash ~30 days after quarter-end (next: Q2 on ~30 July 2026, the sprint deadline); the second
+  estimate later REVISES flash quarters (R11 — recent quarters are Voorlopig).
+- **Reference values (frozen into CC5–CC7; re-measured on BOTH platforms on build day 2026-07-17):** 2026KW01
+  volume j-o-j **+1.4** (Voorlopig); 2023KW04 volume j-o-j **−1.1** (Definitief); 2026KW01 volume k-o-k **+0.2**
+  (Voorlopig).
+
+### `85770NED` — producer prices PPI (sprint #3; measured 2026-07-17 overnight, vocab session 50)
+
+- **Shape:** three dimensions — `Afzetgebieden` (5 codes) × `AlleProdComCoderingen` (525 codes!) × `Perioden`
+  (109: 101 MM + 8 JJ; last ~5 months `Voorlopig`). 3 measures: `M003367` PPI-index (2021=100, fully dense),
+  `M003316` maandmutatie, `M003288` jaarmutatie (headline; nulls in the first series year — no base year, absent
+  cells per R11).
+- **Slice (registered):** `dimensionEquals: { AlleProdComCoderingen: 'A052584' }` (the hierarchy-root ProdCom
+  total "B-E Nijverheid (geen bouw) en energie") + `dimensionPrefixes: { Afzetgebieden: ['A044074','A044077'] }`
+  (totaal afzet + invoer; full codes as exact-match prefixes) → **654 obs, 100% dense**.
+- **Canonical measures (registry, session-50 vocab batch):** `producer_prices_yoy` (M003288 × totaal; canonical
+  default for "producentenprijzen"/"ppi"), `import_prices_yoy` (M003288 × invoer), `producer_price_index_level`
+  (M003367 × totaal; explicit index-level asks). Grains MM+JJ (fixture-measured).
+- **Cadence:** monthly, at latest the 30th day after the measured month (June figure lands ≤30 July 2026).
+- **Reference values (frozen into CC8–CC10 in the s49 overnight prep; v3+v4 cross-checked 2026-07-17; re-pointed
+  from explicit to canonical intents in session 50, values unchanged):** totaal 2026MM05 jaarmutatie **7.2**
+  (index 128.7, Voorlopig); totaal 2023MM06 jaarmutatie **−5.9** (Definitief); invoer 2026MM05 jaarmutatie
+  **9.3** (Voorlopig).
 
 ## Catalog quirks encountered (adds to docs/07's list)
 

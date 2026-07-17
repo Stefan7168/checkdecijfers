@@ -17,6 +17,15 @@ export interface Phase0Table {
   updateCadence: string;
   /** Benchmark tasks this table serves (docs/02-user-scenarios.md). */
   servesTasks: string[];
+  /** Curated PHANTOM-measure exclusion (#167, session 50): measure codes that
+   * CBS's MeasureCodes metadata lists but that carry ZERO observations
+   * table-wide (measured, documented per code below). Registration and sync
+   * treat them as not-published (skipped in units, unit-consistency and the
+   * per-measure row-plausibility check; any fetched row for them is dropped);
+   * the schema FINGERPRINT deliberately stays unfiltered, so a CBS change to
+   * the phantom set still fails the drift check loudly. Without this, a fully
+   * healthy full-table ingest quarantines on measures that never had data. */
+  excludeMeasures?: string[];
 }
 
 export const PHASE0_TABLES: Phase0Table[] = [
@@ -111,6 +120,46 @@ export const COVERAGE_TABLES: Phase0Table[] = [
     },
     updateCadence: 'monthly (at latest the 30th day after the measured month)',
     servesTasks: ['CC8', 'CC9', 'CC10'],
+  },
+  {
+    // GDP flash estimate — FULL ingest, deliberately NO slice (owner decision,
+    // session 50, 2026-07-17): the lean 2-flavor SoortMutaties slice was
+    // REFUTED by the hermetic validator (26 of 210 measures exist only under
+    // the value/price flavors → row_plausibility quarantine, working as
+    // designed — the income-side value-only concepts have no volume variant).
+    // 99,676 obs table-wide (measured v4 2026-07-17, smaller than the loaded
+    // CPI table); 5 mutation flavors × 210 measures × 156 periods (125 KW +
+    // 31 JJ, ~10 recent periods Voorlopig incl. 2026KW01). The FIXTURE is
+    // capture-sliced to 2020+ (22,230 obs — the 86141NED capture-only-slice
+    // pattern; all measures/flavors covered, scripts/capture-cbs-fixtures.ts
+    // has the rationale); live ingest is genuinely unsliced.
+    id: '85880NED',
+    updateCadence: 'quarterly (flash ~30 days after quarter-end; second estimate later revises it)',
+    servesTasks: ['CC5', 'CC6', 'CC7'],
+    // #167: 17 of the 210 MeasureCodes entries carry ZERO observations in the
+    // ENTIRE live table (each probed individually with $orderby Perioden desc
+    // $top 1 on 2026-07-17 — all "GEEN-RIJEN"). CBS metadata phantoms; without
+    // exclusion the per-measure plausibility check quarantines even a full,
+    // healthy ingest.
+    excludeMeasures: [
+      '320000', // "19 Aardolie-industrie"
+      'A044496', // "Saldo aan- en verkopen van niet-geprod.."
+      'A047176', // "In cultuur gebrachte activa"
+      'M002584', // "Uitvoersaldo diensten"
+      'M002592',
+      'M006289',
+      'M006343_1',
+      'M006343_2',
+      'M006445',
+      'M006447',
+      'M006479',
+      'M006557_2',
+      'M006557_3',
+      'M006558_2',
+      'M006562',
+      'M006567_2',
+      'M006567_3',
+    ],
   },
 ];
 

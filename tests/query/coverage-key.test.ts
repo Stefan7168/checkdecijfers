@@ -51,42 +51,43 @@ const INTENTS: Record<string, StructuredIntent> = {
     period: { kind: 'codes', codes: ['2025JJ00'] },
     derivation: 'none',
   },
-  // Table #3 (session-49 overnight prep; CC5-CC7 are RESERVED for the
-  // descoped 85880NED — see coverage-key.json pinnedTo note): EXPLICIT
-  // targets, because the
-  // canonical vocabulary for these tables lands with the session-50 batch
-  // (#164 — one vocab change + one fixture re-record per session). Re-point
-  // at canonical keys when that batch lands; the frozen values stay the same.
+  // Table #2 (85880NED, session 50 — full ingest per the owner decision).
+  CC5: {
+    schemaVersion: 1,
+    target: { kind: 'canonical', key: 'gdp_growth_yoy_volume' },
+    period: { kind: 'codes', codes: ['2026KW01'] },
+    derivation: 'none',
+  },
+  CC6: {
+    schemaVersion: 1,
+    target: { kind: 'canonical', key: 'gdp_growth_yoy_volume' },
+    period: { kind: 'codes', codes: ['2023KW04'] },
+    derivation: 'none',
+  },
+  CC7: {
+    schemaVersion: 1,
+    target: { kind: 'canonical', key: 'gdp_growth_qoq_volume' },
+    period: { kind: 'codes', codes: ['2026KW01'] },
+    derivation: 'none',
+  },
+  // Table #3 (85770NED): frozen in the session-49 overnight prep with EXPLICIT
+  // targets; re-pointed at the canonical keys in the session-50 vocab batch
+  // (#164 — one vocab change + one fixture re-record). Frozen values unchanged.
   CC8: {
     schemaVersion: 1,
-    target: {
-      kind: 'explicit',
-      tableId: '85770NED',
-      measure: 'M003288',
-      dims: { Afzetgebieden: 'A044074', AlleProdComCoderingen: 'A052584' },
-    },
+    target: { kind: 'canonical', key: 'producer_prices_yoy' },
     period: { kind: 'codes', codes: ['2026MM05'] },
     derivation: 'none',
   },
   CC9: {
     schemaVersion: 1,
-    target: {
-      kind: 'explicit',
-      tableId: '85770NED',
-      measure: 'M003288',
-      dims: { Afzetgebieden: 'A044074', AlleProdComCoderingen: 'A052584' },
-    },
+    target: { kind: 'canonical', key: 'producer_prices_yoy' },
     period: { kind: 'codes', codes: ['2023MM06'] },
     derivation: 'none',
   },
   CC10: {
     schemaVersion: 1,
-    target: {
-      kind: 'explicit',
-      tableId: '85770NED',
-      measure: 'M003288',
-      dims: { Afzetgebieden: 'A044077', AlleProdComCoderingen: 'A052584' },
-    },
+    target: { kind: 'canonical', key: 'import_prices_yoy' },
     period: { kind: 'codes', codes: ['2026MM05'] },
     derivation: 'none',
   },
@@ -129,8 +130,8 @@ function checkBaseline(taskId: string, result: ValidatedResult): void {
   for (const cell of result.cells) expect(cell.unit).toBe(key.unit);
 }
 
-describe('coverage verification tasks against the frozen coverage key (83693NED + 85770NED)', () => {
-  for (const taskId of ['CC1', 'CC2', 'CC3', 'CC8', 'CC9', 'CC10'] as const) {
+describe('coverage verification tasks against the frozen coverage key (83693NED + 85880NED + 85770NED)', () => {
+  for (const taskId of ['CC1', 'CC2', 'CC3', 'CC5', 'CC6', 'CC7', 'CC8', 'CC9', 'CC10'] as const) {
     it(`${taskId}: single frozen-key cell reproduces exactly`, () => {
       const key = coverageKey.tasks[taskId]!;
       const result = asResult(taskId);
