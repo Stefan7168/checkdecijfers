@@ -2,7 +2,7 @@
   "requestHash": "c52f2e7241bc9c78d1bf0c098faf3e59",
   "question": "Volledige vraag van de gebruiker: \"hoeveel stroom leveren zonnepanelen\"\nOnderwerp van de gebruiker: \"hoeveel stroom leveren zonnepanelen\"\n\nKandidaat-tabellen:\n1. id=85004NED | status=Regulier | type=Numeric\n   titel: Hernieuwbare energie; zonnestroom, windenergie, RES-regio\n   omschrijving: Deze tabel bevat cijfers over het opgestelde vermogen en de productie (opgewekte elektriciteit, mln kWh) van windenergie op land en zonnestroom, vanaf 2018. Voor zonnestroom betreft dit het paneelvermogen. De gegevens zijn exclusief de in z…\n2. id=82610NED | status=Regulier | type=Numeric\n   titel: Hernieuwbare elektriciteit; productie en vermogen \n   omschrijving: Deze tabel bevat gegevens over de Nederlandse productie van hernieuwbare elektriciteit, het aantal daarbij gebruikte installaties en het opgestelde vermogen van die installaties. Bij de productie wordt daarbij een onderscheid gemaakt naar g…",
   "label": null,
-  "recordedAt": "2026-07-08T09:25:02.989Z",
+  "recordedAt": "2026-07-17T19:25:09.834Z",
   "request": {
     "model": "claude-haiku-4-5",
     "maxTokens": 1024,

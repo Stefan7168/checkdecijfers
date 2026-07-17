@@ -246,7 +246,12 @@ export const CANONICAL_MEASURES: CanonicalMeasure[] = [
     measureTitle: 'Gemiddelde verkoopprijs',
     dims: {},
     definitionLabel: 'gemiddelde verkoopprijs van bestaande koopwoningen',
-    everydayTerms: ['koopwoningprijs', 'huizenprijs', 'verkoopprijs woningen', 'huizenmarkt'],
+    // 'huizenprijzen' (plural) added session 54: with the index key
+    // (house_price_index_regional) in the vocabulary, the bare plural made the
+    // model clarify between the two readings on a follow-up (measured,
+    // f-merge-topic-switch-national record 1) — the canonical default owns
+    // both number forms explicitly.
+    everydayTerms: ['koopwoningprijs', 'huizenprijs', 'huizenprijzen', 'verkoopprijs woningen', 'huizenmarkt'],
     alternates: [
       { measure: 'M001505_2', label: 'prijsindex verkoopprijzen (marktontwikkeling, niet composition-adjusted vs. de gemiddelde prijs)' },
     ],
@@ -393,5 +398,174 @@ export const CANONICAL_MEASURES: CanonicalMeasure[] = [
     everydayTerms: ['producentenprijsindex'],
     notes:
       'Het indexNIVEAU (2021=100), volledig dicht (geen ontbrekende cellen). De alledaagse vraag "wat deden de producentenprijzen" hoort bij producer_prices_yoy; deze key is voor expliciete indexstand-vragen.',
+  },
+  {
+    // Coverage sprint table #4 (85828NED, session-54 vocab batch — the staged
+    // brief 2026-07-17-coverage-4-9-vocab-batch-staged.md is the design
+    // record). Headline: retail turnover YoY for SBI 47 (branch pinned per
+    // key; the value family, uncorrected — CBS's own press-release reading).
+    key: 'retail_turnover_yoy',
+    tableId: '85828NED',
+    measure: 'A042501_2',
+    measureTitle: 'Waarde / Ontwikkeling t.o.v. jaar eerder / Ongecorrigeerd',
+    dims: { BedrijfstakkenBranchesSBI2008: '371600' },
+    definitionLabel: 'omzetontwikkeling detailhandel (waarde t.o.v. een jaar eerder, ongecorrigeerd)',
+    everydayTerms: ['omzet detailhandel', 'detailhandelsomzet', 'winkelomzet'],
+    alternates: [
+      { measure: 'A042501_1', label: 'het indexNIVEAU (2021 = 100), geen mutatiepercentage' },
+      { measure: 'A052581_2', label: 'kalendergecorrigeerde variant' },
+      { dims: { BedrijfstakkenBranchesSBI2008: '371700' }, label: 'alleen supermarkten en warenhuizen (eigen key: supermarket_turnover_yoy)' },
+    ],
+    notes:
+      '2026-periodes zijn Voorlopig (R11). Slice = SBI 47 + de 7 directe subgroepen (473/478 bestaan niet in deze tabel — docs/11).',
+  },
+  {
+    key: 'supermarket_turnover_yoy',
+    tableId: '85828NED',
+    measure: 'A042501_2',
+    measureTitle: 'Waarde / Ontwikkeling t.o.v. jaar eerder / Ongecorrigeerd',
+    dims: { BedrijfstakkenBranchesSBI2008: '371700' },
+    definitionLabel: 'omzetontwikkeling supermarkten en warenhuizen (waarde t.o.v. een jaar eerder, ongecorrigeerd)',
+    everydayTerms: ['omzet supermarkten', 'supermarktomzet'],
+    alternates: [
+      { dims: { BedrijfstakkenBranchesSBI2008: '371600' }, label: 'de hele detailhandel (eigen key: retail_turnover_yoy)' },
+    ],
+    notes: 'Not a canonical-default choice: de term benoemt de supermarktlezing direct. Zelfde maat als retail_turnover_yoy, andere branche.',
+  },
+  {
+    // Coverage sprint table #5 (85937NED, session-54 vocab batch). Headline:
+    // koopdaggecorrigeerde volumemutatie, binnenlandse consumptie totaal
+    // (A047812 — also the table default). M005269 exists for only 6 of 14
+    // categories (docs/11); the pinned default category is one of the 6.
+    key: 'household_consumption_growth',
+    tableId: '85937NED',
+    measure: 'M005269',
+    measureTitle: 'Volumemutaties, koopdaggecorrigeerd',
+    dims: {},
+    definitionLabel: 'consumptie huishoudens: volumemutatie t.o.v. een jaar eerder, koopdaggecorrigeerd',
+    everydayTerms: ['consumptie huishoudens', 'huishoudconsumptie', 'bestedingen huishoudens', 'consumptiegroei'],
+    alternates: [
+      { measure: 'M000282', label: 'gewone volumemutatie (niet koopdaggecorrigeerd; wel dicht over alle 14 categorieën)' },
+      { measure: 'M001288_1', label: 'het indexNIVEAU (2021=100)' },
+    ],
+    notes:
+      'Cijfers vanaf 2021 zijn Voorlopig (gemeten Status-veld, breder dan CBS\'s eigen omschrijving — docs/11). Canonical default mirroring 86141NED: de kale consumptievraag = binnenlandse consumptie totaal (default-coördinaat A047812).',
+  },
+  {
+    // Coverage sprint table #6 (85429NED, session-54 vocab batch). Value keys
+    // + CBS's own YoY mutation keys (R5: never self-compute). Dims {} — the
+    // table defaults pin the totals slice (Landen T001047 x SITC T001082).
+    key: 'goods_imports_value',
+    tableId: '85429NED',
+    measure: 'D001607',
+    measureTitle: 'Totale invoerwaarde',
+    dims: {},
+    definitionLabel: 'totale invoerwaarde van goederen (mln euro)',
+    everydayTerms: ['invoerwaarde', 'goedereninvoer', 'invoer van goederen'],
+    alternates: [
+      { measure: 'M001608', label: 'de jaarmutatie in % (eigen key: goods_imports_yoy)' },
+      { measure: 'M007895', label: 'doorvoerwaarde inkomend (aparte maat, geen invoer)' },
+    ],
+    notes:
+      'LET OP het lopende jaar: 2026JJ00 is een cumulatief deel-jaar ("2026 januari-april") — geen vol jaarcijfer (period semantics + periodelabel zeggen dit). Prijsvragen ("invoerprijzen") horen bij import_prices_yoy (85770NED), niet hier.',
+  },
+  {
+    key: 'goods_exports_value',
+    tableId: '85429NED',
+    measure: 'D001636',
+    measureTitle: 'Totale uitvoerwaarde',
+    dims: {},
+    definitionLabel: 'totale uitvoerwaarde van goederen (mln euro)',
+    everydayTerms: ['uitvoerwaarde', 'goederenuitvoer', 'uitvoer van goederen', 'export van goederen'],
+    alternates: [
+      { measure: 'M001609', label: 'de jaarmutatie in % (eigen key: goods_exports_yoy)' },
+      { measure: 'M001648', label: 'wederuitvoerwaarde (aparte maat)' },
+    ],
+    notes: 'Zelfde tabel/vallen als goods_imports_value (deel-jaar 2026JJ00; methodebreuk bij de mutatiematen).',
+  },
+  {
+    key: 'goods_imports_yoy',
+    tableId: '85429NED',
+    measure: 'M001608',
+    measureTitle: 'Jaarmutatie invoerwaarde',
+    dims: {},
+    definitionLabel: 'jaarmutatie van de invoerwaarde (t.o.v. dezelfde periode een jaar eerder)',
+    everydayTerms: ['jaarmutatie invoer', 'groei van de invoer'],
+    alternates: [{ measure: 'D001607', label: 'de invoerwaarde zelf in mln euro (eigen key: goods_imports_value)' }],
+    notes:
+      'CBS\'s EIGEN mutatiemaat (R5: nooit zelf rekenen). Ontbreekt volledig voor 2015 (geen basisjaar) en 2021 (methodebreuk 2020/2021) — afwezige rijen, eerlijke no_data-weigering (CC21-patroon).',
+  },
+  {
+    key: 'goods_exports_yoy',
+    tableId: '85429NED',
+    measure: 'M001609',
+    measureTitle: 'Jaarmutatie uitvoerwaarde',
+    dims: {},
+    definitionLabel: 'jaarmutatie van de uitvoerwaarde (t.o.v. dezelfde periode een jaar eerder)',
+    everydayTerms: ['jaarmutatie uitvoer', 'groei van de uitvoer'],
+    alternates: [{ measure: 'D001636', label: 'de uitvoerwaarde zelf in mln euro (eigen key: goods_exports_value)' }],
+    notes: 'Zelfde methodebreuk-gaten als goods_imports_yoy (2015 en 2021 afwezig).',
+  },
+  {
+    // Coverage sprint table #7 (85792NED, session-54 vocab batch). RegioS is a
+    // PLAIN dimension here (not GeoDimension) — the national default (NL01,
+    // table default-coordinate) answers with the R7 transparent-default line;
+    // named-region asks on THIS table have no canonical route yet (recorded
+    // design point, staged brief). Gemeente-level price asks belong to
+    // average_home_sale_price_by_gemeente (83625NED, a REAL geo table).
+    key: 'house_price_index_regional',
+    tableId: '85792NED',
+    measure: 'M001505_2',
+    measureTitle: 'Prijsindex verkoopprijzen',
+    dims: {},
+    definitionLabel: 'prijsindex bestaande koopwoningen (2020=100), landelijk',
+    everydayTerms: ['prijsindex koopwoningen', 'huizenprijsindex', 'prijsindex bestaande koopwoningen'],
+    alternates: [
+      { measure: 'M005355', label: 'de jaarmutatie van de index in %' },
+      { measure: 'M001534', label: 'de gemiddelde verkoopprijs in euro (landelijk actueel: key average_existing_home_sale_price)' },
+      { measure: 'M001532_2', label: 'het aantal verkochte woningen' },
+    ],
+    notes:
+      'Cijfers zijn bij publicatie direct definitief (geen revisiecyclus). De kale term "huizenprijs" blijft bij average_existing_home_sale_price (85773NED, maandelijks landelijk) — #165-discipline.',
+  },
+  {
+    // Coverage sprint table #8 (80590ned — LOWERCASE id, session-54 vocab
+    // batch). #165 discipline: the bare term "werkloosheid" STAYS with
+    // unemployment_rate_seasonally_adjusted (85224NED, quarterly) — this key
+    // carries month-flavored terms only.
+    key: 'monthly_unemployment_seasonally_adjusted',
+    tableId: '80590ned',
+    measure: 'M004210',
+    measureTitle: 'Werkloosheidspercentage / Seizoengecorrigeerd',
+    dims: {},
+    // No '(15-75 jaar)' suffix: the quarterly sibling key never names the age
+    // range either (same underlying population), and the suffix measurably
+    // destabilized breakdown follow-ups ("voor jongeren" flipped to
+    // out_of_scope refusal — session-54 record rounds 1/4 vs 3).
+    definitionLabel: 'maandcijfer werkloosheidspercentage, seizoengecorrigeerd',
+    everydayTerms: ['maandwerkloosheid', 'werkloosheid per maand', 'maandelijkse werkloosheid'],
+    alternates: [
+      { measure: 'M001906_2', label: 'niet-seizoengecorrigeerd (heeft wél jaarcijfers)' },
+    ],
+    notes:
+      'De kale term "werkloosheid" hoort bij unemployment_rate_seasonally_adjusted (85224NED, kwartaal — de canonical default), NIET bij deze key. Seizoengecorrigeerde jaarcijfers bestaan per definitie niet: JJ-periodes zijn lege cellen met CBS-reden "Impossible" (R11, CC28).',
+  },
+  {
+    // Coverage sprint table #9 (83625NED, session-54 vocab batch). A REAL
+    // GeoDimension (745 codes: NL01 + 4 LD + 12 PV + 728 GM incl. opgeheven
+    // gemeenten) — regions travel through the intent's regions field, the
+    // population-table way; REGIONAL_KEYS lists this key.
+    key: 'average_home_sale_price_by_gemeente',
+    tableId: '83625NED',
+    measure: 'M001534',
+    measureTitle: 'Gemiddelde verkoopprijs',
+    dims: {},
+    definitionLabel: 'gemiddelde verkoopprijs van bestaande koopwoningen, per gemeente/provincie (jaarcijfer)',
+    everydayTerms: ['huizenprijs per gemeente', 'verkoopprijs per gemeente', 'gemiddelde verkoopprijs per gemeente'],
+    alternates: [
+      { measure: 'M001534', label: 'de landelijke maandactuele lezing: key average_existing_home_sale_price (85773NED)' },
+    ],
+    notes:
+      'Jaarcijfers 1995-2025, alle Definitief; opgeheven gemeenten houden lege cellen met reden "Impossible" na hun opheffing (R11). De kale term "huizenprijs" blijft bij average_existing_home_sale_price (85773NED) — deze key is de per-gemeente/regionale lezing (#160(b)).',
   },
 ];

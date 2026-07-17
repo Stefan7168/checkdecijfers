@@ -1,11 +1,11 @@
 {
-  "generatedAt": "2026-07-17T09:39:16.569Z",
+  "generatedAt": "2026-07-17T19:14:27.388Z",
   "mode": "live",
   "repeat": 3,
   "referenceDate": "2026-08-15",
   "totals": {
-    "pass": 62,
-    "total": 63
+    "pass": 72,
+    "total": 72
   },
   "perCategory": [
     {
@@ -15,8 +15,8 @@
     },
     {
       "category": "variant",
-      "pass": 11,
-      "total": 11
+      "pass": 20,
+      "total": 20
     },
     {
       "category": "benchmark_clarify",
@@ -40,7 +40,7 @@
     },
     {
       "category": "refusal",
-      "pass": 4,
+      "pass": 5,
       "total": 5
     },
     {
@@ -61,7 +61,7 @@
   ],
   "calibration": {
     "correctIntentConfidence": {
-      "count": 41,
+      "count": 50,
       "min": 0.92,
       "median": 0.95
     },
@@ -72,25 +72,11 @@
     "ambiguousAnsweredInsteadOfClarified": []
   },
   "usage": {
-    "inputTokens": 1448031,
-    "outputTokens": 21636
+    "inputTokens": 2069871,
+    "outputTokens": 25017
   },
-  "unstable": [
-    "r-autos: outcome kinds across runs: refusal, clarification"
-  ],
-  "failures": [
-    {
-      "id": "r-autos",
-      "category": "refusal",
-      "question": "Hoeveel auto's zijn er in Nederland?",
-      "outcomeKind": "refusal",
-      "topRawConfidence": null,
-      "pass": false,
-      "problems": [
-        "expected outcome \"clarification\", got \"refusal\" (out_of_scope)"
-      ]
-    }
-  ],
+  "unstable": [],
+  "failures": [],
   "history": [
     {
       "generatedAt": "2026-07-04T03:34:49.700Z",
@@ -938,6 +924,639 @@
       "usage": {
         "inputTokens": 1448031,
         "outputTokens": 21636
+      }
+    },
+    {
+      "generatedAt": "2026-07-17T17:35:32.588Z",
+      "mode": "record",
+      "repeat": 1,
+      "referenceDate": "2026-08-15",
+      "totals": {
+        "pass": 65,
+        "total": 72
+      },
+      "perCategory": [
+        {
+          "category": "benchmark_answerable",
+          "pass": 14,
+          "total": 14
+        },
+        {
+          "category": "variant",
+          "pass": 15,
+          "total": 20
+        },
+        {
+          "category": "benchmark_clarify",
+          "pass": 2,
+          "total": 2
+        },
+        {
+          "category": "benchmark_refusal",
+          "pass": 3,
+          "total": 3
+        },
+        {
+          "category": "benchmark_freshness",
+          "pass": 1,
+          "total": 1
+        },
+        {
+          "category": "ambiguous",
+          "pass": 9,
+          "total": 9
+        },
+        {
+          "category": "refusal",
+          "pass": 4,
+          "total": 5
+        },
+        {
+          "category": "smalltalk",
+          "pass": 1,
+          "total": 1
+        },
+        {
+          "category": "open_range",
+          "pass": 8,
+          "total": 8
+        },
+        {
+          "category": "date_range",
+          "pass": 8,
+          "total": 9
+        }
+      ],
+      "calibration": {
+        "correctIntentConfidence": {
+          "count": 44,
+          "min": 0.92,
+          "median": 0.95
+        },
+        "wrongIntentConfidence": {
+          "count": 2,
+          "values": [
+            {
+              "id": "dr-kw-only-kwartaalgrenzen",
+              "confidence": 0.92
+            },
+            {
+              "id": "cs-omzet-detailhandel-mei",
+              "confidence": 0.92
+            }
+          ]
+        },
+        "ambiguousAnsweredInsteadOfClarified": []
+      },
+      "usage": {
+        "inputTokens": 675713,
+        "outputTokens": 8335
+      }
+    },
+    {
+      "generatedAt": "2026-07-17T17:44:09.321Z",
+      "mode": "record",
+      "repeat": 1,
+      "referenceDate": "2026-08-15",
+      "totals": {
+        "pass": 71,
+        "total": 72
+      },
+      "perCategory": [
+        {
+          "category": "benchmark_answerable",
+          "pass": 14,
+          "total": 14
+        },
+        {
+          "category": "variant",
+          "pass": 20,
+          "total": 20
+        },
+        {
+          "category": "benchmark_clarify",
+          "pass": 2,
+          "total": 2
+        },
+        {
+          "category": "benchmark_refusal",
+          "pass": 3,
+          "total": 3
+        },
+        {
+          "category": "benchmark_freshness",
+          "pass": 1,
+          "total": 1
+        },
+        {
+          "category": "ambiguous",
+          "pass": 9,
+          "total": 9
+        },
+        {
+          "category": "refusal",
+          "pass": 4,
+          "total": 5
+        },
+        {
+          "category": "smalltalk",
+          "pass": 1,
+          "total": 1
+        },
+        {
+          "category": "open_range",
+          "pass": 8,
+          "total": 8
+        },
+        {
+          "category": "date_range",
+          "pass": 9,
+          "total": 9
+        }
+      ],
+      "calibration": {
+        "correctIntentConfidence": {
+          "count": 50,
+          "min": 0.92,
+          "median": 0.95
+        },
+        "wrongIntentConfidence": {
+          "count": 0,
+          "values": []
+        },
+        "ambiguousAnsweredInsteadOfClarified": []
+      },
+      "usage": {
+        "inputTokens": 675701,
+        "outputTokens": 8422
+      }
+    },
+    {
+      "generatedAt": "2026-07-17T17:56:34.278Z",
+      "mode": "record",
+      "repeat": 1,
+      "referenceDate": "2026-08-15",
+      "totals": {
+        "pass": 71,
+        "total": 72
+      },
+      "perCategory": [
+        {
+          "category": "benchmark_answerable",
+          "pass": 14,
+          "total": 14
+        },
+        {
+          "category": "variant",
+          "pass": 20,
+          "total": 20
+        },
+        {
+          "category": "benchmark_clarify",
+          "pass": 2,
+          "total": 2
+        },
+        {
+          "category": "benchmark_refusal",
+          "pass": 3,
+          "total": 3
+        },
+        {
+          "category": "benchmark_freshness",
+          "pass": 1,
+          "total": 1
+        },
+        {
+          "category": "ambiguous",
+          "pass": 9,
+          "total": 9
+        },
+        {
+          "category": "refusal",
+          "pass": 4,
+          "total": 5
+        },
+        {
+          "category": "smalltalk",
+          "pass": 1,
+          "total": 1
+        },
+        {
+          "category": "open_range",
+          "pass": 8,
+          "total": 8
+        },
+        {
+          "category": "date_range",
+          "pass": 9,
+          "total": 9
+        }
+      ],
+      "calibration": {
+        "correctIntentConfidence": {
+          "count": 50,
+          "min": 0.92,
+          "median": 0.95
+        },
+        "wrongIntentConfidence": {
+          "count": 0,
+          "values": []
+        },
+        "ambiguousAnsweredInsteadOfClarified": []
+      },
+      "usage": {
+        "inputTokens": 676133,
+        "outputTokens": 8396
+      }
+    },
+    {
+      "generatedAt": "2026-07-17T18:10:44.102Z",
+      "mode": "live",
+      "repeat": 3,
+      "referenceDate": "2026-08-15",
+      "totals": {
+        "pass": 71,
+        "total": 72
+      },
+      "perCategory": [
+        {
+          "category": "benchmark_answerable",
+          "pass": 14,
+          "total": 14
+        },
+        {
+          "category": "variant",
+          "pass": 20,
+          "total": 20
+        },
+        {
+          "category": "benchmark_clarify",
+          "pass": 2,
+          "total": 2
+        },
+        {
+          "category": "benchmark_refusal",
+          "pass": 3,
+          "total": 3
+        },
+        {
+          "category": "benchmark_freshness",
+          "pass": 1,
+          "total": 1
+        },
+        {
+          "category": "ambiguous",
+          "pass": 9,
+          "total": 9
+        },
+        {
+          "category": "refusal",
+          "pass": 4,
+          "total": 5
+        },
+        {
+          "category": "smalltalk",
+          "pass": 1,
+          "total": 1
+        },
+        {
+          "category": "open_range",
+          "pass": 8,
+          "total": 8
+        },
+        {
+          "category": "date_range",
+          "pass": 9,
+          "total": 9
+        }
+      ],
+      "calibration": {
+        "correctIntentConfidence": {
+          "count": 50,
+          "min": 0.92,
+          "median": 0.95
+        },
+        "wrongIntentConfidence": {
+          "count": 0,
+          "values": []
+        },
+        "ambiguousAnsweredInsteadOfClarified": []
+      },
+      "usage": {
+        "inputTokens": 2028399,
+        "outputTokens": 25521
+      }
+    },
+    {
+      "generatedAt": "2026-07-17T18:17:43.530Z",
+      "mode": "record",
+      "repeat": 1,
+      "referenceDate": "2026-08-15",
+      "totals": {
+        "pass": 71,
+        "total": 72
+      },
+      "perCategory": [
+        {
+          "category": "benchmark_answerable",
+          "pass": 14,
+          "total": 14
+        },
+        {
+          "category": "variant",
+          "pass": 20,
+          "total": 20
+        },
+        {
+          "category": "benchmark_clarify",
+          "pass": 2,
+          "total": 2
+        },
+        {
+          "category": "benchmark_refusal",
+          "pass": 3,
+          "total": 3
+        },
+        {
+          "category": "benchmark_freshness",
+          "pass": 1,
+          "total": 1
+        },
+        {
+          "category": "ambiguous",
+          "pass": 9,
+          "total": 9
+        },
+        {
+          "category": "refusal",
+          "pass": 4,
+          "total": 5
+        },
+        {
+          "category": "smalltalk",
+          "pass": 1,
+          "total": 1
+        },
+        {
+          "category": "open_range",
+          "pass": 8,
+          "total": 8
+        },
+        {
+          "category": "date_range",
+          "pass": 9,
+          "total": 9
+        }
+      ],
+      "calibration": {
+        "correctIntentConfidence": {
+          "count": 50,
+          "min": 0.92,
+          "median": 0.95
+        },
+        "wrongIntentConfidence": {
+          "count": 0,
+          "values": []
+        },
+        "ambiguousAnsweredInsteadOfClarified": []
+      },
+      "usage": {
+        "inputTokens": 688661,
+        "outputTokens": 8291
+      }
+    },
+    {
+      "generatedAt": "2026-07-17T18:54:12.622Z",
+      "mode": "record",
+      "repeat": 1,
+      "referenceDate": "2026-08-15",
+      "totals": {
+        "pass": 71,
+        "total": 72
+      },
+      "perCategory": [
+        {
+          "category": "benchmark_answerable",
+          "pass": 13,
+          "total": 14
+        },
+        {
+          "category": "variant",
+          "pass": 20,
+          "total": 20
+        },
+        {
+          "category": "benchmark_clarify",
+          "pass": 2,
+          "total": 2
+        },
+        {
+          "category": "benchmark_refusal",
+          "pass": 3,
+          "total": 3
+        },
+        {
+          "category": "benchmark_freshness",
+          "pass": 1,
+          "total": 1
+        },
+        {
+          "category": "ambiguous",
+          "pass": 9,
+          "total": 9
+        },
+        {
+          "category": "refusal",
+          "pass": 5,
+          "total": 5
+        },
+        {
+          "category": "smalltalk",
+          "pass": 1,
+          "total": 1
+        },
+        {
+          "category": "open_range",
+          "pass": 8,
+          "total": 8
+        },
+        {
+          "category": "date_range",
+          "pass": 9,
+          "total": 9
+        }
+      ],
+      "calibration": {
+        "correctIntentConfidence": {
+          "count": 49,
+          "min": 0.92,
+          "median": 0.95
+        },
+        "wrongIntentConfidence": {
+          "count": 0,
+          "values": []
+        },
+        "ambiguousAnsweredInsteadOfClarified": []
+      },
+      "usage": {
+        "inputTokens": 688157,
+        "outputTokens": 8267
+      }
+    },
+    {
+      "generatedAt": "2026-07-17T19:04:26.541Z",
+      "mode": "record",
+      "repeat": 1,
+      "referenceDate": "2026-08-15",
+      "totals": {
+        "pass": 72,
+        "total": 72
+      },
+      "perCategory": [
+        {
+          "category": "benchmark_answerable",
+          "pass": 14,
+          "total": 14
+        },
+        {
+          "category": "variant",
+          "pass": 20,
+          "total": 20
+        },
+        {
+          "category": "benchmark_clarify",
+          "pass": 2,
+          "total": 2
+        },
+        {
+          "category": "benchmark_refusal",
+          "pass": 3,
+          "total": 3
+        },
+        {
+          "category": "benchmark_freshness",
+          "pass": 1,
+          "total": 1
+        },
+        {
+          "category": "ambiguous",
+          "pass": 9,
+          "total": 9
+        },
+        {
+          "category": "refusal",
+          "pass": 5,
+          "total": 5
+        },
+        {
+          "category": "smalltalk",
+          "pass": 1,
+          "total": 1
+        },
+        {
+          "category": "open_range",
+          "pass": 8,
+          "total": 8
+        },
+        {
+          "category": "date_range",
+          "pass": 9,
+          "total": 9
+        }
+      ],
+      "calibration": {
+        "correctIntentConfidence": {
+          "count": 50,
+          "min": 0.92,
+          "median": 0.95
+        },
+        "wrongIntentConfidence": {
+          "count": 0,
+          "values": []
+        },
+        "ambiguousAnsweredInsteadOfClarified": []
+      },
+      "usage": {
+        "inputTokens": 689957,
+        "outputTokens": 8339
+      }
+    },
+    {
+      "generatedAt": "2026-07-17T19:14:27.388Z",
+      "mode": "live",
+      "repeat": 3,
+      "referenceDate": "2026-08-15",
+      "totals": {
+        "pass": 72,
+        "total": 72
+      },
+      "perCategory": [
+        {
+          "category": "benchmark_answerable",
+          "pass": 14,
+          "total": 14
+        },
+        {
+          "category": "variant",
+          "pass": 20,
+          "total": 20
+        },
+        {
+          "category": "benchmark_clarify",
+          "pass": 2,
+          "total": 2
+        },
+        {
+          "category": "benchmark_refusal",
+          "pass": 3,
+          "total": 3
+        },
+        {
+          "category": "benchmark_freshness",
+          "pass": 1,
+          "total": 1
+        },
+        {
+          "category": "ambiguous",
+          "pass": 9,
+          "total": 9
+        },
+        {
+          "category": "refusal",
+          "pass": 5,
+          "total": 5
+        },
+        {
+          "category": "smalltalk",
+          "pass": 1,
+          "total": 1
+        },
+        {
+          "category": "open_range",
+          "pass": 8,
+          "total": 8
+        },
+        {
+          "category": "date_range",
+          "pass": 9,
+          "total": 9
+        }
+      ],
+      "calibration": {
+        "correctIntentConfidence": {
+          "count": 50,
+          "min": 0.92,
+          "median": 0.95
+        },
+        "wrongIntentConfidence": {
+          "count": 0,
+          "values": []
+        },
+        "ambiguousAnsweredInsteadOfClarified": []
+      },
+      "usage": {
+        "inputTokens": 2069871,
+        "outputTokens": 25017
       }
     }
   ]

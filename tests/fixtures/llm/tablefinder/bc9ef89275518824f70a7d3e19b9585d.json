@@ -2,7 +2,7 @@
   "requestHash": "bc9ef89275518824f70a7d3e19b9585d",
   "question": "Volledige vraag van de gebruiker: \"inflatie\"\nOnderwerp van de gebruiker: \"inflatie\"\n\nKandidaat-tabellen:\n1. id=71099ned | status=Gediscontinueerd | type=Numeric\n   titel: Consumentenprijzen; inflatie Europa 2005 = 100 (HICP), 1996 - 2015\n   omschrijving: Deze tabel bevat de Europees geharmoniseerde consumentenprijsindex (HICP) voor Nederland, de EU en de Eurozone. Deze prijsindex geeft het prijsverloop weer van een pakket goederen en diensten dat een gemiddeld huishouden in een EU-land aans…\n2. id=70801NED | status=Gediscontinueerd | type=Numeric\n   titel: Consumentenprijzen; onderliggende inflatie 2000 = 100\n   omschrijving: Het CBS stelt een vijftal \"onderliggende\" reeksen consumentenprijsindices samen. Deze reeksen worden samengesteld uitgaande van de gewone of de afgeleide CPI voor alle huishoudens. Daarbij worden wisselend enkele artikelgroepen verwijderd d…\n3. id=71313ned | status=Gediscontinueerd | type=Numeric\n   titel: Consumentenprijzen; onderliggende inflatie 2006=100, 2006 – 2015\n   omschrijving: Deze tabel bevat de zogenaamde onderliggende reeksen. De onderliggende reeksen zijn gelijk aan de consumentenprijsindex (CPI) of afgeleide CPI exclusief de invloed van enkele productgroepen die sterk in prijs fluctueren of grotendeels door …\n4. id=86141NED | status=Regulier | type=Numeric\n   titel: Consumentenprijzen; CPI 2025=100, index en mutaties\n   omschrijving: In deze tabel staan cijfers van de consumentenprijsindex (CPI). De CPI meet de prijsverandering van goederen en diensten die Nederlandse huishoudens voor de eigen consumptie aanschaffen. De tabel geeft informatie over indexcijfers, maandmut…",
   "label": null,
-  "recordedAt": "2026-07-08T09:24:56.560Z",
+  "recordedAt": "2026-07-17T19:25:01.187Z",
   "request": {
     "model": "claude-haiku-4-5",
     "maxTokens": 1024,
@@ -44,12 +44,12 @@
     }
   },
   "response": {
-    "outputText": "{\"version\": 1, \"tableId\": \"86141NED\", \"confidence\": 0.85, \"reading\": \"Dit is de actuele CPI-tabel (status Regulier) die de huidige inflatie meet via prijsveranderingen van goederen en diensten voor Nederlandse huishoudens.\", \"alternativeIds\": [\"71099ned\", \"70801NED\"]}",
+    "outputText": "{\"version\": 1, \"tableId\": \"86141NED\", \"confidence\": 0.85, \"reading\": \"Dit is de actuele CPI-tabel met huidige inflatiecijfers en mutaties, het meest directe antwoord op een algemene inflatievraag.\", \"alternativeIds\": [\"71099ned\", \"70801NED\"]}",
     "model": "claude-haiku-4-5-20251001",
     "stopReason": "end_turn",
     "usage": {
       "inputTokens": 1647,
-      "outputTokens": 92
+      "outputTokens": 88
     }
   }
 }

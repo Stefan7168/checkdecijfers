@@ -91,31 +91,22 @@ const INTENTS: Record<string, StructuredIntent> = {
     period: { kind: 'codes', codes: ['2026MM05'] },
     derivation: 'none',
   },
-  // Tables #4-#9 (session-53 prep, 2026-07-17): EXPLICIT targets, the same
-  // #164 batch discipline as the session-49 overnight prep for table #3 —
-  // canonical vocabulary for all six tables lands in ONE staged vocab batch
-  // (owner-present re-record; see the staged-vocab session brief). Re-point at
-  // canonical keys when that batch lands; the frozen values stay the same.
+  // Tables #4-#9 (session-53 prep, 2026-07-17): frozen with EXPLICIT targets;
+  // RE-POINTED at the canonical keys in the session-54 vocab batch (#164 — one
+  // vocab change + one fixture re-record; frozen values unchanged). CC13/CC15/
+  // CC23/CC24/CC26 deliberately STAY explicit: they pin measures/coordinates
+  // that are alternates, not canonical keys (index level, non-default
+  // category, city/province on the plain-dimension table, unadjusted twin).
   // Table #4 (85828NED omzet detailhandel).
   CC11: {
     schemaVersion: 1,
-    target: {
-      kind: 'explicit',
-      tableId: '85828NED',
-      measure: 'A042501_2',
-      dims: { BedrijfstakkenBranchesSBI2008: '371600' },
-    },
+    target: { kind: 'canonical', key: 'retail_turnover_yoy' },
     period: { kind: 'codes', codes: ['2026MM05'] },
     derivation: 'none',
   },
   CC12: {
     schemaVersion: 1,
-    target: {
-      kind: 'explicit',
-      tableId: '85828NED',
-      measure: 'A042501_2',
-      dims: { BedrijfstakkenBranchesSBI2008: '371700' },
-    },
+    target: { kind: 'canonical', key: 'supermarket_turnover_yoy' },
     period: { kind: 'codes', codes: ['2026MM05'] },
     derivation: 'none',
   },
@@ -133,12 +124,7 @@ const INTENTS: Record<string, StructuredIntent> = {
   // Table #5 (85937NED consumptie huishoudens).
   CC14: {
     schemaVersion: 1,
-    target: {
-      kind: 'explicit',
-      tableId: '85937NED',
-      measure: 'M005269',
-      dims: { ConsumptieveBestedingen: 'A047812' },
-    },
+    target: { kind: 'canonical', key: 'household_consumption_growth' },
     period: { kind: 'codes', codes: ['2025MM12'] },
     derivation: 'none',
   },
@@ -155,68 +141,39 @@ const INTENTS: Record<string, StructuredIntent> = {
   },
   CC16: {
     schemaVersion: 1,
-    target: {
-      kind: 'explicit',
-      tableId: '85937NED',
-      measure: 'M005269',
-      dims: { ConsumptieveBestedingen: 'A047812' },
-    },
+    target: { kind: 'canonical', key: 'household_consumption_growth' },
     period: { kind: 'codes', codes: ['2026MM05'] },
     derivation: 'none',
   },
   CC17: {
     schemaVersion: 1,
-    target: {
-      kind: 'explicit',
-      tableId: '85937NED',
-      measure: 'M005269',
-      dims: { ConsumptieveBestedingen: 'A047812' },
-    },
+    target: { kind: 'canonical', key: 'household_consumption_growth' },
     period: { kind: 'codes', codes: ['2020MM04'] },
     derivation: 'none',
   },
-  // Table #6 (85429NED internationale goederenhandel, totals slice).
+  // Table #6 (85429NED internationale goederenhandel — the totals slice is
+  // pinned by the table's default coordinates, so canonical dims stay {}).
   CC18: {
     schemaVersion: 1,
-    target: {
-      kind: 'explicit',
-      tableId: '85429NED',
-      measure: 'D001607',
-      dims: { Landen: 'T001047', SITC: 'T001082' },
-    },
+    target: { kind: 'canonical', key: 'goods_imports_value' },
     period: { kind: 'codes', codes: ['2026MM04'] },
     derivation: 'none',
   },
   CC19: {
     schemaVersion: 1,
-    target: {
-      kind: 'explicit',
-      tableId: '85429NED',
-      measure: 'M001608',
-      dims: { Landen: 'T001047', SITC: 'T001082' },
-    },
+    target: { kind: 'canonical', key: 'goods_imports_yoy' },
     period: { kind: 'codes', codes: ['2026MM04'] },
     derivation: 'none',
   },
   CC20: {
     schemaVersion: 1,
-    target: {
-      kind: 'explicit',
-      tableId: '85429NED',
-      measure: 'D001607',
-      dims: { Landen: 'T001047', SITC: 'T001082' },
-    },
+    target: { kind: 'canonical', key: 'goods_imports_value' },
     period: { kind: 'codes', codes: ['2015MM01'] },
     derivation: 'none',
   },
   CC21: {
     schemaVersion: 1,
-    target: {
-      kind: 'explicit',
-      tableId: '85429NED',
-      measure: 'M001609',
-      dims: { Landen: 'T001047', SITC: 'T001082' },
-    },
+    target: { kind: 'canonical', key: 'goods_exports_yoy' },
     period: { kind: 'codes', codes: ['2021JJ00'] },
     derivation: 'none',
   },
@@ -224,12 +181,7 @@ const INTENTS: Record<string, StructuredIntent> = {
   // GeoDimension; regions go through dims, never the regions field).
   CC22: {
     schemaVersion: 1,
-    target: {
-      kind: 'explicit',
-      tableId: '85792NED',
-      measure: 'M001505_2',
-      dims: { RegioS: 'NL01' },
-    },
+    target: { kind: 'canonical', key: 'house_price_index_regional' },
     period: { kind: 'codes', codes: ['2026KW01'] },
     derivation: 'none',
   },
@@ -255,15 +207,11 @@ const INTENTS: Record<string, StructuredIntent> = {
     period: { kind: 'codes', codes: ['2020JJ00'] },
     derivation: 'none',
   },
-  // Table #8 (80590ned werkloosheid per maand — lowercase id, totals slice).
+  // Table #8 (80590ned werkloosheid per maand — lowercase id; the totals
+  // slice is pinned by the table defaults, canonical dims stay {}).
   CC25: {
     schemaVersion: 1,
-    target: {
-      kind: 'explicit',
-      tableId: '80590ned',
-      measure: 'M004210',
-      dims: { Geslacht: 'T001038', Leeftijd: '52052' },
-    },
+    target: { kind: 'canonical', key: 'monthly_unemployment_seasonally_adjusted' },
     period: { kind: 'codes', codes: ['2026MM06'] },
     derivation: 'none',
   },
@@ -280,23 +228,13 @@ const INTENTS: Record<string, StructuredIntent> = {
   },
   CC27: {
     schemaVersion: 1,
-    target: {
-      kind: 'explicit',
-      tableId: '80590ned',
-      measure: 'M004210',
-      dims: { Geslacht: 'T001038', Leeftijd: '52052' },
-    },
+    target: { kind: 'canonical', key: 'monthly_unemployment_seasonally_adjusted' },
     period: { kind: 'codes', codes: ['2014MM02'] },
     derivation: 'none',
   },
   CC28: {
     schemaVersion: 1,
-    target: {
-      kind: 'explicit',
-      tableId: '80590ned',
-      measure: 'M004210',
-      dims: { Geslacht: 'T001038', Leeftijd: '52052' },
-    },
+    target: { kind: 'canonical', key: 'monthly_unemployment_seasonally_adjusted' },
     period: { kind: 'codes', codes: ['2025JJ00'] },
     derivation: 'none',
   },
@@ -304,21 +242,21 @@ const INTENTS: Record<string, StructuredIntent> = {
   // here: regions travel through the intent's regions field, the 03759ned way).
   CC29: {
     schemaVersion: 1,
-    target: { kind: 'explicit', tableId: '83625NED', measure: 'M001534' },
+    target: { kind: 'canonical', key: 'average_home_sale_price_by_gemeente' },
     regions: ['NL01'],
     period: { kind: 'codes', codes: ['2025JJ00'] },
     derivation: 'none',
   },
   CC30: {
     schemaVersion: 1,
-    target: { kind: 'explicit', tableId: '83625NED', measure: 'M001534' },
+    target: { kind: 'canonical', key: 'average_home_sale_price_by_gemeente' },
     regions: ['GM0363'],
     period: { kind: 'codes', codes: ['2025JJ00'] },
     derivation: 'none',
   },
   CC31: {
     schemaVersion: 1,
-    target: { kind: 'explicit', tableId: '83625NED', measure: 'M001534' },
+    target: { kind: 'canonical', key: 'average_home_sale_price_by_gemeente' },
     regions: ['GM0363'],
     period: { kind: 'codes', codes: ['2015JJ00'] },
     derivation: 'none',

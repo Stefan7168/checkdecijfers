@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-07-08T09:26:07.559Z",
-  "mode": "live",
+  "generatedAt": "2026-07-17T19:25:21.374Z",
+  "mode": "record",
   "totals": {
     "pass": 11,
     "total": 11
@@ -25,8 +25,8 @@
     {
       "id": "werkloosheid",
       "kind": "confident",
-      "pick": "85224NED",
-      "confidence": 0.85,
+      "pick": "80590ned",
+      "confidence": 0.92,
       "pass": true,
       "problems": []
     },
@@ -82,7 +82,7 @@
       "id": "bijstand-flow",
       "kind": "confident",
       "pick": "85615NED",
-      "confidence": 0.85,
+      "confidence": 0.92,
       "pass": true,
       "problems": []
     },
@@ -837,6 +837,954 @@
           "kind": "confident",
           "pick": "85615NED",
           "confidence": 0.85,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "inkomen-vaag",
+          "kind": "disclose",
+          "pick": null,
+          "confidence": null,
+          "pass": true,
+          "problems": []
+        }
+      ]
+    },
+    {
+      "generatedAt": "2026-07-17T19:15:14.936Z",
+      "mode": "live",
+      "totals": {
+        "pass": 9,
+        "total": 11
+      },
+      "results": [
+        {
+          "id": "huizenprijzen",
+          "kind": "confident",
+          "pick": "85773NED",
+          "confidence": 0.85,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "inflatie",
+          "kind": "confident",
+          "pick": "86141NED",
+          "confidence": 0.85,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "werkloosheid",
+          "kind": "confident",
+          "pick": "80590ned",
+          "confidence": 0.92,
+          "pass": false,
+          "problems": [
+            "expected pick 85224NED, got 80590ned (conf 0.92)"
+          ]
+        },
+        {
+          "id": "faillissementen",
+          "kind": "confident",
+          "pick": "82242NED",
+          "confidence": 0.95,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "zonnepanelen",
+          "kind": "confident",
+          "pick": "85004NED",
+          "confidence": 0.85,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "bevolking",
+          "kind": "confident",
+          "pick": "03759ned",
+          "confidence": 0.95,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "woningvoorraad",
+          "kind": "confident",
+          "pick": "82235NED",
+          "confidence": 0.95,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "onbekend",
+          "kind": "none",
+          "pick": null,
+          "confidence": null,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "bijstand-stock",
+          "kind": "confident",
+          "pick": "85585NED",
+          "confidence": 0.85,
+          "pass": false,
+          "problems": [
+            "expected 37789ksz in the candidate chain (cap 3), got [85585NED, 82015NED, 85692NED]"
+          ]
+        },
+        {
+          "id": "bijstand-flow",
+          "kind": "confident",
+          "pick": "85615NED",
+          "confidence": 0.92,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "inkomen-vaag",
+          "kind": "disclose",
+          "pick": null,
+          "confidence": null,
+          "pass": true,
+          "problems": []
+        }
+      ]
+    },
+    {
+      "generatedAt": "2026-07-17T19:15:49.384Z",
+      "mode": "record",
+      "totals": {
+        "pass": 9,
+        "total": 11
+      },
+      "results": [
+        {
+          "id": "huizenprijzen",
+          "kind": "confident",
+          "pick": "85773NED",
+          "confidence": 0.85,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "inflatie",
+          "kind": "confident",
+          "pick": "86141NED",
+          "confidence": 0.85,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "werkloosheid",
+          "kind": "confident",
+          "pick": "80590ned",
+          "confidence": 0.92,
+          "pass": false,
+          "problems": [
+            "expected pick 85224NED, got 80590ned (conf 0.92)"
+          ]
+        },
+        {
+          "id": "faillissementen",
+          "kind": "confident",
+          "pick": "82242NED",
+          "confidence": 0.95,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "zonnepanelen",
+          "kind": "confident",
+          "pick": "85004NED",
+          "confidence": 0.85,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "bevolking",
+          "kind": "confident",
+          "pick": "03759ned",
+          "confidence": 0.95,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "woningvoorraad",
+          "kind": "confident",
+          "pick": "82235NED",
+          "confidence": 0.95,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "onbekend",
+          "kind": "none",
+          "pick": null,
+          "confidence": null,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "bijstand-stock",
+          "kind": "confident",
+          "pick": "85585NED",
+          "confidence": 0.85,
+          "pass": false,
+          "problems": [
+            "expected 37789ksz in the candidate chain (cap 3), got [85585NED, 82015NED, 85692NED]"
+          ]
+        },
+        {
+          "id": "bijstand-flow",
+          "kind": "confident",
+          "pick": "85615NED",
+          "confidence": 0.92,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "inkomen-vaag",
+          "kind": "disclose",
+          "pick": null,
+          "confidence": null,
+          "pass": true,
+          "problems": []
+        }
+      ]
+    },
+    {
+      "generatedAt": "2026-07-17T19:16:52.572Z",
+      "mode": "record",
+      "totals": {
+        "pass": 9,
+        "total": 11
+      },
+      "results": [
+        {
+          "id": "huizenprijzen",
+          "kind": "confident",
+          "pick": "85773NED",
+          "confidence": 0.85,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "inflatie",
+          "kind": "confident",
+          "pick": "86141NED",
+          "confidence": 0.85,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "werkloosheid",
+          "kind": "confident",
+          "pick": "80590ned",
+          "confidence": 0.92,
+          "pass": false,
+          "problems": [
+            "expected pick 85224NED, got 80590ned (conf 0.92)"
+          ]
+        },
+        {
+          "id": "faillissementen",
+          "kind": "confident",
+          "pick": "82242NED",
+          "confidence": 0.95,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "zonnepanelen",
+          "kind": "confident",
+          "pick": "85004NED",
+          "confidence": 0.85,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "bevolking",
+          "kind": "confident",
+          "pick": "03759ned",
+          "confidence": 0.95,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "woningvoorraad",
+          "kind": "confident",
+          "pick": "82235NED",
+          "confidence": 0.95,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "onbekend",
+          "kind": "none",
+          "pick": null,
+          "confidence": null,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "bijstand-stock",
+          "kind": "confident",
+          "pick": "85585NED",
+          "confidence": 0.85,
+          "pass": false,
+          "problems": [
+            "expected 37789ksz in the candidate chain (cap 3), got [85585NED, 82015NED, 85692NED]"
+          ]
+        },
+        {
+          "id": "bijstand-flow",
+          "kind": "confident",
+          "pick": "85615NED",
+          "confidence": 0.92,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "inkomen-vaag",
+          "kind": "disclose",
+          "pick": null,
+          "confidence": null,
+          "pass": true,
+          "problems": []
+        }
+      ]
+    },
+    {
+      "generatedAt": "2026-07-17T19:17:18.359Z",
+      "mode": "record",
+      "totals": {
+        "pass": 9,
+        "total": 11
+      },
+      "results": [
+        {
+          "id": "huizenprijzen",
+          "kind": "confident",
+          "pick": "85773NED",
+          "confidence": 0.85,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "inflatie",
+          "kind": "confident",
+          "pick": "86141NED",
+          "confidence": 0.85,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "werkloosheid",
+          "kind": "confident",
+          "pick": "80590ned",
+          "confidence": 0.92,
+          "pass": false,
+          "problems": [
+            "expected pick 85224NED, got 80590ned (conf 0.92)"
+          ]
+        },
+        {
+          "id": "faillissementen",
+          "kind": "confident",
+          "pick": "82242NED",
+          "confidence": 0.95,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "zonnepanelen",
+          "kind": "confident",
+          "pick": "85004NED",
+          "confidence": 0.85,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "bevolking",
+          "kind": "confident",
+          "pick": "03759ned",
+          "confidence": 0.95,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "woningvoorraad",
+          "kind": "confident",
+          "pick": "82235NED",
+          "confidence": 0.95,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "onbekend",
+          "kind": "none",
+          "pick": null,
+          "confidence": null,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "bijstand-stock",
+          "kind": "confident",
+          "pick": "85585NED",
+          "confidence": 0.85,
+          "pass": false,
+          "problems": [
+            "expected 37789ksz in the candidate chain (cap 3), got [85585NED, 82015NED, 85692NED]"
+          ]
+        },
+        {
+          "id": "bijstand-flow",
+          "kind": "confident",
+          "pick": "85615NED",
+          "confidence": 0.92,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "inkomen-vaag",
+          "kind": "disclose",
+          "pick": null,
+          "confidence": null,
+          "pass": true,
+          "problems": []
+        }
+      ]
+    },
+    {
+      "generatedAt": "2026-07-17T19:17:51.050Z",
+      "mode": "record",
+      "totals": {
+        "pass": 9,
+        "total": 11
+      },
+      "results": [
+        {
+          "id": "huizenprijzen",
+          "kind": "confident",
+          "pick": "85773NED",
+          "confidence": 0.85,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "inflatie",
+          "kind": "confident",
+          "pick": "86141NED",
+          "confidence": 0.85,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "werkloosheid",
+          "kind": "confident",
+          "pick": "80590ned",
+          "confidence": 0.92,
+          "pass": false,
+          "problems": [
+            "expected pick 85224NED, got 80590ned (conf 0.92)"
+          ]
+        },
+        {
+          "id": "faillissementen",
+          "kind": "confident",
+          "pick": "82242NED",
+          "confidence": 0.95,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "zonnepanelen",
+          "kind": "confident",
+          "pick": "85004NED",
+          "confidence": 0.85,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "bevolking",
+          "kind": "confident",
+          "pick": "03759ned",
+          "confidence": 0.95,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "woningvoorraad",
+          "kind": "confident",
+          "pick": "82235NED",
+          "confidence": 0.95,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "onbekend",
+          "kind": "none",
+          "pick": null,
+          "confidence": null,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "bijstand-stock",
+          "kind": "confident",
+          "pick": "85585NED",
+          "confidence": 0.85,
+          "pass": false,
+          "problems": [
+            "expected 37789ksz in the candidate chain (cap 3), got [85585NED, 82015NED, 85692NED]"
+          ]
+        },
+        {
+          "id": "bijstand-flow",
+          "kind": "confident",
+          "pick": "85615NED",
+          "confidence": 0.92,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "inkomen-vaag",
+          "kind": "disclose",
+          "pick": null,
+          "confidence": null,
+          "pass": true,
+          "problems": []
+        }
+      ]
+    },
+    {
+      "generatedAt": "2026-07-17T19:19:48.767Z",
+      "mode": "record",
+      "totals": {
+        "pass": 2,
+        "total": 11
+      },
+      "results": [
+        {
+          "id": "huizenprijzen",
+          "kind": "disclose",
+          "pick": null,
+          "confidence": null,
+          "pass": false,
+          "problems": [
+            "expected kind confident, got disclose"
+          ]
+        },
+        {
+          "id": "inflatie",
+          "kind": "disclose",
+          "pick": null,
+          "confidence": null,
+          "pass": false,
+          "problems": [
+            "expected kind confident, got disclose"
+          ]
+        },
+        {
+          "id": "werkloosheid",
+          "kind": "disclose",
+          "pick": null,
+          "confidence": null,
+          "pass": false,
+          "problems": [
+            "expected kind confident, got disclose"
+          ]
+        },
+        {
+          "id": "faillissementen",
+          "kind": "disclose",
+          "pick": null,
+          "confidence": null,
+          "pass": false,
+          "problems": [
+            "expected kind confident, got disclose"
+          ]
+        },
+        {
+          "id": "zonnepanelen",
+          "kind": "disclose",
+          "pick": null,
+          "confidence": null,
+          "pass": false,
+          "problems": [
+            "expected kind confident, got disclose"
+          ]
+        },
+        {
+          "id": "bevolking",
+          "kind": "disclose",
+          "pick": null,
+          "confidence": null,
+          "pass": false,
+          "problems": [
+            "expected kind confident, got disclose"
+          ]
+        },
+        {
+          "id": "woningvoorraad",
+          "kind": "disclose",
+          "pick": null,
+          "confidence": null,
+          "pass": false,
+          "problems": [
+            "expected kind confident, got disclose"
+          ]
+        },
+        {
+          "id": "onbekend",
+          "kind": "none",
+          "pick": null,
+          "confidence": null,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "bijstand-stock",
+          "kind": "disclose",
+          "pick": null,
+          "confidence": null,
+          "pass": false,
+          "problems": [
+            "expected kind confident, got disclose"
+          ]
+        },
+        {
+          "id": "bijstand-flow",
+          "kind": "disclose",
+          "pick": null,
+          "confidence": null,
+          "pass": false,
+          "problems": [
+            "expected kind confident, got disclose"
+          ]
+        },
+        {
+          "id": "inkomen-vaag",
+          "kind": "disclose",
+          "pick": null,
+          "confidence": null,
+          "pass": true,
+          "problems": []
+        }
+      ]
+    },
+    {
+      "generatedAt": "2026-07-17T19:20:18.972Z",
+      "mode": "record",
+      "totals": {
+        "pass": 2,
+        "total": 11
+      },
+      "results": [
+        {
+          "id": "huizenprijzen",
+          "kind": "disclose",
+          "pick": null,
+          "confidence": null,
+          "pass": false,
+          "problems": [
+            "expected kind confident, got disclose"
+          ]
+        },
+        {
+          "id": "inflatie",
+          "kind": "disclose",
+          "pick": null,
+          "confidence": null,
+          "pass": false,
+          "problems": [
+            "expected kind confident, got disclose"
+          ]
+        },
+        {
+          "id": "werkloosheid",
+          "kind": "disclose",
+          "pick": null,
+          "confidence": null,
+          "pass": false,
+          "problems": [
+            "expected kind confident, got disclose"
+          ]
+        },
+        {
+          "id": "faillissementen",
+          "kind": "disclose",
+          "pick": null,
+          "confidence": null,
+          "pass": false,
+          "problems": [
+            "expected kind confident, got disclose"
+          ]
+        },
+        {
+          "id": "zonnepanelen",
+          "kind": "disclose",
+          "pick": null,
+          "confidence": null,
+          "pass": false,
+          "problems": [
+            "expected kind confident, got disclose"
+          ]
+        },
+        {
+          "id": "bevolking",
+          "kind": "disclose",
+          "pick": null,
+          "confidence": null,
+          "pass": false,
+          "problems": [
+            "expected kind confident, got disclose"
+          ]
+        },
+        {
+          "id": "woningvoorraad",
+          "kind": "disclose",
+          "pick": null,
+          "confidence": null,
+          "pass": false,
+          "problems": [
+            "expected kind confident, got disclose"
+          ]
+        },
+        {
+          "id": "onbekend",
+          "kind": "none",
+          "pick": null,
+          "confidence": null,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "bijstand-stock",
+          "kind": "disclose",
+          "pick": null,
+          "confidence": null,
+          "pass": false,
+          "problems": [
+            "expected kind confident, got disclose"
+          ]
+        },
+        {
+          "id": "bijstand-flow",
+          "kind": "disclose",
+          "pick": null,
+          "confidence": null,
+          "pass": false,
+          "problems": [
+            "expected kind confident, got disclose"
+          ]
+        },
+        {
+          "id": "inkomen-vaag",
+          "kind": "disclose",
+          "pick": null,
+          "confidence": null,
+          "pass": true,
+          "problems": []
+        }
+      ]
+    },
+    {
+      "generatedAt": "2026-07-17T19:22:25.019Z",
+      "mode": "record",
+      "totals": {
+        "pass": 6,
+        "total": 11
+      },
+      "results": [
+        {
+          "id": "huizenprijzen",
+          "kind": "disclose",
+          "pick": null,
+          "confidence": null,
+          "pass": false,
+          "problems": [
+            "expected kind confident, got disclose"
+          ]
+        },
+        {
+          "id": "inflatie",
+          "kind": "confident",
+          "pick": "86141NED",
+          "confidence": 0.82,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "werkloosheid",
+          "kind": "confident",
+          "pick": "80590ned",
+          "confidence": 0.83,
+          "pass": false,
+          "problems": [
+            "expected pick 85224NED, got 80590ned (conf 0.83)"
+          ]
+        },
+        {
+          "id": "faillissementen",
+          "kind": "disclose",
+          "pick": null,
+          "confidence": null,
+          "pass": false,
+          "problems": [
+            "expected kind confident, got disclose"
+          ]
+        },
+        {
+          "id": "zonnepanelen",
+          "kind": "disclose",
+          "pick": null,
+          "confidence": null,
+          "pass": false,
+          "problems": [
+            "expected kind confident, got disclose"
+          ]
+        },
+        {
+          "id": "bevolking",
+          "kind": "confident",
+          "pick": "03759ned",
+          "confidence": 0.85,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "woningvoorraad",
+          "kind": "confident",
+          "pick": "82235NED",
+          "confidence": 0.85,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "onbekend",
+          "kind": "none",
+          "pick": null,
+          "confidence": null,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "bijstand-stock",
+          "kind": "disclose",
+          "pick": null,
+          "confidence": null,
+          "pass": false,
+          "problems": [
+            "expected kind confident, got disclose"
+          ]
+        },
+        {
+          "id": "bijstand-flow",
+          "kind": "confident",
+          "pick": "85615NED",
+          "confidence": 0.88,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "inkomen-vaag",
+          "kind": "disclose",
+          "pick": null,
+          "confidence": null,
+          "pass": true,
+          "problems": []
+        }
+      ]
+    },
+    {
+      "generatedAt": "2026-07-17T19:25:21.374Z",
+      "mode": "record",
+      "totals": {
+        "pass": 11,
+        "total": 11
+      },
+      "results": [
+        {
+          "id": "huizenprijzen",
+          "kind": "confident",
+          "pick": "85773NED",
+          "confidence": 0.85,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "inflatie",
+          "kind": "confident",
+          "pick": "86141NED",
+          "confidence": 0.85,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "werkloosheid",
+          "kind": "confident",
+          "pick": "80590ned",
+          "confidence": 0.92,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "faillissementen",
+          "kind": "confident",
+          "pick": "82242NED",
+          "confidence": 0.95,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "zonnepanelen",
+          "kind": "confident",
+          "pick": "85004NED",
+          "confidence": 0.85,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "bevolking",
+          "kind": "confident",
+          "pick": "03759ned",
+          "confidence": 0.95,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "woningvoorraad",
+          "kind": "confident",
+          "pick": "82235NED",
+          "confidence": 0.95,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "onbekend",
+          "kind": "none",
+          "pick": null,
+          "confidence": null,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "bijstand-stock",
+          "kind": "confident",
+          "pick": "85585NED",
+          "confidence": 0.85,
+          "pass": true,
+          "problems": []
+        },
+        {
+          "id": "bijstand-flow",
+          "kind": "confident",
+          "pick": "85615NED",
+          "confidence": 0.92,
           "pass": true,
           "problems": []
         },

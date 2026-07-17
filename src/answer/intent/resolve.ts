@@ -186,7 +186,15 @@ async function resolveRegions(
           axis: 'region',
           reason: 'region_unknown',
           message: `"${term.name}" matches no region of table ${canonical.tableId}`,
-          options: [],
+          // The region_unknown template already ASKS "heel Nederland, of een
+          // specifieke gemeente of provincie?" — these are that question's
+          // choice labels, the same literals as the echo-needs_clarification
+          // sibling branch in policy.ts. Empty options here predate the
+          // coverage sprint invisibly (nothing routed self-referential places
+          // onto a geo key until average_home_sale_price_by_gemeente,
+          // session 54): B16 ("...in mijn buurt") then landed on this branch
+          // and the frozen options-non-empty pin caught the gap.
+          options: ['heel Nederland (landelijk cijfer)', 'een specifieke gemeente of provincie — noem de naam'],
         },
       };
     }

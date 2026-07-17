@@ -1,5 +1,13 @@
 # STAGED: de vocab-batch voor dekkingssprint-tabellen #4-#9 (één #164-heropname, owner-begeleid)
 
+> **▶ UITGEVOERD sessie 54 (2026-07-18, owner-aanwezig)** — alle stappen gedraaid; afwijkingen van dit
+> draaiboek, elk gemeten en vastgelegd in [11-coverage-table-set.md](../11-coverage-table-set.md) §
+> "Session-54 vocab batch" + de labelled sets: prompt v6 (ADR-023-tot-fix + gescopete korrel-sibling-regel na
+> een B2-regressie van de eerste generieke formulering), drie beredeneerde herlabels (dr-kw KW→MM, r-autos
+> bistabiel-op-clarificatie, f-v29 → refusal), finder-werkloosheid → 80590ned (productie-moot, #166-gordel),
+> en de bijstand-keten-regressie + gemeten-en-teruggedraaide Sonnet-escalatie als [#172](../open-questions.md).
+> De 85792NED-named-region-ontwerpvraag bleef zoals hieronder beschreven open.
+
 **Geschreven door sessie 53 (2026-07-17, autonome prep-branch `coverage-tables-4-9-prep`).** De zes tabellen
 zijn BUILT DORMANT: seeds + registry-defaults + fixtures + CC11-CC31 staan op de branch en de hermetische gate
 is groen — maar er is bewust NUL vocabulaire toegevoegd ([open-questions #168](../open-questions.md)). Reden:

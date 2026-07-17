@@ -372,14 +372,19 @@ describe('WP15: the offered conversation context is a recorded input (ADR 021 de
   };
 
   it('happy path, end-to-end over recorded fixtures: a follow-up turn answers with the frozen key (B7), records the offered context, and reconstructs', async () => {
-    // f-merge-topic-switch-national (benchmark/followup-cases.json): previous
-    // turn was inflation 2024; "En de huizenprijzen?" merges to exactly B7's
-    // intent (average home price, 2024) — so the composed answer replays from
-    // the same committed compose fixture the clarify-round e2e uses.
+    // f-merge-topic-switch-average-price (benchmark/followup-cases.json):
+    // previous turn was inflation 2024; "En de gemiddelde huizenprijs?"
+    // merges to exactly B7's intent (average home price, 2024) — so the
+    // composed answer replays from the same committed compose fixture the
+    // clarify-round e2e uses. (Session 54: this used to be
+    // f-merge-topic-switch-national, whose bare-plural "huizenprijzen" now
+    // honestly CLARIFIES between the index and average-price readings — two
+    // house-price keys exist since the coverage vocab batch; that case's
+    // relabel note has the measurement.)
     const followupSet = JSON.parse(
       readFileSync(new URL('../../benchmark/followup-cases.json', import.meta.url), 'utf8'),
     ) as { referenceDate: string; cases: { id: string; context: unknown; question: string }[] };
-    const c = followupSet.cases.find((x) => x.id === 'f-merge-topic-switch-national')!;
+    const c = followupSet.cases.find((x) => x.id === 'f-merge-topic-switch-average-price')!;
     const audited = await answerQuestionAudited(db, c.question, {
       intentClient: new ReplayLlmClient(fileURLToPath(new URL('../fixtures/llm/followup', import.meta.url))),
       answerClient: new ReplayLlmClient(ANSWER_FIXTURES),

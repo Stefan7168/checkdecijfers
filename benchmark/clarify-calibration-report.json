@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-17T09:42:10.736Z",
+  "generatedAt": "2026-07-17T19:35:58.292Z",
   "mode": "record",
   "repeat": 1,
   "referenceDate": "2026-08-15",
@@ -8,8 +8,8 @@
     "total": 7
   },
   "usage": {
-    "inputTokens": 57227,
-    "outputTokens": 985
+    "inputTokens": 70700,
+    "outputTokens": 849
   },
   "unstable": [],
   "failures": [],
@@ -96,6 +96,104 @@
       "usage": {
         "inputTokens": 57227,
         "outputTokens": 985
+      }
+    },
+    {
+      "generatedAt": "2026-07-17T17:51:13.742Z",
+      "mode": "record",
+      "repeat": 1,
+      "referenceDate": "2026-08-15",
+      "totals": {
+        "pass": 7,
+        "total": 7
+      },
+      "usage": {
+        "inputTokens": 69272,
+        "outputTokens": 839
+      }
+    },
+    {
+      "generatedAt": "2026-07-17T18:01:11.225Z",
+      "mode": "record",
+      "repeat": 1,
+      "referenceDate": "2026-08-15",
+      "totals": {
+        "pass": 7,
+        "total": 7
+      },
+      "usage": {
+        "inputTokens": 69314,
+        "outputTokens": 861
+      }
+    },
+    {
+      "generatedAt": "2026-07-17T18:12:20.642Z",
+      "mode": "live",
+      "repeat": 1,
+      "referenceDate": "2026-08-15",
+      "totals": {
+        "pass": 7,
+        "total": 7
+      },
+      "usage": {
+        "inputTokens": 69314,
+        "outputTokens": 832
+      }
+    },
+    {
+      "generatedAt": "2026-07-17T18:18:59.134Z",
+      "mode": "record",
+      "repeat": 1,
+      "referenceDate": "2026-08-15",
+      "totals": {
+        "pass": 7,
+        "total": 7
+      },
+      "usage": {
+        "inputTokens": 70532,
+        "outputTokens": 875
+      }
+    },
+    {
+      "generatedAt": "2026-07-17T18:55:58.181Z",
+      "mode": "record",
+      "repeat": 1,
+      "referenceDate": "2026-08-15",
+      "totals": {
+        "pass": 7,
+        "total": 7
+      },
+      "usage": {
+        "inputTokens": 70483,
+        "outputTokens": 861
+      }
+    },
+    {
+      "generatedAt": "2026-07-17T19:05:47.703Z",
+      "mode": "record",
+      "repeat": 1,
+      "referenceDate": "2026-08-15",
+      "totals": {
+        "pass": 7,
+        "total": 7
+      },
+      "usage": {
+        "inputTokens": 70658,
+        "outputTokens": 881
+      }
+    },
+    {
+      "generatedAt": "2026-07-17T19:35:58.292Z",
+      "mode": "record",
+      "repeat": 1,
+      "referenceDate": "2026-08-15",
+      "totals": {
+        "pass": 7,
+        "total": 7
+      },
+      "usage": {
+        "inputTokens": 70700,
+        "outputTokens": 849
       }
     }
   ]

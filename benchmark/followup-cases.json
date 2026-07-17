@@ -1,558 +1,582 @@
 {
-  "version": 1,
-  "referenceDate": "2026-08-15",
-  "note": "Labelled FOLLOW-UP set for the WP15 conversation-memory merge (parseFollowUpQuestion, ADR 021, open-questions #57). Each case pairs a ConversationContext (the previous turn's resolved intent in registry vocabulary — inline here for control; buildConversationContext has its own unit tests) with a NEW question, parsed in follow-up mode via tests/fixtures/llm/followup. Mirrors benchmark/intent-labelled-set.json's calibration role and label-change policy: labels are product-policy judgments (the honest outcome for a given follow-up), not a knob to turn green — changing one is a reviewed decision recorded here, never a silent edit to make a red run pass. When a case fails because the follow-up prompt has a real gap, FOLLOWUP_MODE_SECTION is fixed with a rule and all follow-up fixtures are re-recorded; when the label itself was wrong, the case is corrected and the reasoning added to this note. referenceDate matches the intent set so relative periods resolve identically. Case groups: f-merge-* are the everyday axis merges (region/period/topic switches, V-pass shapes); f-v29/f-v30/f-v31 are the 2026-07-04 validation pass's follow-up questions verbatim (V29 asks an age breakdown the vocabulary cannot express — the honest outcome is a clarification, not an answer; V30's Randstad is not a CBS region — clarification; V31 is a chart request over a single-period referent — the degenerate-range guard turns it into a period clarification); f-standalone/f-abandon-* pin NO-REGRESSION: a self-contained question with context present must parse exactly as it would standalone, and forecast/causal/smalltalk classification must survive the presence of context; f-meta-* pin that meta-questions about the previous answer (V35/V36/V38 verbatim) stay smalltalk refusals — answering them is the F3/#29 template work, not memory (ADR 021). Expectations resolve against the hermetic fixture DB (CPI JJ 2010–2025; population G4+NL 2019–2026) — the same DB record/replay runs use. REPLY LEGS (added 2026-07-04, review finding: the follow-up→clarify→reply chain lost the referent): cases may carry an optional reply + expectAfterReply — the eval and the replay suite then drive the recorded clarification's PendingClarification (with the case's context embedded, CLARIFY_PROMPT_VERSION v2 addendum) through parseClarificationReply and check the merged outcome; the four reply legs cover the V30 comparison resolve, the V31 chart range resolve, a period answer on a period-null context, and the honest still-unresolvable grain dead-end.",
-  "cases": [
-    {
-      "id": "f-merge-region-switch",
-      "context": {
-        "version": 1,
-        "topicKey": "population_on_1_january",
-        "regions": [
-          {
-            "name": "Amsterdam",
-            "kind": "gemeente"
-          }
-        ],
-        "period": {
-          "kind": "year",
-          "year": 2024
-        },
-        "derivation": "none"
-      },
-      "question": "En in Rotterdam?",
-      "expect": {
-        "outcome": "intent",
-        "intent": {
-          "schemaVersion": 1,
-          "target": {
-            "kind": "canonical",
-            "key": "population_on_1_january"
-          },
-          "regions": [
-            "GM0599"
-          ],
-          "period": {
-            "kind": "codes",
-            "codes": [
-              "2024JJ00"
-            ]
-          },
-          "derivation": "none"
-        }
-      }
+ "version": 1,
+ "referenceDate": "2026-08-15",
+ "note": "Labelled FOLLOW-UP set for the WP15 conversation-memory merge (parseFollowUpQuestion, ADR 021, open-questions #57). Each case pairs a ConversationContext (the previous turn's resolved intent in registry vocabulary — inline here for control; buildConversationContext has its own unit tests) with a NEW question, parsed in follow-up mode via tests/fixtures/llm/followup. Mirrors benchmark/intent-labelled-set.json's calibration role and label-change policy: labels are product-policy judgments (the honest outcome for a given follow-up), not a knob to turn green — changing one is a reviewed decision recorded here, never a silent edit to make a red run pass. When a case fails because the follow-up prompt has a real gap, FOLLOWUP_MODE_SECTION is fixed with a rule and all follow-up fixtures are re-recorded; when the label itself was wrong, the case is corrected and the reasoning added to this note. referenceDate matches the intent set so relative periods resolve identically. Case groups: f-merge-* are the everyday axis merges (region/period/topic switches, V-pass shapes); f-v29/f-v30/f-v31 are the 2026-07-04 validation pass's follow-up questions verbatim (V29 asks an age breakdown the vocabulary cannot express — the honest outcome is a clarification, not an answer; V30's Randstad is not a CBS region — clarification; V31 is a chart request over a single-period referent — the degenerate-range guard turns it into a period clarification); f-standalone/f-abandon-* pin NO-REGRESSION: a self-contained question with context present must parse exactly as it would standalone, and forecast/causal/smalltalk classification must survive the presence of context; f-meta-* pin that meta-questions about the previous answer (V35/V36/V38 verbatim) stay smalltalk refusals — answering them is the F3/#29 template work, not memory (ADR 021). Expectations resolve against the hermetic fixture DB (CPI JJ 2010–2025; population G4+NL 2019–2026) — the same DB record/replay runs use. REPLY LEGS (added 2026-07-04, review finding: the follow-up→clarify→reply chain lost the referent): cases may carry an optional reply + expectAfterReply — the eval and the replay suite then drive the recorded clarification's PendingClarification (with the case's context embedded, CLARIFY_PROMPT_VERSION v2 addendum) through parseClarificationReply and check the merged outcome; the four reply legs cover the V30 comparison resolve, the V31 chart range resolve, a period answer on a period-null context, and the honest still-unresolvable grain dead-end.",
+ "cases": [
+  {
+   "id": "f-merge-region-switch",
+   "context": {
+    "version": 1,
+    "topicKey": "population_on_1_january",
+    "regions": [
+     {
+      "name": "Amsterdam",
+      "kind": "gemeente"
+     }
+    ],
+    "period": {
+     "kind": "year",
+     "year": 2024
     },
-    {
-      "id": "f-merge-period-switch",
-      "context": {
-        "version": 1,
-        "topicKey": "population_on_1_january",
-        "regions": [
-          {
-            "name": "Amsterdam",
-            "kind": "gemeente"
-          }
-        ],
-        "period": {
-          "kind": "year",
-          "year": 2024
-        },
-        "derivation": "none"
-      },
-      "question": "En hoe zat dat in 2020?",
-      "expect": {
-        "outcome": "intent",
-        "intent": {
-          "schemaVersion": 1,
-          "target": {
-            "kind": "canonical",
-            "key": "population_on_1_january"
-          },
-          "regions": [
-            "GM0363"
-          ],
-          "period": {
-            "kind": "codes",
-            "codes": [
-              "2020JJ00"
-            ]
-          },
-          "derivation": "none"
-        }
-      }
-    },
-    {
-      "id": "f-merge-both-switch",
-      "context": {
-        "version": 1,
-        "topicKey": "population_on_1_january",
-        "regions": [
-          {
-            "name": "Amsterdam",
-            "kind": "gemeente"
-          }
-        ],
-        "period": {
-          "kind": "year",
-          "year": 2024
-        },
-        "derivation": "none"
-      },
-      "question": "En in Rotterdam in 2022?",
-      "expect": {
-        "outcome": "intent",
-        "intent": {
-          "schemaVersion": 1,
-          "target": {
-            "kind": "canonical",
-            "key": "population_on_1_january"
-          },
-          "regions": [
-            "GM0599"
-          ],
-          "period": {
-            "kind": "codes",
-            "codes": [
-              "2022JJ00"
-            ]
-          },
-          "derivation": "none"
-        }
-      }
-    },
-    {
-      "id": "f-merge-topic-switch-regional-frame",
-      "context": {
-        "version": 1,
-        "topicKey": "population_on_1_january",
-        "regions": [
-          {
-            "name": "Amsterdam",
-            "kind": "gemeente"
-          }
-        ],
-        "period": {
-          "kind": "year",
-          "year": 2024
-        },
-        "derivation": "none"
-      },
-      "question": "En de werkloosheid?",
-      "expect": {
-        "outcome": "clarification",
-        "axesInclude": [
-          "region"
-        ]
-      },
-      "reply": "heel Nederland",
-      "expectAfterReply": {
-        "outcome": "clarification",
-        "axesInclude": [
-          "period"
-        ]
-      }
-    },
-    {
-      "id": "f-merge-topic-switch-national",
-      "context": {
-        "version": 1,
-        "topicKey": "cpi_yearly_inflation",
-        "regions": null,
-        "period": {
-          "kind": "year",
-          "year": 2024
-        },
-        "derivation": "none"
-      },
-      "question": "En de huizenprijzen?",
-      "expect": {
-        "outcome": "intent",
-        "intent": {
-          "schemaVersion": 1,
-          "target": {
-            "kind": "canonical",
-            "key": "average_existing_home_sale_price"
-          },
-          "period": {
-            "kind": "codes",
-            "codes": [
-              "2024JJ00"
-            ]
-          },
-          "derivation": "none"
-        }
-      }
-    },
-    {
-      "id": "f-merge-since-series",
-      "context": {
-        "version": 1,
-        "topicKey": "cpi_yearly_inflation",
-        "regions": null,
-        "period": {
-          "kind": "year",
-          "year": 2024
-        },
-        "derivation": "none"
-      },
-      "question": "En hoe ontwikkelde die zich sinds 2021?",
-      "expect": {
-        "outcome": "intent",
-        "intent": {
-          "schemaVersion": 1,
-          "target": {
-            "kind": "canonical",
-            "key": "cpi_yearly_inflation"
-          },
-          "period": {
-            "kind": "range",
-            "from": "2021JJ00",
-            "to": "2025JJ00"
-          },
-          "derivation": "series"
-        }
-      }
-    },
-    {
-      "id": "f-v31-chart-over-single-period",
-      "context": {
-        "version": 1,
-        "topicKey": "cpi_yearly_inflation",
-        "regions": null,
-        "period": {
-          "kind": "year",
-          "year": 2024
-        },
-        "derivation": "none"
-      },
-      "question": "Kun je dit in een grafiek zetten en een korte uitleg geven?",
-      "expect": {
-        "outcome": "clarification",
-        "axesInclude": [
-          "period"
-        ]
-      },
-      "reply": "van 2020 tot en met 2024",
-      "expectAfterReply": {
-        "outcome": "intent",
-        "intent": {
-          "schemaVersion": 1,
-          "target": {
-            "kind": "canonical",
-            "key": "cpi_yearly_inflation"
-          },
-          "period": {
-            "kind": "range",
-            "from": "2020JJ00",
-            "to": "2024JJ00"
-          },
-          "derivation": "series"
-        }
-      }
-    },
-    {
-      "id": "f-v31-chart-over-series",
-      "context": {
-        "version": 1,
-        "topicKey": "cpi_yearly_inflation",
-        "regions": null,
-        "period": {
-          "kind": "year_range",
-          "fromYear": 2020,
-          "toYear": 2024
-        },
-        "derivation": "series"
-      },
-      "question": "Kun je dit in een grafiek zetten en een korte uitleg geven?",
-      "expect": {
-        "outcome": "intent",
-        "intent": {
-          "schemaVersion": 1,
-          "target": {
-            "kind": "canonical",
-            "key": "cpi_yearly_inflation"
-          },
-          "period": {
-            "kind": "range",
-            "from": "2020JJ00",
-            "to": "2024JJ00"
-          },
-          "derivation": "series"
-        }
-      }
-    },
-    {
-      "id": "f-v29-age-breakdown",
-      "context": {
-        "version": 1,
-        "topicKey": "unemployment_rate_seasonally_adjusted",
-        "regions": null,
-        "period": {
-          "kind": "quarter",
-          "year": 2025,
-          "quarter": 4
-        },
-        "derivation": "none"
-      },
-      "question": "En hoe zit dat voor jongeren?",
-      "expect": {
-        "outcome": "clarification"
-      }
-    },
-    {
-      "id": "f-v30-randstad",
-      "context": {
-        "version": 1,
-        "topicKey": "population_on_1_january",
-        "regions": [
-          {
-            "name": "Amsterdam",
-            "kind": "gemeente"
-          }
-        ],
-        "period": {
-          "kind": "year",
-          "year": 2024
-        },
-        "derivation": "none"
-      },
-      "question": "En alleen in de Randstad?",
-      "expect": {
-        "outcome": "clarification",
-        "axesInclude": [
-          "region"
-        ]
-      },
-      "reply": "Amsterdam en Rotterdam",
-      "expectAfterReply": {
-        "outcome": "intent",
-        "intent": {
-          "schemaVersion": 1,
-          "target": {
-            "kind": "canonical",
-            "key": "population_on_1_january"
-          },
-          "regions": [
-            "GM0363",
-            "GM0599"
-          ],
-          "period": {
-            "kind": "codes",
-            "codes": [
-              "2024JJ00"
-            ]
-          },
-          "derivation": "none"
-        }
-      }
-    },
-    {
-      "id": "f-standalone-with-context",
-      "context": {
-        "version": 1,
-        "topicKey": "population_on_1_january",
-        "regions": [
-          {
-            "name": "Amsterdam",
-            "kind": "gemeente"
-          }
-        ],
-        "period": {
-          "kind": "year",
-          "year": 2024
-        },
-        "derivation": "none"
-      },
-      "question": "Wat was de inflatie in 2023?",
-      "expect": {
-        "outcome": "intent",
-        "intent": {
-          "schemaVersion": 1,
-          "target": {
-            "kind": "canonical",
-            "key": "cpi_yearly_inflation"
-          },
-          "period": {
-            "kind": "codes",
-            "codes": [
-              "2023JJ00"
-            ]
-          },
-          "derivation": "none"
-        }
-      }
-    },
-    {
-      "id": "f-abandon-forecast",
-      "context": {
-        "version": 1,
-        "topicKey": "population_on_1_january",
-        "regions": [
-          {
-            "name": "Amsterdam",
-            "kind": "gemeente"
-          }
-        ],
-        "period": {
-          "kind": "year",
-          "year": 2024
-        },
-        "derivation": "none"
-      },
-      "question": "Wat wordt de inflatie in 2027?",
-      "expect": {
-        "outcome": "refusal",
-        "refusalKind": "forecast"
-      }
-    },
-    {
-      "id": "f-why-causal",
-      "context": {
-        "version": 1,
-        "topicKey": "unemployment_rate_seasonally_adjusted",
-        "regions": null,
-        "period": {
-          "kind": "quarter",
-          "year": 2025,
-          "quarter": 4
-        },
-        "derivation": "none"
-      },
-      "question": "Waarom is dat zo gestegen?",
-      "expect": {
-        "outcome": "refusal",
-        "refusalKind": "causal"
-      }
-    },
-    {
-      "id": "f-meta-v35-source-table",
-      "context": {
-        "version": 1,
-        "topicKey": "cpi_yearly_inflation",
-        "regions": null,
-        "period": {
-          "kind": "year_range",
-          "fromYear": 2020,
-          "toYear": 2024
-        },
-        "derivation": "series"
-      },
-      "question": "Uit welke CBS-tabel komt deze grafiek precies?",
-      "expect": {
-        "outcome": "refusal",
-        "refusalKind": "smalltalk"
-      }
-    },
-    {
-      "id": "f-meta-v36-last-updated",
-      "context": {
-        "version": 1,
-        "topicKey": "cpi_yearly_inflation",
-        "regions": null,
-        "period": {
-          "kind": "year",
-          "year": 2024
-        },
-        "derivation": "none"
-      },
-      "question": "Wanneer zijn deze cijfers voor het laatst bijgewerkt?",
-      "expect": {
-        "outcome": "refusal",
-        "refusalKind": "smalltalk"
-      }
-    },
-    {
-      "id": "f-meta-v38-other-sources",
-      "context": {
-        "version": 1,
-        "topicKey": "unemployment_rate_seasonally_adjusted",
-        "regions": null,
-        "period": {
-          "kind": "quarter",
-          "year": 2025,
-          "quarter": 4
-        },
-        "derivation": "none"
-      },
-      "question": "Welke bronnen gebruik je naast CBS voor deze vraag?",
-      "expect": {
-        "outcome": "refusal",
-        "refusalKind": "smalltalk"
-      }
-    },
-    {
-      "id": "f-period-null-context",
-      "context": {
-        "version": 1,
-        "topicKey": "unemployment_rate_seasonally_adjusted",
-        "regions": null,
-        "period": null,
-        "derivation": "none"
-      },
-      "question": "En in Nederland?",
-      "expect": {
-        "outcome": "clarification",
-        "axesInclude": [
-          "period"
-        ]
-      },
-      "reply": "het vierde kwartaal van 2025",
-      "expectAfterReply": {
-        "outcome": "intent",
-        "intent": {
-          "schemaVersion": 1,
-          "target": {
-            "kind": "canonical",
-            "key": "unemployment_rate_seasonally_adjusted"
-          },
-          "period": {
-            "kind": "codes",
-            "codes": [
-              "2025KW04"
-            ]
-          },
-          "derivation": "none"
-        }
-      }
-    },
-    {
-      "id": "f-echo-context-repeat",
-      "context": {
-        "version": 1,
-        "topicKey": "population_on_1_january",
-        "regions": [
-          {
-            "name": "Amsterdam",
-            "kind": "gemeente"
-          }
-        ],
-        "period": {
-          "kind": "year",
-          "year": 2024
-        },
-        "derivation": "none"
-      },
-      "question": "Kun je dat cijfer nog een keer geven?",
-      "expect": {
-        "outcome": "intent",
-        "intent": {
-          "schemaVersion": 1,
-          "target": {
-            "kind": "canonical",
-            "key": "population_on_1_january"
-          },
-          "regions": [
-            "GM0363"
-          ],
-          "period": {
-            "kind": "codes",
-            "codes": [
-              "2024JJ00"
-            ]
-          },
-          "derivation": "none"
-        }
-      }
+    "derivation": "none"
+   },
+   "question": "En in Rotterdam?",
+   "expect": {
+    "outcome": "intent",
+    "intent": {
+     "schemaVersion": 1,
+     "target": {
+      "kind": "canonical",
+      "key": "population_on_1_january"
+     },
+     "regions": [
+      "GM0599"
+     ],
+     "period": {
+      "kind": "codes",
+      "codes": [
+       "2024JJ00"
+      ]
+     },
+     "derivation": "none"
     }
-  ]
+   }
+  },
+  {
+   "id": "f-merge-period-switch",
+   "context": {
+    "version": 1,
+    "topicKey": "population_on_1_january",
+    "regions": [
+     {
+      "name": "Amsterdam",
+      "kind": "gemeente"
+     }
+    ],
+    "period": {
+     "kind": "year",
+     "year": 2024
+    },
+    "derivation": "none"
+   },
+   "question": "En hoe zat dat in 2020?",
+   "expect": {
+    "outcome": "intent",
+    "intent": {
+     "schemaVersion": 1,
+     "target": {
+      "kind": "canonical",
+      "key": "population_on_1_january"
+     },
+     "regions": [
+      "GM0363"
+     ],
+     "period": {
+      "kind": "codes",
+      "codes": [
+       "2020JJ00"
+      ]
+     },
+     "derivation": "none"
+    }
+   }
+  },
+  {
+   "id": "f-merge-both-switch",
+   "context": {
+    "version": 1,
+    "topicKey": "population_on_1_january",
+    "regions": [
+     {
+      "name": "Amsterdam",
+      "kind": "gemeente"
+     }
+    ],
+    "period": {
+     "kind": "year",
+     "year": 2024
+    },
+    "derivation": "none"
+   },
+   "question": "En in Rotterdam in 2022?",
+   "expect": {
+    "outcome": "intent",
+    "intent": {
+     "schemaVersion": 1,
+     "target": {
+      "kind": "canonical",
+      "key": "population_on_1_january"
+     },
+     "regions": [
+      "GM0599"
+     ],
+     "period": {
+      "kind": "codes",
+      "codes": [
+       "2022JJ00"
+      ]
+     },
+     "derivation": "none"
+    }
+   }
+  },
+  {
+   "id": "f-merge-topic-switch-regional-frame",
+   "context": {
+    "version": 1,
+    "topicKey": "population_on_1_january",
+    "regions": [
+     {
+      "name": "Amsterdam",
+      "kind": "gemeente"
+     }
+    ],
+    "period": {
+     "kind": "year",
+     "year": 2024
+    },
+    "derivation": "none"
+   },
+   "question": "En de werkloosheid?",
+   "expect": {
+    "outcome": "clarification",
+    "axesInclude": [
+     "region"
+    ]
+   },
+   "reply": "heel Nederland",
+   "expectAfterReply": {
+    "outcome": "clarification",
+    "axesInclude": [
+     "period"
+    ]
+   }
+  },
+  {
+   "id": "f-merge-topic-switch-national",
+   "context": {
+    "version": 1,
+    "topicKey": "cpi_yearly_inflation",
+    "regions": null,
+    "period": {
+     "kind": "year",
+     "year": 2024
+    },
+    "derivation": "none"
+   },
+   "question": "En de huizenprijzen?",
+   "expect": {
+    "outcome": "clarification",
+    "axesInclude": [
+     "measure"
+    ]
+   },
+   "note": "RELABELLED session 54 (2026-07-18, confident-merge -> measure clarification): with TWO house-price keys in the registry (average_existing_home_sale_price + the new house_price_index_regional), the bare follow-up 'En de huizenprijzen?' AFTER an inflation question is a genuine registry-internal two-way (price-CHANGE frame vs price-LEVEL) - the model asks one honest question naming both readings (measured rounds 1+3). Direct bare asks still route confidently (cs-kale-huizenprijs-blijft-85773 + v-koopwoning-2023 both pass) - only the frame-switch follow-up clarifies. Considered relabel, WP26-adjacent conservatism accepted."
+  },
+  {
+   "id": "f-merge-since-series",
+   "context": {
+    "version": 1,
+    "topicKey": "cpi_yearly_inflation",
+    "regions": null,
+    "period": {
+     "kind": "year",
+     "year": 2024
+    },
+    "derivation": "none"
+   },
+   "question": "En hoe ontwikkelde die zich sinds 2021?",
+   "expect": {
+    "outcome": "intent",
+    "intent": {
+     "schemaVersion": 1,
+     "target": {
+      "kind": "canonical",
+      "key": "cpi_yearly_inflation"
+     },
+     "period": {
+      "kind": "range",
+      "from": "2021JJ00",
+      "to": "2025JJ00"
+     },
+     "derivation": "series"
+    }
+   }
+  },
+  {
+   "id": "f-v31-chart-over-single-period",
+   "context": {
+    "version": 1,
+    "topicKey": "cpi_yearly_inflation",
+    "regions": null,
+    "period": {
+     "kind": "year",
+     "year": 2024
+    },
+    "derivation": "none"
+   },
+   "question": "Kun je dit in een grafiek zetten en een korte uitleg geven?",
+   "expect": {
+    "outcome": "clarification",
+    "axesInclude": [
+     "period"
+    ]
+   },
+   "reply": "van 2020 tot en met 2024",
+   "expectAfterReply": {
+    "outcome": "intent",
+    "intent": {
+     "schemaVersion": 1,
+     "target": {
+      "kind": "canonical",
+      "key": "cpi_yearly_inflation"
+     },
+     "period": {
+      "kind": "range",
+      "from": "2020JJ00",
+      "to": "2024JJ00"
+     },
+     "derivation": "series"
+    }
+   }
+  },
+  {
+   "id": "f-v31-chart-over-series",
+   "context": {
+    "version": 1,
+    "topicKey": "cpi_yearly_inflation",
+    "regions": null,
+    "period": {
+     "kind": "year_range",
+     "fromYear": 2020,
+     "toYear": 2024
+    },
+    "derivation": "series"
+   },
+   "question": "Kun je dit in een grafiek zetten en een korte uitleg geven?",
+   "expect": {
+    "outcome": "intent",
+    "intent": {
+     "schemaVersion": 1,
+     "target": {
+      "kind": "canonical",
+      "key": "cpi_yearly_inflation"
+     },
+     "period": {
+      "kind": "range",
+      "from": "2020JJ00",
+      "to": "2024JJ00"
+     },
+     "derivation": "series"
+    }
+   }
+  },
+  {
+   "id": "f-v29-age-breakdown",
+   "context": {
+    "version": 1,
+    "topicKey": "unemployment_rate_seasonally_adjusted",
+    "regions": null,
+    "period": {
+     "kind": "quarter",
+     "year": 2025,
+     "quarter": 4
+    },
+    "derivation": "none"
+   },
+   "question": "En hoe zit dat voor jongeren?",
+   "expect": {
+    "outcome": "refusal",
+    "refusalKind": "out_of_scope"
+   },
+   "note": "RELABELLED session 54 (2026-07-18, clarification -> out_of_scope refusal): live-BISTABLE since the coverage vocab batch (refusal in record rounds 1/4/5, clarification in round 3 — the monthly unemployment key shifted the balance; dropping its age suffix did not restore the old behavior). Both outcomes are honest for an unavailable breakdown (r-autos class); label follows the stable majority + the committed fixture. WP26-adjacent conservatism, accepted and tracked."
+  },
+  {
+   "id": "f-v30-randstad",
+   "context": {
+    "version": 1,
+    "topicKey": "population_on_1_january",
+    "regions": [
+     {
+      "name": "Amsterdam",
+      "kind": "gemeente"
+     }
+    ],
+    "period": {
+     "kind": "year",
+     "year": 2024
+    },
+    "derivation": "none"
+   },
+   "question": "En alleen in de Randstad?",
+   "expect": {
+    "outcome": "clarification",
+    "axesInclude": [
+     "region"
+    ]
+   },
+   "reply": "Amsterdam en Rotterdam",
+   "expectAfterReply": {
+    "outcome": "intent",
+    "intent": {
+     "schemaVersion": 1,
+     "target": {
+      "kind": "canonical",
+      "key": "population_on_1_january"
+     },
+     "regions": [
+      "GM0363",
+      "GM0599"
+     ],
+     "period": {
+      "kind": "codes",
+      "codes": [
+       "2024JJ00"
+      ]
+     },
+     "derivation": "none"
+    }
+   }
+  },
+  {
+   "id": "f-standalone-with-context",
+   "context": {
+    "version": 1,
+    "topicKey": "population_on_1_january",
+    "regions": [
+     {
+      "name": "Amsterdam",
+      "kind": "gemeente"
+     }
+    ],
+    "period": {
+     "kind": "year",
+     "year": 2024
+    },
+    "derivation": "none"
+   },
+   "question": "Wat was de inflatie in 2023?",
+   "expect": {
+    "outcome": "intent",
+    "intent": {
+     "schemaVersion": 1,
+     "target": {
+      "kind": "canonical",
+      "key": "cpi_yearly_inflation"
+     },
+     "period": {
+      "kind": "codes",
+      "codes": [
+       "2023JJ00"
+      ]
+     },
+     "derivation": "none"
+    }
+   }
+  },
+  {
+   "id": "f-abandon-forecast",
+   "context": {
+    "version": 1,
+    "topicKey": "population_on_1_january",
+    "regions": [
+     {
+      "name": "Amsterdam",
+      "kind": "gemeente"
+     }
+    ],
+    "period": {
+     "kind": "year",
+     "year": 2024
+    },
+    "derivation": "none"
+   },
+   "question": "Wat wordt de inflatie in 2027?",
+   "expect": {
+    "outcome": "refusal",
+    "refusalKind": "forecast"
+   }
+  },
+  {
+   "id": "f-why-causal",
+   "context": {
+    "version": 1,
+    "topicKey": "unemployment_rate_seasonally_adjusted",
+    "regions": null,
+    "period": {
+     "kind": "quarter",
+     "year": 2025,
+     "quarter": 4
+    },
+    "derivation": "none"
+   },
+   "question": "Waarom is dat zo gestegen?",
+   "expect": {
+    "outcome": "refusal",
+    "refusalKind": "causal"
+   }
+  },
+  {
+   "id": "f-meta-v35-source-table",
+   "context": {
+    "version": 1,
+    "topicKey": "cpi_yearly_inflation",
+    "regions": null,
+    "period": {
+     "kind": "year_range",
+     "fromYear": 2020,
+     "toYear": 2024
+    },
+    "derivation": "series"
+   },
+   "question": "Uit welke CBS-tabel komt deze grafiek precies?",
+   "expect": {
+    "outcome": "refusal",
+    "refusalKind": "smalltalk"
+   }
+  },
+  {
+   "id": "f-meta-v36-last-updated",
+   "context": {
+    "version": 1,
+    "topicKey": "cpi_yearly_inflation",
+    "regions": null,
+    "period": {
+     "kind": "year",
+     "year": 2024
+    },
+    "derivation": "none"
+   },
+   "question": "Wanneer zijn deze cijfers voor het laatst bijgewerkt?",
+   "expect": {
+    "outcome": "refusal",
+    "refusalKind": "smalltalk"
+   }
+  },
+  {
+   "id": "f-meta-v38-other-sources",
+   "context": {
+    "version": 1,
+    "topicKey": "unemployment_rate_seasonally_adjusted",
+    "regions": null,
+    "period": {
+     "kind": "quarter",
+     "year": 2025,
+     "quarter": 4
+    },
+    "derivation": "none"
+   },
+   "question": "Welke bronnen gebruik je naast CBS voor deze vraag?",
+   "expect": {
+    "outcome": "refusal",
+    "refusalKind": "smalltalk"
+   }
+  },
+  {
+   "id": "f-period-null-context",
+   "context": {
+    "version": 1,
+    "topicKey": "unemployment_rate_seasonally_adjusted",
+    "regions": null,
+    "period": null,
+    "derivation": "none"
+   },
+   "question": "En in Nederland?",
+   "expect": {
+    "outcome": "clarification",
+    "axesInclude": [
+     "period"
+    ]
+   },
+   "reply": "het vierde kwartaal van 2025",
+   "expectAfterReply": {
+    "outcome": "intent",
+    "intent": {
+     "schemaVersion": 1,
+     "target": {
+      "kind": "canonical",
+      "key": "unemployment_rate_seasonally_adjusted"
+     },
+     "period": {
+      "kind": "codes",
+      "codes": [
+       "2025KW04"
+      ]
+     },
+     "derivation": "none"
+    }
+   }
+  },
+  {
+   "id": "f-echo-context-repeat",
+   "context": {
+    "version": 1,
+    "topicKey": "population_on_1_january",
+    "regions": [
+     {
+      "name": "Amsterdam",
+      "kind": "gemeente"
+     }
+    ],
+    "period": {
+     "kind": "year",
+     "year": 2024
+    },
+    "derivation": "none"
+   },
+   "question": "Kun je dat cijfer nog een keer geven?",
+   "expect": {
+    "outcome": "intent",
+    "intent": {
+     "schemaVersion": 1,
+     "target": {
+      "kind": "canonical",
+      "key": "population_on_1_january"
+     },
+     "regions": [
+      "GM0363"
+     ],
+     "period": {
+      "kind": "codes",
+      "codes": [
+       "2024JJ00"
+      ]
+     },
+     "derivation": "none"
+    }
+   }
+  },
+  {
+   "id": "f-merge-topic-switch-average-price",
+   "context": {
+    "version": 1,
+    "topicKey": "cpi_yearly_inflation",
+    "regions": null,
+    "period": {
+     "kind": "year",
+     "year": 2024
+    },
+    "derivation": "none"
+   },
+   "question": "En de gemiddelde huizenprijs?",
+   "note": "Session-54 companion to the RELABELLED f-merge-topic-switch-national: the bare plural 'huizenprijzen' now honestly clarifies between the index and average-price readings (two house-price keys since the coverage batch), so the follow-up ANSWER path needed a phrasing that names the average reading directly - it merges to exactly B7's intent and the audit happy-path test (tests/audit/audit-records.test.ts WP15) replays the committed B7 compose fixture through it.",
+   "expect": {
+    "outcome": "intent",
+    "intent": {
+     "schemaVersion": 1,
+     "target": {
+      "kind": "canonical",
+      "key": "average_existing_home_sale_price"
+     },
+     "period": {
+      "kind": "codes",
+      "codes": [
+       "2024JJ00"
+      ]
+     },
+     "derivation": "none"
+    }
+   }
+  }
+ ]
 }

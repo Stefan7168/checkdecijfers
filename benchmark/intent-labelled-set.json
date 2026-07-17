@@ -314,7 +314,8 @@
     "axesInclude": [
      "measure"
     ]
-   }
+   },
+   "note": "Live-BISTABLE case (measured s50 and again s54: refusal<->clarification across records/evals, both honest for a near-boundary topic — ADR 012 note). Label = the ORIGINAL policy choice (clarification) and matches the committed v6 fixture; expect this case to flake in live evals until the vocabulary changes the balance again. The crisp canonical behaviors stay pinned by B15 (clarify) and B17 (scope refusal)."
   },
   {
    "id": "r-stikstof",
@@ -637,16 +638,17 @@
      "schemaVersion": 1,
      "target": {
       "kind": "canonical",
-      "key": "unemployment_rate_seasonally_adjusted"
+      "key": "monthly_unemployment_seasonally_adjusted"
      },
      "period": {
       "kind": "range",
-      "from": "2024KW01",
-      "to": "2025KW02"
+      "from": "2024MM01",
+      "to": "2025MM06"
      },
      "derivation": "series"
     }
-   }
+   },
+   "note": "RELABELLED session 54 (2026-07-18, KW->MM): with the monthly key (80590ned) in the vocabulary, month-precise boundaries ('1 januari 2024 t/m 30 juni 2025') route to the MONTHLY series at 0.92 - a finer-grain honest reading (same seasonally-adjusted definition). Bare 'werkloosheid' asks (v-werkloosheid-nu, os-v01, os-v28) still resolve to the quarterly canonical default - #165 discipline measured intact on record 1."
   },
   {
    "id": "dr-dagen-binnen-maand",
@@ -710,6 +712,202 @@
     }
    },
    "note": "Pins the month-only bare-'tot' reading end-to-end against the live model. The review (2026-07-05) demanded this shape be live-scored; the model read it INCLUSIVE (t/m september) at 0.95, stable x3, while correctly keeping day-precise 'tot 1 januari 2023' exclusive — OWNER DECISION (Stefan, 2026-07-05, in-session): accept the everyday-inclusive reading for month-only bare 'tot'. ADR 023 alternative 4 records the reversal; the prompt rule's wording fix rides the next prompt-changing WP (any registry change re-records everything anyway). If this case starts flipping toward exclusive, that ADR trigger has fired."
+  },
+  {
+   "id": "cs-omzet-detailhandel-2023",
+   "category": "variant",
+   "question": "Wat deed de omzet van de detailhandel in juni 2023?",
+   "expect": {
+    "outcome": "intent",
+    "intent": {
+     "schemaVersion": 1,
+     "target": {
+      "kind": "canonical",
+      "key": "retail_turnover_yoy"
+     },
+     "period": {
+      "kind": "codes",
+      "codes": [
+       "2023MM06"
+      ]
+     },
+     "derivation": "none"
+    }
+   },
+   "note": "Session-54 record-1 finding: the original phrasing ('...ten opzichte van een jaar eerder') made the model emit a two-period comparison, and 2026 periods intermittently read as forecast to the deliberately date-free prompt — labelled cases pin ROUTING, so they use clearly-past periods and plain phrasings (the CC tasks pin the 2026 cells hermetically instead)."
+  },
+  {
+   "id": "cs-supermarkten-2025",
+   "category": "variant",
+   "question": "Wat deed de omzet van supermarkten in mei 2025?",
+   "expect": {
+    "outcome": "intent",
+    "intent": {
+     "schemaVersion": 1,
+     "target": {
+      "kind": "canonical",
+      "key": "supermarket_turnover_yoy"
+     },
+     "period": {
+      "kind": "codes",
+      "codes": [
+       "2025MM05"
+      ]
+     },
+     "derivation": "none"
+    }
+   }
+  },
+  {
+   "id": "cs-consumptie-december",
+   "category": "variant",
+   "question": "Wat was de consumptiegroei van huishoudens in december 2025?",
+   "expect": {
+    "outcome": "intent",
+    "intent": {
+     "schemaVersion": 1,
+     "target": {
+      "kind": "canonical",
+      "key": "household_consumption_growth"
+     },
+     "period": {
+      "kind": "codes",
+      "codes": [
+       "2025MM12"
+      ]
+     },
+     "derivation": "none"
+    }
+   },
+   "note": "Record-1: the looser 'consumptie van huishoudens' phrasing parsed correctly but at 0.85 -> clarification (below the 0.9 R7 floor); 'consumptiegroei' names the growth reading directly."
+  },
+  {
+   "id": "cs-invoerwaarde-jan2025",
+   "category": "variant",
+   "question": "Hoeveel bedroeg de invoerwaarde van goederen in januari 2025?",
+   "expect": {
+    "outcome": "intent",
+    "intent": {
+     "schemaVersion": 1,
+     "target": {
+      "kind": "canonical",
+      "key": "goods_imports_value"
+     },
+     "period": {
+      "kind": "codes",
+      "codes": [
+       "2025MM01"
+      ]
+     },
+     "derivation": "none"
+    }
+   }
+  },
+  {
+   "id": "cs-uitvoer-jaarmutatie-2024",
+   "category": "variant",
+   "question": "Wat was de jaarmutatie van de uitvoerwaarde in maart 2024?",
+   "expect": {
+    "outcome": "intent",
+    "intent": {
+     "schemaVersion": 1,
+     "target": {
+      "kind": "canonical",
+      "key": "goods_exports_yoy"
+     },
+     "period": {
+      "kind": "codes",
+      "codes": [
+       "2024MM03"
+      ]
+     },
+     "derivation": "none"
+    }
+   }
+  },
+  {
+   "id": "cs-huizenprijsindex-kw1",
+   "category": "variant",
+   "question": "Wat was de prijsindex van bestaande koopwoningen in het eerste kwartaal van 2026?",
+   "expect": {
+    "outcome": "intent",
+    "intent": {
+     "schemaVersion": 1,
+     "target": {
+      "kind": "canonical",
+      "key": "house_price_index_regional"
+     },
+     "period": {
+      "kind": "codes",
+      "codes": [
+       "2026KW01"
+      ]
+     },
+     "derivation": "none"
+    }
+   }
+  },
+  {
+   "id": "cs-maandwerkloosheid-juni",
+   "category": "variant",
+   "question": "Wat was de maandwerkloosheid in juni 2026?",
+   "expect": {
+    "outcome": "intent",
+    "intent": {
+     "schemaVersion": 1,
+     "target": {
+      "kind": "canonical",
+      "key": "monthly_unemployment_seasonally_adjusted"
+     },
+     "period": {
+      "kind": "codes",
+      "codes": [
+       "2026MM06"
+      ]
+     },
+     "derivation": "none"
+    }
+   }
+  },
+  {
+   "id": "cs-gemeente-verkoopprijs-amsterdam",
+   "category": "variant",
+   "question": "Wat was de gemiddelde verkoopprijs van een koopwoning in Amsterdam in 2025?",
+   "note": "The session-54 collision calibration case: the NATIONAL monthly key (average_existing_home_sale_price, 85773NED) also matches on topic but cannot serve a gemeente - the regional GeoDimension key must win when a gemeente is named.",
+   "expect": {
+    "outcome": "intent",
+    "intent": {
+     "schemaVersion": 1,
+     "target": {
+      "kind": "canonical",
+      "key": "average_home_sale_price_by_gemeente"
+     },
+     "regions": [
+      "GM0363"
+     ],
+     "period": {
+      "kind": "codes",
+      "codes": [
+       "2025JJ00"
+      ]
+     },
+     "derivation": "none"
+    }
+   }
+  },
+  {
+   "id": "cs-kale-huizenprijs-blijft-85773",
+   "category": "variant",
+   "question": "Wat is de gemiddelde huizenprijs nu?",
+   "note": "#165 discipline pin, session 54: the bare national 'huizenprijs' ask STAYS on the monthly national key even now the per-gemeente key (83625NED) exists.",
+   "expect": {
+    "outcome": "intent",
+    "checks": {
+     "canonicalKey": "average_existing_home_sale_price",
+     "impliedRecency": true,
+     "derivation": "none"
+    }
+   }
   }
  ]
 }

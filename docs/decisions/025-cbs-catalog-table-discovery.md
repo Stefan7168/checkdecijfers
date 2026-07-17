@@ -69,3 +69,17 @@ shortlist choice with the hard allowlist).
 - Recall needs dimension-name signal (title+summary insufficient) → a per-table metadata enrichment pass feeding the `tsvector`.
 - v4 catalog coverage gaps surface real "we don't have that" for tables CBS actually publishes → reconsider a legacy-catalog merge.
 - LLM spend > ~€50/mo (ADR 004) → prompt caching + tier re-evaluation.
+
+## As-built note — the escalation ladder's first firing (session 54, 2026-07-18)
+
+The recorded trigger ("a measured accuracy miss within a good shortlist") fired: on a byte-identical rerank
+prompt, Haiku stably (4/4 records) dropped the only v1-deliverable table `37789ksz` from the bijstand-stock
+candidate chain — upstream model drift, detected by the coverage-batch re-record. The Haiku → Sonnet step was
+executed and REVERTED on measurement, and the ladder's "one-line change" claim did not survive contact:
+(1) Sonnet 5 rejects `temperature: 0` (the un-adapted param API-errored every call; the fail-safe disclosed
+9/11 before any model answer was seen — `thinking: 'disabled'` is the compose-caller pattern to copy);
+(2) Sonnet's confidence distribution is MUDDY against the Haiku-calibrated 0.8 floor (correct must-confident
+picks 0.60–0.88 overlapping should-disclose picks 0.60–0.62), so the threshold must be CO-calibrated per
+model. Sonnet's chains are richer (`37789ksz` back in the alternatives) — the escalation is worth finishing as
+its own supervised WP. Tracked: [open-questions #172](../open-questions.md); the weakened labelled-set
+assertion carries the restore instruction.

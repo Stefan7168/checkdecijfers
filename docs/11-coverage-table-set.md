@@ -132,8 +132,9 @@ independently re-queried from BOTH live CBS platforms before freezing; keys neve
 - **Reference values (frozen into CC11–CC13; v3+v4 cross-checked + fixture-verified 2026-07-17):** 371600 2026MM05
   omzet-YoY **1.8** (Voorlopig); 371700 (supermarkten) 2026MM05 **−0.6** (Voorlopig); 371600 2025JJ00 index
   **118.7** (Definitief). Extra measured, not frozen: 371600 2023MM06 = 7.0, 2020MM04 = −2.9.
-- **Vocabulary: deliberately NONE yet** — canonical keys for all of #4-#9 land in ONE staged owner-present vocab
-  batch (#164; see the staged-vocab session brief). CC tasks use explicit targets until then.
+- **Canonical measures (registry, session-54 vocab batch, 2026-07-18):** `retail_turnover_yoy` (A042501_2 ×
+  371600; canonical default for 'omzet detailhandel') and `supermarket_turnover_yoy` (× 371700). CC11/CC12
+  re-pointed at them; CC13 (index level) stays explicit — the index is an alternate, not a key.
 
 ### `85937NED` — consumptie huishoudens (sprint #5; measured + built session 53, 2026-07-17)
 
@@ -227,8 +228,32 @@ independently re-queried from BOTH live CBS platforms before freezing; keys neve
 - **Reference values (frozen into CC29–CC31; v3+v4 cross-checked + fixture-verified 2026-07-17):** NL01 2025JJ00
   **479.527**; Amsterdam (GM0363) 2025JJ00 **630.621**; Amsterdam 2015JJ00 **303.925** (depth). Extra measured,
   not frozen: NL01/GM0363 1995JJ00 = 93.750/98.008 (series start, below the fixture floor — live-only).
-- **Vocabulary staged** like the rest of #4-#9; note the term-collision watchout with 85773NED ("huizenprijs" stays
-  monthly-national) — the staged-vocab brief carries the analysis.
+- **Canonical measure (registry, session-54 vocab batch):** `average_home_sale_price_by_gemeente` (M001534, a
+  REGIONAL_KEYS entry — regions via the intent's regions field). The bare "huizenprijs" stays with 85773NED
+  (measured pin cs-kale-huizenprijs-blijft-85773); CC29-CC31 re-pointed at the key with regions.
+
+## Session-54 vocab batch (2026-07-18) — tables #4-#9 vocabulary + ONE #164 re-record
+
+Ten canonical keys added in one batch (`src/registry/defaults.ts` is the code record; the staged brief
+[session-briefs/2026-07-17-coverage-4-9-vocab-batch-staged.md](session-briefs/2026-07-17-coverage-4-9-vocab-batch-staged.md)
+was the design doc, executed with deviations noted there): `retail_turnover_yoy`, `supermarket_turnover_yoy`
+(#4), `household_consumption_growth` (#5), `goods_imports_value`/`goods_exports_value`/`goods_imports_yoy`/
+`goods_exports_yoy` (#6), `house_price_index_regional` (#7), `monthly_unemployment_seasonally_adjusted` (#8),
+`average_home_sale_price_by_gemeente` (#9, REGIONAL). Batch outcome, all MEASURED:
+
+- **Prompt v6** (two recorded changes): the deferred ADR-023 bare-"tot" wording fix, and the GRAIN-SIBLING
+  tie-break rule — scoped to explicitly NAMED key pairs only (the first generic wording broke benchmark case B2
+  4/4: generic period-words in a topic rule bleed into every question; prompt.ts carries the warning).
+- **Final gate: intent 72/72 ×3 with ZERO flips** (correct-pick confidence min 0.92 / median 0.95), followup
+  22/22, clarify 7/7, tablefinder 11/11 live + 11/11 hermetic replay.
+- **Three reasoned relabels** (never green-making; each with measured rationale in the labelled sets):
+  `dr-kw-only-kwartaalgrenzen` KW→MM (month-precise boundaries take the monthly series now it exists); `r-autos`
+  stays clarification (bistable, original policy choice, matches the committed fixture); `f-v29-age-breakdown`
+  clarification→refusal (stable majority after the vocab shifted the balance; WP26-adjacent conservatism).
+  Plus the finder's `werkloosheid` case → 80590ned (production-moot: both tables curated, #166 screen).
+- **[#172](open-questions.md) opened:** the bijstand-stock chain regression (upstream Haiku drift, detected on a
+  byte-identical prompt) + the measured-and-reverted Sonnet escalation attempt (muddy confidence distribution vs
+  the Haiku-calibrated 0.8 floor; params fix documented in `src/catalog/rerank.ts`).
 
 ## Catalog quirks encountered (adds to docs/07's list)
 

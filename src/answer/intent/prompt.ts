@@ -29,14 +29,29 @@ import type { CanonicalMeasure } from '../../registry/types.ts';
  * clarification loop).
  *
  * KNOWN WORDING WART (2026-07-05, review + owner decision — ADR 023 alt 4):
- * the v5 rule says toInclusive is "false for bare tot", but the model applies
+ * the v5 rule said toInclusive is "false for bare tot", but the model applies
  * that only to DAY-precise boundaries ("tot 1 januari 2023" → exclusive ✓)
  * and reads month-only bare "tot" ("van maart tot september") as everyday-
  * INCLUSIVE (0.95, stable ×3) — which the owner accepted as the product
- * behavior (pinned live by labelled case dr-kale-tot-maand-inclusief). Fix
- * the rule text with the NEXT prompt-changing WP: prompt bytes are fixture-
- * hashed, so a wording-only fix would force a full re-record by itself. */
-export const PROMPT_VERSION = 5;
+ * behavior (pinned live by labelled case dr-kale-tot-maand-inclusief). The
+ * fix was deferred to "the NEXT prompt-changing WP" → executed in v6.
+ * v6 (2026-07-18, session-54 coverage vocab batch): (a) the deferred ADR-023
+ * wording fix — the toInclusive rule now SAYS what the owner accepted (bare
+ * "tot" before a day-precise boundary = exclusive; before a month-only
+ * boundary = everyday-inclusive), so the model no longer fights the rule text
+ * (dr-exclusief-tot-dag wobbled intent↔clarification under the longer v5+
+ * vocabulary, ×3 measured); (b) a grain-sibling tie-break rule — the registry
+ * now carries the same measure at different grains under different keys
+ * (werkloosheid: quarterly 85224NED + monthly 80590ned, a class that grows
+ * with every coverage table), and without the rule the model sometimes
+ * clarified between them (dr-kw-only-kwartaalgrenzen, ×3 measured).
+ * ⚠ Rule (b) MUST stay scoped to the EXPLICITLY NAMED sibling pairs: the
+ * first, generic wording ("month names take the monthly-series key") made the
+ * unrelated benchmark case B2 ("... op 1 januari 2024", population) flip to a
+ * region clarification 4/4 — generic period-words in a topic rule bleed into
+ * every question. When a future coverage table adds a second sibling pair,
+ * extend the rule's named list, never re-generalize it. */
+export const PROMPT_VERSION = 6;
 
 /** Period grains each canonical measure is published at. Curated from the
  * live-ingest measurement in src/registry/defaults.ts (2026-07-03) and
@@ -68,11 +83,30 @@ export const AVAILABLE_GRAINS: Record<string, ('JJ' | 'KW' | 'MM')[]> = {
   producer_prices_yoy: ['JJ', 'MM'],
   import_prices_yoy: ['JJ', 'MM'],
   producer_price_index_level: ['JJ', 'MM'],
+  // Coverage sprint tables #4-#9 (session-54 vocab batch; grains measured
+  // 2026-07-17, docs/11): 85828NED/85937NED carry all three grains within the
+  // registered scope; 85429NED is MM+JJ; 85792NED is KW+JJ; 83625NED is
+  // yearly-only. 80590ned advertises JJ too: its seasonally-adjusted JJ rows
+  // EXIST as honest nulls with CBS reason 'Impossible' (no seasonal adjustment
+  // on year basis — CC28 pins the honest-null serving), and the eval script's
+  // grain-claim check correctly demands every observed grain be advertised.
+  retail_turnover_yoy: ['JJ', 'KW', 'MM'],
+  supermarket_turnover_yoy: ['JJ', 'KW', 'MM'],
+  household_consumption_growth: ['JJ', 'KW', 'MM'],
+  goods_imports_value: ['JJ', 'MM'],
+  goods_exports_value: ['JJ', 'MM'],
+  goods_imports_yoy: ['JJ', 'MM'],
+  goods_exports_yoy: ['JJ', 'MM'],
+  house_price_index_regional: ['JJ', 'KW'],
+  monthly_unemployment_seasonally_adjusted: ['JJ', 'KW', 'MM'],
+  average_home_sale_price_by_gemeente: ['JJ'],
 };
 
-/** The only Phase 0 measure with a regional dimension (03759ned: national,
- * provinces, municipalities — registry slice). Everything else is national. */
-export const REGIONAL_KEYS = new Set(['population_on_1_january']);
+/** Measures with a regional dimension: 03759ned (population — national,
+ * provinces, municipalities; registry slice) and, since the session-54
+ * coverage batch, 83625NED (home sale prices — a REAL GeoDimension with 728
+ * gemeenten + provincies + NL01). Everything else is national. */
+export const REGIONAL_KEYS = new Set(['population_on_1_january', 'average_home_sale_price_by_gemeente']);
 
 const GRAIN_WORDS: Record<string, string> = {
   JJ: 'jaar',
@@ -146,6 +180,7 @@ ${vocabularyTable(extra)}
 
 Rules for the topic:
 - Everyday terms map to their key: this is the registry's canonical default. Do NOT lower confidence merely because the user did not spell out the technical definition ("werkloosheid" → unemployment_rate_seasonally_adjusted is the intended reading).
+- Grain siblings — applies ONLY to these key pairs, nothing else about any question changes: werkloosheid exists twice (unemployment_rate_seasonally_adjusted = the kwartaal/jaar series, monthly_unemployment_seasonally_adjusted = the maand series). When a werkloosheid question names a specific month or a month-bounded range, pick the maand key; otherwise (kwartaal, jaar, or no period signal) pick unemployment_rate_seasonally_adjusted. Pick with your normal confidence and NEVER clarify between grain siblings — the period already decided.
 - If the topic is data-shaped but matches no key (e.g. "bijstand", "gemiddeld loon"): kind stays data_query, candidates stays EMPTY, set unmatchedMeasureTerm to the user's term, and list the closest keys from the vocabulary in nearestCanonicalKeys (may be empty when nothing is close).
 - If the topic is clearly far from every key, use kind out_of_scope instead.
 
@@ -162,7 +197,7 @@ Rules for the topic:
 
 - Named year → {"kind":"year"}; named quarter → {"kind":"quarter"} (Q1..Q4 as 1..4); named month → {"kind":"month"} (1..12).
 - "van X tot en met Y" per year → {"kind":"year_range"}.
-- Explicit day or month BOUNDARIES ("van 1 januari 2022 tot en met 31 december 2022", "van maart 2020 tot juni 2021") → {"kind":"date_range","from":{"year":..,"month":..,"day":..},"to":{"year":..,"month":..,"day":..},"toInclusive":..}. Copy day, month and year exactly AS WRITTEN (day null when no day is named; month names become 1..12); toInclusive is true for "tot en met"/"t/m", false for bare "tot". NEVER simplify these to year_range and NEVER do date arithmetic yourself — code normalizes the boundaries and picks the granularity. Bare years ("van 2020 tot en met 2024") stay year_range; a single date ("op 1 januari 2025") stays a named year/month, not a range.
+- Explicit day or month BOUNDARIES ("van 1 januari 2022 tot en met 31 december 2022", "van maart 2020 tot juni 2021") → {"kind":"date_range","from":{"year":..,"month":..,"day":..},"to":{"year":..,"month":..,"day":..},"toInclusive":..}. Copy day, month and year exactly AS WRITTEN (day null when no day is named; month names become 1..12); toInclusive is true for "tot en met"/"t/m"; for a bare "tot" it depends on the boundary's precision: false (exclusive) when the boundary names a DAY ("tot 1 januari 2023" ends at 31 december 2022), true (everyday-inclusive) when the boundary names only a month ("van maart tot september" includes september). Emit these confidently — never ask about the boundary reading. NEVER simplify these to year_range and NEVER do date arithmetic yourself — code normalizes the boundaries and picks the granularity. Bare years ("van 2020 tot en met 2024") stay year_range; a single date ("op 1 januari 2025") stays a named year/month, not a range.
 - "sinds {jaar}" / "vanaf {jaar}" with NO end named → {"kind":"since","year":X,"quarter":null,"month":null}. A start month refines it: "sinds maart 2020" → {"kind":"since","year":2020,"quarter":null,"month":3}; a start quarter likewise ("sinds het derde kwartaal van 2023" → quarter 3). You do not know today's date — code resolves the open end to the freshest published period, never you. NEVER emit a year_range with fromYear equal to toYear for these.
 - "de afgelopen/laatste N jaar" (N of 2 or more) → {"kind":"last_n","unit":"year","n":N}; "afgelopen N kwartalen"/"afgelopen N maanden" likewise with unit "quarter"/"month". The singular "het afgelopen jaar"/"de afgelopen maand" stays {"kind":"relative", ...,"offset":-1}.
 - "nu/vandaag/huidige ... vergeleken met N jaar geleden", "hoger/lager dan N jaar geleden" → {"kind":"now_vs_ago","unit":"year","amount":N} ("maanden/kwartalen geleden" likewise). This is a comparison of TWO periods, not a range; code picks the two published periods.

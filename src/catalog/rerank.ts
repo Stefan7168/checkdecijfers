@@ -9,14 +9,28 @@ import { rerankJsonSchema, validateRerankOutput } from './rerank-schema.ts';
 import type { CatalogCandidate, FindTableQuery, RerankResult } from './types.ts';
 
 /**
- * Small/fast tier, same as INTENT_MODEL (ADR 004 "model per task" + the
- * delegation cost-tier rule). The principle-(c) risk of a wrong table is
- * contained STRUCTURALLY — the hard allowlist (never invent an id), a
- * conservative confidence threshold, multi-candidate disclosure, and the
- * downstream verification gate — not by model size. Escalation ladder
- * Haiku → Sonnet → Fable is a one-line change here, triggered ONLY by a
- * MEASURED accuracy miss within a good shortlist (a quality miss, not a safety
- * breach); Fable is not justified for v1 (ADR 025).
+ * The principle-(c) risk of a wrong table is contained STRUCTURALLY — the
+ * hard allowlist (never invent an id), a conservative confidence threshold,
+ * multi-candidate disclosure, and the downstream verification gate — not by
+ * model size. Escalation ladder Haiku → Sonnet → Fable is a one-line change
+ * here, triggered ONLY by a MEASURED accuracy miss within a good shortlist
+ * (a quality miss, not a safety breach); Fable is not justified (ADR 025).
+ *
+ * ▶ ESCALATION ATTEMPTED AND REVERTED (session 54, 2026-07-18 — the ladder's
+ * trigger fired, the step was measured, the measurement said no-for-now):
+ * Haiku stably (4/4 records, byte-identical prompt to the s31/s50 era)
+ * dropped the only v1-DELIVERABLE table 37789ksz from the bijstand-stock
+ * candidate chain — a real quality regression within a good shortlist
+ * (upstream model drift, NOT caused by the coverage batch; tracked as
+ * open-questions #172). The Sonnet step was then measured properly: after
+ * fixing the params (Sonnet 5 rejects temperature 0 — see buildRerankRequest)
+ * its chains are RICHER (37789ksz back in the bijstand alternatives) but its
+ * confidence distribution is MUDDY against the Haiku-calibrated 0.8 floor:
+ * correct must-confident picks land at 0.60-0.88 (huizenprijzen 0.60)
+ * OVERLAPPING should-disclose picks (zonnepanelen runner-up 0.62,
+ * bijstand-stock 0.60) — no clean threshold exists, so adopting Sonnet
+ * requires model+threshold CO-calibration (its own supervised work package,
+ * #172), not a one-line swap. Reverted to the proven Haiku config verbatim.
  */
 export const TABLE_RERANK_MODEL = 'claude-haiku-4-5';
 
@@ -39,6 +53,13 @@ export function buildRerankRequest(
     // but 512 was a tighter margin than any sibling caller; 1024 avoids
     // degrading a confident pick to disclosure on a verbose reading.
     maxTokens: options.maxTokens ?? 1024,
+    // Haiku parses deterministically at temperature 0 (the proven config).
+    // ⚠ For a future Sonnet escalation (#172): Sonnet 5 REJECTS temperature 0
+    // and runs adaptive thinking unless disabled — swap this line for
+    // `thinking: 'disabled'` like the compose caller (src/answer/compose/
+    // prompt.ts). The un-adapted param was the silent killer of the first
+    // s54 escalation attempt: every rerank call API-errored and the fail-safe
+    // disclosed 9/11 before anyone saw a model answer.
     temperature: 0,
     system: buildRerankSystemPrompt(),
     question: serializeShortlist(query, shortlist),

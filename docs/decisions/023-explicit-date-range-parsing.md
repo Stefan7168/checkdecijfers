@@ -56,3 +56,12 @@ The ADR 021 `ConversationContext` builder deliberately round-trips only year-gra
 - Quarter-named ranges ("van Q1 2020 tot Q3 2021") appearing → a `quarter` refinement on DateBoundary, same division of labor.
 - Follow-ups after date-range answers losing the period axis in practice → the known limitation above.
 - Monthly maintenance session: `npm run intent:eval` re-run per ADR 012 (now 63 cases).
+
+## As-built note — the deferred bare-"tot" wording fix landed (prompt v6, session 54, 2026-07-18)
+
+Alternative 4's accepted-behavior wart ("fix the rule text with the NEXT prompt-changing WP") was executed in
+the session-54 coverage vocab batch: the toInclusive rule now states the owner-accepted split explicitly (bare
+"tot" before a DAY-precise boundary = exclusive; before a month-only boundary = everyday-inclusive) instead of
+the blanket "false for bare tot" the model was measurably fighting (dr-exclusief-tot-dag wobbled
+intent↔clarification ×3 under the grown v5 vocabulary). Behavior unchanged BY DESIGN — both dr-labels pin the
+same readings as before; the rule text just stopped contradicting them. Stable ×3 post-change.
