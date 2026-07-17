@@ -8,7 +8,10 @@ and one wrong platform verdict. All four open verification points (a)–(d) are 
 
 ## Headline conclusions
 
-1. **Zero adapter changes needed for tables #3-#9** — mixed-grain Perioden are already first-class
+1. **Zero adapter changes needed for tables #3-#9** *(s50 amendment: table #2 additionally surfaced
+   [#167](../open-questions.md) — 17 MeasureCodes entries with ZERO observations table-wide; the curated
+   `Phase0Table.excludeMeasures` registration rule now exists for that, and tables #4-#9 must run the
+   RUNBOOK phantom-measure probe before freezing their specs)* — mixed-grain Perioden are already first-class
    (`period_grain` per row, like 85773NED/82242NED since Phase 0) and "pick these N codes" slices work via
    `dimensionPrefixes` with FULL codes (startswith == equality when no code extends another).
    **⚠ Table #2 (85880NED) is the ONE exception — REFUTED by the hermetic validator during the overnight
@@ -45,7 +48,9 @@ and one wrong platform verdict. All four open verification points (a)–(d) are 
   measures have zero rows under those flavors → `row_plausibility` quarantines, correctly). Owner/session-50
   decision between the measured options in headline conclusion 1: full ingest (~99,676 obs, ~18MB fixture) vs
   a small `CbsSlice` measure-allowlist extension (v4 accepts `Measure eq` in `$filter`, verified live) vs
-  descope. CC5-CC7 reserved for this table.
+  descope. CC5-CC7 reserved for this table. **▶ RESOLVED session 50: full ingest (owner); CC5-CC7 frozen
+  (1.4 / −1.1 / 0.2, build-day re-measured both platforms); fixture capture-sliced to 2020+; 17 phantom
+  measures excluded per [#167](../open-questions.md) — see headline conclusion 1's s50 amendment.**
 - Headline measure: **`M002782_1`** "Bruto binnenlands product" (%; the title exists on 4 codes — pin by CODE).
 - Canonical key sketch: `gdp_growth_yoy_volume` (M002782_1, dims {SoortMutaties: 'A045299'}, terms
   'economische groei', 'bbp', 'bruto binnenlands product'; alternate dims A045300 'kwartaal-op-kwartaal').

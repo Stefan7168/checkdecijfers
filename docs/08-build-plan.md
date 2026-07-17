@@ -35,8 +35,10 @@ per-table measured record: [11-coverage-table-set.md](11-coverage-table-set.md).
 onboarding (commit `c4134bc`, CI gate+deploy green) + live prod sync (batch 15, 3,864 cells, 0 corrections) + registry defaults + the [#165](open-questions.md)
 vocab-overlap trim + LLM-free live verify (−39, juni 2026; JJ ask refuses `not_published`). Verification tasks CC1-CC4 frozen in
 [benchmark/coverage-key.json](../benchmark/coverage-key.json), scored on the gate by `tests/query/coverage-key.test.ts` (docs/05 onboarding rule).
-**NEXT: tables #2 `85880NED` (BBP) + #3 `85770NED` (PPI) before 30/7 — in ONE build session with ONE combined vocab change + ONE fixture re-record
-(the [#164](open-questions.md) sprint constraint: every vocab addition invalidates all ~93 intent/followup/clarify/delivery LLM fixtures).**
+**✅ Tables #2 `85880NED` (BBP, FULL ingest per the owner decision + the [#167](open-questions.md) phantom-measure exclusion) and #3 `85770NED`
+(PPI) are DONE END-TO-END + LIVE (session 50, 2026-07-17, build commit `57be40a`)** — one combined vocab batch (5 canonical keys) + ONE fixture
+re-record per the [#164](open-questions.md) constraint; CC5-CC10 frozen + green on the gate; all six frozen cells re-verified LLM-free on
+production. **NEXT: tables #4-#9 per the specs doc (releases 3/8-20/8), each starting with the RUNBOOK phantom-measure probe.**
 ~~Table 8 needs ADR-003's v3 path~~ REFUTED by the 2026-07-17 overnight validation: `80590ned` IS on v4 under its lowercase id (docs/07 quirk #1) — no v3 path needed; measured build specs for #2-#9: [session-briefs/2026-07-17-coverage-tables-2-9-measured-specs.md](session-briefs/2026-07-17-coverage-tables-2-9-measured-specs.md). Fresh
 hunts are PAUSED per #163(1); the owner-stack items (#138/WP26/#121/#131/WP30c) queue behind the sprint.
 

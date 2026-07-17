@@ -59,3 +59,18 @@ intent/followup/clarify/delivery LLM replay fixture ([#164](../open-questions.md
 key silently advertises `['JJ']` to the LLM, wrong for a monthly-only table. Verification-task convention for
 curated adds: frozen `CC*` tasks in `benchmark/coverage-key.json`, scored hermetically by
 `tests/query/coverage-key.test.ts` (the docs/05 onboarding rule), leaving B1–B20 and its gate counts untouched.
+
+## As-built addendum (2026-07-17, session 50 — coverage sprint tables #2/#3 + the #167 exclusion rule)
+
+Five keys landed in ONE vocab batch (the [#164](../open-questions.md) batching constraint): `85880NED`
+`gdp_growth_yoy_volume` (canonical default for "economische groei"/"bbp" — CBS's persbericht headline,
+volume j-o-j) + `gdp_growth_qoq_volume`, and `85770NED` `producer_prices_yoy` (canonical default for
+"producentenprijzen"/"ppi") + `import_prices_yoy` + `producer_price_index_level`. Two pattern facts pinned
+here: (1) **a dims-FLAVOR that users ask for by name gets its OWN key** (`gdp_growth_qoq_volume`,
+`import_prices_yoy`) — `alternates` are prompt-side "NIET te verwarren met" hints only, NOT resolvable
+targets, so a flavor without a key cannot be answered or pinned by a CC task; (2) **registration semantics
+gained the curated phantom-measure exclusion** ([#167](../open-questions.md)): `Phase0Table.excludeMeasures`
+lists measured, per-code-documented MeasureCodes entries with ZERO observations table-wide; registration/
+sync/conformance treat them as not-published while the schema fingerprint stays unfiltered (CBS changing
+the phantom set still fails the drift check loudly). Without it, `85880NED`'s 17 phantoms quarantine even a
+healthy full ingest.
