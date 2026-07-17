@@ -9,33 +9,30 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
-**▶ NEXT SESSION STARTS HERE (session 50, 2026-07-17, owner-present — COVERAGE-SPRINT TABLES #2 + #3 DONE END-TO-END + LIVE, and PRs #54/#55
-reviewed + merged. (1) PR REVIEW/MERGE: 18-agent adversarial pre-merge review confirmed 1 HIGH on PR #54 (guard screened only the finder's top
-pick while the WP27 fit gate resolves over the whole candidate chain) — fixed pre-merge; #54 squash `71d85a2`, #55 squash `347bfdf`. A PARALLEL
-owner-present max-review then landed 12 more findings (file + [dispatch record](session-briefs/2026-07-17-pr54-max-review-findings.md)) — ALL
-dispatched in follow-up `c7f6063` (per-measure belt, active-check-first order, batched `alreadyIngestedSet`, fetch-neutral unanswerable mail),
-gate+deploy green: the #166 guard is LIVE hardened. (2) TABLE #2 `85880NED` (BBP flash): owner chose FULL ingest over a CbsSlice
-measure-allowlist; build surfaced [#167](open-questions.md) — 17 PHANTOM MeasureCodes entries (zero observations table-wide) that quarantine
-even a healthy full ingest → curated `Phase0Table.excludeMeasures` (registration/sync/conformance skip them; fingerprint deliberately
-unfiltered; strictness pinned by counter-test). Fixture capture-sliced to 2020+ (22,230 obs ~4MB, 86141NED pattern — 27 test files + 5 scripts
-rebuild the ingested DB per run). (3) TABLE #3 `85770NED` (PPI): vocab batch re-pointed CC8-CC10 to canonical keys. FIVE keys total
-(gdp_growth_yoy_volume = canonical default 'economische groei'/'bbp', gdp_growth_qoq_volume, producer_prices_yoy = default
-'producentenprijzen'/'ppi', import_prices_yoy, producer_price_index_level) + AVAILABLE_GRAINS (measured); CC5-CC7 frozen after build-day
-re-measurement on BOTH platforms (1.4 / −1.1 / 0.2, v4=v3 exact). ONE #164 re-record (owner spend-approved): 93 fixtures; intent 62/63 + ×3
-(os-v02 deliberately re-labelled none→'difference' — verified B13-registered better behavior, note in the labelled set; r-autos measured
-unstable live refusal↔clarification, both safe, recorded fixture = expected clarification so the gate replay is deterministic), followup 22/22,
-clarify 7/7. Build commit `57be40a`, gate+deploy green. Verification (serial, CI-shaped): ingestion 179, invariants 22, benchmark 28, registry
-14, query 98, answer 551, chart 40, audit 99, billing 102, catalog 69, db 48, sources 56, websearch 31, threads 29; benchmark 14/14 + 6/6 + 0
-fabricated PASS; web 323/323; real build; audit:verify 1-253 exit 0; /code-review low ×3 = 0 findings. LIVE STEPS (owner-present): sync
-85770NED batch 16 = 654 rows/0 corr; 85880NED single-stream sync FAILED at fetch (batch 17 — CBS's unfiltered stream ~6KB/s + terminations,
-~53 min) → PARALLEL CHUNKED capture (5 flavor workers, 99,676 rows in ~6 min) + `sync-from-capture` batch 18 = 99,676 rows/0 corr, all five
-validators live; registry:apply 11 tables/16 keys AFTER verified deploy (RUNBOOK ordering rule); LLM-free spot-checks: ALL SIX frozen cells
-exact on prod (PPI 7.2/9.3/−5.9; BBP 1.4/−1.1/0.2). New committed tooling: `scripts/spot-check-canonical.ts`,
-`scripts/capture-observations-chunked.ts`, `scripts/sync-from-capture.ts` (RUNBOOK curated-table steps 4-5). ▶ NEXT = sprint tables #4-#9 per
-the [specs doc](session-briefs/2026-07-17-coverage-tables-2-9-measured-specs.md) (releases 3/8-20/8), EACH starting with the RUNBOOK
-phantom-measure probe (#167). Owner dates: 22/7 06:30 persberichtdag-generale (sync `85773NED` that morning), 23/7 06:30 sync `83693NED`
-(julicijfer — first release table #1 serves on day one), ~30/7 BBP-flash + PPI-junicijfer syncs (85880NED needs the chunked escape hatch),
-#132 route B check on/after 19/7. Kickoff: [session-briefs/2026-07-17-session-51-kickoff.md](session-briefs/2026-07-17-session-51-kickoff.md).)**
+**▶ NEXT SESSION STARTS HERE (session 51, 2026-07-17, owner-present — OWNER PIVOT: PRODUCT-FINISH FIRST ("we hebben nog geen product dat af is …
+het ziet er nog steeds niet uit"): finishing the product now OUTRANKS coverage-sprint tables #4-#9 and the marketing calendar. Delivered this
+session: (1) the PAPIER-EN-INKT huisstijl ([12-huisstijl.md](12-huisstijl.md) — redactioneel & cijfer-vast, owner-chosen: Newsreader serif
+display, tabular figures, warm paper, one ink-blue accent; light-first — the "black void" login WAS the scaffold's auto-dark half-theme);
+(2) a PUBLIC landing on `/` (resolves [#98](open-questions.md); owner decision: the homepage is the product's face — real example answer from
+frozen key CC1 (−39, live-verified), "Geen gokwerk, maar rekenwerk", credits section; proxy allowlists `/` EXACT-match, test-pinned; no data
+reads, no chargeable entry); (3) ALL surfaces restyled (login/header/footer/dashboard/chat/charts/credits/geschiedenis — 5 parallel agents on
+disjoint file sets against the written contract, presentation-only); (4) site-wide CBS/CC BY footer (ux-brief §3). Build commit `4dc5273`;
+verification: full serial block green (audit 99/99 on solo re-run — 2 dev-server load-flakes, the documented pattern), benchmark 14/14 + 6/6 +
+0 fabricated PASS, web 324/324, real build, /code-review low ×2 = 0 findings; landing + login visually verified on local dev (RUNBOOK gained
+the local-dev env procedure). OWNER DECISIONS RECORDED (#53 refinement + #98): trial lives ON the homepage; EMPTY-POT FAIL-SAFE — site never
+breaks, trial input degrades to a login prompt and auto-re-enables on refill; two belts = deterministic per-question DB pot (measured in
+QUESTIONS) inside + a SEPARATE Anthropic API key with its own hard spend cap outside; "Ontdek Nederland in grafieken" homepage section approved
+(LLM-free deterministic charts from our own DB via src/chart/ — may ship BEFORE the trial). ▶ NEXT (product-finish order): (a) "Ontdek
+Nederland in grafieken" section; (b) the #53 anonymous-trial pot (money path — own reviewed change, supervised go-live, separate API key);
+(c) then coverage tables #4-#9 (specs ready, each with the #167 phantom probe). Owner dates stay: 22/7 06:30 sync `85773NED`, 23/7 06:30 sync
+`83693NED`, ~30/7 BBP+PPI syncs (85880NED needs the chunked escape hatch), #132 route B on/after 19/7. Kickoff:
+[session-briefs/2026-07-17-session-52-kickoff.md](session-briefs/2026-07-17-session-52-kickoff.md).)**
+
+**Session 50 (2026-07-17 — sprint tables #2 `85880NED` (FULL ingest) + #3 `85770NED` DONE END-TO-END + LIVE (build `57be40a`; all six frozen
+cells LLM-free exact on prod); PRs #54/#55 reviewed + merged incl. the 12-finding parallel max-review dispatch `c7f6063`; #167 phantom-measure
+exclusion mechanism; slow-stream escape hatch (chunked capture + sync-from-capture — needed for every 85880NED release-day sync); ONE #164
+re-record (62/63 + ×3, os-v02 deliberately re-labelled, r-autos live-unstable but gate-deterministic). Full entry in
+[status-archive.md](status-archive.md).)**
 
 **Session 49 (2026-07-17 — coverage-sprint table #1 `83693NED` DONE END-TO-END + LIVE (build `c4134bc`, sync batch 15, registry:apply 9/11,
 #165 trim 115/115, LLM-free verify −39); sprint-wide finds #164/#165/#166 recorded; #118 code-review-LOW governance addition `09b6191`;

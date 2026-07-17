@@ -38,7 +38,7 @@ vocab-overlap trim + LLM-free live verify (−39, juni 2026; JJ ask refuses `not
 **✅ Tables #2 `85880NED` (BBP, FULL ingest per the owner decision + the [#167](open-questions.md) phantom-measure exclusion) and #3 `85770NED`
 (PPI) are DONE END-TO-END + LIVE (session 50, 2026-07-17, build commit `57be40a`)** — one combined vocab batch (5 canonical keys) + ONE fixture
 re-record per the [#164](open-questions.md) constraint; CC5-CC10 frozen + green on the gate; all six frozen cells re-verified LLM-free on
-production. **NEXT: tables #4-#9 per the specs doc (releases 3/8-20/8), each starting with the RUNBOOK phantom-measure probe.**
+production. **Tables #4-#9 (specs ready, each with the RUNBOOK phantom-measure probe) now QUEUE BEHIND the session-51 owner pivot: PRODUCT-FINISH FIRST** — (a) the 'Ontdek Nederland in grafieken' homepage section (LLM-free), (b) the #53 anonymous-trial pot (money path, own reviewed change), then the tables. See STATUS ▶ block.
 ~~Table 8 needs ADR-003's v3 path~~ REFUTED by the 2026-07-17 overnight validation: `80590ned` IS on v4 under its lowercase id (docs/07 quirk #1) — no v3 path needed; measured build specs for #2-#9: [session-briefs/2026-07-17-coverage-tables-2-9-measured-specs.md](session-briefs/2026-07-17-coverage-tables-2-9-measured-specs.md). Fresh
 hunts are PAUSED per #163(1); the owner-stack items (#138/WP26/#121/#131/WP30c) queue behind the sprint.
 
