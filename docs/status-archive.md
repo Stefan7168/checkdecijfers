@@ -1,5 +1,43 @@
 # STATUS archive — the session log
 
+**Last updated: 2026-07-17→18 (session 53 — AUTONOMOUS coverage-sprint prep: tables #4-#9 BUILT DORMANT on
+[PR #56](https://github.com/Stefan7168/checkdecijfers/pull/56) (branch `coverage-tables-4-9-prep`, commit `9daacfc`), per #118(b):
+branch+PR, zero LLM spend, no prompt-byte changes, no live syncs. Vocabulary deliberately NOT added (#164) — the owner-present remainder is
+ONE step, tracked as [#168](open-questions.md).)**
+
+- **Measurement phase (all on 2026-07-17):** 6 parallel cheap-tier (Sonnet) agents, one per table, curl against BOTH CBS platforms
+  (v4 datasets.cbs.nl + v3 opendata.cbs.nl), each running the RUNBOOK #167 phantom probe + grain/status tallies + frozen-key re-measurement.
+  ~6 min wall-clock, ~440k subagent tokens, 0 errors. **All 21 frozen-key candidates from the overnight specs confirmed EXACTLY on both
+  platforms**, then re-verified a third time against the committed fixture bytes before freezing (the tests replay fixtures).
+- **The #167 probe earned its keep on first scripted use: 85828NED has 7 SLICE-EMPTY measures** (the whole Productie family exists for
+  industry branches, ZERO rows for the 8 retail branches) — without curated `excludeMeasures` the first live sync would have quarantined.
+  Mechanism extended in docs (#167 row, docs/11 quirk #4, RUNBOOK step 1: probe WITHIN the registered slice first).
+- **Built (commit `9daacfc`, 58 files):** 6 `COVERAGE_TABLES` seed entries (slices per the specs; 85828NED excludeMeasures ×7) + 6
+  `TABLE_REGISTRY_DEFAULTS` (period semantics incl. the 2026JJ00 "2026 januari-april" partial-year trap and the 2015/2021 methodebreuk gaps)
+  + capture floors (fixtures +7.8MB: 12,096/8,208/1,132/5,208/5,586/8,195 obs) + conformance entries + **CC11-CC31 frozen with EXPLICIT
+  targets** (the s49-overnight PR-#55 pattern — no vocab, no fixture invalidation). Two new behavior pins: **CC21** = the 85429NED
+  methodebreuk (jaarmutatie 2021 = ABSENT rows) refuses value-free as `no_data`; **CC28** = a new `null_cell` task shape pinning 80590ned's
+  seasonally-adjusted JJ rows as null+`ValueAttribute='Impossible'` served honestly per R11 (the overnight specs' "v4 laat die rijen weg" was
+  measured wrong — rows exist, values are honest nulls). Also measured: 85937NED Voorlopig starts 2021 (not 2022; CBS's own prose undercounts
+  its own Status field), 83625NED is row-dense but opgeheven gemeenten carry null+'Impossible' post-merger, 85792NED is "direct definitief"
+  (all 156 periods), v3 padding widths vary per table (docs/11 quirks 5-6).
+- **`--catalog-add` reverted from the PR (measured find):** merging the six ids into the sampled `_catalog.json` flipped 4/11 finder-replay
+  cases (huizenprijzen/werkloosheid/inwoners/woningvoorraad) to failure-safe `disclose` — the added rows shift Stage-1 shortlists, the
+  recorded rerank fixtures miss on hash. Production routing is UNAFFECTED (the live finder reads the full cbs_catalog mirror where these
+  tables always existed). Scheduled with the owner-present `tablefinder:record` re-record (staged brief step 4b; RUNBOOK step 2 warning
+  added).
+- **Verification (measured, after the catalog revert):** typecheck; all 14 backend suites SERIAL — 1,412 tests green; hermetic benchmark
+  **14/14 + 6/6 + 0 fabricated PASS**; web 361 tests + typecheck + real next build; `/code-review` low: no findings. CI on PR #56 (`9daacfc`): **gate PASS** (both runs,
+  measured via `gh pr checks` at session close; deploy skipped — branches never deploy, only `main` does).
+- **Staged for the owner-present step (draaiboek [session-briefs/2026-07-17-coverage-4-9-vocab-batch-staged.md](session-briefs/2026-07-17-coverage-4-9-vocab-batch-staged.md),
+  tracker #168):** proposed canonical keys per table (with #165 collision analysis: 85224NED keeps "werkloosheid", 85773NED keeps
+  "huizenprijs", 85770NED keeps "invoerprijzen"), AVAILABLE_GRAINS/REGIONAL_KEYS additions, labelled-case additions, ONE #164 re-record,
+  catalog-add + tablefinder re-record, CC re-pointing table, live syncs + registry:apply order (#166 finding 8), spot-checks. Open design
+  point recorded: named-region asks on 85792NED (RegioS is a PLAIN dimension — no geo path) have no canonical route yet.
+- Docs updated same-change (on the PR branch): docs/11 (rows #4-#9 + six measured-facts sections + quirks 4-6), open-questions #167
+  extension + NEW #168, 08-build-plan, 04-architecture adapter row, RUNBOOK steps 1+2, specs-brief build-day amendment note, lessons-learned
+  (6 entries). STATUS + this archive entry land on `main` (docs-only) so a fresh session sees the true state pre-merge.
+
 **Last updated: 2026-07-17 (session 52 — PRODUCT-AF DELIVERED END-TO-END: (a) "Ontdek Nederland in grafieken" LIVE on `/` (`752af59`, ADR 035);
 (b) the #53 anonymous trial pot BUILT (`9317acb`, ADR 036) AND its SUPERVISED GO-LIVE RUN the same day, owner present — THE TRIAL IS LIVE on `/`.
 Both kickoff items closed; next = coverage tables #4-#9.)**
