@@ -25,7 +25,12 @@ Anthropic 2× hard-capped → surprise bill structurally impossible TODAY; RUNBO
 spend-cap rule; outstanding owner clicks: GitHub Budgets (the 2026 gotcha), Resend free-confirm, optional Vercel Firewall rate-limit rule.
 ▶ NEXT: owner dates (22/7 06:30 sync `85773NED` generale; 23/7 06:30 sync `83693NED` julicijfer; ~30/7 BBP+PPI syncs — 85880NED via the
 chunked escape hatch; #132 route B on/after 19/7), then the owner-decision stack: WP26 (trial-conversion stake, s52), #138, #121, #131,
-WP30c, #162, #170 visibility smalls (sparring-approved), #172 escalation WP. Trial ops: pot was 23/25 at s52 close, `npm run trialpot:set`.)**
+WP30c, #162, #170 visibility smalls (sparring-approved), #172 escalation WP. Trial ops: pot was 23/25 at s52 close, `npm run trialpot:set`.
+⚠ MODEL SWITCH (owner, 2026-07-18): Fable available through 2026-07-19 only, then sessions run Opus/Sonnet — tonight (18→19/7) is a
+Fable OVERNIGHT DESIGN MARATHON turning the queue's think-work into execute-ready briefs (WP26 execute-brief, #162 ADR-draft, #172
+protocol, #154 design, WP30c rijksfinancien-dossier, #138/#121 notes, optionally the #170 smalls on a PR):
+[session-briefs/2026-07-18-fable-design-marathon-overnight.md](session-briefs/2026-07-18-fable-design-marathon-overnight.md). The
+delegation cost-tier rule survives the switch (the session model does the thinking, fan-out on Sonnet/Haiku).)**
 
 **Session 53 (2026-07-17→18, AUTONOMOUS — tables #4-#9 BUILT DORMANT on PR #56 per #118(b): measured on both platforms via 6 parallel
 agents, CC11-CC31 frozen with explicit targets, the #167 probe caught 7 slice-empty Productie-measures, the `--catalog-add` finder-fixture
