@@ -322,10 +322,21 @@ Rollback at any point: unset `SEMANTIC_CHECK_ENABLED` and redeploy — fully dor
 verdicts on already-written rows stay valid for R8 (the reconstructor checks them whenever the
 key is present, flag state irrelevant).
 
-## #53 anonymous trial pot — the supervised go-live (⏳ PENDING; build DORMANT since session 52, ADR 036)
+## #53 anonymous trial pot — the supervised go-live (✅ RUN 2026-07-17, session 52, owner present)
 
-Everything is built and dormant: until ALL steps below are done the deployed landing renders no trial at
-all. Owner present for the whole list (new secret, live DDL, spend cap):
+**THE TRIAL IS LIVE.** All 7 steps executed 2026-07-17 (owner made the key in its own hard-capped Anthropic
+workspace and set it in Vercel himself; session set TRIAL_ENABLED + TRIAL_IP_HASH_SECRET — the secret piped
+straight into `vercel env add`, never displayed; migration 020 applied + live-verified RLS on/0 anon grants;
+deploy `2609435`; pot seeded 25). Live smoke, measured: two anonymous questions served end-to-end on prod —
+audit rows 255/256 (`source_tag='anonymous_trial'`, `user_id` NULL, `npm run audit:verify -- 255 255` = 1/1
+clean), both trial_questions rows audit-linked, pot 25→23, visitor counter 2→1→0 with the used-up login
+nudge, closed→open flip after `trialpot:set` WITHOUT a deploy (the auto-re-enable fail-safe, proven).
+Owner-side check: Anthropic console → the trial workspace shows the calls; the main workspace shows none.
+Answer-quality note (NOT a trial bug — main-pipeline behavior): both casually-phrased smoke questions drew
+honest conservative refusals rather than answers ("Wat was de inflatie in juni 2026?" → the forecast guard;
+"Wat is het consumentenvertrouwen?" → the meta template) — the WP26 clarify-policy/answer-first theme now
+directly affects the trial's first impression; see the open-questions #53 note. The checklist below stays as
+the RE-RUN/refill reference:
 
 1. **Anthropic console:** create a NEW API key for the trial with **its own hard spend cap** (start small,
    e.g. $5/mo — the outer belt). Never reuse the main key.

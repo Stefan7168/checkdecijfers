@@ -25,11 +25,14 @@ QUESTIONS) inside + a SEPARATE Anthropic API key with its own hard spend cap out
 (LLM-free deterministic charts from our own DB via src/chart/ — may ship BEFORE the trial). ▶ NEXT (product-finish order): (a) ✅ "Ontdek
 Nederland in grafieken" DONE + LIVE (session 52, 2026-07-17, build `752af59`, CI gate+deploy green, live-verified visually: 4 curated
 LLM-free charts on `/` with R4/R11 rendered; ADR [035](decisions/035-homepage-discovery-charts.md); benchmark 14/14 + 6/6 + 0 fabricated
-PASS, web 334/334, chart 51/51); (b) ✅ the #53 anonymous-trial pot BUILT DORMANT (session 52, build `9317acb`, CI gate+deploy green,
-prod live-verified byte-identical/dormant; ADR [036](decisions/036-anonymous-trial-pot.md) accepted-as-built; migration 020 FILE-ONLY;
-adversarial review 12/12 findings fixed incl. the 90-day trial_questions sweep now in `gdpr:purge`; 1752 tests + benchmark 14/14 + 6/6 + 0
-fabricated) — ⏳ REMAINING: the OWNER-SUPERVISED go-live (RUNBOOK "#53 anonymous trial pot": separate capped Anthropic key + 2 env secrets +
-migration 020 apply + `trialpot:set` seed + live smoke); (c) then coverage tables #4-#9 (specs ready, each with the #167 phantom probe). Owner dates stay: 22/7 06:30 sync `85773NED`, 23/7 06:30 sync
+PASS, web 334/334, chart 51/51); (b) ✅ the #53 anonymous-trial pot BUILT (session 52, `9317acb`; ADR [036](decisions/036-anonymous-trial-pot.md); adversarial review
+12/12 findings fixed incl. the 90-day trial_questions sweep in `gdpr:purge`; 1752 tests + benchmark 14/14 + 6/6 + 0 fabricated) **AND its
+SUPERVISED GO-LIVE RUN same day (owner present): THE TRIAL IS LIVE on `/`** — owner-made trial key in its own hard-capped Anthropic
+workspace, TRIAL envs set, migration 020 applied + RLS-verified, deploy `2609435`, pot seeded 25; live smoke MEASURED: 2 anonymous questions
+served (audit rows 255/256 `anonymous_trial`/user_id NULL, `audit:verify` 1/1 clean, pot 23/25, counter 2→1→0 + used-up nudge, closed→open
+flip WITHOUT deploy). ⚠ WP26 stake raised: both casual smoke phrasings drew honest conservative REFUSALS (forecast-guard/meta) — trial first
+impressions now depend on the answer-first work (#53 row note). (c) NEXT: coverage tables #4-#9 (specs ready, each with the #167 phantom
+probe). Owner dates stay: 22/7 06:30 sync `85773NED`, 23/7 06:30 sync
 `83693NED`, ~30/7 BBP+PPI syncs (85880NED needs the chunked escape hatch), #132 route B on/after 19/7. Kickoff:
 [session-briefs/2026-07-17-session-52-kickoff.md](session-briefs/2026-07-17-session-52-kickoff.md).)**
 

@@ -1,6 +1,6 @@
 # ADR 036 — Het #53-proefpotje: anonieme proefvragen op de homepage
 
-**Status: ACCEPTED — BUILT DORMANT (session 52, 2026-07-17); go-live pending, owner-supervised.** Designed
+**Status: ACCEPTED — LIVE (built session 52, 2026-07-17; supervised go-live RUN the same day, owner present — record in the RUNBOOK's #53 section).** Designed
 and built per the session-52 kickoff ("ontwerp eerst kort uitschrijven, dan bouwen"). The owner-decided core
 (open-questions [#53](../open-questions.md) refinements, session 51) is fixed and restated below; the
 D-decisions marked **[proposed]** are this session's design calls within that frame — reviewable at the
