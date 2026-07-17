@@ -9,32 +9,30 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
-**▶ NEXT SESSION STARTS HERE (session 51, 2026-07-17, owner-present — OWNER PIVOT: PRODUCT-FINISH FIRST ("we hebben nog geen product dat af is …
-het ziet er nog steeds niet uit"): finishing the product now OUTRANKS coverage-sprint tables #4-#9 and the marketing calendar. Delivered this
-session: (1) the PAPIER-EN-INKT huisstijl ([12-huisstijl.md](12-huisstijl.md) — redactioneel & cijfer-vast, owner-chosen: Newsreader serif
-display, tabular figures, warm paper, one ink-blue accent; light-first — the "black void" login WAS the scaffold's auto-dark half-theme);
-(2) a PUBLIC landing on `/` (resolves [#98](open-questions.md); owner decision: the homepage is the product's face — real example answer from
-frozen key CC1 (−39, live-verified), "Geen gokwerk, maar rekenwerk", credits section; proxy allowlists `/` EXACT-match, test-pinned; no data
-reads, no chargeable entry); (3) ALL surfaces restyled (login/header/footer/dashboard/chat/charts/credits/geschiedenis — 5 parallel agents on
-disjoint file sets against the written contract, presentation-only); (4) site-wide CBS/CC BY footer (ux-brief §3). Build commit `4dc5273`;
-verification: full serial block green (audit 99/99 on solo re-run — 2 dev-server load-flakes, the documented pattern), benchmark 14/14 + 6/6 +
-0 fabricated PASS, web 324/324, real build, /code-review low ×2 = 0 findings; landing + login visually verified on local dev (RUNBOOK gained
-the local-dev env procedure). OWNER DECISIONS RECORDED (#53 refinement + #98): trial lives ON the homepage; EMPTY-POT FAIL-SAFE — site never
-breaks, trial input degrades to a login prompt and auto-re-enables on refill; two belts = deterministic per-question DB pot (measured in
-QUESTIONS) inside + a SEPARATE Anthropic API key with its own hard spend cap outside; "Ontdek Nederland in grafieken" homepage section approved
-(LLM-free deterministic charts from our own DB via src/chart/ — may ship BEFORE the trial). ▶ NEXT (product-finish order): (a) ✅ "Ontdek
-Nederland in grafieken" DONE + LIVE (session 52, 2026-07-17, build `752af59`, CI gate+deploy green, live-verified visually: 4 curated
-LLM-free charts on `/` with R4/R11 rendered; ADR [035](decisions/035-homepage-discovery-charts.md); benchmark 14/14 + 6/6 + 0 fabricated
-PASS, web 334/334, chart 51/51); (b) ✅ the #53 anonymous-trial pot BUILT (session 52, `9317acb`; ADR [036](decisions/036-anonymous-trial-pot.md); adversarial review
-12/12 findings fixed incl. the 90-day trial_questions sweep in `gdpr:purge`; 1752 tests + benchmark 14/14 + 6/6 + 0 fabricated) **AND its
-SUPERVISED GO-LIVE RUN same day (owner present): THE TRIAL IS LIVE on `/`** — owner-made trial key in its own hard-capped Anthropic
-workspace, TRIAL envs set, migration 020 applied + RLS-verified, deploy `2609435`, pot seeded 25; live smoke MEASURED: 2 anonymous questions
-served (audit rows 255/256 `anonymous_trial`/user_id NULL, `audit:verify` 1/1 clean, pot 23/25, counter 2→1→0 + used-up nudge, closed→open
-flip WITHOUT deploy). ⚠ WP26 stake raised: both casual smoke phrasings drew honest conservative REFUSALS (forecast-guard/meta) — trial first
-impressions now depend on the answer-first work (#53 row note). (c) NEXT: coverage tables #4-#9 (specs ready, each with the #167 phantom
-probe). Owner dates stay: 22/7 06:30 sync `85773NED`, 23/7 06:30 sync
-`83693NED`, ~30/7 BBP+PPI syncs (85880NED needs the chunked escape hatch), #132 route B on/after 19/7. Kickoff:
-[session-briefs/2026-07-17-session-52-kickoff.md](session-briefs/2026-07-17-session-52-kickoff.md).)**
+**▶ NEXT SESSION STARTS HERE (session 52, 2026-07-17, owner-present — PRODUCT-AF DELIVERED: both session-51 pivot items are DONE + LIVE,
+and the #53 money path is now LIVE IN PRODUCTION. (a) "Ontdek Nederland in grafieken" on `/` (`752af59`, ADR
+[035](decisions/035-homepage-discovery-charts.md)): 4 curated LLM-free charts (consumentenvertrouwen/bbp/inflatie/verkoopprijs) built through
+the real pipeline minus the LLM (freshest-anchored windows), rendered by the product's own ChartView (NOT the pure SVG renderer — measured
+unfit, deviation recorded in ADR 035 D2), 30-min TTL cache + fail-safe (section omits, never breaks). (b) the #53 anonymous trial pot
+(`9317acb`, ADR [036](decisions/036-anonymous-trial-pot.md)) — 2 free questions on `/`, deterministic pot (check-before-serve, advisory-lock
+atomic), per-visitor 2 + per-ip 5/day, ALL trial LLM calls on a SEPARATE hard-capped Anthropic key, R8 rows with `source_tag
+'anonymous_trial'`/user_id NULL, 90-day bookkeeping sweep in `gdpr:purge` — **AND its supervised go-live RUN same day (owner present): THE
+TRIAL IS LIVE** (migration 020 applied+RLS-verified, deploy `2609435`, pot seeded 25; live smoke measured: 2 anonymous questions served,
+audit rows 255/256 reconstruct clean, pot 23/25, counter 2→1→0 + used-up nudge, closed→open flip WITHOUT deploy; RUNBOOK "#53" section = the
+full record; owner console-glance on the trial workspace still to confirm). Verification both pushes: 1752 tests, benchmark 14/14 + 6/6 + 0
+fabricated PASS ×2, real builds, /code-review low (none) ×2, adversarial reviews 4/4 + 12/12 findings ALL fixed pre-push (headline catch: the
+ADR-promised 90-day trial_questions sweep was unbuilt — now in `gdpr:purge`). ⚠ WP26 STAKE RAISED: both casual smoke phrasings drew honest
+conservative REFUSALS (forecast-guard/meta) — a trial visitor's 2 free questions can land on refusals, so the WP26 answer-first work now
+directly gates trial conversion (#53 row note). ▶ NEXT (session 53): coverage tables #4-#9 (specs ready in
+[session-briefs/2026-07-17-coverage-tables-2-9-measured-specs.md](session-briefs/2026-07-17-coverage-tables-2-9-measured-specs.md); each
+table FIRST the RUNBOOK #167 phantom probe; #164 one-vocab-batch constraint). Owner dates stay: 22/7 06:30 sync `85773NED`, 23/7 06:30 sync
+`83693NED`, ~30/7 BBP+PPI syncs (85880NED needs the chunked escape hatch), #132 route B on/after 19/7. Trial ops: pot 23/25,
+`npm run trialpot:set -- <n>` refills/closes (0 = closed, UI degrades honestly). Kickoff:
+[session-briefs/2026-07-17-session-53-kickoff.md](session-briefs/2026-07-17-session-53-kickoff.md).)**
+
+**Session 51 (2026-07-17 — the PRODUCT-FINISH pivot: papier-en-inkt huisstijl + public landing on `/` + all surfaces restyled, live
+`4dc5273`; #98 resolved (homepage = the product's face); #53 owner refinements recorded (trial ON the homepage, empty-pot fail-safe, two
+belts). Full entry in [status-archive.md](status-archive.md).)**
 
 **Session 50 (2026-07-17 — sprint tables #2 `85880NED` (FULL ingest) + #3 `85770NED` DONE END-TO-END + LIVE (build `57be40a`; all six frozen
 cells LLM-free exact on prod); PRs #54/#55 reviewed + merged incl. the 12-finding parallel max-review dispatch `c7f6063`; #167 phantom-measure

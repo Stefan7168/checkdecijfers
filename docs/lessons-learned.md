@@ -29,6 +29,20 @@ on top.
 - **Browser-pane screenshots go blank/stale after JS `scrollIntoView`** (two sessions' tabs, repeatable;
   native scroll timed out too). Workaround that works: `resize_window` to a tall viewport (e.g. 1280×2760)
   on a FRESH tab + one screenshot of the whole page after `navigate`.
+- **The in-app browser pane cannot be trusted on streamed (Suspense) pages — verify prod with curl + the
+  REAL Chrome extension instead.** During the #53 go-live the pane's a11y tree froze at the pre-stream
+  shell, screenshots blanked, and a streamed section sat as an unplaced `<div hidden>` template under
+  `body` — which read as "the trial didn't deploy" until `curl | grep` proved the full HTML and the real
+  Chrome showed the section working. Diagnose page-state questions with curl first; interact via the
+  claude-in-chrome extension.
+- **React-19 controlled inputs ignore ALL programmatic value-setting — only real trusted key events work.**
+  Both the classic native-setter+`dispatchEvent('input')` trick and the Chrome extension's `form_input`
+  left the trial input's React state empty (button stayed disabled) while the DOM showed the text; real
+  typed keystrokes (`computer type` after a real click) flipped state instantly. For smoke tests of React
+  forms: click + type, never inject.
+- **Write only claims YOU can verify into as-executed records.** The go-live record briefly stated the
+  Anthropic-console outcome (owner-only visible) as measured fact — caught and rephrased to "asked,
+  awaiting owner confirmation" (`f32a2c8`). The Golden Rule has a who-dimension: verified-by-whom matters.
 
 - **The "black void" login was a HALF-theme: the scaffold's auto-dark media query flipped the body while
   every component stayed light.** (session 51) Rule going forward: a theme exists only if BOTH halves are

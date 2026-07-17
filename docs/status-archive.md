@@ -1,5 +1,59 @@
 # STATUS archive — the session log
 
+**Last updated: 2026-07-17 (session 52 — PRODUCT-AF DELIVERED END-TO-END: (a) "Ontdek Nederland in grafieken" LIVE on `/` (`752af59`, ADR 035);
+(b) the #53 anonymous trial pot BUILT (`9317acb`, ADR 036) AND its SUPERVISED GO-LIVE RUN the same day, owner present — THE TRIAL IS LIVE on `/`.
+Both kickoff items closed; next = coverage tables #4-#9.)**
+
+- **(a) Ontdek-grafieken (`752af59`, CI run 29582994964 gate+deploy green, live-verified visually):** 4 curated LLM-free charts on the public
+  landing — consumentenvertrouwen 83693NED (24 MM), bbp-groei yoy 85880NED (12 KW, R11 open markers live), inflatie 86141NED (24 MM),
+  gemiddelde verkoopprijs 85773NED (24 MM) — via NEW `src/chart/curated.ts`: `freshestForCanonical` anchor → hand-authored StructuredIntent
+  window → `runQuery` → `buildChartSpec`, per-chart R4 attribution + R7 definition lines. RENDER DECISION (ADR 035 D2, deviates from the
+  kickoff sketch WITH recorded reasons): the product's existing huisstijl ChartView (Recharts), NOT the pure SVG renderer — measured unfit
+  (label-per-point at fixed fonts, footer wrap 100 chars overflows the 640px viewBox, unscalable on mobile); render.ts untouched as the
+  static-image seam. Web side `web/lib/ontdek.ts`: 30-min in-process TTL cache + in-flight coalescing + stale-over-nothing + per-chart skip —
+  the public landing NEVER breaks (gate test pins zero skips on fixtures). ADR 035 D4: no R8 audit rows for page views (answer-scoped; R1 via
+  per-point resultIds), docs/05 scope note added. Adversarial review round 1: 4/4 confirmed findings fixed pre-push (periodStepsBack
+  negative-modulo, transient-skip cache poisoning → I/O throws propagate to stale-over-nothing, cache coalescing race, R1/R8 doc scope).
+- **(b) #53 trial pot BUILT (`9317acb`, CI run 29588886983 green; prod byte-identical-dormant verified):** migration 020 (trial_pot_config
+  singleton 0/0 + trial_questions bookkeeping + source_tag CHECK widened 'anonymous_trial'), `src/billing/trial-pot.ts` (atomic
+  check-BEFORE-serve take under one global advisory lock, idempotent, per-visitor 2 + per-ip-hash 5/day, refund-on-throw-only,
+  questionsLeft computed in-transaction), `web/app/trial-actions.ts` (own action — askQuestion's auth gate untouched; ALL LLM clients incl.
+  the #144 checker on the SEPARATE trial key via the existing `AnthropicLlmClient(sdk)` seam, zero prompt bytes), `web/lib/trial.ts` (D1
+  cookie on first use, HMAC'd IPs, per-request gate state), landing `TrialSectie` dormant behind TRIAL_ENABLED+key+secret. Build revisions
+  (ADR 036 D5, stricter than the draft): v1 has NO clarification-reply round (unmetered anonymous LLM surface) and every SERVED response
+  consumes the proefvraag. Adversarial review round 2: 12/12 confirmed findings ALL fixed pre-push — headline: ADR-promised 90-day
+  trial_questions sweep was UNBUILT (caught via 4 independent lenses) → built into `npm run gdpr:purge` (DELETE leg, pre-migration-safe);
+  attachTrialAudit inside the try could discard a served answer → fail-soft; pot-race contract test; anonymous-row retention tests;
+  semantic-check-on-trial-key test; clarification nudge.
+- **(b') SUPERVISED GO-LIVE (same day, owner present; RUNBOOK "#53" section = the record):** owner created the trial key in its OWN
+  hard-capped Anthropic workspace + set it in Vercel himself (never through chat); session set TRIAL_ENABLED + TRIAL_IP_HASH_SECRET (secret
+  piped straight into `vercel env add`, never displayed); migration 020 applied to prod + live-verified (RLS on, 0 anon grants, pot 0/0,
+  CHECK widened); deploy `2609435` (CI run 29591474836 green) → landing showed the honest CLOSED state; `npm run trialpot:set -- 25` →
+  trial OPENED on the next request WITHOUT a deploy (the owner's auto-re-enable fail-safe, proven live). LIVE SMOKE (measured): 2 anonymous
+  questions served end-to-end on prod — audit rows 255/256 (`source_tag='anonymous_trial'`, `user_id` NULL, llm role `intent` recorded),
+  `npm run audit:verify -- 255 255` = 1/1 clean, both trial_questions rows audit-linked/not-refunded/same visitor, pot 25→23, visitor
+  counter 2→1→0 ending in the used-up login nudge. Owner-side console check (trial workspace shows the spend, main shows none) asked,
+  awaiting his glance.
+- **⚠ WP26 stake raised (recorded on the #53 row):** both casually-phrased smoke questions drew honest conservative REFUSALS instead of
+  answers ("Wat was de inflatie in juni 2026?" → forecast-guard; "Wat is het consumentenvertrouwen?" → meta template) — main-pipeline
+  behavior, zero fabricated numbers, but on the trial surface a visitor's 2 free questions can land on refusals: the WP26
+  answer-first/clarify-policy work now directly gates trial conversion.
+- **Verification (both pushes):** full serial block green ×2 — block 1 = 1711 tests (incl. the 11 new curated-chart tests), block 2 = 1752
+  (+41 trial tests root+web), benchmark 14/14 + 6/6 + 0 fabricated GATE PASS ×2, real `next build` ×2, `/code-review` low = (none) ×2,
+  adversarial reviews 4/4 + 12/12 all dispatched pre-push. Prod verified after each deploy (landing text/DOM + DB checks).
+- **Tooling/process finds (lessons-learned):** the in-app browser pane broke on streamed Suspense pages ALL session (stale a11y
+  tree/blank screenshots/unplaced streamed sections — misread the go-live state as 'section missing' until curl proved the HTML complete);
+  the REAL Chrome extension worked; React-19 controlled inputs ignored both JS native-setter events AND extension form_input — only real
+  trusted key events flipped state. Fail-safe caches read as 'feature absent' on the first post-deploy request — verify on the SECOND.
+  Golden-rule catch: an owner-only-verifiable claim (Anthropic console) was briefly written as measured fact in the RUNBOOK → rephrased
+  (`f32a2c8`).
+- **Commits this session:** `752af59` (Ontdek feat) / `a4e02a5` / `4672300` (ADR 036 design) / `9317acb` (trial feat) / `72fedb2` /
+  `2609435` (go-live envs+deploy) / `78579b6` / `f32a2c8` + this wrap-up. Migration 020 is APPLIED to prod (schema_migrations 20).
+- **NEXT (session 53): coverage tables #4-#9** (specs in [session-briefs/2026-07-17-coverage-tables-2-9-measured-specs.md](session-briefs/2026-07-17-coverage-tables-2-9-measured-specs.md);
+  each table FIRST the RUNBOOK #167 phantom probe; #164 one-vocab-batch constraint). Owner dates: 22/7 06:30 sync `85773NED`, 23/7 06:30
+  sync `83693NED`, ~30/7 `85770NED` + `85880NED` (chunked escape hatch), #132 route B on/after 19/7. Trial ops: pot at 23/25,
+  `npm run trialpot:set -- <n>` refills/closes; WP26 now has trial-conversion stakes.)
+
 **Last updated: 2026-07-17 (session 51 — owner-present: the PRODUCT-FINISH pivot. Owner: "we hebben nog geen product dat af is … het ziet er nog steeds niet uit en het moet allemaal veel beter" — product look/finish now outranks coverage tables #4-#9 and the marketing calendar. Delivered: the papier-en-inkt huisstijl + a public landing on `/` + every surface restyled, live via `4dc5273`.)**
 
 - **Diagnosis first (looked, not remembered):** prod `/` redirected to a bare login form in a black void — the scaffold's auto-dark media query flipped the body dark while every component stayed light (the "half-theme"); globals.css was the untouched 26-line starter (Arial fallback); no landing, no brand, no site-level attribution. The old [10-ux-design-brief.md](10-ux-design-brief.md) had structure (shell/logout via WP135) but explicitly excluded visual design; #98 (what is `/`?) was still open.
