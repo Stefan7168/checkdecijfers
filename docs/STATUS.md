@@ -17,7 +17,7 @@ Build commit `c4134bc`, CI run 29536621797 gate+deploy green; verification block
 fabricated GATE PASS, real build, /code-review low = 0 findings. Live step (owner pre-approved): sync batch 15 = 3,864 cells / 0 corrections;
 registry:apply 9 tables / 11 keys; #165 vocab-overlap trim 115/115 rows; LLM-free prod verify −39 (juni 2026, Definitief) + JJ-ask →
 `not_published`. THREE sprint-wide finds recorded: #164 any vocab addition invalidates all ~93 LLM replay fixtures (re-record template proven:
-63/63 intent ×3 stable, 22/22 followup, 7/7 clarify); #165 done; #166 self-onboarding guard gap (owner design decision, money-path). GOVERNANCE:
+63/63 intent ×3 stable, 22/22 followup, 7/7 clarify); #165 done; #166 guard BUILT+MERGED session 50 (PR #54 + follow-up hardening). GOVERNANCE:
 #118 owner addition — automatic `/code-review` LOW before every code push, now in CLAUDE.md + build-plan rule 2 (commit `09b6191`). ▶ NEXT =
 SPRINT TABLES #2 `85880NED` (BBP flash) + #3 `85770NED` (PPI) BEFORE 30/7, in ONE session with ONE combined vocab change + re-record (#164);
 kickoff: [session-briefs/2026-07-17-session-50-kickoff.md](session-briefs/2026-07-17-session-50-kickoff.md). Owner dates: 22/7 06:30

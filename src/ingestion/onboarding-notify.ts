@@ -82,8 +82,11 @@ export function buildEmail(
         to,
         subject: `We konden je vraag over "${topic}" toch niet beantwoorden`,
         text:
-          `We hebben cijfers over "${topic}" opgehaald bij het CBS, maar je vraag konden we er niet ` +
-          `betrouwbaar mee beantwoorden. ${refund} volledig teruggestort.\n\n` +
+          // Fetch-neutral phrasing (session-50 review): this event also fires
+          // on paths where NOTHING was fetched (fit-gate no_fit, the #166
+          // curated-table belt) — the copy must never claim "opgehaald" then.
+          `We hebben geprobeerd je vraag over "${topic}" met CBS-cijfers te beantwoorden, maar dat ` +
+          `lukte niet betrouwbaar. ${refund} volledig teruggestort.\n\n` +
           `Je vraag was: "${event.questionText}"\n` +
           (event.failureSummary ? `\nToelichting: ${event.failureSummary}` : '') +
           (appOrigin !== null ? `\n\nBekijk de status in je dashboard: ${dashboardUrl(appOrigin)}` : ''),

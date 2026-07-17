@@ -34,7 +34,8 @@ import {
   questionNamesBareYear,
   type MeasureFitFn,
 } from './onboarding-fit.ts';
-import { registerOnboardingVocabulary } from './onboarding-vocab.ts';
+import { ONBOARDED_KEY_PREFIX, registerOnboardingVocabulary } from './onboarding-vocab.ts';
+import type { OnboardedMeasure } from '../answer/intent/prompt.ts';
 import type { NotifyFn } from './onboarding-notify.ts';
 import {
   claimOnePending,
@@ -142,31 +143,41 @@ async function refundOnboarding(
   return amount;
 }
 
-/** True when the table is already registered AND has at least one successful
- * sync (last_sync_at set) — design §3 step 3's piggyback check. EXPORTED since
- * #166: the onboarding finder uses the SAME predicate as its pre-charge guard
- * (a confident pick on an already-ingested table must clarify, never charge) —
- * one definition, no drift between the trigger-side and job-side notions of
- * "we already hold this data". */
-export async function alreadyIngested(db: Db, tableId: string): Promise<boolean> {
+/** The subset of tableIds that are already registered AND have at least one
+ * successful sync (last_sync_at set) — design §3 step 3's piggyback predicate
+ * as a batched set lookup. EXPORTED since #166: the onboarding finder screens
+ * its confident pick AND the alternates in the candidate chain with this SAME
+ * predicate (one definition, no drift between the trigger-side and job-side
+ * notions of "we already hold this data"), in ONE roundtrip on the live chat
+ * path (session-50 follow-up: the per-id loop was 1+N sequential queries). */
+export async function alreadyIngestedSet(db: Db, tableIds: readonly string[]): Promise<Set<string>> {
+  if (tableIds.length === 0) return new Set();
   const { rows } = await db.query(
-    `select 1 from cbs_tables where id = $1 and status = 'active' and last_sync_at is not null`,
-    [tableId],
+    `select id from cbs_tables where id = any($1) and status = 'active' and last_sync_at is not null`,
+    [tableIds],
   );
-  return rows.length > 0;
+  return new Set(rows.map((r) => String(r.id)));
 }
 
-/** True when the table carries CURATED vocabulary — a canonical_measures row
- * whose key is NOT 'onboarded:'-prefixed (the two write paths' structural
- * marker: src/registry/defaults.ts short keys vs onboarding-vocab.ts
- * auto-derived keys). #166 job-side belt: when this holds, Step 6 must not
- * auto-derive parallel `onboarded:<id>:*` rows next to the curated keys. */
-export async function hasCuratedVocabulary(db: Db, tableId: string): Promise<boolean> {
+/** Single-table convenience over alreadyIngestedSet — the job's step-3 check. */
+export async function alreadyIngested(db: Db, tableId: string): Promise<boolean> {
+  return (await alreadyIngestedSet(db, [tableId])).has(tableId);
+}
+
+/** The measure codes on this table covered by CURATED vocabulary — rows whose
+ * key is NOT 'onboarded:'-prefixed (the two write paths' structural marker:
+ * src/registry/defaults.ts short keys vs onboarding-vocab.ts auto-derived
+ * keys). #166 job-side belt, per-measure since the session-50 follow-up: Step 6
+ * must not auto-derive an `onboarded:<id>:*` row NEXT TO a curated key for the
+ * same measure (the #165 duplicate-vocab pollution), while measures WITHOUT
+ * curated coverage keep deriving so a partially-curated table stays
+ * deliverable. */
+export async function curatedMeasureCodes(db: Db, tableId: string): Promise<Set<string>> {
   const { rows } = await db.query(
-    `select 1 from canonical_measures where table_id = $1 and key not like 'onboarded:%' limit 1`,
+    `select measure from canonical_measures where table_id = $1 and key not like '${ONBOARDED_KEY_PREFIX}%'`,
     [tableId],
   );
-  return rows.length > 0;
+  return new Set(rows.map((r) => String(r.measure)));
 }
 
 /** Register + sync one table through the EXISTING pipeline with a
@@ -397,40 +408,42 @@ async function processOneRow(
 
     // Step 6 — vocabulary: derive canonical_measures from the ingested measure
     // metadata. Its output is the delivery re-run's extra parser vocabulary.
-    // #166 belt: a table that already carries CURATED vocabulary (registry
-    // defaults) skips auto-derivation entirely — running it would create
-    // parallel `onboarded:<id>:*` rows next to the curated keys (the exact
-    // duplicate-vocab pollution #165 had to clean up in prod). The delivery
-    // re-run then parses with extra=[] — the curated vocabulary is already in
-    // the standard prompt, so a question those terms cover answers normally;
-    // one that doesn't clarifies → unanswerable + refund (honest, principle c).
+    // #166 belt (per-measure since the session-50 follow-up): measures already
+    // covered by a CURATED key are excluded from auto-derivation — deriving a
+    // parallel `onboarded:<id>:*` row next to a curated key is the exact
+    // duplicate-vocab pollution #165 had to clean up in prod. Measures WITHOUT
+    // curated coverage still derive, so a partially-curated table stays
+    // deliverable for those (charged work keeps its answer route). A question
+    // that only the curated vocabulary covers answers via the standard prompt;
+    // one that nothing covers ends unanswerable + refund (honest, principle c).
     // Reachable only through the trigger-vs-curation race (the finder guard
-    // returns null for an already-ingested pick) or a pre-guard pending row.
-    let extraVocabulary: Awaited<ReturnType<typeof registerOnboardingVocabulary>>['onboarded'] = [];
-    if (await hasCuratedVocabulary(db, targetTableId)) {
-      const skipNote = `Tabel ${targetTableId} heeft al beheerde vocabulaire (curated); automatische vocabulaire-afleiding overgeslagen (#166).`;
+    // null-routes an already-ingested pick) or a pre-guard pending row.
+    const curated = await curatedMeasureCodes(db, targetTableId);
+    const vocab = await registerOnboardingVocabulary(db, {
+      tableId: targetTableId,
+      topicTerm: row.topicTerm,
+      excludeMeasures: curated,
+    });
+    if (curated.size > 0) {
+      const skipNote = `Tabel ${targetTableId} heeft beheerde vocabulaire (curated) voor ${curated.size} van de maten; automatische afleiding daarvoor overgeslagen (#166).`;
       // Durable diagnostic where the note slot is free; a real slice-estimate
       // note (steps 4-5 this attempt, OR a previous attempt that died before
       // Step 6 — the reclaimed-retry case, session-50 review) is never
       // clobbered: the conditional write is a no-op then, console is the floor.
       console.log(`[onboarding ${row.id}] ${skipNote}`);
       await recordSliceNoteIfEmpty(db, row.id, skipNote);
-    } else {
-      const vocab = await registerOnboardingVocabulary(db, {
-        tableId: targetTableId,
-        topicTerm: row.topicTerm,
-      });
-      if (vocab.onboarded.length === 0) {
-        // Nothing registerable → the delivery re-run can't ever answer. Honest
-        // refund, not a fabricated attempt.
-        return await unanswerableAndRefund(
-          deps,
-          row,
-          `De opgehaalde tabel ${targetTableId} bevat geen maat die we onder deze vraag konden aanbieden.`,
-        );
-      }
-      extraVocabulary = vocab.onboarded;
     }
+    if (vocab.onboarded.length === 0 && curated.size === 0) {
+      // Nothing registerable and no curated route either → the delivery re-run
+      // can't ever answer. Honest refund, not a fabricated attempt (the
+      // pre-#166 semantics, unchanged for uncurated tables).
+      return await unanswerableAndRefund(
+        deps,
+        row,
+        `De opgehaalde tabel ${targetTableId} bevat geen maat die we onder deze vraag konden aanbieden.`,
+      );
+    }
+    const extraVocabulary: OnboardedMeasure[] = vocab.onboarded;
 
     // Step 7 — delivery: re-run the ORIGINAL question through the full normal
     // audited pipeline (NOT through the gate — the 100 already covers it), with

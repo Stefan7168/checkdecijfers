@@ -23,10 +23,16 @@ import type { OnboardedMeasure } from '../answer/intent/prompt.ts';
 import type { CanonicalMeasure } from '../registry/types.ts';
 import { REDACTED_QUESTION_TEXT } from '../answer/audit/retention.ts';
 
+/** The structural marker separating the two canonical_measures write paths:
+ * auto-onboarded keys carry this prefix, curated registry-defaults keys never
+ * do. Exported as THE single definition (#166 follow-up cleanup) — every
+ * `like 'onboarded:%'` / `startsWith` on this format should reference it. */
+export const ONBOARDED_KEY_PREFIX = 'onboarded:';
+
 /** Key prefix for auto-onboarded canonical measures — namespaced by table +
  * measure so it can never collide with a curated Phase-0 key (design §3.6). */
 export function onboardedKey(tableId: string, measureCode: string): string {
-  return `onboarded:${tableId}:${measureCode}`;
+  return `${ONBOARDED_KEY_PREFIX}${tableId}:${measureCode}`;
 }
 
 interface UnitMeta {
@@ -147,6 +153,13 @@ export interface RegisterVocabularyInput {
    * registered measure's everydayTerms so the parser maps the user's word onto
    * a key. */
   topicTerm: string;
+  /** Measure codes that must NOT be auto-derived (#166 belt, per-measure since
+   * the session-50 follow-up): measures already covered by a CURATED canonical
+   * key keep the curated vocabulary as their only route — deriving a parallel
+   * `onboarded:` row next to it is the #165 duplicate-vocab pollution. Measures
+   * NOT in this set derive normally, so a partially-curated table stays
+   * deliverable for its uncurated measures. */
+  excludeMeasures?: ReadonlySet<string>;
 }
 
 export interface RegisterVocabularyResult {
@@ -211,6 +224,12 @@ export async function registerOnboardingVocabulary(
   );
 
   for (const shape of shapes) {
+    // #166 belt (per-measure): a measure already covered by a curated key is
+    // never re-derived — the curated vocabulary owns it (see excludeMeasures).
+    if (input.excludeMeasures?.has(shape.measure)) {
+      skippedMeasures.push(shape.measure);
+      continue;
+    }
     if (!shape.hasEmptyDims) {
       skippedMeasures.push(shape.measure);
       continue;
@@ -310,7 +329,7 @@ export async function loadOnboardedVocabulary(db: Db): Promise<OnboardedMeasure[
   const { rows } = await db.query(
     `select key, table_id, measure, measure_title, definition_label, definition_text, everyday_terms
        from canonical_measures
-      where key like 'onboarded:%'
+      where key like '${ONBOARDED_KEY_PREFIX}%'
       order by key`,
   );
   if (rows.length === 0) return [];

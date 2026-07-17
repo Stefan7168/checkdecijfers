@@ -16,7 +16,7 @@ import { findTable } from '../catalog/find.ts';
 import { rerankShortlist } from '../catalog/rerank.ts';
 import type { RerankFn } from '../catalog/types.ts';
 import type { Db } from '../db/types.ts';
-import { alreadyIngested } from './onboarding.ts';
+import { alreadyIngestedSet } from './onboarding.ts';
 import { findActiveRequest } from './onboarding-store.ts';
 
 export interface OnboardingFinderDeps {
@@ -65,33 +65,36 @@ export function buildOnboardingFinder(deps: OnboardingFinderDeps): TableFinder {
       const outcome = await findTable(deps.db, { topic: term, question }, { rerank });
       if (outcome.kind !== 'confident') return null;
 
-      // #166 pre-charge guard: a confident pick on a table we ALREADY hold
-      // (registered active + synced — the job's own alreadyIngested predicate,
-      // shared so the two notions can't drift) must never route to onboarding:
-      // there is nothing to fetch, so a 100-credit "we halen het voor je op"
-      // charge would bill the user for data already in the database (the
-      // coverage sprint makes this reachable: a synonym miss onto a curated
-      // table like 83693NED). Returning null falls back to the plain B15
-      // clarification, which names the loaded topics — the user re-asks with
-      // a listed term and pays the normal question price only.
-      if (await alreadyIngested(deps.db, outcome.pick.tableId)) return null;
-
-      // #166 guard, second leg (session-50 review finding): the fit gate
-      // downstream resolves over the WHOLE candidate chain, not just the pick
-      // (runFitGate iterates candidateIds and takes the first structural fit)
-      // — so an already-held ALTERNATE would let a charged job skip the fetch
-      // and deliver from data we already hold: the exact charge #166 exists to
-      // kill, one link later. Screen the alternates with the same predicate,
-      // BEFORE the cap, so up to 3 genuinely onboardable candidates survive.
-      const onboardableAlternates: string[] = [];
-      for (const id of outcome.alternativeIds) {
-        if (!(await alreadyIngested(deps.db, id))) onboardableAlternates.push(id);
-      }
-
       // Confident pick → does this user already have an active fetch for this
       // exact table? If so, the acknowledgment says "already being fetched"
       // and NO new debit happens (alreadyPending → the action never triggers).
+      // ORDERED BEFORE the #166 held-table guard (session-50 follow-up): the
+      // user's OWN job commits last_sync_at at Step 5, seconds-to-tens-of-
+      // seconds before it finalizes — a re-ask in that window must keep saying
+      // "wordt al voor je opgehaald", not fall through the guard into a
+      // misleading "geen cijfers geladen" clarification.
       const active = await findActiveRequest(deps.db, deps.userId, outcome.pick.tableId);
+
+      // #166 pre-charge guard: a confident pick on a table we ALREADY hold
+      // (registered active + synced — the job's own alreadyIngestedSet
+      // predicate, shared so the two notions can't drift) must never route to
+      // onboarding: there is nothing to fetch, so a 100-credit "we halen het
+      // voor je op" charge would bill the user for data already in the
+      // database (the coverage sprint makes this reachable: a synonym miss
+      // onto a curated table like 83693NED). Returning null falls back to the
+      // plain B15 clarification — the user re-asks with a listed term and pays
+      // the normal question price only. Second leg (session-50 review,
+      // confirmed HIGH): the fit gate downstream resolves over the WHOLE
+      // candidate chain, so already-held ALTERNATES are screened by the same
+      // predicate — otherwise a charged job could skip the fetch and deliver
+      // from data we already hold, one link later. One batched roundtrip for
+      // pick + alternates (the per-id loop was 1+N sequential queries on the
+      // live chat path; alternativeIds has no schema-level cap).
+      const held = await alreadyIngestedSet(deps.db, [outcome.pick.tableId, ...outcome.alternativeIds]);
+      if (active === null && held.has(outcome.pick.tableId)) return null;
+      // Screened BEFORE the cap-3, so up to 3 genuinely onboardable
+      // candidates survive a held alternate.
+      const onboardableAlternates = outcome.alternativeIds.filter((id) => !held.has(id));
       return {
         tableId: outcome.pick.tableId,
         topicTerm: term,

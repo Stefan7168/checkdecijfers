@@ -470,7 +470,7 @@ describe('runOnboardingJob — piggyback', () => {
   });
 });
 
-describe('#166 — curated-vocab belt: Step 6 never creates onboarded:* rows next to curated keys', () => {
+describe('#166 — curated-vocab belt: Step 6 never duplicates a curated key, uncurated measures stay deliverable (per-measure since the session-50 follow-up)', () => {
   /** Intent stub emitting the CURATED key (a real CANONICAL_MEASURES constant,
    * so it is legal at schema validation with extra=[] — the belt's whole
    * point: the standard vocabulary carries the table). */
@@ -504,16 +504,21 @@ describe('#166 — curated-vocab belt: Step 6 never creates onboarded:* rows nex
     };
   }
 
-  it('an already-synced table WITH curated vocabulary: delivery succeeds via the standard vocabulary, zero onboarded:* rows created, skip noted (#166)', async () => {
+  it('an already-synced table WITH a curated key: delivery succeeds via the standard vocabulary, the curated measure is never re-derived, skip noted (#166)', async () => {
     const h = await harness();
     try {
       // Run 1 onboards + syncs 82235NED the normal way (creates onboarded rows).
       await queueRequest(h.db, 'hoeveel woningen in 2024', 'woningvoorraad');
       const first = await runOnboardingJob(h.deps());
       expect(first.processed?.outcome).toBe('delivered');
+      const derivedCount = Number(
+        (await h.db.query(`select count(*)::int n from canonical_measures where key like 'onboarded:${TABLE}:%'`)).rows[0]!.n,
+      );
+      expect(derivedCount).toBeGreaterThan(1);
 
-      // Reshape into the coverage-sprint state (the 83693NED scenario): the
-      // table is synced, carries ONLY curated vocabulary, no onboarded rows.
+      // Reshape into the coverage-sprint-LIKE state (one curated key on a
+      // synced table — the 83693NED shape, mimicked here on the 82235NED
+      // fixture): only curated vocabulary, no onboarded rows.
       await h.db.query(`delete from canonical_measures where key like 'onboarded:${TABLE}:%'`);
       await h.db.query(
         `insert into canonical_measures (key, table_id, measure, measure_title, dims, definition_label, everyday_terms)
@@ -527,11 +532,18 @@ describe('#166 — curated-vocab belt: Step 6 never creates onboarded:* rows nex
       const summary = await runOnboardingJob(h.deps({ intentClient: curatedIntentStub(2023) }));
       expect(summary.processed).toEqual({ id: pendingId, tableId: TABLE, outcome: 'delivered' });
 
-      // The belt: NO onboarded:* rows were re-created next to the curated key…
-      const dup = await h.db.query(
+      // The belt, per-measure: NO onboarded row was re-created for the
+      // CURATED measure…
+      const dup = await h.db.query(`select count(*)::int n from canonical_measures where key = $1`, [
+        onboardedKey(TABLE, MEASURE),
+      ]);
+      expect(Number(dup.rows[0]!.n)).toBe(0);
+      // …while the UNCURATED measures re-derived normally (deliverability
+      // preserved — the session-50 per-measure follow-up)…
+      const rest = await h.db.query(
         `select count(*)::int n from canonical_measures where key like 'onboarded:${TABLE}:%'`,
       );
-      expect(Number(dup.rows[0]!.n)).toBe(0);
+      expect(Number(rest.rows[0]!.n)).toBe(derivedCount - 1);
       // …and the skip is durably recorded on the pending row (steps 4-5 were
       // skipped, so slice_note was free — no estimate note to clobber).
       const note = await h.db.query(
@@ -539,6 +551,39 @@ describe('#166 — curated-vocab belt: Step 6 never creates onboarded:* rows nex
         [pendingId],
       );
       expect(String(note.rows[0]!.slice_note)).toContain('#166');
+    } finally {
+      await h.close();
+    }
+  });
+
+  it('partial curation: a question on an UNCURATED measure still delivers via freshly derived vocabulary (per-measure belt, session-50 follow-up)', async () => {
+    const h = await harness();
+    try {
+      await queueRequest(h.db, 'hoeveel woningen in 2024', 'woningvoorraad');
+      const first = await runOnboardingJob(h.deps());
+      expect(first.processed?.outcome).toBe('delivered');
+      await h.db.query(`delete from canonical_measures where key like 'onboarded:${TABLE}:%'`);
+      await h.db.query(
+        `insert into canonical_measures (key, table_id, measure, measure_title, dims, definition_label, everyday_terms)
+         values ('housing_stock_start_of_year', $1, $2, 'Beginstand voorraad', '{}'::jsonb, 'woningvoorraad per 1 januari', array['woningen','woningvoorraad'])`,
+        [TABLE, MEASURE],
+      );
+
+      // A question about NIEUWBOUW (M003003) — a measure the curated key does
+      // NOT cover. A table-wide skip would refund here; per-measure delivers.
+      const { pendingId } = await queueRequest(h.db, 'hoeveel nieuwbouwwoningen in 2023', 'nieuwbouw');
+      const summary = await runOnboardingJob(h.deps({ intentClient: intentStub(2023, TABLE, 'M003003') }));
+      expect(summary.processed).toEqual({ id: pendingId, tableId: TABLE, outcome: 'delivered' });
+
+      // The uncurated measure got its own onboarded row; the curated one not.
+      const own = await h.db.query(`select count(*)::int n from canonical_measures where key = $1`, [
+        onboardedKey(TABLE, 'M003003'),
+      ]);
+      expect(Number(own.rows[0]!.n)).toBe(1);
+      const dup = await h.db.query(`select count(*)::int n from canonical_measures where key = $1`, [
+        onboardedKey(TABLE, MEASURE),
+      ]);
+      expect(Number(dup.rows[0]!.n)).toBe(0);
     } finally {
       await h.close();
     }
@@ -564,10 +609,11 @@ describe('#166 — curated-vocab belt: Step 6 never creates onboarded:* rows nex
       const summary = await runOnboardingJob(h.deps({ intentClient: curatedIntentStub(2024) }));
       expect(summary.processed).toEqual({ id: pendingId, tableId: TABLE, outcome: 'delivered' });
 
-      // The belt held on the fresh-sync path too: no onboarded:* rows…
-      const dup = await h.db.query(
-        `select count(*)::int n from canonical_measures where key like 'onboarded:${TABLE}:%'`,
-      );
+      // The belt held on the fresh-sync path too: no onboarded row for the
+      // CURATED measure (uncurated measures derive normally, per-measure)…
+      const dup = await h.db.query(`select count(*)::int n from canonical_measures where key = $1`, [
+        onboardedKey(TABLE, MEASURE),
+      ]);
       expect(Number(dup.rows[0]!.n)).toBe(0);
       // …and the REAL slice-estimate note Steps 4-5 wrote survives: the skip
       // marker write is conditional (recordSliceNoteIfEmpty), never a clobber.

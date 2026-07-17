@@ -92,7 +92,10 @@ job e2e tests.
 - **The candidate chain is explicit** (review: every carrier named, or the build session strands the
   data): widen `FindTableOutcome`'s confident variant (`src/catalog/types.ts` + `find.ts`) with the
   rerank's allowlist-sanitized `alternativeIds` → `OnboardingRouting.candidateIds`
-  (`src/answer/intent/policy.ts`; pick first, then alternatives, cap 3) → the `onboarding`
+  (`src/answer/intent/policy.ts`; pick first, then alternatives, cap 3; **since #166 (2026-07-17) the
+  finder also screens pick AND alternatives through the shared `alreadyIngestedSet` predicate — a held
+  pick null-routes to B15, held alternates are dropped before the cap, so the chain the fit gate resolves
+  over can never contain a table we already hold**) → the `onboarding`
   `ParseOutcome` variant (`intent/types.ts`) → `OnboardingEnvelope` (`respond/types.ts`; BOTH
   construction sites in `respond/respond.ts`) → `web/app/actions.ts` `maybeTriggerOnboarding` →
   `TriggerOnboardingInput` (`onboarding-trigger.ts`) → `createPendingRequest` + `fromRow`

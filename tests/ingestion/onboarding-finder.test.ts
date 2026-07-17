@@ -233,6 +233,37 @@ describe('#166 — the pre-charge already-ingested guard', () => {
     expect(again!.tableId).toBe(routing!.tableId);
   });
 
+  it("post-sync window: the user's OWN active fetch outranks the held-table guard — alreadyPending, never a misleading B15 (session-50 follow-up)", async () => {
+    const userId = await fundedUser(db);
+    const probe = await buildOnboardingFinder({ db, userId, rerank: stubPickFirst(0.95) })(CONFIDENT_TOPIC, QUESTION);
+    expect(probe).not.toBeNull();
+    const requestId = randomUUID();
+    const debit = await reserveOnboardingDebit(db, userId, requestId, 100);
+    if (debit.kind !== 'debited') throw new Error('setup debit failed');
+    await createPendingRequest(db, {
+      userId,
+      requestId,
+      questionText: 'q',
+      topicTerm: CONFIDENT_TOPIC,
+      tableId: probe!.tableId,
+      finderConfidence: 0.95,
+      candidateIds: [],
+      debitTransactionId: debit.entry.id,
+    });
+    // The job's Step 5 committed the sync (last_sync_at set) but the row has
+    // not finalized yet — the exact window the active-check-first order covers.
+    await fakeTableRow(probe!.tableId, true);
+
+    const routing = await buildOnboardingFinder({ db, userId, rerank: stubPickFirst(0.95) })(CONFIDENT_TOPIC, QUESTION);
+    expect(routing).not.toBeNull();
+    expect(routing!.alreadyPending).toBe(true);
+
+    // A DIFFERENT user (no active fetch) still hits the guard → null (B15).
+    expect(
+      await buildOnboardingFinder({ db, userId: randomUUID(), rerank: stubPickFirst(0.95) })(CONFIDENT_TOPIC, QUESTION),
+    ).toBeNull();
+  });
+
   it('an already-ingested ALTERNATE is screened out of the candidate chain (second leg, session-50 review: the fit gate resolves over the whole chain, so a held alternate would let a charged job deliver from data we already hold)', async () => {
     const stubWithAlternatives: RerankFn = (_query, shortlist) =>
       Promise.resolve({
