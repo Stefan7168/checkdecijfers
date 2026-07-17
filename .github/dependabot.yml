@@ -20,6 +20,16 @@ updates:
       npm-all:
         patterns:
           - "*"
+    ignore:
+      # TypeScript >= 6/7 (the native-compiler line) breaks `next build`'s
+      # TypeScript step on Next 16.x ("required package(s) not installed",
+      # 2026-07-17 deploy failure on main after PR #53). Pinned back to ^5 in
+      # BOTH package.json files — one compiler version validating src/ (web
+      # checks it too, through the web/backend symlink). Remove this ignore
+      # (and web/'s) together, only after Next's release notes state TS-7
+      # support and a real `next build` proves it.
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
     commit-message:
       prefix: "deps"
 
@@ -34,6 +44,10 @@ updates:
       npm-web-all:
         patterns:
           - "*"
+    ignore:
+      # Same TS-major hold as the root entry above — remove both together.
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
     commit-message:
       prefix: "deps(web)"
 
