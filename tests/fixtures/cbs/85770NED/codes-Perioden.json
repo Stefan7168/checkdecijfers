@@ -1,0 +1,877 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/85770NED/$metadata#PeriodenCodes",
+ "value": [
+  {
+   "Identifier": "2018MM01",
+   "Index": 1,
+   "Title": "2018 januari",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2018MM02",
+   "Index": 2,
+   "Title": "2018 februari",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2018MM03",
+   "Index": 3,
+   "Title": "2018 maart",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2018MM04",
+   "Index": 4,
+   "Title": "2018 april",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2018MM05",
+   "Index": 5,
+   "Title": "2018 mei",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2018MM06",
+   "Index": 6,
+   "Title": "2018 juni",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2018MM07",
+   "Index": 7,
+   "Title": "2018 juli",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2018MM08",
+   "Index": 8,
+   "Title": "2018 augustus",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2018MM09",
+   "Index": 9,
+   "Title": "2018 september",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2018MM10",
+   "Index": 10,
+   "Title": "2018 oktober",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2018MM11",
+   "Index": 11,
+   "Title": "2018 november",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2018MM12",
+   "Index": 12,
+   "Title": "2018 december",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2018JJ00",
+   "Index": 13,
+   "Title": "2018",
+   "Description": "",
+   "DimensionGroupId": "1",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2019MM01",
+   "Index": 14,
+   "Title": "2019 januari",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2019MM02",
+   "Index": 15,
+   "Title": "2019 februari",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2019MM03",
+   "Index": 16,
+   "Title": "2019 maart",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2019MM04",
+   "Index": 17,
+   "Title": "2019 april",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2019MM05",
+   "Index": 18,
+   "Title": "2019 mei",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2019MM06",
+   "Index": 19,
+   "Title": "2019 juni",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2019MM07",
+   "Index": 20,
+   "Title": "2019 juli",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2019MM08",
+   "Index": 21,
+   "Title": "2019 augustus",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2019MM09",
+   "Index": 22,
+   "Title": "2019 september",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2019MM10",
+   "Index": 23,
+   "Title": "2019 oktober",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2019MM11",
+   "Index": 24,
+   "Title": "2019 november",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2019MM12",
+   "Index": 25,
+   "Title": "2019 december",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2019JJ00",
+   "Index": 26,
+   "Title": "2019",
+   "Description": "",
+   "DimensionGroupId": "1",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2020MM01",
+   "Index": 27,
+   "Title": "2020 januari",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2020MM02",
+   "Index": 28,
+   "Title": "2020 februari",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2020MM03",
+   "Index": 29,
+   "Title": "2020 maart",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2020MM04",
+   "Index": 30,
+   "Title": "2020 april",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2020MM05",
+   "Index": 31,
+   "Title": "2020 mei",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2020MM06",
+   "Index": 32,
+   "Title": "2020 juni",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2020MM07",
+   "Index": 33,
+   "Title": "2020 juli",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2020MM08",
+   "Index": 34,
+   "Title": "2020 augustus",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2020MM09",
+   "Index": 35,
+   "Title": "2020 september",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2020MM10",
+   "Index": 36,
+   "Title": "2020 oktober",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2020MM11",
+   "Index": 37,
+   "Title": "2020 november",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2020MM12",
+   "Index": 38,
+   "Title": "2020 december",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2020JJ00",
+   "Index": 39,
+   "Title": "2020",
+   "Description": "",
+   "DimensionGroupId": "1",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2021MM01",
+   "Index": 40,
+   "Title": "2021 januari",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2021MM02",
+   "Index": 41,
+   "Title": "2021 februari",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2021MM03",
+   "Index": 42,
+   "Title": "2021 maart",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2021MM04",
+   "Index": 43,
+   "Title": "2021 april",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2021MM05",
+   "Index": 44,
+   "Title": "2021 mei",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2021MM06",
+   "Index": 45,
+   "Title": "2021 juni",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2021MM07",
+   "Index": 46,
+   "Title": "2021 juli",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2021MM08",
+   "Index": 47,
+   "Title": "2021 augustus",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2021MM09",
+   "Index": 48,
+   "Title": "2021 september",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2021MM10",
+   "Index": 49,
+   "Title": "2021 oktober",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2021MM11",
+   "Index": 50,
+   "Title": "2021 november",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2021MM12",
+   "Index": 51,
+   "Title": "2021 december",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2021JJ00",
+   "Index": 52,
+   "Title": "2021",
+   "Description": "",
+   "DimensionGroupId": "1",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2022MM01",
+   "Index": 53,
+   "Title": "2022 januari",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2022MM02",
+   "Index": 54,
+   "Title": "2022 februari",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2022MM03",
+   "Index": 55,
+   "Title": "2022 maart",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2022MM04",
+   "Index": 56,
+   "Title": "2022 april",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2022MM05",
+   "Index": 57,
+   "Title": "2022 mei",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2022MM06",
+   "Index": 58,
+   "Title": "2022 juni",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2022MM07",
+   "Index": 59,
+   "Title": "2022 juli",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2022MM08",
+   "Index": 60,
+   "Title": "2022 augustus",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2022MM09",
+   "Index": 61,
+   "Title": "2022 september",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2022MM10",
+   "Index": 62,
+   "Title": "2022 oktober",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2022MM11",
+   "Index": 63,
+   "Title": "2022 november",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2022MM12",
+   "Index": 64,
+   "Title": "2022 december ",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2022JJ00",
+   "Index": 65,
+   "Title": "2022",
+   "Description": "",
+   "DimensionGroupId": "1",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2023MM01",
+   "Index": 66,
+   "Title": "2023 januari",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2023MM02",
+   "Index": 67,
+   "Title": "2023 februari",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2023MM03",
+   "Index": 68,
+   "Title": "2023 maart",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2023MM04",
+   "Index": 69,
+   "Title": "2023 april",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2023MM05",
+   "Index": 70,
+   "Title": "2023 mei",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2023MM06",
+   "Index": 71,
+   "Title": "2023 juni",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2023MM07",
+   "Index": 72,
+   "Title": "2023 juli",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2023MM08",
+   "Index": 73,
+   "Title": "2023 augustus",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2023MM09",
+   "Index": 74,
+   "Title": "2023 september",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2023MM10",
+   "Index": 75,
+   "Title": "2023 oktober",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2023MM11",
+   "Index": 76,
+   "Title": "2023 november",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2023MM12",
+   "Index": 77,
+   "Title": "2023 december",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2023JJ00",
+   "Index": 78,
+   "Title": "2023",
+   "Description": "",
+   "DimensionGroupId": "1",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2024MM01",
+   "Index": 79,
+   "Title": "2024 januari",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2024MM02",
+   "Index": 80,
+   "Title": "2024 februari",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2024MM03",
+   "Index": 81,
+   "Title": "2024 maart",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2024MM04",
+   "Index": 82,
+   "Title": "2024 april",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2024MM05",
+   "Index": 83,
+   "Title": "2024 mei",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2024MM06",
+   "Index": 84,
+   "Title": "2024  juni",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2024MM07",
+   "Index": 85,
+   "Title": "2024 juli",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2024MM08",
+   "Index": 86,
+   "Title": "2024 augustus",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2024MM09",
+   "Index": 87,
+   "Title": "2024 september",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2024MM10",
+   "Index": 88,
+   "Title": "2024 oktober",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2024MM11",
+   "Index": 89,
+   "Title": "2024 november",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2024MM12",
+   "Index": 90,
+   "Title": "2024 december",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2024JJ00",
+   "Index": 91,
+   "Title": "2024",
+   "Description": "",
+   "DimensionGroupId": "1",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2025MM01",
+   "Index": 92,
+   "Title": "2025 januari",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2025MM02",
+   "Index": 93,
+   "Title": "2025 februari",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2025MM03",
+   "Index": 94,
+   "Title": "2025 maart",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2025MM04",
+   "Index": 95,
+   "Title": "2025 april",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2025MM05",
+   "Index": 96,
+   "Title": "2025 mei",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2025MM06",
+   "Index": 97,
+   "Title": "2025 juni",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2025MM07",
+   "Index": 98,
+   "Title": "2025 juli",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2025MM08",
+   "Index": 99,
+   "Title": "2025 augustus",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2025MM09",
+   "Index": 100,
+   "Title": "2025 september",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2025MM10",
+   "Index": 101,
+   "Title": "2025 oktober",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2025MM11",
+   "Index": 102,
+   "Title": "2025 november",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2025MM12",
+   "Index": 103,
+   "Title": "2025 december",
+   "Description": "",
+   "DimensionGroupId": "0",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2025JJ00",
+   "Index": 104,
+   "Title": "2025",
+   "Description": "",
+   "DimensionGroupId": "1",
+   "Status": "Definitief"
+  },
+  {
+   "Identifier": "2026MM01",
+   "Index": 105,
+   "Title": "2026 januari",
+   "Description": "Voorlopige cijfers",
+   "DimensionGroupId": "0",
+   "Status": "Voorlopig"
+  },
+  {
+   "Identifier": "2026MM02",
+   "Index": 106,
+   "Title": "2026 februari",
+   "Description": "Voorlopige cijfers",
+   "DimensionGroupId": "0",
+   "Status": "Voorlopig"
+  },
+  {
+   "Identifier": "2026MM03",
+   "Index": 107,
+   "Title": "2026 maart",
+   "Description": "Voorlopige cijfers",
+   "DimensionGroupId": "0",
+   "Status": "Voorlopig"
+  },
+  {
+   "Identifier": "2026MM04",
+   "Index": 108,
+   "Title": "2026 april",
+   "Description": "Voorlopige cijfers",
+   "DimensionGroupId": "0",
+   "Status": "Voorlopig"
+  },
+  {
+   "Identifier": "2026MM05",
+   "Index": 109,
+   "Title": "2026 mei",
+   "Description": "Voorlopige cijfers",
+   "DimensionGroupId": "0",
+   "Status": "Voorlopig"
+  }
+ ]
+}

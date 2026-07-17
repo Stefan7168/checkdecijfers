@@ -1,0 +1,40 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/85770NED/$metadata#AfzetgebiedenCodes",
+ "value": [
+  {
+   "Identifier": "A044074",
+   "Index": 1,
+   "Title": "Totaal afzetprijzen",
+   "Description": "Afzetprijzen bestaan uit twee componenten: \r\n1 Afzetprijzen binnenland;\r\nprijzen die de Nederlandse producenten in rekening brengen aan binnenlandse klanten.\r\n\r\n2 Afzetprijzen buitenland;\r\nprijzen die de Nederlandse producenten in rekening brengen bij export.",
+   "DimensionGroupId": null
+  },
+  {
+   "Identifier": "A044075",
+   "Index": 2,
+   "Title": "Afzetprijzen binnenland",
+   "Description": "Afzetprijzen binnenland zijn gelijk aan de prijzen die de Nederlandse producenten in rekening brengen aan binnenlandse klanten.",
+   "DimensionGroupId": null
+  },
+  {
+   "Identifier": "A044076",
+   "Index": 3,
+   "Title": "Afzetprijzen buitenland",
+   "Description": "Afzetprijzen buitenland zijn gelijk aan de prijzen die de Nederlandse producenten in rekening brengen bij export.",
+   "DimensionGroupId": null
+  },
+  {
+   "Identifier": "A044077",
+   "Index": 4,
+   "Title": "Invoerprijzen",
+   "Description": "Invoerprijzen zijn gelijk aan de prijzen die door de Nederlandse producenten en handel betaald zijn bij import van goederen.",
+   "DimensionGroupId": null
+  },
+  {
+   "Identifier": "A044078",
+   "Index": 5,
+   "Title": "Verbruiksprijzen",
+   "Description": "Verbruiksprijzen industrie bestaan uit twee componenten: \r\n1: importprijzen van industrieproducten betaald door de Nederlandse industrie en handel.\r\n2: prijzen die de Nederlandse industriebedrijven rekenen aan binnenlandse klanten.",
+   "DimensionGroupId": null
+  }
+ ]
+}

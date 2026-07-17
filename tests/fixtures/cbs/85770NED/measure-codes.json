@@ -1,0 +1,38 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/85770NED/$metadata#MeasureCodes",
+ "value": [
+  {
+   "Identifier": "M003367",
+   "Index": 3,
+   "Title": "Producentenprijsindex (PPI)",
+   "Description": "De producentenprijsindex (ppi) is een indexcijfer dat de gemiddelde prijsontwikkeling weergeeft van Nederlandse industrieproducten. \r\n\r\nDe prijsindexcijfers van de afzet zijn een gewogen gemiddelde van prijsgegevens voor de binnenlandse afzet en voor de uitvoer van de desbetreffende goederen.\r\n\r\nDe prijsindexcijfers van het verbruik van grondstoffen en halffabricaten zijn een gewogen gemiddelde van prijsgegevens voor de aankoop van binnenlandse producten en voor de invoer van de desbetreffende goederen.\r\n\r\nDe prijsindexen zijn exclusief accijns.\r\n",
+   "MeasureGroupId": null,
+   "DataType": "Double",
+   "Unit": "2021=100",
+   "Decimals": 1,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "M003316",
+   "Index": 4,
+   "Title": "Maandmutatie PPI",
+   "Description": "Procentuele ontwikkeling ten opzichte van de vorige maand.",
+   "MeasureGroupId": null,
+   "DataType": "Double",
+   "Unit": "%",
+   "Decimals": 1,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "M003288",
+   "Index": 5,
+   "Title": "Jaarmutatie PPI",
+   "Description": "Procentuele ontwikkeling ten opzichte van dezelfde maand een jaar eerder.",
+   "MeasureGroupId": null,
+   "DataType": "Double",
+   "Unit": "%",
+   "Decimals": 1,
+   "PresentationType": null
+  }
+ ]
+}

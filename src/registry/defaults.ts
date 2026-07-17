@@ -91,6 +91,17 @@ export const TABLE_REGISTRY_DEFAULTS: TableRegistryDefaults[] = [
       MM: 'Seizoengecorrigeerd saldo voor de genoemde kalendermaand (gemeten in de eerste helft van die maand; CBS publiceert het cijfer rond de 22e van dezelfde maand). Geen jaar- of kwartaalreeks in deze tabel.',
     },
   },
+  {
+    // Coverage sprint table #3 (specs doc 2026-07-17). Slice pins the ProdCom
+    // total; the Afzetgebieden flavor (totaal vs invoer) is semantic content
+    // for the canonical keys (session-50 vocab batch).
+    tableId: '85770NED',
+    defaultCoordinates: {},
+    periodSemantics: {
+      MM: 'Cijfer voor de genoemde kalendermaand (voor de mutatiematen: t.o.v. dezelfde maand een jaar eerder); de laatste vijf maanden zijn Voorlopig.',
+      JJ: 'Jaargemiddelde over de genoemde kalenderjaar-maanden.',
+    },
+  },
 ];
 
 export const CANONICAL_MEASURES: CanonicalMeasure[] = [

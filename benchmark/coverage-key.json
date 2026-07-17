@@ -3,10 +3,14 @@
   "source": "Coverage-sprint verification tasks (docs/05-data-rules.md table-onboarding rule: 2-3 frozen-key benchmark-style tasks per newly onboarded table). Task ids CC* to keep the Phase-0 benchmark (B1-B20, benchmark/answer-key.json) and its 14/14 + 6/6 gate counts untouched. Scored hermetically by tests/query/coverage-key.test.ts over the committed fixtures; the honesty rule from answer-key.json applies unchanged: keys are never edited to green.",
   "frozenAt": "2026-07-17",
   "pinnedTo": {
-    "note": "Values independently verified on 2026-07-17 by re-querying BOTH live CBS platforms before freezing: OData v4 (datasets.cbs.nl .../Observations) and OData v3 (opendata.cbs.nl .../TypedDataSet) returned identical values for every cell below. The committed fixture capture (tests/fixtures/cbs/83693NED, captured the same day, 3,864 observation rows) is the replay source the tests run against.",
+    "note": "Values independently verified on 2026-07-17 by re-querying BOTH live CBS platforms before freezing: OData v4 (datasets.cbs.nl .../Observations) and OData v3 (opendata.cbs.nl .../TypedDataSet) returned identical values for every cell below. The committed fixture capture (tests/fixtures/cbs/83693NED, captured the same day, 3,864 observation rows) is the replay source the tests run against. Table #3 (85770NED, session-49 overnight prep): same double-platform verification on 2026-07-17 (specs doc 2026-07-17-coverage-tables-2-9-measured-specs.md); its CC tasks use EXPLICIT targets (tableId+measure+dims) because the canonical vocabulary lands with the session-50 batch (#164) — re-point them at canonical keys then. Task ids CC5-CC7 are RESERVED for 85880NED (descoped from the overnight prep: its lean slice fails the zero-rows-per-measure plausibility check — 26 of 210 measures exist only under other SoortMutaties flavors — so table #2 needs the session-50 slice decision first; see the specs doc).",
     "tables": {
       "83693NED": {
         "title": "Consumentenvertrouwen, economisch klimaat en koopbereidheid; gecorrigeerd",
+        "capturedAt": "2026-07-17"
+      },
+      "85770NED": {
+        "title": "Producentenprijzen (PPI); afzet-, invoer-, verbruiksprijzen, index 2021=100",
         "capturedAt": "2026-07-17"
       }
     }
@@ -67,6 +71,63 @@
       "period": "2025JJ00",
       "refusalKind": "not_published",
       "note": "83693NED publishes ONLY a monthly grain (all 483 period keys are YYYYMMnn, measured v3+v4 2026-07-17). A year-figure ask must refuse value-free (principle c / R11), never average months into a fabricated year number."
+    },
+    "CC8": {
+      "question": "Wat was de jaarmutatie van de producentenprijzen (afzet totaal) in mei 2026?",
+      "source": "cbs",
+      "shape": "single",
+      "table": "85770NED",
+      "measure": "M003288",
+      "measureTitle": "Jaarmutatie PPI",
+      "period": "2026MM05",
+      "dims": {
+        "Afzetgebieden": "A044074",
+        "AlleProdComCoderingen": "A052584"
+      },
+      "value": 7.2,
+      "unit": "%",
+      "decimals": 1,
+      "status": "Voorlopig",
+      "valueAttribute": "None",
+      "note": "Headline PPI YoY, total sales area x total ProdCom (A052584, the hierarchy root). Last 5 months Voorlopig — R11."
+    },
+    "CC9": {
+      "question": "Wat was de jaarmutatie van de producentenprijzen in juni 2023?",
+      "source": "cbs",
+      "shape": "single",
+      "table": "85770NED",
+      "measure": "M003288",
+      "measureTitle": "Jaarmutatie PPI",
+      "period": "2023MM06",
+      "dims": {
+        "Afzetgebieden": "A044074",
+        "AlleProdComCoderingen": "A052584"
+      },
+      "value": -5.9,
+      "unit": "%",
+      "decimals": 1,
+      "status": "Definitief",
+      "valueAttribute": "None",
+      "note": "Historical negative-mutation check deep in the series."
+    },
+    "CC10": {
+      "question": "Wat was de jaarmutatie van de invoerprijzen in mei 2026?",
+      "source": "cbs",
+      "shape": "single",
+      "table": "85770NED",
+      "measure": "M003288",
+      "measureTitle": "Jaarmutatie PPI",
+      "period": "2026MM05",
+      "dims": {
+        "Afzetgebieden": "A044077",
+        "AlleProdComCoderingen": "A052584"
+      },
+      "value": 9.3,
+      "unit": "%",
+      "decimals": 1,
+      "status": "Voorlopig",
+      "valueAttribute": "None",
+      "note": "Second Afzetgebieden flavor (invoer) — pins that the slice really carries both sales areas."
     }
   }
 }

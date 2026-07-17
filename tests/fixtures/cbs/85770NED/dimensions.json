@@ -1,0 +1,42 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/85770NED/$metadata#Dimensions",
+ "value": [
+  {
+   "Identifier": "Afzetgebieden",
+   "Title": "Afzetgebieden",
+   "Description": "",
+   "MapYear": null,
+   "ReleasePolicy": null,
+   "Kind": "Dimension",
+   "ContainsGroups": false,
+   "ContainsCodes": true,
+   "CodesUrl": "https://datasets.cbs.nl/odata/v1/CBS/85770NED/AfzetgebiedenCodes",
+   "GroupsUrl": null
+  },
+  {
+   "Identifier": "AlleProdComCoderingen",
+   "Title": "Alle ProdCom coderingen",
+   "Description": "",
+   "MapYear": null,
+   "ReleasePolicy": null,
+   "Kind": "Dimension",
+   "ContainsGroups": true,
+   "ContainsCodes": true,
+   "CodesUrl": "https://datasets.cbs.nl/odata/v1/CBS/85770NED/AlleProdComCoderingenCodes",
+   "GroupsUrl": "https://datasets.cbs.nl/odata/v1/CBS/85770NED/AlleProdComCoderingenGroups"
+  },
+  {
+   "@odata.type": "#Cbs.Ccb.Models.TimeDimension",
+   "Identifier": "Perioden",
+   "Title": "Perioden",
+   "Description": "",
+   "MapYear": null,
+   "ReleasePolicy": true,
+   "Kind": "TimeDimension",
+   "ContainsGroups": true,
+   "ContainsCodes": true,
+   "CodesUrl": "https://datasets.cbs.nl/odata/v1/CBS/85770NED/PeriodenCodes",
+   "GroupsUrl": "https://datasets.cbs.nl/odata/v1/CBS/85770NED/PeriodenGroups"
+  }
+ ]
+}

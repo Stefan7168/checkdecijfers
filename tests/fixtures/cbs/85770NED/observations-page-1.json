@@ -1,0 +1,6545 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/85770NED/$metadata#Observations",
+ "value": [
+  {
+   "Id": 0,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 90,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM01"
+  },
+  {
+   "Id": 1,
+   "Measure": "M003316",
+   "ValueAttribute": "Impossible",
+   "Value": null,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM01"
+  },
+  {
+   "Id": 2,
+   "Measure": "M003288",
+   "ValueAttribute": "Impossible",
+   "Value": null,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM01"
+  },
+  {
+   "Id": 3,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 89.7,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM02"
+  },
+  {
+   "Id": 4,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -0.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM02"
+  },
+  {
+   "Id": 5,
+   "Measure": "M003288",
+   "ValueAttribute": "Impossible",
+   "Value": null,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM02"
+  },
+  {
+   "Id": 6,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 89.9,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM03"
+  },
+  {
+   "Id": 7,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM03"
+  },
+  {
+   "Id": 8,
+   "Measure": "M003288",
+   "ValueAttribute": "Impossible",
+   "Value": null,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM03"
+  },
+  {
+   "Id": 9,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 90.4,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM04"
+  },
+  {
+   "Id": 10,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.5,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM04"
+  },
+  {
+   "Id": 11,
+   "Measure": "M003288",
+   "ValueAttribute": "Impossible",
+   "Value": null,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM04"
+  },
+  {
+   "Id": 12,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 91.6,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM05"
+  },
+  {
+   "Id": 13,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 1.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM05"
+  },
+  {
+   "Id": 14,
+   "Measure": "M003288",
+   "ValueAttribute": "Impossible",
+   "Value": null,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM05"
+  },
+  {
+   "Id": 15,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 92.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM06"
+  },
+  {
+   "Id": 16,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.6,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM06"
+  },
+  {
+   "Id": 17,
+   "Measure": "M003288",
+   "ValueAttribute": "Impossible",
+   "Value": null,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM06"
+  },
+  {
+   "Id": 18,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 92.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM07"
+  },
+  {
+   "Id": 19,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM07"
+  },
+  {
+   "Id": 20,
+   "Measure": "M003288",
+   "ValueAttribute": "Impossible",
+   "Value": null,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM07"
+  },
+  {
+   "Id": 21,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 92.4,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM08"
+  },
+  {
+   "Id": 22,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM08"
+  },
+  {
+   "Id": 23,
+   "Measure": "M003288",
+   "ValueAttribute": "Impossible",
+   "Value": null,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM08"
+  },
+  {
+   "Id": 24,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 92.9,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM09"
+  },
+  {
+   "Id": 25,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.5,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM09"
+  },
+  {
+   "Id": 26,
+   "Measure": "M003288",
+   "ValueAttribute": "Impossible",
+   "Value": null,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM09"
+  },
+  {
+   "Id": 27,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 93.5,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM10"
+  },
+  {
+   "Id": 28,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.6,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM10"
+  },
+  {
+   "Id": 29,
+   "Measure": "M003288",
+   "ValueAttribute": "Impossible",
+   "Value": null,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM10"
+  },
+  {
+   "Id": 30,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 91.9,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM11"
+  },
+  {
+   "Id": 31,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -1.7,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM11"
+  },
+  {
+   "Id": 32,
+   "Measure": "M003288",
+   "ValueAttribute": "Impossible",
+   "Value": null,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM11"
+  },
+  {
+   "Id": 33,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 90.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM12"
+  },
+  {
+   "Id": 34,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -1.9,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM12"
+  },
+  {
+   "Id": 35,
+   "Measure": "M003288",
+   "ValueAttribute": "Impossible",
+   "Value": null,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM12"
+  },
+  {
+   "Id": 36,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 91.4,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018JJ00"
+  },
+  {
+   "Id": 37,
+   "Measure": "M003316",
+   "ValueAttribute": "Impossible",
+   "Value": null,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018JJ00"
+  },
+  {
+   "Id": 38,
+   "Measure": "M003288",
+   "ValueAttribute": "Impossible",
+   "Value": null,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018JJ00"
+  },
+  {
+   "Id": 39,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 90.9,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM01"
+  },
+  {
+   "Id": 40,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.8,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM01"
+  },
+  {
+   "Id": 41,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 1,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM01"
+  },
+  {
+   "Id": 42,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 91.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM02"
+  },
+  {
+   "Id": 43,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM02"
+  },
+  {
+   "Id": 44,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 1.7,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM02"
+  },
+  {
+   "Id": 45,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 91.5,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM03"
+  },
+  {
+   "Id": 46,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM03"
+  },
+  {
+   "Id": 47,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 1.8,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM03"
+  },
+  {
+   "Id": 48,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 92.7,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM04"
+  },
+  {
+   "Id": 49,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 1.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM04"
+  },
+  {
+   "Id": 50,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 2.5,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM04"
+  },
+  {
+   "Id": 51,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 92.7,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM05"
+  },
+  {
+   "Id": 52,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM05"
+  },
+  {
+   "Id": 53,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 1.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM05"
+  },
+  {
+   "Id": 54,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 91.4,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM06"
+  },
+  {
+   "Id": 55,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -1.4,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM06"
+  },
+  {
+   "Id": 56,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -0.8,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM06"
+  },
+  {
+   "Id": 57,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 91.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM07"
+  },
+  {
+   "Id": 58,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -0.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM07"
+  },
+  {
+   "Id": 59,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -1.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM07"
+  },
+  {
+   "Id": 60,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 90.6,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM08"
+  },
+  {
+   "Id": 61,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -0.7,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM08"
+  },
+  {
+   "Id": 62,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -1.9,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM08"
+  },
+  {
+   "Id": 63,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 91,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM09"
+  },
+  {
+   "Id": 64,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.4,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM09"
+  },
+  {
+   "Id": 65,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -2.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM09"
+  },
+  {
+   "Id": 66,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 91.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM10"
+  },
+  {
+   "Id": 67,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM10"
+  },
+  {
+   "Id": 68,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -2.5,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM10"
+  },
+  {
+   "Id": 69,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 91.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM11"
+  },
+  {
+   "Id": 70,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM11"
+  },
+  {
+   "Id": 71,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -0.7,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM11"
+  },
+  {
+   "Id": 72,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 91.6,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM12"
+  },
+  {
+   "Id": 73,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.4,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM12"
+  },
+  {
+   "Id": 74,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 1.6,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM12"
+  },
+  {
+   "Id": 75,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 91.5,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019JJ00"
+  },
+  {
+   "Id": 76,
+   "Measure": "M003316",
+   "ValueAttribute": "Impossible",
+   "Value": null,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019JJ00"
+  },
+  {
+   "Id": 77,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 0,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019JJ00"
+  },
+  {
+   "Id": 78,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 91.9,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM01"
+  },
+  {
+   "Id": 79,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM01"
+  },
+  {
+   "Id": 80,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 1.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM01"
+  },
+  {
+   "Id": 81,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 91.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM02"
+  },
+  {
+   "Id": 82,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -0.8,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM02"
+  },
+  {
+   "Id": 83,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 0,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM02"
+  },
+  {
+   "Id": 84,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 87.7,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM03"
+  },
+  {
+   "Id": 85,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -3.8,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM03"
+  },
+  {
+   "Id": 86,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -4.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM03"
+  },
+  {
+   "Id": 87,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 84.9,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM04"
+  },
+  {
+   "Id": 88,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -3.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM04"
+  },
+  {
+   "Id": 89,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -8.4,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM04"
+  },
+  {
+   "Id": 90,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 85.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM05"
+  },
+  {
+   "Id": 91,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM05"
+  },
+  {
+   "Id": 92,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -8.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM05"
+  },
+  {
+   "Id": 93,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 86.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM06"
+  },
+  {
+   "Id": 94,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 1.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM06"
+  },
+  {
+   "Id": 95,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -5.7,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM06"
+  },
+  {
+   "Id": 96,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 86.5,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM07"
+  },
+  {
+   "Id": 97,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.5,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM07"
+  },
+  {
+   "Id": 98,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -5.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM07"
+  },
+  {
+   "Id": 99,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 86.5,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM08"
+  },
+  {
+   "Id": 100,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM08"
+  },
+  {
+   "Id": 101,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -4.5,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM08"
+  },
+  {
+   "Id": 102,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 86.5,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM09"
+  },
+  {
+   "Id": 103,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM09"
+  },
+  {
+   "Id": 104,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -4.9,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM09"
+  },
+  {
+   "Id": 105,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 86.8,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM10"
+  },
+  {
+   "Id": 106,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM10"
+  },
+  {
+   "Id": 107,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -4.8,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM10"
+  },
+  {
+   "Id": 108,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 87.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM11"
+  },
+  {
+   "Id": 109,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.6,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM11"
+  },
+  {
+   "Id": 110,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -4.4,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM11"
+  },
+  {
+   "Id": 111,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 88.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM12"
+  },
+  {
+   "Id": 112,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 1.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM12"
+  },
+  {
+   "Id": 113,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -3.7,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM12"
+  },
+  {
+   "Id": 114,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 87.4,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020JJ00"
+  },
+  {
+   "Id": 115,
+   "Measure": "M003316",
+   "ValueAttribute": "Impossible",
+   "Value": null,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020JJ00"
+  },
+  {
+   "Id": 116,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -4.4,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020JJ00"
+  },
+  {
+   "Id": 117,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 90.7,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM01"
+  },
+  {
+   "Id": 118,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 2.7,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM01"
+  },
+  {
+   "Id": 119,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -1.4,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM01"
+  },
+  {
+   "Id": 120,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 92.4,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM02"
+  },
+  {
+   "Id": 121,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 1.9,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM02"
+  },
+  {
+   "Id": 122,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 1.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM02"
+  },
+  {
+   "Id": 123,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 94.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM03"
+  },
+  {
+   "Id": 124,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 2,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM03"
+  },
+  {
+   "Id": 125,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 7.4,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM03"
+  },
+  {
+   "Id": 126,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 95.8,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM04"
+  },
+  {
+   "Id": 127,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 1.6,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM04"
+  },
+  {
+   "Id": 128,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 12.8,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM04"
+  },
+  {
+   "Id": 129,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 97,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM05"
+  },
+  {
+   "Id": 130,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 1.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM05"
+  },
+  {
+   "Id": 131,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 13.9,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM05"
+  },
+  {
+   "Id": 132,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 98,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM06"
+  },
+  {
+   "Id": 133,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 1,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM06"
+  },
+  {
+   "Id": 134,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 13.7,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM06"
+  },
+  {
+   "Id": 135,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 100.4,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM07"
+  },
+  {
+   "Id": 136,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 2.5,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM07"
+  },
+  {
+   "Id": 137,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 16,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM07"
+  },
+  {
+   "Id": 138,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 101.6,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM08"
+  },
+  {
+   "Id": 139,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 1.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM08"
+  },
+  {
+   "Id": 140,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 17.4,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM08"
+  },
+  {
+   "Id": 141,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 103.4,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM09"
+  },
+  {
+   "Id": 142,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 1.8,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM09"
+  },
+  {
+   "Id": 143,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 19.5,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM09"
+  },
+  {
+   "Id": 144,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 107.4,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM10"
+  },
+  {
+   "Id": 145,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 3.9,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM10"
+  },
+  {
+   "Id": 146,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 23.8,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM10"
+  },
+  {
+   "Id": 147,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 109.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM11"
+  },
+  {
+   "Id": 148,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 1.6,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM11"
+  },
+  {
+   "Id": 149,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 25,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM11"
+  },
+  {
+   "Id": 150,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 110.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM12"
+  },
+  {
+   "Id": 151,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.9,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM12"
+  },
+  {
+   "Id": 152,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 24.8,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM12"
+  },
+  {
+   "Id": 153,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 100,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021JJ00"
+  },
+  {
+   "Id": 154,
+   "Measure": "M003316",
+   "ValueAttribute": "Impossible",
+   "Value": null,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021JJ00"
+  },
+  {
+   "Id": 155,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 14.4,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021JJ00"
+  },
+  {
+   "Id": 156,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 115,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM01"
+  },
+  {
+   "Id": 157,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 4.4,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM01"
+  },
+  {
+   "Id": 158,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 26.9,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM01"
+  },
+  {
+   "Id": 159,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 116.4,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM02"
+  },
+  {
+   "Id": 160,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 1.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM02"
+  },
+  {
+   "Id": 161,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 26,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM02"
+  },
+  {
+   "Id": 162,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 122.4,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM03"
+  },
+  {
+   "Id": 163,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 5.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM03"
+  },
+  {
+   "Id": 164,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 29.9,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM03"
+  },
+  {
+   "Id": 165,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 127.7,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM04"
+  },
+  {
+   "Id": 166,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 4.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM04"
+  },
+  {
+   "Id": 167,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 33.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM04"
+  },
+  {
+   "Id": 168,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 128.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM05"
+  },
+  {
+   "Id": 169,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.4,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM05"
+  },
+  {
+   "Id": 170,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 32.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM05"
+  },
+  {
+   "Id": 171,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 130.4,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM06"
+  },
+  {
+   "Id": 172,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 1.7,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM06"
+  },
+  {
+   "Id": 173,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 33.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM06"
+  },
+  {
+   "Id": 174,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 133.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM07"
+  },
+  {
+   "Id": 175,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 2.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM07"
+  },
+  {
+   "Id": 176,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 32.7,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM07"
+  },
+  {
+   "Id": 177,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 134.9,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM08"
+  },
+  {
+   "Id": 178,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 1.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM08"
+  },
+  {
+   "Id": 179,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 32.8,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM08"
+  },
+  {
+   "Id": 180,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 134.6,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM09"
+  },
+  {
+   "Id": 181,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -0.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM09"
+  },
+  {
+   "Id": 182,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 30.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM09"
+  },
+  {
+   "Id": 183,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 135,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM10"
+  },
+  {
+   "Id": 184,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM10"
+  },
+  {
+   "Id": 185,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 25.7,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM10"
+  },
+  {
+   "Id": 186,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 132.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM11"
+  },
+  {
+   "Id": 187,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -2.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM11"
+  },
+  {
+   "Id": 188,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 21.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM11"
+  },
+  {
+   "Id": 189,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 129.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM12"
+  },
+  {
+   "Id": 190,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -2.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM12"
+  },
+  {
+   "Id": 191,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 17.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM12"
+  },
+  {
+   "Id": 192,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 128.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022JJ00"
+  },
+  {
+   "Id": 193,
+   "Measure": "M003316",
+   "ValueAttribute": "Impossible",
+   "Value": null,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022JJ00"
+  },
+  {
+   "Id": 194,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 28.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022JJ00"
+  },
+  {
+   "Id": 195,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 130.6,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM01"
+  },
+  {
+   "Id": 196,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 1.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM01"
+  },
+  {
+   "Id": 197,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 13.5,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM01"
+  },
+  {
+   "Id": 198,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 130.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM02"
+  },
+  {
+   "Id": 199,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -0.4,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM02"
+  },
+  {
+   "Id": 200,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 11.8,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM02"
+  },
+  {
+   "Id": 201,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 127.9,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM03"
+  },
+  {
+   "Id": 202,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -1.7,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM03"
+  },
+  {
+   "Id": 203,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 4.5,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM03"
+  },
+  {
+   "Id": 204,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 125.4,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM04"
+  },
+  {
+   "Id": 205,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -1.9,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM04"
+  },
+  {
+   "Id": 206,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -1.8,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM04"
+  },
+  {
+   "Id": 207,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 123.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM05"
+  },
+  {
+   "Id": 208,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -1.9,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM05"
+  },
+  {
+   "Id": 209,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -4,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM05"
+  },
+  {
+   "Id": 210,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 122.7,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM06"
+  },
+  {
+   "Id": 211,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -0.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM06"
+  },
+  {
+   "Id": 212,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -5.9,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM06"
+  },
+  {
+   "Id": 213,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 121.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM07"
+  },
+  {
+   "Id": 214,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -1.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM07"
+  },
+  {
+   "Id": 215,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -9,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM07"
+  },
+  {
+   "Id": 216,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 122.5,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM08"
+  },
+  {
+   "Id": 217,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 1.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM08"
+  },
+  {
+   "Id": 218,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -9.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM08"
+  },
+  {
+   "Id": 219,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 124.4,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM09"
+  },
+  {
+   "Id": 220,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 1.6,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM09"
+  },
+  {
+   "Id": 221,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -7.5,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM09"
+  },
+  {
+   "Id": 222,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 123,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM10"
+  },
+  {
+   "Id": 223,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -1.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM10"
+  },
+  {
+   "Id": 224,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -8.9,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM10"
+  },
+  {
+   "Id": 225,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 122.6,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM11"
+  },
+  {
+   "Id": 226,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -0.4,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM11"
+  },
+  {
+   "Id": 227,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -7.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM11"
+  },
+  {
+   "Id": 228,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 121,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM12"
+  },
+  {
+   "Id": 229,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -1.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM12"
+  },
+  {
+   "Id": 230,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -6.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM12"
+  },
+  {
+   "Id": 231,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 124.6,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023JJ00"
+  },
+  {
+   "Id": 232,
+   "Measure": "M003316",
+   "ValueAttribute": "Impossible",
+   "Value": null,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023JJ00"
+  },
+  {
+   "Id": 233,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -2.9,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023JJ00"
+  },
+  {
+   "Id": 234,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 120.7,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM01"
+  },
+  {
+   "Id": 235,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -0.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM01"
+  },
+  {
+   "Id": 236,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -7.6,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM01"
+  },
+  {
+   "Id": 237,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 120.8,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM02"
+  },
+  {
+   "Id": 238,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM02"
+  },
+  {
+   "Id": 239,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -7.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM02"
+  },
+  {
+   "Id": 240,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 121.6,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM03"
+  },
+  {
+   "Id": 241,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.7,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM03"
+  },
+  {
+   "Id": 242,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -4.9,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM03"
+  },
+  {
+   "Id": 243,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 122.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM04"
+  },
+  {
+   "Id": 244,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.5,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM04"
+  },
+  {
+   "Id": 245,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -2.6,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM04"
+  },
+  {
+   "Id": 246,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 121.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM05"
+  },
+  {
+   "Id": 247,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -0.8,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM05"
+  },
+  {
+   "Id": 248,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -1.5,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM05"
+  },
+  {
+   "Id": 249,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 121.6,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM06"
+  },
+  {
+   "Id": 250,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM06"
+  },
+  {
+   "Id": 251,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -0.9,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM06"
+  },
+  {
+   "Id": 252,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 121.5,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM07"
+  },
+  {
+   "Id": 253,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -0.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM07"
+  },
+  {
+   "Id": 254,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 0.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM07"
+  },
+  {
+   "Id": 255,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 120.5,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM08"
+  },
+  {
+   "Id": 256,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -0.8,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM08"
+  },
+  {
+   "Id": 257,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -1.7,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM08"
+  },
+  {
+   "Id": 258,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 119.9,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM09"
+  },
+  {
+   "Id": 259,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -0.5,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM09"
+  },
+  {
+   "Id": 260,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -3.6,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM09"
+  },
+  {
+   "Id": 261,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 120.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM10"
+  },
+  {
+   "Id": 262,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM10"
+  },
+  {
+   "Id": 263,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -2.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM10"
+  },
+  {
+   "Id": 264,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 121.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM11"
+  },
+  {
+   "Id": 265,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.9,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM11"
+  },
+  {
+   "Id": 266,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -1,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM11"
+  },
+  {
+   "Id": 267,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 121.8,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM12"
+  },
+  {
+   "Id": 268,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.4,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM12"
+  },
+  {
+   "Id": 269,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 0.6,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM12"
+  },
+  {
+   "Id": 270,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 121.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024JJ00"
+  },
+  {
+   "Id": 271,
+   "Measure": "M003316",
+   "ValueAttribute": "Impossible",
+   "Value": null,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024JJ00"
+  },
+  {
+   "Id": 272,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -2.8,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024JJ00"
+  },
+  {
+   "Id": 273,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 123.8,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM01"
+  },
+  {
+   "Id": 274,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 1.6,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM01"
+  },
+  {
+   "Id": 275,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 2.5,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM01"
+  },
+  {
+   "Id": 276,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 124.4,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM02"
+  },
+  {
+   "Id": 277,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.5,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM02"
+  },
+  {
+   "Id": 278,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 3,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM02"
+  },
+  {
+   "Id": 279,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 123.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM03"
+  },
+  {
+   "Id": 280,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -0.9,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM03"
+  },
+  {
+   "Id": 281,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 1.4,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM03"
+  },
+  {
+   "Id": 282,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 121.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM04"
+  },
+  {
+   "Id": 283,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -1.7,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM04"
+  },
+  {
+   "Id": 284,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -0.9,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM04"
+  },
+  {
+   "Id": 285,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 120.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM05"
+  },
+  {
+   "Id": 286,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -0.9,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM05"
+  },
+  {
+   "Id": 287,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -0.9,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM05"
+  },
+  {
+   "Id": 288,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 120.7,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM06"
+  },
+  {
+   "Id": 289,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.5,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM06"
+  },
+  {
+   "Id": 290,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -0.8,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM06"
+  },
+  {
+   "Id": 291,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 120.8,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM07"
+  },
+  {
+   "Id": 292,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM07"
+  },
+  {
+   "Id": 293,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -0.5,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM07"
+  },
+  {
+   "Id": 294,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 119.9,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM08"
+  },
+  {
+   "Id": 295,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -0.8,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM08"
+  },
+  {
+   "Id": 296,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -0.5,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM08"
+  },
+  {
+   "Id": 297,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 119.8,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM09"
+  },
+  {
+   "Id": 298,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -0.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM09"
+  },
+  {
+   "Id": 299,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -0.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM09"
+  },
+  {
+   "Id": 300,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 119.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM10"
+  },
+  {
+   "Id": 301,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -0.4,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM10"
+  },
+  {
+   "Id": 302,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -0.7,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM10"
+  },
+  {
+   "Id": 303,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 119.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM11"
+  },
+  {
+   "Id": 304,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM11"
+  },
+  {
+   "Id": 305,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -1.6,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM11"
+  },
+  {
+   "Id": 306,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 118,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM12"
+  },
+  {
+   "Id": 307,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -1.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM12"
+  },
+  {
+   "Id": 308,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -3.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM12"
+  },
+  {
+   "Id": 309,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 120.9,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025JJ00"
+  },
+  {
+   "Id": 310,
+   "Measure": "M003316",
+   "ValueAttribute": "Impossible",
+   "Value": null,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025JJ00"
+  },
+  {
+   "Id": 311,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -0.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025JJ00"
+  },
+  {
+   "Id": 312,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 118.6,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2026MM01"
+  },
+  {
+   "Id": 313,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.6,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2026MM01"
+  },
+  {
+   "Id": 314,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -4.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2026MM01"
+  },
+  {
+   "Id": 315,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 119,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2026MM02"
+  },
+  {
+   "Id": 316,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2026MM02"
+  },
+  {
+   "Id": 317,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -4.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2026MM02"
+  },
+  {
+   "Id": 318,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 123.7,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2026MM03"
+  },
+  {
+   "Id": 319,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 3.9,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2026MM03"
+  },
+  {
+   "Id": 320,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 0.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2026MM03"
+  },
+  {
+   "Id": 321,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 127.4,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2026MM04"
+  },
+  {
+   "Id": 322,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 3,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2026MM04"
+  },
+  {
+   "Id": 323,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 5.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2026MM04"
+  },
+  {
+   "Id": 324,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 128.7,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2026MM05"
+  },
+  {
+   "Id": 325,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 1,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2026MM05"
+  },
+  {
+   "Id": 326,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 7.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044074",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2026MM05"
+  },
+  {
+   "Id": 352029,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 94.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM01"
+  },
+  {
+   "Id": 352030,
+   "Measure": "M003316",
+   "ValueAttribute": "Impossible",
+   "Value": null,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM01"
+  },
+  {
+   "Id": 352031,
+   "Measure": "M003288",
+   "ValueAttribute": "Impossible",
+   "Value": null,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM01"
+  },
+  {
+   "Id": 352032,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 93.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM02"
+  },
+  {
+   "Id": 352033,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -1.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM02"
+  },
+  {
+   "Id": 352034,
+   "Measure": "M003288",
+   "ValueAttribute": "Impossible",
+   "Value": null,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM02"
+  },
+  {
+   "Id": 352035,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 93.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM03"
+  },
+  {
+   "Id": 352036,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -0.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM03"
+  },
+  {
+   "Id": 352037,
+   "Measure": "M003288",
+   "ValueAttribute": "Impossible",
+   "Value": null,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM03"
+  },
+  {
+   "Id": 352038,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 93.7,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM04"
+  },
+  {
+   "Id": 352039,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.6,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM04"
+  },
+  {
+   "Id": 352040,
+   "Measure": "M003288",
+   "ValueAttribute": "Impossible",
+   "Value": null,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM04"
+  },
+  {
+   "Id": 352041,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 95.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM05"
+  },
+  {
+   "Id": 352042,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 1.8,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM05"
+  },
+  {
+   "Id": 352043,
+   "Measure": "M003288",
+   "ValueAttribute": "Impossible",
+   "Value": null,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM05"
+  },
+  {
+   "Id": 352044,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 96.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM06"
+  },
+  {
+   "Id": 352045,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.9,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM06"
+  },
+  {
+   "Id": 352046,
+   "Measure": "M003288",
+   "ValueAttribute": "Impossible",
+   "Value": null,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM06"
+  },
+  {
+   "Id": 352047,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 96.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM07"
+  },
+  {
+   "Id": 352048,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM07"
+  },
+  {
+   "Id": 352049,
+   "Measure": "M003288",
+   "ValueAttribute": "Impossible",
+   "Value": null,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM07"
+  },
+  {
+   "Id": 352050,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 96.4,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM08"
+  },
+  {
+   "Id": 352051,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM08"
+  },
+  {
+   "Id": 352052,
+   "Measure": "M003288",
+   "ValueAttribute": "Impossible",
+   "Value": null,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM08"
+  },
+  {
+   "Id": 352053,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 97.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM09"
+  },
+  {
+   "Id": 352054,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.7,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM09"
+  },
+  {
+   "Id": 352055,
+   "Measure": "M003288",
+   "ValueAttribute": "Impossible",
+   "Value": null,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM09"
+  },
+  {
+   "Id": 352056,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 98.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM10"
+  },
+  {
+   "Id": 352057,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 1.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM10"
+  },
+  {
+   "Id": 352058,
+   "Measure": "M003288",
+   "ValueAttribute": "Impossible",
+   "Value": null,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM10"
+  },
+  {
+   "Id": 352059,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 96.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM11"
+  },
+  {
+   "Id": 352060,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -2,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM11"
+  },
+  {
+   "Id": 352061,
+   "Measure": "M003288",
+   "ValueAttribute": "Impossible",
+   "Value": null,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM11"
+  },
+  {
+   "Id": 352062,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 94.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM12"
+  },
+  {
+   "Id": 352063,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -2.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM12"
+  },
+  {
+   "Id": 352064,
+   "Measure": "M003288",
+   "ValueAttribute": "Impossible",
+   "Value": null,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018MM12"
+  },
+  {
+   "Id": 352065,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 95.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018JJ00"
+  },
+  {
+   "Id": 352066,
+   "Measure": "M003316",
+   "ValueAttribute": "Impossible",
+   "Value": null,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018JJ00"
+  },
+  {
+   "Id": 352067,
+   "Measure": "M003288",
+   "ValueAttribute": "Impossible",
+   "Value": null,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2018JJ00"
+  },
+  {
+   "Id": 352068,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 94.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM01"
+  },
+  {
+   "Id": 352069,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM01"
+  },
+  {
+   "Id": 352070,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -0.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM01"
+  },
+  {
+   "Id": 352071,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 94.9,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM02"
+  },
+  {
+   "Id": 352072,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.8,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM02"
+  },
+  {
+   "Id": 352073,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 1.8,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM02"
+  },
+  {
+   "Id": 352074,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 95.5,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM03"
+  },
+  {
+   "Id": 352075,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.6,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM03"
+  },
+  {
+   "Id": 352076,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 2.5,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM03"
+  },
+  {
+   "Id": 352077,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 96,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM04"
+  },
+  {
+   "Id": 352078,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.5,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM04"
+  },
+  {
+   "Id": 352079,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 2.5,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM04"
+  },
+  {
+   "Id": 352080,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 96,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM05"
+  },
+  {
+   "Id": 352081,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM05"
+  },
+  {
+   "Id": 352082,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 0.7,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM05"
+  },
+  {
+   "Id": 352083,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 94.5,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM06"
+  },
+  {
+   "Id": 352084,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -1.5,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM06"
+  },
+  {
+   "Id": 352085,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -1.7,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM06"
+  },
+  {
+   "Id": 352086,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 94.5,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM07"
+  },
+  {
+   "Id": 352087,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -0.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM07"
+  },
+  {
+   "Id": 352088,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -1.9,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM07"
+  },
+  {
+   "Id": 352089,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 93.6,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM08"
+  },
+  {
+   "Id": 352090,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -0.9,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM08"
+  },
+  {
+   "Id": 352091,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -2.9,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM08"
+  },
+  {
+   "Id": 352092,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 94.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM09"
+  },
+  {
+   "Id": 352093,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.6,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM09"
+  },
+  {
+   "Id": 352094,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -3,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM09"
+  },
+  {
+   "Id": 352095,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 93.9,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM10"
+  },
+  {
+   "Id": 352096,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -0.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM10"
+  },
+  {
+   "Id": 352097,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -4.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM10"
+  },
+  {
+   "Id": 352098,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 94.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM11"
+  },
+  {
+   "Id": 352099,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.4,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM11"
+  },
+  {
+   "Id": 352100,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -2,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM11"
+  },
+  {
+   "Id": 352101,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 94.6,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM12"
+  },
+  {
+   "Id": 352102,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM12"
+  },
+  {
+   "Id": 352103,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 0.4,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019MM12"
+  },
+  {
+   "Id": 352104,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 94.7,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019JJ00"
+  },
+  {
+   "Id": 352105,
+   "Measure": "M003316",
+   "ValueAttribute": "Impossible",
+   "Value": null,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019JJ00"
+  },
+  {
+   "Id": 352106,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -0.7,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2019JJ00"
+  },
+  {
+   "Id": 352107,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 94.5,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM01"
+  },
+  {
+   "Id": 352108,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -0.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM01"
+  },
+  {
+   "Id": 352109,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 0.4,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM01"
+  },
+  {
+   "Id": 352110,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 93.6,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM02"
+  },
+  {
+   "Id": 352111,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -1,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM02"
+  },
+  {
+   "Id": 352112,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -1.4,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM02"
+  },
+  {
+   "Id": 352113,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 89.6,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM03"
+  },
+  {
+   "Id": 352114,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -4.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM03"
+  },
+  {
+   "Id": 352115,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -6.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM03"
+  },
+  {
+   "Id": 352116,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 86.9,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM04"
+  },
+  {
+   "Id": 352117,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -3,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM04"
+  },
+  {
+   "Id": 352118,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -9.5,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM04"
+  },
+  {
+   "Id": 352119,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 87.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM05"
+  },
+  {
+   "Id": 352120,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM05"
+  },
+  {
+   "Id": 352121,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -9.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM05"
+  },
+  {
+   "Id": 352122,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 87.8,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM06"
+  },
+  {
+   "Id": 352123,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.8,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM06"
+  },
+  {
+   "Id": 352124,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -7.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM06"
+  },
+  {
+   "Id": 352125,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 88.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM07"
+  },
+  {
+   "Id": 352126,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.5,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM07"
+  },
+  {
+   "Id": 352127,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -6.6,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM07"
+  },
+  {
+   "Id": 352128,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 87.9,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM08"
+  },
+  {
+   "Id": 352129,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -0.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM08"
+  },
+  {
+   "Id": 352130,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -6.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM08"
+  },
+  {
+   "Id": 352131,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 87.8,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM09"
+  },
+  {
+   "Id": 352132,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -0.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM09"
+  },
+  {
+   "Id": 352133,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -6.8,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM09"
+  },
+  {
+   "Id": 352134,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 88,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM10"
+  },
+  {
+   "Id": 352135,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM10"
+  },
+  {
+   "Id": 352136,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -6.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM10"
+  },
+  {
+   "Id": 352137,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 88.4,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM11"
+  },
+  {
+   "Id": 352138,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.5,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM11"
+  },
+  {
+   "Id": 352139,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -6.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM11"
+  },
+  {
+   "Id": 352140,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 89.4,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM12"
+  },
+  {
+   "Id": 352141,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 1.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM12"
+  },
+  {
+   "Id": 352142,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -5.5,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020MM12"
+  },
+  {
+   "Id": 352143,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 89.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020JJ00"
+  },
+  {
+   "Id": 352144,
+   "Measure": "M003316",
+   "ValueAttribute": "Impossible",
+   "Value": null,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020JJ00"
+  },
+  {
+   "Id": 352145,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -5.9,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2020JJ00"
+  },
+  {
+   "Id": 352146,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 90.8,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM01"
+  },
+  {
+   "Id": 352147,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 1.6,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM01"
+  },
+  {
+   "Id": 352148,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -4,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM01"
+  },
+  {
+   "Id": 352149,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 92.8,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM02"
+  },
+  {
+   "Id": 352150,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 2.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM02"
+  },
+  {
+   "Id": 352151,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -0.9,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM02"
+  },
+  {
+   "Id": 352152,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 94.5,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM03"
+  },
+  {
+   "Id": 352153,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 1.9,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM03"
+  },
+  {
+   "Id": 352154,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 5.5,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM03"
+  },
+  {
+   "Id": 352155,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 95.7,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM04"
+  },
+  {
+   "Id": 352156,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 1.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM04"
+  },
+  {
+   "Id": 352157,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 10.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM04"
+  },
+  {
+   "Id": 352158,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 96.9,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM05"
+  },
+  {
+   "Id": 352159,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 1.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM05"
+  },
+  {
+   "Id": 352160,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 11.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM05"
+  },
+  {
+   "Id": 352161,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 98.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM06"
+  },
+  {
+   "Id": 352162,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 1.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM06"
+  },
+  {
+   "Id": 352163,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 11.7,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM06"
+  },
+  {
+   "Id": 352164,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 100.9,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM07"
+  },
+  {
+   "Id": 352165,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 2.9,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM07"
+  },
+  {
+   "Id": 352166,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 14.4,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM07"
+  },
+  {
+   "Id": 352167,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 101.4,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM08"
+  },
+  {
+   "Id": 352168,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.5,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM08"
+  },
+  {
+   "Id": 352169,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 15.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM08"
+  },
+  {
+   "Id": 352170,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 102.7,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM09"
+  },
+  {
+   "Id": 352171,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 1.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM09"
+  },
+  {
+   "Id": 352172,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 17,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM09"
+  },
+  {
+   "Id": 352173,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 107.6,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM10"
+  },
+  {
+   "Id": 352174,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 4.7,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM10"
+  },
+  {
+   "Id": 352175,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 22.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM10"
+  },
+  {
+   "Id": 352176,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 109.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM11"
+  },
+  {
+   "Id": 352177,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 1.7,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM11"
+  },
+  {
+   "Id": 352178,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 23.7,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM11"
+  },
+  {
+   "Id": 352179,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 109.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM12"
+  },
+  {
+   "Id": 352180,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM12"
+  },
+  {
+   "Id": 352181,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 22.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021MM12"
+  },
+  {
+   "Id": 352182,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 100,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021JJ00"
+  },
+  {
+   "Id": 352183,
+   "Measure": "M003316",
+   "ValueAttribute": "Impossible",
+   "Value": null,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021JJ00"
+  },
+  {
+   "Id": 352184,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 12.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2021JJ00"
+  },
+  {
+   "Id": 352185,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 115.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM01"
+  },
+  {
+   "Id": 352186,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 5.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM01"
+  },
+  {
+   "Id": 352187,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 26.8,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM01"
+  },
+  {
+   "Id": 352188,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 115.8,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM02"
+  },
+  {
+   "Id": 352189,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.6,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM02"
+  },
+  {
+   "Id": 352190,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 24.8,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM02"
+  },
+  {
+   "Id": 352191,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 120.7,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM03"
+  },
+  {
+   "Id": 352192,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 4.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM03"
+  },
+  {
+   "Id": 352193,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 27.7,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM03"
+  },
+  {
+   "Id": 352194,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 127.9,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM04"
+  },
+  {
+   "Id": 352195,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 6,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM04"
+  },
+  {
+   "Id": 352196,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 33.7,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM04"
+  },
+  {
+   "Id": 352197,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 129,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM05"
+  },
+  {
+   "Id": 352198,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.9,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM05"
+  },
+  {
+   "Id": 352199,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 33.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM05"
+  },
+  {
+   "Id": 352200,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 129.6,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM06"
+  },
+  {
+   "Id": 352201,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.5,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM06"
+  },
+  {
+   "Id": 352202,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 32.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM06"
+  },
+  {
+   "Id": 352203,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 131.8,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM07"
+  },
+  {
+   "Id": 352204,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 1.7,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM07"
+  },
+  {
+   "Id": 352205,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 30.6,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM07"
+  },
+  {
+   "Id": 352206,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 131.7,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM08"
+  },
+  {
+   "Id": 352207,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -0.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM08"
+  },
+  {
+   "Id": 352208,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 29.9,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM08"
+  },
+  {
+   "Id": 352209,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 131.7,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM09"
+  },
+  {
+   "Id": 352210,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM09"
+  },
+  {
+   "Id": 352211,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 28.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM09"
+  },
+  {
+   "Id": 352212,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 134.9,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM10"
+  },
+  {
+   "Id": 352213,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 2.4,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM10"
+  },
+  {
+   "Id": 352214,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 25.4,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM10"
+  },
+  {
+   "Id": 352215,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 129.7,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM11"
+  },
+  {
+   "Id": 352216,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -3.9,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM11"
+  },
+  {
+   "Id": 352217,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 18.6,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM11"
+  },
+  {
+   "Id": 352218,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 126.6,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM12"
+  },
+  {
+   "Id": 352219,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -2.4,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM12"
+  },
+  {
+   "Id": 352220,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 15.8,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022MM12"
+  },
+  {
+   "Id": 352221,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 127,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022JJ00"
+  },
+  {
+   "Id": 352222,
+   "Measure": "M003316",
+   "ValueAttribute": "Impossible",
+   "Value": null,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022JJ00"
+  },
+  {
+   "Id": 352223,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 27,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2022JJ00"
+  },
+  {
+   "Id": 352224,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 128.5,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM01"
+  },
+  {
+   "Id": 352225,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 1.5,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM01"
+  },
+  {
+   "Id": 352226,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 11.6,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM01"
+  },
+  {
+   "Id": 352227,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 123.9,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM02"
+  },
+  {
+   "Id": 352228,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -3.6,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM02"
+  },
+  {
+   "Id": 352229,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 7,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM02"
+  },
+  {
+   "Id": 352230,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 122.6,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM03"
+  },
+  {
+   "Id": 352231,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -1.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM03"
+  },
+  {
+   "Id": 352232,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 1.6,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM03"
+  },
+  {
+   "Id": 352233,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 119.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM04"
+  },
+  {
+   "Id": 352234,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -2.8,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM04"
+  },
+  {
+   "Id": 352235,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -6.8,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM04"
+  },
+  {
+   "Id": 352236,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 117.8,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM05"
+  },
+  {
+   "Id": 352237,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -1.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM05"
+  },
+  {
+   "Id": 352238,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -8.7,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM05"
+  },
+  {
+   "Id": 352239,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 115.8,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM06"
+  },
+  {
+   "Id": 352240,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -1.6,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM06"
+  },
+  {
+   "Id": 352241,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -10.6,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM06"
+  },
+  {
+   "Id": 352242,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 115.7,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM07"
+  },
+  {
+   "Id": 352243,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -0.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM07"
+  },
+  {
+   "Id": 352244,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -12.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM07"
+  },
+  {
+   "Id": 352245,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 116.7,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM08"
+  },
+  {
+   "Id": 352246,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.9,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM08"
+  },
+  {
+   "Id": 352247,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -11.4,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM08"
+  },
+  {
+   "Id": 352248,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 118.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM09"
+  },
+  {
+   "Id": 352249,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 1.4,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM09"
+  },
+  {
+   "Id": 352250,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -10.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM09"
+  },
+  {
+   "Id": 352251,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 118.6,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM10"
+  },
+  {
+   "Id": 352252,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM10"
+  },
+  {
+   "Id": 352253,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -12.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM10"
+  },
+  {
+   "Id": 352254,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 117.5,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM11"
+  },
+  {
+   "Id": 352255,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -0.9,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM11"
+  },
+  {
+   "Id": 352256,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -9.4,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM11"
+  },
+  {
+   "Id": 352257,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 116.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM12"
+  },
+  {
+   "Id": 352258,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -1.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM12"
+  },
+  {
+   "Id": 352259,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -8.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023MM12"
+  },
+  {
+   "Id": 352260,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 119.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023JJ00"
+  },
+  {
+   "Id": 352261,
+   "Measure": "M003316",
+   "ValueAttribute": "Impossible",
+   "Value": null,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023JJ00"
+  },
+  {
+   "Id": 352262,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -6.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2023JJ00"
+  },
+  {
+   "Id": 352263,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 115,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM01"
+  },
+  {
+   "Id": 352264,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -1,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM01"
+  },
+  {
+   "Id": 352265,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -10.5,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM01"
+  },
+  {
+   "Id": 352266,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 115.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM02"
+  },
+  {
+   "Id": 352267,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM02"
+  },
+  {
+   "Id": 352268,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -6.9,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM02"
+  },
+  {
+   "Id": 352269,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 115.8,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM03"
+  },
+  {
+   "Id": 352270,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.4,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM03"
+  },
+  {
+   "Id": 352271,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -5.6,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM03"
+  },
+  {
+   "Id": 352272,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 116.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM04"
+  },
+  {
+   "Id": 352273,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM04"
+  },
+  {
+   "Id": 352274,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -2.6,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM04"
+  },
+  {
+   "Id": 352275,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 116.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM05"
+  },
+  {
+   "Id": 352276,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM05"
+  },
+  {
+   "Id": 352277,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -1.4,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM05"
+  },
+  {
+   "Id": 352278,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 116,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM06"
+  },
+  {
+   "Id": 352279,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -0.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM06"
+  },
+  {
+   "Id": 352280,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 0.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM06"
+  },
+  {
+   "Id": 352281,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 116.8,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM07"
+  },
+  {
+   "Id": 352282,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.6,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM07"
+  },
+  {
+   "Id": 352283,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 1,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM07"
+  },
+  {
+   "Id": 352284,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 115.6,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM08"
+  },
+  {
+   "Id": 352285,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -1,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM08"
+  },
+  {
+   "Id": 352286,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -0.9,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM08"
+  },
+  {
+   "Id": 352287,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 114.6,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM09"
+  },
+  {
+   "Id": 352288,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -0.8,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM09"
+  },
+  {
+   "Id": 352289,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -3.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM09"
+  },
+  {
+   "Id": 352290,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 115,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM10"
+  },
+  {
+   "Id": 352291,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM10"
+  },
+  {
+   "Id": 352292,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -3,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM10"
+  },
+  {
+   "Id": 352293,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 116.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM11"
+  },
+  {
+   "Id": 352294,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 1,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM11"
+  },
+  {
+   "Id": 352295,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -1.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM11"
+  },
+  {
+   "Id": 352296,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 116.9,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM12"
+  },
+  {
+   "Id": 352297,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.7,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM12"
+  },
+  {
+   "Id": 352298,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 0.6,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024MM12"
+  },
+  {
+   "Id": 352299,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 115.8,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024JJ00"
+  },
+  {
+   "Id": 352300,
+   "Measure": "M003316",
+   "ValueAttribute": "Impossible",
+   "Value": null,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024JJ00"
+  },
+  {
+   "Id": 352301,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -2.9,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2024JJ00"
+  },
+  {
+   "Id": 352302,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 118,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM01"
+  },
+  {
+   "Id": 352303,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 1,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM01"
+  },
+  {
+   "Id": 352304,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 2.6,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM01"
+  },
+  {
+   "Id": 352305,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 118.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM02"
+  },
+  {
+   "Id": 352306,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM02"
+  },
+  {
+   "Id": 352307,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 2.5,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM02"
+  },
+  {
+   "Id": 352308,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 116.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM03"
+  },
+  {
+   "Id": 352309,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -1.8,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM03"
+  },
+  {
+   "Id": 352310,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 0.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM03"
+  },
+  {
+   "Id": 352311,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 114.6,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM04"
+  },
+  {
+   "Id": 352312,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -1.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM04"
+  },
+  {
+   "Id": 352313,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -1.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM04"
+  },
+  {
+   "Id": 352314,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 113.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM05"
+  },
+  {
+   "Id": 352315,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -1.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM05"
+  },
+  {
+   "Id": 352316,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -2.4,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM05"
+  },
+  {
+   "Id": 352317,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 113,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM06"
+  },
+  {
+   "Id": 352318,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -0.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM06"
+  },
+  {
+   "Id": 352319,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -2.6,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM06"
+  },
+  {
+   "Id": 352320,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 113.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM07"
+  },
+  {
+   "Id": 352321,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM07"
+  },
+  {
+   "Id": 352322,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -3.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM07"
+  },
+  {
+   "Id": 352323,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 112.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM08"
+  },
+  {
+   "Id": 352324,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -0.8,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM08"
+  },
+  {
+   "Id": 352325,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -2.9,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM08"
+  },
+  {
+   "Id": 352326,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 111.9,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM09"
+  },
+  {
+   "Id": 352327,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -0.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM09"
+  },
+  {
+   "Id": 352328,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -2.4,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM09"
+  },
+  {
+   "Id": 352329,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 111.4,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM10"
+  },
+  {
+   "Id": 352330,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -0.5,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM10"
+  },
+  {
+   "Id": 352331,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -3.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM10"
+  },
+  {
+   "Id": 352332,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 111.4,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM11"
+  },
+  {
+   "Id": 352333,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM11"
+  },
+  {
+   "Id": 352334,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -4.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM11"
+  },
+  {
+   "Id": 352335,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 110.9,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM12"
+  },
+  {
+   "Id": 352336,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": -0.4,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM12"
+  },
+  {
+   "Id": 352337,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -5.1,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025MM12"
+  },
+  {
+   "Id": 352338,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 113.7,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025JJ00"
+  },
+  {
+   "Id": 352339,
+   "Measure": "M003316",
+   "ValueAttribute": "Impossible",
+   "Value": null,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025JJ00"
+  },
+  {
+   "Id": 352340,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -1.8,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2025JJ00"
+  },
+  {
+   "Id": 352341,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 112,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2026MM01"
+  },
+  {
+   "Id": 352342,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 1,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2026MM01"
+  },
+  {
+   "Id": 352343,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -5,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2026MM01"
+  },
+  {
+   "Id": 352344,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 113.8,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2026MM02"
+  },
+  {
+   "Id": 352345,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 1.6,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2026MM02"
+  },
+  {
+   "Id": 352346,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": -3.7,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2026MM02"
+  },
+  {
+   "Id": 352347,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 117,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2026MM03"
+  },
+  {
+   "Id": 352348,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 2.8,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2026MM03"
+  },
+  {
+   "Id": 352349,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 0.8,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2026MM03"
+  },
+  {
+   "Id": 352350,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 122.9,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2026MM04"
+  },
+  {
+   "Id": 352351,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 5,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2026MM04"
+  },
+  {
+   "Id": 352352,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 7.2,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2026MM04"
+  },
+  {
+   "Id": 352353,
+   "Measure": "M003367",
+   "ValueAttribute": "None",
+   "Value": 123.8,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2026MM05"
+  },
+  {
+   "Id": 352354,
+   "Measure": "M003316",
+   "ValueAttribute": "None",
+   "Value": 0.8,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2026MM05"
+  },
+  {
+   "Id": 352355,
+   "Measure": "M003288",
+   "ValueAttribute": "None",
+   "Value": 9.3,
+   "StringValue": null,
+   "Afzetgebieden": "A044077",
+   "AlleProdComCoderingen": "A052584",
+   "Perioden": "2026MM05"
+  }
+ ]
+}
