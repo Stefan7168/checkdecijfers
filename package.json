@@ -61,15 +61,15 @@
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.3",
-    "@types/node": "^24.0.0",
+    "@types/node": "^26.1.1",
     "@types/pg": "^8.20.0",
-    "typescript": "^5.5.0",
-    "vitest": "^3.0.0"
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.110.0",
+    "@anthropic-ai/sdk": "^0.112.1",
     "pg": "^8.22.0",
-    "stripe": "^22.3.0",
+    "stripe": "^22.3.2",
     "zod": "^4.4.3"
   }
 }
