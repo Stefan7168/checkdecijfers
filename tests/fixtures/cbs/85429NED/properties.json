@@ -1,0 +1,92 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/85429NED/$metadata#Properties",
+ "Identifier": "85429NED",
+ "Title": "Internationale goederenhandel; grensoverschrijding, kerncijfers",
+ "Description": "In deze tabel worden de Nederlandse in-, (weder)uitvoer- en inkomende en uitgaande doorvoerwaarde volgens grensoverschrijding ingedeeld naar de secties van de Standard International Trade Classification (SITC). De gegevens worden verder uitgesplitst naar werelddelen en landen volgens de Geonomenclatuur (GEONOM).\r\n\r\nGegevens beschikbaar vanaf: januari 2015.\r\n\r\nStatus van de cijfers:\r\nDe cijfers over de internationale goederenhandel zijn voor langere tijd voorlopig, omdat ze kunnen worden bijgesteld op basis van nieuwe of actuele broninformatie. In het vierde kwartaal na een verslagjaar worden de voorlopige cijfers nader voorlopig. De nader voorlopige cijfers worden dan definitief in het vierde kwartaal van het daaropvolgende jaar.\r\n\r\nWijzigingen per 2 juli 2026:\r\nDe voorlopige cijfers van april 2026 zijn toegevoegd. Tevens zijn de voorlopige cijfers over februari en maart 2026 bijgesteld. \r\n\r\nWijzigingen per 26 november 2025:\r\nDe cijfers over 2015 tot en met 2023 zijn gecorrigeerd. Voor verslagjaren 2024 en 2025 zijn de cijfers bijgesteld. Voor deze jaren kon het voorkomen dat een jaarmutatie op de uitvoerwaarde onterecht als mutatie op de invoerwaarde vermeld was. Het voorgaande is in deze versie hersteld. \r\n\r\nWanneer komen er nieuwe cijfers?\r\nNieuwe cijfers verschijnen zo’n twee maanden na een verslagmaand.\r\n\r\n\r\n",
+ "Language": "nl",
+ "Authority": "https://standaarden.overheid.nl/owms/terms/Centraal_Bureau_voor_de_Statistiek",
+ "Modified": "2026-07-02T06:30:00+02:00",
+ "ReleaseDate": "2026-07-02T06:30:00+02:00",
+ "ModificationDate": "2026-07-02T06:30:00+02:00",
+ "TemporalCoverage": "2015 januari - 2026 april.",
+ "Catalog": "CBS",
+ "Publisher": "https://standaarden.overheid.nl/owms/terms/Centraal_Bureau_voor_de_Statistiek",
+ "ContactPoint": "infoservice@cbs.nl",
+ "Version": "202607020630",
+ "VersionNotes": "",
+ "VersionReason": "Actualisering",
+ "Frequency": "Per maand",
+ "Status": "Regulier",
+ "ObservationCount": 1877320,
+ "ObservationsModified": "2026-07-02T06:30:00+02:00",
+ "DatasetType": "Numeric",
+ "GraphTypes": "Table,Bar,Line",
+ "License": "https://creativecommons.org/licenses/by/4.0/",
+ "Source": "CBS.",
+ "Summary": "In-, (weder)uitvoer- en doorvoerwaarde goederen (grensoverschrijding); \nSITC (1 digit) en landen. High Value Dataset – Statistiek",
+ "LongDescription": "INHOUDSOPGAVE\r\n\r\n1. Toelichting\r\n2. Definities en verklaring van symbolen \r\n3. Koppelingen naar relevante tabellen en artikelen\r\n4. Bronnen en methoden\r\n5. Meer informatie\r\n\r\n\r\n1. TOELICHTING\r\n\r\nIn deze tabel worden de Nederlandse in-, (weder)uitvoer- en inkomende en uitgaande doorvoerwaarde volgens grensoverschrijding ingedeeld naar de secties van de Standard International Trade Classification (SITC). De gegevens worden verder uitgesplitst naar werelddelen en landen volgens de Geonomenclatuur (GEONOM).\r\n\r\nGegevens beschikbaar vanaf: januari 2015.\r\n\r\nStatus van de cijfers:\r\nDe cijfers over de internationale goederenhandel zijn voor langere tijd voorlopig, omdat ze kunnen worden bijgesteld op basis van nieuwe of actuele broninformatie. In het vierde kwartaal na een verslagjaar worden de voorlopige cijfers nader voorlopig. De nader voorlopige cijfers worden dan definitief in het vierde kwartaal van het daaropvolgende jaar.\r\n\r\nWijzigingen per 2 juli 2026:\r\nDe voorlopige cijfers van april 2026 zijn toegevoegd. Tevens zijn de voorlopige cijfers over februari en maart 2026 bijgesteld. \r\n\r\nWijzigingen per 26 november 2025:\r\nDe cijfers over 2015 tot en met 2023 zijn gecorrigeerd. Voor verslagjaren 2024 en 2025 zijn de cijfers bijgesteld. Voor deze jaren kon het voorkomen dat een jaarmutatie op de uitvoerwaarde onterecht als mutatie op de invoerwaarde vermeld was. Het voorgaande is in deze versie hersteld. \r\n\r\nWanneer komen er nieuwe cijfers?\r\nNieuwe cijfers verschijnen zo’n twee maanden na een verslagmaand.\r\n\r\n\r\n2. DEFINITIES EN VERKLARING VAN SYMBOLEN\r\n\r\nGrensoverschrijding:\r\nGoederenbewegingen waarbij de goederen fysiek de Nederlandse landsgrens passeren, zonder dat hierbij altijd sprake is van eigendomsoverdracht.\r\n\r\nVerklaring van symbolen:\r\nniets (blanco)\t: het cijfer kan op logische gronden niet voorkomen\r\n. \t\t: het cijfer is onbekend, onvoldoende betrouwbaar of geheim\r\n0\t\t: het cijfer is minder dan de helft van de gekozen eenheid\r\n*\t\t: voorlopig cijfer\r\n**\t\t: nader voorlopig cijfer\r\n\r\nDoor afronding kan het voorkomen dat totalen niet gelijk zijn aan de opgetelde onderliggende cijfers.\r\n\r\n\r\n3. KOPPELINGEN NAAR RELEVANTE TABELLEN EN ARTIKELEN\r\n\r\nInternationale handel in goederen volgens eigendomsoverdracht:\r\n<a href='https://opendata.cbs.nl/statline/#/CBS/nl/dataset/85427ned'>Internationale goederenhandel; eigendomsoverdracht, kerncijfers</a>\r\n\r\nTabellen volgens oude methode statistiek Internationale handel in goederen:\r\n<a href='https://opendata.cbs.nl/statline/#/CBS/nl/dataset/70017/table?ts=1698674689162'>Internationale handel; in- en uitvoerwaarde kerncijfers, 2002-2022</a>\r\n<a href='https://opendata.cbs.nl/statline/#/CBS/nl/dataset/83028NED/table?ts=1698674712382'>In-, (weder)uitvoer, SITC (1 digit), landen(groepen), 2002-2022</a>\r\n\r\nNota bene: op dit moment vindt er een overgang plaats van tabellen volgens de oude methode naar nieuwe tabellen volgens de methoden van eigendomsoverdracht en grensoverschrijding. Deze overgang zal in fases verlopen, waardoor bepaalde oude tabellen nog niet zijn overgegaan naar de nieuwe situatie.\r\n\r\nMeer <a href='https://www.cbs.nl/nl-nl/cijfers/statline/recente-cijfers?thema=internationale%20handel'>Recente cijfers</a> over de internationale handel.\r\n\r\nInfographic <a href='https://www.cbs.nl/-/media/_pdf/2023/03/internationale-handel.pdf'>Internationale goederenhandel volgens eigendomsoverdracht en grensoverschrijding</a>.\r\n\r\n\r\n4. BRONNEN EN METHODEN\r\n\r\nMethodebreuk 2020/2021. Door voortschrijdende inzichten zijn vanaf verslagjaar 2021 de handelsstromen herzien. Bij de cijfers volgens grensoverschrijding is door deze breuk de invoer zo’n 5 miljard euro hoger en de uitvoer zo’n 1 miljard euro lager. Daarnaast is een groter deel van de handelswaarde toegeschreven aan de doorvoer. Aan de inkomende kant is de doorvoer met 23 miljard euro naar boven bijgesteld en aan de uitgaande met 32 miljard euro. Door de herziening zijn de cijfers over 2021 niet precies vergelijkbaar met die over 2020. Meer informatie over de methodebreuk is <a href='https://www.cbs.nl/-/media/cbs/onze-diensten/methoden/onderzoek/pdf/2022/bijlage_breuk_sitc1_2021.pdf'>hier</a> terug te vinden.\r\n\r\nMethodebreuk werelddelen 2017/2018. Vanaf verslagjaar 2018 zijn de totalen van de werelddelen samengesteld aan de hand van landen, en niet langer op basis van landengroepen. Voor 2017 en eerder ontbreken deze totalen.\r\n\r\nSITC (<a href='https://unstats.un.org/unsd/publication/seriesm/seriesm_34rev4e.pdf'>Standard International Trade Classification</a>):\r\nGoederenindeling gemaakt door de Verenigde Naties om de internationale vergelijkbaarheid te bevorderen van de statistiek over de internationale handel.\r\n\r\nGeonomenclatuur (<a href='https://ec.europa.eu/eurostat/web/metadata/classifications#Geonomenclature%20(GEONOM)'>GEONOM</a>):\r\nLandenindeling gemaakt door Eurostat voor de statistiek over de internationale handel.\r\n\r\nDe onderzoeksmethode van deze tabel is te vinden in de onderzoeksbeschrijving <a href='https://www.cbs.nl/nl-nl/onze-diensten/methoden/onderzoeksomschrijvingen/korte-onderzoeksomschrijvingen/statistiek-internationale-handel-in-goederen-volgens-eigendomsoverdracht-en-grensoverschrijding'>Statistiek Internationale handel in goederen volgens eigendomsoverdracht en grensoverschrijding</a>.\r\n\r\nKwaliteit:\r\nMeer informatie over de kwaliteit van de uitkomsten is <a href='https://www.cbs.nl/-/media/_pdf/2023/02/bijlage2_kwaliteit.pdf'>hier</a> terug te vinden.\r\n\r\nGeheimhouding:\r\nBepaalde in- en uitvoercijfers zijn door geheimhouding slechts gedeeltelijk of helemaal niet gepubliceerd. Dit is het geval wanneer cijfers een individueel karakter hebben en de bekendmaking ervan de belangen van een im- of exporteur in ernstige mate kan schaden. Bij de statistiek Internationale handel in goederen geldt een passieve geheimhouding. Dat wil zeggen dat belanghebbenden zelf een aanvraag tot geheimhouding bij het CBS moeten indienen.\r\n\r\nVerschillen cijfers volgens grensoverschrijding CBS – Eurostat:\r\nEr kunnen kleine verschillen zitten tussen de gepubliceerde cijfers volgens grensoverschrijding in StatLine en die over Nederland in de Comext van Eurostat. Een van de oorzaken is dat de extra-EU invoer door het CBS wordt gepubliceerd naar land van herkomst en door Eurostat naar land van oorsprong. Een andere oorzaak is dat organisaties als Eurostat cijfers over Nederland publiceren zonder (methodologische) afstemming met het CBS. Het CBS en Eurostat gaan ook anders om met de ontsluiting van geheime cijfers: in StatLine worden in tegenstelling tot in de Comext geen incomplete goed- of landtotalen gepubliceerd, maar worden publicatiecellen volledig geheim gemaakt.\r\n\r\n<a href='https://www.cbs.nl/nl-nl/onze-diensten/methoden/onderzoeksomschrijvingen/korte-onderzoeksomschrijvingen/statistiek-internationale-handel-in-goederen-volgens-eigendomsoverdracht-en-grensoverschrijding/veelgestelde-vragen'>Veelgestelde vragen</a>\r\n\r\n\r\n5. MEER INFORMATIE\r\n\r\n<a href='https://www.cbs.nl/nl-nl/over-ons/contact/infoservice'>Infoservice</a>\r\n\r\nCopyright (c) Centraal Bureau voor de Statistiek, Den Haag/Heerlen \r\nVerveelvoudiging is toegestaan, mits CBS als bron wordt vermeld.\r\n\r\n\r\n",
+ "Provenance": [
+  {
+   "Title": "hier",
+   "Url": "https://www.cbs.nl/-/media/cbs/onze-diensten/methoden/onderzoek/pdf/2022/bijlage_breuk_sitc1_2021.pdf"
+  },
+  {
+   "Title": "Standard International Trade Classification",
+   "Url": "https://unstats.un.org/unsd/publication/seriesm/seriesm_34rev4e.pdf"
+  },
+  {
+   "Title": "GEONOM",
+   "Url": "https://ec.europa.eu/eurostat/web/metadata/classifications#Geonomenclature (GEONOM)"
+  },
+  {
+   "Title": "Statistiek Internationale handel in goederen volgens eigendomsoverdracht en grensoverschrijding",
+   "Url": "https://www.cbs.nl/nl-nl/onze-diensten/methoden/onderzoeksomschrijvingen/korte-onderzoeksomschrijvingen/statistiek-internationale-handel-in-goederen-volgens-eigendomsoverdracht-en-grensoverschrijding"
+  },
+  {
+   "Title": "hier",
+   "Url": "https://www.cbs.nl/-/media/_pdf/2023/02/bijlage2_kwaliteit.pdf"
+  },
+  {
+   "Title": "Veelgestelde vragen",
+   "Url": "https://www.cbs.nl/nl-nl/onze-diensten/methoden/onderzoeksomschrijvingen/korte-onderzoeksomschrijvingen/statistiek-internationale-handel-in-goederen-volgens-eigendomsoverdracht-en-grensoverschrijding/veelgestelde-vragen"
+  }
+ ],
+ "RelatedSources": [
+  {
+   "Title": "Internationale goederenhandel; eigendomsoverdracht, kerncijfers",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/dataset/85427ned"
+  },
+  {
+   "Title": "Internationale handel; in- en uitvoerwaarde kerncijfers, 2002-2022",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/dataset/70017/table?ts=1698674689162"
+  },
+  {
+   "Title": "In-, (weder)uitvoer, SITC (1 digit), landen(groepen), 2002-2022",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/dataset/83028NED/table?ts=1698674712382"
+  },
+  {
+   "Title": "Recente cijfers",
+   "Url": "https://www.cbs.nl/nl-nl/cijfers/statline/recente-cijfers?thema=internationale handel"
+  },
+  {
+   "Title": "Internationale goederenhandel volgens eigendomsoverdracht en grensoverschrijding",
+   "Url": "https://www.cbs.nl/-/media/_pdf/2023/03/internationale-handel.pdf"
+  }
+ ],
+ "Distributions": [
+  {
+   "Format": "csv",
+   "MediaType": "csv",
+   "DownloadUrl": "https://datasets.cbs.nl/csv/CBS/nl/85429NED",
+   "AccessUrl": "https://dataportal.cbs.nl/detail/CBS/85429NED",
+   "Language": "nl"
+  },
+  {
+   "Format": "odata",
+   "MediaType": "odata",
+   "DownloadUrl": "https://datasets.cbs.nl/odata/v1/CBS/85429NED",
+   "AccessUrl": "https://dataportal.cbs.nl/detail/CBS/85429NED",
+   "Language": "nl"
+  }
+ ]
+}

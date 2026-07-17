@@ -1,0 +1,20 @@
+{
+ "tableId": "85828NED",
+ "capturedAt": "2026-07-17T16:24:24.459Z",
+ "source": "https://datasets.cbs.nl/odata/v1/CBS/85828NED",
+ "sliceFilter": "(startswith(BedrijfstakkenBranchesSBI2008,'371600') or startswith(BedrijfstakkenBranchesSBI2008,'371700') or startswith(BedrijfstakkenBranchesSBI2008,'372200') or startswith(BedrijfstakkenBranchesSBI2008,'374000') or startswith(BedrijfstakkenBranchesSBI2008,'374600') or startswith(BedrijfstakkenBranchesSBI2008,'377400') or startswith(BedrijfstakkenBranchesSBI2008,'378400') or startswith(BedrijfstakkenBranchesSBI2008,'382500')) and Perioden ge '2020JJ00'",
+ "captureOnlySlice": {
+  "periodFloor": "2020JJ00"
+ },
+ "observationRows": 12096,
+ "observationPages": [
+  "observations-page-1.json"
+ ],
+ "files": {
+  "properties": "properties.json",
+  "dimensions": "dimensions.json",
+  "measure-codes": "measure-codes.json",
+  "codes-BedrijfstakkenBranchesSBI2008": "codes-BedrijfstakkenBranchesSBI2008.json",
+  "codes-Perioden": "codes-Perioden.json"
+ }
+}

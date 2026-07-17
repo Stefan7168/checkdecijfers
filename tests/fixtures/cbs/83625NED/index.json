@@ -1,0 +1,20 @@
+{
+ "tableId": "83625NED",
+ "capturedAt": "2026-07-17T16:32:24.005Z",
+ "source": "https://datasets.cbs.nl/odata/v1/CBS/83625NED",
+ "sliceFilter": "Perioden ge '2015JJ00'",
+ "captureOnlySlice": {
+  "periodFloor": "2015JJ00"
+ },
+ "observationRows": 8195,
+ "observationPages": [
+  "observations-page-1.json"
+ ],
+ "files": {
+  "properties": "properties.json",
+  "dimensions": "dimensions.json",
+  "measure-codes": "measure-codes.json",
+  "codes-RegioS": "codes-RegioS.json",
+  "codes-Perioden": "codes-Perioden.json"
+ }
+}

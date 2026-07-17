@@ -1,0 +1,16 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/83625NED/$metadata#MeasureCodes",
+ "value": [
+  {
+   "Identifier": "M001534",
+   "Index": 2,
+   "Title": "Gemiddelde verkoopprijs",
+   "Description": "De gemiddelde verkoopprijs geeft de gemiddelde waarde weer die betaald is in een verslagperiode voor bestaande woningen die zijn aangekocht door een particulier. Deze cijfers tonen niet het verloop van de prijsontwikkeling van alle bestaande koopwoningen. Daarvoor dient u gebruik te maken van de prijsindexcijfers. De gemiddelde koopsom weerspiegelt namelijk de gemiddelde prijs van woningen die verkocht zijn in een specifieke periode. Doordat elke periode andere woningen worden verkocht, wordt er geen rekening gehouden met eventuele verschillende kenmerken van de verkochte woningen. Een voorbeeld om uit te leggen welke problemen dit met zich meebrengt: Stel in februari van een jaar zijn voornamelijk grote grachtenpanden met tuin verkocht, terwijl in maart veel kleine tussenwoningen van eigenaar wisselden. Hierdoor zal de gemiddelde koopsom in februari hoger liggen dan in maart maar dit wil niet zeggen dat de huizenprijzen zijn gestegen.",
+   "MeasureGroupId": null,
+   "DataType": "Long",
+   "Unit": "euro",
+   "Decimals": 0,
+   "PresentationType": "Relative"
+  }
+ ]
+}

@@ -1,0 +1,42 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/85429NED/$metadata#Dimensions",
+ "value": [
+  {
+   "Identifier": "Landen",
+   "Title": "Landen",
+   "Description": "",
+   "MapYear": null,
+   "ReleasePolicy": null,
+   "Kind": "Dimension",
+   "ContainsGroups": true,
+   "ContainsCodes": true,
+   "CodesUrl": "https://datasets.cbs.nl/odata/v1/CBS/85429NED/LandenCodes",
+   "GroupsUrl": "https://datasets.cbs.nl/odata/v1/CBS/85429NED/LandenGroups"
+  },
+  {
+   "Identifier": "SITC",
+   "Title": "SITC",
+   "Description": "",
+   "MapYear": null,
+   "ReleasePolicy": null,
+   "Kind": "Dimension",
+   "ContainsGroups": true,
+   "ContainsCodes": true,
+   "CodesUrl": "https://datasets.cbs.nl/odata/v1/CBS/85429NED/SITCCodes",
+   "GroupsUrl": "https://datasets.cbs.nl/odata/v1/CBS/85429NED/SITCGroups"
+  },
+  {
+   "@odata.type": "#Cbs.Ccb.Models.TimeDimension",
+   "Identifier": "Perioden",
+   "Title": "Perioden",
+   "Description": "",
+   "MapYear": null,
+   "ReleasePolicy": true,
+   "Kind": "TimeDimension",
+   "ContainsGroups": true,
+   "ContainsCodes": true,
+   "CodesUrl": "https://datasets.cbs.nl/odata/v1/CBS/85429NED/PeriodenCodes",
+   "GroupsUrl": "https://datasets.cbs.nl/odata/v1/CBS/85429NED/PeriodenGroups"
+  }
+ ]
+}

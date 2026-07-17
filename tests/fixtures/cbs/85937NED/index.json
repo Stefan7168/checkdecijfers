@@ -1,0 +1,20 @@
+{
+ "tableId": "85937NED",
+ "capturedAt": "2026-07-17T16:26:29.611Z",
+ "source": "https://datasets.cbs.nl/odata/v1/CBS/85937NED",
+ "sliceFilter": "Perioden ge '2020JJ00'",
+ "captureOnlySlice": {
+  "periodFloor": "2020JJ00"
+ },
+ "observationRows": 8208,
+ "observationPages": [
+  "observations-page-1.json"
+ ],
+ "files": {
+  "properties": "properties.json",
+  "dimensions": "dimensions.json",
+  "measure-codes": "measure-codes.json",
+  "codes-ConsumptieveBestedingen": "codes-ConsumptieveBestedingen.json",
+  "codes-Perioden": "codes-Perioden.json"
+ }
+}

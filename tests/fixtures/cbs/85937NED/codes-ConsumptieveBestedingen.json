@@ -1,0 +1,103 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/85937NED/$metadata#ConsumptieveBestedingenCodes",
+ "value": [
+  {
+   "Identifier": "A047812",
+   "Index": 1,
+   "Title": "Binnenlandse consumptie huishoudens",
+   "Description": "Alle consumptie die in Nederland plaatsvindt. Consumptie door Nederlandse huishoudens in het buitenland valt hier dus niet onder, consumptie door buitenlandse huishoudens in Nederland wel. Bij de invoer van goederen en diensten valt de binnenlandse consumptie door huishoudens onder de finale bestedingen.",
+   "DimensionGroupId": "1"
+  },
+  {
+   "Identifier": "A047813",
+   "Index": 2,
+   "Title": "Consumptie goederen door huishoudens",
+   "Description": "Tastbare producten, zoals voedingsmiddelen, duurzame consumptieartikelen, machines en dergelijke.",
+   "DimensionGroupId": "2"
+  },
+  {
+   "Identifier": "A047875",
+   "Index": 3,
+   "Title": "Voedingsmiddelen, dranken en tabak",
+   "Description": "",
+   "DimensionGroupId": "2"
+  },
+  {
+   "Identifier": "A047825",
+   "Index": 4,
+   "Title": "Duurzame consumptiegoederen",
+   "Description": "Consumptiegoederen die duurzaam van aard zijn zoals textiel en kleding, lederwaren en schoeisel, woninginrichting, huishoudelijke apparaten, huishoudelijke artikelen, voertuigen en overige duurzame goederen.",
+   "DimensionGroupId": "2"
+  },
+  {
+   "Identifier": "A047826",
+   "Index": 5,
+   "Title": "Kleding en textiel",
+   "Description": "Textielgarens, andere textiel, dames- en meisjesbovenkleding, heren- en jongensbovenkleding, kousen, onder- en nachtkleding, overige kleding.",
+   "DimensionGroupId": "2"
+  },
+  {
+   "Identifier": "A047827",
+   "Index": 6,
+   "Title": "Schoenen en lederwaren",
+   "Description": "Lederwaren, schoenen, sportschoenen, werkschoenen, schoendelen.",
+   "DimensionGroupId": "2"
+  },
+  {
+   "Identifier": "A047828",
+   "Index": 7,
+   "Title": "Woninginrichting en woningdecoratie",
+   "Description": "Meubelen, slaapkamermeubelen, beddengoed, vloerbedekking, huishoudtextiel, verlichtingsartikelen, woningdecoratie, hout, bouwmateriaal, gereedschappen, verf en behang, huishoudelijke artikelen.",
+   "DimensionGroupId": "2"
+  },
+  {
+   "Identifier": "A047829",
+   "Index": 8,
+   "Title": "Elektrische apparatuur",
+   "Description": "Audio en video-apparatuur, beeld- en geluidsdragers, grote huishoudelijke apparaten, kleine huishoudelijke apparaten, computers en randapparatuur, software, fototechnische artikelen, cd's en dvd's, telefoons, dragers van digitale informatie.",
+   "DimensionGroupId": "2"
+  },
+  {
+   "Identifier": "A047830",
+   "Index": 9,
+   "Title": "Vervoermiddelen en onderdelen",
+   "Description": "Personenauto's, overige auto's, aanhangers, motorfietsen, scooters, (brom)fietsen, onderdelen, accessoires.",
+   "DimensionGroupId": "2"
+  },
+  {
+   "Identifier": "A047831",
+   "Index": 10,
+   "Title": "Overige duurzame goederen",
+   "Description": "Boeken, optische artikelen, sieraden, uurwerken, sportartikelen, speelgoed, verblijfsrecreatieve goederen, overige duurzame goederen niet elders genoemd.",
+   "DimensionGroupId": "2"
+  },
+  {
+   "Identifier": "A048214",
+   "Index": 11,
+   "Title": "Overige goederen",
+   "Description": "",
+   "DimensionGroupId": "2"
+  },
+  {
+   "Identifier": "A047832",
+   "Index": 12,
+   "Title": "Energie, water en motorbrandstoffen",
+   "Description": "Motorbrandstoffen, energie en overige goederen niet elders genoemd.",
+   "DimensionGroupId": "2"
+  },
+  {
+   "Identifier": "A048213",
+   "Index": 13,
+   "Title": "Persoonlijke verzorging en overige goede",
+   "Description": "",
+   "DimensionGroupId": "2"
+  },
+  {
+   "Identifier": "A047837",
+   "Index": 14,
+   "Title": "Consumptie diensten door huishoudens",
+   "Description": "Producten die niet tastbaar zijn zoals huisvesting, horecadiensten, diensten met betrekking tot recreatie, cultuur, vervoer, communicatie, medische, financiële en zakelijke diensten..",
+   "DimensionGroupId": "3"
+  }
+ ]
+}

@@ -1,0 +1,1783 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/85429NED/$metadata#LandenCodes",
+ "value": [
+  {
+   "Identifier": "T001047",
+   "Index": 1,
+   "Title": "Totaal landen",
+   "Description": "",
+   "DimensionGroupId": "1"
+  },
+  {
+   "Identifier": "L007935",
+   "Index": 2,
+   "Title": "EU (exclusief Nederland)",
+   "Description": "Land (datum van toetreding):\r\nKroatië (1 juli 2013)\r\nBulgarije en Roemenië (1 januari 2007)\r\nCyprus, Estland, Hongarije, Letland, Litouwen, Malta, Polen, Slowakije, Slovenië en Tsjechië (1 mei 2004)\r\nOostenrijk, Finland en Zweden (1 januari 1995)\r\nPortugal en Spanje (1 januari 1986)\r\nGriekenland (1 januari 1981)\r\nDenemarken, Ierland en Verenigd Koninkrijk (1 januari 1973)\r\nBelgië, Duitsland, Frankrijk, Italië en Luxemburg (1 januari 1958)\r\n\r\nLand (datum van uittreding):\r\nVerenigd Koninkrijk (1 februari 2020)\r\n",
+   "DimensionGroupId": "4"
+  },
+  {
+   "Identifier": "L006998",
+   "Index": 3,
+   "Title": "Niet-EU",
+   "Description": "Alle landen die niet tot de Europese Unie (EU) behoren.",
+   "DimensionGroupId": "4"
+  },
+  {
+   "Identifier": "L007933",
+   "Index": 4,
+   "Title": "Europa (exclusief Nederland)",
+   "Description": "",
+   "DimensionGroupId": "2"
+  },
+  {
+   "Identifier": "L008519",
+   "Index": 5,
+   "Title": "Afrika",
+   "Description": "",
+   "DimensionGroupId": "2"
+  },
+  {
+   "Identifier": "L008520",
+   "Index": 6,
+   "Title": "Amerika",
+   "Description": "",
+   "DimensionGroupId": "2"
+  },
+  {
+   "Identifier": "L008524",
+   "Index": 7,
+   "Title": "Azië",
+   "Description": "",
+   "DimensionGroupId": "2"
+  },
+  {
+   "Identifier": "L008531",
+   "Index": 8,
+   "Title": "Oceanië",
+   "Description": "",
+   "DimensionGroupId": "2"
+  },
+  {
+   "Identifier": "L008527",
+   "Index": 9,
+   "Title": "Overige",
+   "Description": "",
+   "DimensionGroupId": "2"
+  },
+  {
+   "Identifier": "L008533",
+   "Index": 10,
+   "Title": "Afghanistan",
+   "Description": "GEO code alfa2: AF\r\nGEO code numeriek: 660",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "L008534",
+   "Index": 11,
+   "Title": "Albanië",
+   "Description": "GEO code alfa2: AL\r\nGEO code numeriek: 070",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "L008535",
+   "Index": 12,
+   "Title": "Algerije",
+   "Description": "GEO code alfa2: DZ\r\nGEO code numeriek: 208",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "L008537",
+   "Index": 13,
+   "Title": "Amerikaanse Maagdeneilanden",
+   "Description": "GEO code alfa2: VI\r\nGEO code numeriek: 457",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "L008536",
+   "Index": 14,
+   "Title": "Amerikaans-Samoa",
+   "Description": "GEO code alfa2: AS\r\nGEO code numeriek: 830",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "L008538",
+   "Index": 15,
+   "Title": "Andorra",
+   "Description": "GEO code alfa2: AD\r\nGEO code numeriek: 043",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "L008539",
+   "Index": 16,
+   "Title": "Angola",
+   "Description": "GEO code alfa2: AO\r\nGEO code numeriek: 330",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "L008540",
+   "Index": 17,
+   "Title": "Anguilla",
+   "Description": "GEO code alfa2: AI\r\nGEO code numeriek: 446",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "L008532",
+   "Index": 18,
+   "Title": "Antarctica",
+   "Description": "GEO code alfa2: AQ\r\nGEO code numeriek: 891",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "L008541",
+   "Index": 19,
+   "Title": "Antigua en Barbuda",
+   "Description": "GEO code alfa2: AG\r\nGEO code numeriek: 459",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "L008542",
+   "Index": 20,
+   "Title": "Argentinië",
+   "Description": "GEO code alfa2: AR\r\nGEO code numeriek: 528",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "L008543",
+   "Index": 21,
+   "Title": "Armenië",
+   "Description": "GEO code alfa2: AM\r\nGEO code numeriek: 077",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "L008544",
+   "Index": 22,
+   "Title": "Aruba",
+   "Description": "GEO code alfa2: AW\r\nGEO code numeriek: 474",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "L008545",
+   "Index": 23,
+   "Title": "Australië",
+   "Description": "GEO code alfa2: AU\r\nGEO code numeriek: 800",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "L008546",
+   "Index": 24,
+   "Title": "Azerbeidzjan",
+   "Description": "GEO code numeriek: 078\r\nGEO code alfa2: AZ",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "L008547",
+   "Index": 25,
+   "Title": "Bahama's",
+   "Description": "GEO code alfa2: BS\r\nGEO code numeriek: 453",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "L008548",
+   "Index": 26,
+   "Title": "Bahrein",
+   "Description": "GEO code alfa2: BH\r\nGEO code numeriek: 640",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "L008549",
+   "Index": 27,
+   "Title": "Bangladesh",
+   "Description": "GEO code alfa2: BD\r\nGEO code numeriek: 666",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "L008550",
+   "Index": 28,
+   "Title": "Barbados",
+   "Description": "GEO code alfa2: BB\r\nGEO code numeriek: 469",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "L008552",
+   "Index": 29,
+   "Title": "België",
+   "Description": "GEO code alfa2: BE\r\nGEO code numeriek: 017",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "L008553",
+   "Index": 30,
+   "Title": "Belize",
+   "Description": "GEO code alfa2: BZ\r\nGEO code numeriek: 421",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "L008554",
+   "Index": 31,
+   "Title": "Benin",
+   "Description": "GEO code alfa2: BJ\r\nGEO code numeriek: 284",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "L008555",
+   "Index": 32,
+   "Title": "Bermuda",
+   "Description": "GEO code alfa2: BM\r\nGEO code numeriek: 413",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "L006997",
+   "Index": 33,
+   "Title": "Bhutan",
+   "Description": "GEO code alfa2: BT\r\nGEO code numeriek: 675",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "L008688",
+   "Index": 34,
+   "Title": "Birma",
+   "Description": "GEO code alfa2: MM\r\nGEO code numeriek: 676",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "L008557",
+   "Index": 35,
+   "Title": "Bolivia",
+   "Description": "GEO code alfa2: BO\r\nGEO code numeriek: 516",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "L008559",
+   "Index": 36,
+   "Title": "Bosnië en Herzegovina",
+   "Description": "GEO code alfa2: BA\r\nGEO code numeriek: 093",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "L008560",
+   "Index": 37,
+   "Title": "Botswana",
+   "Description": "GEO code alfa2: BW\r\nGEO code numeriek: 391",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "L008561",
+   "Index": 38,
+   "Title": "Bouveteiland",
+   "Description": "GEO code alfa2: BV\r\nGEO code numeriek: 892",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "L008562",
+   "Index": 39,
+   "Title": "Brazilië",
+   "Description": "GEO code alfa2: BR\r\nGEO code numeriek: 508",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "L008564",
+   "Index": 40,
+   "Title": "Brits Indische Oceaanterritorium",
+   "Description": "GEO code alfa2: IO\r\nGEO code numeriek: 357",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "L008565",
+   "Index": 41,
+   "Title": "Britse Maagdeneilanden",
+   "Description": "GEO code alfa2: VG\r\nGEO code numeriek: 468",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "L008566",
+   "Index": 42,
+   "Title": "Brunei",
+   "Description": "GEO code alfa2: BN\r\nGEO code numeriek: 703",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "L008567",
+   "Index": 43,
+   "Title": "Bulgarije",
+   "Description": "GEO code alfa2: BG\r\nGEO code numeriek: 068",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "L008568",
+   "Index": 44,
+   "Title": "Burkina Faso",
+   "Description": "GEO code alfa2: BF\r\nGEO code numeriek: 236",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "L008569",
+   "Index": 45,
+   "Title": "Burundi",
+   "Description": "GEO code alfa2: BI\r\nGEO code numeriek: 328",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "L008570",
+   "Index": 46,
+   "Title": "Cambodja",
+   "Description": "GEO code alfa2: KH\r\nGEO code numeriek: 696",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "L008571",
+   "Index": 47,
+   "Title": "Canada",
+   "Description": "GEO code alfa2: CA\r\nGEO code numeriek: 404",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "L008794",
+   "Index": 48,
+   "Title": "Caribisch Nederland",
+   "Description": "GEO code alfa2: BQ\r\nGEO code numeriek: 477\r\nBonaire, Sint Eustatius en Saba\r\n",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "L008573",
+   "Index": 49,
+   "Title": "Centraal-Afrikaanse Republiek",
+   "Description": "GEO code alfa2: CF\r\nGEO code numeriek: 306",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "L008817",
+   "Index": 50,
+   "Title": "Ceuta",
+   "Description": "GEO code alfa2: XC\r\nGEO code numeriek: 021",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "L008574",
+   "Index": 51,
+   "Title": "Chili",
+   "Description": "GEO code alfa2: CL\r\nGEO code numeriek: 512",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "L008575",
+   "Index": 52,
+   "Title": "China",
+   "Description": "GEO code alfa2: CN\r\nGEO code numeriek: 720",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "L008577",
+   "Index": 53,
+   "Title": "Christmaseiland",
+   "Description": "GEO code alfa2: CX\r\nGEO code numeriek: 834",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "L008578",
+   "Index": 54,
+   "Title": "Cocoseilanden",
+   "Description": "GEO code alfa2: CC\r\nGEO code numeriek: 833",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "L008579",
+   "Index": 55,
+   "Title": "Colombia",
+   "Description": "GEO code alfa2: CO\r\nGEO code numeriek: 480",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "L008580",
+   "Index": 56,
+   "Title": "Comoren",
+   "Description": "GEO code alfa2: KM\r\nGEO code numeriek: 375",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "L008581",
+   "Index": 57,
+   "Title": "Congo",
+   "Description": "GEO code alfa2: CG\r\nGEO code numeriek: 318",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "L008582",
+   "Index": 58,
+   "Title": "Congo (Democratische Republiek)",
+   "Description": "GEO code alfa2: CD\r\nGEO code numeriek: 322",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "L008583",
+   "Index": 59,
+   "Title": "Cookeilanden",
+   "Description": "GEO code alfa2: CK\r\nGEO code numeriek: 837",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "L008584",
+   "Index": 60,
+   "Title": "Costa Rica",
+   "Description": "GEO code alfa2: CR\r\nGEO code numeriek: 436",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "L008585",
+   "Index": 61,
+   "Title": "Cuba",
+   "Description": "GEO code alfa2: CU\r\nGEO code numeriek: 448",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "L008586",
+   "Index": 62,
+   "Title": "Curaçao",
+   "Description": "GEO code alfa2: CW\r\nGEO code numeriek: 475",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "L008587",
+   "Index": 63,
+   "Title": "Cyprus",
+   "Description": "GEO code alfa2: CY\r\nGEO code numeriek: 600",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "L008588",
+   "Index": 64,
+   "Title": "Denemarken",
+   "Description": "GEO code alfa2: DK\r\nGEO code numeriek: 008",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "L008589",
+   "Index": 65,
+   "Title": "Djibouti",
+   "Description": "GEO code alfa2: DJ\r\nGEO code numeriek: 338",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "L008590",
+   "Index": 66,
+   "Title": "Dominica",
+   "Description": "GEO code alfa2: DM\r\nGEO code numeriek: 460",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "L008591",
+   "Index": 67,
+   "Title": "Dominicaanse Republiek",
+   "Description": "GEO code alfa2: DO\r\nGEO code numeriek: 456",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "L008592",
+   "Index": 68,
+   "Title": "Duitsland",
+   "Description": "GEO code alfa2: DE\r\nGEO code numeriek: 004",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "L008593",
+   "Index": 69,
+   "Title": "Ecuador",
+   "Description": "GEO code alfa2: EC\r\nGEO code numeriek: 500",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "L008594",
+   "Index": 70,
+   "Title": "Egypte",
+   "Description": "GEO code alfa2: EG\r\nGEO code numeriek: 220",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "L008595",
+   "Index": 71,
+   "Title": "El Salvador",
+   "Description": "GEO code alfa2: SV\r\nGEO code numeriek: 428",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "L008596",
+   "Index": 72,
+   "Title": "Equatoriaal-Guinea",
+   "Description": "GEO code alfa2: GQ\r\nGEO code numeriek: 310",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "L008597",
+   "Index": 73,
+   "Title": "Eritrea",
+   "Description": "GEO code alfa2: ER\r\nGEO code numeriek: 336",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "L008598",
+   "Index": 74,
+   "Title": "Estland",
+   "Description": "GEO code alfa2: EE\r\nGEO code numeriek: 053",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "L008752",
+   "Index": 75,
+   "Title": "Eswatini",
+   "Description": "GEO code alfa2: SZ\r\nGEO code numeriek: 393",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "L008599",
+   "Index": 76,
+   "Title": "Ethiopië",
+   "Description": "GEO code alfa2: ET\r\nGEO code numeriek: 334",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "L008600",
+   "Index": 77,
+   "Title": "Faeröer",
+   "Description": "GEO code alfa2: FO\r\nGEO code numeriek: 041",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "L008601",
+   "Index": 78,
+   "Title": "Falklandeilanden",
+   "Description": "GEO code alfa2: FK\r\nGEO code numeriek: 529",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "L008602",
+   "Index": 79,
+   "Title": "Fiji",
+   "Description": "GEO code alfa2: FJ\r\nGEO code numeriek: 815",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "L008603",
+   "Index": 80,
+   "Title": "Filipijnen",
+   "Description": "GEO code alfa2: PH\r\nGEO code numeriek: 708",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "L008604",
+   "Index": 81,
+   "Title": "Finland",
+   "Description": "GEO code alfa2: FI\r\nGEO code numeriek: 032",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "L008605",
+   "Index": 82,
+   "Title": "Frankrijk",
+   "Description": "GEO code alfa2: FR\r\nGEO code numeriek: 001\r\nInclusief Monaco en de Franse overzeese departementen (Frans-Guyana, Guadeloupe, Martinique, Mayotte en Réunion) en het Franse noordelijke deel van Sint-Maarten",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "L008607",
+   "Index": 83,
+   "Title": "Franse Zuidelijke Gebieden",
+   "Description": "GEO code alfa2: TF\r\nGEO code numeriek: 894",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "L008608",
+   "Index": 84,
+   "Title": "Frans-Polynesië",
+   "Description": "GEO code alfa2: PF\r\nGEO code numeriek: 822",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "L008609",
+   "Index": 85,
+   "Title": "Gabon",
+   "Description": "GEO code alfa2: GA\r\nGEO code numeriek: 314",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "L008610",
+   "Index": 86,
+   "Title": "Gambia",
+   "Description": "GEO code alfa2: GM\r\nGEO code numeriek: 252",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "L008611",
+   "Index": 87,
+   "Title": "Georgië",
+   "Description": "GEO code alfa2: GE\r\nGEO code numeriek: 076",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "L008612",
+   "Index": 88,
+   "Title": "Ghana",
+   "Description": "GEO code alfa2: GH\r\nGEO code numeriek: 276",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "L008613",
+   "Index": 89,
+   "Title": "Gibraltar",
+   "Description": "GEO code alfa2: GI\r\nGEO code numeriek: 044",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "L008614",
+   "Index": 90,
+   "Title": "Grenada",
+   "Description": "GEO code alfa2: GD\r\nGEO code numeriek: 473",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "L008615",
+   "Index": 91,
+   "Title": "Griekenland",
+   "Description": "GEO code alfa2: GR\r\nGEO code numeriek: 009",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "L008616",
+   "Index": 92,
+   "Title": "Groenland",
+   "Description": "GEO code alfa2: GL\r\nGEO code numeriek: 406",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "L008618",
+   "Index": 93,
+   "Title": "Guam",
+   "Description": "GEO code alfa2: GU\r\nGEO code numeriek: 831",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "L008619",
+   "Index": 94,
+   "Title": "Guatemala",
+   "Description": "GEO code alfa2: GT\r\nGEO code numeriek: 416",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "L008621",
+   "Index": 95,
+   "Title": "Guinee",
+   "Description": "GEO code alfa2: GN\r\nGEO code numeriek: 260",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "L008622",
+   "Index": 96,
+   "Title": "Guinee-Bissau",
+   "Description": "GEO code alfa2: GW\r\nGEO code numeriek: 257",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "L008623",
+   "Index": 97,
+   "Title": "Guyana",
+   "Description": "GEO code alfa2: GY\r\nGEO code numeriek: 488",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "L008624",
+   "Index": 98,
+   "Title": "Haïti",
+   "Description": "GEO code alfa2: HT\r\nGEO code numeriek: 452",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "L008625",
+   "Index": 99,
+   "Title": "Heard- en McDonald-eilanden",
+   "Description": "GEO code alfa2: HM\r\nGEO code numeriek: 835",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "L008626",
+   "Index": 100,
+   "Title": "Honduras",
+   "Description": "GEO code alfa2: HN\r\nGEO code numeriek: 424",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "L008627",
+   "Index": 101,
+   "Title": "Hongarije",
+   "Description": "GEO code alfa2: HU\r\nGEO code numeriek: 064",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "L008628",
+   "Index": 102,
+   "Title": "Hongkong",
+   "Description": "GEO code alfa2: HK\r\nGEO code numeriek: 740",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "L008629",
+   "Index": 103,
+   "Title": "Ierland",
+   "Description": "GEO code alfa2: IE\r\nGEO code numeriek: 007",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "L008630",
+   "Index": 104,
+   "Title": "IJsland",
+   "Description": "GEO code alfa2: IS\r\nGEO code numeriek: 024",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "L008631",
+   "Index": 105,
+   "Title": "India",
+   "Description": "GEO code alfa2: IN\r\nGEO code numeriek: 664",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "L008632",
+   "Index": 106,
+   "Title": "Indonesië",
+   "Description": "GEO code alfa2: ID\r\nGEO code numeriek: 700",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "L008633",
+   "Index": 107,
+   "Title": "Irak",
+   "Description": "GEO code alfa2: IQ\r\nGEO code numeriek: 612",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "L008634",
+   "Index": 108,
+   "Title": "Iran",
+   "Description": "GEO code alfa2: IR\r\nGEO code numeriek: 616",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "L008635",
+   "Index": 109,
+   "Title": "Israël",
+   "Description": "GEO code alfa2: IL\r\nGEO code numeriek: 624",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "L008636",
+   "Index": 110,
+   "Title": "Italië",
+   "Description": "GEO code alfa2: IT\r\nGEO code numeriek: 005",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "L008637",
+   "Index": 111,
+   "Title": "Ivoorkust",
+   "Description": "GEO code alfa2: CI\r\nGEO code numeriek: 272",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "L008638",
+   "Index": 112,
+   "Title": "Jamaica",
+   "Description": "GEO code alfa2: JM\r\nGEO code numeriek: 464",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "L008639",
+   "Index": 113,
+   "Title": "Japan",
+   "Description": "GEO code alfa2: JP\r\nGEO code numeriek: 732",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "L008640",
+   "Index": 114,
+   "Title": "Jemen",
+   "Description": "GEO code alfa2: YE\r\nGEO code numeriek: 653",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "L008643",
+   "Index": 115,
+   "Title": "Jordanië",
+   "Description": "GEO code alfa2: JO\r\nGEO code numeriek: 628",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "L008572",
+   "Index": 116,
+   "Title": "Kaaimaneilanden",
+   "Description": "GEO code alfa2: KY\r\nGEO code numeriek: 463",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "L008644",
+   "Index": 117,
+   "Title": "Kaapverdië",
+   "Description": "GEO code alfa2: CV\r\nGEO code numeriek: 247",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "L008645",
+   "Index": 118,
+   "Title": "Kameroen",
+   "Description": "GEO code alfa2: CM\r\nGEO code numeriek: 302",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "L008648",
+   "Index": 119,
+   "Title": "Kazachstan",
+   "Description": "GEO code alfa2: KZ\r\nGEO code numeriek: 079",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "L008649",
+   "Index": 120,
+   "Title": "Kenia",
+   "Description": "GEO code alfa2: KE\r\nGEO code numeriek: 346",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "L008650",
+   "Index": 121,
+   "Title": "Kirgizië",
+   "Description": "GEO code alfa2: KG\r\nGEO code numeriek: 083",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "L008651",
+   "Index": 122,
+   "Title": "Kiribati",
+   "Description": "GEO code alfa2: KI\r\nGEO code numeriek: 812",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "L008652",
+   "Index": 123,
+   "Title": "Koeweit",
+   "Description": "GEO code alfa2: KW\r\nGEO code numeriek: 636",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "L008653",
+   "Index": 124,
+   "Title": "Kosovo",
+   "Description": "GEO code alfa2: XK\r\nGEO code numeriek: 095",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "L008654",
+   "Index": 125,
+   "Title": "Kroatië",
+   "Description": "GEO code alfa2: HR\r\nGEO code numeriek: 092",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "L008655",
+   "Index": 126,
+   "Title": "Laos",
+   "Description": "GEO code alfa2: LA\r\nGEO code numeriek: 684",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "L008656",
+   "Index": 127,
+   "Title": "Lesotho",
+   "Description": "GEO code alfa2: LS\r\nGEO code numeriek: 395",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "L008657",
+   "Index": 128,
+   "Title": "Letland",
+   "Description": "GEO code alfa2: LV\r\nGEO code numeriek: 054",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "L008658",
+   "Index": 129,
+   "Title": "Libanon",
+   "Description": "GEO code alfa2: LB\r\nGEO code numeriek: 604",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "L008659",
+   "Index": 130,
+   "Title": "Liberia",
+   "Description": "GEO code alfa2: LR\r\nGEO code numeriek: 268",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "L008660",
+   "Index": 131,
+   "Title": "Libië",
+   "Description": "GEO code alfa2: LY\r\nGEO code numeriek: 216",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "L008661",
+   "Index": 132,
+   "Title": "Liechtenstein",
+   "Description": "GEO code alfa2: LI\r\nGEO code numeriek: 037",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "L008662",
+   "Index": 133,
+   "Title": "Litouwen",
+   "Description": "GEO code alfa2: LT\r\nGEO code numeriek: 055",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "L008663",
+   "Index": 134,
+   "Title": "Luxemburg",
+   "Description": "GEO code alfa2: LU\r\nGEO code numeriek: 018",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "L008664",
+   "Index": 135,
+   "Title": "Macau",
+   "Description": "GEO code alfa2: MO\r\nGEO code numeriek: 743",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "L008666",
+   "Index": 136,
+   "Title": "Madagaskar",
+   "Description": "GEO code alfa2: MG\r\nGEO code numeriek: 370",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "L008667",
+   "Index": 137,
+   "Title": "Malawi",
+   "Description": "GEO code alfa2: MW\r\nGEO code numeriek: 386",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "L008668",
+   "Index": 138,
+   "Title": "Maldiven",
+   "Description": "GEO code alfa2: MV\r\nGEO code numeriek: 667",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "L008669",
+   "Index": 139,
+   "Title": "Maleisië",
+   "Description": "GEO code alfa2: MY\r\nGEO code numeriek: 701",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "L008670",
+   "Index": 140,
+   "Title": "Mali",
+   "Description": "GEO code alfa2: ML\r\nGEO code numeriek: 232",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "L008671",
+   "Index": 141,
+   "Title": "Malta",
+   "Description": "GEO code alfa2: MT\r\nGEO code numeriek: 046",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "L008673",
+   "Index": 142,
+   "Title": "Marokko",
+   "Description": "GEO code alfa2: MA\r\nGEO code numeriek: 204\r\n",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "L008675",
+   "Index": 143,
+   "Title": "Marshalleilanden",
+   "Description": "GEO code alfa2: MH\r\nGEO code numeriek: 824",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "L008677",
+   "Index": 144,
+   "Title": "Mauritanië",
+   "Description": "GEO code alfa2: MR\r\nGEO code numeriek: 228",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "L008678",
+   "Index": 145,
+   "Title": "Mauritius",
+   "Description": "GEO code alfa2: MU\r\nGEO code numeriek: 373",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "L008818",
+   "Index": 146,
+   "Title": "Melilla",
+   "Description": "GEO code alfa2: XL\r\nGEO code numeriek: 023",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "L008680",
+   "Index": 147,
+   "Title": "Mexico",
+   "Description": "GEO code alfa2: MX\r\nGEO code numeriek: 412",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "L008681",
+   "Index": 148,
+   "Title": "Micronesia",
+   "Description": "GEO code alfa2: FM\r\nGEO code numeriek: 823",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "L008682",
+   "Index": 149,
+   "Title": "Moldavië",
+   "Description": "GEO code alfa2: MD\r\nGEO code numeriek: 074",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "L008684",
+   "Index": 150,
+   "Title": "Mongolië",
+   "Description": "GEO code alfa2: MN\r\nGEO code numeriek: 716",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "L008685",
+   "Index": 151,
+   "Title": "Montenegro",
+   "Description": "GEO code alfa2: ME\r\nGEO code numeriek: 097",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "L008686",
+   "Index": 152,
+   "Title": "Montserrat",
+   "Description": "GEO code alfa2: MS\r\nGEO code numeriek: 470",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "L008687",
+   "Index": 153,
+   "Title": "Mozambique",
+   "Description": "GEO code alfa2: MZ\r\nGEO code numeriek: 366",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "L008689",
+   "Index": 154,
+   "Title": "Namibië",
+   "Description": "GEO code alfa2: NA\r\nGEO code numeriek: 389",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "L008690",
+   "Index": 155,
+   "Title": "Nauru",
+   "Description": "GEO code alfa2: NR\r\nGEO code numeriek: 803",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "L008694",
+   "Index": 156,
+   "Title": "Nepal",
+   "Description": "GEO code alfa2: NP\r\nGEO code numeriek: 672",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "L008695",
+   "Index": 157,
+   "Title": "Nicaragua",
+   "Description": "GEO code alfa2: NI\r\nGEO code numeriek: 432",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "L008696",
+   "Index": 158,
+   "Title": "Nieuw-Caledonië",
+   "Description": "GEO code alfa2: NC\r\nGEO code numeriek: 809",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "L008697",
+   "Index": 159,
+   "Title": "Nieuw-Zeeland",
+   "Description": "GEO code alfa2: NZ\r\nGEO code numeriek: 804",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "L008698",
+   "Index": 160,
+   "Title": "Niger",
+   "Description": "GEO code alfa2: NE\r\nGEO code numeriek: 240",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "L008699",
+   "Index": 161,
+   "Title": "Nigeria",
+   "Description": "GEO code alfa2: NG\r\nGEO code numeriek: 288",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "L008700",
+   "Index": 162,
+   "Title": "Niue",
+   "Description": "GEO code alfa2: NU\r\nGEO code numeriek: 838",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "L008702",
+   "Index": 163,
+   "Title": "Noordelijke Marianen",
+   "Description": "GEO code alfa2: MP\r\nGEO code numeriek: 820",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "L008703",
+   "Index": 164,
+   "Title": "Noord-Korea",
+   "Description": "GEO code alfa2: KP\r\nGEO code numeriek: 724",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "L008665",
+   "Index": 165,
+   "Title": "Noord-Macedonië",
+   "Description": "GEO code alfa2: MK\r\nGEO code numeriek: 096",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "L008704",
+   "Index": 166,
+   "Title": "Noorwegen",
+   "Description": "GEO code alfa2: NO\r\nGEO code numeriek: 028",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "L008705",
+   "Index": 167,
+   "Title": "Norfolkeiland",
+   "Description": "GEO code alfa2: NF\r\nGEO code numeriek: 836",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "L008706",
+   "Index": 168,
+   "Title": "Oekraïne",
+   "Description": "GEO code alfa2: UA\r\nGEO code numeriek: 072",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "L008707",
+   "Index": 169,
+   "Title": "Oezbekistan",
+   "Description": "GEO code alfa2: UZ\r\nGEO code numeriek: 081",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "L008708",
+   "Index": 170,
+   "Title": "Oman",
+   "Description": "GEO code alfa2: OM\r\nGEO code numeriek: 649",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "L008709",
+   "Index": 171,
+   "Title": "Oostenrijk",
+   "Description": "GEO code alfa2: AT\r\nGEO code numeriek: 038",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "L008758",
+   "Index": 172,
+   "Title": "Oost-Timor",
+   "Description": "GEO code alfa2: TL\r\nGEO code numeriek: 626",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "L008710",
+   "Index": 173,
+   "Title": "Pakistan",
+   "Description": "GEO code alfa2: PK\r\nGEO code numeriek: 662",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "L008711",
+   "Index": 174,
+   "Title": "Palau",
+   "Description": "GEO code alfa2: PW\r\nGEO code numeriek: 825",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "L008712",
+   "Index": 175,
+   "Title": "Bezette Palestijnse gebieden",
+   "Description": "GEO code alfa2: PS\r\nGEO code numeriek: 625",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "L008713",
+   "Index": 176,
+   "Title": "Panama",
+   "Description": "GEO code alfa2: PA\r\nGEO code numeriek: 442",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "L008714",
+   "Index": 177,
+   "Title": "Papoea-Nieuw-Guinea",
+   "Description": "GEO code alfa2: PG\r\nGEO code numeriek: 801",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "L008715",
+   "Index": 178,
+   "Title": "Paraguay",
+   "Description": "GEO code alfa2: PY\r\nGEO code numeriek: 520",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "L008716",
+   "Index": 179,
+   "Title": "Peru",
+   "Description": "GEO code alfa2: PE\r\nGEO code numeriek: 504",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "L008717",
+   "Index": 180,
+   "Title": "Pitcairneilanden",
+   "Description": "GEO code alfa2: PN\r\nGEO code numeriek: 813",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "L008718",
+   "Index": 181,
+   "Title": "Polen",
+   "Description": "GEO code alfa2: PL\r\nGEO code numeriek: 060",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "L008719",
+   "Index": 182,
+   "Title": "Portugal",
+   "Description": "GEO code alfa2: PT\r\nGEO code numeriek: 010",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "L008647",
+   "Index": 183,
+   "Title": "Qatar",
+   "Description": "GEO code alfa2: QA\r\nGEO code numeriek: 644",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "L008723",
+   "Index": 184,
+   "Title": "Roemenië",
+   "Description": "GEO code alfa2: RO\r\nGEO code numeriek: 066",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "L008724",
+   "Index": 185,
+   "Title": "Rusland",
+   "Description": "GEO code alfa2: RU\r\nGEO code numeriek: 075",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "L008726",
+   "Index": 186,
+   "Title": "Rwanda",
+   "Description": "GEO code alfa2: RW\r\nGEO code numeriek: 324",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "L008792",
+   "Index": 187,
+   "Title": "Saint Barthélemy",
+   "Description": "GEO code alfa2: BL\r\nGEO code numeriek: 466",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "L008727",
+   "Index": 188,
+   "Title": "Saint Kitts en Nevis",
+   "Description": "GEO code alfa2: KN\r\nGEO code numeriek: 449",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "L008742",
+   "Index": 189,
+   "Title": "Saint Lucia",
+   "Description": "GEO code alfa2: LC\r\nGEO code numeriek: 465",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "L008728",
+   "Index": 190,
+   "Title": "Saint-Pierre en Miquelon",
+   "Description": "GEO code alfa2: PM\r\nGEO code numeriek: 408",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "L008730",
+   "Index": 191,
+   "Title": "Salomonseilanden",
+   "Description": "GEO code alfa2: SB\r\nGEO code numeriek: 806",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "L008731",
+   "Index": 192,
+   "Title": "Samoa",
+   "Description": "GEO code alfa2: WS\r\nGEO code numeriek: 819",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "L008732",
+   "Index": 193,
+   "Title": "San Marino",
+   "Description": "GEO code alfa2: SM\r\nGEO code numeriek: 047",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "L008733",
+   "Index": 194,
+   "Title": "Sao Tomé en Principe",
+   "Description": "GEO code alfa2: ST\r\nGEO code numeriek: 311",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "L008734",
+   "Index": 195,
+   "Title": "Saudi-Arabië",
+   "Description": "GEO code alfa2: SA\r\nGEO code numeriek: 632",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "L008735",
+   "Index": 196,
+   "Title": "Senegal",
+   "Description": "GEO code alfa2: SN\r\nGEO code numeriek: 248",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "L008736",
+   "Index": 197,
+   "Title": "Servië",
+   "Description": "GEO code alfa2: XS\r\nGEO code numeriek: 098",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "L008738",
+   "Index": 198,
+   "Title": "Seychellen",
+   "Description": "GEO code alfa2: SC\r\nGEO code numeriek: 355",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "L008739",
+   "Index": 199,
+   "Title": "Sierra Leone",
+   "Description": "GEO code alfa2: SL\r\nGEO code numeriek: 264",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "L008740",
+   "Index": 200,
+   "Title": "Singapore",
+   "Description": "GEO code alfa2: SG\r\nGEO code numeriek: 706",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "L008743",
+   "Index": 201,
+   "Title": "Sint Maarten (Nederlands deel)",
+   "Description": "GEO code alfa2: SX\r\nGEO code numeriek: 479",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "L008729",
+   "Index": 202,
+   "Title": "Sint Vincent en de Grenadines",
+   "Description": "GEO code alfa2: VC\r\nGEO code numeriek: 467",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "L008741",
+   "Index": 203,
+   "Title": "Sint-Helena, Ascension, Tristan da Cunha",
+   "Description": "Sint-Helena, Ascension en Tristan da Cunha\r\nGEO code alfa2: SH\r\nGEO code numeriek: 329",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "L008744",
+   "Index": 204,
+   "Title": "Slovenië",
+   "Description": "GEO code alfa2: SI\r\nGEO code numeriek: 091",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "L008745",
+   "Index": 205,
+   "Title": "Slowakije",
+   "Description": "GEO code alfa2: SK\r\nGEO code numeriek: 063",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "L008747",
+   "Index": 206,
+   "Title": "Somalië",
+   "Description": "GEO code alfa2: SO\r\nGEO code numeriek: 342",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "L008749",
+   "Index": 207,
+   "Title": "Spanje",
+   "Description": "GEO code alfa2: ES\r\nGEO code numeriek: 011",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "L008750",
+   "Index": 208,
+   "Title": "Sri Lanka",
+   "Description": "GEO code alfa2: LK\r\nGEO code numeriek: 669",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "L008746",
+   "Index": 209,
+   "Title": "Sudan",
+   "Description": "GEO code alfa2: SD\r\nGEO code numeriek: 224",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "L008751",
+   "Index": 210,
+   "Title": "Suriname",
+   "Description": "GEO code alfa2: SR\r\nGEO code numeriek: 492",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "L008753",
+   "Index": 211,
+   "Title": "Syrië",
+   "Description": "GEO code alfa2: SY\r\nGEO code numeriek: 608",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "L008754",
+   "Index": 212,
+   "Title": "Tadzjikistan",
+   "Description": "GEO code alfa2: TJ\r\nGEO code numeriek: 082",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "L008755",
+   "Index": 213,
+   "Title": "Taiwan",
+   "Description": "GEO code alfa2: TW\r\nGEO code numeriek: 736",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "L008756",
+   "Index": 214,
+   "Title": "Tanzania",
+   "Description": "GEO code alfa2: TZ\r\nGEO code numeriek: 352",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "L008757",
+   "Index": 215,
+   "Title": "Thailand",
+   "Description": "GEO code alfa2: TH\r\nGEO code numeriek: 680",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "L008759",
+   "Index": 216,
+   "Title": "Togo",
+   "Description": "GEO code alfa2: TG\r\nGEO code numeriek: 280",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "L008760",
+   "Index": 217,
+   "Title": "Tokelau-eilanden",
+   "Description": "GEO code alfa2: TK\r\nGEO code numeriek: 839",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "L008761",
+   "Index": 218,
+   "Title": "Tonga",
+   "Description": "GEO code alfa2: TO\r\nGEO code numeriek: 817",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "L008762",
+   "Index": 219,
+   "Title": "Trinidad en Tobago",
+   "Description": "GEO code alfa2: TT\r\nGEO code numeriek: 472",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "L008763",
+   "Index": 220,
+   "Title": "Tsjaad",
+   "Description": "GEO code alfa2: TD\r\nGEO code numeriek: 244",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "L008764",
+   "Index": 221,
+   "Title": "Tsjechië",
+   "Description": "GEO code alfa2: CZ\r\nGEO code numeriek: 061",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "L008765",
+   "Index": 222,
+   "Title": "Tunesië",
+   "Description": "GEO code alfa2: TN\r\nGEO code numeriek: 212",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "L008766",
+   "Index": 223,
+   "Title": "Turkije",
+   "Description": "GEO code alfa2: TR\r\nGEO code numeriek: 052",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "L008767",
+   "Index": 224,
+   "Title": "Turkmenistan",
+   "Description": "GEO code alfa2: TM\r\nGEO code numeriek: 080",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "L008768",
+   "Index": 225,
+   "Title": "Turks- en Caicoseilanden",
+   "Description": "GEO code alfa2: TC\r\nGEO code numeriek: 454",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "L008769",
+   "Index": 226,
+   "Title": "Tuvalu",
+   "Description": "GEO code alfa2: TV\r\nGEO code numeriek: 807",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "L008770",
+   "Index": 227,
+   "Title": "Uganda",
+   "Description": "GEO code alfa2: UG\r\nGEO code numeriek: 350\r\n",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "L008771",
+   "Index": 228,
+   "Title": "Uruguay",
+   "Description": "GEO code alfa2: UY\r\nGEO code numeriek: 524",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "L008772",
+   "Index": 229,
+   "Title": "Vanuatu",
+   "Description": "GEO code alfa2: VU\r\nGEO code numeriek: 816",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "L008773",
+   "Index": 230,
+   "Title": "Vaticaanstad",
+   "Description": "GEO code alfa2: VA\r\nGEO code numeriek: 045",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "L008774",
+   "Index": 231,
+   "Title": "Venezuela",
+   "Description": "GEO code alfa2: VE\r\nGEO code numeriek: 484",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "L008779",
+   "Index": 232,
+   "Title": "Verafgelegen eilandjes van de VS",
+   "Description": "Verafgelegen eilandjes van de Verenigde Staten\r\nGEO code alfa2: UM\r\nGEO code numeriek: 832",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "L008776",
+   "Index": 233,
+   "Title": "Verenigd Koninkrijk",
+   "Description": "GEO code alfa2: GB\r\nGEO code numeriek: 006\r\nGroot-Brittannië, Noord-Ierland, de Kanaaleilanden en Man",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "L008777",
+   "Index": 234,
+   "Title": "Verenigde Arabische Emiraten",
+   "Description": "GEO code alfa2: AE\r\nGEO code numeriek: 647\r\nAbu Dhabi, Ajman, Dubai, Fujairah, Ras al Kaimah, Sharjah en Umm al Qaiwain",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "L008778",
+   "Index": 235,
+   "Title": "Verenigde Staten",
+   "Description": "GEO code alfa2: US\r\nGEO code numeriek: 400",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "L008780",
+   "Index": 236,
+   "Title": "Vietnam",
+   "Description": "GEO code alfa2: VN\r\nGEO code numeriek: 690",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "L008782",
+   "Index": 237,
+   "Title": "Wallis en Futuna",
+   "Description": "GEO code alfa2: WF\r\nGEO code numeriek: 811",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "L008813",
+   "Index": 238,
+   "Title": "Westelijke Sahara",
+   "Description": "GEO code alfa2: EH\r\nGEO code numeriek: 229",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "L008783",
+   "Index": 239,
+   "Title": "Wit-Rusland",
+   "Description": "GEO code alfa2: BY\r\nGEO code numeriek: 073",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "L008784",
+   "Index": 240,
+   "Title": "Zambia",
+   "Description": "GEO code alfa2: ZM\r\nGEO code numeriek: 378",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "L008785",
+   "Index": 241,
+   "Title": "Zimbabwe",
+   "Description": "GEO code alfa2: ZW\r\nGEO code numeriek: 382",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "L008787",
+   "Index": 242,
+   "Title": "Zuid-Afrika",
+   "Description": "GEO code alfa2: ZA\r\nGEO code numeriek: 388",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "L008788",
+   "Index": 243,
+   "Title": "Zuid-Georgia en Sandwicheilanden",
+   "Description": "Zuid-Georgia en de Zuidelijke Sandwicheilanden\r\nGEO code alfa2: GS\r\nGEO code numeriek: 893",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "L008789",
+   "Index": 244,
+   "Title": "Zuid-Korea",
+   "Description": "GEO code alfa2: KR\r\nGEO code numeriek: 728",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "L008786",
+   "Index": 245,
+   "Title": "Zuid-Sudan",
+   "Description": "GEO code alfa2: SS\r\nGEO code numeriek: 225",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "L008790",
+   "Index": 246,
+   "Title": "Zweden",
+   "Description": "GEO code alfa2: SE\r\nGEO code numeriek: 030",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "L008791",
+   "Index": 247,
+   "Title": "Zwitserland",
+   "Description": "GEO code alfa2: CH\r\nGEO code numeriek: 039",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "L008816",
+   "Index": 248,
+   "Title": "Boordprovisie EU",
+   "Description": "GEO code alfa2: QR\r\nGEO code numeriek: 951",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "L008815",
+   "Index": 249,
+   "Title": "Boordprovisie niet-EU",
+   "Description": "GEO code alfa2: QS\r\nGEO code numeriek: 952",
+   "DimensionGroupId": "11"
+  },
+  {
+   "Identifier": "L008820",
+   "Index": 250,
+   "Title": "Niet aangegeven landen en gebieden EU",
+   "Description": "Om commerciële of militaire redenen niet nader aangegeven landen en gebieden EU\r\nGEO code alfa2: QY\r\nGEO code numeriek: 978",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "L008821",
+   "Index": 251,
+   "Title": "Niet aangegeven landen, gebieden niet-EU",
+   "Description": "Om commerciële of militaire redenen niet nader aangegeven landen en gebieden niet-EU\r\nGEO code alfa2: QZ\r\nGEO code numeriek: 979",
+   "DimensionGroupId": "11"
+  },
+  {
+   "Identifier": "L008812",
+   "Index": 252,
+   "Title": "Niet bepaalde landen en gebieden EU",
+   "Description": "Niet nader bepaalde landen en gebieden EU\r\nGEO code alfa2: QV\r\nGEO code numeriek: 959",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "L008822",
+   "Index": 253,
+   "Title": "Niet bepaalde landen en gebieden niet-EU",
+   "Description": "Niet nader bepaalde landen en gebieden niet-EU\r\nGEO code alfa2: QW\r\nGEO code numeriek: 960",
+   "DimensionGroupId": "11"
+  },
+  {
+   "Identifier": "L008814",
+   "Index": 254,
+   "Title": "Zeegebied buiten de territoriale wateren",
+   "Description": "GEO code alfa2: QP\r\nGEO code numeriek: 955",
+   "DimensionGroupId": "11"
+  }
+ ]
+}

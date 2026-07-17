@@ -3,7 +3,7 @@
   "source": "Coverage-sprint verification tasks (docs/05-data-rules.md table-onboarding rule: 2-3 frozen-key benchmark-style tasks per newly onboarded table). Task ids CC* to keep the Phase-0 benchmark (B1-B20, benchmark/answer-key.json) and its 14/14 + 6/6 gate counts untouched. Scored hermetically by tests/query/coverage-key.test.ts over the committed fixtures; the honesty rule from answer-key.json applies unchanged: keys are never edited to green.",
   "frozenAt": "2026-07-17",
   "pinnedTo": {
-    "note": "Values independently verified on 2026-07-17 by re-querying BOTH live CBS platforms before freezing: OData v4 (datasets.cbs.nl .../Observations) and OData v3 (opendata.cbs.nl .../TypedDataSet) returned identical values for every cell below. The committed fixture captures (captured the same day) are the replay source the tests run against. Table #3 (85770NED): frozen in the session-49 overnight prep with EXPLICIT targets; RE-POINTED to canonical keys in the session-50 vocab batch (frozen values unchanged). Table #2 (85880NED, session 50): FULL ingest (owner decision — the lean 2-flavor slice was refuted by the hermetic validator: 26 of 210 measures exist only under other SoortMutaties flavors); CC5-CC7 frozen after build-day re-measurement on both platforms (v4=v3 exact: 1.4 / -1.1 / 0.2).",
+    "note": "Values independently verified on 2026-07-17 by re-querying BOTH live CBS platforms before freezing: OData v4 (datasets.cbs.nl .../Observations) and OData v3 (opendata.cbs.nl .../TypedDataSet) returned identical values for every cell below. The committed fixture captures (captured the same day) are the replay source the tests run against. Table #3 (85770NED): frozen in the session-49 overnight prep with EXPLICIT targets; RE-POINTED to canonical keys in the session-50 vocab batch (frozen values unchanged). Table #2 (85880NED, session 50): FULL ingest (owner decision — the lean 2-flavor slice was refuted by the hermetic validator: 26 of 210 measures exist only under other SoortMutaties flavors); CC5-CC7 frozen after build-day re-measurement on both platforms (v4=v3 exact: 1.4 / -1.1 / 0.2). Tables #4-#9 (85828NED, 85937NED, 85429NED, 85792NED, 80590ned, 83625NED — session-53 prep, 2026-07-17): CC11-CC31 frozen with EXPLICIT targets, the same #164 batch discipline as table #3's prep — one staged vocab batch (owner-present re-record) re-points them at canonical keys later, frozen values unchanged. Every cell re-measured live on both platforms AND verified against the committed fixture bytes before freezing.",
     "tables": {
       "83693NED": {
         "title": "Consumentenvertrouwen, economisch klimaat en koopbereidheid; gecorrigeerd",
@@ -15,6 +15,30 @@
       },
       "85880NED": {
         "title": "Bbp, productie en bestedingen; kwartalen, mutaties, nationale rekeningen",
+        "capturedAt": "2026-07-17"
+      },
+      "85828NED": {
+        "title": "Handel en diensten; omzet- en productieontwikkeling, index 2021=100",
+        "capturedAt": "2026-07-17"
+      },
+      "85937NED": {
+        "title": "Consumptieve bestedingen door huishoudens; nationale rekeningen, 2021=100",
+        "capturedAt": "2026-07-17"
+      },
+      "85429NED": {
+        "title": "Internationale goederenhandel; grensoverschrijding, kerncijfers",
+        "capturedAt": "2026-07-17"
+      },
+      "85792NED": {
+        "title": "Bestaande koopwoningen; verkoopprijzen, prijsindex 2020=100, regio",
+        "capturedAt": "2026-07-17"
+      },
+      "80590ned": {
+        "title": "Arbeidsdeelname en werkloosheid per maand",
+        "capturedAt": "2026-07-17"
+      },
+      "83625NED": {
+        "title": "Bestaande koopwoningen; gemiddelde verkoopprijzen, regio",
         "capturedAt": "2026-07-17"
       }
     }
@@ -186,6 +210,380 @@
       "status": "Voorlopig",
       "valueAttribute": "None",
       "note": "Second Afzetgebieden flavor (invoer) — pins that the slice really carries both sales areas."
+    },
+    "CC11": {
+      "question": "Hoeveel steeg de omzet van de detailhandel in mei 2026 ten opzichte van een jaar eerder?",
+      "source": "cbs",
+      "shape": "single",
+      "table": "85828NED",
+      "measure": "A042501_2",
+      "measureTitle": "Waarde / Ontwikkeling t.o.v. jaar eerder / Ongecorrigeerd",
+      "period": "2026MM05",
+      "dims": {
+        "BedrijfstakkenBranchesSBI2008": "371600"
+      },
+      "value": 1.8,
+      "unit": "%",
+      "decimals": 1,
+      "status": "Voorlopig",
+      "valueAttribute": "None",
+      "note": "Headline retail turnover YoY (branch 371600 = SBI 47 Detailhandel niet in auto's). 2026 periods are Voorlopig — R11."
+    },
+    "CC12": {
+      "question": "Wat deed de omzet van supermarkten en warenhuizen in mei 2026?",
+      "source": "cbs",
+      "shape": "single",
+      "table": "85828NED",
+      "measure": "A042501_2",
+      "measureTitle": "Waarde / Ontwikkeling t.o.v. jaar eerder / Ongecorrigeerd",
+      "period": "2026MM05",
+      "dims": {
+        "BedrijfstakkenBranchesSBI2008": "371700"
+      },
+      "value": -0.6,
+      "unit": "%",
+      "decimals": 1,
+      "status": "Voorlopig",
+      "valueAttribute": "None",
+      "note": "Second sliced branch (371700 = SBI 471 supermarkten en warenhuizen) — pins that the 8-branch slice really carries the subgroups, and a negative value survives the pipeline."
+    },
+    "CC13": {
+      "question": "Wat was het omzetindexcijfer van de detailhandel voor 2025?",
+      "source": "cbs",
+      "shape": "single",
+      "table": "85828NED",
+      "measure": "A042501_1",
+      "measureTitle": "Waarde / Indexcijfers / Ongecorrigeerd",
+      "period": "2025JJ00",
+      "dims": {
+        "BedrijfstakkenBranchesSBI2008": "371600"
+      },
+      "value": 118.7,
+      "unit": "2021 = 100",
+      "decimals": 1,
+      "status": "Definitief",
+      "valueAttribute": "None",
+      "note": "Index-level measure + JJ grain (Definitief) — pins that mixed grains and the index family co-exist next to the mutation family. Unit string carries CBS's own spaces ('2021 = 100'), verbatim."
+    },
+    "CC14": {
+      "question": "Met hoeveel groeide de consumptie van huishoudens in december 2025?",
+      "source": "cbs",
+      "shape": "single",
+      "table": "85937NED",
+      "measure": "M005269",
+      "measureTitle": "Volumemutaties, koopdaggecorrigeerd",
+      "period": "2025MM12",
+      "dims": {
+        "ConsumptieveBestedingen": "A047812"
+      },
+      "value": 0.8,
+      "unit": "%",
+      "decimals": 1,
+      "status": "Voorlopig",
+      "valueAttribute": "None",
+      "note": "Headline household consumption (koopdaggecorrigeerde volumemutatie, binnenlandse consumptie A047812). Voorlopig — the table's Status field marks 2021+ Voorlopig, broader than CBS's own prose claims (measured 2026-07-17)."
+    },
+    "CC15": {
+      "question": "Hoeveel gaven huishoudens meer uit aan voedingsmiddelen in het vierde kwartaal van 2025?",
+      "source": "cbs",
+      "shape": "single",
+      "table": "85937NED",
+      "measure": "M005269",
+      "measureTitle": "Volumemutaties, koopdaggecorrigeerd",
+      "period": "2025KW04",
+      "dims": {
+        "ConsumptieveBestedingen": "A047825"
+      },
+      "value": 1.6,
+      "unit": "%",
+      "decimals": 1,
+      "status": "Voorlopig",
+      "valueAttribute": "None",
+      "note": "KW grain + a second category (A047825, one of the 6 of 14 categories that carry the koopdaggecorrigeerd measure — docs/11 documents the 6/14 sparsity)."
+    },
+    "CC16": {
+      "question": "Met hoeveel groeide de consumptie van huishoudens in mei 2026?",
+      "source": "cbs",
+      "shape": "single",
+      "table": "85937NED",
+      "measure": "M005269",
+      "measureTitle": "Volumemutaties, koopdaggecorrigeerd",
+      "period": "2026MM05",
+      "dims": {
+        "ConsumptieveBestedingen": "A047812"
+      },
+      "value": 1.8,
+      "unit": "%",
+      "decimals": 1,
+      "status": "Voorlopig",
+      "valueAttribute": "None",
+      "note": "Freshest month at capture — a truncated-at-the-end ingest cannot pass."
+    },
+    "CC17": {
+      "question": "Hoe hard kromp de consumptie van huishoudens in april 2020?",
+      "source": "cbs",
+      "shape": "single",
+      "table": "85937NED",
+      "measure": "M005269",
+      "measureTitle": "Volumemutaties, koopdaggecorrigeerd",
+      "period": "2020MM04",
+      "dims": {
+        "ConsumptieveBestedingen": "A047812"
+      },
+      "value": -17.4,
+      "unit": "%",
+      "decimals": 1,
+      "status": "Definitief",
+      "valueAttribute": "None",
+      "note": "Covid-depth check at the fixture's 2020 floor (Definitief, strongly negative) — a shifted or floor-broken ingest cannot pass on recent rows alone."
+    },
+    "CC18": {
+      "question": "Hoeveel bedroeg de invoerwaarde van goederen in april 2026?",
+      "source": "cbs",
+      "shape": "single",
+      "table": "85429NED",
+      "measure": "D001607",
+      "measureTitle": "Totale invoerwaarde",
+      "period": "2026MM04",
+      "dims": {
+        "Landen": "T001047",
+        "SITC": "T001082"
+      },
+      "value": 70810,
+      "unit": "mln euro",
+      "decimals": 0,
+      "status": "Voorlopig",
+      "valueAttribute": "None",
+      "note": "Headline goods-import value, totals slice (Landen T001047 x SITC T001082). Freshest month at capture."
+    },
+    "CC19": {
+      "question": "Met hoeveel steeg de invoerwaarde van goederen in april 2026 vergeleken met een jaar eerder?",
+      "source": "cbs",
+      "shape": "single",
+      "table": "85429NED",
+      "measure": "M001608",
+      "measureTitle": "Jaarmutatie invoerwaarde",
+      "period": "2026MM04",
+      "dims": {
+        "Landen": "T001047",
+        "SITC": "T001082"
+      },
+      "value": 10.8,
+      "unit": "%",
+      "decimals": 1,
+      "status": "Voorlopig",
+      "valueAttribute": "None",
+      "note": "The CBS-published YoY mutation measure — pins that we serve CBS's own jaarmutatie, never a self-computed one (R5)."
+    },
+    "CC20": {
+      "question": "Wat was de invoerwaarde van goederen in januari 2015?",
+      "source": "cbs",
+      "shape": "single",
+      "table": "85429NED",
+      "measure": "D001607",
+      "measureTitle": "Totale invoerwaarde",
+      "period": "2015MM01",
+      "dims": {
+        "Landen": "T001047",
+        "SITC": "T001082"
+      },
+      "value": 36083,
+      "unit": "mln euro",
+      "decimals": 0,
+      "status": "Definitief",
+      "valueAttribute": "None",
+      "note": "Series-start depth check (2015MM01 is the earliest period; this table's fixture has NO capture floor)."
+    },
+    "CC21": {
+      "question": "Met hoeveel veranderde de uitvoerwaarde in 2021 ten opzichte van 2020?",
+      "source": "cbs",
+      "shape": "refusal",
+      "table": "85429NED",
+      "measure": "M001609",
+      "period": "2021JJ00",
+      "refusalKind": "no_data",
+      "note": "Methodebreuk 2020/2021: CBS deliberately publishes NO jaarmutatie rows for any 2021 period (nor 2015, the series start) — absent rows, measured exhaustively 2026-07-17. The period itself IS published (levels exist), so the honest refusal is the loud no_data gap, value-free — never a self-computed change across the break (principle c / R5)."
+    },
+    "CC22": {
+      "question": "Wat was de prijsindex van bestaande koopwoningen in het eerste kwartaal van 2026?",
+      "source": "cbs",
+      "shape": "single",
+      "table": "85792NED",
+      "measure": "M001505_2",
+      "measureTitle": "Prijsindex verkoopprijzen",
+      "period": "2026KW01",
+      "dims": {
+        "RegioS": "NL01"
+      },
+      "value": 153.6,
+      "unit": "2020=100",
+      "decimals": 1,
+      "status": "Definitief",
+      "valueAttribute": "None",
+      "note": "Headline regional house-price index, national aggregate (RegioS is a PLAIN dimension in this table, not GeoDimension — the region travels through dims). All periods are 'direct definitief'."
+    },
+    "CC23": {
+      "question": "Wat was de gemiddelde verkoopprijs van een woning in Amsterdam in het vierde kwartaal van 2025?",
+      "source": "cbs",
+      "shape": "single",
+      "table": "85792NED",
+      "measure": "M001534",
+      "measureTitle": "Gemiddelde verkoopprijs",
+      "period": "2025KW04",
+      "dims": {
+        "RegioS": "GM0363"
+      },
+      "value": 635605,
+      "unit": "euro",
+      "decimals": 0,
+      "status": "Definitief",
+      "valueAttribute": "None",
+      "note": "City-level cell (Amsterdam, one of the 4 gemeenten in this 21-region table) — pins that the sub-national codes really carry data."
+    },
+    "CC24": {
+      "question": "Hoeveel woningen werden er in 2020 in Zuid-Holland verkocht?",
+      "source": "cbs",
+      "shape": "single",
+      "table": "85792NED",
+      "measure": "M001532_2",
+      "measureTitle": "Verkochte woningen",
+      "period": "2020JJ00",
+      "dims": {
+        "RegioS": "PV28"
+      },
+      "value": 47764,
+      "unit": "aantal",
+      "decimals": 0,
+      "status": "Definitief",
+      "valueAttribute": "None",
+      "note": "Province + JJ grain + the sales-count measure family, at the fixture's 2020 floor."
+    },
+    "CC25": {
+      "question": "Wat was de seizoengecorrigeerde werkloosheid in juni 2026?",
+      "source": "cbs",
+      "shape": "single",
+      "table": "80590ned",
+      "measure": "M004210",
+      "measureTitle": "Werkloosheidspercentage / Seizoengecorrigeerd",
+      "period": "2026MM06",
+      "dims": {
+        "Geslacht": "T001038",
+        "Leeftijd": "52052"
+      },
+      "value": 3.8,
+      "unit": "%",
+      "decimals": 1,
+      "status": "Definitief",
+      "valueAttribute": "None",
+      "note": "Headline monthly unemployment (lowercase v4 id 80590ned — docs/07 quirk #1; totals slice Geslacht T001038 x Leeftijd 52052). Freshest month at capture; all periods Definitief."
+    },
+    "CC26": {
+      "question": "Wat was het werkloosheidspercentage (niet gecorrigeerd) over 2025?",
+      "source": "cbs",
+      "shape": "single",
+      "table": "80590ned",
+      "measure": "M001906_2",
+      "measureTitle": "Werkloosheidspercentage / Niet-seizoengecorrigeerd",
+      "period": "2025JJ00",
+      "dims": {
+        "Geslacht": "T001038",
+        "Leeftijd": "52052"
+      },
+      "value": 3.9,
+      "unit": "%",
+      "decimals": 1,
+      "status": "Definitief",
+      "valueAttribute": "None",
+      "note": "The UNadjusted twin measure carries real JJ values (year averages) — the asymmetry CC28 pins from the other side."
+    },
+    "CC27": {
+      "question": "Hoe hoog was de seizoengecorrigeerde werkloosheid in februari 2014?",
+      "source": "cbs",
+      "shape": "single",
+      "table": "80590ned",
+      "measure": "M004210",
+      "measureTitle": "Werkloosheidspercentage / Seizoengecorrigeerd",
+      "period": "2014MM02",
+      "dims": {
+        "Geslacht": "T001038",
+        "Leeftijd": "52052"
+      },
+      "value": 8.7,
+      "unit": "%",
+      "decimals": 1,
+      "status": "Definitief",
+      "valueAttribute": "None",
+      "note": "Historical-depth check (the post-crisis high region; this table's fixture has NO capture floor, series starts 2003)."
+    },
+    "CC28": {
+      "question": "Wat was de seizoengecorrigeerde werkloosheid over heel 2025?",
+      "source": "cbs",
+      "shape": "null_cell",
+      "table": "80590ned",
+      "measure": "M004210",
+      "measureTitle": "Werkloosheidspercentage / Seizoengecorrigeerd",
+      "period": "2025JJ00",
+      "dims": {
+        "Geslacht": "T001038",
+        "Leeftijd": "52052"
+      },
+      "value": null,
+      "unit": "%",
+      "decimals": 1,
+      "status": "Definitief",
+      "valueAttribute": "Impossible",
+      "note": "Seasonally-adjusted measures exist on JJ periods as rows with a NULL value and CBS reason 'Impossible' (seasonal adjustment does not exist on year basis — measured 2026-07-17). The honest behavior is serving the null WITH its reason (R11), never substituting the unadjusted figure or averaging months."
+    },
+    "CC29": {
+      "question": "Wat was de gemiddelde verkoopprijs van een koopwoning in Nederland in 2025?",
+      "source": "cbs",
+      "shape": "single",
+      "table": "83625NED",
+      "measure": "M001534",
+      "measureTitle": "Gemiddelde verkoopprijs",
+      "period": "2025JJ00",
+      "dims": {},
+      "region": "NL01",
+      "value": 479527,
+      "unit": "euro",
+      "decimals": 0,
+      "status": "Definitief",
+      "valueAttribute": "None",
+      "note": "National aggregate via the REAL GeoDimension (unlike 85792NED) — the region travels through the intent's regions field, the 03759ned way."
+    },
+    "CC30": {
+      "question": "Wat was de gemiddelde verkoopprijs van een koopwoning in Amsterdam in 2025?",
+      "source": "cbs",
+      "shape": "single",
+      "table": "83625NED",
+      "measure": "M001534",
+      "measureTitle": "Gemiddelde verkoopprijs",
+      "period": "2025JJ00",
+      "dims": {},
+      "region": "GM0363",
+      "value": 630621,
+      "unit": "euro",
+      "decimals": 0,
+      "status": "Definitief",
+      "valueAttribute": "None",
+      "note": "Gemeente-level cell — the per-gemeente local-angle engine (#160(b)); 728 GM codes in this table."
+    },
+    "CC31": {
+      "question": "Wat kostte een koopwoning in Amsterdam gemiddeld in 2015?",
+      "source": "cbs",
+      "shape": "single",
+      "table": "83625NED",
+      "measure": "M001534",
+      "measureTitle": "Gemiddelde verkoopprijs",
+      "period": "2015JJ00",
+      "dims": {},
+      "region": "GM0363",
+      "value": 303925,
+      "unit": "euro",
+      "decimals": 0,
+      "status": "Definitief",
+      "valueAttribute": "None",
+      "note": "Depth check at the fixture's 2015 floor (the live table runs back to 1995)."
     }
   }
 }

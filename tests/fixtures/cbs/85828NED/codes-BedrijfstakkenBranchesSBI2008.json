@@ -1,0 +1,768 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/85828NED/$metadata#BedrijfstakkenBranchesSBI2008Codes",
+ "value": [
+  {
+   "Identifier": "354200",
+   "Index": 1,
+   "Title": "G Handel",
+   "Description": "Groot- en detailhandel; reparatie van auto's \r\nDeze sectie omvat: \r\n- de groot- en detailhandel (verkoop zonder aanbrengen van veranderingen) in alle soorten goederen en de diensten die bij de verkoop van goederen worden verleend; \r\n- tussenhandel/handelsbemiddeling; \r\n- reparatie van auto's en motoren. \r\nDe verkoop zonder bewerking omvat de in de handel gebruikelijke handelingen, bijvoorbeeld sorteren, samenvoegen en combineren van goederen, mengen (versnijden) van goederen (bijvoorbeeld wijn of zand), bottelen (met of zonder reiniging van de fles vooraf), verpakken, opsplitsen en anders verpakken van partijen stukgoederen voor distributie in kleinere hoeveelheden, opslag (al dan niet bevroren of gekoeld), schoonmaken en drogen van landbouwproducten, snijden van houtvezel- of metalen platen voor eigen rekening. \r\nGroothandel is de wederverkoop (verkoop zonder aanbrengen van veranderingen) van nieuwe en gebruikte goederen aan de detailhandel, aan industriële en andere bedrijfsmatige gebruikers, of aan andere groothandelaren, alsmede de handelsbemiddeling bij de aankoop van goederen voor of de verkoop van goederen aan dergelijke personen of bedrijven. De belangrijkste soort van groothandel is de groothandel in goederen, dat wil zeggen groothandelaren die goederen verkopen die zij in eigendom hebben zoals grossiers, dealers, exporteurs, importeurs en coöperatieve inkooporganisaties, verkooporganisaties en verkoopkantoren (detailhandelsbedrijven uitgezonderd) van industriële ondernemingen, die tot taak hebben de producten ervan op de markt te brengen. \r\nTussenhandel/handelsbemiddeling is het samenbrengen van koper en verkoper of het uitvoeren van transacties voor rekening van derden. Inbegrepen zijn makelaars op goederenbeurzen, commissionairs, en andere op commissiebasis werkzame tussenpersonen. \r\nDetailhandel is de wederverkoop (verkoop zonder aanbrengen van veranderingen) van nieuwe en gebruikte goederen hoofdzakelijk aan het publiek voor persoonlijk of huishoudelijk ge- of verbruik, op de markt of door winkels, warenhuizen, postorderbedrijven, straathandelaren, consumentencoöperaties, veilinghuizen enzovoort. De meeste detailhandelaren zijn eigenaar van de goederen die zij verkopen, maar sommigen werken als tussenpersoon voor een opdrachtgever en verkopen in consignatie dan wel op commissiebasis.",
+   "DimensionGroupId": "1"
+  },
+  {
+   "Identifier": "354300",
+   "Index": 2,
+   "Title": "45 Autohandel en -reparatie",
+   "Description": "Handel in en reparatie van auto's, motorfietsen en aanhangers",
+   "DimensionGroupId": "4"
+  },
+  {
+   "Identifier": "354400",
+   "Index": 3,
+   "Title": "451 Autohandel en -reparatie",
+   "Description": "Handel in auto's en aanhangers, eventueel gecombineerd met reparatie",
+   "DimensionGroupId": "13"
+  },
+  {
+   "Identifier": "354600",
+   "Index": 4,
+   "Title": "45111 Import van nieuwe personenauto's",
+   "Description": "Import van nieuwe personenauto's en lichte bedrijfsauto's \r\nDeze klasse omvat: \r\n- import van nieuwe personenauto's en lichte bedrijfswagens. \r\nDeze klasse omvat niet: \r\n- import van nieuwe bedrijfsauto's (45.19.1); \r\n- import van gebruikte personenauto's (45.11.2); \r\n- import van onderdelen en accessoires voor personenauto's (45.31.1).",
+   "DimensionGroupId": "37"
+  },
+  {
+   "Identifier": "354700",
+   "Index": 5,
+   "Title": "45112 Handel en reparatie personenauto's",
+   "Description": "Handel in en reparatie van personenauto's en lichte bedrijfsauto's (geen import van nieuwe) \r\nDeze klasse omvat: \r\n- groothandel in personenauto's (geen import van nieuwe); \r\n- handelsbemiddeling in personenauto's; \r\n- detailhandel in personenauto's; \r\n- handel in campers; \r\n- handel in schadeauto's; \r\n- algemene reparatie en onderhoud van personenauto's; \r\n- algemene restauratie van oude auto's, oldtimers e.d. \r\nDeze klasse omvat niet: \r\n- import van nieuwe personenauto's (45.11.1); \r\n- auto-onderdelenservicebedrijven (45.20.1); \r\n- reparatie en montage van banden (45.20.2); \r\n- gespecialiseerde reparatiebedrijven van auto-onderdelen (45.20.3); \r\n- carrosserieherstel van personenauto's (45.20.4); \r\n- groothandel en handelsbemiddeling in onderdelen en accessoires voor personenauto's (45.31.1); \r\n- detailhandel in onderdelen en accessoires voor personenauto's (45.32); \r\n- autoslopers en groothandel in sloopauto's en autosloopmateriaal (46.77.1); \r\n- benzineservicestations (47.30); \r\n- verrichten van autokeuringen (71.20.2).",
+   "DimensionGroupId": "37"
+  },
+  {
+   "Identifier": "354800",
+   "Index": 6,
+   "Title": "4519 Handel in vrachtwagens, aanhangers",
+   "Description": "Handel in en reparatie van zwaardere bedrijfsauto's, aanhangers en caravans",
+   "DimensionGroupId": "28"
+  },
+  {
+   "Identifier": "355300",
+   "Index": 7,
+   "Title": "452 Gespecialiseerde autoreparatie",
+   "Description": "Gespecialiseerde reparatie van auto's \r\nDeze groep omvat: \r\n45.20.1 Auto- onderdelenservicebedrijven \r\n45.20.2 Bandenservicebedrijven \r\n45.20.3 Reparatie van specifieke auto-onderdelen \r\n45.20.4 Carrosserieherstel \r\n45.20.5 Overige gespecialiseerde reparatie en slepen van auto's",
+   "DimensionGroupId": "13"
+  },
+  {
+   "Identifier": "356000",
+   "Index": 8,
+   "Title": "453 Handel in auto-onderdelen",
+   "Description": "Handel in auto-onderdelen en -accessoires",
+   "DimensionGroupId": "13"
+  },
+  {
+   "Identifier": "356500",
+   "Index": 9,
+   "Title": "454 Handel en reparatie van motorfietsen",
+   "Description": "Handel in en reparatie van motorfietsen en onderdelen daarvan",
+   "DimensionGroupId": "13"
+  },
+  {
+   "Identifier": "356900",
+   "Index": 10,
+   "Title": "46 Groothandel en handelsbemiddeling",
+   "Description": "Groothandel en handelsbemiddeling (niet in auto's en motorfietsen) \r\nDeze afdeling omvat de groepen: \r\n461 Handelsbemiddeling \r\n462 Groothandel in landbouwproducten en levende dieren \r\n463 Groothandel in voedings- en genotmiddelen \r\n464 Groothandel in consumentenartikelen \r\n465 Groothandel in ICT-apparatuur \r\n466 Groothandel in machines en benodigdheden voor industrie en handel \r\n467 Overige gespecialiseerde groothandel \r\n469 Niet-gespecialiseerde groothandel",
+   "DimensionGroupId": "4"
+  },
+  {
+   "Identifier": "358000",
+   "Index": 11,
+   "Title": "462 Groothandel in landbouwproducten",
+   "Description": "Groothandel in landbouwproducten en levende dieren",
+   "DimensionGroupId": "14"
+  },
+  {
+   "Identifier": "359800",
+   "Index": 12,
+   "Title": "463 Groothandel in voedingsmiddelen",
+   "Description": "Groothandel in voedings- en genotmiddelen",
+   "DimensionGroupId": "14"
+  },
+  {
+   "Identifier": "361700",
+   "Index": 13,
+   "Title": "464 Groothandel in non-food",
+   "Description": "Groothandel in consumentenartikelen (non-food)",
+   "DimensionGroupId": "14"
+  },
+  {
+   "Identifier": "365700",
+   "Index": 14,
+   "Title": "465 Groothandel in ICT-apparatuur",
+   "Description": "Groothandel in ICT-apparatuur \r\nDeze groep omvat: \r\n- groothandel in computers en software; \r\n- groothandel in telecommunicatieapparatuur; \r\n- groothandel in overige elektronica.",
+   "DimensionGroupId": "14"
+  },
+  {
+   "Identifier": "366000",
+   "Index": 15,
+   "Title": "466 Groothandel in industriemachines",
+   "Description": "Groothandel in machines, apparaten en toebehoren voor industrie en handel",
+   "DimensionGroupId": "14"
+  },
+  {
+   "Identifier": "367900",
+   "Index": 16,
+   "Title": "467 Overige gespecialiseerde groothandel",
+   "Description": "Overige gespecialiseerde groothandel",
+   "DimensionGroupId": "14"
+  },
+  {
+   "Identifier": "371600",
+   "Index": 17,
+   "Title": "47 Detailhandel (niet in auto's)",
+   "Description": "Detailhandel (niet in auto's) \r\nTot de detailhandel wordt gerekend: \r\nDe verkoop van niet zelfvervaardigde goederen, zowel nieuw als tweedehands, aan consumenten. \r\nDe volgende distributievormen worden onderscheiden: \r\n- winkelverkoop (471 - 477); \r\n- markthandel (478); \r\n- verkoop via internet, thuiswinkels, postorderverkoop, telefonische verkoop, verkoop via radio en televisie (479); \r\n- colportage, verkoop via huisparty's (4799.1); \r\n- straathandel (4799.2); \r\n- automatenverkoop, verkoop vanuit woonhuis, magazijn, werkplaats (4799.9). \r\nTot de detailhandel wordt ook gerekend de tussenpersonen/bemiddeling in de detailhandel (4799.9, internetveilingen: 4791). \r\nTot de detailhandel in winkel wordt gerekend: \r\nVerkoop van voor aflevering gereed zijnde goederen (die naar aard en vorm niet bedoeld zijn om ter plaatse te worden geconsumeerd) aan elke zich aandienende finale consument, gekoppeld aan de expositie van een assortiment, in of vanuit een ommuurde en overspannen ruimte en waarbij deze ruimte zelf of het complex waarin deze ruimte is opgenomen voor het publiek toegankelijk moet zijn. \r\nTot de detailhandel in winkel wordt ook gerekend: \r\n- een boekenkiosk binnen de stationshal; \r\n- een fruitkraam in de hal van een ziekenhuis; \r\n- een noodwinkel; \r\n- een \"shop in de shop\". \r\nTot de detailhandel in winkel wordt niet gerekend: \r\n- de verkoop vanuit markthallen via al dan niet verplaatsbare kramen; wordt tot de markthandel gerekend; \r\n- de verkoop op beurzen en tentoonstellingen; wordt tot de overige vormen van detailhandel gerekend; \r\n- de verkoop van auto's, motoren en motorbrandstoffen; wordt tot afdeling 45 gerekend; \r\n- de verkoop vanuit woonhuis (met geen voor het publiek toegankelijke ruimte), vanuit magazijn of werkplaats; deze verkoop aan particulieren wordt tot de overige vormen van detailhandel gerekend.",
+   "DimensionGroupId": "4"
+  },
+  {
+   "Identifier": "371700",
+   "Index": 18,
+   "Title": "471 Supermarkten en warenhuizen",
+   "Description": "Supermarkten, warenhuizen en dergelijke winkels met een algemeen assortiment",
+   "DimensionGroupId": "15"
+  },
+  {
+   "Identifier": "371800",
+   "Index": 19,
+   "Title": "4711 Supermarkten",
+   "Description": "Supermarkten en dergelijke winkels met een algemeen assortiment voedings- en genotmiddelen \r\nDeze klasse omvat: \r\n- winkels die voldoen aan de volgende eisen: \r\n 1) minimaal de helft van de omzet komt uit winkelverkoop van voedings- en genotmiddelen; \r\n 2) geen specialisatie, dus geen enkele (sub)klasse van de groep 472 heeft een omzetaandeel van 50% of meer; \r\n 3) uit elk van 5 verschillende (sub)klassen uit groep 472 wordt 5% of meer van de omzet gehaald. \r\nDeze criteria gelden per individuele vestiging. \r\nDeze klasse omvat niet: \r\n- winkels in diepvriesartikelen algemeen assortiment (47.29.9).",
+   "DimensionGroupId": "29"
+  },
+  {
+   "Identifier": "372200",
+   "Index": 20,
+   "Title": "472 Winkels in voedingsmiddelen",
+   "Description": "Gespecialiseerde winkels in voedings- en genotmiddelen \r\nDeze groep omvat de klassen: \r\n4721 Winkels in aardappelen, groenten en fruit \r\n4722 Winkels in vlees en vleeswaren, wild en gevogelte \r\n4723 Winkels in vis en schaal- en weekdieren \r\n4724 Winkels in brood, banket chocolade en suikerwerk \r\n4725 Winkels in dranken (geen zuivel) \r\n4726 Winkels in tabaksproducten en rokersbenodigdheden \r\n4729 Winkels gespecialiseerd in overige voedings- en genotmiddelen",
+   "DimensionGroupId": "15"
+  },
+  {
+   "Identifier": "374000",
+   "Index": 21,
+   "Title": "474 Winkels in consumentenelektronica",
+   "Description": "Winkels in consumentenelektronica \r\nDeze groep omvat: \r\n- winkels in computers (hardware en software) en randapparaten; \r\n- winkels in communicatieapparatuur, zoals mobieltjes en telefoons; \r\n- winkels in witgoed en in audio- en videoapparatuur of in een algemeen assortiment van wit- en bruingoed.",
+   "DimensionGroupId": "15"
+  },
+  {
+   "Identifier": "374600",
+   "Index": 22,
+   "Title": "475 Winkels in overige huishoudwaren",
+   "Description": "Winkels in overige huishoudelijke artikelen \r\nDeze groep omvat de klassen: \r\n4751 Winkels in kledingstoffen, huishoudtextiel en fournituren \r\n4752 Winkels in doe-het-zelfartikelen \r\n4753 Winkels in vloerbedekking en gordijnen \r\n4754 Winkels in elektrische huishoudelijke apparatuur en onderdelen daarvoor \r\n4759 Winkels in meubels, verlichting en overige huishoudelijke artikelen (rest)",
+   "DimensionGroupId": "15"
+  },
+  {
+   "Identifier": "900154",
+   "Index": 23,
+   "Title": "Winkels in meubels, woninginrichting alg",
+   "Description": "Winkels in meubels, woninginrichting alg \r\nDeze categorie is een samentelling van categorieën: \r\n4759.1 Winkels in meubels \r\n4759.2 Winkels in verlichtingsartikelen \r\n4759.3 Winkels in artikelen voor woninginrichting algemeen assortiment",
+   "DimensionGroupId": "41"
+  },
+  {
+   "Identifier": "375100",
+   "Index": 24,
+   "Title": "4752 Winkels in doe-het-zelfartikelen",
+   "Description": "Winkels in doe-het-zelfartikelen \r\nDeze klasse omvat: \r\n- winkels in ijzerwaren en gereedschappen voor doe-het-zelf en klein ambachtelijk gebruik; \r\n- winkels in tuingereedschappen, grasmaaiers e.d. \r\n- winkels in hang- en sluitwerk; \r\n- winkels in verf en verfwaren; \r\n- winkels in behang; \r\n- winkels met een assortiment bestaande uit verf en verfwaren, behang, gordijnen en gordijnstoffen, binnenzonweringen en jaloezieën; \r\n- winkels in houten bouw- en tuinmaterialen: \r\n w.o. ramen, deuren, kozijnen, trappen en trapleuningen, plaatmateriaal, palen, balken; \r\n w.o. pergola's, tuinhekken, schermen, tuinhuisjes enz.; \r\n- winkels in wand- en vloertegels; \r\n- winkels in sierstenen en -tegels, sierbanden, keien e.d. bestratingen voor tuin en terras; \r\n- winkels in keukens en keukenkasten; \r\n- winkels in parket-, laminaat- en kurkvloeren; \r\n- winkels in overige bouwmaterialen: \r\n w.o. bouwstenen, dakpannen en andere betonelementen voor de bouw; \r\n w.o. sanitaire artikelen en sanitair installatiemateriaal: \r\n w.o. badkuipen, toiletten en wastafels; \r\n w.o. leidingen, fittingen, kranen enz.; \r\n w.o. boilers en geisers; \r\n w.o. vlakglas; \r\n w.o. open haarden, voorzethaarden e.d. inclusief de rookafvoerkanalen; \r\n w.o. sauna's.",
+   "DimensionGroupId": "29"
+  },
+  {
+   "Identifier": "375900",
+   "Index": 25,
+   "Title": "47528 Bouwmarkten",
+   "Description": "Bouwmarkten en andere winkels in bouwmaterialen algemeen assortiment \r\nDeze klasse omvat: \r\n- detailhandel in bouwmaterialen algemeen assortiment waarvan de artikelengroepen 47.52.1, 47.52.2, 47.52.3, 47.52.4 en 47.52.7 deel uit maken waarbij het omzetaandeel van genoemde artikelengroepen afzonderlijk 5 of meer, maar minder dan 50 % uitmaakt van de omzet. \r\nEventueel in combinatie met: \r\n- op maat zagen of snijden van hout, glas en tegels; \r\n- verhuur van bouwmachines en gereedschappen.",
+   "DimensionGroupId": "38"
+  },
+  {
+   "Identifier": "376600",
+   "Index": 26,
+   "Title": "4759 Winkels overige huishoudartikelen",
+   "Description": "Winkels in meubels, verlichting en overige huishoudelijke artikelen (rest)",
+   "DimensionGroupId": "29"
+  },
+  {
+   "Identifier": "377400",
+   "Index": 27,
+   "Title": "476 Winkels in recreatieartikelen",
+   "Description": "Winkels in lectuur, sport-, kampeer- en recreatieartikelen",
+   "DimensionGroupId": "15"
+  },
+  {
+   "Identifier": "378400",
+   "Index": 28,
+   "Title": "477 Winkels in overige artikelen",
+   "Description": "Winkels in overige artikelen \r\nDeze groep omvat: \r\n- winkels in kleding en modeartikelen; textielsupermarkten; \r\n- winkels in schoenen en lederwaren; \r\n- apotheken en winkels in drogisterij-, medische en orthopedische artikelen; \r\n- winkels in parfums, decoratieve cosmetica, lichaams-, haar- en mondverzorgingsproducten; \r\n- winkels in bloemen, planten, zaden, tuinbenodigdheden, huisdieren en dierbenodigdheden; \r\n- winkels in juweliersartikelen en uurwerken; \r\n- winkels in fotografische en optische artikelen; \r\n- winkels in cadeauartikelen; \r\n- winkels in antiek en tweedehandsartikelen; \r\n- winkels in niet ergens anders genoemde artikelen.",
+   "DimensionGroupId": "15"
+  },
+  {
+   "Identifier": "378500",
+   "Index": 29,
+   "Title": "4771 Winkels in kleding",
+   "Description": "Winkels in kleding en modeartikelen; textielsupermarkten",
+   "DimensionGroupId": "29"
+  },
+  {
+   "Identifier": "379400",
+   "Index": 30,
+   "Title": "4772 Winkels in schoenen en lederwaren",
+   "Description": "Winkels in schoenen en lederwaren",
+   "DimensionGroupId": "29"
+  },
+  {
+   "Identifier": "379900",
+   "Index": 31,
+   "Title": "47741 Drogisterijen",
+   "Description": "Winkels in drogisterijartikelen \r\nDeze klasse omvat: \r\n- winkels met het volgende pakket: zelfzorggeneesmiddelen, gezondheidsproducten en verplegingsartikelen in combinatie met parfums, decoratieve en verzorgende cosmetica, producten voor mond- en haarverzorging waarbij het omzetaandeel parfums en cosmetica minder dan 50% uitmaakt van de omzet; \r\n- winkels in schoonmaakartikelen en borstelwaren.",
+   "DimensionGroupId": "38"
+  },
+  {
+   "Identifier": "382500",
+   "Index": 32,
+   "Title": "479 Detailhandel, geen winkel of markt",
+   "Description": "Detailhandel niet via winkel of markt",
+   "DimensionGroupId": "15"
+  },
+  {
+   "Identifier": "382600",
+   "Index": 33,
+   "Title": "4791 Postorderbedrijven, webwinkels",
+   "Description": "Detailhandel via internet \r\nDeze klasse omvat: \r\n- verkoop aan consumenten via internet: de transactie wordt gesloten via internet; \r\n- verkoop aan consumenten per postorder. \r\nDe goederen worden naar de koper gezonden, nadat deze zijn keuze heeft gemaakt aan de hand van advertenties, catalogi, showmodellen of een andere vorm van adverteren; \r\n- verkoop aan consumenten via radio en televisie; \r\n- verkoop aan consumenten via internetsites, siteshopping; \r\n- verkoop aan consumenten via de telefoon; \r\n- telefonische verkoop van abonnementen; \r\n- verkoop via downloaden van boeken e.d.; \r\n- internetveilingen. \r\nDeze klasse omvat niet: \r\n- verkoop aan consumenten via colportage, huisparty's e.d. (47.99.1); \r\n- callcenters die voor derden telefonische bestellingen van consumenten opnemen, zoals naar aanleiding van radio- en t.v.reclamespots (82.20).",
+   "DimensionGroupId": "29"
+  },
+  {
+   "Identifier": "383100",
+   "Index": 34,
+   "Title": "H Vervoer en opslag",
+   "Description": "Vervoer en opslag \r\nDeze sectie omvat: \r\n- het vervoer van personen of goederen, al dan niet volgens een dienstregeling, per spoor, via een pijpleiding, over de weg, over water of door de lucht; \r\n- de ondersteunende activiteiten als terminal- en parkeerfaciliteiten, vrachtbehandeling, opslag enz.; \r\n- de posterijen; \r\n- de verhuur van transportmiddelen met bestuurder of bedienend personeel. \r\nDeze sectie omvat niet: \r\n- het onderhoud en de reparatie van auto's (45).",
+   "DimensionGroupId": "1"
+  },
+  {
+   "Identifier": "383200",
+   "Index": 35,
+   "Title": "49 Vervoer over land",
+   "Description": "Vervoer over land \r\nDeze afdeling omvat: \r\n- personen- en goederenvervoer over de weg en per spoor. \r\nDeze klasse omvat niet: \r\n- exploitatie van toeristische spoorlijnen (93.21.1).",
+   "DimensionGroupId": "5"
+  },
+  {
+   "Identifier": "900054",
+   "Index": 36,
+   "Title": "491-492 Vervoer per spoor",
+   "Description": "Deze categorie is een samentelling van categorieën: \r\n491 Personenvervoer per spoor (geen tram of metro) \r\n492 Goederenvervoer per spoor",
+   "DimensionGroupId": "26"
+  },
+  {
+   "Identifier": "383700",
+   "Index": 37,
+   "Title": "493 Personenvervoer over de weg",
+   "Description": "Personenvervoer over de weg \r\nDeze groep omvat de klassen: \r\n4931 Openbaar vervoer binnen steden \r\n4932 Exploitatie van taxi s \r\n4939 Overig personenvervoer over de weg (rest)",
+   "DimensionGroupId": "16"
+  },
+  {
+   "Identifier": "383900",
+   "Index": 38,
+   "Title": "4932 Vervoer per taxi",
+   "Description": "Vervoer per taxi \r\nDeze klasse omvat: \r\n- vervoer van personen met taxi's, taxicentrales; \r\n- vervoer met personenauto's, inclusief minibussen, van een besloten groep personen zoals werknemers en scholieren; \r\n- zittend ziekenvervoer met taxi's; \r\n- rolstoelvervoer: vervoer van gehandicapten met hun rolstoel in daarvoor speciaal ingerichte personenauto's, inclusief minibussen; \r\n- rouw- en trouwrijden met personenauto's; \r\n- rouw- en trouwrijden en ander personenvervoer met koetsen; \r\n- verhuur van personenauto's, inclusief minibussen, met chauffeur. \r\nDeze klasse omvat niet: \r\n- vervoer van personen met huifkarren, paardentrams e.d. toeristisch vervoer (49.39.1); \r\n- verhuur van personenauto's zonder chauffeur (71.10.1); \r\n- taxitelefooncentrales (79.90); \r\n- ziekenvervoer met ambulances (86.92.5).",
+   "DimensionGroupId": "30"
+  },
+  {
+   "Identifier": "384000",
+   "Index": 39,
+   "Title": "4939 Overig personenvervoer over de weg",
+   "Description": "Overig personenvervoer over de weg \r\nDeze klasse omvat: \r\n49391 Ongeregeld personenvervoer over de weg \r\n49392 Openbaar interlokaal personenvervoer over de weg \r\n49393 Geregeld besloten personenvervoer over de weg",
+   "DimensionGroupId": "30"
+  },
+  {
+   "Identifier": "384400",
+   "Index": 40,
+   "Title": "494 Goederenvervoer over de weg",
+   "Description": "Goederenvervoer over de weg",
+   "DimensionGroupId": "16"
+  },
+  {
+   "Identifier": "384500",
+   "Index": 41,
+   "Title": "4941 Goederenwegvervoer (geen verhuis-)",
+   "Description": "Goederenvervoer over de weg (geen verhuizingen) \r\nDeze klasse omvat: \r\n- ongeregeld goederenvervoer over de weg ongeacht goederensoort en transportmiddel: \r\n w.o. via huifwagens, tankwagens, containers, koelwagens, diepladers enz.; \r\n w.o. vervoer van vee, bulkgoederen, vloeistoffen, stukgoederen enz.; \r\n- goederenvervoer over de weg door afhaal- en besteldiensten met een groeperende en distribuerende functie; \r\n- bezorgdiensten van producten voor winkeliers, horecabedrijven e.d. zoals bloemen, witgoed, pizza's enz.; \r\n- wegvervoer van afval in opdracht van inzamelaars, verwerkers e.d.; \r\n- verhuur van vracht- en bestelauto's met chauffeur (verchartering); \r\n- verhuur van trekkers met chauffeur (verchartering); \r\n- auto's ergens heen brengen of afhalen. \r\nDeze klasse omvat niet: \r\n- inzamelen van afval, ook via afzetbakken en wisselcontainers (38.11); \r\n- verhuizen van inboedels, vervoer van piano's en plaatsen en ophalen van verhuiscontainers (49.42);; \r\n- lokale postdiensten (53.20.1); \r\n- koeriersdiensten (53.20.2); \r\n- verhuur van vracht- en bestelauto's zonder chauffeur (77.12).",
+   "DimensionGroupId": "30"
+  },
+  {
+   "Identifier": "384600",
+   "Index": 42,
+   "Title": "4942 Verhuisvervoer",
+   "Description": "Verhuisvervoer \r\nDeze klasse omvat: \r\n- verhuizen van inboedels; \r\n- plaatsen en ophalen van verhuiscontainers; \r\n- vervoer van piano's. \r\nDeze klasse omvat niet: \r\n- vervoer van meubels indien niet voor verhuizingen (49.41).",
+   "DimensionGroupId": "30"
+  },
+  {
+   "Identifier": "384900",
+   "Index": 43,
+   "Title": "50 Vervoer over water",
+   "Description": "Vervoer over water \r\nDeze afdeling omvat: \r\n- vervoer van vracht en personen over zee en binnenwateren.",
+   "DimensionGroupId": "5"
+  },
+  {
+   "Identifier": "384905",
+   "Index": 44,
+   "Title": "501-502 Zee- en kustvaart",
+   "Description": "Zee- en kustvaart \r\nDeze categorie is een samentelling van categorieën: \r\n501 Zee- en kustvaart (passagiersvaart en veerdiensten) \r\n502 Zee- en kustvaart (vracht-, tank- en sleepvaart)",
+   "DimensionGroupId": "26"
+  },
+  {
+   "Identifier": "385705",
+   "Index": 45,
+   "Title": "503-504 Binnenvaart",
+   "Description": "Binnenvaart \r\nDeze categorie is een samentelling van categorieën: \r\n503 Binnenvaart (passagiersvaart en veerdiensten) \r\n504 Binnenvaart (vracht-, tank- en sleepvaart)",
+   "DimensionGroupId": "26"
+  },
+  {
+   "Identifier": "386300",
+   "Index": 46,
+   "Title": "51 Vervoer door de lucht",
+   "Description": "Luchtvaart \r\nDeze afdeling omvat: \r\n- vervoer van passagiers en vracht door de lucht.",
+   "DimensionGroupId": "5"
+  },
+  {
+   "Identifier": "386800",
+   "Index": 47,
+   "Title": "52 Opslag, dienstverlening voor vervoer",
+   "Description": "Opslag en dienstverlening voor vervoer",
+   "DimensionGroupId": "5"
+  },
+  {
+   "Identifier": "386900",
+   "Index": 48,
+   "Title": "521 Opslag",
+   "Description": "Opslag \r\nDeze groep omvat: \r\n- opslag van goederen in tanks en tankschepen; \r\n- beschikbaar stellen (verhuren) van opslagtanks; \r\n- koel-, vries- en isothermopslag (z.g. geconditioneerde opslag) in koelhuizen, -tanks, -boxen en -cellen; \r\n- opslaan van goederen in distributiecentra en overige gebouwen (niet in tanks, koelhuizen e.d.); \r\n- beschikbaar stellen (verhuren) van ruimte die ingericht is voor het opslaan en bewaren van goederen (niet in tanks, koelhuizen e.d.). \r\nEventueel in combinatie met: \r\n- sorteren, drogen, schoonmaken, inpakken van de opgeslagen goederen. \r\nDeze klasse omvat niet: \r\n- stalling van fietsen, auto's, aanhangwagens, opleggers en caravans (52.21); \r\n- stalling van boten (52.22).",
+   "DimensionGroupId": "17"
+  },
+  {
+   "Identifier": "387400",
+   "Index": 49,
+   "Title": "522 Dienstverlening voor vervoer",
+   "Description": "Dienstverlening voor vervoer",
+   "DimensionGroupId": "17"
+  },
+  {
+   "Identifier": "387500",
+   "Index": 50,
+   "Title": "5221 Dienstverlening voor landvervoer",
+   "Description": "Dienstverlening voor vervoer over land \r\nDeze klasse omvat: \r\n- exploitatie van fietsenstallingen, autoparkeerterreinen en -garages, winterstallingen voor caravans, toltunnels, tolwegen en tolbruggen; \r\n- aanbieden van mobiele parkeerdiensten; \r\n- exploitatie van terreinen voor het opslaan en stallen van aanhangwagens, containers en opleggers; \r\n- advies en begeleiding van (speciale) transporten over land; \r\n- exploitatie van railinfrastructuur; \r\n- begeleiden, regelen van het spoorwegverkeer; \r\n- regelen van verkeer bij evenementen of wegomleidingen, leveren van verkeersregelaars; \r\n- gladheidsbestrijding; \r\n- zelfstandige (freelance) chauffeurs zonder eigen auto; \r\n- bemiddeling in passagiersvervoer over land, bijvoorbeeld in auto's met chauffeur; \r\n- afhaalcentra voor online aankopen. \r\nDeze klasse omvat niet: \r\n- slepen en bergen van auto's (45.20.5).",
+   "DimensionGroupId": "31"
+  },
+  {
+   "Identifier": "387600",
+   "Index": 51,
+   "Title": "5222 Dienstverlening voor de scheepvaart",
+   "Description": "Dienstverlening voor vervoer over water \r\nDeze klasse omvat: \r\n- ter beschikking stellen van sluis- en havenfaciliteiten; \r\n- verhuur van kaden en havenloodsen voor korte opslag; \r\n- reddings-, bergings- en duikwerk voor zee- en binnenvaart; \r\n- meren en ontmeren van schepen; \r\n- roeiers- en rapportagediensten; \r\n- beloodsen van schepen; \r\n- betonning en bebakening van wateren; \r\n- winterstalling van pleziervaartuigen; \r\n- advies en begeleiding van (speciale) transporten over water; \r\n- zelfstandige (freelance) kapiteins zonder eigen schip. \r\nDeze klasse omvat niet: \r\n- exploitatie van sleepboten (50.20.2, 50.40.3); \r\n- verhuur van havenkranen en drijvende bokken met bedienend personeel (52.24.x); \r\n- verhuur van schepen voor de beroepsvaart zonder bemanning (77.34); \r\n- verhuur van havenkranen en drijvende bokken zonder bedienend personeel (77.39.9); \r\n- exploitatie van jachthavens (93.29.1).",
+   "DimensionGroupId": "31"
+  },
+  {
+   "Identifier": "387700",
+   "Index": 52,
+   "Title": "5223 Dienstverlening voor de luchtvaart",
+   "Description": "Dienstverlening voor de luchtvaart \r\nDeze klasse omvat: \r\n- exploitatie van luchthavens en vliegvelden; \r\n- beschikbaar stellen van luchthavenfaciliteiten: \r\n w.o. hangars, platforms, terreinen e.d.; \r\n- begeleiden van het luchtverkeer; \r\n- opstellen van vluchtplannen; \r\n- afhandeling van passagiers en hun bagage op luchthavens, begeleiden van passagiers met beperkte mobiliteit; \r\n- stalling van vliegtuigen. \r\nDeze klasse omvat niet: \r\n- laden en lossen van vrachten op luchthavens (52.24.2); \r\n- verhuur van vliegtuigen zonder bemanning (77.35); \r\n- vliegscholen voor niet-beroepsvliegers (85.53).",
+   "DimensionGroupId": "31"
+  },
+  {
+   "Identifier": "387800",
+   "Index": 53,
+   "Title": "5224 Laad-, los- en overslagbedrijven",
+   "Description": "Laad-, los- en overslagactiviteiten",
+   "DimensionGroupId": "31"
+  },
+  {
+   "Identifier": "388100",
+   "Index": 54,
+   "Title": "5229 Tussenpersonen vrachtvervoer",
+   "Description": "Expediteurs, cargadoors en bevrachters; weging en meting",
+   "DimensionGroupId": "31"
+  },
+  {
+   "Identifier": "388400",
+   "Index": 55,
+   "Title": "53 Post en koeriers",
+   "Description": "Post en koeriers \r\nDeze afdeling omvat: \r\n- nationale en lokale postdiensten; \r\n- koeriersbedrijven.",
+   "DimensionGroupId": "5"
+  },
+  {
+   "Identifier": "389100",
+   "Index": 56,
+   "Title": "I Horeca",
+   "Description": "Logies-, maaltijd- en drankverstrekking \r\nDeze sectie omvat: \r\n- het aan gasten verschaffen van logies en/of bereide maaltijden, snacks en dranken voor onmiddellijke consumptie. \r\nDe verschillende activiteiten in sectie I overlappen elkaar in zekere mate, omdat bijvoorbeeld de verkoop van dranken een activiteit op zich is, maar ook deel uitmaakt van de activiteiten van een restaurant (waar bij de \r\nmaaltijden dranken worden verstrekt) en dan met de verkoop van maaltijden bij 56.1 (Restaurants) wordt ingedeeld. Evenzo vormt de exploitatie van een restaurant een aparte activiteit, maar kan zij ook deel uitmaken van een bedrijf dat logies verschaft. \r\nLogiesverschaffende eenheden bieden reizigers, vakantiegangers en anderen accommodatie voor kortstondig verblijf (korter dan 3 maanden) aan. Er zijn vele verschillende eenheden. Sommige verschaffen alleen logies, terwijl andere naast logies ook maaltijden en recreatieve faciliteiten aanbieden. Het soort aanvullende dienstverlening kan van eenheid tot eenheid verschillen. \r\nRestaurants verstrekken volledige, voor onmiddellijke consumptie geschikte maaltijden, ongeacht of het traditionele restaurants, zelfbedienings- of afhaalrestaurants, dan wel permanente of tijdelijke viskramen en \r\ndergelijke met of zonder zitplaatsen zijn. Bepalend is het feit dat er voor onmiddellijke consumptie geschikte maaltijden worden aangeboden, niet het soort gelegenheid dat deze maaltijden verstrekt. \r\nDeze sectie omvat niet: \r\n- de productie van maaltijden niet voor onmiddellijke consumptie geschikt of maaltijden of bereid voedsel dat niet als maaltijd wordt beschouwd (SBI 10: voedingsmiddelenindustrie); \r\n- de verkoop van niet zelf vervaardigd voedsel dat niet als maaltijd wordt beschouwd of van niet voor onmiddellijke consumptie geschikte maaltijden (SBI 46 groothandel of SBI 47 detailhandel afhankelijk van de afnemerscategorie).",
+   "DimensionGroupId": "1"
+  },
+  {
+   "Identifier": "389105",
+   "Index": 57,
+   "Title": "Traditionele Horeca",
+   "Description": "Traditionele Horeca \r\nDeze categorie is een samentelling van categorieën: \r\n55.1 Hotels e.d. \r\n56.1 Restaurants, cafetaria's e.d. \r\n56.3 Cafés",
+   "DimensionGroupId": "26"
+  },
+  {
+   "Identifier": "389200",
+   "Index": 58,
+   "Title": "55 Logiesverstrekking",
+   "Description": "Logiesverstrekking",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "389300",
+   "Index": 59,
+   "Title": "551 Hotels",
+   "Description": "Hotels en dergelijke",
+   "DimensionGroupId": "18"
+  },
+  {
+   "Identifier": "390500",
+   "Index": 60,
+   "Title": "56 Eet- en drinkgelegenheden",
+   "Description": "Eet- en drinkgelegenheden",
+   "DimensionGroupId": "6"
+  },
+  {
+   "Identifier": "390600",
+   "Index": 61,
+   "Title": "561 Restaurants, andere eetgelegenheden",
+   "Description": "Restaurants, cafetaria's en dergelijke en ijssalons",
+   "DimensionGroupId": "19"
+  },
+  {
+   "Identifier": "390800",
+   "Index": 62,
+   "Title": "56101 Restaurants",
+   "Description": "Restaurants \r\nDeze klasse omvat: \r\n- verstrekken van maaltijden voor directe consumptie ter plekke met eventueel afzonderlijke verstrekking van dranken of kleine eetwaren voor directe consumptie; \r\n- restaurants in combinatie met afhaalrestaurant; \r\n- partycentra en eetcafés met verstrekking volledige maaltijden; \r\n- pannenkoekenrestaurants; \r\n- het geven van kookworkshops in restaurants. \r\nDeze klasse omvat niet: \r\n- exploitatie van restaurant in combinatie met verschaffen van logies voor kortstondig verblijf (5510.1); \r\n- verstrekken van bereide maaltijden uitsluitend via afhaalrestaurants (56.10.2); \r\n- verstrekken van kleine eetwaren inclusief \"fastfoodrestaurants\" (56.10.2); \r\n- verstrekken van bereide maaltijden in school- en bedrijfskantines e.d. (56.29); \r\n- verstrekken van bereide maaltijden welke uitsluitend geleverd worden via bezorgdienst (56.29); \r\n- verstrekken van bereide maaltijden via partycatering (56.21).",
+   "DimensionGroupId": "39"
+  },
+  {
+   "Identifier": "390905",
+   "Index": 63,
+   "Title": "56102 Fastfoodrestaurants, ijssalons etc",
+   "Description": "Fastfoodrestaurants, cafetaria's, ijssalons, eetkramen e.d. \r\nDeze klasse omvat: \r\n- verstrekken van al dan niet zelf bereide kleine eetwaren voor directe consumptie ter plekke met daarnaast afzonderlijk verstrekken van dranken voor directe consumptie ter plekke; \r\n- verstrekken van zelf bereide kleine eetwaren niet voor directe consumptie; \r\n- verstrekken van bereide maaltijden niet voor directe consumptie ter plekke, z.g. afhaalrestaurants. \r\n- verstrekken van al dan niet zelf bereide banketbakkersartikelen voor directe consumptie ter plekke waarbij zitgelegenheid aanwezig is, lunchrooms e.d.; \r\n- z.g. fastfoodrestaurants, cafetaria's, snackbars, eetkramen, food trucks; \r\n- verstrekken van al dan niet zelf vervaardigd ijs voor directe consumptie ter plekke waarbij zitgelegenheid aanwezig is; \r\n- ijsventers, verkoop van ijs op markten, braderieën en andere ambulante verkoopplaatsen. \r\n- exploitatie van automatieken voor snacks en andere kleine eetwaren; \r\n- vervaardiging van popcorn voor onmiddelijke consumptie. \r\nDeze klasse omvat niet: \r\n- vervaardigen van ijs voor verkoop aan bedrijfsmatige gebruikers (10.52); \r\n- verstrekken van niet-zelfbereide eetwaren aan consumenten niet voor directe consumptie ter plekke (detailhandel 47.xx.x); \r\n- verkoop van ijs vanuit woonhuis (47.99.9); \r\n- automatencatering bij bedrijven en instellingen (56.29); \r\n- verstrekken van kleine eetwaren in school- en bedrijfskantines e.d. (56.29); \r\n- verstrekken van bereide eetwaren uitsluitend via een bezorgdienst (56.21); \r\n- verstrekken van eetwaren via partycatering (56.21).",
+   "DimensionGroupId": "39"
+  },
+  {
+   "Identifier": "391100",
+   "Index": 64,
+   "Title": "562 Kantines en catering",
+   "Description": "Kantines en catering \r\nDeze groep omvat: \r\n- verstrekken van bereide maaltijden en kleine eetwaren voor meestal eenmalige gebeurtenissen (event- en partycatering), \r\n w.o. huwelijken, feesten, recepties e.d.; \r\n w.o. congressen; \r\n w.o. banketten en andere speciale feestelijke gelegenheden; \r\n- verstrekken van bereide maaltijden en eetwaren welke uitsluitend via een bezorgdienst worden geleverd. Er is bij de eenheid geen mogelijkheid tot afhalen c.q. consumptie te plaatse; \r\n- zelfstandige (freelance) koks, kelners, barista's; \r\n- verstrekken van maaltijden, kleine eetwaren en dranken aan grote groepen mensen tegelijk op basis van een contractuele duurovereenkomst (contractcatering) zoals in bedrijfskantines, schoolkantines en -keukens, universiteitsmensa's, messes en kantines voor militairen, ziekenhuizen, verpleeg- en bejaardentehuizen, serviceflats, e.d.; \r\n- luchtvaartcatering; \r\n- automatencatering, verzorging dranken en eetwaren via automaten bij bedrijven en instellingen; \r\n- exploitatie van sportkantines. \r\nDeze klasse omvat niet: \r\n- exploitatie van automatieken voor dranken en eetwaren (56.10.2).",
+   "DimensionGroupId": "19"
+  },
+  {
+   "Identifier": "391400",
+   "Index": 65,
+   "Title": "563 Cafés",
+   "Description": "Cafés \r\nDeze groep omvat: \r\n- verstrekken van dranken voor consumptie ter plekke, eventueel in combinatie met amusement en verkoop van kleine eetwaren in cafés, bars, discotheken, nachtclubs, bierhallen, buffetten in schouwburgen enz.; \r\n- exploitatie van zalen voor feesten en partijen met horecaverstrekkingen. \r\nDeze klasse omvat niet: \r\n- verstrekken van dranken in koffieshops in combinatie met verkoop van softdrugs (47.29.9); \r\n- verstrekken van dranken in combinatie met het verschaffen van logies (551x); \r\n- verstrekken van dranken in sport-, school- en bedrijfskantines (56.29); \r\n- internetcafés (61.90); \r\n- exploitatie van zalen voor feesten en partijen zonder horecaverstrekking (68.20.4); \r\n- seksclubs (96.09).",
+   "DimensionGroupId": "19"
+  },
+  {
+   "Identifier": "391600",
+   "Index": 66,
+   "Title": "J Informatie en communicatie",
+   "Description": "Informatie en communicatie \r\nDeze sectie omvat: \r\n- de productie en distributie van informatie, de voorziening van de infrastructuur om die informatie door te geven, alsmede activiteiten op het gebied van data- en communicatie-informatietechnologie en het bewerken van data en andere informatie. \r\nDe belangrijkste activiteiten die hier ingedeeld worden zijn het uitgeven (afdeling 58, incl. het uitgeven van software), productie van films en geluidsopnamen (afdeling 59) radio en TV (afdeling 60), telecommunicatie (afdeling 61), informatietechnologie (afdeling 62) en andere dienstverlening op het gebied van informatie (afdeling 63). Uitgeven omvat ook het verkrijgen van de copyrights voor de content (informatieproducten) en het toegankelijk maken hiervan voor een breed publiek. Alle mogelijke vormen van uitgeven vallen onder deze sectie (in drukvorm, elektronisch of audio, op het internet, als multimediaproduct enzovoorts).",
+   "DimensionGroupId": "1"
+  },
+  {
+   "Identifier": "391700",
+   "Index": 67,
+   "Title": "58 Uitgeverijen",
+   "Description": "Uitgeverijen",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "392600",
+   "Index": 68,
+   "Title": "59 Film- en tv-productie; geluidsopname",
+   "Description": "Productie en distributie van films en televisieprogramma´s; maken en uitgeven van geluidsopnamen",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "393300",
+   "Index": 69,
+   "Title": "5914 Bioscopen",
+   "Description": "Bioscopen \r\nDeze klasse omvat: \r\n- vertoning van films in bioscopen, filmhuizen, autobioscopen e.d.; \r\n- verhuur van films met bedienend personeel, reisbioscopen.",
+   "DimensionGroupId": "32"
+  },
+  {
+   "Identifier": "393600",
+   "Index": 70,
+   "Title": "60 Radio- en televisieomroepen",
+   "Description": "Verzorgen en uitzenden van radio- en televisieprogramma's",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "394100",
+   "Index": 71,
+   "Title": "61 Telecommunicatie",
+   "Description": "Telecommunicatie \r\nDeze afdeling omvat: \r\n- exploitatie, onderhoud en bieden van toegang tot het overbrengen van gesproken woord, data, tekst, geluid en beelden via eigen draadgebonden telecommunicatie-infrastructuur: \r\n w.o. exploitatie en onderhoud van schakel- en zendstations; \r\n w.o. aanbieden van vaste telefonie; \r\n w.o. kabelexploitatie (voor TV, data etc.); \r\n w.o. verlenen van internettoegang via ADSL of kabel (eventueel in combinatie met aanvullende diensten als email-/webpagina servers, en spam-/virusscan); \r\n w.o. Centrale Antenne Inrichtingen (CAI's); \r\n- exploitatie, onderhoud en bieden van toegang tot het overbrengen van gesproken woord, data, tekst, geluid en beelden via eigen draadloze telecommunicatie-infrastructuur, zoals het aanbieden van draadloos internet via eigen infrastructuur en exploitatie van mobiele netwerken; \r\n- exploitatie, onderhoud en bieden van toegang tot het overbrengen van gesproken woord, data, tekst, geluid en beelden via satelliet; \r\n- belwinkels en belhuizen; \r\n- internetcafés; \r\n- internetproviders (zonder eigen infrastructuur); \r\n- voicing services (technisch functioneren als telefooncentrale van een bedrijf, dus geen callcenters); \r\n- aanbieden van VoIP (bellen over internet).",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "395000",
+   "Index": 72,
+   "Title": "62 IT-dienstverlening",
+   "Description": "Dienstverlenende activiteiten op het gebied van informatietechnologie",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "395600",
+   "Index": 73,
+   "Title": "63 Diensten op het gebied van informatie",
+   "Description": "Dienstverlenende activiteiten op het gebied van informatie",
+   "DimensionGroupId": "7"
+  },
+  {
+   "Identifier": "395700",
+   "Index": 74,
+   "Title": "631 Gegevensverwerking e.d.; webportals",
+   "Description": "Gegevensverwerking, webhosting en aanverwante activiteiten; webportals \r\nDeze groep omvat: \r\n- gegevensverwerking, data-entry; \r\n- hosting: opslaan van websites, data, informatie, afbeeldingen, video's, e.d.; \r\n- webhosting, streaming services, application hosting; \r\n- beheer van domeinnamen; \r\n- exploitatie van websites die overzichtelijk toegang verlenen aan een uitgebreid bestand aan sites op een bepaald gebied. Ze bevatten zelf geen content (inhoud), maar zijn bedoeld om door te linken, bijvoorbeeld \"startpagina.nl\".",
+   "DimensionGroupId": "20"
+  },
+  {
+   "Identifier": "402000",
+   "Index": 75,
+   "Title": "L Verhuur en handel van onroerend goed",
+   "Description": "Verhuur van en handel in onroerend goed \r\nDeze sectie omvat: \r\n- verhuur van onroerend goed; \r\n- bemiddeling in en beheer van onroerend goed.",
+   "DimensionGroupId": "1"
+  },
+  {
+   "Identifier": "402100",
+   "Index": 76,
+   "Title": "68 Verhuur en handel van onroerend goed",
+   "Description": "Verhuur van en handel in onroerend goed \r\nDeze divisie omvat: \r\n- verhuur van onroerend goed; \r\n- bemiddeling in en beheer van onroerend goed.",
+   "DimensionGroupId": "8"
+  },
+  {
+   "Identifier": "300010",
+   "Index": 77,
+   "Title": "M-N Zakelijke dienstverlening",
+   "Description": "Zakelijke dienstverlening \r\nDeze categorie is een samentelling van categorieën: \r\nM Advisering, onderzoek en overige specialistische zakelijke dienstverlening \r\nN Verhuur van roerende goederen en overige zakelijke dienstverlening",
+   "DimensionGroupId": "2"
+  },
+  {
+   "Identifier": "403400",
+   "Index": 78,
+   "Title": "69 Juridische diensten en administratie",
+   "Description": "Rechtskundige dienstverlening, accountancy, belastingadvisering en administratie",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "403500",
+   "Index": 79,
+   "Title": "691 Rechtskundige dienstverlening",
+   "Description": "Rechtskundige dienstverlening \r\nDeze groep omvat: \r\n- advocatenkantoren en rechtskundige adviesbureaus; \r\n- notariskantoren; \r\n- deurwaarderskantoren; \r\n- octrooibureaus.",
+   "DimensionGroupId": "21"
+  },
+  {
+   "Identifier": "404200",
+   "Index": 80,
+   "Title": "692 Accountancy, administratie e.d.",
+   "Description": "Accountancy, belastingadvisering en administratie \r\nDeze groep omvat: \r\n- registeraccountants en accountants-administratieconsulenten; \r\n- boekhoudkantoren en belastingconsulenten; \r\n- overige administratiekantoren.",
+   "DimensionGroupId": "21"
+  },
+  {
+   "Identifier": "405400",
+   "Index": 81,
+   "Title": "702 Managementadviesbureaus",
+   "Description": "Advisering op het gebied van management en bedrijfsvoering",
+   "DimensionGroupId": "22"
+  },
+  {
+   "Identifier": "405900",
+   "Index": 82,
+   "Title": "71 Architecten-, ingenieursbureaus e.d.",
+   "Description": "Architecten, ingenieurs en technisch ontwerp en advies; keuring en controle",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "406100",
+   "Index": 83,
+   "Title": "7111 Architectenbureaus",
+   "Description": "Architecten \r\nDeze klasse omvat: \r\n- ontwerpen en tekenen van bouwwerken voor de burgerlijke en utiliteitsbouw, zowel voor nieuwbouw, restauratie als verbouw. \r\n- ontwerpen van de bouwkundige inrichting binnen gebouwen, inclusief het ontwerp van de kamerindeling en de bekabeling. \r\nEventueel in combinatie met: \r\n- interieurontwerp. \r\nDeze klasse omvat niet: \r\n- ontwerpen van stedenbouwkundige projecten, tuinen, groenvoorzieningen e.d. (71.12); \r\n- ontwerpen van bouwwerken voor de water- en wegenbouw zoals bruggen, tunnels, sluizen e.d. (71.12); \r\n- interieurontwerp en -advies (74.10.3).",
+   "DimensionGroupId": "33"
+  },
+  {
+   "Identifier": "406200",
+   "Index": 84,
+   "Title": "7112 Ingenieursbureaus",
+   "Description": "Ingenieurs en overig technisch ontwerp en advies \r\nDeze klasse omvat: \r\n- ontwerpen en tekenen van projecten op het gebied van grondmechanica, staal- en betonbouw, bouwconstructies e.d.; \r\n- ontwerpen en tekenen van projecten op het gebied van bouwfysica en geluids- en trillingstechniek; \r\n- adviseren op het gebied van bouwakoestiek en lawaaibeheersing en -bestrijding; \r\n- adviseren op het gebied van bouwkosten, bouwkwaliteit, bouworganisatie, bouwbegeleiding e.d.; \r\n- adviseren op het gebied van gebruik en verwerking van bouwproducten; \r\n- uitvoeren van technische berekeningen van projecten voor de burgerlijke en utiliteitsbouw, stedenbouw, verkeers-, tuin- en landschapskunde, ruimtelijke ordening en planologie, grond-, water- en wegenbouw; \r\n- ontwerpen van stedenbouwkundig en verkeerskundige projecten; \r\n- ontwerpen van landschapsonderdelen en recreatiegebieden in de onbebouwde omgeving; \r\n- ontwerpen van stadsparken, stads- en dorpsranden, groenvoorzieningen e.d. in de naaste woonomgeving; \r\n- ontwerpen van tuinen en andere groenvoorzieningen rondom bouwwerken; \r\n- adviseren over aanleg van tuinen en parken; \r\n- ontwerpen van sportvelden; \r\n- adviseren op het gebied van stedenbouw, ruimtelijke ordening, planologie en milieu; \r\n- ontwerpen en tekenen van bouwwerken water- en wegenbouw, \r\n w.o. bruggen, tunnels, sluizen, viaducten enz.; \r\n- ontwerpen en tekenen van transportleidingsystemen; \r\n- adviseren op het gebied van projecten voor de grond-, water- en wegenbouw en off-shore; \r\n- ontwerpen en tekenen van elektrotechnische installaties, zoals liften, roltrappen en lichtinstallaties; \r\n- ontwerpen en tekenen van bouwtechnische installaties, zoals sanitair en klimaatbeheersing; \r\n- ontwerpen en tekenen van op het gebied van telematica; \r\n- ontwerpen, tekenen adviseren m.b.t. alarm-, brand- en inbraakbeveiliging; \r\n- ontwerpen en tekenen van werktuigen, machines en apparaten en van projecten op het gebied van de industriële automatisering; \r\n- adviseren op het gebied van werktuig-, machine- en apparatenbouw; \r\n- uitvoeren van technische berekeningen voor werktuig-, machine- en apparatenbouw; \r\n- ontwerpen, tekenen en berekenen van projecten op het gebied van de procestechniek in de chemische en petrochemische industrie; \r\n- ontwerpen van geografische kaarten, luchtkartering; \r\n- landmeetkundige en kadastrale activiteiten, kadasters; \r\n- meteorologische instituten, freelance weerkundigen e.d.; \r\n- milieuadviesdiensten; \r\n- verzorgen van asbest inventarisatierapporten; \r\n- geologisch en geofysisch bodemonderzoek; \r\n- tekenen van technische illustraties voor boeken en tijdschriften; \r\n- adviseren m.b.t. bedrijfsveiligheid op werkplekken e.d.; \r\n- adviseren op het gebied van gebruik en verwerking van (niet-bouwkundige) producten; \r\n- archeologische adviesbureaus; \r\n- ontwerpen van certificatiesystemen op bovengenoemde gebieden; \r\n- projectbegeleiding op alle bovengenoemde gebieden; \r\n- overige technische ontwerp-, teken- en adviesbureaus voor zover elders niet genoemd. \r\nEventueel in combinatie met: \r\n- het voeren van de directie tijdens de aanleg c.q. bouw van de projecten. \r\nDeze klasse omvat niet: \r\n- ontwerpen van bouwwerken voor burgerlijke en utiliteitsbouw (71.11); \r\n- tekenen van reclame (73.11); \r\n- aanleggen van tuinen, parken e.d. groenvoorzieningen (81.30).",
+   "DimensionGroupId": "33"
+  },
+  {
+   "Identifier": "406300",
+   "Index": 85,
+   "Title": "712 Keurings- en controlediensten",
+   "Description": "Keuring en controle \r\nDeze groep omvat: \r\n- routinematig keuren, controleren en testen van voedings- en genotmiddelen onder meer met het oog op voedingshygiëne; \r\n- vee- en vleeskeuringsdiensten \r\n- melkcontrole- en zuivelkeuringsdiensten; \r\n- warenkeuringsdiensten; \r\n- keuring en controle van land- en tuinbouwproducten. \r\n- verrichten van metingen in verband met de zuiverheid van water of lucht; \r\n- verrichten van metingen van de radioactiviteit e.d.; \r\n- verrichten van analyses van potentiële bronnen van verontreiniging, zoals rook en afvalwater; \r\n- verrichten van onderzoek, inventarisatie en rapportage op het voorkomen van asbest; \r\n- verrichten van keuring en controle op het gebied van bodemverontreiniging. \r\n- inspecteren, routinematig keuren, controleren en testen van alle mogelijke materialen, machines, apparaten, technische installaties, gebruiksvoorwerpen e.d.; \r\n- inspectie van gas- en olietransportleidingen, rioleringen al dan niet met camera's; \r\n- quality survey; \r\n- ijken van machines, apparaten, technische installaties, schepen e.d.; \r\n- verrichten van autokeuringen. \r\nDeze klasse omvat niet: \r\n- controleren van ladingen van transportmiddelen (52.29.2); \r\n- certificeren van onroerend goed projecten (68.31); \r\n- speur- en ontwikkelingswerk (72.1); \r\n- medische laboratoria (86.92.4).",
+   "DimensionGroupId": "23"
+  },
+  {
+   "Identifier": "408100",
+   "Index": 86,
+   "Title": "73 Reclamewezen en marktonderzoek",
+   "Description": "Reclame en marktonderzoek",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "408200",
+   "Index": 87,
+   "Title": "731 Reclamewezen",
+   "Description": "Reclamebureaus en handel in advertentieruimte en -tijd",
+   "DimensionGroupId": "24"
+  },
+  {
+   "Identifier": "408500",
+   "Index": 88,
+   "Title": "732 Markt- en opinieonderzoek",
+   "Description": "Markt- en opinieonderzoekbureaus \r\nDeze groep omvat: \r\n- onderzoek naar marktstructuren en marktontwikkeling; \r\n- onderzoek naar consumentengedrag en gebruikersgewoonten; \r\n- onderzoek naar grootverbruikersmarkten; \r\n- onderzoek naar bevolkingsstructuur, personeels- en arbeidsmarkt; \r\n- imago-onderzoek van producten en bedrijven; \r\n- uitvoeren van opiniepeilingen. \r\nDeze klasse omvat niet: \r\n- speur- en ontwikkelingswerk met betrekking tot marktonderzoek en marktanalyse (72.20); \r\n- reclameadviesbureaus (73.11).",
+   "DimensionGroupId": "24"
+  },
+  {
+   "Identifier": "408700",
+   "Index": 89,
+   "Title": "74 Design, fotografie, vertaalbureaus",
+   "Description": "Industrieel ontwerp en vormgeving, fotografie, vertaling en overige consultancy",
+   "DimensionGroupId": "9"
+  },
+  {
+   "Identifier": "410200",
+   "Index": 90,
+   "Title": "N Verhuur en overige zakelijke diensten",
+   "Description": "Verhuur van roerende goederen en overige zakelijke dienstverlening \r\nDeze sectie omvat: \r\n- activiteiten die zakelijke gebruikers ondersteunen bij de bedrijfsvoering. Het verschil van deze activiteiten met die uit sectie M is dat de activiteiten uit deze sectie niet primair gericht zijn op het overbrengen van expertise en kennis.",
+   "DimensionGroupId": "1"
+  },
+  {
+   "Identifier": "410300",
+   "Index": 91,
+   "Title": "77 Verhuur van roerende goederen",
+   "Description": "Verhuur en lease van auto's, consumentenartikelen, machines en overige roerende goederen",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "412700",
+   "Index": 92,
+   "Title": "78 Uitzendbureaus en arbeidsbemiddeling",
+   "Description": "Arbeidsbemiddeling, uitzendbureaus en personeelsbeheer",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "413700",
+   "Index": 93,
+   "Title": "79 Reisbureaus, reisorganisatie en -info",
+   "Description": "Reisbemiddeling, reisorganisatie, toeristische informatie en reserveringsbureaus",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "414300",
+   "Index": 94,
+   "Title": "80 Beveiligings- en opsporingsdiensten",
+   "Description": "Beveiliging en opsporing",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "415000",
+   "Index": 95,
+   "Title": "81 Schoonmaakbedrijven, hoveniers e.d.",
+   "Description": "Facility management, reiniging en landschapsverzorging",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "415100",
+   "Index": 96,
+   "Title": "811 Facility management",
+   "Description": "Facility management \r\nDeze groep omvat: \r\n- een combinatie van diensten in een vestiging van de cliënt. Deze diensten omvatten interieurreiniging, technisch onderhoud, afvalbeheer, bewaking en beveiliging, postzaken, receptie en andere ondersteunende diensten; \r\n- verhuren van tijdelijke werkplekken met ICT, catering, advies.",
+   "DimensionGroupId": "25"
+  },
+  {
+   "Identifier": "415300",
+   "Index": 97,
+   "Title": "812 Schoonmaakbedrijven",
+   "Description": "Reiniging \r\nDeze klasse omvat: \r\n- glazenwassen; \r\n- schoorsteenvegen en schoonmaken van rookkanalen; \r\n- brand- en roetreiniging (niet met behulp van zandstralen of stoom); \r\n- gevelreiniging met behulp van het onder hoge druk spuiten van water; \r\n- verwijdering van graffiti; \r\n- reinigen van industriële installaties en van tanks en silo's; \r\n- de gaswacht (schoonmaken en controle van gastoestellen); \r\n- schoonmaken van kachels, ovens, boilers, e.d.; \r\n- reinigen van interieurs van woningen, kantoren en andere gebouwen of gedeelten daarvan; \r\n- schoonmaken van toiletten inclusief verversen handdoeken, toiletpapier, zeepautomaat e.d. \r\n- schoonmaken van tanks van schepen en vrachtwagens; \r\n- classificeren van schepen; \r\n- reinigen van treinen, bussen, vliegtuigen, e.d.; \r\n- schoonmaken van vuilcontainers; \r\n- schoonmaken van verpakkingsmiddelen flessen, kratten, pallets e.d.; \r\n- bestrijden van vogeloverlast bij vliegvelden, gebouwen e.d.; \r\n- desinfecteren en bestrijden van ongedierte (niet ten behoeve van de landbouw); \r\n- steriliseren van medische instrumenten en hulpmiddelen; \r\n- schoonmaken van graven en grafmonumenten; \r\n- de bierwacht (schoonmaken en controle van bierleidingen). \r\nDeze klasse omvat niet: \r\n- verwijderen van asbest (39.00); \r\n- reinigen van gevels met stoom, door zandstralen e.d. (43.39); \r\n- reinigen van gebouwen en opruimen van bouwplaatsen na de bouw (43.39); \r\n- particuliere huishoudens met schoonmaakpersoneel in dienst (97.00).",
+   "DimensionGroupId": "25"
+  },
+  {
+   "Identifier": "415400",
+   "Index": 98,
+   "Title": "8121 Interieurreiniging van gebouwen",
+   "Description": "Interieurreiniging van gebouwen \r\nDeze klasse omvat: \r\n- reinigen van interieurs van woningen, kantoren en andere gebouwen of gedeelten daarvan; \r\n- schoonmaken van toiletten inclusief verversen handdoeken, toiletpapier, zeepautomaat e.d.; \r\n- leeg halen van panden/woningen en veegschoon opleveren. \r\nDeze klasse omvat niet: \r\n- particuliere huishoudens met schoonmaakpersoneel in dienst (97.00).",
+   "DimensionGroupId": "34"
+  },
+  {
+   "Identifier": "415700",
+   "Index": 99,
+   "Title": "813 Hoveniersbedrijven",
+   "Description": "Landschapsverzorging \r\nDeze groep omvat: \r\n- aanleg en onderhoud van tuinen, plantsoenen en parken; \r\n- aanleg en onderhoud van bermen; \r\n- aanleg en onderhoud van groenvoorzieningen van sportaccommodaties; \r\n- aanleg en onderhoud van tuinvijvers en aanplantingen hiervoor; \r\n- aanbrengen en onderhoud van interieurbeplanting en grafbeplanting. \r\nDeze klasse omvat niet: \r\n- ontwerpen van tuinen en groenvoorzieningen (71.12); \r\n- aanleg en onderhoud van sportaccommodaties voor zover niet uitsluitend de groenvoorziening (42.99).",
+   "DimensionGroupId": "25"
+  },
+  {
+   "Identifier": "415900",
+   "Index": 100,
+   "Title": "82 Overige zakelijke dienstverlening",
+   "Description": "Overige zakelijke dienstverlening",
+   "DimensionGroupId": "10"
+  },
+  {
+   "Identifier": "437500",
+   "Index": 101,
+   "Title": "95 Reparatie van consumentenartikelen",
+   "Description": "Reparatie van computers en consumentenartikelen",
+   "DimensionGroupId": "11"
+  },
+  {
+   "Identifier": "439200",
+   "Index": 102,
+   "Title": "9602 Kappers en schoonheidsverzorging",
+   "Description": "Haar- en schoonheidsverzorging",
+   "DimensionGroupId": "35"
+  },
+  {
+   "Identifier": "439300",
+   "Index": 103,
+   "Title": "96021 Kappers",
+   "Description": "Haarverzorging \r\nDeze klasse omvat: \r\n- wassen, knippen, verven, kleurspoelen, onduleren e.d. van haar, evenals scheren en knippen. \r\nDeze klasse omvat niet: \r\n- vervaardiging van pruiken (32.99.9).",
+   "DimensionGroupId": "40"
+  },
+  {
+   "Identifier": "439400",
+   "Index": 104,
+   "Title": "96022 Schoonheidssalons en pedicures",
+   "Description": "Schoonheidsverzorging, pedicures en manicures, visagie en image consulting \r\nDeze klasse omvat: \r\n- verrichten van niet-medische diensten in verband met de lichamelijke schoonheid, zoals gezichtsverzorging en -massage, antirimpelbehandeling, epileren, pedicure, manicure; \r\n- geven van kleur- en kledingadviezen; \r\n- image consulting: helpen de eigen persoonlijkheid te accentueren via uiterlijk en gedrag. \r\nDeze klasse omvat niet: \r\n- verrichten van medisch behandelingen in verband met lichamelijke schoonheid zoals plastische chirurgie, vergroten/verkleinen van borsten, huidtransplantatie (86.22.1); \r\n- verrichten van diensten in verband met het lichamelijk welzijn zoals sauna's, solaria, baden, wellness centra, enz. (96.04).",
+   "DimensionGroupId": "40"
+  },
+  {
+   "Identifier": "900051",
+   "Index": 105,
+   "Title": "4711, 472 Winkels in voedingsmiddelen",
+   "Description": "",
+   "DimensionGroupId": "43"
+  },
+  {
+   "Identifier": "B000657",
+   "Index": 106,
+   "Title": "Detailhandel excl. auto's, tankstations",
+   "Description": "",
+   "DimensionGroupId": "43"
+  },
+  {
+   "Identifier": "B000658",
+   "Index": 107,
+   "Title": "Winkels in non-food, dh geen winkel",
+   "Description": "",
+   "DimensionGroupId": "43"
+  },
+  {
+   "Identifier": "403300",
+   "Index": 108,
+   "Title": "M Specialistische zakelijke diensten",
+   "Description": "",
+   "DimensionGroupId": "1"
+  },
+  {
+   "Identifier": "B000655",
+   "Index": 109,
+   "Title": "H+I+J+L+M+N Totaal dienstverlening",
+   "Description": "",
+   "DimensionGroupId": "43"
+  }
+ ]
+}

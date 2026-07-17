@@ -1,0 +1,116 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/85828NED/$metadata#Properties",
+ "Identifier": "85828NED",
+ "Title": "Handel en diensten; omzet- en productieontwikkeling, index 2021=100",
+ "Description": "Deze tabel bevat cijfers over de omzet- en productieontwikkeling van de handel en diensten. De cijfers kunnen worden uitgesplitst naar branche volgens de Standaard bedrijfsindeling (SBI 2008) van het CBS. De ontwikkeling wordt weergegeven als procentuele verandering ten opzichte van een vorige periode en door middel van indexcijfers met als basisjaar 2021. \r\n\r\nDe omzet- en productieontwikkelingen worden in twee vormen gepubliceerd. Allereerst als jaar-op-jaarontwikkelingen waarbij de groei ten opzichte van dezelfde periode in het voorafgaande jaar uitgedrukt wordt. Deze cijfers worden ongecorrigeerd en kalendergecorrigeerd gepresenteerd. De tweede vorm betreft periode-op-periodeontwikkelingen: maand-op-maand of kwartaal-op-kwartaal. Periode-op-periodeontwikkelingen zijn mogelijk door het toepassen van seizoencorrectie.\r\n\r\nGegevens beschikbaar vanaf: januari 2000 voor branches binnen SBI 47 detailhandel en het eerste kwartaal van 2005 voor alle andere branches.\r\n\r\nStatus van de cijfers:\r\nDe cijfers van 2026 zijn voorlopig.\r\n\r\nDe cijfers van een kalenderjaar worden uiterlijk zes maanden na afloop van dat kalenderjaar definitief. Door nagekomen respons kunnen de cijfers tot die tijd nog wijzigen en wordt de status van “voorlopig” aangehouden.\r\n\r\nWijzigingen per 2 juli 2026:\r\nCijfers van de branches behorende bij de SBI-secties G, H, I, J, L, M, N en S zijn toegevoegd.De cijfers betreffen mei 2026 voor de detailhandel, en april 2026 voor de overige branches.\r\nCijfers met de status \"voorlopig\" kunnen zijn bijgesteld.\r\n\r\n\r\nOm de uitkomsten van deze indexreeksen aan te laten sluiten bij de actualiteit wordt eens in de vijf jaar een zogenaamde basisverlegging doorgevoerd. In 2024 is met het publiceren van deze tabel overgestapt van referentiejaar 2015 naar 2021 (2021=100) en zijn de wegingsfactoren geactualiseerd en gebaseerd op het jaar 2021. \r\n\r\nIn deze tabel zijn de gegevens van 9 losse tabellen samengevoegd. Welke tabellen dit betreft, vindt u verderop in deze tabeltoelichting onder “3. Koppelingen naar relevante tabellen en artikelen”.\r\n\r\nWanneer komen er nieuwe cijfers?\r\nVoor maandstatistieken publiceert het CBS als regel op de eerste werkdag van de derde maand na afloop van de verslagmaand, cijfers van de branche detailhandel worden op de eerste werkdag van de tweede maand na afloop van de verslagmaand gepubliceerd. Na publicatie van definitieve uitkomsten past het CBS de uitkomsten alleen aan als er grote bijstellingen en/of correcties noodzakelijk zijn.\r\n\r\n",
+ "Language": "nl",
+ "Authority": "https://standaarden.overheid.nl/owms/terms/Centraal_Bureau_voor_de_Statistiek",
+ "Modified": "2026-07-02T06:30:00+02:00",
+ "ReleaseDate": "2026-07-02T06:30:00+02:00",
+ "ModificationDate": "2026-07-02T06:30:00+02:00",
+ "TemporalCoverage": "2000 - 2025, 2000Q1 - 2025Q4, jan 2000 - mei 2026",
+ "Catalog": "CBS",
+ "Publisher": "https://standaarden.overheid.nl/owms/terms/Centraal_Bureau_voor_de_Statistiek",
+ "ContactPoint": "infoservice@cbs.nl",
+ "Version": "202607020630",
+ "VersionNotes": "De ontwikkelingen van twee branches over de periode mei en oktober 2022 zijn met 0,1 procentpunt bijgesteld als gevolg van een methodewijziging.",
+ "VersionReason": "Revisie",
+ "Frequency": "Per maand",
+ "Status": "Regulier",
+ "ObservationCount": 196301,
+ "ObservationsModified": "2026-07-02T06:30:00+02:00",
+ "DatasetType": "Numeric",
+ "GraphTypes": "Table,Bar,Line",
+ "License": "https://creativecommons.org/licenses/by/4.0/",
+ "Source": "CBS.",
+ "Summary": "Handel en diensten; omzet- en productieontwikkeling, index 2021=100\nNaar bedrijfsactiviteit (SBI 2008) High Value Dataset – Statistiek",
+ "LongDescription": "INHOUDSOPGAVE\r\n\r\n1. Toelichting\r\n2. Definities en verklaring van symbolen\r\n3. Koppelingen naar relevante tabellen en artikelen\r\n4. Bronnen en methoden\r\n5. Meer informatie\r\n\r\n\r\n1. TOELICHTING\r\n\r\nDeze tabel bevat cijfers over de omzet- en productieontwikkeling van de handel en diensten. De cijfers kunnen worden uitgesplitst naar branche volgens de Standaard bedrijfsindeling (SBI 2008) van het CBS. De ontwikkeling wordt weergegeven als procentuele verandering ten opzichte van een vorige periode en door middel van indexcijfers met als basisjaar 2021. \r\n\r\nDe omzet- en productieontwikkelingen worden in twee vormen gepubliceerd. Allereerst als jaar-op-jaarontwikkelingen waarbij de groei ten opzichte van dezelfde periode in het voorafgaande jaar uitgedrukt wordt. Deze cijfers worden ongecorrigeerd en kalendergecorrigeerd gepresenteerd. De tweede vorm betreft periode-op-periodeontwikkelingen: maand-op-maand of kwartaal-op-kwartaal. Periode-op-periodeontwikkelingen zijn mogelijk door het toepassen van seizoencorrectie.\r\n\r\nGegevens beschikbaar vanaf: januari 2000 voor branches binnen SBI 47 detailhandel en het eerste kwartaal van 2005 voor alle andere branches.\r\n\r\nStatus van de cijfers:\r\nDe cijfers van 2026 zijn voorlopig.\r\n\r\nDe cijfers van een kalenderjaar worden uiterlijk zes maanden na afloop van dat kalenderjaar definitief. Door nagekomen respons kunnen de cijfers tot die tijd nog wijzigen en wordt de status van “voorlopig” aangehouden.\r\n\r\nWijzigingen per 2 juli 2026:\r\nCijfers van de branches behorende bij de SBI-secties G, H, I, J, L, M, N en S zijn toegevoegd.De cijfers betreffen mei 2026 voor de detailhandel, en april 2026 voor de overige branches.\r\nCijfers met de status \"voorlopig\" kunnen zijn bijgesteld.\r\n\r\n\r\nOm de uitkomsten van deze indexreeksen aan te laten sluiten bij de actualiteit wordt eens in de vijf jaar een zogenaamde basisverlegging doorgevoerd. In 2024 is met het publiceren van deze tabel overgestapt van referentiejaar 2015 naar 2021 (2021=100) en zijn de wegingsfactoren geactualiseerd en gebaseerd op het jaar 2021. \r\n\r\nIn deze tabel zijn de gegevens van 9 losse tabellen samengevoegd. Welke tabellen dit betreft, vindt u verderop in deze tabeltoelichting onder “3. Koppelingen naar relevante tabellen en artikelen”.\r\n\r\nWanneer komen er nieuwe cijfers?\r\nVoor maandstatistieken publiceert het CBS als regel op de eerste werkdag van de derde maand na afloop van de verslagmaand, cijfers van de branche detailhandel worden op de eerste werkdag van de tweede maand na afloop van de verslagmaand gepubliceerd. Na publicatie van definitieve uitkomsten past het CBS de uitkomsten alleen aan als er grote bijstellingen en/of correcties noodzakelijk zijn.\r\n\r\n2. DEFINITIES EN VERKLARING VAN SYMBOLEN\r\n\r\nDefinities:\r\n\r\nCorrectie van ontwikkelingen\r\nOm ontwikkelingen vergelijkbaar te maken tussen perioden worden correcties toegepast. Bij kalendercorrectie wordt gecorrigeerd voor een verschil in de samenstelling van onder andere de werk- of koopdagen, schrikkeldagen en feestdagen in een periode vergeleken met diezelfde perioden in voorgaande jaren. Een andere samenstelling van kalenderdagen heeft hierdoor geen invloed op de jaar-op-jaarontwikkelingen. Als gevolg hiervan worden de ontwikkelingen zuiverder. Ter illustratie, omzet varieert per dag van de week: in sommige branches wordt op een zaterdag meer omzet gedraaid dan op een maandag, terwijl in andere branches op zaterdag en zondag geen omzet wordt gedraaid. Een periode met meer ongunstige weekdagen leidt verhoudingsgewijs tot een lagere omzet in vergelijking met de referentieperiode. Bij kalendercorrectie corrigeren we voor het effect dat het verschil in samenstelling van weekdagen in een periode heeft op de omzet.  \r\nBij seizoencorrectie wordt gecorrigeerd voor een min of meer vast seizoenpatroon als gevolg van omstandigheden in de verschillende seizoenen. Voorbeelden van deze patronen zijn hogere omzetten tijdens de feestdagen, meer ijsjesverkoop in de zomer en meer gasverbruik in de wintermaanden. Bij seizoencorrectie worden de effecten van deze jaarlijks terugkerende patronen uit de cijfers verwijderd waardoor de cijfers van opeenvolgende periodes direct vergeleken kunnen worden. Binnen het CBS worden de uitkomsten bij seizoencorrectie, naast voor seizoeneffecten, ook gecorrigeerd voor kalendereffecten.\r\nMet het corrigeren voor kalender- en/of seizoeneffecten kan het voorkomen dat de gemiddelde jaarindex van de gecorrigeerde reeks niet gelijk is aan die van de ongecorrigeerde reeks. Dit soort verschillen ontstaat bijvoorbeeld op het moment dat een bepaald jaar in totaal meer werkdagen heeft dan een ander jaar omdat een feestdag in het weekend valt.\r\n\r\nStandaard Bedrijfsindeling 2008 (SBI 2008)\r\nDe Nederlandse hiërarchische indeling van economische activiteiten die door het CBS wordt gebruikt om bedrijfseenheden in te delen naar hun hoofdactiviteit. De SBI 2008 is de versie die vanaf 2008 gebruikt wordt. “Bedrijfstak” of “branche” zijn gangbare termen voor groepen van bedrijven met dezelfde hoofdactiviteit. Het CBS hanteert voor de indeling van bedrijven naar hoofdactiviteit de zogenoemde Standaard Bedrijfsindeling (SBI). Bedrijven in een bedrijfstak of branche kunnen naast deze activiteit ook andere activiteiten (nevenactiviteiten) uitoefenen. De SBI 2008 kent meerdere niveaus die aangegeven worden door maximaal vijf cijfers. Het niveau van vier cijfers komt vrijwel overeen met de indeling van de Europese Unie (NACE). De eerste twee cijfers komen overeen met die van de indeling van Verenigde Naties (ISIC).\r\n\r\nVerklaring van symbolen:\r\n\r\nniets (blanco): het cijfer kan op logische gronden niet voorkomen\r\n.                   : het cijfer is onbekend, onvoldoende betrouwbaar of geheim\r\n*                  : voorlopige cijfers\r\n**                : nader voorlopige cijfers\r\n\r\n\r\n3. KOPPELINGEN NAAR RELEVANTE TABELLEN EN ARTIKELEN\r\n\r\nRelevante tabellen:\r\n\r\nKwartaalcijfers van de motor- en autobranche van de jaren 2005-2023 met als basisjaar het jaar 2015 vindt u in de tabel <a href='https://opendata.cbs.nl/statline/#/CBS/nl/dataset/83839NED/table?dl=A58DB'>Motor- en autobranche; omzetontwikkeling, index 2015=100.</a>\r\n\r\nKwartaalcijfers van de bedrijfstak personenauto-importeurs van de jaren 2005-2023 met als basisjaar het jaar 2015 vindt u in de tabel <a href='https://opendata.cbs.nl/statline/#/CBS/nl/dataset/83823NED/table?dl=9F1DE'>Personenauto-importeurs; omzetontwikkeling, index 2015=100.</a>\r\n\r\nKwartaalcijfers van de bedrijfstak groothandel en handelsbemiddeling van de jaren 2005-2023 met als basisjaar het jaar 2015 vindt u in de tabel <a href='https://opendata.cbs.nl/#/CBS/nl/dataset/83827NED/table?dl=A58DA'>Groothandelsbedrijven; omzetontwikkeling, index 2015=100.</a>\r\n\r\nKwartaalcijfers van de bedrijfstak detailhandel van de jaren 2005-2023 met als basisjaar het jaar 2015 vindt u in de tabel <a href='https://opendata.cbs.nl/statline/#/CBS/nl/dataset/83868NED/table?dl=A58DC'>Detailhandel; omzetontwikkeling, index 2015=100.</a>\r\n\r\nKwartaalcijfers van de bedrijfstak vervoer en opslag van de jaren 2005-2023 met als basisjaar het jaar 2015 vindt u in de tabel <a href='https://opendata.cbs.nl/statline/#/CBS/nl/dataset/83868NED/table?dl=A58DC'>Transportbedrijven; omzetontwikkeling, index 2015=100.</a>\r\n\r\nKwartaalcijfers van de bedrijfstak horeca van de jaren 2005-2023 met als basisjaar het jaar 2015 vindt u in de tabel <a href='https://opendata.cbs.nl/statline/#/CBS/nl/dataset/83862NED/table?dl=A58DE'>Horeca; omzetontwikkeling, index 2015=100.</a>\r\n\r\nKwartaalcijfers van de zakelijke en ICT-dienstverlening van de jaren 2005-2023 met als basisjaar het jaar 2015 vindt u in de tabel <a href='https://opendata.cbs.nl/statline/#/CBS/nl/dataset/83854NED/table?dl=A4CCD'>Zakelijke en ICT-dienstverlening; omzetontwikkeling, index 2015=100.</a>\r\n\r\nKwartaalcijfers van de bedrijfstak haar- en schoonheidsverzorging van de jaren 2005-2023 met als basisjaar het jaar 2015 vindt u in de tabel <a href='https://opendata.cbs.nl/statline/#/CBS/nl/dataset/83858NED/table?ts=1626292744967'>Kappers en schoonheidsverzorging; omzetontwikkeling, index 2015=100.</a>\r\n\r\nKwartaalcijfers met betrekking tot de dienstenprijzen commerciële dienstverlening en transport vindt u in de tabel <a href='https://opendata.cbs.nl/statline/#/CBS/nl/dataset/85817NED/table?ts=1716905997430'>Dienstenprijzen; commerciële dienstverlening en transport, index 2021=100</a>\r\n\r\nJaarcijfers met uitkomsten over de werkgelegenheid en de winst- en verliesrekening voor de bedrijfstakken die vallen onder handel en diensten treft u aan in de hieronder genoemde tabel. In de tabel kunt u de gegevens uitsplitsen naar branches en variabelen. <a href='https://opendata.cbs.nl/#/CBS/nl/dataset/81156ned/table?dl=A58E2'>Bedrijfsleven; arbeids- en financiële gegevens, per branche, SBI 2008.</a>\r\n\r\nRelevante artikelen:\r\n\r\nMeer informatie is te vinden op de themapagina’s <a href='https://www.cbs.nl/nl-nl/economie/handel-en-horeca'>Handel en Horeca</a>, <a href='https://www.cbs.nl/nl-nl/maatschappij/verkeer-en-vervoer'>Verkeer en vervoer</a>, en <a href='https://www.cbs.nl/nl-nl/economie/financiele-en-zakelijke-diensten'>Financiële en zakelijke diensten.</a>\r\n\r\nIn het <a href='https://www.cbs.nl/nl-nl/visualisaties/dashboard-economie/bedrijven#A-U'>Dashboard bedrijven</a> vindt u onder meer informatie over het aantal bedrijven per bedrijfstak en per regio en u vindt cijfers over de omzet. Ook vindt u hier de nieuwste onderzoeksresultaten over verwachte omzet, werkgelegenheid en investeringen.\r\n\r\n\r\n4. BRONNEN EN METHODEN\r\n\r\nEr is een basisverlegging doorgevoerd. Meer informatie over deze basisverlegging is te vinden in het document <a href='https://www.cbs.nl/nl-nl/onze-diensten/methoden/onderzoeksomschrijvingen/aanvullende-onderzoeksomschrijvingen/basisverlegging-omzet-en-prijzenstatistieken-2024'>Basisverlegging omzet- en prijzenstatistieken 2024</a>\r\n\r\nDe onderzoeksmethode van deze tabel is te vinden in de <a href='https://www.cbs.nl/nl-nl/onze-diensten/methoden/onderzoeksomschrijvingen/korte-onderzoeksbeschrijvingen/omzetontwikkeling '>onderzoeksbeschrijving Omzetontwikkeling.</a>\r\n\r\nVoor informatie over de Standaard Bedrijfsindeling zie <a href='https://www.cbs.nl/nl-nl/onze-diensten/methoden/classificaties/activiteiten/sbi-2008-standaard-bedrijfsindeling-2008 '>SBI 2008- Standaard Bedrijfsindeling 2008</a>.\r\n\r\n\r\n5. MEER INFORMATIE\r\n\r\n<a href='https://www.cbs.nl/nl-nl/over-ons/contact/infoservice'>Infoservice</a>\r\n\r\nCopyright © Centraal Bureau voor de Statistiek, Den Haag/Heerlen\r\n\r\nVerveelvoudiging is toegestaan, mits het CBS als bron wordt vermeld.\r\n\r\n\r\n\r\n\r\n\r\n\r\n",
+ "Provenance": [
+  {
+   "Title": "Basisverlegging omzet- en prijzenstatistieken 2024",
+   "Url": "https://www.cbs.nl/nl-nl/onze-diensten/methoden/onderzoeksomschrijvingen/aanvullende-onderzoeksomschrijvingen/basisverlegging-omzet-en-prijzenstatistieken-2024"
+  },
+  {
+   "Title": "onderzoeksbeschrijving Omzetontwikkeling.",
+   "Url": "https://www.cbs.nl/nl-nl/onze-diensten/methoden/onderzoeksomschrijvingen/korte-onderzoeksbeschrijvingen/omzetontwikkeling"
+  },
+  {
+   "Title": "SBI 2008- Standaard Bedrijfsindeling 2008",
+   "Url": "https://www.cbs.nl/nl-nl/onze-diensten/methoden/classificaties/activiteiten/sbi-2008-standaard-bedrijfsindeling-2008"
+  }
+ ],
+ "RelatedSources": [
+  {
+   "Title": "Motor- en autobranche; omzetontwikkeling, index 2015=100.",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/dataset/83839NED/table?dl=A58DB"
+  },
+  {
+   "Title": "Personenauto-importeurs; omzetontwikkeling, index 2015=100.",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/dataset/83823NED/table?dl=9F1DE"
+  },
+  {
+   "Title": "Groothandelsbedrijven; omzetontwikkeling, index 2015=100.",
+   "Url": "https://opendata.cbs.nl/#/CBS/nl/dataset/83827NED/table?dl=A58DA"
+  },
+  {
+   "Title": "Detailhandel; omzetontwikkeling, index 2015=100.",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/dataset/83868NED/table?dl=A58DC"
+  },
+  {
+   "Title": "Transportbedrijven; omzetontwikkeling, index 2015=100.",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/dataset/83868NED/table?dl=A58DC"
+  },
+  {
+   "Title": "Horeca; omzetontwikkeling, index 2015=100.",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/dataset/83862NED/table?dl=A58DE"
+  },
+  {
+   "Title": "Zakelijke en ICT-dienstverlening; omzetontwikkeling, index 2015=100.",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/dataset/83854NED/table?dl=A4CCD"
+  },
+  {
+   "Title": "Kappers en schoonheidsverzorging; omzetontwikkeling, index 2015=100.",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/dataset/83858NED/table?ts=1626292744967"
+  },
+  {
+   "Title": "Dienstenprijzen; commerciële dienstverlening en transport, index 2021=100",
+   "Url": "https://opendata.cbs.nl/statline/#/CBS/nl/dataset/85817NED/table?ts=1716905997430"
+  },
+  {
+   "Title": "Bedrijfsleven; arbeids- en financiële gegevens, per branche, SBI 2008.",
+   "Url": "https://opendata.cbs.nl/#/CBS/nl/dataset/81156ned/table?dl=A58E2"
+  },
+  {
+   "Title": "Handel en Horeca",
+   "Url": "https://www.cbs.nl/nl-nl/economie/handel-en-horeca"
+  },
+  {
+   "Title": "Verkeer en vervoer",
+   "Url": "https://www.cbs.nl/nl-nl/maatschappij/verkeer-en-vervoer"
+  },
+  {
+   "Title": "Financiële en zakelijke diensten.",
+   "Url": "https://www.cbs.nl/nl-nl/economie/financiele-en-zakelijke-diensten"
+  },
+  {
+   "Title": "Dashboard bedrijven",
+   "Url": "https://www.cbs.nl/nl-nl/visualisaties/dashboard-economie/bedrijven#A-U"
+  }
+ ],
+ "Distributions": [
+  {
+   "Format": "csv",
+   "MediaType": "csv",
+   "DownloadUrl": "https://datasets.cbs.nl/csv/CBS/nl/85828NED",
+   "AccessUrl": "https://dataportal.cbs.nl/detail/CBS/85828NED",
+   "Language": "nl"
+  },
+  {
+   "Format": "odata",
+   "MediaType": "odata",
+   "DownloadUrl": "https://datasets.cbs.nl/odata/v1/CBS/85828NED",
+   "AccessUrl": "https://dataportal.cbs.nl/detail/CBS/85828NED",
+   "Language": "nl"
+  }
+ ]
+}

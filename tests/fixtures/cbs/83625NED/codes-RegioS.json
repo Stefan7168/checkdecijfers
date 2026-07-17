@@ -1,0 +1,5220 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/83625NED/$metadata#RegioSCodes",
+ "value": [
+  {
+   "Identifier": "NL01",
+   "Index": 1,
+   "Title": "Nederland",
+   "Description": "",
+   "DimensionGroupId": "NL"
+  },
+  {
+   "Identifier": "LD01",
+   "Index": 2,
+   "Title": "Noord-Nederland (LD)",
+   "Description": "LD = Landsdeel\r\n\r\nNoord-Nederland: Groningen, Fryslân, Drenthe\r\n\r\nRegionale groepering van provincies. Nederland telt 4 landsdelen.",
+   "DimensionGroupId": "LD"
+  },
+  {
+   "Identifier": "LD02",
+   "Index": 3,
+   "Title": "Oost-Nederland (LD)",
+   "Description": "LD = Landsdeel\r\n\r\nOost-Nederland: Overijssel, Flevoland, Gelderland\r\n\r\nRegionale groepering van provincies. Nederland telt 4 landsdelen.",
+   "DimensionGroupId": "LD"
+  },
+  {
+   "Identifier": "LD03",
+   "Index": 4,
+   "Title": "West-Nederland (LD)",
+   "Description": "LD = Landsdeel\r\n\r\nWest-Nederland: Utrecht, Noord-Holland, Zuid-Holland, Zeeland\r\n\r\nRegionale groepering van provincies. Nederland telt 4 landsdelen.",
+   "DimensionGroupId": "LD"
+  },
+  {
+   "Identifier": "LD04",
+   "Index": 5,
+   "Title": "Zuid-Nederland (LD)",
+   "Description": "LD = Landsdeel\r\n\r\nZuid-Nederland: Noord-Brabant, Limburg\r\n\r\nRegionale groepering van provincies. Nederland telt 4 landsdelen.",
+   "DimensionGroupId": "LD"
+  },
+  {
+   "Identifier": "PV20",
+   "Index": 6,
+   "Title": "Groningen (PV)",
+   "Description": "PV = Provincie\r\n\r\nBestuurlijke onderverdeling van het Nederlands grondgebied. Sinds het instellen van de provincie Flevoland per 1 januari 1986 telt Nederland 12 provincies.",
+   "DimensionGroupId": "PV"
+  },
+  {
+   "Identifier": "PV21",
+   "Index": 7,
+   "Title": "Fryslân (PV)",
+   "Description": "PV = Provincie\r\n\r\nBestuurlijke onderverdeling van het Nederlands grondgebied. Sinds het instellen van de provincie Flevoland per 1 januari 1986 telt Nederland 12 provincies.",
+   "DimensionGroupId": "PV"
+  },
+  {
+   "Identifier": "PV22",
+   "Index": 8,
+   "Title": "Drenthe (PV)",
+   "Description": "PV = Provincie\r\n\r\nBestuurlijke onderverdeling van het Nederlands grondgebied. Sinds het instellen van de provincie Flevoland per 1 januari 1986 telt Nederland 12 provincies.",
+   "DimensionGroupId": "PV"
+  },
+  {
+   "Identifier": "PV23",
+   "Index": 9,
+   "Title": "Overijssel (PV)",
+   "Description": "PV = Provincie\r\n\r\nBestuurlijke onderverdeling van het Nederlands grondgebied. Sinds het instellen van de provincie Flevoland per 1 januari 1986 telt Nederland 12 provincies.",
+   "DimensionGroupId": "PV"
+  },
+  {
+   "Identifier": "PV24",
+   "Index": 10,
+   "Title": "Flevoland (PV)",
+   "Description": "PV = Provincie\r\n\r\nBestuurlijke onderverdeling van het Nederlands grondgebied. Sinds het instellen van de provincie Flevoland per 1 januari 1986 telt Nederland 12 provincies.",
+   "DimensionGroupId": "PV"
+  },
+  {
+   "Identifier": "PV25",
+   "Index": 11,
+   "Title": "Gelderland (PV)",
+   "Description": "PV = Provincie\r\n\r\nBestuurlijke onderverdeling van het Nederlands grondgebied. Sinds het instellen van de provincie Flevoland per 1 januari 1986 telt Nederland 12 provincies.",
+   "DimensionGroupId": "PV"
+  },
+  {
+   "Identifier": "PV26",
+   "Index": 12,
+   "Title": "Utrecht (PV)",
+   "Description": "PV = Provincie\r\n\r\nBestuurlijke onderverdeling van het Nederlands grondgebied. Sinds het instellen van de provincie Flevoland per 1 januari 1986 telt Nederland 12 provincies.",
+   "DimensionGroupId": "PV"
+  },
+  {
+   "Identifier": "PV27",
+   "Index": 13,
+   "Title": "Noord-Holland (PV)",
+   "Description": "PV = Provincie\r\n\r\nBestuurlijke onderverdeling van het Nederlands grondgebied. Sinds het instellen van de provincie Flevoland per 1 januari 1986 telt Nederland 12 provincies.",
+   "DimensionGroupId": "PV"
+  },
+  {
+   "Identifier": "PV28",
+   "Index": 14,
+   "Title": "Zuid-Holland (PV)",
+   "Description": "PV = Provincie\r\n\r\nBestuurlijke onderverdeling van het Nederlands grondgebied. Sinds het instellen van de provincie Flevoland per 1 januari 1986 telt Nederland 12 provincies.",
+   "DimensionGroupId": "PV"
+  },
+  {
+   "Identifier": "PV29",
+   "Index": 15,
+   "Title": "Zeeland (PV)",
+   "Description": "PV = Provincie\r\n\r\nBestuurlijke onderverdeling van het Nederlands grondgebied. Sinds het instellen van de provincie Flevoland per 1 januari 1986 telt Nederland 12 provincies.",
+   "DimensionGroupId": "PV"
+  },
+  {
+   "Identifier": "PV30",
+   "Index": 16,
+   "Title": "Noord-Brabant (PV)",
+   "Description": "PV = Provincie\r\n\r\nBestuurlijke onderverdeling van het Nederlands grondgebied. Sinds het instellen van de provincie Flevoland per 1 januari 1986 telt Nederland 12 provincies.",
+   "DimensionGroupId": "PV"
+  },
+  {
+   "Identifier": "PV31",
+   "Index": 17,
+   "Title": "Limburg (PV)",
+   "Description": "PV = Provincie\r\n\r\nBestuurlijke onderverdeling van het Nederlands grondgebied. Sinds het instellen van de provincie Flevoland per 1 januari 1986 telt Nederland 12 provincies.",
+   "DimensionGroupId": "PV"
+  },
+  {
+   "Identifier": "GM1680",
+   "Index": 18,
+   "Title": "Aa en Hunze",
+   "Description": "Ontstaan per 01-01-1998",
+   "DimensionGroupId": "GMPV22"
+  },
+  {
+   "Identifier": "GM0738",
+   "Index": 19,
+   "Title": "Aalburg",
+   "Description": "Opgeheven per 01-01-2019\r\nOntstaan per 01-01-1973",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0358",
+   "Index": 20,
+   "Title": "Aalsmeer",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0197",
+   "Index": 21,
+   "Title": "Aalten",
+   "Description": "Gemeentelijke herindeling per 01-01-2005\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0480",
+   "Index": 22,
+   "Title": "Ter Aar",
+   "Description": "Opgeheven per 01-01-2007\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0739",
+   "Index": 23,
+   "Title": "Aarle-Rixtel",
+   "Description": "Opgeheven per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0305",
+   "Index": 24,
+   "Title": "Abcoude",
+   "Description": "Opgeheven per 01-01-2011\r\nOntstaan per 01-05-1941",
+   "DimensionGroupId": "GMPV26"
+  },
+  {
+   "Identifier": "GM0059",
+   "Index": 25,
+   "Title": "Achtkarspelen",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV21"
+  },
+  {
+   "Identifier": "GM0360",
+   "Index": 26,
+   "Title": "Akersloot",
+   "Description": "Opgeheven per 01-01-2002\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0482",
+   "Index": 27,
+   "Title": "Alblasserdam",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0613",
+   "Index": 28,
+   "Title": "Albrandswaard",
+   "Description": "Ontstaan per 01-01-1985",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0483",
+   "Index": 29,
+   "Title": "Alkemade",
+   "Description": "Opgeheven per 01-01-2009\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0361",
+   "Index": 30,
+   "Title": "Alkmaar",
+   "Description": "Gemeentelijke herindeling per 01-01-2015\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0141",
+   "Index": 31,
+   "Title": "Almelo",
+   "Description": "Begindatum 01-12-1913",
+   "DimensionGroupId": "GMPV23"
+  },
+  {
+   "Identifier": "GM0034",
+   "Index": 32,
+   "Title": "Almere",
+   "Description": "Ontstaan per 01-01-1984",
+   "DimensionGroupId": "GMPV24"
+  },
+  {
+   "Identifier": "GM0484",
+   "Index": 33,
+   "Title": "Alphen aan den Rijn",
+   "Description": "Gemeentelijke herindeling per 01-01-2014\r\nNaamswijziging per 01-01-1918",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0741",
+   "Index": 34,
+   "Title": "Alphen en Riel",
+   "Description": "Opgeheven per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM1723",
+   "Index": 35,
+   "Title": "Alphen-Chaam",
+   "Description": "Ontstaan per 01-01-1997",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM1959",
+   "Index": 36,
+   "Title": "Altena",
+   "Description": "Ontstaan per 01-01-2019",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0142",
+   "Index": 37,
+   "Title": "Ambt Delden",
+   "Description": "Opgeheven per 01-01-2001\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV23"
+  },
+  {
+   "Identifier": "GM1679",
+   "Index": 38,
+   "Title": "Ambt Montfort",
+   "Description": "Opgeheven per 01-01-2007\r\nNaamswijziging per 01-02-1994",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM0060",
+   "Index": 39,
+   "Title": "Ameland",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV21"
+  },
+  {
+   "Identifier": "GM0306",
+   "Index": 40,
+   "Title": "Amerongen",
+   "Description": "Opgeheven per 01-01-2006\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV26"
+  },
+  {
+   "Identifier": "GM0307",
+   "Index": 41,
+   "Title": "Amersfoort",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV26"
+  },
+  {
+   "Identifier": "GM0198",
+   "Index": 42,
+   "Title": "Ammerzoden",
+   "Description": "Opgeheven per 01-01-1999\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0362",
+   "Index": 43,
+   "Title": "Amstelveen",
+   "Description": "Naamswijziging per 01-01-1964",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0363",
+   "Index": 44,
+   "Title": "Amsterdam",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0364",
+   "Index": 45,
+   "Title": "Andijk",
+   "Description": "Opgeheven per 01-01-2011\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0199",
+   "Index": 46,
+   "Title": "Angerlo",
+   "Description": "Opgeheven per 01-01-2005\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0105",
+   "Index": 47,
+   "Title": "Anloo",
+   "Description": "Opgeheven per 01-01-1998\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV22"
+  },
+  {
+   "Identifier": "GM0366",
+   "Index": 48,
+   "Title": "Anna Paulowna",
+   "Description": "Opgeheven per 01-01-2012\r\nBegindatum 18-07-1870",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0200",
+   "Index": 49,
+   "Title": "Apeldoorn",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0003",
+   "Index": 50,
+   "Title": "Appingedam",
+   "Description": "Opgeheven per 01-01-2021\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV20"
+  },
+  {
+   "Identifier": "GM0885",
+   "Index": 51,
+   "Title": "Arcen en Velden",
+   "Description": "Opgeheven per 01-01-2010\r\nBegindatum 02-01-1839",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM0649",
+   "Index": 52,
+   "Title": "Arnemuiden",
+   "Description": "Opgeheven per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV29"
+  },
+  {
+   "Identifier": "GM0202",
+   "Index": 53,
+   "Title": "Arnhem",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0106",
+   "Index": 54,
+   "Title": "Assen",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV22"
+  },
+  {
+   "Identifier": "GM0743",
+   "Index": 55,
+   "Title": "Asten",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0143",
+   "Index": 56,
+   "Title": "Avereest",
+   "Description": "Opgeheven per 01-01-2001\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV23"
+  },
+  {
+   "Identifier": "GM0650",
+   "Index": 57,
+   "Title": "Axel",
+   "Description": "Opgeheven per 01-01-2003\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV29"
+  },
+  {
+   "Identifier": "GM0744",
+   "Index": 58,
+   "Title": "Baarle-Nassau",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0308",
+   "Index": 59,
+   "Title": "Baarn",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV26"
+  },
+  {
+   "Identifier": "GM0745",
+   "Index": 60,
+   "Title": "Bakel en Milheeze",
+   "Description": "Opgeheven per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0489",
+   "Index": 61,
+   "Title": "Barendrecht",
+   "Description": "Naamswijziging per 10-12-1886",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0203",
+   "Index": 62,
+   "Title": "Barneveld",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0144",
+   "Index": 63,
+   "Title": "Bathmen",
+   "Description": "Opgeheven per 01-01-2005\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV23"
+  },
+  {
+   "Identifier": "GM0005",
+   "Index": 64,
+   "Title": "Bedum",
+   "Description": "Opgeheven per 01-01-2019\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV20"
+  },
+  {
+   "Identifier": "GM0888",
+   "Index": 65,
+   "Title": "Beek (L.)",
+   "Description": "Begindatum 02-01-1839",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM0746",
+   "Index": 66,
+   "Title": "Beek en Donk",
+   "Description": "Opgeheven per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM1954",
+   "Index": 67,
+   "Title": "Beekdaelen",
+   "Description": "Ontstaan per 01-01-2019",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM0370",
+   "Index": 68,
+   "Title": "Beemster",
+   "Description": "Begindatum voor 1830\r\nOpgeheven per 01-01-2022",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0889",
+   "Index": 69,
+   "Title": "Beesel",
+   "Description": "Begindatum 02-01-1839",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM0107",
+   "Index": 70,
+   "Title": "Beilen",
+   "Description": "Opgeheven per 01-01-1998\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV22"
+  },
+  {
+   "Identifier": "GM0890",
+   "Index": 71,
+   "Title": "Belfeld",
+   "Description": "Opgeheven per 01-01-2001\r\nBegindatum 02-01-1839",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM0007",
+   "Index": 72,
+   "Title": "Bellingwedde",
+   "Description": "Opgeheven per 01-01-2018\r\nOntstaan per 01-09-1968",
+   "DimensionGroupId": "GMPV20"
+  },
+  {
+   "Identifier": "GM0206",
+   "Index": 73,
+   "Title": "Bemmel",
+   "Description": "Naamswijziging per 01-01-2003\r\nGemeentelijke herindeling per 01-01-2001\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0372",
+   "Index": 74,
+   "Title": "Bennebroek",
+   "Description": "Opgeheven per 01-01-2009\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM1945",
+   "Index": 75,
+   "Title": "Berg en Dal",
+   "Description": "Naamswijziging per 01-01-2016",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0491",
+   "Index": 76,
+   "Title": "Bergambacht",
+   "Description": "Opgeheven per 01-01-2015\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM1724",
+   "Index": 77,
+   "Title": "Bergeijk",
+   "Description": "Naamswijziging per 25-09-1998",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0893",
+   "Index": 78,
+   "Title": "Bergen (L.)",
+   "Description": "Begindatum 02-01-1839",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM0373",
+   "Index": 79,
+   "Title": "Bergen (NH.)",
+   "Description": "Gemeentelijke herindeling per 01-01-2001\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0748",
+   "Index": 80,
+   "Title": "Bergen op Zoom",
+   "Description": "Gemeentelijke herindeling per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0749",
+   "Index": 81,
+   "Title": "Bergeyk",
+   "Description": "Naamswijziging per 25-09-1998\r\nGemeentelijke herindeling per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0207",
+   "Index": 82,
+   "Title": "Bergh",
+   "Description": "Opgeheven per 01-01-2005\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0492",
+   "Index": 83,
+   "Title": "Bergschenhoek",
+   "Description": "Opgeheven per 01-01-2007\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0493",
+   "Index": 84,
+   "Title": "Berkel en Rodenrijs",
+   "Description": "Opgeheven per 01-01-2007\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0751",
+   "Index": 85,
+   "Title": "Berkel-Enschot",
+   "Description": "Opgeheven per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM1859",
+   "Index": 86,
+   "Title": "Berkelland",
+   "Description": "Ontstaan per 01-01-2005",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0752",
+   "Index": 87,
+   "Title": "Berlicum",
+   "Description": "Opgeheven per 01-01-1996\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM1721",
+   "Index": 88,
+   "Title": "Bernheze",
+   "Description": "Naamswijziging per 28-01-1995",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0568",
+   "Index": 89,
+   "Title": "Bernisse",
+   "Description": "Opgeheven per 01-01-2015\r\nOntstaan per 01-01-1980",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0753",
+   "Index": 90,
+   "Title": "Best",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0209",
+   "Index": 91,
+   "Title": "Beuningen",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0375",
+   "Index": 92,
+   "Title": "Beverwijk",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0063",
+   "Index": 93,
+   "Title": "het Bildt",
+   "Description": "Opgeheven per 01-01-2018\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV21"
+  },
+  {
+   "Identifier": "GM0310",
+   "Index": 94,
+   "Title": "De Bilt",
+   "Description": "Gemeentelijke herindeling per 01-01-2001\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV26"
+  },
+  {
+   "Identifier": "GM0585",
+   "Index": 95,
+   "Title": "Binnenmaas",
+   "Description": "Opgeheven per 01-01-2019\r\nGemeentelijke herindeling per 01-01-2007\r\nOntstaan per 01-01-1984",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM1728",
+   "Index": 96,
+   "Title": "Bladel",
+   "Description": "Ontstaan per 01-01-1997",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0754",
+   "Index": 97,
+   "Title": "Bladel en Netersel",
+   "Description": "Opgeheven per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0376",
+   "Index": 98,
+   "Title": "Blaricum",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0495",
+   "Index": 99,
+   "Title": "Bleiswijk",
+   "Description": "Opgeheven per 01-01-2007\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0377",
+   "Index": 100,
+   "Title": "Bloemendaal",
+   "Description": "Gemeentelijke herindeling per 01-01-2009\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0055",
+   "Index": 101,
+   "Title": "Boarnsterhim",
+   "Description": "Opgeheven per 01-01-2014\r\nNaamswijziging per 03-01-1985",
+   "DimensionGroupId": "GMPV21"
+  },
+  {
+   "Identifier": "GM0497",
+   "Index": 102,
+   "Title": "Bodegraven",
+   "Description": "Opgeheven per 01-01-2011\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM1901",
+   "Index": 103,
+   "Title": "Bodegraven-Reeuwijk",
+   "Description": "Ontstaan per 01-01-2011",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0755",
+   "Index": 104,
+   "Title": "Boekel",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0009",
+   "Index": 105,
+   "Title": "Ten Boer",
+   "Description": "Opgeheven per 01-01-2019\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV20"
+  },
+  {
+   "Identifier": "GM0064",
+   "Index": 106,
+   "Title": "Bolsward",
+   "Description": "Opgeheven per 01-01-2011\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV21"
+  },
+  {
+   "Identifier": "GM0211",
+   "Index": 107,
+   "Title": "Borculo",
+   "Description": "Opgeheven per 01-01-2005\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0108",
+   "Index": 108,
+   "Title": "Borger",
+   "Description": "Opgeheven per 01-01-1998\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV22"
+  },
+  {
+   "Identifier": "GM1681",
+   "Index": 109,
+   "Title": "Borger-Odoorn",
+   "Description": "Ontstaan per 01-01-1998",
+   "DimensionGroupId": "GMPV22"
+  },
+  {
+   "Identifier": "GM0897",
+   "Index": 110,
+   "Title": "Born",
+   "Description": "Opgeheven per 01-01-2001\r\nBegindatum 02-01-1839",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM0147",
+   "Index": 111,
+   "Title": "Borne",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV23"
+  },
+  {
+   "Identifier": "GM0654",
+   "Index": 112,
+   "Title": "Borsele",
+   "Description": "Naamswijziging per 01-01-1970",
+   "DimensionGroupId": "GMPV29"
+  },
+  {
+   "Identifier": "GM0499",
+   "Index": 113,
+   "Title": "Boskoop",
+   "Description": "Opgeheven per 01-01-2014\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0756",
+   "Index": 114,
+   "Title": "Boxmeer",
+   "Description": "Gemeentelijke herindeling per 01-01-1998\r\nGemeentelijke herindeling per 01-01-1994\r\nBegindatum voor 1830\r\nOpgeheven per 01-01-2022 wordt Land van Cuijk GM1982",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0757",
+   "Index": 115,
+   "Title": "Boxtel",
+   "Description": "Opgeheven per 01-01-2021\r\nGemeentelijke herindeling per 01-01-1996\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0212",
+   "Index": 116,
+   "Title": "Brakel",
+   "Description": "Opgeheven per 01-01-1999\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0758",
+   "Index": 117,
+   "Title": "Breda",
+   "Description": "Gemeentelijke herindeling per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0194",
+   "Index": 118,
+   "Title": "Brederwiede",
+   "Description": "Opgeheven per 01-01-2001\r\nOntstaan per 01-01-1973",
+   "DimensionGroupId": "GMPV23"
+  },
+  {
+   "Identifier": "GM0311",
+   "Index": 119,
+   "Title": "Breukelen",
+   "Description": "Opgeheven per 01-01-2011\r\nOntstaan per 01-01-1949",
+   "DimensionGroupId": "GMPV26"
+  },
+  {
+   "Identifier": "GM0501",
+   "Index": 120,
+   "Title": "Brielle",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0898",
+   "Index": 121,
+   "Title": "Broekhuizen",
+   "Description": "Opgeheven per 01-01-2001\r\nBegindatum 02-01-1839",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM1876",
+   "Index": 122,
+   "Title": "Bronckhorst",
+   "Description": "Ontstaan per 01-01-2005",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0656",
+   "Index": 123,
+   "Title": "Brouwershaven",
+   "Description": "Opgeheven per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV29"
+  },
+  {
+   "Identifier": "GM0657",
+   "Index": 124,
+   "Title": "Bruinisse",
+   "Description": "Opgeheven per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV29"
+  },
+  {
+   "Identifier": "GM0213",
+   "Index": 125,
+   "Title": "Brummen",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0899",
+   "Index": 126,
+   "Title": "Brunssum",
+   "Description": "Begindatum 02-01-1839",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM0759",
+   "Index": 127,
+   "Title": "Budel",
+   "Description": "Naamswijziging per 28-01-1998\r\nGemeentelijke herindeling per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0312",
+   "Index": 128,
+   "Title": "Bunnik",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV26"
+  },
+  {
+   "Identifier": "GM0313",
+   "Index": 129,
+   "Title": "Bunschoten",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV26"
+  },
+  {
+   "Identifier": "GM0214",
+   "Index": 130,
+   "Title": "Buren",
+   "Description": "Gemeentelijke herindeling per 01-01-1999\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0381",
+   "Index": 131,
+   "Title": "Bussum",
+   "Description": "Opgeheven per 01-01-2016\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0502",
+   "Index": 132,
+   "Title": "Capelle aan den IJssel",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0383",
+   "Index": 133,
+   "Title": "Castricum",
+   "Description": "Gemeentelijke herindeling per 01-01-2002\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0760",
+   "Index": 134,
+   "Title": "Chaam",
+   "Description": "Opgeheven per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0109",
+   "Index": 135,
+   "Title": "Coevorden",
+   "Description": "Gemeentelijke herindeling per 01-01-1998\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV22"
+  },
+  {
+   "Identifier": "GM0314",
+   "Index": 136,
+   "Title": "Cothen",
+   "Description": "Opgeheven per 01-01-1996\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV26"
+  },
+  {
+   "Identifier": "GM1706",
+   "Index": 137,
+   "Title": "Cranendonck",
+   "Description": "Naamswijziging per 28-01-1998",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0611",
+   "Index": 138,
+   "Title": "Cromstrijen",
+   "Description": "Opgeheven per 01-01-2019\r\nOntstaan per 01-01-1984",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM1684",
+   "Index": 139,
+   "Title": "Cuijk",
+   "Description": "Ontstaan per 01-01-1994\r\nOpgeheven per 01-01-2022",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0216",
+   "Index": 140,
+   "Title": "Culemborg",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0110",
+   "Index": 141,
+   "Title": "Dalen",
+   "Description": "Opgeheven per 01-01-1998\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV22"
+  },
+  {
+   "Identifier": "GM0148",
+   "Index": 142,
+   "Title": "Dalfsen",
+   "Description": "Gemeentelijke herindeling per 01-01-2001\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV23"
+  },
+  {
+   "Identifier": "GM0065",
+   "Index": 143,
+   "Title": "Dantumadeel",
+   "Description": "Naamswijziging per 01-01-2009\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV21"
+  },
+  {
+   "Identifier": "GM1891",
+   "Index": 144,
+   "Title": "Dantumadiel",
+   "Description": "Naamswijziging per 01-01-2009",
+   "DimensionGroupId": "GMPV21"
+  },
+  {
+   "Identifier": "GM0503",
+   "Index": 145,
+   "Title": "Delft",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0010",
+   "Index": 146,
+   "Title": "Delfzijl",
+   "Description": "Opgeheven per 01-01-2021\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV20"
+  },
+  {
+   "Identifier": "GM0149",
+   "Index": 147,
+   "Title": "Denekamp",
+   "Description": "Naamswijziging per 01-06-2002\r\nGemeentelijke herindeling per 01-01-2001\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV23"
+  },
+  {
+   "Identifier": "GM0762",
+   "Index": 148,
+   "Title": "Deurne",
+   "Description": "Naamswijziging per 01-01-1926",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0150",
+   "Index": 149,
+   "Title": "Deventer",
+   "Description": "Gemeentelijke herindeling per 01-01-2005\r\nGemeentelijke herindeling per 01-01-1999\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV23"
+  },
+  {
+   "Identifier": "GM0218",
+   "Index": 150,
+   "Title": "Didam",
+   "Description": "Opgeheven per 01-01-2005\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0384",
+   "Index": 151,
+   "Title": "Diemen",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0151",
+   "Index": 152,
+   "Title": "Diepenheim",
+   "Description": "Opgeheven per 01-01-2001\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV23"
+  },
+  {
+   "Identifier": "GM0152",
+   "Index": 153,
+   "Title": "Diepenveen",
+   "Description": "Opgeheven per 01-01-1999\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV23"
+  },
+  {
+   "Identifier": "GM0763",
+   "Index": 154,
+   "Title": "Diessen",
+   "Description": "Opgeheven per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0111",
+   "Index": 155,
+   "Title": "Diever",
+   "Description": "Opgeheven per 01-01-1998\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV22"
+  },
+  {
+   "Identifier": "GM1980",
+   "Index": 156,
+   "Title": "Dijk en Waard",
+   "Description": "Begin datum 01-01-2022 \r\nGemeente Heerhugowaard en Langedijk",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM1774",
+   "Index": 157,
+   "Title": "Dinkelland",
+   "Description": "Naamswijziging per 01-06-2002",
+   "DimensionGroupId": "GMPV23"
+  },
+  {
+   "Identifier": "GM0764",
+   "Index": 158,
+   "Title": "Dinteloord en Prinsenland",
+   "Description": "Opgeheven per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0219",
+   "Index": 159,
+   "Title": "Dinxperlo",
+   "Description": "Opgeheven per 01-01-2005\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0504",
+   "Index": 160,
+   "Title": "Dirksland",
+   "Description": "Opgeheven per 01-01-2013\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0220",
+   "Index": 161,
+   "Title": "Dodewaard",
+   "Description": "Opgeheven per 01-01-2002\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0221",
+   "Index": 162,
+   "Title": "Doesburg",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0222",
+   "Index": 163,
+   "Title": "Doetinchem",
+   "Description": "Gemeentelijke herindeling per 01-01-2005\r\nBegindatum 01-01-1920",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0660",
+   "Index": 164,
+   "Title": "Domburg",
+   "Description": "Opgeheven per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV29"
+  },
+  {
+   "Identifier": "GM0766",
+   "Index": 165,
+   "Title": "Dongen",
+   "Description": "Gemeentelijke herindeling per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0058",
+   "Index": 166,
+   "Title": "Dongeradeel",
+   "Description": "Opgeheven per 01-01-2019\r\nOntstaan per 01-01-1984",
+   "DimensionGroupId": "GMPV21"
+  },
+  {
+   "Identifier": "GM0315",
+   "Index": 167,
+   "Title": "Doorn",
+   "Description": "Opgeheven per 01-01-2006\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV26"
+  },
+  {
+   "Identifier": "GM0505",
+   "Index": 168,
+   "Title": "Dordrecht",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0498",
+   "Index": 169,
+   "Title": "Drechterland",
+   "Description": "Gemeentelijke herindeling per 01-01-2006\r\nNaamswijziging per 01-01-1980",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0316",
+   "Index": 170,
+   "Title": "Driebergen-Rijsenburg",
+   "Description": "Opgeheven per 01-01-2006\r\nBegindatum 01-05-1931",
+   "DimensionGroupId": "GMPV26"
+  },
+  {
+   "Identifier": "GM1719",
+   "Index": 171,
+   "Title": "Drimmelen",
+   "Description": "Naamswijziging per 25-04-1998",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0303",
+   "Index": 172,
+   "Title": "Dronten",
+   "Description": "Ontstaan per 01-01-1972",
+   "DimensionGroupId": "GMPV24"
+  },
+  {
+   "Identifier": "GM0767",
+   "Index": 173,
+   "Title": "Drunen",
+   "Description": "Opgeheven per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0225",
+   "Index": 174,
+   "Title": "Druten",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0662",
+   "Index": 175,
+   "Title": "Duiveland",
+   "Description": "Opgeheven per 01-01-1997\r\nOntstaan per 01-01-1961",
+   "DimensionGroupId": "GMPV29"
+  },
+  {
+   "Identifier": "GM0226",
+   "Index": 176,
+   "Title": "Duiven",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0768",
+   "Index": 177,
+   "Title": "Den Dungen",
+   "Description": "Opgeheven per 01-01-1996\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0769",
+   "Index": 178,
+   "Title": "Dussen",
+   "Description": "Opgeheven per 01-01-1997\r\nNaamswijziging per 08-01-1908",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0112",
+   "Index": 179,
+   "Title": "Dwingeloo",
+   "Description": "Opgeheven per 01-01-1998\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV22"
+  },
+  {
+   "Identifier": "GM0902",
+   "Index": 180,
+   "Title": "Echt",
+   "Description": "Opgeheven per 01-01-2003\r\nBegindatum 02-01-1839",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM0227",
+   "Index": 181,
+   "Title": "Echteld",
+   "Description": "Opgeheven per 01-01-2002\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM1711",
+   "Index": 182,
+   "Title": "Echt-Susteren",
+   "Description": "Ontstaan per 01-01-2003",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM0385",
+   "Index": 183,
+   "Title": "Edam-Volendam",
+   "Description": "Gemeentelijke herindeling per 01-01-2016\r\nNaamswijziging per 01-01-1975",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0228",
+   "Index": 184,
+   "Title": "Ede",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0113",
+   "Index": 185,
+   "Title": "Eelde",
+   "Description": "Opgeheven per 01-01-1998\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV22"
+  },
+  {
+   "Identifier": "GM0317",
+   "Index": 186,
+   "Title": "Eemnes",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV26"
+  },
+  {
+   "Identifier": "GM1979",
+   "Index": 187,
+   "Title": "Eemsdelta",
+   "Description": "Ontstaan per 01-01-2021",
+   "DimensionGroupId": "GMPV20"
+  },
+  {
+   "Identifier": "GM1651",
+   "Index": 188,
+   "Title": "Eemsmond",
+   "Description": "Opgeheven per 01-01-2019\r\nNaamswijziging per 01-01-1992",
+   "DimensionGroupId": "GMPV20"
+  },
+  {
+   "Identifier": "GM0770",
+   "Index": 189,
+   "Title": "Eersel",
+   "Description": "Gemeentelijke herindeling per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0357",
+   "Index": 190,
+   "Title": "Egmond",
+   "Description": "Opgeheven per 01-01-2001\r\nOntstaan per 01-07-1978",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0229",
+   "Index": 191,
+   "Title": "Eibergen",
+   "Description": "Opgeheven per 01-01-2005\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0905",
+   "Index": 192,
+   "Title": "Eijsden",
+   "Description": "Opgeheven per 01-01-2011\r\nBegindatum 02-01-1839",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM1903",
+   "Index": 193,
+   "Title": "Eijsden-Margraten",
+   "Description": "Ontstaan per 01-01-2011",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM0772",
+   "Index": 194,
+   "Title": "Eindhoven",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0230",
+   "Index": 195,
+   "Title": "Elburg",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0231",
+   "Index": 196,
+   "Title": "Elst",
+   "Description": "Opgeheven per 01-01-2001\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0114",
+   "Index": 197,
+   "Title": "Emmen",
+   "Description": "Gemeentelijke herindeling per 01-01-1998\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV22"
+  },
+  {
+   "Identifier": "GM0388",
+   "Index": 198,
+   "Title": "Enkhuizen",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0153",
+   "Index": 199,
+   "Title": "Enschede",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV23"
+  },
+  {
+   "Identifier": "GM0232",
+   "Index": 200,
+   "Title": "Epe",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0233",
+   "Index": 201,
+   "Title": "Ermelo",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0776",
+   "Index": 202,
+   "Title": "Esch",
+   "Description": "Opgeheven per 01-01-1996\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0777",
+   "Index": 203,
+   "Title": "Etten-Leur",
+   "Description": "Naamswijziging per 01-01-1968",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0068",
+   "Index": 204,
+   "Title": "Ferwerderadeel",
+   "Description": "Naamswijziging per 01-01-1999\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV21"
+  },
+  {
+   "Identifier": "GM1722",
+   "Index": 205,
+   "Title": "Ferwerderadiel",
+   "Description": "Opgeheven per 01-01-2019\r\nNaamswijziging per 01-01-1999",
+   "DimensionGroupId": "GMPV21"
+  },
+  {
+   "Identifier": "GM0778",
+   "Index": 206,
+   "Title": "Fijnaart en Heijningen",
+   "Description": "Opgeheven per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0070",
+   "Index": 207,
+   "Title": "Franekeradeel",
+   "Description": "Opgeheven per 01-01-2018\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV21"
+  },
+  {
+   "Identifier": "GM1921",
+   "Index": 208,
+   "Title": "De Friese Meren",
+   "Description": "Naamswijziging per 01-07-2015\r\nOntstaan per 01-01-2014",
+   "DimensionGroupId": "GMPV21"
+  },
+  {
+   "Identifier": "GM1940",
+   "Index": 209,
+   "Title": "De Fryske Marren",
+   "Description": "Naamswijziging per 01-07-2015",
+   "DimensionGroupId": "GMPV21"
+  },
+  {
+   "Identifier": "GM0653",
+   "Index": 210,
+   "Title": "Gaasterlân-Sleat",
+   "Description": "Opgeheven per 01-01-2014\r\nNaamswijziging per 05-06-1985",
+   "DimensionGroupId": "GMPV21"
+  },
+  {
+   "Identifier": "GM0115",
+   "Index": 211,
+   "Title": "Gasselte",
+   "Description": "Opgeheven per 01-01-1998\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV22"
+  },
+  {
+   "Identifier": "GM0779",
+   "Index": 212,
+   "Title": "Geertruidenberg",
+   "Description": "Gemeentelijke herindeling per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0236",
+   "Index": 213,
+   "Title": "Geldermalsen",
+   "Description": "Opgeheven per 01-01-2019\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0781",
+   "Index": 214,
+   "Title": "Geldrop",
+   "Description": "Opgeheven per 01-01-2004\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM1771",
+   "Index": 215,
+   "Title": "Geldrop-Mierlo",
+   "Description": "Ontstaan per 01-01-2004",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0906",
+   "Index": 216,
+   "Title": "Geleen",
+   "Description": "Opgeheven per 01-01-2001\r\nBegindatum 02-01-1839",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM0782",
+   "Index": 217,
+   "Title": "Gemert",
+   "Description": "Opgeheven per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM1652",
+   "Index": 218,
+   "Title": "Gemert-Bakel",
+   "Description": "Ontstaan per 01-01-1997",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0237",
+   "Index": 219,
+   "Title": "Gendringen",
+   "Description": "Opgeheven per 01-01-2005\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0238",
+   "Index": 220,
+   "Title": "Gendt",
+   "Description": "Opgeheven per 01-01-2001\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0154",
+   "Index": 221,
+   "Title": "Genemuiden",
+   "Description": "Opgeheven per 01-01-2001\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV23"
+  },
+  {
+   "Identifier": "GM0907",
+   "Index": 222,
+   "Title": "Gennep",
+   "Description": "Begindatum 02-01-1839",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM0689",
+   "Index": 223,
+   "Title": "Giessenlanden",
+   "Description": "Opgeheven per 01-01-2019\r\nOntstaan per 01-01-1986",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0116",
+   "Index": 224,
+   "Title": "Gieten",
+   "Description": "Opgeheven per 01-01-1998\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV22"
+  },
+  {
+   "Identifier": "GM0784",
+   "Index": 225,
+   "Title": "Gilze en Rijen",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0511",
+   "Index": 226,
+   "Title": "Goedereede",
+   "Description": "Opgeheven per 01-01-2013\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM1924",
+   "Index": 227,
+   "Title": "Goeree-Overflakkee",
+   "Description": "Ontstaan per 01-01-2013",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0664",
+   "Index": 228,
+   "Title": "Goes",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV29"
+  },
+  {
+   "Identifier": "GM0785",
+   "Index": 229,
+   "Title": "Goirle",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM1942",
+   "Index": 230,
+   "Title": "Gooise Meren",
+   "Description": "Ontstaan per 01-01-2016",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0156",
+   "Index": 231,
+   "Title": "Goor",
+   "Description": "Opgeheven per 01-01-2001\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV23"
+  },
+  {
+   "Identifier": "GM0512",
+   "Index": 232,
+   "Title": "Gorinchem",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0239",
+   "Index": 233,
+   "Title": "Gorssel",
+   "Description": "Opgeheven per 01-01-2005\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0513",
+   "Index": 234,
+   "Title": "Gouda",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0693",
+   "Index": 235,
+   "Title": "Graafstroom",
+   "Description": "Opgeheven per 01-01-2013\r\nOntstaan per 01-01-1986",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0365",
+   "Index": 236,
+   "Title": "Graft-De Rijp",
+   "Description": "Opgeheven per 01-01-2015\r\nOntstaan per 01-08-1970",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0157",
+   "Index": 237,
+   "Title": "Gramsbergen",
+   "Description": "Opgeheven per 01-01-2001\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV23"
+  },
+  {
+   "Identifier": "GM0786",
+   "Index": 238,
+   "Title": "Grave",
+   "Description": "Begindatum voor 1830\r\nOpgeheven per 01-01-2022",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0390",
+   "Index": 239,
+   "Title": "'s-Graveland",
+   "Description": "Opgeheven per 01-01-2002\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0517",
+   "Index": 240,
+   "Title": "'s-Gravendeel",
+   "Description": "Opgeheven per 01-01-2007\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0518",
+   "Index": 241,
+   "Title": "'s-Gravenhage (gemeente)",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0787",
+   "Index": 242,
+   "Title": "'s-Gravenmoer",
+   "Description": "Opgeheven per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0519",
+   "Index": 243,
+   "Title": "'s-Gravenzande",
+   "Description": "Opgeheven per 01-01-2004\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0240",
+   "Index": 244,
+   "Title": "Groenlo",
+   "Description": "Naamswijziging per 19-05-2006\r\nGemeentelijke herindeling per 01-01-2005\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0241",
+   "Index": 245,
+   "Title": "Groesbeek",
+   "Description": "Naamswijziging per 01-01-2016\r\nGemeentelijke herindeling per 01-01-2015\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0014",
+   "Index": 246,
+   "Title": "Groningen (gemeente)",
+   "Description": "Gemeentelijke herindeling per 01-01-2019\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV20"
+  },
+  {
+   "Identifier": "GM0015",
+   "Index": 247,
+   "Title": "Grootegast",
+   "Description": "Opgeheven per 01-01-2019\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV20"
+  },
+  {
+   "Identifier": "GM0912",
+   "Index": 248,
+   "Title": "Grubbenvorst",
+   "Description": "Opgeheven per 01-01-2001\r\nBegindatum 02-01-1839",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM0913",
+   "Index": 249,
+   "Title": "Gulpen",
+   "Description": "Opgeheven per 01-01-1999\r\nBegindatum 02-01-1839",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM1729",
+   "Index": 250,
+   "Title": "Gulpen-Wittem",
+   "Description": "Ontstaan per 01-01-1999",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM0158",
+   "Index": 251,
+   "Title": "Haaksbergen",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV23"
+  },
+  {
+   "Identifier": "GM0788",
+   "Index": 252,
+   "Title": "Haaren",
+   "Description": "Gemeentelijke herindeling per 01-01-1996\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0392",
+   "Index": 253,
+   "Title": "Haarlem",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0393",
+   "Index": 254,
+   "Title": "Haarlemmerliede en Spaarnwoude",
+   "Description": "Opgeheven per 01-01-2019\r\nBegindatum 13-06-1857",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0394",
+   "Index": 255,
+   "Title": "Haarlemmermeer",
+   "Description": "Gemeentelijke herindeling per 01-01-2019\r\nBegindatum 16-11-1855",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0914",
+   "Index": 256,
+   "Title": "Haelen",
+   "Description": "Opgeheven per 01-01-2007\r\nGemeentelijke herindeling per 01-01-1991\r\nBegindatum 02-01-1839",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM1655",
+   "Index": 257,
+   "Title": "Halderberge",
+   "Description": "Ontstaan per 01-01-1997",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0789",
+   "Index": 258,
+   "Title": "Halsteren",
+   "Description": "Opgeheven per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0159",
+   "Index": 259,
+   "Title": "Den Ham",
+   "Description": "Opgeheven per 01-01-2001\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV23"
+  },
+  {
+   "Identifier": "GM0160",
+   "Index": 260,
+   "Title": "Hardenberg",
+   "Description": "Gemeentelijke herindeling per 01-01-2001\r\nOntstaan per 01-05-1941",
+   "DimensionGroupId": "GMPV23"
+  },
+  {
+   "Identifier": "GM0243",
+   "Index": 261,
+   "Title": "Harderwijk",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0523",
+   "Index": 262,
+   "Title": "Hardinxveld-Giessendam",
+   "Description": "Ontstaan per 01-01-1957",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0017",
+   "Index": 263,
+   "Title": "Haren",
+   "Description": "Opgeheven per 01-01-2019\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV20"
+  },
+  {
+   "Identifier": "GM0395",
+   "Index": 264,
+   "Title": "Harenkarspel",
+   "Description": "Opgeheven per 01-01-2013\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0072",
+   "Index": 265,
+   "Title": "Harlingen",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV21"
+  },
+  {
+   "Identifier": "GM0318",
+   "Index": 266,
+   "Title": "Harmelen",
+   "Description": "Opgeheven per 01-01-2001\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV26"
+  },
+  {
+   "Identifier": "GM0161",
+   "Index": 267,
+   "Title": "Hasselt",
+   "Description": "Opgeheven per 01-01-2001\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV23"
+  },
+  {
+   "Identifier": "GM0244",
+   "Index": 268,
+   "Title": "Hattem",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0117",
+   "Index": 269,
+   "Title": "Havelte",
+   "Description": "Opgeheven per 01-01-1998\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV22"
+  },
+  {
+   "Identifier": "GM0245",
+   "Index": 270,
+   "Title": "Hedel",
+   "Description": "Opgeheven per 01-01-1999\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM1937",
+   "Index": 271,
+   "Title": "Heel",
+   "Description": "Opgeheven per 01-01-2007\r\nOntstaan per 01-01-1991",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM0396",
+   "Index": 272,
+   "Title": "Heemskerk",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0397",
+   "Index": 273,
+   "Title": "Heemstede",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0246",
+   "Index": 274,
+   "Title": "Heerde",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0074",
+   "Index": 275,
+   "Title": "Heerenveen",
+   "Description": "Gemeentelijke herindeling per 01-01-2014\r\nBegindatum 01-07-1934",
+   "DimensionGroupId": "GMPV21"
+  },
+  {
+   "Identifier": "GM0247",
+   "Index": 276,
+   "Title": "Heerewaarden",
+   "Description": "Opgeheven per 01-01-1999\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0398",
+   "Index": 277,
+   "Title": "Heerhugowaard",
+   "Description": "Begindatum voor 1830\r\nOpgeheven per 01-01-2022 wordt Dijk en Waard GM1980",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0526",
+   "Index": 278,
+   "Title": "Heerjansdam",
+   "Description": "Opgeheven per 01-01-2003\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0917",
+   "Index": 279,
+   "Title": "Heerlen",
+   "Description": "Begindatum 02-01-1839",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM0791",
+   "Index": 280,
+   "Title": "Heesch",
+   "Description": "Naamswijziging per 28-01-1995\r\nGemeentelijke herindeling per 01-01-1994\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0793",
+   "Index": 281,
+   "Title": "Heeze",
+   "Description": "Opgeheven per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM1658",
+   "Index": 282,
+   "Title": "Heeze-Leende",
+   "Description": "Ontstaan per 01-01-1997",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0399",
+   "Index": 283,
+   "Title": "Heiloo",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0162",
+   "Index": 284,
+   "Title": "Heino",
+   "Description": "Opgeheven per 01-01-2001\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV23"
+  },
+  {
+   "Identifier": "GM0918",
+   "Index": 285,
+   "Title": "Helden",
+   "Description": "Opgeheven per 01-01-2010\r\nBegindatum 02-01-1839",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM0400",
+   "Index": 286,
+   "Title": "Den Helder",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0163",
+   "Index": 287,
+   "Title": "Hellendoorn",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV23"
+  },
+  {
+   "Identifier": "GM0530",
+   "Index": 288,
+   "Title": "Hellevoetsluis",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0794",
+   "Index": 289,
+   "Title": "Helmond",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0795",
+   "Index": 290,
+   "Title": "Helvoirt",
+   "Description": "Opgeheven per 01-01-1996\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0531",
+   "Index": 291,
+   "Title": "Hendrik-Ido-Ambacht",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0248",
+   "Index": 292,
+   "Title": "Hengelo (Gld.)",
+   "Description": "Opgeheven per 01-01-2005\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0164",
+   "Index": 293,
+   "Title": "Hengelo (O.)",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV23"
+  },
+  {
+   "Identifier": "GM0796",
+   "Index": 294,
+   "Title": "'s-Hertogenbosch",
+   "Description": "Gemeentelijke herindeling per 01-01-2015\r\nGemeentelijke herindeling per 01-01-1996\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0251",
+   "Index": 295,
+   "Title": "Heteren",
+   "Description": "Opgeheven per 01-01-2001\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0252",
+   "Index": 296,
+   "Title": "Heumen",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0797",
+   "Index": 297,
+   "Title": "Heusden",
+   "Description": "Gemeentelijke herindeling per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0920",
+   "Index": 298,
+   "Title": "Heythuysen",
+   "Description": "Opgeheven per 01-01-2007\r\nGemeentelijke herindeling per 01-01-1991\r\nBegindatum 02-01-1839",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM0534",
+   "Index": 299,
+   "Title": "Hillegom",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0798",
+   "Index": 300,
+   "Title": "Hilvarenbeek",
+   "Description": "Gemeentelijke herindeling per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0402",
+   "Index": 301,
+   "Title": "Hilversum",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM1963",
+   "Index": 302,
+   "Title": "Hoeksche Waard",
+   "Description": "Ontstaan per 01-01-2019",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0253",
+   "Index": 303,
+   "Title": "Hoevelaken",
+   "Description": "Opgeheven per 01-01-2000\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0799",
+   "Index": 304,
+   "Title": "Hoeven",
+   "Description": "Opgeheven per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM1735",
+   "Index": 305,
+   "Title": "Hof van Twente",
+   "Description": "Ontstaan per 01-01-2001",
+   "DimensionGroupId": "GMPV23"
+  },
+  {
+   "Identifier": "GM1966",
+   "Index": 306,
+   "Title": "Het Hogeland",
+   "Description": "Ontstaan per 01-01-2019",
+   "DimensionGroupId": "GMPV20"
+  },
+  {
+   "Identifier": "GM1911",
+   "Index": 307,
+   "Title": "Hollands Kroon",
+   "Description": "Ontstaan per 01-01-2012",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0165",
+   "Index": 308,
+   "Title": "Holten",
+   "Description": "Opgeheven per 01-01-2001\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV23"
+  },
+  {
+   "Identifier": "GM0675",
+   "Index": 309,
+   "Title": "Hontenisse",
+   "Description": "Opgeheven per 01-01-2003\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV29"
+  },
+  {
+   "Identifier": "GM0801",
+   "Index": 310,
+   "Title": "Hooge en Lage Mierde",
+   "Description": "Opgeheven per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0802",
+   "Index": 311,
+   "Title": "Hooge en Lage Zwaluwe",
+   "Description": "Opgeheven per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0800",
+   "Index": 312,
+   "Title": "Hoogeloon, Hapert en Casteren",
+   "Description": "Opgeheven per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0118",
+   "Index": 313,
+   "Title": "Hoogeveen",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV22"
+  },
+  {
+   "Identifier": "GM0018",
+   "Index": 314,
+   "Title": "Hoogezand-Sappemeer",
+   "Description": "Opgeheven per 01-01-2018\r\nOntstaan per 01-04-1949",
+   "DimensionGroupId": "GMPV20"
+  },
+  {
+   "Identifier": "GM0405",
+   "Index": 315,
+   "Title": "Hoorn",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0923",
+   "Index": 316,
+   "Title": "Horst",
+   "Description": "Opgeheven per 01-01-2001\r\nBegindatum 02-01-1839",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM1507",
+   "Index": 317,
+   "Title": "Horst aan de Maas",
+   "Description": "Gemeentelijke herindeling per 01-01-2010\r\nOntstaan per 01-01-2001",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM0321",
+   "Index": 318,
+   "Title": "Houten",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV26"
+  },
+  {
+   "Identifier": "GM0803",
+   "Index": 319,
+   "Title": "Huijbergen",
+   "Description": "Opgeheven per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0255",
+   "Index": 320,
+   "Title": "Huissen",
+   "Description": "Opgeheven per 01-01-2001\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0406",
+   "Index": 321,
+   "Title": "Huizen",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0677",
+   "Index": 322,
+   "Title": "Hulst",
+   "Description": "Gemeentelijke herindeling per 01-01-2003\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV29"
+  },
+  {
+   "Identifier": "GM0256",
+   "Index": 323,
+   "Title": "Hummelo en Keppel",
+   "Description": "Opgeheven per 01-01-2005\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0925",
+   "Index": 324,
+   "Title": "Hunsel",
+   "Description": "Opgeheven per 01-01-2007\r\nBegindatum 02-01-1839",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM0195",
+   "Index": 325,
+   "Title": "IJsselham",
+   "Description": "Opgeheven per 01-01-2001\r\nOntstaan per 01-01-1973",
+   "DimensionGroupId": "GMPV23"
+  },
+  {
+   "Identifier": "GM0191",
+   "Index": 326,
+   "Title": "IJsselmuiden",
+   "Description": "Opgeheven per 01-01-2001\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV23"
+  },
+  {
+   "Identifier": "GM0353",
+   "Index": 327,
+   "Title": "IJsselstein",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV26"
+  },
+  {
+   "Identifier": "GM0645",
+   "Index": 328,
+   "Title": "Jacobswoude",
+   "Description": "Opgeheven per 01-01-2009\r\nOntstaan per 01-01-1991",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM1884",
+   "Index": 329,
+   "Title": "Kaag en Braassem",
+   "Description": "Ontstaan per 01-01-2009",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0166",
+   "Index": 330,
+   "Title": "Kampen",
+   "Description": "Gemeentelijke herindeling per 01-01-2001\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV23"
+  },
+  {
+   "Identifier": "GM0678",
+   "Index": 331,
+   "Title": "Kapelle",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV29"
+  },
+  {
+   "Identifier": "GM0537",
+   "Index": 332,
+   "Title": "Katwijk",
+   "Description": "Gemeentelijke herindeling per 01-01-2006\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0928",
+   "Index": 333,
+   "Title": "Kerkrade",
+   "Description": "Begindatum 02-01-1839",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM0257",
+   "Index": 334,
+   "Title": "Kerkwijk",
+   "Description": "Opgeheven per 01-01-1999\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0929",
+   "Index": 335,
+   "Title": "Kessel",
+   "Description": "Opgeheven per 01-01-2010\r\nBegindatum 02-01-1839",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM0258",
+   "Index": 336,
+   "Title": "Kesteren",
+   "Description": "Naamswijziging per 01-04-2003\r\nGemeentelijke herindeling per 01-01-2002\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0804",
+   "Index": 337,
+   "Title": "Klundert",
+   "Description": "Opgeheven per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM1598",
+   "Index": 338,
+   "Title": "Koggenland",
+   "Description": "Ontstaan per 01-01-2007",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0079",
+   "Index": 339,
+   "Title": "Kollumerland en Nieuwkruisland",
+   "Description": "Opgeheven per 01-01-2019\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV21"
+  },
+  {
+   "Identifier": "GM0588",
+   "Index": 340,
+   "Title": "Korendijk",
+   "Description": "Opgeheven per 01-01-2019\r\nOntstaan per 01-01-1984",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0542",
+   "Index": 341,
+   "Title": "Krimpen aan den IJssel",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM1931",
+   "Index": 342,
+   "Title": "Krimpenerwaard",
+   "Description": "Ontstaan per 01-01-2015",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM1659",
+   "Index": 343,
+   "Title": "Laarbeek",
+   "Description": "Ontstaan per 01-01-1997",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM1685",
+   "Index": 344,
+   "Title": "Landerd",
+   "Description": "Ontstaan per 01-01-1994\r\nOpgeheven per 01-01-2022",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM1982",
+   "Index": 345,
+   "Title": "Land van Cuijk",
+   "Description": "Begindatum 01-01-2022\r\nGemeente Boxmeer, Cuijk, Grave, Mil en Sint Hubert, en Sint Anthonis",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0882",
+   "Index": 346,
+   "Title": "Landgraaf",
+   "Description": "Ontstaan per 01-01-1982",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM0415",
+   "Index": 347,
+   "Title": "Landsmeer",
+   "Description": "Gemeentelijke herindeling per 01-01-1991\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0325",
+   "Index": 348,
+   "Title": "Langbroek",
+   "Description": "Opgeheven per 01-01-1996\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV26"
+  },
+  {
+   "Identifier": "GM0416",
+   "Index": 349,
+   "Title": "Langedijk",
+   "Description": "Ontstaan per 01-08-1941\r\nOpgeheven per 01-01-2022",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM1621",
+   "Index": 350,
+   "Title": "Lansingerland",
+   "Description": "Ontstaan per 01-01-2007",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0417",
+   "Index": 351,
+   "Title": "Laren (NH.)",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0022",
+   "Index": 352,
+   "Title": "Leek",
+   "Description": "Opgeheven per 01-01-2019\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV20"
+  },
+  {
+   "Identifier": "GM0805",
+   "Index": 353,
+   "Title": "Leende",
+   "Description": "Opgeheven per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0545",
+   "Index": 354,
+   "Title": "Leerdam",
+   "Description": "Opgeheven per 01-01-2019\r\nProvinciale wijziging per 01-01-2019\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0326",
+   "Index": 355,
+   "Title": "Leersum",
+   "Description": "Opgeheven per 01-01-2006\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV26"
+  },
+  {
+   "Identifier": "GM0080",
+   "Index": 356,
+   "Title": "Leeuwarden",
+   "Description": "Gemeentelijke herindeling per 01-01-2018\r\nGemeentelijke herindeling per 01-01-2014\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV21"
+  },
+  {
+   "Identifier": "GM0081",
+   "Index": 357,
+   "Title": "Leeuwarderadeel",
+   "Description": "Opgeheven per 01-01-2018\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV21"
+  },
+  {
+   "Identifier": "GM0546",
+   "Index": 358,
+   "Title": "Leiden",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0547",
+   "Index": 359,
+   "Title": "Leiderdorp",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0548",
+   "Index": 360,
+   "Title": "Leidschendam",
+   "Description": "Opgeheven per 01-01-2002\r\nOntstaan per 01-01-1938",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM1916",
+   "Index": 361,
+   "Title": "Leidschendam-Voorburg",
+   "Description": "Ontstaan per 01-01-2002",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0995",
+   "Index": 362,
+   "Title": "Lelystad",
+   "Description": "Ontstaan per 01-01-1980",
+   "DimensionGroupId": "GMPV24"
+  },
+  {
+   "Identifier": "GM0082",
+   "Index": 363,
+   "Title": "Lemsterland",
+   "Description": "Opgeheven per 01-01-2014\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV21"
+  },
+  {
+   "Identifier": "GM1640",
+   "Index": 364,
+   "Title": "Leudal",
+   "Description": "Ontstaan per 01-01-2007",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM0327",
+   "Index": 365,
+   "Title": "Leusden",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV26"
+  },
+  {
+   "Identifier": "GM0260",
+   "Index": 366,
+   "Title": "Lichtenvoorde",
+   "Description": "Opgeheven per 01-01-2005\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM1673",
+   "Index": 367,
+   "Title": "Liemeer",
+   "Description": "Opgeheven per 01-01-2007\r\nNaamswijziging per 01-01-1994",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0806",
+   "Index": 368,
+   "Title": "Liempde",
+   "Description": "Opgeheven per 01-01-1996\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0261",
+   "Index": 369,
+   "Title": "Lienden",
+   "Description": "Opgeheven per 01-01-1999\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0552",
+   "Index": 370,
+   "Title": "De Lier",
+   "Description": "Opgeheven per 01-01-2004\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0807",
+   "Index": 371,
+   "Title": "Lieshout",
+   "Description": "Opgeheven per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0694",
+   "Index": 372,
+   "Title": "Liesveld",
+   "Description": "Opgeheven per 01-01-2013\r\nOntstaan per 01-01-1986",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0418",
+   "Index": 373,
+   "Title": "Limmen",
+   "Description": "Opgeheven per 01-01-2002\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0733",
+   "Index": 374,
+   "Title": "Lingewaal",
+   "Description": "Opgeheven per 01-01-2019\r\nNaamswijziging per 03-01-1987",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM1705",
+   "Index": 375,
+   "Title": "Lingewaard",
+   "Description": "Naamswijziging per 01-01-2003",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0553",
+   "Index": 376,
+   "Title": "Lisse",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0808",
+   "Index": 377,
+   "Title": "Lith",
+   "Description": "Opgeheven per 01-01-2011\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0140",
+   "Index": 378,
+   "Title": "Littenseradiel",
+   "Description": "Opgeheven per 01-01-2018\r\nNaamswijziging per 26-01-1985",
+   "DimensionGroupId": "GMPV21"
+  },
+  {
+   "Identifier": "GM0262",
+   "Index": 379,
+   "Title": "Lochem",
+   "Description": "Gemeentelijke herindeling per 01-01-2005\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0329",
+   "Index": 380,
+   "Title": "Loenen",
+   "Description": "Opgeheven per 01-01-2011\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV26"
+  },
+  {
+   "Identifier": "GM0809",
+   "Index": 381,
+   "Title": "Loon op Zand",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0330",
+   "Index": 382,
+   "Title": "Loosdrecht",
+   "Description": "Opgeheven per 01-01-2002\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV26"
+  },
+  {
+   "Identifier": "GM0331",
+   "Index": 383,
+   "Title": "Lopik",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV26"
+  },
+  {
+   "Identifier": "GM0024",
+   "Index": 384,
+   "Title": "Loppersum",
+   "Description": "Opgeheven per 01-01-2021\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV20"
+  },
+  {
+   "Identifier": "GM0168",
+   "Index": 385,
+   "Title": "Losser",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV23"
+  },
+  {
+   "Identifier": "GM0810",
+   "Index": 386,
+   "Title": "Luyksgestel",
+   "Description": "Opgeheven per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0811",
+   "Index": 387,
+   "Title": "Maarheeze",
+   "Description": "Opgeheven per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0332",
+   "Index": 388,
+   "Title": "Maarn",
+   "Description": "Opgeheven per 01-01-2006\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV26"
+  },
+  {
+   "Identifier": "GM0333",
+   "Index": 389,
+   "Title": "Maarssen",
+   "Description": "Opgeheven per 01-01-2011\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV26"
+  },
+  {
+   "Identifier": "GM0334",
+   "Index": 390,
+   "Title": "Maartensdijk",
+   "Description": "Opgeheven per 01-01-2001\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV26"
+  },
+  {
+   "Identifier": "GM0933",
+   "Index": 391,
+   "Title": "Maasbracht",
+   "Description": "Opgeheven per 01-01-2007\r\nGemeentelijke herindeling per 01-01-1991\r\nBegindatum 02-01-1839",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM0934",
+   "Index": 392,
+   "Title": "Maasbree",
+   "Description": "Opgeheven per 01-01-2010\r\nBegindatum 02-01-1839",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM1671",
+   "Index": 393,
+   "Title": "Maasdonk",
+   "Description": "Opgeheven per 01-01-2015\r\nOntstaan per 01-01-1993",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0263",
+   "Index": 394,
+   "Title": "Maasdriel",
+   "Description": "Gemeentelijke herindeling per 01-01-1999\r\nNaamswijziging per 01-08-1944",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM1641",
+   "Index": 395,
+   "Title": "Maasgouw",
+   "Description": "Ontstaan per 01-01-2007",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM1991",
+   "Index": 396,
+   "Title": "Maashorst",
+   "Description": "Begindatum 01-01-2022\r\nGemeente Uden en Landerd",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0555",
+   "Index": 397,
+   "Title": "Maasland",
+   "Description": "Opgeheven per 01-01-2004\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0556",
+   "Index": 398,
+   "Title": "Maassluis",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0935",
+   "Index": 399,
+   "Title": "Maastricht",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM1665",
+   "Index": 400,
+   "Title": "Made",
+   "Description": "Naamswijziging per 25-04-1998\r\nOntstaan per 01-01-1997",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0812",
+   "Index": 401,
+   "Title": "Made en Drimmelen",
+   "Description": "Opgeheven per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0936",
+   "Index": 402,
+   "Title": "Margraten",
+   "Description": "Opgeheven per 01-01-2011\r\nBegindatum 02-01-1839",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM0686",
+   "Index": 403,
+   "Title": "Mariekerke",
+   "Description": "Opgeheven per 01-01-1997\r\nOntstaan per 01-07-1966",
+   "DimensionGroupId": "GMPV29"
+  },
+  {
+   "Identifier": "GM0169",
+   "Index": 404,
+   "Title": "Markelo",
+   "Description": "Opgeheven per 01-01-2001\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV23"
+  },
+  {
+   "Identifier": "GM1663",
+   "Index": 405,
+   "Title": "De Marne",
+   "Description": "Opgeheven per 01-01-2019\r\nNaamswijziging per 01-01-1992",
+   "DimensionGroupId": "GMPV20"
+  },
+  {
+   "Identifier": "GM0025",
+   "Index": 406,
+   "Title": "Marum",
+   "Description": "Opgeheven per 01-01-2019\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV20"
+  },
+  {
+   "Identifier": "GM0264",
+   "Index": 407,
+   "Title": "Maurik",
+   "Description": "Opgeheven per 01-01-1999\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0420",
+   "Index": 408,
+   "Title": "Medemblik",
+   "Description": "Gemeentelijke herindeling per 01-01-2011\r\nGemeentelijke herindeling per 01-01-2007\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0993",
+   "Index": 409,
+   "Title": "Meerlo-Wanssum",
+   "Description": "Opgeheven per 01-01-2010\r\nOntstaan per 01-07-1969",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM0938",
+   "Index": 410,
+   "Title": "Meerssen",
+   "Description": "Begindatum 02-01-1839",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM1948",
+   "Index": 411,
+   "Title": "Meierijstad",
+   "Description": "Ontstaan per 01-01-2017",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0941",
+   "Index": 412,
+   "Title": "Meijel",
+   "Description": "Opgeheven per 01-01-2010\r\nBegindatum 02-01-1839",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM0083",
+   "Index": 413,
+   "Title": "Menaldumadeel",
+   "Description": "Naamswijziging per 01-01-2011\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV21"
+  },
+  {
+   "Identifier": "GM1908",
+   "Index": 414,
+   "Title": "Menameradiel",
+   "Description": "Opgeheven per 01-01-2018\r\nNaamswijziging per 01-01-2011",
+   "DimensionGroupId": "GMPV21"
+  },
+  {
+   "Identifier": "GM1987",
+   "Index": 415,
+   "Title": "Menterwolde",
+   "Description": "Opgeheven per 01-01-2018\r\nNaamswijziging per 01-02-1991",
+   "DimensionGroupId": "GMPV20"
+  },
+  {
+   "Identifier": "GM0119",
+   "Index": 416,
+   "Title": "Meppel",
+   "Description": "Gemeentelijke herindeling per 01-01-1998\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV22"
+  },
+  {
+   "Identifier": "GM0687",
+   "Index": 417,
+   "Title": "Middelburg (Z.)",
+   "Description": "Gemeentelijke herindeling per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV29"
+  },
+  {
+   "Identifier": "GM0559",
+   "Index": 418,
+   "Title": "Middelharnis",
+   "Description": "Opgeheven per 01-01-2013\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM1842",
+   "Index": 419,
+   "Title": "Midden-Delfland",
+   "Description": "Ontstaan per 01-01-2004",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM1731",
+   "Index": 420,
+   "Title": "Midden-Drenthe",
+   "Description": "Naamswijziging per 01-01-2000",
+   "DimensionGroupId": "GMPV22"
+  },
+  {
+   "Identifier": "GM1952",
+   "Index": 421,
+   "Title": "Midden-Groningen",
+   "Description": "Ontstaan per 01-01-2018",
+   "DimensionGroupId": "GMPV20"
+  },
+  {
+   "Identifier": "GM0688",
+   "Index": 422,
+   "Title": "Middenschouwen",
+   "Description": "Opgeheven per 01-01-1997\r\nOntstaan per 01-01-1961",
+   "DimensionGroupId": "GMPV29"
+  },
+  {
+   "Identifier": "GM1697",
+   "Index": 423,
+   "Title": "Middenveld",
+   "Description": "Naamswijziging per 01-01-2000\r\nOntstaan per 01-01-1998",
+   "DimensionGroupId": "GMPV22"
+  },
+  {
+   "Identifier": "GM0814",
+   "Index": 424,
+   "Title": "Mierlo",
+   "Description": "Opgeheven per 01-01-2004\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0815",
+   "Index": 425,
+   "Title": "Mill en Sint Hubert",
+   "Description": "Begindatum voor 1830\r\nOpgeheven per 01-01-2022",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0265",
+   "Index": 426,
+   "Title": "Millingen aan de Rijn",
+   "Description": "Opgeheven per 01-01-2015\r\nNaamswijziging per 01-01-1954",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM1709",
+   "Index": 427,
+   "Title": "Moerdijk",
+   "Description": "Naamswijziging per 04-04-1998",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0816",
+   "Index": 428,
+   "Title": "Moergestel",
+   "Description": "Opgeheven per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM1978",
+   "Index": 429,
+   "Title": "Molenlanden",
+   "Description": "Ontstaan per 01-01-2019",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM1927",
+   "Index": 430,
+   "Title": "Molenwaard",
+   "Description": "Opgeheven per 01-01-2019\r\nOntstaan per 01-01-2013",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0562",
+   "Index": 431,
+   "Title": "Monster",
+   "Description": "Opgeheven per 01-01-2004\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM1955",
+   "Index": 432,
+   "Title": "Montferland",
+   "Description": "Ontstaan per 01-01-2005",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0335",
+   "Index": 433,
+   "Title": "Montfoort",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV26"
+  },
+  {
+   "Identifier": "GM0944",
+   "Index": 434,
+   "Title": "Mook en Middelaar",
+   "Description": "Begindatum 02-01-1839",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM0563",
+   "Index": 435,
+   "Title": "Moordrecht",
+   "Description": "Opgeheven per 01-01-2010\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0424",
+   "Index": 436,
+   "Title": "Muiden",
+   "Description": "Opgeheven per 01-01-2016\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0565",
+   "Index": 437,
+   "Title": "Naaldwijk",
+   "Description": "Opgeheven per 01-01-2004\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0425",
+   "Index": 438,
+   "Title": "Naarden",
+   "Description": "Opgeheven per 01-01-2016\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM1740",
+   "Index": 439,
+   "Title": "Neder-Betuwe",
+   "Description": "Naamswijziging per 01-04-2003",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0426",
+   "Index": 440,
+   "Title": "Nederhorst den Berg",
+   "Description": "Opgeheven per 01-01-2002\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0643",
+   "Index": 441,
+   "Title": "Nederlek",
+   "Description": "Opgeheven per 01-01-2015\r\nOntstaan per 01-01-1985",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0946",
+   "Index": 442,
+   "Title": "Nederweert",
+   "Description": "Begindatum 02-01-1839",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM0266",
+   "Index": 443,
+   "Title": "Neede",
+   "Description": "Opgeheven per 01-01-2005\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0304",
+   "Index": 444,
+   "Title": "Neerijnen",
+   "Description": "Opgeheven per 01-01-2019\r\nOntstaan per 01-01-1978",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0412",
+   "Index": 445,
+   "Title": "Niedorp",
+   "Description": "Opgeheven per 01-01-2012\r\nOntstaan per 01-08-1970",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0356",
+   "Index": 446,
+   "Title": "Nieuwegein",
+   "Description": "Ontstaan per 01-07-1971",
+   "DimensionGroupId": "GMPV26"
+  },
+  {
+   "Identifier": "GM0567",
+   "Index": 447,
+   "Title": "Nieuwerkerk aan den IJssel",
+   "Description": "Opgeheven per 01-01-2010\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0817",
+   "Index": 448,
+   "Title": "Nieuw-Ginneken",
+   "Description": "Opgeheven per 01-01-1997\r\nOntstaan per 01-01-1942",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0569",
+   "Index": 449,
+   "Title": "Nieuwkoop",
+   "Description": "Gemeentelijke herindeling per 01-01-2007\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0571",
+   "Index": 450,
+   "Title": "Nieuw-Lekkerland",
+   "Description": "Opgeheven per 01-01-2013\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0170",
+   "Index": 451,
+   "Title": "Nieuwleusen",
+   "Description": "Opgeheven per 01-01-2001\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV23"
+  },
+  {
+   "Identifier": "GM0818",
+   "Index": 452,
+   "Title": "Nieuw-Vossemeer",
+   "Description": "Opgeheven per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0104",
+   "Index": 453,
+   "Title": "Nijefurd",
+   "Description": "Opgeheven per 01-01-2011\r\nOntstaan per 01-01-1984",
+   "DimensionGroupId": "GMPV21"
+  },
+  {
+   "Identifier": "GM0121",
+   "Index": 454,
+   "Title": "Nijeveen",
+   "Description": "Opgeheven per 01-01-1998\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV22"
+  },
+  {
+   "Identifier": "GM0267",
+   "Index": 455,
+   "Title": "Nijkerk",
+   "Description": "Gemeentelijke herindeling per 01-01-2000\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0268",
+   "Index": 456,
+   "Title": "Nijmegen",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM1930",
+   "Index": 457,
+   "Title": "Nissewaard",
+   "Description": "Ontstaan per 01-01-2015",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM1970",
+   "Index": 458,
+   "Title": "Noardeast-Fryslân",
+   "Description": "Ontstaan per 01-01-2019",
+   "DimensionGroupId": "GMPV21"
+  },
+  {
+   "Identifier": "GM1695",
+   "Index": 459,
+   "Title": "Noord-Beveland",
+   "Description": "Ontstaan per 01-01-1995",
+   "DimensionGroupId": "GMPV29"
+  },
+  {
+   "Identifier": "GM1699",
+   "Index": 460,
+   "Title": "Noordenveld",
+   "Description": "Ontstaan per 01-01-1998",
+   "DimensionGroupId": "GMPV22"
+  },
+  {
+   "Identifier": "GM0529",
+   "Index": 461,
+   "Title": "Noorder-Koggenland",
+   "Description": "Opgeheven per 01-01-2007\r\nOntstaan per 01-01-1979",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0171",
+   "Index": 462,
+   "Title": "Noordoostpolder",
+   "Description": "Provinciale wijziging per 01-01-1986\r\nNaamswijziging per 01-07-1962",
+   "DimensionGroupId": "GMPV24"
+  },
+  {
+   "Identifier": "GM0575",
+   "Index": 463,
+   "Title": "Noordwijk",
+   "Description": "Gemeentelijke herindeling per 01-01-2019\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0576",
+   "Index": 464,
+   "Title": "Noordwijkerhout",
+   "Description": "Opgeheven per 01-01-2019\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0577",
+   "Index": 465,
+   "Title": "Nootdorp",
+   "Description": "Opgeheven per 01-01-2002\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0120",
+   "Index": 466,
+   "Title": "Norg",
+   "Description": "Opgeheven per 01-01-1998\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV22"
+  },
+  {
+   "Identifier": "GM0820",
+   "Index": 467,
+   "Title": "Nuenen, Gerwen en Nederwetten",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0302",
+   "Index": 468,
+   "Title": "Nunspeet",
+   "Description": "Ontstaan per 01-01-1972",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0951",
+   "Index": 469,
+   "Title": "Nuth",
+   "Description": "Opgeheven per 01-01-2019\r\nBegindatum 02-01-1839",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM0429",
+   "Index": 470,
+   "Title": "Obdam",
+   "Description": "Opgeheven per 01-01-2007\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0122",
+   "Index": 471,
+   "Title": "Odoorn",
+   "Description": "Opgeheven per 01-01-1998\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV22"
+  },
+  {
+   "Identifier": "GM0579",
+   "Index": 472,
+   "Title": "Oegstgeest",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0823",
+   "Index": 473,
+   "Title": "Oirschot",
+   "Description": "Gemeentelijke herindeling per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0824",
+   "Index": 474,
+   "Title": "Oisterwijk",
+   "Description": "Opgeheven per 01-01-2021\r\nGemeentelijke herindeling per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM1895",
+   "Index": 475,
+   "Title": "Oldambt",
+   "Description": "Ontstaan per 01-01-2010",
+   "DimensionGroupId": "GMPV20"
+  },
+  {
+   "Identifier": "GM0269",
+   "Index": 476,
+   "Title": "Oldebroek",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0173",
+   "Index": 477,
+   "Title": "Oldenzaal",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV23"
+  },
+  {
+   "Identifier": "GM0174",
+   "Index": 478,
+   "Title": "Olst",
+   "Description": "Naamswijziging per 26-03-2002\r\nGemeentelijke herindeling per 01-01-2001\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV23"
+  },
+  {
+   "Identifier": "GM1773",
+   "Index": 479,
+   "Title": "Olst-Wijhe",
+   "Description": "Naamswijziging per 26-03-2002",
+   "DimensionGroupId": "GMPV23"
+  },
+  {
+   "Identifier": "GM0175",
+   "Index": 480,
+   "Title": "Ommen",
+   "Description": "Begindatum 01-05-1923",
+   "DimensionGroupId": "GMPV23"
+  },
+  {
+   "Identifier": "GM0881",
+   "Index": 481,
+   "Title": "Onderbanken",
+   "Description": "Opgeheven per 01-01-2019\r\nOntstaan per 01-01-1982",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM1586",
+   "Index": 482,
+   "Title": "Oost Gelre",
+   "Description": "Naamswijziging per 19-05-2006",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0825",
+   "Index": 483,
+   "Title": "Oost-, West- en Middelbeers",
+   "Description": "Opgeheven per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0692",
+   "Index": 484,
+   "Title": "Oostburg",
+   "Description": "Opgeheven per 01-01-2003\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV29"
+  },
+  {
+   "Identifier": "GM0123",
+   "Index": 485,
+   "Title": "Oosterhesselen",
+   "Description": "Opgeheven per 01-01-1998\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV22"
+  },
+  {
+   "Identifier": "GM0826",
+   "Index": 486,
+   "Title": "Oosterhout",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0580",
+   "Index": 487,
+   "Title": "Oostflakkee",
+   "Description": "Opgeheven per 01-01-2013\r\nOntstaan per 01-01-1966",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0085",
+   "Index": 488,
+   "Title": "Ooststellingwerf",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV21"
+  },
+  {
+   "Identifier": "GM0431",
+   "Index": 489,
+   "Title": "Oostzaan",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0176",
+   "Index": 490,
+   "Title": "Ootmarsum",
+   "Description": "Opgeheven per 01-01-2001\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV23"
+  },
+  {
+   "Identifier": "GM0996",
+   "Index": 491,
+   "Title": "Openbaar Lichaam Z.IJ.P.",
+   "Description": "Opgeheven per 01-01-1996\r\nOntstaan per 10-11-1955",
+   "DimensionGroupId": "GMPV24"
+  },
+  {
+   "Identifier": "GM0432",
+   "Index": 492,
+   "Title": "Opmeer",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0086",
+   "Index": 493,
+   "Title": "Opsterland",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV21"
+  },
+  {
+   "Identifier": "GM0828",
+   "Index": 494,
+   "Title": "Oss",
+   "Description": "Gemeentelijke herindeling per 01-01-2015\r\nGemeentelijke herindeling per 01-01-2011\r\nGemeentelijke herindeling per 01-01-2003\r\nGemeentelijke herindeling per 01-01-1994\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0829",
+   "Index": 495,
+   "Title": "Ossendrecht",
+   "Description": "Opgeheven per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0831",
+   "Index": 496,
+   "Title": "Oud en Nieuw Gastel",
+   "Description": "Opgeheven per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0584",
+   "Index": 497,
+   "Title": "Oud-Beijerland",
+   "Description": "Opgeheven per 01-01-2019\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM1509",
+   "Index": 498,
+   "Title": "Oude IJsselstreek",
+   "Description": "Ontstaan per 01-01-2005",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0830",
+   "Index": 499,
+   "Title": "Oudenbosch",
+   "Description": "Opgeheven per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0437",
+   "Index": 500,
+   "Title": "Ouder-Amstel",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0644",
+   "Index": 501,
+   "Title": "Ouderkerk",
+   "Description": "Opgeheven per 01-01-2015\r\nOntstaan per 01-01-1985",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0589",
+   "Index": 502,
+   "Title": "Oudewater",
+   "Description": "Provinciale wijziging per 01-09-1970\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV26"
+  },
+  {
+   "Identifier": "GM1734",
+   "Index": 503,
+   "Title": "Overbetuwe",
+   "Description": "Ontstaan per 01-01-2001",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0590",
+   "Index": 504,
+   "Title": "Papendrecht",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM1894",
+   "Index": 505,
+   "Title": "Peel en Maas",
+   "Description": "Ontstaan per 01-01-2010",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM0124",
+   "Index": 506,
+   "Title": "Peize",
+   "Description": "Opgeheven per 01-01-1998\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV22"
+  },
+  {
+   "Identifier": "GM0765",
+   "Index": 507,
+   "Title": "Pekela",
+   "Description": "Ontstaan per 01-01-1990",
+   "DimensionGroupId": "GMPV20"
+  },
+  {
+   "Identifier": "GM0594",
+   "Index": 508,
+   "Title": "Pijnacker",
+   "Description": "Opgeheven per 01-01-2002\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM1926",
+   "Index": 509,
+   "Title": "Pijnacker-Nootdorp",
+   "Description": "Ontstaan per 01-01-2002",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0832",
+   "Index": 510,
+   "Title": "Prinsenbeek",
+   "Description": "Opgeheven per 01-01-1997\r\nNaamswijziging per 01-01-1951",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0439",
+   "Index": 511,
+   "Title": "Purmerend",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0833",
+   "Index": 512,
+   "Title": "Putte",
+   "Description": "Opgeheven per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0273",
+   "Index": 513,
+   "Title": "Putten",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0177",
+   "Index": 514,
+   "Title": "Raalte",
+   "Description": "Gemeentelijke herindeling per 01-01-2001\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV23"
+  },
+  {
+   "Identifier": "GM0834",
+   "Index": 515,
+   "Title": "Raamsdonk",
+   "Description": "Opgeheven per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0835",
+   "Index": 516,
+   "Title": "Ravenstein",
+   "Description": "Opgeheven per 01-01-2003\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0595",
+   "Index": 517,
+   "Title": "Reeuwijk",
+   "Description": "Opgeheven per 01-01-2011\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM1661",
+   "Index": 518,
+   "Title": "Reiderland",
+   "Description": "Opgeheven per 01-01-2010\r\nNaamswijziging per 01-07-1991",
+   "DimensionGroupId": "GMPV20"
+  },
+  {
+   "Identifier": "GM0703",
+   "Index": 519,
+   "Title": "Reimerswaal",
+   "Description": "Ontstaan per 01-01-1970",
+   "DimensionGroupId": "GMPV29"
+  },
+  {
+   "Identifier": "GM0274",
+   "Index": 520,
+   "Title": "Renkum",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0339",
+   "Index": 521,
+   "Title": "Renswoude",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV26"
+  },
+  {
+   "Identifier": "GM0836",
+   "Index": 522,
+   "Title": "Reusel",
+   "Description": "Opgeheven per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM1667",
+   "Index": 523,
+   "Title": "Reusel-De Mierden",
+   "Description": "Ontstaan per 01-01-1997",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0275",
+   "Index": 524,
+   "Title": "Rheden",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0340",
+   "Index": 525,
+   "Title": "Rhenen",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV26"
+  },
+  {
+   "Identifier": "GM0597",
+   "Index": 526,
+   "Title": "Ridderkerk",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0837",
+   "Index": 527,
+   "Title": "Riethoven",
+   "Description": "Opgeheven per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0602",
+   "Index": 528,
+   "Title": "Rijnsburg",
+   "Description": "Opgeheven per 01-01-2006\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0196",
+   "Index": 529,
+   "Title": "Rijnwaarden",
+   "Description": "Opgeheven per 01-01-2018\r\nOntstaan per 01-01-1985",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM1672",
+   "Index": 530,
+   "Title": "Rijnwoude",
+   "Description": "Opgeheven per 01-01-2014\r\nNaamswijziging per 01-01-1993",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0841",
+   "Index": 531,
+   "Title": "Rijsbergen",
+   "Description": "Opgeheven per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0178",
+   "Index": 532,
+   "Title": "Rijssen",
+   "Description": "Naamswijziging per 15-03-2003\r\nGemeentelijke herindeling per 01-01-2001\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV23"
+  },
+  {
+   "Identifier": "GM1742",
+   "Index": 533,
+   "Title": "Rijssen-Holten",
+   "Description": "Naamswijziging per 15-03-2003",
+   "DimensionGroupId": "GMPV23"
+  },
+  {
+   "Identifier": "GM0603",
+   "Index": 534,
+   "Title": "Rijswijk (ZH.)",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0125",
+   "Index": 535,
+   "Title": "Roden",
+   "Description": "Opgeheven per 01-01-1998\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV22"
+  },
+  {
+   "Identifier": "GM1669",
+   "Index": 536,
+   "Title": "Roerdalen",
+   "Description": "Gemeentelijke herindeling per 01-01-2007\r\nNaamswijziging per 01-01-1993",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM0957",
+   "Index": 537,
+   "Title": "Roermond",
+   "Description": "Gemeentelijke herindeling per 01-01-2007\r\nGemeentelijke herindeling per 01-01-1991\r\nBegindatum 02-01-1839",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM1670",
+   "Index": 538,
+   "Title": "Roggel en Neer",
+   "Description": "Opgeheven per 01-01-2007\r\nNaamswijziging per 01-01-1993",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM0126",
+   "Index": 539,
+   "Title": "Rolde",
+   "Description": "Opgeheven per 01-01-1998\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV22"
+  },
+  {
+   "Identifier": "GM0736",
+   "Index": 540,
+   "Title": "De Ronde Venen",
+   "Description": "Gemeentelijke herindeling per 01-01-2011\r\nOntstaan per 01-01-1989",
+   "DimensionGroupId": "GMPV26"
+  },
+  {
+   "Identifier": "GM1674",
+   "Index": 541,
+   "Title": "Roosendaal",
+   "Description": "Ontstaan per 01-01-1997",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0838",
+   "Index": 542,
+   "Title": "Roosendaal en Nispen",
+   "Description": "Opgeheven per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0839",
+   "Index": 543,
+   "Title": "Rosmalen",
+   "Description": "Opgeheven per 01-01-1996\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0276",
+   "Index": 544,
+   "Title": "Rossum",
+   "Description": "Opgeheven per 01-01-1999\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0599",
+   "Index": 545,
+   "Title": "Rotterdam",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0600",
+   "Index": 546,
+   "Title": "Rozenburg",
+   "Description": "Opgeheven per 18-03-2010\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0277",
+   "Index": 547,
+   "Title": "Rozendaal",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0840",
+   "Index": 548,
+   "Title": "Rucphen",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0127",
+   "Index": 549,
+   "Title": "Ruinen",
+   "Description": "Opgeheven per 01-01-1998\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV22"
+  },
+  {
+   "Identifier": "GM0128",
+   "Index": 550,
+   "Title": "Ruinerwold",
+   "Description": "Opgeheven per 01-01-1998\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV22"
+  },
+  {
+   "Identifier": "GM0278",
+   "Index": 551,
+   "Title": "Ruurlo",
+   "Description": "Opgeheven per 01-01-2005\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0704",
+   "Index": 552,
+   "Title": "Sas van Gent",
+   "Description": "Opgeheven per 01-01-2003\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV29"
+  },
+  {
+   "Identifier": "GM0604",
+   "Index": 553,
+   "Title": "Sassenheim",
+   "Description": "Opgeheven per 01-01-2006\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0441",
+   "Index": 554,
+   "Title": "Schagen",
+   "Description": "Gemeentelijke herindeling per 01-01-2013\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0039",
+   "Index": 555,
+   "Title": "Scheemda",
+   "Description": "Opgeheven per 01-01-2010\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV20"
+  },
+  {
+   "Identifier": "GM0458",
+   "Index": 556,
+   "Title": "Schermer",
+   "Description": "Opgeheven per 01-01-2015\r\nOntstaan per 01-08-1970",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0279",
+   "Index": 557,
+   "Title": "Scherpenzeel",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0606",
+   "Index": 558,
+   "Title": "Schiedam",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0088",
+   "Index": 559,
+   "Title": "Schiermonnikoog",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV21"
+  },
+  {
+   "Identifier": "GM0844",
+   "Index": 560,
+   "Title": "Schijndel",
+   "Description": "Opgeheven per 01-01-2017\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0962",
+   "Index": 561,
+   "Title": "Schinnen",
+   "Description": "Opgeheven per 01-01-2019\r\nBegindatum 02-01-1839",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM0607",
+   "Index": 562,
+   "Title": "Schipluiden",
+   "Description": "Opgeheven per 01-01-2004\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0129",
+   "Index": 563,
+   "Title": "Schoonebeek",
+   "Description": "Opgeheven per 01-01-1998\r\nBegindatum 01-05-1884",
+   "DimensionGroupId": "GMPV22"
+  },
+  {
+   "Identifier": "GM0608",
+   "Index": 564,
+   "Title": "Schoonhoven",
+   "Description": "Opgeheven per 01-01-2015\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0444",
+   "Index": 565,
+   "Title": "Schoorl",
+   "Description": "Opgeheven per 01-01-2001\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM1676",
+   "Index": 566,
+   "Title": "Schouwen-Duiveland",
+   "Description": "Ontstaan per 01-01-1997",
+   "DimensionGroupId": "GMPV29"
+  },
+  {
+   "Identifier": "GM0964",
+   "Index": 567,
+   "Title": "Sevenum",
+   "Description": "Opgeheven per 01-01-2010\r\nBegindatum 02-01-1839",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM0965",
+   "Index": 568,
+   "Title": "Simpelveld",
+   "Description": "Begindatum 02-01-1839",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM1702",
+   "Index": 569,
+   "Title": "Sint Anthonis",
+   "Description": "Naamswijziging per 04-07-1995\r\nOpgeheven per 01-01-2022",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0845",
+   "Index": 570,
+   "Title": "Sint-Michielsgestel",
+   "Description": "Gemeentelijke herindeling per 01-01-1996\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0846",
+   "Index": 571,
+   "Title": "Sint-Oedenrode",
+   "Description": "Opgeheven per 01-01-2017\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0968",
+   "Index": 572,
+   "Title": "Sittard",
+   "Description": "Opgeheven per 01-01-2001\r\nBegindatum 02-01-1839",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM1883",
+   "Index": 573,
+   "Title": "Sittard-Geleen",
+   "Description": "Ontstaan per 01-01-2001",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM0051",
+   "Index": 574,
+   "Title": "Skarsterlân",
+   "Description": "Opgeheven per 01-01-2014\r\nNaamswijziging per 01-03-1985",
+   "DimensionGroupId": "GMPV21"
+  },
+  {
+   "Identifier": "GM0130",
+   "Index": 575,
+   "Title": "Sleen",
+   "Description": "Opgeheven per 01-01-1998\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV22"
+  },
+  {
+   "Identifier": "GM0610",
+   "Index": 576,
+   "Title": "Sliedrecht",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0040",
+   "Index": 577,
+   "Title": "Slochteren",
+   "Description": "Opgeheven per 01-01-2018\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV20"
+  },
+  {
+   "Identifier": "GM1714",
+   "Index": 578,
+   "Title": "Sluis",
+   "Description": "Ontstaan per 01-01-2003",
+   "DimensionGroupId": "GMPV29"
+  },
+  {
+   "Identifier": "GM1698",
+   "Index": 579,
+   "Title": "Sluis-Aardenburg",
+   "Description": "Opgeheven per 01-01-2003\r\nOntstaan per 01-01-1995",
+   "DimensionGroupId": "GMPV29"
+  },
+  {
+   "Identifier": "GM0090",
+   "Index": 580,
+   "Title": "Smallingerland",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV21"
+  },
+  {
+   "Identifier": "GM0131",
+   "Index": 581,
+   "Title": "Smilde",
+   "Description": "Opgeheven per 01-01-1998\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV22"
+  },
+  {
+   "Identifier": "GM0091",
+   "Index": 582,
+   "Title": "Sneek",
+   "Description": "Opgeheven per 01-01-2011\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV21"
+  },
+  {
+   "Identifier": "GM0342",
+   "Index": 583,
+   "Title": "Soest",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV26"
+  },
+  {
+   "Identifier": "GM0847",
+   "Index": 584,
+   "Title": "Someren",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0848",
+   "Index": 585,
+   "Title": "Son en Breugel",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0612",
+   "Index": 586,
+   "Title": "Spijkenisse",
+   "Description": "Opgeheven per 01-01-2015\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0849",
+   "Index": 587,
+   "Title": "Sprang-Capelle",
+   "Description": "Opgeheven per 01-01-1997\r\nBegindatum 01-01-1923",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM1691",
+   "Index": 588,
+   "Title": "St. Anthonis",
+   "Description": "Naamswijziging per 04-07-1995\r\nOntstaan per 01-01-1994\r\n",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0179",
+   "Index": 589,
+   "Title": "Stad Delden",
+   "Description": "Opgeheven per 01-01-2001\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV23"
+  },
+  {
+   "Identifier": "GM0037",
+   "Index": 590,
+   "Title": "Stadskanaal",
+   "Description": "Ontstaan per 01-01-1969",
+   "DimensionGroupId": "GMPV20"
+  },
+  {
+   "Identifier": "GM0850",
+   "Index": 591,
+   "Title": "Standdaarbuiten",
+   "Description": "Opgeheven per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0180",
+   "Index": 592,
+   "Title": "Staphorst",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV23"
+  },
+  {
+   "Identifier": "GM0532",
+   "Index": 593,
+   "Title": "Stede Broec",
+   "Description": "Ontstaan per 01-01-1979",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0851",
+   "Index": 594,
+   "Title": "Steenbergen",
+   "Description": "Gemeentelijke herindeling per 01-01-1997\r\nNaamswijziging per 25-06-1962",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0280",
+   "Index": 595,
+   "Title": "Steenderen",
+   "Description": "Opgeheven per 01-01-2005\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0181",
+   "Index": 596,
+   "Title": "Steenwijk",
+   "Description": "Naamswijziging per 01-01-2003\r\nGemeentelijke herindeling per 01-01-2001\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV23"
+  },
+  {
+   "Identifier": "GM1708",
+   "Index": 597,
+   "Title": "Steenwijkerland",
+   "Description": "Naamswijziging per 01-01-2003",
+   "DimensionGroupId": "GMPV23"
+  },
+  {
+   "Identifier": "GM0971",
+   "Index": 598,
+   "Title": "Stein (L.)",
+   "Description": "Begindatum 02-01-1839",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM1904",
+   "Index": 599,
+   "Title": "Stichtse Vecht",
+   "Description": "Ontstaan per 01-01-2011",
+   "DimensionGroupId": "GMPV26"
+  },
+  {
+   "Identifier": "GM0973",
+   "Index": 600,
+   "Title": "Stramproy",
+   "Description": "Opgeheven per 01-01-1998\r\nBegindatum 02-01-1839",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM0617",
+   "Index": 601,
+   "Title": "Strijen",
+   "Description": "Opgeheven per 01-01-2019\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM1900",
+   "Index": 602,
+   "Title": "Súdwest-Fryslân",
+   "Description": "Gemeentelijke herindeling per 01-01-2018\r\nOntstaan per 01-01-2011",
+   "DimensionGroupId": "GMPV21"
+  },
+  {
+   "Identifier": "GM0974",
+   "Index": 603,
+   "Title": "Susteren",
+   "Description": "Opgeheven per 01-01-2003\r\nBegindatum 02-01-1839",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM0975",
+   "Index": 604,
+   "Title": "Swalmen",
+   "Description": "Opgeheven per 01-01-2007\r\nBegindatum 02-01-1839",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM0976",
+   "Index": 605,
+   "Title": "Tegelen",
+   "Description": "Opgeheven per 01-01-2001\r\nBegindatum 02-01-1839",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM0853",
+   "Index": 606,
+   "Title": "Terheijden",
+   "Description": "Opgeheven per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0715",
+   "Index": 607,
+   "Title": "Terneuzen",
+   "Description": "Gemeentelijke herindeling per 01-01-2003\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV29"
+  },
+  {
+   "Identifier": "GM0093",
+   "Index": 608,
+   "Title": "Terschelling",
+   "Description": "Provinciale wijziging per 01-09-1942\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV21"
+  },
+  {
+   "Identifier": "GM0854",
+   "Index": 609,
+   "Title": "Teteringen",
+   "Description": "Opgeheven per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0448",
+   "Index": 610,
+   "Title": "Texel",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM1525",
+   "Index": 611,
+   "Title": "Teylingen",
+   "Description": "Ontstaan per 01-01-2006",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0716",
+   "Index": 612,
+   "Title": "Tholen",
+   "Description": "Gemeentelijke herindeling per 01-01-1995\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV29"
+  },
+  {
+   "Identifier": "GM0977",
+   "Index": 613,
+   "Title": "Thorn",
+   "Description": "Opgeheven per 01-01-2007\r\nBegindatum 02-01-1839",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM0281",
+   "Index": 614,
+   "Title": "Tiel",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0855",
+   "Index": 615,
+   "Title": "Tilburg",
+   "Description": "Gemeentelijke herindeling per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0183",
+   "Index": 616,
+   "Title": "Tubbergen",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV23"
+  },
+  {
+   "Identifier": "GM1700",
+   "Index": 617,
+   "Title": "Twenterand",
+   "Description": "Naamswijziging per 01-06-2002",
+   "DimensionGroupId": "GMPV23"
+  },
+  {
+   "Identifier": "GM1730",
+   "Index": 618,
+   "Title": "Tynaarlo",
+   "Description": "Naamswijziging per 01-12-1999",
+   "DimensionGroupId": "GMPV22"
+  },
+  {
+   "Identifier": "GM0737",
+   "Index": 619,
+   "Title": "Tytsjerksteradiel",
+   "Description": "Naamswijziging per 01-01-1989",
+   "DimensionGroupId": "GMPV21"
+  },
+  {
+   "Identifier": "GM0282",
+   "Index": 620,
+   "Title": "Ubbergen",
+   "Description": "Opgeheven per 01-01-2015\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0856",
+   "Index": 621,
+   "Title": "Uden",
+   "Description": "Begindatum voor 1830\r\nOpgeheven per 01-01-2022 wordt Maashorst GM1991",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0857",
+   "Index": 622,
+   "Title": "Udenhout",
+   "Description": "Opgeheven per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0450",
+   "Index": 623,
+   "Title": "Uitgeest",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0451",
+   "Index": 624,
+   "Title": "Uithoorn",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0184",
+   "Index": 625,
+   "Title": "Urk",
+   "Description": "Provinciale wijziging per 01-01-1986\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV24"
+  },
+  {
+   "Identifier": "GM0344",
+   "Index": 626,
+   "Title": "Utrecht (gemeente)",
+   "Description": "Gemeentelijke herindeling per 01-01-2001\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV26"
+  },
+  {
+   "Identifier": "GM1581",
+   "Index": 627,
+   "Title": "Utrechtse Heuvelrug",
+   "Description": "Ontstaan per 01-01-2006",
+   "DimensionGroupId": "GMPV26"
+  },
+  {
+   "Identifier": "GM0981",
+   "Index": 628,
+   "Title": "Vaals",
+   "Description": "Begindatum 02-01-1839",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM0283",
+   "Index": 629,
+   "Title": "Valburg",
+   "Description": "Opgeheven per 01-01-2001\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0619",
+   "Index": 630,
+   "Title": "Valkenburg (ZH.)",
+   "Description": "Opgeheven per 01-01-2006\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0994",
+   "Index": 631,
+   "Title": "Valkenburg aan de Geul",
+   "Description": "Ontstaan per 01-01-1982",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM0720",
+   "Index": 632,
+   "Title": "Valkenisse",
+   "Description": "Opgeheven per 01-01-1997\r\nOntstaan per 01-07-1966",
+   "DimensionGroupId": "GMPV29"
+  },
+  {
+   "Identifier": "GM0858",
+   "Index": 633,
+   "Title": "Valkenswaard",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0047",
+   "Index": 634,
+   "Title": "Veendam",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV20"
+  },
+  {
+   "Identifier": "GM0345",
+   "Index": 635,
+   "Title": "Veenendaal",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV26"
+  },
+  {
+   "Identifier": "GM0717",
+   "Index": 636,
+   "Title": "Veere",
+   "Description": "Gemeentelijke herindeling per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV29"
+  },
+  {
+   "Identifier": "GM0860",
+   "Index": 637,
+   "Title": "Veghel",
+   "Description": "Opgeheven per 01-01-2017\r\nGemeentelijke herindeling per 01-01-1994\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0861",
+   "Index": 638,
+   "Title": "Veldhoven",
+   "Description": "Naamswijziging per 01-05-1921",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0453",
+   "Index": 639,
+   "Title": "Velsen",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0454",
+   "Index": 640,
+   "Title": "Venhuizen",
+   "Description": "Opgeheven per 01-01-2006\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0983",
+   "Index": 641,
+   "Title": "Venlo",
+   "Description": "Gemeentelijke herindeling per 01-01-2010\r\nGemeentelijke herindeling per 01-01-2001\r\nBegindatum 02-01-1839",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM0984",
+   "Index": 642,
+   "Title": "Venray",
+   "Description": "Begindatum 02-01-1839",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM0862",
+   "Index": 643,
+   "Title": "Vessem, Wintelre en Knegsel",
+   "Description": "Opgeheven per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0620",
+   "Index": 644,
+   "Title": "Vianen",
+   "Description": "Opgeheven per 01-01-2019\r\nProvinciale wijziging per 01-01-2002\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV26"
+  },
+  {
+   "Identifier": "GM0863",
+   "Index": 645,
+   "Title": "Vierlingsbeek",
+   "Description": "Opgeheven per 01-01-1998\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM1961",
+   "Index": 646,
+   "Title": "Vijfheerenlanden",
+   "Description": "Provinciale wijziging per 01-01-2019\r\nOntstaan per 01-01-2019",
+   "DimensionGroupId": "GMPV26"
+  },
+  {
+   "Identifier": "GM0622",
+   "Index": 647,
+   "Title": "Vlaardingen",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0048",
+   "Index": 648,
+   "Title": "Vlagtwedde",
+   "Description": "Opgeheven per 01-01-2018\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV20"
+  },
+  {
+   "Identifier": "GM0132",
+   "Index": 649,
+   "Title": "Vledder",
+   "Description": "Opgeheven per 01-01-1998\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV22"
+  },
+  {
+   "Identifier": "GM0347",
+   "Index": 650,
+   "Title": "Vleuten-De Meern",
+   "Description": "Opgeheven per 01-01-2001\r\nOntstaan per 01-01-1954",
+   "DimensionGroupId": "GMPV26"
+  },
+  {
+   "Identifier": "GM0096",
+   "Index": 651,
+   "Title": "Vlieland",
+   "Description": "Provinciale wijziging per 01-09-1942\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV21"
+  },
+  {
+   "Identifier": "GM0864",
+   "Index": 652,
+   "Title": "Vlijmen",
+   "Description": "Opgeheven per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0718",
+   "Index": 653,
+   "Title": "Vlissingen",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV29"
+  },
+  {
+   "Identifier": "GM0623",
+   "Index": 654,
+   "Title": "Vlist",
+   "Description": "Opgeheven per 01-01-2015\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0986",
+   "Index": 655,
+   "Title": "Voerendaal",
+   "Description": "Begindatum 02-01-1839",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM0624",
+   "Index": 656,
+   "Title": "Voorburg",
+   "Description": "Opgeheven per 01-01-2002\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0625",
+   "Index": 657,
+   "Title": "Voorhout",
+   "Description": "Opgeheven per 01-01-2006\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM1992",
+   "Index": 658,
+   "Title": "Voorne aan Zee",
+   "Description": "",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0626",
+   "Index": 659,
+   "Title": "Voorschoten",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0285",
+   "Index": 660,
+   "Title": "Voorst",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0286",
+   "Index": 661,
+   "Title": "Vorden",
+   "Description": "Opgeheven per 01-01-2005\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0133",
+   "Index": 662,
+   "Title": "Vries",
+   "Description": "Opgeheven per 01-01-1998\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV22"
+  },
+  {
+   "Identifier": "GM0186",
+   "Index": 663,
+   "Title": "Vriezenveen",
+   "Description": "Naamswijziging per 01-06-2002\r\nGemeentelijke herindeling per 01-01-2001\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV23"
+  },
+  {
+   "Identifier": "GM0865",
+   "Index": 664,
+   "Title": "Vught",
+   "Description": "Opgeheven per 01-01-2021\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM1949",
+   "Index": 665,
+   "Title": "Waadhoeke",
+   "Description": "Ontstaan per 01-01-2018",
+   "DimensionGroupId": "GMPV21"
+  },
+  {
+   "Identifier": "GM0866",
+   "Index": 666,
+   "Title": "Waalre",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0867",
+   "Index": 667,
+   "Title": "Waalwijk",
+   "Description": "Gemeentelijke herindeling per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0627",
+   "Index": 668,
+   "Title": "Waddinxveen",
+   "Description": "Begindatum 01-07-1870",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0289",
+   "Index": 669,
+   "Title": "Wageningen",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0628",
+   "Index": 670,
+   "Title": "Warmond",
+   "Description": "Opgeheven per 01-01-2006\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0291",
+   "Index": 671,
+   "Title": "Warnsveld",
+   "Description": "Opgeheven per 01-01-2005\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0869",
+   "Index": 672,
+   "Title": "Waspik",
+   "Description": "Opgeheven per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0629",
+   "Index": 673,
+   "Title": "Wassenaar",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0630",
+   "Index": 674,
+   "Title": "Wateringen",
+   "Description": "Opgeheven per 01-01-2004\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0852",
+   "Index": 675,
+   "Title": "Waterland",
+   "Description": "Ontstaan per 01-01-1991",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0188",
+   "Index": 676,
+   "Title": "Weerselo",
+   "Description": "Opgeheven per 01-01-2001\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV23"
+  },
+  {
+   "Identifier": "GM0988",
+   "Index": 677,
+   "Title": "Weert",
+   "Description": "Gemeentelijke herindeling per 01-01-1998\r\nBegindatum 02-01-1839",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM0457",
+   "Index": 678,
+   "Title": "Weesp",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0292",
+   "Index": 679,
+   "Title": "Wehl",
+   "Description": "Opgeheven per 01-01-2005\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0870",
+   "Index": 680,
+   "Title": "Werkendam",
+   "Description": "Opgeheven per 01-01-2019\r\nGemeentelijke herindeling per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0459",
+   "Index": 681,
+   "Title": "Wervershoof",
+   "Description": "Opgeheven per 01-01-2011\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM1960",
+   "Index": 682,
+   "Title": "West Betuwe",
+   "Description": "Ontstaan per 01-01-2019",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0668",
+   "Index": 683,
+   "Title": "West Maas en Waal",
+   "Description": "Naamswijziging per 01-07-1985",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0134",
+   "Index": 684,
+   "Title": "Westerbork",
+   "Description": "Opgeheven per 01-01-1998\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV22"
+  },
+  {
+   "Identifier": "GM0871",
+   "Index": 685,
+   "Title": "Westerhoven",
+   "Description": "Opgeheven per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0558",
+   "Index": 686,
+   "Title": "Wester-Koggenland",
+   "Description": "Opgeheven per 01-01-2007\r\nOntstaan per 01-01-1979",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM1969",
+   "Index": 687,
+   "Title": "Westerkwartier",
+   "Description": "Ontstaan per 01-01-2019",
+   "DimensionGroupId": "GMPV20"
+  },
+  {
+   "Identifier": "GM0725",
+   "Index": 688,
+   "Title": "Westerschouwen",
+   "Description": "Opgeheven per 01-01-1997\r\nOntstaan per 01-01-1961",
+   "DimensionGroupId": "GMPV29"
+  },
+  {
+   "Identifier": "GM1701",
+   "Index": 689,
+   "Title": "Westerveld",
+   "Description": "Ontstaan per 01-01-1998",
+   "DimensionGroupId": "GMPV22"
+  },
+  {
+   "Identifier": "GM0293",
+   "Index": 690,
+   "Title": "Westervoort",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM1950",
+   "Index": 691,
+   "Title": "Westerwolde",
+   "Description": "Ontstaan per 01-01-2018",
+   "DimensionGroupId": "GMPV20"
+  },
+  {
+   "Identifier": "GM0726",
+   "Index": 692,
+   "Title": "Westkapelle",
+   "Description": "Opgeheven per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV29"
+  },
+  {
+   "Identifier": "GM1783",
+   "Index": 693,
+   "Title": "Westland",
+   "Description": "Ontstaan per 01-01-2004",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0098",
+   "Index": 694,
+   "Title": "Weststellingwerf",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV21"
+  },
+  {
+   "Identifier": "GM0614",
+   "Index": 695,
+   "Title": "Westvoorne",
+   "Description": "Ontstaan per 01-01-1980",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0189",
+   "Index": 696,
+   "Title": "Wierden",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV23"
+  },
+  {
+   "Identifier": "GM0462",
+   "Index": 697,
+   "Title": "Wieringen",
+   "Description": "Opgeheven per 01-01-2012\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0463",
+   "Index": 698,
+   "Title": "Wieringermeer",
+   "Description": "Opgeheven per 01-01-2012\r\nOntstaan per 01-01-1938",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0296",
+   "Index": 699,
+   "Title": "Wijchen",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM1696",
+   "Index": 700,
+   "Title": "Wijdemeren",
+   "Description": "Ontstaan per 01-01-2002",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0190",
+   "Index": 701,
+   "Title": "Wijhe",
+   "Description": "Opgeheven per 01-01-2001\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV23"
+  },
+  {
+   "Identifier": "GM0135",
+   "Index": 702,
+   "Title": "De Wijk",
+   "Description": "Opgeheven per 01-01-1998\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV22"
+  },
+  {
+   "Identifier": "GM0352",
+   "Index": 703,
+   "Title": "Wijk bij Duurstede",
+   "Description": "Gemeentelijke herindeling per 01-01-1996\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV26"
+  },
+  {
+   "Identifier": "GM0872",
+   "Index": 704,
+   "Title": "Willemstad",
+   "Description": "Opgeheven per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0052",
+   "Index": 705,
+   "Title": "Winschoten",
+   "Description": "Opgeheven per 01-01-2010\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV20"
+  },
+  {
+   "Identifier": "GM0053",
+   "Index": 706,
+   "Title": "Winsum",
+   "Description": "Opgeheven per 01-01-2019\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV20"
+  },
+  {
+   "Identifier": "GM0294",
+   "Index": 707,
+   "Title": "Winterswijk",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0295",
+   "Index": 708,
+   "Title": "Wisch",
+   "Description": "Opgeheven per 01-01-2005\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0990",
+   "Index": 709,
+   "Title": "Wittem",
+   "Description": "Opgeheven per 01-01-1999\r\nBegindatum 02-01-1839",
+   "DimensionGroupId": "GMPV31"
+  },
+  {
+   "Identifier": "GM0873",
+   "Index": 710,
+   "Title": "Woensdrecht",
+   "Description": "Gemeentelijke herindeling per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0632",
+   "Index": 711,
+   "Title": "Woerden",
+   "Description": "Gemeentelijke herindeling per 01-01-2001\r\nProvinciale wijziging per 01-01-1989\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV26"
+  },
+  {
+   "Identifier": "GM0466",
+   "Index": 712,
+   "Title": "Wognum",
+   "Description": "Opgeheven per 01-01-2007\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM1690",
+   "Index": 713,
+   "Title": "De Wolden",
+   "Description": "Ontstaan per 01-01-1998",
+   "DimensionGroupId": "GMPV22"
+  },
+  {
+   "Identifier": "GM0880",
+   "Index": 714,
+   "Title": "Wormerland",
+   "Description": "Ontstaan per 01-01-1991",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0351",
+   "Index": 715,
+   "Title": "Woudenberg",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV26"
+  },
+  {
+   "Identifier": "GM0874",
+   "Index": 716,
+   "Title": "Woudrichem",
+   "Description": "Opgeheven per 01-01-2019\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0875",
+   "Index": 717,
+   "Title": "Wouw",
+   "Description": "Opgeheven per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0710",
+   "Index": 718,
+   "Title": "Wûnseradiel",
+   "Description": "Opgeheven per 01-01-2011\r\nNaamswijziging per 01-01-1987",
+   "DimensionGroupId": "GMPV21"
+  },
+  {
+   "Identifier": "GM0683",
+   "Index": 719,
+   "Title": "Wymbritseradiel",
+   "Description": "Opgeheven per 01-01-2011\r\nNaamswijziging per 01-01-1986",
+   "DimensionGroupId": "GMPV21"
+  },
+  {
+   "Identifier": "GM0479",
+   "Index": 720,
+   "Title": "Zaanstad",
+   "Description": "Ontstaan per 01-01-1974",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0297",
+   "Index": 721,
+   "Title": "Zaltbommel",
+   "Description": "Gemeentelijke herindeling per 01-01-1999\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0473",
+   "Index": 722,
+   "Title": "Zandvoort",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0707",
+   "Index": 723,
+   "Title": "Zederik",
+   "Description": "Opgeheven per 01-01-2019\r\nProvinciale wijziging per 01-01-2019\r\nOntstaan per 01-01-1986",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0478",
+   "Index": 724,
+   "Title": "Zeevang",
+   "Description": "Opgeheven per 01-01-2016\r\nOntstaan per 01-08-1970",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0050",
+   "Index": 725,
+   "Title": "Zeewolde",
+   "Description": "Ontstaan per 01-01-1984",
+   "DimensionGroupId": "GMPV24"
+  },
+  {
+   "Identifier": "GM0355",
+   "Index": 726,
+   "Title": "Zeist",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV26"
+  },
+  {
+   "Identifier": "GM0298",
+   "Index": 727,
+   "Title": "Zelhem",
+   "Description": "Opgeheven per 01-01-2005\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0299",
+   "Index": 728,
+   "Title": "Zevenaar",
+   "Description": "Gemeentelijke herindeling per 01-01-2018\r\nGemeentelijke herindeling per 01-01-2005\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM0878",
+   "Index": 729,
+   "Title": "Zevenbergen",
+   "Description": "Naamswijziging per 04-04-1998\r\nGemeentelijke herindeling per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM1666",
+   "Index": 730,
+   "Title": "Zevenhuizen-Moerkapelle",
+   "Description": "Opgeheven per 01-01-2010\r\nNaamswijziging per 01-02-1992",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0732",
+   "Index": 731,
+   "Title": "Zierikzee",
+   "Description": "Opgeheven per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV29"
+  },
+  {
+   "Identifier": "GM0476",
+   "Index": 732,
+   "Title": "Zijpe",
+   "Description": "Opgeheven per 01-01-2013\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV27"
+  },
+  {
+   "Identifier": "GM0637",
+   "Index": 733,
+   "Title": "Zoetermeer",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0638",
+   "Index": 734,
+   "Title": "Zoeterwoude",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0056",
+   "Index": 735,
+   "Title": "Zuidhorn",
+   "Description": "Opgeheven per 01-01-2019\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV20"
+  },
+  {
+   "Identifier": "GM0136",
+   "Index": 736,
+   "Title": "Zuidlaren",
+   "Description": "Naamswijziging per 01-12-1999\r\nGemeentelijke herindeling per 01-01-1998\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV22"
+  },
+  {
+   "Identifier": "GM1892",
+   "Index": 737,
+   "Title": "Zuidplas",
+   "Description": "Ontstaan per 01-01-2010",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0137",
+   "Index": 738,
+   "Title": "Zuidwolde",
+   "Description": "Opgeheven per 01-01-1998\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV22"
+  },
+  {
+   "Identifier": "GM0879",
+   "Index": 739,
+   "Title": "Zundert",
+   "Description": "Gemeentelijke herindeling per 01-01-1997\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV30"
+  },
+  {
+   "Identifier": "GM0301",
+   "Index": 740,
+   "Title": "Zutphen",
+   "Description": "Gemeentelijke herindeling per 01-01-2005\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV25"
+  },
+  {
+   "Identifier": "GM1896",
+   "Index": 741,
+   "Title": "Zwartewaterland",
+   "Description": "Ontstaan per 01-01-2001",
+   "DimensionGroupId": "GMPV23"
+  },
+  {
+   "Identifier": "GM0192",
+   "Index": 742,
+   "Title": "Zwartsluis",
+   "Description": "Opgeheven per 01-01-2001\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV23"
+  },
+  {
+   "Identifier": "GM0138",
+   "Index": 743,
+   "Title": "Zweeloo",
+   "Description": "Opgeheven per 01-01-1998\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV22"
+  },
+  {
+   "Identifier": "GM0642",
+   "Index": 744,
+   "Title": "Zwijndrecht",
+   "Description": "Gemeentelijke herindeling per 01-01-2003\r\nBegindatum voor 1830",
+   "DimensionGroupId": "GMPV28"
+  },
+  {
+   "Identifier": "GM0193",
+   "Index": 745,
+   "Title": "Zwolle",
+   "Description": "Begindatum voor 1830",
+   "DimensionGroupId": "GMPV23"
+  }
+ ]
+}

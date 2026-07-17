@@ -1,0 +1,30 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/85937NED/$metadata#Dimensions",
+ "value": [
+  {
+   "Identifier": "ConsumptieveBestedingen",
+   "Title": "Consumptieve bestedingen",
+   "Description": "",
+   "MapYear": null,
+   "ReleasePolicy": null,
+   "Kind": "Dimension",
+   "ContainsGroups": true,
+   "ContainsCodes": true,
+   "CodesUrl": "https://datasets.cbs.nl/odata/v1/CBS/85937NED/ConsumptieveBestedingenCodes",
+   "GroupsUrl": "https://datasets.cbs.nl/odata/v1/CBS/85937NED/ConsumptieveBestedingenGroups"
+  },
+  {
+   "@odata.type": "#Cbs.Ccb.Models.TimeDimension",
+   "Identifier": "Perioden",
+   "Title": "Perioden",
+   "Description": "",
+   "MapYear": null,
+   "ReleasePolicy": true,
+   "Kind": "TimeDimension",
+   "ContainsGroups": true,
+   "ContainsCodes": true,
+   "CodesUrl": "https://datasets.cbs.nl/odata/v1/CBS/85937NED/PeriodenCodes",
+   "GroupsUrl": "https://datasets.cbs.nl/odata/v1/CBS/85937NED/PeriodenGroups"
+  }
+ ]
+}

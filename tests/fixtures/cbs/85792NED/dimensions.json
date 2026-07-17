@@ -1,0 +1,30 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/85792NED/$metadata#Dimensions",
+ "value": [
+  {
+   "Identifier": "RegioS",
+   "Title": "Regio's",
+   "Description": "",
+   "MapYear": null,
+   "ReleasePolicy": null,
+   "Kind": "Dimension",
+   "ContainsGroups": true,
+   "ContainsCodes": true,
+   "CodesUrl": "https://datasets.cbs.nl/odata/v1/CBS/85792NED/RegioSCodes",
+   "GroupsUrl": "https://datasets.cbs.nl/odata/v1/CBS/85792NED/RegioSGroups"
+  },
+  {
+   "@odata.type": "#Cbs.Ccb.Models.TimeDimension",
+   "Identifier": "Perioden",
+   "Title": "Perioden",
+   "Description": "",
+   "MapYear": null,
+   "ReleasePolicy": true,
+   "Kind": "TimeDimension",
+   "ContainsGroups": true,
+   "ContainsCodes": true,
+   "CodesUrl": "https://datasets.cbs.nl/odata/v1/CBS/85792NED/PeriodenCodes",
+   "GroupsUrl": "https://datasets.cbs.nl/odata/v1/CBS/85792NED/PeriodenGroups"
+  }
+ ]
+}

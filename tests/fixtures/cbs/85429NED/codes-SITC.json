@@ -1,0 +1,82 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/85429NED/$metadata#SITCCodes",
+ "value": [
+  {
+   "Identifier": "T001082",
+   "Index": 1,
+   "Title": "Totaal goederen",
+   "Description": "",
+   "DimensionGroupId": "13"
+  },
+  {
+   "Identifier": "A018524",
+   "Index": 2,
+   "Title": "0 Voeding en levende dieren",
+   "Description": "",
+   "DimensionGroupId": "14"
+  },
+  {
+   "Identifier": "A018528",
+   "Index": 3,
+   "Title": "1 Dranken en tabak",
+   "Description": "",
+   "DimensionGroupId": "14"
+  },
+  {
+   "Identifier": "A018540",
+   "Index": 4,
+   "Title": "2 Grondstoffen, niet eetbaar, behalve...",
+   "Description": "2 Grondstoffen, niet eetbaar, behalve brandstoffen",
+   "DimensionGroupId": "14"
+  },
+  {
+   "Identifier": "A018591",
+   "Index": 5,
+   "Title": "3 Minerale brandstoffen, smeermiddele...",
+   "Description": "3 Minerale brandstoffen, smeermiddelen en dergelijke producten",
+   "DimensionGroupId": "14"
+  },
+  {
+   "Identifier": "A018612",
+   "Index": 6,
+   "Title": "4 Dierlijke en plantaardige oliën en ...",
+   "Description": "4 Dierlijke en plantaardige oliën en vetten",
+   "DimensionGroupId": "14"
+  },
+  {
+   "Identifier": "A018629",
+   "Index": 7,
+   "Title": "5 Chemische producten",
+   "Description": "",
+   "DimensionGroupId": "14"
+  },
+  {
+   "Identifier": "A018678",
+   "Index": 8,
+   "Title": "6 Fabricaten hoofdzakelijk gerangschi...",
+   "Description": "6 Fabricaten hoofdzakelijk gerangschikt volgens grondstoffen",
+   "DimensionGroupId": "14"
+  },
+  {
+   "Identifier": "A018743",
+   "Index": 9,
+   "Title": "7 Machines en vervoermaterieel",
+   "Description": "",
+   "DimensionGroupId": "14"
+  },
+  {
+   "Identifier": "A018809",
+   "Index": 10,
+   "Title": "8 Diverse gefabriceerde goederen",
+   "Description": "",
+   "DimensionGroupId": "14"
+  },
+  {
+   "Identifier": "A018851",
+   "Index": 11,
+   "Title": "9 Niet afzonderlijk genoemde goederen",
+   "Description": "",
+   "DimensionGroupId": "14"
+  }
+ ]
+}

@@ -1,0 +1,93 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/85429NED/$metadata#MeasureCodes",
+ "value": [
+  {
+   "Identifier": "D001607",
+   "Index": 4,
+   "Title": "Totale invoerwaarde",
+   "Description": "De totale waarde van de goederen die vanuit het buitenland naar Nederland komen.",
+   "MeasureGroupId": "M007894",
+   "DataType": "Long",
+   "Unit": "mln euro",
+   "Decimals": 0,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "M007895",
+   "Index": 5,
+   "Title": "Doorvoerwaarde inkomend",
+   "Description": "Het deel van de invoerwaarde dat bestaat uit goederen die buitenlandse bedrijven en personen in (vrijwel) onbewerkte staat weer uitvoeren vanuit Nederland naar het buitenland.\r\n\r\nLet wel: het gaat hier om zogenaamde quasi-doorvoer, waarbij goederen Nederland niet uitsluitend doorkruisen om transport technische redenen. In de meeste gevallen zijn ze alleen in Nederland voor douaneaangifte.",
+   "MeasureGroupId": "M007894",
+   "DataType": "Long",
+   "Unit": "mln euro",
+   "Decimals": 0,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "D001636",
+   "Index": 7,
+   "Title": "Totale uitvoerwaarde",
+   "Description": "De totale waarde van de goederen die vanuit Nederland naar het buitenland gaan.",
+   "MeasureGroupId": "M007896",
+   "DataType": "Long",
+   "Unit": "mln euro",
+   "Decimals": 0,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "M001648",
+   "Index": 8,
+   "Title": "Wederuitvoerwaarde",
+   "Description": "Het deel van de uitvoerwaarde dat bestaat uit oorspronkelijk ingevoerde goederen die Nederlandse bedrijven en personen in (vrijwel) onbewerkte staat weer uitvoeren vanuit Nederland naar het buitenland.",
+   "MeasureGroupId": "M007896",
+   "DataType": "Long",
+   "Unit": "mln euro",
+   "Decimals": 0,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "M001632",
+   "Index": 9,
+   "Title": "Uitvoerwaarde product NL",
+   "Description": "Het deel van de uitvoerwaarde dat bestaat uit in Nederland gemaakte goederen.",
+   "MeasureGroupId": "M007896",
+   "DataType": "Long",
+   "Unit": "mln euro",
+   "Decimals": 0,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "M007897",
+   "Index": 10,
+   "Title": "Doorvoerwaarde uitgaand",
+   "Description": "Het deel van de uitvoerwaarde dat bestaat uit oorspronkelijk ingevoerde goederen die buitenlandse bedrijven en personen in (vrijwel) onbewerkte staat weer uitvoeren vanuit Nederland naar het buitenland.\r\n\r\nLet wel: het gaat hier om zogenaamde quasi-doorvoer, waarbij goederen Nederland niet uitsluitend doorkruisen om transport technische redenen. In de meeste gevallen zijn ze alleen in Nederland voor douaneaangifte.",
+   "MeasureGroupId": "M007896",
+   "DataType": "Long",
+   "Unit": "mln euro",
+   "Decimals": 0,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "M001608",
+   "Index": 12,
+   "Title": "Jaarmutatie invoerwaarde",
+   "Description": "Procentuele verandering vergeleken met dezelfde periode een jaar eerder.\r\n\r\nLet wel:\r\n- Voor een landengroep worden alleen jaarmutaties weergegeven indien deze dezelfde landen vertegenwoordigt als in dezelfde periode het jaar ervoor;\r\n- Na een methodebreuk ontbreken de jaarmutaties in vergelijking met het voorgaande jaar.\r\n",
+   "MeasureGroupId": "M007898",
+   "DataType": "Double",
+   "Unit": "%",
+   "Decimals": 1,
+   "PresentationType": null
+  },
+  {
+   "Identifier": "M001609",
+   "Index": 13,
+   "Title": "Jaarmutatie uitvoerwaarde",
+   "Description": "Procentuele verandering vergeleken met dezelfde periode een jaar eerder.\r\n\r\nLet wel:\r\n- Voor een landengroep worden alleen jaarmutaties weergegeven indien deze dezelfde landen vertegenwoordigt als in dezelfde periode het jaar ervoor;\r\n- Na een methodebreuk ontbreken de jaarmutaties in vergelijking met het voorgaande jaar.",
+   "MeasureGroupId": "M007898",
+   "DataType": "Double",
+   "Unit": "%",
+   "Decimals": 1,
+   "PresentationType": null
+  }
+ ]
+}

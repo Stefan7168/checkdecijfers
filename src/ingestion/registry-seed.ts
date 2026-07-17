@@ -161,6 +161,112 @@ export const COVERAGE_TABLES: Phase0Table[] = [
       'M006567_3',
     ],
   },
+  {
+    // Sprint #4 — omzet detailhandel (merged 9-in-1 handel-en-diensten table).
+    // Slice: the retail headline branch (371600 = SBI 47) + its exactly 7
+    // direct subgroups (SBI 473 and 478 do NOT exist in this table's dimension
+    // — measured 2026-07-17, docs/11). Full codes as exact-match prefixes
+    // (startswith == equality, no code extends another); all grains kept
+    // (MM/KW/JJ are pipeline-native). Slice = 46,442 obs measured; the FIXTURE
+    // keeps 2020+ only (12,096 obs — capture-only floor, see
+    // scripts/capture-cbs-fixtures.ts).
+    id: '85828NED',
+    slice: {
+      dimensionPrefixes: {
+        BedrijfstakkenBranchesSBI2008: [
+          '371600', // 47 Detailhandel (niet in auto's)
+          '371700', // 471 Supermarkten en warenhuizen
+          '372200', // 472 Winkels in voedingsmiddelen
+          '374000', // 474 Winkels in consumentenelektronica
+          '374600', // 475 Winkels in overige huishoudwaren
+          '377400', // 476 Winkels in recreatieartikelen
+          '378400', // 477 Winkels in overige artikelen
+          '382500', // 479 Detailhandel, geen winkel of markt
+        ],
+      },
+    },
+    updateCadence: 'monthly (first working day of the second month after the measured month)',
+    servesTasks: ['CC11', 'CC12', 'CC13'],
+    // #167-probe result (2026-07-17): the 7 "Productie"-family measures exist
+    // table-wide (industry branches) but carry ZERO rows within the retail
+    // slice — same quarantine mechanism as table-wide phantoms, so the same
+    // curated exclusion applies (slice-empty, not phantom: documented in
+    // docs/11 and open-questions #167).
+    excludeMeasures: [
+      'A042501_7', // "Productie / Indexcijfers / Ongecorrigeerd"
+      'A052581_5', // "Productie / Indexcijfers / Kalendergecorrigeerd"
+      'A050903_5', // "Productie / Indexcijfers / Seizoengecorrigeerd"
+      'A042501_8', // "Productie / Ontwikkeling t.o.v. jaar eerder / Ongecorrigeerd"
+      'A052581_6', // "Productie / Ontwikkeling t.o.v. jaar eerder / Kalendergecorrigeerd"
+      'A042501_9', // "Productie / Ontwikkeling t.o.v. voorgaande periode / Ongecorrigeerd"
+      'A050903_6', // "Productie / Ontwikkeling t.o.v. voorgaande periode / Seizoengecorrigeerd"
+    ],
+  },
+  {
+    // Sprint #5 — consumptie huishoudens. Full ingest (34,048 obs, small);
+    // M005269 (koopdaggecorrigeerd) exists for only 6 of 14 categories —
+    // sparse-but-present, so NO exclusion needed (row_plausibility is
+    // per-measure ≥1 row; measured 2026-07-17, docs/11). The FIXTURE keeps
+    // 2020+ only (8,208 obs).
+    id: '85937NED',
+    updateCadence: 'monthly (~six to seven weeks after the measured month)',
+    servesTasks: ['CC14', 'CC15', 'CC16', 'CC17'],
+  },
+  {
+    // Sprint #6 — internationale goederenhandel. Totals-only slice (Landen
+    // totaal × SITC totaal = 1,132 obs, measured 2026-07-17): the full table
+    // is 1.88M obs. Jaarmutaties have ZERO rows for 2015 (no base year) and
+    // 2021 (methodebreuk 2020/2021 — CBS deliberately publishes no YoY across
+    // the break); absent rows, never null-with-attribute (docs/11). The
+    // current-year JJ code is a PARTIAL-year cumulative ("2026 januari-april")
+    // — period semantics in src/registry/defaults.ts says so.
+    id: '85429NED',
+    slice: {
+      dimensionEquals: { Landen: 'T001047', SITC: 'T001082' },
+    },
+    updateCadence: 'monthly (~two months after the measured month)',
+    servesTasks: ['CC18', 'CC19', 'CC20', 'CC21'],
+  },
+  {
+    // Sprint #7 — huizenprijzen per regio (21 regions: NL01 + 4 landsdelen +
+    // 12 provincies + Amsterdam/Den Haag/Rotterdam/Utrecht). ⚠ RegioS has
+    // Kind="Dimension", NOT GeoDimension (measured 2026-07-17) — the geo path
+    // does not apply; RegioS is a plain dimension with default NL01
+    // (src/registry/defaults.ts). Full ingest (26,208 obs, dense 21×156×8);
+    // the FIXTURE keeps 2020+ only (5,208 obs). All periods are Definitief on
+    // publication ("direct definitief" — no revision cycle).
+    id: '85792NED',
+    updateCadence: 'quarterly (~22 days after quarter-end)',
+    servesTasks: ['CC22', 'CC23', 'CC24'],
+  },
+  {
+    // Sprint #8 — werkloosheid per maand. ⚠ LOWERCASE id: the v4 host serves
+    // this table ONLY as '80590ned' (uppercase 404s — docs/07 catalog quirk
+    // #1, same as 03759ned). Slice: totaal × 15-75 jaar (5,586 obs, dense
+    // 399×14). Seasonally-adjusted measures carry null values with CBS reason
+    // 'Impossible' on JJ periods (no seasonal adjustment exists on year basis
+    // — rows present, values honestly null; measured 2026-07-17). The loaded
+    // quarterly table 85224NED keeps the canonical default for
+    // "werkloosheid"; this monthly table gets its own distinct terms in the
+    // staged vocab batch (#165 lesson).
+    id: '80590ned',
+    slice: {
+      dimensionEquals: { Geslacht: 'T001038', Leeftijd: '52052' },
+    },
+    updateCadence: 'monthly (mid-month, covering the previous month)',
+    servesTasks: ['CC25', 'CC26', 'CC27', 'CC28'],
+  },
+  {
+    // Sprint #9 — gemiddelde verkoopprijzen per gemeente: the per-gemeente
+    // local-angle engine (#160(b)). RegioS IS a GeoDimension here (correctly
+    // typed, unlike 85792NED): 745 codes = 728 GM (incl. opgeheven gemeenten,
+    // whose post-merger years are null with reason 'Impossible') + 12 PV +
+    // 4 LD + NL01. Yearly only (31 JJ, all Definitief), one measure. Full
+    // ingest (23,095 obs); the FIXTURE keeps 2015+ only (8,195 obs).
+    id: '83625NED',
+    updateCadence: 'yearly (new year added ~February)',
+    servesTasks: ['CC29', 'CC30', 'CC31'],
+  },
 ];
 
 // Every curated seed table (Phase 0 + coverage sprint) — what `ingest register`

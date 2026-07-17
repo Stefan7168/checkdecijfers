@@ -114,6 +114,84 @@ export const TABLE_REGISTRY_DEFAULTS: TableRegistryDefaults[] = [
       JJ: 'Procentuele verandering in het genoemde kalenderjaar t.o.v. het voorgaande jaar (beide mutatiesoorten vallen op jaarbasis samen).',
     },
   },
+  {
+    // Coverage sprint table #4 (85828NED omzet detailhandel; measured
+    // 2026-07-17, session 53 prep). The branch is topical content per future
+    // canonical key, but the everyday retail ask anchors on SBI 47 — the
+    // topical total, mirroring 86141NED's alle-bestedingen default. Slice keeps
+    // 371600 + its 7 direct subgroups (SBI 473/478 don't exist in this table).
+    tableId: '85828NED',
+    defaultCoordinates: { BedrijfstakkenBranchesSBI2008: '371600' },
+    periodSemantics: {
+      MM: 'Maandcijfer. Mutatiematen "t.o.v. jaar eerder": t.o.v. dezelfde maand een jaar eerder; indexmaten: maandniveau (2021=100). 2026-periodes zijn Voorlopig.',
+      KW: 'Kwartaalcijfer (mutatiematen t.o.v. hetzelfde kwartaal een jaar eerder, of t.o.v. de voorgaande periode — per maat).',
+      JJ: 'Jaarcijfer: indexmaten het jaargemiddelde indexniveau (2021=100); mutatiematen de jaarmutatie t.o.v. het voorgaande jaar.',
+    },
+  },
+  {
+    // Coverage sprint table #5 (85937NED consumptie huishoudens; measured
+    // 2026-07-17). Default = binnenlandse consumptie totaal (A047812),
+    // mirroring 86141NED's headline-category default. Koopdaggecorrigeerde
+    // maat (M005269) bestaat voor 6 van de 14 categorieën — gedocumenteerd in
+    // docs/11; de gewone volumemutatie (M000282) is overal dicht.
+    tableId: '85937NED',
+    defaultCoordinates: { ConsumptieveBestedingen: 'A047812' },
+    periodSemantics: {
+      MM: 'Maandcijfer; volumemutaties t.o.v. dezelfde maand een jaar eerder (koopdaggecorrigeerd waar de maattitel dat zegt).',
+      KW: 'Kwartaalcijfer; mutaties t.o.v. hetzelfde kwartaal een jaar eerder.',
+      JJ: 'Jaarcijfer; mutaties t.o.v. het voorgaande jaar. Cijfers vanaf 2021 zijn Voorlopig (gemeten Status-veld — breder dan CBS\'s eigen tabelomschrijving "2022-2025" zegt).',
+    },
+  },
+  {
+    // Coverage sprint table #6 (85429NED internationale goederenhandel;
+    // measured 2026-07-17). Slice = totalen (Landen T001047 × SITC T001082) —
+    // default and only coincide, the 03759ned pattern.
+    tableId: '85429NED',
+    defaultCoordinates: { Landen: 'T001047', SITC: 'T001082' },
+    periodSemantics: {
+      MM: 'Maandtotaal (waardematen: mln euro). Jaarmutaties: t.o.v. dezelfde maand een jaar eerder; die ontbreken volledig voor 2015 (geen basisjaar) en 2021 (methodebreuk 2020/2021 — CBS publiceert bewust geen jaar-op-jaarcijfers over de breuk heen; afwezige rijen).',
+      JJ: 'Jaartotaal — LET OP: het lopende jaar staat in deze tabel als cumulatief deel-jaar (2026JJ00 heet "2026 januari-april", gemeten 2026-07-17), geen vol jaarcijfer; het periodelabel benoemt de maanden. Jaarmutatie-jaarcijfers ontbreken voor 2015 en 2021 (zie MM).',
+    },
+  },
+  {
+    // Coverage sprint table #7 (85792NED huizenprijzen per regio; measured
+    // 2026-07-17). RegioS is Kind="Dimension" (NOT GeoDimension) — treated as
+    // a plain dimension with the national aggregate as default; the 4 cities /
+    // 12 provinces are reachable via explicit dims or future canonical keys
+    // (specs-doc design note). All periods are "direct definitief".
+    tableId: '85792NED',
+    defaultCoordinates: { RegioS: 'NL01' },
+    periodSemantics: {
+      KW: 'Kwartaalcijfer voor het genoemde kwartaal; cijfers zijn bij publicatie direct definitief (geen reguliere revisiecyclus).',
+      JJ: 'Jaarcijfer, measure-afhankelijk: prijsindex en gemiddelde verkoopprijs zijn jaargemiddelden; verkochte woningen is een jaartotaal.',
+    },
+  },
+  {
+    // Coverage sprint table #8 (80590ned werkloosheid per maand — LOWERCASE
+    // id, docs/07 quirk #1; measured 2026-07-17). Slice pins totaal × 15-75
+    // jaar — default and only coincide. The quarterly 85224NED keeps the
+    // "werkloosheid" canonical default; this table's own terms come with the
+    // staged vocab batch (#165 discipline).
+    tableId: '80590ned',
+    defaultCoordinates: { Geslacht: 'T001038', Leeftijd: '52052' },
+    periodSemantics: {
+      MM: 'Maandcijfer (seizoengecorrigeerde maten: voor seizoensinvloeden gecorrigeerd maandniveau). Alle periodes zijn Definitief (gemeten 2026-07-17).',
+      KW: 'Kwartaalcijfer.',
+      JJ: 'Jaargemiddelde — alleen de niet-seizoengecorrigeerde maten hebben een jaarwaarde; seizoengecorrigeerde maten staan op jaarperiodes als lege cel met CBS-reden "Impossible" (seizoenscorrectie bestaat niet op jaarbasis).',
+    },
+  },
+  {
+    // Coverage sprint table #9 (83625NED gemiddelde verkoopprijzen per
+    // gemeente; measured 2026-07-17). RegioS is a real GeoDimension (745
+    // codes: NL01 + 4 LD + 12 PV + 728 GM incl. opgeheven gemeenten) — geo
+    // resolution applies, so no RegioS default here (the geo path requires an
+    // explicit region or clarifies, the 03759ned pattern).
+    tableId: '83625NED',
+    defaultCoordinates: {},
+    periodSemantics: {
+      JJ: 'Jaargemiddelde verkoopprijs over de transacties in het genoemde jaar; jaarlijkse publicatie (nieuw jaar ~februari), revisies alleen bij uitzondering. Opgeheven gemeenten houden rijen met lege waarde en CBS-reden "Impossible" voor jaren na hun opheffing.',
+    },
+  },
 ];
 
 export const CANONICAL_MEASURES: CanonicalMeasure[] = [

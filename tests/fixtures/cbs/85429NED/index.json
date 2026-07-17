@@ -1,0 +1,19 @@
+{
+ "tableId": "85429NED",
+ "capturedAt": "2026-07-17T16:27:09.800Z",
+ "source": "https://datasets.cbs.nl/odata/v1/CBS/85429NED",
+ "sliceFilter": "Landen eq 'T001047' and SITC eq 'T001082'",
+ "captureOnlySlice": null,
+ "observationRows": 1132,
+ "observationPages": [
+  "observations-page-1.json"
+ ],
+ "files": {
+  "properties": "properties.json",
+  "dimensions": "dimensions.json",
+  "measure-codes": "measure-codes.json",
+  "codes-Landen": "codes-Landen.json",
+  "codes-SITC": "codes-SITC.json",
+  "codes-Perioden": "codes-Perioden.json"
+ }
+}

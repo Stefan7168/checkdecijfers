@@ -1,0 +1,46 @@
+{
+ "@odata.context": "https://datasets.cbs.nl/odata/v1/CBS/85937NED/$metadata#Properties",
+ "Identifier": "85937NED",
+ "Title": "Consumptieve bestedingen door huishoudens; nationale rekeningen, 2021=100",
+ "Description": "Deze tabel bevat cijfers over de binnenlandse consumptieve bestedingen (inclusief BTW) van huishoudens in waarde, volume en prijs. Hieronder vallen de consumptieve bestedingen in Nederland, ongeacht het ingezetenschap van de consument. \r\n\r\nGegevens beschikbaar vanaf: 2000\r\n\r\nStatus van de cijfers:\r\nDe cijfers over 2022, 2023, 2024 en 2025 zijn voorlopig. De overige cijfers zijn definitief.\r\n\r\nWijzigingen per 8 juli 2026:\r\nCijfers over mei 2026 zijn toegevoegd.\r\n\r\nHet Centraal Bureau voor de Statistiek heeft onlangs de nationale rekeningen gereviseerd. Daarbij worden nieuwe bronnen, methoden en concepten doorgevoerd in de nationale rekeningen, zodat het beeld van de Nederlandse economie weer optimaal aansluit bij alle onderliggende statistieken, bronnen en internationale richtlijnen voor het samenstellen van de nationale rekeningen. Deze tabel geeft de cijfers na revisie weer. Voor meer informatie zie paragraaf 3.\r\n\r\nWanneer komen er nieuwe cijfers?\r\nNieuwe cijfers komen zes tot zeven weken na afloop van de verslagmaand beschikbaar.\r\n\r\n",
+ "Language": "nl",
+ "Authority": "https://standaarden.overheid.nl/owms/terms/Centraal_Bureau_voor_de_Statistiek",
+ "Modified": "2026-07-08T06:30:00+02:00",
+ "ReleaseDate": "2026-07-08T06:30:00+02:00",
+ "ModificationDate": "2026-07-08T06:30:00+02:00",
+ "TemporalCoverage": "januari 2000 t/m mei 2026",
+ "Catalog": "CBS",
+ "Publisher": "https://standaarden.overheid.nl/owms/terms/Centraal_Bureau_voor_de_Statistiek",
+ "ContactPoint": "infoservice@cbs.nl",
+ "Version": "202607080630",
+ "VersionNotes": "",
+ "VersionReason": "Actualisering",
+ "Frequency": "Per maand",
+ "Status": "Regulier",
+ "ObservationCount": 34048,
+ "ObservationsModified": "2026-07-08T06:30:00+02:00",
+ "DatasetType": "Numeric",
+ "GraphTypes": "Table,Bar,Line",
+ "License": "https://creativecommons.org/licenses/by/4.0/",
+ "Source": "CBS.",
+ "Summary": "Mutaties en indexcijfers van consumptie door huishoudens\nnaar goederen en diensten categoriën",
+ "LongDescription": "INHOUDSOPGAVE\r\n\r\n1. Toelichting\r\n2. Definities en verklaring van symbolen\r\n3. Koppelingen naar relevante tabellen en artikelen\r\n4. Bronnen en methoden\r\n5. Meer informatie \r\n\r\n1. TOELICHTING\r\n\r\nDeze tabel bevat cijfers over de binnenlandse consumptieve bestedingen (inclusief BTW) van huishoudens in waarde, volume en prijs. Hieronder vallen de consumptieve bestedingen in Nederland, ongeacht het ingezetenschap van de consument. \r\n\r\nGegevens beschikbaar vanaf: 2000\r\n\r\nStatus van de cijfers:\r\nDe cijfers over 2022, 2023, 2024 en 2025 zijn voorlopig. De overige cijfers zijn definitief.\r\n\r\nWijzigingen per 8 juli 2026:\r\nCijfers over mei 2026 zijn toegevoegd.\r\n\r\nHet Centraal Bureau voor de Statistiek heeft onlangs de nationale rekeningen gereviseerd. Daarbij worden nieuwe bronnen, methoden en concepten doorgevoerd in de nationale rekeningen, zodat het beeld van de Nederlandse economie weer optimaal aansluit bij alle onderliggende statistieken, bronnen en internationale richtlijnen voor het samenstellen van de nationale rekeningen. Deze tabel geeft de cijfers na revisie weer. Voor meer informatie zie paragraaf 3.\r\n\r\nWanneer komen er nieuwe cijfers?\r\nNieuwe cijfers komen zes tot zeven weken na afloop van de verslagmaand beschikbaar.\r\n\r\n2. DEFINITIES EN VERKLARING VAN SYMBOLEN\r\n\r\nDefinities:\r\n\r\nConsumptie door huishoudens \r\nDit omvat de volgende posten:\r\nDe consumptieve bestedingen van consumenten aangeschaft via de handel of direct bij de producent inclusief BTW.\r\nConsumptieve bestedingen door particuliere instellingen zonder winstoogmerk (IZW's). IZW's zijn bijvoorbeeld sportverenigingen, vakbonden en organisaties op religieuze grondslag, waarvan de activiteiten grotendeels gefinancierd worden uit contributies en donaties van leden en sympathisanten. \r\nOnder de consumptieve bestedingen door huishoudens vallen alle vrijwillige uitgaven door particulieren en huishoudens aan goederen en diensten.\r\nOnder de consumptieve bestedingen door huishoudens vallen niet de verplichte uitgaven zoals (gemeente)belastingen. Ook investeringen gedaan door huishoudens zoals een verbouwing aan de woning of het plaatsen van een keuken vallen niet onder de consumptieve bestedingen.\r\nDe precieze afbakening van de consumptie door huishoudens is te vinden in artikel 3.94 e.v. van het Europees Systeem van Rekeningen 2010 (ESR 2010).\r\n\r\n\r\nVerklaring van symbolen:\r\n\r\nniets (blanco)\t: het cijfer kan op logische gronden niet voorkomen\r\n. \t\t: het cijfer is onbekend, onvoldoende betrouwbaar of geheim\r\n*\t\t: voorlopige cijfers\r\n**\t\t: nader voorlopige cijfers\r\n\r\n\r\n3. KOPPELING NAAR RELEVANTE TABELLEN EN ARTIKELEN\r\n\r\nRelevante tabellen:\r\nDeze tabel bevat gegevens die aansluiten op de meest recente revisie van de nationale rekeningen. Gegevens vóór revisie zijn te vinden in tabel <a href='https://opendata.cbs.nl/Statline/#/CBS/nl/dataset/82608NED'>Consumptieve bestedingen door huishoudens; NR, 2015=100, 2000-2024 mei</a>\r\n\r\nRelevante artikelen:\r\nInformatie over <a href='https://www.cbs.nl/nl-nl/nieuws/2018/21/revisie-nationale-rekeningen'>de revisie 2021 van de nationale rekeningen.</a>\r\n\r\nInformatie over <a href='https://www.cbs.nl/nl-nl/economie/macro-economie/bijstellingen-nationale-rekeningen-algemeen-overzicht'>het publicatie- en revisiebeleid en de bijstellingen van de nationale rekeningen.</a>\r\n\r\nMeer informatie is te vinden op de themapagina <a href='https://www.cbs.nl/nl-nl/economie/macro-economie'>Macro-economie</a>.\r\n\r\n4. BRONNEN- EN METHODENBESCHRIJVING\r\n\r\nDe onderzoeksmethode van deze tabel is te vinden in de onderzoeksbeschrijving: \r\n<a href='https://www.cbs.nl/nl-nl/onze-diensten/methoden/onderzoeksomschrijvingen/korte-onderzoeksbeschrijvingen/consumptieve-bestedingen-van-huishoudens-maandcijfers'>Consumptieve bestedingen van huishoudens<a/>\r\n\r\n5. MEER INFORMATIE\r\n\r\n<a href='https://www.cbs.nl/nl-nl/over-ons/contact/infoservice'>Infoservice</a>\r\n\r\nCopyright (c) Centraal Bureau voor de Statistiek, Den Haag/Heerlen \r\nVerveelvoudiging is toegestaan, mits het CBS als bron wordt vermeld.\r\n",
+ "Provenance": [],
+ "RelatedSources": [],
+ "Distributions": [
+  {
+   "Format": "csv",
+   "MediaType": "csv",
+   "DownloadUrl": "https://datasets.cbs.nl/csv/CBS/nl/85937NED",
+   "AccessUrl": "https://dataportal.cbs.nl/detail/CBS/85937NED",
+   "Language": "nl"
+  },
+  {
+   "Format": "odata",
+   "MediaType": "odata",
+   "DownloadUrl": "https://datasets.cbs.nl/odata/v1/CBS/85937NED",
+   "AccessUrl": "https://dataportal.cbs.nl/detail/CBS/85937NED",
+   "Language": "nl"
+  }
+ ]
+}

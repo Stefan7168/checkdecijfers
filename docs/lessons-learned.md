@@ -6,6 +6,42 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 53 (2026-07-17, autonomous prep — coverage tables #4-#9 built dormant)
+
+- **`--catalog-add` is NOT spend-free in effect: it can force a tablefinder re-record.** Merging the six new
+  ids into the sampled `_catalog.json` flipped 4 of 11 finder-replay cases (huizenprijzen / werkloosheid /
+  inwoners / woningvoorraad) to failure-safe `disclose` — the added rows shift the Stage-1 FTS shortlist, the
+  recorded rerank fixtures miss on hash. Sessions 49/50 got away with it because their tables' topics didn't
+  overlap any labelled case; house-price and unemployment tables overlap four. Reverted the merge from the prep
+  PR; the RUNBOOK step now schedules `--catalog-add` WITH the `tablefinder:record` re-record (owner-present).
+  Production routing was never affected — the live finder reads the full cbs_catalog mirror, where these six
+  tables always existed.
+- **The #167 probe earned its place on its first scripted use — and its protective form is per-measure WITHIN
+  the registered slice.** 85828NED's 7 Productie-family measures exist table-wide but have ZERO rows for any
+  retail branch (slice-EMPTY, not phantom) — without exclusion, `row_plausibility` would have quarantined the
+  ingest at first sync. Probe within the slice first, then table-wide only to classify (RUNBOOK step 1, docs/11
+  quirk #4).
+- **The same conceptual gap surfaces as three different mechanisms across tables — pin the mechanism, never
+  assume it.** 85429NED's methodebreuk = ABSENT rows (→ `no_data` refusal, CC21); 80590ned's
+  seizoensgecorrigeerd-op-jaarbasis = rows with null+`Impossible` (→ honest null cell per R11, CC28 — the
+  overnight specs' "v4 laat die rijen weg" was wrong); 83625NED's opgeheven gemeenten = null+`Impossible` too.
+  The coverage-key suite gained a third task shape (`null_cell`) next to `single`/`refusal` for exactly this.
+- **CBS's own prose can contradict its machine-readable Status field.** 85937NED's description says "2022-2025
+  voorlopig"; the PeriodenCodes Status field marks 2021+ Voorlopig (91 periods). Second measured case for
+  "derive from PeriodenCodes, never prose" (first: the same table's Voorlopig span vs the overnight brief).
+- **Six parallel cheap-tier measurement agents (one per table, curl on BOTH platforms, structured output)
+  validated everything in ~6 min wall-clock (~440k subagent tokens): all 21 frozen-key candidates confirmed
+  exactly, plus the three finds above.** The overnight-specs → build-day-re-measure discipline held: zero value
+  drift between the 2026-07-17 overnight measurement and the build-day capture on the same date.
+- **Autonomous discipline scaled to six tables:** vocab/canonical keys STAGED (zero prompt bytes touched, zero
+  LLM spend, all ~93 fixtures still valid), CC tasks on explicit targets (the s49-overnight PR-#55 pattern),
+  branch + PR per #118(b), no live syncs. The whole owner-present remainder is one brief
+  (session-briefs/2026-07-17-coverage-4-9-vocab-batch-staged.md) + open-questions #168.
+- **Fixture floors again earned their keep:** ~40k obs added across six tables (+7.8MB) instead of ~150k+
+  unfloored; every CC cell (incl. the depth pins at each floor) verified against the committed fixture BYTES
+  before freezing, not only against the live platforms — the tests replay fixtures, so fixture-parity is the
+  claim that matters.
+
 ## Session 52 (2026-07-17) — Ontdek-grafieken + #53 trial pot (dormant)
 
 - **A kickoff's implementation sketch is a hypothesis, not a decision — measure it against the real job
