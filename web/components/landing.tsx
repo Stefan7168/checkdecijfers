@@ -8,12 +8,14 @@
 // consumentenvertrouwen juni 2026 = −39, Definitief, tabel 83693NED —
 // re-verified LLM-free on production 2026-07-17) rendered in the product's
 // real answer shape; refresh it CONSCIOUSLY when the frozen key ever changes,
-// never invent one (principle a). The anonymous-trial chat on this page is
-// #53's build (own reviewed change, money path) — until then the CTA routes
-// to /login.
+// never invent one (principle a). The anonymous-trial chat (#53, ADR 036) is
+// built and DORMANT: <TrialSectie /> renders nothing until the supervised
+// go-live sets TRIAL_ENABLED + the trial key + the ip-hash secret and seeds
+// the pot — until then the CTA routes to /login, byte-identically.
 import Link from 'next/link';
 import { OntdekSectie } from './ontdek.tsx';
 import { SiteHeader } from './site-header.tsx';
+import { TrialSectie } from './trial.tsx';
 
 const EXAMPLE_QUESTION = 'Wat is het consumentenvertrouwen in juni 2026?';
 
@@ -47,6 +49,9 @@ export function Landing() {
             </a>
           </div>
         </section>
+
+        {/* The #53 anonymous trial — dormant until the supervised go-live (ADR 036) */}
+        <TrialSectie />
 
         {/* A real answer, in the product's real shape */}
         <section className="border-b border-line py-12">

@@ -36,6 +36,7 @@
     "audit:experience": "node --env-file=.env scripts/run-experience-audit.ts",
     "audit:verify": "node --env-file=.env scripts/verify-audit-rows.ts",
     "gdpr:purge": "node --env-file=.env scripts/gdpr-purge.ts",
+    "trialpot:set": "node --env-file=.env scripts/trial-pot-set.ts",
     "intent:eval": "node --env-file-if-exists=.env scripts/intent-eval.ts",
     "intent:record": "node --env-file-if-exists=.env scripts/intent-eval.ts --record",
     "onboarding-delivery:record": "node --env-file=.env scripts/onboarding-delivery-record.ts",

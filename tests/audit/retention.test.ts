@@ -436,3 +436,44 @@ describe('purgeExpiredQuestionHistory — retention window + idempotency', () =>
     });
   });
 });
+
+describe('anonymous_trial rows (#53, ADR 036 D4 — session 52 scope widening)', () => {
+  const NOW = new Date('2026-07-05T00:00:00Z');
+
+  /** user_id NULL + the migration-020 tag: the shape every trial answer writes. */
+  async function insertAnonymousTrialRow(db: Db, question: string, createdAt: string): Promise<number> {
+    const { rows } = await db.query(
+      `insert into audit_answers
+         (schema_version, user_id, source_tag, kind, question, reference_date, response, final_text, prompt_versions, latency_ms, created_at)
+       values (1, null, 'anonymous_trial', 'answer', $1, '2026-01-01', $2::jsonb, $1, '{}'::jsonb, 100, $3::timestamptz)
+       returning id`,
+      [question, JSON.stringify({ kind: 'answer', question, text: question }), createdAt],
+    );
+    return Number(rows[0]!.id);
+  }
+
+  it('the 2-year purge SWEEPS an expired anonymous row (user_id null is no shield)', async () => {
+    await withDb(async (db) => {
+      const oldId = await insertAnonymousTrialRow(db, 'Wat is de inflatie?', '2023-01-01T00:00:00Z');
+      const youngId = await insertAnonymousTrialRow(db, 'Wat doet het bbp?', '2026-07-01T00:00:00Z');
+      const redacted = await purgeExpiredQuestionHistory(db, twoYearsBefore(NOW));
+      expect(redacted.map((r) => r.id)).toEqual([oldId]);
+      const oldRow = await loadRow(db, oldId);
+      expect(oldRow!.question).not.toContain('inflatie');
+      const youngRow = await loadRow(db, youngId);
+      expect(youngRow!.question).toBe('Wat doet het bbp?');
+    });
+  });
+
+  it('self-service deletion NEVER touches anonymous rows (its WHERE binds user_id)', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      const anonId = await insertAnonymousTrialRow(db, 'Wat is de inflatie?', '2026-07-01T00:00:00Z');
+      await insertAuditRow(db, userId, { kind: 'answer', question: 'mijn eigen vraag' });
+      const redacted = await deleteUserQuestionHistory(db, userId);
+      expect(redacted).toHaveLength(1);
+      const anonRow = await loadRow(db, anonId);
+      expect(anonRow!.question).toBe('Wat is de inflatie?');
+    });
+  });
+});

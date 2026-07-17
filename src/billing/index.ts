@@ -33,6 +33,20 @@ export type {
   ReserveWebSearchDebitResult,
 } from './ledger.ts';
 export { chargeAndRun } from './gate.ts';
+export {
+  attachTrialAudit,
+  countPurgeableTrialBookkeeping,
+  getTrialPotStatus,
+  purgeExpiredTrialBookkeeping,
+  refundTrialQuestion,
+  setTrialPot,
+  takeTrialQuestion,
+  TRIAL_BOOKKEEPING_RETENTION_DAYS,
+  TRIAL_QUESTIONS_PER_IP_PER_DAY,
+  TRIAL_QUESTIONS_PER_VISITOR,
+  trialRetentionCutoff,
+} from './trial-pot.ts';
+export type { TrialPotStatus, TrialTakeResult } from './trial-pot.ts';
 export { getQuestionHistory } from './history.ts';
 export type { QuestionHistoryEntry } from './history.ts';
 export { ACTION_CLASS_PRICES, CREDIT_PACKS, SIGNUP_GRANT_CREDITS } from './pricing-defaults.ts';

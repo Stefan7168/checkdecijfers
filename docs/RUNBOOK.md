@@ -82,6 +82,9 @@ A fresh machine needs to know which login owns each provider to rotate a secret 
 | `CRON_SECRET` | Vercel env store only (**✅ SET 2026-07-06, Production, marked Sensitive — WP16 go-live, session 28**) | Real secret you invent yourself: any long random string (password-manager generator). Vercel automatically sends it in the `Authorization` header of its cron requests; the onboarding cron route (`web/app/api/onboarding-cron/route.ts`) returns 503 when the var is missing and 401 on a wrong value — fail closed either way. Rotation: generate a new string → replace in Vercel → redeploy; no third party involved |
 | `RESEND_API_KEY` | Vercel env store only (**✅ SET 2026-07-06, Production, marked Sensitive — WP16 go-live, session 28; key "checkdecijfers-data-retrieved", Sending scope, separate from the Supabase SMTP key**) | Real secret. Resend dashboard → API Keys → create a key with **Sending access** scope → paste into Vercel (mark Sensitive) → redeploy. This is a SECOND key, separate from the one pasted into Supabase's SMTP settings (that one sends magic-link emails; this one lets the app itself send "je tabel is klaar" onboarding notifications). Without it the app still works — notification emails are skipped with a log line; the dashboard stays the source of truth |
 | `ONBOARDING_ENABLED` | Vercel env store only (**✅ SET `1` 2026-07-06, Production — the WP16 master switch, WP16 go-live session 28**) | Not secret — the literal value `1`, now LIVE. While set, on-demand fetch is active. **Removing it is the instant kill-switch** — the deployed app then never constructs the table finder and behaves exactly as before WP16 sub-part 2 (the honest clarification), no rerank spend, no touch of the migration-012 tables, no code change needed. (Owner marked it Sensitive at set time — harmless; the value `1` is just hidden in the UI.) |
+| `ANTHROPIC_TRIAL_API_KEY` | Vercel env store only (**NOT YET SET — #53 go-live, ADR 036**) | Real secret, and deliberately a SEPARATE key from `ANTHROPIC_API_KEY`: Anthropic console → create a key **with its own hard spend cap** (the trial's outer belt — abuse can never touch the main budget) → paste into Vercel (mark Sensitive) → redeploy. Rotation: same as `ANTHROPIC_API_KEY` but only the Vercel store. Removing it (or `TRIAL_ENABLED`) is the trial's kill-switch — the homepage section disappears, nothing else changes |
+| `TRIAL_IP_HASH_SECRET` | Vercel env store only (**NOT YET SET — #53 go-live, ADR 036**) | Real secret you invent yourself (password-manager generator, long random string). Used ONLY to HMAC visitor IPs for the per-IP trial limit — raw IPs never persist. Rotation: replace in Vercel + redeploy; consequence is benign (per-IP counts restart) |
+| `TRIAL_ENABLED` | Vercel env store only (**NOT YET SET — #53 go-live, ADR 036**) | Not secret — the literal value `1`. The trial master switch: while unset the whole homepage trial renders NOTHING (dormant, byte-identical landing). **Removing it is the instant kill-switch** |
 
 **Note on `NEXT_PUBLIC_*` vars and the Vercel env store (2026-07-04, production outage post-mortem):** this Vercel team enforces the **sensitive environment-variables policy** — every env var added to the project becomes write-only, no matter how it is added (dashboard or CLI; verified against the API: every var reports `type: sensitive`). Write-only is fine for real runtime secrets (`DATABASE_URL`, `ANTHROPIC_API_KEY`, `STRIPE_*` — Vercel injects them into the running functions), but it is **fatally incompatible with `NEXT_PUBLIC_*`** vars: those must be readable at *build* time, and our builds run in GitHub Actions via `vercel pull`, which receives sensitive values as **empty strings**. Result: the middleware was compiled with empty Supabase credentials and every route returned Internal Server Error — while the deploy job stayed green (a build succeeding says nothing about the app running; the CI deploy job now ends with a post-deploy smoke check for exactly this). The three public values therefore live in **`web/.env.production`, committed to git on purpose** (they ship in every browser bundle by design — same reasoning as the committed CA certificate, ADR 018). Never add a `NEXT_PUBLIC_` var to the Vercel env store expecting CI builds to see it, and never put a real secret in `web/.env.production`.
 
@@ -318,6 +321,27 @@ in order, owner present:
 Rollback at any point: unset `SEMANTIC_CHECK_ENABLED` and redeploy — fully dormant again; stored
 verdicts on already-written rows stay valid for R8 (the reconstructor checks them whenever the
 key is present, flag state irrelevant).
+
+## #53 anonymous trial pot — the supervised go-live (⏳ PENDING; build DORMANT since session 52, ADR 036)
+
+Everything is built and dormant: until ALL steps below are done the deployed landing renders no trial at
+all. Owner present for the whole list (new secret, live DDL, spend cap):
+
+1. **Anthropic console:** create a NEW API key for the trial with **its own hard spend cap** (start small,
+   e.g. $5/mo — the outer belt). Never reuse the main key.
+2. **Vercel env store:** add `ANTHROPIC_TRIAL_API_KEY` (Sensitive), `TRIAL_IP_HASH_SECRET` (Sensitive, any
+   long random string) and `TRIAL_ENABLED=1` (see the secrets register rows above).
+3. **Live DDL:** apply migration 020 (`npm run db:migrate` against prod, owner present) — creates
+   `trial_pot_config` (seeded 0/0 = still closed) + `trial_questions`, widens the audit `source_tag` CHECK.
+   Verify grants/RLS as usual (migration 003 auto-locks new tables).
+4. **Redeploy** (env edits never apply to a running deployment). Landing now shows the trial section in its
+   CLOSED state ("proefpotje is leeg") — correct: the pot is still 0.
+5. **Seed the pot small:** `npm run trialpot:set -- 25`. The trial opens on the next request — no deploy.
+6. **Live smoke:** one real anonymous trial question (private browser window) → answer with R4 attribution;
+   check the audit row (`source_tag = 'anonymous_trial'`, `user_id` null) and the `trial_questions` row
+   (linked `audit_answer_id`); watch the Anthropic console: the call landed on the TRIAL key.
+7. **Refill/close later:** `npm run trialpot:set -- <n>` (0 closes it; the UI degrades to the login prompt
+   automatically). Optional owner-side hardening outside the repo: Vercel Firewall rate rules (ADR 036 D2).
 
 ## Moving to a new machine (fresh clone bootstrap)
 

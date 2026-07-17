@@ -14,10 +14,14 @@
 // ledger, never widens scope).
 //
 // Scope, enforced in retention.ts (never trusted to this script), #120:
-// audit_answers rows with source_tag in ('user', 'onboarding_delivery') — the
-// user's own questions AND the on-demand-onboarding delivery answers (both
-// personal data). benchmark/validation rows are this project's own regression
-// fixtures and are never touched, regardless of age. The purge ALSO redacts the
+// audit_answers rows with source_tag in ('user', 'onboarding_delivery',
+// 'anonymous_trial') — the user's own questions, the on-demand-onboarding
+// delivery answers AND the #53 anonymous-trial answers (all personal data;
+// ADR 036 D4). benchmark/validation rows are this project's own regression
+// fixtures and are never touched, regardless of age. The #53 trial's
+// limit-bookkeeping rows (trial_questions: visitor UUID + HMAC'd ip) get
+// their own SHORTER sweep here — DELETED after 90 days (ADR 036 D4), since
+// their only purpose is abuse-limit enforcement. The purge ALSO redacts the
 // free text of expired pending_table_requests rows (question_text/topic_term/
 // failure_summary) in the SAME transaction — the second place a question's text
 // is stored (migration 012). The dry run's counts come from
@@ -30,11 +34,17 @@ import {
   purgeExpiredQuestionHistory,
   twoYearsBefore,
 } from '../src/answer/audit/index.ts';
+import {
+  countPurgeableTrialBookkeeping,
+  purgeExpiredTrialBookkeeping,
+  trialRetentionCutoff,
+} from '../src/billing/index.ts';
 import { connectFromEnv } from '../src/db/client.ts';
 
 async function main(): Promise<void> {
   const apply = process.argv.includes('--apply');
   const cutoff = twoYearsBefore(new Date());
+  const trialCutoff = trialRetentionCutoff(new Date());
 
   const { db, pool } = connectFromEnv();
   try {
@@ -46,18 +56,39 @@ async function main(): Promise<void> {
       const { auditRows, pendingRows } = await countPurgeableQuestionHistory(db, cutoff);
       console.log(
         `DRY RUN — cutoff ${cutoff.toISOString()}: ${auditRows} audit_answers row(s) ` +
-          `(source_tag user + onboarding_delivery) and ${pendingRows} pending_table_requests ` +
-          `row(s) older than 2 years would be redacted.`,
+          `(source_tag user + onboarding_delivery + anonymous_trial) and ${pendingRows} ` +
+          `pending_table_requests row(s) older than 2 years would be redacted.`,
       );
-      console.log('Re-run with --apply to actually redact them.');
+      // Pre-go-live databases have no trial_questions table yet (migration
+      // 020 is applied in the supervised #53 go-live) — skip honestly, never
+      // fail the whole purge over the not-yet-existing leg.
+      try {
+        const trialRows = await countPurgeableTrialBookkeeping(db, trialCutoff);
+        console.log(
+          `DRY RUN — trial cutoff ${trialCutoff.toISOString()}: ${trialRows} trial_questions ` +
+            `bookkeeping row(s) older than 90 days would be DELETED (ADR 036 D4).`,
+        );
+      } catch {
+        console.log('  note: trial_questions absent (migration 020 not applied) — trial leg skipped.');
+      }
+      console.log('Re-run with --apply to actually redact/delete them.');
       return;
     }
 
     const redacted = await purgeExpiredQuestionHistory(db, cutoff);
     console.log(
       `Applied — cutoff ${cutoff.toISOString()}: redacted ${redacted.length} audit_answers row(s) ` +
-        `(source_tag user + onboarding_delivery).`,
+        `(source_tag user + onboarding_delivery + anonymous_trial).`,
     );
+    try {
+      const trialDeleted = await purgeExpiredTrialBookkeeping(db, trialCutoff);
+      console.log(
+        `Applied — trial cutoff ${trialCutoff.toISOString()}: deleted ${trialDeleted} ` +
+          `trial_questions bookkeeping row(s) older than 90 days (ADR 036 D4).`,
+      );
+    } catch {
+      console.log('  note: trial_questions absent (migration 020 not applied) — trial leg skipped.');
+    }
     if (redacted.length > 0) {
       const byKind = redacted.reduce<Record<string, number>>((acc, r) => {
         acc[r.kind] = (acc[r.kind] ?? 0) + 1;

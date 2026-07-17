@@ -24,7 +24,8 @@
 // "the credit amount stays, the question text is gone" describes. No schema
 // change: every column touched already exists (migrations 004/010).
 //
-// Scope, both callers (#120): source_tag in ('user', 'onboarding_delivery').
+// Scope, both callers (#120): source_tag in ('user', 'onboarding_delivery',
+// 'anonymous_trial' — the #53 trial rows, added session 52, ADR 036 D4).
 // The delivery answer row an on-demand-onboarding job writes (source_tag =
 // 'onboarding_delivery') carries the verbatim question + intent + answer, so it
 // is a real user's personal data the retention seam must cover too — widened in
@@ -71,11 +72,15 @@ export const REDACTED_TABLE_ID = 'REDACTED' as const;
  * denylist: benchmark/validation rows are regression fixtures that live forever,
  * while 'onboarding_delivery' rows (the on-demand-onboarding delivery answer,
  * carrying the verbatim question + intent + answer) ARE personal data — added
- * to the scope in session 39. Every scoped statement in this module — the
+ * to the scope in session 39. 'anonymous_trial' rows (ADR 036 D4, session 52)
+ * are personal data too (a visitor's verbatim question) and ride the same
+ * 2-year purge; self-service delete never touches them regardless — its every
+ * WHERE binds user_id, and these rows are user_id NULL by design (no account
+ * exists to invoke deletion from). Every scoped statement in this module — the
  * self-service WHERE, the purge WHERE, the purge's answer_feedback subselect,
  * and the ⟨F2⟩ dry-run count — is built from THIS fragment, so the scope can
  * only ever widen in one place. */
-const AUDIT_SCOPE = `source_tag in ('user', 'onboarding_delivery')` as const;
+const AUDIT_SCOPE = `source_tag in ('user', 'onboarding_delivery', 'anonymous_trial')` as const;
 
 /** #120: the purge's age predicate, shared by the pending-table redaction leg
  * AND the dry-run count so preview and apply can never drift (⟨F2⟩). `$1` is

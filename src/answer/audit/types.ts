@@ -56,8 +56,9 @@ export interface TableRef {
  * 'onboarding_delivery' (WP16 sub-part 2, ADR 026): the fetch job's delivery
  * re-run — a real answer, but produced out-of-band by the cron job rather than
  * a live chat turn, so it is tagged distinctly for reporting/retention. The DB
- * CHECK is widened to match in migration 013. */
-export type AuditSourceTag = 'benchmark' | 'validation' | 'user' | 'onboarding_delivery';
+ * CHECK is widened to match in migration 013; 'anonymous_trial' (the #53
+ * homepage trial, ADR 036: user_id null + this tag) in migration 020. */
+export type AuditSourceTag = 'benchmark' | 'validation' | 'user' | 'onboarding_delivery' | 'anonymous_trial';
 
 export interface AuditRecord {
   id: number;
