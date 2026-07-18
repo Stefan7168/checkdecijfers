@@ -41,6 +41,28 @@ terms, an alias-lane fix, before any rerank work — the s25 precedent).
 (pick + alts + shortlist-extension, cap 6) — restoring the teeth the s54 weakening removed, without pinning one
 model's alt-list whims. `notPick: '85615NED'` stays.
 
+### Step 0 verification — ✅ MEASURED 2026-07-18 (first post-Fable session, hermetic + live read-only, €0 LLM)
+
+Run via a one-off script over `recallCandidates(db, 'bijstand')` (the exact topic `findTable` passes to Stage 1),
+on both the committed 83-row fixture (PGlite) and the live 4,858-row `cbs_catalog` mirror (read-only SELECT; mirror
+last refreshed 2026-07-05):
+
+- **Membership: YES on both legs.** Hermetic: position 14 of 14. **Live mirror: position 22 of 24** (rank 0.0760,
+  second-lowest Regulier rank in the shortlist). So **FTS recall is NOT the gap** — the recall-terms/alias-lane
+  branch of this protocol is ruled out, and Stage-2 has always seen `37789ksz` in its prompt (consistent with s31
+  Haiku and s54 Sonnet both being able to place it in alternatives).
+- **BUT the cap-6 rank-ordered walk as sketched above would NOT reach it.** The returned shortlist is merged by raw
+  FTS rank; after the s54 model chain (85585NED + 82015NED + 85692NED) the next entries in FTS-rank order are
+  ~15 higher-ranked Regulier tables (85615NED 0.2993, 85617NED 0.2432, 82020NED 0.1672, 80794ned + five
+  gemeentefonds tables + 03763 + 81066ned + wijken-en-buurten tables at 0.1216–0.1368) before `37789ksz` at 0.0760.
+  A rank-ordered walk capped at 6 total stops long before it.
+- **Design consequence for the build session:** step 0 still stands (the structural fix beats a model swap — the
+  deciding fact lives in the fit gate, not the rerank), but the walk parameter must change: either walk the FULL
+  remaining Regulier shortlist through the ADR-027 fit gate (worst case here ~15–17 extra probes on a rare,
+  already-100-credit path — bound it and measure the latency), or make the walk order deliverability-aware rather
+  than FTS-rank-ordered. The `walkContains: '37789ksz'` assertion should be pinned against whichever walk actually
+  ships (cap 6 would pin a walk that provably misses it — don't).
+
 ## Step 1 — the profile concept: model + params + threshold are ONE calibrated unit
 
 `TABLE_RERANK_MODEL` + `temperature: 0` + `highConfidence: 0.8` stop being three independent constants. A
