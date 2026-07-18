@@ -44,6 +44,18 @@ const KIND_CODE_PREFIX: Record<Exclude<RegionKind, 'onbekend'>, string> = {
   gemeente: 'GM',
 };
 
+/** CBS region-code prefix → RegionKind — the ONE prefix table, shared with
+ * context/build.ts (#138 extracted the near-duplicate instead of growing a
+ * third copy). Match order GM/PV/LD first, NL last (all prefixes are disjoint
+ * today; the order is belt-and-braces, kept from the original copy). */
+const KIND_BY_PREFIX: [string, Exclude<RegionKind, 'onbekend'>][] = (
+  ['gemeente', 'provincie', 'landsdeel', 'land'] as const
+).map((kind) => [KIND_CODE_PREFIX[kind], kind]);
+
+export function regionKindForCode(code: string): Exclude<RegionKind, 'onbekend'> | null {
+  return KIND_BY_PREFIX.find(([prefix]) => code.startsWith(prefix))?.[1] ?? null;
+}
+
 /** Matching normalization: lowercase, straight apostrophes, no diacritics,
  * collapsed whitespace. Display strings always use the original CBS label. */
 export function normalizeRegionName(name: string): string {

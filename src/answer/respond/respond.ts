@@ -18,6 +18,7 @@ import { parseQuestion, type ParseQuestionOptions } from '../intent/parse.ts';
 import { parseClarificationReply, type ClarifyReplyOptions } from '../intent/clarify.ts';
 import { parseFollowUpQuestion } from '../intent/followup.ts';
 import type { ConversationContext } from '../context/types.ts';
+import { regionTermsFor } from '../context/build.ts';
 import type { ParseOutcome, ParserConfig } from '../intent/types.ts';
 import { RawParseValidationError } from '../intent/types.ts';
 import type { IntentLlmClient } from '../intent/client.ts';
@@ -171,8 +172,13 @@ export async function respondToIntent(
     // an honest refusal into an internal error.
     let suggestions: string[] = [];
     try {
-      suggestions = await buildRefusalSuggestions(outcome, (candidate) =>
-        echoServability(db, candidate),
+      suggestions = await buildRefusalSuggestions(
+        outcome,
+        (candidate) => echoServability(db, candidate),
+        // #138: the honest code→label source for a regional retry chip —
+        // registry/dimension_labels via regionTermsFor (context/build.ts),
+        // injected so suggestions.ts keeps its never-sees-db confinement.
+        (canonicalKey, codes) => regionTermsFor(db, canonicalKey, codes),
       );
     } catch {
       suggestions = [];

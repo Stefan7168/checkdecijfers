@@ -15,24 +15,13 @@ import type { Db } from '../../db/types.ts';
 import type { ComposedResponse } from '../respond/types.ts';
 import type { IntentPeriod, StructuredIntent } from '../../query/index.ts';
 import { resolvedIntent } from '../audit/write.ts';
-import { baseLabel } from '../intent/resolve.ts';
-import type { RegionKind, RegionTerm } from '../intent/types.ts';
+import { baseLabel, regionKindForCode } from '../intent/resolve.ts';
+import type { RegionTerm } from '../intent/types.ts';
 import type { ContextPeriod, ConversationContext } from './types.ts';
 import { CONTEXT_VERSION } from './types.ts';
 
-/** CBS region-code prefix → the raw-parse RegionKind vocabulary. NL sorts
- * last so GM/PV/LD match first (all prefixes are disjoint today; the order is
- * belt-and-braces). */
-const KIND_BY_PREFIX: [string, Exclude<RegionKind, 'onbekend'>][] = [
-  ['GM', 'gemeente'],
-  ['PV', 'provincie'],
-  ['LD', 'landsdeel'],
-  ['NL', 'land'],
-];
-
-function kindForCode(code: string): Exclude<RegionKind, 'onbekend'> | null {
-  return KIND_BY_PREFIX.find(([prefix]) => code.startsWith(prefix))?.[1] ?? null;
-}
+// Region-code prefix → kind lives in ONE place since #138: regionKindForCode
+// (intent/resolve.ts) — this module's local copy was its near-duplicate.
 
 /** Resolved period → concrete PeriodSpec shape. Null when the shape cannot
  * round-trip (ADR 021 limitation 2) — never an approximation. */
@@ -58,8 +47,9 @@ export function contextPeriodFor(period: IntentPeriod): ContextPeriod | null {
 /** Region codes → registry-labelled RegionTerms, via the canonical measure's
  * table geo dimension. Null (whole-context bail-out) when any code cannot be
  * labelled — a partial region list would be a WRONG referent, not a degraded
- * one. */
-async function regionTermsFor(
+ * one. Exported since #138: the refusal retry chip injects this as its
+ * honest code→label source (registry/dimension_labels, never a cell). */
+export async function regionTermsFor(
   db: Db,
   canonicalKey: string,
   codes: string[],
@@ -91,7 +81,7 @@ async function regionTermsFor(
   const terms: RegionTerm[] = [];
   for (const code of codes) {
     const label = labelByCode.get(code);
-    const kind = kindForCode(code);
+    const kind = regionKindForCode(code);
     if (!label || !kind) return null;
     terms.push({ name: baseLabel(label), kind });
   }

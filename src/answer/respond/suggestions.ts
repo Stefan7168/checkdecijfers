@@ -25,6 +25,7 @@
 import { INTENT_SCHEMA_VERSION } from '../../query/index.ts';
 import type { QueryRefusal, StructuredIntent, ValidatedResult } from '../../query/index.ts';
 import type { ServabilityCheck } from '../intent/policy.ts';
+import type { RegionTerm } from '../intent/types.ts';
 import { baseLabel, stepPeriodCode } from '../intent/resolve.ts';
 import { CANONICAL_MEASURES } from '../../registry/defaults.ts';
 import type { CanonicalMeasure } from '../../registry/types.ts';
@@ -288,16 +289,30 @@ export async function buildSuggestions(
  * gets no chip — it stays prose-only (owner decision 2026-07-13). Range-aware
  * like #137, since the owner's canonical example was a range.
  *
- * Region-less v1 (drop-never-guess): a refusal carries no cells, so there is no
- * honest cell-derived region wording — a region-carrying intent yields no chip
- * (the regional case is deferred, #134 v2). The dry-run IS the loadedness proof
+ * #138 (the #134 v2 regional case): a region-carrying intent now gets the same
+ * chip WITH the registry-labelled region — `labelRegions` is the injected
+ * honest code→label source (wired to context/build.ts regionTermsFor at the
+ * respond.ts call site: canonical key → table → GeoDimension →
+ * dimension_labels, a pure metadata mirror structurally incapable of touching
+ * a cell value; this module keeps its never-sees-db confinement). It fails
+ * closed exactly like the context builder: ANY unlabelable code → null → no
+ * chip at all, byte-identical to the region-less-v1 bailout (drop-never-
+ * guess). The regional candidate carries the intent's own region codes, so
+ * the dry-run proves the REGIONAL cells are loaded, not just the national
+ * ones. The dry-run IS the loadedness proof
  * (EchoServability carries no cell values by construction — the same no-numbers
  * guarantee the answer-path generators have); an unservable boundary drops the
  * chip. FAIL-OPEN: any throw returns [] so a chip hiccup never costs the user
  * the (refunded) refusal turn. Returns 0 or 1 chip. */
+export type RegionLabeler = (
+  canonicalKey: string,
+  codes: string[],
+) => Promise<RegionTerm[] | null>;
+
 export async function buildRefusalSuggestions(
   refusal: QueryRefusal,
   check: ServabilityCheck,
+  labelRegions: RegionLabeler,
 ): Promise<string[]> {
   try {
     const r = refusal.refusal;
@@ -318,8 +333,17 @@ export async function buildRefusalSuggestions(
     if (intent.target.kind !== 'canonical') return [];
     const label = definitionLabelByKey.get(intent.target.key);
     if (label === undefined) return [];
-    // Region-less v1: no cells → no honest region wording.
-    if ((intent.regions ?? []).length > 0) return [];
+    // #138: regions are labelled from the registry (dimension_labels via the
+    // injected closure) — the honest source a cell-less refusal DOES have.
+    // Fail-closed: null (any unlabelable code / no geo dimension) or a count
+    // mismatch → no chip at all, byte-identical to the region-less-v1 bailout.
+    const regions = intent.regions ?? [];
+    let regionPhrase = '';
+    if (regions.length > 0) {
+      const terms = await labelRegions(intent.target.key, regions);
+      if (terms === null || terms.length !== regions.length) return [];
+      regionPhrase = ` in ${joinNl(terms.map((t) => t.name))}`;
+    }
     // The boundary the refusal already computed: freshest-available for
     // freshness, the loaded-slice floor (nearestAlternative) for the period
     // outside_loaded_slice.
@@ -350,12 +374,15 @@ export async function buildRefusalSuggestions(
         const rangeCandidate: StructuredIntent = {
           schemaVersion: INTENT_SCHEMA_VERSION,
           target: intent.target,
+          // #138: the regional candidate carries the ask's own region codes —
+          // the dry-run must prove the REGIONAL window serves, not the national.
+          ...(regions.length > 0 ? { regions } : {}),
           period: { kind: 'range', from: boundary, to: intent.period.to },
           derivation: 'series',
         };
         if ((await check(rangeCandidate)).servable) {
           return [
-            `Hoe ontwikkelde ${label} zich van ${periodCodeToNl(boundary)} ` +
+            `Hoe ontwikkelde ${label}${regionPhrase} zich van ${periodCodeToNl(boundary)} ` +
               `tot en met ${periodCodeToNl(intent.period.to)}?`,
           ];
         }
@@ -367,14 +394,16 @@ export async function buildRefusalSuggestions(
     const candidate: StructuredIntent = {
       schemaVersion: INTENT_SCHEMA_VERSION,
       target: intent.target,
+      ...(regions.length > 0 ? { regions } : {}),
       period: { kind: 'codes', codes: [boundary] },
       derivation: 'none',
     };
     // The dry-run proves the boundary period resolves in loaded data (R7 /
     // docs/05 "actually available" rule) — a refusal must never offer a retry
-    // it cannot then serve.
+    // it cannot then serve. With regions on the candidate that proof covers
+    // the regional cells themselves (#138).
     if (!(await check(candidate)).servable) return [];
-    return [`Wat was ${label} in ${periodCodeToNl(boundary)}?`];
+    return [`Wat was ${label}${regionPhrase} in ${periodCodeToNl(boundary)}?`];
   } catch {
     return [];
   }

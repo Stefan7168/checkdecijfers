@@ -7,6 +7,7 @@
 // and fail-open. The envelope test replays B3 end-to-end and pins the
 // R8-audited `text` byte-for-byte (modulo the injected sync date — the one
 // legitimately run-dependent token) while `suggestions` ride alongside.
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { ReplayLlmClient } from '../../src/answer/llm/client.ts';
@@ -17,7 +18,9 @@ import {
   buildRefusalSuggestions,
   buildSuggestions,
   MAX_SUGGESTIONS,
+  type RegionLabeler,
 } from '../../src/answer/respond/suggestions.ts';
+import { regionTermsFor } from '../../src/answer/context/build.ts';
 import { CANONICAL_MEASURES } from '../../src/registry/defaults.ts';
 import type { CanonicalMeasure } from '../../src/registry/types.ts';
 import { echoServability, runQuery, INTENT_SCHEMA_VERSION } from '../../src/query/index.ts';
@@ -43,6 +46,19 @@ afterAll(async () => {
 /** The real dry-run — the production check respondToIntent constructs. */
 function realCheck(): ServabilityCheck {
   return (intent) => echoServability(db, intent);
+}
+
+/** #138 confinement pin for the region-less cases: the labeler must never be
+ * consulted when the intent carries no regions — a throw here that still
+ * yielded a chip would mean the fail-open swallowed a wrong consult. */
+const neverLabels: RegionLabeler = async () => {
+  throw new Error('labelRegions must not be consulted for a region-less intent');
+};
+
+/** The real labeler — the production wiring respond.ts constructs (#138):
+ * registry/dimension_labels via regionTermsFor, never a cell. */
+function realLabels(): RegionLabeler {
+  return (key, codes) => regionTermsFor(db, key, codes);
 }
 
 function intentOf(
@@ -331,14 +347,14 @@ describe('buildRefusalSuggestions — the period-coverage retry chip (real db + 
       freshness: { freshestAvailable: { periodCode: '2025JJ00', status: 'Definitief' }, freshestDefinitief: null },
       nearestAlternative: '2025JJ00',
     });
-    expect(await buildRefusalSuggestions(refusal, realCheck())).toEqual([
+    expect(await buildRefusalSuggestions(refusal, realCheck(), neverLabels)).toEqual([
       `Wat was ${CPI_LABEL} in 2025?`,
     ]);
   });
 
   it('outside_loaded_slice (period axis): offers the loaded-slice floor', async () => {
     const refusal = refusalOf('outside_loaded_slice', { axis: 'period', nearestAlternative: '2010JJ00' });
-    expect(await buildRefusalSuggestions(refusal, realCheck())).toEqual([
+    expect(await buildRefusalSuggestions(refusal, realCheck(), neverLabels)).toEqual([
       `Wat was ${CPI_LABEL} in 2010?`,
     ]);
   });
@@ -348,7 +364,7 @@ describe('buildRefusalSuggestions — the period-coverage retry chip (real db + 
       axis: 'period',
       freshness: { freshestAvailable: { periodCode: '2025JJ00', status: 'Definitief' }, freshestDefinitief: null },
     });
-    const chips = await buildRefusalSuggestions(refusal, realCheck());
+    const chips = await buildRefusalSuggestions(refusal, realCheck(), neverLabels);
     expect(chips).toHaveLength(1);
     for (const token of chips[0]!.match(/\d+(?:[.,]\d+)?/g) ?? []) {
       expect(/^\d{4}$/.test(token), `token '${token}'`).toBe(true);
@@ -376,7 +392,7 @@ describe('buildRefusalSuggestions — #137 range-ask retry chip (real db + real 
       { axis: 'period', nearestAlternative: '2010JJ00' },
       cpiRangeIntent('2001JJ00', '2024JJ00'),
     );
-    expect(await buildRefusalSuggestions(refusal, realCheck())).toEqual([
+    expect(await buildRefusalSuggestions(refusal, realCheck(), neverLabels)).toEqual([
       `Hoe ontwikkelde ${CPI_LABEL} zich van 2010 tot en met 2024?`,
     ]);
   });
@@ -388,7 +404,7 @@ describe('buildRefusalSuggestions — #137 range-ask retry chip (real db + real 
       { axis: 'period', nearestAlternative: '2010JJ00' },
       cpiRangeIntent('2001JJ00', '2050JJ00'),
     );
-    expect(await buildRefusalSuggestions(refusal, realCheck())).toEqual([
+    expect(await buildRefusalSuggestions(refusal, realCheck(), neverLabels)).toEqual([
       `Wat was ${CPI_LABEL} in 2010?`,
     ]);
   });
@@ -401,7 +417,7 @@ describe('buildRefusalSuggestions — #137 range-ask retry chip (real db + real 
       { axis: 'period', nearestAlternative: '2010JJ00' },
       cpiRangeIntent('2001JJ00', '2005JJ00'),
     );
-    expect(await buildRefusalSuggestions(refusal, realCheck())).toEqual([
+    expect(await buildRefusalSuggestions(refusal, realCheck(), neverLabels)).toEqual([
       `Wat was ${CPI_LABEL} in 2010?`,
     ]);
   });
@@ -415,7 +431,7 @@ describe('buildRefusalSuggestions — #137 range-ask retry chip (real db + real 
       },
       cpiRangeIntent('2001JJ00', '2030JJ00'),
     );
-    expect(await buildRefusalSuggestions(refusal, realCheck())).toEqual([
+    expect(await buildRefusalSuggestions(refusal, realCheck(), neverLabels)).toEqual([
       `Wat was ${CPI_LABEL} in 2025?`,
     ]);
   });
@@ -426,7 +442,7 @@ describe('buildRefusalSuggestions — #137 range-ask retry chip (real db + real 
       { axis: 'period', nearestAlternative: '2024JJ00' },
       cpiRangeIntent('2001JJ00', '2024JJ00'),
     );
-    expect(await buildRefusalSuggestions(refusal, realCheck())).toEqual([
+    expect(await buildRefusalSuggestions(refusal, realCheck(), neverLabels)).toEqual([
       `Wat was ${CPI_LABEL} in 2024?`,
     ]);
   });
@@ -445,7 +461,7 @@ describe('buildRefusalSuggestions — #137 range-ask retry chip (real db + real 
       { axis: 'period', nearestAlternative: '2010JJ00' },
       cpiRangeIntent('2001JJ00', '2024JJ00'),
     );
-    expect(await buildRefusalSuggestions(refusal, check)).toEqual([`Wat was ${CPI_LABEL} in 2010?`]);
+    expect(await buildRefusalSuggestions(refusal, check, neverLabels)).toEqual([`Wat was ${CPI_LABEL} in 2010?`]);
   });
 });
 
@@ -454,7 +470,7 @@ describe('buildRefusalSuggestions — #134(b) too-old not_published chip (real d
     // The owner's "inflatie 2001" shape asked as one year: run.ts set the 2010
     // floor as nearestAlternative; the real dry-run serves 2010.
     const refusal = refusalOf('not_published', { axis: 'period', nearestAlternative: '2010JJ00' });
-    expect(await buildRefusalSuggestions(refusal, realCheck())).toEqual([
+    expect(await buildRefusalSuggestions(refusal, realCheck(), neverLabels)).toEqual([
       `Wat was ${CPI_LABEL} in 2010?`,
     ]);
   });
@@ -465,7 +481,7 @@ describe('buildRefusalSuggestions — #134(b) too-old not_published chip (real d
       { axis: 'period', nearestAlternative: '2010JJ00' },
       cpiRangeIntent('2001JJ00', '2024JJ00'),
     );
-    expect(await buildRefusalSuggestions(refusal, realCheck())).toEqual([
+    expect(await buildRefusalSuggestions(refusal, realCheck(), neverLabels)).toEqual([
       `Hoe ontwikkelde ${CPI_LABEL} zich van 2010 tot en met 2024?`,
     ]);
   });
@@ -478,9 +494,137 @@ describe('buildRefusalSuggestions — #134(b) too-old not_published chip (real d
       { axis: 'period', nearestAlternative: '2010JJ00' },
       cpiRangeIntent('2001JJ00', '2050JJ00'),
     );
-    expect(await buildRefusalSuggestions(refusal, realCheck())).toEqual([
+    expect(await buildRefusalSuggestions(refusal, realCheck(), neverLabels)).toEqual([
       `Wat was ${CPI_LABEL} in 2010?`,
     ]);
+  });
+});
+
+// #138: the regional retry chip — real db + real dry-run + the REAL labeler
+// (regionTermsFor over dimension_labels), exactly the production wiring. The
+// fixture's 83625NED is a true GeoDimension table (745 RegioS codes) with
+// GM0363 loaded 2015–2025, so the positive cases prove REGIONAL servability,
+// not just national.
+// ---------------------------------------------------------------------------
+
+const HOUSE = 'average_home_sale_price_by_gemeente';
+const HOUSE_LABEL =
+  'gemiddelde verkoopprijs van bestaande koopwoningen, per gemeente/provincie (jaarcijfer)';
+
+function houseIntent(
+  regions: string[],
+  period: StructuredIntent['period'] = { kind: 'codes', codes: ['2030JJ00'] },
+  derivation: StructuredIntent['derivation'] = 'none',
+): StructuredIntent {
+  return {
+    schemaVersion: INTENT_SCHEMA_VERSION,
+    target: { kind: 'canonical', key: HOUSE },
+    regions,
+    period,
+    derivation,
+  };
+}
+
+describe('buildRefusalSuggestions — #138 regional retry chip (real db + real dry-run + real labeler)', () => {
+  it('freshness on a region ask: offers the boundary WITH the registry-labelled region', async () => {
+    const refusal = refusalOf(
+      'freshness',
+      {
+        axis: 'period',
+        freshness: { freshestAvailable: { periodCode: '2025JJ00', status: 'Definitief' }, freshestDefinitief: null },
+      },
+      houseIntent(['GM0363']),
+    );
+    expect(await buildRefusalSuggestions(refusal, realCheck(), realLabels())).toEqual([
+      `Wat was ${HOUSE_LABEL} in Amsterdam in 2025?`,
+    ]);
+  });
+
+  it('a RANGE ask partly below the floor keeps the region in the trend chip (the #137 shape, regional)', async () => {
+    // Fixture slice floor for 83625NED is 2015; ask 2001–2024 for Amsterdam →
+    // the clamped regional window [2015,2024] serves gap-free.
+    const refusal = refusalOf(
+      'outside_loaded_slice',
+      { axis: 'period', nearestAlternative: '2015JJ00' },
+      houseIntent(['GM0363'], { kind: 'range', from: '2001JJ00', to: '2024JJ00' }, 'series'),
+    );
+    expect(await buildRefusalSuggestions(refusal, realCheck(), realLabels())).toEqual([
+      `Hoe ontwikkelde ${HOUSE_LABEL} in Amsterdam zich van 2015 tot en met 2024?`,
+    ]);
+  });
+
+  it('an unlabelable region code fails CLOSED: no chip at all (drop-never-guess)', async () => {
+    const refusal = refusalOf(
+      'freshness',
+      {
+        axis: 'period',
+        freshness: { freshestAvailable: { periodCode: '2025JJ00', status: 'Definitief' }, freshestDefinitief: null },
+      },
+      houseIntent(['GM9999']),
+    );
+    expect(await buildRefusalSuggestions(refusal, realCheck(), realLabels())).toEqual([]);
+  });
+
+  it('the dry-run proves the REGIONAL cells, not just the national ones (the candidate carries the region codes)', async () => {
+    // A check that refuses any region-carrying candidate: if the generator
+    // dropped the regions from its candidate (the national-proof mutant), the
+    // stub would accept and a chip would wrongly surface.
+    const regionBlindCheck: ServabilityCheck = async (intent) =>
+      (intent.regions ?? []).length > 0 ? NOT_SERVABLE : SERVABLE;
+    const refusal = refusalOf(
+      'freshness',
+      {
+        axis: 'period',
+        freshness: { freshestAvailable: { periodCode: '2025JJ00', status: 'Definitief' }, freshestDefinitief: null },
+      },
+      houseIntent(['GM0363']),
+    );
+    expect(await buildRefusalSuggestions(refusal, regionBlindCheck, realLabels())).toEqual([]);
+  });
+
+  it('a throwing labeler is fail-open: [] — never an exception on the refusal path', async () => {
+    const refusal = refusalOf(
+      'freshness',
+      {
+        axis: 'period',
+        freshness: { freshestAvailable: { periodCode: '2025JJ00', status: 'Definitief' }, freshestDefinitief: null },
+      },
+      houseIntent(['GM0363']),
+    );
+    const exploding: RegionLabeler = async () => {
+      throw new Error('labeler exploded');
+    };
+    expect(await buildRefusalSuggestions(refusal, async () => SERVABLE, exploding)).toEqual([]);
+  });
+
+  it('chip copy carries no digit but the period year — the principle a/c belt holds with a region present', async () => {
+    const refusal = refusalOf(
+      'freshness',
+      {
+        axis: 'period',
+        freshness: { freshestAvailable: { periodCode: '2025JJ00', status: 'Definitief' }, freshestDefinitief: null },
+      },
+      houseIntent(['GM0363']),
+    );
+    const chips = await buildRefusalSuggestions(refusal, realCheck(), realLabels());
+    expect(chips).toHaveLength(1);
+    for (const token of chips[0]!.match(/\d+(?:[.,]\d+)?/g) ?? []) {
+      expect(/^\d{4}$/.test(token), `token '${token}'`).toBe(true);
+    }
+  });
+});
+
+describe('#138 confinement: suggestions.ts still never sees the database', () => {
+  it('imports no db module and names no Db type — region labels arrive ONLY through the injected closure', () => {
+    // The design's structural guarantee (mirrors the dry-run confinement): the
+    // chip module can never read a cell because it can never reach the db. A
+    // future edit that imports db/ or types a Db parameter fails here loudly.
+    const src = readFileSync(
+      fileURLToPath(new URL('../../src/answer/respond/suggestions.ts', import.meta.url)),
+      'utf-8',
+    );
+    expect(src).not.toMatch(/from '[^']*\/db\//);
+    expect(src).not.toMatch(/\bDb\b/);
   });
 });
 
@@ -489,7 +633,7 @@ describe('buildRefusalSuggestions — the gates and fail-open (stub checks)', ()
     // resolve.ts:383 refuses a pinned dimension coordinate on axis 'measure';
     // its nearestAlternative is a coordinate, never a period. Must drop.
     const refusal = refusalOf('outside_loaded_slice', { axis: 'measure', nearestAlternative: 'A048710' });
-    expect(await buildRefusalSuggestions(refusal, async () => SERVABLE)).toEqual([]);
+    expect(await buildRefusalSuggestions(refusal, async () => SERVABLE, neverLabels)).toEqual([]);
   });
 
   it('a MID-GAP not_published (no nearestAlternative — a hole between served periods) stays prose-only: no chip', async () => {
@@ -497,21 +641,24 @@ describe('buildRefusalSuggestions — the gates and fail-open (stub checks)', ()
     // mid-gap not_published carries none, so even an always-servable check
     // yields no chip — there is no single honest "try this" target.
     const refusal = refusalOf('not_published', { axis: 'period' });
-    expect(await buildRefusalSuggestions(refusal, async () => SERVABLE)).toEqual([]);
+    expect(await buildRefusalSuggestions(refusal, async () => SERVABLE, neverLabels)).toEqual([]);
   });
 
   it('a too-old not_published on a NON-period axis never chips (defensive: the boundary is only a period on the period axis)', async () => {
     const refusal = refusalOf('not_published', { axis: 'measure', nearestAlternative: '2010JJ00' });
-    expect(await buildRefusalSuggestions(refusal, async () => SERVABLE)).toEqual([]);
+    expect(await buildRefusalSuggestions(refusal, async () => SERVABLE, neverLabels)).toEqual([]);
   });
 
-  it('a region-carrying intent yields no chip (region-less v1: no cells → no honest region wording)', async () => {
+  it('#138 fail-closed: a region ask on a NO-GEO table (CPI) yields no chip — the real labeler nulls (no GeoDimension), never a guessed referent', async () => {
+    // Pre-#138 this was the blanket region-less-v1 bailout; the behavior for
+    // THIS case is deliberately byte-identical, but now for the honest reason:
+    // regionTermsFor finds no GeoDimension on 86141NED and fails closed.
     const refusal = refusalOf(
       'freshness',
       { axis: 'period', freshness: { freshestAvailable: { periodCode: '2025JJ00', status: 'Definitief' }, freshestDefinitief: null } },
       cpiIntent(['GM0363']),
     );
-    expect(await buildRefusalSuggestions(refusal, async () => SERVABLE)).toEqual([]);
+    expect(await buildRefusalSuggestions(refusal, async () => SERVABLE, realLabels())).toEqual([]);
   });
 
   it('a non-canonical (explicit) target yields no chip (no registry label to name)', async () => {
@@ -522,7 +669,7 @@ describe('buildRefusalSuggestions — the gates and fail-open (stub checks)', ()
       derivation: 'none',
     };
     const refusal = refusalOf('freshness', { axis: 'period', nearestAlternative: '2025JJ00' }, explicit);
-    expect(await buildRefusalSuggestions(refusal, async () => SERVABLE)).toEqual([]);
+    expect(await buildRefusalSuggestions(refusal, async () => SERVABLE, neverLabels)).toEqual([]);
   });
 
   it('R7 gate: a boundary the dry-run rejects never chips (a retry that would dead-end is not offered)', async () => {
@@ -530,12 +677,12 @@ describe('buildRefusalSuggestions — the gates and fail-open (stub checks)', ()
       axis: 'period',
       freshness: { freshestAvailable: { periodCode: '2025JJ00', status: 'Definitief' }, freshestDefinitief: null },
     });
-    expect(await buildRefusalSuggestions(refusal, async () => NOT_SERVABLE)).toEqual([]);
+    expect(await buildRefusalSuggestions(refusal, async () => NOT_SERVABLE, neverLabels)).toEqual([]);
   });
 
   it('no computed boundary (freshness without a payload / outside_loaded_slice without nearestAlternative) → []', async () => {
-    expect(await buildRefusalSuggestions(refusalOf('freshness', { axis: 'period' }), async () => SERVABLE)).toEqual([]);
-    expect(await buildRefusalSuggestions(refusalOf('outside_loaded_slice', { axis: 'period' }), async () => SERVABLE)).toEqual([]);
+    expect(await buildRefusalSuggestions(refusalOf('freshness', { axis: 'period' }), async () => SERVABLE, neverLabels)).toEqual([]);
+    expect(await buildRefusalSuggestions(refusalOf('outside_loaded_slice', { axis: 'period' }), async () => SERVABLE, neverLabels)).toEqual([]);
   });
 
   it('fail-open: a throwing check yields [] — never an exception on the refusal path', async () => {
@@ -546,7 +693,7 @@ describe('buildRefusalSuggestions — the gates and fail-open (stub checks)', ()
     const check: ServabilityCheck = async () => {
       throw new Error('dry-run exploded');
     };
-    expect(await buildRefusalSuggestions(refusal, check)).toEqual([]);
+    expect(await buildRefusalSuggestions(refusal, check, neverLabels)).toEqual([]);
   });
 });
 
@@ -604,6 +751,29 @@ describe('the refusal envelope: the retry chip rides alongside, text is byte-unt
     expect(response.text.length).toBeGreaterThan(0);
     expect(response.text).not.toContain(`Wat was ${CPI_LABEL} in 2025?`);
     expect(answerClient.calls).toBe(0);
+  });
+
+  it('#138: verkoopprijs Amsterdam 2030 refuses AND carries the REGIONAL retry chip — the real respondToIntent wiring incl. the injected labeler', async () => {
+    const stub: Extract<ParseOutcome, { kind: 'intent' }> = {
+      kind: 'intent',
+      question: 'stub',
+      raw: { version: 3, kind: 'data_query', candidates: [], unmatchedMeasureTerm: null, nearestCanonicalKeys: [], note: null },
+      model: 'stub',
+      usage: { inputTokens: 0, outputTokens: 0 },
+      intent: houseIntent(['GM0363']),
+      confidence: 0.97,
+      impliedRecency: false,
+      ranked: [],
+    };
+    const response = await respondToIntent(db, 'Wat kostte een huis in Amsterdam in 2030?', stub, {
+      answerClient: new ThrowingAnswerClient(),
+      referenceDate: '2026-08-15',
+    });
+    expect(response.kind).toBe('refusal');
+    if (response.kind !== 'refusal') throw new Error('unreachable');
+    expect(response.suggestions).toEqual([`Wat was ${HOUSE_LABEL} in Amsterdam in 2025?`]);
+    // R8: the chip rides the structural field only, never the audited text.
+    expect(response.text).not.toContain(`in Amsterdam in 2025?`);
   });
 
   it('CPI 1990 refuses (not_published, too old) AND carries the 2010 floor chip — #134(b), the real respondToIntent wiring end to end', async () => {
