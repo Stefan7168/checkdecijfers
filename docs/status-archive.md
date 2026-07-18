@@ -36,9 +36,21 @@ effective; flagged to the owner. Two deliverables, zero live-LLM spend / prompt 
    test/hook ceiling 60s → 120s — the #125a contention class recurred (SEED_TABLES doubled 8 → 17 in s49–s54;
    `freshest-quarantine` hook solo-green 12.5s, 3× at-ceiling under the query suite's 7 parallel PGlite boots).
 
-   Next session's first agenda item (owner-present): review/merge PR #57. Then the owner dates (22/7 06:30
-   `85773NED`; 23/7 06:30 `83693NED`; ~30/7 BBP+PPI with the `85880NED` chunk hatch; #132 route B on/after 19/7)
-   and the owner-decision menu (see the ▶ block). Kickoff:
+   **Same-day continuation (owner returned in-chat: "Go") — PR #57 MERGED + LIVE-VERIFIED.** Squash-merge
+   `12381e3` under the standing #118 owner-present authorization (the s48 revision: no per-merge asking). ⚠ The
+   merge hit a measured-twice CI trap: the squash message FOLDS branch-commit subjects into its body, so the docs
+   commit's `[skip ci]` skipped gate+deploy on main — and the first trigger commit (`1636059`) QUOTED the marker
+   literally in its own message, re-triggering the skip; a clean empty commit `b1df8dd` ran gate+deploy green
+   (run 29634774649, incl. the new /llms.txt post-deploy smoke). Rule going forward: never put skip-ci markers in
+   branch commits that will be squash-merged, and never quote the bracketed token in a commit message. LIVE
+   verification (measured on prod): `/llms.txt` HTTP 200, cache-control public/max-age=1800, 20 registry tables
+   with per-table measured sync dates (17 curated + the on-demand-onboarded ones — the generated-from-reality
+   point demonstrated); SourceBadge on all four Ontdek homepage charts, each bound to its OWN table id + OWN sync
+   date (83693NED·2026-07-16, 85880NED·2026-07-17, 86141NED·2026-07-02, 85773NED·2026-07-02) with the pinned
+   StatLine href + "Bekijk bij CBS StatLine" title (DOM-verified; browser-pane screenshots of the streamed
+   Recharts section stay blank — the recorded s52 limitation, DOM query is the evidence). Next: the owner dates
+   (22/7 06:30 `85773NED`; 23/7 06:30 `83693NED`; ~30/7 BBP+PPI with the `85880NED` chunk hatch; #132 route B
+   on/after 19/7) and the owner-decision menu (see the ▶ block). Kickoff:
    [session-briefs/2026-07-18-session-56-kickoff.md](session-briefs/2026-07-18-session-56-kickoff.md).)**
 
 **Previous (2026-07-18, Fable overnight design marathon, AUTONOMOUS, docs-only — Fable's LAST session before the

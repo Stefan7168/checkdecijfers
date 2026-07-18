@@ -10,15 +10,16 @@ Sessie 55 draaide — anders dan de modelwissel-aankondiging — blijkens haar e
 draait en meld een mismatch aan de owner. De delegatieregel is rol-gebaseerd en geldt hoe dan ook: het sessiemodel
 doet het denkwerk, fan-out/legwork op Sonnet/Haiku, tiers per rol benoemd.
 
-## Eerste agendapunt (owner-aanwezig): PR #57 reviewen
+## PR #57 — ✅ afgehandeld (owner kwam dezelfde dag terug in de chat: "Go")
 
-**[PR #57](https://github.com/Stefan7168/checkdecijfers/pull/57) — #170 smalls 1+2 (bron-badge + eerlijke
-`/llms.txt`) — staat OPEN en wacht op owner-review per #118(b). Sessie 55 heeft NIET gemerged.** Vol
-verificatieblok was groen (benchmark 14/14 + 6/6 + 0 fabricated; web 378/378; echte build; /code-review LOW
-schoon); check de CI-status van de branch vóór de merge. Na merge bewijst de post-deploy-smoke `/llms.txt` live.
-Meegelift in de PR: vitest-plafond 60→120s (de #125a-contentieklasse kwam terug na de verdubbeling van
-SEED_TABLES). Coördinatiepunt voor de owner: `robots.ts` heeft nog de Phase-0 blanket-disallow — llms.txt is
-direct fetchbaar maar robots-respecterende crawlers zien hem pas na de launch-versoepeling.
+**[PR #57](https://github.com/Stefan7168/checkdecijfers/pull/57) is gemerged (`12381e3`) en LIVE geverifieerd:**
+`/llms.txt` HTTP 200 op prod (20 registertabellen, gemeten syncdatums) en de SourceBadge op alle vier de
+Ontdek-charts, elk aan zijn eigen tabel-ID gebonden. Deploy-run 29634774649 groen incl. de nieuwe
+/llms.txt-smoke. ⚠ Twee keer gemeten merge-val: de squash-message vouwt branch-commit-subjects in de body — een
+`[skip ci]` in een gefolde docs-commit skipte gate+deploy, en een trigger-commit die de marker CITEERDE werd óók
+geskipt; regel: geen skip-ci-markers in branch-commits die gesquasht worden, en de token nooit letterlijk in een
+commit-message citeren. Coördinatiepunt voor de owner blijft: `robots.ts` heeft nog de Phase-0 blanket-disallow —
+llms.txt is direct fetchbaar maar robots-respecterende crawlers zien hem pas na de launch-versoepeling.
 
 ## Stand (geverifieerd, 2026-07-18)
 

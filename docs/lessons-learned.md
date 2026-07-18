@@ -30,6 +30,15 @@ on top.
   proxy+route composition. Caught only because the verification workflow actually FETCHED the route. The allowlist
   decision now has its own proxy.test.ts pin, but the standing rule for builders is: new route ⇒ ask "should an
   anonymous fetch reach this?" and touch proxy.ts + its test in the same change.
+- **Squash-merging folds branch-commit subjects into the merge-commit body — a `[skip ci]` in ANY folded commit
+  skips gate AND deploy on main.** PR #57's merge produced no CI run because the branch's docs commit carried the
+  marker; production kept running the pre-merge build until an empty trigger commit ran the pipeline. The trap
+  bit TWICE: the first trigger commit QUOTED the bracketed marker in its own message while explaining the problem
+  — GitHub substring-matches it anywhere in the message — so that push was skipped too (`1636059`); the clean
+  retry (`b1df8dd`) deployed green. Rules: (1) no skip-ci markers in commits on branches that will be
+  squash-merged (branch CI runs anyway — the marker buys nothing there); (2) never write the bracketed token
+  literally in a commit message; (3) after any merge, VERIFY a run exists for the merge SHA before calling it
+  deployed.
 - **A background `&&`-chain that ends in `echo "EXIT: $?"` reports task-level success even when a suite failed** —
   the first verification chain came back "completed, exit 0" while test:query had failed inside. Read the log for
   FAIL markers (or end chains with a sentinel like `&& echo CHAIN-OK`), never trust the outer exit banner of a

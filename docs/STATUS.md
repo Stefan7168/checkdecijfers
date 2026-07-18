@@ -16,15 +16,18 @@ mismatches. Two deliverables, zero LLM spend / prompt bytes / DDL:
 recall is NOT the gap, BUT the protocol's cap-6 rank-ordered walk would NOT reach it (~15 higher-ranked Regulier tables in between) —
 the escalation WP must walk the FULL remaining Regulier shortlist through the fit gate or use a deliverability-aware order; measured
 record in [session-briefs/2026-07-19-172-escalation-protocol.md](session-briefs/2026-07-19-172-escalation-protocol.md).
-(2) **#170 smalls 1+2 BUILT on [PR #57](https://github.com/Stefan7168/checkdecijfers/pull/57) — AWAITING OWNER REVIEW, not merged**
-(#118(b); branch `visibility-smalls`, CI green both runs): SourceBadge (table id + measured sync date + StatLine link, on answer chips
-+ ChartView → Ontdek included; no cadence promises) + honest `/llms.txt` generated live from the registry (`src/registry/coverage.ts`;
-needs_review excluded; ontdek-style fail-safe; proxy allowlist + pin; /llms.txt in the post-deploy CI smoke). Full verification block
-green (benchmark 14/14 + 6/6 + 0 fabricated; web 378/378; real build; /code-review LOW clean). Rode along: vitest ceiling 60s→120s
-(#125a class recurred — SEED_TABLES doubled 8→17). ⚠ robots.ts Phase-0 disallow keeps crawlers off llms.txt until launch (owner call).
-▶ NEXT: **owner-present: review/merge PR #57 first**, then the owner dates (22/7 06:30 sync `85773NED`; 23/7 06:30 sync `83693NED`;
-~30/7 BBP+PPI — `85880NED` via the chunked hatch; #132 route B on/after 19/7), then the owner-decision menu below. #170 residual:
-(3) chart-download bundles with the Phase-2 OG WP, (4) annotations/toggles open. Kickoff:
+(2) **#170 smalls 1+2 ✅ DONE + LIVE** (built autonomous on [PR #57](https://github.com/Stefan7168/checkdecijfers/pull/57); owner
+returned in-chat same day ("Go") → squash-merge `12381e3` under the standing #118 owner-present authorization; deploy run 29634774649
+gate+deploy green; LIVE-verified: /llms.txt HTTP 200 on prod with 20 registry tables + measured sync dates, SourceBadge on all four
+Ontdek charts each bound to its own table id + own sync date): SourceBadge (answer chips + ChartView; no cadence promises) + honest
+registry-generated `/llms.txt` (needs_review excluded; ontdek-style fail-safe; proxy allowlist + pin; in the post-deploy CI smoke).
+Rode along: vitest ceiling 60s→120s (#125a class — SEED_TABLES doubled 8→17). ⚠ robots.ts Phase-0 disallow keeps robots-respecting
+crawlers off llms.txt until launch (owner call). ⚠ Merge trap measured twice: a squash merge FOLDS branch-commit subjects into the
+body, so a '[skip ci]' in ANY folded docs commit skips gate+deploy on main — and a trigger commit QUOTING that marker re-skips;
+needed a clean empty commit `b1df8dd`. Rule: no skip-ci markers in branch commits that will be squash-merged.
+▶ NEXT: the owner dates (22/7 06:30 sync `85773NED`; 23/7 06:30 sync `83693NED`; ~30/7 BBP+PPI — `85880NED` via the chunked hatch;
+#132 route B on/after 19/7), then the owner-decision menu below. #170 residual: (3) chart-download bundles with the Phase-2 OG WP,
+(4) annotations/toggles open. Kickoff:
 [session-briefs/2026-07-18-session-56-kickoff.md](session-briefs/2026-07-18-session-56-kickoff.md). Full entry in
 [status-archive.md](status-archive.md).)**
 
