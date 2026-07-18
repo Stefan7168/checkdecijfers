@@ -16,10 +16,17 @@ import { defineConfig } from 'vitest/config';
 // db-booting files that session) and benchmark-charts/cli.test started
 // hitting the 30s ceiling on a busy machine — twice in one session, both
 // solo-green in ~1.5s. Same class, same fix as above.
+//
+// Raised 60s → 120s (2026-07-18): the coverage sprint (s49–s54) doubled
+// SEED_TABLES 8 → 17, so every createIngestedDb() beforeAll now ingests
+// twice the fixtures — tests/query/freshest-quarantine.test.ts hit the 60s
+// hook ceiling three times in one session under the query suite's 7
+// parallel PGlite boots on a loaded machine, solo-green in 12.5s each time.
+// Same class, same fix.
 export default defineConfig({
   test: {
-    testTimeout: 60_000,
-    hookTimeout: 60_000,
+    testTimeout: 120_000,
+    hookTimeout: 120_000,
     // web/ is a standalone Next.js workspace (ADR 018) with its own vitest
     // config, jsdom environment, and `npm run web:test` script — its
     // *.test.tsx files must not be swept into this root, Node-environment run.

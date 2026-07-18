@@ -24,6 +24,10 @@ describe('proxy isPublicPath allowlist', () => {
     expect(isPublicPath('/auth/callback')).toBe(true);
   });
 
+  it('#170(2): llms.txt is public — it exists to be fetched anonymously', () => {
+    expect(isPublicPath('/llms.txt')).toBe(true);
+  });
+
   it('the homepage is public (session-51 owner decision: landing for logged-out visitors) — EXACT match only', () => {
     expect(isPublicPath('/')).toBe(true);
   });

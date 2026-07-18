@@ -254,6 +254,23 @@ describe('ChartView', () => {
     expect(screen.getByText('Bron: CBS StatLine, tabel 12345NED.')).toBeInTheDocument();
   });
 
+  it('#170(1): renders the source badge from the STRUCTURED attribution, link bound to the spec own table id', () => {
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      },
+    );
+    render(<ChartView spec={spec()} />);
+    const badge = screen.getByRole('link', { name: 'CBS 12345NED · gesynchroniseerd 2026-07-01' });
+    expect(badge).toHaveAttribute(
+      'href',
+      'https://opendata.cbs.nl/statline/#/CBS/nl/dataset/12345NED/table',
+    );
+  });
+
   it('renders a bar chart kind without crashing', () => {
     vi.stubGlobal(
       'ResizeObserver',
@@ -286,6 +303,10 @@ describe('ChartView', () => {
       s.title,
       s.unit,
       s.attributionLine,
+      // #170(1): the source badge renders the STRUCTURED attribution (table
+      // id + measured sync date) — spec's own strings, same membership rule.
+      s.attribution.tableId,
+      s.attribution.syncedAt,
       s.definitionLine ?? '',
       s.provisionalNote ?? '',
       ...s.nullNotes,

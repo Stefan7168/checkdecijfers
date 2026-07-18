@@ -66,6 +66,12 @@ describe('assembleMessages — ⟨A3⟩ replay completeness (stat-card answer)',
     expect(assistantMsg!.answerView!.tableId).toBe('86141NED');
   });
 
+  it('#170(1): the answerView carries the envelope syncedAt for the source badge', () => {
+    // The same measured timestamp a live render threads (fakeAttribution's
+    // default) — a replayed badge must show the SAME date, never none.
+    expect(assistantMsg!.answerView!.syncedAt).toBe('2026-07-03T12:00:00.000Z');
+  });
+
   it('feedback anchors to the audit row id', () => {
     expect(assistantMsg!.auditId).toBe(42);
   });
