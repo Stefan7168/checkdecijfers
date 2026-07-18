@@ -48,9 +48,24 @@ effective; flagged to the owner. Two deliverables, zero live-LLM spend / prompt 
    point demonstrated); SourceBadge on all four Ontdek homepage charts, each bound to its OWN table id + OWN sync
    date (83693NED·2026-07-16, 85880NED·2026-07-17, 86141NED·2026-07-02, 85773NED·2026-07-02) with the pinned
    StatLine href + "Bekijk bij CBS StatLine" title (DOM-verified; browser-pane screenshots of the streamed
-   Recharts section stay blank — the recorded s52 limitation, DOM query is the evidence). Next: the owner dates
-   (22/7 06:30 `85773NED`; 23/7 06:30 `83693NED`; ~30/7 BBP+PPI with the `85880NED` chunk hatch; #132 route B
-   on/after 19/7) and the owner-decision menu (see the ▶ block). Kickoff:
+   Recharts section stay blank — the recorded s52 limitation, DOM query is the evidence).
+
+   **Second same-day continuation (owner: "continue with next task") — #138 regional retry chip BUILT + LIVE**
+   (commit `f2d015a`, CI run 29639021663 gate+deploy green). The only owner-menu item with no owner question,
+   built exactly per the marathon design (small-designs §a): `buildRefusalSuggestions` gains an injected
+   `RegionLabeler` third parameter wired at the respond.ts call site to `regionTermsFor` (context/build.ts —
+   canonical key → GeoDimension → dimension_labels, the honest cell-less source; fail-closed on ANY unlabelable
+   code / no geo dimension → byte-identical v1 bailout); chips phrase the registry label ("Wat was … in Amsterdam
+   in 2025?", the range variant keeps the region too); the retry candidates carry the ask's own region codes so
+   the echo dry-run proves the REGIONAL cells serve — pinned by a region-blind-check mutant test. The design's
+   refactor rode along (the KIND_CODE_PREFIX / KIND_BY_PREFIX near-duplicates collapsed into one shared
+   `regionKindForCode` in intent/resolve.ts) plus a source-scan confinement test (suggestions.ts imports no db,
+   ever). Suggestions suite 43/43 (6 new #138 cases + a regional respondToIntent wiring test, first-try green on
+   the fixture's 83625NED GeoDimension table); full verification block: 14 suites + benchmark 14/14 + 6/6 + 0
+   fabricated PASS + web green + real build; /code-review LOW clean. Zero prompt bytes, €0 LLM.
+
+   Next: the owner dates (22/7 06:30 `85773NED`; 23/7 06:30 `83693NED`; ~30/7 BBP+PPI with the `85880NED` chunk
+   hatch; #132 route B on/after 19/7) and the owner-decision menu (see the ▶ block; #138 now off it). Kickoff:
    [session-briefs/2026-07-18-session-56-kickoff.md](session-briefs/2026-07-18-session-56-kickoff.md).)**
 
 **Previous (2026-07-18, Fable overnight design marathon, AUTONOMOUS, docs-only — Fable's LAST session before the

@@ -7,6 +7,9 @@ each names its owner question (if any) and its build cost. Code claims verified 
 
 ## (a) #138 — the regional period-refusal chip: the honest code→label source + the chip form
 
+> **✅ BUILT + LIVE 2026-07-18 (session 55 continued, commit `f2d015a`) — exactly as designed below; measured
+> record in the [#138 row](../open-questions.md).** Kept for the design rationale.
+
 **The gap (v1, #134(a)):** a period refusal on a region-carrying question ("werkloosheid in Amsterdam in 2050") gets
 NO retry chip today, because a refusal carries no cells and naming a region from its bare code would be a guess
 (`suggestions.ts:298-322` bails on `intent.regions.length > 0` — drop-never-guess).

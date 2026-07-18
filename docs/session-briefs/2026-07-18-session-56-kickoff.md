@@ -38,8 +38,9 @@ walk over de volle Regulier-shortlist leggen of deliverability-aware maken (staa
 ## Owner-menu (ontwerpen liggen klaar, zie het ▶-blok in STATUS voor links)
 
 WP26 (trial-conversie; safelist-read-back → begeleide bouw, €5/€10) · WP30c (beslismemo, 4 opties) · #121
-(één-regel-vraag; throw-fix hoort er sowieso bij) · #154 (rider op elk begeleid venster) · #138 (klaar, geen
-vraag) · #162 (na WP26) · #170 rest: (3) chart-download bundelen met de Phase-2 OG-WP, (4) annotaties/toggles.
+(één-regel-vraag; throw-fix hoort er sowieso bij) · #154 (rider op elk begeleid venster) · #162 (na WP26) ·
+#170 rest: (3) chart-download bundelen met de Phase-2 OG-WP, (4) annotaties/toggles.
+**#138 is ✅ KLAAR + LIVE** (zelfde dag gebouwd, commit `f2d015a` — van het menu af).
 Residuen: #131, #104/#112 (live-spend), /login-cosmetiek, #151-backfill (begeleid). Owner-clicks open: GitHub
 Budgets, Resend-confirm, optionele Vercel-Firewall-rule.
 

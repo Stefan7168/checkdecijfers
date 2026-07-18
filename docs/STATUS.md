@@ -25,9 +25,13 @@ Rode along: vitest ceiling 60s→120s (#125a class — SEED_TABLES doubled 8→1
 crawlers off llms.txt until launch (owner call). ⚠ Merge trap measured twice: a squash merge FOLDS branch-commit subjects into the
 body, so a '[skip ci]' in ANY folded docs commit skips gate+deploy on main — and a trigger commit QUOTING that marker re-skips;
 needed a clean empty commit `b1df8dd`. Rule: no skip-ci markers in branch commits that will be squash-merged.
+(3) **#138 regional retry chip ✅ DONE + LIVE** (same day, owner-present "continue"; commit `f2d015a`, CI run 29639021663 gate+deploy
+green): built exactly per the marathon design §a — injected RegionLabeler → regionTermsFor (registry labels, fail-closed), chips name
+the region, candidates carry the region codes so the dry-run proves REGIONAL servability; prefix-kind near-duplicates collapsed into
+one shared regionKindForCode; suggestions.ts db-confinement now source-scan-pinned. 43/43 suggestions tests, benchmark PASS, €0 LLM.
 ▶ NEXT: the owner dates (22/7 06:30 sync `85773NED`; 23/7 06:30 sync `83693NED`; ~30/7 BBP+PPI — `85880NED` via the chunked hatch;
-#132 route B on/after 19/7), then the owner-decision menu below. #170 residual: (3) chart-download bundles with the Phase-2 OG WP,
-(4) annotations/toggles open. Kickoff:
+#132 route B on/after 19/7), then the owner-decision menu below (#138 is now OFF that menu — done). #170 residual: (3) chart-download
+bundles with the Phase-2 OG WP, (4) annotations/toggles open. Kickoff:
 [session-briefs/2026-07-18-session-56-kickoff.md](session-briefs/2026-07-18-session-56-kickoff.md). Full entry in
 [status-archive.md](status-archive.md).)**
 
