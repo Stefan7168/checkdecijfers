@@ -41,9 +41,9 @@ import { messageKind } from '../lib/chat-message.ts';
 // visual) when the dock is active, using the SAME id scheme the dock does.
 import type { DockVisual } from '../lib/dock-visuals.ts';
 import { deriveVisuals, messageHasVisual, visualId } from '../lib/dock-visuals.ts';
-import { sourceLinkLabel, sourceTableUrl } from '../lib/statline.ts';
 import { ChartView } from './chart.tsx';
 import { FeedbackButtons } from './feedback-buttons.tsx';
+import { SourceBadge } from './source-badge.tsx';
 import { StatCard } from './stat-card.tsx';
 
 /** WP23 (#75): clickable examples on the empty chat — each a benchmark-
@@ -491,6 +491,8 @@ export function Chat({
                   attribution: response.answer.attributionLine,
                   tableId: response.result.attribution.tableId,
                   source: response.result.attribution.source,
+                  // #170(1): the source badge's measured sync date.
+                  syncedAt: response.result.attribution.syncedAt,
                 }
               : null,
           provisional:
@@ -636,21 +638,18 @@ export function Chat({
                     voorlopig
                   </span>
                 ) : null}
-                {/* WP23 (#90+#86): the source chip — the FULL R4 sentence,
-                  * always visible, plus the StatLine deep-link. Huisstijl rule 7:
-                  * attribution stays quiet — text-xs text-ink-muted. */}
+                {/* WP23 (#90) + #170(1): the source chip — the FULL R4
+                  * sentence, always visible; the #86 deep-link now rides the
+                  * SourceBadge (table id + measured sync date, same pinned
+                  * URL builder). Huisstijl rule 7: attribution stays quiet —
+                  * text-xs text-ink-muted. */}
                 <span className="inline-flex max-w-full flex-wrap items-center gap-2 text-xs text-ink-muted">
                   <span>{message.answerView.attribution}</span>
-                  {sourceTableUrl(message.answerView.source, message.answerView.tableId) !== null ? (
-                    <a
-                      href={sourceTableUrl(message.answerView.source, message.answerView.tableId)!}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="shrink-0 underline"
-                    >
-                      {sourceLinkLabel(message.answerView.source)}
-                    </a>
-                  ) : null}
+                  <SourceBadge
+                    tableId={message.answerView.tableId}
+                    source={message.answerView.source}
+                    syncedAt={message.answerView.syncedAt}
+                  />
                 </span>
               </div>
             ) : null}

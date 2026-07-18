@@ -26,6 +26,11 @@ const PUBLIC_PATH_PREFIXES = [
   '/auth/callback',
   '/api/stripe/webhook',
   '/api/onboarding-cron',
+  // #170(2): the registry-generated self-description for LLMs/crawlers —
+  // public by nature (it exists to be fetched anonymously), read-only, and
+  // it exposes only what the public product already shows on every answer
+  // (table ids, titles, sync dates).
+  '/llms.txt',
 ];
 
 /** True when `pathname` may be reached without a Supabase session. Exported so

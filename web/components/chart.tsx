@@ -27,6 +27,7 @@ import {
   YAxis,
 } from 'recharts';
 import type { ChartSpec } from '../backend/chart/types.ts';
+import { SourceBadge } from './source-badge.tsx';
 
 export type Row = Record<string, string | number | boolean | null>;
 
@@ -220,7 +221,16 @@ export function ChartView({ spec }: { spec: ChartSpec }) {
         </p>
       ))}
       {spec.definitionLine ? <p className="mt-2 text-xs text-ink-muted">{spec.definitionLine}</p> : null}
-      <p className="mt-1 text-xs text-ink-muted">{spec.attributionLine}</p>
+      {/* #170(1): the R4 prose credit keeps its photo-credit size (#92); the
+        * badge is the same attribution made SCANNABLE — table id + measured
+        * sync date + deep link, from spec.attribution only (the source key is
+        * derived from the table id inside the badge; ChartAttribution carries
+        * none). Ontdek reuses this component, so the homepage charts get the
+        * identical badge for free. */}
+      <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+        <p className="text-xs text-ink-muted">{spec.attributionLine}</p>
+        <SourceBadge tableId={spec.attribution.tableId} syncedAt={spec.attribution.syncedAt} />
+      </div>
     </div>
   );
 }

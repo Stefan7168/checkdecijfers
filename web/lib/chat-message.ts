@@ -29,6 +29,10 @@ export interface AnswerView {
   /** Source-registry key for the deep link + label (WP30a); absent on
    * answers stored before WP30a → resolves to 'cbs' (A1). */
   source?: string;
+  /** #170(1): our last successful sync (ISO) for the source badge's measured
+   * date; null when an old/minimal stored envelope lacks it (the badge then
+   * shows no date — measured only, never invented). */
+  syncedAt: string | null;
 }
 
 export interface ChatMessage {

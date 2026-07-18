@@ -354,9 +354,12 @@ describe('Chat — WP23 display smalls', () => {
         'Bron: CBS StatLine, tabel 86141NED — Consumentenprijzen; prijsindex 2015=100. Gegevens gesynchroniseerd op 2026-07-03. Licentie: CC BY 4.0.',
       ),
     ).toBeInTheDocument();
-    const link = screen.getByRole('link', { name: 'Bekijk bij CBS StatLine' });
+    // #170(1): the deep link now rides the source badge — table id + the
+    // MEASURED sync date (fakeAttribution's 2026-07-03), same pinned URL.
+    const link = screen.getByRole('link', { name: 'CBS 86141NED · gesynchroniseerd 2026-07-03' });
     expect(link).toHaveAttribute('href', 'https://opendata.cbs.nl/statline/#/CBS/nl/dataset/86141NED/table');
     expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('title', 'Bekijk bij CBS StatLine');
   });
 
   it('binds the StatLine link to the ANSWER OWN table id, not a constant (#86 binding)', async () => {
@@ -376,7 +379,7 @@ describe('Chat — WP23 display smalls', () => {
     );
     render(<Chat />);
     await submit('Hoe hoog is de werkloosheid?');
-    const link = await screen.findByRole('link', { name: 'Bekijk bij CBS StatLine' });
+    const link = await screen.findByRole('link', { name: /CBS 85224NED/ });
     expect(link).toHaveAttribute('href', 'https://opendata.cbs.nl/statline/#/CBS/nl/dataset/85224NED/table');
   });
 
@@ -423,8 +426,9 @@ describe('Chat — WP23 display smalls', () => {
     // header IS the bold span, the badge IS the pill.
     expect(screen.getByText('Dit kon ik niet beantwoorden').className).toContain('font-semibold');
     expect(screen.getByText('geen antwoord = geen gok').className).toContain('rounded-full');
-    // A refusal has no attribution chip — there is no source to cite.
-    expect(screen.queryByRole('link', { name: 'Bekijk bij CBS StatLine' })).toBeNull();
+    // A refusal has no attribution chip — there is no source to cite, so no
+    // source badge (the only link an answer bubble carries) either.
+    expect(screen.queryByRole('link')).toBeNull();
   });
 
   it('never puts the refusal header on a META answer — the envelope is refusal-kind by design, the text ANSWERS (#84 review fix, HIGH)', async () => {

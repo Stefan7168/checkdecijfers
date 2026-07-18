@@ -187,7 +187,7 @@ jobs:
       - name: Post-deploy smoke check (the app must serve, not just build)
         run: |
           sleep 10
-          for path in / /login; do
+          for path in / /login /llms.txt; do
             status=$(curl -sL -o /dev/null -w "%{http_code}" --max-time 30 "https://checkdecijfers.vercel.app${path}")
             echo "GET ${path} -> ${status} (after redirects)"
             test "$status" = "200"

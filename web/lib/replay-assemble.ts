@@ -84,6 +84,9 @@ function assistantMessage(part: ReplayAssistantPart): ChatMessage {
           attribution: part.answerView.attributionLine,
           tableId: attribution?.tableId ?? '',
           ...(attribution?.source !== undefined ? { source: attribution.source } : {}),
+          // #170(1): the badge's measured sync date; old/minimal envelopes
+          // replay without one and the badge shows no date.
+          syncedAt: attribution?.syncedAt ?? null,
         };
   return {
     role: 'assistant',
