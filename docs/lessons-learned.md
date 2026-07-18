@@ -6,6 +6,35 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 55 (2026-07-18, autonomous, first post-Fable session — #172 step-0 measured, #170 smalls 1+2 built on PR #57)
+
+- **Check the runtime model fact before restating the plan-of-record.** The post-Fable kickoff (and memory) said
+  sessions now run Opus; the session's own environment said `claude-fable-5`. The session flagged the mismatch to the
+  owner instead of either silently "being Opus" or re-litigating the switch — and the delegation rule survived intact
+  because it is ROLE-based (session model thinks, fan-out on Sonnet/Haiku), not name-based. A rule expressed by role
+  keeps working when the top model under it changes or lags.
+- **A step-0 verification should measure the DISTRIBUTION, not just the boolean the protocol asked for.** #172 step 0
+  asked "is `37789ksz` in the Stage-1 shortlist?" — measured YES (live mirror), which per the protocol would mean
+  "step 0 alone recovers the class." But the load-bearing fact was its POSITION: 22 of 24 (rank 0.0760), so the
+  protocol's own cap-6 rank-ordered walk would never reach it. One extra column in the measurement (position, not
+  membership) flipped the design consequence before anything was built. Cheap rule: when verifying a "is X in set S"
+  precondition, always record where in S.
+- **The #125a parallel-load ceiling class recurred, driven by data growth, not new tests:** the coverage sprint
+  doubled SEED_TABLES 8 → 17, so every `createIngestedDb()` boot costs ~2× what the 60s ceiling was calibrated
+  against. `tests/query/freshest-quarantine.test.ts` hit the hook ceiling 3× in one session (once with `next dev`
+  compiling alongside — don't run the dev server concurrently with the suite chain), solo-green in 12.5s every time.
+  Same diagnosis procedure, same fix: ceiling 60s → 120s in vitest.config.ts. Expect this again whenever the seed
+  set grows another multiple.
+- **Every new public route must be added to the `web/proxy.ts` allowlist — the WP16 go-live class in miniature.**
+  /llms.txt 307'd to /login on the first live dev-server fetch; tests were all green because no test exercises the
+  proxy+route composition. Caught only because the verification workflow actually FETCHED the route. The allowlist
+  decision now has its own proxy.test.ts pin, but the standing rule for builders is: new route ⇒ ask "should an
+  anonymous fetch reach this?" and touch proxy.ts + its test in the same change.
+- **A background `&&`-chain that ends in `echo "EXIT: $?"` reports task-level success even when a suite failed** —
+  the first verification chain came back "completed, exit 0" while test:query had failed inside. Read the log for
+  FAIL markers (or end chains with a sentinel like `&& echo CHAIN-OK`), never trust the outer exit banner of a
+  wrapper command.
+
 ## Fable overnight design marathon (2026-07-18, autonomous, docs-only — six execute-ready designs, €0 product-LLM spend)
 
 - **Verify a brief's stated constraint the same way you verify a finder's fix sketch — the marathon brief itself

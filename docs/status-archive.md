@@ -1,6 +1,47 @@
 # STATUS archive — the session log
 
-**Last updated: 2026-07-18 (Fable overnight design marathon, AUTONOMOUS, docs-only — Fable's LAST session before the
+**Last updated: 2026-07-18 (Session 55, AUTONOMOUS — the first post-Fable session, which by its own runtime
+environment still ran on Fable 5 (`claude-fable-5`): the announced session-picker switch to Opus/Sonnet was not yet
+effective; flagged to the owner. Two deliverables, zero live-LLM spend / prompt bytes / DDL:**
+
+1. **#172 step-0 verification MEASURED** (docs-only on main, `0937045`): `37789ksz` IS in the Stage-1 FTS shortlist
+   on both legs — committed 83-row fixture: position 14/14; live 4,858-row mirror (read-only SELECT, mirror last
+   refreshed 2026-07-05): **position 22 of 24, rank 0.0760** (second-lowest Regulier rank in the shortlist). So FTS
+   recall is NOT the gap (Stage-2 has always seen the table — consistent with s31 Haiku and s54 Sonnet placing it in
+   alternatives), **but the protocol's own cap-6 rank-ordered walk would NOT reach it** — ~15 higher-ranked Regulier
+   candidates (85615NED/85617NED/82020NED/five gemeentefonds tables/…) sit between the s54 model chain and the
+   target. Design consequence recorded in the protocol doc + #172 row: the walk must cover the FULL remaining
+   Regulier shortlist through the ADR-027 fit gate (~15–17 extra probes worst case on the rare 100-credit path) or
+   use a deliverability-aware order; pin `walkContains` against the walk that actually ships, never against cap 6.
+   Lesson: measure the DISTRIBUTION (position), not just the boolean the protocol asked for.
+
+2. **#170 visibility smalls 1+2 BUILT as one WP on [PR #57](https://github.com/Stefan7168/checkdecijfers/pull/57)**
+   (branch `visibility-smalls`, code `1d61166` + docs `b00fa21`; autonomous per #118(b) → **awaiting owner review,
+   NOT merged**; both CI runs green: push 29634091977, PR 29634110552; the pickup order followed the sketch's
+   "badges + llms.txt: one small combined WP"). **(1) SourceBadge**: table id + MEASURED last-sync date + StatLine
+   deep link (the pinned #86 URL builder), rendered in ChartView (chat charts + Ontdek homepage automatically) and
+   in the chat attribution chip replacing the bare Bekijk-bij link; `AnswerView.syncedAt` threaded on both
+   construction sites (live + thread replay; old envelopes → badge without a date, never invented); deliberately NO
+   cadence promises ("wekelijks bijgewerkt" rejected as aspirational — the sketch's own rule). **(2) `/llms.txt`**:
+   `src/registry/coverage.ts` enumerates cbs_tables + canonical_measures (hermetic test on the fully ingested DB,
+   5/5); Dutch renderer with the public-claim wording exact, explicit "geen 0%-hallucinatie-claims", needs_review
+   tables EXCLUDED with an honest NB line; ontdek.ts fail-safe posture (30-min TTL cache, in-flight coalescing,
+   stale-over-nothing, 503+Retry-After only when never built); route force-dynamic/nodejs; `web/proxy.ts` public
+   allowlist entry + proxy.test.ts pin (the /llms.txt fetch 307'd to /login on first live check — the WP16 go-live
+   allowlist class in miniature, caught by actually fetching the route); `/llms.txt` added to the post-deploy CI
+   smoke so every deploy proves it live. ⚠ robots.ts Phase-0 blanket-disallow still hides llms.txt from
+   robots-respecting crawlers until the launch relaxation (flagged, owner's call). Verification: root typecheck +
+   all 14 backend suites green; benchmark **14/14 + 6/6 + 0 fabricated — GATE PASS**; web typecheck + **378/378**;
+   real `next build` green (`/llms.txt` as ƒ dynamic route); /code-review LOW: no findings. Rode along: vitest
+   test/hook ceiling 60s → 120s — the #125a contention class recurred (SEED_TABLES doubled 8 → 17 in s49–s54;
+   `freshest-quarantine` hook solo-green 12.5s, 3× at-ceiling under the query suite's 7 parallel PGlite boots).
+
+   Next session's first agenda item (owner-present): review/merge PR #57. Then the owner dates (22/7 06:30
+   `85773NED`; 23/7 06:30 `83693NED`; ~30/7 BBP+PPI with the `85880NED` chunk hatch; #132 route B on/after 19/7)
+   and the owner-decision menu (see the ▶ block). Kickoff:
+   [session-briefs/2026-07-18-session-56-kickoff.md](session-briefs/2026-07-18-session-56-kickoff.md).)**
+
+**Previous (2026-07-18, Fable overnight design marathon, AUTONOMOUS, docs-only — Fable's LAST session before the
 model switch to Opus/Sonnet. Six execute-ready design docs delivered per the marathon brief
 [session-briefs/2026-07-18-fable-design-marathon-overnight.md](session-briefs/2026-07-18-fable-design-marathon-overnight.md),
 phases 1–6 COMPLETE, phase 7 (#170 smalls build) deliberately SKIPPED — capacity reserved for the full wrap-up ritual

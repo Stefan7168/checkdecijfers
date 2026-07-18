@@ -9,7 +9,26 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
-**▶ NEXT SESSION STARTS HERE (Fable overnight design marathon, 2026-07-18, AUTONOMOUS docs-only — FABLE'S LAST SESSION before the model
+**▶ NEXT SESSION STARTS HERE (Session 55, 2026-07-18, AUTONOMOUS — first post-Fable session; NB: it measurably still ran on Fable 5
+(`claude-fable-5`) — the announced Opus/Sonnet picker switch was not yet effective; check the runtime model at session start and flag
+mismatches. Two deliverables, zero LLM spend / prompt bytes / DDL:
+(1) **#172 step-0 MEASURED** (main `0937045`): 37789ksz IS in the Stage-1 shortlist (fixture 14/14; live mirror 22/24, rank 0.0760) →
+recall is NOT the gap, BUT the protocol's cap-6 rank-ordered walk would NOT reach it (~15 higher-ranked Regulier tables in between) —
+the escalation WP must walk the FULL remaining Regulier shortlist through the fit gate or use a deliverability-aware order; measured
+record in [session-briefs/2026-07-19-172-escalation-protocol.md](session-briefs/2026-07-19-172-escalation-protocol.md).
+(2) **#170 smalls 1+2 BUILT on [PR #57](https://github.com/Stefan7168/checkdecijfers/pull/57) — AWAITING OWNER REVIEW, not merged**
+(#118(b); branch `visibility-smalls`, CI green both runs): SourceBadge (table id + measured sync date + StatLine link, on answer chips
++ ChartView → Ontdek included; no cadence promises) + honest `/llms.txt` generated live from the registry (`src/registry/coverage.ts`;
+needs_review excluded; ontdek-style fail-safe; proxy allowlist + pin; /llms.txt in the post-deploy CI smoke). Full verification block
+green (benchmark 14/14 + 6/6 + 0 fabricated; web 378/378; real build; /code-review LOW clean). Rode along: vitest ceiling 60s→120s
+(#125a class recurred — SEED_TABLES doubled 8→17). ⚠ robots.ts Phase-0 disallow keeps crawlers off llms.txt until launch (owner call).
+▶ NEXT: **owner-present: review/merge PR #57 first**, then the owner dates (22/7 06:30 sync `85773NED`; 23/7 06:30 sync `83693NED`;
+~30/7 BBP+PPI — `85880NED` via the chunked hatch; #132 route B on/after 19/7), then the owner-decision menu below. #170 residual:
+(3) chart-download bundles with the Phase-2 OG WP, (4) annotations/toggles open. Kickoff:
+[session-briefs/2026-07-18-session-56-kickoff.md](session-briefs/2026-07-18-session-56-kickoff.md). Full entry in
+[status-archive.md](status-archive.md).)**
+
+**Design marathon (2026-07-18 overnight, AUTONOMOUS docs-only — FABLE'S LAST SESSION before the model
 switch; from now sessions run Opus/Sonnet (top model = Opus; the delegation cost-tier rule survives: the session model thinks, fan-out on
 Sonnet/Haiku). SIX EXECUTE-READY DESIGNS delivered (commits `8ac0e59`→`ead1ead`, all `[skip ci]`, zero live-LLM spend / prompt bytes / DDL):
 (1) [WP26 execute-brief](session-briefs/2026-07-19-wp26-execute-brief.md) — corpus-grounded, safelist read-back doc, NO live DDL needed
