@@ -227,7 +227,8 @@ confident floor 0.85 over threshold 0.8; the disclose boundary is now directly m
 
 Stage A merged + deployed as PR #17
 (2026-07-09, merge `478a852`). Stage B landed per the brief's letter — `candidateIds` (pick first,
-then sanitized `alternativeIds`, cap 3) constructed in `onboarding-finder.ts` and carried as a
+then sanitized `alternativeIds`, cap 3 — **cap and chain-only scope superseded 2026-07-18 by
+amendment A4 below: candidateIds is now the uncapped deliverability walk**) constructed in `onboarding-finder.ts` and carried as a
 REQUIRED field through routing → parse outcome → envelope (both respond.ts sites) → web action →
 trigger → store; migration `015_candidate_chain.sql` committed as a FILE (applied by PGlite/CI
 only; production waits for stage D). Two as-built notes beyond the letter:
