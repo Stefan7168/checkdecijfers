@@ -31,6 +31,7 @@ export {
   RERANK_PROMPT_VERSION,
 } from './rerank-prompt.ts';
 export { findTable, DISCLOSE_LIMIT, type FindTableOptions } from './find.ts';
+export { candidateWalk } from './walk.ts';
 export {
   DEFAULT_FIND_TABLE_CONFIG,
   type CatalogCandidate,

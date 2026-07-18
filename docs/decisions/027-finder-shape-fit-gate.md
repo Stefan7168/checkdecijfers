@@ -310,10 +310,48 @@ Executed per the brief's § Stage D, owner present and confirming before every l
 Operational addition: `scripts/force-ipv4.mjs` is now committed (the lessons-learned IPv4-force
 preload, 3rd recurrence = standing requirement for owner-run CBS fetches; RUNBOOK line added).
 
+## Amendment A4 — the deliverability walk (#172 step 0, 2026-07-18, session 55 continued)
+
+**Context (measured).** Session 54's re-record caught upstream Haiku drift on a byte-identical
+prompt: `37789ksz` — the only v1-deliverable bijstand table — dropped from the cap-3 candidate
+chain (pick `85585NED`, alts `[82015NED, 85692NED]`, 4/4 stable), regressing the s31-proven live
+class to honest refuse-and-refund. The #172 protocol's step-0 verification (2026-07-18) then
+measured that `37789ksz` IS in the Stage-1 shortlist (live position 22/24, rank 0.0760) — so
+recall is not the gap — but ALSO that the protocol's own cap-6 rank-ordered walk sketch would
+never reach it (~15 higher-ranked Regulier tables in between).
+
+**Decision.** `candidateIds` is no longer the model chain alone: `buildOnboardingFinder` now hands
+the fit gate the **deliverability walk** (`candidateWalk`, `src/catalog/walk.ts`) — pick first,
+then the rerank's allowlist-sanitized alternates VERBATIM (they carry the model's judgment, incl.
+"TENZIJ historisch"), then **every remaining CURRENT shortlist entry in shortlist order** (current
+per the row's own source registry entry — the A6/recall-quota notion, else-false for unknown
+sources; discontinued tables are deliberately not auto-walked, since the extension bypasses the
+rerank's historical judgment). **No cap** — any small cap provably misses the measured class. The
+#166 already-held screen applies to the whole walk. Chain membership thereby stops being a
+single-model judgment: the class is drift-proof, and the gate (A3 pre-checks + measure-fit) stays
+the sole deliverability judge.
+
+**Cost, stated honestly.** The walk runs only in the async onboarding job (maxDuration 300s, never
+the request path). Worst case ≈ RECALL_LIMIT (24) schema fetches; the A3 pre-checks reject
+non-fitting shapes deterministically BEFORE any LLM call, so extra fit-LLM calls are rare (for the
+measured bijstand walk: only `37789ksz` itself is time-only and reaches the model). Test-pinned
+end-to-end: a deliverable candidate at walk position 4 delivers (`onboarding-job.test.ts`).
+
+**Assertion restore.** `benchmark/tablefinder-labelled-set.json`'s bijstand-stock case regains
+gate-blocking teeth as `walkContains: '37789ksz'` — asserted through the SAME `candidateWalk` the
+production finder uses, in both `tests/catalog/find-replay.test.ts` (hermetic, CI) and
+`scripts/tablefinder-eval.ts` (live). The s54 weakening note is closed. The eval script also now
+reports disclose REASONS and flags a fail-safe `rerank_error` disclose as RED (the protocol's
+step-1 masking-trap fix, pulled forward). The rest of #172 (RerankProfile co-calibration, ×4
+record rounds, separation gap, live smoke of the bijstand class) remains the supervised WP.
+
 ## Revisit triggers
 
 - Measured shortlist-recall miss (right table absent from the top-20) → alternative 1 (enrichment),
   scoped lazily to shortlist-entered tables first.
+- (A4) A measured walk-driven mis-onboarding — a fit-gate accept on an extension candidate that a
+  human judges wrong for the question — → reintroduce an ordering/cap heuristic ONLY with a
+  measured basis, never a guessed one.
 - Fit-check measured accuracy < the labelled-set gate after threshold calibration → escalate the
   ladder (Sonnet), then reconsider alternative 3 (parser shape hint).
 - Any measured wrong-table CONFIDENT answer reaching a user → tighten `highConfidence`/fit threshold

@@ -60,15 +60,20 @@ describe('buildOnboardingFinder — the production TableFinder closure (WP16 sub
     expect(routing!.tableId).toBeTruthy();
     expect(routing!.topicTerm).toBe(CONFIDENT_TOPIC);
     expect(routing!.alreadyPending).toBe(false);
-    // WP27 stage B: no alternatives from the rerank → the chain is exactly
-    // the pick (never empty on a confident routing).
-    expect(routing!.candidateIds).toEqual([routing!.tableId]);
+    // WP27 stage B + #172 step 0: no alternatives from the rerank → the walk
+    // is the pick + the current-shortlist extension (never empty, never just
+    // one model's output — the drift-proof property).
+    expect(routing!.candidateIds[0]).toBe(routing!.tableId);
+    expect(routing!.candidateIds.length).toBeGreaterThan(1);
   });
 
-  it('WP27 stage B: constructs the candidate chain — pick first, then sanitized alternatives, cap 3', async () => {
+  it('WP27 stage B + #172 step 0: constructs the candidate WALK — pick first, then sanitized alternatives, NO cap', async () => {
     // THE constructing link (PR-#17 review): candidateIds is BUILT here, not
-    // carried — [pick, ...alternativeIds].slice(0, 3). The stub hands back
-    // every other shortlist id as an alternative so the cap must bind.
+    // carried. Since #172 step 0 there is NO cap-3 (measured 2026-07-18: the
+    // only deliverable bijstand table sat at shortlist position 22 — any
+    // small cap provably misses the class the walk exists to recover). The
+    // stub hands back every other shortlist id as an alternative, so the
+    // walk is exactly the whole shortlist in shortlist order.
     let seenShortlist: CatalogCandidate[] = [];
     const stubWithAlternatives: RerankFn = (_query, shortlist) => {
       seenShortlist = shortlist;
@@ -82,12 +87,29 @@ describe('buildOnboardingFinder — the production TableFinder closure (WP16 sub
     const finder = buildOnboardingFinder({ db, userId: randomUUID(), rerank: stubWithAlternatives });
     const routing = await finder(CONFIDENT_TOPIC, QUESTION);
     expect(routing).not.toBeNull();
-    // Guard: the fixture must offer enough candidates for the cap to bind —
+    // Guard: the fixture must offer enough candidates to prove no cap binds —
     // if this fails the catalog fixture shrank, not the finder.
     expect(seenShortlist.length).toBeGreaterThanOrEqual(4);
-    expect(routing!.candidateIds).toEqual(seenShortlist.slice(0, 3).map((c) => c.tableId));
+    expect(routing!.candidateIds).toEqual(seenShortlist.map((c) => c.tableId));
     expect(routing!.candidateIds[0]).toBe(routing!.tableId);
-    expect(routing!.candidateIds).toHaveLength(3);
+  });
+
+  it('#172 step 0 (the s54 drift class): a deliverable table the model chain DROPPED still rides the walk via the current-shortlist extension', async () => {
+    // The measured regression shape: the rerank returns NO alternates at all
+    // (worse than the real drift) — pre-#172 candidateIds would be just the
+    // pick and the fit gate could never reach 37789ksz. The walk extension
+    // must carry every CURRENT shortlist entry (37789ksz included) and skip
+    // the discontinued ones (the extension bypasses the rerank's historical
+    // judgment, so it must never resurrect a discontinued table).
+    const finder = buildOnboardingFinder({ db, userId: randomUUID(), rerank: stubPickFirst(0.95) });
+    const routing = await finder('bijstand', 'Hoeveel mensen zaten er in 2023 in de bijstand?');
+    expect(routing).not.toBeNull();
+    expect(routing!.candidateIds[0]).toBe(routing!.tableId);
+    expect(routing!.candidateIds).toContain('37789ksz');
+    // Known-discontinued fixture rows for this topic never enter via the
+    // extension (only a model alternate could carry one, and there are none).
+    expect(routing!.candidateIds).not.toContain('80724ned');
+    expect(routing!.candidateIds).not.toContain('37470abu');
   });
 
   it('threads the FULL question into the rerank query (WP27 stage A, ADR 027 D3a)', async () => {
@@ -275,18 +297,17 @@ describe('#166 — the pre-charge already-ingested guard', () => {
     const finder = buildOnboardingFinder({ db, userId: randomUUID(), rerank: stubWithAlternatives });
     const before = await finder(CONFIDENT_TOPIC, QUESTION);
     expect(before).not.toBeNull();
-    expect(before!.candidateIds).toHaveLength(3);
+    expect(before!.candidateIds.length).toBeGreaterThanOrEqual(3);
     const heldAlternate = before!.candidateIds[1]!;
     await fakeTableRow(heldAlternate, true);
 
     const after = await finder(CONFIDENT_TOPIC, QUESTION);
     expect(after).not.toBeNull();
     expect(after!.candidateIds).not.toContain(heldAlternate);
-    // Pick unchanged in front, and the chain RE-FILLS from the remaining
-    // alternates — the screen runs before the cap, so a held alternate costs
-    // no chain depth (a filter-after-cap implementation would yield 2 here;
-    // the >=4-candidate shortlist is guarded by the WP27 stage-B test above).
+    // Pick unchanged in front; since #172 step 0 there is no cap, so the
+    // held alternate simply disappears from the walk — every other entry
+    // stays, in order.
     expect(after!.candidateIds[0]).toBe(before!.candidateIds[0]);
-    expect(after!.candidateIds).toHaveLength(3);
+    expect(after!.candidateIds).toEqual(before!.candidateIds.filter((id) => id !== heldAlternate));
   });
 });

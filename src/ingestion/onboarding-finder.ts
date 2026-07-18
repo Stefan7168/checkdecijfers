@@ -14,6 +14,7 @@ import type { LlmClient } from '../answer/llm/client.ts';
 import type { OnboardingRouting, TableFinder } from '../answer/intent/policy.ts';
 import { findTable } from '../catalog/find.ts';
 import { rerankShortlist } from '../catalog/rerank.ts';
+import { candidateWalk } from '../catalog/walk.ts';
 import type { RerankFn } from '../catalog/types.ts';
 import type { Db } from '../db/types.ts';
 import { alreadyIngestedSet } from './onboarding.ts';
@@ -75,6 +76,14 @@ export function buildOnboardingFinder(deps: OnboardingFinderDeps): TableFinder {
       // misleading "geen cijfers geladen" clarification.
       const active = await findActiveRequest(deps.db, deps.userId, outcome.pick.tableId);
 
+      // #172 step 0 (ADR 027 A4): the deliverability walk — model chain first
+      // (pick + alternates, the rerank's judgment), then every remaining
+      // CURRENT shortlist entry in shortlist order. Chain membership stops
+      // being a single-model judgment (the s54 Haiku drift dropped the only
+      // deliverable bijstand table from the cap-3 chain); the fit gate's A3
+      // pre-checks keep the extra candidates cheap (non-fitting shapes never
+      // reach the LLM) and the gate stays the sole deliverability judge.
+      const walk = candidateWalk(outcome);
       // #166 pre-charge guard: a confident pick on a table we ALREADY hold
       // (registered active + synced — the job's own alreadyIngestedSet
       // predicate, shared so the two notions can't drift) must never route to
@@ -85,29 +94,29 @@ export function buildOnboardingFinder(deps: OnboardingFinderDeps): TableFinder {
       // plain B15 clarification — the user re-asks with a listed term and pays
       // the normal question price only. Second leg (session-50 review,
       // confirmed HIGH): the fit gate downstream resolves over the WHOLE
-      // candidate chain, so already-held ALTERNATES are screened by the same
-      // predicate — otherwise a charged job could skip the fetch and deliver
-      // from data we already hold, one link later. One batched roundtrip for
-      // pick + alternates (the per-id loop was 1+N sequential queries on the
-      // live chat path; alternativeIds has no schema-level cap).
-      const held = await alreadyIngestedSet(deps.db, [outcome.pick.tableId, ...outcome.alternativeIds]);
+      // walk, so already-held entries — alternates AND shortlist-extension
+      // tables (the coverage sprint put many curated tables in every
+      // shortlist) — are screened by the same predicate; otherwise a charged
+      // job could skip the fetch and deliver from data we already hold, one
+      // link later. Still one batched roundtrip (the walk is bounded by
+      // RECALL_LIMIT).
+      const held = await alreadyIngestedSet(deps.db, walk);
       if (active === null && held.has(outcome.pick.tableId)) return null;
-      // Screened BEFORE the cap-3, so up to 3 genuinely onboardable
-      // candidates survive a held alternate.
-      const onboardableAlternates = outcome.alternativeIds.filter((id) => !held.has(id));
       return {
         tableId: outcome.pick.tableId,
         topicTerm: term,
         confidence: outcome.confidence,
         alreadyPending: active !== null,
-        // WP27 stage B (ADR 027 D2a): THE constructing link of the candidate
-        // chain — pick first, then the rerank's allowlist-sanitized
-        // alternativeIds (never contain the pick, order preserved; since #166
-        // filtered to not-yet-ingested tables), cap 3. Every link downstream
-        // only CARRIES this list; skip this line and candidate_ids stays []
-        // in production even though everything typechecks (PR-#17 review,
-        // session 31).
-        candidateIds: [outcome.pick.tableId, ...onboardableAlternates].slice(0, 3),
+        // WP27 stage B (ADR 027 D2a) + #172 step 0: THE constructing link of
+        // the candidate walk — pick first (kept even when held: the
+        // alreadyPending route above owns that case), then every onboardable
+        // walked id, NO cap-3 (measured 2026-07-18: the only deliverable
+        // bijstand table sat at shortlist position 22 — any small cap
+        // provably misses the class this walk exists to recover). Every link
+        // downstream only CARRIES this list; skip this line and
+        // candidate_ids stays [] in production even though everything
+        // typechecks (PR-#17 review, session 31).
+        candidateIds: [walk[0]!, ...walk.slice(1).filter((id) => !held.has(id))],
       };
     } catch {
       return null;

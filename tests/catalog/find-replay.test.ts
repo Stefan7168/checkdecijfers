@@ -15,7 +15,7 @@ import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ReplayLlmClient } from '../../src/answer/llm/client.ts';
 import { FixtureSource, loadCatalogFixture } from '../../src/cbs-adapter/fixture-source.ts';
-import { ingestCatalog, findTable, rerankShortlist, DEFAULT_FIND_TABLE_CONFIG } from '../../src/catalog/index.ts';
+import { ingestCatalog, findTable, rerankShortlist, DEFAULT_FIND_TABLE_CONFIG, candidateWalk } from '../../src/catalog/index.ts';
 import { createTestDb } from '../helpers/pglite-db.ts';
 import type { Db } from '../../src/db/types.ts';
 
@@ -32,11 +32,15 @@ interface LabelledCase {
   question?: string;
   /** See scripts/tablefinder-eval.ts: `chainContains` pins the candidate
    *  chain (pick + alternativeIds, Stage-B cap 3) instead of the exact pick;
-   *  `notPick` pins a known mis-pick class out of the top spot. */
+   *  `walkContains` (#172 step 0) pins the SYSTEM-level deliverability walk
+   *  (pick + alternates + current-shortlist extension, candidateWalk — the
+   *  exact list the fit gate receives); `notPick` pins a known mis-pick
+   *  class out of the top spot. */
   expect: {
     kind: 'confident' | 'disclose' | 'none';
     tableId?: string;
     chainContains?: string;
+    walkContains?: string;
     notPick?: string;
   };
 }
@@ -73,6 +77,12 @@ describe('table finder — end-to-end replay against the labelled set', () => {
         if (c.expect.chainContains) {
           const chain = [outcome.pick.tableId, ...outcome.alternativeIds].slice(0, CANDIDATE_CAP);
           expect(chain).toContain(c.expect.chainContains);
+        }
+        // #172 step 0: the restored bijstand-stock teeth — SYSTEM-level, via
+        // the SAME candidateWalk the production finder feeds the fit gate, so
+        // this assertion is pinned against the walk that actually ships.
+        if (c.expect.walkContains) {
+          expect(candidateWalk(outcome)).toContain(c.expect.walkContains);
         }
         // Calibrated floor: every labelled confident pick clears the ROUTING
         // threshold. Referencing the config constant (not a hardcoded 0.8)

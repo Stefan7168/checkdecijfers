@@ -807,6 +807,46 @@ describe('runOnboardingJob — fit gate: candidate fallback (WP27 stage C)', () 
     }
   });
 
+  it('#172 step 0: a deliverable candidate at position 4 DELIVERS — no hidden cap anywhere downstream of the walk', async () => {
+    // The finder now hands the fit gate the full walk (pick + alternates +
+    // current-shortlist extension); this pins that the JOB side honors it:
+    // runFitGate iterates row.candidateIds unbounded, so a table beyond the
+    // old cap-3 chain still resolves. Positions 1-3 are undeliverable shapes
+    // (misfit verdict / two A3(a) breakdown-dims skips); position 4 is the
+    // only deliverable table.
+    const h = await harness(
+      new FixtureSource({
+        [TABLE]: loadFixtureDocs(`${FIXTURES}/${TABLE}`),
+        [STOCK_TABLE]: loadFixtureDocs(`${FIXTURES}/${STOCK_TABLE}`),
+        [FLOWS_TABLE]: loadFixtureDocs(`${FIXTURES}/${FLOWS_TABLE}`),
+        '82242NED': loadFixtureDocs(`${FIXTURES}/82242NED`),
+      }),
+    );
+    try {
+      const script = fitScript({ [TABLE]: FIT_GEEN, [STOCK_TABLE]: FIT_ACCEPT_STOCK });
+      const { pendingId } = await queueRequest(h.db, BIJSTAND_QUESTION, 'bijstand', {
+        tableId: TABLE,
+        candidateIds: [TABLE, FLOWS_TABLE, '82242NED', STOCK_TABLE],
+      });
+
+      const summary = await runOnboardingJob(
+        h.deps({ fit: script.fit, intentClient: intentStub(2023, STOCK_TABLE, STOCK_MEASURE) }),
+      );
+      expect(summary.processed!.outcome).toBe('delivered');
+      // Only the shapes that pass the deterministic pre-checks reach the fit
+      // LLM: TABLE (misfit verdict) and STOCK_TABLE (accept) — FLOWS_TABLE
+      // and 82242NED (both A3a breakdown dims) are skipped for free. This is
+      // also why the longer walk stays cheap in production.
+      expect(script.calls).toEqual([TABLE, STOCK_TABLE]);
+
+      const row = await getPendingRequest(h.db, pendingId);
+      expect(row!.resolvedTableId).toBe(STOCK_TABLE);
+      expect(row!.tableId).toBe(TABLE);
+    } finally {
+      await h.close();
+    }
+  });
+
   it('A3(a): a breakdown-dimension candidate (85615NED) is skipped undeliverable WITHOUT a fit-LLM call — the live #111 shape', async () => {
     const h = await harness(bijstandSource());
     try {

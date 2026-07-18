@@ -63,6 +63,22 @@ last refreshed 2026-07-05):
   than FTS-rank-ordered. The `walkContains: '37789ksz'` assertion should be pinned against whichever walk actually
   ships (cap 6 would pin a walk that provably misses it — don't).
 
+### Step 0 build — ✅ SHIPPED 2026-07-18 (same session, hermetic, €0 LLM; ADR-027 amendment A4)
+
+Built as the full-current-shortlist walk (the first option above; deliverability-aware ordering was rejected —
+there is no honest pre-probe deliverability signal, and the A3 pre-checks make rank-order walking cheap):
+`candidateWalk` (`src/catalog/walk.ts`) = pick + model alternates verbatim + every remaining CURRENT shortlist
+entry in shortlist order; `buildOnboardingFinder` hands the fit gate that walk with NO cap, #166 screen applied to
+the whole list. `walkContains: '37789ksz'` is RESTORED in the labelled set, asserted via the same `candidateWalk`
+in the hermetic find-replay gate test AND the live eval script; the step-1 eval masking-trap fix (disclose reason
+reported, `rerank_error` = RED) was pulled forward into `tablefinder-eval.ts`. End-to-end pin: a deliverable
+candidate at walk position 4 delivers (`onboarding-job.test.ts`). **What remains of this protocol for the
+supervised WP: steps 1–3 (RerankProfile co-calibration, chain-case harvest, ×4 record rounds + separation gap),
+the live end-to-end smoke of the bijstand class through the real onboarding path, and the monthly drift canary.
+Note step 0's effect on step 4's framing: the REGRESSED CLASS is structurally recovered regardless of the rerank
+model, so a Sonnet/Fable profile is now purely a chain/confidence-quality question, exactly as the step-0 branch
+predicted.**
+
 ## Step 1 — the profile concept: model + params + threshold are ONE calibrated unit
 
 `TABLE_RERANK_MODEL` + `temperature: 0` + `highConfidence: 0.8` stop being three independent constants. A

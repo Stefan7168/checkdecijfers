@@ -20,7 +20,7 @@ import {
   type LlmClient,
 } from '../src/answer/llm/client.ts';
 import { FixtureSource, loadCatalogFixture } from '../src/cbs-adapter/fixture-source.ts';
-import { ingestCatalog, findTable, rerankShortlist, DEFAULT_FIND_TABLE_CONFIG } from '../src/catalog/index.ts';
+import { candidateWalk, ingestCatalog, findTable, rerankShortlist, DEFAULT_FIND_TABLE_CONFIG } from '../src/catalog/index.ts';
 import type { FindTableOutcome } from '../src/catalog/index.ts';
 import { createTestDb } from '../tests/helpers/pglite-db.ts';
 
@@ -36,14 +36,17 @@ interface LabelledCase {
    *  prompt. Absent on the older cases: the eval falls back to the topic. */
   question?: string;
   /** confident expectations: `tableId` pins the exact pick; `chainContains`
-   *  pins the CANDIDATE CHAIN instead — pick + alternativeIds under Stage B's
-   *  cap (the fit gate walks that chain, so chain membership IS the
-   *  system-level success condition); `notPick` pins a known mis-pick class
-   *  out of the top spot. */
+   *  pins the MODEL chain — pick + alternativeIds under Stage B's cap;
+   *  `walkContains` (#172 step 0, ADR-027 A4) pins the SYSTEM-level
+   *  deliverability walk instead — pick + alternates + the current-shortlist
+   *  extension via candidateWalk, the exact list the fit gate receives, so
+   *  the assertion survives any one model's alt-list whims; `notPick` pins a
+   *  known mis-pick class out of the top spot. */
   expect: {
     kind: 'confident' | 'disclose' | 'none';
     tableId?: string;
     chainContains?: string;
+    walkContains?: string;
     notPick?: string;
   };
 }
@@ -82,9 +85,24 @@ function checkExpectation(outcome: FindTableOutcome, expect: LabelledCase['expec
         );
       }
     }
+    if (expect.walkContains) {
+      const walk = candidateWalk(outcome);
+      if (!walk.includes(expect.walkContains)) {
+        problems.push(
+          `expected ${expect.walkContains} in the deliverability walk (${walk.length} entries), got [${walk.join(', ')}]`,
+        );
+      }
+    }
   }
-  if (expect.kind === 'disclose' && outcome.kind === 'disclose' && expect.tableId) {
-    if (!outcome.candidates.some((c) => c.tableId === expect.tableId)) {
+  if (expect.kind === 'disclose' && outcome.kind === 'disclose') {
+    // #172 step-1 eval fix (the s54 masking trap): a fail-safe disclose after
+    // a rerank ERROR is a RED result in a calibration run, never a pass — the
+    // first Sonnet attempt looked like 9/11 model-disclose while every call
+    // had API-errored behind the fail-safe.
+    if (outcome.reason === 'rerank_error') {
+      problems.push('fail-safe disclose (rerank_error) — the model never judged; RED in calibration');
+    }
+    if (expect.tableId && !outcome.candidates.some((c) => c.tableId === expect.tableId)) {
       problems.push(`expected ${expect.tableId} among disclosed candidates`);
     }
   }
@@ -102,7 +120,7 @@ async function main(): Promise<void> {
   await ingestCatalog(db, new FixtureSource({}, loadCatalogFixture(CATALOG_DIR)));
 
   const client = buildClient(mode);
-  const results: Array<{ id: string; kind: string; pick: string | null; confidence: number | null; pass: boolean; problems: string[] }> = [];
+  const results: Array<{ id: string; kind: string; reason: string | null; pick: string | null; confidence: number | null; pass: boolean; problems: string[] }> = [];
 
   for (const c of set.cases) {
     const outcome = await findTable(db, { topic: c.topic, question: c.question ?? c.topic }, {
@@ -111,9 +129,13 @@ async function main(): Promise<void> {
     const problems = checkExpectation(outcome, c.expect);
     const pick = outcome.kind === 'confident' ? outcome.pick.tableId : null;
     const confidence = outcome.kind === 'confident' ? outcome.confidence : null;
-    results.push({ id: c.id, kind: outcome.kind, pick, confidence, pass: problems.length === 0, problems });
+    // #172 step-1 eval fix: report the disclose REASON so a fail-safe
+    // (rerank_error) disclose is distinguishable from a model judgment in
+    // the calibration history.
+    const reason = outcome.kind === 'disclose' ? outcome.reason : outcome.kind === 'none' ? outcome.reason : null;
+    results.push({ id: c.id, kind: outcome.kind, reason, pick, confidence, pass: problems.length === 0, problems });
     const mark = problems.length === 0 ? 'ok  ' : 'FAIL';
-    console.log(`${mark} ${c.id.padEnd(18)} -> ${outcome.kind}${pick ? ` ${pick} (${confidence})` : ''}`);
+    console.log(`${mark} ${c.id.padEnd(18)} -> ${outcome.kind}${reason ? ` (${reason})` : ''}${pick ? ` ${pick} (${confidence})` : ''}`);
     for (const p of problems) console.log(`       ${p}`);
   }
   await close();
