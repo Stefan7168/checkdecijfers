@@ -166,10 +166,10 @@ PR #42 `4e2a2fd`, the #140 validator narrowing PR #43 `882c808`; full entries in
   **Fresh hunts are PAUSED per #163(1)** — un-hunted surfaces (auth/session-flow, answer-composition/LLM-harness) stay listed for when hunts
   resume. Tracked follow-ups #146-150 + #152 low/latent; #151 backfill sweep = supervised; #154 = a design WP, owner's call on priority.
 - **Next — owner decisions (queue behind the sprint per #163) — every item below now has an execute-ready design from the 2026-07-18
-  overnight marathon (see the ▶ block above for links):** **#138** (design ready, no owner question), **WP26** (execute-brief ready —
-  safelist read-back + 2 read-back items), **#121** (one-line owner question), **#131** (multilingual L1 — no design yet), **WP30c**
-  (beslismemo ready, 4 options), **#162** (ADR-draft ready — after WP26). Tracked-not-focus: #132 route B ~2026-07-19 (check on/after 19
-  juli), #104/#112 (need live-LLM spend), /login header cosmetic.
+  overnight marathon (see the ▶ block above for links):** **#138 ✅ DONE + LIVE (session 55, `f2d015a` — off this menu)**, **WP26**
+  (execute-brief ready — safelist read-back + 2 read-back items), **#121** (one-line owner question), **#131** (multilingual L1 — no
+  design yet), **WP30c** (beslismemo ready, 4 options), **#162** (ADR-draft ready — after WP26). Tracked-not-focus: #132 route B
+  ~2026-07-19 (check on/after 19 juli), #104/#112 (need live-LLM spend), /login header cosmetic.
 
 
 **▶ TOP PRIORITY STACK — owner decision, session 23 (2026-07-05); this ORDER overrides the "decision-gated" framing below.** The owner set an explicit
