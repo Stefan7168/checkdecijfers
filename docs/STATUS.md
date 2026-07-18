@@ -9,9 +9,10 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
-**▶ NEXT SESSION STARTS HERE (Session 55, 2026-07-18, AUTONOMOUS — first post-Fable session; NB: it measurably still ran on Fable 5
-(`claude-fable-5`) — the announced Opus/Sonnet picker switch was not yet effective; check the runtime model at session start and flag
-mismatches. Two deliverables, zero LLM spend / prompt bytes / DDL:
+**▶ NEXT SESSION STARTS HERE (Session 55, 2026-07-18 — started autonomous, owner joined in-chat. Ran on Fable 5; the owner settled the
+model question mid-session: **"Fable is in our plan now"** — the s54 leave-Fable framing is WITHDRAWN, sessions may run Fable, no
+runtime-model mismatch flagging needed anymore; the ROLE-based delegation rule is unchanged (session model thinks, fan-out on cheaper
+tiers). Four deliverables, zero product-LLM spend / prompt bytes / DDL:
 (1) **#172 step-0 MEASURED** (main `0937045`): 37789ksz IS in the Stage-1 shortlist (fixture 14/14; live mirror 22/24, rank 0.0760) →
 recall is NOT the gap, BUT the protocol's cap-6 rank-ordered walk would NOT reach it (~15 higher-ranked Regulier tables in between) —
 the escalation WP must walk the FULL remaining Regulier shortlist through the fit gate or use a deliverability-aware order; measured

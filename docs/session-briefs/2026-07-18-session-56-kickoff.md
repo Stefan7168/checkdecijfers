@@ -3,12 +3,12 @@
 **Geschreven door sessie 55 (2026-07-18, autonoom).** Leesvolgorde: CLAUDE.md → docs/STATUS.md (▶-blok bovenaan is
 leidend) → dit bestand. De chat is weg; de repo is de bron.
 
-## ⚠ Check eerst het runtime-model
+## Model: Fable zit in het plan (owner, 18-07, in-chat — vervangt de wissel-aanname)
 
-Sessie 55 draaide — anders dan de modelwissel-aankondiging — blijkens haar eigen omgeving nog op **Fable 5**
-(`claude-fable-5`); de sessie-picker was toen nog niet omgezet. Check bij de start welk model deze sessie werkelijk
-draait en meld een mismatch aan de owner. De delegatieregel is rol-gebaseerd en geldt hoe dan ook: het sessiemodel
-doet het denkwerk, fan-out/legwork op Sonnet/Haiku, tiers per rol benoemd.
+Sessie 55 draaide op Fable 5 en de owner heeft dat mid-sessie tot plan verklaard: **"Fable is in our plan now."**
+De s54-aanname "laatste Fable-sessie, daarna Opus/Sonnet" is daarmee ingetrokken — geen runtime-model-mismatch
+meer melden. Ongewijzigd blijft de rol-gebaseerde delegatieregel: het sessiemodel doet het denkwerk,
+fan-out/legwork op Sonnet/Haiku, tiers per rol benoemd, nooit modelnamen hardcoden.
 
 ## PR #57 — ✅ afgehandeld (owner kwam dezelfde dag terug in de chat: "Go")
 
