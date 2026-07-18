@@ -64,8 +64,31 @@ effective; flagged to the owner. Two deliverables, zero live-LLM spend / prompt 
    the fixture's 83625NED GeoDimension table); full verification block: 14 suites + benchmark 14/14 + 6/6 + 0
    fabricated PASS + web green + real build; /code-review LOW clean. Zero prompt bytes, €0 LLM.
 
+   **Third same-day continuation (owner: "Iets waarbij Fabel benodigd is ga door") — #172 STEP-0 BUILD SHIPPED +
+   LIVE** (commit `4626f8a`, CI run 29641007221 gate+deploy green; ADR-027 amendment A4). The session picked the
+   hardest available €0 task — the structural shortlist-walk fix its own morning measurement had just redesigned
+   (cap-6 provably misses 37789ksz at 22/24). Shipped: `candidateWalk` (src/catalog/walk.ts) — pick + model
+   alternates VERBATIM (they carry the rerank's judgment incl. "TENZIJ historisch") + every remaining CURRENT
+   shortlist entry in shortlist order, NO cap; current per the row's own source registry entry (A6 notion,
+   else-false for unknown sources — discontinued tables are never auto-walked, the extension bypasses the
+   rerank's historical judgment); `buildOnboardingFinder` hands the fit gate that walk with the #166 already-held
+   screen over the WHOLE list (one batched roundtrip). Every downstream carrier was already an unbounded
+   string[]; runFitGate iterates unbounded; the A3 pre-checks keep the longer walk cheap (non-fitting shapes
+   never reach the fit LLM — for the measured bijstand walk only 37789ksz itself is time-only) and it runs only
+   in the async job (maxDuration 300s). NO fixture re-record needed: the change is pure post-processing after the
+   rerank call (request hash untouched). Teeth restored: bijstand-stock regains a gate-blocking assertion as
+   `walkContains: '37789ksz'` via the SAME candidateWalk in find-replay (11/11 hermetic, CI) and the live eval;
+   the protocol's step-1 masking-trap fix rode along (eval reports disclose REASONS; a fail-safe rerank_error
+   disclose is RED). End-to-end pin: a deliverable candidate at walk position 4 delivers (onboarding-job suite).
+   Full verification block green (14 suites; catalog 8 files incl. the new walk suite; benchmark 14/14 + 6/6 + 0
+   PASS; eval --replay 11/11; web + real build); /code-review LOW clean. Zero prompt bytes, €0 LLM. The
+   s54-regressed class is structurally recovered independent of the rerank model; what remains of #172 for a
+   supervised window: RerankProfile co-calibration (steps 1–3, ×4 rounds + separation gap ≥0.05), the live
+   bijstand onboarding smoke, and the monthly drift canary.
+
    Next: the owner dates (22/7 06:30 `85773NED`; 23/7 06:30 `83693NED`; ~30/7 BBP+PPI with the `85880NED` chunk
-   hatch; #132 route B on/after 19/7) and the owner-decision menu (see the ▶ block; #138 now off it). Kickoff:
+   hatch; #132 route B on/after 19/7) and the owner-decision menu (see the ▶ block; #138 now off it; #172 = its
+   supervised calibration/smoke half only). Kickoff:
    [session-briefs/2026-07-18-session-56-kickoff.md](session-briefs/2026-07-18-session-56-kickoff.md).)**
 
 **Previous (2026-07-18, Fable overnight design marathon, AUTONOMOUS, docs-only — Fable's LAST session before the

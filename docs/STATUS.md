@@ -29,8 +29,17 @@ needed a clean empty commit `b1df8dd`. Rule: no skip-ci markers in branch commit
 green): built exactly per the marathon design §a — injected RegionLabeler → regionTermsFor (registry labels, fail-closed), chips name
 the region, candidates carry the region codes so the dry-run proves REGIONAL servability; prefix-kind near-duplicates collapsed into
 one shared regionKindForCode; suggestions.ts db-confinement now source-scan-pinned. 43/43 suggestions tests, benchmark PASS, €0 LLM.
+(4) **#172 STEP-0 BUILD ✅ DONE + LIVE** (owner: "iets waarbij Fabel benodigd is"; commit `4626f8a`, CI run 29641007221 gate+deploy
+green; ADR-027 amendment A4): the fit gate now receives the DELIVERABILITY WALK (`candidateWalk`, src/catalog/walk.ts) — pick + model
+alternates verbatim + the FULL current remainder of the Stage-1 shortlist, NO cap (the measured 22/24 position kills every small cap);
+#166 screen over de hele walk; discontinued tables never auto-walked. `walkContains: '37789ksz'` RESTORED gate-blocking (find-replay
+11/11 hermetic + live eval 11/11); step-1 eval masking-trap fix pulled forward (disclose reason, rerank_error = RED); position-4-
+delivers end-to-end pinned. Zero prompt bytes, €0 LLM, no fixture re-record (pure post-rerank processing). The s54-regressed bijstand
+class is structurally recovered INDEPENDENT of the rerank model — the remaining #172 supervised WP (RerankProfile co-calibration ×4 +
+separation gap, live bijstand smoke, drift canary) is now purely a chain/confidence-quality question.
 ▶ NEXT: the owner dates (22/7 06:30 sync `85773NED`; 23/7 06:30 sync `83693NED`; ~30/7 BBP+PPI — `85880NED` via the chunked hatch;
-#132 route B on/after 19/7), then the owner-decision menu below (#138 is now OFF that menu — done). #170 residual: (3) chart-download
+#132 route B on/after 19/7), then the owner-decision menu below (#138 is now OFF that menu — done; #172 needs only its supervised
+calibration/smoke half). #170 residual: (3) chart-download
 bundles with the Phase-2 OG WP, (4) annotations/toggles open. Kickoff:
 [session-briefs/2026-07-18-session-56-kickoff.md](session-briefs/2026-07-18-session-56-kickoff.md). Full entry in
 [status-archive.md](status-archive.md).)**

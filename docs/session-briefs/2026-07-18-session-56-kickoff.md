@@ -24,9 +24,12 @@ llms.txt is direct fetchbaar maar robots-respecterende crawlers zien hem pas na 
 ## Stand (geverifieerd, 2026-07-18)
 
 Productie LIVE en verwerkt echt geld (checkdecijfers.vercel.app). Alle negen dekkingstabellen live; trial LIVE
-(pot 23/25 bij s52-close). **#172 stap-0 is GEMETEN** (main `0937045`): `37789ksz` zit in de Stage-1-shortlist
-(live 22/24) → recall is niet het gat, maar de cap-6 walk uit het protocol mist hem — het escalatie-WP moet de
-walk over de volle Regulier-shortlist leggen of deliverability-aware maken (staat in de protocol-doc).
+(pot 23/25 bij s52-close). **#172 stap-0 is GEMETEN én GEBOUWD + LIVE** (meting `0937045`; bouw `4626f8a`,
+ADR-027 A4): de fit gate loopt nu de volledige deliverability-walk (`candidateWalk` — pick + alternates + hele
+current-shortlist-rest, geen cap); `walkContains: '37789ksz'` staat weer gate-blocking in de labelled set. De
+s54-geregresseerde bijstand-klasse is structureel hersteld, onafhankelijk van het rerank-model. **Wat van #172
+overblijft voor een begeleid venster: alleen de RerankProfile-co-kalibratie (×4 rondes + separation gap), de
+live bijstand-onboarding-smoke en de maandelijkse drift-canary** (protocol-doc heeft de stand).
 
 ## Owner-datums (staand)
 
