@@ -68,7 +68,7 @@
     "vitest": "^4.1.10"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.112.1",
+    "@anthropic-ai/sdk": "^0.114.0",
     "pg": "^8.22.0",
     "stripe": "^22.3.2",
     "zod": "^4.4.3"
