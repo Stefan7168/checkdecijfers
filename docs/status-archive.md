@@ -7,7 +7,8 @@ NEGATIVE" caveat is retired by the fix itself — dated update note), the STATUS
 line (both still listed the fixed cosmetic), 04-architecture capability rows (#154 sentinel + the two #121 alert
 hooks added), and an 08-build-plan status bracket (syncs caught up, #138/#121/#154 done). Two lessons appended
 (dependabot fix-runs dying when branches merge away; recorded the day before: deploy-order). web/README measured:
-untouched Next.js boilerplate — nothing mis-stated, replacement spun off as a task chip. All PR references in
+untouched Next.js boilerplate — nothing mis-stated; a replacement task chip was offered and DISMISSED by the owner
+("Weg ermee") — deliberately not queued anywhere, purely cosmetic. All PR references in
 docs/ remain plain text (0 live links). Session span for the record: 18-07 → 24-07, with this audit on 25-07.
 
 **Session-55 CLOSE ADDENDUM (2026-07-24 — the session was interrupted for six days after the #172 step-0 build and
