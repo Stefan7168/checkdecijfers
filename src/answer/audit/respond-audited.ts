@@ -28,7 +28,7 @@ import type { ConversationContext } from '../context/types.ts';
 import { attachWebAugmentation, type WebBilling } from '../../websearch/attach.ts';
 import type { WebSearchClient } from '../../websearch/client.ts';
 import type { AuditSourceTag } from './types.ts';
-import { maybeAlertSemanticCheckSkip } from './alerts.ts';
+import { maybeAlertInternalRefusal, maybeAlertSemanticCheckSkip } from './alerts.ts';
 import { LlmCallTracker } from './track.ts';
 import { buildAuditRow, insertAuditRecord, type AuditContext } from './write.ts';
 
@@ -188,6 +188,9 @@ export async function answerQuestionAudited(
   // #144 (ADR 034 §5, owner decision 2026-07-16): the fail-open skip alert —
   // fail-soft, after the audit write, never affecting the response.
   await maybeAlertSemanticCheckSkip(audited, wrap.userId);
+  // #121: a served 'internal' refusal (the pipeline's honest catch-all for
+  // unexpected throws, template rung included) becomes loud — same posture.
+  await maybeAlertInternalRefusal(audited, wrap.userId);
   return audited;
 }
 
@@ -242,5 +245,7 @@ export async function answerClarificationReplyAudited(
   const audited = await persistOrFailClosed(db, augmented, wrap);
   // #144 (ADR 034 §5): same fail-open skip alert on the reply turn.
   await maybeAlertSemanticCheckSkip(audited, wrap.userId);
+  // #121: same internal-refusal alert on the reply turn.
+  await maybeAlertInternalRefusal(audited, wrap.userId);
   return audited;
 }

@@ -6,6 +6,27 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 55 close (2026-07-24 — resumed after a SIX-DAY interruption; #121 unconditional half)
+
+- **A resumed session must re-measure the calendar, not just the repo.** The session was interrupted 2026-07-18 and
+  resumed 2026-07-24; `date` (golden rule) caught that the wall-clock had moved six days — and a read-only live-DB
+  check then showed the 22/7 and 23/7 owner release syncs had NOT run (zero ingestion batches since 19/7). Two
+  durable rules: (a) after any long gap, the first wrap-up act is `date` + "which scheduled owner-dates fell inside
+  the gap, and did they actually happen?" measured against the DB (ingestion_batches), never against the plan; (b)
+  the repo-as-source-of-truth discipline is exactly what made the resume cheap — everything pre-interrupt was
+  already committed, so only the calendar had drifted.
+- **Verify a design brief's ADJACENT findings the same way as its main claim — second occurrence of the class.** The
+  marathon brief's #121 finding "the template rung can throw UNCAUGHT" was refuted by measurement: respond.ts's
+  catch-all (respondToQuestion/respondToClarificationReply) already converts every downstream throw into the honest
+  'internal' refusal, on every production path. The REAL gap was silence, so the fix became an admin alert instead
+  of a try/catch nobody needed. Same lesson as the marathon's own #162/#164 correction: briefs are inputs to verify,
+  not specs to obey — building the brief as written would have added dead code and missed the actual gap.
+- **The parallel-load ceiling is machine-load-bound, not a constant to keep chasing:** third occurrence this
+  session, now AT the raised 120s ceiling (audit suite, 14 parallel PGlite boots, `semantic-check-r8` timed out;
+  solo-green 12.9s). The durable asset is the diagnostic procedure (name it → solo → at-ceiling+solo-green =
+  contention), not any particular ceiling value; a suite-level re-run on a quieter machine was enough this time —
+  don't reflexively raise the ceiling again while CI (sequential, quiet) stays structurally clean.
+
 ## Session 55 (2026-07-18, autonomous, first post-Fable session — #172 step-0 measured, #170 smalls 1+2 built on PR #57)
 
 - **Check the runtime model fact before restating the plan-of-record.** The post-Fable kickoff (and memory) said

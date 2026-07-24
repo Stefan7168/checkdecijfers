@@ -9,7 +9,8 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
-**▶ NEXT SESSION STARTS HERE (Session 55, 2026-07-18 — started autonomous, owner joined in-chat. Ran on Fable 5; the owner settled the
+**▶ NEXT SESSION STARTS HERE (Session 55, 2026-07-18 → closed 2026-07-24 after a six-day interruption — started autonomous, owner
+joined in-chat. Ran on Fable 5; the owner settled the
 model question mid-session: **"Fable is in our plan now"** — the s54 leave-Fable framing is WITHDRAWN, sessions may run Fable, no
 runtime-model mismatch flagging needed anymore; the ROLE-based delegation rule is unchanged (session model thinks, fan-out on cheaper
 tiers). Four deliverables, zero product-LLM spend / prompt bytes / DDL:
@@ -38,10 +39,18 @@ alternates verbatim + the FULL current remainder of the Stage-1 shortlist, NO ca
 delivers end-to-end pinned. Zero prompt bytes, €0 LLM, no fixture re-record (pure post-rerank processing). The s54-regressed bijstand
 class is structurally recovered INDEPENDENT of the rerank model — the remaining #172 supervised WP (RerankProfile co-calibration ×4 +
 separation gap, live bijstand smoke, drift canary) is now purely a chain/confidence-quality question.
-▶ NEXT: the owner dates (22/7 06:30 sync `85773NED`; 23/7 06:30 sync `83693NED`; ~30/7 BBP+PPI — `85880NED` via the chunked hatch;
-#132 route B on/after 19/7), then the owner-decision menu below (#138 is now OFF that menu — done; #172 needs only its supervised
-calibration/smoke half). #170 residual: (3) chart-download
-bundles with the Phase-2 OG WP, (4) annotations/toggles open. Kickoff:
+(5) **#121 unconditional half ✅ DONE (2026-07-24 — the session was INTERRUPTED six days and resumed; owner: "ok fix and dan wrap up
+after"):** with a MEASURED correction to the marathon brief's adjacent finding — a template-rung throw is NOT uncaught (respond.ts's
+catch-all already serves the honest 'internal' refusal on every production path); what was missing was LOUDNESS. Shipped: the
+internal-refusal ADMIN ALERT (`maybeAlertInternalRefusal`, #144 posture, both turns at the shared respond-audited site; send path
+deduplicated into one helper; 5 hermetic tests). The #121 one-line owner question (template validator-verdict: serve+alert vs
+fail-closed) REMAINS OPEN — different signal than the throw path.
+▶ NEXT — ⚠ FIRST: **the 22/7 and 23/7 release syncs were MISSED during the six-day interruption (MEASURED against the live DB
+2026-07-24: `85773NED` last synced 2026-07-02, `83693NED` 2026-07-16, ZERO ingestion batches since 19/7).** Catch-up syncs are the
+first owner-supervised action (normal RUNBOOK procedure, just late — staleness machinery warned honestly meanwhile), together with the
+overdue #132 route-B check (was due on/after 19/7) and the ~30/7 BBP+PPI window (`85880NED` via the chunked hatch — days away). Then
+the owner-decision menu below (#138 OFF the menu — done; #172 needs only its supervised calibration/smoke half; #121 needs only its
+one-line answer). #170 residual: (3) chart-download bundles with the Phase-2 OG WP, (4) annotations/toggles open. Kickoff:
 [session-briefs/2026-07-18-session-56-kickoff.md](session-briefs/2026-07-18-session-56-kickoff.md). Full entry in
 [status-archive.md](status-archive.md).)**
 

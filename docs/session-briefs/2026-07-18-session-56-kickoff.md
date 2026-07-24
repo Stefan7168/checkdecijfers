@@ -31,17 +31,24 @@ s54-geregresseerde bijstand-klasse is structureel hersteld, onafhankelijk van he
 overblijft voor een begeleid venster: alleen de RerankProfile-co-kalibratie (×4 rondes + separation gap), de
 live bijstand-onboarding-smoke en de maandelijkse drift-canary** (protocol-doc heeft de stand).
 
-## Owner-datums (staand)
+## ⚠ Owner-datums — 22/7 en 23/7 zijn GEMIST (gemeten 24-07, sessie-55-onderbreking van zes dagen)
 
-1. **wo 22/7 06:30** — sync `85773NED` (generale huizenprijzen-release).
-2. **do 23/7 06:30** — sync `83693NED` (julicijfer consumentenvertrouwen).
-3. **~30/7** — BBP+PPI-syncs; `85880NED` MOET via de chunked escape hatch (RUNBOOK).
-4. **#132 route B** — check op/na 19/7.
+**Read-only tegen de live DB gemeten op 2026-07-24: `85773NED` laatst gesynct 02-07, `83693NED` 16-07, nul
+ingestion-batches sinds 19/7.** De release-syncs van wo 22/7 en do 23/7 zijn dus niet gedraaid; de
+staleness-machinerie heeft intussen eerlijk gewaarschuwd. **Eerste begeleide actie van deze sessie:**
+
+1. **Inhaal-sync `85773NED`** (generale huizenprijzen) + **inhaal-sync `83693NED`** (julicijfer
+   consumentenvertrouwen) — de normale RUNBOOK-procedure, alleen later; CBS-data staat er al dagen.
+2. **#132 route B** — check was al verschuldigd op/na 19/7, ook inhalen.
+3. **~30/7** — BBP+PPI-syncs (dichtbij!); `85880NED` MOET via de chunked escape hatch (RUNBOOK).
 
 ## Owner-menu (ontwerpen liggen klaar, zie het ▶-blok in STATUS voor links)
 
 WP26 (trial-conversie; safelist-read-back → begeleide bouw, €5/€10) · WP30c (beslismemo, 4 opties) · #121
-(één-regel-vraag; throw-fix hoort er sowieso bij) · #154 (rider op elk begeleid venster) · #162 (na WP26) ·
+(alleen nog de één-regel-vraag: template-validator-verdict serve+alert of fail-closed — **de onvoorwaardelijke
+helft is ✅ KLAAR, 24-07**: gemeten correctie op de brief (throw was al netjes gevangen → internal refusal; het
+gat was stilte) + internal-refusal-admin-alert op beide beurten, #144-postuur) · #154 (rider op elk begeleid
+venster) · #162 (na WP26) ·
 #170 rest: (3) chart-download bundelen met de Phase-2 OG-WP, (4) annotaties/toggles.
 **#138 is ✅ KLAAR + LIVE** (zelfde dag gebouwd, commit `f2d015a` — van het menu af).
 Residuen: #131, #104/#112 (live-spend), /login-cosmetiek, #151-backfill (begeleid). Owner-clicks open: GitHub

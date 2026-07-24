@@ -1,5 +1,27 @@
 # STATUS archive — the session log
 
+**Session-55 CLOSE ADDENDUM (2026-07-24 — the session was interrupted for six days after the #172 step-0 build and
+resumed on the owner's "ok fix and dan wrap up after"; every date below verified against `date`/git/DB, not memory):**
+
+- **#121 unconditional half ✅ DONE (code + docs in one commit, see git log 2026-07-24):** MEASURED correction to the
+  marathon brief's adjacent finding first — the claimed "template throw propagates uncaught" is REFUTED:
+  `respondToQuestion`/`respondToClarificationReply` wrap every production path in the fail-closed catch-all that
+  already serves the honest 'internal' refusal (respond.ts:344/410; no external `respondToIntent` caller exists).
+  What WAS true: the failure is SILENT (only the audit row's internalNote). Shipped accordingly: the
+  internal-refusal ADMIN ALERT — `alertInternalRefusal` + `maybeAlertInternalRefusal` in
+  `src/answer/audit/alerts.ts` (#144 posture: console.error floor, Resend when configured, fail-soft always), hooked
+  at BOTH respond-audited turns next to the #144 hook; the duplicated Resend send block (the one /code-review LOW
+  finding, fixed pre-push) extracted into one `sendAdminAlertEmail` helper; 5 new hermetic tests
+  (`tests/audit/internal-refusal-alert.test.ts`) + the 4 existing #144 pins green. Full verification block green
+  (one audit-suite contention re-run: `semantic-check-r8.test.ts` hit the RAISED 120s ceiling under 14 parallel
+  PGlite boots on the loaded machine, solo-green 12.9s — third occurrence of the class this session, at the new
+  ceiling). The #121 one-line owner question (validator-verdict on template bodies: serve+alert vs fail-closed)
+  REMAINS OPEN — a different signal than the throw path.
+- **⚠ MEASURED during close: the 22/7 and 23/7 owner release syncs did NOT run during the interruption** —
+  `85773NED` last_sync_at 2026-07-02, `83693NED` 2026-07-16, zero `ingestion_batches` rows since 2026-07-19
+  (read-only live-DB check). The #132 route-B check (due on/after 19/7) is also still outstanding. Catch-up is the
+  next session's FIRST owner-supervised action; ~30/7 BBP+PPI (chunk hatch) is days away.
+
 **Last updated: 2026-07-18 (Session 55, AUTONOMOUS — the first post-Fable session, which by its own runtime
 environment still ran on Fable 5 (`claude-fable-5`): the announced session-picker switch to Opus/Sonnet was not yet
 effective; flagged to the owner. Two deliverables, zero live-LLM spend / prompt bytes / DDL:**

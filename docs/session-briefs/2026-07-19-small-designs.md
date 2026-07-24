@@ -57,7 +57,14 @@ spots, PR #15 fixed those). The row's two options, now with the trade-offs made 
 `template.ts:81-146`) and its call site (`compose.ts:143-148`) sits OUTSIDE the try/catch that guards the LLM
 attempts. A template exception today propagates uncaught (no rung below, no handler up the chain) and surfaces as an
 internal error. Fix regardless of the owner choice: wrap the template rung; on throw → an honest `internal` refusal
-(the true floor of the ladder), + the same admin alert. **Owner question is exactly one line: option 1 or option 2
+(the true floor of the ladder), + the same admin alert.
+
+> **⚠ MEASURED CORRECTION + SHIPPED (2026-07-24, session 55 close):** the "propagates uncaught" half of this
+> finding is REFUTED — `respondToQuestion`/`respondToClarificationReply` wrap every production path in the
+> fail-closed catch-all that already serves the honest `internal` refusal (respond.ts:344/410; no external
+> `respondToIntent` caller exists), so no extra try/catch was needed. What WAS true: the failure is SILENT. Shipped
+> accordingly: the internal-refusal ADMIN ALERT (`maybeAlertInternalRefusal`, alerts.ts, #144 posture, both
+> respond-audited turns). The one-line owner question above (option 1 vs 2) REMAINS OPEN and untouched. **Owner question is exactly one line: option 1 or option 2
 (recommendation: 2).** Decide before WP30c multiplies the shape surface (the row's own trigger). ~Half a session,
 zero LLM spend; tests: seeded validator-blind-spot template serve+alert (or refuse), template-throw → internal
 refusal, R8 marker round-trip.
