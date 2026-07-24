@@ -5,7 +5,7 @@ leidend. Productie is LIVE en verwerkt echt geld; Stefan (geen developer) is de 
 gewone taal.
 
 **Stand:** sessie 53 (autonoom, 17→18/7) heeft tabellen #4-#9 **BUILT DORMANT** opgeleverd op
-[PR #56](https://github.com/Stefan7168/checkdecijfers/pull/56) (branch `coverage-tables-4-9-prep`): seeds,
+PR #56 (branch `coverage-tables-4-9-prep`): seeds,
 registry-defaults, fixtures en CC11-CC31 bevroren — hermetische gate groen, maar **nul vocabulaire en niet
 gesynct**: de zes tabellen beantwoorden in productie nog niets. Tracker: open-questions **#168**.
 

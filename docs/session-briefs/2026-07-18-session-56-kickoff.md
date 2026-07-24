@@ -12,7 +12,7 @@ fan-out/legwork op Sonnet/Haiku, tiers per rol benoemd, nooit modelnamen hardcod
 
 ## PR #57 — ✅ afgehandeld (owner kwam dezelfde dag terug in de chat: "Go")
 
-**[PR #57](https://github.com/Stefan7168/checkdecijfers/pull/57) is gemerged (`12381e3`) en LIVE geverifieerd:**
+**PR #57 is gemerged (`12381e3`) en LIVE geverifieerd:**
 `/llms.txt` HTTP 200 op prod (20 registertabellen, gemeten syncdatums) en de SourceBadge op alle vier de
 Ontdek-charts, elk aan zijn eigen tabel-ID gebonden. Deploy-run 29634774649 groen incl. de nieuwe
 /llms.txt-smoke. ⚠ Twee keer gemeten merge-val: de squash-message vouwt branch-commit-subjects in de body — een
@@ -31,16 +31,19 @@ s54-geregresseerde bijstand-klasse is structureel hersteld, onafhankelijk van he
 overblijft voor een begeleid venster: alleen de RerankProfile-co-kalibratie (×4 rondes + separation gap), de
 live bijstand-onboarding-smoke en de maandelijkse drift-canary** (protocol-doc heeft de stand).
 
-## ⚠ Owner-datums — 22/7 en 23/7 zijn GEMIST (gemeten 24-07, sessie-55-onderbreking van zes dagen)
+## Owner-datums — 22/7 en 23/7 GEMIST tijdens de onderbreking, maar ✅ INGEHAALD op 24-07 (sessie 55, owner-aanwezig)
 
-**Read-only tegen de live DB gemeten op 2026-07-24: `85773NED` laatst gesynct 02-07, `83693NED` 16-07, nul
-ingestion-batches sinds 19/7.** De release-syncs van wo 22/7 en do 23/7 zijn dus niet gedraaid; de
-staleness-machinerie heeft intussen eerlijk gewaarschuwd. **Eerste begeleide actie van deze sessie:**
+Gemeten en uitgevoerd op 2026-07-24: `83693NED` schoon gesynct (+8 rijen, julicijfer 2026MM07, batch 26);
+`85773NED` stopte eerst eerlijk op de nieuwe release-periodecodes (2026MM06/2026KW02) en ging per ontwerp in
+quarantaine → beoordeeld → `--rebaseline --accept-new-codes` (+16 rijen, batch 27, weer active). Spot-checks
+LLM-vrij exact: consumentenvertrouwen juli **−35**, gemiddelde verkoopprijs juni **€496.235** (beide Definitief).
 
-1. **Inhaal-sync `85773NED`** (generale huizenprijzen) + **inhaal-sync `83693NED`** (julicijfer
-   consumentenvertrouwen) — de normale RUNBOOK-procedure, alleen later; CBS-data staat er al dagen.
-2. **#132 route B** — check was al verschuldigd op/na 19/7, ook inhalen.
-3. **~30/7** — BBP+PPI-syncs (dichtbij!); `85880NED` MOET via de chunked escape hatch (RUNBOOK).
+**Nog open aan datums:**
+1. **~30/7** — BBP+PPI-syncs (dichtbij!); `85880NED` MOET via de chunked escape hatch (RUNBOOK).
+2. **#132 route B** — wacht op de expliciete owner-GO (uitstelweek is voorbij; forks==0 gemeten 24-07 — de
+   go/no-go-voorwaarde houdt). NB: de interim-regel (PR-verwijzingen in docs als platte tekst) was sinds ~17/7
+   geschonden geraakt (29 live links, ook door sessie 55 zelf) — op 24-07 allemaal geneutraliseerd; bewaak hem
+   in elke wrap-up-sweep.
 
 ## Owner-menu (ontwerpen liggen klaar, zie het ▶-blok in STATUS voor links)
 

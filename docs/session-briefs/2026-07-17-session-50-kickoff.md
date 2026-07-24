@@ -4,8 +4,8 @@ Ga verder met checkdecijfers.nl. Lees eerst CLAUDE.md, dan docs/STATUS.md — he
 Productie is LIVE en verwerkt echt geld; Stefan (geen developer) is de enige gebruiker — leg alles uit in gewone taal.
 
 **De klus, in volgorde:**
-1. **Review + merge de twee wachtende PRs** (owner-besluit): [PR #54](https://github.com/Stefan7168/checkdecijfers/pull/54)
-   (#166-guard, geld-pad, gate groen) en [PR #55](https://github.com/Stefan7168/checkdecijfers/pull/55) (tabel #3
+1. **Review + merge de twee wachtende PRs** (owner-besluit): PR #54
+   (#166-guard, geld-pad, gate groen) en PR #55 (tabel #3
    `85770NED` PPI volledig geprept ZONDER vocabulaire — CC8-CC10 draaien al op de poort).
 2. **Beslis tabel #2 `85880NED` (BBP, release 30/7):** de lean slice is door de validator weerlegd (26/210 maten nul
    rijen) — kies: volle ingest (~99.676 cellen, ~18MB fixture) óf een kleine CbsSlice-measure-allowlist-uitbreiding

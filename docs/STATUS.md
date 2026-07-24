@@ -18,7 +18,7 @@ tiers). Four deliverables, zero product-LLM spend / prompt bytes / DDL:
 recall is NOT the gap, BUT the protocol's cap-6 rank-ordered walk would NOT reach it (~15 higher-ranked Regulier tables in between) —
 the escalation WP must walk the FULL remaining Regulier shortlist through the fit gate or use a deliverability-aware order; measured
 record in [session-briefs/2026-07-19-172-escalation-protocol.md](session-briefs/2026-07-19-172-escalation-protocol.md).
-(2) **#170 smalls 1+2 ✅ DONE + LIVE** (built autonomous on [PR #57](https://github.com/Stefan7168/checkdecijfers/pull/57); owner
+(2) **#170 smalls 1+2 ✅ DONE + LIVE** (built autonomous on PR #57; owner
 returned in-chat same day ("Go") → squash-merge `12381e3` under the standing #118 owner-present authorization; deploy run 29634774649
 gate+deploy green; LIVE-verified: /llms.txt HTTP 200 on prod with 20 registry tables + measured sync dates, SourceBadge on all four
 Ontdek charts each bound to its own table id + own sync date): SourceBadge (answer chips + ChartView; no cadence promises) + honest
@@ -45,12 +45,17 @@ catch-all already serves the honest 'internal' refusal on every production path)
 internal-refusal ADMIN ALERT (`maybeAlertInternalRefusal`, #144 posture, both turns at the shared respond-audited site; send path
 deduplicated into one helper; 5 hermetic tests). The #121 one-line owner question (template validator-verdict: serve+alert vs
 fail-closed) REMAINS OPEN — different signal than the throw path.
-▶ NEXT — ⚠ FIRST: **the 22/7 and 23/7 release syncs were MISSED during the six-day interruption (MEASURED against the live DB
-2026-07-24: `85773NED` last synced 2026-07-02, `83693NED` 2026-07-16, ZERO ingestion batches since 19/7).** Catch-up syncs are the
-first owner-supervised action (normal RUNBOOK procedure, just late — staleness machinery warned honestly meanwhile), together with the
-overdue #132 route-B check (was due on/after 19/7) and the ~30/7 BBP+PPI window (`85880NED` via the chunked hatch — days away). Then
-the owner-decision menu below (#138 OFF the menu — done; #172 needs only its supervised calibration/smoke half; #121 needs only its
-one-line answer). #170 residual: (3) chart-download bundles with the Phase-2 OG WP, (4) annotations/toggles open. Kickoff:
+(6) **The MISSED 22/7 + 23/7 release syncs ✅ CAUGHT UP (2026-07-24, owner-present "ga verder"):** measured first (zero ingestion
+batches since 19/7), then executed: `83693NED` synced clean (+8 rows, julicijfer 2026MM07, batch 26); `85773NED` stopped honestly on
+the release's new period codes (2026MM06/2026KW02 — "new codes never pass silently"), the first failed attempt quarantined the table
+(designed behavior, batch 25), reviewed → `--rebaseline --accept-new-codes` synced it (+16 rows, batch 27), status active again.
+Spot-checks LLM-free + exact: consumentenvertrouwen juli −35 (Definitief), gemiddelde verkoopprijs juni €496.235 (Definitief). Also:
+the #132 interim rule (PR refs as PLAIN TEXT in docs) had been violated since ~17/7 incl. by this session — all 29 live PR links
+re-neutralized; forks_count measured 0 on 2026-07-24 (route-B go/no-go still holds).
+▶ NEXT: the ~30/7 BBP+PPI window (`85880NED` via the chunked hatch — days away), the #132 route-B GO (owner's explicit call, deferral
+week has passed, forks==0 measured), then the owner-decision menu below (#138 OFF the menu — done; #172 needs only its supervised
+calibration/smoke half; #121 needs only its one-line answer). #170 residual: (3) chart-download bundles with the Phase-2 OG WP,
+(4) annotations/toggles open. Kickoff:
 [session-briefs/2026-07-18-session-56-kickoff.md](session-briefs/2026-07-18-session-56-kickoff.md). Full entry in
 [status-archive.md](status-archive.md).)**
 
@@ -151,7 +156,7 @@ approval per #118(b)) + the supervised go-live EXECUTED (calibration, fail-open+
 LIVE and ACTIVE in production; the whole session-44 data-integrity hunt list is now CLOSED.)
 
 - **#144 — the semantic fabrication check — ✅ DONE END-TO-END (ADR [034](decisions/034-semantic-fabrication-check.md); PR
-  [#47](https://github.com/Stefan7168/checkdecijfers/pull/47) squash `94b90e4` + go-live commits `8eef383`/`deabbfb`; all gates + deploys green,
+  PR #47 squash `94b90e4` + go-live commits `8eef383`/`deabbfb`; all gates + deploys green,
   prod HTTP 307).** The additive REJECT-ONLY cheap-tier LLM checker over validated bodies that leaned on a residual-prone exemption
   (`ClassifiedToken.soft`) — the shared close for the #140 (descriptor-echo) and #141 (temporal-marker+un-listed-noun) deterministic ceilings.
   Corpus-MEASURED scope (the brief's "most answers skip the call" assumption inverted: naive = 100% trigger on the 18 stored legit bodies →

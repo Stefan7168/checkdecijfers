@@ -21,6 +21,13 @@ on top.
   'internal' refusal, on every production path. The REAL gap was silence, so the fix became an admin alert instead
   of a try/catch nobody needed. Same lesson as the marathon's own #162/#164 correction: briefs are inputs to verify,
   not specs to obey — building the brief as written would have added dead code and missed the actual gap.
+- **An interim rule without a sweep line decays: the #132 plain-text-PR-refs rule was violated 29 times in five
+  days — including by this session.** The rule (docs reference PRs as plain text while route B is pending,
+  recorded 2026-07-12 in the #132 row) was followed nowhere after ~17/7: sessions kept writing live PR links out
+  of habit, and this session's own wrap-up docs added more. Caught only because the #132 row was re-READ for the
+  route-B check. Fix applied (all 29 re-neutralized) + the durable rule: an interim rule is only real if the
+  wrap-up stale-doc sweep greps for its violation pattern (`github.com/.../pull`) — add the grep, not just the
+  rule.
 - **The parallel-load ceiling is machine-load-bound, not a constant to keep chasing:** third occurrence this
   session, now AT the raised 120s ceiling (audit suite, 14 parallel PGlite boots, `semantic-check-r8` timed out;
   solo-green 12.9s). The durable asset is the diagnostic procedure (name it → solo → at-ceiling+solo-green =
