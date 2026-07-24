@@ -21,6 +21,15 @@ resumed on the owner's "ok fix and dan wrap up after"; every date below verified
   `85773NED` last_sync_at 2026-07-02, `83693NED` 2026-07-16, zero `ingestion_batches` rows since 2026-07-19
   (read-only live-DB check). The #132 route-B check (due on/after 19/7) is also still outstanding. Catch-up is the
   next session's FIRST owner-supervised action; ~30/7 BBP+PPI (chunk hatch) is days away.
+- **→ SAME DAY, later: #121 ✅ FULLY RESOLVED — the owner answered the one-line question (OPTION A: serve + alert)
+  after a concrete-example read-back (the first phrasing drew "kan geen beslissing maken"; the −39 scenario landed
+  it).** Shipped: `maybeAlertTemplateValidationFailure` (source 'template' + recorded ok:false — the only servable
+  failing-verdict shape; both turns; reuses `sendAdminAlertEmail`) + the reconstruct.ts R8 marker (distinct label
+  "KNOWN-failing at serve time (#121 serve+alert)" vs the bare corruption label; heals on validator fix — PR #15
+  pattern). Proven: 3 hermetic tests (hook guard incl. llm-source/ok-true/refusal negatives; email content; R8
+  label on a real mutated record with the assembled-text check kept green) + `audit:verify -- 1 256` on ALL prod
+  rows exit 0 (229/231 clean + the 2 pinned divergences) + the full verification block green (GATE PASS,
+  web 378/378, real build). #132 re-asked same day: owner — "Vandaag beslis ik niet" → row stays awaiting GO.
 - **→ SAME DAY, owner-present ("ga verder"): both catch-up syncs ✅ EXECUTED + VERIFIED.** `83693NED` clean
   (+8 rows, 2026MM07, 0 corrections, batch 26). `85773NED`: first attempt stopped honestly at dimension_mapping on
   the release's new period codes (2026MM06/2026KW02, batch 25) and quarantined the table per design; cause reviewed

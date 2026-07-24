@@ -197,9 +197,18 @@ function checkAnswerReconstruction(record: AuditRecord, problems: string[]): voi
   // time passes again — unless the stored result no longer backs it.
   const validation = validateAnswerBody(answer.body, result);
   if (!validation.ok) {
-    problems.push(
-      ...validation.problems.map((p) => `stored body fails re-validation against stored result: ${p}`),
-    );
+    // #121 (owner decision 2026-07-24, option A — serve + alert): a template
+    // body its own validator rejected is SERVED with the verdict recorded, so
+    // a stored ok:false on a template answer marks the failure as KNOWN at
+    // serve time (a validator blind spot, made loud by the admin alert) —
+    // triage it apart from silent corruption. Once the validator blind spot
+    // is fixed, this re-validation passes and the row heals (the PR-15
+    // pattern); until then the distinct label keeps audit:verify honest.
+    const knownAtServe = answer.source === 'template' && answer.validation?.ok === false;
+    const label = knownAtServe
+      ? 'stored template body was KNOWN-failing at serve time (#121 serve+alert)'
+      : 'stored body fails re-validation against stored result';
+    problems.push(...validation.problems.map((p) => `${label}: ${p}`));
   }
 
   // R4, positional: the attribution line must re-derive byte-identically from

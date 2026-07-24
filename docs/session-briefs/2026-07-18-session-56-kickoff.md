@@ -40,19 +40,20 @@ LLM-vrij exact: consumentenvertrouwen juli **−35**, gemiddelde verkoopprijs ju
 
 **Nog open aan datums:**
 1. **~30/7** — BBP+PPI-syncs (dichtbij!); `85880NED` MOET via de chunked escape hatch (RUNBOOK).
-2. **#132 route B** — wacht op de expliciete owner-GO (uitstelweek is voorbij; forks==0 gemeten 24-07 — de
-   go/no-go-voorwaarde houdt). NB: de interim-regel (PR-verwijzingen in docs als platte tekst) was sinds ~17/7
-   geschonden geraakt (29 live links, ook door sessie 55 zelf) — op 24-07 allemaal geneutraliseerd; bewaak hem
-   in elke wrap-up-sweep.
+2. **#132 route B** — op 24-07 opnieuw gevraagd; owner: **"Vandaag beslis ik niet"** → de rij blijft op de
+   expliciete GO wachten; **vraag het deze sessie opnieuw** (T-0-check forks==0 blijft de go/no-go; op 24-07
+   gemeten 0). NB: de interim-regel (PR-verwijzingen in docs als platte tekst) was sinds ~17/7 geschonden
+   geraakt (29 live links, ook door sessie 55 zelf) — op 24-07 allemaal geneutraliseerd; bewaak hem in elke
+   wrap-up-sweep.
 
 ## Owner-menu (ontwerpen liggen klaar, zie het ▶-blok in STATUS voor links)
 
-WP26 (trial-conversie; safelist-read-back → begeleide bouw, €5/€10) · WP30c (beslismemo, 4 opties) · #121
-(alleen nog de één-regel-vraag: template-validator-verdict serve+alert of fail-closed — **de onvoorwaardelijke
-helft is ✅ KLAAR, 24-07**: gemeten correctie op de brief (throw was al netjes gevangen → internal refusal; het
-gat was stilte) + internal-refusal-admin-alert op beide beurten, #144-postuur) · #154 (rider op elk begeleid
-venster) · #162 (na WP26) ·
+WP26 (trial-conversie; safelist-read-back → begeleide bouw, €5/€10) · WP30c (beslismemo, 4 opties) · #154
+(rider op elk begeleid venster) · #162 (na WP26) ·
 #170 rest: (3) chart-download bundelen met de Phase-2 OG-WP, (4) annotaties/toggles.
+**#121 is ✅ VOLLEDIG RESOLVED (24-07, van het menu af):** ochtend = throw-helft (internal-refusal-alert, gemeten
+correctie op de brief); middag = owner koos optie A (serveren + alert + R8-marker) na een concreet-voorbeeld-
+read-back — gebouwd, getest, audit:verify 1-256 schoon.
 **#138 is ✅ KLAAR + LIVE** (zelfde dag gebouwd, commit `f2d015a` — van het menu af).
 Residuen: #131, #104/#112 (live-spend), /login-cosmetiek, #151-backfill (begeleid). Owner-clicks open: GitHub
 Budgets, Resend-confirm, optionele Vercel-Firewall-rule.

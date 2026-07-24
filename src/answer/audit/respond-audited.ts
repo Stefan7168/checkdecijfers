@@ -28,7 +28,11 @@ import type { ConversationContext } from '../context/types.ts';
 import { attachWebAugmentation, type WebBilling } from '../../websearch/attach.ts';
 import type { WebSearchClient } from '../../websearch/client.ts';
 import type { AuditSourceTag } from './types.ts';
-import { maybeAlertInternalRefusal, maybeAlertSemanticCheckSkip } from './alerts.ts';
+import {
+  maybeAlertInternalRefusal,
+  maybeAlertSemanticCheckSkip,
+  maybeAlertTemplateValidationFailure,
+} from './alerts.ts';
 import { LlmCallTracker } from './track.ts';
 import { buildAuditRow, insertAuditRecord, type AuditContext } from './write.ts';
 
@@ -191,6 +195,9 @@ export async function answerQuestionAudited(
   // #121: a served 'internal' refusal (the pipeline's honest catch-all for
   // unexpected throws, template rung included) becomes loud — same posture.
   await maybeAlertInternalRefusal(audited, wrap.userId);
+  // #121 option A (owner, 2026-07-24): a template answer served with a
+  // failing validator verdict becomes loud too — same posture.
+  await maybeAlertTemplateValidationFailure(audited, wrap.userId);
   return audited;
 }
 
@@ -247,5 +254,7 @@ export async function answerClarificationReplyAudited(
   await maybeAlertSemanticCheckSkip(audited, wrap.userId);
   // #121: same internal-refusal alert on the reply turn.
   await maybeAlertInternalRefusal(audited, wrap.userId);
+  // #121 option A: same template-validation alert on the reply turn.
+  await maybeAlertTemplateValidationFailure(audited, wrap.userId);
   return audited;
 }

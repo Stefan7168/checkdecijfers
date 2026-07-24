@@ -137,6 +137,79 @@ export async function alertInternalRefusal(
   }
 }
 
+// #121 option A (owner decision 2026-07-24, in-chat): a TEMPLATE answer that
+// fails its own validator is SERVED (the template renders values straight
+// from cells — structurally incapable of fabricating; a failing verdict
+// indicates a VALIDATOR blind spot, the −39 precedent) — and the owner is
+// told immediately. Same fail-soft posture as the alerts above.
+
+export interface TemplateValidationAlert {
+  auditId: number | null;
+  userId: string | null;
+  question: string;
+  problems: string[];
+}
+
+/** Send the owner alert for ONE served template answer with a failing
+ * validator verdict. Exported separately so tests can stub fetch. */
+export async function alertTemplateValidationFailure(
+  alert: TemplateValidationAlert,
+  fetchImpl: typeof fetch = fetch,
+): Promise<void> {
+  const summary =
+    `TEMPLATE answer served with a FAILING validator verdict (audit row ` +
+    `${alert.auditId ?? 'unknown'}, user ${alert.userId ?? 'anonymous'}) — likely a validator ` +
+    `blind spot: ${alert.problems.join('; ') || 'no problems recorded'}`;
+  // The log line is the floor: present even without email configuration.
+  console.error(`ADMIN ALERT: ${summary}`);
+
+  try {
+    await sendAdminAlertEmail(
+      'checkdecijfers: sjabloon-antwoord geserveerd met afgekeurd validator-verdict',
+      [
+        'Een sjabloon-antwoord is geserveerd terwijl de automatische dubbelcheck het afkeurde (#121, owner-keuze optie A: tonen + melden).',
+        '',
+        'Wat dit betekent: het sjabloon plakt letterlijk databasewaarden in een zin en kan geen getal verzinnen — een afkeurend verdict wijst vrijwel zeker op een blinde vlek in de CHECKER zelf (het −39-precedent uit PR #15). Het antwoord is dus zeer waarschijnlijk correct; de checker verdient een fix. Zodra de checker gerepareerd is, "heelt" de auditrij vanzelf bij herverificatie.',
+        '',
+        `Audit-rij: ${alert.auditId ?? 'onbekend'}`,
+        `Gebruiker: ${alert.userId ?? 'anoniem'}`,
+        `Vraag: ${alert.question}`,
+        `Afkeur-redenen: ${alert.problems.join('; ') || 'geen vastgelegd'}`,
+        `Tijd: ${new Date().toISOString()}`,
+        '',
+        'Naslaan: npm run audit:verify -- <rij> <rij> (de rij toont het #121 serve+alert-label).',
+      ].join('\n'),
+      fetchImpl,
+    );
+  } catch (error) {
+    console.error('template-validation admin alert email failed (answer unaffected):', error);
+  }
+}
+
+/** The hook respond-audited calls after persisting: fires ONLY on a served
+ * ANSWER whose source is the template rung AND whose recorded validator
+ * verdict is ok:false (only template bodies can be served that way — the LLM
+ * rungs retry/fall through on a failing verdict). Never throws. */
+export async function maybeAlertTemplateValidationFailure(
+  audited: AuditedResponse,
+  userId: string | null,
+): Promise<void> {
+  try {
+    if (audited.response.kind !== 'answer') return;
+    const answer = audited.response.answer;
+    if (answer.source !== 'template') return;
+    if (answer.validation?.ok !== false) return;
+    await alertTemplateValidationFailure({
+      auditId: audited.auditId,
+      userId,
+      question: audited.response.question,
+      problems: answer.validation.problems ?? [],
+    });
+  } catch (error) {
+    console.error('template-validation admin alert hook failed (answer unaffected):', error);
+  }
+}
+
 /** The hook respond-audited calls after persisting: fires ONLY on a served
  * refusal with reason 'internal'. Never throws. */
 export async function maybeAlertInternalRefusal(

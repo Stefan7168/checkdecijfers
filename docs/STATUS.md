@@ -52,9 +52,15 @@ the release's new period codes (2026MM06/2026KW02 — "new codes never pass sile
 Spot-checks LLM-free + exact: consumentenvertrouwen juli −35 (Definitief), gemiddelde verkoopprijs juni €496.235 (Definitief). Also:
 the #132 interim rule (PR refs as PLAIN TEXT in docs) had been violated since ~17/7 incl. by this session — all 29 live PR links
 re-neutralized; forks_count measured 0 on 2026-07-24 (route-B go/no-go still holds).
-▶ NEXT: the ~30/7 BBP+PPI window (`85880NED` via the chunked hatch — days away), the #132 route-B GO (owner's explicit call, deferral
-week has passed, forks==0 measured), then the owner-decision menu below (#138 OFF the menu — done; #172 needs only its supervised
-calibration/smoke half; #121 needs only its one-line answer). #170 residual: (3) chart-download bundles with the Phase-2 OG WP,
+(7) **#121 ✅ FULLY RESOLVED (2026-07-24, owner in-chat chose OPTION A after a concrete-example read-back — the −39 scenario):**
+serve + admin-alert + R8 marker shipped same day: `maybeAlertTemplateValidationFailure` (template source + recorded ok:false, both
+turns, #144 posture) + the reconstruct.ts distinct label "KNOWN-failing at serve time (#121 serve+alert)" (triaged apart from silent
+corruption, heals when the validator blind spot is fixed). Proven: 3 hermetic tests + `audit:verify -- 1 256` against ALL prod rows
+exit 0 (229/231 clean + the 2 known pinned divergences — nothing new). Full verification block green again (GATE PASS, web 378/378,
+real build). #132 asked again same day: owner — "Vandaag beslis ik niet"; row stays awaiting GO, next session re-asks.
+▶ NEXT: the ~30/7 BBP+PPI window (`85880NED` via the chunked hatch — days away), the #132 route-B GO (re-ask; forks==0 measured
+24-07), then the owner-decision menu below (#138 and #121 BOTH OFF the menu — done; #172 needs only its supervised
+calibration/smoke half). #170 residual: (3) chart-download bundles with the Phase-2 OG WP,
 (4) annotations/toggles open. Kickoff:
 [session-briefs/2026-07-18-session-56-kickoff.md](session-briefs/2026-07-18-session-56-kickoff.md). Full entry in
 [status-archive.md](status-archive.md).)**

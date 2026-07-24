@@ -21,6 +21,12 @@ on top.
   'internal' refusal, on every production path. The REAL gap was silence, so the fix became an admin alert instead
   of a try/catch nobody needed. Same lesson as the marathon's own #162/#164 correction: briefs are inputs to verify,
   not specs to obey — building the brief as written would have added dead code and missed the actual gap.
+- **An owner question that draws "ik kan me er niets bij voorstellen" needs a CONCRETE HISTORICAL EXAMPLE, not a
+  sharper abstraction.** The #121 one-liner ("template fails its own validator: serve or refuse?") was
+  well-defined and still undecidable for the owner as phrased. Retelling it as the real −39 incident — correct
+  answer, checker stumbled over the minus sign, what should the user see at that moment? — produced an instant,
+  confident choice (option A). Rule for owner read-backs: lead with the one real incident the question came from;
+  the abstraction is for the docs, the incident is for the decision.
 - **An interim rule without a sweep line decays: the #132 plain-text-PR-refs rule was violated 29 times in five
   days — including by this session.** The rule (docs reference PRs as plain text while route B is pending,
   recorded 2026-07-12 in the #132 row) was followed nowhere after ~17/7: sessions kept writing live PR links out

@@ -64,7 +64,11 @@ internal error. Fix regardless of the owner choice: wrap the template rung; on t
 > fail-closed catch-all that already serves the honest `internal` refusal (respond.ts:344/410; no external
 > `respondToIntent` caller exists), so no extra try/catch was needed. What WAS true: the failure is SILENT. Shipped
 > accordingly: the internal-refusal ADMIN ALERT (`maybeAlertInternalRefusal`, alerts.ts, #144 posture, both
-> respond-audited turns). The one-line owner question above (option 1 vs 2) REMAINS OPEN and untouched. **Owner question is exactly one line: option 1 or option 2
+> respond-audited turns). The one-line owner question above (option 1 vs 2) REMAINS OPEN and untouched.
+
+> **✅ OWNER ANSWERED (2026-07-24, in-chat, after a concrete-example read-back): OPTION 2 — serve + admin-alert +
+> R8 marker. Shipped same day** (`maybeAlertTemplateValidationFailure` + the reconstruct.ts "KNOWN-failing at
+> serve time" label; 3 hermetic tests; audit:verify 1–256 clean). #121 is fully closed; this §b is now historical. **Owner question is exactly one line: option 1 or option 2
 (recommendation: 2).** Decide before WP30c multiplies the shape surface (the row's own trigger). ~Half a session,
 zero LLM spend; tests: seeded validator-blind-spot template serve+alert (or refuse), template-throw → internal
 refusal, R8 marker round-trip.
