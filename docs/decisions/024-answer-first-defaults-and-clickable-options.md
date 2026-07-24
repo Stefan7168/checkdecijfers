@@ -92,3 +92,24 @@ WP26 ships **no ledger or pricing change**. A defaulted answer returns `kind:'an
 - Owner deciding either pricing sweetener (decision 6) → a follow-up ledger/config change, not a re-open of this ADR.
 - Free-text follow-ups (not clicks) continuing to dead-end after A ships → the residual conversation-memory scope (ADR [021](021-conversation-memory-structured-context.md) limitations; a click is a structured follow-up, free text is still the harder open problem).
 - Monthly maintenance: confirm B15/B16 still pin the non-safelisted classes as clarifying.
+
+## As-built addendum — WP26c (session 56, 2026-07-25)
+
+The sub-part the execute-brief (§6) proposed and the owner put in scope: a misfired refusal may carry ONE
+deterministic rescue chip. Built as designed, with three notes.
+
+1. **The refusal is untouched.** Neither the classification nor the refusal TEXT changes — you cannot pin an
+   unstable parse (the s54 bistability lesson), so nothing here tries to. The chip sits beside an honest refusal.
+2. **The brief's "period ≤ freshest" gate was folded into the dry-run.** An unpublished period simply fails
+   `echoServability`, which is the same source of truth every other chip in the product is gated on. One check
+   instead of two that could drift apart.
+3. **Taking the chip must not re-enter the parse that misfired** — which meant the rescue needs mechanism A's
+   take-path, and therefore a pending. A refusal that carries a pending is new, so two rules keep it honest:
+   the pending is marked `rescueOnly`, and **anything the user types that is not the chip is answered as a FRESH
+   question** — enforced client-side (the ordinary question path, so on-demand onboarding and the table finder
+   still apply — a review finding) and belted server-side. A rescue pending also does not change the input
+   placeholder: nothing was asked, so the box must not look like it is waiting for an answer.
+
+Flag: rides `CLARIFY_CLICK_ENABLED` (it is mechanism A's machinery). Period detection is deliberately narrow —
+month+year and bare year only, and it bails when a question names more than one distinct period, because a
+missing rescue is a cosmetic loss while a wrong one is a product bug.

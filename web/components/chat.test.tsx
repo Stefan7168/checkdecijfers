@@ -386,6 +386,34 @@ describe('Chat — WP23 display smalls', () => {
     expect(screen.getByText(assumptionLine)).toBeInTheDocument();
   });
 
+  it('a rescue chip takes the reply path, but any OTHER text takes the question path (WP26c)', async () => {
+    // Review finding (session 56): replyToClarification deliberately wires no
+    // table finder, so routing a fresh question through it would silently drop
+    // on-demand onboarding. Only the chip itself may take that path.
+    const chip = '2024 is al gepubliceerd — toon het cijfer voor inflatie.';
+    const refusal = {
+      kind: 'refusal',
+      reason: 'forecast',
+      text: 'CBS publiceert gerealiseerde cijfers, geen voorspellingen.',
+      suggestions: [chip],
+      pending: { version: 1, question: 'q', referenceDate: '2026-08-15', axes: ['measure'], options: [chip], rescueOnly: true },
+    } as unknown as ComposedResponse;
+    askQuestion.mockResolvedValue(outcome({ kind: 'ok', auditId: 1, netCost: 0, response: refusal }));
+    render(<Chat />);
+    await submit('Wat was de inflatie in 2024?');
+    expect(await screen.findByText(refusal.text as unknown as string)).toBeInTheDocument();
+
+    // Something else entirely ⇒ askQuestion, NOT replyToClarification.
+    askQuestion.mockClear();
+    replyToClarification.mockClear();
+    askQuestion.mockResolvedValue(
+      outcome({ kind: 'ok', auditId: 2, netCost: 20, response: fakeAnswerResponse({ cells: [fakeCell()] }) as ComposedResponse }),
+    );
+    await submit('Hoeveel mensen zitten in de bijstand?');
+    expect(askQuestion).toHaveBeenCalledTimes(1);
+    expect(replyToClarification).not.toHaveBeenCalled();
+  });
+
   it('renders no disclosure when no axis was defaulted', async () => {
     const response = fakeAnswerResponse({ body: 'Amsterdam telde 931.298 inwoners.', cells: [fakeCell()] });
     askQuestion.mockResolvedValue(

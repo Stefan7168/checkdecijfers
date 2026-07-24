@@ -574,6 +574,9 @@ export interface RefusalEnvelopeInput {
    * site omits it → [] (the answer pipeline's refusal chips exist only where a
    * boundary period is computed). */
   suggestions?: string[];
+  /** WP26c (ADR 024): the rescue-chip state, set ONLY by respond.ts's misfire
+   * site. Present-only on the envelope. */
+  pending?: PendingClarification;
 }
 
 export function toRefusalResponse(input: RefusalEnvelopeInput): RefusalResponse {
@@ -596,6 +599,9 @@ export function toRefusalResponse(input: RefusalEnvelopeInput): RefusalResponse 
     // #134(a): additive structural field; [] on every refusal but the two
     // period-coverage kinds the caller gates on. Never touches `text` (R8).
     suggestions: input.suggestions ?? [],
+    // WP26c: present-only, so every refusal without a rescue keeps the exact
+    // pre-WP26 field set.
+    ...(input.pending ? { pending: input.pending } : {}),
   };
 }
 

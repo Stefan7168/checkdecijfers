@@ -404,7 +404,16 @@ export function Chat({
       // thread for a reply. Non-thread-aware call sites (Dashboard, tests) omit
       // it, keeping their exact 3-/4-argument shapes byte-identical.
       let outcome: AskOutcome;
-      if (pending) {
+      // WP26c (ADR 024): a RESCUE pending is not an open clarification round —
+      // it exists only so its one chip can resolve deterministically. If the
+      // user types anything else, this is their next QUESTION and must take the
+      // ordinary question path: replyToClarification deliberately wires no table
+      // finder, so routing a fresh question through it would silently drop
+      // on-demand table onboarding. (The server keeps its own belt for a client
+      // that gets this wrong; this branch is what makes the common case right.)
+      const takesRescue =
+        pending?.rescueOnly !== true || pending.options.some((o) => o.trim() === text.trim());
+      if (pending && takesRescue) {
         outcome = threadAware
           ? await replyToClarification(pending, text, requestId, selection, capturedThreadId)
           : websearch
@@ -531,8 +540,20 @@ export function Chat({
       // ⟨A6⟩: capture the thread this clarification attached to, alongside
       // `pending`, so the reply binds to it regardless of any later sidebar
       // switch (which clears both via the loadNonce reset).
-      if (response.kind === 'clarification') {
-        setPending(response.pending);
+      // WP26c (ADR 024): a MISFIRED refusal may carry a rescue pending — the
+      // state that lets its one chip resolve deterministically instead of
+      // re-entering the parse that misfired. It is explicitly `rescueOnly`, and
+      // the server answers any NON-matching reply as a fresh question, so
+      // holding it here cannot turn the user's next unrelated question into a
+      // clarification-reply merge.
+      const carried =
+        response.kind === 'clarification'
+          ? response.pending
+          : response.kind === 'refusal'
+            ? (response.pending ?? null)
+            : null;
+      if (carried) {
+        setPending(carried);
         setCapturedThreadId(outcome.threadId);
       } else {
         setPending(null);
@@ -828,7 +849,12 @@ export function Chat({
           onChange={(e) => setInput(e.target.value)}
           disabled={busy}
           maxLength={500}
-          placeholder={pending ? pending.questionNl : 'Stel een vraag…'}
+          placeholder={
+            // WP26c: a RESCUE pending must not make the box look like it is
+            // waiting for an answer — nothing was asked. Only a real
+            // clarification round echoes its question here.
+            pending && pending.rescueOnly !== true ? pending.questionNl : 'Stel een vraag…'
+          }
           className="flex-1 rounded-md border border-line-strong bg-paper-raised px-3 py-2 text-sm text-ink placeholder:text-ink-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:bg-paper-sunken"
         />
         <button

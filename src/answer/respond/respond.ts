@@ -11,7 +11,13 @@
 // rethrows to the caller and never serves a partial/guessed answer
 // (principle c).
 import type { Db } from '../../db/types.ts';
-import { echoServability, runQuery, type QueryOutcome, type ValidatedResult } from '../../query/index.ts';
+import {
+  echoServability,
+  freshestForCanonical,
+  runQuery,
+  type QueryOutcome,
+  type ValidatedResult,
+} from '../../query/index.ts';
 import { buildChartSpec } from '../../chart/index.ts';
 import { composeAnswer, type ComposeOptions } from '../compose/index.ts';
 import { parseQuestion, type ParseQuestionOptions } from '../intent/parse.ts';
@@ -39,6 +45,7 @@ import type { TableFinder } from '../intent/policy.ts';
 import type { OnboardedMeasure } from '../intent/prompt.ts';
 import { CBS_SOURCE_KEY } from '../../sources/registry.ts';
 import type { SourceSelection } from '../../websearch/types.ts';
+import { buildRescueOffer } from './rescue.ts';
 import { checkStaleness } from './staleness.ts';
 import { buildRefusalSuggestions, buildSuggestions } from './suggestions.ts';
 import type {
@@ -358,11 +365,53 @@ async function respondToParseOutcome(
     conversationContext?: ConversationContext | null;
     /** #144 (ADR 034): rides through to respondToIntent → composeAnswer. */
     semanticCheck?: ComposeOptions['semanticCheck'];
+    /** WP26 (ADR 024): the two rollout flags — the rescue chip below is part of
+     * mechanism A's machinery, so it rides A's flag. */
+    clickOptionsEnabled?: boolean;
+    answerFirstEnabled?: boolean;
   },
 ): Promise<ComposedResponse> {
   if (parse.kind === 'refusal') {
     const built = await buildParseRefusal(db, parse);
-    return toRefusalResponse({ question, built, parse, queryRefusal: null });
+    // WP26c (ADR 024 §6): the two MEASURED misfire classes — a past-tense
+    // question read as a forecast, a bare data question read as a meta one —
+    // may carry ONE deterministic rescue chip. The refusal text is untouched
+    // and still honest; the chip is only offered when code can PROVE the asked
+    // figure is loaded and servable. FAIL-OPEN: a hiccup here must never turn
+    // an honest refusal into an internal error.
+    let rescue: Awaited<ReturnType<typeof buildRescueOffer>> = null;
+    if (options.clickOptionsEnabled === true) {
+      try {
+        rescue = await buildRescueOffer(parse, {
+          servability: (intent) =>
+            echoServability(db, intent, { answerFirstEnabled: options.answerFirstEnabled === true }),
+          freshest: (key) => freshestForCanonical(db, key),
+        });
+      } catch {
+        rescue = null;
+      }
+    }
+    return toRefusalResponse({
+      question,
+      built,
+      parse,
+      queryRefusal: null,
+      ...(rescue
+        ? {
+            suggestions: [rescue.label],
+            pending: {
+              version: RESPONSE_SCHEMA_VERSION,
+              question,
+              referenceDate: options.referenceDate,
+              axes: ['measure'],
+              questionNl: built.text,
+              options: [rescue.label],
+              clickOptions: [rescue.option],
+              rescueOnly: true,
+            },
+          }
+        : {}),
+    });
   }
   if (parse.kind === 'onboarding') {
     // WP16 sub-part 2 (ADR 026): the finder confidently picked a CBS table for
@@ -479,6 +528,15 @@ export async function respondToClarificationReply(
           templateOnly: true,
         });
       }
+    }
+
+    // WP26c: a rescue pending is NOT an open clarification round — it exists
+    // only to carry the chip. Anything the user types instead is their NEXT
+    // question and must be answered as one; merging it with the refused
+    // question would be a silent, confusing regression (and would consume the
+    // one clarification round nobody opened).
+    if (pending.rescueOnly === true) {
+      return await respondToQuestion(db, reply, options);
     }
 
     const clarifyOptions: ClarifyReplyOptions = {

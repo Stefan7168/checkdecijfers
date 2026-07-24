@@ -163,6 +163,13 @@ export interface PendingClarification {
    * never a fabricated number. Absent (flag off, or nothing servable was
    * offered) → the pending is byte-identical to the pre-WP26 one. */
   clickOptions?: ClickOption[];
+  /** WP26c (ADR 024): this pending exists ONLY to carry a rescue chip on a
+   * misfired REFUSAL — it is not an open clarification round. A reply that
+   * matches the chip is taken deterministically; anything else is treated as a
+   * FRESH question, never merged with the refused one. Without that rule a
+   * refusal would silently turn the user's next unrelated question into a
+   * reply-turn merge. Absent on every real clarification. */
+  rescueOnly?: boolean;
   /** WP15 (ADR 021, review finding 2026-07-04): when the clarification arose
    * from a FOLLOW-UP parse, the conversational referent that gave the
    * elliptical question its meaning ("En in Nederland?" ← unemployment) —
@@ -269,6 +276,12 @@ export interface RefusalResponse extends ResponseBase {
    * answer module (the gate.ts "wraps from the OUTSIDE" boundary), so this
    * field is the only thing the answer pipeline hands out for it. */
   onboarding: OnboardingEnvelope | null;
+  /** WP26c (ADR 024): present ONLY when the refusal carries a rescue chip —
+   * the state the client sends back so the deterministic take-path can resolve
+   * it without re-entering the parse that misfired. Marked `rescueOnly`, so a
+   * reply that is not the chip is answered as a fresh question. Absent on every
+   * other refusal ⇒ byte-identical envelopes. */
+  pending?: PendingClarification;
   /** #134(a) (ADR 029, refusal-side variant): servability-gated retry chips on
    * a period-coverage refusal — a STRUCTURAL sibling of AnswerResponse's field,
    * assembled AFTER the refusal text so the R8-audited `text` is byte-untouched.
