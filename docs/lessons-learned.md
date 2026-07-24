@@ -35,6 +35,18 @@ on top.
   measure has an NL-level row" as *verify at build, do not assume*. One read-only query answered it for both geo
   tables in seconds, and the answer widened the feature's scope (B-region ships for BOTH tables, not just
   population as the brief's fallback wording allowed for). Cheap, and it turned a hedge into a fact.
+- **A "sanity check" means re-measuring the world, not re-reading your own summary — and it found a live
+  production degradation.** Asked for a sanity check after reporting WP26 complete, the git/CI/flag claims all
+  verified — and then a plain `curl` over the public routes showed `/llms.txt` returning **503**. Root cause,
+  measured: `(EMAXCONNSESSION) max clients reached in session mode — pool_size: 15`. Five production deploys in
+  quick succession had each spun up function instances holding their own pg pools, exhausting the Supabase free
+  tier's session ceiling; the homepage's Ontdek charts were silently omitted in the same window. It self-healed in
+  ~6 minutes. Three lessons: (a) the CI post-deploy smoke passed because it runs ~10s after deploy, BEFORE the
+  instances stack — a green smoke is not a claim about a minute later; (b) the fail-safes did their job (an honest
+  503 and an omitted section, never stale or invented data) — the design held, the capacity did not; (c) a session
+  that pushes repeatedly is itself load, and `audit:verify`/`catalog:refresh` from a laptop draw from the same 15.
+  Recorded in the RUNBOOK with a diagnosis recipe that works WHEN the pooler is full (the management API bypasses
+  it). **Never end a session on "CI is green" alone — hit the actual site.**
 - **Enforce a rule where the DEGRADATION happens, not only where it is easiest.** WP26c's "a rescue pending is not
   an open clarification round" rule was first written server-side only: any non-chip reply was answered as a fresh
   question. Correct behaviour, wrong LAYER — because the CLIENT still routed the message through the reply Server

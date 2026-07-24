@@ -34,7 +34,17 @@ het consumentenvertrouwen?" → meta) now carry ONE deterministic rescue chip be
 refusal. Offered only when code proved the figure loaded and servable; taking it never re-enters the parse that
 misfired. Rides A's flag.
 
-**▶ NEXT, in order:** (a) the **owner-supervised go-live** of the two flags — new RUNBOOK section "WP26
+**⚠ FOUND BY THE OWNER'S SANITY CHECK (2026-07-25, after the build): a ~6-minute PRODUCTION degradation.**
+`/llms.txt` served its 503 fail-safe and the homepage Ontdek charts were omitted, because five deploys in
+quick succession exhausted Supabase's free-tier **15-connection session pool**
+(`EMAXCONNSESSION`). It SELF-HEALED; all routes verified 200 again, Ontdek back, llms.txt serving real
+content. Both surfaces degraded exactly as designed — no stale or invented data — so this is CAPACITY, not
+correctness. New [#173](open-questions.md) + a RUNBOOK section with a diagnosis recipe that works while the
+pooler is full. **Note the CI post-deploy smoke passed: it runs ~10s after deploy, before instances stack —
+a green smoke is not a claim about a minute later.**
+
+**▶ NEXT, in order:** (a) the **owner-supervised go-live** of the two flags — NOT during a deploy burst
+(#173: both mechanisms add DB work per request; `/llms.txt` = 200 is the cheapest go/no-go canary) — RUNBOOK section "WP26
 answer-first + clickable options", one flag at a time with rollback + live smoke; (b) **~30/7 BBP+PPI syncs** — measured at CBS today: nothing was due yet (`85880NED` still on Modified 2026-07-01,
 `85770NED` on 2026-06-30, both behind our 17/7 sync). `85880NED` MUST use the chunked escape hatch (RUNBOOK step
 5); (d) **re-ask #132 route B**; (e) then the owner menu: WP30c choice / #162 / #170 rest (3)+(4).

@@ -390,6 +390,36 @@ Rollback at any point: unset `SEMANTIC_CHECK_ENABLED` and redeploy — fully dor
 verdicts on already-written rows stay valid for R8 (the reconstructor checks them whenever the
 key is present, flag state irrelevant).
 
+## ⚠ Supabase free tier: 15 SESSION-MODE connections — deploy bursts exhaust it (measured 2026-07-25)
+
+**Measured live, session 56.** After five production deploys inside ~an hour, the pooler refused new
+connections with `(EMAXCONNSESSION) max clients reached in session mode - max clients are limited to
+pool_size: 15` — from a local script AND from production functions. Consequences observed on prod:
+
+- `GET /llms.txt` → **503** with its honest fail-safe body for ~6 minutes;
+- the homepage **Ontdek charts silently omitted** (`[ontdek] charts unavailable, serving previous set if
+  any`) while `/` still served 200.
+
+**Both surfaces degraded exactly as designed** — an honest 503 and an omitted section, never stale or
+invented data. It SELF-HEALED once the extra function instances went idle and their sessions were
+reclaimed; nothing had to be restarted.
+
+What to know:
+- **Each deploy spins up new function instances, and each opens its own pg pool.** Several deploys in
+  quick succession therefore stack sessions against a hard ceiling of 15 (free tier, session mode).
+- **Diagnose it** with the management API (it does NOT go through the pooler, so it still works when the
+  pooler is full): `select count(*) from pg_stat_activity where application_name like 'Supavisor%'`, or
+  simply `vercel logs <prod-url>` and grep for `EMAXCONNSESSION`.
+- **Do not panic-restart anything.** Wait a few minutes and re-check `/llms.txt`; that is the cheapest
+  canary because it needs a fresh connection on a cache miss.
+- **Avoid stacking deploys** when you can — batch doc commits instead of pushing each one, and leave a
+  couple of minutes between a code push and a live smoke.
+- Running `audit:verify`, `catalog:refresh` or any `node --env-file=.env scripts/…` from a laptop takes a
+  session from the SAME pool of 15. Do not run them during a deploy window.
+
+Structural fix (not done): transaction-mode pooling, or a smaller per-instance pool. Tracked as an open
+question — the ceiling is a free-tier property, so a paid tier also raises it.
+
 ## WP26 answer-first + clickable options — the supervised go-live (NOT YET RUN; built session 56, 2026-07-25)
 
 Two INDEPENDENT flags, both dormant. Either can go live first and roll back on its own — deliberate,
@@ -400,8 +430,13 @@ so a problem with one mechanism never forces the other off.
 | `CLARIFY_CLICK_ENABLED=1` | Clarification options carry a pre-verified intent; a reply byte-equal to an offered label resolves deterministically (no LLM). Chips render on clarifications. | Reply turns only. Worst case: a chip is missing (an option failed its dry-run) — never a wrong answer. |
 | `ANSWER_FIRST_ENABLED=1` | A question with no region (on a measure with a national row) answers nationally; a question with no period at all answers with the recent trend. Both disclosed in-sentence. | First turns. Questions that used to clarify now ANSWER — the biggest visible behavior change of the two. |
 
+⚠ **Flip a flag only when the last deploy has SETTLED** (see the connection-ceiling section directly above):
+each flip triggers a redeploy, and both mechanisms add DB work per request — B-region an existence probe on
+a region-less question, B-period a window query. On the 15-connection free tier, flipping both during a
+deploy burst is the wrong moment. Check `/llms.txt` is 200 first; it is the cheapest canary.
+
 Steps (owner present):
-1. `git log --oneline -1` on prod — confirm the deploy carrying commits `8ee71c8`/`37a3c55`/`1a99b3d` is live.
+1. `git log --oneline -1` on prod — confirm the deploy carrying commits `8ee71c8`/`37a3c55`/`1a99b3d`/`1a4ca89` is live.
 2. Flip ONE flag: `vercel env add <FLAG>` (Production) `= 1`, then redeploy. **Not both at once** —
    if something reads wrong you want to know which mechanism did it.
 3. Live smoke, LLM-free where possible: ask a period-less question ("Hoeveel inwoners telde
