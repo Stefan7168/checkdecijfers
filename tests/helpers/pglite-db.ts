@@ -46,6 +46,14 @@ async function runQuery(
   return { rows: result.rows };
 }
 
+/** The Db facade over a PGlite instance, with its own mutex. Exported because
+ * the fixture snapshot (fixture-snapshot.ts) has to drive a raw PGlite handle
+ * through the same funnel — it needs the handle itself to call dumpDataDir(),
+ * which the {db, close} pair below deliberately does not expose. */
+export function wrapPGlite(client: PGlite): Db {
+  return wrapClient(client, createMutex());
+}
+
 function wrapClient(client: PGlite, run: <T>(fn: () => Promise<T>) => Promise<T>): Db {
   const db: Db = {
     query: (text, params) => run(() => runQuery(client, text, params)),

@@ -4,31 +4,25 @@
 // This is the query work package's stand-in for the live database; the
 // benchmark-cell coverage of the fixtures is itself asserted by
 // tests/query/benchmark-intents.test.ts.
-import { fileURLToPath } from 'node:url';
-import { FixtureSource, loadFixtureDocsTree } from '../../src/cbs-adapter/fixture-source.ts';
-import { registerTables, syncTable } from '../../src/ingestion/pipeline.ts';
-import { SEED_TABLES } from '../../src/ingestion/registry-seed.ts';
-import { applyRegistryDefaults } from '../../src/registry/apply.ts';
+//
+// Since 2026-07-25 the ingest itself runs ONCE per `vitest run` and every
+// caller restores that result instead of replaying it — measured 7.9-10.7 s
+// cold versus 1.16-1.39 s restored. Each caller still receives its own private
+// PGlite, so a suite that mutates its database is invisible to every other one
+// (the isolation the answer-first suites depend on). The mechanism, the
+// measurement and the proof of isolation live in fixture-snapshot.ts.
+import { buildIngested, readSnapshot, restoreFromSnapshot } from './fixture-snapshot.ts';
+import { wrapPGlite } from './pglite-db.ts';
 import type { Db } from '../../src/db/types.ts';
-import { createTestDb } from './pglite-db.ts';
-
-const FIXTURES_DIR = fileURLToPath(new URL('../fixtures/cbs', import.meta.url));
 
 export async function createIngestedDb(): Promise<{ db: Db; close(): Promise<void> }> {
-  const { db, close } = await createTestDb();
-  const source = new FixtureSource(loadFixtureDocsTree(FIXTURES_DIR));
-  await registerTables(db, source, SEED_TABLES);
-  const applied = await applyRegistryDefaults(db);
-  if (applied.tablesMissing.length > 0) {
-    throw new Error(`registry defaults reference unregistered table(s): ${applied.tablesMissing.join(', ')}`);
-  }
-  for (const table of SEED_TABLES) {
-    const result = await syncTable(db, source, table.id);
-    if (result.outcome !== 'succeeded') {
-      throw new Error(
-        `fixture sync of ${table.id} failed at ${result.failureStage}: ${result.failureSummary}`,
-      );
-    }
-  }
-  return { db, close };
+  // Every snapshot failure is a SLOW path, never a wrong one: a cold cache, a
+  // read-only filesystem, an unreadable or half-written file, or a runner that
+  // skipped globalSetup all fall back to the original build. The helper's
+  // contract to its 34 callers is unchanged either way.
+  const snapshot = readSnapshot();
+  const restored = snapshot === null ? null : await restoreFromSnapshot(snapshot);
+  const client = restored ?? (await buildIngested());
+  await client.waitReady;
+  return { db: wrapPGlite(client), close: () => client.close() };
 }
