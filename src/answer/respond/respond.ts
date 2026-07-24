@@ -100,6 +100,10 @@ export interface RespondOptions {
    * owner flips it) → no clickable options are ever built AND the deterministic
    * take-rung below is inert, so every turn is byte-identical to pre-WP26. */
   clickOptionsEnabled?: boolean;
+  /** WP26 mechanism B (ADR 024): the `ANSWER_FIRST_ENABLED` rollout flag. Off/
+   * absent ⇒ the query layer defaults nothing and every under-specified
+   * question clarifies exactly as it does today. */
+  answerFirstEnabled?: boolean;
 }
 
 /** WP26 mechanism A: the model field of a take that ran NO model. Recorded on
@@ -209,9 +213,14 @@ export async function respondToIntent(
     /** WP26 mechanism A: compose from the deterministic template, no LLM call
      * (ADR 024). Set only by the clicked-option take-path. */
     templateOnly?: boolean;
+    /** WP26 mechanism B (ADR 024): the answer-first defaults, threaded into the
+     * query layer AND into every dry-run below so the chips are gated by the
+     * same rules the answer itself ran under. */
+    answerFirstEnabled?: boolean;
   },
 ): Promise<ComposedResponse> {
-  const outcome: QueryOutcome = await runQuery(db, parse.intent);
+  const queryOptions = { answerFirstEnabled: options.answerFirstEnabled === true };
+  const outcome: QueryOutcome = await runQuery(db, parse.intent, queryOptions);
 
   if (!outcome.ok) {
     const built = buildQueryRefusal(outcome);
@@ -248,7 +257,7 @@ export async function respondToIntent(
     try {
       suggestions = await buildRefusalSuggestions(
         outcome,
-        (candidate) => echoServability(db, candidate),
+        (candidate) => echoServability(db, candidate, queryOptions),
         // #138: the honest code→label source for a regional retry chip —
         // registry/dimension_labels via regionTermsFor (context/build.ts),
         // injected so suggestions.ts keeps its never-sees-db confinement.
@@ -312,7 +321,7 @@ export async function respondToIntent(
   let suggestions: string[] = [];
   try {
     suggestions = await buildSuggestions(parse.intent, result, (candidate) =>
-      echoServability(db, candidate),
+      echoServability(db, candidate, queryOptions),
     );
   } catch {
     suggestions = [];
@@ -412,6 +421,7 @@ export async function respondToQuestion(
       // WP26 mechanism A: threaded into BOTH the standalone and the follow-up
       // parse — a clarification can arise on either turn.
       clickOptionsEnabled: options.clickOptionsEnabled,
+      answerFirstEnabled: options.answerFirstEnabled,
     };
     // WP15 (ADR 021): with a validated context, the parse runs in follow-up
     // mode — same downstream machinery, same thresholds, same one round of

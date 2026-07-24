@@ -8,7 +8,7 @@ import type { Db } from '../db/types.ts';
 import { parsePeriodCode } from '../ingestion/periods.ts';
 import { CBS_SOURCE_KEY, isProvisionalStatus, resolveSourceForTable } from '../sources/registry.ts';
 import { deriveDifference, deriveDirection, deriveFirstLast, deriveMax, deriveUnitExpansion } from './derivations.ts';
-import { normalizeLabel, periodKey, resolveIntent, type ResolvedQuery } from './resolve.ts';
+import { normalizeLabel, periodKey, resolveIntent, type QueryOptions, type ResolvedQuery } from './resolve.ts';
 import type {
   Attribution,
   DerivationRecord,
@@ -265,8 +265,13 @@ export async function freshestForCanonical(
   return { periodCode: freshest.period_code as string, status: freshest.status as string };
 }
 
-export async function runQuery(db: Db, intent: StructuredIntent): Promise<QueryOutcome> {
-  const outcome = await resolveIntent(db, intent);
+export async function runQuery(
+  db: Db,
+  intent: StructuredIntent,
+  /** WP26 (ADR 024): the answer-first switches. Absent ⇒ pre-WP26 behavior. */
+  options: QueryOptions = {},
+): Promise<QueryOutcome> {
+  const outcome = await resolveIntent(db, intent, options);
   if (!outcome.ok) return outcome;
   const q = outcome.resolved;
 
@@ -454,6 +459,12 @@ export async function runQuery(db: Db, intent: StructuredIntent): Promise<QueryO
     cells,
     derivations,
     attribution,
-    intent,
+    // WP26 mechanism B: the intent we ACTUALLY ran — identical to the caller's
+    // object unless a safelisted axis was defaulted, in which case R8 must show
+    // the resolved coordinate, not the under-specified ask.
+    intent: q.intent,
+    // Present-only (A1 discipline): a non-defaulted answer serializes no key,
+    // so every pre-WP26 and flag-off envelope stays byte-identical.
+    ...(q.regionDefaulted ? { regionDefaulted: true as const } : {}),
   };
 }

@@ -19,6 +19,11 @@ import type { StatCardData } from './stat-card-data.ts';
  * R8 audit string) is untouched server-side. */
 export interface AnswerView {
   body: string;
+  /** WP26 mechanism B (ADR 024): the defaulted-axis disclosure ("Dit is het
+   * landelijke cijfer voor heel Nederland. …") — deterministic code's own
+   * sentence, shown directly under the body. Null when no axis was defaulted,
+   * and on every answer stored before WP26 (A1: the key is simply absent). */
+  assumptionLine: string | null;
   stalenessWarning: string | null;
   definitionLine: string | null;
   markingLine: string | null;

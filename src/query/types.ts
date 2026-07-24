@@ -198,8 +198,21 @@ export interface ValidatedResult {
   cells: ResultCell[];
   derivations: DerivationRecord[];
   attribution: Attribution;
-  /** The intent this result answers — echoed for the audit record (R8, WP10). */
+  /** The intent this result answers — echoed for the audit record (R8, WP10).
+   * When a WP26 default fired, this is the RESOLVED intent (the one that ran),
+   * not the under-specified question. */
   intent: StructuredIntent;
+  /** WP26 mechanism B-region (ADR 024, safelist entry 1): the question named no
+   * place and we answered with the national total. Drives the deterministic
+   * disclosure sentence ("Dit is het landelijke cijfer voor heel Nederland.")
+   * and its correction chip, and is re-read at audit time so that sentence
+   * re-derives byte-identically (R8) instead of being re-decided.
+   *
+   * ADDITIVE and present-only: pre-WP26 rows and every non-defaulted answer
+   * carry no key at all, so readers MUST use `?? false` — `undefined !== false`
+   * would otherwise misreport them (the lesson the WP16 `onboarding` field
+   * taught on ~73 real rows). */
+  regionDefaulted?: boolean;
 }
 
 // ---------------------------------------------------------------------------

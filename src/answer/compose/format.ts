@@ -213,6 +213,35 @@ export function buildDefinitionLine(result: ValidatedResult): string | null {
   return definitionLabel === null || isCircular ? null : `Definitie: ${definitionLabel}.`;
 }
 
+/** WP26 mechanism B (ADR 024 decision 2 + the owner-approved safelist): the
+ * disclosure sentence for an answer that filled in a structurally-determined
+ * axis the question left open. The SINGLE source of truth, like
+ * buildDefinitionLine above — compose.ts builds the line with it and
+ * audit/reconstruct.ts RE-DERIVES it from the stored result, so the shown
+ * assumption and the audited one can never drift.
+ *
+ * Three properties make this the honest side of the principle-(c) line:
+ *  - it is assembled by CODE from validated result state, never by the LLM, and
+ *    sits OUTSIDE the body the answer validator scans (R1's structural
+ *    exemption, exactly like the definition and attribution lines);
+ *  - it carries NO number — it names the assumption, not a value;
+ *  - it states the correction path in the same breath, so the reader is never
+ *    stuck with a reading they did not ask for.
+ *
+ * `?? false` on every flag: pre-WP26 rows serialize no key at all, and
+ * `undefined !== false` would otherwise fabricate a disclosure on ~every
+ * historical row (the lesson the WP16 `onboarding` field taught). */
+export function buildAssumptionLine(result: ValidatedResult): string | null {
+  const parts: string[] = [];
+  if (result.regionDefaulted ?? false) {
+    parts.push(
+      'Dit is het landelijke cijfer voor heel Nederland. ' +
+        'Noem een gemeente of provincie in je vraag als je een specifieke regio wilt.',
+    );
+  }
+  return parts.length > 0 ? parts.join(' ') : null;
+}
+
 /** The R4 attribution sentence — the single builder for every surface that
  * displays it: answer text (compose) and chart specs (WP8). One source of
  * truth so the two can never drift apart. */

@@ -485,6 +485,9 @@ export function Chat({
             response.kind === 'answer'
               ? {
                   body: response.answer.body,
+                  // WP26 mechanism B: `?? null` guards the deploy-window skew
+                  // (an old server bundle omits the key), like suggestions.
+                  assumptionLine: response.answer.assumptionLine ?? null,
                   stalenessWarning: response.stalenessWarning,
                   definitionLine: response.answer.definitionLine,
                   markingLine: response.answer.markingLine,
@@ -629,6 +632,15 @@ export function Chat({
             </div>
             {/* WP23 (#90): the structural lines an answer's text used to
               * carry inline — nothing may be lost (R5/R11 surfaces). */}
+            {/* WP26 mechanism B (ADR 024): the defaulted-axis disclosure. It
+              * sits directly under the body and at BODY-adjacent weight, not as
+              * muted fine print: it qualifies the number the reader just read
+              * ("this is the national figure") and carries the correction path.
+              * Burying it would keep the letter of the safelist and lose its
+              * point. */}
+            {message.answerView?.assumptionLine ? (
+              <p className="mt-1 text-sm text-ink-soft">{message.answerView.assumptionLine}</p>
+            ) : null}
             {message.answerView?.stalenessWarning ? (
               <p className="mt-1 text-sm text-warn">{message.answerView.stalenessWarning}</p>
             ) : null}

@@ -23,7 +23,7 @@
 import { DERIVED_DATA_MARKING } from '../../query/index.ts';
 import type { ValidatedResult } from '../../query/index.ts';
 import { buildChartSpec, chartSpecSchema } from '../../chart/index.ts';
-import { buildAttributionLine, buildDefinitionLine } from '../compose/format.ts';
+import { buildAssumptionLine, buildAttributionLine, buildDefinitionLine } from '../compose/format.ts';
 import { findSuspectTokens } from '../compose/semantic-check.ts';
 import { validateAnswerBody } from '../compose/validate.ts';
 import { stableStringify } from '../llm/client.ts';
@@ -226,15 +226,29 @@ function checkAnswerReconstruction(record: AuditRecord, problems: string[]): voi
   if (answer.definitionLine !== definitionLine) {
     problems.push('definition line does not re-derive from the stored attribution');
   }
+
+  // WP26 mechanism B (ADR 024): the defaulted-axis disclosure re-derives from
+  // the stored result's own flags through the SAME builder compose.ts used —
+  // R8's point being that the assumption the user was shown must be a function
+  // of the recorded state, not a policy this reader re-decides. `?? null` (A1):
+  // pre-WP26 rows serialize no key, and `undefined !== null` would flag every
+  // one of them.
+  const assumptionLine = buildAssumptionLine(result);
+  if ((answer.assumptionLine ?? null) !== assumptionLine) {
+    problems.push('assumption line does not re-derive from the stored result');
+  }
   const markingLine = result.derivations.length > 0 ? `— ${DERIVED_DATA_MARKING}` : null;
   if (answer.markingLine !== markingLine) {
     problems.push('derived-data marking line does not re-derive from the stored derivations');
   }
 
-  // The rendered text re-assembles byte-identically from its stored parts.
+  // The rendered text re-assembles byte-identically from its stored parts —
+  // in the SAME order compose.ts assembles them (assumption → definition →
+  // marking → attribution).
   const text = [
     answer.body,
     '',
+    ...(assumptionLine ? [assumptionLine] : []),
     ...(definitionLine ? [definitionLine] : []),
     ...(markingLine ? [markingLine] : []),
     attribution,

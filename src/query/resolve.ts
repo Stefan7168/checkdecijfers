@@ -19,8 +19,30 @@ import type {
 } from './types.ts';
 import { INTENT_SCHEMA_VERSION } from './types.ts';
 
+/** WP26 mechanism B (ADR 024, safelist entry 1): the CBS code for the national
+ * total. Not a heuristic pick among places — a specific, existing row, which is
+ * exactly what makes it the clean side of the decision-2 line. `run.ts`'s
+ * freshestForCanonical already uses this convention; it lives here so the
+ * default and the freshness lookup can never drift apart. */
+export const NATIONAL_REGION_CODE = 'NL01' as const;
+
+/** WP26 (ADR 024): per-call switches for the answer-first defaults. Absent
+ * (benchmark, tests, CLI, and production until the owner flips the flag) ⇒ the
+ * query layer behaves exactly as it did before WP26. */
+export interface QueryOptions {
+  /** `ANSWER_FIRST_ENABLED`: allow the structurally-determined defaults on the
+   * safelisted axes (region today, period with B-period). Never widens WHICH
+   * axes may default — that list is code, not configuration. */
+  answerFirstEnabled?: boolean;
+}
+
 export interface ResolvedQuery {
   intent: StructuredIntent;
+  /** WP26 mechanism B: true when no region was named and we answered with the
+   * NATIONAL total instead of asking. Travels onto the ValidatedResult so the
+   * disclosure sentence is built from validated state and re-derives at audit
+   * time (R8), never from a re-decided policy. */
+  regionDefaulted: boolean;
   tableId: string;
   measure: string;
   measureTitle: string;
@@ -174,7 +196,11 @@ function belowPeriodFloor(periodCode: string, floor: string | undefined): boolea
   return floor !== undefined && periodCode < floor;
 }
 
-export async function resolveIntent(db: Db, intent: StructuredIntent): Promise<ResolveOutcome> {
+export async function resolveIntent(
+  db: Db,
+  intent: StructuredIntent,
+  options: QueryOptions = {},
+): Promise<ResolveOutcome> {
   // --- Structural validity -------------------------------------------------
   if (intent.schemaVersion !== INTENT_SCHEMA_VERSION) {
     return refuse(intent, 'invalid_intent', `unsupported intent schemaVersion ${intent.schemaVersion}; this query layer speaks version ${INTENT_SCHEMA_VERSION}`);
@@ -339,9 +365,54 @@ export async function resolveIntent(db: Db, intent: StructuredIntent): Promise<R
   let regionCodes: string[] = [''];
   let regionLabels: Record<string, string> = {};
   let regionMissing = false;
+  let regionDefaulted = false;
+  let effectiveIntent = intent;
   if (geoDimension) {
     if (regions.length === 0) {
-      regionMissing = true;
+      // WP26 mechanism B-region (ADR 024, safelist entry 1, owner-approved
+      // session 23 + re-read session 56): a question that names no place, on a
+      // measure that HAS a national figure, gets the national figure — with the
+      // assumption said out loud and a one-click correction — instead of a
+      // clarification round the user has to pay for.
+      //
+      // The default is allowed only because the NL total is a specific EXISTING
+      // row, not a pick among competing places. So we check that it exists for
+      // THIS measure at THIS coordinate before defaulting; when it does not, we
+      // fall through to the clarification exactly as before. There is no branch
+      // in which a national figure is invented.
+      //
+      // Deliberately NOT checked here: whether the requested PERIOD exists. A
+      // missing period has its own honest refusal (freshness / not_published),
+      // identical to what an explicitly-named region would get — the default
+      // concerns the region axis and nothing else.
+      //
+      // A 'max' comparison cannot reach here at all: the derivation-arity check
+      // above already refuses a max with fewer than two named regions, so a
+      // comparison set is never defaulted. Verified, not assumed — pinned in
+      // tests/answer/answer-first-region.test.ts.
+      const nationalRow =
+        options.answerFirstEnabled === true
+          ? await db.query(
+              `select 1 from observations
+               where table_id = $1 and measure = $2 and dims = $3::jsonb and region_code = $4
+               limit 1`,
+              [tableId, measure, JSON.stringify(dims), NATIONAL_REGION_CODE],
+            )
+          : null;
+      if (nationalRow !== null && nationalRow.rows.length > 0) {
+        const labels = await fetchLabels(db, tableId, geoDimension, [NATIONAL_REGION_CODE]);
+        const label = labels.get(NATIONAL_REGION_CODE);
+        if (label !== undefined) {
+          regionCodes = [NATIONAL_REGION_CODE];
+          regionLabels = { [NATIONAL_REGION_CODE]: label };
+          regionDefaulted = true;
+          // R8: record the query we actually RAN, not the one we were asked.
+          // The audit row, the intent hash and the reconstruction all read this
+          // object, so the defaulted region is visible in every one of them.
+          effectiveIntent = { ...intent, regions: [NATIONAL_REGION_CODE] };
+        }
+      }
+      if (!regionDefaulted) regionMissing = true;
     } else {
       const labels = await fetchLabels(db, tableId, geoDimension, regions);
       const unknown = regions.filter((r) => !labels.has(r));
@@ -404,7 +475,8 @@ export async function resolveIntent(db: Db, intent: StructuredIntent): Promise<R
   return {
     ok: true,
     resolved: {
-      intent,
+      intent: effectiveIntent,
+      regionDefaulted,
       tableId,
       measure,
       measureTitle: normalizeLabel(measureMeta.title),

@@ -78,6 +78,7 @@ function assistantMessage(part: ReplayAssistantPart): ChatMessage {
       ? null
       : {
           body: part.answerView.body,
+          assumptionLine: part.answerView.assumptionLine,
           stalenessWarning: part.answerView.stalenessWarning,
           definitionLine: part.answerView.definitionLine,
           markingLine: part.answerView.markingLine,

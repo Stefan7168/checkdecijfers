@@ -11,6 +11,7 @@
 // years are not data values (the #37 policy already lets refusals name them).
 import type { Db } from '../db/types.ts';
 import { freshestForCanonical, runQuery } from './run.ts';
+import type { QueryOptions } from './resolve.ts';
 import type { RefusalKind, StructuredIntent } from './types.ts';
 
 /** What we CAN honestly say is loaded for the suggestion's measure — names
@@ -81,8 +82,12 @@ async function loadedYearRange(
 export async function echoServability(
   db: Db,
   intent: StructuredIntent,
+  /** WP26 (ADR 024): the same answer-first switches the real turn runs under —
+   * a dry-run that ignored them would judge servability against different rules
+   * than the answer it is predicting. */
+  options: QueryOptions = {},
 ): Promise<EchoServability> {
-  const outcome = await runQuery(db, intent);
+  const outcome = await runQuery(db, intent, options);
   if (outcome.ok) return { servable: true };
 
   // Availability lookups are canonical-key based: every parser-produced

@@ -41,6 +41,11 @@ export const CLARIFY_PROMPT_VERSION = 2;
 export interface ClarifyReplyOptions {
   client: IntentLlmClient;
   config?: ParserConfig;
+  /** WP26 mechanism B (ADR 024): the `ANSWER_FIRST_ENABLED` rollout flag,
+   * threaded into the dry-runs below so an option is judged servable under the
+   * SAME rules the answer turn will run under. Off/absent ⇒ byte-identical. */
+  answerFirstEnabled?: boolean;
+
   model?: string;
   maxTokens?: number;
   /** WP16 sub-part 2 (ADR 026): OPTIONAL table-finder for the unmatched exit,
@@ -192,7 +197,7 @@ export async function parseClarificationReply(
     context,
     resolutions,
     options.config ?? DEFAULT_PARSER_CONFIG,
-    (intent) => echoServability(db, intent),
+    (intent) => echoServability(db, intent, { answerFirstEnabled: options.answerFirstEnabled === true }),
     options.tableFinder,
   );
 }

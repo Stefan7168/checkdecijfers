@@ -199,6 +199,15 @@ function clickOptionsEnabled(): boolean {
   return process.env.CLARIFY_CLICK_ENABLED === '1';
 }
 
+// WP26 mechanism B (ADR 024): the answer-first defaults — same dormancy
+// pattern. While ANSWER_FIRST_ENABLED is unset, the query layer defaults no
+// axis: a question with no region on a geo measure clarifies exactly as it does
+// today. Independent of CLARIFY_CLICK_ENABLED so the owner can go live with,
+// and roll back, each mechanism on its own.
+function answerFirstEnabled(): boolean {
+  return process.env.ANSWER_FIRST_ENABLED === '1';
+}
+
 function semanticCheckOptions(): { semanticCheck: SemanticCheckOptions } | Record<string, never> {
   if (process.env.SEMANTIC_CHECK_ENABLED !== '1') return {};
   return {
@@ -367,8 +376,9 @@ export async function askQuestion(
         // parse could NOT match. [] while the switch is off or nothing is
         // onboarded → prompt bytes identical to the calibrated Phase-0 one.
         extraCanonicalMeasures: extraVocabulary,
-        // WP26 mechanism A (ADR 024): dormant until the supervised flag flip.
+        // WP26 mechanisms A + B (ADR 024): dormant until the supervised flips.
         clickOptionsEnabled: clickOptionsEnabled(),
+        answerFirstEnabled: answerFirstEnabled(),
         // WP129+130 (#129, ADR 032): the validated selection rides the audited
         // options as a STRUCTURAL input (never prompt text) — respond* uses it
         // for the web-only / no-sources pre-parse belt, and attach uses it to
@@ -645,6 +655,7 @@ export async function replyToClarification(
         // label-match rung — a reply equal to an offered option resolves from
         // the stored intent, with no LLM call at all.
         clickOptionsEnabled: clickOptionsEnabled(),
+        answerFirstEnabled: answerFirstEnabled(),
         // WP129+130 (#129/#130, ADR 032): the validated selection + web wiring,
         // identical to askQuestion (the reply turn carries the same chips and
         // charges the +10 if it answers/refuses with data). Absent ⇒ byte-

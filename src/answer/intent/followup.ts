@@ -60,6 +60,10 @@ export interface FollowUpOptions {
   /** WP26 mechanism A (ADR 024): the `CLARIFY_CLICK_ENABLED` rollout flag,
    * same seam as ParseQuestionOptions. Off/absent → byte-identical. */
   clickOptionsEnabled?: boolean;
+  /** WP26 mechanism B (ADR 024): the `ANSWER_FIRST_ENABLED` rollout flag,
+   * threaded into the dry-runs below so an option is judged servable under the
+   * SAME rules the answer turn will run under. Off/absent ⇒ byte-identical. */
+  answerFirstEnabled?: boolean;
 }
 
 /** The follow-up-mode instruction, appended verbatim to the WP6 system prompt
@@ -172,7 +176,7 @@ export async function parseFollowUpQuestion(
     outcomeContext,
     resolutions,
     options.config ?? DEFAULT_PARSER_CONFIG,
-    (intent) => echoServability(db, intent),
+    (intent) => echoServability(db, intent, { answerFirstEnabled: options.answerFirstEnabled === true }),
     options.tableFinder,
     options.clickOptionsEnabled,
   );

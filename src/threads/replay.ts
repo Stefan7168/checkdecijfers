@@ -23,6 +23,11 @@ import type { ThreadRow } from './index.ts';
  * precedent). The web side augments this with tableId/source from the envelope. */
 export interface ReplayAnswerView {
   body: string;
+  /** WP26 mechanism B (ADR 024): the defaulted-axis disclosure the user was
+   * shown. Replayed from the STORED envelope, never re-decided — a reopened
+   * thread must state the same assumption the answer originally carried. Null
+   * on every pre-WP26 row and every non-defaulted answer. */
+  assumptionLine: string | null;
   definitionLine: string | null;
   markingLine: string | null;
   attributionLine: string;
@@ -79,6 +84,7 @@ function extractAnswerView(response: ComposedResponse): ReplayAnswerView | null 
   if (typeof body !== 'string' || typeof attributionLine !== 'string') return null;
   return {
     body,
+    assumptionLine: answer?.assumptionLine ?? null,
     definitionLine: answer?.definitionLine ?? null,
     markingLine: answer?.markingLine ?? null,
     attributionLine,

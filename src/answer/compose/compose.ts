@@ -13,7 +13,7 @@ import type { ValidatedResult } from '../../query/index.ts';
 import { DERIVED_DATA_MARKING } from '../../query/index.ts';
 import type { LlmClient, LlmUsage } from '../llm/client.ts';
 import { applyUnitExpansions } from './expand.ts';
-import { buildAttributionLine, buildDefinitionLine } from './format.ts';
+import { buildAssumptionLine, buildAttributionLine, buildDefinitionLine } from './format.ts';
 import { buildPhrasingRequest, COMPOSE_PROMPT_VERSION, PHRASING_MODEL } from './prompt.ts';
 import { runSemanticCheck, type SemanticCheckOptions, type SemanticCheckOutcome } from './semantic-check.ts';
 import { renderTemplateBody } from './template.ts';
@@ -65,13 +65,29 @@ function assemble(result: ValidatedResult, rawBody: string, source: AnswerSource
   // otherwise falls back to the short definitionLabel with the circular-title
   // suppression (lever a).
   const definitionLine = buildDefinitionLine(result);
+  // WP26 mechanism B (ADR 024): the defaulted-axis disclosure, FIRST among the
+  // structural lines — it qualifies what the body just said, so the reader
+  // meets it before the definition and the source. audit/reconstruct.ts
+  // re-assembles in this exact order; changing it here without changing it
+  // there breaks R8 for every defaulted answer.
+  const assumptionLine = buildAssumptionLine(result);
   const markingLine = result.derivations.length > 0 ? `— ${DERIVED_DATA_MARKING}` : null;
   const attribution = buildAttributionLine(result);
-  const text = [body, '', ...(definitionLine ? [definitionLine] : []), ...(markingLine ? [markingLine] : []), attribution].join('\n');
+  const text = [
+    body,
+    '',
+    ...(assumptionLine ? [assumptionLine] : []),
+    ...(definitionLine ? [definitionLine] : []),
+    ...(markingLine ? [markingLine] : []),
+    attribution,
+  ].join('\n');
   return {
     schemaVersion: ANSWER_SCHEMA_VERSION,
     source,
     body,
+    // Present-only: an answer with no defaulted axis serializes no key, so
+    // every pre-WP26 and flag-off envelope stays byte-identical.
+    ...(assumptionLine !== null ? { assumptionLine } : {}),
     definitionLine,
     markingLine,
     attributionLine: attribution,

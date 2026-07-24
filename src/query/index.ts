@@ -5,5 +5,6 @@ export { runQuery, buildResultId, freshestForCanonical } from './run.ts';
 export { echoServability } from './dry-run.ts';
 export type { EchoAvailability, EchoServability } from './dry-run.ts';
 export { resolveIntent, enumeratePeriods, periodKey, contiguousPeriodCodes } from './resolve.ts';
-export type { ResolvedQuery, ResolveOutcome } from './resolve.ts';
+export type { ResolvedQuery, ResolveOutcome, QueryOptions } from './resolve.ts';
+export { NATIONAL_REGION_CODE } from './resolve.ts';
 export * from './types.ts';

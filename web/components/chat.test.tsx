@@ -362,6 +362,41 @@ describe('Chat — WP23 display smalls', () => {
     expect(link).toHaveAttribute('title', 'Bekijk bij CBS StatLine');
   });
 
+  it('renders the WP26 defaulted-axis disclosure directly under the body (ADR 024)', async () => {
+    // The safelist's whole bargain is that the assumption is SAID OUT LOUD.
+    // The chat builds its message from structural fields, not from `text`, so
+    // a disclosure the envelope carries but the view drops would silently
+    // break that bargain — hence a render pin, not just a compose-side one.
+    const body = 'Nederland telde 17.942.942 inwoners op 1 januari 2024.';
+    const assumptionLine =
+      'Dit is het landelijke cijfer voor heel Nederland. ' +
+      'Noem een gemeente of provincie in je vraag als je een specifieke regio wilt.';
+    const response = fakeAnswerResponse({
+      body,
+      text: [body, '', assumptionLine].join('\n'),
+      assumptionLine,
+      cells: [fakeCell()],
+    });
+    askQuestion.mockResolvedValue(
+      outcome({ kind: 'ok', auditId: 1, netCost: 20, response: response as ComposedResponse }),
+    );
+    render(<Chat />);
+    await submit('Hoeveel inwoners telde Nederland in 2024?');
+    expect(await screen.findByText(body)).toBeInTheDocument();
+    expect(screen.getByText(assumptionLine)).toBeInTheDocument();
+  });
+
+  it('renders no disclosure when no axis was defaulted', async () => {
+    const response = fakeAnswerResponse({ body: 'Amsterdam telde 931.298 inwoners.', cells: [fakeCell()] });
+    askQuestion.mockResolvedValue(
+      outcome({ kind: 'ok', auditId: 1, netCost: 20, response: response as ComposedResponse }),
+    );
+    render(<Chat />);
+    await submit('Hoeveel inwoners telde Amsterdam?');
+    expect(await screen.findByText('Amsterdam telde 931.298 inwoners.')).toBeInTheDocument();
+    expect(screen.queryByText(/landelijke cijfer voor heel Nederland/)).not.toBeInTheDocument();
+  });
+
   it('binds the StatLine link to the ANSWER OWN table id, not a constant (#86 binding)', async () => {
     // A different table than the fixture default — a hardcoded-URL mutation
     // (the membership-without-binding class) must fail here.

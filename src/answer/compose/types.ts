@@ -97,6 +97,14 @@ export interface ComposedAnswer {
   source: AnswerSource;
   /** The prose the user reads first — LLM-written (validated) or template. */
   body: string;
+  /** WP26 mechanism B (ADR 024): the defaulted-axis disclosure ("Dit is het
+   * landelijke cijfer voor heel Nederland. …") — assembled by deterministic
+   * code from validated result state, outside the LLM-scanned body, and
+   * re-derived byte-identically at audit time (R8) by the same builder.
+   *
+   * OPTIONAL and present-only: an answer with no defaulted axis, and every row
+   * stored before WP26, carries no key at all — readers MUST use `?? null`. */
+  assumptionLine?: string | null;
   /** "Definitie: …" — rendered whenever a canonical default was applied
    * (attribution.definitionLabel), structurally, never left to the LLM. */
   definitionLine: string | null;

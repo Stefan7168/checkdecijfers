@@ -61,6 +61,8 @@ export function fakeAnswerResponse(opts: {
   attribution?: Partial<Attribution>;
   stalenessWarning?: string | null;
   /** WP23 (#90): the structural answer lines the chat now renders. */
+  /** WP26 mechanism B (ADR 024): the defaulted-axis disclosure. */
+  assumptionLine?: string | null;
   definitionLine?: string | null;
   markingLine?: string | null;
   attributionLine?: string;
@@ -81,6 +83,7 @@ export function fakeAnswerResponse(opts: {
     suggestions: opts.suggestions ?? [],
     answer: {
       body,
+      assumptionLine: opts.assumptionLine ?? null,
       definitionLine: opts.definitionLine ?? null,
       markingLine: opts.markingLine ?? null,
       attributionLine:

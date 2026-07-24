@@ -39,6 +39,10 @@ export interface ParseQuestionOptions {
    * passed straight to decide(). Off/absent → no dry-runs, no clickable
    * options, byte-identical clarifications. */
   clickOptionsEnabled?: boolean;
+  /** WP26 mechanism B (ADR 024): the `ANSWER_FIRST_ENABLED` rollout flag,
+   * threaded into the dry-runs below so an option is judged servable under the
+   * SAME rules the answer turn will run under. Off/absent ⇒ byte-identical. */
+  answerFirstEnabled?: boolean;
 }
 
 /** Up to this many readings are considered; the schema asks for 1–3. */
@@ -115,7 +119,7 @@ export async function parseQuestion(
     context,
     resolutions,
     options.config ?? DEFAULT_PARSER_CONFIG,
-    (intent) => echoServability(db, intent),
+    (intent) => echoServability(db, intent, { answerFirstEnabled: options.answerFirstEnabled === true }),
     options.tableFinder,
     options.clickOptionsEnabled,
   );
