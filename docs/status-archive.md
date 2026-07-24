@@ -29,7 +29,10 @@ resumed on the owner's "ok fix and dan wrap up after"; every date below verified
   gates green pre-merge; the only major is test-only jest-dom 6→7 — covered by the gate's own web tests); trial
   pot measured 23/25 (untouched since s52). All three stacked main runs green incl. deploys. First web:build
   attempt failed on a TRANSIENT Google-Fonts fetch (the documented non-hermetic half of next build) — solo retry
-  green, /login ƒ dynamic in the build output.
+  green, /login ƒ dynamic in the build output. Tail piece: a HIGH Dependabot alert (sharp <0.35.0, libvips CVEs,
+  transitive under next) surfaced during the close — Dependabot's own fix-PR run had died when its branches were
+  merged away, so the bump landed via web/package.json overrides (postcss precedent): sharp 0.35.3, web
+  typecheck+tests+build green, `af1fb2f` gate+deploy green, GitHub alert state measured "fixed".
 - **→ SAME DAY, evening: #154 ✅ BUILT + LIVE ("de context window is pas op 43/50%, ga verder") — the marathon
   design executed with ONE measured correction.** The brief claimed "deploy-order-safe: merge code, apply 021
   later"; inverted in practice — the new `select … last_seen_batch_id` breaks every query pre-apply, so the ship

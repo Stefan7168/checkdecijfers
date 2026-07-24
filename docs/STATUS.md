@@ -72,7 +72,9 @@ header verified on dev (flag temporarily on, then removed) AND live on prod HTML
 (d) Dependabot PR #58 (root: anthropic-sdk 0.114.0) and PR #59 (web: 9 bumps — one major is test-only jest-dom 7) MERGED per the s49
 owner-present precedent, both gates green pre-merge, all three stacked deploys green (runs 30100938646/30100985363/30101035856).
 (e) Trial pot measured 23/25 — untouched since s52, no refill needed. NB: two red "dynamic" runs on 6606275 are Dependabot's own
-internal updater jobs (its branches were merged away), NOT our CI.
+internal updater jobs (its branches were merged away), NOT our CI. (f) **A HIGH Dependabot alert surfaced mid-close (sharp <0.35.0,
+inherited libvips CVEs, transitive under next, runtime scope) — FIXED same hour** via the overrides block (`af1fb2f`, sharp 0.35.3;
+web 40 files/382 tests + build green; gate+deploy green; GitHub confirms alert state "fixed").
 ▶ NEXT: the ~30/7 BBP+PPI window (`85880NED` via the chunked hatch — days away), the #132 route-B GO (re-ask; forks==0 measured
 24-07), then the owner-decision menu below (#138, #121 AND #154 ALL OFF the menu — done; #172 needs only its supervised
 calibration/smoke half). #170 residual: (3) chart-download bundles with the Phase-2 OG WP,
