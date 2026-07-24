@@ -57,6 +57,11 @@ interface ObservationRow {
   status: string;
   value_attribute: string;
   batch_id: unknown;
+  /** #154: non-null marks a RETAINED cell (CBS stopped returning it); the
+   * value is the last batch that provably confirmed it. Kept OFF ResultCell
+   * (a rare internal freshness fact, not answer-surface data) — run() reads
+   * it sideband to compute the honest attribution.syncedAt. */
+  last_seen_batch_id: unknown;
 }
 
 /** Freshest period we hold for these exact coordinates (open-questions #37:
@@ -267,7 +272,8 @@ export async function runQuery(db: Db, intent: StructuredIntent): Promise<QueryO
 
   // --- Fetch all requested cells in one deterministic query ------------------
   const result = await db.query(
-    `select region_code, period_code, value, unit, decimals, status, value_attribute, batch_id
+    `select region_code, period_code, value, unit, decimals, status, value_attribute, batch_id,
+            last_seen_batch_id
      from observations
      where table_id = $1 and measure = $2 and dims = $3::jsonb
        and region_code = any($4::text[]) and period_code = any($5::text[])`,
@@ -389,6 +395,34 @@ export async function runQuery(db: Db, intent: StructuredIntent): Promise<QueryO
   }
 
   // --- Attribution (R4), carried in the result itself --------------------------
+  // #154: the displayed syncedAt is the MINIMUM (oldest) of the cells'
+  // effective dates. A cell present in the latest sync is dated by
+  // cbs_tables.last_sync_at (byte-identical to the old behavior — the 99%
+  // case pays no extra query); a RETAINED cell (last_seen_batch_id set) is
+  // dated by the finished_at of the batch that last confirmed it, so the
+  // shown date honestly reflects the weakest link and checkStaleness —
+  // which reads this same field — starts firing on exactly the class that
+  // used to slip the net (design §3).
+  let effectiveSyncedAt = q.table.lastSyncAt;
+  const retainedBatchIds = [
+    ...new Set(
+      [...byCoordinate.values()]
+        .filter((row) => row.last_seen_batch_id != null)
+        .map((row) => toNumber(row.last_seen_batch_id)),
+    ),
+  ];
+  if (retainedBatchIds.length > 0) {
+    const oldest = await db.query(
+      'select min(finished_at) as oldest from ingestion_batches where id = any($1::bigint[])',
+      [retainedBatchIds],
+    );
+    const raw = oldest.rows[0]?.oldest;
+    if (raw != null) {
+      const iso = new Date(raw as string | Date).toISOString();
+      if (iso < effectiveSyncedAt) effectiveSyncedAt = iso;
+    }
+  }
+
   const attribution: Attribution = {
     tableId: q.tableId,
     tableTitle: q.table.title,
@@ -396,7 +430,7 @@ export async function runQuery(db: Db, intent: StructuredIntent): Promise<QueryO
     // WP30a: everything registered today IS CBS; adapters for source #2
     // will carry their key through registration (ADR 030 D4/D5, WP30c).
     source: CBS_SOURCE_KEY,
-    syncedAt: q.table.lastSyncAt,
+    syncedAt: effectiveSyncedAt,
     coveredPeriods: { from: q.periodCodes[0]!, to: q.periodCodes[q.periodCodes.length - 1]! },
     license: 'CC BY 4.0',
     definitionLabel: q.definitionLabel,

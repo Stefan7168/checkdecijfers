@@ -74,8 +74,23 @@ export async function checkStaleness(
   if (!stale) return { stale: false, warning: null };
 
   const syncDate = result.attribution.syncedAt.slice(0, 10);
+  // #154: pick the honest middle clause (stale-only path — no cost on fresh
+  // answers). When the shown date is OLDER than the table's current
+  // last_sync_at, the attribution min came from a RETAINED cell: we DID sync
+  // recently, the cell just wasn't reconfirmed by CBS — "onze laatste
+  // synchronisatie was op {date}" would then be false about ourselves.
+  const table = await db.query('select last_sync_at from cbs_tables where id = $1', [
+    result.attribution.tableId,
+  ]);
+  const lastSyncRaw = table.rows[0]?.last_sync_at;
+  const tableLastSync =
+    lastSyncRaw == null ? null : new Date(lastSyncRaw as string | Date).toISOString();
+  const retainedMin = tableLastSync !== null && result.attribution.syncedAt < tableLastSync;
+  const clause = retainedMin
+    ? `maar een deel van deze cijfers is door CBS sinds ${syncDate} niet opnieuw bevestigd`
+    : `maar onze laatste synchronisatie was op ${syncDate}`;
   const warning =
     `Let op: deze tabel wordt normaal ${cadenceWordsNl(cadence!)} bijgewerkt door CBS, ` +
-    `maar onze laatste synchronisatie was op ${syncDate} — recentere cijfers kunnen inmiddels beschikbaar zijn.`;
+    `${clause} — recentere cijfers kunnen inmiddels beschikbaar zijn.`;
   return { stale: true, warning };
 }

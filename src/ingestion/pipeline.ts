@@ -606,6 +606,45 @@ export const syncTable: SyncTableFn = async (db, source, tableId, options = {}) 
       `, [tableId]);
       const rowsMissing = Number(missingRows.rows[0]!.count);
 
+      // #154: mark newly-retained cells with the last batch that provably
+      // confirmed them — only where still NULL (repeated absence must never
+      // creep the date forward). The provable prior is the previous
+      // SUCCEEDED batch for this table, but only if that batch ran after
+      // migration 021 was applied (the NULL-means-present invariant holds
+      // from then on); otherwise fall back to the cell's OWN batch_id (its
+      // last change — a true lower bound: "gesynchroniseerd op" may
+      // understate, never overstate). One transition-window approximation,
+      // explicit and conservative (design §2).
+      if (rowsMissing > 0) {
+        const priorBatch = await tx.query(
+          `select b.id
+             from ingestion_batches b
+            where b.table_id = $1
+              and b.outcome = 'succeeded'
+              and b.finished_at > (select applied_at from schema_migrations where version = 21)
+            order by b.id desc
+            limit 1`,
+          [tableId],
+        );
+        const provablePriorId = priorBatch.rows.length > 0 ? (priorBatch.rows[0]!.id as number) : null;
+        const markValueSql = provablePriorId !== null ? '$2::bigint' : 'o.batch_id';
+        const markParams = provablePriorId !== null ? [tableId, provablePriorId] : [tableId];
+        await tx.query(
+          `update observations o
+              set last_seen_batch_id = ${markValueSql}
+            where o.table_id = $1
+              and o.last_seen_batch_id is null
+              and not exists (
+                select 1 from sync_staging s
+                where s.measure = o.measure
+                  and s.period_code = o.period_code
+                  and s.region_code = o.region_code
+                  and s.dims = o.dims
+              )`,
+          markParams,
+        );
+      }
+
       const upsertResult = await tx.query(`
         insert into observations
           (table_id, measure, region_code, period_code, period_grain, period_year,
@@ -620,9 +659,15 @@ export const syncTable: SyncTableFn = async (db, source, tableId, options = {}) 
           value_attribute = excluded.value_attribute,
           unit = excluded.unit,
           decimals = excluded.decimals,
-          batch_id = excluded.batch_id
+          batch_id = excluded.batch_id,
+          -- #154: a re-published cell is confirmed again — clear the
+          -- retained marker. The OR-term below lets an identical-value
+          -- reappearance through the unchanged-row guard for exactly this
+          -- reset (write cost stays proportional to anomalies, design §2).
+          last_seen_batch_id = null
         where (observations.value, observations.status, observations.value_attribute)
           is distinct from (excluded.value, excluded.status, excluded.value_attribute)
+           or observations.last_seen_batch_id is not null
         returning (xmax = 0) as inserted
       `, [tableId, batchId]);
 

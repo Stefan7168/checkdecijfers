@@ -21,6 +21,13 @@ on top.
   'internal' refusal, on every production path. The REAL gap was silence, so the fix became an admin alert instead
   of a try/catch nobody needed. Same lesson as the marathon's own #162/#164 correction: briefs are inputs to verify,
   not specs to obey — building the brief as written would have added dead code and missed the actual gap.
+- **"Deploy-order-safe" is a property of the IMPLEMENTATION, not the design — verify it against the actual reads
+  (third brief-correction of the session).** The #154 design claimed "merge code + migration file, apply later; the
+  code change is inert until a post-apply sync" — but the natural implementation SELECTs the new column on every
+  query, so pre-apply code breaks everything. Caught at build time by asking "what does this code do against a
+  database WITHOUT the migration?"; ship order flipped to apply-then-deploy (additive nullable column = safe under
+  the running old code). Rule: for any schema-coupled change, walk both deploy orders explicitly before shipping —
+  a design's rollout section inherits none of the code's actual column references.
 - **An owner question that draws "ik kan me er niets bij voorstellen" needs a CONCRETE HISTORICAL EXAMPLE, not a
   sharper abstraction.** The #121 one-liner ("template fails its own validator: serve or refuse?") was
   well-defined and still undecidable for the owner as phrased. Retelling it as the real −39 incident — correct

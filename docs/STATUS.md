@@ -58,8 +58,15 @@ turns, #144 posture) + the reconstruct.ts distinct label "KNOWN-failing at serve
 corruption, heals when the validator blind spot is fixed). Proven: 3 hermetic tests + `audit:verify -- 1 256` against ALL prod rows
 exit 0 (229/231 clean + the 2 known pinned divergences — nothing new). Full verification block green again (GATE PASS, web 378/378,
 real build). #132 asked again same day: owner — "Vandaag beslis ik niet"; row stays awaiting GO, next session re-asks.
+(8) **#154 ✅ BUILT + LIVE (2026-07-24, owner-present "ga verder" continued; €0 LLM, zero prompt bytes):** the per-cell freshness
+truth from the marathon design — `last_seen_batch_id` NULL-sentinel (migration 021 APPLIED TO PROD in the supervised window BEFORE
+the code deploy; **measured correction: the design's "deploy-order-safe, apply later" claim was inverted by the new SELECT — ship
+order flipped to apply-then-deploy**), pipeline mark-on-absence (prior-batch value, own-batch_id transition fallback) +
+clear-on-reappearance, run.ts min effective attribution date (marker stays OFF ResultCell), staleness retained-branch wording
+("… door CBS sinds {date} niet opnieuw bevestigd"). Proven: the s47-repro full life cycle + transition bound
+(tests/ingestion/retained-cells.test.ts), full block green, audit:verify 1-256 unchanged clean.
 ▶ NEXT: the ~30/7 BBP+PPI window (`85880NED` via the chunked hatch — days away), the #132 route-B GO (re-ask; forks==0 measured
-24-07), then the owner-decision menu below (#138 and #121 BOTH OFF the menu — done; #172 needs only its supervised
+24-07), then the owner-decision menu below (#138, #121 AND #154 ALL OFF the menu — done; #172 needs only its supervised
 calibration/smoke half). #170 residual: (3) chart-download bundles with the Phase-2 OG WP,
 (4) annotations/toggles open. Kickoff:
 [session-briefs/2026-07-18-session-56-kickoff.md](session-briefs/2026-07-18-session-56-kickoff.md). Full entry in

@@ -21,6 +21,20 @@ resumed on the owner's "ok fix and dan wrap up after"; every date below verified
   `85773NED` last_sync_at 2026-07-02, `83693NED` 2026-07-16, zero `ingestion_batches` rows since 2026-07-19
   (read-only live-DB check). The #132 route-B check (due on/after 19/7) is also still outstanding. Catch-up is the
   next session's FIRST owner-supervised action; ~30/7 BBP+PPI (chunk hatch) is days away.
+- **→ SAME DAY, evening: #154 ✅ BUILT + LIVE ("de context window is pas op 43/50%, ga verder") — the marathon
+  design executed with ONE measured correction.** The brief claimed "deploy-order-safe: merge code, apply 021
+  later"; inverted in practice — the new `select … last_seen_batch_id` breaks every query pre-apply, so the ship
+  order flipped: migration 021 applied to prod FIRST (owner-present supervised window; additive nullable column,
+  0 marked rows, old code unaffected, prod 200 verified post-DDL), THEN the code push. Shipped per design
+  otherwise: pipeline mark-on-absence sets the marker to the last PROVABLE confirming batch (prior succeeded batch
+  when post-migration, else the cell's own batch_id — never overstate), clear-on-reappearance via the upsert
+  OR-term (an identical-value reappearance passes the unchanged-row guard exactly to reset the marker), run.ts
+  attribution.syncedAt = min of effective cell dates (sideband; marker deliberately NOT on ResultCell), staleness
+  retained branch: "een deel van deze cijfers is door CBS sinds {date} niet opnieuw bevestigd". Proven:
+  tests/ingestion/retained-cells.test.ts scenario A (mark-with-PRIOR-batch proven distinguishable by double clean
+  sync; honest min date; retained staleness fires while the fresh control stays silent; no date-creep; heal on
+  reappearance) + scenario B (transition lower bound via a shifted schema_migrations.applied_at), full
+  verification block green (GATE PASS), audit:verify 1-256 unchanged (229/231 + 2 pinned), /code-review LOW none.
 - **→ SAME DAY, later: #121 ✅ FULLY RESOLVED — the owner answered the one-line question (OPTION A: serve + alert)
   after a concrete-example read-back (the first phrasing drew "kan geen beslissing maken"; the −39 scenario landed
   it).** Shipped: `maybeAlertTemplateValidationFailure` (source 'template' + recorded ok:false — the only servable

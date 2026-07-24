@@ -48,9 +48,11 @@ LLM-vrij exact: consumentenvertrouwen juli **−35**, gemiddelde verkoopprijs ju
 
 ## Owner-menu (ontwerpen liggen klaar, zie het ▶-blok in STATUS voor links)
 
-WP26 (trial-conversie; safelist-read-back → begeleide bouw, €5/€10) · WP30c (beslismemo, 4 opties) · #154
-(rider op elk begeleid venster) · #162 (na WP26) ·
-#170 rest: (3) chart-download bundelen met de Phase-2 OG-WP, (4) annotaties/toggles.
+WP26 (trial-conversie; safelist-read-back → begeleide bouw, €5/€10) · WP30c (beslismemo, 4 opties) · #162
+(na WP26) · #170 rest: (3) chart-download bundelen met de Phase-2 OG-WP, (4) annotaties/toggles.
+**#154 is ✅ KLAAR + LIVE (24-07, van het menu af):** migratie 021 op prod toegepast VÓÓR de code-deploy (gemeten
+correctie: de brief-claim "code eerst, apply later" was omgekeerd — de nieuwe SELECT breekt pre-apply);
+retained-cellen krijgen nu de eerlijke oudste datum + de "niet opnieuw bevestigd"-staleness-tekst.
 **#121 is ✅ VOLLEDIG RESOLVED (24-07, van het menu af):** ochtend = throw-helft (internal-refusal-alert, gemeten
 correctie op de brief); middag = owner koos optie A (serveren + alert + R8-marker) na een concreet-voorbeeld-
 read-back — gebouwd, getest, audit:verify 1-256 schoon.
