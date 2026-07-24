@@ -302,6 +302,9 @@ unauthenticated `/geschiedenis` 307s to `/login` (flag on) vs `/` (flag off). Sm
 live credits chip, chart dock, resume identical). Logout worked but gave no pending feedback → fixed same session (`5ba3fb8`, live).
 Cosmetic residual: `/login`'s stripped header does not render in prod while that route is static — harmless. Step 5 (GDPR spot-check)
 deliberately skipped (optional, owner's call). Rollback unchanged: unset the flag + redeploy.
+**[Update 2026-07-24, session 55: the cosmetic residual is FIXED — `/login` is now `force-dynamic` (commit `0cfbd3d`), so the header
+renders and the route reads env vars per request. That also retires the "⚠ /login HTML is a FALSE NEGATIVE" caveat above: `/login` is
+no longer statically prerendered. The `/geschiedenis`-redirect signal still works and remains the belt-and-braces check.]**
 
 The workspace (conversation sidebar + right-pane dock + site shell) ships DORMANT behind
 `WORKSPACE_ENABLED`: until every step below is done, production behaves byte-identically to

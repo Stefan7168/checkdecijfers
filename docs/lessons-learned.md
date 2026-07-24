@@ -21,6 +21,12 @@ on top.
   'internal' refusal, on every production path. The REAL gap was silence, so the fix became an admin alert instead
   of a try/catch nobody needed. Same lesson as the marathon's own #162/#164 correction: briefs are inputs to verify,
   not specs to obey — building the brief as written would have added dead code and missed the actual gap.
+- **A Dependabot security fix can die invisibly when its branches are merged away mid-run — check the alerts tab,
+  not just the PR list, after merging dep PRs.** Minutes after merging PRs #58/#59, a HIGH advisory (sharp <0.35.0)
+  landed; Dependabot's own fix-run failed (its working branches had just been merged/deleted) and would have waited
+  for the next weekly cycle. The manual path: the `overrides` block in web/package.json (postcss precedent) +
+  `npm install` + web verify — alert measured "fixed" within the hour. Also learned: those failed runs show as
+  event "dynamic" with actor dependabot[bot] — they are NOT our CI failing.
 - **"Deploy-order-safe" is a property of the IMPLEMENTATION, not the design — verify it against the actual reads
   (third brief-correction of the session).** The #154 design claimed "merge code + migration file, apply later; the
   code change is inert until a post-apply sync" — but the natural implementation SELECTs the new column on every

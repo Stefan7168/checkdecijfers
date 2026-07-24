@@ -261,3 +261,8 @@ Go-live RUN per RUNBOOK § "WP135 chat workspace" (as-executed record there): mi
 `WORKSPACE_ENABLED=1`, owner smoke tests PASS (threads/dock/resume). Two go-live findings: the logout button needed a pending state
 (`5ba3fb8`, `useFormStatus` — the D6 shell's one UX gap); `/login`'s stripped header does not render in prod because that route is
 statically prerendered and sensitive env vars are empty at build (cosmetic; the D6 shell is otherwise live). GDPR spot-check deferred (optional).
+
+**As-built update (2026-07-24, session 55):** the `/login` header residual is FIXED — the page now exports
+`dynamic = 'force-dynamic'` (commit `0cfbd3d`) so the `WORKSPACE_ENABLED` read happens per request instead of being
+frozen at build time; pinned by `web/app/login/page.test.tsx` (prerender opt-out + flag-on/off render) and verified
+live on production HTML. The ⟨A5⟩ flag semantics are unchanged.

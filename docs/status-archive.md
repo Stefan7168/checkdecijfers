@@ -1,5 +1,15 @@
 # STATUS archive — the session log
 
+**Session-55 FINAL AUDIT (2026-07-25, owner: "check of afronding volgens het boekje is gedaan"):** the full
+CLAUDE.md wrap-up checklist re-ran item by item against sources. Found + fixed in one docs pass: the /login-fix had
+not yet propagated to ADR-033 (as-built note added), the RUNBOOK WP135 record (its "/login HTML is a FALSE
+NEGATIVE" caveat is retired by the fix itself — dated update note), the STATUS residuals line + kickoff Residuen
+line (both still listed the fixed cosmetic), 04-architecture capability rows (#154 sentinel + the two #121 alert
+hooks added), and an 08-build-plan status bracket (syncs caught up, #138/#121/#154 done). Two lessons appended
+(dependabot fix-runs dying when branches merge away; recorded the day before: deploy-order). web/README measured:
+untouched Next.js boilerplate — nothing mis-stated, replacement spun off as a task chip. All PR references in
+docs/ remain plain text (0 live links). Session span for the record: 18-07 → 24-07, with this audit on 25-07.
+
 **Session-55 CLOSE ADDENDUM (2026-07-24 — the session was interrupted for six days after the #172 step-0 build and
 resumed on the owner's "ok fix and dan wrap up after"; every date below verified against `date`/git/DB, not memory):**
 

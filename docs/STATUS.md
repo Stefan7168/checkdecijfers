@@ -216,7 +216,8 @@ PR #42 `4e2a2fd`, the #140 validator narrowing PR #43 `882c808`; full entries in
   overnight marathon (see the ▶ block above for links):** **#138 ✅ DONE + LIVE (session 55, `f2d015a` — off this menu)**, **WP26**
   (execute-brief ready — safelist read-back + 2 read-back items), **#121** (one-line owner question), **#131** (multilingual L1 — no
   design yet), **WP30c** (beslismemo ready, 4 options), **#162** (ADR-draft ready — after WP26). Tracked-not-focus: #132 route B
-  ~2026-07-19 (check on/after 19 juli), #104/#112 (need live-LLM spend), /login header cosmetic.
+  ~2026-07-19 (check on/after 19 juli), #104/#112 (need live-LLM spend). (The /login header cosmetic that used to be
+  listed here was FIXED 2026-07-24, session 55 — see the ▶ block.)
 
 
 **▶ TOP PRIORITY STACK — owner decision, session 23 (2026-07-05); this ORDER overrides the "decision-gated" framing below.** The owner set an explicit

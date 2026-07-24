@@ -57,8 +57,8 @@ retained-cellen krijgen nu de eerlijke oudste datum + de "niet opnieuw bevestigd
 correctie op de brief); middag = owner koos optie A (serveren + alert + R8-marker) na een concreet-voorbeeld-
 read-back — gebouwd, getest, audit:verify 1-256 schoon.
 **#138 is ✅ KLAAR + LIVE** (zelfde dag gebouwd, commit `f2d015a` — van het menu af).
-Residuen: #131, #104/#112 (live-spend), /login-cosmetiek, #151-backfill (begeleid). Owner-clicks open: GitHub
-Budgets, Resend-confirm, optionele Vercel-Firewall-rule.
+Residuen: #131, #104/#112 (live-spend), #151-backfill (begeleid) — de /login-cosmetiek is 24-07 GEFIXT (van de
+lijst af). Owner-clicks open: GitHub Budgets, Resend-confirm, optionele Vercel-Firewall-rule.
 
 ## Kanttekeningen
 
