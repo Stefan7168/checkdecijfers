@@ -189,7 +189,11 @@ export async function parseClarificationReply(
   const resolutions = await Promise.all(
     raw.candidates
       .slice(0, MAX_CANDIDATES)
-      .map((candidate) => resolveCandidate(db, candidate, pending.referenceDate)),
+      .map((candidate) =>
+        resolveCandidate(db, candidate, pending.referenceDate, {
+          answerFirstEnabled: options.answerFirstEnabled === true,
+        }),
+      ),
   );
   // The #56 servability check applies on reply turns too — decide() is the
   // shared seam, so an unservable echo can never be offered from either path.

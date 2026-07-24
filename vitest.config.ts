@@ -23,10 +23,18 @@ import { defineConfig } from 'vitest/config';
 // hook ceiling three times in one session under the query suite's 7
 // parallel PGlite boots on a loaded machine, solo-green in 12.5s each time.
 // Same class, same fix.
+//
+// hookTimeout raised 120s → 300s (WP26, 2026-07-25): two more db-booting
+// suites (the answer-first region/period pins) pushed the parallel PGlite boot
+// count up again and tests/chart/benchmark-charts.test.ts hit the 120s HOOK
+// ceiling — 6 tests skipped, solo-green. Fourth occurrence of the same class,
+// so this raise targets the hook only (per-test time did not move) and matches
+// the 300_000 the newer suites already pass explicitly at their own beforeAll.
+// The real fix is a shared fixture DB across suites; tracked, not done here.
 export default defineConfig({
   test: {
     testTimeout: 120_000,
-    hookTimeout: 120_000,
+    hookTimeout: 300_000,
     // web/ is a standalone Next.js workspace (ADR 018) with its own vitest
     // config, jsdom environment, and `npm run web:test` script — its
     // *.test.tsx files must not be swept into this root, Node-environment run.

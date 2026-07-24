@@ -11,7 +11,7 @@
 // behavior. This file only catches what the query layer cannot see: name
 // ambiguity, unknown names, missing/unresolvable periods.
 import type { Db } from '../../db/types.ts';
-import { INTENT_SCHEMA_VERSION } from '../../query/index.ts';
+import { INTENT_SCHEMA_VERSION, NATIONAL_REGION_CODE } from '../../query/index.ts';
 import type { IntentPeriod, StructuredIntent } from '../../query/index.ts';
 import type {
   PeriodSpec,
@@ -405,7 +405,15 @@ export function parseReferenceDate(iso: string): ReferenceDate {
 }
 
 type PeriodResolution =
-  | { ok: true; period: IntentPeriod; impliedRecency: boolean }
+  | {
+      ok: true;
+      period: IntentPeriod;
+      impliedRecency: boolean;
+      /** WP26 mechanism B-period (ADR 024): the question named NO period and we
+       * filled in the recent-trend window. Travels to the answer layer so the
+       * assumption is disclosed and re-derivable at audit time (R8). */
+      periodDefaulted?: boolean;
+    }
   | { ok: false; failure: Pick<ResolutionFailure, 'axis' | 'reason' | 'message' | 'options'> };
 
 function periodFailure(
@@ -423,6 +431,12 @@ async function resolvePeriod(
   spec: PeriodSpec,
   canonical: CanonicalRow,
   reference: ReferenceDate,
+  /** WP26 (ADR 024): `ANSWER_FIRST_ENABLED`. Off ⇒ a period-less question
+   * clarifies exactly as it does today. */
+  answerFirstEnabled = false,
+  /** WP26 mechanism B-period: the regions the answer will be served for — the
+   * defaulted window must be servable at exactly those coordinates. */
+  regionCodes: string[] = [],
 ): Promise<PeriodResolution> {
   const grains = await availableGrains(db, canonical);
   const requireGrain = (grain: 'JJ' | 'KW' | 'MM'): PeriodResolution | null => {
@@ -703,9 +717,106 @@ async function resolvePeriod(
       if (!latest) return periodFailure('period_invalid', `no published periods found for "${canonical.definitionLabel}"`);
       return { ok: true, period: { kind: 'codes', codes: [latest] }, impliedRecency: true };
     }
-    case 'none':
-      return periodFailure('period_missing', 'the question names no period', []);
+    case 'none': {
+      // WP26 mechanism B-period (ADR 024 safelist entry 2, the owner's session-23
+      // upgrade over "freshest single value"): a question with NO period signal
+      // at all gets the RECENT TREND — a bounded, gap-free run ending at the
+      // freshest published period — disclosed as an assumption, instead of a
+      // clarification round. Rationale on record: a fact-checking reader is
+      // better served by the trend (which contains the latest point anyway)
+      // than by a lone number, and it reads as less of a guess.
+      //
+      // Only reached on a genuine `none`: present-tense questions already
+      // resolve through 'latest', which is the majority path and untouched.
+      if (!answerFirstEnabled) {
+        return periodFailure('period_missing', 'the question names no period', []);
+      }
+      const window = await defaultTrendWindow(db, canonical, grains, regionCodes);
+      // No window we can honestly serve (nothing published at the canonical
+      // coordinate) ⇒ exactly today's clarification. Never a guessed period.
+      if (!window) return periodFailure('period_missing', 'the question names no period', []);
+      return {
+        ok: true,
+        // Degenerate case (a single loaded period): one code, not a range —
+        // the safelist's "degradeert naar één cijfer" branch.
+        period:
+          window.from === window.to
+            ? { kind: 'codes', codes: [window.to] }
+            : { kind: 'range', from: window.from, to: window.to },
+        // The window ends at the freshest published period, so it does imply
+        // currency: a stale table must refuse here exactly as it would for a
+        // 'latest' question, not warn-and-serve.
+        impliedRecency: true,
+        periodDefaulted: true,
+      };
+    }
   }
+}
+
+/** How many periods of the chosen grain a ~10-year window spans. Bounded by
+ * design (ADR 024: "the last ~10 years, or the full loaded range if shorter")
+ * — a named constant, never a magic number at the call site. */
+const DEFAULT_TREND_YEARS = 10;
+const PERIODS_PER_YEAR: Record<'JJ' | 'KW' | 'MM', number> = { JJ: 1, KW: 4, MM: 12 };
+
+/** WP26 mechanism B-period: the bounded, GAP-FREE run ending at the freshest
+ * published period, at the coarsest grain the measure publishes.
+ *
+ * Built by walking backwards from the newest period while each step is
+ * actually present — NOT by computing a range and letting the completeness
+ * check refuse it. That distinction is the whole point: a defaulted window the
+ * user never asked for must never turn an answerable question into a refusal
+ * because of an interior hole in our data. The safelist's "een reeks met gaten
+ * wordt nooit getoond" is satisfied by construction here, and every code in
+ * the returned span is a real loaded period.
+ *
+ * Returns null when nothing is published at the canonical coordinate — the
+ * caller then falls back to today's clarification. */
+async function defaultTrendWindow(
+  db: Db,
+  canonical: CanonicalRow,
+  grains: Set<string>,
+  /** The region codes this window will ACTUALLY be served for. Load-bearing:
+   * a period that exists for some other region but not for this one would make
+   * the window unservable, and the completeness check would refuse — a dead end
+   * produced entirely by a default the user never asked for. `['']` is the
+   * region-less convention for tables without a geo dimension. */
+  regionCodes: string[],
+): Promise<{ from: string; to: string } | null> {
+  const grain = (['JJ', 'KW', 'MM'] as const).find((g) => grains.has(g));
+  if (!grain) return null;
+  const cap = DEFAULT_TREND_YEARS * PERIODS_PER_YEAR[grain];
+  const regions = regionCodes.length > 0 ? regionCodes : [''];
+  // A period counts only when EVERY served region has it — a comparison whose
+  // window holds for one place and not the other is not a window we can serve.
+  const rows = await db.query(
+    `select period_code from observations
+     where table_id = $1 and measure = $2 and period_grain = $3 and dims = $4::jsonb
+       and region_code = any($6::text[])
+     group by period_code
+     having count(distinct region_code) = $7
+     order by period_code desc
+     limit $5`,
+    [
+      canonical.tableId,
+      canonical.measure,
+      grain,
+      JSON.stringify(canonical.mergedDims),
+      cap,
+      regions,
+      regions.length,
+    ],
+  );
+  const available = new Set(rows.rows.map((r) => r.period_code as string));
+  const latest = rows.rows[0]?.period_code as string | undefined;
+  if (latest === undefined) return null;
+  let from = latest;
+  for (;;) {
+    const previous = stepPeriodCode(from, -1);
+    if (previous === null || !available.has(previous)) break;
+    from = previous;
+  }
+  return { from, to: latest };
 }
 
 // ---------------------------------------------------------------------------
@@ -848,6 +959,8 @@ export async function resolveCandidate(
   db: Db,
   candidate: RawCandidate,
   referenceDateIso: string,
+  /** WP26 (ADR 024): the answer-first switches. Absent ⇒ pre-WP26 behavior. */
+  options: { answerFirstEnabled?: boolean } = {},
 ): Promise<CandidateResolution> {
   const confidence = clamp01(candidate.confidence);
   const fail = (
@@ -920,8 +1033,30 @@ export async function resolveCandidate(
   if (derivation === 'max' && regionResolution.codes.length < 2) return await maxNeedsRegions();
 
   const reference = parseReferenceDate(referenceDateIso);
-  const periodResolution = await resolvePeriod(db, candidate.period, canonical, reference);
+  const periodResolution = await resolvePeriod(
+    db,
+    candidate.period,
+    canonical,
+    reference,
+    options.answerFirstEnabled === true,
+    // The coordinates the answer will really run at: the named regions, or —
+    // on a geo table with none named — the national row B-region will default
+    // to, so the two defaults agree on one servable window.
+    regionResolution.codes.length > 0
+      ? regionResolution.codes
+      : geo.geoDimension !== null
+        ? [NATIONAL_REGION_CODE]
+        : [],
+  );
   if (!periodResolution.ok) return fail(periodResolution.failure);
+  // WP26 mechanism B-period: a defaulted trend window IS a series — the same
+  // forcing 'since'/'last_n' already get in normalizeDerivation, applied here
+  // because the shape is only known after resolution. Without it the multi-
+  // period selection would carry the model's 'none' hint and lose the
+  // pre-registered direction derivation honest trend prose binds to (R9).
+  if (periodResolution.periodDefaulted === true && periodResolution.period.kind === 'range') {
+    derivation = 'series';
+  }
 
   // A date_range spanning several months was force-normalized to 'series' —
   // but on a measure whose finest exact grain is coarser, the whole span can
@@ -976,5 +1111,6 @@ export async function resolveCandidate(
     confidence,
     reading: candidate.reading,
     impliedRecency: periodResolution.impliedRecency,
+    ...(periodResolution.periodDefaulted === true ? { periodDefaulted: true } : {}),
   };
 }

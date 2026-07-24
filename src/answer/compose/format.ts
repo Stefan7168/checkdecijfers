@@ -239,6 +239,19 @@ export function buildAssumptionLine(result: ValidatedResult): string | null {
         'Noem een gemeente of provincie in je vraag als je een specifieke regio wilt.',
     );
   }
+  if (result.periodDefaulted ?? false) {
+    // The window's end is named from the CELLS themselves (the last period we
+    // actually served), never from a computed "today" — so the sentence can
+    // only ever describe data that is really in the answer.
+    const last = result.cells[result.cells.length - 1];
+    const until = last === undefined ? null : last.periodLabel;
+    parts.push(
+      until === null
+        ? 'Dit is het recente verloop.'
+        : `Dit is het verloop over de afgelopen jaren, t/m ${until}.`,
+    );
+    parts.push('Vraag gerust naar alleen het laatste cijfer of naar een andere periode.');
+  }
   return parts.length > 0 ? parts.join(' ') : null;
 }
 

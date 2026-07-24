@@ -170,7 +170,11 @@ export async function parseFollowUpQuestion(
   const resolutions = await Promise.all(
     raw.candidates
       .slice(0, MAX_CANDIDATES)
-      .map((candidate) => resolveCandidate(db, candidate, options.referenceDate)),
+      .map((candidate) =>
+        resolveCandidate(db, candidate, options.referenceDate, {
+          answerFirstEnabled: options.answerFirstEnabled === true,
+        }),
+      ),
   );
   return decide(
     outcomeContext,

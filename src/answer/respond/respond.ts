@@ -269,7 +269,13 @@ export async function respondToIntent(
     return toRefusalResponse({ question, built: built.refusal, parse, queryRefusal: outcome, suggestions });
   }
 
-  const result: ValidatedResult = outcome;
+  // WP26 mechanism B-period (ADR 024): the period axis is resolved by the
+  // ANSWER layer (before the query runs), so the query layer cannot know the
+  // window was defaulted — it is stamped onto the validated result here, the
+  // one place that holds both halves. Present-only, like regionDefaulted, so a
+  // turn that defaulted nothing keeps the pre-WP26 envelope bytes.
+  const result: ValidatedResult =
+    parse.periodDefaulted === true ? { ...outcome, periodDefaulted: true } : outcome;
   const staleness = await checkStaleness(db, result, options.referenceDate);
 
   // docs/05 staleness row, recency-implying branch: refuse rather than warn

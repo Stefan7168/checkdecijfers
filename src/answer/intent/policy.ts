@@ -533,6 +533,9 @@ export async function decide(
     intent: top.intent,
     confidence: top.confidence,
     impliedRecency: top.impliedRecency,
+    // WP26 mechanism B-period: present-only, so a turn that defaulted nothing
+    // serializes the pre-WP26 outcome shape.
+    ...(top.periodDefaulted === true ? { periodDefaulted: true } : {}),
     ranked: successes,
   };
 }

@@ -213,6 +213,11 @@ export interface ValidatedResult {
    * would otherwise misreport them (the lesson the WP16 `onboarding` field
    * taught on ~73 real rows). */
   regionDefaulted?: boolean;
+  /** WP26 mechanism B-period (ADR 024, safelist entry 2): the question named no
+   * period and we answered with the recent-trend window. Set by the ANSWER
+   * layer (the period axis is resolved before the query runs), same present-only
+   * and `?? false` discipline as regionDefaulted. */
+  periodDefaulted?: boolean;
 }
 
 // ---------------------------------------------------------------------------

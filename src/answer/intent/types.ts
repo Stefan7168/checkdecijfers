@@ -178,6 +178,11 @@ export interface RankedCandidate {
   /** True when the period came from a relative/'latest' spec — feeds the
    * docs/05 staleness rule (recency-implying questions refuse when stale). */
   impliedRecency: boolean;
+  /** WP26 mechanism B-period (ADR 024): the question named NO period and the
+   * recent-trend window was filled in. Carried to the answer layer, which puts
+   * it on the ValidatedResult so the disclosure is built from validated state
+   * and re-derives at audit time (R8). Absent = nothing was defaulted. */
+  periodDefaulted?: boolean;
 }
 
 /** Why a raw candidate could not become a StructuredIntent. All of these are
@@ -240,6 +245,8 @@ export type ParseOutcome =
       intent: StructuredIntent;
       confidence: number;
       impliedRecency: boolean;
+      /** WP26 mechanism B-period (ADR 024): see RankedCandidate. */
+      periodDefaulted?: boolean;
       /** All resolved readings, best first — R7's "ranked candidate intents". */
       ranked: RankedCandidate[];
     })
