@@ -49,6 +49,13 @@ answer-first + clickable options", one flag at a time with rollback + live smoke
 `85770NED` on 2026-06-30, both behind our 17/7 sync). `85880NED` MUST use the chunked escape hatch (RUNBOOK step
 5); (d) **re-ask #132 route B**; (e) then the owner menu: WP30c choice / #162 / #170 rest (3)+(4).
 
+**▶ DE VOLGENDE SESSIE IS EEN AUTONOME OVERNACHT-RUN.** Wachtrij + regels + de Fable-opdracht staan in
+[session-briefs/2026-07-26-overnight-autonomous-queue.md](session-briefs/2026-07-26-overnight-autonomous-queue.md).
+Kort: sessiemodel Opus 5 orkestreert, **architectuur en complexe analyses gaan naar Fable-agents**
+(owner-steer 25-07), mechanisch legwork naar Sonnet/Haiku. Branch+PR per #118(b), €0 live-LLM, nul
+promptbytes, geen DDL, vlaggen blijven UIT, en geen gestapelde deploys (#173). Slotfase: Fable
+controleert de architectuur van WP26 + #154/#121/#138/#172-stap-0/#170.
+
 Full session record in [status-archive.md](status-archive.md).)**
 
 **Design marathon (2026-07-18 overnight, AUTONOMOUS docs-only — FABLE'S LAST SESSION before the model
