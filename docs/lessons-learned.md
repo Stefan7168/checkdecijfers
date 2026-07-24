@@ -35,6 +35,21 @@ on top.
   measure has an NL-level row" as *verify at build, do not assume*. One read-only query answered it for both geo
   tables in seconds, and the answer widened the feature's scope (B-region ships for BOTH tables, not just
   population as the brief's fallback wording allowed for). Cheap, and it turned a hedge into a fact.
+- **Enforce a rule where the DEGRADATION happens, not only where it is easiest.** WP26c's "a rescue pending is not
+  an open clarification round" rule was first written server-side only: any non-chip reply was answered as a fresh
+  question. Correct behaviour, wrong LAYER — because the CLIENT still routed the message through the reply Server
+  Action, which deliberately wires no table finder, so a fresh question about an unloaded topic silently lost
+  on-demand onboarding (a 100-credit core feature). The server rule looked complete in isolation; only tracing what
+  the whole request path DOES with a correct-but-differently-routed call surfaced it. Rule: when you add a state
+  that changes which entry point a message takes, enumerate what that entry point wires DIFFERENTLY, not just what
+  it computes differently. (Billing, checked for the same reason, turned out fine — the gate prices on response
+  kind, identically for both actions.)
+- **A red test is not automatically YOUR red test — but prove it, do not assume it.** The web cron test went red
+  mid-session. It would have been easy to wave off as unrelated (it is) or to assume it was the new code. The cheap
+  proof was `git stash push -- web` + rerun: it failed WITHOUT the session's changes too, and worse. Then the
+  message itself said `Test timed out in 5000ms` — a load-dependent timeout on a test that dynamically imports the
+  whole backend graph inside its body, not a logic failure. Two minutes of measurement turned "mystery red" into a
+  one-line config fix with a comment explaining it.
 - **The #125a hook-timeout class fired a FOURTH time** (`hookTimeout` 120s → 300s, benchmark-charts). Every WP that
   adds a db-booting suite raises the parallel PGlite boot count and pushes the slowest `beforeAll` over the ceiling.
   Raising the number keeps working but the trend is the signal: the real fix is a shared fixture DB across suites.

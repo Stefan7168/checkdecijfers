@@ -30,11 +30,21 @@ planned €5 / capped €10 was never touched.)**
   and letting the completeness check REFUSE a holey one — honest but hostile, since a default the user never asked
   for would manufacture a dead end. The window is instead WALKED backwards while each step is present, so a hole
   shortens it and it always serves.
-- **Three /code-review LOW findings, all handled honestly:** (a) a region chip would have answered a NARROWER
+- **(4) WP26c ✅ (`1a4ca89`):** the two MEASURED s52-trial misfires now carry ONE deterministic rescue chip beside
+  the UNCHANGED refusal (classification and text untouched — you cannot pin an unstable parse). Gates: one of the
+  two misfire kinds, EXACTLY one nearest canonical key, a target period, and a real dry-run — which subsumes the
+  brief's separate "period ≤ freshest" check. Taking the chip rides mechanism A's take-path so it never re-enters
+  the parse that misfired; the pending is `rescueOnly` and anything else the user types is answered as a FRESH
+  question (client-side, so the table finder still applies — a review finding — with a server-side belt).
+- **Four /code-review LOW findings, all handled honestly:** (a) a region chip would have answered a NARROWER
   question when the user named other regions too → fixed + pinned; (b) the trend window was computed across ALL
   regions but served for ONE → fixed + pinned; (c) a suspected 'max' default leak → INVALIDATED on verification
   (the arity check already refuses first), guard reverted rather than left as dead code, ordering pinned instead.
-- **Test-infra:** `hookTimeout` 120s → 300s. Two more db-booting suites pushed the parallel PGlite boot count up
+- **Vierde bevinding (WP26c):** een genegeerde rescue-chip routeerde de VOLGENDE vraag via de reply-actie, die
+  bewust geen tableFinder heeft → on-demand onboarding viel stil. Client neemt het reply-pad nu alleen bij een
+  byte-match. Prijs was nooit in het geding (de gate rekent af op respons-kind, identiek voor beide acties).
+- **Test-infra:** `hookTimeout` 120s → 300s, en web `testTimeout` 5s → 15s (de cron-test importeert de hele
+  backend-graph dynamisch ín de test; faalde als TIMEOUT, bewezen pre-existent — ook zónder deze sessie's wijzigingen). Two more db-booting suites pushed the parallel PGlite boot count up
   and benchmark-charts hit the 120s HOOK ceiling (6 skipped, solo-green) — fourth occurrence of the #125a class.
   The real fix is a shared fixture DB across suites; noted, not done.
 - **Verification per push:** typecheck (root+web), backend 94 files/1486 tests, web 40/384, benchmark GATE PASS

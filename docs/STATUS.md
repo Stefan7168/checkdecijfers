@@ -9,8 +9,8 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
-**▶ NEXT SESSION STARTS HERE (Session 56, 2026-07-25, owner-present, Opus 5. **WP26 is three-quarters BUILT and
-pushed — mechanism A + B-region + B-period — all DORMANT behind two independent flags. €0 LLM spend: nothing in
+**▶ NEXT SESSION STARTS HERE (Session 56, 2026-07-25, owner-present, Opus 5. **WP26 IS COMPLETE and pushed —
+mechanism A + B-region + B-period + WP26c — all DORMANT behind two independent flags. €0 LLM spend: nothing in
 this WP needed a live model, so the planned €5 / capped €10 was never touched. Zero prompt bytes, zero pricing
 change, no DDL.**
 
@@ -29,11 +29,13 @@ NL01 row. The existence check runs per-measure every time; without a row it stil
 (3) **B-period** `1a99b3d` — no period signal → a bounded recent trend, **walked** backwards so gaps SHORTEN the
 window instead of causing a refusal (this replaces the brief's let-completeness-refuse design, which would have
 manufactured dead ends). Flag `ANSWER_FIRST_ENABLED`, independent of A's.
+(4) **WP26c** `1a4ca89` — the two MEASURED trial misfires ("Wat was de inflatie in juni 2026?" → forecast; "Wat is
+het consumentenvertrouwen?" → meta) now carry ONE deterministic rescue chip beside the unchanged, still-honest
+refusal. Offered only when code proved the figure loaded and servable; taking it never re-enters the parse that
+misfired. Rides A's flag.
 
-**▶ NEXT, in order:** (a) **WP26c** — the last WP26 sub-part (rescue chips on the measured forecast/meta trial
-misfires; design intact in the execute-brief §6, severable by construction); (b) the **owner-supervised go-live**
-of the two flags — new RUNBOOK section "WP26 answer-first + clickable options", one flag at a time with rollback;
-(c) **~30/7 BBP+PPI syncs** — measured at CBS today: nothing was due yet (`85880NED` still on Modified 2026-07-01,
+**▶ NEXT, in order:** (a) the **owner-supervised go-live** of the two flags — new RUNBOOK section "WP26
+answer-first + clickable options", one flag at a time with rollback + live smoke; (b) **~30/7 BBP+PPI syncs** — measured at CBS today: nothing was due yet (`85880NED` still on Modified 2026-07-01,
 `85770NED` on 2026-06-30, both behind our 17/7 sync). `85880NED` MUST use the chunked escape hatch (RUNBOOK step
 5); (d) **re-ask #132 route B**; (e) then the owner menu: WP30c choice / #162 / #170 rest (3)+(4).
 
