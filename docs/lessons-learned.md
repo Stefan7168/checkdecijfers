@@ -6,6 +6,40 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 56 (2026-07-25 — WP26 mechanism A + B built; owner-present, €0 LLM)
+
+- **"Structurally satisfied" can still be hostile to the user — read a design's guarantee from the USER's side.**
+  The WP26 execute-brief satisfied the safelist's "never show a series with gaps" by computing a 10-year window and
+  letting the existing completeness check REFUSE a holey one. Technically correct, and it would have shipped a
+  feature whose whole purpose is to remove dead ends while MANUFACTURING new ones: a default the user never asked
+  for would turn an answerable question into a refusal because of an interior hole in our own data. The fix was to
+  invert it — walk backwards from the freshest period while each step is actually present, so a gap SHORTENS the
+  window. Rule for next time: when a design leans on an existing refusal to uphold a guarantee, ask "who receives
+  that refusal, and did they ask for the thing that triggered it?" If they did not, the guarantee needs a
+  constructive implementation, not a defensive one.
+- **A review finding that turns out wrong must be REVERTED, not left in as a harmless guard.** The /code-review pass
+  flagged that B-region might default a region on a `max` comparison. Plausible, and I wrote a one-line guard for
+  it — then the test proved the derivation-arity check already refuses `max` before the region axis is reached, so
+  the guard was unreachable. Leaving it would have been dead code that quietly implies a hazard that does not
+  exist, and the next reader would maintain it forever. Reverted; the real ORDERING is pinned by a test instead.
+  Reporting the finding as `no_change_needed` with the measured reason is part of the same discipline.
+- **Owner-approved COPY can be unimplementable on the surface it has to live on — flag the deviation, never silently
+  redesign the interaction.** The safelist (owner-read-back, session 23) promised the region correction as *"en een
+  knop: 'Liever een gemeente of provincie? Noem de naam.'"*. But the chip surface fills the input with the chip's
+  own text and the user then sends it, so that chip would be SENT as a question. The alternatives were both worse:
+  invent a new fill-a-template interaction (scope creep on a live money path) or suggest example places (which the
+  safelist explicitly rejects as picking for the user). Shipped it as the disclosure's second sentence — same
+  information, same place on screen — and recorded the deviation in the ADR as-built AND told the owner. A silent
+  substitution here would have been the kind of drift that makes a read-back worthless.
+- **Measure the assumption the ADR flagged; do not carry it into the build.** ADR 024 marked "every in-scope geo
+  measure has an NL-level row" as *verify at build, do not assume*. One read-only query answered it for both geo
+  tables in seconds, and the answer widened the feature's scope (B-region ships for BOTH tables, not just
+  population as the brief's fallback wording allowed for). Cheap, and it turned a hedge into a fact.
+- **The #125a hook-timeout class fired a FOURTH time** (`hookTimeout` 120s → 300s, benchmark-charts). Every WP that
+  adds a db-booting suite raises the parallel PGlite boot count and pushes the slowest `beforeAll` over the ceiling.
+  Raising the number keeps working but the trend is the signal: the real fix is a shared fixture DB across suites.
+  Worth a task chip before the count grows again.
+
 ## Session 55 close (2026-07-24 — resumed after a SIX-DAY interruption; #121 unconditional half)
 
 - **A resumed session must re-measure the calendar, not just the repo.** The session was interrupted 2026-07-18 and

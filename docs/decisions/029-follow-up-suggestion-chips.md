@@ -173,9 +173,12 @@ puts the chip's question text in the input box, the existing pre-send cost line 
 cost, the user presses send, and the turn runs through the completely normal (gated, audited)
 pipeline. No new money entry point, no new backend route, independent of WP26's build.
 **v2 (upgrade seam, deliberately designed-in): when WP26 ships Mechanism A**, the same chips swap
-their click handler to the pre-resolved-intent path (no LLM re-parse; the
-`resolveClarificationOption` sibling), because generation (D1) + gating (D2) are identical in both
-— only the handler differs. *Residual v1 risk, accepted + recorded:* between chip display and
+their click handler to the pre-resolved-intent path (no LLM re-parse), because generation (D1) +
+gating (D2) are identical in both — only the handler differs. **➡ As built (session 56): WP26 chose
+take-path A2, so there is no `resolveClarificationOption` sibling to swap to — the deterministic
+rung lives inside `respondToClarificationReply` and the #75 fill-don't-send handler is UNCHANGED.
+The seam turned out to need no swap at all: a chip fills the input, the user sends, and the server
+recognizes the label. v1 and v2 are the same handler.** *Residual v1 risk, accepted + recorded:* between chip display and
 submit the normal LLM parse could read the filled text differently (e.g. clarify instead of
 answer); mitigated by generating fully-explicit question text (measure, region, period all named —
 the shape that parses confidently, per the #75/#97a precedent) and priced at worst as one ordinary

@@ -390,6 +390,36 @@ Rollback at any point: unset `SEMANTIC_CHECK_ENABLED` and redeploy — fully dor
 verdicts on already-written rows stay valid for R8 (the reconstructor checks them whenever the
 key is present, flag state irrelevant).
 
+## WP26 answer-first + clickable options — the supervised go-live (NOT YET RUN; built session 56, 2026-07-25)
+
+Two INDEPENDENT flags, both dormant. Either can go live first and roll back on its own — deliberate,
+so a problem with one mechanism never forces the other off.
+
+| Flag | What it turns on | Blast radius when on |
+|---|---|---|
+| `CLARIFY_CLICK_ENABLED=1` | Clarification options carry a pre-verified intent; a reply byte-equal to an offered label resolves deterministically (no LLM). Chips render on clarifications. | Reply turns only. Worst case: a chip is missing (an option failed its dry-run) — never a wrong answer. |
+| `ANSWER_FIRST_ENABLED=1` | A question with no region (on a measure with a national row) answers nationally; a question with no period at all answers with the recent trend. Both disclosed in-sentence. | First turns. Questions that used to clarify now ANSWER — the biggest visible behavior change of the two. |
+
+Steps (owner present):
+1. `git log --oneline -1` on prod — confirm the deploy carrying commits `8ee71c8`/`37a3c55`/`1a99b3d` is live.
+2. Flip ONE flag: `vercel env add <FLAG>` (Production) `= 1`, then redeploy. **Not both at once** —
+   if something reads wrong you want to know which mechanism did it.
+3. Live smoke, LLM-free where possible: ask a period-less question ("Hoeveel inwoners telde
+   Amsterdam?") and a region-less one ("Hoeveel inwoners telde Nederland?" on a geo measure).
+   Confirm the disclosure sentence renders DIRECTLY UNDER the answer body, and that the answer's
+   numbers still match the cells (`npm run audit:verify -- <row> <row>` → exit 0).
+4. For the click flag: ask something that clarifies (bare "Utrecht" works), confirm the chips
+   appear, click one, confirm the answer arrives and the audit row records
+   `model = deterministic/wp26-click-option` with zero token usage.
+5. Watch the first day's rows: `answer_source = 'template'` on clicked answers is EXPECTED
+   (ADR 024 — a clicked take composes without the LLM and therefore reads plainer).
+
+Rollback: unset the flag and redeploy — fully dormant again. Rows written while it was on stay
+valid for R8: the disclosure re-derives from the stored result's own flags, not from the flag state.
+
+⚠ A pending clarification offered while `CLARIFY_CLICK_ENABLED` was on, and replied to after it was
+turned off, simply falls through to the normal LLM merge — today's behavior, no error.
+
 ## #53 anonymous trial pot — the supervised go-live (✅ RUN 2026-07-17, session 52, owner present)
 
 **THE TRIAL IS LIVE.** All 7 steps executed 2026-07-17 (owner made the key in its own hard-capped Anthropic

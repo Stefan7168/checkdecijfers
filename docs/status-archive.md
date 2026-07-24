@@ -1,5 +1,52 @@
 # STATUS archive — the session log
 
+**Session 56 (2026-07-25, owner-present, ran on Opus 5 — WP26 THREE-QUARTERS BUILT: mechanism A + B-region +
+B-period, all pushed, all DORMANT behind two flags. €0 LLM spend: nothing in this WP needed a live model, so the
+planned €5 / capped €10 was never touched.)**
+
+- **Owner read-back at the start (all four answered in-chat):** safelist re-read aloud and approved UNCHANGED
+  (session 23's settlement stands); take-path **A2** chosen over ADR-024's A1; **WP26c in scope** (severable);
+  **#132 route B — "nog niet, later beslissen"**, so the row keeps waiting for an explicit GO (forks_count
+  measured 0 today, so the T-0 condition still holds; next session re-asks).
+- **Agenda item 1 (~30/7 syncs): nothing was due today, measured at CBS itself** — `85880NED` still on
+  `Modified` 2026-07-01 and `85770NED` on 2026-06-30, both BEHIND our 17/7 sync, so there is no gap. The window
+  is 30/7 06:30 for both; `85880NED` still needs the chunked escape hatch (RUNBOOK step 5). Hatch scripts verified
+  present.
+- **WP26 build step 1, measured instead of assumed:** ADR 024 marked "every geo measure has an NL-level row" as an
+  assumption to verify. Both registered geo tables really do — `03759ned` ("Nederland", 16 rows, newest 2026JJ00)
+  and `83625NED` ("Nederland", 31 rows, newest 2025JJ00) — so B-region ships for BOTH, not just population.
+- **(1) Mechanism A ✅ (`8ee71c8`, CI run 30117971427 green):** clarification options now carry a fully resolved,
+  dry-run-verified intent; a reply byte-equal to an offered label is taken deterministically (zero LLM calls,
+  proven by a test where BOTH clients throw) and composed through the template rung. Built at policy rules 3/4 and
+  the region_ambiguous (Utrecht) branch. Chips reuse the existing kind-agnostic suggestions surface, so the #75
+  fill-don't-send handler is unchanged — ADR 029's "v2 handler swap" seam turned out to need no swap at all.
+  Client-held payload re-validated fail-closed (`validate-pending.ts`). Flag `CLARIFY_CLICK_ENABLED`.
+- **(2) B-region ✅ (`37a3c55`, CI run 30119491343 green):** no place named on a measure WITH a national row →
+  the national figure, disclosed in-sentence with the correction path. The NL-row existence check runs per-measure
+  every time (not a one-off registry fact), so a measure without one still clarifies — pinned by a test that
+  DELETES the row. The default is region-only: an unpublished period still refuses honestly.
+- **(3) B-period ✅ (`1a99b3d`):** no period signal → a bounded recent trend. **One deliberate design change from
+  the execute-brief, and it is the load-bearing one:** the brief satisfied "no gaps" by computing a 10-year span
+  and letting the completeness check REFUSE a holey one — honest but hostile, since a default the user never asked
+  for would manufacture a dead end. The window is instead WALKED backwards while each step is present, so a hole
+  shortens it and it always serves.
+- **Three /code-review LOW findings, all handled honestly:** (a) a region chip would have answered a NARROWER
+  question when the user named other regions too → fixed + pinned; (b) the trend window was computed across ALL
+  regions but served for ONE → fixed + pinned; (c) a suspected 'max' default leak → INVALIDATED on verification
+  (the arity check already refuses first), guard reverted rather than left as dead code, ordering pinned instead.
+- **Test-infra:** `hookTimeout` 120s → 300s. Two more db-booting suites pushed the parallel PGlite boot count up
+  and benchmark-charts hit the 120s HOOK ceiling (6 skipped, solo-green) — fourth occurrence of the #125a class.
+  The real fix is a shared fixture DB across suites; noted, not done.
+- **Verification per push:** typecheck (root+web), backend 94 files/1486 tests, web 40/384, benchmark GATE PASS
+  (14/14 + 6/6 + 0 fabricated), real `next build`, `audit:verify 1 256` UNCHANGED (229/231 + the 2 known pinned
+  divergences) — the reconstruct change re-derives cleanly over every historical row.
+- **Docs in the same change:** ADR 024 as-built (three measured corrections), the **R7 third branch written into
+  05-data-rules.md** as the ADR required, open-questions #66/#72 marked built, build-plan WP26 status + its stale
+  A1 paragraph corrected, ADR 029's stale forward reference neutralized, and a new RUNBOOK go-live section for the
+  two flags (one at a time, with rollback).
+- **▶ REMAINING for WP26:** WP26c (rescue chips on the forecast/meta misfires) — severable, design intact in the
+  execute-brief §6 — and the owner-supervised flag flip + live smoke for what is built.
+
 **Session-55 FINAL AUDIT (2026-07-25, owner: "check of afronding volgens het boekje is gedaan"):** the full
 CLAUDE.md wrap-up checklist re-ran item by item against sources. Found + fixed in one docs pass: the /login-fix had
 not yet propagated to ADR-033 (as-built note added), the RUNBOOK WP135 record (its "/login HTML is a FALSE

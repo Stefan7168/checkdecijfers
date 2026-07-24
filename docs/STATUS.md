@@ -9,78 +9,35 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
-**▶ NEXT SESSION STARTS HERE (Session 55, 2026-07-18 → closed 2026-07-24 after a six-day interruption — started autonomous, owner
-joined in-chat. Ran on Fable 5; the owner settled the
-model question mid-session: **"Fable is in our plan now"** — the s54 leave-Fable framing is WITHDRAWN, sessions may run Fable, no
-runtime-model mismatch flagging needed anymore; the ROLE-based delegation rule is unchanged (session model thinks, fan-out on cheaper
-tiers). Four deliverables, zero product-LLM spend / prompt bytes / DDL:
-(1) **#172 step-0 MEASURED** (main `0937045`): 37789ksz IS in the Stage-1 shortlist (fixture 14/14; live mirror 22/24, rank 0.0760) →
-recall is NOT the gap, BUT the protocol's cap-6 rank-ordered walk would NOT reach it (~15 higher-ranked Regulier tables in between) —
-the escalation WP must walk the FULL remaining Regulier shortlist through the fit gate or use a deliverability-aware order; measured
-record in [session-briefs/2026-07-19-172-escalation-protocol.md](session-briefs/2026-07-19-172-escalation-protocol.md).
-(2) **#170 smalls 1+2 ✅ DONE + LIVE** (built autonomous on PR #57; owner
-returned in-chat same day ("Go") → squash-merge `12381e3` under the standing #118 owner-present authorization; deploy run 29634774649
-gate+deploy green; LIVE-verified: /llms.txt HTTP 200 on prod with 20 registry tables + measured sync dates, SourceBadge on all four
-Ontdek charts each bound to its own table id + own sync date): SourceBadge (answer chips + ChartView; no cadence promises) + honest
-registry-generated `/llms.txt` (needs_review excluded; ontdek-style fail-safe; proxy allowlist + pin; in the post-deploy CI smoke).
-Rode along: vitest ceiling 60s→120s (#125a class — SEED_TABLES doubled 8→17). ⚠ robots.ts Phase-0 disallow keeps robots-respecting
-crawlers off llms.txt until launch (owner call). ⚠ Merge trap measured twice: a squash merge FOLDS branch-commit subjects into the
-body, so a '[skip ci]' in ANY folded docs commit skips gate+deploy on main — and a trigger commit QUOTING that marker re-skips;
-needed a clean empty commit `b1df8dd`. Rule: no skip-ci markers in branch commits that will be squash-merged.
-(3) **#138 regional retry chip ✅ DONE + LIVE** (same day, owner-present "continue"; commit `f2d015a`, CI run 29639021663 gate+deploy
-green): built exactly per the marathon design §a — injected RegionLabeler → regionTermsFor (registry labels, fail-closed), chips name
-the region, candidates carry the region codes so the dry-run proves REGIONAL servability; prefix-kind near-duplicates collapsed into
-one shared regionKindForCode; suggestions.ts db-confinement now source-scan-pinned. 43/43 suggestions tests, benchmark PASS, €0 LLM.
-(4) **#172 STEP-0 BUILD ✅ DONE + LIVE** (owner: "iets waarbij Fabel benodigd is"; commit `4626f8a`, CI run 29641007221 gate+deploy
-green; ADR-027 amendment A4): the fit gate now receives the DELIVERABILITY WALK (`candidateWalk`, src/catalog/walk.ts) — pick + model
-alternates verbatim + the FULL current remainder of the Stage-1 shortlist, NO cap (the measured 22/24 position kills every small cap);
-#166 screen over de hele walk; discontinued tables never auto-walked. `walkContains: '37789ksz'` RESTORED gate-blocking (find-replay
-11/11 hermetic + live eval 11/11); step-1 eval masking-trap fix pulled forward (disclose reason, rerank_error = RED); position-4-
-delivers end-to-end pinned. Zero prompt bytes, €0 LLM, no fixture re-record (pure post-rerank processing). The s54-regressed bijstand
-class is structurally recovered INDEPENDENT of the rerank model — the remaining #172 supervised WP (RerankProfile co-calibration ×4 +
-separation gap, live bijstand smoke, drift canary) is now purely a chain/confidence-quality question.
-(5) **#121 unconditional half ✅ DONE (2026-07-24 — the session was INTERRUPTED six days and resumed; owner: "ok fix and dan wrap up
-after"):** with a MEASURED correction to the marathon brief's adjacent finding — a template-rung throw is NOT uncaught (respond.ts's
-catch-all already serves the honest 'internal' refusal on every production path); what was missing was LOUDNESS. Shipped: the
-internal-refusal ADMIN ALERT (`maybeAlertInternalRefusal`, #144 posture, both turns at the shared respond-audited site; send path
-deduplicated into one helper; 5 hermetic tests). The #121 one-line owner question (template validator-verdict: serve+alert vs
-fail-closed) REMAINS OPEN — different signal than the throw path.
-(6) **The MISSED 22/7 + 23/7 release syncs ✅ CAUGHT UP (2026-07-24, owner-present "ga verder"):** measured first (zero ingestion
-batches since 19/7), then executed: `83693NED` synced clean (+8 rows, julicijfer 2026MM07, batch 26); `85773NED` stopped honestly on
-the release's new period codes (2026MM06/2026KW02 — "new codes never pass silently"), the first failed attempt quarantined the table
-(designed behavior, batch 25), reviewed → `--rebaseline --accept-new-codes` synced it (+16 rows, batch 27), status active again.
-Spot-checks LLM-free + exact: consumentenvertrouwen juli −35 (Definitief), gemiddelde verkoopprijs juni €496.235 (Definitief). Also:
-the #132 interim rule (PR refs as PLAIN TEXT in docs) had been violated since ~17/7 incl. by this session — all 29 live PR links
-re-neutralized; forks_count measured 0 on 2026-07-24 (route-B go/no-go still holds).
-(7) **#121 ✅ FULLY RESOLVED (2026-07-24, owner in-chat chose OPTION A after a concrete-example read-back — the −39 scenario):**
-serve + admin-alert + R8 marker shipped same day: `maybeAlertTemplateValidationFailure` (template source + recorded ok:false, both
-turns, #144 posture) + the reconstruct.ts distinct label "KNOWN-failing at serve time (#121 serve+alert)" (triaged apart from silent
-corruption, heals when the validator blind spot is fixed). Proven: 3 hermetic tests + `audit:verify -- 1 256` against ALL prod rows
-exit 0 (229/231 clean + the 2 known pinned divergences — nothing new). Full verification block green again (GATE PASS, web 378/378,
-real build). #132 asked again same day: owner — "Vandaag beslis ik niet"; row stays awaiting GO, next session re-asks.
-(8) **#154 ✅ BUILT + LIVE (2026-07-24, owner-present "ga verder" continued; €0 LLM, zero prompt bytes):** the per-cell freshness
-truth from the marathon design — `last_seen_batch_id` NULL-sentinel (migration 021 APPLIED TO PROD in the supervised window BEFORE
-the code deploy; **measured correction: the design's "deploy-order-safe, apply later" claim was inverted by the new SELECT — ship
-order flipped to apply-then-deploy**), pipeline mark-on-absence (prior-batch value, own-batch_id transition fallback) +
-clear-on-reappearance, run.ts min effective attribution date (marker stays OFF ResultCell), staleness retained-branch wording
-("… door CBS sinds {date} niet opnieuw bevestigd"). Proven: the s47-repro full life cycle + transition bound
-(tests/ingestion/retained-cells.test.ts), full block green, audit:verify 1-256 unchanged clean.
-(9) **Closing smalls (2026-07-24 evening, owner: "nog eventjes kleine dingen"):** (a) the WP135 cosmetic residual FIXED + LIVE —
-/login was statically prerendered so the WORKSPACE_ENABLED read froze at build time; `force-dynamic` (commit `0cfbd3d`) + page test;
-header verified on dev (flag temporarily on, then removed) AND live on prod HTML. (b) SourceBadge title now derives via the pinned
-`sourceLinkLabel` (the #170 build had orphaned it). (c) RUNBOOK: standing "walk both deploy orders" rule + migration-021 record.
-(d) Dependabot PR #58 (root: anthropic-sdk 0.114.0) and PR #59 (web: 9 bumps — one major is test-only jest-dom 7) MERGED per the s49
-owner-present precedent, both gates green pre-merge, all three stacked deploys green (runs 30100938646/30100985363/30101035856).
-(e) Trial pot measured 23/25 — untouched since s52, no refill needed. NB: two red "dynamic" runs on 6606275 are Dependabot's own
-internal updater jobs (its branches were merged away), NOT our CI. (f) **A HIGH Dependabot alert surfaced mid-close (sharp <0.35.0,
-inherited libvips CVEs, transitive under next, runtime scope) — FIXED same hour** via the overrides block (`af1fb2f`, sharp 0.35.3;
-web 40 files/382 tests + build green; gate+deploy green; GitHub confirms alert state "fixed").
-▶ NEXT: the ~30/7 BBP+PPI window (`85880NED` via the chunked hatch — days away), the #132 route-B GO (re-ask; forks==0 measured
-24-07), then the owner-decision menu below (#138, #121 AND #154 ALL OFF the menu — done; #172 needs only its supervised
-calibration/smoke half). #170 residual: (3) chart-download bundles with the Phase-2 OG WP,
-(4) annotations/toggles open. Kickoff:
-[session-briefs/2026-07-18-session-56-kickoff.md](session-briefs/2026-07-18-session-56-kickoff.md). Full entry in
-[status-archive.md](status-archive.md).)**
+**▶ NEXT SESSION STARTS HERE (Session 56, 2026-07-25, owner-present, Opus 5. **WP26 is three-quarters BUILT and
+pushed — mechanism A + B-region + B-period — all DORMANT behind two independent flags. €0 LLM spend: nothing in
+this WP needed a live model, so the planned €5 / capped €10 was never touched. Zero prompt bytes, zero pricing
+change, no DDL.**
+
+**Owner read-back this session (in-chat):** safelist re-read aloud, approved UNCHANGED; take-path **A2** chosen
+over ADR-024's A1; **WP26c in scope** (severable); **#132 route B: "nog niet, later beslissen"** — the row still
+awaits an explicit GO, and `forks_count` was measured **0** today, so the T-0 condition holds. **Re-ask #132 next
+session.**
+
+**Shipped (each with the full verification block + its own /code-review LOW pass):**
+(1) **Mechanism A** `8ee71c8` (CI 30117971427 green) — clarification options carry a dry-run-verified intent; a
+reply byte-equal to an offered label resolves deterministically with ZERO LLM calls, composed via the template
+rung. Chips reuse the existing suggestions surface (#75 handler unchanged). Flag `CLARIFY_CLICK_ENABLED`.
+(2) **B-region** `37a3c55` (CI 30119491343 green) — no place named on a measure with a national row → the
+national figure, disclosed + correctable. ADR 024's flagged assumption was MEASURED: both geo tables have the
+NL01 row. The existence check runs per-measure every time; without a row it still clarifies (pinned).
+(3) **B-period** `1a99b3d` — no period signal → a bounded recent trend, **walked** backwards so gaps SHORTEN the
+window instead of causing a refusal (this replaces the brief's let-completeness-refuse design, which would have
+manufactured dead ends). Flag `ANSWER_FIRST_ENABLED`, independent of A's.
+
+**▶ NEXT, in order:** (a) **WP26c** — the last WP26 sub-part (rescue chips on the measured forecast/meta trial
+misfires; design intact in the execute-brief §6, severable by construction); (b) the **owner-supervised go-live**
+of the two flags — new RUNBOOK section "WP26 answer-first + clickable options", one flag at a time with rollback;
+(c) **~30/7 BBP+PPI syncs** — measured at CBS today: nothing was due yet (`85880NED` still on Modified 2026-07-01,
+`85770NED` on 2026-06-30, both behind our 17/7 sync). `85880NED` MUST use the chunked escape hatch (RUNBOOK step
+5); (d) **re-ask #132 route B**; (e) then the owner menu: WP30c choice / #162 / #170 rest (3)+(4).
+
+Full session record in [status-archive.md](status-archive.md).)**
 
 **Design marathon (2026-07-18 overnight, AUTONOMOUS docs-only — FABLE'S LAST SESSION before the model
 switch; from now sessions run Opus/Sonnet (top model = Opus; the delegation cost-tier rule survives: the session model thinks, fan-out on
