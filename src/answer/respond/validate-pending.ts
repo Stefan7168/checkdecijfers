@@ -1,0 +1,93 @@
+// WP26 mechanism A (ADR 024, take-path A2) — the trust boundary for the
+// clickable clarification options.
+//
+// Why this file exists: the take-path A2 decision keeps the enriched pending
+// CLIENT-HELD between the two turns (the same place `conversationContext` and
+// the rest of the pending already live). That buys the #75 convention and the
+// rescue of typed replies, at the price of one extra thing an attacker can
+// shape — so the intents come back through a full schema check before any of
+// them is taken, exactly the way context/validate.ts guards the follow-up
+// referent.
+//
+// The blast radius even WITHOUT this file is bounded by construction: a forged
+// intent can only become a normally-billed, fully-validated query over OTHER
+// real CBS data (the same power as typing a different question), and the query
+// layer remains the only source of values, so no number can be fabricated
+// through here (principle a/c). This validator closes the rest: no free text
+// reaches a prompt (click options never enter one), no unknown canonical key
+// is accepted, no unbounded array is walked, and a malformed option is DROPPED
+// rather than trusted.
+//
+// Fail-closed means "fall back to today": a rejected option list simply
+// disappears, and the reply turn takes the normal LLM merge path — the exact
+// pre-WP26 behavior, never an error the user has to see.
+import { z } from 'zod';
+import { CANONICAL_KEYS } from '../intent/schema.ts';
+import { INTENT_SCHEMA_VERSION } from '../../query/index.ts';
+import { MAX_CLICK_OPTIONS } from '../intent/types.ts';
+import type { ClickOption } from '../intent/types.ts';
+import type { PendingClarification } from './types.ts';
+
+/** CBS period codes are structurally narrow (2024JJ00 / 2024KW02 / 2026MM07);
+ * anything else could never resolve, so it never gets to try. */
+const periodCode = z.string().regex(/^\d{4}(JJ00|KW0[1-4]|MM(0[1-9]|1[0-2]))$/);
+
+/** Region codes are CBS dimension codes (NL01, PV26, GM0363, …) — an
+ * allowlisted SHAPE here; the query layer still checks each one against the
+ * table's real dimension labels and refuses an unknown code (resolve.ts). */
+const regionCode = z.string().regex(/^[A-Za-z]{2}[0-9A-Za-z]{2,8}$/);
+
+/** The offered intents are always canonical targets: policy.ts builds them
+ * from resolved candidates, and resolveCandidate emits no other kind. An
+ * 'explicit' target would therefore be a forgery — and the one shape that
+ * could name a table/measure the parser would never choose — so it is refused
+ * outright rather than validated. */
+const clickIntentSchema = z.strictObject({
+  schemaVersion: z.literal(INTENT_SCHEMA_VERSION),
+  target: z.strictObject({
+    kind: z.literal('canonical'),
+    key: z.enum(CANONICAL_KEYS),
+  }),
+  regions: z.array(regionCode).min(1).max(8).optional(),
+  period: z.discriminatedUnion('kind', [
+    z.strictObject({ kind: z.literal('codes'), codes: z.array(periodCode).min(1).max(64) }),
+    z.strictObject({ kind: z.literal('range'), from: periodCode, to: periodCode }),
+  ]),
+  derivation: z.enum(['none', 'difference', 'max', 'series']),
+});
+
+const clickOptionSchema = z.strictObject({
+  id: z.string().min(1).max(32),
+  label: z.string().min(1).max(500),
+  intent: clickIntentSchema,
+  impliedRecency: z.boolean(),
+});
+
+/** Validates the client-returned click options of a pending clarification.
+ * Returns only the well-formed ones, capped at the same bound the offer side
+ * applies; `[]` when there are none or the payload is not an array.
+ *
+ * NOTE the deliberate ASYMMETRY with the onboarded-vocabulary path: an
+ * on-demand-onboarded canonical key ('onboarded:…') is NOT in CANONICAL_KEYS,
+ * so an option naming one is dropped here and the reply falls through to the
+ * LLM merge that does know about it. Losing a chip is a cosmetic degradation;
+ * widening the allowlist to client-supplied keys would not be. */
+export function validateClickOptions(raw: unknown): ClickOption[] {
+  if (!Array.isArray(raw)) return [];
+  const valid: ClickOption[] = [];
+  for (const entry of raw.slice(0, MAX_CLICK_OPTIONS)) {
+    const parsed = clickOptionSchema.safeParse(entry);
+    if (parsed.success) valid.push(parsed.data as ClickOption);
+  }
+  return valid;
+}
+
+/** The pending as the reply turn may use it: every prompt-bound field
+ * untouched (guardLength/guardPending already bound those), the click options
+ * replaced by their validated subset, and the key REMOVED when nothing
+ * survives — so a stripped pending is byte-identical to a pre-WP26 one. */
+export function withValidatedClickOptions(pending: PendingClarification): PendingClarification {
+  const clickOptions = validateClickOptions(pending.clickOptions);
+  const { clickOptions: _dropped, ...rest } = pending;
+  return clickOptions.length > 0 ? { ...rest, clickOptions } : rest;
+}

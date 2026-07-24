@@ -32,6 +32,15 @@ export interface ComposeOptions {
    * fabricated verdict drops down the SAME R3 ladder (regenerate, then
    * template). The checker can only reject — never approve (principle a). */
   semanticCheck?: SemanticCheckOptions;
+  /** WP26 mechanism A (ADR 024): skip the LLM rungs entirely and compose from
+   * the deterministic template. Set ONLY by the clicked/matched clarification
+   * take-path, where ADR 024 requires "no LLM call at all": the reading was
+   * chosen by the USER from pre-verified options, so there is nothing left to
+   * interpret — and a template body is valid by construction (R3's floor),
+   * injection-free and provider-outage-proof. The honest trade is that a
+   * clicked answer reads plainer than a phrased one. Absent everywhere else →
+   * the full R3 ladder, byte-identical. */
+  templateOnly?: boolean;
 }
 
 function assemble(result: ValidatedResult, rawBody: string, source: AnswerSource, extras: {
@@ -85,7 +94,7 @@ export async function composeAnswer(result: ValidatedResult, options: ComposeOpt
   // adds phrasing risk to an answer that contains no number to phrase.
   const hasNullCells = result.cells.some((c) => c.value === null);
 
-  if (!hasNullCells) {
+  if (!hasNullCells && options.templateOnly !== true) {
     for (const strict of [false, true]) {
       const kind = strict ? ('llm_retry' as const) : ('llm' as const);
       try {

@@ -9,7 +9,7 @@ import { CANONICAL_MEASURES } from '../../registry/defaults.ts';
 import { resolveSource } from '../../sources/registry.ts';
 import { freshestForCanonical, type FreshnessInfo, type QueryRefusal } from '../../query/index.ts';
 import type { Db } from '../../db/types.ts';
-import type { ClarifyAxis, ParseOutcome } from '../intent/types.ts';
+import type { ClarifyAxis, ClickOption, ParseOutcome } from '../intent/types.ts';
 import type { ConversationContext } from '../context/types.ts';
 import { matchMetaTemplate } from './meta.ts';
 import { periodCodeToNl } from './period-nl.ts';
@@ -610,9 +610,16 @@ export interface ClarificationEnvelopeInput {
    * referent must survive into the pending state or the reply merge loses it
    * (adversarial-review finding, 2026-07-04). */
   conversationContext?: ConversationContext | null;
+  /** WP26 mechanism A (ADR 024): the dry-run-verified takeable options, when
+   * the producing layer built any. Absent/empty → pending and envelope keep
+   * the exact pre-WP26 field set. */
+  clickOptions?: ClickOption[];
 }
 
 export function toClarificationResponse(input: ClarificationEnvelopeInput): ClarificationResponse {
+  // WP26 mechanism A: present-only, like conversationContext below — an empty
+  // list must serialize NO key so a flag-off turn stays byte-identical.
+  const clickOptions = input.clickOptions ?? [];
   const pending: PendingClarification = {
     version: RESPONSE_SCHEMA_VERSION,
     question: input.question,
@@ -624,6 +631,7 @@ export function toClarificationResponse(input: ClarificationEnvelopeInput): Clar
     // pre-WP15 field set (serialized state stays byte-stable for the
     // committed clarify fixtures and stored audit rows).
     ...(input.conversationContext ? { conversationContext: input.conversationContext } : {}),
+    ...(clickOptions.length > 0 ? { clickOptions } : {}),
   };
   return {
     schemaVersion: RESPONSE_SCHEMA_VERSION,
@@ -632,6 +640,9 @@ export function toClarificationResponse(input: ClarificationEnvelopeInput): Clar
     kind: 'clarification',
     axes: input.axes,
     options: input.options,
+    // Labels only on the envelope — the intents ride `pending`, which is what
+    // the server reads the taken reading from.
+    ...(clickOptions.length > 0 ? { suggestions: clickOptions.map((o) => o.label) } : {}),
     pending,
     parse: input.parse,
   };

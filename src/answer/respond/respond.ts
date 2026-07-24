@@ -19,8 +19,8 @@ import { parseClarificationReply, type ClarifyReplyOptions } from '../intent/cla
 import { parseFollowUpQuestion } from '../intent/followup.ts';
 import type { ConversationContext } from '../context/types.ts';
 import { regionTermsFor } from '../context/build.ts';
-import type { ParseOutcome, ParserConfig } from '../intent/types.ts';
-import { RawParseValidationError } from '../intent/types.ts';
+import type { ClickOption, ParseOutcome, ParserConfig } from '../intent/types.ts';
+import { RawParseValidationError, RAW_PARSE_VERSION } from '../intent/types.ts';
 import type { IntentLlmClient } from '../intent/client.ts';
 import type { LlmClient } from '../llm/client.ts';
 import {
@@ -95,6 +95,77 @@ export interface RespondOptions {
    * Absent everywhere else (benchmark, tests, CLI) → byte-identical pre-WP path.
    */
   sourceSelection?: SourceSelection;
+  /** WP26 mechanism A (ADR 024, take-path A2): the `CLARIFY_CLICK_ENABLED`
+   * rollout flag. Off/absent (benchmark, tests, CLI, and production until the
+   * owner flips it) → no clickable options are ever built AND the deterministic
+   * take-rung below is inert, so every turn is byte-identical to pre-WP26. */
+  clickOptionsEnabled?: boolean;
+}
+
+/** WP26 mechanism A: the model field of a take that ran NO model. Recorded on
+ * the audit row so R8 shows at a glance that this answer's reading came from
+ * the user's own click, not from a parse. */
+export const CLICK_TAKE_MODEL = 'deterministic/wp26-click-option' as const;
+
+/** Byte-exact (whitespace-trimmed) match of a reply against the labels offered
+ * with the pending clarification. Trimmed, not fuzzy: the chip fills the input
+ * with the label verbatim, and a TYPED reply that happens to equal an offered
+ * option is exactly the dead-end class this rescues — but anything else must
+ * fall through to the normal LLM merge, never to a guessed "closest" option
+ * (principle c). Defensive on shape: `pending` is client-held, so entries that
+ * are not well-formed are skipped rather than trusted. */
+function matchClickOption(pending: PendingClarification, reply: string): ClickOption | null {
+  const wanted = reply.trim();
+  if (wanted === '') return null;
+  for (const option of pending.clickOptions ?? []) {
+    if (
+      option !== null &&
+      typeof option === 'object' &&
+      typeof option.label === 'string' &&
+      option.label.trim() === wanted &&
+      option.intent !== null &&
+      typeof option.intent === 'object'
+    ) {
+      return option;
+    }
+  }
+  return null;
+}
+
+/** The taken option, shaped as the 'intent' ParseOutcome the shared downstream
+ * half already knows how to serve — so a clicked answer runs the SAME query,
+ * validators, staleness rule, gate and audit write as a typed one. Zero token
+ * usage is recorded because zero tokens were spent. */
+function clickTakeOutcome(
+  pending: PendingClarification,
+  option: ClickOption,
+): Extract<ParseOutcome, { kind: 'intent' }> {
+  const reading = {
+    intent: option.intent,
+    confidence: 1,
+    reading: option.label,
+    impliedRecency: option.impliedRecency === true,
+  };
+  return {
+    kind: 'intent',
+    question: pending.question,
+    raw: {
+      version: RAW_PARSE_VERSION,
+      kind: 'data_query',
+      candidates: [],
+      unmatchedMeasureTerm: null,
+      nearestCanonicalKeys: [],
+      note: `WP26 A2: clarification option "${option.id}" taken deterministically (no LLM parse)`,
+    },
+    model: CLICK_TAKE_MODEL,
+    usage: { inputTokens: 0, outputTokens: 0 },
+    intent: option.intent,
+    // Not a model score: the user themselves picked this reading from options
+    // that were proven servable before they were offered.
+    confidence: 1,
+    impliedRecency: reading.impliedRecency,
+    ranked: [reading],
+  };
 }
 
 /** WP129+130 (#129/#130, ADR 032): the source-selection pre-parse belt. When
@@ -135,6 +206,9 @@ export async function respondToIntent(
     conversationContext?: ConversationContext | null;
     /** #144 (ADR 034): threaded through to composeAnswer; absent = off. */
     semanticCheck?: ComposeOptions['semanticCheck'];
+    /** WP26 mechanism A: compose from the deterministic template, no LLM call
+     * (ADR 024). Set only by the clicked-option take-path. */
+    templateOnly?: boolean;
   },
 ): Promise<ComposedResponse> {
   const outcome: QueryOutcome = await runQuery(db, parse.intent);
@@ -224,6 +298,7 @@ export async function respondToIntent(
   const answer = await composeAnswer(result, {
     client: options.answerClient,
     ...(options.semanticCheck ? { semanticCheck: options.semanticCheck } : {}),
+    ...(options.templateOnly ? { templateOnly: true } : {}),
   } satisfies ComposeOptions);
   const chart = buildChartSpec(result);
   const text = staleness.stale ? `${answer.text}\n\n${staleness.warning}` : answer.text;
@@ -304,6 +379,9 @@ async function respondToParseOutcome(
       options: parse.options,
       parse,
       conversationContext: options.conversationContext ?? null,
+      // WP26 mechanism A: the dry-run-verified takeable options policy.ts
+      // built (absent when the flag is off → pending unchanged).
+      ...(parse.clickOptions ? { clickOptions: parse.clickOptions } : {}),
     });
   }
   return respondToIntent(db, question, parse, options);
@@ -331,6 +409,9 @@ export async function respondToQuestion(
       // WP16 sub-part 2 delivery vocabulary (design §3.6): undefined/empty →
       // byte-identical Phase-0 prompt.
       extraCanonicalMeasures: options.extraCanonicalMeasures,
+      // WP26 mechanism A: threaded into BOTH the standalone and the follow-up
+      // parse — a clarification can arise on either turn.
+      clickOptionsEnabled: options.clickOptionsEnabled,
     };
     // WP15 (ADR 021): with a validated context, the parse runs in follow-up
     // mode — same downstream machinery, same thresholds, same one round of
@@ -362,6 +443,28 @@ export async function respondToClarificationReply(
     // reply-turn refusal here.
     const preParse = sourceSelectionRefusal(pending.question, options.sourceSelection);
     if (preParse !== null) return preParse;
+
+    // WP26 mechanism A (ADR 024, take-path A2): the deterministic rung, BEFORE
+    // any LLM call. A reply that is byte-exactly one of the options we offered
+    // needs no re-parse — we already resolved that reading and proved it
+    // servable when we offered it. Taking it here is what makes a click
+    // structurally unable to dead-end, and it costs zero tokens.
+    //
+    // The data may have MOVED between offer and click (a sync in between), so
+    // this is not a replay of a stored answer: respondToIntent re-runs the real
+    // query. If it now refuses, the user gets the honest refusal and the normal
+    // gate refunds — rare, and better than serving a stale promise.
+    if (options.clickOptionsEnabled === true) {
+      const clicked = matchClickOption(pending, reply);
+      if (clicked !== null) {
+        return await respondToIntent(db, pending.question, clickTakeOutcome(pending, clicked), {
+          ...options,
+          finalRound: true,
+          templateOnly: true,
+        });
+      }
+    }
+
     const clarifyOptions: ClarifyReplyOptions = {
       client: options.intentClient,
       config: options.parserConfig,

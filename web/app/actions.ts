@@ -22,6 +22,9 @@ import type { ConversationContext } from '../backend/answer/context/index.ts';
 import { AnthropicLlmClient } from '../backend/answer/llm/client.ts';
 import type { SemanticCheckOptions } from '../backend/answer/compose/index.ts';
 import type { PendingClarification } from '../backend/answer/respond/types.ts';
+// WP26 mechanism A (ADR 024): the click-option trust boundary — the reply
+// turn's counterpart to validateConversationContext above.
+import { withValidatedClickOptions } from '../backend/answer/respond/validate-pending.ts';
 import {
   chargeAndRun,
   compensate,
@@ -140,6 +143,20 @@ function guardPending(pending: PendingClarification): void {
       throw new Error(`pending.options entry rejected: not a string within ${MAX_INPUT_LENGTH} chars`);
     }
   }
+  // WP26 mechanism A (ADR 024, take-path A2): the click options ride the same
+  // client-held pending. They never enter a prompt (the deterministic rung is
+  // the only reader), so the spend asymmetry above does not apply — but the
+  // ARRAY still has to be bounded before anything walks it. Shape validation
+  // of the intents themselves is fail-closed, not throwing:
+  // withValidatedClickOptions below drops what does not check out and the reply
+  // takes the normal LLM merge, which is exactly today's behavior.
+  if (pending.clickOptions !== undefined) {
+    if (!Array.isArray(pending.clickOptions) || pending.clickOptions.length > MAX_PENDING_OPTIONS) {
+      throw new Error(
+        `pending.clickOptions rejected: not an array within ${MAX_PENDING_OPTIONS} entries`,
+      );
+    }
+  }
 }
 
 // WP129+130 (#129, ADR 032): the source-tags selection is UNTRUSTED client
@@ -171,6 +188,17 @@ function validateSelection(raw: unknown): SourceSelection | undefined {
 // fail open (the body already passed the FULL deterministic validator — the
 // checker is defense-in-depth, not the primary gate). While dormant, no path
 // constructs the client and zero extra LLM calls or spend exist.
+// WP26 mechanism A (ADR 024): the clickable-clarification rollout flag —
+// DORMANT until the owner-supervised go-live sets CLARIFY_CLICK_ENABLED='1'
+// (the #53/#144 dormancy pattern). While unset, policy.ts builds no options,
+// runs no extra dry-runs, serializes no extra envelope bytes, and the
+// deterministic take-rung in respond.ts is inert: every turn behaves exactly
+// as it did before WP26. Rolled back by unsetting it — a pending offered while
+// it was on simply falls through to the normal LLM merge afterwards.
+function clickOptionsEnabled(): boolean {
+  return process.env.CLARIFY_CLICK_ENABLED === '1';
+}
+
 function semanticCheckOptions(): { semanticCheck: SemanticCheckOptions } | Record<string, never> {
   if (process.env.SEMANTIC_CHECK_ENABLED !== '1') return {};
   return {
@@ -339,6 +367,8 @@ export async function askQuestion(
         // parse could NOT match. [] while the switch is off or nothing is
         // onboarded → prompt bytes identical to the calibrated Phase-0 one.
         extraCanonicalMeasures: extraVocabulary,
+        // WP26 mechanism A (ADR 024): dormant until the supervised flag flip.
+        clickOptionsEnabled: clickOptionsEnabled(),
         // WP129+130 (#129, ADR 032): the validated selection rides the audited
         // options as a STRUCTURAL input (never prompt text) — respond* uses it
         // for the web-only / no-sources pre-parse belt, and attach uses it to
@@ -567,10 +597,15 @@ export async function replyToClarification(
   // forged/garbled one drops to a contextless reply merge (fail closed).
   const { conversationContext: rawEmbedded, ...pendingRest } = pending;
   const embeddedContext = await validateConversationContext(getDb(), rawEmbedded ?? null);
-  const safePending: PendingClarification = {
+  // WP26 mechanism A (ADR 024): the same trust-boundary treatment for the
+  // click options — every returned intent re-checked against the intent schema
+  // and the registry's canonical keys before the deterministic rung may take
+  // one. Anything malformed is dropped (fail closed to the LLM merge), and a
+  // pending with nothing left keeps the pre-WP26 field set exactly.
+  const safePending: PendingClarification = withValidatedClickOptions({
     ...pendingRest,
     ...(embeddedContext ? { conversationContext: embeddedContext } : {}),
-  };
+  });
   // WP129+130 (#129, ADR 032): same untrusted-selection validation + ⟨W4⟩
   // upfront affordability (30 in both web modes) as askQuestion. A reply turn
   // that resolves to an ANSWER or a data-shaped refusal owes the web attempt
@@ -606,6 +641,10 @@ export async function replyToClarification(
         // NO tableFinder here: a reply-turn onboarding trigger stays an
         // unmade decision.
         extraCanonicalMeasures: extraVocabulary,
+        // WP26 mechanism A (ADR 024, take-path A2): enables the deterministic
+        // label-match rung — a reply equal to an offered option resolves from
+        // the stored intent, with no LLM call at all.
+        clickOptionsEnabled: clickOptionsEnabled(),
         // WP129+130 (#129/#130, ADR 032): the validated selection + web wiring,
         // identical to askQuestion (the reply turn carries the same chips and
         // charges the +10 if it answers/refuses with data). Absent ⇒ byte-

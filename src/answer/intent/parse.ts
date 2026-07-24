@@ -35,6 +35,10 @@ export interface ParseQuestionOptions {
    * code, so a DB-only canonical row is invisible to it: see the HANDOFF's
    * "delivery vocabulary" deviation). */
   extraCanonicalMeasures?: OnboardedMeasure[];
+  /** WP26 mechanism A (ADR 024): the `CLARIFY_CLICK_ENABLED` rollout flag,
+   * passed straight to decide(). Off/absent → no dry-runs, no clickable
+   * options, byte-identical clarifications. */
+  clickOptionsEnabled?: boolean;
 }
 
 /** Up to this many readings are considered; the schema asks for 1–3. */
@@ -113,5 +117,6 @@ export async function parseQuestion(
     options.config ?? DEFAULT_PARSER_CONFIG,
     (intent) => echoServability(db, intent),
     options.tableFinder,
+    options.clickOptionsEnabled,
   );
 }

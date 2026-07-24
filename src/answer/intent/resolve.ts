@@ -144,7 +144,17 @@ interface RegionMatch {
 
 type RegionResolution =
   | { ok: true; codes: string[] }
-  | { ok: false; failure: Pick<ResolutionFailure, 'axis' | 'reason' | 'message' | 'options'> };
+  | {
+      ok: false;
+      failure: Pick<ResolutionFailure, 'axis' | 'reason' | 'message' | 'options'> & {
+        /** WP26 mechanism A: the CBS region codes behind `options`, index-
+         * aligned — set ONLY by the region_ambiguous branch, whose options are
+         * the competing readings themselves. resolveCandidate turns them into
+         * per-option intents; policy.ts then dry-runs each before offering it.
+         * Every other failure keeps this absent (nothing takeable to offer). */
+        optionCodes?: string[];
+      };
+    };
 
 async function resolveRegions(
   db: Db,
@@ -225,6 +235,18 @@ async function resolveRegions(
             reason: 'region_ambiguous',
             message: `"${term.name}" matches several regions: ${effective.map((m) => m.label).join(', ')}`,
             options: effective.map((m) => m.label),
+            // WP26 mechanism A: the codes behind those labels, so the ask
+            // ("Utrecht (gemeente) of Utrecht (PV)?") can be answered with one
+            // click instead of a retyped label + a second paid parse.
+            //
+            // ONLY when the ambiguous term is the question's sole region. With
+            // several named regions ("Amsterdam en Utrecht"), the codes already
+            // resolved earlier in this loop are discarded by this early return
+            // — an option intent built from the ambiguous code alone would
+            // answer a NARROWER question than the user asked (Amsterdam
+            // silently gone). No chip there: the reply falls through to the LLM
+            // merge, which still sees the original question and keeps both.
+            ...(terms.length === 1 ? { optionCodes: effective.map((m) => m.code) } : {}),
           },
         };
       }
@@ -777,6 +799,45 @@ async function openEndedRangeOptions(
 
 const clamp01 = (n: number): number => (Number.isFinite(n) ? Math.min(1, Math.max(0, n)) : 0);
 
+/** WP26 mechanism A (ADR 024): one complete intent per ambiguous region option
+ * — the candidate's measure/period/derivation with the region pinned to each
+ * competing code in turn. Returns undefined (offer nothing) rather than
+ * guessing whenever the remainder cannot be resolved honestly:
+ *  - a 'max' comparison needs at least two regions, so a single-region take
+ *    would hit resolveCandidate's own guard;
+ *  - an unresolvable period has its own clarification and must not be papered
+ *    over by a chip.
+ * These are CANDIDATES: policy.ts dry-runs each through the real query layer
+ * before any of them is offered, so an intent that would refuse never becomes
+ * a chip. */
+async function regionOptionIntents(
+  db: Db,
+  candidate: RawCandidate,
+  canonical: CanonicalRow,
+  referenceDateIso: string,
+  optionCodes: string[],
+): Promise<{ intents: StructuredIntent[]; impliedRecency: boolean } | undefined> {
+  const derivation = normalizeDerivation(candidate);
+  if (derivation === 'max') return undefined;
+  const periodResolution = await resolvePeriod(
+    db,
+    candidate.period,
+    canonical,
+    parseReferenceDate(referenceDateIso),
+  );
+  if (!periodResolution.ok) return undefined;
+  return {
+    intents: optionCodes.map((code) => ({
+      schemaVersion: INTENT_SCHEMA_VERSION,
+      target: { kind: 'canonical', key: canonical.key },
+      regions: [code],
+      period: periodResolution.period,
+      derivation,
+    })),
+    impliedRecency: periodResolution.impliedRecency,
+  };
+}
+
 export type CandidateResolution = RankedCandidate | ResolutionFailure;
 
 export function isResolutionFailure(value: CandidateResolution): value is ResolutionFailure {
@@ -805,7 +866,26 @@ export async function resolveCandidate(
 
   const geo = await fetchTableGeo(db, canonical.tableId);
   const regionResolution = await resolveRegions(db, candidate, canonical, geo);
-  if (!regionResolution.ok) return fail(regionResolution.failure);
+  if (!regionResolution.ok) {
+    // WP26 mechanism A (ADR 024): an ambiguous REGION is the one failure whose
+    // options are complete competing readings — everything else about the
+    // question (measure, period, derivation) is already determined. Resolve
+    // that remainder once and hand policy.ts one full intent per option, so
+    // the ask becomes clickable. Any hiccup here (an unresolvable period, a
+    // max-comparison that needs several regions) simply yields no intents:
+    // the clarification then renders exactly as it does today.
+    const { optionCodes, ...failure } = regionResolution.failure;
+    const options =
+      optionCodes === undefined
+        ? undefined
+        : await regionOptionIntents(db, candidate, canonical, referenceDateIso, optionCodes);
+    return {
+      ...fail(failure),
+      ...(options === undefined
+        ? {}
+        : { optionIntents: options.intents, optionImpliedRecency: options.impliedRecency }),
+    };
+  }
 
   // WP22 (#97a, live-observed 2026-07-05): a 'max' without ≥2 regions must
   // name the REAL gap. Two distinct shapes, deliberately NOT region_unknown

@@ -503,8 +503,16 @@ export function Chat({
           // period-coverage refusals (freshness / outside_loaded_slice) carry a
           // one-click retry chip — both ride the same structural field and the
           // same kind-agnostic render + #75 fill-don't-send handler below.
+          // WP26 mechanism A (ADR 024): clarifications join the same surface —
+          // their chips are the OPTIONS the server proved answerable before
+          // offering them. Same fill-don't-send handler (#75): the click puts
+          // the label in the input, the user presses Verstuur and sees the cost
+          // line, and the server's deterministic rung recognizes the label and
+          // resolves it without a second LLM parse.
           suggestions:
-            response.kind === 'answer' || response.kind === 'refusal'
+            response.kind === 'answer' ||
+            response.kind === 'refusal' ||
+            response.kind === 'clarification'
               ? (response.suggestions ?? [])
               : [],
           // WP128: the feedback anchor — only real answers get buttons; the

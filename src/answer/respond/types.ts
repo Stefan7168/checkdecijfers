@@ -17,7 +17,12 @@ import type { ChartSpec } from '../../chart/index.ts';
 import type { FreshnessInfo, QueryRefusal, ValidatedResult } from '../../query/index.ts';
 import type { ComposedAnswer } from '../compose/index.ts';
 import type { ConversationContext } from '../context/types.ts';
-import type { ClarifyAxis, ParseOutcome } from '../intent/types.ts';
+import type { ClarifyAxis, ClickOption, ParseOutcome } from '../intent/types.ts';
+// WP26 mechanism A (ADR 024): the clickable-option payload is DEFINED in
+// intent/types.ts (where clarification outcomes are born) and re-exported here
+// so the web layer and the audit reader import it from the response contract,
+// like every other envelope type.
+export type { ClickOption } from '../intent/types.ts';
 // WP129+130 (ADR 032): the source-selection state and the unverified-web
 // section ride the envelope as additive structural fields. Imported from the
 // PURE LEAF (never the module barrel) so the Anthropic SDK never enters this
@@ -143,6 +148,21 @@ export interface PendingClarification {
   questionNl: string;
   /** The offered options — each resolves in the loaded data. */
   options: string[];
+  /** WP26 mechanism A (ADR 024, take-path A2): the subset of `options` that a
+   * reply can resolve WITHOUT a second LLM parse — each carries the fully
+   * resolved intent that was dry-run-verified when the option was offered.
+   * respondToClarificationReply matches the reply text byte-exactly against
+   * these labels and takes the stored intent; anything else falls through to
+   * today's LLM merge, unchanged.
+   *
+   * This state is CLIENT-HELD between the two turns (like `conversationContext`
+   * and the whole pending), so it is untrusted on the way back: the web action
+   * re-validates every field against the intent schema before use, and the take
+   * re-runs the REAL query — an attacker-shaped intent can therefore only ever
+   * become a normally-billed, fully-validated query over other real CBS data,
+   * never a fabricated number. Absent (flag off, or nothing servable was
+   * offered) → the pending is byte-identical to the pre-WP26 one. */
+  clickOptions?: ClickOption[];
   /** WP15 (ADR 021, review finding 2026-07-04): when the clarification arose
    * from a FOLLOW-UP parse, the conversational referent that gave the
    * elliptical question its meaning ("En in Nederland?" ← unemployment) —
@@ -208,6 +228,14 @@ export interface ClarificationResponse extends ResponseBase {
   /** Every unresolved axis at once (R7 / docs/05: one round, all axes). */
   axes: ClarifyAxis[];
   options: string[];
+  /** WP26 mechanism A (ADR 024): the clickable option LABELS — the same
+   * structural chip field AnswerResponse (WP29 #73) and RefusalResponse
+   * (#134a) already carry, so the UI renders them through the one kind-
+   * agnostic chip surface with the #75 fill-don't-send handler. Labels only:
+   * the intents behind them stay on `pending`, which is what the server takes
+   * the reading from. PRESENT-ONLY (never `[]`): a flag-off turn serializes no
+   * key at all, keeping the clarification envelope byte-identical to today. */
+  suggestions?: string[];
   /** State for the merge on the user's next message. */
   pending: PendingClarification;
   parse: ParseOutcome;

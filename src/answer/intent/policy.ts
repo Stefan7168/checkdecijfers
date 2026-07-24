@@ -20,6 +20,7 @@ import { stableStringify } from './client.ts';
 import { isResolutionFailure, type CandidateResolution } from './resolve.ts';
 import type {
   ClarifyAxis,
+  ClickOption,
   LlmUsage,
   ParseOutcome,
   ParserConfig,
@@ -27,6 +28,7 @@ import type {
   RawParse,
   ResolutionFailure,
 } from './types.ts';
+import { MAX_CLICK_OPTIONS } from './types.ts';
 
 export interface OutcomeContext {
   question: string;
@@ -87,18 +89,73 @@ function failureQuestion(failure: ResolutionFailure): string {
   }
 }
 
-function clarificationFromFailure(
+/** WP26 mechanism A (ADR 024, execute-brief §3): turn candidate (label,intent)
+ * pairs into offered ClickOptions — but only after PROVING each one answers,
+ * through the same real-query dry-run the #56 echo uses. An option that would
+ * refuse is dropped silently: it stays a plain-text option, exactly as today.
+ * That is the whole dead-end guarantee — a chip exists only if it worked at
+ * offer time, and the take-path re-runs the real query anyway (data can move
+ * between offer and click; the normal gate then refuses and refunds).
+ *
+ * `id` is derived from the option's index in the ORIGINAL list so it stays
+ * aligned with `options[]` even when middle entries drop out. */
+async function buildClickOptions(
+  servability: ServabilityCheck,
+  entries: { label: string; intent: StructuredIntent | null; impliedRecency: boolean }[],
+): Promise<ClickOption[]> {
+  const offered: ClickOption[] = [];
+  for (const [index, entry] of entries.slice(0, MAX_CLICK_OPTIONS).entries()) {
+    if (entry.intent === null) continue;
+    const verdict = await servability(entry.intent);
+    if (!verdict.servable) continue;
+    offered.push({
+      id: `opt-${index + 1}`,
+      label: entry.label,
+      intent: entry.intent,
+      impliedRecency: entry.impliedRecency,
+    });
+  }
+  return offered;
+}
+
+/** Only materialize the key when something is actually offered — an empty
+ * `clickOptions: []` would change the serialized clarification envelope (and
+ * the stored pending) for every flag-off turn, breaking the byte-neutrality
+ * the rollout depends on (#144 pattern). */
+function withClickOptions(
+  outcome: Extract<ParseOutcome, { kind: 'clarification' }>,
+  clickOptions: ClickOption[],
+): ParseOutcome {
+  return clickOptions.length > 0 ? { ...outcome, clickOptions } : outcome;
+}
+
+async function clarificationFromFailure(
   context: OutcomeContext,
   failure: ResolutionFailure,
-): ParseOutcome {
-  return {
+  servability: ServabilityCheck,
+  clickOptionsEnabled: boolean,
+): Promise<ParseOutcome> {
+  const outcome = {
     kind: 'clarification',
     ...context,
     axes: [failure.axis],
     question_nl: failureQuestion(failure),
     options: failure.options,
     reason: failure.message,
-  };
+  } as const satisfies Extract<ParseOutcome, { kind: 'clarification' }>;
+  // The resolver attaches per-option intents only where the options ARE the
+  // competing readings (region_ambiguous: "Utrecht (gemeente)" vs the
+  // province). Everywhere else there is nothing takeable to offer.
+  if (!clickOptionsEnabled || failure.optionIntents === undefined) return outcome;
+  const clickOptions = await buildClickOptions(
+    servability,
+    failure.options.map((label, i) => ({
+      label,
+      intent: failure.optionIntents?.[i] ?? null,
+      impliedRecency: failure.optionImpliedRecency ?? false,
+    })),
+  );
+  return withClickOptions(outcome, clickOptions);
 }
 
 /** WP16 sub-part 2 (ADR 026): the injected table-finder seam. A callback (NOT
@@ -369,6 +426,11 @@ export async function decide(
    * pin). Only the resolutions-empty branch consults it; every other decision
    * path is a normal clarification/intent that has nothing to onboard. */
   finder?: TableFinder,
+  /** WP26 mechanism A (ADR 024): the `CLARIFY_CLICK_ENABLED` rollout flag,
+   * threaded from web/app/actions.ts. Absent/false (benchmark, tests, CLI, and
+   * production until the owner flips it) → not one dry-run runs here and every
+   * clarification is byte-identical to the pre-WP26 one. */
+  clickOptionsEnabled = false,
 ): Promise<ParseOutcome> {
   if (resolutions.length === 0) return resolveUnmatched(context, finder);
 
@@ -376,7 +438,9 @@ export async function decide(
   const top = ranked[0]!;
 
   // Rule 2: never fall through past a failed top reading.
-  if (isResolutionFailure(top)) return clarificationFromFailure(context, top);
+  if (isResolutionFailure(top)) {
+    return clarificationFromFailure(context, top, servability, clickOptionsEnabled);
+  }
 
   // Rule 2.5 (#64): an explicit enumeration of named absolute periods merges
   // into one multi-code intent instead of firing rule 4 — then re-enters the
@@ -391,7 +455,10 @@ export async function decide(
     const enumerated = mergeExplicitPeriodEnumeration(context.question, plausible);
     // The enumerated recursion is a resolved single candidate, never the
     // unmatched exit — the finder is irrelevant there, so it is not threaded.
-    if (enumerated) return decide(context, [enumerated], config, servability);
+    // The click flag IS threaded: the recursion can still exit via rule 3.
+    if (enumerated) {
+      return decide(context, [enumerated], config, servability, undefined, clickOptionsEnabled);
+    }
   }
 
   // Rule 3: a lone reading the model itself doubts → confirm, don't guess —
@@ -400,14 +467,27 @@ export async function decide(
   if (top.confidence < config.answerThreshold) {
     const verdict = await servability(top.intent);
     if (!verdict.servable) return echoUnservableClarification(context, top, verdict);
-    return {
+    const confirm = {
       kind: 'clarification',
       ...context,
       axes: ['measure'],
       question_nl: `Bedoel je ${top.reading}?`,
       options: [top.reading],
       reason: `top reading confidence ${top.confidence} is below the answer threshold ${config.answerThreshold}`,
-    };
+    } as const satisfies Extract<ParseOutcome, { kind: 'clarification' }>;
+    // WP26 mechanism A: this exact intent was JUST proven servable one line
+    // above, so the confirm-option needs no second dry-run — offering it means
+    // "yes, that one" resolves without a paid re-parse.
+    return clickOptionsEnabled
+      ? withClickOptions(confirm, [
+          {
+            id: 'opt-1',
+            label: top.reading,
+            intent: top.intent,
+            impliedRecency: top.impliedRecency,
+          },
+        ])
+      : confirm;
   }
 
   // Rule 4: a materially different plausible second reading → user-facing
@@ -416,24 +496,32 @@ export async function decide(
     .slice(1)
     .find((candidate) => candidate.confidence >= config.runnerUpThreshold);
   if (runnerUp) {
-    if (isResolutionFailure(runnerUp)) {
-      return {
-        kind: 'clarification',
-        ...context,
-        axes: [runnerUp.axis],
-        question_nl: `Bedoel je ${joinOf([top.reading, runnerUp.reading])}?`,
-        options: [top.reading, runnerUp.reading],
-        reason: `plausible alternative reading did not resolve: ${runnerUp.message}`,
-      };
-    }
-    return {
+    const failed = isResolutionFailure(runnerUp);
+    const outcome = {
       kind: 'clarification',
       ...context,
-      axes: differingAxes(top, runnerUp),
+      axes: failed ? [runnerUp.axis] : differingAxes(top, runnerUp),
       question_nl: `Bedoel je ${joinOf([top.reading, runnerUp.reading])}?`,
       options: [top.reading, runnerUp.reading],
-      reason: `two plausible readings above the runner-up threshold ${config.runnerUpThreshold}`,
-    };
+      reason: failed
+        ? `plausible alternative reading did not resolve: ${runnerUp.message}`
+        : `two plausible readings above the runner-up threshold ${config.runnerUpThreshold}`,
+    } as const satisfies Extract<ParseOutcome, { kind: 'clarification' }>;
+    if (!clickOptionsEnabled) return outcome;
+    // WP26 mechanism A: the one shape the measured corpus dead-ends on most —
+    // two competing readings, the user retypes one of them. Both are dry-run
+    // here (neither was checked before: rule 4 answers no question about
+    // servability). A runner-up that FAILED resolution has no intent at all,
+    // so only the top reading can become a chip — the other stays plain text.
+    const clickOptions = await buildClickOptions(servability, [
+      { label: top.reading, intent: top.intent, impliedRecency: top.impliedRecency },
+      {
+        label: runnerUp.reading,
+        intent: failed ? null : runnerUp.intent,
+        impliedRecency: failed ? false : runnerUp.impliedRecency,
+      },
+    ]);
+    return withClickOptions(outcome, clickOptions);
   }
 
   const successes = ranked.filter(

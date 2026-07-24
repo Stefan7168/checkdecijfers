@@ -57,6 +57,9 @@ export interface FollowUpOptions {
    * vocabulary, same seam as ParseQuestionOptions. Absent/empty → byte-
    * identical follow-up prompt (fixtures unaffected). */
   extraCanonicalMeasures?: OnboardedMeasure[];
+  /** WP26 mechanism A (ADR 024): the `CLARIFY_CLICK_ENABLED` rollout flag,
+   * same seam as ParseQuestionOptions. Off/absent → byte-identical. */
+  clickOptionsEnabled?: boolean;
 }
 
 /** The follow-up-mode instruction, appended verbatim to the WP6 system prompt
@@ -171,5 +174,6 @@ export async function parseFollowUpQuestion(
     options.config ?? DEFAULT_PARSER_CONFIG,
     (intent) => echoServability(db, intent),
     options.tableFinder,
+    options.clickOptionsEnabled,
   );
 }

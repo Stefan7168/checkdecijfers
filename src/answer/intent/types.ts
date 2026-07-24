@@ -134,6 +134,43 @@ export interface RawParse {
 
 export type ClarifyAxis = 'measure' | 'region' | 'period' | 'derivation';
 
+/** WP26 mechanism A (ADR 024, execute-brief §3): one clarification option that
+ * a click can RESOLVE without a second LLM parse. The payload is the FULL
+ * resolved intent — built at OFFER time by the code that already holds the
+ * candidate, dry-run-verified there, and stored on the pending state. At take
+ * time nothing is patched or re-parsed: the stored intent is re-validated and
+ * re-queried, so a click can never dead-end on an unanswerable reading and can
+ * never smuggle a fabricated number (the query layer stays the only source of
+ * values). Options with no servable intent (free-text prompts like "noem de
+ * naam") simply get no ClickOption and render as plain text, exactly as today.
+ *
+ * Defined HERE, not in respond/types.ts, because the clarification outcome is
+ * born in this module — respond/types.ts re-exports it (an import the other way
+ * would make the intent→respond type edge circular). */
+export interface ClickOption {
+  /** Stable within one pending clarification ('opt-1', 'opt-2', …). */
+  id: string;
+  /** BYTE-EQUAL to the `options[]` entry it decorates: the deterministic
+   * take-path (respond.ts) matches a reply against exactly this string, so any
+   * drift between the two would silently disable the rung. */
+  label: string;
+  /** Fully resolved AND proven servable by the real query layer at offer time. */
+  intent: StructuredIntent;
+  /** Carried, never re-derived: the period SPEC that implied recency
+   * ("nu", "vorige maand") is gone once resolution turns it into codes, but
+   * the docs/05 staleness rule still needs it — with it true, a stale table
+   * REFUSES instead of warning-and-serving. Guessing `false` here would make a
+   * clicked take quietly less conservative than the typed path, so the truth
+   * travels with the option. */
+  impliedRecency: boolean;
+}
+
+/** Bounds the dry-run work one clarification may trigger (each option costs a
+ * real query). Region ambiguity is 2 in practice (Utrecht gemeente/provincie);
+ * rules 3/4 offer at most 2. A wider list keeps its extra entries as plain
+ * text — never as unverified chips. */
+export const MAX_CLICK_OPTIONS = 4;
+
 export interface RankedCandidate {
   intent: StructuredIntent;
   confidence: number;
@@ -168,6 +205,18 @@ export interface ResolutionFailure {
   message: string;
   /** Concrete, loaded-data options for the clarification (docs/05). */
   options: string[];
+  /** WP26 mechanism A: per-option resolved intents, index-aligned with
+   * `options` (null = this option carries no takeable reading). Populated only
+   * where the resolver can honestly build one — today the `region_ambiguous`
+   * branch, whose options ARE the competing readings ("Utrecht (gemeente)" vs
+   * "Utrecht (PV)"). Absent everywhere else, which simply means no chips.
+   * These are candidates, NOT offers: policy.ts dry-runs each one before it
+   * ever becomes a ClickOption. */
+  optionIntents?: (StructuredIntent | null)[];
+  /** The resolved period's recency implication, shared by every entry in
+   * `optionIntents` (they differ only on the region axis, and recency is a
+   * property of the period spec). See ClickOption.impliedRecency. */
+  optionImpliedRecency?: boolean;
   confidence: number;
   reading: string;
 }
@@ -203,6 +252,11 @@ export type ParseOutcome =
       question_nl: string;
       /** The offered options; each resolves in the loaded data. */
       options: string[];
+      /** WP26 mechanism A (ADR 024): the subset of `options` that is takeable
+       * in one click — each carrying the dry-run-verified intent behind its
+       * label. OPTIONAL and additive: absent (flag off, or no option resolved)
+       * → the clarification is byte-identical to the pre-WP26 one. */
+      clickOptions?: ClickOption[];
       reason: string;
     })
   | (OutcomeBase & {
