@@ -21,6 +21,15 @@ resumed on the owner's "ok fix and dan wrap up after"; every date below verified
   `85773NED` last_sync_at 2026-07-02, `83693NED` 2026-07-16, zero `ingestion_batches` rows since 2026-07-19
   (read-only live-DB check). The #132 route-B check (due on/after 19/7) is also still outstanding. Catch-up is the
   next session's FIRST owner-supervised action; ~30/7 BBP+PPI (chunk hatch) is days away.
+- **→ SAME DAY, closing smalls ("de 50% contextvenster nog wel waard"):** WP135 /login-header residual FIXED+LIVE
+  (`0cfbd3d`: force-dynamic — the flag read was frozen by static prerender; page test pins opt-out + flag-on/off;
+  verified visually on dev with the flag temporarily in web/.env.local (added, verified, REMOVED) and on prod HTML
+  post-deploy); SourceBadge title via the pinned `sourceLinkLabel` (orphan repaired); RUNBOOK "walk both deploy
+  orders" standing rule + migration-021 supervised-step record; dependabot PRs #58+#59 merged (s49 precedent,
+  gates green pre-merge; the only major is test-only jest-dom 6→7 — covered by the gate's own web tests); trial
+  pot measured 23/25 (untouched since s52). All three stacked main runs green incl. deploys. First web:build
+  attempt failed on a TRANSIENT Google-Fonts fetch (the documented non-hermetic half of next build) — solo retry
+  green, /login ƒ dynamic in the build output.
 - **→ SAME DAY, evening: #154 ✅ BUILT + LIVE ("de context window is pas op 43/50%, ga verder") — the marathon
   design executed with ONE measured correction.** The brief claimed "deploy-order-safe: merge code, apply 021
   later"; inverted in practice — the new `select … last_seen_batch_id` breaks every query pre-apply, so the ship

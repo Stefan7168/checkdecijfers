@@ -65,6 +65,14 @@ order flipped to apply-then-deploy**), pipeline mark-on-absence (prior-batch val
 clear-on-reappearance, run.ts min effective attribution date (marker stays OFF ResultCell), staleness retained-branch wording
 ("… door CBS sinds {date} niet opnieuw bevestigd"). Proven: the s47-repro full life cycle + transition bound
 (tests/ingestion/retained-cells.test.ts), full block green, audit:verify 1-256 unchanged clean.
+(9) **Closing smalls (2026-07-24 evening, owner: "nog eventjes kleine dingen"):** (a) the WP135 cosmetic residual FIXED + LIVE —
+/login was statically prerendered so the WORKSPACE_ENABLED read froze at build time; `force-dynamic` (commit `0cfbd3d`) + page test;
+header verified on dev (flag temporarily on, then removed) AND live on prod HTML. (b) SourceBadge title now derives via the pinned
+`sourceLinkLabel` (the #170 build had orphaned it). (c) RUNBOOK: standing "walk both deploy orders" rule + migration-021 record.
+(d) Dependabot PR #58 (root: anthropic-sdk 0.114.0) and PR #59 (web: 9 bumps — one major is test-only jest-dom 7) MERGED per the s49
+owner-present precedent, both gates green pre-merge, all three stacked deploys green (runs 30100938646/30100985363/30101035856).
+(e) Trial pot measured 23/25 — untouched since s52, no refill needed. NB: two red "dynamic" runs on 6606275 are Dependabot's own
+internal updater jobs (its branches were merged away), NOT our CI.
 ▶ NEXT: the ~30/7 BBP+PPI window (`85880NED` via the chunked hatch — days away), the #132 route-B GO (re-ask; forks==0 measured
 24-07), then the owner-decision menu below (#138, #121 AND #154 ALL OFF the menu — done; #172 needs only its supervised
 calibration/smoke half). #170 residual: (3) chart-download bundles with the Phase-2 OG WP,
