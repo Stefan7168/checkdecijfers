@@ -8,7 +8,7 @@
 // the tested URL shape. One component for BOTH chat answers and charts
 // (Ontdek included) — R4's "every source rides the one badge format".
 import { resolveSource, sourceKeyForTableId } from '../backend/sources/registry.ts';
-import { sourceTableUrl } from '../lib/statline.ts';
+import { sourceLinkLabel, sourceTableUrl } from '../lib/statline.ts';
 
 export interface SourceBadgeProps {
   tableId: string;
@@ -46,7 +46,7 @@ export function SourceBadge({ tableId, source, syncedAt }: SourceBadgeProps) {
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      title={`Bekijk bij ${info.attributionLabel}`}
+      title={sourceLinkLabel(key)}
       className={`${pill} underline-offset-2 hover:underline`}
     >
       {text}

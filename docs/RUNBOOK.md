@@ -211,6 +211,24 @@ owner-signed public-claim wording) are at the top of that guide, and its "known 
 points" section lists the verified landmines (e.g. the catalog-refresh prune wipe) that must be
 fixed WITH the first second source.
 
+## Standing rule for schema-coupled code (added 2026-07-24, #154 lesson)
+
+**Before shipping any change that both adds a migration AND reads/writes the new column in code: walk BOTH deploy
+orders explicitly.** A design's "apply the migration later" claim is worthless the moment the code SELECTs the new
+column on a hot path — pre-apply code then breaks every query (#154's brief claimed deploy-order-safe; measured
+inverted at build time). For a purely ADDITIVE nullable column the safe order is: **apply the migration to prod
+FIRST** (`npm run db:migrate`, owner-present window; the running old code ignores the new column), verify prod
+still serves, **then** push the code. Plus the standard per-migration check when a migration adds a TABLE
+(grants/RLS, migration-011 queries); a column on an existing RLS-locked table inherits its table's posture.
+
+## Supervised live step — migration 021 applied (2026-07-24, session 55 continued, owner present)
+
+**✅ DONE.** `npm run db:migrate` applied `021_observation_last_seen.sql` (adds
+`observations.last_seen_batch_id bigint` nullable, FK → `ingestion_batches`; NULL = present in the latest sync —
+exactly the pre-#154 behavior). Verified live: column exists nullable, `schema_migrations` records version 21,
+0 marked rows, prod served 200 on the OLD code post-DDL (additive column invisible to it), THEN the #154 code
+deployed (`cef42b2`, gate+deploy green). No new table ⇒ no grants/RLS step needed (inherits `observations`).
+
 ## Supervised live step — migrations 016 + 017 applied (2026-07-12, session 37-continued, owner present)
 
 **✅ DONE.** `npm run db:migrate` applied both 016 and 017 to production in one run
