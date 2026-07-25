@@ -340,13 +340,22 @@ export async function alertTrialPotLow(
 export async function maybeAlertTrialPotLow(
   alert: TrialPotAlert,
   fetchImpl: typeof fetch = fetch,
-): Promise<void> {
+): Promise<boolean> {
   // console.ERROR, like every sibling alert: an owner filtering Vercel logs to
   // error level must see this one too.
   console.error(`[trial-pot] low water: ${alert.remaining} left (threshold ${alert.threshold})`);
+  // Returns whether the send SUCCEEDED, because the caller latches on it.
+  // Latching on the ATTEMPT was a review finding: one transient Resend failure
+  // then burned the only notification for that drain, and the owner learned the
+  // lead magnet was dark by looking at it — the outcome #180 exists to prevent.
+  // `false` when the alert pair is unconfigured too, so an unset RESEND_API_KEY
+  // never latches a notification as delivered.
+  if (!process.env.RESEND_API_KEY || !process.env.ADMIN_ALERT_EMAIL) return false;
   try {
     await alertTrialPotLow(alert, fetchImpl);
+    return true;
   } catch (err) {
     console.error('[trial-pot] low-water alert e-mail failed:', err);
+    return false;
   }
 }

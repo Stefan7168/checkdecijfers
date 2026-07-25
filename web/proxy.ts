@@ -21,19 +21,13 @@ import { NextResponse, type NextRequest } from 'next/server';
 // of which carries a user session cookie, so the session-redirect must NOT
 // swallow it (a redirect would 307 the cron caller to /login and the job would
 // silently never run — caught live at the WP16 go-live, session 28).
+/** Routes that authenticate themselves and must match EXACTLY — no sibling
+ * under the same name inherits the exemption. */
+const PUBLIC_EXACT_PATHS = ['/api/stripe/webhook', '/api/onboarding-cron', '/api/gdpr-purge-cron'];
+
 const PUBLIC_PATH_PREFIXES = [
   '/login',
   '/auth/callback',
-  '/api/stripe/webhook',
-  '/api/onboarding-cron',
-  // #189: the retention-purge cron, same shape and same reason as the line
-  // above — Vercel Cron carries a Bearer secret, never a session cookie. Left
-  // out, the 307 to /login would return 200 to the cron dashboard, so the job
-  // would look SCHEDULED AND HEALTHY while never running once: exactly the
-  // silence #189 exists to end, with a green tick on top. The route
-  // authenticates itself (fail-closed 503 without CRON_SECRET, 401 on
-  // mismatch), so being reachable here costs nothing.
-  '/api/gdpr-purge-cron',
   // #170(2): the registry-generated self-description for LLMs/crawlers —
   // public by nature (it exists to be fetched anonymously), read-only, and
   // it exposes only what the public product already shows on every answer
@@ -51,6 +45,12 @@ export function isPublicPath(pathname: string): boolean {
   // renders the dashboard only for a session). EXACT match only: a
   // startsWith('/') entry would open every route.
   if (pathname === '/') return true;
+  // EXACT match for the self-authenticating API routes, prefix match only for
+  // the genuinely-prefixed ones. `startsWith` alone meant a future sibling under
+  // an existing name — `/api/gdpr-purge-cron-status` — would ship session-exempt
+  // by accident (review finding); `/` already had exact-match discipline for the
+  // same reason, one line up.
+  if (PUBLIC_EXACT_PATHS.includes(pathname)) return true;
   return PUBLIC_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 }
 

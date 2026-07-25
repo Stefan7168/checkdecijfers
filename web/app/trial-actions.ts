@@ -94,11 +94,30 @@ export type TrialAskOutcome =
   | { kind: 'used_up' }
   | { kind: 'duplicate_request' };
 
-/** Per-instance latch for the pot-empty alert (see the pot_empty branch below).
- * Instance-scoped on purpose: Fluid Compute reuses instances, so this is
- * near-silent in steady state, and a fresh instance re-alerting at most once is
- * the safe direction for a warning whose failure mode is going unheard. */
-let potEmptyAlerted = false;
+/** Per-instance notification latches, one per notification, set ONLY when the
+ * send actually succeeded. Three review findings converged here: the old single
+ * latch was set BEFORE the send (so a transient Resend failure burned the only
+ * attempt), it was reset after the multi-second LLM call (so a take in flight at
+ * drain time re-armed it while the pot was still empty, mailing again), and the
+ * crossing alert used `===` so a pot seeded at or below the threshold never got
+ * a warning shot at all.
+ *
+ * Instance-scoped: Fluid Compute reuses instances, so this is quiet in steady
+ * state, and a fresh instance re-announcing at most once is the safe direction
+ * for a warning whose failure mode is going unheard. */
+let lowWaterAlerted = false;
+let emptyAlerted = false;
+
+/** Fail-soft on every path: an alert must never cost a visitor an answer that
+ * was already produced (the session-52 attachTrialAudit finding). */
+async function announcePot(remaining: number): Promise<boolean> {
+  try {
+    return await maybeAlertTrialPotLow({ remaining, threshold: TRIAL_POT_LOW_WATER });
+  } catch (err) {
+    console.error('[trial] pot alert failed (answer unaffected):', err);
+    return false;
+  }
+}
 
 export async function askTrialQuestion(question: string, requestId: string): Promise<TrialAskOutcome> {
   // TYPE FIRST, THEN SIZE — the same belt actions.ts's guardLength applies, and
@@ -153,26 +172,23 @@ export async function askTrialQuestion(question: string, requestId: string): Pro
   // work; a rejected take has cost nothing and drained nothing.
   const take = await takeTrialQuestion(db, visitorId, ipHash, requestId);
   if (take.kind === 'pot_empty') {
-    // #180 follow-up (found by the review pass on the first cut): the crossing
-    // alert below gets exactly ONE send attempt, because only one take ever
-    // returns potRemaining === 0. If Resend happens to fail on that call the
-    // warning is lost for good — the floor is a log line in short-retention
-    // Vercel logs that nobody watches, which is this whole item's premise. So
-    // re-fire here, where every subsequent anonymous visitor lands: once per
-    // instance, reset by the next successful take, so a refill re-arms it.
-    if (!potEmptyAlerted) {
-      potEmptyAlerted = true;
-      try {
-        await maybeAlertTrialPotLow({ remaining: 0, threshold: TRIAL_POT_LOW_WATER });
-      } catch (err) {
-        console.error('[trial] pot-empty alert failed:', err);
-      }
-    }
+    // Every later visitor lands here, so this is the second chance the crossing
+    // alert needs when its single send fails. Gated on delivery, not on having
+    // tried: otherwise the "second chance" burns itself on the same outage.
+    if (!emptyAlerted) emptyAlerted = await announcePot(0);
     return { kind: 'closed', reason: 'pot_empty' };
   }
   if (take.kind === 'ip_limit') return { kind: 'closed', reason: 'ip_limit' };
   if (take.kind === 'visitor_limit') return { kind: 'used_up' };
   if (take.kind === 'duplicate_request') return { kind: 'duplicate_request' };
+
+  // Re-arm as soon as the pot is OBSERVED healthy — before the LLM call, not
+  // after it. Resetting afterwards let a take that started before the drain
+  // re-arm the latch seconds later, while the pot was still empty.
+  if (take.potRemaining > TRIAL_POT_LOW_WATER) {
+    lowWaterAlerted = false;
+    emptyAlerted = false;
+  }
 
   try {
     const audited = await answerQuestionAudited(db, question, {
@@ -220,18 +236,16 @@ export async function askTrialQuestion(question: string, requestId: string): Pro
     // maybeAlertTrialPotLow swallows its own failures, but the belt costs one
     // line and the failure it prevents is silent — a test of exactly this found
     // the missing belt.
-    // A successful take means the pot is non-empty again — re-arm the latch so
-    // the NEXT drain is announced too.
-    potEmptyAlerted = false;
-    if (take.potRemaining === TRIAL_POT_LOW_WATER || take.potRemaining === 0) {
-      try {
-        await maybeAlertTrialPotLow({
-          remaining: take.potRemaining,
-          threshold: TRIAL_POT_LOW_WATER,
-        });
-      } catch (err) {
-        console.warn('[trial] pot low-water alert failed (answer served):', err);
-      }
+    // `<=`, not `===`. Equality silently skipped the warning entirely whenever
+    // the pot was seeded at or below the threshold (`trialpot:set -- 5` runs
+    // 4,3,2,1,0 and never returns 5), which is exactly the pot size where a
+    // warning shot matters most. The latch — not the equality — is what keeps
+    // this to one mail per drain.
+    if (take.potRemaining <= TRIAL_POT_LOW_WATER && !lowWaterAlerted) {
+      lowWaterAlerted = await announcePot(take.potRemaining);
+    }
+    if (take.potRemaining === 0 && !emptyAlerted) {
+      emptyAlerted = await announcePot(0);
     }
     return { kind: 'ok', response: audited.response, questionsLeft: take.questionsLeft };
   } catch (error) {

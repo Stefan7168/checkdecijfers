@@ -19,6 +19,10 @@ import { getDb } from './db.ts';
 export const TRIAL_COOKIE = 'cdc_trial';
 export const TRIAL_COOKIE_MAX_AGE_S = 180 * 24 * 60 * 60;
 
+/** One dotted-quad pattern, built into both regexes below that need it — it
+ * was written out twice, so a future tightening could reach only one. */
+const IPV4 = String.raw`\d{1,3}(?:\.\d{1,3}){3}`;
+
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** True for a canonically-shaped UUID. Exported because the trial's
@@ -78,44 +82,65 @@ export function ipBucketKey(raw: string): string {
   // Zone index (`fe80::1%eth0`); never seen in x-forwarded-for, cheap to drop.
   const zone = ip.indexOf('%');
   if (zone > 0) ip = ip.slice(0, zone);
-  // `203.0.113.7:443` — an IPv4 with a port contains ':', so without this it
-  // would fall into the IPv6 branch and get a fresh bucket per ephemeral port.
-  const v4WithPort = /^(\d{1,3}(?:\.\d{1,3}){3}):\d+$/.exec(ip);
+  // An IPv4 with a port contains ':', so without this it would fall into the
+  // IPv6 branch and earn a fresh bucket per ephemeral port.
+  const v4WithPort = new RegExp(`^(${IPV4})::?\\d+$`).exec(ip);
   if (v4WithPort) return v4WithPort[1]!;
   if (!ip.includes(':')) return ip; // IPv4, or the 'unknown' sentinel.
 
-  // IPv4-mapped IPv6 (`::ffff:203.0.113.7`) is an IPv4 client — bucket it as
-  // one, or the same visitor would land in two different buckets depending on
-  // which form the platform happened to hand us.
-  const mapped = /^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/i.exec(ip);
-  if (mapped) return mapped[1]!;
+  // ONE canonical form, then one decision — rather than a branch per textual
+  // spelling. Three review findings were three spellings of the SAME case
+  // (`::ffff:1.2.3.4`, `::ffff:c000:0207`, `::1.2.3.4`), each previously
+  // patched separately while the next spelling stayed broken and collapsed
+  // into a shared `0:0:0:0::/64` bucket with `::1` and `::`.
+  //
+  // Step 1: split off a trailing dotted quad so every embedded-IPv4 form
+  // reduces to the same 8-hextet shape.
+  let tail4: string | null = null;
+  const embedded = new RegExp(`^(.*:)(${IPV4})$`).exec(ip);
+  if (embedded) {
+    ip = embedded[1]!;
+    tail4 = embedded[2]!;
+  }
 
-  // Expand `::` before slicing: `2001:db8::1` naively split on ':' yields
-  // ['2001','db8','','1'], whose first four groups are NOT the /64.
+  // Step 2: expand `::` BEFORE slicing — `2001:db8::1` split naively on ':'
+  // yields ['2001','db8','','1'], whose first four groups are NOT the /64.
   let groups: string[];
   if (ip.includes('::')) {
-    const [head = '', tail = ''] = ip.split('::');
+    const [head = '', rest = ''] = ip.split('::');
     const headParts = head.split(':').filter((p) => p !== '');
-    const tailParts = tail.split(':').filter((p) => p !== '');
-    const zeros = Math.max(0, 8 - headParts.length - tailParts.length);
+    const tailParts = rest.split(':').filter((p) => p !== '');
+    const present = headParts.length + tailParts.length + (tail4 === null ? 0 : 2);
+    const zeros = Math.max(0, 8 - present);
     groups = [...headParts, ...Array<string>(zeros).fill('0'), ...tailParts];
   } else {
-    groups = ip.split(':');
+    groups = ip.split(':').filter((p) => p !== '');
   }
-  // Normalise each hextet so 2001:0db8:… and 2001:db8:… agree.
-  const norm = groups.map((g) => g.toLowerCase().replace(/^0+(?=.)/, ''));
+  if (tail4 !== null) {
+    const o = tail4.split('.').map((n) => Number(n) & 255);
+    groups.push((((o[0]! << 8) | o[1]!) >>> 0).toString(16), (((o[2]! << 8) | o[3]!) >>> 0).toString(16));
+  }
 
-  // IPv4-mapped in HEX form (`::ffff:c000:0207`). The dotted form is caught
-  // above; this one only becomes visible after expansion. Without it every
-  // hex-mapped client — and `::1`, and `::` — collapses into ONE shared
-  // `0:0:0:0::/64` bucket, which both locks unrelated visitors out of each
-  // other's 5/day budget and splits one client from its own dotted form.
-  if (norm.length >= 8 && norm.slice(0, 5).every((g) => g === '0') && norm[5] === 'ffff') {
+  const norm = groups.map((g) => g.toLowerCase().replace(/^0+(?=.)/, ''));
+  // Anything that is not 8 valid hextets is malformed. Return it verbatim
+  // rather than guessing: a wrong GUESS merges unrelated visitors into one
+  // 5/day bucket, while a verbatim key is unique per input and can only ever
+  // be over-permissive to the one sender that produced it. It cannot collide
+  // with a /64 key (those end `::/64`) or an IPv4 key (those have no colon).
+  if (norm.length !== 8 || !norm.every((g) => /^[0-9a-f]{1,4}$/.test(g))) {
+    return `unparsed:${ip}${tail4 === null ? '' : tail4}`;
+  }
+
+  // Step 3: an embedded IPv4 — mapped (`::ffff:a.b.c.d`) or the deprecated
+  // compatible form (`::a.b.c.d`) — IS an IPv4 client; bucket it as one, or
+  // the same visitor lands in two buckets depending on which spelling the
+  // platform handed us. `::1` and `::` fall out here as 0.0.0.1 and 0.0.0.0 —
+  // distinct, deterministic, and no longer sharing a bucket with each other.
+  const highIsZero = norm.slice(0, 5).every((g) => g === '0');
+  if (highIsZero && (norm[5] === 'ffff' || norm[5] === '0')) {
     const hi = Number.parseInt(norm[6]!, 16);
     const lo = Number.parseInt(norm[7]!, 16);
-    if (Number.isFinite(hi) && Number.isFinite(lo)) {
-      return `${(hi >> 8) & 255}.${hi & 255}.${(lo >> 8) & 255}.${lo & 255}`;
-    }
+    return `${(hi >> 8) & 255}.${hi & 255}.${(lo >> 8) & 255}.${lo & 255}`;
   }
   return `${norm.slice(0, 4).join(':')}::/64`;
 }
@@ -165,12 +190,18 @@ export async function hashedRequestIp(): Promise<string> {
     throw new Error('TRIAL_IP_HASH_SECRET is unset — refusing to persist an unkeyed IP hash');
   }
   const h = await headers();
-  const forwarded = h.get('x-vercel-forwarded-for') ?? h.get('x-forwarded-for');
-  // Trim BEFORE the fallback, not after: a present-but-whitespace header is
-  // truthy, so trimming last would let ' ' win the `||` and hash to '' — the
-  // same shared-bucket bug as the empty header, one character away.
+  // Normalise EACH tier before choosing, rather than chaining raw header values.
+  // Two review findings landed here in sequence: `??` let a present-but-empty
+  // header mask a populated one, and `||` on raw values still let a
+  // WHITESPACE-only header win and then trim away to nothing. Taking the first
+  // entry and trimming inside the helper makes empty, blank and absent behave
+  // identically at every tier — which is the property the fallback needs.
+  const firstEntry = (value: string | null): string => value?.split(',')[0]?.trim() ?? '';
   const ip =
-    forwarded?.split(',')[0]?.trim() || h.get('x-real-ip')?.trim() || 'unknown';
+    firstEntry(h.get('x-vercel-forwarded-for')) ||
+    firstEntry(h.get('x-forwarded-for')) ||
+    firstEntry(h.get('x-real-ip')) ||
+    'unknown';
   // #182: hash the BUCKET, not the address — over IPv6 those differ by 2^64.
   return createHmac('sha256', secret).update(ipBucketKey(ip)).digest('hex');
 }

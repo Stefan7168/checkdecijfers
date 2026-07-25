@@ -265,64 +265,93 @@ describe('askTrialQuestion', () => {
       await askTrialQuestion('Wat is de inflatie?', crypto.randomUUID());
     }
 
+    // The latches are MODULE-scoped, so they survive between tests in this file.
+    // Prime each test with a healthy-pot take, which re-arms both and emits no
+    // alert — otherwise every test here silently depends on the order of the
+    // ones before it (a review finding in its own right).
+    beforeEach(async () => {
+      maybeAlertTrialPotLow.mockResolvedValue(true);
+      takeTrialQuestion.mockResolvedValue({
+        kind: 'taken', trialQuestionId: 7, questionsLeft: 1, potRemaining: 999,
+      });
+      await askTrialQuestion('priming', crypto.randomUUID());
+      vi.clearAllMocks();
+      maybeAlertTrialPotLow.mockResolvedValue(true);
+      answerQuestionAudited.mockResolvedValue({ response: RESPONSE, auditId: 42 });
+    });
+
     it('stays quiet while the pot is healthy', async () => {
       for (const level of [20, 9, 6]) {
         vi.clearAllMocks();
+        maybeAlertTrialPotLow.mockResolvedValue(true);
         await askWithPot(level);
         expect(maybeAlertTrialPotLow, `level=${level}`).not.toHaveBeenCalled();
       }
     });
 
-    it('warns ONCE at the threshold and once at empty — not on every question below', async () => {
-      // A take always decrements by exactly 1, so equality is what makes this a
-      // warning shot rather than a stream of mail.
+    // `<=`, not `===`. The old equality check skipped the warning entirely for
+    // a pot seeded AT or BELOW the threshold — the size where it matters most.
+    it('warns for a pot seeded at or below the threshold, which === skipped', async () => {
+      await askWithPot(4);
+      expect(maybeAlertTrialPotLow).toHaveBeenCalledWith({ remaining: 4, threshold: 5 });
+    });
+
+    it('warns once per drain, not once per question below the line', async () => {
       await askWithPot(5);
-      expect(maybeAlertTrialPotLow).toHaveBeenCalledWith({ remaining: 5, threshold: 5 });
+      expect(maybeAlertTrialPotLow).toHaveBeenCalledTimes(1);
       vi.clearAllMocks();
-      for (const level of [4, 3, 2, 1]) {
-        await askWithPot(level);
-      }
+      maybeAlertTrialPotLow.mockResolvedValue(true);
+      for (const level of [4, 3, 2, 1]) await askWithPot(level);
       expect(maybeAlertTrialPotLow).not.toHaveBeenCalled();
+    });
+
+    // The latch keys on DELIVERY. Latching on the attempt meant one transient
+    // Resend failure burned the only notification for that drain.
+    it('retries on the next take when the send did NOT land', async () => {
+      maybeAlertTrialPotLow.mockResolvedValue(false);
+      await askWithPot(5);
+      await askWithPot(4);
+      expect(maybeAlertTrialPotLow).toHaveBeenCalledTimes(2);
+    });
+
+    it('re-arms only once the pot is observed healthy again', async () => {
+      await askWithPot(5);
+      vi.clearAllMocks();
+      maybeAlertTrialPotLow.mockResolvedValue(true);
+      await askWithPot(20); // refilled
+      await askWithPot(5); // next drain announces again
+      expect(maybeAlertTrialPotLow).toHaveBeenCalledWith({ remaining: 5, threshold: 5 });
+    });
+
+    it('does not double-mail on an ordinary drain to empty', async () => {
+      await askWithPot(0); // crossing: one low-water + one empty
+      const before = maybeAlertTrialPotLow.mock.calls.length;
+      takeTrialQuestion.mockResolvedValue({ kind: 'pot_empty' });
+      await askTrialQuestion('v', crypto.randomUUID());
+      // The pot_empty branch is a SECOND CHANCE, not a duplicate: the empty
+      // alert already landed, so it stays quiet.
+      expect(maybeAlertTrialPotLow.mock.calls.length).toBe(before);
+    });
+
+    it('pot_empty DOES announce when the crossing send failed', async () => {
+      maybeAlertTrialPotLow.mockResolvedValue(false);
       await askWithPot(0);
+      vi.clearAllMocks();
+      maybeAlertTrialPotLow.mockResolvedValue(true);
+      takeTrialQuestion.mockResolvedValue({ kind: 'pot_empty' });
+      await askTrialQuestion('v', crypto.randomUUID());
       expect(maybeAlertTrialPotLow).toHaveBeenCalledWith({ remaining: 0, threshold: 5 });
     });
 
     it('never lets an alert failure cost the visitor their answer', async () => {
-      maybeAlertTrialPotLow.mockRejectedValueOnce(new Error('resend down'));
+      maybeAlertTrialPotLow.mockRejectedValue(new Error('resend down'));
       takeTrialQuestion.mockResolvedValue({
-        kind: 'taken',
-        trialQuestionId: 7,
-        questionsLeft: 1,
-        potRemaining: 5,
+        kind: 'taken', trialQuestionId: 7, questionsLeft: 1, potRemaining: 5,
       });
-      // Assert the ANSWER survives, not merely that nothing threw — without the
-      // inner try this rejects AND refunds a question already served.
       await expect(
         askTrialQuestion('Wat is de inflatie?', crypto.randomUUID()),
       ).resolves.toMatchObject({ kind: 'ok', response: RESPONSE });
       expect(refundTrialQuestion).not.toHaveBeenCalled();
-    });
-
-    // The crossing alert gets exactly ONE send attempt, so a transient Resend
-    // failure there would lose the warning for good. Every later visitor lands
-    // on pot_empty — re-fire from there, once per instance.
-    it('re-fires from the pot_empty branch, once, and re-arms after a refill', async () => {
-      takeTrialQuestion.mockResolvedValue({ kind: 'pot_empty' });
-      await askTrialQuestion('v', crypto.randomUUID());
-      expect(maybeAlertTrialPotLow).toHaveBeenCalledWith({ remaining: 0, threshold: 5 });
-
-      // Latched: a second empty visitor does not re-mail.
-      vi.clearAllMocks();
-      takeTrialQuestion.mockResolvedValue({ kind: 'pot_empty' });
-      await askTrialQuestion('v', crypto.randomUUID());
-      expect(maybeAlertTrialPotLow).not.toHaveBeenCalled();
-
-      // A refill (a successful take) re-arms it for the next drain.
-      vi.clearAllMocks();
-      await askWithPot(20);
-      takeTrialQuestion.mockResolvedValue({ kind: 'pot_empty' });
-      await askTrialQuestion('v', crypto.randomUUID());
-      expect(maybeAlertTrialPotLow).toHaveBeenCalledWith({ remaining: 0, threshold: 5 });
     });
   });
 });
