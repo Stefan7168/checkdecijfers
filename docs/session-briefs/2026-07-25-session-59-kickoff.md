@@ -1,5 +1,10 @@
 # Kickoff — session 59 (after the two parallel overnight runs of 2026-07-25)
 
+> **⚠ SUPERSEDED — read [`2026-07-26-session-59-kickoff-final.md`](2026-07-26-session-59-kickoff-final.md) instead.**
+> This file was written before the night's PRs were merged. Its state section has been corrected in place, but the
+> final kickoff (with the merged SHAs, the owner's *"work autonomously"* steer and the follow-up order) is the other one.
+
+
 Reading order: `CLAUDE.md` → [`docs/STATUS.md`](../STATUS.md) (the ▶ block is leading) → this file.
 The chat is gone; the repo is the source.
 

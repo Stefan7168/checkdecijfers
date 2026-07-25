@@ -1,9 +1,73 @@
 # STATUS archive — the session log
 
+**Session 58B (2026-07-25 evening/night, AUTONOMOUS — the SECOND of two sessions started on the same brief;
+Opus 5 orchestrating, Fable agents for the adversarial work. Owner joined in-chat late and delegated the merge
+call. ✅ ALL FOUR of the night's PRs MERGED AND LIVE. €0 live-LLM product spend, zero prompt bytes, no DDL,
+both WP26 flags untouched and still OFF.)**
+
+- **⚠ TWO SESSIONS, ONE WORKING TREE — detected in four minutes, and the detection is the reusable part.**
+  `tests/audit/envelope-key-manifest.test.ts` advanced its mtime (18:38:34 → 18:40:52) while this session was
+  reading the repo; `list_sessions` confirmed a RUNNING session with the same `cwd`. Moved out to a git worktree
+  at `/Users/amity/cdc-s58` with its own `node_modules`; **wrote nothing to the main tree all night.** Two
+  cross-session messages agreed the split and the merge order.
+- **The reframe that produced all the value.** PR #64's own commit message said it was *"found by the
+  anonymous-trial hunt (four Fable lenses)"* — i.e. the other session had ALREADY done queue item 4. Repeating
+  the queue would have been waste, so this session took the job a second session can do that a first structurally
+  cannot: **review the open PR nobody can review for themselves, and re-hunt the same surface independently.**
+- **The one production-reachable defect, found by the independent hunt and NOT by the first pass** (shipped as PR
+  [#67](https://github.com/Stefan7168/checkdecijfers/pull/67), squash `b05a1d3`): `trial_questions.request_id` is
+  `text` (migration 020) while `audit_answers.request_id` is `uuid` (migration 010). A non-UUID requestId passed
+  the guard, passed the pot take, spent BOTH LLM calls, and failed only at the R8 insert — whose fail-closed retry
+  re-uses the same id and fails identically, **serving the turn with `auditId: null`**: no audit row for an
+  anonymous answer (ADR 036 owner-frame item 6), nothing to reconcile the trial key's invoice against, one admin
+  e-mail per request from an unauthenticated endpoint, and the pot draining while delivering nothing. The paid
+  path is immune **by accident**: its `credit_transactions.request_id` is `uuid`, written inside the gate before
+  any LLM call. **The tell it was missed: the tests agreed with the bug** — they passed `'r1'`…`'r4'`, the exact
+  shape production rejects, because `answerQuestionAudited` is mocked there so the uuid column never participated.
+- **Five smaller fixes, test-pinned** (each confirmed to fail with its own source change reverted): the landing
+  asserting *"het gratis proefpotje is op dit moment leeg"* in a state where it had merely failed to READ the pot
+  (split `'closed'` / `'unavailable'` — same degrade, different claim); an empty-or-whitespace `x-forwarded-for`
+  never falling through to `x-real-ip` (`''` is not nullish, so `??` short-circuited); `hashedRequestIp`
+  defaulting the HMAC key to `''`; the refund able to push `remaining_questions` above `cap`. **Reasoning-only, no
+  test, and said so plainly:** `gdpr:purge`'s two trial legs sat in a bare `catch {}` blaming a migration live
+  since 2026-07-17 (now a `to_regclass` CHECK, the discipline `retention.ts` states for its own guard), and
+  `getTrialPotStatus`'s silent catch now warns.
+- **Item 3 (#177) delivered**: the rescue path's fresh parse now records `'intent'`, not `'clarify'` — deliberately
+  NOT the new `'parse'` value the row suggested, because `LlmCallRecord['role']` is a closed union and a sixth
+  value would change what old rows mean by omission. Decided in the audit layer, since `isRescuePending` is pure.
+- **TWO REVIEW PASSES OVER ITS OWN DIFF EACH CAUGHT AN OVER-CLAIM — the process working, and worth recording.**
+  The first found the commit message claiming five fixes were "proven by reverting" when two had no test at all.
+  The second (needed because the tree kept moving after the first) found a "guard" test that PASSES on revert by
+  construction. **The disproof was on screen both times** — the revert run had printed `1 failed | 110 passed`.
+- **Corrected BY the other session, recorded because being wrong in public is the point:** its #179 first said the
+  fixture-snapshot A/B was "still unmeasured" — it had been measured before this session started (**70-145 s, not
+  240 s**, magnitude unresolvable at n=2); and its #183 called the 2000-char trial cap a bug when
+  `web/app/actions.ts` says outright it is the intended belt behind a 500-char client cap on the paid path too.
+- **Merges (owner present, *"jij bent de expert"*), serial, one deploy at a time with a canary between:**
+  **#64 `58c814b` → #67 `b05a1d3` → #65 `ed5f240` → #66 `b4da3b2`**, gate+deploy green on every one, production
+  200 on `/`, `/llms.txt`, `/login` with Ontdek rendering after each. #67 rebased onto #64 (guard order
+  `typeof question → length → trialConfigured → requestId shape`); #66's conflicts resolved by **taking both
+  sides** (rows #179-#186 from 58B, #187-#190 from 58; both session sections kept in lessons).
+  **Final counts, arithmetic checked: backend 1536 / 101 files** (1509 + 3 + 24), **web 397** (385 + 6 + 6).
+- **⚠ A NEAR-MISS WORTH THE ENTRY:** waiting on "the latest run on `main`" after a merge matched the PREVIOUS
+  merge's already-completed run and reported green for a build that had not started. Caught only by comparing the
+  run's `headSha` to `HEAD`. **Key post-merge waits on the merge commit's own SHA.**
+- **Owner steer at the close — *"I want you to work autonomously"*** (`d485a28`): everything previously parked on
+  him now carries a recommended default, a cost bound and a rollback in
+  [session-briefs/2026-07-26-autonomous-followups.md](session-briefs/2026-07-26-autonomous-followups.md). #187 was
+  my own over-caution (two requests, ~€0.04, and Vercel's docs already imply the answer); #189's default is now
+  BUILD THE CRON. **The WP26 flag flip stays his** — reserved in his own words three times.
+- Recorded, not fixed: [#179-#186](open-questions.md). **#181 is the one with a real edge**: anonymous trial
+  CONTENT is kept 2 years with no self-service erasure route (that path binds `user_id`), while its bookkeeping
+  goes at 90 days — on justifications (dashboard, ledger) that do not apply to a trial turn.
+
 **Session 58 (2026-07-25 evening → overnight, AUTONOMOUS #2, orchestrated on Opus 5 with Fable agents for the
 adversarial work — THREE PRs/branches from this session AWAITING OWNER REVIEW, nothing merged, nothing deployed.
 €0 live-LLM product spend, zero prompt bytes, no DDL, both WP26 flags untouched and still OFF.)**
 
+- **▶ CLOSED OUT LATER THE SAME DAY (owner present): all four PRs merged and deployed** — #64 `58c814b`,
+  #67 `b05a1d3` (session 58B's), #65 `ed5f240`, #66 `b4da3b2`, serially with a production canary between
+  each. The header above describes this session's own autonomous phase, before that happened.
 - **⚠ THE OWNER STARTED TWO AUTONOMOUS SESSIONS ON THE SAME BRIEF, IN THE SAME WORKING TREE.** The second
   (session "58b") began at 18:38 and detected this one from a test file's advancing mtime. It opened a
   cross-session channel, moved itself to a worktree at `/Users/amity/cdc-s58`, and we split the queue. Nothing

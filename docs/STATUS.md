@@ -9,7 +9,7 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
-**▶ NEXT SESSION STARTS HERE (Session 58, 2026-07-25 evening — AUTONOMOUS overnight #2. ⚠ THE OWNER
+**▶ NEXT SESSION STARTS HERE (Sessions 58 + 58B, 2026-07-25 evening/night — TWO AUTONOMOUS overnight runs. ⚠ THE OWNER
 STARTED TWO SESSIONS ON THIS BRIEF; both ran, split the queue over a cross-session channel, and both shipped.
 Read [status-archive.md](status-archive.md) for the full record and the merge order.**
 
@@ -22,11 +22,12 @@ production canary between each — the #173 discipline. **Both WP26 flags are st
 | 1 | [#64](https://github.com/Stefan7168/checkdecijfers/pull/64) | `58c814b` | Server Action arguments were type-checked only by `.length`, so a content-block array (`.length === 1`) drove a ~1 MB prompt at a flat credit price — on the PAID path too, not just the trial. | gate+deploy ✅, 200/200 |
 | 2 | [#67](https://github.com/Stefan7168/checkdecijfers/pull/67) | `b05a1d3` | 58b's trial hardening: a non-UUID requestId reached the LLM and was rejected only by the R8 insert (served with `auditId: null`); the landing asserting an unverified "pot is leeg"; `x-forwarded-for`/HMAC-secret defaults; the purge's bare `catch`; the cap clamp. **Plus [#177](open-questions.md)** (the rescue parse now records `'intent'`, not `'clarify'`). Rebased onto #64 — guard order `typeof question → length → trialConfigured → requestId shape`. | gate+deploy ✅ (run 30160467319), 200/200 |
 | 3 | [#65](https://github.com/Stefan7168/checkdecijfers/pull/65) | `ed5f240` | The conformance bundle: the double-default test, single-sourced `NL01`, the envelope-key manifest, the query-count pin. Disjoint — floated. | gate+deploy ✅, 200/200 |
-| 4 | [#66](https://github.com/Stefan7168/checkdecijfers/pull/66) | see archive | This docs close-out. Conflicted with #67 in `open-questions.md`, `lessons-learned.md` and the RUNBOOK — resolved by **taking both sides** (rows #179-#186 from 58b, #187-#190 from 58; both session sections kept). | — |
+| 4 | [#66](https://github.com/Stefan7168/checkdecijfers/pull/66) | `b4da3b2` | This docs close-out. Conflicted with #67 in `open-questions.md`, `lessons-learned.md` and the RUNBOOK — resolved by **taking both sides** (rows #179-#186 from 58b, #187-#190 from 58; both session sections kept). | — |
 
-**Measured at the merge, after the arithmetic check the queue demands:** backend **1512** and web **397** on
-#67's tree (main's 1509/391 + 3 backend and 6 web), benchmark **14/14 + 6/6 + 0 fabricated GATE PASS**, real
-`next build`. #65 adds its own on top — re-check the counts against `main` before trusting any later claim.
+**Measured on `main` AFTER all four merges, arithmetic checked:** backend **1536 / 101 files**
+(1509 + 3 from #67 + 24 from #65) and web **397** (385 + 6 from #64 + 6 from #67); benchmark **14/14 + 6/6 +
+0 fabricated, GATE PASS**; real `next build`. Redo that arithmetic after any future merge — it is the check
+that catches a silently-dropped file.
 
 **The measured result the queue asked for:** the fixture-snapshot saving is **70-145 s, not the retracted
 240 s** — and the within-arm spread exceeds the between-arm difference, so at n=2 the magnitude is not
@@ -44,11 +45,11 @@ burst (#173); (c) **~30/7 BBP+PPI syncs** (`85880NED` MUST use the chunked escap
 
 **▶ AND FOR AN AUTONOMOUS SESSION — start here, not at the owner.** Owner steer 2026-07-25: *"I want you to work
 autonomously."* Everything previously parked on him now has a written default, bound and rollback in
-**[session-briefs/2026-07-26-autonomous-followups.md](session-briefs/2026-07-26-autonomous-followups.md)** —
+**[session-briefs/2026-07-26-autonomous-followups.md](session-briefs/2026-07-26-autonomous-followups.md)** (and the kickoff: **[session-briefs/2026-07-26-session-59-kickoff-final.md](session-briefs/2026-07-26-session-59-kickoff-final.md)** — the 2026-07-25 one is superseded) —
 **#187** (two requests, ~€0.04, expected result: the header is NOT forgeable), **#189** (build the purge cron,
 dry-run behind a flag), **#181/#183** and the residuals #180/#182/#184/#185/#186/#174 each with a recommended
 default. Act under #118(b) (branch + PR) and let him veto by exception. **The ONE exception is the WP26 flag
-flip — he has reserved it three times and it stays his.**
+flip — he has reserved it in his own words, repeatedly, and it stays his.**
 
 Full session record in [status-archive.md](status-archive.md).)**
 
