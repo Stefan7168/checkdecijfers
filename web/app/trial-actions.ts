@@ -31,10 +31,12 @@ import { answerQuestionAudited } from '../backend/answer/audit/index.ts';
 import type { SemanticCheckOptions } from '../backend/answer/compose/index.ts';
 import { AnthropicLlmClient } from '../backend/answer/llm/client.ts';
 import type { ComposedResponse } from '../backend/answer/respond/types.ts';
+import { maybeAlertTrialPotLow } from '../backend/answer/audit/index.ts';
 import {
   attachTrialAudit,
   refundTrialQuestion,
   takeTrialQuestion,
+  TRIAL_POT_LOW_WATER,
 } from '../backend/billing/index.ts';
 import { getDb } from '../lib/db.ts';
 import {
@@ -175,6 +177,32 @@ export async function askTrialQuestion(question: string, requestId: string): Pro
         await attachTrialAudit(db, take.trialQuestionId, audited.auditId);
       } catch (err) {
         console.warn('[trial] audit link failed (answer served, link missing):', err);
+      }
+    }
+    // #180: alert on the way DOWN, after the answer is produced. Fired here and
+    // not inside takeTrialQuestion because that holds a global advisory lock and
+    // this sends over the network — holding the lock across an HTTP request
+    // would serialise every anonymous visitor behind an e-mail.
+    //
+    // `===`, not `<=`: a take always decrements by exactly 1, so equality fires
+    // the alert ONCE per drain instead of on every question below the line. The
+    // owner gets one warning shot and one "it is empty", not a stream.
+    //
+    // Wrapped in its OWN try, like attachTrialAudit above and for the identical
+    // reason (the session-52 review finding): this runs inside the outer try, so
+    // an unhandled throw here would reach the catch below, REFUND a question
+    // whose answer was already produced, and hand the visitor an error instead.
+    // maybeAlertTrialPotLow swallows its own failures, but the belt costs one
+    // line and the failure it prevents is silent — a test of exactly this found
+    // the missing belt.
+    if (take.potRemaining === TRIAL_POT_LOW_WATER || take.potRemaining === 0) {
+      try {
+        await maybeAlertTrialPotLow({
+          remaining: take.potRemaining,
+          threshold: TRIAL_POT_LOW_WATER,
+        });
+      } catch (err) {
+        console.warn('[trial] pot low-water alert failed (answer served):', err);
       }
     }
     return { kind: 'ok', response: audited.response, questionsLeft: take.questionsLeft };

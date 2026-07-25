@@ -20,6 +20,11 @@ import type { Db } from '../db/types.ts';
 export const TRIAL_QUESTIONS_PER_VISITOR = 2;
 /** Per-IP-hash backstop against cookie-clearing (ADR 036 D2), per 24h. */
 export const TRIAL_QUESTIONS_PER_IP_PER_DAY = 5;
+/** #180: alert the owner when the pot crosses this on the way down. Chosen so
+ * there is time to refill BEFORE the lead magnet goes dark, not after. Because
+ * a take always decrements by exactly 1, "crossed" is `=== ` and the alert
+ * therefore fires ONCE per drain rather than on every subsequent question. */
+export const TRIAL_POT_LOW_WATER = 5;
 
 const POT_LOCK_KEY = 'trial_pot_global';
 
@@ -69,7 +74,15 @@ export type TrialTakeResult =
    * inside the same transaction — so the caller never needs a post-serve
    * count query whose failure could discard an already-served answer
    * (adversarial-review finding, session 52). */
-  | { kind: 'taken'; trialQuestionId: number; questionsLeft: number }
+  | {
+      kind: 'taken';
+      trialQuestionId: number;
+      questionsLeft: number;
+      /** #180: the POT level after this take, read from the same UPDATE that
+       * decremented it — so the caller can alert on a low pot without a second
+       * query and without re-reading a value that may already have moved. */
+      potRemaining: number;
+    }
   | { kind: 'pot_empty' }
   | { kind: 'visitor_limit' }
   | { kind: 'ip_limit' }
@@ -127,6 +140,7 @@ export async function takeTrialQuestion(
       kind: 'taken',
       trialQuestionId: Number(inserted.rows[0]!.id),
       questionsLeft: Math.max(0, TRIAL_QUESTIONS_PER_VISITOR - (usedBefore + 1)),
+      potRemaining: Number(pot.rows[0]!.remaining_questions),
     };
   });
 }
