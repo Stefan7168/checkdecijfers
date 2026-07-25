@@ -411,8 +411,10 @@ pool_size: 15` — from a local script AND from production functions. Consequenc
   any`) while `/` still served 200.
 
 **Both surfaces degraded exactly as designed** — an honest 503 and an omitted section, never stale or
-invented data. It SELF-HEALED once the extra function instances went idle and their sessions were
-reclaimed; nothing had to be restarted.
+invented data. It SELF-HEALED once the extra function instances were **torn down** and their sessions
+released; nothing had to be restarted. (This sentence used to say "went idle and their sessions were
+reclaimed". That mechanism is **measured wrong** — see the bullet below: idleness alone does not release
+a session, so the recovery clock is instance lifetime, not an idle timer.)
 
 What to know:
 - **Each deploy spins up new function instances, and each opens its own pg pool.** Several deploys in
@@ -432,6 +434,10 @@ What to know:
   **frozen** between requests — the slot comes back when the instance is torn down. Practical
   consequence: after a burst, wait **minutes**, not seconds, before concluding anything, and treat
   "sessions held" as roughly "instances alive recently", not "requests in flight".
+- **Know the baseline before you read the number.** Sampled twice at a quiet hour on 2026-07-25
+  (22:54 and 23:29 Amsterdam, no deploy, essentially no human traffic): **4 of the 15 slots were held
+  both times**, individual sessions living up to **447 s**. So ~27% of the pool is occupied by ordinary
+  drive-by traffic before any deploy stacks on top — "4 sessions" is normal, not a symptom.
 - **The cheapest structural relief is to make a page need no query at all.** Since #186 the landing's
   pot read is served from a 20 s in-process cache (`TRIAL_POT_TTL_MS`, `web/lib/trial.ts`), so a warm
   instance serving a cookie-less visitor opens no session whatsoever.

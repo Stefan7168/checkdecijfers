@@ -1,9 +1,12 @@
 // The #53 trial section on the public landing (ADR 036) — server side.
 // Dormancy contract: while TRIAL_ENABLED/key/secret are unset the section
 // renders NOTHING at all (byte-identical landing, deploy-order-safe — the
-// WP129/WP135 pattern). Once configured, the gate state is read PER REQUEST:
-// a pot refill re-opens the trial without a deploy, an empty pot degrades to
-// the login prompt — the owner's continuity fail-safe, the site never breaks.
+// WP129/WP135 pattern). Once configured, the gate state is computed PER
+// REQUEST — with one qualification since #186: the POT half is served from a
+// short in-process cache (TRIAL_POT_TTL_MS, ../lib/trial.ts), so a pot refill
+// re-opens the trial without a deploy to within that TTL, while everything
+// derived from the VISITOR stays live on every request. An empty pot degrades
+// to the login prompt — the owner's continuity fail-safe, the site never breaks.
 import { Suspense } from 'react';
 import { getTrialGateState, trialConfigured } from '../lib/trial.ts';
 import { LoginNudge, TrialChat } from './trial-chat.tsx';

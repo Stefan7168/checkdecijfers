@@ -247,7 +247,8 @@ export type TrialGateState =
  *
  * 20 s, not longer: the owner's "a pot refill re-opens the trial WITHOUT a
  * deploy" decision then survives to within the TTL, and an operator who runs
- * `npm run trialpot:set` and reloads to check settles it on the second reload.
+ * `npm run trialpot:set` and reloads to check gets the truth by waiting out one
+ * TTL — a delay short enough to sit through, which 30 s+ is not.
  * Not shorter: below ~15 s the drive-by storm and deploy-burst cases — the only
  * ones this helps — stop being covered. */
 export const TRIAL_POT_TTL_MS = 20_000;
@@ -267,6 +268,10 @@ export function resetTrialPotCache(): void {
   potInflight = null;
 }
 
+/** Resolves; NEVER rejects — load-bearing, not merely tidy. Every concurrent
+ * caller on the instance shares this one promise, and `readPotCached` attaches
+ * a bare `.finally()` to it; if this ever rethrew, that would become an
+ * unhandled rejection AND fan the failure out to every waiter at once. */
 async function probePot(): Promise<TrialPotStatus | null> {
   try {
     const pot = await getTrialPotStatus(getDb());
