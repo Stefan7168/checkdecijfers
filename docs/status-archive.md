@@ -55,6 +55,8 @@ deployed. €0 live-LLM product spend, zero prompt bytes, no DDL, both WP26 flag
   `conversationContext` (my own test had pinned the truncated key set as correct), and a cache key that named two
   input files by hand and missed six. Both fixed before pushing; both written up in
   [lessons-learned.md](lessons-learned.md).
+- **CI is green on all four branches** (runs 30133517570 / 30134945761 / 30136652592 / 30136958034), verified at
+  close; production verified healthy at close too (`/llms.txt` 200, `/` 200).
 - Verification per PR: typecheck (root + web), full backend suite, web suite 385/385, benchmark 14/14 + 6/6 + 0
   fabricated, real `next build`, and a review pass over the diff. Backend counts differ per branch by design
   (1498 on #60, 1499 on #61, 1500 on #62) — each branch adds its own tests to main's 1494.

@@ -17,8 +17,8 @@ untouched (#118b). €0 live-LLM product spend, zero prompt bytes, no DDL, both 
 |---|---|---|
 | [#60](https://github.com/Stefan7168/checkdecijfers/pull/60) | #173(c): pg pool `max` 4 → 2 per process. 3 busy processes fitted under the 15-session ceiling; now 7 do. | green |
 | [#61](https://github.com/Stefan7168/checkdecijfers/pull/61) | Fixture DB ingested once per run, not once per suite. Backend suite **680s → 440s**. | green |
-| [#62](https://github.com/Stefan7168/checkdecijfers/pull/62) | WP26 trust-boundary hardening + the corrected RUNBOOK rollback order. | check before merge |
-| [#63](https://github.com/Stefan7168/checkdecijfers/pull/63) | Doc-consistency sweep, the Fable architecture memo, and this close-out. | check before merge |
+| [#62](https://github.com/Stefan7168/checkdecijfers/pull/62) | WP26 trust-boundary hardening + the corrected RUNBOOK rollback order. | green |
+| [#63](https://github.com/Stefan7168/checkdecijfers/pull/63) | Doc-consistency sweep, the Fable architecture memo, and this close-out. | green |
 
 **⚠ TWO THINGS TO KNOW BEFORE THE WP26 GO-LIVE — both found tonight, both change what you should do:**
 1. **The RUNBOOK's rollback order was WRONG.** Correct order: turn `CLARIFY_CLICK_ENABLED` **off first**, leave
