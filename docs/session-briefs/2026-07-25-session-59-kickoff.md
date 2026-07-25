@@ -19,7 +19,7 @@ and prune if it is stale).
 
 ## The state — nothing is merged, nothing is deployed
 
-Production is untouched and healthy. **Both WP26 flags are still OFF.** Four branches await review:
+Production is untouched and healthy. **Both WP26 flags are still OFF.** Four branches await review — three of them opened as PRs; session 58b had not opened its PR when this was written, so check `gh pr list` first:
 
 | Order | Branch / PR | What |
 |---|---|---|
