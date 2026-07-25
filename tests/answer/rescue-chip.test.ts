@@ -233,4 +233,84 @@ describe('flag off', () => {
     expect(response.suggestions).toEqual([]);
     expect(Object.hasOwn(response, 'pending')).toBe(false);
   });
+
+  it('a BARE forged rescueOnly does not reach the fresh-question branch', async () => {
+    // Found by an adversarial review (2026-07-25) and confirmed independently
+    // by two of the four lenses: the branch used to fire on `rescueOnly: true`
+    // alone. The pending is client-held, so with both flags off any client
+    // could post that one byte and reach a WP26c code path that did not exist
+    // before WP26 — which is precisely the claim "dormant behind two flags" is
+    // supposed to make impossible.
+    //
+    // The forgery below carries no chip, so it is not a shape this server ever
+    // mints. It must take the ordinary clarify merge, exactly as it would have
+    // before WP26c.
+    const forged = {
+      version: 1,
+      question: 'Wat was de inflatie in juni 2026?',
+      referenceDate: REFERENCE_DATE,
+      axes: ['measure'],
+      questionNl: 'Ik kan geen voorspellingen doen.',
+      options: [],
+      rescueOnly: true,
+    } as unknown as Parameters<typeof respondToClarificationReply>[1];
+
+    // The clarify merge is the LLM path. A ThrowingClient proves we got there:
+    // the fresh-question branch would have used the canned parse instead and
+    // returned an answer.
+    const next = await respondToClarificationReply(db, forged, 'Hoeveel inwoners had Amsterdam in 2024?', {
+      ...options(),
+      intentClient: new ThrowingClient(),
+    });
+    expect(next.kind).toBe('refusal');
+    if (next.kind !== 'refusal') throw new Error('unreachable');
+    expect(next.reason).toBe('internal');
+    // And the refusal belongs to the ORIGINAL question, the way every
+    // reply-turn refusal does — not to the reply.
+    expect(next.question).toBe('Wat was de inflatie in juni 2026?');
+  });
+
+  it('a GENUINELY minted rescue pending still routes correctly after a rollback', async () => {
+    // The other half of the same decision, and the reason the gate is on the
+    // pending's SHAPE rather than on the flag. When the owner rolls
+    // CLARIFY_CLICK_ENABLED back off, rescue pendings minted minutes earlier
+    // are still sitting in open tabs; they must keep behaving as the closed
+    // rounds they are, not get merged into the refusal they were attached to.
+    const refusal = await ask(
+      'Wat was de inflatie in 2024?',
+      misfire('forecast_request', ['cpi_yearly_inflation']),
+      true,
+    );
+    if (refusal.kind !== 'refusal' || !refusal.pending) throw new Error('expected a rescue pending');
+
+    // Note the options(): NO clickOptionsEnabled — the flag is off now.
+    const next = await respondToClarificationReply(db, refusal.pending, 'Hoeveel inwoners had Amsterdam in 2024?', {
+      ...options(),
+      intentClient: new CannedClient({
+        version: 3,
+        kind: 'data_query',
+        candidates: [
+          {
+            canonicalKey: 'population_on_1_january',
+            regions: [{ name: 'Amsterdam', kind: 'gemeente' }],
+            period: { kind: 'year', year: 2024 },
+            derivation: 'none',
+            confidence: 0.95,
+            reading: 'bevolking van Amsterdam in 2024',
+          },
+        ] as never,
+        unmatchedMeasureTerm: null,
+        nearestCanonicalKeys: [],
+        note: null,
+      }),
+      answerClient: new (class implements LlmClient {
+        async complete(): Promise<LlmResponse> {
+          throw new Error('compose falls back to the template — fine');
+        }
+      })(),
+    });
+    expect(next.kind).toBe('answer');
+    if (next.kind !== 'answer') throw new Error('unreachable');
+    expect(next.question).toBe('Hoeveel inwoners had Amsterdam in 2024?');
+  });
 });

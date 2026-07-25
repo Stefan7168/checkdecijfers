@@ -453,7 +453,33 @@ Rollback: unset the flag and redeploy — fully dormant again. Rows written whil
 valid for R8: the disclosure re-derives from the stored result's own flags, not from the flag state.
 
 ⚠ A pending clarification offered while `CLARIFY_CLICK_ENABLED` was on, and replied to after it was
-turned off, simply falls through to the normal LLM merge — today's behavior, no error.
+turned off, simply falls through to the normal LLM merge — today's behavior, no error. **Two corrections
+to that sentence, from the adversarial review of 2026-07-25 (session 57) — read them before you roll back:**
+
+- **A RESCUE pending (WP26c) is the exception.** It is not an open round, so after the flag goes off a
+  reply to it is answered as a FRESH question rather than merged. That is deliberate and it keeps working
+  after a rollback — the reply-turn branch is gated on the pending's SHAPE, not on the flag, exactly so an
+  open tab keeps behaving correctly. What you should expect: a rescue chip clicked after the rollback is
+  parsed as a normal question (one normal charge, and it may well refuse again, since the chip's label is
+  a sentence and not a question).
+- **⚠ ROLLBACK ORDER, stated plainly: turn `CLARIFY_CLICK_ENABLED` off FIRST, leave `ANSWER_FIRST_ENABLED`
+  on for a day, and only then turn `ANSWER_FIRST_ENABLED` off.** Never the other way round.
+
+  Why. A chip offered for a question that named no place carries an intent with no region in it. It was
+  proven servable by the B-region national default — and that default is applied at QUERY time, gated on
+  `ANSWER_FIRST_ENABLED` *at the moment of the click*, not at the moment of the offer. So the instant B goes
+  off, every such chip still sitting in someone's open tab becomes a guaranteed still-ambiguous refusal:
+  the paid dead-end, on exactly the chips that promise to prevent it.
+
+  Turning A off first does not delete those chips either — but with B still on, a click falls to the normal
+  LLM merge, which resolves to the same region-less reading, gets the national default, and **answers**. A
+  day later the tabs are gone and B can go off harmlessly.
+
+  ⚠ **"Both at once" is NOT a safe shortcut**, contrary to what an earlier version of this line said: with
+  both off, the merge produces the same region-less intent, hits the same refusal, and has now also spent an
+  LLM call to get there. Harm is bounded in every ordering — the reply turn is refunded and no wrong number
+  is ever served, though the original clarification's 10 credits stay spent — but only A-first actually
+  avoids it.
 
 ## #53 anonymous trial pot — the supervised go-live (✅ RUN 2026-07-17, session 52, owner present)
 
