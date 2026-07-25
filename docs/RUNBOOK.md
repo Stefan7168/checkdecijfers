@@ -417,8 +417,23 @@ What to know:
 - Running `audit:verify`, `catalog:refresh` or any `node --env-file=.env scripts/…` from a laptop takes a
   session from the SAME pool of 15. Do not run them during a deploy window.
 
-Structural fix (not done): transaction-mode pooling, or a smaller per-instance pool. Tracked as an open
-question — the ceiling is a free-tier property, so a paid tier also raises it.
+**Structural fix — option (c) is DONE, option (b) stays open** (#173):
+
+- ✅ **(c) smaller per-instance pool — done 2026-07-25** (autonomous session 57). `src/db/client.ts` now
+  caps each process at **2** pooler sessions instead of 4, pinned by `tests/db/pool-config.test.ts` so a
+  later bump has to argue with a failing test. Doubles the number of processes that fit under the 15:
+  four busy processes used to be able to exhaust the project on their own, now it takes eight. This is
+  a *headroom* change, not a cure — a big enough deploy burst still hits the ceiling.
+- ⬜ **(b) transaction-mode pooling — still open, and still the real fix.** It multiplexes far more
+  clients per connection, but the billing gate and the onboarding trigger both use
+  `pg_advisory_xact_lock`, and the ingestion staging step relies on session-scoped temp tables. Those
+  have to be checked one by one before switching. Owner's call, supervised.
+- Deliberately NOT changed: `connectionTimeoutMillis` stays at node-pg's default (wait indefinitely for
+  a free client). A bounded wait turns pool contention into a thrown error, and one place that error
+  could land is between a committed credit debit and its compensating refund — a money-path failure
+  mode, not a capacity knob. Reasoning is written into `src/db/client.ts` beside the setting.
+
+The ceiling itself is a free-tier property; a paid tier raises it but does not remove it.
 
 ## WP26 answer-first + clickable options — the supervised go-live (NOT YET RUN; built session 56, 2026-07-25)
 

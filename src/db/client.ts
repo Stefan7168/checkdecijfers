@@ -35,13 +35,44 @@ function loadCaCert(): string {
   return readFileSync(CA_URL, 'utf8');
 }
 
+// One process — a warm serverless instance, a CI job, a laptop script — may
+// hold at most this many pooler sessions.
+//
+// Measured 2026-07-25 (open-questions #173, RUNBOOK "Supabase free tier: 15
+// SESSION-MODE connections"): Supabase's free tier caps session-mode pooling
+// at **15 clients for the whole project**, and every process here opens its
+// own pool — each deployed function instance one, plus any `--env-file=.env`
+// script a laptop runs. Five deploys inside an hour stacked enough instances
+// to hit `(EMAXCONNSESSION) max clients reached in session mode`; production
+// degraded honestly for ~6 minutes (`/llms.txt` 503, Ontdek section omitted)
+// before self-healing. At the old ceiling of 4, FOUR busy processes could
+// alone exhaust the project. At 2 it takes eight — the same burst now fits.
+//
+// Two is not a throughput regression here because nothing in this codebase
+// needs two clients at once to make progress: `withTransaction` holds exactly
+// one client for its whole callback, every callback uses only the `tx` it is
+// given, and no transaction nests (verified across all 14 call sites). So a
+// small pool can only ever *queue* independent work, never deadlock it. The
+// widest fan-out on the request path is the four curated Ontdek charts
+// (`chart/curated.ts`), which run behind a 30-minute cache with in-flight
+// coalescing — it rebuilds in two lanes instead of four, at most twice an
+// hour, on a page that already tolerates the charts being absent.
+//
+// Deliberately NOT set here: `connectionTimeoutMillis`. node-pg's default (0)
+// waits indefinitely for a free client; a bounded wait would turn pool
+// contention into a thrown error, and one place that error could land is
+// between a committed credit debit and its compensating refund
+// (`billing/gate.ts`). Changing a money-path failure mode is a supervised
+// change, not a capacity tweak — tracked in #173.
+const MAX_POOL_CLIENTS_PER_PROCESS = 2;
+
 export function createPool(databaseUrl: string): pg.Pool {
   const url = new URL(databaseUrl);
   url.search = '';
   return new pg.Pool({
     connectionString: url.toString(),
     ssl: { ca: loadCaCert() },
-    max: 4,
+    max: MAX_POOL_CLIENTS_PER_PROCESS,
   });
 }
 
