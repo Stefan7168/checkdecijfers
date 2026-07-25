@@ -128,6 +128,19 @@ export const CLICK_TAKE_MODEL = 'deterministic/wp26-click-option' as const;
 function matchClickOption(pending: PendingClarification, reply: string): ClickOption | null {
   const wanted = reply.trim();
   if (wanted === '') return null;
+  // A chip's label is ALWAYS one of the plain-text options we offered: all
+  // three offer sites build the two lists from the same strings (the two
+  // policy.ts clarification rules map over `options`, and the rescue chip sets
+  // `options: [chipLabel]`). The pending is client-held, so that invariant is
+  // re-derived here instead of assumed — otherwise a forged pending could
+  // attach any intent to any label, and the user's own echoed message would
+  // describe something other than what was served.
+  const offered = new Set(
+    (Array.isArray(pending.options) ? pending.options : [])
+      .filter((label): label is string => typeof label === 'string')
+      .map((label) => label.trim()),
+  );
+  if (!offered.has(wanted)) return null;
   for (const option of pending.clickOptions ?? []) {
     if (
       option !== null &&
@@ -141,6 +154,37 @@ function matchClickOption(pending: PendingClarification, reply: string): ClickOp
     }
   }
   return null;
+}
+
+/** WP26c mints exactly ONE pending shape: a single measure axis carrying a
+ * single chip whose label is the single offered option. The reply turn treats
+ * such a pending as a closed round (the branch below), which is a real
+ * behavioural fork — so it is granted on the SHAPE, never on the client's bare
+ * word.
+ *
+ * Why the shape and not the feature flag. Checking `clickOptionsEnabled` would
+ * read as the tighter rule, but it is the wrong one in the case that actually
+ * matters: after the owner rolls `CLARIFY_CLICK_ENABLED` back off, a rescue
+ * pending legitimately minted minutes earlier is still sitting in someone's
+ * open tab, and it must keep routing correctly rather than being merged into
+ * the refusal it was attached to. The shape check keeps that rollback graceful
+ * AND closes the forgery: a bare `{rescueOnly: true}` no longer reaches this
+ * branch, so with both flags off nothing here is reachable that was not
+ * reachable before WP26. */
+function isRescuePending(pending: PendingClarification): boolean {
+  if (pending.rescueOnly !== true) return false;
+  const { clickOptions, options, axes } = pending;
+  return (
+    Array.isArray(clickOptions) &&
+    clickOptions.length === 1 &&
+    Array.isArray(options) &&
+    options.length === 1 &&
+    Array.isArray(axes) &&
+    axes.length === 1 &&
+    axes[0] === 'measure' &&
+    typeof clickOptions[0]?.label === 'string' &&
+    clickOptions[0].label === options[0]
+  );
 }
 
 /** The taken option, shaped as the 'intent' ParseOutcome the shared downstream
@@ -535,7 +579,7 @@ export async function respondToClarificationReply(
     // question and must be answered as one; merging it with the refused
     // question would be a silent, confusing regression (and would consume the
     // one clarification round nobody opened).
-    if (pending.rescueOnly === true) {
+    if (isRescuePending(pending)) {
       return await respondToQuestion(db, reply, options);
     }
 
