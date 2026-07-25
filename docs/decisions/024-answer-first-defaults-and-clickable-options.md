@@ -113,3 +113,45 @@ deterministic rescue chip. Built as designed, with three notes.
 Flag: rides `CLARIFY_CLICK_ENABLED` (it is mechanism A's machinery). Period detection is deliberately narrow —
 month+year and bare year only, and it bails when a question names more than one distinct period, because a
 missing rescue is a cosmetic loss while a wrong one is a product bug.
+
+---
+
+## As-built addendum — the trust boundary, hardened (session 57, 2026-07-25, PR #62 squash `29e9e8b`)
+
+An adversarial review of the client-held state (four independent lenses: money path, forgery/injection,
+deploy skew, byte neutrality) confirmed the design's central safety claim and closed four gaps around it.
+
+**Confirmed sound:** a forged `ClickOption` cannot make the product serve a number it would otherwise
+refuse. The take path re-runs the real query layer — schema version, canonical key, table registration,
+**quarantine**, every dimension code against the table's own labels, and the existence of every requested
+cell — and the offer-time dry-run verdict is discarded by construction. `target.kind: 'explicit'` is refused
+at the schema. The blast radius of a perfect forgery is "the same power as typing a different question".
+
+**Four gaps closed:**
+
+1. **`rescueOnly` is granted on the pending's SHAPE, not the client's word.** Three of the four lenses found
+   this independently: the branch fired on `rescueOnly === true` alone, so with both flags off any client
+   could post that byte and reach a WP26c path that did not exist before WP26 — which is what "dormant
+   behind two flags" is supposed to make impossible. The gate is deliberately NOT the feature flag: a flag
+   check would break the case that matters, a rescue pending legitimately minted minutes before a rollback
+   and still sitting in an open tab. The shape check (one measure axis, one chip, one option, labels
+   matching) closes the forgery *and* keeps the rollback graceful.
+2. **A chip's label must be an entry of the pending's `options[]`.** All three offer sites build both lists
+   from the same strings, so binding them cannot drop a legitimate chip.
+3. **`guardPending` bounds `axes` entries and validates `referenceDate`'s shape** (`YYYY-MM-DD`, the same
+   form `parseReferenceDate` accepts). A well-formed lie silently moved what "vorige maand" means.
+4. **The validated pending is rebuilt from an allowlist**, not spread from the client's object — invented
+   keys were being persisted verbatim into `audit_answers.pending_clarification`.
+
+⚠ **The review over the hardening itself caught a regression in it before merge:** the first allowlist
+omitted `conversationContext` (WP15 / ADR 021), and the new test had pinned the truncated key set as
+correct. An allowlist is exactly as good as its completeness; the full key set is now pinned.
+
+**Deliberately not fixed, recorded as [#174-#178](../open-questions.md):** the client-held `impliedRecency`
+bit (the obvious fix over-refuses legitimate historical chips — it needs a decision about what the bit
+means), the trial path never receiving either flag (#175, a product decision), flags-off extra DB queries
+(#176), the `llm_calls` role label on the rescue path (#177), and pending TTL/binding/version (#178).
+
+**RUNBOOK correction in the same PR:** the documented rollback order was wrong. Rolling `ANSWER_FIRST_ENABLED`
+back while `CLARIFY_CLICK_ENABLED` is on strands region-less chips as guaranteed refusals, and "both
+together" is not a safe shortcut. The correct order is **A off, wait, then B**.

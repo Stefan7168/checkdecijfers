@@ -6,30 +6,30 @@ is leading) → this file.
 
 ---
 
-## 0. The first thing to do: four PRs are waiting
+## 0. Everything from session 57 is MERGED AND LIVE — nothing is waiting
 
-Nothing was merged tonight. `main` is untouched, production was never deployed to, and both WP26 flags are
-still off. Everything below sits on branches.
+Session 57 ran autonomously and produced four PRs; the owner then came into the chat and they were all
+merged and deployed the same day. **There is nothing left to review.**
 
-| PR | Branch | What it is |
+| PR | Squash | What |
 |---|---|---|
-| [#60](https://github.com/Stefan7168/checkdecijfers/pull/60) | `ops/173-smaller-per-instance-pool` | #173(c): pg pool `max` 4 → 2 per process |
-| [#61](https://github.com/Stefan7168/checkdecijfers/pull/61) | `test/shared-fixture-db-snapshot` | Fixture DB ingested once per run — backend suite 680s → 440s |
-| [#62](https://github.com/Stefan7168/checkdecijfers/pull/62) | `fix/wp26-trust-boundary-hardening` | WP26 trust-boundary hardening + the corrected RUNBOOK rollback order |
-| [#63](https://github.com/Stefan7168/checkdecijfers/pull/63) | `docs/consistency-sweep-after-wp26` | Doc consistency, the architecture memo, and the session close-out |
+| [#60](https://github.com/Stefan7168/checkdecijfers/pull/60) | `e334590` | #173(c): pg pool `max` 4 → 2 per process |
+| [#61](https://github.com/Stefan7168/checkdecijfers/pull/61) | `ea71c96` | Fixture DB ingested once per run, not once per suite |
+| [#62](https://github.com/Stefan7168/checkdecijfers/pull/62) | `29e9e8b` | WP26 trust-boundary hardening + the corrected RUNBOOK rollback order |
+| [#63](https://github.com/Stefan7168/checkdecijfers/pull/63) | `447fca9` | Doc consistency, the architecture memo, the close-out |
 
-Each carries its own full verification block in its description (typecheck root+web, backend suite, web
-385/385, benchmark 14/14 + 6/6 + 0 fabricated, real `next build`, plus a review pass over the diff).
+Merged **one at a time**, with the gate+deploy completing and a production check between each — deliberately,
+because four stacked deploys is what caused the #173 degradation. #60 went first on purpose: a smaller pool
+per instance buys headroom for the deploys behind it. CI green on every run; production verified after each
+(`/llms.txt` 200, `/` 200, Ontdek rendering).
 
-**#62 and #63 should merge before the WP26 go-live** — #62 contains the corrected rollback instruction, and
-#63 contains the memo the flip decisions rest on. #60 and #61 are independent and can merge in any order.
+**⚠ The WP26 flags were NOT flipped.** The owner reserved that go-live for himself, twice, and "push live"
+was not read as overriding it. Section 1 below is what he needs before he does.
 
-**One thing to weigh on #60:** the PR deliberately does NOT set `connectionTimeoutMillis`, and a comment on
-the PR records the architecture review's counter-argument, which is good and which I think wins. The pool
-change stands on its own either way; the timeout wants its own supervised change, together with a backstop
-for the compensating refund.
-
----
+**▶ The next session is another AUTONOMOUS overnight run** — its queue is
+[`2026-07-26-overnight-queue-2.md`](2026-07-26-overnight-queue-2.md). Read that instead of improvising: the
+conformance bundle, an honest A/B of the fixture-snapshot saving, #177, and a Fable adversarial pass on the
+anonymous-trial surface.
 
 ## 1. ⚠ Before you flip the WP26 flags — two things changed tonight
 
