@@ -49,6 +49,28 @@ with a production canary between. €0 live-LLM product spend, zero prompt bytes
 - **Measured at the close, on `main` @ `e88cfea`:** backend **1544 / 102 files**, web **417 / 41 files**, benchmark
   **14/14 + 6/6 + 0 fabricated GATE PASS**, real `next build`. CI green on every commit; production 200 on `/`,
   `/llms.txt`, `/login` with Ontdek rendering after each of the three deploys.
+- **A MAX-EFFORT POST-MERGE REVIEW closed the night** (PR [#71](https://github.com/Stefan7168/checkdecijfers/pull/71),
+  `d4ade6d`): 10 finder angles over the three merged PRs, 15 findings, **14 fixed and 1 skipped with reasoning**.
+  Four were defects introduced hours earlier the same session. The sharpest: `hashedRequestIp`'s new header tier
+  shipped with `??`, three lines above the comment documenting why that operator had to become `||` — found
+  independently by four angles. Fixing it surfaced a second case a test caught: a WHITESPACE-only header is truthy,
+  so `||` did not fall through either; each tier is now normalised before the choice.
+  **Three findings were three SPELLINGS of one bug** (`::ffff:1.2.3.4`, `::ffff:c000:0207`, `::1.2.3.4`), each
+  previously patched alone while the next stayed broken — so `ipBucketKey` was rebuilt to reduce every form to one
+  canonical shape instead of gaining a fourth branch. The pot latch was rebuilt to key on DELIVERY rather than the
+  attempt (one transient send failure had burned the only notification for a drain), to re-arm before the LLM call
+  rather than after it, and to trigger on `<=` — `===` had silently skipped the warning entirely for a pot seeded
+  at or below the threshold. Also: the RUNBOOK's CRON_SECRET warning was a 4th cell in a 3-column table and GFM was
+  dropping it; CLAUDE.md still claimed nothing schedules the purge; the proxy allowlist split into exact + prefix.
+  **Live-verified after deploy** — the cron route returns 401 and its sibling path 307, which is the proof the
+  allowlist tightening landed. **Skipped deliberately:** the awaited alert's up-to-5s latency, because `after()`
+  would decouple it at the cost of a mechanism whose failure mode is silently never sending.
+- **Owner question at the close, recorded rather than acted on** (`22243a1`): *"the model people's questions use is
+  Haiku, change it to Sonnet 5 Low."* Half right — `PHRASING_MODEL` is ALREADY `claude-sonnet-5`, so the answer text
+  users read is Sonnet's; `INTENT_MODEL` is Haiku but only maps a question onto registry vocabulary and never sees a
+  cell value (ADR 012). On hearing that he chose **no change**. Written next to the constant and into #172 so it is
+  not re-litigated; escalating it remains that row's supervised WP (thinking:'disabled', a re-calibrated 0.8 floor,
+  a #164 re-record of ~93 fixtures).
 - **Five consecutive changes now where a review pass over the session's OWN diff found something real.** It is not
   ceremony; it is the step that keeps catching what re-reading cannot.
 

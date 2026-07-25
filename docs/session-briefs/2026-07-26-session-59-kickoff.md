@@ -9,13 +9,16 @@
 
 ## State, verified 2026-07-26 01:31
 
-- **Last CODE commit on `main` = `e88cfea`** (the docs close-out sits on top of it). CI green on every
-  commit, tree clean, no open PRs, no stray worktrees or branches.
+- **Last CODE commit on `main` = `d4ade6d`** (PR #71, the review-findings fixes). CI green on every commit, tree
+  clean, no open PRs, no stray worktrees or branches.
 - **Production healthy**: `/`, `/llms.txt`, `/login` all 200, Ontdek rendering.
-- **Backend 1544 / 102 files · web 417 / 41 files · benchmark 14/14 + 6/6 + 0 fabricated GATE PASS.**
-- **Seven PRs merged in this session**, each deployed on its own with a canary between (serial per
+- **Backend 1545 / 102 files · web 425 / 41 files · benchmark 14/14 + 6/6 + 0 fabricated GATE PASS.**
+- **Eight PRs merged in this session**, each deployed on its own with a canary between (serial per
   [#173](../open-questions.md)): #64 `58c814b`, #67 `b05a1d3`, #65 `ed5f240`, #66 `b4da3b2`, #68 `fbffe48`,
-  #69 `33a051d`, #70 `e88cfea`.
+  #69 `33a051d`, #70 `e88cfea`, #71 `d4ade6d`.
+- **#180, #182, #187 and #189 are DONE** (see the STATUS table). A max-effort review of that work then fixed 14 of
+  its own 15 findings in #71 — so the trial surface has just been reworked twice; read `web/lib/trial.ts` and
+  `web/app/trial-actions.ts` before touching either.
 
 ## ⚠ The two things that are the owner's, and only his
 
@@ -35,6 +38,8 @@ Write the **recommended default + cost bound + rollback + done-definition** and 
 [`2026-07-26-autonomous-followups.md`](2026-07-26-autonomous-followups.md) — start there.
 
 ## Queue
+
+0. **Nothing is half-finished.** The queue below is fresh work, not a continuation.
 
 1. **[#186](../open-questions.md) — measure, then cache.** Every anonymous homepage GET costs 1-2 uncached queries
    against a 15-connection ceiling, ungated and unrated. **Measure first** (`pg_stat_activity` via the management
@@ -65,7 +70,7 @@ becomes reachable the fix is a refund CAP per visitor, not removing the compensa
 - Delegation by role: session model orchestrates and judges; **Fable** for architecture and adversarial analysis;
   Sonnet/Haiku for legwork. Never hardcode model names in reusable prompts.
 
-## Five traps this session paid for
+## Seven traps this session paid for
 
 1. **A review pass over your own diff has now found something real FIVE changes running.** Budget it as a required
    step, and re-run it if you keep editing after it returns — a review certifies a tree, not an intention.
@@ -75,8 +80,15 @@ becomes reachable the fix is a refund CAP per visitor, not removing the compensa
    merge's completed run and report green for a build that has not started.
 4. **A revert-proof is per-TEST, not per-commit.** Count the failures and match them one-to-one to your claims; if
    a change has no test, write "reasoning-only, no test" rather than letting a blanket sentence cover it.
-5. **A new self-authenticating route must go in `web/proxy.ts`'s `PUBLIC_PATH_PREFIXES`** or it 307s to `/login`,
-   returns 200 to the caller, and looks healthy while never running.
+5. **A new self-authenticating route must go in `web/proxy.ts`'s `PUBLIC_EXACT_PATHS`** or it 307s to `/login`,
+   returns 200 to the caller, and looks healthy while never running. (Exact-match now, not prefix — a sibling under
+   an existing cron's name used to inherit the exemption.)
+6. **A scripted edit whose anchor has drifted is a SILENT no-op.** `replace()` without an assert reported success
+   and did nothing; only a later typecheck caught it. Assert every anchor. Same family as the stale-ref merge and
+   the latest-CI-run trap — a tool that reports success without acting is the expensive kind.
+7. **When a SECOND instance of a bug shows up, stop patching and normalise.** Three review findings were three
+   spellings of one bug in `ipBucketKey`, each closed alone while the next stayed broken. The third instance is
+   already in the input space by the time you see the second.
 
 ---
 
@@ -85,8 +97,8 @@ becomes reachable the fix is a refund CAP per visitor, not removing the compensa
 > Sessie 59 voor checkdecijfers.nl. Lees eerst CLAUDE.md, dan docs/STATUS.md (het ▶-blok bovenaan is leidend),
 > dan docs/session-briefs/2026-07-26-session-59-kickoff.md — dat is je opdracht.
 >
-> Stand: laatste code-commit op main = e88cfea (de close-out-docs staan erbovenop), alles van sessie 58B is gemerged en live (zeven PR's, #64 t/m #70), CI groen, productie
-> 200/200. Backend 1544/102, web 417/41, benchmark 14/14 + 6/6 + 0.
+> Stand: laatste code-commit op main = d4ade6d, alles van sessie 58B is gemerged en live (acht PR's, #64 t/m #71 — inclusief een max-effort review die 14 van z'n eigen 15 bevindingen fixte), CI groen, productie
+> 200/200. Backend 1545/102, web 425/41, benchmark 14/14 + 6/6 + 0.
 > ⚠ TWEE DINGEN ZIJN VAN MIJ: de WP26-vlaggen blijven UIT, en GDPR_PURGE_APPLY blijft UIT tot ik hem zelf zet.
 >
 > Werk autonoom: alles wat eerder op mij geparkeerd stond heeft een aanbevolen default, kostenplafond en rollback

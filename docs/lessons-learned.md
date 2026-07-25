@@ -50,6 +50,36 @@ on top.
   refund is near-unreachable — the second lens was right. Verifying a delegated finding against source before
   acting on it is not optional, and it is cheap compared to shipping a fix for a bug that does not exist.
 
+## Session 58B — the post-merge review round (2026-07-26, owner-present)
+
+- **A post-merge review of code I had just shipped found four defects I introduced hours earlier, and the sharpest
+  was in the function whose own comment explains the mistake.** `hashedRequestIp` gained a header tier written with
+  `??`, three lines above a comment documenting why that operator had to become `||`. Four of ten review angles
+  found it independently. Lesson: the pre-merge review certifies *the change you were thinking about*; a fresh pass
+  over the merged result catches what you re-broke while fixing something else. Budget both when a change touches
+  a function you also edited earlier the same day.
+- **Three findings were three SPELLINGS of one bug, each previously patched alone.** `::ffff:1.2.3.4`,
+  `::ffff:c000:0207` and `::1.2.3.4` are all "an IPv4 inside an IPv6", and each had been closed as its own special
+  case while the next stayed broken and collapsed into a shared bucket. The tell was in my own commit message: it
+  named the trap a naive implementation falls into, and then added a branch instead of removing the cause. **When a
+  second instance of a bug arrives, stop patching and normalise — the third instance is already in the input space.**
+- **Write the test for the PROPERTY, then let it argue with you.** Two fixes this round were found by tests I wrote
+  to confirm the fix: a whitespace-only header is truthy, so even `||` did not fall through; and the module-scoped
+  latches leaked between tests, which was a review finding about cross-test ordering biting me while I fixed
+  something else. Both would have shipped if the tests had been written to agree with the code.
+- **`replace()` without an assert is a silent no-op, and I hit it mid-fix.** A python edit whose anchor had drifted
+  did nothing and reported success; the next typecheck caught it only because the signature mismatched. Every
+  scripted edit in this session's later half asserts its anchor first. Same family as the stale-ref merge and the
+  latest-CI-run trap: **a tool that reports success without doing anything is the most expensive kind.**
+- **Latch on the OUTCOME, not the attempt.** The pot alert latched before sending, so one transient failure burned
+  the only notification for that drain — in a feature whose entire purpose is not going unheard. Any
+  "notify once" flag should key on delivery, and any code that swallows failures should return whether it
+  succeeded rather than `void`.
+- **Declining a finding is worth doing, and worth defending separately.** I skipped one (an awaited alert costing up
+  to 5s) because the alternative introduces a mechanism whose failure mode is silently never sending — exactly what
+  the feature exists to prevent. Reporting it as `skipped` with the reason, rather than quietly dropping it or
+  fixing it to look complete, is the honest third option.
+
 ## Session 58B continued (2026-07-25 evening → 2026-07-26 early hours, owner-present, autonomous execution)
 
 - **A docs-search INDEX is not the docs page, and I wrote the difference into a permanent row as fact.** Settling

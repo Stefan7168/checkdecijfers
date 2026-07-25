@@ -44,15 +44,25 @@ burst (#173); (c) **~30/7 BBP+PPI syncs** (`85880NED` MUST use the chunked escap
 (d) re-ask **#132 route B**.
 
 **✅ THREE MORE ITEMS BUILT AND LIVE under the autonomy steer, each deployed on its own with a production canary
-between** (serial per [#173](open-questions.md)). Final measured state on `main` @ `e88cfea`: backend
-**1544 / 102 files**, web **417 / 41 files**, benchmark **14/14 + 6/6 + 0 fabricated GATE PASS**, CI green on every
-commit, production 200 on `/`, `/llms.txt`, `/login`.
+between** (serial per [#173](open-questions.md)). Measured after those three (`e88cfea`): backend
+**1544 / 102 files**, web **417 / 41 files** — the FINAL numbers are below, after the review round. CI green on
+every commit, production 200 on `/`, `/llms.txt`, `/login` after each deploy.
 
 | # | PR | Squash | What | Left for you |
 |---|---|---|---|---|
 | [#189](open-questions.md) | [#68](https://github.com/Stefan7168/checkdecijfers/pull/68) | `fbffe48` | The GDPR purge is **scheduled monthly** at last — nothing ran it before, and the first trial rows become purgeable **~2026-10-15**. Ships **DORMANT**: reports only. A review caught a blocker first — the route was missing from the proxy allowlist, which would have made the cron read as scheduled AND healthy while never running once. | **`GDPR_PURGE_APPLY=1`** + one watched run (RUNBOOK). Unsetting it is a full rollback. |
 | [#182](open-questions.md) + [#187](open-questions.md) | [#69](https://github.com/Stefan7168/checkdecijfers/pull/69) | `33a051d` | The per-IP backstop bounded **nothing** over IPv6 (a /64 gives one visitor 2^64 buckets); now keyed on the /64. #187 answered from Vercel's docs — `x-forwarded-for` is **not** forgeable on Hobby — and the code now reads the proxy-safe `x-vercel-forwarded-for` first, which matters the day Cloudflare fronts the apex. | — |
 | [#180](open-questions.md) | [#70](https://github.com/Stefan7168/checkdecijfers/pull/70) | `e88cfea` | The trial pot now **warns at 5 and reports empty**. It had no watcher: an outsider drains a 25-question pot for well under a euro and you'd find out by looking at the homepage. | — |
+
+**✅ THEN A MAX-EFFORT REVIEW OF THAT WORK — PR [#71](https://github.com/Stefan7168/checkdecijfers/pull/71), `d4ade6d`.**
+Ten finder angles over the three merged PRs returned 15 findings; **four were defects introduced hours earlier the
+same night**, the sharpest being a `??` that reintroduced an empty-header bug three lines above the comment
+explaining why it had to be `||`. **14 fixed, 1 skipped with reasoning.** Three findings turned out to be three
+spellings of one bug, so `ipBucketKey` was rebuilt to normalise once rather than gain a fourth special case; the
+pot-alert latch now keys on DELIVERY rather than on the attempt; the proxy allowlist splits into exact and prefix
+lists. Live-verified after deploy: `/api/gdpr-purge-cron` returns 401 (its own auth) and
+`/api/gdpr-purge-cron-status` returns 307 — the prefix widening is genuinely closed. Final: backend **1545 / 102
+files**, web **425 / 41 files**, benchmark **14/14 + 6/6 + 0 GATE PASS**.
 
 **[#185](open-questions.md) was DECLINED with reasoning, not shipped** — the suggested fix would charge
 infrastructure failures to visitors to close a hazard that is unreachable and already bounded by the trial key's
