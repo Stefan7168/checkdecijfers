@@ -17,18 +17,25 @@ Session 58b's own record is on its branch at `docs/session-briefs/2026-07-25-ses
 and its worktree was at `/Users/amity/cdc-s58` (it said it would remove it — verify with `git worktree list`
 and prune if it is stale).
 
-## The state — nothing is merged, nothing is deployed
+## The state — ✅ ALL FOUR MERGED AND LIVE (updated at merge time; this section was written before it happened)
 
-Production is untouched and healthy. **Both WP26 flags are still OFF.** Four branches await review — three of them opened as PRs; session 58b had not opened its PR when this was written, so check `gh pr list` first:
+**Both WP26 flags are still OFF — that go-live is still the owner's own supervised step.** Production verified
+healthy after every deploy. The owner was present in-chat and delegated the merge call (*"jij bent de expert"*);
+the four went in **serially**, one deploy at a time with gate+deploy green and a canary between, per
+[#173](../open-questions.md).
 
-| Order | Branch / PR | What |
-|---|---|---|
-| 1 | [#64](https://github.com/Stefan7168/checkdecijfers/pull/64) `fix/guard-argument-types` | Server Action arguments were type-checked only by `.length` — a content-block array with `.length === 1` drove a ~1 MB prompt at a flat credit price, on the **paid** path too. |
-| 2 | `review/s58-trial-audit` (58b) | Trial hardening: a non-UUID requestId reached the LLM and failed only at the R8 insert (served with `auditId: null`); `x-forwarded-for` / HMAC-secret defaults; two bare-`catch` defects. **Touches the same file as #64 — rebase on top.** |
-| 3 | [#65](https://github.com/Stefan7168/checkdecijfers/pull/65) `test/conformance-bundle` | The double-default test, single-sourced `NL01`, the envelope-key manifest, the query-count pin. Disjoint files, so it floats. |
-| 4 | [#66](https://github.com/Stefan7168/checkdecijfers/pull/66) `docs/overnight-2-close-out` | This close-out. **Will conflict with 58b in `open-questions.md` and `lessons-learned.md`** — both append. Take both sides; the rows are numbered to not collide (58b has #179-#186, this has #187-#190). |
+| Order | PR | Squash | What |
+|---|---|---|---|
+| 1 | [#64](https://github.com/Stefan7168/checkdecijfers/pull/64) | `58c814b` | Server Action arguments were type-checked only by `.length` — a content-block array with `.length === 1` drove a ~1 MB prompt at a flat credit price, on the **paid** path too. |
+| 2 | [#67](https://github.com/Stefan7168/checkdecijfers/pull/67) | `b05a1d3` | 58b's trial hardening (non-UUID requestId reaching the LLM and failing only at the R8 insert; the landing asserting an unverified "pot is leeg"; `x-forwarded-for`/HMAC-secret defaults; the purge's bare `catch`; the cap clamp) **plus [#177](../open-questions.md)**. Rebased onto #64; guard order is `typeof question → length → trialConfigured → requestId shape`. |
+| 3 | [#65](https://github.com/Stefan7168/checkdecijfers/pull/65) | `ed5f240` | The double-default test, single-sourced `NL01`, the envelope-key manifest, the query-count pin. Disjoint — floated. |
+| 4 | [#66](https://github.com/Stefan7168/checkdecijfers/pull/66) | this branch | This close-out. Conflicted with #67 in `open-questions.md`, `lessons-learned.md` and the RUNBOOK — resolved by **taking both sides** (rows #179-#186 from 58b, #187-#190 from 58; both session sections kept). |
 
-Merge one at a time with a production check between, per [#173](../open-questions.md). `curl -s -o /dev/null -w '%{http_code}' https://checkdecijfers.vercel.app/llms.txt` → 200 is the cheapest canary.
+The canary between merges, for the next time: `curl -s -o /dev/null -w '%{http_code}' https://checkdecijfers.vercel.app/llms.txt` → 200.
+
+⚠ **One trap worth carrying forward:** waiting on "the latest run on `main`" after a merge can match the
+*previous* merge's already-completed run and report green for a build that has not started. Key the wait on the
+merge commit's own SHA. It happened here and was caught only by comparing the run's `headSha` to `HEAD`.
 
 ## The single next priority
 

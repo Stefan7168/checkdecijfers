@@ -13,15 +13,20 @@
 STARTED TWO SESSIONS ON THIS BRIEF; both ran, split the queue over a cross-session channel, and both shipped.
 Read [status-archive.md](status-archive.md) for the full record and the merge order.**
 
-**THREE OPEN PRs + ONE BRANCH AWAIT REVIEW — none merged, nothing deployed, both WP26 flags still OFF.**
-(Session 58b had not opened its PR yet when this was written; check `gh pr list`.) **Suggested merge order:**
+**✅ ALL FOUR ARE MERGED AND LIVE** (owner present in-chat, 2026-07-25 evening; he delegated the merge call to
+the session with *"jij bent de expert"*). Merged **serially**, one deploy at a time, gate+deploy green and a
+production canary between each — the #173 discipline. **Both WP26 flags are still OFF; that go-live is his.**
 
-| PR | What | From |
-|---|---|---|
-| [#64](https://github.com/Stefan7168/checkdecijfers/pull/64) | **Merge first.** Server Action arguments were type-checked only by `.length`, so a content-block array (`.length === 1`) drove a ~1 MB prompt at a flat credit price — on the PAID path too, not just the trial. | this session |
-| `review/s58-trial-audit` (branch, no PR yet) | The trial hardening: a non-UUID requestId reached the LLM and was rejected only by the R8 insert (served with `auditId: null`), plus `x-forwarded-for`/secret-default fixes and two bare-`catch` defects. Touches the same file as #64 — rebase on top. | session 58b |
-| [#65](https://github.com/Stefan7168/checkdecijfers/pull/65) | The conformance bundle: the double-default test, single-sourced `NL01`, the envelope-key manifest, the query-count pin. Disjoint files — floats. | this session |
-| [#66](https://github.com/Stefan7168/checkdecijfers/pull/66) | Docs close-out: the measured A/B, the presence grammar, the hunt dossier, open-questions #187-190. Conflicts with 58b's branch in `open-questions.md` + `lessons-learned.md` (both append — take both sides). | this session |
+| # | PR | Squash | What | CI + canary |
+|---|---|---|---|---|
+| 1 | [#64](https://github.com/Stefan7168/checkdecijfers/pull/64) | `58c814b` | Server Action arguments were type-checked only by `.length`, so a content-block array (`.length === 1`) drove a ~1 MB prompt at a flat credit price — on the PAID path too, not just the trial. | gate+deploy ✅, 200/200 |
+| 2 | [#67](https://github.com/Stefan7168/checkdecijfers/pull/67) | `b05a1d3` | 58b's trial hardening: a non-UUID requestId reached the LLM and was rejected only by the R8 insert (served with `auditId: null`); the landing asserting an unverified "pot is leeg"; `x-forwarded-for`/HMAC-secret defaults; the purge's bare `catch`; the cap clamp. **Plus [#177](open-questions.md)** (the rescue parse now records `'intent'`, not `'clarify'`). Rebased onto #64 — guard order `typeof question → length → trialConfigured → requestId shape`. | gate+deploy ✅ (run 30160467319), 200/200 |
+| 3 | [#65](https://github.com/Stefan7168/checkdecijfers/pull/65) | `ed5f240` | The conformance bundle: the double-default test, single-sourced `NL01`, the envelope-key manifest, the query-count pin. Disjoint — floated. | gate+deploy ✅, 200/200 |
+| 4 | [#66](https://github.com/Stefan7168/checkdecijfers/pull/66) | see archive | This docs close-out. Conflicted with #67 in `open-questions.md`, `lessons-learned.md` and the RUNBOOK — resolved by **taking both sides** (rows #179-#186 from 58b, #187-#190 from 58; both session sections kept). | — |
+
+**Measured at the merge, after the arithmetic check the queue demands:** backend **1512** and web **397** on
+#67's tree (main's 1509/391 + 3 backend and 6 web), benchmark **14/14 + 6/6 + 0 fabricated GATE PASS**, real
+`next build`. #65 adds its own on top — re-check the counts against `main` before trusting any later claim.
 
 **The measured result the queue asked for:** the fixture-snapshot saving is **70-145 s, not the retracted
 240 s** — and the within-arm spread exceeds the between-arm difference, so at n=2 the magnitude is not
@@ -32,7 +37,7 @@ schedule, no RUNBOOK duty. Two retention clocks depend on that one command (audi
 bookkeeping at 90 days), and the first trial rows become purgeable **~2026-10-15**. The maintenance-session
 agenda now lists it; whether it becomes a cron is yours.
 
-**▶ NEXT, in order:** (a) review + merge the four branches in the order above; (b) the **owner-supervised WP26
+**▶ NEXT, in order:** (a) ~~review + merge~~ **DONE — all four merged and live, see the table above**; (b) the **owner-supervised WP26
 go-live** — one flag at a time, RUNBOOK section "WP26 answer-first + clickable options", NOT during a deploy
 burst (#173); (c) **~30/7 BBP+PPI syncs** (`85880NED` MUST use the chunked escape hatch, RUNBOOK step 5);
 (d) re-ask **#132 route B**; (e) #187's one live measurement (a forged `x-forwarded-for` against production —

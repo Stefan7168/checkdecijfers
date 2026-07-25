@@ -40,6 +40,20 @@ import {
   trialRetentionCutoff,
 } from '../src/billing/index.ts';
 import { connectFromEnv } from '../src/db/client.ts';
+import type { Db } from '../src/db/types.ts';
+
+/** A CHECK, not a catch — the same discipline retention.ts states for its own
+ * migration-017 guard ("the guard must be a check, not a catch"). Both trial
+ * legs used to sit in a bare `catch {}` whose message blamed a missing
+ * migration 020. That migration has been live in production since the #53
+ * go-live (2026-07-17), so from that day the catch could only ever MISREPORT a
+ * genuine failure — a lock timeout, a permissions problem, a connection blip —
+ * as an honest skip, while the script still exited 0. A retention mechanism
+ * that reports success when it did nothing is worse than one that is absent. */
+async function trialTableExists(db: Db): Promise<boolean> {
+  const { rows } = await db.query(`select to_regclass('public.trial_questions') as t`, []);
+  return rows[0]?.t != null;
+}
 
 async function main(): Promise<void> {
   const apply = process.argv.includes('--apply');
@@ -59,16 +73,13 @@ async function main(): Promise<void> {
           `(source_tag user + onboarding_delivery + anonymous_trial) and ${pendingRows} ` +
           `pending_table_requests row(s) older than 2 years would be redacted.`,
       );
-      // Pre-go-live databases have no trial_questions table yet (migration
-      // 020 is applied in the supervised #53 go-live) — skip honestly, never
-      // fail the whole purge over the not-yet-existing leg.
-      try {
+      if (await trialTableExists(db)) {
         const trialRows = await countPurgeableTrialBookkeeping(db, trialCutoff);
         console.log(
           `DRY RUN — trial cutoff ${trialCutoff.toISOString()}: ${trialRows} trial_questions ` +
             `bookkeeping row(s) older than 90 days would be DELETED (ADR 036 D4).`,
         );
-      } catch {
+      } else {
         console.log('  note: trial_questions absent (migration 020 not applied) — trial leg skipped.');
       }
       console.log('Re-run with --apply to actually redact/delete them.');
@@ -80,13 +91,13 @@ async function main(): Promise<void> {
       `Applied — cutoff ${cutoff.toISOString()}: redacted ${redacted.length} audit_answers row(s) ` +
         `(source_tag user + onboarding_delivery + anonymous_trial).`,
     );
-    try {
+    if (await trialTableExists(db)) {
       const trialDeleted = await purgeExpiredTrialBookkeeping(db, trialCutoff);
       console.log(
         `Applied — trial cutoff ${trialCutoff.toISOString()}: deleted ${trialDeleted} ` +
           `trial_questions bookkeeping row(s) older than 90 days (ADR 036 D4).`,
       );
-    } catch {
+    } else {
       console.log('  note: trial_questions absent (migration 020 not applied) — trial leg skipped.');
     }
     if (redacted.length > 0) {

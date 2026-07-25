@@ -15,6 +15,16 @@ import { getDb } from '../../lib/db.ts';
 import { purchaseSuccessUrl } from '../../lib/purchase.ts';
 
 export async function createCheckoutSession(packId: string): Promise<{ error: string } | undefined> {
+  // Server Action arguments are attacker-controlled and their declared types
+  // are erased at runtime — the same belt actions.ts applies to `question` /
+  // `reply` / `requestId`. Benign here (the checkout amount and currency come
+  // from the DB row, never from this input), but it is the one remaining
+  // action argument that did not meet the standard, and an unchecked value
+  // reaching a query parameter is not a habit worth keeping.
+  if (typeof packId !== 'string' || packId.length === 0 || packId.length > 100) {
+    return { error: 'Onbekend of niet meer beschikbaar pakket.' };
+  }
+
   const userId = await currentUserId();
   if (userId === null) {
     return { error: 'Je bent niet ingelogd.' };

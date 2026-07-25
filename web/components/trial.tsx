@@ -8,6 +8,18 @@ import { Suspense } from 'react';
 import { getTrialGateState, trialConfigured } from '../lib/trial.ts';
 import { LoginNudge, TrialChat } from './trial-chat.tsx';
 
+/** One line per non-open gate state. The 'closed' copy names the cause because
+ * the pot was actually READ and was empty; 'unavailable' deliberately does not,
+ * because in that state we do not know why (see TrialGateState in lib/trial.ts
+ * — until 2026-07-25 both shared the pot-is-empty sentence, which during a
+ * #173 pooler exhaustion told every visitor something untrue). */
+const NUDGE_TEXT = {
+  used_up: 'Je hebt je gratis proefvragen gebruikt. Maak een gratis account om verder te gaan.',
+  closed: 'Het gratis proefpotje is op dit moment leeg. Log in om verder te gaan — een account is gratis.',
+  unavailable:
+    'De gratis proefvragen zijn nu even niet beschikbaar. Log in om verder te gaan — een account is gratis.',
+} as const;
+
 export async function TrialGate() {
   const state = await getTrialGateState();
   if (state.kind === 'dormant') return null;
@@ -22,13 +34,7 @@ export async function TrialGate() {
         {state.kind === 'open' ? (
           <TrialChat initialQuestionsLeft={state.questionsLeft} />
         ) : (
-          <LoginNudge
-            text={
-              state.kind === 'used_up'
-                ? 'Je hebt je gratis proefvragen gebruikt. Maak een gratis account om verder te gaan.'
-                : 'Het gratis proefpotje is op dit moment leeg. Log in om verder te gaan — een account is gratis.'
-            }
-          />
+          <LoginNudge text={NUDGE_TEXT[state.kind]} />
         )}
       </div>
     </section>

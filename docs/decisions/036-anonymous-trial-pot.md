@@ -143,6 +143,52 @@ ANTHROPIC_TRIAL_API_KEY + TRIAL_ENABLED + TRIAL_IP_HASH_SECRET; apply migration 
 small (e.g. 25 questions); live smoke (one real trial question end-to-end + audit row check); then refill
 to taste.
 
+## As-built corrections from the independent adversarial pass (2026-07-25, session 58B)
+
+An independent hunt over this surface — deliberately run without the concurrent session's conclusions —
+confirmed the design but found six things the ADR either claimed or implied that were not true of the code.
+Fixed in the same change; the reasoning for each lives in the commit message and
+[session-briefs/2026-07-25-session-58b-independent-review.md](../session-briefs/2026-07-25-session-58b-independent-review.md).
+
+1. **D4's "R8 audit rows are written for anonymous answers too" was defeatable from outside.**
+   `trial_questions.request_id` is `text` (migration 020) while `audit_answers.request_id` is `uuid`
+   (migration 010), and the action checked `requestId` for type and length but not SHAPE. A non-UUID id
+   therefore spent a pot question and both LLM calls and was refused only by the R8 insert, whose
+   fail-closed retry re-used the same id — so the turn was served with **no audit row**, which also
+   destroys the spend-reconciliation mechanism D4 names (the audit rows' `source_tag`) and fires one admin
+   alert e-mail per request. The action now requires a UUID, before the take.
+2. **The "empty pot degrades the UI, never breaks it" fail-safe was honest about DOING and dishonest about
+   SAYING.** The gate folded "pot read as empty", "pot table absent" and "the pot read threw" into one
+   `closed` state whose copy states the pot is empty — so during a [#173](../open-questions.md) pooler
+   exhaustion the landing told every visitor something untrue about a possibly-full pot. `TrialGateState`
+   now separates `closed` (read it) from `unavailable` (could not tell); same degrade, different claim.
+3. **D2's "raw IPs never persist" rested on call ordering alone.** `hashedRequestIp` defaulted the HMAC key
+   to `''`, and an unkeyed SHA-256 of an IPv4 address is brute-forceable over the whole 2^32 space. It now
+   throws instead of degrading. Also: a present-but-empty `x-forwarded-for` never fell through to
+   `x-real-ip` (`''` is not nullish, so `??` short-circuited) — not reachable on Vercel, reachable behind
+   any other proxy.
+4. **D4's 90-day DELETE had no trigger whatsoever** — no cron, no RUNBOOK step, no maintenance-agenda line —
+   so "rows are DELETED after 90 days" was a promise nothing kept. Added to the RUNBOOK monthly agenda; the
+   first real deadline is **~2026-10-15** (the 2026-07-17 go-live + 90 days). A cron remains the sturdier fix.
+5. **Both trial legs of `gdpr:purge` sat in a bare `catch {}`** that blamed a migration live since the
+   go-live, so a genuine failure was reported as an honest skip while the script exited 0. Now a
+   `to_regclass` check, per `retention.ts`'s own "the guard must be a check, not a catch".
+6. **The promised "retention doc note" was never delivered** — [05-data-rules.md](../05-data-rules.md) did
+   not mention the trial at all, and still stated a 2-tag retention scope the code had widened to three.
+   Written now, including the trial's TWO windows.
+
+**Left to the owner, not changed:** anonymous *content* is retained 2 years with no self-service erasure
+route while its bookkeeping goes at 90 days ([#181](../open-questions.md)); the IP backstop bounds nothing
+over IPv6 for want of /64 truncation, with a launch trigger ([#182](../open-questions.md)); the pot has no
+low-water alert ([#180](../open-questions.md)); a refund restores the abuse counters as well as the pot, and
+is near-dead code because the pipeline swallows every attacker-shaped throw ([#185](../open-questions.md)).
+
+**Confirmed sound** (a clean lens is a result): the take's ordering and atomicity, the pot floor,
+`setTrialPot`'s missing `where singleton` (structurally impossible to need it), advisory-key collisions,
+refund idempotency, `duplicate_request` replay including refunded rows, the partial indexes matching both
+count queries exactly, trial spend isolation including the semantic checker, and — the one most expected to
+break — the 2-year purge genuinely reaching `user_id`-null rows.
+
 ## Revisit triggers
 
 - Any confirmed abuse pattern (pot drains in hours) → tighten D2 limits or add Firewall rules.

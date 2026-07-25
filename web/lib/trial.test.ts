@@ -1,6 +1,7 @@
 // The trial gate's dormancy + fail-safe contract (ADR 036): unset envs mean
-// DORMANT (the landing renders as if the feature does not exist), an
-// unreadable/empty pot means CLOSED (the honest login degrade), and a forged
+// DORMANT (the landing renders as if the feature does not exist), a pot READ
+// as empty means CLOSED while a pot we could not read means UNAVAILABLE (both
+// degrade to the login prompt; only the first may say why), and a forged
 // cookie never reaches SQL.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -49,15 +50,28 @@ describe('getTrialGateState', () => {
     expect(await getTrialGateState()).toEqual({ kind: 'dormant' });
   });
 
-  it('reads closed when the pot is empty, absent, or unreadable (fail-safe)', async () => {
+  // The degrade is the same either way; only the CLAIM differs. 'closed' means
+  // we read the pot and it was empty — the copy may say so. 'unavailable' means
+  // we could not tell, and the copy must not name a cause it does not have.
+  it('says closed ONLY for a pot it actually read as empty', async () => {
     configure();
     getTrialPotStatus.mockResolvedValue({ remaining: 0, cap: 25 });
     expect(await getTrialGateState()).toEqual({ kind: 'closed' });
+  });
+
+  it('says unavailable — not closed — when the pot is absent or unreadable', async () => {
+    configure();
     getTrialPotStatus.mockResolvedValue(null);
-    expect(await getTrialGateState()).toEqual({ kind: 'closed' });
+    expect(await getTrialGateState()).toEqual({ kind: 'unavailable' });
     vi.spyOn(console, 'warn').mockImplementation(() => {});
     getTrialPotStatus.mockRejectedValue(new Error('pool down'));
-    expect(await getTrialGateState()).toEqual({ kind: 'closed' });
+    expect(await getTrialGateState()).toEqual({ kind: 'unavailable' });
+    // A failing per-visitor count is the same class: the pot was fine, our
+    // knowledge of the visitor is not.
+    getTrialPotStatus.mockResolvedValue({ remaining: 10, cap: 25 });
+    cookieGet.mockReturnValue({ value: VISITOR });
+    dbQuery.mockRejectedValue(new Error('pool down'));
+    expect(await getTrialGateState()).toEqual({ kind: 'unavailable' });
   });
 
   it('is open with the full budget for a cookie-less visitor', async () => {
@@ -103,5 +117,30 @@ describe('hashedRequestIp', () => {
       name === 'x-forwarded-for' ? '198.51.100.9' : null,
     );
     expect(await hashedRequestIp()).not.toBe(hash);
+  });
+
+  // A PRESENT-but-EMPTY x-forwarded-for splits to '', which is not nullish, so
+  // `??` short-circuited on it and never consulted x-real-ip — bucketing every
+  // such request under one hash distinct from both a real address and
+  // 'unknown'. Not reachable on Vercel; reachable behind any other proxy.
+  it('falls through an empty OR whitespace x-forwarded-for to x-real-ip', async () => {
+    vi.stubEnv('TRIAL_IP_HASH_SECRET', 'secret');
+    headerGet.mockImplementation((name: string) => (name === 'x-real-ip' ? '203.0.113.7' : null));
+    const viaRealIp = await hashedRequestIp();
+    // Empty string: not nullish, so `??` used to short-circuit here.
+    for (const forwarded of ['', '   ', ' , 10.0.0.1']) {
+      headerGet.mockImplementation((name: string) =>
+        name === 'x-forwarded-for' ? forwarded : name === 'x-real-ip' ? '203.0.113.7' : null,
+      );
+      expect(await hashedRequestIp(), `forwarded=${JSON.stringify(forwarded)}`).toBe(viaRealIp);
+    }
+  });
+
+  // An unkeyed SHA-256 of an IPv4 address is brute-forceable over the whole
+  // 2^32 space, i.e. exactly the defeat of D2's "raw IPs never persist". The
+  // caller guarantees the secret is set; this makes the guarantee loud.
+  it('refuses to hash at all when the secret is unset, rather than keying on ""', async () => {
+    vi.stubEnv('TRIAL_IP_HASH_SECRET', '');
+    await expect(hashedRequestIp()).rejects.toThrow('TRIAL_IP_HASH_SECRET');
   });
 });

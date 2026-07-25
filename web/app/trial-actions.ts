@@ -39,16 +39,19 @@ import {
 import { getDb } from '../lib/db.ts';
 import {
   hashedRequestIp,
+  isUuid,
   readTrialVisitorId,
   TRIAL_COOKIE,
   TRIAL_COOKIE_MAX_AGE_S,
   trialConfigured,
 } from '../lib/trial.ts';
 
-// Mirrors actions.ts's guardLength/referenceDate exactly; duplicated (small,
-// two lines each) rather than exported from the paid action file — importing
-// from a 'use server' module would register ITS actions under this module
-// too, and these guards are infra, not shared business logic.
+// Mirrors actions.ts's guardLength/referenceDate; duplicated rather than
+// exported from the paid action file — importing from a 'use server' module
+// would register ITS actions under this module too, and these guards are
+// infra, not shared business logic. The duplication is deliberate but it is
+// NOT free: the type-check half of guardLength was added to both copies at
+// once (2026-07-25) precisely because a fix to one would not reach the other.
 const MAX_INPUT_LENGTH = 2000;
 
 function referenceDate(): string {
@@ -90,11 +93,33 @@ export type TrialAskOutcome =
   | { kind: 'duplicate_request' };
 
 export async function askTrialQuestion(question: string, requestId: string): Promise<TrialAskOutcome> {
+  // TYPE FIRST, THEN SIZE — the same belt actions.ts's guardLength applies, and
+  // for the same reason: a Server Action argument's declared type is erased at
+  // runtime, and an object with a small `.length` (an Anthropic content-block
+  // array is the shape that matters) would otherwise pass the ceiling and drive
+  // an unbounded prompt on the trial key for ONE pot question. This path is
+  // anonymous, so it is the cheapest place in the product to abuse.
+  if (typeof question !== 'string') {
+    throw new Error(`input rejected: not a string within ${MAX_INPUT_LENGTH} chars`);
+  }
   if (question.length > MAX_INPUT_LENGTH) {
     throw new Error(`input rejected: ${question.length} chars exceeds ${MAX_INPUT_LENGTH}`);
   }
   if (!trialConfigured()) return { kind: 'closed', reason: 'dormant' };
-  if (typeof requestId !== 'string' || requestId.length === 0 || requestId.length > 100) {
+  // SHAPE, not just type and size — and this one is load-bearing rather than
+  // hygiene. `trial_questions.request_id` is `text` (migration 020) but
+  // `audit_answers.request_id` is `uuid` (migration 010). A non-UUID id
+  // therefore passes takeTrialQuestion, spends a pot question and BOTH LLM
+  // calls, and is rejected only by the R8 insert — whose fail-closed retry
+  // re-uses the same bad id and throws identically, so the turn is served with
+  // `auditId: null`: no audit row for an anonymous answer (ADR 036's binding
+  // owner-frame item 6), nothing to reconcile the separate trial key's invoice
+  // against, and one admin alert e-mail per request from an unauthenticated
+  // endpoint. The paid path is immune by accident, not design — its
+  // `credit_transactions.request_id` is `uuid` and is written inside the gate
+  // BEFORE any LLM call, so the same garbage fails there for free.
+  // The real client already sends crypto.randomUUID() (trial-chat.tsx).
+  if (typeof requestId !== 'string' || !isUuid(requestId)) {
     throw new Error('input rejected: malformed requestId');
   }
 
