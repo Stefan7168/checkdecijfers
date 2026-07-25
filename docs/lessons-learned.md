@@ -16,6 +16,18 @@ on top.
   apart, cross-check `list_sessions` for a running session with the same `cwd`, and if there is one, **move out** —
   `git worktree add` with its own `node_modules` gives a separate index, HEAD and fixture cache. Do not try to
   share a tree by being careful; you cannot be careful enough about another process's `git` commands.
+- **A revert-proof is per-TEST, not per-commit — and I had the disproof on screen.** I wrote "each proven by
+  reverting the source change and watching the new test fail" over a list of five changes. Two of them had no test
+  at all, and a sixth "guard" test I added passes on revert *by construction* (it asserts the OLD behaviour on a
+  different branch). My own revert run had printed `1 failed | 110 passed` and I read it as confirmation instead of
+  counting it. Two review passes over my own diff caught both over-claims; nothing else would have. Two rules:
+  **count the failures and match them one-to-one to the claims**, and when a change genuinely has no test, write
+  "reasoning-only, no test" in the commit message rather than letting a blanket sentence cover it. This is the
+  test-count arithmetic lesson from session 57 pointed at a different number.
+- **Review your own diff TWICE if you keep editing after the first review.** The first review pass certified one
+  commit, then said plainly that four files I had changed while it was running were outside its scope. It was
+  right, and the second pass over those files found the over-claim above. A review certifies a tree, not an
+  intention — if the tree moves, the certificate expires.
 - **When you discover you are the SECOND session, change the job, not the branch.** My first instinct was to take
   different queue items. The better move surfaced from reading the other session's own commit message: it had
   already done the queue's headline item. What a second session can do that a first structurally cannot is **review
