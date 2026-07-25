@@ -10,8 +10,7 @@
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
 **▶ NEXT SESSION STARTS HERE (Session 57, 2026-07-25 — autonomous overnight, then owner-present for the
-merges. **ALL FOUR PRs ARE NOW MERGED AND LIVE** (`e334590` #60, `ea71c96` #61, `29e9e8b` #62, + this docs
-PR), each deployed separately with a settling gap and a production check between — deliberately, per #173.
+merges. **ALL FOUR PRs ARE NOW MERGED AND LIVE** (`e334590` #60, `ea71c96` #61, `29e9e8b` #62, `447fca9` #63), each deployed separately with a settling gap and a production check between — deliberately, per #173.
 Production verified healthy after every deploy: `/llms.txt` 200, `/` 200, Ontdek section rendering.
 **⚠ THE WP26 FLAGS ARE STILL OFF — that go-live is yours, and the corrected rollback order below matters.**
 

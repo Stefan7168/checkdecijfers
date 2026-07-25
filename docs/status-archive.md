@@ -77,7 +77,9 @@ deployed. €0 live-LLM product spend, zero prompt bytes, no DDL, both WP26 flag
   close; production verified healthy at close too (`/llms.txt` 200, `/` 200).
 - Verification per PR: typecheck (root + web), full backend suite, web suite 385/385, benchmark 14/14 + 6/6 + 0
   fabricated, real `next build`, and a review pass over the diff. Backend counts differ per branch by design
-  (1498 on #60, 1499 on #61, 1500 on #62) — each branch adds its own tests to main's 1494.
+  (1498 on #60, 1499 on #61, 1500 on #62) — each branch adds its own tests to main's 1494. The fully merged
+  tree measured **98 files / 1509 tests** before #62 was merged, which is exactly 1494 + 4 + 5 + 6; that
+  arithmetic is what exposed the stale-ref merge. Main is CI-green on every commit through `c9c9547`.
 
 **Session 56 (2026-07-25, owner-present, ran on Opus 5 — WP26 THREE-QUARTERS BUILT: mechanism A + B-region +
 B-period, all pushed, all DORMANT behind two flags. €0 LLM spend: nothing in this WP needed a live model, so the
