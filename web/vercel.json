@@ -3,6 +3,10 @@
     {
       "path": "/api/onboarding-cron",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/gdpr-purge-cron",
+      "schedule": "0 4 1 * *"
     }
   ]
 }

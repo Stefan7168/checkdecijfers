@@ -15,6 +15,12 @@ describe('proxy isPublicPath allowlist', () => {
     // THE go-live regression pin: the cron route MUST be public — it is called
     // by Vercel Cron and the app's own kick, neither of which carries a session.
     expect(isPublicPath('/api/onboarding-cron')).toBe(true);
+    // #189: the retention-purge cron, same class. Left out, its 307 to /login
+    // returns 200 to the cron dashboard — so the purge would read as scheduled
+    // and healthy while never running once. The failure is invisible by
+    // construction, which is why it gets its own pin rather than trusting the
+    // reviewer of the next route to remember this file exists.
+    expect(isPublicPath('/api/gdpr-purge-cron')).toBe(true);
     // The existing exemption that lets real Stripe purchases land — guard it too.
     expect(isPublicPath('/api/stripe/webhook')).toBe(true);
   });

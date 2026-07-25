@@ -252,3 +252,48 @@ export async function maybeAlertSemanticCheckSkip(
     console.error('semantic-check admin alert hook failed (answer unaffected):', error);
   }
 }
+
+// #189 (2026-07-25): the RETENTION-PURGE alert. The purge is the only thing
+// enforcing either retention window, and once a cron runs it unattended its
+// failure mode is silence — the same shape as the two alerts above, and the
+// reason #189 existed at all was that nobody noticed the job was never running.
+// Same posture: console.error is the floor, e-mail when configured, fail-soft
+// always (an alert failure must never turn a SUCCESSFUL purge into a failed
+// cron response).
+export interface RetentionPurgeAlert {
+  /** 'failed' — the job threw. 'skipped' — it reported the trial table absent
+   * on a database where migration 020 has been live since 2026-07-17, which is
+   * now a real signal rather than a shrug. */
+  kind: 'failed' | 'skipped';
+  detail: string;
+}
+
+export async function alertRetentionPurge(
+  alert: RetentionPurgeAlert,
+  fetchImpl: typeof fetch = fetch,
+): Promise<void> {
+  const subject =
+    alert.kind === 'failed'
+      ? 'checkdecijfers: de GDPR-bewaartermijnpurge is MISLUKT'
+      : 'checkdecijfers: de GDPR-purge sloeg het trial-been over';
+  const meaning =
+    alert.kind === 'failed'
+      ? 'De purge is het ENIGE dat de bewaartermijnen afdwingt (auditrijen 2 jaar, ' +
+        'trial-boekhouding 90 dagen). Zolang dit faalt loopt er niets af.'
+      : 'De purge meldde dat trial_questions niet bestaat. Migratie 020 draait sinds ' +
+        '17-07-2026 op productie, dus dit hoort niet te kunnen — onderzoek het.';
+  await sendAdminAlertEmail(subject, `${meaning}\n\n${alert.detail}`, fetchImpl);
+}
+
+/** Fail-soft wrapper: logs the floor, never throws. */
+export async function maybeAlertRetentionPurge(
+  alert: RetentionPurgeAlert,
+  fetchImpl: typeof fetch = fetch,
+): Promise<void> {
+  console.error(`[retention-purge] ${alert.kind}: ${alert.detail}`);
+  try {
+    await alertRetentionPurge(alert, fetchImpl);
+  } catch (err) {
+    console.error('[retention-purge] alert e-mail failed:', err);
+  }
+}
