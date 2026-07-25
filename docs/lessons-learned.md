@@ -6,6 +6,50 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 58 — autonomous overnight #2 (2026-07-25 evening)
+
+- **TWO AUTONOMOUS SESSIONS WERE STARTED ON THE SAME BRIEF, IN THE SAME WORKING TREE.** The owner launched a
+  second overnight session at 18:38 with the identical kickoff. It detected me from a test file's advancing
+  mtime and opened a cross-session channel; we split the queue, it moved to its own worktree
+  (`/Users/amity/cdc-s58`), and both halves shipped. **Nothing was lost — but only because neither of us ran
+  `git add -A` or a branch checkout in the shared tree at the wrong moment, which is luck, not design.**
+  Concrete costs measured: the backend suite went from ~500 s to **1447 s**, the web suite from 15 s to 342 s,
+  and one verification block came back RED with `Failed to start forks worker` — a load flake, not a defect,
+  but it cost a full re-run to establish that. Rules for next time: **a session that finds another running in
+  its cwd should move to a worktree immediately rather than negotiate**, and the kickoff brief should carry a
+  "if another session is already running this queue, take items N-M" line. Also: check `list_sessions` at
+  startup — it takes one call and would have caught this before the first write.
+- **Hand the other session your FINDINGS, not your conclusions, and check what they already recorded before
+  writing your own.** Its independent hunt of the same surface produced eight open-questions rows overlapping
+  mine. Reading its branch first (read-only) let me renumber to 187-190 and record only the four findings its
+  rows did not cover, cross-referencing rather than restating. Where we overlapped we agreed — including on a
+  refuted finding — which is worth more than either report alone. Duplicated rows on one table would have been
+  a net loss for the reader.
+- **A review pass over my own diff found a real defect in BOTH code PRs — three for three across sessions now.**
+  On the security PR it caught that my new `guardRequestId` bound did not match the columns requestId actually
+  lands in (`uuid` on two tables, `text` on a third), which exposed a genuine anonymous R8 hole neither of us
+  had seen; it also caught three comments dated *tomorrow*. On the conformance PR it caught that my manifest
+  parser silently skipped `readonly foo: string`, method signatures and quoted keys — **and that the
+  member-count assertions I had written as the backstop were computed from the parser's own output**, so they
+  would have moved right along with the miss. A circular backstop is not a backstop. Budget the review pass as
+  a required step, not a courtesy.
+- **The most valuable finding of the night came out of a hunt aimed somewhere else.** The brief scoped item 4
+  to the anonymous trial; the headline defect (`guardLength` type-checking nothing, so a content-block array
+  with `.length === 1` drove a ~1 MB prompt at a flat credit price) sits on the PAID path and has since WP13.
+  The trial lens found it only because it was reading the trial's copy of the same guard. Adjacent code is
+  worth reading during a scoped hunt.
+- **A performance claim needs at least two legs per arm, alternated — and sometimes the honest answer is "not
+  resolvable".** The re-measured fixture-snapshot A/B came out 70-145 s rather than the retracted 240 s, but
+  the *within-arm* spread (690 s vs 432 s on two warm runs) was larger than the between-arm difference. Saying
+  so plainly is the result; a single mean would have been a third wrong number in the same doc. The alternating
+  design also explained the original error rather than merely doubting it: both original numbers land on warm
+  legs at different loads.
+- **Two Fable lenses contradicted each other on a HIGH finding, and the code settled it in one read.** One
+  reported an unmetered free-LLM loop via the refund path; the other, hunting that exact primitive, could not
+  build it. `respondToQuestion` wraps its whole body and converts every throw into a *returned* refusal, so the
+  refund is near-unreachable — the second lens was right. Verifying a delegated finding against source before
+  acting on it is not optional, and it is cheap compared to shipping a fix for a bug that does not exist.
+
 ## Session 58B (2026-07-25 night, AUTONOMOUS — the second of TWO sessions running the same queue)
 
 - **Check whether another session is already in the working tree, before you touch a byte.** I was started with the
@@ -78,7 +122,9 @@ on top.
   680s → 440s" in a PR; the 680s baseline had run while six review agents were working and the 440s had not. The
   underlying mechanism was cleanly measured back-to-back (build 7.9-10.7 s vs restore 1.16-1.39 s) and is sound —
   but the headline ratio was confounded and I had quoted it as the headline. Corrected in the docs rather than left
-  standing, and a same-conditions A/B queued. Rule: for any before/after timing, capture `uptime` load alongside
+  standing, and a same-conditions A/B queued — **which has now been run: the real saving is 70-145 s, not 240 s,
+  and even that is not resolvable at n=2 because the within-arm spread exceeds the between-arm difference**
+  (ADR 009). Rule: for any before/after timing, capture `uptime` load alongside
   both numbers, or measure them back-to-back in one run. This project's standard is measured results, never
   aspirational ones — and a confounded number is aspirational wearing a decimal point.
 - **Merge one at a time when deploys are the scarce resource.** Four PRs = four production deploys, and five deploys
@@ -111,11 +157,9 @@ on top.
 - **Fixing the CAUSE of a repeated symptom was ~10x cheaper than the four times we treated the symptom.** The
   `hookTimeout` had been raised 30 → 60 → 120 → 300 s across four sessions because every one of 34 test files
   re-ingested 17 tables (measured 7.9-10.7 s each). Ingesting once and restoring a private copy per suite (1.16-1.39 s)
-  took one session. The tell that it was worth doing: the same fix had been
+  took one session and cut the suite by a measured 70-145 s (the "680 s → 440 s" first quoted here was
+  load-confounded; see ADR 009 for the four-leg A/B). The tell that it was worth doing: the same fix had been
   *written down as the real fix* in the vitest config comment each time it was deferred.
-  **(Corrected 2026-07-25, session 58: this bullet said "cut the suite 680 s → 440 s" — the very number the bullet
-  two entries above it retracts as load-confounded. A doc that corrects a figure in one paragraph and repeats it in
-  another has not corrected it. The suite-level saving is still unmeasured; see [#179](open-questions.md).)**
 - **Two adversarial agents can BOTH be right about the code and disagree about the verdict — and the synthesis is
   better than either.** On WP26's un-gated `rescueOnly`, one lens called it a dormancy hole and another called it
   deliberate protection for a post-rollback tab. Both were factually correct. The resolution was neither's

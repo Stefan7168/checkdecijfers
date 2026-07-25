@@ -81,6 +81,28 @@ dependent suites down on a corrupt cache file — every snapshot failure is now 
 **Measured and deliberately not done:** snapshotting `createTestDb()` as well. Applying the migrations to an
 empty PGlite costs ~0.8 s, which a restore does not beat.
 
-⚠ **The suite-level "680 s → 440 s" figure quoted at merge time is CONFOUNDED** — baseline and result were
-measured at different machine loads. The per-suite mechanism numbers above are clean (back-to-back, one
-machine). A same-conditions A/B is queued for the next session.
+⚠ **The suite-level "680 s → 440 s" figure quoted at merge time was CONFOUNDED, and has now been MEASURED
+properly (2026-07-25).** Four alternating legs on one machine, load captured around each, 98 files / 1509 tests
+green every leg:
+
+| leg | mode | wall | 1-min load at start |
+|---|---|---|---|
+| 1 | warm (snapshot on) | 690 s | 20.01 |
+| 2 | cold (snapshot off) | 762 s | 21.34 |
+| 3 | warm | 432 s | 20.52 |
+| 4 | cold | 577 s | 18.78 |
+
+Adjacent pairs — the right comparison, since load drifts across a 42-minute run — give **+72 s** and **+145 s**
+for cold. But the spread WITHIN each arm (warm 690 vs 432 = 258 s) is larger than the difference BETWEEN them,
+so **the direction is consistent and the magnitude is not resolvable at n=2**. Best estimate: the snapshot
+saves roughly **70–145 s on a 430–760 s suite**, not the 240 s originally claimed.
+
+Two details worth keeping. First, the original pair is now explained rather than merely doubted: 680 ≈ leg 1
+(690, loaded) and 440 ≈ leg 3 (432, lighter) — both consistent with WARM runs at different loads, which is
+exactly the confound. Second, the measurement RECONCILES with the mechanism: ~250 s of serial ingest removed
+(34 suites × ~7.4 s), divided by the fork pool's effective parallelism, lands in the observed range. The
+per-suite numbers above were never in doubt and still stand.
+
+There is no off switch for the snapshot; the A/B used a temporary `CDC_FIXTURE_SNAPSHOT=off` guard in
+`ensureSnapshot`/`readSnapshot`, reverted afterwards. Re-measuring means re-adding it and alternating at least
+two legs per arm — a single before/after pair is what produced the wrong number the first time.

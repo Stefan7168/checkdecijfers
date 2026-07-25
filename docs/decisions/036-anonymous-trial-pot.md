@@ -194,3 +194,31 @@ break — the 2-year purge genuinely reaching `user_id`-null rows.
 - Any confirmed abuse pattern (pot drains in hours) → tighten D2 limits or add Firewall rules.
 - KvK/launch marketing push → pot size and refill cadence become a real budget decision.
 - The #166 "bedoel je …?"-copy follow-up ships → trial refusal copy aligns with it.
+
+---
+
+## As-built note — the 2026-07-25 adversarial hunt
+
+Two independent autonomous sessions hunted this surface on the same night (four Fable lenses here, dossier in
+[session-briefs/2026-07-25-trial-surface-hunt.md](../session-briefs/2026-07-25-trial-surface-hunt.md); the other
+session's rows are [#179–#186](../open-questions.md), this session's are #187–#190). **The core design held:**
+check-before-serve is genuinely correct (the pot take and both limit checks complete before any LLM client is
+constructed, so a rejected visitor costs zero tokens); the pot cannot go negative; the take is idempotent and
+the refund cannot inflate it; raw IPs never persist; and there is no auth bypass. Two lenses verified the first
+of those independently.
+
+Three claims in this ADR need qualifying, and none of them is fixed by a code change alone:
+
+- **D2's "the pot is the real ceiling" is too strong.** The per-IP backstop bounds an ordinary person clearing
+  cookies — the case D2 names — and little else. It does not bound a script (the server mints a fresh visitor id
+  per request and keeps no record one was issued), it is keyed on the *exact* address so an IPv6 /64 yields 2^64
+  buckets (#182 — measured NOT reachable over IPv6 today, so latent), and it reads an `x-forwarded-for` entry
+  whose trustworthiness has never been measured (#187). Treat the **hard spend cap on the trial API key as
+  load-bearing**, not as a belt-and-braces extra.
+- **D4's "its purpose expires" is true of `visitor_id`, not of `ip_hash`** — the rolling 24-hour count is its
+  only consumer anywhere, yet it is retained the full 90 days.
+- **D4's deletion happens only if someone runs the CLI.** Nothing schedules `gdpr:purge` (#189); the RUNBOOK's
+  monthly-maintenance agenda now lists it.
+
+Also recorded: the revisit trigger above ("pot drains in hours") is currently **unobservable** — `ip_limit`,
+`pot_empty` and refunds are all silent, so the owner would find out at the next `trialpot:set`.
