@@ -4,7 +4,16 @@
 adversarial analysis, Sonnet/Haiku for legwork — FOUR PRs OPEN AWAITING OWNER REVIEW, nothing merged, nothing
 deployed. €0 live-LLM product spend, zero prompt bytes, no DDL, both WP26 flags untouched and still OFF.)**
 
-- **Ran under #118(b):** branch + PR + owner review for every change; `main` was never pushed to. A branch push runs
+- **▶ CLOSED OUT OWNER-PRESENT: all four PRs merged and deployed the same day** (`e334590` #60, `ea71c96` #61,
+  `29e9e8b` #62, + the docs PR). Merged ONE AT A TIME with the gate+deploy completing and a production check
+  between each — deliberately applying the #173 lesson rather than stacking four deploys. #60 went first on
+  purpose: it lowers per-instance connections, so it bought headroom for the three deploys after it.
+  Production verified after every one: `/llms.txt` 200, `/` 200, Ontdek rendering. **The WP26 flags were NOT
+  flipped — the owner reserved that go-live for himself, and "push live" was not read as overriding it.**
+  ⚠ One real catch during the merges: `git merge origin/main` used a STALE ref (fetched after #60, not after
+  #61), so #61's files never came in. Nothing was lost, and it was caught only because the merged test count
+  came out 1509-expected vs 1504-measured — the arithmetic, not the eye. Lesson recorded.
+- **Ran under #118(b) while autonomous:** branch + PR for every change; `main` was never pushed to directly. A branch push runs
   the CI gate only — `deploy` is `refs/heads/main`-gated (verified in the workflow), so none of tonight's work
   touched production or the 15-connection budget (#173). Production verified healthy at close: `/llms.txt` 200, `/` 200.
 - **PR #60 — [#173](open-questions.md) option (c), the per-process pooler footprint.** `max: 4 → 2` in
@@ -17,10 +26,19 @@ deployed. €0 live-LLM product spend, zero prompt bytes, no DDL, both WP26 flag
   Pinned by `tests/db/pool-config.test.ts`. CI green (run 30133517570).
 - **PR #61 — one fixture ingest per run instead of one per suite.** The cause behind four `hookTimeout` raises
   (30 → 60 → 120 → 300 s). Measured: cold build 7.9 s / 10.7 s per suite × 34 suites; restore 1.16-1.39 s. **Full
-  backend suite 680.32 s → 440.26 s.** Isolation preserved because each caller still gets its OWN PGlite restored
+  backend suite 680.32 s → 440.26 s — but see the correction below.** Isolation preserved because each caller still gets its OWN PGlite restored
   from shared bytes — proven, not assumed: deleting all 98,672 observations from one copy leaves a sibling at
   98,672, and that is now a test. Measured and deliberately NOT done: snapshotting `createTestDb()` (migrations cost
   ~0.8 s, a restore would not beat it). CI green (run 30134945761).
+- **⚠ MEASUREMENT CORRECTION on the PR #61 headline number, made at merge time.** The 680.32 s baseline and
+  the 440.26 s result were measured at different machine loads (the baseline ran while six review agents were
+  working; the result ran on a quieter machine), so the pair is CONFOUNDED and the 35% figure should not be
+  quoted as the suite-level saving. What IS cleanly measured, back-to-back on one machine, is the mechanism:
+  **7.9 s / 10.7 s to build the ingested database versus 1.16-1.39 s to restore it**, and a 3-file targeted
+  run going **11.0 s (cold, incl. building the snapshot) → 2.4 s (warm)**. A same-conditions full-suite A/B is
+  queued for the next autonomous session. The change is sound and the mechanism verified; only the headline
+  ratio is unproven.
+
 - **PR #62 — WP26 trust-boundary hardening**, the outcome of item 3's adversarial review (four Fable lenses: money
   path, forgery, deploy skew, byte neutrality). **The headline is good news: a forged clickOption CANNOT make the
   product serve a number it would otherwise refuse** — the take path re-runs the real query layer including the

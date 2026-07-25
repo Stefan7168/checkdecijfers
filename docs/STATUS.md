@@ -9,14 +9,23 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
-**▶ NEXT SESSION STARTS HERE (Session 57, 2026-07-25, AUTONOMOUS overnight, Opus 5 orchestrating Fable
-agents. **FOUR PRs ARE OPEN AND WAITING FOR YOUR REVIEW. Nothing was merged, nothing deployed, `main`
-untouched (#118b). €0 live-LLM product spend, zero prompt bytes, no DDL, both WP26 flags still OFF.**
+**▶ NEXT SESSION STARTS HERE (Session 57, 2026-07-25 — autonomous overnight, then owner-present for the
+merges. **ALL FOUR PRs ARE NOW MERGED AND LIVE** (`e334590` #60, `ea71c96` #61, `29e9e8b` #62, + this docs
+PR), each deployed separately with a settling gap and a production check between — deliberately, per #173.
+Production verified healthy after every deploy: `/llms.txt` 200, `/` 200, Ontdek section rendering.
+**⚠ THE WP26 FLAGS ARE STILL OFF — that go-live is yours, and the corrected rollback order below matters.**
+
+**▶ THE NEXT SESSION IS ANOTHER AUTONOMOUS OVERNIGHT RUN** — queue in
+[session-briefs/2026-07-26-overnight-queue-2.md](session-briefs/2026-07-26-overnight-queue-2.md):
+the conformance bundle, a clean A/B of the fixture-snapshot saving, #177, and a Fable adversarial pass on the
+anonymous-trial surface (the only anonymous money-adjacent surface, and un-hunted).
+
+(Historical, from the autonomous phase of this session: €0 live-LLM product spend, zero prompt bytes, no DDL, both WP26 flags still OFF.**
 
 | PR | What | CI |
 |---|---|---|
 | [#60](https://github.com/Stefan7168/checkdecijfers/pull/60) | #173(c): pg pool `max` 4 → 2 per process. 3 busy processes fitted under the 15-session ceiling; now 7 do. | green |
-| [#61](https://github.com/Stefan7168/checkdecijfers/pull/61) | Fixture DB ingested once per run, not once per suite. Backend suite **680s → 440s**. | green |
+| [#61](https://github.com/Stefan7168/checkdecijfers/pull/61) | Fixture DB ingested once per run, not once per suite. Measured per suite: **build 7.9-10.7s → restore 1.2-1.4s** (the suite-level 680→440s pair was load-confounded — see the archive note). | green |
 | [#62](https://github.com/Stefan7168/checkdecijfers/pull/62) | WP26 trust-boundary hardening + the corrected RUNBOOK rollback order. | green |
 | [#63](https://github.com/Stefan7168/checkdecijfers/pull/63) | Doc-consistency sweep, the Fable architecture memo, and this close-out. | green |
 
