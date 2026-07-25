@@ -9,7 +9,37 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
-**▶ NEXT SESSION STARTS HERE (Session 57, 2026-07-25 — autonomous overnight, then owner-present for the
+**▶ NEXT SESSION STARTS HERE (Session 58, 2026-07-25 evening — AUTONOMOUS overnight #2. ⚠ THE OWNER
+STARTED TWO SESSIONS ON THIS BRIEF; both ran, split the queue over a cross-session channel, and both shipped.
+Read [status-archive.md](status-archive.md) for the full record and the merge order.**
+
+**FOUR PRs AWAIT REVIEW — none merged, nothing deployed, both WP26 flags still OFF. Suggested merge order:**
+
+| PR | What | From |
+|---|---|---|
+| [#64](https://github.com/Stefan7168/checkdecijfers/pull/64) | **Merge first.** Server Action arguments were type-checked only by `.length`, so a content-block array (`.length === 1`) drove a ~1 MB prompt at a flat credit price — on the PAID path too, not just the trial. | this session |
+| `review/s58-trial-audit` | The trial hardening: a non-UUID requestId reached the LLM and was rejected only by the R8 insert (served with `auditId: null`), plus `x-forwarded-for`/secret-default fixes and two bare-`catch` defects. Touches the same file as #64 — rebase on top. | session 58b |
+| [#65](https://github.com/Stefan7168/checkdecijfers/pull/65) | The conformance bundle: the double-default test, single-sourced `NL01`, the envelope-key manifest, the query-count pin. Disjoint files — floats. | this session |
+| this branch | Docs close-out: the measured A/B, the presence grammar, the hunt dossier, open-questions #187-190. | this session |
+
+**The measured result the queue asked for:** the fixture-snapshot saving is **70-145 s, not the retracted
+240 s** — and the within-arm spread exceeds the between-arm difference, so at n=2 the magnitude is not
+resolvable. Full four-leg table in ADR [009](decisions/009-hermetic-test-database.md).
+
+**⚠ NEW, and the one to read: [#189](open-questions.md) — NOTHING SCHEDULES `gdpr:purge`.** No cron, no CI
+schedule, no RUNBOOK duty. Two retention clocks depend on that one command (audit rows at 2 years, trial
+bookkeeping at 90 days), and the first trial rows become purgeable **~2026-10-15**. The maintenance-session
+agenda now lists it; whether it becomes a cron is yours.
+
+**▶ NEXT, in order:** (a) review + merge the four branches in the order above; (b) the **owner-supervised WP26
+go-live** — one flag at a time, RUNBOOK section "WP26 answer-first + clickable options", NOT during a deploy
+burst (#173); (c) **~30/7 BBP+PPI syncs** (`85880NED` MUST use the chunked escape hatch, RUNBOOK step 5);
+(d) re-ask **#132 route B**; (e) #187's one live measurement (a forged `x-forwarded-for` against production —
+an autonomous session may not probe abuse limits, so it needs you).
+
+Full session record in [status-archive.md](status-archive.md).)**
+
+**Session 57 (2026-07-25 — autonomous overnight, then owner-present for the
 merges. **ALL FOUR PRs ARE NOW MERGED AND LIVE** (`e334590` #60, `ea71c96` #61, `29e9e8b` #62, `447fca9` #63), each deployed separately with a settling gap and a production check between — deliberately, per #173.
 Production verified healthy after every deploy: `/llms.txt` 200, `/` 200, Ontdek section rendering.
 **⚠ THE WP26 FLAGS ARE STILL OFF — that go-live is yours, and the corrected rollback order below matters.**
@@ -24,7 +54,7 @@ anonymous-trial surface (the only anonymous money-adjacent surface, and un-hunte
 | PR | What | CI |
 |---|---|---|
 | [#60](https://github.com/Stefan7168/checkdecijfers/pull/60) | #173(c): pg pool `max` 4 → 2 per process. 3 busy processes fitted under the 15-session ceiling; now 7 do. | green |
-| [#61](https://github.com/Stefan7168/checkdecijfers/pull/61) | Fixture DB ingested once per run, not once per suite. Measured per suite: **build 7.9-10.7s → restore 1.2-1.4s** (the suite-level 680→440s pair was load-confounded — see the archive note). | green |
+| [#61](https://github.com/Stefan7168/checkdecijfers/pull/61) | Fixture DB ingested once per run, not once per suite. Measured per suite: **build 7.9-10.7s → restore 1.2-1.4s**. Suite level, MEASURED properly 25/7 in a 4-leg alternating A/B: **70-145 s saved, not the 240 s first quoted** (ADR 009). | green |
 | [#62](https://github.com/Stefan7168/checkdecijfers/pull/62) | WP26 trust-boundary hardening + the corrected RUNBOOK rollback order. | green |
 | [#63](https://github.com/Stefan7168/checkdecijfers/pull/63) | Doc-consistency sweep, the Fable architecture memo, and this close-out. | green |
 
@@ -251,7 +281,7 @@ sequence; everything else queues behind it:
 0. **✅ DONE + live-verified on production (2026-07-05): GDPR retention purge + self-service deletion (#14).** `npm run gdpr:purge` + a "Verwijder mijn
    vraaggeschiedenis" button, both **redact** the content (question + answer + the topic columns gone; the financial skeleton stays — a
    `credit_transactions` FK blocks a real row-DELETE). Reviewed + committed (`6aafb40`); 715 backend + 135 web tests green. The purge ran clean on
-   prod (0 rows — nothing is 2 years old yet); ongoing retention = the monthly maintenance session. Owner confirmed the redact-and-retain posture.
+   prod (0 rows — nothing is 2 years old yet); ongoing retention = the monthly maintenance session — **which did NOT list the purge on its agenda until 2026-07-25 ([#189](open-questions.md)); it does now, and nothing else schedules it.** Owner confirmed the redact-and-retain posture.
    *Full detail: the session entry in [status-archive.md](status-archive.md) + the #14 section in [08-build-plan.md](08-build-plan.md). ([#59](open-questions.md) — the separate
    account-deletion FK tension — stays open; #14 does not touch it.)*
 1. **On-demand CBS fetch when data is missing — WP16.** If a question needs data not in our DB, fetch the CBS table via API → verify → store → answer,

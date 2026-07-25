@@ -1,5 +1,69 @@
 # STATUS archive — the session log
 
+**Session 58 (2026-07-25 evening → overnight, AUTONOMOUS #2, orchestrated on Opus 5 with Fable agents for the
+adversarial work — THREE PRs/branches from this session AWAITING OWNER REVIEW, nothing merged, nothing deployed.
+€0 live-LLM product spend, zero prompt bytes, no DDL, both WP26 flags untouched and still OFF.)**
+
+- **⚠ THE OWNER STARTED TWO AUTONOMOUS SESSIONS ON THE SAME BRIEF, IN THE SAME WORKING TREE.** The second
+  (session "58b") began at 18:38 and detected this one from a test file's advancing mtime. It opened a
+  cross-session channel, moved itself to a worktree at `/Users/amity/cdc-s58`, and we split the queue. Nothing
+  was lost. The measured cost was real though: with both running suites the backend suite went ~500 s → **1447 s**
+  and the web suite 15 s → 342 s, and one verification block came back RED with `Failed to start forks worker`
+  — a load flake, confirmed by re-running alone (40 files / 385 tests, 20.6 s, green). Lessons recorded.
+- **Split as executed.** This session: items 1 (conformance bundle), 2 (the A/B), 4 (the Fable hunt), 5
+  (presence grammar), plus the docs close-out. Session 58b: item 3 (#177) and the trial-hardening fixes that
+  fell out of this session's item-4 findings, handed over with file:line specifics so it did not have to
+  re-derive them. **It did NOT re-run the hunt** — that would have been a large duplicated spend.
+- **PR [#64](https://github.com/Stefan7168/checkdecijfers/pull/64) — the headline, and it is not in the trial.**
+  `guardLength` checked `.length` and nothing else, so a Server Action argument shaped
+  `[{type:'text', text:'A'.repeat(400_000)}]` (`.length === 1`) passed the 2000-char spend ceiling and flowed
+  verbatim into `messages[0].content` — valid Anthropic input, so the call SUCCEEDS with a prompt bounded only
+  by Next's ~1 MB body limit, at the same flat credit price. Reachable on `askQuestion`, `replyToClarification`
+  (both signed-in, MAIN budget) and `askTrialQuestion` (anonymous, one pot question). No fabricated number and
+  principle (a) untouched — the blast radius is spend, which makes the Anthropic hard caps load-bearing rather
+  than belt-and-braces. Also: `guardRequestId` on the paid path (client-generated, previously unvalidated,
+  while the TRIAL action had always checked it) and a `packId` guard. Verification: backend 1509/1509, web
+  391/391, benchmark 14/14 + 6/6 + 0 fabricated, real build. **Every new test confirmed to FAIL with the source
+  reverted.** Found by the trial hunt while reading the trial's copy of the same guard.
+- **PR [#65](https://github.com/Stefan7168/checkdecijfers/pull/65) — the conformance bundle** (the architecture
+  memo's recommendation 3): a test for the **double-default path** (no region AND no period on a geo table —
+  the branch the flag flip activates, and the one where the intent layer PREDICTS the query layer's default;
+  removing the prediction fails 6 of 9 new tests, verified by mutation), **single-sourced `NATIONAL_REGION_CODE`**
+  (it was declared three ways), an **envelope-key manifest test** (every ComposedResponse/ComposedAnswer key
+  with its real R8 treatment, so a new field cannot land silently in "ignored"), and a **query-count pin**.
+  Measured statement counts: fully-specified 12, national-only 8, region-ambiguous flags-off 8 / flags-on 12,
+  both-axes-open 13 — so the flip adds four statements to an ambiguous turn, and costs a fully-specified turn
+  nothing. Backend **1533/1533** (1509 + exactly 24 new). The manifest test deliberately does NOT use the
+  TypeScript compiler API: TS 7 maps the package's "." export to `lib/version.cjs`.
+- **Item 2 — the A/B, MEASURED.** Four alternating legs on one machine before the collision, load captured
+  around each: warm 690 s / 432 s, cold 762 s / 577 s. Adjacent pairs give **+72 s and +145 s** for cold, but
+  the within-arm spread (258 s) exceeds the between-arm difference — **direction consistent, magnitude not
+  resolvable at n=2**. Best estimate **70-145 s**, not the retracted 240 s. The original pair is now explained
+  rather than doubted: 680 ≈ the loaded warm leg, 440 ≈ the lighter warm leg — two WARM runs at different
+  loads. Corrected in ADR 009, STATUS, status-archive and lessons-learned.
+- **Item 4 — the trial hunt, four Fable lenses, all verified against source before being recorded.** One lens's
+  HIGH finding was **REFUTED**: it reported an unmetered free-LLM loop through the refund path, but
+  `respondToQuestion` converts every throw into a *returned* internal refusal (`respond.ts:503-536`), so the
+  refund is near-unreachable and the question is consumed — the second lens, hunting that exact primitive
+  independently, had already failed to build it. Dossier:
+  [session-briefs/2026-07-26-trial-surface-hunt.md](session-briefs/2026-07-26-trial-surface-hunt.md). Session
+  58b hunted the same surface independently and recorded #179-#186; where we overlap we agree, so this session
+  recorded only **#187-#190** — the four findings its rows did not cover — cross-referencing rather than
+  restating.
+- **⚠ [#189](open-questions.md) is the one to read: NOTHING SCHEDULES `gdpr:purge`.** No cron, no CI schedule,
+  no RUNBOOK duty; `web/vercel.json` carries one cron and it is the onboarding job. Two retention clocks run off
+  that single command, and the first `trial_questions` rows become purgeable ~2026-10-15. The maintenance-session
+  agenda now lists it (RUNBOOK + CLAUDE.md), and the contradicted STATUS claim is corrected; a cron is an owner
+  decision.
+- **Item 5 — the presence grammar** is written: [13-envelope-presence-grammar.md](13-envelope-presence-grammar.md),
+  the four shapes, the `?? null` discipline the WP16 `onboarding` bug taught, and why `suggestions` deliberately
+  differs by response kind (a flag-gated field must leave the envelope byte-identical when off).
+- **The review pass over my own diff found real defects in BOTH code PRs — three sessions running.** On #64: my
+  new requestId bound did not match the columns it lands in, which surfaced a genuine anonymous R8 hole (handed
+  to 58b), plus three comments dated *tomorrow*. On #65: my manifest parser silently skipped `readonly`,
+  method signatures and quoted keys, **and the member-count assertions I had written as the backstop were
+  computed from the parser's own output** — a circular backstop. It now throws on any shape it cannot classify.
+
 **Session 57 (2026-07-25, AUTONOMOUS overnight, orchestrated on Opus 5 with Fable agents for architecture and
 adversarial analysis, Sonnet/Haiku for legwork — FOUR PRs OPEN AWAITING OWNER REVIEW, nothing merged, nothing
 deployed. €0 live-LLM product spend, zero prompt bytes, no DDL, both WP26 flags untouched and still OFF.)**
@@ -26,11 +90,18 @@ deployed. €0 live-LLM product spend, zero prompt bytes, no DDL, both WP26 flag
   Pinned by `tests/db/pool-config.test.ts`. CI green (run 30133517570).
 - **PR #61 — one fixture ingest per run instead of one per suite.** The cause behind four `hookTimeout` raises
   (30 → 60 → 120 → 300 s). Measured: cold build 7.9 s / 10.7 s per suite × 34 suites; restore 1.16-1.39 s. **Full
-  backend suite 680.32 s → 440.26 s — but see the correction below.** Isolation preserved because each caller still gets its OWN PGlite restored
+  backend suite 680.32 s → 440.26 s — RETRACTED, see the correction below; the measured saving is 70-145 s.** Isolation preserved because each caller still gets its OWN PGlite restored
   from shared bytes — proven, not assumed: deleting all 98,672 observations from one copy leaves a sibling at
   98,672, and that is now a test. Measured and deliberately NOT done: snapshotting `createTestDb()` (migrations cost
   ~0.8 s, a restore would not beat it). CI green (run 30134945761).
-- **⚠ MEASUREMENT CORRECTION on the PR #61 headline number, made at merge time.** The 680.32 s baseline and
+- **⚠ MEASUREMENT CORRECTION on the PR #61 headline number, made at merge time — and NOW SUPERSEDED BY A REAL
+  MEASUREMENT (2026-07-25, overnight #2; full table in ADR [009](decisions/009-hermetic-test-database.md)).**
+  Four alternating legs on one machine with load captured around each: warm 690 s / 432 s, cold 762 s / 577 s.
+  Adjacent pairs give **+72 s and +145 s** for cold — so the saving is real and its direction is consistent, but
+  the within-arm spread (258 s) exceeds the between-arm difference, meaning **the magnitude is not resolvable at
+  n=2**. Best estimate 70-145 s on a 430-760 s suite; **not** the 240 s / 35% originally quoted. The original
+  pair is now explained rather than merely doubted: 680 ≈ the loaded warm leg and 440 ≈ the lighter warm leg,
+  i.e. two WARM runs at different loads. The 680.32 s baseline and
   the 440.26 s result were measured at different machine loads (the baseline ran while six review agents were
   working; the result ran on a quieter machine), so the pair is CONFOUNDED and the 35% figure should not be
   quoted as the suite-level saving. What IS cleanly measured, back-to-back on one machine, is the mechanism:
