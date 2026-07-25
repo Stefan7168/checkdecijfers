@@ -120,13 +120,16 @@ visitor another's budget.
 **As-built note, 2026-07-26 (session 59, [#184](../open-questions.md)):** the landing gate now also
 reports the **per-IP backstop** as its own state (`ip_limit`), instead of letting a capped visitor type a
 question and learn one round-trip later. Both limit counts share ONE round trip, so with the #186 cache
-an anonymous render costs exactly one query — the fix pays for itself rather than adding a third. Three
+a steady-state anonymous render costs one query (two on the render that refreshes the pot) — the fix
+pays for itself rather than adding a third. Three
 consequences worth having written down: the check runs even with **no cookie**, because the visitor this
 is for is usually a first-timer behind a network someone else already spent; the gate's precedence
 mirrors `takeTrialQuestion`'s (visitor before network) so the two surfaces never name different causes;
 and the visitor's own `questionsLeft` is **never** clamped by the network's headroom, because telling
 someone they used a question they never asked is exactly the unverified claim D2's honesty posture and
-principle (c) forbid. The visitor-facing sentences for these states now live once, in
+principle (c) forbid. ⚠ The accepted cost: this gate can be **stricter** than the take, because the IP is
+read at RENDER time and a CGNAT pool may hand the later submit a different address — a rare over-refusal,
+self-healing on reload, traded against the common wasted effort D2's per-IP backstop otherwise imposes. The visitor-facing sentences for these states now live once, in
 `web/lib/trial-copy.ts`.
 
 **Build revision 1 — NO clarification reply round in v1** (stricter than this ADR's draft, which allowed

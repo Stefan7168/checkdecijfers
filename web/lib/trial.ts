@@ -253,10 +253,12 @@ export type TrialGateState =
  * Compute instance is frozen. One drive-by can therefore hold one of the free
  * tier's 15 session slots for minutes ([#173](docs/open-questions.md)).
  *
- * What this buys, stated against the state that actually ships (#186 + #184):
- * **exactly ONE query per anonymous render, cookie or no cookie, down from 1-2**
- * — the pot read itself drops from every-GET to at most once per TTL per
- * instance, and the two limit counts fold into one round trip. #186 alone would
+ * What this buys, stated against the state that actually ships (#186 + #184)
+ * and stated precisely, because "one query" is a claim: **a steady-state
+ * anonymous render costs ONE query, cookie or no cookie, down from 1-2.** The
+ * render that actually refreshes the pot costs two — but that is at most one
+ * render per TTL per instance, not one per visitor. The two limit counts fold
+ * into a single round trip either way. #186 alone would
  * have made a cookie-less drive-by cost ZERO queries; #184 spends that back to
  * buy the honesty fix, deliberately and with the trade recorded in both rows.
  * The named next lever, if traffic ever makes it worth the machinery, is a
@@ -390,6 +392,20 @@ export async function getTrialGateState(): Promise<TrialGateState> {
     // Visitor before network, mirroring takeTrialQuestion's own order, so that
     // where both apply the gate names the same cause the action would.
     if (left <= 0) return { kind: 'used_up' };
+    // ⚠ The one direction in which this gate can be STRICTER than the take, so
+    // it is written down rather than discovered later. `used_up` is keyed on the
+    // visitor COOKIE, which is stable between render and submit; `ip_limit` is
+    // keyed on the address of the RENDER request, and a large NAT or CGNAT
+    // gateway may hand a later request a different address from its pool. So a
+    // visitor can be shown this nudge — and lose the form, since trial.tsx
+    // renders the nudge INSTEAD of the chat — where the submit would have
+    // carried an uncapped address and takeTrialQuestion would have let them
+    // through. Accepted, for three reasons: the sentence is true of what we
+    // actually read, it is self-healing (a reload re-reads the address), and the
+    // alternative is the status quo this row exists to fix, where every capped
+    // visitor types a question first and is refused afterwards. Trading a rare
+    // over-refusal for a common wasted effort is the right way round — but it IS
+    // a trade, not a free win.
     if (networkUsed >= TRIAL_QUESTIONS_PER_IP_PER_DAY) return { kind: 'ip_limit' };
     // NOT clamped by the network's headroom: showing "1 van 2 over" because a
     // stranger on the same NAT spent one would tell this visitor they had used a
