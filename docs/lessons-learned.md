@@ -6,6 +6,46 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 57 (2026-07-25, AUTONOMOUS overnight — 4 PRs on branches, €0 LLM product spend)
+
+- **An allowlist is exactly as good as its completeness, and mine was not — the failure is SILENT by
+  construction.** Replacing a `{...spread}` with an explicit key allowlist (to stop forged pending keys being
+  persisted) dropped `conversationContext`, the WP15 referent that gives an elliptical follow-up its meaning.
+  Nothing threw. No test failed. **My own new test had asserted the truncated key set as CORRECT**, so it pinned
+  the bug. A review agent caught it only by *running* the function instead of reading it. Two rules for next time:
+  (a) when you replace a spread with an allowlist, re-read the type definition to its LAST line — I had read the
+  first 30 lines of `PendingClarification` and the ninth field was at line 173; (b) a test that asserts an exact
+  key set must be written from the TYPE, not from the implementation you just wrote, or it only proves the code
+  agrees with itself.
+- **Delegating a review of your OWN diff is worth more than delegating the diff.** Both code PRs tonight had a real
+  defect found by a review pass over my own work — the allowlist above, and a fixture-snapshot cache key that named
+  two input files by hand and MISSED SIX that change what the database contains (a warm cache would then have made
+  34 suites pass against a pre-fix database). Neither was findable by re-reading my own code; both were found by an
+  agent that traced the real dependency chain. Budget a review pass over your own diff as a required step, not a
+  nicety.
+- **When a hand-written list decides correctness, hash the whole directory instead.** The fix for the cache-key bug
+  was not "add the six missing files" — an enumerated list rots the moment someone adds a file to the pipeline. It
+  was to hash all of `src/` (117 files, ~0.1 s) and accept an occasional needless rebuild. Over-broad and honest
+  beats precise and silently wrong, when the failure mode is a silent lie.
+- **Fixing the CAUSE of a repeated symptom was ~10x cheaper than the four times we treated the symptom.** The
+  `hookTimeout` had been raised 30 → 60 → 120 → 300 s across four sessions because every one of 34 test files
+  re-ingested 17 tables (measured 7.9-10.7 s each). Ingesting once and restoring a private copy per suite (1.16-1.39 s)
+  took one session and cut the suite 680 s → 440 s. The tell that it was worth doing: the same fix had been
+  *written down as the real fix* in the vitest config comment each time it was deferred.
+- **Two adversarial agents can BOTH be right about the code and disagree about the verdict — and the synthesis is
+  better than either.** On WP26's un-gated `rescueOnly`, one lens called it a dormancy hole and another called it
+  deliberate protection for a post-rollback tab. Both were factually correct. The resolution was neither's
+  suggestion: gate on the pending's SHAPE rather than on the flag, which closes the forgery *and* keeps the
+  rollback graceful. When two reviews conflict, look for the third option before picking a side.
+- **A review can prove the reviewer's own doc wrong.** I wrote a RUNBOOK rollback correction saying "roll A back
+  first, or both together". An architecture agent traced it and showed "both together" is NOT safe — it produces
+  the same refusal plus a wasted LLM call. Corrected the same session. Writing an operational instruction from
+  reasoning is not the same as tracing it through the code, even when the reasoning is fresh.
+- **Autonomous ≠ decide.** Five findings tonight were deliberately NOT fixed and recorded as #174-#178 instead, the
+  clearest being `impliedRecency`: the obvious fix would make legitimate chips start refusing, so it needs a
+  decision about what the bit MEANS. "The obvious fix is worse than the bug" is a real finding, and writing it down
+  with its reasoning is more useful than a patch the owner has to unpick.
+
 ## Session 56 (2026-07-25 — WP26 mechanism A + B built; owner-present, €0 LLM)
 
 - **"Structurally satisfied" can still be hostile to the user — read a design's guarantee from the USER's side.**

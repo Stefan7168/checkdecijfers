@@ -9,7 +9,58 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
-**▶ NEXT SESSION STARTS HERE (Session 56, 2026-07-25, owner-present, Opus 5. **WP26 IS COMPLETE and pushed —
+**▶ NEXT SESSION STARTS HERE (Session 57, 2026-07-25 — autonomous overnight, then owner-present for the
+merges. **ALL FOUR PRs ARE NOW MERGED AND LIVE** (`e334590` #60, `ea71c96` #61, `29e9e8b` #62, + this docs
+PR), each deployed separately with a settling gap and a production check between — deliberately, per #173.
+Production verified healthy after every deploy: `/llms.txt` 200, `/` 200, Ontdek section rendering.
+**⚠ THE WP26 FLAGS ARE STILL OFF — that go-live is yours, and the corrected rollback order below matters.**
+
+**▶ THE NEXT SESSION IS ANOTHER AUTONOMOUS OVERNIGHT RUN** — queue in
+[session-briefs/2026-07-26-overnight-queue-2.md](session-briefs/2026-07-26-overnight-queue-2.md):
+the conformance bundle, a clean A/B of the fixture-snapshot saving, #177, and a Fable adversarial pass on the
+anonymous-trial surface (the only anonymous money-adjacent surface, and un-hunted).
+
+(Historical, from the autonomous phase of this session: €0 live-LLM product spend, zero prompt bytes, no DDL, both WP26 flags still OFF.**
+
+| PR | What | CI |
+|---|---|---|
+| [#60](https://github.com/Stefan7168/checkdecijfers/pull/60) | #173(c): pg pool `max` 4 → 2 per process. 3 busy processes fitted under the 15-session ceiling; now 7 do. | green |
+| [#61](https://github.com/Stefan7168/checkdecijfers/pull/61) | Fixture DB ingested once per run, not once per suite. Measured per suite: **build 7.9-10.7s → restore 1.2-1.4s** (the suite-level 680→440s pair was load-confounded — see the archive note). | green |
+| [#62](https://github.com/Stefan7168/checkdecijfers/pull/62) | WP26 trust-boundary hardening + the corrected RUNBOOK rollback order. | green |
+| [#63](https://github.com/Stefan7168/checkdecijfers/pull/63) | Doc-consistency sweep, the Fable architecture memo, and this close-out. | green |
+
+**⚠ TWO THINGS TO KNOW BEFORE THE WP26 GO-LIVE — both found tonight, both change what you should do:**
+1. **The RUNBOOK's rollback order was WRONG.** Correct order: turn `CLARIFY_CLICK_ENABLED` **off first**, leave
+   `ANSWER_FIRST_ENABLED` on for a day, then turn that off. Rolling B back while A is on strands region-less
+   chips in open tabs as guaranteed refusals, and "both together" is **not** a safe shortcut (same refusal, plus
+   a wasted LLM call). Fixed in PR #62 — merge it before the flip.
+2. **The anonymous trial never receives either flag** ([#175](open-questions.md)). Flipping them changes the paid
+   product and NOT the trial — the surface whose measured misfires motivated WP26c. Also: a logged-out smoke test
+   would therefore prove nothing. This is a product decision, so the session did not make it.
+
+**The Fable architecture review** (5 agents, one per question, + a synthesiser) is at
+[session-briefs/2026-07-25-wp26-architecture-review-memo.md](session-briefs/2026-07-25-wp26-architecture-review-memo.md).
+Verdict: architecture in good shape, the honesty seam came through WP26 clean; the one cross-cutting problem is
+that the project **pins every rule about a NUMBER with machinery and every rule about the SYSTEM with prose**.
+Its top three: fix the RUNBOOK (done, PR #62), decide the trial-flag question, and add the small conformance
+bundle (a double-default test, a single-sourced `NL01`, an envelope-key manifest, a query-count pin).
+
+**Also recorded, not fixed — [#174-#178](open-questions.md)**, each with the reasoning for deferring. The one
+worth reading is **#174**: a client-held `impliedRecency` bit can turn a stale-table refusal into a served
+figure, and the obvious fix is *worse than the bug* (it would make legitimate historical chips start refusing).
+It needs a decision about what the bit means.
+
+**▶ NEXT, in order:** (a) review + merge the four PRs; (b) the **owner-supervised WP26 go-live** — one flag at a
+time, RUNBOOK section "WP26 answer-first + clickable options", NOT during a deploy burst (#173, `/llms.txt` = 200
+is the cheapest canary); (c) **~30/7 BBP+PPI syncs** (`85880NED` MUST use the chunked escape hatch, RUNBOOK step
+5); (d) re-ask **#132 route B**; (e) then the owner menu: WP30c choice / #162 / #170 rest (3)+(4).
+
+Item 5 of the overnight queue (#162 slot-filling) was **not started** — it was explicitly "only if time remains",
+and verifying the review findings was the better use of the session.
+
+Full session record in [status-archive.md](status-archive.md).)**
+
+**Session 56 (2026-07-25, owner-present, Opus 5. **WP26 IS COMPLETE and pushed —
 mechanism A + B-region + B-period + WP26c — all DORMANT behind two independent flags. €0 LLM spend: nothing in
 this WP needed a live model, so the planned €5 / capped €10 was never touched. Zero prompt bytes, zero pricing
 change, no DDL.**
@@ -241,7 +292,7 @@ sequence; everything else queues behind it:
    dossier](session-briefs/2026-07-08-multi-source-dossier.md); build = WP30 in [08-build-plan.md](08-build-plan.md), after WP27; the concrete first
    source is an OPEN owner decision (WP30c).** Broadens the public claim from "official CBS cell" to "official sources" (CLAUDE.md needs a matching
    update) and likely triggers the ADR 001 Python split.
-3. **Answer/question-quality optimization on the widened data base** — re-run the experience audit + ship the clarify-policy fix (WP26, now tier-3,
+3. **Answer/question-quality optimization on the widened data base** — re-run the experience audit + ship the clarify-policy fix (**WP26 ✅ BUILT session 56, dormant behind two flags — only the supervised flip remains; the "tier-3, after the data work" sequencing below is historical**,
    ready but after the data work).
 
 *Grounded in the session-23 experience audit (110 questions, live, measured): 40 answer / 32 clarification / 38 refusal; **20 of 56 answerable
@@ -260,7 +311,7 @@ implied:**
     Vercel's short retention ([#65](open-questions.md))
   - **WP16, demand-driven table onboarding:** now owner-confirmed wanted, with its user-facing copy and "costs credits" pricing decided
     ([08-build-plan.md](08-build-plan.md), [#24](open-questions.md))
-  - **Clarification UX — now designed as one WP (WP26), session 23, ADR [024](decisions/024-answer-first-defaults-and-clickable-options.md); awaits
+  - **Clarification UX — one WP (WP26), designed session 23 (ADR [024](decisions/024-answer-first-defaults-and-clickable-options.md)), ✅ BUILT session 56 and DORMANT behind two flags; the text below describes the design as it awaited
     owner read-back of the safelist + a supervised build:** clickable pre-verified suggestion buttons ([#66](open-questions.md)/Mechanism A) +
     smart-default-with-escape-hatch on the narrow safe set instead of always clarifying ([#72](open-questions.md)/Mechanism B) — the two root causes
     of the "paid dead-end" (net 10 credits for nothing), zero prompt bytes, pricing deferred ([#101](open-questions.md))

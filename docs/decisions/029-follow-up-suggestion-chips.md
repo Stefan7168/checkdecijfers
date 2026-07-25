@@ -205,7 +205,11 @@ waits for #117/#74.
 
 ## Revisit triggers
 
-- WP26 Mechanism A ships → do the v2 handler swap (remove the re-parse risk).
+- ~~WP26 Mechanism A ships → do the v2 handler swap (remove the re-parse risk).~~ **RETIRED
+  (session 57, 2026-07-25): this trigger can never fire. WP26 shipped on take-path A2, so there is
+  no sibling handler to swap to — see the as-built note in D3 above. v1 and v2 are the same
+  handler, and the "residual v1 risk" it was meant to remove is instead closed by the server
+  recognising the label byte-exactly.**
 - Measured: a filled chip question that produced a clarification round (audit rows show it) →
   tighten that generator's template or drop it.
 - Onboarded-answer surface (#117/#74 dashboard work) → extend chips there with the same generators.

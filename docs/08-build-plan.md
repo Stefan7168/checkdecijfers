@@ -27,7 +27,7 @@
 
 ---
 
-**▶ IN PROGRESS (the COVERAGE SPRINT, owner-approved strategy [#163](open-questions.md)(3))** — onboard the 8 validated
+**✅ COMPLETE (the COVERAGE SPRINT, owner-approved strategy [#163](open-questions.md)(3))** — onboard the 8 validated
 publication-calendar gap tables via the curated route ([how-to-add-a-source.md](how-to-add-a-source.md), NOT the WP16 fit-gate). Execute-ready
 brief with build order, slices and caveats: [session-briefs/2026-07-17-coverage-sprint-brief.md](session-briefs/2026-07-17-coverage-sprint-brief.md);
 per-table measured record: [11-coverage-table-set.md](11-coverage-table-set.md).
@@ -173,11 +173,11 @@ Built per the frozen [design brief](session-briefs/2026-07-16-144-semantic-check
 
 **Go-live (owner-supervised, not yet done):** set `CLARIFY_CLICK_ENABLED=1` and/or `ANSWER_FIRST_ENABLED=1` (independent; either can go first and roll back alone), then the §7.4 go/no-go smoke from the [execute-brief](session-briefs/2026-07-19-wp26-execute-brief.md). Flags unset = byte-identical to pre-WP26, pinned by neutrality tests.
 
-**▶ Re-sequenced (owner, session 23): tier-3.** The owner set data coverage as priorities #1 (WP16 on-demand fetch) and #2 (new sources); WP26 is the tier-3 answer-quality item — safelist settled and ready to build, but sequenced **after** the data work.
+**▶ ✅ BUILT (session 56, 2026-07-25) — all four mechanisms, DORMANT behind `CLARIFY_CLICK_ENABLED` and `ANSWER_FIRST_ENABLED`; only the owner-supervised flag flip remains (RUNBOOK "WP26 answer-first + clickable options"). The re-sequencing note below is the HISTORICAL reason it waited, not its current status. ▶ Re-sequenced (owner, session 23): tier-3.** The owner set data coverage as priorities #1 (WP16 on-demand fetch) and #2 (new sources); WP26 is the tier-3 answer-quality item — safelist settled and ready to build, but sequenced **after** the data work.
 
 *Owner-chosen (Stefan, 2026-07-05, session 23): build [#72](open-questions.md) and [#66](open-questions.md) **together as one WP**. Full design, the principle-(c) line, the safelist, and the deferred-pricing decision are in ADR [024](decisions/024-answer-first-defaults-and-clickable-options.md); this entry is the buildable summary. (Historical framing — see the STATUS block at the top of this section: WP26 was BUILT in session 56.) The direction is blessed; the **safelist was read back + settled by the owner in session 23 (ADR [024](decisions/024-answer-first-defaults-and-clickable-options.md) status line: B-region kept as-is, B-period upgraded to "recent trend", entity-collision cases stay-a-clarification-with-buttons; pricing stays deferred, #101)** — WP26 awaited only its supervised build, which ran in session 56; what remains is the supervised GO-LIVE (flag flip + smoke), not any owner decision about scope.*
 
-**Why:** first real usage produced the recurring "paid dead-end" — a clarification charges 10 credits (measured, [gate.ts](../../src/billing/gate.ts); an answer is 20, a refusal 0), the user replies, and the reply dead-ends in `still_ambiguous` — *"net 10 for nothing"*. Two independent root causes (code-verified in `policy.ts decide()` / `resolve.ts`): (1) we clarify when a canonical structural default exists; (2) when we do clarify, free-text replies ("Beiden", "Jan modaal inkomen 2024") fail the second LLM re-parse.
+**Why:** first real usage produced the recurring "paid dead-end" — a clarification charges 10 credits (measured, [gate.ts](../src/billing/gate.ts); an answer is 20, a refusal 0), the user replies, and the reply dead-ends in `still_ambiguous` — *"net 10 for nothing"*. Two independent root causes (code-verified in `policy.ts decide()` / `resolve.ts`): (1) we clarify when a canonical structural default exists; (2) when we do clarify, free-text replies ("Beiden", "Jan modaal inkomen 2024") fail the second LLM re-parse.
 
 **Mechanism A — clickable, pre-verified options (#66):** each clarification option carries a **resolvable intent** (a full `StructuredIntent` for the rule-4 readings and the #56 echo suggestion; an `{axis,value}` patch on the pending partial intent for region presets), attached **only if it passes the existing `echoServability` dry-run**. The UI (`chat.tsx`) renders them as clickable chips. **AS BUILT (session 56 — the owner chose take-path A2 over this paragraph's original A1): there is NO new entry point.** `respondToClarificationReply` gained a deterministic first rung — a reply byte-equal to an offered label takes that option's stored intent and runs query → answer **with no LLM call**, so a click can never dead-end, and a TYPED reply that happens to equal an option is rescued too. Free-text that matches nothing stays the fallback (today's merge, unchanged). Options carry full resolved intents only; the `{axis,value}` patch idea was dropped as unnecessary. This *reduces* the R2/injection surface (no free text re-fed to the model) at the cost of one client-held payload, which is re-validated fail-closed on the way back.
 
@@ -244,7 +244,12 @@ protocol plan €5 / cap €10, test plan + flag rollout); build from that brief
 
 ---
 
-## #53 anonymous-trial page — FULL BRIEF, not built (the brief's build condition fails)
+## #53 anonymous-trial page — ✅ BUILT AND LIVE (session 52, 2026-07-17, `9317acb`, ADR [036](decisions/036-anonymous-trial-pot.md))
+
+> **⚠ The brief below is SUPERSEDED and kept only as the design record.** It reads as though the
+> feature is unbuilt and its open questions are unanswered; they were answered by ADR 036 and the
+> trial has been live on `/` since 2026-07-17 (pot ops via `npm run trialpot:set`). Do not treat
+> anything below as an open decision — check ADR 036 and [STATUS.md](STATUS.md) first.
 
 The overnight brief allows building #53 only if every product decision is already recorded. #53's row
 explicitly records the OPPOSITE: "Not yet designed: the isolated-budget mechanism itself … and the

@@ -1,5 +1,84 @@
 # STATUS archive — the session log
 
+**Session 57 (2026-07-25, AUTONOMOUS overnight, orchestrated on Opus 5 with Fable agents for architecture and
+adversarial analysis, Sonnet/Haiku for legwork — FOUR PRs OPEN AWAITING OWNER REVIEW, nothing merged, nothing
+deployed. €0 live-LLM product spend, zero prompt bytes, no DDL, both WP26 flags untouched and still OFF.)**
+
+- **▶ CLOSED OUT OWNER-PRESENT: all four PRs merged and deployed the same day** (`e334590` #60, `ea71c96` #61,
+  `29e9e8b` #62, + the docs PR). Merged ONE AT A TIME with the gate+deploy completing and a production check
+  between each — deliberately applying the #173 lesson rather than stacking four deploys. #60 went first on
+  purpose: it lowers per-instance connections, so it bought headroom for the three deploys after it.
+  Production verified after every one: `/llms.txt` 200, `/` 200, Ontdek rendering. **The WP26 flags were NOT
+  flipped — the owner reserved that go-live for himself, and "push live" was not read as overriding it.**
+  ⚠ One real catch during the merges: `git merge origin/main` used a STALE ref (fetched after #60, not after
+  #61), so #61's files never came in. Nothing was lost, and it was caught only because the merged test count
+  came out 1509-expected vs 1504-measured — the arithmetic, not the eye. Lesson recorded.
+- **Ran under #118(b) while autonomous:** branch + PR for every change; `main` was never pushed to directly. A branch push runs
+  the CI gate only — `deploy` is `refs/heads/main`-gated (verified in the workflow), so none of tonight's work
+  touched production or the 15-connection budget (#173). Production verified healthy at close: `/llms.txt` 200, `/` 200.
+- **PR #60 — [#173](open-questions.md) option (c), the per-process pooler footprint.** `max: 4 → 2` in
+  `src/db/client.ts`. Measured framing: at 4, three busy processes fit under the free tier's 15-session ceiling; at
+  2, seven do. Note `max` was ALREADY an explicit 4, not node-pg's default of 10 — the brief had assumed the default
+  might still be in place. Safety verified BEFORE changing the number: all 14 `withTransaction` call sites use only
+  the `tx` they are handed, none nests, and nothing needs two clients at once, so a small pool can only queue work,
+  never deadlock it. `connectionTimeoutMillis` deliberately left unset (money-path reasoning) — **and later in the
+  same session the architecture review refuted that reasoning; a comment on the PR records the counter-argument.**
+  Pinned by `tests/db/pool-config.test.ts`. CI green (run 30133517570).
+- **PR #61 — one fixture ingest per run instead of one per suite.** The cause behind four `hookTimeout` raises
+  (30 → 60 → 120 → 300 s). Measured: cold build 7.9 s / 10.7 s per suite × 34 suites; restore 1.16-1.39 s. **Full
+  backend suite 680.32 s → 440.26 s — but see the correction below.** Isolation preserved because each caller still gets its OWN PGlite restored
+  from shared bytes — proven, not assumed: deleting all 98,672 observations from one copy leaves a sibling at
+  98,672, and that is now a test. Measured and deliberately NOT done: snapshotting `createTestDb()` (migrations cost
+  ~0.8 s, a restore would not beat it). CI green (run 30134945761).
+- **⚠ MEASUREMENT CORRECTION on the PR #61 headline number, made at merge time.** The 680.32 s baseline and
+  the 440.26 s result were measured at different machine loads (the baseline ran while six review agents were
+  working; the result ran on a quieter machine), so the pair is CONFOUNDED and the 35% figure should not be
+  quoted as the suite-level saving. What IS cleanly measured, back-to-back on one machine, is the mechanism:
+  **7.9 s / 10.7 s to build the ingested database versus 1.16-1.39 s to restore it**, and a 3-file targeted
+  run going **11.0 s (cold, incl. building the snapshot) → 2.4 s (warm)**. A same-conditions full-suite A/B is
+  queued for the next autonomous session. The change is sound and the mechanism verified; only the headline
+  ratio is unproven.
+
+- **PR #62 — WP26 trust-boundary hardening**, the outcome of item 3's adversarial review (four Fable lenses: money
+  path, forgery, deploy skew, byte neutrality). **The headline is good news: a forged clickOption CANNOT make the
+  product serve a number it would otherwise refuse** — the take path re-runs the real query layer including the
+  quarantine gate and discards the offer-time dry run. Four fixes: `rescueOnly` now granted on the pending's SHAPE
+  rather than the client's bare word (three of four lenses found this independently — it meant one WP26c path was
+  reachable with both flags off); chip labels bound to the offered options; `guardPending` bounds `axes` entries and
+  validates `referenceDate`'s shape; the pending rebuilt from an allowlist instead of a spread.
+- **PR #63 — doc-consistency sweep + the Fable architecture memo.** The "v2 handler swap when WP26 Mechanism A
+  ships" claim was stale in FOUR places (it can never happen — WP26 chose A2, so v1 and v2 are the same handler);
+  the coverage-sprint header said IN PROGRESS while its body said COMPLETE; the #53 section still read as unbuilt;
+  WP26 was still "tier-3"; CLAUDE.md's module list omitted `threads/`/`sources/`/`websearch/` (an unclosed ADR-001
+  residual, now closed); THREE dead links fixed and a repo-wide sweep now reports zero.
+- **The closing Fable architecture review** (five agents, one per §3 question, plus a synthesiser) is at
+  [session-briefs/2026-07-25-wp26-architecture-review-memo.md](session-briefs/2026-07-25-wp26-architecture-review-memo.md).
+  Verdict: the architecture is in good shape and the honesty seam came through WP26 clean; the cross-cutting problem
+  is that the project **pins every rule about a NUMBER with machinery and every rule about the SYSTEM with prose**.
+  Three items flagged as before-the-flag-flip.
+- **⚠ Two findings the owner must see before the go-live.** (1) The RUNBOOK's rollback instruction was WRONG, twice:
+  rolling `ANSWER_FIRST_ENABLED` back while `CLARIFY_CLICK_ENABLED` is on strands region-less chips as guaranteed
+  refusals, and "both together" is NOT the safe shortcut — the correct order is **A off, wait a day, then B**.
+  Corrected in PR #62. (2) **The anonymous trial never receives either WP26 flag**, so flipping them changes the paid
+  product and not the trial — the very surface whose measured misfires motivated WP26c. Recorded as #175; it is a
+  product decision, so it was not made autonomously.
+- **Deliberately NOT fixed, recorded with reasoning as [#174-#178](open-questions.md):** the client-held
+  `impliedRecency` bit (the obvious fix over-refuses legitimate historical chips — it needs a decision about what
+  the bit means), the trial-path flags (#175), flags-off extra DB queries on region-ambiguous questions (#176 —
+  matters because of #173), the `llm_calls` role label on the rescue path (#177), and pending TTL/binding/version
+  (#178).
+- **Item 5 (#162 slot-filling) was NOT started** — it was explicitly "only if there is time left", and the review
+  findings plus their verification were a better use of the session.
+- **Both code PRs had a real defect found by a review pass over my OWN diff** — an allowlist that silently dropped
+  `conversationContext` (my own test had pinned the truncated key set as correct), and a cache key that named two
+  input files by hand and missed six. Both fixed before pushing; both written up in
+  [lessons-learned.md](lessons-learned.md).
+- **CI is green on all four branches** (runs 30133517570 / 30134945761 / 30136652592 / 30136958034), verified at
+  close; production verified healthy at close too (`/llms.txt` 200, `/` 200).
+- Verification per PR: typecheck (root + web), full backend suite, web suite 385/385, benchmark 14/14 + 6/6 + 0
+  fabricated, real `next build`, and a review pass over the diff. Backend counts differ per branch by design
+  (1498 on #60, 1499 on #61, 1500 on #62) — each branch adds its own tests to main's 1494.
+
 **Session 56 (2026-07-25, owner-present, ran on Opus 5 — WP26 THREE-QUARTERS BUILT: mechanism A + B-region +
 B-period, all pushed, all DORMANT behind two flags. €0 LLM spend: nothing in this WP needed a live model, so the
 planned €5 / capped €10 was never touched.)**
