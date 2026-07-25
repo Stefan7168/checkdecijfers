@@ -152,6 +152,38 @@ describe('trial pot (migration 020 + src/billing/trial-pot.ts)', () => {
     expect((await takeTrialQuestion(db, V1, IP_A, 'r3')).kind).toBe('taken');
   });
 
+  // A refund that lands AFTER a supervised refill must not push the pot above
+  // its own cap: migration 020 has check (remaining >= 0) and check (cap >= 0)
+  // but no `remaining <= cap`, so nothing else stops it, and monitoring would
+  // read "26 of 25 left". The owner's `trialpot:set` is authoritative.
+  it('a refund landing after a refill is clamped to cap — but still frees the visitor budget', async () => {
+    await setTrialPot(db, 25);
+    const t1 = await takeTrialQuestion(db, V1, IP_A, 'r1');
+    expect(t1.kind).toBe('taken');
+    expect(await remaining()).toBe(24);
+
+    // The supervised refill happens while that take is in flight.
+    await setTrialPot(db, 25);
+    expect(await remaining()).toBe(25);
+
+    await refundTrialQuestion(db, (t1 as { trialQuestionId: number }).trialQuestionId);
+    expect(await remaining()).toBe(25); // clamped, not 26
+    const { rows } = await db.query('select cap from trial_pot_config', []);
+    expect(await remaining()).toBeLessThanOrEqual(Number(rows[0]!.cap));
+    // The clamp must not swallow the OTHER half of the compensation: the row
+    // stopped counting against the visitor either way.
+    expect((await takeTrialQuestion(db, V1, IP_A, 'r2')).kind).toBe('taken');
+  });
+
+  it('below the cap a refund is still exactly +1 — the clamp only bites at the boundary', async () => {
+    await setTrialPot(db, 25);
+    const t1 = await takeTrialQuestion(db, V1, IP_A, 'r1');
+    await takeTrialQuestion(db, V2, IP_A, 'r2');
+    expect(await remaining()).toBe(23);
+    await refundTrialQuestion(db, (t1 as { trialQuestionId: number }).trialQuestionId);
+    expect(await remaining()).toBe(24);
+  });
+
   it('attachTrialAudit refuses a nonexistent audit row (FK teeth)', async () => {
     await setTrialPot(db, 25);
     const take = await takeTrialQuestion(db, V1, IP_A, 'r1');

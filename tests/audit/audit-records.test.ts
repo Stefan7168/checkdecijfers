@@ -354,12 +354,72 @@ describe('the clarification-reply round records the ADR 015 wrap-site context', 
     expect(record.pendingClarification).toEqual(first.response.pending);
     expect(record.question).toBe(c.originalQuestion);
     const roles = record.llmCalls.map((x) => x.role);
+    // #177: this is ALSO the guard on the other side of the rescue-path label
+    // fix — a real clarification reply must keep recording 'clarify'. Asserting
+    // the shape makes the coupling explicit rather than incidental.
+    expect(first.response.pending.rescueOnly).toBeUndefined();
     expect(roles).toContain('clarify');
     expect(roles).toContain('compose');
     expect(roles).not.toContain('intent');
     expect(record.conversationContext).toBeNull();
     expect(reconstructionReport(record).problems).toEqual([]);
   });
+});
+
+// #177: a WP26c rescue pending is not an open clarification round. A reply that
+// is not the chip is routed to respondToQuestion, which issues the STANDALONE
+// question prompt — so recording that call under role 'clarify' named a role it
+// did not play. Note what makes this test tight: it hands the reply turn the
+// INTENT fixtures. Under the clarify-merge path those replays would miss, so the
+// test proves both the role label AND which prompt actually ran.
+describe('#177: a rescue-pending reply records the parse it actually made', () => {
+  it('labels the fresh standalone parse intent, not clarify', async () => {
+    const task = ANSWERABLE_TASKS['B1']!;
+    const chipLabel = 'Bekijk het gerealiseerde cijfer';
+    const rescuePending = {
+      version: 1 as const,
+      question: 'Wat wordt de inflatie in 2027?',
+      referenceDate: REFERENCE_DATE,
+      axes: ['measure' as const],
+      questionNl: 'Bedoel je het gerealiseerde cijfer?',
+      options: [chipLabel],
+      rescueOnly: true,
+      clickOptions: [
+        {
+          id: 'opt-1',
+          label: chipLabel,
+          // Type-required, but never read on this path: clickOptionsEnabled is
+          // unset so matchClickOption never runs, and the rescue branch discards
+          // the pending entirely. The answer below comes from the REPLAYED
+          // standalone parse, not from this intent — which `roles ⊇ ['intent']`
+          // is what proves, since a click-take would record zero LLM calls.
+          intent: ANSWERABLE_TASKS['B1']!.intent as StructuredIntent,
+          impliedRecency: false,
+        },
+      ],
+    };
+
+    const replied = await answerClarificationReplyAudited(
+      db,
+      rescuePending,
+      // Not the chip: the user's NEXT question, answered as a fresh one.
+      task.question,
+      { ...clarifyReplyOptions(), intentClient: new ReplayLlmClient(INTENT_FIXTURES) },
+    );
+    expect(replied.response.kind).toBe('answer');
+
+    const record = await mustLoad(replied.auditId);
+    const roles = record.llmCalls.map((x) => x.role);
+    expect(roles).toContain('intent');
+    expect(roles).not.toContain('clarify');
+    expect(reconstructionReport(record).problems).toEqual([]);
+  }, 300_000);
+
+  // The opposite over-correction — labelling a REAL clarification reply 'intent'
+  // — is already caught by c-b15-full above, which asserts 'clarify' and not
+  // 'intent' on that flow. Deliberately NOT duplicated here: it would cost a
+  // second full first-turn + reply-turn PGlite flow for one assertion, and that
+  // assertion lives with the flow it describes (see the rescueOnly check there).
 });
 
 describe('WP15: the offered conversation context is a recorded input (ADR 021 decision 3)', () => {

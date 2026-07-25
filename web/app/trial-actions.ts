@@ -39,6 +39,7 @@ import {
 import { getDb } from '../lib/db.ts';
 import {
   hashedRequestIp,
+  isUuid,
   readTrialVisitorId,
   TRIAL_COOKIE,
   TRIAL_COOKIE_MAX_AGE_S,
@@ -105,7 +106,20 @@ export async function askTrialQuestion(question: string, requestId: string): Pro
     throw new Error(`input rejected: ${question.length} chars exceeds ${MAX_INPUT_LENGTH}`);
   }
   if (!trialConfigured()) return { kind: 'closed', reason: 'dormant' };
-  if (typeof requestId !== 'string' || requestId.length === 0 || requestId.length > 100) {
+  // SHAPE, not just type and size — and this one is load-bearing rather than
+  // hygiene. `trial_questions.request_id` is `text` (migration 020) but
+  // `audit_answers.request_id` is `uuid` (migration 010). A non-UUID id
+  // therefore passes takeTrialQuestion, spends a pot question and BOTH LLM
+  // calls, and is rejected only by the R8 insert — whose fail-closed retry
+  // re-uses the same bad id and throws identically, so the turn is served with
+  // `auditId: null`: no audit row for an anonymous answer (ADR 036's binding
+  // owner-frame item 6), nothing to reconcile the separate trial key's invoice
+  // against, and one admin alert e-mail per request from an unauthenticated
+  // endpoint. The paid path is immune by accident, not design — its
+  // `credit_transactions.request_id` is `uuid` and is written inside the gate
+  // BEFORE any LLM call, so the same garbage fails there for free.
+  // The real client already sends crypto.randomUUID() (trial-chat.tsx).
+  if (typeof requestId !== 'string' || !isUuid(requestId)) {
     throw new Error('input rejected: malformed requestId');
   }
 

@@ -171,7 +171,7 @@ function matchClickOption(pending: PendingClarification, reply: string): ClickOp
  * AND closes the forgery: a bare `{rescueOnly: true}` no longer reaches this
  * branch, so with both flags off nothing here is reachable that was not
  * reachable before WP26. */
-function isRescuePending(pending: PendingClarification): boolean {
+export function isRescuePending(pending: PendingClarification): boolean {
   if (pending.rescueOnly !== true) return false;
   const { clickOptions, options, axes } = pending;
   return (

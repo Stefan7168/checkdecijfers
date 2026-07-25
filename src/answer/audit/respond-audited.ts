@@ -15,6 +15,7 @@
 import type { Db } from '../../db/types.ts';
 import { toInternalRefusal } from '../respond/refusals.ts';
 import {
+  isRescuePending,
   respondToClarificationReply,
   respondToQuestion,
   type RespondOptions,
@@ -228,7 +229,19 @@ export async function answerClarificationReplyAudited(
   const response = await respondToClarificationReply(db, pending, reply, {
     ...options,
     conversationContext: null,
-    intentClient: tracker.wrap('clarify', options.intentClient),
+    // #177: 'clarify' is the reply-MERGE parse's role, and a rescue pending
+    // never runs that parse. WP26c routes a reply that is not the chip to
+    // respondToQuestion (respond.ts), which issues the STANDALONE question
+    // prompt — so labelling this turn 'clarify' recorded a role the call did not
+    // play, in the one place the sibling wrap ABOVE (in answerQuestionAudited,
+    // which picks 'intent' vs 'followup' by the same reasoning) shows the label
+    // is meant to name the prompt that ran. Decided here rather than in respond.ts because
+    // isRescuePending is a pure function of the pending, so the audit layer can
+    // pick the label before the call; respond.ts stays unaware of roles.
+    // 'intent' is the same role a standalone parse gets above — deliberately not
+    // a new role value, which would widen a closed union and change what old
+    // rows mean by omission.
+    intentClient: tracker.wrap(isRescuePending(pending) ? 'intent' : 'clarify', options.intentClient),
     answerClient: tracker.wrap('compose', options.answerClient),
     // #144 (ADR 034): same tracking on the reply turn.
     ...(options.semanticCheck

@@ -28,16 +28,29 @@ export interface TrialPotStatus {
   cap: number;
 }
 
-/** Null when migration 020 has not been applied — callers treat that exactly
- * like an empty pot (dormant, the fail-safe posture). */
+/** Null when migration 020 has not been applied OR when the read threw — this
+ * function deliberately cannot tell those apart, so neither can its callers.
+ * They must therefore treat null as "we do not know", NOT as "the pot is
+ * empty": the gate maps it to 'unavailable' rather than 'closed' precisely
+ * because the two have the same fail-safe degrade but different truth (see
+ * TrialGateState in web/lib/trial.ts — until 2026-07-25 this comment said
+ * callers treat null "exactly like an empty pot", and the landing consequently
+ * told visitors the pot was empty during a #173 pooler exhaustion). */
 export async function getTrialPotStatus(db: Db): Promise<TrialPotStatus | null> {
   try {
     const { rows } = await db.query('select remaining_questions, cap from trial_pot_config', []);
     const row = rows[0];
     if (row === undefined) return null;
     return { remaining: Number(row.remaining_questions), cap: Number(row.cap) };
-  } catch {
-    // Table absent (pre-migration database): dormant, never an error page.
+  } catch (err) {
+    // Degrade, but SAY SO. This catch was silent, so a pool exhaustion here was
+    // indistinguishable from a pre-migration database in the logs as well as in
+    // the return value — and the caller then rendered it as "the pot is empty".
+    // The degrade is deliberate (never an error page); the silence was not.
+    // Deliberately NOT a to_regclass existence check like the purge script's:
+    // this runs on the hottest anonymous path, once per homepage GET, and an
+    // extra query per request is the #173 pressure we are trying to reduce.
+    console.warn('[trial] pot read failed — reporting unknown, not empty:', err);
     return null;
   }
 }
@@ -132,8 +145,20 @@ export async function refundTrialQuestion(db: Db, trialQuestionId: number): Prom
       [trialQuestionId],
     );
     if (marked.rows.length === 0) return;
+    // Clamped at `cap`: a take that is in flight while the owner runs
+    // `trialpot:set` and then throws would otherwise return its question to a
+    // pot that has already been refilled, leaving remaining > cap and a
+    // monitoring line reading "26 of 25 left". Below the cap this is exactly
+    // `remaining + 1`, so the ordinary compensation is untouched.
+    //
+    // The deliberate asymmetry, so the next session need not re-derive it: after
+    // a refill (or a SHRINK) the pot half of the compensation is swallowed while
+    // the visitor half still happens — `refunded = true` flips regardless, so
+    // the row stops counting against their budget. That is the right direction:
+    // the owner's `trialpot:set` is authoritative about how much money is on the
+    // table, and the visitor should not be charged for a question that failed.
     await tx.query(
-      'update trial_pot_config set remaining_questions = remaining_questions + 1 where singleton',
+      'update trial_pot_config set remaining_questions = least(remaining_questions + 1, cap) where singleton',
       [],
     );
   });
@@ -168,11 +193,17 @@ export function trialRetentionCutoff(now: Date): Date {
   return cutoff;
 }
 
-/** Dry-run count for the purge script (⟨F2⟩ discipline: preview and apply
- * share one WHERE shape, so they can never disagree). */
+/** The ⟨F2⟩ discipline is that preview and apply share ONE WHERE shape so they
+ * can never disagree. It used to be claimed by a comment over two hand-written
+ * copies of the same literal — which is the drift risk the discipline exists to
+ * remove, not the discipline. This is the shared fragment retention.ts's
+ * AUDIT_SCOPE is. */
+const TRIAL_PURGE_WHERE = 'created_at < $1';
+
+/** Dry-run count for the purge script (⟨F2⟩: same WHERE as the delete below). */
 export async function countPurgeableTrialBookkeeping(db: Db, cutoff: Date): Promise<number> {
   const { rows } = await db.query(
-    'select count(*)::int as n from trial_questions where created_at < $1',
+    `select count(*)::int as n from trial_questions where ${TRIAL_PURGE_WHERE}`,
     [cutoff.toISOString()],
   );
   return Number(rows[0]!.n);
@@ -182,7 +213,7 @@ export async function countPurgeableTrialBookkeeping(db: Db, cutoff: Date): Prom
  * fixed cutoff — a second run finds nothing left. */
 export async function purgeExpiredTrialBookkeeping(db: Db, cutoff: Date): Promise<number> {
   const { rows } = await db.query(
-    'delete from trial_questions where created_at < $1 returning id',
+    `delete from trial_questions where ${TRIAL_PURGE_WHERE} returning id`,
     [cutoff.toISOString()],
   );
   return rows.length;
