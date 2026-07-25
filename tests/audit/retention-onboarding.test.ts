@@ -304,7 +304,7 @@ describe('#151 fit_note + table-identity redaction (session-47 GDPR hunt)', () =
         createdAt: new Date(cutoff.getTime() - 1000).toISOString(),
       });
 
-      await purgeExpiredQuestionHistory(db, cutoff);
+      await purgeExpiredQuestionHistory(db, cutoff, cutoff);
 
       const row = await loadPending(db, id);
       expect(row.fit_note).toBe(REDACTED_QUESTION_TEXT);
@@ -380,7 +380,7 @@ describe('#120 onboarding_delivery audit rows — redacted by BOTH paths, fixtur
         createdAt: old,
       });
 
-      const redacted = await purgeExpiredQuestionHistory(db, cutoff);
+      const redacted = await purgeExpiredQuestionHistory(db, cutoff, cutoff);
 
       expect(redacted.map((r) => r.id)).toEqual([deliveryRow]);
       expect(await loadAuditQuestion(db, deliveryRow)).toBe(REDACTED_QUESTION_TEXT);
@@ -417,7 +417,7 @@ describe('#120 purge cutoff strictness on the pending leg (< not <=)', () => {
         createdAt: new Date(cutoff.getTime() + 1000 * 60 * 60 * 24 * 30).toISOString(),
       });
 
-      await purgeExpiredQuestionHistory(db, cutoff);
+      await purgeExpiredQuestionHistory(db, cutoff, cutoff);
 
       expect((await loadPending(db, olderId)).question_text).toBe(REDACTED_QUESTION_TEXT);
       // Strict `<`: exactly at the cutoff is NOT purged.
@@ -537,11 +537,11 @@ describe('#120 ⟨F2⟩ — countPurgeableQuestionHistory preview === what the p
       await insertPendingRow(db, { userId: userB, tableId: '90003NED', questionText: 'B oude pending', createdAt: old }); // ✔
       const expectedPendingRows = 2;
 
-      const preview = await countPurgeableQuestionHistory(db, cutoff);
+      const preview = await countPurgeableQuestionHistory(db, cutoff, cutoff);
       expect(preview.auditRows).toBe(expectedAuditRows);
       expect(preview.pendingRows).toBe(expectedPendingRows);
 
-      const redacted = await purgeExpiredQuestionHistory(db, cutoff);
+      const redacted = await purgeExpiredQuestionHistory(db, cutoff, cutoff);
 
       // Equivalence: the audit preview equals the returned RedactedRow[] length.
       expect(preview.auditRows).toBe(redacted.length);

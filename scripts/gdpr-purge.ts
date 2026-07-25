@@ -1,5 +1,6 @@
 // GDPR retention purge (#14, docs/08-build-plan.md WP14): redacts every
-// personal-data audit_answers row older than the 2-year retention window
+// personal-data audit_answers row older than ITS retention window — 2 years for
+// account-held rows, 90 days for anonymous-trial content (#181)
 // (docs/05-data-rules.md audit-trail section). Deterministic code only — no
 // LLM calls, no live pipeline invocation.
 //

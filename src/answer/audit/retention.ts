@@ -1,7 +1,8 @@
 // GDPR retention + self-service deletion (#14, docs/08-build-plan.md WP14).
 //
 // Two callers share this module: the retention purge CLI (scripts/gdpr-purge.ts,
-// `npm run gdpr:purge` — source_tag='user' rows older than 2 years) and the
+// `npm run gdpr:purge` — account rows older than 2 years, and since #181
+// anonymous-trial rows older than 90 days) and the
 // self-service "delete my question history" server action (web/app/actions.ts —
 // a signed-in user's own source_tag='user' rows, any age). Both must apply
 // EXACTLY the same redaction so the dashboard degrades identically either way
@@ -73,14 +74,38 @@ export const REDACTED_TABLE_ID = 'REDACTED' as const;
  * while 'onboarding_delivery' rows (the on-demand-onboarding delivery answer,
  * carrying the verbatim question + intent + answer) ARE personal data — added
  * to the scope in session 39. 'anonymous_trial' rows (ADR 036 D4, session 52)
- * are personal data too (a visitor's verbatim question) and ride the same
- * 2-year purge; self-service delete never touches them regardless — its every
+ * are personal data too (a visitor's verbatim question). Since #181 they ride
+ * the same purge on a SHORTER clock — 90 days, not 2 years (see
+ * AUDIT_PURGE_WHERE); self-service delete never touches them regardless — its every
  * WHERE binds user_id, and these rows are user_id NULL by design (no account
  * exists to invoke deletion from). Every scoped statement in this module — the
  * self-service WHERE, the purge WHERE, the purge's answer_feedback subselect,
  * and the ⟨F2⟩ dry-run count — is built from THIS fragment, so the scope can
  * only ever widen in one place. */
-const AUDIT_SCOPE = `source_tag in ('user', 'onboarding_delivery', 'anonymous_trial')` as const;
+const ACCOUNT_SCOPE = `source_tag in ('user', 'onboarding_delivery')` as const;
+const ANON_TRIAL_SCOPE = `source_tag = 'anonymous_trial'` as const;
+/** Unchanged in MEANING — the same three tags — but now composed, because #181
+ * splits the two halves by CUTOFF while leaving membership exactly as it was.
+ * Self-service deletion still uses this full union (and still cannot reach the
+ * anonymous half, for the user_id reason below). */
+const AUDIT_SCOPE = `(${ACCOUNT_SCOPE} or ${ANON_TRIAL_SCOPE})` as const;
+
+/** #181: the purge's scope AND its two ages, in ONE fragment.
+ *
+ * Account-held content keeps the 2-year window (`$1`); anonymous trial content
+ * expires at 90 days (`$2`), the same clock as its own abuse bookkeeping. The
+ * 2-year window was decided for account holders and justified by dashboard
+ * history plus a financial trail retained by law — a trial turn has NEITHER: it
+ * never touches `credit_transactions` and never appears in any dashboard. ADR
+ * 036 D4 already applies exactly this "retention without purpose" reasoning to
+ * the bookkeeping; #181 is that reasoning finished, applied to the content.
+ *
+ * ONE fragment rather than a second purge leg, deliberately: a separate leg
+ * would double-count in the dry run (an anonymous row over 2 years old matches
+ * both windows) and leave "which leg redacted it" with two answers. Preview and
+ * apply are built from this same string, so ⟨F2⟩ holds by construction. */
+const AUDIT_PURGE_WHERE =
+  `((${ACCOUNT_SCOPE} and created_at < $1) or (${ANON_TRIAL_SCOPE} and created_at < $2))` as const;
 
 /** #120: the purge's age predicate, shared by the pending-table redaction leg
  * AND the dry-run count so preview and apply can never drift (⟨F2⟩). `$1` is
@@ -293,35 +318,51 @@ export async function deleteUserQuestionHistory(db: Db, userId: string): Promise
   );
 }
 
-/** Retention purge (#14 piece 1): every in-scope audit row (AUDIT_SCOPE:
- * source_tag in ('user', 'onboarding_delivery', 'anonymous_trial')) older than
- * the given cutoff, across ALL users — the scheduled 2-year sweep, and the ONLY
+/** Retention purge (#14 piece 1): every in-scope audit row older than ITS OWN
+ * window, across ALL users — account-held content at `cutoff` (2 years),
+ * anonymous-trial content at `anonymousCutoff` (90 days, #181) — PLUS
+ * pending_table_requests rows older than `cutoff` (#120). This is still the ONLY
  * path that reaches anonymous-trial content, since its WHERE keys on scope and
- * age with no user_id predicate — PLUS pending_table_requests
- * rows older than the cutoff (#120). `cutoff` is an injected Date (never
- * `new Date()` inside this function) so the purge is testable against a fixed
- * clock, mirroring the rest of the codebase's reference-date discipline
- * (web/app/actions.ts's referenceDate()). */
-export async function purgeExpiredQuestionHistory(db: Db, cutoff: Date): Promise<RedactedRow[]> {
+ * age with no user_id predicate.
+ *
+ * ⚠ Keying invariant, stated as a NEGATIVE because getting it wrong is silent:
+ * the anonymous half must NEVER be keyed through `trial_questions.audit_answer_id`.
+ * The bookkeeping DELETE (`purgeExpiredTrialBookkeeping`) removes those rows in
+ * the same run and on the same 90-day clock, so a join-keyed redaction would
+ * permanently orphan any content whose bookkeeping went first. Keyed on
+ * `audit_answers`' own scope + age, leg order cannot matter — and it currently
+ * does not, which is why no ordering constraint is imposed on the caller.
+ *
+ * Both cutoffs are injected Dates (never `new Date()` inside) so the purge is
+ * testable against a fixed clock, mirroring the codebase's reference-date
+ * discipline (web/app/actions.ts's referenceDate()). */
+export async function purgeExpiredQuestionHistory(
+  db: Db,
+  cutoff: Date,
+  anonymousCutoff: Date,
+): Promise<RedactedRow[]> {
   const cutoffIso = cutoff.toISOString();
+  const anonIso = anonymousCutoff.toISOString();
   return redactMatchingRows(
     db,
-    `${AUDIT_SCOPE} and created_at < $1`,
-    [cutoffIso],
+    AUDIT_PURGE_WHERE,
+    [cutoffIso, anonIso],
     {
       // WP128: feedback attached to purged answers goes with them — scoped by
-      // the SAME cutoff + AUDIT_SCOPE window the redaction uses (the feedback
-      // row's own age is irrelevant; it inherits its answer's retention).
+      // the SAME window the redaction uses (the feedback row's own age is
+      // irrelevant; it inherits its answer's retention). Anonymous trial turns
+      // cannot have feedback (that path binds a user), but the subselect is
+      // written from the shared fragment anyway rather than assuming so.
       sql: `delete from answer_feedback where audit_answer_id in
-            (select id from audit_answers where ${AUDIT_SCOPE} and created_at < $1)`,
-      params: [cutoffIso],
+            (select id from audit_answers where ${AUDIT_PURGE_WHERE})`,
+      params: [cutoffIso, anonIso],
     },
     {
-      // #120/#151: pending onboarding requests older than the cutoff, scoped by
-      // the SAME age predicate the audit purge uses (PENDING_PURGE_WHERE, `$1` =
-      // cutoff), via the SAME shared PENDING_REDACTION_SET as the self-service
-      // leg — free text on all statuses, table identity on terminal rows only
-      // (see deleteUserQuestionHistory for the in-flight-race rationale).
+      // #120/#151: pending onboarding requests older than the ACCOUNT cutoff.
+      // Deliberately NOT the anonymous one: pending_table_requests requires a
+      // user (ADR 036 D5 gives the trial no onboarding path), so there is no
+      // anonymous row here to expire early. Uses PENDING_PURGE_WHERE with `$1`
+      // and the SAME shared PENDING_REDACTION_SET as the self-service leg.
       sql: `update pending_table_requests set ${PENDING_REDACTION_SET}
             where ${PENDING_PURGE_WHERE}`,
       params: [cutoffIso, REDACTED_QUESTION_TEXT, REDACTED_TABLE_ID],
@@ -339,18 +380,33 @@ export async function purgeExpiredQuestionHistory(db: Db, cutoff: Date): Promise
 export async function countPurgeableQuestionHistory(
   db: Db,
   cutoff: Date,
-): Promise<{ auditRows: number; pendingRows: number }> {
+  anonymousCutoff: Date,
+): Promise<{ auditRows: number; accountRows: number; anonymousTrialRows: number; pendingRows: number }> {
   const cutoffIso = cutoff.toISOString();
-  const { rows: audit } = await db.query(
-    `select count(*)::int as n from audit_answers where ${AUDIT_SCOPE} and created_at < $1`,
+  const anonIso = anonymousCutoff.toISOString();
+  // #181: split by the two CONSTITUENT fragments AUDIT_PURGE_WHERE is composed
+  // from, so the split can never disagree with the total and the total can never
+  // disagree with the purge. Reported separately because the operator reading a
+  // dry run needs to know WHICH window is about to bite — the two are 21 months
+  // apart, and "12 rows" says nothing about whether that is routine or a surprise.
+  const { rows: account } = await db.query(
+    `select count(*)::int as n from audit_answers where ${ACCOUNT_SCOPE} and created_at < $1`,
     [cutoffIso],
+  );
+  const { rows: anon } = await db.query(
+    `select count(*)::int as n from audit_answers where ${ANON_TRIAL_SCOPE} and created_at < $1`,
+    [anonIso],
   );
   const { rows: pending } = await db.query(
     `select count(*)::int as n from pending_table_requests where ${PENDING_PURGE_WHERE}`,
     [cutoffIso],
   );
+  const accountRows = Number(account[0]?.n ?? 0);
+  const anonymousTrialRows = Number(anon[0]?.n ?? 0);
   return {
-    auditRows: Number(audit[0]?.n ?? 0),
+    auditRows: accountRows + anonymousTrialRows,
+    accountRows,
+    anonymousTrialRows,
     pendingRows: Number(pending[0]?.n ?? 0),
   };
 }
@@ -361,6 +417,27 @@ export async function countPurgeableQuestionHistory(
 export function twoYearsBefore(now: Date): Date {
   const cutoff = new Date(now);
   cutoff.setUTCFullYear(cutoff.getUTCFullYear() - 2);
+  return cutoff;
+}
+
+/** #181: the ONE retention window for everything the anonymous trial writes
+ * about a visitor — their content here, their abuse bookkeeping in
+ * `src/billing/trial-pot.ts`, which imports this constant rather than declaring
+ * its own 90.
+ *
+ * The direction of that import is deliberate and is the reason the constant
+ * lives HERE: billing may depend on answer, never the reverse (ADR 001's arrow,
+ * restated in retention-job.ts). Two copies of "90" would let the two windows
+ * drift, and either drift is a bug with a name — content outliving bookkeeping
+ * recreates exactly the #181 asymmetry this closes, and bookkeeping outliving
+ * content leaves a visitor id and an IP hash pointing at a redacted stub, which
+ * is retention without purpose all over again. */
+export const ANONYMOUS_TRIAL_RETENTION_DAYS = 90;
+
+/** The 90-day cutoff, same injected-clock discipline as `twoYearsBefore`. */
+export function anonymousTrialCutoff(now: Date): Date {
+  const cutoff = new Date(now);
+  cutoff.setUTCDate(cutoff.getUTCDate() - ANONYMOUS_TRIAL_RETENTION_DAYS);
   return cutoff;
 }
 
