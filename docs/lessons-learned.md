@@ -50,6 +50,46 @@ on top.
   refund is near-unreachable — the second lens was right. Verifying a delegated finding against source before
   acting on it is not optional, and it is cheap compared to shipping a fix for a bug that does not exist.
 
+## Session 58B continued (2026-07-25 evening → 2026-07-26 early hours, owner-present, autonomous execution)
+
+- **A docs-search INDEX is not the docs page, and I wrote the difference into a permanent row as fact.** Settling
+  [#187](open-questions.md) I searched Vercel's doc index, got a summary of the `x-forwarded-for` behaviour, and
+  concluded that `x-vercel-forwarded-for` "is not the documented header" — then said so in an open-questions row and
+  a commit message, and *dropped a planned hardening on the strength of it*. Fetching the actual page took one call
+  and showed a dedicated section for that header, describing it as the one that stays correct when a proxy sits in
+  front of Vercel — i.e. exactly the Cloudflare launch plan. The correction did not just fix a sentence, it
+  **reversed the code decision**. Rule: "undocumented" is a claim that requires the page open; an index tells you
+  what it happened to surface, and absence there is not evidence.
+- **Write the test for the PROPERTY, not for the code you just wrote — it will find your wiring.** I added an alert
+  whose helper is documented "fail-soft, never throws", then wrote a test asserting *the visitor keeps their answer
+  if the alert fails*. It failed: I had awaited the alert inside the action's outer `try`, so a throw would have
+  refunded and discarded an answer that was **already produced**. The helper was fail-soft; the wiring was not.
+  Same shape as the session-52 `attachTrialAudit` finding, in the same file, four sessions later.
+- **The pin that matters is the one a NAIVE implementation would fail.** My IPv6 /64 tests all passed against a
+  version with the `::`-expansion branch deleted — every case I had chosen happened to carry its four groups before
+  the `::`, so plain `slice(0,4)` was right for all of them. The single case my own commit message named as the
+  thing naive code gets wrong (`2001:db8::1`) was in the prose and in no test. Before trusting a suite, delete the
+  branch it is supposed to protect and check it goes red.
+- **Declining a review finding needs its own adversarial pass.** I refused [#185](open-questions.md)'s suggested fix
+  (it would charge infrastructure failures to visitors to close an unreachable hazard) and explicitly asked the next
+  reviewer to attack that decision rather than the code. It held — and the reviewer independently verified the
+  premise I was leaning on, that the trial key's hard spend cap is a *configured fact* and not my assumption.
+  Declining is where rationalising is easiest, so it is where the second opinion is worth most.
+- **A single-shot alert is not an alert.** The pot warning fired on the one take that returns the threshold exactly.
+  One transient Resend failure there and the warning is gone for good — with the floor being a log line in
+  short-retention logs that nobody watches, which is the *premise of the item that asked for the alert*. Ask of any
+  notification: what happens if the one send fails? If the answer is "nothing, ever", it needs a second place to
+  fire from.
+- **A new self-authenticating route must be added to the proxy allowlist, or it looks healthy and never runs.**
+  `/api/gdpr-purge-cron` was missing from `PUBLIC_PATH_PREFIXES`, so Vercel Cron's GET would have been 307'd to
+  `/login`, which returns **200** to the cron dashboard. Scheduled, green, never executed — the exact silence the
+  change existed to end. `proxy.ts`'s own comment narrates this happening at the WP16 go-live in session 28; I read
+  that file and still did it. The live 401 after deploy is what proves the fix, because an unlisted route would
+  never have reached the route's own auth.
+- **Closing the review's follow-up in the same change beats shipping a second deploy for it.** The reviewer said
+  "safe to merge, close finding 1 next". On a project where four stacked deploys once caused a production
+  degradation ([#173](open-questions.md)), "next" costs a deploy; folding it in cost ten minutes.
+
 ## Session 58B (2026-07-25 night, AUTONOMOUS — the second of TWO sessions running the same queue)
 
 - **Check whether another session is already in the working tree, before you touch a byte.** I was started with the

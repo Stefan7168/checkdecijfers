@@ -33,21 +33,34 @@ that catches a silently-dropped file.
 240 s** — and the within-arm spread exceeds the between-arm difference, so at n=2 the magnitude is not
 resolvable. Full four-leg table in ADR [009](decisions/009-hermetic-test-database.md).
 
-**⚠ NEW, and the one to read: [#189](open-questions.md) — NOTHING SCHEDULES `gdpr:purge`.** No cron, no CI
-schedule, no RUNBOOK duty. Two retention clocks depend on that one command (audit rows at 2 years, trial
-bookkeeping at 90 days), and the first trial rows become purgeable **~2026-10-15**. The maintenance-session
-agenda now lists it; whether it becomes a cron is yours.
+**✅ [#189](open-questions.md) — `gdpr:purge` IS scheduled now** (it was not, and nothing had noticed: no cron,
+no CI schedule, no RUNBOOK duty, while two retention clocks depended on that one command). A monthly Vercel cron
+runs it, **dormant** until `GDPR_PURGE_APPLY=1`. The first trial rows become purgeable **~2026-10-15**, so the
+flip has time — but it is the one thing standing between the code and the promise.
 
 **▶ NEXT, in order:** (a) ~~review + merge~~ **DONE — all four merged and live, see the table above**; (b) the **owner-supervised WP26
 go-live** — one flag at a time, RUNBOOK section "WP26 answer-first + clickable options", NOT during a deploy
 burst (#173); (c) **~30/7 BBP+PPI syncs** (`85880NED` MUST use the chunked escape hatch, RUNBOOK step 5);
 (d) re-ask **#132 route B**.
 
-**✅ [#189](open-questions.md) IS BUILT AND LIVE (PR [#68](https://github.com/Stefan7168/checkdecijfers/pull/68), `fbffe48`) — the first item taken under the autonomy steer.** The GDPR retention purge is now scheduled monthly and **DORMANT**: it reports what it would delete until `GDPR_PURGE_APPLY=1` is set. That flip is one env var plus one watched run (RUNBOOK), and unsetting it is a complete rollback. A review pass over the diff caught a blocker first — the route was missing from the proxy allowlist, which would have made the cron read as healthy while never running. Backend **1543/102**, web **405/41**.
+**✅ THREE MORE ITEMS BUILT AND LIVE under the autonomy steer, each deployed on its own with a production canary
+between** (serial per [#173](open-questions.md)). Final measured state on `main` @ `e88cfea`: backend
+**1544 / 102 files**, web **417 / 41 files**, benchmark **14/14 + 6/6 + 0 fabricated GATE PASS**, CI green on every
+commit, production 200 on `/`, `/llms.txt`, `/login`.
+
+| # | PR | Squash | What | Left for you |
+|---|---|---|---|---|
+| [#189](open-questions.md) | [#68](https://github.com/Stefan7168/checkdecijfers/pull/68) | `fbffe48` | The GDPR purge is **scheduled monthly** at last — nothing ran it before, and the first trial rows become purgeable **~2026-10-15**. Ships **DORMANT**: reports only. A review caught a blocker first — the route was missing from the proxy allowlist, which would have made the cron read as scheduled AND healthy while never running once. | **`GDPR_PURGE_APPLY=1`** + one watched run (RUNBOOK). Unsetting it is a full rollback. |
+| [#182](open-questions.md) + [#187](open-questions.md) | [#69](https://github.com/Stefan7168/checkdecijfers/pull/69) | `33a051d` | The per-IP backstop bounded **nothing** over IPv6 (a /64 gives one visitor 2^64 buckets); now keyed on the /64. #187 answered from Vercel's docs — `x-forwarded-for` is **not** forgeable on Hobby — and the code now reads the proxy-safe `x-vercel-forwarded-for` first, which matters the day Cloudflare fronts the apex. | — |
+| [#180](open-questions.md) | [#70](https://github.com/Stefan7168/checkdecijfers/pull/70) | `e88cfea` | The trial pot now **warns at 5 and reports empty**. It had no watcher: an outsider drains a 25-question pot for well under a euro and you'd find out by looking at the homepage. | — |
+
+**[#185](open-questions.md) was DECLINED with reasoning, not shipped** — the suggested fix would charge
+infrastructure failures to visitors to close a hazard that is unreachable and already bounded by the trial key's
+hard spend cap. A reviewer asked to attack that decision agreed. Better future fix recorded in the row.
 
 **▶ AND FOR AN AUTONOMOUS SESSION — start here, not at the owner.** Owner steer 2026-07-25: *"I want you to work
 autonomously."* Everything previously parked on him now has a written default, bound and rollback in
-**[session-briefs/2026-07-26-autonomous-followups.md](session-briefs/2026-07-26-autonomous-followups.md)** (and the kickoff: **[session-briefs/2026-07-26-session-59-kickoff-final.md](session-briefs/2026-07-26-session-59-kickoff-final.md)** — the 2026-07-25 one is superseded) —
+**[session-briefs/2026-07-26-autonomous-followups.md](session-briefs/2026-07-26-autonomous-followups.md)** (and the kickoff: **[session-briefs/2026-07-26-session-59-kickoff.md](session-briefs/2026-07-26-session-59-kickoff.md)** — the two earlier session-59 kickoffs are superseded) —
 **#187** (two requests, ~€0.04, expected result: the header is NOT forgeable), **#189** (build the purge cron,
 dry-run behind a flag), **#181/#183** and the residuals #180/#182/#184/#185/#186/#174 each with a recommended
 default. Act under #118(b) (branch + PR) and let him veto by exception. **The ONE exception is the WP26 flag

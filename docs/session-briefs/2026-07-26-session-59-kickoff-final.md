@@ -1,5 +1,8 @@
 # Session 59 kickoff — the definitive one
 
+> **⚠ SUPERSEDED by [`2026-07-26-session-59-kickoff.md`](2026-07-26-session-59-kickoff.md).** Its whole queue (#187, #182, #189, #180) was
+> built and merged in the same session that wrote this file. Kept as the record of what was true at that moment.
+
 **Written 2026-07-25 22:30 by session 58B, AFTER all four of the night's PRs were merged and deployed.**
 There is an earlier `2026-07-25-session-59-kickoff.md` from the parallel session; it was written before the
 merges and has been corrected in place, but **this file is the current one.** Read this.

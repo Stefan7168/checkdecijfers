@@ -1,5 +1,57 @@
 # STATUS archive — the session log
 
+**Session 58B — continued (2026-07-25 evening → 2026-07-26 early hours, OWNER-PRESENT, autonomous execution
+under his steer *"I want you to work autonomously"*. THREE more items merged and live, each deployed on its own
+with a production canary between. €0 live-LLM product spend, zero prompt bytes, no DDL, both WP26 flags still OFF.)**
+
+- **Owner steer that reframed the work:** ending a session by handing him decisions is a failure mode. Everything
+  previously parked on him now carries a recommended default, a cost bound and a rollback in
+  [session-briefs/2026-07-26-autonomous-followups.md](session-briefs/2026-07-26-autonomous-followups.md) (`d485a28`),
+  so a session acts and he vetoes by exception. **The WP26 flag flip is the one deliberate exception** — reserved in
+  his own words, repeatedly.
+- **[#189](open-questions.md) — the GDPR purge is SCHEDULED (PR [#68](https://github.com/Stefan7168/checkdecijfers/pull/68), `fbffe48`).**
+  Nothing ran it: no cron, no CI schedule, no runbook duty, while two retention clocks depend on it and the first
+  trial rows become purgeable ~2026-10-15. Orchestration lifted into `src/answer/audit/retention-job.ts` so the CLI
+  and the new route are two thin adapters over ONE implementation (the ⟨F2⟩ discipline); the trial leg is INJECTED,
+  not imported, so `answer/` gains no inward edge to `billing/`. **Ships DORMANT** — reports only until
+  `GDPR_PURGE_APPLY=1`. **The review pass caught a BLOCKER:** the route was missing from `web/proxy.ts`'s
+  `PUBLIC_PATH_PREFIXES`, so Vercel Cron's GET would have been 307'd to `/login`, returned **200** to the cron
+  dashboard, and the purge would have read as scheduled AND healthy while never running — the same failure as the
+  WP16 go-live in session 28. Fixed with its own pin. **Live-verified after deploy: the route returns 401**, which
+  is itself the proof the allowlist entry landed (an unlisted route never reaches its own auth). `e909c37` records it.
+- **[#182](open-questions.md) + [#187](open-questions.md) (PR [#69](https://github.com/Stefan7168/checkdecijfers/pull/69), `33a051d`).**
+  The per-IP backstop HMAC'd the FULL address, so over IPv6 it bounded nothing — a /64 delegation gives one visitor
+  2^64 buckets. `ipBucketKey()` now keys on the /64. **#187 was answered from the docs instead of by probing
+  production** — Vercel overwrites `x-forwarded-for` and does not forward external IPs, so it is not forgeable on
+  Hobby. **But my stated rationale was FALSE and the review caught it:** I had called `x-vercel-forwarded-for`
+  "not the documented header" after searching a doc INDEX; the page has a dedicated section for it, describing it as
+  the header that survives a proxy in front of Vercel — the Cloudflare launch plan. The code now reads it first: a
+  no-op today, correct at the trigger. Three more real findings from the same review: the `::`-expansion rule my own
+  commit named as the naive-implementation trap was **untested** (deleting the branch left every test green),
+  hex-form IPv4-mapped addresses collapsed into one shared bucket, and an IPv4-with-port earned a bucket per
+  ephemeral port. Plus a false consequence I had written ("counts restart once" — they do not; IPv4 keys are
+  byte-identical).
+- **[#180](open-questions.md) (PR [#70](https://github.com/Stefan7168/checkdecijfers/pull/70), `e88cfea`).** The pot
+  had no watcher: an outsider drains a 25-question pot for well under a euro and the owner finds out by looking at
+  the homepage. Now warns at 5 and reports empty, fired by the CALLER (never inside `takeTrialQuestion`, which holds
+  a global advisory lock — an e-mail is a network call), triggered on `===` so it is a warning shot rather than a
+  stream. **A test written for the fail-soft CLAIM found the wiring was not fail-soft** (the alert sat inside the
+  outer `try`; a throw would have refunded an answer already produced — the session-52 `attachTrialAudit` shape
+  again). A second review found the crossing alert had exactly ONE send attempt, so a single transient failure lost
+  it forever; the empty alert now also fires from the `pot_empty` branch, latched per instance and re-armed by the
+  next successful take. `AbortSignal.timeout(5s)` added to the shared sender, hardening all four alerts.
+- **[#185](open-questions.md) DECLINED with reasoning rather than shipped.** Dropping `and not refunded` would make
+  a visitor whose question died on an INFRASTRUCTURE failure lose one of their two free questions — a certain cost —
+  to close a hazard that is unreachable (`respondToQuestion` catches every attacker-shaped throw) and already
+  bounded in euros by the trial key's hard cap. A reviewer asked specifically to attack that decision agreed, and
+  independently verified the cap is configured rather than assumed. Better future fix recorded: a refund CAP per
+  visitor.
+- **Measured at the close, on `main` @ `e88cfea`:** backend **1544 / 102 files**, web **417 / 41 files**, benchmark
+  **14/14 + 6/6 + 0 fabricated GATE PASS**, real `next build`. CI green on every commit; production 200 on `/`,
+  `/llms.txt`, `/login` with Ontdek rendering after each of the three deploys.
+- **Five consecutive changes now where a review pass over the session's OWN diff found something real.** It is not
+  ceremony; it is the step that keeps catching what re-reading cannot.
+
 **Session 58B (2026-07-25 evening/night, AUTONOMOUS — the SECOND of two sessions started on the same brief;
 Opus 5 orchestrating, Fable agents for the adversarial work. Owner joined in-chat late and delegated the merge
 call. ✅ ALL FOUR of the night's PRs MERGED AND LIVE. €0 live-LLM product spend, zero prompt bytes, no DDL,

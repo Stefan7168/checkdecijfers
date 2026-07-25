@@ -177,17 +177,49 @@ Fixed in the same change; the reasoning for each lives in the commit message and
    not mention the trial at all, and still stated a 2-tag retention scope the code had widened to three.
    Written now, including the trial's TWO windows.
 
-**Left to the owner, not changed:** anonymous *content* is retained 2 years with no self-service erasure
-route while its bookkeeping goes at 90 days ([#181](../open-questions.md)); the IP backstop bounds nothing
-over IPv6 for want of /64 truncation, with a launch trigger ([#182](../open-questions.md)); the pot has no
-low-water alert ([#180](../open-questions.md)); a refund restores the abuse counters as well as the pot, and
-is near-dead code because the pipeline swallows every attacker-shaped throw ([#185](../open-questions.md)).
+**Left to the owner, not changed (as of that first pass — see the SECOND as-built note below, which closes two
+of these):** anonymous *content* is retained 2 years with no self-service erasure route while its bookkeeping goes
+at 90 days ([#181](../open-questions.md)); ~~the IP backstop bounds nothing over IPv6~~ **✅ fixed 2026-07-26**
+([#182](../open-questions.md)); ~~the pot has no low-water alert~~ **✅ fixed 2026-07-26**
+([#180](../open-questions.md)); a refund restores the abuse counters as well as the pot, and is near-dead code
+because the pipeline swallows every attacker-shaped throw ([#185](../open-questions.md) — deliberately kept, see
+below).
 
 **Confirmed sound** (a clean lens is a result): the take's ordering and atomicity, the pot floor,
 `setTrialPot`'s missing `where singleton` (structurally impossible to need it), advisory-key collisions,
 refund idempotency, `duplicate_request` replay including refunded rows, the partial indexes matching both
 count queries exactly, trial spend isolation including the semantic checker, and — the one most expected to
 break — the 2-year purge genuinely reaching `user_id`-null rows.
+
+## As-built, second pass (2026-07-26) — D2's backstop, and the pot finally gets a watcher
+
+Three more changes to this ADR's surface, all merged and live. They matter to D2 in particular, whose
+"the pot is the real ceiling" framing the [first as-built note](#as-built-corrections-from-the-independent-adversarial-pass-2026-07-25-session-58b) already qualified.
+
+1. **The per-IP backstop bounded NOTHING over IPv6** ([#182](../open-questions.md), `33a051d`). It HMAC'd the full
+   address; a residential delegation is a /64 at minimum, so one visitor had 2^64 buckets each with its own fresh
+   5/day. `ipBucketKey()` now keys on the /64 — the household, which is the unit the limit is about. Zero
+   behavioural change today (all traffic is IPv4, `dig AAAA` empty for both hostnames), which is why it shipped
+   BEFORE the launch trigger rather than after.
+2. **D2's header assumption is now a citation, and the header changed** ([#187](../open-questions.md)). The old
+   comment asserted that `x-forwarded-for`'s first entry is the platform-set address. That is TRUE and documented —
+   Vercel overwrites the header and does not forward external IPs (overriding it is an Enterprise trusted-proxy
+   purchase; we are on Hobby) — so the backstop's input was never forgeable here. **But the code now reads
+   `x-vercel-forwarded-for` FIRST**, because Vercel documents that one as identical *except* that
+   `x-forwarded-for` can be overwritten by a proxy on top of Vercel. Put Cloudflare in front (the launch plan) and
+   the old read would have collapsed every visitor into a handful of edge buckets, locking real people out of a
+   limit they never used. **Revisit trigger for D2, restated:** any proxy in front of Vercel — not "a proxy that
+   appends", which was the wrong framing.
+3. **The pot has a watcher** ([#180](../open-questions.md), `e88cfea`). D2 named the pot as the blast-radius cap but
+   nothing observed it, so the documented revisit trigger ("pot drains in hours") was unobservable — the owner would
+   have learned at the next `trialpot:set`. It now alerts at `TRIAL_POT_LOW_WATER = 5` and at empty, through the
+   existing admin-alert seam, fired by the caller (never inside the advisory-locked take) and latched so it is a
+   warning shot rather than a stream.
+
+**Deliberately NOT changed:** the refund still restores the visitor's and the IP's budget as well as the pot
+([#185](../open-questions.md)). Dropping that would charge infrastructure failures to the visitor to close a hazard
+that is unreachable today and already bounded in euros by D3's separate capped key. If it ever becomes reachable,
+the recorded fix is a refund CAP per visitor, not removing the compensation.
 
 ## Revisit triggers
 
