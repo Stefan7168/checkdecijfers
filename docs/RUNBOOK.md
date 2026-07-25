@@ -411,8 +411,10 @@ pool_size: 15` — from a local script AND from production functions. Consequenc
   any`) while `/` still served 200.
 
 **Both surfaces degraded exactly as designed** — an honest 503 and an omitted section, never stale or
-invented data. It SELF-HEALED once the extra function instances went idle and their sessions were
-reclaimed; nothing had to be restarted.
+invented data. It SELF-HEALED once the extra function instances were **torn down** and their sessions
+released; nothing had to be restarted. (This sentence used to say "went idle and their sessions were
+reclaimed". That mechanism is **measured wrong** — see the bullet below: idleness alone does not release
+a session, so the recovery clock is instance lifetime, not an idle timer.)
 
 What to know:
 - **Each deploy spins up new function instances, and each opens its own pg pool.** Several deploys in
@@ -420,6 +422,25 @@ What to know:
 - **Diagnose it** with the management API (it does NOT go through the pooler, so it still works when the
   pooler is full): `select count(*) from pg_stat_activity where application_name like 'Supavisor%'`, or
   simply `vercel logs <prod-url>` and grep for `EMAXCONNSESSION`.
+  **This recipe was VERIFIED 2026-07-26** (session 59, #186): application sessions really do report
+  `application_name = 'Supavisor'`, so the count is the number of the 15 slots in use. Add
+  `, state, now() - state_change as idle_for, left(query, 60)` to see WHICH query each slot last ran —
+  that is what identified the landing's pot read as the holder.
+- **⚠ A session is NOT released after ~10 seconds.** An earlier version of this section (and
+  [#186](open-questions.md)) said idle instances release on node-pg's 10 s `idleTimeoutMillis`, and that
+  the incident self-healed that way. **Measured false 2026-07-26:** one anonymous homepage GET left a
+  Supavisor backend **idle for 174 s and counting**, and 4 of the 15 slots were held (72-174 s) at a
+  quiet hour from about two page views. The timer does not fire while a Fluid Compute instance is
+  **frozen** between requests — the slot comes back when the instance is torn down. Practical
+  consequence: after a burst, wait **minutes**, not seconds, before concluding anything, and treat
+  "sessions held" as roughly "instances alive recently", not "requests in flight".
+- **Know the baseline before you read the number.** Sampled twice at a quiet hour on 2026-07-25
+  (22:54 and 23:29 Amsterdam, no deploy, essentially no human traffic): **4 of the 15 slots were held
+  both times**, individual sessions living up to **447 s**. So ~27% of the pool is occupied by ordinary
+  drive-by traffic before any deploy stacks on top — "4 sessions" is normal, not a symptom.
+- **The cheapest structural relief is to make a page need no query at all.** Since #186 the landing's
+  pot read is served from a 20 s in-process cache (`TRIAL_POT_TTL_MS`, `web/lib/trial.ts`), so a warm
+  instance serving a cookie-less visitor opens no session whatsoever.
 - **Do not panic-restart anything.** Wait a few minutes and re-check `/llms.txt`; that is the cheapest
   canary because it needs a fresh connection on a cache miss.
 - **Avoid stacking deploys** when you can — batch doc commits instead of pushing each one, and leave a
@@ -531,12 +552,18 @@ the RE-RUN/refill reference:
    Verify grants/RLS as usual (migration 003 auto-locks new tables).
 4. **Redeploy** (env edits never apply to a running deployment). Landing now shows the trial section in its
    CLOSED state ("proefpotje is leeg") — correct: the pot is still 0.
-5. **Seed the pot small:** `npm run trialpot:set -- 25`. The trial opens on the next request — no deploy.
+5. **Seed the pot small:** `npm run trialpot:set -- 25`. The trial opens without a deploy — but since
+   [#186](open-questions.md) the landing serves the pot from a **20 s in-process cache**
+   (`TRIAL_POT_TTL_MS`, `web/lib/trial.ts`), so **if the first reload still shows the old state, wait
+   ~20 s and reload again before concluding anything failed.** The script prints this reminder itself.
+   Each instance has its own cache, so two reloads can even disagree for a moment.
 6. **Live smoke:** one real anonymous trial question (private browser window) → answer with R4 attribution;
    check the audit row (`source_tag = 'anonymous_trial'`, `user_id` null) and the `trial_questions` row
    (linked `audit_answer_id`); watch the Anthropic console: the call landed on the TRIAL key.
 7. **Refill/close later:** `npm run trialpot:set -- <n>` (0 closes it; the UI degrades to the login prompt
-   automatically). Optional owner-side hardening outside the repo: Vercel Firewall rate rules (ADR 036 D2).
+   automatically, within the ~20 s cache window from step 5). Optional owner-side hardening outside the
+   repo: Vercel Firewall rate rules (ADR 036 D2) — and note the rule must target **`POST /`**, not
+   `/api/`, because Server Actions POST to the page path.
 
 ## Moving to a new machine (fresh clone bootstrap)
 

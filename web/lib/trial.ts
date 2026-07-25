@@ -13,6 +13,7 @@
 import { createHmac } from 'node:crypto';
 import { cookies, headers } from 'next/headers';
 import { getTrialPotStatus, TRIAL_QUESTIONS_PER_VISITOR } from '../backend/billing/index.ts';
+import type { TrialPotStatus } from '../backend/billing/index.ts';
 import { getDb } from './db.ts';
 
 /** The D1 visitor cookie: HttpOnly, functional-only, set on FIRST use. */
@@ -208,7 +209,13 @@ export async function hashedRequestIp(): Promise<string> {
 
 export type TrialGateState =
   | { kind: 'dormant' }
-  /** The pot was READ and is empty. Only this state may say so to the visitor. */
+  /** The pot was READ and is empty. Only this state may say so to the visitor.
+   *
+   * Since #186 that reading may be up to `TRIAL_POT_TTL_MS` old, so the copy's
+   * "op dit moment leeg" means "when we last looked, at most 20 seconds ago".
+   * That is a different class of claim from the 2026-07-25 sin this state was
+   * split out to fix: an OBSERVED fact of bounded age, not an unverified cause.
+   * Principle (c) forbids the second, not the first. */
   | { kind: 'closed' }
   /** We could not determine the pot state (table absent, DB unreachable, pooler
    * full). Degrades identically to 'closed' — but the copy must NOT name a
@@ -223,22 +230,120 @@ export type TrialGateState =
   | { kind: 'used_up' }
   | { kind: 'open'; questionsLeft: number };
 
-/** The landing's per-request gate read (server component): computed fresh on
- * every request so a pot refill re-opens the trial WITHOUT a deploy (owner
- * decision: auto re-enable). Fail-safe unchanged: anything short of a verified
- * open pot degrades to the login nudge, never to a broken page — only the
- * REASON we show is now distinguished from the reason we merely assumed. */
+/** How long the landing may serve a pot reading it has already made (#186).
+ *
+ * MEASURED 2026-07-25, which is why this exists. `pg_stat_statements` (never
+ * reset since 2026-07-02) shows `select remaining_questions, cap from
+ * trial_pot_config` at **143 calls since the trial went live on 2026-07-17** —
+ * ~17/day, one per anonymous homepage render — against 5 per-visitor counts and
+ * 2 questions actually served. The cost is not the 0.44 ms query. It is the
+ * POOLER SESSION the query forces the instance to open: sampled the same night,
+ * a single anonymous GET left a Supavisor backend **idle for 174 s and
+ * counting**, because node-pg's 10 s idle timeout does not fire while a Fluid
+ * Compute instance is frozen. One drive-by can therefore hold one of the free
+ * tier's 15 session slots for minutes ([#173](docs/open-questions.md)). Within
+ * the TTL a warm instance answers a cookie-less drive-by with ZERO queries, and
+ * so needs no session at all.
+ *
+ * 20 s, not longer: the owner's "a pot refill re-opens the trial WITHOUT a
+ * deploy" decision then survives to within the TTL, and an operator who runs
+ * `npm run trialpot:set` and reloads to check gets the truth by waiting out one
+ * TTL — a delay short enough to sit through, which 30 s+ is not.
+ * Not shorter: below ~15 s the drive-by storm and deploy-burst cases — the only
+ * ones this helps — stop being covered. */
+export const TRIAL_POT_TTL_MS = 20_000;
+
+let potCache: { at: number; value: Readonly<TrialPotStatus> } | null = null;
+// In-flight coalescing, the ontdek.ts / llms-txt.ts pattern: without it a
+// deploy burst landing N concurrent requests on one cold instance triggers N
+// reads — precisely the #173 shape this exists to prevent. The shared promise
+// NEVER rejects (see probePot), so one caller's failure cannot fan out to the
+// others as an unhandled rejection.
+let potInflight: Promise<TrialPotStatus | null> | null = null;
+
+/** Test seam: reset the module-scope cache between cases (the resetOntdekCache
+ * / resetLlmsTxtCache idiom — call it from the suite's `beforeEach`). */
+export function resetTrialPotCache(): void {
+  potCache = null;
+  potInflight = null;
+}
+
+/** Resolves; NEVER rejects — load-bearing, not merely tidy. Every concurrent
+ * caller on the instance shares this one promise, and `readPotCached` attaches
+ * a bare `.finally()` to it; if this ever rethrew, that would become an
+ * unhandled rejection AND fan the failure out to every waiter at once. */
+async function probePot(): Promise<TrialPotStatus | null> {
+  try {
+    const pot = await getTrialPotStatus(getDb());
+    // Only a SUCCESSFUL read is cached. A null is "we do not know", and
+    // remembering that for 20 s would keep telling visitors the trial is
+    // unavailable after the database has recovered — the expensive direction,
+    // since a stale 'open' costs nothing (the atomic take is the real gate)
+    // while a stale 'unavailable' costs a visitor the whole trial.
+    if (pot !== null) potCache = { at: Date.now(), value: Object.freeze({ ...pot }) };
+    return pot;
+  } catch (err) {
+    // getDb() can throw synchronously (no DATABASE_URL) and a stubbed
+    // getTrialPotStatus can reject; the real one already catches its own query
+    // failures. All three must land as null rather than as a rejection of the
+    // promise every concurrent caller on this instance is sharing.
+    console.warn('[trial] pot read failed — reporting unknown, not empty:', err);
+    return null;
+  }
+}
+
+/** The pot reading the landing gate uses, cached for `TRIAL_POT_TTL_MS`.
+ *
+ * Deliberately NOT ontdek.ts's stale-over-nothing. That module serves an
+ * EXPIRED cache when a rebuild fails, which is right for charts and wrong here:
+ * an expired "open" from before an outage would invite a visitor to type a
+ * question into a backend we have just observed to be down. So an expired entry
+ * is never resurrected — a failed refresh falls through to null, which the gate
+ * renders as 'unavailable' (we could not tell), never as 'closed' (we looked,
+ * and it was empty).
+ *
+ * Only the POT is cached. The per-visitor count below stays live on every
+ * request: it is per-visitor data, and sharing it across requests on a reused
+ * instance would hand one visitor another's budget. */
+async function readPotCached(): Promise<TrialPotStatus | null> {
+  const hit = potCache;
+  if (hit !== null && Date.now() - hit.at < TRIAL_POT_TTL_MS) return hit.value;
+  if (potInflight === null) {
+    const probe = probePot();
+    potInflight = probe;
+    // Cleared HERE and not in probePot's own `finally`: a probe that settles
+    // without ever suspending would run that finally BEFORE this assignment and
+    // latch the resolved promise forever (getDb() throwing synchronously is
+    // exactly that path). The identity check stops a slow probe clearing a
+    // newer one.
+    void probe.finally(() => {
+      if (potInflight === probe) potInflight = null;
+    });
+  }
+  return potInflight;
+}
+
+/** The landing's gate read (server component). The pot reading is at most
+ * `TRIAL_POT_TTL_MS` old (#186); everything derived from the VISITOR is
+ * computed fresh on every request. A pot refill still re-opens the trial
+ * WITHOUT a deploy (owner decision: auto re-enable) — now to within the TTL.
+ * Fail-safe unchanged: anything short of a verified open pot degrades to the
+ * login nudge, never to a broken page — only the REASON we show is
+ * distinguished from the reason we merely assumed. */
 export async function getTrialGateState(): Promise<TrialGateState> {
   if (!trialConfigured()) return { kind: 'dormant' };
   try {
-    const db = getDb();
-    const pot = await getTrialPotStatus(db);
+    const pot = await readPotCached();
     // getTrialPotStatus returns null for BOTH "table absent" and "read threw"
     // — neither is evidence the pot is empty.
     if (pot === null) return { kind: 'unavailable' };
     if (pot.remaining <= 0) return { kind: 'closed' };
     const visitorId = await readTrialVisitorId();
+    // Below the early return, so that within the TTL a cookie-less drive-by —
+    // the dominant anonymous traffic, since the cookie is set on first USE —
+    // touches the database not at all, and the instance needs no pooler session.
     if (visitorId === null) return { kind: 'open', questionsLeft: TRIAL_QUESTIONS_PER_VISITOR };
+    const db = getDb();
     const { rows } = await db.query(
       'select count(*)::int as n from trial_questions where visitor_id = $1 and not refunded',
       [visitorId],

@@ -21,9 +21,17 @@ vi.mock('../backend/billing/index.ts', () => ({
 }));
 vi.mock('./db.ts', () => ({ getDb: vi.fn(() => ({ query: dbQuery })) }));
 
-import { getTrialGateState, hashedRequestIp, ipBucketKey, readTrialVisitorId } from './trial.ts';
+import {
+  getTrialGateState,
+  hashedRequestIp,
+  ipBucketKey,
+  readTrialVisitorId,
+  resetTrialPotCache,
+  TRIAL_POT_TTL_MS,
+} from './trial.ts';
 
 const VISITOR = '9b2f1c2e-6a1d-4f3a-9c0d-0a1b2c3d4e5f';
+const OTHER_VISITOR = '1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d';
 
 function configure() {
   vi.stubEnv('TRIAL_ENABLED', '1');
@@ -32,11 +40,16 @@ function configure() {
 }
 
 beforeEach(() => {
+  // #186: the pot read is cached at module scope, so without this every case
+  // would inherit the previous case's pot — the resetOntdekCache /
+  // resetLlmsTxtCache idiom, for the same reason.
+  resetTrialPotCache();
   cookieGet.mockReturnValue(undefined);
   headerGet.mockReturnValue(null);
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.unstubAllEnvs();
   vi.clearAllMocks();
 });
@@ -88,6 +101,113 @@ describe('getTrialGateState', () => {
     expect(await getTrialGateState()).toEqual({ kind: 'open', questionsLeft: 1 });
     dbQuery.mockResolvedValue({ rows: [{ n: 2 }] });
     expect(await getTrialGateState()).toEqual({ kind: 'used_up' });
+  });
+});
+
+// #186. The measured cost of the landing is not the 0.44 ms pot query but the
+// pooler SESSION it forces an instance to open — sampled 2026-07-25, one
+// anonymous GET left a Supavisor backend idle for 174 s, because node-pg's 10 s
+// idle timeout does not fire while a Fluid Compute instance is frozen. Within
+// the TTL a cookie-less drive-by must therefore reach the database ZERO times.
+describe('the pot-read cache (#186)', () => {
+  // The TTL's MAGNITUDE needs its own pin. The expiry test below advances the
+  // clock BY this constant, so it crosses the boundary whatever the constant
+  // says and would sit there green if someone made the cache six hours long.
+  // The band is the one the owner-approved brief named: long enough to cover a
+  // drive-by storm, short enough that "a refill re-opens the trial without a
+  // deploy" still reads as true to an operator who reloads to check.
+  it('keeps the TTL inside the 15-30 s band the refill decision allows', () => {
+    expect(TRIAL_POT_TTL_MS).toBeGreaterThanOrEqual(15_000);
+    expect(TRIAL_POT_TTL_MS).toBeLessThanOrEqual(30_000);
+  });
+
+  it('reads the pot ONCE for repeated gate renders inside the TTL', async () => {
+    configure();
+    getTrialPotStatus.mockResolvedValue({ remaining: 10, cap: 25 });
+    expect(await getTrialGateState()).toEqual({ kind: 'open', questionsLeft: 2 });
+    expect(await getTrialGateState()).toEqual({ kind: 'open', questionsLeft: 2 });
+    expect(getTrialPotStatus).toHaveBeenCalledTimes(1);
+    // The whole point: a cookie-less visitor served from cache touches the
+    // database not at all, so the instance needs no pooler session.
+    expect(dbQuery).not.toHaveBeenCalled();
+  });
+
+  it('re-reads once the TTL has expired', async () => {
+    configure();
+    vi.useFakeTimers();
+    getTrialPotStatus.mockResolvedValue({ remaining: 10, cap: 25 });
+    expect(await getTrialGateState()).toEqual({ kind: 'open', questionsLeft: 2 });
+    vi.advanceTimersByTime(TRIAL_POT_TTL_MS + 1);
+    getTrialPotStatus.mockResolvedValue({ remaining: 0, cap: 25 });
+    expect(await getTrialGateState()).toEqual({ kind: 'closed' });
+    expect(getTrialPotStatus).toHaveBeenCalledTimes(2);
+  });
+
+  // The asymmetry that decides this: a stale 'open' costs nothing (the atomic
+  // take is the real gate and refuses honestly), while a stale 'unavailable'
+  // costs a visitor the whole trial. So failures are never remembered, and a
+  // recovered database is visible on the very next request.
+  it('never caches a failed read — recovery is visible immediately', async () => {
+    configure();
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    getTrialPotStatus.mockResolvedValue(null);
+    expect(await getTrialGateState()).toEqual({ kind: 'unavailable' });
+    getTrialPotStatus.mockRejectedValue(new Error('pool down'));
+    expect(await getTrialGateState()).toEqual({ kind: 'unavailable' });
+    getTrialPotStatus.mockResolvedValue({ remaining: 10, cap: 25 });
+    expect(await getTrialGateState()).toEqual({ kind: 'open', questionsLeft: 2 });
+    expect(getTrialPotStatus).toHaveBeenCalledTimes(3);
+  });
+
+  // Deliberately NOT ontdek.ts's stale-over-nothing: an EXPIRED 'open' from
+  // before an outage would invite a visitor to type into a backend we have just
+  // observed to be down.
+  it('does not resurrect an EXPIRED entry when the refresh fails', async () => {
+    configure();
+    vi.useFakeTimers();
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    getTrialPotStatus.mockResolvedValue({ remaining: 10, cap: 25 });
+    expect(await getTrialGateState()).toEqual({ kind: 'open', questionsLeft: 2 });
+    vi.advanceTimersByTime(TRIAL_POT_TTL_MS + 1);
+    getTrialPotStatus.mockRejectedValue(new Error('pool down'));
+    expect(await getTrialGateState()).toEqual({ kind: 'unavailable' });
+  });
+
+  // The #173 shape this is aimed at: a deploy burst landing N concurrent
+  // requests on ONE cold instance must cost one read, not N.
+  it('coalesces concurrent cold reads into a single query', async () => {
+    configure();
+    let release: (v: { remaining: number; cap: number }) => void = () => {};
+    getTrialPotStatus.mockReturnValue(
+      new Promise<{ remaining: number; cap: number }>((r) => {
+        release = r;
+      }),
+    );
+    const inflight = [getTrialGateState(), getTrialGateState(), getTrialGateState()];
+    release({ remaining: 10, cap: 25 });
+    expect(await Promise.all(inflight)).toEqual([
+      { kind: 'open', questionsLeft: 2 },
+      { kind: 'open', questionsLeft: 2 },
+      { kind: 'open', questionsLeft: 2 },
+    ]);
+    expect(getTrialPotStatus).toHaveBeenCalledTimes(1);
+  });
+
+  // The line the cache must never cross. The pot is global and may be shared;
+  // the per-visitor count is not, and serving one visitor's budget to another
+  // on a reused instance would be a cross-visitor leak.
+  it('never caches the PER-VISITOR count — two visitors get their own budgets', async () => {
+    configure();
+    getTrialPotStatus.mockResolvedValue({ remaining: 10, cap: 25 });
+    cookieGet.mockReturnValue({ value: VISITOR });
+    dbQuery.mockResolvedValue({ rows: [{ n: 1 }] });
+    expect(await getTrialGateState()).toEqual({ kind: 'open', questionsLeft: 1 });
+    cookieGet.mockReturnValue({ value: OTHER_VISITOR });
+    dbQuery.mockResolvedValue({ rows: [{ n: 0 }] });
+    expect(await getTrialGateState()).toEqual({ kind: 'open', questionsLeft: 2 });
+    // One pot read shared, but a live count for each visitor.
+    expect(getTrialPotStatus).toHaveBeenCalledTimes(1);
+    expect(dbQuery).toHaveBeenCalledTimes(2);
   });
 });
 

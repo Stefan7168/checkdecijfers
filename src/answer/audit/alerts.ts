@@ -330,9 +330,11 @@ export async function alertTrialPotLow(
     : `checkdecijfers: nog ${alert.remaining} proefvragen in het potje`;
   const body = empty
     ? 'De homepage toont vanaf nu "log in om verder te gaan" in plaats van het proefveld. ' +
-      'Bijvullen: npm run trialpot:set -- <aantal>. De trial heropent ZONDER deploy.'
+      'Bijvullen: npm run trialpot:set -- <aantal>. De trial heropent ZONDER deploy — ' +
+      'wacht na het bijvullen wel even met herladen: de landing leest het potje uit een korte cache (#186).'
     : `Het potje staat op de waarschuwingsgrens van ${alert.threshold}. Bijvullen met ` +
-      'npm run trialpot:set -- <aantal> voordat het leeg is; dat heropent de trial zonder deploy.';
+      'npm run trialpot:set -- <aantal> voordat het leeg is; dat heropent de trial zonder deploy ' +
+      '(de landing kan de oude stand nog even tonen — korte cache, #186).';
   await sendAdminAlertEmail(subject, body, fetchImpl);
 }
 
