@@ -438,9 +438,10 @@ What to know:
   (22:54 and 23:29 Amsterdam, no deploy, essentially no human traffic): **4 of the 15 slots were held
   both times**, individual sessions living up to **447 s**. So ~27% of the pool is occupied by ordinary
   drive-by traffic before any deploy stacks on top — "4 sessions" is normal, not a symptom.
-- **The cheapest structural relief is to make a page need no query at all.** Since #186 the landing's
-  pot read is served from a 20 s in-process cache (`TRIAL_POT_TTL_MS`, `web/lib/trial.ts`), so a warm
-  instance serving a cookie-less visitor opens no session whatsoever.
+- **The cheapest structural relief is to make a page need fewer queries.** Since #186 the landing's pot
+  read is served from a 20 s in-process cache (`TRIAL_POT_TTL_MS`, `web/lib/trial.ts`), and since #184
+  the two limit counts share one round trip — so an anonymous render costs **exactly one** query,
+  cookie or no cookie, down from 1-2.
 - **Do not panic-restart anything.** Wait a few minutes and re-check `/llms.txt`; that is the cheapest
   canary because it needs a fresh connection on a cache miss.
 - **Avoid stacking deploys** when you can — batch doc commits instead of pushing each one, and leave a

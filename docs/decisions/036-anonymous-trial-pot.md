@@ -117,6 +117,18 @@ timer does not fire while a Fluid Compute instance is frozen. Only the POT is ca
 stays live on every request, because sharing it across requests on a reused instance would hand one
 visitor another's budget.
 
+**As-built note, 2026-07-26 (session 59, [#184](../open-questions.md)):** the landing gate now also
+reports the **per-IP backstop** as its own state (`ip_limit`), instead of letting a capped visitor type a
+question and learn one round-trip later. Both limit counts share ONE round trip, so with the #186 cache
+an anonymous render costs exactly one query — the fix pays for itself rather than adding a third. Three
+consequences worth having written down: the check runs even with **no cookie**, because the visitor this
+is for is usually a first-timer behind a network someone else already spent; the gate's precedence
+mirrors `takeTrialQuestion`'s (visitor before network) so the two surfaces never name different causes;
+and the visitor's own `questionsLeft` is **never** clamped by the network's headroom, because telling
+someone they used a question they never asked is exactly the unverified claim D2's honesty posture and
+principle (c) forbid. The visitor-facing sentences for these states now live once, in
+`web/lib/trial-copy.ts`.
+
 **Build revision 1 — NO clarification reply round in v1** (stricter than this ADR's draft, which allowed
 one): the reply would be an UNMETERED anonymous LLM endpoint — nothing decrements when a visitor replies,
 so deliberately vague questions would buy unlimited free clarify-merge calls against the trial key. A trial
