@@ -22,7 +22,7 @@
 // matching the #75 example chip and policy.ts's own range options (the
 // brief's "van X tot Y" sketch left the inclusivity wording to the repo
 // convention).
-import { INTENT_SCHEMA_VERSION } from '../../query/index.ts';
+import { INTENT_SCHEMA_VERSION, NATIONAL_REGION_CODE } from '../../query/index.ts';
 import type { QueryRefusal, StructuredIntent, ValidatedResult } from '../../query/index.ts';
 import type { ServabilityCheck } from '../intent/policy.ts';
 import type { RegionTerm } from '../intent/types.ts';
@@ -34,11 +34,13 @@ import { periodCodeToNl } from './period-nl.ts';
 /** ADR 029 D1: at most 3 chips shown, fixed generator priority. */
 export const MAX_SUGGESTIONS = 3;
 
-/** CBS's standard RegioS code for the whole country — fixture-confirmed on
- * every geo table we ingest (the codes-RegioS.json fixtures). Only used to
- * BUILD a candidate intent; the dry-run gates it, so a table using a
- * different national code simply drops the chip (never a wrong offer). */
-const NATIONAL_REGION_CODE = 'NL01';
+// NATIONAL_REGION_CODE is IMPORTED from the query module above, not re-declared
+// here. It used to be a local copy of the same literal, which meant this layer
+// predicted the query layer's default rather than reading it — the shape the
+// 2026-07-25 architecture review named (one constant, three declarations).
+// Here it is only used to BUILD a candidate intent; the dry-run gates it, so a
+// table using a different national code simply drops the chip, never offers a
+// wrong one.
 
 /** The G4 comparison set (ADR 029 D1 generator 3, national-answer branch).
  * Copy says "Den Haag" (what users say); the parser's own alias map resolves

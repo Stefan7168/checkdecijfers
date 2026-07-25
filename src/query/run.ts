@@ -8,7 +8,14 @@ import type { Db } from '../db/types.ts';
 import { parsePeriodCode } from '../ingestion/periods.ts';
 import { CBS_SOURCE_KEY, isProvisionalStatus, resolveSourceForTable } from '../sources/registry.ts';
 import { deriveDifference, deriveDirection, deriveFirstLast, deriveMax, deriveUnitExpansion } from './derivations.ts';
-import { normalizeLabel, periodKey, resolveIntent, type QueryOptions, type ResolvedQuery } from './resolve.ts';
+import {
+  NATIONAL_REGION_CODE,
+  normalizeLabel,
+  periodKey,
+  resolveIntent,
+  type QueryOptions,
+  type ResolvedQuery,
+} from './resolve.ts';
 import type {
   Attribution,
   DerivationRecord,
@@ -200,8 +207,10 @@ function toNumber(value: unknown): number {
  * rather than duplicating it with a different shape.
  *
  * Region handling: canonical measures on a regional table (population) are
- * asked about nationally unless the user names a place — 'NL01' is the
- * national aggregate code already used throughout the fixtures/tests.
+ * asked about nationally unless the user names a place — NATIONAL_REGION_CODE
+ * is the national aggregate code, imported from resolve.ts rather than spelled
+ * out here (it was a third hardcoded 'NL01' until 2026-07-25; a layer that
+ * re-declares another layer's constant is a layer that can drift from it).
  * Regionless tables use the '' convention resolve.ts/observations use
  * throughout. Grain-agnostic (freshest across every ingested grain): callers
  * only need "the freshest we can serve", not a specific grain's cadence. */
@@ -244,7 +253,7 @@ export async function freshestForCanonical(
       : (tableRow.default_coordinates ?? {})
   ) as Record<string, string>;
   const geoDimension = expectedDimensions.find((d) => d.kind === 'GeoDimension')?.name ?? null;
-  const regionCode = geoDimension ? 'NL01' : '';
+  const regionCode = geoDimension ? NATIONAL_REGION_CODE : '';
 
   // Observations store the FULL merged coordinate set: the table's pinned
   // default ("totaal") coordinates overlaid with the canonical measure's
