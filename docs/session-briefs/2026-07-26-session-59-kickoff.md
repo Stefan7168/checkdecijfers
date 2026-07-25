@@ -1,13 +1,13 @@
 # Session 59 kickoff
 
-**Written 2026-07-26 01:40 at the close of session 58B.** Supersedes both earlier session-59 kickoffs
+**Written 2026-07-26 01:40, refreshed 03:43 at the close of session 58B.** Supersedes both earlier session-59 kickoffs
 (`2026-07-25-session-59-kickoff.md` and `2026-07-26-session-59-kickoff-final.md`) — their queues are now DONE.
 
 ## Reading order
 
 `CLAUDE.md` → [`docs/STATUS.md`](../STATUS.md) (the ▶ block leads) → this file.
 
-## State, verified 2026-07-26 01:31
+## State, verified 2026-07-26 03:43
 
 - **Last CODE commit on `main` = `d4ade6d`** (PR #71, the review-findings fixes). CI green on every commit, tree
   clean, no open PRs, no stray worktrees or branches.
@@ -72,7 +72,8 @@ becomes reachable the fix is a refund CAP per visitor, not removing the compensa
 
 ## Seven traps this session paid for
 
-1. **A review pass over your own diff has now found something real FIVE changes running.** Budget it as a required
+1. **A review pass over your own diff has now found something real SIX changes running**, including a
+   max-effort pass that found four defects shipped hours earlier the same night. Budget it as a required
    step, and re-run it if you keep editing after it returns — a review certifies a tree, not an intention.
 2. **A docs-search INDEX is not the page.** "Undocumented" is a claim that needs the page open; getting it wrong
    here reversed a code decision.
