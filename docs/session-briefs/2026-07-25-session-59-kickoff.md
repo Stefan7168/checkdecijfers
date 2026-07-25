@@ -26,7 +26,7 @@ Production is untouched and healthy. **Both WP26 flags are still OFF.** Four bra
 | 1 | [#64](https://github.com/Stefan7168/checkdecijfers/pull/64) `fix/guard-argument-types` | Server Action arguments were type-checked only by `.length` — a content-block array with `.length === 1` drove a ~1 MB prompt at a flat credit price, on the **paid** path too. |
 | 2 | `review/s58-trial-audit` (58b) | Trial hardening: a non-UUID requestId reached the LLM and failed only at the R8 insert (served with `auditId: null`); `x-forwarded-for` / HMAC-secret defaults; two bare-`catch` defects. **Touches the same file as #64 — rebase on top.** |
 | 3 | [#65](https://github.com/Stefan7168/checkdecijfers/pull/65) `test/conformance-bundle` | The double-default test, single-sourced `NL01`, the envelope-key manifest, the query-count pin. Disjoint files, so it floats. |
-| 4 | `docs/overnight-2-close-out` | This close-out. **Will conflict with 58b in `open-questions.md` and `lessons-learned.md`** — both append. Take both sides; the rows are numbered to not collide (58b has #179-#186, this has #187-#190). |
+| 4 | [#66](https://github.com/Stefan7168/checkdecijfers/pull/66) `docs/overnight-2-close-out` | This close-out. **Will conflict with 58b in `open-questions.md` and `lessons-learned.md`** — both append. Take both sides; the rows are numbered to not collide (58b has #179-#186, this has #187-#190). |
 
 Merge one at a time with a production check between, per [#173](../open-questions.md). `curl -s -o /dev/null -w '%{http_code}' https://checkdecijfers.vercel.app/llms.txt` → 200 is the cheapest canary.
 

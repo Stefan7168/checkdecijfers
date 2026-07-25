@@ -20,7 +20,7 @@ Read [status-archive.md](status-archive.md) for the full record and the merge or
 | [#64](https://github.com/Stefan7168/checkdecijfers/pull/64) | **Merge first.** Server Action arguments were type-checked only by `.length`, so a content-block array (`.length === 1`) drove a ~1 MB prompt at a flat credit price — on the PAID path too, not just the trial. | this session |
 | `review/s58-trial-audit` | The trial hardening: a non-UUID requestId reached the LLM and was rejected only by the R8 insert (served with `auditId: null`), plus `x-forwarded-for`/secret-default fixes and two bare-`catch` defects. Touches the same file as #64 — rebase on top. | session 58b |
 | [#65](https://github.com/Stefan7168/checkdecijfers/pull/65) | The conformance bundle: the double-default test, single-sourced `NL01`, the envelope-key manifest, the query-count pin. Disjoint files — floats. | this session |
-| this branch | Docs close-out: the measured A/B, the presence grammar, the hunt dossier, open-questions #187-190. | this session |
+| [#66](https://github.com/Stefan7168/checkdecijfers/pull/66) | Docs close-out: the measured A/B, the presence grammar, the hunt dossier, open-questions #187-190. Conflicts with 58b's branch in `open-questions.md` + `lessons-learned.md` (both append — take both sides). | this session |
 
 **The measured result the queue asked for:** the fixture-snapshot saving is **70-145 s, not the retracted
 240 s** — and the within-arm spread exceeds the between-arm difference, so at n=2 the magnitude is not
