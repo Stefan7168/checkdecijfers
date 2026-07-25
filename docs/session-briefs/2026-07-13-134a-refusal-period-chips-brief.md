@@ -69,7 +69,7 @@ turn — the ADR 029 rule).
   to also take `refusal` suggestions. The existing chip render block (`message.suggestions.map(...)`)
   is kind-agnostic — no other web change; the click handler IS the #75 fill-don't-send handler.
 
-## Invariants at stake (Definition of done, [CLAUDE.md](../CLAUDE.md))
+## Invariants at stake (Definition of done, [CLAUDE.md](../../CLAUDE.md))
 
 - **R8** — refusal `text` byte-untouched; `suggestions` is additive and `reconstruct.ts` never reads
   it (verified: reconstruct checks `finalText === response.text`, reason, onboarding presence — not
