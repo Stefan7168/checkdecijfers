@@ -188,7 +188,36 @@ describe('ipBucketKey (#182)', () => {
     expect(ipBucketKey('2a02:a45f:1:2::9')).not.toBe(a);
   });
 
-  it('buckets an IPv4-mapped address as the IPv4 it is — dotted AND hex form', () => {
+  // One canonical form, one decision: every spelling of an embedded IPv4 must
+  // reach the SAME bucket. Three review findings were three spellings of this
+  // one case, each previously collapsing into the shared 0:0:0:0::/64 bucket.
+  it('buckets EVERY embedded-IPv4 spelling as the same IPv4', () => {
+    const spellings = [
+      '::ffff:203.0.113.7',
+      '::FFFF:203.0.113.7',
+      '::ffff:cb00:7107',
+      '0:0:0:0:0:ffff:203.0.113.7',
+      '0::ffff:203.0.113.7',
+      '::203.0.113.7',
+      '203.0.113.7',
+      '203.0.113.7:443',
+    ].map(ipBucketKey);
+    expect(new Set(spellings), spellings.join(' | ')).toEqual(new Set(['203.0.113.7']));
+  });
+
+  it('keeps :: and ::1 apart instead of merging them into one bucket', () => {
+    expect(ipBucketKey('::')).not.toBe(ipBucketKey('::1'));
+  });
+
+  it('returns a unique key for malformed input rather than guessing a bucket', () => {
+    // A wrong guess merges unrelated visitors into one 5/day budget; a verbatim
+    // key can only ever be over-permissive to the single sender that produced it.
+    const a = ipBucketKey('::ffff:203.0.113.7:443');
+    expect(a).not.toBe('203.0.113.7');
+    expect(a).not.toBe(ipBucketKey('::ffff:1.2.3.4:443'));
+  });
+
+  it('legacy: dotted AND hex form', () => {
     // Otherwise one visitor lands in two buckets depending on which form the
     // platform handed us — and worse, every hex-form client would collapse into
     // one shared 0:0:0:0::/64 bucket and lock unrelated visitors out.
@@ -207,6 +236,22 @@ describe('ipBucketKey (#182)', () => {
 
   // #187: identical to x-forwarded-for today, but the documented one that
   // survives a proxy in front of Vercel — which the launch plan contemplates.
+  // The regression this file exists to prevent, one header higher: `??` treats
+  // '' as a value, so an empty platform header masked a populated XFF.
+  it('falls through an EMPTY x-vercel-forwarded-for to x-forwarded-for', async () => {
+    vi.stubEnv('TRIAL_IP_HASH_SECRET', 'secret');
+    headerGet.mockImplementation((name: string) =>
+      name === 'x-forwarded-for' ? '203.0.113.7' : null,
+    );
+    const viaXff = await hashedRequestIp();
+    for (const empty of ['', '   ']) {
+      headerGet.mockImplementation((name: string) =>
+        name === 'x-vercel-forwarded-for' ? empty : name === 'x-forwarded-for' ? '203.0.113.7' : null,
+      );
+      expect(await hashedRequestIp(), `empty=${JSON.stringify(empty)}`).toBe(viaXff);
+    }
+  });
+
   it('prefers x-vercel-forwarded-for when both are present', async () => {
     vi.stubEnv('TRIAL_IP_HASH_SECRET', 'secret');
     headerGet.mockImplementation((name: string) =>

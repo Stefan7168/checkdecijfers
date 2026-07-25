@@ -68,7 +68,10 @@ async function main(): Promise<void> {
       // lose the record of GDPR work that actually committed.
       if (error instanceof RetentionPurgePartialError) {
         console.error(
-          `PARTIAL — ${error.auditRowsRedacted} audit redaction(s) COMMITTED; the 90-day trial leg then failed.`,
+          `PARTIAL — ${error.auditRowsRedacted} audit redaction(s) COMMITTED under cutoff ` +
+            `${error.auditCutoff}` +
+            `${error.byKind === undefined ? '' : ` by kind ${JSON.stringify(error.byKind)}`}` +
+            `; the 90-day trial leg then failed.`,
         );
       }
       throw error;

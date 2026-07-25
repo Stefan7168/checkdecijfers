@@ -86,6 +86,11 @@ export async function GET(request: Request): Promise<Response> {
     }
     return Response.json(summary, { status: 200 });
   } catch (error) {
+    // The FULL error, object and stack — not just its message. This is the
+    // unattended runner, so a one-line "connection terminated" in
+    // short-retention logs is all a debugging operator would otherwise have
+    // (the CLI still prints the whole thing via its top-level rejection).
+    console.error('gdpr-purge-cron failed:', error);
     // Loud, because silence is the bug this route exists to fix. The alert is
     // fail-soft and cannot turn a successful purge into a failed response — it
     // only ever runs on a path that has already failed.
@@ -94,7 +99,9 @@ export async function GET(request: Request): Promise<Response> {
     // wording says nothing is expiring. Say what landed.
     const detail =
       error instanceof RetentionPurgePartialError
-        ? `${error.message} — those ${error.auditRowsRedacted} redaction(s) DID commit; ` +
+        ? `${error.message} — those ${error.auditRowsRedacted} redaction(s) DID commit ` +
+          `under cutoff ${error.auditCutoff}` +
+          `${error.byKind === undefined ? '' : ` (${JSON.stringify(error.byKind)})`}; ` +
           `the 2-year leg ran, only the 90-day trial leg did not.`
         : error instanceof Error
           ? error.message

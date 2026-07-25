@@ -17,6 +17,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   describeRetentionPurge,
+  RetentionPurgePartialError,
   runRetentionPurge,
   type TrialRetentionLeg,
 } from '../../src/answer/audit/retention-job.ts';
@@ -157,6 +158,36 @@ describe('#189 runRetentionPurge — the shared job behind the CLI and the cron'
       await expect(
         runRetentionPurge({ db, now: NOW, apply: false, trial: exploding }),
       ).rejects.toThrow('lock timeout');
+    });
+  });
+
+  // The APPLY-mode partial path, with the REAL error class. Both composition
+  // roots' "what landed" messaging depends on it, and it was previously only
+  // exercised via a fake class in the route's module mock — so a narrowed try
+  // or a reordered constructor would have left both suites green while
+  // production partial failures fell into the generic-failure branch, whose
+  // wording says nothing is expiring about a run that redacted rows.
+  it('throws RetentionPurgePartialError carrying what COMMITTED before the trial leg failed', async () => {
+    await withDb(async (db) => {
+      await seedExpired(db);
+      const exploding: TrialRetentionLeg = {
+        cutoff: trialRetentionCutoff,
+        count: () => Promise.reject(new Error('lock timeout')),
+        purge: () => Promise.reject(new Error('lock timeout')),
+      };
+      const err = await runRetentionPurge({ db, now: NOW, apply: true, trial: exploding }).then(
+        () => null,
+        (e: unknown) => e,
+      );
+      expect(err).toBeInstanceOf(RetentionPurgePartialError);
+      const partial = err as RetentionPurgePartialError;
+      expect(partial.auditRowsRedacted).toBe(1);
+      expect(partial.auditCutoff).toBe(new Date('2024-07-25T12:00:00.000Z').toISOString());
+      expect(partial.byKind).toEqual({ answer: 1 });
+      expect(partial.message).toContain('lock timeout');
+      // The audit leg really did commit — that is the whole point of reporting it.
+      const audit = await db.query('select question from audit_answers limit 1', []);
+      expect(audit.rows[0]!.question).toBe(REDACTED_QUESTION_TEXT);
     });
   });
 

@@ -124,6 +124,8 @@ export async function runRetentionPurge(
       `trial leg failed AFTER the audit leg committed ${redacted.length} redaction(s)`,
       redacted.length,
       error,
+      auditCutoff.toISOString(),
+      redacted.length > 0 ? byKind : undefined,
     );
   }
   return {
@@ -141,13 +143,27 @@ export async function runRetentionPurge(
  * redacted rows. */
 export class RetentionPurgePartialError extends Error {
   readonly auditRowsRedacted: number;
-  readonly reason: unknown;
+  /** The cutoff those redactions ran under, and what kinds they were. The old
+   * progressive-print CLI had already emitted both before the trial leg ran;
+   * building one summary at the end lost them on exactly the runs where the
+   * GDPR record matters most (a review finding). */
+  readonly auditCutoff: string;
+  readonly byKind: Record<string, number> | undefined;
 
-  constructor(message: string, auditRowsRedacted: number, reason: unknown) {
-    super(`${message}: ${reason instanceof Error ? reason.message : String(reason)}`);
+  constructor(
+    message: string,
+    auditRowsRedacted: number,
+    reason: unknown,
+    auditCutoff: string,
+    byKind?: Record<string, number>,
+  ) {
+    super(`${message}: ${reason instanceof Error ? reason.message : String(reason)}`, {
+      cause: reason,
+    });
     this.name = 'RetentionPurgePartialError';
     this.auditRowsRedacted = auditRowsRedacted;
-    this.reason = reason;
+    this.auditCutoff = auditCutoff;
+    this.byKind = byKind;
   }
 }
 
