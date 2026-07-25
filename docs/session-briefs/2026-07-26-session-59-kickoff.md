@@ -9,7 +9,8 @@
 
 ## State, verified 2026-07-26 01:31
 
-- **`main` = `e88cfea`**, CI green on every commit, tree clean, no open PRs, no stray worktrees or branches.
+- **Last CODE commit on `main` = `e88cfea`** (the docs close-out sits on top of it). CI green on every
+  commit, tree clean, no open PRs, no stray worktrees or branches.
 - **Production healthy**: `/`, `/llms.txt`, `/login` all 200, Ontdek rendering.
 - **Backend 1544 / 102 files · web 417 / 41 files · benchmark 14/14 + 6/6 + 0 fabricated GATE PASS.**
 - **Seven PRs merged in this session**, each deployed on its own with a canary between (serial per
@@ -84,7 +85,7 @@ becomes reachable the fix is a refund CAP per visitor, not removing the compensa
 > Sessie 59 voor checkdecijfers.nl. Lees eerst CLAUDE.md, dan docs/STATUS.md (het ▶-blok bovenaan is leidend),
 > dan docs/session-briefs/2026-07-26-session-59-kickoff.md — dat is je opdracht.
 >
-> Stand: main = e88cfea, alles van sessie 58B is gemerged en live (zeven PR's, #64 t/m #70), CI groen, productie
+> Stand: laatste code-commit op main = e88cfea (de close-out-docs staan erbovenop), alles van sessie 58B is gemerged en live (zeven PR's, #64 t/m #70), CI groen, productie
 > 200/200. Backend 1544/102, web 417/41, benchmark 14/14 + 6/6 + 0.
 > ⚠ TWEE DINGEN ZIJN VAN MIJ: de WP26-vlaggen blijven UIT, en GDPR_PURGE_APPLY blijft UIT tot ik hem zelf zet.
 >
