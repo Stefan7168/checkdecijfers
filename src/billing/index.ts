@@ -42,6 +42,7 @@ export {
   setTrialPot,
   takeTrialQuestion,
   TRIAL_BOOKKEEPING_RETENTION_DAYS,
+  TRIAL_POT_LOW_WATER,
   TRIAL_QUESTIONS_PER_IP_PER_DAY,
   TRIAL_QUESTIONS_PER_VISITOR,
   trialRetentionCutoff,

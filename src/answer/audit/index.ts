@@ -41,6 +41,8 @@ export type {
 } from './retention-job.ts';
 export { maybeAlertRetentionPurge, alertRetentionPurge } from './alerts.ts';
 export type { RetentionPurgeAlert } from './alerts.ts';
+export { maybeAlertTrialPotLow, alertTrialPotLow } from './alerts.ts';
+export type { TrialPotAlert } from './alerts.ts';
 export { FEEDBACK_TEXT_MAX_LENGTH, upsertAnswerFeedback } from './feedback.ts';
 export type { AnswerFeedbackInput } from './feedback.ts';
 // #133(a): the known-divergence register — re-exported alongside

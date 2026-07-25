@@ -31,10 +31,12 @@ import { answerQuestionAudited } from '../backend/answer/audit/index.ts';
 import type { SemanticCheckOptions } from '../backend/answer/compose/index.ts';
 import { AnthropicLlmClient } from '../backend/answer/llm/client.ts';
 import type { ComposedResponse } from '../backend/answer/respond/types.ts';
+import { maybeAlertTrialPotLow } from '../backend/answer/audit/index.ts';
 import {
   attachTrialAudit,
   refundTrialQuestion,
   takeTrialQuestion,
+  TRIAL_POT_LOW_WATER,
 } from '../backend/billing/index.ts';
 import { getDb } from '../lib/db.ts';
 import {
@@ -92,6 +94,12 @@ export type TrialAskOutcome =
   | { kind: 'used_up' }
   | { kind: 'duplicate_request' };
 
+/** Per-instance latch for the pot-empty alert (see the pot_empty branch below).
+ * Instance-scoped on purpose: Fluid Compute reuses instances, so this is
+ * near-silent in steady state, and a fresh instance re-alerting at most once is
+ * the safe direction for a warning whose failure mode is going unheard. */
+let potEmptyAlerted = false;
+
 export async function askTrialQuestion(question: string, requestId: string): Promise<TrialAskOutcome> {
   // TYPE FIRST, THEN SIZE — the same belt actions.ts's guardLength applies, and
   // for the same reason: a Server Action argument's declared type is erased at
@@ -144,7 +152,24 @@ export async function askTrialQuestion(question: string, requestId: string): Pro
   // Check-BEFORE-serve (owner decision): the atomic take precedes any LLM
   // work; a rejected take has cost nothing and drained nothing.
   const take = await takeTrialQuestion(db, visitorId, ipHash, requestId);
-  if (take.kind === 'pot_empty') return { kind: 'closed', reason: 'pot_empty' };
+  if (take.kind === 'pot_empty') {
+    // #180 follow-up (found by the review pass on the first cut): the crossing
+    // alert below gets exactly ONE send attempt, because only one take ever
+    // returns potRemaining === 0. If Resend happens to fail on that call the
+    // warning is lost for good — the floor is a log line in short-retention
+    // Vercel logs that nobody watches, which is this whole item's premise. So
+    // re-fire here, where every subsequent anonymous visitor lands: once per
+    // instance, reset by the next successful take, so a refill re-arms it.
+    if (!potEmptyAlerted) {
+      potEmptyAlerted = true;
+      try {
+        await maybeAlertTrialPotLow({ remaining: 0, threshold: TRIAL_POT_LOW_WATER });
+      } catch (err) {
+        console.error('[trial] pot-empty alert failed:', err);
+      }
+    }
+    return { kind: 'closed', reason: 'pot_empty' };
+  }
   if (take.kind === 'ip_limit') return { kind: 'closed', reason: 'ip_limit' };
   if (take.kind === 'visitor_limit') return { kind: 'used_up' };
   if (take.kind === 'duplicate_request') return { kind: 'duplicate_request' };
@@ -175,6 +200,37 @@ export async function askTrialQuestion(question: string, requestId: string): Pro
         await attachTrialAudit(db, take.trialQuestionId, audited.auditId);
       } catch (err) {
         console.warn('[trial] audit link failed (answer served, link missing):', err);
+      }
+    }
+    // #180: alert on the way DOWN, after the answer is produced. Fired here and
+    // not inside takeTrialQuestion because that holds a global advisory lock and
+    // this sends over the network — holding the lock across an HTTP request
+    // would serialise every anonymous visitor behind an e-mail.
+    //
+    // `===`, not `<=`: a take always decrements by exactly 1, so equality gives
+    // one warning shot and one "it is empty" rather than a mail per question.
+    // Not strictly once — a refund can lift the pot back over the line and the
+    // next take re-crosses it — but a duplicate warning is the safe direction,
+    // and refunds are near-dead code (see #185).
+    //
+    // Wrapped in its OWN try, like attachTrialAudit above and for the identical
+    // reason (the session-52 review finding): this runs inside the outer try, so
+    // an unhandled throw here would reach the catch below, REFUND a question
+    // whose answer was already produced, and hand the visitor an error instead.
+    // maybeAlertTrialPotLow swallows its own failures, but the belt costs one
+    // line and the failure it prevents is silent — a test of exactly this found
+    // the missing belt.
+    // A successful take means the pot is non-empty again — re-arm the latch so
+    // the NEXT drain is announced too.
+    potEmptyAlerted = false;
+    if (take.potRemaining === TRIAL_POT_LOW_WATER || take.potRemaining === 0) {
+      try {
+        await maybeAlertTrialPotLow({
+          remaining: take.potRemaining,
+          threshold: TRIAL_POT_LOW_WATER,
+        });
+      } catch (err) {
+        console.warn('[trial] pot low-water alert failed (answer served):', err);
       }
     }
     return { kind: 'ok', response: audited.response, questionsLeft: take.questionsLeft };

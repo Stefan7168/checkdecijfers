@@ -184,6 +184,19 @@ describe('trial pot (migration 020 + src/billing/trial-pot.ts)', () => {
     expect(await remaining()).toBe(24);
   });
 
+  // #180: the alert needs the pot level, and it must come from the UPDATE that
+  // decremented it — a second read could see a value that already moved.
+  it('a take reports the pot level AFTER its own decrement', async () => {
+    await setTrialPot(db, 3);
+    const t1 = await takeTrialQuestion(db, V1, IP_A, 'aaaaaaaa-0000-4000-8000-000000000001');
+    expect(t1).toMatchObject({ kind: 'taken', potRemaining: 2 });
+    const t2 = await takeTrialQuestion(db, V2, IP_A, 'aaaaaaaa-0000-4000-8000-000000000002');
+    expect(t2).toMatchObject({ kind: 'taken', potRemaining: 1 });
+    const t3 = await takeTrialQuestion(db, V3, IP_A, 'aaaaaaaa-0000-4000-8000-000000000003');
+    expect(t3).toMatchObject({ kind: 'taken', potRemaining: 0 });
+    expect(await remaining()).toBe(0);
+  });
+
   it('attachTrialAudit refuses a nonexistent audit row (FK teeth)', async () => {
     await setTrialPot(db, 25);
     const take = await takeTrialQuestion(db, V1, IP_A, 'r1');

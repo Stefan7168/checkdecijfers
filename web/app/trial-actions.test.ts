@@ -10,8 +10,16 @@ vi.mock('next/headers', () => ({
   headers: vi.fn(async () => ({ get: vi.fn(() => null) })),
 }));
 
-const { answerQuestionAudited } = vi.hoisted(() => ({ answerQuestionAudited: vi.fn() }));
-vi.mock('../backend/answer/audit/index.ts', () => ({ answerQuestionAudited }));
+const { answerQuestionAudited, maybeAlertTrialPotLow } = vi.hoisted(() => ({
+  answerQuestionAudited: vi.fn(),
+  // Folded into the SAME factory: a second vi.mock of one path replaces the
+  // first outright, which silently left answerQuestionAudited undefined.
+  maybeAlertTrialPotLow: vi.fn(),
+}));
+vi.mock('../backend/answer/audit/index.ts', () => ({
+  answerQuestionAudited,
+  maybeAlertTrialPotLow,
+}));
 
 const sdkInstances = vi.hoisted(() => [] as { apiKey?: string }[]);
 vi.mock('@anthropic-ai/sdk', () => ({
@@ -41,6 +49,7 @@ vi.mock('../backend/billing/index.ts', () => ({
   refundTrialQuestion,
   attachTrialAudit,
   TRIAL_QUESTIONS_PER_VISITOR: 2,
+  TRIAL_POT_LOW_WATER: 5,
 }));
 vi.mock('../lib/db.ts', () => ({ getDb: vi.fn(() => ({ query: dbQuery })) }));
 
@@ -76,7 +85,12 @@ beforeEach(() => {
   configure();
   readTrialVisitorId.mockResolvedValue(VISITOR);
   hashedRequestIp.mockResolvedValue('ip-hash');
-  takeTrialQuestion.mockResolvedValue({ kind: 'taken', trialQuestionId: 7, questionsLeft: 1 });
+  takeTrialQuestion.mockResolvedValue({
+    kind: 'taken',
+    trialQuestionId: 7,
+    questionsLeft: 1,
+    potRemaining: 20,
+  });
   answerQuestionAudited.mockResolvedValue({ response: RESPONSE, auditId: 42 });
   dbQuery.mockResolvedValue({ rows: [{ n: 1 }] });
   sdkInstances.length = 0;
@@ -236,5 +250,79 @@ describe('askTrialQuestion', () => {
     for (const instance of sdkInstances) {
       expect(instance.apiKey).toBe('sk-trial-test');
     }
+  });
+
+  // #180: the pot had no watcher at all — an outsider could drain it for well
+  // under a euro and the owner would find out by looking at the homepage.
+  describe('pot low-water alert', () => {
+    async function askWithPot(potRemaining: number): Promise<void> {
+      takeTrialQuestion.mockResolvedValue({
+        kind: 'taken',
+        trialQuestionId: 7,
+        questionsLeft: 1,
+        potRemaining,
+      });
+      await askTrialQuestion('Wat is de inflatie?', crypto.randomUUID());
+    }
+
+    it('stays quiet while the pot is healthy', async () => {
+      for (const level of [20, 9, 6]) {
+        vi.clearAllMocks();
+        await askWithPot(level);
+        expect(maybeAlertTrialPotLow, `level=${level}`).not.toHaveBeenCalled();
+      }
+    });
+
+    it('warns ONCE at the threshold and once at empty — not on every question below', async () => {
+      // A take always decrements by exactly 1, so equality is what makes this a
+      // warning shot rather than a stream of mail.
+      await askWithPot(5);
+      expect(maybeAlertTrialPotLow).toHaveBeenCalledWith({ remaining: 5, threshold: 5 });
+      vi.clearAllMocks();
+      for (const level of [4, 3, 2, 1]) {
+        await askWithPot(level);
+      }
+      expect(maybeAlertTrialPotLow).not.toHaveBeenCalled();
+      await askWithPot(0);
+      expect(maybeAlertTrialPotLow).toHaveBeenCalledWith({ remaining: 0, threshold: 5 });
+    });
+
+    it('never lets an alert failure cost the visitor their answer', async () => {
+      maybeAlertTrialPotLow.mockRejectedValueOnce(new Error('resend down'));
+      takeTrialQuestion.mockResolvedValue({
+        kind: 'taken',
+        trialQuestionId: 7,
+        questionsLeft: 1,
+        potRemaining: 5,
+      });
+      // Assert the ANSWER survives, not merely that nothing threw — without the
+      // inner try this rejects AND refunds a question already served.
+      await expect(
+        askTrialQuestion('Wat is de inflatie?', crypto.randomUUID()),
+      ).resolves.toMatchObject({ kind: 'ok', response: RESPONSE });
+      expect(refundTrialQuestion).not.toHaveBeenCalled();
+    });
+
+    // The crossing alert gets exactly ONE send attempt, so a transient Resend
+    // failure there would lose the warning for good. Every later visitor lands
+    // on pot_empty — re-fire from there, once per instance.
+    it('re-fires from the pot_empty branch, once, and re-arms after a refill', async () => {
+      takeTrialQuestion.mockResolvedValue({ kind: 'pot_empty' });
+      await askTrialQuestion('v', crypto.randomUUID());
+      expect(maybeAlertTrialPotLow).toHaveBeenCalledWith({ remaining: 0, threshold: 5 });
+
+      // Latched: a second empty visitor does not re-mail.
+      vi.clearAllMocks();
+      takeTrialQuestion.mockResolvedValue({ kind: 'pot_empty' });
+      await askTrialQuestion('v', crypto.randomUUID());
+      expect(maybeAlertTrialPotLow).not.toHaveBeenCalled();
+
+      // A refill (a successful take) re-arms it for the next drain.
+      vi.clearAllMocks();
+      await askWithPot(20);
+      takeTrialQuestion.mockResolvedValue({ kind: 'pot_empty' });
+      await askTrialQuestion('v', crypto.randomUUID());
+      expect(maybeAlertTrialPotLow).toHaveBeenCalledWith({ remaining: 0, threshold: 5 });
+    });
   });
 });

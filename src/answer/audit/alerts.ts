@@ -71,6 +71,11 @@ async function sendAdminAlertEmail(
   const to = process.env.ADMIN_ALERT_EMAIL;
   if (!apiKey || !to) return;
   const res = await fetchImpl('https://api.resend.com/emails', {
+    // A THROW is caught by every caller; a HANG is not — nothing times out a
+    // stalled socket, so an alert on a user-facing path would hold the request
+    // to the platform limit and cost a visitor an answer that was already
+    // produced. Bounds all four alerts, not just the newest one.
+    signal: AbortSignal.timeout(5_000),
     method: 'POST',
     headers: {
       Authorization: `Bearer ${apiKey}`,
@@ -295,5 +300,53 @@ export async function maybeAlertRetentionPurge(
     await alertRetentionPurge(alert, fetchImpl);
   } catch (err) {
     console.error('[retention-purge] alert e-mail failed:', err);
+  }
+}
+
+// #180 (2026-07-26): the TRIAL POT low-water alert. The pot is the anonymous
+// lead magnet's whole budget and nothing watched it: an outsider could drain it
+// for well under a euro (5 addresses x 5/day covers a 25-question pot), the
+// homepage would quietly degrade to "log in om verder te gaan", and the owner
+// would find out by looking. Same posture as the alerts above — console.error
+// is the floor, e-mail when configured, fail-soft always.
+//
+// Deliberately fired by the CALLER after the take commits, never inside it: the
+// take holds a global advisory lock, and this module sends over the network.
+// Holding that lock across an HTTP request would serialise every anonymous
+// visitor behind an e-mail (the ledger's own "never across an LLM call" rule,
+// same reasoning).
+export interface TrialPotAlert {
+  remaining: number;
+  threshold: number;
+}
+
+export async function alertTrialPotLow(
+  alert: TrialPotAlert,
+  fetchImpl: typeof fetch = fetch,
+): Promise<void> {
+  const empty = alert.remaining <= 0;
+  const subject = empty
+    ? 'checkdecijfers: het gratis proefpotje is LEEG'
+    : `checkdecijfers: nog ${alert.remaining} proefvragen in het potje`;
+  const body = empty
+    ? 'De homepage toont vanaf nu "log in om verder te gaan" in plaats van het proefveld. ' +
+      'Bijvullen: npm run trialpot:set -- <aantal>. De trial heropent ZONDER deploy.'
+    : `Het potje staat op de waarschuwingsgrens van ${alert.threshold}. Bijvullen met ` +
+      'npm run trialpot:set -- <aantal> voordat het leeg is; dat heropent de trial zonder deploy.';
+  await sendAdminAlertEmail(subject, body, fetchImpl);
+}
+
+/** Fail-soft wrapper: logs the floor, never throws, never blocks a served answer. */
+export async function maybeAlertTrialPotLow(
+  alert: TrialPotAlert,
+  fetchImpl: typeof fetch = fetch,
+): Promise<void> {
+  // console.ERROR, like every sibling alert: an owner filtering Vercel logs to
+  // error level must see this one too.
+  console.error(`[trial-pot] low water: ${alert.remaining} left (threshold ${alert.threshold})`);
+  try {
+    await alertTrialPotLow(alert, fetchImpl);
+  } catch (err) {
+    console.error('[trial-pot] low-water alert e-mail failed:', err);
   }
 }
