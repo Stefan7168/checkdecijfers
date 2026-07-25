@@ -43,6 +43,8 @@ go-live** — one flag at a time, RUNBOOK section "WP26 answer-first + clickable
 burst (#173); (c) **~30/7 BBP+PPI syncs** (`85880NED` MUST use the chunked escape hatch, RUNBOOK step 5);
 (d) re-ask **#132 route B**.
 
+**✅ [#189](open-questions.md) IS BUILT AND LIVE (PR [#68](https://github.com/Stefan7168/checkdecijfers/pull/68), `fbffe48`) — the first item taken under the autonomy steer.** The GDPR retention purge is now scheduled monthly and **DORMANT**: it reports what it would delete until `GDPR_PURGE_APPLY=1` is set. That flip is one env var plus one watched run (RUNBOOK), and unsetting it is a complete rollback. A review pass over the diff caught a blocker first — the route was missing from the proxy allowlist, which would have made the cron read as healthy while never running. Backend **1543/102**, web **405/41**.
+
 **▶ AND FOR AN AUTONOMOUS SESSION — start here, not at the owner.** Owner steer 2026-07-25: *"I want you to work
 autonomously."* Everything previously parked on him now has a written default, bound and rollback in
 **[session-briefs/2026-07-26-autonomous-followups.md](session-briefs/2026-07-26-autonomous-followups.md)** (and the kickoff: **[session-briefs/2026-07-26-session-59-kickoff-final.md](session-briefs/2026-07-26-session-59-kickoff-final.md)** — the 2026-07-25 one is superseded) —
