@@ -21,7 +21,7 @@ vi.mock('../backend/billing/index.ts', () => ({
 }));
 vi.mock('./db.ts', () => ({ getDb: vi.fn(() => ({ query: dbQuery })) }));
 
-import { getTrialGateState, hashedRequestIp, readTrialVisitorId } from './trial.ts';
+import { getTrialGateState, hashedRequestIp, ipBucketKey, readTrialVisitorId } from './trial.ts';
 
 const VISITOR = '9b2f1c2e-6a1d-4f3a-9c0d-0a1b2c3d4e5f';
 
@@ -142,5 +142,100 @@ describe('hashedRequestIp', () => {
   it('refuses to hash at all when the secret is unset, rather than keying on ""', async () => {
     vi.stubEnv('TRIAL_IP_HASH_SECRET', '');
     await expect(hashedRequestIp()).rejects.toThrow('TRIAL_IP_HASH_SECRET');
+  });
+});
+
+// #182: the per-IP backstop must bucket an IPv6 HOUSEHOLD, not an address. A
+// residential delegation is a /64 at minimum, so keying on the full address
+// hands one visitor 2^64 fresh 5/day budgets — i.e. the limit bounds nothing.
+// Tested on the key directly: through the HMAC every wrong answer looks like
+// the same opaque hex.
+describe('ipBucketKey (#182)', () => {
+  it('leaves IPv4 alone — one address is already the household', () => {
+    expect(ipBucketKey('203.0.113.7')).toBe('203.0.113.7');
+    expect(ipBucketKey('unknown')).toBe('unknown');
+  });
+
+  it('collapses a whole /64 to ONE key', () => {
+    const keys = [
+      '2001:db8:abcd:1234:0000:0000:0000:0001',
+      '2001:db8:abcd:1234::1',
+      '2001:db8:abcd:1234:ffff:ffff:ffff:ffff',
+      '2001:0db8:abcd:1234::dead:beef',
+      '[2001:db8:abcd:1234::1]:443',
+      '2001:db8:abcd:1234::1%eth0',
+      '2001:DB8:ABCD:1234::1',
+    ].map(ipBucketKey);
+    expect(new Set(keys).size, keys.join(' | ')).toBe(1);
+  });
+
+  // THE sub-rule the whole fix turns on, and the one an earlier version of this
+  // file failed to pin: every case above carries its four /64 groups BEFORE the
+  // `::`, so naive split(':').slice(0,4) happens to be right for all of them.
+  // Deleting the expansion branch left them all green. These do not.
+  it('expands `::` BEFORE slicing — the case naive slicing gets wrong', () => {
+    expect(ipBucketKey('2001:db8::1')).toBe('2001:db8:0:0::/64');
+    // Same household written two ways; naive slicing gives 2001:db8::1::/64 vs
+    // 2001:db8:0:0::/64 — one /64 split across two buckets, i.e. #182 again.
+    expect(ipBucketKey('2001:db8::1')).toBe(ipBucketKey('2001:db8:0:0:ffff::1'));
+    expect(ipBucketKey('2a02::5')).toBe('2a02:0:0:0::/64');
+  });
+
+  it('keeps DIFFERENT /64s apart — including a neighbouring one', () => {
+    const a = ipBucketKey('2001:db8:abcd:1234::1');
+    expect(ipBucketKey('2001:db8:abcd:1235::1')).not.toBe(a); // next /64
+    expect(ipBucketKey('2001:db8:abcd::1')).not.toBe(a); // shorter prefix
+    expect(ipBucketKey('2a02:a45f:1:2::9')).not.toBe(a);
+  });
+
+  it('buckets an IPv4-mapped address as the IPv4 it is — dotted AND hex form', () => {
+    // Otherwise one visitor lands in two buckets depending on which form the
+    // platform handed us — and worse, every hex-form client would collapse into
+    // one shared 0:0:0:0::/64 bucket and lock unrelated visitors out.
+    expect(ipBucketKey('::ffff:203.0.113.7')).toBe('203.0.113.7');
+    expect(ipBucketKey('::FFFF:203.0.113.7')).toBe('203.0.113.7');
+    expect(ipBucketKey('::ffff:cb00:7107')).toBe('203.0.113.7');
+    expect(ipBucketKey('::ffff:c000:0207')).toBe('192.0.2.7');
+    // Two different hex-mapped clients must NOT share a bucket.
+    expect(ipBucketKey('::ffff:cb00:7107')).not.toBe(ipBucketKey('::ffff:c000:0207'));
+  });
+
+  it('does not give an IPv4 address a fresh bucket per ephemeral port', () => {
+    expect(ipBucketKey('203.0.113.7:443')).toBe('203.0.113.7');
+    expect(ipBucketKey('203.0.113.7:51234')).toBe(ipBucketKey('203.0.113.7'));
+  });
+
+  // #187: identical to x-forwarded-for today, but the documented one that
+  // survives a proxy in front of Vercel — which the launch plan contemplates.
+  it('prefers x-vercel-forwarded-for when both are present', async () => {
+    vi.stubEnv('TRIAL_IP_HASH_SECRET', 'secret');
+    headerGet.mockImplementation((name: string) =>
+      name === 'x-vercel-forwarded-for' ? '203.0.113.7' : null,
+    );
+    const real = await hashedRequestIp();
+    headerGet.mockImplementation((name: string) =>
+      name === 'x-vercel-forwarded-for'
+        ? '203.0.113.7'
+        : name === 'x-forwarded-for'
+          ? '198.51.100.9'
+          : null,
+    );
+    expect(await hashedRequestIp()).toBe(real);
+  });
+
+  it('the hash follows the bucket: two addresses in one /64 share a hash', async () => {
+    vi.stubEnv('TRIAL_IP_HASH_SECRET', 'secret');
+    headerGet.mockImplementation((name: string) =>
+      name === 'x-forwarded-for' ? '2001:db8:abcd:1234::1' : null,
+    );
+    const first = await hashedRequestIp();
+    headerGet.mockImplementation((name: string) =>
+      name === 'x-forwarded-for' ? '2001:db8:abcd:1234::99ff' : null,
+    );
+    expect(await hashedRequestIp()).toBe(first);
+    headerGet.mockImplementation((name: string) =>
+      name === 'x-forwarded-for' ? '2001:db8:abcd:9999::1' : null,
+    );
+    expect(await hashedRequestIp()).not.toBe(first);
   });
 });
