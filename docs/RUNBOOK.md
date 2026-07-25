@@ -440,8 +440,9 @@ What to know:
   drive-by traffic before any deploy stacks on top — "4 sessions" is normal, not a symptom.
 - **The cheapest structural relief is to make a page need fewer queries.** Since #186 the landing's pot
   read is served from a 20 s in-process cache (`TRIAL_POT_TTL_MS`, `web/lib/trial.ts`), and since #184
-  the two limit counts share one round trip — so an anonymous render costs **exactly one** query,
-  cookie or no cookie, down from 1-2.
+  the two limit counts share one round trip — so a steady-state anonymous render costs **one** query,
+  cookie or no cookie, down from 1-2 (the render that refreshes the pot costs two, at most once per
+  TTL per instance).
 - **Do not panic-restart anything.** Wait a few minutes and re-check `/llms.txt`; that is the cheapest
   canary because it needs a fresh connection on a cache miss.
 - **Avoid stacking deploys** when you can — batch doc commits instead of pushing each one, and leave a
