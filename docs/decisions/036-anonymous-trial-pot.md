@@ -106,6 +106,17 @@ keyed on real users). The trial section sits under the masthead with its own inp
 shown honestly; empty pot or dormant flag ⇒ the same area renders the login prompt (server-checked per
 request, so refill re-enables it without a deploy — the #53 fail-safe).
 
+**As-built note, 2026-07-26 (session 59, [#186](../open-questions.md)):** "server-checked per request" is
+now *per request, from a pot reading at most 20 s old* (`TRIAL_POT_TTL_MS`, `web/lib/trial.ts`). The
+fail-safe is unchanged in kind — a refill still re-enables the trial without a deploy, to within the TTL —
+and the cache **cannot over-serve**, because the atomic take under the advisory lock is the real gate and
+refuses honestly whatever the landing invited. What is cached is the invitation, never a question. It was
+built after measuring that the cost of the per-request read is not its 0.44 ms but the pooler SESSION it
+forces an instance to open: one anonymous GET was observed holding a slot for 174 s, since node-pg's idle
+timer does not fire while a Fluid Compute instance is frozen. Only the POT is cached; the per-visitor count
+stays live on every request, because sharing it across requests on a reused instance would hand one
+visitor another's budget.
+
 **Build revision 1 — NO clarification reply round in v1** (stricter than this ADR's draft, which allowed
 one): the reply would be an UNMETERED anonymous LLM endpoint — nothing decrements when a visitor replies,
 so deliberately vague questions would buy unlimited free clarify-merge calls against the trial key. A trial
