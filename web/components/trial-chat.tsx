@@ -10,6 +10,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import type { ComposedResponse } from '../backend/answer/respond/types.ts';
 import type { TrialAskOutcome } from '../app/trial-actions.ts';
+import { TRIAL_COPY } from '../lib/trial-copy.ts';
 import { askTrialQuestion } from '../app/trial-actions.ts';
 import { ChartView } from './chart.tsx';
 
@@ -23,13 +24,14 @@ interface TrialMessage {
 
 type Notice = 'pot_empty' | 'ip_limit' | 'used_up' | 'error' | null;
 
+// From the SHARED copy (#184): the landing gate can now discover pot_empty,
+// used_up and ip_limit at page render, and this component shows the same states
+// after a submit. Two spellings of one state is the drift this closes.
 const NOTICE_TEXT: Record<Exclude<Notice, null>, string> = {
-  pot_empty:
-    'Het gratis proefpotje is op dit moment leeg. Log in om verder te gaan — een account is gratis.',
-  ip_limit:
-    'Vanaf dit netwerk zijn de gratis proefvragen voor vandaag op. Maak een gratis account om verder te gaan.',
-  used_up: 'Je hebt je gratis proefvragen gebruikt. Maak een gratis account om verder te gaan.',
-  error: 'Er ging iets mis; je proefvraag is niet verbruikt. Probeer het zo nog eens.',
+  pot_empty: TRIAL_COPY.pot_empty,
+  ip_limit: TRIAL_COPY.ip_limit,
+  used_up: TRIAL_COPY.used_up,
+  error: TRIAL_COPY.error,
 };
 
 export function LoginNudge({ text }: { text: string }) {

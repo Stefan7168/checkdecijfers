@@ -9,18 +9,21 @@
 // to the login prompt — the owner's continuity fail-safe, the site never breaks.
 import { Suspense } from 'react';
 import { getTrialGateState, trialConfigured } from '../lib/trial.ts';
+import { TRIAL_COPY } from '../lib/trial-copy.ts';
 import { LoginNudge, TrialChat } from './trial-chat.tsx';
 
-/** One line per non-open gate state. The 'closed' copy names the cause because
- * the pot was actually READ and was empty; 'unavailable' deliberately does not,
- * because in that state we do not know why (see TrialGateState in lib/trial.ts
- * — until 2026-07-25 both shared the pot-is-empty sentence, which during a
- * #173 pooler exhaustion told every visitor something untrue). */
+/** One line per non-open gate state, taken from the SHARED copy (#184) so the
+ * sentence a visitor reads at page render is byte-identical to the one the
+ * action would show them a round-trip later. The 'closed' copy names the cause
+ * because the pot was actually READ and was empty; 'unavailable' deliberately
+ * does not, because in that state we do not know why (see TrialGateState in
+ * lib/trial.ts — until 2026-07-25 both shared the pot-is-empty sentence, which
+ * during a #173 pooler exhaustion told every visitor something untrue). */
 const NUDGE_TEXT = {
-  used_up: 'Je hebt je gratis proefvragen gebruikt. Maak een gratis account om verder te gaan.',
-  closed: 'Het gratis proefpotje is op dit moment leeg. Log in om verder te gaan — een account is gratis.',
-  unavailable:
-    'De gratis proefvragen zijn nu even niet beschikbaar. Log in om verder te gaan — een account is gratis.',
+  used_up: TRIAL_COPY.used_up,
+  closed: TRIAL_COPY.pot_empty,
+  unavailable: TRIAL_COPY.unavailable,
+  ip_limit: TRIAL_COPY.ip_limit,
 } as const;
 
 export async function TrialGate() {

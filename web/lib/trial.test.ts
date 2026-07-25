@@ -18,6 +18,7 @@ const { getTrialPotStatus, dbQuery } = vi.hoisted(() => ({
 vi.mock('../backend/billing/index.ts', () => ({
   getTrialPotStatus,
   TRIAL_QUESTIONS_PER_VISITOR: 2,
+  TRIAL_QUESTIONS_PER_IP_PER_DAY: 5,
 }));
 vi.mock('./db.ts', () => ({ getDb: vi.fn(() => ({ query: dbQuery })) }));
 
@@ -46,6 +47,9 @@ beforeEach(() => {
   resetTrialPotCache();
   cookieGet.mockReturnValue(undefined);
   headerGet.mockReturnValue(null);
+  // #184: the gate now always reads both counts in one row. Default to an
+  // untouched visitor on an untouched network; cases that care override it.
+  dbQuery.mockResolvedValue({ rows: [{ visitor_n: 0, ip_n: 0 }] });
 });
 
 afterEach(() => {
@@ -97,10 +101,84 @@ describe('getTrialGateState', () => {
     configure();
     getTrialPotStatus.mockResolvedValue({ remaining: 10, cap: 25 });
     cookieGet.mockReturnValue({ value: VISITOR });
-    dbQuery.mockResolvedValue({ rows: [{ n: 1 }] });
+    dbQuery.mockResolvedValue({ rows: [{ visitor_n: 1, ip_n: 1 }] });
     expect(await getTrialGateState()).toEqual({ kind: 'open', questionsLeft: 1 });
-    dbQuery.mockResolvedValue({ rows: [{ n: 2 }] });
+    dbQuery.mockResolvedValue({ rows: [{ visitor_n: 2, ip_n: 2 }] });
     expect(await getTrialGateState()).toEqual({ kind: 'used_up' });
+  });
+});
+
+// #184: a visitor behind a NAT whose 5/day is already spent used to be invited
+// to type a question and only told one round-trip later. The gate now knows.
+describe('the per-network limit at the gate (#184)', () => {
+  it('reports ip_limit for a FIRST-time visitor on an exhausted network', async () => {
+    configure();
+    getTrialPotStatus.mockResolvedValue({ remaining: 10, cap: 25 });
+    // No cookie: the visitor personally asked nothing. This is the case the row
+    // is about — CGNAT and office NAT put strangers behind one address — and the
+    // old gate short-circuited on the null cookie before it could ever notice.
+    dbQuery.mockResolvedValue({ rows: [{ visitor_n: 0, ip_n: 5 }] });
+    expect(await getTrialGateState()).toEqual({ kind: 'ip_limit' });
+  });
+
+  it('lets the visitor through while the network is one under the cap', async () => {
+    configure();
+    getTrialPotStatus.mockResolvedValue({ remaining: 10, cap: 25 });
+    dbQuery.mockResolvedValue({ rows: [{ visitor_n: 0, ip_n: 4 }] });
+    expect(await getTrialGateState()).toEqual({ kind: 'open', questionsLeft: 2 });
+  });
+
+  // Their own budget is the more specific, more actionable truth, and it is the
+  // order takeTrialQuestion checks in — so where both apply, the gate names the
+  // same cause the action would.
+  it('prefers used_up over ip_limit when both apply', async () => {
+    configure();
+    getTrialPotStatus.mockResolvedValue({ remaining: 10, cap: 25 });
+    cookieGet.mockReturnValue({ value: VISITOR });
+    dbQuery.mockResolvedValue({ rows: [{ visitor_n: 2, ip_n: 9 }] });
+    expect(await getTrialGateState()).toEqual({ kind: 'used_up' });
+  });
+
+  // Showing "1 van 2 over" because a STRANGER on the same NAT spent one would
+  // tell this visitor they had used a question they never asked — the exact
+  // class of unverified claim principle (c) forbids.
+  it('never clamps the visitor budget by the network headroom', async () => {
+    configure();
+    getTrialPotStatus.mockResolvedValue({ remaining: 10, cap: 25 });
+    dbQuery.mockResolvedValue({ rows: [{ visitor_n: 0, ip_n: 4 }] });
+    expect(await getTrialGateState()).toEqual({ kind: 'open', questionsLeft: 2 });
+  });
+
+  // The sequencing promise #186 made: adding this check must not ADD a query.
+  it('costs ONE query per render — both limits in a single round trip', async () => {
+    configure();
+    getTrialPotStatus.mockResolvedValue({ remaining: 10, cap: 25 });
+    cookieGet.mockReturnValue({ value: VISITOR });
+    await getTrialGateState();
+    expect(dbQuery).toHaveBeenCalledTimes(1);
+    const [sql, params] = dbQuery.mock.calls[0] as [string, unknown[]];
+    expect(sql).toMatch(/visitor_n/);
+    expect(sql).toMatch(/ip_n/);
+    // Both partial indexes from migration 020 are `… where not refunded`, so a
+    // read that dropped that predicate would silently seq-scan the table on
+    // every anonymous page view.
+    expect(sql.match(/not refunded/g)).toHaveLength(2);
+    expect(params).toHaveLength(2);
+  });
+
+  // The gate must not be able to CAUSE the thing it reports. Nothing here is
+  // written, and the raw address never leaves memory (ADR 036 D2).
+  it('reads the network count without writing anything', async () => {
+    configure();
+    headerGet.mockImplementation((name: string) =>
+      name === 'x-forwarded-for' ? '203.0.113.7' : null,
+    );
+    getTrialPotStatus.mockResolvedValue({ remaining: 10, cap: 25 });
+    await getTrialGateState();
+    const [sql, params] = dbQuery.mock.calls[0] as [string, unknown[]];
+    expect(sql).not.toMatch(/insert|update|delete/i);
+    expect(params[1]).toMatch(/^[0-9a-f]{64}$/);
+    expect(params[1]).not.toContain('203.0.113.7');
   });
 });
 
@@ -108,7 +186,8 @@ describe('getTrialGateState', () => {
 // pooler SESSION it forces an instance to open — sampled 2026-07-25, one
 // anonymous GET left a Supavisor backend idle for 174 s, because node-pg's 10 s
 // idle timeout does not fire while a Fluid Compute instance is frozen. Within
-// the TTL a cookie-less drive-by must therefore reach the database ZERO times.
+// the TTL the pot must therefore be read at most once per instance, however
+// many drive-bys arrive.
 describe('the pot-read cache (#186)', () => {
   // The TTL's MAGNITUDE needs its own pin. The expiry test below advances the
   // clock BY this constant, so it crosses the boundary whatever the constant
@@ -127,9 +206,10 @@ describe('the pot-read cache (#186)', () => {
     expect(await getTrialGateState()).toEqual({ kind: 'open', questionsLeft: 2 });
     expect(await getTrialGateState()).toEqual({ kind: 'open', questionsLeft: 2 });
     expect(getTrialPotStatus).toHaveBeenCalledTimes(1);
-    // The whole point: a cookie-less visitor served from cache touches the
-    // database not at all, so the instance needs no pooler session.
-    expect(dbQuery).not.toHaveBeenCalled();
+    // Two renders, ONE pot read, and the only remaining per-render query is the
+    // single combined limits read #184 added. Before both changes this pair of
+    // renders cost 2-4 queries.
+    expect(dbQuery).toHaveBeenCalledTimes(2);
   });
 
   it('re-reads once the TTL has expired', async () => {
@@ -200,10 +280,10 @@ describe('the pot-read cache (#186)', () => {
     configure();
     getTrialPotStatus.mockResolvedValue({ remaining: 10, cap: 25 });
     cookieGet.mockReturnValue({ value: VISITOR });
-    dbQuery.mockResolvedValue({ rows: [{ n: 1 }] });
+    dbQuery.mockResolvedValue({ rows: [{ visitor_n: 1, ip_n: 1 }] });
     expect(await getTrialGateState()).toEqual({ kind: 'open', questionsLeft: 1 });
     cookieGet.mockReturnValue({ value: OTHER_VISITOR });
-    dbQuery.mockResolvedValue({ rows: [{ n: 0 }] });
+    dbQuery.mockResolvedValue({ rows: [{ visitor_n: 0, ip_n: 0 }] });
     expect(await getTrialGateState()).toEqual({ kind: 'open', questionsLeft: 2 });
     // One pot read shared, but a live count for each visitor.
     expect(getTrialPotStatus).toHaveBeenCalledTimes(1);
