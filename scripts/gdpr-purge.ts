@@ -30,9 +30,9 @@
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 import {
-  countPurgeableQuestionHistory,
-  purgeExpiredQuestionHistory,
-  twoYearsBefore,
+  describeRetentionPurge,
+  RetentionPurgePartialError,
+  runRetentionPurge,
 } from '../src/answer/audit/index.ts';
 import {
   countPurgeableTrialBookkeeping,
@@ -40,81 +40,39 @@ import {
   trialRetentionCutoff,
 } from '../src/billing/index.ts';
 import { connectFromEnv } from '../src/db/client.ts';
-import type { Db } from '../src/db/types.ts';
 
-/** A CHECK, not a catch — the same discipline retention.ts states for its own
- * migration-017 guard ("the guard must be a check, not a catch"). Both trial
- * legs used to sit in a bare `catch {}` whose message blamed a missing
- * migration 020. That migration has been live in production since the #53
- * go-live (2026-07-17), so from that day the catch could only ever MISREPORT a
- * genuine failure — a lock timeout, a permissions problem, a connection blip —
- * as an honest skip, while the script still exited 0. A retention mechanism
- * that reports success when it did nothing is worse than one that is absent. */
-async function trialTableExists(db: Db): Promise<boolean> {
-  const { rows } = await db.query(`select to_regclass('public.trial_questions') as t`, []);
-  return rows[0]?.t != null;
-}
+// The trial leg is INJECTED, not imported by the job — ADR 001's arrow points
+// billing → answer, never back. This script is one of the two composition roots
+// (the other is web/app/api/gdpr-purge-cron/route.ts) and they inject the SAME
+// three functions, so the CLI and the cron cannot describe different work.
+const TRIAL_LEG = {
+  cutoff: trialRetentionCutoff,
+  count: countPurgeableTrialBookkeeping,
+  purge: purgeExpiredTrialBookkeeping,
+};
 
 async function main(): Promise<void> {
   const apply = process.argv.includes('--apply');
-  const cutoff = twoYearsBefore(new Date());
-  const trialCutoff = trialRetentionCutoff(new Date());
+  // ONE clock for both windows: two `new Date()` calls could straddle midnight
+  // and cut the two cutoffs from different days.
+  const now = new Date();
 
   const { db, pool } = connectFromEnv();
   try {
-    if (!apply) {
-      // Dry run: ⟨F2⟩ counts come from countPurgeableQuestionHistory, which is
-      // built on the purge's OWN scope fragments — no second hand-written WHERE
-      // clause that could silently drift from what --apply redacts. Read-only:
-      // two COUNT queries, never a write.
-      const { auditRows, pendingRows } = await countPurgeableQuestionHistory(db, cutoff);
-      console.log(
-        `DRY RUN — cutoff ${cutoff.toISOString()}: ${auditRows} audit_answers row(s) ` +
-          `(source_tag user + onboarding_delivery + anonymous_trial) and ${pendingRows} ` +
-          `pending_table_requests row(s) older than 2 years would be redacted.`,
-      );
-      if (await trialTableExists(db)) {
-        const trialRows = await countPurgeableTrialBookkeeping(db, trialCutoff);
-        console.log(
-          `DRY RUN — trial cutoff ${trialCutoff.toISOString()}: ${trialRows} trial_questions ` +
-            `bookkeeping row(s) older than 90 days would be DELETED (ADR 036 D4).`,
+    try {
+      const summary = await runRetentionPurge({ db, now, apply, trial: TRIAL_LEG });
+      console.log(describeRetentionPurge(summary));
+      if (!apply) console.log('Re-run with --apply to actually redact/delete them.');
+    } catch (error) {
+      // A partial failure still redacted rows. Saying only "it failed" would
+      // lose the record of GDPR work that actually committed.
+      if (error instanceof RetentionPurgePartialError) {
+        console.error(
+          `PARTIAL — ${error.auditRowsRedacted} audit redaction(s) COMMITTED; the 90-day trial leg then failed.`,
         );
-      } else {
-        console.log('  note: trial_questions absent (migration 020 not applied) — trial leg skipped.');
       }
-      console.log('Re-run with --apply to actually redact/delete them.');
-      return;
+      throw error;
     }
-
-    const redacted = await purgeExpiredQuestionHistory(db, cutoff);
-    console.log(
-      `Applied — cutoff ${cutoff.toISOString()}: redacted ${redacted.length} audit_answers row(s) ` +
-        `(source_tag user + onboarding_delivery + anonymous_trial).`,
-    );
-    if (await trialTableExists(db)) {
-      const trialDeleted = await purgeExpiredTrialBookkeeping(db, trialCutoff);
-      console.log(
-        `Applied — trial cutoff ${trialCutoff.toISOString()}: deleted ${trialDeleted} ` +
-          `trial_questions bookkeeping row(s) older than 90 days (ADR 036 D4).`,
-      );
-    } else {
-      console.log('  note: trial_questions absent (migration 020 not applied) — trial leg skipped.');
-    }
-    if (redacted.length > 0) {
-      const byKind = redacted.reduce<Record<string, number>>((acc, r) => {
-        acc[r.kind] = (acc[r.kind] ?? 0) + 1;
-        return acc;
-      }, {});
-      console.log(`  by kind: ${JSON.stringify(byKind)}`);
-    }
-    // #120: the expired pending_table_requests rows were redacted in the SAME
-    // transaction as the audit rows above (purgeExpiredQuestionHistory's pending
-    // leg). Its count isn't in the RedactedRow[] return, so we note it here so
-    // an operator reading the log knows the pending store was covered too.
-    console.log(
-      '  note: expired pending_table_requests free text (question_text/topic_term/' +
-        'failure_summary) was redacted in the same transaction.',
-    );
   } finally {
     try {
       await pool.end();

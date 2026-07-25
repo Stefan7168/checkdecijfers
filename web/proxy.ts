@@ -26,6 +26,14 @@ const PUBLIC_PATH_PREFIXES = [
   '/auth/callback',
   '/api/stripe/webhook',
   '/api/onboarding-cron',
+  // #189: the retention-purge cron, same shape and same reason as the line
+  // above — Vercel Cron carries a Bearer secret, never a session cookie. Left
+  // out, the 307 to /login would return 200 to the cron dashboard, so the job
+  // would look SCHEDULED AND HEALTHY while never running once: exactly the
+  // silence #189 exists to end, with a green tick on top. The route
+  // authenticates itself (fail-closed 503 without CRON_SECRET, 401 on
+  // mismatch), so being reachable here costs nothing.
+  '/api/gdpr-purge-cron',
   // #170(2): the registry-generated self-description for LLMs/crawlers —
   // public by nature (it exists to be fetched anonymously), read-only, and
   // it exposes only what the public product already shows on every answer

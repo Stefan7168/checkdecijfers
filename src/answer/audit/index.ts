@@ -27,6 +27,20 @@ export {
   redactionIntegrityReport,
 } from './retention.ts';
 export type { RedactedRow } from './retention.ts';
+// #189: the purge as a framework-agnostic job, so the CLI and the cron route are
+// two thin adapters over one implementation rather than two orchestrations.
+export {
+  runRetentionPurge,
+  describeRetentionPurge,
+  RetentionPurgePartialError,
+} from './retention-job.ts';
+export type {
+  RetentionPurgeOptions,
+  RetentionPurgeSummary,
+  TrialRetentionLeg,
+} from './retention-job.ts';
+export { maybeAlertRetentionPurge, alertRetentionPurge } from './alerts.ts';
+export type { RetentionPurgeAlert } from './alerts.ts';
 export { FEEDBACK_TEXT_MAX_LENGTH, upsertAnswerFeedback } from './feedback.ts';
 export type { AnswerFeedbackInput } from './feedback.ts';
 // #133(a): the known-divergence register — re-exported alongside
