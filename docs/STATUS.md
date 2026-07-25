@@ -40,8 +40,15 @@ agenda now lists it; whether it becomes a cron is yours.
 **▶ NEXT, in order:** (a) ~~review + merge~~ **DONE — all four merged and live, see the table above**; (b) the **owner-supervised WP26
 go-live** — one flag at a time, RUNBOOK section "WP26 answer-first + clickable options", NOT during a deploy
 burst (#173); (c) **~30/7 BBP+PPI syncs** (`85880NED` MUST use the chunked escape hatch, RUNBOOK step 5);
-(d) re-ask **#132 route B**; (e) #187's one live measurement (a forged `x-forwarded-for` against production —
-an autonomous session may not probe abuse limits, so it needs you).
+(d) re-ask **#132 route B**.
+
+**▶ AND FOR AN AUTONOMOUS SESSION — start here, not at the owner.** Owner steer 2026-07-25: *"I want you to work
+autonomously."* Everything previously parked on him now has a written default, bound and rollback in
+**[session-briefs/2026-07-26-autonomous-followups.md](session-briefs/2026-07-26-autonomous-followups.md)** —
+**#187** (two requests, ~€0.04, expected result: the header is NOT forgeable), **#189** (build the purge cron,
+dry-run behind a flag), **#181/#183** and the residuals #180/#182/#184/#185/#186/#174 each with a recommended
+default. Act under #118(b) (branch + PR) and let him veto by exception. **The ONE exception is the WP26 flag
+flip — he has reserved it three times and it stays his.**
 
 Full session record in [status-archive.md](status-archive.md).)**
 
