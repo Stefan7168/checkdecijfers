@@ -241,7 +241,7 @@ sequence; everything else queues behind it:
    dossier](session-briefs/2026-07-08-multi-source-dossier.md); build = WP30 in [08-build-plan.md](08-build-plan.md), after WP27; the concrete first
    source is an OPEN owner decision (WP30c).** Broadens the public claim from "official CBS cell" to "official sources" (CLAUDE.md needs a matching
    update) and likely triggers the ADR 001 Python split.
-3. **Answer/question-quality optimization on the widened data base** — re-run the experience audit + ship the clarify-policy fix (WP26, now tier-3,
+3. **Answer/question-quality optimization on the widened data base** — re-run the experience audit + ship the clarify-policy fix (**WP26 ✅ BUILT session 56, dormant behind two flags — only the supervised flip remains; the "tier-3, after the data work" sequencing below is historical**,
    ready but after the data work).
 
 *Grounded in the session-23 experience audit (110 questions, live, measured): 40 answer / 32 clarification / 38 refusal; **20 of 56 answerable
@@ -260,7 +260,7 @@ implied:**
     Vercel's short retention ([#65](open-questions.md))
   - **WP16, demand-driven table onboarding:** now owner-confirmed wanted, with its user-facing copy and "costs credits" pricing decided
     ([08-build-plan.md](08-build-plan.md), [#24](open-questions.md))
-  - **Clarification UX — now designed as one WP (WP26), session 23, ADR [024](decisions/024-answer-first-defaults-and-clickable-options.md); awaits
+  - **Clarification UX — one WP (WP26), designed session 23 (ADR [024](decisions/024-answer-first-defaults-and-clickable-options.md)), ✅ BUILT session 56 and DORMANT behind two flags; the text below describes the design as it awaited
     owner read-back of the safelist + a supervised build:** clickable pre-verified suggestion buttons ([#66](open-questions.md)/Mechanism A) +
     smart-default-with-escape-hatch on the narrow safe set instead of always clarifying ([#72](open-questions.md)/Mechanism B) — the two root causes
     of the "paid dead-end" (net 10 credits for nothing), zero prompt bytes, pricing deferred ([#101](open-questions.md))
