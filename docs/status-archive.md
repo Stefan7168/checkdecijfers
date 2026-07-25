@@ -46,7 +46,7 @@ adversarial work — THREE PRs/branches from this session AWAITING OWNER REVIEW,
   `respondToQuestion` converts every throw into a *returned* internal refusal (`respond.ts:503-536`), so the
   refund is near-unreachable and the question is consumed — the second lens, hunting that exact primitive
   independently, had already failed to build it. Dossier:
-  [session-briefs/2026-07-26-trial-surface-hunt.md](session-briefs/2026-07-26-trial-surface-hunt.md). Session
+  [session-briefs/2026-07-25-trial-surface-hunt.md](session-briefs/2026-07-25-trial-surface-hunt.md). Session
   58b hunted the same surface independently and recorded #179-#186; where we overlap we agree, so this session
   recorded only **#187-#190** — the four findings its rows did not cover — cross-referencing rather than
   restating.

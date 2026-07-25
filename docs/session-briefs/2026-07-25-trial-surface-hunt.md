@@ -1,6 +1,6 @@
 # Adversarial hunt: the anonymous trial surface
 
-**Autonomous overnight session, 2026-07-25→26. Four Fable agents, one lens each, read-only.**
+**Autonomous overnight session, 2026-07-25. Four Fable agents, one lens each, read-only.**
 Commissioned by [overnight-queue-2](2026-07-26-overnight-queue-2.md) item 4: the anonymous trial is the only
 unauthenticated, money-adjacent surface in the product, it has no billing-gate metering entry, and it is LIVE.
 Session 57's hunts covered WP26's client-held state; this surface had never been hunted.
