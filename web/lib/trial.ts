@@ -12,7 +12,11 @@
 // threw (the copy must not name a cause we do not have).
 import { createHmac } from 'node:crypto';
 import { cookies, headers } from 'next/headers';
-import { getTrialPotStatus, TRIAL_QUESTIONS_PER_VISITOR } from '../backend/billing/index.ts';
+import {
+  getTrialPotStatus,
+  TRIAL_QUESTIONS_PER_IP_PER_DAY,
+  TRIAL_QUESTIONS_PER_VISITOR,
+} from '../backend/billing/index.ts';
 import type { TrialPotStatus } from '../backend/billing/index.ts';
 import { getDb } from './db.ts';
 
@@ -228,6 +232,12 @@ export type TrialGateState =
   | { kind: 'unavailable' }
   /** THIS visitor's own budget is spent (the pot may still be open). */
   | { kind: 'used_up' }
+  /** This NETWORK's 24h backstop is spent (#184). The visitor may personally
+   * have asked nothing — behind CGNAT or an office NAT that is the normal case,
+   * which is why the copy attributes it to the network and not to them. Before
+   * #184 this state existed only on the ACTION's response, so a capped visitor
+   * was invited to type a question and told one round-trip later. */
+  | { kind: 'ip_limit' }
   | { kind: 'open'; questionsLeft: number };
 
 /** How long the landing may serve a pot reading it has already made (#186).
@@ -241,9 +251,16 @@ export type TrialGateState =
  * a single anonymous GET left a Supavisor backend **idle for 174 s and
  * counting**, because node-pg's 10 s idle timeout does not fire while a Fluid
  * Compute instance is frozen. One drive-by can therefore hold one of the free
- * tier's 15 session slots for minutes ([#173](docs/open-questions.md)). Within
- * the TTL a warm instance answers a cookie-less drive-by with ZERO queries, and
- * so needs no session at all.
+ * tier's 15 session slots for minutes ([#173](docs/open-questions.md)).
+ *
+ * What this buys, stated against the state that actually ships (#186 + #184):
+ * **exactly ONE query per anonymous render, cookie or no cookie, down from 1-2**
+ * — the pot read itself drops from every-GET to at most once per TTL per
+ * instance, and the two limit counts fold into one round trip. #186 alone would
+ * have made a cookie-less drive-by cost ZERO queries; #184 spends that back to
+ * buy the honesty fix, deliberately and with the trade recorded in both rows.
+ * The named next lever, if traffic ever makes it worth the machinery, is a
+ * bounded per-`ip_hash` cache for that remaining count.
  *
  * 20 s, not longer: the owner's "a pot refill re-opens the trial WITHOUT a
  * deploy" decision then survives to within the TTL, and an operator who runs
@@ -324,9 +341,9 @@ async function readPotCached(): Promise<TrialPotStatus | null> {
 }
 
 /** The landing's gate read (server component). The pot reading is at most
- * `TRIAL_POT_TTL_MS` old (#186); everything derived from the VISITOR is
- * computed fresh on every request. A pot refill still re-opens the trial
- * WITHOUT a deploy (owner decision: auto re-enable) — now to within the TTL.
+ * `TRIAL_POT_TTL_MS` old (#186); everything derived from the VISITOR or their
+ * NETWORK is computed fresh on every request. A pot refill still re-opens the
+ * trial WITHOUT a deploy (owner decision: auto re-enable) — now to within the TTL.
  * Fail-safe unchanged: anything short of a verified open pot degrades to the
  * login nudge, never to a broken page — only the REASON we show is
  * distinguished from the reason we merely assumed. */
@@ -338,18 +355,47 @@ export async function getTrialGateState(): Promise<TrialGateState> {
     // — neither is evidence the pot is empty.
     if (pot === null) return { kind: 'unavailable' };
     if (pot.remaining <= 0) return { kind: 'closed' };
+    // Both limits in ONE round trip (#184). Two scalar subqueries rather than
+    // one FROM with an OR: each is textually the query it replaces (the old gate
+    // count, and takeTrialQuestion's own ip count), so no equivalence proof is
+    // needed at the next edit — and each hits its own PARTIAL index from
+    // migration 020 (`… where not refunded`). An OR-form whose outer WHERE
+    // omitted `not refunded` would imply neither index predicate and degrade to
+    // a seq scan per anonymous page view, which is the pressure #186 is about.
+    //
+    // Net effect with #186's cache: exactly ONE query per anonymous render,
+    // cookie or no cookie — down from 1-2 — while gaining the honesty fix. The
+    // #184 row's "adds a third uncached query" objection is discharged, not
+    // accepted.
     const visitorId = await readTrialVisitorId();
-    // Below the early return, so that within the TTL a cookie-less drive-by —
-    // the dominant anonymous traffic, since the cookie is set on first USE —
-    // touches the database not at all, and the instance needs no pooler session.
-    if (visitorId === null) return { kind: 'open', questionsLeft: TRIAL_QUESTIONS_PER_VISITOR };
+    const ipHash = await hashedRequestIp();
     const db = getDb();
     const { rows } = await db.query(
-      'select count(*)::int as n from trial_questions where visitor_id = $1 and not refunded',
-      [visitorId],
+      `select
+         (select count(*)::int from trial_questions
+           where visitor_id = $1::uuid and not refunded) as visitor_n,
+         (select count(*)::int from trial_questions
+           where ip_hash = $2::text and not refunded
+             and created_at > now() - interval '24 hours') as ip_n`,
+      [visitorId, ipHash],
     );
-    const left = TRIAL_QUESTIONS_PER_VISITOR - Number(rows[0]!.n);
-    return left > 0 ? { kind: 'open', questionsLeft: left } : { kind: 'used_up' };
+    // visitorId is null until the visitor's FIRST use, and `visitor_id = null`
+    // is NULL, not false — so visitor_n is 0 and the budget reads full, exactly
+    // as the old early return did. The IP arm still runs, and that is the whole
+    // point: the visitor #184 is about is usually a FIRST-time visitor behind a
+    // network someone else already spent.
+    const visitorUsed = Number(rows[0]!.visitor_n);
+    const networkUsed = Number(rows[0]!.ip_n);
+    const left = TRIAL_QUESTIONS_PER_VISITOR - visitorUsed;
+    // Visitor before network, mirroring takeTrialQuestion's own order, so that
+    // where both apply the gate names the same cause the action would.
+    if (left <= 0) return { kind: 'used_up' };
+    if (networkUsed >= TRIAL_QUESTIONS_PER_IP_PER_DAY) return { kind: 'ip_limit' };
+    // NOT clamped by the network's headroom: showing "1 van 2 over" because a
+    // stranger on the same NAT spent one would tell this visitor they had used a
+    // question they never asked. The budget shown is theirs; ip_limit covers the
+    // exhausted case.
+    return { kind: 'open', questionsLeft: left };
   } catch (err) {
     console.warn('[trial] gate read failed, rendering unavailable:', err);
     return { kind: 'unavailable' };

@@ -18,6 +18,7 @@ vi.mock('./trial-chat.tsx', () => ({
 }));
 
 import { TrialGate, TrialSectie } from './trial.tsx';
+import { TRIAL_COPY } from '../lib/trial-copy.ts';
 
 afterEach(() => {
   cleanup();
@@ -73,6 +74,26 @@ describe('TrialGate', () => {
     getTrialGateState.mockResolvedValue({ kind: 'used_up' });
     render(await TrialGate());
     expect(screen.getByTestId('login-nudge')).toHaveTextContent('proefvragen gebruikt');
+  });
+
+  // #184: the visitor behind an exhausted NAT usually asked nothing themselves,
+  // so the copy must blame the NETWORK and never them — and must not leak that
+  // we bucket by a hash of their address.
+  it('blames the NETWORK, not the visitor, when the per-IP backstop is spent', async () => {
+    getTrialGateState.mockResolvedValue({ kind: 'ip_limit' });
+    render(await TrialGate());
+    const nudge = screen.getByTestId('login-nudge');
+    expect(nudge).toHaveTextContent('Vanaf dit netwerk');
+    expect(nudge).not.toHaveTextContent(/\bje hebt\b/i);
+    expect(nudge.textContent ?? '').not.toMatch(/ip|hash|adres/i);
+    expect(screen.queryByTestId('trial-chat')).toBeNull();
+  });
+
+  // One state, one sentence, whichever surface discovers it (#184). Before the
+  // shared copy these were two literals that could drift apart.
+  it('shows the SAME sentence the action would show a round-trip later', () => {
+    expect(TRIAL_COPY.ip_limit).toContain('Vanaf dit netwerk');
+    expect(new Set(Object.values(TRIAL_COPY)).size).toBe(Object.keys(TRIAL_COPY).length);
   });
 
   it('renders nothing at all when the gate reads dormant', async () => {
