@@ -57,6 +57,18 @@ describe('TrialGate', () => {
     expect(screen.queryByTestId('trial-chat')).toBeNull();
   });
 
+  // The degrade is identical; the CLAIM is not. During a #173 pooler
+  // exhaustion the gate cannot read the pot, and telling every visitor it is
+  // empty is a statement we have not verified.
+  it('does NOT claim the pot is empty when it could not read the pot', async () => {
+    getTrialGateState.mockResolvedValue({ kind: 'unavailable' });
+    render(await TrialGate());
+    const nudge = screen.getByTestId('login-nudge');
+    expect(nudge).not.toHaveTextContent('leeg');
+    expect(nudge).toHaveTextContent('niet beschikbaar');
+    expect(screen.queryByTestId('trial-chat')).toBeNull();
+  });
+
   it('tells an exhausted visitor their own budget is spent', async () => {
     getTrialGateState.mockResolvedValue({ kind: 'used_up' });
     render(await TrialGate());

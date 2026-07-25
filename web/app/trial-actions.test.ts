@@ -57,6 +57,13 @@ vi.mock('../lib/trial.ts', async (importOriginal) => ({
 import { askTrialQuestion } from './trial-actions.ts';
 
 const VISITOR = '9b2f1c2e-6a1d-4f3a-9c0d-0a1b2c3d4e5f';
+// Real UUIDs, deliberately. These used to be 'r1'…'r4' — the exact shape
+// `audit_answers.request_id uuid` rejects, which is why the missing shape check
+// went unnoticed: the tests agreed with the bug.
+const R1 = '00000000-0000-4000-8000-000000000001';
+const R2 = '00000000-0000-4000-8000-000000000002';
+const R3 = '00000000-0000-4000-8000-000000000003';
+const R4 = '00000000-0000-4000-8000-000000000004';
 const RESPONSE = { kind: 'answer', text: 'Het antwoord.', chart: null };
 
 function configure() {
@@ -82,9 +89,32 @@ afterEach(() => {
 });
 
 describe('askTrialQuestion', () => {
+  // The pot take writes request_id into a `text` column, the R8 insert into a
+  // `uuid` one. Without the shape check a non-UUID id spends a pot question and
+  // both LLM calls and is refused only by the audit write — whose fail-closed
+  // retry re-uses the same id and fails too, serving the turn unaudited. The
+  // guard must therefore run BEFORE the take, which is what these assert.
+  it('rejects a non-UUID requestId before taking a pot question or calling any LLM', async () => {
+    for (const bad of ['r1', 'not-a-uuid', '1', 'a'.repeat(100), '', '../../etc', null, 42, {}]) {
+      await expect(askTrialQuestion('Wat is de inflatie?', bad as string)).rejects.toThrow(
+        'malformed requestId',
+      );
+    }
+    expect(takeTrialQuestion).not.toHaveBeenCalled();
+    expect(answerQuestionAudited).not.toHaveBeenCalled();
+    expect(sdkInstances).toHaveLength(0);
+  });
+
+  it('accepts what the real client actually sends (crypto.randomUUID)', async () => {
+    await expect(
+      askTrialQuestion('Wat is de inflatie?', crypto.randomUUID()),
+    ).resolves.toMatchObject({ kind: 'ok' });
+    expect(takeTrialQuestion).toHaveBeenCalledTimes(1);
+  });
+
   it('is closed(dormant) when the trial envs are not fully set — before any DB work', async () => {
     vi.stubEnv('TRIAL_ENABLED', '0');
-    await expect(askTrialQuestion('vraag', 'r1')).resolves.toEqual({
+    await expect(askTrialQuestion('vraag', R1)).resolves.toEqual({
       kind: 'closed',
       reason: 'dormant',
     });
@@ -92,7 +122,7 @@ describe('askTrialQuestion', () => {
   });
 
   it('serves the pipeline response and links the audit row to the pot bookkeeping', async () => {
-    const outcome = await askTrialQuestion('Wat is de inflatie?', 'r1');
+    const outcome = await askTrialQuestion('Wat is de inflatie?', R1);
     // questionsLeft comes from the take itself (in-transaction), never a
     // post-serve read.
     expect(outcome).toEqual({ kind: 'ok', response: RESPONSE, questionsLeft: 1 });
@@ -105,11 +135,11 @@ describe('askTrialQuestion', () => {
   });
 
   it('writes the R8 row as anonymous: userId null + sourceTag anonymous_trial', async () => {
-    await askTrialQuestion('Wat is de inflatie?', 'r1');
+    await askTrialQuestion('Wat is de inflatie?', R1);
     const options = answerQuestionAudited.mock.calls[0]![2] as Record<string, unknown>;
     expect(options.userId).toBeNull();
     expect(options.sourceTag).toBe('anonymous_trial');
-    expect(options.requestId).toBe('r1');
+    expect(options.requestId).toBe(R1);
     expect(options.conversationContext).toBeNull();
     // Trial scope (ADR 036 D5): none of the account-bound machinery rides along.
     expect(options).not.toHaveProperty('tableFinder');
@@ -119,7 +149,7 @@ describe('askTrialQuestion', () => {
   });
 
   it('constructs EVERY LLM client on the trial key (the outer belt)', async () => {
-    await askTrialQuestion('Wat is de inflatie?', 'r1');
+    await askTrialQuestion('Wat is de inflatie?', R1);
     expect(sdkInstances.length).toBeGreaterThanOrEqual(2);
     for (const instance of sdkInstances) {
       expect(instance.apiKey).toBe('sk-trial-test');
@@ -133,26 +163,26 @@ describe('askTrialQuestion', () => {
 
   it('maps the take rejections to their UI states', async () => {
     takeTrialQuestion.mockResolvedValue({ kind: 'pot_empty' });
-    await expect(askTrialQuestion('v', 'r1')).resolves.toEqual({ kind: 'closed', reason: 'pot_empty' });
+    await expect(askTrialQuestion('v', R1)).resolves.toEqual({ kind: 'closed', reason: 'pot_empty' });
     takeTrialQuestion.mockResolvedValue({ kind: 'ip_limit' });
-    await expect(askTrialQuestion('v', 'r2')).resolves.toEqual({ kind: 'closed', reason: 'ip_limit' });
+    await expect(askTrialQuestion('v', R2)).resolves.toEqual({ kind: 'closed', reason: 'ip_limit' });
     takeTrialQuestion.mockResolvedValue({ kind: 'visitor_limit' });
-    await expect(askTrialQuestion('v', 'r3')).resolves.toEqual({ kind: 'used_up' });
+    await expect(askTrialQuestion('v', R3)).resolves.toEqual({ kind: 'used_up' });
     takeTrialQuestion.mockResolvedValue({ kind: 'duplicate_request' });
-    await expect(askTrialQuestion('v', 'r4')).resolves.toEqual({ kind: 'duplicate_request' });
+    await expect(askTrialQuestion('v', R4)).resolves.toEqual({ kind: 'duplicate_request' });
     expect(answerQuestionAudited).not.toHaveBeenCalled();
   });
 
   it('refunds the pot when the pipeline throws (and only then)', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
     answerQuestionAudited.mockRejectedValue(new Error('LLM down'));
-    await expect(askTrialQuestion('v', 'r1')).rejects.toThrow('LLM down');
+    await expect(askTrialQuestion('v', R1)).rejects.toThrow('LLM down');
     expect(refundTrialQuestion).toHaveBeenCalledWith(expect.anything(), 7);
   });
 
   it('mints and sets the visitor cookie on first use only', async () => {
     readTrialVisitorId.mockResolvedValue(null);
-    await askTrialQuestion('v', 'r1');
+    await askTrialQuestion('v', R1);
     expect(cookieSet).toHaveBeenCalledTimes(1);
     const [name, value, opts] = cookieSet.mock.calls[0]!;
     expect(name).toBe('cdc_trial');
@@ -161,12 +191,12 @@ describe('askTrialQuestion', () => {
 
     cookieSet.mockClear();
     readTrialVisitorId.mockResolvedValue(VISITOR);
-    await askTrialQuestion('v', 'r2');
+    await askTrialQuestion('v', R2);
     expect(cookieSet).not.toHaveBeenCalled();
   });
 
   it('rejects oversized input before touching anything', async () => {
-    await expect(askTrialQuestion('x'.repeat(2001), 'r1')).rejects.toThrow('exceeds');
+    await expect(askTrialQuestion('x'.repeat(2001), R1)).rejects.toThrow('exceeds');
     expect(takeTrialQuestion).not.toHaveBeenCalled();
   });
 
@@ -187,14 +217,14 @@ describe('askTrialQuestion', () => {
   it('still serves the answer when the post-hoc audit link fails (fail-soft, no refund)', async () => {
     vi.spyOn(console, 'warn').mockImplementation(() => {});
     attachTrialAudit.mockRejectedValue(new Error('update lost'));
-    const outcome = await askTrialQuestion('Wat is de inflatie?', 'r1');
+    const outcome = await askTrialQuestion('Wat is de inflatie?', R1);
     expect(outcome).toEqual({ kind: 'ok', response: RESPONSE, questionsLeft: 1 });
     expect(refundTrialQuestion).not.toHaveBeenCalled();
   });
 
   it('runs the #144 semantic checker on the TRIAL key too when the flag is live', async () => {
     vi.stubEnv('SEMANTIC_CHECK_ENABLED', '1');
-    await askTrialQuestion('Wat is de inflatie?', 'r1');
+    await askTrialQuestion('Wat is de inflatie?', R1);
     const options = answerQuestionAudited.mock.calls[0]![2] as {
       semanticCheck?: { client: unknown; mode: string };
     };

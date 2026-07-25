@@ -6,6 +6,54 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 58B (2026-07-25 night, AUTONOMOUS — the second of TWO sessions running the same queue)
+
+- **Check whether another session is already in the working tree, before you touch a byte.** I was started with the
+  same overnight queue as a session that was already running in the same directory, and found out four minutes in
+  only because `tests/audit/envelope-key-manifest.test.ts` advanced its mtime *while I was reading the repo*
+  (18:38:34 → 18:40:52). One `git add -A`, `git stash` or `git checkout` from either side would have silently eaten
+  the other's uncommitted work. The recipe, now that it exists: `stat -f '%Sm'` the modified files twice a minute
+  apart, cross-check `list_sessions` for a running session with the same `cwd`, and if there is one, **move out** —
+  `git worktree add` with its own `node_modules` gives a separate index, HEAD and fixture cache. Do not try to
+  share a tree by being careful; you cannot be careful enough about another process's `git` commands.
+- **When you discover you are the SECOND session, change the job, not the branch.** My first instinct was to take
+  different queue items. The better move surfaced from reading the other session's own commit message: it had
+  already done the queue's headline item. What a second session can do that a first structurally cannot is **review
+  the first one's work** — nobody independently reviews their own diff — and **re-hunt the same surface without the
+  first pass's conclusions**. That reframing is where all of this session's value came from, including the one
+  production-reachable defect. Duplicating a queue is waste; being the adversary is not.
+- **When one logical id lives in two tables, check the column types agree — the looser one is the attack surface.**
+  `trial_questions.request_id` is `text`; `audit_answers.request_id` is `uuid`. That single disagreement let a
+  non-UUID request id pass the guard, pass the pot take, spend both LLM calls, and fail only at the R8 insert —
+  whose fail-closed retry re-used the same bad id and failed identically, serving the turn with no audit row at all.
+  The paid path was immune **by accident**: its `credit_transactions.request_id` is `uuid` and is written inside the
+  gate *before* the LLM call, so the same garbage fails there for free. Nobody designed that asymmetry; a migration
+  just picked a different type three months apart.
+- **A test that mocks the layer enforcing a constraint cannot prove the constraint — and may pin its violation.**
+  The trial tests passed `'r1'`…`'r4'` as request ids throughout, the exact shape production rejects, and stayed
+  green for weeks because `answerQuestionAudited` is mocked there so the `uuid` column never participated. Same
+  family as session 57's "my own new test had asserted the truncated key set as CORRECT". Ask of every fixture
+  value: *would the real database accept this?*
+- **"Fail-safe" and "honest" are different properties, and this product needs both.** The trial gate degraded
+  perfectly — never a broken page, always the login nudge — while telling every visitor *"het gratis proefpotje is
+  op dit moment leeg"* in a state where it had merely failed to READ the pot, which during the #173 pooler
+  exhaustion meant a full pot. No number was wrong, so no invariant fired. Separate the two questions explicitly:
+  *what do we DO when we don't know* (degrade) and *what do we SAY* (not a cause we haven't verified).
+- **A `catch {}` that explains itself is more dangerous than a silent one.** `gdpr:purge` wrapped both trial legs in
+  a bare catch that printed *"trial_questions absent (migration 020 not applied)"* and exited 0. That migration has
+  been live since 2026-07-17, so from that day the message could only ever be false, and a lock timeout or
+  permission error would have been reported as an honest skip forever. The house rule already existed one file
+  away, in `retention.ts`: *"the guard must be a check, not a catch."* Grep for the rule before inventing one.
+- **A retraction that lives in one paragraph is not a retraction.** `lessons-learned.md` retracted the confounded
+  "680 s → 440 s" figure and then **restated it as fact three bullets later in the same file**. After correcting a
+  number, grep the repo for the number — the doc-freshness rule already says this about decisions, and it applies
+  just as much to measurements.
+- **The measurement you could not schedule sometimes falls out of a log line.** I could not run item 2's A/B
+  honestly (two sessions, load 32.8 then 41.2 on 8 cores). But my own worktree's cold `globalSetup` logged
+  `snapshot built in 138470 ms` — 138 s for a build that costs 7.9-10.7 s idle. That is a measured 13-17× penalty
+  on exactly the term the arithmetic wanted to treat as constant, and it is why one number was never the right
+  shape for that claim. Read your own build logs before concluding something is unmeasurable.
+
 ## Session 57 — merge phase (2026-07-25, owner-present)
 
 - **`git merge origin/main` merges the ref you last FETCHED, not the branch that exists.** I merged main into a
@@ -51,8 +99,11 @@ on top.
 - **Fixing the CAUSE of a repeated symptom was ~10x cheaper than the four times we treated the symptom.** The
   `hookTimeout` had been raised 30 → 60 → 120 → 300 s across four sessions because every one of 34 test files
   re-ingested 17 tables (measured 7.9-10.7 s each). Ingesting once and restoring a private copy per suite (1.16-1.39 s)
-  took one session and cut the suite 680 s → 440 s. The tell that it was worth doing: the same fix had been
+  took one session. The tell that it was worth doing: the same fix had been
   *written down as the real fix* in the vitest config comment each time it was deferred.
+  **(Corrected 2026-07-25, session 58: this bullet said "cut the suite 680 s → 440 s" — the very number the bullet
+  two entries above it retracts as load-confounded. A doc that corrects a figure in one paragraph and repeats it in
+  another has not corrected it. The suite-level saving is still unmeasured; see [#179](open-questions.md).)**
 - **Two adversarial agents can BOTH be right about the code and disagree about the verdict — and the synthesis is
   better than either.** On WP26's un-gated `rescueOnly`, one lens called it a dormancy hole and another called it
   deliberate protection for a post-rollback tab. Both were factually correct. The resolution was neither's

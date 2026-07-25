@@ -253,8 +253,13 @@ async function redactMatchingRows(
 }
 
 /** Self-service deletion (#14 piece 2): every in-scope audit row (AUDIT_SCOPE:
- * source_tag in ('user', 'onboarding_delivery')) belonging to THIS user, any
- * age, PLUS the user's pending_table_requests free text (#120). THE CRITICAL
+ * source_tag in ('user', 'onboarding_delivery', 'anonymous_trial')) belonging to
+ * THIS user, any age, PLUS the user's pending_table_requests free text (#120).
+ * Note the consequence of binding user_id: `anonymous_trial` rows are in
+ * AUDIT_SCOPE but have `user_id` null, so this path can NEVER reach them — an
+ * anonymous visitor has no self-service erasure route at all, and only the
+ * age-based purge below ever redacts their content (open-questions #181).
+ * THE CRITICAL
  * SECURITY SCOPE: every where clause binds user_id as a parameter — there is no
  * code path in this function that can touch a different user's rows, by
  * construction (no dynamic SQL, no string interpolation of userId). Idempotent:
@@ -289,8 +294,10 @@ export async function deleteUserQuestionHistory(db: Db, userId: string): Promise
 }
 
 /** Retention purge (#14 piece 1): every in-scope audit row (AUDIT_SCOPE:
- * source_tag in ('user', 'onboarding_delivery')) older than the given cutoff,
- * across ALL users — the scheduled 2-year sweep — PLUS pending_table_requests
+ * source_tag in ('user', 'onboarding_delivery', 'anonymous_trial')) older than
+ * the given cutoff, across ALL users — the scheduled 2-year sweep, and the ONLY
+ * path that reaches anonymous-trial content, since its WHERE keys on scope and
+ * age with no user_id predicate — PLUS pending_table_requests
  * rows older than the cutoff (#120). `cutoff` is an injected Date (never
  * `new Date()` inside this function) so the purge is testable against a fixed
  * clock, mirroring the rest of the codebase's reference-date discipline
