@@ -138,10 +138,31 @@ function guardPending(pending: PendingClarification): void {
       throw new Error(`pending.${field} rejected: not an array within ${MAX_PENDING_OPTIONS} entries`);
     }
   }
-  for (const opt of pending.options) {
-    if (typeof opt !== 'string' || opt.length > MAX_INPUT_LENGTH) {
-      throw new Error(`pending.options entry rejected: not a string within ${MAX_INPUT_LENGTH} chars`);
+  // Entries, not just the array length. `options` was already bounded; `axes`
+  // was not, so twenty megabyte-sized strings passed the belt and were then
+  // persisted verbatim into audit_answers.pending_clarification.
+  for (const [field, arr] of [
+    ['options', pending.options],
+    ['axes', pending.axes],
+  ] as const) {
+    for (const entry of arr as unknown[]) {
+      if (typeof entry !== 'string' || entry.length > MAX_INPUT_LENGTH) {
+        throw new Error(
+          `pending.${field} entry rejected: not a string within ${MAX_INPUT_LENGTH} chars`,
+        );
+      }
     }
+  }
+  // The reply must resolve relative periods against the SAME clock as the
+  // original parse, and this is the field that carries it. A length check is
+  // not enough: it is fed straight to parseReferenceDate, which accepts only
+  // YYYY-MM-DD. A well-formed LIE ("2019-01-01") silently moves what "vorige
+  // maand" means; a malformed one throws deep in the parse and surfaces as an
+  // 'internal' refusal, which also fires an admin alert — an amplifier a
+  // client should not be able to hold. Same regex as parseReferenceDate, kept
+  // deliberately literal so the two cannot drift apart unnoticed.
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(pending.referenceDate)) {
+    throw new Error('pending.referenceDate rejected: not a YYYY-MM-DD date');
   }
   // WP26 mechanism A (ADR 024, take-path A2): the click options ride the same
   // client-held pending. They never enter a prompt (the deterministic rung is

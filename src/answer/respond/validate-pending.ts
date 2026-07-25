@@ -85,9 +85,40 @@ export function validateClickOptions(raw: unknown): ClickOption[] {
 /** The pending as the reply turn may use it: every prompt-bound field
  * untouched (guardLength/guardPending already bound those), the click options
  * replaced by their validated subset, and the key REMOVED when nothing
- * survives — so a stripped pending is byte-identical to a pre-WP26 one. */
+ * survives — so a stripped pending is byte-identical to a pre-WP26 one.
+ *
+ * Rebuilt from an ALLOWLIST of the known keys rather than spread from the
+ * incoming object. The spread let anything the client invented ride through
+ * untouched — and this value is not merely read, it is persisted verbatim into
+ * `audit_answers.pending_clarification`. A single junk key sized to the Server
+ * Action body limit therefore became a database row, on a turn that can cost
+ * the user nothing. Unknown keys are now simply not carried.
+ *
+ * The optional keys stay PRESENT-ONLY: re-adding `clickOptions: []` or
+ * `rescueOnly: false` would change the stored envelope for every flag-off turn,
+ * which is exactly the byte-neutrality the dormant rollout rests on.
+ *
+ * ⚠ AN ALLOWLIST HAS TO BE KEPT COMPLETE, and the first version of this one was
+ * not: it omitted `conversationContext` (WP15 / ADR 021), the referent that
+ * gives an elliptical follow-up its meaning. Dropping it does not throw — it
+ * quietly costs the reply merge its `previous_intent`, so a follow-up
+ * clarification round dead-ends far more often. If a field is added to
+ * `PendingClarification`, it must be added here too; the test in
+ * tests/answer/wp26-trust-boundary.test.ts pins the full key set for exactly
+ * that reason. */
 export function withValidatedClickOptions(pending: PendingClarification): PendingClarification {
   const clickOptions = validateClickOptions(pending.clickOptions);
-  const { clickOptions: _dropped, ...rest } = pending;
-  return clickOptions.length > 0 ? { ...rest, clickOptions } : rest;
+  return {
+    version: pending.version,
+    question: pending.question,
+    referenceDate: pending.referenceDate,
+    axes: pending.axes,
+    questionNl: pending.questionNl,
+    options: pending.options,
+    ...(clickOptions.length > 0 ? { clickOptions } : {}),
+    ...(pending.rescueOnly === true ? { rescueOnly: true as const } : {}),
+    ...(pending.conversationContext !== undefined
+      ? { conversationContext: pending.conversationContext }
+      : {}),
+  };
 }
