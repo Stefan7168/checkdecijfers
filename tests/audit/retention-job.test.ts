@@ -265,7 +265,12 @@ describe('#189 runRetentionPurge — the shared job behind the CLI and the cron'
     });
 
     // ⟨F2⟩ across the NEW split: what a dry run promises is what an apply does.
-    it('dry-run counts equal what apply actually redacts, per window', async () => {
+    // Named for what it actually proves, after a review pointed out the earlier
+    // name overstated it: both paths derive their cutoffs from the SAME
+    // anonymousTrialCutoff(now) call, so this can only catch the two paths
+    // DISAGREEING — it is blind to a bug that shifts both consistently (a wrong
+    // constant, say). The absolute counts are pinned by its sibling above.
+    it('dry-run and apply agree with each other (F2), though neither pins the constant', async () => {
       await withDb(async (db) => {
         await seedExpired(db);
         await seedAnonymous(db, 'Wat is de inflatie?', '2026-04-24T00:00:00.000Z');

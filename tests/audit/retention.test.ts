@@ -507,16 +507,27 @@ describe('anonymous_trial rows (#53, ADR 036 D4 — session 52 scope widening)',
     });
   });
 
-  it('leaves an anonymous row that is only 89 days old alone', async () => {
+  // The BOUNDARY, at the instant rather than near it. `anonymousTrialCutoff` of
+  // 2026-07-05 is exactly 2026-04-06T00:00:00Z, so this pins strict `<` on the
+  // anonymous half of AUDIT_PURGE_WHERE: a row AT the cutoff survives, one
+  // second older goes. That predicate is a textually separate literal from the
+  // account half, so the account leg's own strict-`<` test cannot catch it
+  // regressing to `<=` — a review pointed out the gap, and that an earlier
+  // version of this test was labelled "89 days" while actually seeding 88.
+  it('anonymous half uses strict < : a row AT the cutoff survives, a second older does not', async () => {
     await withDb(async (db) => {
-      const id = await insertAnonymousTrialRow(db, 'Wat doet het bbp?', '2026-04-08T00:00:00Z');
-      const redacted = await purgeExpiredQuestionHistory(
+      const cutoff = anonymousTrialCutoff(NOW);
+      expect(cutoff.toISOString()).toBe('2026-04-06T00:00:00.000Z');
+      const atCutoff = await insertAnonymousTrialRow(db, 'Precies op de grens', cutoff.toISOString());
+      const oneSecondOlder = await insertAnonymousTrialRow(
         db,
-        twoYearsBefore(NOW),
-        anonymousTrialCutoff(NOW),
+        'Een seconde ouder',
+        new Date(cutoff.getTime() - 1000).toISOString(),
       );
-      expect(redacted).toEqual([]);
-      expect((await loadRow(db, id))!.question).toBe('Wat doet het bbp?');
+      const redacted = await purgeExpiredQuestionHistory(db, twoYearsBefore(NOW), cutoff);
+      expect(redacted.map((r) => r.id)).toEqual([oneSecondOlder]);
+      expect((await loadRow(db, atCutoff))!.question).toBe('Precies op de grens');
+      expect((await loadRow(db, oneSecondOlder))!.question).not.toContain('seconde');
     });
   });
 

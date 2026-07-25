@@ -83,7 +83,8 @@ gets the secrets-register entry + rotation steps.
 Audit rows are written exactly as today with `user_id = null` and a NEW `source_tag = 'anonymous_trial'`
 (migration widens the CHECK by exact-name drop/re-add — the 007/013/018 pattern; `AuditSourceTag` union
 widened in code). The tag is ADDED to the GDPR retention allowlist (`AUDIT_SCOPE`, retention.ts) so the
-2-year purge sweeps anonymous rows — without this conscious add they'd be silently retained forever (the
+age-based purge sweeps anonymous rows — 2 years when this was written, 90 days since #181 — and without
+this conscious add they'd be silently retained forever (the
 allowlist is deliberately not automatic). Self-service deletion structurally doesn't exist for anonymous
 rows (no account to invoke it from) — retention is the age-based purge, and since [#181](../open-questions.md)
 (2026-07-26) that is **90 days for anonymous content**, not 2 years: exactly the reasoning this D4 already
