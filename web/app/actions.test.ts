@@ -126,6 +126,63 @@ function lastAskOptions(): Record<string, unknown> {
   return audit.answerQuestionAudited.mock.calls[0]![2] as Record<string, unknown>;
 }
 
+describe('askQuestion / replyToClarification — argument TYPE guards (untrusted client payload)', () => {
+  // The hole this pins (found 2026-07-25, trial-surface hunt): guardLength
+  // checked `.length` and nothing else, so any object with a small `.length`
+  // passed the spend ceiling. The one that matters is an Anthropic
+  // content-block array — valid API input, so the model call SUCCEEDS with a
+  // prompt orders of magnitude larger than the ceiling, at the same flat price.
+  // guardPending has always type-checked its fields; the top-level arguments
+  // had not.
+  const blockArray = [{ type: 'text', text: 'A'.repeat(400_000) }] as unknown as string;
+
+  it('rejects a content-block array as the question — before any charge', async () => {
+    driveGate(fakeAnswer(), 1, 20);
+    // `.length` is 1, so the size ceiling alone would have let this through.
+    expect(blockArray.length).toBe(1);
+    await expect(askQuestion(blockArray, 'rid')).rejects.toThrow(/not a string/);
+    expect(billing.chargeAndRun).not.toHaveBeenCalled();
+    expect(audit.answerQuestionAudited).not.toHaveBeenCalled();
+  });
+
+  it('rejects a content-block array as the reply — before any charge', async () => {
+    driveGate(fakeAnswer(), 1, 20);
+    await expect(replyToClarification(validPending, blockArray, 'rid')).rejects.toThrow(
+      /not a string/,
+    );
+    expect(billing.chargeAndRun).not.toHaveBeenCalled();
+    expect(audit.answerClarificationReplyAudited).not.toHaveBeenCalled();
+  });
+
+  it('rejects a malformed requestId — the billing idempotency key', async () => {
+    // Not a spend hole like the above, but it is the one value standing between
+    // a double-submit and a double debit, and the trial action has always
+    // type-checked it.
+    driveGate(fakeAnswer(), 1, 20);
+    for (const bad of [null, 42, {}, '', 'x'.repeat(101)] as unknown as string[]) {
+      await expect(askQuestion('q', bad)).rejects.toThrow(/requestId/);
+      // The reply turn carries the same key and must reject it identically —
+      // without this leg, deleting the guard from replyToClarification alone
+      // would leave the suite green.
+      await expect(replyToClarification(validPending, 'ok', bad)).rejects.toThrow(/requestId/);
+    }
+    expect(billing.chargeAndRun).not.toHaveBeenCalled();
+  });
+
+  it('accepts a requestId exactly at the length boundary', async () => {
+    driveGate(fakeAnswer(), 1, 20);
+    const { gated } = await askQuestion('q', 'x'.repeat(100));
+    expect(gated.kind).toBe('ok');
+  });
+
+  it('still accepts a normal question and requestId', async () => {
+    driveGate(fakeAnswer(), 1, 20);
+    const { gated } = await askQuestion('Hoeveel inwoners had Amsterdam in 2024?', 'rid');
+    expect(gated.kind).toBe('ok');
+    expect(billing.chargeAndRun).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('askQuestion — selection validation (untrusted client payload)', () => {
   it('filters sources to KNOWN registry keys, dropping unknowns', async () => {
     driveGate(fakeAnswer(), 1, 20);

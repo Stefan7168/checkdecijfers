@@ -96,9 +96,39 @@ function referenceDate(): string {
 // proper stays Phase 1–2 (docs/03 non-goals, ADR 005).
 const MAX_INPUT_LENGTH = 2000;
 
+// TYPE FIRST, THEN SIZE. `text` is a Server Action ARGUMENT — attacker-
+// controlled, and its declared `string` type is erased at runtime. Checking
+// only `.length` lets any object with a small `.length` through, and the
+// dangerous shape is specific and cheap to send: an Anthropic content-block
+// array, `[{ type: 'text', text: <400 kB> }]`, whose `.length` is 1. It then
+// flows verbatim into `messages: [{ role: 'user', content: request.question }]`
+// (src/answer/llm/client.ts) — where the API ACCEPTS it, because it is valid
+// input — driving a prompt bounded only by Next's request-body limit (~1 MB,
+// some 500x this ceiling) at the same flat credit price, and on the anonymous
+// path for one pot question.
+//
+// guardPending below already type-checks every field it bounds, for exactly
+// this reason and naming exactly this threat ("array-stuffed"); the top-level
+// arguments were simply never given the same check (found by the trial-surface
+// hunt, 2026-07-25 — it reaches the PAID path too, not only the trial).
 function guardLength(text: string): void {
+  if (typeof text !== 'string') {
+    throw new Error(`input rejected: not a string within ${MAX_INPUT_LENGTH} chars`);
+  }
   if (text.length > MAX_INPUT_LENGTH) {
     throw new Error(`input rejected: ${text.length} chars exceeds ${MAX_INPUT_LENGTH}`);
+  }
+}
+
+/** The billing idempotency key is client-generated and equally untrusted: it
+ * becomes `credit_transactions.request_id`, the one thing standing between a
+ * double-submit and a double debit. The trial action has always type-checked
+ * it (trial-actions.ts); the paid path had not. Same bound, same reason. */
+const MAX_REQUEST_ID_LENGTH = 100;
+
+function guardRequestId(requestId: string): void {
+  if (typeof requestId !== 'string' || requestId.length === 0 || requestId.length > MAX_REQUEST_ID_LENGTH) {
+    throw new Error(`input rejected: malformed requestId`);
   }
 }
 
@@ -338,6 +368,7 @@ export async function askQuestion(
   rawThreadId?: unknown,
 ): Promise<AskOutcome> {
   guardLength(question);
+  guardRequestId(requestId);
   const userId = await currentUserId();
   if (userId === null) {
     return { gated: { kind: 'unauthenticated' }, context: null, threadId: null };
@@ -609,6 +640,7 @@ export async function replyToClarification(
   rawThreadId?: unknown,
 ): Promise<AskOutcome> {
   guardLength(reply);
+  guardRequestId(requestId);
   // Session 47 (billing-path hunt): bound the untrusted, client-held `pending`
   // to the same spend belt as `reply`/`question` — its prompt-bound fields
   // reach the clarify LLM at a flat price, so an oversized one must be rejected
