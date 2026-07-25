@@ -45,10 +45,12 @@ import {
   trialConfigured,
 } from '../lib/trial.ts';
 
-// Mirrors actions.ts's guardLength/referenceDate exactly; duplicated (small,
-// two lines each) rather than exported from the paid action file — importing
-// from a 'use server' module would register ITS actions under this module
-// too, and these guards are infra, not shared business logic.
+// Mirrors actions.ts's guardLength/referenceDate; duplicated rather than
+// exported from the paid action file — importing from a 'use server' module
+// would register ITS actions under this module too, and these guards are
+// infra, not shared business logic. The duplication is deliberate but it is
+// NOT free: the type-check half of guardLength was added to both copies at
+// once (2026-07-25) precisely because a fix to one would not reach the other.
 const MAX_INPUT_LENGTH = 2000;
 
 function referenceDate(): string {
@@ -90,6 +92,15 @@ export type TrialAskOutcome =
   | { kind: 'duplicate_request' };
 
 export async function askTrialQuestion(question: string, requestId: string): Promise<TrialAskOutcome> {
+  // TYPE FIRST, THEN SIZE — the same belt actions.ts's guardLength applies, and
+  // for the same reason: a Server Action argument's declared type is erased at
+  // runtime, and an object with a small `.length` (an Anthropic content-block
+  // array is the shape that matters) would otherwise pass the ceiling and drive
+  // an unbounded prompt on the trial key for ONE pot question. This path is
+  // anonymous, so it is the cheapest place in the product to abuse.
+  if (typeof question !== 'string') {
+    throw new Error(`input rejected: not a string within ${MAX_INPUT_LENGTH} chars`);
+  }
   if (question.length > MAX_INPUT_LENGTH) {
     throw new Error(`input rejected: ${question.length} chars exceeds ${MAX_INPUT_LENGTH}`);
   }

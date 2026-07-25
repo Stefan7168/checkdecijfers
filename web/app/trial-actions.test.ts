@@ -170,6 +170,20 @@ describe('askTrialQuestion', () => {
     expect(takeTrialQuestion).not.toHaveBeenCalled();
   });
 
+  it('rejects a NON-STRING question before touching anything', async () => {
+    // The size ceiling alone did not close this (found 2026-07-25): a Server
+    // Action argument's declared type is erased at runtime, and an Anthropic
+    // content-block array has `.length === 1` while carrying an arbitrarily
+    // large prompt — which the API accepts, because it is valid input. On this
+    // anonymous path that buys an unbounded call on the trial key for ONE pot
+    // question. Rejected before the take, so it drains nothing.
+    const blockArray = [{ type: 'text', text: 'A'.repeat(400_000) }] as unknown as string;
+    expect(blockArray.length).toBe(1);
+    await expect(askTrialQuestion(blockArray, 'r1')).rejects.toThrow(/not a string/);
+    expect(takeTrialQuestion).not.toHaveBeenCalled();
+    expect(answerQuestionAudited).not.toHaveBeenCalled();
+  });
+
   it('still serves the answer when the post-hoc audit link fails (fail-soft, no refund)', async () => {
     vi.spyOn(console, 'warn').mockImplementation(() => {});
     attachTrialAudit.mockRejectedValue(new Error('update lost'));
