@@ -49,10 +49,101 @@ export async function readTrialVisitorId(): Promise<string | null> {
   return value !== undefined && UUID_PATTERN.test(value) ? value.toLowerCase() : null;
 }
 
-/** HMAC-hashed request IP (ADR 036 D2): raw IPs never persist. Vercel
- * terminates the connection, so x-forwarded-for's FIRST entry is the
- * platform-set client address (spoofable only by proxies the visitor owns —
- * acceptable for a backstop limit; the pot is the real ceiling).
+/** The BUCKET KEY an address hashes under — exported so the /64 rule is tested
+ * directly rather than only through the HMAC, where every wrong answer looks
+ * like the same opaque hex.
+ *
+ * #182: for IPv6 we key on the /64 PREFIX, not the full address. A
+ * residential IPv6 customer is delegated a /64 at minimum and often a /56, so
+ * hashing the whole address gives ONE visitor 2^64 distinct buckets and the
+ * per-IP backstop bounds nothing at all. The /64 is the household, which is the
+ * unit the limit is actually about. IPv4 is returned unchanged — one address is
+ * already the household there.
+ *
+ * Measured NOT reachable when written (2026-07-25): `dig AAAA` was empty for
+ * both checkdecijfers.vercel.app and checkdecijfers.nl, so every address
+ * arriving today is IPv4 and this path changes nothing. It becomes load-bearing
+ * the day the apex goes through an IPv6-capable front, which the launch plan
+ * contemplates — which is exactly why it ships before that and not after.
+ *
+ * The returned string is a stable KEY, not a valid address: callers only need
+ * two requests from one /64 to agree, and two from different /64s to differ. */
+export function ipBucketKey(raw: string): string {
+  let ip = raw.trim();
+  // `[2001:db8::1]:443` — bracketed form, optionally with a port.
+  if (ip.startsWith('[')) {
+    const close = ip.indexOf(']');
+    if (close > 0) ip = ip.slice(1, close);
+  }
+  // Zone index (`fe80::1%eth0`); never seen in x-forwarded-for, cheap to drop.
+  const zone = ip.indexOf('%');
+  if (zone > 0) ip = ip.slice(0, zone);
+  // `203.0.113.7:443` — an IPv4 with a port contains ':', so without this it
+  // would fall into the IPv6 branch and get a fresh bucket per ephemeral port.
+  const v4WithPort = /^(\d{1,3}(?:\.\d{1,3}){3}):\d+$/.exec(ip);
+  if (v4WithPort) return v4WithPort[1]!;
+  if (!ip.includes(':')) return ip; // IPv4, or the 'unknown' sentinel.
+
+  // IPv4-mapped IPv6 (`::ffff:203.0.113.7`) is an IPv4 client — bucket it as
+  // one, or the same visitor would land in two different buckets depending on
+  // which form the platform happened to hand us.
+  const mapped = /^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/i.exec(ip);
+  if (mapped) return mapped[1]!;
+
+  // Expand `::` before slicing: `2001:db8::1` naively split on ':' yields
+  // ['2001','db8','','1'], whose first four groups are NOT the /64.
+  let groups: string[];
+  if (ip.includes('::')) {
+    const [head = '', tail = ''] = ip.split('::');
+    const headParts = head.split(':').filter((p) => p !== '');
+    const tailParts = tail.split(':').filter((p) => p !== '');
+    const zeros = Math.max(0, 8 - headParts.length - tailParts.length);
+    groups = [...headParts, ...Array<string>(zeros).fill('0'), ...tailParts];
+  } else {
+    groups = ip.split(':');
+  }
+  // Normalise each hextet so 2001:0db8:… and 2001:db8:… agree.
+  const norm = groups.map((g) => g.toLowerCase().replace(/^0+(?=.)/, ''));
+
+  // IPv4-mapped in HEX form (`::ffff:c000:0207`). The dotted form is caught
+  // above; this one only becomes visible after expansion. Without it every
+  // hex-mapped client — and `::1`, and `::` — collapses into ONE shared
+  // `0:0:0:0::/64` bucket, which both locks unrelated visitors out of each
+  // other's 5/day budget and splits one client from its own dotted form.
+  if (norm.length >= 8 && norm.slice(0, 5).every((g) => g === '0') && norm[5] === 'ffff') {
+    const hi = Number.parseInt(norm[6]!, 16);
+    const lo = Number.parseInt(norm[7]!, 16);
+    if (Number.isFinite(hi) && Number.isFinite(lo)) {
+      return `${(hi >> 8) & 255}.${hi & 255}.${(lo >> 8) & 255}.${lo & 255}`;
+    }
+  }
+  return `${norm.slice(0, 4).join(':')}::/64`;
+}
+
+/** HMAC-hashed request IP (ADR 036 D2): raw IPs never persist.
+ *
+ * **Header order (#187, settled against vercel.com/docs/headers/request-headers
+ * on 2026-07-26 by reading the page, not an index).** Two things it says, both
+ * quoted exactly:
+ *
+ *   - on `x-forwarded-for`: *"If you are trying to use Vercel behind a proxy, we
+ *     currently overwrite the `X-Forwarded-For` header and do not forward
+ *     external IPs. This restriction is in place to prevent IP spoofing."*
+ *     (Overriding it is an Enterprise "trusted proxy" purchase; we are on Hobby,
+ *     so a client-supplied value never reaches us — the header is NOT forgeable
+ *     here, which is what #187 asked.)
+ *   - on `x-vercel-forwarded-for`: *"This header is identical to the
+ *     `x-forwarded-for` header. However, `x-forwarded-for` could be overwritten
+ *     if you're using a proxy on top of Vercel."*
+ *
+ * So we read `x-vercel-forwarded-for` FIRST. Today that is a no-op — the two are
+ * identical. It matters at the launch trigger: put Cloudflare in front (the
+ * plan) and `x-forwarded-for` carries the PROXY's address, which would collapse
+ * every visitor into a handful of edge buckets and lock real people out of a
+ * 5/day limit they never used. The platform header keeps the real client. An
+ * earlier draft of this comment dismissed `x-vercel-forwarded-for` as
+ * undocumented; that was wrong, and it is documented as the fix for precisely
+ * the scenario this product is heading into.
  *
  * `||`, not `??`, on the fall-through (2026-07-25): a header that is PRESENT
  * but EMPTY splits to `''`, which is not nullish — so `??` short-circuited on
@@ -74,13 +165,14 @@ export async function hashedRequestIp(): Promise<string> {
     throw new Error('TRIAL_IP_HASH_SECRET is unset — refusing to persist an unkeyed IP hash');
   }
   const h = await headers();
-  const forwarded = h.get('x-forwarded-for');
+  const forwarded = h.get('x-vercel-forwarded-for') ?? h.get('x-forwarded-for');
   // Trim BEFORE the fallback, not after: a present-but-whitespace header is
   // truthy, so trimming last would let ' ' win the `||` and hash to '' — the
   // same shared-bucket bug as the empty header, one character away.
   const ip =
     forwarded?.split(',')[0]?.trim() || h.get('x-real-ip')?.trim() || 'unknown';
-  return createHmac('sha256', secret).update(ip).digest('hex');
+  // #182: hash the BUCKET, not the address — over IPv6 those differ by 2^64.
+  return createHmac('sha256', secret).update(ipBucketKey(ip)).digest('hex');
 }
 
 export type TrialGateState =
