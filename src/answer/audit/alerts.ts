@@ -71,6 +71,11 @@ async function sendAdminAlertEmail(
   const to = process.env.ADMIN_ALERT_EMAIL;
   if (!apiKey || !to) return;
   const res = await fetchImpl('https://api.resend.com/emails', {
+    // A THROW is caught by every caller; a HANG is not — nothing times out a
+    // stalled socket, so an alert on a user-facing path would hold the request
+    // to the platform limit and cost a visitor an answer that was already
+    // produced. Bounds all four alerts, not just the newest one.
+    signal: AbortSignal.timeout(5_000),
     method: 'POST',
     headers: {
       Authorization: `Bearer ${apiKey}`,
@@ -326,7 +331,7 @@ export async function alertTrialPotLow(
   const body = empty
     ? 'De homepage toont vanaf nu "log in om verder te gaan" in plaats van het proefveld. ' +
       'Bijvullen: npm run trialpot:set -- <aantal>. De trial heropent ZONDER deploy.'
-    : `Het potje is onder de drempel van ${alert.threshold} gezakt. Bijvullen met ` +
+    : `Het potje staat op de waarschuwingsgrens van ${alert.threshold}. Bijvullen met ` +
       'npm run trialpot:set -- <aantal> voordat het leeg is; dat heropent de trial zonder deploy.';
   await sendAdminAlertEmail(subject, body, fetchImpl);
 }
@@ -336,7 +341,9 @@ export async function maybeAlertTrialPotLow(
   alert: TrialPotAlert,
   fetchImpl: typeof fetch = fetch,
 ): Promise<void> {
-  console.warn(`[trial-pot] low water: ${alert.remaining} left (threshold ${alert.threshold})`);
+  // console.ERROR, like every sibling alert: an owner filtering Vercel logs to
+  // error level must see this one too.
+  console.error(`[trial-pot] low water: ${alert.remaining} left (threshold ${alert.threshold})`);
   try {
     await alertTrialPotLow(alert, fetchImpl);
   } catch (err) {

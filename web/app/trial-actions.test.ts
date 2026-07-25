@@ -289,8 +289,40 @@ describe('askTrialQuestion', () => {
 
     it('never lets an alert failure cost the visitor their answer', async () => {
       maybeAlertTrialPotLow.mockRejectedValueOnce(new Error('resend down'));
-      await expect(askWithPot(5)).resolves.toBeUndefined();
+      takeTrialQuestion.mockResolvedValue({
+        kind: 'taken',
+        trialQuestionId: 7,
+        questionsLeft: 1,
+        potRemaining: 5,
+      });
+      // Assert the ANSWER survives, not merely that nothing threw — without the
+      // inner try this rejects AND refunds a question already served.
+      await expect(
+        askTrialQuestion('Wat is de inflatie?', crypto.randomUUID()),
+      ).resolves.toMatchObject({ kind: 'ok', response: RESPONSE });
       expect(refundTrialQuestion).not.toHaveBeenCalled();
+    });
+
+    // The crossing alert gets exactly ONE send attempt, so a transient Resend
+    // failure there would lose the warning for good. Every later visitor lands
+    // on pot_empty — re-fire from there, once per instance.
+    it('re-fires from the pot_empty branch, once, and re-arms after a refill', async () => {
+      takeTrialQuestion.mockResolvedValue({ kind: 'pot_empty' });
+      await askTrialQuestion('v', crypto.randomUUID());
+      expect(maybeAlertTrialPotLow).toHaveBeenCalledWith({ remaining: 0, threshold: 5 });
+
+      // Latched: a second empty visitor does not re-mail.
+      vi.clearAllMocks();
+      takeTrialQuestion.mockResolvedValue({ kind: 'pot_empty' });
+      await askTrialQuestion('v', crypto.randomUUID());
+      expect(maybeAlertTrialPotLow).not.toHaveBeenCalled();
+
+      // A refill (a successful take) re-arms it for the next drain.
+      vi.clearAllMocks();
+      await askWithPot(20);
+      takeTrialQuestion.mockResolvedValue({ kind: 'pot_empty' });
+      await askTrialQuestion('v', crypto.randomUUID());
+      expect(maybeAlertTrialPotLow).toHaveBeenCalledWith({ remaining: 0, threshold: 5 });
     });
   });
 });
