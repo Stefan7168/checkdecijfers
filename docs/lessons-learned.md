@@ -6,6 +6,27 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 57 — merge phase (2026-07-25, owner-present)
+
+- **`git merge origin/main` merges the ref you last FETCHED, not the branch that exists.** I merged main into a
+  feature branch after merging two PRs, but had only fetched after the first — so the second PR's files silently
+  never came in. Nothing errored; the merge reported success. It was caught only because the resulting test count
+  was **1504 measured against 1509 expected** by arithmetic (main's 1494 + 4 + 5 + 6). Two rules: always `git fetch`
+  immediately before merging a remote ref, and **do the test-count arithmetic after every merge** — it is a free
+  integrity check on whether the code you think you merged is actually there.
+- **A performance claim measured at two different machine loads is not a measurement.** I published "backend suite
+  680s → 440s" in a PR; the 680s baseline had run while six review agents were working and the 440s had not. The
+  underlying mechanism was cleanly measured back-to-back (build 7.9-10.7 s vs restore 1.16-1.39 s) and is sound —
+  but the headline ratio was confounded and I had quoted it as the headline. Corrected in the docs rather than left
+  standing, and a same-conditions A/B queued. Rule: for any before/after timing, capture `uptime` load alongside
+  both numbers, or measure them back-to-back in one run. This project's standard is measured results, never
+  aspirational ones — and a confounded number is aspirational wearing a decimal point.
+- **Merge one at a time when deploys are the scarce resource.** Four PRs = four production deploys, and five deploys
+  in an hour is precisely what caused the #173 degradation. Merging serially, waiting for each gate+deploy to
+  complete and checking the canary between, cost about an hour of wall-clock and zero risk. Ordering mattered too:
+  the pool-size PR went FIRST because it lowers per-instance connections, buying headroom for the three deploys
+  behind it. Sequence infra-relief changes ahead of the changes that will lean on them.
+
 ## Session 57 (2026-07-25, AUTONOMOUS overnight — 4 PRs on branches, €0 LLM product spend)
 
 - **An allowlist is exactly as good as its completeness, and mine was not — the failure is SILENT by
