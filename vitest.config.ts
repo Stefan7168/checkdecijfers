@@ -31,8 +31,16 @@ import { defineConfig } from 'vitest/config';
 // so this raise targets the hook only (per-test time did not move) and matches
 // the 300_000 the newer suites already pass explicitly at their own beforeAll.
 // The real fix is a shared fixture DB across suites; tracked, not done here.
+// 2026-07-25: the underlying cause was finally addressed rather than the
+// symptom. createIngestedDb() no longer re-ingests 17 tables per suite; the
+// ingest runs once in globalSetup and each suite restores a private copy
+// (tests/helpers/fixture-snapshot.ts — measured 7.9-10.7 s → 1.16-1.39 s).
+// The timeouts below are deliberately LEFT HIGH for now: they cost nothing on
+// a green run, and lowering them is a separate claim that wants a few CI runs
+// of evidence behind it, not the same change that removed the pressure.
 export default defineConfig({
   test: {
+    globalSetup: ['./tests/global-setup.ts'],
     testTimeout: 120_000,
     hookTimeout: 300_000,
     // web/ is a standalone Next.js workspace (ADR 018) with its own vitest
