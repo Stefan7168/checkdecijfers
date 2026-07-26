@@ -959,8 +959,11 @@ export async function resolveCandidate(
   db: Db,
   candidate: RawCandidate,
   referenceDateIso: string,
-  /** WP26 (ADR 024): the answer-first switches. Absent ⇒ pre-WP26 behavior. */
-  options: { answerFirstEnabled?: boolean } = {},
+  /** WP26 (ADR 024): the two rollout flags — `ANSWER_FIRST_ENABLED` (mechanism
+   * B's defaults) and `CLARIFY_CLICK_ENABLED` (mechanism A's clickable
+   * options). Absent ⇒ pre-WP26 behavior, and #176: absent also means the
+   * per-option intents nobody would read are not built. */
+  options: { answerFirstEnabled?: boolean; clickOptionsEnabled?: boolean } = {},
 ): Promise<CandidateResolution> {
   const confidence = clamp01(candidate.confidence);
   const fail = (
@@ -988,15 +991,27 @@ export async function resolveCandidate(
     // max-comparison that needs several regions) simply yields no intents:
     // the clarification then renders exactly as it does today.
     const { optionCodes, ...failure } = regionResolution.failure;
-    const options =
-      optionCodes === undefined
+    // #176: and ONLY when the flag that consumes them is on. policy.ts reads
+    // optionIntents behind `clickOptionsEnabled` (policy.ts:149) and nothing
+    // else reads them at all, so building them flag-off spent a resolvePeriod
+    // query per region-ambiguous question on a result that was then discarded
+    // — measurable pressure on the 15-session pooler ceiling (#173) for zero
+    // effect. Gated here rather than in policy.ts because this is the module
+    // that owns the db; policy.ts stays DB-free by design (see ServabilityCheck).
+    // Named `optionResolution`, not `options`: the parameter is called `options`
+    // and a shadow here would put the flag out of reach.
+    const optionResolution =
+      optionCodes === undefined || options.clickOptionsEnabled !== true
         ? undefined
         : await regionOptionIntents(db, candidate, canonical, referenceDateIso, optionCodes);
     return {
       ...fail(failure),
-      ...(options === undefined
+      ...(optionResolution === undefined
         ? {}
-        : { optionIntents: options.intents, optionImpliedRecency: options.impliedRecency }),
+        : {
+            optionIntents: optionResolution.intents,
+            optionImpliedRecency: optionResolution.impliedRecency,
+          }),
     };
   }
 

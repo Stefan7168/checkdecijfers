@@ -486,6 +486,15 @@ so a problem with one mechanism never forces the other off.
 | `CLARIFY_CLICK_ENABLED=1` | Clarification options carry a pre-verified intent; a reply byte-equal to an offered label resolves deterministically (no LLM). Chips render on clarifications. | Reply turns only. Worst case: a chip is missing (an option failed its dry-run) — never a wrong answer. |
 | `ANSWER_FIRST_ENABLED=1` | A question with no region (on a measure with a national row) answers nationally; a question with no period at all answers with the recent trend. Both disclosed in-sentence. | First turns. Questions that used to clarify now ANSWER — the biggest visible behavior change of the two. |
 
+⚠ **BEFORE the `ANSWER_FIRST_ENABLED` flip, read [#191](open-questions.md)** (found 2026-07-26, session 60).
+The clarification REPLY turn never actually receives that flag — `ClarifyReplyOptions` declares
+`answerFirstEnabled` and its comment says it is threaded, but `respondToClarificationReply` never sets it
+(`src/answer/respond/respond.ts:586-595`). Harmless while the flag is off, because both turns then run
+pre-B and agree. Flip it and they stop agreeing: the first turn defaults a missing region/period and
+answers, the reply turn judges the same option under pre-B rules and can refuse or re-clarify. That is two
+halves of one conversation disagreeing about what is servable — decide what a reply turn *should* do
+(default like the first turn, or deliberately not) before flipping, not after.
+
 ⚠ **Flip a flag only when the last deploy has SETTLED** (see the connection-ceiling section directly above):
 each flip triggers a redeploy, and both mechanisms add DB work per request — B-region an existence probe on
 a region-less question, B-period a window query. On the 15-connection free tier, flipping both during a

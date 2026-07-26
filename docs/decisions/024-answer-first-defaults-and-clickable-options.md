@@ -152,6 +152,26 @@ bit (the obvious fix over-refuses legitimate historical chips — it needs a dec
 means), the trial path never receiving either flag (#175, a product decision), flags-off extra DB queries
 (#176), the `llm_calls` role label on the rescue path (#177), and pending TTL/binding/version (#178).
 
+**As-built, 2026-07-26 (session 60) — [#176](../open-questions.md) is now FIXED.** Mechanism A's per-option
+intents are built by `resolveCandidate`, but read only by `clarificationFromFailure` behind
+`clickOptionsEnabled` — so with the flag off the resolver was spending a `resolvePeriod` query per
+region-ambiguous question and discarding the result. `resolveCandidate` now takes `clickOptionsEnabled` in
+its existing options bag and gates the `regionOptionIntents` call on it; `parse.ts` and `followup.ts` pass
+the same flag they already pass to `decide()`. `clarify.ts` passes nothing **on purpose**: a reply turn is
+the final round and never asks again, so those intents were dead work there in every flag state.
+Measured on a named ambiguity ("Utrecht"): **3 statements flag-off, 4 flag-on**.
+
+Two things this surfaced that belong in the ADR record. First, `regionOptionIntents` resolves its period
+**without** `answerFirstEnabled` and without region codes (`resolve.ts:933`), unlike the main path — so a
+period-less ambiguous question builds no chips even with both flags on. That looks deliberate (per-option
+trend windows would each need their own servability check) but was written down nowhere; it is also the
+main reason the alternative design (moving the construction into `policy.ts`'s gated branch) is riskier
+than it sounds — any reimplementation must reproduce it exactly or silently change flag-ON behaviour.
+Second, the byte-neutrality review that ORIGINALLY found #176 was right about the defect and the test that
+was supposed to pin it was not: the "region ambiguous" case in `tests/answer/query-count.test.ts` passed
+`regions: null`, which never enters the failure branch at all. The pin and the defect had drifted apart
+without either being wrong on its own terms.
+
 **RUNBOOK correction in the same PR:** the documented rollback order was wrong. Rolling `ANSWER_FIRST_ENABLED`
 back while `CLARIFY_CLICK_ENABLED` is on strands region-less chips as guaranteed refusals, and "both
 together" is not a safe shortcut. The correct order is **A off, wait, then B**.

@@ -116,6 +116,9 @@ export async function parseQuestion(
       .map((candidate) =>
         resolveCandidate(db, candidate, options.referenceDate, {
           answerFirstEnabled: options.answerFirstEnabled === true,
+          // #176: the same flag decide() gets below. Without it the resolver
+          // built per-option intents that policy.ts then discarded flag-off.
+          clickOptionsEnabled: options.clickOptionsEnabled === true,
         }),
       ),
   );

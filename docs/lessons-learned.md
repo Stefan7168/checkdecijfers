@@ -6,6 +6,53 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 60 — #176, and a pin that had drifted from its defect (2026-07-26, autonomous)
+
+- **The test that was supposed to pin the bug did not cover the bug — and it was confident about it.**
+  `tests/answer/query-count.test.ts` carried a case commented *"the shape #176 was found on"*. It passes
+  `regions: null`, which returns ok early at `resolve.ts:166` and **never enters the failure branch #176 is
+  about**; its `served:false` came from the query layer, not from any region ambiguity. So the fix moved
+  none of the pre-existing pinned numbers, and verifying against that tripwire as it stood would have
+  proved nothing — *a no-op gate would have stayed exactly as green*. Neither artefact was wrong on its own
+  terms: the byte-neutrality review found a real defect, the conformance bundle added a real tripwire, and
+  nobody re-read one against the other. **A pin inherits its authority from the shape it exercises, not
+  from the issue number in its comment. Before trusting a test as the verification of a fix, construct the
+  failing input yourself and confirm that test would see it.**
+- **The mutation is the only thing that told me the new pins were real.** I guessed the two new statement
+  counts (3 flag-off, 4 flag-on) and both passed first try — which, after last session's tautology finds,
+  reads as a warning rather than a success. Removing the gate fails the flag-off pin 3→4; **inverting** it
+  fails 10 tests across 3 files; dropping the `followup.ts` threading fails the new follow-up test. The
+  `'max'` case I added passes with the gate removed too, so it is labelled a guard, not a proof.
+- **A second call site had no coverage at all, and its failure mode is silent.** Both `parse.ts` and
+  `followup.ts` feed `resolveCandidate`, and production reaches both through the same options object
+  (`respond.ts:528-532`) — but every existing click-option test went through `parse.ts` only. Forgetting the
+  follow-up threading would have shipped green, and the symptom is not an error: the clarification renders
+  perfectly, minus its chips. **When threading a flag to N call sites, count the call sites first and check
+  the test file covers each one — "the suite passed" says nothing about the site nobody tests.**
+- **The cheap design was also the right one, for a reason only reading revealed.** Moving the construction
+  into `policy.ts`'s already-gated branch (the alternative the row named) would have had to reproduce one
+  undocumented subtlety exactly: `regionOptionIntents` resolves its period WITHOUT `answerFirstEnabled` and
+  without region codes (`resolve.ts:933`), unlike the main path. Miss that and flag-ON behaviour changes
+  silently. **An "obviously cleaner" refactor across a module boundary inherits every undocumented
+  asymmetry it moves; price that in before calling it cleaner.**
+- **The review over my own diff found something real for the ELEVENTH change running — and this time it was
+  in the doc, understating a residual in the direction that flattered the change.** I wrote that the
+  leftover flag-ON waste needs "several candidates simultaneously region-ambiguous"; it actually happens
+  whenever **any non-top** candidate is ambiguous, including a mixed parse whose top reading is a plain
+  success and whose turn therefore just *answers*. Same class as session 59's "the thing you did not write
+  down is the thing you did not want to", one step subtler: the thing you *did* write down, phrased so the
+  residual sounds rarer than it is. **When you document a limitation of your own change, state the
+  precondition from the code path, not from the example you happened to test.** The review also found a
+  stale doc comment on `optionIntents` (the one carrier of the old framing my sweep missed) and, adjacent
+  to the diff rather than in it, **#191** — the reply turn never receives `ANSWER_FIRST_ENABLED` despite
+  its options type declaring it. That last one is the payoff of briefing a reviewer with the *shape* of the
+  bug ("an options-bag omission") rather than only its location: it went looking for the same shape one
+  module over and found it, dormant, on the path the owner is about to switch on.
+- **Commit-message language has drifted from the stated convention.** CLAUDE.md says English for commit
+  messages; every session-59 commit is Dutch, and the ~30 before them are English. Recorded rather than
+  silently picked a side — this session wrote English per the convention, and the owner should settle
+  whether the doc or the practice wins.
+
 ## Session 59 — the capacity/retention batch (2026-07-26, autonomous then owner-authorised push)
 
 - **`git rebase --continue` SILENTLY DROPS a subject line that starts with `#`.** It bit twice tonight, on

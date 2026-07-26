@@ -173,6 +173,8 @@ export async function parseFollowUpQuestion(
       .map((candidate) =>
         resolveCandidate(db, candidate, options.referenceDate, {
           answerFirstEnabled: options.answerFirstEnabled === true,
+          // #176: the same flag decide() gets below — see parse.ts.
+          clickOptionsEnabled: options.clickOptionsEnabled === true,
         }),
       ),
   );
