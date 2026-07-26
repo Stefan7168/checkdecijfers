@@ -443,6 +443,14 @@ What to know:
   the two limit counts share one round trip — so a steady-state anonymous render costs **one** query,
   cookie or no cookie, down from 1-2 (the render that refreshes the pot costs two, at most once per
   TTL per instance).
+- **The public landing now DEGRADES under saturation instead of hanging** (#190(b), 2026-07-26). Both
+  anonymous reads are bounded at 5 s (`ANONYMOUS_READ_DEADLINE_MS`, `web/lib/deadline.ts`): the trial
+  gate falls back to the login nudge, the Ontdek section to its stale set or to nothing. Before this
+  they simply WAITED — the fail-safe engaged on errors and never on waits, so during the 2026-07-25
+  incident a visitor got a page that never finished rather than the honest degrade designed for it.
+  ⚠ It does NOT free the pooler session: a race does not cancel the query, so the client stays checked
+  out until the work finishes. It buys the VISITOR, not the connection — the connection fix is still
+  transaction-mode pooling, (b) below.
 - **Do not panic-restart anything.** Wait a few minutes and re-check `/llms.txt`; that is the cheapest
   canary because it needs a fresh connection on a cache miss.
 - **Avoid stacking deploys** when you can — batch doc commits instead of pushing each one, and leave a

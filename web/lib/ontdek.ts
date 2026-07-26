@@ -17,6 +17,7 @@
 import { buildCuratedCharts } from '../backend/chart/index.ts';
 import type { CuratedChart } from '../backend/chart/index.ts';
 import { getDb } from './db.ts';
+import { ANONYMOUS_READ_DEADLINE_MS, withDeadline } from './deadline.ts';
 
 const TTL_MS = 30 * 60 * 1000;
 
@@ -56,5 +57,10 @@ async function rebuild(): Promise<CuratedChart[]> {
 export function getOntdekCharts(): Promise<CuratedChart[]> {
   if (cache !== null && Date.now() - cache.at < TTL_MS) return Promise.resolve(cache.charts);
   inflight ??= rebuild();
-  return inflight;
+  // #190(b): rebuild() degrades on a THROWN error but not on a WAIT — under pool
+  // saturation it simply blocks, and the landing blocks with it. The fallback is
+  // the same stale-over-nothing this module already chose: the last good set if
+  // there is one, else an empty list, which renders as no section. The build
+  // itself keeps running and will populate the cache for the next request.
+  return withDeadline(inflight, cache?.charts ?? [], 'ontdek', ANONYMOUS_READ_DEADLINE_MS);
 }

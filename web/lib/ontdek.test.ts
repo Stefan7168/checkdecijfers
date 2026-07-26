@@ -9,6 +9,7 @@ vi.mock('../backend/chart/index.ts', () => ({ buildCuratedCharts }));
 vi.mock('./db.ts', () => ({ getDb: vi.fn(() => ({})) }));
 
 import { getOntdekCharts, resetOntdekCache } from './ontdek.ts';
+import { ANONYMOUS_READ_DEADLINE_MS } from './deadline.ts';
 
 const chartA = { slug: 'a', spec: { title: 'A' } };
 const chartB = { slug: 'b', spec: { title: 'B' } };
@@ -87,5 +88,29 @@ describe('getOntdekCharts', () => {
     await expect(first).resolves.toEqual([chartA]);
     await expect(second).resolves.toEqual([chartA]);
     expect(buildCuratedCharts).toHaveBeenCalledTimes(1);
+  });
+});
+
+// #190(b): rebuild() degrades on a THROWN error but not on a WAIT. Under pool
+// saturation it simply blocks, and the public landing blocked with it — so the
+// section that is designed to be omissible could not omit itself.
+describe('the chart feed degrades instead of waiting (#190b)', () => {
+  it('serves an empty section when the build never settles (nothing cached yet)', async () => {
+    buildCuratedCharts.mockReturnValue(new Promise(() => {}));
+    const charts = getOntdekCharts();
+    await vi.advanceTimersByTimeAsync(ANONYMOUS_READ_DEADLINE_MS + 1);
+    await expect(charts).resolves.toEqual([]);
+  });
+
+  it('serves the STALE set when a refresh never settles', async () => {
+    buildCuratedCharts.mockResolvedValue({ charts: [chartA], skipped: [] });
+    await expect(getOntdekCharts()).resolves.toEqual([chartA]);
+    vi.advanceTimersByTime(31 * 60 * 1000);
+    buildCuratedCharts.mockReturnValue(new Promise(() => {}));
+    const stale = getOntdekCharts();
+    await vi.advanceTimersByTimeAsync(ANONYMOUS_READ_DEADLINE_MS + 1);
+    // Stale-over-nothing, the posture this module already chose for a THROWN
+    // failure — now reached for a hung one too.
+    await expect(stale).resolves.toEqual([chartA]);
   });
 });

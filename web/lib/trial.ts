@@ -19,6 +19,7 @@ import {
 } from '../backend/billing/index.ts';
 import type { TrialPotStatus } from '../backend/billing/index.ts';
 import { getDb } from './db.ts';
+import { ANONYMOUS_READ_DEADLINE_MS, withDeadline } from './deadline.ts';
 
 /** The D1 visitor cookie: HttpOnly, functional-only, set on FIRST use. */
 export const TRIAL_COOKIE = 'cdc_trial';
@@ -350,7 +351,19 @@ async function readPotCached(): Promise<TrialPotStatus | null> {
  * login nudge, never to a broken page — only the REASON we show is
  * distinguished from the reason we merely assumed. */
 export async function getTrialGateState(): Promise<TrialGateState> {
+  // Dormancy stays SYNCHRONOUS and outside the deadline: while the flags are
+  // unset there is no read to bound and no timer to arm (byte-identical landing).
   if (!trialConfigured()) return { kind: 'dormant' };
+  // #190(b): a saturated pool made this WAIT rather than degrade — the fail-safe
+  // engaged on errors and never on waits, so the visitor got a page that never
+  // finished instead of the login nudge that was designed for exactly this.
+  // 'unavailable' is the right fallback and not 'closed': a read we abandoned is
+  // not evidence the pot is empty, which is the same distinction the two states
+  // were split apart for on 2026-07-25.
+  return withDeadline(computeTrialGateState(), { kind: 'unavailable' }, 'trial', ANONYMOUS_READ_DEADLINE_MS);
+}
+
+async function computeTrialGateState(): Promise<TrialGateState> {
   try {
     const pot = await readPotCached();
     // getTrialPotStatus returns null for BOTH "table absent" and "read threw"
