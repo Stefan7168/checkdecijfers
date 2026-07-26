@@ -80,6 +80,15 @@ on top.
   only, with both halves pinned (prose fails, the quoted form passes). **A pin that fires on its own
   documentation is telling you the rule was stated more loosely than it was meant; the useful response is
   to sharpen the rule, not to carve out the file.**
+- **The CI step I added to enforce a convention broke CI itself — an unquoted colon in a YAML step name.**
+  The step was named with a parenthetical containing a colon-space, which YAML reads as the start of a
+  mapping; the whole workflow failed to parse, and the run died in **0 s** with "this run likely failed
+  because of a workflow file issue". Nothing local caught it: the full test suite, both typechecks, the
+  benchmark and a real build had all just passed green, because none of them parses `.github/workflows/`.
+  **A `.yml` edit is a code change with no local gate — validate it explicitly** (`python3 -c "import
+  yaml; yaml.safe_load(open('.github/workflows/ci.yml'))"` takes a second and would have caught this
+  before the push). A 0-second red run is the signature: that is a parse failure, not a test failure, and
+  it means the gate did not run at all rather than running and passing.
 - **A local `npm test` while you are still editing is not a measurement.** Two full-suite runs came back
   `1 failed` and I explained the first away as a race between my edits and the runner. The second failed
   identically, which killed that theory — the actual cause was the item above, sitting in the tree the
