@@ -74,7 +74,8 @@ session 56 measured, so the ~30/7 date remains a *forecast* of CBS's next public
 **⚠ CI went red once and was fixed: run 30197192763 failed in 0 s** because the new workflow step's name
 contained an unquoted colon-space, which YAML reads as a mapping. The gate did not run at all rather than
 running and passing. Nothing local catches this — the full suite, both typechecks, the benchmark and a real
-build had all just passed green, because none of them parses `.github/workflows/`. Fixed in `06f6209`.
+build had all just passed green, because none of them parses `.github/workflows/`. Fixed in `06f6209`,
+verified green on run 30197230629 — the fix is confirmed by CI, not by having been written.
 
 **Held deliberately, per the owner's instruction:** [#174](open-questions.md), [#185](open-questions.md),
 [#183](open-questions.md), [#188](open-questions.md), [#190(a)](open-questions.md).

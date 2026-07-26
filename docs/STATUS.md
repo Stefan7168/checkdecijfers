@@ -24,7 +24,7 @@ and now **[#191](open-questions.md) too** (below), which is a genuine pre-flip b
 |---|---|
 | `a108ba3` | **[#176](open-questions.md)** — the resolver builds per-option intents only for the flag that reads them. |
 | `a25f3e8` | **[#132](open-questions.md) rule (i)** — 38 live PR links re-neutralized; the rule is now a CI-gated test. |
-| `06f6209` | CI fix — an unquoted colon in the new step's name broke the workflow (red 0 s run, then green). |
+| `06f6209` | CI fix — an unquoted colon in the new step's name broke the workflow: run 30197192763 died in **0 s** without running the gate at all. Green again on run 30197230629. |
 
 **⚠ NEW [#191](open-questions.md) — READ BEFORE THE `ANSWER_FIRST_ENABLED` FLIP.** The clarification REPLY
 turn never receives that flag, though `ClarifyReplyOptions` declares it and its comment says it is threaded
