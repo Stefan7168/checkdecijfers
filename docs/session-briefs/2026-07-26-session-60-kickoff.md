@@ -119,7 +119,9 @@ judgement, and it changes what someone is charged).
 > (2) ~30/7 BBP+PPI-syncs, 85880NED via de chunked escape hatch; (3) #132 route B opnieuw vragen. Houd #174,
 > #185, #183, #188 en #190(a) expliciet aan.
 >
-> Harde grenzen: volledig verificatieblok plus een review-pas over je eigen diff vóór elke push, nul
+> Harde grenzen: ben ik er niet bij, dan branch + PR + mijn review vóór de merge (#118(b)) — sessie 59 kreeg
+> daar van mij een expliciete uitzondering op, en die geldt NIET automatisch opnieuw; vraag het of ga uit van
+> branch + PR. Verder: volledig verificatieblok plus een review-pas over je eigen diff vóór elke push, nul
 > promptbytes, geen live DDL, geen gestapelde deploys (#173). Architectuur en diepe analyse naar Fable-agents,
 > mechanisch legwork naar Sonnet/Haiku. ⚠ Bij elke rebase/cherry-pick: `--cleanup=whitespace`, anders slikt git
 > je `#`-subject.
