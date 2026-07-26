@@ -8,6 +8,18 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+// STATIC imports, not a dynamic one inside each test body (changed 2026-07-26,
+// session 59). The dynamic form pulled the whole backend module graph — the
+// Anthropic SDK, the CBS adapter, the ingestion job — through the transform
+// pipeline INSIDE a timed test, so on a loaded machine the test failed as a
+// TIMEOUT rather than a logic failure. It flaked three times in one session at
+// load 18-25, having already had its ceiling raised 5s -> 15s in session 56 for
+// exactly this; that comment says a further raise is not the fix, and it is
+// right. This removes the cause instead: the route reads process.env.CRON_SECRET
+// INSIDE its GET handler (route.ts:40), never at module load, so importing once
+// at collection time is semantically identical and no longer races a timer.
+import { GET } from './api/onboarding-cron/route.ts';
+import { kickOnboardingJob } from '../lib/onboarding-kick.ts';
 
 const read = (rel: string): string => readFileSync(join(__dirname, rel), 'utf-8');
 
@@ -20,14 +32,12 @@ describe('onboarding-cron auth guard (directly exercised)', () => {
 
   it('503 when CRON_SECRET is not configured (fail closed, before any DB work)', async () => {
     delete process.env.CRON_SECRET;
-    const { GET } = await import('./api/onboarding-cron/route.ts');
     const res = await GET(new Request('https://x/api/onboarding-cron'));
     expect(res.status).toBe(503);
   });
 
   it('401 on a missing / wrong Bearer token', async () => {
     process.env.CRON_SECRET = 'secret-abc';
-    const { GET } = await import('./api/onboarding-cron/route.ts');
 
     const noHeader = await GET(new Request('https://x/api/onboarding-cron'));
     expect(noHeader.status).toBe(401);
@@ -49,8 +59,6 @@ describe('onboarding-cron auth guard (directly exercised)', () => {
   // sends it and replays it against the real route guard.
   it("the kick's OWN Authorization header passes the route guard (cross-pin)", async () => {
     process.env.CRON_SECRET = 'secret-abc';
-    const { GET } = await import('./api/onboarding-cron/route.ts');
-    const { kickOnboardingJob } = await import('../lib/onboarding-kick.ts');
 
     let capturedAuth: string | null = null;
     await kickOnboardingJob({

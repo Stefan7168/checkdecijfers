@@ -17,6 +17,7 @@
 import { buildCuratedCharts } from '../backend/chart/index.ts';
 import type { CuratedChart } from '../backend/chart/index.ts';
 import { getDb } from './db.ts';
+import { ANONYMOUS_READ_DEADLINE_MS, withDeadline } from './deadline.ts';
 
 const TTL_MS = 30 * 60 * 1000;
 
@@ -48,13 +49,41 @@ async function rebuild(): Promise<CuratedChart[]> {
     // while the database hiccups. Cache untouched so the next request
     // retries immediately.
     return cache?.charts ?? [];
-  } finally {
-    inflight = null;
   }
+  // NB: `inflight` is deliberately NOT cleared here. An in-body `finally` runs
+  // synchronously when this function settles without ever suspending — which
+  // `getDb()` throwing does — and that happens BEFORE the caller's assignment,
+  // latching the settled promise forever. Cleared by the caller instead.
 }
 
 export function getOntdekCharts(): Promise<CuratedChart[]> {
   if (cache !== null && Date.now() - cache.at < TTL_MS) return Promise.resolve(cache.charts);
-  inflight ??= rebuild();
-  return inflight;
+  if (inflight === null) {
+    const build = rebuild();
+    inflight = build;
+    // Cleared HERE, not inside rebuild()'s own `finally` — the trap trial.ts's
+    // readPotCached already documents, found in THIS file by a review of the
+    // combined session diff. `buildCuratedCharts(getDb())` evaluates `getDb()`
+    // as a plain argument before any await, and getDb() throws SYNCHRONOUSLY
+    // when DATABASE_URL is missing or the CA cert will not load — the exact
+    // "no DATABASE_URL (local dev)" case this module's header names as a
+    // degrade it handles. rebuild() then ran to completion synchronously, its
+    // in-body finally set inflight = null BEFORE `inflight ??= rebuild()`
+    // assigned it, and the assignment latched a settled promise forever: cache
+    // was never populated, so the TTL check never short-circuited, and no
+    // further build was ever attempted for the life of that warm instance. The
+    // Ontdek section stayed empty for every later visitor even after the
+    // config was fixed. A `.finally()` attached from out here is always
+    // deferred to a microtask, so it cannot run before the assignment; the
+    // identity check stops a slow build clearing a newer one.
+    void build.finally(() => {
+      if (inflight === build) inflight = null;
+    });
+  }
+  // #190(b): rebuild() degrades on a THROWN error but not on a WAIT — under pool
+  // saturation it simply blocks, and the landing blocks with it. The fallback is
+  // the same stale-over-nothing this module already chose: the last good set if
+  // there is one, else an empty list, which renders as no section. A bounded-out
+  // build keeps running and populates the cache for a later request.
+  return withDeadline(inflight, cache?.charts ?? [], 'ontdek', ANONYMOUS_READ_DEADLINE_MS);
 }

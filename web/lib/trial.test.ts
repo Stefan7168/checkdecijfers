@@ -30,6 +30,7 @@ import {
   resetTrialPotCache,
   TRIAL_POT_TTL_MS,
 } from './trial.ts';
+import { ANONYMOUS_READ_DEADLINE_MS } from './deadline.ts';
 
 const VISITOR = '9b2f1c2e-6a1d-4f3a-9c0d-0a1b2c3d4e5f';
 const OTHER_VISITOR = '1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d';
@@ -105,6 +106,38 @@ describe('getTrialGateState', () => {
     expect(await getTrialGateState()).toEqual({ kind: 'open', questionsLeft: 1 });
     dbQuery.mockResolvedValue({ rows: [{ visitor_n: 2, ip_n: 2 }] });
     expect(await getTrialGateState()).toEqual({ kind: 'used_up' });
+  });
+});
+
+// #190(b): under pool saturation the gate WAITED instead of degrading — the
+// fail-safe engages on errors and never on waits, so a visitor got a page that
+// never finished rather than the login nudge built for exactly this.
+describe('the gate degrades instead of waiting (#190b)', () => {
+  it('renders unavailable — not a hang — when the pot read never settles', async () => {
+    configure();
+    vi.useFakeTimers();
+    getTrialPotStatus.mockReturnValue(new Promise(() => {}));
+    const state = getTrialGateState();
+    await vi.advanceTimersByTimeAsync(ANONYMOUS_READ_DEADLINE_MS + 1);
+    // 'unavailable', never 'closed': a read we abandoned is not evidence the pot
+    // is empty — the same distinction the two states were split apart for.
+    await expect(state).resolves.toEqual({ kind: 'unavailable' });
+  });
+
+  it('renders unavailable when the LIMIT read never settles either', async () => {
+    configure();
+    vi.useFakeTimers();
+    getTrialPotStatus.mockResolvedValue({ remaining: 10, cap: 25 });
+    dbQuery.mockReturnValue(new Promise(() => {}));
+    const state = getTrialGateState();
+    await vi.advanceTimersByTimeAsync(ANONYMOUS_READ_DEADLINE_MS + 1);
+    await expect(state).resolves.toEqual({ kind: 'unavailable' });
+  });
+
+  it('does not bound the DORMANT path — no read, no timer', async () => {
+    vi.useFakeTimers();
+    await expect(getTrialGateState()).resolves.toEqual({ kind: 'dormant' });
+    expect(vi.getTimerCount()).toBe(0);
   });
 });
 

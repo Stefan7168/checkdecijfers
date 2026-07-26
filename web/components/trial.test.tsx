@@ -89,9 +89,13 @@ describe('TrialGate', () => {
     expect(screen.queryByTestId('trial-chat')).toBeNull();
   });
 
-  // One state, one sentence, whichever surface discovers it (#184). Before the
-  // shared copy these were two literals that could drift apart.
-  it('shows the SAME sentence the action would show a round-trip later', () => {
+  // A GUARD on the shared copy CONSTANT, not a proof that both surfaces render
+  // it — labelled honestly after a review pointed out the earlier name promised
+  // more than it delivered. trial-chat.tsx is mocked out in this file, so this
+  // would NOT catch it hardcoding a similar-but-different string; what it does
+  // catch is the constant itself drifting or two states collapsing onto one
+  // sentence. The single-sourcing itself is enforced by the import, not here.
+  it('keeps one distinct sentence per state in the shared copy (#184)', () => {
     expect(TRIAL_COPY.ip_limit).toContain('Vanaf dit netwerk');
     expect(new Set(Object.values(TRIAL_COPY)).size).toBe(Object.keys(TRIAL_COPY).length);
   });
