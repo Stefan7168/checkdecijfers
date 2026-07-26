@@ -15,7 +15,7 @@ anything you are about to act on (`date +%Y-%m-%d`, `git --no-pager log --onelin
 
 - **Four items shipped in session 59**, each merged serially with a production canary between (#173):
   [#186](../open-questions.md) `e30203a` (PR 72), [#184](../open-questions.md) `1342f79` (PR 74),
-  [#181](../open-questions.md) `4a9cb77` (PR 75), [#190(b)](../open-questions.md) (PR 76).
+  [#181](../open-questions.md) `4a9cb77` (PR 75), [#190(b)](../open-questions.md) `ae7640c` (PR 76).
 - **Counts at the close:** backend **1551 / 102 files**, web **452 / 42**, benchmark **14/14 + 6/6 + 0
   fabricated GATE PASS**. Production 200 on `/`, `/llms.txt`, `/login`.
 - **Theme was capacity + retention on the ANONYMOUS surface.** If you are picking up capacity work, read
@@ -90,6 +90,14 @@ judgement, and it changes what someone is charged).
    session were the same class: an incomplete stale-doc sweep, a summary sentence still stating the old rule one
    paragraph above the new one. The fourth was the one trade-off I had not written down while documenting every
    other — **the thing you did not write down is the thing you did not want to.**
+   **And budget one more pass over the COMBINED diff at the end of a multi-change session.** Each of the four
+   changes was reviewed alone and came back clean; reviewing them together, briefed to hunt only for what breaks
+   when two MEET, found a real latch bug in `web/lib/ontdek.ts` — in the file next to the one where that exact
+   trap had just been avoided deliberately and documented. Knowing a trap in file A does not protect file B.
+8. **A number measured on a branch goes STALE when you rebase it.** Three commit messages this session carried
+   counts that were true when measured and wrong when merged (e.g. "web 425/41", correct pre-rebase, 440 after).
+   Re-measure after the last REBASE, or put the number in the PR body, which is editable, rather than the commit
+   message, which is not.
 7. **A doc that explains a MECHANISM is still a claim.** Both #186's row and the RUNBOOK said pooler sessions
    release on node-pg's 10 s idle timer. Measured false — a session was held 174 s, because the timer does not
    fire while a Fluid Compute instance is frozen. Two docs agreeing with each other is not evidence.

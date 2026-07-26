@@ -42,7 +42,8 @@ axis). One constant, `ANONYMOUS_TRIAL_RETENTION_DAYS`, which `trial-pot.ts` now 
 billing may depend on answer and never the reverse. ⚠ **Merging it deletes nothing**: the cron reports only until
 `GDPR_PURGE_APPLY=1`, and the first anonymous rows become purgeable **~2026-10-15**.
 
-**Also built: [#190(b)](open-questions.md)** ([#76](https://github.com/Stefan7168/checkdecijfers/pull/76)) — the two
+**Also built: [#190(b)](open-questions.md)** ([#76](https://github.com/Stefan7168/checkdecijfers/pull/76), squash
+`ae7640c`) — the two
 anonymous read paths are bounded at **5 s** (`ANONYMOUS_READ_DEADLINE_MS`), so a saturated pool degrades to the
 login nudge instead of hanging. The number is measured: every landing-path query's worst observed EXECUTION in
 production is under ~17 ms, and the route's ceiling is 90 s. ⚠ It frees the VISITOR, not the pooler session — a

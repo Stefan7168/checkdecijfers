@@ -24,7 +24,7 @@ permission to push to `main` and left for the night. Theme: capacity + retention
 | [#186](open-questions.md) | [#72](https://github.com/Stefan7168/checkdecijfers/pull/72) | `e30203a` | 20 s single-flight cache on the **pot read only**. |
 | [#184](open-questions.md) | [#74](https://github.com/Stefan7168/checkdecijfers/pull/74) | `1342f79` | Gate reports the per-IP backstop at render time, in FEWER queries than before. |
 | [#181](open-questions.md) | [#75](https://github.com/Stefan7168/checkdecijfers/pull/75) | `4a9cb77` | Anonymous trial CONTENT redacted at 90 days, same clock as its bookkeeping. |
-| [#190(b)](open-questions.md) | [#76](https://github.com/Stefan7168/checkdecijfers/pull/76) | see below | 5 s deadline on both anonymous reads — degrade, don't hang. |
+| [#190(b)](open-questions.md) | [#76](https://github.com/Stefan7168/checkdecijfers/pull/76) | `ae7640c` | 5 s deadline on both anonymous reads — degrade, don't hang. Also carries a REAL bug the combined-diff review found (below) and the flaky-test fix. |
 
 **⚠ The measurement that disproved a doc we were trusting.** #186's own row AND the RUNBOOK said idle pooler
 sessions release on node-pg's 10 s timer, and that this is why the 2026-07-25 incident self-healed. **Measured
@@ -32,6 +32,12 @@ false:** one anonymous GET held a session **174 s**, and 4 of the 15 slots were 
 views — the timer does not fire while a Fluid Compute instance is frozen; the slot returns on TEARDOWN. Both
 corrected. Volume itself is trivial (~17 anonymous renders/day, 2 trial questions ever served), so these ship as
 headroom, not as a fix for a live pressure.
+
+**⚠ The review of the COMBINED diff earned its place.** Each change was reviewed alone and came back clean; a
+final pass over all four together, briefed to hunt only for what breaks when two MEET, found a real latch bug in
+`web/lib/ontdek.ts` (a synchronous `getDb()` throw left the in-flight slot latched forever, so the Ontdek section
+stayed empty for the life of that warm instance). **The trap is documented, correctly, in `trial.ts` one file
+over.** Knowing a trap in file A does not protect file B, and no per-change review sees the pair.
 
 **⚠ `git rebase --continue` SILENTLY DROPS a `#`-prefixed subject line** — it bit twice tonight and reported
 success both times. This repo's commits are `#181: …`; the rebase editor strips `#` lines as comments. **Use
