@@ -16,7 +16,7 @@ anything you are about to act on (`date +%Y-%m-%d`, `git --no-pager log --onelin
 - **Four items shipped in session 59**, each merged serially with a production canary between (#173):
   [#186](../open-questions.md) `e30203a` (PR 72), [#184](../open-questions.md) `1342f79` (PR 74),
   [#181](../open-questions.md) `4a9cb77` (PR 75), [#190(b)](../open-questions.md) `ae7640c` (PR 76).
-- **Counts at the close:** backend **1551 / 102 files**, web **452 / 42**, benchmark **14/14 + 6/6 + 0
+- **Counts at the close:** backend **1551 / 102 files**, web **453 / 42**, benchmark **14/14 + 6/6 + 0
   fabricated GATE PASS**. Production 200 on `/`, `/llms.txt`, `/login`.
 - **Theme was capacity + retention on the ANONYMOUS surface.** If you are picking up capacity work, read
   #186's row first — the measurement in it changed what the right fix was.
@@ -110,7 +110,7 @@ judgement, and it changes what someone is charged).
 > dan docs/session-briefs/2026-07-26-session-60-kickoff.md — dat is je opdracht.
 >
 > Stand: sessie 59 leverde vier items, allemaal gemerged en live (PR #72/#74/#75/#76 — #186 pot-cache, #184
-> IP-limiet op de gate, #181 anonieme retentie 90 dagen, #190(b) 5s-deadline). Backend 1551/102, web 452/42,
+> IP-limiet op de gate, #181 anonieme retentie 90 dagen, #190(b) 5s-deadline). Backend 1551/102, web 453/42,
 > benchmark 14/14 + 6/6 + 0, productie 200/200/200. Verifieer dat zelf even — niet uit deze tekst overnemen.
 >
 > ⚠ TWEE DINGEN BLIJVEN VAN MIJ: de WP26-vlaggen UIT, en GDPR_PURGE_APPLY UIT tot ik hem zelf zet.

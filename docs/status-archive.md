@@ -73,7 +73,7 @@ ceiling had already been raised 5 s → 15 s in session 56 with a note saying a 
 note was right, so the CAUSE went instead: it imported the route dynamically inside the test body, dragging the
 whole backend module graph through the transform pipeline under a test timer. Static import, 730 ms → 7 ms.
 
-**Measured on `main` after the three merges:** backend **1551 / 102 files**, web **452 / 42** (on the #190b
+**Measured on `main` after all four merges:** backend **1551 / 102 files**, web **453 / 42** (⚠ this line first said 452, and the wrap-up's own FINAL SELF-AUDIT caught it: the ontdek regression test added one more web test after the number had been written. Same late-measurement staleness class as the three commit-message counts recorded in lessons this session — the audit step exists for exactly this and earned its keep on its first pass) (on the #190b
 branch, which carries #186+#184+#190b), benchmark **14/14 + 6/6 + 0 fabricated GATE PASS**, real `next build`.
 Production 200 on `/`, `/llms.txt`, `/login` after every deploy, Ontdek rendering.
 
