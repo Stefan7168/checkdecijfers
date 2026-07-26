@@ -9,7 +9,52 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
-**▶ NEXT SESSION STARTS HERE (Sessions 58 + 58B, 2026-07-25 evening/night — TWO AUTONOMOUS overnight runs. ⚠ THE OWNER
+**▶ NEXT SESSION STARTS HERE — Session 59 (2026-07-26). Began autonomous; mid-session the owner gave standing
+permission to push to `main` and left for the night. Theme: capacity + retention on the ANONYMOUS surface.
+€0 live-LLM spend, zero prompt bytes, no DDL.**
+
+**⚠ THE TWO THINGS THAT ARE STILL ONLY YOURS, untouched again this session:** the **WP26 flags**
+(`CLARIFY_CLICK_ENABLED`, `ANSWER_FIRST_ENABLED`) and **`GDPR_PURGE_APPLY`**. Read
+[#175](open-questions.md) before flipping WP26 — the anonymous trial receives NEITHER flag.
+
+**✅ MERGED AND LIVE**, serially, gate+deploy green and a production canary between each (#173):
+
+| # | PR | Squash | What |
+|---|---|---|---|
+| [#186](open-questions.md) | [#72](https://github.com/Stefan7168/checkdecijfers/pull/72) | `e30203a` | 20 s single-flight cache on the **pot read only**. |
+| [#184](open-questions.md) | [#74](https://github.com/Stefan7168/checkdecijfers/pull/74) | `1342f79` | Gate reports the per-IP backstop at render time, in FEWER queries than before. |
+| [#181](open-questions.md) | [#75](https://github.com/Stefan7168/checkdecijfers/pull/75) | `4a9cb77` | Anonymous trial CONTENT redacted at 90 days, same clock as its bookkeeping. |
+| [#190(b)](open-questions.md) | [#76](https://github.com/Stefan7168/checkdecijfers/pull/76) | see below | 5 s deadline on both anonymous reads — degrade, don't hang. |
+
+**⚠ The measurement that disproved a doc we were trusting.** #186's own row AND the RUNBOOK said idle pooler
+sessions release on node-pg's 10 s timer, and that this is why the 2026-07-25 incident self-healed. **Measured
+false:** one anonymous GET held a session **174 s**, and 4 of the 15 slots were held at a quiet hour from ~2 page
+views — the timer does not fire while a Fluid Compute instance is frozen; the slot returns on TEARDOWN. Both
+corrected. Volume itself is trivial (~17 anonymous renders/day, 2 trial questions ever served), so these ship as
+headroom, not as a fix for a live pressure.
+
+**⚠ `git rebase --continue` SILENTLY DROPS a `#`-prefixed subject line** — it bit twice tonight and reported
+success both times. This repo's commits are `#181: …`; the rebase editor strips `#` lines as comments. **Use
+`--cleanup=whitespace` on every rebase/cherry-pick here.**
+
+**▶ NEXT, in order:** (a) the **owner-supervised WP26 go-live** — one flag at a time, RUNBOOK section "WP26
+answer-first + clickable options", NOT during a deploy burst (#173); (b) **`GDPR_PURGE_APPLY=1`** plus one watched
+run (RUNBOOK) — nothing is deleted until then, first rows purgeable ~2026-10-15; (c) **[#176](open-questions.md)**,
+the clearly-next capacity item, now de-risked: the #164 fixture key hashes the **LLM request**, not the source
+file, so touching `resolveCandidate` cannot invalidate a fixture; (d) **~30/7 BBP+PPI syncs** (`85880NED` MUST use
+the chunked escape hatch, RUNBOOK step 5); (e) re-ask **[#132](open-questions.md) route B**; (f) then the owner
+menu: WP30c choice / [#162](open-questions.md) / [#170](open-questions.md) rest (3)+(4).
+
+**Tracked, deliberately NOT built:** [#174](open-questions.md) and [#185](open-questions.md) (both explicitly held
+— the obvious fix is worse than the bug, and a reasoned decline respectively), [#183](open-questions.md) (product
+call), [#188](open-questions.md) (concurrency on a live money path — supervised), [#190(a)](open-questions.md)
+(whether an infrastructure-caused refusal should cost a trial question — a conversion judgement, yours).
+
+Full session record in [status-archive.md](status-archive.md).
+
+**(Historical from here down.)**
+
+**(Sessions 58 + 58B, 2026-07-25 evening/night — TWO AUTONOMOUS overnight runs. ⚠ THE OWNER
 STARTED TWO SESSIONS ON THIS BRIEF; both ran, split the queue over a cross-session channel, and both shipped.
 Read [status-archive.md](status-archive.md) for the full record and the merge order.**
 

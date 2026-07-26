@@ -1,5 +1,88 @@
 # STATUS archive — the session log
 
+**Session 59 (2026-07-26 — began AUTONOMOUS on the session-59 kickoff; mid-session the owner wrote *"I will be
+gone all night, work as much as you can. see you tomorrow, you have permission to push to main along the way"*,
+which is the standing authorisation the rest of the night ran under. Theme: capacity and retention on the
+anonymous surface. €0 live-LLM product spend, zero prompt bytes, no DDL, both WP26 flags and `GDPR_PURGE_APPLY`
+untouched.)**
+
+**Merged and live, serially, gate + deploy green and a production canary between each — the #173 discipline:**
+
+| # | PR | Squash | What |
+|---|---|---|---|
+| [#186](open-questions.md) | [#72](https://github.com/Stefan7168/checkdecijfers/pull/72) | `e30203a` | Measure first, then a 20 s single-flight cache on the **pot read only**. |
+| [#184](open-questions.md) | [#74](https://github.com/Stefan7168/checkdecijfers/pull/74) | `1342f79` | The landing gate reports the per-IP backstop at render time — and costs FEWER queries than before, not more. |
+| [#181](open-questions.md) | [#75](https://github.com/Stefan7168/checkdecijfers/pull/75) | `4a9cb77` | Anonymous trial CONTENT is redacted at 90 days, the same clock as its own bookkeeping. |
+
+**The measurement that changed a design, and disproved a doc.** #186's brief said "measure first". The instrument
+that answered it was **`pg_stat_statements`** (never reset since 2026-07-02), not a `pg_stat_activity` snapshot:
+the pot read has run **143 times since the trial went live on 2026-07-17** — ~17 anonymous landing renders a day,
+mean **0.443 ms** — against **5** per-visitor counts and **2** questions ever served. Real shape, trivial volume;
+it ships as headroom, not as a fix for a live pressure. But the finding that changed the design came from
+`pg_stat_activity` after all: a single anonymous GET left a Supavisor backend **idle for 174 s and counting**, and
+**4 of the 15 slots were held (72–447 s)** across two quiet-hour samples from roughly two page views. ⚠ **So both
+#186's own row and the RUNBOOK were WRONG** where they said idle sessions release on node-pg's 10 s
+`idleTimeoutMillis` and that this is why the 2026-07-25 incident self-healed — the timer does not fire while a
+Fluid Compute instance is frozen; the slot returns on instance TEARDOWN. Both corrected. Verified in passing: the
+RUNBOOK's diagnosis recipe (`application_name like 'Supavisor%'`) is right, and direct-Postgres `max_connections`
+is 60 — the binding ceiling is Supavisor's 15, not Postgres's.
+
+**#184's objection turned out to be dischargeable, not merely acceptable.** The row said it "ADDS a third uncached
+query per anonymous page view". Folding both limit counts into ONE round trip means a steady-state anonymous
+render costs **one** query, cookie or no cookie, against 1–2 before either change. A review killed my first
+draft: the `OR`-form's outer `WHERE` did not carry `not refunded`, so it implied **neither** of migration 020's
+partial indexes and would have degraded to a **seq scan per anonymous page view** — a self-inflicted #173, and not
+academic while #189's purge is still dormant and the table only grows. A reviewer confirmed the shipped form with
+`EXPLAIN` on a live PGlite.
+
+**#181 shipped as a two-cutoff SINGLE fragment**, not a fourth purge leg (an anonymous row over two years old
+matches both windows → the dry run double-counts and "which leg redacted it" has two answers) and not a narrowing
+of `AUDIT_SCOPE` (that fragment is also the SELF-SERVICE scope, so editing it to fix a cutoff moves the wrong
+axis). One constant, `ANONYMOUS_TRIAL_RETENTION_DAYS`, which `trial-pot.ts` now IMPORTS — that direction, because
+billing may depend on answer and never the reverse. ⚠ **Merging it deletes nothing**: the cron reports only until
+`GDPR_PURGE_APPLY=1`, and the first anonymous rows become purgeable **~2026-10-15**.
+
+**Also built: [#190(b)](open-questions.md)** ([#76](https://github.com/Stefan7168/checkdecijfers/pull/76)) — the two
+anonymous read paths are bounded at **5 s** (`ANONYMOUS_READ_DEADLINE_MS`), so a saturated pool degrades to the
+login nudge instead of hanging. The number is measured: every landing-path query's worst observed EXECUTION in
+production is under ~17 ms, and the route's ceiling is 90 s. ⚠ It frees the VISITOR, not the pooler session — a
+race does not cancel the query.
+
+**Three process failures worth keeping, all mine:**
+
+1. ⚠ **`git rebase --continue` silently drops a subject line starting with `#`.** It bit twice on the same commit
+   and both times the rebase reported success. This repo's convention is `#181: …`, and the rebase editor's
+   default cleanup strips `#` lines as comments (`git commit -F` does not, which is why the originals were fine).
+   **Every rebase or cherry-pick here needs `--cleanup=whitespace`.**
+2. ⚠ **A number from a partial run went into a commit message.** It claimed a mutation "fails 1 test"; across the
+   whole suite it fails **4**. A review caught it. The tests were stronger than claimed, not weaker — but the
+   Golden Rule is about a number's provenance, not its direction.
+3. ⚠ **Mutation testing found a tautology in my own test, twice** — #186's expiry test advanced the clock BY the
+   constant (a six-hour TTL would have stayed green), and #181's window-equality test cannot fail while one module
+   imports the other's constant. First fixed with a range assertion; second relabelled a guard rather than left
+   reading as a proof.
+
+**The review pass over my own diff found something real on all four changes — ten in a row now.** Three of the
+four were the same class: an incomplete stale-doc sweep, a summary sentence still stating the old rule one
+paragraph above the new one. The fourth was the one trade-off I had not written down (#184's gate can be
+*stricter* than the take under CGNAT) while carefully documenting every other one.
+
+**Cleared out of the way:** the `onboarding-cron` web test that flaked three times tonight at load 18–25. Its
+ceiling had already been raised 5 s → 15 s in session 56 with a note saying a further raise is not the fix — that
+note was right, so the CAUSE went instead: it imported the route dynamically inside the test body, dragging the
+whole backend module graph through the transform pipeline under a test timer. Static import, 730 ms → 7 ms.
+
+**Measured on `main` after the three merges:** backend **1551 / 102 files**, web **452 / 42** (on the #190b
+branch, which carries #186+#184+#190b), benchmark **14/14 + 6/6 + 0 fabricated GATE PASS**, real `next build`.
+Production 200 on `/`, `/llms.txt`, `/login` after every deploy, Ontdek rendering.
+
+**Not built, deliberately, and de-risked for the next session: [#176](open-questions.md).** The thing that made it
+look risky is now checked rather than assumed — the #164 fixture key is `sha256(stableStringify(request))` over
+the **LLM request**, not over the source file, so the kickoff's "`parse.ts` byte-identical" is conservative
+shorthand and threading a flag through `resolveCandidate` (which runs after the LLM call) cannot invalidate a
+fixture. It is the clearly-next capacity item.
+
+
 **Session 58B — continued (2026-07-25 evening → 2026-07-26 early hours, OWNER-PRESENT, autonomous execution
 under his steer *"I want you to work autonomously"*. THREE more items merged and live, each deployed on its own
 with a production canary between. €0 live-LLM product spend, zero prompt bytes, no DDL, both WP26 flags still OFF.)**

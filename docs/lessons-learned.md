@@ -6,6 +6,55 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 59 — the capacity/retention batch (2026-07-26, autonomous then owner-authorised push)
+
+- **`git rebase --continue` SILENTLY DROPS a subject line that starts with `#`.** It bit twice tonight, on
+  the same commit, and both times the rebase reported success — the commit simply became a subject-less
+  paragraph (`git log --oneline` showed a 500-character "subject"). Cause: this repo's convention is
+  `#181: …` / `#186: …`, and a rebase continuation opens an editor whose default cleanup mode strips `#`
+  lines as comments. `git commit -F` does NOT (its cleanup is `whitespace`), which is why the original
+  commits were fine. **Every rebase or cherry-pick of a `#`-prefixed commit in this repo needs
+  `--cleanup=whitespace`** — `git -c core.commentChar=';' rebase --continue` works too. Same family as the
+  scripted-edit no-op trap: a tool that reports success while quietly destroying something.
+- **Two measurements changed a design; one of them contradicted a doc we had been trusting.** #186's brief
+  said "measure first", and the instrument that answered it was **`pg_stat_statements`, not
+  `pg_stat_activity`** — a snapshot shows what is connected right now, the other had been accumulating since
+  2026-07-02. It gave 143 pot reads since the trial go-live (~17/day, mean 0.44 ms) against 2 questions ever
+  served. But the finding that changed the design was in `pg_stat_activity` after all: **one anonymous GET
+  left a pooler session idle for 174 s**, and 4 of the 15 slots were held at a quiet hour from ~2 page views.
+  Both #186's row and the RUNBOOK said idle sessions release on node-pg's 10 s timer, and that this is why
+  the 2026-07-25 incident self-healed. **Measured false** — the timer does not fire while a Fluid Compute
+  instance is frozen. Lesson: when a doc explains a mechanism, the explanation is a claim like any other.
+- **I wrote a number into a commit message from a partial run, and a review caught it.** The message said a
+  mutation "fails 1 test"; I had run it against one file after adding tests to a second in the same commit.
+  Across the whole suite it fails **4**. The tests were stronger than claimed, not weaker — but the Golden
+  Rule is about the *provenance* of a number, not its direction. **Re-run the mutation over the whole suite
+  the change touches, after the last test is added, not during.**
+- **Mutation testing found a tautology in my own test, twice.** #186's expiry test advanced the clock BY the
+  TTL constant, so a six-hour cache would have kept it green — a range assertion now pins the magnitude
+  separately. And #181's window-equality test cannot fail while one module imports the other's constant;
+  it is a guard against a future literal, not a proof, and it now says so. **Run the mutation you claim, and
+  when a test survives a mutation it should have caught, relabel it rather than leave it reading as a proof.**
+- **A review pass over my own diff found something real on all four changes — that is ten in a row now across
+  sessions.** Three of the four were the same class: an incomplete stale-doc sweep, where a summary sentence
+  kept stating the old rule one paragraph above the new one. The fourth was the one trade-off I had not
+  written down (the #184 gate can be *stricter* than the take under CGNAT) while carefully documenting every
+  other. **The pattern to watch for: the thing you did not write down is the thing you did not want to.**
+- **A flaky test's ceiling had already been raised once "deliberately modestly", with a note not to raise it
+  again — and the note was right.** `onboarding-cron.test.ts` timed out three more times at load 18-25. The
+  fix was to remove the cause: it imported the route *dynamically inside the test body*, dragging the whole
+  backend module graph through the transform pipeline under a test timer. The route reads its env inside the
+  handler, so a static import is identical and moves the cost to collection time — 730 ms → 7 ms.
+  **When a timeout ceiling has already been raised once for one test, the next escalation is the cause.**
+- **Squash-merging a stacked PR closes the child, it does not retarget it.** #73's base branch was deleted by
+  #72's squash merge, which auto-CLOSED #73 and made its base unchangeable (`Cannot change the base branch of
+  a closed pull request`). Recovery is a rebase `--onto main <old-base-sha>` plus a fresh PR. **Stack only
+  when the dependency is real, and expect to re-open the child.**
+- **Five parallel review agents all died on `529 Overloaded`, and the workflow returned `{confirmed: [], refuted: []}`**
+  — which reads exactly like "clean". The tool's own warning covers this: an empty result is not a finding of
+  nothing, it can be a finding of *nothing ran*. Re-running two at a time succeeded. **Check the failure list
+  before believing an empty review.**
+
 ## Session 58 — autonomous overnight #2 (2026-07-25 evening)
 
 - **TWO AUTONOMOUS SESSIONS WERE STARTED ON THE SAME BRIEF, IN THE SAME WORKING TREE.** The owner launched a
