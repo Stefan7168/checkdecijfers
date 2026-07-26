@@ -15,6 +15,7 @@
 // is held only for these fast statements, never across an LLM call (the
 // ledger's own rule).
 import type { Db } from '../db/types.ts';
+import { ANONYMOUS_TRIAL_RETENTION_DAYS } from '../answer/audit/retention.ts';
 
 /** Per-visitor budget (owner decision: 2 proefvragen). */
 export const TRIAL_QUESTIONS_PER_VISITOR = 2;
@@ -199,7 +200,13 @@ export async function attachTrialAudit(
  * independently). Documented consequence: a returning visitor's 2-question
  * budget refreshes after the window — deliberate; keeping visitor ids
  * forever to enforce a lifetime cap would be retention without purpose. */
-export const TRIAL_BOOKKEEPING_RETENTION_DAYS = 90;
+// #181: ONE number for everything the trial writes about a visitor. It is
+// defined in `answer/audit/retention.ts` beside the content leg that now shares
+// it, and imported here rather than the other way round because billing may
+// depend on answer and not the reverse (ADR 001's arrow). Two copies of 90 could
+// drift, and both directions of drift are named bugs — see the constant's own
+// comment.
+export const TRIAL_BOOKKEEPING_RETENTION_DAYS = ANONYMOUS_TRIAL_RETENTION_DAYS;
 
 export function trialRetentionCutoff(now: Date): Date {
   const cutoff = new Date(now);

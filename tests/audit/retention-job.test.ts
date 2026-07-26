@@ -213,4 +213,73 @@ describe('#189 runRetentionPurge — the shared job behind the CLI and the cron'
       expect(none).toContain('trial leg not configured');
     });
   });
+
+  // #181: for an unattended cron run this line is the ONLY view an operator ever
+  // gets of what happened. Two windows now run in one sweep, 21 months apart, so
+  // a line that names one of them — or reports a bare total — is the
+  // doc-contradicts-code bug this project treats as a real defect, in the one
+  // place where the doc IS the interface.
+  describe('the operator line reports BOTH windows (#181)', () => {
+    async function seedAnonymous(db: Db, question: string, createdAt: string): Promise<void> {
+      await db.query(
+        `insert into audit_answers
+           (schema_version, kind, source_tag, question, reference_date, response,
+            final_text, prompt_versions, latency_ms, created_at)
+         values (1, 'answer', 'anonymous_trial', $1, '2026-01-01', '{}'::jsonb,
+                 'Het antwoord.', '{}'::jsonb, 0, $2)`,
+        [question, createdAt],
+      );
+    }
+
+    it('names both cutoffs and splits the dry-run count by window', async () => {
+      await withDb(async (db) => {
+        await seedExpired(db); // one 2023 ACCOUNT row
+        // 91 days before NOW: past the anonymous window, far inside the account one.
+        await seedAnonymous(db, 'Wat is de inflatie?', '2026-04-24T00:00:00.000Z');
+        const summary = await runRetentionPurge({ db, now: NOW, apply: false, trial: TRIAL_LEG });
+        expect(summary.accountRows).toBe(1);
+        expect(summary.anonymousTrialRows).toBe(1);
+        expect(summary.auditRows).toBe(2);
+        // The two cutoffs are genuinely different instants, not the same date twice.
+        expect(summary.anonymousCutoff).not.toBe(summary.auditCutoff);
+        const line = describeRetentionPurge(summary);
+        expect(line).toContain(summary.auditCutoff);
+        expect(line).toContain(summary.anonymousCutoff);
+        expect(line).toContain('1 account @ 2y');
+        expect(line).toContain('1 anonymous_trial @ 90d');
+        // The pre-#181 line said this over a sweep that now also runs 90 days.
+        expect(line).not.toContain('older than 2 years');
+      });
+    });
+
+    it('the applied line names both windows too', async () => {
+      await withDb(async (db) => {
+        await seedExpired(db);
+        await seedAnonymous(db, 'Wat is de inflatie?', '2026-04-24T00:00:00.000Z');
+        const summary = await runRetentionPurge({ db, now: NOW, apply: true, trial: TRIAL_LEG });
+        expect(summary.auditRows).toBe(2);
+        const line = describeRetentionPurge(summary);
+        expect(line).toContain('anonymous_trial @ 90 days');
+        expect(line).toContain(summary.anonymousCutoff);
+      });
+    });
+
+    // ⟨F2⟩ across the NEW split: what a dry run promises is what an apply does.
+    // Named for what it actually proves, after a review pointed out the earlier
+    // name overstated it: both paths derive their cutoffs from the SAME
+    // anonymousTrialCutoff(now) call, so this can only catch the two paths
+    // DISAGREEING — it is blind to a bug that shifts both consistently (a wrong
+    // constant, say). The absolute counts are pinned by its sibling above.
+    it('dry-run and apply agree with each other (F2), though neither pins the constant', async () => {
+      await withDb(async (db) => {
+        await seedExpired(db);
+        await seedAnonymous(db, 'Wat is de inflatie?', '2026-04-24T00:00:00.000Z');
+        await seedAnonymous(db, 'En het bbp?', '2026-07-24T00:00:00.000Z'); // 1 day old, survives
+        const dry = await runRetentionPurge({ db, now: NOW, apply: false, trial: TRIAL_LEG });
+        const applied = await runRetentionPurge({ db, now: NOW, apply: true, trial: TRIAL_LEG });
+        expect(applied.auditRows).toBe(dry.auditRows);
+        expect((dry.accountRows ?? 0) + (dry.anonymousTrialRows ?? 0)).toBe(applied.auditRows);
+      });
+    });
+  });
 });

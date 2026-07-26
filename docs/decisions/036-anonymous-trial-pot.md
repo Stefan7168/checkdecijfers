@@ -83,9 +83,12 @@ gets the secrets-register entry + rotation steps.
 Audit rows are written exactly as today with `user_id = null` and a NEW `source_tag = 'anonymous_trial'`
 (migration widens the CHECK by exact-name drop/re-add — the 007/013/018 pattern; `AuditSourceTag` union
 widened in code). The tag is ADDED to the GDPR retention allowlist (`AUDIT_SCOPE`, retention.ts) so the
-2-year purge sweeps anonymous rows — without this conscious add they'd be silently retained forever (the
+age-based purge sweeps anonymous rows — 2 years when this was written, 90 days since #181 — and without
+this conscious add they'd be silently retained forever (the
 allowlist is deliberately not automatic). Self-service deletion structurally doesn't exist for anonymous
-rows (no account to invoke it from) — retention is the 2-year purge; `trial_questions` rows (the limit
+rows (no account to invoke it from) — retention is the age-based purge, and since [#181](../open-questions.md)
+(2026-07-26) that is **90 days for anonymous content**, not 2 years: exactly the reasoning this D4 already
+applied to the bookkeeping, finished. Both windows are one constant now. `trial_questions` rows (the limit
 bookkeeping, incl. ip-hashes) get their own shorter sweep (90 days) since their purpose expires with the
 limit window. **As built (the adversarial review caught this promised-but-unbuilt; fixed same session): a
 DELETE leg (`purgeExpiredTrialBookkeeping`, `src/billing/trial-pot.ts`) wired into `npm run gdpr:purge`
@@ -204,7 +207,7 @@ Fixed in the same change; the reasoning for each lives in the commit message and
    Written now, including the trial's TWO windows.
 
 **Left to the owner, not changed (as of that first pass — see the SECOND as-built note below, which closes two
-of these):** anonymous *content* is retained 2 years with no self-service erasure route while its bookkeeping goes
+of these; ✅ RESOLVED 2026-07-26 by [#181](../open-questions.md) — content now goes at 90 days too):** anonymous *content* was retained 2 years with no self-service erasure route while its bookkeeping went
 at 90 days ([#181](../open-questions.md)); ~~the IP backstop bounds nothing over IPv6~~ **✅ fixed 2026-07-26**
 ([#182](../open-questions.md)); ~~the pot has no low-water alert~~ **✅ fixed 2026-07-26**
 ([#180](../open-questions.md)); a refund restores the abuse counters as well as the pot, and is near-dead code

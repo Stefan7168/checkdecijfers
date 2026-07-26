@@ -9,11 +9,17 @@
 import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import {
+  ANONYMOUS_TRIAL_RETENTION_DAYS,
   REDACTED_QUESTION_TEXT,
+  anonymousTrialCutoff,
   deleteUserQuestionHistory,
   purgeExpiredQuestionHistory,
   twoYearsBefore,
 } from '../../src/answer/audit/retention.ts';
+import {
+  TRIAL_BOOKKEEPING_RETENTION_DAYS,
+  trialRetentionCutoff,
+} from '../../src/billing/trial-pot.ts';
 import { chargeAndRun } from '../../src/billing/gate.ts';
 import { applyPricingDefaults } from '../../src/billing/pricing-apply.ts';
 import type { Db } from '../../src/db/types.ts';
@@ -310,7 +316,7 @@ describe('deleteUserQuestionHistory / purgeExpiredQuestionHistory — ledger-unt
       if (gated.kind !== 'ok') throw new Error(`expected ok, got ${gated.kind}`);
 
       const before = await ledgerRows(db, userId);
-      await purgeExpiredQuestionHistory(db, twoYearsBefore(new Date('2026-01-01T00:00:00Z')));
+      await purgeExpiredQuestionHistory(db, twoYearsBefore(new Date('2026-01-01T00:00:00Z')), twoYearsBefore(new Date('2026-01-01T00:00:00Z')));
       const after = await ledgerRows(db, userId);
       expect(after).toEqual(before);
     });
@@ -363,7 +369,7 @@ describe('purgeExpiredQuestionHistory — retention window + idempotency', () =>
         createdAt: new Date(cutoff.getTime() + 1000 * 60 * 60 * 24 * 30).toISOString(),
       });
 
-      const redacted = await purgeExpiredQuestionHistory(db, cutoff);
+      const redacted = await purgeExpiredQuestionHistory(db, cutoff, cutoff);
 
       expect(redacted.map((r) => r.id)).toEqual([oldId]);
       expect((await loadRow(db, atCutoffId))!.question).toBe('exact op de grens');
@@ -395,7 +401,7 @@ describe('purgeExpiredQuestionHistory — retention window + idempotency', () =>
         createdAt: old,
       });
 
-      const redacted = await purgeExpiredQuestionHistory(db, cutoff);
+      const redacted = await purgeExpiredQuestionHistory(db, cutoff, cutoff);
 
       expect(redacted.map((r) => r.id)).toEqual([userRowId]);
       expect((await loadRow(db, benchmarkId))!.question).toBe('benchmark frozen-key vraag');
@@ -413,8 +419,8 @@ describe('purgeExpiredQuestionHistory — retention window + idempotency', () =>
         createdAt: new Date(cutoff.getTime() - 1000).toISOString(),
       });
 
-      const first = await purgeExpiredQuestionHistory(db, cutoff);
-      const second = await purgeExpiredQuestionHistory(db, cutoff);
+      const first = await purgeExpiredQuestionHistory(db, cutoff, cutoff);
+      const second = await purgeExpiredQuestionHistory(db, cutoff, cutoff);
 
       expect(first).toHaveLength(1);
       // The row still matches source_tag='user' AND created_at < cutoff (its
@@ -431,7 +437,11 @@ describe('purgeExpiredQuestionHistory — retention window + idempotency', () =>
 
   it('purging with no matching rows returns an empty array (no crash)', async () => {
     await withDb(async (db) => {
-      const redacted = await purgeExpiredQuestionHistory(db, twoYearsBefore(NOW));
+      const redacted = await purgeExpiredQuestionHistory(
+        db,
+        twoYearsBefore(NOW),
+        anonymousTrialCutoff(NOW),
+      );
       expect(redacted).toEqual([]);
     });
   });
@@ -452,17 +462,87 @@ describe('anonymous_trial rows (#53, ADR 036 D4 — session 52 scope widening)',
     return Number(rows[0]!.id);
   }
 
-  it('the 2-year purge SWEEPS an expired anonymous row (user_id null is no shield)', async () => {
+  it('the purge SWEEPS an expired anonymous row (user_id null is no shield)', async () => {
     await withDb(async (db) => {
       const oldId = await insertAnonymousTrialRow(db, 'Wat is de inflatie?', '2023-01-01T00:00:00Z');
       const youngId = await insertAnonymousTrialRow(db, 'Wat doet het bbp?', '2026-07-01T00:00:00Z');
-      const redacted = await purgeExpiredQuestionHistory(db, twoYearsBefore(NOW));
+      const redacted = await purgeExpiredQuestionHistory(
+        db,
+        twoYearsBefore(NOW),
+        anonymousTrialCutoff(NOW),
+      );
       expect(redacted.map((r) => r.id)).toEqual([oldId]);
       const oldRow = await loadRow(db, oldId);
       expect(oldRow!.question).not.toContain('inflatie');
       const youngRow = await loadRow(db, youngId);
       expect(youngRow!.question).toBe('Wat doet het bbp?');
     });
+  });
+
+  // #181: the boundary that moved. An anonymous turn has neither of the two
+  // things the 2-year window was decided for — it never touches
+  // credit_transactions and never appears in a dashboard — so its content now
+  // expires with its own abuse bookkeeping. The account window is UNCHANGED,
+  // which is the half this test exists to prove did not move by accident.
+  it('redacts anonymous content at 90 days while an identically-aged account row survives', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      // 91 days before NOW — past the anonymous window, nowhere near 2 years.
+      const aged = '2026-04-05T00:00:00Z';
+      const anonId = await insertAnonymousTrialRow(db, 'Wat is de inflatie?', aged);
+      const accountId = await insertAuditRow(db, userId, {
+        kind: 'answer',
+        question: 'Hoeveel inwoners had Utrecht?',
+        createdAt: aged,
+      });
+      const redacted = await purgeExpiredQuestionHistory(
+        db,
+        twoYearsBefore(NOW),
+        anonymousTrialCutoff(NOW),
+      );
+      expect(redacted.map((r) => r.id)).toEqual([anonId]);
+      expect((await loadRow(db, anonId))!.question).not.toContain('inflatie');
+      // The account row is the control: same age, different clock, untouched.
+      expect((await loadRow(db, accountId))!.question).toBe('Hoeveel inwoners had Utrecht?');
+    });
+  });
+
+  // The BOUNDARY, at the instant rather than near it. `anonymousTrialCutoff` of
+  // 2026-07-05 is exactly 2026-04-06T00:00:00Z, so this pins strict `<` on the
+  // anonymous half of AUDIT_PURGE_WHERE: a row AT the cutoff survives, one
+  // second older goes. That predicate is a textually separate literal from the
+  // account half, so the account leg's own strict-`<` test cannot catch it
+  // regressing to `<=` — a review pointed out the gap, and that an earlier
+  // version of this test was labelled "89 days" while actually seeding 88.
+  it('anonymous half uses strict < : a row AT the cutoff survives, a second older does not', async () => {
+    await withDb(async (db) => {
+      const cutoff = anonymousTrialCutoff(NOW);
+      expect(cutoff.toISOString()).toBe('2026-04-06T00:00:00.000Z');
+      const atCutoff = await insertAnonymousTrialRow(db, 'Precies op de grens', cutoff.toISOString());
+      const oneSecondOlder = await insertAnonymousTrialRow(
+        db,
+        'Een seconde ouder',
+        new Date(cutoff.getTime() - 1000).toISOString(),
+      );
+      const redacted = await purgeExpiredQuestionHistory(db, twoYearsBefore(NOW), cutoff);
+      expect(redacted.map((r) => r.id)).toEqual([oneSecondOlder]);
+      expect((await loadRow(db, atCutoff))!.question).toBe('Precies op de grens');
+      expect((await loadRow(db, oneSecondOlder))!.question).not.toContain('seconde');
+    });
+  });
+
+  // ONE number for everything the trial writes about a visitor.
+  //
+  // Labelled honestly: this is a GUARD, not a revert-proof. `trial-pot.ts`
+  // currently *imports* this constant, so the two can never disagree and no
+  // mutation of the number alone can fail this test — verified by mutating it to
+  // 180, which failed the 90-day boundary test above and not this one. What it
+  // does catch is the regression it exists for: someone replacing the import
+  // with a literal, at which point the content and bookkeeping windows can drift
+  // apart, and both directions of drift are named bugs (see the constant).
+  it('shares ONE retention window with the trial bookkeeping sweep', () => {
+    expect(ANONYMOUS_TRIAL_RETENTION_DAYS).toBe(TRIAL_BOOKKEEPING_RETENTION_DAYS);
+    expect(anonymousTrialCutoff(NOW).getTime()).toBe(trialRetentionCutoff(NOW).getTime());
   });
 
   it('self-service deletion NEVER touches anonymous rows (its WHERE binds user_id)', async () => {

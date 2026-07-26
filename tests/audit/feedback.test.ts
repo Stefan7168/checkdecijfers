@@ -173,7 +173,7 @@ describe('GDPR interplay (frozen-brief F3 — same transaction, feedback first)'
       await upsertAnswerFeedback(db, { auditAnswerId: old, userId: 'user-1', verdict: 'down', feedbackText: 'oud' });
       await upsertAnswerFeedback(db, { auditAnswerId: fresh, userId: 'user-1', verdict: 'up' });
 
-      await purgeExpiredQuestionHistory(db, new Date('2024-01-01T00:00:00Z'));
+      await purgeExpiredQuestionHistory(db, new Date('2024-01-01T00:00:00Z'), new Date('2024-01-01T00:00:00Z'));
 
       const rows = await feedbackRows(db);
       expect(rows).toHaveLength(1);

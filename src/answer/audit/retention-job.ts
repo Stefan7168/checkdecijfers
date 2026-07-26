@@ -17,6 +17,7 @@
 // propagate, not read as an honest skip" pin is written at all.
 import type { Db } from '../../db/types.ts';
 import {
+  anonymousTrialCutoff,
   countPurgeableQuestionHistory,
   purgeExpiredQuestionHistory,
   twoYearsBefore,
@@ -42,8 +43,18 @@ export interface RetentionPurgeOptions {
 export interface RetentionPurgeSummary {
   mode: 'dry-run' | 'applied';
   auditCutoff: string;
-  /** Rows redacted (applied) or that WOULD be redacted (dry run). */
+  /** #181: the 90-day cutoff the anonymous-trial half of the audit sweep used.
+   * Always present, so an operator reading a summary never has to remember that
+   * two windows exist — the summary says so. */
+  anonymousCutoff: string;
+  /** Rows redacted (applied) or that WOULD be redacted (dry run) — both windows. */
   auditRows: number;
+  /** Dry run only: the same total split by window, because the two are 21
+   * months apart and "12 rows" does not say which clock is about to bite.
+   * Absent after an apply — `purgeExpiredQuestionHistory` returns one list and
+   * a split there would be a number we did not measure. */
+  accountRows?: number;
+  anonymousTrialRows?: number;
   /** pending_table_requests rows at the same cutoff. A NUMBER on a dry run.
    * `null` after an apply — the pending leg runs inside
    * purgeExpiredQuestionHistory's own transaction (#120) and is not itemised in
@@ -84,6 +95,10 @@ export async function runRetentionPurge(
 ): Promise<RetentionPurgeSummary> {
   const { db, now, apply, trial } = options;
   const auditCutoff = twoYearsBefore(now);
+  // #181: anonymous trial CONTENT expires with its own bookkeeping at 90 days,
+  // not at the account window. Derived from the SAME injected `now` as the
+  // 2-year cutoff — one clock, two windows — so a run can never mix instants.
+  const anonCutoff = anonymousTrialCutoff(now);
 
   const trialLeg = async (): Promise<RetentionPurgeSummary['trial']> => {
     if (trial === null) return { skipped: 'not-configured' };
@@ -96,17 +111,21 @@ export async function runRetentionPurge(
   if (!apply) {
     // ⟨F2⟩: the preview counts come from the purge's OWN scope fragments, so a
     // dry run can never disagree with what --apply would redact.
-    const { auditRows, pendingRows } = await countPurgeableQuestionHistory(db, auditCutoff);
+    const { auditRows, accountRows, anonymousTrialRows, pendingRows } =
+      await countPurgeableQuestionHistory(db, auditCutoff, anonCutoff);
     return {
       mode: 'dry-run',
       auditCutoff: auditCutoff.toISOString(),
+      anonymousCutoff: anonCutoff.toISOString(),
       auditRows,
+      accountRows,
+      anonymousTrialRows,
       pendingRows,
       trial: await trialLeg(),
     };
   }
 
-  const redacted = await purgeExpiredQuestionHistory(db, auditCutoff);
+  const redacted = await purgeExpiredQuestionHistory(db, auditCutoff, anonCutoff);
   const byKind = redacted.reduce<Record<string, number>>((acc, r) => {
     acc[r.kind] = (acc[r.kind] ?? 0) + 1;
     return acc;
@@ -131,6 +150,7 @@ export async function runRetentionPurge(
   return {
     mode: 'applied',
     auditCutoff: auditCutoff.toISOString(),
+    anonymousCutoff: anonCutoff.toISOString(),
     auditRows: redacted.length,
     pendingRows: null,
     ...(redacted.length > 0 ? { byKind } : {}),
@@ -170,13 +190,22 @@ export class RetentionPurgePartialError extends Error {
 /** One-line operator summary, shared by the CLI and the cron log so the two
  * never describe the same run differently. */
 export function describeRetentionPurge(s: RetentionPurgeSummary): string {
+  // #181: the sweep runs TWO windows, so the operator line names both. Saying
+  // "older than 2 years" over a run that also redacts 90-day-old anonymous rows
+  // would be the doc-contradicts-code bug this project treats as a real defect —
+  // and here the doc IS the operator's only view of what happened.
+  const split =
+    s.accountRows === undefined || s.anonymousTrialRows === undefined
+      ? ''
+      : ` [${s.accountRows} account @ 2y, ${s.anonymousTrialRows} anonymous_trial @ 90d]`;
   const head =
     s.mode === 'dry-run'
-      ? `DRY RUN — audit cutoff ${s.auditCutoff}: ${s.auditRows} audit_answers row(s) ` +
-        `(source_tag user + onboarding_delivery + anonymous_trial) and ${s.pendingRows ?? 0} ` +
-        `pending_table_requests row(s) older than 2 years WOULD be redacted.`
-      : `Applied — audit cutoff ${s.auditCutoff}: redacted ${s.auditRows} audit_answers row(s) ` +
-        `(source_tag user + onboarding_delivery + anonymous_trial); expired ` +
+      ? `DRY RUN — account cutoff ${s.auditCutoff}, anonymous-trial cutoff ${s.anonymousCutoff}: ` +
+        `${s.auditRows} audit_answers row(s)${split} and ${s.pendingRows ?? 0} ` +
+        `pending_table_requests row(s) WOULD be redacted.`
+      : `Applied — account cutoff ${s.auditCutoff}, anonymous-trial cutoff ${s.anonymousCutoff}: ` +
+        `redacted ${s.auditRows} audit_answers row(s) (source_tag user + onboarding_delivery @ 2 years, ` +
+        `anonymous_trial @ 90 days); expired ` +
         `pending_table_requests free text was redacted in the SAME transaction.`;
   const kinds = s.byKind ? `\n  by kind: ${JSON.stringify(s.byKind)}` : '';
   const trial =
