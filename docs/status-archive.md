@@ -1,5 +1,84 @@
 # STATUS archive — the session log
 
+**Session 60 (2026-07-26 — AUTONOMOUS. The owner handed over the kickoff and left; his prompt said session 59's
+push-to-`main` exception does NOT carry over and to "ask it or assume branch + PR", so this session assumed
+branch + PR and merged nothing. €0 live-LLM product spend, zero prompt bytes, no DDL, no deploy. Both WP26 flags
+and `GDPR_PURGE_APPLY` untouched.)**
+
+**Everything below is on PR #77, OPEN and awaiting the owner's review. Nothing is merged and nothing is live.**
+
+| Commit | What |
+|---|---|
+| `a108ba3` | **#176** — the resolver builds per-option intents only for the flag that reads them. |
+| `a25f3e8` | **#132 interim rule (i)** — 38 live PR links re-neutralized, rule converted into a CI-gated test. |
+| `06f6209` | **CI fix** — an unquoted colon in the new step's name broke the workflow. |
+
+**#176 — the fix was small; the finding was in the test.** `resolveCandidate` called `regionOptionIntents`
+(and through it a real `resolvePeriod` query) on every region-ambiguous question, while the `optionIntents` it
+produces are read in exactly one place (`policy.ts:149`) and only when `clickOptionsEnabled` is true — off in
+production. The flag is now threaded into the resolver's existing options bag and the call gated; `parse.ts`
+and `followup.ts` pass what they already pass to `decide()`, and **`clarify.ts` passes nothing deliberately**
+(a reply turn is the final round and never asks again, so that work was dead there in *every* flag state).
+Design B — moving the construction into `policy.ts`'s gated branch — was rejected on review: it would need
+`ResolutionFailure` to carry `optionCodes` + the period spec + the canonical row out of the resolver plus a
+third injected callback through `decide()`, and would have to reproduce one undocumented asymmetry exactly
+(`regionOptionIntents` resolves its period WITHOUT `answerFirstEnabled` and without region codes,
+`resolve.ts:933`) or silently change flag-ON behaviour.
+
+⚠ **`tests/answer/query-count.test.ts` carried a case commented "the shape #176 was found on" — and it was
+not.** It passes `regions: null`, which returns ok early at `resolve.ts:166` and never enters the failure
+branch at all; its `served:false` came from the query layer. **So the fix moved none of the pre-existing
+pinned numbers, and verifying against that tripwire as it stood would have proved nothing — a no-op gate
+would have been just as green.** Two pins on the real shape (a NAMED ambiguous region) now measure it:
+**3 statements flag-off, 4 flag-on**. Mutation-verified: gate removed → the flag-off pin fails 3→4 plus both
+absent-key tests; gate **inverted** → 10 tests fail across 3 files; `followup.ts` threading dropped → the new
+follow-up test fails, and **nothing covered that call site before** (every existing click test goes through
+`parse.ts`, and the failure is silent — the clarification renders perfectly, minus its chips). The `'max'`
+case is labelled a guard, not a proof.
+
+**⚠ NEW [#191](open-questions.md) — a go-live item, found by the review of the #176 diff.** The clarification
+REPLY turn never receives `ANSWER_FIRST_ENABLED`, though `ClarifyReplyOptions` declares it and its comment says
+it is threaded (`respond.ts:586-595`). Dormant while the flag is off; real the moment it is flipped — which is
+the owner's next WP26 step. Flip it and the two halves of one conversation disagree about what is servable.
+The RUNBOOK's go-live section now warns before the flip. Not fixed here on purpose: it is a flag-ON behaviour
+change needing its own verification and its own product question.
+
+**#132 — the rule that was enforced by remembering, and therefore was not.** Re-asking route B (owner not
+present, so on the record) turned up that **38 live PR links had crept back into `docs/` since session 55
+re-neutralized 29** — written by sessions 58 and 59, whose wrap-ups both reported the stale-doc sweep as done.
+Route B deletes and recreates the repo, so every one of those 404s. Re-neutralized, and the rule converted
+into `tests/docs/doc-conventions.test.ts`, wired into CI as `test:docs`. `forks_count` measured **0** (stars 0,
+watchers 0) — route B's T-0 go/no-go **still holds** and the two-phase drill still awaits the owner's explicit
+in-chat GO.
+
+**⚠ And the review of THAT commit found the fix breaking what it fixed, for the third round running.** The
+substitution rewrote a linked reference to plain text without dropping the word already in front of it,
+producing a doubled "PR" — **10 shipped in the commit, and 17 more inherited from the session-37 and
+session-55 rounds that nobody had ever spotted.** All three passes made the identical mistake. All 27 fixed
+and the form pinned. The same review showed the first regex was anchored on markdown `](…)` syntax while the
+REASON for the rule is that the URL 404s — so bare URLs, reference-style targets, HTML `href`s and
+`/files`/`#issuecomment-…` suffixes were all blind spots. Widened, with an issue-link counter-case.
+**Then the new pin failed on the lessons entry describing the defect, because that entry has to quote it** —
+resolved by sharpening the rule rather than exempting the file: prose is checked, backticked quotations are
+not, both halves pinned.
+
+**~30/7 BBP+PPI syncs — MEASURED, nothing due, nothing run.** At CBS today: `85880NED` `Modified`
+**2026-07-01T06:30**, `85770NED` **2026-06-30T06:30**; our 17/7 sync is ahead of both. Identical to what
+session 56 measured, so the ~30/7 date remains a *forecast* of CBS's next publication, not a due date passed.
+
+**Verification (frozen tree, `a25f3e8`):** typecheck root + web clean; backend **1562 / 103 files**
+(1551 + 7 from #176 + 4 from the new docs suite — arithmetic checked); web **453 / 42** unchanged; benchmark
+**14/14 + 6/6 + 0 fabricated, GATE PASS**; real `next build`. Production verified **200** on `/`, `/llms.txt`,
+`/login` — unchanged, since nothing deployed.
+
+**⚠ CI went red once and was fixed: run 30197192763 failed in 0 s** because the new workflow step's name
+contained an unquoted colon-space, which YAML reads as a mapping. The gate did not run at all rather than
+running and passing. Nothing local catches this — the full suite, both typechecks, the benchmark and a real
+build had all just passed green, because none of them parses `.github/workflows/`. Fixed in `06f6209`.
+
+**Held deliberately, per the owner's instruction:** [#174](open-questions.md), [#185](open-questions.md),
+[#183](open-questions.md), [#188](open-questions.md), [#190(a)](open-questions.md).
+
 **Session 59 (2026-07-26 — began AUTONOMOUS on the session-59 kickoff; mid-session the owner wrote *"I will be
 gone all night, work as much as you can. see you tomorrow, you have permission to push to main along the way"*,
 which is the standing authorisation the rest of the night ran under. Theme: capacity and retention on the

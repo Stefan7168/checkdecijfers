@@ -9,52 +9,62 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
-**▶ NEXT SESSION STARTS HERE — Session 59 (2026-07-26). Began autonomous; mid-session the owner gave standing
-permission to push to `main` and left for the night. Theme: capacity + retention on the ANONYMOUS surface.
-€0 live-LLM spend, zero prompt bytes, no DDL.**
+**▶ NEXT SESSION STARTS HERE — Session 60 (2026-07-26). AUTONOMOUS: the owner handed over the kickoff and
+left, and his prompt said session 59's push-to-`main` exception does NOT carry over. So: branch + PR,
+nothing merged, nothing deployed. €0 live-LLM spend, zero prompt bytes, no DDL.**
 
-**⚠ THE TWO THINGS THAT ARE STILL ONLY YOURS, untouched again this session:** the **WP26 flags**
+**⚠ THE TWO THINGS THAT ARE STILL ONLY YOURS, untouched again:** the **WP26 flags**
 (`CLARIFY_CLICK_ENABLED`, `ANSWER_FIRST_ENABLED`) and **`GDPR_PURGE_APPLY`**. Read
-[#175](open-questions.md) before flipping WP26 — the anonymous trial receives NEITHER flag.
+[#175](open-questions.md) before flipping WP26 — the anonymous trial receives NEITHER flag —
+and now **[#191](open-questions.md) too** (below), which is a genuine pre-flip blocker.
 
-**✅ MERGED AND LIVE**, serially, gate+deploy green and a production canary between each (#173):
+**▶ FIRST THING: PR #77 IS OPEN AND AWAITS YOUR REVIEW.** Three commits, two independent changes:
 
-| # | PR | Squash | What |
-|---|---|---|---|
-| [#186](open-questions.md) | PR #72 | `e30203a` | 20 s single-flight cache on the **pot read only**. |
-| [#184](open-questions.md) | PR #74 | `1342f79` | Gate reports the per-IP backstop at render time, in FEWER queries than before. |
-| [#181](open-questions.md) | PR #75 | `4a9cb77` | Anonymous trial CONTENT redacted at 90 days, same clock as its bookkeeping. |
-| [#190(b)](open-questions.md) | PR #76 | `ae7640c` | 5 s deadline on both anonymous reads — degrade, don't hang. Also carries a REAL bug the combined-diff review found (below) and the flaky-test fix. |
+| Commit | What |
+|---|---|
+| `a108ba3` | **[#176](open-questions.md)** — the resolver builds per-option intents only for the flag that reads them. |
+| `a25f3e8` | **[#132](open-questions.md) rule (i)** — 38 live PR links re-neutralized; the rule is now a CI-gated test. |
+| `06f6209` | CI fix — an unquoted colon in the new step's name broke the workflow (red 0 s run, then green). |
 
-**⚠ The measurement that disproved a doc we were trusting.** #186's own row AND the RUNBOOK said idle pooler
-sessions release on node-pg's 10 s timer, and that this is why the 2026-07-25 incident self-healed. **Measured
-false:** one anonymous GET held a session **174 s**, and 4 of the 15 slots were held at a quiet hour from ~2 page
-views — the timer does not fire while a Fluid Compute instance is frozen; the slot returns on TEARDOWN. Both
-corrected. Volume itself is trivial (~17 anonymous renders/day, 2 trial questions ever served), so these ship as
-headroom, not as a fix for a live pressure.
+**⚠ NEW [#191](open-questions.md) — READ BEFORE THE `ANSWER_FIRST_ENABLED` FLIP.** The clarification REPLY
+turn never receives that flag, though `ClarifyReplyOptions` declares it and its comment says it is threaded
+(`respond.ts:586-595`). Harmless while it is off — both turns run pre-B and agree. Flip it and they stop
+agreeing: the first turn defaults a missing region/period and answers, the reply turn judges under pre-B
+rules and can refuse instead. Decide what a reply turn *should* do before flipping. RUNBOOK now warns.
 
-**⚠ The review of the COMBINED diff earned its place.** Each change was reviewed alone and came back clean; a
-final pass over all four together, briefed to hunt only for what breaks when two MEET, found a real latch bug in
-`web/lib/ontdek.ts` (a synchronous `getDb()` throw left the in-flight slot latched forever, so the Ontdek section
-stayed empty for the life of that warm instance). **The trap is documented, correctly, in `trial.ts` one file
-over.** Knowing a trap in file A does not protect file B, and no per-change review sees the pair.
+**⚠ The lesson of #176 was in the TEST, not the code.** `query-count.test.ts` had a case commented "the
+shape #176 was found on" — it wasn't. It passes `regions: null`, which exits early at `resolve.ts:166` and
+never reaches the branch. **The fix moved none of the pinned numbers; verifying against that pin would have
+proved nothing.** Real shape (a NAMED ambiguous region) now pinned: 3 statements flag-off, 4 flag-on.
 
-**⚠ `git rebase --continue` SILENTLY DROPS a `#`-prefixed subject line** — it bit twice tonight and reported
-success both times. This repo's commits are `#181: …`; the rebase editor strips `#` lines as comments. **Use
-`--cleanup=whitespace` on every rebase/cherry-pick here.**
+**⚠ A convention "the wrap-up sweep will catch" was not caught, twice.** 38 live PR links had crept back
+into `docs/` since session 55 fixed 29 — route B deletes the repo, so each 404s. Re-neutralized, and the
+rule is now `tests/docs/doc-conventions.test.ts` in CI. **The review then found my own fix produced a
+doubled "PR" in 10 places, and 17 more inherited from the 2 earlier rounds — all three passes made the
+same mistake.** Fixed and pinned.
 
-**▶ NEXT, in order:** (a) the **owner-supervised WP26 go-live** — one flag at a time, RUNBOOK section "WP26
-answer-first + clickable options", NOT during a deploy burst (#173); (b) **`GDPR_PURGE_APPLY=1`** plus one watched
-run (RUNBOOK) — nothing is deleted until then, first rows purgeable ~2026-10-15; (c) **[#176](open-questions.md)**,
-the clearly-next capacity item, now de-risked: the #164 fixture key hashes the **LLM request**, not the source
-file, so touching `resolveCandidate` cannot invalidate a fixture; (d) **~30/7 BBP+PPI syncs** (`85880NED` MUST use
-the chunked escape hatch, RUNBOOK step 5); (e) re-ask **[#132](open-questions.md) route B**; (f) then the owner
+**~30/7 BBP+PPI syncs: MEASURED, NOTHING DUE.** At CBS today `85880NED` Modified **2026-07-01**,
+`85770NED` **2026-06-30**; our 17/7 sync is ahead of both. The ~30/7 date is CBS's expected next
+publication, not a due date passed. `85880NED` still MUST use the chunked escape hatch (RUNBOOK step 5).
+
+**[#132](open-questions.md) route B re-asked, on the record:** `forks_count` = **0** (stars 0, watchers 0),
+so the T-0 go/no-go **holds** and the two-phase reversible drill still awaits your explicit in-chat GO.
+
+**▶ NEXT, in order:** (a) **review + merge PR #77**; (b) the **owner-supervised WP26 go-live** — one flag at
+a time, RUNBOOK section "WP26 answer-first + clickable options", **[#191](open-questions.md) first**, NOT
+during a deploy burst (#173); (c) **`GDPR_PURGE_APPLY=1`** plus one watched run (RUNBOOK) — nothing is
+deleted until then, first rows purgeable ~2026-10-15; (d) **#132 route B** GO or defer; (e) then the owner
 menu: WP30c choice / [#162](open-questions.md) / [#170](open-questions.md) rest (3)+(4).
 
 **Tracked, deliberately NOT built:** [#174](open-questions.md) and [#185](open-questions.md) (both explicitly held
 — the obvious fix is worse than the bug, and a reasoned decline respectively), [#183](open-questions.md) (product
 call), [#188](open-questions.md) (concurrency on a live money path — supervised), [#190(a)](open-questions.md)
 (whether an infrastructure-caused refusal should cost a trial question — a conversion judgement, yours).
+
+**Measured this session (frozen tree `a25f3e8`):** backend **1562 / 103 files**, web **453 / 42**, benchmark
+**14/14 + 6/6 + 0 fabricated GATE PASS**, real `next build`. Production **200/200/200**, unchanged — nothing
+deployed. **⚠ `git rebase --continue` still SILENTLY DROPS a `#`-prefixed subject line** (session 59): use
+`--cleanup=whitespace` on every rebase/cherry-pick here.
 
 Full session record in [status-archive.md](status-archive.md).
 

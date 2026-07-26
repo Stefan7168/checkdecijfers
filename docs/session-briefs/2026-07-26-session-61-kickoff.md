@@ -1,0 +1,144 @@
+# Session 61 kickoff
+
+**Written 2026-07-26 at the close of session 60.** Supersedes
+[`2026-07-26-session-60-kickoff.md`](2026-07-26-session-60-kickoff.md) — its queue is done.
+
+## Reading order
+
+`CLAUDE.md` → [`docs/STATUS.md`](../STATUS.md) (the ▶ block leads) → this file.
+
+## State — verify it, don't trust this file
+
+The Golden Rule applies to *reading* a handover too. Re-derive anything you are about to act on:
+`date +%Y-%m-%d`, `git --no-pager log --oneline -5`, `gh pr list --state all -L 5`, `gh run list -L 5`,
+`curl` the prod URL.
+
+- **Nothing was merged or deployed in session 60.** The owner was not in the chat and his session-60 prompt
+  said session 59's push-to-`main` exception does not carry over, so everything went to a branch.
+- **PR 77 is OPEN and is the first thing to deal with** — branch `perf/176-gate-region-option-intents`,
+  three commits: `a108ba3` (#176), `a25f3e8` (#132 pin), `06f6209` (a CI fix).
+- **Counts at the close, measured on a frozen tree at `a25f3e8`:** backend **1562 / 103 files**, web
+  **453 / 42**, benchmark **14/14 + 6/6 + 0 fabricated GATE PASS**, real `next build`. Production
+  **200 / 200 / 200**, unchanged — nothing shipped.
+- CI: green on `a108ba3`; red once on `a25f3e8` (a 0-second workflow-parse failure, see traps) then fixed
+  by `06f6209`. **Check the run for `06f6209` yourself before believing the branch is green.**
+
+## ⚠ The two things that are the owner's, and only his
+
+1. **The WP26 flags** — `CLARIFY_CLICK_ENABLED`, `ANSWER_FIRST_ENABLED`. Still OFF, five sessions running.
+   Two things to read before anyone flips them: [#175](../open-questions.md) (the anonymous trial receives
+   **neither** flag, so flipping changes the paid product and not the surface WP26c was built for) and now
+   **[#191](../open-questions.md)** — new, and a genuine pre-flip blocker, see below.
+2. **`GDPR_PURGE_APPLY=1`.** The monthly cron runs but **reports only**. Three clocks depend on it
+   (account content 2 years, anonymous content 90 days, trial bookkeeping deleted at 90 days) and it
+   deletes nothing until he sets that variable. First anonymous rows purgeable **~2026-10-15**.
+
+## Queue
+
+1. **PR 77 — the owner reviews and merges, or a session merges on his word.** Two independent changes on one
+   branch (deliberately not stacked: they touch the same two doc files, and session 59 learned that
+   squash-merging a stacked PR closes the child rather than retargeting it). Merge serially per
+   [#173](../open-questions.md), canary between.
+2. **[#191](../open-questions.md) — answer it before the `ANSWER_FIRST_ENABLED` flip, not after.** The
+   clarification REPLY turn never receives that flag, though `ClarifyReplyOptions` declares it and its
+   comment says it is threaded (`respond.ts:586-595`). Harmless while off — both turns run pre-B and agree.
+   Flip it and they stop agreeing: the first turn defaults a missing region/period and answers, the reply
+   turn judges the same option under pre-B rules and can refuse. **The question is not "thread it" — it is
+   whether a reply turn SHOULD default like the first turn, or whether the user's reply is exactly the
+   moment not to default.** That is a product call sitting on a two-line code change.
+3. **The WP26 go-live** (owner-supervised) — one flag at a time, RUNBOOK section "WP26 answer-first +
+   clickable options", **#191 first**, NOT during a deploy burst (#173).
+4. **`GDPR_PURGE_APPLY=1`** plus one watched run (RUNBOOK).
+5. **[#132](../open-questions.md) route B** — `forks_count` measured **0** on 2026-07-26, so the T-0
+   go/no-go still holds and the two-phase reversible drill still awaits the owner's explicit in-chat GO.
+   It has been re-asked three times now; it is purely waiting on him, nothing has expired.
+6. Then the owner menu: WP30c choice, [#162](../open-questions.md), [#170](../open-questions.md) rest
+   (3)+(4).
+
+**~30/7 BBP+PPI syncs — measured 2026-07-26, nothing was due.** `85880NED` `Modified` 2026-07-01,
+`85770NED` 2026-06-30; our 17/7 sync is ahead of both. The ~30/7 date is CBS's *expected next publication*,
+not a deadline that passed. Re-measure before assuming — `curl -s https://datasets.cbs.nl/odata/v1/CBS/<id>/Properties`
+returns `Modified` directly. `85880NED` still MUST use the chunked escape hatch (RUNBOOK step 5).
+
+**Explicitly NOT to do:** [#174](../open-questions.md) (the obvious fix is worse than the bug — it needs a
+decision about what the bit MEANS), [#185](../open-questions.md) (declined with reasoning),
+[#183](../open-questions.md) (product call), [#188](../open-questions.md) (concurrency on a live money path
+— supervised only), [#190(a)](../open-questions.md) (whether an infrastructure-caused refusal costs a trial
+question — a conversion judgement that changes what someone is charged).
+
+## Binding constraints
+
+- **Git workflow:** owner-present ⇒ push/merge directly, no per-change asking. Autonomous ⇒ branch + PR +
+  owner review, **unless he says otherwise for that session**. He did in session 59; he explicitly did NOT
+  renew it for session 60. Do not generalise either way — ask, or assume branch + PR.
+  [#118](../open-questions.md)(b).
+- **Full verification block before EVERY code push:** typecheck root + web, backend suite, web suite,
+  benchmark 14/14 + 6/6 + 0, real `next build`, **plus a review pass over your own diff**.
+- **Zero prompt bytes** unless you are deliberately doing a #164 re-record.
+- **No live DDL** without a supervised window. **No stacked deploys** (#173) — one at a time, canary
+  between: `curl -s -o /dev/null -w '%{http_code}' https://checkdecijfers.vercel.app/llms.txt` → 200.
+- Delegation by role: session model orchestrates and judges; **Fable** for architecture and adversarial
+  analysis; Sonnet/Haiku for legwork. Never hardcode model names in reusable prompts.
+- **Commit messages in English** per CLAUDE.md. Session 59 wrote Dutch; session 60 went back to English and
+  flagged the divergence. If the owner wants Dutch, the convention doc should change — not the practice
+  drifting again.
+
+## Traps this session paid for
+
+1. **A test can name the issue it does not cover.** `query-count.test.ts` had a case commented "the shape
+   #176 was found on"; it passes `regions: null`, which exits at `resolve.ts:166` and never reaches the
+   branch. The fix moved none of its numbers, and a no-op gate would have stayed green.
+   **Before trusting a test as the verification of a fix, construct the failing input yourself and confirm
+   that test would see it.**
+2. **A `.yml` edit is a code change with no local gate.** An unquoted colon-space in a workflow step name
+   made the whole file unparseable; CI died in **0 s** while the full suite, both typechecks, the benchmark
+   and a real build were all green locally — none of them parses `.github/workflows/`. A 0-second red run
+   is the signature. Validate: `python3 -c "import yaml; yaml.safe_load(open('.github/workflows/ci.yml'))"`.
+3. **Freeze the tree, then measure.** Two full-suite runs came back `1 failed`; the first was explained away
+   as a race with in-flight edits, and the second failed identically, which killed that theory. The 16-minute
+   local suite makes "run it and keep editing" tempting and it is always wrong. **When a failure repeats,
+   discard the convenient explanation first.**
+4. **A search-and-replace must be checked against the words AROUND its pattern.** Neutralizing
+   `PR [#68](url)` → `PR #68` left the word already in front, producing a doubled "PR" — 10 in this
+   session's commit and 17 inherited, meaning all three neutralization rounds ever run made the same
+   mistake and none noticed.
+5. **Derive a pin's pattern from the REASON for the rule, not from the instances in front of you.** The
+   first version of the doc-convention regex was anchored on markdown `](…)` syntax, while the rule exists
+   because the URL 404s — so bare URLs, reference-style targets and HTML hrefs were all blind spots.
+6. **A pin that fires on its own documentation means the rule was stated more loosely than it was meant.**
+   The doubled-word check went red on the lessons entry explaining the doubled word. Sharpen the rule
+   (prose is checked, backticked quotations are not) rather than exempting the file.
+7. **Brief a reviewer with the SHAPE of a bug, not only its location.** #191 was found because the review
+   of #176 was told the shape was "an options-bag omission" and went looking for the same shape one module
+   over — where it found one, dormant, on the path the owner is about to switch on.
+8. **`git rebase --continue` still silently drops a `#`-prefixed subject line** (session 59). Use
+   `--cleanup=whitespace` on every rebase and cherry-pick here.
+
+---
+
+## Paste-ready
+
+> Sessie 61 voor checkdecijfers.nl. Lees eerst CLAUDE.md, dan docs/STATUS.md (het ▶-blok bovenaan is
+> leidend), dan docs/session-briefs/2026-07-26-session-61-kickoff.md — dat is je opdracht.
+>
+> Stand: sessie 60 draaide autonoom en heeft NIETS gemerged of gedeployd — PR 77 staat open op mijn review
+> (drie commits: #176, de #132-doc-pin, en een CI-fix). Backend 1562/103, web 453/42, benchmark
+> 14/14 + 6/6 + 0, productie 200/200/200 onveranderd. Verifieer dat zelf even — niet uit deze tekst
+> overnemen, en check zelf of de CI-run van `06f6209` groen is.
+>
+> ⚠ TWEE DINGEN BLIJVEN VAN MIJ: de WP26-vlaggen UIT, en GDPR_PURGE_APPLY UIT tot ik hem zelf zet.
+>
+> Volgorde: (1) PR 77; (2) #191 — NIEUW, en het blokkeert de ANSWER_FIRST-flip: de reply-beurt krijgt die
+> vlag nooit terwijl z'n eigen type hem declareert, en de vraag is niet "doorgeven" maar of een reply-beurt
+> hoort te defaulten zoals de eerste beurt; (3) de WP26-livegang, #191 eerst; (4) GDPR_PURGE_APPLY;
+> (5) #132 route B. De ~30/7-syncs zijn gemeten: er viel niets te syncen, meet zelf opnieuw.
+> Houd #174, #185, #183, #188 en #190(a) expliciet aan.
+>
+> Harde grenzen: ben ik er niet bij, dan branch + PR + mijn review vóór de merge (#118(b)) — vraag het of
+> ga daarvan uit, een uitzondering geldt nooit automatisch opnieuw. Verder: volledig verificatieblok plus
+> een review-pas over je eigen diff vóór elke push, nul promptbytes, geen live DDL, geen gestapelde deploys
+> (#173). Architectuur en diepe analyse naar Fable-agents, mechanisch legwork naar Sonnet/Haiku.
+> ⚠ Valideer elke `.yml`-wijziging met yaml.safe_load vóór je pusht — een niet-gequote dubbele punt liet
+> CI in 0 s falen zonder dat iets lokaals het zag. ⚠ Bij elke rebase/cherry-pick: `--cleanup=whitespace`.
+>
+> Sluit af met het volledige wrap-up-ritueel.
