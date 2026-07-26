@@ -48,6 +48,44 @@ on top.
   its options type declaring it. That last one is the payoff of briefing a reviewer with the *shape* of the
   bug ("an options-bag omission") rather than only its location: it went looking for the same shape one
   module over and found it, dormant, on the path the owner is about to switch on.
+- **A "the wrap-up sweep now greps for this" rule failed twice in a row, because nothing actually runs the
+  grep.** Session 55 re-neutralized 29 live PR links in `docs/` (interim rule (i) under #132: route B
+  deletes the repo, so every live PR link would 404) and recorded that the sweep would catch it in future.
+  Sessions 58 and 59 then added **38 more**, and both wrap-ups declared the stale-doc sweep done.
+  Re-neutralized again this session. **A convention enforced by a human-or-model remembering to grep is not
+  enforced.** The repo already knows the fix — it is the same "a convention ships with its pin" rule the
+  session-57 architecture memo proposed and the conformance bundle acted on for four other conventions.
+  This one wants a test or a CI grep, not another note saying to remember — **so this session wrote the
+  test rather than the note**: `tests/docs/doc-conventions.test.ts`, wired into CI as `test:docs`,
+  mutation-checked (reintroduce one link → it names the file and the count). The rule is now enforced by
+  the same thing that enforces everything else here: a red pipeline.
+- **And the review of THAT commit caught the fix breaking the thing it was fixing — for the third round
+  running.** The mechanical substitution rewrote `[#68](url)` to `PR #68` without noticing the docs often
+  already said `PR ` in front of the link, producing **`PR PR #68`** — 10 shipped in my own commit, and
+  **17 more found inherited from the session-37 and session-55 rounds**, meaning all three neutralization
+  passes made the identical mistake and none noticed. All 27 fixed, and the test now pins that form too,
+  because a URL check structurally cannot see prose damage. The same review also showed the first regex
+  was anchored on markdown `](…)` syntax while the *reason* for the rule is that a repo recreate 404s the
+  URL — so a bare pasted URL, a reference-style target and an HTML `href` were all blind spots. Widened,
+  with an issue-link counter-case so the widening cannot over-match. **Two lessons, and the second is the
+  general one: (1) a search-and-replace that changes a word must be checked against the words AROUND it,
+  not only against its own pattern; (2) when you write a pin, derive its pattern from the REASON for the
+  rule, not from the shape of the instances you happen to be looking at — I pinned the syntax I was
+  cleaning up rather than the failure I was preventing.**
+- **Then the new pin failed on the lessons entry describing the defect it pins — and that was the pin
+  earning its keep, not a false positive.** The bullet above has to quote the doubled form to explain it,
+  so the check went red on this very file. The fix was not an exemption but a definition: a careless
+  search-and-replace produces the doubled word in PROSE, while a session explaining the trap puts it in
+  backticks deliberately — so the check now strips fenced blocks and inline code spans and looks at prose
+  only, with both halves pinned (prose fails, the quoted form passes). **A pin that fires on its own
+  documentation is telling you the rule was stated more loosely than it was meant; the useful response is
+  to sharpen the rule, not to carve out the file.**
+- **A local `npm test` while you are still editing is not a measurement.** Two full-suite runs came back
+  `1 failed` and I explained the first away as a race between my edits and the runner. The second failed
+  identically, which killed that theory — the actual cause was the item above, sitting in the tree the
+  whole time. The 16-minute local suite is long enough that "run it, keep editing" is tempting and always
+  wrong. **Freeze the tree, then measure; and when a failure repeats, the convenient explanation is the
+  first one to discard.**
 - **Commit-message language has drifted from the stated convention.** CLAUDE.md says English for commit
   messages; every session-59 commit is Dutch, and the ~30 before them are English. Recorded rather than
   silently picked a side — this session wrote English per the convention, and the owner should settle

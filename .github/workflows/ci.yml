@@ -116,6 +116,8 @@ jobs:
         run: npm run test:websearch
       - name: Threads tests (chat workspace threads + replay, WP135)
         run: npm run test:threads
+      - name: Doc-convention tests (#132 interim rule (i): no live PR links in docs)
+        run: npm run test:docs
       - name: Benchmark run (hermetic, audited pipeline)
         run: npm run benchmark:run
       - name: Benchmark scorer (audit records vs frozen key)

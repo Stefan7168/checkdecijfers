@@ -40,7 +40,7 @@ That reframing is the main thing to take from this document.
 
 ## 1. Independent review of PR #64 — verdict: **merge as-is**
 
-PR [#64](https://github.com/Stefan7168/checkdecijfers/pull/64) (`fix/guard-argument-types`, `d84aa8d`) hardens
+PR #64 (`fix/guard-argument-types`, `d84aa8d`) hardens
 Server Action arguments: `guardLength` checked `.length` without `typeof`, so
 `[{type:'text',text:<400 kB>}]` (`.length === 1`) passed a 2000-char spend ceiling.
 

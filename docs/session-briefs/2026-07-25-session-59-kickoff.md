@@ -31,10 +31,10 @@ the four went in **serially**, one deploy at a time with gate+deploy green and a
 
 | Order | PR | Squash | What |
 |---|---|---|---|
-| 1 | [#64](https://github.com/Stefan7168/checkdecijfers/pull/64) | `58c814b` | Server Action arguments were type-checked only by `.length` — a content-block array with `.length === 1` drove a ~1 MB prompt at a flat credit price, on the **paid** path too. |
-| 2 | [#67](https://github.com/Stefan7168/checkdecijfers/pull/67) | `b05a1d3` | 58b's trial hardening (non-UUID requestId reaching the LLM and failing only at the R8 insert; the landing asserting an unverified "pot is leeg"; `x-forwarded-for`/HMAC-secret defaults; the purge's bare `catch`; the cap clamp) **plus [#177](../open-questions.md)**. Rebased onto #64; guard order is `typeof question → length → trialConfigured → requestId shape`. |
-| 3 | [#65](https://github.com/Stefan7168/checkdecijfers/pull/65) | `ed5f240` | The double-default test, single-sourced `NL01`, the envelope-key manifest, the query-count pin. Disjoint — floated. |
-| 4 | [#66](https://github.com/Stefan7168/checkdecijfers/pull/66) | this branch | This close-out. Conflicted with #67 in `open-questions.md`, `lessons-learned.md` and the RUNBOOK — resolved by **taking both sides** (rows #179-#186 from 58b, #187-#190 from 58; both session sections kept). |
+| 1 | PR #64 | `58c814b` | Server Action arguments were type-checked only by `.length` — a content-block array with `.length === 1` drove a ~1 MB prompt at a flat credit price, on the **paid** path too. |
+| 2 | PR #67 | `b05a1d3` | 58b's trial hardening (non-UUID requestId reaching the LLM and failing only at the R8 insert; the landing asserting an unverified "pot is leeg"; `x-forwarded-for`/HMAC-secret defaults; the purge's bare `catch`; the cap clamp) **plus [#177](../open-questions.md)**. Rebased onto #64; guard order is `typeof question → length → trialConfigured → requestId shape`. |
+| 3 | PR #65 | `ed5f240` | The double-default test, single-sourced `NL01`, the envelope-key manifest, the query-count pin. Disjoint — floated. |
+| 4 | PR #66 | this branch | This close-out. Conflicted with #67 in `open-questions.md`, `lessons-learned.md` and the RUNBOOK — resolved by **taking both sides** (rows #179-#186 from 58b, #187-#190 from 58; both session sections kept). |
 
 The canary between merges, for the next time: `curl -s -o /dev/null -w '%{http_code}' https://checkdecijfers.vercel.app/llms.txt` → 200.
 

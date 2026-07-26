@@ -13,10 +13,10 @@ merged and deployed the same day. **There is nothing left to review.**
 
 | PR | Squash | What |
 |---|---|---|
-| [#60](https://github.com/Stefan7168/checkdecijfers/pull/60) | `e334590` | #173(c): pg pool `max` 4 → 2 per process |
-| [#61](https://github.com/Stefan7168/checkdecijfers/pull/61) | `ea71c96` | Fixture DB ingested once per run, not once per suite |
-| [#62](https://github.com/Stefan7168/checkdecijfers/pull/62) | `29e9e8b` | WP26 trust-boundary hardening + the corrected RUNBOOK rollback order |
-| [#63](https://github.com/Stefan7168/checkdecijfers/pull/63) | `447fca9` | Doc consistency, the architecture memo, the close-out |
+| PR #60 | `e334590` | #173(c): pg pool `max` 4 → 2 per process |
+| PR #61 | `ea71c96` | Fixture DB ingested once per run, not once per suite |
+| PR #62 | `29e9e8b` | WP26 trust-boundary hardening + the corrected RUNBOOK rollback order |
+| PR #63 | `447fca9` | Doc consistency, the architecture memo, the close-out |
 
 Merged **one at a time**, with the gate+deploy completing and a production check between each — deliberately,
 because four stacked deploys is what caused the #173 degradation. #60 went first on purpose: a smaller pool

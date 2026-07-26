@@ -21,10 +21,10 @@ permission to push to `main` and left for the night. Theme: capacity + retention
 
 | # | PR | Squash | What |
 |---|---|---|---|
-| [#186](open-questions.md) | [#72](https://github.com/Stefan7168/checkdecijfers/pull/72) | `e30203a` | 20 s single-flight cache on the **pot read only**. |
-| [#184](open-questions.md) | [#74](https://github.com/Stefan7168/checkdecijfers/pull/74) | `1342f79` | Gate reports the per-IP backstop at render time, in FEWER queries than before. |
-| [#181](open-questions.md) | [#75](https://github.com/Stefan7168/checkdecijfers/pull/75) | `4a9cb77` | Anonymous trial CONTENT redacted at 90 days, same clock as its bookkeeping. |
-| [#190(b)](open-questions.md) | [#76](https://github.com/Stefan7168/checkdecijfers/pull/76) | `ae7640c` | 5 s deadline on both anonymous reads — degrade, don't hang. Also carries a REAL bug the combined-diff review found (below) and the flaky-test fix. |
+| [#186](open-questions.md) | PR #72 | `e30203a` | 20 s single-flight cache on the **pot read only**. |
+| [#184](open-questions.md) | PR #74 | `1342f79` | Gate reports the per-IP backstop at render time, in FEWER queries than before. |
+| [#181](open-questions.md) | PR #75 | `4a9cb77` | Anonymous trial CONTENT redacted at 90 days, same clock as its bookkeeping. |
+| [#190(b)](open-questions.md) | PR #76 | `ae7640c` | 5 s deadline on both anonymous reads — degrade, don't hang. Also carries a REAL bug the combined-diff review found (below) and the flaky-test fix. |
 
 **⚠ The measurement that disproved a doc we were trusting.** #186's own row AND the RUNBOOK said idle pooler
 sessions release on node-pg's 10 s timer, and that this is why the 2026-07-25 incident self-healed. **Measured
@@ -70,10 +70,10 @@ production canary between each — the #173 discipline. **Both WP26 flags are st
 
 | # | PR | Squash | What | CI + canary |
 |---|---|---|---|---|
-| 1 | [#64](https://github.com/Stefan7168/checkdecijfers/pull/64) | `58c814b` | Server Action arguments were type-checked only by `.length`, so a content-block array (`.length === 1`) drove a ~1 MB prompt at a flat credit price — on the PAID path too, not just the trial. | gate+deploy ✅, 200/200 |
-| 2 | [#67](https://github.com/Stefan7168/checkdecijfers/pull/67) | `b05a1d3` | 58b's trial hardening: a non-UUID requestId reached the LLM and was rejected only by the R8 insert (served with `auditId: null`); the landing asserting an unverified "pot is leeg"; `x-forwarded-for`/HMAC-secret defaults; the purge's bare `catch`; the cap clamp. **Plus [#177](open-questions.md)** (the rescue parse now records `'intent'`, not `'clarify'`). Rebased onto #64 — guard order `typeof question → length → trialConfigured → requestId shape`. | gate+deploy ✅ (run 30160467319), 200/200 |
-| 3 | [#65](https://github.com/Stefan7168/checkdecijfers/pull/65) | `ed5f240` | The conformance bundle: the double-default test, single-sourced `NL01`, the envelope-key manifest, the query-count pin. Disjoint — floated. | gate+deploy ✅, 200/200 |
-| 4 | [#66](https://github.com/Stefan7168/checkdecijfers/pull/66) | `b4da3b2` | This docs close-out. Conflicted with #67 in `open-questions.md`, `lessons-learned.md` and the RUNBOOK — resolved by **taking both sides** (rows #179-#186 from 58b, #187-#190 from 58; both session sections kept). | — |
+| 1 | PR #64 | `58c814b` | Server Action arguments were type-checked only by `.length`, so a content-block array (`.length === 1`) drove a ~1 MB prompt at a flat credit price — on the PAID path too, not just the trial. | gate+deploy ✅, 200/200 |
+| 2 | PR #67 | `b05a1d3` | 58b's trial hardening: a non-UUID requestId reached the LLM and was rejected only by the R8 insert (served with `auditId: null`); the landing asserting an unverified "pot is leeg"; `x-forwarded-for`/HMAC-secret defaults; the purge's bare `catch`; the cap clamp. **Plus [#177](open-questions.md)** (the rescue parse now records `'intent'`, not `'clarify'`). Rebased onto #64 — guard order `typeof question → length → trialConfigured → requestId shape`. | gate+deploy ✅ (run 30160467319), 200/200 |
+| 3 | PR #65 | `ed5f240` | The conformance bundle: the double-default test, single-sourced `NL01`, the envelope-key manifest, the query-count pin. Disjoint — floated. | gate+deploy ✅, 200/200 |
+| 4 | PR #66 | `b4da3b2` | This docs close-out. Conflicted with #67 in `open-questions.md`, `lessons-learned.md` and the RUNBOOK — resolved by **taking both sides** (rows #179-#186 from 58b, #187-#190 from 58; both session sections kept). | — |
 
 **Measured on `main` AFTER all four merges, arithmetic checked:** backend **1536 / 101 files**
 (1509 + 3 from #67 + 24 from #65) and web **397** (385 + 6 from #64 + 6 from #67); benchmark **14/14 + 6/6 +
@@ -101,11 +101,11 @@ every commit, production 200 on `/`, `/llms.txt`, `/login` after each deploy.
 
 | # | PR | Squash | What | Left for you |
 |---|---|---|---|---|
-| [#189](open-questions.md) | [#68](https://github.com/Stefan7168/checkdecijfers/pull/68) | `fbffe48` | The GDPR purge is **scheduled monthly** at last — nothing ran it before, and the first trial rows become purgeable **~2026-10-15**. Ships **DORMANT**: reports only. A review caught a blocker first — the route was missing from the proxy allowlist, which would have made the cron read as scheduled AND healthy while never running once. | **`GDPR_PURGE_APPLY=1`** + one watched run (RUNBOOK). Unsetting it is a full rollback. |
-| [#182](open-questions.md) + [#187](open-questions.md) | [#69](https://github.com/Stefan7168/checkdecijfers/pull/69) | `33a051d` | The per-IP backstop bounded **nothing** over IPv6 (a /64 gives one visitor 2^64 buckets); now keyed on the /64. #187 answered from Vercel's docs — `x-forwarded-for` is **not** forgeable on Hobby — and the code now reads the proxy-safe `x-vercel-forwarded-for` first, which matters the day Cloudflare fronts the apex. | — |
-| [#180](open-questions.md) | [#70](https://github.com/Stefan7168/checkdecijfers/pull/70) | `e88cfea` | The trial pot now **warns at 5 and reports empty**. It had no watcher: an outsider drains a 25-question pot for well under a euro and you'd find out by looking at the homepage. | — |
+| [#189](open-questions.md) | PR #68 | `fbffe48` | The GDPR purge is **scheduled monthly** at last — nothing ran it before, and the first trial rows become purgeable **~2026-10-15**. Ships **DORMANT**: reports only. A review caught a blocker first — the route was missing from the proxy allowlist, which would have made the cron read as scheduled AND healthy while never running once. | **`GDPR_PURGE_APPLY=1`** + one watched run (RUNBOOK). Unsetting it is a full rollback. |
+| [#182](open-questions.md) + [#187](open-questions.md) | PR #69 | `33a051d` | The per-IP backstop bounded **nothing** over IPv6 (a /64 gives one visitor 2^64 buckets); now keyed on the /64. #187 answered from Vercel's docs — `x-forwarded-for` is **not** forgeable on Hobby — and the code now reads the proxy-safe `x-vercel-forwarded-for` first, which matters the day Cloudflare fronts the apex. | — |
+| [#180](open-questions.md) | PR #70 | `e88cfea` | The trial pot now **warns at 5 and reports empty**. It had no watcher: an outsider drains a 25-question pot for well under a euro and you'd find out by looking at the homepage. | — |
 
-**✅ THEN A MAX-EFFORT REVIEW OF THAT WORK — PR [#71](https://github.com/Stefan7168/checkdecijfers/pull/71), `d4ade6d`.**
+**✅ THEN A MAX-EFFORT REVIEW OF THAT WORK — PR #71, `d4ade6d`.**
 Ten finder angles over the three merged PRs returned 15 findings; **four were defects introduced hours earlier the
 same night**, the sharpest being a `??` that reintroduced an empty-header bug three lines above the comment
 explaining why it had to be `||`. **14 fixed, 1 skipped with reasoning.** Three findings turned out to be three
@@ -143,10 +143,10 @@ anonymous-trial surface (the only anonymous money-adjacent surface, and un-hunte
 
 | PR | What | CI |
 |---|---|---|
-| [#60](https://github.com/Stefan7168/checkdecijfers/pull/60) | #173(c): pg pool `max` 4 → 2 per process. 3 busy processes fitted under the 15-session ceiling; now 7 do. | green |
-| [#61](https://github.com/Stefan7168/checkdecijfers/pull/61) | Fixture DB ingested once per run, not once per suite. Measured per suite: **build 7.9-10.7s → restore 1.2-1.4s**. Suite level, MEASURED properly 25/7 in a 4-leg alternating A/B: **70-145 s saved, not the 240 s first quoted** (ADR 009). | green |
-| [#62](https://github.com/Stefan7168/checkdecijfers/pull/62) | WP26 trust-boundary hardening + the corrected RUNBOOK rollback order. | green |
-| [#63](https://github.com/Stefan7168/checkdecijfers/pull/63) | Doc-consistency sweep, the Fable architecture memo, and this close-out. | green |
+| PR #60 | #173(c): pg pool `max` 4 → 2 per process. 3 busy processes fitted under the 15-session ceiling; now 7 do. | green |
+| PR #61 | Fixture DB ingested once per run, not once per suite. Measured per suite: **build 7.9-10.7s → restore 1.2-1.4s**. Suite level, MEASURED properly 25/7 in a 4-leg alternating A/B: **70-145 s saved, not the 240 s first quoted** (ADR 009). | green |
+| PR #62 | WP26 trust-boundary hardening + the corrected RUNBOOK rollback order. | green |
+| PR #63 | Doc-consistency sweep, the Fable architecture memo, and this close-out. | green |
 
 **⚠ TWO THINGS TO KNOW BEFORE THE WP26 GO-LIVE — both found tonight, both change what you should do:**
 1. **The RUNBOOK's rollback order was WRONG.** Correct order: turn `CLARIFY_CLICK_ENABLED` **off first**, leave
