@@ -6,7 +6,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { buildCuratedCharts } = vi.hoisted(() => ({ buildCuratedCharts: vi.fn() }));
 vi.mock('../backend/chart/index.ts', () => ({ buildCuratedCharts }));
-vi.mock('./db.ts', () => ({ getDb: vi.fn(() => ({})) }));
+const { getDb } = vi.hoisted(() => ({ getDb: vi.fn(() => ({})) }));
+vi.mock('./db.ts', () => ({ getDb }));
 
 import { getOntdekCharts, resetOntdekCache } from './ontdek.ts';
 import { ANONYMOUS_READ_DEADLINE_MS } from './deadline.ts';
@@ -112,5 +113,31 @@ describe('the chart feed degrades instead of waiting (#190b)', () => {
     // Stale-over-nothing, the posture this module already chose for a THROWN
     // failure — now reached for a hung one too.
     await expect(stale).resolves.toEqual([chartA]);
+  });
+});
+
+// Found by a review of the COMBINED session diff, not by any per-change review:
+// `buildCuratedCharts(getDb())` evaluates getDb() as a plain argument before any
+// await, and getDb() throws SYNCHRONOUSLY when DATABASE_URL is missing or the CA
+// cert will not load — the "no DATABASE_URL (local dev)" case this module's own
+// header names as a degrade it handles. rebuild() then completed synchronously,
+// its in-body `finally` cleared `inflight` BEFORE `inflight ??= rebuild()`
+// assigned it, and the assignment latched a settled promise forever.
+//
+// The existing 'retries immediately after a failure' test could not catch this:
+// it mocks an ASYNC rejection, which suspends at a real await, so the finally
+// runs after the assignment and the slot clears correctly.
+describe('a SYNCHRONOUS build failure must not latch the in-flight slot', () => {
+  it('retries on the next request after getDb() throws synchronously', async () => {
+    getDb.mockImplementationOnce(() => {
+      throw new Error('DATABASE_URL is not set');
+    });
+    // First request: the section degrades to empty, as designed.
+    await expect(getOntdekCharts()).resolves.toEqual([]);
+    // Second request, config now fine. Before the fix this returned [] forever
+    // and buildCuratedCharts was never called again on this instance.
+    buildCuratedCharts.mockResolvedValue({ charts: [chartA], skipped: [] });
+    await expect(getOntdekCharts()).resolves.toEqual([chartA]);
+    expect(buildCuratedCharts).toHaveBeenCalledTimes(1);
   });
 });

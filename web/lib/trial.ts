@@ -378,10 +378,11 @@ async function computeTrialGateState(): Promise<TrialGateState> {
     // omitted `not refunded` would imply neither index predicate and degrade to
     // a seq scan per anonymous page view, which is the pressure #186 is about.
     //
-    // Net effect with #186's cache: exactly ONE query per anonymous render,
-    // cookie or no cookie — down from 1-2 — while gaining the honesty fix. The
-    // #184 row's "adds a third uncached query" objection is discharged, not
-    // accepted.
+    // Net effect with #186's cache: a STEADY-STATE anonymous render costs ONE
+    // query, cookie or no cookie — down from 1-2 — while gaining the honesty
+    // fix. The render that refreshes the pot costs two, at most once per TTL per
+    // instance. The #184 row's "adds a third uncached query" objection is
+    // discharged, not accepted.
     const visitorId = await readTrialVisitorId();
     const ipHash = await hashedRequestIp();
     const db = getDb();
