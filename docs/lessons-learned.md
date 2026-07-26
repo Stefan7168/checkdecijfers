@@ -50,6 +50,22 @@ on top.
   #72's squash merge, which auto-CLOSED #73 and made its base unchangeable (`Cannot change the base branch of
   a closed pull request`). Recovery is a rebase `--onto main <old-base-sha>` plus a fresh PR. **Stack only
   when the dependency is real, and expect to re-open the child.**
+- **A review of the COMBINED diff found a real bug that four per-change reviews could not.** Each of the
+  session's four changes was reviewed alone and came back clean or fixed. A final pass over all four together,
+  briefed to hunt ONLY for what breaks when two of them meet, found that `web/lib/ontdek.ts` latched its
+  in-flight slot forever after a SYNCHRONOUS build failure — `getDb()` throws synchronously on a missing
+  `DATABASE_URL`, so `rebuild()`'s in-body `finally` cleared the slot BEFORE `inflight ??= rebuild()` assigned
+  it, and nothing ever rebuilt again on that instance. **The trap is documented, correctly, in `trial.ts` one
+  file over** — where I had just avoided it deliberately — and #190(b) had added a comment to `ontdek.ts`
+  asserting the opposite. **Lesson: knowing a trap in file A does not protect file B, and a per-change review
+  never sees the pair. Budget one pass over the combined diff at the end of a multi-change session.**
+- **Numbers measured on a branch go STALE the moment you rebase it.** Three commit messages this session carried
+  counts that were true when measured and wrong when merged: `#181` said "web 425/41" (true on its pre-rebase
+  branch, 440 after rebasing onto a main that had #186+#184), `#190(b)` reused "backend 1545/102" when its new
+  parent had brought it to 1551, and `#186`'s "TTL=0 → 2 fail" was measured before two more tests existed
+  (3 on the shipped tree). Distinct from the partial-run mistake above and with a different fix: **re-measure
+  after the last rebase, not after the last edit** — or write the number in the PR body, which is editable,
+  rather than the commit message, which is not.
 - **Five parallel review agents all died on `529 Overloaded`, and the workflow returned `{confirmed: [], refuted: []}`**
   — which reads exactly like "clean". The tool's own warning covers this: an empty result is not a finding of
   nothing, it can be a finding of *nothing ran*. Re-running two at a time succeeded. **Check the failure list
