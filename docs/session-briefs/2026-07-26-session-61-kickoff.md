@@ -3,6 +3,19 @@
 **Written 2026-07-26 at the close of session 60.** Supersedes
 [`2026-07-26-session-60-kickoff.md`](2026-07-26-session-60-kickoff.md) — its queue is done.
 
+## ⚠ Read this before the reading order: these docs are NOT on `main`
+
+Everything session 60 wrote lives on the **PR 77 branch** (`perf/176-gate-region-option-intents`). On `main`,
+STATUS still opens with "Session 59", and `#191`/`#192`/`#193`, the corrected RUNBOOK step 5, the new
+release-day step 6, and this file **do not exist**. Either `git checkout perf/176-gate-region-option-intents`
+or merge PR 77 before reading anything.
+
+Why it matters more than a stale tracker: **the ~30/7 sync DATA is already live in production** while the
+docs recording it are not on `main`, so `main` and production disagree. A session reading `main` would
+conclude that #176 and the syncs still need doing, and — worst of the three — `main`'s RUNBOOK step 5 still
+instructs a release-day sync through the chunked escape hatch, which is measured wrong and would quarantine
+the table ([#192](../open-questions.md)).
+
 ## Reading order
 
 `CLAUDE.md` → [`docs/STATUS.md`](../STATUS.md) (the ▶ block leads) → this file.
@@ -133,8 +146,19 @@ question — a conversion judgement that changes what someone is charged).
 
 ## Paste-ready
 
-> Sessie 61 voor checkdecijfers.nl. Lees eerst CLAUDE.md, dan docs/STATUS.md (het ▶-blok bovenaan is
-> leidend), dan docs/session-briefs/2026-07-26-session-61-kickoff.md — dat is je opdracht.
+> Sessie 61 voor checkdecijfers.nl.
+>
+> ⚠ **EERST DIT: alle documentatie van sessie 60 staat op de BRANCH van PR 77, nog NIET op `main`.**
+> `main` z'n STATUS begint nog met "Session 59", en #191/#192/#193, de gecorrigeerde RUNBOOK-stap 5 + de
+> nieuwe stap 6, en dit bestand bestaan daar niet. Doe dus één van tweeën vóór je iets leest:
+> `git checkout perf/176-gate-region-option-intents`, óf merge PR 77 eerst. Lees NIET de STATUS van `main`
+> en concludeer dat #176 en de ~30/7-syncs nog moeten — die zijn klaar, en de sync-DATA staat al live in
+> productie terwijl de docs die dat zeggen nog op de branch staan.
+> ⚠ Extra scherp: `main` z'n RUNBOOK stap 5 zegt nog dat je op releasedag de chunked escape hatch MOET
+> gebruiken. Dat is gemeten onjuist én die hatch quarantainet de tabel (#192). Volg 'm niet.
+>
+> Lees dan: CLAUDE.md, dan docs/STATUS.md (het ▶-blok bovenaan is leidend), dan
+> docs/session-briefs/2026-07-26-session-61-kickoff.md — dat is je opdracht.
 >
 > ⚠ Let op: sessie 60 liep over TWAALF DAGEN (26/7 geschreven, 7/8 hervat). Draai `date` als eerste — een
 > conclusie uit die sessie ("er valt niets te syncen") was door het tijdsverloop juist omgedraaid.
