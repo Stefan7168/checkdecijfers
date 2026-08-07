@@ -52,7 +52,17 @@ The Golden Rule applies to *reading* a handover too. Re-derive anything you are 
 5. **[#132](../open-questions.md) route B** — `forks_count` measured **0** on 2026-07-26, so the T-0
    go/no-go still holds and the two-phase reversible drill still awaits the owner's explicit in-chat GO.
    It has been re-asked three times now; it is purely waiting on him, nothing has expired.
-6. Then the owner menu: WP30c choice, [#162](../open-questions.md), [#170](../open-questions.md) rest
+6. **[#192](../open-questions.md)** — small ingestion fix: `sync-from-capture.ts` passes no options to
+   `syncTable`, so the documented escape hatch can never accept the new period code every CBS release brings.
+   Thread `--accept-new-codes` / `--rebaseline` through exactly as `src/ingestion/cli.ts:32-33` already does.
+7. **[#193](../open-questions.md)** — a product/copy call, not a bug: CBS revised **1,103 already-`Definitief`
+   figures** back to 2015KW01 in one release, and the product offers the freshest *Definitief* period as the
+   safer one. Three options framed in the row; the ambitious one is [#88](../open-questions.md) revision
+   awareness, built on the correction-diff log we already keep.
+8. **Three Dependabot PRs arrived during the gap — #80, #81, #82** (undici 7.29.0; `npm-all` ×4;
+   `npm-web-all` ×14). Not touched. ⚠ s49 precedent: a bump can pass the gate and go red only at
+   `next build` (that is how the TS ^5 pin happened), so watch the deploy job, not just the tests.
+9. Then the owner menu: WP30c choice, [#162](../open-questions.md), [#170](../open-questions.md) rest
    (3)+(4).
 
 **✅ ~30/7 BBP+PPI syncs — DONE 2026-08-07, nothing left to do here.** ⚠ *This section first said "measured
@@ -139,7 +149,10 @@ question — a conversion judgement that changes what someone is charged).
 > Volgorde: (1) PR 77; (2) #191 — NIEUW, en het blokkeert de ANSWER_FIRST-flip: de reply-beurt krijgt die
 > vlag nooit terwijl z'n eigen type hem declareert, en de vraag is niet "doorgeven" maar of een reply-beurt
 > hoort te defaulten zoals de eerste beurt; (3) de WP26-livegang, #191 eerst; (4) GDPR_PURGE_APPLY;
-> (5) #132 route B; (6) #192 — de escape hatch kan een release-sync niet afmaken (kleine ingestion-fix).
+> (5) #132 route B; (6) #192 — de escape hatch kan een release-sync niet afmaken (kleine ingestion-fix);
+> (7) #193 — CBS herzag 1.103 al-`Definitief` cijfers tot 2015 terug; wat mag "Definitief" nog impliceren?
+> Dat is een product/copy-keuze van jou, drie opties staan in de rij. Er staan ook DRIE Dependabot-PR's open
+> (#80/#81/#82) die tijdens de pauze binnenkwamen.
 > De ~30/7-syncs zijn op 7/8 GEDRAAID en live — daar hoef je niets meer aan te doen.
 > Houd #174, #185, #183, #188 en #190(a) expliciet aan.
 >

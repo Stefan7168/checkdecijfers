@@ -38,6 +38,13 @@ on top.
   on a release sync — session 50 used it for first-time registration, where nothing is new. **A procedure
   validated only on its easy path is not validated. The hatch worked the once it was tried and was then
   written into the RUNBOOK as routine.**
+- **The stale-doc sweep had to distinguish records from guidance, and only the guidance is a bug.** Grepping
+  "chunked escape hatch" returned ~25 hits: the RUNBOOK's step 5, `04-architecture`'s capability row, and a
+  long tail of session briefs and archive entries. Only the first two were corrected. **A dated handover or
+  an archive entry is a record of what a session was told at the time — rewriting it falsifies the log, and
+  the repo already treats `status-archive.md` that way ("verbatim, newest on top").** The test is not "does
+  this string appear" but "would someone ACT on it": the RUNBOOK's step 5 would have been followed on a
+  release day and would have quarantined the table, so that one had to change.
 - **⚠ "Definitief" does not mean immutable, and I only found that out because I looked at 2,009 corrections
   instead of accepting the count — [#193](open-questions.md).** The BBP release carried 2,009 corrections,
   which is easy to wave through as "national accounts get revised". Splitting them was the whole finding:

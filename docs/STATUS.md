@@ -63,8 +63,15 @@ so the T-0 go/no-go **holds** and the two-phase reversible drill still awaits yo
 **▶ NEXT, in order:** (a) **review + merge PR #77**; (b) the **owner-supervised WP26 go-live** — one flag at
 a time, RUNBOOK section "WP26 answer-first + clickable options", **[#191](open-questions.md) first**, NOT
 during a deploy burst (#173); (c) **`GDPR_PURGE_APPLY=1`** plus one watched run (RUNBOOK) — nothing is
-deleted until then, first rows purgeable ~2026-10-15; (d) **#132 route B** GO or defer; (e) then the owner
-menu: WP30c choice / [#162](open-questions.md) / [#170](open-questions.md) rest (3)+(4).
+deleted until then, first rows purgeable ~2026-10-15; (d) **#132 route B** GO or defer; (e) **[#192](open-questions.md)**
+— small ingestion fix, thread the flags through `sync-from-capture.ts`; (f) **[#193](open-questions.md)** —
+a product/copy call on what `Definitief` should imply, now that 1,103 final figures were measurably revised;
+(g) then the owner menu: WP30c choice / [#162](open-questions.md) / [#170](open-questions.md) rest (3)+(4).
+
+**⚠ ALSO WAITING, arrived during the 12-day gap: three Dependabot PRs — #80, #81, #82** (undici 7.29.0; the
+`npm-all` group ×4; the `npm-web-all` group ×14). Untouched this session: dependency bumps need their own CI
+pass and a look at any major, and the s49 precedent is that a bump CAN go red only at `next build`
+(the TS ^5 pin). Not urgent, not forgotten.
 
 **Tracked, deliberately NOT built:** [#174](open-questions.md) and [#185](open-questions.md) (both explicitly held
 — the obvious fix is worse than the bug, and a reasoned decline respectively), [#183](open-questions.md) (product
