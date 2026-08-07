@@ -38,6 +38,16 @@ on top.
   on a release sync — session 50 used it for first-time registration, where nothing is new. **A procedure
   validated only on its easy path is not validated. The hatch worked the once it was tried and was then
   written into the RUNBOOK as routine.**
+- **⚠ An autonomous session that correctly refuses to merge leaves its whole written record where the next
+  session does not look.** Branch + PR (#118(b)) protects the code path and quietly breaks the
+  documentation path: on `main`, STATUS still opened with "Session 59", and #191/#192/#193, the corrected
+  RUNBOOK step 5, the new release-day step 6 and the session-61 kickoff simply did not exist. Two things
+  made that worse than a lagging tracker here — **the sync DATA is live in production while the docs saying
+  so sit on the branch**, so `main` and production actively disagree; and **`main`'s RUNBOOK still instructs
+  the release-day path that quarantines a table**, so following `main`'s own guidance would take a table out
+  of service. Caught only because the owner asked "so nothing will be forgotten, right?" and the honest
+  answer required checking rather than reassuring. **Any handover written from an unmerged branch must say,
+  at the top, that it is not on `main` and how to reach it.**
 - **The stale-doc sweep had to distinguish records from guidance, and only the guidance is a bug.** Grepping
   "chunked escape hatch" returned ~25 hits: the RUNBOOK's step 5, `04-architecture`'s capability row, and a
   long tail of session briefs and archive entries. Only the first two were corrected. **A dated handover or
