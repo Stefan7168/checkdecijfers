@@ -1,5 +1,127 @@
 # STATUS archive — the session log
 
+**Session 61 (2026-08-07. AUTONOMOUS — the owner handed over the kickoff and left. He authorised ONE merge
+by name (PR 77); everything else went to a branch per [#118](open-questions.md)(b). €0 live-LLM spend, zero
+prompt bytes, no live DDL. Both WP26 flags and `GDPR_PURGE_APPLY` untouched.)**
+
+**✅ PR 77 MERGED AND DEPLOYED.** Squash `1a16eed`; CI run **31159544689** `gate` ✅ + `deploy` ✅; canary
+`/llms.txt` **200**. This closed the split the session opened with: session 60's docs were stranded on a
+branch while its sync DATA was already live in production, so `main` and production contradicted each other.
+⚠ A `failure` conclusion appears on `main` at the same SHA — it is the **"Dependabot Updates"** workflow
+(`event: dynamic`), not CI, and two other Dependabot runs at that SHA succeeded. Not a gate failure.
+
+**Three facts in the handover did not survive checking** — recorded because the Golden Rule applies to
+reading a handover too. PR 77 had **12** commits, not 11 (`git rev-list --count`); CI was **`in_progress`**
+on HEAD when the session started, not green (it went green later); and `/api/health` returns **307**, not
+200, so the "200/200/200" line is not reproducible as stated — the RUNBOOK's actual canary is `/llms.txt`
+alone. STATUS's own top block still said PR 77 had "Three commits" while the branch was at twelve, and the
+session-60 self-audit had corrected that number in **one of the two places it appeared**. Fixed by removing
+the count entirely: a commit count in a doc is stale on the next commit, so the doc now names the three CODE
+commits and points at `gh pr view`.
+
+**PR #85 OPENED, awaiting owner review** — branch `fix/191-reply-turn-answer-first`, four commits.
+
+**[#191](open-questions.md) — the WP26 pre-flip blocker, and it was worse than recorded.** Filed as "the
+reply turn never receives `ANSWER_FIRST_ENABLED`". Measurement showed the reply turn ran **HALF of mechanism
+B**, a state nobody chose: **B-region** lives in the QUERY layer (`src/query/resolve.ts:393`) and already
+reached reply turns through the `{ ...options }` spread into `respondToIntent` (`respond.ts:652`), while
+**B-period** lives in the INTENT layer (`src/answer/intent/resolve.ts:731`) and is fed by the
+`ClarifyReplyOptions` bag that `respondToClarificationReply` built without the flag. So with the flag on, a
+reply turn **silently defaulted the region the user never mentioned and then refused over the period it was
+allowed to default.** Measured on the hermetic fixture DB, flag ON — pre-fix: first turn `answer`, reply turn
+`refusal (still_ambiguous)`; post-fix: both `answer`.
+
+**The product question dissolved once the written rule was read.** R7's third branch authorises filling in a
+structurally-determined axis under four conditions and draws **no first-turn/reply-turn distinction**, and
+the safelist is "code, never configuration" — so half-applying it was an invariant conformance gap, not
+deliberate caution. Supporting argument the open-question row did not make: a reply is the LAST round by
+rule (a reply never asks again), so it is the turn where refusing costs most — the user answered the exact
+question we asked and would be refused on an axis nobody asked about, after paying the clarification price,
+which is the precise paid dead-end ADR 024 exists to remove. Pinned by
+`tests/answer/answer-first-reply-turn.test.ts`, whose load-bearing case asserts the two turns **agree**
+rather than asserting a verdict, and which also pins R7 condition (c) — the disclosure (`assumptionLine`)
+really does render on a reply turn. Flag-off byte-neutrality independently verified. Also corrected: the
+RUNBOOK blast-radius cell said this flag affects "First turns", which was measurably wrong.
+
+**[#192](open-questions.md) — the capture hatch can now finish a release-day sync.** It called `syncTable`
+with no options bag, so `--accept-new-codes` was unreachable from the one entry point documented for release
+days; every CBS release adds a period code by definition, an unmapped code fails `dimension_mapping`, and a
+failed mapping quarantines the table, which then refuses in production. Bigger than threading two flags: the
+script had **zero importable surface** (top-level side effects against real argv, fs, wall clock,
+`connectFromEnv`), so a flags-only patch could not have been tested against the real path. Restructured to
+mirror `src/ingestion/cli.ts`. A bare `dimension_mapping` failure now prints the recovery command. Safety
+property recorded: `--accept-new-codes` admits new dimension **coordinate** codes only — a new measure code
+still fails unconditionally, so the flag cannot silently widen the vocabulary.
+
+**Both fixes were verified RED before being trusted** (session 60's trap 1). #191: removing the one line
+reproduced first-turn-`answer` / reply-turn-`refusal`. #192: removing the options bag made the recovery case
+fail exactly as the row describes.
+
+**[#132](open-questions.md) — the pin inherited the blind spot it was written to close.** PR 77's new
+doc-convention test scanned `docs/` + two READMEs, leaving `CLAUDE.md` — doc #1 in the reading order —
+unscanned, and its regex was case-sensitive and scheme-anchored (missing `GitHub.com/...` and
+protocol-relative `//github.com/...`). Session 60's own trap 5 was "derive a pin's pattern from the REASON
+for the rule, not from the instances in front of you". Widened, plus a test that walks the real tree and
+fails if the explicit file list stops naming what exists. No live links exist in the newly covered files
+today, so this closed a latent gap rather than an escape.
+
+**[#193](open-questions.md) DECIDED — option (b), and the copy question hid a factual bug.** The product
+**never prints `(definitief cijfer)`**: `provisionalDisplay` (`src/sources/registry.ts:73-76`) maps only
+`Voorlopig`/`NaderVoorlopig`. The single place that string existed was `web/components/landing.tsx:68`,
+inside the example the file's own header comment calls *"the product's real answer shape"* — so the homepage
+advertised a shape the pipeline cannot produce. Fixed (status moved to the source line, where the pipeline
+shows it and where the page's step 3 already promises it), with a comment so it is not helpfully re-added.
+The finality implication is therefore **structural** — the silence where a `(voorlopig cijfer)` marker would
+be — not asserted; the copy is not false but measurably optimistic, and the public traceability claim is
+untouched. **Two remaining copy edits specified but deliberately NOT shipped:** they change a refusal
+TEMPLATE, and per [#133](open-questions.md) stored rows reconstruct against TODAY's rules, so live rows would
+each need a **row-id-pinned** `known-divergences` entry — and that register takes exact ids, never patterns,
+so the ids must be found with `audit:verify` against the live DB. Owner-supervised. ⚠ Trap recorded for
+whoever ships it: `tests/answer/respond-refusals.test.ts:419` asserts `.not.toMatch(/laatste definitieve/)`
+to prove the aside is ABSENT — rewording the template makes that assertion **vacuously true**.
+
+**Dependabot #80 / #81 / #82 triaged, NOT merged.** Risk order **#80** (`undici` patch) → **#81**
+(`@anthropic-ai/sdk` 0.114→0.115, a 0.x minor that can break under semver; `stripe` 22.3→22.4 on the money
+path) → **#82** (`next` 16.2.11→16.3.0; `jsdom` ^29→^30 **major**). ⚠ **CI cannot catch a build-breaking
+bump on a PR, and that is DELIBERATE, not the s49 trap made structural** — `gate` is hermetic and
+`next build` fetches fonts over the network, so it runs only inside `deploy`, downstream of green (comment
+at the top of `.github/workflows/ci.yml`). The mitigation is a LOCAL build. **#82 was built locally in a git
+worktree — the one check CI structurally cannot do: root `npm ci` exit 0, web typecheck exit 0, web suite
+**42/42 files and 453/453 tests**, and `next build` (Next.js 16.3.0, Turbopack) **exit 0** with the full
+route table emitted.** So the riskiest of the three bumps is cleared on the axis that matters; it still
+needs the owner's merge.
+
+⚠ **Three measurement errors were made here and caught before anything was reported as fact.** (1) A first
+attempt reported "9 test files failed" — the SESSION's error, not the PR's: only `npm --prefix web ci` had
+been run, so backend modules reached through the `web/backend` symlink could not resolve root-level deps
+(`@anthropic-ai/sdk`, `zod`); CI runs the root install first. **A local dependency check must install BOTH
+lockfiles or it will manufacture failures.** (2) Symlinking the main checkout's `node_modules` into the
+worktree to dodge that install made Turbopack fail with `Symlink [project]/node_modules is invalid, it
+points out of the filesystem root` — the exact error ADR 018 exists to avoid; a real install is required.
+(3) `echo "EXIT=$?"` after a `cmd | tail -N` pipeline captures **`tail`'s** exit code, which is always 0, so
+two earlier "BUILD_EXIT=0" readings were meaningless. **Never read an exit code through a pipe.**
+
+**Measured this session (frozen tree, verification block run SOLO):** backend **1572 / 105 files**, web
+**453 / 42**, benchmark **14/14 + 6/6 + 0 fabricated GATE PASS**, real `next build` compiled successfully,
+both typechecks clean. Arithmetic check: 1562 + 4 (`answer-first-reply-turn`) + 5 (`sync-from-capture`) + 1
+(new doc-convention case) = **1572**; 103 + 2 new files = **105** ✅.
+
+**⚠ THE MACHINE LESSON OF THIS SESSION.** The backend suite is **OOM-KILLED (exit 137)** if it runs
+alongside concurrent agents on this 8 GB machine — 105 PGlite-backed test files will not coexist with an
+11-agent review fleet. **Two runs were truncated that way, and the first was misread as green purely because
+the log had no failure line in it.** Session 60's trap 3 says "freeze the tree, then measure"; the tree was
+frozen and the *machine* was not. **Run the verification block solo, capture the exit code explicitly
+(`npm test > log 2>&1; echo $?`), and treat a log without a summary line as a kill, not a pass.**
+
+**An independent adversarial review of this session's own diff found 8 things, 7 real, all addressed** —
+including a self-inflicted one: the explanatory comment added for #191 pushed the `{ ...options }` spread
+from line 630 to 652, and the RUNBOOK and open-questions rows written in the *same commit* cited 630. A line
+reference written while editing the file above it is stale on arrival. ⚠ It also produced the session's most
+useful delegation lesson: one review agent supported a correct conclusion with a citation to
+`tests/answer/audit-reconstruct.test.ts` — **a file that does not exist and never has**. The adversarial
+verifier caught the fabricated citation while agreeing with the conclusion. **A subagent's conclusion and its
+evidence are two separate claims; verify them separately.**
+
 **Session 60 CONTINUATION (2026-08-07 — same session, resumed twelve days later. AUTONOMOUS. No code merged,
 no deploy; the only production change is DATA — the two CBS syncs the owner scheduled for ~30/7.)**
 

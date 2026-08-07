@@ -172,6 +172,40 @@ was supposed to pin it was not: the "region ambiguous" case in `tests/answer/que
 `regions: null`, which never enters the failure branch at all. The pin and the defect had drifted apart
 without either being wrong on its own terms.
 
+**As-built, 2026-08-07 (session 61) — [#191](../open-questions.md) is now FIXED, and it corrects a claim
+made two paragraphs above.** The #176 note says `clarify.ts` passes nothing to `resolveCandidate` **on
+purpose**. That remains true and correct for `clickOptionsEnabled`. It was NOT true, and not deliberate, for
+`answerFirstEnabled`: `ClarifyReplyOptions` declared that field and `clarify.ts` faithfully threaded it into
+both consumers (the dry-runs at lines 194 and 210), but `respondToClarificationReply` never SET it —
+so the value was always `undefined`.
+
+The consequence was not "reply turns run pre-WP26". It was that a reply turn ran **HALF of mechanism B**, a
+state nobody designed. B's two axes live in different layers: **B-region** is applied in the QUERY layer
+(`src/query/resolve.ts:393`) and already reached reply turns through the `{ ...options }` spread into
+`respondToIntent` (`respond.ts:652`), while **B-period** is applied in the INTENT layer
+(`src/answer/intent/resolve.ts:731`) and is fed by exactly the bag that was missing the flag. So with
+`ANSWER_FIRST_ENABLED=1`, a reply turn **silently defaulted the region the user never mentioned and then
+refused over the period it was allowed to default.**
+
+Measured on the hermetic fixture DB, flag ON — pre-fix: first turn `answer`, reply turn
+`refusal (still_ambiguous)` on the same intent; post-fix: both `answer`.
+
+**Why the reply turn SHOULD default, which is the decision this note records.** It reads as a product fork
+("is the user's reply exactly the moment not to guess?") and is not one. **R7's third branch authorises
+filling in a structurally-determined axis under four conditions and draws no first-turn/reply-turn
+distinction**, and the safelist is code, not configuration — so applying it to one axis and not the other
+was an invariant conformance gap. The supporting argument is that a reply is the LAST round by rule (a reply
+never asks again), which makes it the turn where refusing costs most: the user answered the exact question
+we asked and would be refused on an axis nobody asked about, after paying the clarification price — the
+precise paid dead-end this ADR's Context section exists to remove. Condition (c) holds unchanged: the
+disclosure re-derives through the same `buildAssumptionLine` on both turns, verified live and now pinned.
+
+Pinned by `tests/answer/answer-first-reply-turn.test.ts`. Its load-bearing case asserts the two turns
+**agree** rather than asserting a verdict — a "the reply now answers" pin would still pass if a later change
+made the FIRST turn refuse too — and it guards against a vacuous pass by first asserting neither turn took
+the `internal` error exit. **Also corrected in the same change:** the RUNBOOK's blast-radius cell said this
+flag affects "First turns", which was measurably wrong, since B-region always reached replies.
+
 **RUNBOOK correction in the same PR:** the documented rollback order was wrong. Rolling `ANSWER_FIRST_ENABLED`
 back while `CLARIFY_CLICK_ENABLED` is on strands region-less chips as guaranteed refusals, and "both
 together" is not a safe shortcut. The correct order is **A off, wait, then B**.

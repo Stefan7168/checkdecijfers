@@ -9,83 +9,75 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
-**▶ NEXT SESSION STARTS HERE — Session 60 (2026-07-26, continued 2026-08-07). AUTONOMOUS: the owner handed
-over the kickoff and left, and his prompt said session 59's push-to-`main` exception does NOT carry over.
-So: branch + PR, **nothing merged, no code deployed**. €0 live-LLM spend, zero prompt bytes, no DDL.
-⚠ The session SPANNED TWELVE DAYS — the 26/7 work and the 7/8 continuation are both below, and the gap
-turned one of its own conclusions stale (see the syncs). The only live-production change is DATA: the two
-CBS syncs the owner had scheduled for ~30/7.**
+**▶ NEXT SESSION STARTS HERE — Session 61 (2026-08-07). AUTONOMOUS: the owner handed over the kickoff and
+left. His prompt authorised ONE merge by name (PR 77) and said that otherwise, absent from the chat, it is
+branch + PR + his review ([#118](open-questions.md)(b)) — so exactly one thing was merged and everything
+else is on a branch.**
 
 **⚠ THE TWO THINGS THAT ARE STILL ONLY YOURS, untouched again:** the **WP26 flags**
 (`CLARIFY_CLICK_ENABLED`, `ANSWER_FIRST_ENABLED`) and **`GDPR_PURGE_APPLY`**. Read
-[#175](open-questions.md) before flipping WP26 — the anonymous trial receives NEITHER flag —
-and now **[#191](open-questions.md) too** (below), which is a genuine pre-flip blocker.
+[#175](open-questions.md) before flipping WP26 — the anonymous trial receives NEITHER flag.
+✅ **[#191](open-questions.md), the pre-flip blocker, is FIXED** (in PR #85, below — merge that first).
 
-**▶ FIRST THING: PR #77 IS OPEN AND AWAITS YOUR REVIEW.** Two independent changes, carried by the three
-CODE commits below; every later commit on the branch is a doc close-out. ⚠ **A commit COUNT written into a
-doc is stale on the next commit** — this block said "Three" while the branch was at twelve, and the session-60
-self-audit corrected the number in one of the two places it appeared. Ask git, not a doc:
-`gh pr view 77 --json commits --jq '.commits | length'`.
+**✅ PR 77 IS MERGED AND DEPLOYED** — squash `1a16eed`, CI run 31159544689 `gate` ✅ + `deploy` ✅, canary
+`/llms.txt` **200**. That closes the split that opened the session: all of session 60's documentation was
+stranded on a branch while its sync DATA was already live, so `main` and production disagreed. They agree now.
 
-| Commit | What |
+**▶ FIRST THING: PR #85 IS OPEN AND AWAITS YOUR REVIEW** (branch `fix/191-reply-turn-answer-first`).
+Four commits, four independent concerns:
+
+| What | Why it matters |
 |---|---|
-| `a108ba3` | **[#176](open-questions.md)** — the resolver builds per-option intents only for the flag that reads them. |
-| `a25f3e8` | **[#132](open-questions.md) rule (i)** — 38 live PR links re-neutralized; the rule is now a CI-gated test. |
-| `06f6209` | CI fix — an unquoted colon in the new step's name broke the workflow: run 30197192763 died in **0 s** without running the gate at all. Green again on run 30197230629. |
+| **[#191](open-questions.md)** — the reply turn gets the whole `ANSWER_FIRST_ENABLED` flag | **This was the WP26 pre-flip blocker.** |
+| **[#192](open-questions.md)** — the capture hatch can finish a release-day sync | It could previously only quarantine the table. |
+| **[#132](open-questions.md)** — the doc-convention pin was scoped to `docs/`, not to the rule | `CLAUDE.md` was never scanned. |
+| **[#193](open-questions.md)** — decided (option b); the landing-page bug fixed | The product never prints `(definitief cijfer)`. |
 
-**⚠ NEW [#191](open-questions.md) — READ BEFORE THE `ANSWER_FIRST_ENABLED` FLIP.** The clarification REPLY
-turn never receives that flag, though `ClarifyReplyOptions` declares it and its comment says it is threaded
-(`respond.ts:586-595`). Harmless while it is off — both turns run pre-B and agree. Flip it and they stop
-agreeing: the first turn defaults a missing region/period and answers, the reply turn judges under pre-B
-rules and can refuse instead. Decide what a reply turn *should* do before flipping. RUNBOOK now warns.
+**⚠ [#191](open-questions.md) was WORSE than it was recorded, and the correction changes the answer.** It
+was filed as "the reply turn never receives the flag". Measured: the reply turn ran **HALF of mechanism B**,
+a state nobody chose. **B-region** lives in the QUERY layer and already reached reply turns via the
+`{ ...options }` spread; **B-period** lives in the INTENT layer and did not. So flag-on, a reply turn
+**silently defaulted the region the user never mentioned and refused over the period it was allowed to
+default.** Measured flag ON, pre-fix: first turn → `answer`, reply turn → `refusal (still_ambiguous)`;
+post-fix both `answer`. **The product question dissolved once R7 was read**: its third branch authorises
+filling in a structurally-determined axis and draws **no first-turn/reply-turn distinction**, and the
+safelist is code, not configuration — so half-applying it was an invariant conformance gap, not caution.
+Flag-off byte-neutrality independently verified, so it cannot disturb production while the flags are off.
 
-**⚠ The lesson of #176 was in the TEST, not the code.** `query-count.test.ts` had a case commented "the
-shape #176 was found on" — it wasn't. It passes `regions: null`, which exits early at `resolve.ts:166` and
-never reaches the branch. **The fix moved none of the pinned numbers; verifying against that pin would have
-proved nothing.** Real shape (a NAMED ambiguous region) now pinned: 3 statements flag-off, 4 flag-on.
+**⚠ [#193](open-questions.md) DECIDED — and the copy question hid a factual bug.** The product **never
+prints `(definitief cijfer)`**: `provisionalDisplay` maps only `Voorlopig`/`NaderVoorlopig`. The only place
+that string existed was the landing-page example, under a comment calling it *"the product's real answer
+shape"*. Fixed. **Two remaining copy edits are specified but deliberately NOT shipped**: they change a
+refusal TEMPLATE, and per [#133](open-questions.md) stored rows are reconstructed against TODAY's rules, so
+live rows would need **row-id-pinned** `known-divergences` entries — discovering the ids needs
+`audit:verify` against the live DB, which is yours.
 
-**⚠ A convention "the wrap-up sweep will catch" was not caught, twice.** 38 live PR links had crept back
-into `docs/` since session 55 fixed 29 — route B deletes the repo, so each 404s. Re-neutralized, and the
-rule is now `tests/docs/doc-conventions.test.ts` in CI. **The review then found my own fix produced a
-doubled "PR" in 10 places, and 17 more inherited from the 2 earlier rounds — all three passes made the
-same mistake.** Fixed and pinned.
+**⚠ DEPENDABOT #80 / #81 / #82 — still open, NOT merged** (autonomous + money path). Risk order:
+**#80** `undici` patch → **#81** `@anthropic-ai/sdk` 0.114→**0.115** (a 0.x minor can break under semver)
++ `stripe` 22.3→22.4 → **#82** `next` 16.2.11→**16.3.0** + `jsdom` ^29→**^30 (major)**. ⚠ **CI cannot
+catch a build-breaking bump on a PR, and that is DELIBERATE** — `gate` is hermetic and `next build` fetches
+fonts over the network, so it only runs inside `deploy`, downstream of green (see the comment at the top of
+`.github/workflows/ci.yml`). The mitigation is a LOCAL build, not a CI change. #82 was built locally this
+session — result recorded in [status-archive.md](status-archive.md).
 
-**✅ ~30/7 BBP+PPI SYNCS: RUN AND LIVE (2026-08-07, session-60 continuation).** *(The 26/7 measurement said
-"nothing due" — true that day, stale eight days later. CBS published both on 30/7.)* Both are `active`,
-verified LLM-free through the real query path, and `/llms.txt` shows **synced 2026-08-07**:
-**Q2 2026 BBP** volume j-o-j **+1.3** / k-o-k **+0.4**; **PPI juni 2026** totaal **5.3** / invoer **7.9**.
-⚠ **Two frozen reference values in [11-coverage-table-set.md](11-coverage-table-set.md) MOVED** — CBS revised
-provisional cells (PPI invoer 2026MM05 9.3 → 8.4; BBP 2026KW01 k-o-k +0.2 → +0.3). The other four re-verified
-exactly. Nothing is broken: hermetic tests replay the 17/7 fixture and still pass; live data moved on.
-⚠ **`85880NED` did NOT need the chunked escape hatch** — the direct stream finished in **77 s**, so the
-~6KB/s slow stream was network-specific after all. ⚠ **NEW [#192](open-questions.md): the escape hatch cannot
-complete a release sync** (`sync-from-capture.ts` passes no options, so it can never accept a new period code).
+**Measured this session (frozen tree, verification block run SOLO):** backend **1572 / 105 files**, web
+**453 / 42**, benchmark **14/14 + 6/6 + 0 fabricated GATE PASS**, real `next build` compiled. Arithmetic
+check: 1562 + 4 + 5 + 1 = 1572 and 103 + 2 files = 105 ✅.
+⚠ **The backend suite gets OOM-KILLED (exit 137) if it runs alongside agents on this 8 GB machine** — two
+runs were truncated that way and the first was misread as green because the log simply had no failure line.
+**Run the block solo and read the exit code; a log without a summary is a kill, not a pass.**
 
-**[#132](open-questions.md) route B re-asked, on the record:** `forks_count` = **0** (stars 0, watchers 0),
-so the T-0 go/no-go **holds** and the two-phase reversible drill still awaits your explicit in-chat GO.
+**▶ NEXT, in order:** (a) **review + merge PR #85** (serial, canary between — [#173](open-questions.md));
+(b) the **owner-supervised WP26 go-live** — one flag at a time, RUNBOOK "WP26 answer-first + clickable
+options"; #191 no longer blocks it; (c) **`GDPR_PURGE_APPLY=1`** plus one watched run — first rows purgeable
+**~2026-10-15**; (d) **Dependabot #80 → #81 → #82**, in that order, one deploy at a time; (e) **#193's two
+remaining copy edits** with an `audit:verify` run; (f) **#132 route B** GO or defer; (g) then the owner menu:
+WP30c choice / [#162](open-questions.md) / [#170](open-questions.md) rest (3)+(4).
 
-**▶ NEXT, in order:** (a) **review + merge PR #77**; (b) the **owner-supervised WP26 go-live** — one flag at
-a time, RUNBOOK section "WP26 answer-first + clickable options", **[#191](open-questions.md) first**, NOT
-during a deploy burst (#173); (c) **`GDPR_PURGE_APPLY=1`** plus one watched run (RUNBOOK) — nothing is
-deleted until then, first rows purgeable ~2026-10-15; (d) **#132 route B** GO or defer; (e) **[#192](open-questions.md)**
-— small ingestion fix, thread the flags through `sync-from-capture.ts`; (f) **[#193](open-questions.md)** —
-a product/copy call on what `Definitief` should imply, now that 1,103 final figures were measurably revised;
-(g) then the owner menu: WP30c choice / [#162](open-questions.md) / [#170](open-questions.md) rest (3)+(4).
-
-**⚠ ALSO WAITING, arrived during the 12-day gap: three Dependabot PRs — #80, #81, #82** (undici 7.29.0; the
-`npm-all` group ×4; the `npm-web-all` group ×14). Untouched this session: dependency bumps need their own CI
-pass and a look at any major, and the s49 precedent is that a bump CAN go red only at `next build`
-(the TS ^5 pin). Not urgent, not forgotten.
-
-**Tracked, deliberately NOT built:** [#174](open-questions.md) and [#185](open-questions.md) (both explicitly held
-— the obvious fix is worse than the bug, and a reasoned decline respectively), [#183](open-questions.md) (product
-call), [#188](open-questions.md) (concurrency on a live money path — supervised), [#190(a)](open-questions.md)
-(whether an infrastructure-caused refusal should cost a trial question — a conversion judgement, yours).
-
-**Measured this session (frozen tree `a25f3e8`):** backend **1562 / 103 files**, web **453 / 42**, benchmark
-**14/14 + 6/6 + 0 fabricated GATE PASS**, real `next build`. Production **200/200/200**, unchanged — nothing
-deployed. **⚠ `git rebase --continue` still SILENTLY DROPS a `#`-prefixed subject line** (session 59): use
-`--cleanup=whitespace` on every rebase/cherry-pick here.
+**Tracked, deliberately NOT built:** [#174](open-questions.md) and [#185](open-questions.md) (both explicitly
+held), [#183](open-questions.md) (product call), [#188](open-questions.md) (concurrency on a live money path
+— supervised), [#190(a)](open-questions.md) (whether an infrastructure-caused refusal should cost a trial
+question — a conversion judgement, yours).
 
 Full session record in [status-archive.md](status-archive.md).
 
