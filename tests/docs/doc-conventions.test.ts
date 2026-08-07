@@ -18,7 +18,7 @@
 // four other conventions. The project pins every rule about a NUMBER with
 // machinery and every rule about the SYSTEM with prose; this is one of the
 // prose ones, converted.
-import { lstatSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, lstatSync, readFileSync, readdirSync, realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -54,7 +54,8 @@ function markdownFilesUnder(dir: string): string[] {
  * pasted URL, a reference-style link target and an HTML href all die exactly
  * the same way. The trailing part is open (`/files`, `#issuecomment-…`) for the
  * same reason. Optional `www.` for completeness. */
-const LIVE_PR_LINK = /https?:\/\/(?:www\.)?github\.com\/[^/\s)]+\/checkdecijfers\/pull\/\d+/g;
+const LIVE_PR_LINK =
+  /(?:https?:)?\/\/(?:www\.)?github\.com\/[^/\s)]+\/checkdecijfers\/pull\/\d+/gi;
 
 /** The scar left by a careless neutralization: `PR [#68](…/pull/68)` rewritten
  * to `PR #68` yields `PR PR #68`. Session 60 shipped 10 of these in the very
@@ -62,6 +63,23 @@ const LIVE_PR_LINK = /https?:\/\/(?:www\.)?github\.com\/[^/\s)]+\/checkdecijfers
  * and session-55 rounds — three rounds, same mistake. A URL check cannot see
  * prose damage, so this pins the one form the substitution actually produces. */
 const DOUBLED_PR_WORD = /\bPR PR #/g;
+
+/** Every markdown file in the repo that is NOT under docs/ and is not vendored.
+ * Listed explicitly rather than globbed: a new top-level doc should be a
+ * deliberate addition here, so nobody can add one and silently escape the rule.
+ * Kept in sync by the test directly below, which fails if the repo grows one
+ * this list does not name. */
+const OUTSIDE_DOCS_MARKDOWN = [
+  'README.md',
+  'web/README.md',
+  'CLAUDE.md',
+  'web/CLAUDE.md',
+  'AGENTS.md',
+  'web/AGENTS.md',
+  'KICKOFF_PROMPT.md',
+  'checkdecijfers.nl.md',
+  '.claude/commands/wrap-session.md',
+];
 
 /** Strip fenced blocks and inline code spans.
  *
@@ -92,14 +110,61 @@ describe('#132 interim rule (i): PR references in docs are plain text, never liv
     ).toEqual([]);
   });
 
-  it('the same rule holds for the orientation READMEs', () => {
+  it('the same rule holds for every markdown file OUTSIDE docs/', () => {
+    // Scoping this to docs/ + the two READMEs was the original blind spot: the
+    // rule exists because the URL 404s after a repo recreate, and that is true
+    // of CLAUDE.md — doc #1 in the reading order — exactly as it is of
+    // docs/. Derive the set from the reason for the rule, not from where the
+    // offenders happened to be found last time.
+    //
+    // AGENTS.md and web/AGENTS.md are SYMLINKS to their directory's CLAUDE.md
+    // (a committed convention, see CLAUDE.md). realpath-dedupe keeps one file
+    // from being reported twice under two names.
+    const seen = new Set<string>();
     const offenders: string[] = [];
-    for (const relative of ['README.md', 'web/README.md']) {
-      const content = readFileSync(join(REPO_ROOT, relative), 'utf8');
-      if (LIVE_PR_LINK.test(content)) offenders.push(relative);
-      LIVE_PR_LINK.lastIndex = 0; // the regex is /g — .test() carries state
+    for (const relative of OUTSIDE_DOCS_MARKDOWN) {
+      const absolute = join(REPO_ROOT, relative);
+      if (!existsSync(absolute)) continue;
+      const real = realpathSync(absolute);
+      if (seen.has(real)) continue;
+      seen.add(real);
+      const hits = readFileSync(absolute, 'utf8').match(LIVE_PR_LINK);
+      if (hits) offenders.push(`${relative} (${hits.length})`);
     }
-    expect(offenders).toEqual([]);
+    expect(
+      offenders,
+      'Live PR links found outside docs/. Same reason as above: #132 route (b) recreates this ' +
+        'repository and every one of these 404s. Write `PR #72`, not a link.',
+    ).toEqual([]);
+  });
+
+  it('the outside-docs list names every markdown file the repo actually has', () => {
+    // The blind spot this closes is structural, not textual: an explicit list
+    // silently stops covering the repo the moment someone adds a top-level
+    // doc. Walk the real tree and demand the list already knows about it, so a
+    // new CONTRIBUTING.md cannot quietly become the one file nobody checks.
+    const IGNORED = new Set(['node_modules', '.git', 'docs', 'dist', '.next', 'coverage']);
+    const found: string[] = [];
+
+    const walk = (dir: string, depth: number): void => {
+      if (depth > 2) return;
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        if (IGNORED.has(entry.name)) continue;
+        const absolute = join(dir, entry.name);
+        if (entry.isDirectory()) walk(absolute, depth + 1);
+        // REPO_ROOT already carries a trailing slash (it comes from a URL), so
+        // slice at its raw length — a +1 here eats the first character.
+        else if (entry.name.endsWith('.md')) found.push(absolute.slice(REPO_ROOT.length));
+      }
+    };
+    walk(REPO_ROOT, 0);
+
+    const unlisted = found.filter((relative) => !OUTSIDE_DOCS_MARKDOWN.includes(relative)).sort();
+    expect(
+      unlisted,
+      'A markdown file outside docs/ is not named in OUTSIDE_DOCS_MARKDOWN, so the live-PR-link ' +
+        'rule does not cover it. Add it to that list (that is the whole fix).',
+    ).toEqual([]);
   });
 
   it('no doc carries the "PR PR #" scar of a careless neutralization', () => {
