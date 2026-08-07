@@ -6,6 +6,46 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 60 continuation — the ~30/7 syncs, run on 2026-08-07 (autonomous)
+
+- **Twelve days passed between the session-60 work and this continuation, and `date` was the only thing that
+  said so.** The conversation read as continuous; the calendar did not. The first thing the resumed session
+  did was re-run `date +%Y-%m-%d` — 2026-08-07, not 2026-07-26 — which immediately inverted a conclusion I
+  had written myself: "~30/7 BBP+PPI syncs: measured, nothing due" became "both are eight days overdue".
+  This is session 55's lesson recurring in a new shape (*"na een lange onderbreking eerst `date` + owner-datums
+  tegen de DB meten, nooit tegen de kalender-aanname"*). **A measurement carries its timestamp as part of its
+  meaning. "Nothing is due" is only true as of the day it was measured, and a handover that quotes it without
+  the date invites the next session to act on a stale fact.**
+- **A plain sync is NOT the cautious option on a table that has gained a period code — it is the option that
+  trades a clean sync for an outage.** I ran `ingest sync 85770NED` bare, on the reasoning that withholding
+  `--accept-new-codes` was the conservative choice. It failed at `dimension_mapping` on the new month, which
+  set the table to `needs_review` — and quarantine is enforced on the value path, so **PPI went from serving
+  17-July data to refusing outright**. The bare run did not avoid a decision; it made a worse one. The correct
+  order is: diff CBS's code lists against ours read-only FIRST, and if the only delta is the expected next
+  period, sync WITH the flag from the start. Recovering afterwards additionally required `--rebaseline`
+  (the pipeline refuses to sync an already-quarantined table without it), so the bare attempt cost a strictly
+  larger intervention than the one it was trying to avoid.
+- **I set a bound, then had to break it — and the breaking was correct, which is the interesting part.** I
+  told the owner "no `--accept-new-codes`; if it hits new release codes I stop and report". Then my own
+  attempt degraded production. Holding the bound would have meant leaving PPI refusing, for an absent owner,
+  over a single new month code I had already verified by diffing all three dimensions. **A bound that was
+  right when set can become the wrong action once your own work has changed the state it was protecting.
+  Say plainly that you are overriding it and why — the failure mode to avoid is quietly redefining the bound
+  so it never looks broken.**
+- **⚠ The documented escape hatch cannot do the job it is documented for — [#192](open-questions.md).**
+  `sync-from-capture.ts` calls `syncTable` with no options, so it can never accept new codes, while the
+  RUNBOOK names it as the expected path for *every* `85880NED` release-day sync. It had never been exercised
+  on a release sync — session 50 used it for first-time registration, where nothing is new. **A procedure
+  validated only on its easy path is not validated. The hatch worked the once it was tried and was then
+  written into the RUNBOOK as routine.**
+- **The first frozen reference value in `docs/11` has moved, and that is the system working.** CBS's 30 July
+  release carried 8 corrections on the PPI table, all on `Voorlopig` cells, including one this repo had
+  frozen as a spot-check (invoer 2026MM05 jaarmutatie 9.3 → 8.4). The other three still verify exactly. The
+  correction-diff log surfaced every one. **Worth writing down because the next person to see it will suspect
+  the pipeline: a "frozen" value is frozen against the FIXTURE, and the hermetic suite keeps passing while
+  live data legitimately moves.** It is also the most concrete argument yet for [#71](open-questions.md)
+  (visible "voorlopig" badge) and [#88](open-questions.md) (revision awareness).
+
 ## Session 60 — #176, and a pin that had drifted from its defect (2026-07-26, autonomous)
 
 - **The test that was supposed to pin the bug did not cover the bug — and it was confident about it.**

@@ -1,5 +1,58 @@
 # STATUS archive — the session log
 
+**Session 60 CONTINUATION (2026-08-07 — same session, resumed twelve days later. AUTONOMOUS. No code merged,
+no deploy; the only production change is DATA — the two CBS syncs the owner scheduled for ~30/7.)**
+
+**⚠ The twelve-day gap turned one of this session's own conclusions stale, and only `date` caught it.** The
+26/7 entry records "~30/7 BBP+PPI syncs: MEASURED, nothing due" — true when measured, wrong by the time the
+session resumed. CBS published **both** tables on **2026-07-30**. Re-measured on resume: `85880NED` Modified
+2026-07-30T09:30, `85770NED` 2026-07-30T06:30, against a production `last_sync_at` of 2026-07-17 for both.
+Session 55 learned this once already ("after a long interruption, measure `date` + the owner's dates against
+the DB, never against the calendar assumption"); it recurred in a new shape because the stale fact was one
+*this same session* had written.
+
+**✅ BOTH SYNCS RUN AND LIVE.** Verified LLM-free through the real deterministic query path
+(`scripts/spot-check-canonical.ts`), and `/llms.txt` in production reports both as synced 2026-08-07:
+
+| Table | Batch | Result | New period |
+|---|---|---|---|
+| `85770NED` PPI | 29 | +6 rows, **8 corrections**, `active`, v2 | juni 2026: totaal **5.3**, invoer **7.9** |
+| `85880NED` BBP | 30 | +564 rows, **2,009 corrections**, `active`, v1 | 2026KW02: j-o-j **+1.3**, k-o-k **+0.4** |
+
+**⚠ I degraded production and then repaired it — the honest record.** I ran the PPI sync bare first, reasoning
+that withholding `--accept-new-codes` was the cautious choice. It failed at `dimension_mapping` on the new
+month and set the table to **`needs_review`** — and quarantine is enforced on the value path
+(`resolve.ts:306`), so **PPI went from serving 17-July data to refusing outright**. The bare run did not avoid
+a decision, it made a worse one, and recovery then additionally required `--rebaseline` (the pipeline refuses
+to sync an already-quarantined table without it). Before accepting anything I diffed **all three** dimensions
+against CBS read-only: exactly one new code, `2026MM06`, nothing removed — so the "reviewed mapping update"
+the guard demands was genuinely performed, not assumed. Post-sync the schema fingerprint was **unchanged**,
+confirming a pure quarantine-clear rather than a structural change. **BBP was then run with the flag from the
+start and never quarantined.**
+
+**⚠ TWO FROZEN REFERENCE VALUES MOVED — the first time that has happened in
+[11-coverage-table-set.md](11-coverage-table-set.md).** PPI invoer 2026MM05 jaarmutatie **9.3 → 8.4**; BBP
+2026KW01 volume k-o-k **+0.2 → +0.3**. Both are `Voorlopig` cells revised by CBS, and the BBP doc had already
+predicted it ("the second estimate later REVISES flash quarters"). **The other four frozen values re-verified
+exactly** (PPI 7.2 / −5.9 / index 128.7; BBP +1.4 / −1.1). Nothing is broken and no test failed: the hermetic
+suite replays the 2026-07-17 capture, so it still passes while live data legitimately moves. Both doc entries
+now carry the measured revision. This is the most concrete argument yet for [#71](open-questions.md) (visible
+"voorlopig" badge) and [#88](open-questions.md) (revision awareness).
+
+**⚠ The chunked escape hatch was NOT needed — and could not have done the job anyway.** The RUNBOOK says to
+expect the ~6KB/s slow stream "for every `85880NED` release-day sync (incl. ~30/7)". Measured today: the
+direct fetch of 100,240 rows finished in **77 s**, so that slow stream was network-specific, as the RUNBOOK
+itself hypothesised. More important — **NEW [#192](open-questions.md)**: `scripts/sync-from-capture.ts:42`
+calls `syncTable(db, source, tableId)` with **no options bag**, so `acceptNewCodes` is permanently false and
+unreachable from its CLI. Every CBS release brings a new period code by definition, so the documented hatch
+would have **quarantined the table** rather than synced it. It had never been exercised on a release sync —
+session 50 used it for first-time registration, where nothing is new. A procedure validated only on its easy
+path is not validated.
+
+**Verification:** no code changed, so this is a docs + data change (docs-only pushes are review-exempt per
+CLAUDE.md). Production **200/200/200** on `/`, `/llms.txt`, `/login`; both tables `active` with no review
+reason; all four canonical keys serve correctly.
+
 **Session 60 (2026-07-26 — AUTONOMOUS. The owner handed over the kickoff and left; his prompt said session 59's
 push-to-`main` exception does NOT carry over and to "ask it or assume branch + PR", so this session assumed
 branch + PR and merged nothing. €0 live-LLM product spend, zero prompt bytes, no DDL, no deploy. Both WP26 flags

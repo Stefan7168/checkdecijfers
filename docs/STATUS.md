@@ -9,9 +9,12 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
-**▶ NEXT SESSION STARTS HERE — Session 60 (2026-07-26). AUTONOMOUS: the owner handed over the kickoff and
-left, and his prompt said session 59's push-to-`main` exception does NOT carry over. So: branch + PR,
-nothing merged, nothing deployed. €0 live-LLM spend, zero prompt bytes, no DDL.**
+**▶ NEXT SESSION STARTS HERE — Session 60 (2026-07-26, continued 2026-08-07). AUTONOMOUS: the owner handed
+over the kickoff and left, and his prompt said session 59's push-to-`main` exception does NOT carry over.
+So: branch + PR, **nothing merged, no code deployed**. €0 live-LLM spend, zero prompt bytes, no DDL.
+⚠ The session SPANNED TWELVE DAYS — the 26/7 work and the 7/8 continuation are both below, and the gap
+turned one of its own conclusions stale (see the syncs). The only live-production change is DATA: the two
+CBS syncs the owner had scheduled for ~30/7.**
 
 **⚠ THE TWO THINGS THAT ARE STILL ONLY YOURS, untouched again:** the **WP26 flags**
 (`CLARIFY_CLICK_ENABLED`, `ANSWER_FIRST_ENABLED`) and **`GDPR_PURGE_APPLY`**. Read
@@ -43,9 +46,16 @@ rule is now `tests/docs/doc-conventions.test.ts` in CI. **The review then found 
 doubled "PR" in 10 places, and 17 more inherited from the 2 earlier rounds — all three passes made the
 same mistake.** Fixed and pinned.
 
-**~30/7 BBP+PPI syncs: MEASURED, NOTHING DUE.** At CBS today `85880NED` Modified **2026-07-01**,
-`85770NED` **2026-06-30**; our 17/7 sync is ahead of both. The ~30/7 date is CBS's expected next
-publication, not a due date passed. `85880NED` still MUST use the chunked escape hatch (RUNBOOK step 5).
+**✅ ~30/7 BBP+PPI SYNCS: RUN AND LIVE (2026-08-07, session-60 continuation).** *(The 26/7 measurement said
+"nothing due" — true that day, stale eight days later. CBS published both on 30/7.)* Both are `active`,
+verified LLM-free through the real query path, and `/llms.txt` shows **synced 2026-08-07**:
+**Q2 2026 BBP** volume j-o-j **+1.3** / k-o-k **+0.4**; **PPI juni 2026** totaal **5.3** / invoer **7.9**.
+⚠ **Two frozen reference values in [11-coverage-table-set.md](11-coverage-table-set.md) MOVED** — CBS revised
+provisional cells (PPI invoer 2026MM05 9.3 → 8.4; BBP 2026KW01 k-o-k +0.2 → +0.3). The other four re-verified
+exactly. Nothing is broken: hermetic tests replay the 17/7 fixture and still pass; live data moved on.
+⚠ **`85880NED` did NOT need the chunked escape hatch** — the direct stream finished in **77 s**, so the
+~6KB/s slow stream was network-specific after all. ⚠ **NEW [#192](open-questions.md): the escape hatch cannot
+complete a release sync** (`sync-from-capture.ts` passes no options, so it can never accept a new period code).
 
 **[#132](open-questions.md) route B re-asked, on the record:** `forks_count` = **0** (stars 0, watchers 0),
 so the T-0 go/no-go **holds** and the two-phase reversible drill still awaits your explicit in-chat GO.

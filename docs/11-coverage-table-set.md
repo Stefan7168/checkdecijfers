@@ -90,8 +90,15 @@ independently re-queried from BOTH live CBS platforms before freezing; keys neve
 - **Cadence:** flash ~30 days after quarter-end (next: Q2 on ~30 July 2026, the sprint deadline); the second
   estimate later REVISES flash quarters (R11 — recent quarters are Voorlopig).
 - **Reference values (frozen into CC5–CC7; re-measured on BOTH platforms on build day 2026-07-17):** 2026KW01
-  volume j-o-j **+1.4** (Voorlopig); 2023KW04 volume j-o-j **−1.1** (Definitief); 2026KW01 volume k-o-k **+0.2**
-  (Voorlopig).
+  volume j-o-j **+1.4** (Voorlopig); 2023KW04 volume j-o-j **−1.1** (Definitief); 2026KW01 volume k-o-k
+  ~~**+0.2**~~ → **+0.3** (Voorlopig).
+  ⚠ **Revised by the 2026-07-30 flash release, measured 2026-08-07 (session 60 continuation) — exactly the
+  behaviour the Cadence line above predicts.** That sync (batch 30) carried **2,009 corrections** across the
+  table, which is normal for quarterly national accounts: a flash release re-estimates the whole recent
+  series, not just the new quarter. The two `Definitief`/older frozen cells were re-verified and **still hold
+  exactly** (+1.4, −1.1); only the k-o-k flash cell moved. **Q2 2026 is now loaded:** volume j-o-j **+1.3**,
+  volume k-o-k **+0.4** (both Voorlopig). See the PPI note below — the same "frozen against the fixture, not
+  against CBS" caveat applies, and here the doc had already warned that flash quarters get revised.
 
 ### `85770NED` — producer prices PPI (sprint #3; measured 2026-07-17 overnight, vocab session 50)
 
@@ -109,7 +116,18 @@ independently re-queried from BOTH live CBS platforms before freezing; keys neve
 - **Reference values (frozen into CC8–CC10 in the s49 overnight prep; v3+v4 cross-checked 2026-07-17; re-pointed
   from explicit to canonical intents in session 50, values unchanged):** totaal 2026MM05 jaarmutatie **7.2**
   (index 128.7, Voorlopig); totaal 2023MM06 jaarmutatie **−5.9** (Definitief); invoer 2026MM05 jaarmutatie
-  **9.3** (Voorlopig).
+  ~~**9.3**~~ → **8.4** (Voorlopig).
+  ⚠ **CBS REVISED that last one, measured 2026-08-07 (session 60 continuation), and this is the first time a
+  frozen reference value in this document has moved.** The 2026-07-30 release carried **8 corrections** on this
+  table, all on `Voorlopig` cells (batch 29): invoer 2026MM05 jaarmutatie **9.3 → 8.4**, its index 123.8 → 122.8
+  and maandmutatie 0.8 → −0.2; invoer 2026MM04 jaarmutatie 7.2 → 7.4; plus two 2026MM01 cells promoted
+  Voorlopig → Definitief. The other three frozen values were **re-verified against production and still hold
+  exactly** (7.2, −5.9, 128.7). Nothing is wrong: this is provisional data behaving as provisional data, the
+  correction-diff log doing its job, and the reason [#71](open-questions.md) (a visible "voorlopig" badge) and
+  [#88](open-questions.md) (revision awareness) are on the list. **The lesson for this document: a frozen
+  reference value is only frozen against a FIXTURE. The hermetic suite still passes because it replays the
+  2026-07-17 capture — live data has simply moved on, and a doc that quotes both without saying which is which
+  will eventually mislead someone into thinking the pipeline broke.**
 
 ### `85828NED` — omzet detailhandel (sprint #4; measured + built session 53, 2026-07-17)
 
