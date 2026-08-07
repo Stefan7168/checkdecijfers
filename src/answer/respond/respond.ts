@@ -586,6 +586,28 @@ export async function respondToClarificationReply(
     const clarifyOptions: ClarifyReplyOptions = {
       client: options.intentClient,
       config: options.parserConfig,
+      // #191: the reply turn runs under the SAME rollout flag as the answer
+      // turn. It was declared on ClarifyReplyOptions and threaded onward by
+      // clarify.ts (lines 194, 210) but never SET here, and the result was not
+      // "pre-WP26 on replies" — it was HALF of mechanism B, a state nobody
+      // chose. B has two axes and they live in different layers: B-REGION is
+      // in the query layer (query/resolve.ts) and already reached reply turns
+      // through the `{ ...options }` spread into respondToIntent below, while
+      // B-PERIOD is in the intent layer (intent/resolve.ts:731) and is fed by
+      // exactly this bag. So with ANSWER_FIRST_ENABLED=1 a reply turn silently
+      // defaulted the region the user never mentioned, and then refused over
+      // the period it was allowed to default.
+      //
+      // R7's third branch (05-data-rules.md) authorizes filling in a
+      // structurally-determined axis and draws NO first-turn/reply-turn
+      // distinction — the safelist is code, not configuration — so applying it
+      // to one axis and not the other was an invariant conformance gap, not a
+      // deliberate conservatism. And a reply is the LAST round by rule (R7: a
+      // reply never asks again), which makes it the turn where refusing costs
+      // the most: the user answered the question we asked and would be refused
+      // on an axis nobody asked about, after paying the clarification price —
+      // the exact paid dead-end ADR 024 exists to remove.
+      answerFirstEnabled: options.answerFirstEnabled === true,
       // #112: the reply merge must accept the same onboarded keys the first
       // turn's parse could have put in the pending's candidates — without
       // this, an 'onboarded:' key fails the reply-turn schema validation and

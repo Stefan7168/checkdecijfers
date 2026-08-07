@@ -8,7 +8,17 @@
 // consumentenvertrouwen juni 2026 = −39, Definitief, tabel 83693NED —
 // re-verified LLM-free on production 2026-07-17) rendered in the product's
 // real answer shape; refresh it CONSCIOUSLY when the frozen key ever changes,
-// never invent one (principle a). The anonymous-trial chat (#53, ADR 036) is
+// never invent one (principle a).
+//
+// ⚠ #193 (2026-08-07): the body carries NO status suffix, and that is correct
+// — do not "helpfully" add "(definitief cijfer)" back. `provisionalDisplay`
+// (src/sources/registry.ts) maps only Voorlopig and NaderVoorlopig, so the
+// real pipeline renders a definitive cell with no suffix at all. This example
+// used to print one, which made the homepage advertise an answer shape the
+// product cannot produce — under a comment claiming it was the real shape.
+// The status now sits in the source line, which is where the pipeline shows
+// it and what step 3 below already promises ("Elk getal met CBS-tabel,
+// periode en publicatiestatus"). The anonymous-trial chat (#53, ADR 036) is
 // built and DORMANT: <TrialSectie /> renders nothing until the supervised
 // go-live sets TRIAL_ENABLED + the trial key + the ip-hash secret and seeds
 // the pot — until then the CTA routes to /login, byte-identically.
@@ -65,12 +75,12 @@ export function Landing() {
             <div className="max-w-xl rounded-lg border border-line bg-paper-raised px-4 py-3">
               <p className="text-ink">
                 Het consumentenvertrouwen in Nederland was in juni 2026{' '}
-                <span className="tnum font-semibold">−39</span> (definitief cijfer).
+                <span className="tnum font-semibold">−39</span>.
               </p>
               <p className="mt-2 border-t border-line pt-2 text-xs text-ink-muted">
                 Bron: CBS StatLine, tabel 83693NED — Consumentenvertrouwen,
                 economisch klimaat en koopbereidheid; gecorrigeerd. Periode: juni
-                2026. Licentie: CC BY 4.0.
+                2026. Status bij CBS: definitief. Licentie: CC BY 4.0.
               </p>
             </div>
           </div>

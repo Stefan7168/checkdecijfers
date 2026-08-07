@@ -6,6 +6,107 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 61 — 2026-08-07 (autonomous; PR 77 merged, PR #85 opened)
+
+- **A poll-loop watcher you then check by hand becomes a spinner — stop it explicitly.** This session armed
+  several `while true; do gh run list …; sleep 30; done` monitors to wait on CI, and then in most cases
+  checked the same run manually a minute later. The manual check answered the question; the loop kept
+  spinning. **The owner had to kill one that had been running for about five hours** on his own machine.
+  Nothing was lost — everything was already committed, pushed and green — but it was pure waste on an 8 GB
+  machine that this same session had already established cannot spare the CPU (see the OOM lesson above).
+  **Fixes, in order of preference:** prefer a BOUNDED wait (`until <condition>; do sleep N; done` with a
+  real exit, run via a backgrounded command) over an unbounded `while true`; and the moment you satisfy a
+  watcher's condition by hand, kill it — don't leave it to a timeout, and don't assume a reported
+  "Monitor timed out" actually reaped the shell (the five-hour one survived exactly that).
+
+- **The final self-audit earned its place: it caught the session repeating the exact mistake the session
+  had fixed that morning.** Session 61 opened by removing "Three commits" from STATUS because a commit count
+  in a doc is stale on the next commit — and then wrote "five commits" for PR #85 into the session-62 kickoff
+  and "Four commits" into STATUS, both wrong (it was seven) by the time the wrap-up commits landed. Nothing
+  caught it until step 8's `gh pr view 85 --json commits`. **A rule you just wrote does not protect you from
+  breaking it four hours later; only re-deriving every number against its source does.** Both now name the
+  CONCERNS and point at git.
+
+- **A missing summary line is not a pass.** The branch's backend suite was read as green from a log that
+  simply had no `Test Files` line in it. It had been **OOM-killed — exit 137** — because 103 PGlite-backed
+  test files were running alongside 11 concurrent review agents on an 8 GB machine. Two separate runs were
+  truncated the same way before the exit code was checked. Session 60's trap 3 says "freeze the tree, then
+  measure"; the tree was frozen and the *machine* was not. **On this machine the verification block must run
+  with no agents in flight**, and a log without an explicit pass/fail line must be treated as a failure until
+  an exit code says otherwise. `npm test > log 2>&1; echo $?` — capture the code, never infer it from silence.
+
+- **A line reference written while editing the file above it is stale on arrival.** The `#191` fix added an
+  explanatory comment to `respond.ts`, which pushed the `{ ...options }` spread from line 630 to 652 — and
+  the RUNBOOK and open-questions rows written in the same commit cited 630. It was true on `main` and false
+  on the branch the moment it was written. The independent review caught it. **Cite a line number only after
+  the edit is final, and re-grep before committing.**
+
+- **A subagent's conclusion and its evidence need separate verification.** A review agent reported a correct
+  conclusion about R8 reconstruction, supported by a citation to `tests/answer/audit-reconstruct.test.ts` —
+  **a file that does not exist and never has** (`git log --all --diff-filter=A` confirms). The adversarial
+  verifier caught the fabricated citation while agreeing with the conclusion. This is the concrete argument
+  for the verify stage: without it, a fabricated file path would have been copied into a doc as fact.
+  Related: [#191](open-questions.md), and the `index-is-not-the-page` lesson from 2026-07-26.
+
+- **"Is it threaded?" was the wrong question; "which half is threaded?" was the right one.** [#191](open-questions.md)
+  was recorded as a reply turn that never receives `ANSWER_FIRST_ENABLED`. Measurement showed the reply turn
+  ran **half** of mechanism B: B-region lives in the QUERY layer and already arrived via a `{ ...options }`
+  spread, while B-period lives in the INTENT layer and did not. The recorded framing ("both turns run pre-B
+  and agree") was wrong in a way that mattered — flag-on, the reply turn defaulted the region the user never
+  mentioned and refused over the period it was allowed to default. **When a flag has two mechanisms, check
+  each one's layer separately; a single "is the flag passed?" answer can be true and false at once.**
+
+- **The product question dissolved once the written rule was actually read.** #191 was framed as a product
+  call ("should a reply turn default like the first turn?"). R7's third branch already authorizes filling in
+  a structurally-determined axis and draws **no first-turn/reply-turn distinction**, and the safelist is
+  "code, never configuration". So half-applying it was an invariant conformance gap, not a design choice.
+  **Before treating something as an open product question, check whether an invariant already answers it.**
+
+- **A pin can inherit the very blind spot it was written to close.** Session 60's trap 5 was "derive a pin's
+  pattern from the REASON for the rule, not from the instances in front of you" — and the doc-convention test
+  written from that lesson was still scoped to `docs/`, where the instances happened to live, leaving
+  `CLAUDE.md` (doc #1 in the reading order) unscanned. Its regex was also case-sensitive and scheme-anchored.
+  **After writing a pin, ask what set the RULE covers and compare it to what the pin walks.** An explicit
+  file list now ships with a test that walks the real tree and fails if the list stops naming what exists.
+
+- **A test asserting absence goes vacuous the moment you reword the thing it looks for.**
+  `tests/answer/respond-refusals.test.ts:419` asserts `.not.toMatch(/laatste definitieve/)` to prove a
+  refusal aside is ABSENT in one case. Rewording that template — exactly what [#193](open-questions.md)
+  option (b) calls for — would make the assertion trivially true and silently defang the test. Recorded in
+  the #193 row for whoever ships it. **Grep for `not.toMatch` / `not.toContain` against any string you are
+  about to change.**
+
+- **A copy question turned out to be a factual bug about our own output.** [#193](open-questions.md) asked
+  what `Definitief` may imply. Auditing the copy first showed the product **never prints
+  `(definitief cijfer)` at all** — `provisionalDisplay` maps only `Voorlopig`/`NaderVoorlopig`. The one place
+  that string existed was the landing-page example, under a comment calling it "the product's real answer
+  shape". **Before debating what copy implies, verify the product actually emits it.**
+
+- **Changing a refusal TEMPLATE has an R8 cost that is invisible from the code.** Per [#133](open-questions.md),
+  `reconstructionReport` verifies stored rows against TODAY's builder rules, so live rows carrying the old
+  string start failing reconstruction and each needs a **row-id-pinned** entry in `known-divergences.ts` —
+  and the register takes exact ids, never patterns, so the ids must be discovered with `audit:verify` against
+  the live database. That makes any refusal-copy change owner-supervised, which is why #193's remaining two
+  edits are specified but deliberately unshipped. **Template edits are not "just copy".**
+
+- **Never read an exit code through a pipe, and install BOTH lockfiles before judging a dependency PR.**
+  Verifying Dependabot PR #82 (`next` 16.3.0 + `jsdom` major) locally produced three wrong readings in a row
+  before it produced a true one. (1) `npm --prefix web ci` alone made **9 web test files fail** on
+  `Failed to resolve import "@anthropic-ai/sdk"` — backend modules reached through the `web/backend` symlink
+  need the ROOT install, which CI does first. That was the session's error being misread as the PR's defect.
+  (2) Symlinking the main checkout's `node_modules` into the worktree to dodge the install made Turbopack
+  fail with `Symlink [project]/node_modules is invalid, it points out of the filesystem root` — the exact
+  error [ADR 018](decisions/018-web-app-own-lockfile.md) exists to avoid. (3) `echo "EXIT=$?"` after
+  `cmd | tail -N` captures **`tail`'s** status, always 0 — so two "BUILD_EXIT=0" readings meant nothing.
+  Done correctly (real root install, no symlink, `cmd > log 2>&1; echo $?`), #82 is clean: install 0,
+  typecheck 0, 42/42 files, 453/453 tests, `next build` 0.
+
+- **The `deploy` job never running on a PR is deliberate, not a gap.** It was briefly read as the s49 trap
+  made structural. [ci.yml](../.github/workflows/ci.yml) explains it: `gate` is hermetic (no network beyond
+  npm) and `next build` fetches fonts at build time, so it can only run inside `deploy`, downstream of green.
+  The correct mitigation for a dependency bump is therefore to build it **locally** before merging, not to
+  change CI. **Read the comment before calling a config a bug.**
+
 ## Session 60 continuation — the ~30/7 syncs, run on 2026-08-07 (autonomous)
 
 - **Twelve days passed between the session-60 work and this continuation, and `date` was the only thing that
