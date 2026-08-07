@@ -79,6 +79,7 @@ held), [#183](open-questions.md) (product call), [#188](open-questions.md) (conc
 — supervised), [#190(a)](open-questions.md) (whether an infrastructure-caused refusal should cost a trial
 question — a conversion judgement, yours).
 
+Next-session kickoff: [session-briefs/2026-08-07-session-62-kickoff.md](session-briefs/2026-08-07-session-62-kickoff.md).
 Full session record in [status-archive.md](status-archive.md).
 
 **(Historical from here down.)**

@@ -1,5 +1,11 @@
 # Session 61 kickoff
 
+> ⚠ **SUPERSEDED — session 61 ran on 2026-08-07 and this brief's queue is done.** PR 77 is **merged and
+> deployed** (squash `1a16eed`); #191, #192 and #193 are resolved in **PR #85**, which is open on the
+> owner's review. Read [`../STATUS.md`](../STATUS.md) and the newest file in this directory instead. Kept
+> verbatim below as the historical handover — every "PR 77 is OPEN" and "#191 blocks the flip" statement
+> in it was true when written and is not true now.
+
 **Written 2026-07-26 at the close of session 60.** Supersedes
 [`2026-07-26-session-60-kickoff.md`](2026-07-26-session-60-kickoff.md) — its queue is done.
 
