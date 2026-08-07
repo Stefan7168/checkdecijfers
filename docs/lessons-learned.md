@@ -8,6 +8,17 @@ on top.
 
 ## Session 61 — 2026-08-07 (autonomous; PR 77 merged, PR #85 opened)
 
+- **A poll-loop watcher you then check by hand becomes a spinner — stop it explicitly.** This session armed
+  several `while true; do gh run list …; sleep 30; done` monitors to wait on CI, and then in most cases
+  checked the same run manually a minute later. The manual check answered the question; the loop kept
+  spinning. **The owner had to kill one that had been running for about five hours** on his own machine.
+  Nothing was lost — everything was already committed, pushed and green — but it was pure waste on an 8 GB
+  machine that this same session had already established cannot spare the CPU (see the OOM lesson above).
+  **Fixes, in order of preference:** prefer a BOUNDED wait (`until <condition>; do sleep N; done` with a
+  real exit, run via a backgrounded command) over an unbounded `while true`; and the moment you satisfy a
+  watcher's condition by hand, kill it — don't leave it to a timeout, and don't assume a reported
+  "Monitor timed out" actually reaped the shell (the five-hour one survived exactly that).
+
 - **The final self-audit earned its place: it caught the session repeating the exact mistake the session
   had fixed that morning.** Session 61 opened by removing "Three commits" from STATUS because a commit count
   in a doc is stale on the next commit — and then wrote "five commits" for PR #85 into the session-62 kickoff
