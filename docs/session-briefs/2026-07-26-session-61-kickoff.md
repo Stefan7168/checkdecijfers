@@ -28,8 +28,10 @@ The Golden Rule applies to *reading* a handover too. Re-derive anything you are 
 
 - **Nothing was merged or deployed in session 60.** The owner was not in the chat and his session-60 prompt
   said session 59's push-to-`main` exception does not carry over, so everything went to a branch.
-- **PR 77 is OPEN and is the first thing to deal with** — branch `perf/176-gate-region-option-intents`,
-  three commits: `a108ba3` (#176), `a25f3e8` (#132 pin), `06f6209` (a CI fix).
+- **PR 77 is OPEN and is the first thing to deal with** — branch `perf/176-gate-region-option-intents`.
+  Three commits carry the CODE: `a108ba3` (#176), `a25f3e8` (#132 pin), `06f6209` (a CI fix); the rest are
+  this session's doc close-outs. ⚠ **Do not trust a commit COUNT written in any doc** — it goes stale on the
+  next commit, and it did here twice. `gh pr view 77 --json commits --jq '.commits | length'` is the authority.
 - **Counts at the close, measured on a frozen tree at `a25f3e8`:** backend **1562 / 103 files**, web
   **453 / 42**, benchmark **14/14 + 6/6 + 0 fabricated GATE PASS**, real `next build`. Production
   **200 / 200 / 200**, unchanged — nothing shipped.
@@ -164,7 +166,8 @@ question — a conversion judgement that changes what someone is charged).
 > conclusie uit die sessie ("er valt niets te syncen") was door het tijdsverloop juist omgedraaid.
 >
 > Stand: sessie 60 draaide autonoom en heeft NIETS gemerged en GEEN CODE gedeployd — PR 77 staat open op
-> mijn review, **9 commits** (#176, de #132-doc-pin, een CI-fix, en de close-outs). Backend 1562/103, web
+> mijn review (#176, de #132-doc-pin, een CI-fix, en de close-outs — vraag `gh pr view 77` om het actuele
+> aantal, een getal in een doc is per definitie verouderd). Backend 1562/103, web
 > 453/42, benchmark 14/14 + 6/6 + 0, productie 200/200/200. Wél live: de twee CBS-syncs (dat is data, geen
 > deploy). Verifieer dit alles zelf — niet uit deze tekst overnemen; CI is groen op HEAD `79fff74`, en
 > `a25f3e8` was rood-en-daarna-gefixt door `06f6209`.

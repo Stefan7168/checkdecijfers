@@ -21,7 +21,11 @@ CBS syncs the owner had scheduled for ~30/7.**
 [#175](open-questions.md) before flipping WP26 — the anonymous trial receives NEITHER flag —
 and now **[#191](open-questions.md) too** (below), which is a genuine pre-flip blocker.
 
-**▶ FIRST THING: PR #77 IS OPEN AND AWAITS YOUR REVIEW.** Three commits, two independent changes:
+**▶ FIRST THING: PR #77 IS OPEN AND AWAITS YOUR REVIEW.** Two independent changes, carried by the three
+CODE commits below; every later commit on the branch is a doc close-out. ⚠ **A commit COUNT written into a
+doc is stale on the next commit** — this block said "Three" while the branch was at twelve, and the session-60
+self-audit corrected the number in one of the two places it appeared. Ask git, not a doc:
+`gh pr view 77 --json commits --jq '.commits | length'`.
 
 | Commit | What |
 |---|---|
