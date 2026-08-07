@@ -38,6 +38,14 @@ on top.
   on a release sync — session 50 used it for first-time registration, where nothing is new. **A procedure
   validated only on its easy path is not validated. The hatch worked the once it was tried and was then
   written into the RUNBOOK as routine.**
+- **⚠ "Definitief" does not mean immutable, and I only found that out because I looked at 2,009 corrections
+  instead of accepting the count — [#193](open-questions.md).** The BBP release carried 2,009 corrections,
+  which is easy to wave through as "national accounts get revised". Splitting them was the whole finding:
+  **1,103 were `Definitief → Definitief`, reaching back to 2015KW01** — CBS revised eleven years of
+  already-final figures in one release. The pipeline handled every one correctly. But the product leans on
+  that status (`buildFreshnessRefusal` offers the freshest *Definitief* period as the safer one), which
+  teaches users that a final number is settled. **A large number in a summary line is not a finding; the
+  distribution inside it is. I nearly logged "2009 corrections, normal for national accounts" and moved on.**
 - **The first frozen reference value in `docs/11` has moved, and that is the system working.** CBS's 30 July
   release carried 8 corrections on the PPI table, all on `Voorlopig` cells, including one this repo had
   frozen as a spot-check (invoer 2026MM05 jaarmutatie 9.3 → 8.4). The other three still verify exactly. The
