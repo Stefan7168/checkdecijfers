@@ -216,7 +216,13 @@ export interface ResolutionFailure {
    * branch, whose options ARE the competing readings ("Utrecht (gemeente)" vs
    * "Utrecht (PV)"). Absent everywhere else, which simply means no chips.
    * These are candidates, NOT offers: policy.ts dry-runs each one before it
-   * ever becomes a ClickOption. */
+   * ever becomes a ClickOption.
+   *
+   * #176 (2026-07-26): absent ALSO whenever `clickOptionsEnabled` is off, on
+   * that same region_ambiguous branch. Building them costs a real query and
+   * policy.ts reads them behind that flag (policy.ts:149), so flag-off they
+   * were pure waste. Absence therefore means "no chips" for either reason —
+   * never assume a region ambiguity implies these keys exist. */
   optionIntents?: (StructuredIntent | null)[];
   /** The resolved period's recency implication, shared by every entry in
    * `optionIntents` (they differ only on the region axis, and recency is a

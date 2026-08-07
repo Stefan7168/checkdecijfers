@@ -6,6 +6,165 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 60 continuation — the ~30/7 syncs, run on 2026-08-07 (autonomous)
+
+- **Twelve days passed between the session-60 work and this continuation, and `date` was the only thing that
+  said so.** The conversation read as continuous; the calendar did not. The first thing the resumed session
+  did was re-run `date +%Y-%m-%d` — 2026-08-07, not 2026-07-26 — which immediately inverted a conclusion I
+  had written myself: "~30/7 BBP+PPI syncs: measured, nothing due" became "both are eight days overdue".
+  This is session 55's lesson recurring in a new shape (*"na een lange onderbreking eerst `date` + owner-datums
+  tegen de DB meten, nooit tegen de kalender-aanname"*). **A measurement carries its timestamp as part of its
+  meaning. "Nothing is due" is only true as of the day it was measured, and a handover that quotes it without
+  the date invites the next session to act on a stale fact.**
+- **A plain sync is NOT the cautious option on a table that has gained a period code — it is the option that
+  trades a clean sync for an outage.** I ran `ingest sync 85770NED` bare, on the reasoning that withholding
+  `--accept-new-codes` was the conservative choice. It failed at `dimension_mapping` on the new month, which
+  set the table to `needs_review` — and quarantine is enforced on the value path, so **PPI went from serving
+  17-July data to refusing outright**. The bare run did not avoid a decision; it made a worse one. The correct
+  order is: diff CBS's code lists against ours read-only FIRST, and if the only delta is the expected next
+  period, sync WITH the flag from the start. Recovering afterwards additionally required `--rebaseline`
+  (the pipeline refuses to sync an already-quarantined table without it), so the bare attempt cost a strictly
+  larger intervention than the one it was trying to avoid.
+- **I set a bound, then had to break it — and the breaking was correct, which is the interesting part.** I
+  told the owner "no `--accept-new-codes`; if it hits new release codes I stop and report". Then my own
+  attempt degraded production. Holding the bound would have meant leaving PPI refusing, for an absent owner,
+  over a single new month code I had already verified by diffing all three dimensions. **A bound that was
+  right when set can become the wrong action once your own work has changed the state it was protecting.
+  Say plainly that you are overriding it and why — the failure mode to avoid is quietly redefining the bound
+  so it never looks broken.**
+- **⚠ The documented escape hatch cannot do the job it is documented for — [#192](open-questions.md).**
+  `sync-from-capture.ts` calls `syncTable` with no options, so it can never accept new codes, while the
+  RUNBOOK names it as the expected path for *every* `85880NED` release-day sync. It had never been exercised
+  on a release sync — session 50 used it for first-time registration, where nothing is new. **A procedure
+  validated only on its easy path is not validated. The hatch worked the once it was tried and was then
+  written into the RUNBOOK as routine.**
+- **⚠ An autonomous session that correctly refuses to merge leaves its whole written record where the next
+  session does not look.** Branch + PR (#118(b)) protects the code path and quietly breaks the
+  documentation path: on `main`, STATUS still opened with "Session 59", and #191/#192/#193, the corrected
+  RUNBOOK step 5, the new release-day step 6 and the session-61 kickoff simply did not exist. Two things
+  made that worse than a lagging tracker here — **the sync DATA is live in production while the docs saying
+  so sit on the branch**, so `main` and production actively disagree; and **`main`'s RUNBOOK still instructs
+  the release-day path that quarantines a table**, so following `main`'s own guidance would take a table out
+  of service. Caught only because the owner asked "so nothing will be forgotten, right?" and the honest
+  answer required checking rather than reassuring. **Any handover written from an unmerged branch must say,
+  at the top, that it is not on `main` and how to reach it.**
+- **The stale-doc sweep had to distinguish records from guidance, and only the guidance is a bug.** Grepping
+  "chunked escape hatch" returned ~25 hits: the RUNBOOK's step 5, `04-architecture`'s capability row, and a
+  long tail of session briefs and archive entries. Only the first two were corrected. **A dated handover or
+  an archive entry is a record of what a session was told at the time — rewriting it falsifies the log, and
+  the repo already treats `status-archive.md` that way ("verbatim, newest on top").** The test is not "does
+  this string appear" but "would someone ACT on it": the RUNBOOK's step 5 would have been followed on a
+  release day and would have quarantined the table, so that one had to change.
+- **⚠ "Definitief" does not mean immutable, and I only found that out because I looked at 2,009 corrections
+  instead of accepting the count — [#193](open-questions.md).** The BBP release carried 2,009 corrections,
+  which is easy to wave through as "national accounts get revised". Splitting them was the whole finding:
+  **1,103 were `Definitief → Definitief`, reaching back to 2015KW01** — CBS revised eleven years of
+  already-final figures in one release. The pipeline handled every one correctly. But the product leans on
+  that status (`buildFreshnessRefusal` offers the freshest *Definitief* period as the safer one), which
+  teaches users that a final number is settled. **A large number in a summary line is not a finding; the
+  distribution inside it is. I nearly logged "2009 corrections, normal for national accounts" and moved on.**
+- **The first frozen reference value in `docs/11` has moved, and that is the system working.** CBS's 30 July
+  release carried 8 corrections on the PPI table, all on `Voorlopig` cells, including one this repo had
+  frozen as a spot-check (invoer 2026MM05 jaarmutatie 9.3 → 8.4). The other three still verify exactly. The
+  correction-diff log surfaced every one. **Worth writing down because the next person to see it will suspect
+  the pipeline: a "frozen" value is frozen against the FIXTURE, and the hermetic suite keeps passing while
+  live data legitimately moves.** It is also the most concrete argument yet for [#71](open-questions.md)
+  (visible "voorlopig" badge) and [#88](open-questions.md) (revision awareness).
+
+## Session 60 — #176, and a pin that had drifted from its defect (2026-07-26, autonomous)
+
+- **The test that was supposed to pin the bug did not cover the bug — and it was confident about it.**
+  `tests/answer/query-count.test.ts` carried a case commented *"the shape #176 was found on"*. It passes
+  `regions: null`, which returns ok early at `resolve.ts:166` and **never enters the failure branch #176 is
+  about**; its `served:false` came from the query layer, not from any region ambiguity. So the fix moved
+  none of the pre-existing pinned numbers, and verifying against that tripwire as it stood would have
+  proved nothing — *a no-op gate would have stayed exactly as green*. Neither artefact was wrong on its own
+  terms: the byte-neutrality review found a real defect, the conformance bundle added a real tripwire, and
+  nobody re-read one against the other. **A pin inherits its authority from the shape it exercises, not
+  from the issue number in its comment. Before trusting a test as the verification of a fix, construct the
+  failing input yourself and confirm that test would see it.**
+- **The mutation is the only thing that told me the new pins were real.** I guessed the two new statement
+  counts (3 flag-off, 4 flag-on) and both passed first try — which, after last session's tautology finds,
+  reads as a warning rather than a success. Removing the gate fails the flag-off pin 3→4; **inverting** it
+  fails 10 tests across 3 files; dropping the `followup.ts` threading fails the new follow-up test. The
+  `'max'` case I added passes with the gate removed too, so it is labelled a guard, not a proof.
+- **A second call site had no coverage at all, and its failure mode is silent.** Both `parse.ts` and
+  `followup.ts` feed `resolveCandidate`, and production reaches both through the same options object
+  (`respond.ts:528-532`) — but every existing click-option test went through `parse.ts` only. Forgetting the
+  follow-up threading would have shipped green, and the symptom is not an error: the clarification renders
+  perfectly, minus its chips. **When threading a flag to N call sites, count the call sites first and check
+  the test file covers each one — "the suite passed" says nothing about the site nobody tests.**
+- **The cheap design was also the right one, for a reason only reading revealed.** Moving the construction
+  into `policy.ts`'s already-gated branch (the alternative the row named) would have had to reproduce one
+  undocumented subtlety exactly: `regionOptionIntents` resolves its period WITHOUT `answerFirstEnabled` and
+  without region codes (`resolve.ts:933`), unlike the main path. Miss that and flag-ON behaviour changes
+  silently. **An "obviously cleaner" refactor across a module boundary inherits every undocumented
+  asymmetry it moves; price that in before calling it cleaner.**
+- **The review over my own diff found something real for the ELEVENTH change running — and this time it was
+  in the doc, understating a residual in the direction that flattered the change.** I wrote that the
+  leftover flag-ON waste needs "several candidates simultaneously region-ambiguous"; it actually happens
+  whenever **any non-top** candidate is ambiguous, including a mixed parse whose top reading is a plain
+  success and whose turn therefore just *answers*. Same class as session 59's "the thing you did not write
+  down is the thing you did not want to", one step subtler: the thing you *did* write down, phrased so the
+  residual sounds rarer than it is. **When you document a limitation of your own change, state the
+  precondition from the code path, not from the example you happened to test.** The review also found a
+  stale doc comment on `optionIntents` (the one carrier of the old framing my sweep missed) and, adjacent
+  to the diff rather than in it, **#191** — the reply turn never receives `ANSWER_FIRST_ENABLED` despite
+  its options type declaring it. That last one is the payoff of briefing a reviewer with the *shape* of the
+  bug ("an options-bag omission") rather than only its location: it went looking for the same shape one
+  module over and found it, dormant, on the path the owner is about to switch on.
+- **A "the wrap-up sweep now greps for this" rule failed twice in a row, because nothing actually runs the
+  grep.** Session 55 re-neutralized 29 live PR links in `docs/` (interim rule (i) under #132: route B
+  deletes the repo, so every live PR link would 404) and recorded that the sweep would catch it in future.
+  Sessions 58 and 59 then added **38 more**, and both wrap-ups declared the stale-doc sweep done.
+  Re-neutralized again this session. **A convention enforced by a human-or-model remembering to grep is not
+  enforced.** The repo already knows the fix — it is the same "a convention ships with its pin" rule the
+  session-57 architecture memo proposed and the conformance bundle acted on for four other conventions.
+  This one wants a test or a CI grep, not another note saying to remember — **so this session wrote the
+  test rather than the note**: `tests/docs/doc-conventions.test.ts`, wired into CI as `test:docs`,
+  mutation-checked (reintroduce one link → it names the file and the count). The rule is now enforced by
+  the same thing that enforces everything else here: a red pipeline.
+- **And the review of THAT commit caught the fix breaking the thing it was fixing — for the third round
+  running.** The mechanical substitution rewrote `[#68](url)` to `PR #68` without noticing the docs often
+  already said `PR ` in front of the link, producing **`PR PR #68`** — 10 shipped in my own commit, and
+  **17 more found inherited from the session-37 and session-55 rounds**, meaning all three neutralization
+  passes made the identical mistake and none noticed. All 27 fixed, and the test now pins that form too,
+  because a URL check structurally cannot see prose damage. The same review also showed the first regex
+  was anchored on markdown `](…)` syntax while the *reason* for the rule is that a repo recreate 404s the
+  URL — so a bare pasted URL, a reference-style target and an HTML `href` were all blind spots. Widened,
+  with an issue-link counter-case so the widening cannot over-match. **Two lessons, and the second is the
+  general one: (1) a search-and-replace that changes a word must be checked against the words AROUND it,
+  not only against its own pattern; (2) when you write a pin, derive its pattern from the REASON for the
+  rule, not from the shape of the instances you happen to be looking at — I pinned the syntax I was
+  cleaning up rather than the failure I was preventing.**
+- **Then the new pin failed on the lessons entry describing the defect it pins — and that was the pin
+  earning its keep, not a false positive.** The bullet above has to quote the doubled form to explain it,
+  so the check went red on this very file. The fix was not an exemption but a definition: a careless
+  search-and-replace produces the doubled word in PROSE, while a session explaining the trap puts it in
+  backticks deliberately — so the check now strips fenced blocks and inline code spans and looks at prose
+  only, with both halves pinned (prose fails, the quoted form passes). **A pin that fires on its own
+  documentation is telling you the rule was stated more loosely than it was meant; the useful response is
+  to sharpen the rule, not to carve out the file.**
+- **The CI step I added to enforce a convention broke CI itself — an unquoted colon in a YAML step name.**
+  The step was named with a parenthetical containing a colon-space, which YAML reads as the start of a
+  mapping; the whole workflow failed to parse, and the run died in **0 s** with "this run likely failed
+  because of a workflow file issue". Nothing local caught it: the full test suite, both typechecks, the
+  benchmark and a real build had all just passed green, because none of them parses `.github/workflows/`.
+  **A `.yml` edit is a code change with no local gate — validate it explicitly** (`python3 -c "import
+  yaml; yaml.safe_load(open('.github/workflows/ci.yml'))"` takes a second and would have caught this
+  before the push). A 0-second red run is the signature: that is a parse failure, not a test failure, and
+  it means the gate did not run at all rather than running and passing.
+- **A local `npm test` while you are still editing is not a measurement.** Two full-suite runs came back
+  `1 failed` and I explained the first away as a race between my edits and the runner. The second failed
+  identically, which killed that theory — the actual cause was the item above, sitting in the tree the
+  whole time. The 16-minute local suite is long enough that "run it, keep editing" is tempting and always
+  wrong. **Freeze the tree, then measure; and when a failure repeats, the convenient explanation is the
+  first one to discard.**
+- **Commit-message language has drifted from the stated convention.** CLAUDE.md says English for commit
+  messages; every session-59 commit is Dutch, and the ~30 before them are English. Recorded rather than
+  silently picked a side — this session wrote English per the convention, and the owner should settle
+  whether the doc or the practice wins.
+
 ## Session 59 — the capacity/retention batch (2026-07-26, autonomous then owner-authorised push)
 
 - **`git rebase --continue` SILENTLY DROPS a subject line that starts with `#`.** It bit twice tonight, on

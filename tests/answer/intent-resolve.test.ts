@@ -808,3 +808,50 @@ describe('explicit date ranges (#77, ADR 023): date_range → whole months → f
     });
   });
 });
+
+// #176 (2026-07-26): the resolver builds per-option intents ONLY for the flag
+// that consumes them. policy.ts reads `optionIntents` behind
+// `clickOptionsEnabled` and nothing else reads them at all, so building them
+// flag-off spent a resolvePeriod query per region-ambiguous question on a
+// result that was then discarded — real pressure on a 15-session pooler
+// ceiling (#173) for no effect anywhere.
+describe('per-option intents are built only when something will read them', () => {
+  /** Bare "Utrecht": gemeente GM0344 vs provincie PV26 — the one failure shape
+   * whose options ARE the competing readings, and the only branch that reaches
+   * this work at all. */
+  const ambiguous = (): RawCandidate =>
+    raw('population_on_1_january', { kind: 'year', year: 2024 }, [
+      { name: 'Utrecht', kind: 'onbekend' },
+    ]);
+
+  it('attaches no optionIntents KEYS at all when the click flag is absent', async () => {
+    const resolution = await resolveCandidate(db, ambiguous(), REFERENCE_DATE);
+    if (!isResolutionFailure(resolution)) throw new Error('expected a region ambiguity');
+    expect(resolution.reason).toBe('region_ambiguous');
+    expect(resolution.options).toContain('Utrecht (gemeente)');
+    // Absent KEYS, not empty arrays: the failure object is spread into the
+    // clarification, so an `optionIntents: undefined` would still be a key.
+    expect(Object.hasOwn(resolution, 'optionIntents')).toBe(false);
+    expect(Object.hasOwn(resolution, 'optionImpliedRecency')).toBe(false);
+  });
+
+  it('an explicit false is the same as absent', async () => {
+    const resolution = await resolveCandidate(db, ambiguous(), REFERENCE_DATE, {
+      clickOptionsEnabled: false,
+    });
+    if (!isResolutionFailure(resolution)) throw new Error('expected a region ambiguity');
+    expect(Object.hasOwn(resolution, 'optionIntents')).toBe(false);
+  });
+
+  it('builds one intent per competing code when the flag IS on', async () => {
+    const resolution = await resolveCandidate(db, ambiguous(), REFERENCE_DATE, {
+      clickOptionsEnabled: true,
+    });
+    if (!isResolutionFailure(resolution)) throw new Error('expected a region ambiguity');
+    expect(resolution.optionIntents?.map((i) => i?.regions?.[0])).toEqual(['GM0344', 'PV26']);
+    // Index-aligned with the labels the user sees — policy.ts pairs them by
+    // position, so a reordering here would offer the wrong intent behind the
+    // right label: a wrong number with a correct-looking source.
+    expect(resolution.options).toEqual(['Utrecht (gemeente)', 'Utrecht (PV)']);
+  });
+});

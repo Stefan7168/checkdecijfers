@@ -192,6 +192,12 @@ export async function parseClarificationReply(
       .map((candidate) =>
         resolveCandidate(db, candidate, pending.referenceDate, {
           answerFirstEnabled: options.answerFirstEnabled === true,
+          // #176: deliberately NOT threaded, and it is the one call site where
+          // that is a decision rather than an omission. The decide() call below
+          // passes no clickOptionsEnabled either (a reply turn is the final
+          // round — it never asks again, so there is nothing to make clickable),
+          // so per-option intents were dead work here in EVERY flag state.
+          // Leaving the resolver's default false is what stops building them.
         }),
       ),
   );

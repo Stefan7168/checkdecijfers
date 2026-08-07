@@ -9,52 +9,83 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
-**▶ NEXT SESSION STARTS HERE — Session 59 (2026-07-26). Began autonomous; mid-session the owner gave standing
-permission to push to `main` and left for the night. Theme: capacity + retention on the ANONYMOUS surface.
-€0 live-LLM spend, zero prompt bytes, no DDL.**
+**▶ NEXT SESSION STARTS HERE — Session 60 (2026-07-26, continued 2026-08-07). AUTONOMOUS: the owner handed
+over the kickoff and left, and his prompt said session 59's push-to-`main` exception does NOT carry over.
+So: branch + PR, **nothing merged, no code deployed**. €0 live-LLM spend, zero prompt bytes, no DDL.
+⚠ The session SPANNED TWELVE DAYS — the 26/7 work and the 7/8 continuation are both below, and the gap
+turned one of its own conclusions stale (see the syncs). The only live-production change is DATA: the two
+CBS syncs the owner had scheduled for ~30/7.**
 
-**⚠ THE TWO THINGS THAT ARE STILL ONLY YOURS, untouched again this session:** the **WP26 flags**
+**⚠ THE TWO THINGS THAT ARE STILL ONLY YOURS, untouched again:** the **WP26 flags**
 (`CLARIFY_CLICK_ENABLED`, `ANSWER_FIRST_ENABLED`) and **`GDPR_PURGE_APPLY`**. Read
-[#175](open-questions.md) before flipping WP26 — the anonymous trial receives NEITHER flag.
+[#175](open-questions.md) before flipping WP26 — the anonymous trial receives NEITHER flag —
+and now **[#191](open-questions.md) too** (below), which is a genuine pre-flip blocker.
 
-**✅ MERGED AND LIVE**, serially, gate+deploy green and a production canary between each (#173):
+**▶ FIRST THING: PR #77 IS OPEN AND AWAITS YOUR REVIEW.** Two independent changes, carried by the three
+CODE commits below; every later commit on the branch is a doc close-out. ⚠ **A commit COUNT written into a
+doc is stale on the next commit** — this block said "Three" while the branch was at twelve, and the session-60
+self-audit corrected the number in one of the two places it appeared. Ask git, not a doc:
+`gh pr view 77 --json commits --jq '.commits | length'`.
 
-| # | PR | Squash | What |
-|---|---|---|---|
-| [#186](open-questions.md) | [#72](https://github.com/Stefan7168/checkdecijfers/pull/72) | `e30203a` | 20 s single-flight cache on the **pot read only**. |
-| [#184](open-questions.md) | [#74](https://github.com/Stefan7168/checkdecijfers/pull/74) | `1342f79` | Gate reports the per-IP backstop at render time, in FEWER queries than before. |
-| [#181](open-questions.md) | [#75](https://github.com/Stefan7168/checkdecijfers/pull/75) | `4a9cb77` | Anonymous trial CONTENT redacted at 90 days, same clock as its bookkeeping. |
-| [#190(b)](open-questions.md) | [#76](https://github.com/Stefan7168/checkdecijfers/pull/76) | `ae7640c` | 5 s deadline on both anonymous reads — degrade, don't hang. Also carries a REAL bug the combined-diff review found (below) and the flaky-test fix. |
+| Commit | What |
+|---|---|
+| `a108ba3` | **[#176](open-questions.md)** — the resolver builds per-option intents only for the flag that reads them. |
+| `a25f3e8` | **[#132](open-questions.md) rule (i)** — 38 live PR links re-neutralized; the rule is now a CI-gated test. |
+| `06f6209` | CI fix — an unquoted colon in the new step's name broke the workflow: run 30197192763 died in **0 s** without running the gate at all. Green again on run 30197230629. |
 
-**⚠ The measurement that disproved a doc we were trusting.** #186's own row AND the RUNBOOK said idle pooler
-sessions release on node-pg's 10 s timer, and that this is why the 2026-07-25 incident self-healed. **Measured
-false:** one anonymous GET held a session **174 s**, and 4 of the 15 slots were held at a quiet hour from ~2 page
-views — the timer does not fire while a Fluid Compute instance is frozen; the slot returns on TEARDOWN. Both
-corrected. Volume itself is trivial (~17 anonymous renders/day, 2 trial questions ever served), so these ship as
-headroom, not as a fix for a live pressure.
+**⚠ NEW [#191](open-questions.md) — READ BEFORE THE `ANSWER_FIRST_ENABLED` FLIP.** The clarification REPLY
+turn never receives that flag, though `ClarifyReplyOptions` declares it and its comment says it is threaded
+(`respond.ts:586-595`). Harmless while it is off — both turns run pre-B and agree. Flip it and they stop
+agreeing: the first turn defaults a missing region/period and answers, the reply turn judges under pre-B
+rules and can refuse instead. Decide what a reply turn *should* do before flipping. RUNBOOK now warns.
 
-**⚠ The review of the COMBINED diff earned its place.** Each change was reviewed alone and came back clean; a
-final pass over all four together, briefed to hunt only for what breaks when two MEET, found a real latch bug in
-`web/lib/ontdek.ts` (a synchronous `getDb()` throw left the in-flight slot latched forever, so the Ontdek section
-stayed empty for the life of that warm instance). **The trap is documented, correctly, in `trial.ts` one file
-over.** Knowing a trap in file A does not protect file B, and no per-change review sees the pair.
+**⚠ The lesson of #176 was in the TEST, not the code.** `query-count.test.ts` had a case commented "the
+shape #176 was found on" — it wasn't. It passes `regions: null`, which exits early at `resolve.ts:166` and
+never reaches the branch. **The fix moved none of the pinned numbers; verifying against that pin would have
+proved nothing.** Real shape (a NAMED ambiguous region) now pinned: 3 statements flag-off, 4 flag-on.
 
-**⚠ `git rebase --continue` SILENTLY DROPS a `#`-prefixed subject line** — it bit twice tonight and reported
-success both times. This repo's commits are `#181: …`; the rebase editor strips `#` lines as comments. **Use
-`--cleanup=whitespace` on every rebase/cherry-pick here.**
+**⚠ A convention "the wrap-up sweep will catch" was not caught, twice.** 38 live PR links had crept back
+into `docs/` since session 55 fixed 29 — route B deletes the repo, so each 404s. Re-neutralized, and the
+rule is now `tests/docs/doc-conventions.test.ts` in CI. **The review then found my own fix produced a
+doubled "PR" in 10 places, and 17 more inherited from the 2 earlier rounds — all three passes made the
+same mistake.** Fixed and pinned.
 
-**▶ NEXT, in order:** (a) the **owner-supervised WP26 go-live** — one flag at a time, RUNBOOK section "WP26
-answer-first + clickable options", NOT during a deploy burst (#173); (b) **`GDPR_PURGE_APPLY=1`** plus one watched
-run (RUNBOOK) — nothing is deleted until then, first rows purgeable ~2026-10-15; (c) **[#176](open-questions.md)**,
-the clearly-next capacity item, now de-risked: the #164 fixture key hashes the **LLM request**, not the source
-file, so touching `resolveCandidate` cannot invalidate a fixture; (d) **~30/7 BBP+PPI syncs** (`85880NED` MUST use
-the chunked escape hatch, RUNBOOK step 5); (e) re-ask **[#132](open-questions.md) route B**; (f) then the owner
-menu: WP30c choice / [#162](open-questions.md) / [#170](open-questions.md) rest (3)+(4).
+**✅ ~30/7 BBP+PPI SYNCS: RUN AND LIVE (2026-08-07, session-60 continuation).** *(The 26/7 measurement said
+"nothing due" — true that day, stale eight days later. CBS published both on 30/7.)* Both are `active`,
+verified LLM-free through the real query path, and `/llms.txt` shows **synced 2026-08-07**:
+**Q2 2026 BBP** volume j-o-j **+1.3** / k-o-k **+0.4**; **PPI juni 2026** totaal **5.3** / invoer **7.9**.
+⚠ **Two frozen reference values in [11-coverage-table-set.md](11-coverage-table-set.md) MOVED** — CBS revised
+provisional cells (PPI invoer 2026MM05 9.3 → 8.4; BBP 2026KW01 k-o-k +0.2 → +0.3). The other four re-verified
+exactly. Nothing is broken: hermetic tests replay the 17/7 fixture and still pass; live data moved on.
+⚠ **`85880NED` did NOT need the chunked escape hatch** — the direct stream finished in **77 s**, so the
+~6KB/s slow stream was network-specific after all. ⚠ **NEW [#192](open-questions.md): the escape hatch cannot
+complete a release sync** (`sync-from-capture.ts` passes no options, so it can never accept a new period code).
+
+**[#132](open-questions.md) route B re-asked, on the record:** `forks_count` = **0** (stars 0, watchers 0),
+so the T-0 go/no-go **holds** and the two-phase reversible drill still awaits your explicit in-chat GO.
+
+**▶ NEXT, in order:** (a) **review + merge PR #77**; (b) the **owner-supervised WP26 go-live** — one flag at
+a time, RUNBOOK section "WP26 answer-first + clickable options", **[#191](open-questions.md) first**, NOT
+during a deploy burst (#173); (c) **`GDPR_PURGE_APPLY=1`** plus one watched run (RUNBOOK) — nothing is
+deleted until then, first rows purgeable ~2026-10-15; (d) **#132 route B** GO or defer; (e) **[#192](open-questions.md)**
+— small ingestion fix, thread the flags through `sync-from-capture.ts`; (f) **[#193](open-questions.md)** —
+a product/copy call on what `Definitief` should imply, now that 1,103 final figures were measurably revised;
+(g) then the owner menu: WP30c choice / [#162](open-questions.md) / [#170](open-questions.md) rest (3)+(4).
+
+**⚠ ALSO WAITING, arrived during the 12-day gap: three Dependabot PRs — #80, #81, #82** (undici 7.29.0; the
+`npm-all` group ×4; the `npm-web-all` group ×14). Untouched this session: dependency bumps need their own CI
+pass and a look at any major, and the s49 precedent is that a bump CAN go red only at `next build`
+(the TS ^5 pin). Not urgent, not forgotten.
 
 **Tracked, deliberately NOT built:** [#174](open-questions.md) and [#185](open-questions.md) (both explicitly held
 — the obvious fix is worse than the bug, and a reasoned decline respectively), [#183](open-questions.md) (product
 call), [#188](open-questions.md) (concurrency on a live money path — supervised), [#190(a)](open-questions.md)
 (whether an infrastructure-caused refusal should cost a trial question — a conversion judgement, yours).
+
+**Measured this session (frozen tree `a25f3e8`):** backend **1562 / 103 files**, web **453 / 42**, benchmark
+**14/14 + 6/6 + 0 fabricated GATE PASS**, real `next build`. Production **200/200/200**, unchanged — nothing
+deployed. **⚠ `git rebase --continue` still SILENTLY DROPS a `#`-prefixed subject line** (session 59): use
+`--cleanup=whitespace` on every rebase/cherry-pick here.
 
 Full session record in [status-archive.md](status-archive.md).
 
@@ -70,10 +101,10 @@ production canary between each — the #173 discipline. **Both WP26 flags are st
 
 | # | PR | Squash | What | CI + canary |
 |---|---|---|---|---|
-| 1 | [#64](https://github.com/Stefan7168/checkdecijfers/pull/64) | `58c814b` | Server Action arguments were type-checked only by `.length`, so a content-block array (`.length === 1`) drove a ~1 MB prompt at a flat credit price — on the PAID path too, not just the trial. | gate+deploy ✅, 200/200 |
-| 2 | [#67](https://github.com/Stefan7168/checkdecijfers/pull/67) | `b05a1d3` | 58b's trial hardening: a non-UUID requestId reached the LLM and was rejected only by the R8 insert (served with `auditId: null`); the landing asserting an unverified "pot is leeg"; `x-forwarded-for`/HMAC-secret defaults; the purge's bare `catch`; the cap clamp. **Plus [#177](open-questions.md)** (the rescue parse now records `'intent'`, not `'clarify'`). Rebased onto #64 — guard order `typeof question → length → trialConfigured → requestId shape`. | gate+deploy ✅ (run 30160467319), 200/200 |
-| 3 | [#65](https://github.com/Stefan7168/checkdecijfers/pull/65) | `ed5f240` | The conformance bundle: the double-default test, single-sourced `NL01`, the envelope-key manifest, the query-count pin. Disjoint — floated. | gate+deploy ✅, 200/200 |
-| 4 | [#66](https://github.com/Stefan7168/checkdecijfers/pull/66) | `b4da3b2` | This docs close-out. Conflicted with #67 in `open-questions.md`, `lessons-learned.md` and the RUNBOOK — resolved by **taking both sides** (rows #179-#186 from 58b, #187-#190 from 58; both session sections kept). | — |
+| 1 | PR #64 | `58c814b` | Server Action arguments were type-checked only by `.length`, so a content-block array (`.length === 1`) drove a ~1 MB prompt at a flat credit price — on the PAID path too, not just the trial. | gate+deploy ✅, 200/200 |
+| 2 | PR #67 | `b05a1d3` | 58b's trial hardening: a non-UUID requestId reached the LLM and was rejected only by the R8 insert (served with `auditId: null`); the landing asserting an unverified "pot is leeg"; `x-forwarded-for`/HMAC-secret defaults; the purge's bare `catch`; the cap clamp. **Plus [#177](open-questions.md)** (the rescue parse now records `'intent'`, not `'clarify'`). Rebased onto #64 — guard order `typeof question → length → trialConfigured → requestId shape`. | gate+deploy ✅ (run 30160467319), 200/200 |
+| 3 | PR #65 | `ed5f240` | The conformance bundle: the double-default test, single-sourced `NL01`, the envelope-key manifest, the query-count pin. Disjoint — floated. | gate+deploy ✅, 200/200 |
+| 4 | PR #66 | `b4da3b2` | This docs close-out. Conflicted with #67 in `open-questions.md`, `lessons-learned.md` and the RUNBOOK — resolved by **taking both sides** (rows #179-#186 from 58b, #187-#190 from 58; both session sections kept). | — |
 
 **Measured on `main` AFTER all four merges, arithmetic checked:** backend **1536 / 101 files**
 (1509 + 3 from #67 + 24 from #65) and web **397** (385 + 6 from #64 + 6 from #67); benchmark **14/14 + 6/6 +
@@ -101,11 +132,11 @@ every commit, production 200 on `/`, `/llms.txt`, `/login` after each deploy.
 
 | # | PR | Squash | What | Left for you |
 |---|---|---|---|---|
-| [#189](open-questions.md) | [#68](https://github.com/Stefan7168/checkdecijfers/pull/68) | `fbffe48` | The GDPR purge is **scheduled monthly** at last — nothing ran it before, and the first trial rows become purgeable **~2026-10-15**. Ships **DORMANT**: reports only. A review caught a blocker first — the route was missing from the proxy allowlist, which would have made the cron read as scheduled AND healthy while never running once. | **`GDPR_PURGE_APPLY=1`** + one watched run (RUNBOOK). Unsetting it is a full rollback. |
-| [#182](open-questions.md) + [#187](open-questions.md) | [#69](https://github.com/Stefan7168/checkdecijfers/pull/69) | `33a051d` | The per-IP backstop bounded **nothing** over IPv6 (a /64 gives one visitor 2^64 buckets); now keyed on the /64. #187 answered from Vercel's docs — `x-forwarded-for` is **not** forgeable on Hobby — and the code now reads the proxy-safe `x-vercel-forwarded-for` first, which matters the day Cloudflare fronts the apex. | — |
-| [#180](open-questions.md) | [#70](https://github.com/Stefan7168/checkdecijfers/pull/70) | `e88cfea` | The trial pot now **warns at 5 and reports empty**. It had no watcher: an outsider drains a 25-question pot for well under a euro and you'd find out by looking at the homepage. | — |
+| [#189](open-questions.md) | PR #68 | `fbffe48` | The GDPR purge is **scheduled monthly** at last — nothing ran it before, and the first trial rows become purgeable **~2026-10-15**. Ships **DORMANT**: reports only. A review caught a blocker first — the route was missing from the proxy allowlist, which would have made the cron read as scheduled AND healthy while never running once. | **`GDPR_PURGE_APPLY=1`** + one watched run (RUNBOOK). Unsetting it is a full rollback. |
+| [#182](open-questions.md) + [#187](open-questions.md) | PR #69 | `33a051d` | The per-IP backstop bounded **nothing** over IPv6 (a /64 gives one visitor 2^64 buckets); now keyed on the /64. #187 answered from Vercel's docs — `x-forwarded-for` is **not** forgeable on Hobby — and the code now reads the proxy-safe `x-vercel-forwarded-for` first, which matters the day Cloudflare fronts the apex. | — |
+| [#180](open-questions.md) | PR #70 | `e88cfea` | The trial pot now **warns at 5 and reports empty**. It had no watcher: an outsider drains a 25-question pot for well under a euro and you'd find out by looking at the homepage. | — |
 
-**✅ THEN A MAX-EFFORT REVIEW OF THAT WORK — PR [#71](https://github.com/Stefan7168/checkdecijfers/pull/71), `d4ade6d`.**
+**✅ THEN A MAX-EFFORT REVIEW OF THAT WORK — PR #71, `d4ade6d`.**
 Ten finder angles over the three merged PRs returned 15 findings; **four were defects introduced hours earlier the
 same night**, the sharpest being a `??` that reintroduced an empty-header bug three lines above the comment
 explaining why it had to be `||`. **14 fixed, 1 skipped with reasoning.** Three findings turned out to be three
@@ -143,10 +174,10 @@ anonymous-trial surface (the only anonymous money-adjacent surface, and un-hunte
 
 | PR | What | CI |
 |---|---|---|
-| [#60](https://github.com/Stefan7168/checkdecijfers/pull/60) | #173(c): pg pool `max` 4 → 2 per process. 3 busy processes fitted under the 15-session ceiling; now 7 do. | green |
-| [#61](https://github.com/Stefan7168/checkdecijfers/pull/61) | Fixture DB ingested once per run, not once per suite. Measured per suite: **build 7.9-10.7s → restore 1.2-1.4s**. Suite level, MEASURED properly 25/7 in a 4-leg alternating A/B: **70-145 s saved, not the 240 s first quoted** (ADR 009). | green |
-| [#62](https://github.com/Stefan7168/checkdecijfers/pull/62) | WP26 trust-boundary hardening + the corrected RUNBOOK rollback order. | green |
-| [#63](https://github.com/Stefan7168/checkdecijfers/pull/63) | Doc-consistency sweep, the Fable architecture memo, and this close-out. | green |
+| PR #60 | #173(c): pg pool `max` 4 → 2 per process. 3 busy processes fitted under the 15-session ceiling; now 7 do. | green |
+| PR #61 | Fixture DB ingested once per run, not once per suite. Measured per suite: **build 7.9-10.7s → restore 1.2-1.4s**. Suite level, MEASURED properly 25/7 in a 4-leg alternating A/B: **70-145 s saved, not the 240 s first quoted** (ADR 009). | green |
+| PR #62 | WP26 trust-boundary hardening + the corrected RUNBOOK rollback order. | green |
+| PR #63 | Doc-consistency sweep, the Fable architecture memo, and this close-out. | green |
 
 **⚠ TWO THINGS TO KNOW BEFORE THE WP26 GO-LIVE — both found tonight, both change what you should do:**
 1. **The RUNBOOK's rollback order was WRONG.** Correct order: turn `CLARIFY_CLICK_ENABLED` **off first**, leave

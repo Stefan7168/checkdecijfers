@@ -31,6 +31,9 @@ import {
 } from '../../src/answer/respond/index.ts';
 import type { ClickOption, PendingClarification } from '../../src/answer/respond/index.ts';
 import { MAX_CLICK_OPTIONS } from '../../src/answer/intent/types.ts';
+import { parseFollowUpQuestion } from '../../src/answer/intent/followup.ts';
+import { CONTEXT_VERSION } from '../../src/answer/context/types.ts';
+import type { ConversationContext } from '../../src/answer/context/types.ts';
 import type { LlmClient, LlmResponse } from '../../src/answer/llm/client.ts';
 import type { RawParse } from '../../src/answer/intent/types.ts';
 import type { StructuredIntent } from '../../src/query/index.ts';
@@ -237,6 +240,59 @@ describe('flag on: every offered option is a proven, resolved reading', () => {
         derivation: 'none',
         confidence: 0.95,
         reading: 'bevolking van Amsterdam en Utrecht in 2024',
+      }),
+      true,
+    );
+    expect(response.options).toContain('Utrecht (gemeente)');
+    expect(response.pending.clickOptions ?? []).toEqual([]);
+    expect(Object.hasOwn(response, 'suggestions')).toBe(false);
+  });
+
+  it('a FOLLOW-UP region ambiguity offers chips too — the second call site', async () => {
+    // #176 threaded clickOptionsEnabled into resolveCandidate from BOTH
+    // parse.ts and followup.ts. Only parse.ts was covered here, and the way
+    // this fails is silent: forget the follow-up call site and the resolver
+    // never builds the intents, so policy.ts finds nothing to offer and the
+    // clarification renders perfectly — minus its chips. Nothing throws.
+    const context: ConversationContext = {
+      version: CONTEXT_VERSION,
+      topicKey: 'population_on_1_january',
+      regions: [{ name: 'Amsterdam', kind: 'gemeente' }],
+      period: { kind: 'year', year: 2024 },
+      derivation: 'none',
+    };
+    const outcome = await parseFollowUpQuestion(
+      db,
+      context,
+      'En Utrecht?',
+      {
+        client: new CannedClient(AMBIGUOUS_UTRECHT),
+        referenceDate: REFERENCE_DATE,
+        clickOptionsEnabled: true,
+      },
+    );
+    if (outcome.kind !== 'clarification') {
+      throw new Error(`expected a clarification, got ${outcome.kind}`);
+    }
+    const regions = (outcome.clickOptions ?? []).map((o) => o.intent.regions?.[0]);
+    expect(regions).toContain('GM0344');
+    expect(regions).toContain('PV26');
+  });
+
+  it("a 'max' derivation on an ambiguous region still yields no chips", async () => {
+    // A GUARD, not a proof — it passes with the #176 gate removed too, because
+    // regionOptionIntents early-outs on 'max' on its own (resolve.ts:932): a
+    // comparison needs several regions, so one-code-per-option intents would
+    // answer a question nobody asked. Kept because the #176 gate now sits
+    // directly above that early-out and a future edit could swallow it.
+    const response = await clarify(
+      rawDataQuery({
+        canonicalKey: 'population_on_1_january',
+        regions: [{ name: 'Utrecht', kind: 'onbekend' }],
+        period: { kind: 'year', year: 2024 },
+        derivation: 'max',
+        confidence: 0.95,
+        reading: 'gemeente met de meeste inwoners in 2024',
       }),
       true,
     );
