@@ -8,6 +8,14 @@ on top.
 
 ## Session 61 — 2026-08-07 (autonomous; PR 77 merged, PR #85 opened)
 
+- **The final self-audit earned its place: it caught the session repeating the exact mistake the session
+  had fixed that morning.** Session 61 opened by removing "Three commits" from STATUS because a commit count
+  in a doc is stale on the next commit — and then wrote "five commits" for PR #85 into the session-62 kickoff
+  and "Four commits" into STATUS, both wrong (it was seven) by the time the wrap-up commits landed. Nothing
+  caught it until step 8's `gh pr view 85 --json commits`. **A rule you just wrote does not protect you from
+  breaking it four hours later; only re-deriving every number against its source does.** Both now name the
+  CONCERNS and point at git.
+
 - **A missing summary line is not a pass.** The branch's backend suite was read as green from a log that
   simply had no `Test Files` line in it. It had been **OOM-killed — exit 137** — because 103 PGlite-backed
   test files were running alongside 11 concurrent review agents on an 8 GB machine. Two separate runs were

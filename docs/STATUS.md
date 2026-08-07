@@ -24,7 +24,9 @@ else is on a branch.**
 stranded on a branch while its sync DATA was already live, so `main` and production disagreed. They agree now.
 
 **▶ FIRST THING: PR #85 IS OPEN AND AWAITS YOUR REVIEW** (branch `fix/191-reply-turn-answer-first`).
-Four commits, four independent concerns:
+Four independent concerns (plus the review fixes and this close-out). ⚠ Deliberately no commit count — this
+block dropped one for PR 77 this session precisely because it goes stale on the next commit; ask
+`gh pr view 85 --json commits --jq '.commits | length'`:
 
 | What | Why it matters |
 |---|---|

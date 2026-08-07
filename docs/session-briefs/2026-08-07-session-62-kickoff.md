@@ -17,8 +17,11 @@ The Golden Rule applies to reading a handover too. Re-derive anything you act on
 `curl -s -o /dev/null -w '%{http_code}' https://checkdecijfers.vercel.app/llms.txt`.
 
 - **PR 77 is MERGED and DEPLOYED** — squash `1a16eed`, CI run 31159544689 `gate` ✅ + `deploy` ✅, canary 200.
-- **PR #85 is OPEN on the owner's review** — branch `fix/191-reply-turn-answer-first`, five commits
-  (#191, #192, #132, #193, plus the wrap-up docs). **Nothing from it is merged or deployed.**
+- **PR #85 is OPEN on the owner's review** — branch `fix/191-reply-turn-answer-first`. Four concerns:
+  **#191**, **#192**, **#132**, **#193**, plus the review fixes and the wrap-up docs. **Nothing from it is
+  merged or deployed.** ⚠ No commit count here on purpose: session 61 removed one from STATUS for going
+  stale on the next commit, then wrote a wrong one into this very file and caught it in the final
+  self-audit. Ask git: `gh pr view 85 --json commits --jq '.commits | length'`.
 - **Counts at the close, measured on a frozen tree with the block run SOLO:** backend **1572 / 105 files**,
   web **453 / 42**, benchmark **14/14 + 6/6 + 0 fabricated GATE PASS**, real `next build` compiled, both
   typechecks clean.
