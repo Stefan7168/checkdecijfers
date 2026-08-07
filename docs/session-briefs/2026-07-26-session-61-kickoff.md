@@ -139,10 +139,11 @@ question — a conversion judgement that changes what someone is charged).
 > ⚠ Let op: sessie 60 liep over TWAALF DAGEN (26/7 geschreven, 7/8 hervat). Draai `date` als eerste — een
 > conclusie uit die sessie ("er valt niets te syncen") was door het tijdsverloop juist omgedraaid.
 >
-> Stand: sessie 60 draaide autonoom en heeft NIETS gemerged of gedeployd — PR 77 staat open op mijn review
-> (drie commits: #176, de #132-doc-pin, en een CI-fix). Backend 1562/103, web 453/42, benchmark
-> 14/14 + 6/6 + 0, productie 200/200/200 onveranderd. Verifieer dat zelf even — niet uit deze tekst
-> overnemen, en check zelf of de CI-run van `06f6209` groen is.
+> Stand: sessie 60 draaide autonoom en heeft NIETS gemerged en GEEN CODE gedeployd — PR 77 staat open op
+> mijn review, **9 commits** (#176, de #132-doc-pin, een CI-fix, en de close-outs). Backend 1562/103, web
+> 453/42, benchmark 14/14 + 6/6 + 0, productie 200/200/200. Wél live: de twee CBS-syncs (dat is data, geen
+> deploy). Verifieer dit alles zelf — niet uit deze tekst overnemen; CI is groen op HEAD `79fff74`, en
+> `a25f3e8` was rood-en-daarna-gefixt door `06f6209`.
 >
 > ⚠ TWEE DINGEN BLIJVEN VAN MIJ: de WP26-vlaggen UIT, en GDPR_PURGE_APPLY UIT tot ik hem zelf zet.
 >
