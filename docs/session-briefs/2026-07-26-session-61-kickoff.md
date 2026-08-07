@@ -55,10 +55,15 @@ The Golden Rule applies to *reading* a handover too. Re-derive anything you are 
 6. Then the owner menu: WP30c choice, [#162](../open-questions.md), [#170](../open-questions.md) rest
    (3)+(4).
 
-**~30/7 BBP+PPI syncs — measured 2026-07-26, nothing was due.** `85880NED` `Modified` 2026-07-01,
-`85770NED` 2026-06-30; our 17/7 sync is ahead of both. The ~30/7 date is CBS's *expected next publication*,
-not a deadline that passed. Re-measure before assuming — `curl -s https://datasets.cbs.nl/odata/v1/CBS/<id>/Properties`
-returns `Modified` directly. `85880NED` still MUST use the chunked escape hatch (RUNBOOK step 5).
+**✅ ~30/7 BBP+PPI syncs — DONE 2026-08-07, nothing left to do here.** ⚠ *This section first said "measured
+2026-07-26, nothing was due" — true that day, and stale twelve days later when the session resumed. CBS
+published both on 30/7.* Both are synced, `active`, verified LLM-free, and live: **BBP 2026KW02** j-o-j
+**+1.3** / k-o-k **+0.4**; **PPI juni 2026** totaal **5.3** / invoer **7.9**. Two frozen reference values in
+[`11-coverage-table-set.md`](../11-coverage-table-set.md) were revised by CBS and are corrected there.
+**`85880NED` did NOT need the chunked escape hatch** — the direct stream did 100,240 rows in 77 s. And per
+**[#192](../open-questions.md)** the hatch could not have done it anyway: `sync-from-capture.ts` passes no
+options, so it can never accept the new period code every release brings. Re-measure before assuming
+anything here: `curl -s https://datasets.cbs.nl/odata/v1/CBS/<id>/Properties` returns `Modified` directly.
 
 **Explicitly NOT to do:** [#174](../open-questions.md) (the obvious fix is worse than the bug — it needs a
 decision about what the bit MEANS), [#185](../open-questions.md) (declined with reasoning),
@@ -121,6 +126,9 @@ question — a conversion judgement that changes what someone is charged).
 > Sessie 61 voor checkdecijfers.nl. Lees eerst CLAUDE.md, dan docs/STATUS.md (het ▶-blok bovenaan is
 > leidend), dan docs/session-briefs/2026-07-26-session-61-kickoff.md — dat is je opdracht.
 >
+> ⚠ Let op: sessie 60 liep over TWAALF DAGEN (26/7 geschreven, 7/8 hervat). Draai `date` als eerste — een
+> conclusie uit die sessie ("er valt niets te syncen") was door het tijdsverloop juist omgedraaid.
+>
 > Stand: sessie 60 draaide autonoom en heeft NIETS gemerged of gedeployd — PR 77 staat open op mijn review
 > (drie commits: #176, de #132-doc-pin, en een CI-fix). Backend 1562/103, web 453/42, benchmark
 > 14/14 + 6/6 + 0, productie 200/200/200 onveranderd. Verifieer dat zelf even — niet uit deze tekst
@@ -131,7 +139,8 @@ question — a conversion judgement that changes what someone is charged).
 > Volgorde: (1) PR 77; (2) #191 — NIEUW, en het blokkeert de ANSWER_FIRST-flip: de reply-beurt krijgt die
 > vlag nooit terwijl z'n eigen type hem declareert, en de vraag is niet "doorgeven" maar of een reply-beurt
 > hoort te defaulten zoals de eerste beurt; (3) de WP26-livegang, #191 eerst; (4) GDPR_PURGE_APPLY;
-> (5) #132 route B. De ~30/7-syncs zijn gemeten: er viel niets te syncen, meet zelf opnieuw.
+> (5) #132 route B; (6) #192 — de escape hatch kan een release-sync niet afmaken (kleine ingestion-fix).
+> De ~30/7-syncs zijn op 7/8 GEDRAAID en live — daar hoef je niets meer aan te doen.
 > Houd #174, #185, #183, #188 en #190(a) expliciet aan.
 >
 > Harde grenzen: ben ik er niet bij, dan branch + PR + mijn review vóór de merge (#118(b)) — vraag het of
