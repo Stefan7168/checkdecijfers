@@ -490,7 +490,7 @@ so a problem with one mechanism never forces the other off.
 It was recorded as "the reply turn never receives the flag", but measurement showed something worse: the
 reply turn ran **half** of mechanism B, a state nobody chose. B has two axes in two different layers —
 **B-region** lives in the QUERY layer (`src/query/resolve.ts:393`) and already reached reply turns through
-the `{ ...options }` spread into `respondToIntent` (`respond.ts:630`), while **B-period** lives in the
+the `{ ...options }` spread into `respondToIntent` (`respond.ts:652`), while **B-period** lives in the
 INTENT layer (`src/answer/intent/resolve.ts:731`) and is fed by the `ClarifyReplyOptions` bag that
 `respondToClarificationReply` built without the flag. So with the flag on, a reply turn silently defaulted
 the REGION the user never mentioned and then REFUSED over the PERIOD it was allowed to default.

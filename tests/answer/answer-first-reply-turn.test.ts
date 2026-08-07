@@ -143,6 +143,15 @@ describe('#191 flag ON: the reply turn defaults the period like the first turn',
     // 'refusal' with reason 'still_ambiguous' — the user answered the exact
     // question we asked and was refused on an axis nobody asked about.
     expect(response.kind).not.toBe('refusal');
+    if (response.kind !== 'answer') return;
+
+    // R7 third branch condition (c): a filled-in axis MUST be disclosed by
+    // deterministic code. That condition is what makes defaulting legitimate
+    // at all, so it is pinned HERE on the reply turn rather than inherited by
+    // argument from the first turn's pins — "the code path is shared" is a
+    // reason to expect it, not evidence that it happened.
+    expect(response.answer.assumptionLine).toBeTruthy();
+    expect(response.answer.text).toContain(response.answer.assumptionLine!);
   });
 });
 
@@ -167,6 +176,21 @@ describe('#191 the property that must hold: first turn and reply turn AGREE', ()
         'de gemeente',
         replyOptions(raw, answerFirstEnabled) as never,
       );
+
+      // Guard against a VACUOUS pass. Agreement is trivially satisfied if both
+      // turns die the same way for an unrelated reason — and this file already
+      // hit exactly that: a bare-string `regions` array fails the raw-parse
+      // schema and yields an 'internal' refusal on BOTH sides, which would
+      // have "agreed" perfectly while testing nothing. So assert first that
+      // neither turn took the error exit.
+      for (const [label, turn] of [
+        ['first', firstTurn],
+        ['reply', replyTurn],
+      ] as const) {
+        if (turn.kind === 'refusal') {
+          expect(turn.reason, `${label} turn took the internal-error exit`).not.toBe('internal');
+        }
+      }
 
       const servable = (kind: string) => kind !== 'refusal' && kind !== 'clarification';
       expect(servable(replyTurn.kind)).toBe(servable(firstTurn.kind));

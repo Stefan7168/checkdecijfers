@@ -143,11 +143,20 @@ describe('#132 interim rule (i): PR references in docs are plain text, never liv
     // silently stops covering the repo the moment someone adds a top-level
     // doc. Walk the real tree and demand the list already knows about it, so a
     // new CONTRIBUTING.md cannot quietly become the one file nobody checks.
+    // Only vendor/build artifacts and docs/ (covered by its own test above).
+    // Deliberately NOT source directories: excluding tests/ or benchmark/
+    // because they happen to hold no markdown today would re-create the exact
+    // blind spot this test closes, the moment someone adds a README there.
     const IGNORED = new Set(['node_modules', '.git', 'docs', 'dist', '.next', 'coverage']);
     const found: string[] = [];
 
+    // Depth 4, not 2: the deepest markdown outside docs/ today is at depth 2
+    // (.claude/commands/wrap-session.md), and a cap that only just clears the
+    // current tree stops covering the repo the moment anyone nests one level
+    // deeper — which is the exact failure mode this test exists to prevent.
+    // The IGNORED set, not the cap, is what keeps this cheap.
     const walk = (dir: string, depth: number): void => {
-      if (depth > 2) return;
+      if (depth > 4) return;
       for (const entry of readdirSync(dir, { withFileTypes: true })) {
         if (IGNORED.has(entry.name)) continue;
         const absolute = join(dir, entry.name);
