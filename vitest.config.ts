@@ -46,6 +46,21 @@ export default defineConfig({
     // web/ is a standalone Next.js workspace (ADR 018) with its own vitest
     // config, jsdom environment, and `npm run web:test` script — its
     // *.test.tsx files must not be swept into this root, Node-environment run.
+    //
+    // .claude/worktrees/** (2026-08-26): git worktree isolation (this
+    // project's own agent-parallelism pattern, `.claude/worktrees/<id>/`) puts
+    // a FULL nested clone — its own web/, its own tests/, its own copy of
+    // every file — inside the repo root. 'web/**' above only matches the
+    // top-level web/ directory, not a web/ nested three levels down, so a root
+    // `npm test` while a worktree exists swept in every test file from every
+    // worktree too: each ran 2-3x over, cross-copy jsdom-global collisions
+    // ("Element is not defined" / "document is not defined") from running the
+    // SAME logical suite from multiple paths in one process, and a missing
+    // node_modules in the worktree copy (worktrees don't get their own
+    // install) crashed suites outright. 238 spurious failures from one run.
+    // Excluded wholesale — .claude/ is Claude Code's own tooling directory,
+    // never a place project test files legitimately live, the same category
+    // as node_modules/.git/dist above.
     exclude: [
       '**/node_modules/**',
       '**/dist/**',
@@ -53,6 +68,7 @@ export default defineConfig({
       '**/.{idea,git,cache,output,temp}/**',
       '**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build}.config.*',
       'web/**',
+      '.claude/**',
     ],
   },
 });
