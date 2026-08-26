@@ -209,3 +209,26 @@ flag affects "First turns", which was measurably wrong, since B-region always re
 **RUNBOOK correction in the same PR:** the documented rollback order was wrong. Rolling `ANSWER_FIRST_ENABLED`
 back while `CLARIFY_CLICK_ENABLED` is on strands region-less chips as guaranteed refusals, and "both
 together" is not a safe shortcut. The correct order is **A off, wait, then B**.
+
+**As-built, 2026-08-26 (session 63) — [#178](../open-questions.md) is now partly FIXED: mechanism A's
+click-take path could silently serve a stale figure for a "nu"/"vorige maand"-style option.**
+`ClickOption.impliedRecency` is carried from offer time and never re-derived — its own doc comment already
+says as much — but that field only ever fed the docs/05 staleness rule (`checkStaleness`, TABLE sync age).
+Nothing re-checked whether the option's own STORED period was still the freshest available: a chip minted
+weeks earlier for "nu" replayed its baked-in period codes verbatim even after newer data had synced in,
+with no staleness marker — the take-path equivalent of the #191 gap this ADR already amended once, a
+narrow conformance hole rather than a new decision. Fixed by `clickOptionStillCurrent`
+(`src/answer/respond/respond.ts`), which re-derives the current freshest period (at the option's own grain
+and region — a first pass caught both `freshestForCanonical` comparing across grains and defaulting to the
+national region regardless of the option's own) before the deterministic rung is allowed to fire; a stale
+click now falls through to the normal LLM merge instead, exactly like a non-matching reply. Two residuals
+confirmed real and deliberately not solved in the same change (documented in
+[open-questions #178](../open-questions.md), not silently dropped): a `relative`-derived option
+("3 maanden geleden") is *also* `impliedRecency: true` for an unrelated reason (the table might not have
+published that calendar point yet, not "wants the latest"), so it will always miss the fast path too — safe
+(same fallback as any reply) but a needless cost regression for that one `PeriodSpec` shape, unfixable
+without `ClickOption` also recording which spec produced a resolution; and the pending's general lack of a
+TTL (the other two findings in the same #178 row — silent staleness beyond this specific case, and GDPR-text
+resurrection on a stale reply tab) stays exactly as open as it already was — the age-bound this ADR's own
+take-path design never included is still the owner's call on priority, not something this fix expanded or
+narrowed.

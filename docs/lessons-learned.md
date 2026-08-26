@@ -6,6 +6,66 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 63 — same-day continuation, 2026-08-26/27 (autonomous, owner explicitly not present, "work for hours")
+
+- **An exit code of 0 is not proof the test suite actually passed — even without the OOM kill the
+  existing lesson below already warns about.** A full `npm test` run took 3050s (~51 min) instead of the
+  usual ~400-430s (~7 min) — a ~7x slowdown — and finished with exit code 0 while its own summary read
+  "7 failed | 98 passed (105)" and "3 failed | 1520 passed | 50 skipped (1573)". The machine was under
+  heavy ambient load from unrelated processes (multiple MCP server instances, an unrelated project's dev
+  server, Adobe Creative Cloud) stacked on top of this session's own work — not an OOM kill (that would
+  be exit 137), just severe resource contention producing spurious failures and skips while the process
+  itself still exited cleanly. **Confirmed as noise, not a regression, by re-running the one flagged test
+  file in isolation** (passed cleanly, 24/24) and then **re-running the full suite once more** (clean,
+  105/1573, matching the expected baseline exactly) once the earlier heavy work had finished. The
+  existing "exit 137 = OOM kill" lesson doesn't cover this shape — a "successful" exit code with a wrong
+  summary is a second, distinct failure mode this machine produces under load, and both require reading
+  the actual `Test Files N passed (N)` line, never the exit code alone.
+- **A review that finds real gaps beyond the original fix is not a reason to rush a bigger fix into the
+  same PR.** `/code-review` at high effort on a one-line advisory-lock fix (#34(c)) surfaced two real,
+  deeper correctness gaps (a pre-existing TOCTOU on pre-lock validation reads; a silent-clobber risk from
+  an unguarded version-bump) beyond what the lock alone closes. Both were real and both would have taken
+  meaningfully more design care to fix correctly (the TOCTOU needs restructuring the validate-then-
+  transact pipeline; the clobber fix needs deciding what "modified concurrently" should do to an
+  in-flight batch row). Documenting them clearly (in the PR, in open-questions, with a recommended fix
+  shape) and shipping the narrower, well-tested fix on its own was the right call — matches the
+  established #174 precedent ("the obvious fix is worse than the bug") with fresh evidence: two review
+  findings from the SAME pass (lock scope too wide; no timeout bound) WERE small enough to fix inline in
+  the same session, and got fixed; the two deeper ones didn't, and got documented instead. The
+  distinguishing question that worked in practice: "can I verify this specific fix is correct with the
+  same rigor as everything else in this PR, in the time I actually have," not "is this finding real."
+- **A cited testing precedent is worth re-verifying yourself, not just trusting because it's a
+  precedent.** `tests/billing/ledger.test.ts`'s own comment already documented that PGlite's
+  single-connection mutex means its concurrent-debit test "would pass even without `pg_advisory_xact_lock`".
+  Before leaning on that same reasoning for a new test, verified it directly against
+  `tests/helpers/pglite-db.ts`'s actual code (confirmed: every query, transactional or not, funnels
+  through one promise-chain mutex) rather than assuming the precedent's comment was still accurate. It
+  was — but the point is this took one extra `Read` and closed a real gap: an outdated or wrong precedent
+  comment would otherwise have propagated into new code with the same false confidence.
+- **Simulating a multi-PR merge sequence in a disposable clone is cheap and catches real problems a
+  session can't see from a diff alone.** Four PRs (one already open from a prior session, three new)
+  each independently branched from the same base and touched overlapping files in places (two different
+  PRs both edited `respond.ts`; two different PRs both edited the same `open-questions.md` table). Rather
+  than asserting "should merge cleanly" from reading the diffs, cloned the repo to `/tmp`, merged all four
+  branches in the recommended order, and confirmed zero conflicts plus a clean typecheck and full test
+  run on the *combined* result (47 files / 957 tests) — genuine end-to-end evidence instead of an
+  educated guess, for about 5 minutes of wall-clock time (mostly the test run) and zero risk (a disposable
+  clone, deleted after). Worth doing by default whenever recommending a merge order for more than two
+  interdependent same-session PRs.
+- **A background CI outage is worth documenting AND waiting out, not routing around.** GitHub Actions
+  stopped assigning runners to this repo for ~45 minutes mid-session (multiple branches' `gate` jobs sat
+  `queued` indefinitely, no fast billing-block failure like the previously-documented pattern). Nothing a
+  session can safely do about the root cause (no billing access without requesting a wider auth scope,
+  which is an account-level change outside an autonomous session's authority) — the productive response
+  was to document it precisely (exact symptom, timestamps, what was and wasn't tried) in both the
+  session log and `docs/RUNBOOK.md` (whose existing "Actions billing block" entry was itself stale —
+  marked "historical since the repo is public," but the repo went private again at the 2026-08-15 pause,
+  so the entry was quietly active again and nobody had un-stale'd it), keep doing locally-verifiable
+  work in the meantime, and use `Monitor` (a poll-loop-until-resolved background watch) rather than
+  manually re-checking `gh pr checks` every few minutes once the recovery was underway — the earlier
+  session-61 lesson about killing spinner loops applies in reverse here too: a *bounded*, self-terminating
+  poll loop is the right tool for "notify me when this condition becomes true," manual re-polling is not.
+
 ## Session 62 — the resume from pause, 2026-08-26 (autonomous, owner asked for hours of unattended work)
 
 - **`origin/main` had silently stopped receiving pushes 12 commits before the halt — nobody had noticed,

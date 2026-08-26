@@ -1,5 +1,160 @@
 # STATUS archive — the session log
 
+**Session 63 (2026-08-26/27, AUTONOMOUS — same day as session 62; owner explicitly not present, "Ik ben
+niet aanwezig; je zult het zelf moeten regelen, autonoom. Werk uren en uren door"). Four more PRs opened
+and fixed, all CI-green, none merged (#118(b) — no owner in chat). Also investigated, documented, and
+partly resolved a ~45-minute GitHub Actions outage on this repo, and end-to-end-verified the full
+recommended merge order for all four session-63 PRs plus the four from session 62.**
+
+**Started on `fix/191-reply-turn-answer-first`** (per the session-62 kickoff instructions, since PR #85
+was still unmerged and `origin/main`'s tip was still `1a16eed`) — confirmed via `gh pr view 85`
+(`state: OPEN`, `mergedAt: null`) before touching anything, not assumed from the prior session's
+resume-log alone. `gh pr list` showed the same 10 PRs session 62 left open, all still green, no new
+Dependabot PRs.
+
+**PR #93 — refactor: consolidate `ParseQuestionOptions`/`ClarifyReplyOptions`/`FollowUpOptions`.** These
+three interfaces (in `src/answer/intent/{parse,clarify,followup}.ts`) had drifted out of sync twice —
+#176, then #191 — because a WP16/WP26 field added to one and not the others compiled cleanly (nearly
+every field optional), silently dropping a seam on that one call path. New `src/answer/intent/options.ts`
+holds the shared shape (`IntentCallOptions` base + `FreshIntentParseOptions` extension, since a
+clarification reply structurally can't carry `referenceDate`/`clickOptionsEnabled` — see the type's own
+doc comment); the three original names are now `export type X = <shared type>` aliases, so every existing
+call site and re-export keeps working unchanged. `respond.ts` already relied on `ParseQuestionOptions`
+and `FollowUpOptions` being structurally identical (it reuses one object across both `parseQuestion` and
+`parseFollowUpQuestion`) — that reliance is now enforced by construction instead of by coincidence. Pure
+refactor: full local gate green with counts identical to the pre-change baseline (backend 1572/1572 · 105
+files, benchmark 14/14+6/6+0 fabricated GATE PASS, web 453/453 · 42 files). `/code-review` at medium
+effort (8 finder angles via parallel subagents, 1-vote verify): 4 confirmed, all fixed inline (3 dead
+`IntentLlmClient` imports left behind by the interface deletion, a duplicated/circular-referencing
+rationale comment between two files). 2 PLAUSIBLE findings recorded as deliberate follow-ups, not fixed —
+real but broader scope than this refactor: `RespondOptions`/`ComposeOptions`/`SemanticCheckOptions`
+elsewhere in `answer/` still hand-duplicate a smaller version of the same `client`/`model`/`maxTokens`
+seam (on closer look, a 2-3 field overlap, not the 7-9 field WP16/WP26-laden surface the intent module
+had — lower urgency than the finding first suggested); the two `respond.ts` construction sites for the
+shared type remain separate hand-written literals with no shared builder (same drift shape, one level
+further out — flagged by the review's own altitude angle as "not sufficient to fully close the #176/#191
+bug class," a fair characterization of what this refactor did and didn't do).
+
+**PR #95 — fix: re-derive freshness for clicked "nu" clarification chips (open-questions #178).** A WP26
+mechanism-A clickable chip carrying `impliedRecency: true` bakes in whatever was freshest at OFFER time;
+`checkStaleness` only measures TABLE sync age, so it never catches a chip whose OWN period has fallen
+behind newer synced data — clicking it silently served the stale figure as current, no warning. New
+`clickOptionStillCurrent` (`src/answer/respond/respond.ts`) re-derives the current freshest period before
+letting the zero-LLM-call fast path proceed; a stale click now falls through to the normal LLM merge
+instead. `/code-review` at **high** effort (this touches WP26 trust-boundary code, the area with this
+project's own history of extra scrutiny) caught two real gaps in the first pass, both fixed before
+pushing: `freshestForCanonical` had no `period_grain` filter (comparing period codes across grains isn't
+a valid freshness check — its sibling functions in the same file already filter on grain) and it always
+checked the *national* region regardless of the click option's own region(s) — independently caught by
+two separate finder angles. Both fixed by threading an optional `{regionCode?, grain?}` override through
+`freshestForCanonical` (additive — every other of its six call sites keeps its unchanged 2-arg call). One
+gap left deliberately open and documented (at the fix site and in open-questions #178, plus an as-built
+note in ADR 024): a `relative`-derived option ("3 maanden geleden") is *also* `impliedRecency: true` for
+an unrelated reason (the table might not have published that calendar point yet, not "wants the latest"),
+so it will always miss the fast path too — safe (same fallback as any reply, no wrong data) but a
+needless cost/latency regression for that one `PeriodSpec` shape; fixing it needs `ClickOption` to also
+record which spec produced a resolution, a schema change out of scope here. Full TDD: RED confirmed for
+the two original tests, then a manual `git stash`-based RED check specifically for the grain/region
+refinement (since it landed after the first GREEN). Full local gate green, counts = baseline + 8 new
+tests: backend 1578/1578 (105 files), benchmark 14/14+6/6+0 GATE PASS, web 453/453 (42 files).
+`open-questions.md` #178 updated in the same change.
+
+**PR #96 — fix: advisory-lock concurrent table rebaselines (open-questions #34(c)).** Re-verified #34
+against current code: its "single operator, manual CLI" premise no longer held, since the WP16 onboarding
+cron now shares `syncTable` with the manual CLI, with zero coordination. `syncTable`'s rebaseline branch
+does `DELETE FROM dimension_labels` then a per-row `INSERT` with **no `ON CONFLICT`** — the one write in
+the transaction without a real conflict guard (every other write there — the observations upsert,
+`acceptNewCodes`' inserts — already has one). Two concurrent rebaselines of the same table could crash on
+a PK violation or leave a torn label set, not just theoretically. Fixed with
+`pg_advisory_xact_lock(hashtext(tableId))`, serializing concurrent rebaselines of the same table.
+`/code-review` at high effort caught two real refinements, both applied: the lock was initially
+unconditional (top of the whole transaction) — narrowed to just the rebaseline branch, so ordinary
+same-table syncs (already upsert-safe) never wait; added a `lock_timeout` (this pool configures none
+anywhere, and an unbounded wait risked the onboarding cron's Vercel function — 300s ceiling — getting
+killed mid-wait instead of failing cleanly, turning a fast crash into a batch row stuck `'running'`). Two
+DEEPER findings confirmed real, deliberately **not** fixed — need their own scoped session, bigger than a
+locking fix should attempt in one commit: a pre-existing TOCTOU (the five sync validators read via plain
+queries before the transaction/lock opens, so a concurrent rebaseline can invalidate what was already
+validated); the rebaseline's version bump has no optimistic-concurrency guard, so two now-serialized-but-
+still-concurrent rebaselines can silently clobber each other's result with no error. Both documented in
+open-questions #34 with a recommended fix shape. TDD included a real RED verification via `git stash` for
+the grain/region-equivalent refinement here too, plus 6 new direct unit tests for
+`freshestForCanonical`'s region/grain overrides (proving the mechanism, not just the outcome contract) —
+the end-to-end concurrency test itself carries the same disclosed PGlite-single-connection-mutex caveat
+`tests/billing/ledger.test.ts`'s own concurrent-debit tests already do, verified directly against
+`tests/helpers/pglite-db.ts` rather than assumed from the precedent. Full local gate green, counts =
+baseline + 1 test: backend 1573/1573 (105 files), benchmark 14/14+6/6+0 GATE PASS, web 453/453 (42
+files).
+
+**PR #94 — docs: session log + a stale-WP16-header doc-freshness fix.** `08-build-plan.md`'s WP16 section
+still headlined "▶ TOP PRIORITY... EXECUTE-READY BRIEF" though its own body showed sub-parts 1+2 fully
+live in production since session 28 with all session-30/39 follow-ups merged+deployed — corrected. The
+same stale framing was independently found in `06-roadmap.md` during this session's final stale-doc
+sweep and fixed there too.
+
+**All four branch from the current tip of `fix/191-reply-turn-answer-first`** (needed its code context —
+#93 and #95 both touch files #85 also touches) **but target `main` as their PR base deliberately**,
+avoiding the documented squash-merge-closes-stacked-PR trap: stacking a PR on an unmerged feature branch
+risks GitHub auto-closing it if that branch is later deleted on squash-merge. Recommendation: merge #85
+first.
+
+**⚠ Found mid-session: GitHub Actions stopped assigning runners to this repo for ~45 minutes
+(~15:12–16:00 UTC).** `gate` jobs sat `queued` indefinitely across multiple branches simultaneously — no
+fast 0-step billing-annotation failure like the previously-documented pattern (`docs/RUNBOOK.md`, first
+seen 2026-07-08), just an indefinite hang. That RUNBOOK entry was itself stale — marked "historical since
+the repo is public" — but the repo went back to PRIVATE at the 2026-08-15 pause, so the entry was quietly
+active again and nobody had un-stale'd it (fixed in the same session). Root cause unconfirmed (checking
+Actions billing/usage needs the `user` OAuth scope, which this session deliberately did not request — an
+account-level change outside an autonomous session's authority); the most likely explanation remains this
+private repo's monthly included Actions minutes, given the volume of CI-heavy pushes across sessions 62
+and 63 the same day, but a real monthly exhaustion would not have self-cleared without a plan change, so
+this may instead have been a transient platform-side capacity issue. **CI recovered on its own ~16:00
+UTC** for new pushes, but the run instances that were already `queued` when the block started never
+recovered (`gh run rerun <id>` refused them — "workflow is already running" — and closing+reopening a PR
+doesn't help either, since checks are keyed to the head commit SHA). Fixed by pushing a fresh commit to
+each stuck branch (an empty commit where no code change was needed) — reliably triggers a new check run.
+Both the outage and the fix are now recorded in `docs/RUNBOOK.md` for next time.
+
+**✅ All eight open PRs (four from today, four from session 62) reconfirmed CI-green before this entry was
+written** — not assumed from earlier in the session: `gh pr checks` re-run fresh on each, 8/8 `gate` runs
+`pass` on the four session-63 PRs specifically (2 runs each, since every push here triggered both a push-
+and a pull_request-triggered run), every `deploy` job correctly `skipping`. Watched the remaining runs to
+completion via the `Monitor` tool (a self-terminating poll loop) rather than manually re-checking
+`gh pr checks` every few minutes — the session-61 lesson about not leaving spinner loops running applies
+in reverse here: a *bounded*, exit-on-condition poll loop is the right tool for "notify me when this
+resolves," manual re-polling isn't.
+
+**Merge order verified end-to-end, not just asserted:** cloned the repo to a disposable `/tmp` directory
+and merged `fix/191-reply-turn-answer-first` → #93 → #95 → #96 in exactly the recommended sequence —
+**zero manual conflicts** (git auto-merged the two real line-level overlaps cleanly: `respond.ts` between
+#93's comment-only change and #95's real logic; `open-questions.md` between #95's and #96's rows), clean
+root typecheck, and the three affected suites together (`tests/answer` + `tests/ingestion` +
+`tests/query`): **47 files / 957 tests, all passing.** Deleted the clone afterward; zero risk, about 5
+minutes of wall-clock time (mostly the test run).
+
+**Also this session:** re-verified open-questions #34(b) (dimension-label writes still row-by-row,
+confirmed still open by direct contrast with `observations`' own chunked batching in the same function —
+not fixed, needs its own session); confirmed no new Dependabot PRs and no new Dependabot security alerts
+beyond the already-tracked 9 high / 6 moderate; production still live and healthy throughout (`/` and
+`/llms.txt` both 200, checked at session close); both WP26 flags and `GDPR_PURGE_APPLY` confirmed still
+off, untouched, exactly as session 62 left them.
+
+**Traps hit or avoided this session:**
+- The stacked-PR-closes-on-squash-merge trap (documented from an earlier session): avoided by targeting
+  `main` as the PR base for all three new code PRs while still branching from the correct, up-to-date
+  code context.
+- A cited testing precedent (`ledger.test.ts`'s "this test passes even without the lock" caveat) was
+  re-verified directly against `tests/helpers/pglite-db.ts`'s actual code before being relied on for a
+  new test, rather than trusted purely because it was a precedent. It held up, but the verification step
+  itself is the lesson.
+- A background CI outage was documented and waited out, not routed around — no attempt to bypass CI, no
+  auth-scope expansion, no unilateral repo-settings changes.
+
+Full narrative record, decision-by-decision: `session-briefs/2026-08-26-session-63-resume-log.md`. Fresh
+process lessons appended to `lessons-learned.md`; both project-state memory files
+(`project_wp16_p1_table_finder`, `project_paused_until_october`) updated to current reality.
+
+
 **Session 62 (2026-08-26, AUTONOMOUS — the owner resumed the project ~11 days into the ~2-month pause and
 asked for hours of unattended, multi-agent work). Four PRs opened/fixed, all CI-green, none merged
 (#118(b) — no owner in chat during this session).**

@@ -50,7 +50,7 @@ The runtime pipeline runs intent → query → answer ([04-architecture.md](04-a
 
 ---
 
-## WP16 — On-demand CBS fetch when data is missing (demand-driven table onboarding)  ▶ TOP PRIORITY (owner, session 23) — EXECUTE-READY BRIEF; Fable-authorized on the hard sub-parts
+## WP16 — On-demand CBS fetch when data is missing (demand-driven table onboarding)  ✅ CORE LOOP LIVE IN PRODUCTION (sub-parts 1+2, session 24–39) — session-30/39 follow-ups all merged+deployed; known v1 limitations noted in the sub-part-2 entry below; Fable-authorized on the hard sub-parts
 
 *Owner reprioritized this to #1 (Stefan, session 23, 2026-07-05): "dit verdient de voorrang… nummer 1, het allerergste wat we gaan doen; als het ingewikkeld is moet Fable dat doen." It was Phase 2-3; it is now the next big build, ahead of WP26. The design has been decided across multiple sessions ([open-questions #21](open-questions.md)/[#24](open-questions.md), roadmap feature pool) — this brief makes it execute-ready. This entry is now the source of truth; do not describe missing-data behaviour as a flat refusal.*
 

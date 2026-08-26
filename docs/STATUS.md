@@ -9,30 +9,34 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
-**▶ RESUMED 2026-08-26 (session 62, autonomous — the owner came back ~11 days into the ~2-month pause and
-asked for hours of unattended, multi-agent work). Project is ACTIVE again; the pause section below is
-historical.**
+**▶ RESUMED 2026-08-26 (session 62, autonomous). Session 63 (same day, autonomous) continued the queue —
+full narrative in [status-archive.md](status-archive.md) (prepended) and
+[session-briefs/2026-08-26-session-63-resume-log.md](session-briefs/2026-08-26-session-63-resume-log.md).
+Session 64 (2026-08-27, owner present) merged the bridge chain — `main` is current again, not stale.**
 
-**⚠ READ THIS FIRST: `main` is stale — PR #85 is the bridge, not an ordinary PR.** Session 61 committed
-everything after PR #77 (the #191/#192/#193 fixes AND the pause/halt decision docs) onto its own branch
-(`fix/191-reply-turn-answer-first`) instead of `main`, and never merged it — `origin/main`'s real tip is
-still `1a16eed`, the PR #77 squash. `main` does not yet show the pause, the RUNBOOK's resume section, or any
-work below. Nothing is lost (every commit exists, pushed, on that branch), but **whoever reviews next should
-merge #85 before trusting a plain `main` checkout for anything.** Full detail in the session-62 entry,
-[status-archive.md](status-archive.md).
+**✅ `main` IS CURRENT (fixed 2026-08-27, session 64) — the "main is stale" warning below is now HISTORY.**
+Merged in order, each with gate+deploy green on `main` and a production canary (`/`, `/llms.txt` both 200)
+confirmed before starting the next merge: **#85** (`d6f6a5f`, the bridge — #191/#192/#132-pin + 4
+review-bug fixes) → **#93** (`18a68d2`, consolidated the 3 duplicated intent-parsing option interfaces) →
+**#95** (`12e5799`, fixed [#178](open-questions.md) — a clicked "nu" WP26 chip could silently serve stale
+data) → **#96** (`50d3c63`, fixed [#34](open-questions.md)(c) — concurrent CBS table syncs could
+crash/corrupt `dimension_labels`). Owner-present session, standing push authorization (#118 revision) —
+no per-merge approval needed; WP26 flags and `GDPR_PURGE_APPLY` untouched throughout, as required. Verify
+yourself: `git log -1 origin/main` should no longer show `1a16eed`.
 
-**▶ FOUR PRS OPEN, ALL VERIFIED (full local gate + confirmed-green CI), NONE MERGED** (autonomous session,
-no owner in chat — [#118](open-questions.md)(b)):
+**▶ FOUR PRS REMAIN OPEN, ALL CI-GREEN** ([#118](open-questions.md)(b) governs #91/#92/#80 — autonomous
+session, no owner in chat when opened; #94 is being merged directly this session, owner present):
 
 | PR | What | State |
 |---|---|---|
-| **#85** | `fix/191-reply-turn-answer-first` — #191/#192/#132-pin (session 61) **+ 4 confirmed review-bug fixes (session 62)** | Reviewed, fixed, CI green |
-| **#91** | #193's remaining copy edits | Done, CI green |
-| **#92** | Infra fix: `vitest.config.ts` was sweeping in every worktree's test files on a root `npm test` (238 spurious failures measured) | Done, CI green |
-| **#80** | Dependabot `undici` bump, rebased + re-verified | Done, CI green |
+| **#94** | Docs: session 63 log + doc-freshness fixes (s63) | merging now (s64) — resolving doc conflicts against the new `main` |
+| **#91** | #193's remaining copy edits (s62) | CI green, not yet merged |
+| **#92** | Infra: `vitest.config.ts` was sweeping in every worktree's tests on a root `npm test` (s62) | CI green, not yet merged |
+| **#80** | Dependabot `undici` bump, rebased (s62) | CI green, not yet merged |
 
-Ask `gh pr view <n> --json commits --jq '.commits | length'` for current commit counts — this block goes
-stale on the next push.
+None of these three were part of the verified #85→#93→#95→#96 merge-order simulation (they don't branch
+from `fix/191-...`'s tip), so re-check `gh pr view <n> --json mergeable,mergeStateStatus` fresh immediately
+before each merge rather than trusting this table.
 
 **⚠ THE TWO THINGS THAT ARE STILL ONLY YOURS, untouched again:** the **WP26 flags**
 (`CLARIFY_CLICK_ENABLED`, `ANSWER_FIRST_ENABLED`) and **`GDPR_PURGE_APPLY`**. Read
@@ -52,21 +56,35 @@ archive entry before merging on autopilot.
 **CBS data:** all 20 registered tables checked this session; the 12 with real drift are synced clean.
 Nothing stale beyond what CBS itself hasn't published yet.
 
-**▶ NEXT, in order:** (a) **merge PR #85 first** (it's the bridge — brings `main` up to date); (b) the
-**owner-supervised WP26 go-live** — one flag at a time, RUNBOOK "WP26 answer-first + clickable options"; #191
-no longer blocks it; (c) **`GDPR_PURGE_APPLY=1`** plus one watched run; (d) work the Dependabot order above,
-one deploy at a time ([#173](open-questions.md)); (e) **#193's live `audit:verify` pinning step** (R8
-divergence check against production — expected clean per PR #91's own investigation, but unverified); (f)
-**#132 route B** GO or defer (T-0 condition — `forks_count` — still 0, re-measured 2026-08-26); (g) then the
-owner menu: WP30c choice / [#162](open-questions.md) / [#170](open-questions.md) rest (3)+(4).
+**▶ NEXT, in order:** (a) ~~merge PR #85 first~~ **DONE — #85→#93→#95→#96 merged, session 64**; finish
+#94 (in progress, this session), then #91/#92/#80; (b) the **owner-supervised WP26
+go-live** — one flag at a time, RUNBOOK "WP26 answer-first + clickable options"; #191 no longer blocks
+it, and #178's "nu"-staleness half is now fixed in #95 (age-bound/TTL half still open, see below); (c)
+**`GDPR_PURGE_APPLY=1`** plus one watched run; (d) work the Dependabot order above, one deploy at a time
+([#173](open-questions.md)); (e) **#193's live `audit:verify` pinning step** (R8 divergence check against
+production — expected clean per PR #91's own investigation, but unverified); (f) **#132 route B** GO or
+defer (T-0 condition — `forks_count` — still 0, re-measured 2026-08-26); (g) then the owner menu: WP30c
+choice / [#162](open-questions.md) / [#170](open-questions.md) rest (3)+(4). **Engineering follow-ups
+available whenever a session has room (none owner-blocked):** #34(b)+(c)'s residuals, #93's
+`RespondOptions`/`ComposeOptions`/`SemanticCheckOptions` dedup — see the tracked list below.
 
 **Tracked, deliberately NOT built:** [#174](open-questions.md) and [#185](open-questions.md) (both explicitly
 held), [#183](open-questions.md) (product call), [#188](open-questions.md) (concurrency on a live money path
 — supervised), [#190(a)](open-questions.md) (whether an infrastructure-caused refusal should cost a trial
-question — a conversion judgement, yours).
+question — a conversion judgement, yours), **[#178](open-questions.md)'s age-bound/TTL half** (the
+"nu"-staleness correctness half is fixed in PR #95 — session 63; picking "how many days is too old" for a
+client-held pending stays your call), **[#34](open-questions.md)(b)** (batch `dimension_labels` writes —
+confirmed still open, session 63) **and (c)'s two deeper residuals** (a pre-existing TOCTOU on pre-lock
+validation reads; the rebaseline's unguarded version-bump allowing a silent clobber between two
+concurrent rebaselines), **PR #93's two review findings** (`RespondOptions`/`ComposeOptions`/
+`SemanticCheckOptions` still hand-duplicate a smaller version of the same options-bag seam; the two
+`respond.ts` construction sites have no shared builder) — none of these are owner-blocked, each just
+needs its own scoped session rather than a rushed addition to an already-large PR.
 
 Full session-62 record: [status-archive.md](status-archive.md) +
 [session-briefs/2026-08-26-session-62-resume-log.md](session-briefs/2026-08-26-session-62-resume-log.md).
+Full session-63 record: [status-archive.md](status-archive.md) (prepended) +
+[session-briefs/2026-08-26-session-63-resume-log.md](session-briefs/2026-08-26-session-63-resume-log.md).
 
 ---
 
