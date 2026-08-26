@@ -19,13 +19,14 @@
 import type { Db } from '../../db/types.ts';
 import { echoServability } from '../../query/index.ts';
 import type { ConversationContext } from '../context/types.ts';
-import { INTENT_MODEL, type IntentLlmClient, type IntentLlmRequest } from './client.ts';
+import { INTENT_MODEL, type IntentLlmRequest } from './client.ts';
 import { MAX_CANDIDATES, REFUSAL_KIND_BY_QUESTION_KIND, extraKeysOf } from './parse.ts';
 import { buildSystemPrompt, type OnboardedMeasure } from './prompt.ts';
 import { rawParseJsonSchema, validateRawParse } from './schema.ts';
 import { resolveCandidate } from './resolve.ts';
 import { resolveUnmatched, decide, type OutcomeContext, type TableFinder } from './policy.ts';
 import { DEFAULT_PARSER_CONFIG, type ParseOutcome, type ParserConfig } from './types.ts';
+import type { FreshIntentParseOptions } from './options.ts';
 
 /** Bump when the follow-up mode section or payload shape changes
  * meaningfully — recorded in every follow-up fixture and the audit record.
@@ -43,28 +44,12 @@ import { DEFAULT_PARSER_CONFIG, type ParseOutcome, type ParserConfig } from './t
  * never the model's self-doubt (principle c). */
 export const FOLLOWUP_PROMPT_VERSION = 3;
 
-export interface FollowUpOptions {
-  client: IntentLlmClient;
-  referenceDate: string;
-  config?: ParserConfig;
-  model?: string;
-  maxTokens?: number;
-  /** WP16 sub-part 2 (ADR 026): OPTIONAL table-finder, same seam as
-   * ParseQuestionOptions — a follow-up whose topic matches nothing loaded can
-   * also route to the on-demand fetch trigger. Absent → B15, byte-identical. */
-  tableFinder?: TableFinder;
-  /** WP16 sub-part 2 (ADR 026): OPTIONAL onboarded measures appended to the
-   * vocabulary, same seam as ParseQuestionOptions. Absent/empty → byte-
-   * identical follow-up prompt (fixtures unaffected). */
-  extraCanonicalMeasures?: OnboardedMeasure[];
-  /** WP26 mechanism A (ADR 024): the `CLARIFY_CLICK_ENABLED` rollout flag,
-   * same seam as ParseQuestionOptions. Off/absent → byte-identical. */
-  clickOptionsEnabled?: boolean;
-  /** WP26 mechanism B (ADR 024): the `ANSWER_FIRST_ENABLED` rollout flag,
-   * threaded into the dry-runs below so an option is judged servable under the
-   * SAME rules the answer turn will run under. Off/absent ⇒ byte-identical. */
-  answerFirstEnabled?: boolean;
-}
+/** Same shape as ParseQuestionOptions (both fresh-parse entry points share
+ * every field, including the ones this module doesn't read itself — kept
+ * that way deliberately, see options.ts). respond.ts relies on this: it
+ * builds ONE options object and passes it to both parseQuestion and
+ * parseFollowUpQuestion. */
+export type FollowUpOptions = FreshIntentParseOptions;
 
 /** The follow-up-mode instruction, appended verbatim to the WP6 system prompt
  * so the vocabulary/region/period/derivation rules stay a single source of

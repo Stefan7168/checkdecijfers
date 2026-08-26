@@ -19,7 +19,7 @@ import type { Db } from '../../db/types.ts';
 import { echoServability } from '../../query/index.ts';
 import type { ConversationContext } from '../context/types.ts';
 import type { PendingClarification } from '../respond/types.ts';
-import { INTENT_MODEL, type IntentLlmClient, type IntentLlmRequest } from './client.ts';
+import { INTENT_MODEL, type IntentLlmRequest } from './client.ts';
 import { MAX_CANDIDATES, REFUSAL_KIND_BY_QUESTION_KIND, extraKeysOf } from './parse.ts';
 import { buildSystemPrompt } from './prompt.ts';
 import type { OnboardedMeasure } from './prompt.ts';
@@ -27,6 +27,7 @@ import { rawParseJsonSchema, validateRawParse } from './schema.ts';
 import { resolveCandidate } from './resolve.ts';
 import { resolveUnmatched, decide, type OutcomeContext, type TableFinder } from './policy.ts';
 import { DEFAULT_PARSER_CONFIG, type ParseOutcome, type ParserConfig } from './types.ts';
+import type { IntentCallOptions } from './options.ts';
 
 /** Bump when the clarify-mode section or reply payload shape changes
  * meaningfully — recorded in every clarify fixture and the audit record.
@@ -38,33 +39,10 @@ import { DEFAULT_PARSER_CONFIG, type ParseOutcome, type ParserConfig } from './t
  * unchanged; proven by the replay suite). */
 export const CLARIFY_PROMPT_VERSION = 2;
 
-export interface ClarifyReplyOptions {
-  client: IntentLlmClient;
-  config?: ParserConfig;
-  /** WP26 mechanism B (ADR 024): the `ANSWER_FIRST_ENABLED` rollout flag,
-   * threaded into the dry-runs below so an option is judged servable under the
-   * SAME rules the answer turn will run under. Off/absent ⇒ byte-identical. */
-  answerFirstEnabled?: boolean;
-
-  model?: string;
-  maxTokens?: number;
-  /** WP16 sub-part 2 (ADR 026): OPTIONAL table-finder for the unmatched exit,
-   * kept uniform with the other two call sites. NOT wired in production today
-   * (web/app/actions.ts injects it only into askQuestion, not
-   * replyToClarification — a reply-turn onboarding trigger is a separate
-   * decision), so a reply that still names an unmatched topic keeps its
-   * byte-identical B15 behavior. Threaded here so the seam stays consistent
-   * and a future decision can enable it without touching this module. */
-  tableFinder?: TableFinder;
-  /** #112: the on-demand-onboarded vocabulary, threaded into the reply merge
-   * exactly as parse.ts/followup.ts thread it into the first turn. Without
-   * this, a clarification whose pending candidates carry an 'onboarded:' key
-   * (possible once live turns load the onboarded vocabulary) would fail the
-   * reply-turn schema validation — a fail-closed refund, but a paid dead-end
-   * the user did nothing to deserve. Empty/absent → prompt + schema bytes
-   * identical to the recorded clarify fixtures. */
-  extraCanonicalMeasures?: OnboardedMeasure[];
-}
+/** The narrower of the two option shapes — see options.ts's
+ * `FreshIntentParseOptions` comment for why a reply carries neither
+ * `referenceDate` nor `clickOptionsEnabled`. */
+export type ClarifyReplyOptions = IntentCallOptions;
 
 /** The clarify-mode instruction, appended verbatim to the WP6 system prompt
  * so the vocabulary/region/period/derivation rules stay a single source of

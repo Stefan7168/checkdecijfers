@@ -515,7 +515,12 @@ export async function respondToQuestion(
       // is injected. Undefined when absent → B15 unchanged.
       tableFinder: options.tableFinder,
       // WP16 sub-part 2 delivery vocabulary (design §3.6): undefined/empty →
-      // byte-identical Phase-0 prompt.
+      // byte-identical Phase-0 prompt. The delivery re-run passes the
+      // just-onboarded measure(s) so the parser can actually emit their
+      // canonical key and the answer flows through the full validator chain
+      // — without this the re-run would re-hit the unmatched exit and
+      // dead-end in a refund, because the parser prompt is built from code
+      // and a DB-only canonical row is otherwise invisible to it.
       extraCanonicalMeasures: options.extraCanonicalMeasures,
       // WP26 mechanism A: threaded into BOTH the standalone and the follow-up
       // parse — a clarification can arise on either turn.

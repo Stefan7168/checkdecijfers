@@ -6,44 +6,13 @@ import type { Db } from '../../db/types.ts';
 import { echoServability } from '../../query/index.ts';
 import { buildSystemPrompt, type OnboardedMeasure } from './prompt.ts';
 import { rawParseJsonSchema, validateRawParse } from './schema.ts';
-import { INTENT_MODEL, type IntentLlmClient, type IntentLlmRequest } from './client.ts';
+import { INTENT_MODEL, type IntentLlmRequest } from './client.ts';
 import { resolveCandidate } from './resolve.ts';
 import { resolveUnmatched, decide, type OutcomeContext, type TableFinder } from './policy.ts';
 import { DEFAULT_PARSER_CONFIG, type ParseOutcome, type ParserConfig } from './types.ts';
+import type { FreshIntentParseOptions } from './options.ts';
 
-export interface ParseQuestionOptions {
-  client: IntentLlmClient;
-  /** YYYY-MM-DD "today" for relative periods ("vorige maand") — injected,
-   * never read from the wall clock inside the pipeline. */
-  referenceDate: string;
-  config?: ParserConfig;
-  model?: string;
-  maxTokens?: number;
-  /** WP16 sub-part 2 (ADR 026): OPTIONAL table-finder — present only when the
-   * caller (web/app/actions.ts) wants an unmatched topic to route to the
-   * on-demand fetch trigger. Absent everywhere else (benchmark, tests, CLI) →
-   * the plain B15 clarification, byte-identical. */
-  tableFinder?: TableFinder;
-  /** WP16 sub-part 2 (ADR 026, design §3.6/§0.4): OPTIONAL extra canonical
-   * measures appended to the parser vocabulary — the on-demand-onboarded
-   * measures registered by the fetch job. Absent/empty → the prompt bytes are
-   * IDENTICAL to Phase-0-only (recorded fixtures + benchmark unaffected by
-   * construction). The delivery re-run passes the just-onboarded measure(s) so
-   * the parser can actually emit their canonical key and the answer flows
-   * through the full validator chain (without this the re-run would re-hit the
-   * unmatched exit and dead-end in a refund — the parser prompt is built from
-   * code, so a DB-only canonical row is invisible to it: see the HANDOFF's
-   * "delivery vocabulary" deviation). */
-  extraCanonicalMeasures?: OnboardedMeasure[];
-  /** WP26 mechanism A (ADR 024): the `CLARIFY_CLICK_ENABLED` rollout flag,
-   * passed straight to decide(). Off/absent → no dry-runs, no clickable
-   * options, byte-identical clarifications. */
-  clickOptionsEnabled?: boolean;
-  /** WP26 mechanism B (ADR 024): the `ANSWER_FIRST_ENABLED` rollout flag,
-   * threaded into the dry-runs below so an option is judged servable under the
-   * SAME rules the answer turn will run under. Off/absent ⇒ byte-identical. */
-  answerFirstEnabled?: boolean;
-}
+export type ParseQuestionOptions = FreshIntentParseOptions;
 
 /** Up to this many readings are considered; the schema asks for 1–3. */
 export const MAX_CANDIDATES = 3;
