@@ -217,6 +217,15 @@ function toNumber(value: unknown): number {
 export async function freshestForCanonical(
   db: Db,
   canonicalKey: string,
+  /** Both optional, both additive: omitted ⇒ byte-identical to every existing
+   * caller (national/regionless region, every grain pooled together — this
+   * function's own doc above). `regionCode` lets a caller ask "freshest for
+   * THIS region" instead of the national default; `grain` restricts the
+   * comparison to one grain, needed by any caller comparing against an
+   * already-resolved period code (mixing grains in one `order by
+   * period_year, period_index` is not a valid freshness ordering — KW04 and
+   * MM12 of the same year are not comparable by `period_index` alone). */
+  overrides?: { regionCode?: string; grain?: 'JJ' | 'KW' | 'MM' },
 ): Promise<{ periodCode: string; status: string } | null> {
   const cm = await db.query(
     'select table_id, measure, dims from canonical_measures where key = $1',
@@ -253,7 +262,7 @@ export async function freshestForCanonical(
       : (tableRow.default_coordinates ?? {})
   ) as Record<string, string>;
   const geoDimension = expectedDimensions.find((d) => d.kind === 'GeoDimension')?.name ?? null;
-  const regionCode = geoDimension ? NATIONAL_REGION_CODE : '';
+  const regionCode = geoDimension ? (overrides?.regionCode ?? NATIONAL_REGION_CODE) : '';
 
   // Observations store the FULL merged coordinate set: the table's pinned
   // default ("totaal") coordinates overlaid with the canonical measure's
@@ -263,11 +272,15 @@ export async function freshestForCanonical(
   // 2026-07-03: the forecast/causal offers then lose their period).
   const mergedDims = { ...defaultCoordinates, ...dims };
 
+  const grainFilter = overrides?.grain ? 'and period_grain = $5' : '';
+  const params = overrides?.grain
+    ? [tableId, measure, JSON.stringify(mergedDims), regionCode, overrides.grain]
+    : [tableId, measure, JSON.stringify(mergedDims), regionCode];
   const result = await db.query(
     `select period_code, status from observations
-     where table_id = $1 and measure = $2 and dims = $3::jsonb and region_code = $4
+     where table_id = $1 and measure = $2 and dims = $3::jsonb and region_code = $4 ${grainFilter}
      order by period_year desc, coalesce(period_index, 0) desc limit 1`,
-    [tableId, measure, JSON.stringify(mergedDims), regionCode],
+    params,
   );
   const freshest = result.rows[0];
   if (!freshest) return null;

@@ -156,6 +156,49 @@ function matchClickOption(pending: PendingClarification, reply: string): ClickOp
   return null;
 }
 
+/** #178: `impliedRecency` is carried on the option, never re-derived
+ * (ClickOption's own doc comment) — but that only covers the WARN-vs-REFUSE
+ * staleness rule (`checkStaleness` measures TABLE sync age). It says nothing
+ * about whether the option's own STORED period is still the freshest: a chip
+ * minted for "nu" bakes in whatever was freshest at OFFER time, and a table
+ * that syncs a newer period afterwards is never "stale" by that check even
+ * though the chip's period has fallen behind. This re-derives the CURRENT
+ * freshest period for the option's canonical key — at the SAME grain the
+ * stored code carries (mixing grains is not a valid freshness comparison:
+ * `freshestForCanonical`'s own doc) and for EVERY region the option names
+ * (a national default when it names none) — and reports whether the stored
+ * code still matches everywhere it applies. Anything that doesn't imply
+ * recency skips the check entirely (nothing to re-derive, no extra query on
+ * the common path); an inconclusive lookup (the canonical key vanished, a
+ * region has no data at all, the table was quarantined since offer time)
+ * fails closed — false, not a guess.
+ *
+ * Known accepted gap, not silently missed (open-questions #178): a `relative`
+ * period ("3 maanden geleden") is ALSO marked `impliedRecency: true` — not
+ * because it tracks "the freshest", but because a stale TABLE might not have
+ * published that calendar point yet (the existing warn/refuse rule this
+ * shares with every other recency-implying shape). Its resolved code is pure
+ * calendar arithmetic, not `latestPeriod`-derived, so it will essentially
+ * never equal the current freshest and this check always sends it through
+ * the LLM-merge fallback — safe (the fallback is the ordinary, already-
+ * trusted parse path; no wrong number can result) but a needless loss of the
+ * zero-LLM-call guarantee for that one PeriodSpec shape. `ClickOption` does
+ * not carry which PeriodSpec produced its resolution, so this check cannot
+ * distinguish "wants the latest" from "computed relative to today" without a
+ * schema change — left as a follow-up, not solved here. */
+async function clickOptionStillCurrent(db: Db, option: ClickOption): Promise<boolean> {
+  if (option.impliedRecency !== true) return true;
+  const { target, period, regions } = option.intent;
+  if (target.kind !== 'canonical') return false;
+  const referenceCode = period.kind === 'range' ? period.to : period.codes[period.codes.length - 1];
+  const grain = referenceCode.slice(4, 6) as 'JJ' | 'KW' | 'MM';
+  const checkRegions = regions && regions.length > 0 ? regions : [undefined];
+  const freshestPerRegion = await Promise.all(
+    checkRegions.map((regionCode) => freshestForCanonical(db, target.key, { regionCode, grain })),
+  );
+  return freshestPerRegion.every((freshest) => freshest !== null && freshest.periodCode === referenceCode);
+}
+
 /** WP26c mints exactly ONE pending shape: a single measure axis carrying a
  * single chip whose label is the single offered option. The reply turn treats
  * such a pending as a closed round (the branch below), which is a real
@@ -562,7 +605,9 @@ export async function respondToClarificationReply(
     // any LLM call. A reply that is byte-exactly one of the options we offered
     // needs no re-parse — we already resolved that reading and proved it
     // servable when we offered it. Taking it here is what makes a click
-    // structurally unable to dead-end, and it costs zero tokens.
+    // structurally unable to dead-end, and — when the fast path below is
+    // actually taken (#178 can still route a stale recency click to the
+    // normal merge instead) — it costs zero tokens.
     //
     // The data may have MOVED between offer and click (a sync in between), so
     // this is not a replay of a stored answer: respondToIntent re-runs the real
@@ -570,7 +615,11 @@ export async function respondToClarificationReply(
     // gate refunds — rare, and better than serving a stale promise.
     if (options.clickOptionsEnabled === true) {
       const clicked = matchClickOption(pending, reply);
-      if (clicked !== null) {
+      // #178: that re-run query proves the CELL still exists — it does not
+      // prove a "nu" option's stored period is still what "nu" means today. A
+      // clicked-but-now-outdated recency option falls through to the normal
+      // merge below instead, exactly like a non-matching reply.
+      if (clicked !== null && (await clickOptionStillCurrent(db, clicked))) {
         return await respondToIntent(db, pending.question, clickTakeOutcome(pending, clicked), {
           ...options,
           finalRound: true,

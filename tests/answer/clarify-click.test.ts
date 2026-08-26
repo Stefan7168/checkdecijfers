@@ -37,6 +37,7 @@ import type { ConversationContext } from '../../src/answer/context/types.ts';
 import type { LlmClient, LlmResponse } from '../../src/answer/llm/client.ts';
 import type { RawParse } from '../../src/answer/intent/types.ts';
 import type { StructuredIntent } from '../../src/query/index.ts';
+import { freshestForCanonical } from '../../src/query/index.ts';
 
 let db: Db;
 let close: () => Promise<void>;
@@ -428,6 +429,91 @@ describe('the take-path resolves without any LLM call', () => {
       response.reason,
     );
     expect(response.queryRefusal).not.toBeNull();
+  });
+
+  it('#178: a clicked "nu" option whose period is no longer the freshest does not silently serve it', async () => {
+    // Distinct from the "data moved between offer and click" case above: here
+    // the stored period still has REAL data (or, if it happens not to, that's
+    // fine too — see the reason assertion below) — the bug is that a chip
+    // minted while some OLD period was "the freshest" keeps claiming that
+    // forever, because clickTakeOutcome replays the stored codes verbatim and
+    // checkStaleness only measures TABLE sync age, never the specific period
+    // baked into an already-offered option. A table that synced ten minutes
+    // ago is never "stale" by that check, even if the option was minted weeks
+    // earlier against an older freshest period.
+    const stale: ClickOption = {
+      id: 'opt-1',
+      label: 'nu',
+      intent: {
+        schemaVersion: 1,
+        target: { kind: 'canonical', key: 'population_on_1_january' },
+        regions: ['NL01'],
+        period: { kind: 'codes', codes: ['2010JJ00'] },
+        derivation: 'none',
+      },
+      impliedRecency: true,
+    };
+    const pending: PendingClarification = {
+      version: 1,
+      question: 'Hoeveel inwoners heeft Nederland nu?',
+      referenceDate: REFERENCE_DATE,
+      axes: ['period'],
+      questionNl: 'Welke periode bedoel je?',
+      options: [stale.label],
+      clickOptions: [stale],
+    };
+    const response = await respondToClarificationReply(db, pending, stale.label, {
+      intentClient: new ThrowingClient(),
+      answerClient: new ThrowingClient(),
+      referenceDate: REFERENCE_DATE,
+      clickOptionsEnabled: true,
+    });
+    // Falls through to the LLM merge (both clients throw) instead of taking
+    // the deterministic rung — an outdated "nu" must re-parse fresh, not
+    // silently serve 2010 as if it were current. A query-layer refusal
+    // (reason other than 'internal') would mean the take path ran anyway and
+    // only failed for an unrelated reason — not the fix this pins.
+    expect(response.kind).toBe('refusal');
+    if (response.kind !== 'refusal') throw new Error('unreachable');
+    expect(response.reason).toBe('internal');
+  });
+
+  it('#178 control: a clicked "nu" option whose period IS still the freshest takes normally', async () => {
+    const freshest = await freshestForCanonical(db, 'population_on_1_january');
+    if (freshest === null) throw new Error('fixture must carry population_on_1_january data');
+    const current: ClickOption = {
+      id: 'opt-1',
+      label: 'nu',
+      intent: {
+        schemaVersion: 1,
+        target: { kind: 'canonical', key: 'population_on_1_january' },
+        regions: ['NL01'],
+        period: { kind: 'codes', codes: [freshest.periodCode] },
+        derivation: 'none',
+      },
+      impliedRecency: true,
+    };
+    const pending: PendingClarification = {
+      version: 1,
+      question: 'Hoeveel inwoners heeft Nederland nu?',
+      referenceDate: REFERENCE_DATE,
+      axes: ['period'],
+      questionNl: 'Welke periode bedoel je?',
+      options: [current.label],
+      clickOptions: [current],
+    };
+    // BOTH clients throw: a freshness re-check must not itself become a
+    // second LLM call, and a still-fresh option must still take LLM-free.
+    const response = await respondToClarificationReply(db, pending, current.label, {
+      intentClient: new ThrowingClient(),
+      answerClient: new ThrowingClient(),
+      referenceDate: REFERENCE_DATE,
+      clickOptionsEnabled: true,
+    });
+    expect(response.kind).toBe('answer');
+    if (response.kind !== 'answer') throw new Error('unreachable');
+    expect(response.parse.model).toBe(CLICK_TAKE_MODEL);
+    expect(response.parse.usage).toEqual({ inputTokens: 0, outputTokens: 0 });
   });
 });
 
