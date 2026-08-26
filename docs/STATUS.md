@@ -9,85 +9,72 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
-**▶ NEXT SESSION STARTS HERE — Session 60 (2026-07-26, continued 2026-08-07). AUTONOMOUS: the owner handed
-over the kickoff and left, and his prompt said session 59's push-to-`main` exception does NOT carry over.
-So: branch + PR, **nothing merged, no code deployed**. €0 live-LLM spend, zero prompt bytes, no DDL.
-⚠ The session SPANNED TWELVE DAYS — the 26/7 work and the 7/8 continuation are both below, and the gap
-turned one of its own conclusions stale (see the syncs). The only live-production change is DATA: the two
-CBS syncs the owner had scheduled for ~30/7.**
+**▶ RESUMED 2026-08-26 (session 62, autonomous — the owner came back ~11 days into the ~2-month pause and
+asked for hours of unattended, multi-agent work). Project is ACTIVE again; the pause section below is
+historical.**
+
+**⚠ READ THIS FIRST: `main` is stale — PR #85 is the bridge, not an ordinary PR.** Session 61 committed
+everything after PR #77 (the #191/#192/#193 fixes AND the pause/halt decision docs) onto its own branch
+(`fix/191-reply-turn-answer-first`) instead of `main`, and never merged it — `origin/main`'s real tip is
+still `1a16eed`, the PR #77 squash. `main` does not yet show the pause, the RUNBOOK's resume section, or any
+work below. Nothing is lost (every commit exists, pushed, on that branch), but **whoever reviews next should
+merge #85 before trusting a plain `main` checkout for anything.** Full detail in the session-62 entry,
+[status-archive.md](status-archive.md).
+
+**▶ FOUR PRS OPEN, ALL VERIFIED (full local gate + confirmed-green CI), NONE MERGED** (autonomous session,
+no owner in chat — [#118](open-questions.md)(b)):
+
+| PR | What | State |
+|---|---|---|
+| **#85** | `fix/191-reply-turn-answer-first` — #191/#192/#132-pin (session 61) **+ 4 confirmed review-bug fixes (session 62)** | Reviewed, fixed, CI green |
+| **#91** | #193's remaining copy edits | Done, CI green |
+| **#92** | Infra fix: `vitest.config.ts` was sweeping in every worktree's test files on a root `npm test` (238 spurious failures measured) | Done, CI green |
+| **#80** | Dependabot `undici` bump, rebased + re-verified | Done, CI green |
+
+Ask `gh pr view <n> --json commits --jq '.commits | length'` for current commit counts — this block goes
+stale on the next push.
 
 **⚠ THE TWO THINGS THAT ARE STILL ONLY YOURS, untouched again:** the **WP26 flags**
 (`CLARIFY_CLICK_ENABLED`, `ANSWER_FIRST_ENABLED`) and **`GDPR_PURGE_APPLY`**. Read
-[#175](open-questions.md) before flipping WP26 — the anonymous trial receives NEITHER flag —
-and now **[#191](open-questions.md) too** (below), which is a genuine pre-flip blocker.
+[#175](open-questions.md) before flipping WP26 — the anonymous trial receives NEITHER flag.
+✅ **[#191](open-questions.md), the pre-flip blocker, is FIXED** (in PR #85 — merge that first).
+**GDPR dry-run measured 2026-08-26: 0 rows purgeable yet** (first ones land ~2026-10-15) —
+`GDPR_PURGE_APPLY` is still off, unchanged.
 
-**▶ FIRST THING: PR #77 IS OPEN AND AWAITS YOUR REVIEW.** Two independent changes, carried by the three
-CODE commits below; every later commit on the branch is a doc close-out. ⚠ **A commit COUNT written into a
-doc is stale on the next commit** — this block said "Three" while the branch was at twelve, and the session-60
-self-audit corrected the number in one of the two places it appeared. Ask git, not a doc:
-`gh pr view 77 --json commits --jq '.commits | length'`.
+**Dependabot backlog — 7 PRs open (`#90 #89 #88 #86 #84 #83 #80`), all individually verified this session,
+none merged.** ⚠ **#89 + #86 + #84 close every currently-open HIGH-severity Dependabot security alert on
+`main`** (checked directly against the GitHub API) — lead with those three. Recommended order: #89 → #86 →
+#84 → #88 → #83 (re-check for redundancy after #88+#86 land) → **#90 last** (touches Stripe webhook
+verification + the core LLM path — the most load-bearing code in the product). #80 is independent, safe
+anywhere. Real overlaps between #83/#88 (next version) and #83/#86 (nanoid target) — read the session-62
+archive entry before merging on autopilot.
 
-| Commit | What |
-|---|---|
-| `a108ba3` | **[#176](open-questions.md)** — the resolver builds per-option intents only for the flag that reads them. |
-| `a25f3e8` | **[#132](open-questions.md) rule (i)** — 38 live PR links re-neutralized; the rule is now a CI-gated test. |
-| `06f6209` | CI fix — an unquoted colon in the new step's name broke the workflow: run 30197192763 died in **0 s** without running the gate at all. Green again on run 30197230629. |
+**CBS data:** all 20 registered tables checked this session; the 12 with real drift are synced clean.
+Nothing stale beyond what CBS itself hasn't published yet.
 
-**⚠ NEW [#191](open-questions.md) — READ BEFORE THE `ANSWER_FIRST_ENABLED` FLIP.** The clarification REPLY
-turn never receives that flag, though `ClarifyReplyOptions` declares it and its comment says it is threaded
-(`respond.ts:586-595`). Harmless while it is off — both turns run pre-B and agree. Flip it and they stop
-agreeing: the first turn defaults a missing region/period and answers, the reply turn judges under pre-B
-rules and can refuse instead. Decide what a reply turn *should* do before flipping. RUNBOOK now warns.
+**▶ NEXT, in order:** (a) **merge PR #85 first** (it's the bridge — brings `main` up to date); (b) the
+**owner-supervised WP26 go-live** — one flag at a time, RUNBOOK "WP26 answer-first + clickable options"; #191
+no longer blocks it; (c) **`GDPR_PURGE_APPLY=1`** plus one watched run; (d) work the Dependabot order above,
+one deploy at a time ([#173](open-questions.md)); (e) **#193's live `audit:verify` pinning step** (R8
+divergence check against production — expected clean per PR #91's own investigation, but unverified); (f)
+**#132 route B** GO or defer (T-0 condition — `forks_count` — still 0, re-measured 2026-08-26); (g) then the
+owner menu: WP30c choice / [#162](open-questions.md) / [#170](open-questions.md) rest (3)+(4).
 
-**⚠ The lesson of #176 was in the TEST, not the code.** `query-count.test.ts` had a case commented "the
-shape #176 was found on" — it wasn't. It passes `regions: null`, which exits early at `resolve.ts:166` and
-never reaches the branch. **The fix moved none of the pinned numbers; verifying against that pin would have
-proved nothing.** Real shape (a NAMED ambiguous region) now pinned: 3 statements flag-off, 4 flag-on.
+**Tracked, deliberately NOT built:** [#174](open-questions.md) and [#185](open-questions.md) (both explicitly
+held), [#183](open-questions.md) (product call), [#188](open-questions.md) (concurrency on a live money path
+— supervised), [#190(a)](open-questions.md) (whether an infrastructure-caused refusal should cost a trial
+question — a conversion judgement, yours).
 
-**⚠ A convention "the wrap-up sweep will catch" was not caught, twice.** 38 live PR links had crept back
-into `docs/` since session 55 fixed 29 — route B deletes the repo, so each 404s. Re-neutralized, and the
-rule is now `tests/docs/doc-conventions.test.ts` in CI. **The review then found my own fix produced a
-doubled "PR" in 10 places, and 17 more inherited from the 2 earlier rounds — all three passes made the
-same mistake.** Fixed and pinned.
+Full session-62 record: [status-archive.md](status-archive.md) +
+[session-briefs/2026-08-26-session-62-resume-log.md](session-briefs/2026-08-26-session-62-resume-log.md).
 
-**✅ ~30/7 BBP+PPI SYNCS: RUN AND LIVE (2026-08-07, session-60 continuation).** *(The 26/7 measurement said
-"nothing due" — true that day, stale eight days later. CBS published both on 30/7.)* Both are `active`,
-verified LLM-free through the real query path, and `/llms.txt` shows **synced 2026-08-07**:
-**Q2 2026 BBP** volume j-o-j **+1.3** / k-o-k **+0.4**; **PPI juni 2026** totaal **5.3** / invoer **7.9**.
-⚠ **Two frozen reference values in [11-coverage-table-set.md](11-coverage-table-set.md) MOVED** — CBS revised
-provisional cells (PPI invoer 2026MM05 9.3 → 8.4; BBP 2026KW01 k-o-k +0.2 → +0.3). The other four re-verified
-exactly. Nothing is broken: hermetic tests replay the 17/7 fixture and still pass; live data moved on.
-⚠ **`85880NED` did NOT need the chunked escape hatch** — the direct stream finished in **77 s**, so the
-~6KB/s slow stream was network-specific after all. ⚠ **NEW [#192](open-questions.md): the escape hatch cannot
-complete a release sync** (`sync-from-capture.ts` passes no options, so it can never accept a new period code).
+---
 
-**[#132](open-questions.md) route B re-asked, on the record:** `forks_count` = **0** (stars 0, watchers 0),
-so the T-0 go/no-go **holds** and the two-phase reversible drill still awaits your explicit in-chat GO.
-
-**▶ NEXT, in order:** (a) **review + merge PR #77**; (b) the **owner-supervised WP26 go-live** — one flag at
-a time, RUNBOOK section "WP26 answer-first + clickable options", **[#191](open-questions.md) first**, NOT
-during a deploy burst (#173); (c) **`GDPR_PURGE_APPLY=1`** plus one watched run (RUNBOOK) — nothing is
-deleted until then, first rows purgeable ~2026-10-15; (d) **#132 route B** GO or defer; (e) **[#192](open-questions.md)**
-— small ingestion fix, thread the flags through `sync-from-capture.ts`; (f) **[#193](open-questions.md)** —
-a product/copy call on what `Definitief` should imply, now that 1,103 final figures were measurably revised;
-(g) then the owner menu: WP30c choice / [#162](open-questions.md) / [#170](open-questions.md) rest (3)+(4).
-
-**⚠ ALSO WAITING, arrived during the 12-day gap: three Dependabot PRs — #80, #81, #82** (undici 7.29.0; the
-`npm-all` group ×4; the `npm-web-all` group ×14). Untouched this session: dependency bumps need their own CI
-pass and a look at any major, and the s49 precedent is that a bump CAN go red only at `next build`
-(the TS ^5 pin). Not urgent, not forgotten.
-
-**Tracked, deliberately NOT built:** [#174](open-questions.md) and [#185](open-questions.md) (both explicitly held
-— the obvious fix is worse than the bug, and a reasoned decline respectively), [#183](open-questions.md) (product
-call), [#188](open-questions.md) (concurrency on a live money path — supervised), [#190(a)](open-questions.md)
-(whether an infrastructure-caused refusal should cost a trial question — a conversion judgement, yours).
-
-**Measured this session (frozen tree `a25f3e8`):** backend **1562 / 103 files**, web **453 / 42**, benchmark
-**14/14 + 6/6 + 0 fabricated GATE PASS**, real `next build`. Production **200/200/200**, unchanged — nothing
-deployed. **⚠ `git rebase --continue` still SILENTLY DROPS a `#`-prefixed subject line** (session 59): use
-`--cleanup=whitespace` on every rebase/cherry-pick here.
-
-Full session record in [status-archive.md](status-archive.md).
+**(Historical — the pause, 2026-08-15 to 2026-08-26.)** Project was paused ~2 months (owner decision) and the
+repo set PRIVATE at the same time ([#132](open-questions.md) option D). Production stayed live and unattended
+throughout, correctly: `/` and `/llms.txt` 200 the whole time, no data corruption, the trial pot untouched.
+The GDPR retention clock does not pause — first purgeable rows land ~2026-10-15, right at the resume point;
+handled above. Full pause-era detail in the session-61 halt entry, [status-archive.md](status-archive.md).
 
 **(Historical from here down.)**
 

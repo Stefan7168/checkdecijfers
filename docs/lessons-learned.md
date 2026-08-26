@@ -6,6 +6,196 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 62 — the resume from pause, 2026-08-26 (autonomous, owner asked for hours of unattended work)
+
+- **`origin/main` had silently stopped receiving pushes 12 commits before the halt — nobody had noticed,
+  because the LOCAL clone had everything.** Session 61 did all of its post-PR-77 work (the #191/#192/#193
+  fixes, and critically the pause/halt decision documentation itself) as commits on ITS OWN feature branch
+  (`fix/191-reply-turn-answer-first`, this branch) rather than on `main`, then apparently left the repository
+  checked out on that branch at session end instead of returning to `main`. `origin/main`'s actual tip stayed
+  at `1a16eed` — the PR #77 squash-merge — the whole time. This session's `date`/`git log` checks at startup
+  read the LOCAL working tree (which had this branch checked out, so showed the halt commit and everything
+  after it) and correctly concluded the project was paused — that conclusion was right — but several later doc
+  edits this session were made against a fresh `git checkout main`, which is the STALE, pre-halt copy, not the
+  copy anyone would actually recognize as current. Caught via `git log -1 origin/main -- docs/STATUS.md`
+  returning `1a16eed` when it should have matched local HEAD — a mismatch that only surfaces if you diff a
+  specific file's history against the remote, not just check `git status`/`ahead-behind` counts, since a
+  `--ff-only pull` on a branch with no upstream commits to fetch reports "Already up to date" whether or not
+  the LOCAL branch itself is stale relative to where the real work lives. **Nothing was lost** — every commit
+  exists, reachable from this branch, on both the local repo and `origin` (verified with `git cat-file -t` and
+  `git branch --contains`) — but any doc edit made against a `main` checkout during this session needed
+  re-doing against this branch instead. **The concrete fix, once this merges:** `main` will finally reflect the
+  pause, and a future session reading `main` directly (rather than inheriting a feature-branch checkout) won't
+  hit this. **The lesson to carry forward regardless: before believing a `git checkout main` gives you the
+  actual current docs, check that `main`'s tip matches what the local working tree said moments earlier** — a
+  session that does a lot of branch-hopping (as an autonomous multi-PR session naturally does) can silently
+  drift onto the wrong base without any single command flagging it directly.
+- **A "failed: stalled at 600s" background-task notification described work that had actually finished
+  successfully — twice in one session.** An implementer subagent's notification said "failed" after its stream
+  watchdog gave up; its actual last message was "pushing the branch and opening the PR" — and it had. A
+  CBS-sync subagent's notification also said "failed," and the database showed several tables cleanly synced
+  with zero orphaned state. **The notification's status field is not proof of anything — it means the harness
+  stopped listening, not that the underlying work stopped or failed.** Verify the real state (git, `gh pr
+  list`, the DB) before either redoing the work or reporting a failure. Redoing already-completed work wastes
+  real time and, worse, risks double-running something with side effects.
+- **`git rebase --cleanup=whitespace` is not a valid flag on a plain (non-`--continue`) rebase on this
+  machine's git (2.39.5)** — it errors "unknown option `cleanup=whitespace'" before touching anything. The
+  session-59 lesson below already names the alternative (`git -c core.commentChar=';' rebase ...`), but framed
+  it as an equally-good option rather than a needed fallback — a future session reaching for `--cleanup`
+  first, as the RUNBOOK's own paste-ready kickoff text instructs verbatim, will hit this. Use the
+  `commentChar` form; verified this session to both work and preserve a `#`-leading commit subject intact.
+- **A vitest config gap silently ran the whole backend suite 2-3× over, for the entire time multiple worktrees
+  coexisted.** `vitest.config.ts`'s `exclude: ['web/**', ...]` only matches a top-level `web/`, not one nested
+  inside `.claude/worktrees/<id>/` (a full nested clone, this project's own agent-isolation pattern). A root
+  `npm test` therefore swept in every test file from every worktree too — 238 spurious failures from one
+  measured run, cross-copy jsdom-global collisions, and crashes from a worktree's missing `node_modules`. This
+  almost certainly explains "sustained heavy machine load" a concurrent session flagged the same evening: every
+  root-level `npm test` anyone ran while worktrees existed was quietly doing 2-3× the real work, on an 8GB
+  machine already documented as OOM-prone under load (`vitest.config.ts`'s own comment history). Fixed by
+  adding `.claude/**` to the exclude list (PR #92). **The same root-cause shape — a hand-rolled or
+  narrowly-scoped exclude pattern that doesn't account for a worktree's nested full clone — independently hit
+  THREE different mechanisms this session**: this vitest config, a custom doc-completeness test
+  (`tests/docs/doc-conventions.test.ts`, fixed in this same PR), and is best avoided going forward by asking
+  git what it actually tracks (`git ls-files --cached --others --exclude-standard`) rather than hand-walking
+  the filesystem with a maintained ignore list, wherever that pattern shows up next.
+- **Reading only the exit code of a background test run, not its `Test Files N passed (N)` summary line, would
+  have missed the vitest bug above entirely.** The existing session-61 lesson about this ("a log without a
+  summary is a kill, not a pass") extends to: a summary line with the WRONG COUNT is also not a pass, even when
+  the exit code says success — only comparing the count against a known-good baseline (105 files, not the 300+
+  the contaminated run silently produced) surfaced it.
+- **A destructive-sounding retry can be perfectly safe once you check what actually failed.** Three CBS syncs
+  crashed on connection-pool errors (`EAUTHTIMEOUT`, "connection terminated", "statement timeout") under this
+  session's own concurrent load — consistent with #173's documented free-tier pool-exhaustion history. Checking
+  `cbs_tables` and `ingestion_batches` directly (not assuming) showed zero partial writes and only harmless
+  orphaned bookkeeping rows; all three tables synced clean on a spaced-out retry. Postgres's transactional
+  guarantees did exactly what they're supposed to — a crashed client mid-query is not the same risk class as a
+  crashed client mid-write when every write is wrapped in a transaction.
+- **"Session 62" was available, not "session 63," despite a kickoff doc already existing for it.** Session 61
+  wrote its own close-out doc and a forward-looking `session-62-kickoff.md` mid-stream, then kept going itself
+  (per its own halt commit: "session 61 spanned eight days," covering the period the kickoff doc implied would
+  belong to a new session). A session number gets consumed by being actually USED as a distinct session, not by
+  a kickoff doc being written for it.
+
+## Session 61 — 2026-08-07 (autonomous; PR 77 merged, PR #85 opened)
+
+- **A session outliving its own dates is now the PATTERN, not the accident — assume it.** Session 60 spanned
+  twelve days (26/7 → 7/8) and turned one of its own conclusions upside down ("nothing to sync" became two
+  overdue syncs). Session 61 then spanned eight (7/8 → 15/8): every measurement, every doc, and the whole
+  session-62 kickoff say **2026-08-07**, while the halt was decided on **2026-08-15**. Twice in a row, the
+  conversation read as continuous and the calendar did not. **Treat `date +%Y-%m-%d` as the first command of
+  every turn that will write a date, not just the first command of the session** — a date derived at the
+  start of a long session is as untrustworthy as a date recalled from memory, which is what the Golden Rule
+  already says about everything else. The concrete cost here was near-zero only because `date` was run again
+  at the halt.
+
+- **A pause pauses the work, not the clocks the work made promises about.** Halting the project for ~2 months
+  from 2026-08-15 lands squarely on **~2026-10-15**, the date the first `anonymous_trial` rows become
+  purgeable under the 90-day retention promise — while `GDPR_PURGE_APPLY` is off, so the monthly cron reports
+  and deletes nothing. Nothing was broken at the halt; the promise simply starts being missed at roughly the
+  moment the project returns, with nobody watching in between. **Before pausing anything, enumerate the
+  commitments that keep running: retention windows, certificate/credential expiries, scheduled jobs that are
+  dormant rather than absent, and live money paths.** It was worth raising with the owner while he was still
+  in the chat, since it is his env var and in two months he would not be.
+
+- **A poll-loop watcher you then check by hand becomes a spinner — stop it explicitly.** This session armed
+  several `while true; do gh run list …; sleep 30; done` monitors to wait on CI, and then in most cases
+  checked the same run manually a minute later. The manual check answered the question; the loop kept
+  spinning. **The owner had to kill one that had been running for about five hours** on his own machine.
+  Nothing was lost — everything was already committed, pushed and green — but it was pure waste on an 8 GB
+  machine that this same session had already established cannot spare the CPU (see the OOM lesson above).
+  **Fixes, in order of preference:** prefer a BOUNDED wait (`until <condition>; do sleep N; done` with a
+  real exit, run via a backgrounded command) over an unbounded `while true`; and the moment you satisfy a
+  watcher's condition by hand, kill it — don't leave it to a timeout, and don't assume a reported
+  "Monitor timed out" actually reaped the shell (the five-hour one survived exactly that).
+
+- **The final self-audit earned its place: it caught the session repeating the exact mistake the session
+  had fixed that morning.** Session 61 opened by removing "Three commits" from STATUS because a commit count
+  in a doc is stale on the next commit — and then wrote "five commits" for PR #85 into the session-62 kickoff
+  and "Four commits" into STATUS, both wrong (it was seven) by the time the wrap-up commits landed. Nothing
+  caught it until step 8's `gh pr view 85 --json commits`. **A rule you just wrote does not protect you from
+  breaking it four hours later; only re-deriving every number against its source does.** Both now name the
+  CONCERNS and point at git.
+
+- **A missing summary line is not a pass.** The branch's backend suite was read as green from a log that
+  simply had no `Test Files` line in it. It had been **OOM-killed — exit 137** — because 103 PGlite-backed
+  test files were running alongside 11 concurrent review agents on an 8 GB machine. Two separate runs were
+  truncated the same way before the exit code was checked. Session 60's trap 3 says "freeze the tree, then
+  measure"; the tree was frozen and the *machine* was not. **On this machine the verification block must run
+  with no agents in flight**, and a log without an explicit pass/fail line must be treated as a failure until
+  an exit code says otherwise. `npm test > log 2>&1; echo $?` — capture the code, never infer it from silence.
+
+- **A line reference written while editing the file above it is stale on arrival.** The `#191` fix added an
+  explanatory comment to `respond.ts`, which pushed the `{ ...options }` spread from line 630 to 652 — and
+  the RUNBOOK and open-questions rows written in the same commit cited 630. It was true on `main` and false
+  on the branch the moment it was written. The independent review caught it. **Cite a line number only after
+  the edit is final, and re-grep before committing.**
+
+- **A subagent's conclusion and its evidence need separate verification.** A review agent reported a correct
+  conclusion about R8 reconstruction, supported by a citation to `tests/answer/audit-reconstruct.test.ts` —
+  **a file that does not exist and never has** (`git log --all --diff-filter=A` confirms). The adversarial
+  verifier caught the fabricated citation while agreeing with the conclusion. This is the concrete argument
+  for the verify stage: without it, a fabricated file path would have been copied into a doc as fact.
+  Related: [#191](open-questions.md), and the `index-is-not-the-page` lesson from 2026-07-26.
+
+- **"Is it threaded?" was the wrong question; "which half is threaded?" was the right one.** [#191](open-questions.md)
+  was recorded as a reply turn that never receives `ANSWER_FIRST_ENABLED`. Measurement showed the reply turn
+  ran **half** of mechanism B: B-region lives in the QUERY layer and already arrived via a `{ ...options }`
+  spread, while B-period lives in the INTENT layer and did not. The recorded framing ("both turns run pre-B
+  and agree") was wrong in a way that mattered — flag-on, the reply turn defaulted the region the user never
+  mentioned and refused over the period it was allowed to default. **When a flag has two mechanisms, check
+  each one's layer separately; a single "is the flag passed?" answer can be true and false at once.**
+
+- **The product question dissolved once the written rule was actually read.** #191 was framed as a product
+  call ("should a reply turn default like the first turn?"). R7's third branch already authorizes filling in
+  a structurally-determined axis and draws **no first-turn/reply-turn distinction**, and the safelist is
+  "code, never configuration". So half-applying it was an invariant conformance gap, not a design choice.
+  **Before treating something as an open product question, check whether an invariant already answers it.**
+
+- **A pin can inherit the very blind spot it was written to close.** Session 60's trap 5 was "derive a pin's
+  pattern from the REASON for the rule, not from the instances in front of you" — and the doc-convention test
+  written from that lesson was still scoped to `docs/`, where the instances happened to live, leaving
+  `CLAUDE.md` (doc #1 in the reading order) unscanned. Its regex was also case-sensitive and scheme-anchored.
+  **After writing a pin, ask what set the RULE covers and compare it to what the pin walks.** An explicit
+  file list now ships with a test that walks the real tree and fails if the list stops naming what exists.
+
+- **A test asserting absence goes vacuous the moment you reword the thing it looks for.**
+  `tests/answer/respond-refusals.test.ts:419` asserts `.not.toMatch(/laatste definitieve/)` to prove a
+  refusal aside is ABSENT in one case. Rewording that template — exactly what [#193](open-questions.md)
+  option (b) calls for — would make the assertion trivially true and silently defang the test. Recorded in
+  the #193 row for whoever ships it. **Grep for `not.toMatch` / `not.toContain` against any string you are
+  about to change.**
+
+- **A copy question turned out to be a factual bug about our own output.** [#193](open-questions.md) asked
+  what `Definitief` may imply. Auditing the copy first showed the product **never prints
+  `(definitief cijfer)` at all** — `provisionalDisplay` maps only `Voorlopig`/`NaderVoorlopig`. The one place
+  that string existed was the landing-page example, under a comment calling it "the product's real answer
+  shape". **Before debating what copy implies, verify the product actually emits it.**
+
+- **Changing a refusal TEMPLATE has an R8 cost that is invisible from the code.** Per [#133](open-questions.md),
+  `reconstructionReport` verifies stored rows against TODAY's builder rules, so live rows carrying the old
+  string start failing reconstruction and each needs a **row-id-pinned** entry in `known-divergences.ts` —
+  and the register takes exact ids, never patterns, so the ids must be discovered with `audit:verify` against
+  the live database. That makes any refusal-copy change owner-supervised, which is why #193's remaining two
+  edits are specified but deliberately unshipped. **Template edits are not "just copy".**
+
+- **Never read an exit code through a pipe, and install BOTH lockfiles before judging a dependency PR.**
+  Verifying Dependabot PR #82 (`next` 16.3.0 + `jsdom` major) locally produced three wrong readings in a row
+  before it produced a true one. (1) `npm --prefix web ci` alone made **9 web test files fail** on
+  `Failed to resolve import "@anthropic-ai/sdk"` — backend modules reached through the `web/backend` symlink
+  need the ROOT install, which CI does first. That was the session's error being misread as the PR's defect.
+  (2) Symlinking the main checkout's `node_modules` into the worktree to dodge the install made Turbopack
+  fail with `Symlink [project]/node_modules is invalid, it points out of the filesystem root` — the exact
+  error [ADR 018](decisions/018-web-app-own-lockfile.md) exists to avoid. (3) `echo "EXIT=$?"` after
+  `cmd | tail -N` captures **`tail`'s** status, always 0 — so two "BUILD_EXIT=0" readings meant nothing.
+  Done correctly (real root install, no symlink, `cmd > log 2>&1; echo $?`), #82 is clean: install 0,
+  typecheck 0, 42/42 files, 453/453 tests, `next build` 0.
+
+- **The `deploy` job never running on a PR is deliberate, not a gap.** It was briefly read as the s49 trap
+  made structural. [ci.yml](../.github/workflows/ci.yml) explains it: `gate` is hermetic (no network beyond
+  npm) and `next build` fetches fonts at build time, so it can only run inside `deploy`, downstream of green.
+  The correct mitigation for a dependency bump is therefore to build it **locally** before merging, not to
+  change CI. **Read the comment before calling a config a bug.**
+
 ## Session 60 continuation — the ~30/7 syncs, run on 2026-08-07 (autonomous)
 
 - **Twelve days passed between the session-60 work and this continuation, and `date` was the only thing that

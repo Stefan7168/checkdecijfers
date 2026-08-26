@@ -1,5 +1,257 @@
 # STATUS archive — the session log
 
+**Session 62 (2026-08-26, AUTONOMOUS — the owner resumed the project ~11 days into the ~2-month pause and
+asked for hours of unattended, multi-agent work). Four PRs opened/fixed, all CI-green, none merged
+(#118(b) — no owner in chat during this session).**
+
+**⚠ Found mid-session: `origin/main` had not actually received any of session 61's post-PR-77 work —
+including the pause/halt documentation itself.** Session 61 committed everything after PR #77 (the #191/#192/
+#193 fixes AND the halt/pause decision docs) onto its own feature branch (`fix/191-reply-turn-answer-first`,
+PR #85) rather than `main`, and appears to have left the repository checked out on that branch at session end
+rather than returning to `main`. `origin/main`'s real tip stayed at `1a16eed` (the PR #77 squash) the entire
+time. This session's own `date`/`git log` checks at startup read the inherited local checkout (which had the
+branch, so showed the halt commit and everything since) and correctly concluded the project was paused — but
+several doc edits made mid-session against a fresh `git checkout main` were against the STALE pre-halt copy
+and had to be redone against the actual current branch once caught (via `git log -1 origin/main -- <file>`
+disagreeing with local HEAD). **Nothing was lost** — every commit is present on both the local repo and
+`origin`, reachable from `fix/191-reply-turn-answer-first` — but `main` itself will not show the pause, the
+RUNBOOK's "resuming after a pause" section, or any of the fixes below until PR #85 is reviewed and merged.
+**This is the actual reason `main` looks two-plus weeks behind reality; treat PR #85 as the bridge, not an
+ordinary feature PR.**
+
+**Resume-checklist state, measured fresh (not carried over from the pause note):** GDPR dry-run
+(`npm run gdpr:purge`, no `--apply`) — **0 rows purgeable** (first real ones land ~2026-10-15, as the pause
+note expected). Trial pot **23/25**, unchanged since session 52 — confirms nobody drained it. `#132` T-0
+condition (`forks_count`) — still **0**. Production `/` and `/llms.txt` — **200**. Anthropic console / Stripe
+dashboard — no authenticated browser session available this session; a quick manual glance for the owner, not
+a finding. Vercel↔GitHub integration post-privacy-change — still unproven; needs a real push, which stays
+the owner's merge to trigger.
+
+**CBS re-sync — all 20 registered tables checked, all drift synced.** 8 had no drift; 12 had real drift (only
+new period codes, nothing removed — the documented safe case) and all 12 are now synced. 3 of the 12 hit
+transient connection-pool errors on the first attempt (consistent with #173's documented free-tier
+exhaustion history under this session's own concurrent load) — verified no data corruption from any of the 3
+(only harmless orphaned `'running'` bookkeeping rows, no partial writes), and all 3 succeeded cleanly on a
+spaced-out retry.
+
+**Dependabot backlog — all 7 currently-open PRs verified (the 6 named in the prior kickoff plus `#80`, found
+open but out of scope for that brief), none merged.** Real overlaps found between them (a `next` version
+alignment issue between #83/#88, differing `nanoid` targets between #83/#86, and — inherent to the ADR-018
+`web/backend` symlink split, not new — a cross-lockfile Stripe/Anthropic-SDK version-skew window between root's
+#90 and web's #88). **All 6 currently-open Dependabot SECURITY alerts on `main` are closed by #89, #86, and
+#84 specifically** (checked directly against the GitHub API, not inferred) — all HIGH severity
+(`brace-expansion` DoS ×4, `nanoid` infinite-loop ×2). Recommended merge order: #89 → #86 → #84 (closes all 6
+alerts) → #88 → #83 (likely redundant after #88+#86) → **#90 last, deliberately** (the one PR touching Stripe
+webhook verification + the core LLM path — merge it last so a stable baseline exists to bisect against if
+anything shows up). #80 is fully independent, safe anywhere in the order.
+
+**PR #91 — the #193 remaining copy edits, done and CI-green.** Both specified copy changes shipped verbatim,
+plus the test-vacuity trap the open-question row warned about handled correctly (the new assertion appended
+alongside the old one, inside the same gate, verified by extending both the positive and negative test cases
+rather than just reasoning about it). Also investigated `reconstruct.ts` directly rather than deferring the
+R8 risk: both touched builders produce `kind:'refusal'` envelopes, which `checkAnswerReconstruction` never
+re-derives — so no new audit divergence is expected. The live `audit:verify` pinning step from open-questions
+#193 stays the owner's, untouched, as specified.
+
+**PR #85 — reviewed (`/code-review`, 10 finder angles + a gap-sweep, 11 findings) and the 4 confirmed
+correctness bugs fixed on the branch.** Three of the four were independently reproduced live by 2-4 different
+reviewer angles each, not just asserted once: (1) `scripts/sync-from-capture.ts`'s `runSyncFromCapture` had no
+`try/catch` around `syncTable`, which throws rather than returns a failed result when a table is already
+`needs_review` without `--rebaseline` — exactly the state a release-day retry lands in; an operator forgetting
+the flag got a raw crash instead of the guided failure message. (2) The new `doc-conventions.test.ts`
+completeness-check failed whenever a git worktree existed on disk — this project's own agent-isolation
+pattern — because its ignore-list wasn't gitignore-aware; replaced with `git ls-files
+--cached --others --exclude-standard`. (3) The #193 body-suffix fix (session 61) had moved a fabricated status
+clause INTO the source line instead of removing it — `buildAttributionLine` never emits a status clause on
+that line, for any status value; removed outright. (4, found only by the gap-sweep) `open-questions.md` row
+#193 had an unclosed italics span, the same defect class this PR's own self-review commit already fixed on
+rows #191/#192 but missed on #193. One architectural finding (three hand-duplicated options-bag interfaces
+carrying the same recurring bug shape as #176→#191) and 6 cleanup items were reported, not fixed — real, but
+broader than this PR's scope. Full clean re-verification after the fixes (typecheck, backend 1572/1572 · 105
+files, web 453/453 · 42 files, benchmark 14/14+6/6+0 GATE PASS, real `web:build`) — all match the pre-pause
+baseline exactly. CI green on both triggers.
+
+**PR #92 — a genuinely separate infrastructure bug, found while chasing a clean test run for PR #85.**
+`vitest.config.ts`'s exclude list only matched a top-level `web/`, not one nested inside a worktree's full
+clone, so a root `npm test` silently ran the whole suite 2-3× over for the entire time any worktree existed —
+238 spurious failures in one measured run, and very likely the true explanation for "sustained heavy machine
+load" a concurrent Dependabot-verification agent flagged the same evening. Fixed by adding `.claude/**` to the
+exclude list; verified with two real worktrees present (clean 103 files/1562 tests, and the one real failure
+it caught — a live PR link in this session's own scratch notes — is evidence the fix surfaces genuine signal
+rather than suppressing it). Kept on its own branch/PR rather than folded into #85, since it's unrelated to
+that PR's actual scope.
+
+**Owner-menu items (WP30c / #162 / #170 rest / #132 route B) — checked, confirmed genuinely blocked, not
+silently skipped.** Each needs either a real owner decision, LLM spend authorization, a not-yet-cleared phase
+gate, or is explicitly destructive/irreversible and awaiting a GO. None built.
+
+Full session narrative, including every trap hit and the exact commands run:
+[session-briefs/2026-08-26-session-62-resume-log.md](session-briefs/2026-08-26-session-62-resume-log.md).
+
+**Session 61 CLOSE / PROJECT HALT (2026-08-15 — same session, 8 days after the work below. Owner present.
+Two decisions: pause the project ~2 months, and set the GitHub repo PRIVATE.)**
+
+**⚠ The session outlived its own dates for the second time running.** The work recorded below was measured
+on **2026-08-07**; the halt was decided on **2026-08-15**. Session 60 spanned twelve days, session 61 spanned
+eight. `date` caught it again. Every number in the entry below is as-measured on the 7th and must be
+re-measured on resume.
+
+**Repo set PRIVATE — this is [#132](open-questions.md) option D**, the one session 37 explicitly recommended
+AGAINST at the time, on the grounds that it costs the free GitHub Actions minutes. That reasoning was sound
+then and is irrelevant now: nothing will be pushed for two months, so there are no minutes to lose, and the
+project is going dark rather than staying open to the public. A+B+C (stop-new-leakage, tree redaction, git
+history rewrite) were already executed in session 37, so **D is additive protection, not a substitute** —
+the PII is already out of the history, and going private additionally removes the dangling-commit exposure
+that the post-rewrite audit flagged as permanently reachable on a public repo.
+
+**⚠ THE GDPR CLOCK DOES NOT PAUSE, AND IT LANDS AT THE END OF THE PAUSE.** `gdpr:purge` drives three clocks
+(account rows redact at 2 years; `anonymous_trial` audit CONTENT at 90 days; `trial_questions` bookkeeping —
+visitor UUID + HMAC'd IP — **DELETED** at 90 days). First rows purgeable **~2026-10-15**, which is exactly
+where a 2-month pause from 2026-08-15 ends, and **`GDPR_PURGE_APPLY` was left OFF** — so the monthly Vercel
+cron reports and deletes nothing throughout. Raised with the owner in-chat at the halt, since it is his flag
+and his call; recorded as the FIRST item in the STATUS pause banner and in the new RUNBOOK "Resuming after a
+long pause" section, ahead of PR #85. Nothing is broken as of the halt; the promise starts being missed at
+roughly the moment the project comes back.
+
+**Production left LIVE and unattended** — `/llms.txt` and `/` both **200** at the halt. Expected on return,
+none of it a bug: CBS data goes stale (no syncs; BBP quarterly and PPI monthly publish regardless) and the
+staleness net correctly REFUSES recency questions rather than serving old numbers; the anonymous trial and
+the Stripe money path stay live with the trial pot hard-capped; Dependabot keeps opening PRs.
+
+**State at the halt, verified:** HEAD `2dd94b9`, tree clean, everything pushed, CI green.
+**PR #85 remains OPEN and unmerged** — it carries the WP26 pre-flip blocker fix (#191) plus #192, #132 and
+#193. Nothing from it is deployed. Both WP26 flags and `GDPR_PURGE_APPLY` remain OFF, untouched, as they
+have been for six sessions.
+
+**A new RUNBOOK section, "Resuming after a long pause", is the actual deliverable of this halt** — seven
+ordered steps: run `date` first; deal with the GDPR clock before anything else; re-sync CBS *with*
+`--accept-new-codes` because several releases' worth of new period codes will be waiting and a bare sync
+quarantines the table; check pot/spend/Stripe; expect a stale dependency backlog; verify the Vercel↔GitHub
+integration still deploys after the visibility change (with a trivial docs commit, not a real one); then the
+normal queue.
+
+**Session 61 (2026-08-07. AUTONOMOUS — the owner handed over the kickoff and left. He authorised ONE merge
+by name (PR 77); everything else went to a branch per [#118](open-questions.md)(b). €0 live-LLM spend, zero
+prompt bytes, no live DDL. Both WP26 flags and `GDPR_PURGE_APPLY` untouched.)**
+
+**✅ PR 77 MERGED AND DEPLOYED.** Squash `1a16eed`; CI run **31159544689** `gate` ✅ + `deploy` ✅; canary
+`/llms.txt` **200**. This closed the split the session opened with: session 60's docs were stranded on a
+branch while its sync DATA was already live in production, so `main` and production contradicted each other.
+⚠ A `failure` conclusion appears on `main` at the same SHA — it is the **"Dependabot Updates"** workflow
+(`event: dynamic`), not CI, and two other Dependabot runs at that SHA succeeded. Not a gate failure.
+
+**Three facts in the handover did not survive checking** — recorded because the Golden Rule applies to
+reading a handover too. PR 77 had **12** commits, not 11 (`git rev-list --count`); CI was **`in_progress`**
+on HEAD when the session started, not green (it went green later); and `/api/health` returns **307**, not
+200, so the "200/200/200" line is not reproducible as stated — the RUNBOOK's actual canary is `/llms.txt`
+alone. STATUS's own top block still said PR 77 had "Three commits" while the branch was at twelve, and the
+session-60 self-audit had corrected that number in **one of the two places it appeared**. Fixed by removing
+the count entirely: a commit count in a doc is stale on the next commit, so the doc now names the three CODE
+commits and points at `gh pr view`.
+
+**PR #85 OPENED, awaiting owner review** — branch `fix/191-reply-turn-answer-first`, four commits.
+
+**[#191](open-questions.md) — the WP26 pre-flip blocker, and it was worse than recorded.** Filed as "the
+reply turn never receives `ANSWER_FIRST_ENABLED`". Measurement showed the reply turn ran **HALF of mechanism
+B**, a state nobody chose: **B-region** lives in the QUERY layer (`src/query/resolve.ts:393`) and already
+reached reply turns through the `{ ...options }` spread into `respondToIntent` (`respond.ts:652`), while
+**B-period** lives in the INTENT layer (`src/answer/intent/resolve.ts:731`) and is fed by the
+`ClarifyReplyOptions` bag that `respondToClarificationReply` built without the flag. So with the flag on, a
+reply turn **silently defaulted the region the user never mentioned and then refused over the period it was
+allowed to default.** Measured on the hermetic fixture DB, flag ON — pre-fix: first turn `answer`, reply turn
+`refusal (still_ambiguous)`; post-fix: both `answer`.
+
+**The product question dissolved once the written rule was read.** R7's third branch authorises filling in a
+structurally-determined axis under four conditions and draws **no first-turn/reply-turn distinction**, and
+the safelist is "code, never configuration" — so half-applying it was an invariant conformance gap, not
+deliberate caution. Supporting argument the open-question row did not make: a reply is the LAST round by
+rule (a reply never asks again), so it is the turn where refusing costs most — the user answered the exact
+question we asked and would be refused on an axis nobody asked about, after paying the clarification price,
+which is the precise paid dead-end ADR 024 exists to remove. Pinned by
+`tests/answer/answer-first-reply-turn.test.ts`, whose load-bearing case asserts the two turns **agree**
+rather than asserting a verdict, and which also pins R7 condition (c) — the disclosure (`assumptionLine`)
+really does render on a reply turn. Flag-off byte-neutrality independently verified. Also corrected: the
+RUNBOOK blast-radius cell said this flag affects "First turns", which was measurably wrong.
+
+**[#192](open-questions.md) — the capture hatch can now finish a release-day sync.** It called `syncTable`
+with no options bag, so `--accept-new-codes` was unreachable from the one entry point documented for release
+days; every CBS release adds a period code by definition, an unmapped code fails `dimension_mapping`, and a
+failed mapping quarantines the table, which then refuses in production. Bigger than threading two flags: the
+script had **zero importable surface** (top-level side effects against real argv, fs, wall clock,
+`connectFromEnv`), so a flags-only patch could not have been tested against the real path. Restructured to
+mirror `src/ingestion/cli.ts`. A bare `dimension_mapping` failure now prints the recovery command. Safety
+property recorded: `--accept-new-codes` admits new dimension **coordinate** codes only — a new measure code
+still fails unconditionally, so the flag cannot silently widen the vocabulary.
+
+**Both fixes were verified RED before being trusted** (session 60's trap 1). #191: removing the one line
+reproduced first-turn-`answer` / reply-turn-`refusal`. #192: removing the options bag made the recovery case
+fail exactly as the row describes.
+
+**[#132](open-questions.md) — the pin inherited the blind spot it was written to close.** PR 77's new
+doc-convention test scanned `docs/` + two READMEs, leaving `CLAUDE.md` — doc #1 in the reading order —
+unscanned, and its regex was case-sensitive and scheme-anchored (missing `GitHub.com/...` and
+protocol-relative `//github.com/...`). Session 60's own trap 5 was "derive a pin's pattern from the REASON
+for the rule, not from the instances in front of you". Widened, plus a test that walks the real tree and
+fails if the explicit file list stops naming what exists. No live links exist in the newly covered files
+today, so this closed a latent gap rather than an escape.
+
+**[#193](open-questions.md) DECIDED — option (b), and the copy question hid a factual bug.** The product
+**never prints `(definitief cijfer)`**: `provisionalDisplay` (`src/sources/registry.ts:73-76`) maps only
+`Voorlopig`/`NaderVoorlopig`. The single place that string existed was `web/components/landing.tsx:68`,
+inside the example the file's own header comment calls *"the product's real answer shape"* — so the homepage
+advertised a shape the pipeline cannot produce. Fixed (status moved to the source line, where the pipeline
+shows it and where the page's step 3 already promises it), with a comment so it is not helpfully re-added.
+The finality implication is therefore **structural** — the silence where a `(voorlopig cijfer)` marker would
+be — not asserted; the copy is not false but measurably optimistic, and the public traceability claim is
+untouched. **Two remaining copy edits specified but deliberately NOT shipped:** they change a refusal
+TEMPLATE, and per [#133](open-questions.md) stored rows reconstruct against TODAY's rules, so live rows would
+each need a **row-id-pinned** `known-divergences` entry — and that register takes exact ids, never patterns,
+so the ids must be found with `audit:verify` against the live DB. Owner-supervised. ⚠ Trap recorded for
+whoever ships it: `tests/answer/respond-refusals.test.ts:419` asserts `.not.toMatch(/laatste definitieve/)`
+to prove the aside is ABSENT — rewording the template makes that assertion **vacuously true**.
+
+**Dependabot #80 / #81 / #82 triaged, NOT merged.** Risk order **#80** (`undici` patch) → **#81**
+(`@anthropic-ai/sdk` 0.114→0.115, a 0.x minor that can break under semver; `stripe` 22.3→22.4 on the money
+path) → **#82** (`next` 16.2.11→16.3.0; `jsdom` ^29→^30 **major**). ⚠ **CI cannot catch a build-breaking
+bump on a PR, and that is DELIBERATE, not the s49 trap made structural** — `gate` is hermetic and
+`next build` fetches fonts over the network, so it runs only inside `deploy`, downstream of green (comment
+at the top of `.github/workflows/ci.yml`). The mitigation is a LOCAL build. **#82 was built locally in a git
+worktree — the one check CI structurally cannot do: root `npm ci` exit 0, web typecheck exit 0, web suite
+**42/42 files and 453/453 tests**, and `next build` (Next.js 16.3.0, Turbopack) **exit 0** with the full
+route table emitted.** So the riskiest of the three bumps is cleared on the axis that matters; it still
+needs the owner's merge.
+
+⚠ **Three measurement errors were made here and caught before anything was reported as fact.** (1) A first
+attempt reported "9 test files failed" — the SESSION's error, not the PR's: only `npm --prefix web ci` had
+been run, so backend modules reached through the `web/backend` symlink could not resolve root-level deps
+(`@anthropic-ai/sdk`, `zod`); CI runs the root install first. **A local dependency check must install BOTH
+lockfiles or it will manufacture failures.** (2) Symlinking the main checkout's `node_modules` into the
+worktree to dodge that install made Turbopack fail with `Symlink [project]/node_modules is invalid, it
+points out of the filesystem root` — the exact error ADR 018 exists to avoid; a real install is required.
+(3) `echo "EXIT=$?"` after a `cmd | tail -N` pipeline captures **`tail`'s** exit code, which is always 0, so
+two earlier "BUILD_EXIT=0" readings were meaningless. **Never read an exit code through a pipe.**
+
+**Measured this session (frozen tree, verification block run SOLO):** backend **1572 / 105 files**, web
+**453 / 42**, benchmark **14/14 + 6/6 + 0 fabricated GATE PASS**, real `next build` compiled successfully,
+both typechecks clean. Arithmetic check: 1562 + 4 (`answer-first-reply-turn`) + 5 (`sync-from-capture`) + 1
+(new doc-convention case) = **1572**; 103 + 2 new files = **105** ✅.
+
+**⚠ THE MACHINE LESSON OF THIS SESSION.** The backend suite is **OOM-KILLED (exit 137)** if it runs
+alongside concurrent agents on this 8 GB machine — 105 PGlite-backed test files will not coexist with an
+11-agent review fleet. **Two runs were truncated that way, and the first was misread as green purely because
+the log had no failure line in it.** Session 60's trap 3 says "freeze the tree, then measure"; the tree was
+frozen and the *machine* was not. **Run the verification block solo, capture the exit code explicitly
+(`npm test > log 2>&1; echo $?`), and treat a log without a summary line as a kill, not a pass.**
+
+**An independent adversarial review of this session's own diff found 8 things, 7 real, all addressed** —
+including a self-inflicted one: the explanatory comment added for #191 pushed the `{ ...options }` spread
+from line 630 to 652, and the RUNBOOK and open-questions rows written in the *same commit* cited 630. A line
+reference written while editing the file above it is stale on arrival. ⚠ It also produced the session's most
+useful delegation lesson: one review agent supported a correct conclusion with a citation to
+`tests/answer/audit-reconstruct.test.ts` — **a file that does not exist and never has**. The adversarial
+verifier caught the fabricated citation while agreeing with the conclusion. **A subagent's conclusion and its
+evidence are two separate claims; verify them separately.**
+
 **Session 60 CONTINUATION (2026-08-07 — same session, resumed twelve days later. AUTONOMOUS. No code merged,
 no deploy; the only production change is DATA — the two CBS syncs the owner scheduled for ~30/7.)**
 

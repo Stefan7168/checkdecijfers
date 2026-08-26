@@ -8,7 +8,22 @@
 // consumentenvertrouwen juni 2026 = −39, Definitief, tabel 83693NED —
 // re-verified LLM-free on production 2026-07-17) rendered in the product's
 // real answer shape; refresh it CONSCIOUSLY when the frozen key ever changes,
-// never invent one (principle a). The anonymous-trial chat (#53, ADR 036) is
+// never invent one (principle a).
+//
+// ⚠ #193 (2026-08-07, corrected 2026-08-26): NEITHER the body NOR the source
+// line carries a status suffix, and that is correct — do not "helpfully" add
+// one back anywhere. `provisionalDisplay` (src/sources/registry.ts) maps only
+// Voorlopig and NaderVoorlopig, so the real pipeline renders a definitive
+// cell with no status text at all — not in the body (fixed here originally),
+// and not in the source line either: `buildAttributionLine`
+// (src/answer/compose/format.ts) is the ONE builder for that sentence on
+// every surface, and its shape is fixed — Bron/tabel, sync date, period,
+// license — with no status field, for any status value. An earlier version
+// of this fix moved the fabricated "(definitief cijfer)" suffix INTO the
+// source line ("Status bij CBS: definitief.") instead of removing it,
+// re-introducing the exact bug it was fixing one line down — a claim about
+// where the pipeline shows the status that the pipeline does not do anywhere.
+// The anonymous-trial chat (#53, ADR 036) is
 // built and DORMANT: <TrialSectie /> renders nothing until the supervised
 // go-live sets TRIAL_ENABLED + the trial key + the ip-hash secret and seeds
 // the pot — until then the CTA routes to /login, byte-identically.
@@ -65,7 +80,7 @@ export function Landing() {
             <div className="max-w-xl rounded-lg border border-line bg-paper-raised px-4 py-3">
               <p className="text-ink">
                 Het consumentenvertrouwen in Nederland was in juni 2026{' '}
-                <span className="tnum font-semibold">−39</span> (definitief cijfer).
+                <span className="tnum font-semibold">−39</span>.
               </p>
               <p className="mt-2 border-t border-line pt-2 text-xs text-ink-muted">
                 Bron: CBS StatLine, tabel 83693NED — Consumentenvertrouwen,

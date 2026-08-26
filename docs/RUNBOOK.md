@@ -484,16 +484,27 @@ so a problem with one mechanism never forces the other off.
 | Flag | What it turns on | Blast radius when on |
 |---|---|---|
 | `CLARIFY_CLICK_ENABLED=1` | Clarification options carry a pre-verified intent; a reply byte-equal to an offered label resolves deterministically (no LLM). Chips render on clarifications. | Reply turns only. Worst case: a chip is missing (an option failed its dry-run) — never a wrong answer. |
-| `ANSWER_FIRST_ENABLED=1` | A question with no region (on a measure with a national row) answers nationally; a question with no period at all answers with the recent trend. Both disclosed in-sentence. | First turns. Questions that used to clarify now ANSWER — the biggest visible behavior change of the two. |
+| `ANSWER_FIRST_ENABLED=1` | A question with no region (on a measure with a national row) answers nationally; a question with no period at all answers with the recent trend. Both disclosed in-sentence. | **First turns AND clarification-reply turns** (corrected 2026-08-07 — this cell said "First turns" and that was measurably wrong; see #191 below). Questions that used to clarify now ANSWER — the biggest visible behavior change of the two. |
 
-⚠ **BEFORE the `ANSWER_FIRST_ENABLED` flip, read [#191](open-questions.md)** (found 2026-07-26, session 60).
-The clarification REPLY turn never actually receives that flag — `ClarifyReplyOptions` declares
-`answerFirstEnabled` and its comment says it is threaded, but `respondToClarificationReply` never sets it
-(`src/answer/respond/respond.ts:586-595`). Harmless while the flag is off, because both turns then run
-pre-B and agree. Flip it and they stop agreeing: the first turn defaults a missing region/period and
-answers, the reply turn judges the same option under pre-B rules and can refuse or re-clarify. That is two
-halves of one conversation disagreeing about what is servable — decide what a reply turn *should* do
-(default like the first turn, or deliberately not) before flipping, not after.
+✅ **[#191](open-questions.md) is FIXED (2026-08-07, session 61) — the pre-flip blocker is cleared.**
+It was recorded as "the reply turn never receives the flag", but measurement showed something worse: the
+reply turn ran **half** of mechanism B, a state nobody chose. B has two axes in two different layers —
+**B-region** lives in the QUERY layer (`src/query/resolve.ts:393`) and already reached reply turns through
+the `{ ...options }` spread into `respondToIntent` (`respond.ts:652`), while **B-period** lives in the
+INTENT layer (`src/answer/intent/resolve.ts:731`) and is fed by the `ClarifyReplyOptions` bag that
+`respondToClarificationReply` built without the flag. So with the flag on, a reply turn silently defaulted
+the REGION the user never mentioned and then REFUSED over the PERIOD it was allowed to default.
+
+Measured on the hermetic fixture DB, flag ON, before the fix: first turn → **answer**, reply turn →
+**refusal (`still_ambiguous`)** on the same intent. After the fix both **answer**. Pinned by
+`tests/answer/answer-first-reply-turn.test.ts`, whose load-bearing case asserts the two turns AGREE rather
+than asserting a particular verdict.
+
+Why defaulting is the right answer, not merely the convenient one: **R7's third branch**
+([05-data-rules.md](05-data-rules.md)) authorizes filling in a structurally-determined axis under four
+conditions and draws **no first-turn/reply-turn distinction** — the safelist is code, not configuration —
+so applying it to one axis and not the other was an invariant conformance gap. And a reply is the LAST
+round by rule (R7: a reply never asks again), which makes it the turn where refusing costs the most.
 
 ⚠ **Flip a flag only when the last deploy has SETTLED** (see the connection-ceiling section directly above):
 each flip triggers a redeploy, and both mechanisms add DB work per request — B-region an existence probe on
@@ -583,6 +594,60 @@ the RE-RUN/refill reference:
    automatically, within the ~20 s cache window from step 5). Optional owner-side hardening outside the
    repo: Vercel Firewall rate rules (ADR 036 D2) — and note the rule must target **`POST /`**, not
    `/api/`, because Server Actions POST to the page path.
+
+## Resuming after a long pause (written 2026-08-15, at the ~2-month halt)
+
+**✅ RUN 2026-08-26 (session 62, autonomous) — ~11 days into the pause, not the full ~2 months, by owner
+request.** All 7 steps below were worked in order; results in the session-62 entry in
+[status-archive.md](status-archive.md) and
+[session-briefs/2026-08-26-session-62-resume-log.md](session-briefs/2026-08-26-session-62-resume-log.md).
+Kept below unmodified as reusable guidance for any future pause — nothing here stopped being accurate, it's
+just now also a completed record.
+
+The project was paused **2026-08-15** by owner decision, expected back **~2026-10-15**, and the GitHub repo
+was set **private** at the same time. Production was left **live** (`/llms.txt` and `/` both 200). Work
+through this in order — the first item has a deadline, the rest are checks.
+
+1. **`date +%Y-%m-%d` FIRST, before reading anything else.** Two sessions running have outlived their own
+   dates (session 60 spanned 12 days, session 61 spanned 8). Every measured number in `docs/` is stale until
+   re-measured; treat the whole tree as a historical document until you have re-derived what you act on.
+
+2. **⚠ THE GDPR CLOCK — deal with this before PR #85, before anything.** Three clocks run off
+   `npm run gdpr:purge` (see the maintenance section above): account audit rows redact at 2 years,
+   `anonymous_trial` audit CONTENT redacts at 90 days, and `trial_questions` bookkeeping (visitor UUID +
+   HMAC'd IP) is **DELETED** at 90 days. The first rows became purgeable **~2026-10-15**, i.e. right at the
+   end of this pause, and **`GDPR_PURGE_APPLY` was left OFF**, so the monthly cron has been reporting and
+   deleting nothing the whole time. **Run the purge in report mode first and read what it says it WOULD
+   delete**, then set `GDPR_PURGE_APPLY=1` (owner action) and do one watched run. If the answer is "there is
+   nothing to purge because nobody used the trial", that is a fine answer — but it must be MEASURED, not
+   assumed, because it is the one promise that kept running while the project did not.
+
+3. **Re-sync CBS before trusting any answer.** No sync ran during the pause; CBS publishes BBP quarterly and
+   PPI monthly regardless. Expect several releases' worth of drift. The staleness net behaves correctly
+   (recency questions REFUSE rather than serve old numbers; covered historical periods warn-and-serve), so
+   the product is not lying — it is just increasingly unable to answer. ⚠ **Read step 6 (release-day sync)
+   before running one**: diff the CBS code lists read-only first, then sync **with** `--accept-new-codes`.
+   Several releases' worth of new period codes will be waiting, and a bare sync quarantines the table.
+
+4. **Check the money path and the spend.** The anonymous trial and Stripe were live and unwatched. The trial
+   pot is hard-capped so exposure is bounded, but verify: the pot balance, the Anthropic workspace spend, and
+   any Stripe activity. Nothing should have moved if nobody visited — confirm that rather than assume it.
+
+5. **Dependency backlog.** Dependabot kept opening PRs throughout. Expect the three that were open
+   (#80/#81/#82) to have gone stale or conflicted, plus new ones. ⚠ Re-verify locally before merging — CI's
+   `gate` deliberately does not run `next build` (it is hermetic; `next build` fetches fonts over the
+   network), so a build-breaking bump only shows up in `deploy`, after merge.
+
+6. **The repo is PRIVATE now.** Consequences: GitHub Actions minutes come out of the account quota instead of
+   being free (irrelevant while paused, relevant again once pushes resume — watch the billing page), and
+   every `github.com` link to this repo 404s for anyone not signed in as a collaborator, which reinforces
+   rather than replaces [#132](open-questions.md) interim rule (i). Verify the **Vercel↔GitHub integration
+   still deploys** on the first push back: the integration holds its own repo access, and a visibility change
+   is exactly the kind of thing that can silently invalidate it. Do that with a trivial docs commit, not with
+   a real change.
+
+7. **Then the normal queue** — [session-briefs/2026-08-07-session-62-kickoff.md](session-briefs/2026-08-07-session-62-kickoff.md),
+   starting with PR #85 (which carries the WP26 pre-flip blocker fix).
 
 ## Moving to a new machine (fresh clone bootstrap)
 
@@ -747,7 +812,7 @@ The on-demand-fetch code was built and merged (2026-07-06, hermetic — full det
 
    **⚠ BOTH HALVES OF THAT LAST SENTENCE ARE NOW MEASURED FALSE (2026-08-07, the ~30/7 release sync).** Corrected, because this step is operational guidance and a session following it as written would have made things worse:
    - **The slow stream WAS network-specific.** The direct `ingest sync 85880NED` fetched **100,240 rows in 77 s**. Do NOT reach for the hatch by default — **try the direct sync first**; a fetch failure does not quarantine, so the attempt is free. Reach for the hatch only when the direct fetch actually stalls.
-   - **The hatch cannot complete a RELEASE sync at all ([#192](open-questions.md)).** `scripts/sync-from-capture.ts:42` calls `syncTable(db, source, tableId)` with **no options bag**, so `acceptNewCodes` is permanently false and unreachable from its CLI — while every CBS release brings a new period code by definition. Following this step on a release day would fail `dimension_mapping`, set the table to `needs_review`, and (quarantine being enforced on the value path) make it **refuse in production**. The hatch had only ever been used for FIRST-TIME registration, where nothing is new. Until #192 is fixed, the hatch is usable only for a re-sync that introduces no new codes.
+   - **✅ [#192](open-questions.md) FIXED 2026-08-07 (session 61) — the hatch can now complete a release sync.** It previously called `syncTable(db, source, tableId)` with **no options bag**, so `acceptNewCodes` was permanently false and unreachable from its CLI, while every CBS release brings a new period code by definition. Following this step on a release day would fail `dimension_mapping`, set the table to `needs_review`, and (quarantine being enforced on the value path) make it **refuse in production** — it had only ever been used for FIRST-TIME registration, where nothing is new. It now accepts `--accept-new-codes` and `--rebaseline` with the same spelling and the same never-implicit defaults as `ingest sync`, and on a bare `dimension_mapping` failure it prints the recovery command instead of leaving you to work it out. Pinned by `tests/ingestion/sync-from-capture.test.ts`, which drives the script's own exported entry points (driving `syncTable` directly would have proven the pipeline works and said nothing about the entry point that was broken).
 
 6. **Release-day sync procedure (added 2026-08-07 after the ~30/7 syncs; read this BEFORE running one).** A release always adds a period code, and a bare sync therefore does not "play it safe" — it quarantines the table and takes it out of service. Order:
    1. **Measure**: `curl -s https://datasets.cbs.nl/odata/v1/CBS/<id>/Properties` → compare `Modified` against `cbs_tables.last_sync_at`. Nothing newer ⇒ nothing to do.
