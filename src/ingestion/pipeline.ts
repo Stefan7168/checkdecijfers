@@ -507,6 +507,31 @@ export const syncTable: SyncTableFn = async (db, source, tableId, options = {}) 
   const { corrections, rowsInserted, rowsUpdated, rowsUnchanged, rowsMissing } = await db.withTransaction(
     async (tx) => {
       if (rebaselined) {
+        // #34(c): serializes concurrent REBASELINES of the same table — the
+        // on-demand onboarding cron and a manual CLI resync now share this
+        // entry point with no other protection, and this delete-then-
+        // per-row-insert is the one write in this transaction with no
+        // on-conflict guard (every other write here — the observations
+        // upsert, acceptNewCodes' inserts — already has a real unique
+        // constraint or ON CONFLICT behind it). Scoped to just this branch,
+        // not the whole transaction: an ordinary (non-rebaseline) sync never
+        // touches this unguarded write, so it never needs to wait on it.
+        // Transaction-scoped (released automatically on commit/rollback) —
+        // doesn't touch the ingestion_batches row inserted further up,
+        // which is deliberately its own separate statement outside any
+        // transaction (survives a failed sync).
+        //
+        // Bounded, not the query's default unbounded wait: this pool sets
+        // no lock_timeout anywhere else (src/db/client.ts), and the
+        // onboarding cron's Vercel function has a 300s ceiling — an
+        // unbounded wait here could tie up a pooled connection past that
+        // ceiling and turn a clean, catchable failure into a killed
+        // function and a batch row stuck 'running'. 180s leaves headroom
+        // under the 300s ceiling for the validation work that already ran
+        // before this point.
+        await tx.query("set local lock_timeout = '180s'");
+        await tx.query('select pg_advisory_xact_lock(hashtext($1))', [tableId]);
+
         // Reviewed re-baseline persists only now, after all five checks
         // passed — atomically with the data it validated.
         await tx.query(

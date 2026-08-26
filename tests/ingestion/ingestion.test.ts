@@ -692,6 +692,77 @@ describe('sync semantics', () => {
     }
   });
 
+  it('#34(c): two concurrent rebaselines of the SAME table never crash or leave dimension_labels torn', async () => {
+    // The rebaseline path (delete then re-insert dimension_labels) has no
+    // on-conflict guard, unlike every other write in syncTable's transaction
+    // — a genuine crash/corruption risk once two callers can race it (the
+    // onboarding cron and a manual CLI resync now share this same entry
+    // point; open-questions #34(c)). Both calls here are individually valid
+    // (same clean source, same quarantined table) — the point isn't that one
+    // must win and the other lose (unlike a spend race), it's that neither
+    // may observe or leave a half-written label set.
+    //
+    // Same caveat as tests/billing/ledger.test.ts's concurrent-debit tests:
+    // PGlite serves one connection through a single promise-chain mutex
+    // (tests/helpers/pglite-db.ts), so this passes even without the
+    // pg_advisory_xact_lock the fix adds — PGlite's own harness already
+    // forbids two withTransaction bodies from interleaving. What this DOES
+    // pin is the observable contract (never crash, never tear the label
+    // set) that the lock exists to guarantee against a real multi-connection
+    // pg.Pool in production, which this hermetic suite cannot reproduce.
+    const { db, close } = await createTestDb();
+    try {
+      const cleanDocs = await loadDocs('85224NED');
+      const cleanSource = new FixtureSource(cleanDocs);
+      await registerTables(db, cleanSource, [table('85224NED')]);
+      await syncTable(db, cleanSource, '85224NED');
+
+      const corruptDocs = clone(cleanDocs);
+      const measures = (corruptDocs.measureCodes as { value: Record<string, unknown>[] }).value;
+      const target = measures.find((m) => m.Identifier === 'M001906');
+      if (!target) throw new Error('expected M001906 in fixture');
+      target.Unit = 'x 1 000';
+      const corruptSource = new FixtureSource(corruptDocs);
+      const failed = await syncTable(db, corruptSource, '85224NED');
+      expect(failed.outcome).toBe('failed');
+
+      const labelCountBefore = (
+        await db.query('select count(*)::int as n from dimension_labels where table_id = $1', ['85224NED'])
+      ).rows[0]!.n as number;
+      expect(labelCountBefore).toBeGreaterThan(0);
+
+      const results = await Promise.allSettled([
+        syncTable(db, cleanSource, '85224NED', { rebaseline: true }),
+        syncTable(db, cleanSource, '85224NED', { rebaseline: true }),
+      ]);
+      // Neither call may reject with an unhandled database error (a bare
+      // PRIMARY KEY violation from the unguarded insert racing another
+      // caller's delete) — a domain-level failure (e.g. "already active, not
+      // quarantined" on whichever ran second) is fine; a raw constraint
+      // violation propagating out is exactly the crash #34(c) describes.
+      for (const result of results) {
+        if (result.status === 'rejected') {
+          expect(String(result.reason)).not.toMatch(/duplicate key|violates.*constraint/i);
+        }
+      }
+
+      const labelCountAfter = (
+        await db.query('select count(*)::int as n from dimension_labels where table_id = $1', ['85224NED'])
+      ).rows[0]!.n as number;
+      // Torn interleaving (one caller's DELETE running between another
+      // caller's per-row INSERTs) would leave this short of a full set —
+      // it must land exactly where one clean rebaseline alone would.
+      expect(labelCountAfter).toBe(labelCountBefore);
+
+      const rowAfter = (
+        await db.query('select status from cbs_tables where id = $1', ['85224NED'])
+      ).rows[0];
+      expect(rowAfter?.status).toBe('active');
+    } finally {
+      await close();
+    }
+  });
+
   it('rebaseline that fails a later check leaves the registry baseline untouched', async () => {
     const { db, close } = await createTestDb();
     try {
