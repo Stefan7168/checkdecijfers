@@ -12,56 +12,66 @@
 **▶ RESUMED 2026-08-26 (session 62, autonomous). Session 63 (same day, autonomous) continued the queue —
 full narrative in [status-archive.md](status-archive.md) (prepended) and
 [session-briefs/2026-08-26-session-63-resume-log.md](session-briefs/2026-08-26-session-63-resume-log.md).
-Session 64 (2026-08-27, owner present) merged the bridge chain — `main` is current again, not stale.**
+Session 64 (2026-08-27, owner present) merged ALL EIGHT open PRs — `main` is fully current.**
 
-**✅ `main` IS CURRENT (fixed 2026-08-27, session 64) — the "main is stale" warning below is now HISTORY.**
-Merged in order, each with gate+deploy green on `main` and a production canary (`/`, `/llms.txt` both 200)
-confirmed before starting the next merge: **#85** (`d6f6a5f`, the bridge — #191/#192/#132-pin + 4
-review-bug fixes) → **#93** (`18a68d2`, consolidated the 3 duplicated intent-parsing option interfaces) →
-**#95** (`12e5799`, fixed [#178](open-questions.md) — a clicked "nu" WP26 chip could silently serve stale
-data) → **#96** (`50d3c63`, fixed [#34](open-questions.md)(c) — concurrent CBS table syncs could
-crash/corrupt `dimension_labels`). Owner-present session, standing push authorization (#118 revision) —
-no per-merge approval needed; WP26 flags and `GDPR_PURGE_APPLY` untouched throughout, as required. Verify
-yourself: `git log -1 origin/main` should no longer show `1a16eed`.
+**✅ ALL EIGHT PRS MERGED (2026-08-27, session 64) — `main` is current, the old "main is stale" warning is
+now HISTORY.** Merged serially, each with gate+deploy green on `main` and a production canary (`/`,
+`/llms.txt` both 200) confirmed before starting the next merge: **#85** (`d6f6a5f`, the bridge) → **#93**
+(`18a68d2`, consolidated the 3 duplicated intent-parsing option interfaces) → **#95** (`12e5799`, fixed
+[#178](open-questions.md)) → **#96** (`50d3c63`, fixed [#34](open-questions.md)(c)) → **#94** (`7133428`,
+docs) → **#91** (`e15c953`, fixed [#193](open-questions.md) copy) → **#92** (`8d16ff7`, vitest
+worktree-exclude fix) → **#80** (`c794d5c`, Dependabot `undici`). Owner-present session, standing push
+authorization (#118 revision) — no per-merge approval needed; WP26 flags and `GDPR_PURGE_APPLY` untouched
+throughout. Verify yourself: `git log -1 origin/main` should show `c794d5c` or later.
 
-**▶ FOUR PRS REMAIN OPEN, ALL CI-GREEN** ([#118](open-questions.md)(b) governs #91/#92/#80 — autonomous
-session, no owner in chat when opened; #94 is being merged directly this session, owner present):
+**Two traps hit while merging, both caught by not trusting a single signal:** (1) `gh pr view <n>
+--json mergeable` returned `UNKNOWN` for #91 and #80 even after a 20s+ wait — merging directly via `gh pr
+merge` worked cleanly both times rather than blocking on that async field. (2) **`gh run watch` reported a
+run "completed successfully" (exit 0) three separate times while `gh run view` on the SAME run id still
+showed `in_progress`** — the inverse of session 62's "false stalled" finding. Caught every time by
+independently re-querying `gh run view` before trusting a canary check, never by the watch's own exit
+status alone.
 
-| PR | What | State |
-|---|---|---|
-| **#94** | Docs: session 63 log + doc-freshness fixes (s63) | merging now (s64) — resolving doc conflicts against the new `main` |
-| **#91** | #193's remaining copy edits (s62) | CI green, not yet merged |
-| **#92** | Infra: `vitest.config.ts` was sweeping in every worktree's tests on a root `npm test` (s62) | CI green, not yet merged |
-| **#80** | Dependabot `undici` bump, rebased (s62) | CI green, not yet merged |
+**PR #94 conflicted with the new `main`** (`STATUS.md`, `open-questions.md`, `lessons-learned.md`,
+`status-archive.md` — all four also touched by #85/#93/#95/#96's own doc updates). Three were pure
+insertion-point clashes (one side of the 3-way merge contributed nothing, so keeping HEAD's content was
+correct by construction); `open-questions.md` row #34 was a REAL content conflict — HEAD carried the
+pre-#96-fix description, `origin/main` the correct post-fix one, so `origin/main`'s version was kept.
+`respond.ts` + 6 other code files auto-merged with zero textual conflicts. Full local verification run once
+on the resulting merge commit (typecheck ×2, backend 105/105 · 1579/1579, web 42/42 · 453/453, benchmark
+14/14+6/6+0 GATE PASS, real build) plus a `/code-review` LOW pass — 0 findings, since the only genuinely
+new content was the doc resolution itself.
 
-None of these three were part of the verified #85→#93→#95→#96 merge-order simulation (they don't branch
-from `fix/191-...`'s tip), so re-check `gh pr view <n> --json mergeable,mergeStateStatus` fresh immediately
-before each merge rather than trusting this table.
+**Dependabot regenerated #88 as #97** (`npm-web-all` group, now 17 updates not 16) while these PRs sat
+open — the backlog below is corrected for that.
 
 **⚠ THE TWO THINGS THAT ARE STILL ONLY YOURS, untouched again:** the **WP26 flags**
 (`CLARIFY_CLICK_ENABLED`, `ANSWER_FIRST_ENABLED`) and **`GDPR_PURGE_APPLY`**. Read
 [#175](open-questions.md) before flipping WP26 — the anonymous trial receives NEITHER flag.
-✅ **[#191](open-questions.md), the pre-flip blocker, is FIXED** (in PR #85 — merge that first).
+✅ **[#191](open-questions.md), the pre-flip blocker, is FIXED** (in PR #85, merged — see above).
 **GDPR dry-run measured 2026-08-26: 0 rows purgeable yet** (first ones land ~2026-10-15) —
 `GDPR_PURGE_APPLY` is still off, unchanged.
 
-**Dependabot backlog — 7 PRs open (`#90 #89 #88 #86 #84 #83 #80`), all individually verified this session,
-none merged.** ⚠ **#89 + #86 + #84 close every currently-open HIGH-severity Dependabot security alert on
-`main`** (checked directly against the GitHub API) — lead with those three. Recommended order: #89 → #86 →
-#84 → #88 → #83 (re-check for redundancy after #88+#86 land) → **#90 last** (touches Stripe webhook
-verification + the core LLM path — the most load-bearing code in the product). #80 is independent, safe
-anywhere. Real overlaps between #83/#88 (next version) and #83/#86 (nanoid target) — read the session-62
-archive entry before merging on autopilot.
+**Dependabot backlog — 6 PRs open (`#83 #84 #86 #89 #90 #97`), #80 now merged, #88 superseded by #97,
+NONE of these six re-verified against the new `main` yet.** Session 63's finding (#89 + #86 + #84 close
+every currently-open HIGH-severity Dependabot security alert — checked directly against the GitHub API)
+should still hold — the alerts are about the dependency, not the base commit — but re-check before
+trusting it. Prior recommended order: #89 → #86 → #84 → #97(was #88) → #83 (re-check for redundancy after
+#97+#86 land) → **#90 last** (touches Stripe webhook verification + the core LLM path — the most
+load-bearing code in the product). Real overlaps between #83/#97 (next version) and #83/#86 (nanoid
+target) — read the session-62 archive entry before merging on autopilot, and re-verify #97's diff
+specifically since it's a regenerated PR, not the one session 63 actually looked at.
 
 **CBS data:** all 20 registered tables checked this session; the 12 with real drift are synced clean.
 Nothing stale beyond what CBS itself hasn't published yet.
 
-**▶ NEXT, in order:** (a) ~~merge PR #85 first~~ **DONE — #85→#93→#95→#96 merged, session 64**; finish
-#94 (in progress, this session), then #91/#92/#80; (b) the **owner-supervised WP26
+**▶ NEXT, in order:** (a) ~~merge the 8 open PRs~~ **DONE, session 64 — all eight merged and live, `main`
+current**; (b) the **owner-supervised WP26
 go-live** — one flag at a time, RUNBOOK "WP26 answer-first + clickable options"; #191 no longer blocks
 it, and #178's "nu"-staleness half is now fixed in #95 (age-bound/TTL half still open, see below); (c)
-**`GDPR_PURGE_APPLY=1`** plus one watched run; (d) work the Dependabot order above, one deploy at a time
-([#173](open-questions.md)); (e) **#193's live `audit:verify` pinning step** (R8 divergence check against
+**`GDPR_PURGE_APPLY=1`** plus one watched run; (d) re-verify and work the Dependabot backlog
+(`#83 #84 #86 #89 #90 #97`) against the new `main`, one deploy at a time ([#173](open-questions.md)); (e)
+**#193's live `audit:verify` pinning step** (R8 divergence check against
 production — expected clean per PR #91's own investigation, but unverified); (f) **#132 route B** GO or
 defer (T-0 condition — `forks_count` — still 0, re-measured 2026-08-26); (g) then the owner menu: WP30c
 choice / [#162](open-questions.md) / [#170](open-questions.md) rest (3)+(4). **Engineering follow-ups
