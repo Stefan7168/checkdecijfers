@@ -324,6 +324,12 @@ function buildFreshnessRefusal(refusal: QueryRefusal): BuiltRefusal {
     offer = `Ik kan het cijfer voor ${periodWithStatusNl(available)} direct geven, vraag daar gerust naar.`;
     if (differs) {
       offer += ` (Het laatste definitieve cijfer is er voor ${periodCodeToNl(definitief!.periodCode)}.)`;
+      // OQ-193 (measured 2026-08-07): CBS revised 1,103 figures already
+      // marked Definitief, so that status does not mean immutable. Soften
+      // the copy — owner-confirmed option (b) — so it reads as CBS's
+      // current publication status, not "final". The freshestDefinitief
+      // preference itself stays correct and unchanged.
+      offer += ` (De laatste periode met CBS-status 'definitief' is ${periodCodeToNl(definitief!.periodCode)} — ook die cijfers kan CBS later nog bijstellen.)`;
     }
   } else {
     body = definitionLabel

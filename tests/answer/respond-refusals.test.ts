@@ -401,6 +401,11 @@ describe('buildQueryRefusal — exhaustive over every QueryRefusal.refusal.kind'
     if (outcome.kind !== 'refusal') throw new Error('unreachable');
     expect(outcome.refusal.text).toContain('januari 2026');
     expect(outcome.refusal.offer).toContain('januari 2026');
+    // OQ-193 (option b, 2026-08-07): the "even Definitief can be revised"
+    // softening aside rides along with the original freshestDefinitief
+    // mention, naming the same period.
+    expect(outcome.refusal.offer).toContain("CBS-status 'definitief'");
+    expect(outcome.refusal.offer).toContain('kan CBS later nog bijstellen');
   });
 
   it('freshness: does NOT mention freshestDefinitief when it equals freshestAvailable (Definitief, no status marking)', () => {
@@ -415,8 +420,10 @@ describe('buildQueryRefusal — exhaustive over every QueryRefusal.refusal.kind'
     if (outcome.kind !== 'refusal') throw new Error('unreachable');
     expect(outcome.refusal.text).not.toContain('voorlopig');
     // Should only mention the year once as the offered period, not a second
-    // "laatste definitieve cijfer" aside.
+    // "laatste definitieve cijfer" aside, and not the OQ-193 softening aside
+    // either — both ride on the same `differs` gate, which is false here.
     expect(outcome.refusal.text).not.toMatch(/laatste definitieve/);
+    expect(outcome.refusal.text).not.toMatch(/CBS-status 'definitief'/);
   });
 
   it('freshness: NaderVoorlopig renders "nader voorlopig cijfer" (R11)', () => {

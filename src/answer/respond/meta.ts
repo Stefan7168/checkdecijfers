@@ -124,7 +124,12 @@ export const META_TEMPLATES: readonly MetaTemplate[] = [
     buildBody: () =>
       'Bij elk antwoord staat een peildatum: de datum waarop wij de CBS-tabel voor het laatst hebben gesynchroniseerd, ' +
       'plus de periode waarover het cijfer gaat. Zo zie je per antwoord precies hoe actueel het is; ' +
-      'is een cijfer voorlopig, dan staat dat erbij.',
+      'is een cijfer voorlopig, dan staat dat erbij. ' +
+      // OQ-193 (measured 2026-08-07): 1,103 figures already marked
+      // Definitief were later revised by CBS — soften the FAQ so Definitief
+      // reads as CBS's current publication status, not "final".
+      'Let op: ook cijfers die CBS als definitief publiceert, kan CBS later nog herzien. ' +
+      'Zo\'n herziening nemen wij over bij de eerstvolgende synchronisatie — de peildatum bij het antwoord laat zien van wanneer onze versie is.',
   },
   {
     key: 'sources',
