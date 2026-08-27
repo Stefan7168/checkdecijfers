@@ -12,7 +12,8 @@
 **▶ RESUMED 2026-08-26 (session 62, autonomous). Session 63 (same day, autonomous) continued the queue —
 full narrative in [status-archive.md](status-archive.md) (prepended) and
 [session-briefs/2026-08-26-session-63-resume-log.md](session-briefs/2026-08-26-session-63-resume-log.md).
-Session 64 (2026-08-27, owner present) merged EVERY open PR — zero PRs open, `main` fully current.**
+Session 64 (2026-08-27, owner present) merged EVERY open PR — zero PRs open, `main` fully current.
+Session 65 (same day, owner present) fixed the root-`nanoid` HIGH alert — see below.**
 
 **✅ ZERO OPEN PRS (2026-08-27, session 64) — every PR open at session start is merged.** Merged serially,
 each with gate+deploy green on `main` and a production canary (`/`, `/llms.txt` both 200) confirmed before
@@ -28,14 +29,12 @@ push authorization (#118 revision) — no per-merge approval needed; WP26 flags 
 untouched throughout. Verify yourself: `git log -1 origin/main` should show `a1e9365` or later and
 `gh pr list --state open` should be empty.
 
-**⚠ ONE SECURITY ALERT REMAINS, with NO PR covering it: root `nanoid` 3.3.17, HIGH** ([#194](open-questions.md); "custom generators
-can loop indefinitely when size is zero", fixed at 3.3.18) — alert #28, root `package-lock.json` (not
-web, already fixed by #86). Not in #90's npm-all group bump (Dependabot hadn't flagged it yet when #90 was
-generated) and no existing PR to `@dependabot recreate` against. **Not fixed this session, deliberately** —
-hand-authoring an unplanned dependency bump would skip the reviewed-PR convention
-`.github/dependabot.yml`'s own comment documents as load-bearing. Wait for next week's scheduled run, or
-check whether this codebase ever calls nanoid's custom generator with `size: 0` (if unreachable, the DoS is
-theoretical here) to judge urgency yourself.
+**✅ THE ROOT `nanoid` HIGH ALERT IS FIXED (2026-08-27, session 65)** ([#194](open-questions.md)) — hand-authored
+on explicit owner instruction (session 65 opened by asking the owner what to prioritize; they chose fixing
+this over waiting for Dependabot). Transitive dev-only dep (`vitest → vite → postcss`), so a pure lockfile
+bump: `npm update nanoid` moved `package-lock.json`'s entry 3.3.17 → 3.3.18. `npm audit`: 0 vulnerabilities.
+Full verification block + `/code-review` LOW (0 findings) before a direct push to `main` — see #194 for
+the complete record, including the one confirmed-transient test timeout under full-suite load.
 
 **Three traps hit while merging, all caught by not trusting a single signal:** (1) `gh pr view <n>
 --json mergeable` returned `UNKNOWN` for several PRs even after 20s+ waits — merging directly via `gh pr
@@ -73,8 +72,8 @@ Nothing stale beyond what CBS itself hasn't published yet.
 **▶ NEXT, in order:** (a) ~~merge every open PR~~ **DONE, session 64 — zero open, `main` current**; (b) the
 **owner-supervised WP26 go-live** — one flag at a time, RUNBOOK "WP26 answer-first + clickable options";
 #191 no longer blocks it, and #178's "nu"-staleness half is now fixed in #95 (age-bound/TTL half still
-open, see below); (c) **`GDPR_PURGE_APPLY=1`** plus one watched run; (d) decide on the root-`nanoid` HIGH
-alert above (wait for Dependabot, or judge urgency yourself); (e) **#193's live `audit:verify` pinning
+open, see below); (c) **`GDPR_PURGE_APPLY=1`** plus one watched run; (d) ~~decide on the root-`nanoid` HIGH
+alert~~ **DONE, session 65 — fixed, see above**; (e) **#193's live `audit:verify` pinning
 step** (R8 divergence check against production — expected clean per PR #91's own investigation, but
 unverified); (f) **#132 route B** GO or defer (T-0 condition — `forks_count` — still 0, re-measured
 2026-08-26); (g) then the owner menu: WP30c choice / [#162](open-questions.md) / [#170](open-questions.md)
