@@ -41,7 +41,7 @@ theoretical here) to judge urgency yourself.
 --json mergeable` returned `UNKNOWN` for several PRs even after 20s+ waits — merging directly via `gh pr
 merge` worked cleanly every time rather than blocking on that async field. (2) **`gh run watch` reported
 "completed successfully" (exit 0) on runs that `gh run view` on the SAME run id still showed
-`in_progress`, five separate times this session** — the inverse of session 62's "false stalled" finding.
+`in_progress`, three separate times this session** — the inverse of session 62's "false stalled" finding.
 Caught every time by independently re-querying `gh run view` before trusting a canary, never by the watch's
 exit status alone. (3) **#83 and #97 both bumped `next` in web/** — #97 landed the newer version and
 GitHub auto-closed #83 as superseded, which would have silently dropped #83's UNRELATED postcss security

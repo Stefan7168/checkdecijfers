@@ -95,8 +95,12 @@ calls out as the deliberate, load-bearing exception to this project's no-PR buil
 returning `UNKNOWN` indefinitely for several PRs — resolved by merging directly via `gh pr merge` rather
 than blocking on the async field, which worked cleanly every time. (2) `gh run watch --exit-status`
 reporting a run "completed successfully" (exit 0) while `gh run view` on the SAME run id still showed
-`in_progress` — happened **five separate times** this session, always caught by an independent
-`gh run view` re-check before trusting a production canary, never by the watch's own exit status. (3) the
+`in_progress` — happened **three separate times** this session (PR #91, PR #80, and a docs push during
+this session's own wrap-up), always caught by an independent `gh run view` re-check before trusting a
+production canary, never by the watch's own exit status. ⚠ This entry originally said "five separate
+times" — corrected by the session's own final self-audit, which found the number had never actually been
+counted against the transcript. Left visible rather than silently fixed, since the miscounting is itself
+exactly the kind of unverified claim this project's Golden Rule exists to catch. (3) the
 #83/#97 auto-close, above.
 
 **Final measured state:** `git log -1 origin/main` → `9add066` (a docs-only STATUS.md update, pushed after

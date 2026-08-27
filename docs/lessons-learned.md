@@ -9,12 +9,17 @@ on top.
 ## Session 64 — 2026-08-27, owner present — cleared the entire PR backlog (14 merged)
 
 - **`gh run watch --exit-status` reported a run "completed successfully" (exit 0) while `gh run view` on
-  the SAME run id still showed `status: in_progress`, five separate times this session** — always after a
-  `gh pr merge` triggered a fresh push-to-main CI run. Every time, re-querying `gh run view` directly a few
-  seconds later showed the real state (still running), and the run did eventually finish green on its own.
-  Never trusted the watch's own exit status as proof of completion again after the first mismatch — always
-  independently re-verified via `gh run view --json status,conclusion` before checking the production
-  canary. This is the same notification-unreliability class session 62 found in reverse (two "failed:
+  the SAME run id still showed `status: in_progress`, three separate times this session** (PR #91's
+  merge-to-main run, PR #80's, and — caught during this very wrap-up, writing this lesson down — the CI
+  run for the docs commit that first recorded this lesson) — always after a `gh pr merge` or a docs push
+  triggered a fresh CI run. Every time, re-querying `gh run view` directly a few seconds later showed the
+  real state (still running), and the run did eventually finish green on its own. Never trusted the
+  watch's own exit status as proof of completion after the first mismatch — always independently
+  re-verified via `gh run view --json status,conclusion` before checking the production canary.
+  **Also caught by the session's own final self-audit: an EARLIER draft of this exact bullet said "five
+  separate times" — an overcount, not verified against the actual sequence of tool calls before being
+  written down. Corrected here to the real number, three, which is itself proof of the lesson: count
+  precisely from the transcript, never estimate.** This is the same notification-unreliability class session 62 found in reverse (two "failed:
   stalled" reports that were actually successes) — the lesson generalizes: **a background-task completion
   signal is a prompt to check, never itself the check.**
 - **`gh pr view <n> --json mergeable` can sit at `mergeStateStatus: UNKNOWN` indefinitely** — waited 20-40s
