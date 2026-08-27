@@ -13,7 +13,15 @@
 full narrative in [status-archive.md](status-archive.md) (prepended) and
 [session-briefs/2026-08-26-session-63-resume-log.md](session-briefs/2026-08-26-session-63-resume-log.md).
 Session 64 (2026-08-27, owner present) merged EVERY open PR — zero PRs open, `main` fully current.
-Session 65 (same day, owner present) fixed the root-`nanoid` HIGH alert — see below.**
+Session 65 (same day, owner present) fixed the root-`nanoid` HIGH alert (see below) and — on an
+in-chat owner steer for a large autonomous follow-up run — compiled a verified, prioritized backlog of
+already-designed-but-unbuilt work for **session 66, a fully autonomous multi-hour run starting where this
+leaves off.** Full queue: [session-briefs/2026-08-27-session-66-autonomous-queue.md](session-briefs/2026-08-27-session-66-autonomous-queue.md);
+kickoff: [session-briefs/2026-08-27-session-66-kickoff.md](session-briefs/2026-08-27-session-66-kickoff.md).
+**Nothing in the queue is built yet — session 66's job is to execute it.** ⚠ The owner was asked directly
+whether session 66 may flip WP26/`GDPR_PURGE_APPLY` if it runs out of other work, and said no — hold off,
+mine the docs for buildable ideas instead (which is what the queue is). Both flags remain OFF-LIMITS to
+any autonomous session, not just "stays supervised" as a general default.**
 
 **✅ ZERO OPEN PRS (2026-08-27, session 64) — every PR open at session start is merged.** Merged serially,
 each with gate+deploy green on `main` and a production canary (`/`, `/llms.txt` both 200) confirmed before

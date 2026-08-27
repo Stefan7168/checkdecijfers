@@ -6,6 +6,33 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 65 — 2026-08-27, owner present — nanoid HIGH alert fixed, session-66 autonomous queue planned
+
+- **`gh run watch --exit-status` is unreliable in BOTH directions, not just the one session 64 found.** Session 64
+  documented it falsely reporting "completed successfully" while a run was still in progress. This session hit the
+  mirror case: it exited 1 ("failed") on a run that had actually passed cleanly — the real cause was a transient
+  network read-timeout on the watch command's own polling connection (`read tcp ...: operation timed out`), nothing
+  to do with the workflow itself. `gh run view <id>` immediately after showed the truth (`gate` ✓, `deploy` ✓).
+  Generalizes the existing lesson rather than replacing it: **the watch command's exit code is a prompt to check via
+  `gh run view`, never itself the check, regardless of which way it's wrong.** Added to RUNBOOK's merge-queue notes.
+- **The 8GB-machine flaky-test pattern (documented in memory, not previously in this file) reproduced exactly as
+  described:** the full backend suite reported exit 0 but its real summary line read "1 failed | 104 passed (105)" —
+  `tests/registry/registry.test.ts`'s idempotency test hit its 120s timeout at 323s of wall-clock under full-suite
+  load. Re-run alone: 14/14 pass in 19s. Confirms the existing rule (read the actual `Test Files N passed (N)` line,
+  never trust exit code alone; re-run anomalies in isolation before treating them as real) rather than teaching a new
+  one — recorded here once as a concrete data point since this file had none yet, memory already has the rule.
+- **A single-item ask can turn into a much larger planning task mid-turn — treat the owner's follow-up message as
+  the real scope, not the original one.** The session opened as "fix the nanoid alert" (owner picked it from a menu
+  of small options) and finished as "plan an hours-long fully-autonomous multi-agent session for tomorrow." Two
+  things made this safe rather than a scope-creep problem: (1) the pivot arrived as a mid-turn message and was
+  treated as new input to act on immediately, not queued behind finishing the original ask first; (2) the new ask
+  contained a real conflict with a long-standing, repeatedly-reaffirmed rule ("go live" if idle, vs. WP26/GDPR flags
+  being explicitly owner-only across ~10 prior sessions) — surfaced as a direct question rather than either silently
+  obeying the casual phrasing or silently protecting the old rule. The owner's answer ("hold off going live, mine the
+  docs for buildable ideas instead") was a genuinely different, better instruction than either the literal ask or the
+  standing default alone would have produced. **Worth repeating: when a live instruction conflicts with a durable,
+  multiply-reaffirmed rule, ask — don't pick a side unilaterally, even under an explicit "don't bother me" framing.**
+
 ## Session 64 — 2026-08-27, owner present — cleared the entire PR backlog (14 merged)
 
 - **`gh run watch --exit-status` reported a run "completed successfully" (exit 0) while `gh run view` on

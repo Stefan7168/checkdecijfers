@@ -1,5 +1,96 @@
 # STATUS archive — the session log
 
+**Session 65 (2026-08-27, owner present in chat throughout). Fixed the root-`nanoid` HIGH alert (#194,
+`aed5bf6`) on explicit owner instruction, then — on an in-chat owner steer for a large autonomous
+follow-up — compiled and verified a prioritized backlog of already-designed-but-unbuilt work for session
+66, a fully autonomous multi-hour run.**
+
+Opened with the standard verification block: `date` confirmed 2026-08-27, `git log -1 origin/main`
+confirmed `0433a7e` (session 64's last commit, a docs-only kickoff fix), `gh pr list --state open` empty,
+local `HEAD` matched `origin/main` exactly, working tree clean — all matched the session-65 kickoff doc's
+own expectations, no surprises. Asked the owner what to prioritize from a menu of small ready items (WP26
+go-live, `GDPR_PURGE_APPLY`, the nanoid alert, or something else); they picked the nanoid fix over waiting
+for Dependabot's next scheduled run.
+
+**The fix itself: a pure lockfile bump.** `nanoid` is a transitive dev-only dependency
+(`vitest → vite → postcss`, postcss pins `^3.3.12`), not declared anywhere in `package.json` directly. `npm
+update nanoid` moved `package-lock.json`'s single entry 3.3.17 → 3.3.18; `package.json` untouched. `npm
+audit`: 0 vulnerabilities after (was 1 high before). Full verification block run before push: typecheck ×2
+clean; backend suite reported "1 failed | 104 passed (105)" on first run — `tests/registry/registry.test.ts`'s
+idempotency test hit its 120s timeout at 323s of wall-clock under full-suite load on this 8GB machine, and
+per the project's own "read the real summary line, re-run anomalies in isolation" rule, a solo re-run came
+back 14/14 in 19s, confirming the failure was transient machine load, not a regression from the nanoid
+bump (which touches nothing near the registry module); web suite 42/42 files · 453/453 tests clean;
+benchmark 14/14+6/6+0 GATE PASS; real `next build` clean; `/code-review` LOW pass — 0 findings, since the
+diff is a version+integrity-hash bump with no logic to review. Pushed directly to `main` (`aed5bf6`) under
+the owner-present standing authorization (#118 revision) — no PR, matching how the row's own reasoning
+treated "reviewed before merging" as satisfied by the verification block plus the owner's explicit direct
+instruction, not skipped. CI green (`gate` 13m33s + `deploy` 1m51s — confirmed via `gh run view` directly
+after `gh run watch --exit-status` falsely reported the run as failed; the real cause was a transient
+network read-timeout on `gh run watch`'s own polling connection, unrelated to the workflow — see the new
+RUNBOOK note). Production canary 200/200 (`/`, `/llms.txt`). GitHub's own Dependabot alert #28 confirmed
+`state: fixed` afterward. `docs/open-questions.md` #194 and `docs/STATUS.md`'s two nanoid mentions updated
+in the same commit.
+
+**Mid-wrap-up, the owner sent a substantially larger ask.** After the nanoid fix, the owner triggered the
+session wrap-up ritual — and partway through it, sent a new message asking for the *next* session to run
+autonomously for hours, with heavy sub-agent fan-out, spare Fable 5 credits used, "I don't want to be
+involved," and — notably — framing "go live" (flipping the WP26 flags and/or `GDPR_PURGE_APPLY`) as the
+fallback if the session ran out of other assigned work. This directly touched a rule that has been
+reaffirmed, unchanged, across roughly ten prior sessions: those two flags are the owner's call, explicitly,
+every time the question has come up. Rather than either silently honoring the casual "go live" phrasing or
+silently protecting the old rule on the session's own authority, the conflict was surfaced directly: two
+targeted questions, asked in-chat before writing anything into a brief that would drive unsupervised hours
+of work. The owner's actual answer diverged from both the literal new ask and the old default — **hold off
+on going live entirely, and use this session's remaining time to mine the docs for already-designed ideas
+that can be built now instead.** ("RSL checks," the other ambiguous phrase in the original ask, was
+confirmed to mean RLS — Row-Level Security — checks.)
+
+**Three parallel research agents (general-purpose, Sonnet tier, backgrounded) then mined the docs for
+exactly that.** One read `docs/open-questions.md` in full (~181 rows, filtering out anything already
+resolved, anything needing an owner decision, and anything needing live DDL/spend/flag-flips) and surfaced
+26 candidates. One read `docs/08-build-plan.md` plus the WP30/WP30c architecture materials, confirming
+WP30a/b (the source-neutral groundwork) are already done and WP30c itself is genuinely owner-gated with no
+leftover shared plumbing to build early, while separately surfacing the `#34` ingestion-hardening pair and
+a PR-#93 code-review dedup finding the open-questions sweep couldn't have found (they aren't open-questions
+rows). One read every standalone design doc under `docs/session-briefs/`, cross-confirming the `#170` chart
+smalls the other two also found, adding the hermetic-only slice of `#162` slot-filling as buildable (a
+nuance sharper than the open-questions row's blanket exclusion), and — importantly — flagging `#172` as
+**not** safe for any unsupervised run at all (needs the owner present at live go/no-go checkpoints, not
+just to start).
+
+**The three catalogs disagreed once, directly, and it was checked rather than guessed.** The
+open-questions.md pass read row `#87` (historical-range chip) as cleanly buildable; the build-plan pass
+read it as blocked on an unresolved three-way design fork. Read `08-build-plan.md`'s own `#87` section
+directly to settle it: the open-questions row undersells it — the fuller build-plan brief explicitly says
+"Owner sees the (a)/(b)/(c) fork before build — it changes what audit rows contain, which is his product's
+proof artifact." The build-plan pass was right; `#87` was excluded from the queue. This is the reason the
+resulting queue document says it is "verified, not raw agent output" — this is the concrete case that
+earned that claim.
+
+**Result: two new docs.**
+[session-briefs/2026-08-27-session-66-autonomous-queue.md](session-briefs/2026-08-27-session-66-autonomous-queue.md)
+— eight prioritized, independently-verified batches (money-path hardening, `#34` ingestion fixes, an
+answer-pipeline dedup, the `#39`/`#70`/`#79`/`#89` attribution-transparency chain, dashboard/onboarding
+visibility, the two remaining `#170` chart smalls, ops items with a build-now/apply-later split, and a
+lower-priority tail), an RLS audit as the first item (using `connectFromEnv()` + a direct SQL query against
+`pg_tables`/`pg_policies`/`information_schema.role_table_grants`, since the Supabase MCP needs interactive
+auth this environment doesn't have), an explicit exclusion list with reasons (`#87`, `#172`, the
+`85792NED` region override, `#81`+`#88`, `#131`, `#161` pending a phase-gate check, `#173`'s live pooling
+cutover, `#170`(3)), and a "these are already built, don't rediscover them" list. Plus
+[session-briefs/2026-08-27-session-66-kickoff.md](session-briefs/2026-08-27-session-66-kickoff.md), the
+paste-ready handoff. **Nothing in the queue was built this session — session 66's job is to execute it,**
+under full `#118(b)` autonomous rules (branch+PR, no direct push, no live DDL/spend/flag-flips), with the
+"go live is off" instruction restated as firmly as the research made it: not a default that stays
+supervised, but a direct owner "no" for this specific run.
+
+**Two RUNBOOK/lessons additions worth carrying forward:** `gh run watch --exit-status` is now confirmed
+unreliable in *both* directions (session 64 caught it falsely reporting success; this session caught it
+falsely reporting failure, via a transient network timeout on its own polling connection) — the rule is to
+always independently re-check `gh run view` regardless of which way watch reports. And the 8GB-machine
+flaky-test pattern (documented in memory already) reproduced exactly as expected on the backend suite,
+confirming rather than teaching the existing rule.
+
 **Session 64 (2026-08-27, owner present in chat throughout). Cleared the entire open-PR backlog in one
 sitting: all 8 bridge PRs from sessions 61-63, then all 6 open Dependabot PRs plus one regenerated one —
 14 merges total, zero PRs left open, `main` fully current for the first time since the PR #77 squash
