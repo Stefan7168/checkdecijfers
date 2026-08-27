@@ -12,25 +12,40 @@
 **▶ RESUMED 2026-08-26 (session 62, autonomous). Session 63 (same day, autonomous) continued the queue —
 full narrative in [status-archive.md](status-archive.md) (prepended) and
 [session-briefs/2026-08-26-session-63-resume-log.md](session-briefs/2026-08-26-session-63-resume-log.md).
-Session 64 (2026-08-27, owner present) merged ALL EIGHT open PRs — `main` is fully current.**
+Session 64 (2026-08-27, owner present) merged EVERY open PR — zero PRs open, `main` fully current.**
 
-**✅ ALL EIGHT PRS MERGED (2026-08-27, session 64) — `main` is current, the old "main is stale" warning is
-now HISTORY.** Merged serially, each with gate+deploy green on `main` and a production canary (`/`,
-`/llms.txt` both 200) confirmed before starting the next merge: **#85** (`d6f6a5f`, the bridge) → **#93**
-(`18a68d2`, consolidated the 3 duplicated intent-parsing option interfaces) → **#95** (`12e5799`, fixed
-[#178](open-questions.md)) → **#96** (`50d3c63`, fixed [#34](open-questions.md)(c)) → **#94** (`7133428`,
-docs) → **#91** (`e15c953`, fixed [#193](open-questions.md) copy) → **#92** (`8d16ff7`, vitest
-worktree-exclude fix) → **#80** (`c794d5c`, Dependabot `undici`). Owner-present session, standing push
-authorization (#118 revision) — no per-merge approval needed; WP26 flags and `GDPR_PURGE_APPLY` untouched
-throughout. Verify yourself: `git log -1 origin/main` should show `c794d5c` or later.
+**✅ ZERO OPEN PRS (2026-08-27, session 64) — every PR open at session start is merged.** Merged serially,
+each with gate+deploy green on `main` and a production canary (`/`, `/llms.txt` both 200) confirmed before
+the next merge. The 8-PR bridge chain: **#85** (`d6f6a5f`) → **#93** (`18a68d2`) → **#95** (`12e5799`,
+fixed [#178](open-questions.md)) → **#96** (`50d3c63`, fixed [#34](open-questions.md)(c)) → **#94**
+(`7133428`, docs) → **#91** (`e15c953`, fixed [#193](open-questions.md) copy) → **#92** (`8d16ff7`) →
+**#80** (`c794d5c`). Then the Dependabot backlog: **#89** (`4eef2a6`, brace-expansion) → **#86**
+(`b41841b`, nanoid/web) → **#84** (`f29a5ae`, postcss/root) → **#97** (`7e51307`, 17-package web group,
+supersedes #88, bumps `next`→16.3.2) → **#83 auto-closed** (superseded by #97's `next` bump, but was the
+ONLY PR fixing the web postcss alerts — `@dependabot recreate` triggered a fresh one, **#98** (`a1e9365`),
+merged) → **#90** (`6b372cc`, Stripe/pg/LLM-SDK bumps, lockfile-only diff). Owner-present session, standing
+push authorization (#118 revision) — no per-merge approval needed; WP26 flags and `GDPR_PURGE_APPLY`
+untouched throughout. Verify yourself: `git log -1 origin/main` should show `a1e9365` or later and
+`gh pr list --state open` should be empty.
 
-**Two traps hit while merging, both caught by not trusting a single signal:** (1) `gh pr view <n>
---json mergeable` returned `UNKNOWN` for #91 and #80 even after a 20s+ wait — merging directly via `gh pr
-merge` worked cleanly both times rather than blocking on that async field. (2) **`gh run watch` reported a
-run "completed successfully" (exit 0) three separate times while `gh run view` on the SAME run id still
-showed `in_progress`** — the inverse of session 62's "false stalled" finding. Caught every time by
-independently re-querying `gh run view` before trusting a canary check, never by the watch's own exit
-status alone.
+**⚠ ONE SECURITY ALERT REMAINS, with NO PR covering it: root `nanoid` 3.3.17, HIGH** ("custom generators
+can loop indefinitely when size is zero", fixed at 3.3.18) — alert #28, root `package-lock.json` (not
+web, already fixed by #86). Not in #90's npm-all group bump (Dependabot hadn't flagged it yet when #90 was
+generated) and no existing PR to `@dependabot recreate` against. **Not fixed this session, deliberately** —
+hand-authoring an unplanned dependency bump would skip the reviewed-PR convention
+`.github/dependabot.yml`'s own comment documents as load-bearing. Wait for next week's scheduled run, or
+check whether this codebase ever calls nanoid's custom generator with `size: 0` (if unreachable, the DoS is
+theoretical here) to judge urgency yourself.
+
+**Three traps hit while merging, all caught by not trusting a single signal:** (1) `gh pr view <n>
+--json mergeable` returned `UNKNOWN` for several PRs even after 20s+ waits — merging directly via `gh pr
+merge` worked cleanly every time rather than blocking on that async field. (2) **`gh run watch` reported
+"completed successfully" (exit 0) on runs that `gh run view` on the SAME run id still showed
+`in_progress`, five separate times this session** — the inverse of session 62's "false stalled" finding.
+Caught every time by independently re-querying `gh run view` before trusting a canary, never by the watch's
+exit status alone. (3) **#83 and #97 both bumped `next` in web/** — #97 landed the newer version and
+GitHub auto-closed #83 as superseded, which would have silently dropped #83's UNRELATED postcss security
+fix (#97 never touches postcss) if not caught — recovered via `@dependabot recreate` → PR #98.
 
 **PR #94 conflicted with the new `main`** (`STATUS.md`, `open-questions.md`, `lessons-learned.md`,
 `status-archive.md` — all four also touched by #85/#93/#95/#96's own doc updates). Three were pure
@@ -42,9 +57,6 @@ on the resulting merge commit (typecheck ×2, backend 105/105 · 1579/1579, web 
 14/14+6/6+0 GATE PASS, real build) plus a `/code-review` LOW pass — 0 findings, since the only genuinely
 new content was the doc resolution itself.
 
-**Dependabot regenerated #88 as #97** (`npm-web-all` group, now 17 updates not 16) while these PRs sat
-open — the backlog below is corrected for that.
-
 **⚠ THE TWO THINGS THAT ARE STILL ONLY YOURS, untouched again:** the **WP26 flags**
 (`CLARIFY_CLICK_ENABLED`, `ANSWER_FIRST_ENABLED`) and **`GDPR_PURGE_APPLY`**. Read
 [#175](open-questions.md) before flipping WP26 — the anonymous trial receives NEITHER flag.
@@ -52,31 +64,23 @@ open — the backlog below is corrected for that.
 **GDPR dry-run measured 2026-08-26: 0 rows purgeable yet** (first ones land ~2026-10-15) —
 `GDPR_PURGE_APPLY` is still off, unchanged.
 
-**Dependabot backlog — 6 PRs open (`#83 #84 #86 #89 #90 #97`), #80 now merged, #88 superseded by #97,
-NONE of these six re-verified against the new `main` yet.** Session 63's finding (#89 + #86 + #84 close
-every currently-open HIGH-severity Dependabot security alert — checked directly against the GitHub API)
-should still hold — the alerts are about the dependency, not the base commit — but re-check before
-trusting it. Prior recommended order: #89 → #86 → #84 → #97(was #88) → #83 (re-check for redundancy after
-#97+#86 land) → **#90 last** (touches Stripe webhook verification + the core LLM path — the most
-load-bearing code in the product). Real overlaps between #83/#97 (next version) and #83/#86 (nanoid
-target) — read the session-62 archive entry before merging on autopilot, and re-verify #97's diff
-specifically since it's a regenerated PR, not the one session 63 actually looked at.
+**Dependabot backlog — CLEAR.** All six + the #83→#98 recreate merged this session (see above). Only the
+root-`nanoid` gap above remains, with no PR yet.
 
 **CBS data:** all 20 registered tables checked this session; the 12 with real drift are synced clean.
 Nothing stale beyond what CBS itself hasn't published yet.
 
-**▶ NEXT, in order:** (a) ~~merge the 8 open PRs~~ **DONE, session 64 — all eight merged and live, `main`
-current**; (b) the **owner-supervised WP26
-go-live** — one flag at a time, RUNBOOK "WP26 answer-first + clickable options"; #191 no longer blocks
-it, and #178's "nu"-staleness half is now fixed in #95 (age-bound/TTL half still open, see below); (c)
-**`GDPR_PURGE_APPLY=1`** plus one watched run; (d) re-verify and work the Dependabot backlog
-(`#83 #84 #86 #89 #90 #97`) against the new `main`, one deploy at a time ([#173](open-questions.md)); (e)
-**#193's live `audit:verify` pinning step** (R8 divergence check against
-production — expected clean per PR #91's own investigation, but unverified); (f) **#132 route B** GO or
-defer (T-0 condition — `forks_count` — still 0, re-measured 2026-08-26); (g) then the owner menu: WP30c
-choice / [#162](open-questions.md) / [#170](open-questions.md) rest (3)+(4). **Engineering follow-ups
-available whenever a session has room (none owner-blocked):** #34(b)+(c)'s residuals, #93's
-`RespondOptions`/`ComposeOptions`/`SemanticCheckOptions` dedup — see the tracked list below.
+**▶ NEXT, in order:** (a) ~~merge every open PR~~ **DONE, session 64 — zero open, `main` current**; (b) the
+**owner-supervised WP26 go-live** — one flag at a time, RUNBOOK "WP26 answer-first + clickable options";
+#191 no longer blocks it, and #178's "nu"-staleness half is now fixed in #95 (age-bound/TTL half still
+open, see below); (c) **`GDPR_PURGE_APPLY=1`** plus one watched run; (d) decide on the root-`nanoid` HIGH
+alert above (wait for Dependabot, or judge urgency yourself); (e) **#193's live `audit:verify` pinning
+step** (R8 divergence check against production — expected clean per PR #91's own investigation, but
+unverified); (f) **#132 route B** GO or defer (T-0 condition — `forks_count` — still 0, re-measured
+2026-08-26); (g) then the owner menu: WP30c choice / [#162](open-questions.md) / [#170](open-questions.md)
+rest (3)+(4). **Engineering follow-ups available whenever a session has room (none owner-blocked):**
+#34(b)+(c)'s residuals, #93's `RespondOptions`/`ComposeOptions`/`SemanticCheckOptions` dedup — see the
+tracked list below.
 
 **Tracked, deliberately NOT built:** [#174](open-questions.md) and [#185](open-questions.md) (both explicitly
 held), [#183](open-questions.md) (product call), [#188](open-questions.md) (concurrency on a live money path
