@@ -52,9 +52,15 @@ merge to `docs/session-63-log` — #94's OWN branch — not realizing that once 
 commits to its source branch goes nowhere (no live PR exists to carry them onto `main`, and git raises no
 warning). Caught by noticing the pushed SHA didn't match `git log -1 origin/main`. Fixed by checking out
 `main`, fast-forwarding, and `git cherry-pick`ing the stray commit directly onto `main`, then pushing that.
-The orphaned commit (`98428b4`) still sits on the now-pointless `docs/session-63-log` branch (local +
-remote) — harmless (its content is fully preserved on `main` via the cherry-pick) but not cleaned up, since
-deleting a branch isn't something to do without being asked; noted for a future housekeeping pass.
+The orphaned commit (`98428b4`) sat on the now-pointless `docs/session-63-log` branch (local + remote) —
+harmless (its content was fully preserved on `main` via the cherry-pick), flagged as a task chip rather
+than deleted unprompted. The owner asked to have it resolved directly instead; verified the commit's
+content really was already on `main` (`git branch --contains`, an empty `git diff`) then deleted the
+branch both locally and on the remote. That same check also surfaced something bigger: `main` has
+`delete_branch_on_merge` set to `false`, so dozens of OTHER long-merged PRs' branches are sitting around
+the same way — not touched (bulk branch deletion is exactly the kind of thing not to do unprompted), noted
+in [RUNBOOK.md](RUNBOOK.md)'s recurring-duties section as an owner decision (flip the repo setting, and/or
+ask a session to sweep the backlog).
 
 **Checked in with the owner after the bridge chain landed** rather than continuing unprompted into the
 Dependabot backlog — offered four options (continue with Dependabot, do the WP26 go-live now, do the GDPR
