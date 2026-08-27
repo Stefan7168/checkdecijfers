@@ -9,17 +9,20 @@
 > geschreven door sessie 64 op 2026-08-27 en kan verouderd zijn tegen de tijd dat jij het leest.
 >
 > `main` was aan het eind van sessie 64 volledig actueel en er stond GEEN enkele PR open — dat is de
-> eerste keer sinds de PR-77-squash (2026-08-07). Als `git log -1 origin/main` iets anders dan `9add066`
-> teruggeeft of `gh pr list --state open` niet leeg is, is er sindsdien iets gebeurd — lees wat, voordat
-> je verder gaat.
+> eerste keer sinds de PR-77-squash (2026-08-07). **`gh pr list --state open` hoort leeg te zijn** en de
+> laatste commit op `origin/main` hoort een docs-commit van sessie 64 (2026-08-27) te zijn — zo niet, is
+> er sindsdien iets gebeurd; lees wat, voordat je verder gaat. (Geen vaste SHA hier genoemd met opzet —
+> deze file kreeg na het schrijven nog een paar opvolgcommits, en een hardgecodeerde SHA is dan al stale
+> voordat iemand hem leest.)
 
 ## Verified state at session-64 close (re-derive, don't trust blindly)
 
 - **Date:** 2026-08-27 (both local and UTC — no midnight-rollover confusion this session, unlike
   session 60/61's multi-day gaps).
-- **`origin/main` tip:** `9add066` (a docs-only STATUS.md update). Zero open PRs (`gh pr list --state
-  open` returned `[]`). Production confirmed healthy: `/` and `/llms.txt` both 200, checked after every
-  one of the 14 merges this session, not just at the end.
+- **`origin/main` tip at last check:** `37086dc` (a docs-only status-archive correction — session 64's
+  wrap-up kept finding small things to fix on itself; re-run `git log -1 origin/main` rather than trusting
+  this). Zero open PRs (`gh pr list --state open` returned `[]`). Production confirmed healthy: `/` and
+  `/llms.txt` both 200, checked after every one of the 14 merges this session, not just at the end.
 - **Owner was present in chat for the entire session** — standing push authorization applied (#118
   revision), no per-merge approval was asked for or needed. If session 65 is autonomous instead
   (spawned task chip, overnight run, owner explicitly not in chat), that does NOT carry over — #118(b)
