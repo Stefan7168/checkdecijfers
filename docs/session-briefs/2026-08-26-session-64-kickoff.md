@@ -1,5 +1,10 @@
 # Session 64 — kickoff (written by session 63 at close, 2026-08-26)
 
+**⚠ SUPERSEDED — session 64 ran on this brief 2026-08-27 and closed clean: all 8 PRs named below merged,
+plus the full Dependabot backlog (14 merges total), zero PRs left open, `main` fully current. This file is
+kept as the point-in-time handover record, not edited — see [session-briefs/2026-08-27-session-65-kickoff.md](2026-08-27-session-65-kickoff.md)
+for the current state and next steps.**
+
 **Paste-ready prompt, Dutch (matches this project's convention for owner-facing kickoffs):**
 
 > Sessie 64 voor checkdecijfers.nl. Lees eerst `docs/CLAUDE.md`, dan `docs/STATUS.md` (het bovenste

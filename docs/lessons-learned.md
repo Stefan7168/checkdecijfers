@@ -6,6 +6,60 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 64 — 2026-08-27, owner present — cleared the entire PR backlog (14 merged)
+
+- **`gh run watch --exit-status` reported a run "completed successfully" (exit 0) while `gh run view` on
+  the SAME run id still showed `status: in_progress`, five separate times this session** — always after a
+  `gh pr merge` triggered a fresh push-to-main CI run. Every time, re-querying `gh run view` directly a few
+  seconds later showed the real state (still running), and the run did eventually finish green on its own.
+  Never trusted the watch's own exit status as proof of completion again after the first mismatch — always
+  independently re-verified via `gh run view --json status,conclusion` before checking the production
+  canary. This is the same notification-unreliability class session 62 found in reverse (two "failed:
+  stalled" reports that were actually successes) — the lesson generalizes: **a background-task completion
+  signal is a prompt to check, never itself the check.**
+- **`gh pr view <n> --json mergeable` can sit at `mergeStateStatus: UNKNOWN` indefinitely** — waited 20-40s
+  on several PRs with no resolution. Stopped waiting and called `gh pr merge <n> --squash` directly instead;
+  it succeeded cleanly every time this session (git's real merge attempt is authoritative, the cached
+  `mergeable` field is just a hint that hadn't recomputed). Only fall back to inspecting a real conflict if
+  `gh pr merge` itself errors.
+- **Merging a broader, newer PR can silently auto-close an older PR that GitHub decides is "superseded" —
+  but the newer PR does not necessarily cover everything the closed one fixed.** PR #97 (a 17-package grouped
+  web dependency bump, including `next`) landed with a newer `next` version than PR #83 (`postcss` + `next`
+  as an ancestor bump) was targeting, so GitHub auto-closed #83 as conflicting/superseded. #97 never touched
+  `postcss` at all — closing #83 would have silently dropped its **security fix** (a HIGH + a MEDIUM
+  PostCSS source-map disclosure CVE) with nothing announcing the loss; the PR list would just show one fewer
+  open PR, which reads as progress, not regression. Caught by checking `gh pr view <n> --json mergeable`
+  before assuming a closed PR was safely redundant, and recovered by commenting `@dependabot recreate` on
+  the closed PR — Dependabot opened a fresh one (`#98`) covering only the residual (`postcss` alone, no
+  `next`), which merged clean. **Whenever a PR closes itself mid-session, diff what it was fixing against
+  what actually landed before treating it as done — "closed" and "superseded" are not synonyms for "safe
+  to ignore."**
+- **After clearing a known PR backlog, a fresh `gh api repos/.../dependabot/alerts` sweep found a NEW HIGH
+  alert (root `nanoid` 3.3.17, DoS on a zero-size custom generator) that no open PR — before or after this
+  session's merges — ever covered.** The 6-PR backlog this session started from was a snapshot from session
+  63; Dependabot's own grouped-PR generation apparently hadn't caught this one yet. Not fixed by hand (would
+  skip the reviewed-PR discipline `.github/dependabot.yml`'s own header comment calls out as the deliberate
+  exception to this project's no-PR build-phase workflow) — flagged in STATUS.md instead, left for
+  Dependabot's next run or an explicit owner call on urgency. **"The backlog list is empty" and "the
+  security posture is clean" are different claims — check the alerts API directly, not just the PR list.**
+- **Pushing a fix to a PR's branch AFTER that PR has already merged goes nowhere.** Made this mistake once:
+  resolved PR #94's merge conflict, then pushed a follow-up STATUS.md correction to `docs/session-63-log`
+  (PR #94's branch) — but #94 had merged minutes earlier, so the branch had no live PR to carry the commit
+  onto `main`. GitHub happily accepted the push (branches don't stop accepting commits after their PR
+  merges) with no error or warning that the commit was now orphaned. Caught by re-reading the pushed commit
+  hash against `git log -1 origin/main` and noticing they didn't match. Fixed by checking out `main`,
+  fast-forwarding, and `git cherry-pick`ing the stray commit directly onto `main`. **Once a PR merges, its
+  source branch is dead for further changes — any follow-up fix goes on `main` (or a fresh branch), never
+  back onto the old one, even though git will silently let you push there.**
+- **A doc merge conflict can mix real content conflicts with pure insertion-point clashes in the same
+  file — resolve each hunk on its own merits, not with a blanket "take mine" or "take theirs."** PR #94's
+  4-file conflict (`STATUS.md`, `open-questions.md`, `lessons-learned.md`, `status-archive.md`) had 3 hunks
+  where one side of the 3-way diff contributed nothing (so keeping HEAD's content was correct by
+  construction) and exactly 1 real content conflict (`open-questions.md` row #34, where HEAD had the
+  pre-#96-fix description and `origin/main` had the already-corrected post-fix one — picking wrong here
+  would have shipped a stale security/correctness description). Reading each hunk's actual diverging text
+  before resolving — rather than resolving the whole file one way — is what caught the difference.
+
 ## Session 63 — same-day continuation, 2026-08-26/27 (autonomous, owner explicitly not present, "work for hours")
 
 - **An exit code of 0 is not proof the test suite actually passed — even without the OOM kill the

@@ -28,7 +28,7 @@ push authorization (#118 revision) — no per-merge approval needed; WP26 flags 
 untouched throughout. Verify yourself: `git log -1 origin/main` should show `a1e9365` or later and
 `gh pr list --state open` should be empty.
 
-**⚠ ONE SECURITY ALERT REMAINS, with NO PR covering it: root `nanoid` 3.3.17, HIGH** ("custom generators
+**⚠ ONE SECURITY ALERT REMAINS, with NO PR covering it: root `nanoid` 3.3.17, HIGH** ([#194](open-questions.md); "custom generators
 can loop indefinitely when size is zero", fixed at 3.3.18) — alert #28, root `package-lock.json` (not
 web, already fixed by #86). Not in #90's npm-all group bump (Dependabot hadn't flagged it yet when #90 was
 generated) and no existing PR to `@dependabot recreate` against. **Not fixed this session, deliberately** —

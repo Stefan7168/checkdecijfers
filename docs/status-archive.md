@@ -1,5 +1,120 @@
 # STATUS archive — the session log
 
+**Session 64 (2026-08-27, owner present in chat throughout). Cleared the entire open-PR backlog in one
+sitting: all 8 bridge PRs from sessions 61-63, then all 6 open Dependabot PRs plus one regenerated one —
+14 merges total, zero PRs left open, `main` fully current for the first time since the PR #77 squash
+(2026-08-07).**
+
+Started by verifying the session-63 kickoff's claims fresh rather than trusting them: `date` confirmed
+2026-08-27 (kickoff was written 2026-08-26); `git log -1 origin/main` still returned `1a16eed` (PR #77
+squash) — `main` was still stale; `gh pr view 85 --json state,mergedAt` confirmed `OPEN`/`null`, so PR #85
+had not been merged in the gap. All matched the kickoff's own fallback instructions exactly, so no
+surprises at the door.
+
+**Owner-presence read:** this session opened with the owner's own paste-ready kickoff prompt sent directly
+in chat (not a spawned task chip, not an autonomous/overnight trigger phrase) — treated as owner-present
+per CLAUDE.md's #118 distinction, meaning standing push/merge authorization applied (no per-merge approval
+needed) while WP26 flags, `GDPR_PURGE_APPLY`, and any live DDL/spend stayed reserved for an explicit
+owner ask regardless of presence. Confirmed with the owner mid-session before starting the Dependabot batch
+(the bridge chain was pre-approved by the kickoff's own "NEXT (a)" item; the Dependabot batch was an
+explicit choice offered and taken after the bridge chain landed).
+
+**Phase 1 — the 8-PR bridge chain, merge order #85→#93→#95→#96→#94→#91→#92→#80 (the order session 63 had
+already simulated end-to-end for the first five; #91/#92/#80 followed since nothing blocked them):**
+each PR was squash-merged, its resulting main-branch CI run (`gate`+`deploy`) watched to genuine
+completion, and the production canary (`/`, `/llms.txt` — both 200) checked before starting the next merge,
+matching the [#173](open-questions.md) one-deploy-at-a-time discipline. Squash SHAs: `d6f6a5f` (#85, the
+bridge — #191/#192/#132-pin + 4 review-bug fixes), `18a68d2` (#93, consolidated the 3 duplicated
+intent-parsing option interfaces), `12e5799` (#95, fixed [#178](open-questions.md) — a clicked "nu" WP26
+chip could silently serve stale data), `50d3c63` (#96, fixed [#34](open-questions.md)(c) — concurrent CBS
+table syncs could crash/corrupt `dimension_labels`), `7133428` (#94, docs), `e15c953` (#91, softened
+"definitief" copy per [#193](open-questions.md)), `8d16ff7` (#92, vitest worktree-exclude fix), `c794d5c`
+(#80, Dependabot `undici`).
+
+**PR #94 was the one real snag: it conflicted with the new `main`**, because #85/#93/#95/#96's own doc
+updates (`STATUS.md`, `open-questions.md`, `lessons-learned.md`, `status-archive.md`) all touched the same
+regions #94 had independently edited. Resolved by hand, hunk by hunk rather than a blanket strategy: three
+of the four files' conflicts were pure insertion-point clashes (`origin/main`'s side of the 3-way diff
+contributed nothing at that hunk, so keeping HEAD's — #94's own — content was correct by construction);
+`open-questions.md` row #34 was the one REAL content conflict, where HEAD carried the description written
+BEFORE #96's fix landed and `origin/main` carried the already-corrected post-fix version — `origin/main`'s
+version was kept, since taking HEAD's would have shipped a stale, already-wrong description of a
+concurrency fix back onto `main`. Six other code files (`respond.ts`, `pipeline.ts`, `run.ts`,
+`clarify.ts`, `followup.ts`, `parse.ts`, plus the new `options.ts`) auto-merged with zero textual
+conflicts. Ran the full local verification block once on the resulting merge commit before pushing —
+typecheck ×2 clean, backend 105/105 files · 1579/1579 tests, web 42/42 · 453/453, benchmark
+14/14+6/6+0 fabricated GATE PASS, real `next build` — plus a `/code-review` LOW pass over the diff (0
+findings, since the only genuinely new content beyond already-reviewed PR code was the doc resolution
+itself).
+
+**Then a self-inflicted mistake, caught and fixed:** pushed the STATUS.md correction that followed #94's
+merge to `docs/session-63-log` — #94's OWN branch — not realizing that once a PR merges, pushing more
+commits to its source branch goes nowhere (no live PR exists to carry them onto `main`, and git raises no
+warning). Caught by noticing the pushed SHA didn't match `git log -1 origin/main`. Fixed by checking out
+`main`, fast-forwarding, and `git cherry-pick`ing the stray commit directly onto `main`, then pushing that.
+The orphaned commit (`98428b4`) still sits on the now-pointless `docs/session-63-log` branch (local +
+remote) — harmless (its content is fully preserved on `main` via the cherry-pick) but not cleaned up, since
+deleting a branch isn't something to do without being asked; noted for a future housekeeping pass.
+
+**Checked in with the owner after the bridge chain landed** rather than continuing unprompted into the
+Dependabot backlog — offered four options (continue with Dependabot, do the WP26 go-live now, do the GDPR
+flip now, or stop here); the owner chose to continue with Dependabot.
+
+**Phase 2 — the Dependabot backlog, `#89 #86 #84 #97 #90` plus a regenerated `#98`:** re-derived the merge
+order fresh rather than trusting session 63's note verbatim (Dependabot had regenerated #88 as #97 — a
+17-package grouped update, not 16 — while the PRs sat open), then merged `#89` (`4eef2a6`,
+brace-expansion, closes 4 HIGH alerts) → `#86` (`b41841b`, nanoid/web, closes 3 HIGH) → `#84` (`f29a5ae`,
+postcss/root, closes 1 MEDIUM) → `#97` (`7e51307`, the 17-package web group, bumps `next` to 16.3.2) →
+`#90` (`6b372cc`, `@anthropic-ai/sdk`/`pg`/`@types/pg`/`stripe`/`@electric-sql/pglite`/`@types/node`,
+lockfile-only diff, merged last deliberately since it's the most load-bearing code in the product). Along
+the way, re-derived STATUS.md's own inherited claim that "#89+#86+#84 close every HIGH alert" and found it
+imprecise: #84 only closes a MEDIUM (root postcss), not a HIGH — the HIGH postcss alert lived on
+`web/package-lock.json` and needed #83 (or its eventual replacement), corrected in the same pass rather
+than repeated.
+
+**#83 auto-closed itself mid-batch, and very nearly took a real security fix down with it.** #83
+("postcss + next as an ancestor bump") and #97 (the 17-package group, which also bumps `next`, to a
+NEWER version) both touched `web/package.json`'s `next` field. Once #97 merged, GitHub auto-closed #83 as
+superseded — but #97 never touches `postcss` at all, so closing #83 would have silently dropped the ONE
+PR fixing two real, currently-exploitable postcss alerts (a HIGH and a MEDIUM source-map disclosure CVE,
+both live on `main` at that point: `web/package.json` still pinned `postcss` at 8.5.16, vulnerable to
+both). Caught by checking `gh pr view 83` after #97 landed and seeing `state: CLOSED` instead of the
+expected conflict, not by assuming a closed PR was safely redundant. Recovered by commenting
+`@dependabot recreate` on the closed PR, which opened `#98` (`deps(web): bump postcss from 8.5.16 to
+8.5.26`) — CI-green immediately, merged (`a1e9365`) as `postcss` alone with no `next` this time.
+
+**Result: security alerts went from 10 open (8 high, 2 moderate) at Dependabot-backlog-start to 1** — a
+fresh `gh api repos/.../dependabot/alerts` sweep after the batch surfaced a HIGH alert on ROOT `nanoid`
+(3.3.17, needs ≥3.3.18 — "custom generators can loop indefinitely when size is zero") that no PR, before
+or during this session, ever covered; recorded as [#194](open-questions.md) rather than hand-authored,
+since a manual bump would skip the reviewed-PR discipline `.github/dependabot.yml`'s own header comment
+calls out as the deliberate, load-bearing exception to this project's no-PR build-phase workflow.
+
+**Three infrastructure-reliability traps, all caught by not trusting a single signal — see
+[lessons-learned.md](lessons-learned.md) for the full detail on each:** (1) `gh pr view --json mergeable`
+returning `UNKNOWN` indefinitely for several PRs — resolved by merging directly via `gh pr merge` rather
+than blocking on the async field, which worked cleanly every time. (2) `gh run watch --exit-status`
+reporting a run "completed successfully" (exit 0) while `gh run view` on the SAME run id still showed
+`in_progress` — happened **five separate times** this session, always caught by an independent
+`gh run view` re-check before trusting a production canary, never by the watch's own exit status. (3) the
+#83/#97 auto-close, above.
+
+**Final measured state:** `git log -1 origin/main` → `9add066` (a docs-only STATUS.md update, pushed after
+the batch); `gh pr list --state open` → empty; `curl` on `/` and `/llms.txt` → 200/200, checked after every
+single deploy this session (14 of them), never just at the end; `gh run view` on the final push's CI run →
+`gate` success, `deploy` success. WP26 flags and `GDPR_PURGE_APPLY` confirmed untouched throughout — the
+only two things this session deliberately did not do, exactly as scoped.
+
+**Not done, all explicit owner calls, none blocking:** the WP26 go-live and the `GDPR_PURGE_APPLY=1` flip
+(both reserved for an explicit owner ask, per standing project rule, regardless of owner presence); the new
+[#194](open-questions.md) root-`nanoid` alert (wait for Dependabot's next weekly run, or judge urgency);
+[#193](open-questions.md)'s live `audit:verify` pinning step; [#132](open-questions.md) route B; the owner
+menu (WP30c / [#162](open-questions.md) / [#170](open-questions.md) rest).
+
+Full narrative and the paste-ready next-session prompt:
+[session-briefs/2026-08-27-session-65-kickoff.md](session-briefs/2026-08-27-session-65-kickoff.md).
+
+
 **Session 63 (2026-08-26/27, AUTONOMOUS — same day as session 62; owner explicitly not present, "Ik ben
 niet aanwezig; je zult het zelf moeten regelen, autonoom. Werk uren en uren door"). Four more PRs opened
 and fixed, all CI-green, none merged (#118(b) — no owner in chat). Also investigated, documented, and
