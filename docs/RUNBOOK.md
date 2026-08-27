@@ -837,6 +837,15 @@ The "Doorgaan met Google" button is **merged + deployed** (PR #23, merge `e8b09b
 ## Your recurring duties
 
 - **Sign-offs** at the gates in [STATUS.md](STATUS.md).
+- **Stale merged-PR branches accumulate because `delete_branch_on_merge` is `false` on this repo**
+  (checked 2026-08-27, session 64) — dozens of local + remote branches for long-merged PRs are still
+  sitting around (`fix/191-...`, `refactor/shared-intent-options`, old `ops/173-...` branches, etc.),
+  none of them harmful, all of them clutter. A session should never delete branches in bulk unprompted
+  (destructive git action), so this is an owner decision: flip **Settings → General → "Automatically
+  delete head branches"** to on (stops future accumulation, changes nothing retroactively), and/or ask a
+  session to sweep the existing backlog (`gh pr list --state merged --json headRefName` minus branches any
+  open PR still needs, confirmed safe the same way the one accidental branch was checked this session —
+  `git branch --contains <merge-commit>` before deleting).
 - **Monthly maintenance session** — start a chat with: *"Run the monthly maintenance session for checkdecijfers.nl per CLAUDE.md."* Agenda: dependency alerts, provider deprecation notices, spend dashboards, backup status, **and `npm run gdpr:purge` (dry-run first, then `-- --apply`)**.
   - ⚠ **Until `GDPR_PURGE_APPLY=1` is set, this command is the ONLY thing that actually enforces retention** ([#189](open-questions.md), found 2026-07-25 and BUILT the same day). A monthly Vercel cron (`/api/gdpr-purge-cron`, `0 4 1 * *`) now runs the same job, but it **reports only** until the owner sets that env var — so the earlier wording here ("there is no cron and no CI schedule") is out of date, and the duty is still real. **THREE clocks run off this one command** (since [#181](open-questions.md), 2026-07-26): account audit rows redact at **2 years**, `anonymous_trial` audit content redacts at **90 days**, and `trial_questions` bookkeeping (visitor UUID + HMAC'd IP) is **DELETED** at 90 days. The first trial rows become purgeable **~2026-10-15**; if nobody runs this and the flag stays unset, they simply stay.
   - **And if a run prints `note: trial_questions absent (migration 020 not applied)` against production, that is a REAL signal, not a shrug** — migration 020 has been live since the 2026-07-17 go-live, so the table exists; investigate rather than continue. (The script no longer reports it from a bare `catch`: since #67 it is a `to_regclass` check, so this note now only ever means the table is genuinely absent.)
