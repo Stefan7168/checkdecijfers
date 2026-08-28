@@ -189,7 +189,10 @@ clarification round, which v2 eliminates structurally.
 `chart`/`stalenessWarning` — the R8-audited `text` string is byte-untouched, no prompt bytes change
 anywhere, fixtures and the benchmark are unaffected by construction. Rendering: live chat only
 (`chat.tsx`, under the answer, #84 styling conventions). The async dashboard/onboarded surface
-waits for #117/#74.
+waits for #117/#74. *(As-built update, 2026-08-27 session 66: #117/#74 landed — the history list
+now live-refreshes while a fetch is in flight, so a delivered onboarding answer appears there
+without a reload. Chips on that surface remain UNBUILT: the history's answer branch renders no
+suggestions; extending chips there is still the open option below, now unblocked.)*
 
 ## Alternatives rejected
 

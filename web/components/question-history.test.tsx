@@ -2,8 +2,15 @@
 // truncation, cost/date display, and the empty state -- the actual logic
 // worth pinning in this otherwise-plain Server Component.
 import { cleanup, render, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { QuestionHistoryEntry } from '../backend/billing/index.ts';
+
+// #74/#117: QuestionHistory now mounts OnboardingLiveStatus (a client
+// component calling useRouter) -- mocked, since jsdom has no App Router
+// context. Its polling behavior has its own suite
+// (onboarding-live-status.test.tsx); here it only needs to render.
+vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
+
 import { QuestionHistory } from './question-history.tsx';
 
 afterEach(cleanup);
@@ -283,6 +290,52 @@ describe('QuestionHistory', () => {
     it('applies the amber pending styling to a pending entry', () => {
       const { container } = render(<QuestionHistory items={[onboardingEntry()]} />);
       expect(container.querySelector('.bg-warn-soft')).not.toBeNull();
+    });
+
+    // #74 + #117: the at-a-glance line above the list (and the live poll it
+    // carries) appears exactly when an in-flight entry exists -- so a pending
+    // request buried under newer answered questions is still visible at a
+    // glance, and the poll's stop condition (count 0 on a refreshed render)
+    // is decided HERE, from the server-rendered items.
+    describe('live-status line (#74/#117)', () => {
+      it('shows the in-behandeling line when a pending request exists', () => {
+        render(<QuestionHistory items={[entry(), onboardingEntry()]} />);
+        expect(screen.getByRole('status')).toHaveTextContent(
+          'Er is 1 aanvraag bij het CBS in behandeling',
+        );
+      });
+
+      it('counts pending AND running requests together', () => {
+        render(
+          <QuestionHistory
+            items={[
+              onboardingEntry(),
+              onboardingEntry({
+                id: 2,
+                onboarding: { status: 'running', topicTerm: 'windenergie', failureSummary: null },
+              }),
+            ]}
+          />,
+        );
+        expect(screen.getByRole('status')).toHaveTextContent(
+          'Er zijn 2 aanvragen bij het CBS in behandeling',
+        );
+      });
+
+      it('shows no line when nothing is in flight (answers and a failed request only)', () => {
+        render(
+          <QuestionHistory
+            items={[
+              entry(),
+              onboardingEntry({
+                creditsCharged: 0,
+                onboarding: { status: 'failed', topicTerm: 'zonnestroom', failureSummary: 'mislukt' },
+              }),
+            ]}
+          />,
+        );
+        expect(screen.queryByRole('status')).toBeNull();
+      });
     });
 
     it('a delivered onboarding answer renders through the ORDINARY answer branch, not the onboarding branch', () => {

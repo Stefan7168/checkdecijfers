@@ -40,8 +40,24 @@
 // attribution ALWAYS fully visible (the #90 convention: never behind a
 // click). Entries without answerParts (refusals, clarifications, legacy
 // rows) render the finalText blob exactly as before -- zero-loss fallback.
+//
+// #74 + #117: while any onboarding request is in flight (pending/running),
+// an at-a-glance summary line renders ABOVE the list and a client-side
+// router.refresh() poll keeps the whole list live, so a delivered answer
+// (or a failure) appears without a manual refresh. Both live in
+// onboarding-live-status.tsx; this component stays a Server Component and
+// only hands it the server-derived in-flight COUNT — the poll's stop
+// condition is that count reaching zero on a refreshed render, never a
+// client-held flag.
 import type { QuestionHistoryEntry } from '../backend/billing/index.ts';
 import { splitDefinitionForDisplay } from '../lib/definition-display.ts';
+import { OnboardingLiveStatus } from './onboarding-live-status.tsx';
+
+/** WP16's two in-flight sub-states — the one predicate behind the per-item
+ * amber styling AND the #74/#117 live-status line + poll above the list. */
+function isInFlight(onboarding: NonNullable<QuestionHistoryEntry['onboarding']>): boolean {
+  return onboarding.status === 'pending' || onboarding.status === 'running';
+}
 
 /** Dutch, deterministic, owner-readable -- no LLM involved in producing any
  * of this (CLAUDE.md: Dutch product copy is always a fixed template). */
@@ -127,16 +143,21 @@ export function QuestionHistory({ items }: { items: QuestionHistoryEntry[] }) {
     return <p className="text-sm text-ink-muted">Nog geen eerdere vragen.</p>;
   }
 
+  const inFlightCount = items.filter(
+    (item) => item.onboarding !== null && isInFlight(item.onboarding),
+  ).length;
+
   return (
     <div className="flex flex-col gap-2">
       <h2 className="text-sm font-semibold text-ink-soft">Eerdere vragen</h2>
+      <OnboardingLiveStatus inFlightCount={inFlightCount} />
       {items.map((item) => {
         // WP16 sub-part 2: an onboarding-queue entry (pending/running/failed/
         // unanswerable) has no answer/refusal body -- its own render branch,
         // entirely separate from the isDeleted/clarification/answer paths
         // below (which only ever apply to an ordinary audit-row entry).
         if (item.onboarding !== null) {
-          const inFlight = item.onboarding.status === 'pending' || item.onboarding.status === 'running';
+          const inFlight = isInFlight(item.onboarding);
           const { label, body } = onboardingStatusCopy(item);
           return (
             <details

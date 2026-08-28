@@ -117,7 +117,8 @@ project"; the privacy link follows when the #14(d) policy exists — no dead lin
 guard pattern from the WP24 spec stays (not centralized in `layout.tsx`); `/login` keeps a
 stripped header. #98 stays answered as option A (merged `/`), now rendering the workspace.
 QuestionHistory + account details move behind the nav (the #74 "mijn aanvragen" panel keeps its
-seam there, out of scope here).
+seam there, out of scope here; *seam filled 2026-08-27, session 66 — the #74/#117 live-status
+line + poll render inside QuestionHistory itself, see those rows*).
 
 ### D7 — Dormant-until-flag rollout
 
@@ -234,7 +235,10 @@ list. The ADR 001 seam holds: threads are a web-app domain module, not an answer
 
 - Per-thread deletion ask from the owner or an external user → build the deferred D2 leg.
 - Multi-device/live-sync expectations (threads updating across open tabs) → the #117 poll/push
-  decision must be taken jointly.
+  decision must be taken jointly. *(Update 2026-08-27, session 66: #117's onboarding-status half
+  is decided and built — a bounded `router.refresh()` poll while a fetch is in flight, no push
+  infrastructure. THREAD live-sync remains undecided; a future decision should weigh reusing that
+  poll pattern before inventing push.)*
 - A real table renderer (beyond stat cards) → it docks by the same D4 rule; the web section
   still never does.
 - External users → revisit sidebar pagination and the 2-year sidebar horizon.

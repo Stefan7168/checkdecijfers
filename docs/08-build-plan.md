@@ -149,7 +149,7 @@ Built per the frozen [design brief](session-briefs/2026-07-16-144-semantic-check
 
 **Done means:** full verification block green (npm ci ×2, typecheck ×2, backend + web vitest, benchmark 14/14 + 6/6 + 0 fabricated — serially, exit codes checked); the byte-identity rendering pins + cross-user pins + replay pins all in the suite; flag-off byte-identity proven; docs (ADR 033 as-built, #135/#98/#99 rows, STATUS) updated same-change; PR open for owner review — **merge only on owner approval.**
 
-**Residuals out of scope, tracked:** per-thread delete (fast-follow, #135 row); #74 "mijn aanvragen" panel + #117 live updates (their seam = behind the nav, unchanged here); #53 guest-mode shell variant; a real table renderer (would dock by the same rule).
+**Residuals out of scope, tracked:** per-thread delete (fast-follow, #135 row); #74 "mijn aanvragen" panel + #117 live updates (their seam = behind the nav, unchanged here — **✅ landed 2026-08-27, session 66: at-a-glance line + `router.refresh()` poll inside `QuestionHistory`, so both the `/geschiedenis` surface and the flag-off Dashboard have it; see the #74/#117 rows**); #53 guest-mode shell variant; a real table renderer (would dock by the same rule).
 
 ---
 

@@ -1,9 +1,13 @@
 // WP135 (ADR 033 D6/⟨A5⟩): "Geschiedenis" — the question history moved out of
-// the Dashboard, behind the site nav (the #74 "mijn aanvragen" seam lives here
-// later, out of scope now). The QuestionHistory server component is MOVED, not
-// rewritten. The route ships DARK: while WORKSPACE_ENABLED is off it redirects
-// to / (no new surface reachable pre-flip); flag on ⇒ auth-guarded, with the
-// site header like every other authenticated page.
+// the Dashboard, behind the site nav. The #74 "mijn aanvragen" seam that lived
+// here is FILLED (session 66, #74/#117): QuestionHistory itself renders the
+// at-a-glance in-behandeling line and the router.refresh() poll
+// (onboarding-live-status.tsx), so this page needs no wiring of its own — a
+// pending fetch surfaces its delivered answer here without a manual refresh.
+// The QuestionHistory server component is MOVED, not rewritten. The route
+// ships DARK: while WORKSPACE_ENABLED is off it redirects to / (no new
+// surface reachable pre-flip); flag on ⇒ auth-guarded, with the site header
+// like every other authenticated page.
 export const runtime = 'nodejs';
 
 import { redirect } from 'next/navigation';

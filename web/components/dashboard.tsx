@@ -12,6 +12,7 @@
 // QuestionHistory stays a Server Component, passed through as children.
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { useCallback, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { GatedResponse } from '../backend/billing/index.ts';
@@ -42,6 +43,7 @@ export function Dashboard({
    * "Internet" chip; absent ⇒ the chat is byte-identical to today. */
   websearch?: { enabled: true; addonPrice: number };
 }) {
+  const router = useRouter();
   const [balance, setBalance] = useState(initialBalance);
   const [showPurchaseBanner, setShowPurchaseBanner] = useState(purchaseSuccess);
 
@@ -52,15 +54,34 @@ export function Dashboard({
     window.history.replaceState(null, '', window.location.pathname);
   }
 
-  const handleOutcome = useCallback((gated: GatedResponse) => {
-    if (gated.kind === 'ok') {
-      setBalance((b) => b - gated.netCost);
-    } else if (gated.kind === 'insufficient_credits') {
-      setBalance(gated.balance);
-    }
-    // 'unauthenticated' / 'duplicate_request': nothing was charged and no
-    // balance was reported -- the display stays as-is.
-  }, []);
+  const handleOutcome = useCallback(
+    (gated: GatedResponse) => {
+      if (gated.kind === 'ok') {
+        setBalance((b) => b - gated.netCost);
+        // #74/#117: an onboarding acknowledgment means a pending_table_requests
+        // row now exists (committed before the action returned) that the
+        // server-rendered history below predates. Refresh the server payload
+        // ONCE so the history shows the amber in-flight entry and its live
+        // poll (OnboardingLiveStatus) takes over from there. Client state --
+        // the chat transcript, the balance above -- survives a
+        // router.refresh() by design. 'onboarding_already_pending' refreshes
+        // too: the queue row it re-acknowledges can likewise postdate this
+        // page's render (asked seconds ago in another tab).
+        if (
+          gated.response.kind === 'refusal' &&
+          (gated.response.reason === 'onboarding_pending' ||
+            gated.response.reason === 'onboarding_already_pending')
+        ) {
+          router.refresh();
+        }
+      } else if (gated.kind === 'insufficient_credits') {
+        setBalance(gated.balance);
+      }
+      // 'unauthenticated' / 'duplicate_request': nothing was charged and no
+      // balance was reported -- the display stays as-is.
+    },
+    [router],
+  );
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 p-4">

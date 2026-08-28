@@ -33,11 +33,17 @@ vi.mock('../app/actions.ts', () => ({
   submitAnswerFeedback,
 }));
 
+// #74/#117: Dashboard calls useRouter().refresh() after an onboarding
+// acknowledgment (jsdom has no App Router context, so the hook is mocked).
+const { routerRefresh } = vi.hoisted(() => ({ routerRefresh: vi.fn() }));
+vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: routerRefresh }) }));
+
 afterEach(() => {
   cleanup();
   askQuestion.mockReset();
   replyToClarification.mockReset();
   submitAnswerFeedback.mockReset();
+  routerRefresh.mockReset();
 });
 
 function outcome(gated: GatedResponse): AskOutcome {
@@ -209,5 +215,73 @@ describe('Dashboard — the warning reacts to the LIVE balance (#69 x #68)', () 
     // 45 - 20 = 25: inside [20, 40).
     expect(screen.getByText('25 credits')).toBeInTheDocument();
     expect(screen.getByText(WARNING)).toBeInTheDocument();
+  });
+});
+
+// #74/#117: an onboarding acknowledgment commits a pending_table_requests row
+// the server-rendered history slot predates -- Dashboard must refresh the
+// server payload ONCE so the amber in-flight entry (and the live poll it
+// carries, OnboardingLiveStatus) appears without a manual reload. Any other
+// outcome must NOT refresh: a stray refresh on every answer would needlessly
+// re-run all the page's server reads.
+describe('Dashboard — onboarding acknowledgment refreshes the history (#74/#117)', () => {
+  function onboardingAck(reason: 'onboarding_pending' | 'onboarding_already_pending'): GatedResponse {
+    return {
+      kind: 'ok',
+      auditId: 7,
+      netCost: 100,
+      response: {
+        kind: 'refusal',
+        reason,
+        text: 'We vragen de cijfers nu automatisch op bij het CBS.',
+      } as unknown as ComposedResponse,
+    };
+  }
+
+  for (const reason of ['onboarding_pending', 'onboarding_already_pending'] as const) {
+    it(`refreshes the server payload once on ${reason}`, async () => {
+      askQuestion.mockResolvedValue(outcome(onboardingAck(reason)));
+      renderDashboard(200);
+      await submit('Hoeveel zonnestroom werd er opgewekt in 2024?');
+      await screen.findByText('We vragen de cijfers nu automatisch op bij het CBS.');
+      expect(routerRefresh).toHaveBeenCalledTimes(1);
+    });
+  }
+
+  it('still moves the live balance by the acknowledgment netCost (the #68 contract)', async () => {
+    askQuestion.mockResolvedValue(outcome(onboardingAck('onboarding_pending')));
+    // 250 - 100 = 150: distinct from the message's own "100 credits" cost
+    // caption, so the balance assertion cannot match the caption instead.
+    renderDashboard(250);
+    await submit('Hoeveel zonnestroom werd er opgewekt in 2024?');
+    await screen.findByText('We vragen de cijfers nu automatisch op bij het CBS.');
+    expect(screen.getByText('150 credits')).toBeInTheDocument();
+  });
+
+  it('does not refresh on an ordinary answer', async () => {
+    askQuestion.mockResolvedValue(outcome(fakeAnswer('Nederland telt 18.044.027 inwoners.', 20)));
+    renderDashboard(100);
+    await submit('Hoeveel inwoners heeft Nederland?');
+    await screen.findByText('Nederland telt 18.044.027 inwoners.');
+    expect(routerRefresh).not.toHaveBeenCalled();
+  });
+
+  it('does not refresh on a non-onboarding refusal', async () => {
+    askQuestion.mockResolvedValue(
+      outcome({
+        kind: 'ok',
+        auditId: 8,
+        netCost: 0,
+        response: {
+          kind: 'refusal',
+          reason: 'not_published',
+          text: 'CBS heeft deze periode niet gepubliceerd.',
+        } as unknown as ComposedResponse,
+      }),
+    );
+    renderDashboard(100);
+    await submit('Wat was de inflatie in 2030?');
+    await screen.findByText('CBS heeft deze periode niet gepubliceerd.');
+    expect(routerRefresh).not.toHaveBeenCalled();
   });
 });
