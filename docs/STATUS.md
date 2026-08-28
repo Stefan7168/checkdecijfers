@@ -9,19 +9,33 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
-**▶ RESUMED 2026-08-26 (session 62, autonomous). Session 63 (same day, autonomous) continued the queue —
-full narrative in [status-archive.md](status-archive.md) (prepended) and
-[session-briefs/2026-08-26-session-63-resume-log.md](session-briefs/2026-08-26-session-63-resume-log.md).
-Session 64 (2026-08-27, owner present) merged EVERY open PR — zero PRs open, `main` fully current.
-Session 65 (same day, owner present) fixed the root-`nanoid` HIGH alert (see below) and — on an
-in-chat owner steer for a large autonomous follow-up run — compiled a verified, prioritized backlog of
-already-designed-but-unbuilt work for **session 66, a fully autonomous multi-hour run starting where this
-leaves off.** Full queue: [session-briefs/2026-08-27-session-66-autonomous-queue.md](session-briefs/2026-08-27-session-66-autonomous-queue.md);
+**▶ SESSION 66 (2026-08-27 into 2026-08-28 local +07, fully autonomous, owner absent by explicit
+request) EXECUTED THE ENTIRE SESSION-65 QUEUE IN ONE CONTINUOUS RUN — 16 PRs (#99-#114) from the queue
+itself, plus this wrap-up PR (#115) — CI green on all 17 (verified: `gh pr checks` on each, both gate
+runs pass), ZERO merged (autonomous session = branch+PR per [#118(b)](open-questions.md), no self-merge
+— the owner reviews and merges next), ZERO production flags touched. ⚠ **Two MORE PRs (#116, #117)
+appeared autonomously after this session's own queue work concluded — Dependabot dependency bumps,
+unrelated to the queue, NOT reviewed or acted on here (acting on them would be inventing new scope the
+kickoff explicitly said not to do). 19 PRs open in total; CI green on all 19.** Full narrative:
+[status-archive.md](status-archive.md) (prepended below).
+The queue ran dry exactly as it was written to: every batch (RLS audit, money-path hardening, ingestion
+pipeline, options-bag dedup, #63, #39, the #74/#117/#108/#109/#116/#85 dashboard-visibility batch, WP25
+error_log + #114 health route, #110 eviction/TTL, the #170(4) Ontdek smalls, #162's slot-filling
+hermetic half) either shipped or was found already-satisfied by earlier work — the session then
+stopped, per its own kickoff's instruction, rather than inventing new scope.
+
+**Session 65 (2026-08-27, owner present) context that led here:** fixed the root-`nanoid` HIGH alert
+(see below) and, on an in-chat owner steer for a large autonomous follow-up run, compiled the queue
+session 66 executed. Full queue doc:
+[session-briefs/2026-08-27-session-66-autonomous-queue.md](session-briefs/2026-08-27-session-66-autonomous-queue.md);
 kickoff: [session-briefs/2026-08-27-session-66-kickoff.md](session-briefs/2026-08-27-session-66-kickoff.md).
-**Nothing in the queue is built yet — session 66's job is to execute it.** ⚠ The owner was asked directly
-whether session 66 may flip WP26/`GDPR_PURGE_APPLY` if it runs out of other work, and said no — hold off,
-mine the docs for buildable ideas instead (which is what the queue is). Both flags remain OFF-LIMITS to
-any autonomous session, not just "stays supervised" as a general default.**
+⚠ The owner was asked directly whether session 66 may flip WP26/`GDPR_PURGE_APPLY` if it ran out of
+other work, and said no — **both flags stayed OFF-LIMITS throughout and remain untouched**, not just
+"stays supervised" as a general default.
+
+**Before session 64 (2026-08-27, owner present): every PR open at session start had been merged** — zero
+PRs open, `main` fully current at that point (full 8-PR bridge chain + Dependabot backlog, detail in
+[status-archive.md](status-archive.md)).
 
 **✅ ZERO OPEN PRS (2026-08-27, session 64) — every PR open at session start is merged.** Merged serially,
 each with gate+deploy green on `main` and a production canary (`/`, `/llms.txt` both 200) confirmed before
@@ -77,36 +91,51 @@ root-`nanoid` gap above remains, with no PR yet.
 **CBS data:** all 20 registered tables checked this session; the 12 with real drift are synced clean.
 Nothing stale beyond what CBS itself hasn't published yet.
 
-**▶ NEXT, in order:** (a) ~~merge every open PR~~ **DONE, session 64 — zero open, `main` current**; (b) the
-**owner-supervised WP26 go-live** — one flag at a time, RUNBOOK "WP26 answer-first + clickable options";
-#191 no longer blocks it, and #178's "nu"-staleness half is now fixed in #95 (age-bound/TTL half still
-open, see below); (c) **`GDPR_PURGE_APPLY=1`** plus one watched run; (d) ~~decide on the root-`nanoid` HIGH
-alert~~ **DONE, session 65 — fixed, see above**; (e) **#193's live `audit:verify` pinning
-step** (R8 divergence check against production — expected clean per PR #91's own investigation, but
-unverified); (f) **#132 route B** GO or defer (T-0 condition — `forks_count` — still 0, re-measured
-2026-08-26); (g) then the owner menu: WP30c choice / [#162](open-questions.md) (**[#170](open-questions.md)
-item (4) done — session 66, autonomous, PR pending review/merge (see the row); item (3) stays explicitly
-Phase-2-bundled, not a queue candidate**). **Engineering follow-ups available whenever a session has room (none owner-blocked):**
-#34(b)+(c)'s residuals, #93's `RespondOptions`/`ComposeOptions`/`SemanticCheckOptions` dedup — see the
-tracked list below.
+**▶ NEXT, in order:** (a) **review + merge session 66's 17 PRs (#99-#115, #115 being this wrap-up
+itself)** — the new front of the queue; all CI-green, none merged, no particular order required (mostly
+independent — Batch 4's sequencing note in the queue doc and #103 (#39) landing before any future
+#89/#70/#79 work are the only real dependencies). **Also open, unrelated to the queue: #116/#117
+(Dependabot dependency bumps, appeared autonomously after this session's own work — CI green, not
+reviewed here, a normal maintenance-session item).** (b) the **owner-supervised WP26 go-live** — one flag at a time, RUNBOOK "WP26 answer-first
++ clickable options"; #191 no longer blocks it, and #178's "nu"-staleness half is now fixed in #95
+(age-bound/TTL half still open, see below); (c) **`GDPR_PURGE_APPLY=1`** plus one watched run; (d) **live
+migration applies** once their PRs merge — #147 (023), WP25/#65 (024), #110 (025) — each a supervised
+`npm run db:migrate`, same pattern as every prior migration; (e) **#193's live `audit:verify` pinning
+step** (R8 divergence check against production — the COPY itself shipped in PR #91 last session, this is
+ONLY the live-DB verification + `known-divergences.ts` pinning, still not run); (f) **#132 route B** GO
+or defer (T-0 condition — `forks_count` — still 0, re-measured 2026-08-26); (g) **#162's A/B** (blind
+pairwise LLM judge + owner read-back, ~€1-2 live spend) once PR #113 merges — the mechanism is built and
+flag-off-neutral, no phrasing-quality claim exists yet; (h) then the owner menu: WP30c choice (now with
+one more verified data point — the Rijksfinanciën 1900-2018 table id, `80504NED`, is confirmed ordinary
+StatLine but `Gediscontinueerd`, session 66/PR #112) / [#170](open-questions.md)(3) (still Phase-2-tied,
+item (4) shipped in PR #114) / the #89/#70/#79 UI trio (deliberately deferred behind #39, PR #103, which
+now needs to merge first). **Housekeeping, whenever a session has room:** `open-questions.md` itself is
+~312KB (measured: 319,705 bytes) and flagged (again) as due for a prune — no session has done this pass
+yet; the two stale
+pre-pause local branches found in session 66 (`refactor/shared-intent-options`,
+`fix/vitest-exclude-worktrees`) want a deliberate, owner-present delete.
 
 **Tracked, deliberately NOT built:** [#174](open-questions.md) and [#185](open-questions.md) (both explicitly
 held), [#183](open-questions.md) (product call), [#188](open-questions.md) (concurrency on a live money path
 — supervised), [#190(a)](open-questions.md) (whether an infrastructure-caused refusal should cost a trial
 question — a conversion judgement, yours), **[#178](open-questions.md)'s age-bound/TTL half** (the
 "nu"-staleness correctness half is fixed in PR #95 — session 63; picking "how many days is too old" for a
-client-held pending stays your call), **[#34](open-questions.md)(b)** (batch `dimension_labels` writes —
-confirmed still open, session 63) **and (c)'s two deeper residuals** (a pre-existing TOCTOU on pre-lock
-validation reads; the rebaseline's unguarded version-bump allowing a silent clobber between two
-concurrent rebaselines), **PR #93's two review findings** (`RespondOptions`/`ComposeOptions`/
-`SemanticCheckOptions` still hand-duplicate a smaller version of the same options-bag seam; the two
-`respond.ts` construction sites have no shared builder) — none of these are owner-blocked, each just
-needs its own scoped session rather than a rushed addition to an already-large PR.
+client-held pending stays your call).
+
+**✅ Built, PR open, pending your review (session 66):** **[#34](open-questions.md)(b)+(c)** — batch
+`dimension_labels` writes, the TOCTOU pre-lock-validation guard, and the rebaseline unguarded-version-bump
+guard, all in **PR #100**. **PR #93's dedup finding** — `RespondOptions`/`ComposeOptions`/
+`SemanticCheckOptions` now share one base (`LlmCallOptions`) instead of hand-duplicating it, in **PR
+#102**.
 
 Full session-62 record: [status-archive.md](status-archive.md) +
 [session-briefs/2026-08-26-session-62-resume-log.md](session-briefs/2026-08-26-session-62-resume-log.md).
 Full session-63 record: [status-archive.md](status-archive.md) (prepended) +
 [session-briefs/2026-08-26-session-63-resume-log.md](session-briefs/2026-08-26-session-63-resume-log.md).
+Full session-66 record: [status-archive.md](status-archive.md) (prepended) +
+[session-briefs/2026-08-27-session-66-autonomous-queue.md](session-briefs/2026-08-27-session-66-autonomous-queue.md)
+(what was asked) + [session-briefs/2026-08-28-session-66-close.md](session-briefs/2026-08-28-session-66-close.md)
+(the close-out and session-67 kickoff).
 
 ---
 

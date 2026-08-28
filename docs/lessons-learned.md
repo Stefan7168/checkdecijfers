@@ -6,6 +6,98 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 66 — 2026-08-27 into 2026-08-28 (local, +07), fully autonomous, owner absent — the entire session-65 queue executed in one run, 17 PRs
+
+Session spanned midnight local time — started 2026-08-27, wrapped 2026-08-28. All 17 PRs (16 from the
+queue plus this session's own wrap-up PR, #99-#115) branch+PR per #118(b) (autonomous, no owner in
+chat), zero direct pushes to `main`, zero production-flag touches (WP26, `GDPR_PURGE_APPLY` both
+untouched as instructed). ⚠ Two more PRs (#116, #117 — routine Dependabot bumps) appeared autonomously
+after the queue work concluded, found during a second wrap-up pass later the same session; CI green,
+deliberately not reviewed (out of scope). Full PR list, batch mapping, and per-PR
+verification numbers: [status-archive.md](status-archive.md) session-66 entry (prepended below this
+wrap) and [session-briefs/2026-08-27-session-66-autonomous-queue.md](session-briefs/2026-08-27-session-66-autonomous-queue.md)
+for what was asked.
+
+- **A "stalled: no progress for 600s" notification does NOT reliably mean a dispatched agent's process
+  is fully inert.** Repeatedly this session, an agent reported stalled (no live background children),
+  got resumed, and later a SEPARATE notification arrived showing it had continued working independently
+  in the interim — including once after the orchestrating session had ALREADY taken over that same
+  worktree and pushed its own commit. Git handled the concurrent-but-sequential writes safely (the
+  agent's own later commit simply superseded the orchestrator's, byte-identical content, no corruption),
+  but this was a property of git's safety, not of the orchestration being race-free. **Practical rule
+  going forward: once you decide to take over a worktree after a stall, do NOT send that agent another
+  message — driving the SAME worktree from two places at once is the actual hazard, not the stall
+  itself.**
+- **The root cause of most stalls: an agent backgrounds a long-running command (`npm test`,
+  `benchmark:run`, `web:build` — each 5-40 min on this machine) and then idle-waits for it. The
+  orchestrating harness ends that agent's turn while it waits, well before the command finishes** — this
+  is a harness-level interaction, not a bug in the agent's own logic or a sign of lost work. The fix that
+  worked every time: resume via `SendMessage` (never restart) — all worktree state, including the
+  eventually-completed background command's real output, survives and the agent picks up cleanly. This
+  session confirmed it can take 3-4 resume cycles for one agent to fully finish its own verification
+  block; that is normal, not a signal something is wrong.
+- **Running multiple vitest processes concurrently breaks vitest's OWN WORKER POOL on this 8GB machine —
+  a distinct failure mode from OOM, with its own signature: `[vitest-pool-runner]: Timeout waiting for
+  worker to respond`, `Failed to start forks worker`.** Confirmed by deliberately reproducing it (running
+  3 scoped suites "in parallel" in one worktree) and by seeing it happen incidentally when an
+  orchestrator-run command overlapped a subagent's own test run in the same worktree. The existing "never
+  run concurrent vitest" rule (memory, RUNBOOK) already covered OOM; this generalizes it — the failure
+  can be a worker-pool timeout with an otherwise-healthy process, not only a hard kill. Recovery is always
+  the same: re-run the SAME suite alone once nothing else is running; it passes clean every time this
+  session (5-for-5).
+- **A worktree created via agent-tool `isolation: "worktree"` can get an INCOMPLETE `node_modules` (root
+  or `web/`) at creation time** — hit roughly half the worktrees dispatched this session (one had a root
+  `node_modules` with 4 entries instead of ~70; two others had a `web/node_modules` with 1 entry instead
+  of ~380-500). The symptom is misleading: it does NOT fail immediately or obviously — most of the suite
+  passes fine (Node's module resolution walks up to the PARENT repo's `node_modules` for ordinary
+  imports), and only tests that read `node_modules` by a raw filesystem path (a cache-key hash, a
+  `jest-dom`/`vitest` type-reference import) fail, looking like a real regression. **Check `ls
+  node_modules | wc -l` (and `web/node_modules` separately) before trusting ANY test failure in a fresh
+  worktree — `npm install` (or `npm install` inside `web/`) fixes it in seconds and is always safe to run
+  first.**
+- **A documented "cost tripwire" test is DESIGNED to have its pinned numbers change — updating the
+  numbers AND prominently disclosing the cost in the PR is the correct response, not a smell to route
+  around.** `tests/answer/query-count.test.ts` pins exact DB-statement counts per turn specifically so a
+  deliberate cost increase gets said "out loud in review" (its own header) rather than discovered later
+  in a pooler alarm (#173's own history). The #110 (table eviction) work added one real DB round-trip to
+  every SERVED turn (a debounced check-and-maybe-update is still one round trip even on the ~29 days out
+  of 30 it doesn't write) — updated the four affected pins, expanded the header with the mechanism, and
+  flagged it as the FIRST line of that PR's description rather than burying it in the verification
+  section. Worth checking whether other cost-tripwire-style tests exist before treating a similar future
+  failure as noise.
+- **Three separate "the code already does what this open-questions row asks for, the row just never got
+  marked resolved" findings landed this session** (#85's truthful-activity indicator, #109's onboarding
+  suggestion chip, #193's softened-Definitief copy — the latter two specifically: a PR from an EARLIER
+  session had already shipped the work, but the row kept describing it as pending/not-yet-shipped).
+  Pattern: work that ships as a side effect of a DIFFERENT PR's focus, or via a PR whose own description
+  didn't reference the row by number, doesn't get the row updated. All three were closed with a
+  docs-only PR (verified against the actual code/git history, not assumed) rather than being rebuilt —
+  cheaper and more honest than either silently skipping them or re-implementing something that already
+  exists. Worth the owner's monthly open-questions.md triage specifically watching for this shape, not
+  just pruning stale/duplicate rows.
+- **Two stale, long-abandoned local branches from before the 2026-08-15→26 pause turned up mid-session**
+  (`refactor/shared-intent-options`, `fix/vitest-exclude-worktrees`) — both predate the pause, both
+  clearly superseded by work that landed differently since. Neither was touched (different branch names
+  from anything this session created, no actual collision) — flagged here rather than deleted
+  unilaterally, since a stale branch is exactly the kind of "unfamiliar state, investigate before
+  touching" case CLAUDE.md's safety section describes. Worth a deliberate cleanup pass (confirm superseded,
+  then delete) in a future session, ideally one with the owner present given `git branch -D` is
+  destructive.
+- **A shared/predictable scratchpad file path can silently collide between two parallel autonomous
+  agents.** One agent (Batch 6) found a stray edit at its own intended scratch-file path mid-task,
+  correctly diagnosed it as a SIBLING agent (#162) writing to the same shared temp location rather than
+  its own code being corrupted (its actual work was safely committed on its own branch throughout), and
+  self-corrected by using a distinctly-named file. No harm done, but worth building the habit
+  deliberately: when briefing parallel agents that might use a shared scratch directory, tell them to
+  name scratch files distinctly (agent id or task slug prefix) rather than a generic name like
+  `pr-body.md`.
+- **The whole-queue-in-one-run pattern (piloted as a plan in session 65, executed here) works end to end
+  when the queue is written the way session 65 wrote it**: every item pre-researched with exact
+  file/line pointers, the invariants at stake named up front, explicit exclusions with reasons so an
+  agent doesn't have to re-derive scope boundaries, and a clear "stop, don't invent scope" instruction
+  for when it empties. Zero scope invention happened this session; every PR traces to a named queue item
+  or a finding made WHILE working one (the two doc-lag PRs, the stale-branch note, the RLS audit script).
+
 ## Session 65 — 2026-08-27, owner present — nanoid HIGH alert fixed, session-66 autonomous queue planned
 
 - **`gh run watch --exit-status` is unreliable in BOTH directions, not just the one session 64 found.** Session 64

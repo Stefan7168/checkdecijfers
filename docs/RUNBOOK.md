@@ -679,6 +679,46 @@ through this in order — the first item has a deadline, the rest are checks.
 7. **Then the normal queue** — [session-briefs/2026-08-07-session-62-kickoff.md](session-briefs/2026-08-07-session-62-kickoff.md),
    starting with PR #85 (which carries the WP26 pre-flip blocker fix).
 
+## Multi-agent autonomous sessions — worktree/subagent operational gotchas (added session 66, 2026-08-27→28)
+
+Session 66 ran a whole queue's worth of work (16 PRs from the queue, plus its own wrap-up PR — 17 total)
+through parallel worktree-isolated subagents on this 8GB machine. Five patterns worth knowing before the next session does the same, promoted here from
+memory (per CLAUDE.md's "durable knowledge lives only in the repo" rule) rather than left as a
+per-machine cache:
+
+1. **A dispatched agent reporting "stalled: no progress for 600s" is usually still fine — it means the
+   ORCHESTRATING harness ended that agent's turn while it idle-waited on a long-running background
+   command (`npm test`/`benchmark:run`/`web:build`, each 5-40 min here), not that work was lost.** All
+   worktree state, including the eventually-completed command's real output, survives. **Resume it with
+   SendMessage — never restart it, and never start driving the same worktree yourself in parallel with
+   it** (git handles a genuine race safely, but it is not something to rely on — pick one driver per
+   worktree and stick with it). Expect 3-4 resume cycles per agent to be normal on a task with a full
+   verification block, not a sign of trouble.
+2. **Never run more than one vitest process at a time anywhere on this machine — not just to avoid OOM,
+   but because concurrent vitest runs can break vitest's own worker pool**, with its own distinct failure
+   signature (`[vitest-pool-runner]: Timeout waiting for worker to respond`, `Failed to start forks
+   worker`) that reads exactly like a real regression until you notice three suites were running at once.
+   Re-running the SAME suite alone, once nothing else is running, has cleared it every time it's been hit.
+   This generalizes the existing "8GB machine, run solo" rule — it now also applies ACROSS worktrees, not
+   only within one process.
+3. **A fresh worktree created for a subagent can end up with an incomplete `node_modules` (root or
+   `web/`) — check before trusting a test failure.** `ls node_modules | wc -l` should read ~70 in the
+   repo root and ~380-500 in `web/`; if either is far below that (single digits has happened), run `npm
+   install` (or `npm install` inside `web/`) before treating any test failure in that worktree as real.
+   The failure mode is misleading: MOST tests still pass (Node's module resolution walks up to the parent
+   repo's `node_modules`), so it looks like an isolated, real bug rather than a missing-dependency
+   artifact.
+4. **When several autonomous branches build in parallel, each one's first new migration file will often
+   independently claim the same "next free" number** (nothing on a separate branch can see another
+   branch's uncommitted file). This is expected, not an error — catch it before pushing (check the
+   highest migration number across ALL sibling branches you know about, not just `main`) and renumber.
+   Session 66 hit this four times in one run (four branches all reaching for `022`); final numbers ended
+   up 023/024/025, each noted in its own PR description.
+5. **A shared scratchpad path can silently collide between two agents running at the same time.** If you
+   brief multiple parallel agents that might write to a common scratch directory, tell each one to use a
+   distinctly-named file (its own task slug or agent id as a prefix) rather than a generic name like
+   `notes.md` or `pr-body.md`.
+
 ## Moving to a new machine (fresh clone bootstrap)
 
 Everything that matters lives in this repository or in your own accounts

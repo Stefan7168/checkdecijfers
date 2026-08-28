@@ -1,5 +1,82 @@
 # STATUS archive — the session log
 
+**Session 66 (2026-08-27 into 2026-08-28, local time +07 — the session spanned midnight; fully
+autonomous, owner explicitly absent by request). Executed the ENTIRE session-65 queue in one continuous
+run: 16 PRs from the queue (#99-#114) plus this session's own wrap-up PR (#115) — 17 total, CI green on
+every one, ZERO merged (autonomous = branch+PR per [#118(b)](open-questions.md), no self-merge), ZERO
+production flags touched (WP26, `GDPR_PURGE_APPLY` both explicitly off-limits for this run per the
+owner's own answer in session 65, and stayed off-limits the whole way through). ⚠ Caught during a
+second wrap-up pass triggered later the same session: two MORE PRs (#116, #117) appeared autonomously in
+the interim — routine Dependabot dependency bumps, CI green, unrelated to the queue and deliberately NOT
+reviewed or acted on (would be inventing new scope). 19 PRs open in total by the time this session
+actually ended.**
+
+Opened with the standard verification block per the kickoff's own instruction: `date` confirmed
+2026-08-27 (the session's actual start), `git log -1 origin/main` confirmed `ad0190b` (session 65's last
+commit), local `HEAD` matched `origin/main` exactly, working tree clean — matched the kickoff doc's own
+expectations. Read `CLAUDE.md`, `STATUS.md`'s top block, the kickoff doc, and the full autonomous-queue
+doc in full before building anything, per the kickoff's explicit instruction.
+
+**The queue, worked top to bottom, batch by batch — every PR branch+PR'd, none merged (owner review is
+next):**
+
+| Batch | What | PR(s) | Notes |
+|---|---|---|---|
+| Do-first | RLS posture audit | **#99** | Read-only script (`scripts/rls-audit.ts`) against the live DB — 17/17 tables clean (RLS on, 0 policies, 0 anon/authenticated grants), matching the session-25 known-good posture exactly. No drift found, so the PR is just the reusable audit script itself. |
+| 1 | Money-path hardening (#146-150) | **#101** | `requestId` UUID validation, onboarding `netCost` threaded from the real debit (not a second price read), Stripe `payment_status` check + async-settlement events, a compensation-amount-bound migration (023), a stale-row-reclaim margin regression test. |
+| 2 | Ingestion pipeline hardening (#34 b+c) | **#100** | Batched `dimension_labels` writes, a pre-lock TOCTOU guard, an optimistic-concurrency guard on the rebaseline version bump. |
+| 3 | Answer-pipeline cleanup | **#102**, **#104** | #102: `RespondOptions`/`ComposeOptions`/`SemanticCheckOptions` deduped against a new shared `LlmCallOptions` base (PR #93's own review finding), plus a `ThreadedInto<T>` helper that turns a silently-dropped WP16/WP26 field into a compile error instead of a repeat of #176/#191. #104: rule 4 (#63) now dry-runs servability for BOTH competing readings, not just the click-options branch — closes a real gap in the flag-off (i.e. today's live) path. |
+| 4 (item 1 only; UI trio deferred) | Registry alternate-reading disclosure (#39) | **#103** | `Attribution.alternates` threaded from the registry, a new deterministic `buildAlternatesLine` builder, wired through compose/audit/replay/chat. The clickable "waarom dit antwoord" affordance (#89/#70/#79) stays deliberately unbuilt — the row itself says it needs a shared design pass, now buildable FROM this PR's shape once it merges. |
+| 5 | Dashboard & onboarding visibility | **#107**, **#108**, **#105**, **#106** | #107: #74+#117 — an at-a-glance "in behandeling" line + a `router.refresh()` live poll (chosen over a new status endpoint: only a full server re-render brings the delivered ANSWER itself, not just a status label). #108: #108+#116-residual — catalog status-flip detection (a registered table going `Gediscontinueerd`, new admin alert) + a per-answer email deep-link anchor. #105 and #106 are docs-only: #85 (truthful generic activity indicator) and #109 (the onboarding suggestion chip) were BOTH already satisfied by existing shipped behavior — closed with a verified finding, not a rebuild. |
+| 6 | Ontdek chart smalls (#170 item 4) | **#114** | Curated event annotations (3 real macro-economic reference points, honestly noted as outside today's rolling chart windows) + a narrow definition toggle (werkloosheid, seizoensgecorrigeerd/ongecorrigeerd — added as a 5th Ontdek chart specifically because it's the only registry entry with a genuine same-table dims-only alternate). |
+| 7 | Data-quality / ops | **#110**, **#111** | #110: WP25 durable `error_log` (migration 024) + the #114 auth-free health route (`/api/health`, exercising the same real reads the dashboard depends on with no test credential to manage). #111: #110(b)/(c) on-demand table eviction/TTL, hermetic half (migration 025) — found and fixed a real cost-tripwire consequence along the way (see below). |
+| 8 | Lower priority | **#113**, **#112** | #113: #162 slot-filling hermetic half — the most invariant-sensitive build of the session (see below). #112: docs-only, verified the Rijksfinanciën 1900-2018 table id (`80504NED`, ordinary StatLine, but `Gediscontinueerd`) for a future WP30c call. |
+| Found while working, not in the original queue | #193 doc-lag | **#109** | The two Dutch copy softening edits the row described as still-pending had actually shipped in PR #91, a session before this one — the row just never got marked resolved. Closed docs-only. |
+
+**Three doc-lag findings this session (#85, #109, #193)** — code that already did what an open-questions
+row asked for, closed with a verified docs-only PR instead of a rebuild. Worth the owner's monthly
+open-questions.md triage watching for this shape specifically.
+
+**One real cost trade-off found and disclosed, not hidden:** #110's `touchLastQueriedAt` eviction-tracking
+bump adds one real DB round-trip to every SERVED turn — the debounce bounds how often it WRITES, not how
+often it's CHECKED, so this lands against #173's Supabase-pooler history on every request, not just once
+a day. Caught by `tests/answer/query-count.test.ts` (a documented cost tripwire, not a correctness gate)
+failing exactly as designed; fixed the four affected pins, expanded the test's own header, and made it
+the first line of PR #111's description rather than a buried verification detail.
+
+**#162 (slot-filling) got the deepest manual review of the session**, given it's the most
+invariant-sensitive change (touches R1/R3/R9-R11 directly): independently re-ran its flag-off neutrality
+test (32/32) rather than trusting the self-report, then read `slots.ts` (the six §1 validation rules) and
+`compose.ts`'s ladder wiring (`composeViaSlots`, the `templateOnly`-wins-outright and `slotPhrasing ===
+true` strict-equality gating) in full before considering it verified. Found no bugs. `SLOT_PHRASING_ENABLED`
+is set nowhere; the flag-off path is proven byte-identical to today.
+
+**Operational patterns confirmed/discovered this session** (full detail in
+[lessons-learned.md](lessons-learned.md)'s session-66 entry): a "stalled" subagent notification does not
+reliably mean the process is inert (resume via SendMessage, never restart, never dual-drive the same
+worktree); concurrent vitest runs break vitest's own worker pool on this 8GB machine, a distinct failure
+signature from OOM; a fresh agent-tool worktree can get an incomplete `node_modules` (root or `web/`) —
+check `ls node_modules | wc -l` before trusting a test failure; a shared scratchpad path can silently
+collide between parallel agents (self-corrected by the agent that hit it, no harm done).
+
+**Two stale, long-abandoned local branches from before the 2026-08-15→26 pause found, not touched**
+(`refactor/shared-intent-options`, `fix/vitest-exclude-worktrees`) — flagged for a deliberate,
+owner-present delete rather than removed unilaterally.
+
+**Migration numbers, for whoever reviews the PRs:** four PRs each independently wrote a new migration
+file starting from the same next-free number (022) since none of them could see each other's uncommitted
+work; caught and renumbered before each push — final numbers 022 (unclaimed/available), 023 (#146-150's
+compensation bound, PR #101), 024 (WP25's `error_log`, PR #110), 025 (#110's eviction columns, PR #111).
+All four are FILE-ONLY — no live `db:migrate` ran against production this session; that stays a
+supervised step for each, in merge order.
+
+**Nothing merged, nothing live, no flag flipped.** All 17 of this session's PRs are exactly where an
+autonomous session under [#118(b)](open-questions.md) should leave them: green CI, a clear description,
+verification numbers that were independently checked rather than only self-reported, and a named list of
+what stays owner-supervised. (#116/#117 — the two Dependabot PRs that appeared afterward — are also
+green but are not this session's work; noted, not reviewed.) Full queue-vs-outcome mapping and the
+session-67 kickoff: [session-briefs/2026-08-28-session-66-close.md](session-briefs/2026-08-28-session-66-close.md).
+
 **Session 65 (2026-08-27, owner present in chat throughout). Fixed the root-`nanoid` HIGH alert (#194,
 `aed5bf6`) on explicit owner instruction, then — on an in-chat owner steer for a large autonomous
 follow-up — compiled and verified a prioritized backlog of already-designed-but-unbuilt work for session
