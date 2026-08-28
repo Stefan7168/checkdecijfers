@@ -700,7 +700,10 @@ describe('sync semantics', () => {
     // point; open-questions #34(c)). Both calls here are individually valid
     // (same clean source, same quarantined table) — the point isn't that one
     // must win and the other lose (unlike a spend race), it's that neither
-    // may observe or leave a half-written label set.
+    // may observe or leave a half-written label set. (Since #34(c)(ii),
+    // session 66, the second to acquire the lock additionally fails loudly
+    // with 'rebaseline_conflict' instead of re-committing over the winner —
+    // pinned by the dedicated tests in the #34(b)+(c) describe block below.)
     //
     // Same caveat as tests/billing/ledger.test.ts's concurrent-debit tests:
     // PGlite serves one connection through a single promise-chain mutex
@@ -1010,6 +1013,317 @@ describe('#167 — curated phantom-measure exclusion (Phase0Table.excludeMeasure
 
       const row = (await db.query('select status from cbs_tables where id = $1', ['82235NED'])).rows[0]!;
       expect(row.status).toBe('needs_review');
+    } finally {
+      await close();
+    }
+  });
+});
+
+describe('#34(b)+(c) — batched label writes and rebaseline concurrency guards (session 66)', () => {
+  /** The full dimension_labels row set the SOURCE publishes — what the old
+   * per-row insert loops wrote, field for field. Sorted with the same JS
+   * comparator as dbLabelRows so collation differences can't produce a
+   * spurious order-only mismatch. */
+  type LabelRowShape = {
+    dimension: string;
+    code: string;
+    label: string;
+    dimension_group: string | null;
+    status: string | null;
+    sort_index: number | null;
+  };
+
+  function sortLabelRows<T extends { dimension: string; code: string }>(rows: T[]): T[] {
+    return [...rows].sort(
+      (a, b) => a.dimension.localeCompare(b.dimension) || a.code.localeCompare(b.code),
+    );
+  }
+
+  async function sourceLabelRows(source: FixtureSource, tableId: string): Promise<LabelRowShape[]> {
+    const schema = await source.fetchTableSchema(tableId);
+    const rows: LabelRowShape[] = [];
+    for (const dim of schema.dimensions) {
+      for (const code of await source.fetchCodeList(tableId, dim.name)) {
+        rows.push({
+          dimension: dim.name,
+          code: code.code,
+          label: code.title,
+          dimension_group: code.dimensionGroup,
+          status: code.status,
+          sort_index: code.index,
+        });
+      }
+    }
+    return sortLabelRows(rows);
+  }
+
+  async function dbLabelRows(db: Db, tableId: string): Promise<LabelRowShape[]> {
+    const result = await db.query(
+      `select dimension, code, label, dimension_group, status, sort_index
+         from dimension_labels where table_id = $1`,
+      [tableId],
+    );
+    return sortLabelRows(result.rows as LabelRowShape[]);
+  }
+
+  /** Delegating Db facade whose FIRST withTransaction call first commits an
+   * interfering write through the raw db (auto-commit, outside the
+   * transaction about to open) — deterministically simulating a concurrent
+   * caller committing between syncTable's pre-transaction validation reads
+   * and its advisory-lock acquisition. PGlite is single-connection, so real
+   * multi-connection interleaving cannot be reproduced hermetically (same
+   * caveat as the #34(c) test above); this hook injects the exact
+   * read-then-overtaken ordering the guards exist for. */
+  function dbWithPreTransactionWrite(db: Db, interfere: () => Promise<void>): Db {
+    let fired = false;
+    return {
+      query: (text, params) => db.query(text, params),
+      withTransaction: async (fn) => {
+        if (!fired) {
+          fired = true;
+          await interfere();
+        }
+        return db.withTransaction(fn);
+      },
+    };
+  }
+
+  it('#34(b): registration and rebaseline write the labels batched with content identical to the fetched code lists', async () => {
+    const { db, close } = await createTestDb();
+    try {
+      const source = new FixtureSource(await loadDocs('85224NED'));
+      await registerTables(db, source, [table('85224NED')]);
+
+      const expected = await sourceLabelRows(source, '85224NED');
+      expect(expected.length).toBeGreaterThan(0);
+      // Registration (batched, on-conflict-do-nothing): every row, every
+      // column — label text, group, status and sort_index included — exactly
+      // as published, nothing dropped, nothing invented.
+      expect(await dbLabelRows(db, '85224NED')).toEqual(expected);
+
+      const synced = await syncTable(db, source, '85224NED');
+      expect(synced.outcome).toBe('succeeded');
+
+      // Rebaseline (delete + batched rewrite, no on-conflict): the full set
+      // lands content-identically again.
+      const rebaselined = await syncTable(db, source, '85224NED', { rebaseline: true });
+      expect(rebaselined.outcome).toBe('succeeded');
+      expect(await dbLabelRows(db, '85224NED')).toEqual(expected);
+    } finally {
+      await close();
+    }
+  });
+
+  it('#34(b): a code list larger than CHUNK_SIZE registers across multiple chunks with nothing dropped', async () => {
+    const { db, close } = await createTestDb();
+    try {
+      // CHUNK_SIZE is 5000 (pipeline.ts); 5100 synthetic codes force the
+      // flattened label array over one chunk. Registration alone writes
+      // labels, so no synthetic observations are needed.
+      const docs = clone(await loadDocs('85224NED'));
+      const codeList = (docs.codes as Record<string, { value: Record<string, unknown>[] }>)
+        .SeizoenEnWerkdagcorrectie;
+      const syntheticCount = 5100;
+      for (let i = 0; i < syntheticCount; i++) {
+        codeList.value.push({
+          Identifier: `SYN${String(i).padStart(5, '0')}`,
+          Title: `Synthetische code ${i}`,
+          DimensionGroupId: null,
+          Status: null,
+          Index: 9000 + i,
+        });
+      }
+      const source = new FixtureSource(docs);
+
+      await registerTables(db, source, [table('85224NED')]);
+
+      const expected = await sourceLabelRows(source, '85224NED');
+      expect(expected.length).toBeGreaterThan(5000); // multi-chunk actually exercised
+      expect(await dbLabelRows(db, '85224NED')).toEqual(expected);
+    } finally {
+      await close();
+    }
+  });
+
+  it('#34(c)(ii): a version bump committed between validation and the lock aborts the rebaseline loudly — nothing overwritten, batch recorded failed', async () => {
+    const { db, close } = await createTestDb();
+    try {
+      const source = new FixtureSource(await loadDocs('85224NED'));
+      await registerTables(db, source, [table('85224NED')]);
+      expect((await syncTable(db, source, '85224NED')).outcome).toBe('succeeded');
+
+      const before = (
+        await db.query(
+          'select version, units, expected_dimensions, schema_fingerprint from cbs_tables where id = $1',
+          ['85224NED'],
+        )
+      ).rows[0]!;
+      const versionBefore = Number(before.version);
+      const labelsBefore = await dbLabelRows(db, '85224NED');
+
+      // Simulate a concurrent rebaseline committing first: it bumps version.
+      const racedDb = dbWithPreTransactionWrite(db, async () => {
+        await db.query('update cbs_tables set version = version + 1, updated_at = now() where id = $1', [
+          '85224NED',
+        ]);
+      });
+
+      const result = await syncTable(racedDb, source, '85224NED', { rebaseline: true });
+      expect(result.outcome).toBe('failed');
+      expect(result.failureStage).toBe('rebaseline_conflict');
+      expect(result.failureSummary).toMatch(/modified concurrently/i);
+      expect(result.failureSummary).toContain(`version ${versionBefore} -> ${versionBefore + 1}`);
+      expect(result.rebaselined).toBe(true);
+
+      // The batch row is terminally recorded — never left stuck at 'running'.
+      const batch = (
+        await db.query(
+          'select outcome, failure_stage, failure_summary, finished_at from ingestion_batches where id = $1',
+          [result.batchId],
+        )
+      ).rows[0]!;
+      expect(batch.outcome).toBe('failed');
+      expect(batch.failure_stage).toBe('rebaseline_conflict');
+      expect(batch.finished_at).not.toBeNull();
+
+      // Nothing overwritten: version shows ONLY the interference bump (+1,
+      // not +2), baseline fields and labels untouched, and no quarantine —
+      // the concurrent winner's baseline is not suspect data.
+      const after = (
+        await db.query(
+          'select version, status, units, expected_dimensions, schema_fingerprint from cbs_tables where id = $1',
+          ['85224NED'],
+        )
+      ).rows[0]!;
+      expect(Number(after.version)).toBe(versionBefore + 1);
+      expect(after.status).toBe('active');
+      expect(after.units).toEqual(before.units);
+      expect(after.expected_dimensions).toEqual(before.expected_dimensions);
+      expect(after.schema_fingerprint).toBe(before.schema_fingerprint);
+      expect(await dbLabelRows(db, '85224NED')).toEqual(labelsBefore);
+
+      // The abort leaves a retryable state: a plain rebaseline now succeeds.
+      const retry = await syncTable(db, source, '85224NED', { rebaseline: true });
+      expect(retry.outcome).toBe('succeeded');
+      expect(
+        Number((await db.query('select version from cbs_tables where id = $1', ['85224NED'])).rows[0]!.version),
+      ).toBe(versionBefore + 2);
+    } finally {
+      await close();
+    }
+  });
+
+  it("#34(c)(i): a concurrent ordinary sync's committed row count (no version bump) fails the post-lock re-validation at row_plausibility", async () => {
+    const { db, close } = await createTestDb();
+    try {
+      const source = new FixtureSource(await loadDocs('85224NED'));
+      await registerTables(db, source, [table('85224NED')]);
+      const first = await syncTable(db, source, '85224NED');
+      expect(first.outcome).toBe('succeeded');
+
+      const before = (
+        await db.query(
+          'select version, units, expected_dimensions, schema_fingerprint from cbs_tables where id = $1',
+          ['85224NED'],
+        )
+      ).rows[0]!;
+      const labelsBefore = await dbLabelRows(db, '85224NED');
+
+      // Simulate a concurrent ORDINARY sync committing a wildly different
+      // row count after this rebaseline's pre-lock stage-2 read. Ordinary
+      // syncs never bump version, so the (c)(ii) guard alone would miss it.
+      const racedDb = dbWithPreTransactionWrite(db, async () => {
+        await db.query('update cbs_tables set last_row_count = $2, updated_at = now() where id = $1', [
+          '85224NED',
+          first.rowCount * 10,
+        ]);
+      });
+
+      const result = await syncTable(racedDb, source, '85224NED', { rebaseline: true });
+      expect(result.outcome).toBe('failed');
+      expect(result.failureStage).toBe('row_plausibility');
+      expect(result.failureSummary).toMatch(/Row count changed/);
+      expect(result.failureSummary).toMatch(/post-lock re-validation/);
+
+      // Same semantics as a pre-transaction stage-2 failure: quarantined.
+      const after = (
+        await db.query(
+          `select status, needs_review_reason, version, units, expected_dimensions, schema_fingerprint
+             from cbs_tables where id = $1`,
+          ['85224NED'],
+        )
+      ).rows[0]!;
+      expect(after.status).toBe('needs_review');
+      expect(after.needs_review_reason).toBeTruthy();
+      // The rolled-back rebaseline changed no baseline field and no labels.
+      expect(Number(after.version)).toBe(Number(before.version));
+      expect(after.units).toEqual(before.units);
+      expect(after.expected_dimensions).toEqual(before.expected_dimensions);
+      expect(after.schema_fingerprint).toBe(before.schema_fingerprint);
+      expect(await dbLabelRows(db, '85224NED')).toEqual(labelsBefore);
+
+      const batch = (
+        await db.query('select outcome, failure_stage from ingestion_batches where id = $1', [result.batchId])
+      ).rows[0]!;
+      expect(batch.outcome).toBe('failed');
+      expect(batch.failure_stage).toBe('row_plausibility');
+    } finally {
+      await close();
+    }
+  });
+
+  it('#34(c)(ii): of two concurrent rebaselines, exactly one wins — the loser fails loudly with rebaseline_conflict, version bumps once', async () => {
+    // Same PGlite-single-connection-mutex caveat as the #34(c) test above:
+    // the two transactions cannot truly interleave here. What IS real in
+    // this arrangement: both calls capture the registry version via plain
+    // db.query BEFORE either write transaction runs (both pre-reads are
+    // enqueued on the mutex ahead of both transactions), so whichever
+    // transaction commits second holds a genuinely stale pre-lock read —
+    // exactly the ordering the version guard closes.
+    const { db, close } = await createTestDb();
+    try {
+      const source = new FixtureSource(await loadDocs('85224NED'));
+      await registerTables(db, source, [table('85224NED')]);
+      expect((await syncTable(db, source, '85224NED')).outcome).toBe('succeeded');
+      const versionBefore = Number(
+        (await db.query('select version from cbs_tables where id = $1', ['85224NED'])).rows[0]!.version,
+      );
+      const labelsBefore = await dbLabelRows(db, '85224NED');
+
+      const settled = await Promise.allSettled([
+        syncTable(db, source, '85224NED', { rebaseline: true }),
+        syncTable(db, source, '85224NED', { rebaseline: true }),
+      ]);
+      // Neither call may throw: the loser must return a failed result, not
+      // reject (a rejection would have left its batch row stuck 'running').
+      expect(settled.map((s) => s.status)).toEqual(['fulfilled', 'fulfilled']);
+      const results = settled.map((s) => (s.status === 'fulfilled' ? s.value : null)!);
+
+      const outcomes = results.map((r) => r.outcome).sort();
+      expect(outcomes).toEqual(['failed', 'succeeded']);
+      const loser = results.find((r) => r.outcome === 'failed')!;
+      const winner = results.find((r) => r.outcome === 'succeeded')!;
+      expect(loser.failureStage).toBe('rebaseline_conflict');
+
+      // Both batches terminally recorded.
+      for (const [batchId, expected] of [
+        [loser.batchId, 'failed'],
+        [winner.batchId, 'succeeded'],
+      ] as const) {
+        const row = (
+          await db.query('select outcome from ingestion_batches where id = $1', [batchId])
+        ).rows[0]!;
+        expect(row.outcome).toBe(expected);
+      }
+
+      // One committed rebaseline exactly: version +1, label set intact,
+      // table active (a conflict abort never quarantines).
+      const after = (
+        await db.query('select version, status from cbs_tables where id = $1', ['85224NED'])
+      ).rows[0]!;
+      expect(Number(after.version)).toBe(versionBefore + 1);
+      expect(after.status).toBe('active');
+      expect(await dbLabelRows(db, '85224NED')).toEqual(labelsBefore);
     } finally {
       await close();
     }

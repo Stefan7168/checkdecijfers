@@ -101,18 +101,13 @@ export const registerTables: RegisterTablesFn = async (db, source, tables) => {
         ],
       );
 
-      for (const dim of schema.dimensions) {
-        const codes = codeLists[dim.name] ?? [];
-        for (const code of codes) {
-          await tx.query(
-            `insert into dimension_labels
-               (table_id, dimension, code, label, dimension_group, status, sort_index)
-             values ($1, $2, $3, $4, $5, $6, $7)
-             on conflict (table_id, dimension, code) do nothing`,
-            [table.id, dim.name, code.code, code.title, code.dimensionGroup, code.status, code.index],
-          );
-        }
-      }
+      // #34(b): batched, preserving this site's on-conflict-do-nothing.
+      await insertDimensionLabels(
+        tx,
+        table.id,
+        labelRowsFromCodeLists(schema.dimensions, codeLists),
+        'ignore',
+      );
     });
 
     newlyRegistered.push(table.id);
@@ -199,6 +194,102 @@ async function failBatch(
          set status = 'needs_review', needs_review_reason = $2, updated_at = now()
        where id = $1`,
       [tableId, summary],
+    );
+  }
+}
+
+/**
+ * #34(c): thrown from inside the rebaseline write transaction when its
+ * post-lock re-validation decides this sync must not commit. withTransaction's
+ * contract rolls everything back on rejection; syncTable's outer scope catches
+ * exactly this type, records the batch as failed via failBatch (the
+ * ingestion_batches row must never be left stuck at 'running'), and returns
+ * the same failed SyncResult shape the five ordered checks produce. It must
+ * never escape syncTable.
+ */
+class RebaselineAbortError extends Error {
+  readonly stage: NonNullable<SyncResult['failureStage']>;
+  readonly failureSummary: string;
+  /** Mirrors failBatch's quarantine flag: true also marks the table needs_review. */
+  readonly quarantine: boolean;
+
+  constructor(
+    stage: NonNullable<SyncResult['failureStage']>,
+    failureSummary: string,
+    quarantine: boolean,
+  ) {
+    super(failureSummary);
+    this.name = 'RebaselineAbortError';
+    this.stage = stage;
+    this.failureSummary = failureSummary;
+    this.quarantine = quarantine;
+  }
+}
+
+/** One dimension_labels row, in the exact column order the insert writes. */
+interface LabelRow {
+  dimension: string;
+  code: string;
+  label: string;
+  dimension_group: string | null;
+  status: string | null;
+  sort_index: number | null;
+}
+
+/** Flattens fetched code lists into label rows, in the same dimension-then-code
+ * order the old per-row insert loops used. */
+function labelRowsFromCodeLists(
+  dimensions: CbsDimension[],
+  codeLists: Record<string, CbsCode[]>,
+): LabelRow[] {
+  const rows: LabelRow[] = [];
+  for (const dim of dimensions) {
+    for (const code of codeLists[dim.name] ?? []) {
+      rows.push({
+        dimension: dim.name,
+        code: code.code,
+        label: code.title,
+        dimension_group: code.dimensionGroup,
+        status: code.status,
+        sort_index: code.index,
+      });
+    }
+  }
+  return rows;
+}
+
+/**
+ * #34(b): dimension_labels writes go in CHUNK_SIZE batches through
+ * jsonb_to_recordset — one round-trip per chunk instead of one per code, the
+ * same batching the observations staging insert already uses (per-row label
+ * writes dominated the 4-6 minute syncs of small tables). Row content is
+ * identical to the old per-row inserts: same columns, same values, and
+ * CbsCode's nullable fields are explicit nulls, which JSON round-trips
+ * losslessly. `onConflict: 'ignore'` keeps the two sites that had
+ * `on conflict ... do nothing`; 'none' keeps the rebaseline rewrite's exact
+ * semantics — it follows a delete, so a conflict there can only be a genuine
+ * anomaly (a duplicate code inside one fetched CBS code list) and must stay
+ * a loud unique-violation failure, never a silent drop.
+ */
+async function insertDimensionLabels(
+  tx: Db,
+  tableId: string,
+  rows: LabelRow[],
+  onConflict: 'ignore' | 'none',
+): Promise<void> {
+  const conflictClause =
+    onConflict === 'ignore' ? '\n       on conflict (table_id, dimension, code) do nothing' : '';
+  for (let i = 0; i < rows.length; i += CHUNK_SIZE) {
+    const chunk = rows.slice(i, i + CHUNK_SIZE);
+    await tx.query(
+      `insert into dimension_labels
+         (table_id, dimension, code, label, dimension_group, status, sort_index)
+       select $1::text, x.dimension, x.code, x.label, x.dimension_group, x.status, x.sort_index
+       from jsonb_to_recordset($2::jsonb) as x(
+         dimension text, code text, label text, dimension_group text,
+         status text, sort_index integer
+       )${conflictClause}`,
+      [tableId, JSON.stringify(chunk)],
     );
   }
 }
@@ -504,13 +595,19 @@ export const syncTable: SyncTableFn = async (db, source, tableId, options = {}) 
     }
   }
 
-  const { corrections, rowsInserted, rowsUpdated, rowsUnchanged, rowsMissing } = await db.withTransaction(
-    async (tx) => {
+  // #34(c): the rebaseline branch inside this transaction can abort via
+  // RebaselineAbortError. withTransaction rolls the writes back on rejection,
+  // and the instanceof branch below turns exactly that error into a loudly
+  // recorded failed batch — never a batch left stuck at 'running', never a
+  // silent overwrite. Any other rejection is a real infrastructure error and
+  // propagates unchanged (SyncTableFn's documented contract).
+  const syncWrites = await db
+    .withTransaction(async (tx) => {
       if (rebaselined) {
         // #34(c): serializes concurrent REBASELINES of the same table — the
         // on-demand onboarding cron and a manual CLI resync now share this
         // entry point with no other protection, and this delete-then-
-        // per-row-insert is the one write in this transaction with no
+        // reinsert is the one write in this transaction with no
         // on-conflict guard (every other write here — the observations
         // upsert, acceptNewCodes' inserts — already has a real unique
         // constraint or ON CONFLICT behind it). Scoped to just this branch,
@@ -532,6 +629,79 @@ export const syncTable: SyncTableFn = async (db, source, tableId, options = {}) 
         await tx.query("set local lock_timeout = '180s'");
         await tx.query('select pg_advisory_xact_lock(hashtext($1))', [tableId]);
 
+        // #34(c)(i)+(ii): everything above was validated against registry
+        // state read BEFORE this lock existed (the plain db.query reads at
+        // the top of syncTable) — a concurrent writer can have committed
+        // between those reads and this point. Re-read the registry row
+        // fresh, inside the transaction and under the lock. FOR UPDATE takes
+        // the cbs_tables row lock now rather than at this branch's update
+        // just below (same acquisition order as before, no new deadlock
+        // shape), so the row also cannot move between this re-read and
+        // commit.
+        const freshRows = await tx.query(
+          `select version, last_row_count, row_count_tolerance
+             from cbs_tables where id = $1 for update`,
+          [tableId],
+        );
+        const fresh = freshRows.rows[0];
+        if (!fresh) {
+          // The table was registered when this sync started; only a
+          // concurrent hard delete could get here. Abort loudly.
+          throw new RebaselineAbortError(
+            'rebaseline_conflict',
+            `Rebaseline of "${tableId}" aborted: the registry row disappeared while this sync was validating.`,
+            false,
+          );
+        }
+
+        // (c)(ii): the version bump below carries no optimistic-concurrency
+        // guard, so without this check the second of two concurrent
+        // rebaselines would silently commit its own (stale-validated)
+        // baseline over the first's fresher one — both reporting
+        // 'succeeded'. If the version moved since the pre-lock read, this
+        // sync validated against a superseded baseline: abort and leave the
+        // winner's baseline untouched. Deliberately NOT a quarantine — the
+        // registry now holds the concurrent winner's freshly validated
+        // baseline, not suspect data.
+        const freshVersion = Number(fresh.version);
+        if (freshVersion !== registry.version) {
+          throw new RebaselineAbortError(
+            'rebaseline_conflict',
+            `Rebaseline of "${tableId}" aborted: the registry baseline was modified concurrently ` +
+              `(version ${registry.version} -> ${freshVersion}) after this sync validated against it — ` +
+              `most likely another rebaseline committed first. Nothing was overwritten; ` +
+              `re-run the rebaseline if it is still needed.`,
+            false,
+          );
+        }
+
+        // (c)(i): of the five ordered checks, row plausibility (stage 2) is
+        // the only one whose rebaseline-path inputs come from the registry
+        // rather than from this sync's own fetched data (last_row_count +
+        // row_count_tolerance; stages 1, 3, 4 and 5 validate the fetched
+        // schema/codes/units against themselves when rebaselining). Re-run
+        // it against the just-read values, so a row count committed by a
+        // concurrent ordinary sync (which bumps no version) cannot be
+        // bypassed on the strength of this sync's stale pre-lock read.
+        // Failing here means exactly what a pre-transaction stage-2 failure
+        // means, so it quarantines the same way.
+        const freshLastRowCount = fresh.last_row_count == null ? null : Number(fresh.last_row_count);
+        const freshTolerance = Number(fresh.row_count_tolerance);
+        const recheck = checkRowPlausibility(
+          observationRows,
+          registryUnits,
+          freshLastRowCount,
+          freshTolerance,
+        );
+        if (!recheck.ok) {
+          throw new RebaselineAbortError(
+            recheck.stage,
+            `${recheck.summary} (Caught by the post-lock re-validation: the registry row changed ` +
+              `while this rebaseline was validating.)`,
+            true,
+          );
+        }
+
         // Reviewed re-baseline persists only now, after all five checks
         // passed — atomically with the data it validated.
         await tx.query(
@@ -543,16 +713,15 @@ export const syncTable: SyncTableFn = async (db, source, tableId, options = {}) 
           [tableId, JSON.stringify(expectedDimensions), JSON.stringify(registryUnits), fingerprint],
         );
         await tx.query('delete from dimension_labels where table_id = $1', [tableId]);
-        for (const dim of schema.dimensions) {
-          for (const code of codeLists[dim.name] ?? []) {
-            await tx.query(
-              `insert into dimension_labels
-                 (table_id, dimension, code, label, dimension_group, status, sort_index)
-               values ($1, $2, $3, $4, $5, $6, $7)`,
-              [tableId, dim.name, code.code, code.title, code.dimensionGroup, code.status, code.index],
-            );
-          }
-        }
+        // #34(b): batched full-set rewrite. Deliberately no on-conflict
+        // clause, exactly like the per-row loop it replaces — see
+        // insertDimensionLabels.
+        await insertDimensionLabels(
+          tx,
+          tableId,
+          labelRowsFromCodeLists(schema.dimensions, codeLists),
+          'none',
+        );
       }
 
       await tx.query(`
@@ -715,20 +884,24 @@ export const syncTable: SyncTableFn = async (db, source, tableId, options = {}) 
 
       // Reviewed acceptance of new codes: insert as labels.
       if (options.acceptNewCodes) {
+        const acceptedRows: LabelRow[] = [];
         for (const [dim, codes] of newCodesAccepted) {
           const fetched = codeLists[dim] ?? [];
           const byCode = new Map(fetched.map((c) => [c.code, c]));
           for (const code of codes) {
             const c = byCode.get(code)!;
-            await tx.query(
-              `insert into dimension_labels
-                 (table_id, dimension, code, label, dimension_group, status, sort_index)
-               values ($1, $2, $3, $4, $5, $6, $7)
-               on conflict (table_id, dimension, code) do nothing`,
-              [tableId, dim, c.code, c.title, c.dimensionGroup, c.status, c.index],
-            );
+            acceptedRows.push({
+              dimension: dim,
+              code: c.code,
+              label: c.title,
+              dimension_group: c.dimensionGroup,
+              status: c.status,
+              sort_index: c.index,
+            });
           }
         }
+        // #34(b): batched, preserving this site's on-conflict-do-nothing.
+        await insertDimensionLabels(tx, tableId, acceptedRows, 'ignore');
       }
 
       await tx.query(
@@ -742,8 +915,39 @@ export const syncTable: SyncTableFn = async (db, source, tableId, options = {}) 
       );
 
       return { corrections, rowsInserted, rowsUpdated, rowsUnchanged, rowsMissing };
-    },
-  );
+    })
+    .catch((err: unknown) => {
+      if (err instanceof RebaselineAbortError) return err;
+      throw err;
+    });
+
+  if (syncWrites instanceof RebaselineAbortError) {
+    await failBatch(
+      db,
+      batchId,
+      tableId,
+      syncWrites.stage,
+      syncWrites.failureSummary,
+      observationRows.length,
+      fingerprint,
+      syncWrites.quarantine,
+    );
+    return {
+      tableId,
+      batchId,
+      outcome: 'failed',
+      failureStage: syncWrites.stage,
+      failureSummary: syncWrites.failureSummary,
+      rowCount: observationRows.length,
+      rowsInserted: 0,
+      rowsUpdated: 0,
+      rowsUnchanged: 0,
+      rowsMissing: 0,
+      corrections: [],
+      rebaselined,
+    };
+  }
+  const { corrections, rowsInserted, rowsUpdated, rowsUnchanged, rowsMissing } = syncWrites;
 
   await db.query(
     `update ingestion_batches

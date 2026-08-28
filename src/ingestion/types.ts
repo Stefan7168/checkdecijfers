@@ -13,7 +13,15 @@ export type FailureStage =
   | 'row_plausibility'
   | 'period_parsing'
   | 'dimension_mapping'
-  | 'unit_consistency';
+  | 'unit_consistency'
+  /**
+   * #34(c)(ii): a rebaseline discovered, after acquiring its advisory lock,
+   * that the registry baseline it validated against had already been
+   * superseded (cbs_tables.version moved — a concurrent rebaseline committed
+   * first). The sync aborts without writing; the fresher baseline stays.
+   * Requires migration 022 (extends the failure_stage CHECK constraint).
+   */
+  | 'rebaseline_conflict';
 
 export interface Correction {
   measure: string;
