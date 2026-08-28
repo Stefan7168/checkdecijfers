@@ -30,7 +30,7 @@
 // SVG's text nodes must occur verbatim in the spec's own strings, marker
 // count must equal point count, and marker positions must be exact affine
 // images of the point values.
-import type { ChartPoint, ChartSeries, ChartSpec } from './types.ts';
+import type { ChartAnnotation, ChartPoint, ChartSeries, ChartSpec } from './types.ts';
 
 export interface RenderChartOptions {
   /** Total SVG width in px (default 640). */
@@ -133,12 +133,30 @@ export function renderChartSvg(spec: ChartSpec, options: RenderChartOptions = {}
   const plotBottom = plotTop + plotHeight;
   const xLabelY = plotBottom + 18;
 
+  // #170(4): curated event markers. Metadata, not data (never touches the
+  // R1/R3 numeric-token machinery — docs/05's R1/R8 scope note) — kept only
+  // when its period code is literally one of THIS chart's own plotted
+  // categories (R6 discipline extended to metadata: never an approximate or
+  // interpolated placement), and only for line charts: a bar/comparison
+  // result is one period across regions, so a "reference line over time"
+  // has no meaning there. Always-visible text goes in the footer below
+  // (small multi-line SVG text has no good way to lay out a long label
+  // rotated alongside a thin plotted line without colliding with point
+  // labels — the file's existing footer mechanism already IS this renderer's
+  // "always visible, never hover-only" surface, so annotations use it too);
+  // the reference line itself additionally carries a native <title> tooltip
+  // with the same text for a renderer that supports hover.
+  const plottedPeriodCodes = new Set(spec.series.flatMap((s) => s.points.map((p) => p.periodCode)));
+  const annotations: ChartAnnotation[] =
+    spec.kind === 'line' ? (spec.annotations ?? []).filter((a) => plottedPeriodCodes.has(a.periodCode)) : [];
+
   const parts: string[] = [];
   const footer: string[] = [
     ...(spec.provisionalNote === null ? [] : [spec.provisionalNote]),
     ...spec.nullNotes,
     ...(spec.definitionLine === null ? [] : [spec.definitionLine]),
     ...wrap(spec.attributionLine, 100),
+    ...annotations.flatMap((a) => wrap(`Gemarkeerd in de grafiek: ${a.label}.`, 100)),
   ];
   const footerTop = xLabelY + 16;
   const height = footerTop + footer.length * 15 + 8;
@@ -191,6 +209,18 @@ export function renderChartSvg(spec: ChartSpec, options: RenderChartOptions = {}
         ? plotLeft + plotWidth / 2
         : plotLeft + (i * plotWidth) / (categories.length - 1);
     };
+
+    // #170(4): a dashed vertical reference line per curated annotation,
+    // drawn before the axis labels/series so it sits visually BEHIND the
+    // data (paint order = source order in SVG). `annotations` is already
+    // filtered to this chart's own plotted period codes, so `xFor` always
+    // resolves.
+    for (const a of annotations) {
+      const x = xFor(a.periodCode);
+      parts.push(
+        `<line x1="${px(x)}" y1="${px(plotTop)}" x2="${px(x)}" y2="${px(plotBottom)}" stroke="#9ca3af" stroke-width="1" stroke-dasharray="3 3" data-annotation="marker" data-annotation-period="${escapeXml(a.periodCode)}"><title>${escapeXml(a.label)}</title></line>`,
+      );
+    }
 
     // X labels once per category, from the first point that carries it.
     const labelByCode = new Map<string, string>();

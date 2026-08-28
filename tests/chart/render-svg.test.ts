@@ -52,6 +52,10 @@ function allowedTokens(spec: ChartSpec): Set<string> {
     ...(spec.provisionalNote === null ? [] : [spec.provisionalNote]),
     ...spec.nullNotes,
     ...(spec.definitionLine === null ? [] : [spec.definitionLine]),
+    // #170(4): annotation labels are curated spec strings too — a numeric
+    // token inside one (a year, e.g.) is legitimately "from the spec," not
+    // renderer-invented.
+    ...(spec.annotations ?? []).map((a) => a.label),
     ...spec.series.flatMap((s) => [
       s.label,
       ...s.points.flatMap((p) => [p.periodLabel, ...(p.formattedValue === null ? [] : [p.formattedValue])]),
@@ -172,6 +176,52 @@ describe('renderChartSvg — R11 and R4 render unconditionally', () => {
     for (const token of findNumericTokens(normalizeForScan(svgText(svg)))) {
       expect(allowed, `renderer invented numeric token "${token.token}"`).toContain(token.token);
     }
+  });
+});
+
+// #170(4): curated event markers. buildChartSpec never sets `annotations` —
+// these specs are hand-assembled the way the Ontdek curated path would
+// produce them (spec + a merged-in annotations array), never via
+// buildChartSpec itself (which stays untouched by this feature).
+describe('renderChartSvg — #170(4) curated event annotations', () => {
+  it('draws a dashed reference line and a footer line when the annotation is in view', () => {
+    const spec: ChartSpec = { ...lineSpec(), annotations: [{ periodCode: '2020JJ00', label: 'Testgebeurtenis 2020' }] };
+    const svg = renderChartSvg(spec);
+    expect(svg).toContain('data-annotation="marker"');
+    expect(svg).toContain('data-annotation-period="2020JJ00"');
+    expect(svg).toContain('<title>Testgebeurtenis 2020</title>');
+    expect(svgText(svg)).toContain('Gemarkeerd in de grafiek: Testgebeurtenis 2020.');
+  });
+
+  it('places the marker at the exact x-position of its own period — the same category the data point sits at', () => {
+    const base = lineSpec();
+    const point2020 = base.series[0]!.points.find((p) => p.periodCode === '2020JJ00')!;
+    const spec: ChartSpec = { ...base, annotations: [{ periodCode: '2020JJ00', label: 'Testgebeurtenis' }] };
+    const svg = renderChartSvg(spec);
+    const markerX = Number(svg.match(/<line x1="([^"]+)"[^>]*data-annotation="marker"/)![1]);
+    const escaped = point2020.resultId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const pointX = Number(svg.match(new RegExp(`<circle cx="([^"]+)"[^>]*data-result-id="${escaped}"`))![1]);
+    expect(markerX).toBeCloseTo(pointX, 1);
+  });
+
+  it('never draws a marker for an annotation outside the chart\'s own plotted periods', () => {
+    const spec: ChartSpec = { ...lineSpec(), annotations: [{ periodCode: '1999JJ00', label: 'Buiten beeld' }] };
+    const svg = renderChartSvg(spec);
+    expect(svg).not.toContain('data-annotation="marker"');
+    expect(svgText(svg)).not.toContain('Buiten beeld');
+  });
+
+  it('never draws a marker on a bar chart — one period across regions has no time axis to mark', () => {
+    const spec: ChartSpec = { ...barSpec(), annotations: [{ periodCode: '2024JJ00', label: 'Zou hier niet moeten staan' }] };
+    const svg = renderChartSvg(spec);
+    expect(svg).not.toContain('data-annotation="marker"');
+    expect(svgText(svg)).not.toContain('Zou hier niet moeten staan');
+  });
+
+  it('a spec with no annotations field renders identically to one with an empty array', () => {
+    const base = lineSpec();
+    const withEmpty: ChartSpec = { ...base, annotations: [] };
+    expect(renderChartSvg(withEmpty)).toBe(renderChartSvg(base));
   });
 });
 

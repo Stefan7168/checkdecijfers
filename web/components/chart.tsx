@@ -21,6 +21,7 @@ import {
   Legend,
   Line,
   LineChart,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -97,6 +98,28 @@ export function buildRows(spec: ChartSpec): { rows: Row[]; seriesMeta: SeriesMet
   return { rows, seriesMeta };
 }
 
+/** #170(4): which curated annotations to draw, resolved to the exact
+ * `periodLabel` string Recharts' categorical x-axis (dataKey="periodLabel")
+ * matches on — looked up from `rows`, never reformatted or recomputed here.
+ * Only meaningful for line charts (a bar/comparison result is one period
+ * across regions — no time axis to place a vertical marker on) and only for
+ * an annotation whose period is literally one of this chart's own plotted
+ * rows (R6 discipline extended to metadata: never an approximate or
+ * interpolated placement). Exported for direct testing, mirroring buildRows. */
+export function annotationMarkers(spec: ChartSpec, rows: Row[]): { periodLabel: string; label: string }[] {
+  if (spec.kind !== 'line') return [];
+  const annotations = spec.annotations ?? [];
+  if (annotations.length === 0) return [];
+  const labelByCode = new Map<string, string>();
+  for (const row of rows) labelByCode.set(String(row.periodCode), String(row.periodLabel));
+  const markers: { periodLabel: string; label: string }[] = [];
+  for (const a of annotations) {
+    const periodLabel = labelByCode.get(a.periodCode);
+    if (periodLabel !== undefined) markers.push({ periodLabel, label: a.label });
+  }
+  return markers;
+}
+
 interface TooltipPayloadEntry {
   dataKey: string;
   color: string;
@@ -164,6 +187,7 @@ function ProvisionalDot(seriesKey: string) {
 export function ChartView({ spec }: { spec: ChartSpec }) {
   const { rows, seriesMeta } = buildRows(spec);
   const dimEntries = Object.entries(spec.dimLabels);
+  const markers = annotationMarkers(spec, rows);
 
   return (
     <div className="mt-3 rounded-lg border border-line bg-paper-raised p-3">
@@ -183,6 +207,21 @@ export function ChartView({ spec }: { spec: ChartSpec }) {
               <YAxis tick={false} width={16} domain={yAxisDomain(spec.kind)} />
               <Tooltip content={<ChartTooltip seriesMeta={seriesMeta} />} />
               {seriesMeta.length > 1 ? <Legend /> : null}
+              {/* #170(4): curated event markers — drawn before the series so
+                * they sit visually behind the data (paint order = JSX order
+                * in Recharts' own layering). No inline Recharts label: the
+                * always-visible text lives in the footer below (a rotated or
+                * inline label risks colliding with point values at this
+                * chart's typical width), matching the choice documented in
+                * src/chart/render.ts for the static SVG renderer. */}
+              {markers.map((m) => (
+                <ReferenceLine
+                  key={m.periodLabel}
+                  x={m.periodLabel}
+                  stroke="var(--ink-muted)"
+                  strokeDasharray="3 3"
+                />
+              ))}
               {seriesMeta.map((s) => (
                 <Line
                   key={s.key}
@@ -221,6 +260,15 @@ export function ChartView({ spec }: { spec: ChartSpec }) {
         </p>
       ))}
       {spec.definitionLine ? <p className="mt-2 text-xs text-ink-muted">{spec.definitionLine}</p> : null}
+      {/* #170(4): curated event markers, always-visible text (never
+        * hover-only — see the ReferenceLine comment above). Neutral tone
+        * (text-ink-muted), distinct from the #92 amber caveats above: this
+        * is contextual metadata, not a data-quality warning. */}
+      {markers.map((m) => (
+        <p key={m.label} className="text-xs text-ink-muted">
+          Gemarkeerd in de grafiek: {m.label}
+        </p>
+      ))}
       {/* #170(1): the R4 prose credit keeps its photo-credit size (#92); the
         * badge is the same attribution made SCANNABLE — table id + measured
         * sync date + deep link, from spec.attribution only (the source key is

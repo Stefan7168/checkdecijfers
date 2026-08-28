@@ -35,6 +35,16 @@ const chartAttributionSchema = z.strictObject({
   license: z.literal('CC BY 4.0'),
 });
 
+// #170(4): curated event markers (metadata about WHEN something happened,
+// never a data value) — structurally validated like every other spec field,
+// but kept OPTIONAL so every spec stored before this field existed (R8: those
+// rows live forever) still parses unchanged. `buildChartSpec` itself never
+// sets this key; only the Ontdek curated path does (src/chart/annotations.ts).
+const chartAnnotationSchema = z.strictObject({
+  periodCode: z.string().min(1),
+  label: z.string().min(1),
+});
+
 export const chartSpecSchema = z
   .strictObject({
     schemaVersion: z.literal(1),
@@ -49,6 +59,7 @@ export const chartSpecSchema = z
     definitionLine: z.string().min(1).nullable(),
     attributionLine: z.string().min(1),
     attribution: chartAttributionSchema,
+    annotations: z.array(chartAnnotationSchema).optional(),
   })
   // A point's display string and its value must be null together — a value
   // without display text (or text without a value) is a malformed spec.

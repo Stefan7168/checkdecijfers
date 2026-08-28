@@ -37,9 +37,18 @@ export function resetOntdekCache(): void {
 
 async function rebuild(): Promise<CuratedChart[]> {
   try {
-    const { charts, skipped } = await buildCuratedCharts(getDb());
+    // toggleSkipped defaults to [] defensively: the real buildCuratedCharts
+    // always sets it, but this keeps the destructure safe against any test
+    // double that only supplies { charts, skipped }.
+    const { charts, skipped, toggleSkipped = [] } = await buildCuratedCharts(getDb());
     for (const skip of skipped) {
       console.warn(`[ontdek] chart '${skip.slug}' skipped: ${skip.reason}`);
+    }
+    // #170(4): a chart still SERVES here (it is in `charts`); only its
+    // optional definition toggle degraded — logged the same way a whole-
+    // chart skip is, never silently dropped.
+    for (const skip of toggleSkipped) {
+      console.warn(`[ontdek] chart '${skip.slug}' toggle skipped: ${skip.reason}`);
     }
     cache = { at: Date.now(), charts };
     return charts;

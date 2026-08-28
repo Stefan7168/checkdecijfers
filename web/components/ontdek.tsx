@@ -12,6 +12,7 @@
 import { Suspense } from 'react';
 import { getOntdekCharts } from '../lib/ontdek.ts';
 import { ChartView } from './chart.tsx';
+import { ChartWithToggle } from './chart-toggle.tsx';
 
 export async function OntdekCharts() {
   const charts = await getOntdekCharts();
@@ -21,14 +22,20 @@ export async function OntdekCharts() {
       <h2 className="text-2xl text-ink">Ontdek Nederland in grafieken</h2>
       <p className="mt-3 max-w-xl text-ink-soft">
         Rechtstreeks uit onze database met officiële CBS-cijfers:
-        consumentenvertrouwen, economische groei, inflatie en de gemiddelde
-        verkoopprijs van woningen. Elk punt is herleidbaar tot een CBS-tabel —
-        bron en datum staan erbij.
+        consumentenvertrouwen, economische groei, inflatie, de gemiddelde
+        verkoopprijs van woningen en de werkloosheid. Elk punt is herleidbaar
+        tot een CBS-tabel — bron en datum staan erbij.
       </p>
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        {charts.map((chart) => (
-          <ChartView key={chart.slug} spec={chart.spec} />
-        ))}
+        {charts.map((chart) =>
+          // #170(4): a chart with a built toggle gets the client switcher;
+          // every other chart renders exactly as before this feature existed.
+          chart.toggle ? (
+            <ChartWithToggle key={chart.slug} spec={chart.spec} toggle={chart.toggle} />
+          ) : (
+            <ChartView key={chart.slug} spec={chart.spec} />
+          ),
+        )}
       </div>
     </section>
   );

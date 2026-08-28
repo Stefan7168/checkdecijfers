@@ -39,6 +39,26 @@ describe('getOntdekCharts', () => {
     );
   });
 
+  // #170(4): a chart that DID build still serves (present in `charts`) even
+  // when its optional toggle degraded — logged distinctly from a whole-chart
+  // skip, never silently dropped.
+  it('logs a degraded toggle separately from a whole-chart skip, and still serves the chart', async () => {
+    buildCuratedCharts.mockResolvedValue({
+      charts: [chartA],
+      skipped: [],
+      toggleSkipped: [{ slug: 'a', reason: 'alternate reading refused (freshness): too old' }],
+    });
+    await expect(getOntdekCharts()).resolves.toEqual([chartA]);
+    expect(console.warn).toHaveBeenCalledWith(
+      "[ontdek] chart 'a' toggle skipped: alternate reading refused (freshness): too old",
+    );
+  });
+
+  it('tolerates a test double that omits toggleSkipped entirely (defensive default)', async () => {
+    buildCuratedCharts.mockResolvedValue({ charts: [chartA], skipped: [] });
+    await expect(getOntdekCharts()).resolves.toEqual([chartA]);
+  });
+
   it('caches within the TTL — one DB build for many requests', async () => {
     buildCuratedCharts.mockResolvedValue({ charts: [chartA], skipped: [] });
     await getOntdekCharts();

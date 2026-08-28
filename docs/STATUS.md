@@ -84,8 +84,9 @@ open, see below); (c) **`GDPR_PURGE_APPLY=1`** plus one watched run; (d) ~~decid
 alert~~ **DONE, session 65 — fixed, see above**; (e) **#193's live `audit:verify` pinning
 step** (R8 divergence check against production — expected clean per PR #91's own investigation, but
 unverified); (f) **#132 route B** GO or defer (T-0 condition — `forks_count` — still 0, re-measured
-2026-08-26); (g) then the owner menu: WP30c choice / [#162](open-questions.md) / [#170](open-questions.md)
-rest (3)+(4). **Engineering follow-ups available whenever a session has room (none owner-blocked):**
+2026-08-26); (g) then the owner menu: WP30c choice / [#162](open-questions.md) (**[#170](open-questions.md)
+item (4) done — session 66, autonomous, PR pending review/merge (see the row); item (3) stays explicitly
+Phase-2-bundled, not a queue candidate**). **Engineering follow-ups available whenever a session has room (none owner-blocked):**
 #34(b)+(c)'s residuals, #93's `RespondOptions`/`ComposeOptions`/`SemanticCheckOptions` dedup — see the
 tracked list below.
 

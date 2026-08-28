@@ -5,7 +5,7 @@
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ChartSpec } from '../backend/chart/types.ts';
-import { buildRows, ChartTooltip, ChartView, yAxisDomain } from './chart.tsx';
+import { annotationMarkers, buildRows, ChartTooltip, ChartView, yAxisDomain } from './chart.tsx';
 
 afterEach(cleanup);
 
@@ -186,6 +186,34 @@ describe('ChartView — footer arrangement (#92)', () => {
   });
 });
 
+// #170(4): curated event markers, resolved to the exact periodLabel Recharts
+// matches its categorical x-axis on — never reformatted, only looked up.
+describe('annotationMarkers', () => {
+  it('resolves an in-view annotation to its row\'s own periodLabel', () => {
+    const s = spec({ annotations: [{ periodCode: '2024JJ00', label: 'Testgebeurtenis' }] });
+    const { rows } = buildRows(s);
+    expect(annotationMarkers(s, rows)).toEqual([{ periodLabel: '2024', label: 'Testgebeurtenis' }]);
+  });
+
+  it('drops an annotation whose period is not one of this chart\'s own rows', () => {
+    const s = spec({ annotations: [{ periodCode: '1999JJ00', label: 'Buiten beeld' }] });
+    const { rows } = buildRows(s);
+    expect(annotationMarkers(s, rows)).toEqual([]);
+  });
+
+  it('is empty for a bar chart even if the spec somehow carries an annotation', () => {
+    const s = spec({ kind: 'bar', annotations: [{ periodCode: '2024JJ00', label: 'x' }] });
+    const { rows } = buildRows(s);
+    expect(annotationMarkers(s, rows)).toEqual([]);
+  });
+
+  it('is empty when the spec carries no annotations field at all', () => {
+    const s = spec();
+    const { rows } = buildRows(s);
+    expect(annotationMarkers(s, rows)).toEqual([]);
+  });
+});
+
 describe('yAxisDomain (open-questions #48 honesty policy)', () => {
   it('floors bar charts at zero — a truncated bar lies about ratios', () => {
     expect(yAxisDomain('bar')).toEqual([0, 'auto']);
@@ -271,6 +299,35 @@ describe('ChartView', () => {
     );
   });
 
+  it('#170(4): renders the annotation as always-visible footer text, neutral tone (not the #92 amber caveat)', () => {
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      },
+    );
+    const s = spec({ annotations: [{ periodCode: '2024JJ00', label: 'Testgebeurtenis 2024' }] });
+    render(<ChartView spec={s} />);
+    const marker = screen.getByText('Gemarkeerd in de grafiek: Testgebeurtenis 2024');
+    expect(marker.className).toContain('text-ink-muted');
+    expect(marker.className).not.toContain('text-warn');
+  });
+
+  it('#170(4): renders nothing extra when the spec carries no annotations (unchanged default)', () => {
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      },
+    );
+    const { container } = render(<ChartView spec={spec()} />);
+    expect(container.textContent).not.toContain('Gemarkeerd in de grafiek');
+  });
+
   it('renders a bar chart kind without crashing', () => {
     vi.stubGlobal(
       'ResizeObserver',
@@ -310,6 +367,8 @@ describe('ChartView', () => {
       s.definitionLine ?? '',
       s.provisionalNote ?? '',
       ...s.nullNotes,
+      // #170(4): annotation labels are spec strings too — same membership rule.
+      ...(s.annotations ?? []).map((a) => a.label),
       ...Object.keys(s.dimLabels),
       ...Object.values(s.dimLabels),
       ...s.series.flatMap((se) => se.points.flatMap((p) => [p.formattedValue ?? '', p.periodLabel])),

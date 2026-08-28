@@ -59,6 +59,21 @@ export interface ChartAttribution {
   license: 'CC BY 4.0';
 }
 
+/** #170(4): a curated, hand-authored event marker — METADATA about when
+ * something happened, never a data VALUE (R1/R3's numeric-token scanning
+ * never sees these; they never appear in answer prose, only on the Ontdek
+ * homepage — docs/05's R1/R8 scope note). `periodCode` reuses the same CBS
+ * period-code space as `ChartPoint.periodCode` so a renderer can place the
+ * marker with the exact same x-axis logic it already uses for points; `label`
+ * is the full, ready-to-display Dutch text (curated code decides what to
+ * show — a renderer never formats or derives it, mirroring R6's "no
+ * computation, no omission" rule for the rest of the spec). Deterministic and
+ * curated only: never LLM-generated, never auto-derived. */
+export interface ChartAnnotation {
+  periodCode: string;
+  label: string;
+}
+
 export interface ChartSpec {
   schemaVersion: typeof CHART_SPEC_VERSION;
   /** Phase 0 chart vocabulary (ADR 007): line for series results, bar for
@@ -90,4 +105,11 @@ export interface ChartSpec {
   /** The exact R4 attribution sentence (same builder as answers). */
   attributionLine: string;
   attribution: ChartAttribution;
+  /** #170(4), OPTIONAL and additive: curated event markers merged in by
+   * `src/chart/annotations.ts`, today only for the Ontdek homepage set
+   * (`src/chart/curated.ts`) — `buildChartSpec` itself never sets this field,
+   * so every spec the chat/answer pipeline builds and stores (R8: forever) is
+   * byte-identical to before this field existed, and old stored specs
+   * without the key keep validating against `chartSpecSchema` unchanged. */
+  annotations?: ChartAnnotation[];
 }

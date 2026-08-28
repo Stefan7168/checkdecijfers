@@ -203,4 +203,34 @@ describe('buildChartSpec — contract discipline', () => {
     broken.series[0]!.points[0]!.formattedValue = null;
     expect(() => chartSpecSchema.parse(broken)).toThrow(/formattedValue/);
   });
+
+  // #170(4): buildChartSpec itself never sets `annotations` (only the Ontdek
+  // curated path does, in src/chart/curated.ts) — this pins that a spec
+  // built by the shared, chat-facing function is byte-identical to before
+  // the field existed, and that the schema still treats it as OPTIONAL so
+  // every spec stored before this PR (R8: those rows live forever) keeps
+  // validating unchanged.
+  it('annotations: buildChartSpec never sets it, and the schema accepts a spec both with and without it', () => {
+    const spec = buildChartSpec(makeResult('series', seriesCells))!;
+    expect(spec.annotations).toBeUndefined();
+    expect(() => chartSpecSchema.parse(spec)).not.toThrow();
+    const withAnnotations = { ...spec, annotations: [{ periodCode: '2020JJ00', label: 'Testgebeurtenis (2020).' }] };
+    expect(() => chartSpecSchema.parse(withAnnotations)).not.toThrow();
+  });
+
+  it('annotations: the schema rejects a malformed entry (missing field, empty label, unknown key)', () => {
+    const spec = buildChartSpec(makeResult('series', seriesCells))!;
+    expect(() =>
+      chartSpecSchema.parse({ ...spec, annotations: [{ periodCode: '2020JJ00' }] }),
+    ).toThrow();
+    expect(() =>
+      chartSpecSchema.parse({ ...spec, annotations: [{ periodCode: '2020JJ00', label: '' }] }),
+    ).toThrow();
+    expect(() =>
+      chartSpecSchema.parse({
+        ...spec,
+        annotations: [{ periodCode: '2020JJ00', label: 'x', extra: 1 }],
+      }),
+    ).toThrow();
+  });
 });

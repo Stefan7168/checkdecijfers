@@ -77,4 +77,36 @@ describe('OntdekCharts', () => {
     expect(container).toBeEmptyDOMElement();
     expect(screen.queryByText('Ontdek Nederland in grafieken')).toBeNull();
   });
+
+  // #170(4): a chart carrying a built toggle gets the client switcher
+  // (two buttons) instead of a bare ChartView; every other chart is
+  // untouched (already covered by the test above).
+  it('renders the definition-toggle switcher for a chart that has one', async () => {
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      },
+    );
+    getOntdekCharts.mockResolvedValue([
+      {
+        slug: 'werkloosheid',
+        spec: spec('Werkloosheidspercentage', '85224NED'),
+        toggle: {
+          primaryLabel: 'seizoengecorrigeerd',
+          alternateLabel: 'oorspronkelijke, ongecorrigeerde cijfers',
+          alternateSpec: spec('Werkloosheidspercentage (ongecorrigeerd)', '85224NED'),
+        },
+      },
+    ]);
+    render(await OntdekCharts());
+    expect(screen.getByRole('button', { name: 'seizoengecorrigeerd' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'oorspronkelijke, ongecorrigeerde cijfers' }),
+    ).toBeInTheDocument();
+    // Primary spec's title shows by default.
+    expect(screen.getByText('Werkloosheidspercentage')).toBeInTheDocument();
+  });
 });

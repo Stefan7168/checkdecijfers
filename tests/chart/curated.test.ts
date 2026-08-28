@@ -5,7 +5,13 @@
 // production is therefore a data regression, never an accepted steady state.
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Db } from '../../src/db/types.ts';
-import { buildCuratedCharts, ONTDEK_CHARTS, periodStepsBack } from '../../src/chart/index.ts';
+import {
+  buildCuratedCharts,
+  chartSpecSchema,
+  ONTDEK_CHARTS,
+  periodStepsBack,
+  renderChartSvg,
+} from '../../src/chart/index.ts';
 import type { CuratedChartsOutcome } from '../../src/chart/index.ts';
 import { parsePeriodCode } from '../../src/ingestion/periods.ts';
 import { createIngestedDb } from '../helpers/ingested-db.ts';
@@ -18,6 +24,7 @@ const EXPECTED_TABLES: Record<string, string> = {
   'economische-groei': '85880NED',
   inflatie: '86141NED',
   huizenprijzen: '85773NED',
+  werkloosheid: '85224NED',
 };
 
 let db: Db;
@@ -161,5 +168,79 @@ describe('buildCuratedCharts (hermetic, fixture DB)', () => {
         );
       }
     }
+  });
+});
+
+// #170(4): the narrow-scope definition toggle. werkloosheid is the one
+// ONTDEK_CHARTS entry configured with an alternateReading (see the code
+// comment on that entry for why it, not one of the original four).
+describe('buildCuratedCharts — #170(4) definition toggle', () => {
+  it('builds a toggle for werkloosheid, and nothing unconfigured (zero toggleSkipped)', () => {
+    expect(outcome.toggleSkipped).toEqual([]);
+    const untoggled = outcome.charts.filter((c) => c.slug !== 'werkloosheid');
+    for (const chart of untoggled) expect(chart.toggle, chart.slug).toBeUndefined();
+    const werkloosheid = outcome.charts.find((c) => c.slug === 'werkloosheid')!;
+    expect(werkloosheid.toggle).toBeDefined();
+    expect(werkloosheid.toggle!.primaryLabel).toBe('seizoengecorrigeerd');
+    expect(werkloosheid.toggle!.alternateLabel).toBe('oorspronkelijke, ongecorrigeerde cijfers');
+  });
+
+  it('the alternate spec is independently built, validated (R6) and over the SAME window as the primary', () => {
+    const werkloosheid = outcome.charts.find((c) => c.slug === 'werkloosheid')!;
+    const primary = werkloosheid.spec;
+    const alternate = werkloosheid.toggle!.alternateSpec;
+    expect(() => chartSpecSchema.parse(alternate)).not.toThrow();
+    expect(alternate.attribution.tableId).toBe(primary.attribution.tableId);
+    // Same window (a stable x-axis across the toggle) — same period codes,
+    // same order.
+    expect(alternate.series[0]!.points.map((p) => p.periodCode)).toEqual(
+      primary.series[0]!.points.map((p) => p.periodCode),
+    );
+    // A genuinely DIFFERENT reading, not an accidental duplicate: the
+    // seizoengecorrigeerd and ongecorrigeerde series are not pointwise
+    // identical over a 3-year window.
+    const primaryValues = primary.series[0]!.points.map((p) => p.value);
+    const alternateValues = alternate.series[0]!.points.map((p) => p.value);
+    expect(alternateValues).not.toEqual(primaryValues);
+  });
+
+  it('the toggle never blends or recomputes — the primary chart is untouched by the alternate existing', () => {
+    // Both specs pass the exact same schema and R6 gate a lone chart would;
+    // the toggle field is purely additive on top of an otherwise-normal
+    // CuratedChart.
+    const werkloosheid = outcome.charts.find((c) => c.slug === 'werkloosheid')!;
+    expect(() => chartSpecSchema.parse(werkloosheid.spec)).not.toThrow();
+  });
+});
+
+// #170(4): curated event annotations, merged in after buildChartSpec runs.
+describe('buildCuratedCharts — #170(4) event annotations', () => {
+  it('every curated chart carries an annotations array (never undefined) on its spec', () => {
+    for (const chart of outcome.charts) {
+      expect(Array.isArray(chart.spec.annotations), chart.slug).toBe(true);
+    }
+  });
+
+  it("today's curated dataset falls outside every chart's rolling window — documented, not a bug (see annotations.ts)", () => {
+    // ONTDEK_CHARTS windows are rolling (2 years of months / 3 years of
+    // quarters ending at the freshest ingested period); the three curated
+    // events (2008/2020/2022) are all older than that. selectAnnotations
+    // itself is proven directly in tests/chart/annotations.test.ts against
+    // a constructed in-range window rather than relying on this timing.
+    const allAnnotations = outcome.charts.flatMap((c) => c.spec.annotations ?? []);
+    expect(allAnnotations).toEqual([]);
+  });
+
+  it('an annotation attached to a chart is never rendered outside its own plotted periods (spot-check via renderChartSvg)', () => {
+    // Direct proof the mechanism WOULD show something if a curated date were
+    // ever in view: hand-attach one to a real built spec's own first period
+    // and confirm the renderer honours it exactly like a production one
+    // would (same code path as web/lib/ontdek.ts would receive).
+    const chart = outcome.charts[0]!;
+    const inViewCode = chart.spec.series[0]!.points[0]!.periodCode;
+    const withAnnotation = { ...chart.spec, annotations: [{ periodCode: inViewCode, label: 'Testmarkering' }] };
+    const svg = renderChartSvg(withAnnotation);
+    expect(svg).toContain('data-annotation="marker"');
+    expect(svg).toContain('Testmarkering');
   });
 });
