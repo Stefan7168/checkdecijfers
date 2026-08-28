@@ -71,6 +71,11 @@ describe('QuestionHistory', () => {
     expect(screen.getAllByText('Nederland telt 18.044.027 inwoners.').length).toBeGreaterThanOrEqual(1);
   });
 
+  it('#116 residual: renders an id the delivery email anchors on ("audit-{id}", matching the existing source-scoped React key)', () => {
+    const { container } = render(<QuestionHistory items={[entry({ id: 314 })]} />);
+    expect(container.querySelector('#audit-314')).not.toBeNull();
+  });
+
   it('truncates a long answer in the collapsed snippet', () => {
     const longText = 'A'.repeat(200);
     render(<QuestionHistory items={[entry({ finalText: longText })]} />);
@@ -290,6 +295,11 @@ describe('QuestionHistory', () => {
     it('applies the amber pending styling to a pending entry', () => {
       const { container } = render(<QuestionHistory items={[onboardingEntry()]} />);
       expect(container.querySelector('.bg-warn-soft')).not.toBeNull();
+    });
+
+    it('#116 residual: renders an id the delivery email anchors on ("onboarding-{id}", matching the existing source-scoped React key)', () => {
+      const { container } = render(<QuestionHistory items={[onboardingEntry({ id: 42 })]} />);
+      expect(container.querySelector('#onboarding-42')).not.toBeNull();
     });
 
     // #74 + #117: the at-a-glance line above the list (and the live poll it

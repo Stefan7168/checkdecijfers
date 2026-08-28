@@ -20,6 +20,11 @@ function event(overrides: Partial<OnboardingNotifyEvent> = {}): OnboardingNotify
     outcome: 'delivered',
     failureSummary: null,
     refundedCredits: null,
+    // #116 residual: a real delivery always carries its own audit id; a
+    // synthetic default here would be indistinguishable from a genuine one,
+    // so tests exercising the anchor override both explicitly per case.
+    pendingId: 42,
+    deliveryAuditAnswerId: 99,
     ...overrides,
   };
 }
@@ -85,6 +90,37 @@ describe('buildEmail — #116 dashboard deep link', () => {
     const withoutSlash = buildEmail('a@b.nl', event({ outcome: 'delivered' }), 'https://x.nl');
     expect(withSlash.text).toContain('Bekijk je antwoord: https://x.nl/');
     expect(withSlash.text).toBe(withoutSlash.text);
+  });
+
+  describe('#116 residual — per-answer anchor', () => {
+    it('delivered anchors on the delivery audit row (audit-{id}) — the SAME string question-history.tsx renders as the audit-branch entry\'s HTML id', () => {
+      const email = buildEmail(
+        'a@b.nl',
+        event({ outcome: 'delivered', pendingId: 7, deliveryAuditAnswerId: 314 }),
+        origin,
+      );
+      expect(email.text).toContain('Bekijk je antwoord: https://checkdecijfers.nl/#audit-314');
+      expect(email.text).not.toContain('#onboarding-');
+    });
+
+    it('unanswerable anchors on the pending request (onboarding-{id}) — no delivery audit row exists to point at', () => {
+      const email = buildEmail(
+        'a@b.nl',
+        event({ outcome: 'unanswerable', refundedCredits: 100, failureSummary: 'geen maat', pendingId: 7, deliveryAuditAnswerId: null }),
+        origin,
+      );
+      expect(email.text).toContain('Bekijk de status in je dashboard: https://checkdecijfers.nl/#onboarding-7');
+      expect(email.text).not.toContain('#audit-');
+    });
+
+    it('failed anchors on the pending request (onboarding-{id}), same as unanswerable', () => {
+      const email = buildEmail(
+        'a@b.nl',
+        event({ outcome: 'failed', refundedCredits: 100, failureSummary: 'CBS gaf een 500', pendingId: 7, deliveryAuditAnswerId: null }),
+        origin,
+      );
+      expect(email.text).toContain('Bekijk de status in je dashboard: https://checkdecijfers.nl/#onboarding-7');
+    });
   });
 
   it('default (appOrigin omitted) is byte-identical to appOrigin explicitly null — no link, no stray whitespace', () => {

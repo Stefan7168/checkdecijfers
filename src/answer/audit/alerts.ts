@@ -361,3 +361,77 @@ export async function maybeAlertTrialPotLow(
     return false;
   }
 }
+
+// #108 (2026-08-27, session 66): a REGISTERED table (one we actually serve
+// answers from, cbs_tables) flipping to a non-current catalog status
+// (CBS 'Gediscontinueerd'/'Vervallen', or vanishing from the catalog fetch
+// entirely) with no machine-readable successor link. Detection only — the
+// row is explicit that re-onboarding a successor stays an owner-reviewed
+// action, never automatic. Same posture as every alert above: console.error
+// is the floor, e-mail when configured, fail-soft always. "Current" is read
+// from the table's OWN source registry entry (SourceInfo.currentCatalogStatuses,
+// src/sources/registry.ts) rather than a hardcoded CBS string list, so this
+// stays correct as WP30 multi-source tables get registered too.
+export interface TableStatusFlip {
+  tableId: string;
+  /** The catalog status this table had before this refresh (null: the
+   * registered table had no catalog mirror row at all — a gap in its own
+   * right, worth flagging the same way). */
+  oldStatus: string | null;
+  /** The catalog status after this refresh (null: CBS no longer lists this
+   * id in the catalog fetch at all — the table vanished, not just its status
+   * changing). */
+  newStatus: string | null;
+}
+
+export interface TableStatusFlipAlert {
+  flips: TableStatusFlip[];
+}
+
+export async function alertTableStatusFlip(
+  alert: TableStatusFlipAlert,
+  fetchImpl: typeof fetch = fetch,
+): Promise<void> {
+  const subject =
+    alert.flips.length === 1
+      ? `checkdecijfers: tabel ${alert.flips[0]!.tableId} is niet meer actueel bij de bron`
+      : `checkdecijfers: ${alert.flips.length} geregistreerde tabellen zijn niet meer actueel bij de bron`;
+  const lines = alert.flips.map(
+    (f) =>
+      `- ${f.tableId}: ${f.oldStatus ?? '(geen catalogusrij)'} -> ${f.newStatus ?? '(niet meer in de catalogus)'}`,
+  );
+  const body = [
+    'Een of meer tabellen waar checkdecijfers.nl echt cijfers uit serveert, staan bij de bron niet ' +
+      'meer als actueel geregistreerd (bijv. CBS "Gediscontinueerd"/"Vervallen"), of zijn helemaal ' +
+      'uit de catalogus verdwenen.',
+    '',
+    'Wat dit betekent: bestaande, al gesynchroniseerde cijfers blijven gewoon bruikbaar (de warn-and-serve ' +
+      'staleness-regel verandert hier niets aan) — maar de bron publiceert dit onderwerp mogelijk voortaan ' +
+      'onder een ANDERE tabel-id, waardoor toekomstige verversingen achterblijven zonder dat iets dat luid meldt.',
+    '',
+    'Actie: geen automatische her-onboarding — dat is bewust een door jou beoordeelde stap. Zoek zelf (of ' +
+      'laat een sessie zoeken) of de bron een opvolgtabel heeft voor hetzelfde onderwerp.',
+    '',
+    ...lines,
+    '',
+    `Tijd: ${new Date().toISOString()}`,
+  ].join('\n');
+  await sendAdminAlertEmail(subject, body, fetchImpl);
+}
+
+/** Fail-soft wrapper: logs the floor, never throws — a catalog:refresh run
+ * must never fail or block on this. No-op on an empty flip list. */
+export async function maybeAlertTableStatusFlip(
+  alert: TableStatusFlipAlert,
+  fetchImpl: typeof fetch = fetch,
+): Promise<void> {
+  if (alert.flips.length === 0) return;
+  for (const f of alert.flips) {
+    console.error(`[catalog-status-flip] ${f.tableId}: ${f.oldStatus ?? '(none)'} -> ${f.newStatus ?? '(gone)'}`);
+  }
+  try {
+    await alertTableStatusFlip(alert, fetchImpl);
+  } catch (err) {
+    console.error('[catalog-status-flip] alert e-mail failed:', err);
+  }
+}

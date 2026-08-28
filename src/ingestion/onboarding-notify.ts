@@ -24,6 +24,14 @@ export interface OnboardingNotifyEvent {
    * price the job actually read from the DB and compensated) — never inlined,
    * so the email can name the true amount. Null on delivered (no refund). */
   refundedCredits: number | null;
+  /** #116 residual — the pending_table_requests row id, for the deep-link
+   * anchor on the unanswerable/failed outcomes (a delivered outcome anchors
+   * on deliveryAuditAnswerId instead — see that field). */
+  pendingId: number;
+  /** #116 residual — the delivery audit row's own id, set ONLY on 'delivered'
+   * (null on unanswerable/failed, which have no answer/refusal audit row of
+   * their own to point at — the request stays represented by pendingId). */
+  deliveryAuditAnswerId: number | null;
 }
 
 /** One transactional email. The injected sender receives exactly this; the
@@ -51,6 +59,26 @@ function dashboardUrl(appOrigin: string): string {
   return `${appOrigin.replace(/\/+$/, '')}/`;
 }
 
+/** #116 residual — the per-answer deep link. The anchor format matches
+ * web/components/question-history.tsx's OWN existing React key convention
+ * (`${item.source}-${item.id}`) exactly, reused here as the HTML `id` that
+ * convention already implies rather than inventing a second identity scheme:
+ * a delivered outcome renders through the ordinary 'audit' entry branch
+ * (keyed `audit-{auditId}`); unanswerable/failed stay the synthesized
+ * 'onboarding' entry (keyed `onboarding-{pendingId}`) since neither produced
+ * an answer/refusal audit row of its own. This is a plain HTML fragment —
+ * no client JS: the browser scrolls the matching element into view, still
+ * collapsed, its status line already visible in the <summary> (the
+ * component's own stated design is native <details>/<summary>, no JS for
+ * the fold interaction — this doesn't add any either). */
+function dashboardAnchorUrl(appOrigin: string, event: OnboardingNotifyEvent): string {
+  const anchor =
+    event.outcome === 'delivered' && event.deliveryAuditAnswerId !== null
+      ? `audit-${event.deliveryAuditAnswerId}`
+      : `onboarding-${event.pendingId}`;
+  return `${dashboardUrl(appOrigin)}#${anchor}`;
+}
+
 /** Deterministic Dutch bodies. No digits appear in these templates (nothing to
  * fabricate), and they never quote a data value — they point the user back to
  * the chat, where the audited answer lives.
@@ -74,7 +102,7 @@ export function buildEmail(
           `Goed nieuws! We hebben de cijfers over "${topic}" opgehaald bij het CBS en gecontroleerd. ` +
           `Je vraag is beantwoord — open de chat om het antwoord te bekijken.\n\n` +
           `Je vraag was: "${event.questionText}"` +
-          (appOrigin !== null ? `\n\nBekijk je antwoord: ${dashboardUrl(appOrigin)}` : ''),
+          (appOrigin !== null ? `\n\nBekijk je antwoord: ${dashboardAnchorUrl(appOrigin, event)}` : ''),
       };
     case 'unanswerable': {
       const refund = event.refundedCredits === null ? 'De credits zijn' : `De ${event.refundedCredits} credits zijn`;
@@ -89,7 +117,7 @@ export function buildEmail(
           `lukte niet betrouwbaar. ${refund} volledig teruggestort.\n\n` +
           `Je vraag was: "${event.questionText}"\n` +
           (event.failureSummary ? `\nToelichting: ${event.failureSummary}` : '') +
-          (appOrigin !== null ? `\n\nBekijk de status in je dashboard: ${dashboardUrl(appOrigin)}` : ''),
+          (appOrigin !== null ? `\n\nBekijk de status in je dashboard: ${dashboardAnchorUrl(appOrigin, event)}` : ''),
       };
     }
     case 'failed': {
@@ -102,7 +130,7 @@ export function buildEmail(
           `${refund} volledig teruggestort.\n\n` +
           `Je vraag was: "${event.questionText}"\n` +
           (event.failureSummary ? `\nToelichting: ${event.failureSummary}` : '') +
-          (appOrigin !== null ? `\n\nBekijk de status in je dashboard: ${dashboardUrl(appOrigin)}` : ''),
+          (appOrigin !== null ? `\n\nBekijk de status in je dashboard: ${dashboardAnchorUrl(appOrigin, event)}` : ''),
       };
     }
   }

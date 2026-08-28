@@ -329,6 +329,8 @@ async function recoverDelivered(
     outcome: 'delivered',
     failureSummary: null,
     refundedCredits: null,
+    pendingId: row.id,
+    deliveryAuditAnswerId,
   });
 }
 
@@ -471,6 +473,8 @@ async function processOneRow(
         outcome: 'delivered',
         failureSummary: null,
         refundedCredits: null,
+        pendingId: row.id,
+        deliveryAuditAnswerId: delivered.auditId,
       });
       return 'delivered';
     }
@@ -535,6 +539,8 @@ async function unanswerableAndRefund(
     outcome: 'unanswerable',
     failureSummary: summary,
     refundedCredits: refunded,
+    pendingId: row.id,
+    deliveryAuditAnswerId: null,
   });
   return 'unanswerable';
 }
@@ -558,6 +564,8 @@ async function failAndRefund(
     outcome: 'failed',
     failureSummary: summary,
     refundedCredits: refunded,
+    pendingId: row.id,
+    deliveryAuditAnswerId: null,
   });
   return 'failed';
 }

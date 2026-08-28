@@ -105,7 +105,85 @@ describe('ingestCatalog', () => {
     };
     await ingestCatalog(db, catalogOnlySource([a]));
     const result = await ingestCatalog(db, catalogOnlySource([]));
-    expect(result).toEqual({ fetched: 0, upserted: 0, pruned: 0 });
+    expect(result).toEqual({ fetched: 0, upserted: 0, pruned: 0, flips: [] });
     expect(await countCatalog(db)).toBe(1); // untouched
+  });
+
+  // #108: a REGISTERED table (cbs_tables) going non-current at the source.
+  async function registerTable(db: Db, id: string): Promise<void> {
+    await db.query(
+      `insert into cbs_tables (id, title, expected_dimensions) values ($1, $2, '[]'::jsonb)`,
+      [id, id],
+    );
+  }
+
+  it('#108: flags a REGISTERED table flipping from a current to a non-current status', async () => {
+    const reg: CbsCatalogEntry = {
+      tableId: 'REG1',
+      title: 'Geregistreerd',
+      summary: '',
+      status: 'Regulier',
+      datasetType: 'Numeric',
+      language: 'nl',
+      modified: null,
+    };
+    await registerTable(db, 'REG1');
+    const first = await ingestCatalog(db, catalogOnlySource([reg]));
+    expect(first.flips).toEqual([]); // first sync, nothing to compare against
+
+    const flipped = await ingestCatalog(db, catalogOnlySource([{ ...reg, status: 'Gediscontinueerd' }]));
+    expect(flipped.flips).toEqual([{ tableId: 'REG1', oldStatus: 'Regulier', newStatus: 'Gediscontinueerd' }]);
+  });
+
+  it('#108: does NOT flag a registered table that stays current, or an unregistered one that goes discontinued', async () => {
+    const reg: CbsCatalogEntry = {
+      tableId: 'REG2',
+      title: 'Geregistreerd, stabiel',
+      summary: '',
+      status: 'Regulier',
+      datasetType: 'Numeric',
+      language: 'nl',
+      modified: null,
+    };
+    const unreg: CbsCatalogEntry = { ...reg, tableId: 'UNREG', title: 'Niet geregistreerd' };
+    await registerTable(db, 'REG2');
+    await ingestCatalog(db, catalogOnlySource([reg, unreg]));
+
+    const stillRegular = await ingestCatalog(db, catalogOnlySource([reg, unreg])); // no change
+    expect(stillRegular.flips).toEqual([]);
+
+    // UNREG going discontinued is a real catalog change but NOT a flip we
+    // alert on — #108 is scoped to tables we actually serve answers from.
+    const unregDiscontinued = await ingestCatalog(
+      db,
+      catalogOnlySource([reg, { ...unreg, status: 'Gediscontinueerd' }]),
+    );
+    expect(unregDiscontinued.flips).toEqual([]);
+  });
+
+  it('#108: flags a registered table that VANISHES from the catalog fetch entirely (not just a status change)', async () => {
+    const reg: CbsCatalogEntry = {
+      tableId: 'REG3',
+      title: 'Verdwijnt straks',
+      summary: '',
+      status: 'Regulier',
+      datasetType: 'Numeric',
+      language: 'nl',
+      modified: null,
+    };
+    await registerTable(db, 'REG3');
+    await ingestCatalog(db, catalogOnlySource([reg]));
+
+    const vanished = await ingestCatalog(db, catalogOnlySource([])); // suspect-result guard: fetched 0
+    // The zero-fetch guard short-circuits before any diffing happens — this
+    // is the SAME "never wipe on a suspect empty fetch" protection the prune
+    // guard above relies on, so no flip fires from a suspect zero-row fetch.
+    expect(vanished.flips).toEqual([]);
+
+    // A REAL non-empty fetch that simply no longer lists REG3 (e.g. a fixed
+    // small catalog with one other real row) is the genuine vanish case.
+    const other: CbsCatalogEntry = { ...reg, tableId: 'OTHER', title: 'Iets anders' };
+    const reallyGone = await ingestCatalog(db, catalogOnlySource([other]));
+    expect(reallyGone.flips).toEqual([{ tableId: 'REG3', oldStatus: 'Regulier', newStatus: null }]);
   });
 });

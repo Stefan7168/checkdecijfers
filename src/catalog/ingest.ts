@@ -7,6 +7,8 @@
 // later fetched through the existing register/sync pipeline (sub-part 2+).
 import type { CbsSource } from '../cbs-adapter/types.ts';
 import type { Db } from '../db/types.ts';
+import { resolveSourceForTable } from '../sources/registry.ts';
+import type { TableStatusFlip } from '../answer/audit/alerts.ts';
 
 export interface CatalogIngestResult {
   /** Rows returned by CBS. */
@@ -15,6 +17,10 @@ export interface CatalogIngestResult {
   upserted: number;
   /** Stale rows removed (present before, absent from this refresh). */
   pruned: number;
+  /** #108: REGISTERED tables (cbs_tables) whose catalog status flipped from
+   * current to non-current this refresh (or vanished from the catalog
+   * fetch entirely) — detection only, the caller decides whether to alert. */
+  flips: TableStatusFlip[];
 }
 
 const UPSERT_SQL = `
@@ -41,16 +47,34 @@ const UPSERT_SQL = `
 export async function ingestCatalog(db: Db, source: CbsSource): Promise<CatalogIngestResult> {
   const entries = await source.fetchCatalog();
   if (entries.length === 0) {
-    return { fetched: 0, upserted: 0, pruned: 0 };
+    return { fetched: 0, upserted: 0, pruned: 0, flips: [] };
   }
   return db.withTransaction(async (tx) => {
+    // #108: capture each REGISTERED table's status BEFORE this refresh
+    // touches cbs_catalog — the only way to detect a flip rather than just
+    // the after-state. cbs_tables is small (registered tables only), so this
+    // is a cheap join, not a full-catalog scan.
+    const { rows: registeredRows } = await tx.query(
+      `select t.id as table_id, c.status as old_status
+       from cbs_tables t
+       left join cbs_catalog c on c.table_id = t.id`,
+    );
+    const oldStatusByTableId = new Map(
+      (registeredRows as { table_id: string; old_status: string | null }[]).map((r) => [
+        r.table_id,
+        r.old_status,
+      ]),
+    );
+
     // One DB-side timestamp for the whole batch: every upserted row gets it as
     // refreshed_at, so rows left with an older refreshed_at are exactly the
     // ones this refresh did not see and can be pruned.
     const { rows: tsRows } = await tx.query('select now() as ts');
     const batchTs = (tsRows[0] as { ts: unknown }).ts;
 
+    const newStatusByTableId = new Map<string, string | null>();
     for (const e of entries) {
+      newStatusByTableId.set(e.tableId, e.status);
       await tx.query(UPSERT_SQL, [
         e.tableId,
         e.title,
@@ -68,6 +92,23 @@ export async function ingestCatalog(db: Db, source: CbsSource): Promise<CatalogI
       [batchTs],
     );
 
-    return { fetched: entries.length, upserted: entries.length, pruned: prunedRows.length };
+    // #108: a REGISTERED table that WAS current (per its own source's
+    // currentCatalogStatuses) and is no longer — either its status changed
+    // (e.g. CBS 'Gediscontinueerd'/'Vervallen') or it vanished from this
+    // fetch entirely (pruned, or CBS simply stopped listing it — both read
+    // as newStatus === null here, since a pruned id is also absent from
+    // newStatusByTableId). Detection only; never touches cbs_tables itself.
+    const flips: TableStatusFlip[] = [];
+    for (const [tableId, oldStatus] of oldStatusByTableId) {
+      const wasCurrent =
+        oldStatus !== null && resolveSourceForTable(tableId).currentCatalogStatuses.includes(oldStatus);
+      if (!wasCurrent) continue;
+      const newStatus = newStatusByTableId.get(tableId) ?? null;
+      const nowCurrent =
+        newStatus !== null && resolveSourceForTable(tableId).currentCatalogStatuses.includes(newStatus);
+      if (!nowCurrent) flips.push({ tableId, oldStatus, newStatus });
+    }
+
+    return { fetched: entries.length, upserted: entries.length, pruned: prunedRows.length, flips };
   });
 }

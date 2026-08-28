@@ -165,6 +165,11 @@ export function QuestionHistory({ items }: { items: QuestionHistoryEntry[] }) {
               // audit_answers both use bigint identity, so raw `item.id`
               // alone is not unique across the merged list.
               key={`${item.source}-${item.id}`}
+              // #116 residual: the SAME string, as a real HTML id — the
+              // onboarding delivery email's per-answer deep link anchors on
+              // exactly this (src/ingestion/onboarding-notify.ts
+              // dashboardAnchorUrl). Plain fragment scroll, no client JS.
+              id={`${item.source}-${item.id}`}
               className={
                 'rounded-lg border p-2 ' + (inFlight ? 'border-warn bg-warn-soft' : 'border-line')
               }
@@ -185,7 +190,13 @@ export function QuestionHistory({ items }: { items: QuestionHistoryEntry[] }) {
         }
 
         return (
-          <details key={`${item.source}-${item.id}`} className="rounded-lg border border-line p-2">
+          <details
+            key={`${item.source}-${item.id}`}
+            // #116 residual: matches the onboarding-branch id above — the
+            // delivery email's deep link anchors on this exact string.
+            id={`${item.source}-${item.id}`}
+            className="rounded-lg border border-line p-2"
+          >
             <summary className="cursor-pointer text-sm">
               <span className={item.isDeleted ? 'italic text-ink-muted' : 'font-medium'}>
                 {item.isDeleted ? 'Verwijderde vraag' : item.question}
