@@ -38,4 +38,4 @@ WP16 sub-part 1 (table discovery) is built and live-calibrated (ADR [025](025-cb
 - A table's estimated ingestion time approaches the 300s function ceiling → escalate to Vercel Workflow DevKit (one job-engine swap, isolated behind the same "run the pending row" function).
 - Real fetch-flow usage data suggests 100 credits is mispriced (too high suppresses the exact coverage-wall fix WP16 exists for; too low doesn't cover cost) → re-price via the existing pricing-config seam.
 - Priority #2 (new data sources) lands → extend verification to a genuine cross-source check.
-- #108/#109/#110's full scope becomes the actual next priority once the core loop is live and proven.
+- #108/#109/#110's full scope becomes the actual next priority once the core loop is live and proven. *(#109 resolved 2026-08-27, session 66: met in substance by this design's own confident-path behavior — the live flow fetches immediately with the three honesty guards enforced, so an offer-shaped chip would be a confirm-first retrofit on the live money path, an owner product decision rather than deferred UX; see the open-questions row for the full evidence.)*
