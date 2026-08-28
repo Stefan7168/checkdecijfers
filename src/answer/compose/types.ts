@@ -83,6 +83,44 @@ export interface SemanticCheckRecord {
   latencyMs: number | null;
 }
 
+// ---------------------------------------------------------------------------
+// #162 (ADR-draft slot-filling, hermetic half) — typed-placeholder phrasing
+// ---------------------------------------------------------------------------
+
+export const SLOT_PHRASING_SCHEMA_VERSION = 1 as const;
+
+/** One slot's binding: which stored coordinate fills it (R1/R8 traceability
+ * per slot — the ADR-draft's "slot map"). Re-derivable: the slot menu is a
+ * pure function of the ValidatedResult (buildSlotContext), so reconstruction
+ * re-derives this map from the stored result and compares byte-identically. */
+export interface SlotBinding {
+  slot: string;
+  kind: 'value' | 'period' | 'derivation';
+  /** The cell whose value ('value') or periodLabel ('period') fills the slot;
+   * null for derivation slots. For a shared period slot: the FIRST cell
+   * carrying that periodCode (cells are ordered, so this is deterministic). */
+  resultId: string | null;
+  /** Index into the stored result.derivations for 'derivation' slots (the
+   * records carry no id of their own; the stored array is verbatim, so the
+   * index is exact); null for cell-backed slots. */
+  derivationIndex: number | null;
+}
+
+/** #162: stored on the served answer when the slot rung wrote the body —
+ * the raw placeholder body (the model's actual output, zero digits) plus the
+ * slot map. Present-only (key not serialized when the flag is off or the body
+ * came from another rung), so every pre-#162 and flag-off envelope stays
+ * byte-identical — readers use `?? null` (A1). R8: reconstruction re-fills
+ * rawBody through the deterministic filler against the stored result and must
+ * reproduce the stored body byte-identically. */
+export interface SlotPhrasingRecord {
+  schemaVersion: typeof SLOT_PHRASING_SCHEMA_VERSION;
+  /** The model's raw placeholder body, BEFORE filling — validated digit-free. */
+  rawBody: string;
+  /** slot → stored coordinate, in menu order. */
+  slots: SlotBinding[];
+}
+
 /** One failed or succeeded LLM attempt — kept for the audit record (R8). */
 export interface ComposeAttempt {
   kind: 'llm' | 'llm_retry';
@@ -141,4 +179,9 @@ export interface ComposedAnswer {
    * serialized otherwise, so pre-feature envelopes stay byte-identical and
    * readers use `?? null` (A1). */
   semanticCheck?: SemanticCheckRecord;
+  /** #162 (slot-filling, flag `SLOT_PHRASING_ENABLED`, OFF by default): the
+   * raw placeholder body + slot map when the slot rung wrote the served body.
+   * Present-only — absent on every flag-off, pre-#162 and template envelope
+   * (`?? null`, A1). */
+  slotPhrasing?: SlotPhrasingRecord;
 }

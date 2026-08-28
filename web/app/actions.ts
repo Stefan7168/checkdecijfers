@@ -295,6 +295,15 @@ function semanticCheckOptions(): { semanticCheck: SemanticCheckOptions } | Recor
   };
 }
 
+// #162 (ADR-DRAFT slot-filling, hermetic half): the number-free-phrasing
+// experiment rung. DORMANT — the flag stays UNSET until the owner-supervised
+// A/B (blind pairwise phrasing judge + owner read-back, ADR-draft §6) decides;
+// while unset every compose call runs the see-and-echo ladder byte-identically.
+// Same dormancy pattern as SEMANTIC_CHECK_ENABLED / ONBOARDING_ENABLED.
+function slotPhrasingEnabled(): boolean {
+  return process.env.SLOT_PHRASING_ENABLED === '1';
+}
+
 // #112 (the go-live money bug): a fresh chat turn must KNOW what has already
 // been onboarded, or re-asking an answered topic re-triggers the full
 // 100-credit onboarding instead of answering at the normal question price.
@@ -448,6 +457,8 @@ export async function askQuestion(
         // #144 (ADR 034): the reject-only semantic checker — dormant until the
         // supervised go-live sets the env flags (see semanticCheckOptions).
         ...semanticCheckOptions(),
+        // #162: the slot-phrasing experiment rung — dormant (flag unset).
+        slotPhrasing: slotPhrasingEnabled(),
         // #112: the already-onboarded vocabulary, so a repeat question on an
         // onboarded topic parses onto its 'onboarded:' key and answers
         // directly (normal price) — the finder below only sees topics the
@@ -736,6 +747,8 @@ export async function replyToClarification(
         answerClient: new AnthropicLlmClient(),
         // #144 (ADR 034): same checker seam on the reply turn.
         ...semanticCheckOptions(),
+        // #162: same slot-phrasing seam on the reply turn (dormant, flag unset).
+        slotPhrasing: slotPhrasingEnabled(),
         // #112: the reply merge must accept the same onboarded keys the first
         // turn could have parsed into the pending's candidates — without this
         // the round dead-ends in an internal refusal (paid dead-end). Still

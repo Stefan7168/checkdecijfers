@@ -34,7 +34,9 @@ export const PHRASING_MODEL = 'claude-sonnet-5';
  * twee gemeenten'/'de vier G4-gemeenten' (B10/B14 fell to template). */
 export const COMPOSE_PROMPT_VERSION = 3;
 
-const TREND_WORD_BY_DIRECTION = { up: 'stijging', down: 'daling', flat: 'gelijk gebleven' } as const;
+/** Exported since #162: the slot payload (slots.ts) hands the model the SAME
+ * trend words, so the two payload shapes can never phrase a direction apart. */
+export const TREND_WORD_BY_DIRECTION = { up: 'stijging', down: 'daling', flat: 'gelijk gebleven' } as const;
 
 /** The R2 payload — the ONLY fields the model ever sees. The whitelist test
  * in tests/answer walks this structure; adding a field here without updating

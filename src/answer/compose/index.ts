@@ -29,4 +29,15 @@ export {
   SemanticCheckValidationError,
 } from './semantic-check.ts';
 export type { SemanticCheckOptions, SemanticCheckOutcome, SemanticCheckPayload } from './semantic-check.ts';
+// #162 (ADR-DRAFT slot-filling, hermetic half; flag SLOT_PHRASING_ENABLED, off).
+export {
+  buildSlotContext,
+  buildSlotPhrasingPayload,
+  buildSlotPhrasingRequest,
+  buildSlotSystemPrompt,
+  fillSlots,
+  validateSlotBody,
+  SLOT_COMPOSE_PROMPT_VERSION,
+} from './slots.ts';
+export type { SlotContext, SlotDemand, SlotPhrasingPayload, SlotPhrasingRequestOptions } from './slots.ts';
 export * from './types.ts';

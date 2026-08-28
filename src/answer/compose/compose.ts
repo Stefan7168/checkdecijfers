@@ -13,13 +13,26 @@ import type { ValidatedResult } from '../../query/index.ts';
 import { DERIVED_DATA_MARKING } from '../../query/index.ts';
 import type { LlmCallOptions, LlmUsage } from '../llm/client.ts';
 import { applyUnitExpansions } from './expand.ts';
-import { buildAlternatesLine, buildAssumptionLine, buildAttributionLine, buildDefinitionLine } from './format.ts';
+import {
+  buildAlternatesLine,
+  buildAssumptionLine,
+  buildAttributionLine,
+  buildDefinitionLine,
+  normalizeForScan,
+} from './format.ts';
 import { buildPhrasingRequest, COMPOSE_PROMPT_VERSION, PHRASING_MODEL } from './prompt.ts';
 import { runSemanticCheck, type SemanticCheckOptions, type SemanticCheckOutcome } from './semantic-check.ts';
+import {
+  buildSlotContext,
+  buildSlotPhrasingRequest,
+  fillSlots,
+  SLOT_COMPOSE_PROMPT_VERSION,
+  validateSlotBody,
+} from './slots.ts';
 import { renderTemplateBody } from './template.ts';
 import { validateAnswerBody } from './validate.ts';
-import type { AnswerSource, ComposeAttempt, ComposedAnswer, SemanticCheckRecord } from './types.ts';
-import { ANSWER_SCHEMA_VERSION } from './types.ts';
+import type { AnswerSource, ComposeAttempt, ComposedAnswer, SemanticCheckRecord, SlotPhrasingRecord } from './types.ts';
+import { ANSWER_SCHEMA_VERSION, SLOT_PHRASING_SCHEMA_VERSION } from './types.ts';
 
 export interface ComposeOptions extends LlmCallOptions {
   /** #144 (ADR 034): the additive, reject-only semantic checker. Absent = off
@@ -38,6 +51,17 @@ export interface ComposeOptions extends LlmCallOptions {
    * clicked answer reads plainer than a phrased one. Absent everywhere else →
    * the full R3 ladder, byte-identical. */
   templateOnly?: boolean;
+  /** #162 (ADR-DRAFT slot-filling, hermetic half): the `SLOT_PHRASING_ENABLED`
+   * experiment flag. Absent/false (benchmark, tests, CLI, and production —
+   * the default) → the see-and-echo ladder above, byte-identical. True → the
+   * slot rung REPLACES the two see-and-echo LLM rungs: the model writes a
+   * digit-free placeholder body, deterministic code fills the slots, and the
+   * template stays the unchanged floor. `templateOnly` wins over this flag
+   * (ADR 024's "no LLM call at all" is absolute), and `semanticCheck` is
+   * deliberately NOT run on slot bodies — both #140/#141 residual shapes need
+   * a digit the model cannot emit on this path (ADR-draft §2); the checker
+   * stays wired for the legacy pipeline only. */
+  slotPhrasing?: boolean;
 }
 
 function assemble(result: ValidatedResult, rawBody: string, source: AnswerSource, extras: {
@@ -48,6 +72,13 @@ function assemble(result: ValidatedResult, rawBody: string, source: AnswerSource
    * serialized when the checker actually ran its gate (feature on, LLM body),
    * so pre-feature envelopes stay byte-identical (A1). */
   semanticCheck?: SemanticCheckRecord;
+  /** #162: the prompt version that was in play — the slot rung passes its own
+   * constant; absent (every legacy path) = COMPOSE_PROMPT_VERSION, so
+   * flag-off envelopes stay byte-identical. */
+  promptVersion?: number;
+  /** #162: the raw placeholder body + slot map when the slot rung wrote the
+   * served body — present-only (A1), like semanticCheck. */
+  slotPhrasing?: SlotPhrasingRecord;
 }): ComposedAnswer {
   // #125a (ADR 031 D4): once the body is settled — validated LLM prose or the
   // by-construction-valid template — splice the registered unit expansions in
@@ -99,12 +130,98 @@ function assemble(result: ValidatedResult, rawBody: string, source: AnswerSource
     attributionLine: attribution,
     text,
     model: extras.model,
-    promptVersion: COMPOSE_PROMPT_VERSION,
+    promptVersion: extras.promptVersion ?? COMPOSE_PROMPT_VERSION,
     usage: extras.usage,
     attempts: extras.attempts,
     validation: validateAnswerBody(body, result),
     ...(extras.semanticCheck !== undefined ? { semanticCheck: extras.semanticCheck } : {}),
+    ...(extras.slotPhrasing !== undefined ? { slotPhrasing: extras.slotPhrasing } : {}),
   };
+}
+
+// ---------------------------------------------------------------------------
+// #162 (ADR-DRAFT slot-filling, hermetic half) — the slot rung
+// ---------------------------------------------------------------------------
+//
+// The NEW FIRST RUNG of the R3 ladder when `slotPhrasing` is on (ADR-draft
+// §3): slot-phrase → (reject: digits / unknown slot / missing slot /
+// word-form / R9) → one strict retry → the EXISTING template rung, unchanged,
+// as the floor. The model writes a body with typed placeholders and zero
+// digits (validateSlotBody, the §1 pre-fill rules); deterministic code fills
+// the slots through the template rung's proven formatters (fillSlots — R10
+// unit adjacency and R11 provisional marking become filler-owned, structural);
+// and the FILLED body still passes the full legacy R3/R9/R10/R11 validator as
+// a belt (§2: by construction it cannot find an unbacked digit — the numbers
+// were never model output — but direction/comparison words are still the
+// model's own prose and can genuinely fail here, fail-closed).
+//
+// The #144 semantic checker is deliberately NOT called on this path: both
+// residual shapes it exists for (#140 metadata echo, #141 temporal marker)
+// need the MODEL to emit a digit, which this path makes unrepresentable
+// (ADR-draft §2). Null-cell results never reach this rung (composeAnswer's
+// hasNullCells guard) and `templateOnly` wins outright.
+async function composeViaSlots(
+  result: ValidatedResult,
+  options: ComposeOptions,
+  usage: LlmUsage,
+  attempts: ComposeAttempt[],
+): Promise<ComposedAnswer> {
+  const context = buildSlotContext(result);
+  for (const strict of [false, true]) {
+    const kind = strict ? ('llm_retry' as const) : ('llm' as const);
+    try {
+      const request = buildSlotPhrasingRequest(result, {
+        model: options.model,
+        maxTokens: options.maxTokens,
+        strict,
+      });
+      const response = await options.client.complete(request);
+      usage.inputTokens += response.usage.inputTokens;
+      usage.outputTokens += response.usage.outputTokens;
+      // Normalized ONCE here: the stored rawBody, the pre-fill validation and
+      // the fill all see the same canonical text (normalizeForScan is
+      // idempotent, so the R8 re-fill of the stored rawBody is byte-stable).
+      const rawBody = normalizeForScan(response.outputText.trim());
+      const slotValidation = validateSlotBody(rawBody, context);
+      if (!slotValidation.ok) {
+        attempts.push({ kind, ok: false, problems: slotValidation.problems, error: null });
+        continue;
+      }
+      const body = fillSlots(rawBody, context);
+      // The §2 belt: the filled body through the FULL legacy validator. The
+      // filler's own numbers pass by construction (template formatters);
+      // direction words, comparisons and equality claims are still judged.
+      const validation = validateAnswerBody(body, result);
+      if (!validation.ok) {
+        attempts.push({ kind, ok: false, problems: validation.problems, error: null });
+        continue;
+      }
+      attempts.push({ kind, ok: true, problems: [], error: null });
+      return assemble(result, body, kind, {
+        model: response.model,
+        usage,
+        attempts,
+        promptVersion: SLOT_COMPOSE_PROMPT_VERSION,
+        slotPhrasing: { schemaVersion: SLOT_PHRASING_SCHEMA_VERSION, rawBody, slots: context.bindings },
+      });
+    } catch (error) {
+      attempts.push({
+        kind,
+        ok: false,
+        problems: [],
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+  // Fail closed: the SAME unchanged template floor (no slotPhrasing record —
+  // a template body has no raw placeholder form; the slot prompt version is
+  // recorded as the one that was in play, flag-on only).
+  return assemble(result, renderTemplateBody(result), 'template', {
+    model: null,
+    usage,
+    attempts,
+    promptVersion: SLOT_COMPOSE_PROMPT_VERSION,
+  });
 }
 
 export async function composeAnswer(result: ValidatedResult, options: ComposeOptions): Promise<ComposedAnswer> {
@@ -117,6 +234,11 @@ export async function composeAnswer(result: ValidatedResult, options: ComposeOpt
   const hasNullCells = result.cells.some((c) => c.value === null);
 
   if (!hasNullCells && options.templateOnly !== true) {
+    // #162: flag on → the slot rung replaces the two see-and-echo LLM rungs
+    // below (same template floor). Flag off/absent → byte-identical ladder.
+    if (options.slotPhrasing === true) {
+      return composeViaSlots(result, options, usage, attempts);
+    }
     for (const strict of [false, true]) {
       const kind = strict ? ('llm_retry' as const) : ('llm' as const);
       try {

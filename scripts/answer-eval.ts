@@ -14,6 +14,16 @@
 // sampling), repeat measures how stable the validator verdict is across
 // samples, which is the stability that actually matters.
 //
+// #162 (ADR-DRAFT slot-filling, hermetic half): --slots runs the SAME eval
+// through the slot rung (composeAnswer with slotPhrasing: true). Slot
+// requests have their own hash (different prompt + payload), so recorded slot
+// fixtures COEXIST with the legacy set in the same directory (ADR-draft §5) —
+// the legacy 15 files are never touched. The slot fixture set is NOT yet
+// recorded: `--slots --record` is the owner-supervised A/B session's first
+// step (live spend, ~cents), and until then `--slots --replay` fails loudly
+// on the missing fixtures. Slot runs report to their own file so the legacy
+// baseline history stays clean.
+//
 // Pass criterion per task = the SAME checks CI applies (tests/helpers/
 // answer-expectations.ts): validator ok + frozen-key values verbatim in the
 // text + attribution. A template fallback is a PASS with source='template' —
@@ -36,6 +46,7 @@ import { checkComposedAnswer, loadAnswerKey } from '../tests/helpers/answer-expe
 
 const FIXTURES_DIR = fileURLToPath(new URL('../tests/fixtures/llm/answer', import.meta.url));
 const REPORT_PATH = fileURLToPath(new URL('../benchmark/answer-eval-report.json', import.meta.url));
+const SLOTS_REPORT_PATH = fileURLToPath(new URL('../benchmark/answer-eval-slots-report.json', import.meta.url));
 
 interface CaseResult {
   id: string;
@@ -57,10 +68,12 @@ async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const mode = args.includes('--record') ? 'record' : args.includes('--replay') ? 'replay' : 'live';
   const repeat = mode === 'replay' ? 1 : Number(args.find((a) => a.startsWith('--repeat='))?.split('=')[1] ?? '1');
+  // #162: --slots routes composition through the slot rung (see header note).
+  const slots = args.includes('--slots');
 
   const answerKey = loadAnswerKey();
   const taskIds = Object.keys(ANSWERABLE_TASKS);
-  console.log(`mode=${mode} repeat=${repeat} model=${PHRASING_MODEL} tasks=${taskIds.length}`);
+  console.log(`mode=${mode} repeat=${repeat} model=${PHRASING_MODEL} pipeline=${slots ? 'slot' : 'legacy'} tasks=${taskIds.length}`);
 
   const { db, close } = await createIngestedDb();
 
@@ -87,7 +100,7 @@ async function main(): Promise<void> {
     currentTask = taskId;
     const verdicts: CaseResult[] = [];
     for (let run = 0; run < repeat; run++) {
-      const answer = await composeAnswer(results.get(taskId)!, { client });
+      const answer = await composeAnswer(results.get(taskId)!, { client, ...(slots ? { slotPhrasing: true } : {}) });
       inputTokens += answer.usage.inputTokens;
       outputTokens += answer.usage.outputTokens;
       const problems = checkComposedAnswer(taskId, answerKey.tasks[taskId as keyof typeof answerKey.tasks]!, answer);
@@ -114,6 +127,7 @@ async function main(): Promise<void> {
     generatedAt: new Date().toISOString(),
     mode,
     repeat,
+    pipeline: slots ? ('slot' as const) : ('legacy' as const),
     model: PHRASING_MODEL,
     totals: { pass: caseResults.filter((r) => r.pass).length, total: caseResults.length },
     sources: {
@@ -125,9 +139,11 @@ async function main(): Promise<void> {
   };
 
   // Per-run history so claims stay auditable (WP6 review lesson: a run must
-  // never silently overwrite the evidence of the run before it).
-  const priorHistory: unknown[] = existsSync(REPORT_PATH)
-    ? ((JSON.parse(readFileSync(REPORT_PATH, 'utf8')) as { history?: unknown[] }).history ?? [])
+  // never silently overwrite the evidence of the run before it). Slot runs
+  // keep their own file so the legacy baseline history stays comparable.
+  const reportPath = slots ? SLOTS_REPORT_PATH : REPORT_PATH;
+  const priorHistory: unknown[] = existsSync(reportPath)
+    ? ((JSON.parse(readFileSync(reportPath, 'utf8')) as { history?: unknown[] }).history ?? [])
     : [];
   const report = {
     ...summary,
@@ -144,8 +160,8 @@ async function main(): Promise<void> {
   }
 
   if (mode !== 'replay') {
-    writeFileSync(REPORT_PATH, `${JSON.stringify(report, null, 2)}\n`);
-    console.log(`report written to ${REPORT_PATH}`);
+    writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`);
+    console.log(`report written to ${reportPath}`);
   }
   if (summary.totals.pass < summary.totals.total) process.exitCode = 1;
 }

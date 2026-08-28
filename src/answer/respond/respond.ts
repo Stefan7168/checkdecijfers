@@ -113,6 +113,12 @@ export interface RespondOptions
    * Absent everywhere else (benchmark, tests, CLI) → byte-identical pre-WP path.
    */
   sourceSelection?: SourceSelection;
+  /** #162 (ADR-DRAFT slot-filling, hermetic half): the `SLOT_PHRASING_ENABLED`
+   * experiment flag, wired ONLY by web/app/actions.ts. Off/absent (benchmark,
+   * tests, CLI, and production — the default) ⇒ composeAnswer runs the
+   * see-and-echo ladder byte-identically; true ⇒ the slot rung replaces the
+   * two LLM rungs (template floor unchanged). */
+  slotPhrasing?: boolean;
 }
 
 /** The target bag, with EVERY key (the optional ones included) required to be
@@ -324,6 +330,8 @@ export async function respondToIntent(
      * query layer AND into every dry-run below so the chips are gated by the
      * same rules the answer itself ran under. */
     answerFirstEnabled?: boolean;
+    /** #162: rides through to composeAnswer; absent = the legacy ladder. */
+    slotPhrasing?: boolean;
   },
 ): Promise<ComposedResponse> {
   const queryOptions = { answerFirstEnabled: options.answerFirstEnabled === true };
@@ -421,6 +429,9 @@ export async function respondToIntent(
     client: options.answerClient,
     ...(options.semanticCheck ? { semanticCheck: options.semanticCheck } : {}),
     ...(options.templateOnly ? { templateOnly: true } : {}),
+    // #162: absent unless the SLOT_PHRASING_ENABLED wire is on (flag-off
+    // compose options stay byte-identical to today).
+    ...(options.slotPhrasing === true ? { slotPhrasing: true } : {}),
   } satisfies ComposeOptions);
   const chart = buildChartSpec(result);
   const text = staleness.stale ? `${answer.text}\n\n${staleness.warning}` : answer.text;
@@ -469,6 +480,8 @@ async function respondToParseOutcome(
      * mechanism A's machinery, so it rides A's flag. */
     clickOptionsEnabled?: boolean;
     answerFirstEnabled?: boolean;
+    /** #162: rides through to respondToIntent → composeAnswer. */
+    slotPhrasing?: boolean;
   },
 ): Promise<ComposedResponse> {
   if (parse.kind === 'refusal') {

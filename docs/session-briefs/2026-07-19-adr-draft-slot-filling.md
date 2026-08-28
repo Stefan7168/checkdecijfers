@@ -5,6 +5,21 @@ session promotes this to `docs/decisions/` (next free number) **only after** (a)
 measures a win. Owner signal on record: *"klinkt echt uitstekend"* (session 48, [open-questions #162](../open-questions.md));
 explicitly a candidate experiment, NOT scheduled, additive-first — this draft honors that framing.
 
+> **AS-BUILT NOTE — the HERMETIC HALF exists (2026-08-28, session 66, autonomous; branch
+> `feat/162-slot-filling-hermetic`, PR #113).** §1–§3 are implemented behind `SLOT_PHRASING_ENABLED` (OFF by default and in
+> production; flag-off proven byte-identical — request bytes + envelope, test-pinned): the typed-placeholder
+> contract + payload and the pre-fill rules live in `src/answer/compose/slots.ts`, the ladder rung in
+> `compose.ts` (`composeViaSlots` — template floor unchanged, #144 checker skipped per §2), the R1/R8 slot record
+> + re-fill reconstruction in `src/answer/audit/reconstruct.ts`, tests in `tests/answer/slot-compose.test.ts` +
+> `tests/audit/slot-phrasing-r8.test.ts`, and `answer:eval --slots` for the §5 fixture set (NOT yet recorded).
+> **The §6 A/B, the owner read-back, fixture recording, ADR promotion, and any flag flip remain OPEN** — this
+> draft is still a draft. Two implementation interpretations, both deliberately conservative: (1) the "filler
+> never starts a sentence with a bare digit" reorder guard is prompt-side only (slot rule 8), not a blocking
+> validator rule — §1 lists exactly six deterministic rules and quality-rule calibration belongs to the A/B;
+> (2) the payload adds digit-free `periodKind` (jaar/kwartaal/maand) per cell for preposition guidance, and
+> deliberately does NOT add a magnitude-class word (a scale word like "miljoen" in the payload would invite
+> echoes the word-form rejection then kills — revisit in the A/B if slot prose measurably needs magnitude cues).
+
 ## Context
 
 Today the phrasing LLM **sees the real values** — `buildPhrasingPayload` (`src/answer/compose/prompt.ts:80-87`) passes

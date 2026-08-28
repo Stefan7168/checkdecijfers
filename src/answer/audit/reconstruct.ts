@@ -24,10 +24,12 @@ import { DERIVED_DATA_MARKING } from '../../query/index.ts';
 import type { ValidatedResult } from '../../query/index.ts';
 import { buildChartSpec, chartSpecSchema } from '../../chart/index.ts';
 import { buildAlternatesLine, buildAssumptionLine, buildAttributionLine, buildDefinitionLine } from '../compose/format.ts';
+import { applyUnitExpansions } from '../compose/expand.ts';
 import { findSuspectTokens } from '../compose/semantic-check.ts';
+import { buildSlotContext, fillSlots, validateSlotBody } from '../compose/slots.ts';
 import { validateAnswerBody } from '../compose/validate.ts';
 import { stableStringify } from '../llm/client.ts';
-import { ANSWER_SCHEMA_VERSION, SEMANTIC_CHECK_SCHEMA_VERSION } from '../compose/types.ts';
+import { ANSWER_SCHEMA_VERSION, SEMANTIC_CHECK_SCHEMA_VERSION, SLOT_PHRASING_SCHEMA_VERSION } from '../compose/types.ts';
 import { RESPONSE_SCHEMA_VERSION } from '../respond/types.ts';
 import type { AnswerResponse } from '../respond/types.ts';
 import type { AuditRecord } from './types.ts';
@@ -333,6 +335,42 @@ function checkAnswerReconstruction(record: AuditRecord, problems: string[]): voi
         }
       } else {
         problems.push(`unknown semanticCheck status '${String((semanticCheck as { status: unknown }).status)}'`);
+      }
+    }
+  }
+
+  // #162 (ADR-DRAFT slot-filling, hermetic half): when the slot rung wrote
+  // the body, the record stores the raw placeholder body + the slot map —
+  // and BOTH re-derive. The slot menu/map is a pure function of the stored
+  // result (buildSlotContext), so a forged binding fails byte-comparison; the
+  // stored body must re-derive BYTE-IDENTICALLY by re-filling the stored raw
+  // body through the same deterministic filler (+ the same unit-expansion
+  // splice assemble() applies) — the ADR-draft's §1 R1/R8 rule, the same
+  // re-derivation pattern the attribution line uses, now covering every
+  // number in the body. Absent key (`?? null`, A1) = flag off / pre-#162 row.
+  const slotPhrasing = answer.slotPhrasing ?? null;
+  if (slotPhrasing !== null) {
+    if (answer.source === 'template') {
+      problems.push('slotPhrasing present on a template body — the slot rung never serves templates');
+    }
+    if (slotPhrasing.schemaVersion !== SLOT_PHRASING_SCHEMA_VERSION) {
+      problems.push(
+        `slotPhrasing schemaVersion ${slotPhrasing.schemaVersion} is not the v${SLOT_PHRASING_SCHEMA_VERSION} this reconstructor handles`,
+      );
+    } else {
+      const context = buildSlotContext(result);
+      if (stableStringify(slotPhrasing.slots) !== stableStringify(context.bindings)) {
+        problems.push('slotPhrasing slot map does not re-derive from the stored result');
+      }
+      const slotValidation = validateSlotBody(slotPhrasing.rawBody, context);
+      if (!slotValidation.ok) {
+        problems.push(
+          ...slotValidation.problems.map((p) => `stored raw placeholder body fails slot re-validation: ${p}`),
+        );
+      }
+      const refilled = applyUnitExpansions(fillSlots(slotPhrasing.rawBody, context), result);
+      if (refilled !== answer.body) {
+        problems.push('stored body does not re-derive from the stored raw placeholder body via the slot filler');
       }
     }
   }

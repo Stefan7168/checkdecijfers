@@ -131,6 +131,10 @@ const MANIFEST: Record<string, Record<string, Entry>> = {
     attempts: { category: 'ignored', why: 'the failed-attempt log; a record of what happened, with nothing to re-derive it from' },
     validation: { category: 'shape-checked' }, // read by the #121 known-at-serve-time labelling
     semanticCheck: { category: 'shape-checked' }, // verdict recorded; its SCOPE (the suspect list) IS re-derived and its status cross-checked
+    slotPhrasing: {
+      category: 'shape-checked',
+      note: 'rawBody is recorded LLM output (no deterministic ground truth of its own, like body) but everything around it re-derives: the slot map must re-compute byte-identically from the stored result (buildSlotContext), the raw body must re-pass the slot pre-fill validator, and the stored body must re-derive byte-identically by re-filling rawBody through the deterministic filler (+ unit-expansion splice) — the #162 R1/R8 rule. Present-only: absent = flag off / pre-#162 row / template body.',
+    },
   },
 };
 
@@ -245,7 +249,7 @@ describe('the envelope-key manifest covers the declared types', () => {
       AnswerResponse: 7,
       ClarificationResponse: 6,
       RefusalResponse: 11,
-      ComposedAnswer: 15,
+      ComposedAnswer: 16,
     };
     for (const [name, count] of Object.entries(expectedCounts)) {
       expect(declared.get(name)?.length, `${name} parsed an unexpected member count`).toBe(count);

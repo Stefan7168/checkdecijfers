@@ -39,7 +39,10 @@ function normalizeQuotes(text: string): string {
   return text.replace(/[‘’]/g, "'");
 }
 
-function mentions(text: string, label: string): boolean {
+/** Exported since #162: the slot pre-fill binding check re-uses the exact
+ * region-mention semantics of the R9 checks below (quote-normalized,
+ * case-insensitive containment) so the two paths can never drift. */
+export function mentions(text: string, label: string): boolean {
   return normalizeQuotes(text).toLowerCase().includes(normalizeQuotes(label).toLowerCase());
 }
 
@@ -1045,6 +1048,21 @@ function checkDirectionWords(
 // The blocking validator
 // ---------------------------------------------------------------------------
 
+/** The R3 word-form rejection, shared verbatim with the #162 slot pre-fill
+ * validator (ADR-draft §1 rule iv: slots stop digits, not "zeventien
+ * miljoen") — one implementation so the two paths reject identically.
+ * `body` must already be normalizeForScan'd. */
+export function wordFormProblems(body: string): string[] {
+  const problems: string[] = [];
+  for (const match of body.matchAll(QUANTITY_WORD_FORMS)) {
+    problems.push(`R3: kwantiteitswoord '${match[0]}' — hoeveelheden alleen in cijfers`);
+  }
+  for (const match of body.matchAll(CARDINAL_WORD_FORMS)) {
+    problems.push(`R3: telwoord '${match[0]}' — hoeveelheden alleen in cijfers`);
+  }
+  return problems;
+}
+
 export function validateAnswerBody(rawBody: string, result: ValidatedResult): AnswerValidationReport {
   const problems: string[] = [];
   // One canonical text for every check below: NFKC-folded, zero-width
@@ -1053,12 +1071,7 @@ export function validateAnswerBody(rawBody: string, result: ValidatedResult): An
 
   // R3: quantity word-forms are rejected — digits only, and no registered
   // derivation emits word forms.
-  for (const match of body.matchAll(QUANTITY_WORD_FORMS)) {
-    problems.push(`R3: kwantiteitswoord '${match[0]}' — hoeveelheden alleen in cijfers`);
-  }
-  for (const match of body.matchAll(CARDINAL_WORD_FORMS)) {
-    problems.push(`R3: telwoord '${match[0]}' — hoeveelheden alleen in cijfers`);
-  }
+  problems.push(...wordFormProblems(body));
 
   // R3/R1: every numeric token must be backed.
   const tokens = scanBody(body, result);

@@ -21,7 +21,9 @@ export function nullReasonText(valueAttribute: string): string {
   return info.nullReasonLabels[valueAttribute] ?? `door ${info.displayName} gemarkeerd als '${valueAttribute}'`;
 }
 
-function provisionalSuffix(cell: ResultCell): string {
+/** Exported since #162: the slot filler appends the SAME registry-worded
+ * marking to a provisional slot's rendering (R11 filler-owned on that path). */
+export function provisionalSuffix(cell: ResultCell): string {
   if (!cell.provisional) return '';
   // A2: the two-tier CBS wording comes from the registry map; a provisional
   // status outside the map keeps the generic suffix (pre-WP30a behavior).
@@ -55,8 +57,9 @@ export function displayValueUnit(value: number, decimals: number, unit: string):
   return `${formatted} ${trimmed}`;
 }
 
-/** Difference values over %-cells are procentpunt, never % (R10). */
-function displayDifferenceUnit(value: number, decimals: number, unit: string): string {
+/** Difference values over %-cells are procentpunt, never % (R10). Exported
+ * since #162: the slot filler renders verschil-slots through this exact code. */
+export function displayDifferenceUnit(value: number, decimals: number, unit: string): string {
   if (unit.trim() === '%') return `${formatValueNl(value, decimals)} procentpunt`;
   return displayValueUnit(value, decimals, unit);
 }

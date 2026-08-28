@@ -51,6 +51,8 @@ and that difference is checked.
 `ResponseBase.sourceSelection`, `ResponseBase.webSection` (both also nullable),
 `ComposedAnswer.assumptionLine` (nullable), `ComposedAnswer.alternatesLine` (nullable, #39),
 `ComposedAnswer.semanticCheck`,
+`ComposedAnswer.slotPhrasing` (#162, flag `SLOT_PHRASING_ENABLED` — absent on every flag-off,
+pre-#162 and template envelope),
 `ClarificationResponse.suggestions`, `RefusalResponse.pending`,
 `PendingClarification.clickOptions`, `PendingClarification.rescueOnly`,
 `PendingClarification.conversationContext` (nullable),
