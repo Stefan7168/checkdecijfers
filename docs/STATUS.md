@@ -9,133 +9,97 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
-**▶ SESSION 66 (2026-08-27 into 2026-08-28 local +07, fully autonomous, owner absent by explicit
-request) EXECUTED THE ENTIRE SESSION-65 QUEUE IN ONE CONTINUOUS RUN — 16 PRs (#99-#114) from the queue
-itself, plus this wrap-up PR (#115) — CI green on all 17 (verified: `gh pr checks` on each, both gate
-runs pass), ZERO merged (autonomous session = branch+PR per [#118(b)](open-questions.md), no self-merge
-— the owner reviews and merges next), ZERO production flags touched. ⚠ **Two MORE PRs (#116, #117)
-appeared autonomously after this session's own queue work concluded — Dependabot dependency bumps,
-unrelated to the queue, NOT reviewed or acted on here (acting on them would be inventing new scope the
-kickoff explicitly said not to do). 19 PRs open in total; CI green on all 19.** Full narrative:
+**▶ SESSION 67 (2026-08-28, local +07, owner present) REVIEWED AND MERGED ALL 19 PRs SESSION 66 LEFT
+OPEN (#99-#117) — zero held, two real (non-live) bugs found and fixed pre-merge, two residuals logged as
+new tracked rows, production canaried green after every merge.** Parallel review pass first (19 agents:
+13 normal, 4 adversarial on the flagged-risky ones, 2 on the Dependabot pair) — every verdict was `merge`
+or `merge_with_note`. Found and FIXED before merging: **#110**'s admin-alert email hardcoded "the trial
+leg failed" regardless of which leg actually threw, self-contradicting its own error message — now tagged
+with a `leg` field both composition roots branch on. Found and LOGGED, not merge-blocking (mechanism is
+manual-apply-only, nothing live depends on it): **[#195](open-questions.md)** (PR #111's disclosed
+eviction cost is ~4-6x understated) and **[#196](open-questions.md)** (a concurrent eviction can
+false-refuse a live query). Merged in dependency-aware clusters — foundational-first within each,
+after a `gh pr diff --name-only` scan found real code overlap the kickoff's "no order needed" framing had
+missed (the `compose.ts` trio #102→#103→#113, the ingestion pair #100→#111, the money/actions trio
+#101→#110): isolated docs (#99,#105,#109,#112,#106,#104) → ingestion (#100→#111) → money-path+actions
+(#101→#110) → the compose engine (#102→#103→#113, the one real hand-resolved 4-file conflict, predicted
+in advance by the review's own merge-simulation) → dashboard (#107→#108, one hand-resolved conflict) →
+chart (#114) → session-66's own wrap-up docs (#115, two hand-resolved conflicts) → Dependabot (#116,#117).
+Full narrative, every merge SHA, every conflict resolution:
 [status-archive.md](status-archive.md) (prepended below).
-The queue ran dry exactly as it was written to: every batch (RLS audit, money-path hardening, ingestion
-pipeline, options-bag dedup, #63, #39, the #74/#117/#108/#109/#116/#85 dashboard-visibility batch, WP25
-error_log + #114 health route, #110 eviction/TTL, the #170(4) Ontdek smalls, #162's slot-filling
-hermetic half) either shipped or was found already-satisfied by earlier work — the session then
-stopped, per its own kickoff's instruction, rather than inventing new scope.
 
-**Session 65 (2026-08-27, owner present) context that led here:** fixed the root-`nanoid` HIGH alert
-(see below) and, on an in-chat owner steer for a large autonomous follow-up run, compiled the queue
-session 66 executed. Full queue doc:
-[session-briefs/2026-08-27-session-66-autonomous-queue.md](session-briefs/2026-08-27-session-66-autonomous-queue.md);
-kickoff: [session-briefs/2026-08-27-session-66-kickoff.md](session-briefs/2026-08-27-session-66-kickoff.md).
-⚠ The owner was asked directly whether session 66 may flip WP26/`GDPR_PURGE_APPLY` if it ran out of
-other work, and said no — **both flags stayed OFF-LIMITS throughout and remain untouched**, not just
-"stays supervised" as a general default.
+⚠ **One process detour, caught before it reached the owner:** the first canary check assumed
+`checkdecijfers.nl` was production (it isn't — registered on Namecheap's default nameservers, used only
+for `mail.checkdecijfers.nl`'s email DNS, never wired to Vercel) and got a TCP-level timeout that looked
+exactly like an outage. The real URL, `https://checkdecijfers.vercel.app`, was 200 on `/` and `/llms.txt`
+throughout — production was never at risk, this was a wrong assumption on this session's part. Corrected
+in RUNBOOK's new operational section (see below) so it doesn't happen again.
 
-**Before session 64 (2026-08-27, owner present): every PR open at session start had been merged** — zero
-PRs open, `main` fully current at that point (full 8-PR bridge chain + Dependabot backlog, detail in
-[status-archive.md](status-archive.md)).
+**Docs touched this session (verified facts only, all cross-checked against `git log`/CI/production, none
+aspirational):** 18 `open-questions.md` rows got a merge-confirmation appended; 2 NEW rows added (#195,
+#196); `04-architecture.md` gained rows for #39 (alternates disclosure, now LIVE unconditional) and #110
+(eviction/TTL), and corrected #162's/#65+#114's stale "pending review" language to merged; `08-build-plan.md`'s
+WP25 header updated; `RUNBOOK.md` gained supervised-live-step sections for migrations 023 and 025 (024
+already had one) plus a new "Reviewing and merging a large PR batch" section recording this session's own
+recipe. Cleanup: one stray review-scratch worktree + two stray review-scratch local branches removed
+(zero unique content, already squash-merged under different SHAs).
 
-**✅ ZERO OPEN PRS (2026-08-27, session 64) — every PR open at session start is merged.** Merged serially,
-each with gate+deploy green on `main` and a production canary (`/`, `/llms.txt` both 200) confirmed before
-the next merge. The 8-PR bridge chain: **#85** (`d6f6a5f`) → **#93** (`18a68d2`) → **#95** (`12e5799`,
-fixed [#178](open-questions.md)) → **#96** (`50d3c63`, fixed [#34](open-questions.md)(c)) → **#94**
-(`7133428`, docs) → **#91** (`e15c953`, fixed [#193](open-questions.md) copy) → **#92** (`8d16ff7`) →
-**#80** (`c794d5c`). Then the Dependabot backlog: **#89** (`4eef2a6`, brace-expansion) → **#86**
-(`b41841b`, nanoid/web) → **#84** (`f29a5ae`, postcss/root) → **#97** (`7e51307`, 17-package web group,
-supersedes #88, bumps `next`→16.3.2) → **#83 auto-closed** (superseded by #97's `next` bump, but was the
-ONLY PR fixing the web postcss alerts — `@dependabot recreate` triggered a fresh one, **#98** (`a1e9365`),
-merged) → **#90** (`6b372cc`, Stripe/pg/LLM-SDK bumps, lockfile-only diff). Owner-present session, standing
-push authorization (#118 revision) — no per-merge approval needed; WP26 flags and `GDPR_PURGE_APPLY`
-untouched throughout. Verify yourself: `git log -1 origin/main` should show `a1e9365` or later and
-`gh pr list --state open` should be empty.
+⚠ **Stale-branch count CORRECTED (session 66 undercounted this at "two"):** `git branch -vv` after this
+session's `git fetch --prune` shows **26** stale local branches, not 2 — 7 pre-pause branches whose
+REMOTE still exists (`fix/178-click-freshness-recheck`, `fix/191-reply-turn-answer-first`,
+`fix/193-soften-definitief-copy`, `fix/34c-sync-table-lock`, `perf/176-gate-region-option-intents`,
+`refactor/shared-intent-options`, `fix/vitest-exclude-worktrees`), 7 old Dependabot branches whose remote
+is already gone (their content is long since merged, reflected in the session-64 bridge chain below), and
+12 `worktree-agent-*` orphans from past agent-tool sessions (all pointing at already-superseded commits,
+no remote). None affect `origin/main` or production either way — flagged for a deliberate, owner-present
+`git branch -D` pass whenever there's room, not touched by this session per the same caution session 66
+applied to the two it found.
 
-**✅ THE ROOT `nanoid` HIGH ALERT IS FIXED (2026-08-27, session 65)** ([#194](open-questions.md)) — hand-authored
-on explicit owner instruction (session 65 opened by asking the owner what to prioritize; they chose fixing
-this over waiting for Dependabot). Transitive dev-only dep (`vitest → vite → postcss`), so a pure lockfile
-bump: `npm update nanoid` moved `package-lock.json`'s entry 3.3.17 → 3.3.18. `npm audit`: 0 vulnerabilities.
-Full verification block + `/code-review` LOW (0 findings) before a direct push to `main` — see #194 for
-the complete record, including the one confirmed-transient test timeout under full-suite load.
-
-**Three traps hit while merging, all caught by not trusting a single signal:** (1) `gh pr view <n>
---json mergeable` returned `UNKNOWN` for several PRs even after 20s+ waits — merging directly via `gh pr
-merge` worked cleanly every time rather than blocking on that async field. (2) **`gh run watch` reported
-"completed successfully" (exit 0) on runs that `gh run view` on the SAME run id still showed
-`in_progress`, three separate times this session** — the inverse of session 62's "false stalled" finding.
-Caught every time by independently re-querying `gh run view` before trusting a canary, never by the watch's
-exit status alone. (3) **#83 and #97 both bumped `next` in web/** — #97 landed the newer version and
-GitHub auto-closed #83 as superseded, which would have silently dropped #83's UNRELATED postcss security
-fix (#97 never touches postcss) if not caught — recovered via `@dependabot recreate` → PR #98.
-
-**PR #94 conflicted with the new `main`** (`STATUS.md`, `open-questions.md`, `lessons-learned.md`,
-`status-archive.md` — all four also touched by #85/#93/#95/#96's own doc updates). Three were pure
-insertion-point clashes (one side of the 3-way merge contributed nothing, so keeping HEAD's content was
-correct by construction); `open-questions.md` row #34 was a REAL content conflict — HEAD carried the
-pre-#96-fix description, `origin/main` the correct post-fix one, so `origin/main`'s version was kept.
-`respond.ts` + 6 other code files auto-merged with zero textual conflicts. Full local verification run once
-on the resulting merge commit (typecheck ×2, backend 105/105 · 1579/1579, web 42/42 · 453/453, benchmark
-14/14+6/6+0 GATE PASS, real build) plus a `/code-review` LOW pass — 0 findings, since the only genuinely
-new content was the doc resolution itself.
-
-**⚠ THE TWO THINGS THAT ARE STILL ONLY YOURS, untouched again:** the **WP26 flags**
-(`CLARIFY_CLICK_ENABLED`, `ANSWER_FIRST_ENABLED`) and **`GDPR_PURGE_APPLY`**. Read
+**⚠ THE TWO THINGS THAT ARE STILL ONLY YOURS, untouched through three sessions running:** the **WP26
+flags** (`CLARIFY_CLICK_ENABLED`, `ANSWER_FIRST_ENABLED`) and **`GDPR_PURGE_APPLY`**. Read
 [#175](open-questions.md) before flipping WP26 — the anonymous trial receives NEITHER flag.
-✅ **[#191](open-questions.md), the pre-flip blocker, is FIXED** (in PR #85, merged — see above).
-**GDPR dry-run measured 2026-08-26: 0 rows purgeable yet** (first ones land ~2026-10-15) —
-`GDPR_PURGE_APPLY` is still off, unchanged.
 
-**Dependabot backlog — CLEAR.** All six + the #83→#98 recreate merged this session (see above). Only the
-root-`nanoid` gap above remains, with no PR yet.
+**✅ ZERO OPEN PRS (2026-08-28, session 67).** Verify yourself: `git log -1 origin/main` should show
+`b1b752a` or later and `gh pr list --state open` should be empty.
 
-**CBS data:** all 20 registered tables checked this session; the 12 with real drift are synced clean.
-Nothing stale beyond what CBS itself hasn't published yet.
-
-**▶ NEXT, in order:** (a) **review + merge session 66's 17 PRs (#99-#115, #115 being this wrap-up
-itself)** — the new front of the queue; all CI-green, none merged, no particular order required (mostly
-independent — Batch 4's sequencing note in the queue doc and #103 (#39) landing before any future
-#89/#70/#79 work are the only real dependencies). **Also open, unrelated to the queue: #116/#117
-(Dependabot dependency bumps, appeared autonomously after this session's own work — CI green, not
-reviewed here, a normal maintenance-session item).** (b) the **owner-supervised WP26 go-live** — one flag at a time, RUNBOOK "WP26 answer-first
-+ clickable options"; #191 no longer blocks it, and #178's "nu"-staleness half is now fixed in #95
-(age-bound/TTL half still open, see below); (c) **`GDPR_PURGE_APPLY=1`** plus one watched run; (d) **live
-migration applies** once their PRs merge — #147 (023), WP25/#65 (024), #110 (025) — each a supervised
-`npm run db:migrate`, same pattern as every prior migration; (e) **#193's live `audit:verify` pinning
-step** (R8 divergence check against production — the COPY itself shipped in PR #91 last session, this is
-ONLY the live-DB verification + `known-divergences.ts` pinning, still not run); (f) **#132 route B** GO
-or defer (T-0 condition — `forks_count` — still 0, re-measured 2026-08-26); (g) **#162's A/B** (blind
-pairwise LLM judge + owner read-back, ~€1-2 live spend) once PR #113 merges — the mechanism is built and
-flag-off-neutral, no phrasing-quality claim exists yet; (h) then the owner menu: WP30c choice (now with
-one more verified data point — the Rijksfinanciën 1900-2018 table id, `80504NED`, is confirmed ordinary
-StatLine but `Gediscontinueerd`, session 66/PR #112) / [#170](open-questions.md)(3) (still Phase-2-tied,
-item (4) shipped in PR #114) / the #89/#70/#79 UI trio (deliberately deferred behind #39, PR #103, which
-now needs to merge first). **Housekeeping, whenever a session has room:** `open-questions.md` itself is
-~312KB (measured: 319,705 bytes) and flagged (again) as due for a prune — no session has done this pass
-yet; the two stale
-pre-pause local branches found in session 66 (`refactor/shared-intent-options`,
-`fix/vitest-exclude-worktrees`) want a deliberate, owner-present delete.
+**▶ NEXT, in order — nothing urgent, all owner-supervised:** (a) **three live migration applies** now
+that their PRs are merged — 023 (#147, money-path compensation bound), 024 (#65/WP25, error_log), 025
+(#110, eviction/TTL lifecycle columns) — each a supervised `npm run db:migrate`; RUNBOOK now has a
+dedicated section per migration with the exact verification steps; (b) the **owner-supervised WP26
+go-live** — one flag at a time, RUNBOOK "WP26 answer-first + clickable options"; #191/#178's "nu"-half
+already fixed, age-bound/TTL half still open (see below); (c) **`GDPR_PURGE_APPLY=1`** plus one watched
+run; (d) **#193's live `audit:verify` pinning step** (R8 divergence check against production — the copy
+itself has been live since PR #91, only the live-DB verification + `known-divergences.ts` pinning is
+outstanding); (e) **#162's A/B** (blind pairwise LLM judge + owner read-back, ~€1-2 live spend) — now
+UNBLOCKED, PR #113 is merged; (f) **#132 route B** GO or defer (T-0 condition — `forks_count` — still 0,
+last measured 2026-08-26); (g) then the owner menu: WP30c choice (Rijksfinanciën `80504NED`, confirmed
+ordinary StatLine but `Gediscontinueerd`) / [#170](open-questions.md)(3) (Phase-2-tied) / the #89/#70/#79
+UI trio (now UNBLOCKED, #103 is merged — but still needs its own shared-design decision first, not an
+automatic follow-on). **Housekeeping, whenever a session has room:** `open-questions.md` is still ~320KB
+and still due for a prune; the 26 stale branches above want a deliberate delete pass.
 
 **Tracked, deliberately NOT built:** [#174](open-questions.md) and [#185](open-questions.md) (both explicitly
 held), [#183](open-questions.md) (product call), [#188](open-questions.md) (concurrency on a live money path
 — supervised), [#190(a)](open-questions.md) (whether an infrastructure-caused refusal should cost a trial
 question — a conversion judgement, yours), **[#178](open-questions.md)'s age-bound/TTL half** (the
-"nu"-staleness correctness half is fixed in PR #95 — session 63; picking "how many days is too old" for a
+"nu"-staleness correctness half is fixed in PR #95; picking "how many days is too old" for a
 client-held pending stays your call).
-
-**✅ Built, PR open, pending your review (session 66):** **[#34](open-questions.md)(b)+(c)** — batch
-`dimension_labels` writes, the TOCTOU pre-lock-validation guard, and the rebaseline unguarded-version-bump
-guard, all in **PR #100**. **PR #93's dedup finding** — `RespondOptions`/`ComposeOptions`/
-`SemanticCheckOptions` now share one base (`LlmCallOptions`) instead of hand-duplicating it, in **PR
-#102**.
 
 Full session-62 record: [status-archive.md](status-archive.md) +
 [session-briefs/2026-08-26-session-62-resume-log.md](session-briefs/2026-08-26-session-62-resume-log.md).
 Full session-63 record: [status-archive.md](status-archive.md) (prepended) +
 [session-briefs/2026-08-26-session-63-resume-log.md](session-briefs/2026-08-26-session-63-resume-log.md).
-Full session-66 record: [status-archive.md](status-archive.md) (prepended) +
-[session-briefs/2026-08-27-session-66-autonomous-queue.md](session-briefs/2026-08-27-session-66-autonomous-queue.md)
-(what was asked) + [session-briefs/2026-08-28-session-66-close.md](session-briefs/2026-08-28-session-66-close.md)
-(the close-out and session-67 kickoff).
+Full session-64 record (the 8-PR bridge chain + Dependabot backlog that got `main` to zero open PRs that
+day): [status-archive.md](status-archive.md) (prepended).
+Full session-65 record (the root-`nanoid` HIGH-alert fix, `#194`, and the queue session 66 executed):
+[status-archive.md](status-archive.md) (prepended) +
+[session-briefs/2026-08-27-session-66-autonomous-queue.md](session-briefs/2026-08-27-session-66-autonomous-queue.md).
+Full session-66 record (the entire queue executed, 17 PRs, zero merged):
+[status-archive.md](status-archive.md) (prepended) +
+[session-briefs/2026-08-28-session-66-close.md](session-briefs/2026-08-28-session-66-close.md).
+Full session-67 record (this session — review + merge of all 19):
+[status-archive.md](status-archive.md) (prepended above) +
+[session-briefs/2026-08-28-session-67-close.md](session-briefs/2026-08-28-session-67-close.md).
 
 ---
 

@@ -1,5 +1,138 @@
 # STATUS archive — the session log
 
+**Session 67 (2026-08-28, local time +07, owner present) REVIEWED AND MERGED ALL 19 PRs SESSION 66 LEFT
+OPEN (#99-#117) — zero held, zero new scope invented, two real (non-live) bugs found and fixed before
+merging, two residuals logged as new tracked rows, production canaried green after every single merge.**
+
+Opened per the kickoff's own instruction: read `CLAUDE.md`, `STATUS.md`'s top block, the kickoff prompt,
+and [session-briefs/2026-08-28-session-66-close.md](session-briefs/2026-08-28-session-66-close.md) in
+full before touching anything. Verified independently rather than trusting the kickoff doc's numbers:
+`date` confirmed 2026-08-28; `gh pr list --state open` returned exactly 19 PRs (#99-#117), all CI green —
+matched the brief exactly, nothing had changed in the interim.
+
+**Review pass (parallel, read-only, before any merge attempt):** a Workflow fanned out 19 independent
+review agents — 13 at normal/medium effort, 4 at high-effort/adversarial on the PRs flagged risky in the
+kickoff (#101 money-path, #110 error-log/health-route, #111 eviction/TTL, #113 slot-filling), 2 low-effort
+triaging the two open Dependabot PRs (#116/#117). All 19 came back `merge` or `merge_with_note` — none
+held. Two concrete, pre-merge findings came out of the elevated pass:
+- **#110 (real bug, fixed before merge):** the retention-purge job's admin-alert email hardcoded "the
+  trial leg failed" in both composition roots (the cron route, the CLI) regardless of which leg actually
+  threw — self-contradicting the underlying error's own message on an error_log-leg failure, exactly the
+  misdiagnosis-during-an-incident class this WP25 feature exists to prevent. Fixed by adding a
+  `leg: 'trial' | 'errorLog'` field to `RetentionPurgePartialError` that both composition roots now branch
+  on instead of guessing, plus the symmetric test that was missing (a trial-leg-throws case existed;
+  an error_log-leg-throws case did not). Verified: 24 tests across the two affected files, all green.
+- **#111 (two residuals, NOT merge-blocking — logged as new tracked rows [#195](open-questions.md) and
+  [#196](open-questions.md)):** the disclosed eviction cost ("+1 DB round-trip per served turn") is
+  understated by tracing the real `respond.ts` call graph (the true multiplier is ~4-6x, via follow-up-
+  suggestion and disambiguation probes that also keep a table artificially "warm" without ever serving
+  it), and a genuine, if currently unreachable (manual-`--apply`-only), race where a concurrent eviction
+  can serve a live query a false "no data" refusal. Neither blocks merging the hermetic mechanism — no
+  cron exists, no on-demand table is old enough yet — but both must close before any live/automated apply.
+- **#113 (confirmed in advance, not a surprise when it happened):** the elevated review pre-emptively
+  merge-simulated #113 against #102 and #103 (both still open at the time, all three touching
+  `compose.ts`) in an isolated scratch worktree and found the real conflict would be trivial, but landing
+  #113 last would ALSO silently break two hand-rolled test assertions with no idea a sibling PR existed —
+  confirmed exactly true when the real merge happened (see below).
+
+**Merge order, in clusters — foundational-first within each, chosen after a `gh pr diff --name-only`
+scan across all 19 found three real code clusters (not just docs overlap) the kickoff's "no fixed order
+needed" framing had missed:**
+
+1. **Isolated / docs-only (6):** #99 `c8d8201` (RLS audit script) → #105 `e876914` (#85 already-satisfied)
+   → #109 `a4ae327` (#193 doc-lag) → #112 `36f7624` (WP30c table-id verify) → #106 `2895657` (#109
+   already-met) → #104 `2337e46` (#63 rule-4 servability gate). All merged clean, one combined CI run
+   confirmed the batch (all 5 back-to-back pushes ran independent full CI — this repo's `ci.yml` has no
+   `concurrency:` group — only the last mattered for the combined state; see lessons-learned).
+2. **Ingestion pipeline (2):** #100 `c02f126` (#34 b+c: batch `dimension_labels` writes, rebaseline
+   concurrency guard) → #111 `18134aa` (#110: eviction/TTL, builds on #100's pipeline state).
+3. **Money-path + actions (2):** #101 `bded817` (#146-150: requestId UUID guard, netCost fix, Stripe
+   payment_status check, compensation bound — migration 023) → #110 `5cccaa3` (#65+#114: durable
+   error_log + health route — migration 024; the leg-misattribution fix above went in here).
+4. **Answer-compose engine (3, the delicate one):** #102 `fc8bf89` (pure dedup refactor, foundational,
+   behavior-preserving — independently re-typechecked and traced both construction sites to confirm) →
+   #103 `d7f0d20` (#39: alternate-reading disclosure, now LIVE unconditional default behavior — new
+   architecture row added) → #113 `6fdae6f` (#162: slot-filling hermetic half, DORMANT behind
+   `SLOT_PHRASING_ENABLED`, confirmed unset in Vercel Production). **#113's merge needed a real,
+   hand-resolved 4-file conflict** (`docs/13-envelope-presence-grammar.md`,
+   `src/answer/audit/reconstruct.ts`, `src/answer/compose/compose.ts`, `src/answer/respond/respond.ts` —
+   all mechanical: additive imports/doc-table rows, and one interface field that #102's refactor had moved
+   to an inherited base, requiring `slotPhrasing` to be re-added standalone rather than alongside the now-
+   inherited `clickOptionsEnabled`/`answerFirstEnabled`) **plus the two test-file fixes the review had
+   already predicted** — `tests/audit/envelope-key-manifest.test.ts`'s `ComposedAnswer` member-count pin
+   (15→16, both #103's and #113's new fields) and `tests/audit/slot-phrasing-r8.test.ts`'s `rebuildTexts()`
+   helper (missing `alternatesLine` in its manual text-reassembly, would have silently diverged from the
+   real `compose.ts` line order). Verified in an isolated worktree before pushing: typecheck ×2 clean,
+   697/697 answer tests, 138/138 audit tests, 464/464 web tests.
+5. **Dashboard / question-history (2):** #107 `352f4de` (#74+#117: live onboarding status line + poll) →
+   #108 `974392a` (#108+#116: catalog status-flip alert + email deep link). **#108 needed one hand-resolved
+   conflict** in `web/components/question-history.test.tsx` (both PRs added an independent describe/it
+   block to the same insertion point — purely additive, both kept) verified with 27/27 (the one file)
+   + 481/481 (full web) + 286/286 (catalog+ingestion backend suites).
+6. **Chart (1):** #114 `86d2182` (#170(4): curated Ontdek annotations + werkloosheid definition toggle).
+7. **Session 66's own wrap-up (1, merged deliberately last of the "real" queue):** #115 `f3d0479`.
+   **Needed one hand-resolved conflict** in `docs/STATUS.md`'s "▶ NEXT" block and one in
+   `docs/04-architecture.md`'s Ontdek-charts row — both cases of one side (origin/main, i.e. the
+   unchanged pre-session-66 base, since none of the 15 already-merged PRs happened to touch these exact
+   paragraphs) being genuinely stale next to the other (HEAD, #115's own more complete/accurate account);
+   kept the more accurate side each time, matching the historical PR #94 resolution precedent.
+8. **Dependabot (2, unrelated to the queue, normal maintenance triage):** #116 `f305864` (4 patch/minor
+   web deps) → #117 `b1b752a` (4 minor/patch root deps, incl. `@anthropic-ai/sdk`) — both pure
+   lockfile/`package.json` diffs, no application source touched, no majors.
+
+**Every merge individually verified, never trusted on a single signal:** `gh pr merge <n> --squash
+--delete-branch` (mergeable stayed `UNKNOWN` on every PR checked, confirming/hardening session 65's same
+finding — merging directly always worked regardless), then the resulting `main` commit's CI run confirmed
+via `gh run view` (not `gh run watch`'s exit code alone, per the session-65/66 "watch lies" precedent —
+checked independently every time, no discrepancy found this session), then a production canary
+(`https://checkdecijfers.vercel.app/` + `/llms.txt`, both 200 after every single merge — 19-for-19) plus
+one live functional check of the new `/api/health` route (`{"ok":true,"checks":[...]}`, names only, no
+error text or row data — matches what the review verified statically).
+
+**⚠ One process detour, caught before it became a false alarm:** the FIRST canary attempt used
+`https://checkdecijfers.nl/` (assumed from the project name) and timed out at the TCP level — looked
+exactly like a production outage. Investigation via the Vercel API (`get_project`'s `domains` field
+listed only the two `.vercel.app` hostnames) and the RUNBOOK (which already correctly names
+`https://checkdecijfers.vercel.app` as the deployed URL) resolved it: `.nl` is registered on Namecheap's
+default nameservers and used only for `mail.checkdecijfers.nl`'s Resend DNS — never wired to Vercel.
+Production was never at risk; this was a wrong assumption on this session's part, caught before being
+reported to the owner. Full lesson + the corrected canary URL recorded in RUNBOOK and lessons-learned.
+
+**Final measured state (last CI run, `b1b752a`, PR #117's merge):** backend **113 files / 1707 tests**
+(summed across the 15 backend suites the gate runs: ingestion 16/209, invariant 1/22, benchmark-structure
+3/28, registry 2/19, query+intent 8/127, answer/intent 27/697, chart 5/71, audit/R8 18/138, billing 7/128,
+catalog 8/77, db 10/70, sources 3/56, websearch 2/31, threads 2/29, doc-convention 1/5), web **46 files /
+494 tests**, benchmark **14/14 answerable + 6/6 refusal/clarify + 0 fabricated, GATE PASS**, real `next
+build` + deploy green on every merge. Zero test failures anywhere this session; every alarming-looking
+console line in CI logs (injected fixture failures, deliberate fail-closed messages) traced and confirmed
+intentional negative-path test output, not a real failure.
+
+**Docs updated in this same session (the wrap-up, not a separate pass):** 18 `open-questions.md` rows
+(#34, #39, #63, #65, #74, #85, #108, #109, #110, #114, #146-150, #162, #170, #193) each got a
+merge-confirmation note appended (PR number + squash SHA), preserving all existing technical content;
+2 NEW rows added ([#195](open-questions.md), [#196](open-questions.md), #111's residuals);
+`docs/04-architecture.md` gained a new row for #39/alternates-disclosure and #110/eviction-TTL, and had
+two existing rows (#162 slot-filling, #65+#114 error-log) corrected from "pending review, not yet merged"
+to their actual merged state; `docs/08-build-plan.md`'s WP25 header updated to merged; `docs/RUNBOOK.md`
+gained two new "Supervised live step" sections (migrations 023 and 025 — 024's already existed) plus a new
+"Reviewing and merging a large PR batch" operational section capturing this session's own recipe for
+whoever does this next.
+
+**Cleanup:** one stray git worktree (`/private/tmp/pr101-wt`, left by the #101 adversarial review's own
+"independent checkout, not trusting the PR's self-report" verification step) found via `git worktree list`
+and removed — `git status`/`gh pr list` alone would not have surfaced it.
+
+**⚠ THE TWO THINGS THAT ARE STILL ONLY THE OWNER'S, untouched, exactly as instructed throughout:** the
+**WP26 flags** (`CLARIFY_CLICK_ENABLED`, `ANSWER_FIRST_ENABLED`) and **`GDPR_PURGE_APPLY`**.
+
+**✅ ZERO OPEN PRS at session end** (verify: `gh pr list --state open` empty, `git log -1 origin/main` =
+`b1b752a`). **Left for the next owner-present session, none urgent:** the three live migration applies
+(023, 024, 025 — each a supervised `npm run db:migrate`, RUNBOOK has a dedicated section for each now);
+[#193](open-questions.md)'s live `audit:verify` pinning step; [#162](open-questions.md)'s A/B phrasing
+measurement (~€1-2 spend) now that PR #113 is merged; the WP26 go-live and `GDPR_PURGE_APPLY=1` whenever
+the owner is ready; the `open-questions.md` prune (still ~320KB, still nobody's done this pass); the
+#89/#70/#79 UI trio (unblocked now that #103 is merged, still needs its own shared-design decision first).
+
 **Session 66 (2026-08-27 into 2026-08-28, local time +07 — the session spanned midnight; fully
 autonomous, owner explicitly absent by request). Executed the ENTIRE session-65 queue in one continuous
 run: 16 PRs from the queue (#99-#114) plus this session's own wrap-up PR (#115) — 17 total, CI green on

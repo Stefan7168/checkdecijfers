@@ -234,7 +234,7 @@ FIRST** (`npm run db:migrate`, owner-present window; the running old code ignore
 still serves, **then** push the code. Plus the standard per-migration check when a migration adds a TABLE
 (grants/RLS, migration-011 queries); a column on an existing RLS-locked table inherits its table's posture.
 
-## Supervised live step — migration 024 error_log (NOT YET RUN; built session 66, 2026-08-27, autonomous)
+## Supervised live step — migration 024 error_log (NOT YET RUN; built session 66, 2026-08-27, autonomous; merged into `main` session 67, 2026-08-28, PR #110)
 
 **⏳ TO RUN in the next owner-present window.** Migration `024_error_log.sql` (#65 / WP25: the durable,
 insert-only production error log — catch sites in the chat actions, the Stripe webhook, the auth callback
@@ -260,6 +260,44 @@ The step itself (owner present):
    days via the existing gdpr-purge cron (dormant-apply rules unchanged: the DELETE only runs once
    `GDPR_PURGE_APPLY=1`, same as every other leg — until that flag flips, the monthly manual
    `npm run gdpr:purge -- --apply` is what actually deletes).
+
+## Supervised live step — migration 023 compensation-amount bound (NOT YET RUN; built session 66, 2026-08-27, autonomous; merged into `main` session 67, 2026-08-28, PR #101)
+
+**⏳ TO RUN in the next owner-present window — low urgency: defense-in-depth, not a live gap.**
+Migration `023_compensation_amount_bound.sql` ([#147](open-questions.md)) widens the existing
+`credit_transactions_validate_compensation` trigger (migration 008, already widened by 013/018) to also
+bound a compensation's credited `delta` to the magnitude of the debit it reverses. **Verified NOT
+reachable through any live caller today** (`gate.ts`, `refundOnboarding`, `settleWebAddon` all already
+compensate at or under the original debit) — this closes a gap for a FUTURE caller (an admin refund tool,
+a hand-run fix), not a live bug.
+
+The step itself (owner present): `npm run db:migrate` from the repo root. No new table, no new grants to
+check — this only `CREATE OR REPLACE`s an existing trigger function, so there is nothing to verify beyond
+the migration completing (the pinned tests already exercise the new bound hermetically). No production
+behavior changes on apply — every live caller already stays under the new ceiling.
+
+## Supervised live step — migration 025 table-eviction lifecycle columns (NOT YET RUN; built session 66, 2026-08-27, autonomous; merged into `main` session 67, 2026-08-28, PR #111)
+
+**⏳ TO RUN whenever convenient — nothing downstream depends on it yet.** Migration
+`025_table_eviction_lifecycle.sql` ([#110](open-questions.md)) adds two columns to `cbs_tables`:
+`pinned boolean` (TRUE = eviction-exempt; the migration itself pins the full curated seed set) and
+`last_queried_at timestamptz` (debounced to ~1 write/table/day, read by the eviction GC). Applying it does
+**nothing observable** on its own — the eviction CLI (`scripts/table-eviction.ts`, `npm run tables:evict`)
+only ever runs manually, there is no cron, and no on-demand-onboarded table is old enough yet to be a
+real eviction candidate.
+
+**⚠ Before ever running `tables:evict --apply` against a live table (not before this migration, but
+before that later step) — two residuals a session-67 review found and logged, neither closed yet:**
+[#195](open-questions.md) (the disclosed "+1 round-trip per served turn" cost is understated — the real
+path is ~4-6x that, and the same probes that inflate the count also keep a table artificially "warm") and
+[#196](open-questions.md) (a concurrent eviction can false-refuse a live query for the table it's
+evicting — the guard only checks for an active onboarding job, not an in-flight read). Read both before
+scheduling any automation on top of this.
+
+The step itself (owner present): `npm run db:migrate` from the repo root, then optionally `npm run
+tables:evict` (dry-run, no `--apply`) to confirm it reports the pinned seed set as exempt and everything
+else as `never queried` (expected — `last_queried_at` starts NULL for every existing row until the query
+executor's next write).
 
 ## Supervised live step — migration 021 applied (2026-07-24, session 55 continued, owner present)
 
@@ -718,6 +756,56 @@ per-machine cache:
    brief multiple parallel agents that might write to a common scratch directory, tell each one to use a
    distinctly-named file (its own task slug or agent id as a prefix) rather than a generic name like
    `notes.md` or `pr-body.md`.
+
+## Reviewing and merging a large PR batch (added session 67, 2026-08-28 — reviewed + merged all 19 open PRs left by session 66)
+
+1. **Review in parallel, merge in serial.** The review pass (does each PR actually do what it claims,
+   any invariant risk) is read-only and independent per PR — fan it out (19 agents this session: 13
+   normal-effort, 4 adversarial/high-effort on the flagged risky ones, 2 low-effort on Dependabot). The
+   MERGE itself must stay sequential — it mutates shared `main`, and merge order changes what conflicts
+   with what.
+2. **Before picking a merge order, check actual file overlap (`gh pr diff <n> --name-only` for every open
+   PR), not just PR titles.** This session's kickoff assumed "no fixed order needed" for most of the 19;
+   the file-overlap scan found three real code clusters (the `compose.ts` trio, the ingestion-pipeline
+   pair, the `actions.ts`/webhook trio) that needed a deliberate foundational-first order, plus several
+   more that shared `open-questions.md`/`STATUS.md` insertion points (docs conflicts, always mechanical).
+3. **`gh pr merge <n> --squash --delete-branch` first; only fall back to a manual worktree merge on the
+   `GraphQL: Pull Request has merge conflicts` error.** Most merges in a same-base batch resolve cleanly
+   server-side even when they touch the same file, as long as they don't touch the same LINES — don't
+   pre-emptively hand-merge everything just because two PRs share a file.
+4. **The manual-conflict recipe, when it's needed:** `git worktree add /tmp/wt-prNNN <branch>` (isolated,
+   never the shared checkout) → `git merge origin/main --no-edit` to surface the real conflicts → resolve
+   by hand (prefer the objectively more-accurate/more-complete side on a real content conflict, same rule
+   as the historical PR #94 resolution) → `git add -A && git commit --no-edit` → `npm ci` (root AND
+   `web/`, a fresh worktree has neither) → typecheck both + the specifically-affected test files + the
+   broader suite one level up (e.g. all of `tests/answer/` when the conflict touched `compose.ts`) → push
+   → remove the worktree → wait for that PR's own CI to go green → THEN `gh pr merge`.
+5. **A textually-clean auto-merge can still be semantically wrong when two PRs both add a field to the
+   same interface/type.** This session's adversarial review pre-emptively caught it: merging #113 after
+   #102+#103 needed not just a conflict resolution but two test-file fixes the git merge itself couldn't
+   flag — a hardcoded member-count assertion (`tests/audit/envelope-key-manifest.test.ts`) and a
+   hand-rolled text-reassembly helper that didn't know about a sibling PR's new field
+   (`tests/audit/slot-phrasing-r8.test.ts`'s `rebuildTexts()`). Running the review's own merge-simulation
+   BEFORE starting real merges (fetch both branches into a scratch worktree, merge-simulate) found this in
+   advance — worth doing for any PR the review flags as touching the same file as another open PR.
+6. **Back-to-back merges do NOT cancel each other's CI — this repo's `ci.yml` has no `concurrency:`
+   group.** Five isolated/low-risk merges in a row each kicked off their own independent full-gate run; all
+   five completed, none was cancelled by the next push. Convenient for a safe batch (docs-only, no shared
+   code), but it means N merges = N full CI runs' worth of Action minutes — worth waiting for one merge's
+   CI before the next once the PRs start touching real code, both to avoid wasted minutes on a run that
+   will be superseded before it finishes mattering, and because only the LAST run in a burst actually
+   validates the full combined state.
+7. **`checkdecijfers.nl` is NOT the production URL — it resolves to Namecheap's default parking
+   nameservers and is used only for `mail.checkdecijfers.nl`'s Resend DNS records.** The real production
+   URL is `https://checkdecijfers.vercel.app` (this RUNBOOK already said so; the mistake was not checking
+   before curling). A canary check against the wrong host times out at the TCP level (never even reaches
+   an HTTP response) rather than 404ing, which can look alarmingly like a real outage — verify the actual
+   deployed domain via `get_project`'s `domains` field (or this doc) before treating a failed canary as a
+   production incident.
+8. **`gh pr view <n> --json mergeable` stayed `UNKNOWN` for every PR checked this session, even well after
+   the PR was created — this is now the expected steady state on this repo, not a transient race
+   (confirms and hardens session 65's same finding).** Never gate a merge attempt on this field resolving;
+   just call `gh pr merge` and read ITS result.
 
 ## Moving to a new machine (fresh clone bootstrap)
 

@@ -208,9 +208,9 @@ protocol plan €5 / cap €10, test plan + flag rollout); build from that brief
 
 # Briefs written by the 2026-07-05 overnight session (queue items 5–6) — build nothing here without the named prerequisite
 
-## WP25 (working number) — #65 durable error logging  ✅ BUILT 2026-08-27 (session 66, autonomous; hermetic — live apply still supervised)
+## WP25 (working number) — #65 durable error logging  ✅ BUILT 2026-08-27 (session 66, autonomous); MERGED 2026-08-28 (session 67, PR #110, `5cccaa3`) — hermetic, live apply still supervised
 
-> **✅ Built per this brief (2026-08-27, session 66), together with the #114 health route.** As-built:
+> **✅ Built per this brief (2026-08-27, session 66), together with the #114 health route; merged session 67.** As-built:
 > migration `024_error_log.sql` (FILE-ONLY until the supervised apply — [RUNBOOK](RUNBOOK.md) "migration
 > 024" step), `src/db/error-log.ts` (fail-open `logError` + the 90-day retention primitives; the brief's
 > suggested 90 days adopted as the default, [#65](open-questions.md)), `web/lib/error-report.ts` +

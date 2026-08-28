@@ -6,6 +6,62 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 67 — 2026-08-28 (local, +07), owner present — reviewed and merged all 19 PRs session 66 left open (#99-#117)
+
+Full narrative: [status-archive.md](status-archive.md) session-67 entry. Nineteen open PRs, zero held —
+every review came back `merge` or `merge_with_note`, two real (pre-merge, non-live) bugs found and fixed,
+two residuals logged as new open-questions rows. Full local + CI verification on every merge, production
+canaried after each.
+
+- **A kickoff's "no fixed merge order needed" claim should be independently checked, not trusted, once
+  real code is involved.** Session 66's own kickoff said the 17 PRs were "mostly independent." A
+  `gh pr diff <n> --name-only` scan across all 19 PRs before merging anything found three real code
+  clusters sharing files at the LINE level, not just the file level — the `compose.ts` trio (#102/#103/
+  #113), the ingestion-pipeline pair (#100/#111), and the `actions.ts`/webhook trio (#101/#110/#113).
+  Docs-only overlaps (`open-questions.md`, `STATUS.md`) turned out to be the easy case — GitHub's
+  server-side merge resolved most of those with zero manual intervention, since different PRs edited
+  different existing rows or different insertion points. The real risk was entirely in the code clusters,
+  and merging those in a deliberate foundational-first order (refactor before the features built on it;
+  data-integrity fix before the feature that reads its output) kept every conflict mechanical.
+- **A pre-merge conflict SIMULATION (fetch both branches into a scratch worktree, merge, don't push)
+  catches interaction bugs a normal single-PR review cannot see.** The adversarial review of #113 did
+  this against #102 and #103 (both still open, both touching `compose.ts`) and found, in advance, that
+  the git conflict itself would be trivial but landing #113 last would ALSO silently break two
+  hand-rolled test assertions that had no idea a sibling PR existed — a hardcoded interface-member count
+  and a manually-reassembled expected-text string. Knowing this before starting the real merge turned a
+  "why did CI go red" investigation into a five-minute planned fix.
+- **This repo's CI (`ci.yml`) has no `concurrency:` group, so back-to-back merges do NOT cancel each
+  other's runs — confirmed by merging 5 low-risk PRs in a row and watching all 5 complete independently.**
+  Convenient for genuinely independent/docs-only merges (nothing to lose by not waiting), but it means
+  every merge burns a full CI run's Action minutes regardless of whether an earlier one in the same burst
+  gets superseded before finishing — and only the LAST run in a burst actually proves the combined state,
+  so the earlier ones' green checkmarks are informative, not sufficient, once real code is involved.
+- **Assumed the production canary URL was `checkdecijfers.nl` (the project's own name) instead of
+  checking the RUNBOOK first — wasted a `whois`/`dig`/Vercel-API detour chasing what looked like a
+  production outage (the domain times out at the TCP level, never even 404s) before finding it was never
+  wired to Vercel at all.** The RUNBOOK already correctly names `https://checkdecijfers.vercel.app` as
+  the deployed URL; `.nl` is registered and only used for `mail.checkdecijfers.nl`'s transactional-email
+  DNS. A failed canary against the wrong host looks exactly like an outage (connection timeout, not an
+  HTTP error) — worth deliberately checking the documented URL before treating one as an incident.
+  Verified once corrected: `checkdecijfers.vercel.app` was 200 on `/` and `/llms.txt` throughout the
+  entire session, so production was never actually at risk.
+- **A review-only agent that checks out a PR branch "in its own worktree, not trusting the PR's
+  self-report" (this session's own instruction, to get independent verification) can leave that worktree
+  registered after it finishes.** Found one stray worktree (`/private/tmp/pr101-wt`, from the #101
+  adversarial review) at session-end cleanup that a plain `git status`/`gh pr list` check wouldn't have
+  surfaced — only `git worktree list` did. Worth checking explicitly at the end of any session that ran
+  review agents instructed to use their own worktree, not just sessions that used `isolation: "worktree"`
+  Agent calls directly.
+- **The two bugs the adversarial review found (#110's leg-misattribution, #111's cost-understatement +
+  concurrency race) were both found by tracing the REAL call graph / composition roots rather than
+  trusting the PR's own stated claim** — #110's PR description didn't mention the misattribution at all
+  (found by reading both composition roots' catch blocks side by side); #111's PR description DID
+  disclose a cost, but the disclosed number was itself wrong once the actual `respond.ts` call graph
+  (follow-up suggestions, disambiguation probes) was traced rather than just the two functions the PR's
+  own cost-tripwire test measured directly. Confirms the standing rule (CLAUDE.md, review discipline):
+  a passing test proves the SPECIFIED behavior; it does not prove the description of that behavior is
+  complete.
+
 ## Session 66 — 2026-08-27 into 2026-08-28 (local, +07), fully autonomous, owner absent — the entire session-65 queue executed in one run, 17 PRs
 
 Session spanned midnight local time — started 2026-08-27, wrapped 2026-08-28. All 17 PRs (16 from the
