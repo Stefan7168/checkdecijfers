@@ -25,9 +25,9 @@ import { parseClarificationReply, type ClarifyReplyOptions } from '../intent/cla
 import { parseFollowUpQuestion } from '../intent/followup.ts';
 import type { ConversationContext } from '../context/types.ts';
 import { regionTermsFor } from '../context/build.ts';
-import type { ClickOption, ParseOutcome, ParserConfig } from '../intent/types.ts';
+import type { ClickOption, ParseOutcome } from '../intent/types.ts';
+import type { FreshIntentParseOptions } from '../intent/options.ts';
 import { RawParseValidationError, RAW_PARSE_VERSION } from '../intent/types.ts';
-import type { IntentLlmClient } from '../intent/client.ts';
 import type { LlmClient } from '../llm/client.ts';
 import {
   buildNoSourcesRefusal,
@@ -41,8 +41,6 @@ import {
   toInternalRefusal,
   toRefusalResponse,
 } from './refusals.ts';
-import type { TableFinder } from '../intent/policy.ts';
-import type { OnboardedMeasure } from '../intent/prompt.ts';
 import { CBS_SOURCE_KEY } from '../../sources/registry.ts';
 import type { SourceSelection } from '../../websearch/types.ts';
 import { buildRescueOffer } from './rescue.ts';
@@ -57,10 +55,43 @@ import type {
 } from './types.ts';
 import { RESPONSE_SCHEMA_VERSION } from './types.ts';
 
-export interface RespondOptions {
+/** The respond entry points' options bag.
+ *
+ * The intent-parse subset — referenceDate, tableFinder, extraCanonicalMeasures,
+ * clickOptionsEnabled, answerFirstEnabled — is INHERITED from
+ * FreshIntentParseOptions (intent/options.ts, the single source of truth for
+ * that shape; PR #93 review finding). This interface used to hand-duplicate it
+ * under the same field names, which is the exact drift class that produced
+ * #176/#191 on the intent side: a WP16/WP26 field added to one bag and not the
+ * others compiles cleanly and silently drops a seam on one call path. Now a
+ * field added to the intent bags appears here by construction, and the
+ * `ThreadedInto` guards below turn a not-yet-threaded field into a compile
+ * error instead of a silent drop. See the intent/options.ts field comments for
+ * each inherited seam's contract; respond-path wiring notes:
+ *  - tableFinder is wired ONLY by web/app/actions.ts's askQuestion dependency
+ *    construction (absent: benchmark, tests, CLI, replyToClarification → the
+ *    unmatched exit stays the byte-identical B15 clarification); a confident
+ *    finder pick routes an unloaded topic to the on-demand fetch
+ *    acknowledgment ('onboarding_pending' / 'onboarding_already_pending');
+ *  - extraCanonicalMeasures is passed by the onboarding job's delivery re-run
+ *    (src/ingestion/onboarding.ts) and — #112 — by web/app/actions.ts's live
+ *    chat turns (loadOnboardedVocabulary) so an ALREADY-onboarded topic
+ *    answers at the normal question price instead of re-triggering the
+ *    100-credit onboarding;
+ *  - clickOptionsEnabled (CLARIFY_CLICK_ENABLED) additionally gates the
+ *    deterministic take-rung in respondToClarificationReply below.
+ *
+ * `client`/`config` are aliased to the respond layer's own names
+ * (intentClient/parserConfig — this bag also carries answerClient, so a bare
+ * `client` would be ambiguous); `model`/`maxTokens` are deliberately NOT
+ * exposed — each client harness owns its model (INTENT_MODEL /
+ * PHRASING_MODEL), and no respond caller ever overrode them per call. */
+export interface RespondOptions
+  extends Omit<FreshIntentParseOptions, 'client' | 'config' | 'model' | 'maxTokens'> {
   /** Shared LLM client for BOTH intent parsing and clarify-reply parsing
    * (same seam, ADR 012/013). */
-  intentClient: IntentLlmClient;
+  intentClient: FreshIntentParseOptions['client'];
+  parserConfig?: FreshIntentParseOptions['config'];
   /** LLM client for answer phrasing (ADR 013's harness — same interface,
    * different model/fixtures). */
   answerClient: LlmClient;
@@ -69,31 +100,11 @@ export interface RespondOptions {
    * (web/app/actions.ts); absent everywhere else (benchmark, tests, CLI) →
    * byte-identical pre-#144 behavior, zero extra LLM calls. */
   semanticCheck?: ComposeOptions['semanticCheck'];
-  /** YYYY-MM-DD "today" — injected, never the wall clock (docs/05 staleness,
-   * ADR 012 period policy). */
-  referenceDate: string;
-  parserConfig?: ParserConfig;
   /** WP15 (ADR 021): the previous turn's resolved intent as a merge candidate
    * for follow-up questions. MUST already be validated (context/validate.ts)
    * — the caller owns the trust boundary; this layer treats it as vocabulary.
    * Absent/null = a standalone first-turn parse, exactly the pre-WP15 path. */
   conversationContext?: ConversationContext | null;
-  /** WP16 sub-part 2 (ADR 026): OPTIONAL table-finder. Wired ONLY by
-   * web/app/actions.ts's askQuestion dependency construction; absent
-   * everywhere else (benchmark, tests, CLI, replyToClarification) → the
-   * unmatched exit stays the byte-identical B15 clarification. When present,
-   * a confident finder pick routes an unloaded topic to the on-demand fetch
-   * acknowledgment ('onboarding_pending' / 'onboarding_already_pending'). */
-  tableFinder?: TableFinder;
-  /** WP16 sub-part 2 (ADR 026, design §3.6): OPTIONAL on-demand-onboarded
-   * measures appended to the parser vocabulary. Passed by the onboarding
-   * job's delivery re-run (src/ingestion/onboarding.ts) so the just-onboarded
-   * measure is parseable, and — #112 — by web/app/actions.ts's live chat
-   * turns (loadOnboardedVocabulary) so an ALREADY-onboarded topic answers at
-   * the normal question price instead of re-triggering the 100-credit
-   * onboarding. Absent/empty everywhere else (benchmark, tests, CLI) →
-   * byte-identical Phase-0 prompt (fixtures + benchmark unaffected). */
-  extraCanonicalMeasures?: OnboardedMeasure[];
   /** WP129+130 (#129/#130, ADR 032): the #129 source-tags selection, a
    * STRUCTURAL input (never prompt text). Present only when the web action
    * wires it (flag on). When CBS is not selected it drives the deterministic
@@ -102,16 +113,18 @@ export interface RespondOptions {
    * Absent everywhere else (benchmark, tests, CLI) → byte-identical pre-WP path.
    */
   sourceSelection?: SourceSelection;
-  /** WP26 mechanism A (ADR 024, take-path A2): the `CLARIFY_CLICK_ENABLED`
-   * rollout flag. Off/absent (benchmark, tests, CLI, and production until the
-   * owner flips it) → no clickable options are ever built AND the deterministic
-   * take-rung below is inert, so every turn is byte-identical to pre-WP26. */
-  clickOptionsEnabled?: boolean;
-  /** WP26 mechanism B (ADR 024): the `ANSWER_FIRST_ENABLED` rollout flag. Off/
-   * absent ⇒ the query layer defaults nothing and every under-specified
-   * question clarifies exactly as it does today. */
-  answerFirstEnabled?: boolean;
 }
+
+/** The target bag, with EVERY key (the optional ones included) required to be
+ * named: the construction sites below build `ThreadedInto<...>` objects, so a
+ * field newly added to IntentCallOptions/FreshIntentParseOptions fails
+ * compilation RIGHT AT the bag that forgot to thread it — the #176/#191
+ * silent-drop class caught by tsc instead of by a production misfire. An
+ * optional field the site deliberately does not thread is written as an
+ * explicit `undefined` with a comment saying why — runtime-identical to the
+ * absent key for every consumer (no exactOptionalPropertyTypes in this repo;
+ * consumers read `options.model ?? INTENT_MODEL` style). */
+type ThreadedInto<T> = T & Record<keyof T, unknown>;
 
 /** WP26 mechanism A: the model field of a take that ran NO model. Recorded on
  * the audit row so R8 shows at a glance that this answer's reading came from
@@ -548,10 +561,16 @@ export async function respondToQuestion(
     // deselected-CBS turn refuses deterministically without any LLM call.
     const preParse = sourceSelectionRefusal(question, options.sourceSelection);
     if (preParse !== null) return preParse;
-    const parseOptions: ParseQuestionOptions = {
+    // ThreadedInto: every ParseQuestionOptions key must be named here — a new
+    // intent-side field can't be silently dropped on this path (#176/#191).
+    const parseOptions: ThreadedInto<ParseQuestionOptions> = {
       client: options.intentClient,
       referenceDate: options.referenceDate,
       config: options.parserConfig,
+      // No per-call override seam on RespondOptions (its doc comment): the
+      // parse always runs the intent harness's own model.
+      model: undefined,
+      maxTokens: undefined,
       // WP16 sub-part 2 (ADR 026): threaded into BOTH the standalone and
       // follow-up parse (parseFollowUpQuestion accepts the same field) so an
       // unmatched topic on either turn can route to onboarding when a finder
@@ -637,9 +656,19 @@ export async function respondToClarificationReply(
       return await respondToQuestion(db, reply, options);
     }
 
-    const clarifyOptions: ClarifyReplyOptions = {
+    // ThreadedInto: same compile-time threading guard as parseOptions above —
+    // #191 WAS this exact bag missing a field that compiled cleanly.
+    const clarifyOptions: ThreadedInto<ClarifyReplyOptions> = {
       client: options.intentClient,
       config: options.parserConfig,
+      // No per-call override seam on RespondOptions (its doc comment).
+      model: undefined,
+      maxTokens: undefined,
+      // Deliberately NOT threaded (see the FreshIntentParseOptions comment and
+      // the 'onboarding' branch below): a reply-turn unmatched exit stays the
+      // byte-identical B15 clarification — a reply-turn onboarding trigger is
+      // a separate, unmade decision.
+      tableFinder: undefined,
       // #191: the reply turn runs under the SAME rollout flag as the answer
       // turn. It was declared on ClarifyReplyOptions and threaded onward by
       // clarify.ts (lines 194, 210) but never SET here, and the result was not

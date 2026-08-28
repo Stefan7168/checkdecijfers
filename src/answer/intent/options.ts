@@ -8,18 +8,21 @@
 // (it reuses one object across both `parseQuestion` and
 // `parseFollowUpQuestion` calls); that reliance is now enforced by
 // construction instead of by coincidence.
+import type { LlmCallOptions } from '../llm/client.ts';
 import type { IntentLlmClient } from './client.ts';
 import type { OnboardedMeasure } from './prompt.ts';
 import type { TableFinder } from './policy.ts';
 import type { ParserConfig } from './types.ts';
 
 /** Every entry point's LLM-call plumbing plus the WP16/WP26 seams that apply
- * regardless of which turn is being parsed. */
-export interface IntentCallOptions {
+ * regardless of which turn is being parsed. The client/model/maxTokens triple
+ * comes from the shared LlmCallOptions base (llm/client.ts) — the same
+ * declaration ComposeOptions and SemanticCheckOptions extend. */
+export interface IntentCallOptions extends LlmCallOptions {
+  /** Redeclared (same type — IntentLlmClient IS LlmClient, re-exported under
+   * the WP6 name) so this seam keeps the intent module's own vocabulary. */
   client: IntentLlmClient;
   config?: ParserConfig;
-  model?: string;
-  maxTokens?: number;
   /** WP16 sub-part 2 (ADR 026): OPTIONAL table-finder — present only when the
    * caller wants an unmatched topic to route to the on-demand fetch trigger.
    * Absent everywhere else (benchmark, tests, CLI, and — deliberately, see

@@ -58,6 +58,20 @@ export interface LlmClient {
   complete(request: LlmRequest): Promise<LlmResponse>;
 }
 
+/** The caller-supplied plumbing every LLM-calling options bag starts from: the
+ * client seam plus the optional per-call model/max-tokens overrides (absent →
+ * the module's own constant, e.g. INTENT_MODEL / PHRASING_MODEL /
+ * SEMANTIC_CHECK_MODEL, decides). Extracted with intent/options.ts's seam
+ * (PR #93 review finding): ComposeOptions, SemanticCheckOptions and
+ * IntentCallOptions each hand-declared this same triple, the exact ad-hoc
+ * duplication that produced #176/#191 on the intent side. One declaration,
+ * extended everywhere — a field added here reaches every bag by construction. */
+export interface LlmCallOptions {
+  client: LlmClient;
+  model?: string;
+  maxTokens?: number;
+}
+
 /** JSON.stringify with recursively sorted object keys — hash input must not
  * depend on property insertion order. Undefined-valued fields are dropped,
  * which is what keeps pre-WP7 intent fixture hashes stable. */

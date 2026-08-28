@@ -11,7 +11,7 @@
 // them.
 import type { ValidatedResult } from '../../query/index.ts';
 import { DERIVED_DATA_MARKING } from '../../query/index.ts';
-import type { LlmClient, LlmUsage } from '../llm/client.ts';
+import type { LlmCallOptions, LlmUsage } from '../llm/client.ts';
 import { applyUnitExpansions } from './expand.ts';
 import { buildAssumptionLine, buildAttributionLine, buildDefinitionLine } from './format.ts';
 import { buildPhrasingRequest, COMPOSE_PROMPT_VERSION, PHRASING_MODEL } from './prompt.ts';
@@ -21,10 +21,7 @@ import { validateAnswerBody } from './validate.ts';
 import type { AnswerSource, ComposeAttempt, ComposedAnswer, SemanticCheckRecord } from './types.ts';
 import { ANSWER_SCHEMA_VERSION } from './types.ts';
 
-export interface ComposeOptions {
-  client: LlmClient;
-  model?: string;
-  maxTokens?: number;
+export interface ComposeOptions extends LlmCallOptions {
   /** #144 (ADR 034): the additive, reject-only semantic checker. Absent = off
    * (benchmark, tests, CLI — zero behavior and zero envelope-byte changes).
    * When present, an LLM body that passed the deterministic validator but

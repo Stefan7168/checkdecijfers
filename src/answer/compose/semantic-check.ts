@@ -18,7 +18,7 @@
 // re-running the LLM (ADR 034's R8 section).
 import { z } from 'zod';
 import type { ValidatedResult } from '../../query/index.ts';
-import type { LlmClient, LlmRequest, LlmUsage } from '../llm/client.ts';
+import type { LlmCallOptions, LlmRequest, LlmUsage } from '../llm/client.ts';
 import { formatValueNl, normalizeForScan } from './format.ts';
 import { scanBody, splitSentences } from './validate.ts';
 import type { SemanticCheckMode, SemanticCheckRecord, SemanticVerdictItem, SuspectToken } from './types.ts';
@@ -246,14 +246,11 @@ export function buildSemanticCheckRequest(
 // Runner
 // ---------------------------------------------------------------------------
 
-export interface SemanticCheckOptions {
-  client: LlmClient;
+export interface SemanticCheckOptions extends LlmCallOptions {
   /** Owner decision (ADR 034): fail_open serves on checker errors (the body
    * already passed the full deterministic validator), fail_closed drops down
    * the R3 ladder. */
   mode: SemanticCheckMode;
-  model?: string;
-  maxTokens?: number;
 }
 
 export interface SemanticCheckOutcome {
