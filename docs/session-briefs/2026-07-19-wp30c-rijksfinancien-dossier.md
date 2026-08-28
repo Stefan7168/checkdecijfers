@@ -109,9 +109,22 @@ plus one refusal pin per source (politie: an `RE`/wijk-grain ask; minfin: a phas
   hoofdstuk+artikel level, uitgaven/verplichtingen/ontvangsten (`vuo`) + fase dims; the verified Defensie pair is
   the natural first frozen key. `financiele_instrumenten` (Wie ontvingen) as a SECOND step (different unit — whole
   euros — and different shape; keep it out of v1 to avoid the 1000×-trap in one WP).
-- **Cheap complement worth one check regardless of choice (UNVERIFIED):** data.overheid lists a CBS-hosted
-  "Rijksfinanciën; 1900-2018" historical series — if that is an ordinary StatLine table, a slice of the begroting
-  TOPIC could ship through the EXISTING CBS pipeline without WP30c. Verify its table id before the owner call.
+- **Cheap complement worth one check regardless of choice — ✅ VERIFIED (2026-08-27, session 66, autonomous):** data.overheid's
+  "Rijksfinanciën; 1900-2018" IS an ordinary CBS StatLine v4 table, confirmed directly against the live catalog mirror
+  (`cbs_catalog`): **table id `80504NED`**, title matches exactly, `cbs_modified` **2020-02-20**. So the underlying premise
+  holds — a slice of the begroting topic COULD ship through the EXISTING CBS pipeline without WP30c, no new-source
+  architecture needed. **New finding, not in the original question: its catalog `status` is `Gediscontinueerd`** — CBS
+  is not extending it with new years (consistent with the title's own closed "1900-2018" range; this reads as "a
+  finished historical archive," not "an abandoned mid-stream table," but that reading is this session's inference,
+  not independently confirmed). **Onboarding it is a separate, larger task from this lookup** — the same multi-step
+  process the 9 coverage-sprint tables went through (schema fingerprint, dimension/canonical-measure mapping, 2-3
+  frozen benchmark verification tasks per [05-data-rules.md](../05-data-rules.md)'s table-onboarding rule, a live
+  sync) — deliberately NOT attempted here; this was scoped to the id-verification check only. Whoever picks this up
+  next: also check `docs/RUNBOOK.md`/[#108](../open-questions.md) posture for onboarding a table that's ALREADY
+  discontinued at registration time — #108's new status-flip detector (session 66) watches for a REGISTERED table
+  going discontinued after the fact; a table discontinued BEFORE onboarding is a different, not-yet-considered case
+  worth a deliberate decision (build anyway since the range is closed and won't go stale in the usual sense? require
+  explicit owner sign-off given the status? #108's own detection logic doesn't cover this entry case).
 
 ## 5. Effort, spend, and the constraint that binds either choice
 
