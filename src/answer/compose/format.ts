@@ -255,6 +255,56 @@ export function buildAssumptionLine(result: ValidatedResult): string | null {
   return parts.length > 0 ? parts.join(' ') : null;
 }
 
+/** #39: a registry alternate label, cleaned for display. The curated labels
+ * double as intent-parser prompt notes and some carry a registry-internal
+ * cross-reference ("eigen key: gdp_growth_yoy_volume", "key
+ * average_existing_home_sale_price") that means nothing to a reader. This
+ * strips exactly that cross-reference — a deterministic REMOVAL, never a
+ * rewording (principle a: code may drop internal notation, it may not invent
+ * words) — and tidies the separators the removal leaves behind. */
+export function displayAlternateLabel(label: string): string {
+  return (
+    label
+      // the internal cross-reference: "eigen key: x_y" / "key x_y" — an
+      // underscore_key never occurs in real Dutch copy, so this can only
+      // match the registry's own notation.
+      .replace(/(?:eigen\s+)?key:?\s+[a-z0-9]+(?:_[a-z0-9]+)+/gi, '')
+      // an emptied parenthetical: "(  )" / "(; )" / "(: )"
+      .replace(/\(\s*[;,:]?\s*\)/g, '')
+      // a dangling separator left before a closing paren: "(de headline; )"
+      .replace(/\s*[;,:]+\s*\)/g, ')')
+      // a colon that now introduces nothing but a parenthetical:
+      // "lezing:  (85773NED)" → "lezing (85773NED)"
+      .replace(/:\s+\(/g, ' (')
+      .replace(/\s{2,}/g, ' ')
+      .trim()
+      .replace(/[;,:]+$/, '')
+      .trim()
+  );
+}
+
+/** #39 (owner policy, 2026-07-04): when the answer used a canonical default
+ * that has registry-recorded alternate readings, SAY that those readings
+ * exist — never silently pick a definition. Like buildDefinitionLine and
+ * buildAssumptionLine above, this is the SINGLE source of truth: compose.ts
+ * builds the line with it and audit/reconstruct.ts re-derives it
+ * byte-identically from the stored result (R8). It is deterministic code over
+ * validated Attribution data, sits OUTSIDE the LLM-scanned body (R1's
+ * structural exemption), and carries no data value — it names readings, not
+ * numbers. `?? null` (A1, docs/13): rows stored before #39 and answers whose
+ * default has no alternates serialize no key at all. */
+export function buildAlternatesLine(result: ValidatedResult): string | null {
+  const alternates = result.attribution.alternates ?? null;
+  if (alternates === null || alternates.length === 0) return null;
+  const labels = alternates
+    .map((a) => displayAlternateLabel(a.label))
+    .filter((label) => label.length > 0);
+  if (labels.length === 0) return null;
+  return labels.length === 1
+    ? `Er is ook een andere lezing beschikbaar: ${labels[0]}.`
+    : `Er zijn ook andere lezingen beschikbaar: ${labels.join('; ')}.`;
+}
+
 /** The R4 attribution sentence — the single builder for every surface that
  * displays it: answer text (compose) and chart specs (WP8). One source of
  * truth so the two can never drift apart. */

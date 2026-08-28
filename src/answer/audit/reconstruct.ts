@@ -23,7 +23,7 @@
 import { DERIVED_DATA_MARKING } from '../../query/index.ts';
 import type { ValidatedResult } from '../../query/index.ts';
 import { buildChartSpec, chartSpecSchema } from '../../chart/index.ts';
-import { buildAssumptionLine, buildAttributionLine, buildDefinitionLine } from '../compose/format.ts';
+import { buildAlternatesLine, buildAssumptionLine, buildAttributionLine, buildDefinitionLine } from '../compose/format.ts';
 import { findSuspectTokens } from '../compose/semantic-check.ts';
 import { validateAnswerBody } from '../compose/validate.ts';
 import { stableStringify } from '../llm/client.ts';
@@ -227,6 +227,15 @@ function checkAnswerReconstruction(record: AuditRecord, problems: string[]): voi
     problems.push('definition line does not re-derive from the stored attribution');
   }
 
+  // #39: the alternate-reading disclosure re-derives from the stored
+  // attribution's own alternates through the SAME builder compose.ts used.
+  // `?? null` (A1, docs/13): pre-#39 rows and answers without alternates
+  // serialize no key at all.
+  const alternatesLine = buildAlternatesLine(result);
+  if ((answer.alternatesLine ?? null) !== alternatesLine) {
+    problems.push('alternate-reading line does not re-derive from the stored attribution');
+  }
+
   // WP26 mechanism B (ADR 024): the defaulted-axis disclosure re-derives from
   // the stored result's own flags through the SAME builder compose.ts used —
   // R8's point being that the assumption the user was shown must be a function
@@ -244,12 +253,13 @@ function checkAnswerReconstruction(record: AuditRecord, problems: string[]): voi
 
   // The rendered text re-assembles byte-identically from its stored parts —
   // in the SAME order compose.ts assembles them (assumption → definition →
-  // marking → attribution).
+  // alternates → marking → attribution).
   const text = [
     answer.body,
     '',
     ...(assumptionLine ? [assumptionLine] : []),
     ...(definitionLine ? [definitionLine] : []),
+    ...(alternatesLine ? [alternatesLine] : []),
     ...(markingLine ? [markingLine] : []),
     attribution,
   ].join('\n');

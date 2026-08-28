@@ -4,7 +4,7 @@
 // hermetic end-to-end suite (compose-pipeline.test.ts) exercises real query
 // results and recorded LLM output. Values mirror the frozen answer key so the
 // prose in the correct-fixture tests reads like real answers.
-import type { DerivationRecord, ResultCell, ValidatedResult } from '../../src/query/index.ts';
+import type { AttributionAlternate, DerivationRecord, ResultCell, ValidatedResult } from '../../src/query/index.ts';
 import { DERIVED_DATA_MARKING } from '../../src/query/index.ts';
 
 interface CellSpec {
@@ -52,6 +52,9 @@ export function makeResult(spec: {
   definitionLabel?: string | null;
   definitionText?: string | null;
   periodSemantics?: string | null;
+  /** #39: registry alternates — present-only on the attribution, like the real
+   * query layer serializes them (absent unless non-empty). */
+  alternates?: AttributionAlternate[];
 }): ValidatedResult {
   const cells = spec.cells;
   return {
@@ -70,6 +73,9 @@ export function makeResult(spec: {
       definitionLabel: spec.definitionLabel ?? null,
       definitionText: spec.definitionText ?? null,
       periodSemantics: spec.periodSemantics ?? null,
+      ...(spec.alternates !== undefined && spec.alternates.length > 0
+        ? { alternates: spec.alternates }
+        : {}),
     },
     intent: {
       schemaVersion: 1,

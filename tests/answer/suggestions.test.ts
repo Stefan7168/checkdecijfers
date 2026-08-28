@@ -250,9 +250,15 @@ describe('the envelope: suggestions ride the response, text is byte-untouched (R
     // envelope's own STRUCTURAL attribution field — every other byte is the
     // frozen literal. Any suggestions-work leak into `text` fails here.
     const sync = response.result.attribution.syncedAt.slice(0, 10);
+    // #39 (2026-08-27, session 66): the golden literal gained ONE line — the
+    // deterministic alternate-reading disclosure for cpi_yearly_inflation's
+    // registry-recorded alternate. A deliberate, documented update of the
+    // frozen text (the alternate is registry data, not a new number source),
+    // not drift: every other byte is the 2026-07-11 literal.
     expect(response.text).toBe(
       'De inflatie (jaarmutatie CPI, alle bestedingen) bedroeg in 2024 3,3%.\n\n' +
         'Definitie: inflatie (jaarmutatie CPI, alle bestedingen).\n' +
+        'Er is ook een andere lezing beschikbaar: CPI indexniveau (2025=100), geen mutatiepercentage.\n' +
         `Bron: CBS StatLine, tabel 86141NED — Consumentenprijzen; CPI 2025=100, index en mutaties. ` +
         `Gegevens gesynchroniseerd op ${sync}. Periode: 2024. Licentie: CC BY 4.0.`,
     );

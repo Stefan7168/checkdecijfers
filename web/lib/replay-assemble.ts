@@ -81,6 +81,7 @@ function assistantMessage(part: ReplayAssistantPart): ChatMessage {
           assumptionLine: part.answerView.assumptionLine,
           stalenessWarning: part.answerView.stalenessWarning,
           definitionLine: part.answerView.definitionLine,
+          alternatesLine: part.answerView.alternatesLine ?? null,
           markingLine: part.answerView.markingLine,
           attribution: part.answerView.attributionLine,
           tableId: attribution?.tableId ?? '',

@@ -499,6 +499,10 @@ export function Chat({
                   assumptionLine: response.answer.assumptionLine ?? null,
                   stalenessWarning: response.stalenessWarning,
                   definitionLine: response.answer.definitionLine,
+                  // #39: `?? null` guards the deploy-window skew AND every
+                  // answer without registry-recorded alternates (the key is
+                  // simply absent — A1).
+                  alternatesLine: response.answer.alternatesLine ?? null,
                   markingLine: response.answer.markingLine,
                   attribution: response.answer.attributionLine,
                   tableId: response.result.attribution.tableId,
@@ -667,6 +671,12 @@ export function Chat({
             ) : null}
             {message.answerView?.definitionLine ? (
               <p className="mt-1 text-xs text-ink-muted">{message.answerView.definitionLine}</p>
+            ) : null}
+            {/* #39: the alternate-reading disclosure — plain text under the
+              * definition it qualifies (the clickable affordance is #89,
+              * deliberately not built here). */}
+            {message.answerView?.alternatesLine ? (
+              <p className="mt-1 text-xs text-ink-muted">{message.answerView.alternatesLine}</p>
             ) : null}
             {message.answerView?.markingLine ? (
               <p className="mt-1 text-xs text-ink-muted">{message.answerView.markingLine}</p>

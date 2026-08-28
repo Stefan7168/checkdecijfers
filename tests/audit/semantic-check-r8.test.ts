@@ -35,6 +35,12 @@ function rebuildTexts(record: AuditRecord): void {
     answer.body,
     '',
     ...(answer.definitionLine ? [answer.definitionLine] : []),
+    // #39: this record's real alternatesLine (if any) survives the clone
+    // untouched by this helper — thread it through the same way
+    // reconstruct.ts/compose.ts do, or a body-only edit here would make
+    // reconstruction see a stored text missing a line the attribution still
+    // has.
+    ...(answer.alternatesLine ? [answer.alternatesLine] : []),
     ...(answer.markingLine ? [answer.markingLine] : []),
     answer.attributionLine,
   ].join('\n');

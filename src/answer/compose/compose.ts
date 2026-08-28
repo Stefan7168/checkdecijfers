@@ -13,7 +13,7 @@ import type { ValidatedResult } from '../../query/index.ts';
 import { DERIVED_DATA_MARKING } from '../../query/index.ts';
 import type { LlmCallOptions, LlmUsage } from '../llm/client.ts';
 import { applyUnitExpansions } from './expand.ts';
-import { buildAssumptionLine, buildAttributionLine, buildDefinitionLine } from './format.ts';
+import { buildAlternatesLine, buildAssumptionLine, buildAttributionLine, buildDefinitionLine } from './format.ts';
 import { buildPhrasingRequest, COMPOSE_PROMPT_VERSION, PHRASING_MODEL } from './prompt.ts';
 import { runSemanticCheck, type SemanticCheckOptions, type SemanticCheckOutcome } from './semantic-check.ts';
 import { renderTemplateBody } from './template.ts';
@@ -62,6 +62,12 @@ function assemble(result: ValidatedResult, rawBody: string, source: AnswerSource
   // otherwise falls back to the short definitionLabel with the circular-title
   // suppression (lever a).
   const definitionLine = buildDefinitionLine(result);
+  // #39: the alternate-reading disclosure, directly AFTER the definition it
+  // qualifies — the reader sees which reading was used, then that others
+  // exist. Same single-builder discipline as the lines above:
+  // audit/reconstruct.ts re-derives it through buildAlternatesLine, so the
+  // shown disclosure and the audited one can never drift.
+  const alternatesLine = buildAlternatesLine(result);
   // WP26 mechanism B (ADR 024): the defaulted-axis disclosure, FIRST among the
   // structural lines — it qualifies what the body just said, so the reader
   // meets it before the definition and the source. audit/reconstruct.ts
@@ -75,6 +81,7 @@ function assemble(result: ValidatedResult, rawBody: string, source: AnswerSource
     '',
     ...(assumptionLine ? [assumptionLine] : []),
     ...(definitionLine ? [definitionLine] : []),
+    ...(alternatesLine ? [alternatesLine] : []),
     ...(markingLine ? [markingLine] : []),
     attribution,
   ].join('\n');
@@ -86,6 +93,8 @@ function assemble(result: ValidatedResult, rawBody: string, source: AnswerSource
     // every pre-WP26 and flag-off envelope stays byte-identical.
     ...(assumptionLine !== null ? { assumptionLine } : {}),
     definitionLine,
+    // #39: present-only, same discipline — no alternates, no key.
+    ...(alternatesLine !== null ? { alternatesLine } : {}),
     markingLine,
     attributionLine: attribution,
     text,

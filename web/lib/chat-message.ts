@@ -26,6 +26,12 @@ export interface AnswerView {
   assumptionLine: string | null;
   stalenessWarning: string | null;
   definitionLine: string | null;
+  /** #39: the alternate-reading disclosure ("Er is ook een andere lezing
+   * beschikbaar: …") — deterministic code's own sentence, shown with the
+   * definition line. Null when the answer's canonical default has no
+   * registry-recorded alternates, and on every answer stored before #39
+   * (A1: the key is simply absent). */
+  alternatesLine: string | null;
   markingLine: string | null;
   /** The full R4 attribution sentence — ALWAYS visible on the chip, never
    * behind a click. */

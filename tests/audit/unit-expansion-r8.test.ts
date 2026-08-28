@@ -52,6 +52,14 @@ describe('R8 across the #125a boundary (B6, the factor-unit benchmark task)', ()
       old.response.answer.body = old.response.answer.body.replace(' (= 8.204.000)', '');
       expect(old.response.answer.body).not.toContain('8.204.000');
       old.response.answer.markingLine = null;
+      // #39: a pre-#125a row necessarily predates #39 too — a genuinely old
+      // row carries no alternates data at all. Blank BOTH the derived line
+      // and the underlying attribution field it re-derives from (same pairing
+      // as the derivations/markingLine blanking above), or reconstruction
+      // would recompute a non-null alternatesLine from the still-real
+      // attribution and flag it against the blanked display field.
+      old.response.answer.alternatesLine = null;
+      delete old.response.result.attribution.alternates;
       const oldText = [
         old.response.answer.body,
         '',

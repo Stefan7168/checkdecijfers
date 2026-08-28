@@ -49,11 +49,14 @@ and that difference is checked.
 
 **Present-only** (absent = off/pre-feature):
 `ResponseBase.sourceSelection`, `ResponseBase.webSection` (both also nullable),
-`ComposedAnswer.assumptionLine` (nullable), `ComposedAnswer.semanticCheck`,
+`ComposedAnswer.assumptionLine` (nullable), `ComposedAnswer.alternatesLine` (nullable, #39),
+`ComposedAnswer.semanticCheck`,
 `ClarificationResponse.suggestions`, `RefusalResponse.pending`,
 `PendingClarification.clickOptions`, `PendingClarification.rescueOnly`,
 `PendingClarification.conversationContext` (nullable),
-and on the query side `ValidatedResult.regionDefaulted` / `.periodDefaulted`.
+and on the query side `ValidatedResult.regionDefaulted` / `.periodDefaulted` and
+`Attribution.alternates` (#39 — absent on explicit targets, on canonical measures without
+registry-recorded alternates, and on every row stored before #39).
 
 **Required-nullable:** `AnswerResponse.chart`, `AnswerResponse.stalenessWarning`,
 `ComposedAnswer.definitionLine`, `ComposedAnswer.markingLine`, `ComposedAnswer.model`,

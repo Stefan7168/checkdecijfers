@@ -64,6 +64,8 @@ export function fakeAnswerResponse(opts: {
   /** WP26 mechanism B (ADR 024): the defaulted-axis disclosure. */
   assumptionLine?: string | null;
   definitionLine?: string | null;
+  /** #39: the alternate-reading disclosure line. */
+  alternatesLine?: string | null;
   markingLine?: string | null;
   attributionLine?: string;
   /** WP29 (#73): servability-gated follow-up chip texts the chat renders. */
@@ -85,6 +87,7 @@ export function fakeAnswerResponse(opts: {
       body,
       assumptionLine: opts.assumptionLine ?? null,
       definitionLine: opts.definitionLine ?? null,
+      alternatesLine: opts.alternatesLine ?? null,
       markingLine: opts.markingLine ?? null,
       attributionLine:
         opts.attributionLine ??

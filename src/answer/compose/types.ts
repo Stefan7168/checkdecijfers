@@ -108,6 +108,16 @@ export interface ComposedAnswer {
   /** "Definitie: …" — rendered whenever a canonical default was applied
    * (attribution.definitionLabel), structurally, never left to the LLM. */
   definitionLine: string | null;
+  /** #39 (owner policy 2026-07-04): the alternate-reading disclosure ("Er is
+   * ook een andere lezing beschikbaar: …") — built by deterministic code
+   * (buildAlternatesLine) from the registry alternates carried on the stored
+   * attribution, outside the LLM-scanned body, and re-derived byte-identically
+   * at audit time (R8) by the same builder.
+   *
+   * OPTIONAL and present-only (docs/13): an answer whose canonical default has
+   * no recorded alternates, every explicit-target answer, and every row stored
+   * before #39 carries no key at all — readers MUST use `?? null`. */
+  alternatesLine?: string | null;
   /** CC BY derived-data marking — rendered whenever the result carries any
    * derivation record (R5; docs/05 Source attribution section). */
   markingLine: string | null;

@@ -157,6 +157,20 @@ export type DerivationRecord =
       value: number;
     });
 
+/** #39: one non-chosen alternate reading of a canonical measure — the
+ * registry's own record (canonical_measures.alternates) carried onto the
+ * result so the answer can STATE that the alternate exists (owner policy,
+ * 2026-07-04: never silently pick a definition). Mirrors the registry shape
+ * (src/registry/types.ts CanonicalMeasureAlternate) so the later #89 UI
+ * affordance has the full coordinates to build from, not just a label. */
+export interface AttributionAlternate {
+  /** Present when the alternate differs by measure code. */
+  measure?: string;
+  /** Present when the alternate differs by dimension coordinate(s). */
+  dims?: Record<string, string>;
+  label: string;
+}
+
 /** R4: what every answer must display, carried in the result so no rendering
  * path can drop it. */
 export interface Attribution {
@@ -186,6 +200,13 @@ export interface Attribution {
   /** What a period code means for this table + grain (registry
    * period_semantics: stand per 1 januari vs. jaargemiddelde). */
   periodSemantics: string | null;
+  /** #39: the registry-recorded alternate readings of the chosen canonical
+   * default, so the answer can state that a non-chosen reading exists (owner
+   * policy 2026-07-04 — never silently pick a definition). PRESENT-ONLY
+   * (docs/13-envelope-presence-grammar.md): absent on explicit targets, on
+   * canonical measures without alternates, and on every row stored before
+   * #39 — readers use `?? []`/`?? null`, never a bare read. */
+  alternates?: AttributionAlternate[];
 }
 
 export type ResultShape = 'single' | 'series' | 'comparison' | 'derived';

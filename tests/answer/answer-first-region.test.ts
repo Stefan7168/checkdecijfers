@@ -150,6 +150,9 @@ describe('flag on: the national total answers, and says so', () => {
       '',
       ...(buildAssumptionLine(outcome) ? [buildAssumptionLine(outcome)!] : []),
       ...(answer.definitionLine ? [answer.definitionLine] : []),
+      // #39: the alternate-reading disclosure sits between definition and
+      // marking — same order as compose.ts/reconstruct.ts.
+      ...(answer.alternatesLine ? [answer.alternatesLine] : []),
       ...(answer.markingLine ? [answer.markingLine] : []),
       answer.attributionLine,
     ].join('\n');

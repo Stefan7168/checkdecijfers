@@ -12,6 +12,7 @@ import type { CbsSlice } from '../cbs-adapter/types.ts';
 import type { Db } from '../db/types.ts';
 import { parsePeriodCode, type ParsedPeriod } from '../ingestion/periods.ts';
 import type {
+  AttributionAlternate,
   IntentDerivation,
   PeriodGrain,
   QueryRefusal,
@@ -62,6 +63,12 @@ export interface ResolvedQuery {
   derivation: IntentDerivation;
   definitionLabel: string | null;
   definitionText: string | null;
+  /** #39: the non-chosen alternate readings recorded on the resolved canonical
+   * measure (canonical_measures.alternates) — [] for explicit targets and for
+   * canonical measures without any. Read from the SAME registry row
+   * definitionLabel comes from, so the disclosure can never name an alternate
+   * the chosen default does not actually have. */
+  alternates: AttributionAlternate[];
   table: {
     title: string;
     version: number;
@@ -290,6 +297,7 @@ export async function resolveIntent(
   let explicitDims: Record<string, string>;
   let definitionLabel: string | null;
   let definitionText: string | null;
+  let alternates: AttributionAlternate[];
   if (intent.target.kind === 'canonical') {
     // definition_text (the real CBS blurb, #115 lever b, migration 014) is read
     // ONLY for on-demand-onboarded keys. This keeps the HOT seed-table path off
@@ -300,8 +308,8 @@ export async function resolveIntent(
     // which requires the column — so this branch never hits a missing column.
     const onboarded = intent.target.key.startsWith('onboarded:');
     const cols = onboarded
-      ? 'table_id, measure, measure_title, dims, definition_label, definition_text'
-      : 'table_id, measure, measure_title, dims, definition_label';
+      ? 'table_id, measure, measure_title, dims, definition_label, definition_text, alternates'
+      : 'table_id, measure, measure_title, dims, definition_label, alternates';
     const result = await db.query(
       `select ${cols} from canonical_measures where key = $1`,
       [intent.target.key],
@@ -316,6 +324,14 @@ export async function resolveIntent(
     explicitDims = {};
     definitionLabel = row.definition_label as string;
     definitionText = onboarded ? ((row.definition_text as string | null) ?? null) : null;
+    // #39: the alternates recorded on this SAME registry row. Defensive over
+    // the JSONB shape (the registry writes it, but a row is forever): only
+    // entries with a real label survive — a malformed entry is dropped, never
+    // rendered (fail toward claiming less).
+    alternates = parseJsonb<AttributionAlternate[]>(row.alternates, []).filter(
+      (a): a is AttributionAlternate =>
+        a != null && typeof a.label === 'string' && a.label.trim().length > 0,
+    );
   } else {
     tableId = intent.target.tableId;
     measure = intent.target.measure;
@@ -323,6 +339,9 @@ export async function resolveIntent(
     explicitDims = intent.target.dims ?? {};
     definitionLabel = null;
     definitionText = null;
+    // Explicit targets chose their own coordinates — there is no registry
+    // default whose non-chosen readings need disclosing.
+    alternates = [];
   }
 
   const table = await fetchTable(db, tableId);
@@ -491,6 +510,7 @@ export async function resolveIntent(
       derivation: intent.derivation,
       definitionLabel,
       definitionText,
+      alternates,
       table: {
         title: table.title,
         version: table.version,

@@ -121,6 +121,7 @@ const MANIFEST: Record<string, Record<string, Entry>> = {
     body: { category: 'revalidated' }, // R1/R3/R9/R10/R11 re-run against the stored result
     assumptionLine: { category: 'rederived' }, // buildAssumptionLine, byte-identical, `?? null` (A1)
     definitionLine: { category: 'rederived' }, // buildDefinitionLine, byte-identical
+    alternatesLine: { category: 'rederived' }, // #39 buildAlternatesLine, byte-identical, `?? null` (A1)
     markingLine: { category: 'rederived' }, // from result.derivations
     attributionLine: { category: 'rederived' }, // buildAttributionLine, byte-identical (R4 positional)
     text: { category: 'rederived' }, // re-assembles from body + the structural lines, in order
@@ -244,7 +245,7 @@ describe('the envelope-key manifest covers the declared types', () => {
       AnswerResponse: 7,
       ClarificationResponse: 6,
       RefusalResponse: 11,
-      ComposedAnswer: 14,
+      ComposedAnswer: 15,
     };
     for (const [name, count] of Object.entries(expectedCounts)) {
       expect(declared.get(name)?.length, `${name} parsed an unexpected member count`).toBe(count);

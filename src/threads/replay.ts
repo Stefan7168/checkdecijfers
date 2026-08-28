@@ -29,6 +29,10 @@ export interface ReplayAnswerView {
    * on every pre-WP26 row and every non-defaulted answer. */
   assumptionLine: string | null;
   definitionLine: string | null;
+  /** #39: the alternate-reading disclosure the user was shown. Replayed from
+   * the STORED envelope, never re-decided. Null on every pre-#39 row and every
+   * answer without registry-recorded alternates. */
+  alternatesLine: string | null;
   markingLine: string | null;
   attributionLine: string;
   stalenessWarning: string | null;
@@ -86,6 +90,7 @@ function extractAnswerView(response: ComposedResponse): ReplayAnswerView | null 
     body,
     assumptionLine: answer?.assumptionLine ?? null,
     definitionLine: answer?.definitionLine ?? null,
+    alternatesLine: answer?.alternatesLine ?? null,
     markingLine: answer?.markingLine ?? null,
     attributionLine,
     stalenessWarning: (response as AnswerResponse).stalenessWarning ?? null,

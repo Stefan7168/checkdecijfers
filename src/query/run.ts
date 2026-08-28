@@ -504,6 +504,10 @@ export async function runQuery(
     definitionLabel: q.definitionLabel,
     definitionText: q.definitionText,
     periodSemantics: q.table.periodSemantics?.[q.grain] ?? null,
+    // #39: present-only (docs/13) — an answer whose canonical default has no
+    // recorded alternates, and every explicit-target answer, serializes no key
+    // at all, so all previously stored envelopes stay byte-identical.
+    ...(q.alternates.length > 0 ? { alternates: q.alternates } : {}),
   };
 
   const shape: ResultShape =
