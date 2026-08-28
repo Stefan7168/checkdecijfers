@@ -77,6 +77,11 @@ export type RegisterTablesFn = (
   db: Db,
   source: CbsSource,
   tables: Phase0Table[],
+  /** #110(c): `pinned: true` registers the tables as eviction-EXEMPT — the
+   * curated seed set (`ingest register`, the fixture harness). On-demand
+   * onboarding registers with the default (false): those rows are the TTL
+   * cache the eviction GC (src/ingestion/eviction.ts) may remove. */
+  options?: { pinned?: boolean },
 ) => Promise<string[]>;
 
 /**

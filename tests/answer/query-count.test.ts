@@ -18,15 +18,27 @@
 // — because that is the half that runs identically every time. Billing, audit
 // writes and the LLM calls sit outside it and have their own seams.
 //
-// WHAT THE MEASURED NUMBERS SAY (2026-07-25, re-measured 2026-07-26):
+// WHAT THE MEASURED NUMBERS SAY (2026-07-25, re-measured 2026-07-26; +1 to
+// every SERVED number 2026-08-27 session 66, #110 — see the note below):
 //
-//   fully specified, region + period       12   ← the majority path
-//   national-only measure, fully specified  8   ← the cheapest real turn
+//   fully specified, region + period       13   ← the majority path
+//   national-only measure, fully specified  9   ← the cheapest real turn
 //   no region named, flags OFF              8   ← exits to a clarification
-//   no region named, flags ON              12   ← the flip: defaults and SERVES
-//   both axes open, flags ON               13   ← the most expensive shape
+//   no region named, flags ON              13   ← the flip: defaults and SERVES
+//   both axes open, flags ON               14   ← the most expensive shape
 //   NAMED ambiguous region, click OFF       3   ← #176, after the fix
 //   NAMED ambiguous region, click ON        4   ← the cost of building a chip
+//
+// #110 (2026-08-27, session 66): the on-demand table eviction/TTL feature
+// added ONE statement to every SERVED turn — runQuery's touchLastQueriedAt
+// bump (src/query/run.ts), which stamps the resolved table's last-use clock
+// for the eviction GC. The debounce (writes only when >1 day stale) bounds
+// ROW CHURN, not ROUND-TRIP COUNT: the check-and-maybe-update is one SQL
+// statement either way, so this +1 lands on every served answer, every time,
+// not just once a day — the connection-pooler cost this file exists to watch
+// (#173) is paid per request, same as the WP26 flags above it. Rows that
+// never reach runQuery (a clarification exit, an unmatched topic) are
+// unaffected — hence the flags-OFF/no-region row above stays 8, unchanged.
 //
 // The flag flip therefore adds four statements to a turn that named no region.
 // That is a real cost against a 15-connection ceiling (#173) — but it is not a
@@ -136,7 +148,7 @@ describe('the deterministic half of a turn costs a pinned number of statements',
       false,
     );
     expect(served).toBe(true);
-    expect(count).toBe(12);
+    expect(count).toBe(13);
   });
 
   it('flags off, NO region named — exits to a clarification', async () => {
@@ -160,7 +172,7 @@ describe('the deterministic half of a turn costs a pinned number of statements',
       true,
     );
     expect(served).toBe(true); // the national default answers
-    expect(count).toBe(12);
+    expect(count).toBe(13);
   });
 
   it('flags on, BOTH axes open — the most expensive defaulted shape', async () => {
@@ -169,7 +181,7 @@ describe('the deterministic half of a turn costs a pinned number of statements',
       true,
     );
     expect(served).toBe(true);
-    expect(count).toBe(13);
+    expect(count).toBe(14);
   });
 
   // ---- The #176 shape. Everything above names no region at all; only these
@@ -211,7 +223,7 @@ describe('the deterministic half of a turn costs a pinned number of statements',
       false,
     );
     expect(served).toBe(true);
-    expect(count).toBe(8);
+    expect(count).toBe(9);
   });
 });
 

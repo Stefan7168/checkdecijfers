@@ -66,7 +66,11 @@ export function unitsFromMeasures(measures: CbsMeasure[]): RegistryUnits {
 // registerTables
 // ---------------------------------------------------------------------------
 
-export const registerTables: RegisterTablesFn = async (db, source, tables) => {
+export const registerTables: RegisterTablesFn = async (db, source, tables, options = {}) => {
+  // #110(c): seed registrations pin (eviction-exempt); on-demand onboarding
+  // takes the default false — matching the column default, so the on-demand
+  // path needed no change when the option landed.
+  const pinned = options.pinned ?? false;
   const existingRows = await db.query('select id from cbs_tables');
   const existingIds = new Set(existingRows.rows.map((r) => r.id as string));
 
@@ -89,8 +93,8 @@ export const registerTables: RegisterTablesFn = async (db, source, tables) => {
     await db.withTransaction(async (tx) => {
       await tx.query(
         `insert into cbs_tables
-           (id, title, expected_dimensions, slice, units, update_cadence, schema_fingerprint)
-         values ($1, $2, $3, $4, $5, $6, null)`,
+           (id, title, expected_dimensions, slice, units, update_cadence, schema_fingerprint, pinned)
+         values ($1, $2, $3, $4, $5, $6, null, $7)`,
         [
           table.id,
           schema.title,
@@ -98,6 +102,7 @@ export const registerTables: RegisterTablesFn = async (db, source, tables) => {
           table.slice ? JSON.stringify(table.slice) : null,
           JSON.stringify(units),
           table.updateCadence,
+          pinned,
         ],
       );
 

@@ -287,6 +287,39 @@ export async function freshestForCanonical(
   return { periodCode: freshest.period_code as string, status: freshest.status as string };
 }
 
+/** #110(b): usage bookkeeping for the on-demand table lifecycle — records that
+ * an answer/follow-up/chart read used this table (`cbs_tables.last_queried_at`,
+ * migration 025), which is the eviction GC's staleness anchor
+ * (src/ingestion/eviction.ts). DEBOUNCED in the WHERE clause itself: the
+ * UPDATE writes only when the stored value is > 1 day stale (or null), so a
+ * popular table costs at most ~one row write per day — every other read runs a
+ * zero-row UPDATE (no write, no row lock). SQL `now()` rather than an injected
+ * clock, deliberately: the debounce needs no test-pinned instant (tests assert
+ * bump/no-bump by manipulating the stored value), and threading a clock through
+ * runQuery for bookkeeping would touch every caller.
+ *
+ * NEVER fails the read path: a bookkeeping write must not take down an answer
+ * (the worst a missed bump can cost is a table evicted up to a day early, and
+ * eviction is recoverable by re-onboarding — an answer failure is not). This
+ * isolation also makes the migration-025 deploy window safe: code that reaches
+ * production before the column exists warns instead of erroring. */
+export async function touchLastQueriedAt(db: Db, tableId: string): Promise<void> {
+  try {
+    await db.query(
+      `update cbs_tables
+          set last_queried_at = now()
+        where id = $1
+          and (last_queried_at is null or last_queried_at < now() - interval '1 day')`,
+      [tableId],
+    );
+  } catch (error) {
+    console.warn(
+      `last_queried_at bump failed for table ${tableId} (answer unaffected):`,
+      error instanceof Error ? error.message : String(error),
+    );
+  }
+}
+
 export async function runQuery(
   db: Db,
   intent: StructuredIntent,
@@ -296,6 +329,14 @@ export async function runQuery(
   const outcome = await resolveIntent(db, intent, options);
   if (!outcome.ok) return outcome;
   const q = outcome.resolved;
+
+  // #110(b): every consumer of the query executor — answers, follow-ups, chart
+  // reads — bumps the resolved table's last-queried timestamp here, at the one
+  // choke point, so no present or future caller can forget to. Runs on the
+  // missing-cell diagnosis path too (a refusal for a specific period is still
+  // live demand for the table). Awaited: it is one debounced statement, and an
+  // un-awaited write racing the caller's connection teardown would be worse.
+  await touchLastQueriedAt(db, q.tableId);
 
   // --- Fetch all requested cells in one deterministic query ------------------
   const result = await db.query(

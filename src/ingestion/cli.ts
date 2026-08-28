@@ -84,7 +84,8 @@ export async function runCli(argv: string[], deps: Deps): Promise<number> {
   if (args.command === 'register') {
     const start = Date.now();
     try {
-      const registered = await registerTables(db, source, SEED_TABLES);
+      // #110(c): seed tables register PINNED — the permanent, eviction-exempt set.
+      const registered = await registerTables(db, source, SEED_TABLES, { pinned: true });
       const duration = ((Date.now() - start) / 1000).toFixed(1);
       if (registered.length === 0) {
         console.log(`All ${SEED_TABLES.length} seed table(s) were already registered. Nothing to do.`);
@@ -102,7 +103,7 @@ export async function runCli(argv: string[], deps: Deps): Promise<number> {
   const seedTables = args.all ? SEED_TABLES : SEED_TABLES.filter((t) => args.tableIds.includes(t.id));
 
   try {
-    const registered = await registerTables(db, source, seedTables);
+    const registered = await registerTables(db, source, seedTables, { pinned: true });
     if (registered.length > 0) {
       console.log(`Auto-registered ${registered.length} table(s) before syncing: ${registered.join(', ')}.`);
     }

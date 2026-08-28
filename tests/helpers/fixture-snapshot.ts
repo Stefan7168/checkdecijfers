@@ -121,7 +121,8 @@ async function buildIngested(): Promise<PGlite> {
   const db = wrapPGlite(client);
   await applyMigrations(db);
   const source = new FixtureSource(loadFixtureDocsTree(FIXTURES_DIR));
-  await registerTables(db, source, SEED_TABLES);
+  // #110(c): pinned, mirroring `ingest register` — the seed set is eviction-exempt.
+  await registerTables(db, source, SEED_TABLES, { pinned: true });
   const applied = await applyRegistryDefaults(db);
   if (applied.tablesMissing.length > 0) {
     throw new Error(
