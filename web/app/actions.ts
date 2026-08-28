@@ -42,10 +42,10 @@ import { AnthropicWebSearchClient } from '../backend/websearch/index.ts';
 import type { SourceSelection } from '../backend/websearch/index.ts';
 import { SOURCES } from '../backend/sources/registry.ts';
 import { buildOnboardingFinder } from '../backend/ingestion/onboarding-finder.ts';
-import {
-  onboardingPrice,
-  triggerOnboarding,
-} from '../backend/ingestion/onboarding-trigger.ts';
+// #148: onboardingPrice is no longer imported here — the 'started' branch
+// below now uses the amount triggerOnboarding actually debited
+// (result.credits) instead of a second, independent price read.
+import { triggerOnboarding } from '../backend/ingestion/onboarding-trigger.ts';
 import { loadOnboardedVocabulary } from '../backend/ingestion/onboarding-vocab.ts';
 import type { OnboardedMeasure } from '../backend/answer/intent/prompt.ts';
 // WP135 (ADR 033): the chat-thread entity (Stage A). A NEW top-level backend
@@ -66,6 +66,10 @@ import { currentUserId } from '../lib/current-user.ts';
 import { getDb } from '../lib/db.ts';
 import { kickOnboardingJob } from '../lib/onboarding-kick.ts';
 import { createClient } from '../lib/supabase-server.ts';
+// #149 (session-47 hunt): the SAME UUID-shape check the trial action already
+// uses (trial-actions.ts) — reused, not duplicated, to close the identical
+// gap on the paid path below.
+import { isUuid } from '../lib/trial.ts';
 
 // Auth check happens HERE, inside the Server Action — not only in proxy.ts.
 // Next's own data-security guidance is explicit that a Proxy matcher is an
@@ -123,11 +127,30 @@ function guardLength(text: string): void {
 /** The billing idempotency key is client-generated and equally untrusted: it
  * becomes `credit_transactions.request_id`, the one thing standing between a
  * double-submit and a double debit. The trial action has always type-checked
- * it (trial-actions.ts); the paid path had not. Same bound, same reason. */
+ * it (trial-actions.ts); the paid path had not. Same bound, same reason.
+ *
+ * #149 (session-47 hunt, closed session 66): length/type alone let a
+ * well-typed but non-UUID string (truncated, hand-typed, or otherwise
+ * malformed) through to `reserveDebit`'s SQL, where the uuid-typed
+ * `credit_transactions.request_id` column rejects it with a raw Postgres
+ * "invalid input syntax for type uuid" error INSIDE the transaction —
+ * rolled back cleanly (no debit, no spend; fail-safe for money either way)
+ * but surfacing as a masked 500 from deep inside the DB layer instead of a
+ * clean, well-labeled guard-clause error at the top of the action (worse
+ * logs/observability, no other consequence — the real client always sends
+ * `crypto.randomUUID()`, and chat.tsx already catches the rejection and
+ * shows a normal retry). `isUuid` (web/lib/trial.ts) already closed this
+ * exact gap for the anonymous trial action; reused here rather than
+ * duplicated, so the two paths can't drift onto different shape checks. */
 const MAX_REQUEST_ID_LENGTH = 100;
 
 function guardRequestId(requestId: string): void {
-  if (typeof requestId !== 'string' || requestId.length === 0 || requestId.length > MAX_REQUEST_ID_LENGTH) {
+  if (
+    typeof requestId !== 'string' ||
+    requestId.length === 0 ||
+    requestId.length > MAX_REQUEST_ID_LENGTH ||
+    !isUuid(requestId)
+  ) {
     throw new Error(`input rejected: malformed requestId`);
   }
 }
@@ -568,7 +591,14 @@ async function maybeTriggerOnboarding(
       after(() => kickOnboardingJob());
       // Show the acknowledgment; the caption must read the 100-credit fetch
       // cost, not the refunded question turn's 0 (design §2/§5).
-      return { ...gated, netCost: await onboardingPrice(getDb()) };
+      // #148: netCost is the amount triggerOnboarding ACTUALLY debited
+      // (result.credits) — not a second, independent onboardingPrice() read.
+      // A live reprice landing between the debit and this read used to be
+      // able to make the shown netCost drift from the real ledger entry
+      // (display-only; self-heals on refresh; history.ts always renders the
+      // true ledger cost) — mirrors the "never a fresh price read" fix
+      // already applied to src/ingestion/onboarding.ts's refundOnboarding.
+      return { ...gated, netCost: result.credits };
     case 'duplicate':
       // #113 kick-on-trigger: an active row already exists — a re-ask is the
       // natural user retry channel if an earlier kick failed, and the cron

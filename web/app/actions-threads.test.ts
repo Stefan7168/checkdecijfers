@@ -57,6 +57,9 @@ vi.mock('../backend/threads/index.ts', () => threads);
 import { askQuestion, replyToClarification } from './actions.ts';
 
 const fakeDb = {} as Db;
+// #149: guardRequestId now validates UUID shape — every call site needs a
+// real UUID rather than the old meaningless RID placeholder.
+const RID = '00000000-0000-4000-8000-000000000001';
 
 beforeEach(() => {
   currentUserId.mockResolvedValue('user-1');
@@ -99,28 +102,28 @@ function driveOk(response: ComposedResponse, auditId: number | null, netCost = 2
 describe('askQuestion — WP135 lazy thread creation ⟨A1⟩', () => {
   it('attaches (lazily creates) a thread on a gated-ok answer and returns its id', async () => {
     driveOk(fakeAnswer(), 5);
-    const outcome = await askQuestion('q', 'rid', null, undefined, null);
+    const outcome = await askQuestion('q', RID, null, undefined, null);
     expect(threads.attachOrCreateThread).toHaveBeenCalledWith(fakeDb, 'user-1', null, 5);
     expect(outcome.threadId).toBe(7);
   });
 
   it('does NOT create a thread on insufficient_credits (gate refuses)', async () => {
     billing.chargeAndRun.mockResolvedValue({ kind: 'insufficient_credits', balance: 5, required: 20 });
-    const outcome = await askQuestion('q', 'rid', null, undefined, null);
+    const outcome = await askQuestion('q', RID, null, undefined, null);
     expect(threads.attachOrCreateThread).not.toHaveBeenCalled();
     expect(outcome.threadId).toBeNull();
   });
 
   it('does NOT create a thread on duplicate_request', async () => {
     billing.chargeAndRun.mockResolvedValue({ kind: 'duplicate_request' });
-    const outcome = await askQuestion('q', 'rid', null, undefined, null);
+    const outcome = await askQuestion('q', RID, null, undefined, null);
     expect(threads.attachOrCreateThread).not.toHaveBeenCalled();
     expect(outcome.threadId).toBeNull();
   });
 
   it('does NOT create a thread when the audit write failed (auditId null)', async () => {
     driveOk(fakeAnswer(), null);
-    const outcome = await askQuestion('q', 'rid', null, undefined, null);
+    const outcome = await askQuestion('q', RID, null, undefined, null);
     expect(threads.attachOrCreateThread).not.toHaveBeenCalled();
     expect(outcome.threadId).toBeNull();
   });
@@ -129,7 +132,7 @@ describe('askQuestion — WP135 lazy thread creation ⟨A1⟩', () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
     driveOk(fakeAnswer(), 5);
     threads.attachOrCreateThread.mockRejectedValue(new Error('not attachable'));
-    const outcome = await askQuestion('q', 'rid', null, undefined, null);
+    const outcome = await askQuestion('q', RID, null, undefined, null);
     expect(outcome.gated.kind).toBe('ok');
     expect(outcome.threadId).toBeNull();
     spy.mockRestore();
@@ -137,7 +140,7 @@ describe('askQuestion — WP135 lazy thread creation ⟨A1⟩', () => {
 
   it('is byte-identical (NO thread work) when rawThreadId is ABSENT (Dashboard/benchmark path)', async () => {
     driveOk(fakeAnswer(), 5);
-    const outcome = await askQuestion('q', 'rid', null); // 3-arg call, no rawThreadId
+    const outcome = await askQuestion('q', RID, null); // 3-arg call, no rawThreadId
     expect(threads.validateThreadOwnership).not.toHaveBeenCalled();
     expect(threads.attachOrCreateThread).not.toHaveBeenCalled();
     expect(outcome.threadId).toBeNull();
@@ -148,7 +151,7 @@ describe('askQuestion — WP135 cross-user isolation ⟨A1⟩', () => {
   it('a forged/foreign thread id validates to null → a FRESH thread, never a cross-attach', async () => {
     threads.validateThreadOwnership.mockResolvedValue(null); // not owned by this user
     driveOk(fakeAnswer(), 5);
-    await askQuestion('q', 'rid', null, undefined, 999);
+    await askQuestion('q', RID, null, undefined, 999);
     expect(threads.validateThreadOwnership).toHaveBeenCalledWith(fakeDb, 'user-1', 999);
     // attach receives validatedThreadId null ⇒ a NEW thread, never 999.
     expect(threads.attachOrCreateThread).toHaveBeenCalledWith(fakeDb, 'user-1', null, 5);
@@ -157,7 +160,7 @@ describe('askQuestion — WP135 cross-user isolation ⟨A1⟩', () => {
   it('an OWNED thread id is passed through to the attach', async () => {
     threads.validateThreadOwnership.mockResolvedValue(3);
     driveOk(fakeAnswer(), 5);
-    await askQuestion('q', 'rid', null, undefined, 3);
+    await askQuestion('q', RID, null, undefined, 3);
     expect(threads.attachOrCreateThread).toHaveBeenCalledWith(fakeDb, 'user-1', 3, 5);
   });
 });
@@ -178,7 +181,7 @@ describe('replyToClarification — WP135 ⟨A6⟩ captured-thread binding', () =
   it('validates the CAPTURED thread id and attaches the reply to it', async () => {
     threads.validateThreadOwnership.mockResolvedValue(3);
     driveOk(fakeAnswer(), 8);
-    const outcome = await replyToClarification(pending, '2024', 'rid', undefined, 3);
+    const outcome = await replyToClarification(pending, '2024', RID, undefined, 3);
     expect(threads.validateThreadOwnership).toHaveBeenCalledWith(fakeDb, 'user-1', 3);
     expect(threads.attachOrCreateThread).toHaveBeenCalledWith(fakeDb, 'user-1', 3, 8);
     expect(outcome.threadId).toBe(7);
@@ -186,7 +189,7 @@ describe('replyToClarification — WP135 ⟨A6⟩ captured-thread binding', () =
 
   it('does NO thread work when rawThreadId is absent (byte-identical)', async () => {
     driveOk(fakeAnswer(), 8);
-    await replyToClarification(pending, '2024', 'rid');
+    await replyToClarification(pending, '2024', RID);
     expect(threads.attachOrCreateThread).not.toHaveBeenCalled();
   });
 });

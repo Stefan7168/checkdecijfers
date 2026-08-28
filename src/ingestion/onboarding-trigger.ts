@@ -49,8 +49,20 @@ export interface TriggerOnboardingInput {
 
 export type TriggerOnboardingResult =
   /** Debited 100 + queued the fetch. Show the acknowledgment; the turn's net
-   * cost is 100 (the 20-credit question debit was refunded by the gate). */
-  | { kind: 'started'; debitTransactionId: number; pendingId: number }
+   * cost is 100 (the 20-credit question debit was refunded by the gate).
+   *
+   * #148: `credits` is the amount ACTUALLY debited — `required` above, read
+   * ONCE at the top of this function and reused for both the debit and this
+   * field, never re-read. The caller (web/app/actions.ts's
+   * maybeTriggerOnboarding) uses it for `netCost` instead of a SECOND,
+   * independent `onboardingPrice(db)` read: `action_class_prices` is a live
+   * plain-UPDATE table, so an owner reprice racing between the two reads
+   * could otherwise make the displayed netCost drift from the amount the
+   * ledger actually shows (display-only; self-heals on refresh; history.ts
+   * always computes the real cost from the ledger). Mirrors the same
+   * "never a fresh price read" fix already applied to
+   * src/ingestion/onboarding.ts's refundOnboarding. */
+  | { kind: 'started'; debitTransactionId: number; pendingId: number; credits: number }
   /** Not enough credits for the 100-credit fetch — nothing was debited and no
    * row was queued. The web action shows the existing insufficient-credits UI
    * with required: 100; the audited acknowledgment exists but is not rendered
@@ -110,7 +122,7 @@ export async function triggerOnboarding(
         debitTransactionId: debit.id,
         ackAuditAnswerId: input.ackAuditAnswerId,
       });
-      return { kind: 'started', debitTransactionId: debit.id, pendingId: pending.id } as const;
+      return { kind: 'started', debitTransactionId: debit.id, pendingId: pending.id, credits: required } as const;
     });
   } catch (error) {
     // The only expected throw is the pending_one_active_per_user_table

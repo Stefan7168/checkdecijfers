@@ -63,10 +63,14 @@ describe('WP16 sub-part 2 onboarding-trigger wiring (source pins)', () => {
   });
 
   it('maps the three trigger results to the pinned gated shapes/costs', () => {
-    // started → 100-credit caption; insufficient → the existing UI shape with
-    // required 100; duplicate → net 0.
+    // started → the amount actually debited; insufficient → the existing UI
+    // shape with required 100; duplicate → net 0.
     expect(source).toContain("case 'started'");
-    expect(source).toContain('netCost: await onboardingPrice(getDb())');
+    // #148: netCost now reads the amount triggerOnboarding actually debited
+    // (result.credits), never a second, independent onboardingPrice() read
+    // that could drift from the real ledger entry on a live reprice.
+    expect(source).toContain('netCost: result.credits');
+    expect(source).not.toContain('netCost: await onboardingPrice(getDb())');
     expect(source).toContain("case 'insufficient'");
     expect(source).toContain("kind: 'insufficient_credits'");
     expect(source).toContain("case 'duplicate'");

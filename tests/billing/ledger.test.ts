@@ -162,6 +162,108 @@ describe('credit_transactions_validate_compensation (migration 008, adversarial-
       expect(comp).not.toBeNull();
     });
   });
+
+  // #147 (migration 023, session-47 hunt, closed session 66): the trigger
+  // above checks user + reason but — until this migration — never bounded
+  // the CREDITED AMOUNT to the debit's own magnitude. Defense-in-depth: no
+  // live caller can trigger this today (gate.ts, refundOnboarding and
+  // settleWebAddon all compensate <= the debit's stored/in-memory amount by
+  // construction), but nothing in the schema stopped a future one (an admin
+  // refund tool, a hand-run fix) from over-crediting silently.
+  describe('#147 — compensation amount bound (migration 023)', () => {
+    it('accepts a compensation at EXACTLY the debit\'s magnitude (the legal ceiling, e.g. a full refund)', async () => {
+      await withDb(async (db) => {
+        const userId = randomUUID();
+        const debit = await debitQuestion(db, userId, randomUUID(), 20);
+        // 20 in, 20 back out — the exact boundary, not merely under it (the
+        // existing "well-formed" test above only exercises a PARTIAL refund
+        // of 10 against a debit of 20, which never reaches this edge).
+        const comp = await compensate(db, userId, debit!.id, 20, null);
+        expect(comp).not.toBeNull();
+        expect(await getBalance(db, userId)).toBe(0); // -20 + 20
+      });
+    });
+
+    it('accepts a bounded PARTIAL compensation (e.g. the clarification-price refund gate.ts computes)', async () => {
+      await withDb(async (db) => {
+        const userId = randomUUID();
+        const debit = await debitQuestion(db, userId, randomUUID(), 20);
+        const comp = await compensate(db, userId, debit!.id, 12, null); // < 20
+        expect(comp).not.toBeNull();
+        expect(await getBalance(db, userId)).toBe(-8); // -20 + 12
+      });
+    });
+
+    it('rejects a compensation whose delta EXCEEDS the debit it reverses — the over-credit guard', async () => {
+      await withDb(async (db) => {
+        const userId = randomUUID();
+        const debit = await debitQuestion(db, userId, randomUUID(), 20);
+        await expect(
+          db.query(
+            `insert into credit_transactions (user_id, delta, reason, related_transaction_id, note)
+             values ($1, 21, 'compensation', $2, 'over-credit attempt')`,
+            [userId, debit!.id],
+          ),
+        ).rejects.toThrow(/exceeds the debit it reverses/);
+        // The rejected insert must leave no trace — balance still reflects
+        // only the original debit, never a partially-applied over-credit.
+        expect(await getBalance(db, userId)).toBe(-20);
+      });
+    });
+
+    it('rejects a wildly over-sized compensation too (not just an off-by-one)', async () => {
+      await withDb(async (db) => {
+        const userId = randomUUID();
+        const debit = await debitQuestion(db, userId, randomUUID(), 20);
+        await expect(compensate(db, userId, debit!.id, 1_000_000, null)).rejects.toThrow(
+          /exceeds the debit it reverses/,
+        );
+      });
+    });
+
+    it('the bound applies identically to an onboarding_cost debit (migration 013\'s widened reason)', async () => {
+      await withDb(async (db) => {
+        const userId = randomUUID();
+        const requestId = randomUUID();
+        await db.query(
+          `insert into credit_transactions (user_id, delta, reason, request_id, note)
+           values ($1, -100, 'onboarding_cost', $2, 'onboarding debit')`,
+          [userId, requestId],
+        );
+        const { rows } = await db.query(
+          "select id from credit_transactions where user_id = $1 and reason = 'onboarding_cost'",
+          [userId],
+        );
+        const debitId = Number(rows[0]!.id);
+        // Exactly 100 is legal (a full onboarding refund)...
+        expect(await compensate(db, userId, debitId, 100, null)).not.toBeNull();
+      });
+    });
+
+    it('the bound applies identically to a websearch_cost debit (migration 018\'s widened reason)', async () => {
+      await withDb(async (db) => {
+        const userId = randomUUID();
+        const requestId = randomUUID();
+        await db.query(
+          `insert into credit_transactions (user_id, delta, reason, request_id, note)
+           values ($1, -10, 'websearch_cost', $2, 'web add-on debit')`,
+          [userId, requestId],
+        );
+        const { rows } = await db.query(
+          "select id from credit_transactions where user_id = $1 and reason = 'websearch_cost'",
+          [userId],
+        );
+        const debitId = Number(rows[0]!.id);
+        await expect(
+          db.query(
+            `insert into credit_transactions (user_id, delta, reason, related_transaction_id, note)
+             values ($1, 11, 'compensation', $2, 'over-credit on websearch refund')`,
+            [userId, debitId],
+          ),
+        ).rejects.toThrow(/exceeds the debit it reverses/);
+      });
+    });
+  });
 });
 
 describe('action_class_prices_validate_clarification_price (migration 008, adversarial-review finding)', () => {

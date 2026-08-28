@@ -54,12 +54,35 @@ describe('triggerOnboarding — charge + queue, atomically (WP16 sub-part 2)', (
     });
   });
 
+  it('#148: started.credits tracks a repriced heavy class, not a hardcoded 100', async () => {
+    // The regression this guards: the caller (web/app/actions.ts) used to
+    // re-read onboardingPrice() a SECOND time, independently, for its netCost
+    // caption — a live reprice landing between the debit and that second read
+    // could make the shown cost drift from what the ledger actually charged.
+    // `credits` is read ONCE, inside this same call, and is structurally the
+    // same value used for the debit — so it must equal whatever price is live
+    // AT CALL TIME, never a stale/hardcoded figure.
+    await withDb(async (db) => {
+      const userId = await fundedUser(db, 300);
+      await db.query("update action_class_prices set credits = 150 where action_class = 'heavy'");
+      const result = await triggerOnboarding(db, input(userId));
+      expect(result.kind).toBe('started');
+      if (result.kind !== 'started') throw new Error('unreachable');
+      expect(result.credits).toBe(150);
+      expect(await getBalance(db, userId)).toBe(150); // 300 − 150
+    });
+  });
+
   it('started: debits 100 AND creates a pending row, referencing the debit', async () => {
     await withDb(async (db) => {
       const userId = await fundedUser(db, 150);
       const result = await triggerOnboarding(db, input(userId));
       expect(result.kind).toBe('started');
       if (result.kind !== 'started') throw new Error('unreachable');
+      // #148: `credits` is the amount ACTUALLY debited (== onboardingPrice,
+      // read once and reused for the debit AND this field — never a second,
+      // independent read the caller could otherwise drift against).
+      expect(result.credits).toBe(100);
       // Ledger: 150 grant − 100 onboarding = 50.
       expect(await getBalance(db, userId)).toBe(50);
       // Queue row exists, active, referencing the debit.

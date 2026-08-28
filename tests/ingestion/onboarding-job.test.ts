@@ -9,6 +9,7 @@
 // → sync → vocab → a DELIVERED answer whose value is the fixture cell → ledger
 // net −100 → row 'delivered'. The failure paths prove every terminal state is
 // refunded, never a kept charge and never an escaped exception.
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
@@ -1468,5 +1469,57 @@ describe('runOnboardingJob — #119 delivery idempotency (crash between audit wr
     } finally {
       await h.close();
     }
+  });
+});
+
+// #150 (session-47 hunt, closed session 66): STALE_RUNNING_MS is the ONLY
+// thing standing between a still-alive cron invocation and a premature
+// reclaim of its row back to 'pending' — reclaim it too early and TWO
+// invocations can process the same row concurrently (one refunds while the
+// other delivers: the user keeps the answer AND the refund). Today that is
+// safe purely because Vercel's maxDuration hard-kills any invocation well
+// before the 20-minute threshold, a comfortable margin — but nothing
+// PREVIOUSLY tied the two constants together structurally, so a future
+// maxDuration bump toward/past STALE_RUNNING_MS could silently reopen the
+// race with no test failing to say so. This is a REGRESSION GUARD, not a
+// behavior change: it reads the cron route's own declared `maxDuration` from
+// its source (never a hardcoded copy that could drift from the real value)
+// and asserts a >=3x safety margin — the same "source pin for a guarantee the
+// harness cannot otherwise exercise" judgment as the SKIP LOCKED pin in
+// tests/ingestion/onboarding-store.test.ts (there is no way to hermetically
+// simulate "a cron invocation is still running at minute 6").
+describe("#150 — STALE_RUNNING_MS stays >= 3x the cron route's maxDuration", () => {
+  const routeSource = readFileSync(
+    fileURLToPath(new URL('../../web/app/api/onboarding-cron/route.ts', import.meta.url)),
+    'utf-8',
+  );
+
+  function cronMaxDurationSeconds(): number {
+    const match = /export const maxDuration = (\d+);/.exec(routeSource);
+    expect(
+      match,
+      'web/app/api/onboarding-cron/route.ts must declare `export const maxDuration = <seconds>;` ' +
+        '— this guard cannot read a value it cannot find.',
+    ).not.toBeNull();
+    return Number(match![1]);
+  }
+
+  it('the route still declares a maxDuration this test can read (not a tautology)', () => {
+    // Guards against the regex silently matching nothing (a rename, a
+    // reformat) and the margin assertion below passing vacuously.
+    expect(cronMaxDurationSeconds()).toBeGreaterThan(0);
+  });
+
+  it('STALE_RUNNING_MS >= 3 x the cron route maxDuration (the actual guard)', () => {
+    const maxDurationMs = cronMaxDurationSeconds() * 1000;
+    expect(STALE_RUNNING_MS).toBeGreaterThanOrEqual(3 * maxDurationMs);
+  });
+
+  it('measured margin today: 20-minute reclaim vs. a 300s maxDuration is a 4x margin', () => {
+    // Not a restatement of the assertion above — this pins the CURRENT
+    // concrete numbers so a change to either constant shows up as a failing
+    // test with the old/new values in the diff, not just a boolean flip.
+    expect(cronMaxDurationSeconds()).toBe(300);
+    expect(STALE_RUNNING_MS).toBe(20 * 60 * 1000);
   });
 });

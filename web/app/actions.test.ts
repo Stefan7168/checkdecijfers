@@ -60,6 +60,11 @@ vi.mock('../backend/websearch/index.ts', () => ({ AnthropicWebSearchClient: vi.f
 import { askQuestion, replyToClarification } from './actions.ts';
 
 const fakeDb = {} as Db;
+// #149: guardRequestId now validates UUID shape (mirrors trial-actions.ts's
+// R1-style constants), so every call site below needs a real UUID rather than
+// the old meaningless RID placeholder — a non-UUID string now throws before
+// the billing gate even runs, which would break every test using one.
+const RID = '00000000-0000-4000-8000-000000000001';
 
 beforeEach(() => {
   currentUserId.mockResolvedValue('user-1');
@@ -140,14 +145,14 @@ describe('askQuestion / replyToClarification — argument TYPE guards (untrusted
     driveGate(fakeAnswer(), 1, 20);
     // `.length` is 1, so the size ceiling alone would have let this through.
     expect(blockArray.length).toBe(1);
-    await expect(askQuestion(blockArray, 'rid')).rejects.toThrow(/not a string/);
+    await expect(askQuestion(blockArray, RID)).rejects.toThrow(/not a string/);
     expect(billing.chargeAndRun).not.toHaveBeenCalled();
     expect(audit.answerQuestionAudited).not.toHaveBeenCalled();
   });
 
   it('rejects a content-block array as the reply — before any charge', async () => {
     driveGate(fakeAnswer(), 1, 20);
-    await expect(replyToClarification(validPending, blockArray, 'rid')).rejects.toThrow(
+    await expect(replyToClarification(validPending, blockArray, RID)).rejects.toThrow(
       /not a string/,
     );
     expect(billing.chargeAndRun).not.toHaveBeenCalled();
@@ -159,7 +164,20 @@ describe('askQuestion / replyToClarification — argument TYPE guards (untrusted
     // a double-submit and a double debit, and the trial action has always
     // type-checked it.
     driveGate(fakeAnswer(), 1, 20);
-    for (const bad of [null, 42, {}, '', 'x'.repeat(101)] as unknown as string[]) {
+    for (const bad of [
+      null,
+      42,
+      {},
+      '',
+      'x'.repeat(101),
+      // #149: right type, right-ish shape, still not a UUID — the gap
+      // guardRequestId's old length/type-only check let through to
+      // reserveDebit's SQL, where it surfaced as a raw Postgres syntax error
+      // instead of a clean guard-clause rejection here.
+      'not-a-uuid',
+      'x'.repeat(36), // exactly UUID length, still not UUID-shaped
+      RID.replace(/-/g, ''), // valid hex, just missing the hyphens isUuid requires
+    ] as unknown as string[]) {
       await expect(askQuestion('q', bad)).rejects.toThrow(/requestId/);
       // The reply turn carries the same key and must reject it identically —
       // without this leg, deleting the guard from replyToClarification alone
@@ -169,15 +187,17 @@ describe('askQuestion / replyToClarification — argument TYPE guards (untrusted
     expect(billing.chargeAndRun).not.toHaveBeenCalled();
   });
 
-  it('accepts a requestId exactly at the length boundary', async () => {
-    driveGate(fakeAnswer(), 1, 20);
-    const { gated } = await askQuestion('q', 'x'.repeat(100));
-    expect(gated.kind).toBe('ok');
-  });
+  // #149: the old "accepts a requestId exactly at the length boundary" test
+  // (a bare 'x'.repeat(100)) is gone — that value is no longer accepted at
+  // all now that guardRequestId also checks UUID format (it is now one of the
+  // `bad` cases above), and a real UUID is always 36 chars, well under the
+  // 100-char ceiling, so there is no length boundary left to probe for
+  // acceptance. "still accepts a normal question and requestId" below already
+  // covers the well-formed-UUID-is-accepted case.
 
   it('still accepts a normal question and requestId', async () => {
     driveGate(fakeAnswer(), 1, 20);
-    const { gated } = await askQuestion('Hoeveel inwoners had Amsterdam in 2024?', 'rid');
+    const { gated } = await askQuestion('Hoeveel inwoners had Amsterdam in 2024?', RID);
     expect(gated.kind).toBe('ok');
     expect(billing.chargeAndRun).toHaveBeenCalledTimes(1);
   });
@@ -186,20 +206,20 @@ describe('askQuestion / replyToClarification — argument TYPE guards (untrusted
 describe('askQuestion — selection validation (untrusted client payload)', () => {
   it('filters sources to KNOWN registry keys, dropping unknowns', async () => {
     driveGate(fakeAnswer(), 1, 20);
-    await askQuestion('q', 'rid', null, { sources: ['cbs', 'nope', 'wikipedia'], web: false });
+    await askQuestion('q', RID, null, { sources: ['cbs', 'nope', 'wikipedia'], web: false });
     expect(lastAskOptions().sourceSelection).toEqual({ sources: ['cbs'], web: false });
   });
 
   it('coerces web to a strict boolean', async () => {
     driveGate(fakeAnswer(), 1, 20);
     // web: 'yes' (a truthy non-boolean) must coerce to false, not true.
-    await askQuestion('q', 'rid', null, { sources: ['cbs'], web: 'yes' });
+    await askQuestion('q', RID, null, { sources: ['cbs'], web: 'yes' });
     expect(lastAskOptions().sourceSelection).toEqual({ sources: ['cbs'], web: false });
   });
 
   it('degrades a malformed payload to undefined (never throws)', async () => {
     driveGate(fakeAnswer(), 1, 20);
-    await askQuestion('q', 'rid', null, 'garbage-not-an-object');
+    await askQuestion('q', RID, null, 'garbage-not-an-object');
     expect(lastAskOptions().sourceSelection).toBeUndefined();
     // No web machinery for a malformed selection.
     expect(lastAskOptions().webClient).toBeUndefined();
@@ -210,7 +230,7 @@ describe('askQuestion — selection validation (untrusted client payload)', () =
     vi.stubEnv('WEBSEARCH_ENABLED', '0');
     driveGate(fakeAnswer(), 1, 20);
     // Even a well-formed web:true payload is ignored while dormant.
-    await askQuestion('q', 'rid', null, { sources: ['cbs'], web: true });
+    await askQuestion('q', RID, null, { sources: ['cbs'], web: true });
     expect(lastAskOptions().sourceSelection).toBeUndefined();
     expect(lastAskOptions().webClient).toBeUndefined();
     expect(lastAskOptions().webBilling).toBeUndefined();
@@ -219,7 +239,7 @@ describe('askQuestion — selection validation (untrusted client payload)', () =
 
   it('wires the web client + billing closure only when the Internet chip is on', async () => {
     driveGate(fakeAnswer(okSection), 5, 20);
-    await askQuestion('q', 'rid', null, { sources: ['cbs'], web: true });
+    await askQuestion('q', RID, null, { sources: ['cbs'], web: true });
     expect(lastAskOptions().webClient).toBeDefined();
     expect(lastAskOptions().webBilling).toBeDefined();
     expect(lastAskOptions().sourceSelection).toEqual({ sources: ['cbs'], web: true });
@@ -233,7 +253,7 @@ describe('askQuestion — ⟨W4⟩ upfront affordability (30 in BOTH web modes)'
   ] as const) {
     it(`refuses BEFORE the gate at balance < 30 (${label})`, async () => {
       billing.getBalance.mockResolvedValue(25);
-      const { gated } = await askQuestion('q', 'rid', null, selection);
+      const { gated } = await askQuestion('q', RID, null, selection);
       expect(gated).toEqual({ kind: 'insufficient_credits', balance: 25, required: 30 });
       expect(billing.chargeAndRun).not.toHaveBeenCalled();
       expect(billing.reserveWebSearchDebit).not.toHaveBeenCalled();
@@ -243,14 +263,14 @@ describe('askQuestion — ⟨W4⟩ upfront affordability (30 in BOTH web modes)'
   it('proceeds when the balance covers the transient 30-credit hold', async () => {
     billing.getBalance.mockResolvedValue(30);
     driveGate(fakeAnswer(okSection), 5, 20);
-    const { gated } = await askQuestion('q', 'rid', null, { sources: ['cbs'], web: true });
+    const { gated } = await askQuestion('q', RID, null, { sources: ['cbs'], web: true });
     expect(gated.kind).toBe('ok');
     expect(billing.chargeAndRun).toHaveBeenCalledTimes(1);
   });
 
   it('does NOT run the affordability check when the Internet chip is off', async () => {
     driveGate(fakeAnswer(), 1, 20);
-    await askQuestion('q', 'rid', null, { sources: ['cbs'], web: false });
+    await askQuestion('q', RID, null, { sources: ['cbs'], web: false });
     expect(billing.getBalance).not.toHaveBeenCalled();
   });
 });
@@ -258,14 +278,14 @@ describe('askQuestion — ⟨W4⟩ upfront affordability (30 in BOTH web modes)'
 describe('askQuestion — ⟨W3⟩/⟨W1⟩ web add-on settlement (final gated object)', () => {
   it('KEEPS the +10 (netCost 20 → 30) when a cited section ships on an audited ok turn', async () => {
     driveGate(fakeAnswer(okSection), 5, 20);
-    const { gated } = await askQuestion('q', 'rid', null, { sources: ['cbs'], web: true });
+    const { gated } = await askQuestion('q', RID, null, { sources: ['cbs'], web: true });
     expect(gated).toMatchObject({ kind: 'ok', netCost: 30, auditId: 5 });
     expect(billing.compensate).not.toHaveBeenCalled();
   });
 
   it('REFUNDS (compensates) when the web section failed — netCost stays 20', async () => {
     driveGate(fakeAnswer({ status: 'failed', code: 'api_error' }), 5, 20);
-    const { gated } = await askQuestion('q', 'rid', null, { sources: ['cbs'], web: true });
+    const { gated } = await askQuestion('q', RID, null, { sources: ['cbs'], web: true });
     expect(gated).toMatchObject({ kind: 'ok', netCost: 20 });
     // compensate(db, userId, debitId=99, price=10, auditId=5)
     expect(billing.compensate).toHaveBeenCalledWith(fakeDb, 'user-1', 99, 10, 5);
@@ -273,14 +293,14 @@ describe('askQuestion — ⟨W3⟩/⟨W1⟩ web add-on settlement (final gated o
 
   it('REFUNDS when auditId is null DESPITE an ok section (the ⟨W1⟩ belt)', async () => {
     driveGate(fakeAnswer(okSection), null, 20);
-    const { gated } = await askQuestion('q', 'rid', null, { sources: ['cbs'], web: true });
+    const { gated } = await askQuestion('q', RID, null, { sources: ['cbs'], web: true });
     expect((gated as { netCost: number }).netCost).toBe(20);
     expect(billing.compensate).toHaveBeenCalledWith(fakeDb, 'user-1', 99, 10, null);
   });
 
   it('does not settle anything when no web debit was taken (web chip off)', async () => {
     driveGate(fakeAnswer(), 1, 20);
-    const { gated } = await askQuestion('q', 'rid', null, { sources: ['cbs'], web: false });
+    const { gated } = await askQuestion('q', RID, null, { sources: ['cbs'], web: false });
     expect((gated as { netCost: number }).netCost).toBe(20);
     expect(billing.compensate).not.toHaveBeenCalled();
   });
@@ -300,7 +320,7 @@ describe('askQuestion — ⟨W3⟩/⟨W1⟩ web add-on settlement (final gated o
       },
     );
     try {
-      await expect(askQuestion('q', 'rid', null, { sources: ['cbs'], web: true })).rejects.toThrow(
+      await expect(askQuestion('q', RID, null, { sources: ['cbs'], web: true })).rejects.toThrow(
         'pipeline boom',
       );
       expect(billing.compensate).toHaveBeenCalledWith(fakeDb, 'user-1', 99, 10, null);
@@ -326,7 +346,7 @@ describe('replyToClarification — the reply turn carries the same selection + s
 
   it('validates the selection and keeps the +10 on a cited answered reply', async () => {
     driveGate(fakeAnswer(okSection), 7, 20);
-    const { gated } = await replyToClarification(pending, '2024', 'rid', {
+    const { gated } = await replyToClarification(pending, '2024', RID, {
       sources: ['cbs', 'bogus'],
       web: true,
     });
@@ -337,7 +357,7 @@ describe('replyToClarification — the reply turn carries the same selection + s
 
   it('enforces the ⟨W4⟩ 30-credit upfront hold on the reply turn too', async () => {
     billing.getBalance.mockResolvedValue(10);
-    const { gated } = await replyToClarification(pending, '2024', 'rid', { sources: [], web: true });
+    const { gated } = await replyToClarification(pending, '2024', RID, { sources: [], web: true });
     expect(gated).toEqual({ kind: 'insufficient_credits', balance: 10, required: 30 });
     expect(billing.chargeAndRun).not.toHaveBeenCalled();
   });
@@ -365,7 +385,7 @@ describe('replyToClarification — pending input bound (untrusted client payload
   for (const [label, pending] of rejected) {
     it(`rejects ${label} before charging or calling the pipeline`, async () => {
       driveGate(fakeAnswer(), 7, 20);
-      await expect(replyToClarification(pending, '2024', 'rid')).rejects.toThrow(/pending\./);
+      await expect(replyToClarification(pending, '2024', RID)).rejects.toThrow(/pending\./);
       expect(billing.chargeAndRun).not.toHaveBeenCalled();
       expect(audit.answerClarificationReplyAudited).not.toHaveBeenCalled();
     });
@@ -373,7 +393,7 @@ describe('replyToClarification — pending input bound (untrusted client payload
 
   it('lets a normal-size pending through to the gate unchanged', async () => {
     driveGate(fakeAnswer(), 7, 20);
-    const { gated } = await replyToClarification(validPending, '2024', 'rid');
+    const { gated } = await replyToClarification(validPending, '2024', RID);
     expect(gated.kind).toBe('ok');
     expect(billing.chargeAndRun).toHaveBeenCalledTimes(1);
   });
@@ -381,7 +401,7 @@ describe('replyToClarification — pending input bound (untrusted client payload
   it('allows a field exactly at the MAX_INPUT_LENGTH boundary', async () => {
     driveGate(fakeAnswer(), 7, 20);
     const atLimit = 'x'.repeat(MAX_INPUT_LENGTH);
-    const { gated } = await replyToClarification({ ...validPending, questionNl: atLimit }, '2024', 'rid');
+    const { gated } = await replyToClarification({ ...validPending, questionNl: atLimit }, '2024', RID);
     expect(gated.kind).toBe('ok');
     expect(billing.chargeAndRun).toHaveBeenCalledTimes(1);
   });
