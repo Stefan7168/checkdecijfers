@@ -31,6 +31,9 @@ describe('proxy isPublicPath allowlist', () => {
     // shape above). The smoke deliberately does NOT follow redirects, so THIS
     // pin and that curl fail together or not at all.
     expect(isPublicPath('/api/health')).toBe(true);
+    // The architecture reference page — no DB reads, no account, reachable
+    // via the footer's gear icon by design.
+    expect(isPublicPath('/systeemoverzicht')).toBe(true);
     // EXACT, not prefix: a future sibling under an existing cron's name must
     // NOT inherit the session exemption (review finding — `startsWith` alone
     // would have shipped it public by accident).
@@ -39,6 +42,8 @@ describe('proxy isPublicPath allowlist', () => {
     expect(isPublicPath('/api/stripe/webhook/replay')).toBe(false);
     expect(isPublicPath('/api/health-debug')).toBe(false);
     expect(isPublicPath('/api/health/details')).toBe(false);
+    expect(isPublicPath('/systeemoverzicht-debug')).toBe(false);
+    expect(isPublicPath('/systeemoverzicht/details')).toBe(false);
   });
 
   it('allows the auth-flow paths', () => {

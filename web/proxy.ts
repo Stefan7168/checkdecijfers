@@ -32,6 +32,9 @@ const PUBLIC_EXACT_PATHS = [
   '/api/onboarding-cron',
   '/api/gdpr-purge-cron',
   '/api/health',
+  // The public, noindexed architecture reference page — no DB reads, no
+  // account needed, reachable via the footer's gear icon by design.
+  '/systeemoverzicht',
 ];
 
 const PUBLIC_PATH_PREFIXES = [
