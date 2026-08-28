@@ -497,6 +497,62 @@ export async function decide(
     .find((candidate) => candidate.confidence >= config.runnerUpThreshold);
   if (runnerUp) {
     const failed = isResolutionFailure(runnerUp);
+    // #63: the SAME unconditional servability dry-run rule 3 already runs for
+    // its own lone reading, now run for BOTH rule-4 readings — regardless of
+    // clickOptionsEnabled. Before this, only the click-options branch below
+    // ever checked servability here, so the PLAIN-TEXT options (what
+    // production actually shows today, flag off) could confirm a dead end —
+    // exactly the class WP15's #56 fix exists to prevent for rule 3. A failed
+    // runner-up has no intent to check (pre-existing) and is never servable.
+    // Narrowed once here (matching the pre-existing technique below of
+    // ternary-ing on the `failed` const alias) so every later use of the
+    // runner-up's intent/impliedRecency stays type-safe without re-deriving
+    // narrowing from a compound boolean TS can't trace back to `runnerUp`.
+    const runnerUpIntent = failed ? null : runnerUp.intent;
+    const runnerUpImpliedRecency = failed ? false : runnerUp.impliedRecency;
+    const topVerdict = await servability(top.intent);
+    const runnerUpVerdict = runnerUpIntent === null ? null : await servability(runnerUpIntent);
+    const topServable = topVerdict.servable;
+    const runnerUpServable = runnerUpVerdict !== null && runnerUpVerdict.servable;
+
+    // Neither reading would answer: the same fallback rule 3 uses for its own
+    // unservable top reading — name what IS loaded rather than offer a pair
+    // that both dead-end.
+    if (!topServable && !runnerUpServable) {
+      return echoUnservableClarification(
+        context,
+        top,
+        topVerdict as Extract<EchoServability, { servable: false }>,
+      );
+    }
+    // Exactly one reading survives: this is no longer a two-way ambiguity —
+    // the same single-reading confirm shape rule 3 uses, reusing the verdict
+    // already computed above instead of a second dry-run.
+    if (topServable !== runnerUpServable) {
+      const solo = topServable
+        ? { reading: top.reading, intent: top.intent, impliedRecency: top.impliedRecency }
+        : { reading: runnerUp.reading, intent: runnerUpIntent!, impliedRecency: runnerUpImpliedRecency };
+      const confirm = {
+        kind: 'clarification',
+        ...context,
+        axes: ['measure'],
+        question_nl: `Bedoel je ${solo.reading}?`,
+        options: [solo.reading],
+        reason: `only one of two plausible readings is servable (rule 4 → rule-3-shaped confirm): the other would dead-end`,
+      } as const satisfies Extract<ParseOutcome, { kind: 'clarification' }>;
+      return clickOptionsEnabled
+        ? withClickOptions(confirm, [
+            {
+              id: 'opt-1',
+              label: solo.reading,
+              intent: solo.intent,
+              impliedRecency: solo.impliedRecency,
+            },
+          ])
+        : confirm;
+    }
+
+    // Both servable: the outcome shape is unchanged from before #63.
     const outcome = {
       kind: 'clarification',
       ...context,
@@ -509,18 +565,19 @@ export async function decide(
     } as const satisfies Extract<ParseOutcome, { kind: 'clarification' }>;
     if (!clickOptionsEnabled) return outcome;
     // WP26 mechanism A: the one shape the measured corpus dead-ends on most —
-    // two competing readings, the user retypes one of them. Both are dry-run
-    // here (neither was checked before: rule 4 answers no question about
-    // servability). A runner-up that FAILED resolution has no intent at all,
-    // so only the top reading can become a chip — the other stays plain text.
-    const clickOptions = await buildClickOptions(servability, [
-      { label: top.reading, intent: top.intent, impliedRecency: top.impliedRecency },
+    // two competing readings, the user retypes one of them. Both verdicts are
+    // already known from the dry-run above — reused here, not re-run. (Both
+    // reaching here implies !failed, since a failed runner-up is never
+    // servable — runnerUpIntent is therefore never null in this branch.)
+    const clickOptions: ClickOption[] = [
+      { id: 'opt-1', label: top.reading, intent: top.intent, impliedRecency: top.impliedRecency },
       {
+        id: 'opt-2',
         label: runnerUp.reading,
-        intent: failed ? null : runnerUp.intent,
-        impliedRecency: failed ? false : runnerUp.impliedRecency,
+        intent: runnerUpIntent!,
+        impliedRecency: runnerUpImpliedRecency,
       },
-    ]);
+    ];
     return withClickOptions(outcome, clickOptions);
   }
 

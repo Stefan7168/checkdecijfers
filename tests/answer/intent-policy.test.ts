@@ -422,7 +422,7 @@ describe('#56 echo-suggestion servability (WP15, ADR 021 decision 4)', () => {
     expect(outcome.options).toEqual(['de inflatie in 2024']);
   });
 
-  it('servability is consulted only on the rule-3 echo path — never on confident answers or two-option ambiguity', async () => {
+  it('servability is never consulted on a confident single answer; #63 — rule 4 now dry-runs BOTH readings, same as rule 3 dry-runs its lone one', async () => {
     let calls = 0;
     const counting: ServabilityCheck = async () => {
       calls += 1;
@@ -430,6 +430,10 @@ describe('#56 echo-suggestion servability (WP15, ADR 021 decision 4)', () => {
     };
     await decide(context(), [candidate(intentOf('cpi_yearly_inflation', 2024), 0.95)], config, counting);
     expect(calls).toBe(0);
+    // #63: two plausible readings (rule 4) now dry-run BOTH — top and
+    // runner-up — before the plain-text options are offered, closing the gap
+    // where a confirmed-servable rule 3 could sit beside an UNCHECKED rule 4
+    // (see the two tests below for what each dry-run outcome produces).
     await decide(
       context(),
       [
@@ -439,9 +443,66 @@ describe('#56 echo-suggestion servability (WP15, ADR 021 decision 4)', () => {
       config,
       counting,
     );
-    expect(calls).toBe(0);
+    expect(calls).toBe(2);
     await decide(context(), [candidate(intentOf('cpi_yearly_inflation', 2024), 0.45)], config, counting);
-    expect(calls).toBe(1);
+    expect(calls).toBe(3);
+  });
+
+  it('#63: an unservable runner-up is NOT offered as a plain-text option — rule 4 collapses to a rule-3-shaped solo confirm on the top reading', async () => {
+    const top = candidate(intentOf('cpi_yearly_inflation', 2024), 0.8, 'de inflatie in 2024');
+    const runnerUp = candidate(intentOf('average_existing_home_sale_price', 2024), 0.5, 'de huizenprijs in 2024');
+    const verdictFor: ServabilityCheck = async (intent) =>
+      intent.target.kind === 'canonical' && intent.target.key === 'cpi_yearly_inflation'
+        ? { servable: true }
+        : unservable('outside_loaded_slice', noAvailability);
+    const outcome = await decide(context(), [top, runnerUp], config, verdictFor);
+    expect(outcome.kind).toBe('clarification');
+    if (outcome.kind !== 'clarification') throw new Error('unreachable');
+    expect(outcome.question_nl).toBe('Bedoel je de inflatie in 2024?');
+    expect(outcome.options).toEqual(['de inflatie in 2024']);
+    // Before #63 this offered BOTH readings in plain text, regardless of
+    // servability — the unservable one is now dropped, never named.
+    expect(outcome.options).not.toContain('de huizenprijs in 2024');
+  });
+
+  it('#63: the SAME collapse when it is the TOP reading that is unservable — the servable runner-up becomes the solo confirm', async () => {
+    const top = candidate(intentOf('average_existing_home_sale_price', 2024), 0.8, 'de huizenprijs in 2024');
+    const runnerUp = candidate(intentOf('cpi_yearly_inflation', 2024), 0.5, 'de inflatie in 2024');
+    const verdictFor: ServabilityCheck = async (intent) =>
+      intent.target.kind === 'canonical' && intent.target.key === 'cpi_yearly_inflation'
+        ? { servable: true }
+        : unservable('outside_loaded_slice', noAvailability);
+    const outcome = await decide(context(), [top, runnerUp], config, verdictFor);
+    expect(outcome.kind).toBe('clarification');
+    if (outcome.kind !== 'clarification') throw new Error('unreachable');
+    expect(outcome.question_nl).toBe('Bedoel je de inflatie in 2024?');
+    expect(outcome.options).toEqual(['de inflatie in 2024']);
+  });
+
+  it('#63: click options for a collapsed solo confirm carry the servable reading only, when the flag is on', async () => {
+    const top = candidate(intentOf('cpi_yearly_inflation', 2024), 0.8, 'de inflatie in 2024');
+    const runnerUp = candidate(intentOf('average_existing_home_sale_price', 2024), 0.5, 'de huizenprijs in 2024');
+    const verdictFor: ServabilityCheck = async (intent) =>
+      intent.target.kind === 'canonical' && intent.target.key === 'cpi_yearly_inflation'
+        ? { servable: true }
+        : unservable('outside_loaded_slice', noAvailability);
+    const outcome = await decide(context(), [top, runnerUp], config, verdictFor, undefined, true);
+    expect(outcome.kind).toBe('clarification');
+    if (outcome.kind !== 'clarification') throw new Error('unreachable');
+    expect(outcome.clickOptions?.map((o) => o.label)).toEqual(['de inflatie in 2024']);
+  });
+
+  it('#63: both rule-4 readings unservable falls back to the same loaded-window guidance rule 3 uses for its own unservable top reading', async () => {
+    const top = candidate(intentOf('population_on_1_january', 1970), 0.8, 'alle gemeenten vanaf 1970');
+    const runnerUp = candidate(intentOf('cpi_yearly_inflation', 1970), 0.5, 'de inflatie in 1970');
+    const verdict = unservable('outside_loaded_slice', { yearRange: { fromYear: 2019, toYear: 2026 }, freshest: null }, ['period']);
+    const outcome = await decide(context(), [top, runnerUp], config, async () => verdict);
+    expect(outcome.kind).toBe('clarification');
+    if (outcome.kind !== 'clarification') throw new Error('unreachable');
+    expect(outcome.question_nl).toContain('van 2019 tot en met 2026');
+    expect(outcome.options).toEqual(['2019 tot en met 2026']);
+    expect(outcome.options).not.toContain('alle gemeenten vanaf 1970');
+    expect(outcome.options).not.toContain('de inflatie in 1970');
   });
 
   it('an unservable echo names the loaded year window instead of the unservable suggestion (V22/V23 shape)', async () => {
