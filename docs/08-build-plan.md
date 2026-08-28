@@ -208,7 +208,18 @@ protocol plan €5 / cap €10, test plan + flag rollout); build from that brief
 
 # Briefs written by the 2026-07-05 overnight session (queue items 5–6) — build nothing here without the named prerequisite
 
-## WP25 (working number) — #65 durable error logging  BRIEF ONLY (needs a live migration → next supervised session)
+## WP25 (working number) — #65 durable error logging  ✅ BUILT 2026-08-27 (session 66, autonomous; hermetic — live apply still supervised)
+
+> **✅ Built per this brief (2026-08-27, session 66), together with the #114 health route.** As-built:
+> migration `024_error_log.sql` (FILE-ONLY until the supervised apply — [RUNBOOK](RUNBOOK.md) "migration
+> 024" step), `src/db/error-log.ts` (fail-open `logError` + the 90-day retention primitives; the brief's
+> suggested 90 days adopted as the default, [#65](open-questions.md)), `web/lib/error-report.ts` +
+> catch-site writes in both chat actions, the Stripe webhook, the auth callback and the #114 health
+> route, and an error_log leg in `runRetentionPurge` (honest `table-absent` skip pre-apply). Deviations
+> from the literal brief, documented in the migration header: `context` NEVER holds question text (the
+> brief's "never by default" hardened to structural — the table has no redaction machinery, so it must
+> never need it), and a non-uuid request id lands in `context` rather than failing the uuid column.
+> The original brief is kept below as the design record.
 
 *Owner-decided (2026-07-04, session 18): build. Blocked tonight by the overnight brief's no-live-DDL constraint — the design needs a new table applied to production before its code deploys.*
 

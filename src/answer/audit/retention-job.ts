@@ -16,6 +16,15 @@
 // a test substitute the leg — which is how the "a failing trial read must
 // propagate, not read as an honest skip" pin is written at all.
 import type { Db } from '../../db/types.ts';
+// #65 / WP25: the error_log 90-day sweep. Imported DIRECTLY, unlike the trial
+// leg below — src/db/ is the shared layer beneath every ADR-001 module (this
+// file already imports its types), so no arrow is violated and the two
+// composition roots cannot drift by wiring it differently.
+import {
+  countPurgeableErrorLog,
+  errorLogRetentionCutoff,
+  purgeExpiredErrorLog,
+} from '../../db/error-log.ts';
 import {
   anonymousTrialCutoff,
   countPurgeableQuestionHistory,
@@ -69,6 +78,14 @@ export interface RetentionPurgeSummary {
      * skipped. A read that throws propagates instead (see below). */
     | { skipped: 'table-absent' }
     | { skipped: 'not-configured' };
+  /** #65 / WP25: the error_log housekeeping sweep — DELETED at 90 days
+   * (src/db/error-log.ts; an ops log, not a user-facing record — no personal
+   * data by construction, so this is table hygiene, not GDPR erasure; it rides
+   * this job because the job is the one scheduled sweep that exists).
+   * 'table-absent' is the EXPECTED state until migration 024's supervised
+   * live apply — the composition roots must not alert on it (unlike the trial
+   * leg, whose migration is live). */
+  errorLog: { cutoff: string; rows: number } | { skipped: 'table-absent' };
 }
 
 /** A CHECK, not a catch — `retention.ts` states the rule for its own
@@ -78,6 +95,14 @@ export interface RetentionPurgeSummary {
  * that reports success when it did nothing is worse than one that is absent. */
 async function trialTableExists(db: Db): Promise<boolean> {
   const { rows } = await db.query(`select to_regclass('public.trial_questions') as t`, []);
+  return rows[0]?.t != null;
+}
+
+/** Same check-not-catch rule for the error_log leg (#65). Until migration
+ * 024's supervised live apply this is FALSE on production and the leg skips
+ * honestly; after it, a throwing read propagates like any real failure. */
+async function errorLogTableExists(db: Db): Promise<boolean> {
+  const { rows } = await db.query(`select to_regclass('public.error_log') as t`, []);
   return rows[0]?.t != null;
 }
 
@@ -108,6 +133,18 @@ export async function runRetentionPurge(
     return { cutoff: cutoff.toISOString(), rows };
   };
 
+  // #65: the 90-day error_log sweep — the same one-clock rule (cutoff derived
+  // from the injected `now`), the same dry-run/apply split, the same ⟨F2⟩
+  // guarantee (count and purge share one WHERE in src/db/error-log.ts).
+  const errorLogLeg = async (): Promise<RetentionPurgeSummary['errorLog']> => {
+    if (!(await errorLogTableExists(db))) return { skipped: 'table-absent' };
+    const cutoff = errorLogRetentionCutoff(now);
+    const rows = apply
+      ? await purgeExpiredErrorLog(db, cutoff)
+      : await countPurgeableErrorLog(db, cutoff);
+    return { cutoff: cutoff.toISOString(), rows };
+  };
+
   if (!apply) {
     // ⟨F2⟩: the preview counts come from the purge's OWN scope fragments, so a
     // dry run can never disagree with what --apply would redact.
@@ -122,6 +159,7 @@ export async function runRetentionPurge(
       anonymousTrialRows,
       pendingRows,
       trial: await trialLeg(),
+      errorLog: await errorLogLeg(),
     };
   }
 
@@ -144,6 +182,24 @@ export async function runRetentionPurge(
       redacted.length,
       error,
       auditCutoff.toISOString(),
+      'trial',
+      redacted.length > 0 ? byKind : undefined,
+    );
+  }
+  // #65: same "carry what committed" rule — by here the audit leg (and the
+  // trial DELETE) already landed, so an error_log failure must not be
+  // reported as "nothing expired".
+  let errorLogResult: RetentionPurgeSummary['errorLog'];
+  try {
+    errorLogResult = await errorLogLeg();
+  } catch (error) {
+    throw new RetentionPurgePartialError(
+      `error_log leg failed AFTER the audit leg committed ${redacted.length} redaction(s) ` +
+        `(the trial leg also already ran)`,
+      redacted.length,
+      error,
+      auditCutoff.toISOString(),
+      'errorLog',
       redacted.length > 0 ? byKind : undefined,
     );
   }
@@ -155,6 +211,7 @@ export async function runRetentionPurge(
     pendingRows: null,
     ...(redacted.length > 0 ? { byKind } : {}),
     trial: trialResult,
+    errorLog: errorLogResult,
   };
 }
 
@@ -169,12 +226,19 @@ export class RetentionPurgePartialError extends Error {
    * GDPR record matters most (a review finding). */
   readonly auditCutoff: string;
   readonly byKind: Record<string, number> | undefined;
+  /** Which leg actually failed — callers must brand their own "what ran"
+   * wording off this, not off a hardcoded guess. A review caught both
+   * composition roots hardcoding "the trial leg" regardless of which leg
+   * threw, which self-contradicts this error's own `message` on an
+   * error_log-leg failure. */
+  readonly leg: 'trial' | 'errorLog';
 
   constructor(
     message: string,
     auditRowsRedacted: number,
     reason: unknown,
     auditCutoff: string,
+    leg: 'trial' | 'errorLog',
     byKind?: Record<string, number>,
   ) {
     super(`${message}: ${reason instanceof Error ? reason.message : String(reason)}`, {
@@ -184,6 +248,7 @@ export class RetentionPurgePartialError extends Error {
     this.auditRowsRedacted = auditRowsRedacted;
     this.auditCutoff = auditCutoff;
     this.byKind = byKind;
+    this.leg = leg;
   }
 }
 
@@ -215,5 +280,13 @@ export function describeRetentionPurge(s: RetentionPurgeSummary): string {
         : '\n  note: trial leg not configured for this run.'
       : `\n  trial cutoff ${s.trial.cutoff}: ${s.trial.rows} trial_questions bookkeeping row(s) ` +
         `${s.mode === 'dry-run' ? 'WOULD be' : 'were'} DELETED (ADR 036 D4).`;
-  return head + kinds + trial;
+  // #65: the error_log line. Table-absent is EXPECTED until migration 024's
+  // supervised apply — say so, so an operator reading the daily cron log does
+  // not misread the normal pre-apply state as an incident.
+  const errorLog =
+    'skipped' in s.errorLog
+      ? '\n  note: error_log absent (migration 024 not applied yet — expected until its supervised apply); error-log leg skipped.'
+      : `\n  error_log cutoff ${s.errorLog.cutoff}: ${s.errorLog.rows} error_log row(s) ` +
+        `${s.mode === 'dry-run' ? 'WOULD be' : 'were'} DELETED (90-day ops-log retention, #65).`;
+  return head + kinds + trial + errorLog;
 }

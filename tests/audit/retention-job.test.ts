@@ -181,11 +181,40 @@ describe('#189 runRetentionPurge — the shared job behind the CLI and the cron'
       );
       expect(err).toBeInstanceOf(RetentionPurgePartialError);
       const partial = err as RetentionPurgePartialError;
+      expect(partial.leg).toBe('trial');
       expect(partial.auditRowsRedacted).toBe(1);
       expect(partial.auditCutoff).toBe(new Date('2024-07-25T12:00:00.000Z').toISOString());
       expect(partial.byKind).toEqual({ answer: 1 });
       expect(partial.message).toContain('lock timeout');
       // The audit leg really did commit — that is the whole point of reporting it.
+      const audit = await db.query('select question from audit_answers limit 1', []);
+      expect(audit.rows[0]!.question).toBe(REDACTED_QUESTION_TEXT);
+    });
+  });
+
+  // The symmetric case to the trial-leg test above (a review finding): the
+  // error_log leg can ALSO throw after the audit leg commits, and its own
+  // `leg` tag is what both composition roots now depend on to say which leg
+  // failed — a hardcoded guess there previously self-contradicted this same
+  // error's `message` on exactly this path.
+  it('throws RetentionPurgePartialError tagged leg:errorLog when the error_log leg fails after commit', async () => {
+    await withDb(async (db) => {
+      await seedExpired(db);
+      // errorLogTableExists checks to_regclass, which still finds the table
+      // once its expected column is gone — the read itself then throws, the
+      // same "check-not-catch" shape as the trial leg's exploding mock above.
+      await db.query('alter table error_log rename column occurred_at to renamed_away', []);
+      const err = await runRetentionPurge({ db, now: NOW, apply: true, trial: TRIAL_LEG }).then(
+        () => null,
+        (e: unknown) => e,
+      );
+      expect(err).toBeInstanceOf(RetentionPurgePartialError);
+      const partial = err as RetentionPurgePartialError;
+      expect(partial.leg).toBe('errorLog');
+      expect(partial.auditRowsRedacted).toBe(1);
+      expect(partial.message).toContain('error_log leg failed');
+      expect(partial.message).toContain('the trial leg also already ran');
+      // The audit leg really did commit, same guarantee as the trial-leg case.
       const audit = await db.query('select question from audit_answers limit 1', []);
       expect(audit.rows[0]!.question).toBe(REDACTED_QUESTION_TEXT);
     });
@@ -211,6 +240,64 @@ describe('#189 runRetentionPurge — the shared job behind the CLI and the cron'
         await runRetentionPurge({ db, now: NOW, apply: false, trial: null }),
       );
       expect(none).toContain('trial leg not configured');
+    });
+  });
+
+  // #65 / WP25: the error_log housekeeping leg — same job, third clock.
+  describe('the error_log leg (#65): 90-day DELETE, table-absent honest skip', () => {
+    async function seedErrorLogRow(db: Db, occurredAt: string, message: string): Promise<void> {
+      await db.query(
+        `insert into error_log (source, message, occurred_at) values ('askQuestion', $1, $2)`,
+        [message, occurredAt],
+      );
+    }
+
+    it('dry run counts expired rows and deletes nothing; apply DELETEs exactly those', async () => {
+      await withDb(async (db) => {
+        // 91 days before NOW: expired. 1 day before NOW: must survive.
+        await seedErrorLogRow(db, '2026-04-25T00:00:00.000Z', 'old failure');
+        await seedErrorLogRow(db, '2026-07-24T00:00:00.000Z', 'recent failure');
+
+        const dry = await runRetentionPurge({ db, now: NOW, apply: false, trial: TRIAL_LEG });
+        expect(dry.errorLog).toMatchObject({ rows: 1 });
+        expect(Number((await db.query('select count(*)::int as n from error_log', [])).rows[0]!.n)).toBe(2);
+
+        const applied = await runRetentionPurge({ db, now: NOW, apply: true, trial: TRIAL_LEG });
+        // ⟨F2⟩: apply deleted what the dry run promised.
+        expect(applied.errorLog).toEqual(dry.errorLog);
+        const left = await db.query('select message from error_log', []);
+        expect(left.rows).toHaveLength(1);
+        expect(left.rows[0]!.message).toBe('recent failure');
+
+        // Idempotent for a fixed clock.
+        const second = await runRetentionPurge({ db, now: NOW, apply: true, trial: TRIAL_LEG });
+        expect(second.errorLog).toMatchObject({ rows: 0 });
+      });
+    });
+
+    it('reports table-absent when migration 024 is not applied — the EXPECTED pre-apply state, never a throw', async () => {
+      await withDb(async (db) => {
+        // Production today: the cron runs daily against a database where
+        // migration 024 has not had its supervised apply yet. The job must
+        // skip honestly and keep running the GDPR legs.
+        await db.query('drop table if exists error_log cascade', []);
+        const summary = await runRetentionPurge({ db, now: NOW, apply: true, trial: TRIAL_LEG });
+        expect(summary.errorLog).toEqual({ skipped: 'table-absent' });
+        const line = describeRetentionPurge(summary);
+        expect(line).toContain('migration 024 not applied yet');
+        expect(line).toContain('expected until its supervised apply');
+      });
+    });
+
+    it('the operator line names the error_log leg on a real run', async () => {
+      await withDb(async (db) => {
+        await seedErrorLogRow(db, '2026-04-25T00:00:00.000Z', 'old failure');
+        const line = describeRetentionPurge(
+          await runRetentionPurge({ db, now: NOW, apply: false, trial: TRIAL_LEG }),
+        );
+        expect(line).toContain('1 error_log row(s) WOULD be DELETED');
+        expect(line).toContain('90-day ops-log retention');
+      });
     });
   });
 

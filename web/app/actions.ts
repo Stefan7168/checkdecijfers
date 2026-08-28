@@ -64,6 +64,9 @@ import { assembleMessages } from '../lib/replay-assemble.ts';
 import type { ChatMessage } from '../lib/replay-assemble.ts';
 import { currentUserId } from '../lib/current-user.ts';
 import { getDb } from '../lib/db.ts';
+// #65 / WP25: durable error logging at the outermost catch sites. Fail-open by
+// contract (reportError never throws) — see web/lib/error-report.ts.
+import { reportError } from '../lib/error-report.ts';
 import { kickOnboardingJob } from '../lib/onboarding-kick.ts';
 import { createClient } from '../lib/supabase-server.ts';
 // #149 (session-47 hunt): the SAME UUID-shape check the trial action already
@@ -533,10 +536,15 @@ export async function askQuestion(
     if (webDebitHolder.entry !== null) {
       await compensate(getDb(), userId, webDebitHolder.entry.id, webAddonPrice, null);
     }
-    // Vercel function logs are the owner's only visibility into production
-    // infra failures (WP12 review); the client still receives Next's generic
+    // Vercel function logs used to be the owner's ONLY visibility into
+    // production infra failures (WP12 review) — and their short retention once
+    // rotated a stack trace away before anyone looked (#65's origin, session
+    // 18). Console first (unchanged), then the durable error_log copy (WP25;
+    // fail-open — a failed write can never mask or replace `error`), then
+    // rethrow exactly as before: the client still receives Next's generic
     // masked error, never these details.
     console.error('askQuestion failed:', error);
+    await reportError('askQuestion', error, { requestId, userId });
     throw error;
   }
 }
@@ -775,6 +783,8 @@ export async function replyToClarification(
       await compensate(getDb(), userId, webDebitHolder.entry.id, webAddonPrice, null);
     }
     console.error('replyToClarification failed:', error);
+    // #65 / WP25: same durable copy + unchanged rethrow as askQuestion above.
+    await reportError('replyToClarification', error, { requestId, userId });
     throw error;
   }
 }

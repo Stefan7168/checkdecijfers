@@ -233,6 +233,33 @@ FIRST** (`npm run db:migrate`, owner-present window; the running old code ignore
 still serves, **then** push the code. Plus the standard per-migration check when a migration adds a TABLE
 (grants/RLS, migration-011 queries); a column on an existing RLS-locked table inherits its table's posture.
 
+## Supervised live step — migration 024 error_log (NOT YET RUN; built session 66, 2026-08-27, autonomous)
+
+**⏳ TO RUN in the next owner-present window.** Migration `024_error_log.sql` (#65 / WP25: the durable,
+insert-only production error log — catch sites in the chat actions, the Stripe webhook, the auth callback
+and the #114 health route write to it) shipped FILE-ONLY per the house rule. Until this step runs, every
+error_log write on production fails OPEN into `console.error` — exactly the pre-WP25 behavior, by design —
+and the daily gdpr-purge cron reports its error_log leg as `skipped: 'table-absent'` (EXPECTED, not an
+incident; the operator line says so itself).
+
+Both deploy orders walked (the #154 standing rule above): **code-first (what actually shipped) is safe** —
+every write site is fail-open and the retention job checks `to_regclass` before touching the table;
+migration-first would also have been safe (an empty table nothing writes to yet). No flag exists for this
+feature on purpose: fail-open IS the dormancy mechanism.
+
+The step itself (owner present):
+1. `npm run db:migrate` from the repo root (applies only what's missing; expect `024_error_log.sql`).
+2. The standard per-migration check for a NEW table (migration-011 queries): `error_log` must show
+   **0 `anon`/`authenticated` grants + RLS enabled, 0 policies** (migration-003 auto-lockdown).
+3. Verify one write lands: hit `https://checkdecijfers.vercel.app/api/health` (should be 200 — it only
+   writes on failure), then simply confirm `select count(*) from error_log` runs and returns 0+ rows;
+   the first real production error after this step becomes the first row.
+4. From then on: errors are queryable by the owner (`select occurred_at, source, message from error_log
+   order by occurred_at desc limit 20`) — no more racing Vercel's log retention. Rows self-expire at 90
+   days via the existing gdpr-purge cron (dormant-apply rules unchanged: the DELETE only runs once
+   `GDPR_PURGE_APPLY=1`, same as every other leg — until that flag flips, the monthly manual
+   `npm run gdpr:purge -- --apply` is what actually deletes).
+
 ## Supervised live step — migration 021 applied (2026-07-24, session 55 continued, owner present)
 
 **✅ DONE.** `npm run db:migrate` applied `021_observation_last_seen.sql` (adds

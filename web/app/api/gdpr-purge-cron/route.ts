@@ -102,7 +102,11 @@ export async function GET(request: Request): Promise<Response> {
         ? `${error.message} — those ${error.auditRowsRedacted} redaction(s) DID commit ` +
           `under cutoff ${error.auditCutoff}` +
           `${error.byKind === undefined ? '' : ` (${JSON.stringify(error.byKind)})`}; ` +
-          `the 2-year leg ran, only the 90-day trial leg did not.`
+          `${
+            error.leg === 'trial'
+              ? 'the 2-year leg ran, only the 90-day trial leg did not.'
+              : 'the 2-year leg and the 90-day trial leg both ran; only the error_log leg did not.'
+          }`
         : error instanceof Error
           ? error.message
           : String(error);

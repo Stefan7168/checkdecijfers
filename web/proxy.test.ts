@@ -23,12 +23,22 @@ describe('proxy isPublicPath allowlist', () => {
     expect(isPublicPath('/api/gdpr-purge-cron')).toBe(true);
     // The existing exemption that lets real Stripe purchases land — guard it too.
     expect(isPublicPath('/api/stripe/webhook')).toBe(true);
+    // #114: the health route is auth-free BY DESIGN — the CI post-deploy smoke
+    // exercises the signed-in dashboard's real DB reads through it, and CI
+    // holds no test-user credential. Left out of the allowlist, its 307 to
+    // /login would return 200 to a redirect-following caller — the app reads
+    // as healthy while the check never ran once (the exact cron-route failure
+    // shape above). The smoke deliberately does NOT follow redirects, so THIS
+    // pin and that curl fail together or not at all.
+    expect(isPublicPath('/api/health')).toBe(true);
     // EXACT, not prefix: a future sibling under an existing cron's name must
     // NOT inherit the session exemption (review finding — `startsWith` alone
     // would have shipped it public by accident).
     expect(isPublicPath('/api/gdpr-purge-cron-status')).toBe(false);
     expect(isPublicPath('/api/onboarding-cron-debug')).toBe(false);
     expect(isPublicPath('/api/stripe/webhook/replay')).toBe(false);
+    expect(isPublicPath('/api/health-debug')).toBe(false);
+    expect(isPublicPath('/api/health/details')).toBe(false);
   });
 
   it('allows the auth-flow paths', () => {

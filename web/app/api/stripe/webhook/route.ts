@@ -7,6 +7,7 @@ export const runtime = 'nodejs';
 
 import { handleStripeEvent } from '../../../../backend/billing/index.ts';
 import { getDb } from '../../../../lib/db.ts';
+import { reportError } from '../../../../lib/error-report.ts';
 
 export async function POST(request: Request): Promise<Response> {
   const signature = request.headers.get('stripe-signature');
@@ -23,6 +24,12 @@ export async function POST(request: Request): Promise<Response> {
     // Webhook security: an unverified/malformed event must be REJECTED
     // (4xx), never processed — Stripe retries on non-2xx.
     console.error('stripe webhook failed:', error);
+    // #65 / WP25: durable copy (fail-open — cannot change the 400 below). A
+    // failure HERE is a money-path incident with no audit row and no session,
+    // exactly the zero-trace class error_log exists for. No request/user
+    // context: the raw body is unverified at this point and must not be
+    // logged (it is attacker-suppliable until the signature checks out).
+    await reportError('stripe-webhook', error);
     return new Response('webhook error', { status: 400 });
   }
 }

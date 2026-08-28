@@ -21,9 +21,18 @@ import { NextResponse, type NextRequest } from 'next/server';
 // of which carries a user session cookie, so the session-redirect must NOT
 // swallow it (a redirect would 307 the cron caller to /login and the job would
 // silently never run — caught live at the WP16 go-live, session 28).
-/** Routes that authenticate themselves and must match EXACTLY — no sibling
- * under the same name inherits the exemption. */
-const PUBLIC_EXACT_PATHS = ['/api/stripe/webhook', '/api/onboarding-cron', '/api/gdpr-purge-cron'];
+/** Routes that authenticate themselves (or need no auth) and must match
+ * EXACTLY — no sibling under the same name inherits the exemption.
+ * /api/health (#114) is auth-free BY DESIGN: it exists so the CI post-deploy
+ * smoke can exercise the signed-in dashboard's real DB reads without holding
+ * a test-user credential — it takes no input, reads a synthetic user id that
+ * matches no rows, and returns only check names, never data or error text. */
+const PUBLIC_EXACT_PATHS = [
+  '/api/stripe/webhook',
+  '/api/onboarding-cron',
+  '/api/gdpr-purge-cron',
+  '/api/health',
+];
 
 const PUBLIC_PATH_PREFIXES = [
   '/login',

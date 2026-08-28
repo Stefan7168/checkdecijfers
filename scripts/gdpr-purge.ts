@@ -68,11 +68,15 @@ async function main(): Promise<void> {
       // A partial failure still redacted rows. Saying only "it failed" would
       // lose the record of GDPR work that actually committed.
       if (error instanceof RetentionPurgePartialError) {
+        const legFailed =
+          error.leg === 'trial'
+            ? 'the 90-day trial leg then failed.'
+            : 'the 90-day trial leg then ran; the error_log leg failed.';
         console.error(
           `PARTIAL — ${error.auditRowsRedacted} audit redaction(s) COMMITTED under cutoff ` +
             `${error.auditCutoff}` +
             `${error.byKind === undefined ? '' : ` by kind ${JSON.stringify(error.byKind)}`}` +
-            `; the 90-day trial leg then failed.`,
+            `; ${legFailed}`,
         );
       }
       throw error;

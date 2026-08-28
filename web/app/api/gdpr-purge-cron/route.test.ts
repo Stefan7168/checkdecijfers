@@ -20,10 +20,12 @@ const { runRetentionPurge, maybeAlertRetentionPurge, FakePartialError } = vi.hoi
   maybeAlertRetentionPurge: vi.fn(),
   FakePartialError: class extends Error {
     auditRowsRedacted: number;
-    constructor(message: string, auditRowsRedacted: number) {
+    leg: 'trial' | 'errorLog';
+    constructor(message: string, auditRowsRedacted: number, leg: 'trial' | 'errorLog' = 'trial') {
       super(message);
       this.name = 'RetentionPurgePartialError';
       this.auditRowsRedacted = auditRowsRedacted;
+      this.leg = leg;
     }
   },
 }));
@@ -119,12 +121,25 @@ describe('gdpr-purge-cron route', () => {
   // A PARTIAL failure redacted rows before it broke. Reporting only "it failed"
   // would tell the owner nothing expired when the 2-year leg actually ran.
   it('says what COMMITTED when the trial leg fails after the audit leg', async () => {
-    runRetentionPurge.mockRejectedValue(new FakePartialError('trial leg failed', 12));
+    runRetentionPurge.mockRejectedValue(new FakePartialError('trial leg failed', 12, 'trial'));
     const res = await GET(req('Bearer sekrit'));
     expect(res.status).toBe(500);
     const detail = maybeAlertRetentionPurge.mock.calls[0]![0].detail as string;
     expect(detail).toContain('12 redaction(s) DID commit');
-    expect(detail).toContain('the 2-year leg ran');
+    expect(detail).toContain('the 2-year leg ran, only the 90-day trial leg did not');
+  });
+
+  // A review finding: this branch previously hardcoded "only the trial leg
+  // did not" regardless of which leg actually threw, self-contradicting the
+  // error's own message on exactly this path.
+  it('says what COMMITTED when the error_log leg fails after the audit leg, without blaming the trial leg', async () => {
+    runRetentionPurge.mockRejectedValue(new FakePartialError('error_log leg failed', 12, 'errorLog'));
+    const res = await GET(req('Bearer sekrit'));
+    expect(res.status).toBe(500);
+    const detail = maybeAlertRetentionPurge.mock.calls[0]![0].detail as string;
+    expect(detail).toContain('12 redaction(s) DID commit');
+    expect(detail).toContain('the 2-year leg and the 90-day trial leg both ran; only the error_log leg did not');
+    expect(detail).not.toContain('only the 90-day trial leg did not');
   });
 
   // Migration 020 has been live since the 2026-07-17 go-live, so on THIS

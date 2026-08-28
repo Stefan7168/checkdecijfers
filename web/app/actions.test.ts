@@ -57,6 +57,11 @@ vi.mock('../backend/answer/context/index.ts', () => ({
 vi.mock('../backend/answer/llm/client.ts', () => ({ AnthropicLlmClient: vi.fn() }));
 vi.mock('../backend/websearch/index.ts', () => ({ AnthropicWebSearchClient: vi.fn() }));
 
+// #65: the durable error reporter — stubbed to a resolved no-op so the
+// exception-path tests below stay silent; its own behavior (fail-open, the
+// throwing-logger pin) is covered in actions-errorlog.test.ts.
+vi.mock('../lib/error-report.ts', () => ({ reportError: vi.fn().mockResolvedValue(undefined) }));
+
 import { askQuestion, replyToClarification } from './actions.ts';
 
 const fakeDb = {} as Db;

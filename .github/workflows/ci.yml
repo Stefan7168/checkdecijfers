@@ -196,3 +196,17 @@ jobs:
             echo "GET ${path} -> ${status} (after redirects)"
             test "$status" = "200"
           done
+          # #114: the auth-free health route — runs the SAME real DB reads the
+          # signed-in dashboard makes (balance/history/pricing, incl. the
+          # onboarding join), the class the anonymous paths above are blind to
+          # (session-27 incident: GET / 500'd for every logged-in user while
+          # this smoke stayed green). Deliberately NO -L here: a proxy
+          # regression that un-exempts the route would 307 to /login, and
+          # following it would report /login's 200 as health (the WP16 go-live
+          # bug class) — the raw status must be exactly 200. The body is check
+          # names only (no data, no error text), so echoing it is safe and
+          # names the failing check right in this log.
+          health=$(curl -s --max-time 30 -w '\n%{http_code}' "https://checkdecijfers.vercel.app/api/health")
+          status=$(printf '%s' "$health" | tail -n 1)
+          echo "GET /api/health -> ${status} (no redirects followed): $(printf '%s' "$health" | head -n 1)"
+          test "$status" = "200"

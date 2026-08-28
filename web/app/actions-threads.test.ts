@@ -18,6 +18,9 @@ const { currentUserId, getDb } = vi.hoisted(() => ({
 }));
 vi.mock('../lib/current-user.ts', () => ({ currentUserId }));
 vi.mock('../lib/db.ts', () => ({ getDb }));
+// #65: no-op the durable error reporter (its own pins live in
+// actions-errorlog.test.ts) so exception-path tests here stay silent.
+vi.mock('../lib/error-report.ts', () => ({ reportError: vi.fn().mockResolvedValue(undefined) }));
 
 const billing = vi.hoisted(() => ({
   chargeAndRun: vi.fn(),
