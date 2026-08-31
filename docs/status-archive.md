@@ -1,5 +1,91 @@
 # STATUS archive — the session log
 
+**Session 68 (2026-08-28 into 2026-08-31, local time +07, owner present — the session spanned three
+calendar days, all in one continuous conversation) BUILT `/systeemoverzicht`, A PUBLIC ARCHITECTURE
+REFERENCE PAGE, ON DIRECT OWNER REQUEST — not a queued work package.** The owner asked in-chat for a
+page mirroring the equivalent system-map page on their other project (GlaiBaan), reachable via a gear
+icon in the site footer. Three commits, one per request across the session's three days:
+
+1. **`0fbd37a` (2026-08-28) — the page itself.** `web/app/systeemoverzicht/page.tsx` (a Server
+   Component holding `metadata`, `robots: {index:false, follow:false}` — belt-and-suspenders on top of
+   the site's existing blanket noindex) rendering the big-picture system diagram (`web/components/
+   system-map-diagram.tsx`, a hand-drawn inline SVG in the `stat-card.tsx` style — `rect`/`text`/`line`
+   with an arrowhead `marker`, huisstijl CSS vars via `currentColor`, no diagramming library), the
+   8-step journey of one question through the real pipeline (docs/04's "System shape" ASCII diagram,
+   turned into plain-language cards), an ALLOWED/NEVER list for what the AI may do, every external
+   service (Vercel, Supabase, Anthropic, CBS StatLine, Stripe, Resend, Namecheap) with cost and live/
+   frozen/planned status, a scheduled-automations table, and a "built, off" list for the WP26/#162
+   dormant flags. A gear icon (hand-drawn SVG, no icon library — none exists in this codebase) added to
+   `SiteFooter`, linking to the new route.
+   - **Found and fixed before the first push: the route wasn't in `proxy.ts`'s `PUBLIC_EXACT_PATHS`
+     allowlist**, so the middleware silently redirected every anonymous visit to `/login` — caught by
+     actually navigating to the page in a local dev server rather than trusting the code alone. Added as
+     an exact-match entry (not a prefix — matching this file's own stated discipline) and pinned with
+     both a positive and two negative (`-debug`, `/details` suffix) cases in `proxy.test.ts`.
+   - **Found and fixed via the pre-push LOW code-review:** `StatusLegend` hand-duplicated the exact
+     class strings and labels that `StatusPill` (defined a few lines below it) already encoded for the
+     same three states — refactored to a shared `StatusKind`/`STATUS_STYLES`/`STATUS_LABELS` module-level
+     trio, `StatusLegend` now renders `StatusPill` instead of its own copy.
+   - Verified: `web:typecheck` clean, full web suite 494/494 (unchanged from before — no backend touched),
+     a local dev server visually inspected (top-of-page screenshot succeeded; the diagram's own
+     correctness was confirmed programmatically via `getBoundingClientRect` on every SVG text node —
+     zero overlaps, zero orphaned labels outside their parent box — after screenshot/scroll tools started
+     returning blank frames mid-verification, traced to `document.hidden === true` on the Browser pane, a
+     known quirk from the sibling project that had not previously hit this repo), mobile viewport (375px)
+     confirmed the page body never scrolls horizontally while the diagram's own `overflow-x-auto`
+     container does. CI green (gate + deploy), production canary `/systeemoverzicht` → 200 after deploy.
+2. **`d328213` (2026-08-30) — an EN/NL language toggle, English default, Dutch second, per explicit
+   owner instruction.** Required a structural split: `metadata` cannot be exported from a Client
+   Component, and the toggle needs `useState`, so `page.tsx` stayed a thin Server Component (metadata
+   now in English, matching the new default) delegating to a new Client Component,
+   `system-map-content.tsx`, which holds the full bilingual content dictionary (`CONTENT: Record<'en' |
+   'nl', Content>`, English authored as canonical, Dutch translated to match) and the toggle itself (a
+   pill button pair, `aria-pressed` wired correctly). `system-map-diagram.tsx` took a new `lang` prop and
+   a matching bilingual `TEXT` dictionary, including two full aria-label translations for the diagram's
+   own screen-reader description. The choice persists per-viewer only, in `localStorage`
+   (`systeemoverzicht-lang`) — read once after mount (so the very first client render always matches the
+   server's English render, avoiding a hydration mismatch) — and `document.documentElement.lang` tracks
+   the active language while on the page, resetting to the site's Dutch default (via a captured
+   `previous` value) on unmount so a client-side navigation away never leaks the override to the rest of
+   the (Dutch-only) site.
+   - LOW code-review: two passes, both came back with zero findings after careful manual tracing of the
+     two `useEffect`s' interaction (the mount-restore effect and the `[lang]`-dependent attribute-sync
+     effect can both fire on the same initial render; traced through several toggle/restore sequences by
+     hand to confirm the DOM attribute always ends up correct and always resets to Dutch on unmount).
+   - Verified: `web:typecheck` clean, full suite 494/494, live-clicked the toggle via `element.click()` in
+     the dev server (screenshot/scroll tools were unreliable again, same `document.hidden` cause) and
+     confirmed via DOM queries: `h1` text, `document.documentElement.lang`, `localStorage` value, and
+     button `aria-pressed` states all flipped correctly both directions; reload after toggling to NL
+     correctly restored NL from `localStorage` (including the diagram's own `aria-label`). A full-page
+     screenshot at a resized-tall viewport (avoiding the scroll issue entirely) confirmed the visual
+     result: EN default renders correctly, the EN/NL pill sits top-right next to the kicker. CI green,
+     production canary confirmed the English title (`<title>System map — Check de Cijfers</title>`) live.
+3. **`f2b3975` (2026-08-31) — removed a VISUAL double-footer the owner flagged, one day later.** Not the
+   same bug as step 1's earlier semantic `<footer>`-in-`<footer>` fix (already closed) — this was the
+   page's own closing content block (a plain `<div>`, correctly not a `<footer>` tag) sitting directly
+   above the global `SiteFooter` with matching styling (`border-t border-line` + small muted text),
+   reading as two stacked footer-looking bars. Removed outright, per the literal instruction, rather than
+   relocated: its content (a repeat of "drawn from the repo docs on [date]", already stated once in the
+   page's own header, plus a "back to home" link) was genuinely redundant, not merely misplaced. Removed
+   the now-dead `Link` import and the `footerNote`/`backLink` content-dictionary fields alongside it (both
+   languages). LOW code-review: pure removal, zero findings. Verified: `web:typecheck` clean, full suite
+   494/494, `document.querySelectorAll('footer').length === 1` confirmed both locally and on production
+   after deploy, CI green, canary 200 on `/` and `/systeemoverzicht`.
+
+**Docs updated in this same close-out:** [04-architecture.md](04-architecture.md) gained a new capability
+row for the page (all three commits folded into one row, since this wasn't tracked against any existing
+open-question — a genuinely new, unplanned addition); this [lessons-learned.md](lessons-learned.md) entry
+(the Server/Client split constraint, the visual-vs-semantic double-footer distinction, and the
+`document.hidden` verification workaround); this status-archive.md entry; STATUS.md's top block. README.md
+checked, still accurate (doesn't enumerate individual product routes). No `open-questions.md` row needed —
+nothing here was a deferred decision, and no residual was found worth tracking.
+
+**Clean state confirmed at close:** `git status` clean, single worktree, `main` at `f2b3975`, CI green
+(gate + deploy) on the final push, zero open PRs (`gh pr list --state open` empty), production 200 on `/`
+and `/systeemoverzicht`. Nothing from the queue this session touched — WP26, `GDPR_PURGE_APPLY`, the three
+live migrations (023/024/025), and everything else on the session-67 "▶ NEXT" list stand exactly where
+session 67 left them, untouched, still entirely owner-supervised.
+
 **Session 67 (2026-08-28, local time +07, owner present) REVIEWED AND MERGED ALL 19 PRs SESSION 66 LEFT
 OPEN (#99-#117) — zero held, zero new scope invented, two real (non-live) bugs found and fixed before
 merging, two residuals logged as new tracked rows, production canaried green after every single merge.**

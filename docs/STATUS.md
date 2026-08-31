@@ -9,74 +9,46 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
-**▶ SESSION 67 (2026-08-28, local +07, owner present) REVIEWED AND MERGED ALL 19 PRs SESSION 66 LEFT
-OPEN (#99-#117) — zero held, two real (non-live) bugs found and fixed pre-merge, two residuals logged as
-new tracked rows, production canaried green after every merge.** Parallel review pass first (19 agents:
-13 normal, 4 adversarial on the flagged-risky ones, 2 on the Dependabot pair) — every verdict was `merge`
-or `merge_with_note`. Found and FIXED before merging: **#110**'s admin-alert email hardcoded "the trial
-leg failed" regardless of which leg actually threw, self-contradicting its own error message — now tagged
-with a `leg` field both composition roots branch on. Found and LOGGED, not merge-blocking (mechanism is
-manual-apply-only, nothing live depends on it): **[#195](open-questions.md)** (PR #111's disclosed
-eviction cost is ~4-6x understated) and **[#196](open-questions.md)** (a concurrent eviction can
-false-refuse a live query). Merged in dependency-aware clusters — foundational-first within each,
-after a `gh pr diff --name-only` scan found real code overlap the kickoff's "no order needed" framing had
-missed (the `compose.ts` trio #102→#103→#113, the ingestion pair #100→#111, the money/actions trio
-#101→#110): isolated docs (#99,#105,#109,#112,#106,#104) → ingestion (#100→#111) → money-path+actions
-(#101→#110) → the compose engine (#102→#103→#113, the one real hand-resolved 4-file conflict, predicted
-in advance by the review's own merge-simulation) → dashboard (#107→#108, one hand-resolved conflict) →
-chart (#114) → session-66's own wrap-up docs (#115, two hand-resolved conflicts) → Dependabot (#116,#117).
-Full narrative, every merge SHA, every conflict resolution:
+**▶ SESSION 68 (2026-08-28 into 2026-08-31, local +07, owner present, spanned three calendar days in one
+continuous conversation) BUILT `/systeemoverzicht` — a public architecture reference page, on direct
+owner request, NOT a queued work package.** Mirrors the equivalent system-map page on the owner's other
+project (GlaiBaan): the big-picture system diagram, the 8-step journey of one question, an ALLOWED/NEVER
+AI-scope list, every external service with cost/status, scheduled automations, and the "built, off"
+flags — reachable via a gear icon in the footer. Three commits, one per follow-up request: `0fbd37a` the
+page itself, `d328213` an EN/NL toggle added two days later (English default per owner instruction, Dutch
+second), `f2b3975` a visual double-footer fix one day after that. Two real issues found and fixed before
+their respective pushes: the route was missing from `proxy.ts`'s public-path allowlist (would have
+silently redirected every visitor to `/login`) and `StatusLegend` hand-duplicated `StatusPill`'s styling
+(caught by the pre-push LOW code-review). Full narrative, every verification step:
 [status-archive.md](status-archive.md) (prepended below).
 
-⚠ **One process detour, caught before it reached the owner:** the first canary check assumed
-`checkdecijfers.nl` was production (it isn't — registered on Namecheap's default nameservers, used only
-for `mail.checkdecijfers.nl`'s email DNS, never wired to Vercel) and got a TCP-level timeout that looked
-exactly like an outage. The real URL, `https://checkdecijfers.vercel.app`, was 200 on `/` and `/llms.txt`
-throughout — production was never at risk, this was a wrong assumption on this session's part. Corrected
-in RUNBOOK's new operational section (see below) so it doesn't happen again.
+**✅ ZERO OPEN PRS, clean state (2026-08-31, session 68).** Verify yourself: `git log -1 origin/main`
+should show `f2b3975` or later and `gh pr list --state open` should be empty.
 
-**Docs touched this session (verified facts only, all cross-checked against `git log`/CI/production, none
-aspirational):** 18 `open-questions.md` rows got a merge-confirmation appended; 2 NEW rows added (#195,
-#196); `04-architecture.md` gained rows for #39 (alternates disclosure, now LIVE unconditional) and #110
-(eviction/TTL), and corrected #162's/#65+#114's stale "pending review" language to merged; `08-build-plan.md`'s
-WP25 header updated; `RUNBOOK.md` gained supervised-live-step sections for migrations 023 and 025 (024
-already had one) plus a new "Reviewing and merging a large PR batch" section recording this session's own
-recipe. Cleanup: one stray review-scratch worktree + two stray review-scratch local branches removed
-(zero unique content, already squash-merged under different SHAs).
+Full session-67 record (reviewed + merged all 19 PRs session 66 left open, #99-#117): [status-archive.md](status-archive.md) (prepended) +
+[session-briefs/2026-08-28-session-67-close.md](session-briefs/2026-08-28-session-67-close.md).
 
-⚠ **Stale-branch count CORRECTED (session 66 undercounted this at "two"):** `git branch -vv` after this
-session's `git fetch --prune` shows **26** stale local branches, not 2 — 7 pre-pause branches whose
-REMOTE still exists (`fix/178-click-freshness-recheck`, `fix/191-reply-turn-answer-first`,
-`fix/193-soften-definitief-copy`, `fix/34c-sync-table-lock`, `perf/176-gate-region-option-intents`,
-`refactor/shared-intent-options`, `fix/vitest-exclude-worktrees`), 7 old Dependabot branches whose remote
-is already gone (their content is long since merged, reflected in the session-64 bridge chain below), and
-12 `worktree-agent-*` orphans from past agent-tool sessions (all pointing at already-superseded commits,
-no remote). None affect `origin/main` or production either way — flagged for a deliberate, owner-present
-`git branch -D` pass whenever there's room, not touched by this session per the same caution session 66
-applied to the two it found.
-
-**⚠ THE TWO THINGS THAT ARE STILL ONLY YOURS, untouched through three sessions running:** the **WP26
+**⚠ THE TWO THINGS THAT ARE STILL ONLY YOURS, untouched through four sessions running:** the **WP26
 flags** (`CLARIFY_CLICK_ENABLED`, `ANSWER_FIRST_ENABLED`) and **`GDPR_PURGE_APPLY`**. Read
 [#175](open-questions.md) before flipping WP26 — the anonymous trial receives NEITHER flag.
 
-**✅ ZERO OPEN PRS (2026-08-28, session 67).** Verify yourself: `git log -1 origin/main` should show
-`b1b752a` or later and `gh pr list --state open` should be empty.
-
-**▶ NEXT, in order — nothing urgent, all owner-supervised:** (a) **three live migration applies** now
-that their PRs are merged — 023 (#147, money-path compensation bound), 024 (#65/WP25, error_log), 025
-(#110, eviction/TTL lifecycle columns) — each a supervised `npm run db:migrate`; RUNBOOK now has a
-dedicated section per migration with the exact verification steps; (b) the **owner-supervised WP26
-go-live** — one flag at a time, RUNBOOK "WP26 answer-first + clickable options"; #191/#178's "nu"-half
-already fixed, age-bound/TTL half still open (see below); (c) **`GDPR_PURGE_APPLY=1`** plus one watched
-run; (d) **#193's live `audit:verify` pinning step** (R8 divergence check against production — the copy
-itself has been live since PR #91, only the live-DB verification + `known-divergences.ts` pinning is
-outstanding); (e) **#162's A/B** (blind pairwise LLM judge + owner read-back, ~€1-2 live spend) — now
-UNBLOCKED, PR #113 is merged; (f) **#132 route B** GO or defer (T-0 condition — `forks_count` — still 0,
-last measured 2026-08-26); (g) then the owner menu: WP30c choice (Rijksfinanciën `80504NED`, confirmed
-ordinary StatLine but `Gediscontinueerd`) / [#170](open-questions.md)(3) (Phase-2-tied) / the #89/#70/#79
-UI trio (now UNBLOCKED, #103 is merged — but still needs its own shared-design decision first, not an
-automatic follow-on). **Housekeeping, whenever a session has room:** `open-questions.md` is still ~320KB
-and still due for a prune; the 26 stale branches above want a deliberate delete pass.
+**▶ NEXT, in order — nothing urgent, all owner-supervised, UNCHANGED by session 68 (a side quest, not
+part of this queue):** (a) **three live migration applies** now that their PRs are merged — 023 (#147,
+money-path compensation bound), 024 (#65/WP25, error_log), 025 (#110, eviction/TTL lifecycle columns) —
+each a supervised `npm run db:migrate`; RUNBOOK now has a dedicated section per migration with the exact
+verification steps; (b) the **owner-supervised WP26 go-live** — one flag at a time, RUNBOOK "WP26
+answer-first + clickable options"; #191/#178's "nu"-half already fixed, age-bound/TTL half still open
+(see below); (c) **`GDPR_PURGE_APPLY=1`** plus one watched run; (d) **#193's live `audit:verify` pinning
+step** (R8 divergence check against production — the copy itself has been live since PR #91, only the
+live-DB verification + `known-divergences.ts` pinning is outstanding); (e) **#162's A/B** (blind pairwise
+LLM judge + owner read-back, ~€1-2 live spend) — UNBLOCKED, PR #113 is merged; (f) **#132 route B** GO or
+defer (T-0 condition — `forks_count` — still 0, last measured 2026-08-26); (g) then the owner menu: WP30c
+choice (Rijksfinanciën `80504NED`, confirmed ordinary StatLine but `Gediscontinueerd`) /
+[#170](open-questions.md)(3) (Phase-2-tied) / the #89/#70/#79 UI trio (UNBLOCKED, #103 is merged — but
+still needs its own shared-design decision first, not an automatic follow-on). **Housekeeping, whenever
+a session has room:** `open-questions.md` is still ~320KB and still due for a prune; **26** stale local
+branches (7 pre-pause with a live remote, 7 old-Dependabot with none, 12 `worktree-agent-*` orphans —
+full list in the session-67 record above) want a deliberate, owner-present `git branch -D` pass.
 
 **Tracked, deliberately NOT built:** [#174](open-questions.md) and [#185](open-questions.md) (both explicitly
 held), [#183](open-questions.md) (product call), [#188](open-questions.md) (concurrency on a live money path
@@ -97,9 +69,8 @@ Full session-65 record (the root-`nanoid` HIGH-alert fix, `#194`, and the queue 
 Full session-66 record (the entire queue executed, 17 PRs, zero merged):
 [status-archive.md](status-archive.md) (prepended) +
 [session-briefs/2026-08-28-session-66-close.md](session-briefs/2026-08-28-session-66-close.md).
-Full session-67 record (this session — review + merge of all 19):
-[status-archive.md](status-archive.md) (prepended above) +
-[session-briefs/2026-08-28-session-67-close.md](session-briefs/2026-08-28-session-67-close.md).
+Full session-68 record (this session — `/systeemoverzicht`, direct owner request):
+[status-archive.md](status-archive.md) (prepended above).
 
 ---
 

@@ -6,6 +6,42 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 68 — 2026-08-28 into 2026-08-31 (local, +07), owner present, spanned multiple calendar days in one continuous session — built /systeemoverzicht on direct owner request
+
+Full narrative: [status-archive.md](status-archive.md) session-68 entry. Not a queued WP — the owner
+asked directly, in-chat, for a public architecture reference page mirroring the equivalent page on
+their other project, gear-icon-linked from the footer. Three commits over three sessions of the same
+conversation: the page itself (`0fbd37a`), an EN/NL toggle added two days later (`d328213`), a
+visual-duplication footer fix one day after that (`f2b3975`).
+
+- **A page that needs client-side interactive state (a language toggle's `useState`) cannot just get
+  `'use client'` slapped on top if it also exports `metadata` — `metadata` is a Server-Component-only
+  export.** Caught before writing any code, not after: the fix is splitting into a thin Server Component
+  (`page.tsx`, holds `metadata`, English and static since a client toggle can't influence what a crawler
+  or a link preview sees before any JS runs) and a Client Component child (`system-map-content.tsx`,
+  holds the toggle and the bilingual content dictionary). Worth remembering as the default shape for any
+  future "static reference page with a bit of client interactivity" — don't reach for one file with
+  `'use client'` at the top and then discover the metadata export silently stops working.
+- **A "double footer" report can be a VISUAL duplication, not a semantic HTML one — checking DOM landmark
+  counts alone can pass while the actual complaint is still there.** The first pass through this page
+  found and fixed a genuine two-`<footer>`-elements bug (the page's own closing block used the `<footer>`
+  tag, colliding with the global `SiteFooter`). Session 68 found a SECOND, different issue the owner
+  actually meant: after that fix, the page's own closing content block (a `<div>`, not a `<footer>`) still
+  sat directly above the global footer with identical styling (`border-t` + small muted text) — reading
+  as two stacked footer bars to a human, invisible to a `document.querySelectorAll('footer').length`
+  check. The actual fix was removing the block outright (it also duplicated the header's own "drawn from
+  the repo docs" line). Lesson: when a visual complaint uses a semantic-sounding word ("footer", "modal",
+  "header"), check what a HUMAN would perceive as that element, not just what carries the matching tag.
+- **The Browser pane's `document.hidden`-while-backgrounded quirk (already known from the sibling
+  project) also hits plain scroll+screenshot verification on THIS repo's pages, not just map-style
+  rendering** — `computer scroll` timed out repeatedly and full-page screenshots at a scrolled position
+  came back blank while `document.hidden` read `true`. Two reliable workarounds used successfully here:
+  (a) resize the viewport to the full page height once (`resize_window` with a tall `height`) and take a
+  single screenshot instead of scrolling, or (b) skip pixels entirely and verify DOM geometry
+  programmatically (`getBoundingClientRect`, text-node position checks against parent box bounds) — this
+  is what actually caught that the new SVG diagram's ~30 text nodes were all correctly placed with no
+  overlaps, when screenshots of the scrolled diagram kept coming back blank.
+
 ## Session 67 — 2026-08-28 (local, +07), owner present — reviewed and merged all 19 PRs session 66 left open (#99-#117)
 
 Full narrative: [status-archive.md](status-archive.md) session-67 entry. Nineteen open PRs, zero held —
