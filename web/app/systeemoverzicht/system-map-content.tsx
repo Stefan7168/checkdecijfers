@@ -7,7 +7,6 @@
 // else.
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { SystemMapDiagram } from '../../components/system-map-diagram.tsx';
 
@@ -56,8 +55,6 @@ type Content = {
   builtFrozenHeading: string;
   builtFrozenIntro: string;
   builtFrozenItems: BuiltFrozenItem[];
-  footerNote: string;
-  backLink: string;
 };
 
 const DRAWN_ON_DATE = { en: '28 August 2026', nl: '28 augustus 2026' } as const;
@@ -244,8 +241,6 @@ const CONTENT: Record<Lang, Content> = {
         body: 'Filling the text around a figure through fixed placeholders instead of free text, so a fabricated number becomes impossible instead of caught after the fact.',
       },
     ],
-    footerNote: `Drawn from the repo docs on ${DRAWN_ON_DATE.en}. Something out of date? Check the repo under`,
-    backLink: '← Back to Check de Cijfers',
   },
   nl: {
     statusLabels: { live: 'Live', frozen: 'Gebouwd, uit', planned: 'Gepland' },
@@ -428,8 +423,6 @@ const CONTENT: Record<Lang, Content> = {
         body: 'De tekst rond een cijfer laten invullen via vaste plekhouders in plaats van vrije tekst, zodat een verzonnen getal onmogelijk wordt in plaats van achteraf betrapt.',
       },
     ],
-    footerNote: `Getekend vanuit de repo-docs op ${DRAWN_ON_DATE.nl}. Vragen of iets klopt niet meer? Kijk in de repo onder`,
-    backLink: '← Terug naar Check de Cijfers',
   },
 };
 
@@ -644,20 +637,6 @@ export function SystemMapContent() {
           ))}
         </ul>
       </section>
-
-      {/* A plain div, not <footer> — the global SiteFooter (app/layout.tsx)
-        * already renders the page's one <footer> landmark; a second one here
-        * would double up on assistive-tech footer navigation. */}
-      <div className="border-t border-line pt-4 text-xs text-ink-muted">
-        <p>
-          {t.footerNote} <code className="rounded bg-paper-sunken px-1 py-0.5">docs/04-architecture.md</code>.
-        </p>
-        <p className="mt-2">
-          <Link href="/" className="text-accent hover:underline">
-            {t.backLink}
-          </Link>
-        </p>
-      </div>
     </div>
   );
 }
