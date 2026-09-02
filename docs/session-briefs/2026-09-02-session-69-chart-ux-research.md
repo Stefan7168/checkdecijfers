@@ -1,6 +1,8 @@
 # Chart/graphics UX research — session 69 (2026-09-02)
 
-**Status: proposal only, awaiting owner go/no-go. Nothing built from this yet.**
+**Status: GO given in-chat the same day ("Can you execute it now", after switching the session to
+Fable 5.1). Step 1 built session 69 — see [open-questions #197](../open-questions.md) for the as-built
+record and the defaults taken on the ten decisions. Steps 2–3 follow; 4–8 unscheduled.**
 
 Polished version (published as a Claude Artifact, may not survive an account switch —
 this file is the durable copy): the session published it at publish time; ask a fresh

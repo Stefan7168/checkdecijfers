@@ -19,9 +19,13 @@
 // 2026-07-12): it would mean keeping every superseded builder behavior alive
 // forever, a machinery burden that only grows, for zero user-facing value
 // (nobody wants a re-derivation to intentionally reproduce an OLDER, less
-// safe chart/definition-line rule). All schema versions stay at 1;
-// `reconstructionReport` stays reject-on-mismatch, unconditionally, for
-// everyone who is not in this register.
+// safe chart/definition-line rule). Every stored spec is schemaVersion 1
+// today; when a v2 ever exists, `reconstructionReport` re-derives through a
+// builder dispatched on the row's STORED schemaVersion (ADR 014 as-built
+// notes, session 69) — a versioned builder is not the rejected "replay each
+// row's historical rule set". `reconstructionReport` stays
+// reject-on-mismatch, unconditionally, for everyone who is not in this
+// register.
 //
 // So a legitimate divergence is a DOCUMENTED, PINNED exception — never a
 // blanket "old rows don't have to reconstruct" switch. Each entry names the

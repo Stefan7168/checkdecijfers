@@ -29,7 +29,15 @@ users. Result: [#197](open-questions.md), full proposal in
 [session-briefs/2026-09-02-session-69-chart-ux-research.md](session-briefs/2026-09-02-session-69-chart-ux-research.md)
 (also a Claude Artifact for a readable version) — 8 ranked ideas, a first-three build order, 10 owner
 decisions. One fabricated claim in the raw research (a nonexistent "palette validator" script) was
-caught and removed before publishing. **Awaiting your go/no-go — nothing built from it yet.**
+caught and removed before publishing. **GO given in-chat the same day (after switching the session to
+Fable 5.1); step 1 BUILT:** numbers back on the chart (axis min/max, end-of-line and per-bar labels —
+spec strings only, bound to resultIds), colour-blind-safe `--series-1..4` palette + dash patterns +
+hatched provisional bars, accessible name + announced tooltip, tap-to-pin on touch, ≥ 24 px targets,
+download menu with real menu semantics AND computed-paint inlining (the #170(3) export had serialized
+`var(--token)` strokes no standalone file can resolve — found and fixed here), toggle as a radiogroup,
+a `schemaVersion` guard in the web renderer, ADR 014 as-built rule for optional v1 fields. Web
+renderer only; spec/builder/audit rows untouched. 27 new tests render the real svg in jsdom; web suite
+529/529. Steps 2 (Tabel view) and 3 (comparison chips, gated on the WP26 smoke test) are next.
 
 **▶ SESSION 68 (2026-08-28 into 2026-08-31, local +07, owner present, spanned three calendar days in one
 continuous conversation) BUILT `/systeemoverzicht` — a public architecture reference page, on direct

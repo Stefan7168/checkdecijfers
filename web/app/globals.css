@@ -33,6 +33,22 @@
   --warn-soft: #fdf3e3;
   --danger: #b91c1c;
 
+  /* #197 (session 69): chart SERIES colours — the one sanctioned exception to
+   * "one accent" (docs/12-huisstijl.md house rule 3): data series need
+   * distinguishable hues, and the semantic tokens above must never be reused
+   * for that (they used to be: red-vs-green at 1.10:1, the pair colour-blind
+   * readers cannot tell apart by hue either). Colour-blind-safe set: the
+   * accent for brand continuity, then Okabe-Ito vermillion and bluish green,
+   * then Tol purple — each ≥ 3:1 against both paper surfaces (WCAG 1.4.11;
+   * measured 2026-09-02 vs white: 8.7 / 3.9 / 3.4 / 6.1). Series five and up
+   * fall back to --ink-muted; dash patterns carry what colour cannot
+   * (web/components/chart.tsx, seriesStyle). Any huisstijl substitution must
+   * re-pass the same contrast check before it ships. */
+  --series-1: var(--accent);
+  --series-2: #d55e00;
+  --series-3: #009e73;
+  --series-4: #aa3377;
+
   --background: var(--paper);
   --foreground: var(--ink);
 }
@@ -57,6 +73,10 @@
   --color-warn: var(--warn);
   --color-warn-soft: var(--warn-soft);
   --color-danger: var(--danger);
+  --color-series-1: var(--series-1);
+  --color-series-2: var(--series-2);
+  --color-series-3: var(--series-3);
+  --color-series-4: var(--series-4);
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);

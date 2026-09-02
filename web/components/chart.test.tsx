@@ -3,9 +3,17 @@
 // periods must sort chronologically by code, not label/insertion order —
 // mirroring the checks ADR 014's SVG-renderer test suite already runs.
 import { cleanup, render, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ChartSpec } from '../backend/chart/types.ts';
-import { annotationMarkers, buildRows, ChartTooltip, ChartView, yAxisDomain } from './chart.tsx';
+import {
+  annotationMarkers,
+  buildRows,
+  ChartTooltip,
+  ChartView,
+  seriesStyle,
+  valueLabelPlan,
+  yAxisDomain,
+} from './chart.tsx';
 
 afterEach(cleanup);
 
@@ -341,6 +349,16 @@ describe('ChartView', () => {
     expect(screen.getByText('Testreeks')).toBeInTheDocument();
   });
 
+  it('#197: refuses a spec version it does not speak instead of silently drawing it (mirrors render.ts)', () => {
+    const s = { ...spec(), schemaVersion: 2 } as unknown as ChartSpec;
+    const { container } = render(<ChartView spec={s} />);
+    expect(container.querySelector('svg')).toBeNull();
+    expect(screen.getByText(/nieuwere versie/)).toBeInTheDocument();
+    // The attribution still renders: a refused chart is never a silently
+    // source-less one (R4).
+    expect(screen.getByText('Bron: CBS StatLine, tabel 12345NED.')).toBeInTheDocument();
+  });
+
   it('every numeric token in the rendered DOM occurs verbatim in the spec\'s own strings (ADR 018 membership check)', () => {
     vi.stubGlobal(
       'ResizeObserver',
@@ -381,5 +399,249 @@ describe('ChartView', () => {
         `numeric token "${tok}" in the rendered DOM has no source in the spec's own strings`,
       ).toBe(true);
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// #197 step 1 — numbers on the chart + the accessibility baseline (session 69).
+// The tests below render the REAL chart in jsdom: ResponsiveContainer keeps
+// its initialDimension when ResizeObserver is undefined (jsdom's default), so
+// the svg — axis ticks, dots, labels — is actually in the DOM here, unlike the
+// ResizeObserver-stubbed tests above, which only ever saw the footer text.
+// Recharts' default axis <Text> measures glyphs and renders nothing in jsdom;
+// every label asserted here is rendered by this file's own components.
+// ---------------------------------------------------------------------------
+
+function threePointSpec(overrides: Partial<ChartSpec> = {}): ChartSpec {
+  return spec({
+    series: [
+      {
+        label: 'Nederland',
+        regionCode: 'NL01',
+        points: [
+          point({ resultId: 'lo', periodCode: '2022JJ00', periodLabel: '2022', value: 1.5, formattedValue: '1,5' }),
+          point({ resultId: 'mid', periodCode: '2023JJ00', periodLabel: '2023', value: 2, formattedValue: '2,0' }),
+          point({ resultId: 'hi', periodCode: '2024JJ00', periodLabel: '2024', value: 3.25, formattedValue: '3,3' }),
+        ],
+      },
+    ],
+    ...overrides,
+  });
+}
+
+describe('seriesStyle (#197: colour-blind-safe series palette + non-colour encoding)', () => {
+  it('draws the first four series in the dedicated series tokens, never the semantic status colours', () => {
+    const colors = [0, 1, 2, 3].map((i) => seriesStyle(i).color);
+    expect(colors).toEqual(['var(--series-1)', 'var(--series-2)', 'var(--series-3)', 'var(--series-4)']);
+  });
+
+  it('renders series five and beyond in the muted ink token — the chart stops pretending to tell them apart by hue', () => {
+    expect(seriesStyle(4).color).toBe('var(--ink-muted)');
+    expect(seriesStyle(9).color).toBe('var(--ink-muted)');
+  });
+
+  it('gives every series after the first a distinct dash pattern, so colour is never the only difference', () => {
+    expect(seriesStyle(0).dasharray).toBeUndefined();
+    const dashes = [1, 2, 3, 4].map((i) => seriesStyle(i).dasharray);
+    for (const d of dashes) expect(d).toBeTruthy();
+    expect(new Set(dashes).size).toBe(4);
+  });
+});
+
+describe('valueLabelPlan (#197: the numbers a lay reader asked for — still only spec strings)', () => {
+  it('ticks the y-axis at the plotted minimum and maximum with those points\' own formattedValue, bound to their resultIds', () => {
+    const plan = valueLabelPlan(threePointSpec());
+    expect(plan.axisTicks).toEqual([
+      { value: 1.5, display: '1,5', resultId: 'lo' },
+      { value: 3.25, display: '3,3', resultId: 'hi' },
+    ]);
+  });
+
+  it('labels the end of each line with its LAST plotted point as "periode: waarde"', () => {
+    const plan = valueLabelPlan(threePointSpec());
+    expect(plan.endLabels).toEqual([{ seriesKey: 's0', periodCode: '2024JJ00', resultId: 'hi', text: '2024: 3,3' }]);
+  });
+
+  it('skips a trailing null when choosing the end label — an honest gap has no value to show', () => {
+    const s = threePointSpec();
+    s.series[0].points.push(
+      point({ resultId: 'gap', periodCode: '2025JJ00', periodLabel: '2025', value: null, formattedValue: null }),
+    );
+    const plan = valueLabelPlan(s);
+    expect(plan.endLabels[0].resultId).toBe('hi');
+    expect(plan.axisTicks.map((t) => t.resultId)).toEqual(['lo', 'hi']);
+  });
+
+  it('marks a provisional end value the way the tooltip and the SVG renderer do (trailing *)', () => {
+    const s = threePointSpec();
+    s.series[0].points[2].provisional = true;
+    expect(valueLabelPlan(s).endLabels[0].text).toBe('2024: 3,3*');
+  });
+
+  it('collapses to a single tick when every plotted value is identical', () => {
+    const s = spec({
+      series: [
+        {
+          label: 'A',
+          regionCode: null,
+          points: [
+            point({ resultId: 'a', periodCode: '2023JJ00', periodLabel: '2023', value: 2, formattedValue: '2,0' }),
+            point({ resultId: 'b', periodCode: '2024JJ00', periodLabel: '2024', value: 2, formattedValue: '2,0' }),
+          ],
+        },
+      ],
+    });
+    expect(valueLabelPlan(s).axisTicks).toHaveLength(1);
+  });
+
+  it('plans nothing when every point is null', () => {
+    const s = spec({
+      series: [{ label: 'A', regionCode: null, points: [point({ value: null, formattedValue: null })] }],
+    });
+    const plan = valueLabelPlan(s);
+    expect(plan.axisTicks).toEqual([]);
+    expect(plan.endLabels).toEqual([]);
+    expect(plan.barLabels).toEqual([]);
+  });
+
+  it('gives a bar chart a value label per bar (no axis ticks, no end labels)', () => {
+    const s = spec({
+      kind: 'bar',
+      series: [
+        { label: 'Amsterdam', regionCode: 'GM0363', points: [point({ resultId: 'ams', value: 4.2, formattedValue: '4,2' })] },
+        { label: 'Utrecht', regionCode: 'GM0344', points: [point({ resultId: 'utr', value: 3.1, formattedValue: '3,1', provisional: true })] },
+      ],
+    });
+    const plan = valueLabelPlan(s);
+    expect(plan.axisTicks).toEqual([]);
+    expect(plan.endLabels).toEqual([]);
+    expect(plan.barLabels).toEqual([
+      { seriesKey: 's0', periodCode: '2024JJ00', resultId: 'ams', text: '4,2' },
+      { seriesKey: 's1', periodCode: '2024JJ00', resultId: 'utr', text: '3,1*' },
+    ]);
+  });
+
+  it('drops per-bar labels above the readable maximum (idea-bank >15 rule) rather than smearing them', () => {
+    const series = Array.from({ length: 16 }, (_, i) => ({
+      label: `G${i}`,
+      regionCode: `GM${i}`,
+      points: [point({ resultId: `r${i}`, value: i, formattedValue: `${i},0` })],
+    }));
+    expect(valueLabelPlan(spec({ kind: 'bar', series })).barLabels).toEqual([]);
+  });
+});
+
+describe('ChartView — #197 step 1, rendered against the real svg', () => {
+  // Earlier tests in this file stub ResizeObserver and never unstub it; with
+  // it defined, ResponsiveContainer measures the jsdom container (0×0) and
+  // renders nothing. Undefined = it keeps initialDimension and draws.
+  beforeEach(() => vi.unstubAllGlobals());
+
+  it('labels the y-axis at min and max with the points\' own formattedValue, each bound to its resultId', () => {
+    const { container } = render(<ChartView spec={threePointSpec()} />);
+    const lo = container.querySelector('svg [data-role="axis-tick"][data-label-for="lo"]');
+    const hi = container.querySelector('svg [data-role="axis-tick"][data-label-for="hi"]');
+    expect(lo?.textContent).toBe('1,5');
+    expect(hi?.textContent).toBe('3,3');
+    expect(container.querySelector('svg [data-role="axis-tick"][data-label-for="mid"]')).toBeNull();
+  });
+
+  it('shows an always-visible end-of-line label on the last plotted point', () => {
+    const { container } = render(<ChartView spec={threePointSpec()} />);
+    const end = container.querySelector('svg [data-role="end-label"][data-label-for="hi"]');
+    expect(end?.textContent).toBe('2024: 3,3');
+  });
+
+  it('bar chart: every bar carries its own value label bound to its resultId, and a provisional bar is hatched', () => {
+    const s = spec({
+      kind: 'bar',
+      provisionalNote: 'Voorlopige cijfers zijn gemarkeerd met *.',
+      series: [
+        { label: 'Amsterdam', regionCode: 'GM0363', points: [point({ resultId: 'ams', value: 4.2, formattedValue: '4,2' })] },
+        { label: 'Utrecht', regionCode: 'GM0344', points: [point({ resultId: 'utr', value: 3.1, formattedValue: '3,1', provisional: true })] },
+      ],
+    });
+    const { container } = render(<ChartView spec={s} />);
+    expect(container.querySelector('svg [data-role="bar-label"][data-label-for="ams"]')?.textContent).toBe('4,2');
+    expect(container.querySelector('svg [data-role="bar-label"][data-label-for="utr"]')?.textContent).toBe('3,1*');
+    const provisionalBar = container.querySelector('svg [data-point="value"][data-result-id="utr"]');
+    expect(provisionalBar?.getAttribute('fill')).toMatch(/^url\(#/);
+    const finalBar = container.querySelector('svg [data-point="value"][data-result-id="ams"]');
+    expect(finalBar?.getAttribute('fill')).toBe('var(--series-1)');
+  });
+
+  it('gives the chart an accessible name from spec strings and a keyboard hint in its <desc>', () => {
+    const { container } = render(<ChartView spec={threePointSpec()} />);
+    const svg = container.querySelector('svg')!;
+    expect(svg.getAttribute('aria-label')).toContain('Testreeks');
+    expect(svg.querySelector('desc')?.textContent).toMatch(/pijltjestoetsen/);
+  });
+
+  it('exposes the chart title as a heading so heading-navigation reaches it', () => {
+    render(<ChartView spec={threePointSpec()} />);
+    expect(screen.getByRole('heading', { name: 'Testreeks' })).toBeInTheDocument();
+  });
+
+  it('renders a legend key for the hollow provisional marker exactly when the spec carries a provisional note', () => {
+    const withNote = threePointSpec({ provisionalNote: 'Voorlopige cijfers zijn gemarkeerd met *.' });
+    const { unmount } = render(<ChartView spec={withNote} />);
+    expect(screen.getByText('○ = voorlopig cijfer')).toBeInTheDocument();
+    unmount();
+    render(<ChartView spec={threePointSpec()} />);
+    expect(screen.queryByText('○ = voorlopig cijfer')).toBeNull();
+  });
+
+  it('still shows no numeric token that is not a spec string once axis and end labels render (membership over the REAL svg)', () => {
+    const s = threePointSpec({
+      provisionalNote: 'Voorlopige cijfers (2024) zijn gemarkeerd met *.',
+      nullNotes: ['2021: geen gegevens beschikbaar (geheim).'],
+      definitionLine: 'Definitie: testdefinitie 2020.',
+    });
+    const { container } = render(<ChartView spec={s} />);
+    expect(container.querySelector('svg')).not.toBeNull();
+    const specStrings = [
+      s.title,
+      s.unit,
+      s.attributionLine,
+      s.attribution.tableId,
+      s.attribution.syncedAt,
+      s.definitionLine ?? '',
+      s.provisionalNote ?? '',
+      ...s.nullNotes,
+      ...Object.keys(s.dimLabels),
+      ...Object.values(s.dimLabels),
+      ...s.series.flatMap((se) => se.points.flatMap((p) => [p.formattedValue ?? '', p.periodLabel])),
+    ].filter(Boolean);
+    // Per TEXT NODE, not container.textContent: adjacent svg <text> nodes
+    // concatenate without a separator ("1,5" + "3,3" -> "1,53,3"), which
+    // would hide the very labels this test exists to check.
+    const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+    const tokens: string[] = [];
+    for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+      tokens.push(...((node.textContent ?? '').match(/\d[\d.,]*/g) ?? []));
+    }
+    expect(tokens.length).toBeGreaterThan(0);
+    // The axis ticks and the end label must actually be among the tokens —
+    // otherwise this test proves nothing about them.
+    expect(tokens).toContain('1,5');
+    expect(tokens).toContain('3,3');
+    for (const tok of tokens) {
+      expect(
+        specStrings.some((str) => str.includes(tok)),
+        `numeric token "${tok}" in the rendered DOM has no source in the spec's own strings`,
+      ).toBe(true);
+    }
+  });
+});
+
+describe('ChartTooltip — #197: announced, not just shown', () => {
+  it('is a polite live region, so keyboard point-walking through the chart is read out', () => {
+    const s = threePointSpec();
+    const { rows, seriesMeta } = buildRows(s);
+    const payload = seriesMeta.map((m) => ({ dataKey: m.key, color: m.color, payload: rows[2] }));
+    const { container } = render(<ChartTooltip active label="2024" payload={payload} seriesMeta={seriesMeta} />);
+    const root = container.firstElementChild!;
+    expect(root.getAttribute('role')).toBe('status');
+    expect(root.getAttribute('aria-live')).toBe('polite');
   });
 });

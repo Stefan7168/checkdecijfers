@@ -65,7 +65,7 @@ function spec(title: string): ChartSpec {
 }
 
 describe('ChartWithToggle', () => {
-  it('shows the primary spec by default, both buttons present, primary marked pressed', () => {
+  it('shows the primary spec by default, both options present, primary marked checked', () => {
     render(
       <ChartWithToggle
         spec={spec('Seizoengecorrigeerd')}
@@ -78,12 +78,12 @@ describe('ChartWithToggle', () => {
     );
     expect(screen.getByText('Seizoengecorrigeerd')).toBeInTheDocument();
     expect(screen.queryByText('Ongecorrigeerd')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'seizoengecorrigeerd' })).toHaveAttribute(
-      'aria-pressed',
+    expect(screen.getByRole('radio', { name: 'seizoengecorrigeerd' })).toHaveAttribute(
+      'aria-checked',
       'true',
     );
-    expect(screen.getByRole('button', { name: 'ongecorrigeerd' })).toHaveAttribute(
-      'aria-pressed',
+    expect(screen.getByRole('radio', { name: 'ongecorrigeerd' })).toHaveAttribute(
+      'aria-checked',
       'false',
     );
   });
@@ -99,15 +99,15 @@ describe('ChartWithToggle', () => {
         }}
       />,
     );
-    fireEvent.click(screen.getByRole('button', { name: 'ongecorrigeerd' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'ongecorrigeerd' }));
     expect(screen.getByText('Ongecorrigeerd')).toBeInTheDocument();
     expect(screen.queryByText('Seizoengecorrigeerd')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'ongecorrigeerd' })).toHaveAttribute(
-      'aria-pressed',
+    expect(screen.getByRole('radio', { name: 'ongecorrigeerd' })).toHaveAttribute(
+      'aria-checked',
       'true',
     );
-    expect(screen.getByRole('button', { name: 'seizoengecorrigeerd' })).toHaveAttribute(
-      'aria-pressed',
+    expect(screen.getByRole('radio', { name: 'seizoengecorrigeerd' })).toHaveAttribute(
+      'aria-checked',
       'false',
     );
   });
@@ -123,13 +123,13 @@ describe('ChartWithToggle', () => {
         }}
       />,
     );
-    fireEvent.click(screen.getByRole('button', { name: 'ongecorrigeerd' }));
-    fireEvent.click(screen.getByRole('button', { name: 'seizoengecorrigeerd' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'ongecorrigeerd' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'seizoengecorrigeerd' }));
     expect(screen.getByText('Seizoengecorrigeerd')).toBeInTheDocument();
     expect(screen.queryByText('Ongecorrigeerd')).not.toBeInTheDocument();
   });
 
-  it('the toggle is a labelled group for assistive tech', () => {
+  it('#197: the toggle is a labelled radiogroup — one choice of two, not two independent toggles', () => {
     render(
       <ChartWithToggle
         spec={spec('Seizoengecorrigeerd')}
@@ -140,6 +140,25 @@ describe('ChartWithToggle', () => {
         }}
       />,
     );
-    expect(screen.getByRole('group', { name: 'Definitie wisselen' })).toBeInTheDocument();
+    expect(screen.getByRole('radiogroup', { name: 'Definitie wisselen' })).toBeInTheDocument();
+  });
+
+  it('#197: arrow keys move the selection like a native radio group', () => {
+    render(
+      <ChartWithToggle
+        spec={spec('Seizoengecorrigeerd')}
+        toggle={{
+          primaryLabel: 'seizoengecorrigeerd',
+          alternateLabel: 'ongecorrigeerd',
+          alternateSpec: spec('Ongecorrigeerd'),
+        }}
+      />,
+    );
+    const primary = screen.getByRole('radio', { name: 'seizoengecorrigeerd' });
+    primary.focus();
+    fireEvent.keyDown(primary, { key: 'ArrowRight' });
+    expect(screen.getByRole('radio', { name: 'ongecorrigeerd' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByText('Ongecorrigeerd')).toBeInTheDocument();
+    expect(document.activeElement).toBe(screen.getByRole('radio', { name: 'ongecorrigeerd' }));
   });
 });

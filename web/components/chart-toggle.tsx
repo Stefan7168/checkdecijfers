@@ -11,13 +11,19 @@
 // Deliberately NOT the general Phase-2 definition-switching mechanism
 // (open-questions #46) — one hardcoded pair per chart, styled after the
 // existing segmented-button pattern in feedback-buttons.tsx.
-import { useState } from 'react';
+//
+// #197 (session 69): exposed as a radiogroup — the two options are mutually
+// exclusive, which `aria-pressed` (independent toggle buttons) mis-described
+// to screen readers ("toggle button, pressed" instead of "1 of 2"). Arrow
+// keys move the choice like a native radio group; the pills meet the 24px
+// touch-target minimum.
+import { useRef, useState, type KeyboardEvent } from 'react';
 import type { ChartSpec, CuratedChartToggle } from '../backend/chart/index.ts';
 import { ChartView } from './chart.tsx';
 
 function buttonClass(active: boolean): string {
   return (
-    'rounded-full border px-2 py-0.5 text-xs ' +
+    'min-h-6 rounded-full border px-2.5 py-1 text-xs ' +
     (active
       ? 'border-line-strong bg-paper-sunken text-ink'
       : 'border-line-strong text-ink-soft hover:bg-paper-sunken')
@@ -26,21 +32,47 @@ function buttonClass(active: boolean): string {
 
 export function ChartWithToggle({ spec, toggle }: { spec: ChartSpec; toggle: CuratedChartToggle }) {
   const [alternate, setAlternate] = useState(false);
+  const primaryRef = useRef<HTMLButtonElement>(null);
+  const alternateRef = useRef<HTMLButtonElement>(null);
+
+  function select(next: boolean): void {
+    setAlternate(next);
+    (next ? alternateRef : primaryRef).current?.focus();
+  }
+
+  function onKeyDown(event: KeyboardEvent<HTMLDivElement>): void {
+    if (['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp'].includes(event.key)) {
+      event.preventDefault();
+      select(!alternate);
+    }
+  }
+
   return (
     <div>
-      <div role="group" aria-label="Definitie wisselen" className="mb-2 flex flex-wrap items-center gap-2">
+      <div
+        role="radiogroup"
+        aria-label="Definitie wisselen"
+        onKeyDown={onKeyDown}
+        className="mb-2 flex flex-wrap items-center gap-2"
+      >
         <button
+          ref={primaryRef}
           type="button"
-          aria-pressed={!alternate}
-          onClick={() => setAlternate(false)}
+          role="radio"
+          aria-checked={!alternate}
+          tabIndex={alternate ? -1 : 0}
+          onClick={() => select(false)}
           className={buttonClass(!alternate)}
         >
           {toggle.primaryLabel}
         </button>
         <button
+          ref={alternateRef}
           type="button"
-          aria-pressed={alternate}
-          onClick={() => setAlternate(true)}
+          role="radio"
+          aria-checked={alternate}
+          tabIndex={alternate ? 0 : -1}
+          onClick={() => select(true)}
           className={buttonClass(alternate)}
         >
           {toggle.alternateLabel}

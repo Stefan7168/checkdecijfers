@@ -32,6 +32,16 @@ Every future output format is *another renderer over the same spec*: a static-im
 - Chart correctness is testable without a browser: assert spec contents against query results (invariant R6 in [05-data-rules.md](../05-data-rules.md)).
 - Interactivity in Phase 0 is minimal by design; hover/zoom arrive with the Studio, not before.
 
+## As-built notes
+
+- The spec-versioning rule has one bounded, written-down exception (optional v1 fields the
+  shared builder never emits and a v1 renderer can honestly ignore) — see ADR
+  [014](014-chart-spec-v1-and-renderer.md) "As-built notes" (session 69, 2026-09-02). Anything
+  a renderer must understand to draw correctly is still a new schema version.
+- "Interactivity in Phase 0 is minimal by design" held until session 69, when the owner pulled
+  a first slice forward ([#197](../open-questions.md) step 1): labels, accessibility and palette
+  on the web renderer — all presentation over the unchanged spec, no data-changing controls.
+
 ## Revisit triggers
 
 - Phase 2 sharing features → build the static-image renderer over the spec.

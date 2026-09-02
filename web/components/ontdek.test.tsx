@@ -102,9 +102,9 @@ describe('OntdekCharts', () => {
       },
     ]);
     render(await OntdekCharts());
-    expect(screen.getByRole('button', { name: 'seizoengecorrigeerd' })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'seizoengecorrigeerd' })).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: 'oorspronkelijke, ongecorrigeerde cijfers' }),
+      screen.getByRole('radio', { name: 'oorspronkelijke, ongecorrigeerde cijfers' }),
     ).toBeInTheDocument();
     // Primary spec's title shows by default.
     expect(screen.getByText('Werkloosheidspercentage')).toBeInTheDocument();

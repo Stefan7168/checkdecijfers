@@ -95,6 +95,31 @@ only, which is the safe direction.
 - Spec v1 is frozen the moment it is stored (audit records, WP10): additions
   arrive as `schemaVersion: 2` plus renderer dispatch, never as silent v1 edits.
 
+## As-built notes
+
+- **The optional-v1-field rule (written down 2026-09-02, session 69, [#197](../open-questions.md);
+  applied once before, unwritten: `annotations`, #170(4), session 66).** "Never a silent v1 edit"
+  has one bounded exception in practice: an OPTIONAL field may be added to v1 iff (a) the shared
+  builder (`buildChartSpec`) never emits it — so every spec the answer pipeline stores stays
+  byte-identical and `reconstruct.ts` (R8) sees no divergence; (b) every already-stored v1 spec
+  still validates unchanged against `src/chart/schema.ts`; and (c) a v1 renderer that IGNORES the
+  field still draws an honest chart. Fail (c) — e.g. a field that re-keys or re-orders points, or
+  that a renderer must know about to place anything correctly — and it is `schemaVersion: 2`,
+  with both renderers dispatching on the stored version and `reconstruct.ts`/`threads/replay.ts`
+  re-deriving through a versioned builder (the rejected alternative remains "replay each row's
+  historical rule set"; see the `known-divergences.ts` header).
+- **Both renderers now guard the version.** `src/chart/render.ts` has refused non-v1 specs since
+  WP8; the Recharts wrapper (`web/components/chart.tsx`) did not read `schemaVersion` at all until
+  session 69 — a v2 spec would have rendered silently, possibly wrong. It now renders an explicit
+  Dutch "nieuwere versie" notice (attribution still shown, R4) instead.
+- **Session 69 (#197 step 1) changed the WEB renderer's presentation only — the spec, the builder
+  and the SVG renderer are untouched:** axis min/max ticks, end-of-line and per-bar labels (all
+  `formattedValue` strings bound via `data-label-for`; WHICH points get a label is a count-based
+  presentation rule, WHAT they say is never computed here), a colour-blind-safe series palette
+  (`--series-1..4`, dash patterns as the non-colour channel, hatch fill for provisional bars), an
+  accessible name + announced tooltip, tap-to-pin on touch devices, and `initialDimension` on the
+  responsive container (which is also what lets jsdom render the real svg in the component tests).
+
 ## Revisit triggers
 
 - Chat-UI session → build the Recharts wrapper (ADR 008 constraint 3).

@@ -27,7 +27,15 @@ NEVER raw zinc-*/blue-* palette classes and never hex values.
    (wordmark, big numbers in stat cards may combine `.font-display .tnum`).
 2. **Every number is tabular** — wrap numeric spans in `.tnum` (or `data-numeric`); tables get it free.
 3. **One accent.** Blue is for actions and links only. Semantic colors are reserved for their meaning —
-   never decorative.
+   never decorative. **The one sanctioned exception (session 69, [#197](open-questions.md)): chart SERIES
+   colours.** Data series need distinguishable hues, so charts draw from `--series-1..4` (Tailwind
+   `text-series-N`/`bg-series-N`): the accent, then Okabe-Ito vermillion `#d55e00` and bluish green
+   `#009e73`, then Tol purple `#aa3377` — a colour-blind-safe set, each ≥ 3:1 against both paper surfaces
+   (WCAG 1.4.11; measured 2026-09-02). Series five and up render `--ink-muted`; dash patterns and the
+   hollow/hatched provisional marker carry what colour cannot. Never reuse `--ok`/`--warn`/`--danger` as
+   series colours (that is what the chart did before session 69: red-vs-green at 1.10:1, the exact pair
+   colour-blind readers cannot separate by hue). A brand substitution must re-pass the same contrast
+   check across all four before it ships.
 4. **Hairlines over shadows.** Cards are `bg-paper-raised border border-line rounded-lg`; shadows at most
    `shadow-sm`. The editorial look is flat paper, not floating glass.
 5. **Buttons:** primary `bg-accent text-white hover:bg-accent-strong rounded-md px-4 py-2 font-medium`;

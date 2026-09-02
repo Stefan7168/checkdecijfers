@@ -5,16 +5,26 @@
 // Honesty contract, mirrored from the SVG renderer: every numeric STRING a
 // viewer can read must be a point's own `formattedValue`, never Recharts'
 // own formatting of the raw `value` — enforced below via a custom tooltip
-// that reads a sibling `_display` field, and axis ticks are hidden entirely
-// (the SVG renderer's own choice: "gridlines are deliberately unlabeled — no
-// invented axis ticks"). `value` itself is used only for geometry (bar
-// height / line position), never rendered as text. Every displayed value is
-// additionally BOUND to its source cell via `data-label-for="<resultId>"` —
-// membership alone ("the string appears somewhere in the spec") provably
-// misses swapped labels (WP8 review lesson; recurred here, WP12 review).
+// that reads a sibling `_display` field, custom axis ticks that show only a
+// point's own display string (Recharts' own tick numbers stay switched off:
+// "no invented axis ticks", the SVG renderer's rule), and custom point/bar
+// labels that do the same. `value` itself is used only for geometry (bar
+// height / line position / WHICH points get a label), never rendered as
+// text. Every displayed value is additionally BOUND to its source cell via
+// `data-label-for="<resultId>"` — membership alone ("the string appears
+// somewhere in the spec") provably misses swapped labels (WP8 review lesson;
+// recurred here, WP12 review).
+//
+// #197 step 1 (session 69, open-questions #197): the numbers came back onto
+// the chart (axis min/max, end-of-line and per-bar labels), the series
+// palette became colour-blind-safe with dash patterns as the non-colour
+// channel, the chart got an accessible name + announced tooltip, tap-to-pin
+// on touch devices, and a schemaVersion guard mirroring render.ts. All of it
+// is presentation over the same spec — nothing here changes what the builder
+// emits, so stored specs (R8) and `reconstruct.ts` are untouched.
 'use client';
 
-import { useRef } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import {
   Bar,
   BarChart,
@@ -28,7 +38,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import type { ChartSpec } from '../backend/chart/types.ts';
+import type { ChartPoint, ChartSpec } from '../backend/chart/types.ts';
 import { ChartDownloadMenu } from './chart-download.tsx';
 import { SourceBadge } from './source-badge.tsx';
 
@@ -38,20 +48,30 @@ export interface SeriesMeta {
   key: string;
   label: string;
   color: string;
+  /** Non-colour encoding (#197): undefined = solid, else an SVG dash pattern.
+   * Recharts' legend icon picks it up automatically. */
+  dasharray: string | undefined;
 }
 
-// Huisstijl palette (docs/12-huisstijl.md): the primary series takes the one
-// accent; subsequent series fall back to the other semantic tokens rather than
-// introducing new hex colors. CSS var() strings are valid SVG stroke/fill
-// values, so the same tokens app/globals.css defines drive the chart.
-const COLORS = [
-  'var(--accent)',
-  'var(--danger)',
-  'var(--ok)',
-  'var(--accent-strong)',
-  'var(--warn)',
-  'var(--ink-soft)',
-];
+// #197 series palette — the one sanctioned exception to the huisstijl's "one
+// accent" rule (docs/12-huisstijl.md): data series need distinguishable hues.
+// Tokens live in app/globals.css (`--series-1..4`: the accent for brand
+// continuity, then Okabe-Ito vermillion / bluish green and Tol purple — a
+// colour-blind-safe set, each ≥ 3:1 against both paper surfaces, measured
+// 2026-09-02). The old palette reused the semantic --danger/--ok/--warn
+// tokens as series colours: red-vs-green at 1.10:1 lightness contrast AND the
+// hue pair deuteranopia collapses. Series five and beyond render in muted ink
+// — the chart stops pretending to tell them apart by hue (the table view is
+// the honest surface for many series) — and every series after the first
+// carries a dash pattern so colour is never the only difference (WCAG 1.4.1).
+const SERIES_COLORS = ['var(--series-1)', 'var(--series-2)', 'var(--series-3)', 'var(--series-4)'];
+const SERIES_DASHES = ['6 3', '2 2', '8 3 2 3', '1 3'];
+
+export function seriesStyle(index: number): { color: string; dasharray: string | undefined } {
+  const color = index < SERIES_COLORS.length ? SERIES_COLORS[index] : 'var(--ink-muted)';
+  const dasharray = index === 0 ? undefined : SERIES_DASHES[(index - 1) % SERIES_DASHES.length];
+  return { color, dasharray };
+}
 
 // Y-axis honesty policy (open-questions #48, resolved 2026-07-04): a bar
 // encodes LENGTH, so a non-zero baseline visually lies about ratios — bars
@@ -60,6 +80,9 @@ const COLORS = [
 // (src/chart/render.ts), which has done this since WP8. Exported + wired into
 // the YAxis below so the tested policy IS the rendered policy (WP12 review
 // lesson: a policy that the render doesn't actually use is not a guard).
+// #197: a zoomed line axis is now also honest BY DISCLOSURE — its plotted
+// minimum and maximum are labelled, so a reader can see the axis does not
+// start at zero.
 export function yAxisDomain(kind: ChartSpec['kind']): [0 | 'auto', 'auto'] {
   return kind === 'bar' ? [0, 'auto'] : ['auto', 'auto'];
 }
@@ -74,7 +97,7 @@ export function buildRows(spec: ChartSpec): { rows: Row[]; seriesMeta: SeriesMet
   const seriesMeta: SeriesMeta[] = spec.series.map((series, i) => ({
     key: `s${i}`,
     label: series.label,
-    color: COLORS[i % COLORS.length],
+    ...seriesStyle(i),
   }));
 
   const rows: Row[] = sortedCodes.map((code) => {
@@ -122,6 +145,103 @@ export function annotationMarkers(spec: ChartSpec, rows: Row[]): { periodLabel: 
   return markers;
 }
 
+// ---------------------------------------------------------------------------
+// #197: the numbers on the chart. WHICH points get a label is a count-based
+// presentation rule of the same kind as the idea bank's label-thinning rule
+// (docs/idea-bank.md §1): the plotted minimum and maximum on the y-axis, the
+// last plotted point of every line, every bar up to a readable maximum. WHAT
+// the label says is always the point's own `formattedValue` (+ the same '*'
+// provisional suffix the tooltip and src/chart/render.ts use) — never a
+// number this file formatted, rounded or interpolated. Selecting among
+// existing spec strings is rendering; producing a new one would not be.
+// ---------------------------------------------------------------------------
+
+export interface AxisTickLabel {
+  /** The raw value, used only to POSITION the tick (geometry). */
+  value: number;
+  /** The point's own display string — the only text a viewer sees. */
+  display: string;
+  resultId: string;
+}
+
+export interface PointLabel {
+  seriesKey: string;
+  periodCode: string;
+  resultId: string;
+  text: string;
+}
+
+export interface ValueLabelPlan {
+  /** Line charts: the plotted min and max (one entry when they coincide). */
+  axisTicks: AxisTickLabel[];
+  /** Line charts: "periodLabel: value" at each series' last plotted point. */
+  endLabels: PointLabel[];
+  /** Bar charts: one label per bar, or none above BAR_LABEL_MAX bars. */
+  barLabels: PointLabel[];
+}
+
+/** Above this many bars the labels would smear into each other; the idea
+ * bank's >15-categories rule says a table is the honest view there. */
+export const BAR_LABEL_MAX = 15;
+
+function pointLabelText(point: ChartPoint): string {
+  return `${point.formattedValue ?? ''}${point.provisional ? '*' : ''}`;
+}
+
+export function valueLabelPlan(spec: ChartSpec): ValueLabelPlan {
+  const empty: ValueLabelPlan = { axisTicks: [], endLabels: [], barLabels: [] };
+  const plotted = spec.series.flatMap((series, i) =>
+    series.points
+      .filter((p) => p.value !== null && p.formattedValue !== null)
+      .map((point) => ({ seriesKey: `s${i}`, point })),
+  );
+  if (plotted.length === 0) return empty;
+
+  if (spec.kind === 'bar') {
+    if (plotted.length > BAR_LABEL_MAX) return empty;
+    return {
+      ...empty,
+      barLabels: plotted.map(({ seriesKey, point }) => ({
+        seriesKey,
+        periodCode: point.periodCode,
+        resultId: point.resultId,
+        text: pointLabelText(point),
+      })),
+    };
+  }
+
+  // First occurrence wins on ties, in the spec's own order — deterministic.
+  let lo = plotted[0];
+  let hi = plotted[0];
+  for (const entry of plotted) {
+    if ((entry.point.value as number) < (lo.point.value as number)) lo = entry;
+    if ((entry.point.value as number) > (hi.point.value as number)) hi = entry;
+  }
+  const tick = (entry: { point: ChartPoint }): AxisTickLabel => ({
+    value: entry.point.value as number,
+    display: entry.point.formattedValue as string,
+    resultId: entry.point.resultId,
+  });
+  const axisTicks = lo.point.value === hi.point.value ? [tick(lo)] : [tick(lo), tick(hi)];
+
+  const endLabels: PointLabel[] = spec.series.flatMap((series, i) => {
+    // Spec order is period-ascending (R6: the spec's order IS the render
+    // order), so the last plotted point is the last non-null one.
+    const last = [...series.points].reverse().find((p) => p.value !== null && p.formattedValue !== null);
+    if (!last) return [];
+    return [
+      {
+        seriesKey: `s${i}`,
+        periodCode: last.periodCode,
+        resultId: last.resultId,
+        text: `${last.periodLabel}: ${pointLabelText(last)}`,
+      },
+    ];
+  });
+
+  return { axisTicks, endLabels, barLabels: [] };
+}
+
 interface TooltipPayloadEntry {
   dataKey: string;
   color: string;
@@ -130,6 +250,10 @@ interface TooltipPayloadEntry {
 
 // Exported for direct testing: the tooltip is the one place displayed value
 // strings are assembled, so its binding contract is test-pinned (WP12 review).
+// #197: a polite live region — Recharts' accessibility layer lets keyboard
+// users arrow through the points, and its own default tooltip was a live
+// region; this custom replacement (needed for the honesty contract) had
+// dropped that, so nothing was announced while navigating.
 export function ChartTooltip({
   active,
   payload,
@@ -144,7 +268,11 @@ export function ChartTooltip({
   if (!active || !payload || payload.length === 0) return null;
   const labelByKey = new Map(seriesMeta.map((s) => [s.key, s.label]));
   return (
-    <div className="rounded-md border border-line-strong bg-paper-raised px-3 py-2 text-sm shadow-sm">
+    <div
+      role="status"
+      aria-live="polite"
+      className="rounded-md border border-line-strong bg-paper-raised px-3 py-2 text-sm shadow-sm"
+    >
       <div className="font-medium text-ink">{label}</div>
       {payload.map((entry) => {
         const display = entry.payload[`${entry.dataKey}_display`];
@@ -166,49 +294,227 @@ export function ChartTooltip({
   );
 }
 
-function ProvisionalDot(seriesKey: string) {
-  return function Dot(props: { cx?: number; cy?: number; payload?: Row }) {
+/** Line-chart point marker: filled in the series colour, hollow when
+ * provisional (R11, same convention as render.ts), plus the #197 end-of-line
+ * label on the series' last plotted point. Recharts passes the Line's own
+ * `stroke` into a custom dot's props, so the marker follows the series colour
+ * without a second palette lookup. */
+function SeriesDot(seriesKey: string, endLabel: PointLabel | undefined) {
+  return function Dot(props: { cx?: number; cy?: number; payload?: Row; stroke?: string }) {
     const { cx, cy, payload } = props;
     if (cx == null || cy == null || !payload) return null;
     const value = payload[seriesKey];
     if (value == null) return null;
     const provisional = payload[`${seriesKey}_provisional`];
+    const resultId = payload[`${seriesKey}_resultId`];
+    const color = props.stroke ?? 'currentColor';
+    const isEnd = endLabel !== undefined && payload.periodCode === endLabel.periodCode;
     return (
-      <circle
-        cx={cx}
-        cy={cy}
-        r={4}
-        fill={provisional ? 'white' : undefined}
-        stroke="currentColor"
-        strokeWidth={2}
-      />
+      <g>
+        <circle
+          cx={cx}
+          cy={cy}
+          r={4}
+          fill={provisional ? 'var(--paper-raised)' : color}
+          stroke={color}
+          strokeWidth={2}
+          data-point="value"
+          data-result-id={resultId == null ? undefined : String(resultId)}
+        />
+        {isEnd ? (
+          <text
+            x={cx + 8}
+            y={cy + 4}
+            fontSize={11}
+            fill="var(--ink)"
+            textAnchor="start"
+            data-role="end-label"
+            data-label-for={endLabel.resultId}
+          >
+            {endLabel.text}
+          </text>
+        ) : null}
+      </g>
     );
   };
 }
 
+/** Bar-chart bar: the series colour, or a hatch pattern in that colour when
+ * provisional (a provisional bar used to be indistinguishable from a final
+ * one — only the prose note said so), plus the #197 value label. */
+function SeriesBar(seriesKey: string, color: string, patternId: string, labelByPeriod: Map<string, PointLabel>) {
+  return function Shape(props: { x?: number; y?: number; width?: number; height?: number; payload?: Row }) {
+    const { x, y, width, height, payload } = props;
+    if (x == null || y == null || width == null || height == null || !payload) return null;
+    const value = payload[seriesKey];
+    if (value == null) return null;
+    const provisional = Boolean(payload[`${seriesKey}_provisional`]);
+    const resultId = payload[`${seriesKey}_resultId`];
+    const label = labelByPeriod.get(String(payload.periodCode));
+    const negative = typeof value === 'number' && value < 0;
+    return (
+      <g>
+        <rect
+          x={x}
+          y={y}
+          width={width}
+          height={height}
+          fill={provisional ? `url(#${patternId})` : color}
+          stroke={provisional ? color : undefined}
+          strokeWidth={provisional ? 1 : undefined}
+          data-point="value"
+          data-result-id={resultId == null ? undefined : String(resultId)}
+        />
+        {label ? (
+          <text
+            x={x + width / 2}
+            y={negative ? y + height + 12 : y - 4}
+            fontSize={11}
+            fill="var(--ink)"
+            textAnchor="middle"
+            data-role="bar-label"
+            data-label-for={label.resultId}
+          >
+            {label.text}
+          </text>
+        ) : null}
+      </g>
+    );
+  };
+}
+
+/** Y-axis tick that shows a point's own display string — or nothing. With an
+ * explicit `ticks` list Recharts only asks for the values we gave it; if it
+ * ever asked for another one, rendering nothing beats inventing a number. */
+function AxisTick(tickByValue: Map<number, AxisTickLabel>) {
+  return function Tick(props: { x?: number | string; y?: number | string; payload?: { value?: unknown } }) {
+    const value = props.payload?.value;
+    const tick = typeof value === 'number' ? tickByValue.get(value) : undefined;
+    if (!tick || props.x == null || props.y == null) return null;
+    return (
+      <text
+        x={props.x}
+        y={props.y}
+        dy={4}
+        fontSize={11}
+        fill="var(--ink-muted)"
+        textAnchor="end"
+        data-role="axis-tick"
+        data-label-for={tick.resultId}
+      >
+        {tick.display}
+      </text>
+    );
+  };
+}
+
+/** Touch-only devices (no hover): Recharts' tooltip only follows a press-and-
+ * drag there, and a plain tap did nothing — so the tooltip pins on tap
+ * instead. Hover-capable devices keep the hover tooltip. */
+function useCoarsePointer(): boolean {
+  const [coarse, setCoarse] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return undefined;
+    const query = window.matchMedia('(hover: none) and (pointer: coarse)');
+    setCoarse(query.matches);
+    const onChange = (event: MediaQueryListEvent) => setCoarse(event.matches);
+    query.addEventListener('change', onChange);
+    return () => query.removeEventListener('change', onChange);
+  }, []);
+  return coarse;
+}
+
+const KEYBOARD_HINT = 'Gebruik de pijltjestoetsen om de punten van de grafiek te doorlopen.';
+
+/** Approximate text width at the 11px label font — layout only, so the plot
+ * leaves room for the end-of-line label instead of clipping it. */
+function labelWidthPx(text: string): number {
+  return Math.ceil(text.length * 6.5) + 12;
+}
+
 export function ChartView({ spec }: { spec: ChartSpec }) {
+  const chartContainerRef = useRef<HTMLDivElement>(null);
+  const rawId = useId();
+  const domId = rawId.replace(/[^a-zA-Z0-9_-]/g, '');
+  const coarsePointer = useCoarsePointer();
+
+  if (spec.schemaVersion !== 1) {
+    // Renderers dispatch on the schema version (ADR 007); this one only
+    // speaks v1 and must say so rather than misrender a future spec — the
+    // guard src/chart/render.ts has always had, and this wrapper lacked
+    // until #197 (a v2 spec would have rendered silently, possibly wrong).
+    return (
+      <div className="mt-3 rounded-lg border border-line bg-paper-raised p-3">
+        <div role="heading" aria-level={3} className="text-sm font-semibold text-ink">
+          {spec.title}
+        </div>
+        <p className="mt-2 text-sm text-warn">
+          Deze grafiek is gemaakt in een nieuwere versie dan deze pagina kan tonen. De cijfers staan in het
+          antwoord zelf.
+        </p>
+        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+          <p className="text-xs text-ink-muted">{spec.attributionLine}</p>
+          <SourceBadge tableId={spec.attribution.tableId} syncedAt={spec.attribution.syncedAt} />
+        </div>
+      </div>
+    );
+  }
+
   const { rows, seriesMeta } = buildRows(spec);
   const dimEntries = Object.entries(spec.dimLabels);
   const markers = annotationMarkers(spec, rows);
-  const chartContainerRef = useRef<HTMLDivElement>(null);
+  const plan = valueLabelPlan(spec);
+  const tickByValue = new Map(plan.axisTicks.map((t) => [t.value, t]));
+  const endLabelByKey = new Map(plan.endLabels.map((l) => [l.seriesKey, l]));
+  const barLabelsByKey = new Map<string, Map<string, PointLabel>>();
+  for (const label of plan.barLabels) {
+    const byPeriod = barLabelsByKey.get(label.seriesKey) ?? new Map<string, PointLabel>();
+    byPeriod.set(label.periodCode, label);
+    barLabelsByKey.set(label.seriesKey, byPeriod);
+  }
+  const yAxisWidth =
+    plan.axisTicks.length > 0
+      ? Math.min(80, Math.max(24, labelWidthPx(plan.axisTicks.reduce((w, t) => (t.display.length > w.length ? t.display : w), ''))))
+      : 16;
+  const rightMargin =
+    plan.endLabels.length > 0
+      ? Math.min(140, plan.endLabels.reduce((w, l) => Math.max(w, labelWidthPx(l.text)), 0))
+      : 8;
+  const accessibleName = `Grafiek: ${spec.title} (${spec.unit})`;
+  const tooltipTrigger = coarsePointer ? 'click' : 'hover';
 
   return (
     <div className="mt-3 rounded-lg border border-line bg-paper-raised p-3">
-      <div className="text-sm font-semibold text-ink">{spec.title}</div>
+      <div role="heading" aria-level={3} className="text-sm font-semibold text-ink">
+        {spec.title}
+      </div>
       {dimEntries.length > 0 ? (
         <div className="text-xs text-ink-muted">
           {dimEntries.map(([k, v]) => `${k}: ${v}`).join(' · ')}
         </div>
       ) : null}
       <div className="text-xs text-ink-muted">{spec.unit}</div>
-      <div ref={chartContainerRef} className="h-64 w-full">
-        <ResponsiveContainer width="100%" height="100%">
+      {/* touch-pan-y: the tooltip's press-and-drag must not fight vertical
+        * page scrolling on a phone. */}
+      <div ref={chartContainerRef} className="h-64 w-full touch-pan-y" data-tooltip-trigger={tooltipTrigger}>
+        <ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 640, height: 256 }}>
           {spec.kind === 'line' ? (
-            <LineChart data={rows} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
+            <LineChart
+              data={rows}
+              margin={{ top: 8, right: rightMargin, left: 8, bottom: 8 }}
+              desc={KEYBOARD_HINT}
+              aria-label={accessibleName}
+            >
               <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" />
               <XAxis dataKey="periodLabel" tick={{ fontSize: 11, fill: 'var(--ink-muted)' }} />
-              <YAxis tick={false} width={16} domain={yAxisDomain(spec.kind)} />
-              <Tooltip content={<ChartTooltip seriesMeta={seriesMeta} />} />
+              <YAxis
+                ticks={plan.axisTicks.map((t) => t.value)}
+                interval={0}
+                tick={plan.axisTicks.length > 0 ? AxisTick(tickByValue) : false}
+                width={yAxisWidth}
+                domain={yAxisDomain(spec.kind)}
+              />
+              <Tooltip trigger={tooltipTrigger} content={<ChartTooltip seriesMeta={seriesMeta} />} />
               {seriesMeta.length > 1 ? <Legend /> : null}
               {/* #170(4): curated event markers — drawn before the series so
                 * they sit visually behind the data (paint order = JSX order
@@ -232,26 +538,64 @@ export function ChartView({ spec }: { spec: ChartSpec }) {
                   dataKey={s.key}
                   name={s.label}
                   stroke={s.color}
+                  strokeWidth={2}
+                  strokeDasharray={s.dasharray}
                   connectNulls={false}
-                  dot={ProvisionalDot(s.key)}
+                  dot={SeriesDot(s.key, endLabelByKey.get(s.key))}
                   isAnimationActive={false}
                 />
               ))}
             </LineChart>
           ) : (
-            <BarChart data={rows} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
+            <BarChart
+              data={rows}
+              margin={{ top: 16, right: 8, left: 8, bottom: 8 }}
+              desc={KEYBOARD_HINT}
+              aria-label={accessibleName}
+            >
+              <defs>
+                {seriesMeta.map((s) => (
+                  <pattern
+                    key={s.key}
+                    id={`hatch-${domId}-${s.key}`}
+                    patternUnits="userSpaceOnUse"
+                    width={6}
+                    height={6}
+                    patternTransform="rotate(45)"
+                  >
+                    <rect width={6} height={6} fill="var(--paper-raised)" />
+                    <line x1={0} y1={0} x2={0} y2={6} stroke={s.color} strokeWidth={2} />
+                  </pattern>
+                ))}
+              </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" />
               <XAxis dataKey="periodLabel" tick={{ fontSize: 11, fill: 'var(--ink-muted)' }} />
               <YAxis tick={false} width={16} domain={yAxisDomain(spec.kind)} />
-              <Tooltip content={<ChartTooltip seriesMeta={seriesMeta} />} />
+              <Tooltip trigger={tooltipTrigger} content={<ChartTooltip seriesMeta={seriesMeta} />} />
               {seriesMeta.length > 1 ? <Legend /> : null}
               {seriesMeta.map((s) => (
-                <Bar key={s.key} dataKey={s.key} name={s.label} fill={s.color} isAnimationActive={false} />
+                <Bar
+                  key={s.key}
+                  dataKey={s.key}
+                  name={s.label}
+                  fill={s.color}
+                  isAnimationActive={false}
+                  shape={SeriesBar(
+                    s.key,
+                    s.color,
+                    `hatch-${domId}-${s.key}`,
+                    barLabelsByKey.get(s.key) ?? new Map<string, PointLabel>(),
+                  )}
+                />
               ))}
             </BarChart>
           )}
         </ResponsiveContainer>
       </div>
+      {/* #197: the hollow marker needs a key a lay reader can decode without
+        * reading the note first; rendered exactly when the spec says a
+        * provisional point exists (R11's provisionalNote is present iff). */}
+      {spec.provisionalNote ? <p className="mt-1 text-xs text-ink-muted">○ = voorlopig cijfer</p> : null}
       {/* WP23 (#92): caveats read like caveats — warn and a step larger than
         * the source credit, which stays smallest/lightest (photo-credit
         * style). Content untouched: same strings from the same one builder

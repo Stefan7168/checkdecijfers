@@ -26,7 +26,7 @@ At every step where confidence fails, the pipeline exits to **clarification or r
 | Chat UI, minimal | One conversation, no history persistence requirements beyond the session |
 | Validated answers | Numbers computed by code; LLM sees only validated result objects ([05-data-rules.md](05-data-rules.md)) |
 | Attribution + freshness | Table ID, title, sync date, covered period on every answer |
-| Simple charts | Line/bar/table from a server-built chart spec; no interactivity, no exports *(chart/image export stays out of Phase 0; the Phase 1 CSV **data** export shipped later under [open-questions #52](open-questions.md) / WP21, and WP20's stat-card PNG under #80 — this row described Phase 0 truthfully when frozen)* |
+| Simple charts | Line/bar/table from a server-built chart spec; no interactivity, no exports *(chart/image export stays out of Phase 0; the Phase 1 CSV **data** export shipped later under [open-questions #52](open-questions.md) / WP21, and WP20's stat-card PNG under #80 — this row described Phase 0 truthfully when frozen. **Owner pull-forward, session 69 (2026-09-02, [#197](open-questions.md)):** chart PNG/SVG download (#170(3)) and the step-1 slice of the chart-UX proposal — value labels, a colour-blind-safe palette, accessibility, tap-to-pin — all presentation over the unchanged spec; data-changing chart controls stay in the Phase 2 Studio row below)* |
 | Refusal & clarification | Per principle 3 (c) in [CLAUDE.md](../CLAUDE.md); exercised by benchmark tasks B15–B20 |
 | Audit record per answer | Question, parsed intent, query plan, result IDs, numbers used, table versions, timestamps — backend-verifiable |
 | The 20-task benchmark | Run by hand against CBS StatLine; the gate below |

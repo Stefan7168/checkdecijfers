@@ -6,6 +6,64 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 69 — 2026-09-02, owner present — RUNBOOK queue cleared, #170(3) pulled forward, chart-UX research (#197) + its step 1 built
+
+Full narrative: [status-archive.md](status-archive.md) session-69 entry; the research itself:
+[session-briefs/2026-09-02-session-69-chart-ux-research.md](session-briefs/2026-09-02-session-69-chart-ux-research.md).
+
+- **A research subagent invented a tool and reported its output as a measurement.** The synthesis pass
+  wrote "run through the dataviz palette validator (`validate_palette.js --pairs all`) … CVD ΔE 7.1" and
+  proposed four exact replacement hex colours "that PASS every check". No such script exists anywhere in
+  the repo (`grep -rn validate_palette` → nothing); the numbers had no source. Caught only because the
+  session grepped for the tool before repeating the claim to the owner. The four underlying research
+  passes were otherwise excellent and every file:line they cited checked out — which is exactly what
+  makes one confident-sounding fabrication dangerous. Rule that worked: **before a research result reaches
+  the owner, verify every claim of "I ran X" against the repo, and recompute at least one number
+  independently** (the WCAG ratios were recomputed by hand and matched to two decimals).
+- **The same research over-stated a requirement: "pairwise ≥ 3:1 contrast between series colours".**
+  WCAG 1.4.11 asks 3:1 against the ADJACENT background, and 1.4.1 asks that colour is never the only
+  distinguishing means; no set of saturated hues achieves pairwise 3:1 (measured: Okabe-Ito/Tol pairs sit
+  at 1.1–2.6). The honest fix is a colour-blind-safe hue set + ≥ 3:1 vs the surface + dash patterns /
+  hollow markers / labels — which is what shipped. Don't let a plausible-sounding metric from a research
+  pass become the acceptance criterion without checking the standard it claims to cite.
+- **The #170(3) chart export shipped in the morning was blank outside the page — found in the afternoon
+  while building on it.** Recharts writes `stroke="var(--series-1)"` as a literal attribute; the live page
+  resolves it, a standalone `.svg` file or an `<img>` rasterization cannot, so every line drew as `none`.
+  The morning's "live-verified" check confirmed the download FIRED (no failure message), never that the
+  file had visible content. Fixed by inlining each element's COMPUTED paint into the clone before
+  serializing. Lesson: **verifying an export means opening the exported file, not watching the click
+  succeed** — and jsdom cannot do it (see next bullet), so this needs a real browser or an explicit
+  "resolver injected" unit test plus a manual open.
+- **jsdom fakes SVG computed paint.** `getComputedStyle(path).stroke` returns `rgba(0, 0, 0, 0)` and
+  `fill` returns `rgb(0, 0, 0)` for an element whose attribute is `var(--x)` — plausible-looking, wrong.
+  A test that assumed "jsdom returns nothing, so the markup stays untouched" failed for the opposite
+  reason. Make the resolver an injectable parameter and test the guard branch with `() => null`.
+- **`vi.stubGlobal('ResizeObserver', …)` leaks across every later test in the file unless unstubbed —
+  and with it defined, Recharts' ResponsiveContainer measures the jsdom container (0×0) and renders
+  nothing.** Conversely, with ResizeObserver UNDEFINED (jsdom's default) and `initialDimension` set on the
+  container, Recharts renders the whole real svg in jsdom: custom ticks, dots, labels, `aria-*` on the
+  root. That turned "the tests only ever saw the footer text" into "the tests assert the real chart" — a
+  large, cheap gain. Pattern: `beforeEach(() => vi.unstubAllGlobals())` in the svg-level describe.
+- **`container.textContent` concatenates adjacent svg `<text>` nodes without a separator**, so the
+  numeric-token membership check saw `1,53,3` instead of `1,5` and `3,3` once axis ticks existed.
+  Tokenize per text node (TreeWalker), not the flattened string — the old membership test only passed
+  because nothing numeric was adjacent yet.
+- **A background Workflow does not survive a context compaction/restart.** All four research agents
+  showed `started` in `journal.jsonl` with no `result` lines; the completion notification said "no
+  completion record". `Workflow({ scriptPath, resumeFromRunId })` re-ran it from the persisted script in
+  ~21 minutes (5 agents, 238 tool calls). Launch long workflows early in a context window, and know that
+  the persisted script path under `~/.claude/projects/<repo>/<session>/workflows/scripts/` is the
+  recovery handle.
+- **Neither route to a visual check worked from the Browser pane this session:** a Claude Artifact URL
+  needs the owner's claude.ai login (the pane has none → "Page not found"), and a `file://` page opens as
+  a "static snapshot" that `screenshot` / `read_page` / `get_page_text` all refuse while the pane is
+  hidden. A careful static read of the CSS caught two real bugs instead (an `@media` jammed into a
+  selector list, an unconstrained flex item) — so do that read regardless, but a real render still needs
+  the dev server on a free port (3000 is held by the sibling project; a scratch entry on 3010 works).
+- **`npm run lint` in `web/` is dead:** ESLint 10.7 vs the `eslint-plugin-react` bundled by
+  `eslint-config-next` (`contextOrFilename.getFilename is not a function`). Pre-existing, not on CI, so
+  nothing was blocked — spun off as a task chip rather than fixed in a chart change.
+
 ## Session 68 — 2026-08-28 into 2026-08-31 (local, +07), owner present, spanned multiple calendar days in one continuous session — built /systeemoverzicht on direct owner request
 
 Full narrative: [status-archive.md](status-archive.md) session-68 entry. Not a queued WP — the owner
