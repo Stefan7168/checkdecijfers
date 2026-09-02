@@ -2,8 +2,9 @@
 
 **Session 69 (2026-09-02, owner present; the session's model was switched to Fable 5.1 mid-session at the
 owner's request, and the conversation was context-compacted once) — CLEARED MOST OF THE RUNBOOK QUEUE,
-PULLED #170(3) FORWARD, RAN THE CHART-UX RESEARCH (#197) AND BUILT ITS FIRST TWO STEPS.** Six commits,
-all 2026-09-02, all direct to `main` under the #118 owner-present authorization:
+PULLED #170(3) FORWARD, RAN THE CHART-UX RESEARCH (#197) AND BUILT ITS FIRST TWO STEPS.** Six work
+commits (+ the wrap-up docs commit `c40c35e` and this fix-up), all 2026-09-02, all direct to `main` under
+the #118 owner-present authorization:
 
 1. **The queue.** Migrations 022 (undocumented in the RUNBOOK but a purely additive CHECK widening from
    PR #100 — flagged before running), 023, 024, 025 applied to production in one `npm run db:migrate`
