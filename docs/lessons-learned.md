@@ -6,6 +6,39 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 70 — 2026-09-02 (later the same day), owner away — #197 step 3 on a branch, second session as reviewer
+
+Full narrative: [status-archive.md](status-archive.md) session-70 entry.
+
+- **"Ask the owner whether X was done" has a cheaper, more honest first step: check the system that would
+  show it.** The kickoff's item 1 was "ask the owner to run the WP26 smoke test (or check whether he did)".
+  One read-only production query (`audit_answers`, zero `deterministic/wp26-click-option` rows, zero reply
+  rows since the flip) answered it in seconds, and the same query surfaced something the owner had NOT
+  reported: his three 12:43Z questions had died on Anthropic `529 overloaded_error` and been refunded. Rule:
+  when the question is "did an event happen in production", query the audit trail before asking a human.
+- **The parallel-session collision happened again (the 25-07 shape) and the memory rule worked.** The second
+  session saw the first's uncommitted edits, wrote nothing, moved to a worktree and reviewed instead. Its
+  review found one real bug (an `onboarded:` key would have minted a chip the click-time validator strips —
+  a paid LLM merge on click) that neither the tests nor the LOW review had caught, because the failure needs
+  the live wiring (`extraCanonicalMeasures` + the flag together). Lesson for producers of client-held
+  options: **whatever a validator will strip on the way back must never be offered on the way out** — the
+  producer-side twin of the schema (`isClickTakeableIntent`) is the cheap, structural way to keep the two
+  from drifting.
+- **Editing source while the full suite runs invalidates the run, and vitest will not tell you.** A change
+  to `suggestions.ts` landed mid-run; the run reported 1 failure that was really a version skew between the
+  test file (new) and the module (cached old) and passed everything else — on a tree that no longer
+  existed. On an 11-minute suite the temptation to "fold a small fix in meanwhile" is real; the honest
+  sequence is edit → typecheck → targeted files → ONE full run on the frozen tree, and a run that
+  overlapped an edit is stopped and repeated, never interpreted.
+- **A cost tripwire is only as good as its coverage.** `query-count.test.ts` had pinned the deterministic
+  half of a turn since #176 and never once called the chip builder — which alone spends 3–4 full
+  `runQuery` dry-runs per answer. Measured, not guessed: the new comparison chips change nothing on
+  regional/national answers (the cap short-circuits; the comparison takes the region variant's slot) and
+  add one dry-run on national-only measures. Pin the numbers where the growth actually is.
+- **Design-review verdicts are cheap to fold in BEFORE a push and expensive after.** Seven verdicts
+  arrived while the suite was running; all seven landed in the same commit (with the rerun above). Had the
+  push gone first, each would have been a follow-up commit on a live-money-path PR.
+
 ## Session 69 — 2026-09-02, owner present — RUNBOOK queue cleared, #170(3) pulled forward, chart-UX research (#197) + its step 1 built
 
 Full narrative: [status-archive.md](status-archive.md) session-69 entry; the research itself:

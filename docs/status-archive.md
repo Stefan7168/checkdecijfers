@@ -1,5 +1,70 @@
 # STATUS archive — the session log
 
+**Session 70 (2026-09-02, later the same day as session 69; the owner pasted the session-70 kickoff — into
+TWO sessions in the same working tree, the 25-07 collision shape: the second session (local_09530460…)
+detected the first's uncommitted edits, wrote nothing, moved to the worktree `.claude/worktrees/s70-reviewer`
+and became the independent reviewer) — #197 STEP 3 BUILT ON A BRANCH, DRAFT PR #118, MERGE GATED ON THE
+OWNER'S WP26 SMOKE TEST.**
+
+1. **The smoke test, checked against reality instead of asked about.** A read-only query of production
+   `audit_answers` (root `.env`, `connectFromEnv`) found ZERO rows with the click model
+   `deterministic/wp26-click-option` and zero reply rows since the flag flip — the RUNBOOK's 3-step check
+   had not been run. The only rows since 1 Sept were ids 257–259 (thread 5, 12:43Z: "Maak een grafiek van
+   de inflatie van 2020 tot en met 2024" and "2024" twice), all `internal` refusals whose `internalNote`
+   reads `529 overloaded_error` from Anthropic on the intent parse; each was refunded by the gate (ledger
+   rows 94/96/98, `compensation`, "refund: no answer produced") — provider overload, not a code bug. Both
+   facts were independently found by the reviewer session and re-verified here before being written down.
+   The owner was pinged (mobile push) to run the smoke test; no confirmation had arrived at close-out.
+2. **Step 3 built on `feat/197-3-comparison-chips` (`02a328e`), draft PR
+   [#118](https://github.com/Stefan7168/checkdecijfers/pull/118), NOT merged** — the approved build order
+   gates it on the smoke test it reuses, and #118's autonomous-work rule says branch + PR anyway. Design:
+   two comparison generators in `suggestions.ts` — `compareRegion` (the answered regions + `NL01`, or
+   `NL01` + the G4: "Vergelijk met Nederland" / "Vergelijk met Amsterdam, Rotterdam, Den Haag en Utrecht")
+   and `comparePeriod` (the same period one year earlier as the registered `difference` derivation:
+   "Vergelijk met 2023") — ahead of the region variant, which is skipped once a comparison surfaced; cap
+   stays 3 (so on a regional single answer the period comparison is unreachable — recorded). Each chip
+   rides a dry-run-proven `ClickOption` on a present-only `AnswerResponse.pending` minted in the WP26c
+   chip-carrier shape (`rescueOnly`); a click fills the input (#75 unchanged), on send the client routes a
+   byte-equal label to `replyToClarification`, whose deterministic rung takes the stored intent through
+   the `templateOnly` path — a NEW validated comparison (R6), the click model on the parse, zero tokens, a
+   real audit row, 20 credits. `isRescuePending` widened to 1..4 label-bound chips (ADR 024 addendum).
+   Flag-gated: `CLARIFY_CLICK_ENABLED` off ⇒ the pre-#197 chip list and no `pending` key (pinned).
+   Thread resume drops carrier-bound labels (no pending is restored there — ADR 033 ⟨A6⟩). Deviation
+   taken as a default: no "Sinds 2008" chip (no honest floor without db access; a monthly since-floor
+   range would render as a ~190-cell semicolon wall under `templateOnly`).
+3. **The reviewer session's design review (4 lenses, 29 claims, 19 survived a refuting skeptic) — seven
+   verdicts, all folded in before the push:** (1) MAJOR: an on-demand-onboarded `onboarded:` key would have
+   minted a chip the click-time validator strips — the pending would stop being carrier-shaped and the
+   label would fall into a paid LLM merge; fixed with `isClickTakeableIntent` (validate-pending.ts, the
+   schema's own `safeParse`) gating every candidate before its dry-run, pinned; (2) short labels fall into
+   a fresh parse after a flag rollback or in an old bundle during a deploy window — documented in the
+   RUNBOOK and ADR 024, the rollback ROUTE pinned; (3) the taken comparison's audited `question` stays the
+   ORIGINAL question with the label as `reply_text` (the reply-row convention) — rule written into ADR
+   024, asserted in the take test, "history title = reply_text" recorded as a follow-up; (4) the
+   `templateOnly` comparison always closes with "Nederland had de hoogste waarde." on a count measure —
+   true but vacuous; NOT changed (an R8 re-derivation divergence needing a known-divergences pin), recorded
+   in #197; (5) cost unmeasured — pinned in `query-count.test.ts`: 27 statements / 3 dry-runs on a
+   regional single answer flag off AND on, 39 / 4 national, 12 → 18 on a national-only measure (#195);
+   (6) test gaps closed (derived take asserts `chart === null`, chaining pins, forgery pins for swapped
+   labels / length mismatch / bare flag); (7) confirmed in favour: reusing `rescueOnly`, NL + G4, leaving
+   out the since-floor chip, `impliedRecency: false`. Earlier reviewer note also taken: the comparisons
+   start from the RESOLVED intent (`result.intent`), so a B-region-defaulted national answer still gets its
+   G4 chip with every region explicit (pinned with `answerFirstEnabled: true`).
+4. **Verification before the push** (solo runs, exit codes read): root + web typecheck; backend
+   114 files / 1733 tests (the first full run caught a mid-run source/test version skew — the resolved-
+   intent change landed while it ran — and was rerun on the final tree; a second run on the pre-fix tree
+   was stopped as moot); benchmark 14/14 + 6/6 + 0 fabricated GATE PASS; web 47 files / 537 tests;
+   `next build` clean; LOW `/code-review` 0 findings. 21 tests in the new
+   `tests/answer/comparison-chips.test.ts` (real fixture db + real dry-run, both LLM clients throwing on the
+   take, the audited row reconstructing clean), + 2 cost pins, + 2 replay pins, + 2 chat-client pins, +
+   the envelope-key manifest entry for `AnswerResponse.pending`. CI on the branch (runs 33638609958 and
+   33638618181) was still IN PROGRESS at close-out — verdict to be recorded below.
+5. **Docs in the PR:** ADR 029 first as-built note, ADR 024 addendum (chip carriers on answers, six
+   notes), 04-architecture rows, 08-build-plan #197 step 3, open-questions #197 (as-built, deviations,
+   follow-ups, the two-sessions note) + #195 (measured chip cost), docs/13 inventory, RUNBOOK step 6 +
+   deploy-window sentence. **Docs on `main` (this close-out, single writer per the split):** STATUS top
+   block, this entry, the session-71 kickoff, lessons, memory.
+
 **Session 69 (2026-09-02, owner present; the session's model was switched to Fable 5.1 mid-session at the
 owner's request, and the conversation was context-compacted once) — CLEARED MOST OF THE RUNBOOK QUEUE,
 PULLED #170(3) FORWARD, RAN THE CHART-UX RESEARCH (#197) AND BUILT ITS FIRST TWO STEPS.** Six work

@@ -9,6 +9,29 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
+**▶ SESSION 70 (2026-09-02, later the same day — TWO sessions received the kickoff in the same tree; the
+second stopped building, moved to a git worktree and became the independent reviewer, the 25-07 shape) —
+#197 STEP 3 BUILT ON A BRANCH, MERGE GATED ON YOUR SMOKE TEST.** First checked production instead of
+asking: `audit_answers` holds ZERO chip-click takes ever (no `deterministic/wp26-click-option` row, no
+reply row), so the WP26 smoke test had NOT been run — and the three rows you produced at 12:43Z (ids
+257–259, "Maak een grafiek van de inflatie…" + "2024" ×2) were Anthropic `529 overloaded_error` on the
+intent parse, each refunded by the gate (ledger 94/96/98): provider overload, not a code bug. Then built
+step 3 — comparison chips — on branch `feat/197-3-comparison-chips` (`02a328e`), **draft PR
+[#118](https://github.com/Stefan7168/checkdecijfers/pull/118), NOT merged:** two comparison generators
+("Vergelijk met Nederland" / "Vergelijk met Amsterdam, Rotterdam, Den Haag en Utrecht" / "Vergelijk met
+<a year earlier>"), each chip a dry-run-proven `ClickOption` on a present-only `AnswerResponse.pending`
+in the WP26c chip-carrier shape, taken through the zero-LLM `templateOnly` path as a NEW validated result
+(R6), 20 credits, real audit row; only with `CLARIFY_CLICK_ENABLED` on, byte-identical off. The reviewer
+session's 7 verdicts are folded in (resolved-intent source, a takeability gate that stops an `onboarded:`
+key from minting a chip the validator strips, forgery pins, replay parity, a measured cost pin). Verified
+before the push: backend 114 files / 1733 tests, benchmark 14/14 + 6/6 + 0 fabricated, web 537/537,
+`next build`, LOW review 0 findings. Details: ADR 029 first as-built note, ADR 024 last addendum,
+[status-archive.md](status-archive.md). **Your two actions, in order:** (1) the WP26 smoke test
+(RUNBOOK "WP26 answer-first + clickable options", steps 4–5: log in, bare "Utrecht", click a chip);
+(2) if it passes, merge PR #118 (or tell the next session to) and run step 6 of the same RUNBOOK section
+("Vergelijk met Nederland" under an Amsterdam answer). If the chip click fails, that is a WP26 bug to fix
+BEFORE #118 merges.
+
 **▶ SESSION 69 (2026-09-02, owner present) — cleared most of the RUNBOOK queue.** Applied all 4 pending
 migrations (022 found undocumented but additive/023/024/025) to production, verified clean. Flipped
 `CLARIFY_CLICK_ENABLED` live — gate+deploy green, but **the live chip-click smoke test is still
@@ -55,11 +78,14 @@ silently redirected every visitor to `/login`) and `StatusLegend` hand-duplicate
 (caught by the pre-push LOW code-review). Full narrative, every verification step:
 [status-archive.md](status-archive.md) (prepended below).
 
-**✅ ZERO OPEN PRS, clean state (2026-09-02, session-69 wrap-up).** Verify yourself: `git log -1 origin/main`
-should show `1d2140f` or later and `gh pr list --state open` should be empty. **CI verdicts, measured
-after the wrap-up: `da47566` (run 33630872233) and `1d2140f` (run 33631282656) both `success` — gate AND
-deploy, so #197 steps 1+2 are LIVE on prod (`/` served 200).** Only the two docs-only wrap-up commits
-(`c40c35e`, `0f96af5`) were still running when this line was written — `gh run list --branch main -L 4`.
+**ONE OPEN DRAFT PR (2026-09-02, session-70 close-out): [#118](https://github.com/Stefan7168/checkdecijfers/pull/118)
+`feat/197-3-comparison-chips` at `02a328e` — merge gated on the owner's smoke test (above).** Verify
+yourself: `gh pr list --state open` shows exactly #118; `git log -1 origin/main` shows the session-70
+docs commit or later. CI on the branch (runs 33638609958 push + 33638618181 pull_request) was IN PROGRESS
+when this block was written — the measured verdict is recorded in the session-70 archive entry once
+known; a red run must be fixed on the branch before merge. The four session-69 docs-only commits on
+`main` measured at this close-out (`gh run list --branch main -L 4`, sha status conclusion):
+`f2f4bb6 completed success;4d18dc1 completed success;0f96af5 completed success;c40c35e completed success;`. #197 steps 1+2 stay LIVE on prod.
 
 Full session-67 record (reviewed + merged all 19 PRs session 66 left open, #99-#117): [status-archive.md](status-archive.md) (prepended) +
 [session-briefs/2026-08-28-session-67-close.md](session-briefs/2026-08-28-session-67-close.md).
@@ -81,9 +107,11 @@ spend, PR #113 already merged so mechanically unblocked) — needs you present, 
 `forks_count` — still 0, last asked 2026-09-02, deferred again); (f) then the owner menu: WP30c choice
 (Rijksfinanciën `80504NED`, confirmed ordinary StatLine but `Gediscontinueerd`) / the #89/#70/#79 UI trio
 (UNBLOCKED, #103 is merged — but still needs its own shared-design decision first, not an automatic
-follow-on); (g) **[#197](open-questions.md) step 3 — comparison chips** — GO already given, steps 1+2 are
-live; step 3 waits ONLY on (a) above because it reuses the same zero-LLM take-path (spec: 08-build-plan
-"#197" section + the research brief). Ideas 4–8 stay unscheduled unless you say otherwise.
+follow-on); (g) **[#197](open-questions.md) step 3 — comparison chips — BUILT on branch `feat/197-3-comparison-chips`,
+draft PR #118, waiting ONLY on (a) above to be merged** (it reuses the same zero-LLM take-path; ADR 029 first
+as-built note has the design and the recorded follow-ups — the "Nederland had de hoogste waarde" tautology
+on count measures needs a known-divergences pin before it may change). Ideas 4–8 stay unscheduled unless
+you say otherwise.
 **Housekeeping, whenever a session has room:** `open-questions.md` is still ~320KB and still due for a
 prune; **26** stale local branches (7 pre-pause with a live remote, 7 old-Dependabot with none, 12
 `worktree-agent-*` orphans — full list in the session-67 record above) want a deliberate, owner-present
