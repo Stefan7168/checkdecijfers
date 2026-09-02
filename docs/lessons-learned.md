@@ -10,6 +10,18 @@ on top.
 
 Full narrative: [status-archive.md](status-archive.md) session-70 entry.
 
+- **A docs-only wrap-up commit can turn `main` red, and "the run started" is not "the run is green".**
+  Both session-70 close-out commits (`221ce1a`, `e0f6695`) failed the `test:docs` gate: the #132 interim
+  rule (i) test forbids live PR links in `docs/`, and the archive/STATUS wrote `[#118](https://…/pull/118)`
+  three times (the rule wants plain `PR #118`). The builder session had ended before the verdicts landed,
+  so the red sat there until the reviewer session found it and messaged the exact cause; the builder woke
+  on that message and pushed the fix (`fcbb479`). Two rules: run `npm run test:docs` (1 s)
+  before any docs push, and the wrap-up's clean-state item means WAITING for the docs commit's CI verdict
+  — a wrap-up that ends while its own run is in flight has not verified clean state.
+- **A close-out sentence written from intent, not from `git log`, was wrong within the hour.** The archive
+  said a reviewer finding was "removed in a follow-up commit on the branch, verified before its push" —
+  no such commit was ever pushed (the branch head stayed `02a328e`). The Golden Rule covers exactly this:
+  a SHA, a "pushed", a "removed" is written only after the command that proves it has run.
 - **"Ask the owner whether X was done" has a cheaper, more honest first step: check the system that would
   show it.** The kickoff's item 1 was "ask the owner to run the WP26 smoke test (or check whether he did)".
   One read-only production query (`audit_answers`, zero `deterministic/wp26-click-option` rows, zero reply

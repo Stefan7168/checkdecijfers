@@ -17,7 +17,7 @@ reply row), so the WP26 smoke test had NOT been run — and the three rows you p
 257–259, "Maak een grafiek van de inflatie…" + "2024" ×2) were Anthropic `529 overloaded_error` on the
 intent parse, each refunded by the gate (ledger 94/96/98): provider overload, not a code bug. Then built
 step 3 — comparison chips — on branch `feat/197-3-comparison-chips` (`02a328e`), **draft PR
-PR #118, NOT merged:** two comparison generators
+#118, NOT merged:** two comparison generators
 ("Vergelijk met Nederland" / "Vergelijk met Amsterdam, Rotterdam, Den Haag en Utrecht" / "Vergelijk met
 <a year earlier>"), each chip a dry-run-proven `ClickOption` on a present-only `AnswerResponse.pending`
 in the WP26c chip-carrier shape, taken through the zero-LLM `templateOnly` path as a NEW validated result
@@ -25,9 +25,15 @@ in the WP26c chip-carrier shape, taken through the zero-LLM `templateOnly` path 
 session's 7 verdicts are folded in (resolved-intent source, a takeability gate that stops an `onboarded:`
 key from minting a chip the validator strips, forgery pins, replay parity, a measured cost pin). Verified
 before the push: backend 114 files / 1733 tests, benchmark 14/14 + 6/6 + 0 fabricated, web 537/537,
-`next build`, LOW review 0 findings. Details: ADR 029 first as-built note, ADR 024 last addendum,
-[status-archive.md](status-archive.md). **Your two actions, in order:** (1) the WP26 smoke test
-(RUNBOOK "WP26 answer-first + clickable options", steps 4–5: log in, bare "Utrecht", click a chip);
+`next build`, LOW review 0 findings. **Independently re-verified by the reviewer session in its clean
+worktree (same numbers, branch CI 33638609958 + 33638618181 both green); its LOW pass left ONE minor open
+follow-up on the PR (the redundant `MAX_COMPARISON_REGIONS` bound in `suggestions.ts`, see the PR #118
+review comment).** The two docs-only close-out commits (`221ce1a`, `e0f6695`) went RED on the #132
+"no live PR links in docs/" test (three `[#118](https://…/pull/118)` links) — found by the reviewer
+session, fixed in `fcbb479` (run 33642409302); prod was never touched (the gate precedes the deploy).
+Details: ADR 029 first as-built note, ADR 024 last addendum, [status-archive.md](status-archive.md).
+**Your two actions, in order:** (1) the WP26 smoke test (RUNBOOK "WP26 answer-first + clickable
+options", steps 4–5: log in, bare "Utrecht", click a chip);
 (2) if it passes, merge PR #118 (or tell the next session to) and run step 6 of the same RUNBOOK section
 ("Vergelijk met Nederland" under an Amsterdam answer). If the chip click fails, that is a WP26 bug to fix
 BEFORE #118 merges.
