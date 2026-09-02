@@ -14,6 +14,7 @@
 // misses swapped labels (WP8 review lesson; recurred here, WP12 review).
 'use client';
 
+import { useRef } from 'react';
 import {
   Bar,
   BarChart,
@@ -28,6 +29,7 @@ import {
   YAxis,
 } from 'recharts';
 import type { ChartSpec } from '../backend/chart/types.ts';
+import { ChartDownloadMenu } from './chart-download.tsx';
 import { SourceBadge } from './source-badge.tsx';
 
 export type Row = Record<string, string | number | boolean | null>;
@@ -188,6 +190,7 @@ export function ChartView({ spec }: { spec: ChartSpec }) {
   const { rows, seriesMeta } = buildRows(spec);
   const dimEntries = Object.entries(spec.dimLabels);
   const markers = annotationMarkers(spec, rows);
+  const chartContainerRef = useRef<HTMLDivElement>(null);
 
   return (
     <div className="mt-3 rounded-lg border border-line bg-paper-raised p-3">
@@ -198,7 +201,7 @@ export function ChartView({ spec }: { spec: ChartSpec }) {
         </div>
       ) : null}
       <div className="text-xs text-ink-muted">{spec.unit}</div>
-      <div className="h-64 w-full">
+      <div ref={chartContainerRef} className="h-64 w-full">
         <ResponsiveContainer width="100%" height="100%">
           {spec.kind === 'line' ? (
             <LineChart data={rows} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
@@ -278,6 +281,15 @@ export function ChartView({ spec }: { spec: ChartSpec }) {
       <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
         <p className="text-xs text-ink-muted">{spec.attributionLine}</p>
         <SourceBadge tableId={spec.attribution.tableId} syncedAt={spec.attribution.syncedAt} />
+        {/* #170(3): download-as-image, PNG or SVG, attribution baked into
+          * the file itself — not just shown on this page — via the SAME
+          * spec.attributionLine string shown above (R4: one builder, one
+          * sentence, never re-derived here). */}
+        <ChartDownloadMenu
+          containerRef={chartContainerRef}
+          attributionText={`${spec.attributionLine} checkdecijfers.nl`}
+          filenameBase={`checkdecijfers-${spec.attribution.tableId}`}
+        />
       </div>
     </div>
   );
