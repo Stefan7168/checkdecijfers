@@ -9,6 +9,25 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
+**▶ SESSION 69 (2026-09-02, owner present) — cleared most of the RUNBOOK queue.** Applied all 4 pending
+migrations (022 found undocumented but additive/023/024/025) to production, verified clean. Flipped
+`CLARIFY_CLICK_ENABLED` live — gate+deploy green, but **the live chip-click smoke test is still
+unconfirmed** (Claude has no login access; you still need to run it — RUNBOOK's 3-step procedure).
+Closed [#193](open-questions.md) for real: live `audit:verify` found zero divergent rows against
+production, nothing to pin. Mid-session you redirected to chart/graphics UX research (see below) and
+pulled [#170](open-questions.md)(3) forward: chart download-as-image now ships, **both PNG and SVG**, via
+a new `ChartDownloadMenu` (`web/components/chart-download.tsx`) — mirrors StatCard's #80 PNG pattern,
+adds a shared attribution footer baked into the exported image itself so a downloaded chart still carries
+its source once it leaves the page. 502/502 web tests green, LOW code-review run (2 findings fixed:
+missing SVG failure-handling, duplicated width/height derivation), pushed directly (`4d7ac2d`), CI green.
+**Declined to flip `GDPR_PURGE_APPLY=1` or run the #162 A/B** — real deletion and real spend are exactly
+the owner-supervised carve-out CLAUDE.md excludes from standing push authorization, so the dry-run
+baseline (0 rows everywhere) stays the only thing captured this session. [#132](open-questions.md) route
+B re-asked, you said defer again. Launched a 5-agent background research workflow
+(`chart-graphics-research`; `claude-fable-5-1` for the UX-vision and architecture angles) on how to
+improve the charts for end users — results pending, will come back as one concrete proposal for a
+go/no-go before anything is built from it.
+
 **▶ SESSION 68 (2026-08-28 into 2026-08-31, local +07, owner present, spanned three calendar days in one
 continuous conversation) BUILT `/systeemoverzicht` — a public architecture reference page, on direct
 owner request, NOT a queued work package.** Mirrors the equivalent system-map page on the owner's other
@@ -22,33 +41,35 @@ silently redirected every visitor to `/login`) and `StatusLegend` hand-duplicate
 (caught by the pre-push LOW code-review). Full narrative, every verification step:
 [status-archive.md](status-archive.md) (prepended below).
 
-**✅ ZERO OPEN PRS, clean state (2026-08-31, session 68).** Verify yourself: `git log -1 origin/main`
-should show `f2b3975` or later and `gh pr list --state open` should be empty.
+**✅ ZERO OPEN PRS, clean state (2026-09-02, session 69).** Verify yourself: `git log -1 origin/main`
+should show `4d7ac2d` or later and `gh pr list --state open` should be empty.
 
 Full session-67 record (reviewed + merged all 19 PRs session 66 left open, #99-#117): [status-archive.md](status-archive.md) (prepended) +
 [session-briefs/2026-08-28-session-67-close.md](session-briefs/2026-08-28-session-67-close.md).
 
-**⚠ THE TWO THINGS THAT ARE STILL ONLY YOURS, untouched through four sessions running:** the **WP26
-flags** (`CLARIFY_CLICK_ENABLED`, `ANSWER_FIRST_ENABLED`) and **`GDPR_PURGE_APPLY`**. Read
-[#175](open-questions.md) before flipping WP26 — the anonymous trial receives NEITHER flag.
+**⚠ STILL ONLY YOURS:** `ANSWER_FIRST_ENABLED` and `GDPR_PURGE_APPLY` (fully untouched) **+ the
+`CLARIFY_CLICK_ENABLED` live smoke test** (the flag itself is flipped and deployed since session 69, but
+nobody has actually clicked a chip in production yet — Claude has no login access to do this). Read
+[#175](open-questions.md) before flipping `ANSWER_FIRST_ENABLED` — the anonymous trial receives NEITHER
+flag.
 
-**▶ NEXT, in order — nothing urgent, all owner-supervised, UNCHANGED by session 68 (a side quest, not
-part of this queue):** (a) **three live migration applies** now that their PRs are merged — 023 (#147,
-money-path compensation bound), 024 (#65/WP25, error_log), 025 (#110, eviction/TTL lifecycle columns) —
-each a supervised `npm run db:migrate`; RUNBOOK now has a dedicated section per migration with the exact
-verification steps; (b) the **owner-supervised WP26 go-live** — one flag at a time, RUNBOOK "WP26
-answer-first + clickable options"; #191/#178's "nu"-half already fixed, age-bound/TTL half still open
-(see below); (c) **`GDPR_PURGE_APPLY=1`** plus one watched run; (d) **#193's live `audit:verify` pinning
-step** (R8 divergence check against production — the copy itself has been live since PR #91, only the
-live-DB verification + `known-divergences.ts` pinning is outstanding); (e) **#162's A/B** (blind pairwise
-LLM judge + owner read-back, ~€1-2 live spend) — UNBLOCKED, PR #113 is merged; (f) **#132 route B** GO or
-defer (T-0 condition — `forks_count` — still 0, last measured 2026-08-26); (g) then the owner menu: WP30c
-choice (Rijksfinanciën `80504NED`, confirmed ordinary StatLine but `Gediscontinueerd`) /
-[#170](open-questions.md)(3) (Phase-2-tied) / the #89/#70/#79 UI trio (UNBLOCKED, #103 is merged — but
-still needs its own shared-design decision first, not an automatic follow-on). **Housekeeping, whenever
-a session has room:** `open-questions.md` is still ~320KB and still due for a prune; **26** stale local
-branches (7 pre-pause with a live remote, 7 old-Dependabot with none, 12 `worktree-agent-*` orphans —
-full list in the session-67 record above) want a deliberate, owner-present `git branch -D` pass.
+**▶ NEXT, in order — nothing urgent, all owner-supervised:** (a) **the `CLARIFY_CLICK_ENABLED` live smoke
+test** (RUNBOOK "WP26 answer-first + clickable options" has the exact 3 steps) — blocks (b) below;
+(b) **`ANSWER_FIRST_ENABLED`**, the second WP26 flag, one flag at a time per RUNBOOK, only after (a);
+#191/#178's "nu"-half already fixed, age-bound/TTL half still open (see below); (c) **`GDPR_PURGE_APPLY=1`**
+plus one watched run — dry-run baseline (0 rows everywhere) already captured, just needs the flip + a
+watched live run, both yours; (d) **#162's A/B** (blind pairwise LLM judge + owner read-back, ~€1-2 live
+spend, PR #113 already merged so mechanically unblocked) — needs you present, since the methodology's own
+§6 requires your read-back, not just a spend sign-off; (e) **#132 route B** GO or defer (T-0 condition —
+`forks_count` — still 0, last asked 2026-09-02, deferred again); (f) then the owner menu: WP30c choice
+(Rijksfinanciën `80504NED`, confirmed ordinary StatLine but `Gediscontinueerd`) / the #89/#70/#79 UI trio
+(UNBLOCKED, #103 is merged — but still needs its own shared-design decision first, not an automatic
+follow-on). **Also in flight:** the chart/graphics UX research workflow launched session 69 — read its
+result before starting any of it; it's a proposal needing your go/no-go, not a ready build queue.
+**Housekeeping, whenever a session has room:** `open-questions.md` is still ~320KB and still due for a
+prune; **26** stale local branches (7 pre-pause with a live remote, 7 old-Dependabot with none, 12
+`worktree-agent-*` orphans — full list in the session-67 record above) want a deliberate, owner-present
+`git branch -D` pass.
 
 **Tracked, deliberately NOT built:** [#174](open-questions.md) and [#185](open-questions.md) (both explicitly
 held), [#183](open-questions.md) (product call), [#188](open-questions.md) (concurrency on a live money path
