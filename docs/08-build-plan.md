@@ -308,4 +308,27 @@ values + since-boundary), R5-registered, R1-scan acceptance via the derivation r
 chip template (no LLM), benchmark-style pins over the fixture DB. Owner sees the (a)/(b)/(c) fork
 before build — it changes what audit rows contain, which is his product's proof artifact.
 
+## #197 — chart UX for end users (owner request, session 69, 2026-09-02) — steps 1+2 ✅ BUILT, step 3 gated
+
+Not a numbered WP: an owner-initiated research → build thread. The brief IS the spec:
+[session-briefs/2026-09-02-session-69-chart-ux-research.md](session-briefs/2026-09-02-session-69-chart-ux-research.md)
+(8 ranked ideas, a build order, 10 owner decisions with leanings — GO given in-chat, leanings taken as
+defaults the owner vetoes by exception; as-built record in [open-questions #197](open-questions.md)).
+
+- **Step 1 ✅ `da47566`** — numbers on the chart (axis min/max, end-of-line, per-bar labels; spec strings
+  only, bound via `data-label-for`), colour-blind-safe `--series-1..4` palette + dash patterns + hatched
+  provisional bars, accessible name + announced tooltip, tap-to-pin on touch, menu-button semantics on the
+  download menu, computed-paint inlining in the export (the #170(3) export was blank outside the page),
+  toggle as a radiogroup, `schemaVersion` guard in `chart.tsx`, ADR 014 as-built rule for optional v1 fields.
+- **Step 2 ✅ `1d2140f`** — Grafiek/Tabel switch on every chart (`tableModel`; > 15-series comparisons open on
+  the table). No duplicate CSV entry in the menu (WP21's button already sits under every chat answer).
+- **Step 3 — comparison chips ("Vergelijk met Nederland", "Zelfde periode vorig jaar", "Sinds 2008")** — a 5th
+  generator in `src/answer/respond/suggestions.ts`, chips as `ClickOption`s through the existing zero-LLM
+  `templateOnly` take-path, 20 credits, `echoServability`-gated. **GATED on the owner's live
+  `CLARIFY_CLICK_ENABLED` smoke test** (RUNBOOK "WP26 answer-first + clickable options") — it reuses exactly
+  that take-path. Invariants at stake: R1 (every chip's cells traceable), R6 (chips are new validated
+  results, never client merges), principle (c) (no national row → no compare chip; the dry-run decides).
+- Ideas 4–8 (takeaway line, "bewijs dit punt" + revision history, presentation toggles, reading toggles,
+  small multiples) unscheduled; idea 5 needs a migration (owner-supervised); 6–8 are Phase-2 Studio slices.
+
 *When a WP completes: tick it in [STATUS.md](STATUS.md), record measured results, and — if a design decision here changed — update this file so it stays the plan of record.*

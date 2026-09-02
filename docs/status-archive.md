@@ -1,5 +1,76 @@
 # STATUS archive — the session log
 
+**Session 69 (2026-09-02, owner present; the session's model was switched to Fable 5.1 mid-session at the
+owner's request, and the conversation was context-compacted once) — CLEARED MOST OF THE RUNBOOK QUEUE,
+PULLED #170(3) FORWARD, RAN THE CHART-UX RESEARCH (#197) AND BUILT ITS FIRST TWO STEPS.** Six commits,
+all 2026-09-02, all direct to `main` under the #118 owner-present authorization:
+
+1. **The queue.** Migrations 022 (undocumented in the RUNBOOK but a purely additive CHECK widening from
+   PR #100 — flagged before running), 023, 024, 025 applied to production in one `npm run db:migrate`
+   (`Applied 4 migration(s)`), verified clean. `CLARIFY_CLICK_ENABLED` set via `vercel env add` and
+   deployed by an empty commit **`83aa84c`** (CI 33598926751 gate+deploy green) — **but its live
+   chip-click smoke test is still unconfirmed:** the session has no login (magic link needs the owner's
+   inbox; entering his Google password is prohibited), so the RUNBOOK's 3-step check is the owner's.
+   `ANSWER_FIRST_ENABLED` therefore not flipped (one flag at a time). [#193](open-questions.md) closed for
+   real: live `npm run audit:verify` found ZERO divergent rows, nothing to pin. `GDPR_PURGE_APPLY=1` NOT
+   flipped and `--apply` NOT run — a permanent deletion of production rows the session declined to
+   execute itself; the dry-run baseline (0 rows everywhere) is captured. #162's A/B not run (real spend +
+   the methodology's own owner read-back). #132 route B re-asked → owner: defer.
+2. **`4d7ac2d` — #170(3) chart download, PNG or SVG,** pulled forward by the owner ("I want people to be
+   able to choose between both"). `web/components/chart-download.tsx`: both formats serialize the same
+   attributed markup; LOW review found 2 issues (no SVG failure handling, duplicated measurement) — fixed.
+   CI 33617405690 green. **Later the same day, found while building on it: the export was BLANK outside
+   the page** — `var(--token)` strokes serialize verbatim and no standalone file resolves them; fixed in
+   step 1 below (lessons-learned).
+3. **`41f4594` + `e098490` — docs.** The queue outcomes; then the chart-UX research: owner redirected
+   mid-session ("research on how to improve the graphics … use Fable 5.1 ULTRACODE for architecture
+   decisions"). A 5-agent Workflow (`chart-graphics-research`, run `wf_93184bc9-c56`; the first launch died
+   with the compaction — no results in the journal — and was resumed from its persisted script: 5 agents,
+   238 tool calls, ~21 min): user value + architecture (both `claude-fable-5-1`), accessibility/mobile,
+   competitive scan (CBS StatLine, OWID, Eurostat, NOS live-tested), one synthesis. **One fabricated claim
+   caught before it reached the owner:** a nonexistent "palette validator" script with invented CVD ΔE
+   numbers and four "passing" hex colours — grep found nothing; the real WCAG ratios were recomputed by
+   hand (danger-vs-ok 1.10:1, ok-vs-warn 1.01:1, exact to two decimals) and kept. Published as a Claude
+   Artifact ("Chart UX Dossier") + the durable
+   [session-briefs/2026-09-02-session-69-chart-ux-research.md](session-briefs/2026-09-02-session-69-chart-ux-research.md);
+   tracked as [#197](open-questions.md). Both CI runs green (33625565187, 33627817822).
+4. **`da47566` — #197 step 1** (owner: "I've changed models. Can you execute it now" → GO, leanings taken as
+   defaults). Web renderer only: y-axis ticks at the plotted min/max, end-of-line "periode: waarde" and
+   per-bar labels (`valueLabelPlan` — which points get a label is a count-based presentation rule, what
+   they say is always the point's own `formattedValue`, bound via `data-label-for`); `--series-1..4`
+   (accent, Okabe-Ito vermillion `#d55e00` + bluish green `#009e73`, Tol purple `#aa3377`; each ≥ 3:1 vs
+   both paper surfaces — the research's "pairwise ≥ 3:1" was not a real WCAG requirement and no saturated
+   palette meets it) with dash patterns, hollow/hatched provisional markers and a "○ = voorlopig cijfer"
+   key; `aria-label` + `<desc>` keyboard hint on the svg, the tooltip as a polite live region (Recharts'
+   accessibility layer already arrow-walks points; the custom tooltip had dropped the announcement),
+   tap-to-pin on `(hover: none)` devices, `touch-pan-y`, ≥ 24 px targets; download menu with real
+   menu-button semantics (Escape/outside-pointerdown close, focus in/out, `role="alert"`) and computed-paint
+   inlining; toggle as a `radiogroup` with arrow keys; `schemaVersion` guard in `chart.tsx`; the
+   optional-v1-field rule written into ADR 014 (+ ADR 007 pointer), `known-divergences.ts` header
+   corrected. Tests render the REAL svg in jsdom (`initialDimension` + ResizeObserver left undefined) —
+   27 new pins. Verified before push: root + web typecheck, backend 113 files / 1707 tests, benchmark 14/14
+   + 6/6 + 0 fabricated GATE PASS, web 529/529, `next build`, LOW code-review 0 findings, and a real-browser
+   check on a scratch dev server (port 3010 — 3000 is held by the sibling project; `DATABASE_URL`
+   temporarily appended to `web/.env.local` and restored): computed paint resolves to `rgb(30, 64, 175)`
+   (68 attributes, 0 left over), menu/radiogroup semantics and 24 px targets confirmed in the DOM.
+5. **`1d2140f` — #197 step 2:** Grafiek/Tabel `tablist` on every chart, `tableModel` (period × series;
+   comparisons one row per region under their period; null cells "— (CBS reason)"; every cell bound);
+   > 15-series comparisons open on the table; image download in chart view only. Deviation recorded in
+   #197: no duplicate CSV entry in the menu (WP21's button already sits under every chat answer). Verified:
+   web 535/535, typecheck, `next build`, LOW review 0 findings; `src/` unchanged since the green backend
+   run (stated in the commit).
+6. **Step 3 (comparison chips) deliberately NOT built** — the approved build order gates it on the
+   `CLARIFY_CLICK_ENABLED` smoke test it reuses. The owner was asked to run the 3-step check.
+
+**CI at wrap-up (2026-09-02, verified with `gh run list`):** runs for `da47566` (33630872233) and `1d2140f`
+(33631282656) were still `in_progress` when this entry was written — the next session verifies both are
+green before assuming so (`gh run list --branch main -L 4`). Prod `/` served 200. Zero open PRs, `main` ==
+`origin/main`, one worktree. Housekeeping spun off as a task chip: `npm run lint` in `web/` is dead
+(ESLint 10 vs the bundled `eslint-plugin-react`; not on CI). Lessons: 9 bullets in
+[lessons-learned.md](lessons-learned.md) (fabricated tool claims, the over-stated contrast metric, the blank
+export, jsdom's fake computed paint, the ResizeObserver stub leak, textContent concatenation, workflow loss
+on compaction, browser-pane dead ends, the dead lint).
+
 **Session 68 (2026-08-28 into 2026-08-31, local time +07, owner present — the session spanned three
 calendar days, all in one continuous conversation) BUILT `/systeemoverzicht`, A PUBLIC ARCHITECTURE
 REFERENCE PAGE, ON DIRECT OWNER REQUEST — not a queued work package.** The owner asked in-chat for a

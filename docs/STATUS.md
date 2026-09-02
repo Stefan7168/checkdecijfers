@@ -55,8 +55,10 @@ silently redirected every visitor to `/login`) and `StatusLegend` hand-duplicate
 (caught by the pre-push LOW code-review). Full narrative, every verification step:
 [status-archive.md](status-archive.md) (prepended below).
 
-**✅ ZERO OPEN PRS, clean state (2026-09-02, session 69).** Verify yourself: `git log -1 origin/main`
-should show `4d7ac2d` or later and `gh pr list --state open` should be empty.
+**✅ ZERO OPEN PRS, clean state (2026-09-02, session-69 wrap-up).** Verify yourself: `git log -1 origin/main`
+should show `1d2140f` or later and `gh pr list --state open` should be empty. **⚠ CI for the last two
+commits (`da47566` run 33630872233, `1d2140f` run 33631282656) was still `in_progress` at wrap-up — check
+`gh run list --branch main -L 4` first thing; everything before them is green.**
 
 Full session-67 record (reviewed + merged all 19 PRs session 66 left open, #99-#117): [status-archive.md](status-archive.md) (prepended) +
 [session-briefs/2026-08-28-session-67-close.md](session-briefs/2026-08-28-session-67-close.md).
@@ -78,9 +80,9 @@ spend, PR #113 already merged so mechanically unblocked) — needs you present, 
 `forks_count` — still 0, last asked 2026-09-02, deferred again); (f) then the owner menu: WP30c choice
 (Rijksfinanciën `80504NED`, confirmed ordinary StatLine but `Gediscontinueerd`) / the #89/#70/#79 UI trio
 (UNBLOCKED, #103 is merged — but still needs its own shared-design decision first, not an automatic
-follow-on); (g) **[#197](open-questions.md)'s chart/graphics UX proposal** — read it and give a go/no-go;
-the first three ideas (chart labels/palette/accessibility fix, a table view, comparison chips) are
-small enough that a "go" likely just means picking them up next session.
+follow-on); (g) **[#197](open-questions.md) step 3 — comparison chips** — GO already given, steps 1+2 are
+live; step 3 waits ONLY on (a) above because it reuses the same zero-LLM take-path (spec: 08-build-plan
+"#197" section + the research brief). Ideas 4–8 stay unscheduled unless you say otherwise.
 **Housekeeping, whenever a session has room:** `open-questions.md` is still ~320KB and still due for a
 prune; **26** stale local branches (7 pre-pause with a live remote, 7 old-Dependabot with none, 12
 `worktree-agent-*` orphans — full list in the session-67 record above) want a deliberate, owner-present

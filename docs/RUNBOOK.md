@@ -1033,3 +1033,18 @@ DATABASE_URL (a secret — supervised only); logged-out surfaces (landing, /logi
 Session-52 note: without DATABASE_URL the landing's "Ontdek Nederland in grafieken" section degrades to
 nothing by design (the ADR 035 fail-safe) — locally you see the landing minus the charts; the charts
 themselves are verified hermetically on the gate (`tests/chart/curated.test.ts`) and visually on production.
+
+**Session-69 additions (2026-09-02) — a working recipe for a real visual check of the Ontdek charts:**
+- Port 3000 is often held by the owner's OTHER project's dev server (a `node …/Glaibaan/scripts/dev-web.mjs`
+  process — never kill it). Add a temporary `.claude/launch.json` entry on another port
+  (`"runtimeArgs": ["--prefix", "web", "run", "dev", "--", "-p", "3010"], "port": 3010`), use it via
+  `preview_start`, and REMOVE the entry before committing (`git status` must not show `.claude/launch.json`).
+- For the charts to render locally, append root `.env`'s `DATABASE_URL` line to `web/.env.local` for the
+  duration of the check only (`grep '^DATABASE_URL=' .env >> web/.env.local`, after backing the file up) and
+  restore the original 6-line file afterwards — the RUNBOOK's "what lives where" table above stays true.
+  The first Ontdek read on a cold pooler can exceed the 5 s budget and log the #190 "degrading" warning;
+  reload once.
+- Browser-pane quirks that cost time this session: a Claude Artifact URL needs the owner's claude.ai login
+  (the pane has none → "Page not found"); a `file://` page opens as a "static snapshot" that none of the read
+  tools can inspect while the pane is hidden; scrolled screenshots come back blank (session-68 lesson) — use
+  a tall `resize_window` + one screenshot, and verify interactions through `javascript_tool` DOM queries.
