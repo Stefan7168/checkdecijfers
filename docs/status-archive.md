@@ -57,8 +57,12 @@ OWNER'S WP26 SMOKE TEST.**
    `next build` clean; LOW `/code-review` 0 findings. 21 tests in the new
    `tests/answer/comparison-chips.test.ts` (real fixture db + real dry-run, both LLM clients throwing on the
    take, the audited row reconstructing clean), + 2 cost pins, + 2 replay pins, + 2 chat-client pins, +
-   the envelope-key manifest entry for `AnswerResponse.pending`. CI on the branch (runs 33638609958 and
-   33638618181) was still IN PROGRESS at close-out — verdict to be recorded below.
+   the envelope-key manifest entry for `AnswerResponse.pending`. CI on the branch, measured after the
+   close-out with `gh run view`: run 33638609958 (push) `success` — job `gate` `success`, job `deploy`
+   `skipped` (the deploy job runs only from `main`) — and run 33638618181 (pull_request) `success`.
+   A reviewer LOW pass on the PR diff found one minor redundancy (a hand-copied region cap of 8 next to
+   the schema gate that already enforces it) — removed in a follow-up commit on the branch, verified
+   before its push (see the branch log).
 5. **Docs in the PR:** ADR 029 first as-built note, ADR 024 addendum (chip carriers on answers, six
    notes), 04-architecture rows, 08-build-plan #197 step 3, open-questions #197 (as-built, deviations,
    follow-ups, the two-sessions note) + #195 (measured chip cost), docs/13 inventory, RUNBOOK step 6 +

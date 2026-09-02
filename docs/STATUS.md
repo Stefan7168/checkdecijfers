@@ -81,9 +81,9 @@ silently redirected every visitor to `/login`) and `StatusLegend` hand-duplicate
 **ONE OPEN DRAFT PR (2026-09-02, session-70 close-out): [#118](https://github.com/Stefan7168/checkdecijfers/pull/118)
 `feat/197-3-comparison-chips` at `02a328e` — merge gated on the owner's smoke test (above).** Verify
 yourself: `gh pr list --state open` shows exactly #118; `git log -1 origin/main` shows the session-70
-docs commit or later. CI on the branch (runs 33638609958 push + 33638618181 pull_request) was IN PROGRESS
-when this block was written — the measured verdict is recorded in the session-70 archive entry once
-known; a red run must be fixed on the branch before merge. The four session-69 docs-only commits on
+docs commit or later. **CI on the branch, measured after the close-out: run 33638609958 (push) `success` — gate
+`success`, deploy `skipped` (deploys only from `main`) — and run 33638618181 (pull_request) `success`.**
+So #118 is green and mergeable the moment the smoke test passes. The four session-69 docs-only commits on
 `main` measured at this close-out (`gh run list --branch main -L 4`, sha status conclusion):
 `f2f4bb6 completed success;4d18dc1 completed success;0f96af5 completed success;c40c35e completed success;`. #197 steps 1+2 stay LIVE on prod.
 
