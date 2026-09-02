@@ -16,7 +16,7 @@ OWNER'S WP26 SMOKE TEST.**
    facts were independently found by the reviewer session and re-verified here before being written down.
    The owner was pinged (mobile push) to run the smoke test; no confirmation had arrived at close-out.
 2. **Step 3 built on `feat/197-3-comparison-chips` (`02a328e`), draft PR
-   [#118](https://github.com/Stefan7168/checkdecijfers/pull/118), NOT merged** — the approved build order
+   PR #118, NOT merged** — the approved build order
    gates it on the smoke test it reuses, and #118's autonomous-work rule says branch + PR anyway. Design:
    two comparison generators in `suggestions.ts` — `compareRegion` (the answered regions + `NL01`, or
    `NL01` + the G4: "Vergelijk met Nederland" / "Vergelijk met Amsterdam, Rotterdam, Den Haag en Utrecht")

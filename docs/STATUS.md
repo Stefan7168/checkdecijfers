@@ -17,7 +17,7 @@ reply row), so the WP26 smoke test had NOT been run — and the three rows you p
 257–259, "Maak een grafiek van de inflatie…" + "2024" ×2) were Anthropic `529 overloaded_error` on the
 intent parse, each refunded by the gate (ledger 94/96/98): provider overload, not a code bug. Then built
 step 3 — comparison chips — on branch `feat/197-3-comparison-chips` (`02a328e`), **draft PR
-[#118](https://github.com/Stefan7168/checkdecijfers/pull/118), NOT merged:** two comparison generators
+PR #118, NOT merged:** two comparison generators
 ("Vergelijk met Nederland" / "Vergelijk met Amsterdam, Rotterdam, Den Haag en Utrecht" / "Vergelijk met
 <a year earlier>"), each chip a dry-run-proven `ClickOption` on a present-only `AnswerResponse.pending`
 in the WP26c chip-carrier shape, taken through the zero-LLM `templateOnly` path as a NEW validated result
@@ -78,7 +78,7 @@ silently redirected every visitor to `/login`) and `StatusLegend` hand-duplicate
 (caught by the pre-push LOW code-review). Full narrative, every verification step:
 [status-archive.md](status-archive.md) (prepended below).
 
-**ONE OPEN DRAFT PR (2026-09-02, session-70 close-out): [#118](https://github.com/Stefan7168/checkdecijfers/pull/118)
+**ONE OPEN DRAFT PR (2026-09-02, session-70 close-out): PR #118
 `feat/197-3-comparison-chips` at `02a328e` — merge gated on the owner's smoke test (above).** Verify
 yourself: `gh pr list --state open` shows exactly #118; `git log -1 origin/main` shows the session-70
 docs commit or later. **CI on the branch, measured after the close-out: run 33638609958 (push) `success` — gate
