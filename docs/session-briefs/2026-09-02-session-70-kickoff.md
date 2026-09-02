@@ -9,9 +9,10 @@ repo is the source of truth. Every fact below was verified against `git log` / `
 Lees in deze volgorde vóór je iets doet: `CLAUDE.md` → `docs/STATUS.md` (het bovenste blok is de waarheid)
 → `docs/session-briefs/2026-09-02-session-70-kickoff.md` (dit bestand) → `docs/status-archive.md`
 (sessie-69-entry, bovenaan). Verifieer jezelf eerst met `date +%Y-%m-%d`, `git log -3 --oneline`,
-`gh pr list --state open` en **`gh run list --branch main -L 4`** — de laatste twee CI-runs van sessie 69
-(`da47566` run 33630872233, `1d2140f` run 33631282656) waren bij het afsluiten nog `in_progress`;
-alles daarvóór is groen. Rood = eerst fixen, geen nieuw werk.
+`gh pr list --state open` en **`gh run list --branch main -L 4`** — de code-commits van sessie 69
+(`da47566` run 33630872233, `1d2140f` run 33631282656) zijn gemeten groen (gate + deploy, dus live);
+alleen de docs-only wrap-up-commits (`c40c35e`, `0f96af5`) liepen nog bij het afsluiten. Rood = eerst
+fixen, geen nieuw werk.
 
 **Stand (sessie 69, 2026-09-02, owner aanwezig):** migraties 022–025 staan live; `CLARIFY_CLICK_ENABLED`
 staat AAN in productie (`83aa84c`) maar de LIVE smoke test (RUNBOOK "WP26 answer-first + clickable

@@ -63,9 +63,10 @@ the #118 owner-present authorization:
 6. **Step 3 (comparison chips) deliberately NOT built** — the approved build order gates it on the
    `CLARIFY_CLICK_ENABLED` smoke test it reuses. The owner was asked to run the 3-step check.
 
-**CI at wrap-up (2026-09-02, verified with `gh run list`):** runs for `da47566` (33630872233) and `1d2140f`
-(33631282656) were still `in_progress` when this entry was written — the next session verifies both are
-green before assuming so (`gh run list --branch main -L 4`). Prod `/` served 200. Zero open PRs, `main` ==
+**CI (2026-09-02, verified with `gh run list` after the wrap-up):** `da47566` (33630872233) and `1d2140f`
+(33631282656) both completed `success` — gate and deploy — so #197 steps 1+2 are live on prod; the
+docs-only wrap-up commits (`c40c35e`, `0f96af5`) were still running when this was written. Prod `/`
+served 200. Zero open PRs, `main` ==
 `origin/main`, one worktree. Housekeeping spun off as a task chip: `npm run lint` in `web/` is dead
 (ESLint 10 vs the bundled `eslint-plugin-react`; not on CI). Lessons: 9 bullets in
 [lessons-learned.md](lessons-learned.md) (fabricated tool claims, the over-stated contrast metric, the blank

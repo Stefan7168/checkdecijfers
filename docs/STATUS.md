@@ -56,9 +56,10 @@ silently redirected every visitor to `/login`) and `StatusLegend` hand-duplicate
 [status-archive.md](status-archive.md) (prepended below).
 
 **✅ ZERO OPEN PRS, clean state (2026-09-02, session-69 wrap-up).** Verify yourself: `git log -1 origin/main`
-should show `1d2140f` or later and `gh pr list --state open` should be empty. **⚠ CI for the last two
-commits (`da47566` run 33630872233, `1d2140f` run 33631282656) was still `in_progress` at wrap-up — check
-`gh run list --branch main -L 4` first thing; everything before them is green.**
+should show `1d2140f` or later and `gh pr list --state open` should be empty. **CI verdicts, measured
+after the wrap-up: `da47566` (run 33630872233) and `1d2140f` (run 33631282656) both `success` — gate AND
+deploy, so #197 steps 1+2 are LIVE on prod (`/` served 200).** Only the two docs-only wrap-up commits
+(`c40c35e`, `0f96af5`) were still running when this line was written — `gh run list --branch main -L 4`.
 
 Full session-67 record (reviewed + merged all 19 PRs session 66 left open, #99-#117): [status-archive.md](status-archive.md) (prepended) +
 [session-briefs/2026-08-28-session-67-close.md](session-briefs/2026-08-28-session-67-close.md).
