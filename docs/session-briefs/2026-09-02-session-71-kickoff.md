@@ -10,7 +10,7 @@ Lees in deze volgorde vóór je iets doet: `CLAUDE.md` → `docs/STATUS.md` (het
 → `docs/session-briefs/2026-09-02-session-71-kickoff.md` (dit bestand) → `docs/status-archive.md`
 (sessie-70-entry, bovenaan). Verifieer jezelf eerst met `date +%Y-%m-%d`, `git log -3 --oneline`,
 `gh pr list --state open` (verwacht: precies één draft PR, **#118**, branch `feat/197-3-comparison-chips`
-op `02a328e`) en `gh run list --branch feat/197-3-comparison-chips -L 2` + `gh run list --branch main -L 3`.
+op `e6b5846`) en `gh run list --branch feat/197-3-comparison-chips -L 2` + `gh run list --branch main -L 3`.
 Rood = eerst fixen, geen nieuw werk. **Let op: sessie 70 draaide per ongeluk TWEE keer** (de kickoff werd
 in twee sessies geplakt; de tweede werd reviewer in een worktree `.claude/worktrees/s70-reviewer`). Check
 `git worktree list` en verwijder die worktree als hij er nog staat en niemand hem gebruikt
@@ -20,12 +20,13 @@ sessie 71 loopt vóór je iets schrijft.
 **Stand (sessie 70, 2026-09-02):** #197 stap 3 (vergelijkingschips) is GEBOUWD op de branch, geverifieerd
 (backend 114 bestanden / 1733 tests, benchmark 14/14 + 6/6 + 0 fabricated, web 537/537, `next build`, LOW
 review 0 findings, onafhankelijke design-review door de tweede sessie: 7 verdicts verwerkt; de
-reviewer-sessie heeft `02a328e` daarna zelf opnieuw geverifieerd met dezelfde uitkomsten en liet één
-kleine open follow-up achter als review-comment op de PR: de overbodige `MAX_COMPARISON_REGIONS`-grens in
-`suggestions.ts` — verwijderen mag bij de merge, niet blokkerend) en staat als draft PR #118 — **NIET
+reviewer-sessie heeft `02a328e` daarna zelf opnieuw geverifieerd met dezelfde uitkomsten; haar ene
+kleine finding — een overbodige, handmatig gekopieerde regio-grens naast de schema-gate — is verwijderd in
+de follow-up `e6b5846`, branch-CI groen op beide commits) en staat als draft PR #118 — **NIET
 gemerged.** Let op bij docs-pushes: de #132-test verbiedt live PR-links in `docs/` (schrijf `PR #118`,
 nooit `[#118](https://…/pull/118)`); de twee wrap-up-commits van sessie 70 gingen daarop rood en zijn
-gefixt in `fcbb479` — check `gh run list --branch main -L 3` dat die fix (en de commit erna) groen is.
+gefixt in `fcbb479` (run 33642409302 groen, gate + deploy) en de reviewer-commit `f3c3236` erna ook groen
+(run 33643051369) — check het zelf met `gh run list --branch main -L 3`.
 Reden voor het niet-mergen: de WP26 smoke test is nog steeds niet gedaan — productie
 `audit_answers` bevat nul rijen met `deterministic/wp26-click-option`; de drie rijen van de owner op
 02-09 12:43Z (ids 257–259) waren Anthropic `529 overloaded_error`, elk terugbetaald (ledger 94/96/98),

@@ -20,7 +20,8 @@ Full narrative: [status-archive.md](status-archive.md) session-70 entry.
   — a wrap-up that ends while its own run is in flight has not verified clean state.
 - **A close-out sentence written from intent, not from `git log`, was wrong within the hour.** The archive
   said a reviewer finding was "removed in a follow-up commit on the branch, verified before its push" —
-  no such commit was ever pushed (the branch head stayed `02a328e`). The Golden Rule covers exactly this:
+  at that moment no such commit had been pushed (the branch head was still `02a328e`; the follow-up landed
+  later as `e6b5846`, after the full block). The Golden Rule covers exactly this:
   a SHA, a "pushed", a "removed" is written only after the command that proves it has run.
 - **"Ask the owner whether X was done" has a cheaper, more honest first step: check the system that would
   show it.** The kickoff's item 1 was "ask the owner to run the WP26 smoke test (or check whether he did)".

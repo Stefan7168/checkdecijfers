@@ -15,7 +15,7 @@ OWNER'S WP26 SMOKE TEST.**
    rows 94/96/98, `compensation`, "refund: no answer produced") — provider overload, not a code bug. Both
    facts were independently found by the reviewer session and re-verified here before being written down.
    The owner was pinged (mobile push) to run the smoke test; no confirmation had arrived at close-out.
-2. **Step 3 built on `feat/197-3-comparison-chips` (`02a328e`), draft PR
+2. **Step 3 built on `feat/197-3-comparison-chips` (`02a328e`, head `e6b5846` after the follow-up below), draft PR
    #118, NOT merged** — the approved build order
    gates it on the smoke test it reuses, and #118's autonomous-work rule says branch + PR anyway. Design:
    two comparison generators in `suggestions.ts` — `compareRegion` (the answered regions + `NL01`, or
@@ -63,20 +63,26 @@ OWNER'S WP26 SMOKE TEST.**
    A reviewer LOW pass on the PR diff found one minor redundancy (a hand-copied region cap of 8,
    `MAX_COMPARISON_REGIONS`, next to the schema gate `isClickTakeableIntent` that already enforces it).
    **Correction by the reviewer session (verified with `git log origin/feat/197-3-comparison-chips`,
-   2026-09-02 14:30Z): NO follow-up commit exists — the branch head is still `02a328e`; the builder
-   session ended at 14:14Z before pushing one. The redundancy is OPEN, recorded in the PR #118 review
-   comment; the merging session removes it (or leaves it) as part of the merge.**
+   2026-09-02 14:30Z): at that moment NO follow-up commit existed — the branch head was still `02a328e`
+   and the earlier version of this sentence had been written from intent, not from `git log`.** The
+   follow-up then landed, measured: **`e6b5846`** (committed 2026-09-02T21:42:42+07:00, `refactor(#197-3): drop the
+   hand-copied region cap — the schema gate is the bound`), pushed after the full block (root typecheck;
+   backend 114 files / 1733 tests solo; benchmark 14/14 + 6/6 + 0 fabricated; web 47 / 537; `next build`
+   13 routes / 12 static pages; LOW review 0 findings); branch CI runs 33643838978 (push) and 33643837354
+   (pull_request) both `success` (gate; deploy skipped off `main`). The PR #118 review comment's "still
+   open" clause is superseded by a follow-up comment naming `e6b5846`.
 5. **Docs in the PR:** ADR 029 first as-built note, ADR 024 addendum (chip carriers on answers, six
    notes), 04-architecture rows, 08-build-plan #197 step 3, open-questions #197 (as-built, deviations,
    follow-ups, the two-sessions note) + #195 (measured chip cost), docs/13 inventory, RUNBOOK step 6 +
    deploy-window sentence. **Docs on `main` (this close-out, single writer per the split):** STATUS top
    block, this entry, the session-71 kickoff, lessons, memory.
-6. **The reviewer session's own close (local_09530460…, worktree `s70-reviewer`, 2026-09-02 14:00–14:35Z),
+6. **The reviewer session's own close (local_09530460…, worktree `s70-reviewer`, 2026-09-02 13:00–14:35Z —
+   created 13:00:28Z per `get_session`),
    every fact re-measured:** independent verification of `02a328e` in the clean worktree (shared
    `node_modules`, lockfiles unchanged) — root + web typecheck clean; backend 114 files / 1733 tests,
    exit 0 (1423 s solo); benchmark 14/14 + 6/6 + 0 fabricated GATE PASS; web 47 files / 537 tests;
-   `next build` clean (12 routes); LOW `/code-review` 1 minor finding (the `MAX_COMPARISON_REGIONS`
-   redundancy above, open). Posted as a review comment on PR #118 at 14:28:27Z. Branch CI runs
+   `next build` clean (13 routes, 12 static pages); LOW `/code-review` 1 minor finding (the
+   `MAX_COMPARISON_REGIONS` redundancy above, since closed by `e6b5846`). Posted as a review comment on PR #118 at 14:28:27Z. Branch CI runs
    33638609958 (push) and 33638618181 (pull_request): both `success`. **`main` went RED on both docs-only
    close-out commits** — `221ce1a` (run 33639056477) and `e0f6695` (run 33640675548) failed the
    `test:docs` gate step: `tests/docs/doc-conventions.test.ts` (#132 interim rule (i), no live PR links
@@ -84,9 +90,9 @@ OWNER'S WP26 SMOKE TEST.**
    The gate runs before `deploy`, so production stayed on the `1d2140f` build (`/` and `/llms.txt` 200).
    The builder session had ended (last activity 14:14Z) and did not see the red; the reviewer session
    messaged it with the exact cause at 14:29Z, which woke it: it pushed the three-link fix **`fcbb479`**
-   (14:29:36Z, `docs(wrap): plain 'PR #118' instead of live PR links`), CI run 33642409302 — still in
-   progress when this was written; the session-71 kickoff tells the next session to check
-   `gh run list --branch main`. The reviewer session had prepared the same fix independently
+   (14:29:36Z, `docs(wrap): plain 'PR #118' instead of live PR links`), CI run 33642409302 — measured
+   after the fact: `success`, gate AND deploy (prod redeployed the same code; `/` 200); the reviewer's
+   own `f3c3236` (run 33643051369) `success` as well. The reviewer session had prepared the same fix independently
    (`npm run test:docs` 5/5 locally) and rebased its commit — this one, carrying only the record and the
    correction above — onto `fcbb479`. Docs-only pushes to `main` by an autonomous session are allowed
    under #118 rule (b).

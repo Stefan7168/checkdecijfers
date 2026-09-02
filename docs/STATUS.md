@@ -16,7 +16,7 @@ asking: `audit_answers` holds ZERO chip-click takes ever (no `deterministic/wp26
 reply row), so the WP26 smoke test had NOT been run — and the three rows you produced at 12:43Z (ids
 257–259, "Maak een grafiek van de inflatie…" + "2024" ×2) were Anthropic `529 overloaded_error` on the
 intent parse, each refunded by the gate (ledger 94/96/98): provider overload, not a code bug. Then built
-step 3 — comparison chips — on branch `feat/197-3-comparison-chips` (`02a328e`), **draft PR
+step 3 — comparison chips — on branch `feat/197-3-comparison-chips` (head `e6b5846`), **draft PR
 #118, NOT merged:** two comparison generators
 ("Vergelijk met Nederland" / "Vergelijk met Amsterdam, Rotterdam, Den Haag en Utrecht" / "Vergelijk met
 <a year earlier>"), each chip a dry-run-proven `ClickOption` on a present-only `AnswerResponse.pending`
@@ -26,11 +26,13 @@ session's 7 verdicts are folded in (resolved-intent source, a takeability gate t
 key from minting a chip the validator strips, forgery pins, replay parity, a measured cost pin). Verified
 before the push: backend 114 files / 1733 tests, benchmark 14/14 + 6/6 + 0 fabricated, web 537/537,
 `next build`, LOW review 0 findings. **Independently re-verified by the reviewer session in its clean
-worktree (same numbers, branch CI 33638609958 + 33638618181 both green); its LOW pass left ONE minor open
-follow-up on the PR (the redundant `MAX_COMPARISON_REGIONS` bound in `suggestions.ts`, see the PR #118
-review comment).** The two docs-only close-out commits (`221ce1a`, `e0f6695`) went RED on the #132
-"no live PR links in docs/" test (three `[#118](https://…/pull/118)` links) — found by the reviewer
-session, fixed in `fcbb479` (run 33642409302); prod was never touched (the gate precedes the deploy).
+worktree (same numbers, branch CI 33638609958 + 33638618181 both green); its LOW pass found ONE minor
+redundancy (a hand-copied region cap next to the schema gate), removed in the follow-up `e6b5846` after
+the full verification block — branch CI runs 33643838978 (push) and 33643837354 (pull_request) both
+`success`.** The two docs-only close-out commits (`221ce1a`, `e0f6695`) went RED on the #132 "no live PR
+links in docs/" test (three `[#118](https://…/pull/118)` links) — found by the reviewer session, fixed in
+`fcbb479` (run 33642409302 `success`, gate AND deploy — prod redeployed the same `1d2140f` code, `/` 200);
+the reviewer's docs commit `f3c3236` (run 33643051369) `success` too.
 Details: ADR 029 first as-built note, ADR 024 last addendum, [status-archive.md](status-archive.md).
 **Your two actions, in order:** (1) the WP26 smoke test (RUNBOOK "WP26 answer-first + clickable
 options", steps 4–5: log in, bare "Utrecht", click a chip);
@@ -85,10 +87,11 @@ silently redirected every visitor to `/login`) and `StatusLegend` hand-duplicate
 [status-archive.md](status-archive.md) (prepended below).
 
 **ONE OPEN DRAFT PR (2026-09-02, session-70 close-out): PR #118
-`feat/197-3-comparison-chips` at `02a328e` — merge gated on the owner's smoke test (above).** Verify
+`feat/197-3-comparison-chips` at `e6b5846` — merge gated on the owner's smoke test (above).** Verify
 yourself: `gh pr list --state open` shows exactly #118; `git log -1 origin/main` shows the session-70
 docs commit or later. **CI on the branch, measured after the close-out: run 33638609958 (push) `success` — gate
-`success`, deploy `skipped` (deploys only from `main`) — and run 33638618181 (pull_request) `success`.**
+`success`, deploy `skipped` (deploys only from `main`) — and run 33638618181 (pull_request) `success`;
+the follow-up `e6b5846`: runs 33643838978 (push) and 33643837354 (pull_request) both `success`.**
 So #118 is green and mergeable the moment the smoke test passes. The four session-69 docs-only commits on
 `main` measured at this close-out (`gh run list --branch main -L 4`, sha status conclusion):
 `f2f4bb6 completed success;4d18dc1 completed success;0f96af5 completed success;c40c35e completed success;`. #197 steps 1+2 stay LIVE on prod.
