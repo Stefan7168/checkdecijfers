@@ -37,7 +37,10 @@ download menu with real menu semantics AND computed-paint inlining (the #170(3) 
 `var(--token)` strokes no standalone file can resolve — found and fixed here), toggle as a radiogroup,
 a `schemaVersion` guard in the web renderer, ADR 014 as-built rule for optional v1 fields. Web
 renderer only; spec/builder/audit rows untouched. 27 new tests render the real svg in jsdom; web suite
-529/529. Steps 2 (Tabel view) and 3 (comparison chips, gated on the WP26 smoke test) are next.
+529/529. **Step 2 BUILT too:** a Grafiek/Tabel switch on every chart (period × series, comparisons one
+row per region, null cells as "— (reason)", >15-series comparisons open on the table); no duplicate CSV
+entry in the menu — WP21's button already sits under every chat answer. Step 3 (comparison chips) is
+next and gated on the WP26 smoke test.
 
 **▶ SESSION 68 (2026-08-28 into 2026-08-31, local +07, owner present, spanned three calendar days in one
 continuous conversation) BUILT `/systeemoverzicht` — a public architecture reference page, on direct

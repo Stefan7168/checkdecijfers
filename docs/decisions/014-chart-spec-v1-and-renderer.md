@@ -119,6 +119,12 @@ only, which is the safe direction.
   (`--series-1..4`, dash patterns as the non-colour channel, hatch fill for provisional bars), an
   accessible name + announced tooltip, tap-to-pin on touch devices, and `initialDimension` on the
   responsive container (which is also what lets jsdom render the real svg in the component tests).
+- **The `table` kind never became a spec kind — it became a VIEW (session 69, #197 step 2).** ADR 007's
+  Phase-0 vocabulary listed "line/bar/table"; the spec stayed line/bar and the web renderer now offers a
+  Grafiek/Tabel switch over the same spec (`tableModel` in `web/components/chart.tsx`): a second dumb
+  renderer, cells are spec strings bound to resultIds, nulls shown with their CBS reason. This keeps the
+  revisit trigger below honest — "a result shape that genuinely needs the `table` kind" still means a
+  shape neither line nor bar can carry, not "the user wants to see a table".
 
 ## Revisit triggers
 

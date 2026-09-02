@@ -24,7 +24,7 @@
 // emits, so stored specs (R8) and `reconstruct.ts` are untouched.
 'use client';
 
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import {
   Bar,
   BarChart,
@@ -242,6 +242,76 @@ export function valueLabelPlan(spec: ChartSpec): ValueLabelPlan {
   return { axisTicks, endLabels, barLabels: [] };
 }
 
+// ---------------------------------------------------------------------------
+// #197 step 2: the "Tabel" view — a second dumb renderer over the same spec.
+// Period × series, the point's own formattedValue (+ the '*' provisional
+// suffix), a null cell as an honest gap with its CBS reason (R11 — never a
+// blank that reads as zero). Bars transpose: one row per region under the
+// single period. Nothing here is computed; every cell is a spec string bound
+// to its resultId, same contract as the chart.
+// ---------------------------------------------------------------------------
+
+export interface TableCell {
+  text: string;
+  resultId: string | null;
+}
+
+export interface TableModel {
+  caption: string;
+  header: string[];
+  rows: { label: string; cells: TableCell[] }[];
+}
+
+function tableCellText(point: ChartPoint): string {
+  if (point.value === null || point.formattedValue === null) {
+    return point.valueAttribute === 'None' ? '—' : `— (${point.valueAttribute})`;
+  }
+  return pointLabelText(point);
+}
+
+const EMPTY_CELL: TableCell = { text: '', resultId: null };
+
+export function tableModel(spec: ChartSpec): TableModel {
+  const caption = `${spec.title} (${spec.unit})`;
+  if (spec.kind === 'bar') {
+    const periodLabels = new Set(spec.series.flatMap((s) => s.points.map((p) => p.periodLabel)));
+    const periodHeader = periodLabels.size === 1 ? [...periodLabels][0] : 'Waarde';
+    return {
+      caption,
+      header: ['Regio', periodHeader],
+      rows: spec.series.map((series) => {
+        const point = series.points[0];
+        return {
+          label: series.label,
+          cells: [point ? { text: tableCellText(point), resultId: point.resultId } : EMPTY_CELL],
+        };
+      }),
+    };
+  }
+  // Same chronological ordering rule as buildRows (period codes sort
+  // lexicographically = chronologically within one grain).
+  const codes = [...new Set(spec.series.flatMap((s) => s.points.map((p) => p.periodCode)))].sort((a, b) =>
+    a.localeCompare(b),
+  );
+  const labelByCode = new Map<string, string>();
+  for (const series of spec.series) {
+    for (const point of series.points) {
+      if (!labelByCode.has(point.periodCode)) labelByCode.set(point.periodCode, point.periodLabel);
+    }
+  }
+  return {
+    caption,
+    header: ['Periode', ...spec.series.map((s) => s.label)],
+    rows: codes.map((code) => ({
+      label: labelByCode.get(code) ?? code,
+      cells: spec.series.map((series) => {
+        const point = series.points.find((p) => p.periodCode === code);
+        return point ? { text: tableCellText(point), resultId: point.resultId } : EMPTY_CELL;
+      }),
+    })),
+  };
+}
+
 interface TooltipPayloadEntry {
   dataKey: string;
   color: string;
@@ -437,6 +507,12 @@ export function ChartView({ spec }: { spec: ChartSpec }) {
   const rawId = useId();
   const domId = rawId.replace(/[^a-zA-Z0-9_-]/g, '');
   const coarsePointer = useCoarsePointer();
+  // #197 step 2: chart or table. A comparison with more bars than the chart
+  // can label opens on the table — the idea bank's >15-categories rule, the
+  // honest view for many series.
+  const [view, setView] = useState<'chart' | 'table'>(spec.series.length > BAR_LABEL_MAX ? 'table' : 'chart');
+  const chartTabRef = useRef<HTMLButtonElement>(null);
+  const tableTabRef = useRef<HTMLButtonElement>(null);
 
   if (spec.schemaVersion !== 1) {
     // Renderers dispatch on the schema version (ADR 007); this one only
@@ -482,6 +558,24 @@ export function ChartView({ spec }: { spec: ChartSpec }) {
       : 8;
   const accessibleName = `Grafiek: ${spec.title} (${spec.unit})`;
   const tooltipTrigger = coarsePointer ? 'click' : 'hover';
+  const table = tableModel(spec);
+  const panelId = `${domId}-panel`;
+
+  function selectView(next: 'chart' | 'table'): void {
+    setView(next);
+    (next === 'chart' ? chartTabRef : tableTabRef).current?.focus();
+  }
+
+  function onTabKeyDown(event: KeyboardEvent<HTMLDivElement>): void {
+    if (['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp'].includes(event.key)) {
+      event.preventDefault();
+      selectView(view === 'chart' ? 'table' : 'chart');
+    }
+  }
+
+  const tabClass = (active: boolean): string =>
+    'min-h-6 rounded-full border px-2.5 py-1 text-xs ' +
+    (active ? 'border-line-strong bg-paper-sunken text-ink' : 'border-line-strong text-ink-soft hover:bg-paper-sunken');
 
   return (
     <div className="mt-3 rounded-lg border border-line bg-paper-raised p-3">
@@ -494,9 +588,75 @@ export function ChartView({ spec }: { spec: ChartSpec }) {
         </div>
       ) : null}
       <div className="text-xs text-ink-muted">{spec.unit}</div>
-      {/* touch-pan-y: the tooltip's press-and-drag must not fight vertical
-        * page scrolling on a phone. */}
-      <div ref={chartContainerRef} className="h-64 w-full touch-pan-y" data-tooltip-trigger={tooltipTrigger}>
+      <div role="tablist" aria-label="Weergave" onKeyDown={onTabKeyDown} className="mt-2 flex flex-wrap gap-2">
+        <button
+          ref={chartTabRef}
+          type="button"
+          role="tab"
+          aria-selected={view === 'chart'}
+          aria-controls={panelId}
+          tabIndex={view === 'chart' ? 0 : -1}
+          onClick={() => selectView('chart')}
+          className={tabClass(view === 'chart')}
+        >
+          Grafiek
+        </button>
+        <button
+          ref={tableTabRef}
+          type="button"
+          role="tab"
+          aria-selected={view === 'table'}
+          aria-controls={panelId}
+          tabIndex={view === 'table' ? 0 : -1}
+          onClick={() => selectView('table')}
+          className={tabClass(view === 'table')}
+        >
+          Tabel
+        </button>
+      </div>
+      {view === 'table' ? (
+        <div id={panelId} role="tabpanel" aria-label="Tabel" className="mt-2 overflow-x-auto">
+          <table className="w-full text-sm" aria-label={table.caption}>
+            <thead>
+              <tr>
+                {table.header.map((h) => (
+                  <th key={h} scope="col" className="border-b border-line-strong px-2 py-1 text-left font-medium text-ink-soft">
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {table.rows.map((row) => (
+                <tr key={row.label} className="border-b border-line">
+                  <th scope="row" className="px-2 py-1 text-left font-normal text-ink">
+                    {row.label}
+                  </th>
+                  {row.cells.map((cell, i) => (
+                    <td
+                      key={table.header[i + 1] ?? i}
+                      className="px-2 py-1 text-right text-ink"
+                      data-label-for={cell.resultId ?? undefined}
+                    >
+                      {cell.text}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+      /* touch-pan-y: the tooltip's press-and-drag must not fight vertical
+       * page scrolling on a phone. */
+      <div
+        id={panelId}
+        role="tabpanel"
+        aria-label="Grafiek"
+        ref={chartContainerRef}
+        className="mt-2 h-64 w-full touch-pan-y"
+        data-tooltip-trigger={tooltipTrigger}
+      >
         <ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 640, height: 256 }}>
           {spec.kind === 'line' ? (
             <LineChart
@@ -592,6 +752,7 @@ export function ChartView({ spec }: { spec: ChartSpec }) {
           )}
         </ResponsiveContainer>
       </div>
+      )}
       {/* #197: the hollow marker needs a key a lay reader can decode without
         * reading the note first; rendered exactly when the spec says a
         * provisional point exists (R11's provisionalNote is present iff). */}
@@ -629,11 +790,13 @@ export function ChartView({ spec }: { spec: ChartSpec }) {
           * the file itself — not just shown on this page — via the SAME
           * spec.attributionLine string shown above (R4: one builder, one
           * sentence, never re-derived here). */}
-        <ChartDownloadMenu
-          containerRef={chartContainerRef}
-          attributionText={`${spec.attributionLine} checkdecijfers.nl`}
-          filenameBase={`checkdecijfers-${spec.attribution.tableId}`}
-        />
+        {view === 'chart' ? (
+          <ChartDownloadMenu
+            containerRef={chartContainerRef}
+            attributionText={`${spec.attributionLine} checkdecijfers.nl`}
+            filenameBase={`checkdecijfers-${spec.attribution.tableId}`}
+          />
+        ) : null}
       </div>
     </div>
   );

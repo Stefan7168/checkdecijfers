@@ -2,7 +2,7 @@
 // every displayed numeric STRING must be a point's own formattedValue, and
 // periods must sort chronologically by code, not label/insertion order —
 // mirroring the checks ADR 014's SVG-renderer test suite already runs.
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ChartSpec } from '../backend/chart/types.ts';
 import {
@@ -11,6 +11,7 @@ import {
   ChartTooltip,
   ChartView,
   seriesStyle,
+  tableModel,
   valueLabelPlan,
   yAxisDomain,
 } from './chart.tsx';
@@ -643,5 +644,129 @@ describe('ChartTooltip — #197: announced, not just shown', () => {
     const root = container.firstElementChild!;
     expect(root.getAttribute('role')).toBe('status');
     expect(root.getAttribute('aria-live')).toBe('polite');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// #197 step 2 — the "Tabel" view beside every chart (session 69). A second,
+// dumb renderer over the same spec: period × series, the point's own
+// formattedValue (+ the '*' provisional suffix), a null cell shown as an
+// honest gap with its CBS reason. The switch is pure UI state.
+// ---------------------------------------------------------------------------
+
+describe('tableModel (#197 step 2)', () => {
+  it('lays a line chart out as one row per period and one column per series, cells bound to their resultIds', () => {
+    const s = spec({
+      series: [
+        {
+          label: 'Amsterdam',
+          regionCode: 'GM0363',
+          points: [
+            point({ resultId: 'a23', periodCode: '2023JJ00', periodLabel: '2023', value: 1, formattedValue: '1,0' }),
+            point({ resultId: 'a24', periodCode: '2024JJ00', periodLabel: '2024', value: 2, formattedValue: '2,0', provisional: true }),
+          ],
+        },
+        {
+          label: 'Utrecht',
+          regionCode: 'GM0344',
+          points: [point({ resultId: 'u24', periodCode: '2024JJ00', periodLabel: '2024', value: 3, formattedValue: '3,0' })],
+        },
+      ],
+    });
+    const model = tableModel(s);
+    expect(model.caption).toBe('Testreeks (%)');
+    expect(model.header).toEqual(['Periode', 'Amsterdam', 'Utrecht']);
+    expect(model.rows).toEqual([
+      { label: '2023', cells: [{ text: '1,0', resultId: 'a23' }, { text: '', resultId: null }] },
+      { label: '2024', cells: [{ text: '2,0*', resultId: 'a24' }, { text: '3,0', resultId: 'u24' }] },
+    ]);
+  });
+
+  it('shows a null cell as an honest gap carrying the CBS reason, never a blank that reads as zero', () => {
+    const s = spec({
+      series: [
+        {
+          label: 'A',
+          regionCode: null,
+          points: [point({ resultId: 'gap', value: null, formattedValue: null, valueAttribute: 'Geheim' })],
+        },
+      ],
+    });
+    expect(tableModel(s).rows[0].cells[0]).toEqual({ text: '— (Geheim)', resultId: 'gap' });
+  });
+
+  it('lays a bar chart out as one row per region under the single period', () => {
+    const s = spec({
+      kind: 'bar',
+      series: [
+        { label: 'Amsterdam', regionCode: 'GM0363', points: [point({ resultId: 'ams', value: 4.2, formattedValue: '4,2' })] },
+        { label: 'Utrecht', regionCode: 'GM0344', points: [point({ resultId: 'utr', value: 3.1, formattedValue: '3,1', provisional: true })] },
+      ],
+    });
+    const model = tableModel(s);
+    expect(model.header).toEqual(['Regio', '2024']);
+    expect(model.rows).toEqual([
+      { label: 'Amsterdam', cells: [{ text: '4,2', resultId: 'ams' }] },
+      { label: 'Utrecht', cells: [{ text: '3,1*', resultId: 'utr' }] },
+    ]);
+  });
+});
+
+describe('ChartView — #197 step 2, the Tabel view', () => {
+  beforeEach(() => vi.unstubAllGlobals());
+
+  it('offers a Grafiek/Tabel switch, chart first, and swaps to a table bound cell-by-cell to the spec', () => {
+    const { container } = render(<ChartView spec={threePointSpec()} />);
+    expect(screen.getByRole('tab', { name: 'Grafiek' })).toHaveAttribute('aria-selected', 'true');
+    expect(container.querySelector('svg')).not.toBeNull();
+    expect(container.querySelector('table')).toBeNull();
+    fireEvent.click(screen.getByRole('tab', { name: 'Tabel' }));
+    expect(screen.getByRole('tab', { name: 'Tabel' })).toHaveAttribute('aria-selected', 'true');
+    expect(container.querySelector('svg')).toBeNull();
+    const table = screen.getByRole('table', { name: 'Testreeks (%)' });
+    expect(table.querySelector('[data-label-for="lo"]')?.textContent).toBe('1,5');
+    expect(table.querySelector('[data-label-for="hi"]')?.textContent).toBe('3,3');
+    // Image download makes no sense for a table — the menu is not offered there.
+    expect(screen.queryByRole('button', { name: 'Download' })).toBeNull();
+    fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
+    expect(container.querySelector('svg')).not.toBeNull();
+  });
+
+  it('opens on the table when a comparison has more series than a chart can label (the idea-bank >15 rule)', () => {
+    const series = Array.from({ length: 16 }, (_, i) => ({
+      label: `Gemeente ${i}`,
+      regionCode: `GM${i}`,
+      points: [point({ resultId: `r${i}`, value: i, formattedValue: `${i},0` })],
+    }));
+    const { container } = render(<ChartView spec={spec({ kind: 'bar', series })} />);
+    expect(screen.getByRole('tab', { name: 'Tabel' })).toHaveAttribute('aria-selected', 'true');
+    expect(container.querySelector('table')).not.toBeNull();
+    expect(container.querySelector('svg')).toBeNull();
+  });
+
+  it('shows no numeric token in the table that is not a spec string', () => {
+    const s = threePointSpec({ nullNotes: ['2021: geen gegevens beschikbaar (geheim).'] });
+    const { container } = render(<ChartView spec={s} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Tabel' }));
+    const specStrings = [
+      s.title,
+      s.unit,
+      s.attributionLine,
+      s.attribution.tableId,
+      s.attribution.syncedAt,
+      ...s.nullNotes,
+      ...Object.keys(s.dimLabels),
+      ...Object.values(s.dimLabels),
+      ...s.series.flatMap((se) => se.points.flatMap((p) => [p.formattedValue ?? '', p.periodLabel])),
+    ].filter(Boolean);
+    const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+    const tokens: string[] = [];
+    for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+      tokens.push(...((node.textContent ?? '').match(/\d[\d.,]*/g) ?? []));
+    }
+    expect(tokens).toContain('2,0');
+    for (const tok of tokens) {
+      expect(specStrings.some((str) => str.includes(tok)), `token "${tok}" has no source in the spec`).toBe(true);
+    }
   });
 });
