@@ -60,6 +60,13 @@ Full narrative: [status-archive.md](status-archive.md) session-69 entry; the res
   hidden. A careful static read of the CSS caught two real bugs instead (an `@media` jammed into a
   selector list, an unconstrained flex item) — so do that read regardless, but a real render still needs
   the dev server on a free port (3000 is held by the sibling project; a scratch entry on 3010 works).
+- **A prod screenshot that shows the tab pills but an empty chart area is NOT (necessarily) a regression.**
+  Right after the wrap-up, the first screenshot of the deployed landing showed both Ontdek cards with the
+  new Grafiek/Tabel pills and nothing below them — 30 seconds of "step 2 broke prod" until a DOM query
+  showed 5 svgs at 710×256, 5 line paths, 10 axis ticks and zero console errors; the next screenshot was
+  fine. The pane's screenshot fired before Recharts had drawn. Rule: before calling a chart regression,
+  query the DOM (`.recharts-responsive-container svg`, `[data-role="axis-tick"]`) and the console; a
+  screenshot alone proves nothing either way.
 - **`npm run lint` in `web/` is dead:** ESLint 10.7 vs the `eslint-plugin-react` bundled by
   `eslint-config-next` (`contextOrFilename.getFilename is not a function`). Pre-existing, not on CI, so
   nothing was blocked — spun off as a task chip rather than fixed in a chart change.
