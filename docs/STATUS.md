@@ -23,10 +23,13 @@ missing SVG failure-handling, duplicated width/height derivation), pushed direct
 **Declined to flip `GDPR_PURGE_APPLY=1` or run the #162 A/B** — real deletion and real spend are exactly
 the owner-supervised carve-out CLAUDE.md excludes from standing push authorization, so the dry-run
 baseline (0 rows everywhere) stays the only thing captured this session. [#132](open-questions.md) route
-B re-asked, you said defer again. Launched a 5-agent background research workflow
-(`chart-graphics-research`; `claude-fable-5-1` for the UX-vision and architecture angles) on how to
-improve the charts for end users — results pending, will come back as one concrete proposal for a
-go/no-go before anything is built from it.
+B re-asked, you said defer again. Ran a 5-agent background research workflow (`chart-graphics-research`;
+`claude-fable-5-1` for the UX-vision and architecture angles) on how to improve the charts for end
+users. Result: [#197](open-questions.md), full proposal in
+[session-briefs/2026-09-02-session-69-chart-ux-research.md](session-briefs/2026-09-02-session-69-chart-ux-research.md)
+(also a Claude Artifact for a readable version) — 8 ranked ideas, a first-three build order, 10 owner
+decisions. One fabricated claim in the raw research (a nonexistent "palette validator" script) was
+caught and removed before publishing. **Awaiting your go/no-go — nothing built from it yet.**
 
 **▶ SESSION 68 (2026-08-28 into 2026-08-31, local +07, owner present, spanned three calendar days in one
 continuous conversation) BUILT `/systeemoverzicht` — a public architecture reference page, on direct
@@ -64,8 +67,9 @@ spend, PR #113 already merged so mechanically unblocked) — needs you present, 
 `forks_count` — still 0, last asked 2026-09-02, deferred again); (f) then the owner menu: WP30c choice
 (Rijksfinanciën `80504NED`, confirmed ordinary StatLine but `Gediscontinueerd`) / the #89/#70/#79 UI trio
 (UNBLOCKED, #103 is merged — but still needs its own shared-design decision first, not an automatic
-follow-on). **Also in flight:** the chart/graphics UX research workflow launched session 69 — read its
-result before starting any of it; it's a proposal needing your go/no-go, not a ready build queue.
+follow-on); (g) **[#197](open-questions.md)'s chart/graphics UX proposal** — read it and give a go/no-go;
+the first three ideas (chart labels/palette/accessibility fix, a table view, comparison chips) are
+small enough that a "go" likely just means picking them up next session.
 **Housekeeping, whenever a session has room:** `open-questions.md` is still ~320KB and still due for a
 prune; **26** stale local branches (7 pre-pause with a live remote, 7 old-Dependabot with none, 12
 `worktree-agent-*` orphans — full list in the session-67 record above) want a deliberate, owner-present
