@@ -11,8 +11,14 @@
 
 **▶ SESSION 74 (2026-09-03, AUTONOMOUS — the SESSION-73 kickoff pasted again from the phone app; no owner reply in chat;
 `list_sessions`: the earlier session 73 idle, no second RUNNING instance) — HIGH-EFFORT PASSES ON #122 AND #123 BEFORE
-MERGE DAY, BOTH FIXED ON THEIR BRANCHES, THE BATCH RE-SIMULATED AND RE-VERIFIED; STILL NOTHING MERGED, NOTHING FLIPPED.**
-#122's round-1 client fix could discard an OPEN clarification round (a glance at an older chip, then a typed reply → sent
+MERGE DAY, BOTH FIXED ON THEIR BRANCHES, THE BATCH RE-SIMULATED AND RE-VERIFIED — WHILE A SECOND, OWNER-PRESENT SESSION
+MERGED #121, #120 AND THEN #122 IN PARALLEL; #123 IS THE ONE STILL OPEN — GATES GREEN, MERGE PENDING.** A remote-control session started
+17:33Z (owner present) squash-merged #121 as `527ef2e` (17:50Z; main run 33786945030 green, its deploy on the alias, the
+canaries 200) and #120 as `069a03e` (18:10Z; main run 33788899139 success — gate 18:10→18:23Z, deploy 18:23→18:25Z; its deployment `dpl_GjA6ge1ZCTp3SuRjbEsGRrGTbwsr` (`checkdecijfers-b6smn8m5i…`, created 18:24:59Z, `meta.githubCommitSha` = `069a03e`) is on the alias; `/`, `/llms.txt`, `/api/health` 200 at 18:26–18:27Z — TypeScript 7.0.2 builds production from here on) — this session saw it on the `git fetch`
+before its docs push, not before; Dependabot opened #124 (root, 5 updates) and #125 (web, 8 updates) within two minutes
+of #120's merge, the ignore stanza being gone. That session then squash-merged #122 as `4fd6ea5` (18:26:47Z, head `002f5b0` —
+this session's round 2 included). New `main` + #122 + #123 is the very tree block 4 verified (`9394d9c6…`, both orders),
+so `4fd6ea5` + #123 is too. #122's round-1 client fix could discard an OPEN clarification round (a glance at an older chip, then a typed reply → sent
 as a fresh question, the paid round lost) and lost the race with an in-flight answer; a B-defaulted answer's chips named
 no place over an explicit `NL01` intent (the take served with no R7 disclosure); a stripped carrier's fresh parse was
 recorded as `clarify` (#177). #123's "Geen bewerking toegepast … de waarde uit de cel" fired SINGULAR under "Gelezen: N
@@ -21,23 +27,24 @@ the component, outside the builder's try/catch; the panel contradicted the answe
 `first_last`-only result. All fixed and pinned on the branches, each delta LOW-reviewed (RUNBOOK batch item 10 measured
 again: nine + six HIGH findings, and every LOW pass over a fix found more — two of them the session's own wrong claims).
 Blocks: both branches and the combined tree of the FINAL heads green — typecheck ×2, backend 116 files / 1780 tests, benchmark answerable 14/14 + refusal 6/6 + 0 fabricated (GATE PASS), web 50 files / 584 tests, real `next build` under TypeScript 7.0.2 (TypeScript step 0.7 s); three merge orders → one tree
-`9394d9c6…`. Gates on the final heads: #122 `002f5b0` runs 33788083444 (push) + 33788089643 (pull_request), both success; #123 `92d4db7` runs 33788997612 (push) + 33789010370 (pull_request) in progress at 18:20Z (updated below once they finish). Details: [status-archive.md](status-archive.md) session-74 entry.
+`9394d9c6…`. Gates on the final heads: #122 `002f5b0` runs 33788083444 (push) + 33788089643 (pull_request), both success; #123 `92d4db7` runs 33788997612 (push) + 33789010370 (pull_request) both success (18:27:48Z / 18:27:58Z). Details: [status-archive.md](status-archive.md) session-74 entry.
 
 | PR | Head now | Merge | Left for you |
 |---|---|---|---|
-| **#121** | `ebd341f` (unchanged since session 73) | clean | merge |
-| **#120** | `5c4c88f` (unchanged) | clean | merge; revert this one commit if a deploy ever goes red on the TypeScript step |
+| **#121** | MERGED 17:50Z by the parallel session — squash `527ef2e` | — | nothing; the post-merge docs wording waits for #122 (conflict zone) |
+| **#120** | MERGED 18:10Z by the parallel session — squash `069a03e` (TS 7.0.2 in production once its deploy lands) | — | if a deploy ever goes red on the TypeScript step, revert this one commit |
 | **#123** | `92d4db7` (round 2 on top of `3d185a1`, one code commit) | clean | merge — or veto a default (label, inline vs dock, ids toggle, collapsed) |
-| **#122** | `002f5b0` (round 2 on top of `0ffe4c0`: code `6f28884` + `d2e24d1`, two docs commits) | clean | merge — veto points: template phrasing on chip takes; NEW: a defaulted answer's chips now say "… in Nederland …" |
+| **#122** | MERGED 18:26:47Z by the parallel session — squash `4fd6ea5` (head `002f5b0`: round 2 included) | — | its main run + deploy + canaries: the parallel session's close-out records them; veto point still open in substance: a defaulted answer's chips now say "… in Nederland …" (revert = one PR) |
 
-**▶ NEXT, in order — nothing urgent:** (a) merge the four PRs — any order is conflict-free (re-simulated on the final
-heads); still one at a time, each deploy allowed to finish, a canary on `/`, `/llms.txt`, `/api/health` after each (from a
-cloud session: through the Vercel MCP tools — RUNBOOK multi-agent item 10); then the post-merge docs push that turns the
+**▶ NEXT, in order — nothing urgent:** (a) merge #123 (conflict-free against the new `main`; the parallel session was
+presumably waiting for its gates), let its deploy finish, a canary on `/`, `/llms.txt`, `/api/health` (from a cloud
+session: through the Vercel MCP tools — RUNBOOK multi-agent item 10); then the post-merge docs push that turns the
 "PR pending owner review" wordings (ADR 029, rows #73/#79/#195/#196, the build plan) into MERGED + LIVE and brings rows
 #195/#196 + ADR 029's note + 04-architecture to #121's round-2 state; (b) `GDPR_PURGE_APPLY=1` + one watched run; (c)
 #162's A/B (real spend); (d)–(e) as in the session-72 block below, which otherwise still holds. Recorded, not built: the
 carrier on `ChatMessage` once #123 has merged; the ⟨A6⟩ `capturedThreadId` simplification; one shared R5 predicate
-(`csv.ts` applies a narrower rule) — rows #73 and #79.
+(`csv.ts` applies a narrower rule) — rows #73 and #79. Also new: Dependabot #124/#125 — the first update PRs since the
+TypeScript hold left the ignore stanza; the monthly agenda's dependency item, yours to review (never blind-merge).
 
 **▶ SESSION 73 (2026-09-03, AUTONOMOUS — the session-73 kickoff pasted, no owner reply in chat, `list_sessions` showed
 no second instance) — THE FOUR PRs ARE NOW MERGE-CLEAN IN ANY ORDER; STILL NOTHING MERGED, NOTHING FLIPPED.** A

@@ -64,6 +64,14 @@ Full narrative: [status-archive.md](status-archive.md) session-74 entry.
   reviewers contradicted each other on the predicate until the simplest truthful form ended it. The pre-push LOW
   rule is right; the stop condition is "the remaining findings are cleanup-level and each is either fixed or
   recorded", said out loud in the PR note — not "the reviewer had nothing to say".
+- **Two sessions on one repo at once — the kickoff's `list_sessions` check is a snapshot, not a lock.** At 15:5xZ no
+  second session was running; at 17:33Z the owner started a remote-control session with the same stale kickoff and,
+  present at the laptop, merged #121 (17:50Z) and #120 (18:10Z) while this cloud session was still reviewing #122/#123.
+  Nothing broke, for three reasons worth keeping: `git fetch` before every push caught the moved `main` (two squash
+  merges) before the docs push, the close-out commits touch only files no PR edits (the rebase was clean), and the batch
+  was re-simulated against the NEW `main` — `069a03e` + #122 + #123 gave the identical tree `9394d9c6…`, so the block
+  stood. Rules: re-run `list_sessions` and `git fetch origin main` right before the docs push, not only at kickoff; when
+  another session may be writing STATUS/archive too, push the close-out promptly and say in it which session did what.
 - **Fixing two open PRs in one session: keep each one's new tests out of the other's hunks, then re-simulate.**
   #122's new pins went to the END of `chat.test.tsx`, #123's hunk sits mid-file; #123's resumed-thread render test
   went into a NEW file rather than `chat.test.tsx`. Three merge orders still yield one tree — the session-73 batch

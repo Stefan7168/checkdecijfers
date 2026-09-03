@@ -10,8 +10,9 @@ source of truth. Every fact below was verified against `git log`, the GitHub API
 Lees in deze volgorde vóór je iets doet: `CLAUDE.md` → `docs/STATUS.md` (het bovenste blok is de waarheid — en tel de
 sessie vanaf de bovenste archive-entry, niet vanaf de titel van deze brief) → `docs/session-briefs/2026-09-03-session-75-kickoff.md`
 (dit bestand) → `docs/status-archive.md` (sessie-74-entry, bovenaan). Verifieer jezelf eerst met `date +%Y-%m-%d`,
-`git log -3 --oneline`, de open PRs (verwacht: VIER — #120, #121, #122, #123; koppen `5c4c88f`, `ebd341f`, `002f5b0`,
-`92d4db7`; alle met een groene gate), de laatste drie `main`-runs (alles `success`) en het deployment op de alias
+`git log -3 --oneline`, de open PRs (verwacht: hoogstens #123 `92d4db7` van de batch — als de parallelle sessie hem nog niet
+gemerged heeft — plus Dependabot #124/#125; #121, #120 en #122 zijn op 2026-09-03 gemerged als `527ef2e`, `069a03e` en
+`4fd6ea5` door een parallelle, owner-aanwezige sessie), de laatste drie `main`-runs (alles `success`) en het deployment op de alias
 `checkdecijfers.vercel.app` (moet uit de nieuwste `main`-commit komen; vanuit een cloud-sessie via de Vercel-MCP-tools:
 `get_deployment` → `meta.githubCommitSha`, `web_fetch_vercel_url` voor `/`, `/llms.txt`, `/api/health` — `curl` geeft daar
 `000` door de netwerkpolicy, dat is GEEN storing). Rood = eerst fixen. Check met `list_sessions` dat er geen tweede
@@ -24,18 +25,20 @@ B-defaulted antwoord, de `intent`-rol voor een stripped carrier, de live-thread-
 "geen bewerking"-stap die ook de CC BY-markering van het antwoord volgt, twee never-throws-belts, `memo`, fixtures die
 herberekening wél onderscheiden, een hervat-thread-rendertest. Elke delta is LOW-gereviewd; de batch is opnieuw
 gesimuleerd (drie volgordes → één boom `9394d9c6…`) en het volledige blok op die gecombineerde boom is groen
-(typecheck ×2, backend 116 files / 1780 tests, benchmark answerable 14/14 + refusal 6/6 + 0 fabricated (GATE PASS), web 50 files / 584 tests, real `next build` under TypeScript 7.0.2 (TypeScript step 0.7 s)). Gates op de definitieve koppen: #122 `002f5b0` runs 33788083444 (push) + 33788089643 (pull_request), both success; #123 `92d4db7` runs 33788997612 (push) + 33789010370 (pull_request) in progress at 18:20Z (updated below once they finish). Niets gemerged, niets geflipt, geen spend.
+(typecheck ×2, backend 116 files / 1780 tests, benchmark answerable 14/14 + refusal 6/6 + 0 fabricated (GATE PASS), web 50 files / 584 tests, real `next build` under TypeScript 7.0.2 (TypeScript step 0.7 s)). Gates op de definitieve koppen: #122 `002f5b0` runs 33788083444 (push) + 33788089643 (pull_request), both success; #123 `92d4db7` runs 33788997612 (push) + 33789010370 (pull_request) both success (18:27:48Z / 18:27:58Z). Deze sessie heeft niets gemerged, niets geflipt, geen spend. Intussen merged een PARALLELLE owner-aanwezige sessie (remote-control CLI, gestart 17:33Z) #121 (`527ef2e`, 17:50Z), #120 (`069a03e`, 18:10Z) en #122 (`4fd6ea5`, 18:26Z); nieuwe `main` + #123 geeft exact de geverifieerde boom `9394d9c6…`. Dependabot opende #124/#125 (de ignore-stanza is weg met #120).
 
 Dé volgende prioriteit, in deze volgorde:
 
-1. **Owner aanwezig: merge de vier PRs** — volgorde vrij; één voor één, per PR de deploy laten afronden en een canary
+1. **Owner aanwezig: merge #123** (als de parallelle sessie dat niet al deed) — de deploy laten afronden en een canary
    (`/`, `/llms.txt`, `/api/health` 200). Vetopunten per PR staan in de review-comments (sessie 72, 73 en 74); nieuw
    sinds ronde 2 van #122: de chips van een antwoord zónder genoemde plaats zeggen nu "… in Nederland …". Een veto = de PR
    sluiten of de default aanpassen, niet stilzwijgend mergen. Na de merges één docs-push (`test:docs` eerst): STATUS-topblok
    + de "PR pending owner review"-formuleringen in ADR 029 / open-questions #73, #79, #195, #196 / de build-plan-regels
    naar MERGED + LIVE, en de eviction-regel in 04-architecture, rij #196 en ADR 029's #195/#196-notitie naar de
    ronde-2-staat van #121 (`table_evicted`/`evicted`, one-snapshot fetch, skip-locked touch).
-2. Daarna `GDPR_PURGE_APPLY=1` + één bewaakte run (owner), dan #162's A/B (echte spend, owner).
+2. Dependabot #124/#125 beoordelen (de eerste update-PRs sinds de TypeScript-hold de ignore-stanza verliet; nooit blind
+   mergen — het maandagenda-punt). Daarna `GDPR_PURGE_APPLY=1` + één bewaakte run (owner), dan #162's A/B (echte spend,
+   owner).
 
 Bindende kaders en owner-steers: principes (a)/(b)/(c); R6 — een chip-take is altijd een NIEUW gevalideerd resultaat; de
 tien #197-beslissingen + de sessie-70/72/74-defaults zijn defaults — owner veto bij uitzondering. Geen prompt-bytes, geen

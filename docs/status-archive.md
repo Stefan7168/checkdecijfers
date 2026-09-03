@@ -4,8 +4,9 @@
 cloud session, auto-branch `claude/sessie-73-pr-review-merge-5xji6b`); no reply in chat, so the merges — that kickoff's
 "owner present" step — were NOT taken; `list_sessions` showed the earlier session 73 IDLE and no second RUNNING
 instance) — THE HIGH-EFFORT PASSES ON #122 AND #123 BEFORE MERGE DAY: TWO REVIEW ROUNDS FIXED ON THE BRANCHES, THE BATCH
-RE-SIMULATED AND RE-VERIFIED; STILL NOTHING MERGED, NOTHING FLIPPED.** Git workflow: #118 rule (b) — code on the PR
-branches, docs direct to `main`; no spend, no prompt bytes, no DDL.
+RE-SIMULATED AND RE-VERIFIED — WHILE A SECOND, OWNER-PRESENT SESSION MERGED #121 AND #120 IN PARALLEL (item 9).** Git
+workflow: #118 rule (b) — code on the PR branches, docs direct to `main`; this session merged nothing, flipped nothing;
+no spend, no prompt bytes, no DDL.
 
 1. **Start state, verified (the kickoff was one session stale — STATUS's top block and the archive's session-73 entry
    settled it; this session is 74):** `main` at `470e4cf`, clean, no worktrees; the last five main runs `success`
@@ -74,15 +75,30 @@ branches, docs direct to `main`; no spend, no prompt bytes, no DDL.
    batch re-simulated after every head move — three merge orders → one tree each time (`fd86327c…`, `de804dbf…`,
    `ce973e99…`, `9394d9c6…`); the session-73 property (any order is conflict-free) still holds.
 6. **CI on the moved heads:** #122 `04affae` runs 33782485566 + 33782488407 success; `002f5b0` runs 33788083444 (push) +
-   33788089643 (pull_request), both success; #123 `92d4db7` runs in progress at 18:20Z (updated below once they finish). PR notes posted on #122 and #123 (the round-2 notes:
-   what moved, why, the measurements). The four PRs' `mergeable_state` is re-read once the #123 gates finish (recorded in the close-out follow-up).
+   33788089643 (pull_request), both success; #123 `92d4db7` runs both success (18:27:48Z / 18:27:58Z). PR notes posted on #122 and #123 (the round-2 notes:
+   what moved, why, the measurements). At 18:31Z #123 read `mergeable_state: clean` with both gates green (head `92d4db7`); #121, #120 and #122 were merged by then (item 9).
 7. **Docs → `main` (this close-out; `test:docs` 11/11):** STATUS top block (session 74), this entry, lessons-learned
-   (eleven lessons), RUNBOOK multi-agent items 6 (amended) + 10 (new: the cloud-session container) and batch item 10
+   (twelve lessons), RUNBOOK multi-agent items 6 (amended) + 10 (new: the cloud-session container) and batch item 10
    (amended), `scripts/verify-block.sh` (bash), the session-75 kickoff brief. Deliberately NOT touched on `main`:
    every file the open PRs edit (open-questions, 04-architecture, 08-build-plan, ADR 024/029/033, the RUNBOOK
    passages the PRs edit). The same docs first went to the harness's auto-branch `claude/sessie-73-pr-review-merge-5xji6b`
    (`f75afab`) — a cloud session's stop hook insists on a pushed branch; the branch is a mirror, `main` is the record.
-8. **Not done, deliberately:** any merge (the owner's step — no owner reply in chat, #118 rule b), `GDPR_PURGE_APPLY`,
+9. **A parallel session merged two of the four while this one ran.** `list_sessions` at kickoff (15:5xZ) showed no
+   second running instance; a remote-control CLI session titled "Session 73 kickoff" (the same stale brief, owner present
+   at the laptop) started 17:33Z on `main` `470e4cf`, squash-merged #121 as `527ef2e` (17:50:34Z; main run 33786945030
+   success 17:50→18:08; its deploy `dpl_6n9n8zZaSvQirPUNpFAPuNTQk8Dk` — `checkdecijfers-1zwvn3hh1…`, created 18:08:24Z by
+   that run's deploy job, READY — on the alias, canaries 200 at 18:22Z) and #120 as `069a03e` (18:10:10Z; main run 33788899139 success — gate 18:10→18:23Z, deploy 18:23→18:25Z; its deployment `dpl_GjA6ge1ZCTp3SuRjbEsGRrGTbwsr` (`checkdecijfers-b6smn8m5i…`, created 18:24:59Z, `meta.githubCommitSha` = `069a03e`) is on the alias; `/`, `/llms.txt`, `/api/health` 200 at 18:26–18:27Z — TypeScript 7.0.2 builds production from here on), then
+   went idle (18:13Z) — presumably at #123, whose head this session had just moved (18:11Z). Dependabot opened #124 (root,
+   5 updates) and #125 (web, 8 updates) at 18:11–18:12Z, the ignore stanza having left with #120. It resumed and
+   squash-merged #122 as `4fd6ea5` at 18:26:47Z (head `002f5b0`, this session's round 2 included) — noticed by this
+   session on the last mergeability read before its docs push; #123 was still open then, both its gates green by 18:28Z (runs
+   33788997612 + 33789010370). This session noticed the first two on
+   the `git fetch` before its docs push (RUNBOOK: fetch before every push), rebased its two docs commits cleanly (they
+   touch no file the PRs edit) and re-checked the batch against the NEW `main`: `069a03e` + #122 + #123 yields tree
+   `9394d9c6…` in both orders — byte-identical to the tree block 4 verified, so the verification stands as is. Nothing
+   this session pushed conflicts with what the parallel session did; its own close-out, if it writes one, is the next
+   session number.
+10. **Not done, deliberately:** any merge (the owner's step — no owner reply in THIS chat, #118 rule b), `GDPR_PURGE_APPLY`,
    #162's A/B, #198, #132 route B, prompt bytes, fixture re-records, live DDL; the follow-ups recorded in #73 and #79
    (carrier on `ChatMessage`; the ⟨A6⟩ simplification; one shared R5 predicate). Scratch worktrees (`pr122`, `pr123`,
    `s74-sim`) removed at the end.
