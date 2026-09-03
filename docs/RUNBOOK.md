@@ -602,7 +602,11 @@ Steps (owner present):
    the click ("Utrecht (gemeente)", 0 tokens, `template`, 20 credits, `audit:verify` 2/2 clean).
 5. Watch the first day's rows: `answer_source = 'template'` on clicked answers is EXPECTED
    (ADR 024 — a clicked take composes without the LLM and therefore reads plainer).
-6. **#197 step 3 (once its branch is merged):** ask a gemeente question that answers ("Hoeveel inwoners
+6. **#197 step 3 — ✅ RUN 2026-09-03 (session 71, owner): rows 263 (the Amsterdam answer, chip minted) and 264
+   (the take: `reply_text = 'Vergelijk met Nederland'`, `parse.model = deterministic/wp26-click-option`, 0 tokens,
+   `template`, two `result_ids` GM0363 + NL01, bar chart with 2 series, 20 credits, `audit:verify` 2/2 clean; the
+   "Nederland had de hoogste waarde" closing line is the recorded #197 follow-up, not a bug).** The procedure:
+   ask a gemeente question that answers ("Hoeveel inwoners
    had Amsterdam in 2024?"), confirm a "Vergelijk met Nederland" chip under the answer, click it, press
    Verstuur: the answer must be a TWO-bar comparison (Amsterdam + Nederland, same period), 20 credits, and
    the audit row again `model = deterministic/wp26-click-option` with zero tokens and
