@@ -35,7 +35,8 @@ links in docs/" test (three `[#118](https://…/pull/118)` links) — found by t
 the reviewer's docs commit `f3c3236` (run 33643051369) `success` too.
 Details: ADR 029 first as-built note, ADR 024 last addendum, [status-archive.md](status-archive.md).
 **Your two actions, in order:** (1) the WP26 smoke test (RUNBOOK "WP26 answer-first + clickable
-options", steps 4–5: log in, bare "Utrecht", click a chip);
+options", steps 4–5: log in, ask `Hoeveel inwoners had Utrecht in 2024?` — NOT the single word "Utrecht", the
+parser refuses that as smalltalk (measured 2026-09-03, row 260) — click a chip);
 (2) if it passes, merge PR #118 (or tell the next session to) and run step 6 of the same RUNBOOK section
 ("Vergelijk met Nederland" under an Amsterdam answer). If the chip click fails, that is a WP26 bug to fix
 BEFORE #118 merges.

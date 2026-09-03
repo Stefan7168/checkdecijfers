@@ -587,8 +587,11 @@ Steps (owner present):
    Amsterdam?") and a region-less one ("Hoeveel inwoners telde Nederland?" on a geo measure).
    Confirm the disclosure sentence renders DIRECTLY UNDER the answer body, and that the answer's
    numbers still match the cells (`npm run audit:verify -- <row> <row>` → exit 0).
-4. For the click flag: ask something that clarifies (bare "Utrecht" works), confirm the chips
-   appear, click one, confirm the answer arrives and the audit row records
+4. For the click flag: ask something that clarifies — use the flagship case
+   `Hoeveel inwoners had Utrecht in 2024?` (Utrecht without "gemeente"/"provincie" is ambiguous, so it
+   clarifies with the chips "Utrecht (gemeente)" / "Utrecht (provincie)"). NOT the single word
+   "Utrecht": that is no statistics question, the intent parser refuses it as smalltalk (measured in
+   production 2026-09-03, audit row 260, refunded) and no chips appear. Confirm the chips appear, click one, confirm the answer arrives and the audit row records
    `model = deterministic/wp26-click-option` with zero token usage.
 5. Watch the first day's rows: `answer_source = 'template'` on clicked answers is EXPECTED
    (ADR 024 — a clicked take composes without the LLM and therefore reads plainer).
