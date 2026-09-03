@@ -132,7 +132,10 @@ instance) — WP26 SMOKE TEST PASSED, #197 STEP 3 MERGED + LIVE, A CI DEPLOY RAC
     `#over-dit-project` — the landing's how-it-works heading now carries that id (pinned). Verified on the local
     production build: `/login` and `/systeemoverzicht` each exactly one `contentinfo` + one gear link. Also:
     `.claude/launch.json` gained `autoPort` (ports 3000/3001 are held by the owner's other project's servers —
-    left running, not ours), ADR 033 D6 as-built note.
+    left running, not ours), ADR 033 D6 as-built note. Shipped as `d797571` (web 47 files / 540 tests, build,
+    LOW review 1 finding fixed; parser reverted to committed v6 so backend/benchmark unchanged): run 33729056323 gate +
+    deploy green, alias on `checkdecijfers-pmkjd0ry1…`; production `/login` and `/systeemoverzicht` each report
+    exactly one `footer` and one gear link (checked in the browser after the deploy).
 
 **Session 70 (2026-09-02, later the same day as session 69; the owner pasted the session-70 kickoff — into
 TWO sessions in the same working tree, the 25-07 collision shape: the second session (local_09530460…)
