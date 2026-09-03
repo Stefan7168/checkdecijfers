@@ -162,6 +162,24 @@ describe('askTrialQuestion', () => {
     expect(options).not.toHaveProperty('extraCanonicalMeasures');
   });
 
+  // #175 (ADR 036 D5 as-built, 2026-09-03): the trial receives the SAME
+  // answer-first flag as the paid product — read from the env at call time,
+  // so a flip needs a redeploy and nothing else — and NEVER the click flag
+  // (a chip a trial visitor cannot take is worse than no chip).
+  it('passes answerFirstEnabled from ANSWER_FIRST_ENABLED and never clickOptionsEnabled (#175)', async () => {
+    vi.stubEnv('ANSWER_FIRST_ENABLED', '1');
+    await askTrialQuestion('Hoeveel inwoners telde Nederland?', R1);
+    const on = answerQuestionAudited.mock.calls[0]![2] as Record<string, unknown>;
+    expect(on.answerFirstEnabled).toBe(true);
+    expect(on).not.toHaveProperty('clickOptionsEnabled');
+
+    vi.stubEnv('ANSWER_FIRST_ENABLED', '');
+    await askTrialQuestion('Hoeveel inwoners telde Nederland?', R1);
+    const off = answerQuestionAudited.mock.calls[1]![2] as Record<string, unknown>;
+    expect(off.answerFirstEnabled).toBe(false);
+    expect(off).not.toHaveProperty('clickOptionsEnabled');
+  });
+
   it('constructs EVERY LLM client on the trial key (the outer belt)', async () => {
     await askTrialQuestion('Wat is de inflatie?', R1);
     expect(sdkInstances.length).toBeGreaterThanOrEqual(2);

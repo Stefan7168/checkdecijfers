@@ -109,6 +109,17 @@ keyed on real users). The trial section sits under the masthead with its own inp
 shown honestly; empty pot or dormant flag ⇒ the same area renders the login prompt (server-checked per
 request, so refill re-enables it without a deploy — the #53 fail-safe).
 
+**As-built note, 2026-09-03 (session 71, [#175](../open-questions.md)) — the trial now receives the WP26
+answer-first flag, and deliberately NOT the click flag.** `trial-actions.ts` passes
+`answerFirstEnabled: process.env.ANSWER_FIRST_ENABLED === '1'` (the same read as the paid path in
+`actions.ts`), so once the flag is on, a trial visitor's region-less or period-less question is answered with
+the structural default (disclosed in-sentence, ADR 024 mechanism B) instead of dying in a clarification the
+visitor cannot reply to (D5 gives the trial no reply endpoint) after the pot already paid. `clickOptionsEnabled`
+stays absent on purpose: a chip the visitor cannot take without spending trial question #2 is worse than no chip
+(#175's open half — recorded as the default, owner veto by exception). Pinned in `trial-actions.test.ts`
+(flag on → `true`, flag off → `false`, never `clickOptionsEnabled`). Decided with the `ANSWER_FIRST_ENABLED`
+go-live of 2026-09-03, per #175's "decide this before or with the go-live".
+
 **As-built note, 2026-07-26 (session 59, [#186](../open-questions.md)):** "server-checked per request" is
 now *per request, from a pot reading at most 20 s old* (`TRIAL_POT_TTL_MS`, `web/lib/trial.ts`). The
 fail-safe is unchanged in kind — a refill still re-enables the trial without a deploy, to within the TTL —

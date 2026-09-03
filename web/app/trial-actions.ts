@@ -200,6 +200,15 @@ export async function askTrialQuestion(question: string, requestId: string): Pro
       intentClient: trialClient(),
       answerClient: trialClient(),
       ...trialSemanticCheckOptions(),
+      // WP26 mechanism B (#175, ADR 036 D5 as-built 2026-09-03): the trial
+      // receives the SAME answer-first flag as the paid product, read the same
+      // way as in actions.ts. A trial visitor has no reply endpoint (D5), so a
+      // region-less or period-less question that clarifies is a paid-for
+      // dead end for the pot; answer-first is exactly what prevents that.
+      // Deliberately STILL absent: clickOptionsEnabled — a chip the visitor
+      // cannot take without spending trial question #2 is worse than no chip
+      // (the open half of #175; owner veto by exception).
+      answerFirstEnabled: process.env.ANSWER_FIRST_ENABLED === '1',
       // Deliberately absent: extraCanonicalMeasures / sourceSelection /
       // webClient / webBilling / tableFinder — the trial serves the Phase-0
       // core loop only (ADR 036 D5); every absent option keeps that path

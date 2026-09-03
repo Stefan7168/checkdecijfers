@@ -25,8 +25,9 @@ guarded for good: the deploy job now skips itself when its commit is no longer t
 (`llm_calls` is `[]` on a click take; the model lives in `response->'parse'->>'model'`), corrected.
 Hygiene: the s70-reviewer worktree removed, 28 stale local branches + 9 merged remote branches deleted;
 open-questions.md triaged (every row read) — 25 terminally-closed rows moved to its archive twin, 147 live.
-**`CLARIFY_CLICK_ENABLED` ON and proven; `ANSWER_FIRST_ENABLED` and `GDPR_PURGE_APPLY` still untouched —
-both remain YOUR call (owner-supervised), not a session's.** Details, every SHA and run id:
+**`CLARIFY_CLICK_ENABLED` ON and proven; `ANSWER_FIRST_ENABLED` ON since 2026-09-03 on your explicit go in
+chat (env set 05:40Z, deployed by the #175 commit's own run (id in the session-71 archive entry) together with the #175 fix that gives the anonymous
+trial the same flag); `GDPR_PURGE_APPLY` still untouched — yours.** Details, every SHA and run id:
 [status-archive.md](status-archive.md). **Step 6 (the comparison chip) also PASSED later the same day: rows 263/264 — the take
 has the click model, 0 tokens, GM0363 + NL01, a 2-series bar chart, 20 credits, R8 clean.** **Your next
 decision:** whether `ANSWER_FIRST_ENABLED` may go on (one flag at a time; last deploy settled; rollback order in
@@ -97,11 +98,9 @@ patch, lockfile only) squash-merged as `206f137`; branches deleted; `origin/main
 Full session-67 record (reviewed + merged all 19 PRs session 66 left open, #99-#117): [status-archive.md](status-archive.md) (prepended) +
 [session-briefs/2026-08-28-session-67-close.md](session-briefs/2026-08-28-session-67-close.md).
 
-**⚠ STILL ONLY YOURS:** `ANSWER_FIRST_ENABLED` and `GDPR_PURGE_APPLY` (fully untouched) **+ the
-`CLARIFY_CLICK_ENABLED` live smoke test** (the flag itself is flipped and deployed since session 69, but
-nobody has actually clicked a chip in production yet — Claude has no login access to do this). Read
-[#175](open-questions.md) before flipping `ANSWER_FIRST_ENABLED` — the anonymous trial receives NEITHER
-flag.
+**⚠ STILL ONLY YOURS:** `GDPR_PURGE_APPLY` (fully untouched) and the #162 A/B (real spend). Both WP26 flags
+are ON and smoke-tested (sessions 69–71); [#175](open-questions.md) is decided — the anonymous trial receives
+the answer-first flag (same env read) and deliberately NOT the click flag.
 
 **▶ NEXT, in order — nothing urgent, all owner-supervised:** (a) **the `CLARIFY_CLICK_ENABLED` live smoke
 test** (RUNBOOK "WP26 answer-first + clickable options" has the exact 3 steps) — blocks (b) below;

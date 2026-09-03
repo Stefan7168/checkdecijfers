@@ -35,6 +35,12 @@ Full narrative: [status-archive.md](status-archive.md) session-71 entry.
 - **Never write the SHA of the commit you are still amending.** The RUNBOOK sentence "Since `3c54400` …"
   pointed at a commit that stopped existing on the very next `--amend`. Cite "the commit that added this
   section" or pin the SHA only after the push.
+- **A terse "continue" after a yes/no proposal is not the yes.** The owner's "continue" arrived after a message
+  that ended in "if you say yes, I flip the flag". The session-47 lesson (a terse *Continue* is not merge
+  approval) is moot for pushes under standing authorization, but a live production flag is exactly the
+  owner-reserved class it was written for — one explicit yes/no question cost ten seconds and produced a real
+  "Ja, zet hem aan". Related: `vercel env add NAME production --sensitive` reads the value from stdin
+  (`printf '1' | …`), so a flip is scriptable and leaves no prompt for the value to be mistyped.
 - **Squash-merged branches look unmerged to git.** `git branch --merged main` listed 13 of the 28 stale
   local branches; the other 15 were squash-merged PRs (#77–#96) that `git` cannot see as merged. Map each
   branch to its PR state with `gh pr list --state all --head <branch>` before `-D`; the two CLOSED

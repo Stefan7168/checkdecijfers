@@ -71,6 +71,16 @@ instance) — WP26 SMOKE TEST PASSED, #197 STEP 3 MERGED + LIVE, A CI DEPLOY RAC
    GM0363 + NL01 on `03759ned` 2024JJ00, `chart_emitted` bar with 2 series, ledger 105 (−20, no refund),
    `npm run audit:verify -- 263 264` → 2/2 clean. The closing "Nederland had de hoogste waarde." is the recorded
    #197 follow-up (tautology on a count measure), present as expected.
+10. **`ANSWER_FIRST_ENABLED` flipped ON (owner go via an explicit yes/no in chat — a terse "continue" was NOT
+    taken as the go, per the session-47 lesson).** Pre-flight: the four WP26 commits confirmed on `main`, last
+    deploy settled (`dff3aa3`, `/llms.txt` 200), `vercel env ls production` showed only the click flag. Before the
+    flip, open-questions #175 was read as STATUS demanded and its clear half BUILT: `trial-actions.ts` now passes
+    `answerFirstEnabled` (same env read as `actions.ts`), the click flag stays out of the trial by decision (ADR
+    036 D5 as-built note, #175 row). Verification block on that change: root + web typecheck, backend 114 files /
+    1733 tests, benchmark 14/14 + 6/6 + 0 fabricated GATE PASS, web 47 files / 538 tests (1 new pin), real
+    `next build`, LOW review 0 findings. Env set 05:40:16Z (`printf '1' | vercel env add … --sensitive`);
+    the #175 commit is the redeploy that carries the flag — its run id and the owner's two canaries (RUNBOOK
+    step 3: a period-less and a region-less question, `audit:verify` on both rows) are recorded below when measured.
 
 **Session 70 (2026-09-02, later the same day as session 69; the owner pasted the session-70 kickoff — into
 TWO sessions in the same working tree, the 25-07 collision shape: the second session (local_09530460…)

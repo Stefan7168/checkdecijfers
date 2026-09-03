@@ -28,9 +28,11 @@ autonoom" (steer 25-07).
 
 Dé volgende prioriteit, in deze volgorde, niets anders eerst:
 
-1. Stap 6 is GEDAAN (rijen 263/264, zie de archive-entry) — niet opnieuw vragen. `ANSWER_FIRST_ENABLED` is de volgende vlag — ALLEEN op expliciet owner-akkoord in de chat, één
-   vlag tegelijk, pas als de laatste deploy gesetteld is (`/llms.txt` 200), RUNBOOK stappen 1–3 + 5;
-   rollback-volgorde: klik-vlag eerst uit, B een dag later, nooit andersom.
+1. `ANSWER_FIRST_ENABLED` staat AAN sinds 2026-09-03 05:40Z (owner-go in chat, sessie 71; #175 dezelfde dag
+   gebouwd: de anonieme trial krijgt dezelfde vlag, níet de klik-vlag). Check in productie of de owner de twee
+   canaries van RUNBOOK stap 3 heeft gedaan (rijen > 264: een periode-loze en een plaats-loze vraag die
+   ANTWOORDEN met een disclosure-zin; `audit:verify` op beide rijen → exit 0). Rollback-volgorde blijft:
+   klik-vlag eerst uit, B een dag later, nooit andersom. Kijk de eerste dag naar de rijen (RUNBOOK stap 5).
 2. Daarna `GDPR_PURGE_APPLY=1` + één bewaakte run (owner), dan #162's A/B (echte spend, owner).
 
 Bindende kaders en owner-steers: principes (a)/(b)/(c); R6 — een chip-take is altijd een NIEUW gevalideerd
