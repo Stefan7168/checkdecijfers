@@ -9,6 +9,41 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
+**▶ SESSION 75 (2026-09-03, OWNER PRESENT in the desktop chat — the session-73 kickoff pasted a THIRD time; a cloud
+session calling itself session 74 was RUNNING on the same kickoff in parallel) — THE FOUR-PR BATCH IS MERGED AND LIVE:
+#121 `527ef2e`, #120 `069a03e`, #122 `4fd6ea5`, #123 `ddca024`.** After ONE targeted question the owner chose staged
+merges by the session (17:50Z). Serial squash merges, each with its own main run, deploy and canaries. Verification before
+each step: a merge simulation with the cloud session's new #122 head (three orders → one tree `37fa0621…`) and the full
+block on it (backend 116 files / 1780 tests, benchmark refusal 6/6 + 0 fabricated + GATE PASS, web 49 / 579, real `next
+build`); a backstop block on merged `main` `4fd6ea5`; the final tree `main` + #123 = `9394d9c6…` — byte-identical to the
+tree the cloud session's own block verified — re-verified locally (backend 116 / 1780, GATE PASS, web 50 / 584, `next
+build`). **One process miss, recorded honestly:** #122 was merged at head `002f5b0`, two cloud-session commits past the
+locally verified `04affae` (its gates were green, the cloud block covered it, the backstop confirmed it) — from now on
+`gh pr merge --match-head-commit <full sha>` (RUNBOOK batch item 11); #123 was merged that way. The cloud session
+(idle since its close-out `a249493`) is invisible to `list_sessions`; `ListAgents` is the second-instance check.
+Post-merge docs push: every "PR pending owner review" wording → MERGED + LIVE (ADR 024/029, 04-architecture, 06-roadmap,
+08-build-plan, RUNBOOK, open-questions rows 70/73/79/89/178/195/196/197); rows #195/#196, ADR 029's note and
+04-architecture now carry #121's round-2 state. Details: [status-archive.md](status-archive.md) session-75 entry.
+
+| PR | Merged as | Main run → deploy on the alias | Canaries `/`, `/llms.txt`, `/api/health` |
+|---|---|---|---|
+| **#121** | `527ef2e` 17:50Z | 33786945030 gate + deploy → `checkdecijfers-1zwvn3hh1…` | 200 ×3 at 18:09Z |
+| **#120** | `069a03e` 18:10Z | 33788899139 gate + deploy → `checkdecijfers-b6smn8m5i…` (TypeScript 7.0.2 builds production since) | 200 ×3 at 18:26Z |
+| **#122** | `4fd6ea5` 18:26Z (head `002f5b0`) | 33790545774 gate green, deploy SKIPPED itself (tip had moved to `a249493`); live via `a249493`'s run 33791021811 → `checkdecijfers-aw4si6dls…` | 200 ×3 at 18:44Z |
+| **#123** | `ddca024` 18:51Z (head `92d4db7`, `--match-head-commit`) | 33793011578 gate + deploy → `checkdecijfers-5ofg8pp7v…` | 200 ×3 at 19:09Z |
+
+**⚠ STILL ONLY YOURS:** `GDPR_PURGE_APPLY` (fully untouched — the flip + one watched run), the #162 A/B (real spend),
+and now **Dependabot #124 (root, 5 updates) + #125 (web, 8 updates)** — opened minutes after #120 removed the ignore
+stanza; review normally, never blind-merge. #198 stays PARKED at your word. Both WP26 flags ON.
+
+**▶ NEXT, in order — nothing urgent:** (a) Dependabot #124/#125 (owner review; the monthly agenda's dependency item);
+(b) `GDPR_PURGE_APPLY=1` + one watched run; (c) #162's A/B; (d) #132 route B GO or defer; (e) the owner menu: WP30c
+choice, #199 (a proof panel on the dashboard history — a small read-model WP), #197 ideas 4–8, the three #197 follow-ups.
+**Recorded review follow-ups, not built (hermetic, a session can pick them up):** the carrier on `ChatMessage` now that
+#123 has freed `chat-message.ts` and the ⟨A6⟩ `capturedThreadId` simplification (row #73); one shared R5 predicate — `csv.ts`
+applies a narrower rule (row #79); eviction must YIELD to in-flight reads before any live automation of
+`tables:evict --apply` (row #196, task chip filed session 73).
+
 **▶ SESSION 74 (2026-09-03, AUTONOMOUS — the SESSION-73 kickoff pasted again from the phone app; no owner reply in chat;
 `list_sessions`: the earlier session 73 idle, no second RUNNING instance) — HIGH-EFFORT PASSES ON #122 AND #123 BEFORE
 MERGE DAY, BOTH FIXED ON THEIR BRANCHES, THE BATCH RE-SIMULATED AND RE-VERIFIED — WHILE A SECOND, OWNER-PRESENT SESSION

@@ -1,5 +1,94 @@
 # STATUS archive — the session log
 
+**Session 75 (2026-09-03, OWNER PRESENT in the desktop chat — the SESSION-73 kickoff pasted a third time, ≈17:35Z; a cloud
+session that called itself session 74 was RUNNING on the same kickoff in parallel) — THE FOUR-PR BATCH MERGED AND LIVE:
+#121 `527ef2e`, #120 `069a03e`, #122 `4fd6ea5`, #123 `ddca024`. Owner-authorized merges by this session, one at a time,
+each with its own main run, deploy and canaries.** Git workflow: #118 — owner present, standing push authorization;
+merges only after the owner's explicit answer in chat (item 5). No spend, no prompt bytes, no DDL, no flag flips.
+
+1. **Start state, verified (17:35–17:40Z):** the pasted kickoff was one session stale — `git log` showed session 73's close-out
+   (`470e4cf`) and a session-74 kickoff on `main`; the archive's top entry settled the numbering. `main` `470e4cf`, clean,
+   no worktrees; the last three main runs `success`; the alias on `checkdecijfers-jkwyqcurp…` (the `470e4cf` run's deploy
+   log: `this run` = `main tip`); `/`, `/llms.txt`, `/api/health` 200. Four open PRs, all `MERGEABLE`/`CLEAN`, but #122's
+   head was `04affae`, not the `0ffe4c0` the kickoff expected: two commits pushed 16:34Z/17:05Z carrying
+   `Claude-Session: https://claude.ai/code/session_…` and an ADR note signed "session 74" — a cloud session. `ListAgents`
+   showed it RUNNING ("Sessie 73: vier PRs reviewen en mergen", started from the phone app with the same stale kickoff),
+   with its own docs branch `claude/sessie-73-pr-review-merge-5xji6b` (`f75afab`). `list_sessions` (local only) had shown
+   no second running instance — a cloud session is invisible there; `ListAgents` is the check that sees it.
+2. **Collision handling (RUNBOOK "Parallel session collision", adapted for a peer that cannot reply):** one-way
+   cross-session messages to the cloud session — a non-interference plan (this session merges nothing and pushes to no
+   PR branch until the owner answers; it takes the independent-reviewer role; PR comments are the only channel it
+   reads), then the owner's decision, then the merge status and a docs division (which files each session touches on
+   `main`). The cloud session's own close-out later records the same events from its side (archive session-74 entry,
+   item 9).
+3. **Independent verification of the batch with the new #122 head:** `git merge-tree --write-tree` chained through
+   `git commit-tree` (no worktree needed) — three merge orders from `470e4cf` with heads `ebd341f` / `5c4c88f` /
+   `3d185a1` / `04affae` → one tree `37fa0621…`, no conflicts. The full block on that tree (`scripts/verify-block.sh`,
+   detached, solo, `.claude/worktrees/s74-combined`, `npm ci` root + web, 17:39–17:49Z): typecheck ×2 exit 0; backend
+   116 files / 1780 tests; benchmark refusal 6/6, 0 fabricated, GATE PASS; web 49 files / 579 tests; real `next build`
+   (Compiled successfully, "Finished TypeScript in 843ms", 12/12 pages). Posted on #122 as the shared record.
+4. **The `list_sessions` + `ListAgents` distinction, and the merge question.** The recorded rule (session-74 kickoff,
+   STATUS): no owner reply in chat → no merge. The pasted kickoff is not a reply, and a second session was live on the
+   same PRs, so this session did everything that did not depend on the answer (items 1–3) and then asked ONE targeted
+   question (`AskUserQuestion`, four options, recommendation first).
+5. **Owner decision, 17:50Z: "Ik merge nu, gefaseerd" — staged merges by this session:** #121 → #120 → #122 now,
+   serially, each deploy allowed to finish with a canary on the three paths; #123 held until the cloud session's round 2
+   on it was pushed and the block on the final tree green. Recipe: RUNBOOK "Reviewing and merging a large PR batch"
+   item 3 (`gh pr merge <n> --squash --delete-branch`), then a detached checker per merge commit (wait for the commit's
+   CI run, print the deploy job's tip check, `vercel inspect` the alias, curl the canaries).
+6. **#121 → `527ef2e` (17:50Z):** main run 33786945030 success (gate + deploy); deploy log `this run` = `main tip`;
+   alias → `checkdecijfers-1zwvn3hh1…` (created 18:08Z); canaries 200 ×3 at 18:09Z. **#120 → `069a03e` (18:10Z):**
+   CI run 33788899139 success; tip check matched; alias → `checkdecijfers-b6smn8m5i…` (18:24Z); canaries 200 ×3 at
+   18:26Z — TypeScript 7.0.2 builds production from here. Two operational finds: (a) `gh run list --commit` needs the
+   FULL SHA (a short one finds nothing); (b) the `dependabot.yml` change in #120 fired three "Dependabot Updates" runs
+   on the same commit, and the checker first watched one of those (instant success, no deploy job) — filter on
+   `--workflow ci.yml`. Dependabot then opened #124 (root) and #125 (web) within minutes, the ignore stanza being gone.
+7. **#122 → `4fd6ea5` (18:26Z) — merged at head `002f5b0`, NOT the locally verified `04affae`: a process miss,
+   recorded honestly.** Between this session's 17:44Z head check and the merge, the cloud session had pushed `d2e24d1`
+   (17:33Z, code: the live-thread fallback in `chat.tsx` + a comment in `actions.ts` + one pin) and `002f5b0` (17:52Z,
+   docs) and posted its round-2 comment (18:18Z) — this session read the PR's head in the merge command but did not
+   assert it against the verified head. Mitigations, all measured: both gates on `002f5b0` were green (runs 33788083444 +
+   33788089643, completed 18:17Z); the cloud session's own full block had run on the combined tree of the FINAL heads
+   (`9394d9c6…`: backend 116 / 1780, benchmark 14/14 + 6/6 + 0, web 50 / 584, real `next build`); the merge commit's CI
+   run 33790545774 went green (gate + deploy job); and this session ran a backstop block on merged `main` `4fd6ea5`
+   (18:28–18:38Z: typecheck ×2, backend 116 files, GATE PASS, web 47 files, `next build`, all exit 0). The d2e24d1 code
+   was read by this session after the fact: a `?? threadId` fallback, comments, one test. **Rule from now on:
+   `gh pr merge --match-head-commit <verified sha>`** — the merge refuses if the head moved (RUNBOOK batch item 11).
+8. **`4fd6ea5`'s deploy step skipped itself — correctly.** The cloud session had pushed its close-out to `main`
+   (`5cc0b9e` its docs branch rebased, `5ef1d1f` "session 74 close-out", `a249493` a follow-up recording this session's
+   merges — 18:21–18:31Z), so by the time `4fd6ea5`'s gate finished `main` was at `a249493`; the session-71 guard
+   skipped the deploy and `a249493`'s own run 33791021811 (gate + deploy success; log `this run` = `main tip`,
+   Aliased 18:43:36Z) put `checkdecijfers-aw4si6dls…` on the alias — #122's code live through that deployment;
+   canaries 200 ×3 at 18:44Z. Locally: `git pull` with two uncommitted docs edits stashed; the stash pop conflicted on
+   the RUNBOOK TS-7 line both sessions had updated (upstream wording kept), the ADR 029 edits and the migration-025
+   line survived; `test:docs` 11/11.
+9. **#123 → `ddca024` (18:51Z), the gated way.** The final tree `main` `4fd6ea5` + `92d4db7` (the cloud session's round
+   2: a plural-honest "geen bewerking" step, `marked` on the same R5 rule as compose/citation, `typeof` + `default` belts,
+   `memo`; code diff read by this session) is `9394d9c6…`, byte-identical to the tree the cloud session's own block had
+   verified; this session's block on it (18:38–18:50Z): typecheck ×2, backend 116 files / 1780 tests, benchmark refusal
+   6/6 + 0 fabricated + GATE PASS, web 50 files / 584 tests, real `next build` ("Finished TypeScript in 626ms"). Gates on
+   `92d4db7` green (18:27Z). First merge attempt refused: `--match-head-commit 92d4db7d` — the flag wants the full
+   40-character sha ("Could not coerce value to GitObjectID"); merged with the full sha after asserting its prefix. CI
+   run 33793011578 success (gate + deploy); deploy log `this run` = `main tip`; alias → `checkdecijfers-5ofg8pp7v…`
+   (19:08Z); canaries 200 ×3 at 19:09Z. Merge note posted on #123.
+10. **Docs → `main` (this close-out; `test:docs` 11/11 after every edit):** STATUS top block (session 75), this entry,
+   lessons-learned (eight lessons), RUNBOOK batch item 11 (merge day with a live peer: `ListAgents`, `--match-head-commit`
+   with the full sha, re-read the PR thread before each merge, `--workflow ci.yml --commit $(git rev-parse …)`, the
+   deploy-skip guard) plus the migration-025 line and the two `CLARIFY_CLICK_ENABLED` wordings to MERGED; every "PR
+   pending owner review" wording → MERGED + LIVE with the merge sha (ADR 024 item 7; ADR 029 header, #73 v2 heading and
+   a round-2 + merged paragraph on the #195/#196 note; 04-architecture rows 46/55/57/58; 06-roadmap row 45; 08-build-plan
+   WP29 + the drill-through brief; open-questions rows 70/73/79/89/195/196/197, row 178's stale "PR pending" from
+   session 63 → PR #95 `12e5799`); rows #195/#196 and 04-architecture carry #121's round-2 state and the structural
+   eviction-yield follow-up; the session-76 kickoff brief; memory file (local). The cloud session's close-out
+   (`5ef1d1f`, `a249493`) is left as written — its "session 74" numbering stands, this entry is session 75; its
+   `2026-09-03-session-75-kickoff.md` was the handoff this session executed and is superseded by the session-76 brief.
+11. **Not done, deliberately:** `GDPR_PURGE_APPLY`, #162's A/B, #198, #132 route B, Dependabot #124/#125 (the owner's
+   review), prompt bytes, fixture re-records, live DDL; the recorded follow-ups in rows #73/#79/#196. Cleanup: the
+   verification worktree `.claude/worktrees/s74-combined` removed; the helper scripts (merge simulation, post-merge
+   checker) lived in the session scratchpad, nothing to delete in the repo. CI on this session's `main` commits: the four
+   merge commits all `success` (items 6–9); the close-out commit's own run id cannot be known while it is being
+   written — the session-76 kickoff verifies it.
+
 **Session 74 (2026-09-03, AUTONOMOUS — the owner pasted the SESSION-73 kickoff again, from the phone app (a Claude Code
 cloud session, auto-branch `claude/sessie-73-pr-review-merge-5xji6b`); no reply in chat, so the merges — that kickoff's
 "owner present" step — were NOT taken; `list_sessions` showed the earlier session 73 IDLE and no second RUNNING

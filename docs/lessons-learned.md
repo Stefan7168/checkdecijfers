@@ -6,6 +6,48 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 75 — 2026-09-03, owner present (the session-73 kickoff pasted a THIRD time, on the desktop) — merge day for the four-PR batch, with a cloud session running on the same kickoff
+
+Full narrative: [status-archive.md](status-archive.md) session-75 entry.
+
+- **`list_sessions` cannot see a cloud session; `ListAgents` can.** The kickoff's "check with `list_sessions` that no
+  second session runs" passed while a Claude Code cloud session (started from the phone app with the same stale kickoff)
+  was RUNNING and pushing to two of the PR branches. The tell was in the repo, not the session list: commits carrying a
+  `Claude-Session: https://claude.ai/code/…` trailer and an ADR note signed with a session number `main` did not know.
+  Rule: the second-instance check is `ListAgents` (local, remote-control AND cloud rows) plus a look at every open PR's
+  head against the kickoff's expected heads — a moved head is a session you have not met.
+- **A cloud peer is one-way: it reads messages, it cannot answer.** Coordination worked through the repo instead — a
+  non-interference plan sent by `SendMessage`, and PR comments as the shared record both sessions read before acting.
+  Divide the docs files explicitly (who touches STATUS/archive/lessons/RUNBOOK on `main`), because both close-outs are
+  top-prepends to the same three files; the second to land rebases and keeps both entries.
+- **Assert the head you merge — `gh pr merge --match-head-commit <verified sha>`.** #122 was merged at `002f5b0`, two
+  commits past the `04affae` this session had verified; the cloud session had pushed them (and posted a PR comment)
+  between this session's head check and its merge command. Printing the head in the same command is not a guard; the
+  flag is — the merge refuses when the head moved, and then the new head gets read, re-simulated and re-verified first.
+  The flag wants the FULL 40-character sha (`$(gh pr view <n> --json headRefOid --jq .headRefOid)`, asserted against the
+  short one you verified); a short sha is refused as "Could not coerce value to GitObjectID". #123 was merged this way.
+  The miss was covered three ways after the fact (gates green on the new head, the cloud session's block on the
+  identical final tree, a local backstop block on merged `main`), but "covered after the fact" is not the standard.
+- **Re-read every PR's comments right before its merge, not only at kickoff.** The cloud session's round-2 comment on
+  #122 (18:18Z) landed 28 minutes after this session's own comment and was not read before the 18:26Z merge; it named
+  the new head and the block that covered it. In a batch with a live peer, the PR thread is the inbox.
+- **`gh run list --commit` wants the FULL sha, and a `dependabot.yml` change fires "Dependabot Updates" runs on the
+  same commit.** The post-merge checker first found no run (short sha), then watched a Dependabot run (instant success,
+  no deploy job) as if it were the gate. Select `--workflow ci.yml` and pass `$(git rev-parse <sha>)`; read the job
+  names (`gate`, `deploy`) before trusting a "completed success".
+- **The kickoff's "no owner reply → no merge" rule plus ONE targeted question is the right shape for merge day.** The
+  same kickoff had been pasted three times across three sessions; two autonomous sessions correctly declined to merge.
+  This session did every step that did not depend on the answer (simulation, block, PR comment), then asked one
+  four-option question with the recommendation first — the owner answered within a minute and the batch was live 79 minutes
+  later (17:50Z decision → 19:09Z last canary). Neither silent compliance ("owner aanwezig" in a pasted brief) nor a bare refusal would have been right.
+- **The session-71 deploy guard had its third real overlap and behaved:** `4fd6ea5`'s (#122) deploy step skipped
+  itself because the cloud session's docs commit `a249493` had become the tip while the gate ran; `a249493`'s own run
+  deployed the combined state. Expected cost: one skipped `vercel build`, no alias flip-flop, no manual promote.
+- **zsh does not word-split an unquoted `$var` in `for h in $order`** — the first merge simulation loop treated the
+  whole space-separated list as one revision and failed with "not a valid object name". Write helper loops in a bash
+  script file (`bash sim.sh …`) or use `${=order}`; `git merge-tree --write-tree` chained through `git commit-tree`
+  simulates a serial batch merge in seconds with no worktree at all.
+
 ## Session 74 — 2026-09-03, autonomous (the session-73 kickoff pasted AGAIN, from the phone app; no owner reply) — HIGH passes on #122 and #123 before merge day
 
 Full narrative: [status-archive.md](status-archive.md) session-74 entry.

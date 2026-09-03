@@ -281,8 +281,7 @@ under an ANSWER for its comparison chips ("Vergelijk met Nederland", "Vergelijk 
    design, so a chip for it would have been stripped at click time and the label would have fallen into the
    paid LLM merge. Found by the parallel session's review before the push; pinned.
 
-7. **The carrier became the GENERAL chip carrier with #73 v2 (session 72, 2026-09-03, autonomous, PR pending
-   owner review — ADR 029 v2 as-built note):** every takeable follow-up chip under an answer (adjacent period,
+7. **The carrier became the GENERAL chip carrier with #73 v2 (session 72, 2026-09-03, autonomous, PR #122 MERGED + LIVE 2026-09-03, session 75, squash `4fd6ea5`):** every takeable follow-up chip under an answer (adjacent period,
    trend, region variant, same topic) now rides it beside the comparisons, so a click on any chip is this
    mechanism's zero-LLM take. Still 1..`MAX_CLICK_OPTIONS` chips (at most `MAX_SUGGESTIONS` = 3), still
    `rescueOnly`, still label-bound. One present-only bit joined `ClickOption` — `questionShaped: true` on the

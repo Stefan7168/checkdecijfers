@@ -10,14 +10,15 @@ the [#134](../open-questions.md)(b) too-old `not_published` chip (session 44, 20
 step-3 COMPARISON chips (session 70, 2026-09-02, branch `feat/197-3-comparison-chips`; MERGED + LIVE 2026-09-03,
 session 71, squash `83f790e`, PR #118) — the first chips that
 are taken WITHOUT an LLM re-parse; see the third as-built note below. #73 v2 (session 72, 2026-09-03,
-autonomous per #118(b), branch `feat/73-v2-click-take-chips` — PR pending owner review): EVERY follow-up chip
-is now such a take; see the first as-built note directly below.
+autonomous per #118(b), branch `feat/73-v2-click-take-chips`; review round 2 by the parallel cloud session 74;
+**PR #122 MERGED + LIVE 2026-09-03 — session 75, owner-approved in chat, squash `4fd6ea5` of head `002f5b0`**): EVERY
+follow-up chip is now such a take; see the first as-built note directly below.
 FIXED [#195](../open-questions.md)/[#196](../open-questions.md) (session 72, 2026-09-03, branch
-`fix/195-196-eviction-probe-touch`, PR pending owner review per [#118](../open-questions.md)(b)) — the
-dry-run primitive this ADR's chips run through no longer bumps `last_queried_at`; see the second as-built
-note below.**
+`fix/195-196-eviction-probe-touch`; review round 2 session 73, `ebd341f`; **PR #121 MERGED + LIVE 2026-09-03 —
+session 75, owner-approved in chat, squash `527ef2e`**) — the dry-run primitive this ADR's chips run through no
+longer bumps `last_queried_at`; see the second as-built note below.**
 
-## As-built note (#73 v2 — every chip takeable, session 72, 2026-09-03, autonomous, PR pending owner review)
+## As-built note (#73 v2 — every chip takeable, session 72, 2026-09-03, autonomous; MERGED + LIVE 2026-09-03 as PR #122, session 75)
 
 Row [#73](../open-questions.md) recorded the v2 seam as "WP26 Mechanism-A click, no re-parse — revisit when WP26
 ships"; WP26 mechanism A went live on 2026-09-02/03 and the #197 comparison chips proved the carrier shape in
@@ -172,6 +173,26 @@ there is no real concurrency to race against: BEFORE → `table_not_registered`,
 the fetch has already captured what it needed), `tests/answer/query-count.test.ts` (re-measured — see the "Cost,
 measured" bullet above — plus a `set last_queried_at` statement count: exactly 0 across a full chip build, exactly
 1 across one real served `respondToQuestion` turn), and `tests/ingestion/eviction.test.ts` unchanged.
+
+**Round 2 (session 73, 2026-09-03, `ebd341f`) and MERGED + LIVE (PR #121 → squash `527ef2e`, session 75, 2026-09-03,
+owner-approved in chat; CI run 33786945030 gate + deploy green, canaries 200):** a HIGH-effort review of the round-1 fix
+found fifteen verified items (the moved touch still queued behind an eviction's row lock; a TOCTOU in the re-check that
+could re-create the false `not_published`; raw period codes, a too-new sync date and a silenced staleness warning in
+the same race; the benign race paging the owner as an internal error). Fixed: the `last_queried_at` touch takes the row
+`for no key update skip locked` in a subquery — a locked, eviction-eligible row is SKIPPED, never waited on (NO KEY so an
+ingestion insert's FK KEY SHARE never causes a spurious skip); the observations fetch LEFT-JOINs the period labels and
+the retained cells' batch dates — one statement, one snapshot; the registration check runs LAST in `diagnoseMissing`'s
+`not_published` branch (the only branch a fully evicted table can reach); an eviction landing mid-flight yields the new
+`RefusalKind` `table_evicted` → `RefusalReason` `evicted` with honest Dutch copy ("stonden in onze database, maar zijn
+zojuist opgeruimd … stel je vraag opnieuw"), never the owner alert; `ValidatedResult.registry` (present-only:
+`updateCadence` + the table's `lastSyncAt`) is carried from `resolveIntent`'s row so `checkStaleness` re-reads nothing
+after the fetch. Tests: four committed-eviction interleavings, a served turn pinned to read nothing after the fetch, the
+statement tripwires re-measured (per served turn 13→12 / 9→8 / 13→12 / 14→13, per successful dry-run 24→21 / 10→8 /
+15→12), the new reason / silent alert / no-re-read path pinned; docs/05's failure table has the evicted-mid-flight row.
+**Structural follow-up, recorded not built:** `resolveIntent`'s canonical-measures lookup and label reads race the same
+eviction one step earlier — eviction must YIELD to in-flight reads (a `pg_advisory_xact_lock` per table the read also
+takes, or a marked-for-eviction grace state) before any live automation of `tables:evict --apply`; see row
+[#196](../open-questions.md).
 
 ## As-built note (#197 step 3 — comparison chips, session 70, 2026-09-02)
 
