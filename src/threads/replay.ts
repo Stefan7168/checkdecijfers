@@ -107,6 +107,26 @@ function computeProvisional(response: ComposedResponse): boolean {
   return cells.some((cell) => (cell as { provisional?: unknown }).provisional === true);
 }
 
+/** The chips a resumed turn may show. Question-shaped chips (the WP29
+ * generators, the #134 retry) replay verbatim: a click fills the input and the
+ * text goes through the ordinary parse, exactly as live. A chip whose click
+ * resolves through a chip-carrier pending — WP26c's rescue chip, the #197
+ * step-3 comparison chips (`pending.rescueOnly`) — needs that pending on the
+ * client, and a resumed thread deliberately restores NO pending (ADR 033 ⟨A6⟩:
+ * exactly like a page reload). Replayed as a plain chip, "Vergelijk met
+ * Nederland" would be sent through a fresh LLM parse it was never written for
+ * — a paid, likely-refused turn — so carrier-bound labels are dropped on
+ * resume. Defensive over the stored envelope shape, like every reader here. */
+function replayableSuggestions(response: ComposedResponse): string[] {
+  if (response.kind !== 'answer' && response.kind !== 'refusal') return [];
+  const envelope = response as AnswerResponse | RefusalResponse;
+  const all = Array.isArray(envelope.suggestions) ? envelope.suggestions : [];
+  const pending = envelope.pending;
+  if (!pending || pending.rescueOnly !== true || !Array.isArray(pending.options)) return all;
+  const carried = new Set(pending.options);
+  return all.filter((label) => !carried.has(label));
+}
+
 function buildAssistantPart(row: ThreadRow): ReplayAssistantPart {
   const response = row.response;
   return {
@@ -122,10 +142,7 @@ function buildAssistantPart(row: ThreadRow): ReplayAssistantPart {
     // live read in chat.tsx (dropping the refusal retry chip on resume was a
     // parity gap the #134(a) adversarial review caught: this second read site
     // was missed when chat.tsx was widened). `?? []` = A1 absent-key discipline.
-    suggestions:
-      response.kind === 'answer' || response.kind === 'refusal'
-        ? ((response as AnswerResponse | RefusalResponse).suggestions ?? [])
-        : [],
+    suggestions: replayableSuggestions(response),
     // Additive envelope fields (A1 absent-key discipline): `?? null` reads.
     webSection: response.webSection ?? null,
     provisional: computeProvisional(response),

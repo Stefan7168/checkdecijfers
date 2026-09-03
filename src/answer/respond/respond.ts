@@ -27,7 +27,7 @@ import type { ConversationContext } from '../context/types.ts';
 import { regionTermsFor } from '../context/build.ts';
 import type { ClickOption, ParseOutcome } from '../intent/types.ts';
 import type { FreshIntentParseOptions } from '../intent/options.ts';
-import { RawParseValidationError, RAW_PARSE_VERSION } from '../intent/types.ts';
+import { MAX_CLICK_OPTIONS, RawParseValidationError, RAW_PARSE_VERSION } from '../intent/types.ts';
 import type { LlmClient } from '../llm/client.ts';
 import {
   buildNoSourcesRefusal,
@@ -45,7 +45,7 @@ import { CBS_SOURCE_KEY } from '../../sources/registry.ts';
 import type { SourceSelection } from '../../websearch/types.ts';
 import { buildRescueOffer } from './rescue.ts';
 import { checkStaleness } from './staleness.ts';
-import { buildRefusalSuggestions, buildSuggestions } from './suggestions.ts';
+import { buildAnswerChips, buildRefusalSuggestions } from './suggestions.ts';
 import type {
   AnswerResponse,
   ClarificationResponse,
@@ -218,36 +218,52 @@ async function clickOptionStillCurrent(db: Db, option: ClickOption): Promise<boo
   return freshestPerRegion.every((freshest) => freshest !== null && freshest.periodCode === referenceCode);
 }
 
-/** WP26c mints exactly ONE pending shape: a single measure axis carrying a
- * single chip whose label is the single offered option. The reply turn treats
- * such a pending as a closed round (the branch below), which is a real
- * behavioural fork — so it is granted on the SHAPE, never on the client's bare
- * word.
+/** A CHIP-CARRIER pending: WP26c's single rescue chip on a misfired refusal
+ * and, since #197 step 3, the comparison chips under an answer. Both mint the
+ * same shape — `rescueOnly`, one to MAX_CLICK_OPTIONS chips, `options` the
+ * chips' labels in the same order (byte-equal, index for index), at least one
+ * declared axis. The reply turn treats such a pending as a CLOSED round (the
+ * branch below): a matching reply is taken, anything else is a fresh question.
+ * That is a real behavioural fork — so it is granted on the SHAPE, never on
+ * the client's bare word.
  *
  * Why the shape and not the feature flag. Checking `clickOptionsEnabled` would
  * read as the tighter rule, but it is the wrong one in the case that actually
- * matters: after the owner rolls `CLARIFY_CLICK_ENABLED` back off, a rescue
+ * matters: after the owner rolls `CLARIFY_CLICK_ENABLED` back off, a carrier
  * pending legitimately minted minutes earlier is still sitting in someone's
  * open tab, and it must keep routing correctly rather than being merged into
- * the refusal it was attached to. The shape check keeps that rollback graceful
- * AND closes the forgery: a bare `{rescueOnly: true}` no longer reaches this
- * branch, so with both flags off nothing here is reachable that was not
- * reachable before WP26. */
+ * the answer or refusal it was attached to. The shape check keeps that
+ * rollback graceful AND closes the forgery: a bare `{rescueOnly: true}` never
+ * reaches this branch, so with both flags off nothing here is reachable that
+ * was not reachable before WP26. (Before #197 the shape was pinned to exactly
+ * one chip on one `measure` axis; widened to N chips with pairwise-bound
+ * labels — the label binding, not the axis literal, is what closes forgery.) */
 export function isRescuePending(pending: PendingClarification): boolean {
   if (pending.rescueOnly !== true) return false;
   const { clickOptions, options, axes } = pending;
   return (
     Array.isArray(clickOptions) &&
-    clickOptions.length === 1 &&
+    clickOptions.length >= 1 &&
+    clickOptions.length <= MAX_CLICK_OPTIONS &&
     Array.isArray(options) &&
-    options.length === 1 &&
+    options.length === clickOptions.length &&
     Array.isArray(axes) &&
-    axes.length === 1 &&
-    axes[0] === 'measure' &&
-    typeof clickOptions[0]?.label === 'string' &&
-    clickOptions[0].label === options[0]
+    axes.length >= 1 &&
+    axes.every((axis) => typeof axis === 'string') &&
+    clickOptions.every(
+      (option, index) =>
+        option !== null &&
+        typeof option === 'object' &&
+        typeof option.label === 'string' &&
+        option.label === options[index],
+    )
   );
 }
+
+/** #197 step 3: the `questionNl` of an answer's chip-carrier pending. Required
+ * by the pending's shape; never rendered — the chat input shows no placeholder
+ * for a `rescueOnly` pending because nothing was asked (chat.tsx). */
+export const COMPARISON_CARRIER_QUESTION_NL = 'Vergelijk dit cijfer met:';
 
 /** The taken option, shaped as the 'intent' ParseOutcome the shared downstream
  * half already knows how to serve — so a clicked answer runs the SAME query,
@@ -330,6 +346,12 @@ export async function respondToIntent(
      * query layer AND into every dry-run below so the chips are gated by the
      * same rules the answer itself ran under. */
     answerFirstEnabled?: boolean;
+    /** #197 step 3: WP26 mechanism A's flag (CLARIFY_CLICK_ENABLED). True ⇒
+     * the answer may carry comparison chips on a chip-carrier pending, taken
+     * deterministically on the reply turn; absent/false ⇒ the pre-#197 chip
+     * list and NO `pending` key (byte-identical envelope). Both public entry
+     * points pass it through their options spread. */
+    clickOptionsEnabled?: boolean;
     /** #162: rides through to composeAnswer; absent = the legacy ladder. */
     slotPhrasing?: boolean;
   },
@@ -438,17 +460,41 @@ export async function respondToIntent(
 
   // WP29 (#73, ADR 029): follow-up chips, servability-gated through the same
   // dry-run primitive policy.ts uses (a closure over db, mirroring parse.ts's
-  // construction). FAIL-OPEN belt on top of buildSuggestions' own: a
+  // construction). FAIL-OPEN belt on top of buildAnswerChips' own: a
   // suggestions hiccup may never cost the user the paid answer — the same
   // rule web/app/actions.ts applies to outcomeContext. Assembled
   // post-compose: `text` above is already final and stays byte-untouched.
+  //
+  // #197 step 3: with CLARIFY_CLICK_ENABLED on, the comparison chips among
+  // them ride a chip-carrier pending (the WP26c rescue shape, `rescueOnly`) so
+  // the reply turn takes a clicked one from its stored, dry-run-proven intent
+  // — no LLM, a new validated result, a real audit row. PRESENT-ONLY: no
+  // survivors (or flag off) ⇒ no `pending` key, envelope bytes unchanged.
   let suggestions: string[] = [];
+  let carrier: PendingClarification | null = null;
   try {
-    suggestions = await buildSuggestions(parse.intent, result, (candidate) =>
-      echoServability(db, candidate, queryOptions),
+    const chips = await buildAnswerChips(
+      parse.intent,
+      result,
+      (candidate) => echoServability(db, candidate, queryOptions),
+      { clickOptions: options.clickOptionsEnabled === true },
     );
+    suggestions = chips.suggestions;
+    if (chips.clickOptions.length > 0) {
+      carrier = {
+        version: RESPONSE_SCHEMA_VERSION,
+        question,
+        referenceDate: options.referenceDate,
+        axes: chips.axes,
+        questionNl: COMPARISON_CARRIER_QUESTION_NL,
+        options: chips.clickOptions.map((option) => option.label),
+        clickOptions: chips.clickOptions,
+        rescueOnly: true,
+      };
+    }
   } catch {
     suggestions = [];
+    carrier = null;
   }
 
   const response: AnswerResponse = {
@@ -462,6 +508,7 @@ export async function respondToIntent(
     parse,
     result,
     suggestions,
+    ...(carrier ? { pending: carrier } : {}),
   };
   return response;
 }

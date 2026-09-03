@@ -550,10 +550,16 @@ export function Chat({
       // the server answers any NON-matching reply as a fresh question, so
       // holding it here cannot turn the user's next unrelated question into a
       // clarification-reply merge.
+      // #197 step 3: an ANSWER may carry the same carrier shape for its
+      // comparison chips ("Vergelijk met Nederland", …). Same `rescueOnly`
+      // routing in handleSubmit — a chip click goes to replyToClarification
+      // and is taken without a parse; any other text is the next question,
+      // with the held conversation context intact. `?? null` guards the
+      // deploy-window skew (an old server bundle omits the key).
       const carried =
         response.kind === 'clarification'
           ? response.pending
-          : response.kind === 'refusal'
+          : response.kind === 'refusal' || response.kind === 'answer'
             ? (response.pending ?? null)
             : null;
       if (carried) {

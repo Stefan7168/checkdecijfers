@@ -53,7 +53,8 @@ and that difference is checked.
 `ComposedAnswer.semanticCheck`,
 `ComposedAnswer.slotPhrasing` (#162, flag `SLOT_PHRASING_ENABLED` — absent on every flag-off,
 pre-#162 and template envelope),
-`ClarificationResponse.suggestions`, `RefusalResponse.pending`,
+`ClarificationResponse.suggestions`, `RefusalResponse.pending`, `AnswerResponse.pending` (#197 step 3 — the
+comparison chips' carrier; absent when `CLARIFY_CLICK_ENABLED` is off or nothing survived the dry-run),
 `PendingClarification.clickOptions`, `PendingClarification.rescueOnly`,
 `PendingClarification.conversationContext` (nullable),
 and on the query side `ValidatedResult.regionDefaulted` / `.periodDefaulted` and

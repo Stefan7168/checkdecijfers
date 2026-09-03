@@ -595,6 +595,16 @@ Steps (owner present):
    `model = deterministic/wp26-click-option` with zero token usage.
 5. Watch the first day's rows: `answer_source = 'template'` on clicked answers is EXPECTED
    (ADR 024 — a clicked take composes without the LLM and therefore reads plainer).
+6. **#197 step 3 (once its branch is merged):** ask a gemeente question that answers ("Hoeveel inwoners
+   had Amsterdam in 2024?"), confirm a "Vergelijk met Nederland" chip under the answer, click it, press
+   Verstuur: the answer must be a TWO-bar comparison (Amsterdam + Nederland, same period), 20 credits, and
+   the audit row again `model = deterministic/wp26-click-option` with zero tokens and
+   `reply_text = 'Vergelijk met Nederland'`. Typing anything else instead of the chip must be answered as a
+   fresh question. Rollback of the flag makes these chips disappear on new answers; a chip still open in a
+   tab is then parsed as a fresh question (it may refuse — same as the rescue chip, below). The same
+   fresh-parse fallback applies during the deploy window itself: a tab still running the OLD bundle never
+   reads the answer's carrier, so a comparison chip clicked there goes through the ordinary question path
+   until the tab reloads — one ordinary charge, never a wrong number.
 
 Rollback: unset the flag and redeploy — fully dormant again. Rows written while it was on stay
 valid for R8: the disclosure re-derives from the stored result's own flags, not from the flag state.

@@ -87,6 +87,10 @@ const MANIFEST: Record<string, Record<string, Entry>> = {
       category: 'ignored',
       why: 'servability-gated at PRODUCE time by a dry-run against live data; re-running that dry-run at audit time would check the database of today against a chip offered months ago. Assembled after the audited text, so it cannot alter it.',
     },
+    pending: {
+      category: 'ignored',
+      why: '#197 step 3: the chip-carrier state behind the comparison chips (their pre-verified intents), offered on this turn; like the refusal-side rescue pending, the REPLY turn\'s copy (record.pendingClarification, checked against reply_text) is what reconstruct reads',
+    },
   },
   ClarificationResponse: {
     kind: { category: 'shape-checked' },
@@ -246,7 +250,7 @@ describe('the envelope-key manifest covers the declared types', () => {
     // catches an interface silently losing a member to an edit.
     const expectedCounts: Record<string, number> = {
       ResponseBase: 5,
-      AnswerResponse: 7,
+      AnswerResponse: 8, // #197 step 3: + present-only `pending`
       ClarificationResponse: 6,
       RefusalResponse: 11,
       ComposedAnswer: 16,

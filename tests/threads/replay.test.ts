@@ -382,3 +382,71 @@ describe('rebuildContext — determinism + ⟨A7⟩ (pin 3)', () => {
     });
   });
 });
+
+// ---------------------------------------------------------------------------
+// #197 step 3: chip-carrier labels are not replayed
+// ---------------------------------------------------------------------------
+
+describe('replayParts — #197 step 3 chip-carrier labels are dropped on resume', () => {
+  it('an answer keeps its question-shaped chips but not the comparison chips bound to its rescueOnly pending (no take-path on a resumed thread)', () => {
+    const row = mkRow({
+      id: 1,
+      kind: 'answer',
+      question: 'a',
+      response: {
+        ...answerEnvelopeWithView({
+          question: 'a',
+          finalText: 'a',
+          suggestions: ['Wat was X in 2025?', 'Hoe ontwikkelde X zich van 2020 tot en met 2024?', 'Vergelijk met Nederland'],
+        }),
+        pending: {
+          version: 1,
+          question: 'a',
+          referenceDate: '2026-08-15',
+          axes: ['region'],
+          questionNl: 'Vergelijk dit cijfer met:',
+          options: ['Vergelijk met Nederland'],
+          clickOptions: [{ id: 'cmp-1', label: 'Vergelijk met Nederland', intent: {}, impliedRecency: false }],
+          rescueOnly: true,
+        },
+      },
+    });
+    const [, part] = replayParts([row]);
+    // Live shows all three; resume shows the two question-shaped ones — the
+    // deliberate asymmetry recorded in #197.
+    expect((part as ReplayAssistantPart).suggestions).toEqual([
+      'Wat was X in 2025?',
+      'Hoe ontwikkelde X zich van 2020 tot en met 2024?',
+    ]);
+  });
+
+  it('a WP26c rescue refusal likewise replays without its rescue chip; a pending that is NOT rescueOnly changes nothing', () => {
+    const chip = '2024 is al gepubliceerd — toon het cijfer voor inflatie.';
+    const rescueRow = mkRow({
+      id: 2,
+      kind: 'refusal',
+      question: 'b',
+      response: {
+        schemaVersion: 1,
+        kind: 'refusal',
+        question: 'b',
+        text: 'CBS publiceert gerealiseerde cijfers, geen voorspellingen.',
+        reason: 'forecast',
+        suggestions: [chip],
+        pending: { version: 1, question: 'b', referenceDate: '2026-08-15', axes: ['measure'], questionNl: 'x', options: [chip], rescueOnly: true },
+      },
+    });
+    const oddRow = mkRow({
+      id: 3,
+      kind: 'answer',
+      question: 'c',
+      response: {
+        ...answerEnvelopeWithView({ question: 'c', finalText: 'c', suggestions: ['Wat was Y in 2025?'] }),
+        pending: { version: 1, question: 'c', referenceDate: '2026-08-15', axes: ['region'], questionNl: 'x', options: ['Wat was Y in 2025?'] },
+      },
+    });
+    const [, aRescue, , aOdd] = replayParts([rescueRow, oddRow]);
+    expect((aRescue as ReplayAssistantPart).suggestions).toEqual([]);
+    expect((aOdd as ReplayAssistantPart).suggestions).toEqual(['Wat was Y in 2025?']);
+  });
+});

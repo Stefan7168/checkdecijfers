@@ -6,7 +6,84 @@ autonomous, branch `wp29-follow-up-chips` per #118)** — execute brief:
 **EXTENDED with a refusal-side variant for [#134](../open-questions.md)(a) (session 43, 2026-07-13,
 branch `feat/134a-refusal-period-chips`) — see the second as-built note below. FURTHER EXTENDED with
 the [#134](../open-questions.md)(b) too-old `not_published` chip (session 44, 2026-07-13, PR #41
-`12518eb`, MERGED + LIVE) — see the fourth as-built note.**
+`12518eb`, MERGED + LIVE) — see the fourth as-built note. EXTENDED AGAIN with the [#197](../open-questions.md)
+step-3 COMPARISON chips (session 70, 2026-09-02, branch `feat/197-3-comparison-chips`) — the first chips that
+are taken WITHOUT an LLM re-parse; see the first as-built note directly below.**
+
+## As-built note (#197 step 3 — comparison chips, session 70, 2026-09-02)
+
+The chart-UX research ([#197](../open-questions.md), session 69) put "one-tap comparison chips" third in its
+build order; the owner gave GO in-chat. Built on branch `feat/197-3-comparison-chips` — its merge is gated on
+the owner's live `CLARIFY_CLICK_ENABLED` smoke test (RUNBOOK), because the chips reuse exactly that take-path.
+
+- **Two new generators in `suggestions.ts`, ahead of the region variant:** `compareRegion` — a sub-national
+  single-period answer offers ITS regions plus the national row ("Vergelijk met Nederland"); a national one
+  offers the country plus the G4 ("Vergelijk met Amsterdam, Rotterdam, Den Haag en Utrecht") — and
+  `comparePeriod` — a single-period, single-place answer offers the same period one year earlier as the
+  registered `difference` derivation (R5; "Vergelijk met 2023" / "Vergelijk met juni 2025"). Priority is now
+  adjacent → trend → compareRegion → comparePeriod → regionVariant → sameTopic; the region variant is SKIPPED
+  once a region comparison surfaced (the side-by-side subsumes the lone national figure). With the cap still at
+  3 (D1), a regional answer therefore shows adjacent / trend / "Vergelijk met Nederland" instead of the old
+  "Wat was X in Nederland?" question — and, a direct consequence worth knowing, the period comparison is
+  UNREACHABLE on such an answer (three slots, three earlier survivors): "Vergelijk met 2023" surfaces on
+  national-only measures (CPI: no region comparison to fill the slot) or when adjacent/trend fail. Raising the
+  cap to 4 under the flag was considered and left for usage data.
+- **The comparisons start from the RESOLVED intent** (`result.intent`, the one the query ran — carried for
+  R8), not the parsed one. They differ only when mechanism B-region defaulted the national row onto a
+  question that named no place; built on the parsed intent the chips would be absent exactly there, built
+  on the resolved one they offer the country + the G4 with every region explicit, so a click never depends
+  on the default still being on (reviewer finding, the parallel session 70).
+- **These chips are the first that D3's "v2" actually delivers:** each survivor rides the label list AND a
+  `ClickOption` (ADR 024 mechanism A) — the fully resolved, dry-run-proven intent — on a NEW present-only
+  `AnswerResponse.pending`, minted in the WP26c chip-carrier shape (`rescueOnly`). A click fills the input
+  (#75, unchanged handler); on send the client routes a byte-equal label to `replyToClarification`, whose
+  deterministic rung takes the stored intent through the `templateOnly` path: a real query, a NEW validated
+  result (R6 — never a client-side merge of two answers), the click model on the parse, zero tokens, a real
+  audit row at the normal reply price (20 credits — decision 4 of the brief, taken as the default). Anything
+  else typed is a fresh question, exactly like the rescue pending.
+- **Flag-gated, byte-neutral off:** the generators run only with `clickOptionsEnabled` (the
+  `CLARIFY_CLICK_ENABLED` wire threaded into `respondToIntent`). Off ⇒ the pre-#197 chip list and NO `pending`
+  key — pinned by test. Offered as plain labels without the take-path, "Vergelijk met Nederland" would go
+  through a parse it was never written for, so they are not offered at all.
+- **Principle (c) is the same dry-run gate:** a table with no national row offers no national comparison —
+  pinned with a stub check that refuses `NL01`. Structural skips before any dry-run: explicit targets (the
+  trust boundary refuses them), multi-period answers (one varying axis per question), an answer that already
+  contains the national row, a region set beyond the validator's bound of 8 (an option the validator would drop
+  at click time would silently downgrade the click to the LLM merge — so it is never offered).
+- **`isRescuePending` widened** from "exactly one chip on one `measure` axis" to "1..MAX_CLICK_OPTIONS chips,
+  labels pairwise byte-equal to `options`, ≥ 1 axis" — the label binding, not the axis literal, is what closes
+  forgery (ADR 024 addendum). The carrier's `axes` names what the chips vary (`region` / `period`).
+- **Thread resume drops carrier-bound labels** (`src/threads/replay.ts`): a resumed thread restores NO pending
+  (ADR 033 ⟨A6⟩), so a replayed "Vergelijk met Nederland" would have been sent through a fresh parse — the
+  question-shaped chips replay as before. This also now applies to the WP26c rescue chip. Restoring the carrier
+  on resume is a possible follow-up, recorded in #197.
+- **Not built, recorded as a deviation:** the brief's "Sinds 2008" chip. An answer carries no loaded-slice
+  floor, and this module never sees the database (its confinement), so a "since" year would be a guess; the
+  trend generator already offers a proven window. If it is ever wanted: the honest route is the injected-
+  closure pattern `buildRefusalSuggestions` already uses for `RegionLabeler` — respond.ts would construct
+  `(key, grain, regionCode) => earliestForCanonical(db, …)`, a `run.ts` export mirroring
+  `freshestForCanonical` with the sort reversed (the private `earliestAvailablePeriod` #134(b) uses is the
+  body to copy) — one indexed query per answer, and under cap 3 it would still rarely surface. A second
+  reason to leave it: on a MONTHLY measure a since-the-floor range is ~190 cells, and the `templateOnly`
+  take renders a series as one semicolon-separated wall (`renderSeries` has no cap; a `range` has no length
+  bound while `codes` caps at 64) — a chip whose answer nobody can read.
+- **Cost, measured** (pinned in `tests/answer/query-count.test.ts`, real fixture db + real dry-run): a
+  regional single answer (Amsterdam 2024) costs 27 statements / 3 dry-runs with the flag OFF **and** ON — the
+  cap stops the roster after three survivors and the region comparison takes the slot the region variant
+  took, one dry-run for one; a national answer (Nederland 2026) 39 / 4 either way; a national-only measure
+  (CPI 2024) 12 / 2 OFF → 18 / 3 ON (the period comparison fills the free slot). Worst case, with early
+  generators failing their dry-runs: 8 dry-runs ON vs 6 OFF. Every dry-run is a full `runQuery` including
+  the #110 `touchLastQueriedAt` statement — [#195](../open-questions.md)'s per-turn count.
+- **Takeability gate (reviewer finding, the parallel session 70):** a comparison candidate is dry-run only if
+  `isClickTakeableIntent` (validate-pending.ts, the click-time schema's `safeParse`) accepts it — the case
+  that forced it: live chat answers on-demand-onboarded topics (`onboarded:…` keys, outside `CANONICAL_KEYS`
+  by design) with the flag on, and a chip minted for one would be stripped at click time, the pending would
+  stop being carrier-shaped, and the label would fall into the paid LLM merge. Not takeable ⇒ not offered,
+  no dry-run spent (pinned).
+- **Verification:** 19 new backend tests (`tests/answer/comparison-chips.test.ts`: real fixture db + real
+  dry-run, both LLM clients throwing on the take, the audited row reconstructing clean), a replay pin, two
+  chat-client pins, the envelope-key manifest entry for `AnswerResponse.pending`; the full block per CLAUDE.md
+  before the push.
 
 ## As-built note (#134(a) refusal-side variant, 2026-07-13)
 

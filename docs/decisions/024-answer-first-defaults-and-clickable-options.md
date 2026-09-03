@@ -232,3 +232,48 @@ TTL (the other two findings in the same #178 row — silent staleness beyond thi
 resurrection on a stale reply tab) stays exactly as open as it already was — the age-bound this ADR's own
 take-path design never included is still the owner's call on priority, not something this fix expanded or
 narrowed.
+
+---
+
+## As-built addendum — chip-carrier pendings on ANSWERS (#197 step 3, session 70, 2026-09-02)
+
+The WP26c rescue pending turned out to be a general mechanism: a `rescueOnly` pending is a **chip carrier** —
+not an open clarification round, only the state that lets a byte-equal reply be taken through mechanism A's
+deterministic rung. #197 step 3 (ADR [029](029-follow-up-suggestion-chips.md) as-built) mints the same shape
+under an ANSWER for its comparison chips ("Vergelijk met Nederland", "Vergelijk met <de G4>", "Vergelijk met
+<a year earlier>"), on a new present-only `AnswerResponse.pending`. Three notes:
+
+1. **`isRescuePending` was widened, not bypassed.** The shape check now accepts 1..`MAX_CLICK_OPTIONS` chips
+   whose labels are pairwise byte-equal to `options[]` on ≥ 1 declared axis (it was: exactly one chip on one
+   `measure` axis). The forgery closure of the session-57 hardening rests on the label binding and the
+   re-validation of every intent (`validate-pending.ts`), not on the axis literal — a bare `{rescueOnly: true}`
+   still never reaches the fresh-question branch (pinned). The rollback property is unchanged: a carrier
+   minted before `CLARIFY_CLICK_ENABLED` goes off keeps routing — its chip label is then parsed as a fresh
+   question, the documented post-rollback behaviour of the rescue chip (pinned).
+2. **The comparison intents never depend on mechanism B.** Every carried intent names its regions and periods
+   explicitly (the answered ones plus the comparison target), so the RUNBOOK's rollback-order warning — chips
+   whose intent relied on the B-region default — does not apply to them; `impliedRecency` is `false` because a
+   comparison names explicit, already-answered periods (the rescue chip's reasoning).
+3. **Thread resume drops carrier-bound labels** (`src/threads/replay.ts`), for the rescue chip and the
+   comparison chips alike: a resumed thread restores no pending (ADR 033 ⟨A6⟩), so replaying such a label as a
+   plain chip would send it through a parse it was never written for. Question-shaped chips replay as before.
+
+4. **The audited `question` of a taken comparison is the ORIGINAL question**, with the chip label as
+   `reply_text` — the existing reply-row convention (a clarification take records the same pair), so R8's
+   `response.question === record.question` holds, thread replay shows the label as the user turn, and the
+   dashboard history lists the row under the original question. Debatable for a comparison (the row's result
+   is Amsterdam + Nederland while its title reads "Hoeveel inwoners had Amsterdam"); kept for consistency and
+   pinned in the take test. "History title = `reply_text` on reply rows" is a possible UI follow-up (#197).
+5. **Two fallback routes send the short label through a fresh parse**, both bounded and both the rescue
+   chip's existing property: (a) after a flag ROLLBACK a carrier still open in a tab routes its label as a
+   fresh question (pinned — `respondToQuestion` receives the label; it may refuse or clarify, one ordinary
+   charge); (b) during a DEPLOY WINDOW an old client bundle never reads `answer.pending`, so its filled label
+   goes through `askQuestion` — until the tab reloads. Full-question labels would make both parse, at the
+   cost of the brief's copy; left as the owner's call. Stated in the RUNBOOK's rollback text.
+6. **Only takeable intents are minted** (`isClickTakeableIntent`, validate-pending.ts — the click-time
+   schema's own `safeParse`): an on-demand-onboarded `onboarded:…` key is outside `CANONICAL_KEYS` by
+   design, so a chip for it would have been stripped at click time and the label would have fallen into the
+   paid LLM merge. Found by the parallel session's review before the push; pinned.
+
+Same flag, same dormancy pattern, no new entry point, no prompt bytes, no schema change: the carrier rides the
+client-held pending and, on the reply row, the existing `audit_answers.pending_clarification` jsonb.

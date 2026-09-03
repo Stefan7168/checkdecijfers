@@ -26,6 +26,7 @@ import { CANONICAL_KEYS } from '../intent/schema.ts';
 import { INTENT_SCHEMA_VERSION } from '../../query/index.ts';
 import { MAX_CLICK_OPTIONS } from '../intent/types.ts';
 import type { ClickOption } from '../intent/types.ts';
+import type { StructuredIntent } from '../../query/index.ts';
 import type { PendingClarification } from './types.ts';
 
 /** CBS period codes are structurally narrow (2024JJ00 / 2024KW02 / 2026MM07);
@@ -62,6 +63,20 @@ const clickOptionSchema = z.strictObject({
   intent: clickIntentSchema,
   impliedRecency: z.boolean(),
 });
+
+/** #197 step 3: whether an intent CAN come back through this boundary intact —
+ * the producer-side twin of the schema below, for the comparison-chip
+ * generators (suggestions.ts). An option the validator would DROP at click
+ * time is worse than no option: the pending loses its clickOptions, stops
+ * being carrier-shaped, and the label falls into the LLM merge — a paid parse
+ * of "Vergelijk met Nederland" against the answered question. So a chip is
+ * minted only for an intent this predicate accepts: a CANONICAL_KEYS target
+ * (an on-demand-onboarded `onboarded:…` key is deliberately NOT in that list —
+ * see the NOTE on validateClickOptions), ≤ 8 regions, well-formed period codes,
+ * a known derivation. (Reviewer finding, the parallel session 70, 2026-09-02.) */
+export function isClickTakeableIntent(intent: StructuredIntent): boolean {
+  return clickIntentSchema.safeParse(intent).success;
+}
 
 /** Validates the client-returned click options of a pending clarification.
  * Returns only the well-formed ones, capped at the same bound the offer side

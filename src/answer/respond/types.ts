@@ -228,6 +228,20 @@ export interface AnswerResponse extends ResponseBase {
    * suggestions.ts). ADDITIVE: pre-WP29 audit rows lack the field; readers
    * treat absence as [] (reconstruct.ts checks only the fields it names). */
   suggestions: string[];
+  /** #197 step 3 (ADR 029 as-built, over ADR 024 mechanism A): the chip-carrier
+   * pending for the COMPARISON chips — the subset of `suggestions` a click
+   * resolves WITHOUT an LLM parse. Each ClickOption carries the fully resolved,
+   * dry-run-proven intent (the answered regions + the national row, the
+   * country + the G4, or the answered period against a year earlier);
+   * `options` are exactly their labels. Marked `rescueOnly` — NOT an open
+   * clarification round: a reply byte-equal to a label is taken through the
+   * templateOnly take-path (respondToClarificationReply), anything else is a
+   * FRESH question (isRescuePending). PRESENT-ONLY (docs/13): absent when
+   * CLARIFY_CLICK_ENABLED is off, when no comparison survived the dry-run, and
+   * on every row stored before #197 — the envelope is then byte-identical to
+   * the pre-#197 one. Client-held between the turns and re-validated
+   * fail-closed on the way back, exactly like a clarification's pending. */
+  pending?: PendingClarification;
 }
 
 export interface ClarificationResponse extends ResponseBase {

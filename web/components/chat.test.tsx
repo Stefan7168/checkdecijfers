@@ -1216,3 +1216,105 @@ describe('Chat — WP129+130 web section rendering (#130)', () => {
     expect(screen.queryByText('Van het web (niet door checkdecijfers geverifieerd)')).toBeNull();
   });
 });
+
+// #197 step 3 (ADR 029 as-built over ADR 024 mechanism A): an ANSWER may carry
+// a chip-carrier pending (`rescueOnly`) for its comparison chips. The chip
+// itself keeps the #75 fill-don't-send handler; what changes is the ROUTE on
+// send — the carrier makes a byte-equal label take replyToClarification (the
+// server's deterministic rung), while any other text stays a fresh question.
+describe('Chat — #197 step 3 comparison chips on an answer (chip-carrier pending)', () => {
+  const chip = 'Vergelijk met Nederland';
+  const questionChip = 'Wat was bevolking op 1 januari in Amsterdam in 2025?';
+  function answerWithCarrier(): GatedResponse {
+    const pending = {
+      version: 1,
+      question: 'Hoeveel inwoners had Amsterdam in 2024?',
+      referenceDate: '2026-08-15',
+      axes: ['region'],
+      questionNl: 'Vergelijk dit cijfer met:',
+      options: [chip],
+      clickOptions: [
+        {
+          id: 'cmp-1',
+          label: chip,
+          intent: {
+            schemaVersion: 1,
+            target: { kind: 'canonical', key: 'population_on_1_january' },
+            regions: ['GM0363', 'NL01'],
+            period: { kind: 'codes', codes: ['2024JJ00'] },
+            derivation: 'none',
+          },
+          impliedRecency: false,
+        },
+      ],
+      rescueOnly: true,
+    };
+    return {
+      kind: 'ok',
+      auditId: 7,
+      netCost: 20,
+      response: {
+        ...fakeAnswerResponse({
+          body: 'Amsterdam telde 931.298 inwoners.',
+          suggestions: [questionChip, chip],
+          cells: [fakeCell()],
+        }),
+        pending,
+      } as unknown as ComposedResponse,
+    };
+  }
+
+  it('the comparison chip FILLS the input (never sends); Verstuur then takes the REPLY path with the carrier pending', async () => {
+    askQuestion.mockResolvedValue(outcome(answerWithCarrier()));
+    render(<Chat />);
+    await submit('Hoeveel inwoners had Amsterdam in 2024?');
+    const button = await screen.findByRole('button', { name: chip });
+    fireEvent.click(button);
+    const input = screen.getByPlaceholderText('Stel een vraag…');
+    expect(input).toHaveValue(chip);
+    // Fill, never send: still only the original submit.
+    expect(askQuestion).toHaveBeenCalledTimes(1);
+    expect(replyToClarification).not.toHaveBeenCalled();
+    // A carrier is not an open round: the placeholder never echoes a question.
+    expect(input).toHaveAttribute('placeholder', 'Stel een vraag…');
+
+    replyToClarification.mockResolvedValue(
+      outcome({
+        kind: 'ok',
+        auditId: 8,
+        netCost: 20,
+        response: fakeAnswerResponse({ body: 'Twee regio\'s naast elkaar.', cells: [fakeCell()] }) as ComposedResponse,
+      }),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Verstuur' }));
+    await screen.findByText('Twee regio\'s naast elkaar.');
+    expect(replyToClarification).toHaveBeenCalledTimes(1);
+    expect(replyToClarification.mock.calls[0]![0]).toMatchObject({ rescueOnly: true, options: [chip] });
+    expect(replyToClarification.mock.calls[0]![1]).toBe(chip);
+    expect(askQuestion).toHaveBeenCalledTimes(1);
+  });
+
+  it('the question-shaped chip beside it, and any other text, take the QUESTION path (fresh parse) — the carrier never merges them', async () => {
+    askQuestion.mockResolvedValue(outcome(answerWithCarrier()));
+    render(<Chat />);
+    await submit('Hoeveel inwoners had Amsterdam in 2024?');
+    await screen.findByRole('button', { name: chip });
+
+    askQuestion.mockClear();
+    replyToClarification.mockClear();
+    askQuestion.mockResolvedValue(
+      outcome({
+        kind: 'ok',
+        auditId: 9,
+        netCost: 20,
+        response: fakeAnswerResponse({ body: 'Volgend jaar.', cells: [fakeCell()] }) as ComposedResponse,
+      }),
+    );
+    fireEvent.click(screen.getByRole('button', { name: questionChip }));
+    expect(screen.getByPlaceholderText('Stel een vraag…')).toHaveValue(questionChip);
+    fireEvent.click(screen.getByRole('button', { name: 'Verstuur' }));
+    await screen.findByText('Volgend jaar.');
+    expect(askQuestion).toHaveBeenCalledTimes(1);
+    expect(replyToClarification).not.toHaveBeenCalled();
+  });
+});

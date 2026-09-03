@@ -25,7 +25,8 @@ export type { MetaTemplate, MetaTemplateKey, MetaBodyContext } from './meta.ts';
 export { maxAgeDaysForCadence, checkStaleness } from './staleness.ts';
 export type { StalenessCheck } from './staleness.ts';
 export { periodCodeToNl } from './period-nl.ts';
-export { buildRefusalSuggestions, buildSuggestions, MAX_SUGGESTIONS } from './suggestions.ts';
+export { buildAnswerChips, buildRefusalSuggestions, buildSuggestions, MAX_SUGGESTIONS } from './suggestions.ts';
+export type { AnswerChips } from './suggestions.ts';
 // WP26 mechanism A (ADR 024): the client-held click-option trust boundary.
 export { validateClickOptions, withValidatedClickOptions } from './validate-pending.ts';
 export * from './types.ts';

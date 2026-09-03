@@ -63,7 +63,9 @@ import type { Db, QueryResultRow } from '../../src/db/types.ts';
 import { createIngestedDb } from '../helpers/ingested-db.ts';
 import { isResolutionFailure, resolveCandidate } from '../../src/answer/intent/resolve.ts';
 import type { RawCandidate } from '../../src/answer/intent/types.ts';
-import { runQuery } from '../../src/query/index.ts';
+import { buildAnswerChips } from '../../src/answer/respond/suggestions.ts';
+import { echoServability, runQuery, INTENT_SCHEMA_VERSION } from '../../src/query/index.ts';
+import type { StructuredIntent } from '../../src/query/index.ts';
 
 let base: Db;
 let close: () => Promise<void>;
@@ -240,5 +242,55 @@ describe('what the flag flip costs, stated as a difference', () => {
     const off = await statementsFor(spec, false);
     const on = await statementsFor(spec, true);
     expect(on.count).toBe(off.count);
+  });
+});
+
+// #197 step 3 (session 70, 2026-09-02): the follow-up chip builder is the
+// largest per-request grower since #176 — every dry-run is a full runQuery
+// INCLUDING the #110 touchLastQueriedAt statement (#195) — and nothing here
+// measured it. Measured with the real fixture db and the real echoServability:
+//
+//   regional single answer (Amsterdam 2024)   27 statements / 3 dry-runs   flag OFF and ON
+//   national single answer (Nederland 2026)   39 statements / 4 dry-runs   flag OFF and ON
+//   national-only measure (CPI 2024)          12 / 2  OFF   →   18 / 3  ON
+//
+// Why the first two do not move: the cap (MAX_SUGGESTIONS = 3) stops the
+// roster after three survivors, and with the flag on the region comparison
+// takes the slot the region variant used to take — one dry-run for one. Only a
+// shape with a free slot (a national-only measure: no region comparison) spends
+// the extra dry-run for the period comparison. The worst case is a roster
+// where the early generators FAIL their dry-runs (each failure costs a dry-run
+// and frees no slot): 8 dry-runs flag ON vs 6 OFF; not pinned here because it
+// needs a stub check, and the tripwire is about the real path.
+describe('#197 step 3: what the comparison chips cost per answered turn', () => {
+  async function chipStatements(intent: StructuredIntent, clickOptions: boolean): Promise<number> {
+    const result = await runQuery(base, intent);
+    if (!result.ok) throw new Error('fixture intent not servable');
+    const { db, statements } = countingDb(base);
+    await buildAnswerChips(intent, result, (candidate) => echoServability(db, candidate), { clickOptions });
+    return statements.length;
+  }
+  const amsterdam: StructuredIntent = {
+    schemaVersion: INTENT_SCHEMA_VERSION,
+    target: { kind: 'canonical', key: 'population_on_1_january' },
+    regions: ['GM0363'],
+    period: { kind: 'codes', codes: ['2024JJ00'] },
+    derivation: 'none',
+  };
+  const cpi: StructuredIntent = {
+    schemaVersion: INTENT_SCHEMA_VERSION,
+    target: { kind: 'canonical', key: 'cpi_yearly_inflation' },
+    period: { kind: 'codes', codes: ['2024JJ00'] },
+    derivation: 'none',
+  };
+
+  it('a regional single answer: the flag changes nothing — the comparison takes the region variant\'s slot', async () => {
+    expect(await chipStatements(amsterdam, false)).toBe(27);
+    expect(await chipStatements(amsterdam, true)).toBe(27);
+  });
+
+  it('a national-only measure: the flag adds exactly one dry-run (the period comparison fills the free slot)', async () => {
+    expect(await chipStatements(cpi, false)).toBe(12);
+    expect(await chipStatements(cpi, true)).toBe(18);
   });
 });
