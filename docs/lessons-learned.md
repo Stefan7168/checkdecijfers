@@ -12,7 +12,7 @@ Full narrative: [status-archive.md](status-archive.md) session-73 entry.
 
 - **LOW is the pre-push floor, not merge-day assurance — a HIGH pass on a core-product PR found fifteen verified items
   on a fix LOW had passed clean.** PR #121 (the query path) got the mandatory LOW pass in session 72 with zero
-  findings. The HIGH pass (ten finder angles, six verifiers, a sweep, cheap tier, ≈2.8M tokens, ~45 minutes) found a
+  findings. The HIGH pass (ten finder angles, five verifier agents, a sweep, cheap tier, ≈2.75M tokens, ~45 minutes) found a
   lock wait that coupled a served answer to an eviction's commit, a TOCTOU that re-created the very false refusal the
   PR closed, and three metadata degradations in the same race. Rule: before merge day, every core-product PR gets a
   HIGH/adversarial pass; the LOW gate only catches what is visible from the hunk.

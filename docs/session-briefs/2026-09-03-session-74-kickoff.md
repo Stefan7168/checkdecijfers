@@ -31,8 +31,8 @@ eviction-lock, een TOCTOU in de re-check, rauwe periodecodes / een te nieuwe syn
 staleness-waarschuwing in dezelfde race, en de race die de owner als interne fout alarmeerde. Alles gefixt op de
 branch (`0a7bad8` → `ebd341f`); één structurele follow-up opgeschreven. Branch-blok groen, LOW 0, gecombineerde boom
 opnieuw volledig geverifieerd (drie volgordes → één boom `53f7ffd6…`); gates op `ebd341f`: runs 33756815650 +
-33756820787 beide groen; PR-status bij afsluiting: #121 MERGEABLE/CLEAN ebd341f #120 UNKNOWN/UNKNOWN 5c4c88f #123
-UNKNOWN/UNKNOWN 3d185a1 #122 UNKNOWN/UNKNOWN 0ffe4c0.
+33756820787 beide groen; alle vier PRs `MERGEABLE`/`CLEAN` bij afsluiting (GitHub las ~30 s `UNKNOWN` direct na de
+docs-push — het herberekenvenster, RUNBOOK batch-item 8).
 
 Dé volgende prioriteit, in deze volgorde:
 

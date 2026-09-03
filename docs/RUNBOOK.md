@@ -918,11 +918,10 @@ per-machine cache:
     mandatory LOW pass clean in session 72 and yielded fifteen verified findings at HIGH — a lock wait that coupled a
     served answer to an eviction's commit, a TOCTOU that re-created the very false refusal the PR closed, three
     metadata degradations in the same race, and the benign race paging the owner as an internal error. Cost: ten
-    finder angles + six verifiers + one gap sweep on the cheap tier (≈2.8M tokens, ~45 minutes wall-clock),
+    finder angles + five verifier agents + one gap sweep on the cheap tier (≈2.75M tokens, ~45 minutes wall-clock),
     orchestrated from the session, which reads every finder's evidence itself — a finder's proposed FIX can be wrong
     even when its finding is right. Fixes go on the PR branch (docs-only or not, the gates re-run), then re-simulate
     the batch (item 9) and re-run the full block on the combined tree before the owner merges.
-
 
 ## Moving to a new machine (fresh clone bootstrap)
 

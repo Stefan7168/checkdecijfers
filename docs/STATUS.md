@@ -32,8 +32,9 @@ race, and the benign race paging you as an internal error. All fixed on the bran
 touch, one-snapshot fetch, check-last, a `table_evicted`/`evicted` refusal with honest Dutch copy, the registry facts
 carried on the result, docs/05 row); one structural follow-up recorded (eviction must yield to in-flight reads before
 any live automation). Branch block green, LOW 0, the combined tree re-verified (three orders → one tree, full block
-green); gates on `ebd341f`: runs 33756815650 (push) + 33756820787 (pull_request) both success; PR states at close:
-#121 MERGEABLE/CLEAN ebd341f #120 UNKNOWN/UNKNOWN 5c4c88f #123 UNKNOWN/UNKNOWN 3d185a1 #122 UNKNOWN/UNKNOWN 0ffe4c0.**
+green); gates on `ebd341f`: runs 33756815650 (push) + 33756820787 (pull_request) both success; all four PRs
+`MERGEABLE`/`CLEAN` at close (GitHub read `UNKNOWN` for ~30 s right after the docs push — the recompute window,
+RUNBOOK batch item 8).**
 
 | PR | Head now | Merge | Left for you |
 |---|---|---|---|

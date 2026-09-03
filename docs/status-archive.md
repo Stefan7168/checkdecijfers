@@ -62,23 +62,24 @@ workflow: #118 rule (b) — nothing merged, nothing flipped, no spend, no prompt
     was chosen: a HIGH-effort adversarial review of the four PRs, #121 first (the query path — data integrity). A
     wrap-up hook fired on a system notification with no owner message behind it — treated as a false positive, the
     ritual deferred to the end.
-11. **PR #121 reviewed at HIGH (ten finder angles, six verifiers, a gap sweep — all cheap tier, ≈2.8M tokens;
-    synthesis here): fifteen verified findings on a fix LOW had passed clean.** CONFIRMED: the moved
-    `touchLastQueriedAt` UPDATE still queued behind an eviction's `for update` row lock (the debounce cannot skip an
-    eviction-eligible row) and held one of the process's two pooled connections; the registration re-check ran BEFORE
-    `diagnoseMissing`, whose own reads could straddle the eviction and return the very `not_published` #196 forbids
-    (TOCTOU); the period labels were read after that touch, so the race put raw period codes ("2025JJ00") in the
-    served Dutch sentence; the retained-cell `ingestion_batches` lookup and the staleness `readUpdateCadence` re-read
-    hit the same window (a too-new "gesynchroniseerd op" date; the staleness warning and the recency refusal silently
-    off); the race refusal rode `table_not_registered` → reason `internal` and paged the owner with "something broke
-    under the hood"; the new refusal carried the raw intent instead of `q.intent` (R8);
-    `scripts/spot-check-canonical.ts` bumped `last_queried_at` in production. PLAUSIBLE: +1 statement on the routine
-    freshness refusal; `resolveIntent`'s earlier reads race the same eviction (`invalid_intent`); the race harness's
-    `'from observations'` substring also matches resolve.ts's answer-first lookup. Test/cleanup tier: the 'after' case
-    passed on the old ordering too and asserted neither labels nor the date; the synthetic eviction ran outside a
-    transaction; an inlined lookup duplicating the PR's own `tableIdForCanonicalKey`; the touch filter written twice.
-    One finder-proposed fix was wrong (a scalar subquery folded into a query that returns zero rows in exactly the
-    evicted case) and was rejected on verification — the session read every finder's evidence itself.
+11. **PR #121 reviewed at HIGH (ten finder angles, five verifier agents over six candidates — the rest verified by the
+    session's own reading — and a gap sweep, all cheap tier, ≈2.75M tokens; synthesis here): fifteen verified findings
+    on a fix LOW had passed clean.** CONFIRMED: the moved `touchLastQueriedAt` UPDATE still queued behind an
+    eviction's `for update` row lock (the debounce cannot skip an eviction-eligible row) and held one of the process's
+    two pooled connections; the registration re-check ran BEFORE `diagnoseMissing`, whose own reads could straddle the
+    eviction and return the very `not_published` #196 forbids (TOCTOU); the period labels were read after that touch,
+    so the race put raw period codes ("2025JJ00") in the served Dutch sentence; the retained-cell `ingestion_batches`
+    lookup and the staleness `readUpdateCadence` re-read hit the same window (a too-new "gesynchroniseerd op" date;
+    the staleness warning and the recency refusal silently off); the race refusal rode `table_not_registered` → reason
+    `internal` and paged the owner with "something broke under the hood"; the new refusal carried the raw intent
+    instead of `q.intent` (R8); `scripts/spot-check-canonical.ts` bumped `last_queried_at` in production. PLAUSIBLE:
+    +1 statement on the routine freshness refusal; `resolveIntent`'s earlier reads race the same eviction
+    (`invalid_intent`); the race harness's `'from observations'` substring also matches resolve.ts's answer-first
+    lookup. Test/cleanup tier: the 'after' case passed on the old ordering too and asserted neither labels nor the
+    date; the synthetic eviction ran outside a transaction; an inlined lookup duplicating the PR's own
+    `tableIdForCanonicalKey`; the touch filter written twice. One finder-proposed fix was wrong (a scalar subquery
+    folded into a query that returns zero rows in exactly the evicted case) and was rejected on verification — the
+    session read every finder's evidence itself.
 12. **Round-2 fix on the branch, `ebd341f` (15 files, +392/−135):** the touch takes the row with `for no key update
     skip locked` in a subquery (the `claimOnePending` shape; NO KEY so an ingestion insert's FK KEY SHARE never causes
     a spurious skip; source-pinned in `tests/query/last-queried.test.ts`); the observations fetch LEFT-JOINs the
@@ -98,8 +99,8 @@ workflow: #118 rule (b) — nothing merged, nothing flipped, no spend, no prompt
     real `next build` (TypeScript step 5.8 s); LOW code-review of the diff 0 findings; three merge orders with the new
     head → one tree `53f7ffd69f49`; the combined block on it (`c780792`) — typecheck ×2, backend 116 / 1776, benchmark
     14/14 + 6/6 + 0 fabricated, web 49 / 575, real `next build`. Gates on `ebd341f`: runs 33756815650 (push) +
-    33756820787 (pull_request) both success; PR states at close: #121 MERGEABLE/CLEAN ebd341f #120 UNKNOWN/UNKNOWN
-    5c4c88f #123 UNKNOWN/UNKNOWN 3d185a1 #122 UNKNOWN/UNKNOWN 0ffe4c0. Round-2 note posted on #121.
+    33756820787 (pull_request) both success; all four PRs `MERGEABLE`/`CLEAN` at close (GitHub read `UNKNOWN` for ~30
+    s right after the docs push — the recompute window, RUNBOOK batch item 8). Round-2 note posted on #121.
 13. **Deferred, recorded:** the remaining race class one step earlier — `resolveIntent`'s canonical-measures lookup
     and label reads against the same eviction — needs eviction to YIELD to in-flight reads (a `pg_advisory_xact_lock`
     per table the read also takes, or a marked-for-eviction grace state) rather than every reader defending itself; it
