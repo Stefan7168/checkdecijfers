@@ -39,8 +39,11 @@ instance) — WP26 SMOKE TEST PASSED, #197 STEP 3 MERGED + LIVE, A CI DEPLOY RAC
    on its first real overlap** (deliberately pushed `dbb07bf` while the `ade89b4` run 33702138479 was in its
    gate): the older run's tip step printed `this run: ade89b4… main tip: dbb07bf…`, its five deploy steps show
    `skipped`, run `success`; run 33702205292 (`dbb07bf`) deployed `checkdecijfers-o0u14se0v…`, which
-   `vercel inspect` shows on the production alias (created 01:18:54Z). All six session-71 main runs green:
-   33699493029, 33699880673, 33700860875, 33702138479, 33702205292 (+ this docs commit's own run).
+   `vercel inspect` shows on the production alias (created 01:18:54Z). **Second overlap, same result:** run
+   33703270848 (`08edd92`) skipped its deploy (steps 6–10 `skipped`, green) because `c8ce420` had been pushed;
+   run 33703373813 (`c8ce420`) deployed `checkdecijfers-88lkl9usx…`, confirmed on the alias. Session-71 main runs,
+   all `success`: 33699493029, 33699880673, 33700860875, 33702138479, 33702205292, 33703270848, 33703373813,
+   33705226025 (the #119 merge, below).
 6. **Trackers to the measured state** (`ec48c02`): build-plan #197 header + step 3, open-questions #197 row,
    04-architecture row, ADR 029 header + as-built note; STATUS top block rewritten as session 71 (this
    entry's summary) with session 70 compressed beneath it; lessons-learned session-71 entry (5 lessons).
@@ -51,7 +54,12 @@ instance) — WP26 SMOKE TEST PASSED, #197 STEP 3 MERGED + LIVE, A CI DEPLOY RAC
    agent classified all 172 rows, every ARCHIVE candidate was re-read here (residual-keyword scan + row tails;
    one chunk had mis-numbered its rows and was discarded) — 25 rows with nothing left open moved verbatim to
    `open-questions-archive.md` (#15, #16, #24, #35, #36, #121, #129, #130, #139, #142, #145, #155, #156, #165,
-   #167, #168, #177, #179, #182, #183, #187, #191, #192, #193, #194), 147 live rows remain. Memory: the two
+   #167, #168, #177, #179, #182, #183, #187, #191, #192, #193, #194), 147 live rows remain. Stale-doc finds
+   fixed along the way: the three RUNBOOK "Supervised live step — migration 023/024/025" headers still said
+   NOT YET RUN and open-questions #147 + the error-log architecture row still called the apply pending — but
+   production `schema_migrations` shows 022–025 applied 2026-09-02T06:23Z (session 69); the WP26-A architecture
+   row still said DORMANT. Dependabot PR #119 (browserslist 4.28.4→4.28.8 in `web/`, lockfile only, both gates
+   green) squash-merged as `206f137`; `origin/main` is again the only remote branch. Memory: the two
    session-70 files replaced by one session-71 state file.
 8. **Not done, deliberately:** `ANSWER_FIRST_ENABLED` and `GDPR_PURGE_APPLY` (owner-supervised — the owner's
    "keep working autonomously" does not cover the WP26 flip, per the 25-07 steer); #162 A/B (real spend); the

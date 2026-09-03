@@ -90,8 +90,8 @@ silently redirected every visitor to `/login`) and `StatusLegend` hand-duplicate
 (caught by the pre-push LOW code-review). Full narrative, every verification step:
 [status-archive.md](status-archive.md) (prepended below).
 
-**NO OPEN PRs (2026-09-03, session 71): PR #118 squash-merged as `83f790e`, branch deleted locally and on
-origin; `origin/main` is the only remote branch.** Verify yourself: `gh pr list --state open` is empty;
+**NO OPEN PRs (2026-09-03, session 71): PR #118 squash-merged as `83f790e`, Dependabot PR #119 (browserslist
+patch, lockfile only) squash-merged as `206f137`; branches deleted; `origin/main` is the only remote branch.** Verify yourself: `gh pr list --state open` is empty;
 `gh run list --branch main -L 3` all `success`. #197 steps 1+2+3 are LIVE on prod.
 
 Full session-67 record (reviewed + merged all 19 PRs session 66 left open, #99-#117): [status-archive.md](status-archive.md) (prepended) +
