@@ -35,7 +35,12 @@ instance) — WP26 SMOKE TEST PASSED, #197 STEP 3 MERGED + LIVE, A CI DEPLOY RAC
    session, LOW code-review 0 findings, YAML parsed): a `tip` step in the deploy job compares `GITHUB_SHA`
    with `git ls-remote --heads origin main` and every deploy step carries `if: steps.tip.outputs.stale !=
    'true'` — a stale run skips the deploy and stays green. RUNBOOK section "Two CI runs in flight" added
-   (how to see it, `vercel promote` to fix, "let a merge's run finish before pushing again").
+   (how to see it, `vercel promote` to fix, "let a merge's run finish before pushing again"). **Guard measured
+   on its first real overlap** (deliberately pushed `dbb07bf` while the `ade89b4` run 33702138479 was in its
+   gate): the older run's tip step printed `this run: ade89b4… main tip: dbb07bf…`, its five deploy steps show
+   `skipped`, run `success`; run 33702205292 (`dbb07bf`) deployed `checkdecijfers-o0u14se0v…`, which
+   `vercel inspect` shows on the production alias (created 01:18:54Z). All six session-71 main runs green:
+   33699493029, 33699880673, 33700860875, 33702138479, 33702205292 (+ this docs commit's own run).
 6. **Trackers to the measured state** (`ec48c02`): build-plan #197 header + step 3, open-questions #197 row,
    04-architecture row, ADR 029 header + as-built note; STATUS top block rewritten as session 71 (this
    entry's summary) with session 70 compressed beneath it; lessons-learned session-71 entry (5 lessons).

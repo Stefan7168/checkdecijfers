@@ -20,7 +20,8 @@ first attempt (the one-word "Utrecht", row 260) was refused as smalltalk and ref
 deploy one minute AFTER the merge's and re-aliased production to the PRE-merge code while both runs were
 green; caught by `vercel inspect`, fixed instantly with `vercel promote` of the `83f790e` deployment, and
 guarded for good: the deploy job now skips itself when its commit is no longer the tip of `main`
-(RUNBOOK "Two CI runs in flight"). Also: the RUNBOOK's click-row query looked in the wrong column
+(RUNBOOK "Two CI runs in flight") — measured working on its first real overlap the same night (run
+33702138479 skipped its deploy in favour of 33702205292, both green, alias on the newer deployment). Also: the RUNBOOK's click-row query looked in the wrong column
 (`llm_calls` is `[]` on a click take; the model lives in `response->'parse'->>'model'`), corrected.
 Hygiene: the s70-reviewer worktree removed, 28 stale local branches + 9 merged remote branches deleted;
 open-questions.md triaged (every row read) — 25 terminally-closed rows moved to its archive twin, 147 live.

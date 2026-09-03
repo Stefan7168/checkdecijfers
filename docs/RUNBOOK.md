@@ -695,6 +695,11 @@ silently went back to the pre-merge code while both runs showed green.
 Since session 71 (2026-09-03, the commit that added this section) the deploy job checks `git ls-remote origin main` first and **skips every deploy
 step when its commit is no longer the tip** (the newer commit's own run deploys it; the stale run stays
 green because its gate verdict is still real). Runs started before that commit do not have the guard.
+**Measured on its first real overlap (2026-09-03, 01:05Z–01:19Z):** run 33702138479 (`ade89b4`, pushed first)
+reached its deploy job after `dbb07bf` had been pushed — its tip step printed `this run: ade89b4… main tip:
+dbb07bf…`, steps 6–10 (CLI install, pull, build, deploy, smoke) show `skipped`, job and run `success`; run
+33702205292 (`dbb07bf`) deployed `checkdecijfers-o0u14se0v…` and `vercel inspect` shows that deployment on the
+alias. Nothing to promote by hand.
 
 How to see it: `vercel inspect https://checkdecijfers.vercel.app` gives the deployment id/url that holds the
 alias; the deploy job's log of each run prints the SHA it shipped (`gh run view <run> --job <deploy-job>
