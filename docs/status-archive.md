@@ -109,7 +109,10 @@ workflow: #118 rule (b) — nothing merged, nothing flipped, no spend, no prompt
     push, not now.
 14. **Cleanup:** the review worktree (`.claude/worktrees/s73-review-121`) and the second simulation worktree
     (`s73-sim2`) removed with their local branches and the `pr/*` refs; `origin/main` plus the four PR branches are
-    the only remote branches.
+    the only remote branches. CI on the session's `main` commits, all `success`: `8a3fb06` run 33749095613, `bde091d`
+    run 33750842713, `4912b69` run 33758518272, `e24744d` run 33760329689 (its deploy on the alias, canaries 200); the
+    commit that adds this line has its run verified by session 74's kickoff. A task chip filed for the structural
+    follow-up (eviction yields to in-flight reads).
 
 **Session 72 (2026-09-03, AUTONOMOUS — the owner pasted the session-72 kickoff and added "I want you to work hours and
 hours autonomously, use multiple subagents with their needed level"; `list_sessions` showed no second instance) — FOUR PRs
