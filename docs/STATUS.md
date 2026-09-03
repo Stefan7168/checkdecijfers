@@ -121,7 +121,7 @@ spend, PR #113 already merged so mechanically unblocked) — needs you present, 
 (Rijksfinanciën `80504NED`, confirmed ordinary StatLine but `Gediscontinueerd`) / the #89/#70/#79 UI trio
 (UNBLOCKED, #103 is merged — but still needs its own shared-design decision first, not an automatic
 follow-on); (g) **[#197](open-questions.md) step 3 — comparison chips — BUILT on branch `feat/197-3-comparison-chips`,
-draft PR #118, waiting ONLY on (a) above to be merged** (it reuses the same zero-LLM take-path; ADR 029 first
+PR #118 — MERGED + LIVE in session 71 (`83f790e`, 2026-09-03) after the smoke test passed** (it reuses the same zero-LLM take-path; ADR 029 first
 as-built note has the design and the recorded follow-ups — the "Nederland had de hoogste waarde" tautology
 on count measures needs a known-divergences pin before it may change). Ideas 4–8 stay unscheduled unless
 you say otherwise.

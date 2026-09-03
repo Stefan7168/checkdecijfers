@@ -23,8 +23,10 @@ productie-incident gevonden: twee CI-runs tegelijk op `main` (docs-push vlak na 
 LAATST klaar was zette de alias op de oudere commit terwijl beide runs groen waren. Direct hersteld met
 `vercel promote`, en structureel afgevangen: de deploy-job slaat zichzelf over als zijn commit niet meer de
 tip van `main` is (RUNBOOK "Two CI runs in flight"). Vlaggen: `CLARIFY_CLICK_ENABLED` AAN en bewezen;
-`ANSWER_FIRST_ENABLED` en `GDPR_PURGE_APPLY` onaangeroerd — die blijven van de owner, ook onder "werk
-autonoom" (steer 25-07).
+`ANSWER_FIRST_ENABLED` AAN sinds 03-09 05:40Z op expliciet owner-akkoord (B-regio bewezen, rij 269; B-periode
+zie #198); `GDPR_PURGE_APPLY` onaangeroerd — blijft van de owner, ook onder "werk autonoom" (steer 25-07).
+Let op: STATUS.md is in sessie 71 één keer per ongeluk als leeg bestand gepusht (hersteld; `test:docs` bewaakt
+nu de omvang van de plan-of-record-docs) — vertrouw de docs-gate, en lees STATUS.md echt.
 
 Dé volgende prioriteit, in deze volgorde, niets anders eerst:
 
@@ -35,9 +37,12 @@ Dé volgende prioriteit, in deze volgorde, niets anders eerst:
    (promptregel); drie formuleringen zijn gemeten en TERUGGEDRAAID (elke variant drukte de onboarded
    bijstand-delivery-parse onder 0,9). Prompt staat weer op v6. Volgende stap: de owner beslist over optie 2
    (code-drempel 0,8 voor de ene vorm "enkele kandidaat, periode none / regio null, vlag aan") — het voorstel
-   en de twee te hergebruiken labelled cases staan in #198. Bouw het NIET zonder zijn go; wel: pin het met de
-   gemeten live-confidences 0,85/0,95. De dubbele footer is in sessie 71 gefixt (site-footer.tsx is de enige). Rollback-volgorde blijft:
-   klik-vlag eerst uit, B een dag later, nooit andersom. Kijk de eerste dag naar de rijen (RUNBOOK stap 5).
+   en de twee te hergebruiken labelled cases staan in #198. **De owner zei "later" (03-09): GEPARKEERD, niet
+   blokkerend (één klik antwoordt) — niet opnieuw aankaarten tenzij hij erover begint; bouw het NIET zonder
+   zijn go; wel: pin het dan met de gemeten live-confidences 0,85/0,95.** De dubbele footer is in sessie 71
+   gefixt (site-footer.tsx is de enige, met het tandwiel-icoon). Rollback-volgorde blijft: klik-vlag eerst uit,
+   B een dag later, nooit andersom. Kijk de eerste dag naar de rijen (RUNBOOK stap 5): rijen met
+   `regionDefaulted`/`periodDefaulted` versus rule-3-bevestigingen.
 2. Daarna `GDPR_PURGE_APPLY=1` + één bewaakte run (owner), dan #162's A/B (echte spend, owner).
 
 Bindende kaders en owner-steers: principes (a)/(b)/(c); R6 — een chip-take is altijd een NIEUW gevalideerd

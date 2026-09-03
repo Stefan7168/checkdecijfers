@@ -277,3 +277,28 @@ under an ANSWER for its comparison chips ("Vergelijk met Nederland", "Vergelijk 
 
 Same flag, same dormancy pattern, no new entry point, no prompt bytes, no schema change: the carrier rides the
 client-held pending and, on the reply row, the existing `audit_answers.pending_clarification` jsonb.
+
+## As-built addendum — BOTH flags LIVE and measured (session 71, 2026-09-03)
+
+- **Mechanism A (`CLARIFY_CLICK_ENABLED`)**: flipped 2026-09-02 (session 69); the owner's first real click
+  landed 2026-09-03 — audit row 261 (clarification "Bedoel je Utrecht (PV) of Utrecht (gemeente)?" with two
+  `clickOptions`) → row 262 (the take: `parse.model = deterministic/wp26-click-option`, `llm_calls = []`,
+  0 tokens, `answer_source = template`, 20 credits, R8 reconstruct clean). The #197 comparison chip on an
+  answer took the same path (rows 263 → 264, two `result_ids`, a 2-series bar chart). One RUNBOOK correction:
+  the smoke test needs a real question (`Hoeveel inwoners had Utrecht in 2024?`); a one-word "Utrecht" is a
+  smalltalk refusal, not a clarification.
+- **Mechanism B (`ANSWER_FIRST_ENABLED`)**: flipped 2026-09-03 05:40Z on the owner's explicit yes, deployed by
+  `27c79cb` (run 33719897606) together with the [#175](../open-questions.md) fix that passes the flag to the
+  anonymous trial (`trial-actions.ts`; the click flag stays out of the trial by decision, ADR 036 D5).
+  **B-region proven** — row 269, a fresh thread, "Hoeveel inwoners waren er in 2024?": `regionDefaulted = true`,
+  NL01 → 17.942.942, the disclosure line directly under the body, and the G4 comparison chip on top.
+  **B-period fires but is gated by the parser's confidence** — row 266, "Hoeveel inwoners telde Amsterdam?": no
+  period question any more, but the single reading scored 0.85 (< `answerThreshold` 0.9) with the note "zonder
+  specifieke periode genoemd", so R7 rule 3 produced a one-chip confirmation; the click (row 267) delivered the
+  2019–2026 trend without an LLM. This is the decision above working as written ("a below-threshold single
+  reading still clarifies") meeting a parser that books a missing period as mild doubt. Recorded as
+  [#198](../open-questions.md); a prompt-side fix was tried in three wordings and reverted the same day (each
+  lowered the onboarded bijstand delivery parse below 0.9); a code-side threshold for that one shape is proposed;
+  the owner parked the decision ("later"). Same-thread caveat measured too (row 268): a follow-up inherits the
+  previous region from context by design — test B-region in a NEW chat.
+- **Rollback order unchanged**: A off first, B a day later, never the reverse (RUNBOOK).
