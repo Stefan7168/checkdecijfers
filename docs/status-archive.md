@@ -79,8 +79,17 @@ instance) — WP26 SMOKE TEST PASSED, #197 STEP 3 MERGED + LIVE, A CI DEPLOY RAC
     036 D5 as-built note, #175 row). Verification block on that change: root + web typecheck, backend 114 files /
     1733 tests, benchmark 14/14 + 6/6 + 0 fabricated GATE PASS, web 47 files / 538 tests (1 new pin), real
     `next build`, LOW review 0 findings. Env set 05:40:16Z (`printf '1' | vercel env add … --sensitive`);
-    the #175 commit is the redeploy that carries the flag — its run id and the owner's two canaries (RUNBOOK
-    step 3: a period-less and a region-less question, `audit:verify` on both rows) are recorded below when measured.
+    the #175 commit `27c79cb` is the redeploy that carries the flag: run 33719897606 gate + deploy green, alias on
+    `checkdecijfers-r61dt6049…` (05:57Z), `/llms.txt` + `/api/health` 200.
+11. **Canary 1 measured — a real finding, [#198](open-questions.md):** "Hoeveel inwoners telde Amsterdam?" → row
+    265 (05:42Z, asked before the deploy) = period-axis clarification, as before; row 266 (06:40Z, flag live) =
+    NO period question any more (B-period fired) but a rule-3 confirmation "Bedoel je bevolking van Amsterdam
+    (gemeente) zonder specifieke periode genoemd?" with one click chip, because Haiku scored the period-less
+    reading `0.85` (< `answerThreshold 0.9`) — the parser books a missing period as "mild doubt". By ADR 024's
+    own rule a below-threshold single reading still clarifies, and the hermetic answer-first pin ran on a 0.95
+    fixture parse, so this was invisible until the live canary. Paid dead-end gone (the chip is a zero-LLM take);
+    "answers directly" not yet true for period-less questions. Remedies recorded in #198 (prompt rule + re-record
+    as the default, code-side threshold as the alternative) — owner-supervised either way (prompt bytes, spend).
 
 **Session 70 (2026-09-02, later the same day as session 69; the owner pasted the session-70 kickoff — into
 TWO sessions in the same working tree, the 25-07 collision shape: the second session (local_09530460…)

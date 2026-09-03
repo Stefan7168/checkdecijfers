@@ -588,7 +588,11 @@ Steps (owner present):
 2. Flip ONE flag: `vercel env add <FLAG>` (Production) `= 1`, then redeploy. **Not both at once** —
    if something reads wrong you want to know which mechanism did it.
 3. Live smoke, LLM-free where possible: ask a period-less question ("Hoeveel inwoners telde
-   Amsterdam?") and a region-less one ("Hoeveel inwoners telde Nederland?" on a geo measure).
+   Amsterdam?") and a region-less one ("Hoeveel inwoners waren er in 2024?" — a geo measure with NO place
+   named; "…telde Nederland?" names a place and tests nothing). **Measured 2026-09-03 (session 71, rows
+   265/266): the period-less canary stops asking for a period (B works) but comes back as a one-chip
+   "Bedoel je …?" because the live parse scores 0.85 < 0.9 for a period-less reading — see
+   [#198](open-questions.md); clicking the chip answers deterministically.**
    Confirm the disclosure sentence renders DIRECTLY UNDER the answer body, and that the answer's
    numbers still match the cells (`npm run audit:verify -- <row> <row>` → exit 0).
 4. For the click flag: ask something that clarifies — use the flagship case
