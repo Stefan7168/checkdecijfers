@@ -9,6 +9,44 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
+**▶ SESSION 72 (2026-09-03, AUTONOMOUS — you said "work hours and hours autonomously, use multiple subagents") —
+FOUR PRs WAIT FOR YOUR REVIEW, NOTHING MERGED, NOTHING FLIPPED.** The session-66 pattern: code on branches + PRs
+(#118 rule b), docs direct to `main`. Every PR carries a review comment from the session with the measured full
+verification block (typecheck ×2, backend suite, benchmark 14/14 + 6/6 + 0 fabricated, web suite, real
+`next build`) and a LOW code-review pass; every PR's CI gate is green (all four verified at close, 2026-09-03). **Merge order
+suggestion:** #121 → #120 → #123 → #122 (the last two both touch `chat.tsx` — #122 only adds a ref and a click
+handler, #123 adds a field on `ChatMessage`; no shared lines, but merge serially and let each deploy finish).
+
+| PR | Branch (head) | What | Left for you |
+|---|---|---|---|
+| **#121** | `fix/195-196-eviction-probe-touch` (`93db80a`) | #195/#196: servability probes no longer bump `last_queried_at`; the bump runs after the fetch (a read never waits behind an eviction lock); an eviction landing mid-query yields an honest `table_not_registered`. Tripwires 27→24 / 12→10 / 18→15. | merge |
+| **#120** | `chore/ts7-lift` (`5c4c88f`) | The TypeScript-7 hold lifted: Next 16.3 type-checks through the `tsc` CLI; TS 7.0.2 root + web, Dependabot ignore stanza removed; proven with a real `next build` twice (agent + session). | merge; if the deploy ever goes red on the TypeScript step, revert this one commit |
+| **#123** | `feat/70-79-89-drill-through` (`3d185a1`) | "Bewijs dit cijfer": one panel, three depths (reading + alternates / the cells / the step list), client-side over the stored envelope, no backend, no flag. Design brief with defaults on `main` (`093380b`). | merge — or veto a default (label, inline vs dock, ids behind a toggle, collapsed by default) |
+| **#122** | `feat/73-v2-click-take-chips` (`db3aabb`) | #73 v2: every follow-up chip is a zero-LLM click take on the WP26 carrier (adjacent period, trend, region variant, same topic — not only the comparisons). Review round 1 fixed a carrier-validation defect and a per-message binding trap. | merge — veto point: template phrasing on chip takes instead of LLM phrasing; 20 credits per take unchanged |
+
+**Also on `main` this session (docs only):** the stale-doc sweep `5aa48c3` (ADR 029's #138 line, the build plan's #111
+framing, rows #34/#65/#66/#72/#42/#116 to their real state, #151 measured: 0 rows to backfill) and the drill-through
+design brief `093380b`. **Read-only maintenance, all clean:** `gdpr:purge` dry-run 0 rows in every leg; RLS audit
+18/18 tables; `npm audit` 0 in root and web; no Dependabot alerts. `scripts/verify-block.sh` + RUNBOOK
+"Multi-agent autonomous sessions" 6–9 record the day's operational finds (the `pgrep -f vitest` self-deadlock, the
+10-minute Bash cap, ~8-minute full blocks on an idle machine, `npm ci` before any local verification).
+
+**⚠ STILL ONLY YOURS:** `GDPR_PURGE_APPLY` (fully untouched — the flip + one watched run) and the #162 A/B (real
+spend). #198 stays PARKED at your word. Both WP26 flags are ON and smoke-tested (sessions 69–71).
+
+**▶ NEXT, in order — nothing urgent:** (a) review + merge the four PRs above (serially, each deploy allowed to finish;
+a canary on `/`, `/llms.txt`, `/api/health` after each — the session-67 discipline); after #121 merges the RUNBOOK's
+migration-025 section is already updated on that branch; (b) **`GDPR_PURGE_APPLY=1`** plus one watched run — dry-run
+baseline re-measured today (0 rows everywhere); (c) **#162's A/B** (~€1-2 live spend, needs your read-back);
+(d) **#132 route B** GO or defer (last asked 2026-09-02); (e) the owner menu: WP30c choice (Rijksfinanciën `80504NED`,
+`Gediscontinueerd`), #199 (a proof panel on the dashboard history — needs a small read-model WP), #197 ideas 4–8
+(unscheduled), the three recorded #197 follow-ups (tautology / history titles / carrier on resume — untouched).
+
+**Tracked, deliberately NOT built:** [#174](open-questions.md), [#185](open-questions.md) (held), [#188](open-questions.md)
+(concurrency on a live money path — supervised), [#190(a)](open-questions.md) (yours), [#178](open-questions.md)'s
+age-bound/TTL half (yours; the per-message carrier binding in #122 narrows the label-collision part of it, the age
+bound is still open).
+
 **▶ SESSION 71 (2026-09-03, owner present) — WP26 SMOKE TEST PASSED, #197 STEP 3 MERGED + LIVE, A DEPLOY RACE
 FOUND AND GUARDED.** Started by checking production instead of asking: still zero chip-click takes. Your
 first attempt (the one-word "Utrecht", row 260) was refused as smalltalk and refunded — the RUNBOOK's
@@ -98,44 +136,13 @@ silently redirected every visitor to `/login`) and `StatusLegend` hand-duplicate
 (caught by the pre-push LOW code-review). Full narrative, every verification step:
 [status-archive.md](status-archive.md) (prepended below).
 
-**NO OPEN PRs (2026-09-03, session 71): PR #118 squash-merged as `83f790e`, Dependabot PR #119 (browserslist
-patch, lockfile only) squash-merged as `206f137`; branches deleted; `origin/main` is the only remote branch.** Verify yourself: `gh pr list --state open` is empty;
+**FOUR OPEN PRs (2026-09-03, session 72): #120, #121, #122, #123 — every one with a green gate and a session-72 review
+comment; see the session-72 block above for what each does and the suggested merge order. Their four branches plus
+`origin/main` are the only remote branches.** Verify yourself: `gh pr list --state open` shows exactly those four;
 `gh run list --branch main -L 3` all `success`. #197 steps 1+2+3 are LIVE on prod.
 
 Full session-67 record (reviewed + merged all 19 PRs session 66 left open, #99-#117): [status-archive.md](status-archive.md) (prepended) +
 [session-briefs/2026-08-28-session-67-close.md](session-briefs/2026-08-28-session-67-close.md).
-
-**⚠ STILL ONLY YOURS:** `GDPR_PURGE_APPLY` (fully untouched) and the #162 A/B (real spend). Both WP26 flags
-are ON and smoke-tested (sessions 69–71); [#175](open-questions.md) is decided — the anonymous trial receives
-the answer-first flag (same env read) and deliberately NOT the click flag.
-
-**▶ NEXT, in order — nothing urgent, all owner-supervised:** (a) **the `CLARIFY_CLICK_ENABLED` live smoke
-test** (RUNBOOK "WP26 answer-first + clickable options" has the exact 3 steps) — blocks (b) below;
-(b) **`ANSWER_FIRST_ENABLED`**, the second WP26 flag, one flag at a time per RUNBOOK, only after (a);
-#191/#178's "nu"-half already fixed, age-bound/TTL half still open (see below); (c) **`GDPR_PURGE_APPLY=1`**
-plus one watched run — dry-run baseline (0 rows everywhere) already captured, just needs the flip + a
-watched live run, both yours; (d) **#162's A/B** (blind pairwise LLM judge + owner read-back, ~€1-2 live
-spend, PR #113 already merged so mechanically unblocked) — needs you present, since the methodology's own
-§6 requires your read-back, not just a spend sign-off; (e) **#132 route B** GO or defer (T-0 condition —
-`forks_count` — still 0, last asked 2026-09-02, deferred again); (f) then the owner menu: WP30c choice
-(Rijksfinanciën `80504NED`, confirmed ordinary StatLine but `Gediscontinueerd`) / the #89/#70/#79 UI trio
-(UNBLOCKED, #103 is merged — but still needs its own shared-design decision first, not an automatic
-follow-on); (g) **[#197](open-questions.md) step 3 — comparison chips — BUILT on branch `feat/197-3-comparison-chips`,
-PR #118 — MERGED + LIVE in session 71 (`83f790e`, 2026-09-03) after the smoke test passed** (it reuses the same zero-LLM take-path; ADR 029 first
-as-built note has the design and the recorded follow-ups — the "Nederland had de hoogste waarde" tautology
-on count measures needs a known-divergences pin before it may change). Ideas 4–8 stay unscheduled unless
-you say otherwise.
-**Housekeeping, whenever a session has room:** `open-questions.md` is still ~320KB and still due for a
-prune; **26** stale local branches (7 pre-pause with a live remote, 7 old-Dependabot with none, 12
-`worktree-agent-*` orphans — full list in the session-67 record above) want a deliberate, owner-present
-`git branch -D` pass.
-
-**Tracked, deliberately NOT built:** [#174](open-questions.md) and [#185](open-questions.md) (both explicitly
-held), [#183](open-questions.md) (product call), [#188](open-questions.md) (concurrency on a live money path
-— supervised), [#190(a)](open-questions.md) (whether an infrastructure-caused refusal should cost a trial
-question — a conversion judgement, yours), **[#178](open-questions.md)'s age-bound/TTL half** (the
-"nu"-staleness correctness half is fixed in PR #95; picking "how many days is too old" for a
-client-held pending stays your call).
 
 Full session-62 record: [status-archive.md](status-archive.md) +
 [session-briefs/2026-08-26-session-62-resume-log.md](session-briefs/2026-08-26-session-62-resume-log.md).

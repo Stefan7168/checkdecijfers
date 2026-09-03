@@ -822,6 +822,28 @@ per-machine cache:
    distinctly-named file (its own task slug or agent id as a prefix) rather than a generic name like
    `notes.md` or `pr-body.md`.
 
+6. **The vitest mutex must never be spelled `pgrep -f vitest` inside a shell that also contains the word
+   (measured 2026-09-03, session 72 — two builder agents lost a 10-minute timeout each).** A backgrounded
+   wrapper such as `while pgrep -f vitest >/dev/null; do sleep 15; done; npx vitest run …` matches its OWN
+   command line (it contains "vitest") and waits forever, silently. Use the bracket trick —
+   `pgrep -f "[n]ode.*vitest"` — which matches a real runner (a node process) and never the literal pattern
+   in a shell's cmdline; a script file whose cmdline is its own path is safe either way.
+7. **The Bash tool caps a command at 10 minutes, background or not — run the full verification block as a
+   detached script and watch its log.** `scripts/verify-block.sh <checkout> <log>` (session 72) runs
+   typecheck ×2 → the full backend suite → benchmark run + score → the web suite → a real `next build`,
+   serially, behind the mutex above, and prints `Test Files N passed` + `exit=` lines plus a final
+   `=== DONE` marker: `nohup scripts/verify-block.sh <dir> <log> >/dev/null 2>&1 & disown`. Measured
+   2026-09-03 on an idle machine: ~8 minutes per block (three PRs: 8:07, 7:37, 7:31) — the 1,423 s of
+   session 70 was the same suite under parallel-agent load, not its natural length.
+8. **Local `node_modules` lag the lockfiles between sessions — `npm ci` (root AND `web/`) before any
+   verification.** On 2026-09-03 `web/` had `next` 16.2.11 installed against a 16.3.2 pin and the root
+   had `@anthropic-ai/sdk` 0.117.1 against 0.120.0 wanted; a local block would have tested code CI never
+   runs. The tell: `npm outdated` showing Current < Wanted for an exactly-pinned package.
+9. **`/code-review` can return nothing at all inside a forked builder agent (2026-09-03, PR #122).** A
+   builder saying "the skill produced no output, I self-reviewed" is NOT the LOW pass CLAUDE.md requires —
+   the orchestrating session runs the pass itself over the PR diff (five cheap-tier finders + verification)
+   and posts the result before the PR is called reviewed.
+
 ## Reviewing and merging a large PR batch (added session 67, 2026-08-28 — reviewed + merged all 19 open PRs left by session 66)
 
 1. **Review in parallel, merge in serial.** The review pass (does each PR actually do what it claims,

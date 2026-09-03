@@ -1,5 +1,71 @@
 # STATUS archive — the session log
 
+**Session 72 (2026-09-03, AUTONOMOUS — the owner pasted the session-72 kickoff and added "I want you to work hours and
+hours autonomously, use multiple subagents with their needed level"; `list_sessions` showed no second instance) — FOUR PRs
+FOR OWNER REVIEW (#120 TS-7 lift, #121 eviction fix, #122 every chip a click take, #123 the "Bewijs dit cijfer" proof
+panel), A STALE-DOC SWEEP, A DESIGN BRIEF, THE MONTHLY READ-ONLY MAINTENANCE CHECKS.** Git workflow: #118 rule (b) —
+core-product code on branches + PRs, docs direct to `main`; nothing merged by the session.
+
+1. **Start state, verified:** `main` at `da6dfab`, no open PRs, the last three main runs `success`, the production alias
+   on the `da6dfab` deployment (`checkdecijfers-aoz7rwvhj…`, deploy log tip check matched), `/`, `/llms.txt`,
+   `/api/health` 200. `npm ci` root + web first — local `node_modules` had drifted (`next` 16.2.11 installed vs 16.3.2
+   pinned).
+2. **Read-only maintenance (the monthly agenda's session half):** `gdpr:purge` dry-run 0 rows in every leg (account
+   cutoff 2024-09-03, trial/error_log cutoff 2026-06-05); `scripts/rls-audit.ts` CLEAN, 18/18 tables (`error_log` included
+   since session 69); `npm audit` 0 vulnerabilities root + web; no open Dependabot alerts; `npm outdated` only minor lag.
+   #151's "one-off backfill sweep" measured against production: `pending_table_requests` 4 rows, 0 redacted — nothing to
+   backfill, row closed with the measurement.
+3. **The queue, compiled the session-65 way:** two cheap-tier mining agents over open-questions (148 live rows read) and
+   the build plan + briefs + ADRs; every candidate re-read at the source. Result: the session-66 queue really was drained —
+   what remained hermetic was #195/#196, the WP29 v2 seam (#73, "revisit when WP26 ships" — WP26 is live), the approved
+   #70/#79/#89 trio behind a design pass, and the TS-7 hold; everything else is owner-gated in its own row.
+4. **Stale-doc sweep → `main` (`5aa48c3`, run 33736138568 green):** ADR 029 still said the #138 regional chip was
+   deferred (shipped session 55, `f2d015a`); the build plan still gated #111's design step on an owner answer (closed
+   session 33); rows #34/#65 still described migrations 022/024 as a pending supervised apply (applied session 69); #66/#72
+   still ended on "Remaining: the owner-supervised flag flip + live smoke" (done, sessions 69–71); #42 resolved by #125(a)
+   (ADR 031); #116's per-answer anchor built in PR #108. Then the design brief for the source drill-through cluster →
+   `main` (`093380b`, run 33736281376 green; the older run skipped its deploy on the tip check — the session-71 guard's
+   second real test; alias on `checkdecijfers-h8c4bsffl…`).
+5. **PR #121 — #195/#196 (Sonnet builder, branch `fix/195-196-eviction-probe-touch`, head `93db80a`):** `QueryOptions.probe`
+   set by `echoServability`; the `last_queried_at` bump moved AFTER the observations fetch (a read never waits behind an
+   eviction's row lock) and skipped on probes; a registration re-check on the missing-cell path turns an in-flight eviction
+   into an honest `table_not_registered` refusal. Tripwires re-measured: chip build 27→24 (regional), 12→10 / 18→15
+   (national-only); new pins: 0 bumps per chip build, exactly 1 per served turn; a deterministic race test. RUNBOOK
+   migration-025 section no longer says the two rows are open. Full block on `789b7e3`: backend 115 files / 1745 tests,
+   benchmark 14/14 + 6/6 + 0 fabricated, web 47/540, real `next build`; LOW review 0 findings; review comment posted.
+6. **PR #122 — #73 v2 (Fable builder, `feat/73-v2-click-take-chips`):** every WP29 generator returns `{kind,label,intent,
+   axis}`; `buildAnswerChips` mints a ClickOption for each survivor the click-time schema accepts (a servable-but-not-takeable
+   question-shaped chip stays a plain label); the carrier holds all takeable chips (`CHIP_CARRIER_QUESTION_NL`); a present-only
+   `ClickOption.questionShaped: true` lets thread resume keep question-shaped chips as fill-the-input; B-region-defaulted
+   answers mint explicit `NL01` intents; flag-off byte-identical. Full block on `ba232a5`: backend 115 / 1758, benchmark
+   PASS, web 47/540, build. The orchestrator's LOW fan-out (five cheap-tier finders — the skill returned nothing inside the
+   builder) found: CONFIRMED `withValidatedClickOptions` filtered `clickOptions` but not `options`, so one dropped option
+   un-shaped the carrier and routed the next question into the paid merge; a FALSE claim ("same topic cannot fire on the
+   seed" — eight seed tables carry 2–5 measures) repeated in the test header, ADR 029 and #73; the national trend and
+   zero-takeable cases unpinned; a PLAUSIBLE client trap (an older message's fixed-text chip taking the CURRENT carrier's
+   intent). Fix round `db3aabb` (all six items): carrier `options` re-aligned at the trust boundary + a stripped-carrier route (`isStrippedCarrier`), the false claim corrected in three places and a real `topic-1` take pinned (consumer confidence → economic climate), the national trend take and the flag-on-zero-takeable case pinned at both levels, the id triplets pinned, per-message carriers in `chat.tsx` (`carriersRef`, keyed by audit id). Builder counts: `wp29-click-take` 25/25, `chat.test.tsx` 71/71. Second full block on `db3aabb`: backend 115 files / 1765 tests, benchmark PASS, web 47/541, real `next build`; review comment posted.
+7. **PR #123 — #70/#79/#89 (Sonnet builder over the Fable design brief, `feat/70-79-89-drill-through`):** "Bewijs dit
+   cijfer" — one button, one inline panel, three depths (reading + alternates / the cells / the step list), client-side over
+   the stored envelope (`web/lib/answer-proof.ts`, `answer-proof.tsx`, `ChatMessage.proof`, replay parity), no backend, no
+   flag; R1 token-scan test. Full block on `9bf9c14`: backend 114 / 1739 (unchanged), benchmark PASS, web 49 files / 572
+   tests, build. Review round 1 → `3d185a1`: a try/catch belt makes "never throws" structural (one malformed stored derivation must not take down a resumed thread's render) and `order-last` keeps the citation/CSV buttons on the first line with the open panel beneath — both pinned. Second full block on `3d185a1`: backend 114 / 1739, benchmark PASS, web 49 files / 574 tests, real `next build`; review comment posted.
+   New row #199 (dashboard history has no proof panel — needs a read-model WP).
+8. **PR #120 — the TypeScript-7 hold lifted (Sonnet, `chore/ts7-lift`, `5c4c88f`):** Next 16.3.x type-checks through the
+   project-local `tsc` CLI (`useTypeScriptCli: true`, confirmed in the installed 16.3.2); TS 7.0.2 in both package.json
+   files, both Dependabot ignore rules removed, RUNBOOK note; typecheck ×2 + a real `next build` clean; no compiler-API
+   consumer anywhere (the envelope-key-manifest test parses with its own line parser). Full block by the session with TS 7.0.2 in both trees: typecheck ×2 clean, backend 114 / 1739, benchmark PASS, web 47/540, real `next build` with Next's TypeScript step reported ("Finished TypeScript"); review comment posted. Peer
+   warning: `@typescript-eslint/tsconfig-utils` still declares `typescript <6.1.0` (lint tooling; `npm run lint` in `web/`
+   is already the open task chip).
+9. **Operational findings → RUNBOOK "Multi-agent autonomous sessions" 6–9 + `scripts/verify-block.sh`:** the `pgrep -f
+   vitest` mutex self-matches a backgrounded shell (bracket trick `[n]ode.*vitest`); the Bash tool's 10-minute cap → detached
+   verification script + log monitor; the full backend suite is ~7 min solo on an idle machine (s70's 1,423 s was under
+   load); `npm ci` before any local verification; `/code-review` silent inside a forked agent → the orchestrator runs it.
+10. **Not done, deliberately:** `GDPR_PURGE_APPLY`, #162's A/B, #198, #132 route B, prompt bytes, fixture re-records, live
+    DDL, any merge; #197 ideas 4–8; the three #197 follow-ups (the tautology, history titles, carrier on resume).
+    CI: the two docs pushes green (runs 33736138568 and 33736281376); every PR's gate green on its final head (#122's on `db3aabb` confirmed at close).
+    The close-out commit's own run id and the alias it deploys cannot be known while it is being written — session 73's
+    kickoff verifies them (`gh run list --branch main -L 3`, `vercel inspect`).
+
 **Session 71 (2026-09-03, owner present; the session-71 kickoff pasted once — `list_sessions` showed no second
 instance) — WP26 SMOKE TEST PASSED, #197 STEP 3 MERGED + LIVE, A CI DEPLOY RACE FOUND, FIXED AND GUARDED.**
 

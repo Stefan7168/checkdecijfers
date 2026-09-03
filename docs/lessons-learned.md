@@ -6,6 +6,54 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 72 — 2026-09-03, autonomous (owner: "work hours autonomously, use subagents") — four PRs, a stale-doc sweep, a design brief
+
+Full narrative: [status-archive.md](status-archive.md) session-72 entry.
+
+- **A vitest mutex spelled `pgrep -f vitest` deadlocks the shell that contains it.** Two builder agents were
+  briefed with `while pgrep -f vitest >/dev/null; do sleep 15; done` and each lost a 10-minute timeout: a
+  backgrounded wrapper's own command line contains the word, so `pgrep` finds itself and never proceeds — and
+  it fails silently, looking exactly like a slow test run. The bracket trick (`pgrep -f "[n]ode.*vitest"`)
+  matches a real runner and never the pattern's own text. Rule: a process-matching guard must be tested once
+  from inside the shape it will run in, not written from memory.
+- **The Bash tool's 10-minute cap applies to background commands too — a verification block must be a
+  detached script.** The first full block was launched as an inline background command and had to be stopped
+  before the cap hit it mid-suite; `nohup scripts/verify-block.sh <dir> <log> & disown` plus a Monitor on
+  the log's `=== DONE` marker ran three blocks unattended. Bonus measurement: the full backend suite takes
+  ~7 minutes on an idle machine — session 70's 1,423 s was the same suite under four parallel agents. The
+  "~30 min, memory-heavy" folklore came from measuring under load.
+- **Local `node_modules` had silently drifted from the lockfiles: `web/` ran `next` 16.2.11 against a
+  16.3.2 pin.** Found only because `npm outdated` was run as a maintenance step. Any local verification before
+  `npm ci` would have tested a Next the deploy never uses. `npm ci` root + web is now the first line of the
+  block, not an optional step.
+- **"Index is not the page", three more times in one session.** The two cheap-tier mining passes over
+  open-questions and the build plan were genuinely useful (they found the four rows still describing the WP26
+  flags and migrations 022/024 as pending), but their bucket-A list held rows already closed: #116's per-answer
+  anchor (built in PR #108, row never updated), #42 (resolved by #125(a)'s unit-expansion derivation, ADR 031),
+  #151's "backfill sweep" (measured against production: 4 rows, 0 redacted, nothing to backfill). Each was
+  settled by reading the row, the code and the database — never by the summary.
+- **A builder's own "cannot fire on the seed" claim was false and was written into three docs before anyone
+  checked the registry.** The #73 v2 builder stated every seeded table carries one canonical measure, so the
+  same-topic take "cannot be exercised" — `src/registry/defaults.ts` has five seed tables with 2–4 measures
+  (85429NED ×4, 83693NED ×3, 85770NED ×3, 85880NED ×2, 85828NED ×2 — counted from `CANONICAL_MEASURES` itself;
+  a first `grep tableId:` had double-counted the alternates' table ids, which the builder caught in turn). A cheap-tier conventions finder caught it in the review fan-out; the only
+  generator whose take switches `target.key` was about to ship untested on a wrong premise. Rule: a claim
+  about the data is checked with one `grep` before it becomes a test header or an ADR sentence.
+- **`/code-review` can return nothing inside a forked builder agent.** The #73 v2 builder reported the skill
+  produced no output and self-reviewed instead; the orchestrator's own five-finder LOW pass over the same
+  diff found one confirmed defect (a validator that filtered `clickOptions` but not the label-bound
+  `options`, so one dropped option un-shaped the whole carrier and routed the next question into the paid
+  merge). A self-review is not the pass; when the skill is silent, the session runs it.
+- **The session-66 queue really was drained; the honest answer to "hours of autonomous work" is a small
+  list.** Two mining passes and a re-read of the s66 close-out left exactly the hermetic items this session
+  shipped (#195/#196, #73 v2, the approved #70/#79/#89 trio behind a design brief with defaults, the TS-7
+  hold) plus docs. Everything else on the backlog is owner-gated for a reason recorded in its row — the mining
+  reports confirmed the gate rather than finding a way around it, which is the right outcome.
+- **Two docs pushes 96 s apart put the deploy-race guard through its second real test.** Run 33736138568
+  (`5aa48c3`) skipped its deploy because `093380b` had landed; the alias moved to the newer deployment
+  (`h8c4bsffl`). The guard from session 71 holds; the habit "wait for a run's deploy before pushing again"
+  still saves an Action-minutes-worth of wasted build.
+
 ## Session 71 — 2026-09-03, owner present — WP26 smoke test, #118 merged, a deploy race
 
 Full narrative: [status-archive.md](status-archive.md) session-71 entry.
