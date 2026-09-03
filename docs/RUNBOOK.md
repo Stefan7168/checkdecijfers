@@ -892,7 +892,28 @@ per-machine cache:
 8. **`gh pr view <n> --json mergeable` stayed `UNKNOWN` for every PR checked this session, even well after
    the PR was created — this is now the expected steady state on this repo, not a transient race
    (confirms and hardens session 65's same finding).** Never gate a merge attempt on this field resolving;
-   just call `gh pr merge` and read ITS result.
+   just call `gh pr merge` and read ITS result. **Re-measured 2026-09-03 (session 73): the field read
+   `MERGEABLE`/`CLEAN` for all four open PRs at session start, flipped to `UNKNOWN` for the two untouched PRs the
+   minute `main` moved, and was `CLEAN` again within ~5 minutes — a recompute window, not a permanent state.
+   The rule stands either way: don't gate on it.**
+9. **Per-PR `MERGEABLE`/`CLEAN` is measured against `main` alone — a batch of PRs from ONE session can still conflict
+   with EACH OTHER, and the conflict source is the docs, not the code (measured 2026-09-03, session 73, on session 72's
+   four PRs).** Two PRs of the same session both add a header sentence and a new top as-built note to the same ADR
+   ("newest on top") and both extend adjacent open-questions rows (195/196 vs 197): the serial merge #121 → #120 →
+   #123 → #122 merged every code file cleanly (the shared `chat.tsx` included) and stopped on those two docs files at
+   the LAST PR. **Recipe, before merge day:** (1) simulate the serial merge in a scratch worktree — `git fetch origin
+   refs/pull/<n>/head:refs/remotes/pr/<n>` per PR, `git worktree add <dir> -b sim origin/main`, then `git merge pr/<n>`
+   in the intended order; (2) if two open PRs conflict, lift the EARLIER PR's conflicting docs onto `main` as a
+   docs-only commit (take the files from the simulation's post-merge commit — the 3-way-merged versions, hunks identical
+   to the PR's own; verify with a diff of the two diffs), then merge `main` into the LATER PR's branch and resolve once,
+   and merge `main` into the earlier branch too (clean, identical content) — a cherry-pick onto the other branch does
+   NOT work: only a commit on `main` advances the merge-base, and it would drag the earlier PR's code into the later
+   PR's diff; (3) prove it — re-simulate from the new `main` in two or three orders and check they yield the same tree
+   (`git rev-parse HEAD^{tree}`), identical to the tree the full verification block ran on; (4) note the new heads on
+   the PRs (docs-only; code byte-identical by `git diff <old> <new> -- src web tests`) and let the gates re-run. Code
+   stays only in its own PR; the rollback is one `git revert` of the lifted docs commit. Keep the close-out's own docs
+   push off every file the open PRs edit (`gh pr diff <n> --name-only`) or it creates the next conflict.
+
 
 ## Moving to a new machine (fresh clone bootstrap)
 

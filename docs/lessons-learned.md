@@ -6,6 +6,37 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 73 — 2026-09-03, autonomous (kickoff pasted, no owner reply) — the four-PR batch made merge-clean
+
+Full narrative: [status-archive.md](status-archive.md) session-73 entry.
+
+- **Per-PR `MERGEABLE`/`CLEAN` says nothing about a batch — four PRs from one session conflicted with EACH OTHER,
+  and on docs, not code.** GitHub measures each PR against `main` alone. Session 72's #121 and #122 both added a header
+  sentence and a new top as-built note to ADR 029 ("newest on top" — two notes claiming the same slot) and both extended
+  adjacent open-questions rows (195/196 vs 197). The serial-merge simulation (the RUNBOOK's session-67 item 5,
+  generalized to the whole batch) merged every code file — the shared `chat.tsx` included — and stopped on those two
+  docs files at the LAST PR, exactly where a non-developer owner would have been stuck. Rule: whenever one session
+  leaves several PRs, simulate the whole batch in the intended order before merge day, and expect the docs to collide.
+- **To pre-resolve a conflict between two OPEN PRs, the earlier PR's conflicting docs must go through `main` — a
+  cherry-pick onto the other branch does not advance the merge-base.** Lifting #121's docs onto `main` (`8a3fb06`) let
+  #122 merge `main` and resolve once, and let #121 merge `main` with identical content; three different merge orders
+  then produced one identical tree. The cherry-pick route would have left the conflict to reappear at merge time and
+  put #121's code into #122's diff.
+- **A resolver's size guard must be calibrated against a SIDE, not the conflicted file.** The first version asserted
+  "resolved text not much shorter than the input", but the conflicted input holds both sides, so a correct resolution
+  is legitimately shorter — the guard refused (good) for the wrong reason. Fixed to `len(new) ≥ pre + max(side) + post`.
+  Same family as session 71's truncation guard: a guard is only as good as its baseline.
+- **"Too fast to be real" is a prompt to read the output, not a verdict.** `next build` finished in 13 s on a fresh
+  worktree; the log showed Turbopack "Compiled successfully in 5.7s", "Finished TypeScript in 937ms", 12/12 pages and a
+  `BUILD_ID` — a real build. The exit code was never the evidence; the summary lines were.
+- **RUNBOOK batch item 8 ("`mergeable` stays `UNKNOWN`, the steady state") did not hold today:** the field read `CLEAN`
+  for all four PRs at session start, flipped to `UNKNOWN` for the two untouched PRs the minute `main` moved, and was
+  `CLEAN` again within ~5 minutes. It is a recompute window. The rule "don't gate a merge on it" stands; the
+  "permanent" reading was a stale doc and is amended.
+- **A close-out's docs push must stay off the files the open PRs edit.** open-questions, 04-architecture, 08-build-plan,
+  ADR 024/029 and three RUNBOOK spots are all touched by the open PRs; a close-out that "just updates the rows" would
+  have created the next conflict. Checked with `gh pr diff <n> --name-only` plus the hunk line numbers before writing.
+
 ## Session 72 — 2026-09-03, autonomous (owner: "work hours autonomously, use subagents") — four PRs, a stale-doc sweep, a design brief
 
 Full narrative: [status-archive.md](status-archive.md) session-72 entry.

@@ -1,5 +1,63 @@
 # STATUS archive — the session log
 
+**Session 73 (2026-09-03, AUTONOMOUS — the owner pasted the session-73 kickoff; no reply in chat, so the merges — the
+kickoff's "owner present" step — were NOT taken; `list_sessions` showed no second instance) — THE FOUR-PR BATCH MADE
+MERGE-CLEAN IN ANY ORDER: ONE DOCS COMMIT ON `main`, TWO DOCS-ONLY BRANCH UPDATES, THE COMBINED TREE VERIFIED.** Git
+workflow: #118 rule (b) — nothing merged, nothing flipped, no spend, no prompt bytes, no DDL.
+
+1. **Start state, verified:** `main` at `0dfc248`, clean, no worktrees; the last three main runs `success`
+   (33745028025 for `0dfc248`); the production alias on `checkdecijfers-kyzaefwvp…` — that run's deploy-job log printed
+   `this run: 0dfc248… main tip: 0dfc248…` and aliased that URL; `/`, `/llms.txt`, `/api/health` 200; four open PRs,
+   all `MERGEABLE`/`CLEAN`, gates green, one review comment each; heads `93db80a` / `5c4c88f` / `3d185a1` / `db3aabb`,
+   behind `main` by 3 / 1 / 1 / 1 docs commits. `npm ci` root + web in the scratch worktree (TS 7.0.2 in both trees from
+   #120's lockfiles, `next` 16.3.2).
+2. **The serial-merge simulation (`.claude/worktrees/s73-merge-sim` from `0dfc248`, plain `git merge` per PR in the
+   suggested order):** #121 (`4c2eee3`), #120 (`7641593`), #123 (`9906d8a`) clean — #123's `chat.tsx` included — then
+   #122 CONFLICTED on two docs files only: `docs/decisions/029-follow-up-suggestion-chips.md` (both PRs add a header
+   sentence and a new top as-built note) and `docs/open-questions.md` (one block, lines 157–165: #121 extends rows 195
+   and 196, #122 extends 197 — three adjacent lines). Every code file merged cleanly. GitHub's per-PR `CLEAN` is measured
+   against `main` alone, so the owner would have hit "conflicts must be resolved" on the last PR of the batch.
+3. **Resolution (in the simulation first):** ADR 029 keeps both header sentences and both notes — #73 v2 first,
+   #195/#196 second, #197 step 3 third, the pointer words renumbered ("first/second/third as-built note below");
+   open-questions keeps rows 195/196 from #121 and row 197 from #122. A Python resolver with hard asserts (exactly one
+   conflict block, the expected row ids, no markers left, resolved text at least as long as either side); its first
+   version's size guard compared against the conflicted file, which holds BOTH sides, and refused — correctly, for the
+   wrong reason — fixed to a per-side baseline. `npm run test:docs` 11/11. Combined commit `981c7f0`.
+4. **The full block on the combined tree `981c7f0` (`scripts/verify-block.sh`, detached, 11:10Z–11:18Z, 8.5 min solo):**
+   typecheck root + web exit 0; backend 116 files / 1771 tests; benchmark answerable 14/14, refusal 6/6, 0 fabricated,
+   GATE PASS; web 49 files / 575 tests (so the #122 + #123 `chat.tsx` overlap is compatible by test, not only by a clean
+   merge); real `next build` — 13 s on the fresh worktree, checked rather than trusted: Turbopack "Compiled successfully
+   in 5.7s", "Finished TypeScript in 937ms" (the TS 7 CLI step), 12/12 static pages, `BUILD_ID` written.
+5. **Made merge-clean for real, docs only:** (a) PR #121's four docs files (04-architecture, RUNBOOK, ADR 029,
+   open-questions) lifted onto `main` as `8a3fb06` — taken from the simulation's post-#121 commit, i.e. the 3-way-merged
+   versions; a diff of the diffs against the PR's own docs change was empty; `test:docs` 11/11; the commit message
+   carries the why and the rollback (`git revert 8a3fb06` if #121 is vetoed). (b) `main` merged into
+   `feat/73-v2-click-take-chips` in its own worktree — the same two files conflicted, resolved with ADR 029 from
+   `981c7f0` (unchanged by the #120/#123 merges) and a side-agnostic row resolver (195/196 from `main`, 197 from
+   `db3aabb`, each line asserted equal to its source) → `0ffe4c0`; `git diff db3aabb 0ffe4c0 -- src web tests` empty;
+   the PR is now 22 files +1504/−184 (was +1502/−182: the two renumbered pointer lines). (c) `main` merged into
+   `fix/195-196-eviction-probe-touch` → `0a7bad8`, clean; docs identical to `main`, so the PR diff is code + tests only
+   (7 files +362/−34); `git diff 93db80a 0a7bad8 -- src tests` empty. Why lift-to-`main` rather than a cherry-pick
+   between the branches: only a commit on `main` advances the later branch's merge-base; a cherry-pick leaves the
+   conflict to reappear at merge time and would have put #121's code into #122's diff.
+6. **Proof, re-simulated from the new `main` (`8a3fb06`) with the updated heads:** order A #121 → #120 → #123 → #122,
+   order B #122 → #121 → #120 → #123, order C #123 → #122 → #120 → #121 — all clean, all the same tree `eaf568a95804`,
+   `git diff 981c7f0` empty: the block in item 4 IS the measurement for the tree any merge order produces.
+7. **GitHub state after the pushes:** #121 and #122 `MERGEABLE`/`UNSTABLE` (gates running); #120 and #123 went
+   `UNKNOWN` the minute `main` moved and were `MERGEABLE`/`CLEAN` again within ~5 minutes (RUNBOOK batch item 8
+   amended: a recompute window, not a permanent state). Session-73 notes posted on #121 and #122 (the moved heads,
+   what changed, the combined block, the rollback). CI: main run 33749095613 (`8a3fb06`) success, its deploy
+   `checkdecijfers-87b7zd0jh…` on the production alias (tip check matched), `/`, `/llms.txt`, `/api/health` 200; the
+   gates on the moved heads all success — #121 runs 33749196246 + 33749200112, #122 runs 33749190942 + 33749196611;
+   all four PRs `MERGEABLE`/`CLEAN` at close.
+8. **Docs → `main` (this close-out):** STATUS top block (session 73), this entry, lessons-learned (six lessons), RUNBOOK
+   "Reviewing and merging a large PR batch" item 8 amended + item 9 (the batch simulation and the lift-to-`main`
+   recipe), the session-74 kickoff brief. Deliberately NOT touched on `main`: open-questions, 04-architecture,
+   08-build-plan, ADR 024/029 and the RUNBOOK sections the open PRs edit — each would have created a new conflict.
+9. **Not done, deliberately:** any merge (the owner's step; the kickoff's priority 1 reads "owner present"),
+   `GDPR_PURGE_APPLY`, #162's A/B, #198, #132 route B, prompt bytes, fixture re-records, live DDL. The three scratch
+   worktrees and their local branches removed at the end.
+
 **Session 72 (2026-09-03, AUTONOMOUS — the owner pasted the session-72 kickoff and added "I want you to work hours and
 hours autonomously, use multiple subagents with their needed level"; `list_sessions` showed no second instance) — FOUR PRs
 FOR OWNER REVIEW (#120 TS-7 lift, #121 eviction fix, #122 every chip a click take, #123 the "Bewijs dit cijfer" proof

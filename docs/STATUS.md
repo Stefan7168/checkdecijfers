@@ -9,6 +9,34 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
+**▶ SESSION 73 (2026-09-03, AUTONOMOUS — the session-73 kickoff pasted, no owner reply in chat, `list_sessions` showed
+no second instance) — THE FOUR PRs ARE NOW MERGE-CLEAN IN ANY ORDER; STILL NOTHING MERGED, NOTHING FLIPPED.** A
+serial-merge simulation of session 72's four PRs (scratch worktree, #121 → #120 → #123 → #122) merged all CODE cleanly
+— the shared `chat.tsx` of #122/#123 included — and conflicted only on DOCS between #121 and #122 (ADR 029's header +
+top as-built note, open-questions rows 195–197). Fixed ahead of merge day: PR #121's docs lifted onto `main`
+(`8a3fb06`, hunks identical to the PR's), `main` merged into #122 with the overlap resolved once (head `db3aabb` →
+`0ffe4c0`) and into #121 (head `93db80a` → `0a7bad8`); code on both branches byte-identical to the heads session 72
+reviewed. Re-simulated in three merge orders: all clean, one and the same tree, identical to the tree the FULL block
+passed on (typecheck ×2, backend 116 files / 1771 tests, benchmark 14/14 + 6/6 + 0 fabricated, web 49 files / 575
+tests, real `next build` under TS 7.0.2). CI: main run 33749095613 (`8a3fb06`) success, its deploy
+`checkdecijfers-87b7zd0jh…` on the production alias (tip check matched), `/`, `/llms.txt`, `/api/health` 200; the
+gates on the moved heads all success — #121 runs 33749196246 + 33749200112, #122 runs 33749190942 + 33749196611; all
+four PRs `MERGEABLE`/`CLEAN` at close. Session-73 notes on #121 and #122 record the moved heads. Rollback if #121 is
+vetoed: `git revert 8a3fb06`. Details: [status-archive.md](status-archive.md) session-73 entry.
+
+| PR | Head now | Merge | Left for you |
+|---|---|---|---|
+| **#121** | `0a7bad8` (code + tests only — its docs are already on `main`) | clean | merge |
+| **#120** | `5c4c88f` (unchanged) | clean | merge; revert this one commit if a deploy ever goes red on the TypeScript step |
+| **#123** | `3d185a1` (unchanged) | clean | merge — or veto a default (label, inline vs dock, ids toggle, collapsed) |
+| **#122** | `0ffe4c0` (docs resolved against `main`, code unchanged) | clean | merge — veto point: template phrasing on chip takes |
+
+**▶ NEXT, in order — nothing urgent:** (a) merge the four PRs — any order is conflict-free now; still one at a time,
+each deploy allowed to finish, a canary on `/`, `/llms.txt`, `/api/health` after each (the session-67 discipline); then
+a docs push that turns the "PR pending owner review" wordings (ADR 029, rows #73/#195/#196, the build plan) into
+MERGED + LIVE; (b) `GDPR_PURGE_APPLY=1` + one watched run; (c) #162's A/B (real spend); (d)–(e) as in the session-72
+block below, which otherwise still holds.
+
 **▶ SESSION 72 (2026-09-03, AUTONOMOUS — you said "work hours and hours autonomously, use multiple subagents") —
 FOUR PRs WAIT FOR YOUR REVIEW, NOTHING MERGED, NOTHING FLIPPED.** The session-66 pattern: code on branches + PRs
 (#118 rule b), docs direct to `main`. Every PR carries a review comment from the session with the measured full
@@ -19,10 +47,10 @@ handler, #123 adds a field on `ChatMessage`; no shared lines, but merge serially
 
 | PR | Branch (head) | What | Left for you |
 |---|---|---|---|
-| **#121** | `fix/195-196-eviction-probe-touch` (`93db80a`) | #195/#196: servability probes no longer bump `last_queried_at`; the bump runs after the fetch (a read never waits behind an eviction lock); an eviction landing mid-query yields an honest `table_not_registered`. Tripwires 27→24 / 12→10 / 18→15. | merge |
+| **#121** | `fix/195-196-eviction-probe-touch` (`93db80a` → `0a7bad8`, session 73: docs-only merge from `main`) | #195/#196: servability probes no longer bump `last_queried_at`; the bump runs after the fetch (a read never waits behind an eviction lock); an eviction landing mid-query yields an honest `table_not_registered`. Tripwires 27→24 / 12→10 / 18→15. | merge |
 | **#120** | `chore/ts7-lift` (`5c4c88f`) | The TypeScript-7 hold lifted: Next 16.3 type-checks through the `tsc` CLI; TS 7.0.2 root + web, Dependabot ignore stanza removed; proven with a real `next build` twice (agent + session). | merge; if the deploy ever goes red on the TypeScript step, revert this one commit |
 | **#123** | `feat/70-79-89-drill-through` (`3d185a1`) | "Bewijs dit cijfer": one panel, three depths (reading + alternates / the cells / the step list), client-side over the stored envelope, no backend, no flag. Design brief with defaults on `main` (`093380b`). | merge — or veto a default (label, inline vs dock, ids behind a toggle, collapsed by default) |
-| **#122** | `feat/73-v2-click-take-chips` (`db3aabb`) | #73 v2: every follow-up chip is a zero-LLM click take on the WP26 carrier (adjacent period, trend, region variant, same topic — not only the comparisons). Review round 1 fixed a carrier-validation defect and a per-message binding trap. | merge — veto point: template phrasing on chip takes instead of LLM phrasing; 20 credits per take unchanged |
+| **#122** | `feat/73-v2-click-take-chips` (`db3aabb` → `0ffe4c0`, session 73: docs-only merge from `main`) | #73 v2: every follow-up chip is a zero-LLM click take on the WP26 carrier (adjacent period, trend, region variant, same topic — not only the comparisons). Review round 1 fixed a carrier-validation defect and a per-message binding trap. | merge — veto point: template phrasing on chip takes instead of LLM phrasing; 20 credits per take unchanged |
 
 **Also on `main` this session (docs only):** the stale-doc sweep `5aa48c3` (ADR 029's #138 line, the build plan's #111
 framing, rows #34/#65/#66/#72/#42/#116 to their real state, #151 measured: 0 rows to backfill) and the drill-through
@@ -35,8 +63,8 @@ design brief `093380b`. **Read-only maintenance, all clean:** `gdpr:purge` dry-r
 spend). #198 stays PARKED at your word. Both WP26 flags are ON and smoke-tested (sessions 69–71).
 
 **▶ NEXT, in order — nothing urgent:** (a) review + merge the four PRs above (serially, each deploy allowed to finish;
-a canary on `/`, `/llms.txt`, `/api/health` after each — the session-67 discipline); after #121 merges the RUNBOOK's
-migration-025 section is already updated on that branch; (b) **`GDPR_PURGE_APPLY=1`** plus one watched run — dry-run
+a canary on `/`, `/llms.txt`, `/api/health` after each — the session-67 discipline); the RUNBOOK's migration-025
+section already records #195/#196 closed (lifted to `main` in session 73, `8a3fb06`); (b) **`GDPR_PURGE_APPLY=1`** plus one watched run — dry-run
 baseline re-measured today (0 rows everywhere); (c) **#162's A/B** (~€1-2 live spend, needs your read-back);
 (d) **#132 route B** GO or defer (last asked 2026-09-02); (e) the owner menu: WP30c choice (Rijksfinanciën `80504NED`,
 `Gediscontinueerd`), #199 (a proof panel on the dashboard history — needs a small read-model WP), #197 ideas 4–8
