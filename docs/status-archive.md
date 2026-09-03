@@ -99,6 +99,14 @@ instance) — WP26 SMOKE TEST PASSED, #197 STEP 3 MERGED + LIVE, A CI DEPLOY RAC
     confidence 0.95) — the region came from the conversation context, by design (followup prompt), and it answered
     Amsterdam 2024 = 931.298 via the LLM path (row 268, 20 credits). B-region needs a FRESH thread; asked of the
     owner. `npm run audit:verify -- 265 268` → 4/4 reconstruct clean.
+13. **Canary 2 in a fresh thread PASSED (row 269, 06:47Z):** "Hoeveel inwoners waren er in 2024?" → `answer`,
+    parse confidence 0.95 (reading "bevolking van Nederland op 1 januari 2024"), `result.regionDefaulted = true`,
+    `result_ids` = NL01 2024JJ00 → "17.942.942", the disclosure line rendered directly under the body ("Dit is
+    het landelijke cijfer voor heel Nederland. Noem een gemeente of provincie in je vraag als je een specifieke
+    regio wilt."), LLM compose, 20 credits — AND the #197 G4 comparison chip ("Vergelijk met Amsterdam,
+    Rotterdam, Den Haag en Utrecht") minted on the defaulted national answer, the exact case session 70 pinned
+    with `answerFirstEnabled: true`. `npm run audit:verify -- 269 269` → audit rows 269-269: 1/1 reconstruct clean. So mechanism B is proven live
+    on the region axis; on the period axis it is gated by the parser's 0.85 (#198).
 
 **Session 70 (2026-09-02, later the same day as session 69; the owner pasted the session-70 kickoff — into
 TWO sessions in the same working tree, the 25-07 collision shape: the second session (local_09530460…)

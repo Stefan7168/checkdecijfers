@@ -595,7 +595,8 @@ Steps (owner present):
    [#198](open-questions.md); clicking the chip answers deterministically (row 267: the 2019–2026 trend, line
    chart, 0 tokens). ⚠ Ask the region-less canary in a NEW chat: in the same thread it is parsed as a
    continuation and inherits the previous region from context (row 268 answered Amsterdam, not Nederland) — that
-   is the follow-up design working, not B-region being tested.**
+   is the follow-up design working, not B-region being tested. In a NEW chat the same question PASSED (row 269:
+   `regionDefaulted`, Nederland 17.942.942, disclosure line under the body, G4 comparison chip, R8 clean).**
    Confirm the disclosure sentence renders DIRECTLY UNDER the answer body, and that the answer's
    numbers still match the cells (`npm run audit:verify -- <row> <row>` → exit 0).
 4. For the click flag: ask something that clarifies — use the flagship case

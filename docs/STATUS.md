@@ -27,9 +27,10 @@ Hygiene: the s70-reviewer worktree removed, 28 stale local branches + 9 merged r
 open-questions.md triaged (every row read) — 25 terminally-closed rows moved to its archive twin, 147 live.
 **`CLARIFY_CLICK_ENABLED` ON and proven; `ANSWER_FIRST_ENABLED` ON since 2026-09-03 on your explicit go in
 chat (env set 05:40Z, deployed by run 33719897606 together with the #175 fix that gives the anonymous trial
-the same flag). First canary measured: B stops the period question, but the live parse scores a period-less
-reading 0.85 < 0.9, so R7 still confirms with one chip instead of answering — [#198](open-questions.md),
-owner call (prompt rule + re-record vs a code-side threshold). `GDPR_PURGE_APPLY` still untouched — yours.** Details, every SHA and run id:
+the same flag). Canaries measured: the REGION default is proven live (row 269: `regionDefaulted`, national figure with the
+disclosure line, G4 chip); the PERIOD default fires but the live parse scores a period-less reading 0.85 < 0.9,
+so R7 still confirms with one chip (row 266 → click → the trend, row 267) instead of answering directly —
+[#198](open-questions.md), owner call (prompt rule + re-record vs a code-side threshold). `GDPR_PURGE_APPLY` still untouched — yours.** Details, every SHA and run id:
 [status-archive.md](status-archive.md). **Step 6 (the comparison chip) also PASSED later the same day: rows 263/264 — the take
 has the click model, 0 tokens, GM0363 + NL01, a 2-series bar chart, 20 credits, R8 clean.** **Your next
 decision:** whether `ANSWER_FIRST_ENABLED` may go on (one flag at a time; last deploy settled; rollback order in
