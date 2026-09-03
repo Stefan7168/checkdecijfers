@@ -107,6 +107,32 @@ instance) — WP26 SMOKE TEST PASSED, #197 STEP 3 MERGED + LIVE, A CI DEPLOY RAC
     Rotterdam, Den Haag en Utrecht") minted on the defaulted national answer, the exact case session 70 pinned
     with `answerFirstEnabled: true`. `npm run audit:verify -- 269 269` → audit rows 269-269: 1/1 reconstruct clean. So mechanism B is proven live
     on the region axis; on the period axis it is gated by the parser's 0.85 (#198).
+14. **#198 option 1 — attempted in three wordings, measured, REVERTED (owner: "1" after a plain-English
+    pros/cons).** Each pass = intent prompt v7 (`PROMPT_VERSION = 7`) + the affected fixture sets cleared and
+    re-recorded live + `intent:eval --repeat=3`. Pass 1 (a separate two-sentence bullet): model-side 74/74 at
+    record time, Amsterdam 0.92 (was 0.85), but the 3-repeat eval flipped the unrelated `os-v02`
+    (`difference`→`none`, all three repeats, minutes after a `difference` record). Pass 2 (one clause on the
+    confidence bullet): os-v02 stable in four runs, final live 3-repeat eval 74/74 with zero flips and the
+    calibration floor unchanged (min 0.92 / median 0.95 over 51 intents); the two failures on the way were both
+    my own labels (a place-less geo question resolves to `NL01` at the intent layer — the answer/clarify choice
+    lives in the query layer). Then the backend suite went 1734/1735: the onboarding-delivery fixture (the
+    fourth set that embeds the intent prompt, missed on the clear) — re-recorded live, the #124 bijstand
+    delivery parse came back at **0.88** instead of 0.92, stable in three of three runs, note "specifieke
+    subcategorieën … zijn ook beschikbaar" → `unanswerable` instead of `delivered`. Pass 3 (phrased like the
+    existing "Do NOT lower confidence merely because…" rule): delivery parse **0.85** — worse; chain stopped.
+    Reverted with `git checkout` (prompt, all fixtures, three calibration reports, labelled set); hermetic
+    replay 72/72 and the onboarding test 35/35 again on v6. Spend from the logs' usage lines: ≈ 6.3M input
+    tokens over passes 1–2 (≈ $6.7) + the final eval and pass 3's partial run ≈ $3 → ≈ $10. Outcome recorded in
+    #198 with the two labelled cases to reuse and a concrete option-2 proposal; decision back to the owner.
+15. **Double footer + missing gear (owner report, in chat):** the workspace rendered its own ADR-033 footer
+    AND the session-68 site footer (with the gear link) directly under it. Fix: one site-wide footer
+    (`site-footer.tsx`, now a client component reading the pathname): attribution sentence everywhere, the
+    "Over dit project" anchor only on `/`, the gear on every page; the workspace footer removed; the byte pin
+    moved with it. The LOW review caught a real dead link: a logged-OUT `/` renders the Landing, which had no
+    `#over-dit-project` — the landing's how-it-works heading now carries that id (pinned). Verified on the local
+    production build: `/login` and `/systeemoverzicht` each exactly one `contentinfo` + one gear link. Also:
+    `.claude/launch.json` gained `autoPort` (ports 3000/3001 are held by the owner's other project's servers —
+    left running, not ours), ADR 033 D6 as-built note.
 
 **Session 70 (2026-09-02, later the same day as session 69; the owner pasted the session-70 kickoff — into
 TWO sessions in the same working tree, the 25-07 collision shape: the second session (local_09530460…)

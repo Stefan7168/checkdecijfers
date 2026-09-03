@@ -19,13 +19,6 @@ import { SiteHeader } from './site-header.tsx';
 import { ThreadSidebar } from './thread-sidebar.tsx';
 import { VisualDock } from './visual-dock.tsx';
 
-/** The exact footer line (ADR 033 D6, byte-pinned in the tests; owner gives the
- * final look at PR review). NO privacy link until the #14(d) policy exists. The
- * "Over dit project" anchor links to the on-page section below. */
-export const FOOTER_PREFIX =
-  'Cijfers: CBS StatLine (CC BY 4.0) · Elk getal herleidbaar tot een officiële CBS-tabel · ';
-export const FOOTER_ABOUT_LABEL = 'Over dit project';
-
 interface Handoff {
   messages: ChatMessage[];
   context: ConversationContext | null;
@@ -234,13 +227,10 @@ export function Workspace({
           of onduidelijk is, vragen we door of zeggen we het eerlijk.
         </p>
       </section>
-
-      <footer className="mx-4 mb-4 mt-6 border-t border-line pt-3 text-xs text-ink-muted">
-        {FOOTER_PREFIX}
-        <a href="#over-dit-project" className="underline">
-          {FOOTER_ABOUT_LABEL}
-        </a>
-      </footer>
+      {/* The footer line (ADR 033 D6) is rendered ONCE, site-wide, by
+          components/site-footer.tsx in app/layout.tsx — it carries the
+          "Over dit project" anchor to the section above on this page. Until
+          2026-09-03 a second copy lived here (two footer bars — owner report). */}
     </div>
   );
 }

@@ -593,7 +593,12 @@ Steps (owner present):
    265/266): the period-less canary stops asking for a period (B works) but comes back as a one-chip
    "Bedoel je …?" because the live parse scores 0.85 < 0.9 for a period-less reading — see
    [#198](open-questions.md); clicking the chip answers deterministically (row 267: the 2019–2026 trend, line
-   chart, 0 tokens). ⚠ Ask the region-less canary in a NEW chat: in the same thread it is parsed as a
+   chart, 0 tokens). **A prompt fix (v7, #198 option 1) was attempted the same day and REVERTED — every wording lowered the
+   onboarded-delivery parse's confidence below 0.9 (see #198). Procedure that a prompt change needs, learned
+   the hard way: edit → bump `PROMPT_VERSION` → clear ALL FOUR `tests/fixtures/llm/{intent,followup,clarify,
+   onboarding-delivery}` (all embed the intent system prompt; the fourth was missed on the first pass and
+   showed up as one red backend test) → the four `*:record` scripts → `intent:eval -- --repeat=3` (zero flips)
+   → check the delivery fixture's confidence stays ≥ 0.9 → full verification block → push. ≈ $3–4 per pass.** ⚠ Ask the region-less canary in a NEW chat: in the same thread it is parsed as a
    continuation and inherits the previous region from context (row 268 answered Amsterdam, not Nederland) — that
    is the follow-up design working, not B-region being tested. In a NEW chat the same question PASSED (row 269:
    `regionDefaulted`, Nederland 17.942.942, disclosure line under the body, G4 comparison chip, R8 clean).**

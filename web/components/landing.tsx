@@ -93,7 +93,13 @@ export function Landing() {
 
         {/* How it works — the honest mechanism, in three steps */}
         <section id="hoe-het-werkt" className="border-b border-line py-12">
-          <h2 className="text-2xl text-ink">Geen gokwerk, maar rekenwerk</h2>
+          {/* `over-dit-project` is the site footer's "Over dit project" anchor
+              (site-footer.tsx renders it on "/"): the logged-in workspace has
+              a section with that id, the logged-out landing points it at this
+              how-it-works heading — never a dead link (ADR 033 D6). */}
+          <h2 id="over-dit-project" className="text-2xl text-ink">
+            Geen gokwerk, maar rekenwerk
+          </h2>
           <ol className="mt-6 grid gap-6 sm:grid-cols-3">
             <li>
               <p className="tnum text-sm font-semibold text-accent">1</p>

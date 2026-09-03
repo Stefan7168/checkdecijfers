@@ -1,14 +1,40 @@
-// One-line site footer (docs/10-ux-design-brief.md section 3). Plain text,
-// plus one icon link to the internal /systeemoverzicht page (mirrors the
-// gear-icon footer entry point on the owner's other project). /privacy and
-// /over still don't exist. Needs no data; safe to mount globally in
-// app/layout.tsx.
+'use client';
+// The ONE site-wide footer (docs/10-ux-design-brief.md section 3, ADR 033 D6),
+// mounted globally in app/layout.tsx. Plain text, one line:
+//   - the #99 attribution sentence (byte-pinned in the tests — owner copy);
+//   - on the home page only, the "Over dit project" anchor to the workspace's
+//     on-page section (it exists nowhere else, so elsewhere the link would be
+//     dead — D6: no dead links);
+//   - one gear-icon link to the internal /systeemoverzicht page (mirrors the
+//     gear-icon footer entry point on the owner's other project).
+// Until 2026-09-03 the workspace ALSO rendered its own footer with the same
+// sentence directly above this one — two footer bars on the logged-in page
+// (owner report, session 71). The workspace footer is gone; this is the only
+// one. /privacy and /over still don't exist (#14(d)).
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+
+/** The attribution sentence without the trailing separator. */
+export const FOOTER_ATTRIBUTION =
+  'Cijfers: CBS StatLine (CC BY 4.0) · Elk getal herleidbaar tot een officiële CBS-tabel';
+/** The exact footer prefix on the home page (ADR 033 D6, byte-pinned in the
+ * tests; owner gave the final look at PR review). */
+export const FOOTER_PREFIX = FOOTER_ATTRIBUTION + ' · ';
+export const FOOTER_ABOUT_LABEL = 'Over dit project';
 
 export function SiteFooter() {
+  const pathname = usePathname();
+  const onHome = pathname === '/';
   return (
     <footer className="flex items-center justify-between gap-3 border-t border-line px-4 py-4 text-xs text-ink-muted">
-      <span>Cijfers: CBS StatLine (CC BY 4.0) · Elk getal herleidbaar tot een officiële CBS-tabel</span>
+      <span>
+        {onHome ? FOOTER_PREFIX : FOOTER_ATTRIBUTION}
+        {onHome ? (
+          <a href="#over-dit-project" className="underline">
+            {FOOTER_ABOUT_LABEL}
+          </a>
+        ) : null}
+      </span>
       <Link
         href="/systeemoverzicht"
         aria-label="Systeemoverzicht"

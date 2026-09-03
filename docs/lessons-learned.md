@@ -35,6 +35,31 @@ Full narrative: [status-archive.md](status-archive.md) session-71 entry.
 - **Never write the SHA of the commit you are still amending.** The RUNBOOK sentence "Since `3c54400` …"
   pointed at a commit that stopped existing on the very next `--amend`. Cite "the commit that added this
   section" or pin the SHA only after the push.
+- **A prompt rule can be right for the case it targets and still be unshippable — the fixture sets that
+  embed the prompt are the only thing that shows it, so clear and re-record ALL of them.** #198's rule ("a
+  missing period or place is not doubt") lifted the target case from 0.85 to 0.92, and in every wording pushed
+  the onboarded bijstand delivery parse (18 sibling measures) from 0.92 down to 0.88 or 0.85 — below the 0.9
+  line, stable across runs. Three of four fixture sets were re-recorded on the first pass; the fourth
+  (onboarding-delivery) surfaced only as one red backend test. Two goals that both live in the model's
+  confidence number cannot be tuned independently by prose; a code-side threshold for the specific shape is
+  the honest lever. And a prompt attempt that fails is reverted with `git checkout`, fixtures and reports
+  included — never half-kept.
+- **A prompt sentence that is right can still knock an unrelated case over — the 3-repeat eval is the only
+  thing that shows it.** Prompt v7's first wording (a separate two-sentence bullet) recorded 74/74, then the
+  3-repeat live eval returned `derivation: none` for `os-v02` ("… vergeleken met vijf jaar geleden") on all
+  three repeats, minutes after the record run had returned `difference`. Shortening the rule to one clause on
+  the existing confidence bullet made os-v02 stable again in four runs. Rule: change the fewest prompt bytes
+  that carry the meaning, and never skip the repeat run because the record run was clean.
+- **Label the layer, not the product.** Twice the only eval failure was my expectation, not the model: at the
+  intent layer a place-less geo question resolves to `NL01` (the answer-first/clarify decision lives in the
+  query layer), so "expect a region clarification" and "expect regions []" were both wrong. Before labelling a
+  new case, run it once and read what the layer under test actually returns — a label written from the
+  product's behaviour costs a live pass (~$3) to discover.
+- **A global component added next to a page-local twin is a duplicate until the twin is removed.** Session 68
+  mounted a site-wide footer for the gear icon while the workspace still rendered its own byte-pinned footer;
+  nobody looked at the logged-in page, where the two sat one above the other for six days. When adding a
+  layout-level element, grep for the page-level one it replaces and delete it in the same change — and check
+  the page a logged-in user sees, not only the public ones.
 - **A terse "continue" after a yes/no proposal is not the yes.** The owner's "continue" arrived after a message
   that ended in "if you say yes, I flip the flag". The session-47 lesson (a terse *Continue* is not merge
   approval) is moot for pushes under standing authorization, but a live production flag is exactly the

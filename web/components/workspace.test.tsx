@@ -17,8 +17,15 @@ const actions = vi.hoisted(() => ({
 vi.mock('../app/actions.ts', () => actions);
 
 import type { ThreadSummary } from '../backend/threads/index.ts';
-import { FOOTER_ABOUT_LABEL, FOOTER_PREFIX, Workspace } from './workspace.tsx';
+import { Workspace } from './workspace.tsx';
 import { SiteHeader } from './site-header.tsx';
+import { FOOTER_ABOUT_LABEL, FOOTER_ATTRIBUTION, FOOTER_PREFIX, SiteFooter } from './site-footer.tsx';
+import { Landing } from './landing.tsx';
+
+// The site footer reads the pathname to decide whether the "Over dit project"
+// anchor (a section that only exists on the home page) is rendered.
+const pathname = vi.hoisted(() => ({ current: '/' }));
+vi.mock('next/navigation', () => ({ usePathname: () => pathname.current }));
 
 Element.prototype.scrollIntoView = vi.fn();
 
@@ -53,19 +60,43 @@ function renderWorkspace(initialThreads: ThreadSummary[] = []) {
 }
 
 describe('Workspace — WP135 shell (flag on)', () => {
-  it('renders the footer with the EXACT byte-pinned attribution string', () => {
+  it('renders NO footer of its own — the site footer is the only one (owner report 2026-09-03)', () => {
     renderWorkspace();
-    const footer = document.querySelector('footer');
-    expect(footer).not.toBeNull();
-    expect(footer!.textContent).toBe(FOOTER_EXACT);
-    // The exported constants must not drift from the pinned string.
-    expect(FOOTER_PREFIX + FOOTER_ABOUT_LABEL).toBe(FOOTER_EXACT);
+    expect(document.querySelector('footer')).toBeNull();
+    // The anchor target the site footer links to still exists on this page.
+    expect(document.getElementById('over-dit-project')).not.toBeNull();
   });
 
-  it('has NO privacy link in the footer (until #14(d) exists — no dead links)', () => {
-    renderWorkspace();
-    const footer = document.querySelector('footer')!;
+  it('site footer on the home page: the EXACT byte-pinned attribution string + the gear link', () => {
+    pathname.current = '/';
+    render(<SiteFooter />);
+    const footers = document.querySelectorAll('footer');
+    expect(footers).toHaveLength(1);
+    const footer = footers[0]!;
+    // textContent ignores the icon (an aria-hidden svg without text), so the
+    // owner's sentence is pinned byte-for-byte.
+    expect(footer.textContent).toBe(FOOTER_EXACT);
+    expect(FOOTER_PREFIX + FOOTER_ABOUT_LABEL).toBe(FOOTER_EXACT);
+    expect(footer.querySelector('a[href="#over-dit-project"]')?.textContent).toBe(FOOTER_ABOUT_LABEL);
+    const gear = footer.querySelector('a[href="/systeemoverzicht"]');
+    expect(gear).not.toBeNull();
+    expect(gear!.getAttribute('aria-label')).toBe('Systeemoverzicht');
     expect(footer.textContent).not.toMatch(/privacy/i);
+  });
+
+  it('the home-page anchor target exists on the logged-OUT home too (Landing) — no dead link for visitors', () => {
+    render(<Landing />);
+    expect(document.getElementById('over-dit-project')).not.toBeNull();
+  });
+
+  it('site footer elsewhere: attribution + gear, but NO "Over dit project" (the section is not there — no dead links)', () => {
+    pathname.current = '/credits';
+    render(<SiteFooter />);
+    const footer = document.querySelector('footer')!;
+    expect(footer.textContent).toBe(FOOTER_ATTRIBUTION);
+    expect(footer.querySelector('a[href="#over-dit-project"]')).toBeNull();
+    expect(footer.querySelector('a[href="/systeemoverzicht"]')).not.toBeNull();
+    pathname.current = '/';
   });
 
   it('renders the header: wordmark, live balance chip, Credits kopen, Geschiedenis', () => {

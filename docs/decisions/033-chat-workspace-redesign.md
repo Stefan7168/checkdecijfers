@@ -120,6 +120,16 @@ QuestionHistory + account details move behind the nav (the #74 "mijn aanvragen" 
 seam there, out of scope here; *seam filled 2026-08-27, session 66 — the #74/#117 live-status
 line + poll render inside QuestionHistory itself, see those rows*).
 
+**As-built note, 2026-09-03 (session 71, owner report "two footers"):** the D6 footer line is now rendered
+ONCE, site-wide, by `web/components/site-footer.tsx` mounted in `app/layout.tsx` — the workspace's own
+`<footer>` is gone. Since session 68 (2026-08-28) the site footer (added for the `/systeemoverzicht` gear
+icon) had rendered directly under the workspace footer with the same sentence: two footer bars on the
+logged-in page, and the gear sat in the second one where the owner did not find it. The site footer reads
+the pathname: on `/` it renders the byte-pinned line INCLUDING the "Over dit project" anchor (the section
+lives on that page); elsewhere the attribution sentence only (no dead anchor — D6's rule) plus the gear.
+The byte pin moved from `workspace.test.tsx` to the same file's site-footer cases. Verified locally on the
+production build: `/login` and `/systeemoverzicht` each have exactly one `contentinfo` and one gear link.
+
 ### D7 — Dormant-until-flag rollout
 
 The workspace ships behind `WORKSPACE_ENABLED` (the WP129+130 pattern): flag off → today's
