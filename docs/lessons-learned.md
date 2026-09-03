@@ -35,6 +35,13 @@ Full narrative: [status-archive.md](status-archive.md) session-71 entry.
 - **Never write the SHA of the commit you are still amending.** The RUNBOOK sentence "Since `3c54400` …"
   pointed at a commit that stopped existing on the very next `--amend`. Cite "the commit that added this
   section" or pin the SHA only after the push.
+- **`open(p, 'w').write(open(p).read().replace(...))` EMPTIES the file — and `git add -A` shipped the empty
+  STATUS.md.** Python evaluates the write-mode `open` first (truncating the file), then reads the now-empty file.
+  STATUS.md — the plan of record — went to 0 bytes in the footer commit and stayed empty for three commits;
+  `npm run test:docs` passed all the while because nothing asserted the file had content. Found only when a
+  later edit could not find its anchor text. Restored from the last good commit and re-edited. Rules: read
+  first into a variable, then write; every scripted doc edit asserts the new text is non-empty and not much
+  shorter than the old; and the docs gate now pins STATUS.md's size and its top-block marker.
 - **A prompt rule can be right for the case it targets and still be unshippable — the fixture sets that
   embed the prompt are the only thing that shows it, so clear and re-record ALL of them.** #198's rule ("a
   missing period or place is not doubt") lifted the target case from 0.85 to 0.92, and in every wording pushed
