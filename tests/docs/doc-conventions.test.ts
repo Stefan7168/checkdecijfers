@@ -221,3 +221,32 @@ describe('#132 interim rule (i): PR references in docs are plain text, never liv
     expect(markdownFilesUnder(join(REPO_ROOT, 'docs')).length).toBeGreaterThan(20);
   });
 });
+
+// Added session 71 (2026-09-03) after docs/STATUS.md — the plan of record — was
+// committed as a 0-byte file (a scripted edit opened it for writing before
+// reading it) and shipped empty through three green pushes: nothing on this
+// gate asserted that the load-bearing docs HAVE content. A fresh session reads
+// STATUS.md first; an empty one would have sent it to the archive to guess.
+// Floors are deliberately far below today's sizes (STATUS ~630 lines, the
+// archive ~2,300, the RUNBOOK ~1,100, ~150 live open-questions rows) so a
+// normal prune never trips them, while a truncation always does.
+describe('the plan-of-record docs are present and not truncated', () => {
+  const floors: Array<{ file: string; minLines: number; mustContain: string[] }> = [
+    { file: 'docs/STATUS.md', minLines: 200, mustContain: ['# STATUS', '▶ SESSION'] },
+    { file: 'docs/status-archive.md', minLines: 800, mustContain: ['# STATUS archive'] },
+    { file: 'docs/open-questions.md', minLines: 60, mustContain: ['| # | Area |'] },
+    { file: 'docs/RUNBOOK.md', minLines: 400, mustContain: ['## Moving to a new machine'] },
+    { file: 'docs/08-build-plan.md', minLines: 100, mustContain: [] },
+    { file: 'CLAUDE.md', minLines: 60, mustContain: ['## Session wrap-up'] },
+  ];
+  for (const { file, minLines, mustContain } of floors) {
+    it(`${file} has at least ${minLines} lines and its marker text`, () => {
+      const content = readFileSync(join(REPO_ROOT, file), 'utf8');
+      const lines = content.split('\n').length;
+      expect(lines, `${file} has ${lines} lines — truncated?`).toBeGreaterThanOrEqual(minLines);
+      for (const marker of mustContain) {
+        expect(content, `${file} lost its marker "${marker}"`).toContain(marker);
+      }
+    });
+  }
+});
