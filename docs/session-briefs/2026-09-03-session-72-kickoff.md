@@ -51,8 +51,8 @@ de guard gestart zijn niet). `npm run test:docs` (1 s) vóór elke docs-push (#1
 `docs/`).
 
 Bewust NIET gedaan, niet herontdekken: #132 route B (owner: uitstellen); `npm run lint` in `web/` kapot (task
-chip bestaat); open-questions.md-prune "whenever a session has room" (de 28 oude lokale branches zijn nu wél
-opgeruimd — `origin/main` is de enige remote branch); kaartweergave geparkeerd; #197-ideeën 4–8 ongepland.
+chip bestaat); de open-questions-prune en de 28 oude lokale branches zijn in sessie 71 wél gedaan (25 rijen naar de
+archive-twin, 147 live; `origin/main` is de enige remote branch); kaartweergave geparkeerd; #197-ideeën 4–8 ongepland.
 
 Sessie-einde: de volledige wrap-up-ritual uit CLAUDE.md — ongevraagd, compleet, elk feit geverifieerd tegen
 `git`/`gh`/prod, nooit uit het geheugen.

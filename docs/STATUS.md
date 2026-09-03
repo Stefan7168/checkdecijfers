@@ -22,7 +22,8 @@ green; caught by `vercel inspect`, fixed instantly with `vercel promote` of the 
 guarded for good: the deploy job now skips itself when its commit is no longer the tip of `main`
 (RUNBOOK "Two CI runs in flight"). Also: the RUNBOOK's click-row query looked in the wrong column
 (`llm_calls` is `[]` on a click take; the model lives in `response->'parse'->>'model'`), corrected.
-Hygiene: the s70-reviewer worktree removed, 28 stale local branches + 9 merged remote branches deleted.
+Hygiene: the s70-reviewer worktree removed, 28 stale local branches + 9 merged remote branches deleted;
+open-questions.md triaged (every row read) — 25 terminally-closed rows moved to its archive twin, 147 live.
 **`CLARIFY_CLICK_ENABLED` ON and proven; `ANSWER_FIRST_ENABLED` and `GDPR_PURGE_APPLY` still untouched —
 both remain YOUR call (owner-supervised), not a session's.** Details, every SHA and run id:
 [status-archive.md](status-archive.md). **Your next action:** RUNBOOK WP26 section step 6 — ask

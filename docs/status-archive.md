@@ -42,7 +42,12 @@ instance) — WP26 SMOKE TEST PASSED, #197 STEP 3 MERGED + LIVE, A CI DEPLOY RAC
 7. **Hygiene:** 28 stale local branches deleted (13 `git`-merged worktree-agent/reviewer branches; 15
    squash-merged or superseded PR branches mapped to their PR state with `gh pr list --head` first) and 8
    remote branches of merged PRs (#67, #77, #85, #91–#93, #95, #96) — `origin/main` is now the only remote
-   branch. Memory: the two session-70 files replaced by one session-71 state file.
+   branch. Open-questions triage (the monthly-maintenance item, "whenever a session has room"): a cheap-tier
+   agent classified all 172 rows, every ARCHIVE candidate was re-read here (residual-keyword scan + row tails;
+   one chunk had mis-numbered its rows and was discarded) — 25 rows with nothing left open moved verbatim to
+   `open-questions-archive.md` (#15, #16, #24, #35, #36, #121, #129, #130, #139, #142, #145, #155, #156, #165,
+   #167, #168, #177, #179, #182, #183, #187, #191, #192, #193, #194), 147 live rows remain. Memory: the two
+   session-70 files replaced by one session-71 state file.
 8. **Not done, deliberately:** `ANSWER_FIRST_ENABLED` and `GDPR_PURGE_APPLY` (owner-supervised — the owner's
    "keep working autonomously" does not cover the WP26 flip, per the 25-07 steer); #162 A/B (real spend); the
    three recorded #197 follow-ups. RUNBOOK step 6 (the comparison chip under an Amsterdam answer) was asked of
