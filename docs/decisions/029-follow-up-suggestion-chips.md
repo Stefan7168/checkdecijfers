@@ -108,7 +108,7 @@ step" idea (this ADR's whole point) applies there too.
 - **Deliberately excluded (in this note):** the DIMENSION `outside_loaded_slice` (axis `measure`,
   whose `nearestAlternative` is a dimension coordinate, never a period). `not_published` was excluded
   here (no boundary computed) but is now handled for the too-old sub-case — the [#134](../open-questions.md)(b)
-  half, see the fourth as-built note below. Regional chip still deferred ([#138](../open-questions.md)).
+  half, see the fourth as-built note below. The regional chip shipped later ([#138](../open-questions.md), session 55, commit `f2d015a` — see the fifth as-built note if present, else the row).
 - **[#137](../open-questions.md) range chip (session 43, PR #40):** for a range-ask
   `outside_loaded_slice` refusal, the chip prefers the clamped WORKING sub-range `[floor, originalTo]`
   as a trend question ("Hoe ontwikkelde {label} zich van {floor} tot en met {to}?" — the owner's
