@@ -9,7 +9,51 @@ the [#134](../open-questions.md)(b) too-old `not_published` chip (session 44, 20
 `12518eb`, MERGED + LIVE) — see the fourth as-built note. EXTENDED AGAIN with the [#197](../open-questions.md)
 step-3 COMPARISON chips (session 70, 2026-09-02, branch `feat/197-3-comparison-chips`; MERGED + LIVE 2026-09-03,
 session 71, squash `83f790e`, PR #118) — the first chips that
-are taken WITHOUT an LLM re-parse; see the first as-built note directly below.**
+are taken WITHOUT an LLM re-parse; see the first as-built note directly below.
+FIXED [#195](../open-questions.md)/[#196](../open-questions.md) (session 72, 2026-09-03, branch
+`fix/195-196-eviction-probe-touch`, PR pending owner review per [#118](../open-questions.md)(b)) — the
+dry-run primitive this ADR's chips run through no longer bumps `last_queried_at`; see the newest as-built
+note directly below.**
+
+## As-built note (#195/#196 — the dry-run primitive no longer touches last_queried_at, session 72, 2026-09-03)
+
+Session 67's adversarial review of PR #111 (the eviction/TTL feature, [#110](../open-questions.md)) found that
+`echoServability` — the servability-probe primitive every chip generator in this ADR dry-runs through — shared
+`runQuery` with the SERVED answer path, and `runQuery` bumped `cbs_tables.last_queried_at` unconditionally. Two
+consequences, tracked as [#195](../open-questions.md) and [#196](../open-questions.md): a table could be kept
+artificially "warm" for the eviction GC by chip-building traffic that never once delivered an answer (#195), and
+a live read racing a concurrent eviction transaction could be served a false "no data" refusal instead of the
+real answer, because the touch's own locking UPDATE forced the read to synchronize behind the eviction's row
+lock (#196). Neither was a merge blocker for PR #111 (eviction `--apply` is manual/supervised only, no cron)
+but both were flagged as must-close-before-any-live-automation.
+
+**Fixed together, since #196's mechanism is exactly what made #195 possible to reproduce as a false refusal
+rather than just an accounting nit.** `src/query/resolve.ts`'s `QueryOptions` gained a `probe?: boolean` field;
+`echoServability` (`src/query/dry-run.ts`) now calls `runQuery(db, intent, { ...options, probe: true })` — every
+comparison chip, follow-up chip and alternate-reading check in this ADR is therefore a probe by construction, with
+no per-generator change needed. In `runQuery` (`src/query/run.ts`), the `touchLastQueriedAt` call moved from
+BEFORE the observations fetch to directly AFTER it (still before the completeness loop, so a period refusal on
+an otherwise-present, registered table still counts as demand — the original #110(b) design's intent, unchanged),
+and is now skipped entirely when `options.probe === true`. **The semantics of `last_queried_at` are therefore
+now "last SERVED/DELIVERED read", never "last touched by any internal machinery"** — the eviction anchor
+(`src/ingestion/eviction.ts`) means what its own doc comment always claimed it meant. The READ-THEN-TOUCH order
+also closes #196 directly: the observations fetch no longer waits behind an eviction's `select ... for update`
+row lock (that lock contention was the touch's own UPDATE, not the fetch), so a read that arrives while an
+eviction is still mid-transaction simply sees the pre-eviction data via ordinary MVCC. For the residual case
+where the fetch genuinely runs AFTER an eviction has already committed (no lock contention needed — plain
+timing), `runQuery`'s missing-cell branch now re-checks `cbs_tables` registration before calling `diagnoseMissing`
+and returns an honest `table_not_registered` refusal (never `no_data`/`not_published`) naming that the table was
+evicted while the query was in flight and can be asked again — one extra statement, only on that already-
+exceptional path, never on a served answer ([#173](../open-questions.md) pooler budget).
+
+Verified: `tests/query/last-queried.test.ts` (a probe read and `echoServability` both leave the clock untouched;
+the existing served-bump pin still holds), `tests/query/eviction-race.test.ts` (new — a synthetic eviction
+injected deterministically before vs. after the observations fetch, since PGlite serves one query at a time and
+there is no real concurrency to race against: BEFORE → `table_not_registered`, never `no_data`/`not_published`/
+`freshness`; AFTER → the answer still serves with the real cell values, unaffected by an eviction landing once
+the fetch has already captured what it needed), `tests/answer/query-count.test.ts` (re-measured — see the "Cost,
+measured" bullet above — plus a `set last_queried_at` statement count: exactly 0 across a full chip build, exactly
+1 across one real served `respondToQuestion` turn), and `tests/ingestion/eviction.test.ts` unchanged.
 
 ## As-built note (#197 step 3 — comparison chips, session 70, 2026-09-02)
 
@@ -72,12 +116,18 @@ CI run 33699880673 gate + deploy green).
   take renders a series as one semicolon-separated wall (`renderSeries` has no cap; a `range` has no length
   bound while `codes` caps at 64) — a chip whose answer nobody can read.
 - **Cost, measured** (pinned in `tests/answer/query-count.test.ts`, real fixture db + real dry-run): a
-  regional single answer (Amsterdam 2024) costs 27 statements / 3 dry-runs with the flag OFF **and** ON — the
+  regional single answer (Amsterdam 2024) costs 24 statements / 3 dry-runs with the flag OFF **and** ON — the
   cap stops the roster after three survivors and the region comparison takes the slot the region variant
-  took, one dry-run for one; a national answer (Nederland 2026) 39 / 4 either way; a national-only measure
-  (CPI 2024) 12 / 2 OFF → 18 / 3 ON (the period comparison fills the free slot). Worst case, with early
-  generators failing their dry-runs: 8 dry-runs ON vs 6 OFF. Every dry-run is a full `runQuery` including
-  the #110 `touchLastQueriedAt` statement — [#195](../open-questions.md)'s per-turn count.
+  took, one dry-run for one; a national answer (Nederland 2026) 36 / 4 either way; a national-only measure
+  (CPI 2024) 10 / 2 OFF → 15 / 3 ON (the period comparison fills the free slot). Worst case, with early
+  generators failing their dry-runs: 8 dry-runs ON vs 6 OFF (a FAILED dry-run never reached the touch line
+  either, so this figure is unaffected by the #195 fix below). Every dry-run is a full `runQuery`, but —
+  since the [#195](../open-questions.md) fix (as-built note below) — **no longer** includes the #110
+  `touchLastQueriedAt` statement: these numbers were re-measured 2026-09-03 and are 3/2/3 lower than the
+  27/12/18 originally measured 2026-09-02, one fewer statement per dry-run, exactly the touch that used to
+  fire on each one. The 36-statement national-answer figure was not independently pinned by a test either
+  before or after this fix (unlike the other two rows) — measured directly for this addendum, not carried
+  forward from the original note (which had understated it by one dry-run's worth even before the fix).
 - **Takeability gate (reviewer finding, the parallel session 70):** a comparison candidate is dry-run only if
   `isClickTakeableIntent` (validate-pending.ts, the click-time schema's `safeParse`) accepts it — the case
   that forced it: live chat answers on-demand-onboarded topics (`onboarded:…` keys, outside `CANONICAL_KEYS`

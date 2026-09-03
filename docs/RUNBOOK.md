@@ -289,7 +289,7 @@ only ever runs manually, there is no cron, and no on-demand-onboarded table is o
 real eviction candidate.
 
 **⚠ Before ever running `tables:evict --apply` against a live table (not before this migration, but
-before that later step) — two residuals a session-67 review found and logged, neither closed yet:**
+before that later step) — two residuals a session-67 review found and logged — BOTH CLOSED in session 72 (2026-09-03, PR #121: servability probes no longer bump `last_queried_at`, the bump runs AFTER the observations fetch so a read never waits behind an eviction's row lock, and an eviction landing mid-query yields an honest `table_not_registered` refusal instead of a false "no data"). Kept for the record; the CLI is still manual, no cron:**
 [#195](open-questions.md) (the disclosed "+1 round-trip per served turn" cost is understated — the real
 path is ~4-6x that, and the same probes that inflate the count also keep a table artificially "warm") and
 [#196](open-questions.md) (a concurrent eviction can false-refuse a live query for the table it's
