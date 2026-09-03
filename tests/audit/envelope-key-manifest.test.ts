@@ -89,7 +89,7 @@ const MANIFEST: Record<string, Record<string, Entry>> = {
     },
     pending: {
       category: 'ignored',
-      why: '#197 step 3: the chip-carrier state behind the comparison chips (their pre-verified intents), offered on this turn; like the refusal-side rescue pending, the REPLY turn\'s copy (record.pendingClarification, checked against reply_text) is what reconstruct reads',
+      why: '#197 step 3: the chip-carrier state behind the takeable follow-up chips (the comparisons first, every takeable chip since #73 v2 — their pre-verified intents), offered on this turn; like the refusal-side rescue pending, the REPLY turn\'s copy (record.pendingClarification, checked against reply_text) is what reconstruct reads',
     },
   },
   ClarificationResponse: {

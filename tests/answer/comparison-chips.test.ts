@@ -19,6 +19,11 @@
 //  5. THE AUDIT ROW IS REAL. The audited reply path records the label as the
 //     reply, zero LLM calls, template source, and reconstructs cleanly (R8).
 //
+// #73 v2 (2026-09-03): the question-shaped WP29 chips ride the SAME carrier
+// now (tests/answer/wp29-click-take.test.ts pins their takes), so the
+// comparison assertions below select their option by id (`cmp-…`) where the
+// carrier holds more than the comparison — every comparison pin is kept.
+//
 // Hermetic: fixture-ingested PGlite + canned/throwing clients. No API key, no
 // network — exactly what CI runs.
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -162,15 +167,16 @@ describe('buildAnswerChips — the comparison generators against the real fixtur
       'Hoe ontwikkelde bevolking op 1 januari in Amsterdam zich van 2020 tot en met 2024?',
       'Vergelijk met Nederland',
     ]);
-    expect(chips.clickOptions).toEqual([
-      {
-        id: 'cmp-1',
-        label: 'Vergelijk met Nederland',
-        intent: intentOf('population_on_1_january', { kind: 'codes', codes: ['2024JJ00'] }, ['GM0363', 'NL01']),
-        impliedRecency: false,
-      },
-    ]);
-    expect(chips.axes).toEqual(['region']);
+    // #73 v2: the carrier holds all three; the comparison is the third.
+    expect(chips.clickOptions.map((o) => o.label)).toEqual(chips.suggestions);
+    expect(chips.clickOptions.map((o) => o.id)).toEqual(['adjacent-1', 'trend-1', 'cmp-1']);
+    expect(chips.clickOptions[2]).toEqual({
+      id: 'cmp-1',
+      label: 'Vergelijk met Nederland',
+      intent: intentOf('population_on_1_january', { kind: 'codes', codes: ['2024JJ00'] }, ['GM0363', 'NL01']),
+      impliedRecency: false,
+    });
+    expect(chips.axes).toEqual(['period', 'region']);
     expectNoValueDigits(chips.suggestions);
   });
 
@@ -178,10 +184,11 @@ describe('buildAnswerChips — the comparison generators against the real fixtur
     const intent = intentOf('population_on_1_january', { kind: 'codes', codes: ['2026JJ00'] }, ['NL01']);
     const chips = await buildAnswerChips(intent, await answered(intent), realCheck, ON);
     expect(chips.suggestions[2]).toBe('Vergelijk met Amsterdam, Rotterdam, Den Haag en Utrecht');
-    expect(chips.clickOptions).toHaveLength(1);
-    expect(chips.clickOptions[0]!.intent.regions).toEqual(['NL01', 'GM0363', 'GM0599', 'GM0518', 'GM0344']);
-    expect(chips.clickOptions[0]!.intent.period).toEqual({ kind: 'codes', codes: ['2026JJ00'] });
-    expect(chips.clickOptions[0]!.intent.derivation).toBe('none');
+    const comparisons = chips.clickOptions.filter((o) => o.id.startsWith('cmp-'));
+    expect(comparisons).toHaveLength(1);
+    expect(comparisons[0]!.intent.regions).toEqual(['NL01', 'GM0363', 'GM0599', 'GM0518', 'GM0344']);
+    expect(comparisons[0]!.intent.period).toEqual({ kind: 'codes', codes: ['2026JJ00'] });
+    expect(comparisons[0]!.intent.derivation).toBe('none');
     // The lone-G4 question of the region variant is subsumed, not duplicated.
     expect(chips.suggestions.join(' ')).not.toContain('in de gemeentes');
   });
@@ -194,14 +201,15 @@ describe('buildAnswerChips — the comparison generators against the real fixtur
       'Hoe ontwikkelde inflatie (jaarmutatie CPI, alle bestedingen) zich van 2020 tot en met 2024?',
       'Vergelijk met 2023',
     ]);
-    expect(chips.clickOptions).toEqual([
-      {
-        id: 'cmp-1',
-        label: 'Vergelijk met 2023',
-        intent: intentOf('cpi_yearly_inflation', { kind: 'codes', codes: ['2023JJ00', '2024JJ00'] }, undefined, 'difference'),
-        impliedRecency: false,
-      },
-    ]);
+    expect(chips.clickOptions.map((o) => o.label)).toEqual(chips.suggestions);
+    // #122 review: the full id triplet on the national-only roster, measured.
+    expect(chips.clickOptions.map((o) => o.id)).toEqual(['adjacent-1', 'trend-1', 'cmp-1']);
+    expect(chips.clickOptions[2]).toEqual({
+      id: 'cmp-1',
+      label: 'Vergelijk met 2023',
+      intent: intentOf('cpi_yearly_inflation', { kind: 'codes', codes: ['2023JJ00', '2024JJ00'] }, undefined, 'difference'),
+      impliedRecency: false,
+    });
     expect(chips.axes).toEqual(['period']);
     expectNoValueDigits(chips.suggestions);
   });
@@ -209,8 +217,9 @@ describe('buildAnswerChips — the comparison generators against the real fixtur
   it('a series answer gets no comparison chip (one varying axis per question — several regions AND several periods is refused)', async () => {
     const intent = intentOf('cpi_yearly_inflation', { kind: 'range', from: '2020JJ00', to: '2024JJ00' }, undefined, 'series');
     const chips = await buildAnswerChips(intent, await answered(intent), realCheck, ON);
-    expect(chips.clickOptions).toEqual([]);
-    expect(chips.axes).toEqual([]);
+    // #73 v2: the adjacent-period chip is still a take; no comparison is.
+    expect(chips.clickOptions.map((o) => o.id)).toEqual(['adjacent-1']);
+    expect(chips.axes).toEqual(['period']);
     expect(chips.suggestions).toEqual(await buildSuggestions(intent, await answered(intent), realCheck));
   });
 
@@ -258,7 +267,9 @@ describe('buildAnswerChips — the gates (stub checks)', () => {
       'Hoe ontwikkelde bevolking op 1 januari in Amsterdam zich van 2020 tot en met 2024?',
       'Vergelijk met 2023',
     ]);
-    expect(chips.clickOptions.map((o) => o.label)).toEqual(['Vergelijk met 2023']);
+    // #73 v2: the two question-shaped survivors are takes too; all three vary the period.
+    expect(chips.clickOptions.map((o) => o.label)).toEqual(chips.suggestions);
+    expect(chips.clickOptions.map((o) => o.id)).toEqual(['adjacent-1', 'trend-1', 'cmp-1']);
     expect(chips.axes).toEqual(['period']);
   });
 
@@ -282,7 +293,10 @@ describe('buildAnswerChips — the gates (stub checks)', () => {
     // stub result carries the regions under test.
     const chips = await buildAnswerChips(intent, { ...amsterdamResult, intent }, check, ON);
     expect(chips.suggestions.join(' ')).not.toContain('Vergelijk met Nederland');
-    // Two regions ⇒ the difference derivation cannot apply either.
+    // Two regions ⇒ the difference derivation cannot apply either. (#73 v2:
+    // the question-shaped survivors here name no place while the answer had
+    // two — the stub result carries one region label for two codes — so they
+    // stay labels too: an option would lean on the B-region default.)
     expect(chips.clickOptions).toEqual([]);
   });
 
@@ -385,8 +399,11 @@ describe('the envelope: an answer carries its comparison chips on a chip-carrier
     expect(pending).toBeDefined();
     if (!pending) throw new Error('unreachable');
     expect(pending.rescueOnly).toBe(true);
-    expect(pending.options).toEqual(['Vergelijk met Nederland']);
-    expect(pending.axes).toEqual(['region']);
+    // #73 v2: the carrier holds every takeable chip; the comparison is last.
+    expect(pending.options).toEqual(response.suggestions);
+    expect(pending.options[2]).toBe('Vergelijk met Nederland');
+    expect(pending.clickOptions?.[2]!.id).toBe('cmp-1');
+    expect(pending.axes).toEqual(['period', 'region']);
     expect(pending.question).toBe('Hoeveel inwoners had Amsterdam in 2024?');
     expect(pending.referenceDate).toBe(REFERENCE_DATE);
     expect(pending.clickOptions?.map((o) => o.label)).toEqual(pending.options);
@@ -404,22 +421,30 @@ describe('the envelope: an answer carries its comparison chips on a chip-carrier
     const response = await answerAmsterdam(true);
     const pending = response.pending;
     if (!pending || !pending.clickOptions) throw new Error('expected a carrier pending');
+    // #73 v2: the real carrier already holds three chips (adjacent, trend,
+    // the comparison) — the pins run on it directly. A two-chip comparison-
+    // only carrier (an older row, or a stub-steered roster) is built as well.
+    const comparison = pending.clickOptions.find((o) => o.id === 'cmp-1');
+    if (!comparison) throw new Error('expected the comparison option');
     const second: typeof pending.clickOptions[number] = {
-      ...pending.clickOptions[0]!,
+      ...comparison,
       id: 'cmp-2',
       label: 'Vergelijk met 2023',
     };
     const twoChips: PendingClarification = {
       ...pending,
       options: ['Vergelijk met Nederland', 'Vergelijk met 2023'],
-      clickOptions: [pending.clickOptions[0]!, second],
+      clickOptions: [comparison, second],
     };
+    expect(isRescuePending(pending)).toBe(true);
     expect(isRescuePending(twoChips)).toBe(true);
     // (a) options[i] must equal clickOptions[i].label — order swapped ⇒ not a carrier.
     expect(isRescuePending({ ...twoChips, options: ['Vergelijk met 2023', 'Vergelijk met Nederland'] })).toBe(false);
+    expect(isRescuePending({ ...pending, options: [...pending.options].reverse() })).toBe(false);
     // (b) a length mismatch either way ⇒ not a carrier.
     expect(isRescuePending({ ...twoChips, options: ['Vergelijk met Nederland'] })).toBe(false);
     expect(isRescuePending({ ...pending, options: ['Vergelijk met Nederland', 'Vergelijk met 2023'] })).toBe(false);
+    expect(isRescuePending({ ...pending, clickOptions: [comparison] })).toBe(false);
     // (c) the bare flag, no chips at all ⇒ not a carrier (the session-57 pin, still holding).
     expect(isRescuePending({ ...pending, clickOptions: undefined, rescueOnly: true })).toBe(false);
     expect(isRescuePending({ ...pending, axes: [] })).toBe(false);
@@ -471,10 +496,11 @@ describe('the take: a clicked comparison is a NEW validated result, without any 
     // the label travels as reply_text; ADR 024 addendum states the rule).
     expect(taken.question).toBe('Hoeveel inwoners had Amsterdam in 2024?');
     expectNoValueDigits(taken.suggestions);
-    // Chaining is deliberately closed: a two-region answer already holds the
-    // national row (no region comparison) and has two places (no difference)
-    // — so the taken answer carries NO new carrier.
-    expect(Object.hasOwn(taken, 'pending')).toBe(false);
+    // Comparison chaining is deliberately closed: a two-region answer already
+    // holds the national row (no region comparison) and has two places (no
+    // difference) — no comparison option on the taken answer. (#73 v2: its
+    // question-shaped chips ARE takes, so a carrier may still be present.)
+    expect(taken.pending?.clickOptions?.some((o) => o.id.startsWith('cmp-')) ?? false).toBe(false);
     expect(taken.suggestions.join(' ')).not.toContain('Vergelijk');
   });
 
@@ -497,7 +523,7 @@ describe('the take: a clicked comparison is a NEW validated result, without any 
       ),
     );
     if (response.kind !== 'answer' || !response.pending) throw new Error('expected an answer with a carrier');
-    expect(response.pending.options).toEqual(['Vergelijk met 2023']);
+    expect(response.pending.options).toContain('Vergelijk met 2023');
     const taken = await respondToClarificationReply(db, response.pending, 'Vergelijk met 2023', {
       intentClient: new ThrowingClient(),
       answerClient: new ThrowingClient(),
@@ -514,8 +540,9 @@ describe('the take: a clicked comparison is a NEW validated result, without any 
     expect(taken.chart).toBeNull();
     expect(taken.parse.model).toBe(CLICK_TAKE_MODEL);
     expect(taken.answer.source).toBe('template');
-    // No chaining from a two-period answer either (one varying axis).
-    expect(Object.hasOwn(taken, 'pending')).toBe(false);
+    // No comparison chaining from a two-period answer either (one varying axis).
+    expect(taken.pending?.clickOptions?.some((o) => o.id.startsWith('cmp-')) ?? false).toBe(false);
+    expect(taken.suggestions.join(' ')).not.toContain('Vergelijk');
   });
 
   it('anything typed that is not a chip is answered as a FRESH question, never merged with the answered one', async () => {

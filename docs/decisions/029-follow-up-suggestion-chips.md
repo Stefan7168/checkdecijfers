@@ -4,16 +4,134 @@
 autonomous, branch `wp29-follow-up-chips` per #118)** — execute brief:
 [session-briefs/2026-07-08-follow-up-chips-brief.md](../session-briefs/2026-07-08-follow-up-chips-brief.md).
 **EXTENDED with a refusal-side variant for [#134](../open-questions.md)(a) (session 43, 2026-07-13,
-branch `feat/134a-refusal-period-chips`) — see the second as-built note below. FURTHER EXTENDED with
+branch `feat/134a-refusal-period-chips`) — see the third as-built note below. FURTHER EXTENDED with
 the [#134](../open-questions.md)(b) too-old `not_published` chip (session 44, 2026-07-13, PR #41
 `12518eb`, MERGED + LIVE) — see the fourth as-built note. EXTENDED AGAIN with the [#197](../open-questions.md)
 step-3 COMPARISON chips (session 70, 2026-09-02, branch `feat/197-3-comparison-chips`; MERGED + LIVE 2026-09-03,
 session 71, squash `83f790e`, PR #118) — the first chips that
-are taken WITHOUT an LLM re-parse; see the first as-built note directly below.
+are taken WITHOUT an LLM re-parse; see the third as-built note below. #73 v2 (session 72, 2026-09-03,
+autonomous per #118(b), branch `feat/73-v2-click-take-chips` — PR pending owner review): EVERY follow-up chip
+is now such a take; see the first as-built note directly below.
 FIXED [#195](../open-questions.md)/[#196](../open-questions.md) (session 72, 2026-09-03, branch
 `fix/195-196-eviction-probe-touch`, PR pending owner review per [#118](../open-questions.md)(b)) — the
-dry-run primitive this ADR's chips run through no longer bumps `last_queried_at`; see the newest as-built
-note directly below.**
+dry-run primitive this ADR's chips run through no longer bumps `last_queried_at`; see the second as-built
+note below.**
+
+## As-built note (#73 v2 — every chip takeable, session 72, 2026-09-03, autonomous, PR pending owner review)
+
+Row [#73](../open-questions.md) recorded the v2 seam as "WP26 Mechanism-A click, no re-parse — revisit when WP26
+ships"; WP26 mechanism A went live on 2026-09-02/03 and the #197 comparison chips proved the carrier shape in
+production (rows 263/264). v2 is now built on exactly that carrier — no handler swap (the D3 as-built note stays
+true: the #75 fill-don't-send handler is untouched), just an option per chip. Built autonomously on branch
+`feat/73-v2-click-take-chips` per [#118](../open-questions.md)(b): a PR for the owner's review, not a push to main.
+
+- **Every generator returns one candidate shape** (`ChipCandidate`: label + the resolved intent it just dry-ran +
+  the axis it varies + which generator made it), and the assembly loop mints a `ClickOption` for every survivor
+  whose intent passes the click-time schema (`isClickTakeableIntent`, the same gate the comparisons had). Axes:
+  adjacent period and trend → `period`, region variant → `region`, same topic → `measure`, plus the comparisons'
+  own. Ids name the generator (`adjacent-1`, `trend-1`, `region-1`, `topic-1`; the comparisons keep `cmp-N`) so
+  the audit row's take note reads at a glance. `impliedRecency` is `false` on every chip: each names an explicit,
+  already-answered period or window (an adjacent code, a window ending at the answered period, the answered
+  period at another place or for a sibling measure, a comparison of named periods) — no "what is it now" claim,
+  the rescue chip's reasoning. The intents are the ones the generators already dry-ran — no new query shape,
+  and the number of dry-runs per turn is unchanged (re-measured: `query-count.test.ts` pins stay 27/27 regional,
+  39/39 national, 12→18 CPI).
+- **The take path needed no change** — it is label-bound and generic. Verified per generator on the fixture db
+  with both LLM clients throwing (`tests/answer/wp29-click-take.test.ts`): adjacent → one cell, `single`, no
+  chart; trend → a five-period `series` with the builder's line chart; region variant → the lone `NL01` cell,
+  or the G4 `comparison` with a bar chart; every take `parse.model = deterministic/wp26-click-option`, zero
+  tokens, `answer_source = template`, a NEW validated result (R6), and the audited row reconstructs clean (R8)
+  with the label as `reply_text`. Same topic — the only take that switches `target.key` — fires on real data
+  too: five seed tables carry several canonical measures (`CANONICAL_MEASURES`: 83693NED ×3, 85880NED ×2,
+  85770NED ×3, 85828NED ×2, 85429NED ×4; the rest carry one), and under cap 3 the topic chip surfaces when an
+  earlier generator yields nothing — e.g. a consumer-confidence SERIES answer (no trend chip, no single-period
+  comparison) offers "Hoeveel economisch klimaat waren er in juni 2026?" as `topic-1`, whose take is one cell
+  of the sibling measure under the sibling's own attribution and definition label, R8 clean (pinned). Its
+  candidate is the adjacent-period shape on a sibling key and is minted only for a `CANONICAL_KEYS` sibling.
+  (The v2 note's first version claimed same topic could not fire on the seed at all — the registry has grown
+  since the WP29 as-built note below was written; corrected in the PR #122 review.) The template's plural
+  "Hoeveel … waren er" reads awkwardly for an index-valued sibling — a pre-existing WP29 copy wart, now
+  reachable, recorded here and not changed in this PR.
+- **Servable-but-not-takeable stays a label.** A question-shaped survivor the click-time schema rejects (an
+  `onboarded:` key — outside `CANONICAL_KEYS` by design) is offered exactly as before v2: in `suggestions`, not in
+  `clickOptions`, and a click fills the input for the ordinary parse. Only the comparisons are all-or-nothing.
+- **A minted intent never leans on the B-region default.** The question-shaped candidates used the PARSED
+  intent's regions; on a B-defaulted answer (a question naming no place — live since 2026-09-03, row 269) that is
+  no region at all, and such an intent would only serve while `ANSWER_FIRST_ENABLED` is on — the RUNBOOK's
+  rollback-order hazard the comparisons avoided by starting from the RESOLVED intent. The same rule now applies:
+  when the question named NO place, the candidate carries the resolved regions (explicit `NL01`), and — review
+  round 2 — the chip copy names the country too ("… in Nederland in 2025?"), exactly as when the question named
+  it: the take is an explicit national intent that discloses no default, so the label itself carries the
+  disclosure the answer's `assumptionLine` gave (R7 third branch (c)/(d)); a resolved region without an honest
+  cell label keeps the candidates region-less labels, like a named place. Extended to the take: when a place WAS named but its cells
+  carry no honest label (the drop-never-guess rule that already emptied the copy), the region-less candidate is
+  offered as a label only. Pinned both ways (a take with `ANSWER_FIRST_ENABLED` off still serves `NL01`).
+- **Thread resume: carriers are still NOT restored** (ADR 033 ⟨A6⟩). `src/threads/replay.ts` used to drop every
+  carrier-bound label; with all chips carrier-bound that would have emptied resumed answers. A present-only
+  `ClickOption.questionShaped: true` (the four WP29 generators; absent on comparisons, the rescue chip and
+  clarification options; accepted by the click-time schema as the literal `true` only) tells replay which
+  carrier chips are complete questions — those replay as the plain fill-the-input chips they were before v2, the
+  comparison labels are dropped as before. Resume behaviour is therefore exactly today's, deliberately.
+- **Flag off is byte-identical in SHAPE** (same generators, same order, same dry-runs, no options, no `pending`
+  key — the existing pins stay green). One copy change is flag-independent since review round 2: a B-defaulted
+  answer's question chips name the country ("… in Nederland …") whether or not the flag is on — it is label
+  copy, not carrier shape, and it is the honest wording either way. The carrier question (`questionNl`, never rendered) is now the neutral
+  'Vervolg op dit antwoord:' (`CHIP_CARRIER_QUESTION_NL`); rows minted before carry the old comparison wording.
+  `isRescuePending`'s 1..`MAX_CLICK_OPTIONS` (4) bound holds `MAX_SUGGESTIONS` (3) chips — pinned.
+- **Web: the routing stays label-bound** (a label in `pending.options` goes to `replyToClarification`, anything
+  else is a fresh question). `chat.tsx` did gain logic in the review rounds — per-message carriers and a
+  send-time binding for a clicked chip (round 1 item (6) and round 2 below). `MAX_SUGGESTIONS = 3` chips are
+  within the carrier's 1..4 bound.
+- **Verification (this branch, per file):** `suggestions` 43/43, `comparison-chips` 22/22, `wp29-click-take`
+  18/18 (new), `query-count` 10/10 (pins unchanged), `clarify-click` 19/19, `rescue-chip` 10/10,
+  `wp26-trust-boundary` 4/4, `tests/threads` 32/32, `envelope-key-manifest` 9/9, both typechecks clean; the full
+  suite, the benchmark and the real build run in the orchestrating session before merge. Zero prompt bytes, no
+  migration, no env flag.
+- **Review round 1 (orchestrator, PR #122, 2026-09-03 — full block green on `ba232a5`; six items fixed on the
+  branch):** (1) CONFIRMED DEFECT at the trust boundary: `withValidatedClickOptions` passed a carrier's
+  `options` through unfiltered while `clickOptions` was schema-filtered, so ONE dropped option left the
+  carrier mis-shaped and the user's next text fell into the paid `parseClarificationReply` merge — a
+  carrier's options now re-align to the surviving chips (a real clarification's options are untouched), and a
+  carrier whose every chip was dropped is a STRIPPED carrier (`rescueOnly` + empty options + no chips,
+  `isStrippedCarrier`) that routes every reply as a fresh question, never the merge (ADR 024 addendum
+  corrected; the session-57 bare-forgery pin split into its two shapes). (2) The false "same topic cannot fire
+  on the seed" claim corrected in three places and a REAL `topic-1` take pinned (above). (3) A NATIONAL trend
+  take pinned (Nederland 2022–2026, five cells, line chart). (4) Zero takeable survivors on the real path
+  pinned: the Utrecht-gemeente + Utrecht-provincie + Nederland answer (colliding base labels → label-only
+  question chips, no comparison possible) carries two `suggestions` and NO `pending` key, through
+  `respondToIntent` and `respondToQuestion`. (5) The full id triplets pinned on the Amsterdam and CPI rosters.
+  (6) A UX trap widened by v2 fixed client-side: two answers' fixed-text chips can share a label and the client
+  held ONE live pending, so an older answer's chip was taken against the NEWEST answer — `chat.tsx` now keeps
+  each answer's carrier under its audit id (a ref, not the ChatMessage type) and a chip click re-binds the
+  send to ITS answer's carrier; pinned in `chat.test.tsx`. Plus the label-keyed `questionShaped` lookup in
+  `replay.ts` acknowledged as a documented fragility (no collision possible with today's fixed templates).
+- **Review round 2 (session 74, 2026-09-03 — the HIGH-effort pass RUNBOOK batch item 10 asks for before a
+  core-product PR merges; nine findings, the code ones fixed on the branch):** (1) round 1's client fix
+  re-bound `pending` ON THE CLICK, which discarded an OPEN clarification round when the user glanced at an older
+  chip and then typed a reply (the paid round went out as a fresh question) and lost the race with an in-flight
+  answer overwriting `pending` — `chat.tsx` now binds a clicked chip to its message's carrier at SEND time
+  (`chipRef`, only while the label goes out unedited), and the carriers are keyed by message index so a
+  REFUSAL's rescue chip binds to its own carrier too; three pins. (2) A B-defaulted answer's question chips
+  named no place while their minted intent named `NL01` — the take then served the national figure with no
+  disclosure at all (R7 third branch (c)/(d) — v1's fresh parse re-fired the default and its `assumptionLine`);
+  the copy now names the country (above). (3) The audit role of a STRIPPED carrier's standalone parse was
+  'clarify' — the exact #177 mislabel, re-introduced for the shape round 1 added; now 'intent' (pinned). (4) The
+  "a `rescueOnly` WITH options but without chips still merges" claim (respond.ts, ADR 024, the rescue-chip pin)
+  held only for direct callers — the deployed path's boundary re-aligns a carrier's options first; scoped in all
+  three places and the boundary pinned (`wp26-trust-boundary.test.ts`). (5) This note's own "no change to
+  `chat.tsx` logic" bullet contradicted item (6) — corrected. (6) The label-collision premise behind replay's
+  `questionShaped` lookup is now an explicit **Assumption** (replay.ts, [#73](../open-questions.md)). Not
+  changed: chips stay clickable while a send is in flight (harmless with the send-time binding); the
+  `ID_PREFIX`/`QUESTION_SHAPED` twin tables (a simplification, recorded). The LOW pass over this round added: a
+  send whose captured thread is null (that turn's attach had failed) — a chip-bound take or a typed clarification
+  reply alike — falls back to the LIVE thread (a null would have made the server open a new thread and fork the
+  conversation — pinned for both paths, ADR 033 ⟨A6⟩ addendum); and one follow-up — the
+  carriers are keyed by message INDEX in a ref, correct today (within a thread the list only appends; the reset
+  clears the map) but an implicit coupling on a money-path route: once `web/lib/chat-message.ts` is free (after
+  PR #123 merges) the carrier belongs ON the `ChatMessage`.
+- **Veto points for the owner:** a clicked follow-up now reads in the plainer TEMPLATE phrasing (no LLM) — the
+  ADR 024 trade every take makes; the price is unchanged at 20 credits per take ([#101](../open-questions.md)
+  still open); the carrier question wording.
 
 ## As-built note (#195/#196 — the dry-run primitive no longer touches last_queried_at, session 72, 2026-09-03)
 
@@ -248,7 +366,9 @@ Built exactly per D1–D4; the deliberate micro-refinements, all inside the desi
   explicitly (D3's fully-explicit rule), via the cells' own CBS labels.
 - **Generator 4 never fires on the Phase-0 seed** (every seeded table carries exactly one
   canonical measure) — pinned by test with an injected sibling registry; it activates when a
-  table gains a second canonical measure.
+  table gains a second canonical measure. *(➡ No longer true: the registry has since grown to five
+  tables with several canonical measures — 83693NED, 85880NED, 85770NED, 85828NED, 85429NED — so the
+  generator fires on real data; its take is pinned in the #73 v2 note above.)*
 - **Envelope**: `AnswerResponse.suggestions: string[]` (required, default `[]`), assembled
   post-compose in `respondToIntent` — the ONE construction site both entry points share, so
   first-turn and clarification-reply answers get chips identically. `text` byte-identity is
@@ -263,7 +383,8 @@ Built exactly per D1–D4; the deliberate micro-refinements, all inside the desi
 - **Adversarial review (5 lenses × dual refuting skeptics, 2026-07-11):** the three
   heavyweight lenses CLEAN (R7 servability gating, R8/audit byte-discipline, money/entry-points);
   one generator finding refuted by both skeptics (sameTopic plural-template wording —
-  unreachable on the Phase-0 seed, activates only with a future second measure per table);
+  unreachable on the Phase-0 seed, activates only with a future second measure per table — *➡ reachable
+  since the registry grew; the wording is a recorded copy wart, see the #73 v2 note*);
   one CONFIRMED test-adequacy gap — no pin proved suggestions also ride the warn-and-serve
   STALE answer branch (a mutant skipping chips on stale answers passed the whole gate) —
   closed same session with a mutation-verified test (the mutant now fails exactly that pin).
@@ -309,7 +430,13 @@ gating (D2) are identical in both — only the handler differs. **➡ As built (
 take-path A2, so there is no `resolveClarificationOption` sibling to swap to — the deterministic
 rung lives inside `respondToClarificationReply` and the #75 fill-don't-send handler is UNCHANGED.
 The seam turned out to need no swap at all: a chip fills the input, the user sends, and the server
-recognizes the label. v1 and v2 are the same handler.** *Residual v1 risk, accepted + recorded:* between chip display and
+recognizes the label. v1 and v2 are the same handler.** **➡ #73 v2 as built (session 72, 2026-09-03): the
+no-re-parse half of v2 is now DELIVERED — not by a handler swap but by minting a ClickOption for every takeable
+chip on the WP26 chip carrier (the #197 mechanism), so a live click takes the stored intent through the zero-LLM
+`templateOnly` rung; the handler is still unchanged, and the fresh parse remains only the fallback where no carrier
+exists (flag off, a resumed thread, an old bundle in the deploy window). See the v2 as-built note at the top.**
+*Residual v1 risk, accepted + recorded (closed structurally on the live turn by v2, still the fallback's
+property):* between chip display and
 submit the normal LLM parse could read the filled text differently (e.g. clarify instead of
 answer); mitigated by generating fully-explicit question text (measure, region, period all named —
 the shape that parses confidently, per the #75/#97a precedent) and priced at worst as one ordinary
@@ -343,7 +470,9 @@ suggestions; extending chips there is still the open option below, now unblocked
   (session 57, 2026-07-25): this trigger can never fire. WP26 shipped on take-path A2, so there is
   no sibling handler to swap to — see the as-built note in D3 above. v1 and v2 are the same
   handler, and the "residual v1 risk" it was meant to remove is instead closed by the server
-  recognising the label byte-exactly.**
+  recognising the label byte-exactly.** **Update (session 72, 2026-09-03): the OUTCOME this trigger wanted — no
+  re-parse on a click — is now delivered by #73 v2 through the chip carrier (an option per chip, handler
+  untouched); see the v2 as-built note.**
 - Measured: a filled chip question that produced a clarification round (audit rows show it) →
   tighten that generator's template or drop it.
 - Onboarded-answer surface (#117/#74 dashboard work) → extend chips there with the same generators.

@@ -14,32 +14,49 @@
 // same structural no-numbers guarantee the refusal templates have (ADR 015).
 // The chip TEXT is built from labels and period codes only.
 //
-// v1 click behavior lives in web/components/chat.tsx: FILL the input, never
-// send (the proven #75 convention — no new charged entry point). Because the
-// filled text goes through a fresh LLM parse, every generated question is
-// FULLY explicit (measure label, region names, period words) — the shape
-// that parses confidently (ADR 029 D3). Inclusive ranges say "tot en met",
-// matching the #75 example chip and policy.ts's own range options (the
-// brief's "van X tot Y" sketch left the inclusivity wording to the repo
-// convention).
+// The click handler lives in web/components/chat.tsx: FILL the input, never
+// send (the proven #75 convention — no new charged entry point). The chip's
+// text is a complete, FULLY explicit Dutch question (measure label, region
+// names, period words) — the shape that parses confidently (ADR 029 D3) —
+// because until #73 v2 that filled text went through a fresh LLM parse, and
+// on the surfaces without a carrier (below) it still does. Inclusive ranges
+// say "tot en met", matching the #75 example chip and policy.ts's own range
+// options (the brief's "van X tot Y" sketch left the inclusivity wording to
+// the repo convention).
 //
 // #197 step 3 (session 70, 2026-09-02): two COMPARISON generators join the
 // four — "Vergelijk met Nederland" / "Vergelijk met <de G4>" (the answered
 // regions plus the national row, or the country plus the G4, at the answered
 // period) and "Vergelijk met <a year earlier>" (the answered period against
 // the same period one year back, as the registered `difference` derivation).
-// They differ from the four question-shaped generators in ONE way: their
-// candidate is not re-parsed by the LLM on click. Each surviving comparison
-// rides the label list AND a `ClickOption` (WP26 mechanism A, ADR 024) — the
-// fully resolved intent the dry-run just proved — so respond.ts can offer it
-// on a chip-carrier pending and the reply turn takes it deterministically
-// through the `templateOnly` take-path: a real query, a real audit row, zero
-// LLM, and a NEW validated result (R6: never a client-side merge of two
-// answers). They exist only while `CLARIFY_CLICK_ENABLED` is on — offered as a
-// plain label without that take-path, a click would send "Vergelijk met
-// Nederland" through a fresh parse it was never written for. Principle (c) is
-// the same dry-run gate as every other chip: a table with no national row
-// simply never offers the national comparison.
+// Their chips were the first NOT re-parsed by the LLM on click: each rides the
+// label list AND a `ClickOption` (WP26 mechanism A, ADR 024) — the fully
+// resolved intent the dry-run just proved — so respond.ts can offer it on a
+// chip-carrier pending and the reply turn takes it deterministically through
+// the `templateOnly` take-path: a real query, a real audit row, zero LLM, and
+// a NEW validated result (R6: never a client-side merge of two answers). They
+// exist only while `CLARIFY_CLICK_ENABLED` is on — offered as a plain label
+// without that take-path, a click would send "Vergelijk met Nederland" through
+// a fresh parse it was never written for. Principle (c) is the same dry-run
+// gate as every other chip: a table with no national row simply never offers
+// the national comparison.
+//
+// #73 v2 (session 72, 2026-09-03 — the upgrade seam ADR 029 D3 recorded as
+// "v2: no re-parse, revisit when WP26 ships"; WP26 is live): EVERY generator
+// now returns the same candidate shape — label + the resolved intent it just
+// dry-ran + the axis it varies — and the assembly loop mints a ClickOption for
+// each survivor whose intent passes the click-time schema. A click on any chip
+// is then the zero-LLM take above; the fresh parse the D3 text was written for
+// remains only the fallback where no carrier exists (flag off; a resumed
+// thread, ADR 033 ⟨A6⟩; an old bundle in the deploy window) — and there the
+// question-shaped copy still parses on its own, which is why it is unchanged.
+// Two rules keep the flag states honest: with the flag OFF the output is the
+// pre-#197 list byte for byte (same generators, same order, same dry-runs, no
+// options); with it ON, a question-shaped survivor the schema rejects (an
+// `onboarded:` key) is still offered as the plain label it always was, just
+// without an option — only the comparisons are all-or-nothing. The number of
+// dry-runs per turn does not change: every generator already dry-ran exactly
+// the candidate it now hands out.
 import { INTENT_SCHEMA_VERSION, NATIONAL_REGION_CODE } from '../../query/index.ts';
 import type { QueryRefusal, StructuredIntent, ValidatedResult } from '../../query/index.ts';
 import type { ServabilityCheck } from '../intent/policy.ts';
@@ -100,6 +117,23 @@ interface SuggestionContext {
   /** The answered regions, verbatim intent codes (empty = national-only
    * measure: resolveRegions emits no codes for those). */
   regions: string[];
+  /** #73 v2: the regions a question-shaped CANDIDATE carries. `regions` when
+   * the question named a place we can word honestly; when the question named
+   * NO place at all, the RESOLVED intent's regions (`result.intent.regions` —
+   * WP26 mechanism B-region's explicit `NL01` on a defaulted answer, nothing
+   * on a national-only measure). The same rule `answeredRegions` applies to
+   * the comparisons, for the same reason: an intent a click TAKES must name
+   * its region explicitly, so the take never depends on the B default still
+   * being on at click time (the RUNBOOK's rollback-order hazard). Chip COPY
+   * names that place too (review round 2: `regionPhrase` covers the defaulted
+   * case — the take is an EXPLICIT national intent that discloses no default,
+   * so the label itself carries the disclosure the answer's `assumptionLine`
+   * gave), and the dry-run proves the explicit candidate — the B default
+   * probes that same NL01 cell, so the verdict is unchanged. Empty
+   * `regions` from the drop-never-guess rule (a place was named but its cells
+   * carry no honest label) stays empty here too: a label naming no place must
+   * not take a regional intent. */
+  candidateRegions: string[];
   /** Display names for the answered regions, in cell order, parentheticals
    * stripped ("Utrecht (gemeente)" → "Utrecht") — built from the cells' own
    * CBS labels, never re-derived from codes. */
@@ -114,14 +148,38 @@ interface SuggestionContext {
   comparedRegions: boolean;
 }
 
-/** #197 step 3: a comparison candidate — the chip label AND the fully resolved
- * intent a click takes without a parse (respond.ts wraps it in a ClickOption).
- * `axis` names what the comparison varies, for the carrier pending's `axes`. */
-interface ComparisonCandidate {
+/** Which generator produced a chip: the ClickOption id prefix (readable in
+ * the audit row's take note), and the one property that follows from it —
+ * whether the label is a question the ordinary parse handles on its own. */
+type GeneratorKind = 'adjacent' | 'trend' | 'region' | 'topic' | 'compareRegion' | 'comparePeriod';
+
+/** A chip candidate — the shape EVERY generator returns since #73 v2: the
+ * label, the fully resolved intent the dry-run just proved (the intent a
+ * click takes without a parse; respond.ts wraps it in a ClickOption), and the
+ * axis the chip varies (the carrier pending's `axes`). */
+interface ChipCandidate {
+  kind: GeneratorKind;
   label: string;
   intent: StructuredIntent;
   axis: ClarifyAxis;
 }
+
+const ID_PREFIX: Record<GeneratorKind, string> = {
+  adjacent: 'adjacent',
+  trend: 'trend',
+  region: 'region',
+  topic: 'topic',
+  compareRegion: 'cmp',
+  comparePeriod: 'cmp',
+};
+
+/** The four WP29 generators write a complete, fully-explicit Dutch QUESTION
+ * (ADR 029 D1/D3) — the shape the ordinary parse handles on its own. That is
+ * what lets their chips fall back to a plain fill-the-input chip wherever the
+ * carrier is absent (a resumed thread, ADR 033 ⟨A6⟩ — src/threads/replay.ts
+ * reads the bit; an old client bundle in the deploy window). The comparison
+ * labels are imperatives written only for the take-path and are not marked. */
+const QUESTION_SHAPED: ReadonlySet<GeneratorKind> = new Set<GeneratorKind>(['adjacent', 'trend', 'region', 'topic']);
 
 const isNationalCode = (code: string): boolean => code.startsWith('NL');
 
@@ -131,7 +189,9 @@ const isNationalCode = (code: string): boolean => code.startsWith('NL');
  * onboarded topics (`onboarded:…` canonical keys) with the flag on, and those
  * keys are deliberately outside CANONICAL_KEYS, so a chip minted for them
  * would be stripped at click time and the label would fall into the paid LLM
- * merge. Not takeable ⇒ not offered, and no dry-run spent. */
+ * merge. Not takeable ⇒ not offered, and no dry-run spent. (The question-
+ * shaped generators use plain `servable` instead: their label is worth
+ * offering even when no option can be minted for it — see buildAnswerChips.) */
 async function servableAndTakeable(ctx: SuggestionContext, intent: StructuredIntent): Promise<boolean> {
   if (!isClickTakeableIntent(intent)) return false;
   return servable(ctx, intent);
@@ -159,7 +219,7 @@ function variant(
   ctx: SuggestionContext,
   period: StructuredIntent['period'],
   derivation: StructuredIntent['derivation'],
-  regions: string[] = ctx.regions,
+  regions: string[] = ctx.candidateRegions,
 ): StructuredIntent {
   return {
     schemaVersion: INTENT_SCHEMA_VERSION,
@@ -174,14 +234,21 @@ function variant(
  * loaded neighbor. "Next" is preferred; when the answer already sits at the
  * latest loaded period (the dry-run says next is not servable), fall back to
  * the period before the answered window. The dry-run IS the loadedness
- * check — no db access here. */
-async function adjacentPeriod(ctx: SuggestionContext): Promise<string | null> {
+ * check — no db access here. A take is one cell (the `single` shape, no
+ * chart). */
+async function adjacentPeriod(ctx: SuggestionContext): Promise<ChipCandidate | null> {
   if (ctx.label === null) return null;
   const neighbors = [stepPeriodCode(ctx.lastPeriod, 1), stepPeriodCode(ctx.firstPeriod, -1)];
   for (const code of neighbors) {
     if (code === null) continue;
-    if (await servable(ctx, variant(ctx, { kind: 'codes', codes: [code] }, 'none'))) {
-      return `Wat was ${ctx.label}${ctx.regionPhrase} in ${periodCodeToNl(code)}?`;
+    const candidate = variant(ctx, { kind: 'codes', codes: [code] }, 'none');
+    if (await servable(ctx, candidate)) {
+      return {
+        kind: 'adjacent',
+        label: `Wat was ${ctx.label}${ctx.regionPhrase} in ${periodCodeToNl(code)}?`,
+        intent: candidate,
+        axis: 'period',
+      };
     }
   }
   return null;
@@ -192,22 +259,27 @@ async function adjacentPeriod(ctx: SuggestionContext): Promise<string | null> {
  * three-period minimum (the brief's "≥3 periods loaded" floor); the dry-run
  * proves the whole window serves gap-free (runQuery's completeness pass), so
  * a named range is never a range we cannot deliver. Skipped when the answer
- * already IS a series — the chip would re-ask the question just answered. */
-async function trend(ctx: SuggestionContext): Promise<string | null> {
+ * already IS a series — the chip would re-ask the question just answered. A
+ * take is the `series` shape with the builder's line chart. */
+async function trend(ctx: SuggestionContext): Promise<ChipCandidate | null> {
   if (ctx.label === null) return null;
   if (ctx.result.shape === 'series' || ctx.intent.derivation === 'series') return null;
   // A multi-region series is a shape the query layer refuses (several regions
   // AND several periods) — don't burn dry-runs on it.
-  if (ctx.regions.length > 1) return null;
+  if (ctx.candidateRegions.length > 1) return null;
   for (const span of [5, 3]) {
     const from = stepPeriodCode(ctx.lastPeriod, -(span - 1));
     if (from === null) continue;
     const candidate = variant(ctx, { kind: 'range', from, to: ctx.lastPeriod }, 'series');
     if (await servable(ctx, candidate)) {
-      return (
-        `Hoe ontwikkelde ${ctx.label}${ctx.regionPhrase} zich van ` +
-        `${periodCodeToNl(from)} tot en met ${periodCodeToNl(ctx.lastPeriod)}?`
-      );
+      return {
+        kind: 'trend',
+        label:
+          `Hoe ontwikkelde ${ctx.label}${ctx.regionPhrase} zich van ` +
+          `${periodCodeToNl(from)} tot en met ${periodCodeToNl(ctx.lastPeriod)}?`,
+        intent: candidate,
+        axis: 'period',
+      };
     }
   }
   return null;
@@ -216,8 +288,10 @@ async function trend(ctx: SuggestionContext): Promise<string | null> {
 /** Generator 3 — region variant, only when the measure is regional (the
  * answered intent carries region codes; national-only measures never do —
  * resolveRegions contract). A sub-national answer offers the national
- * figure; a national answer offers the G4 comparison. One region chip max. */
-async function regionVariant(ctx: SuggestionContext): Promise<string | null> {
+ * figure; a national answer offers the G4 comparison. One region chip max. A
+ * take is one national cell, or the G4 `comparison` shape with its bar
+ * chart. */
+async function regionVariant(ctx: SuggestionContext): Promise<ChipCandidate | null> {
   if (ctx.label === null) return null;
   if (ctx.regions.length === 0) return null;
   // #197 step 3: a side-by-side comparison chip already carries the national
@@ -228,16 +302,25 @@ async function regionVariant(ctx: SuggestionContext): Promise<string | null> {
   if (answeredNational) {
     const candidate = variant(ctx, period, 'none', G4.map((g) => g.code));
     if (await servable(ctx, candidate)) {
-      return (
-        `Wat was ${ctx.label} in de gemeentes ${joinNl(G4.map((g) => g.name))} ` +
-        `in ${periodCodeToNl(ctx.lastPeriod)}?`
-      );
+      return {
+        kind: 'region',
+        label:
+          `Wat was ${ctx.label} in de gemeentes ${joinNl(G4.map((g) => g.name))} ` +
+          `in ${periodCodeToNl(ctx.lastPeriod)}?`,
+        intent: candidate,
+        axis: 'region',
+      };
     }
     return null;
   }
   const candidate = variant(ctx, period, 'none', [NATIONAL_REGION_CODE]);
   if (await servable(ctx, candidate)) {
-    return `Wat was ${ctx.label} in Nederland in ${periodCodeToNl(ctx.lastPeriod)}?`;
+    return {
+      kind: 'region',
+      label: `Wat was ${ctx.label} in Nederland in ${periodCodeToNl(ctx.lastPeriod)}?`,
+      intent: candidate,
+      axis: 'region',
+    };
   }
   return null;
 }
@@ -246,8 +329,11 @@ async function regionVariant(ctx: SuggestionContext): Promise<string | null> {
  * (first by key order, skipping the answered one), asked with ITS everyday
  * term. The candidate intent carries the sibling's canonical key and the
  * answered period/regions — complete, so the dry-run is meaningful and the
- * filled text re-parses onto the sibling's own definition. */
-async function sameTopic(ctx: SuggestionContext): Promise<string | null> {
+ * filled text re-parses onto the sibling's own definition. A take is one cell
+ * of the sibling measure (the adjacent-period shape, on another key); the
+ * click-time schema accepts it only for a registry (CANONICAL_KEYS) sibling —
+ * any other sibling stays a plain label. */
+async function sameTopic(ctx: SuggestionContext): Promise<ChipCandidate | null> {
   if (ctx.intent.target.kind !== 'canonical') return null;
   const answeredKey = ctx.intent.target.key;
   const sibling = ctx.registry
@@ -258,12 +344,17 @@ async function sameTopic(ctx: SuggestionContext): Promise<string | null> {
   const candidate: StructuredIntent = {
     schemaVersion: INTENT_SCHEMA_VERSION,
     target: { kind: 'canonical', key: sibling.key },
-    ...(ctx.regions.length > 0 ? { regions: ctx.regions } : {}),
+    ...(ctx.candidateRegions.length > 0 ? { regions: ctx.candidateRegions } : {}),
     period: { kind: 'codes', codes: [ctx.lastPeriod] },
     derivation: 'none',
   };
   if (await servable(ctx, candidate)) {
-    return `Hoeveel ${term} waren er${ctx.regionPhrase} in ${periodCodeToNl(ctx.lastPeriod)}?`;
+    return {
+      kind: 'topic',
+      label: `Hoeveel ${term} waren er${ctx.regionPhrase} in ${periodCodeToNl(ctx.lastPeriod)}?`,
+      intent: candidate,
+      axis: 'measure',
+    };
   }
   return null;
 }
@@ -287,7 +378,7 @@ async function sameTopic(ctx: SuggestionContext): Promise<string | null> {
  * the dry-run — one source of truth for those bounds. Principle (c): a table
  * with no national row fails the dry-run and offers nothing — the same gate
  * as every chip. */
-async function compareRegion(ctx: SuggestionContext): Promise<ComparisonCandidate | null> {
+async function compareRegion(ctx: SuggestionContext): Promise<ChipCandidate | null> {
   if (ctx.intent.target.kind !== 'canonical') return null;
   const answered = answeredRegions(ctx);
   if (answered.length === 0) return null;
@@ -298,7 +389,12 @@ async function compareRegion(ctx: SuggestionContext): Promise<ComparisonCandidat
     const regions = [...answered, ...G4.map((g) => g.code)];
     const candidate = variant(ctx, period, 'none', regions);
     if (await servableAndTakeable(ctx, candidate)) {
-      return { label: `Vergelijk met ${joinNl(G4.map((g) => g.name))}`, intent: candidate, axis: 'region' };
+      return {
+        kind: 'compareRegion',
+        label: `Vergelijk met ${joinNl(G4.map((g) => g.name))}`,
+        intent: candidate,
+        axis: 'region',
+      };
     }
     return null;
   }
@@ -308,7 +404,7 @@ async function compareRegion(ctx: SuggestionContext): Promise<ComparisonCandidat
   // one source of truth for the bound (reviewer finding, PR #118).
   const candidate = variant(ctx, period, 'none', [...answered, NATIONAL_REGION_CODE]);
   if (await servableAndTakeable(ctx, candidate)) {
-    return { label: 'Vergelijk met Nederland', intent: candidate, axis: 'region' };
+    return { kind: 'compareRegion', label: 'Vergelijk met Nederland', intent: candidate, axis: 'region' };
   }
   return null;
 }
@@ -321,7 +417,7 @@ async function compareRegion(ctx: SuggestionContext): Promise<ComparisonCandidat
  * ONE place only: `difference` compares periods at one place by definition
  * (resolve.ts arity rule). The label names the earlier period explicitly —
  * period words only, never a value. */
-async function comparePeriod(ctx: SuggestionContext): Promise<ComparisonCandidate | null> {
+async function comparePeriod(ctx: SuggestionContext): Promise<ChipCandidate | null> {
   if (ctx.intent.target.kind !== 'canonical') return null;
   const answered = answeredRegions(ctx);
   if (answered.length > 1) return null;
@@ -338,16 +434,23 @@ async function comparePeriod(ctx: SuggestionContext): Promise<ComparisonCandidat
     answered,
   );
   if (await servableAndTakeable(ctx, candidate)) {
-    return { label: `Vergelijk met ${periodCodeToNl(earlier)}`, intent: candidate, axis: 'period' };
+    return {
+      kind: 'comparePeriod',
+      label: `Vergelijk met ${periodCodeToNl(earlier)}`,
+      intent: candidate,
+      axis: 'period',
+    };
   }
   return null;
 }
 
 /** What respondToIntent assembles under an answer: the chip labels in display
- * order (at most MAX_SUGGESTIONS) and, for the comparison chips among them,
- * the ClickOptions a click takes deterministically plus the axes they vary
- * (the carrier pending's `axes`). `clickOptions` is [] and `axes` is [] unless
- * the caller enabled comparisons — the flag-off shape is byte-identical to the
+ * order (at most MAX_SUGGESTIONS) and, for the TAKEABLE chips among them, the
+ * ClickOptions a click takes deterministically plus the axes they vary (the
+ * carrier pending's `axes`). Since #73 v2 that is normally every chip; a
+ * question-shaped chip the click-time schema rejects is in `suggestions` but
+ * not in `clickOptions`. `clickOptions` is [] and `axes` is [] unless the
+ * caller enabled click options — the flag-off shape is byte-identical to the
  * pre-#197 `buildSuggestions`. */
 export interface AnswerChips {
   suggestions: string[];
@@ -355,7 +458,7 @@ export interface AnswerChips {
   axes: ClarifyAxis[];
 }
 
-type Generator = (ctx: SuggestionContext) => Promise<string | ComparisonCandidate | null>;
+type Generator = (ctx: SuggestionContext) => Promise<ChipCandidate | null>;
 
 /** Builds the servability-gated chips for an answered question (ADR 029):
  * candidates in fixed priority — adjacent period → trend → [#197: region
@@ -367,11 +470,22 @@ type Generator = (ctx: SuggestionContext) => Promise<string | ComparisonCandidat
  * list, byte for byte. They sit ahead of the region variant because a
  * side-by-side comparison subsumes the lone national figure; with the cap at 3
  * that is also the only position where they can surface at all on a regional
- * answer. Pure apart from the injected dry-run; FAIL-OPEN — any throw
- * anywhere (including a throwing check) returns the empty shape so a chips
- * hiccup can never cost the user the paid answer (the same rule
- * web/app/actions.ts applies to outcomeContext). `registry` is injectable for
- * tests only; production call sites take the default. */
+ * answer.
+ *
+ * #73 v2: with `opts.clickOptions` on, EVERY survivor whose intent passes the
+ * click-time schema (`isClickTakeableIntent`) gets a ClickOption — the four
+ * question-shaped generators included — so a click on any chip is the
+ * zero-LLM take. A question-shaped survivor the schema rejects (an
+ * `onboarded:` key: outside CANONICAL_KEYS by design) keeps its place in
+ * `suggestions` as the plain fill-the-input label it was before v2; only the
+ * comparisons are all-or-nothing (their generators gate on takeability before
+ * the dry-run). The dry-run count per turn is unchanged by v2: each generator
+ * hands out exactly the candidate it already dry-ran. Pure apart from the
+ * injected dry-run; FAIL-OPEN — any throw anywhere (including a throwing
+ * check) returns the empty shape so a chips hiccup can never cost the user
+ * the paid answer (the same rule web/app/actions.ts applies to
+ * outcomeContext). `registry` is injectable for tests only; production call
+ * sites take the default. */
 export async function buildAnswerChips(
   intent: StructuredIntent,
   result: ValidatedResult,
@@ -393,14 +507,30 @@ export async function buildAnswerChips(
       const name = baseLabel(cell.regionLabel.replace(/\s+/g, ' ').trim());
       if (!regionNames.includes(name)) regionNames.push(name);
     }
-    const regions = intent.regions ?? [];
+    const parsedRegions = intent.regions ?? [];
     // Drop-never-guess: an intent with regions whose cells carry no labels
     // (or vice versa) has no honest region wording — generate nothing that
     // names a region. Empty-region generators still run.
-    const regionPhrase =
-      regions.length > 0 && regionNames.length === regions.length
-        ? ` in ${joinNl(regionNames)}`
-        : '';
+    const worded = parsedRegions.length > 0 && regionNames.length === parsedRegions.length;
+    const regions = worded ? parsedRegions : [];
+    // #73 v2 (SuggestionContext.candidateRegions): a question that named NO
+    // place takes the RESOLVED regions — the B-region default's explicit NL01
+    // — so a minted intent never leans on the default. A drop-never-guess
+    // emptying (a place WAS named) stays empty. Review round 2: only when the
+    // resolved regions have honest cell labels, one each — the same wording
+    // rule a named place obeys — so the copy can name the place the take
+    // carries; otherwise the candidates stay region-less labels.
+    const resolvedRegions = result.intent.regions ?? [];
+    const defaulted =
+      parsedRegions.length === 0 && resolvedRegions.length > 0 && regionNames.length === resolvedRegions.length;
+    const candidateRegions = worded ? parsedRegions : defaulted ? resolvedRegions : [];
+    // The copy names the place the candidate carries. On a B-defaulted answer
+    // the question named none and the take is an EXPLICIT national intent, so
+    // nothing downstream discloses a default any more (R7 third branch (c)/(d):
+    // `assumptionLine` is the default's own disclosure, and a take has no
+    // default) — the chip itself says "in Nederland", exactly as it does when
+    // the question named the country (review round 2, PR #122).
+    const regionPhrase = worded || defaulted ? ` in ${joinNl(regionNames)}` : '';
     const ctx: SuggestionContext = {
       intent,
       result,
@@ -409,7 +539,8 @@ export async function buildAnswerChips(
       label: result.attribution.definitionLabel,
       firstPeriod,
       lastPeriod,
-      regions: regions.length > 0 && regionNames.length === regions.length ? regions : [],
+      regions,
+      candidateRegions,
       regionNames,
       regionPhrase,
       comparedRegions: false,
@@ -421,26 +552,43 @@ export async function buildAnswerChips(
     const suggestions: string[] = [];
     const clickOptions: ClickOption[] = [];
     const axes: ClarifyAxis[] = [];
+    const minted = new Map<string, number>();
     for (const generator of generators) {
       if (suggestions.length >= MAX_SUGGESTIONS) break;
       const produced = await generator(ctx);
       if (produced === null) continue;
-      if (typeof produced === 'string') {
-        suggestions.push(produced);
-        continue;
-      }
       suggestions.push(produced.label);
+      if (produced.kind === 'compareRegion') ctx.comparedRegions = true;
+      if (!opts.clickOptions) continue;
+      // #73 v2: a survivor is servable (its dry-run just passed) but may still
+      // not be TAKEABLE — an `onboarded:` key, a shape the click-time schema
+      // rejects. A question-shaped one is then offered exactly as before v2: a
+      // plain label that fills the input, without an option. (A comparison
+      // never reaches this line untakeable — its generator gated on it before
+      // spending the dry-run.)
+      if (!isClickTakeableIntent(produced.intent)) continue;
+      // Drop-never-guess, extended to the take: a candidate that names no
+      // place on an answer that HAD one (a named region whose cells carry no
+      // honest label — the rule that emptied `regionPhrase` and
+      // `candidateRegions`) would serve only through the B-region default at
+      // click time. Its label reads exactly as before v2; no option is minted.
+      if ((produced.intent.regions ?? []).length === 0 && answeredRegions(ctx).length > 0) continue;
+      const prefix = ID_PREFIX[produced.kind];
+      const ordinal = (minted.get(prefix) ?? 0) + 1;
+      minted.set(prefix, ordinal);
       clickOptions.push({
-        id: `cmp-${clickOptions.length + 1}`,
+        id: `${prefix}-${ordinal}`,
         label: produced.label,
         intent: produced.intent,
-        // A comparison names the explicit, already-answered period(s) — it
-        // makes no "what is it now" claim, so the staleness rule must not
-        // treat a click as one (the same reasoning as the rescue chip).
+        // Every chip names explicit, already-answered periods or windows — an
+        // adjacent code, a window ending at the answered period, the answered
+        // period at another place or for a sibling measure, a comparison of
+        // named periods. None makes a "what is it now" claim, so the staleness
+        // rule must not treat a click as one (the rescue chip's reasoning).
         impliedRecency: false,
+        ...(QUESTION_SHAPED.has(produced.kind) ? { questionShaped: true as const } : {}),
       });
       if (!axes.includes(produced.axis)) axes.push(produced.axis);
-      if (produced.axis === 'region') ctx.comparedRegions = true;
     }
     return { suggestions, clickOptions, axes };
   } catch {

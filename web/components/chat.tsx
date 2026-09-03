@@ -264,7 +264,12 @@ export function Chat({
   const [threadId, setThreadId] = useState<number | null>(initialThreadId ?? null);
   // ⟨A6⟩: the threadId captured ALONGSIDE `pending` at question time — a reply
   // attaches to ITS clarification's originating thread, never the sidebar's
-  // currently-active one. Cleared with pending on a thread switch.
+  // currently-active one. Cleared with pending on a thread switch. One
+  // fallback (#73 v2 review round 2): when the captured id is NULL — that
+  // turn's own attach failed fail-soft — the send uses the LIVE thread, for a
+  // typed reply and a chip alike; a null would make the server open a fresh
+  // thread and fork the conversation, and a switch has cleared both by then,
+  // so the live thread is the only other honest choice (see handleSubmit).
   const [capturedThreadId, setCapturedThreadId] = useState<number | null>(null);
   // WP15 (ADR 021): the structured referent carried between turns. Held
   // exactly like `pending` (client-held React state, sent back verbatim on
@@ -310,6 +315,28 @@ export function Chat({
   // the newly displayed thread. Captured at submit start; re-checked after the
   // action resolves.
   const generationRef = useRef(0);
+  // #73 v2 review (PR #122): the chip carrier of every answer AND refusal
+  // message that arrived with one, keyed by the message's INDEX in `messages`
+  // (a refusal carries no audit id on the client; indexes are stable — within
+  // a thread the list only appends, and a thread switch replaces it whole and
+  // clears this map). Two answers' fixed-text chips can share a label byte for
+  // byte ("Vergelijk met Nederland", the G4 label), and `takesRescue` in
+  // handleSubmit routes on the label alone — so without this an older chip
+  // would be taken against the NEWEST answer: the wrong question, silently
+  // (never a wrong number: the served answer discloses its own period and
+  // region). Held in a ref rather than on ChatMessage (web/lib/chat-message.ts
+  // is a sibling PR's file). A resumed thread carries no carrier (ADR 033
+  // ⟨A6⟩), so a replayed message's chip keeps the current-pending route.
+  type Carrier = { pending: PendingClarification; threadId: number | null };
+  const carriersRef = useRef<Map<number, Carrier>>(new Map());
+  // Review round 2: the chip clicked LAST, with its message's carrier. The
+  // binding is resolved at SEND time (handleSubmit), never on the click — round
+  // 1 re-bound `pending` on the click, which (a) discarded an OPEN clarification
+  // round when the user then typed a reply to it instead of sending the chip,
+  // and (b) lost the race with an in-flight answer whose landing overwrote
+  // `pending` again. Consulted only while the sent text is still the clicked
+  // label byte for byte; edited text is typed text and keeps the live pending.
+  const chipRef = useRef<({ label: string } & Carrier) | null>(null);
 
   function toggleSource(key: string): void {
     setSelectedSources((prev) => {
@@ -350,6 +377,8 @@ export function Chat({
     setThreadId(initialThreadId ?? null);
     setPending(null);
     setCapturedThreadId(null);
+    carriersRef.current.clear();
+    chipRef.current = null;
     setInput('');
     setError(null);
     setStaleDeploy(false);
@@ -411,14 +440,30 @@ export function Chat({
       // finder, so routing a fresh question through it would silently drop
       // on-demand table onboarding. (The server keeps its own belt for a client
       // that gets this wrong; this branch is what makes the common case right.)
+      // #73 v2 review round 2: a clicked chip is bound to ITS message's carrier
+      // HERE, at send time, and only while the input still holds the clicked
+      // label byte for byte. Typed or edited text keeps the live pending, so a
+      // click elsewhere never discards an open clarification round, and an
+      // answer landing after the click cannot re-route the chip to itself.
+      const clicked = chipRef.current;
+      chipRef.current = null;
+      const chip = clicked !== null && clicked.label.trim() === text ? clicked : null;
+      const sendPending = chip ? chip.pending : pending;
+      // LOW review, round 2: a carrier recorded on a turn whose thread attach
+      // failed (fail-soft, actions.ts) holds `threadId: null`; if the chat has
+      // attached since, a null here would make the server INSERT a fresh thread
+      // for the take and fork the conversation. A thread switch clears the
+      // carriers and the pending alike, so a recorded thread is either the live
+      // one or null — fall back to the live thread.
+      const sendThreadId = (chip ? chip.threadId : capturedThreadId) ?? threadId;
       const takesRescue =
-        pending?.rescueOnly !== true || pending.options.some((o) => o.trim() === text.trim());
-      if (pending && takesRescue) {
+        sendPending?.rescueOnly !== true || sendPending.options.some((o) => o.trim() === text);
+      if (sendPending && takesRescue) {
         outcome = threadAware
-          ? await replyToClarification(pending, text, requestId, selection, capturedThreadId)
+          ? await replyToClarification(sendPending, text, requestId, selection, sendThreadId)
           : websearch
-            ? await replyToClarification(pending, text, requestId, selection)
-            : await replyToClarification(pending, text, requestId);
+            ? await replyToClarification(sendPending, text, requestId, selection)
+            : await replyToClarification(sendPending, text, requestId);
       } else {
         outcome = threadAware
           ? await askQuestion(text, requestId, context, selection, threadId)
@@ -551,7 +596,8 @@ export function Chat({
       // holding it here cannot turn the user's next unrelated question into a
       // clarification-reply merge.
       // #197 step 3: an ANSWER may carry the same carrier shape for its
-      // comparison chips ("Vergelijk met Nederland", …). Same `rescueOnly`
+      // comparison chips ("Vergelijk met Nederland", …) — and since #73 v2
+      // for every takeable follow-up chip beside them. Same `rescueOnly`
       // routing in handleSubmit — a chip click goes to replyToClarification
       // and is taken without a parse; any other text is the next question,
       // with the held conversation context intact. `?? null` guards the
@@ -565,6 +611,16 @@ export function Chat({
       if (carried) {
         setPending(carried);
         setCapturedThreadId(outcome.threadId);
+        // #73 v2 review: remember this message's carrier so an older chip can
+        // bind its send to it (see carriersRef / chipRef). The assistant
+        // message was appended right after this turn's user message, and
+        // `messages` is the list as of this submit (busy gates a second one),
+        // so its index is messages.length + 1. Answers and refusals alike — a
+        // refusal's rescue chip is a carrier chip too; a clarification is an
+        // open round, not a carrier, and is never recorded here.
+        if (response.kind === 'answer' || response.kind === 'refusal') {
+          carriersRef.current.set(messages.length + 1, { pending: carried, threadId: outcome.threadId });
+        }
       } else {
         setPending(null);
         setCapturedThreadId(null);
@@ -764,7 +820,20 @@ export function Chat({
                   <button
                     key={question}
                     type="button"
-                    onClick={() => setInput(question)}
+                    onClick={() => {
+                      // #73 v2 review: remember THIS message's carrier with the
+                      // clicked label; handleSubmit binds the send to it only if
+                      // the label goes out unedited (an older answer's or
+                      // refusal's chip takes against ITS carrier, not the latest
+                      // one — see carriersRef / chipRef). Nothing is re-bound
+                      // here — `pending` stays what it is, so an open
+                      // clarification round survives a glance at an older chip.
+                      // A message without a carrier (a resumed thread, a
+                      // clarification's own option) records nothing.
+                      const own = carriersRef.current.get(i);
+                      chipRef.current = own ? { label: question, ...own } : null;
+                      setInput(question);
+                    }}
                     className="rounded-full border border-line-strong px-3 py-1 text-xs text-ink-soft hover:bg-paper-sunken"
                   >
                     {question}

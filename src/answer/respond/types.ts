@@ -236,17 +236,21 @@ export interface AnswerResponse extends ResponseBase {
    * treat absence as [] (reconstruct.ts checks only the fields it names). */
   suggestions: string[];
   /** #197 step 3 (ADR 029 as-built, over ADR 024 mechanism A): the chip-carrier
-   * pending for the COMPARISON chips — the subset of `suggestions` a click
-   * resolves WITHOUT an LLM parse. Each ClickOption carries the fully resolved,
-   * dry-run-proven intent (the answered regions + the national row, the
-   * country + the G4, or the answered period against a year earlier);
-   * `options` are exactly their labels. Marked `rescueOnly` — NOT an open
-   * clarification round: a reply byte-equal to a label is taken through the
-   * templateOnly take-path (respondToClarificationReply), anything else is a
-   * FRESH question (isRescuePending). PRESENT-ONLY (docs/13): absent when
-   * CLARIFY_CLICK_ENABLED is off, when no comparison survived the dry-run, and
-   * on every row stored before #197 — the envelope is then byte-identical to
-   * the pre-#197 one. Client-held between the turns and re-validated
+   * pending — the subset of `suggestions` a click resolves WITHOUT an LLM
+   * parse. Each ClickOption carries the fully resolved, dry-run-proven intent;
+   * `options` are exactly their labels. Introduced for the COMPARISON chips
+   * (the answered regions + the national row, the country + the G4, the
+   * answered period against a year earlier); since #73 v2 (2026-09-03) it
+   * holds EVERY takeable chip — the four question-shaped WP29 generators too
+   * (`questionShaped` on their options). A question-shaped chip the click-time
+   * schema rejects stays in `suggestions` as a plain fill-the-input label and
+   * is simply absent here. Marked `rescueOnly` — NOT an open clarification
+   * round: a reply byte-equal to a label is taken through the templateOnly
+   * take-path (respondToClarificationReply), anything else is a FRESH question
+   * (isRescuePending). PRESENT-ONLY (docs/13): absent when
+   * CLARIFY_CLICK_ENABLED is off, when no takeable chip survived the dry-run,
+   * and on every row stored before #197 — the envelope is then byte-identical
+   * to the pre-#197 one. Client-held between the turns and re-validated
    * fail-closed on the way back, exactly like a clarification's pending. */
   pending?: PendingClarification;
 }

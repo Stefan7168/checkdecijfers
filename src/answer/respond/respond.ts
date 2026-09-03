@@ -219,7 +219,10 @@ async function clickOptionStillCurrent(db: Db, option: ClickOption): Promise<boo
 }
 
 /** A CHIP-CARRIER pending: WP26c's single rescue chip on a misfired refusal
- * and, since #197 step 3, the comparison chips under an answer. Both mint the
+ * and, since #197 step 3, the chips under an answer — the comparison chips
+ * first, and since #73 v2 every takeable follow-up chip (at most
+ * MAX_SUGGESTIONS = 3 of them, inside the 1..MAX_CLICK_OPTIONS = 4 bound
+ * below; pinned in tests/answer/wp29-click-take.test.ts). Both mint the
  * same shape — `rescueOnly`, one to MAX_CLICK_OPTIONS chips, `options` the
  * chips' labels in the same order (byte-equal, index for index), at least one
  * declared axis. The reply turn treats such a pending as a CLOSED round (the
@@ -237,7 +240,10 @@ async function clickOptionStillCurrent(db: Db, option: ClickOption): Promise<boo
  * reaches this branch, so with both flags off nothing here is reachable that
  * was not reachable before WP26. (Before #197 the shape was pinned to exactly
  * one chip on one `measure` axis; widened to N chips with pairwise-bound
- * labels — the label binding, not the axis literal, is what closes forgery.) */
+ * labels — the label binding, not the axis literal, is what closes forgery.
+ * A `rescueOnly` with NO options at all is the STRIPPED-carrier shape and is
+ * routed fresh by `isStrippedCarrier` below — see there for why that byte
+ * grants a client nothing.) */
 export function isRescuePending(pending: PendingClarification): boolean {
   if (pending.rescueOnly !== true) return false;
   const { clickOptions, options, axes } = pending;
@@ -260,10 +266,42 @@ export function isRescuePending(pending: PendingClarification): boolean {
   );
 }
 
+/** #73 v2 review (PR #122, 2026-09-03): a STRIPPED carrier — `rescueOnly`
+ * whose every option the trust boundary dropped. withValidatedClickOptions
+ * re-aligns a carrier's `options` to the surviving chips, so the stripped
+ * shape is exactly `rescueOnly` + empty options + no clickOptions. Nothing is
+ * left to take, and a carrier was never an open round, so every reply is a
+ * FRESH question — the documented fallback for a chip whose take-path is gone
+ * (a rollback, a stale or malformed option). A client can post this shape
+ * unprompted too, and gains nothing by it: the branch IS the ordinary
+ * question path it could call directly (no finder, no context — the reply
+ * bag), so the session-57 property holds in substance — no new capability,
+ * no money difference, no wrong number. What guards the shape on the DEPLOYED
+ * path (review round 2): the trust boundary — `withValidatedClickOptions`,
+ * applied in web/app/actions.ts before this module is reached — re-aligns a
+ * carrier's `options` to its surviving chips, so a carrier arriving here is
+ * either well-formed or stripped. A `rescueOnly` WITH options but without
+ * chips reaches the merge only when this function is called DIRECTLY — the
+ * bare-forgery pin in tests/answer/rescue-chip.test.ts documents that
+ * direct-call property; tests/answer/wp26-trust-boundary.test.ts pins the
+ * deployed one (a bare forgery becomes the stripped carrier, a mis-paired one
+ * is repaired to its chips' labels). */
+export function isStrippedCarrier(pending: PendingClarification): boolean {
+  return (
+    pending.rescueOnly === true &&
+    Array.isArray(pending.options) &&
+    pending.options.length === 0 &&
+    (pending.clickOptions === undefined ||
+      (Array.isArray(pending.clickOptions) && pending.clickOptions.length === 0))
+  );
+}
+
 /** #197 step 3: the `questionNl` of an answer's chip-carrier pending. Required
  * by the pending's shape; never rendered — the chat input shows no placeholder
- * for a `rescueOnly` pending because nothing was asked (chat.tsx). */
-export const COMPARISON_CARRIER_QUESTION_NL = 'Vergelijk dit cijfer met:';
+ * for a `rescueOnly` pending because nothing was asked (chat.tsx). Worded
+ * neutrally since #73 v2, when the carrier stopped being comparison-only
+ * (rows minted before that carry the old 'Vergelijk dit cijfer met:'). */
+export const CHIP_CARRIER_QUESTION_NL = 'Vervolg op dit antwoord:';
 
 /** The taken option, shaped as the 'intent' ParseOutcome the shared downstream
  * half already knows how to serve — so a clicked answer runs the SAME query,
@@ -347,8 +385,9 @@ export async function respondToIntent(
      * same rules the answer itself ran under. */
     answerFirstEnabled?: boolean;
     /** #197 step 3: WP26 mechanism A's flag (CLARIFY_CLICK_ENABLED). True ⇒
-     * the answer may carry comparison chips on a chip-carrier pending, taken
-     * deterministically on the reply turn; absent/false ⇒ the pre-#197 chip
+     * the answer may carry its chips on a chip-carrier pending, taken
+     * deterministically on the reply turn — the comparison chips, and since
+     * #73 v2 every takeable follow-up chip; absent/false ⇒ the pre-#197 chip
      * list and NO `pending` key (byte-identical envelope). Both public entry
      * points pass it through their options spread. */
     clickOptionsEnabled?: boolean;
@@ -465,11 +504,14 @@ export async function respondToIntent(
   // rule web/app/actions.ts applies to outcomeContext. Assembled
   // post-compose: `text` above is already final and stays byte-untouched.
   //
-  // #197 step 3: with CLARIFY_CLICK_ENABLED on, the comparison chips among
-  // them ride a chip-carrier pending (the WP26c rescue shape, `rescueOnly`) so
-  // the reply turn takes a clicked one from its stored, dry-run-proven intent
-  // — no LLM, a new validated result, a real audit row. PRESENT-ONLY: no
-  // survivors (or flag off) ⇒ no `pending` key, envelope bytes unchanged.
+  // #197 step 3: with CLARIFY_CLICK_ENABLED on, the takeable chips among them
+  // ride a chip-carrier pending (the WP26c rescue shape, `rescueOnly`) so the
+  // reply turn takes a clicked one from its stored, dry-run-proven intent —
+  // no LLM, a new validated result, a real audit row. First the comparison
+  // chips only; since #73 v2 every chip whose intent passes the click-time
+  // schema (a question-shaped chip that does not is still offered as a plain
+  // label — see buildAnswerChips). PRESENT-ONLY: no takeable survivor (or
+  // flag off) ⇒ no `pending` key, envelope bytes unchanged.
   let suggestions: string[] = [];
   let carrier: PendingClarification | null = null;
   try {
@@ -486,7 +528,7 @@ export async function respondToIntent(
         question,
         referenceDate: options.referenceDate,
         axes: chips.axes,
-        questionNl: COMPARISON_CARRIER_QUESTION_NL,
+        questionNl: CHIP_CARRIER_QUESTION_NL,
         options: chips.clickOptions.map((option) => option.label),
         clickOptions: chips.clickOptions,
         rescueOnly: true,
@@ -713,6 +755,12 @@ export async function respondToClarificationReply(
     // question would be a silent, confusing regression (and would consume the
     // one clarification round nobody opened).
     if (isRescuePending(pending)) {
+      return await respondToQuestion(db, reply, options);
+    }
+    // #73 v2 review: a STRIPPED carrier (every chip dropped at the trust
+    // boundary — see isStrippedCarrier) is likewise not an open round: nothing
+    // to take, so every reply is the user's next question.
+    if (isStrippedCarrier(pending)) {
       return await respondToQuestion(db, reply, options);
     }
 

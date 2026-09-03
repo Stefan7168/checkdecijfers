@@ -163,6 +163,18 @@ export interface ClickOption {
    * clicked take quietly less conservative than the typed path, so the truth
    * travels with the option. */
   impliedRecency: boolean;
+  /** #73 v2 (ADR 029 as-built, 2026-09-03): the label is a complete, fully-
+   * explicit Dutch QUESTION (the WP29 generators' copy, ADR 029 D1/D3) that
+   * the ordinary parse handles on its own — so wherever the chip carrier is
+   * NOT present (a resumed thread restores no pending, ADR 033 ⟨A6⟩ —
+   * src/threads/replay.ts; an old client bundle in the deploy window) the
+   * chip may still be offered as a plain fill-the-input chip, exactly the v1
+   * contract. ABSENT on every option whose label exists only with its
+   * take-path — the comparison chips ("Vergelijk met …"), the WP26c rescue
+   * chip, a clarification option — and those are dropped where the carrier
+   * is not restored. PRESENT-ONLY (`true` or absent, never `false`): a
+   * pre-v2 row simply lacks the key and reads as today. */
+  questionShaped?: true;
 }
 
 /** Bounds the dry-run work one clarification may trigger (each option costs a

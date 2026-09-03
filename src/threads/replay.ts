@@ -109,21 +109,46 @@ function computeProvisional(response: ComposedResponse): boolean {
 
 /** The chips a resumed turn may show. Question-shaped chips (the WP29
  * generators, the #134 retry) replay verbatim: a click fills the input and the
- * text goes through the ordinary parse, exactly as live. A chip whose click
- * resolves through a chip-carrier pending — WP26c's rescue chip, the #197
- * step-3 comparison chips (`pending.rescueOnly`) — needs that pending on the
- * client, and a resumed thread deliberately restores NO pending (ADR 033 ⟨A6⟩:
- * exactly like a page reload). Replayed as a plain chip, "Vergelijk met
- * Nederland" would be sent through a fresh LLM parse it was never written for
- * — a paid, likely-refused turn — so carrier-bound labels are dropped on
- * resume. Defensive over the stored envelope shape, like every reader here. */
+ * text goes through the ordinary parse, exactly as live before #73 v2. A chip
+ * whose click resolves ONLY through a chip-carrier pending — WP26c's rescue
+ * chip, the #197 step-3 comparison chips (`pending.rescueOnly`) — needs that
+ * pending on the client, and a resumed thread deliberately restores NO pending
+ * (ADR 033 ⟨A6⟩: exactly like a page reload). Replayed as a plain chip,
+ * "Vergelijk met Nederland" would be sent through a fresh LLM parse it was
+ * never written for — a paid, likely-refused turn — so such labels are dropped
+ * on resume.
+ *
+ * #73 v2 (2026-09-03): the carrier now holds the question-shaped chips too
+ * (their click is a zero-LLM take on the live turn). Those are the chips that
+ * WERE written for a fresh parse, so on resume they fall back to exactly the
+ * plain fill-the-input chip they were before v2 — told apart by the
+ * present-only `questionShaped` bit their ClickOption carries, never by the
+ * label text. A carrier-bound label WITHOUT that bit is dropped as before.
+ * The bit is looked up by label TEXT (the only field `options[]` and
+ * `clickOptions[]` share). **Assumption:** two carrier chips never share a
+ * label — true for today's fixed templates (each generator yields at most one
+ * chip, and the "Vergelijk met …" copy never coincides with a question),
+ * unverified for any future generator; one whose copy could collide must first
+ * key this lookup on the option id (mirrored in open-questions #73). Defensive
+ * over the stored envelope shape, like every reader here. */
 function replayableSuggestions(response: ComposedResponse): string[] {
   if (response.kind !== 'answer' && response.kind !== 'refusal') return [];
   const envelope = response as AnswerResponse | RefusalResponse;
   const all = Array.isArray(envelope.suggestions) ? envelope.suggestions : [];
   const pending = envelope.pending;
   if (!pending || pending.rescueOnly !== true || !Array.isArray(pending.options)) return all;
-  const carried = new Set(pending.options);
+  const questionShaped = new Set(
+    (Array.isArray(pending.clickOptions) ? pending.clickOptions : [])
+      .filter(
+        (option) =>
+          option !== null &&
+          typeof option === 'object' &&
+          typeof option.label === 'string' &&
+          option.questionShaped === true,
+      )
+      .map((option) => option.label),
+  );
+  const carried = new Set(pending.options.filter((label) => !questionShaped.has(label)));
   return all.filter((label) => !carried.has(label));
 }
 

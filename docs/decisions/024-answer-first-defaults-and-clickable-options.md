@@ -247,7 +247,13 @@ under an ANSWER for its comparison chips ("Vergelijk met Nederland", "Vergelijk 
    whose labels are pairwise byte-equal to `options[]` on ≥ 1 declared axis (it was: exactly one chip on one
    `measure` axis). The forgery closure of the session-57 hardening rests on the label binding and the
    re-validation of every intent (`validate-pending.ts`), not on the axis literal — a bare `{rescueOnly: true}`
-   still never reaches the fresh-question branch (pinned). The rollback property is unchanged: a carrier
+   WITH options but without chips still never reaches the fresh-question branch (pinned). **#73 v2 review
+   (PR #122, 2026-09-03):** the trust boundary now re-aligns a carrier's `options` to its surviving chips (a
+   dropped option used to leave the carrier mis-shaped, so the user's next text fell into the paid merge —
+   a confirmed defect), and a carrier whose EVERY chip was dropped arrives as `rescueOnly` + empty options + no
+   chips — a STRIPPED carrier — and routes every reply as a fresh question (`isStrippedCarrier`): that branch is
+   the ordinary question path any client can call directly, so posting the shape unprompted grants nothing (no
+   new capability, no money difference, no wrong number). The rollback property is unchanged: a carrier
    minted before `CLARIFY_CLICK_ENABLED` goes off keeps routing — its chip label is then parsed as a fresh
    question, the documented post-rollback behaviour of the rescue chip (pinned).
 2. **The comparison intents never depend on mechanism B.** Every carried intent names its regions and periods
@@ -274,6 +280,22 @@ under an ANSWER for its comparison chips ("Vergelijk met Nederland", "Vergelijk 
    schema's own `safeParse`): an on-demand-onboarded `onboarded:…` key is outside `CANONICAL_KEYS` by
    design, so a chip for it would have been stripped at click time and the label would have fallen into the
    paid LLM merge. Found by the parallel session's review before the push; pinned.
+
+7. **The carrier became the GENERAL chip carrier with #73 v2 (session 72, 2026-09-03, autonomous, PR pending
+   owner review — ADR 029 v2 as-built note):** every takeable follow-up chip under an answer (adjacent period,
+   trend, region variant, same topic) now rides it beside the comparisons, so a click on any chip is this
+   mechanism's zero-LLM take. Still 1..`MAX_CLICK_OPTIONS` chips (at most `MAX_SUGGESTIONS` = 3), still
+   `rescueOnly`, still label-bound. One present-only bit joined `ClickOption` — `questionShaped: true` on the
+   question-shaped chips — read only by thread resume (a resumed thread restores no pending, so those chips fall
+   back to the plain fill-the-input chip; comparison labels are dropped as before). A question-shaped chip the
+   click-time schema rejects stays a plain label; the comparisons remain all-or-nothing. **Review round 2
+   (session 74, 2026-09-03):** the trust boundary (`withValidatedClickOptions`) is the DEPLOYED gate on a
+   carrier's shape — it re-aligns a carrier's `options` to its surviving chips, so what reaches
+   `respondToClarificationReply` is a well-formed carrier or the STRIPPED one (fresh-question routing); the
+   "bare `rescueOnly` with options still merges" property of the shape check holds for direct callers only, and
+   both are pinned in their own scope. A stripped carrier's fresh standalone parse records role `intent`
+   (#177's rule), not `clarify`. On the client, a clicked chip binds to its message's carrier at SEND time, so an
+   open clarification round survives a glance at an older chip (ADR 029 round-2 note).
 
 Same flag, same dormancy pattern, no new entry point, no prompt bytes, no schema change: the carrier rides the
 client-held pending and, on the reply row, the existing `audit_answers.pending_clarification` jsonb.

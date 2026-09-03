@@ -11,6 +11,7 @@ import {
   validateClickOptions,
   withValidatedClickOptions,
 } from '../../src/answer/respond/validate-pending.ts';
+import { isRescuePending, isStrippedCarrier } from '../../src/answer/respond/respond.ts';
 import type { PendingClarification } from '../../src/answer/respond/types.ts';
 import type { ClickOption } from '../../src/answer/intent/types.ts';
 
@@ -122,5 +123,39 @@ describe('withValidatedClickOptions carries only known keys', () => {
     expect(validateClickOptions([{ ...chip(), intent: { kind: 'explicit' } }])).toEqual([]);
     expect(validateClickOptions('not an array')).toEqual([]);
     expect(validateClickOptions([chip()])).toHaveLength(1);
+  });
+});
+
+// #73 v2 review round 2 (PR #122): the boundary, not respond.ts's shape check,
+// is the deployed gate on a carrier's shape. isRescuePending's pairwise label
+// binding still holds for a DIRECT caller (tests/answer/rescue-chip.test.ts),
+// but on the deployed path the boundary re-aligns a carrier's `options` to its
+// surviving chips first — so what reaches respondToClarificationReply is either
+// a well-formed carrier or the stripped one. Pinned here so the two claims stay
+// scoped honestly.
+describe("a carrier's options are re-aligned to its chips — the deployed gate", () => {
+  it('a bare forged rescueOnly WITH options and no chips becomes the STRIPPED carrier (fresh-question routing), never a merge shape', () => {
+    const safe = withValidatedClickOptions(rescuePending({ clickOptions: undefined }));
+    expect(safe.options).toEqual([]);
+    expect(Object.hasOwn(safe, 'clickOptions')).toBe(false);
+    expect(safe.rescueOnly).toBe(true);
+    expect(isStrippedCarrier(safe)).toBe(true);
+    expect(isRescuePending(safe)).toBe(false);
+  });
+
+  it("mis-paired option labels are repaired to the chips' own labels — the pairwise binding is enforced by the boundary", () => {
+    const safe = withValidatedClickOptions(rescuePending({ options: ['Iets heel anders.'] }));
+    expect(safe.options).toEqual([CHIP_LABEL]);
+    expect(safe.clickOptions?.map((o) => o.label)).toEqual([CHIP_LABEL]);
+    expect(isRescuePending(safe)).toBe(true);
+    expect(isStrippedCarrier(safe)).toBe(false);
+  });
+
+  it("a real clarification's options are never touched — a typed reply merges against them by design", () => {
+    const real = rescuePending({ rescueOnly: undefined, options: ['Utrecht (gemeente)', 'Utrecht (provincie)'], clickOptions: undefined });
+    const safe = withValidatedClickOptions(real);
+    expect(safe.options).toEqual(['Utrecht (gemeente)', 'Utrecht (provincie)']);
+    expect(Object.hasOwn(safe, 'rescueOnly')).toBe(false);
+    expect(isStrippedCarrier(safe)).toBe(false);
   });
 });

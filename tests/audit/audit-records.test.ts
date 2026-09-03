@@ -415,6 +415,38 @@ describe('#177: a rescue-pending reply records the parse it actually made', () =
     expect(reconstructionReport(record).problems).toEqual([]);
   }, 300_000);
 
+  // #73 v2 review round 2: the STRIPPED carrier — `rescueOnly`, no options, no
+  // chips, the shape the trust boundary leaves when it drops every chip of a
+  // follow-up carrier — is routed to respondToQuestion too (isStrippedCarrier),
+  // and must record the same 'intent' role. Same tightness as above: INTENT
+  // fixtures on the reply turn prove which prompt ran.
+  it('labels a STRIPPED carrier\'s fresh standalone parse intent, not clarify', async () => {
+    const task = ANSWERABLE_TASKS['B1']!;
+    const stripped = {
+      version: 1 as const,
+      question: 'Hoeveel inwoners had Amsterdam in 2024?',
+      referenceDate: REFERENCE_DATE,
+      axes: ['period' as const],
+      questionNl: 'Vervolg op dit antwoord:',
+      options: [] as string[],
+      rescueOnly: true,
+    };
+
+    const replied = await answerClarificationReplyAudited(
+      db,
+      stripped,
+      task.question,
+      { ...clarifyReplyOptions(), intentClient: new ReplayLlmClient(INTENT_FIXTURES) },
+    );
+    expect(replied.response.kind).toBe('answer');
+
+    const record = await mustLoad(replied.auditId);
+    const roles = record.llmCalls.map((x) => x.role);
+    expect(roles).toContain('intent');
+    expect(roles).not.toContain('clarify');
+    expect(reconstructionReport(record).problems).toEqual([]);
+  }, 300_000);
+
   // The opposite over-correction — labelling a REAL clarification reply 'intent'
   // — is already caught by c-b15-full above, which asserts 'clarify' and not
   // 'intent' on that flow. Deliberately NOT duplicated here: it would cost a

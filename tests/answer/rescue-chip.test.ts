@@ -234,7 +234,14 @@ describe('flag off', () => {
     expect(Object.hasOwn(response, 'pending')).toBe(false);
   });
 
-  it('a BARE forged rescueOnly does not reach the fresh-question branch', async () => {
+  it('a BARE forged rescueOnly WITH options does not reach the fresh-question branch when this function is called DIRECTLY; a rescueOnly with NO options at all (the stripped-carrier shape) is answered as a fresh question', async () => {
+    // Scope (review round 2, PR #122): this is a DIRECT-CALL property. On the
+    // deployed path web/app/actions.ts runs withValidatedClickOptions first,
+    // which re-aligns a carrier's `options` to its surviving chips — so the
+    // shape below never reaches this function in production (it becomes the
+    // stripped carrier and routes fresh). The boundary's own pin lives in
+    // tests/answer/wp26-trust-boundary.test.ts; this one keeps the function's
+    // contract honest for every other caller.
     // Found by an adversarial review (2026-07-25) and confirmed independently
     // by two of the four lenses: the branch used to fire on `rescueOnly: true`
     // alone. The pending is client-held, so with both flags off any client
@@ -242,16 +249,16 @@ describe('flag off', () => {
     // before WP26 — which is precisely the claim "dormant behind two flags" is
     // supposed to make impossible.
     //
-    // The forgery below carries no chip, so it is not a shape this server ever
-    // mints. It must take the ordinary clarify merge, exactly as it would have
-    // before WP26c.
+    // The forgery below carries an option label but no chip, so it is not a
+    // shape this server ever mints. It must take the ordinary clarify merge,
+    // exactly as it would have before WP26c.
     const forged = {
       version: 1,
       question: 'Wat was de inflatie in juni 2026?',
       referenceDate: REFERENCE_DATE,
       axes: ['measure'],
       questionNl: 'Ik kan geen voorspellingen doen.',
-      options: [],
+      options: ['Toon het cijfer voor inflatie (juni 2026).'],
       rescueOnly: true,
     } as unknown as Parameters<typeof respondToClarificationReply>[1];
 
@@ -268,6 +275,41 @@ describe('flag off', () => {
     // And the refusal belongs to the ORIGINAL question, the way every
     // reply-turn refusal does — not to the reply.
     expect(next.question).toBe('Wat was de inflatie in juni 2026?');
+
+    // #73 v2 review (PR #122, 2026-09-03): the trust boundary re-aligns a
+    // carrier's options to its surviving chips, so a carrier whose EVERY chip
+    // was dropped arrives here as `rescueOnly` + empty options + no chips — a
+    // STRIPPED carrier (isStrippedCarrier). Nothing is left to take and a
+    // carrier was never an open round, so the reply is a FRESH question: the
+    // ordinary question path, which any client can call directly — posting
+    // this shape unprompted grants nothing (no new capability, no money
+    // difference, no wrong number). The canned parse answers it, and the
+    // answer belongs to the REPLY, not to the refused question.
+    const stripped = { ...forged, options: [] } as unknown as Parameters<typeof respondToClarificationReply>[1];
+    const fresh = await respondToClarificationReply(db, stripped, 'Hoeveel inwoners had Amsterdam in 2024?', {
+      ...options(),
+      intentClient: new CannedClient({
+        version: 3,
+        kind: 'data_query',
+        candidates: [
+          {
+            canonicalKey: 'population_on_1_january',
+            regions: [{ name: 'Amsterdam', kind: 'gemeente' }],
+            period: { kind: 'year', year: 2024 },
+            derivation: 'none',
+            confidence: 0.95,
+            reading: 'bevolking van Amsterdam in 2024',
+          },
+        ],
+        unmatchedMeasureTerm: null,
+        nearestCanonicalKeys: [],
+        note: null,
+      }),
+    });
+    expect(fresh.kind).toBe('answer');
+    if (fresh.kind !== 'answer') throw new Error('unreachable');
+    expect(fresh.question).toBe('Hoeveel inwoners had Amsterdam in 2024?');
+    expect(fresh.result.intent.regions).toEqual(['GM0363']);
   });
 
   it('a GENUINELY minted rescue pending still routes correctly after a rollback', async () => {

@@ -54,8 +54,11 @@ and that difference is checked.
 `ComposedAnswer.slotPhrasing` (#162, flag `SLOT_PHRASING_ENABLED` — absent on every flag-off,
 pre-#162 and template envelope),
 `ClarificationResponse.suggestions`, `RefusalResponse.pending`, `AnswerResponse.pending` (#197 step 3 — the
-comparison chips' carrier; absent when `CLARIFY_CLICK_ENABLED` is off or nothing survived the dry-run),
+chip carrier: the comparison chips first, every takeable follow-up chip since #73 v2 (2026-09-03); absent when
+`CLARIFY_CLICK_ENABLED` is off or no takeable chip survived the dry-run),
 `PendingClarification.clickOptions`, `PendingClarification.rescueOnly`,
+`ClickOption.questionShaped` (#73 v2 — the literal `true` or absent, never `false`: marks a carrier chip whose
+label is a complete question, so thread resume may replay it as a plain fill-the-input chip),
 `PendingClarification.conversationContext` (nullable),
 and on the query side `ValidatedResult.regionDefaulted` / `.periodDefaulted` and
 `Attribution.alternates` (#39 — absent on explicit targets, on canonical measures without

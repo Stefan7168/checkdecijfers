@@ -117,7 +117,7 @@ describe('buildSuggestions — generators against the real fixture db + real dry
     ]);
   });
 
-  it('national-only measure (CPI 2024) yields NO region chip — and no same-topic chip (each Phase-0 table has one canonical measure)', async () => {
+  it('national-only measure (CPI 2024) yields NO region chip — and no same-topic chip (86141NED carries one canonical measure; five other seed tables carry several — see wp29-click-take.test.ts (g))', async () => {
     const intent = intentOf('cpi_yearly_inflation', { kind: 'codes', codes: ['2024JJ00'] });
     const result = await answered(intent);
     const chips = await buildSuggestions(intent, result, realCheck());

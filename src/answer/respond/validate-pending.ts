@@ -62,18 +62,28 @@ const clickOptionSchema = z.strictObject({
   label: z.string().min(1).max(500),
   intent: clickIntentSchema,
   impliedRecency: z.boolean(),
+  // #73 v2: present-only, literal `true` — a client-supplied `false` (a
+  // shape the producer never writes) fails the option like any other
+  // malformation. The bit only decides whether the label may replay as a
+  // plain chip on a resumed thread; it never widens what a take can do.
+  questionShaped: z.literal(true).optional(),
 });
 
 /** #197 step 3: whether an intent CAN come back through this boundary intact —
- * the producer-side twin of the schema below, for the comparison-chip
- * generators (suggestions.ts). An option the validator would DROP at click
- * time is worse than no option: the pending loses its clickOptions, stops
- * being carrier-shaped, and the label falls into the LLM merge — a paid parse
- * of "Vergelijk met Nederland" against the answered question. So a chip is
+ * the producer-side twin of the schema below, for the chip generators
+ * (suggestions.ts). An option the validator would DROP at click time is worse
+ * than no option: the pending loses its clickOptions, stops being
+ * carrier-shaped, and the label falls into the LLM merge — a paid parse of
+ * "Vergelijk met Nederland" against the answered question. So a chip is
  * minted only for an intent this predicate accepts: a CANONICAL_KEYS target
  * (an on-demand-onboarded `onboarded:…` key is deliberately NOT in that list —
  * see the NOTE on validateClickOptions), ≤ 8 regions, well-formed period codes,
- * a known derivation. (Reviewer finding, the parallel session 70, 2026-09-02.) */
+ * a known derivation. (Reviewer finding, the parallel session 70, 2026-09-02.)
+ * Since #73 v2 the SAME predicate is the mint gate for the four question-shaped
+ * WP29 generators — with one difference in what a rejection means: a
+ * comparison that is not takeable is not offered at all (its label was never
+ * written for a parse), while a question-shaped candidate that is not takeable
+ * is still offered as the plain fill-the-input label it always was. */
 export function isClickTakeableIntent(intent: StructuredIntent): boolean {
   return clickIntentSchema.safeParse(intent).success;
 }
@@ -123,15 +133,29 @@ export function validateClickOptions(raw: unknown): ClickOption[] {
  * that reason. */
 export function withValidatedClickOptions(pending: PendingClarification): PendingClarification {
   const clickOptions = validateClickOptions(pending.clickOptions);
+  // #73 v2 review (PR #122, 2026-09-03): on a chip CARRIER (`rescueOnly`) the
+  // `options` ARE the chips' labels, index for index — the shape
+  // isRescuePending grants the fresh-question routing on. Dropping one option
+  // here without its label left `options` one longer than `clickOptions`, the
+  // carrier stopped being carrier-shaped, and the reply turn MERGED the user's
+  // next text with the answered question — the paid LLM parse a carrier exists
+  // to avoid (orchestrator review finding). So a carrier's options are
+  // re-aligned to the survivors, same order; with none left it becomes a
+  // STRIPPED carrier — `rescueOnly`, empty options, no clickOptions — the shape
+  // respondToClarificationReply routes as fresh questions (isStrippedCarrier).
+  // A real clarification's `options` are ITS labels and a typed reply merges
+  // against them by design, so those stay untouched.
+  const carrier = pending.rescueOnly === true;
+  const options = carrier ? clickOptions.map((option) => option.label) : pending.options;
   return {
     version: pending.version,
     question: pending.question,
     referenceDate: pending.referenceDate,
     axes: pending.axes,
     questionNl: pending.questionNl,
-    options: pending.options,
+    options,
     ...(clickOptions.length > 0 ? { clickOptions } : {}),
-    ...(pending.rescueOnly === true ? { rescueOnly: true as const } : {}),
+    ...(carrier ? { rescueOnly: true as const } : {}),
     ...(pending.conversationContext !== undefined
       ? { conversationContext: pending.conversationContext }
       : {}),

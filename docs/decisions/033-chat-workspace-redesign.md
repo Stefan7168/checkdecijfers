@@ -213,7 +213,15 @@ folded into the frozen brief (cross-marked ⟨A1⟩–⟨A7⟩ there):
   flag-off byte-identity is pinned for all routes.
 - **⟨A6⟩ A clarification reply could attach to the wrong thread** after a sidebar switch:
   replies now carry the threadId captured with `pending` at question time, and a thread switch
-  clears `pending` (same as "nieuwe chat").
+  clears `pending` (same as "nieuwe chat"). **Addendum (session 74, PR #122 review round 2):** when the
+  captured id is null — the clarification turn's own attach failed fail-soft — the reply (typed, or a
+  chip-bound take) sends the LIVE thread instead of null, which would have made the server open a fresh
+  thread and fork the conversation; a switch clears `pending` and the captured id together, so the live
+  thread is the only other honest choice. Pinned for both paths in `chat.test.tsx`. **Follow-up (LOW pass, same
+  session):** with that fallback the captured id is provably either the live `threadId` or null at send time, so
+  `capturedThreadId` and the carrier's `threadId` express an invariant that collapses to "send the live thread" —
+  a later cleanup can pass the live thread on both paths and drop both fields (and this five-place doc trail);
+  not done inside PR #122 (out of its scope).
 - **⟨A7⟩ Redacted rows would render as a two-bubble sentinel echo and could CRASH the context
   rebuild** (`resolvedIntent` throws on a redacted 'answer' envelope — kind preserved, `result`
   gone): replay emits one placeholder message; the rebuild walk skips redacted rows before

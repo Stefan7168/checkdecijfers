@@ -420,6 +420,39 @@ describe('replayParts — #197 step 3 chip-carrier labels are dropped on resume'
     ]);
   });
 
+  it('#73 v2: a question-shaped chip bound to the carrier (its ClickOption carries questionShaped) STILL replays as a plain fill-the-input chip; the comparison beside it is dropped; the bit must be literally true', () => {
+    const adjacent = 'Wat was X in 2025?';
+    const trend = 'Hoe ontwikkelde X zich van 2020 tot en met 2024?';
+    const compare = 'Vergelijk met Nederland';
+    const row = mkRow({
+      id: 4,
+      kind: 'answer',
+      question: 'd',
+      response: {
+        ...answerEnvelopeWithView({ question: 'd', finalText: 'd', suggestions: [adjacent, trend, compare] }),
+        pending: {
+          version: 1,
+          question: 'd',
+          referenceDate: '2026-08-15',
+          axes: ['period', 'region'],
+          questionNl: 'Vervolg op dit antwoord:',
+          options: [adjacent, trend, compare],
+          clickOptions: [
+            { id: 'adjacent-1', label: adjacent, intent: {}, impliedRecency: false, questionShaped: true },
+            // A forged / malformed bit is not the literal `true` — dropped like a comparison.
+            { id: 'trend-1', label: trend, intent: {}, impliedRecency: false, questionShaped: 'yes' },
+            { id: 'cmp-1', label: compare, intent: {}, impliedRecency: false },
+          ],
+          rescueOnly: true,
+        },
+      },
+    });
+    const [, part] = replayParts([row]);
+    // Live shows all three as takes; resume shows the question-shaped chip as
+    // the plain chip it was before v2 — exactly today's resumed-thread rule.
+    expect((part as ReplayAssistantPart).suggestions).toEqual([adjacent]);
+  });
+
   it('a WP26c rescue refusal likewise replays without its rescue chip; a pending that is NOT rescueOnly changes nothing', () => {
     const chip = '2024 is al gepubliceerd — toon het cijfer voor inflatie.';
     const rescueRow = mkRow({

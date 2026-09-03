@@ -16,6 +16,7 @@ import type { Db } from '../../db/types.ts';
 import { toInternalRefusal } from '../respond/refusals.ts';
 import {
   isRescuePending,
+  isStrippedCarrier,
   respondToClarificationReply,
   respondToQuestion,
   type RespondOptions,
@@ -240,8 +241,14 @@ export async function answerClarificationReplyAudited(
     // pick the label before the call; respond.ts stays unaware of roles.
     // 'intent' is the same role a standalone parse gets above — deliberately not
     // a new role value, which would widen a closed union and change what old
-    // rows mean by omission.
-    intentClient: tracker.wrap(isRescuePending(pending) ? 'intent' : 'clarify', options.intentClient),
+    // rows mean by omission. A STRIPPED carrier (#73 v2 review round 2 — the
+    // trust boundary in web/app/actions.ts dropped every chip) takes the same
+    // standalone path (isStrippedCarrier, respond.ts), so it gets the same
+    // label; without this the record said 'clarify' for a parse that never ran.
+    intentClient: tracker.wrap(
+      isRescuePending(pending) || isStrippedCarrier(pending) ? 'intent' : 'clarify',
+      options.intentClient,
+    ),
     answerClient: tracker.wrap('compose', options.answerClient),
     // #144 (ADR 034): same tracking on the reply turn.
     ...(options.semanticCheck

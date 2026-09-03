@@ -683,7 +683,9 @@ export async function replyToClarification(
   rawSelection?: unknown,
   // WP135 ⟨A6⟩: the threadId the CLIENT captured ALONGSIDE `pending` at question
   // time (stored together in chat state), NOT the sidebar's current active
-  // thread — so a reply always attaches to its originating thread. On
+  // thread — so a reply always attaches to its originating thread (the client
+  // falls back to its live thread only when the captured one is null, i.e.
+  // that turn's own attach failed — #73 v2 review round 2, chat.tsx). On
   // ownership-validation failure it attaches to a fresh thread, never
   // cross-attaches. ABSENT ⇒ not thread-aware (byte-identical to today).
   rawThreadId?: unknown,

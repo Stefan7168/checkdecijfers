@@ -4,7 +4,7 @@
 // WP15 (ADR 021): askQuestion/replyToClarification now return an AskOutcome
 // ({ gated, context }), not a bare GatedResponse — the chat must hold the
 // context across turns and thread it back as askQuestion's third argument.
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AskOutcome } from '../app/actions.ts';
 import type { GatedResponse } from '../backend/billing/index.ts';
@@ -38,7 +38,9 @@ const { askQuestion, replyToClarification, submitAnswerFeedback } = vi.hoisted((
   askQuestion:
     vi.fn<(question: string, requestId: string, rawContext?: unknown, rawSelection?: unknown) => Promise<AskOutcome>>(),
   replyToClarification:
-    vi.fn<(pending: unknown, reply: string, requestId: string, rawSelection?: unknown) => Promise<AskOutcome>>(),
+    vi.fn<
+      (pending: unknown, reply: string, requestId: string, rawSelection?: unknown, rawThreadId?: unknown) => Promise<AskOutcome>
+    >(),
   // WP128: FeedbackButtons (rendered by Chat) imports this from the same
   // mocked module — typed against the real action's signature.
   submitAnswerFeedback:
@@ -1225,10 +1227,10 @@ describe('Chat — WP129+130 web section rendering (#130)', () => {
 describe('Chat — #197 step 3 comparison chips on an answer (chip-carrier pending)', () => {
   const chip = 'Vergelijk met Nederland';
   const questionChip = 'Wat was bevolking op 1 januari in Amsterdam in 2025?';
-  function answerWithCarrier(): GatedResponse {
+  function answerWithCarrier(question = 'Hoeveel inwoners had Amsterdam in 2024?', auditId = 7): GatedResponse {
     const pending = {
       version: 1,
-      question: 'Hoeveel inwoners had Amsterdam in 2024?',
+      question,
       referenceDate: '2026-08-15',
       axes: ['region'],
       questionNl: 'Vergelijk dit cijfer met:',
@@ -1251,7 +1253,7 @@ describe('Chat — #197 step 3 comparison chips on an answer (chip-carrier pendi
     };
     return {
       kind: 'ok',
-      auditId: 7,
+      auditId,
       netCost: 20,
       response: {
         ...fakeAnswerResponse({
@@ -1316,5 +1318,222 @@ describe('Chat — #197 step 3 comparison chips on an answer (chip-carrier pendi
     await screen.findByText('Volgend jaar.');
     expect(askQuestion).toHaveBeenCalledTimes(1);
     expect(replyToClarification).not.toHaveBeenCalled();
+  });
+
+  it('#73 v2 (PR #122 review): a chip on an OLDER answer binds the send to THAT answer\'s carrier — two answers share the label, the older chip is clicked, replyToClarification receives the older pending', async () => {
+    askQuestion.mockResolvedValue(outcome(answerWithCarrier()));
+    render(<Chat />);
+    await submit('Hoeveel inwoners had Amsterdam in 2024?');
+    await screen.findByRole('button', { name: chip });
+    // A second answer with its own carrier for the SAME fixed-text label.
+    askQuestion.mockResolvedValue(outcome(answerWithCarrier('Hoeveel inwoners had Rotterdam in 2024?', 8)));
+    await submit('Hoeveel inwoners had Rotterdam in 2024?');
+    const same = await screen.findAllByRole('button', { name: chip });
+    expect(same).toHaveLength(2);
+    expect(askQuestion).toHaveBeenCalledTimes(2);
+    // Click the OLDER answer's chip (rendered first): fill, never send.
+    fireEvent.click(same[0]!);
+    expect(screen.getByPlaceholderText('Stel een vraag…')).toHaveValue(chip);
+    expect(replyToClarification).not.toHaveBeenCalled();
+    replyToClarification.mockResolvedValue(
+      outcome({
+        kind: 'ok',
+        auditId: 9,
+        netCost: 20,
+        response: fakeAnswerResponse({ body: 'Amsterdam naast Nederland.', cells: [fakeCell()] }) as ComposedResponse,
+      }),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Verstuur' }));
+    await screen.findByText('Amsterdam naast Nederland.');
+    // The reply is bound to the OLDER answer's carrier, not the latest one.
+    expect(replyToClarification).toHaveBeenCalledTimes(1);
+    expect(replyToClarification.mock.calls[0]![0]).toMatchObject({
+      rescueOnly: true,
+      question: 'Hoeveel inwoners had Amsterdam in 2024?',
+      options: [chip],
+    });
+    expect(replyToClarification.mock.calls[0]![1]).toBe(chip);
+    expect(askQuestion).toHaveBeenCalledTimes(2);
+  });
+
+  // Review round 2 (session 74): the round-1 fix re-bound `pending` ON THE
+  // CLICK. Two failure modes followed, both pinned here: a glance at an older
+  // chip while a real clarification round was open discarded that round (the
+  // typed reply went out as a fresh question — the paid round lost), and a
+  // chip clicked while a newer question was in flight lost its binding when
+  // that answer landed and overwrote `pending`. The binding now happens at
+  // SEND time, from the clicked message's carrier, only while the input still
+  // holds the label unedited.
+  it('#73 v2 review round 2: a chip click never discards an OPEN clarification round — the older chip is clicked, the user answers the clarification instead, and that reply merges against the clarification', async () => {
+    askQuestion.mockResolvedValue(outcome(answerWithCarrier()));
+    render(<Chat />);
+    await submit('Hoeveel inwoners had Amsterdam in 2024?');
+    await screen.findByRole('button', { name: chip });
+    const asked = 'Bedoel je Utrecht (gemeente) of Utrecht (provincie)?';
+    askQuestion.mockResolvedValue(outcome(fakeClarification(asked)));
+    await submit('Hoeveel inwoners had Utrecht in 2024?');
+    // An open round: the placeholder echoes its question.
+    const input = await screen.findByPlaceholderText(asked);
+    // A glance at the older answer's chip: fill, never send — and the round
+    // stays open (the placeholder still echoes the clarification).
+    fireEvent.click(screen.getByRole('button', { name: chip }));
+    expect(input).toHaveValue(chip);
+    expect(input).toHaveAttribute('placeholder', asked);
+    expect(replyToClarification).not.toHaveBeenCalled();
+    // Change of mind: answer the clarification instead.
+    replyToClarification.mockResolvedValue(
+      outcome({
+        kind: 'ok',
+        auditId: 9,
+        netCost: 10,
+        response: fakeAnswerResponse({ body: 'Utrecht (gemeente) telde 361.924 inwoners.', cells: [fakeCell()] }) as ComposedResponse,
+      }),
+    );
+    fireEvent.change(input, { target: { value: 'de gemeente' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Verstuur' }));
+    await screen.findByText('Utrecht (gemeente) telde 361.924 inwoners.');
+    // The reply merged against the CLARIFICATION, not against the older carrier
+    // and not as a fresh question.
+    expect(replyToClarification).toHaveBeenCalledTimes(1);
+    expect(replyToClarification.mock.calls[0]![0]).toMatchObject({ questionNl: asked });
+    expect(replyToClarification.mock.calls[0]![0]).not.toHaveProperty('rescueOnly');
+    expect(replyToClarification.mock.calls[0]![1]).toBe('de gemeente');
+    expect(askQuestion).toHaveBeenCalledTimes(2);
+  });
+
+  it('#73 v2 review round 2: a chip clicked while a NEWER question is in flight still binds to its own carrier once that answer has landed', async () => {
+    askQuestion.mockResolvedValue(outcome(answerWithCarrier()));
+    render(<Chat />);
+    await submit('Hoeveel inwoners had Amsterdam in 2024?');
+    await screen.findByRole('button', { name: chip });
+    let release: (o: AskOutcome) => void = () => undefined;
+    askQuestion.mockImplementationOnce(
+      () =>
+        new Promise<AskOutcome>((resolve) => {
+          release = resolve;
+        }),
+    );
+    const input = screen.getByPlaceholderText('Stel een vraag…');
+    fireEvent.change(input, { target: { value: 'Hoeveel inwoners had Rotterdam in 2024?' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Verstuur' }));
+    await screen.findByText('Hoeveel inwoners had Rotterdam in 2024?');
+    // In flight: the input is disabled, the older answer's chip is not.
+    expect(input).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: chip }));
+    expect(input).toHaveValue(chip);
+    // The newer answer lands, with its own carrier for the SAME label.
+    release(outcome(answerWithCarrier('Hoeveel inwoners had Rotterdam in 2024?', 8)));
+    await waitFor(() => expect(screen.getAllByRole('button', { name: chip })).toHaveLength(2));
+    expect(input).not.toBeDisabled();
+    replyToClarification.mockResolvedValue(
+      outcome({
+        kind: 'ok',
+        auditId: 9,
+        netCost: 20,
+        response: fakeAnswerResponse({ body: 'Amsterdam naast Nederland.', cells: [fakeCell()] }) as ComposedResponse,
+      }),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Verstuur' }));
+    await screen.findByText('Amsterdam naast Nederland.');
+    // Bound to the OLDER answer's carrier — the one whose chip was clicked.
+    expect(replyToClarification).toHaveBeenCalledTimes(1);
+    expect(replyToClarification.mock.calls[0]![0]).toMatchObject({
+      rescueOnly: true,
+      question: 'Hoeveel inwoners had Amsterdam in 2024?',
+      options: [chip],
+    });
+    expect(replyToClarification.mock.calls[0]![1]).toBe(chip);
+    expect(askQuestion).toHaveBeenCalledTimes(2);
+  });
+
+  it("#73 v2 review round 2: a REFUSAL's rescue chip binds to its own carrier too, after a newer answer has replaced the live pending", async () => {
+    const rescue = 'Bekijk het gerealiseerde cijfer';
+    const refusal = {
+      kind: 'refusal',
+      reason: 'forecast',
+      text: 'CBS publiceert gerealiseerde cijfers, geen voorspellingen.',
+      suggestions: [rescue],
+      pending: {
+        version: 1,
+        question: 'Wat wordt de inflatie in 2027?',
+        referenceDate: '2026-08-15',
+        axes: ['measure'],
+        questionNl: 'Bedoel je het gerealiseerde cijfer?',
+        options: [rescue],
+        rescueOnly: true,
+      },
+    } as unknown as ComposedResponse;
+    askQuestion.mockResolvedValue(outcome({ kind: 'ok', auditId: 1, netCost: 0, response: refusal }));
+    render(<Chat />);
+    await submit('Wat wordt de inflatie in 2027?');
+    await screen.findByRole('button', { name: rescue });
+    askQuestion.mockResolvedValue(outcome(answerWithCarrier()));
+    await submit('Hoeveel inwoners had Amsterdam in 2024?');
+    await screen.findByRole('button', { name: chip });
+    // The refusal's chip, clicked AFTER the answer took over the live pending.
+    fireEvent.click(screen.getByRole('button', { name: rescue }));
+    expect(screen.getByPlaceholderText('Stel een vraag…')).toHaveValue(rescue);
+    replyToClarification.mockResolvedValue(
+      outcome({
+        kind: 'ok',
+        auditId: 9,
+        netCost: 20,
+        response: fakeAnswerResponse({ body: 'De inflatie over 2024.', cells: [fakeCell()] }) as ComposedResponse,
+      }),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Verstuur' }));
+    await screen.findByText('De inflatie over 2024.');
+    expect(replyToClarification).toHaveBeenCalledTimes(1);
+    expect(replyToClarification.mock.calls[0]![0]).toMatchObject({
+      rescueOnly: true,
+      question: 'Wat wordt de inflatie in 2027?',
+      options: [rescue],
+    });
+    expect(replyToClarification.mock.calls[0]![1]).toBe(rescue);
+    expect(askQuestion).toHaveBeenCalledTimes(2);
+  });
+
+  it('#73 v2 review round 2 (LOW): a chip recorded on a turn whose thread attach FAILED sends with the live thread, never null — the take must not fork the conversation into a new thread', async () => {
+    const onThreadId = vi.fn();
+    // Turn 1: an answer with a carrier, but its thread attach failed (threadId null).
+    askQuestion.mockResolvedValue(outcome(answerWithCarrier(), null, null));
+    render(<Chat onThreadId={onThreadId} />);
+    await submit('Hoeveel inwoners had Amsterdam in 2024?');
+    await screen.findByRole('button', { name: chip });
+    expect(onThreadId).not.toHaveBeenCalled();
+    // Turn 2: attaches to thread 7.
+    askQuestion.mockResolvedValue(outcome(fakeAnswer('Rotterdam telde 655.468 inwoners.'), null, 7));
+    await submit('Hoeveel inwoners had Rotterdam in 2024?');
+    await screen.findByText('Rotterdam telde 655.468 inwoners.');
+    expect(onThreadId).toHaveBeenLastCalledWith(7);
+    // Turn 1's chip: its own carrier, the LIVE thread.
+    fireEvent.click(screen.getByRole('button', { name: chip }));
+    replyToClarification.mockResolvedValue(outcome(fakeAnswer('Amsterdam naast Nederland.'), null, 7));
+    fireEvent.click(screen.getByRole('button', { name: 'Verstuur' }));
+    await screen.findByText('Amsterdam naast Nederland.');
+    expect(replyToClarification).toHaveBeenCalledTimes(1);
+    expect(replyToClarification.mock.calls[0]![0]).toMatchObject({ question: 'Hoeveel inwoners had Amsterdam in 2024?' });
+    expect(replyToClarification.mock.calls[0]![4]).toBe(7);
+  });
+
+  it('#73 v2 review round 2 (LOW): the same fallback on the PLAIN reply path — a clarification turn whose attach failed, then a typed reply, sends the live thread', async () => {
+    const onThreadId = vi.fn();
+    askQuestion.mockResolvedValue(outcome(fakeAnswer('Amsterdam telde 931.298 inwoners.'), null, 7));
+    render(<Chat onThreadId={onThreadId} />);
+    await submit('Hoeveel inwoners had Amsterdam in 2024?');
+    await screen.findByText('Amsterdam telde 931.298 inwoners.');
+    expect(onThreadId).toHaveBeenLastCalledWith(7);
+    // The clarification turn's attach failed: captured thread null, live thread still 7.
+    const asked = 'Bedoel je Utrecht (gemeente) of Utrecht (provincie)?';
+    askQuestion.mockResolvedValue(outcome(fakeClarification(asked), null, null));
+    await submit('Hoeveel inwoners had Utrecht in 2024?');
+    const input = await screen.findByPlaceholderText(asked);
+    replyToClarification.mockResolvedValue(outcome(fakeAnswer('Utrecht (gemeente) telde 361.924 inwoners.'), null, 7));
+    fireEvent.change(input, { target: { value: 'de gemeente' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Verstuur' }));
+    await screen.findByText('Utrecht (gemeente) telde 361.924 inwoners.');
+    expect(replyToClarification).toHaveBeenCalledTimes(1);
+    expect(replyToClarification.mock.calls[0]![0]).toMatchObject({ questionNl: asked });
+    expect(replyToClarification.mock.calls[0]![4]).toBe(7);
   });
 });
