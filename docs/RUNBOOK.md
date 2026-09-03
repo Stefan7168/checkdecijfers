@@ -289,7 +289,7 @@ only ever runs manually, there is no cron, and no on-demand-onboarded table is o
 real eviction candidate.
 
 **⚠ Before ever running `tables:evict --apply` against a live table (not before this migration, but
-before that later step) — two residuals a session-67 review found and logged — BOTH CLOSED in session 72 (2026-09-03, PR #121: servability probes no longer bump `last_queried_at`, the bump runs AFTER the observations fetch so a read never waits behind an eviction's row lock, and an eviction landing mid-query yields an honest `table_not_registered` refusal instead of a false "no data"). Kept for the record; the CLI is still manual, no cron:**
+before that later step) — two residuals a session-67 review found and logged — BOTH CLOSED in session 72 (2026-09-03, PR #121: servability probes no longer bump `last_queried_at`, the bump runs AFTER the observations fetch so a read never waits behind an eviction's row lock, and an eviction landing mid-query yields an honest refusal instead of a false "no data" — round 2 (session 73, same PR, `ebd341f`): the bump SKIPS a locked row instead of waiting, labels and retained-batch dates ride the fetch in one snapshot, the registration check runs LAST on the one branch an evicted table can reach, and the refusal is its own kind `table_evicted` → reason `evicted`, never the owner alert). Kept for the record; the CLI is still manual, no cron — and the structural follow-up (eviction yields to in-flight reads) belongs before any cron:**
 [#195](open-questions.md) (the disclosed "+1 round-trip per served turn" cost is understated — the real
 path is ~4-6x that, and the same probes that inflate the count also keep a table artificially "warm") and
 [#196](open-questions.md) (a concurrent eviction can false-refuse a live query for the table it's
@@ -913,6 +913,15 @@ per-machine cache:
    the PRs (docs-only; code byte-identical by `git diff <old> <new> -- src web tests`) and let the gates re-run. Code
    stays only in its own PR; the rollback is one `git revert` of the lifted docs commit. Keep the close-out's own docs
    push off every file the open PRs edit (`gh pr diff <n> --name-only`) or it creates the next conflict.
+10. **LOW is the pre-push floor, not merge-day assurance: run a HIGH/adversarial code-review pass on every
+    core-product PR before it merges (measured 2026-09-03, session 73).** PR #121 (the query path) had passed the
+    mandatory LOW pass clean in session 72 and yielded fifteen verified findings at HIGH — a lock wait that coupled a
+    served answer to an eviction's commit, a TOCTOU that re-created the very false refusal the PR closed, three
+    metadata degradations in the same race, and the benign race paging the owner as an internal error. Cost: ten
+    finder angles + six verifiers + one gap sweep on the cheap tier (≈2.8M tokens, ~45 minutes wall-clock),
+    orchestrated from the session, which reads every finder's evidence itself — a finder's proposed FIX can be wrong
+    even when its finding is right. Fixes go on the PR branch (docs-only or not, the gates re-run), then re-simulate
+    the batch (item 9) and re-run the full block on the combined tree before the owner merges.
 
 
 ## Moving to a new machine (fresh clone bootstrap)

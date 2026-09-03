@@ -56,7 +56,59 @@ workflow: #118 rule (b) — nothing merged, nothing flipped, no spend, no prompt
    08-build-plan, ADR 024/029 and the RUNBOOK sections the open PRs edit — each would have created a new conflict.
 9. **Not done, deliberately:** any merge (the owner's step; the kickoff's priority 1 reads "owner present"),
    `GDPR_PURGE_APPLY`, #162's A/B, #198, #132 route B, prompt bytes, fixture re-records, live DDL. The three scratch
-   worktrees and their local branches removed at the end.
+   worktrees and their local branches removed at the end (item 14 — more were added later in the session).
+10. **Mid-session owner instruction — "When done, pick up another task autonomously" (no reply to the merge
+    question).** The merges stayed the owner's step (#118 rule b); the one hermetic task that touches no open-PR file
+    was chosen: a HIGH-effort adversarial review of the four PRs, #121 first (the query path — data integrity). A
+    wrap-up hook fired on a system notification with no owner message behind it — treated as a false positive, the
+    ritual deferred to the end.
+11. **PR #121 reviewed at HIGH (ten finder angles, six verifiers, a gap sweep — all cheap tier, ≈2.8M tokens;
+    synthesis here): fifteen verified findings on a fix LOW had passed clean.** CONFIRMED: the moved
+    `touchLastQueriedAt` UPDATE still queued behind an eviction's `for update` row lock (the debounce cannot skip an
+    eviction-eligible row) and held one of the process's two pooled connections; the registration re-check ran BEFORE
+    `diagnoseMissing`, whose own reads could straddle the eviction and return the very `not_published` #196 forbids
+    (TOCTOU); the period labels were read after that touch, so the race put raw period codes ("2025JJ00") in the
+    served Dutch sentence; the retained-cell `ingestion_batches` lookup and the staleness `readUpdateCadence` re-read
+    hit the same window (a too-new "gesynchroniseerd op" date; the staleness warning and the recency refusal silently
+    off); the race refusal rode `table_not_registered` → reason `internal` and paged the owner with "something broke
+    under the hood"; the new refusal carried the raw intent instead of `q.intent` (R8);
+    `scripts/spot-check-canonical.ts` bumped `last_queried_at` in production. PLAUSIBLE: +1 statement on the routine
+    freshness refusal; `resolveIntent`'s earlier reads race the same eviction (`invalid_intent`); the race harness's
+    `'from observations'` substring also matches resolve.ts's answer-first lookup. Test/cleanup tier: the 'after' case
+    passed on the old ordering too and asserted neither labels nor the date; the synthetic eviction ran outside a
+    transaction; an inlined lookup duplicating the PR's own `tableIdForCanonicalKey`; the touch filter written twice.
+    One finder-proposed fix was wrong (a scalar subquery folded into a query that returns zero rows in exactly the
+    evicted case) and was rejected on verification — the session read every finder's evidence itself.
+12. **Round-2 fix on the branch, `ebd341f` (15 files, +392/−135):** the touch takes the row with `for no key update
+    skip locked` in a subquery (the `claimOnePending` shape; NO KEY so an ingestion insert's FK KEY SHARE never causes
+    a spurious skip; source-pinned in `tests/query/last-queried.test.ts`); the observations fetch LEFT-JOINs the
+    period labels and the retained cells' batch dates — one statement, one snapshot, two statements fewer per served
+    turn; the registration check lives LAST in `diagnoseMissing`'s `not_published` branch (the only branch a fully
+    evicted table can reach); a new `RefusalKind` `table_evicted` → `RefusalReason` `evicted` with honest Dutch copy
+    ("stonden in onze database, maar zijn zojuist opgeruimd … stel je vraag opnieuw"), never the owner alert;
+    `ValidatedResult.registry` (present-only: `updateCadence` + the table's `lastSyncAt`) carried from resolveIntent's
+    row so `checkStaleness` never re-reads after the fetch (synthetic results still take the registry reads);
+    `q.intent` on the refusal; the operator script probes. Tests: four committed-eviction interleavings (the new
+    TOCTOU case fails on the check-first code), a served turn pinned to read nothing after the fetch, the synthetic
+    eviction in one transaction armed on fetch-unique fragments, `lastQueriedTouches` + `tableIdForCanonicalKey`
+    shared, the statement tripwire re-measured (−1 per served turn 13→12 / 9→8 / 13→12 / 14→13, per successful dry-run
+    24→21 / 10→8 / 15→12), the new reason / silent alert / no-re-read path pinned in `respond-refusals`,
+    `internal-refusal-alert`, `respond-staleness`; docs/05's failure table gains the evicted-mid-flight row. Verified:
+    branch block — typecheck ×2, backend 115 files / 1750 tests, benchmark 14/14 + 6/6 + 0 fabricated, web 47 / 540,
+    real `next build` (TypeScript step 5.8 s); LOW code-review of the diff 0 findings; three merge orders with the new
+    head → one tree `53f7ffd69f49`; the combined block on it (`c780792`) — typecheck ×2, backend 116 / 1776, benchmark
+    14/14 + 6/6 + 0 fabricated, web 49 / 575, real `next build`. Gates on `ebd341f`: runs 33756815650 (push) +
+    33756820787 (pull_request) both success; PR states at close: #121 MERGEABLE/CLEAN ebd341f #120 UNKNOWN/UNKNOWN
+    5c4c88f #123 UNKNOWN/UNKNOWN 3d185a1 #122 UNKNOWN/UNKNOWN 0ffe4c0. Round-2 note posted on #121.
+13. **Deferred, recorded:** the remaining race class one step earlier — `resolveIntent`'s canonical-measures lookup
+    and label reads against the same eviction — needs eviction to YIELD to in-flight reads (a `pg_advisory_xact_lock`
+    per table the read also takes, or a marked-for-eviction grace state) rather than every reader defending itself; it
+    belongs before any live automation of `tables:evict --apply`. Rows #195/#196 and ADR 029's note on `main` still
+    describe round 1 — rows 195–197 are exactly the #122 conflict zone, so they are updated in the post-merge docs
+    push, not now.
+14. **Cleanup:** the review worktree (`.claude/worktrees/s73-review-121`) and the second simulation worktree
+    (`s73-sim2`) removed with their local branches and the `pr/*` refs; `origin/main` plus the four PR branches are
+    the only remote branches.
 
 **Session 72 (2026-09-03, AUTONOMOUS — the owner pasted the session-72 kickoff and added "I want you to work hours and
 hours autonomously, use multiple subagents with their needed level"; `list_sessions` showed no second instance) — FOUR PRs

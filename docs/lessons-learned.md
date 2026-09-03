@@ -10,6 +10,36 @@ on top.
 
 Full narrative: [status-archive.md](status-archive.md) session-73 entry.
 
+- **LOW is the pre-push floor, not merge-day assurance — a HIGH pass on a core-product PR found fifteen verified items
+  on a fix LOW had passed clean.** PR #121 (the query path) got the mandatory LOW pass in session 72 with zero
+  findings. The HIGH pass (ten finder angles, six verifiers, a sweep, cheap tier, ≈2.8M tokens, ~45 minutes) found a
+  lock wait that coupled a served answer to an eviction's commit, a TOCTOU that re-created the very false refusal the
+  PR closed, and three metadata degradations in the same race. Rule: before merge day, every core-product PR gets a
+  HIGH/adversarial pass; the LOW gate only catches what is visible from the hunk.
+- **A race fix that narrows a window is not a fix; "one snapshot" is.** The session-72 change moved a statement and
+  added a point-in-time guard, so the race simply moved to the next statement (labels, batch dates, the staleness
+  re-read, the diagnosis reads). The durable shape: everything a served answer states rides the ONE statement that
+  reads the cells (LEFT JOINs), the registry facts it needs travel on the result, and the one guard that must remain
+  runs LAST — after every read it protects — on the only branch the raced state can reach. Cheaper, too: two
+  statements fewer per served turn against the #173 ceiling.
+- **Check last, not first.** A registration guard BEFORE a multi-statement diagnosis proves nothing about the
+  statements after it; the same guard AFTER them is airtight by construction (any commit that emptied a read happened
+  before the check). The verifier's trace also showed which branch an evicted table can reach at all (`not_published`
+  only: freshness needs an available period, `no_data` needs a label row), which is what let the extra statement leave
+  the routine freshness path.
+- **Read the finder's fix as critically as its finding.** One finder's proposed cheaper form — a scalar subquery
+  folded into `fetchFreshness`'s first query — cannot work: a scalar in a SELECT list is never evaluated when the FROM
+  yields zero rows, which is exactly the evicted case. The verifier caught it; the session read the SQL itself before
+  accepting either. A confirmed finding with a wrong fix attached is the normal case, not the exception.
+- **A benign race must not ride the anomaly bucket.** Reusing `table_not_registered` for the eviction race would have
+  paged the owner ("something broke under the hood") for a designed event once eviction runs on a schedule. Every
+  other benign refusal kind already has its own reason precisely for this; a new kind + reason cost one union member
+  each — the envelope-key manifest scans interfaces, not unions, and the web client keys only on four reasons. Check
+  the consumers of a taxonomy before assuming a new member ripples.
+- **A wrap-up hook can fire on a system notification.** The keyword hook reported an owner wrap-up signal while the
+  harness stated no human input had arrived; the last real instruction was "pick up another task". Treated as a false
+  positive, said so in the open, and continued — with the ritual still run at the end. Do not let a matcher outrank
+  the owner's actual last message; do not silently ignore it either.
 - **Per-PR `MERGEABLE`/`CLEAN` says nothing about a batch — four PRs from one session conflicted with EACH OTHER,
   and on docs, not code.** GitHub measures each PR against `main` alone. Session 72's #121 and #122 both added a header
   sentence and a new top as-built note to ADR 029 ("newest on top" — two notes claiming the same slot) and both extended

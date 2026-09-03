@@ -24,18 +24,30 @@ gates on the moved heads all success — #121 runs 33749196246 + 33749200112, #1
 four PRs `MERGEABLE`/`CLEAN` at close. Session-73 notes on #121 and #122 record the moved heads. Rollback if #121 is
 vetoed: `git revert 8a3fb06`. Details: [status-archive.md](status-archive.md) session-73 entry.
 
+**Later the same session (owner: "pick up another task autonomously"; the merge question got no reply, so the merges
+stayed yours): a HIGH-effort adversarial review of #121 found fifteen verified items on the session-72 fix, which LOW
+had passed clean — the moved touch still queued behind the eviction's row lock, a TOCTOU in the re-check that could
+re-create the false `not_published`, raw period codes / a too-new sync date / a silenced staleness warning in the same
+race, and the benign race paging you as an internal error. All fixed on the branch (`0a7bad8` → `ebd341f`: skip-locked
+touch, one-snapshot fetch, check-last, a `table_evicted`/`evicted` refusal with honest Dutch copy, the registry facts
+carried on the result, docs/05 row); one structural follow-up recorded (eviction must yield to in-flight reads before
+any live automation). Branch block green, LOW 0, the combined tree re-verified (three orders → one tree, full block
+green); gates on `ebd341f`: runs 33756815650 (push) + 33756820787 (pull_request) both success; PR states at close:
+#121 MERGEABLE/CLEAN ebd341f #120 UNKNOWN/UNKNOWN 5c4c88f #123 UNKNOWN/UNKNOWN 3d185a1 #122 UNKNOWN/UNKNOWN 0ffe4c0.**
+
 | PR | Head now | Merge | Left for you |
 |---|---|---|---|
-| **#121** | `0a7bad8` (code + tests only — its docs are already on `main`) | clean | merge |
+| **#121** | `ebd341f` (review round 2 on top of `0a7bad8`; code + tests + one docs/05 row) | clean | merge |
 | **#120** | `5c4c88f` (unchanged) | clean | merge; revert this one commit if a deploy ever goes red on the TypeScript step |
 | **#123** | `3d185a1` (unchanged) | clean | merge — or veto a default (label, inline vs dock, ids toggle, collapsed) |
 | **#122** | `0ffe4c0` (docs resolved against `main`, code unchanged) | clean | merge — veto point: template phrasing on chip takes |
 
 **▶ NEXT, in order — nothing urgent:** (a) merge the four PRs — any order is conflict-free now; still one at a time,
-each deploy allowed to finish, a canary on `/`, `/llms.txt`, `/api/health` after each (the session-67 discipline); then
-a docs push that turns the "PR pending owner review" wordings (ADR 029, rows #73/#195/#196, the build plan) into
-MERGED + LIVE; (b) `GDPR_PURGE_APPLY=1` + one watched run; (c) #162's A/B (real spend); (d)–(e) as in the session-72
-block below, which otherwise still holds.
+each deploy allowed to finish, a canary on `/`, `/llms.txt`, `/api/health` after each (the session-67 discipline);
+then a docs push that turns the "PR pending owner review" wordings (ADR 029, rows #73/#195/#196, the build plan) into
+MERGED + LIVE and brings rows #195/#196 + ADR 029's note to the round-2 state (`table_evicted`/`evicted`, the
+one-snapshot fetch); (b) `GDPR_PURGE_APPLY=1` + one watched run; (c) #162's A/B (real spend); (d)–(e) as in the
+session-72 block below, which otherwise still holds.
 
 **▶ SESSION 72 (2026-09-03, AUTONOMOUS — you said "work hours and hours autonomously, use multiple subagents") —
 FOUR PRs WAIT FOR YOUR REVIEW, NOTHING MERGED, NOTHING FLIPPED.** The session-66 pattern: code on branches + PRs
@@ -47,7 +59,7 @@ handler, #123 adds a field on `ChatMessage`; no shared lines, but merge serially
 
 | PR | Branch (head) | What | Left for you |
 |---|---|---|---|
-| **#121** | `fix/195-196-eviction-probe-touch` (`93db80a` → `0a7bad8`, session 73: docs-only merge from `main`) | #195/#196: servability probes no longer bump `last_queried_at`; the bump runs after the fetch (a read never waits behind an eviction lock); an eviction landing mid-query yields an honest `table_not_registered`. Tripwires 27→24 / 12→10 / 18→15. | merge |
+| **#121** | `fix/195-196-eviction-probe-touch` (`93db80a` → `0a7bad8`, session 73: docs-only merge from `main`) | #195/#196: servability probes no longer bump `last_queried_at`; the bump runs after the fetch (a read never waits behind an eviction lock); an eviction landing mid-query yields an honest refusal. Round 2 (session 73, `ebd341f`): skip-locked bump, one-snapshot fetch, check-last, `table_evicted`/`evicted`; tripwires re-measured again (21 / 8 / 12). Tripwires 27→24 / 12→10 / 18→15. | merge |
 | **#120** | `chore/ts7-lift` (`5c4c88f`) | The TypeScript-7 hold lifted: Next 16.3 type-checks through the `tsc` CLI; TS 7.0.2 root + web, Dependabot ignore stanza removed; proven with a real `next build` twice (agent + session). | merge; if the deploy ever goes red on the TypeScript step, revert this one commit |
 | **#123** | `feat/70-79-89-drill-through` (`3d185a1`) | "Bewijs dit cijfer": one panel, three depths (reading + alternates / the cells / the step list), client-side over the stored envelope, no backend, no flag. Design brief with defaults on `main` (`093380b`). | merge — or veto a default (label, inline vs dock, ids behind a toggle, collapsed by default) |
 | **#122** | `feat/73-v2-click-take-chips` (`db3aabb` → `0ffe4c0`, session 73: docs-only merge from `main`) | #73 v2: every follow-up chip is a zero-LLM click take on the WP26 carrier (adjacent period, trend, region variant, same topic — not only the comparisons). Review round 1 fixed a carrier-validation defect and a per-message binding trap. | merge — veto point: template phrasing on chip takes instead of LLM phrasing; 20 credits per take unchanged |
