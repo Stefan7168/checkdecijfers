@@ -6,6 +6,50 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 74 — 2026-09-03, autonomous (the session-73 kickoff pasted AGAIN, from the phone app; no owner reply) — HIGH passes on #122 and #123 before merge day
+
+Full narrative: [status-archive.md](status-archive.md) session-74 entry.
+
+- **A pasted kickoff can be one session stale — STATUS's top block outranks it.** The owner pasted the session-73
+  kickoff (written at session 72's close) into a new session after session 73 had already run it; `git log` and the
+  archive's top entry showed session 73's close-out and a session-74 kickoff on `main`. The reading order caught it
+  (STATUS first) and the doc-freshness rule decided it: the repo's plan of record says what the next step is, not the
+  paste. Rules: number the session from the archive's top entry, never from the kickoff's title; `list_sessions`
+  "no second instance" means no second RUNNING one — an IDLE earlier session with the same title is history.
+- **A cloud session (Claude Code on the web / the phone app) differs from the remote-control CLI sessions in ways
+  that bite the kickoff checks:** its container's network policy blocked `checkdecijfers.vercel.app` at the proxy
+  (`CONNECT` → 403), so `curl` canaries returned `000` — an apparent outage that was not one; the Vercel MCP tools do
+  the job (`get_deployment` for the alias's `githubCommitSha`, `web_fetch_vercel_url` for the three canary paths).
+  No `gh`, no `vercel`, no `zsh` — the GitHub MCP tools replace `gh`, and `scripts/verify-block.sh` (zsh for its
+  `pipestatus`) had to be ported to bash on the spot; the bash form is now the committed one (RUNBOOK multi-agent
+  item 10).
+- **Review the FIX, not only the feature — each review round's diff earned its own pass, and each pass found
+  something.** #122's round-1 client fix (re-bind `pending` on a chip click) discarded an open clarification round and
+  raced an in-flight answer (HIGH, this session); the LOW pass over the round-2 diff then found a null-thread fork in
+  the new code. #123's round-2 LOW pass found the panel contradicting the answer's own CC BY marking on a
+  `first_last`-only series and a prototype-chain hole in the belt round 2 had just added. Three rounds on a
+  money-path route is the normal cost, not overkill.
+- **`/code-review` at HIGH inside a forked skill run has no Agent tool — it degrades to one careful single-pass
+  reader and says so.** It still found nine verified items on #122. For #123 the session ran three cheap-tier finder
+  agents with distinct angles (fabrication/R1, robustness/replay/redaction, the `chat.tsx` interplay with the sibling
+  PR) and verified every finding against the source itself. The RUNBOOK item-10 recipe — fan-out plus the session's
+  own verification — is the session's job; the skill is one finder, not the fan-out.
+- **A deterministic Dutch template needs its plural.** The brief's "Geen bewerking toegepast: het antwoord is de
+  waarde uit de cel." was written for one cell and fired for every multi-cell answer without a shown derivation —
+  every G4 comparison, live since rows 263/264 — directly under "Gelezen: N cellen". Copy templates need one fixture
+  per cardinality the data produces, and a sibling-surface check: compose.ts and citation.ts mark a `first_last`-only
+  series as derived, so the panel had to as well (R5 is one rule for every surface, not one per surface).
+- **A fixture that coincides with a recomputation cannot pin "read, not computed".** Two `direction` fixtures had
+  `netChange === last − first`, so the R1 canary would have passed a regression that recomputed the delta; the
+  sibling fixtures (difference, unit_expansion) had deliberately diverged. Every "stored value, never arithmetic" pin
+  needs a stored value a naive recomputation would NOT produce.
+- **`=== undefined` is not a belt against a malformed lookup key.** A stored `direction: 'constructor'` resolves
+  through the prototype chain to a function and passes the `undefined` check; `typeof word !== 'string'` is the belt.
+- **Fixing two open PRs in one session: keep each one's new tests out of the other's hunks, then re-simulate.**
+  #122's new pins went to the END of `chat.test.tsx`, #123's hunk sits mid-file; #123's resumed-thread render test
+  went into a NEW file rather than `chat.test.tsx`. Three merge orders still yield one tree — the session-73 batch
+  rule, applied while the batch was being changed.
+
 ## Session 73 — 2026-09-03, autonomous (kickoff pasted, no owner reply) — the four-PR batch made merge-clean
 
 Full narrative: [status-archive.md](status-archive.md) session-73 entry.

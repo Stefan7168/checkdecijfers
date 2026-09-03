@@ -851,6 +851,17 @@ per-machine cache:
    the orchestrating session runs the pass itself over the PR diff (five cheap-tier finders + verification)
    and posts the result before the PR is called reviewed.
 
+10. **A cloud session (Claude Code on the web / the phone app) runs in a container with its own network policy —
+    on 2026-09-03 `curl https://checkdecijfers.vercel.app/...` returned `000` because the proxy answered `403` to
+    `CONNECT`; that is NOT a production incident.** Canaries from such a session go through the Vercel MCP tools:
+    `get_deployment` on the project's `latestDeployment` (its `meta.githubCommitSha` must equal the `main` tip and its
+    `alias` must include `checkdecijfers.vercel.app`) and `web_fetch_vercel_url` for `/`, `/llms.txt` and
+    `/api/health` (200 each); PR state and CI through the GitHub MCP tools (`pull_request_read`, `actions_list`,
+    `merge_pull_request`) — neither `gh` nor `vercel` is installed there, and neither is `zsh`, which is why
+    `scripts/verify-block.sh` is a bash script since session 74 (`PIPESTATUS`; the same file, same usage). Such a
+    session also clones onto an auto-named `claude/...` branch — the repo's workflow still applies (docs direct to
+    `main`, code on the PR branches); that branch is only where the harness's own default pushes would land.
+
 ## Reviewing and merging a large PR batch (added session 67, 2026-08-28 — reviewed + merged all 19 open PRs left by session 66)
 
 1. **Review in parallel, merge in serial.** The review pass (does each PR actually do what it claims,
@@ -928,7 +939,11 @@ per-machine cache:
     finder angles + five verifier agents + one gap sweep on the cheap tier (≈2.75M tokens, ~45 minutes wall-clock),
     orchestrated from the session, which reads every finder's evidence itself — a finder's proposed FIX can be wrong
     even when its finding is right. Fixes go on the PR branch (docs-only or not, the gates re-run), then re-simulate
-    the batch (item 9) and re-run the full block on the combined tree before the owner merges.
+    the batch (item 9) and re-run the full block on the combined tree before the owner merges. **Measured again in
+    session 74 (2026-09-03):** the HIGH pass on #122 found nine verified items on the round-1 fix (one a lost paid
+    clarification round), three cheap-tier finder angles on #123 found six (one live on every multi-cell comparison),
+    and the LOW pass over EACH round-2 diff found more (a null-thread fork; a panel contradicting the answer's own
+    marking) — review the fix as well as the feature, every round.
 
 ## Moving to a new machine (fresh clone bootstrap)
 
