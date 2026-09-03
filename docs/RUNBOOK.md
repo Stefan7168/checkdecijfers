@@ -544,7 +544,7 @@ What to know:
 
 The ceiling itself is a free-tier property; a paid tier raises it but does not remove it.
 
-## WP26 answer-first + clickable options — the supervised go-live (NOT YET RUN; built session 56, 2026-07-25)
+## WP26 answer-first + clickable options — the supervised go-live (built session 56, 2026-07-25; `CLARIFY_CLICK_ENABLED` ✅ LIVE 2026-09-02 + smoke test ✅ PASSED 2026-09-03, session 71; `ANSWER_FIRST_ENABLED` NOT YET)
 
 Two INDEPENDENT flags, both dormant. Either can go live first and roll back on its own — deliberate,
 so a problem with one mechanism never forces the other off.
@@ -592,7 +592,14 @@ Steps (owner present):
    clarifies with the chips "Utrecht (gemeente)" / "Utrecht (provincie)"). NOT the single word
    "Utrecht": that is no statistics question, the intent parser refuses it as smalltalk (measured in
    production 2026-09-03, audit row 260, refunded) and no chips appear. Confirm the chips appear, click one, confirm the answer arrives and the audit row records
-   `model = deterministic/wp26-click-option` with zero token usage.
+   `model = deterministic/wp26-click-option` with zero token usage. **Where that model lives:** in the stored
+   envelope, `response->'parse'->>'model'` — NOT in the promoted `llm_calls` column, which is `[]` on a click
+   take because no LLM was called (a `llm_calls::text like '%wp26-click-option%'` query is a false negative —
+   session 70 used it, and it happened to be right only because there were no takes yet). Read-only check:
+   `select id, reply_text, input_tokens, answer_source from audit_answers where response->'parse'->>'model' =
+   'deterministic/wp26-click-option'`. Measured first pass 2026-09-03 (session 71): row 261 = the clarification
+   (`pending_clarification.clickOptions` = "Utrecht (PV)" / "Utrecht (gemeente)", 10 credits net), row 262 =
+   the click ("Utrecht (gemeente)", 0 tokens, `template`, 20 credits, `audit:verify` 2/2 clean).
 5. Watch the first day's rows: `answer_source = 'template'` on clicked answers is EXPECTED
    (ADR 024 — a clicked take composes without the LLM and therefore reads plainer).
 6. **#197 step 3 (once its branch is merged):** ask a gemeente question that answers ("Hoeveel inwoners
@@ -675,6 +682,25 @@ the RE-RUN/refill reference:
    automatically, within the ~20 s cache window from step 5). Optional owner-side hardening outside the
    repo: Vercel Firewall rate rules (ADR 036 D2) — and note the rule must target **`POST /`**, not
    `/api/`, because Server Actions POST to the page path.
+
+## ⚠ Two CI runs in flight on `main` — the LAST deploy to finish owns production (measured 2026-09-03, session 71)
+
+Every push to `main` runs `gate` and then `deploy`, and `deploy` aliases **its own commit** to
+`checkdecijfers.vercel.app`. Two runs overlap whenever a second push lands while the first is still in
+its ~15-minute gate — typically a docs-only push right after a merge. Whichever deploy job finishes LAST
+wins the alias, regardless of commit order. Measured: the docs commit `2d27175` (pushed 00:26Z) finished
+its deploy at 00:44Z, one minute AFTER the merge `83f790e` (pushed 00:31Z) had gone live, and production
+silently went back to the pre-merge code while both runs showed green.
+
+Since session 71 (2026-09-03, the commit that added this section) the deploy job checks `git ls-remote origin main` first and **skips every deploy
+step when its commit is no longer the tip** (the newer commit's own run deploys it; the stale run stays
+green because its gate verdict is still real). Runs started before that commit do not have the guard.
+
+How to see it: `vercel inspect https://checkdecijfers.vercel.app` gives the deployment id/url that holds the
+alias; the deploy job's log of each run prints the SHA it shipped (`gh run view <run> --job <deploy-job>
+--log | grep -o '<sha>'`). Fix, instant and reversible: `vercel promote <deployment-url> --yes` with the URL of
+the deployment built from the newest commit (the `vercel deploy` line in that run's deploy log). Habit that
+avoids it entirely: after a merge, let its run finish before pushing anything else.
 
 ## Resuming after a long pause (written 2026-08-15, at the ~2-month halt)
 

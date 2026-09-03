@@ -154,6 +154,25 @@ jobs:
       # attempt assumed it was redundant (ADR 018 point 9, attempt 5).
       - run: npm ci
       #
+      # Two runs on main can be in flight at once (a docs-only push right
+      # after a merge, 2026-09-03): each deploy job aliases ITS OWN commit to
+      # production, so the deploy that FINISHES LAST wins — measured: the
+      # docs commit 2d27175 re-aliased production over the merge 83f790e
+      # that had gone live a minute earlier, and had to be promoted back by
+      # hand (RUNBOOK "Two CI runs in flight"). Only the run whose commit is
+      # still the tip of main deploys; a stale run skips every deploy step
+      # below and stays green (its gate verdict is the point of that run).
+      - name: Skip the deploy when main has moved on
+        id: tip
+        run: |
+          tip=$(git ls-remote --heads origin main | cut -f1)
+          echo "this run: ${GITHUB_SHA}  main tip: ${tip}"
+          if [ -z "$tip" ]; then echo "could not read the tip of main"; exit 1; fi
+          if [ "$tip" != "$GITHUB_SHA" ]; then
+            echo "stale=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::main is already at ${tip}; that commit's own run deploys it. Skipping this deploy."
+          fi
+      #
       # Commands run from the repo ROOT (no --cwd web) and rely entirely on
       # the Vercel PROJECT's own settings — rootDirectory: "web" plus
       # sourceFilesOutsideRootDirectory: true (Vercel's documented monorepo
@@ -163,20 +182,24 @@ jobs:
       # the subdirectory (a real, reproduced bug: ADR 018 point 9) — the two
       # are alternatives, never both.
       - name: Install Vercel CLI
+        if: steps.tip.outputs.stale != 'true'
         run: npm install --global vercel@latest
       - name: Pull Vercel project settings and env vars
+        if: steps.tip.outputs.stale != 'true'
         run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
       - name: Build
+        if: steps.tip.outputs.stale != 'true'
         run: vercel build --prod --token="$VERCEL_TOKEN"
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
       - name: Deploy prebuilt output
+        if: steps.tip.outputs.stale != 'true'
         run: vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN"
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
@@ -189,6 +212,7 @@ jobs:
       # deployed app must actually serve a page. -L follows the auth
       # redirect to /login; anything but a final 200 fails the job.
       - name: Post-deploy smoke check (the app must serve, not just build)
+        if: steps.tip.outputs.stale != 'true'
         run: |
           sleep 10
           for path in / /login /llms.txt; do
