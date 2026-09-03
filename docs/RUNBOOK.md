@@ -592,7 +592,10 @@ Steps (owner present):
    named; "…telde Nederland?" names a place and tests nothing). **Measured 2026-09-03 (session 71, rows
    265/266): the period-less canary stops asking for a period (B works) but comes back as a one-chip
    "Bedoel je …?" because the live parse scores 0.85 < 0.9 for a period-less reading — see
-   [#198](open-questions.md); clicking the chip answers deterministically.**
+   [#198](open-questions.md); clicking the chip answers deterministically (row 267: the 2019–2026 trend, line
+   chart, 0 tokens). ⚠ Ask the region-less canary in a NEW chat: in the same thread it is parsed as a
+   continuation and inherits the previous region from context (row 268 answered Amsterdam, not Nederland) — that
+   is the follow-up design working, not B-region being tested.**
    Confirm the disclosure sentence renders DIRECTLY UNDER the answer body, and that the answer's
    numbers still match the cells (`npm run audit:verify -- <row> <row>` → exit 0).
 4. For the click flag: ask something that clarifies — use the flagship case

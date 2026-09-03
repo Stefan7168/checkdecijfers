@@ -90,6 +90,15 @@ instance) — WP26 SMOKE TEST PASSED, #197 STEP 3 MERGED + LIVE, A CI DEPLOY RAC
     fixture parse, so this was invisible until the live canary. Paid dead-end gone (the chip is a zero-LLM take);
     "answers directly" not yet true for period-less questions. Remedies recorded in #198 (prompt rule + re-record
     as the default, code-side threshold as the alternative) — owner-supervised either way (prompt bytes, spend).
+12. **The chip on that confirmation, clicked (row 267, 06:44Z):** `reply_text` = the reading label, `parse.model =
+    deterministic/wp26-click-option`, 0 tokens, `template`, B-period's recent-trend window delivered — eight
+    cells 2019JJ00…2026JJ00 for GM0363 (862.965 → 941.927), a `line` chart, 20 credits (ledger 110). So the
+    period-less path is: confirmation (10) + one click (20) → the trend answer — a working correction path, not
+    yet a direct answer. **Canary 2 as asked did NOT test B-region:** "Hoeveel inwoners waren er in 2024?" in the
+    SAME thread was parsed as a continuation ("bevolking van Amsterdam in 2024 (vervolg op de vorige vraag…)",
+    confidence 0.95) — the region came from the conversation context, by design (followup prompt), and it answered
+    Amsterdam 2024 = 931.298 via the LLM path (row 268, 20 credits). B-region needs a FRESH thread; asked of the
+    owner. `npm run audit:verify -- 265 268` → 4/4 reconstruct clean.
 
 **Session 70 (2026-09-02, later the same day as session 69; the owner pasted the session-70 kickoff — into
 TWO sessions in the same working tree, the 25-07 collision shape: the second session (local_09530460…)
