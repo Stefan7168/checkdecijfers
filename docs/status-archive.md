@@ -136,6 +136,14 @@ instance) — WP26 SMOKE TEST PASSED, #197 STEP 3 MERGED + LIVE, A CI DEPLOY RAC
     LOW review 1 finding fixed; parser reverted to committed v6 so backend/benchmark unchanged): run 33729056323 gate +
     deploy green, alias on `checkdecijfers-pmkjd0ry1…`; production `/login` and `/systeemoverzicht` each report
     exactly one `footer` and one gear link (checked in the browser after the deploy).
+16. **Incident on my side, caught late:** the docs rewrite that recorded the reverted #198 attempt used
+    `open(p,'w').write(open(p).read()…)` on STATUS.md — Python truncates on the first `open` — so STATUS.md
+    went to 0 bytes and was committed by `git add -A` in `d797571`, then carried through `bf5cb87` and
+    `c03ef74` (three green runs: nothing on the docs gate asserted content). Found when the next edit could not
+    find its anchor. Restored from `836ff60` (the last good, 629 lines), the intended edits re-applied with a
+    read-then-write helper that asserts the new text is non-empty and not much shorter (`44e8a0c`), and a new
+    docs-gate test pins the plan-of-record docs' minimum sizes + marker texts (`a0b8b50`; `test:docs` 11/11).
+    #198 itself: owner said "later" — parked, not blocking (`c03ef74`, `44e8a0c`).
 
 **Session 70 (2026-09-02, later the same day as session 69; the owner pasted the session-70 kickoff — into
 TWO sessions in the same working tree, the 25-07 collision shape: the second session (local_09530460…)
