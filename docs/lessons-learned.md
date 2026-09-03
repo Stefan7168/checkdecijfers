@@ -6,6 +6,40 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 71 — 2026-09-03, owner present — WP26 smoke test, #118 merged, a deploy race
+
+Full narrative: [status-archive.md](status-archive.md) session-71 entry.
+
+- **A RUNBOOK step that has never been executed is a hypothesis, and this one was wrong.** Step 4 of the
+  WP26 go-live said "ask something that clarifies (bare "Utrecht" works)". The owner did exactly that and
+  the intent parser refused the one-word question as smalltalk (audit row 260, refunded) — no chips, no
+  test. The sentence had been condensed from a test-file comment ("Bare 'Utrecht' on the population
+  measure") whose actual question is `Hoeveel inwoners had Utrecht in 2024?`. Rule: an owner-facing
+  procedure names the EXACT input the tests prove, never a paraphrase — and the first live execution of any
+  procedure is itself a test of the procedure, so read it as one and fix it in the same session.
+- **Two green CI runs on `main` can leave production on the OLDER commit.** The docs push `2d27175` (00:26Z)
+  and the merge `83f790e` (00:31Z) ran concurrently; the merge's deploy finished first (00:42Z), the docs
+  run's deploy finished a minute later and aliased ITS commit — the pre-merge code — to production, while
+  both runs showed green and the merge run's own smoke check had passed. Found only because `vercel ls
+  --prod` listed a deployment NEWER than the merge's; `vercel inspect` + the deploy-job log SHA confirmed
+  it; `vercel promote <merge deployment> --yes` fixed it in two seconds. Guard added to the deploy job
+  (skip when the commit is no longer the tip of `main`). Rules: after a merge, do not push again until its
+  run has deployed; and "CI green" proves the RUN, not what production serves — `vercel inspect
+  https://checkdecijfers.vercel.app` is the only proof of the latter.
+- **A "zero rows" answer from a query that CANNOT match is not evidence.** The session-70 check for
+  chip-click takes was `llm_calls::text like '%wp26-click-option%'`; on a click take `llm_calls` is `[]`
+  (no LLM was called) and the click model sits in `response->'parse'->>'model'`. The conclusion happened to
+  be right because there were no takes yet — the one situation in which a never-matching query looks
+  correct. Rule: before trusting a negative, run the same query against a row that MUST match (here: make
+  one, or use the test fixture's shape); if none exists, say the check is unproven.
+- **Never write the SHA of the commit you are still amending.** The RUNBOOK sentence "Since `3c54400` …"
+  pointed at a commit that stopped existing on the very next `--amend`. Cite "the commit that added this
+  section" or pin the SHA only after the push.
+- **Squash-merged branches look unmerged to git.** `git branch --merged main` listed 13 of the 28 stale
+  local branches; the other 15 were squash-merged PRs (#77–#96) that `git` cannot see as merged. Map each
+  branch to its PR state with `gh pr list --state all --head <branch>` before `-D`; the two CLOSED
+  (unmerged) dependabot branches were superseded PRs and safe to drop too.
+
 ## Session 70 — 2026-09-02 (later the same day), owner away — #197 step 3 on a branch, second session as reviewer
 
 Full narrative: [status-archive.md](status-archive.md) session-70 entry.

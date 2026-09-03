@@ -9,37 +9,38 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
+**▶ SESSION 71 (2026-09-03, owner present) — WP26 SMOKE TEST PASSED, #197 STEP 3 MERGED + LIVE, A DEPLOY RACE
+FOUND AND GUARDED.** Started by checking production instead of asking: still zero chip-click takes. Your
+first attempt (the one-word "Utrecht", row 260) was refused as smalltalk and refunded — the RUNBOOK's
+"bare Utrecht works" was a wrong summary of the test case, fixed in `2d27175`. The real flagship question
+`Hoeveel inwoners had Utrecht in 2024?` clarified with two chips (row 261) and your click on "Utrecht
+(gemeente)" produced row 262: `parse.model = deterministic/wp26-click-option`, 0 tokens, `template`,
+20 credits, `audit:verify` 2/2 clean. On that evidence PR #118 was squash-merged as `83f790e` (CI run
+33699880673 gate + deploy green). **Then the deploy race:** the docs run for `2d27175` finished its
+deploy one minute AFTER the merge's and re-aliased production to the PRE-merge code while both runs were
+green; caught by `vercel inspect`, fixed instantly with `vercel promote` of the `83f790e` deployment, and
+guarded for good: the deploy job now skips itself when its commit is no longer the tip of `main`
+(RUNBOOK "Two CI runs in flight"). Also: the RUNBOOK's click-row query looked in the wrong column
+(`llm_calls` is `[]` on a click take; the model lives in `response->'parse'->>'model'`), corrected.
+Hygiene: the s70-reviewer worktree removed, 28 stale local branches + 9 merged remote branches deleted.
+**`CLARIFY_CLICK_ENABLED` ON and proven; `ANSWER_FIRST_ENABLED` and `GDPR_PURGE_APPLY` still untouched —
+both remain YOUR call (owner-supervised), not a session's.** Details, every SHA and run id:
+[status-archive.md](status-archive.md). **Your next action:** RUNBOOK WP26 section step 6 — ask
+`Hoeveel inwoners had Amsterdam in 2024?`, click "Vergelijk met Nederland", Verstuur: a two-bar comparison,
+20 credits. Then say whether `ANSWER_FIRST_ENABLED` may go on (one flag at a time; rollback order in the
+RUNBOOK: click flag off first, B a day later).
+
 **▶ SESSION 70 (2026-09-02, later the same day — TWO sessions received the kickoff in the same tree; the
-second stopped building, moved to a git worktree and became the independent reviewer, the 25-07 shape) —
-#197 STEP 3 BUILT ON A BRANCH, MERGE GATED ON YOUR SMOKE TEST.** First checked production instead of
-asking: `audit_answers` holds ZERO chip-click takes ever (no `deterministic/wp26-click-option` row, no
-reply row), so the WP26 smoke test had NOT been run — and the three rows you produced at 12:43Z (ids
-257–259, "Maak een grafiek van de inflatie…" + "2024" ×2) were Anthropic `529 overloaded_error` on the
-intent parse, each refunded by the gate (ledger 94/96/98): provider overload, not a code bug. Then built
-step 3 — comparison chips — on branch `feat/197-3-comparison-chips` (head `e6b5846`), **draft PR
-#118, NOT merged:** two comparison generators
-("Vergelijk met Nederland" / "Vergelijk met Amsterdam, Rotterdam, Den Haag en Utrecht" / "Vergelijk met
-<a year earlier>"), each chip a dry-run-proven `ClickOption` on a present-only `AnswerResponse.pending`
-in the WP26c chip-carrier shape, taken through the zero-LLM `templateOnly` path as a NEW validated result
-(R6), 20 credits, real audit row; only with `CLARIFY_CLICK_ENABLED` on, byte-identical off. The reviewer
-session's 7 verdicts are folded in (resolved-intent source, a takeability gate that stops an `onboarded:`
-key from minting a chip the validator strips, forgery pins, replay parity, a measured cost pin). Verified
-before the push: backend 114 files / 1733 tests, benchmark 14/14 + 6/6 + 0 fabricated, web 537/537,
-`next build`, LOW review 0 findings. **Independently re-verified by the reviewer session in its clean
-worktree (same numbers, branch CI 33638609958 + 33638618181 both green); its LOW pass found ONE minor
-redundancy (a hand-copied region cap next to the schema gate), removed in the follow-up `e6b5846` after
-the full verification block — branch CI runs 33643838978 (push) and 33643837354 (pull_request) both
-`success`.** The two docs-only close-out commits (`221ce1a`, `e0f6695`) went RED on the #132 "no live PR
-links in docs/" test (three `[#118](https://…/pull/118)` links) — found by the reviewer session, fixed in
-`fcbb479` (run 33642409302 `success`, gate AND deploy — prod redeployed the same `1d2140f` code, `/` 200);
-the reviewer's docs commit `f3c3236` (run 33643051369) `success` too.
-Details: ADR 029 first as-built note, ADR 024 last addendum, [status-archive.md](status-archive.md).
-**Your two actions, in order:** (1) the WP26 smoke test (RUNBOOK "WP26 answer-first + clickable
-options", steps 4–5: log in, ask `Hoeveel inwoners had Utrecht in 2024?` — NOT the single word "Utrecht", the
-parser refuses that as smalltalk (measured 2026-09-03, row 260) — click a chip);
-(2) if it passes, merge PR #118 (or tell the next session to) and run step 6 of the same RUNBOOK section
-("Vergelijk met Nederland" under an Amsterdam answer). If the chip click fails, that is a WP26 bug to fix
-BEFORE #118 merges.
+second became the independent reviewer in a worktree) — #197 STEP 3 BUILT ON A BRANCH (merged in session
+71, above).** Two comparison generators ("Vergelijk met Nederland" / "Vergelijk met Amsterdam, Rotterdam,
+Den Haag en Utrecht" / "Vergelijk met <a year earlier>"), each a dry-run-proven `ClickOption` on a
+present-only `AnswerResponse.pending` in the WP26c chip-carrier shape, taken through the zero-LLM
+`templateOnly` path as a NEW validated result (R6), 20 credits; only with `CLARIFY_CLICK_ENABLED` on,
+byte-identical off. Reviewer's 7 verdicts folded in. Verified: backend 114 files / 1733 tests, benchmark
+14/14 + 6/6 + 0 fabricated, web 537/537, `next build`, LOW review 0 findings; branch CI green on `02a328e`
+and `e6b5846`. Owner's rows 257–259 (02-09 12:43Z) were Anthropic 529 overloads, refunded. Two docs
+commits went red on the #132 no-live-PR-links test, fixed in `fcbb479`. Details: ADR 029 first as-built
+note, ADR 024 last addendum, [status-archive.md](status-archive.md).
 
 **▶ SESSION 69 (2026-09-02, owner present) — cleared most of the RUNBOOK queue.** Applied all 4 pending
 migrations (022 found undocumented but additive/023/024/025) to production, verified clean. Flipped
@@ -71,8 +72,8 @@ a `schemaVersion` guard in the web renderer, ADR 014 as-built rule for optional 
 renderer only; spec/builder/audit rows untouched. 27 new tests render the real svg in jsdom; web suite
 529/529. **Step 2 BUILT too:** a Grafiek/Tabel switch on every chart (period × series, comparisons one
 row per region, null cells as "— (reason)", >15-series comparisons open on the table); no duplicate CSV
-entry in the menu — WP21's button already sits under every chat answer. Step 3 (comparison chips) is
-next and gated on the WP26 smoke test.
+entry in the menu — WP21's button already sits under every chat answer. Step 3 (comparison chips) was
+built in session 70 and merged + LIVE in session 71 (`83f790e`, above).
 
 **▶ SESSION 68 (2026-08-28 into 2026-08-31, local +07, owner present, spanned three calendar days in one
 continuous conversation) BUILT `/systeemoverzicht` — a public architecture reference page, on direct
@@ -87,15 +88,9 @@ silently redirected every visitor to `/login`) and `StatusLegend` hand-duplicate
 (caught by the pre-push LOW code-review). Full narrative, every verification step:
 [status-archive.md](status-archive.md) (prepended below).
 
-**ONE OPEN DRAFT PR (2026-09-02, session-70 close-out): PR #118
-`feat/197-3-comparison-chips` at `e6b5846` — merge gated on the owner's smoke test (above).** Verify
-yourself: `gh pr list --state open` shows exactly #118; `git log -1 origin/main` shows the session-70
-docs commit or later. **CI on the branch, measured after the close-out: run 33638609958 (push) `success` — gate
-`success`, deploy `skipped` (deploys only from `main`) — and run 33638618181 (pull_request) `success`;
-the follow-up `e6b5846`: runs 33643838978 (push) and 33643837354 (pull_request) both `success`.**
-So #118 is green and mergeable the moment the smoke test passes. The four session-69 docs-only commits on
-`main` measured at this close-out (`gh run list --branch main -L 4`, sha status conclusion):
-`f2f4bb6 completed success;4d18dc1 completed success;0f96af5 completed success;c40c35e completed success;`. #197 steps 1+2 stay LIVE on prod.
+**NO OPEN PRs (2026-09-03, session 71): PR #118 squash-merged as `83f790e`, branch deleted locally and on
+origin; `origin/main` is the only remote branch.** Verify yourself: `gh pr list --state open` is empty;
+`gh run list --branch main -L 3` all `success`. #197 steps 1+2+3 are LIVE on prod.
 
 Full session-67 record (reviewed + merged all 19 PRs session 66 left open, #99-#117): [status-archive.md](status-archive.md) (prepended) +
 [session-briefs/2026-08-28-session-67-close.md](session-briefs/2026-08-28-session-67-close.md).
