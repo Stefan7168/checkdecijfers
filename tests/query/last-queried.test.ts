@@ -7,11 +7,20 @@
 //    rewritten (at most ~one write per table per day), a >1-day-stale one is;
 //  - the bump can NEVER fail the read path (the migration-025 deploy-window
 //    guarantee: pre-migration code paths warn, answers still serve).
+//
+// #195 (session 72): a FOURTH property — a `probe: true` read (the
+// echoServability primitive every follow-up/comparison chip and alternate-
+// reading check funnels through) must NEVER bump the clock. Only a read that
+// can actually DELIVER an answer counts as demand for the eviction GC; the
+// eviction anchor now reads as "last served/delivered read", not "last
+// touched by any internal machinery".
 import { describe, expect, it } from 'vitest';
-import { runQuery, touchLastQueriedAt } from '../../src/query/index.ts';
+import { runQuery, touchLastQueriedAt, echoServability } from '../../src/query/index.ts';
 import type { Db } from '../../src/db/types.ts';
 import { createTestDb } from '../helpers/pglite-db.ts';
-import { createIngestedDb } from '../helpers/ingested-db.ts';
+import { createIngestedDb, tableIdForCanonicalKey } from '../helpers/ingested-db.ts';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { ANSWERABLE_TASKS } from '../helpers/benchmark-intents.ts';
 
 async function insertBareTable(db: Db, id: string): Promise<void> {
@@ -94,5 +103,58 @@ describe('runQuery — bumps the resolved table', () => {
     } finally {
       await close();
     }
+  });
+
+  it('#195: a probe read on the SAME servable intent does NOT stamp the table', async () => {
+    const { db, close } = await createIngestedDb();
+    try {
+      const [taskId, task] = Object.entries(ANSWERABLE_TASKS)[0]!;
+      const outcome = await runQuery(db, task.intent, { probe: true });
+      if (!outcome.ok) throw new Error(`benchmark intent ${taskId} did not serve: ${outcome.refusal.kind}`);
+
+      const tableId = outcome.cells[0]!.tableId;
+      // Never queried before (fresh fixture db) and this call was a probe —
+      // the eviction anchor must stay null, exactly the pre-first-answer state.
+      expect(await lastQueriedAt(db, tableId)).toBeNull();
+    } finally {
+      await close();
+    }
+  });
+
+  it('#195: echoServability (the dry-run primitive) never stamps the table it checks', async () => {
+    const { db, close } = await createIngestedDb();
+    try {
+      const [taskId, task] = Object.entries(ANSWERABLE_TASKS)[0]!;
+      const servability = await echoServability(db, task.intent);
+      expect(servability.servable).toBe(true);
+
+      // echoServability's own return type carries no cells (R1/principle c
+      // confinement), so recover the table id independently — straight from
+      // the registry, never through another runQuery call — so this
+      // assertion proves ONLY echoServability's own call left no bump.
+      if (task.intent.target.kind !== 'canonical') throw new Error(`${taskId}: expected a canonical target`);
+      const tableId = await tableIdForCanonicalKey(db, task.intent.target.key);
+      expect(await lastQueriedAt(db, tableId)).toBeNull();
+    } finally {
+      await close();
+    }
+  });
+});
+
+// #196 (session 73): the touch must SKIP a row an eviction holds `for update`
+// instead of queueing behind that transaction (a served answer's latency and
+// its pooled connection, #173, must never be coupled to an eviction's commit).
+// The contention itself cannot be exercised under single-connection PGlite —
+// the same recorded judgment as tests/ingestion/onboarding-store.test.ts's
+// claimOnePending pin — so the clause is pinned in the function's own source.
+describe('touchLastQueriedAt — skip-locked source pin (untestable behaviorally under PGlite)', () => {
+  it('takes the row with FOR NO KEY UPDATE SKIP LOCKED inside touchLastQueriedAt itself', () => {
+    const source = readFileSync(fileURLToPath(new URL('../../src/query/run.ts', import.meta.url)), 'utf8');
+    const start = source.indexOf('export async function touchLastQueriedAt');
+    expect(start).toBeGreaterThan(-1);
+    const end = source.indexOf('\nexport ', start + 1);
+    const body = source.slice(start, end === -1 ? undefined : end);
+    expect(body).toContain('for no key update skip locked');
+    expect(body).toContain('set last_queried_at = now()');
   });
 });

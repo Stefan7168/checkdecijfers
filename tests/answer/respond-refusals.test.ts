@@ -464,6 +464,17 @@ describe('buildQueryRefusal — exhaustive over every QueryRefusal.refusal.kind'
     expect(outcome.refusal.text).toMatch(/tijdelijk/i);
   });
 
+  it('table_evicted -> reason "evicted" (never internal — never the owner alert): the data left OUR store, ask again', () => {
+    const outcome = buildQueryRefusal(queryRefusal('table_evicted'));
+    if (outcome.kind !== 'refusal') throw new Error('unreachable');
+    expect(outcome.refusal.reason).toBe('evicted');
+    expect(outcome.refusal.text).toMatch(/opgeruimd/);
+    expect(outcome.refusal.text).toMatch(/niet weg bij het CBS/);
+    expect(outcome.refusal.text).toMatch(/opnieuw/);
+    expect(outcome.refusal.text).not.toMatch(/\d/);
+    expect(outcome.refusal.internalNote).toBe('stub message for table_evicted');
+  });
+
   it('needs_clarification -> a ClarificationResponse-shaped outcome; region axis gets concrete resolvable options', () => {
     const outcome = buildQueryRefusal(
       queryRefusal('needs_clarification', { axes: ['region', 'period'] }),

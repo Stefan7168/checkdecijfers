@@ -53,6 +53,15 @@ function cadenceWordsNl(cadence: string): string {
   return cadence;
 }
 
+/** The registry-read fallback for a synthetic result (no `registry` on the
+ * result): the table's own last_sync_at, ISO or null. A real runQuery result
+ * never comes here (#196). */
+async function readTableLastSync(db: Db, tableId: string): Promise<string | null> {
+  const table = await db.query('select last_sync_at from cbs_tables where id = $1', [tableId]);
+  const raw = table.rows[0]?.last_sync_at;
+  return raw == null ? null : new Date(raw as string | Date).toISOString();
+}
+
 /** docs/05 staleness row, both branches: stale iff the floor of days between
  * the table's last sync and the injected reference date STRICTLY EXCEEDS the
  * cadence's max-age threshold (boundary: age == maxAge is NOT stale — a
@@ -62,7 +71,15 @@ export async function checkStaleness(
   result: ValidatedResult,
   referenceDate: string,
 ): Promise<StalenessCheck> {
-  const cadence = await readUpdateCadence(db, result.attribution.tableId);
+  // #196 (session 73): a real runQuery result carries the registry facts it
+  // was resolved with (ValidatedResult.registry — the same cbs_tables row the
+  // attribution came from), never re-read here, where an eviction landing
+  // after the fetch would answer "no row": staleness silently off, and the
+  // #154 clause below misphrased. Present-only: a synthetic result (tests)
+  // carries no key and still takes the registry reads.
+  const registry = result.registry;
+  const cadence =
+    registry !== undefined ? registry.updateCadence : await readUpdateCadence(db, result.attribution.tableId);
   const maxAgeDays = maxAgeDaysForCadence(cadence);
   if (maxAgeDays === null) return { stale: false, warning: null };
 
@@ -79,12 +96,8 @@ export async function checkStaleness(
   // last_sync_at, the attribution min came from a RETAINED cell: we DID sync
   // recently, the cell just wasn't reconfirmed by CBS — "onze laatste
   // synchronisatie was op {date}" would then be false about ourselves.
-  const table = await db.query('select last_sync_at from cbs_tables where id = $1', [
-    result.attribution.tableId,
-  ]);
-  const lastSyncRaw = table.rows[0]?.last_sync_at;
   const tableLastSync =
-    lastSyncRaw == null ? null : new Date(lastSyncRaw as string | Date).toISOString();
+    registry !== undefined ? registry.lastSyncAt : await readTableLastSync(db, result.attribution.tableId);
   const retainedMin = tableLastSync !== null && result.attribution.syncedAt < tableLastSync;
   const clause = retainedMin
     ? `maar een deel van deze cijfers is door CBS sinds ${syncDate} niet opnieuw bevestigd`

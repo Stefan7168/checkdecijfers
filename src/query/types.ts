@@ -239,6 +239,21 @@ export interface ValidatedResult {
    * layer (the period axis is resolved before the query runs), same present-only
    * and `?? false` discipline as regionDefaulted. */
   periodDefaulted?: boolean;
+  /** #196 (session 73): the two registry facts the staleness check needs,
+   * carried from the SAME cbs_tables row resolveIntent already read
+   * (resolve.ts fetchTable) so src/answer/respond/staleness.ts never re-reads
+   * that row after the fetch — a re-read an eviction landing mid-turn answers
+   * with "no row", silently switching off the staleness warning and the
+   * recency refusal, and misphrasing the #154 retained-cell clause.
+   * Present-only: a synthetic result (tests) carries no key and checkStaleness
+   * then falls back to the registry reads. */
+  registry?: {
+    /** Free-text `update_cadence` ("monthly (~22 days …)"), null when unset. */
+    updateCadence: string | null;
+    /** The table's own `last_sync_at` (ISO) — attribution.syncedAt is the
+     * MINIMUM over retained cells and can be older than this. */
+    lastSyncAt: string | null;
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -255,6 +270,17 @@ export type RefusalKind =
   | 'needs_clarification'
   /** Explicit target names a table not in the registry. */
   | 'table_not_registered'
+  /** #196 (sessions 72–73): the table WAS registered when this query resolved
+   * but was evicted (src/ingestion/eviction.ts, the on-demand TTL) before the
+   * query completed. Deliberately its own kind: `table_not_registered` is a
+   * genuine anomaly (a parser-produced table id nobody registered) and pages
+   * the owner through the 'internal' refusal reason; this is a designed,
+   * benign race — the data left OUR store, not CBS — with its own honest
+   * wording ('evicted' reason, never the alert). run.ts's diagnoseMissing
+   * re-checks registration LAST on the only branch a fully evicted table can
+   * reach (not_published), so no data-gap refusal is ever manufactured for a
+   * table that simply vanished mid-flight. */
+  | 'table_evicted'
   /** Table is quarantined (needs_review) — out of scope, never served. */
   | 'table_quarantined'
   /** CBS publishes this, but it is outside our ingested slice

@@ -69,6 +69,14 @@ interface ObservationRow {
    * (a rare internal freshness fact, not answer-surface data) — run() reads
    * it sideband to compute the honest attribution.syncedAt. */
   last_seen_batch_id: unknown;
+  /** #196 (session 73): the period's label, LEFT-JOINed from dimension_labels
+   * into the fetch itself so labels come from the same snapshot as the cells
+   * (null only for a period the table's time dimension does not list). */
+  period_label: string | null;
+  /** #196 (session 73): for a RETAINED cell, finished_at of the batch that
+   * last confirmed it (ingestion_batches, LEFT-JOINed — same snapshot); null
+   * for a cell present in the latest sync. */
+  retained_finished_at: unknown;
 }
 
 /** Freshest period we hold for these exact coordinates (open-questions #37:
@@ -177,6 +185,24 @@ async function diagnoseMissing(
     const earliest = await earliestAvailablePeriod(db, q, regionCode);
     const tooOld =
       earliest !== null && requestedKey < periodKey(parsePeriodCode(earliest)!);
+    // #196 (session 73): the ONE branch a fully evicted table can reach — no
+    // available period (the freshness branch needs one), no dimension_labels
+    // row (the no_data branch needs one) — so this is where "evicted
+    // mid-flight" must be told apart from "CBS never published it". Checked
+    // LAST, after every read above: any eviction that could have emptied one
+    // of those reads committed before this statement runs, so the honest
+    // refusal always wins; and a registration that still holds here means
+    // every read above saw a live table. One statement, only on this branch
+    // (#173) — the freshness and no_data outcomes pay nothing.
+    const stillRegistered = await db.query('select 1 from cbs_tables where id = $1', [q.tableId]);
+    if (stillRegistered.rows.length === 0) {
+      return refuse(
+        q.intent,
+        'table_evicted',
+        `table "${q.tableId}" was evicted while this query was in flight — it is no longer registered; the next question about it goes through the on-demand fetch again`,
+        { axis: 'period' },
+      );
+    }
     return refuse(
       q.intent,
       'not_published',
@@ -302,13 +328,24 @@ export async function freshestForCanonical(
  * (the worst a missed bump can cost is a table evicted up to a day early, and
  * eviction is recoverable by re-onboarding — an answer failure is not). This
  * isolation also makes the migration-025 deploy window safe: code that reaches
- * production before the column exists warns instead of erroring. */
+ * production before the column exists warns instead of erroring.
+ *
+ * #196 (session 73): the row is taken with `for no key update skip locked` in
+ * a subquery, so a bump that meets an in-flight eviction's `select … for
+ * update` (src/ingestion/eviction.ts) SKIPS instead of queueing behind that
+ * transaction — a served answer's latency and its pooled connection (#173)
+ * are never coupled to an eviction's commit, and a table mid-eviction needs no
+ * bump anyway. NO KEY UPDATE rather than UPDATE so a concurrent ingestion
+ * insert's FK check (a KEY SHARE lock on this row) never causes a spurious
+ * skip; eviction's FOR UPDATE still does. Same shape as onboarding-store's
+ * claimOnePending; like there, the contention path is untestable under
+ * single-connection PGlite and is source-pinned (tests/query/last-queried). */
 export async function touchLastQueriedAt(db: Db, tableId: string): Promise<void> {
   try {
     await db.query(
       `update cbs_tables
           set last_queried_at = now()
-        where id = $1
+        where id = (select id from cbs_tables where id = $1 for no key update skip locked)
           and (last_queried_at is null or last_queried_at < now() - interval '1 day')`,
       [tableId],
     );
@@ -330,26 +367,60 @@ export async function runQuery(
   if (!outcome.ok) return outcome;
   const q = outcome.resolved;
 
-  // #110(b): every consumer of the query executor — answers, follow-ups, chart
-  // reads — bumps the resolved table's last-queried timestamp here, at the one
-  // choke point, so no present or future caller can forget to. Runs on the
-  // missing-cell diagnosis path too (a refusal for a specific period is still
-  // live demand for the table). Awaited: it is one debounced statement, and an
-  // un-awaited write racing the caller's connection teardown would be worse.
-  await touchLastQueriedAt(db, q.tableId);
-
   // --- Fetch all requested cells in one deterministic query ------------------
+  // #196 (session 73): ONE statement, ONE snapshot. The period labels and the
+  // retained cells' batch dates used to be two later statements
+  // (dimension_labels, ingestion_batches), each its own autocommit snapshot —
+  // an eviction committing between the fetch and either of them left a served
+  // answer with raw period codes in its sentence and a too-new "gesynchroniseerd
+  // op" date for a retained cell. LEFT-JOINed here they are read together with
+  // the cells they describe, and a served turn pays two statements fewer (#173).
   const result = await db.query(
-    `select region_code, period_code, value, unit, decimals, status, value_attribute, batch_id,
-            last_seen_batch_id
-     from observations
-     where table_id = $1 and measure = $2 and dims = $3::jsonb
-       and region_code = any($4::text[]) and period_code = any($5::text[])`,
-    [q.tableId, q.measure, JSON.stringify(q.dims), q.regionCodes, q.periodCodes],
+    `select o.region_code, o.period_code, o.value, o.unit, o.decimals, o.status, o.value_attribute,
+            o.batch_id, o.last_seen_batch_id,
+            dl.label as period_label,
+            ib.finished_at as retained_finished_at
+     from observations o
+     left join dimension_labels dl
+       on dl.table_id = o.table_id and dl.dimension = $6 and dl.code = o.period_code
+     left join ingestion_batches ib
+       on ib.id = o.last_seen_batch_id
+     where o.table_id = $1 and o.measure = $2 and o.dims = $3::jsonb
+       and o.region_code = any($4::text[]) and o.period_code = any($5::text[])`,
+    [q.tableId, q.measure, JSON.stringify(q.dims), q.regionCodes, q.periodCodes, q.timeDimension],
   );
   const byCoordinate = new Map<string, ObservationRow>();
+  const periodLabelByCode = new Map<string, string>();
   for (const row of result.rows) {
-    byCoordinate.set(`${row.region_code}|${row.period_code}`, row as unknown as ObservationRow);
+    const obs = row as unknown as ObservationRow;
+    byCoordinate.set(`${obs.region_code}|${obs.period_code}`, obs);
+    if (obs.period_label != null) periodLabelByCode.set(obs.period_code, normalizeLabel(obs.period_label));
+  }
+
+  // #110(b) usage bookkeeping — AFTER the fetch since #195/#196 (session 72,
+  // adversarial review of PR #111), skip-locked since session 73:
+  //  (a) #196 — a read never waits behind an eviction. The fetch above holds
+  //      no lock and reads its own MVCC snapshot, so a query that arrives while
+  //      evictStaleTables is mid-transaction simply sees the pre-eviction data
+  //      (never a manufactured miss); and touchLastQueriedAt's UPDATE takes the
+  //      row with `for no key update skip locked` (see its header), so it
+  //      SKIPS an eviction's `select … for update` instead of queueing behind
+  //      it — the served turn's latency and its pooled connection (#173) are
+  //      never coupled to an eviction's commit.
+  //  (b) #195 — only a DELIVERABLE read counts as demand. `options.probe`
+  //      (dry-run.ts's echoServability, the servability-probe primitive every
+  //      follow-up chip / comparison chip / alternate-reading check funnels
+  //      through) skips the bump entirely: a probe never shows the caller a
+  //      value, so it must not keep a table artificially "warm" for the
+  //      eviction GC — the eviction anchor reads as "last SERVED/DELIVERED
+  //      read", not "last touched by any internal machinery". Still runs on
+  //      the missing-cell diagnosis path below (the original #110(b) design):
+  //      a refusal for one missing period on an otherwise-present, still-
+  //      registered table is still live demand for the table as a whole.
+  // Debounced in touchLastQueriedAt's own WHERE clause and never fails the
+  // read path (see that function's header) either way.
+  if (options.probe !== true) {
+    await touchLastQueriedAt(db, q.tableId);
   }
 
   // --- Completeness: every requested coordinate, or a diagnosed refusal ------
@@ -365,13 +436,7 @@ export async function runQuery(
   }
 
   // --- Build ordered, labeled cells ------------------------------------------
-  const periodLabels = await db.query(
-    'select code, label from dimension_labels where table_id = $1 and dimension = $2 and code = any($3::text[])',
-    [q.tableId, q.timeDimension, q.periodCodes],
-  );
-  const periodLabelByCode = new Map(
-    periodLabels.rows.map((r) => [r.code as string, normalizeLabel(r.label as string)]),
-  );
+  // (the period labels came with the fetch above — one snapshot, #196)
 
   const cells: ResultCell[] = [];
   for (const periodCode of q.periodCodes) {
@@ -471,24 +536,15 @@ export async function runQuery(
   // shown date honestly reflects the weakest link and checkStaleness —
   // which reads this same field — starts firing on exactly the class that
   // used to slip the net (design §3).
+  // #196 (session 73): the retained batches' finished_at rode along with the
+  // fetch (LEFT JOIN ingestion_batches on last_seen_batch_id) — no second
+  // statement, no second snapshot, so an eviction landing after the fetch can
+  // no longer hide the older date behind a "batch row gone" null.
   let effectiveSyncedAt = q.table.lastSyncAt;
-  const retainedBatchIds = [
-    ...new Set(
-      [...byCoordinate.values()]
-        .filter((row) => row.last_seen_batch_id != null)
-        .map((row) => toNumber(row.last_seen_batch_id)),
-    ),
-  ];
-  if (retainedBatchIds.length > 0) {
-    const oldest = await db.query(
-      'select min(finished_at) as oldest from ingestion_batches where id = any($1::bigint[])',
-      [retainedBatchIds],
-    );
-    const raw = oldest.rows[0]?.oldest;
-    if (raw != null) {
-      const iso = new Date(raw as string | Date).toISOString();
-      if (iso < effectiveSyncedAt) effectiveSyncedAt = iso;
-    }
+  for (const row of byCoordinate.values()) {
+    if (row.last_seen_batch_id == null || row.retained_finished_at == null) continue;
+    const iso = new Date(row.retained_finished_at as string | Date).toISOString();
+    if (iso < effectiveSyncedAt) effectiveSyncedAt = iso;
   }
 
   const attribution: Attribution = {
@@ -526,6 +582,9 @@ export async function runQuery(
     cells,
     derivations,
     attribution,
+    // #196 (session 73): the registry facts the staleness check needs, from the
+    // row this query resolved against — read once, never re-read after the fetch.
+    registry: { updateCadence: q.table.updateCadence, lastSyncAt: q.table.lastSyncAt },
     // WP26 mechanism B: the intent we ACTUALLY ran — identical to the caller's
     // object unless a safelisted axis was defaulted, in which case R8 must show
     // the resolved coordinate, not the under-specified ask.

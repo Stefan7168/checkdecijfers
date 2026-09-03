@@ -106,6 +106,8 @@ describe('maybeAlertInternalRefusal (the respond-audited hook)', () => {
     try {
       await maybeAlertInternalRefusal(auditedRefusal('freshness'), 'user-1');
       await maybeAlertInternalRefusal(auditedRefusal('scope'), 'user-1');
+      // #196 (session 73): the eviction race has its own reason — never paged.
+      await maybeAlertInternalRefusal(auditedRefusal('evicted'), 'user-1');
       expect(consoleError).not.toHaveBeenCalled();
       await maybeAlertInternalRefusal(auditedRefusal('internal'), 'user-1');
       expect(consoleError).toHaveBeenCalledOnce();

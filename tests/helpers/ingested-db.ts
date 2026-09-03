@@ -26,3 +26,14 @@ export async function createIngestedDb(): Promise<{ db: Db; close(): Promise<voi
   await client.waitReady;
   return { db: wrapPGlite(client), close: () => client.close() };
 }
+
+/** The registry's table for a canonical key — the lookup the #195/#196 race
+ * and bump pins need (tests/query/eviction-race, last-queried). Throws when the
+ * key is unknown so a wrong fixture fails loudly instead of yielding an
+ * undefined table id. */
+export async function tableIdForCanonicalKey(db: Db, key: string): Promise<string> {
+  const { rows } = await db.query('select table_id from canonical_measures where key = $1', [key]);
+  const tableId = rows[0]?.table_id as string | undefined;
+  if (!tableId) throw new Error(`canonical key "${key}" not found in the registry`);
+  return tableId;
+}

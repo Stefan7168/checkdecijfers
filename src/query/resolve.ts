@@ -35,6 +35,17 @@ export interface QueryOptions {
    * safelisted axes (region today, period with B-period). Never widens WHICH
    * axes may default — that list is code, not configuration. */
   answerFirstEnabled?: boolean;
+  /** #195/#196 (session 72): this call is a SERVABILITY DRY-RUN, never a
+   * served read — the caller discards every value and shows the user
+   * nothing from it (dry-run.ts's echoServability, the servability-probe
+   * primitive follow-up chips / comparison chips / alternate-reading checks
+   * all funnel through). `true` ⇒ runQuery skips the `last_queried_at`
+   * usage bump entirely: a table that is only ever probed and never
+   * actually delivers an answer must not read as "in demand" to the
+   * eviction GC (src/ingestion/eviction.ts) — that was #195's finding, a
+   * probe-inflated warmth that defeated the TTL's own premise. Absent/false
+   * ⇒ byte-identical to pre-#195 behavior (every existing caller). */
+  probe?: boolean;
 }
 
 export interface ResolvedQuery {
@@ -73,6 +84,7 @@ export interface ResolvedQuery {
     title: string;
     version: number;
     lastSyncAt: string | null;
+    updateCadence: string | null;
     slice: CbsSlice | null;
     periodSemantics: Record<string, string> | null;
   };
@@ -172,6 +184,8 @@ interface TableRow {
   status: 'active' | 'needs_review';
   needsReviewReason: string | null;
   lastSyncAt: string | null;
+  /** #196 (session 73): free-text registry cadence, threaded to the result. */
+  updateCadence: string | null;
   expectedDimensions: { name: string; kind: string }[];
   defaultCoordinates: Record<string, string>;
   periodSemantics: Record<string, string> | null;
@@ -189,6 +203,7 @@ async function fetchTable(db: Db, tableId: string): Promise<TableRow | null> {
     status: row.status as TableRow['status'],
     needsReviewReason: (row.needs_review_reason as string | null) ?? null,
     lastSyncAt: row.last_sync_at == null ? null : new Date(row.last_sync_at as string | Date).toISOString(),
+    updateCadence: (row.update_cadence as string | null) ?? null,
     expectedDimensions: parseJsonb(row.expected_dimensions, []),
     defaultCoordinates: parseJsonb(row.default_coordinates, {}),
     periodSemantics: parseJsonb(row.period_semantics, null),
@@ -515,6 +530,7 @@ export async function resolveIntent(
         title: table.title,
         version: table.version,
         lastSyncAt: table.lastSyncAt,
+        updateCadence: table.updateCadence,
         slice,
         periodSemantics: table.periodSemantics,
       },

@@ -397,6 +397,24 @@ function buildQuarantinedRefusal(): BuiltRefusal {
   };
 }
 
+/** #196 (session 73): the table was evicted (the on-demand TTL) between
+ * resolving this query and finishing it. Its own reason — never 'internal' —
+ * so the owner alert stays silent for a designed race and the user hears what
+ * happened: the figures left OUR store after a long time without use; asking
+ * again goes through the on-demand fetch (its own messaging and price). */
+function buildEvictedRefusal(refusal: QueryRefusal): BuiltRefusal {
+  const body =
+    'Deze cijfers stonden in onze database, maar zijn zojuist opgeruimd omdat er lange tijd niet naar gevraagd was. Ze zijn niet weg bij het CBS: stel je vraag opnieuw, dan proberen we ze opnieuw op te halen.';
+  return {
+    reason: 'evicted',
+    text: assertNotAQuestion(body),
+    offer: null,
+    guidance: null,
+    freshness: null,
+    internalNote: refusal.refusal.message,
+  };
+}
+
 const AXIS_NL: Record<ClarifyAxis, string> = {
   measure: 'welk onderwerp/definitie je bedoelt',
   region: 'voor welke regio',
@@ -485,6 +503,8 @@ export function buildQueryRefusal(refusal: QueryRefusal): QueryRefusalOutcome {
       return { kind: 'refusal', refusal: buildQuarantinedRefusal() };
     case 'needs_clarification':
       return { kind: 'clarification', ...buildNeedsClarificationAsClarification(refusal) };
+    case 'table_evicted':
+      return { kind: 'refusal', refusal: buildEvictedRefusal(refusal) };
     case 'invalid_intent':
     case 'table_not_registered':
     case 'no_data':

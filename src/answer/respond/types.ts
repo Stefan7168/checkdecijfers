@@ -101,6 +101,13 @@ export type RefusalReason =
    * CBS answer) with the unverified-web section rendered below it; NOT in the
    * skip-list (this reason is exactly where the web section belongs). */
   | 'web_only'
+  /** #196 (session 73): the table answering this question was evicted from
+   * OUR store (the on-demand TTL, src/ingestion/eviction.ts) while the query
+   * was in flight — a designed, benign race, not a pipeline fault: NOT the
+   * 'internal' bucket (no owner alert), honest wording that the figures left
+   * our store (not CBS) and that asking again re-onboards them. Not in the
+   * ⟨W3⟩ skip-list — like scope/freshness, the web section may still help. */
+  | 'evicted'
   /** Loud internal problems (data gap, failed derivation, inconsistency,
    * invalid intent, unparseable LLM output) — an honest "cannot answer this
    * reliably right now", never a partial or guessed answer. */

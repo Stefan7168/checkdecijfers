@@ -26,7 +26,9 @@ const intent: StructuredIntent = {
 
 const { db, pool } = connectFromEnv();
 try {
-  const outcome = await runQuery(db, intent);
+  // #195 (session 73): an operator spot-check is not user demand — a probe
+  // never bumps last_queried_at, the eviction anchor (src/query/run.ts).
+  const outcome = await runQuery(db, intent, { probe: true });
   if (!outcome.ok) {
     console.log(`REFUSAL (${outcome.refusal.kind}): ${outcome.refusal.message}`);
     process.exitCode = 2;

@@ -126,6 +126,30 @@ describe('checkStaleness — comparator boundary (db-backed, real registry caden
     expect(check.warning).not.toBeNull();
   });
 
+  it('#196 (session 73): a result carrying updateCadence never re-reads the registry — an eviction mid-turn cannot switch staleness off', async () => {
+    const noDb = {
+      query: async () => {
+        throw new Error('registry read attempted after the fetch');
+      },
+      withTransaction: async () => {
+        throw new Error('transaction attempted');
+      },
+    } as unknown as Db;
+    const stale = cpiResultSyncedAt('2026-01-01T00:00:00.000Z');
+    stale.registry = { updateCadence: 'monthly', lastSyncAt: '2026-01-01T00:00:00.000Z' };
+    const check = await checkStaleness(noDb, stale, '2026-02-18'); // 48 days > 47
+    expect(check.stale).toBe(true);
+    expect(check.warning).toContain('onze laatste synchronisatie was op 2026-01-01');
+    // #154 clause from the carried table date: the shown date is OLDER than the
+    // table's own sync → the retained-cell wording, without any registry read.
+    const retained = cpiResultSyncedAt('2026-01-01T00:00:00.000Z');
+    retained.registry = { updateCadence: 'monthly', lastSyncAt: '2026-02-10T00:00:00.000Z' };
+    expect((await checkStaleness(noDb, retained, '2026-02-18')).warning).toContain('niet opnieuw bevestigd');
+    const unknownCadence = cpiResultSyncedAt('2026-01-01T00:00:00.000Z');
+    unknownCadence.registry = { updateCadence: null, lastSyncAt: '2026-01-01T00:00:00.000Z' };
+    expect((await checkStaleness(noDb, unknownCadence, '2026-02-18')).stale).toBe(false);
+  });
+
   it('fresh result: warning is null', async () => {
     const result = cpiResultSyncedAt('2026-06-01T00:00:00.000Z');
     const check = await checkStaleness(db, result, '2026-07-03');

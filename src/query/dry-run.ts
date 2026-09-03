@@ -87,7 +87,14 @@ export async function echoServability(
    * than the answer it is predicting. */
   options: QueryOptions = {},
 ): Promise<EchoServability> {
-  const outcome = await runQuery(db, intent, options);
+  // #195: this is THE servability-probe primitive — every follow-up-chip,
+  // comparison-chip and alternate-reading check funnels through here, and
+  // none of them ever shows the caller a value. `probe: true` tells runQuery
+  // to skip the last_queried_at usage bump: a probe that always refuses (or
+  // one whose result is simply discarded) must not count as "demand" for the
+  // eviction GC, or a table can be kept artificially warm by disambiguation
+  // traffic that never once delivered an answer.
+  const outcome = await runQuery(db, intent, { ...options, probe: true });
   if (outcome.ok) return { servable: true };
 
   // Availability lookups are canonical-key based: every parser-produced
