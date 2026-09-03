@@ -1,5 +1,53 @@
 # STATUS archive — the session log
 
+**Session 71 (2026-09-03, owner present; the session-71 kickoff pasted once — `list_sessions` showed no second
+instance) — WP26 SMOKE TEST PASSED, #197 STEP 3 MERGED + LIVE, A CI DEPLOY RACE FOUND, FIXED AND GUARDED.**
+
+1. **Start state, verified:** `main` at `7fb5b11`, every main run green (the two red docs commits of session 70
+   fixed in `fcbb479`, as recorded), one draft PR #118 at `e6b5846` with branch CI green, GitHub `MERGEABLE`/
+   `CLEAN`, `git merge-tree` clean. Removed the leftover worktree `.claude/worktrees/s70-reviewer` and its
+   merged branch `fix/132-pr-links`. Production `audit_answers` (read-only, root `.env`): still zero chip-click
+   takes, nothing after rows 257–259.
+2. **The smoke test, first attempt (owner):** the one-word "Utrecht" the kickoff and RUNBOOK step 4 asked
+   for → row 260, `refusal`/`smalltalk` from the Haiku intent parse (24,372 in / 64 out), refunded by the gate
+   (ledger 99/100). Not a WP26 bug: the RUNBOOK's "bare Utrecht works" was a wrong summary of the test-file
+   comment in `tests/answer/clarify-click.test.ts`, whose real question is `Hoeveel inwoners had Utrecht in
+   2024?`. Fixed in RUNBOOK + STATUS (`2d27175`, run 33699493029 green).
+3. **Second attempt (owner), PASSED:** row 261 `clarification` "Bedoel je Utrecht (PV) of Utrecht
+   (gemeente)?" with `pending_clarification.clickOptions` = opt-1 `PV26` / opt-2 `GM0344` (charged 20,
+   refunded 10 → the clarification price); row 262 `answer`, `reply_text = 'Utrecht (gemeente)'`,
+   `response.parse.model = deterministic/wp26-click-option` ("clarification option opt-2 taken
+   deterministically (no LLM parse)"), `llm_calls = []`, 0/0 tokens, `answer_source = template`,
+   `result_ids = 03759ned:M000352:GM0344:2024JJ00:…` → "374.238", 20 credits (ledger 103, no refund).
+   `npm run audit:verify -- 261 262` → "2/2 reconstruct clean". Finding recorded in the RUNBOOK: the click
+   model lives in `response->'parse'->>'model'`, NOT in the promoted `llm_calls` column — the session-70
+   query `llm_calls::text like '%wp26-click-option%'` can never match a take.
+4. **Merge:** `gh pr ready 118` + `gh pr merge --squash` (the convention since session 67: no merge commits on
+   `main` after 2026-07-12) → `83f790e`; run 33699880673 gate `success` + deploy `success` (deploy-job log
+   shipped `83f790efce…`, smoke check passed). Feature branch deleted locally and on origin.
+5. **The deploy race (measured):** `vercel ls --prod` showed a deployment NEWER than the merge's:
+   `checkdecijfers-4cgjbt13c…` created 00:44:31Z by the DOCS run's deploy job (33699493029, checked out at
+   `2d27175`), aliased to `checkdecijfers.vercel.app` one minute after the merge deployment
+   `checkdecijfers-axtqgpal1…` (00:42:54Z). Production was on the pre-merge code with both runs green.
+   `vercel promote https://checkdecijfers-axtqgpal1-stefanpeek01-3883s-projects.vercel.app --yes` →
+   `dpl_FizQG7uEz3ikdTG2wkn3g523gU9y` back on the alias in 2 s (`vercel inspect` confirms). Root cause: the
+   workflow has no ordering between concurrent runs and each deploy aliases its own commit. Fix (this
+   session, LOW code-review 0 findings, YAML parsed): a `tip` step in the deploy job compares `GITHUB_SHA`
+   with `git ls-remote --heads origin main` and every deploy step carries `if: steps.tip.outputs.stale !=
+   'true'` — a stale run skips the deploy and stays green. RUNBOOK section "Two CI runs in flight" added
+   (how to see it, `vercel promote` to fix, "let a merge's run finish before pushing again").
+6. **Trackers to the measured state** (`ec48c02`): build-plan #197 header + step 3, open-questions #197 row,
+   04-architecture row, ADR 029 header + as-built note; STATUS top block rewritten as session 71 (this
+   entry's summary) with session 70 compressed beneath it; lessons-learned session-71 entry (5 lessons).
+7. **Hygiene:** 28 stale local branches deleted (13 `git`-merged worktree-agent/reviewer branches; 15
+   squash-merged or superseded PR branches mapped to their PR state with `gh pr list --head` first) and 8
+   remote branches of merged PRs (#67, #77, #85, #91–#93, #95, #96) — `origin/main` is now the only remote
+   branch. Memory: the two session-70 files replaced by one session-71 state file.
+8. **Not done, deliberately:** `ANSWER_FIRST_ENABLED` and `GDPR_PURGE_APPLY` (owner-supervised — the owner's
+   "keep working autonomously" does not cover the WP26 flip, per the 25-07 steer); #162 A/B (real spend); the
+   three recorded #197 follow-ups. RUNBOOK step 6 (the comparison chip under an Amsterdam answer) was asked of
+   the owner and had not been run at the time of writing (no rows after 262).
+
 **Session 70 (2026-09-02, later the same day as session 69; the owner pasted the session-70 kickoff — into
 TWO sessions in the same working tree, the 25-07 collision shape: the second session (local_09530460…)
 detected the first's uncommitted edits, wrote nothing, moved to the worktree `.claude/worktrees/s70-reviewer`
