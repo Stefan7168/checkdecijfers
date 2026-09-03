@@ -234,7 +234,7 @@ FIRST** (`npm run db:migrate`, owner-present window; the running old code ignore
 still serves, **then** push the code. Plus the standard per-migration check when a migration adds a TABLE
 (grants/RLS, migration-011 queries); a column on an existing RLS-locked table inherits its table's posture.
 
-## Supervised live step — migration 024 error_log (NOT YET RUN; built session 66, 2026-08-27, autonomous; merged into `main` session 67, 2026-08-28, PR #110)
+## Supervised live step — migration 024 error_log (✅ RUN 2026-09-02, session 69, owner present — applied with 022 in one `npm run db:migrate`, verified clean; built session 66, 2026-08-27, autonomous; merged into `main` session 67, 2026-08-28, PR #110)
 
 **⏳ TO RUN in the next owner-present window.** Migration `024_error_log.sql` (#65 / WP25: the durable,
 insert-only production error log — catch sites in the chat actions, the Stripe webhook, the auth callback
@@ -261,7 +261,7 @@ The step itself (owner present):
    `GDPR_PURGE_APPLY=1`, same as every other leg — until that flag flips, the monthly manual
    `npm run gdpr:purge -- --apply` is what actually deletes).
 
-## Supervised live step — migration 023 compensation-amount bound (NOT YET RUN; built session 66, 2026-08-27, autonomous; merged into `main` session 67, 2026-08-28, PR #101)
+## Supervised live step — migration 023 compensation-amount bound (✅ RUN 2026-09-02, session 69, owner present — applied with 022 in one `npm run db:migrate`, verified clean; built session 66, 2026-08-27, autonomous; merged into `main` session 67, 2026-08-28, PR #101)
 
 **⏳ TO RUN in the next owner-present window — low urgency: defense-in-depth, not a live gap.**
 Migration `023_compensation_amount_bound.sql` ([#147](open-questions.md)) widens the existing
@@ -276,7 +276,7 @@ check — this only `CREATE OR REPLACE`s an existing trigger function, so there 
 the migration completing (the pinned tests already exercise the new bound hermetically). No production
 behavior changes on apply — every live caller already stays under the new ceiling.
 
-## Supervised live step — migration 025 table-eviction lifecycle columns (NOT YET RUN; built session 66, 2026-08-27, autonomous; merged into `main` session 67, 2026-08-28, PR #111)
+## Supervised live step — migration 025 table-eviction lifecycle columns (✅ RUN 2026-09-02, session 69, owner present — applied with 022 in one `npm run db:migrate`, verified clean; built session 66, 2026-08-27, autonomous; merged into `main` session 67, 2026-08-28, PR #111)
 
 **⏳ TO RUN whenever convenient — nothing downstream depends on it yet.** Migration
 `025_table_eviction_lifecycle.sql` ([#110](open-questions.md)) adds two columns to `cbs_tables`:
