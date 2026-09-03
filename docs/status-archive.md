@@ -1,5 +1,92 @@
 # STATUS archive — the session log
 
+**Session 74 (2026-09-03, AUTONOMOUS — the owner pasted the SESSION-73 kickoff again, from the phone app (a Claude Code
+cloud session, auto-branch `claude/sessie-73-pr-review-merge-5xji6b`); no reply in chat, so the merges — that kickoff's
+"owner present" step — were NOT taken; `list_sessions` showed the earlier session 73 IDLE and no second RUNNING
+instance) — THE HIGH-EFFORT PASSES ON #122 AND #123 BEFORE MERGE DAY: TWO REVIEW ROUNDS FIXED ON THE BRANCHES, THE BATCH
+RE-SIMULATED AND RE-VERIFIED; STILL NOTHING MERGED, NOTHING FLIPPED.** Git workflow: #118 rule (b) — code on the PR
+branches, docs direct to `main`; no spend, no prompt bytes, no DDL.
+
+1. **Start state, verified (the kickoff was one session stale — STATUS's top block and the archive's session-73 entry
+   settled it; this session is 74):** `main` at `470e4cf`, clean, no worktrees; the last five main runs `success`
+   (33762409605 for `470e4cf`); the production alias on `dpl_8ofA7eAPTCE9MdWnQ85NLBTUU58r`
+   (`checkdecijfers-jkwyqcurp…`, READY, `meta.githubCommitSha` = `470e4cf`); `/`, `/llms.txt`, `/api/health` 200 —
+   measured through the Vercel MCP tools, because the container's network policy answers 403 to `CONNECT` for
+   `checkdecijfers.vercel.app` (`curl` prints `000`; not an incident — RUNBOOK multi-agent item 10). Four open PRs at
+   `5c4c88f` / `ebd341f` / `0ffe4c0` / `3d185a1`, every gate green on those heads; GitHub's `mergeable_state` read
+   `unknown` on the first API read of each (the lazy recompute). Container: 4 cores / 15 GB, no `gh`, no `vercel`, no
+   `zsh`; `npm ci` root + web first.
+2. **PR #122 (#73 v2 — the click-take chips, a money-path route) reviewed at HIGH** (`/code-review` at HIGH; inside the
+   skill's fork the Agent tool is absent, so it ran as one careful single-pass reader and said so): nine verified
+   findings on the round-1 fix. CONFIRMED and fixed in `6f28884`: the round-1 client fix re-bound `pending` ON THE
+   CLICK, which discarded an OPEN clarification round when the user glanced at an older chip and then typed a reply
+   (the paid round went out as a fresh question) and lost the race with an in-flight answer overwriting `pending` —
+   the binding now happens at SEND time (`chipRef`, only while the label goes out unedited), carriers keyed by
+   message index so a refusal's rescue chip binds to its own carrier too (three pins); a B-region-defaulted answer's
+   question chips named no place while their minted intent named `NL01`, so the take served the national figure with
+   no disclosure at all (R7 third branch (c)/(d) — v1's fresh parse re-fired the default and its `assumptionLine`) —
+   the copy now names the country, as when the question named it; a STRIPPED carrier's fresh standalone parse
+   recorded role `clarify` (the #177 mislabel, re-introduced for the shape round 1 added) — now `intent`, pinned; the
+   "a `rescueOnly` WITH options but without chips still merges" claim held for direct callers only (the deployed
+   path's trust boundary re-aligns a carrier's options first) — scoped in respond.ts, ADR 024 and the rescue-chip pin,
+   the boundary pinned as the deployed gate; replay's label-collision premise marked as an **Assumption** (replay.ts,
+   ADR 029, #73); ADR 029's "no change to `chat.tsx` logic" bullet corrected. Dispatched, not changed: chips stay
+   clickable while a send is in flight (harmless with send-time binding); the `ID_PREFIX`/`QUESTION_SHAPED` twin
+   tables. **LOW passes over each successive delta** (RUNBOOK: LOW before every push): a null captured thread on a
+   chip-bound send would have made the server open a fresh thread and fork the conversation → `?? threadId` fallback
+   (pinned, both the chip and the typed-reply path; ADR 033 ⟨A6⟩ addendum, `d2e24d1`); the "Flag off: byte-identical"
+   wording qualified (the country-naming copy change is flag-independent); two follow-ups recorded rather than built
+   (`04affae`, `002f5b0`): the index-keyed carrier ref (carry the carrier on `ChatMessage` once #123 has freed
+   `chat-message.ts`) and the now-redundant ⟨A6⟩ `capturedThreadId`. Head `0ffe4c0` → `002f5b0` (code `6f28884` +
+   `d2e24d1`, the rest docs).
+3. **PR #123 (the "Bewijs dit cijfer" panel) reviewed at HIGH** — three cheap-tier finder agents with distinct angles
+   (fabrication/R1; robustness/replay/redaction; the `chat.tsx` interplay with #122), every finding re-verified by the
+   session against the source: the brief's "Geen bewerking toegepast: het antwoord is de waarde uit de cel." step
+   fired for EVERY answer without a shown derivation — singular under "Gelezen: N cellen" on every multi-cell
+   comparison (the G4 chips, live since rows 263/264); the derivation `switch` had no `default`, so a stored kind
+   outside today's union put `undefined` into `steps[]` and the COMPONENT threw on render, outside the builder's
+   try/catch; the direction-word lookup printed the literal "undefined"; `AnswerProof` was unmemoized (an open panel
+   rebuilt its cell table on every keystroke); the two `direction` fixtures coincided with a naive recomputation
+   (`last − first = netChange`), so the R1 canary could not tell a stored read from live arithmetic; the count-shaped
+   R1 exemptions were a flat membership check; no test rendered the panel through the resume path. Fixed on the branch:
+   a plural-honest step for multi-cell answers; the `first_last`-only result — which compose.ts, reconstruct.ts and
+   citation.ts DO mark as derived — now names that derivation for what it is and stays marked (`marked` follows the
+   same `derivations.length > 0` rule as the answer's marking line); one honest unknown step behind a `typeof` belt
+   (a `=== undefined` check let the prototype-chain key `constructor` through — found by the LOW pass); `memo`;
+   diverging fixtures via one shared `seriesEndpoints()`; exact-sentence pins for the count tokens; the belts pinned;
+   a resumed-thread render test (`replayParts` → `assembleMessages` → `<Chat initialMessages>`) in its own new file.
+   **Two claims the session itself wrote were wrong and were removed by the next LOW pass:** "a unit-mixing series
+   produces a first_last-only result" (run.ts refuses mixed units before any derivation) and "the allValuesPresent
+   gate dates from 2026-08-31" (that date is the SHALLOW clone's boundary commit `f0709fe`, session 68's close-out;
+   ADR 011 has documented null-cell omission since WP5, 2026-07-03). The branch now says: no live producer is known;
+   the belt is for stored rows this build did not write — an explicit **Assumption**, mirrored in #79. Head
+   `3d185a1` → `92d4db7` (one code commit, amended through the LOW rounds).
+4. **PR #120 (the TS-7 lift), mechanically:** both `package.json` files `^7.0.2`, both lockfiles resolve `typescript`
+   7.0.2, the Dependabot ignore stanza gone, no compiler-API consumer (the manifest test's own comment confirms), the
+   only peer range still `<6.1.0` is `@typescript-eslint/tsconfig-utils` (lint tooling, the open task chip). The
+   combined tree's `npm ci` installs 7.0.2 in both trees and its real `next build` runs the TypeScript step under it.
+5. **Blocks (`scripts/verify-block.sh`, ported to bash on the spot — no zsh in the container):** #122 branch
+   (`6f28884`): typecheck ×2, backend 115 files / 1769 tests, benchmark GATE PASS (refusal 6/6, 0 fabricated), web 47 /
+   545, real `next build` (TypeScript 6.6 s). #123 branch (`9174ac2`): typecheck ×2, backend 114 / 1739, GATE PASS,
+   web 50 / 578, real `next build`. Combined tree #1 (`7f62c34`, heads `6f28884`/`9174ac2`/`5c4c88f`/`ebd341f`):
+   typecheck ×2, backend 116 / 1780, GATE PASS, web 50 / 583, real `next build` (TypeScript 1.5 s). Combined tree #2
+   (the FINAL heads `002f5b0`/`92d4db7`/`5c4c88f`/`ebd341f`, `fcf83a5`, tree `9394d9c6137e`): typecheck ×2, backend 116 files / 1780 tests, benchmark answerable 14/14 + refusal 6/6 + 0 fabricated (GATE PASS), web 50 files / 584 tests, real `next build` under TypeScript 7.0.2 (TypeScript step 0.7 s). The
+   batch re-simulated after every head move — three merge orders → one tree each time (`fd86327c…`, `de804dbf…`,
+   `ce973e99…`, `9394d9c6…`); the session-73 property (any order is conflict-free) still holds.
+6. **CI on the moved heads:** #122 `04affae` runs 33782485566 + 33782488407 success; `002f5b0` runs 33788083444 (push) +
+   33788089643 (pull_request), both success; #123 `92d4db7` runs in progress at 18:20Z (updated below once they finish). PR notes posted on #122 and #123 (the round-2 notes:
+   what moved, why, the measurements). The four PRs' `mergeable_state` is re-read once the #123 gates finish (recorded in the close-out follow-up).
+7. **Docs → `main` (this close-out; `test:docs` 11/11):** STATUS top block (session 74), this entry, lessons-learned
+   (eleven lessons), RUNBOOK multi-agent items 6 (amended) + 10 (new: the cloud-session container) and batch item 10
+   (amended), `scripts/verify-block.sh` (bash), the session-75 kickoff brief. Deliberately NOT touched on `main`:
+   every file the open PRs edit (open-questions, 04-architecture, 08-build-plan, ADR 024/029/033, the RUNBOOK
+   passages the PRs edit). The same docs first went to the harness's auto-branch `claude/sessie-73-pr-review-merge-5xji6b`
+   (`f75afab`) — a cloud session's stop hook insists on a pushed branch; the branch is a mirror, `main` is the record.
+8. **Not done, deliberately:** any merge (the owner's step — no owner reply in chat, #118 rule b), `GDPR_PURGE_APPLY`,
+   #162's A/B, #198, #132 route B, prompt bytes, fixture re-records, live DDL; the follow-ups recorded in #73 and #79
+   (carrier on `ChatMessage`; the ⟨A6⟩ simplification; one shared R5 predicate). Scratch worktrees (`pr122`, `pr123`,
+   `s74-sim`) removed at the end.
+
 **Session 73 (2026-09-03, AUTONOMOUS — the owner pasted the session-73 kickoff; no reply in chat, so the merges — the
 kickoff's "owner present" step — were NOT taken; `list_sessions` showed no second instance) — THE FOUR-PR BATCH MADE
 MERGE-CLEAN IN ANY ORDER: ONE DOCS COMMIT ON `main`, TWO DOCS-ONLY BRANCH UPDATES, THE COMBINED TREE VERIFIED.** Git

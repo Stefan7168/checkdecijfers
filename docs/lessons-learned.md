@@ -45,6 +45,25 @@ Full narrative: [status-archive.md](status-archive.md) session-74 entry.
   needs a stored value a naive recomputation would NOT produce.
 - **`=== undefined` is not a belt against a malformed lookup key.** A stored `direction: 'constructor'` resolves
   through the prototype chain to a function and passes the `undefined` check; `typeof word !== 'string'` is the belt.
+- **A reviewer's date or mechanism is a CLAIM, not a fact — and `git blame` in a shallow clone lies.** A LOW pass
+  stated that a query-layer gate "was introduced 2026-08-31 (`f0709fe`)"; the session wrote that date into a code
+  comment, a test, the brief and an open-questions row. The next pass caught it: the cloud container's clone is
+  SHALLOW (`.git/shallow`, boundary commit `f0709fe`, dated 2026-08-31), so blame attributes every old line to the
+  boundary commit — and ADR 011 had documented the behaviour since WP5 (2026-07-03). The same pass killed a second
+  claim ("a unit-mixing series produces a `first_last`-only result") by reading run.ts: mixed units are refused
+  before any derivation runs. The Golden Rule applies to code comments and tests too: a date or a mechanism goes in
+  only after `git log` / the source confirms it — in a shallow clone, `git log` cannot, so say "unverifiable here".
+- **The `pgrep`/`pkill` self-match has a second form: the literal elsewhere on the same command line.** The
+  bracket trick (`[v]erify-block-bash`) keeps the PATTERN from matching itself, but the same shell command later
+  ran `nohup …/verify-block-bash.sh`, so the shell's own command line still contained the literal — `pkill -f`
+  killed the shell (exit 144), twice, before the pattern was spelled `verify-bl[o]ck` in a command of its own.
+  RUNBOOK multi-agent item 6 amended. Rule: a kill command carries nothing but the kill.
+- **A LOW pass on every delta finds something; decide up front where the loop stops.** Round 2 of #123 went
+  through four LOW passes (marked rule → false producer + unverified date → a no-op predicate → a fixture that
+  bypassed the shared helper), each on the previous fix. Every finding was real, none was a wrong number, and two
+  reviewers contradicted each other on the predicate until the simplest truthful form ended it. The pre-push LOW
+  rule is right; the stop condition is "the remaining findings are cleanup-level and each is either fixed or
+  recorded", said out loud in the PR note — not "the reviewer had nothing to say".
 - **Fixing two open PRs in one session: keep each one's new tests out of the other's hunks, then re-simulate.**
   #122's new pins went to the END of `chat.test.tsx`, #123's hunk sits mid-file; #123's resumed-thread render test
   went into a NEW file rather than `chat.test.tsx`. Three merge orders still yield one tree — the session-73 batch

@@ -834,7 +834,12 @@ per-machine cache:
    wrapper such as `while pgrep -f vitest >/dev/null; do sleep 15; done; npx vitest run …` matches its OWN
    command line (it contains "vitest") and waits forever, silently. Use the bracket trick —
    `pgrep -f "[n]ode.*vitest"` — which matches a real runner (a node process) and never the literal pattern
-   in a shell's cmdline; a script file whose cmdline is its own path is safe either way.
+   in a shell's cmdline; a script file whose cmdline is its own path is safe either way. **The same self-match bites `pkill -f` when the literal appears ANYWHERE else on the same
+   command line** — `pkill -f "[v]erify-block-bash"` in a command that later runs `nohup …/verify-block-bash.sh`
+   matched the shell's own command line through that later literal and killed the shell (session 74, twice; the
+   tool reports exit 144). The bracket trick protects only the pattern argument. Kill in a command of its own
+   whose text contains no other copy of the literal (`pkill -f "verify-bl[o]ck"`), or by PID.
+
 7. **The Bash tool caps a command at 10 minutes, background or not — run the full verification block as a
    detached script and watch its log.** `scripts/verify-block.sh <checkout> <log>` (session 72) runs
    typecheck ×2 → the full backend suite → benchmark run + score → the web suite → a real `next build`,

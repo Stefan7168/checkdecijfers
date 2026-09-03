@@ -9,6 +9,36 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
+**▶ SESSION 74 (2026-09-03, AUTONOMOUS — the SESSION-73 kickoff pasted again from the phone app; no owner reply in chat;
+`list_sessions`: the earlier session 73 idle, no second RUNNING instance) — HIGH-EFFORT PASSES ON #122 AND #123 BEFORE
+MERGE DAY, BOTH FIXED ON THEIR BRANCHES, THE BATCH RE-SIMULATED AND RE-VERIFIED; STILL NOTHING MERGED, NOTHING FLIPPED.**
+#122's round-1 client fix could discard an OPEN clarification round (a glance at an older chip, then a typed reply → sent
+as a fresh question, the paid round lost) and lost the race with an in-flight answer; a B-defaulted answer's chips named
+no place over an explicit `NL01` intent (the take served with no R7 disclosure); a stripped carrier's fresh parse was
+recorded as `clarify` (#177). #123's "Geen bewerking toegepast … de waarde uit de cel" fired SINGULAR under "Gelezen: N
+cellen" on every multi-cell comparison (the G4 chips, live); a stored derivation of an unknown kind would have thrown in
+the component, outside the builder's try/catch; the panel contradicted the answer's own CC BY marking on a
+`first_last`-only result. All fixed and pinned on the branches, each delta LOW-reviewed (RUNBOOK batch item 10 measured
+again: nine + six HIGH findings, and every LOW pass over a fix found more — two of them the session's own wrong claims).
+Blocks: both branches and the combined tree of the FINAL heads green — typecheck ×2, backend 116 files / 1780 tests, benchmark answerable 14/14 + refusal 6/6 + 0 fabricated (GATE PASS), web 50 files / 584 tests, real `next build` under TypeScript 7.0.2 (TypeScript step 0.7 s); three merge orders → one tree
+`9394d9c6…`. Gates on the final heads: #122 `002f5b0` runs 33788083444 (push) + 33788089643 (pull_request), both success; #123 `92d4db7` runs 33788997612 (push) + 33789010370 (pull_request) in progress at 18:20Z (updated below once they finish). Details: [status-archive.md](status-archive.md) session-74 entry.
+
+| PR | Head now | Merge | Left for you |
+|---|---|---|---|
+| **#121** | `ebd341f` (unchanged since session 73) | clean | merge |
+| **#120** | `5c4c88f` (unchanged) | clean | merge; revert this one commit if a deploy ever goes red on the TypeScript step |
+| **#123** | `92d4db7` (round 2 on top of `3d185a1`, one code commit) | clean | merge — or veto a default (label, inline vs dock, ids toggle, collapsed) |
+| **#122** | `002f5b0` (round 2 on top of `0ffe4c0`: code `6f28884` + `d2e24d1`, two docs commits) | clean | merge — veto points: template phrasing on chip takes; NEW: a defaulted answer's chips now say "… in Nederland …" |
+
+**▶ NEXT, in order — nothing urgent:** (a) merge the four PRs — any order is conflict-free (re-simulated on the final
+heads); still one at a time, each deploy allowed to finish, a canary on `/`, `/llms.txt`, `/api/health` after each (from a
+cloud session: through the Vercel MCP tools — RUNBOOK multi-agent item 10); then the post-merge docs push that turns the
+"PR pending owner review" wordings (ADR 029, rows #73/#79/#195/#196, the build plan) into MERGED + LIVE and brings rows
+#195/#196 + ADR 029's note + 04-architecture to #121's round-2 state; (b) `GDPR_PURGE_APPLY=1` + one watched run; (c)
+#162's A/B (real spend); (d)–(e) as in the session-72 block below, which otherwise still holds. Recorded, not built: the
+carrier on `ChatMessage` once #123 has merged; the ⟨A6⟩ `capturedThreadId` simplification; one shared R5 predicate
+(`csv.ts` applies a narrower rule) — rows #73 and #79.
+
 **▶ SESSION 73 (2026-09-03, AUTONOMOUS — the session-73 kickoff pasted, no owner reply in chat, `list_sessions` showed
 no second instance) — THE FOUR PRs ARE NOW MERGE-CLEAN IN ANY ORDER; STILL NOTHING MERGED, NOTHING FLIPPED.** A
 serial-merge simulation of session 72's four PRs (scratch worktree, #121 → #120 → #123 → #122) merged all CODE cleanly
