@@ -26,6 +26,7 @@ import type { GatedResponse } from '../backend/billing/index.ts';
 // barrel that pulls the Anthropic SDK into the client bundle.
 import { SOURCES } from '../backend/sources/registry.ts';
 import type { WebSection } from '../backend/websearch/types.ts';
+import { buildAnswerProof } from '../lib/answer-proof.ts';
 import { buildCitation } from '../lib/citation.ts';
 import { buildAnswerCsv } from '../lib/csv.ts';
 import type { AnswerCsv } from '../lib/csv.ts';
@@ -41,6 +42,7 @@ import { messageKind } from '../lib/chat-message.ts';
 // visual) when the dock is active, using the SAME id scheme the dock does.
 import type { DockVisual } from '../lib/dock-visuals.ts';
 import { deriveVisuals, messageHasVisual, visualId } from '../lib/dock-visuals.ts';
+import { AnswerProof } from './answer-proof.tsx';
 import { ChartView } from './chart.tsx';
 import { FeedbackButtons } from './feedback-buttons.tsx';
 import { SourceBadge } from './source-badge.tsx';
@@ -412,7 +414,7 @@ export function Chat({
 
     setMessages((m) => [
       ...m,
-      { role: 'user', kind: null, text, chart: null, cost: null, citation: null, card: null, csv: null, answerView: null, provisional: false, suggestions: [], auditId: null, webSection: null },
+      { role: 'user', kind: null, text, chart: null, cost: null, citation: null, card: null, csv: null, proof: null, answerView: null, provisional: false, suggestions: [], auditId: null, webSection: null },
     ]);
     setInput('');
     setBusy(true);
@@ -503,6 +505,7 @@ export function Chat({
             citation: null,
             card: null,
             csv: null,
+            proof: null,
             answerView: null,
             provisional: false,
             suggestions: [],
@@ -535,6 +538,7 @@ export function Chat({
           citation: response.kind === 'answer' ? buildCitation(response) : null,
           card: response.kind === 'answer' ? statCardData(response) : null,
           csv: response.kind === 'answer' ? buildAnswerCsv(response) : null,
+          proof: response.kind === 'answer' ? buildAnswerProof(response) : null,
           answerView:
             response.kind === 'answer'
               ? {
@@ -785,8 +789,19 @@ export function Chat({
                   : ''}
               </div>
             ) : null}
-            {message.citation !== null || message.csv !== null ? (
+            {message.citation !== null || message.csv !== null || message.proof !== null ? (
               <div className="mt-0.5 flex flex-wrap items-center gap-3">
+                {/* Session 72 design brief (#70/#79/#89): the drill-through
+                  * trigger is FIRST in this row, same label style as the
+                  * citation/CSV buttons; its panel (self-managed open state)
+                  * wraps onto its own line directly under the row via
+                  * basis-full — and `order-last` (orchestrator review round
+                  * 1) keeps the trigger/citation/CSV buttons together on the
+                  * row's first line regardless of the panel's DOM position,
+                  * so opening it pushes nothing out of the row itself, only
+                  * the panel wraps beneath — still before the chart / dock
+                  * chip / suggestion chips / web section below (D5). */}
+                {message.proof !== null ? <AnswerProof proof={message.proof} /> : null}
                 {message.citation !== null ? <CopyCitationButton citation={message.citation} /> : null}
                 {message.csv !== null ? <DownloadCsvButton csv={message.csv} /> : null}
               </div>

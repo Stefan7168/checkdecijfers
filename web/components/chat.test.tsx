@@ -295,6 +295,78 @@ describe('Chat — WP21 CSV export (#52)', () => {
   });
 });
 
+// Session 72 design brief (docs/session-briefs/2026-09-03-source-drill-
+// through-design.md; #70/#79/#89/#90-deep): the "Bewijs dit cijfer" trigger
+// rides the same citation/CSV row, singular/plural on the cell count, and
+// only ever appears on a real answer (never a refusal, clarification, or
+// info reclassification, all of which carry no validated cells).
+describe('Chat — #70/#79/#89 source drill-through trigger', () => {
+  it('shows the singular trigger for a single-cell answer', async () => {
+    const response = fakeAnswerResponse({
+      body: 'De inflatie in 2024 was 3,3%.',
+      shape: 'single',
+      cells: [fakeCell()],
+    });
+    askQuestion.mockResolvedValue(
+      outcome({ kind: 'ok', auditId: 1, netCost: 20, response: response as ComposedResponse }),
+    );
+    render(<Chat />);
+    await submit('Wat was de inflatie in 2024?');
+    expect(await screen.findByRole('button', { name: 'Bewijs dit cijfer' })).toBeInTheDocument();
+  });
+
+  it('shows the plural trigger for a multi-cell answer', async () => {
+    const response = fakeAnswerResponse({
+      body: 'De inflatie steeg van 2020 tot 2024.',
+      shape: 'series',
+      cells: [fakeCell(), fakeCell({ resultId: 'X', periodCode: '2025JJ00', periodLabel: '2025' })],
+    });
+    askQuestion.mockResolvedValue(
+      outcome({ kind: 'ok', auditId: 1, netCost: 20, response: response as ComposedResponse }),
+    );
+    render(<Chat />);
+    await submit('Hoe ontwikkelde de inflatie zich?');
+    expect(await screen.findByRole('button', { name: 'Bewijs deze cijfers' })).toBeInTheDocument();
+  });
+
+  it('offers no drill-through trigger on a clarification message', async () => {
+    askQuestion.mockResolvedValue(outcome(fakeClarification('Welke gemeente bedoel je?')));
+    render(<Chat />);
+    await submit('Hoeveel werklozen zijn er?');
+    expect(await screen.findByText('Welke gemeente bedoel je?')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Bewijs dit cijfer' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Bewijs deze cijfers' })).toBeNull();
+  });
+
+  it('offers no drill-through trigger on a refusal message', async () => {
+    const refusal = {
+      kind: 'refusal',
+      reason: 'forecast',
+      text: 'CBS publiceert gerealiseerde cijfers, geen voorspellingen.',
+    } as unknown as ComposedResponse;
+    askQuestion.mockResolvedValue(outcome({ kind: 'ok', auditId: 3, netCost: 0, response: refusal }));
+    render(<Chat />);
+    await submit('Hoe hoog wordt de inflatie volgend jaar?');
+    expect(await screen.findByText(refusal.text as unknown as string)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Bewijs dit cijfer' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Bewijs deze cijfers' })).toBeNull();
+  });
+
+  it('offers no drill-through trigger on an info message (meta/smalltalk reclassification)', async () => {
+    const meta = {
+      kind: 'refusal',
+      reason: 'meta',
+      text: 'Al mijn cijfers komen rechtstreeks uit officiële tabellen van CBS StatLine.',
+    } as unknown as ComposedResponse;
+    askQuestion.mockResolvedValue(outcome({ kind: 'ok', auditId: 3, netCost: 0, response: meta }));
+    render(<Chat />);
+    await submit('Waar komen je cijfers vandaan?');
+    expect(await screen.findByText(meta.text as unknown as string)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Bewijs dit cijfer' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Bewijs deze cijfers' })).toBeNull();
+  });
+});
+
 // WP22 (#96a): a stale tab's first action after a deploy throws Next's
 // UnrecognizedActionError — the chat must show the honest deploy message
 // with a refresh affordance, never the misleading generic error. The test

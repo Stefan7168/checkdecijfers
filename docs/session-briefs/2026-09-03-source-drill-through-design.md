@@ -36,7 +36,7 @@ export interface AnswerProof {
   cells: ProofCell[];
   steps: { text: string; technical: string | null }[];
   nullNotice: string | null;
-  marked: boolean;                      // a step prints a derivation value → DERIVED_DATA_MARKING
+  marked: boolean;                      // result.derivations.length > 0 → DERIVED_DATA_MARKING (round 2: the compose/citation rule)
 }
 ```
 
@@ -61,7 +61,7 @@ Sources (all `src/query/types.ts`, reached as `response.result`):
 - **R1** — every digit is `formatValueNl` over `cell.value`, `derivation.value`, `netChange`, `factor`, or a verbatim metadata string. No arithmetic in `answer-proof.ts`: "B − A" prints the STORED `derivation.value`. Pinned by a token-scan test (§5).
 - **R3/R10** — one formatter: `displayValueUnit` / `displayDifferenceUnit` / `formatValueNl`, the template rung's and stat card's own code.
 - **R4** — chip + `SourceBadge` untouched; the panel is an expansion. The link stays the table view (#86: cell deep-links unreliable); coordinates shown alongside, as #86 foresaw.
-- **R5** — when a step prints a derivation value, the panel ends with `DERIVED_DATA_MARKING` (`web/backend/query/types.ts`, as `csv.ts` imports it); `markingLine` stays.
+- **R5** — when the result carries a derivation record (the rule compose.ts's `markingLine` and citation.ts already apply; review round 2 aligned the panel — a binding-only `first_last` counts), the panel ends with `DERIVED_DATA_MARKING` (`web/backend/query/types.ts`, as `csv.ts` imports it); `markingLine` stays.
 - **R8** — a client view model; `reconstruct.ts` never reads it; `tests/audit/envelope-key-manifest.test.ts` parses only `respond/types.ts` + `compose/types.ts`, untouched. Replay is identical because the same builder runs over the same stored envelope.
 - **R11** — `provisionalSuffix` + verbatim `status`; null cells state `nullReasonText`. The #71 pill unchanged.
 - **#14 redaction** — `src/threads/replay.ts` `replayParts` emits `role: 'redacted'` before any assistant part exists, so `assembleMessages` yields `redactedMessage()` with `proof: null`; the live path cannot be redacted mid-session; history is out. Belt: the builder returns `null` without `result` (the redacted envelope is `{schemaVersion, kind, question, text, redacted: true}`, `retention.ts` line 147).
@@ -80,13 +80,21 @@ Sources (all `src/query/types.ts`, reached as `response.result`):
   - max: `Hoogste waarde bepaald: {winner regionLabel ?? periodLabel} ({value}). Volgorde: {label (value)}; …` in `rankingResultIds` order.
   - direction: `Richting van de reeks: {gestegen|gedaald|gelijk gebleven} van {first.periodLabel} tot en met {last.periodLabel}; netto {displayDifferenceUnit(netChange)}.` + when `!monotonic`: ` De reeks ging niet in elke stap dezelfde kant op.`
   - unit_expansion: `Uitgerekend: {displayValueUnit(source)} = {formatValueNl(value, 0)}.`
-  - none: `Geen bewerking toegepast: het antwoord is de waarde uit de cel.`
+  - none, one cell: `Geen bewerking toegepast: het antwoord is de waarde uit de cel.`; none, several cells (review
+    round 2, session 74 — a comparison, or a series whose null cell blocked its derivations: run.ts registers them
+    only when every value is present): `Geen bewerking toegepast: het antwoord toont de gelezen waarden van deze
+    cellen.`; only a binding `first_last` (no live producer is known — run.ts registers direction and first_last
+    under the same preconditions and refuses mixed units before either; a belt for stored rows this build did not
+    write — shown nowhere, but the answer line and the citation mark any derivation record as derived; `marked`
+    follows that same `derivations.length > 0` rule): `Geen bewerking met een eigen uitkomst: het antwoord duidt de
+    reeks als geheel (begin- en eindpunt) en toont de gelezen waarden van deze cellen.`; a stored derivation of a kind or direction word this build does not know (belt): `Een bewerking van een
+    onbekend type kon niet worden weergegeven.`
   - null notice: `{k} van de {n} cellen heeft geen waarde; de reden van CBS staat per cel in de tabel.`
   - closing when `marked`: `bewerking van CBS-gegevens door checkdecijfers.nl`; technical suffix per step ` [cel-id …]`.
 
 ## 5. Test plan (vitest + jsdom, `@testing-library/react`, `web/test/fake-answer.ts` fixtures)
 
-`web/lib/answer-proof.test.ts`: (1) single cell, no derivations → `Gelezen: 1 cel …` + `Geen bewerking toegepast…`, `marked` false; (2) difference with a real `DerivationRecord` → signed text, `procentpunt` for `%`, `marked` true; (3) comparison + `max` (3 cells) → winner, `Volgorde` in `rankingResultIds` order; (4) series + `direction` → word matches `direction`, non-monotonic sentence only when `monotonic:false`, `first_last` renders nothing; (5) `unit_expansion` → line from `value`, never multiplication; (6) null cell (`valueAttribute:'Confidential'`) → `geen waarde — door CBS niet gepubliceerd (vertrouwelijk)` + notice; (7) provisional → ` (voorlopig cijfer)`, `status` verbatim; (8) alternates → `eigen key: …` stripped, code in technical; absent → no entry, no "geen andere lezing" claim; (9) `definitionLabel:null` → `reading` = `measureTitle`; (10) envelope without `result` → `null`; (11) **R1 scan:** `findNumericTokens` over every string after `maskPhrases(unitMaskPhrases(unit))` — each token equals a formatted cell/derivation value or a verbatim metadata field.
+`web/lib/answer-proof.test.ts`: (1) single cell, no derivations → `Gelezen: 1 cel …` + `Geen bewerking toegepast…`, `marked` false; (2) difference with a real `DerivationRecord` → signed text, `procentpunt` for `%`, `marked` true; (3) comparison + `max` (3 cells) → winner, `Volgorde` in `rankingResultIds` order; (4) series + `direction` → word matches `direction`, non-monotonic sentence only when `monotonic:false`, `first_last` renders nothing; (5) `unit_expansion` → line from `value`, never multiplication; (6) null cell (`valueAttribute:'Confidential'`) → `geen waarde — door CBS niet gepubliceerd (vertrouwelijk)` + notice; (7) provisional → ` (voorlopig cijfer)`, `status` verbatim; (8) alternates → `eigen key: …` stripped, code in technical; absent → no entry, no "geen andere lezing" claim; (9) `definitionLabel:null` → `reading` = `measureTitle`; (10) envelope without `result` → `null`; (11) **R1 scan:** `findNumericTokens` over every string after `maskPhrases(unitMaskPhrases(unit))` — each token equals a formatted cell/derivation value or a verbatim metadata field. Added in review round 2 (session 74): (12) multi-cell without a shown derivation → the plural sentence; a `first_last`-only result → the "eigen uitkomst" sentence, `marked` true (with and without a null cell); (13) the two count-shaped tokens the scan exempts pinned as exact sentences; (14) an unknown derivation kind or an odd direction word → the honest unknown step, never `undefined`; plus `components/answer-proof-replay.test.tsx` — the panel through `replayParts` → `assembleMessages` → `<Chat initialMessages>`.
 
 `web/components/answer-proof.test.tsx`: closed by default (no region, `aria-expanded="false"`); click → region present, `aria-controls` equals its id (`chart-download.test.tsx` precedent); technical off → no `resultId` text, on → `aria-pressed="true"` + `cel-id`/`batchId` visible; native `<button>` roles pin keyboard reachability.
 

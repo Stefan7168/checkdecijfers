@@ -9,6 +9,7 @@
 import type { ChartSpec } from '../backend/chart/types.ts';
 import type { ComposedResponse } from '../backend/answer/respond/types.ts';
 import type { WebSection } from '../backend/websearch/types.ts';
+import type { AnswerProof } from './answer-proof.ts';
 import type { AnswerCsv } from './csv.ts';
 import type { StatCardData } from './stat-card-data.ts';
 
@@ -69,6 +70,11 @@ export interface ChatMessage {
   /** WP21 #52: the exported data file — built once at receive/replay time from
    * the validated envelope (csv.ts); null on non-answers. */
   csv: AnswerCsv | null;
+  /** Session 72 design brief (#70/#79/#89/#90-deep): the "Bewijs dit cijfer"
+   * drill-through data — built once at receive/replay time from the SAME
+   * validated envelope (answer-proof.ts); null on non-answers, and on a
+   * redacted row (#14). */
+  proof: AnswerProof | null;
   /** WP23 (#90): structural answer rendering; null on non-answers. */
   answerView: AnswerView | null;
   /** WP23 (#71): any quoted cell is provisional — the amber pill. */

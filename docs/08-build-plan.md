@@ -244,6 +244,8 @@ protocol plan €5 / cap €10, test plan + flag rollout); build from that brief
 
 ## Phase-2-shaped design brief — the source drill-through cluster (#70 + #79 + #89 + #90-deep)
 
+**✅ BUILT session 72 per the 2026-09-03 design brief, PR pending** (autonomous — owner review required per #118(b) before merge). Brief: [session-briefs/2026-09-03-source-drill-through-design.md](session-briefs/2026-09-03-source-drill-through-design.md). Shipped exactly as the brief below describes — one "Bewijs dit cijfer"/"Bewijs deze cijfers" panel, collapsed by default under the answer, depths 1→2→3 stacked, ids behind one "Technische details" toggle — in `web/lib/answer-proof.ts` (`buildAnswerProof`, the pure leaf) + `web/components/answer-proof.tsx` (`AnswerProof`), wired into `web/components/chat.tsx` beside the citation/CSV row. No backend/pipeline change, zero prompt bytes, zero DDL, no flag. See [open-questions #70](open-questions.md)/[#79](open-questions.md)/[#89](open-questions.md) for the per-depth detail. **Out of scope (unchanged by this build):** dashboard history has no proof panel yet — tracked as its own residual row in [open-questions.md](open-questions.md).
+
 *All four approved individually; the batch notes and #90's row say they are ONE design (three buttons would be three ways to say "show me the proof"). #90's chip PRESENTATION shipped in WP23 (the chip is the collapsed state); this brief is the expansion.*
 
 **One surface, three depths, all deterministic reads of data every answer already carries:**

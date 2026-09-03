@@ -9,6 +9,7 @@ import { REDACTED_QUESTION_TEXT } from '../backend/answer/audit/retention.ts';
 import type { ThreadRow } from '../backend/threads/index.ts';
 import { replayParts } from '../backend/threads/replay.ts';
 import type { ComposedResponse } from '../backend/answer/respond/types.ts';
+import { buildAnswerProof } from './answer-proof.ts';
 import { buildCitation } from './citation.ts';
 import { buildAnswerCsv } from './csv.ts';
 import { deriveVisuals } from './dock-visuals.ts';
@@ -57,6 +58,11 @@ describe('assembleMessages — ⟨A3⟩ replay completeness (stat-card answer)',
     expect(assistantMsg!.cost).toBe(20);
   });
 
+  it('#70/#79/#89: reconstructs the proof panel data identical to a live render (<A3>)', () => {
+    expect(assistantMsg!.proof).not.toBeNull();
+    expect(assistantMsg!.proof).toEqual(buildAnswerProof(response as never));
+  });
+
   it('R8: replayed text is byte-equal to the stored finalText', () => {
     expect(assistantMsg!.text).toBe(response.text);
   });
@@ -99,6 +105,9 @@ describe('assembleMessages — ⟨A3⟩ meta refusal reclassifies to info', () =
     expect(assistantMsg!.card).toBeNull();
     expect(assistantMsg!.citation).toBeNull();
     expect(assistantMsg!.auditId).toBeNull();
+    // #70/#79/#89: a refusal (even one that reads as plain info) carries no
+    // validated cells — no proof panel to drill into.
+    expect(assistantMsg!.proof).toBeNull();
   });
 
   it('#134(a): a replayed period-coverage refusal carries its retry chip into the assembled message (parity with the live turn)', () => {
@@ -126,5 +135,7 @@ describe('assembleMessages — ⟨A7⟩ redacted row is one placeholder', () => 
     expect(messages).toHaveLength(1);
     expect(messages[0]!.role).toBe('redacted');
     expect(messages[0]!.text).toBe('Deze vraag is verwijderd.');
+    // #70/#79/#89: the redacted placeholder carries no proof panel.
+    expect(messages[0]!.proof).toBeNull();
   });
 });

@@ -16,6 +16,7 @@ import type {
   ReplayPart,
 } from '../backend/threads/replay.ts';
 import type { AnswerResponse } from '../backend/answer/respond/types.ts';
+import { buildAnswerProof } from './answer-proof.ts';
 import { buildCitation } from './citation.ts';
 import type { ChatMessage } from './chat-message.ts';
 import { messageKind } from './chat-message.ts';
@@ -38,6 +39,7 @@ function redactedMessage(): ChatMessage {
     citation: null,
     card: null,
     csv: null,
+    proof: null,
     answerView: null,
     provisional: false,
     suggestions: [],
@@ -56,6 +58,7 @@ function userMessage(text: string): ChatMessage {
     citation: null,
     card: null,
     csv: null,
+    proof: null,
     answerView: null,
     provisional: false,
     suggestions: [],
@@ -102,6 +105,7 @@ function assistantMessage(part: ReplayAssistantPart): ChatMessage {
     citation: answer !== null ? buildCitation(answer) : null,
     card: answer !== null ? statCardData(answer) : null,
     csv: answer !== null ? buildAnswerCsv(answer) : null,
+    proof: answer !== null ? buildAnswerProof(answer) : null,
     answerView,
     provisional: part.provisional,
     suggestions: part.suggestions,
