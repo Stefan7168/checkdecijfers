@@ -28,16 +28,10 @@ autonoom" (steer 25-07).
 
 Dé volgende prioriteit, in deze volgorde, niets anders eerst:
 
-1. Check of de owner RUNBOOK WP26 stap 6 heeft gedaan — in productie, niet door te vragen: `audit_answers`
-   read-only (root `.env`, `connectFromEnv`) op rijen met id > 262 en `reply_text = 'Vergelijk met Nederland'`
-   (verwacht: `kind = answer`, twee regio's in `result_ids` — GM0363 + NL01 — `parse.model` het click-model,
-   0 tokens, 20 credits). Nul rijen → vraag de owner stap 6 te doen (vraag `Hoeveel inwoners had Amsterdam in
-   2024?`, chip "Vergelijk met Nederland", Verstuur). Iets anders dan de chip typen moet als verse vraag
-   beantwoord worden.
-2. Na stap 6: `ANSWER_FIRST_ENABLED` is de volgende vlag — ALLEEN op expliciet owner-akkoord in de chat, één
+1. Stap 6 is GEDAAN (rijen 263/264, zie de archive-entry) — niet opnieuw vragen. `ANSWER_FIRST_ENABLED` is de volgende vlag — ALLEEN op expliciet owner-akkoord in de chat, één
    vlag tegelijk, pas als de laatste deploy gesetteld is (`/llms.txt` 200), RUNBOOK stappen 1–3 + 5;
    rollback-volgorde: klik-vlag eerst uit, B een dag later, nooit andersom.
-3. Daarna `GDPR_PURGE_APPLY=1` + één bewaakte run (owner), dan #162's A/B (echte spend, owner).
+2. Daarna `GDPR_PURGE_APPLY=1` + één bewaakte run (owner), dan #162's A/B (echte spend, owner).
 
 Bindende kaders en owner-steers: principes (a)/(b)/(c); R6 — een chip-take is altijd een NIEUW gevalideerd
 resultaat; de tien #197-beslissingen + de sessie-70-defaults zijn defaults — owner veto bij uitzondering, niet

@@ -63,8 +63,14 @@ instance) — WP26 SMOKE TEST PASSED, #197 STEP 3 MERGED + LIVE, A CI DEPLOY RAC
    session-70 files replaced by one session-71 state file.
 8. **Not done, deliberately:** `ANSWER_FIRST_ENABLED` and `GDPR_PURGE_APPLY` (owner-supervised — the owner's
    "keep working autonomously" does not cover the WP26 flip, per the 25-07 steer); #162 A/B (real spend); the
-   three recorded #197 follow-ups. RUNBOOK step 6 (the comparison chip under an Amsterdam answer) was asked of
-   the owner and had not been run at the time of writing (no rows after 262).
+   three recorded #197 follow-ups.
+9. **RUNBOOK step 6 PASSED (owner, 05:20–05:23Z):** row 263 = "Hoeveel inwoners had Amsterdam in 2024?" answered
+   by the LLM path (931.298) with `response.pending.clickOptions` = ["Vergelijk met Nederland"] and the same label
+   third in `suggestions`; row 264 = the click: `reply_text = 'Vergelijk met Nederland'`, `parse.model =
+   deterministic/wp26-click-option`, `llm_calls = []`, 0/0 tokens, `answer_source = template`, `result_ids`
+   GM0363 + NL01 on `03759ned` 2024JJ00, `chart_emitted` bar with 2 series, ledger 105 (−20, no refund),
+   `npm run audit:verify -- 263 264` → 2/2 clean. The closing "Nederland had de hoogste waarde." is the recorded
+   #197 follow-up (tautology on a count measure), present as expected.
 
 **Session 70 (2026-09-02, later the same day as session 69; the owner pasted the session-70 kickoff — into
 TWO sessions in the same working tree, the 25-07 collision shape: the second session (local_09530460…)

@@ -27,10 +27,10 @@ Hygiene: the s70-reviewer worktree removed, 28 stale local branches + 9 merged r
 open-questions.md triaged (every row read) — 25 terminally-closed rows moved to its archive twin, 147 live.
 **`CLARIFY_CLICK_ENABLED` ON and proven; `ANSWER_FIRST_ENABLED` and `GDPR_PURGE_APPLY` still untouched —
 both remain YOUR call (owner-supervised), not a session's.** Details, every SHA and run id:
-[status-archive.md](status-archive.md). **Your next action:** RUNBOOK WP26 section step 6 — ask
-`Hoeveel inwoners had Amsterdam in 2024?`, click "Vergelijk met Nederland", Verstuur: a two-bar comparison,
-20 credits. Then say whether `ANSWER_FIRST_ENABLED` may go on (one flag at a time; rollback order in the
-RUNBOOK: click flag off first, B a day later).
+[status-archive.md](status-archive.md). **Step 6 (the comparison chip) also PASSED later the same day: rows 263/264 — the take
+has the click model, 0 tokens, GM0363 + NL01, a 2-series bar chart, 20 credits, R8 clean.** **Your next
+decision:** whether `ANSWER_FIRST_ENABLED` may go on (one flag at a time; last deploy settled; rollback order in
+the RUNBOOK: click flag off first, B a day later).
 
 **▶ SESSION 70 (2026-09-02, later the same day — TWO sessions received the kickoff in the same tree; the
 second became the independent reviewer in a worktree) — #197 STEP 3 BUILT ON A BRANCH (merged in session
