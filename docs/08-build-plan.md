@@ -308,7 +308,7 @@ values + since-boundary), R5-registered, R1-scan acceptance via the derivation r
 chip template (no LLM), benchmark-style pins over the fixture DB. Owner sees the (a)/(b)/(c) fork
 before build — it changes what audit rows contain, which is his product's proof artifact.
 
-## #197 — chart UX for end users (owner request, session 69, 2026-09-02) — steps 1+2 ✅ BUILT + LIVE, step 3 ✅ BUILT on a branch (merge gated)
+## #197 — chart UX for end users (owner request, session 69, 2026-09-02) — steps 1+2 ✅ BUILT + LIVE, step 3 ✅ MERGED + LIVE (2026-09-03)
 
 Not a numbered WP: an owner-initiated research → build thread. The brief IS the spec:
 [session-briefs/2026-09-02-session-69-chart-ux-research.md](session-briefs/2026-09-02-session-69-chart-ux-research.md)
@@ -322,9 +322,12 @@ defaults the owner vetoes by exception; as-built record in [open-questions #197]
   toggle as a radiogroup, `schemaVersion` guard in `chart.tsx`, ADR 014 as-built rule for optional v1 fields.
 - **Step 2 ✅ `1d2140f`** — Grafiek/Tabel switch on every chart (`tableModel`; > 15-series comparisons open on
   the table). No duplicate CSV entry in the menu (WP21's button already sits under every chat answer).
-- **Step 3 ✅ BUILT (session 70, 2026-09-02) on branch `feat/197-3-comparison-chips` — NOT merged: the merge is
-  GATED on the owner's live `CLARIFY_CLICK_ENABLED` smoke test** (RUNBOOK "WP26 answer-first + clickable
-  options", steps 4–6), because the chips reuse exactly that take-path. What shipped: two comparison generators
+- **Step 3 ✅ BUILT (session 70, 2026-09-02) on branch `feat/197-3-comparison-chips`, MERGED 2026-09-03
+  (session 71) as squash commit `83f790e` (PR #118), CI run 33699880673 gate + deploy green — merged only after
+  the owner.s `CLARIFY_CLICK_ENABLED` smoke test passed in production (RUNBOOK "WP26 answer-first + clickable
+  options", step 4: audit rows 261/262 — a clarification with two click options and the click-taken answer,
+  `parse.model = deterministic/wp26-click-option`, zero tokens, `audit:verify` 2/2 clean).** The chips reuse
+  exactly that take-path. What shipped: two comparison generators
   in `src/answer/respond/suggestions.ts` — "Vergelijk met Nederland" (the answered regions + the national row) /
   "Vergelijk met Amsterdam, Rotterdam, Den Haag en Utrecht" (a national answer + the G4), and "Vergelijk met
   <a year earlier>" (the registered `difference` derivation) — ahead of the region variant, which is skipped

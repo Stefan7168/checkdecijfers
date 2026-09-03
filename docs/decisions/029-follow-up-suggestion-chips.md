@@ -7,14 +7,18 @@ autonomous, branch `wp29-follow-up-chips` per #118)** — execute brief:
 branch `feat/134a-refusal-period-chips`) — see the second as-built note below. FURTHER EXTENDED with
 the [#134](../open-questions.md)(b) too-old `not_published` chip (session 44, 2026-07-13, PR #41
 `12518eb`, MERGED + LIVE) — see the fourth as-built note. EXTENDED AGAIN with the [#197](../open-questions.md)
-step-3 COMPARISON chips (session 70, 2026-09-02, branch `feat/197-3-comparison-chips`) — the first chips that
+step-3 COMPARISON chips (session 70, 2026-09-02, branch `feat/197-3-comparison-chips`; MERGED + LIVE 2026-09-03,
+session 71, squash `83f790e`, PR #118) — the first chips that
 are taken WITHOUT an LLM re-parse; see the first as-built note directly below.**
 
 ## As-built note (#197 step 3 — comparison chips, session 70, 2026-09-02)
 
 The chart-UX research ([#197](../open-questions.md), session 69) put "one-tap comparison chips" third in its
-build order; the owner gave GO in-chat. Built on branch `feat/197-3-comparison-chips` — its merge is gated on
-the owner's live `CLARIFY_CLICK_ENABLED` smoke test (RUNBOOK), because the chips reuse exactly that take-path.
+build order; the owner gave GO in-chat. Built on branch `feat/197-3-comparison-chips`; its merge was gated on
+the owner.s live `CLARIFY_CLICK_ENABLED` smoke test (RUNBOOK), because the chips reuse exactly that take-path —
+that test passed in production on 2026-09-03 (audit rows 261/262, `parse.model = deterministic/wp26-click-option`,
+zero tokens, R8 reconstruct clean) and the branch was squash-merged the same day as `83f790e` (PR #118, session 71;
+CI run 33699880673 gate + deploy green).
 
 - **Two new generators in `suggestions.ts`, ahead of the region variant:** `compareRegion` — a sub-national
   single-period answer offers ITS regions plus the national row ("Vergelijk met Nederland"); a national one
