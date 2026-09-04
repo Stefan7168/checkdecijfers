@@ -189,11 +189,13 @@ stanza; review normally, never blind-merge. #198 stays PARKED at your word. Both
 
 **▶ NEXT, in order — nothing urgent:** (a) Dependabot #124/#125 (owner review; the monthly agenda's dependency item);
 (b) `GDPR_PURGE_APPLY=1` + one watched run; (c) #162's A/B; (d) #132 route B GO or defer; (e) the owner menu: WP30c
-choice, #199 (a proof panel on the dashboard history — a small read-model WP), #197 ideas 4–8, the three #197 follow-ups.
-**Recorded review follow-ups, not built (hermetic, a session can pick them up):** the carrier on `ChatMessage` now that
-#123 has freed `chat-message.ts` and the ⟨A6⟩ `capturedThreadId` simplification (row #73); one shared R5 predicate — `csv.ts`
+choice, #199 (a proof panel on the dashboard history — a small read-model WP), #197 ideas 4–8, the three #197
+follow-ups.
+**Recorded review follow-ups, not built (hermetic, a session can pick them up):** one shared R5 predicate — `csv.ts`
 applies a narrower rule (row #79); eviction must YIELD to in-flight reads before any live automation of
-`tables:evict --apply` (row #196, task chip filed session 73).
+`tables:evict --apply` (row #196, task chip filed session 73). **Session 76 (2026-09-04, autonomous, branch
+`fix/73-carrier-on-chatmessage`): the carrier-on-`ChatMessage` move and the ⟨A6⟩ `capturedThreadId` simplification
+(row #73) are BUILT, gates green — PR open, owner review pending (autonomous-session branch+PR rule).**
 
 **▶ SESSION 74 (2026-09-03, AUTONOMOUS — the SESSION-73 kickoff pasted again from the phone app; no owner reply in chat;
 `list_sessions`: the earlier session 73 idle, no second RUNNING instance) — HIGH-EFFORT PASSES ON #122 AND #123 BEFORE

@@ -130,6 +130,14 @@ true: the #75 fill-don't-send handler is untouched), just an option per chip. Bu
   carriers are keyed by message INDEX in a ref, correct today (within a thread the list only appends; the reset
   clears the map) but an implicit coupling on a money-path route: once `web/lib/chat-message.ts` is free (after
   PR #123 merges) the carrier belongs ON the `ChatMessage`.
+- **Follow-up ✅ BUILT (session 76, 2026-09-04, branch `fix/73-carrier-on-chatmessage`, [#73](../open-questions.md)):**
+  the carrier moved onto `ChatMessage.carrier` (`web/lib/chat-message.ts`), set in the same `setMessages` call that
+  appends the message; `chat.tsx`'s index-keyed ref is gone, and a chip click reads `message.carrier` off the exact
+  message it renders — the "own message's carrier, never the newest" behavior is unchanged (pinned by the existing
+  two-answers-share-a-label test, `chat.test.tsx`), and `web/lib/replay-assemble.ts`'s three message builders are now
+  type-forced to set `carrier: null` on every replayed message (ADR 033 ⟨A6⟩). The SAME follow-up also confirmed and
+  applied the LOW pass's `capturedThreadId`/carrier-`threadId` equivalence (ADR 033 ⟨A6⟩ addendum) — both fields are
+  dropped, and `chat.tsx` sends the live `threadId` state directly on both send paths.
 - **Veto points for the owner:** a clicked follow-up now reads in the plainer TEMPLATE phrasing (no LLM) — the
   ADR 024 trade every take makes; the price is unchanged at 20 credits per take ([#101](../open-questions.md)
   still open); the carrier question wording.

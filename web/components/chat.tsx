@@ -264,15 +264,22 @@ export function Chat({
   // prop, updated to the server's attached thread id after a completed turn,
   // and sent as askQuestion's 5th argument (only when thread-aware).
   const [threadId, setThreadId] = useState<number | null>(initialThreadId ?? null);
-  // ⟨A6⟩: the threadId captured ALONGSIDE `pending` at question time — a reply
-  // attaches to ITS clarification's originating thread, never the sidebar's
-  // currently-active one. Cleared with pending on a thread switch. One
-  // fallback (#73 v2 review round 2): when the captured id is NULL — that
-  // turn's own attach failed fail-soft — the send uses the LIVE thread, for a
-  // typed reply and a chip alike; a null would make the server open a fresh
-  // thread and fork the conversation, and a switch has cleared both by then,
-  // so the live thread is the only other honest choice (see handleSubmit).
-  const [capturedThreadId, setCapturedThreadId] = useState<number | null>(null);
+  // ⟨A6⟩ addendum (#73 v2 follow-up, session 76): a reply used to attach to a
+  // separately CAPTURED threadId (taken alongside `pending`, or alongside a
+  // message's carrier) rather than the live `threadId` state, because the
+  // sidebar's active thread could otherwise race ahead of an open
+  // clarification round. The round-2 live-thread-fallback fix (below) proved
+  // that captured value is ALWAYS either the live `threadId` or null at send
+  // time (never a third value) — `threadId` is set from the very same
+  // `outcome.threadId` a capture would have stored, and a thread switch clears
+  // `pending`/every carrier together with resetting `threadId` itself, so a
+  // surviving capture can never point at a thread other than the current live
+  // one. That made the separate capture provably redundant, so this follow-up
+  // dropped it (and the carrier's own per-message threadId field —
+  // web/lib/chat-message.ts) and sends the live `threadId` directly on both
+  // the typed-reply and chip-take paths (see handleSubmit) — same observed
+  // behavior, one fewer piece of state to keep in sync. Pinned in
+  // chat.test.tsx's two thread-attach-failed cases.
   // WP15 (ADR 021): the structured referent carried between turns. Held
   // exactly like `pending` (client-held React state, sent back verbatim on
   // the next submit) but updated only on an 'ok' outcome that itself
@@ -317,20 +324,19 @@ export function Chat({
   // the newly displayed thread. Captured at submit start; re-checked after the
   // action resolves.
   const generationRef = useRef(0);
-  // #73 v2 review (PR #122): the chip carrier of every answer AND refusal
-  // message that arrived with one, keyed by the message's INDEX in `messages`
-  // (a refusal carries no audit id on the client; indexes are stable — within
-  // a thread the list only appends, and a thread switch replaces it whole and
-  // clears this map). Two answers' fixed-text chips can share a label byte for
-  // byte ("Vergelijk met Nederland", the G4 label), and `takesRescue` in
-  // handleSubmit routes on the label alone — so without this an older chip
-  // would be taken against the NEWEST answer: the wrong question, silently
-  // (never a wrong number: the served answer discloses its own period and
-  // region). Held in a ref rather than on ChatMessage (web/lib/chat-message.ts
-  // is a sibling PR's file). A resumed thread carries no carrier (ADR 033
-  // ⟨A6⟩), so a replayed message's chip keeps the current-pending route.
-  type Carrier = { pending: PendingClarification; threadId: number | null };
-  const carriersRef = useRef<Map<number, Carrier>>(new Map());
+  // #73 v2 review (PR #122), moved onto ChatMessage in the #73 v2 follow-up
+  // (session 76, once web/lib/chat-message.ts was free — a sibling PR held it
+  // at the time): each answer/refusal message now carries ITS OWN carrier
+  // directly (`message.carrier`, chat-message.ts) instead of an index-keyed
+  // `Map` in a ref. Two answers' fixed-text chips can share a label byte for
+  // byte ("Vergelijk met Nederland", the G4 label), and `takesRescue` below
+  // routes on the label alone — so a click must resolve against the CLICKED
+  // message's own carrier, never the newest one (the click handler below
+  // reads `message.carrier` off the message it renders). A resumed message's
+  // `carrier` is always `null` (ADR 033 ⟨A6⟩ — replay-assemble.ts never
+  // guesses one), so its chip keeps the current-pending route, exactly as
+  // before this move.
+  type Carrier = { pending: PendingClarification };
   // Review round 2: the chip clicked LAST, with its message's carrier. The
   // binding is resolved at SEND time (handleSubmit), never on the click — round
   // 1 re-bound `pending` on the click, which (a) discarded an OPEN clarification
@@ -378,8 +384,6 @@ export function Chat({
     setContext(initialContext ?? null);
     setThreadId(initialThreadId ?? null);
     setPending(null);
-    setCapturedThreadId(null);
-    carriersRef.current.clear();
     chipRef.current = null;
     setInput('');
     setError(null);
@@ -414,7 +418,7 @@ export function Chat({
 
     setMessages((m) => [
       ...m,
-      { role: 'user', kind: null, text, chart: null, cost: null, citation: null, card: null, csv: null, proof: null, answerView: null, provisional: false, suggestions: [], auditId: null, webSection: null },
+      { role: 'user', kind: null, text, chart: null, cost: null, citation: null, card: null, csv: null, proof: null, answerView: null, provisional: false, suggestions: [], auditId: null, webSection: null, carrier: null },
     ]);
     setInput('');
     setBusy(true);
@@ -431,9 +435,11 @@ export function Chat({
         ? { sources: [...selectedSources], web: webSelected }
         : undefined;
       // WP135 ⟨A1⟩/⟨A6⟩: thread-aware call sites (the workspace) carry the 5th
-      // rawThreadId argument — the current thread for a question, the CAPTURED
-      // thread for a reply. Non-thread-aware call sites (Dashboard, tests) omit
-      // it, keeping their exact 3-/4-argument shapes byte-identical.
+      // rawThreadId argument — the LIVE thread, for a question and a reply
+      // alike (the #73 v2 follow-up dropped the separate captured-thread
+      // state; see the `threadId` declaration above). Non-thread-aware call
+      // sites (Dashboard, tests) omit it, keeping their exact 3-/4-argument
+      // shapes byte-identical.
       let outcome: AskOutcome;
       // WP26c (ADR 024): a RESCUE pending is not an open clarification round —
       // it exists only so its one chip can resolve deterministically. If the
@@ -451,18 +457,19 @@ export function Chat({
       chipRef.current = null;
       const chip = clicked !== null && clicked.label.trim() === text ? clicked : null;
       const sendPending = chip ? chip.pending : pending;
-      // LOW review, round 2: a carrier recorded on a turn whose thread attach
-      // failed (fail-soft, actions.ts) holds `threadId: null`; if the chat has
-      // attached since, a null here would make the server INSERT a fresh thread
-      // for the take and fork the conversation. A thread switch clears the
-      // carriers and the pending alike, so a recorded thread is either the live
-      // one or null — fall back to the live thread.
-      const sendThreadId = (chip ? chip.threadId : capturedThreadId) ?? threadId;
+      // ⟨A6⟩ addendum (#73 v2 follow-up): send the LIVE thread on both the
+      // chip-take and the typed-reply path — proven equivalent to the former
+      // captured-threadId fallback (see the `threadId` state comment above),
+      // including a turn whose OWN attach failed fail-soft (that turn's
+      // carrier used to hold `threadId: null`; the live `threadId` already
+      // carries the fallback's result, since a switch clears `pending`/every
+      // carrier together with `threadId` itself, so nothing here can point at
+      // a thread other than the current live one — or fork a fresh one).
       const takesRescue =
         sendPending?.rescueOnly !== true || sendPending.options.some((o) => o.trim() === text);
       if (sendPending && takesRescue) {
         outcome = threadAware
-          ? await replyToClarification(sendPending, text, requestId, selection, sendThreadId)
+          ? await replyToClarification(sendPending, text, requestId, selection, threadId)
           : websearch
             ? await replyToClarification(sendPending, text, requestId, selection)
             : await replyToClarification(sendPending, text, requestId);
@@ -511,6 +518,7 @@ export function Chat({
             suggestions: [],
             auditId: null,
             webSection: null,
+            carrier: null,
           },
         ]);
         // None of these kinds change the pending clarification state;
@@ -519,6 +527,33 @@ export function Chat({
       }
 
       const { response } = gated;
+      // ⟨A6⟩: the pending clarification (if any) this turn's response offers
+      // for its next reply — a clarification's own open round, or a
+      // rescueOnly carrier riding an answer/refusal's follow-up chips (#197
+      // step 3 / #73 v2). WP26c (ADR 024): a MISFIRED refusal may carry a
+      // rescue pending — the state that lets its one chip resolve
+      // deterministically instead of re-entering the parse that misfired. It
+      // is explicitly `rescueOnly`, and the server answers any NON-matching
+      // reply as a fresh question, so holding it here cannot turn the user's
+      // next unrelated question into a clarification-reply merge. `?? null`
+      // guards the deploy-window skew (an old server bundle omits the key).
+      const carried =
+        response.kind === 'clarification'
+          ? response.pending
+          : response.kind === 'refusal' || response.kind === 'answer'
+            ? (response.pending ?? null)
+            : null;
+      // #73 v2 follow-up (moved onto ChatMessage, session 76): only an
+      // answer/refusal's carried pending is a CARRIER a later chip binds to —
+      // a clarification IS the open round itself, not a carrier (its own
+      // chips take the live `pending` route below instead, exactly as
+      // before). Computed HERE, before the message literal below, so it lands
+      // in the SAME setMessages call that appends the message — never a
+      // render behind, or a chip could briefly render with no bound carrier.
+      const carrier: ChatMessage['carrier'] =
+        carried && (response.kind === 'answer' || response.kind === 'refusal')
+          ? { pending: carried }
+          : null;
       setMessages((m) => [
         ...m,
         {
@@ -588,47 +623,15 @@ export function Chat({
           // them. `?? null` guards the deploy-window skew (an old server bundle
           // omits the field); it renders keyed on this value, never the kind.
           webSection: response.webSection ?? null,
+          carrier,
         },
       ]);
-      // ⟨A6⟩: capture the thread this clarification attached to, alongside
-      // `pending`, so the reply binds to it regardless of any later sidebar
-      // switch (which clears both via the loadNonce reset).
-      // WP26c (ADR 024): a MISFIRED refusal may carry a rescue pending — the
-      // state that lets its one chip resolve deterministically instead of
-      // re-entering the parse that misfired. It is explicitly `rescueOnly`, and
-      // the server answers any NON-matching reply as a fresh question, so
-      // holding it here cannot turn the user's next unrelated question into a
-      // clarification-reply merge.
-      // #197 step 3: an ANSWER may carry the same carrier shape for its
-      // comparison chips ("Vergelijk met Nederland", …) — and since #73 v2
-      // for every takeable follow-up chip beside them. Same `rescueOnly`
-      // routing in handleSubmit — a chip click goes to replyToClarification
-      // and is taken without a parse; any other text is the next question,
-      // with the held conversation context intact. `?? null` guards the
-      // deploy-window skew (an old server bundle omits the key).
-      const carried =
-        response.kind === 'clarification'
-          ? response.pending
-          : response.kind === 'refusal' || response.kind === 'answer'
-            ? (response.pending ?? null)
-            : null;
-      if (carried) {
-        setPending(carried);
-        setCapturedThreadId(outcome.threadId);
-        // #73 v2 review: remember this message's carrier so an older chip can
-        // bind its send to it (see carriersRef / chipRef). The assistant
-        // message was appended right after this turn's user message, and
-        // `messages` is the list as of this submit (busy gates a second one),
-        // so its index is messages.length + 1. Answers and refusals alike — a
-        // refusal's rescue chip is a carrier chip too; a clarification is an
-        // open round, not a carrier, and is never recorded here.
-        if (response.kind === 'answer' || response.kind === 'refusal') {
-          carriersRef.current.set(messages.length + 1, { pending: carried, threadId: outcome.threadId });
-        }
-      } else {
-        setPending(null);
-        setCapturedThreadId(null);
-      }
+      // ⟨A6⟩: `carried` also becomes the live round a plain typed reply
+      // merges against (a resumed/switched thread clears it via the loadNonce
+      // reset). The message just appended above carries the identical pending
+      // as its own `carrier` for a chip click to bind to instead — see
+      // handleSubmit's send-time resolution and the click handler below.
+      setPending(carried ?? null);
     } catch (err) {
       // WP135 (blocker fix): same generation guard for the failure path — a
       // stale submit's error must not paint over the thread now displayed.
@@ -836,17 +839,20 @@ export function Chat({
                     key={question}
                     type="button"
                     onClick={() => {
-                      // #73 v2 review: remember THIS message's carrier with the
-                      // clicked label; handleSubmit binds the send to it only if
-                      // the label goes out unedited (an older answer's or
-                      // refusal's chip takes against ITS carrier, not the latest
-                      // one — see carriersRef / chipRef). Nothing is re-bound
-                      // here — `pending` stays what it is, so an open
-                      // clarification round survives a glance at an older chip.
-                      // A message without a carrier (a resumed thread, a
-                      // clarification's own option) records nothing.
-                      const own = carriersRef.current.get(i);
-                      chipRef.current = own ? { label: question, ...own } : null;
+                      // #73 v2 review: remember THIS message's own carrier
+                      // (message.carrier, chat-message.ts) with the clicked
+                      // label; handleSubmit binds the send to it only if the
+                      // label goes out unedited (an older answer's or
+                      // refusal's chip takes against ITS carrier, not the
+                      // latest one). Nothing is re-bound here — `pending`
+                      // stays what it is, so an open clarification round
+                      // survives a glance at an older chip. A message without
+                      // a carrier (a resumed thread, a clarification's own
+                      // option) records nothing — chipRef stays null and the
+                      // send below falls through to the live `pending`.
+                      chipRef.current = message.carrier
+                        ? { label: question, ...message.carrier }
+                        : null;
                       setInput(question);
                     }}
                     className="rounded-full border border-line-strong px-3 py-1 text-xs text-ink-soft hover:bg-paper-sunken"

@@ -7,7 +7,7 @@
 // reference the type and the reclassifier without pulling the client Chat
 // component into the server bundle.
 import type { ChartSpec } from '../backend/chart/types.ts';
-import type { ComposedResponse } from '../backend/answer/respond/types.ts';
+import type { ComposedResponse, PendingClarification } from '../backend/answer/respond/types.ts';
 import type { WebSection } from '../backend/websearch/types.ts';
 import type { AnswerProof } from './answer-proof.ts';
 import type { AnswerCsv } from './csv.ts';
@@ -92,6 +92,24 @@ export interface ChatMessage {
    * FIELD VALUE (never message.kind). Null on user messages, non-'ok' gated
    * outcomes, and turns that owed no web attempt. */
   webSection: WebSection | null;
+  /** #73 v2 follow-up (moved off `chat.tsx`'s index-keyed `carriersRef` once
+   * this file was free — ADR 033 ⟨A6⟩ addendum): the click-takeable pending
+   * THIS message's own follow-up/rescue chips bind to, so a click on an
+   * older message's chip resolves against ITS OWN carrier and never the
+   * newest one, even when two messages carry a byte-identical chip label
+   * (the G4 "Vergelijk met Nederland" case). Set in the SAME state update
+   * that appends the message (chat.tsx) — never a render behind, or a chip
+   * could briefly render with no bound carrier. `null` on user messages, on
+   * an answer/refusal with no rescueOnly pending, on a clarification (an
+   * open round is not a carrier — see chat.tsx's chipRef), and on EVERY
+   * replayed/resumed message (ADR 033 ⟨A6⟩: carriers are not restored on
+   * resume — replay-assemble.ts has no live pending to put here, so it
+   * always sets `null`, never a guess). The former per-message `threadId`
+   * alongside `pending` was dropped in the same follow-up: proven (⟨A6⟩
+   * addendum, the live-thread-fallback fix) to always equal the live
+   * `threadId` state or null at send time, so a click-time carrier lookup
+   * needs no thread id of its own — chat.tsx sends the live `threadId`. */
+  carrier: { pending: PendingClarification } | null;
 }
 
 export type MessageKind = 'answer' | 'clarification' | 'refusal' | 'info';

@@ -45,6 +45,9 @@ function redactedMessage(): ChatMessage {
     suggestions: [],
     auditId: null,
     webSection: null,
+    // ADR 033 ⟨A6⟩: carriers are not restored on resume — a redacted row has
+    // no envelope to guess one from anyway.
+    carrier: null,
   };
 }
 
@@ -64,6 +67,8 @@ function userMessage(text: string): ChatMessage {
     suggestions: [],
     auditId: null,
     webSection: null,
+    // A user turn never carried a carrier live either.
+    carrier: null,
   };
 }
 
@@ -112,6 +117,11 @@ function assistantMessage(part: ReplayAssistantPart): ChatMessage {
     // Feedback only anchors to real answers (the receive-path convention).
     auditId: isAnswer ? part.auditId : null,
     webSection: part.webSection,
+    // ADR 033 ⟨A6⟩: carriers are not restored on resume — no live `pending`
+    // exists to bind a resumed chip to, so this is always `null`, never a
+    // guess. A resumed message's own question-shaped chips (suggestions
+    // above) still render; they just fill the input instead of taking.
+    carrier: null,
   };
 }
 
