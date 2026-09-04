@@ -16,9 +16,17 @@
 //   numbers the validated answer carried. No other number source exists.
 // - R4: the preamble's source row IS buildAttributionLine(result) verbatim —
 //   the one builder shared with answer text and chart specs; it cannot drift.
-// - R5/CC BY: explicit derivation values ship in their own marked section
-//   with their source cell ids; the implicit binding derivations
-//   (direction/first_last) are prose infrastructure, never exported.
+// - R5/CC BY: the "Bewerking: ..." marking line fires whenever the result
+//   carries ANY derivation (isDerivedResult, src/query/types.ts) — the SAME
+//   predicate compose.ts/reconstruct.ts/citation.ts/answer-proof.ts use, so
+//   this file can no longer under-disclose a derivation it doesn't export
+//   (open-questions #79 follow-up: a direction- or first_last-only result
+//   used to omit the line here while every other surface showed it). The
+//   "Afgeleide waarden" data table below is a SEPARATE, narrower question —
+//   which derivations have an actual number to put in a row — and stays
+//   scoped to exportableDerivations() (explicit difference/max only); a
+//   direction or first_last derivation has no value of its own to export, so
+//   it is marked but not tabulated.
 // - R10: eenheid is the cell's raw CBS unit metadata, verbatim.
 // - R11: per-cell status column; a null value stays empty and states its CBS
 //   reason in `bijzonderheid`.
@@ -27,7 +35,7 @@
 // query/types.ts — the WP20 precedent), never a barrel.
 import { buildAttributionLine } from '../backend/answer/compose/format.ts';
 import type { AnswerResponse } from '../backend/answer/respond/types.ts';
-import { DERIVED_DATA_MARKING } from '../backend/query/types.ts';
+import { DERIVED_DATA_MARKING, isDerivedResult } from '../backend/query/types.ts';
 import type { DerivationRecord, ResultCell } from '../backend/query/types.ts';
 
 export interface AnswerCsv {
@@ -68,7 +76,9 @@ function csvDerivedNumberNl(value: number, decimals: number | null): string {
 
 /** The explicit derivations are the answer's own headline computations
  * (difference/max — deriveDifference is always explicit, deriveMax carries
- * the flag). Only they are exported. */
+ * the flag). Only they have a value to put in the "Afgeleide waarden" table
+ * — the marking line above uses a broader rule (isDerivedResult), see the
+ * file-header comment. */
 type ExportableDerivation = Extract<DerivationRecord, { kind: 'difference' | 'max' }>;
 
 function exportableDerivations(derivations: DerivationRecord[]): ExportableDerivation[] {
@@ -106,6 +116,9 @@ function derivationDecimals(
 export function buildAnswerCsv(response: AnswerResponse): AnswerCsv {
   const { result } = response;
   const derived = exportableDerivations(result.derivations);
+  // R5: the marking-line decision uses the shared predicate (any derivation,
+  // not just the exportable ones) — see the file-header comment above.
+  const showDerivedMarking = isDerivedResult(result);
 
   // Preamble: self-describing provenance sentences, one per row (R4 + CC BY
   // INSIDE the file, per open-questions #52 / the WP21 brief).
@@ -121,7 +134,7 @@ export function buildAnswerCsv(response: AnswerResponse): AnswerCsv {
     // ("Let op: deze tabel wordt normaal ... bijgewerkt ...", staleness.ts).
     preamble.push(csvRow([response.stalenessWarning]));
   }
-  if (derived.length > 0) {
+  if (showDerivedMarking) {
     preamble.push(csvRow([`Bewerking: ${DERIVED_DATA_MARKING}`]));
   }
   preamble.push(csvRow(['Bestand aangemaakt door checkdecijfers.nl']));

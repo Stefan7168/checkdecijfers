@@ -20,7 +20,7 @@
 //     no-unbacked-numbers guarantee is structural + belt-checked by the WP9
 //     suites at produce time, and the benchmark scorer re-scans refusal texts
 //     against run-time whitelists.
-import { DERIVED_DATA_MARKING } from '../../query/index.ts';
+import { DERIVED_DATA_MARKING, isDerivedResult } from '../../query/index.ts';
 import type { ValidatedResult } from '../../query/index.ts';
 import { buildChartSpec, chartSpecSchema } from '../../chart/index.ts';
 import { buildAlternatesLine, buildAssumptionLine, buildAttributionLine, buildDefinitionLine } from '../compose/format.ts';
@@ -248,7 +248,7 @@ function checkAnswerReconstruction(record: AuditRecord, problems: string[]): voi
   if ((answer.assumptionLine ?? null) !== assumptionLine) {
     problems.push('assumption line does not re-derive from the stored result');
   }
-  const markingLine = result.derivations.length > 0 ? `— ${DERIVED_DATA_MARKING}` : null;
+  const markingLine = isDerivedResult(result) ? `— ${DERIVED_DATA_MARKING}` : null;
   if (answer.markingLine !== markingLine) {
     problems.push('derived-data marking line does not re-derive from the stored derivations');
   }

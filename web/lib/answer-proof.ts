@@ -38,6 +38,7 @@ import {
   provisionalSuffix,
 } from '../backend/answer/compose/template.ts';
 import type { AnswerResponse } from '../backend/answer/respond/types.ts';
+import { isDerivedResult } from '../backend/query/types.ts';
 import type { AttributionAlternate, DerivationRecord, ResultCell, ValidatedResult } from '../backend/query/types.ts';
 // #170(1): the same measured-date formatter the source badge chip already
 // uses — reused here (not re-derived) so the panel's date can never drift
@@ -295,7 +296,7 @@ function buildSteps(result: ValidatedResult, cellsById: Map<string, ResultCell>)
   // the first_last-only shape is known — run.ts registers direction and
   // first_last under the same gate and refuses mixed units before either — so
   // this is a belt for stored rows this build did not write, not a live path.
-  const derived = result.derivations.length > 0;
+  const derived = isDerivedResult(result);
   const noShownStep = derived
     ? 'Geen bewerking met een eigen uitkomst: het antwoord duidt de reeks als geheel (begin- en eindpunt) en toont de gelezen waarden van deze cellen.'
     : result.cells.length === 1

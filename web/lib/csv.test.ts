@@ -224,7 +224,11 @@ describe('buildAnswerCsv', () => {
     expect(content).not.toContain('0,30000000000000004');
   });
 
-  it('never exports the implicit binding derivations — a plain series file is unmodified CBS data', () => {
+  it('never TABULATES the implicit binding derivations — a plain series data table is unmodified CBS data', () => {
+    // open-questions #79 follow-up: the marking-line decision uses the SAME
+    // shared predicate (isDerivedResult) every other surface uses — a
+    // direction-only result IS marked as derived here too, even though it has
+    // no value of its own to put in the "Afgeleide waarden" table.
     const { content } = buildAnswerCsv(
       fakeAnswerResponse({
         cells: [fakeCell(), fakeCell({ resultId: 'X', periodCode: '2025JJ00', periodLabel: '2025', value: 3.6 })],
@@ -244,8 +248,35 @@ describe('buildAnswerCsv', () => {
         ],
       }),
     );
+    expect(content).toContain(`Bewerking: ${DERIVED_DATA_MARKING}\r\n`);
     expect(content).not.toContain('Afgeleide waarden');
-    expect(content).not.toContain('bewerking');
+  });
+
+  it('marks a first_last-only result as derived even though it carries no value of its own (R5, open-questions #79)', () => {
+    // answer-proof.test.ts's PR #123 review-round-2 decision: first_last
+    // "carries no value of its own" (D9 — it is never tabulated here or
+    // stepped-through there) but STILL counts as derived — compose.ts and
+    // citation.ts already mark ANY result with a derivation record
+    // (derivations.length > 0 / isDerivedResult), so csv.ts must agree.
+    const { content } = buildAnswerCsv(
+      fakeAnswerResponse({
+        shape: 'series',
+        cells: [fakeCell(), fakeCell({ resultId: 'X', periodCode: '2025JJ00', periodLabel: '2025', value: 3.6 })],
+        derivations: [
+          {
+            kind: 'first_last',
+            explicit: false,
+            sourceResultIds: ['86141NED:CPI000000:NL01:2024JJ00', 'X'],
+            unit: '%',
+            marking: DERIVED_DATA_MARKING,
+            firstResultId: '86141NED:CPI000000:NL01:2024JJ00',
+            lastResultId: 'X',
+          } satisfies DerivationRecord,
+        ],
+      }),
+    );
+    expect(content).toContain(`Bewerking: ${DERIVED_DATA_MARKING}\r\n`);
+    expect(content).not.toContain('Afgeleide waarden');
   });
 
   it('quotes fields containing the separator or quotes, RFC 4180 style', () => {
@@ -307,9 +338,12 @@ describe('buildAnswerCsv', () => {
     expect(content).not.toContain('3,4');
   });
 
-  it('never exports a REAL implicit max (run.ts registers one on every comparison answer)', () => {
+  it('never TABULATES a REAL implicit max (run.ts registers one on every comparison answer)', () => {
     // Review finding: dropping the `explicit` filter survived green because
     // the only implicit fixture was kind 'direction' (already kind-filtered).
+    // open-questions #79 follow-up: the marking line still fires for this
+    // implicit-only result (isDerivedResult, matching every other surface) —
+    // only the "Afgeleide waarden" TABLE stays exportable-only.
     const { content } = buildAnswerCsv(
       fakeAnswerResponse({
         cells: [
@@ -330,8 +364,8 @@ describe('buildAnswerCsv', () => {
         ],
       }),
     );
+    expect(content).toContain(`Bewerking: ${DERIVED_DATA_MARKING}\r\n`);
     expect(content).not.toContain('Afgeleide waarden');
-    expect(content).not.toContain('bewerking');
   });
 
   it('exports an EXPLICIT max with its own Dutch label and the winner precision', () => {

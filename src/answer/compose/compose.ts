@@ -10,7 +10,7 @@
 // fields, after the body is settled — no LLM output can add, alter or drop
 // them.
 import type { ValidatedResult } from '../../query/index.ts';
-import { DERIVED_DATA_MARKING } from '../../query/index.ts';
+import { DERIVED_DATA_MARKING, isDerivedResult } from '../../query/index.ts';
 import type { LlmCallOptions, LlmUsage } from '../llm/client.ts';
 import { applyUnitExpansions } from './expand.ts';
 import {
@@ -105,7 +105,7 @@ function assemble(result: ValidatedResult, rawBody: string, source: AnswerSource
   // re-assembles in this exact order; changing it here without changing it
   // there breaks R8 for every defaulted answer.
   const assumptionLine = buildAssumptionLine(result);
-  const markingLine = result.derivations.length > 0 ? `— ${DERIVED_DATA_MARKING}` : null;
+  const markingLine = isDerivedResult(result) ? `— ${DERIVED_DATA_MARKING}` : null;
   const attribution = buildAttributionLine(result);
   const text = [
     body,

@@ -93,6 +93,20 @@ export interface ResultCell {
 
 export const DERIVED_DATA_MARKING = 'bewerking van CBS-gegevens door checkdecijfers.nl' as const;
 
+/** R5's single true-by-construction "is this result derived, so must it show
+ * DERIVED_DATA_MARKING?" predicate. Every marking-line call site (compose.ts,
+ * audit/reconstruct.ts — which must byte-match compose.ts per R8 —
+ * citation.ts, and the answer-proof panel) calls this instead of repeating
+ * `derivations.length > 0`, so the rule cannot silently diverge across
+ * surfaces the way it did before open-questions #79's follow-up. csv.ts's
+ * `exportableDerivations` answers a different, narrower question — which
+ * derivations get a numbered row in the CSV's own data table — and stays
+ * separate; its marking-line decision (whether to show "Bewerking: ..." at
+ * all) uses this predicate too. */
+export function isDerivedResult(result: { derivations: DerivationRecord[] }): boolean {
+  return result.derivations.length > 0;
+}
+
 interface DerivationBase {
   /** True when the intent asked for this derivation (its value is the
    * answer's headline number); false for the automatically pre-registered
