@@ -49,9 +49,12 @@ gate-green" tied to these four PRs across `docs/`; fixed every real hit — `04-
 `open-questions.md` rows #79/#196, ADR 029, ADR 033 (the correction above) — to MERGED + LIVE with the real
 squash SHAs. `git status` clean, no stray worktrees.
 
-**▶ NEXT this session:** Dependabot #125 (owner-stated priority, verify still clean before merging); #124 stays
-blocked (zod regression). Then `GDPR_PURGE_APPLY=1`, #162's A/B, the owner menu — unchanged from session 77's
-list below.
+**Dependabot #125 merged too** (squash `938f742`, session 76's prior verification re-confirmed still accurate —
+head unchanged since it opened, gate green) — gate+deploy+canary all green. `gh pr list --state open` now shows
+only #124 (still blocked, zod regression, unchanged). Everything else in the priority stack —
+`GDPR_PURGE_APPLY=1`, #162's A/B (real spend), #132 route B, the owner menu — needs explicit owner sign-off
+per CLAUDE.md's live-DDL/spend/flag-flip carve-out, so this session paused there rather than proceeding on its
+own judgment.
 
 **▶ SESSION 77 (2026-09-04, AUTONOMOUS — owner said "up to you, work autonomously for hours and hours" in an
 owner-present chat, then left) — RE-TRIAGED open-questions.md FOR MORE HERMETIC FOLLOW-UPS: MOSTLY NOISE, ONE REAL
