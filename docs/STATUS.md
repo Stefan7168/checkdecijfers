@@ -53,8 +53,9 @@ shows exactly the 3 files reported (`src/answer/llm/client.ts` +76/-7, a new `te
 +161, `docs/open-questions.md` +1/-1); read the actual diff — the no-near-miss message is untouched (byte-identical
 template literal, just re-indented) and the near-miss message hedges correctly. Build agent's own measured
 verify-block: typecheck clean, `tests/answer/llm-client.test.ts` 4/4, full `npm run test:answer` 757/757 (30
-files) — **CI gate on the round-2 push was still PENDING as of this writing; do not treat this as green until `gh
-pr checks 129` is re-checked.**
+files) — **CI gate on the round-2 push confirmed PASS by this session** (`gh pr checks 129` after the fact: both
+`gate` runs `pass`, 16m29s/16m51s; `deploy` correctly `skipping`, non-main). PR #129 is fully green, ready for
+review.
 
 **Maintenance, read-only:** `npm audit` root and `web/` both 0 vulnerabilities (the web check needed one retry after
 a transient registry timeout); `gdpr:purge` dry-run 0 rows everywhere (fresh baseline, matches every prior
