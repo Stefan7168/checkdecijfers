@@ -62,10 +62,36 @@ established "code on branches+PRs, docs direct to main" convention (session 72's
 between a sibling PR's own STATUS.md/open-questions.md edit and this block, if any, is expected and gets resolved
 at merge time exactly as session 73 resolved one for the #121/#122 batch.
 
+**Later the same session (owner: "continue working autonomously... get as much work done as possible with
+subagents") — Dependabot #124/#125 verification legwork done (still your merge click), plus one closed
+investigation:** dispatched two more agents to checkout each Dependabot PR into its own worktree, run the full
+verify block, and read the actual changelogs against real call sites — **PR #125 (web, 8 packages): clean, safe to
+merge**, everything green (backend 116/1780, benchmark GATE PASS, web 50/584, real `next build`), no relevant
+breaking change in any of the 8 bumps (checked each against actual usage — e.g. next's CVE fix doesn't apply, no
+`next/image` in the app), comment posted. **PR #124 (root, 5 packages): DO NOT MERGE AS-IS — a real, reproducible
+regression**, confirmed on CI itself (both gate runs fail identically) and locally: benchmark refusal/clarify gate
+0/6 (needs 6/6), 49/1780 backend tests fail. Root cause identified AND bisection-confirmed (not just hypothesized):
+`zod` 4.4.3→4.5.4 changes `z.toJSONSchema()`'s output bytes, which changes the SHA-256 hash the hermetic LLM
+replay-fixture system keys on (`requestHash()` in `src/answer/llm/client.ts`) — pinning `zod` alone back to 4.4.3
+in the same worktree (all 4 other bumps left in place) restored a clean `GATE VERDICT: PASS`, proving it by
+elimination. The other 4 packages (`@anthropic-ai/sdk`, `stripe`, `@electric-sql/pglite`, `@types/node`) have no
+evidence of any problem. Both findings posted as PR comments (not merges/approvals — that stays yours); new
+open-questions row #200 records the underlying fragility (the fixture-hash system breaks on ANY non-behavioral zod
+serialization change, not just this once) for whoever eventually revisits it. Also investigated (read-only, no
+code touched) whether open-questions row #63's residual — `buildNeedsClarificationAsClarification`'s region
+presets, never dry-run-verified — is still reachable now that WP26 is live: **yes, confirmed reachable** (traced
+the call chain, corroborated by an existing passing test that deletes a live NL01 row and asserts the clarification
+fires), but the fix's real payoff today is small (the one chip-able preset would almost always fail its own
+dry-run at the exact moment this path fires under `ANSWER_FIRST_ENABLED`) — recorded in row #63, left open,
+deliberately not prioritized. Also resolved a naming confusion in row #63's own prose: this builder is a QUERY-layer
+missing-axis mechanism, architecturally unrelated to `policy.ts`'s rule-4 name-ambiguity mechanism the row's text
+bundled it with. No spend, no prompt bytes, no DDL, no flag flips, no merges.
+
 **▶ NEXT, in order — nothing urgent:** (a) review + merge #126/#127/#128 (any order, independent files except all
 three touch docs/STATUS.md and docs/open-questions.md in different rows — expect trivial doc conflicts, not code
-ones); (b) Dependabot #124/#125 (still yours, unchanged); (c) `GDPR_PURGE_APPLY=1` + one watched run; (d) #162's
-A/B; (e) #132 route B GO or defer; (f) the owner menu: WP30c choice, #199, #197 ideas 4–8, the three #197
+ones); (b) Dependabot #125 (verified clean, ready for your merge click) — **#124 is now blocked, do not merge
+as-is** (see above; PR #124's comments have the full bisection); (c) `GDPR_PURGE_APPLY=1` + one watched run; (d)
+#162's A/B; (e) #132 route B GO or defer; (f) the owner menu: WP30c choice, #199, #197 ideas 4–8, the three #197
 follow-ups. **The three recorded hermetic follow-ups are now exhausted** — nothing else in the docs is currently
 flagged as safe for a session to pick up without your input, so no further code work was started this session.
 

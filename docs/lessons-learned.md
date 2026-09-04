@@ -37,6 +37,29 @@ Full narrative: [status-archive.md](status-archive.md) session-76 entry.
   throwaway local branch needs its own cleanup afterward (done this session) — worth stating explicitly in a future
   fix-stage brief so the agent doesn't waste a cycle discovering the worktree-exclusivity error itself.
 
+**Later the same session — Dependabot #124/#125 legwork + the row-#63 investigation.**
+
+- **A "strong hypothesis, not fully bisected" finding from a subagent is worth closing yourself with a targeted
+  follow-up, not accepting as final.** The #124 build agent correctly diagnosed the zod-version root cause but
+  couldn't finish the single-package bisection (a second agent held the machine's one-vitest-at-a-time budget).
+  Rather than spawn a whole new Workflow agent for one mechanical check, this session reused the SAME
+  already-`npm ci`'d worktree directly (confirmed via `pgrep` that nothing else was using vitest first), ran
+  `npm install zod@4.4.3 --no-save` in it, and re-ran just the benchmark — turning a hedge into a proof by
+  elimination in about two minutes. When a subagent's finding is "probably X, ran out of room to confirm," check
+  whether the orchestrating session can close the last step directly instead of paying for another full agent
+  dispatch — often cheaper and faster than it looks.
+- **A grouped Dependabot PR can bundle one bad package with several good ones — the group, not each package, is
+  what CI gates on.** #124's 5-package bump failed entirely because of `zod` alone; `@anthropic-ai/sdk`, `stripe`,
+  `@electric-sql/pglite`, and `@types/node` had zero issues. Worth remembering when reviewing any grouped
+  dependency-update PR: "the PR fails" and "every package in it is a problem" are different claims, and only a
+  bisection (not just a changelog read) tells them apart with certainty.
+- **A test-fixture system keyed on a third-party library's exact serialization output (not just the application's
+  own request shape) is a hidden fragility surface.** This repo's hermetic LLM-replay fixtures hash the full
+  request including a `zod`-generated JSON Schema; a routine `zod` minor bump changed the schema's serialized
+  BYTES (not its meaning) and broke every fixture keyed on it. Worth checking for this pattern (hashing/pinning
+  something a dependency formats, not something the application itself controls) whenever a fixture/snapshot/pin
+  system is being designed or reviewed — recorded as open-questions row #200 for this specific instance.
+
 ## Session 75 — 2026-09-03, owner present (the session-73 kickoff pasted a THIRD time, on the desktop) — merge day for the four-PR batch, with a cloud session running on the same kickoff
 
 Full narrative: [status-archive.md](status-archive.md) session-75 entry.

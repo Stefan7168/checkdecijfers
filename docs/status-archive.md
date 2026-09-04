@@ -137,6 +137,70 @@ push/merge).** Zero spend, zero prompt bytes, zero DDL, zero flag flips.
     sibling PR's own STATUS.md/open-questions.md edit and this push, if any, is expected and gets resolved at
     merge time exactly as session 73 resolved one for the #121/#122 batch.
 
+**Later the same session (2026-09-04, owner: "continue working autonomously... get as much work done as possible
+with subagents") — Dependabot #124/#125 verification legwork, plus a closed investigation on row #63.**
+
+11. Dispatched a second Workflow (3 independent agents, `parallel()`, no build/review chain since these are
+    standalone prep tasks): one each to verify Dependabot PR #124 (root, 5-package `npm-all` group) and #125 (web,
+    8-package `npm-web-all` group) — checkout into an isolated worktree, `npm ci`, full verify-block, a real
+    changelog review against actual call sites (not a generic "check the changelog" deflection), and a PR comment
+    with findings — explicitly NOT a merge or approval, per CLAUDE.md's owner-supervised dependency-merge rule. A
+    third, non-isolated read-only agent investigated open-questions row #63's residual reachability question.
+12. **PR #125: verified clean.** All 8 bumps (`@anthropic-ai/sdk`, `next`, `stripe`, `zod`,
+    `@testing-library/react`, `@types/node`, `@vitejs/plugin-react`, `eslint-config-next`) are minor/patch, no
+    majors. Each checked against real usage: `next` 16.3.3 fixes 2 critical CVEs (Windows RCE, an
+    Image-Optimization-API AVIF RCE) — neither applies (Vercel/Linux prod, zero `next/image` usage, confirmed by
+    grep); `stripe`'s pinned-API-version bump and its two changelog warnings don't touch the app's one
+    `checkout.sessions.create` call; `@anthropic-ai/sdk`'s one relevant change (`webhooks.unwrap()` requiring
+    headers) isn't used; `zod` 4.5.x is purely additive for this app's touched APIs. Full verify block: typecheck
+    root+web clean, backend 116/1780, benchmark GATE PASS (14/14 answerable, 6/6 refusal, 0 fabricated), web
+    50/584, real `next build` clean (the exact step that caught the earlier TS-7 regression the CI gate alone
+    doesn't run). PR's own CI: `gate` pass on both push+pull_request (33812206986/33812208827; 24m3s/23m20s),
+    `deploy` correctly `skipping`. Comment posted: "Looks safe to merge", verified independently by this session
+    (`gh pr view --json comments`, `gh pr checks`) — confirmed for real, not trusted from the agent report alone.
+13. **PR #124: a real, reproducible regression — confirmed NOT safe to merge, and confirmed WHY with certainty.**
+    Verify block: typecheck clean, but backend suite FAILS (49/1780 tests across 16 files), benchmark
+    `GATE VERDICT: FAIL` (refusal/clarify 0/6, gate requires 6/6 — B17-B20 + B3/B5-undisambiguated all fail). PR's
+    own CI `gate` failed identically on two independent runs (33812125773/33812130445, same assertion both times —
+    reproducible, not a flake), independently confirmed via `gh pr checks 124`. The build agent traced a strong
+    hypothesis (only `zod` 4.4.3→4.5.4 plausibly explains it: `requestHash()` in `src/answer/llm/client.ts` hashes
+    `request.jsonSchema`, built via `z.toJSONSchema()` at four call sites; a hash mismatch throws "no recorded LLM
+    fixture" — exactly the failure seen; `web/`'s own suite, on an unchanged `zod` ^4.4.3, stayed 100% green on
+    identical application code) but could not fully bisect it in its own run (a second agent was using the
+    machine's one-vitest-at-a-time budget concurrently). **This session closed that gap directly** rather than
+    spawning a third agent for a single mechanical check: reused the SAME already-`npm ci`'d worktree (saved ~5 min
+    setup), confirmed no vitest was running (`pgrep -f "[n]ode.*vitest"`), ran `npm install zod@4.4.3 --no-save`
+    (zod alone, back to its pre-PR version, all 4 other bumps left at the PR's versions, lockfile untouched), and
+    re-ran the benchmark: `GATE VERDICT: PASS`, 14/14 + 6/6 + 0 fabricated — proof by elimination, not a remaining
+    hedge. Posted a follow-up PR comment with the bisection proof (recommendation unchanged: do not merge as-is);
+    both PR #124 comments independently confirmed present via `gh pr view --json comments`. Filed
+    **open-questions row #200** for the underlying architectural fragility this exposed — the fixture-hash system
+    is coupled to zod's exact JSON-schema serialization, so ANY future non-behavioral zod bump could break it
+    again, not just this once — with two possible directions (normalize the hashed schema projection; or make the
+    "no recorded fixture" failure name the real cause) for whoever picks it up, deliberately not attempted here
+    (would mean touching the fixture-recording system or re-recording fixtures — both explicitly owner-supervised;
+    "no fixture-herrecording" is one of this session's own binding constraints).
+14. **Row #63 investigation: closed, read-only, no code touched.** Traced `buildNeedsClarificationAsClarification`
+    (`src/answer/respond/refusals.ts:452`)'s one call site end to end: fed exclusively by `src/query/resolve.ts`'s
+    missing-axis check, a QUERY-layer mechanism — confirmed architecturally UNRELATED to `policy.ts`'s `decide()`
+    rule 4 (INTENT-layer name-ambiguity, already fixed earlier in this same row), resolving a naming confusion in
+    the row's own prose (grep confirmed zero shared call sites between the two). Confirmed STILL REACHABLE with
+    `ANSWER_FIRST_ENABLED` on (live since 2026-09-03): fires whenever no place is named AND the B-region NL01
+    dry-run finds no national-total row for that exact table+measure+dims — corroborated by an EXISTING, already
+    -committed, passing test (`tests/answer/answer-first-region.test.ts`, "the no-default pins" block) that deletes
+    a live NL01 row and asserts the clarification fires; ADR 024 decision 3 documents this as the intended
+    fallback, not a bug. But the fix's real-world payoff today is small — reaching this path with the flag on
+    structurally requires the NL01 dry-run to have already failed, so the one chip-able preset ("heel Nederland")
+    would almost always ALSO fail its own dry-run right here — so recommended NOT prioritizing it, recorded the
+    full finding + a sketch for whoever revisits it later in row #63 directly.
+15. **Cleanup:** removed the two Dependabot-verification worktrees (`.claude/worktrees/wf_c0a67fe5-c9e-{1,2}`)
+    after the bisection and PR comments were done; `git worktree list`/`git status` confirmed clean before this
+    docs push.
+16. **Still not done, deliberately:** no merge of #124/#125/#126/#127/#128 (owner absent); no `GDPR_PURGE_APPLY`
+    flip; no #162 A/B spend; no fix attempted for row #200's fixture-hash fragility or row #63's residual (both
+    recorded, neither prioritized) — this session continued the same discipline as its first batch: verified
+    legwork and honest findings, no invented scope, no unauthorized merges.
+
 **Session 75 (2026-09-03, OWNER PRESENT in the desktop chat — the SESSION-73 kickoff pasted a third time, ≈17:35Z; a cloud
 session that called itself session 74 was RUNNING on the same kickoff in parallel) — THE FOUR-PR BATCH MERGED AND LIVE:
 #121 `527ef2e`, #120 `069a03e`, #122 `4fd6ea5`, #123 `ddca024`. Owner-authorized merges by this session, one at a time,
