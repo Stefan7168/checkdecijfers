@@ -842,6 +842,19 @@ per-machine cache:
    tool reports exit 144). The bracket trick protects only the pattern argument. Kill in a command of its own
    whose text contains no other copy of the literal (`pkill -f "verify-bl[o]ck"`), or by PID.
 
+7. **A Workflow's worktrees and their local scaffolding branches don't clean themselves up — run `git worktree
+   list` + `git branch` at every wrap-up, not just when something feels off (measured session 77, 2026-09-04).**
+   Session 77 found 2 of its own leftover build-workflow worktrees still mounted, plus 6 stray local branches — 2
+   of which (`worktree-wf_<runid>-N`, pointing at an already-`main`-ancestor commit) were **session 76's**
+   leftovers, despite session 76's own lessons-learned claiming "the 4 workflow worktrees + their throwaway local
+   branches" were cleaned up. A prior session's "cleaned up" claim in its own writeup is not itself evidence —
+   verify with the same commands before trusting it. Before deleting any stray branch, confirm nothing is lost:
+   `git merge-base --is-ancestor <branch> origin/main` (safe to delete if true) or `git log -1 --oneline <branch>`
+   compared against the real PR branch's head (safe if identical — the content already lives there under a
+   different local name, e.g. a fix-round branch pushed to an existing remote ref, the worktree-exclusivity pattern
+   in [lessons-learned.md](lessons-learned.md)'s session-76 and session-77 entries). Then `git worktree remove
+   --force` and `git branch -D`.
+
 7. **The Bash tool caps a command at 10 minutes, background or not — run the full verification block as a
    detached script and watch its log.** `scripts/verify-block.sh <checkout> <log>` (session 72) runs
    typecheck ×2 → the full backend suite → benchmark run + score → the web suite → a real `next build`,

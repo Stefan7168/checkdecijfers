@@ -8,7 +8,7 @@ on top.
 
 ## Session 77 — 2026-09-04, autonomous ("work autonomously for hours and hours") — re-triaging open-questions.md for a hermetic follow-up: mostly noise, one real find (#200b)
 
-Full narrative: [status-archive.md](status-archive.md) session-77 entry (once wrapped).
+Full narrative: [status-archive.md](status-archive.md) session-77 entry.
 
 - **Parallel agents asked to freely "read N rows and classify each" will hallucinate content for rows that don't
   exist, or misattribute one row's content to a different row number.** A 5-agent triage of all 150 live
@@ -34,6 +34,17 @@ Full narrative: [status-archive.md](status-archive.md) session-77 entry (once wr
   PR actually covered, leaving a reader to cross-reference the commit message to know that only item (d) remained
   open. **Read the ENTIRE cell (these run to several thousand characters) and check ancestry against `main`
   specifically before writing "stale doc" anywhere.**
+- **A Workflow's worktrees/branches don't clean themselves up, and a prior session's "cleaned up" claim needs the
+  same verification as any other fact.** At session-77 wrap-up, `git worktree list` and `git branch` showed 2
+  leftover worktrees from THIS session's own #200(b) build workflow (never explicitly removed after the PR was
+  pushed) plus 6 stray local branches — 2 of which (`worktree-wf_c0a67fe5-c9e-1`/`-2`) were leftovers from
+  **session 76's** own workflow, despite session 76's lessons-learned explicitly claiming "cleaned up the 4
+  workflow worktrees + their throwaway local branches." All were harmless (every commit on them was either already
+  an ancestor of `origin/main` or fully captured on `origin` under the branch's real name — verified with
+  `git merge-base --is-ancestor` and `git log -1` before deleting anything), but the miss shows a "done" cleanup
+  claim in a session's own writeup is exactly the kind of fact the wrap-up ritual's GOLDEN RULE says to re-verify,
+  not trust from memory (even the memory of a few hours ago in the same session). **Run `git worktree list` +
+  `git branch` as a matter of course at every wrap-up, not just when something feels off.**
 
 ## Session 76 — 2026-09-04, autonomous ("I will be gone for hours... use multiple sub-agents") — the three recorded hermetic follow-ups (#73/#79/#196), one Workflow, build→HIGH-review→fix per package
 

@@ -1,5 +1,120 @@
 # STATUS archive — the session log
 
+**Session 77 (2026-09-04, AUTONOMOUS — the owner said "up to you, work autonomously for hours and hours" in an
+owner-present chat, then left) — RE-TRIAGED open-questions.md FOR MORE HERMETIC FOLLOW-UPS: SEVEN OF EIGHT
+CANDIDATES WERE FALSE POSITIVES, ONE REAL NEW PR (#200b/#129); A SEPARATE STALE-DOC SWEEP FOUND ONE MINOR REAL GAP
+OUT OF THREE FLAGGED. Nothing merged, nothing flipped, no spend, no prompt bytes, no DDL.**
+
+1. **Kickoff verification:** the session-76 kickoff brief (`docs/session-briefs/2026-09-04-session-77-kickoff.md`)
+   was pasted as the first message, describing a `checkdecijfers` project this session's scratch workspace didn't
+   contain — the session used `change_directory` to move into `/Users/amity/Documents/Check de Cijfers` (the local
+   folder matching the repo name) before doing anything else. Verified against reality once there: `git log -3`
+   top commit `3b959b3` matched the kickoff exactly; `gh pr list --state open` showed exactly the five PRs the
+   kickoff named (#124-#128); `gh pr checks` on each matched (`gate: pass` on #125-128, `gate: fail` on #124); `gh
+   run list --branch main -L 3` all `success`. Production endpoint curls timed out from this sandbox (exit 28,
+   later confirmed a sandbox network-egress restriction, not a real outage — `gh`/GitHub API calls worked
+   throughout). `ListAgents` showed an interactive peer session `check-de-cijfers-ee`; flagged to the owner via
+   `AskUserQuestion` before touching anything — the owner confirmed no other session was actually running.
+2. **Merge-authority question, asked and answered before any action:** per
+   [[feedback_ask_before_reversing_standing_rules]] (memory), a live "just go, work autonomously" instruction that
+   could be read as overriding the #118(b) autonomous-session merge gate got one targeted `AskUserQuestion` rather
+   than a silent pick either way. The owner chose "leave queued for your review" — so #126/#127/#128/#125 stayed
+   exactly as session 76 left them for this entire session, despite CLAUDE.md's owner-present standing-push
+   authorization technically permitting a direct merge.
+3. **Re-triage of docs/open-questions.md (150 live rows) via a 5-agent Workflow** (`wf_34af8d97-fba`, ~496k
+   subagent tokens), each agent assigned 30 rows and asked to classify CLOSED / OWNER-GATED / HERMETIC-CANDIDATE.
+   Returned 8 candidates (rows #34, #63, #73, #79, #90, #99, #196, #199) and counted 82 closed + 59 owner-gated
+   across the other 142 rows (not individually enumerated by design). **Verifying all 8 by hand found 7 were
+   wrong:** #73/#79/#196 are exactly what session 76 already built as PRs #126/#127/#128 (confirmed via
+   `gh pr list`/STATUS.md, not re-read from the row); #63 was already investigated and deliberately deprioritized
+   in session 76's own "later the same session" block; #199 has been the same owner-menu item since at least
+   session 72 (five-plus sessions' worth of STATUS.md "▶ NEXT" blocks list it under "the owner menu", never as
+   buildable); #90 does not exist as a row in the live file at all (`grep -n "^| 90 |" docs/open-questions.md`
+   returned nothing — most likely archived to open-questions-archive.md; the triage agent invented content for a
+   nonexistent row); #99's real content (the site header/footer/shell, D6-signed-off in ADR 033, shipped inside
+   WP135) has nothing to do with what the agent described (a stale comment in `src/ingestion/onboarding-notify.ts`
+   about an email deep-link). **Only row #200 direction (b) survived** — verified by reading
+   `src/answer/llm/client.ts` directly: `ReplayLlmClient.complete()`'s generic "no recorded LLM fixture" error on a
+   hash miss, with row #200's own two suggested directions ((a) normalize the hash — rejected, would invalidate
+   every existing fixture and require a full re-record, forbidden autonomously; (b) name the likely cause instead
+   of a generic message — hermetic, test-infra-only, zero prompt-byte risk).
+4. **Built PR #129 via a build → HIGH-review → conditional-fix Workflow** (`wf_a580d149-cf0`, 3 agents,
+   worktree-isolated, ~323k subagent tokens, ~20 min wall-clock). Build agent added `findNearMissFixture()` to
+   `src/answer/llm/client.ts`: on a hash miss, scans the same fixtures directory for a fixture whose request is
+   `stableStringify`-identical once `jsonSchema` is excluded, and if found, appends a diagnostic naming that
+   near-miss fixture instead of leaving only the generic message; the no-near-miss path is byte-identical to the
+   original (regression-pinned by a new test). Added `tests/answer/llm-client.test.ts` (4 tests — no such unit
+   test existed before): exact-hit unchanged, no-near-miss byte-identical message, near-miss triggers the new
+   diagnostic, and a true-negative case proving no cross-match on unrelated fixtures. Verify: `npm run typecheck`
+   clean, the new test file 4/4, full `npm run test:answer` 757/757 across 30 files (chosen because
+   `ReplayLlmClient` backs dozens of other hermetic tests via the real intent/answer/clarify/tablefinder fixture
+   directories, so a directory-wide run was the right regression net, not just the new file). Opened PR #129
+   (`fix/200-fixture-hash-diagnostic`, head `914622e`). **HIGH review found 1 real low-severity finding:** the
+   diagnostic message asserted the jsonSchema-only mismatch "usually means" a dependency-bump serialization
+   artifact, but the detector's signal (identical request except `jsonSchema`) genuinely cannot distinguish that
+   from a real, intentional zod-schema edit in one of the four `schema.ts` call sites that happens not to touch the
+   prompt in the same commit — a fair critique of the wording, not a functional defect. **Fix round 2** (a
+   differently-named local branch `work-200-review2` pushed to the existing remote branch name, since the original
+   branch was already checked out in a sibling worktree — the exact workaround pattern session 76's lessons-learned
+   already documented for #196) reworded both the doc comment and the thrown message to present the two causes
+   neutrally with a concrete disambiguation method (diff the jsonSchema, check recent schema.ts commits); no
+   functional/test change (the test asserts a prefix that stayed byte-identical). Head after fix: `c5e5b34`.
+   **Verified independently by this session, not just trusted from the agent report:** `gh pr view 129
+   --json headRefOid` returned `c5e5b34...` matching exactly; `git diff main...origin/fix/200-fixture-hash-diagnostic
+   --stat` showed exactly the reported 3 files (`src/answer/llm/client.ts` +76/-7, `tests/answer/llm-client.test.ts`
+   +161, `docs/open-questions.md` +1/-1); read the actual diff of `client.ts` — `requestHash`, `stableStringify`,
+   `RecordingLlmClient`, and all four `jsonSchema`-building call sites are untouched, and the no-near-miss message
+   is the identical three-line template literal, only re-indented. `gh pr checks 129` (via `gh run watch`, watched
+   to completion): `gate` on both the push and pull_request runs = `pass` (16m29s / 16m51s), `deploy` correctly
+   `skipping` (non-main branch). PR #129 is fully green, open, not merged.
+5. **A second, evidence-gated stale-doc sweep** (`wf_adbf4588-0ec`, 3 agents, ~302k subagent tokens) checked 43 row
+   numbers pulled from the last 80 commit messages, required to quote BOTH the row's own claim AND a concrete git
+   commit before reporting anything. Flagged 2 candidates. **Row #196 was a false alarm:** the "contradicting"
+   commits (`45da636`, `16dfeed`) were on the still-open, unmerged `fix/196-eviction-resolve-race` branch (PR #128)
+   — confirmed via `git merge-base --is-ancestor 45da636 main` → NOT ON MAIN — so `--all` (which includes every
+   fetched branch) misled the agent; the row's "still open" framing is correct as far as `main` is concerned.
+   **Row #34 was also a false alarm:** its own cell (6873 characters) already records "(b) + (c)(i) + (c)(ii) ALL
+   BUILT" and "PR #100 merged into `main`" further down the SAME paragraph — the agent, and briefly this session
+   too before reading the full cell, drew a conclusion from an incomplete read of a multi-thousand-character row.
+   **Row #110 was the one real (minor) gap:** its closing "PR #111 merged" sentence didn't say which of items
+   (b)/(c)/(d) that PR actually shipped, leaving the preceding "(b)/(c)/(d) ... DEFERRED" sentence reading as if
+   still fully accurate. Confirmed via `git show --stat 18134aa` (on `main`, verified via `merge-base
+   --is-ancestor`) and `grep -n "last_queried_at\|pinned" src/ingestion/eviction.ts`: PR #111 shipped (b) and (c);
+   only (d) (pure TTL vs LRU-with-frequency) remains genuinely undecided. Fixed directly in `docs/open-questions.md`
+   row #110's resolution cell.
+6. **Maintenance, read-only:** `npm audit --omit=dev` in root = 0 vulnerabilities; the same in `web/` needed one
+   retry after a transient `registry.npmjs.org` timeout, then also 0 vulnerabilities. `npm run gdpr:purge` (dry-run,
+   default): 0 `audit_answers` rows, 0 `pending_table_requests` rows, 0 `trial_questions` rows, 0 `error_log` rows
+   — everywhere, matching every prior baseline this project has measured.
+7. **Docs pushed straight to `main` (3 commits, all CI-green and deployed with a passing post-deploy smoke check):**
+   `e28bae9` (the session-77 STATUS/lessons-learned/open-questions-row-#110 update), `e01379c` (a follow-up
+   correcting a "CI still pending" note in `e28bae9` to the now-confirmed-green result — written honestly as
+   pending at the time, corrected once the watch resolved, never left stale). `npm run test:docs` (11/11) run
+   before both pushes, per session 76's own lesson about catching a live-PR-markdown-link violation before it
+   reaches CI.
+8. **Cleanup, at wrap-up:** `git worktree list` and `git branch` showed 2 leftover worktrees from THIS session's
+   own #200(b) build workflow (`.claude/worktrees/wf_a580d149-cf0-1` and `-3`, never explicitly removed after the
+   PR was pushed) plus 6 stray local branches — 2 of which (`worktree-wf_c0a67fe5-c9e-1`/`-2`, both at `47a201d`)
+   were leftovers from **session 76's own** workflow, despite session 76's lessons-learned explicitly claiming "the
+   4 workflow worktrees + their throwaway local branches" were cleaned up. Every branch's commit was verified
+   before deletion — either already an ancestor of `origin/main` (`git merge-base --is-ancestor`) or fully captured
+   on `origin` under its real branch name (`git log -1` comparison) — nothing was lost. `git worktree remove
+   --force` ×2, `git branch -D` ×6. Final state: `git status` clean, only `main` + the four still-open PRs' local
+   tracking branches remain.
+
+**No spend, no prompt bytes, no DDL, no flag flips, no merges — matches every autonomous session before it.**
+
+**▶ NEXT, in order — unchanged from session 76 except PR #129 added to (a):** (a) review + merge
+#126/#127/#128/#129 (independent files, expect trivial docs/STATUS.md + open-questions.md conflicts, not code
+ones); (b) Dependabot #125 (clean, ready); **#124 still blocked** (zod regression, PR #124's comments have the
+bisection); (c) `GDPR_PURGE_APPLY=1` + one watched run; (d) #162's A/B; (e) #132 route B GO or defer; (f) the owner
+menu: WP30c choice, #199, #197 ideas 4–8, the three #197 follow-ups. **The hermetic queue is now confirmed
+genuinely exhausted by two independent, evidence-verified triage passes across two sessions** (session 76's initial
+pass + this session's re-triage and stale-doc sweep) — a future session should not re-run the same "scan
+open-questions.md for hermetic work" triage without a genuinely new angle; both failure patterns that produced
+false positives this session are recorded in [lessons-learned.md](lessons-learned.md) session-77 entry so they
+aren't rediscovered at the same cost.
+
 **Session 76 (2026-09-04, AUTONOMOUS — the owner said "Continue working autonomously. Use multiple sub-agents. I
 will be gone for hours... Start" and left; no reply expected in chat) — THE THREE RECORDED HERMETIC REVIEW
 FOLLOW-UPS (open-questions rows #73, #79, #196) BUILT, EACH ON ITS OWN PR, EACH HIGH-REVIEWED; NOTHING MERGED
