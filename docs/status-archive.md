@@ -23,8 +23,11 @@ OUT OF THREE FLAGGED. Nothing merged, nothing flipped, no spend, no prompt bytes
    authorization technically permitting a direct merge.
 3. **Re-triage of docs/open-questions.md (150 live rows) via a 5-agent Workflow** (`wf_34af8d97-fba`, ~496k
    subagent tokens), each agent assigned 30 rows and asked to classify CLOSED / OWNER-GATED / HERMETIC-CANDIDATE.
-   Returned 8 candidates (rows #34, #63, #73, #79, #90, #99, #196, #199) and counted 82 closed + 59 owner-gated
-   across the other 142 rows (not individually enumerated by design). **Verifying all 8 by hand found 7 were
+   Returned 8 candidates (rows #34, #63, #73, #79, #90, #99, #196, #199) and self-reported 82 closed + 59
+   owner-gated across the other 142 rows (not individually enumerated by design — and note 82+59=141, one short of
+   142, an unreconciled off-by-one in the agents' own self-reported counts, itself a small data point for how much
+   to trust a triage agent's aggregate arithmetic, not just its content claims). **Verifying all 8 by hand found 7
+   were
    wrong:** #73/#79/#196 are exactly what session 76 already built as PRs #126/#127/#128 (confirmed via
    `gh pr list`/STATUS.md, not re-read from the row); #63 was already investigated and deliberately deprioritized
    in session 76's own "later the same session" block; #199 has been the same owner-menu item since at least

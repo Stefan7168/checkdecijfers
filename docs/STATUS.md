@@ -42,7 +42,7 @@ small item, confirming session 76's "the three follow-ups exhausted the queue" w
 directory for a near-miss fixture whose request is identical in every field except `jsonSchema`, and if found,
 names that near-miss and explains the two possible causes (a non-behavioral schema-serialization-library bump, or
 a genuine intentional zod-schema edit that didn't touch the prompt) instead of the old generic "no recorded
-fixture" message — see #200's PR#124 bisection for the original diagnosis this closes the loop on. HIGH review
+fixture" message — see #200's PR #124 bisection for the original diagnosis this closes the loop on. HIGH review
 found 1 real low-severity finding (the first draft overclaimed the dependency-bump cause as the "usual" one when
 the signal genuinely can't distinguish it from an intentional schema edit); fixed in round 2 to present both causes
 neutrally with a concrete disambiguation method. `requestHash()`, `stableStringify()`, `RecordingLlmClient`, and all
