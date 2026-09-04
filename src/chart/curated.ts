@@ -190,6 +190,23 @@ export function periodStepsBack(p: ParsedPeriod, steps: number): ParsedPeriod {
  * buildOne's own policy (see its header comment) — only a deterministic
  * cannot-serve outcome (refusal, no-chart shape, or a buildChartSpec
  * corruption throw) degrades to "no toggle", never the transient case. */
+// #196 review round 2 (session 76) — **Assumption**, mirrored in
+// docs/open-questions.md row #196: this is the ONLY place in production code
+// that ever constructs an `explicit` target, and `primary.attribution.tableId`
+// here is always a table a curated chart definition's CANONICAL key already
+// resolved to — i.e. always one of the hand-curated, pinned seed tables
+// (`src/ingestion/registry-seed.ts`'s `SEED_TABLES`, pinned by migration
+// `025_table_eviction_lifecycle.sql`), never an on-demand-onboarded
+// (evictable) one.
+// src/query/resolve.ts's explicit-target branch relies on exactly this: an
+// eviction race on an explicit target still refuses `table_not_registered`
+// (not the honest `table_evicted` a canonical target gets), which is safe
+// ONLY because eviction.ts's own WHERE clause exempts pinned tables
+// (`pinned = false`) — an explicit target here can therefore never actually
+// race an eviction. Pinned: tests/chart/curated.test.ts asserts every curated
+// chart's resolved table carries `pinned = true`. If this function, or any
+// future explicit-target caller, ever comes to reference a non-pinned table,
+// resolve.ts's explicit-target branch needs revisiting first.
 async function buildAlternateSpec(
   db: Db,
   primary: ValidatedResult,

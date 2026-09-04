@@ -197,10 +197,11 @@ zojuist opgeruimd … stel je vraag opnieuw"), never the owner alert; `Validated
 after the fetch. Tests: four committed-eviction interleavings, a served turn pinned to read nothing after the fetch, the
 statement tripwires re-measured (per served turn 13→12 / 9→8 / 13→12 / 14→13, per successful dry-run 24→21 / 10→8 /
 15→12), the new reason / silent alert / no-re-read path pinned; docs/05's failure table has the evicted-mid-flight row.
-**Structural follow-up, recorded not built:** `resolveIntent`'s canonical-measures lookup and label reads race the same
-eviction one step earlier — eviction must YIELD to in-flight reads (a `pg_advisory_xact_lock` per table the read also
-takes, or a marked-for-eviction grace state) before any live automation of `tables:evict --apply`; see row
-[#196](../open-questions.md).
+**Structural follow-up ✅ FIXED (session 76, branch `fix/196-eviction-resolve-race`, PR #128 pending owner review):**
+`resolveIntent`'s canonical-measures lookup and label reads raced the same eviction one step earlier — closed with a
+per-table `pg_advisory_xact_lock`, SHARED in `resolveIntent`'s read arc and EXCLUSIVE in eviction's per-table
+transaction ("eviction yields to in-flight reads" by construction, chosen over a marked-for-eviction grace state as the
+simpler fix — no new schema, no migration). See row [#196](../open-questions.md) for the full as-built note.
 
 ## As-built note (#197 step 3 — comparison chips, session 70, 2026-09-02)
 
@@ -275,6 +276,14 @@ CI run 33699880673 gate + deploy green).
   fire on each one. The 36-statement national-answer figure was not independently pinned by a test either
   before or after this fix (unlike the other two rows) — measured directly for this addendum, not carried
   forward from the original note (which had understated it by one dry-run's worth even before the fix).
+  ⚠ **Stale as of 2026-09-04 (session 76, [#196](../open-questions.md)'s structural follow-up, PR #128, and
+  its review round 2 the same day): every dry-run is a FULL `resolveIntent` call, so it now also pays that
+  fix's per-resolution advisory-lock-plus-transaction cost (+3 statements/dry-run — see
+  `tests/answer/query-count.test.ts`'s own header for the full history). The two PINNED rows above,
+  re-measured: regional single answer (Amsterdam 2024) 24 → **30** statements / 3 dry-runs, flag OFF and ON;
+  national-only measure (CPI 2024) 10 → **14** / 2 OFF → 15 → **21** / 3 ON. The unpinned 36-statement
+  national-answer figure above was NOT re-measured for this correction — treat it as stale-but-unverified,
+  not as a specific new number, until someone re-runs the addendum's own direct measurement.**
 - **Takeability gate (reviewer finding, the parallel session 70):** a comparison candidate is dry-run only if
   `isClickTakeableIntent` (validate-pending.ts, the click-time schema's `safeParse`) accepts it — the case
   that forced it: live chat answers on-demand-onboarded topics (`onboarded:…` keys, outside `CANONICAL_KEYS`

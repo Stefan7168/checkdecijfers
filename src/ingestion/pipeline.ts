@@ -630,7 +630,23 @@ export const syncTable: SyncTableFn = async (db, source, tableId, options = {}) 
         // ceiling and turn a clean, catchable failure into a killed
         // function and a batch row stuck 'running'. 180s leaves headroom
         // under the 300s ceiling for the validation work that already ran
-        // before this point.
+        // before this point. This 180s bound is about how long THIS
+        // acquisition waits to succeed — it says nothing about how long a
+        // DIFFERENT caller waiting on the SAME key, once this one succeeds,
+        // then waits for this transaction to commit or roll back.
+        //
+        // #196 (session 76, PR #128 round 2): this key (hashtext(tableId))
+        // is also taken EXCLUSIVE by evictStaleTables (src/ingestion/
+        // eviction.ts) and SHARED by resolveIntent's read arc
+        // (src/query/resolve.ts) — a live read for this exact table now
+        // waits, unbounded, behind a `--rebaseline` in progress, same as it
+        // already does behind an eviction in progress. Analyzed and accepted
+        // there (src/query/resolve.ts's comment at its own lock
+        // acquisition): both EXCLUSIVE acquirers of this key are manual,
+        // operator-initiated, never cron-driven (confirmed: this branch only
+        // runs when `--rebaseline` is passed, and only src/ingestion/cli.ts
+        // ever passes it — the onboarding cron's own syncTable call,
+        // src/ingestion/onboarding.ts:202, passes no options).
         await tx.query("set local lock_timeout = '180s'");
         await tx.query('select pg_advisory_xact_lock(hashtext($1))', [tableId]);
 

@@ -294,9 +294,15 @@ before that later step) — two residuals a session-67 review found and logged �
 path is ~4-6x that, and the same probes that inflate the count also keep a table artificially "warm") and
 [#196](open-questions.md) (a concurrent eviction can false-refuse a live query for the table it's
 evicting — the guard only checks for an active onboarding job, not an in-flight read). Read both before
-scheduling any automation on top of this. **PR #128 (session 76, 2026-09-04) now builds the #196 fix** — a
-per-table advisory lock so eviction yields to in-flight reads; open, HIGH-reviewed, gate-green, awaiting
-merge per #118(b). Once merged, this precondition is satisfied.
+scheduling any automation on top of this. **#196's own structural follow-up (`resolveIntent`'s reads racing
+the same eviction one step earlier) is ALSO now ✅ FIXED (session 76, PR #128, merged session 78) — a
+per-table advisory lock, SHARED in the read arc and EXCLUSIVE in eviction's transaction; see
+[#196](open-questions.md)'s as-built note.** **Operationally relevant:** the SAME advisory-lock key
+(`hashtext(tableId)`) is also taken EXCLUSIVE by `src/ingestion/pipeline.ts`'s manual
+`ingest sync <id> --rebaseline` (pre-existing, unrelated to eviction) — so a live read for a table now
+waits, unbounded, behind EITHER a `tables:evict --apply` OR a `--rebaseline` of that same table while either is
+in progress, not just the former. Both are manual/supervised/rare (never cron), so avoid running either against
+a table you know is getting real live traffic at that moment, same caution as `--apply` already carried.
 
 The step itself (owner present): `npm run db:migrate` from the repo root, then optionally `npm run
 tables:evict` (dry-run, no `--apply`) to confirm it reports the pinned seed set as exempt and everything

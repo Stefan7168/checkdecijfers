@@ -359,181 +359,310 @@ export async function resolveIntent(
     alternates = [];
   }
 
-  const table = await fetchTable(db, tableId);
-  if (!table) {
-    return refuse(intent, 'table_not_registered', `table "${tableId}" is not registered — out of the loaded Phase 0 scope`, { axis: 'measure' });
-  }
-  if (table.status === 'needs_review') {
-    return refuse(intent, 'table_quarantined', `table "${tableId}" is quarantined pending review (${table.needsReviewReason ?? 'reason not recorded'}) — not served until it passes validation again`);
-  }
+  // --- #196 (structural follow-up): from here on, every read is scoped to
+  // `tableId`, and every one of them must not TEAR against a concurrent
+  // `tables:evict --apply` of this exact table (src/ingestion/eviction.ts).
+  // fetchTable, the per-dimension fetchLabels calls and the answer-first
+  // national-default probe below are several SEPARATE autocommit statements
+  // (no shared snapshot), so an eviction committing in any gap between them
+  // used to surface as a fabricated table_not_registered/invalid_intent
+  // instead of the honest "evicted mid-flight" outcome.
+  //
+  // The fix: a per-table Postgres advisory lock, taken SHARED here and
+  // EXCLUSIVE by eviction's per-table transaction (evictStaleTables,
+  // src/ingestion/eviction.ts) — "eviction yields to an in-flight read"
+  // by construction, the direction the row #196 recorded and justified over a
+  // marked-for-eviction grace state: a lock composes with the existing
+  // per-table eviction transaction for free (advisory locks are already
+  // transaction-scoped, no new schema, no new state machine), multiple
+  // concurrent reads of the SAME table never block each other (SHARED —
+  // eviction is the only EXCLUSIVE acquirer), and it needs no migration.
+  // Wrapping the rest of this function in one transaction is what lets the
+  // lock, which is transaction-scoped, span every read below instead of being
+  // acquired and instantly released by its own autocommit statement.
+  //
+  // Why NOT the canonical_measures lookup above: `tableId` isn't known until
+  // it returns, so there is nothing to lock yet — but that single statement
+  // cannot itself be torn (Postgres MVCC), so it either sees the row fully
+  // (pre-eviction, or eviction still uncommitted — see below) or fully misses
+  // it (eviction already committed before this call even started, a cold
+  // "unknown canonical measure key" — an honest fact, not a race artifact).
+  return db.withTransaction(async (tx): Promise<ResolveOutcome> => {
+    // #196: SHARED so concurrent reads of the same popular table never queue
+    // behind each other; eviction's EXCLUSIVE acquisition (same key,
+    // hashtext(tableId)) cannot proceed while any read holds this, and this
+    // cannot proceed while eviction holds its EXCLUSIVE — matching the
+    // codebase's existing pg_advisory_xact_lock(hashtext($1)) convention
+    // (src/ingestion/pipeline.ts, src/billing/ledger.ts, trial-pot.ts,
+    // onboarding-trigger.ts).
+    //
+    // #196 review round 2 — the coupling this key convention creates,
+    // analyzed explicitly (a HIGH review of PR #128 found it disclosed only
+    // for eviction.ts, not for the OTHER pre-existing EXCLUSIVE acquirer of
+    // this exact key): src/ingestion/pipeline.ts's manual `ingest sync
+    // --rebaseline` ALSO takes `pg_advisory_xact_lock(hashtext(tableId))`
+    // (EXCLUSIVE, pipeline.ts's `if (rebaselined)` branch) inside its own
+    // per-table transaction. Both
+    // eviction and a rebaseline are therefore lock PEERS of this SHARED
+    // acquisition, not just eviction — while either holds the EXCLUSIVE lock
+    // on a table's key, a resolveIntent call for that SAME table waits here.
+    // Confirmed harmless in the exact way eviction already was: `--rebaseline`
+    // is CLI-only (src/ingestion/cli.ts's `--rebaseline` flag; the onboarding
+    // cron's own `syncTable` call, src/ingestion/onboarding.ts:202, passes no
+    // options and so never rebaselines) — manual and supervised, never
+    // cron-driven, same as eviction.
+    //
+    // No lock_timeout, matching every advisory-lock acquisition in this
+    // codebase except pipeline.ts's OWN 180s bound on ACQUIRING its exclusive
+    // lock (pipeline.ts's `set local lock_timeout`, just above its own
+    // acquisition) — that bound protects ITS OWN connection from
+    // outliving the onboarding cron's 300s ceiling; it says nothing about how
+    // long a call waiting ON that lock, like this one, may wait once
+    // acquisition succeeds and the rebaseline's transaction is open. This is
+    // a deliberate, not an accidental, omission: web/lib/deadline.ts
+    // documents this codebase's live policy in so many words — a bounded
+    // wait is applied to the two ANONYMOUS read paths only (the trial gate,
+    // the Ontdek chart build; both already wrap their whole call in a 5 s
+    // `withDeadline`, independently of any DB-level lock, so they degrade
+    // regardless of what happens here) and is "deliberately NOT applied to
+    // the paid path... those are exactly the money-path semantics the unset
+    // timeout protects" — this resolveIntent call is that same paid path.
+    // Adding a lock_timeout here would need new error handling with no
+    // established pattern to follow (every existing advisory-lock caller in
+    // this codebase — eviction.ts, billing/ledger.ts, trial-pot.ts,
+    // onboarding-trigger.ts — relies on the same unbounded wait), so it stays
+    // out of THIS surgical fix rather than being added speculatively without
+    // its own tests. Both EXCLUSIVE acquirers are rare, manual, operator-
+    // initiated actions (never cron), so an unbounded wait here is the same
+    // accepted, bounded-by-operator-behavior risk eviction already carried —
+    // now explicitly extended to cover pipeline.ts's rebaseline lock too.
+    // Pinned: tests/query/resolve-eviction-race.test.ts's source-pin describe
+    // block asserts pipeline.ts's rebaseline acquisition uses this identical
+    // hashtext(tableId) key, so the two can never silently drift apart.
+    await tx.query('select pg_advisory_xact_lock_shared(hashtext($1))', [tableId]);
 
-  const measureMeta = table.units[measure];
-  if (!measureMeta) {
-    return refuse(intent, 'invalid_intent', `measure "${measure}" does not exist on table "${tableId}"`, { axis: 'measure' });
-  }
-
-  // --- Dimensions ------------------------------------------------------------
-  const geoDimension = table.expectedDimensions.find((d) => d.kind === 'GeoDimension')?.name ?? null;
-  const timeDimension = table.expectedDimensions.find((d) => d.kind === 'TimeDimension')?.name ?? 'Perioden';
-  const plainDimensions = table.expectedDimensions.filter((d) => d.kind === 'Dimension').map((d) => d.name);
-
-  // default (totaal) coordinates < canonical semantic dims < explicit dims
-  const dims: Record<string, string> = { ...table.defaultCoordinates, ...semanticDims, ...explicitDims };
-  for (const dim of Object.keys(dims)) {
-    if (!plainDimensions.includes(dim)) {
-      return refuse(intent, 'invalid_intent', `"${dim}" is not a dimension of table "${tableId}" (has: ${plainDimensions.join(', ') || 'none'})`, { axis: 'measure' });
-    }
-  }
-  const unpinned = plainDimensions.filter((d) => dims[d] === undefined);
-  const dimLabels: Record<string, string> = {};
-  for (const [dim, code] of Object.entries(dims)) {
-    const labels = await fetchLabels(db, tableId, dim, [code]);
-    const label = labels.get(code);
-    if (label === undefined) {
-      return refuse(intent, 'invalid_intent', `code "${code}" does not exist in dimension "${dim}" of table "${tableId}"`, { axis: 'measure' });
-    }
-    dimLabels[dim] = label;
-  }
-
-  // --- Regions ----------------------------------------------------------------
-  let regionCodes: string[] = [''];
-  let regionLabels: Record<string, string> = {};
-  let regionMissing = false;
-  let regionDefaulted = false;
-  let effectiveIntent = intent;
-  if (geoDimension) {
-    if (regions.length === 0) {
-      // WP26 mechanism B-region (ADR 024, safelist entry 1, owner-approved
-      // session 23 + re-read session 56): a question that names no place, on a
-      // measure that HAS a national figure, gets the national figure — with the
-      // assumption said out loud and a one-click correction — instead of a
-      // clarification round the user has to pay for.
+    const table = await fetchTable(tx, tableId);
+    if (!table) {
+      // A canonical target only ever gets here via a canonical_measures row
+      // THIS call already read successfully a moment ago (the `!row` branch
+      // above returns before reaching this point) — and canonical_measures
+      // rows cannot outlive their table's cbs_tables row under normal
+      // operation (eviction deletes canonical_measures BEFORE cbs_tables, in
+      // the same FK-safe transaction, src/ingestion/eviction.ts). So a
+      // canonical target finding no table HERE, under the lock we now hold,
+      // is provably the eviction we were racing — never a table that simply
+      // never existed. Same kind and wording run.ts's own race window already
+      // uses (tests/query/eviction-race.test.ts), so both windows read
+      // identically to the caller. Explicit targets carry no such prior
+      // evidence (no earlier read established this table ever existed), so
+      // table_not_registered stays their answer, unchanged from before this
+      // fix (pinned: tests/query/query.test.ts "an unregistered table
+      // refuses as out of loaded scope").
       //
-      // The default is allowed only because the NL total is a specific EXISTING
-      // row, not a pick among competing places. So we check that it exists for
-      // THIS measure at THIS coordinate before defaulting; when it does not, we
-      // fall through to the clarification exactly as before. There is no branch
-      // in which a national figure is invented.
-      //
-      // Deliberately NOT checked here: whether the requested PERIOD exists. A
-      // missing period has its own honest refusal (freshness / not_published),
-      // identical to what an explicitly-named region would get — the default
-      // concerns the region axis and nothing else.
-      //
-      // A 'max' comparison cannot reach here at all: the derivation-arity check
-      // above already refuses a max with fewer than two named regions, so a
-      // comparison set is never defaulted. Verified, not assumed — pinned in
-      // tests/answer/answer-first-region.test.ts.
-      const nationalRow =
-        options.answerFirstEnabled === true
-          ? await db.query(
-              `select 1 from observations
-               where table_id = $1 and measure = $2 and dims = $3::jsonb and region_code = $4
-               limit 1`,
-              [tableId, measure, JSON.stringify(dims), NATIONAL_REGION_CODE],
-            )
-          : null;
-      if (nationalRow !== null && nationalRow.rows.length > 0) {
-        const labels = await fetchLabels(db, tableId, geoDimension, [NATIONAL_REGION_CODE]);
-        const label = labels.get(NATIONAL_REGION_CODE);
-        if (label !== undefined) {
-          regionCodes = [NATIONAL_REGION_CODE];
-          regionLabels = { [NATIONAL_REGION_CODE]: label };
-          regionDefaulted = true;
-          // R8: record the query we actually RAN, not the one we were asked.
-          // The audit row, the intent hash and the reconstruction all read this
-          // object, so the defaulted region is visible in every one of them.
-          effectiveIntent = { ...intent, regions: [NATIONAL_REGION_CODE] };
-        }
+      // #196 review round 2 — **Assumption**, made explicit (open-questions
+      // #196, mirrored there): this is a deliberate asymmetry with run.ts's
+      // diagnoseMissing, which is target-kind-agnostic and returns
+      // table_evicted for the identical race regardless of how the target
+      // was named. It is safe ONLY because every explicit target actually
+      // reachable in production names a PINNED table: src/chart/curated.ts
+      // is the sole caller that ever constructs one (the alternate-reading
+      // toggle, over the SAME table its primary canonical reading already
+      // resolved — see the comment at its call site), and every curated
+      // chart definition resolves to a table from the hand-curated pinned
+      // seed set (`src/ingestion/registry-seed.ts`'s `SEED_TABLES`, pinned by
+      // migration `025_table_eviction_lifecycle.sql`), which eviction.ts's own WHERE
+      // clause exempts by construction (`cbs_tables.pinned = false`) — so an
+      // explicit target can structurally never race an eviction at all
+      // today, and this branch's table_not_registered is never actually
+      // reachable via the #196 race, only via a genuinely-unregistered id.
+      // Pinned: tests/chart/curated.test.ts asserts every curated chart's
+      // resolved table carries `pinned = true`. If a future explicit-target
+      // caller ever names a non-pinned (on-demand-onboarded) table, this
+      // branch would need the SAME canonical-target treatment above — that
+      // "prior evidence" would then exist via that caller's own earlier read,
+      // same as the canonical branch's reasoning already documents.
+      if (intent.target.kind === 'canonical') {
+        return refuse(
+          intent,
+          'table_evicted',
+          `table "${tableId}" was evicted while this query was in flight — it is no longer registered; the next question about it goes through the on-demand fetch again`,
+          { axis: 'measure' },
+        );
       }
-      if (!regionDefaulted) regionMissing = true;
-    } else {
-      const labels = await fetchLabels(db, tableId, geoDimension, regions);
-      const unknown = regions.filter((r) => !labels.has(r));
-      if (unknown.length > 0) {
-        return refuse(intent, 'invalid_intent', `region code(s) ${unknown.join(', ')} do not exist in dimension "${geoDimension}" of table "${tableId}"`, { axis: 'region' });
-      }
-      regionCodes = [...regions];
-      regionLabels = Object.fromEntries(regions.map((r) => [r, labels.get(r)!]));
+      return refuse(intent, 'table_not_registered', `table "${tableId}" is not registered — out of the loaded Phase 0 scope`, { axis: 'measure' });
     }
-  } else if (regions.length > 0) {
-    return refuse(intent, 'invalid_intent', `table "${tableId}" has no regional dimension, but the intent names region(s) ${regions.join(', ')}`, { axis: 'region' });
-  }
+    if (table.status === 'needs_review') {
+      return refuse(intent, 'table_quarantined', `table "${tableId}" is quarantined pending review (${table.needsReviewReason ?? 'reason not recorded'}) — not served until it passes validation again`);
+    }
 
-  // --- Clarification: ALL unresolved user-facing axes in ONE refusal ----------
-  // docs/05's failure table requires the single clarification round to cover
-  // every unresolved axis at once (combined presets) — so this refusal must
-  // name them all, never just the first one hit (principle c: no axis is ever
-  // defaulted silently).
-  if (unpinned.length > 0 || regionMissing) {
-    const axes: ('measure' | 'region')[] = [];
-    const parts: string[] = [];
-    if (unpinned.length > 0) {
-      axes.push('measure');
-      parts.push(`dimension(s) ${unpinned.join(', ')} carry no coordinate (materially different readings exist)`);
+    const measureMeta = table.units[measure];
+    if (!measureMeta) {
+      return refuse(intent, 'invalid_intent', `measure "${measure}" does not exist on table "${tableId}"`, { axis: 'measure' });
     }
-    if (regionMissing) {
-      axes.push('region');
-      parts.push(`no region is named (table is regional: ${geoDimension})`);
-    }
-    return refuse(intent, 'needs_clarification', `table "${tableId}": ${parts.join('; and ')} — these must be chosen, never defaulted silently`, { axis: axes[0], axes });
-  }
 
-  // --- Slice compatibility (docs/05: "outside the loaded slice" is its own
-  // refusal, distinct from "not published by CBS") -----------------------------
-  const slice = table.slice;
-  if (slice) {
-    for (const [dim, pinned] of Object.entries(slice.dimensionEquals ?? {})) {
-      if (dims[dim] !== undefined && dims[dim] !== pinned) {
-        return refuse(intent, 'outside_loaded_slice', `dimension "${dim}" is only loaded at coordinate "${pinned}" (asked: "${dims[dim]}") — CBS publishes more, but it is outside our ingested slice`, { axis: 'measure', nearestAlternative: pinned });
+    // --- Dimensions ------------------------------------------------------------
+    const geoDimension = table.expectedDimensions.find((d) => d.kind === 'GeoDimension')?.name ?? null;
+    const timeDimension = table.expectedDimensions.find((d) => d.kind === 'TimeDimension')?.name ?? 'Perioden';
+    const plainDimensions = table.expectedDimensions.filter((d) => d.kind === 'Dimension').map((d) => d.name);
+
+    // default (totaal) coordinates < canonical semantic dims < explicit dims
+    const dims: Record<string, string> = { ...table.defaultCoordinates, ...semanticDims, ...explicitDims };
+    for (const dim of Object.keys(dims)) {
+      if (!plainDimensions.includes(dim)) {
+        return refuse(intent, 'invalid_intent', `"${dim}" is not a dimension of table "${tableId}" (has: ${plainDimensions.join(', ') || 'none'})`, { axis: 'measure' });
       }
     }
-    for (const [dim, prefixes] of Object.entries(slice.dimensionPrefixes ?? {})) {
-      if (dim === geoDimension) {
-        for (const region of regionCodes) {
-          if (!prefixes.some((p) => region.startsWith(p))) {
-            return refuse(intent, 'outside_loaded_slice', `region "${region}" is outside the loaded slice of table "${tableId}" (loaded: ${prefixes.map((p) => `${p}…`).join(', ')})`, { axis: 'region' });
+    const unpinned = plainDimensions.filter((d) => dims[d] === undefined);
+    const dimLabels: Record<string, string> = {};
+    for (const [dim, code] of Object.entries(dims)) {
+      const labels = await fetchLabels(tx, tableId, dim, [code]);
+      const label = labels.get(code);
+      if (label === undefined) {
+        return refuse(intent, 'invalid_intent', `code "${code}" does not exist in dimension "${dim}" of table "${tableId}"`, { axis: 'measure' });
+      }
+      dimLabels[dim] = label;
+    }
+
+    // --- Regions ----------------------------------------------------------------
+    let regionCodes: string[] = [''];
+    let regionLabels: Record<string, string> = {};
+    let regionMissing = false;
+    let regionDefaulted = false;
+    let effectiveIntent = intent;
+    if (geoDimension) {
+      if (regions.length === 0) {
+        // WP26 mechanism B-region (ADR 024, safelist entry 1, owner-approved
+        // session 23 + re-read session 56): a question that names no place, on a
+        // measure that HAS a national figure, gets the national figure — with the
+        // assumption said out loud and a one-click correction — instead of a
+        // clarification round the user has to pay for.
+        //
+        // The default is allowed only because the NL total is a specific EXISTING
+        // row, not a pick among competing places. So we check that it exists for
+        // THIS measure at THIS coordinate before defaulting; when it does not, we
+        // fall through to the clarification exactly as before. There is no branch
+        // in which a national figure is invented.
+        //
+        // Deliberately NOT checked here: whether the requested PERIOD exists. A
+        // missing period has its own honest refusal (freshness / not_published),
+        // identical to what an explicitly-named region would get — the default
+        // concerns the region axis and nothing else.
+        //
+        // A 'max' comparison cannot reach here at all: the derivation-arity check
+        // above already refuses a max with fewer than two named regions, so a
+        // comparison set is never defaulted. Verified, not assumed — pinned in
+        // tests/answer/answer-first-region.test.ts.
+        const nationalRow =
+          options.answerFirstEnabled === true
+            ? await tx.query(
+                `select 1 from observations
+                 where table_id = $1 and measure = $2 and dims = $3::jsonb and region_code = $4
+                 limit 1`,
+                [tableId, measure, JSON.stringify(dims), NATIONAL_REGION_CODE],
+              )
+            : null;
+        if (nationalRow !== null && nationalRow.rows.length > 0) {
+          const labels = await fetchLabels(tx, tableId, geoDimension, [NATIONAL_REGION_CODE]);
+          const label = labels.get(NATIONAL_REGION_CODE);
+          if (label !== undefined) {
+            regionCodes = [NATIONAL_REGION_CODE];
+            regionLabels = { [NATIONAL_REGION_CODE]: label };
+            regionDefaulted = true;
+            // R8: record the query we actually RAN, not the one we were asked.
+            // The audit row, the intent hash and the reconstruction all read this
+            // object, so the defaulted region is visible in every one of them.
+            effectiveIntent = { ...intent, regions: [NATIONAL_REGION_CODE] };
           }
         }
-      } else if (dims[dim] !== undefined && !prefixes.some((p) => dims[dim]!.startsWith(p))) {
-        return refuse(intent, 'outside_loaded_slice', `dimension "${dim}" coordinate "${dims[dim]}" is outside the loaded slice of table "${tableId}" (loaded: ${prefixes.map((p) => `${p}…`).join(', ')})`, { axis: 'measure' });
+        if (!regionDefaulted) regionMissing = true;
+      } else {
+        const labels = await fetchLabels(tx, tableId, geoDimension, regions);
+        const unknown = regions.filter((r) => !labels.has(r));
+        if (unknown.length > 0) {
+          return refuse(intent, 'invalid_intent', `region code(s) ${unknown.join(', ')} do not exist in dimension "${geoDimension}" of table "${tableId}"`, { axis: 'region' });
+        }
+        regionCodes = [...regions];
+        regionLabels = Object.fromEntries(regions.map((r) => [r, labels.get(r)!]));
       }
+    } else if (regions.length > 0) {
+      return refuse(intent, 'invalid_intent', `table "${tableId}" has no regional dimension, but the intent names region(s) ${regions.join(', ')}`, { axis: 'region' });
     }
-    for (const { code } of parsedPeriods) {
-      if (belowPeriodFloor(code, slice.periodFloor)) {
-        return refuse(intent, 'outside_loaded_slice', `period ${code} is before the loaded slice of table "${tableId}" (loaded from ${slice.periodFloor}) — CBS publishes earlier periods, but they are outside our ingested slice`, { axis: 'period', nearestAlternative: slice.periodFloor });
-      }
-    }
-  }
 
-  return {
-    ok: true,
-    resolved: {
-      intent: effectiveIntent,
-      regionDefaulted,
-      tableId,
-      measure,
-      measureTitle: normalizeLabel(measureMeta.title),
-      dims,
-      dimLabels,
-      regionCodes,
-      regionLabels,
-      geoDimension,
-      timeDimension,
-      periodCodes,
-      grain,
-      derivation: intent.derivation,
-      definitionLabel,
-      definitionText,
-      alternates,
-      table: {
-        title: table.title,
-        version: table.version,
-        lastSyncAt: table.lastSyncAt,
-        updateCadence: table.updateCadence,
-        slice,
-        periodSemantics: table.periodSemantics,
+    // --- Clarification: ALL unresolved user-facing axes in ONE refusal ----------
+    // docs/05's failure table requires the single clarification round to cover
+    // every unresolved axis at once (combined presets) — so this refusal must
+    // name them all, never just the first one hit (principle c: no axis is ever
+    // defaulted silently).
+    if (unpinned.length > 0 || regionMissing) {
+      const axes: ('measure' | 'region')[] = [];
+      const parts: string[] = [];
+      if (unpinned.length > 0) {
+        axes.push('measure');
+        parts.push(`dimension(s) ${unpinned.join(', ')} carry no coordinate (materially different readings exist)`);
+      }
+      if (regionMissing) {
+        axes.push('region');
+        parts.push(`no region is named (table is regional: ${geoDimension})`);
+      }
+      return refuse(intent, 'needs_clarification', `table "${tableId}": ${parts.join('; and ')} — these must be chosen, never defaulted silently`, { axis: axes[0], axes });
+    }
+
+    // --- Slice compatibility (docs/05: "outside the loaded slice" is its own
+    // refusal, distinct from "not published by CBS") -----------------------------
+    const slice = table.slice;
+    if (slice) {
+      for (const [dim, pinned] of Object.entries(slice.dimensionEquals ?? {})) {
+        if (dims[dim] !== undefined && dims[dim] !== pinned) {
+          return refuse(intent, 'outside_loaded_slice', `dimension "${dim}" is only loaded at coordinate "${pinned}" (asked: "${dims[dim]}") — CBS publishes more, but it is outside our ingested slice`, { axis: 'measure', nearestAlternative: pinned });
+        }
+      }
+      for (const [dim, prefixes] of Object.entries(slice.dimensionPrefixes ?? {})) {
+        if (dim === geoDimension) {
+          for (const region of regionCodes) {
+            if (!prefixes.some((p) => region.startsWith(p))) {
+              return refuse(intent, 'outside_loaded_slice', `region "${region}" is outside the loaded slice of table "${tableId}" (loaded: ${prefixes.map((p) => `${p}…`).join(', ')})`, { axis: 'region' });
+            }
+          }
+        } else if (dims[dim] !== undefined && !prefixes.some((p) => dims[dim]!.startsWith(p))) {
+          return refuse(intent, 'outside_loaded_slice', `dimension "${dim}" coordinate "${dims[dim]}" is outside the loaded slice of table "${tableId}" (loaded: ${prefixes.map((p) => `${p}…`).join(', ')})`, { axis: 'measure' });
+        }
+      }
+      for (const { code } of parsedPeriods) {
+        if (belowPeriodFloor(code, slice.periodFloor)) {
+          return refuse(intent, 'outside_loaded_slice', `period ${code} is before the loaded slice of table "${tableId}" (loaded from ${slice.periodFloor}) — CBS publishes earlier periods, but they are outside our ingested slice`, { axis: 'period', nearestAlternative: slice.periodFloor });
+        }
+      }
+    }
+
+    return {
+      ok: true,
+      resolved: {
+        intent: effectiveIntent,
+        regionDefaulted,
+        tableId,
+        measure,
+        measureTitle: normalizeLabel(measureMeta.title),
+        dims,
+        dimLabels,
+        regionCodes,
+        regionLabels,
+        geoDimension,
+        timeDimension,
+        periodCodes,
+        grain,
+        derivation: intent.derivation,
+        definitionLabel,
+        definitionText,
+        alternates,
+        table: {
+          title: table.title,
+          version: table.version,
+          lastSyncAt: table.lastSyncAt,
+          updateCadence: table.updateCadence,
+          slice,
+          periodSemantics: table.periodSemantics,
+        },
       },
-    },
-  };
+    };
+  });
 }

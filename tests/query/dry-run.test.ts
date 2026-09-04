@@ -70,10 +70,20 @@ describe('echoServability (#56, ADR 021 decision 4)', () => {
   });
 
   it('an interior gap in the loaded years suppresses the year window — the fallback must never name a range we cannot serve', async () => {
-    // Punch a one-year hole inside the population window, inside a rolled-back
-    // transaction (probes never leave residue — WP10 lesson). Mirrors the
-    // openEndedRangeOptions gap test; this guards dry-run.ts's own
-    // reimplementation of that discipline (review finding, 2026-07-04:
+    // Punch a one-year hole inside the population window, then restore it by
+    // re-inserting the exact captured rows — NOT a rolled-back raw `begin`
+    // transaction (the WP10 lesson's original technique). #196 (session 76)
+    // retired that: resolveIntent now opens its OWN `db.withTransaction` once
+    // it knows the target table (a per-table advisory lock, src/query/
+    // resolve.ts), and that transaction's own commit — reached the instant
+    // `echoServability` below resolves — silently satisfies a raw `begin`
+    // this test issued around it, so a later `rollback` has nothing left to
+    // undo (Postgres: a nested `begin` warns and stays in the SAME
+    // transaction, so resolveIntent's `commit` ends it early). Snapshotting
+    // the exact rows and re-inserting them after the probe is correct
+    // regardless of what any callee does with transactions internally.
+    // Mirrors the openEndedRangeOptions gap test; this guards dry-run.ts's
+    // own reimplementation of that discipline (review finding, 2026-07-04:
     // deleting the gap check would have passed every existing test).
     const canonical = await db.query(
       `select c.table_id, c.measure, c.dims, t.default_coordinates
@@ -94,18 +104,45 @@ describe('echoServability (#56, ADR 021 decision 4)', () => {
       derivation: 'series',
     });
 
-    await db.query('begin');
+    const gapWhere =
+      "table_id = $1 and measure = $2 and dims = $3::jsonb and period_grain = 'JJ' and period_code = '2021JJ00'";
+    const gapParams = [row.table_id, row.measure, JSON.stringify(mergedDims)];
+    const snapshot = await db.query(`select * from observations where ${gapWhere}`, gapParams);
+    expect(snapshot.rows.length).toBeGreaterThan(0);
+
     try {
-      await db.query(
-        "delete from observations where table_id = $1 and measure = $2 and dims = $3::jsonb and period_grain = 'JJ' and period_code = '2021JJ00'",
-        [row.table_id, row.measure, JSON.stringify(mergedDims)],
-      );
+      await db.query(`delete from observations where ${gapWhere}`, gapParams);
       const verdict = await echoServability(db, unservable);
       expect(verdict.servable).toBe(false);
       if (verdict.servable) throw new Error('unreachable');
       expect(verdict.availability.yearRange).toBeNull();
     } finally {
-      await db.query('rollback');
+      // Re-insert every captured row byte-for-byte (a fresh `id` — nothing
+      // reads observations by id — everything else exactly as snapshotted).
+      for (const captured of snapshot.rows) {
+        await db.query(
+          `insert into observations
+             (table_id, measure, region_code, period_code, period_grain, period_year, period_index,
+              dims, value, unit, decimals, status, value_attribute, batch_id)
+           values ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9, $10, $11, $12, $13, $14)`,
+          [
+            captured.table_id,
+            captured.measure,
+            captured.region_code,
+            captured.period_code,
+            captured.period_grain,
+            captured.period_year,
+            captured.period_index,
+            typeof captured.dims === 'string' ? captured.dims : JSON.stringify(captured.dims),
+            captured.value,
+            captured.unit,
+            captured.decimals,
+            captured.status,
+            captured.value_attribute,
+            captured.batch_id,
+          ],
+        );
+      }
     }
     // The hole is gone: the window is offered again.
     const restored = await echoServability(db, unservable);

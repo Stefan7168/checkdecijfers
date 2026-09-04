@@ -136,6 +136,25 @@ describe('buildCuratedCharts (hermetic, fixture DB)', () => {
     }
   });
 
+  // #196 review round 2 (session 76): the assumption src/query/resolve.ts's
+  // explicit-target eviction-race branch relies on, made a real assertion —
+  // buildAlternateSpec (src/chart/curated.ts) is the only production caller
+  // of an `explicit` target, and it always targets the table a curated
+  // chart's own CANONICAL key already resolved to. If any curated table were
+  // ever NOT pinned, it would be eviction-eligible, and an explicit target
+  // over it could race an eviction the same way a canonical target does —
+  // which resolve.ts's explicit branch does not handle (it keeps
+  // `table_not_registered`, not the honest `table_evicted`). This asserts
+  // the registry-level fact that keeps that gap unreachable in production.
+  it('every curated chart resolves to a PINNED table — cbs_tables.pinned = true', async () => {
+    const tableIds = [...new Set(Object.values(EXPECTED_TABLES))];
+    expect(tableIds.length).toBeGreaterThan(0);
+    for (const tableId of tableIds) {
+      const { rows } = await db.query('select pinned from cbs_tables where id = $1', [tableId]);
+      expect(rows[0]?.pinned, tableId).toBe(true);
+    }
+  });
+
   it('provisional points are R11-marked in the spec', () => {
     // The BBP flash series always carries recent Voorlopig quarters in the
     // committed fixture; the note must therefore be present — proving the

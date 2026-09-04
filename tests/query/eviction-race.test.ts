@@ -1,18 +1,12 @@
 // #196 (session 72): a concurrent eviction must never turn into a false "no
 // data"/"not published" refusal for a live read of the exact table it is
-// evicting. Reproduced deterministically — PGlite serves one query at a time
-// (tests/helpers/pglite-db.ts), so there is no real concurrency to race
-// against; instead this wraps the Db so a synthetic eviction (the SAME five
-// deletes, in the SAME FK-safe order and in ONE transaction, as
-// evictStaleTables performs them, src/ingestion/eviction.ts) is injected at
-// exactly one moment relative to a chosen statement of runQuery's — the same
-// intercept-and-count technique tests/answer/query-count.test.ts's
-// `countingDb` uses to observe statement order, here used to inject writes
-// instead of just counting. What this proves: run.ts's behaviour against an
-// eviction that has COMMITTED between two of its statements, at every
-// interleaving that matters. What it cannot prove (single connection): the
-// lock behaviour of an eviction still holding its row lock — that half is the
-// skip-locked touch, source-pinned in tests/query/last-queried.test.ts.
+// evicting. Reproduced deterministically with `withEvictionRace`
+// (tests/helpers/eviction-race.ts — its header has the full technique and
+// what it cannot prove under single-connection PGlite); this file covers
+// run.ts's read arc (resolveIntent has already returned by the time any race
+// here lands). The structural follow-up — the SAME eviction racing
+// resolveIntent's OWN reads, one step earlier — is
+// tests/query/resolve-eviction-race.test.ts, reusing this exact helper.
 //
 // Four cases (session 73 review of PR #121 added the last two):
 //  - the eviction commits BEFORE the fetch runs → the fetch sees nothing →
@@ -37,52 +31,7 @@ import { runQuery } from '../../src/query/index.ts';
 import type { Db, QueryResultRow } from '../../src/db/types.ts';
 import { createIngestedDb, tableIdForCanonicalKey } from '../helpers/ingested-db.ts';
 import { ANSWERABLE_TASKS } from '../helpers/benchmark-intents.ts';
-
-/** Reproduces #196's race deterministically. A synthetic eviction of
- * `tableId` runs at exactly one moment relative to the FIRST query whose SQL
- * text contains `matchSubstring`:
- *  - `timing: 'before'` — the eviction runs, THEN the matching query executes
- *    (it sees nothing) — the eviction wins the race against the read.
- *  - `timing: 'after'`  — the matching query executes FIRST (it sees the real
- *    data), and the eviction runs before the NEXT query issued after it — the
- *    eviction lands just after the read already captured what it needed.
- * Fires at most once either way. */
-function withEvictionRace(inner: Db, tableId: string, timing: 'before' | 'after', matchSubstring: string): Db {
-  let phase: 'pending' | 'armed' | 'done' = 'pending';
-  const evict = async (target: Db): Promise<void> => {
-    // One transaction, like evictStaleTables — a committed eviction is
-    // all-or-nothing; `target` is the inner Db, so nothing here is intercepted.
-    await target.withTransaction(async (tx) => {
-      await tx.query('delete from observations where table_id = $1', [tableId]);
-      await tx.query('delete from dimension_labels where table_id = $1', [tableId]);
-      await tx.query('delete from canonical_measures where table_id = $1', [tableId]);
-      await tx.query('delete from ingestion_batches where table_id = $1', [tableId]);
-      await tx.query('delete from cbs_tables where id = $1', [tableId]);
-    });
-  };
-  const wrap = (target: Db): Db => ({
-    async query(text: string, params?: unknown[]): Promise<{ rows: QueryResultRow[] }> {
-      const isMatch = phase === 'pending' && text.toLowerCase().includes(matchSubstring);
-      if (timing === 'before' && isMatch) {
-        await evict(target);
-        phase = 'done';
-        return target.query(text, params);
-      }
-      if (timing === 'after' && phase === 'armed') {
-        await evict(target);
-        phase = 'done';
-        return target.query(text, params);
-      }
-      const result = await target.query(text, params);
-      if (timing === 'after' && isMatch) phase = 'armed';
-      return result;
-    },
-    withTransaction<T>(fn: (tx: Db) => Promise<T>): Promise<T> {
-      return target.withTransaction((tx) => fn(wrap(tx)));
-    },
-  });
-  return wrap(inner);
-}
+import { withEvictionRace } from '../helpers/eviction-race.ts';
 
 const B1 = ANSWERABLE_TASKS.B1!; // population_on_1_january, NL01, 2025 — single coordinate
 /** A fragment unique to runQuery's observations fetch (src/query/run.ts): the

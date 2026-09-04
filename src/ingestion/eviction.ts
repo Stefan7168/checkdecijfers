@@ -236,6 +236,31 @@ export async function evictStaleTables(
   for (const candidate of candidates) {
     try {
       const result = await db.withTransaction(async (tx) => {
+        // #196 (structural follow-up): the SAME per-table advisory lock
+        // resolveIntent's read arc takes SHARED (src/query/resolve.ts) —
+        // taken EXCLUSIVE here, FIRST, before anything else in this
+        // transaction. This is what makes "eviction yields to an in-flight
+        // read" true by construction: this acquisition cannot succeed while
+        // any resolveIntent+runQuery call for this table already holds the
+        // shared lock (it simply waits), and once acquired, no such call can
+        // begin its own locked section until this whole transaction commits
+        // or rolls back — so the delete statements below and a concurrent
+        // read's registry reads can never interleave. hashtext(tableId),
+        // matching the codebase's existing pg_advisory_xact_lock(hashtext($1))
+        // convention (src/ingestion/pipeline.ts's rebaseline lock,
+        // src/billing/ledger.ts, trial-pot.ts, onboarding-trigger.ts).
+        //
+        // review round 2 (session 76): pipeline.ts's `--rebaseline` sync
+        // takes this SAME EXCLUSIVE lock on this SAME key (its own
+        // `if (rebaselined)` branch)
+        // — this eviction and a manual rebaseline of the same table are
+        // therefore mutually exclusive with each other too, not only with
+        // resolveIntent's SHARED reader. Both are manual/supervised
+        // operator actions (never cron-driven, confirmed above), so this is
+        // the same accepted, rare, operator-scoped contention as the
+        // read-vs-eviction case, not a new risk class.
+        await tx.query('select pg_advisory_xact_lock(hashtext($1))', [candidate.id]);
+
         // Re-derive eligibility INSIDE the transaction, from the same
         // fragment, locking the registry row: the listing above is a moment
         // ago, and the debounced last_queried_at bump (src/query/run.ts) may

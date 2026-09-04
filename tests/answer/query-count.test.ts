@@ -19,16 +19,47 @@
 // writes and the LLM calls sit outside it and have their own seams.
 //
 // WHAT THE MEASURED NUMBERS SAY (2026-07-25, re-measured 2026-07-26; +1 to
-// every SERVED number 2026-08-27 session 66, #110 — see the note below):
+// every SERVED number 2026-08-27 session 66, #110; +3 to every number that
+// reaches target resolution 2026-09-04 session 76, #196 structural follow-up
+// — see the notes below):
 //
-//   fully specified, region + period       12   ← the majority path
-//   national-only measure, fully specified  8   ← the cheapest real turn
-//   no region named, flags OFF              8   ← exits to a clarification
-//   no region named, flags ON              12   ← the flip: defaults and SERVES
-//   both axes open, flags ON               13   ← the most expensive shape
+//   fully specified, region + period       15   ← the majority path
+//   national-only measure, fully specified 11   ← the cheapest real turn
+//   no region named, flags OFF             11   ← exits to a clarification
+//   no region named, flags ON              15   ← the flip: defaults and SERVES
+//   both axes open, flags ON               16   ← the most expensive shape
 //   NAMED ambiguous region, click OFF       3   ← #176, after the fix
 //   NAMED ambiguous region, click ON        4   ← the cost of building a chip
 //
+// ⚠ #196 STRUCTURAL FOLLOW-UP, 2026-09-04 (session 76): +3 to every number
+// above that reaches TARGET RESOLUTION in resolveIntent (src/query/resolve.ts)
+// — i.e. every row except the two #176 rows, which fail earlier in a
+// DIFFERENT module (src/answer/intent/resolve.ts's resolveCandidate) and
+// never reach query/resolve.ts at all. Once resolveIntent knows `tableId`, it
+// now takes a per-table `pg_advisory_xact_lock_shared(hashtext(tableId))` as
+// the first statement of its OWN `db.withTransaction`-wrapped read arc —
+// SHARED so concurrent reads of the same table never queue behind each
+// other, and it is what makes eviction (`tables:evict --apply`, EXCLUSIVE on
+// the same key) yield to an in-flight read instead of racing it (closes the
+// structural gap open-questions #196 left open after PR #121: resolveIntent's
+// own reads raced the same eviction one step earlier than run.ts's
+// already-hardened read arc). Three round trips, paid once per resolution,
+// including a CLARIFICATION exit — reaching resolveIntent's target-resolution
+// section is what matters, not whether the turn ultimately serves. The
+// `#197 step 3` describe below measures dry-runs, each of which is a FULL
+// resolveIntent call and so also pays this +3 per dry-run; see its own
+// header.
+//
+// ⚠ #196 REVIEW ROUND 2 CORRECTION, 2026-09-04 (session 76, PR #128): the
+// number above is +3, not the originally-shipped "+1 statement (the lock
+// acquisition)" — a HIGH review found the +1 counted only the lock statement
+// itself, silently missing the BEGIN and COMMIT the wrapping
+// `db.withTransaction` also sends (2 more real round trips against the exact
+// pooler this file exists to protect, #173), because `countingDb` below
+// used to count only what `fn` issued through `tx.query(...)`, never the
+// transaction boundaries the real driver sends around it. `countingDb` is
+// fixed to count those too (see its own docstring); the numbers in this file
+// are the corrected, re-measured ones.
 // #110 (2026-08-27, session 66): the on-demand table eviction/TTL feature
 // added ONE statement to every SERVED turn — runQuery's touchLastQueriedAt
 // bump (src/query/run.ts), which stamps the resolved table's last-use clock
@@ -38,7 +69,10 @@
 // not just once a day — the connection-pooler cost this file exists to watch
 // (#173) is paid per request, same as the WP26 flags above it. Rows that
 // never reach runQuery (a clarification exit, an unmatched topic) are
-// unaffected — hence the flags-OFF/no-region row above stays 8, unchanged.
+// unaffected by THIS mechanism — hence the flags-OFF/no-region row stayed 8
+// at the time of this note (superseded by the #196 structural follow-up note
+// above, a DIFFERENT mechanism that DOES reach a clarification exit, since it
+// fires inside resolveIntent, before runQuery's own touch is ever reached).
 // ⚠ #195/#196 FIX, 2026-09-03 (session 72): "every served turn" above means
 // exactly that now, not "every runQuery call" — a SERVABILITY DRY-RUN
 // (`echoServability`, the probe primitive every follow-up/comparison chip and
@@ -100,14 +134,39 @@ afterAll(async () => {
   await close();
 });
 
-/** Counts every statement the caller issues, including inside a transaction.
+/** Counts every statement the caller issues, including inside a transaction —
+ * AND, since #196 review round 2 (session 76), the transaction's own
+ * begin/commit/rollback round trips.
  *
  * Precision, since the numbers below are the point: the counted path
- * (`src/answer/intent/` + `src/query/`) contains no `withTransaction` call
- * today, and the driver's own BEGIN/COMMIT would not be counted even if it
- * did. So these are application statements, not a full count of what the
- * pooler sees. The transaction wrapping is there so the pin keeps working if
- * the path ever grows one.
+ * (`src/answer/intent/` + `src/query/`) grew its first `withTransaction` call
+ * with #196's structural follow-up (`resolveIntent`, `src/query/resolve.ts`)
+ * — the exact case this function's OWN docstring used to say "if the path
+ * ever grows one", stated below before that happened.
+ *
+ * ⚠ #196 review round 2 CORRECTION (session 76): this function used to wrap
+ * ONLY `target.withTransaction`'s inner `tx`, counting whatever `fn` issued
+ * via `tx.query(...)` but NOT the begin/commit the real driver sends around
+ * `fn` — those happen on the raw pooled client, one level below the `Db`
+ * interface this wrapper can see (`src/db/client.ts`'s `poolDb.withTransaction`
+ * issues `client.query('begin')`/`'commit'`/`'rollback'` directly, never
+ * through the `clientDb` it hands to `fn`; `tests/helpers/pglite-db.ts`
+ * mirrors the identical shape). So from the moment `resolveIntent` started
+ * wrapping its own read arc in one `db.withTransaction`, every pinned number
+ * below that reaches it was TWO round trips short of the real cost against
+ * the pooler this file exists to protect (#173) — exactly the gap a HIGH
+ * review of PR #128 found: the numbers said "+1 statement (the lock
+ * acquisition)" when the true added cost was +1 counted statement AND +2
+ * uncounted round trips, tripling per dry-run for any turn that builds
+ * follow-up chips (`#197 step 3` below). Fixed here by pushing synthetic
+ * `'begin'`/`'commit'`/`'rollback'` entries around the delegated call, in the
+ * same chronological position the real driver puts them — BEFORE `fn` runs
+ * and AFTER it settles — so a `withTransaction` call anywhere in the counted
+ * path is now priced at its true round-trip cost, not just its inner
+ * statements. This is a general fix, not resolveIntent-specific: it prices
+ * the NEXT `withTransaction` this path grows too, which is what the original
+ * docstring's "the transaction wrapping is there so the pin keeps working"
+ * was reaching for without actually doing.
  *
  * `statements` holds each statement's FULL trimmed text (not just a label) —
  * #195's `set last_queried_at` pins below match against it — so it also
@@ -126,8 +185,21 @@ function countingDb(inner: Db): { db: Db; statements: string[] } {
       statements.push(text.trim());
       return target.query(text, params);
     },
-    withTransaction<T>(fn: (tx: Db) => Promise<T>): Promise<T> {
-      return target.withTransaction((tx) => fn(wrap(tx)));
+    async withTransaction<T>(fn: (tx: Db) => Promise<T>): Promise<T> {
+      // Mirrors src/db/client.ts's poolDb.withTransaction / tests/helpers/
+      // pglite-db.ts's identical shape: begin before `fn` runs, commit after
+      // it resolves, rollback if it throws — so the round trips the real
+      // driver spends on transaction boundaries are priced here too, not
+      // just the statements `fn` issues via `tx.query(...)`.
+      statements.push('begin');
+      try {
+        const result = await target.withTransaction((tx) => fn(wrap(tx)));
+        statements.push('commit');
+        return result;
+      } catch (err) {
+        statements.push('rollback');
+        throw err;
+      }
     },
   });
   return { db: wrap(inner), statements };
@@ -183,7 +255,7 @@ describe('the deterministic half of a turn costs a pinned number of statements',
       false,
     );
     expect(served).toBe(true);
-    expect(count).toBe(12);
+    expect(count).toBe(15);
   });
 
   it('flags off, NO region named — exits to a clarification', async () => {
@@ -195,7 +267,7 @@ describe('the deterministic half of a turn costs a pinned number of statements',
       false,
     );
     expect(served).toBe(false); // today's clarification
-    expect(count).toBe(8);
+    expect(count).toBe(11);
   });
 
   it('flags on, NO region named — what the flip adds on this shape', async () => {
@@ -207,7 +279,7 @@ describe('the deterministic half of a turn costs a pinned number of statements',
       true,
     );
     expect(served).toBe(true); // the national default answers
-    expect(count).toBe(12);
+    expect(count).toBe(15);
   });
 
   it('flags on, BOTH axes open — the most expensive defaulted shape', async () => {
@@ -216,7 +288,7 @@ describe('the deterministic half of a turn costs a pinned number of statements',
       true,
     );
     expect(served).toBe(true);
-    expect(count).toBe(13);
+    expect(count).toBe(16);
   });
 
   // ---- The #176 shape. Everything above names no region at all; only these
@@ -258,7 +330,7 @@ describe('the deterministic half of a turn costs a pinned number of statements',
       false,
     );
     expect(served).toBe(true);
-    expect(count).toBe(8);
+    expect(count).toBe(11);
   });
 });
 
@@ -294,6 +366,16 @@ describe('what the flag flip costs, stated as a difference', () => {
 // ⚠ #196 FOLLOW-UP, 2026-09-03 (session 73): −1 per SUCCESSFUL dry-run again —
 // the period-label read folded into runQuery's fetch (file header), so every
 // servable probe is one statement shorter. Re-measured.
+//
+// ⚠ #196 STRUCTURAL FOLLOW-UP, 2026-09-04 (session 76): +3 per dry-run again —
+// each dry-run is a FULL resolveIntent call, so it pays the same per-resolution
+// begin+lock+commit round trips the file header describes (src/query/resolve.ts).
+// Originally shipped re-measured as +1/dry-run ("24" / "10 → 15" below); a
+// review round-2 correction (see the file header's own note) found that
+// undercounted the transaction's begin/commit, corrected to +3/dry-run:
+//
+//   regional single answer (Amsterdam 2024)   30 statements / 3 dry-runs   flag OFF and ON   (was 27, 24, 21, then 24)
+//   national-only measure (CPI 2024)          14 / 2  OFF   →   21 / 3  ON                    (was 12→18, 10→15, 8→12, then 10→15)
 //
 // Why the first row does not move between flag OFF/ON: the cap (MAX_SUGGESTIONS
 // = 3) stops the roster after three survivors, and with the flag on the region
@@ -332,13 +414,13 @@ describe('#197 step 3: what the comparison chips cost per answered turn', () => 
   };
 
   it('a regional single answer: the flag changes nothing — the comparison takes the region variant\'s slot', async () => {
-    expect((await chipStatements(amsterdam, false)).count).toBe(21);
-    expect((await chipStatements(amsterdam, true)).count).toBe(21);
+    expect((await chipStatements(amsterdam, false)).count).toBe(30);
+    expect((await chipStatements(amsterdam, true)).count).toBe(30);
   });
 
   it('a national-only measure: the flag adds exactly one dry-run (the period comparison fills the free slot)', async () => {
-    expect((await chipStatements(cpi, false)).count).toBe(8);
-    expect((await chipStatements(cpi, true)).count).toBe(12);
+    expect((await chipStatements(cpi, false)).count).toBe(14);
+    expect((await chipStatements(cpi, true)).count).toBe(21);
   });
 
   // #195: the dry-run primitive itself never bumps the eviction clock — zero
