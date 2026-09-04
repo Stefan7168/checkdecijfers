@@ -9,6 +9,70 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
+**▶ SESSION 77 (2026-09-04, AUTONOMOUS — owner said "up to you, work autonomously for hours and hours" in an
+owner-present chat, then left) — RE-TRIAGED open-questions.md FOR MORE HERMETIC FOLLOW-UPS: MOSTLY NOISE, ONE REAL
+NEW BUILD (#200b), NOTHING MERGED.** Kickoff: verified session-76's kickoff brief against reality first (matched
+exactly — `main` `3b959b3`, PRs #124-128 as described, CI green ×3); `ListAgents` showed an interactive peer
+`check-de-cijfers-ee` — flagged to the owner, who confirmed no other session was actually running, so this session
+proceeded as the sole active one. Per #118(b) (autonomous, core-product code): branch + PR + owner review, never
+merge — asked and got an explicit owner answer ("leave queued for your review") before touching anything, so
+**#126/#127/#128/#125 were deliberately left untouched, exactly as session 76 left them.**
+
+Dispatched a 5-agent Workflow to re-triage all 150 live open-questions.md rows for anything a session could safely
+pick up without owner input (session 76 had declared that queue "exhausted"). It returned 8 candidates; **verifying
+every one by hand found 7 were wrong** — 3 were exact duplicates of what session 76 already built as open PRs
+(#73/#79/#196, i.e. #126/#127/#128), 1 (#63) was already investigated and deliberately deprioritized last session,
+1 (#199) is the same owner-menu item every session since 72 has correctly left alone, and 2 (#90, #99) described
+content that doesn't match the real row at all (row #90 doesn't exist in the live file; row #99 is the long-since
+signed-off site footer, unrelated to what the agent invented). **Only one candidate survived verification: open-
+questions row #200 direction (b)** — a diagnostic-error improvement for the hermetic LLM fixture-replay harness
+(confirmed real by reading `src/answer/llm/client.ts` directly, not from the triage summary). A second,
+evidence-required sweep for stale "still open" doc claims flagged 2 more candidates; **both mostly evaporated on
+verification too** — row #196 turned out to compare an unmerged PR branch against `main` (row's "still open"
+framing was correct), row #34 already recorded its own fix further down the same long cell (this session read only
+part of it before drawing the wrong conclusion, caught before writing anything). Only row #110 was a real minor
+gap (fixed directly, docs-only: its closing PR reference didn't say which sub-items that PR actually covered).
+Full detail on both false-positive patterns: [lessons-learned.md](lessons-learned.md) session-77 entry — **this is
+the main, reusable finding of this session's triage phase**, since the actual net-new hermetic work found was one
+small item, confirming session 76's "the three follow-ups exhausted the queue" was correct.
+
+**Built PR #200(b) exactly like session 76's pattern (build → HIGH-review → fix-if-needed, worktree-isolated):**
+**PR #129** (`fix/200-fixture-hash-diagnostic`, round-2 head `c5e5b34`) adds a diagnostic to
+`ReplayLlmClient.complete()` (`src/answer/llm/client.ts`) — on a fixture-hash miss, it now scans the same fixtures
+directory for a near-miss fixture whose request is identical in every field except `jsonSchema`, and if found,
+names that near-miss and explains the two possible causes (a non-behavioral schema-serialization-library bump, or
+a genuine intentional zod-schema edit that didn't touch the prompt) instead of the old generic "no recorded
+fixture" message — see #200's PR#124 bisection for the original diagnosis this closes the loop on. HIGH review
+found 1 real low-severity finding (the first draft overclaimed the dependency-bump cause as the "usual" one when
+the signal genuinely can't distinguish it from an intentional schema edit); fixed in round 2 to present both causes
+neutrally with a concrete disambiguation method. `requestHash()`, `stableStringify()`, `RecordingLlmClient`, and all
+four `jsonSchema`-building call sites are untouched — zero prompt-byte risk, and `ReplayLlmClient` is CI/test-replay
+only (never used in production). **Verified independently by this session (not just trusted from the agent
+report):** `gh pr view 129` head SHA matches the reported `c5e5b34` exactly; `git diff main...origin/fix/200-…`
+shows exactly the 3 files reported (`src/answer/llm/client.ts` +76/-7, a new `tests/answer/llm-client.test.ts`
++161, `docs/open-questions.md` +1/-1); read the actual diff — the no-near-miss message is untouched (byte-identical
+template literal, just re-indented) and the near-miss message hedges correctly. Build agent's own measured
+verify-block: typecheck clean, `tests/answer/llm-client.test.ts` 4/4, full `npm run test:answer` 757/757 (30
+files) — **CI gate on the round-2 push was still PENDING as of this writing; do not treat this as green until `gh
+pr checks 129` is re-checked.**
+
+**Maintenance, read-only:** `npm audit` root and `web/` both 0 vulnerabilities (the web check needed one retry after
+a transient registry timeout); `gdpr:purge` dry-run 0 rows everywhere (fresh baseline, matches every prior
+measurement this project has taken). **Docs fixed, docs-only:** open-questions row #110's closing sentence now says
+which sub-items PR #111 actually shipped ((b)+(c); only (d) is genuinely open) instead of reading as if all of
+(b)/(c)/(d) were still open.
+
+**No spend, no prompt bytes, no DDL, no flag flips, no merges — matches every autonomous session before it.**
+
+**▶ NEXT, in order — nothing urgent, unchanged from session 76 except PR #129 is now added to (a):** (a) review +
+merge #126/#127/#128/#129 (independent files, expect trivial docs/STATUS.md + open-questions.md conflicts, not code
+ones — same as session 76 predicted for the first three); (b) Dependabot #125 (clean, ready); **#124 still blocked,
+do not merge as-is** (zod regression, PR #124's comments have the bisection); (c) `GDPR_PURGE_APPLY=1` + one watched
+run; (d) #162's A/B; (e) #132 route B GO or defer; (f) the owner menu: WP30c choice, #199, #197 ideas 4–8, the three
+#197 follow-ups. **The hermetic queue is now confirmed genuinely exhausted** — two independent triage passes this
+session, one open-ended and one evidence-gated, together found exactly one small new item; further re-triaging the
+same doc without new information is unlikely to be worth the tokens.
+
 **▶ SESSION 76 (2026-09-04, AUTONOMOUS — owner said "I will be gone for hours... use multiple sub-agents", no reply
 expected in chat) — THE THREE RECORDED HERMETIC FOLLOW-UPS (rows #73, #79, #196) ARE BUILT, EACH ON ITS OWN PR,
 EACH HIGH-REVIEWED, NOTHING MERGED.** Kickoff verified clean first (`main` `da71ccb`, open PRs = exactly #124/#125

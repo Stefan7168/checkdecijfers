@@ -6,6 +6,35 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 77 — 2026-09-04, autonomous ("work autonomously for hours and hours") — re-triaging open-questions.md for a hermetic follow-up: mostly noise, one real find (#200b)
+
+Full narrative: [status-archive.md](status-archive.md) session-77 entry (once wrapped).
+
+- **Parallel agents asked to freely "read N rows and classify each" will hallucinate content for rows that don't
+  exist, or misattribute one row's content to a different row number.** A 5-agent triage of all 150 live
+  open-questions.md rows returned 8 "hermetic candidates." Verifying every one directly (per
+  [[feedback_verify_agent_evidence]] — that rule applies to a session's own sub-triage output exactly as much as to
+  a delegated build's evidence) found: 3 were exact duplicates of what session 76 already built as open PRs
+  (#73/#79/#196 — the agents pattern-matched the doc's framing without checking these already had PRs open), 1 was
+  already investigated and deliberately deprioritized last session (#63), 1 has been consistently treated as an
+  owner-menu item across at least five prior sessions despite looking technically simple (#199), and 2 described
+  content that does not match the real row at all — row #90 doesn't even exist in the live file (most likely
+  archived), and row #99's actual content (the site footer/shell, signed off long ago) has nothing to do with what
+  the agent invented (an onboarding-notify.ts email comment). Only #200(b), verified by hand against the real
+  source, survived. **Never build from a triage agent's row-content summary — `grep`/`Read` the actual row yourself
+  before writing a build brief.**
+- **A "this doc contradicts the code" claim needs `git merge-base --is-ancestor <sha> main`, not `git log --all
+  --grep`.** A follow-up evidence-grounded sweep (agents required to quote both the row text and a concrete git
+  commit before reporting) flagged 2 candidates. Row #196 turned out to be a false alarm: the "contradicting"
+  commits were on the still-open, unmerged PR #128 branch, not `main` — `--all` includes every fetched branch, and
+  the row's "still open" framing was correct as far as `main` is concerned. Row #34 was also a false alarm: its own
+  cell (over 6000 characters, several paragraphs) already recorded the fix further down — the agent, and briefly
+  this session too, stopped reading partway through a long multi-paragraph cell and drew a conclusion from an
+  incomplete read. Only row #110 was a real (minor) gap: its closing PR reference didn't say *which* sub-items that
+  PR actually covered, leaving a reader to cross-reference the commit message to know that only item (d) remained
+  open. **Read the ENTIRE cell (these run to several thousand characters) and check ancestry against `main`
+  specifically before writing "stale doc" anywhere.**
+
 ## Session 76 — 2026-09-04, autonomous ("I will be gone for hours... use multiple sub-agents") — the three recorded hermetic follow-ups (#73/#79/#196), one Workflow, build→HIGH-review→fix per package
 
 Full narrative: [status-archive.md](status-archive.md) session-76 entry.
