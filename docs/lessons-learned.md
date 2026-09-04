@@ -6,6 +6,37 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 76 — 2026-09-04, autonomous ("I will be gone for hours... use multiple sub-agents") — the three recorded hermetic follow-ups (#73/#79/#196), one Workflow, build→HIGH-review→fix per package
+
+Full narrative: [status-archive.md](status-archive.md) session-76 entry.
+
+- **A pipeline of build → independent HIGH-review → conditional fix, one lane per package, earned its cost.** Two of
+  three packages reviewed clean, but the third (#196/PR #128) had 3 real findings the build agent's own LOW
+  self-review missed entirely — including an undisclosed lock coupling with a pre-existing `pipeline.ts` advisory
+  lock on the identical key, exactly the class of subtle cross-module interaction a same-agent, same-context review
+  is least likely to catch (it wasn't looking at `pipeline.ts` at all; it was looking at its own diff). Worth the
+  ~2× token cost of an independent reviewer agent for core-product PRs the owner can't review in person.
+- **An agent spawned by a Workflow cannot itself call the Agent tool (no nested subagent dispatch).** Two build
+  agents reported "the Agent tool was unavailable in this session" when their brief said to run an automatic
+  `/code-review` pass, and correctly fell back to doing the review themselves in one thorough pass instead of
+  silently skipping it. Future workflow briefs that say "run /code-review" or "dispatch a subagent" should say
+  explicitly "do this yourself, single-pass" — an agent inside a Workflow has no way to spawn a further agent.
+- **`db.withTransaction` wrapping a previously-unwrapped read path can silently break a test that sandboxes a
+  mutation with a raw `BEGIN`/`ROLLBACK`.** PR #128 wrapped `resolveIntent` in one transaction; an existing
+  `dry-run.test.ts` case that mutated a row inside its own `db.query('begin')` … `rollback` sandbox had that
+  rollback become a no-op, because Postgres treats a nested `BEGIN` as a warning-and-continue on the SAME
+  transaction — so `resolveIntent`'s own `COMMIT` ended the test's outer transaction early instead of the test's
+  `ROLLBACK` ever running. Caught only because the test's fixture data was visibly wrong afterward, not because
+  anything threw. Any future PR wrapping a shared read/write path in `withTransaction` should grep tests for a raw
+  `begin`/`rollback` sandbox around that path before assuming test isolation still holds.
+- **A fix-round agent addressing findings on a branch already checked out in a sibling worktree can't `git checkout`
+  that branch directly (worktree exclusivity).** The #196 fix agent worked around it with a differently-named local
+  branch (`work-196-review2`) in its own worktree, cherry-picked/rebuilt onto the same head, and pushed it to the
+  EXISTING remote branch name (`git push origin work-196-review2:fix/196-eviction-resolve-race`) rather than
+  opening a second PR. Worked correctly (verified: `origin/fix/196-…` ended at the fix's real final head), but the
+  throwaway local branch needs its own cleanup afterward (done this session) — worth stating explicitly in a future
+  fix-stage brief so the agent doesn't waste a cycle discovering the worktree-exclusivity error itself.
+
 ## Session 75 — 2026-09-03, owner present (the session-73 kickoff pasted a THIRD time, on the desktop) — merge day for the four-PR batch, with a cloud session running on the same kickoff
 
 Full narrative: [status-archive.md](status-archive.md) session-75 entry.

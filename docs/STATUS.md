@@ -9,6 +9,66 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
+**▶ SESSION 76 (2026-09-04, AUTONOMOUS — owner said "I will be gone for hours... use multiple sub-agents", no reply
+expected in chat) — THE THREE RECORDED HERMETIC FOLLOW-UPS (rows #73, #79, #196) ARE BUILT, EACH ON ITS OWN PR,
+EACH HIGH-REVIEWED, NOTHING MERGED.** Kickoff verified clean first (`main` `da71ccb`, open PRs = exactly #124/#125
+Dependabot as expected, last 3 CI runs `success`, prod alias on `da71ccb` per its deploy job's `this run == main
+tip`, canaries 200×3; `ListAgents` showed 3 other `check-de-cijfers-*` interactive peers with no visible
+running/idle state — not investigated further since nothing here touched `main` until this docs push). Per #118(b)
+(autonomous session, owner absent, core-product code): branch + PR + owner review, never merge — so all three PRs
+below are OPEN, not merged, exactly like session 72's batch.
+
+Dispatched one Workflow (build → HIGH-review → fix-if-needed, 7 agents, worktree-isolated, ~2.33M subagent tokens,
+~4h wall-clock): **PR #126** (`fix/73-carrier-on-chatmessage`,
+head `146594c`) moves the WP29 click-chip carrier off an index-keyed ref onto `ChatMessage` itself (now that #123
+freed `chat-message.ts`) and drops `capturedThreadId` + the carrier's own `threadId` (proved equivalent to always
+sending the live `threadId`) — HIGH review: clean, 0 findings, independently re-verified. **PR #127**
+(`fix/79-shared-derived-predicate`, head `5bda716`)
+extracts one shared `isDerivedResult()` for R5's marking-line rule and fixes `csv.ts`'s real divergence — it was
+silently omitting the "Bewerking: ..." disclosure for a direction/first_last-only derivation while every other
+surface (chat answer, citation, proof panel) correctly showed it — HIGH review: clean, 0 findings. **PR #128**
+(`fix/196-eviction-resolve-race`, round-2 head
+`ef4e35a`) closes the recorded structural gap: `resolveIntent`'s own registry reads (before `run.ts`'s
+already-hardened arc) now take a per-table `pg_advisory_xact_lock_shared`, matched by an `EXCLUSIVE` lock in
+eviction's per-table transaction — "eviction yields to in-flight reads" by construction, no DDL. HIGH review found
+3 real findings (medium: the new SHARED lock collides, undisclosed and with no `lock_timeout`, with
+`pipeline.ts`'s pre-existing EXCLUSIVE `--rebaseline` lock on the same key — a documented-not-fixed trade-off,
+see below; medium: the query-count tripwire undercounted the true cost as +1 statement when wrapping in
+`db.withTransaction` actually costs +3 round trips; low: an explicit-target/pinned-table assumption was
+undocumented) — a fix round addressed all three (disclosure + a source-pin test for the lock coupling, corrected
+tripwire numbers across query-count.test.ts + ADR 029 + row #195, an **Assumption** comment + a new pinning test
+for the pinned-table dependency), re-verified, pushed as `ef4e35a`.
+
+**Verified independently by this session (not just trusted from agent reports, per the GOLDEN RULE):** `gh pr
+list --state open` shows exactly #126/#127/#128/#125/#124; `gh pr checks` on all three new PRs shows both `gate`
+runs `pass` (19–26 min each) and `deploy` correctly `skipping` (non-main); `git rev-parse origin/fix/196-…` matches
+the fix round's claimed head `ef4e35a`. Each PR's own verify-block: backend 116-117 files / 1780-1788 tests,
+benchmark refusal 6/6 + 0 fabricated + GATE PASS, web 50 files / 584-585 tests, real `next build`. Cleaned up the
+4 workflow worktrees + their throwaway local branches after confirming origin had every final commit.
+
+**⚠ Worth your attention on #128 specifically (not a blocker, a disclosed trade-off):** the new lock is `SHARED` in
+every chat query's `resolveIntent` and `EXCLUSIVE` in both `tables:evict --apply` (rare, manual, already true) AND
+`--rebaseline` (the annual gemeente-reorg sync, ALSO manual but on a table that can be actively queried, e.g. via
+`src/chart/curated.ts`'s homepage charts) — with no `lock_timeout`, matching this codebase's existing no-timeout
+convention on every other advisory-lock site, but new for this particular coupling. Today both sides are
+manual/supervised so it's the same accepted rare-contention risk eviction already carried, not a new production
+hazard — just something to know about given this project's #173/#188/#190 pooler-incident history
+(`MAX_POOL_CLIENTS_PER_PROCESS=2`) before merging. Full reasoning in PR #128's "Review round 2" section.
+
+**No spend, no prompt bytes, no DDL, no flag flips — pure engineering.** The three build agents' own PRs already
+carry their docs/open-questions.md row updates (#73/#79/#196) and touched ADRs/RUNBOOK — those land on `main` when
+each PR merges, not before; this block is this session's own summary, pushed docs-only straight to `main` per the
+established "code on branches+PRs, docs direct to main" convention (session 72's precedent) — a doc-only conflict
+between a sibling PR's own STATUS.md/open-questions.md edit and this block, if any, is expected and gets resolved
+at merge time exactly as session 73 resolved one for the #121/#122 batch.
+
+**▶ NEXT, in order — nothing urgent:** (a) review + merge #126/#127/#128 (any order, independent files except all
+three touch docs/STATUS.md and docs/open-questions.md in different rows — expect trivial doc conflicts, not code
+ones); (b) Dependabot #124/#125 (still yours, unchanged); (c) `GDPR_PURGE_APPLY=1` + one watched run; (d) #162's
+A/B; (e) #132 route B GO or defer; (f) the owner menu: WP30c choice, #199, #197 ideas 4–8, the three #197
+follow-ups. **The three recorded hermetic follow-ups are now exhausted** — nothing else in the docs is currently
+flagged as safe for a session to pick up without your input, so no further code work was started this session.
+
 **▶ SESSION 75 (2026-09-03, OWNER PRESENT in the desktop chat — the session-73 kickoff pasted a THIRD time; a cloud
 session calling itself session 74 was RUNNING on the same kickoff in parallel) — THE FOUR-PR BATCH IS MERGED AND LIVE:
 #121 `527ef2e`, #120 `069a03e`, #122 `4fd6ea5`, #123 `ddca024`.** After ONE targeted question the owner chose staged

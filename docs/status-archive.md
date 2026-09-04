@@ -1,5 +1,142 @@
 # STATUS archive — the session log
 
+**Session 76 (2026-09-04, AUTONOMOUS — the owner said "Continue working autonomously. Use multiple sub-agents. I
+will be gone for hours... Start" and left; no reply expected in chat) — THE THREE RECORDED HERMETIC REVIEW
+FOLLOW-UPS (open-questions rows #73, #79, #196) BUILT, EACH ON ITS OWN PR, EACH HIGH-REVIEWED; NOTHING MERGED
+(git-workflow rule #118(b): autonomous session + core-product code = branch + PR + owner review, never a direct
+push/merge).** Zero spend, zero prompt bytes, zero DDL, zero flag flips.
+
+1. **Kickoff verification (session-76 brief, pasted per its own instructions):** `date` confirmed 2026-09-04;
+   `git log -3` showed `main` at `da71ccb` (session-75's own close-out commit) with `ddca024` (#123) and `a249493`
+   (session-74 follow-up docs) below it — matching the brief exactly; `gh pr list --state open` showed exactly
+   #124 and #125 (Dependabot), no leftover session-72-batch PRs; `gh run list --branch main --workflow ci.yml -L 3`
+   all `success`; the deploy job log for the latest run (`33795236313`) printed `this run: da71ccb… main tip:
+   da71ccb…` — the alias is genuinely on the current tip, confirmed again directly via `vercel inspect` (deployment
+   `dpl_G1jpLmgFW9NnYwroDmsaq3q8WyYW`, status Ready) and `curl` canaries `/`, `/llms.txt`, `/api/health` all 200.
+   `ListAgents` (the second-instance check the brief specifically calls out) showed 14 peer sessions, including
+   three other `check-de-cijfers-*` interactive sessions (started 8–17h earlier) with no idle/running indicator
+   visible from that listing — flagged to the (absent) owner in this session's chat reply but not investigated
+   further, since no write to `main` happened until this docs push and the three build PRs touch only their own
+   branches.
+2. **Scoping, done by this session before dispatching any agent (not delegated):** read CLAUDE.md, STATUS.md's top
+   block, the session-76 kickoff brief, then located and read in full: open-questions.md rows #73/#79/#196 (the
+   three "hermetic, a session can pick them up" follow-ups — the only work in the entire docs set flagged as safe
+   for autonomous pickup without an owner decision), the relevant source (`web/lib/chat-message.ts`,
+   `web/components/chat.tsx`'s carrier/chipRef comments, `src/query/types.ts`/`compose.ts`/`reconstruct.ts`/
+   `citation.ts`/`answer-proof.ts`/`csv.ts` around `DERIVED_DATA_MARKING`, `src/query/resolve.ts`/`run.ts`,
+   `src/ingestion/eviction.ts`, `tests/query/eviction-race.test.ts`), `docs/05-data-rules.md`'s R5 definition, and
+   `scripts/verify-block.sh` + RUNBOOK's "Multi-agent autonomous sessions" gotchas (the vitest mutex, fresh-worktree
+   `node_modules`, the migration-number collision risk — none of these three tasks needed a migration). Confirmed
+   everything else in STATUS's priority stack (Dependabot, `GDPR_PURGE_APPLY`, the #162 A/B, WP30c/#199/#197
+   ideas 4-8) is explicitly owner-gated and deliberately left untouched — no invented scope.
+3. **Dispatched one Workflow** (`wf_14aed7d3-aee`, 7 agents total, worktree-isolated per package, ~2.33M subagent
+   tokens, ~4h wall-clock): a `pipeline()` of Build → HIGH-review → conditional Fix, one lane per package, so a
+   clean review didn't wait on a dirty one's fix round. Each build agent was briefed with the exact files, the
+   already-fixed defects it must not regress, the full CLAUDE.md verification block + LOW code-review-before-push
+   gate, and an explicit "stop and disclose rather than force a fragile change" instruction; each review agent ran
+   a HIGH-effort independent re-verification (own re-run of the relevant suites in a disposable worktree, `gh pr
+   checks`/`gh pr diff` against the real PR, not the build agent's self-report) standing in for RUNBOOK batch item
+   10's pre-merge HIGH pass since the owner isn't here to request it.
+4. **PR #126** — `fix/73-carrier-on-chatmessage`, head
+   `146594c`. Row #73's follow-up: the WP29/#73-v2 click-chip carrier moves off `chat.tsx`'s index-keyed
+   `useRef<Map<number, Carrier>>` onto `ChatMessage` itself (`web/lib/chat-message.ts`, now free since #123
+   merged) — computed once and placed in the SAME `setMessages` literal that appends the message (same-update
+   guarantee, invariant (a)), read directly off the rendered message closure by the click handler (own-message
+   binding preserved, invariant (c) — the existing byte-identical-label chat.test.tsx case caught this
+   unmodified), `chipRef`'s send-time resolution untouched (invariant (b)), and all three `replay-assemble.ts`
+   factories now set `carrier: null` explicitly, TypeScript-enforced (invariant (d), ADR 033 ⟨A6⟩). Second half:
+   traced every write to `threadId`/`capturedThreadId`/the carrier's own `threadId` through `src/threads/index.ts`
+   and confirmed they're provably always either the same live value or null-on-attach-failure (never divergent) —
+   dropped both fields, sending live `threadId` on both the typed-reply and chip-take paths; the two existing
+   "thread attach FAILED" tests caught this unmodified. Verify block: typecheck root+web clean; backend 116/1780;
+   benchmark refusal 6/6, fabricated 0, GATE PASS; web 50/584; real `next build` clean; LOW code-review 0 findings.
+   HIGH review (independent re-verification, own worktree): **clean, 0 findings** — confirmed no other ChatMessage
+   construction site exists repo-wide, confirmed the threadId-monotonic argument by reading `src/threads/index.ts`
+   itself rather than trusting the build report, confirmed both CI gate runs green on the real head sha via `gh pr
+   checks`. `gh pr checks 126`: `gate` pass 19m18s + 19m40s, `deploy` skipping ×2 (correct, non-main).
+5. **PR #127** — `fix/79-shared-derived-predicate`, head
+   `5bda716`. Row #79's follow-up: added `isDerivedResult(result)` beside `DERIVED_DATA_MARKING`
+   (`src/query/types.ts`) as R5's single true-by-construction predicate; the four sites that already used the
+   literal `result.derivations.length > 0` (`compose.ts`, `audit/reconstruct.ts`, `citation.ts`, `answer-proof.ts`)
+   now call it — a pure, byte-identical extraction there. The real fix: `web/lib/csv.ts` used a narrower rule
+   (`exportableDerivations(...)` — explicit difference/max only) to decide whether to show the "Bewerking: ..."
+   disclosure line at all, silently omitting it for a direction- or `first_last`-only export even though the same
+   result's chat answer/citation/proof panel all correctly disclosed it (confirmed real, not hypothetical:
+   `run.ts` pre-registers implicit direction/max/first_last derivations regardless of question phrasing). Now the
+   marking-line decision uses `isDerivedResult` (any derivation) while `exportableDerivations()` still, correctly,
+   gates the separate "Afgeleide waarden" data table (a valueless derivation has no number to tabulate) — two
+   different questions, both correct now. Two existing csv.test.ts cases that encoded the OLD under-disclosing
+   behavior were flipped to assert the NEW correct behavior; a new first_last-only case was added (the exact
+   scenario PR #123's round-2 review named). Self-caught before push: a stale doc comment contradicting the new
+   rule, and a live-PR-markdown-link violation of open-questions #132 interim rule (i) in its own row-#79 update
+   (fixed in a follow-up commit). Verify block: backend 116/1780; benchmark GATE PASS; web 50/585; real `next
+   build` clean. HIGH review: **clean, 0 findings** — independently reran the R5/R8 invariant tests plus the full
+   `tests/audit/` folder (139/139) in a disposable worktree, grepped the whole branch confirming no
+   `derivations.length > 0` literal survives anywhere. `gh pr checks 127`: `gate` pass 24m52s + 24m54s, `deploy`
+   skipping ×2.
+6. **PR #128** — `fix/196-eviction-resolve-race`. Row
+   #196's still-open structural follow-up: `resolveIntent`'s own registry reads (`canonical_measures`,
+   `dimension_labels`, `cbs_tables` — all in `src/query/resolve.ts`) run BEFORE `run.ts`'s already-hardened read
+   arc (the #121-round-2 fix) and raced the same `tables:evict --apply` one step earlier. Confirmed first that
+   `--apply` is still manual-only (no `evict` in `src/ingestion/cli.ts`, `web/vercel.json`'s only crons are
+   onboarding + gdpr-purge) — background hardening, not urgent. Chose direction (a) from the row's own two
+   options: a per-table `pg_advisory_xact_lock`, `SHARED` around `resolveIntent`'s full read arc (wrapped in one
+   `db.withTransaction` from `fetchTable` onward) and `EXCLUSIVE` as the first statement of eviction's per-table
+   transaction — reusing this codebase's existing advisory-lock convention (`pipeline.ts`, `billing/ledger.ts`,
+   `trial-pot.ts`, `onboarding-trigger.ts`) rather than inventing a grace-state machine; no DDL. The one
+   deliberately-unlocked window (the canonical-measures lookup before a `tableId` is even known) was verified safe
+   by checking the actual FK in `migrations/002_registry_defaults.sql`, not just asserted. New
+   `tests/query/resolve-eviction-race.test.ts` extends the existing `eviction-race.test.ts` intercept technique
+   (extracted into a shared `tests/helpers/eviction-race.ts`) to reproduce an eviction landing during
+   `resolveIntent`'s own reads. Build-round verify block: backend 117/1786 (2 new tests); benchmark GATE PASS; web
+   50/584 unchanged; real `next build` clean. **First head `679741b`, PR opened.**
+   **HIGH review found 3 real findings** (this is the value the review stage was built for): (medium) the new
+   `SHARED` lock has no `lock_timeout` and collides, undisclosed and untested, with `pipeline.ts`'s **pre-existing**
+   `EXCLUSIVE` lock on the identical key for the manual `--rebaseline` sync — a `--rebaseline` of an actively-queried
+   table would now hang every concurrent chat query against it with no timeout, tying up one of only 2 pooled
+   connections per process (this project's #173/#188/#190 pooler-incident lineage); (medium) the query-count
+   tripwire's own docstring still claimed the counted path uses no `withTransaction`, so the fix's real round-trip
+   cost was invisibly undercounted as "+1 statement" when it's actually +3 (`BEGIN`/`COMMIT` bypass the counting
+   wrapper); (low) an explicit-target read racing eviction still returns `table_not_registered` instead of the
+   kind-agnostic `table_evicted` run.ts gives — safe only because `src/chart/curated.ts`'s explicit targets always
+   hit the pinned/eviction-exempt seed set, a dependency that was real but undocumented. **Fix round**: agreed with
+   and addressed all three — disclosed the lock coupling in comments on both sites plus a new source-pin test
+   (deliberately did NOT add a `lock_timeout`, matching this codebase's own documented policy that bounded waits
+   apply only to the two anonymous read paths, each independently protected by its own `web/lib/deadline.ts`
+   5s guard — not to the paid path `resolveIntent` sits on, and no other advisory-lock site in the codebase has one
+   either) and added the same caution to RUNBOOK's pre-`--apply` checklist; fixed `countingDb` to price a
+   `withTransaction` at its true cost and re-measured every pinned number (majority path 13→15, national-only
+   9→11, both-axes-ON 14→16, etc. — corrected in query-count.test.ts, ADR 029, and open-questions row #195, leaving
+   older dated historical measurements untouched as audit trail); added an explicit **Assumption** comment at both
+   ends of the explicit-target asymmetry plus a new `tests/chart/curated.test.ts` case pinning that every curated
+   chart's table is `pinned = true`. Self-review (LOW, single-pass — the Agent tool was unavailable inside that
+   nested context) caught and fixed two more issues before pushing: stale line-number references its own diff had
+   shifted, and a non-unique test anchor string. Re-verify block after the fix: backend 117/1788 (+2 pins); GATE
+   PASS; web 50/584; real `next build` clean. Pushed two commits, **final head `ef4e35a`**. This session
+   independently confirmed `origin/fix/196-eviction-resolve-race` really is `ef4e35a` via `git fetch` + `rev-parse`
+   before trusting the fix report. `gh pr checks 128` (final push): `gate` pass 22m58s + 25m52s, `deploy` skipping
+   ×2.
+7. **Independent verification by this session** (GOLDEN RULE — nothing below taken on an agent's word alone):
+   `gh pr list --state open` → exactly #124/#125/#126/#127/#128; `gh pr checks` on all three new PRs → both `gate`
+   runs `pass`, `deploy` correctly `skipping`; `git rev-parse origin/fix/196-…` → `ef4e35a`, matching the fix
+   report's claim.
+8. **Cleanup:** `git worktree remove --force` on the 4 workflow worktrees (`.claude/worktrees/wf_14aed7d3-aee-{1,2,3,7}`)
+   only after confirming (step 7) origin already carried every commit they held; deleted their throwaway local
+   branches (`worktree-wf_14aed7d3-aee-{1,2,3,7}`, `work-196-review2` — a local branch one fix agent created inside
+   its own worktree since the real branch was checked out in a sibling worktree it couldn't touch). Left the
+   pre-existing stray remote branches (`origin/claude/sessie-73-pr-review-merge-…`, `remotes/pr/123`) alone — not
+   this session's to clean up, flagged by PR #127's own reviewer as pre-dating this work.
+9. **Not done, deliberately:** no merge of #126/#127/#128 (owner absent, #118(b)); no Dependabot review; no
+   `GDPR_PURGE_APPLY` flip; no #162 A/B spend; no WP30c/#199/#197-ideas-4-8 work (all owner-gated, undecided). The
+   three recorded hermetic follow-ups are now the full extent of what the docs flag as autonomously buildable —
+   nothing invented beyond them.
+10. **Docs updated in the same PRs (land on `main` at merge, not before):** each of #126/#127/#128 carries its own
+    open-questions.md row update (#73/#79/#196) plus the ADR/RUNBOOK notes its change touched. This archive entry
+    and STATUS.md's new top block are this session's own summary, pushed docs-only straight to `main` (the
+    established "code on branches+PRs, docs direct to main" convention) — a trivial doc-line conflict between a
+    sibling PR's own STATUS.md/open-questions.md edit and this push, if any, is expected and gets resolved at
+    merge time exactly as session 73 resolved one for the #121/#122 batch.
+
 **Session 75 (2026-09-03, OWNER PRESENT in the desktop chat — the SESSION-73 kickoff pasted a third time, ≈17:35Z; a cloud
 session that called itself session 74 was RUNNING on the same kickoff in parallel) — THE FOUR-PR BATCH MERGED AND LIVE:
 #121 `527ef2e`, #120 `069a03e`, #122 `4fd6ea5`, #123 `ddca024`. Owner-authorized merges by this session, one at a time,
