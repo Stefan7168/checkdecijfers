@@ -21,7 +21,7 @@
 // committed fixture. New optional fields are safe (absent = not serialized);
 // renames are not.
 import { createHash } from 'node:crypto';
-import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import Anthropic from '@anthropic-ai/sdk';
 
@@ -150,6 +150,55 @@ export interface RecordedFixture {
   response: LlmResponse;
 }
 
+/** #200 direction (b): a fixture-miss diagnostic. When the exact request hash
+ * has no fixture, scan the same directory for a fixture whose request is
+ * identical in every field EXCEPT `jsonSchema`. This is the signature of
+ * EITHER a non-behavioral schema-serialization change (e.g. zod's
+ * `toJSONSchema()` emitting different bytes for the same schema across a
+ * dependency bump, PR #124's confirmed bisection) OR a genuine, intentional
+ * edit to a zod schema (e.g. a field added/removed in one of the schema.ts
+ * call sites) that didn't also touch the prompt/model/registry in the same
+ * commit — the "identical except jsonSchema" signal cannot distinguish
+ * these two root causes, and the caller must check which one it is (see the
+ * near-miss message below) rather than assume the former. Returns the
+ * near-miss fixture, or null if none is found. Comparing with `jsonSchema`
+ * stripped relies on stableStringify already dropping undefined-valued keys
+ * (see the HASH-STABILITY CONSTRAINT above) — safe because that's an
+ * existing, relied-upon property, not new behavior. Malformed/foreign files
+ * in the directory are skipped, never thrown. */
+function findNearMissFixture(
+  fixturesDir: string,
+  request: LlmRequest,
+): RecordedFixture | null {
+  const target = stableStringify({ ...request, jsonSchema: undefined });
+  let entries: string[];
+  try {
+    entries = readdirSync(fixturesDir);
+  } catch {
+    return null;
+  }
+  for (const entry of entries) {
+    if (!entry.endsWith('.json')) continue;
+    let candidate: RecordedFixture;
+    try {
+      candidate = JSON.parse(readFileSync(join(fixturesDir, entry), 'utf8')) as RecordedFixture;
+    } catch {
+      continue;
+    }
+    if (!candidate || typeof candidate !== 'object' || !candidate.request) continue;
+    let candidateProjection: string;
+    try {
+      candidateProjection = stableStringify({ ...candidate.request, jsonSchema: undefined });
+    } catch {
+      continue;
+    }
+    if (candidateProjection === target) {
+      return candidate;
+    }
+  }
+  return null;
+}
+
 export class ReplayLlmClient implements LlmClient {
   private readonly fixturesDir: string;
 
@@ -161,12 +210,27 @@ export class ReplayLlmClient implements LlmClient {
     const hash = requestHash(request);
     const file = join(this.fixturesDir, `${hash}.json`);
     if (!existsSync(file)) {
-      throw new Error(
+      let message =
         `no recorded LLM fixture for this request (hash ${hash}).\n` +
-          `User text: "${request.question.slice(0, 200)}"\n` +
-          `Either the request is new, or the prompt/schema/model/registry changed since ` +
-          `recording. Re-record with the matching record script (spends API tokens).`,
-      );
+        `User text: "${request.question.slice(0, 200)}"\n` +
+        `Either the request is new, or the prompt/schema/model/registry changed since ` +
+        `recording. Re-record with the matching record script (spends API tokens).`;
+      const nearMiss = findNearMissFixture(this.fixturesDir, request);
+      if (nearMiss) {
+        message +=
+          `\n\nNear-miss found: fixture ${nearMiss.requestHash} ` +
+          `("${nearMiss.question.slice(0, 80)}") matches this request on every field ` +
+          `except jsonSchema. This has two possible causes that look identical from here: ` +
+          `(1) a schema-serialization library (e.g. zod's toJSONSchema()) changed its ` +
+          `output shape in a dependency bump with no real prompt/schema/model/registry ` +
+          `change, or (2) a genuine, intentional edit to a zod schema in one of the ` +
+          `schema.ts call sites (e.g. a field added or removed) that didn't also touch ` +
+          `the prompt wording in the same commit. Diff this request's jsonSchema against ` +
+          `the near-miss fixture's, and check recent commits to the relevant schema.ts, ` +
+          `before assuming this is just a dependency-bump artifact — do not treat this ` +
+          `message as confirming (1). See docs/open-questions.md #200.`;
+      }
+      throw new Error(message);
     }
     const fixture = JSON.parse(readFileSync(file, 'utf8')) as RecordedFixture;
     return fixture.response;
