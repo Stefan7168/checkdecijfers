@@ -30,6 +30,11 @@ Full narrative: [status-archive.md](status-archive.md) session-78 entry.
   merges, never `git pull`/`git merge --ff-only`. `git status` immediately showed "Your branch is behind
   'origin/main' by 4 commits" once checked. Any repo-wide grep/read intended to reflect "current state" after a
   remote-affecting operation (merge, another session's push) needs a fast-forward first, not just a fetch.
+  **Recurred the same session on the push side:** a docs commit made against a local `main` that hadn't tracked
+  `gh pr merge 125`'s effect on `origin/main` (that command moves `origin` directly; it never touches the local
+  branch) was rejected as non-fast-forward. `gh pr merge` and any other origin-only operation need the same
+  fetch+integrate step before the NEXT local commit, not only before a read — `git rebase origin/main` resolved
+  it cleanly here (no conflict, since the two commits touched disjoint files).
 - **`curl` is not installed in this sandbox.** Every canary check in this session used `node -e
   "fetch(url).then(r=>console.log(r.status))"` instead, which worked reliably throughout (3 endpoints × 4
   post-merge checks, all 200). Worth remembering for any future session in the same environment — don't assume
