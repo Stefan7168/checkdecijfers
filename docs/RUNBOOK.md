@@ -295,7 +295,8 @@ path is ~4-6x that, and the same probes that inflate the count also keep a table
 [#196](open-questions.md) (a concurrent eviction can false-refuse a live query for the table it's
 evicting — the guard only checks for an active onboarding job, not an in-flight read). Read both before
 scheduling any automation on top of this. **#196's own structural follow-up (`resolveIntent`'s reads racing
-the same eviction one step earlier) is ALSO now ✅ FIXED (session 76, PR #128, merged session 78) — a
+the same eviction one step earlier) is ALSO now ✅ FIXED (session 76, PR #128, MERGED + LIVE session 78,
+squash `be9144f`) — a
 per-table advisory lock, SHARED in the read arc and EXCLUSIVE in eviction's transaction; see
 [#196](open-questions.md)'s as-built note.** **Operationally relevant:** the SAME advisory-lock key
 (`hashtext(tableId)`) is also taken EXCLUSIVE by `src/ingestion/pipeline.ts`'s manual

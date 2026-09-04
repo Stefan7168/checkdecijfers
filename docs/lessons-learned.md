@@ -6,6 +6,41 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 78 — 2026-09-04 into 2026-09-05, owner present — merge day for #126–129
+
+Full narrative: [status-archive.md](status-archive.md) session-78 entry.
+
+- **Never resolve a docs merge conflict by assuming which side is newer — `git show <sha>:<path>` both sides and
+  compare content, every time.** Resolving PR #126's ADR 033 conflict, a blind `git checkout --theirs` took
+  `main`'s side on the assumption that `main` (which had absorbed several later sessions' docs pushes) must be
+  the more current copy. Wrong: direct comparison (`git show ca2c76f:docs/decisions/033-chat-workspace-redesign.md`
+  vs `git show 146594c:...`, the two conflict sides) showed the PR branch's own note — written by the same
+  build session that did the work — was the fuller, technically accurate one, while `main`'s copy was a thinner
+  stub written later by a *different* session doing unrelated nearby edits, that happened to touch the same
+  paragraph without the original author's detail. The other two conflicts in the same merge batch
+  (`04-architecture.md`, `RUNBOOK.md` on PR #128) went the other way — `main` genuinely was more current there —
+  so there is no reliable heuristic ("the branch is older, so main wins" or vice versa); only reading both raw
+  sides settles it. Caught this session only because every resolution was re-verified against both sides after
+  the fact, not because the first pass got it right — fixed with a direct follow-up edit to `main` rather than
+  left wrong.
+- **`git fetch` updates remote-tracking refs, not the local working tree — a grep against local files after
+  `git fetch` alone can silently read stale content.** After several `gh pr merge` calls (which only affect
+  `origin`), a stale-wording sweep grepped local `docs/*.md` and found several "already fixed" hits — the local
+  `main` checkout had drifted 4 commits behind `origin/main` because only `git fetch` had been run between
+  merges, never `git pull`/`git merge --ff-only`. `git status` immediately showed "Your branch is behind
+  'origin/main' by 4 commits" once checked. Any repo-wide grep/read intended to reflect "current state" after a
+  remote-affecting operation (merge, another session's push) needs a fast-forward first, not just a fetch.
+- **`curl` is not installed in this sandbox.** Every canary check in this session used `node -e
+  "fetch(url).then(r=>console.log(r.status))"` instead, which worked reliably throughout (3 endpoints × 4
+  post-merge checks, all 200). Worth remembering for any future session in the same environment — don't assume
+  `curl` and fall back silently; `node`'s built-in `fetch` is the tested working alternative here.
+- **A serial multi-PR merge into a moving `main` can re-conflict a PR that was already resolved once.** PR #128's
+  docs conflict was resolved and pushed, then re-conflicted (a second, different file this time — `STATUS.md`)
+  purely because PR #126 merged into `main` in between, touching a paragraph #128's stale branch also touched.
+  Expected in a batch where every PR carries `docs/STATUS.md` edits — re-check `mergeable` immediately before
+  each merge, not just once at the start of the batch, and be ready for the resolve → push → re-verify cycle to
+  repeat.
+
 ## Session 77 — 2026-09-04, autonomous ("work autonomously for hours and hours") — re-triaging open-questions.md for a hermetic follow-up: mostly noise, one real find (#200b)
 
 Full narrative: [status-archive.md](status-archive.md) session-77 entry.

@@ -1,5 +1,71 @@
 # STATUS archive — the session log
 
+**Session 78 (2026-09-04 into 2026-09-05, OWNER PRESENT — merge day) — #126/#127/#128/#129 ALL MERGED + LIVE.
+(This entry covers the merge phase; extended at wrap-up if the session continues further.)**
+
+1. **Kickoff verification:** read CLAUDE.md → STATUS.md top block (session-77's entry) →
+   `docs/session-briefs/2026-09-04-session-78-kickoff.md` → status-archive session-77 entry → lessons-learned
+   session-77 entry, per the kickoff's own reading order. Verified against reality: `git log -3` top `ca2c76f`
+   matched exactly; `gh pr list --state open` showed exactly six — #126/#127/#128/#129 + Dependabot #124/#125;
+   `gh run list --branch main -L 3` all `success`; `git worktree list` showed only the main checkout; `git
+   branch` showed no branch that didn't map to an open PR or `main`. Everything matched the kickoff with no
+   drift.
+2. **Asked the owner what to prioritize** (`AskUserQuestion`, four options: merge #126–129 / Dependabot #125 /
+   the GDPR flag / something else) rather than assume — the answer was to review + merge #126–129 first.
+3. **Pre-merge mergeable check:** `gh pr view --json mergeable` initially returned `UNKNOWN` for all four (the
+   post-push recompute window); re-checked after a few seconds — #127 and #129 `MERGEABLE`/`CLEAN`, #126 and
+   #128 `CONFLICTING`/`DIRTY`. `git merge-tree --write-tree` against each showed the conflicts were **doc-only
+   in every case, zero code conflicts**: #126 conflicted solely on `docs/decisions/033-chat-workspace-redesign.md`;
+   #128 solely on `docs/04-architecture.md` + `docs/RUNBOOK.md`. `docs/STATUS.md` and `docs/open-questions.md`
+   auto-merged cleanly on both despite both PRs touching them, because sessions 76/77's later docs-direct-to-main
+   pushes had landed in different rows/paragraphs than these stale branches touched.
+4. **Merged #127 first** (`fix/79-shared-derived-predicate`, squash `676facf`, 17:20:09Z) — clean, no
+   conflicts. Watched `main`'s gate (`33900019626`, push event) to completion: gate pass, deploy `1m39s`
+   (deployment id `101114373175`), post-deploy smoke check passed. Canary (`node -e "fetch(...)"`, `curl` is not
+   installed in this sandbox): `/`, `/llms.txt`, `/api/health` all 200.
+5. **Merged #129 next** (`fix/200-fixture-hash-diagnostic`, squash `30098e9`, 17:32:01Z) — clean. Gate
+   (`33901085323`) pass, deploy `1m39s` (id `101119416221`), smoke check passed. Canary 200×3.
+6. **Resolved #126's ADR 033 conflict:** worktree `.claude/worktrees/merge-126` off `fix/73-carrier-on-chatmessage`
+   (head `146594c`), `git merge origin/main`, single conflict in ADR 033. **First attempt: `git checkout
+   --theirs` (took `main`'s side) — this was WRONG,** caught later (see lesson below) — main's copy was a
+   thinner stub, the branch's own note (written by the session that did the actual work) was fuller and more
+   accurate. Pushed as `24372ce`, PR gate green (`33900274681`, deploy correctly `skipping` — non-main), merged
+   as squash `95c7487` (17:49:41Z). `main` gate (`33902632950`) pass, deploy `1m52s` (id `101124270217`), smoke
+   check passed, canary 200×3.
+7. **Resolved #128's first conflict round:** worktree `.claude/worktrees/merge-128` off
+   `fix/196-eviction-resolve-race` (had to `git fetch` + `git reset --hard origin/...` first — the local branch
+   ref was stale, still pointing at the PR's *original* pre-review head `679741b` instead of the real
+   HIGH-review-fixed head `ef4e35a`). Merged `origin/main`, two conflicts: `docs/04-architecture.md` (took
+   `--theirs`/main's side — verified correct this time, main's copy genuinely was fuller, with the HIGH-review
+   finding detail the branch's shorter note omitted) and `docs/RUNBOOK.md` (hand-merged: kept the branch's own
+   new operational caution about the advisory-lock key coupling with `pipeline.ts --rebaseline`, which did not
+   exist on `main` at all yet, while updating the surrounding merge-status wording). Pushed as `28fba37`, PR gate
+   green (`33900274322`/`33904247279` after a re-push).
+8. **#128 re-conflicted before merge** — `main` had advanced again (PR #126 merged in the meantime), producing a
+   NEW conflict, this time in `docs/STATUS.md` only (04-architecture.md/RUNBOOK.md auto-merged clean the second
+   time since nothing new touched them). Second worktree round: merged the two sides' "▶ NEXT" paragraphs
+   (branch had #196's own "now FIXED" note, `main` had #126's "now BUILT" note — combined into one paragraph
+   naming all three follow-ups #73/#79/#196 as built+merged). Pushed as `3c849bd`, gate re-verified green
+   (`33904247279`), merged as squash `be9144f` (18:24:49Z) — the last of the four. `main` gate (`33905754018`)
+   pass, deploy `1m54s` (id `101134309064`), smoke check passed, canary 200×3.
+9. **Post-merge stale-wording sweep:** grepped `docs/*.md` + `docs/decisions/*.md` for "pending owner
+   review"/"awaiting merge"/"not yet merged"/"OPEN, gate-green" tied to the four PRs. First pass returned several
+   hits that turned out to be **already fixed on `origin/main`** — the local working tree had drifted 4 commits
+   behind (only `git fetch` had been run between merges, never a fast-forward); `git status` showed "behind
+   'origin/main' by 4 commits", fixed with `git merge --ff-only origin/main`, then the grep re-run for real.
+   Real hits fixed: `docs/04-architecture.md` (closing sentence), `docs/open-questions.md` rows #79 and #196,
+   `docs/decisions/029-follow-up-suggestion-chips.md` (#196's note) — all updated to MERGED + LIVE with the real
+   squash SHAs. **Then re-verified every conflict resolution from steps 6–8 against BOTH raw sides directly**
+   (`git show <sha>:<path>`, not the diff/assumption used at resolution time) — this caught the ADR 033 mistake
+   from step 6: fixed with a direct edit to `main`, folding the branch's fuller original text back in with
+   updated MERGED+LIVE wording, rather than left silently wrong. Full lesson, and the two smaller process
+   findings from this sweep (the stale-local-tree grep trap, the missing `curl`), recorded in
+   [lessons-learned.md](lessons-learned.md) session-78 entry.
+10. **End state after this phase:** `gh pr list --state open` shows exactly Dependabot #124 (blocked,
+    zod regression) and #125 (clean, next up); `git status` clean; no stray worktrees (`.claude/worktrees/merge-126`,
+    `merge-128`, `merge-128b` all removed after use); local `main` fast-forwarded to `be9144f`. No DDL, no flag
+    flips, no LLM spend.
+
 **Session 77 (2026-09-04, AUTONOMOUS — the owner said "up to you, work autonomously for hours and hours" in an
 owner-present chat, then left) — RE-TRIAGED open-questions.md FOR MORE HERMETIC FOLLOW-UPS: SEVEN OF EIGHT
 CANDIDATES WERE FALSE POSITIVES, ONE REAL NEW PR (#200b/#129); A SEPARATE STALE-DOC SWEEP FOUND ONE MINOR REAL GAP

@@ -9,6 +9,50 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
+**▶ SESSION 78 (2026-09-04 into 2026-09-05, OWNER PRESENT — merge day for the four PRs sessions 76/77 left
+open) — #126/#127/#128/#129 ARE ALL MERGED + LIVE.** Kickoff verified clean against
+`docs/session-briefs/2026-09-04-session-78-kickoff.md`: `git log -3` matched, `gh pr list` showed exactly the
+six PRs expected, all CI runs `success`, no stray worktrees/branches. Asked the owner what to prioritize;
+answer: review + merge #126–129 first.
+
+**Merge order:** #127 (clean) → #129 (clean) → #126 (doc conflict) → #128 (doc conflict, twice — see below).
+Squashed serially, one deploy at a time, gate+deploy+3-canary (`/`, `/llms.txt`, `/api/health`, all 200) checked
+before starting the next merge, matching the established discipline. Final SHAs: #127 `676facf`, #129 `30098e9`,
+#126 `95c7487`, #128 `be9144f`.
+
+**Conflicts were doc-only in every case (no code conflicts at all)** — expected, since these branches were cut
+before sessions 76/77's own docs-direct-to-main pushes moved `docs/STATUS.md`/`open-questions.md` on. #126
+conflicted only on ADR 033; #128 conflicted on `04-architecture.md` + `RUNBOOK.md` (round 1) and then
+`STATUS.md` again (round 2, because `main` advanced past #128's stale branch a second time when #126 merged
+in between) — each resolved in a scratch worktree, pushed back to the PR branch, re-verified green before
+merging into `main`.
+
+**One resolution mistake, self-caught and fixed the same session:** the ADR 033 conflict was resolved with a
+blind `git checkout --theirs` (taking `main`'s side) on the assumption main's copy was more current — **wrong**:
+direct comparison of both sides (`git show ca2c76f:...` vs `git show 146594c:...`) showed the PR branch's own
+note was the fuller, more accurate one (it documented the companion carrier-onto-`ChatMessage` move that main's
+thinner stub omitted entirely), while for the OTHER two conflicting files (`04-architecture.md`, `RUNBOOK.md`)
+main's side genuinely was more current and `--theirs`/a hand-merge was correct. Caught by re-checking every
+resolution against both raw sides directly instead of trusting the first read — fixed with a direct edit to
+`main` (folding the branch's fuller text back in, updated to MERGED+LIVE wording) rather than left wrong.
+**Lesson: never resolve a docs conflict by assuming which side is newer — `git show <sha>:<path>` both sides
+and compare content, every time,** logged in [lessons-learned.md](lessons-learned.md).
+
+**Also caught mid-sweep:** the local working tree had drifted 4 commits behind `origin/main` (only `git fetch`
+had been run, not `git pull`/`merge --ff-only`) — a stale-wording grep against local files silently returned
+results for content that had already been fixed on `origin/main` minutes earlier. Fast-forwarded before
+re-running the sweep for real. `curl` is not installed in this sandbox (canaries used `node -e "fetch(...)"`
+instead, working reliably throughout).
+
+**Post-merge docs sweep:** grepped for "pending owner review"/"awaiting merge"/"not yet merged"/"OPEN,
+gate-green" tied to these four PRs across `docs/`; fixed every real hit — `04-architecture.md`, `RUNBOOK.md`,
+`open-questions.md` rows #79/#196, ADR 029, ADR 033 (the correction above) — to MERGED + LIVE with the real
+squash SHAs. `git status` clean, no stray worktrees.
+
+**▶ NEXT this session:** Dependabot #125 (owner-stated priority, verify still clean before merging); #124 stays
+blocked (zod regression). Then `GDPR_PURGE_APPLY=1`, #162's A/B, the owner menu — unchanged from session 77's
+list below.
+
 **▶ SESSION 77 (2026-09-04, AUTONOMOUS — owner said "up to you, work autonomously for hours and hours" in an
 owner-present chat, then left) — RE-TRIAGED open-questions.md FOR MORE HERMETIC FOLLOW-UPS: MOSTLY NOISE, ONE REAL
 NEW BUILD (#200b), NOTHING MERGED.** Kickoff: verified session-76's kickoff brief against reality first (matched

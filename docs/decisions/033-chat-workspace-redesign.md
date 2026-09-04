@@ -217,15 +217,17 @@ folded into the frozen brief (cross-marked ⟨A1⟩–⟨A7⟩ there):
   captured id is null — the clarification turn's own attach failed fail-soft — the reply (typed, or a
   chip-bound take) sends the LIVE thread instead of null, which would have made the server open a fresh
   thread and fork the conversation; a switch clears `pending` and the captured id together, so the live
-  thread is the only other honest choice. Pinned for both paths in `chat.test.tsx`. **Follow-up (LOW pass, same
-  session):** with that fallback the captured id is provably either the live `threadId` or null at send time, so
-  `capturedThreadId` and the carrier's `threadId` express an invariant that collapses to "send the live thread" —
-  a later cleanup can pass the live thread on both paths and drop both fields (and this five-place doc trail);
-  not done inside PR #122 (out of its scope). **Done in PR #126 (session 76, 2026-09-04, branch
-  `fix/73-carrier-on-chatmessage`, head `146594c`)** — the carrier moved off the index-keyed ref onto
-  `ChatMessage` itself, `capturedThreadId` and the carrier's own `threadId` both dropped (the live thread is
-  sent on both paths, as this note predicted). HIGH review: clean, 0 findings. Open, gate-green, awaiting merge
-  per #118(b).
+  thread is the only other honest choice. Pinned for both paths in `chat.test.tsx`. **Follow-up ✅ BUILT + MERGED
+  (session 76 build, session 78 merge, branch `fix/73-carrier-on-chatmessage`, PR #126, squash `95c7487`, #73
+  row):** the captured-id invariant from the LOW pass above was confirmed and acted on — `capturedThreadId`
+  (React state) and the carrier's own `threadId` field are gone; both the typed-reply and the chip-take path in
+  `chat.tsx` now send the live `threadId` state directly. Pinned by the SAME two thread-attach-failed
+  `chat.test.tsx` cases, unchanged (their outcome is identical either way — that is the whole point of the
+  equivalence). The companion move — the chip carrier itself off `chat.tsx`'s index-keyed `carriersRef` and onto
+  `ChatMessage.carrier` (`web/lib/chat-message.ts`) — landed in the same branch/PR, now that `chat-message.ts`
+  was free (PR #123 had merged); `web/lib/replay-assemble.ts` always sets the new field `null` (a resumed
+  message's carrier is never restored — the existing #73/#197 open-questions rows' framing this ADR note was
+  already cited for). HIGH review: clean, 0 findings.
 - **⟨A7⟩ Redacted rows would render as a two-bubble sentinel echo and could CRASH the context
   rebuild** (`resolvedIntent` throws on a redacted 'answer' envelope — kind preserved, `result`
   gone): replay emits one placeholder message; the rebuild walk skips redacted rows before

@@ -197,7 +197,7 @@ zojuist opgeruimd … stel je vraag opnieuw"), never the owner alert; `Validated
 after the fetch. Tests: four committed-eviction interleavings, a served turn pinned to read nothing after the fetch, the
 statement tripwires re-measured (per served turn 13→12 / 9→8 / 13→12 / 14→13, per successful dry-run 24→21 / 10→8 /
 15→12), the new reason / silent alert / no-re-read path pinned; docs/05's failure table has the evicted-mid-flight row.
-**Structural follow-up ✅ FIXED (session 76, branch `fix/196-eviction-resolve-race`, PR #128 pending owner review):**
+**Structural follow-up ✅ FIXED (session 76, branch `fix/196-eviction-resolve-race`, PR #128 MERGED + LIVE session 78, squash `be9144f`):**
 `resolveIntent`'s canonical-measures lookup and label reads raced the same eviction one step earlier — closed with a
 per-table `pg_advisory_xact_lock`, SHARED in `resolveIntent`'s read arc and EXCLUSIVE in eviction's per-table
 transaction ("eviction yields to in-flight reads" by construction, chosen over a marked-for-eviction grace state as the
