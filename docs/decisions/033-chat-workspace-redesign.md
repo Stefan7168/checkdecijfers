@@ -221,7 +221,11 @@ folded into the frozen brief (cross-marked ⟨A1⟩–⟨A7⟩ there):
   session):** with that fallback the captured id is provably either the live `threadId` or null at send time, so
   `capturedThreadId` and the carrier's `threadId` express an invariant that collapses to "send the live thread" —
   a later cleanup can pass the live thread on both paths and drop both fields (and this five-place doc trail);
-  not done inside PR #122 (out of its scope).
+  not done inside PR #122 (out of its scope). **Done in PR #126 (session 76, 2026-09-04, branch
+  `fix/73-carrier-on-chatmessage`, head `146594c`)** — the carrier moved off the index-keyed ref onto
+  `ChatMessage` itself, `capturedThreadId` and the carrier's own `threadId` both dropped (the live thread is
+  sent on both paths, as this note predicted). HIGH review: clean, 0 findings. Open, gate-green, awaiting merge
+  per #118(b).
 - **⟨A7⟩ Redacted rows would render as a two-bubble sentinel echo and could CRASH the context
   rebuild** (`resolvedIntent` throws on a redacted 'answer' envelope — kind preserved, `result`
   gone): replay emits one placeholder message; the rebuild walk skips redacted rows before

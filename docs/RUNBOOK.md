@@ -294,7 +294,9 @@ before that later step) — two residuals a session-67 review found and logged �
 path is ~4-6x that, and the same probes that inflate the count also keep a table artificially "warm") and
 [#196](open-questions.md) (a concurrent eviction can false-refuse a live query for the table it's
 evicting — the guard only checks for an active onboarding job, not an in-flight read). Read both before
-scheduling any automation on top of this.
+scheduling any automation on top of this. **PR #128 (session 76, 2026-09-04) now builds the #196 fix** — a
+per-table advisory lock so eviction yields to in-flight reads; open, HIGH-reviewed, gate-green, awaiting
+merge per #118(b). Once merged, this precondition is satisfied.
 
 The step itself (owner present): `npm run db:migrate` from the repo root, then optionally `npm run
 tables:evict` (dry-run, no `--apply`) to confirm it reports the pinned seed set as exempt and everything
@@ -963,6 +965,17 @@ per-machine cache:
     `dependabot.yml` change fires "Dependabot Updates" runs on the same commit that complete instantly with no deploy
     job. (e) Expect the deploy-skip guard to fire when the peer pushes docs mid-gate; the newer commit's run deploys the
     combined state — verify with that run's deploy log, not the merge commit's.
+12. **A grouped Dependabot PR that fails CI/the local gate may have only ONE bad package inside it — isolate it by
+    pinning, not by guessing from changelogs (measured 2026-09-04, session 76, PR #124: a 5-package `npm-all` bump
+    failed the benchmark gate 0/6; `zod` alone was the cause, the other 4 packages had zero issues).** In the SAME
+    already-`npm ci`'d worktree (confirm nothing else is using vitest first — the one-vitest-at-a-time mutex, item 2
+    above), run `npm install <suspect-pkg>@<previous-version> --no-save` (no lockfile change, no separate install)
+    and re-run just the failing suite. A clean pass by elimination is proof, not a hedge — cheaper and faster than
+    dispatching a fresh review agent for one mechanical check. Related fragility to watch for: hashing/pinning a
+    third-party library's exact serialization output (not just the application's own request shape) inside a
+    fixture/snapshot system is a hidden break-on-any-bump surface — see [open-questions #200](open-questions.md)
+    (this repo's hermetic LLM-replay fixtures hash a zod-generated JSON Schema, so any zod bump that changes
+    serialized bytes, not meaning, can break every fixture keyed on it).
 
 ## Moving to a new machine (fresh clone bootstrap)
 
