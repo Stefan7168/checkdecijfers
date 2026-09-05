@@ -341,7 +341,10 @@ defaults the owner vetoes by exception; as-built record in [open-questions #197]
   (default, veto by exception): no "Sinds 2008" chip** — an answer carries no loaded-slice floor and the module
   never sees the database, so a "since" year would be a guess; the trend chip already offers a proven window.
   As-built detail: ADR 029 (first as-built note) + ADR 024 (last addendum).
-- Ideas 4–8 (takeaway line, "bewijs dit punt" + revision history, presentation toggles, reading toggles,
-  small multiples) unscheduled; idea 5 needs a migration (owner-supervised); 6–8 are Phase-2 Studio slices.
+- **Idea 4 (trend headline) BUILT** (sessions 80-81, 2026-09-05) — see [open-questions #197](open-questions.md)
+  and [ADR 014](decisions/014-chart-spec-v1-and-renderer.md)'s as-built notes for the full record; PR #6 open,
+  not yet merged (autonomous session + core-product code, #118(b)). **Ideas 6 (series legend) + 8 (small
+  multiples) BUILT + MERGED + LIVE** (session 79, 2026-09-05). Idea 5 (revision history) still needs a migration
+  (owner-supervised), unscheduled. Idea 7 unscheduled.
 
 *When a WP completes: tick it in [STATUS.md](STATUS.md), record measured results, and — if a design decision here changed — update this file so it stays the plan of record.*
