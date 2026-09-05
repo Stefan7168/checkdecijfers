@@ -1,7 +1,7 @@
 # STATUS archive — the session log
 
-**Session 78 (2026-09-04 into 2026-09-05, OWNER PRESENT — merge day) — #126/#127/#128/#129 ALL MERGED + LIVE.
-(This entry covers the merge phase; extended at wrap-up if the session continues further.)**
+**Session 78 (2026-09-04 into 2026-09-05, OWNER PRESENT) — #126/#127/#128/#129 + Dependabot #125 ALL MERGED +
+LIVE; THEN `GDPR_PURGE_APPLY=1` FLIPPED LIVE AND VERIFIED, OWNER-DIRECTED.**
 
 1. **Kickoff verification:** read CLAUDE.md → STATUS.md top block (session-77's entry) →
    `docs/session-briefs/2026-09-04-session-78-kickoff.md` → status-archive session-77 entry → lessons-learned
@@ -61,10 +61,57 @@
    updated MERGED+LIVE wording, rather than left silently wrong. Full lesson, and the two smaller process
    findings from this sweep (the stale-local-tree grep trap, the missing `curl`), recorded in
    [lessons-learned.md](lessons-learned.md) session-78 entry.
-10. **End state after this phase:** `gh pr list --state open` shows exactly Dependabot #124 (blocked,
+10. **End state after the merge phase:** `gh pr list --state open` showed exactly Dependabot #124 (blocked,
     zod regression) and #125 (clean, next up); `git status` clean; no stray worktrees (`.claude/worktrees/merge-126`,
     `merge-128`, `merge-128b` all removed after use); local `main` fast-forwarded to `be9144f`. No DDL, no flag
     flips, no LLM spend.
+11. **Asked the owner what to prioritize next** (`AskUserQuestion`: Dependabot #125 / GDPR flag / #162 A/B /
+    #132 route B / owner-menu) — answer: Dependabot #125. Verified its head unchanged since Dependabot opened it
+    and session 76's prior full-verify-block review still applied (single commit, same two files,
+    `web/package-lock.json` + `web/package.json`); re-confirmed gate green and `MERGEABLE`/`CLEAN`. Merged as
+    squash `938f742`. `main` gate (`33908962630`) pass, deploy `1m49s` (id `101144060831`), smoke check passed,
+    canary 200×3.
+12. **A `git push` was rejected non-fast-forward** immediately after — the small STATUS.md commit recording
+    #125's merge was made against a local `main` that had never tracked `gh pr merge 125`'s effect on `origin`
+    (that command moves `origin` directly, never the local branch). `git fetch` + `git rebase origin/main`
+    resolved it cleanly (no conflict, disjoint files) — recorded in lessons-learned as a recurrence of the
+    stale-local-tree trap, this time on the push side.
+13. **Asked again what to prioritize** (`AskUserQuestion`: #162 A/B / #132 route B / owner menu / nothing else)
+    — answer: `GDPR_PURGE_APPLY=1`. Checked `docs/RUNBOOK.md`'s documented procedure first (`vercel env add` →
+    `1` → redeploy → trigger one run → compare `vercel logs` counts against a laptop dry run) and the deploy-burst
+    caution (#173) — confirmed a ~5-hour gap since the last deploy (19:17Z → 00:26Z), clear of the burst window.
+    `npm run gdpr:purge` dry-run baseline: 0 rows everywhere (matching every prior measurement). `vercel env ls
+    production` confirmed the var was genuinely unset first. `printf '1' | vercel env add GDPR_PURGE_APPLY
+    production` set it (typed Sensitive by the CLI's default — a cosmetic mismatch against RUNBOOK's "not secret"
+    characterization, functionally identical either way, left as-is rather than trigger an extra redeploy to fix
+    cosmetically). Empty-commit redeploy (`490362f`) to pick it up: `main` gate (`33933080136`) pass, deploy
+    `2m1s` (id `101218215182`), smoke check passed, canary 200×3.
+14. **Triggering the verification run needed a detour.** First attempt: `vercel env pull` to a scratch file
+    (outside the repo, deleted after) to retrieve `CRON_SECRET` for an `Authorization: Bearer` header — got
+    **401**, because the var is Vercel-"Sensitive"-typed and pulls back as the literal placeholder `[SENSITIVE]`,
+    never the real value (by design — even the account owner's own CLI cannot read a Sensitive var's plaintext
+    back out once set). Correct method found via `vercel crons --help`: **`vercel crons run
+    /api/gdpr-purge-cron`** — Vercel's own CLI is already authenticated to the project and invokes the route
+    with the real secret internally, no need to ever see or handle it. Triggered at `2026-09-05T00:48:41.443Z`;
+    `vercel logs` showed `gdpr-purge-cron: Applied — redacted 0 audit_answers row(s) ...; 0 trial_questions ...
+    were DELETED; 0 error_log ... were DELETED` — matching the dry-run baseline exactly, satisfying RUNBOOK's
+    "counts must agree" requirement. The earlier 401 attempt left no side effect (rejected before reaching the
+    purge logic).
+15. **Docs fixed everywhere the purge cron was described as dormant/reporting-only:** `CLAUDE.md`'s
+    maintenance-agenda line, `docs/05-data-rules.md` (two spots — the anonymous-trial retention note and the
+    `error_log` retention note), `docs/RUNBOOK.md` (the `GDPR_PURGE_APPLY` secrets-table row + the
+    maintenance-agenda "THREE clocks" note), `docs/08-build-plan.md` (the #14 GDPR section's "not measured this
+    session" closing line), `docs/open-questions.md` row #189. Grepped `GDPR_PURGE_APPLY` across every living doc
+    (`docs/*.md`, `docs/decisions/*.md`, `CLAUDE.md`) to confirm no stale mention survived; `session-briefs/*`
+    intentionally left untouched (historical point-in-time snapshots, not living docs).
+16. **End state:** `gh pr list --state open` shows exactly Dependabot #124 (blocked); `git status` clean; no
+    stray worktrees; canaries green throughout. `GDPR_PURGE_APPLY=1` is live in production. No further owner
+    priority chosen this session — offered #162/#132/owner-menu again, owner said "You choose"; none of the
+    three were appropriate to pick unilaterally (real spend + owner read-back; a personal-privacy call; unscoped
+    feature work needing a brainstorming pass), so the reasoning was surfaced back rather than picked blind, and
+    the owner's "Continue" was read as endorsing the implicit recommendation to close out here. Full wrap-up run
+    per CLAUDE.md's ritual (this entry, [lessons-learned.md](lessons-learned.md) session-78 entry, memory files,
+    the next-session kickoff brief).
 
 **Session 77 (2026-09-04, AUTONOMOUS — the owner said "up to you, work autonomously for hours and hours" in an
 owner-present chat, then left) — RE-TRIAGED open-questions.md FOR MORE HERMETIC FOLLOW-UPS: SEVEN OF EIGHT

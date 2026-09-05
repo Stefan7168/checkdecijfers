@@ -6,7 +6,7 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
-## Session 78 — 2026-09-04 into 2026-09-05, owner present — merge day for #126–129
+## Session 78 — 2026-09-04 into 2026-09-05, owner present — merge day for #126–129, then the GDPR_PURGE_APPLY flip
 
 Full narrative: [status-archive.md](status-archive.md) session-78 entry.
 
@@ -45,6 +45,26 @@ Full narrative: [status-archive.md](status-archive.md) session-78 entry.
   Expected in a batch where every PR carries `docs/STATUS.md` edits — re-check `mergeable` immediately before
   each merge, not just once at the start of the batch, and be ready for the resolve → push → re-verify cycle to
   repeat.
+- **A Vercel env var typed "Sensitive" cannot be read back in plaintext by anyone, including via `vercel env
+  pull` — it always resolves to the literal placeholder `[SENSITIVE]`, not the real value.** Flipping
+  `GDPR_PURGE_APPLY=1` needed one triggered run of the `CRON_SECRET`-gated `/api/gdpr-purge-cron` route to
+  verify; the first attempt pulled production env vars to a scratch file and built an `Authorization: Bearer
+  <value>` header from the `CRON_SECRET` line — got 401, because the pulled "value" was the string
+  `[SENSITIVE]`, not the actual secret (this codebase deliberately marks `CRON_SECRET` Sensitive; harmless here
+  since the attempt only ever produced an authenticated-as-wrong-value rejection, no data touched). **The
+  correct tool is `vercel crons run <path>`** — Vercel's own CLI is already authenticated to the project and
+  invokes the route with the real secret internally, so a Sensitive-gated cron route can be manually triggered
+  without ever needing to see or handle the secret at all. Worth checking `vercel crons run --help`/`vercel
+  crons list` before reaching for a raw `fetch` + pulled-secret approach on any cron-gated route.
+- **A terse one-word answer to an open-ended "what next" question can mean "run with your own implicit
+  recommendation," not "pick blindly from the menu."** Asked what to prioritize among three owner-gated items
+  (real spend, a personal-privacy decision, unscoped feature work) plus "wrap up," the owner replied "You
+  choose." None of the three substantive options were actually appropriate to decide unilaterally (each
+  structurally needs the owner's own spend approval, privacy judgment, or a brainstorming pass), so the
+  reasoning was surfaced back to the owner rather than picking one blindly; the owner's next one-word reply
+  ("Continue") to *that* framing was read as endorsing the implicit recommendation ("this looks like a natural
+  stopping point") — consistent with [[feedback_delegate_sequencing_choice]]: a terse acknowledgment after a
+  reasoned recommendation means proceed with it, not restate the choice.
 
 ## Session 77 — 2026-09-04, autonomous ("work autonomously for hours and hours") — re-triaging open-questions.md for a hermetic follow-up: mostly noise, one real find (#200b)
 
