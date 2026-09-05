@@ -911,6 +911,21 @@ per-machine cache:
     message naming a path it never touched, that is this bug, not a real permissions problem or something for
     the agent to work around — it cannot self-resolve; stop it and re-dispatch once the orchestrating
     session's own worktree state is clean.
+12. **First full use of `superpowers:subagent-driven-development` in this project (session 80, 2026-09-05,
+    #199 and #197 idea 4) — worked well, three things worth knowing before the next session uses it again.**
+    (a) **Use plain `git worktree add` for the isolated workspace, not the `EnterWorktree` tool** — this
+    session already had a still-alive background agent (item 11's exact hazard) at the time, so the tool was
+    deliberately skipped in favor of the manual approach this project already uses everywhere else (matches
+    the "avoid `EnterWorktree` while a background agent is active" rule above). (b) **A task reviewer only
+    ever sees the task brief (`scripts/task-brief`'s output) and the implementer's report — never the
+    controller's own dispatch prompt.** If the controller told an implementer to skip a step deliberately
+    (docs updates, a final `/code-review` pass — both correctly reserved as one-time, end-of-plan controller
+    steps rather than per-task work), the reviewer will still flag it as "Missing." Real quality/spec findings
+    from the SAME review still need fixing; the deliberately-deferred ones just need the controller to
+    recognize why they don't apply, not a fix dispatch. (c) **`.superpowers/` (the skill's own scratch
+    directory — progress ledger, task briefs/reports, review-package diffs) was not in this repo's
+    `.gitignore`** despite the skill calling it "git-ignored scratch" in its own docs — added this session,
+    nothing had actually been committed. Check for this on any repo the first time this skill runs there.
 
 ## Reviewing and merging a large PR batch (added session 67, 2026-08-28 — reviewed + merged all 19 open PRs left by session 66)
 

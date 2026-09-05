@@ -31,3 +31,9 @@ coverage/
 benchmark/audit-run.json
 benchmark/audit-run-live.json
 benchmark/validation-run.json
+
+# superpowers:subagent-driven-development scratch (progress ledger, task
+# briefs/reports, review-package diffs) — per-worktree, regenerated each run,
+# never meant to be committed (added session 80, 2026-09-05, after finding it
+# wasn't ignored — nothing had actually been committed, caught before it was).
+.superpowers/
