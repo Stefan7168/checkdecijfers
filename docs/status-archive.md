@@ -1,5 +1,138 @@
 # STATUS archive — the session log
 
+**Session 79 (2026-09-05, OWNER PRESENT throughout) — ROUTE B EXECUTED, #197 IDEAS 6+8 BUILT + MERGED + LIVE
+(pending Vercel secrets), #162 CLOSED OUT AT 91% CLEAN AFTER THREE REAL ATTEMPTS, NO PHRASING VERDICT.**
+
+1. **Kickoff:** read CLAUDE.md → STATUS.md → `docs/session-briefs/2026-09-05-session-79-kickoff.md` → memory,
+   per the kickoff's own reading order. Verified against reality: `git log -3` matched, `gh pr list --state open`
+   showed exactly one (Dependabot #124, still blocked), `gh run list` all `success`, `git worktree list`/`git
+   branch` clean. `ListAgents` found an interactive peer — resolved as session 78 itself, idle, not a live
+   conflict. Owner answered the priority menu with "ALL" — every thread below was worked in parallel rather
+   than picking one.
+
+2. **Route B: executed.** Before touching anything, ran a fresh secret-exposure scan across the full 807-commit
+   history (common key-prefix patterns for every major provider used by this project, plus Stripe/Supabase/JWT
+   shapes) — zero real hits; the three filename-flagged matches (`web/.env.production`'s intentionally-public
+   Supabase URL/key, a test fixture literally named `FAKE_URL`, a public CA certificate) were each verified
+   safe by reading their actual content, converging with session 37's original 2026-07-12 audit rather than
+   just trusting it. Old repo renamed to `checkdecijfers-pre-rewrite-archief` (private, PII off the public
+   internet), new public `Stefan7168/checkdecijfers` created and pushed (807 commits, `refs/pull` confirmed
+   empty on the fresh repo), Dependabot vulnerability alerts + security fixes re-enabled. **Left for the
+   owner:** 3 `gh secret set` commands (`VERCEL_ORG_ID`/`VERCEL_PROJECT_ID`/`VERCEL_TOKEN`) on the new repo —
+   the session cannot set these itself (`gh secret set` was blocked by the permission classifier even for the
+   two non-secret IDs, and `VERCEL_TOKEN` must never pass through chat regardless). Until set, every `deploy`
+   CI job on this repo fails at "Pull Vercel project settings," harmlessly — production keeps serving the last
+   successful deployment throughout, confirmed live via `checkdecijfers.vercel.app/api/health` → 200 (the
+   custom domain `checkdecijfers.nl` is unreachable from this session's own sandbox network specifically,
+   unrelated to the app).
+
+3. **#197 ideas 6 (hide/show a series) + 8 (small multiples): brainstormed, planned, built, reviewed, fixed,
+   MERGED + LIVE in git.** Brainstormed in-chat per `CLAUDE.md`'s process; the resulting design doc
+   ([session-briefs/2026-09-05-chart-ideas-4-6-8-design.md](session-briefs/2026-09-05-chart-ideas-4-6-8-design.md))
+   corrected a real error in the original session-69 research brief, which had understated idea 4's (the
+   takeaway headline) scope by conflating it with the already-built #89 explainer — idea 4 was correctly
+   rescoped out of this branch, unscheduled. Ideas 6+8 were written up as a full implementation plan
+   ([superpowers/plans/2026-09-05-...](superpowers/plans/2026-09-05-chart-series-toggle-and-small-multiples.md))
+   and executed via subagent-driven-development in an isolated worktree: haiku implementers (the plan's own
+   text contained complete code, making implementation transcription-plus-testing), sonnet task reviewers,
+   opus for the final whole-branch review. **Two real process misses caught by the review loop itself, not
+   missed silently:** (a) the plan's own Task 2 Step 6 test asserted "no SVG at all" after switching to small
+   multiples — wrong on its own terms, since small-multiples panels are ALSO Recharts SVGs; the implementer
+   correctly stopped and asked instead of guessing, the plan was corrected, a second implementer continued
+   cleanly; (b) Task 1's implementer collapsed 3 planned incremental commits into 1, using the first
+   commit's own message ("no behavior change yet") for a commit that actually contained all three slices — the
+   task reviewer caught it, a fix round amended the commit message to accurately describe its real contents
+   (verified byte-identical tree pre/post-amend). **The final whole-branch review earned its cost decisively:**
+   it found a Critical bug neither task-level review could see, because it required checking call sites
+   OUTSIDE the diff — `ChartView` is not remounted per spec at two live call sites (`visual-dock.tsx`,
+   `chart-toggle.tsx`, both swap `spec` on the same mounted instance) — so the new hidden-series/small-multiples
+   state could leak across a chart switch, either silently blanking a chart with no legend to recover it
+   (series keys are index-based and can coincidentally collide across different charts) or baking a false "N
+   van M reeksen verborgen" claim into an exported file. Fixed by resetting the three new presentation states
+   on a genuine spec-identity change (React's own documented "adjust state during render" pattern, no Effect),
+   proven with a rerender-same-instance-different-spec test. Also fixed from the same review, same session:
+   inverted `aria-pressed` polarity on the new legend buttons (a repeat of a mistake this codebase had already
+   fixed once elsewhere — chart-toggle.tsx); small-multiples panels overflowing their fixed-height container
+   past ~4 series; and a real correctness gap the review's own LOW pass found mid-fix — the download menu
+   stayed enabled in small-multiples view and would have silently exported only the first panel under the full
+   chart's attribution, now suppressed the same way the Tabel view already suppresses it. One design tension
+   was raised to the owner rather than resolved unilaterally — "eigen assen" (own-axis) mode auto-scaled each
+   panel with no axis labels, contradicting this same file's own stated axis-honesty policy; asked for the best
+   UX, owner said use best judgment, and per-panel honest min/max labels were added in own-axis mode only
+   (reusing the chart's existing honesty-bound tick mechanism — a label is still only ever a real point's own
+   formattedValue), deliberately not added to shared-axis mode (where panels are already directly comparable by
+   construction, and labeling a shared endpoint belonging to a different series' data would itself be
+   dishonest). **Final state, independently re-verified by this session (not trusted from any subagent
+   report):** root+web typecheck clean, backend suite 118/118 files 1792/1792 tests, benchmark GATE PASS
+   (14/14+6/6+0 fabricated), web suite 51/51 files 605/605 tests, `next build` clean. Merged to `main`
+   (`e49862c`, fast-forward, then two more docs-only commits) and pushed; CI `gate` job green (8m49s); `deploy`
+   failed only at the pre-existing Route B secrets gap (§2), not a regression. Docs updated in the same
+   pushes: open-questions rows #46 and #197 (including a correction the final review caught — idea 6 applies
+   to any 2+-series chart kind, not "line charts only" as an earlier docs pass had wrongly stated).
+
+4. **A genuine tooling bug, found live and reproduced directly:** partway through the #162 third-attempt
+   agent's work (below), its sandbox began refusing every Bash/Edit call, citing isolation to a worktree
+   (`chart-series-toggle-small-multiples`) it had never touched — this session's OWN concurrent worktree,
+   entered via `EnterWorktree` while that background agent was still running. The orchestrating session then
+   reproduced the identical symptom directly: an app-level directory-change notification (a different
+   mechanism from `EnterWorktree`) collided with its own worktree-isolation state, refusing commands even with
+   an explicit, correct, absolute path. `ExitWorktree` (`action: "keep"`) followed by a fresh `EnterWorktree`
+   cleared it cleanly, with no data loss (all work was already committed). Recorded in
+   [RUNBOOK.md](RUNBOOK.md) item 11 (multi-agent gotchas section) for the next session that hits it.
+
+5. **#162 (slot-filling A/B): three real attempts, closed out at 91% clean, no phrasing verdict — owner's
+   explicit call after a full walkthrough of the remaining gap.** All owner-authorized real spend, all
+   verified independently by this session (exact JSON report fields cross-checked, not just prose summaries
+   trusted). **Attempt 1** (recording): correctly stopped at 2 hard-gate failures before the judge could run —
+   18 template-falls across 82 slot calls, 1 unrecovered digit-leak — with 3 root causes diagnosed from the
+   actual failure data (`attempts[].problems`), not guessed. A mid-session mistake (6 of 20 "diversity" picks
+   turned out to duplicate existing benchmark questions, briefly overwriting 5 protected legacy fixtures) was
+   self-caught via `git status`, restored, and independently re-verified byte-identical. Spend: $0.537.
+   **Attempt 2** (fix the 3 bugs): hit the tooling bug in point 4 above partway through and made zero commits,
+   but its free/local diagnostic work before the lockout was real and reused directly — it correctly scoped one
+   of the three fixes (a shared-validator marker-list gap) as "diagnose and propose only, do not apply,"
+   recognizing the code path also serves live production, not just this experiment. **Attempt 3** (clean
+   worktree, explicit instruction not to re-attempt on any repeat of the tooling failure): applied all 3
+   diagnosed fixes, and found a 4th live during end-to-end verification — the pre-fill exemption for one bug
+   was a complete no-op, because compose.ts's POST-fill validator belt re-ran the same unmodified check and
+   re-flagged the identical word every time; fixed by wiring a filtered variant into the belt specifically for
+   the slot rung, leaving the legacy rung's validator call untouched. Verified via a git-stash-controlled
+   full-suite run (stashed its own changes, re-ran against the unmodified base commit, got the identical
+   failure — proving one remaining test failure was a pre-existing worktree-`node_modules` gap, RUNBOOK item 3,
+   not a regression): 1806/1807. Independent benchmark re-run: GATE PASS, legacy pipeline unaffected, 0
+   fabricated in every round throughout all 3 attempts. Template-falls dropped 18→3 (leg1/B1-B14 specifically
+   7→1). **Remaining gap (2 of 34 cases):** a second, independent same-sentence check —
+   `checkBinding` in `validate.ts`'s own R9 pass, a different implementation of nearly the same rule already
+   fixed once elsewhere this round — fused into the shared validator's core logic in a way that isn't safely
+   patchable after the fact (the first three fixes could each filter a known problem-string post-hoc without
+   touching core logic; this one needs the flagged claim's own derivation data, only available by editing
+   `checkBinding` itself a second time this round, or duplicating its logic separately with drift risk). Given
+   a full plain-language explanation of exactly what that means and costs, the owner chose to stop rather than
+   authorize a 4th attempt — 31/34 (91%) clean is the recorded, honest result; the judge never ran, so no
+   phrasing-quality claim exists, win or loss, in either direction. Cumulative spend across all 3 rounds:
+   ≈$1.14 (~€1.05). Branch `experiment/162-slot-filling-ab` (head `f26d01e`) kept as a 91%-fixed foundation for
+   whenever this is revisited, not merged, not deleted. **Flagged, not yet acted on:** the Tier-B fix (a
+   one-word regex addition fixing a real, independently-confirmed latent bug in the shared validator used by
+   the LIVE production pipeline, not just this experiment) is small, well-tested, and could be extracted and
+   shipped on its own regardless of what happens to the rest of the slot-filling idea.
+
+6. **Also this session, docs-only:** two new roadmap ideas recorded from the owner mid-conversation —
+   user-connectable Google Sheets ([#201](open-questions.md), the owner himself named the real blocker: no user
+   accounts/auth exists, and he doesn't want to build that yet) and drag-and-drop chat attachments
+   ([#202](open-questions.md)) — both deliberately recorded, not built, cross-referenced to each other and to
+   [ADR 032](decisions/032-websearch-augmentation.md)'s existing "unofficial content gets its own separately-
+   attributed section" pattern, since both raise the identical tension. WP30c stayed at "wait" — the owner's
+   Google Sheets answer didn't pick from the original 4 framed options, so it was recorded as a new, bigger
+   idea rather than force-fit as a WP30c choice. #199 was asked about again and declined again (owner: leave
+   it parked) — consistent with every session since 72.
+
+**▶ NEXT, in order — nothing urgent except the one owner-blocking item:** (a) the 3 `gh secret set` commands
+for Route B's new repo; (b) consider extracting the #162 Tier-B validator fix for a standalone ship; (c) #162
+itself — parked at 91%, pick up `checkBinding` whenever revisited; (d) Dependabot #124 still blocked, zod
+regression, unchanged; (e) #199 — parked, declined again; (f) idea 4 (takeaway headline) — designed
+([session-briefs/2026-09-05-chart-ideas-4-6-8-design.md](session-briefs/2026-09-05-chart-ideas-4-6-8-design.md)
+§3), not built.
+
 **Session 78 (2026-09-04 into 2026-09-05, OWNER PRESENT) — #126/#127/#128/#129 + Dependabot #125 ALL MERGED +
 LIVE; THEN `GDPR_PURGE_APPLY=1` FLIPPED LIVE AND VERIFIED, OWNER-DIRECTED.**
 

@@ -6,6 +6,62 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 79 — 2026-09-05, owner present — Route B, #197 ideas 6+8, #162 closed at 91%
+
+Full narrative: [status-archive.md](status-archive.md) session-79 entry.
+
+- **A final whole-branch review is not a bigger version of the per-task reviews — it catches a different
+  CLASS of bug, because it's the only step that looks outside the diff.** Both task-level reviews for the
+  #197 chart work passed clean; the final review found a Critical bug (stale hidden-series/small-multiples
+  state leaking across a chart switch, because `ChartView` isn't remounted per spec at two call sites entirely
+  outside this branch's diff — `visual-dock.tsx`, `chart-toggle.tsx`) that no amount of re-reviewing the diff
+  itself could have surfaced, because the bug isn't IN the diff — it's in how the diff's new code gets
+  CONSUMED by code the diff never touches. Worth the dedicated final pass on its own, independent of how clean
+  the per-task reviews came back; a plan or task brief cannot name this class of risk in advance, because the
+  brief author (the same session writing the plan) has exactly the same blind spot the task reviewer does.
+- **Even a "transcription plus testing" task (the plan already contains complete code) still needs commit-
+  discipline verification, not just correctness verification.** Task 1's implementer produced fully correct
+  code but collapsed 3 plan-specified incremental commits into 1, keeping the FIRST commit's message ("no
+  behavior change yet") on a commit that actually contained all three slices — caught by the task reviewer,
+  not by anything in the "is the code right" checks. The fix (amend the message, verify the tree is
+  byte-identical pre/post-amend) was cheap, but the miss shows that dispatching a mechanical/cheap-tier
+  implementer for genuinely mechanical work still needs its OWN review dimension for process fidelity, separate
+  from spec compliance and code quality.
+- **`EnterWorktree` in the orchestrating session can bind an already-running background agent's OWN sandbox to
+  the wrong worktree, refusing every command it makes from that point on — reproduced directly, not just
+  inferred from a confused agent report.** A background agent doing real work in its own worktree
+  (`agent-ad8ec20c3cba7eebd`) started getting every Bash/Edit call refused, citing isolation to
+  `chart-series-toggle-small-multiples` — a worktree it had never touched, which the orchestrating session had
+  entered for unrelated work while that agent was still running. Confirmed this wasn't the agent's own
+  confusion by reproducing the identical symptom in the orchestrating session itself immediately after:  an
+  app-level directory-change notification (unrelated to `EnterWorktree`) collided with the session's own
+  worktree-isolation state, and even an explicit, correct, absolute path was refused. `ExitWorktree` (`action:
+  "keep"`) then a fresh `EnterWorktree` cleared it, no data lost (everything was already committed). **Rule
+  going forward: avoid calling `EnterWorktree` in the orchestrating session while a background agent is still
+  active, and if a background agent ever reports every command failing on a worktree-isolation message naming
+  a path it never touched, that's this bug — stop and re-dispatch after clearing the orchestrating session's
+  own worktree state, don't have the agent retry variations of the same command.** Full detail:
+  [RUNBOOK.md](RUNBOOK.md) item 11.
+- **A validator fix applied only at the pre-fill stage can be a complete no-op if a post-fill belt re-runs the
+  same unmodified check on the finished text — measured, not assumed, by testing all the way through.** The
+  #162 telwoord-vs-entity-count fix (session 79, attempt 3) was implemented once, in the slot pre-fill rules,
+  and looked correct in isolation — but `compose.ts`'s post-fill validator belt calls the SAME shared
+  `wordFormProblems` function unmodified afterward, re-flagging the identical word on the finished body every
+  time (measured: 24 of 30 B14 samples passed the pre-fill check cleanly, then failed the post-fill belt on the
+  exact same token). Only caught because the fix was verified end-to-end (`composeAnswer`, not just the
+  pre-fill function in isolation) before being reported as done. Any future fix to this codebase's two-stage
+  fill-then-validate pipelines should be verified through BOTH stages, not just the one actually edited — a
+  unit test on the edited function proves the function is right; it doesn't prove the pipeline is.
+- **A subagent's own report numbers matched its committed JSON evidence exactly, three separate times this
+  session (#162 attempts 1 and 3, and the chart work's final review) — worth naming as confirmation the
+  verify-before-trusting discipline is working, not just overhead.** Every hard-gate number, spend figure, and
+  test count reported in prose was cross-checked against the actual `benchmark/ab-162-record-report.json`
+  fields or a fresh independent command run before being repeated to the owner; all matched. The one time a
+  report DID turn out to be wrong this session (Task 1's "full test suite" claim that was actually one file,
+  caught in the chart work's task review) was caught by exactly this same discipline. Neither outcome is a
+  reason to relax it — a habit that mostly confirms good news is still the reason the one bad-news case gets
+  caught.
+
 ## Session 78 — 2026-09-04 into 2026-09-05, owner present — merge day for #126–129, then the GDPR_PURGE_APPLY flip
 
 Full narrative: [status-archive.md](status-archive.md) session-78 entry.
