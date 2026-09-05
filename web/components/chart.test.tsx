@@ -430,6 +430,19 @@ function threePointSpec(overrides: Partial<ChartSpec> = {}): ChartSpec {
   });
 }
 
+// Shared by the idea-6 (series legend) and idea-8 (small multiples) describe
+// blocks below — both need a plain two-series spec and previously each
+// defined a byte-identical local copy of this helper.
+function twoSeriesSpec(overrides: Partial<ChartSpec> = {}): ChartSpec {
+  return spec({
+    series: [
+      { label: 'Nederland', regionCode: 'NL01', points: [point({ resultId: 'nl', value: 1, formattedValue: '1,0' })] },
+      { label: 'Utrecht', regionCode: 'GM0344', points: [point({ resultId: 'ut', value: 2, formattedValue: '2,0' })] },
+    ],
+    ...overrides,
+  });
+}
+
 describe('seriesStyle (#197: colour-blind-safe series palette + non-colour encoding)', () => {
   it('draws the first four series in the dedicated series tokens, never the semantic status colours', () => {
     const colors = [0, 1, 2, 3].map((i) => seriesStyle(i).color);
@@ -774,16 +787,6 @@ describe('ChartView — #197 step 2, the Tabel view', () => {
 describe('ChartView — series legend and hide/show (idea 6)', () => {
   beforeEach(() => vi.unstubAllGlobals());
 
-  function twoSeriesSpec(overrides: Partial<ChartSpec> = {}): ChartSpec {
-    return spec({
-      series: [
-        { label: 'Nederland', regionCode: 'NL01', points: [point({ resultId: 'nl', value: 1, formattedValue: '1,0' })] },
-        { label: 'Utrecht', regionCode: 'GM0344', points: [point({ resultId: 'ut', value: 2, formattedValue: '2,0' })] },
-      ],
-      ...overrides,
-    });
-  }
-
   it('renders one real button per series, labelled by name, none hidden by default', () => {
     render(<ChartView spec={twoSeriesSpec()} />);
     const nl = screen.getByRole('button', { name: 'Nederland' });
@@ -847,16 +850,6 @@ describe('ChartView — series legend and hide/show (idea 6)', () => {
 
 describe('ChartView — small multiples toggle (idea 8)', () => {
   beforeEach(() => vi.unstubAllGlobals());
-
-  function twoSeriesSpec(overrides: Partial<ChartSpec> = {}): ChartSpec {
-    return spec({
-      series: [
-        { label: 'Nederland', regionCode: 'NL01', points: [point({ resultId: 'nl', value: 1, formattedValue: '1,0' })] },
-        { label: 'Utrecht', regionCode: 'GM0344', points: [point({ resultId: 'ut', value: 2, formattedValue: '2,0' })] },
-      ],
-      ...overrides,
-    });
-  }
 
   it('offers no small-multiples toggle for a single-series chart', () => {
     render(<ChartView spec={threePointSpec()} />);
