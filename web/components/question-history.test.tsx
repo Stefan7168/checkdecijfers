@@ -482,4 +482,9 @@ describe('proof panel (#199)', () => {
     render(<QuestionHistory items={[entry()]} />);
     expect(screen.queryByText('Bewijs dit cijfer')).not.toBeInTheDocument();
   });
+
+  it('renders no proof panel for a deleted entry, even if an envelope was recorded', () => {
+    render(<QuestionHistory items={[{ ...entryWithProof(), isDeleted: true }]} />);
+    expect(screen.queryByText('Bewijs dit cijfer')).not.toBeInTheDocument();
+  });
 });

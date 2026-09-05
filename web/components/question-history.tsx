@@ -240,6 +240,13 @@ export function QuestionHistory({ items }: { items: QuestionHistoryEntry[] }) {
                 ) : (
                   <div className="mt-2 whitespace-pre-wrap text-sm text-ink-soft">{item.finalText}</div>
                 )}
+                {/* Critical: the !item.isDeleted guard above is the ONLY protection
+                  * against a proof panel appearing under a "Verwijderde vraag" heading.
+                  * In a collapsed round where the clarification row is redacted but the
+                  * reply row is not, isDeleted=true (OR of both rows' redaction state)
+                  * but answerEnvelope≠null (from the non-redacted reply row only).
+                  * Without this structural guard, the proof panel could expose
+                  * table/measure/region/period info on a deleted entry. */}
                 {item.answerEnvelope !== null ? (() => {
                   const proof = buildAnswerProof(item.answerEnvelope);
                   return proof !== null ? <AnswerProof proof={proof} /> : null;
