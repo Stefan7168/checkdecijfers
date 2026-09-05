@@ -9,31 +9,52 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
-**▶ SESSION 80 (2026-09-05, OWNER PRESENT, ~09:1xZ–14:2xZ) — #162's Tier-B fix and its checkBinding gap both
-fixed (§6 A/B judged: clean loss, do-not-adopt), Dependabot's zod regression fixed at the root + all 5 open PRs
-resolved, #199 dashboard proof panel MERGED + LIVE, #197 idea 4 (trend headline) 2-of-3 tasks built then PAUSED
-mid-build at wrap-up (not abandoned). Full session entry: [status-archive.md](status-archive.md).**
+**▶ SESSION 81 (2026-09-05, AUTONOMOUS — owner said "I will sleep. Work autonomously for hours and hours" and
+left) — #197 IDEA 4 FULLY BUILT + REVIEWED + FIXED, PR #6 OPEN (not merged); STATUS.md pruning finished for
+sessions 68-79.** Kickoff verified clean against `docs/session-briefs/2026-09-05-session-81-kickoff.md`. Full
+session entry: [status-archive.md](status-archive.md).
 
-**CI/production:** `gate` green on every commit through the wrap-up push (`b70cde0`, verified directly via `gh
-run view --json jobs`, not the top-level run conclusion — the top-level conclusion reads `failure` on some of
-these commits solely because of the `deploy` job below); `deploy` still fails only on the pending Route-B Vercel
-secrets (owner's own 3 `gh secret set` commands, unset since session 79) — production unaffected, `/api/health`
-200 confirmed at wrap-up. `git worktree list`: main + 3 deliberate non-main (`agent-aa024a353bfdc08d5` — still
-alive, do not touch; `experiment/162-slot-filling-ab` — parked, 91%+judge done; `feat/197-chart-trend-headline`
-— mid-build, see below).
+**#197 idea 4: Task 3 done (`7944fd7`), then the final whole-branch review (opus) found 2 CRITICAL + 2
+IMPORTANT issues, all real and reproduced against the actual code, not hypothetical** — a multi-region chart's
+`direction` derivation silently diffed across DIFFERENT regions (a false, unqualified trend claim); every
+historical chart row with a `direction` derivation would have failed R8 audit reconstruction once this shipped.
+Fixed in one round (`af21ab8`), independently re-reviewed (a second opus pass checking the fix against the real
+`deriveDirection`/`monotonic` code, not just the fix report) and confirmed correct with 0 new issues. Docs added
+(`b7e0c7e`, `d78cfb5`): open-questions #197 + new #203 (the pre-existing, not-a-branch-regression
+`deriveDirection` region-guard gap the review surfaced, cross-ref #100), ADR 014 as-built notes,
+`known-divergences.ts` header, a 04-architecture capability row. `/code-review` LOW pass: 0 findings. **PR #6
+opened; merged `main` into it to resolve a docs-only
+conflict (the worktree's `open-questions.md` predated session 80's later `main` commits) — both `gate` runs
+green, `mergeStateStatus: CLEAN`. NOT merged — autonomous session + core-product code, #118(b) requires owner
+review before merge.** Final measured state on the branch: typecheck ×2, backend 119 files/1814 tests, benchmark
+GATE PASS (14/14+6/6+0 fabricated), web 51 files/610 tests, real `next build` clean.
 
-**▶ NEXT, in order:** (a) resume #197 idea 4 Task 3 (render `trendHeadline` in `chart.tsx`) + the final
-whole-branch review, in `.claude/worktrees/feat-197-trend-headline` (ledger: that worktree's own
-`.superpowers/sdd/progress.md`, plan: `superpowers/plans/2026-09-05-chart-trend-headline.md`) — a
-straightforward continuation, no fresh owner input needed; (b) owner's 3 `gh secret set` commands
-(`VERCEL_ORG_ID`/`VERCEL_PROJECT_ID`/`VERCEL_TOKEN`), still blocking only `deploy`; (c) #162's §6 A/B verdict is
-in and it's a clean loss (41.18% win-or-tie vs 60% needed, 9/34 grammar complaints vs 0 allowed) — decide
-whether to accept as final (leave parked) or authorize a round 5 (prompt-level phrasing fixes + a fresh
-~$0.20 re-judge); (d) WP30c + #197's three older follow-ups — unscheduled owner-menu items. **Also flagged, not
-acted on:** `docs/STATUS.md` has accumulated un-trimmed full session blocks back through session 71 despite its
-own "lean top block" convention (line 7-10 above) — a dedicated pruning pass would fix this but wasn't done here
-(900+ lines of unrelated history is out of this session's scope); this session's own entry was kept lean to at
-least stop adding to the pile.
+**`docs/STATUS.md` pruning finished** — removed sessions 68-79's full un-trimmed blocks (582 lines, session
+80's kickoff had flagged 71-79; three more turned out to need it too), verified every session header already
+existed verbatim in [status-archive.md](status-archive.md) before deleting, `npm run test:docs` 11/11 after.
+Older 44-58 content deliberately left untouched (interleaved with still-referenced standing decisions, not pure
+superseded narrative — needs a closer read than a mechanical prune). Pushed direct to `main` (`b18817a`,
+docs-only, matches the established autonomous-session convention).
+
+**Maintenance (read-only, autonomous-safe per established precedent):** `npm audit` root + web, 0
+vulnerabilities. `npm run gdpr:purge` dry-run was BLOCKED by the permission classifier (a DB-connecting script,
+even in its default report-only mode) — not run, no override attempted. Production confirmed healthy,
+`/api/health` 200.
+
+**Declined by default, no owner input available tonight:** #162 round 5 (a fresh ~$0.20 re-judge) — left
+parked, per session 80's own "leave parked, default if nothing said." The 3 `gh secret set` commands (owner's
+own terminal). WP30c + #197's three older follow-ups (owner-menu items) — untouched.
+
+**`git worktree list` re-verified:** main + 3 deliberate non-main — `agent-aa024a353bfdc08d5` (PID re-confirmed
+genuinely alive via `ps -p`, 13h16m elapsed at check time — do not touch); `experiment/162-slot-filling-ab`
+(parked, unchanged); `feat/197-chart-trend-headline` (now PR #6, unmerged).
+
+**▶ NEXT, in order:** (a) review + merge PR #6 — green,
+conflict-free, nothing else needed from you but the merge click; (b) the 3 `gh secret set` commands for Route
+B, still blocking only `deploy`; (c) #162's §6 A/B verdict (clean loss, recorded session 80) — accept as final
+or authorize a round 5; (d) WP30c + #197's three older follow-ups; (e) new row
+[#203](open-questions.md) (`deriveDirection` has no region guard — pre-existing, low urgency, no owner decision
+needed to start whenever a session picks it up).
 
 
 **(Historical — the pause, 2026-08-15 to 2026-08-26.)** Project was paused ~2 months (owner decision) and the

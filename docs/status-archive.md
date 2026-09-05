@@ -1,5 +1,124 @@
 # STATUS archive — the session log
 
+**Session 81 (2026-09-05, AUTONOMOUS — owner pasted the session-81 kickoff, then said "I will sleep. Work
+autonousmly for hours and hours, I expect great process tomorrow. Go.") — #197 IDEA 4 FULLY BUILT, REVIEWED
+(FOUND 2 CRITICAL + 2 IMPORTANT REAL BUGS), FIXED, RE-REVIEWED CLEAN, PR #6 OPEN (NOT MERGED); STATUS.md
+PRUNING FINISHED FOR SESSIONS 68-79.**
+
+1. **Kickoff verified clean, second-instance check re-confirmed a known finding rather than trusting it from
+   memory.** `git log`/`gh pr list`/`git worktree list`/`git branch` all matched the session-80 kickoff's
+   predictions exactly (tip two commits ahead, as the kickoff itself anticipated). `ListAgents` showed two
+   other interactive `check-de-cijfers-*` peer sessions (started 6h/13h ago) — not investigated further,
+   matching sessions 76/77's established precedent for this exact situation (autonomous session, peers present
+   but not touching `main` with code). `ps -p <pid>` on the `agent-aa024a353bfdc08d5` worktree's lock
+   independently RE-CONFIRMED (not just re-trusted from session 80's note) a real, currently-running `claude`
+   process — 13 hours 16 minutes of elapsed time at the time of the check. Per the session-80 lesson, `ps`
+   against the lock file is the reliable signal here, not `ListAgents`.
+
+2. **#197 idea 4 resumed and finished.** The worktree's own `.superpowers/sdd/progress.md` ledger only listed
+   Task 1 as complete, even though the worktree's HEAD matched Task 2's commit — verified directly against
+   `git log` and Task 2's own report file (both confirmed Task 2 genuinely done, task-reviewed, just never
+   logged) rather than trusting either the stale ledger or blindly re-dispatching. Ledger backfilled. Task 3
+   (render `trendHeadline` in `chart.tsx`) dispatched to a haiku implementer per this project's established
+   model tier for transcription-plus-testing work: `7944fd7`, 610/610 web tests. Its task review (sonnet) found
+   one Important, plan-mandated gap — the implementer's report didn't evidence Step 6's full verification
+   block, only the web suite — so the controller ran it directly (no code change needed): typecheck ×2, backend
+   1810/1810, benchmark GATE PASS, web 610/610, `next build` clean, appended to the report.
+
+3. **The final whole-branch review (opus, per this project's established model tier for this step) found 2
+   CRITICAL + 2 IMPORTANT issues, all real, reproduced against the actual code, not hypothetical — this is the
+   THIRD session in a row this exact review step has caught what per-task review structurally could not see
+   (sessions 79 and 80 both found similar-class bugs at this same stage).**
+   - **C1 (Critical):** `deriveDirection` (`src/query/derivations.ts`) has no region guard, and cells are
+     built period-major/region-minor (`src/query/run.ts`) — so on a multi-region chart, the registered
+     `direction` derivation's `(firstResultId, lastResultId)` pair can silently diff across TWO DIFFERENT
+     regions. Reproduced concretely: Amsterdam 200→190 (falling) + Utrecht 100→150 (rising) on one chart
+     registered `direction: 'down'` and would have shown "Bevolking daalde sinds 2023" — false, and
+     contradicted by the chart itself.
+   - **C2 (Critical):** every historical chart row with a `direction` derivation would have failed R8 audit
+     reconstruction the moment this shipped — rebuilding an unchanged stored result now produces a
+     `trendHeadline` the row never had, so `reconstruct.ts`'s byte-comparison would falsely report
+     non-reconstruction for every such row. Not user-facing (`threads/replay.ts` serves stored charts
+     verbatim), but a real gap in `npm run audit:verify`. Root cause: `trendHeadline` is the FIRST optional-v1
+     field (ADR 014) the builder actually emits for real, live cases — `annotations` (the only prior
+     precedent) is a dormant, never-populated field, so condition (a) of the optional-v1-field rule ("the
+     builder never emits it") was trivially true for it and never actually exercised until now.
+   - **I1 (Important):** a non-monotonic flat series (rose then fell back to its start value) still rendered
+     "bleef stabiel" (remained stable) — a false straight-line claim; no honest one-sentence phrasing exists
+     for that shape.
+   - **I2 (Important):** any 2-point series is trivially monotonic (one interval), so every 2-point direction
+     derivation always earned "gestaag" (steadily) — the same hazard class [#100](open-questions.md) already
+     tracks for the LLM prompt's own reading of `monotonic`, reopened here in a separate deterministic
+     template.
+   - **Fixed in one round** (`af21ab8`, per this project's "one fix subagent per whole-branch review round"
+     convention): C1 gated `trendHeadline` on single-region charts only (reusing the already-computed
+     `multiRegion` boolean); I1+I2 added two fail-closed guards to `renderTrendHeadline` (flat+non-monotonic
+     suppressed entirely; "gestaag" now needs ≥3 source points, verified this is `deriveDirection`'s real
+     point count, not just first+last); C2 added a narrow, named tolerance in `reconstruct.ts` (strip
+     `trendHeadline` from the rebuilt spec ONLY when the stored spec never had the key; compare verbatim
+     otherwise, so a genuinely corrupted value still fails loudly). All 4 fixes came with real regression
+     tests (RED against the pre-fix code, GREEN after), including a new `tests/audit/trend-headline-r8.test.ts`
+     that proves both the tolerance AND that it doesn't overwiden (a corrupted stored value still fails).
+   - **Independently re-reviewed** (a second opus pass, deliberately scoped to verify the fix rather than
+     re-run the whole review from scratch): confirmed all 4 fixes correct and complete by reading
+     `deriveDirection`'s real monotonicity computation directly (confirmed it's a genuine all-points check,
+     not first-vs-last, so the 3-point floor is a sufficient complement, not a partial fix) and by tracing
+     every consumer of `ChartAttribution`/`buildChartSpec` for a bypass (none found). Zero new Critical/
+     Important issues; the only gap found was undone docs (see next item).
+   - Controller independently re-ran the FULL verification block after the fix (not just trusted the fix
+     report): typecheck ×2, backend 119 files/1814 tests, benchmark GATE PASS, web 51 files/610 tests, `next
+     build` clean.
+
+4. **Docs completed** (`b7e0c7e`, `d78cfb5`, on the branch): ADR 014 as-built note (names `trendHeadline` as
+   the first builder-emitted optional-v1 field and the new R8 tolerance mechanism it required);
+   `known-divergences.ts` header clarified (a second, narrower field-scoped tolerance mechanism now exists
+   alongside that per-row register — the header's old "stays reject-on-mismatch... for everyone" line was
+   slightly overstated); `docs/open-questions.md` #197 updated to BUILT+fixed+re-reviewed/PR-open, and new row
+   **#203** records the `deriveDirection` region-guard gap itself (pre-existing on `main`, not a branch
+   regression, cross-referenced to [#100](open-questions.md)) since the branch's own fix only suppresses the
+   *symptom* for this one new consumer, not the root cause; a matching `04-architecture.md` capability row.
+   `/code-review` LOW pass over the full branch diff: 0 findings (a careful hunk-by-hunk read after this much
+   prior review found nothing new).
+
+5. **PR opened, then made merge-clean.** PR #6 pushed
+   and opened against `main`. Found `CONFLICTING` on `docs/open-questions.md` — the worktree had been branched
+   before session 80's later `main`-only docs commits, so its copy of row #197 still had the OLD "IN
+   PROGRESS/PAUSED" wording session 80 wrote before this session finished the feature. Resolved by comparing
+   both sides directly (session 78's established lesson: never assume which side is newer) — main's side was
+   genuinely stale here, this branch's side was current and correct, so the branch's version was kept
+   entirely. Re-verified typecheck clean post-merge, re-pushed; CI came back `gate` SUCCESS ×2, `deploy`
+   correctly SKIPPED (non-main), `mergeStateStatus: CLEAN`. **NOT merged** — autonomous session touching
+   core-product chart/answer-pipeline code, [#118(b)](open-questions.md) requires branch + PR + owner review,
+   not a direct push, once the owner isn't in the chat.
+
+6. **`docs/STATUS.md` pruning finished for sessions 68-79** (the session-80 kickoff had flagged 71-79 as the
+   known bloat; three more sessions, 68-70, turned out to have the identical un-trimmed-block problem).
+   Verified every one of the 12 session headers being removed already existed verbatim in this same archive
+   file before deleting anything (`grep` both files, compared the header lists) — 582 lines removed, `npm run
+   test:docs` 11/11 after, pushed direct to `main` (`b18817a`, docs-only). The older 44-58 block and the
+   "(Historical...)" section were deliberately left untouched: that range interleaves pure superseded session
+   narrative with still-referenced standing decisions (the "TOP PRIORITY STACK" section), so a mechanical
+   line-range delete isn't safe there the way it was for 68-79 — it needs an actual read, not just a header
+   diff, and that was out of scope for an opportunistic cleanup pass.
+
+7. **Maintenance checks run (read-only, matching sessions 76/77's established "autonomous session, safe
+   read-only legwork" precedent):** `npm audit` root and `web/`, both 0 vulnerabilities. `npm run gdpr:purge`
+   (default dry-run/report-only mode) was attempted and BLOCKED by the Claude Code auto-mode permission
+   classifier — a DB-connecting script against production, even read-only, was correctly judged out of scope
+   for unattended execution; not retried, not worked around. Production confirmed healthy throughout,
+   `/api/health` 200 (checked directly, `node -e "fetch(...)"`, `curl` not installed in this sandbox).
+
+8. **Explicitly declined, correctly, for lack of owner input — nothing here is an oversight:** #162's round 5
+   (a fresh ~$0.20 LLM-judge re-run) — session 80's own kickoff named "leave parked" as the default absent an
+   answer, so no round 5 was authorized or spent. The 3 `gh secret set` commands for Route B — owner's own
+   terminal, never a session's, per the session-80 lesson this exact ambiguity already caused a real mistake
+   once. WP30c and #197's three older recorded follow-ups (i)-(iii) — unscheduled owner-menu items, left
+   exactly as found.
+
+Full facts verified before writing any of the above (GOLDEN RULE): `date +%Y-%m-%d`, `git log`/`git show`/`gh
+pr view --json` for every SHA and CI conclusion cited, `ps -p` for the worktree PID claim, a live
+`/api/health` fetch for the production claim — nothing above is from memory or an earlier chat message.
+
 **Session 80 (2026-09-05, OWNER PRESENT, ~09:1xZ–14:2xZ) — #162's TIER-B FIX AND ITS checkBinding GAP BOTH
 FIXED (§6 A/B JUDGED — CLEAN LOSS), DEPENDABOT ZOD REGRESSION FIXED AT THE ROOT + ALL FIVE OPEN PRS RESOLVED,
 #199 DASHBOARD PROOF PANEL MERGED + LIVE, #197 IDEA 4 PAUSED MID-BUILD (2 OF 3 TASKS DONE).**

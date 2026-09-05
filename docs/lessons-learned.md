@@ -6,6 +6,76 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 81 — 2026-09-05, autonomous (owner asleep) — #197 idea 4 finished, reviewed, fixed, PR opened
+
+Full narrative: [status-archive.md](status-archive.md) session-81 entry.
+
+- **A feature worktree branched mid-session can silently fall behind `main` on DOCS, and a doc edit that
+  reads correctly from the main checkout can fail to match (or worse, silently apply somewhere wrong) inside
+  the worktree.** Reading `docs/open-questions.md` row #197 from the main checkout early in this session and
+  later trying to `Edit` that same "old" text inside the `feat/197-chart-trend-headline` worktree failed —
+  the worktree's copy simply didn't have the sentence yet, because it was branched from a commit before
+  session 80's later `main`-only docs pushes added it. This is not a bug in the Edit tool; it is two
+  genuinely different files (different branches) that happen to share a path. **The fix that generalizes:
+  when a docs edit inside a worktree/branch doesn't match text you read from elsewhere, re-read the file from
+  THAT exact path before assuming the tool is broken** — don't retype from memory of an earlier read on a
+  different checkout. The eventual PR-merge conflict this caused was expected and resolved the normal way
+  (compare both sides, session 78's lesson), but the wasted Edit attempt was avoidable.
+- **A subagent-driven-development progress ledger can under-report completed work, and the fix is to trust
+  git log + the task's own report file over the ledger, not to re-dispatch.** `.superpowers/sdd/progress.md`
+  listed only Task 1 as complete, but the worktree's HEAD was already at Task 2's commit and Task 2's own
+  report file existed, dated, with a full RED/GREEN account. The ledger's own stated purpose ("your recovery
+  map... trust the ledger and git log over your own recollection") assumes it stays in sync with reality; this
+  session found a case where it didn't (Task 2's completion was simply never appended), and the skill's own
+  guidance to check `git log` as a cross-check is what caught it, not an accident. Backfilled the ledger line
+  and moved on — the lesson is to actually DO that cross-check when a ledger and the visible commit history
+  disagree, not to treat either source as automatically authoritative.
+- **The final whole-branch review has now found real, reproduced, Critical-class bugs at this exact stage
+  three sessions in a row (79, 80, 81) — each time, after both per-task reviews on that same work had already
+  passed clean.** This session's two Critical findings were structurally the same SHAPE as the prior two: a
+  bug that lives in how the new code's assumptions interact with EXISTING code the diff never touched
+  (`deriveDirection`'s pre-existing lack of a region guard, invisible to a review that only reads the new
+  `trendHeadline` code) and a bug in a cross-cutting INVARIANT the new code broke without touching the
+  invariant's own enforcement point (R8 reconstruction in `reconstruct.ts`, which the new field's addition
+  broke by omission, not by any line in `reconstruct.ts` itself changing). Worth stating plainly now that it's
+  a pattern, not a coincidence: for this specific codebase and this specific SDD process, the final
+  whole-branch review is not a formality even when every task review passed — it is where a distinct, real
+  class of bug gets caught, and skipping or shortening it would have shipped two Critical defects to a product
+  whose entire value proposition is not shipping exactly that kind of defect.
+- **ADR 014's optional-v1-field rule had a hidden precondition that only a field the builder ACTUALLY EMITS
+  for real cases can expose — and this session's feature was the first one to actually test it.** The rule's
+  condition (a) ("the shared builder never emits it — so ... `reconstruct.ts` (R8) sees no divergence") reads
+  as a requirement, but for the one prior field that used this rule (`annotations`, session 66), it was never
+  actually EXERCISED — that field is a dormant, unpopulated schema addition, so "the builder never emits it"
+  was trivially true by construction, not proven by any test. `trendHeadline` is the first field under this
+  rule that the builder genuinely does emit for live, real cases, and only then did it become visible that
+  condition (a) doesn't hold automatically — it needed a new, purpose-built tolerance in `reconstruct.ts`.
+  **The general lesson: a design rule with an unexercised precondition can look load-bearing right up until
+  something finally tests it, and "it worked for the last field that used this pattern" is not evidence the
+  pattern itself is complete if that prior field never actually triggered the precondition.** Recorded in ADR
+  014's own as-built notes so the next optional-v1 field that IS builder-emitted knows to follow the same
+  strip-if-absent/compare-if-present shape rather than rediscover this from scratch.
+- **`ScheduleWakeup` used once outside its documented `/loop` context produced a turn with no visible output**
+  — used generically this session as a "just in case the background-agent notification doesn't land" fallback
+  (not the `/loop` skill it is built for), the tool call itself succeeded but the response that followed
+  carried no user-facing text, triggering a harness prompt to produce visible output. Session 79 separately
+  recorded a DIFFERENT `ScheduleWakeup` misuse (a duplicate delivery) from the same root cause — using this
+  tool outside `/loop` dynamic mode. Two sessions, two different malfunctions, same root cause: **this tool is
+  built for `/loop`'s specific resume mechanics and does not degrade gracefully outside them.** The tool's own
+  description already says background-agent completions notify automatically without it — the fix going
+  forward is simply not reaching for `ScheduleWakeup` as a generic "check back later" mechanism at all; a
+  dispatched background `Agent` call's own completion notification is sufficient, and was in fact what
+  actually drove this session's progress every other time.
+- **A DB-connecting maintenance script correctly blocked by the auto-mode permission classifier is a working
+  safety boundary, not an obstacle to route around.** `npm run gdpr:purge` (default dry-run/report-only mode,
+  the same command sessions 76/77 ran successfully as safe autonomous legwork) was blocked this session by
+  the classifier specifically because it connects to production via `--env-file=.env`. Read the refusal,
+  confirmed it named a real, sensible boundary (an unattended session touching live production credentials,
+  even read-only), and moved on rather than finding another way to run the same script — exactly the
+  documented response to a permission denial. Worth recording since a future session might otherwise assume
+  this command is always safe to run unattended just because two prior sessions ran it successfully; the
+  classifier's judgment on any given session/sandbox configuration is the actual gate, not precedent alone.
+
 ## Session 80 — 2026-09-05, owner present — #162 fully closed out, Dependabot resolved, #199 shipped, #197 idea 4 in progress
 
 Full narrative: [STATUS.md](STATUS.md) session-80 entry.
