@@ -52,9 +52,25 @@ baseline matches exactly), benchmark GATE PASS, web 50/50 files 585/585 tests, r
 low: 0 findings, plus a hermetic re-check of all 34 recorded A/B pairs against the fix (zero LLM spend) — 0 new
 regressions. **Honest caveat:** could not replay B13's own exact historical repeat-2 failure text (only
 attempt-0's body persists per pair) — the unit tests are the available proof for this deterministic-validator
-change, not a literal replay. **Still NOT done, still owner-supervised:** the §6 A/B judge (real spend, blind
-pairwise phrasing quality) — no phrasing-quality claim exists yet; any flag flip; any merge to `main`. Full detail:
-[open-questions #162](open-questions.md).
+change, not a literal replay.
+
+**§6 A/B judge run, owner-authorized same session ("Yes, run the judge") — FAILS BOTH PHRASING GATES.** Blind
+pairwise judge (`experiment/162-slot-filling-ab` `fc472f7`; Haiku 4.5, 3 votes × 34 pairs, $0.1719 real spend):
+slot wins 6/34, legacy wins 20/34, ties 8/34 — win-or-tie **41.18%** (gate ≥60%, **FAIL**); a grammar error
+flagged in the slot text for **9/34 pairs** (gate 0, **FAIL**). Per the original 2026-07-17 decision rule ("the
+bar = equal-or-better Dutch phrasing... additive experiment first"), this means **do not adopt as-is** — no ADR,
+no flag flip, no merge. Two concrete, judge-cited patterns explain most of the loss: (1) the slot template's bare
+"Op `<year>`" opener repeatedly reads as ungrammatical Dutch to the judge — the EXACT construction this session's
+OWN Tier-B validator fix had to rescue from wrongful rejection; the validator fix is still correct (it's a real
+number, not a fabrication), but the phrasing CHOICE itself is the problem, a prompt-template issue, not a
+validator one; (2) restating a derivation's value in a later sentence — validator-legal since rounds 3+4 — often
+reads as redundant to a human/judge. Full votes + reasoning on the experiment branch
+(`benchmark/ab-162-judge-{votes,report}.json`). **The four validator-fix rounds were not wasted: they were the
+precondition for getting a TRUE phrasing measurement at all** (template-falls previously masked the LLM's actual
+output behind a fallback). **This closes the §6 A/B's open question. Remaining decision, entirely the owner's:**
+accept this as the experiment's final verdict (leave the branch parked, un-merged, flag off — per the
+pre-committed rule) or authorize a round 5 (prompt-level phrasing fixes + a fresh, cheap re-judge) first. Full
+detail: [open-questions #162](open-questions.md).
 
 **Dependabot's zod regression (open-questions #200, blocking the old #124 → renumbered #2) fixed at the root, not
 routed around** (`main` `c6fa764`): added an `ignore` rule for `zod` to `.github/dependabot.yml`'s `npm-all`
@@ -101,9 +117,11 @@ now shows the main checkout plus exactly the two deliberately-kept ones: the sti
 (see above — do not touch) and the parked `experiment/162-slot-filling-ab`. `git status` clean, fully pushed.
 
 **▶ NEXT, in order — nothing urgent, all owner's call:** (a) the 3 `gh secret set` commands, still blocking only
-`deploy`; (b) #162's §6 A/B judge — real spend, owner-supervised, would finally produce a phrasing-quality verdict
-now that the hard gate is clean; (c) #199, WP30c, #197 idea 4, the three older #197 follow-ups — all owner-menu
-items, unscheduled. **Separately worth a look, not
+`deploy`; (b) #162's §6 A/B verdict is IN and it's a clean loss (41.18% win-or-tie vs 60% needed, 9/34 grammar
+complaints vs 0 allowed) — decide whether to accept that as final (leave parked, no further action) or authorize
+a round 5 (prompt-level phrasing fixes targeting the two named failure patterns + a fresh ~$0.20 re-judge); (c)
+#199, WP30c, #197 idea 4, the three older #197 follow-ups — all owner-menu items, unscheduled. **Separately worth
+a look, not
 acted on this session:** `docs/STATUS.md` itself has accumulated full session blocks back through session 71
 (4600+ tokens for the first 500 lines alone) despite the file's own stated "top block only, history lives in
 status-archive.md since session 41" convention — a pruning pass would bring it back in line with its own rule,
