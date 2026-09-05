@@ -39,6 +39,7 @@ import {
 } from 'recharts';
 import type { ChartPoint, ChartSpec } from '../backend/chart/types.ts';
 import { ChartDownloadMenu } from './chart-download.tsx';
+import { ChartSmallMultiples } from './chart-small-multiples.tsx';
 import { SourceBadge } from './source-badge.tsx';
 
 export type Row = Record<string, string | number | boolean | null>;
@@ -556,6 +557,8 @@ export function ChartView({ spec }: { spec: ChartSpec }) {
   const tableTabRef = useRef<HTMLButtonElement>(null);
 
   const [hiddenKeys, setHiddenKeys] = useState<Set<string>>(new Set());
+  const [smallMultiples, setSmallMultiples] = useState(false);
+  const [axisMode, setAxisMode] = useState<'shared' | 'own'>('shared');
 
   function toggleSeries(key: string): void {
     setHiddenKeys((prev) => {
@@ -609,6 +612,7 @@ export function ChartView({ spec }: { spec: ChartSpec }) {
       ? Math.min(140, plan.endLabels.reduce((w, l) => Math.max(w, labelWidthPx(l.text)), 0))
       : 8;
   const accessibleName = `Grafiek: ${spec.title} (${spec.unit})`;
+  const smallMultiplesAvailable = spec.kind === 'line' && seriesMeta.length > 1;
   const hiddenDisclosure =
     hiddenKeys.size > 0 ? ` ${hiddenKeys.size} van ${seriesMeta.length} reeksen verborgen.` : '';
   const tooltipTrigger = coarsePointer ? 'click' : 'hover';
@@ -711,6 +715,9 @@ export function ChartView({ spec }: { spec: ChartSpec }) {
         className="mt-2 h-64 w-full touch-pan-y"
         data-tooltip-trigger={tooltipTrigger}
       >
+        {smallMultiples && smallMultiplesAvailable ? (
+          <ChartSmallMultiples spec={spec} hiddenKeys={hiddenKeys} axisMode={axisMode} />
+        ) : (
         <ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 640, height: 256 }}>
           {spec.kind === 'line' ? (
             <LineChart
@@ -812,6 +819,7 @@ export function ChartView({ spec }: { spec: ChartSpec }) {
             </BarChart>
           )}
         </ResponsiveContainer>
+        )}
       </div>
       )}
       {view === 'chart' && seriesMeta.length > 1 ? (
@@ -823,6 +831,38 @@ export function ChartView({ spec }: { spec: ChartSpec }) {
             </p>
           ) : null}
         </>
+      ) : null}
+      {view === 'chart' && smallMultiplesAvailable ? (
+        <div className="mt-2 flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            aria-pressed={smallMultiples}
+            onClick={() => setSmallMultiples((v) => !v)}
+            className={tabClass(smallMultiples)}
+          >
+            Kleine grafieken
+          </button>
+          {smallMultiples ? (
+            <div role="group" aria-label="Gelijke assen of eigen assen" className="flex gap-2">
+              <button
+                type="button"
+                aria-pressed={axisMode === 'shared'}
+                onClick={() => setAxisMode('shared')}
+                className={tabClass(axisMode === 'shared')}
+              >
+                Gelijke assen
+              </button>
+              <button
+                type="button"
+                aria-pressed={axisMode === 'own'}
+                onClick={() => setAxisMode('own')}
+                className={tabClass(axisMode === 'own')}
+              >
+                Eigen assen
+              </button>
+            </div>
+          ) : null}
+        </div>
       ) : null}
       {/* #197: the hollow marker needs a key a lay reader can decode without
         * reading the note first; rendered exactly when the spec says a

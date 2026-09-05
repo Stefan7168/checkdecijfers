@@ -844,3 +844,43 @@ describe('ChartView — series legend and hide/show (idea 6)', () => {
     delete (URL as unknown as Record<string, unknown>).revokeObjectURL;
   });
 });
+
+describe('ChartView — small multiples toggle (idea 8)', () => {
+  beforeEach(() => vi.unstubAllGlobals());
+
+  function twoSeriesSpec(overrides: Partial<ChartSpec> = {}): ChartSpec {
+    return spec({
+      series: [
+        { label: 'Nederland', regionCode: 'NL01', points: [point({ resultId: 'nl', value: 1, formattedValue: '1,0' })] },
+        { label: 'Utrecht', regionCode: 'GM0344', points: [point({ resultId: 'ut', value: 2, formattedValue: '2,0' })] },
+      ],
+      ...overrides,
+    });
+  }
+
+  it('offers no small-multiples toggle for a single-series chart', () => {
+    render(<ChartView spec={threePointSpec()} />);
+    expect(screen.queryByRole('button', { name: 'Kleine grafieken' })).toBeNull();
+  });
+
+  it('offers no small-multiples toggle for a bar/comparison chart', () => {
+    const s = twoSeriesSpec({ kind: 'bar' });
+    render(<ChartView spec={s} />);
+    expect(screen.queryByRole('button', { name: 'Kleine grafieken' })).toBeNull();
+  });
+
+  it('switches to one panel per series when toggled on, and shows the axis-mode switch only then', () => {
+    const { container } = render(<ChartView spec={twoSeriesSpec()} />);
+    expect(screen.queryByRole('group', { name: 'Gelijke assen of eigen assen' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Kleine grafieken' }));
+    // Two panels, each its own small chart — proves the switch happened.
+    // (Not asserting "no SVG at all": ChartSmallMultiples' own mini charts
+    // are ALSO Recharts SVGs with the same .recharts-surface class as the
+    // combined view, so that would be a false signal either way. The
+    // ChartView JSX renders ChartSmallMultiples OR the combined
+    // ResponsiveContainer, never both — the panel count already proves which
+    // branch is active.)
+    expect(container.querySelectorAll('[data-panel-for]').length).toBe(2);
+    expect(screen.getByRole('group', { name: 'Gelijke assen of eigen assen' })).toBeInTheDocument();
+  });
+});
