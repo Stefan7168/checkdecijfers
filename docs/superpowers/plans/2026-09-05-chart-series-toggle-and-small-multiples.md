@@ -605,8 +605,14 @@ describe('ChartView — small multiples toggle (idea 8)', () => {
     const { container } = render(<ChartView spec={twoSeriesSpec()} />);
     expect(screen.queryByRole('group', { name: 'Gelijke assen of eigen assen' })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Kleine grafieken' }));
+    // Two panels, each its own small chart — proves the switch happened.
+    // (Not asserting "no SVG at all": ChartSmallMultiples' own mini charts
+    // are ALSO Recharts SVGs with the same .recharts-surface class as the
+    // combined view, so that would be a false signal either way. The
+    // ChartView JSX renders ChartSmallMultiples OR the combined
+    // ResponsiveContainer, never both — the panel count already proves which
+    // branch is active.)
     expect(container.querySelectorAll('[data-panel-for]').length).toBe(2);
-    expect(container.querySelector('svg.recharts-surface')).toBeNull();
     expect(screen.getByRole('group', { name: 'Gelijke assen of eigen assen' })).toBeInTheDocument();
   });
 });
