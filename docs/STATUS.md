@@ -51,10 +51,22 @@ squash SHAs. `git status` clean, no stray worktrees.
 
 **Dependabot #125 merged too** (squash `938f742`, session 76's prior verification re-confirmed still accurate —
 head unchanged since it opened, gate green) — gate+deploy+canary all green. `gh pr list --state open` now shows
-only #124 (still blocked, zod regression, unchanged). Everything else in the priority stack —
-`GDPR_PURGE_APPLY=1`, #162's A/B (real spend), #132 route B, the owner menu — needs explicit owner sign-off
-per CLAUDE.md's live-DDL/spend/flag-flip carve-out, so this session paused there rather than proceeding on its
-own judgment.
+only #124 (still blocked, zod regression, unchanged).
+
+**Then, owner-directed: `GDPR_PURGE_APPLY=1` is now SET and VERIFIED LIVE (2026-09-05).** `npm run gdpr:purge`
+dry-run baseline first (0 rows everywhere, same as every prior measurement); `vercel env add
+GDPR_PURGE_APPLY production` = `1`, empty-commit redeploy (`490362f`, gate+deploy+canary green); triggered one
+real run with `vercel crons run /api/gdpr-purge-cron` (Vercel's own CLI invokes it pre-authenticated — no need
+to retrieve `CRON_SECRET`, which is Sensitive-typed and cannot be read back via `vercel env pull` by design;
+an earlier attempt to fetch it that way and call the route directly correctly got 401, since a Sensitive var
+pulls as the literal placeholder `[SENSITIVE]`, not its real value). `vercel logs` confirmed `Applied —
+redacted 0 audit_answers ... 0 trial_questions ... 0 error_log`, matching the dry-run baseline exactly, per
+RUNBOOK's procedure. The monthly cron now actually enforces retention. Docs updated everywhere this was stated
+as dormant: RUNBOOK's secrets table + maintenance-agenda note, 05-data-rules.md (two spots), CLAUDE.md's
+maintenance-agenda line, open-questions #189.
+
+Everything else in the priority stack — #162's A/B (real spend), #132 route B, the owner menu — still needs
+explicit owner sign-off, so this session paused there rather than picking one on its own judgment.
 
 **▶ SESSION 77 (2026-09-04, AUTONOMOUS — owner said "up to you, work autonomously for hours and hours" in an
 owner-present chat, then left) — RE-TRIAGED open-questions.md FOR MORE HERMETIC FOLLOW-UPS: MOSTLY NOISE, ONE REAL

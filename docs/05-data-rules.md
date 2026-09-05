@@ -123,8 +123,9 @@ Purpose now: benchmark scoring and R1/R8 verification (backend-only in Phase 0).
     the justification was inherited rather than derived. ADR 036 D4 already applied exactly this
     "retention without purpose" reasoning to the bookkeeping; #181 finished it. Both windows are now ONE constant
     (`ANONYMOUS_TRIAL_RETENTION_DAYS`, imported by the bookkeeping sweep), so they cannot drift.
-    ⚠ **Nothing is deleted until the owner sets `GDPR_PURGE_APPLY=1`** — the monthly cron reports only
-    ([#189](open-questions.md)); the first anonymous rows become purgeable ~2026-10-15.
+    ✅ **`GDPR_PURGE_APPLY=1` is SET (2026-09-05, session 78)** — the monthly cron now actually redacts/deletes,
+    verified against a matching dry-run baseline ([#189](open-questions.md)); the first anonymous rows become
+    purgeable ~2026-10-15.
 - **The `error_log` ops table — 90 days, DELETED not redacted, and NOT personal data by construction**
   ([#65](open-questions.md) / WP25, migration 024, built session 66, 2026-08-27; table live only after its
   supervised apply — [RUNBOOK](RUNBOOK.md)). The durable production error log (catch sites: the chat Server
@@ -134,7 +135,7 @@ Purpose now: benchmark scoring and R1/R8 verification (backend-only in Phase 0).
   redaction machinery above. Its 90-day window (`ERROR_LOG_RETENTION_DAYS`) is therefore table hygiene, not GDPR
   erasure; it rides the same retention job (`runRetentionPurge`'s error-log leg) because that job is the one
   scheduled sweep that exists — hard DELETE, safe because nothing references `error_log`. Same ⚠ as the trial
-  windows: nothing is deleted until `GDPR_PURGE_APPLY=1` (or a manual `gdpr:purge -- --apply`). Writes are
+  windows: enforced now that `GDPR_PURGE_APPLY=1` is set (or via a manual `gdpr:purge -- --apply`). Writes are
   **fail-OPEN** — the deliberate reverse of R8's fail-closed audit store: a broken logger must never break the
   product path or mask the original error (pins: `tests/db/error-log.test.ts`, `web/app/actions-errorlog.test.ts`).
 - **The ledger (`credit_transactions`) is never written by either path** — both functions touch only `audit_answers` (+ the WP128 `answer_feedback` deletes), structurally (no import of `src/billing/ledger.ts` in `retention.ts`).
