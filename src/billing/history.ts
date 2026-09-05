@@ -43,6 +43,15 @@
 import type { Db } from '../db/types.ts';
 import { REDACTED_QUESTION_TEXT } from '../answer/audit/retention.ts';
 import { listRequestsForHistory, type PendingRequestStatus } from '../ingestion/onboarding-store.ts';
+import type { AnswerResponse, ComposedResponse } from '../answer/respond/types.ts';
+
+// Mirrors src/threads/index.ts's own (unexported) decodeResponse — the pg
+// driver may return a JSONB column already parsed or still as a string
+// depending on configuration; duplicated here rather than importing across
+// the threads/billing module boundary for a two-line helper.
+function decodeResponse(raw: unknown): ComposedResponse {
+  return typeof raw === 'string' ? (JSON.parse(raw) as ComposedResponse) : (raw as ComposedResponse);
+}
 
 export interface QuestionHistoryEntry {
   /** Scoped to `source`, NOT globally unique across the two source tables
@@ -110,6 +119,17 @@ export interface QuestionHistoryEntry {
     attributionLine: string;
     stalenessWarning: string | null;
   } | null;
+  /** #199: the decoded answer envelope, for the dashboard's "Bewijs dit
+   * cijfer" proof panel — question-history.tsx builds the actual
+   * AnswerProof from this via buildAnswerProof (web/lib/answer-proof.ts).
+   * Set only when this row IS an answer whose stored envelope decodes with
+   * kind 'answer' — null for refusals, clarifications, and redacted rows
+   * (retention.ts's redactedResponse still sets kind, but strips `result`
+   * entirely, so buildAnswerProof's own guard returns null for those safely
+   * — no redaction check needed here, matching chat.tsx/replay-assemble.ts's
+   * own unconditional `response.kind === 'answer' ? buildAnswerProof(...) :
+   * null` pattern). */
+  answerEnvelope: AnswerResponse | null;
 }
 
 interface HistoryRow {
@@ -126,6 +146,7 @@ interface HistoryRow {
   offeredQuestionNl: string | null;
   /** #115: the stored answer envelope's display fields (answer rows only). */
   answerParts: QuestionHistoryEntry['answerParts'];
+  answerEnvelope: QuestionHistoryEntry['answerEnvelope'];
 }
 
 /** null-safe round total: a partial sum would silently understate what the
@@ -165,6 +186,7 @@ export async function getQuestionHistory(
        a.final_text,
        a.created_at,
        a.reply_text,
+       a.response,
        a.pending_clarification->>'questionNl' as replied_question_nl,
        a.response->'pending'->>'questionNl' as offered_question_nl,
        -- #115 (definition expander): the answer envelope's own display
@@ -301,6 +323,10 @@ export async function getQuestionHistory(
               row.answer_staleness_warning === null ? null : String(row.answer_staleness_warning),
           }
         : null,
+    answerEnvelope: (() => {
+      const decoded = decodeResponse(row.response);
+      return decoded.kind === 'answer' && 'result' in decoded ? (decoded as AnswerResponse) : null;
+    })(),
   }));
 
   // Group oldest -> newest so a reply always sees its clarification first.
@@ -326,6 +352,7 @@ export async function getQuestionHistory(
         // #115: a collapsed round's outcome is the REPLY row's answer -- its
         // structured fields travel with its finalText.
         match.entry.answerParts = row.answerParts;
+        match.entry.answerEnvelope = row.answerEnvelope;
         match.entry.creditsCharged = sumCosts(match.entry.creditsCharged, row.creditsCharged);
         match.entry.clarification = { text: clarifyText, reply: row.replyText };
         // Either side of a collapsed round can be independently redacted (the
@@ -357,6 +384,7 @@ export async function getQuestionHistory(
         isDeleted: isRedacted(row.question),
         onboarding: null,
         answerParts: row.answerParts,
+        answerEnvelope: row.answerEnvelope,
       },
       sortAt: row.createdAt,
       sortId: row.id,
@@ -405,6 +433,7 @@ export async function getQuestionHistory(
         isDeleted: false,
         onboarding: { status: row.status, topicTerm: row.topicTerm, failureSummary: row.failureSummary },
         answerParts: null,
+        answerEnvelope: null,
       },
       sortAt: (row.finishedAt ?? row.createdAt).toISOString(),
       sortId: row.id,
