@@ -125,6 +125,35 @@ only, which is the safe direction.
   renderer, cells are spec strings bound to resultIds, nulls shown with their CBS reason. This keeps the
   revisit trigger below honest — "a result shape that genuinely needs the `table` kind" still means a
   shape neither line nor bar can carry, not "the user wants to see a table".
+- **`trendHeadline` (#197 idea 4, session 80-81) is the FIRST optional-v1 field the builder actually
+  emits for real, live cases — exposing a hidden precondition in condition (a) above.** `annotations`
+  (session 66) and every field present since v1's original design are either never populated by
+  `buildChartSpec` yet, or have been there since the byte-comparison baseline existed; condition (a)'s
+  "the shared builder never emits it — so ... `reconstruct.ts` (R8) sees no divergence" was trivially
+  true for those. `trendHeadline` breaks that: `buildChartSpec` sets it whenever a chart is
+  single-region and carries a monotonic, ≥3-point `direction` derivation (multi-region charts and
+  fewer-than-3-point or non-monotonic-flat series never get one — see below), so rebuilding an
+  UNCHANGED historical result now produces a value that didn't exist when the row was stored, and raw
+  R8 byte-comparison would flag every such row as non-reconstructing. **Fixed with a narrow, named
+  exception in `reconstruct.ts`'s `checkAnswerReconstruction`** (not a general "tolerate any additive
+  field" mechanism, and NOT an entry in `known-divergences.ts` — that register is for per-row pinned
+  exceptions to a RULE CHANGE, this is a structural comparison rule for one named field): when the
+  STORED spec's attribution has no `trendHeadline` key, the field is stripped from the REBUILT spec
+  before comparing; a stored spec that DOES carry the key is compared verbatim, so a corrupted or
+  genuinely wrong value still fails loudly. A future builder-emitted optional field should follow this
+  same strip-if-absent/compare-if-present shape rather than assume condition (a) is automatically
+  satisfied.
+  **Three fail-closed correctness guards, found by the final whole-branch review, not the original
+  plan:** (1) suppressed entirely on multi-region charts — `deriveDirection` (src/query/derivations.ts)
+  has no region guard and cells are period-major/region-minor, so a multi-region chart's derivation
+  silently diffed across DIFFERENT regions (a real, reproduced false claim); the pre-existing lack of a
+  region guard in `deriveDirection` itself is tracked as [#203](../open-questions.md), adjacent to
+  [#100](../open-questions.md)'s related `monotonic` hazard. (2) suppressed entirely when
+  `direction === 'flat' && !monotonic` (a series that rose and fell back to its start nets to zero but
+  isn't honestly "bleef stabiel"/remained-stable). (3) the "gestaag" (steadily) suffix additionally
+  requires ≥3 source points — a 2-point series is trivially monotonic (one interval), the same hazard
+  class #100 tracks for the LLM prompt's reading of `monotonic`, reopened here for this separate
+  deterministic template and closed the same way.
 - **Ideas 6 (hide/show a series) and 8 (small multiples) also stayed web-renderer-only (session 79,
   2026-09-05, [#197](../open-questions.md)) — no new `ChartSpec` field, no schema bump.** Both are pure
   client-side interaction/presentation state inside `ChartView` (`hiddenKeys`, `smallMultiples`,
