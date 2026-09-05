@@ -876,4 +876,13 @@ describe('ChartView — small multiples toggle (idea 8)', () => {
     expect(container.querySelectorAll('[data-panel-for]').length).toBe(2);
     expect(screen.getByRole('group', { name: 'Gelijke assen of eigen assen' })).toBeInTheDocument();
   });
+
+  it('hides the download menu in small-multiples view (it would silently export only the first panel)', () => {
+    render(<ChartView spec={twoSeriesSpec()} />);
+    expect(screen.getByRole('button', { name: 'Download' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Kleine grafieken' }));
+    expect(screen.queryByRole('button', { name: 'Download' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Kleine grafieken' }));
+    expect(screen.getByRole('button', { name: 'Download' })).toBeInTheDocument();
+  });
 });

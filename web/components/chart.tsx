@@ -900,8 +900,14 @@ export function ChartView({ spec }: { spec: ChartSpec }) {
         {/* #170(3): download-as-image, PNG or SVG, attribution baked into
           * the file itself — not just shown on this page — via the SAME
           * spec.attributionLine string shown above (R4: one builder, one
-          * sentence, never re-derived here). */}
-        {view === 'chart' ? (
+          * sentence, never re-derived here). Not offered in small-multiples
+          * view (idea 8): ChartDownloadMenu grabs the first <svg> under the
+          * container, which in that view is just one series' own mini panel
+          * — exporting it under the full chart's filename/attribution would
+          * silently misrepresent what's shown, the same risk #46(c) already
+          * names for exports. Same precedent as the Tabel view below, which
+          * has never offered a download either. */}
+        {view === 'chart' && !smallMultiples ? (
           <ChartDownloadMenu
             containerRef={chartContainerRef}
             attributionText={`${spec.attributionLine} checkdecijfers.nl${hiddenDisclosure}`}
