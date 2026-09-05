@@ -503,8 +503,11 @@ function SeriesBar(seriesKey: string, color: string, patternId: string, labelByP
 
 /** Y-axis tick that shows a point's own display string — or nothing. With an
  * explicit `ticks` list Recharts only asks for the values we gave it; if it
- * ever asked for another one, rendering nothing beats inventing a number. */
-function AxisTick(tickByValue: Map<number, AxisTickLabel>) {
+ * ever asked for another one, rendering nothing beats inventing a number.
+ * Exported for reuse by ChartSmallMultiples' own-axis mode, same reason as
+ * buildRows/seriesStyle/valueLabelPlan: the honesty contract (only ever a
+ * point's own formattedValue) has to be the SAME mechanism everywhere. */
+export function AxisTick(tickByValue: Map<number, AxisTickLabel>) {
   return function Tick(props: { x?: number | string; y?: number | string; payload?: { value?: unknown } }) {
     const value = props.payload?.value;
     const tick = typeof value === 'number' ? tickByValue.get(value) : undefined;

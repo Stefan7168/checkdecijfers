@@ -3,6 +3,60 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ChartSpec } from '../backend/chart/types.ts';
 import { ChartSmallMultiples, sharedLineDomain } from './chart-small-multiples.tsx';
 
+function twoPointSeriesSpec(overrides: Partial<ChartSpec> = {}): ChartSpec {
+  return {
+    schemaVersion: 1,
+    kind: 'line',
+    title: 'Testreeks',
+    dims: { Kenmerk: '000000' },
+    dimLabels: { Kenmerk: 'Alle kenmerken' },
+    unit: '%',
+    series: [
+      {
+        label: 'Klein',
+        regionCode: null,
+        points: [
+          {
+            resultId: 'k-lo',
+            periodCode: '2023JJ00',
+            periodLabel: '2023',
+            value: 1,
+            formattedValue: '1,0',
+            decimals: 1,
+            status: 'Definitief',
+            provisional: false,
+            valueAttribute: 'None',
+          },
+          {
+            resultId: 'k-hi',
+            periodCode: '2024JJ00',
+            periodLabel: '2024',
+            value: 2,
+            formattedValue: '2,0',
+            decimals: 1,
+            status: 'Definitief',
+            provisional: false,
+            valueAttribute: 'None',
+          },
+        ],
+      },
+    ],
+    provisionalNote: null,
+    nullNotes: [],
+    definitionLine: null,
+    attributionLine: 'Bron: CBS StatLine, tabel 12345NED.',
+    attribution: {
+      tableId: '12345NED',
+      tableTitle: 'Test',
+      tableVersion: 1,
+      syncedAt: '2026-07-01',
+      coveredPeriods: { from: '2020', to: '2024' },
+      license: 'CC BY 4.0',
+    },
+    ...overrides,
+  };
+}
+
 afterEach(cleanup);
 
 function point(overrides: Partial<ChartSpec['series'][0]['points'][0]> = {}) {
@@ -76,6 +130,25 @@ describe('ChartSmallMultiples', () => {
     );
     expect(container.querySelectorAll('[data-panel-for]').length).toBe(2);
     expect(container.textContent).not.toContain('Utrecht');
+  });
+
+  it('"eigen assen" labels each panel with its OWN min/max, bound to its own points -- never a foreign or invented number', () => {
+    const { container } = render(
+      <ChartSmallMultiples spec={twoPointSeriesSpec()} hiddenKeys={new Set()} axisMode="own" />,
+    );
+    const panel = container.querySelector('[data-panel-for="s0"]')!;
+    const lo = panel.querySelector('[data-role="axis-tick"][data-label-for="k-lo"]');
+    const hi = panel.querySelector('[data-role="axis-tick"][data-label-for="k-hi"]');
+    expect(lo?.textContent).toBe('1,0');
+    expect(hi?.textContent).toBe('2,0');
+  });
+
+  it('"gelijke assen" shows no per-panel tick labels (a shared endpoint may belong to a different series\' data, which would be dishonest to label here)', () => {
+    const { container } = render(
+      <ChartSmallMultiples spec={twoPointSeriesSpec()} hiddenKeys={new Set()} axisMode="shared" />,
+    );
+    const panel = container.querySelector('[data-panel-for="s0"]')!;
+    expect(panel.querySelector('[data-role="axis-tick"]')).toBeNull();
   });
 });
 
