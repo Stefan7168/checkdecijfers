@@ -16,9 +16,10 @@
 // spec strings.
 import type { ChartPoint, ChartSeries, ChartSpec } from './types.ts';
 import { CHART_SPEC_VERSION } from './types.ts';
-import type { ResultCell, ValidatedResult } from '../query/index.ts';
+import type { DerivationRecord, ResultCell, ValidatedResult } from '../query/index.ts';
 import { contiguousPeriodCodes } from '../query/index.ts';
 import { buildAttributionLine, formatValueNl } from '../answer/compose/format.ts';
+import { renderTrendHeadline } from '../answer/compose/template.ts';
 import { resolveSource } from '../sources/registry.ts';
 
 /** R11 note rendered with any chart containing non-definitive points. */
@@ -117,6 +118,17 @@ export function buildChartSpec(result: ValidatedResult): ChartSpec | null {
   const multiRegion = series.length > 1;
   const anyProvisional = result.cells.some((c) => c.provisional);
 
+  const direction = result.derivations.find(
+    (d): d is Extract<DerivationRecord, { kind: 'direction' }> => d.kind === 'direction',
+  );
+  // C1 (whole-branch review, #197): deriveDirection has no region guard, and
+  // cells are period-major/region-minor, so on a multi-region chart its
+  // (first cell, last cell) pair silently diffs across DIFFERENT regions —
+  // not a real trend (e.g. Amsterdam falling + Utrecht rising could net to
+  // "steeg", contradicting the chart itself). A trend headline is only ever
+  // honest for a single-region chart; `multiRegion` is already computed above.
+  const trendHeadline = direction && !multiRegion ? renderTrendHeadline(result, direction) : undefined;
+
   return {
     schemaVersion: CHART_SPEC_VERSION,
     kind,
@@ -141,6 +153,7 @@ export function buildChartSpec(result: ValidatedResult): ChartSpec | null {
       syncedAt: result.attribution.syncedAt,
       coveredPeriods: { ...result.attribution.coveredPeriods },
       license: result.attribution.license,
+      ...(trendHeadline !== undefined ? { trendHeadline } : {}),
     },
   };
 }

@@ -378,7 +378,28 @@ function checkAnswerReconstruction(record: AuditRecord, problems: string[]): voi
   // R6+R8: the chart the user saw is exactly what the stored result produces
   // through the same deterministic builder — and it still validates.
   const rederived = buildChartSpec(result);
-  if (stableStringify(response.chart) !== stableStringify(rederived)) {
+  // ADR 014 optional-v1-field tolerance, narrowly scoped to `trendHeadline`
+  // only (#197 whole-branch review, C2): a row stored BEFORE this field
+  // existed has no `trendHeadline` key in its stored attribution, but
+  // rebuilding from the very same (unchanged) result now DOES produce one —
+  // so a raw byte comparison would falsely flag every historical row with a
+  // `direction` derivation as "not re-deriving". When the STORED spec has no
+  // `trendHeadline` key, strip the key from the REBUILT spec before
+  // comparing. When the stored spec DOES carry the key, it is compared
+  // verbatim below — so a genuinely wrong/corrupted stored value still fails
+  // loudly. This is not a general "tolerate any additive field" mechanism;
+  // it names exactly the one field this exception covers.
+  let comparableRederived = rederived;
+  if (
+    response.chart !== null &&
+    rederived !== null &&
+    !('trendHeadline' in response.chart.attribution)
+  ) {
+    const attribution = { ...rederived.attribution };
+    delete attribution.trendHeadline;
+    comparableRederived = { ...rederived, attribution };
+  }
+  if (stableStringify(response.chart) !== stableStringify(comparableRederived)) {
     problems.push('chart spec does not re-derive from the stored result');
   }
   if (response.chart !== null) {

@@ -4,14 +4,14 @@
 // structural lines (R4 attribution, R5 marking, definition transparency) must
 // render exactly when required.
 import { describe, expect, it } from 'vitest';
-import type { ValidatedResult } from '../../src/query/index.ts';
+import type { ValidatedResult, DerivationRecord } from '../../src/query/index.ts';
 import { DERIVED_DATA_MARKING } from '../../src/query/index.ts';
 import {
   composeAnswer,
   renderTemplateBody,
   validateAnswerBody,
 } from '../../src/answer/compose/index.ts';
-import { displayValueUnit } from '../../src/answer/compose/template.ts';
+import { displayValueUnit, renderTrendHeadline } from '../../src/answer/compose/template.ts';
 import { buildDefinitionLine } from '../../src/answer/compose/format.ts';
 import type { LlmClient, LlmRequest, LlmResponse } from '../../src/answer/llm/client.ts';
 import {
@@ -307,5 +307,117 @@ describe('#143: an index-base unit ("2015=100") renders as a label, never a ×-f
     // rendered before this fix must not start failing (review test-gap pin).
     const oldForm = 'CPI indexniveau was in 2024 118,3 (× 2015=100).';
     expect(validateAnswerBody(oldForm, cpiIndex).problems).toEqual([]);
+  });
+});
+
+describe('renderTrendHeadline (#197 idea 4)', () => {
+  // 3 source points (I2, whole-branch review): a 2-point sequence has only
+  // one interval, so it is trivially "monotonic" and would always qualify
+  // for "gestaag" — this helper's default shape is 3 points so the
+  // "gestaag" cases below test a REAL steady trend, not that hazard.
+  function series(direction: 'up' | 'down' | 'flat', monotonic: boolean): {
+    result: ValidatedResult;
+    derivation: Extract<DerivationRecord, { kind: 'direction' }>;
+  } {
+    const first = makeCell({ periodCode: '2015JJ00', periodLabel: '2015', value: 100, unit: 'aantal' });
+    const middle = makeCell({ periodCode: '2020JJ00', periodLabel: '2020', value: 110, unit: 'aantal' });
+    const last = makeCell({ periodCode: '2024JJ00', periodLabel: '2024', value: 120, unit: 'aantal' });
+    const result = makeResult({
+      shape: 'series',
+      definitionLabel: 'bevolking',
+      cells: [first, middle, last],
+    });
+    const derivation: Extract<DerivationRecord, { kind: 'direction' }> = {
+      kind: 'direction',
+      explicit: false,
+      sourceResultIds: [first.resultId, middle.resultId, last.resultId],
+      unit: 'aantal',
+      marking: DERIVED_DATA_MARKING,
+      direction,
+      monotonic,
+      netChange: 20,
+      firstResultId: first.resultId,
+      lastResultId: last.resultId,
+    };
+    return { result, derivation };
+  }
+
+  /** The ORIGINAL 2-cell fixture shape (first/last only, no middle point) —
+   * kept separate from `series()` above specifically to pin the I2 guard:
+   * 2 source points must never earn "gestaag", no matter how monotonic. */
+  function twoPointSeries(direction: 'up' | 'down' | 'flat', monotonic: boolean): {
+    result: ValidatedResult;
+    derivation: Extract<DerivationRecord, { kind: 'direction' }>;
+  } {
+    const first = makeCell({ periodCode: '2015JJ00', periodLabel: '2015', value: 100, unit: 'aantal' });
+    const last = makeCell({ periodCode: '2024JJ00', periodLabel: '2024', value: 120, unit: 'aantal' });
+    const result = makeResult({
+      shape: 'series',
+      definitionLabel: 'bevolking',
+      cells: [first, last],
+    });
+    const derivation: Extract<DerivationRecord, { kind: 'direction' }> = {
+      kind: 'direction',
+      explicit: false,
+      sourceResultIds: [first.resultId, last.resultId],
+      unit: 'aantal',
+      marking: DERIVED_DATA_MARKING,
+      direction,
+      monotonic,
+      netChange: 20,
+      firstResultId: first.resultId,
+      lastResultId: last.resultId,
+    };
+    return { result, derivation };
+  }
+
+  it('renders an upward, monotonic trend with "gestaag" and the first period (3+ source points)', () => {
+    const { result, derivation } = series('up', true);
+    expect(derivation.sourceResultIds.length).toBeGreaterThanOrEqual(3);
+    expect(renderTrendHeadline(result, derivation)).toBe('Bevolking steeg gestaag sinds 2015.');
+  });
+
+  it('renders a downward, monotonic trend', () => {
+    const { result, derivation } = series('down', true);
+    expect(derivation.sourceResultIds.length).toBeGreaterThanOrEqual(3);
+    expect(renderTrendHeadline(result, derivation)).toBe('Bevolking daalde gestaag sinds 2015.');
+  });
+
+  it('renders a flat trend without "gestaag" (steadiness does not apply to no change)', () => {
+    const { result, derivation } = series('flat', true);
+    expect(renderTrendHeadline(result, derivation)).toBe('Bevolking bleef stabiel sinds 2015.');
+  });
+
+  it('omits "gestaag" for a non-monotonic up/down trend (the net direction, not a straight line)', () => {
+    const { result, derivation } = series('up', false);
+    expect(renderTrendHeadline(result, derivation)).toBe('Bevolking steeg sinds 2015.');
+  });
+
+  it('returns undefined when the first source cell cannot be found (defensive, should not happen)', () => {
+    const { result, derivation } = series('up', true);
+    const broken = { ...derivation, firstResultId: 'does-not-exist' };
+    expect(renderTrendHeadline(result, broken)).toBeUndefined();
+  });
+
+  // I2 (whole-branch review): any 2-point sequence is trivially monotone —
+  // there is only one interval, so it can't help but look "steady". Without
+  // a point-count floor, EVERY 2-point direction derivation would earn
+  // "gestaag", which is exactly the class of hazard docs/open-questions.md
+  // #100 already tracks for this same `monotonic` field on a different
+  // (LLM prompt) mechanism.
+  it('omits "gestaag" for a monotonic up/down trend with only 2 source points', () => {
+    const { result, derivation } = twoPointSeries('up', true);
+    expect(derivation.sourceResultIds.length).toBe(2);
+    expect(renderTrendHeadline(result, derivation)).toBe('Bevolking steeg sinds 2015.');
+  });
+
+  // I1 (whole-branch review): FLAT + non-monotonic means the series moved
+  // (rose and/or fell) but netted back to its starting value — "bleef
+  // stabiel" (remained stable) would be a false claim of a straight,
+  // unmoving line. No honest one-sentence phrasing exists for this shape
+  // today, so the headline is suppressed entirely (fail-closed).
+  it('returns undefined for a non-monotonic flat trend (net-zero but not actually flat)', () => {
+    const { result, derivation } = series('flat', false);
+    expect(renderTrendHeadline(result, derivation)).toBeUndefined();
   });
 });

@@ -927,3 +927,19 @@ describe('ChartView — small multiples toggle (idea 8)', () => {
     expect(grid.textContent).not.toContain('Utrecht');
   });
 });
+
+describe('trend headline (#197 idea 4)', () => {
+  it('renders the headline when attribution.trendHeadline is set', () => {
+    render(
+      <ChartView
+        spec={spec({ attribution: { ...spec().attribution, trendHeadline: 'Bevolking steeg gestaag sinds 2015.' } })}
+      />,
+    );
+    expect(screen.getByText('Bevolking steeg gestaag sinds 2015.')).toBeInTheDocument();
+  });
+
+  it('renders nothing extra when trendHeadline is absent (old specs unaffected)', () => {
+    const { container } = render(<ChartView spec={spec()} />);
+    expect(container.querySelector('[data-testid="trend-headline"]')).toBeNull();
+  });
+});

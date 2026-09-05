@@ -865,6 +865,11 @@ export function ChartView({ spec }: { spec: ChartSpec }) {
         )}
       </div>
       )}
+      {view === 'chart' && spec.attribution.trendHeadline !== undefined ? (
+        <p data-testid="trend-headline" className="mt-1 text-sm text-ink">
+          {spec.attribution.trendHeadline}
+        </p>
+      ) : null}
       {view === 'chart' && seriesMeta.length > 1 ? (
         <>
           <SeriesLegend seriesMeta={seriesMeta} hiddenKeys={hiddenKeys} onToggle={toggleSeries} />

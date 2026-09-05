@@ -23,9 +23,18 @@
 // today; when a v2 ever exists, `reconstructionReport` re-derives through a
 // builder dispatched on the row's STORED schemaVersion (ADR 014 as-built
 // notes, session 69) — a versioned builder is not the rejected "replay each
-// row's historical rule set". `reconstructionReport` stays
-// reject-on-mismatch, unconditionally, for everyone who is not in this
-// register.
+// row's historical rule set".
+//
+// A different, narrower mechanism lives alongside this register:
+// `reconstruct.ts` itself carries a small number of NAMED, field-scoped
+// tolerances for one specific additive optional field at a time (the WP30a
+// `attribution.source` A1 fallback; the #197 `trendHeadline` ADR-014
+// optional-v1-field exception — see ADR 014's as-built notes). These are NOT
+// entries in this register (they are not per-row, and not tied to a rule
+// change) — each narrows tolerance for exactly one named field's
+// presence-vs-absence, never for a whole row or an unbounded set of
+// problems. `reconstructionReport` otherwise stays reject-on-mismatch,
+// unconditionally, for everyone not covered by one of these two mechanisms.
 //
 // So a legitimate divergence is a DOCUMENTED, PINNED exception — never a
 // blanket "old rows don't have to reconstruct" switch. Each entry names the

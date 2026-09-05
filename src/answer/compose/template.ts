@@ -77,6 +77,16 @@ function subjectSentenceStart(result: ValidatedResult): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
+/** Verb-form direction words for a chart headline sentence ("Bevolking
+ * steeg... ") — distinct from prompt.ts's TREND_WORD_BY_DIRECTION, which is
+ * the NOUN form ("stijging") used as an LLM phrasing hint, not a formatter
+ * output. */
+const TREND_VERB_BY_DIRECTION: Record<'up' | 'down' | 'flat', string> = {
+  up: 'steeg',
+  down: 'daalde',
+  flat: 'bleef stabiel',
+};
+
 function regionPhrase(cell: ResultCell): string {
   return cell.regionLabel === null ? '' : ` in ${baseRegionLabel(cell.regionLabel)}`;
 }
@@ -146,6 +156,46 @@ function renderMax(result: ValidatedResult, derivation: Extract<DerivationRecord
     `${subject(result)}: ${displayValueUnit(winner.value!, winner.decimals, winner.unit)}${provisionalSuffix(winner)}. ` +
     `Daarna: ${others}.`
   );
+}
+
+/** #197 idea 4: a short, deterministic Dutch headline for a chart backed by
+ * a `direction` derivation ("Bevolking steeg gestaag sinds 2015."). Template
+ * only, no LLM — mirrors renderDifference/renderMax's own discipline.
+ * `undefined` (not thrown) when the derivation's own firstResultId cannot be
+ * resolved against the result's cells — a defensive guard for a shape that
+ * should not occur (a registered derivation's source ids are always drawn
+ * from the same result's own cells), matched by buildChartSpec choosing not
+ * to set ChartAttribution.trendHeadline in that case (Task 2).
+ *
+ * Two more fail-closed guards (whole-branch review, #197 I1+I2):
+ * - `undefined` when direction is 'flat' but NOT monotonic: a series that
+ *   rose and fell back to its starting value nets to zero, but the FLAT verb
+ *   ("bleef stabiel") claims a straight, unmoving line — false for that
+ *   shape. There is no honest one-sentence phrasing for a
+ *   net-zero-but-not-actually-flat series today, so the headline is
+ *   suppressed entirely, the same fail-closed posture renderSeries already
+ *   takes elsewhere in this file for trend claims it can't make safely.
+ * - "gestaag" additionally requires >= 3 SOURCE points (derivation.
+ *   sourceResultIds.length), not just monotonicity: a 2-point sequence has
+ *   exactly one interval, so it is trivially "monotonic" and would otherwise
+ *   always qualify for "gestaag" — the same class of hazard
+ *   docs/open-questions.md #100 already tracks for `monotonic`'s reading in
+ *   the LLM answer prompt, reopened here in this separate deterministic
+ *   template. */
+export function renderTrendHeadline(
+  result: ValidatedResult,
+  derivation: Extract<DerivationRecord, { kind: 'direction' }>,
+): string | undefined {
+  const byId = new Map(result.cells.map((c) => [c.resultId, c]));
+  const first = byId.get(derivation.firstResultId);
+  if (!first) return undefined;
+  if (derivation.direction === 'flat' && !derivation.monotonic) return undefined;
+  const verb = TREND_VERB_BY_DIRECTION[derivation.direction];
+  const steadily =
+    derivation.monotonic && derivation.direction !== 'flat' && derivation.sourceResultIds.length >= 3
+      ? ' gestaag'
+      : '';
+  return `${subjectSentenceStart(result)} ${verb}${steadily} sinds ${first.periodLabel}.`;
 }
 
 /** Deterministic Dutch answer body for any ValidatedResult. */

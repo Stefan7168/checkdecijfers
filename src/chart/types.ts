@@ -57,6 +57,19 @@ export interface ChartAttribution {
   syncedAt: string;
   coveredPeriods: { from: string; to: string };
   license: 'CC BY 4.0';
+  /** #197 idea 4: a short, deterministic Dutch trend sentence ("Bevolking
+   * steeg gestaag sinds 2015."), set only when the result carries a
+   * `direction` derivation AND the chart is single-region (buildChartSpec,
+   * src/chart/build.ts — a multi-region chart's derivation diffs across
+   * different regions, not a real trend, whole-branch review C1) — absent
+   * (not null) on every other spec, including every spec stored before this
+   * field existed (R8: those rows live forever, ADR 014's optional-v1-field
+   * rule). Built by renderTrendHeadline (src/answer/compose/template.ts,
+   * which applies its own further honesty guards — flat-but-non-monotonic
+   * and a 3+ source-point floor for "gestaag" — before returning a string),
+   * the same deterministic-template discipline the rest of this file's
+   * display strings already follow. */
+  trendHeadline?: string;
 }
 
 /** #170(4): a curated, hand-authored event marker — METADATA about when

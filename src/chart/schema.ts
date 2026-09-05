@@ -33,6 +33,7 @@ const chartAttributionSchema = z.strictObject({
   syncedAt: z.string().min(1),
   coveredPeriods: z.strictObject({ from: z.string().min(1), to: z.string().min(1) }),
   license: z.literal('CC BY 4.0'),
+  trendHeadline: z.string().min(1).optional(),
 });
 
 // #170(4): curated event markers (metadata about WHEN something happened,
