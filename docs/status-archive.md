@@ -80,8 +80,8 @@ PRUNING FINISHED FOR SESSIONS 68-79.**
    `/code-review` LOW pass over the full branch diff: 0 findings (a careful hunk-by-hunk read after this much
    prior review found nothing new).
 
-5. **PR opened, then made merge-clean.** PR #6 pushed
-   and opened against `main`. Found `CONFLICTING` on `docs/open-questions.md` — the worktree had been branched
+5. **PR opened, then made merge-clean.** PR #6 pushed and opened against `main`. Found `CONFLICTING` on
+   `docs/open-questions.md` — the worktree had been branched
    before session 80's later `main`-only docs commits, so its copy of row #197 still had the OLD "IN
    PROGRESS/PAUSED" wording session 80 wrote before this session finished the feature. Resolved by comparing
    both sides directly (session 78's established lesson: never assume which side is newer) — main's side was
