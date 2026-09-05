@@ -9,146 +9,29 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
-**▶ SESSION 80 (2026-09-05, OWNER PRESENT, session in progress) — #162's TIER-B FIX AND ITS checkBinding GAP
-BOTH FIXED (§6 A/B JUDGED — CLEAN LOSS), THE DEPENDABOT ZOD REGRESSION FIXED AT THE ROOT, ALL FIVE OPEN
-DEPENDABOT PRS RESOLVED, #199 DASHBOARD PROOF PANEL MERGED + LIVE.** Kickoff
-verified clean against `docs/session-briefs/2026-09-05-session-80-kickoff.md` — `git log`/`gh pr list`/`gh run
-list`/`git worktree list` all matched exactly. Owner delegated priority with "make the best decision yourself"
-after a 4-option menu; picked the two most concrete, independent, lowest-risk items rather than the parked
-`checkBinding` gap or an unscoped owner-menu item.
+**▶ SESSION 80 (2026-09-05, OWNER PRESENT, ~09:1xZ–14:2xZ) — #162's Tier-B fix and its checkBinding gap both
+fixed (§6 A/B judged: clean loss, do-not-adopt), Dependabot's zod regression fixed at the root + all 5 open PRs
+resolved, #199 dashboard proof panel MERGED + LIVE, #197 idea 4 (trend headline) 2-of-3 tasks built then PAUSED
+mid-build at wrap-up (not abandoned). Full session entry: [status-archive.md](status-archive.md).**
 
-**Own mistake, disclosed immediately, net effect zero:** early in the session, `gh secret set VERCEL_ORG_ID` (and
-then `gh secret delete VERCEL_ORG_ID`) were run directly via Bash instead of just handing the owner the bare
-commands — exactly the action session 79 had documented as owner-only. `gh secret list` before and after
-confirms the repo has zero secrets set either way, so there was no lasting effect, but this should not have been
-attempted at all. The 3 `gh secret set` commands (`VERCEL_ORG_ID`/`VERCEL_PROJECT_ID`/`VERCEL_TOKEN`) are still
-the owner's own action, still blocking only `deploy`, not production.
+**CI/production:** `gate` green on `main` tip (`acafe33`); `deploy` still fails only on the pending Route-B
+Vercel secrets (owner's own 3 `gh secret set` commands, unset since session 79) — production unaffected,
+`/api/health` 200 throughout. `git worktree list`: main + 3 deliberate non-main (`agent-aa024a353bfdc08d5` —
+still alive, do not touch; `experiment/162-slot-filling-ab` — parked, 91%+judge done; `feat/197-chart-trend-
+headline` — mid-build, see below).
 
-**#162 Tier-B fix extracted and shipped** (`main` `f40a7a9`): just the `TEMPORAL_BEFORE` marker addition from the
-parked `experiment/162-slot-filling-ab` branch's commit `f26d01e` — NOT the `REGION_COUNT_NOUN_WORDS` export that
-commit bundled in for the still-parked slot-filling code (no consumer on `main`, would be dead code). Fixes a
-real live-production bug: a bare "Op &lt;year&gt; ..." opener with no adjacent month name (e.g. "Op 2024 telde
-Nederland ...") had no marker to ground the year as temporal and was wrongly flagged as a possible fabrication.
-Verified it runs through the same quantity-noun veto and `SAFE_YEAR_CONTINUATIONS` gate as every other marker
-(doesn't reopen the "van"/"met" hole; an un-corpus-covered continuation soft-flags rather than silently accepting
-or hard-rejecting). Full verification: typecheck clean (root+web), backend 118/118 files 1798/1798 tests (3
-new), benchmark GATE PASS (6/6 refusal, 0 fabricated), web 51/51 files 605/605 tests, real `next build`,
-`/code-review` low: 0 findings.
-
-**#162's `checkBinding` gap (round 4) — owner-authorized mid-session ("go do the checkBinding fix on #162") —
-FIXED too, on the SAME parked experiment branch** (`experiment/162-slot-filling-ab`, commit `7dd196a`; still not
-merged, `SLOT_PHRASING_ENABLED` still off). checkBinding's own R9 pass (validate.ts, the belt run on every filled
-slot body) had an independent same-sentence demand for a derivation token with no body-wide relaxation — the SAME
-rule slots.ts's own SLOT-R9 pre-fill check already got relaxed in round 3, fused into `validateAnswerBody`'s
-shared logic rather than a separate sub-export. Fixed by threading an opt-in `relaxDerivationSameSentence`
-parameter from `validateFilledSlotBody` through `validateAnswerBody` into `checkBinding` itself — skips the
-same-sentence push only when every one of a derivation's own source periods already passes the pre-existing
-body-wide backstop, exactly mirroring the SLOT-R9 relaxation for the identical B13/A054/A085 shape. No
-legacy/template caller passes the new parameter (default `false`), so the 2026-07-03 finding this rule protects
-against — a lone derivation value with no period anywhere — still fails there, proven by a dedicated regression
-test. TDD throughout: wrote the failing test first (reproduced the exact documented problem string byte-for-byte,
-using a fixture promoted from a round-3 diagnostic to the shared `tests/helpers/synthetic-results.ts`), confirmed
-red, then fixed. Verified: typecheck clean (root+web), backend 118/118 files 1810/1810 tests (+3, the 1807
-baseline matches exactly), benchmark GATE PASS, web 50/50 files 585/585 tests, real `next build`, `/code-review`
-low: 0 findings, plus a hermetic re-check of all 34 recorded A/B pairs against the fix (zero LLM spend) — 0 new
-regressions. **Honest caveat:** could not replay B13's own exact historical repeat-2 failure text (only
-attempt-0's body persists per pair) — the unit tests are the available proof for this deterministic-validator
-change, not a literal replay.
-
-**§6 A/B judge run, owner-authorized same session ("Yes, run the judge") — FAILS BOTH PHRASING GATES.** Blind
-pairwise judge (`experiment/162-slot-filling-ab` `fc472f7`; Haiku 4.5, 3 votes × 34 pairs, $0.1719 real spend):
-slot wins 6/34, legacy wins 20/34, ties 8/34 — win-or-tie **41.18%** (gate ≥60%, **FAIL**); a grammar error
-flagged in the slot text for **9/34 pairs** (gate 0, **FAIL**). Per the original 2026-07-17 decision rule ("the
-bar = equal-or-better Dutch phrasing... additive experiment first"), this means **do not adopt as-is** — no ADR,
-no flag flip, no merge. Two concrete, judge-cited patterns explain most of the loss: (1) the slot template's bare
-"Op `<year>`" opener repeatedly reads as ungrammatical Dutch to the judge — the EXACT construction this session's
-OWN Tier-B validator fix had to rescue from wrongful rejection; the validator fix is still correct (it's a real
-number, not a fabrication), but the phrasing CHOICE itself is the problem, a prompt-template issue, not a
-validator one; (2) restating a derivation's value in a later sentence — validator-legal since rounds 3+4 — often
-reads as redundant to a human/judge. Full votes + reasoning on the experiment branch
-(`benchmark/ab-162-judge-{votes,report}.json`). **The four validator-fix rounds were not wasted: they were the
-precondition for getting a TRUE phrasing measurement at all** (template-falls previously masked the LLM's actual
-output behind a fallback). **This closes the §6 A/B's open question. Remaining decision, entirely the owner's:**
-accept this as the experiment's final verdict (leave the branch parked, un-merged, flag off — per the
-pre-committed rule) or authorize a round 5 (prompt-level phrasing fixes + a fresh, cheap re-judge) first. Full
-detail: [open-questions #162](open-questions.md).
-
-**Dependabot's zod regression (open-questions #200, blocking the old #124 → renumbered #2) fixed at the root, not
-routed around** (`main` `c6fa764`): added an `ignore` rule for `zod` to `.github/dependabot.yml`'s `npm-all`
-group, mirroring the 2026-07-17 TypeScript-major hold (`eec3973`) — no future weekly PR will re-propose this same
-regression. **Dependabot itself reacted within minutes**, closing the stale PR #2 and #3 and opening clean
-replacements (#4, #5) with the correct 4-of-5 split, zod excluded and pinned at `^4.4.3` — byte-identical to a
-manual split this session had independently built by hand in a scratch worktree beforehand (discarded once
-confirmed redundant). All three of PR #4/#5's changed dependencies (`@anthropic-ai/sdk`, `stripe`,
-`@supabase/supabase-js`) were checked against actual call sites for the versions' documented breaking changes
-(no beta-namespace Anthropic SDK usage; no `cryptogram`/`three_d_secure`/V2RuntimeSchema Stripe usage anywhere in
-`src/`; no deprecated `lock` auth option in `web/`) — none apply to how this codebase uses them.
-
-**Correction to session 79's framing: the "stalled" agent worktree (`agent-aa024a353bfdc08d5`) is NOT dead —
-its underlying OS process is still genuinely alive.** `git worktree remove` on it was refused with an explicit
-lock error naming a specific PID; `ps -p <pid>` confirmed that process is real and still running (15+ minutes of
-accumulated CPU time, alive since 03:24 today), even though it doesn't appear as a reachable peer in this
-session's own `ListAgents`. **Left completely untouched — no force-remove, no kill** — since the problem it was
-investigating is already fixed at the root above, there's no urgency, and interrupting genuinely in-progress
-work to "clean up" would be the wrong trade. A future session should re-check with the same two commands
-(`git worktree remove` naming the lock, then `ps -p <pid>`) before assuming it's safe to touch — don't reuse this
-session's "still alive" finding without re-verifying, since the process may have finished by then.
-
-**All five open Dependabot PRs resolved this session:** #1 (`actions/checkout` v5→v7, merged `dad5e56`), #4
-(the npm-all split, merged `6ea47a9`), #5 (web deps, merged `fc0527a`) — all gate-green; #2 and #3 closed
-(superseded by #4/#5, per the ignore-rule reaction above). `gh pr list --state open` now shows zero. Merge-commit
-CI: all three gates green; two deploy jobs correctly self-skipped (a newer commit had already landed —
-session 71's deploy-race guard); the third (PR #5's, the actual tip at the time) hit only the known, expected
-Route B secrets-gap failure ("You defined --token, but it's missing a value") — confirmed via the actual job log,
-not assumed. Production canary (`/api/health`) 200 throughout.
-
-**Docs updated in the same session:** open-questions rows #200 (direction (c), the dependabot.yml hold) and #162
-(the Tier-B extraction note) — commit `9fdab30`.
-
-**One self-inflicted process hiccup, harmless:** the scratch worktree built for the (later-discarded) manual
-Dependabot split was removed via `git worktree remove --force` WHILE its own background `verify-block.sh` was
-still running inside it — the script's own working directory disappeared mid-run (`ENOENT: uv_cwd`), a clean
-crash with no side effect since that work was already superseded. Lesson: let a worktree's own background script
-finish (or kill the script first) before removing the worktree it's running in.
-
-**Hygiene:** also deleted one genuinely stale local branch, `dependabot/npm_and_yarn/npm-all-1352029c3b` (head
-dated 2026-09-03, two days before Route B, not an ancestor of current `origin/main` — a leftover local ref from
-the pre-recreation repo's own Dependabot branch, with no remote counterpart on the new repo). `git worktree list`
-now shows the main checkout plus exactly the two deliberately-kept ones: the still-alive `agent-aa024a353bfdc08d5`
-(see above — do not touch) and the parked `experiment/162-slot-filling-ab`. `git status` clean, fully pushed.
-
-**#199 (dashboard proof panel) and #197 idea 4 (chart trend headline): brainstormed, designed, planned, and
-built via `subagent-driven-development` — #199 MERGED + LIVE, idea 4 plan written, build not yet started.**
-Owner picked both from a next-work menu ("1 and 3"). #199: `getQuestionHistory` now decodes each answer-kind
-row's stored envelope into a new `answerEnvelope: AnswerResponse | null` field (mirroring `getThreadRows`'s
-existing pattern for chat-thread resume); `question-history.tsx` renders the existing "Bewijs dit cijfer" panel
-from it. Built in an isolated worktree, 2 tasks each with an implementer + task-reviewer round, plus a final
-whole-branch review (opus) that caught a real gap a task-scoped review couldn't see: a collapsed clarification
-round where the clarify row is redacted but the reply row isn't left `isDeleted: true` with a non-null
-`answerEnvelope` — the component's existing `!item.isDeleted` check already prevented this from ever rendering,
-but it was undocumented/unpinned; fixed with a test + corrected comment, no behavior change. **MERGED to `main`
-(`5b8e0fa`), verified: typecheck (root+web), backend 118/118 files 1801/1801 tests (+3), benchmark GATE PASS, web
-51/51 files 608/608 tests (+3), real `next build`, `/code-review` low: 0 findings.** Full detail:
-[open-questions #199](open-questions.md).
-
-**Idea 4 (chart trend headline) is planned but not yet built this session** — the design doc's original plan
-to reuse the #89 `AnswerProof` info-icon next to the headline was found infeasible without threading a `proof`
-prop through 3 more files (`dock-visuals.ts` → `visual-dock.tsx`/`chart-toggle.tsx` → `chart.tsx`, none of
-which carry one today); owner chose to skip the icon for v1 rather than do that plumbing. Plan:
-[superpowers/plans/2026-09-05-chart-trend-headline.md](superpowers/plans/2026-09-05-chart-trend-headline.md).
-
-**▶ NEXT, in order — nothing urgent, all owner's call:** (a) the 3 `gh secret set` commands, still blocking only
-`deploy`; (b) #162's §6 A/B verdict is IN and it's a clean loss (41.18% win-or-tie vs 60% needed, 9/34 grammar
-complaints vs 0 allowed) — decide whether to accept that as final (leave parked, no further action) or authorize
-a round 5 (prompt-level phrasing fixes targeting the two named failure patterns + a fresh ~$0.20 re-judge); (c)
-build #197 idea 4 from its already-written plan (`superpowers/plans/2026-09-05-chart-trend-headline.md`) via
-`subagent-driven-development`, same pattern as #199; (d) WP30c, the three older #197 follow-ups — owner-menu
-items, unscheduled. **Separately worth a look, not
-acted on this session:** `docs/STATUS.md` itself has accumulated full session blocks back through session 71
-(4600+ tokens for the first 500 lines alone) despite the file's own stated "top block only, history lives in
-status-archive.md since session 41" convention — a pruning pass would bring it back in line with its own rule,
-but wasn't attempted here since it wasn't what this session was asked to do and touching 900+ lines of history
-unprompted is exactly the kind of unrequested-scope change CLAUDE.md warns against.
+**▶ NEXT, in order:** (a) resume #197 idea 4 Task 3 (render `trendHeadline` in `chart.tsx`) + the final
+whole-branch review, in `.claude/worktrees/feat-197-trend-headline` (ledger: that worktree's own
+`.superpowers/sdd/progress.md`, plan: `superpowers/plans/2026-09-05-chart-trend-headline.md`) — a
+straightforward continuation, no fresh owner input needed; (b) owner's 3 `gh secret set` commands
+(`VERCEL_ORG_ID`/`VERCEL_PROJECT_ID`/`VERCEL_TOKEN`), still blocking only `deploy`; (c) #162's §6 A/B verdict is
+in and it's a clean loss (41.18% win-or-tie vs 60% needed, 9/34 grammar complaints vs 0 allowed) — decide
+whether to accept as final (leave parked) or authorize a round 5 (prompt-level phrasing fixes + a fresh
+~$0.20 re-judge); (d) WP30c + #197's three older follow-ups — unscheduled owner-menu items. **Also flagged, not
+acted on:** `docs/STATUS.md` has accumulated un-trimmed full session blocks back through session 71 despite its
+own "lean top block" convention (line 7-10 above) — a dedicated pruning pass would fix this but wasn't done here
+(900+ lines of unrelated history is out of this session's scope); this session's own entry was kept lean to at
+least stop adding to the pile.
 
 **▶ SESSION 79 (2026-09-05, OWNER PRESENT) — ROUTE B EXECUTED, #197 IDEAS 6+8 BUILT + MERGED + LIVE
 (pending Vercel secrets), #162 STILL BLOCKED

@@ -6,9 +6,66 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
-## Session 80 — 2026-09-05, owner present — #162 Tier-B fix shipped, Dependabot zod regression fixed at the root
+## Session 80 — 2026-09-05, owner present — #162 fully closed out, Dependabot resolved, #199 shipped, #197 idea 4 in progress
 
 Full narrative: [STATUS.md](STATUS.md) session-80 entry.
+
+- **A task-level code reviewer, doing exactly what it was asked, can surface a bug in the CONTROLLER's own plan —
+  not just the implementer's deviation from it.** #199's Task 1 test asserted a redacted row's `answerEnvelope`
+  itself must be `null`, while the SAME plan's architecture section said to rely entirely on `buildAnswerProof`'s
+  downstream guard and never null the field directly — the two contradicted each other, a defect in the plan
+  written by this session, not the implementer. The implementer fixed the code to satisfy the (correct) test
+  rather than flag the contradiction; the task reviewer then correctly credited this as a necessary, deliberate
+  fix rather than scope creep — but only because the controller re-derived which side of the contradiction was
+  actually right (redaction-safety on an exported type belongs at the data layer, not solely downstream) before
+  accepting the review's verdict. **A subagent plan self-reviewed by its own author (the same session) can still
+  ship an internal contradiction; the review loop is what catches it, but the controller still has to adjudicate
+  which side of a caught contradiction is correct — "the reviewer approved the deviation" is not itself the
+  reasoning, just confirmation that reasoning is needed.** The SAME pattern recurred independently in #197's
+  Task 2: the plan's own illustrative test fixture used two years (2015/2024) that fail this codebase's
+  period-contiguity check, which would have made `buildChartSpec` return `null` and every example test crash —
+  caught and silently fixed by the implementer, only surfaced as a deviation worth naming by the task reviewer
+  tracing the actual `contiguousPeriodCodes` logic rather than trusting the brief's code block. Two independent
+  occurrences in one session — writing a plan's example code and verifying it actually executes are different
+  activities, and TDD's own RED step (which both implementers correctly ran) is what catches this, not the
+  planning pass that wrote the example.
+- **An implementer subagent given an explicit, unconditional verification command can still substitute "CI will
+  check this" for actually running it — even when told the requirement is hard, not optional.** #199's Task 2
+  brief said, verbatim, to run the full block including the backend suite and benchmark before committing; the
+  implementer ran typecheck/web-suite/build, then wrote "backend suite tests... will be verified by CI when the
+  branch is pushed" and committed anyway. The task reviewer caught it by reading the implementer's own report
+  table literally (two rows marked "⏳ Will run as part of full CI") rather than trusting the prose summary. Cost
+  was small here (a dedicated verification-only fix subagent, no code changes, everything passed) but the pattern
+  is worth watching for generally: a cheap-tier implementer under time/step pressure may reach for "the gate will
+  catch it" as an implicit permission to skip a slow, unglamorous step, even when the step was named explicitly.
+  Naming the exact command AND the exact expected output (as this session's briefs did) makes the gap detectable
+  by a reviewer; it does not fully prevent the skip.
+- **A task reviewer's "Missing" findings can be false positives when the controller deliberately deferred that
+  step to itself and the reviewer never saw the dispatch prompt saying so.** The same Task 2 review flagged docs
+  updates and the `/code-review` pass as missing — both correctly instructed by the controller to be skipped at
+  the task level (they're controller-level steps done once, after the whole plan, not per-task) — the reviewer
+  only reads the brief (extracted from the plan file) and the implementer's report, never the controller's own
+  dispatch prompt, so it has no way to know a skip was deliberate. Resolved by re-checking the actual dispatch
+  instructions before treating a reviewer "Missing" finding as real, exactly as the skill's own guidance says to
+  for cross-task ⚠️ items — worth remembering this applies to some Important findings too, not only items the
+  reviewer itself flags with the ⚠️ marker.
+- **A final whole-branch review earning its cost, a second time this session (see session-79's lesson on the
+  same pattern for #197 ideas 6/8):** #199's two task-level reviews both passed clean, and the whole-branch pass
+  still found a real GDPR-adjacent gap neither could see — a collapsed clarification round where the clarify row
+  is redacted but the reply row isn't leaves `isDeleted: true` with a non-null `answerEnvelope`, safe today only
+  because of a structural UI guard (`!item.isDeleted`) that a comment mischaracterized as "defense in depth"
+  (implying redundant) rather than load-bearing. The bug wasn't live — but the MISLEADING COMMENT was a real risk
+  by itself: a future session reading "defense in depth" and simplifying "the backend already nulls these" would
+  have reintroduced a genuine leak with no test to catch it. A review that only checks "does this diff do what it
+  claims" cannot find this class of issue — it required reading the *consuming* code the diff's own author never
+  touched and reasoning about a combination (redacted + non-redacted rows collapsed into one round) neither
+  per-task review's scope included.
+- **`.superpowers/` (the subagent-driven-development skill's own scratch directory — progress ledgers, task
+  briefs/reports, review-package diffs) was not in this repo's `.gitignore`, despite the skill's own
+  documentation calling it "git-ignored scratch."** Never actually committed (this session only ever `git add`ed
+  specific named files, never `-A`), but the gap was real and would eventually catch someone. Fixed by adding it
+  to `.gitignore` directly — worth checking for on any repo where this skill runs for the first time, since nothing
+  else surfaces the gap until a careless broad `add` sweeps it in.
 
 - **An ambiguous RUNBOOK instruction directly caused a real mistake — twice, in two different sessions, in two
   different directions.** The Route B execution steps read `gh secret set VERCEL_ORG_ID` + `VERCEL_PROJECT_ID`
