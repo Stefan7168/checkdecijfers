@@ -20,6 +20,17 @@ updates:
       npm-all:
         patterns:
           - "*"
+    ignore:
+      # ANY zod version bump can change z.toJSONSchema()'s serialized output
+      # bytes, which changes the SHA-256 hash the hermetic LLM replay-fixture
+      # system keys on (docs/open-questions.md #200) — confirmed by bisection
+      # on the 4.4.3->4.5.4 hop, itself only a MINOR release, so this ignores
+      # every update-type, not just major. A zod bump needs a coordinated
+      # fixture re-record alongside it, not an automated one. Remove this
+      # ignore only after that re-record happens deliberately. web/'s own
+      # npm-web-all group is unaffected (it doesn't run the benchmark/fixture
+      # scripts at all) and keeps updating zod normally.
+      - dependency-name: "zod"
     commit-message:
       prefix: "deps"
 
