@@ -23,10 +23,9 @@ Fixed in one round (`af21ab8`), independently re-reviewed (a second opus pass ch
 (`b7e0c7e`, `d78cfb5`): open-questions #197 + new #203 (the pre-existing, not-a-branch-regression
 `deriveDirection` region-guard gap the review surfaced, cross-ref #100), ADR 014 as-built notes,
 `known-divergences.ts` header, a 04-architecture capability row. `/code-review` LOW pass: 0 findings. **PR #6
-opened; merged `main` into it to resolve a docs-only
-conflict (the worktree's `open-questions.md` predated session 80's later `main` commits) — both `gate` runs
-green, `mergeStateStatus: CLEAN`. NOT merged — autonomous session + core-product code, #118(b) requires owner
-review before merge.** Final measured state on the branch: typecheck ×2, backend 119 files/1814 tests, benchmark
+opened; merged `main` into it to resolve a docs-only conflict (the worktree's `open-questions.md` predated
+session 80's later `main` commits) — both `gate` runs green, `mergeStateStatus: CLEAN`. NOT merged — autonomous
+session + core-product code, #118(b) requires owner review before merge.** Final measured state on the branch: typecheck ×2, backend 119 files/1814 tests, benchmark
 GATE PASS (14/14+6/6+0 fabricated), web 51 files/610 tests, real `next build` clean.
 
 **`docs/STATUS.md` pruning finished** — removed sessions 68-79's full un-trimmed blocks (582 lines, session
@@ -49,12 +48,11 @@ own terminal). WP30c + #197's three older follow-ups (owner-menu items) — unto
 genuinely alive via `ps -p`, 13h16m elapsed at check time — do not touch); `experiment/162-slot-filling-ab`
 (parked, unchanged); `feat/197-chart-trend-headline` (now PR #6, unmerged).
 
-**▶ NEXT, in order:** (a) review + merge PR #6 — green,
-conflict-free, nothing else needed from you but the merge click; (b) the 3 `gh secret set` commands for Route
-B, still blocking only `deploy`; (c) #162's §6 A/B verdict (clean loss, recorded session 80) — accept as final
-or authorize a round 5; (d) WP30c + #197's three older follow-ups; (e) new row
-[#203](open-questions.md) (`deriveDirection` has no region guard — pre-existing, low urgency, no owner decision
-needed to start whenever a session picks it up).
+**▶ NEXT, in order:** (a) review + merge PR #6 — green, conflict-free, nothing else needed from you but the
+merge click; (b) the 3 `gh secret set` commands for Route B, still blocking only `deploy`; (c) #162's §6 A/B
+verdict (clean loss, recorded session 80) — accept as final or authorize a round 5; (d) WP30c + #197's three
+older follow-ups; (e) new row [#203](open-questions.md) (`deriveDirection` has no region guard — pre-existing,
+low urgency, no owner decision needed to start whenever a session picks it up).
 
 
 **(Historical — the pause, 2026-08-15 to 2026-08-26.)** Project was paused ~2 months (owner decision) and the
