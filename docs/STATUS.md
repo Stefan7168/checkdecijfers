@@ -9,6 +9,74 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
+**▶ SESSION 79 (2026-09-05, OWNER PRESENT, session still ongoing — this entry will be extended at actual
+wrap-up) — ROUTE B EXECUTED, #197 IDEAS 6+8 BUILT + MERGED + LIVE (pending Vercel secrets), #162 STILL BLOCKED
+(twice, second time by tooling, not the experiment).** Kickoff verified clean against
+`docs/session-briefs/2026-09-05-session-79-kickoff.md`. Owner said "ALL" to the priority menu — worked all four
+threads in parallel rather than picking one.
+
+**Route B: DONE.** Fresh secret-exposure scan across all 807 commits (common key-prefix patterns for every major
+provider + Stripe + Supabase + JWT-shaped tokens) found nothing real — the three filename-flagged hits
+(`web/.env.production`'s public Supabase URL/key, a `FAKE_URL` test fixture, a public CA cert) were all verified
+safe by reading their actual content, converging with session 37's original 2026-07-12 audit. Old repo renamed
+to `checkdecijfers-pre-rewrite-archief` (private), new public `Stefan7168/checkdecijfers` created and pushed
+(807 commits, `refs/pull` confirmed empty), Dependabot re-enabled. **Still needed from the owner:** 3
+`gh secret set` commands (`VERCEL_ORG_ID`/`VERCEL_PROJECT_ID`/`VERCEL_TOKEN`) on the new repo — until then every
+`deploy` CI job fails at "Pull Vercel project settings," harmlessly (production keeps serving the last
+successful deployment; confirmed live via `checkdecijfers.vercel.app/api/health` → 200 — the custom domain
+`checkdecijfers.nl` isn't reachable from this session's sandbox network, unrelated to the app).
+
+**#197 ideas 6 (hide/show a series) + 8 (small multiples): BUILT, reviewed, MERGED + LIVE in git — `main`
+`e49862c`, CI `gate` job green (8m49s).** Brainstormed in-chat, written up as
+[session-briefs/2026-09-05-chart-ideas-4-6-8-design.md](session-briefs/2026-09-05-chart-ideas-4-6-8-design.md)
+(idea 4, the takeaway headline, is bigger than the original research brief implied — correctly rescoped out,
+unscheduled) and [superpowers/plans/2026-09-05-...md](superpowers/plans/2026-09-05-chart-series-toggle-and-small-multiples.md),
+executed via subagent-driven-development (haiku implementers, sonnet task reviewers, opus for the final
+whole-branch review) in an isolated worktree. **The final whole-branch review earned its cost:** it found a
+Critical bug no task-level review could see — `ChartView` isn't remounted per spec at two live call sites
+(`visual-dock.tsx`, `chart-toggle.tsx` both swap `spec` on the same mounted instance) — so the new hidden-series
+state could leak across a chart switch and either silently blank a chart with no legend to recover it (index-
+based series keys can coincidentally collide across different charts) or bake a false "N van M reeksen
+verborgen" claim into an export. Fixed (reset the three new presentation states on a real spec-identity change,
+React's own documented pattern, no Effect) and proven with a rerender-same-instance-different-spec test. Also
+fixed from the same review: inverted `aria-pressed` polarity on the new legend buttons (a repeat of a mistake
+this codebase had already fixed once elsewhere), small-multiples panels overflowing their fixed-height
+container past ~4 series, and — raised explicitly to the owner rather than picked unilaterally — "eigen assen"
+mode's panels auto-scaled with no axis labels, contradicting this file's own stated axis-honesty policy; owner
+asked for the best UX, so per-panel own-axis labels were added, reusing the chart's existing honesty-bound
+tick mechanism (never an invented number). Final state: root+web typecheck clean, backend suite 118/118 files
+1792/1792 tests, benchmark GATE PASS (14/14+6/6+0 fabricated), web suite 51/51 files 605/605 tests, `next build`
+clean — all independently re-verified by this session, not just trusted from subagent reports. **Docs updated
+in the same push:** open-questions rows #46 and #197.
+
+**#162 (slot-filling A/B): still no phrasing-quality verdict, blocked twice for two different reasons.** First
+attempt (owner-authorized real spend, ~€0.50 of the ~€1-2 budget) correctly stopped at real hard-gate failures
+before the judge ever ran — 3 root-caused validator/prompt bugs, one of which (a shared-validator false
+positive on "Op &lt;year&gt;..." phrasing) turned out to be a **latent bug in the live production pipeline
+too**, not just this experiment (recorded, not yet fixed — needs its own follow-up). Second attempt (asked to
+fix the 3 bugs and complete the experiment) hit a genuine **tooling failure, not a code problem**: partway
+through, its sandbox got bound to a worktree it had no relation to (`chart-series-toggle-small-multiples`,
+this same session's OWN concurrent worktree) and every Bash/Edit call was refused from that point on. This
+session independently reproduced the identical symptom directly afterward (an app-level directory-change
+notification collided with this session's own `EnterWorktree` isolation, refusing every command including
+explicit correct paths, until `ExitWorktree` + fresh `EnterWorktree` cleared it) — worth a RUNBOOK note: **don't
+run `EnterWorktree` in the orchestrating session while a background agent is still active**, and if a
+background agent starts reporting worktree-isolation refusals for a path it never touched, that is this bug,
+not a real permissions problem. Branch `experiment/162-slot-filling-ab` is unchanged at `fd1a3b6`, $0 additional
+spend (the second attempt's diagnosis work was all free/local before the lockout) — needs a clean third attempt.
+
+**Also this session:** two new roadmap ideas recorded from the owner mid-conversation — user-connectable Google
+Sheets ([#201](open-questions.md), explicitly blocked on auth the owner doesn't want to build yet) and
+drag-and-drop chat attachments ([#202](open-questions.md)) — both deliberately NOT built, cross-referenced to
+each other and to ADR 032's existing "unofficial content gets its own attributed section" pattern. WP30c stays
+at "wait" (not decided this session).
+
+**▶ NEXT, in order — nothing urgent except the two owner-blocking items:** (a) the 3 `gh secret set` commands
+for Route B's new repo (yours); (b) #162 third attempt — fix the 3 identified bugs for real this time, complete
+through the judge; (c) the newly-found latent shared-validator bug (period-recognition false positive) — real
+but low-frequency, worth a scoped fix; (d) Dependabot #124 still blocked, zod regression, unchanged; (e) #199 —
+declined again this session (owner said leave it parked); (f) idea 4 (takeaway headline) — designed, not built.
+
 **▶ SESSION 78 (2026-09-04 into 2026-09-05, OWNER PRESENT — merge day for the four PRs sessions 76/77 left
 open) — #126/#127/#128/#129 ARE ALL MERGED + LIVE.** Kickoff verified clean against
 `docs/session-briefs/2026-09-04-session-78-kickoff.md`: `git log -3` matched, `gh pr list` showed exactly the
