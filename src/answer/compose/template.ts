@@ -77,6 +77,16 @@ function subjectSentenceStart(result: ValidatedResult): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
+/** Verb-form direction words for a chart headline sentence ("Bevolking
+ * steeg... ") — distinct from prompt.ts's TREND_WORD_BY_DIRECTION, which is
+ * the NOUN form ("stijging") used as an LLM phrasing hint, not a formatter
+ * output. */
+const TREND_VERB_BY_DIRECTION: Record<'up' | 'down' | 'flat', string> = {
+  up: 'steeg',
+  down: 'daalde',
+  flat: 'bleef stabiel',
+};
+
 function regionPhrase(cell: ResultCell): string {
   return cell.regionLabel === null ? '' : ` in ${baseRegionLabel(cell.regionLabel)}`;
 }
@@ -146,6 +156,26 @@ function renderMax(result: ValidatedResult, derivation: Extract<DerivationRecord
     `${subject(result)}: ${displayValueUnit(winner.value!, winner.decimals, winner.unit)}${provisionalSuffix(winner)}. ` +
     `Daarna: ${others}.`
   );
+}
+
+/** #197 idea 4: a short, deterministic Dutch headline for a chart backed by
+ * a `direction` derivation ("Bevolking steeg gestaag sinds 2015."). Template
+ * only, no LLM — mirrors renderDifference/renderMax's own discipline.
+ * `undefined` (not thrown) when the derivation's own firstResultId cannot be
+ * resolved against the result's cells — a defensive guard for a shape that
+ * should not occur (a registered derivation's source ids are always drawn
+ * from the same result's own cells), matched by buildChartSpec choosing not
+ * to set ChartAttribution.trendHeadline in that case (Task 2). */
+export function renderTrendHeadline(
+  result: ValidatedResult,
+  derivation: Extract<DerivationRecord, { kind: 'direction' }>,
+): string | undefined {
+  const byId = new Map(result.cells.map((c) => [c.resultId, c]));
+  const first = byId.get(derivation.firstResultId);
+  if (!first) return undefined;
+  const verb = TREND_VERB_BY_DIRECTION[derivation.direction];
+  const steadily = derivation.monotonic && derivation.direction !== 'flat' ? ' gestaag' : '';
+  return `${subjectSentenceStart(result)} ${verb}${steadily} sinds ${first.periodLabel}.`;
 }
 
 /** Deterministic Dutch answer body for any ValidatedResult. */

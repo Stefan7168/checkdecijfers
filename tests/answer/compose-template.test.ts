@@ -4,14 +4,14 @@
 // structural lines (R4 attribution, R5 marking, definition transparency) must
 // render exactly when required.
 import { describe, expect, it } from 'vitest';
-import type { ValidatedResult } from '../../src/query/index.ts';
+import type { ValidatedResult, DerivationRecord } from '../../src/query/index.ts';
 import { DERIVED_DATA_MARKING } from '../../src/query/index.ts';
 import {
   composeAnswer,
   renderTemplateBody,
   validateAnswerBody,
 } from '../../src/answer/compose/index.ts';
-import { displayValueUnit } from '../../src/answer/compose/template.ts';
+import { displayValueUnit, renderTrendHeadline } from '../../src/answer/compose/template.ts';
 import { buildDefinitionLine } from '../../src/answer/compose/format.ts';
 import type { LlmClient, LlmRequest, LlmResponse } from '../../src/answer/llm/client.ts';
 import {
@@ -307,5 +307,59 @@ describe('#143: an index-base unit ("2015=100") renders as a label, never a ×-f
     // rendered before this fix must not start failing (review test-gap pin).
     const oldForm = 'CPI indexniveau was in 2024 118,3 (× 2015=100).';
     expect(validateAnswerBody(oldForm, cpiIndex).problems).toEqual([]);
+  });
+});
+
+describe('renderTrendHeadline (#197 idea 4)', () => {
+  function series(direction: 'up' | 'down' | 'flat', monotonic: boolean): {
+    result: ValidatedResult;
+    derivation: Extract<DerivationRecord, { kind: 'direction' }>;
+  } {
+    const first = makeCell({ periodCode: '2015JJ00', periodLabel: '2015', value: 100, unit: 'aantal' });
+    const last = makeCell({ periodCode: '2024JJ00', periodLabel: '2024', value: 120, unit: 'aantal' });
+    const result = makeResult({
+      shape: 'series',
+      definitionLabel: 'bevolking',
+      cells: [first, last],
+    });
+    const derivation: Extract<DerivationRecord, { kind: 'direction' }> = {
+      kind: 'direction',
+      explicit: false,
+      sourceResultIds: [first.resultId, last.resultId],
+      unit: 'aantal',
+      marking: DERIVED_DATA_MARKING,
+      direction,
+      monotonic,
+      netChange: 20,
+      firstResultId: first.resultId,
+      lastResultId: last.resultId,
+    };
+    return { result, derivation };
+  }
+
+  it('renders an upward, monotonic trend with "gestaag" and the first period', () => {
+    const { result, derivation } = series('up', true);
+    expect(renderTrendHeadline(result, derivation)).toBe('Bevolking steeg gestaag sinds 2015.');
+  });
+
+  it('renders a downward, monotonic trend', () => {
+    const { result, derivation } = series('down', true);
+    expect(renderTrendHeadline(result, derivation)).toBe('Bevolking daalde gestaag sinds 2015.');
+  });
+
+  it('renders a flat trend without "gestaag" (steadiness does not apply to no change)', () => {
+    const { result, derivation } = series('flat', true);
+    expect(renderTrendHeadline(result, derivation)).toBe('Bevolking bleef stabiel sinds 2015.');
+  });
+
+  it('omits "gestaag" for a non-monotonic up/down trend (the net direction, not a straight line)', () => {
+    const { result, derivation } = series('up', false);
+    expect(renderTrendHeadline(result, derivation)).toBe('Bevolking steeg sinds 2015.');
+  });
+
+  it('returns undefined when the first source cell cannot be found (defensive, should not happen)', () => {
+    const { result, derivation } = series('up', true);
+    const broken = { ...derivation, firstResultId: 'does-not-exist' };
+    expect(renderTrendHeadline(result, broken)).toBeUndefined();
   });
 });
