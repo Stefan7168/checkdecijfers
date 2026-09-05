@@ -121,7 +121,13 @@ export function buildChartSpec(result: ValidatedResult): ChartSpec | null {
   const direction = result.derivations.find(
     (d): d is Extract<DerivationRecord, { kind: 'direction' }> => d.kind === 'direction',
   );
-  const trendHeadline = direction ? renderTrendHeadline(result, direction) : undefined;
+  // C1 (whole-branch review, #197): deriveDirection has no region guard, and
+  // cells are period-major/region-minor, so on a multi-region chart its
+  // (first cell, last cell) pair silently diffs across DIFFERENT regions —
+  // not a real trend (e.g. Amsterdam falling + Utrecht rising could net to
+  // "steeg", contradicting the chart itself). A trend headline is only ever
+  // honest for a single-region chart; `multiRegion` is already computed above.
+  const trendHeadline = direction && !multiRegion ? renderTrendHeadline(result, direction) : undefined;
 
   return {
     schemaVersion: CHART_SPEC_VERSION,

@@ -165,7 +165,23 @@ function renderMax(result: ValidatedResult, derivation: Extract<DerivationRecord
  * resolved against the result's cells — a defensive guard for a shape that
  * should not occur (a registered derivation's source ids are always drawn
  * from the same result's own cells), matched by buildChartSpec choosing not
- * to set ChartAttribution.trendHeadline in that case (Task 2). */
+ * to set ChartAttribution.trendHeadline in that case (Task 2).
+ *
+ * Two more fail-closed guards (whole-branch review, #197 I1+I2):
+ * - `undefined` when direction is 'flat' but NOT monotonic: a series that
+ *   rose and fell back to its starting value nets to zero, but the FLAT verb
+ *   ("bleef stabiel") claims a straight, unmoving line — false for that
+ *   shape. There is no honest one-sentence phrasing for a
+ *   net-zero-but-not-actually-flat series today, so the headline is
+ *   suppressed entirely, the same fail-closed posture renderSeries already
+ *   takes elsewhere in this file for trend claims it can't make safely.
+ * - "gestaag" additionally requires >= 3 SOURCE points (derivation.
+ *   sourceResultIds.length), not just monotonicity: a 2-point sequence has
+ *   exactly one interval, so it is trivially "monotonic" and would otherwise
+ *   always qualify for "gestaag" — the same class of hazard
+ *   docs/open-questions.md #100 already tracks for `monotonic`'s reading in
+ *   the LLM answer prompt, reopened here in this separate deterministic
+ *   template. */
 export function renderTrendHeadline(
   result: ValidatedResult,
   derivation: Extract<DerivationRecord, { kind: 'direction' }>,
@@ -173,8 +189,12 @@ export function renderTrendHeadline(
   const byId = new Map(result.cells.map((c) => [c.resultId, c]));
   const first = byId.get(derivation.firstResultId);
   if (!first) return undefined;
+  if (derivation.direction === 'flat' && !derivation.monotonic) return undefined;
   const verb = TREND_VERB_BY_DIRECTION[derivation.direction];
-  const steadily = derivation.monotonic && derivation.direction !== 'flat' ? ' gestaag' : '';
+  const steadily =
+    derivation.monotonic && derivation.direction !== 'flat' && derivation.sourceResultIds.length >= 3
+      ? ' gestaag'
+      : '';
   return `${subjectSentenceStart(result)} ${verb}${steadily} sinds ${first.periodLabel}.`;
 }
 

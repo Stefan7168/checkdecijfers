@@ -238,13 +238,19 @@ describe('buildChartSpec — contract discipline', () => {
 });
 
 describe('trendHeadline (#197 idea 4)', () => {
+  // 3 source points (I2, whole-branch review): a 2-point derivation is
+  // trivially monotonic (one interval only) and must never earn "gestaag" —
+  // this fixture uses 3 contiguous years so the "gestaag" case below stays a
+  // real steady-trend test instead of silently degrading to a non-gestaag
+  // string under an unchanged assertion.
   function seriesWithDirection() {
     const first = makeCell({ periodCode: '2023JJ00', value: 100 });
-    const last = makeCell({ periodCode: '2024JJ00', value: 120 });
+    const middle = makeCell({ periodCode: '2024JJ00', value: 110 });
+    const last = makeCell({ periodCode: '2025JJ00', value: 120 });
     const direction: DerivationRecord = {
       kind: 'direction',
       explicit: false,
-      sourceResultIds: [first.resultId, last.resultId],
+      sourceResultIds: [first.resultId, middle.resultId, last.resultId],
       unit: '%',
       marking: DERIVED_DATA_MARKING,
       direction: 'up',
@@ -253,7 +259,7 @@ describe('trendHeadline (#197 idea 4)', () => {
       firstResultId: first.resultId,
       lastResultId: last.resultId,
     };
-    return makeResult('series', [first, last], { definitionLabel: 'bevolking' }, [direction]);
+    return makeResult('series', [first, middle, last], { definitionLabel: 'bevolking' }, [direction]);
   }
 
   it('sets attribution.trendHeadline when a direction derivation is registered', () => {
@@ -263,6 +269,39 @@ describe('trendHeadline (#197 idea 4)', () => {
 
   it('omits trendHeadline (no key at all, not undefined-valued) when there is no direction derivation', () => {
     const spec = buildChartSpec(makeResult('series', [makeCell({ periodCode: '2023JJ00' }), makeCell({ periodCode: '2024JJ00' })]))!;
+    expect('trendHeadline' in spec.attribution).toBe(false);
+  });
+
+  // C1 (whole-branch review, Critical): deriveDirection has no region guard
+  // and cells are period-major/region-minor, so on a multi-region chart its
+  // (first cell, last cell) pair silently diffs across DIFFERENT regions —
+  // reproduced by the reviewer as Amsterdam 200→190 (falling) + Utrecht
+  // 100→150 (rising) yielding a false, unqualified "daalde" headline. The
+  // fix gates trendHeadline on single-region charts only, regardless of what
+  // the (possibly cross-region) direction derivation itself says.
+  it('suppresses trendHeadline on a multi-region chart even when a direction derivation is registered', () => {
+    const cells = [
+      makeCell({ regionCode: 'GM0363', periodCode: '2023JJ00', value: 200 }),
+      makeCell({ regionCode: 'GM0344', periodCode: '2023JJ00', value: 100 }),
+      makeCell({ regionCode: 'GM0363', periodCode: '2024JJ00', value: 190 }),
+      makeCell({ regionCode: 'GM0344', periodCode: '2024JJ00', value: 150 }),
+    ];
+    const direction: DerivationRecord = {
+      kind: 'direction',
+      explicit: false,
+      sourceResultIds: cells.map((c) => c.resultId),
+      unit: '%',
+      marking: DERIVED_DATA_MARKING,
+      // Exactly the reported shape: cells[0] (region GM0363) vs cells[3]
+      // (region GM0344) — a cross-region diff, not a real trend.
+      direction: 'down',
+      monotonic: true,
+      netChange: -50,
+      firstResultId: cells[0]!.resultId,
+      lastResultId: cells[3]!.resultId,
+    };
+    const spec = buildChartSpec(makeResult('series', cells, { definitionLabel: 'bevolking' }, [direction]))!;
+    expect(spec.series).toHaveLength(2);
     expect('trendHeadline' in spec.attribution).toBe(false);
   });
 
