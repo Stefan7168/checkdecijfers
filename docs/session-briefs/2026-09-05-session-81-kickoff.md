@@ -11,11 +11,12 @@ top, if you need the full narrative — numbered list, 13 items) → `docs/lesso
 new bullets on top of the existing one, read before running `subagent-driven-development` again or touching
 `src/answer/compose/validate.ts`).
 
-Verify yourself first: `date +%Y-%m-%d`, `git log -3 --oneline` (expect `61b6168` on top or later — session 80's
+Verify yourself first: `date +%Y-%m-%d`, `git log -3 --oneline` (expect `b70cde0` on top or later — session 80's
 wrap-up push), `gh pr list --state open` (expect empty — all 5 Dependabot PRs resolved this session), `gh run
-list --branch main -L 3` (expect `gate` green on the tip; `deploy` will show `failure` — that's the KNOWN Route B
-secrets gap below, not a real problem, but confirm the `gate` job specifically via `gh run view <id> --json
-jobs`, don't assume from the top-level conclusion), `git worktree list` (expect the main checkout PLUS THREE
+list --branch main -L 3` (expect `gate` green on the tip; `deploy` will show `failure` on `b70cde0` specifically —
+confirmed at wrap-up time, it's the KNOWN Route B secrets gap below, not a real problem — but confirm the `gate`
+job itself via `gh run view <id> --json jobs`, don't assume from the top-level run conclusion, which reads
+`failure` solely because of `deploy`), `git worktree list` (expect the main checkout PLUS THREE
 other worktrees — see below, do not delete any without reading why first) + `git branch`. Second-instance check:
 `ListAgents`. Red anywhere = understand why before proceeding, not necessarily "fix" — the deploy failures and
 the extra worktrees are known and explained below.
@@ -65,7 +66,7 @@ priority once with "make the best decision yourself," then gave four more small 
    (`VERCEL_ORG_ID`/`VERCEL_PROJECT_ID`/`VERCEL_TOKEN`) are still the owner's own action, still blocking only
    `deploy`.
 6. **This session's own wrap-up trimmed `STATUS.md` back to its own "lean top block" convention** (was 1222
-   lines with full session essays stacked back through session 71, despite the file's stated rule; now 1095 —
+   lines with full session essays stacked back through session 71, despite the file's stated rule; now 1097 —
    session 80's own entry was kept lean, older bloat deliberately left untouched as out-of-scope bulk cleanup).
    If a future session has spare, low-priority capacity: a dedicated pruning pass on sessions 71-79's top-block
    remnants (already fully preserved in `status-archive.md`) would finish the job — not urgent, not requested by

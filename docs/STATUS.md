@@ -14,11 +14,13 @@ fixed (§6 A/B judged: clean loss, do-not-adopt), Dependabot's zod regression fi
 resolved, #199 dashboard proof panel MERGED + LIVE, #197 idea 4 (trend headline) 2-of-3 tasks built then PAUSED
 mid-build at wrap-up (not abandoned). Full session entry: [status-archive.md](status-archive.md).**
 
-**CI/production:** `gate` green on `main` tip (`acafe33`); `deploy` still fails only on the pending Route-B
-Vercel secrets (owner's own 3 `gh secret set` commands, unset since session 79) — production unaffected,
-`/api/health` 200 throughout. `git worktree list`: main + 3 deliberate non-main (`agent-aa024a353bfdc08d5` —
-still alive, do not touch; `experiment/162-slot-filling-ab` — parked, 91%+judge done; `feat/197-chart-trend-
-headline` — mid-build, see below).
+**CI/production:** `gate` green on every commit through the wrap-up push (`b70cde0`, verified directly via `gh
+run view --json jobs`, not the top-level run conclusion — the top-level conclusion reads `failure` on some of
+these commits solely because of the `deploy` job below); `deploy` still fails only on the pending Route-B Vercel
+secrets (owner's own 3 `gh secret set` commands, unset since session 79) — production unaffected, `/api/health`
+200 confirmed at wrap-up. `git worktree list`: main + 3 deliberate non-main (`agent-aa024a353bfdc08d5` — still
+alive, do not touch; `experiment/162-slot-filling-ab` — parked, 91%+judge done; `feat/197-chart-trend-headline`
+— mid-build, see below).
 
 **▶ NEXT, in order:** (a) resume #197 idea 4 Task 3 (render `trendHeadline` in `chart.tsx`) + the final
 whole-branch review, in `.claude/worktrees/feat-197-trend-headline` (ledger: that worktree's own
