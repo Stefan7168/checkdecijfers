@@ -125,6 +125,24 @@ only, which is the safe direction.
   renderer, cells are spec strings bound to resultIds, nulls shown with their CBS reason. This keeps the
   revisit trigger below honest — "a result shape that genuinely needs the `table` kind" still means a
   shape neither line nor bar can carry, not "the user wants to see a table".
+- **Ideas 6 (hide/show a series) and 8 (small multiples) also stayed web-renderer-only (session 79,
+  2026-09-05, [#197](../open-questions.md)) — no new `ChartSpec` field, no schema bump.** Both are pure
+  client-side interaction/presentation state inside `ChartView` (`hiddenKeys`, `smallMultiples`,
+  `axisMode`), gated respectively on `seriesMeta.length > 1` (any chart kind) and `spec.kind === 'line'
+  && seriesMeta.length > 1`. `ChartSmallMultiples` (new file, `web/components/chart-small-multiples.tsx`)
+  reuses the SAME pure helpers (`buildRows`, `yAxisDomain`, and — for its own-axis per-panel tick labels
+  — `valueLabelPlan`/`AxisTick`, now exported from `chart.tsx` for this reuse) rather than re-deriving
+  anything, so the optional-v1-field rule above never even comes into play. **One real lesson from this
+  round, worth generalizing:** the final whole-branch review (a step distinct from and after the per-task
+  reviews) found a Critical bug neither task review could see, because it lived entirely OUTSIDE the diff
+  — `ChartView` is not remounted per spec at two existing call sites (`visual-dock.tsx`, `chart-toggle.tsx`
+  both swap `spec` on one mounted instance), so the two new pieces of state could leak across a chart
+  switch. Fixed by resetting them on a genuine spec-identity change (compared by value, not object
+  identity) rather than relying on mount-time `useState` initializers, which is what the two ALREADY-
+  existing states (`view`, and the untouched-this-round `smallMultiples` sibling) still do — safely, only
+  because both of those happen to be valid for any spec, unlike hidden-series state. Full detail:
+  [status-archive.md](../status-archive.md) session-79 entry, [lessons-learned.md](../lessons-learned.md)
+  session-79 entry.
 
 ## Revisit triggers
 

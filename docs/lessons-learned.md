@@ -61,6 +61,30 @@ Full narrative: [status-archive.md](status-archive.md) session-79 entry.
   caught in the chart work's task review) was caught by exactly this same discipline. Neither outcome is a
   reason to relax it — a habit that mostly confirms good news is still the reason the one bad-news case gets
   caught.
+- **A push's overall CI status can read "failure" while the actual code/docs gate is fully green — check the
+  `gate` job specifically, not just the run summary, on every push made after the Route B secrets gap opened
+  (2026-09-05).** `gh run list`'s one-line summary showed `completed failure` for a pure docs push
+  (status-archive + lessons-learned, `45329b2`) that briefly went unchecked mid-session; `gh run view` showed
+  `gate` green at 8m55s, `deploy` failing at the same known "Pull Vercel project settings" point every push
+  hits until the 3 `gh secret set` commands are run. Not a new problem, but a pattern worth naming explicitly:
+  every push in this window will show this same misleading overall-failure summary regardless of content —
+  don't let the top-line status alone stand in for the actual gate check, and don't assume "docs-only, surely
+  fine" is a reason to skip verifying even a low-risk push once a known gate-affecting condition exists.
+- **`ScheduleWakeup` used outside its documented `/loop` context can deliver the same stored prompt more than
+  once.** Used generically this session as a "check back in N minutes" mechanism (not the `/loop` skill it's
+  actually built for), the identical prompt text arrived as a fresh turn twice for the same one-time check —
+  harmless here because the second arrival was recognized as a duplicate of already-completed work before
+  redoing anything, but worth the explicit habit: treat a `ScheduleWakeup`-delivered prompt as possibly a
+  repeat, check what it asks for is not already done, before acting on it as if new.
+- **A background `Agent` dispatch can go silent with partial, uncommitted progress and no completion
+  notification ever arriving — after ~6 hours, still true of one dispatched near this session's start (the
+  #124 Dependabot zod-regression investigation).** Every OTHER agent dispatched this session, including
+  several 20-40 minute ones, reported back cleanly; this one shows modified `package.json`/`package-lock.json`
+  in its worktree (real attempted progress) but no commit and no notification. Not yet diagnosed — possibly a
+  genuinely still-running long task, possibly stuck/orphaned with no way to self-report. Recorded rather than
+  silently waited on forever: a future session should check `git -C <its-worktree> status`/`log` directly
+  before assuming either "still working" or "safe to discard" — the uncommitted changes are real attempted
+  work, not to be discarded without inspecting them first.
 
 ## Session 78 — 2026-09-04 into 2026-09-05, owner present — merge day for #126–129, then the GDPR_PURGE_APPLY flip
 

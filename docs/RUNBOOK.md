@@ -1031,11 +1031,16 @@ computer or any one Claude account. A new machine needs, in order:
 1. **Install** (one-time): [Node.js](https://nodejs.org) **24 or newer**
    (`node --version` to check — the project requires ≥24), git,
    [Claude Code](https://claude.com/claude-code), and the GitHub CLI
-   (`gh`). The CLI is not optional in practice: the repo is private, and
-   `gh auth login` (step 2) is what gives git the credentials the clone
-   in step 3 needs (measured on the 2026-07-03 bootstrap — the clone
-   worked *because* gh was signed in). It also lets you watch CI from
-   the terminal. **Optional but recommended for incident response:** the
+   (`gh`). **⚠ The repo's visibility has changed since this was written:**
+   private from 2026-08-15 to the [#132](open-questions.md) Route B rename
+   on 2026-09-05, public again since (measured on the 2026-07-03 bootstrap,
+   when it was still private: the clone worked *because* `gh auth login`
+   (step 2) had already given git its credentials — a plain anonymous
+   `git clone` would fail on a private repo). With the repo public again, a
+   bare `git clone` works without any `gh` auth at all — but `gh auth
+   login` is still what you need to `git push`, open/merge PRs, and watch
+   CI from the terminal, so treat it as effectively required regardless.
+   **Optional but recommended for incident response:** the
    **Vercel CLI** (`npm i -g vercel`, then `vercel login` as
    personal gmail #2 and `vercel link` to project `checkdecijfers`) —
    the supervised-live-step playbooks below tell you to run `vercel logs`
