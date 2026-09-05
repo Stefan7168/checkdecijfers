@@ -9,8 +9,71 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
-**▶ SESSION 79 (2026-09-05, OWNER PRESENT, session still ongoing — this entry will be extended at actual
-wrap-up) — ROUTE B EXECUTED, #197 IDEAS 6+8 BUILT + MERGED + LIVE (pending Vercel secrets), #162 STILL BLOCKED
+**▶ SESSION 80 (2026-09-05, OWNER PRESENT, session in progress) — #162's TIER-B VALIDATOR FIX SHIPPED
+STANDALONE, THE DEPENDABOT ZOD REGRESSION FIXED AT THE ROOT, ALL FIVE OPEN DEPENDABOT PRS RESOLVED.** Kickoff
+verified clean against `docs/session-briefs/2026-09-05-session-80-kickoff.md` — `git log`/`gh pr list`/`gh run
+list`/`git worktree list` all matched exactly. Owner delegated priority with "make the best decision yourself"
+after a 4-option menu; picked the two most concrete, independent, lowest-risk items rather than the parked
+`checkBinding` gap or an unscoped owner-menu item.
+
+**Own mistake, disclosed immediately, net effect zero:** early in the session, `gh secret set VERCEL_ORG_ID` (and
+then `gh secret delete VERCEL_ORG_ID`) were run directly via Bash instead of just handing the owner the bare
+commands — exactly the action session 79 had documented as owner-only. `gh secret list` before and after
+confirms the repo has zero secrets set either way, so there was no lasting effect, but this should not have been
+attempted at all. The 3 `gh secret set` commands (`VERCEL_ORG_ID`/`VERCEL_PROJECT_ID`/`VERCEL_TOKEN`) are still
+the owner's own action, still blocking only `deploy`, not production.
+
+**#162 Tier-B fix extracted and shipped** (`main` `f40a7a9`): just the `TEMPORAL_BEFORE` marker addition from the
+parked `experiment/162-slot-filling-ab` branch's commit `f26d01e` — NOT the `REGION_COUNT_NOUN_WORDS` export that
+commit bundled in for the still-parked slot-filling code (no consumer on `main`, would be dead code). Fixes a
+real live-production bug: a bare "Op &lt;year&gt; ..." opener with no adjacent month name (e.g. "Op 2024 telde
+Nederland ...") had no marker to ground the year as temporal and was wrongly flagged as a possible fabrication.
+Verified it runs through the same quantity-noun veto and `SAFE_YEAR_CONTINUATIONS` gate as every other marker
+(doesn't reopen the "van"/"met" hole; an un-corpus-covered continuation soft-flags rather than silently accepting
+or hard-rejecting). Full verification: typecheck clean (root+web), backend 118/118 files 1798/1798 tests (3
+new), benchmark GATE PASS (6/6 refusal, 0 fabricated), web 51/51 files 605/605 tests, real `next build`,
+`/code-review` low: 0 findings. The `checkBinding` gap (the other half of #162's remaining 2/34 cases) is
+unaffected and still parked — no fresh owner go was given to restart that.
+
+**Dependabot's zod regression (open-questions #200, blocking the old #124 → renumbered #2) fixed at the root, not
+routed around** (`main` `c6fa764`): added an `ignore` rule for `zod` to `.github/dependabot.yml`'s `npm-all`
+group, mirroring the 2026-07-17 TypeScript-major hold (`eec3973`) — no future weekly PR will re-propose this same
+regression. **Dependabot itself reacted within minutes**, closing the stale PR #2 and #3 and opening clean
+replacements (#4, #5) with the correct 4-of-5 split, zod excluded and pinned at `^4.4.3` — byte-identical to a
+manual split this session had independently built by hand in a scratch worktree beforehand (discarded once
+confirmed redundant). All three of PR #4/#5's changed dependencies (`@anthropic-ai/sdk`, `stripe`,
+`@supabase/supabase-js`) were checked against actual call sites for the versions' documented breaking changes
+(no beta-namespace Anthropic SDK usage; no `cryptogram`/`three_d_secure`/V2RuntimeSchema Stripe usage anywhere in
+`src/`; no deprecated `lock` auth option in `web/`) — none apply to how this codebase uses them.
+
+**All five open Dependabot PRs resolved this session:** #1 (`actions/checkout` v5→v7, merged `dad5e56`), #4
+(the npm-all split, merged `6ea47a9`), #5 (web deps, merged `fc0527a`) — all gate-green; #2 and #3 closed
+(superseded by #4/#5, per the ignore-rule reaction above). `gh pr list --state open` now shows zero. Merge-commit
+CI: all three gates green; two deploy jobs correctly self-skipped (a newer commit had already landed —
+session 71's deploy-race guard); the third (PR #5's, the actual tip at the time) hit only the known, expected
+Route B secrets-gap failure ("You defined --token, but it's missing a value") — confirmed via the actual job log,
+not assumed. Production canary (`/api/health`) 200 throughout.
+
+**Docs updated in the same session:** open-questions rows #200 (direction (c), the dependabot.yml hold) and #162
+(the Tier-B extraction note) — commit `9fdab30`.
+
+**One self-inflicted process hiccup, harmless:** the scratch worktree built for the (later-discarded) manual
+Dependabot split was removed via `git worktree remove --force` WHILE its own background `verify-block.sh` was
+still running inside it — the script's own working directory disappeared mid-run (`ENOENT: uv_cwd`), a clean
+crash with no side effect since that work was already superseded. Lesson: let a worktree's own background script
+finish (or kill the script first) before removing the worktree it's running in.
+
+**▶ NEXT, in order — nothing urgent, all owner's call:** (a) the 3 `gh secret set` commands, still blocking only
+`deploy`; (b) #162's `checkBinding` gap — parked at 91% clean, pick up only on a fresh owner go; (c) #199, WP30c,
+#197 idea 4, the three older #197 follow-ups — all owner-menu items, unscheduled. **Separately worth a look, not
+acted on this session:** `docs/STATUS.md` itself has accumulated full session blocks back through session 71
+(4600+ tokens for the first 500 lines alone) despite the file's own stated "top block only, history lives in
+status-archive.md since session 41" convention — a pruning pass would bring it back in line with its own rule,
+but wasn't attempted here since it wasn't what this session was asked to do and touching 900+ lines of history
+unprompted is exactly the kind of unrequested-scope change CLAUDE.md warns against.
+
+**▶ SESSION 79 (2026-09-05, OWNER PRESENT) — ROUTE B EXECUTED, #197 IDEAS 6+8 BUILT + MERGED + LIVE
+(pending Vercel secrets), #162 STILL BLOCKED
 (twice, second time by tooling, not the experiment).** Kickoff verified clean against
 `docs/session-briefs/2026-09-05-session-79-kickoff.md`. Owner said "ALL" to the priority menu — worked all four
 threads in parallel rather than picking one.

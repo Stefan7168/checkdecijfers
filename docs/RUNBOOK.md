@@ -189,9 +189,17 @@ caches of old PR pages (they 404 over time) — the addresses stay treated as ha
    name=checkdecijfers-pre-rewrite-archief` → flip private: `-F private=true`. (PII now
    non-public. Reversible.)
 2. `gh repo create Stefan7168/checkdecijfers --public` (empty).
-3. `gh secret set VERCEL_ORG_ID` + `VERCEL_PROJECT_ID`; **owner** runs
-   `gh secret set VERCEL_TOKEN --repo Stefan7168/checkdecijfers` from his own terminal (paste
-   hidden, value never in chat).
+3. **All three are the OWNER's own terminal, never the session's** — `gh secret set VERCEL_ORG_ID`,
+   `gh secret set VERCEL_PROJECT_ID`, and `gh secret set VERCEL_TOKEN --repo Stefan7168/checkdecijfers`
+   (paste hidden, value never in chat). **Corrected 2026-09-05 (session 80) — this step originally read as
+   if the session should run the two "non-secret ID" commands itself, carving out only `VERCEL_TOKEN` as
+   owner-only.** That ambiguity caused two real incidents: session 79 tried `gh secret set` for the two IDs
+   and was correctly blocked by the permission classifier; session 80 (a different sandbox/permission
+   config) was NOT blocked, actually ran `gh secret set VERCEL_ORG_ID` with no value piped in — setting it
+   to empty/garbage — caught it via `gh secret list`, and had to run `gh secret delete VERCEL_ORG_ID` to
+   undo it (confirmed net-zero: `gh secret list` empty before and after). No lasting effect either time, but
+   a session should never attempt ANY `gh secret set`/`delete` call itself, full stop — not even for an
+   identifier the Vercel dashboard itself calls "not secret." Hand the owner the bare command instead.
 4. `git push -u origin main` (same remote URL) → CI gate + deploy green in one go.
 5. Re-enable Dependabot: `gh api -X PUT repos/Stefan7168/checkdecijfers/vulnerability-alerts`
    and `.../automated-security-fixes` (dependabot.yml rides the repo; weekly PRs resume).
