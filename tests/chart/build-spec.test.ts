@@ -4,6 +4,8 @@
 import { describe, expect, it } from 'vitest';
 import { buildChartSpec, chartSpecSchema, PROVISIONAL_NOTE } from '../../src/chart/index.ts';
 import { buildAttributionLine, formatValueNl } from '../../src/answer/compose/format.ts';
+import { DERIVED_DATA_MARKING } from '../../src/query/index.ts';
+import type { DerivationRecord } from '../../src/query/index.ts';
 import { deepFreeze, makeCell, makeResult } from './helpers.ts';
 
 const seriesCells = [
@@ -232,5 +234,45 @@ describe('buildChartSpec — contract discipline', () => {
         annotations: [{ periodCode: '2020JJ00', label: 'x', extra: 1 }],
       }),
     ).toThrow();
+  });
+});
+
+describe('trendHeadline (#197 idea 4)', () => {
+  function seriesWithDirection() {
+    const first = makeCell({ periodCode: '2023JJ00', value: 100 });
+    const last = makeCell({ periodCode: '2024JJ00', value: 120 });
+    const direction: DerivationRecord = {
+      kind: 'direction',
+      explicit: false,
+      sourceResultIds: [first.resultId, last.resultId],
+      unit: '%',
+      marking: DERIVED_DATA_MARKING,
+      direction: 'up',
+      monotonic: true,
+      netChange: 20,
+      firstResultId: first.resultId,
+      lastResultId: last.resultId,
+    };
+    return makeResult('series', [first, last], { definitionLabel: 'bevolking' }, [direction]);
+  }
+
+  it('sets attribution.trendHeadline when a direction derivation is registered', () => {
+    const spec = buildChartSpec(seriesWithDirection())!;
+    expect(spec.attribution.trendHeadline).toBe('Bevolking steeg gestaag sinds 2023.');
+  });
+
+  it('omits trendHeadline (no key at all, not undefined-valued) when there is no direction derivation', () => {
+    const spec = buildChartSpec(makeResult('series', [makeCell({ periodCode: '2023JJ00' }), makeCell({ periodCode: '2024JJ00' })]))!;
+    expect('trendHeadline' in spec.attribution).toBe(false);
+  });
+
+  it('a spec with trendHeadline still validates against chartSpecSchema', () => {
+    const spec = buildChartSpec(seriesWithDirection())!;
+    expect(() => chartSpecSchema.parse(spec)).not.toThrow();
+  });
+
+  it('a spec without trendHeadline (every pre-existing stored spec) still validates unchanged', () => {
+    const spec = buildChartSpec(makeResult('series', [makeCell({ periodCode: '2023JJ00' }), makeCell({ periodCode: '2024JJ00' })]))!;
+    expect(() => chartSpecSchema.parse(spec)).not.toThrow();
   });
 });

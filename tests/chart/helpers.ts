@@ -1,6 +1,7 @@
 // Handcrafted ValidatedResult factories for chart unit tests. The builder
-// only ever reads cells + attribution + shape, but the objects are complete
-// and type-checked so the tests exercise the real contract, not a lookalike.
+// reads cells + attribution + shape (and, for a direction derivation, the
+// headline formatter's own inputs), but the objects are complete and
+// type-checked so the tests exercise the real contract, not a lookalike.
 import type { Attribution, ResultCell, ValidatedResult } from '../../src/query/index.ts';
 
 export function makeCell(overrides: Partial<ResultCell> = {}): ResultCell {
@@ -33,6 +34,7 @@ export function makeResult(
   shape: ValidatedResult['shape'],
   cells: ResultCell[],
   attribution: Partial<Attribution> = {},
+  derivations: ValidatedResult['derivations'] = [],
 ): ValidatedResult {
   const from = cells[0]!.periodCode;
   const to = cells[cells.length - 1]!.periodCode;
@@ -41,7 +43,7 @@ export function makeResult(
     schemaVersion: 1,
     shape,
     cells,
-    derivations: [],
+    derivations,
     attribution: {
       tableId: 'TESTNED',
       tableTitle: 'Testtabel voor grafieken',

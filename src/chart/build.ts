@@ -16,9 +16,10 @@
 // spec strings.
 import type { ChartPoint, ChartSeries, ChartSpec } from './types.ts';
 import { CHART_SPEC_VERSION } from './types.ts';
-import type { ResultCell, ValidatedResult } from '../query/index.ts';
+import type { DerivationRecord, ResultCell, ValidatedResult } from '../query/index.ts';
 import { contiguousPeriodCodes } from '../query/index.ts';
 import { buildAttributionLine, formatValueNl } from '../answer/compose/format.ts';
+import { renderTrendHeadline } from '../answer/compose/template.ts';
 import { resolveSource } from '../sources/registry.ts';
 
 /** R11 note rendered with any chart containing non-definitive points. */
@@ -117,6 +118,11 @@ export function buildChartSpec(result: ValidatedResult): ChartSpec | null {
   const multiRegion = series.length > 1;
   const anyProvisional = result.cells.some((c) => c.provisional);
 
+  const direction = result.derivations.find(
+    (d): d is Extract<DerivationRecord, { kind: 'direction' }> => d.kind === 'direction',
+  );
+  const trendHeadline = direction ? renderTrendHeadline(result, direction) : undefined;
+
   return {
     schemaVersion: CHART_SPEC_VERSION,
     kind,
@@ -141,6 +147,7 @@ export function buildChartSpec(result: ValidatedResult): ChartSpec | null {
       syncedAt: result.attribution.syncedAt,
       coveredPeriods: { ...result.attribution.coveredPeriods },
       license: result.attribution.license,
+      ...(trendHeadline !== undefined ? { trendHeadline } : {}),
     },
   };
 }
