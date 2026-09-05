@@ -889,6 +889,21 @@ per-machine cache:
     session also clones onto an auto-named `claude/...` branch — the repo's workflow still applies (docs direct to
     `main`, code on the PR branches); that branch is only where the harness's own default pushes would land.
 
+11. **`EnterWorktree` in the orchestrating session can bind a DIFFERENT, already-running background agent's
+    sandbox to the wrong worktree, refusing all its commands from that point on (measured 2026-09-05, session
+    79).** A background agent working correctly in its own worktree started getting every Bash/Edit call
+    refused with "this session is isolated in the worktree `<other-worktree>`" — a worktree it had no relation
+    to, which the orchestrating session had entered for unrelated work WHILE that agent was still running. The
+    orchestrating session reproduced the identical symptom directly afterward: an app-level directory-change
+    notification collided with its own `EnterWorktree` state, and even an explicit, correct, absolute path was
+    refused. `ExitWorktree` (`action: "keep"`) followed by a fresh `EnterWorktree` cleared it. **Two rules:**
+    (a) treat this as a real possibility before dispatching a long-running background agent into its own
+    worktree — avoid entering/switching worktrees in the orchestrating session while that agent is still
+    active if avoidable; (b) if a background agent reports every command failing with a worktree-isolation
+    message naming a path it never touched, that is this bug, not a real permissions problem or something for
+    the agent to work around — it cannot self-resolve; stop it and re-dispatch once the orchestrating
+    session's own worktree state is clean.
+
 ## Reviewing and merging a large PR batch (added session 67, 2026-08-28 — reviewed + merged all 19 open PRs left by session 66)
 
 1. **Review in parallel, merge in serial.** The review pass (does each PR actually do what it claims,
