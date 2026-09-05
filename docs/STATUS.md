@@ -97,8 +97,12 @@ benchmark GATE PASS, `next build` clean.
 **▶ NEXT, in order — nothing urgent except the one owner-blocking item:** (a) the 3 `gh secret set` commands
 for Route B's new repo (yours); (b) consider extracting the #162 Tier-B validator fix (the "op" marker) for a
 standalone ship, independent of the rest of the slot-filling experiment; (c) #162 itself — parked at 91% clean,
-pick up `checkBinding` whenever the idea gets revisited, no rush; (d) Dependabot #124 still blocked, zod
-regression, unchanged; (e) #199 — declined again this session (owner said leave it parked); (f) idea 4 (takeaway
+pick up `checkBinding` whenever the idea gets revisited, no rush; (d) **Route B's repo recreation reset
+Dependabot's PR numbering — the old #124 npm-all zod-regression PR no longer exists as such; the same
+underlying group is now PR #2 on the fresh repo** (confirmed: zod 4.4.3→4.5.4 among the same 5 packages, other
+4 at newer targets since time passed), still blocked by the same fixture-hash issue; an early-session agent
+was investigating this (see the tooling-gotcha note above) and its output should be checked against PR #2, not
+the defunct #124; (e) #199 — declined again this session (owner said leave it parked); (f) idea 4 (takeaway
 headline) — designed, not built.
 
 **▶ SESSION 78 (2026-09-04 into 2026-09-05, OWNER PRESENT — merge day for the four PRs sessions 76/77 left
