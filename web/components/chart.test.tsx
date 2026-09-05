@@ -912,4 +912,18 @@ describe('ChartView — small multiples toggle (idea 8)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Kleine grafieken' }));
     expect(screen.getByRole('button', { name: 'Download' })).toBeInTheDocument();
   });
+
+  it('a series hidden via the legend (idea 6) has no small-multiples panel either (shared hiddenKeys, not a separate copy)', () => {
+    const { container } = render(<ChartView spec={twoSeriesSpec()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Utrecht' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Kleine grafieken' }));
+    const panels = container.querySelectorAll('[data-panel-for]');
+    expect(panels.length).toBe(1);
+    expect(panels[0].getAttribute('data-panel-for')).toBe('s0');
+    // Scoped to the small-multiples grid itself, not the whole component --
+    // the legend (idea 6) still lists Utrecht, dimmed, so it can be shown
+    // again; that's correct and unrelated to whether it has a panel here.
+    const grid = screen.getByRole('group', { name: 'Kleine grafieken per reeks' });
+    expect(grid.textContent).not.toContain('Utrecht');
+  });
 });

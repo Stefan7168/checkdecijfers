@@ -1,7 +1,7 @@
 import { cleanup, render } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ChartSpec } from '../backend/chart/types.ts';
-import { ChartSmallMultiples } from './chart-small-multiples.tsx';
+import { ChartSmallMultiples, sharedLineDomain } from './chart-small-multiples.tsx';
 
 afterEach(cleanup);
 
@@ -76,5 +76,65 @@ describe('ChartSmallMultiples', () => {
     );
     expect(container.querySelectorAll('[data-panel-for]').length).toBe(2);
     expect(container.textContent).not.toContain('Utrecht');
+  });
+});
+
+describe('sharedLineDomain ("gelijke assen": the shared y-domain across all visible panels)', () => {
+  function asymmetricSpec(): ChartSpec {
+    return spec({
+      series: [
+        {
+          label: 'Klein',
+          regionCode: null,
+          points: [
+            point({ resultId: 'k1', periodCode: '2023JJ00', periodLabel: '2023', value: 1, formattedValue: '1,0' }),
+            point({ resultId: 'k2', periodCode: '2024JJ00', periodLabel: '2024', value: 2, formattedValue: '2,0' }),
+          ],
+        },
+        {
+          label: 'Groot',
+          regionCode: null,
+          points: [
+            point({ resultId: 'g1', periodCode: '2023JJ00', periodLabel: '2023', value: 1, formattedValue: '1,0' }),
+            point({ resultId: 'g2', periodCode: '2024JJ00', periodLabel: '2024', value: 1000, formattedValue: '1.000,0' }),
+          ],
+        },
+      ],
+    });
+  }
+
+  it('spans the min and max across ALL visible series, not just one', () => {
+    // Klein alone is [1,2]; Groot alone is [1,1000] -- the shared domain
+    // must cover both, proving it is not accidentally scoped to one series.
+    expect(sharedLineDomain(asymmetricSpec(), [0, 1])).toEqual([1, 1000]);
+  });
+
+  it('excludes a hidden series from the shared domain (only the passed indexes count)', () => {
+    // Same spec, but only Klein (index 0) is "visible" -- Groot's 1000 must
+    // not leak into the domain once it is hidden.
+    expect(sharedLineDomain(asymmetricSpec(), [0])).toEqual([1, 2]);
+  });
+
+  it('skips null cells rather than treating them as zero', () => {
+    const s = spec({
+      series: [
+        {
+          label: 'Met gat',
+          regionCode: null,
+          points: [
+            point({ resultId: 'a', value: 5, formattedValue: '5,0' }),
+            point({ resultId: 'b', value: null, formattedValue: null }),
+          ],
+        },
+      ],
+    });
+    expect(sharedLineDomain(s, [0])).toEqual([5, 5]);
+  });
+
+  it('returns undefined (falls back to auto-scaling) when every visible point is null', () => {
+    const s = spec({
+      series: [{ label: 'Leeg', regionCode: null, points: [point({ value: null, formattedValue: null })] }],
+    });
+    expect(sharedLineDomain(s, [0])).toBeUndefined();
   });
 });

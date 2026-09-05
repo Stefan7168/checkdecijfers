@@ -9,7 +9,12 @@ import { CartesianGrid, Line, LineChart, ResponsiveContainer, XAxis, YAxis } fro
 import type { ChartSpec } from '../backend/chart/types.ts';
 import { buildRows, yAxisDomain } from './chart.tsx';
 
-function sharedLineDomain(spec: ChartSpec, visibleIndexes: number[]): [number, number] | undefined {
+// Exported for direct testing (same pattern as chart.tsx's buildRows/
+// seriesStyle/valueLabelPlan): the actual y-domain math is what "gelijke
+// assen" vs "eigen assen" hinges on, and Recharts renders it as raw SVG path
+// geometry with no data-attribute to bind a DOM assertion to -- a unit test
+// on the real computation is more robust than inferring it from pixels.
+export function sharedLineDomain(spec: ChartSpec, visibleIndexes: number[]): [number, number] | undefined {
   let min = Infinity;
   let max = -Infinity;
   for (const i of visibleIndexes) {
