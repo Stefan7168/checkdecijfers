@@ -123,12 +123,13 @@ export interface QuestionHistoryEntry {
    * cijfer" proof panel — question-history.tsx builds the actual
    * AnswerProof from this via buildAnswerProof (web/lib/answer-proof.ts).
    * Set only when this row IS an answer whose stored envelope decodes with
-   * kind 'answer' — null for refusals, clarifications, and redacted rows
-   * (retention.ts's redactedResponse still sets kind, but strips `result`
-   * entirely, so buildAnswerProof's own guard returns null for those safely
-   * — no redaction check needed here, matching chat.tsx/replay-assemble.ts's
-   * own unconditional `response.kind === 'answer' ? buildAnswerProof(...) :
-   * null` pattern). */
+   * both kind 'answer' AND a `result` field — null for refusals,
+   * clarifications, and redacted rows. This dual guard is necessary because
+   * retention.ts's redactedResponse keeps kind='answer' but strips the `result`
+   * field entirely. Without the explicit `'result' in decoded` check, a
+   * redacted row's malformed pseudo-AnswerResponse would be exposed as if it
+   * were genuine. The check ensures only fully-intact answer rows are exposed
+   * to the proof-panel builder. */
   answerEnvelope: AnswerResponse | null;
 }
 

@@ -28,6 +28,7 @@ function entry(overrides: Partial<QuestionHistoryEntry> = {}): QuestionHistoryEn
     isDeleted: false,
     onboarding: null,
     answerParts: null,
+    answerEnvelope: null,
     ...overrides,
   };
 }
