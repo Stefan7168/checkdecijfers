@@ -386,7 +386,13 @@ function SeriesLegend({
           <button
             key={s.key}
             type="button"
-            aria-pressed={hidden}
+            /* Pressed = shown (the toggle's "on" state), not "is hidden" --
+             * the accessible name is just the series label ("Nederland"), so
+             * aria-pressed={hidden} would announce "pressed" exactly when
+             * the series is OFF. Matches the fix already applied once
+             * elsewhere in this codebase for the same mistake (see
+             * chart-toggle.tsx). */
+            aria-pressed={!hidden}
             onClick={() => onToggle(s.key)}
             className={
               'inline-flex min-h-6 items-center gap-1.5 rounded px-1 text-xs ' +
@@ -560,6 +566,32 @@ export function ChartView({ spec }: { spec: ChartSpec }) {
   const [smallMultiples, setSmallMultiples] = useState(false);
   const [axisMode, setAxisMode] = useState<'shared' | 'own'>('shared');
 
+  // Stable per-chart identity, not object identity: a fresh spec object can
+  // represent the exact same chart across a re-render. Resets the three
+  // presentation states above when the viewer is shown a genuinely DIFFERENT
+  // chart without ChartView remounting — both the visual dock
+  // (visual-dock.tsx) and the Ontdek reading toggle (chart-toggle.tsx) swap
+  // `spec` on the same mounted instance (no `key` at either call site), so a
+  // useState initializer only runs once and would otherwise leak state
+  // across charts. `view` (chart/table, above) is exempt on purpose: it is
+  // presentationally valid for ANY spec, so leaking it is harmless. These
+  // three are not: a stale hiddenKeys entry that happens to collide with a
+  // different chart's own series key can silently drop a real line with no
+  // visible disclosure (open-questions #46(a)) or bake a false "N van M
+  // reeksen verborgen" claim into an export (#46(c)) — found reachable via
+  // ordinary dock-tab switching in the 2026-09-05 final review of this file.
+  // React's own documented pattern for this ("adjusting state when a prop
+  // changes", no Effect): compare against the last-seen identity and, if it
+  // changed, call the setters directly during render.
+  const specIdentity = JSON.stringify(spec);
+  const [lastSpecIdentity, setLastSpecIdentity] = useState(specIdentity);
+  if (specIdentity !== lastSpecIdentity) {
+    setLastSpecIdentity(specIdentity);
+    setHiddenKeys(new Set());
+    setSmallMultiples(false);
+    setAxisMode('shared');
+  }
+
   function toggleSeries(key: string): void {
     setHiddenKeys((prev) => {
       const next = new Set(prev);
@@ -712,7 +744,15 @@ export function ChartView({ spec }: { spec: ChartSpec }) {
         role="tabpanel"
         aria-label="Grafiek"
         ref={chartContainerRef}
-        className="mt-2 h-64 w-full touch-pan-y"
+        className={
+          'mt-2 w-full touch-pan-y ' +
+          // The combined chart's ResponsiveContainer sizes to 100% of a
+          // fixed-height parent; small multiples lays out its own h-24
+          // panels in a grid and needs the parent to grow with them
+          // instead — a fixed h-64 clips anything past ~4 series (found in
+          // the 2026-09-05 final review).
+          (smallMultiples && smallMultiplesAvailable ? 'h-auto' : 'h-64')
+        }
         data-tooltip-trigger={tooltipTrigger}
       >
         {smallMultiples && smallMultiplesAvailable ? (

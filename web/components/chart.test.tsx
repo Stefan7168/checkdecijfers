@@ -791,8 +791,9 @@ describe('ChartView — series legend and hide/show (idea 6)', () => {
     render(<ChartView spec={twoSeriesSpec()} />);
     const nl = screen.getByRole('button', { name: 'Nederland' });
     const ut = screen.getByRole('button', { name: 'Utrecht' });
-    expect(nl).toHaveAttribute('aria-pressed', 'false');
-    expect(ut).toHaveAttribute('aria-pressed', 'false');
+    // Pressed = shown (the toggle's "on" state) -- both start shown.
+    expect(nl).toHaveAttribute('aria-pressed', 'true');
+    expect(ut).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('does not render a legend at all for a single-series chart', () => {
@@ -809,7 +810,7 @@ describe('ChartView — series legend and hide/show (idea 6)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Utrecht' }));
     expect(container.querySelector('svg [data-point="value"][data-result-id="ut"]')).toBeNull();
     expect(container.querySelector('svg [data-point="value"][data-result-id="nl"]')).not.toBeNull();
-    expect(screen.getByRole('button', { name: 'Utrecht' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Utrecht' })).toHaveAttribute('aria-pressed', 'false');
     expect(screen.getByText('1 van 2 reeksen verborgen')).toBeInTheDocument();
   });
 
@@ -818,7 +819,7 @@ describe('ChartView — series legend and hide/show (idea 6)', () => {
     const utrecht = screen.getByRole('button', { name: 'Utrecht' });
     fireEvent.click(utrecht);
     fireEvent.click(utrecht);
-    expect(utrecht).toHaveAttribute('aria-pressed', 'false');
+    expect(utrecht).toHaveAttribute('aria-pressed', 'true');
     expect(screen.queryByText(/reeksen verborgen/)).toBeNull();
   });
 
@@ -845,6 +846,32 @@ describe('ChartView — series legend and hide/show (idea 6)', () => {
 
     delete (URL as unknown as Record<string, unknown>).createObjectURL;
     delete (URL as unknown as Record<string, unknown>).revokeObjectURL;
+  });
+
+  it('hiding every series shows an honest "all hidden" disclosure without crashing, and both legend buttons survive to undo it', () => {
+    render(<ChartView spec={twoSeriesSpec()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Nederland' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Utrecht' }));
+    expect(screen.getByText('2 van 2 reeksen verborgen')).toBeInTheDocument();
+    expect(screen.getByRole('tabpanel', { name: 'Grafiek' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Nederland' })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('button', { name: 'Utrecht' })).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('resets hidden-series state when the SAME ChartView instance receives a different spec without remounting (the visual-dock/chart-toggle pattern — neither keys ChartView by spec)', () => {
+    const { container, rerender } = render(<ChartView spec={twoSeriesSpec()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Nederland' }));
+    expect(screen.getByText('1 van 2 reeksen verborgen')).toBeInTheDocument();
+
+    // threePointSpec's single series is ALSO keyed s0 (buildRows keys by
+    // index, not by anything chart-specific) -- before the fix, hiding "s0"
+    // on one chart then rerendering the same instance with a different
+    // single-series chart silently dropped that chart's only line, with no
+    // legend to recover it (a single-series chart renders no legend at all)
+    // and no disclosure explaining why.
+    rerender(<ChartView spec={threePointSpec()} />);
+    expect(screen.queryByText(/reeksen verborgen/)).toBeNull();
+    expect(container.querySelector('svg [data-point="value"][data-result-id="lo"]')).not.toBeNull();
   });
 });
 
