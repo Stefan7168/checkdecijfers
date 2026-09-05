@@ -770,3 +770,77 @@ describe('ChartView — #197 step 2, the Tabel view', () => {
     }
   });
 });
+
+describe('ChartView — series legend and hide/show (idea 6)', () => {
+  beforeEach(() => vi.unstubAllGlobals());
+
+  function twoSeriesSpec(overrides: Partial<ChartSpec> = {}): ChartSpec {
+    return spec({
+      series: [
+        { label: 'Nederland', regionCode: 'NL01', points: [point({ resultId: 'nl', value: 1, formattedValue: '1,0' })] },
+        { label: 'Utrecht', regionCode: 'GM0344', points: [point({ resultId: 'ut', value: 2, formattedValue: '2,0' })] },
+      ],
+      ...overrides,
+    });
+  }
+
+  it('renders one real button per series, labelled by name, none hidden by default', () => {
+    render(<ChartView spec={twoSeriesSpec()} />);
+    const nl = screen.getByRole('button', { name: 'Nederland' });
+    const ut = screen.getByRole('button', { name: 'Utrecht' });
+    expect(nl).toHaveAttribute('aria-pressed', 'false');
+    expect(ut).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('does not render a legend at all for a single-series chart', () => {
+    render(<ChartView spec={threePointSpec()} />);
+    expect(screen.queryByRole('button', { name: 'Nederland' })).toBeNull();
+  });
+
+  it('clicking a legend button hides that series\' point and shows the disclosure count', () => {
+    const { container } = render(<ChartView spec={twoSeriesSpec()} />);
+    // Bound to resultId, not a Recharts internal class name — same convention
+    // every other test in this file uses (data-point/data-result-id from SeriesDot).
+    expect(container.querySelector('svg [data-point="value"][data-result-id="ut"]')).not.toBeNull();
+    expect(container.querySelector('svg [data-point="value"][data-result-id="nl"]')).not.toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Utrecht' }));
+    expect(container.querySelector('svg [data-point="value"][data-result-id="ut"]')).toBeNull();
+    expect(container.querySelector('svg [data-point="value"][data-result-id="nl"]')).not.toBeNull();
+    expect(screen.getByRole('button', { name: 'Utrecht' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByText('1 van 2 reeksen verborgen')).toBeInTheDocument();
+  });
+
+  it('clicking a hidden series again restores it and clears the disclosure', () => {
+    render(<ChartView spec={twoSeriesSpec()} />);
+    const utrecht = screen.getByRole('button', { name: 'Utrecht' });
+    fireEvent.click(utrecht);
+    fireEvent.click(utrecht);
+    expect(utrecht).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.queryByText(/reeksen verborgen/)).toBeNull();
+  });
+
+  it('bakes the hidden-series disclosure into the export attribution text, matching #46(c)\'s decided default', async () => {
+    // Same URL-API stubbing pattern chart-download.test.tsx already uses,
+    // but capturing the actual Blob passed to createObjectURL so we can read
+    // back the baked SVG markup (attributedSvgMarkup writes attributionText
+    // into it) instead of just checking a download was attempted.
+    let capturedBlob: Blob | undefined;
+    (URL as unknown as Record<string, unknown>).createObjectURL = vi.fn((blob: Blob) => {
+      capturedBlob = blob;
+      return 'blob:mock';
+    });
+    (URL as unknown as Record<string, unknown>).revokeObjectURL = vi.fn();
+
+    render(<ChartView spec={twoSeriesSpec()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Utrecht' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Download' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Download als SVG' }));
+
+    expect(capturedBlob).toBeDefined();
+    const markup = await capturedBlob!.text();
+    expect(markup).toContain('1 van 2 reeksen verborgen');
+
+    delete (URL as unknown as Record<string, unknown>).createObjectURL;
+    delete (URL as unknown as Record<string, unknown>).revokeObjectURL;
+  });
+});

@@ -29,7 +29,6 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
-  Legend,
   Line,
   LineChart,
   ReferenceLine,
@@ -364,6 +363,48 @@ export function ChartTooltip({
   );
 }
 
+/** #197 idea 6: a real interactive legend, replacing Recharts' decorative
+ * default. One button per series toggles it in/out of the chart; hidden
+ * series stay listed (dimmed) so they can be brought back. Client-side
+ * presentation only — never touches the spec or the audit record
+ * (open-questions #46(b)). */
+function SeriesLegend({
+  seriesMeta,
+  hiddenKeys,
+  onToggle,
+}: {
+  seriesMeta: SeriesMeta[];
+  hiddenKeys: Set<string>;
+  onToggle: (key: string) => void;
+}) {
+  return (
+    <div role="group" aria-label="Reeksen" className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
+      {seriesMeta.map((s) => {
+        const hidden = hiddenKeys.has(s.key);
+        return (
+          <button
+            key={s.key}
+            type="button"
+            aria-pressed={hidden}
+            onClick={() => onToggle(s.key)}
+            className={
+              'inline-flex min-h-6 items-center gap-1.5 rounded px-1 text-xs ' +
+              (hidden ? 'text-ink-muted line-through' : 'text-ink')
+            }
+          >
+            <span
+              aria-hidden="true"
+              style={{ backgroundColor: hidden ? 'var(--ink-muted)' : s.color }}
+              className="inline-block h-2.5 w-2.5 rounded-full"
+            />
+            {s.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 /** Line-chart point marker: filled in the series colour, hollow when
  * provisional (R11, same convention as render.ts), plus the #197 end-of-line
  * label on the series' last plotted point. Recharts passes the Line's own
@@ -514,6 +555,17 @@ export function ChartView({ spec }: { spec: ChartSpec }) {
   const chartTabRef = useRef<HTMLButtonElement>(null);
   const tableTabRef = useRef<HTMLButtonElement>(null);
 
+  const [hiddenKeys, setHiddenKeys] = useState<Set<string>>(new Set());
+
+  function toggleSeries(key: string): void {
+    setHiddenKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
+
   if (spec.schemaVersion !== 1) {
     // Renderers dispatch on the schema version (ADR 007); this one only
     // speaks v1 and must say so rather than misrender a future spec — the
@@ -557,6 +609,8 @@ export function ChartView({ spec }: { spec: ChartSpec }) {
       ? Math.min(140, plan.endLabels.reduce((w, l) => Math.max(w, labelWidthPx(l.text)), 0))
       : 8;
   const accessibleName = `Grafiek: ${spec.title} (${spec.unit})`;
+  const hiddenDisclosure =
+    hiddenKeys.size > 0 ? ` ${hiddenKeys.size} van ${seriesMeta.length} reeksen verborgen.` : '';
   const tooltipTrigger = coarsePointer ? 'click' : 'hover';
   const table = tableModel(spec);
   const panelId = `${domId}-panel`;
@@ -667,6 +721,11 @@ export function ChartView({ spec }: { spec: ChartSpec }) {
             >
               <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" />
               <XAxis dataKey="periodLabel" tick={{ fontSize: 11, fill: 'var(--ink-muted)' }} />
+              {/* #197 idea 6: axis ticks come from the full spec (valueLabelPlan
+                * doesn't know about hiddenKeys) and are NOT recomputed when a
+                * series is hidden — an accepted v1 limitation, not a bug: the
+                * Tabel view and the un-hidden chart remain the source of exact
+                * values. */}
               <YAxis
                 ticks={plan.axisTicks.map((t) => t.value)}
                 interval={0}
@@ -675,7 +734,6 @@ export function ChartView({ spec }: { spec: ChartSpec }) {
                 domain={yAxisDomain(spec.kind)}
               />
               <Tooltip trigger={tooltipTrigger} content={<ChartTooltip seriesMeta={seriesMeta} />} />
-              {seriesMeta.length > 1 ? <Legend /> : null}
               {/* #170(4): curated event markers — drawn before the series so
                 * they sit visually behind the data (paint order = JSX order
                 * in Recharts' own layering). No inline Recharts label: the
@@ -691,20 +749,22 @@ export function ChartView({ spec }: { spec: ChartSpec }) {
                   strokeDasharray="3 3"
                 />
               ))}
-              {seriesMeta.map((s) => (
-                <Line
-                  key={s.key}
-                  type="linear"
-                  dataKey={s.key}
-                  name={s.label}
-                  stroke={s.color}
-                  strokeWidth={2}
-                  strokeDasharray={s.dasharray}
-                  connectNulls={false}
-                  dot={SeriesDot(s.key, endLabelByKey.get(s.key))}
-                  isAnimationActive={false}
-                />
-              ))}
+              {seriesMeta
+                .filter((s) => !hiddenKeys.has(s.key))
+                .map((s) => (
+                  <Line
+                    key={s.key}
+                    type="linear"
+                    dataKey={s.key}
+                    name={s.label}
+                    stroke={s.color}
+                    strokeWidth={2}
+                    strokeDasharray={s.dasharray}
+                    connectNulls={false}
+                    dot={SeriesDot(s.key, endLabelByKey.get(s.key))}
+                    isAnimationActive={false}
+                  />
+                ))}
             </LineChart>
           ) : (
             <BarChart
@@ -732,27 +792,38 @@ export function ChartView({ spec }: { spec: ChartSpec }) {
               <XAxis dataKey="periodLabel" tick={{ fontSize: 11, fill: 'var(--ink-muted)' }} />
               <YAxis tick={false} width={16} domain={yAxisDomain(spec.kind)} />
               <Tooltip trigger={tooltipTrigger} content={<ChartTooltip seriesMeta={seriesMeta} />} />
-              {seriesMeta.length > 1 ? <Legend /> : null}
-              {seriesMeta.map((s) => (
-                <Bar
-                  key={s.key}
-                  dataKey={s.key}
-                  name={s.label}
-                  fill={s.color}
-                  isAnimationActive={false}
-                  shape={SeriesBar(
-                    s.key,
-                    s.color,
-                    `hatch-${domId}-${s.key}`,
-                    barLabelsByKey.get(s.key) ?? new Map<string, PointLabel>(),
-                  )}
-                />
-              ))}
+              {seriesMeta
+                .filter((s) => !hiddenKeys.has(s.key))
+                .map((s) => (
+                  <Bar
+                    key={s.key}
+                    dataKey={s.key}
+                    name={s.label}
+                    fill={s.color}
+                    isAnimationActive={false}
+                    shape={SeriesBar(
+                      s.key,
+                      s.color,
+                      `hatch-${domId}-${s.key}`,
+                      barLabelsByKey.get(s.key) ?? new Map<string, PointLabel>(),
+                    )}
+                  />
+                ))}
             </BarChart>
           )}
         </ResponsiveContainer>
       </div>
       )}
+      {view === 'chart' && seriesMeta.length > 1 ? (
+        <>
+          <SeriesLegend seriesMeta={seriesMeta} hiddenKeys={hiddenKeys} onToggle={toggleSeries} />
+          {hiddenKeys.size > 0 ? (
+            <p className="mt-1 text-xs text-ink-muted">
+              {hiddenKeys.size} van {seriesMeta.length} reeksen verborgen
+            </p>
+          ) : null}
+        </>
+      ) : null}
       {/* #197: the hollow marker needs a key a lay reader can decode without
         * reading the note first; rendered exactly when the spec says a
         * provisional point exists (R11's provisionalNote is present iff). */}
@@ -793,7 +864,7 @@ export function ChartView({ spec }: { spec: ChartSpec }) {
         {view === 'chart' ? (
           <ChartDownloadMenu
             containerRef={chartContainerRef}
-            attributionText={`${spec.attributionLine} checkdecijfers.nl`}
+            attributionText={`${spec.attributionLine} checkdecijfers.nl${hiddenDisclosure}`}
             filenameBase={`checkdecijfers-${spec.attribution.tableId}`}
           />
         ) : null}
