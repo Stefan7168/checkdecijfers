@@ -83,6 +83,17 @@ drag-and-drop chat attachments ([#202](open-questions.md)) — both deliberately
 each other and to ADR 032's existing "unofficial content gets its own attributed section" pattern. WP30c stays
 at "wait" (not decided this session).
 
+**A fourth, unrelated bug found and fixed: negation-blindness in R9's direction-word checker, MERGED + LIVE
+(`main` `54694ae`).** `UP_WORDS`/`DOWN_WORDS`/`FLAT_WORDS` in `src/answer/compose/validate.ts` matched a bare
+trend word with no regard for a preceding negation, so honest prose like "groeide gestaag, zonder tussentijdse
+dalingen" (grew steadily, without intermediate declines) was rejected as a false decline claim. Found
+incidentally during #162's diagnostic work, correctly spun off as its own task since it's unrelated to
+slot-filling and affects the live production pipeline directly — fixed on request the same session. A trend
+word preceded by zonder/geen/niet in the same clause is now treated as no claim at all (same as a clause with
+no trend words), verified not to mask a genuinely wrong unnegated claim sitting alongside a correctly-negated
+true one in the same sentence. Verified: typecheck clean, backend suite 118/118 files 1795/1795 tests (3 new),
+benchmark GATE PASS, `next build` clean.
+
 **▶ NEXT, in order — nothing urgent except the one owner-blocking item:** (a) the 3 `gh secret set` commands
 for Route B's new repo (yours); (b) consider extracting the #162 Tier-B validator fix (the "op" marker) for a
 standalone ship, independent of the rest of the slot-filling experiment; (c) #162 itself — parked at 91% clean,
