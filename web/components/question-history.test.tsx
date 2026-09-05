@@ -4,6 +4,7 @@
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { QuestionHistoryEntry } from '../backend/billing/index.ts';
+import { fakeAnswerResponse, fakeCell } from '../test/fake-answer.ts';
 
 // #74/#117: QuestionHistory now mounts OnboardingLiveStatus (a client
 // component calling useRouter) -- mocked, since jsdom has no App Router
@@ -28,6 +29,7 @@ function entry(overrides: Partial<QuestionHistoryEntry> = {}): QuestionHistoryEn
     isDeleted: false,
     onboarding: null,
     answerParts: null,
+    answerEnvelope: null,
     ...overrides,
   };
 }
@@ -52,6 +54,22 @@ function onboardedAnswerEntry(): QuestionHistoryEntry {
       attributionLine: 'Bron: CBS StatLine, tabel 83694NED — Consumentenvertrouwen. Licentie: CC BY 4.0.',
       stalenessWarning: null,
     },
+  });
+}
+
+function entryWithProof(): QuestionHistoryEntry {
+  return entry({
+    question: 'Hoeveel inwoners heeft Nederland?',
+    // fakeAnswerResponse's own default `cells` is [] (empty) — buildAnswerProof
+    // doesn't reject that (Array.isArray([]) is true) but AnswerProof's trigger
+    // label depends on the count (answer-proof.tsx:88), so pass exactly one
+    // cell explicitly to get the singular 'Bewijs dit cijfer' the test below
+    // asserts on, rather than relying on an unstated default.
+    answerEnvelope: fakeAnswerResponse({
+      body: 'Nederland telde in 2024 18.044.027 inwoners.',
+      shape: 'single',
+      cells: [fakeCell({ regionCode: 'NL01', regionLabel: 'Nederland', value: 18044027, decimals: 0, unit: 'aantal' })],
+    }),
   });
 }
 
@@ -447,5 +465,26 @@ describe('QuestionHistory — structured answer parts (#115)', () => {
     render(<QuestionHistory items={[entry({ finalText: 'gewone blob-weergave' })]} />);
     expect(screen.getAllByText('gewone blob-weergave').length).toBeGreaterThanOrEqual(1);
     expect(screen.queryByText('Meer over deze meting')).toBeNull();
+  });
+});
+
+describe('proof panel (#199)', () => {
+  it('renders the proof panel when the entry has an answerEnvelope', () => {
+    render(<QuestionHistory items={[entryWithProof()]} />);
+    // AnswerProof's own trigger button text (answer-proof.tsx:88) — 'Bewijs
+    // dit cijfer' singular because fakeAnswerResponse's default is one cell
+    // (fakeCell()); confirms the panel mounted without depending on its
+    // internal markup.
+    expect(screen.getByText('Bewijs dit cijfer')).toBeInTheDocument();
+  });
+
+  it('renders no proof panel when answerEnvelope is null', () => {
+    render(<QuestionHistory items={[entry()]} />);
+    expect(screen.queryByText('Bewijs dit cijfer')).not.toBeInTheDocument();
+  });
+
+  it('renders no proof panel for a deleted entry, even if an envelope was recorded', () => {
+    render(<QuestionHistory items={[{ ...entryWithProof(), isDeleted: true }]} />);
+    expect(screen.queryByText('Bewijs dit cijfer')).not.toBeInTheDocument();
   });
 });

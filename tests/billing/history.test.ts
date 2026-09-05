@@ -664,6 +664,124 @@ describe('getQuestionHistory — structured answer parts (#115)', () => {
   });
 });
 
+// #199: the decoded answer envelope for the dashboard's proof panel.
+// question-history.tsx builds the actual AnswerProof from this (a
+// backend module must not import web/lib/answer-proof.ts — ADR 001).
+describe('getQuestionHistory — answer envelope for the proof panel (#199)', () => {
+  const PROOF_ENVELOPE = {
+    kind: 'answer',
+    answer: { body: 'Nederland telde in 2024 18.044.027 inwoners.' },
+    result: {
+      shape: 'single',
+      cells: [
+        {
+          resultId: '03759ned:M000352:NL01:2024JJ00:D',
+          tableId: '03759ned',
+          measure: 'M000352',
+          measureTitle: 'Bevolking op 1 januari',
+          regionCode: 'NL01',
+          regionLabel: 'Nederland',
+          periodCode: '2024JJ00',
+          periodLabel: '2024',
+          dims: {},
+          dimLabels: {},
+          value: 18044027,
+          decimals: 0,
+          unit: 'aantal',
+          status: 'Definitief',
+          provisional: false,
+          valueAttribute: 'None',
+        },
+      ],
+      derivations: [],
+      attribution: {
+        tableId: '03759ned',
+        tableTitle: 'Bevolking; geslacht, leeftijd',
+        tableVersion: 1,
+        syncedAt: '2026-01-01T00:00:00.000Z',
+        coveredPeriods: { from: '2024JJ00', to: '2024JJ00' },
+        license: 'CC BY 4.0',
+        definitionLabel: null,
+      },
+    },
+  };
+
+  it('exposes the decoded answer envelope on an answer entry', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      await insertAuditRow(db, userId, {
+        kind: 'answer',
+        question: 'Hoeveel inwoners heeft Nederland?',
+        finalText: 'blob',
+        requestId: null,
+        envelope: PROOF_ENVELOPE,
+      });
+      const [entry] = await getQuestionHistory(db, userId);
+      expect(entry!.answerEnvelope).toEqual(PROOF_ENVELOPE);
+    });
+  });
+
+  it('null answerEnvelope on refusals, clarifications, and redacted answer rows', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      await insertAuditRow(db, userId, {
+        kind: 'refusal',
+        question: 'r',
+        finalText: 'weigering',
+        requestId: null,
+        envelope: { kind: 'refusal', question: 'r', text: 'weigering' },
+      });
+      const redactedId = await insertAuditRow(db, userId, {
+        kind: 'answer',
+        question: 'zal verwijderd worden',
+        finalText: 'x',
+        requestId: null,
+        envelope: PROOF_ENVELOPE,
+      });
+      // Mirrors retention.ts's redactedResponse('answer') shape exactly —
+      // no `result` key, `kind` preserved.
+      await db.query('update audit_answers set response = $2::jsonb where id = $1', [
+        redactedId,
+        JSON.stringify({ schemaVersion: 1, kind: 'answer', question: 'Deze vraag is verwijderd.', text: 'Deze vraag is verwijderd.', redacted: true }),
+      ]);
+      const history = await getQuestionHistory(db, userId);
+      expect(history).toHaveLength(2);
+      for (const entry of history) expect(entry.answerEnvelope).toBeNull();
+    });
+  });
+
+  it("a collapsed clarification round carries the REPLY row's answerEnvelope", async () => {
+    // Exact structure of the existing #115 test with the same name/shape
+    // (search this file for "carries the REPLY row's answerParts") — no
+    // chargeAndRun needed, pairing works off question + repliedQuestionNl
+    // matching offeredQuestionNl alone.
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      const questionNl = 'Welke gemeente bedoel je?';
+      await insertAuditRow(db, userId, {
+        kind: 'clarification',
+        question: 'Hoeveel inwoners heeft de gemeente?',
+        finalText: questionNl,
+        requestId: null,
+        offeredQuestionNl: questionNl,
+      });
+      await insertAuditRow(db, userId, {
+        kind: 'answer',
+        question: 'Hoeveel inwoners heeft de gemeente?',
+        finalText: 'Amsterdam telt 931.298 inwoners.',
+        requestId: null,
+        replyText: 'Amsterdam',
+        repliedQuestionNl: questionNl,
+        envelope: PROOF_ENVELOPE,
+      });
+      const history = await getQuestionHistory(db, userId);
+      expect(history).toHaveLength(1);
+      expect(history[0]!.clarification).not.toBeNull();
+      expect(history[0]!.answerEnvelope).toEqual(PROOF_ENVELOPE);
+    });
+  });
+});
+
 // Review finding (session 30): every onboarding trigger wrote BOTH an
 // acknowledgment refusal row and a queue row for the same question -- the
 // dashboard showed the question twice with two credit captions (0 and 100).
