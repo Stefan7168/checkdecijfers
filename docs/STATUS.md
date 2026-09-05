@@ -10,7 +10,8 @@
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
 **▶ SESSION 80 (2026-09-05, OWNER PRESENT, session in progress) — #162's TIER-B FIX AND ITS checkBinding GAP
-BOTH FIXED, THE DEPENDABOT ZOD REGRESSION FIXED AT THE ROOT, ALL FIVE OPEN DEPENDABOT PRS RESOLVED.** Kickoff
+BOTH FIXED (§6 A/B JUDGED — CLEAN LOSS), THE DEPENDABOT ZOD REGRESSION FIXED AT THE ROOT, ALL FIVE OPEN
+DEPENDABOT PRS RESOLVED, #199 DASHBOARD PROOF PANEL MERGED + LIVE.** Kickoff
 verified clean against `docs/session-briefs/2026-09-05-session-80-kickoff.md` — `git log`/`gh pr list`/`gh run
 list`/`git worktree list` all matched exactly. Owner delegated priority with "make the best decision yourself"
 after a 4-option menu; picked the two most concrete, independent, lowest-risk items rather than the parked
@@ -116,12 +117,33 @@ the pre-recreation repo's own Dependabot branch, with no remote counterpart on t
 now shows the main checkout plus exactly the two deliberately-kept ones: the still-alive `agent-aa024a353bfdc08d5`
 (see above — do not touch) and the parked `experiment/162-slot-filling-ab`. `git status` clean, fully pushed.
 
+**#199 (dashboard proof panel) and #197 idea 4 (chart trend headline): brainstormed, designed, planned, and
+built via `subagent-driven-development` — #199 MERGED + LIVE, idea 4 plan written, build not yet started.**
+Owner picked both from a next-work menu ("1 and 3"). #199: `getQuestionHistory` now decodes each answer-kind
+row's stored envelope into a new `answerEnvelope: AnswerResponse | null` field (mirroring `getThreadRows`'s
+existing pattern for chat-thread resume); `question-history.tsx` renders the existing "Bewijs dit cijfer" panel
+from it. Built in an isolated worktree, 2 tasks each with an implementer + task-reviewer round, plus a final
+whole-branch review (opus) that caught a real gap a task-scoped review couldn't see: a collapsed clarification
+round where the clarify row is redacted but the reply row isn't left `isDeleted: true` with a non-null
+`answerEnvelope` — the component's existing `!item.isDeleted` check already prevented this from ever rendering,
+but it was undocumented/unpinned; fixed with a test + corrected comment, no behavior change. **MERGED to `main`
+(`5b8e0fa`), verified: typecheck (root+web), backend 118/118 files 1801/1801 tests (+3), benchmark GATE PASS, web
+51/51 files 608/608 tests (+3), real `next build`, `/code-review` low: 0 findings.** Full detail:
+[open-questions #199](open-questions.md).
+
+**Idea 4 (chart trend headline) is planned but not yet built this session** — the design doc's original plan
+to reuse the #89 `AnswerProof` info-icon next to the headline was found infeasible without threading a `proof`
+prop through 3 more files (`dock-visuals.ts` → `visual-dock.tsx`/`chart-toggle.tsx` → `chart.tsx`, none of
+which carry one today); owner chose to skip the icon for v1 rather than do that plumbing. Plan:
+[superpowers/plans/2026-09-05-chart-trend-headline.md](superpowers/plans/2026-09-05-chart-trend-headline.md).
+
 **▶ NEXT, in order — nothing urgent, all owner's call:** (a) the 3 `gh secret set` commands, still blocking only
 `deploy`; (b) #162's §6 A/B verdict is IN and it's a clean loss (41.18% win-or-tie vs 60% needed, 9/34 grammar
 complaints vs 0 allowed) — decide whether to accept that as final (leave parked, no further action) or authorize
 a round 5 (prompt-level phrasing fixes targeting the two named failure patterns + a fresh ~$0.20 re-judge); (c)
-#199, WP30c, #197 idea 4, the three older #197 follow-ups — all owner-menu items, unscheduled. **Separately worth
-a look, not
+build #197 idea 4 from its already-written plan (`superpowers/plans/2026-09-05-chart-trend-headline.md`) via
+`subagent-driven-development`, same pattern as #199; (d) WP30c, the three older #197 follow-ups — owner-menu
+items, unscheduled. **Separately worth a look, not
 acted on this session:** `docs/STATUS.md` itself has accumulated full session blocks back through session 71
 (4600+ tokens for the first 500 lines alone) despite the file's own stated "top block only, history lives in
 status-archive.md since session 41" convention — a pruning pass would bring it back in line with its own rule,
