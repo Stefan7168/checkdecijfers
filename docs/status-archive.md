@@ -1,9 +1,10 @@
 # STATUS archive — the session log
 
-**Session 81 (2026-09-05, AUTONOMOUS — owner pasted the session-81 kickoff, then said "I will sleep. Work
-autonousmly for hours and hours, I expect great process tomorrow. Go.") — #197 IDEA 4 FULLY BUILT, REVIEWED
-(FOUND 2 CRITICAL + 2 IMPORTANT REAL BUGS), FIXED, RE-REVIEWED CLEAN, PR #6 OPEN (NOT MERGED); STATUS.md
-PRUNING FINISHED FOR SESSIONS 68-79.**
+**Session 81 (2026-09-05 into 2026-09-06, spans midnight — AUTONOMOUS first, owner pasted the session-81
+kickoff then said "I will sleep. Work autonousmly for hours and hours, I expect great process tomorrow. Go.";
+OWNER PRESENT again at the close for the final wrap-up) — #197 IDEA 4 FULLY BUILT, REVIEWED (FOUND 2 CRITICAL
++ 2 IMPORTANT REAL BUGS), FIXED, RE-REVIEWED CLEAN, PR #6 OPEN (NOT MERGED); STATUS.md PRUNING FINISHED FOR
+SESSIONS 68-79; ONE STALE-WORKTREE CLEANUP FLAGGED FOR THE OWNER (CLASSIFIER-BLOCKED).**
 
 1. **Kickoff verified clean, second-instance check re-confirmed a known finding rather than trusting it from
    memory.** `git log`/`gh pr list`/`git worktree list`/`git branch` all matched the session-80 kickoff's
@@ -115,8 +116,33 @@ PRUNING FINISHED FOR SESSIONS 68-79.**
    once. WP30c and #197's three older recorded follow-ups (i)-(iii) — unscheduled owner-menu items, left
    exactly as found.
 
-Full facts verified before writing any of the above (GOLDEN RULE): `date +%Y-%m-%d`, `git log`/`git show`/`gh
-pr view --json` for every SHA and CI conclusion cited, `ps -p` for the worktree PID claim, a live
+9. **Continuation, 2026-09-06 (date rolled over past midnight mid-session): a 3-tick autonomous monitoring
+   loop, then the owner returned and asked to wrap up.** After item 8, an autonomous-loop check ran three
+   times (~30 min apart) per the harness's own loop-tick protocol — each tick re-verified PR #6 fresh
+   (`gate` green, `mergeStateStatus: CLEAN`, 0 reviews, 0 comments, not behind `main`) and found nothing
+   changed; the loop correctly self-terminated on the third consecutive quiet tick with one push notification,
+   per its own stated design (not a session decision to second-guess). The owner then returned in-chat ("ok
+   wrap up per docs") and this final wrap-up pass re-verified everything above still held — it did, byte for
+   byte — and found exactly one new thing: **`agent-aa024a353bfdc08d5`'s background process (alive 13+ hours
+   the last time this session checked) had finally exited** — its worktree lock file was gone and `ps -p
+   <pid>` confirmed the process no longer running. Its worktree still carried uncommitted `package.json`/
+   `package-lock.json` edits (dependency bumps): inspected before deciding anything (never discard unexamined
+   background-agent work), found they duplicate 4 of the 5 packages session 76 already independently
+   verified safe months of session-time ago, and — checked, not assumed — those exact bumps have SINCE been
+   merged for real via Dependabot's own automated PRs #4/#5, making this worktree's attempt fully redundant.
+   Also confirmed its branch's tip commit is already an ancestor of `main` (`git merge-base --is-ancestor`),
+   so nothing would be lost by removing it. **`git branch -D` and `git worktree remove --force` were both
+   BLOCKED by the auto-mode permission classifier** despite that diligence — correctly not routed around (no
+   raw `rm -rf` on the directory either); flagged to the owner instead, since they were now present to decide.
+   Corrected one lesson from earlier in this same session while here: the `ScheduleWakeup` blank-output-turn
+   diagnosis (originally blamed "outside `/loop` context") was disproven by this very continuation — a
+   genuine `/loop` tick reproduced the identical symptom, so the real pattern is response ORDERING
+   (`ScheduleWakeup` as a turn's last content block after text goes blank; before text, or with no text, it
+   renders fine), not loop context. Fixed in `docs/lessons-learned.md` and the memory file.
+
+Full facts verified before writing any of the above (GOLDEN RULE): `date +%Y-%m-%d` (run twice — once
+2026-09-05, once 2026-09-06, confirming the rollover), `git log`/`git show`/`gh pr view --json` for every SHA
+and CI conclusion cited, `ps -p` for both worktree-PID claims (alive, then later confirmed exited), a live
 `/api/health` fetch for the production claim — nothing above is from memory or an earlier chat message.
 
 **Session 80 (2026-09-05, OWNER PRESENT, ~09:1xZ–14:2xZ) — #162's TIER-B FIX AND ITS checkBinding GAP BOTH

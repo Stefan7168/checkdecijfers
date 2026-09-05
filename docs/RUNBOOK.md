@@ -926,6 +926,16 @@ per-machine cache:
     directory — progress ledger, task briefs/reports, review-package diffs) was not in this repo's
     `.gitignore`** despite the skill calling it "git-ignored scratch" in its own docs — added this session,
     nothing had actually been committed. Check for this on any repo the first time this skill runs there.
+13. **A background agent's worktree lock eventually clears on its own when the process exits — check `ps -p`
+    again, don't assume "alive last time I checked" still holds hours later (session 81, 2026-09-05→06).**
+    `agent-aa024a353bfdc08d5` had been flagged "genuinely still alive, do not touch" across sessions 79/80/81's
+    own kickoff verification; by the end of session 81 its lock file was simply gone and `ps -p <same pid>`
+    found nothing. It left real uncommitted `package.json`/`package-lock.json` edits behind — inspect before
+    deciding anything (they may be genuine unfinished work, or — as here — already-superseded-elsewhere and
+    safe to discard). **Even after full diligence confirms it's safe, `git branch -D` and `git worktree remove
+    --force` are still separately gated by the auto-mode permission classifier** — a session can assemble every
+    piece of evidence for why an irreversible op is safe and still correctly get blocked; that block is not a
+    bug to route around (no raw `rm -rf` on the directory either), it means get the owner's explicit go instead.
 
 ## Reviewing and merging a large PR batch (added session 67, 2026-08-28 — reviewed + merged all 19 open PRs left by session 66)
 

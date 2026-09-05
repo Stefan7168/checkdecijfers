@@ -55,17 +55,23 @@ Full narrative: [status-archive.md](status-archive.md) session-81 entry.
   pattern itself is complete if that prior field never actually triggered the precondition.** Recorded in ADR
   014's own as-built notes so the next optional-v1 field that IS builder-emitted knows to follow the same
   strip-if-absent/compare-if-present shape rather than rediscover this from scratch.
-- **`ScheduleWakeup` used once outside its documented `/loop` context produced a turn with no visible output**
-  — used generically this session as a "just in case the background-agent notification doesn't land" fallback
-  (not the `/loop` skill it is built for), the tool call itself succeeded but the response that followed
-  carried no user-facing text, triggering a harness prompt to produce visible output. Session 79 separately
-  recorded a DIFFERENT `ScheduleWakeup` misuse (a duplicate delivery) from the same root cause — using this
-  tool outside `/loop` dynamic mode. Two sessions, two different malfunctions, same root cause: **this tool is
-  built for `/loop`'s specific resume mechanics and does not degrade gracefully outside them.** The tool's own
-  description already says background-agent completions notify automatically without it — the fix going
-  forward is simply not reaching for `ScheduleWakeup` as a generic "check back later" mechanism at all; a
-  dispatched background `Agent` call's own completion notification is sufficient, and was in fact what
-  actually drove this session's progress every other time.
+- **CORRECTION to a lesson written earlier THIS SAME SESSION: the `ScheduleWakeup` blank-output turn was NOT
+  caused by using it "outside `/loop`" — later evidence in this same session contradicts that diagnosis.**
+  The original bullet (below, as first written) blamed the tool's `/loop`-specific resume mechanics. But this
+  session then ran three genuine `/loop`-style autonomous-loop ticks (real ones, dispatched by the harness's
+  own "Autonomous loop tick" mechanism, not a generic fallback) — the FIRST of those ticks reproduced the
+  IDENTICAL blank-output symptom, which the original "outside /loop" theory cannot explain since that tick
+  genuinely was inside `/loop`. The actual pattern across all four observed cases: **a response that emits
+  text and then ends its turn with `ScheduleWakeup` as the LAST tool call goes blank; a response that calls
+  `ScheduleWakeup` first (or emits text AFTER it) renders correctly.** Two later ticks in this same session
+  confirmed the fix — putting the tool call before any trailing text (or having no text at all in that turn)
+  rendered fine both times. **The generalizable rule: never let `ScheduleWakeup` be the final content block in
+  a turn that also contains user-facing text — call it first, or add a short trailing text block after it, not
+  before.** Left as an open question whether this is a client-rendering quirk specific to turns ending in this
+  particular tool, or something broader; recorded as an ordering rule either way since it's cheap to follow
+  regardless of root cause. (Session 79's separate `ScheduleWakeup` duplicate-delivery finding is unrelated to
+  this ordering issue and still stands on its own — that one really was about generic-fallback use outside
+  `/loop`.)
 - **A DB-connecting maintenance script correctly blocked by the auto-mode permission classifier is a working
   safety boundary, not an obstacle to route around.** `npm run gdpr:purge` (default dry-run/report-only mode,
   the same command sessions 76/77 ran successfully as safe autonomous legwork) was blocked this session by
@@ -75,6 +81,19 @@ Full narrative: [status-archive.md](status-archive.md) session-81 entry.
   documented response to a permission denial. Worth recording since a future session might otherwise assume
   this command is always safe to run unattended just because two prior sessions ran it successfully; the
   classifier's judgment on any given session/sandbox configuration is the actual gate, not precedent alone.
+- **The same classifier boundary held again, later the same session, for a DIFFERENT class of action:** once
+  `agent-aa024a353bfdc08d5`'s long-running background process finally exited on its own (13+ hours after this
+  session first found it alive; its lock file disappeared, `ps -p <pid>` confirmed the process gone), it left
+  behind uncommitted `package.json`/`package-lock.json` edits in a worktree whose branch pre-dates session 78.
+  Inspection showed the edits were superseded dependency bumps (four of the five packages a much earlier
+  session, 76, had already independently verified safe — `zod` deliberately excluded — and which Dependabot's
+  own automated PRs #4/#5 have SINCE merged for real, making this worktree's attempt fully redundant). Having
+  done that diligence, `git branch -D` + `git worktree remove --force` were both BLOCKED by the auto-mode
+  classifier anyway — force-deleting a branch and force-removing a worktree are exactly the class of
+  irreversible operation the classifier gates regardless of how much justification the session has already
+  assembled for why it's safe. Correct response, same as the `gdpr:purge` case: stop, don't route around it
+  (e.g. a raw `rm -rf` on the worktree directory would have bypassed the same intent), and surface the finding
+  with the reasoning already done so a present human can approve in one read rather than starting from zero.
 
 ## Session 80 — 2026-09-05, owner present — #162 fully closed out, Dependabot resolved, #199 shipped, #197 idea 4 in progress
 
