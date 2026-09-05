@@ -62,8 +62,20 @@ notification collided with this session's own `EnterWorktree` isolation, refusin
 explicit correct paths, until `ExitWorktree` + fresh `EnterWorktree` cleared it) — worth a RUNBOOK note: **don't
 run `EnterWorktree` in the orchestrating session while a background agent is still active**, and if a
 background agent starts reporting worktree-isolation refusals for a path it never touched, that is this bug,
-not a real permissions problem. Branch `experiment/162-slot-filling-ab` is unchanged at `fd1a3b6`, $0 additional
-spend (the second attempt's diagnosis work was all free/local before the lockout) — needs a clean third attempt.
+not a real permissions problem. **Third attempt (clean environment): real progress, still no verdict.** All 3
+diagnosed bugs fixed plus a 4th found live during end-to-end verification (the bug-3 pre-fill fix alone was a
+no-op until the POST-fill validator belt was also patched) — template-falls 18→3 (leg1/B1-B14 specifically
+7→1), confirmed via a git-stash-controlled full-suite run (1806/1807, the 1 failure a pre-existing
+worktree-`node_modules` gap, RUNBOOK item 3) and an independent benchmark re-run (GATE PASS, legacy pipeline
+unaffected, 0 fabricated throughout). **Remaining gap (2 of 34 cases): a second, independent same-sentence
+check — `checkBinding` in `validate.ts`'s own R9 pass — fused into the shared validator's core logic in a way
+that isn't safely patchable after the fact, unlike the first three fixes.** Given a full plain-language
+walkthrough of that gap, owner's call: **stop here, not a 4th attempt** — 31/34 (91%) clean is the recorded
+result; the judge never ran, so no phrasing-quality verdict exists either way. Cumulative spend, all 3 rounds:
+≈$1.14 (~€1.05). Branch `experiment/162-slot-filling-ab` (head `f26d01e`) kept as a 91%-fixed foundation, not
+merged, not deleted. **Worth a separate look:** the Tier-B fix (the "op" marker addition to the shared
+validator) is a genuine, small, well-tested production correctness fix, independent of the rest of the
+slot-filling experiment — a candidate for extracting and shipping on its own, not yet done.
 
 **Also this session:** two new roadmap ideas recorded from the owner mid-conversation — user-connectable Google
 Sheets ([#201](open-questions.md), explicitly blocked on auth the owner doesn't want to build yet) and
@@ -71,11 +83,12 @@ drag-and-drop chat attachments ([#202](open-questions.md)) — both deliberately
 each other and to ADR 032's existing "unofficial content gets its own attributed section" pattern. WP30c stays
 at "wait" (not decided this session).
 
-**▶ NEXT, in order — nothing urgent except the two owner-blocking items:** (a) the 3 `gh secret set` commands
-for Route B's new repo (yours); (b) #162 third attempt — fix the 3 identified bugs for real this time, complete
-through the judge; (c) the newly-found latent shared-validator bug (period-recognition false positive) — real
-but low-frequency, worth a scoped fix; (d) Dependabot #124 still blocked, zod regression, unchanged; (e) #199 —
-declined again this session (owner said leave it parked); (f) idea 4 (takeaway headline) — designed, not built.
+**▶ NEXT, in order — nothing urgent except the one owner-blocking item:** (a) the 3 `gh secret set` commands
+for Route B's new repo (yours); (b) consider extracting the #162 Tier-B validator fix (the "op" marker) for a
+standalone ship, independent of the rest of the slot-filling experiment; (c) #162 itself — parked at 91% clean,
+pick up `checkBinding` whenever the idea gets revisited, no rush; (d) Dependabot #124 still blocked, zod
+regression, unchanged; (e) #199 — declined again this session (owner said leave it parked); (f) idea 4 (takeaway
+headline) — designed, not built.
 
 **▶ SESSION 78 (2026-09-04 into 2026-09-05, OWNER PRESENT — merge day for the four PRs sessions 76/77 left
 open) — #126/#127/#128/#129 ARE ALL MERGED + LIVE.** Kickoff verified clean against
