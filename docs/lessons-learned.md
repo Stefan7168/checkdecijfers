@@ -57,6 +57,16 @@ Full narrative: [STATUS.md](STATUS.md) session-80 entry.
   would have been caught by "the test suite is green" alone if the removed/changed surface simply isn't
   exercised by any existing test — changelog-to-call-site verification is a distinct check from test-suite
   verification, not a formality once tests pass.
+- **`ListAgents` not listing a dispatched agent as a reachable peer does NOT mean its underlying process is
+  dead — check the OS process directly before treating a worktree as abandoned.** Session 79's kickoff brief
+  flagged `agent-aa024a353bfdc08d5` as "genuinely uncertain, check before trusting or discarding," and this
+  session's own `ListAgents` call (like session 79's) didn't list it as a messageable peer — reasonable grounds
+  to suspect it was orphaned. It was not: attempting `git worktree remove` on it was refused with an explicit
+  lock naming a specific PID, and `ps -p <that PID>` confirmed a real, still-running `claude` process (15+
+  minutes of accumulated CPU time). Git's own worktree lock is what actually prevented a real mistake here — the
+  force-remove flag was one keystroke away before that check. **The reliable signal for "is this agent still
+  alive" is the worktree's lock file + `ps`, not `ListAgents`** — the latter reflects what's reachable/addressable
+  from THIS session, not everything that's actually running on the machine.
 
 ## Session 79 — 2026-09-05, owner present — Route B, #197 ideas 6+8, #162 closed at 91%
 

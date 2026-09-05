@@ -46,6 +46,16 @@ confirmed redundant). All three of PR #4/#5's changed dependencies (`@anthropic-
 (no beta-namespace Anthropic SDK usage; no `cryptogram`/`three_d_secure`/V2RuntimeSchema Stripe usage anywhere in
 `src/`; no deprecated `lock` auth option in `web/`) — none apply to how this codebase uses them.
 
+**Correction to session 79's framing: the "stalled" agent worktree (`agent-aa024a353bfdc08d5`) is NOT dead —
+its underlying OS process is still genuinely alive.** `git worktree remove` on it was refused with an explicit
+lock error naming a specific PID; `ps -p <pid>` confirmed that process is real and still running (15+ minutes of
+accumulated CPU time, alive since 03:24 today), even though it doesn't appear as a reachable peer in this
+session's own `ListAgents`. **Left completely untouched — no force-remove, no kill** — since the problem it was
+investigating is already fixed at the root above, there's no urgency, and interrupting genuinely in-progress
+work to "clean up" would be the wrong trade. A future session should re-check with the same two commands
+(`git worktree remove` naming the lock, then `ps -p <pid>`) before assuming it's safe to touch — don't reuse this
+session's "still alive" finding without re-verifying, since the process may have finished by then.
+
 **All five open Dependabot PRs resolved this session:** #1 (`actions/checkout` v5→v7, merged `dad5e56`), #4
 (the npm-all split, merged `6ea47a9`), #5 (web deps, merged `fc0527a`) — all gate-green; #2 and #3 closed
 (superseded by #4/#5, per the ignore-rule reaction above). `gh pr list --state open` now shows zero. Merge-commit
@@ -62,6 +72,12 @@ Dependabot split was removed via `git worktree remove --force` WHILE its own bac
 still running inside it — the script's own working directory disappeared mid-run (`ENOENT: uv_cwd`), a clean
 crash with no side effect since that work was already superseded. Lesson: let a worktree's own background script
 finish (or kill the script first) before removing the worktree it's running in.
+
+**Hygiene:** also deleted one genuinely stale local branch, `dependabot/npm_and_yarn/npm-all-1352029c3b` (head
+dated 2026-09-03, two days before Route B, not an ancestor of current `origin/main` — a leftover local ref from
+the pre-recreation repo's own Dependabot branch, with no remote counterpart on the new repo). `git worktree list`
+now shows the main checkout plus exactly the two deliberately-kept ones: the still-alive `agent-aa024a353bfdc08d5`
+(see above — do not touch) and the parked `experiment/162-slot-filling-ab`. `git status` clean, fully pushed.
 
 **▶ NEXT, in order — nothing urgent, all owner's call:** (a) the 3 `gh secret set` commands, still blocking only
 `deploy`; (b) #162's `checkBinding` gap — parked at 91% clean, pick up only on a fresh owner go; (c) #199, WP30c,
