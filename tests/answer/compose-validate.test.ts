@@ -214,6 +214,33 @@ describe('R9: direction, superlative and comparison words', () => {
     const body = 'De inflatie steeg met 0,5 procentpunt, van 3,8% in 2023 naar 3,3% in 2024.';
     expect(validateAnswerBody(body, inflationDrop()).ok).toBe(false);
   });
+
+  it('#162: a negated trend word ("zonder tussentijdse dalingen") is not a claim of that direction (rescue)', () => {
+    // The real B13 shape that surfaced this live (2026-09-05): a genuine
+    // monotonic increase, restated with a qualifier clause. Before the fix,
+    // DOWN_WORDS matched 'dalingen' with no negation awareness and this was
+    // rejected as a false decline claim against the real 'up' direction.
+    const body =
+      'De bevolking op 1 januari in Nederland groeide in 2024 met 101.085 inwoners, zonder tussentijdse dalingen: van 17.942.942 in 2024 naar 18.044.027 in 2025.';
+    expect(validateAnswerBody(body, populationDifference()).problems).toEqual([]);
+  });
+
+  it('#162: negation-awareness does not mask a genuinely wrong, unnegated claim in the same sentence', () => {
+    // 'niet gedaald' is correctly negated (real direction IS down here, so
+    // this clause alone would otherwise be an honest claim) -- but 'gestegen'
+    // right after it is a real, unnegated, WRONG claim and must still fail.
+    const body = 'De inflatie is niet gedaald, maar gestegen, van 3,8% in 2023 naar 3,3% in 2024.';
+    expect(validateAnswerBody(body, inflationDrop()).ok).toBe(false);
+  });
+
+  it('#162: "geen" and "niet" negate a trend word the same way "zonder" does', () => {
+    const geen =
+      'De bevolking op 1 januari in Nederland groeide in 2024 met 101.085 inwoners, geen dalingen: van 17.942.942 in 2024 naar 18.044.027 in 2025.';
+    expect(validateAnswerBody(geen, populationDifference()).problems).toEqual([]);
+    const niet =
+      'De bevolking op 1 januari in Nederland groeide in 2024 met 101.085 inwoners, niet gedaald: van 17.942.942 in 2024 naar 18.044.027 in 2025.';
+    expect(validateAnswerBody(niet, populationDifference()).problems).toEqual([]);
+  });
 });
 
 describe('adversarial-review regressions (2026-07-03): confirmed validator bypasses must stay dead', () => {

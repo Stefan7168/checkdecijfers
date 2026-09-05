@@ -865,6 +865,20 @@ const UP_WORDS =
 const DOWN_WORDS =
   /\b(daal\w*|dalen\w*|daling\w*|gedaald|afnam\w*|afgenomen|afname\w*|krimp\w*|kromp|gekrompen|zakte|gezakt|omlaag|terugliep|teruggelopen)\b|\bn(?:am|amen|eemt|emen)\b[^.!?;:]{0,30}?\baf\b|\bliep\w*\b[^.!?;:]{0,30}?\bterug\b/i;
 const FLAT_WORDS = /\b(gelijk gebleven|stabiel|onveranderd|ongewijzigd|constant gebleven)\b|\b(?:vrijwel|nagenoeg)\s+gelijk\b/i;
+// A trend word negated earlier in the SAME clause ('zonder tussentijdse
+// dalingen', 'niet gedaald') isn't a claim of that direction at all — it's
+// most often a qualifier reinforcing an already-stated claim elsewhere in
+// the sentence. Found live during #162 diagnostic work (2026-09-05): honest
+// growth prose ("groeide gestaag, zonder tussentijdse dalingen") was
+// rejected as a false decline claim because UP_WORDS/DOWN_WORDS/FLAT_WORDS
+// matched on the bare word with no negation awareness at all.
+const NEGATION_WORDS = /\b(zonder|geen|niet)\b/i;
+
+function negatedMatch(text: string, wordRegex: RegExp): boolean {
+  const match = wordRegex.exec(text);
+  if (!match) return false;
+  return NEGATION_WORDS.test(text.slice(0, match.index));
+}
 const SUPERLATIVE_WORDS = /\b(meeste|hoogste|grootste|laagste|minste)\b/i;
 const COMPARATIVE = /\b(meer|hoger|groter|minder|lager|kleiner)\b[^.!?]{0,60}?\bdan\b/i;
 
@@ -961,9 +975,9 @@ function checkDirectionWords(
     const comparative = COMPARATIVE.exec(sentence.text);
 
     for (const clause of splitClauses(sentence)) {
-      const saysUp = UP_WORDS.test(clause.text);
-      const saysDown = DOWN_WORDS.test(clause.text);
-      const saysFlat = FLAT_WORDS.test(clause.text);
+      const saysUp = UP_WORDS.test(clause.text) && !negatedMatch(clause.text, UP_WORDS);
+      const saysDown = DOWN_WORDS.test(clause.text) && !negatedMatch(clause.text, DOWN_WORDS);
+      const saysFlat = FLAT_WORDS.test(clause.text) && !negatedMatch(clause.text, FLAT_WORDS);
       if (!saysUp && !saysDown && !saysFlat) continue;
       if (!backing) {
         problems.push(`R9: trendwoord in "${clause.text.trim()}" zonder direction/difference-derivatie om aan te binden`);
