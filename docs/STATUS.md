@@ -9,8 +9,8 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
-**▶ SESSION 80 (2026-09-05, OWNER PRESENT, session in progress) — #162's TIER-B VALIDATOR FIX SHIPPED
-STANDALONE, THE DEPENDABOT ZOD REGRESSION FIXED AT THE ROOT, ALL FIVE OPEN DEPENDABOT PRS RESOLVED.** Kickoff
+**▶ SESSION 80 (2026-09-05, OWNER PRESENT, session in progress) — #162's TIER-B FIX AND ITS checkBinding GAP
+BOTH FIXED, THE DEPENDABOT ZOD REGRESSION FIXED AT THE ROOT, ALL FIVE OPEN DEPENDABOT PRS RESOLVED.** Kickoff
 verified clean against `docs/session-briefs/2026-09-05-session-80-kickoff.md` — `git log`/`gh pr list`/`gh run
 list`/`git worktree list` all matched exactly. Owner delegated priority with "make the best decision yourself"
 after a 4-option menu; picked the two most concrete, independent, lowest-risk items rather than the parked
@@ -32,8 +32,29 @@ Verified it runs through the same quantity-noun veto and `SAFE_YEAR_CONTINUATION
 (doesn't reopen the "van"/"met" hole; an un-corpus-covered continuation soft-flags rather than silently accepting
 or hard-rejecting). Full verification: typecheck clean (root+web), backend 118/118 files 1798/1798 tests (3
 new), benchmark GATE PASS (6/6 refusal, 0 fabricated), web 51/51 files 605/605 tests, real `next build`,
-`/code-review` low: 0 findings. The `checkBinding` gap (the other half of #162's remaining 2/34 cases) is
-unaffected and still parked — no fresh owner go was given to restart that.
+`/code-review` low: 0 findings.
+
+**#162's `checkBinding` gap (round 4) — owner-authorized mid-session ("go do the checkBinding fix on #162") —
+FIXED too, on the SAME parked experiment branch** (`experiment/162-slot-filling-ab`, commit `7dd196a`; still not
+merged, `SLOT_PHRASING_ENABLED` still off). checkBinding's own R9 pass (validate.ts, the belt run on every filled
+slot body) had an independent same-sentence demand for a derivation token with no body-wide relaxation — the SAME
+rule slots.ts's own SLOT-R9 pre-fill check already got relaxed in round 3, fused into `validateAnswerBody`'s
+shared logic rather than a separate sub-export. Fixed by threading an opt-in `relaxDerivationSameSentence`
+parameter from `validateFilledSlotBody` through `validateAnswerBody` into `checkBinding` itself — skips the
+same-sentence push only when every one of a derivation's own source periods already passes the pre-existing
+body-wide backstop, exactly mirroring the SLOT-R9 relaxation for the identical B13/A054/A085 shape. No
+legacy/template caller passes the new parameter (default `false`), so the 2026-07-03 finding this rule protects
+against — a lone derivation value with no period anywhere — still fails there, proven by a dedicated regression
+test. TDD throughout: wrote the failing test first (reproduced the exact documented problem string byte-for-byte,
+using a fixture promoted from a round-3 diagnostic to the shared `tests/helpers/synthetic-results.ts`), confirmed
+red, then fixed. Verified: typecheck clean (root+web), backend 118/118 files 1810/1810 tests (+3, the 1807
+baseline matches exactly), benchmark GATE PASS, web 50/50 files 585/585 tests, real `next build`, `/code-review`
+low: 0 findings, plus a hermetic re-check of all 34 recorded A/B pairs against the fix (zero LLM spend) — 0 new
+regressions. **Honest caveat:** could not replay B13's own exact historical repeat-2 failure text (only
+attempt-0's body persists per pair) — the unit tests are the available proof for this deterministic-validator
+change, not a literal replay. **Still NOT done, still owner-supervised:** the §6 A/B judge (real spend, blind
+pairwise phrasing quality) — no phrasing-quality claim exists yet; any flag flip; any merge to `main`. Full detail:
+[open-questions #162](open-questions.md).
 
 **Dependabot's zod regression (open-questions #200, blocking the old #124 → renumbered #2) fixed at the root, not
 routed around** (`main` `c6fa764`): added an `ignore` rule for `zod` to `.github/dependabot.yml`'s `npm-all`
@@ -80,8 +101,9 @@ now shows the main checkout plus exactly the two deliberately-kept ones: the sti
 (see above — do not touch) and the parked `experiment/162-slot-filling-ab`. `git status` clean, fully pushed.
 
 **▶ NEXT, in order — nothing urgent, all owner's call:** (a) the 3 `gh secret set` commands, still blocking only
-`deploy`; (b) #162's `checkBinding` gap — parked at 91% clean, pick up only on a fresh owner go; (c) #199, WP30c,
-#197 idea 4, the three older #197 follow-ups — all owner-menu items, unscheduled. **Separately worth a look, not
+`deploy`; (b) #162's §6 A/B judge — real spend, owner-supervised, would finally produce a phrasing-quality verdict
+now that the hard gate is clean; (c) #199, WP30c, #197 idea 4, the three older #197 follow-ups — all owner-menu
+items, unscheduled. **Separately worth a look, not
 acted on this session:** `docs/STATUS.md` itself has accumulated full session blocks back through session 71
 (4600+ tokens for the first 500 lines alone) despite the file's own stated "top block only, history lives in
 status-archive.md since session 41" convention — a pruning pass would bring it back in line with its own rule,
