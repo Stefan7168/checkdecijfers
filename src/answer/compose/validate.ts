@@ -334,20 +334,26 @@ const SAFE_YEAR_CONTINUATIONS = new Set([
 /** Does the text ENDING at a period number mark it as temporal? Multiword
  * chains matched right-to-left from the token ("tot en met", "ten opzichte
  * van", "het 4e kwartaal van", a span's first leg "2019 tot/en/naar"). Bare
- * "op"/"per"/"met"/"van" deliberately absent: each precedes fabricated
- * quantities as easily as periods ("een stijging van 2024", "steeg met
- * 2024"); "van" only counts led by a temporal noun, "naar"/"tot"/"en" only
- * led by another period number. "voor" IS listed — the template's own null
- * branch opens with it ("Voor 2024 in Aduard is er geen waarde") and the
- * quantity-noun veto still blocks "voor 2024 banen". "heel/geheel" is listed:
- * "in heel 2025" is idiomatic Dutch annual-total prose, and 'heel' only ever
- * reads temporally directly before a year. Whitespace bridges are capped at
- * 3 so a marker must genuinely sit next to the number (also the anti-fake-\b
- * guard: a marker can then never start exactly at the 48-char window edge —
- * that would need a 45+-char marker). */
+ * "per"/"met"/"van" deliberately absent: each precedes fabricated quantities
+ * as easily as periods ("een stijging van 2024", "steeg met 2024"); "van"
+ * only counts led by a temporal noun, "naar"/"tot"/"en" only led by another
+ * period number. "voor" IS listed — the template's own null branch opens with
+ * it ("Voor 2024 in Aduard is er geen waarde") and the quantity-noun veto
+ * still blocks "voor 2024 banen". "heel/geheel" is listed: "in heel 2025" is
+ * idiomatic Dutch annual-total prose, and 'heel' only ever reads temporally
+ * directly before a year. "op" is listed: "Op 2024 telde Nederland …" is the
+ * standard way to open a sentence naming a point in time (the prose
+ * equivalent of "In 2024 …"), and — like "voor"/"heel" — never idiomatically
+ * introduces a quantity/delta itself ("op 2024 kinderen" has no natural
+ * reading the way "met 2024 kinderen" or "een aantal van 2024" would), so it
+ * runs through the SAME quantity-noun veto and SAFE_YEAR_CONTINUATIONS gate as
+ * every other marker here, not a new exemption path. Whitespace bridges are
+ * capped at 3 so a marker must genuinely sit next to the number (also the
+ * anti-fake-\b guard: a marker can then never start exactly at the 48-char
+ * window edge — that would need a 45+-char marker). */
 const TEMPORAL_BEFORE = new RegExp(
   '(?:' +
-    `\\b(?:in|tussen|sinds|vanaf|sedert|na|voor|gedurende|rond|omstreeks|eind|einde|ultimo|begin|medio|halverwege|jaar|kalenderjaar|vóór|heel|geheel|${MONTH_NAMES})` +
+    `\\b(?:in|tussen|sinds|vanaf|sedert|na|voor|gedurende|rond|omstreeks|eind|einde|ultimo|begin|medio|halverwege|jaar|kalenderjaar|vóór|heel|geheel|op|${MONTH_NAMES})` +
     '|\\btot\\s{1,3}en\\s{1,3}met|\\bt/m' +
     '|\\bten\\s{1,3}opzichte\\s{1,3}van|\\bt\\.o\\.v\\.|\\bvergeleken\\s{1,3}met' +
     '|\\b(?:kwartaal|kwartalen|maand|maanden|halfjaar|periode|jaren)\\s{1,3}van' +

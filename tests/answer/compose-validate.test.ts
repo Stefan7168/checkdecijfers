@@ -939,6 +939,38 @@ describe('#141: period numbers are exempt only in temporal context (fabrication 
   });
 });
 
+describe('bare "op <year>" grounds via the same TEMPORAL_BEFORE mechanism as #141', () => {
+  it('"Op <year> werden/telde/bedroeg ..." with no adjacent month now grounds as period', () => {
+    const bankruptcies = makeResult({
+      shape: 'single',
+      definitionLabel: 'uitgesproken faillissementen',
+      cells: [
+        makeCell({
+          table: '82242NED', measure: 'M1', measureTitle: 'Uitgesproken faillissementen',
+          region: null, periodCode: '2024JJ00', periodLabel: '2024', value: 3226, unit: 'aantal', decimals: 0,
+        }),
+      ],
+    });
+    expect(validateAnswerBody('Op 2024 werden in totaal 3.226 faillissementen uitgesproken.', bankruptcies).problems).toEqual([]);
+    expect(scanBody('Op 2024 werden in totaal 3.226 faillissementen uitgesproken.', bankruptcies).find((t) => t.value === 2024)?.kind).toBe('period');
+  });
+
+  it('"op" does not reopen the "van"/"met" quantity-launder hole', () => {
+    expect(scanBody('een stijging van 2024', housingSingle).find((t) => t.value === 2024)?.kind).toBe('unbacked');
+    expect(scanBody('steeg met 2024', housingSingle).find((t) => t.value === 2024)?.kind).toBe('unbacked');
+    // "op" itself, immediately before a genuine quantity-noun claim, still fails —
+    // the shared quantity-noun veto applies to "op" exactly like every other marker.
+    expect(scanBody('nam toe op 2024 woningen', housingSingle).find((t) => t.value === 2024)?.kind).toBe('unbacked');
+  });
+
+  it('"op <year> <un-corpus-covered word>" soft-flags rather than silently accepting or hard-rejecting', () => {
+    const cpi = cpiSeries();
+    const token = scanBody('op 2024 na was de inflatie stabiel', cpi).find((t) => t.value === 2024);
+    expect(token?.kind).toBe('period');
+    expect(token?.soft).toBe(true);
+  });
+});
+
 // #142 (session-44 data-integrity hunt, MEDIUM): count exemptions are now
 // AXIS-BOUND. countNumbers pooled the cell/region/period counts and any
 // structure noun accepted any of them — so "in 4 gemeenten" grounded as
