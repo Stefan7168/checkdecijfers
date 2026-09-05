@@ -51,6 +51,8 @@
 // client-held flag.
 import type { QuestionHistoryEntry } from '../backend/billing/index.ts';
 import { splitDefinitionForDisplay } from '../lib/definition-display.ts';
+import { buildAnswerProof } from '../lib/answer-proof.ts';
+import { AnswerProof } from './answer-proof.tsx';
 import { OnboardingLiveStatus } from './onboarding-live-status.tsx';
 
 /** WP16's two in-flight sub-states — the one predicate behind the per-item
@@ -238,6 +240,10 @@ export function QuestionHistory({ items }: { items: QuestionHistoryEntry[] }) {
                 ) : (
                   <div className="mt-2 whitespace-pre-wrap text-sm text-ink-soft">{item.finalText}</div>
                 )}
+                {item.answerEnvelope !== null ? (() => {
+                  const proof = buildAnswerProof(item.answerEnvelope);
+                  return proof !== null ? <AnswerProof proof={proof} /> : null;
+                })() : null}
               </>
             )}
           </details>
