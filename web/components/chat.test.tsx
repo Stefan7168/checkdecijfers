@@ -1609,3 +1609,18 @@ describe('Chat — #197 step 3 comparison chips on an answer (chip-carrier pendi
     expect(replyToClarification.mock.calls[0]![4]).toBe(7);
   });
 });
+
+describe('Chat — attachment entry points (#201/#202, session 83 scoping)', () => {
+  it('renders link/upload/data-source buttons as disabled, explanatory placeholders', () => {
+    render(<Chat />);
+    for (const [name, hint] of [
+      ['Link toevoegen', 'link naar een webpagina'],
+      ['Bestand uploaden', 'upload een bestand'],
+      ['Databron verbinden', 'verbind een databron'],
+    ] as const) {
+      const button = screen.getByRole('button', { name });
+      expect(button).toBeDisabled();
+      expect(button).toHaveAttribute('title', expect.stringContaining(hint));
+    }
+  });
+});

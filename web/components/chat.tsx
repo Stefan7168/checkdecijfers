@@ -948,6 +948,38 @@ export function Chat({
       {nothingSelected ? (
         <p className="mt-1 text-xs text-danger">Selecteer minstens één bron.</p>
       ) : null}
+      {/* #201/#202 (open-questions, session 83 scoping): attachment entry
+        * points — none of these are wired up yet (see
+        * docs/session-briefs/2026-09-06-chat-attachments-*.md once written).
+        * Disabled with an explanatory title rather than removed, so the
+        * button honestly signals "coming soon" instead of silently doing
+        * nothing or pretending to work (principle c: never fake it). */}
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          disabled
+          title="Binnenkort beschikbaar: voeg een link naar een webpagina toe"
+          className="rounded-full border border-line-strong px-3 py-1 text-xs text-ink-muted disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          Link toevoegen
+        </button>
+        <button
+          type="button"
+          disabled
+          title="Binnenkort beschikbaar: upload een bestand (bijv. PDF)"
+          className="rounded-full border border-line-strong px-3 py-1 text-xs text-ink-muted disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          Bestand uploaden
+        </button>
+        <button
+          type="button"
+          disabled
+          title="Binnenkort beschikbaar: verbind een databron (bijv. Google Sheets)"
+          className="rounded-full border border-line-strong px-3 py-1 text-xs text-ink-muted disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          Databron verbinden
+        </button>
+      </div>
       <form onSubmit={handleSubmit} className="mt-4 flex gap-2">
         <input
           type="text"
