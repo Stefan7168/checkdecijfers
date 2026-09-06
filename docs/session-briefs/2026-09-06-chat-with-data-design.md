@@ -1,6 +1,6 @@
 # Session brief — "chat with your data" design (#201 / #202)
 
-**Date:** 2026-09-06 (session 84). **Status:** DRAFT for owner review — nothing built, nothing decided.
+**Date:** 2026-09-06 (session 84). **Status:** DRAFT — all 9 §8 owner decisions resolved (2026-09-06, same session); nothing built yet. Next: ADR promotion + pre-build adversarial review (see the update note before §0).
 **Provenance:** produced by a Fable 5 planning agent (`effort: max`, 115 tool calls, ~458k tokens,
 15 min), spawned per the owner's request ("spawn a Fable 5 ULTRACODE agent to create the overall
 plan"). Reviewed by the session model before being written here: ADR numbering (037 is next free,
@@ -19,9 +19,12 @@ owner: **(H1)** the LLM only emits a structured, checkable instruction — deter
 the chart from the stored data, never the LLM; **(H2)** a chart built from user data must be
 visibly and structurally impossible to confuse with an official CBS chart.
 
-**Next step:** the owner reads this, answers the numbered points in §8, and the plan is either
-promoted to `docs/decisions/037-...md` + a frozen executor brief (per the plan's own §5 WP202-0),
-or sent back for revision. **No execution/build agents are dispatched until that happens.**
+**Update (2026-09-06, same session):** the owner read back all 9 §8 points in chat, one at a
+time. All resolved — see §8 below for the decisions as recorded. One new item surfaced during the
+read-back (a possible future monthly subscription tier) and was parked as its own future item, not
+folded into this design — see the note at the top of §8. **Next step:** promote to
+`docs/decisions/037-...md` + a frozen executor brief + the pre-build adversarial review (per the
+plan's own §5 WP202-0), still pending. **No execution/build agents have been dispatched.**
 
 ---
 
@@ -42,7 +45,7 @@ or sent back for revision. **No execution/build agents are dispatched until that
 3. **The AI only translates the request into a small, checkable instruction** ("x = kolom Jaar, y = kolom Omzet, filter Jaar 2020..2023, type = lijn"). It may only name columns and values that actually exist in the file — anything else is rejected by code before it can do anything. **Then plain code draws the chart from the stored rows.** The AI never writes, repeats or computes a number that lands on a chart. This is principle (a) applied to the user's own data.
 4. Every user-data chart is visibly and structurally different from a CBS chart: a permanent **"Eigen data · niet door checkdecijfers geverifieerd"** badge, a dashed frame, no CBS source badge/StatLine link, no "CC BY 4.0" line, and the same disclaimer baked into any downloaded PNG/SVG. It can never be mistaken for, or mixed into, an official CBS chart.
 5. Nothing in the existing CBS pipeline changes: zero prompt bytes, the benchmark stays 14/14 + 6/6 + 0 fabricated by construction, and the CBS chat's message envelope stays byte-identical (ADR 033 D4 pins untouched).
-6. Costs ride the existing credit ledger with its own reason and its own price rows (like the +10 web add-on). **The amounts are your decision** (§8, Q1).
+6. Costs ride the existing credit ledger with its own reason and its own price rows (like the +10 web add-on). **Decided (§8 Q1):** CSV upload is free; each dataset-chat turn costs credits, sized near the web add-on. Exact numbers still open. No subscription-tier gate — that idea was raised and parked separately (see §8).
 7. Uploaded files and everything derived from them are personal data: they join the existing delete-my-history button, get a **per-file delete** button, and are purged on the existing monthly retention job — from day one, in the same transaction as the rest.
 8. Recommended first slice: CSV/TSV upload → dataset chat → line/bar charts with filters, on a flag (`ATTACHMENTS_ENABLED`), supervised go-live. Web links + XLSX next, PDF after that (PDF needs AI-assisted reading, so it gets extra verification and a stronger badge).
 
@@ -289,7 +292,7 @@ type DatasetTurnEnvelope =
 - **Scope:** `user_datasets` (name, URL, bytes, cells, profile, extraction) and `dataset_turns` (question, envelope, instruction) are personal data — and uploaded files may contain **third parties'** personal data (a journalist's spreadsheet of names). Both tables are inside the redaction scope on the first commit that creates them.
 - **Self-service:** `deleteMyQuestionHistory` already redacts everything; `redactMatchingRows` gains a generic `extraLegs: { sql; params; guardTable?: string }[]` parameter (rather than a 4th and 5th named argument) so `deleteUserDatasets(userId)` runs **in the same transaction**: `dataset_turns` → the D9 sentinel (skeleton kept: id, user_id, thread_id, request_id, created_at, kind — the "verwijderde vraag" placeholder posture with cost still visible); `user_datasets` → `file_bytes = null, cells = '[]', profile = '{}', extraction = null, display_name = REDACTED, source_url = null, status = 'redacted'` (row kept: the thread FK and quota history stay consistent; nothing references the ledger, so a hard DELETE would also be legal — redact keeps the sidebar/placeholder behaviour uniform). Guarded on `to_regclass` only during the deploy window (a check, not a catch), like the feedback leg.
 - **Per-dataset delete (recommended in v1, §8 Q3):** "Verwijder dit bestand" in the dataset thread — the same leg scoped `where id = $2 and user_id = $1`, redacting the dataset **and** its turns. This is the first real need for ADR 033's deferred per-thread deletion ("I uploaded the wrong file" is a far stronger expectation than for a chat), and it satisfies that residual for dataset threads. Cross-user pins as in `tests/threads/threads.test.ts`.
-- **Purge:** `runRetentionPurge` gains a `datasets` leg (count + purge sharing ONE `WHERE` fragment, the ⟨F2⟩ rule; `RetentionPurgeSummary.datasets`; carry-what-committed on partial failure). Window: **default = the #14 two-year account window** for cells/turns; **Assumption/owner decision (§8 Q2):** a *shorter* window for raw `file_bytes` only (e.g. 90 days, the #181 "retention without purpose" reasoning — bytes serve re-extraction/download, not the chart record) is cheap to add as a second cutoff in the same fragment.
+- **Purge:** `runRetentionPurge` gains a `datasets` leg (count + purge sharing ONE `WHERE` fragment, the ⟨F2⟩ rule; `RetentionPurgeSummary.datasets`; carry-what-committed on partial failure). Window: **DECIDED (§8 Q2, 2026-09-06):** the #14 two-year account window for `cells`/`profile`/turns; a **shorter, 90-day** window for raw `file_bytes` only (the #181 "retention without purpose" reasoning — bytes serve re-extraction/download, not the chart record) — a second cutoff in the same fragment.
 - **Chart images:** exports are client-side blobs (nothing stored). Redacted turns replay as one placeholder, so a redacted dataset's tabs vanish on resume (the ⟨A7⟩ posture).
 - **DPA/disclosure:** dataset headers/samples (and, in WP202c, PDF text) transit the LLM provider — the docs/04 GDPR item 3 seam widens from "user questions" to "user-uploaded content"; the privacy-policy line (#14(d), still pending) must say so before external users. Also an in-UI notice near the upload button (copy for owner review) advising against uploading bijzondere persoonsgegevens.
 
@@ -369,16 +372,19 @@ ADR 037 (new); ADR 001 module list (+ `attachments/`); ADR 004 (fourth/fifth con
 
 ## 8. Open questions and assumptions (never presented as settled)
 
-**Owner decisions**
-1. **Prices:** `dataset_turn` and `dataset_ingest` in credits (sizing hint from the brief: near the +10 web add-on, not the 100 onboarding tier); whether deterministic CSV ingest is free and only LLM-assisted ingest charges. *(Mechanism is independent of the numbers.)*
-2. **Retention windows:** 2 years for cells/turns (default = #14); shorter for raw file bytes (e.g. 90 days)?
-3. **Per-file delete in v1** — recommended yes (D13); it also settles ADR 033's per-thread-delete residual for dataset threads.
-4. **PDF in v1 or fast-follow** — recommended fast-follow (WP202c), because its extraction is the one place LLM output is the data source and needs the belt + preview.
-5. **XLSX in the first slice or the second** — recommended second (WP202b) after the library/security evaluation; v1 copy can say "Excel: sla op als CSV, XLSX volgt".
-6. **Copy** (huisstijl rule 8 — reviewed text): "Eigen data · niet geverifieerd", "Eigen data van de gebruiker — niet door checkdecijfers geverifieerd.", "Eigen grafiek n", the upload privacy notice.
-7. **Ever combine user data with CBS data in one chart?** Recommended: never (ADR 032 rule); recorded as a revisit trigger only.
-8. **History/gallery integration** (dashboard `/geschiedenis`, #159 "Jouw grafieken") in v1 (UNION only) or WP202d?
-9. **Caps/quota**: 4 MB, 10,000 rows, 50 columns, 500 points, 25 datasets / 50 MB per user — confirm as starting constants.
+**Owner decisions — ALL RESOLVED 2026-09-06 (session 84, read back in chat, one at a time)**
+
+1. **Prices — mechanism DECIDED, exact numbers still open:** free CSV/TSV ingest (no AI work happens there, so nothing to charge for); pay-per-turn in credits for each dataset-chat question, sized near the +10 web add-on (exact number not yet set); a future LLM-assisted ingest (PDF/HTML) would charge on ingest too, since that step is real AI work. **No subscription-tier gate** — raised during this read-back, parked separately (see the tracked item below), does not block this feature. *(The two-price-row mechanism is independent of the exact numbers.)*
+2. **Retention windows — DECIDED:** 2 years for `cells`/`profile`/turns (the existing #14 account-retention default); the raw uploaded file (`file_bytes`) is purged sooner, after **90 days** — it only serves re-extraction/download, not the chart record itself.
+3. **Per-file delete in v1 — DECIDED: yes.** Ships in WP202a ("Verwijder dit bestand" in the dataset thread). Also settles ADR 033's per-thread-delete residual for dataset threads.
+4. **PDF in v1 or fast-follow — DECIDED: fast-follow (WP202c).** Not in the first release.
+5. **XLSX in the first slice or the second — DECIDED: second batch, with web links (WP202b).** v1 copy: "Excel? Sla op als CSV — XLSX volgt."
+6. **Copy — DECIDED: use as proposed, verbatim.** Badge "Eigen data · niet geverifieerd"; disclaimer "Eigen data van de gebruiker — niet door checkdecijfers geverifieerd."; chart tab name "Eigen grafiek n". (The upload privacy notice advising against *bijzondere persoonsgegevens* still needs its own copy pass at build time — not reviewed in this round.)
+7. **Ever combine user data with CBS data in one chart? — DECIDED: never, for v1.** Confirms D1's original design. A safer "side-by-side, never computed across" shape was sketched as the only way to do this at all without breaking the traceability invariants, then the owner explicitly deferred the whole question: **"these are edge cases for later."** Not designed further now; revisit only as its own future ADR.
+8. **History/gallery integration — DECIDED: yes, in v1.** Dataset charts appear in the existing `/geschiedenis` page from day one — confirms the `UNION` over `dataset_turns` already scoped into WP202a's done-definition (D12), rather than deferring it to WP202d.
+9. **Caps/quota — DECIDED: accept as proposed.** 4 MB file, 10,000 rows, 50 columns, 500 points per chart, 25 datasets / 50 MB per user. Plain config constants — adjustable later without a schema change.
+
+**New tracked item (not part of this design, surfaced during the Q1 read-back):** the owner wants attachments/premium features eventually gated behind a **monthly recurring subscription**. This reverses the explicit "no subscription" decision in [ADR 006](decisions/006-auth-billing-seams.md) and [ADR 020](decisions/020-credit-ledger-and-billing-gate.md) (one-time Stripe Checkout purchases only) and touches billing schema, Stripe integration, and gating logic across the whole product — a bigger change than this feature. **Parked as its own future brainstorm + ADR revision** (see open-questions for the tracking row). Attachments v1 ships on the existing one-time-credit mechanism and does not depend on it.
 
 **Assumptions the session marks inline (verify at build)**
 - Next 16 Server Action body-size config key and Vercel's 4.5 MB request cap (per `web/CLAUDE.md`: read the installed docs, never memory).
