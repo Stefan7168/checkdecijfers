@@ -349,3 +349,29 @@ export function redactedDatasetEnvelope(kind: DatasetTurnEnvelope['kind']): Reda
     redacted: true,
   };
 }
+
+/** A loaded `dataset_turns` row — the AuditRecord analog for this tier
+ * (src/answer/audit/types.ts's `AuditRecord`), read back by
+ * `getDatasetTurnById` (read.ts) for reconstruction (reconstruct.ts) and the
+ * verify script. `envelope` is either a live DatasetTurnEnvelope or, once
+ * redacted (retention.ts), a RedactedDatasetEnvelope — the two are
+ * distinguished by the `redacted` key, same as AuditRecord's response. */
+export interface DatasetTurnRecord {
+  id: number;
+  userId: string;
+  datasetId: number;
+  threadId: number;
+  requestId: string;
+  kind: 'chart' | 'clarification' | 'refusal';
+  question: string;
+  envelope: DatasetTurnEnvelope | RedactedDatasetEnvelope;
+  finalText: string;
+  instruction: ChartInstruction | null;
+  chartEmitted: boolean;
+  promptVersions: Record<string, number>;
+  llmCalls: unknown[];
+  inputTokens: number;
+  outputTokens: number;
+  latencyMs: number;
+  createdAt: string;
+}

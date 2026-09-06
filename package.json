@@ -36,6 +36,7 @@
     "validation:run": "node --env-file=.env scripts/run-validation-pass.ts",
     "audit:experience": "node --env-file=.env scripts/run-experience-audit.ts",
     "audit:verify": "node --env-file=.env scripts/verify-audit-rows.ts",
+    "attachments:verify": "node --env-file=.env scripts/verify-dataset-turns.ts",
     "gdpr:purge": "node --env-file=.env scripts/gdpr-purge.ts",
     "tables:evict": "node --env-file=.env scripts/table-eviction.ts",
     "trialpot:set": "node --env-file=.env scripts/trial-pot-set.ts",

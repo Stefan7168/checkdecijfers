@@ -15,18 +15,25 @@ backend for the attachments feature (ADR 037/WP202a), plus a cross-cutting produ
 (#206: English, not Dutch) and coordination with a parallel rebrand-planning session.** Full session
 entry: [status-archive.md](status-archive.md).
 
-**WP202a backend is fully built and tested; nothing is live.** 5 commits
+**WP202a backend is fully built and tested; nothing is live.** 5 session-84 commits
 (`1e090c3`→`01840ee`→`ce5dd5f`→`d60edb7`→`fd3df3b`), each its own full verification block +
 `/code-review` LOW pass (real bugs caught and fixed in every single slice — see
-[08-build-plan.md](08-build-plan.md)'s new WP202a section for the per-slice detail). Covers: the H1
+[08-build-plan.md](08-build-plan.md)'s WP202a section for the per-slice detail). Covers: the H1
 closed-vocabulary engine (parse→validate→execute→chart, the LLM can only pick from a supplied
 allowlist, never emit a value), DB persistence + the R8-analog audit trail + full GDPR self-service/
 purge, credit-ledger billing wiring, the Haiku instruct-prompt harness, and the turn orchestration
-tying all of it together. Migrations 026+027 are **FILE-ONLY**, never applied. Still needed before
-go-live: `reconstructDatasetTurn`, Server Actions, the UI (`DatasetChat`/`UserChartView`), the
-`ATTACHMENTS_ENABLED` flag, fixtures, and the docs §7 sweep — see the build-plan entry for the exact
-list. Design doc + the full 7-lens adversarial review:
-[session-briefs/2026-09-06-chat-with-data-design.md](session-briefs/2026-09-06-chat-with-data-design.md).
+tying all of it together. **Session 85 (still in progress) added `reconstructDatasetTurn` +
+`redactedTurnIntegrityReport`** (`src/attachments/reconstruct.ts`) + `getDatasetTurnById`
+(`read.ts`) + `scripts/verify-dataset-turns.ts` (`npm run attachments:verify`) — the R8/D9
+reconstruction check, mirroring the CBS side's own `reconstructionReport`/`verify-audit-rows.ts`.
+One real bug found+fixed while writing its tests (not in review): the module's local
+`stableStringify` didn't special-case `Date` — pg/PGlite hand back a live `Date` for `timestamptz`
+columns despite `UserDataset.createdAt` being typed `string`, so every chart turn's reconstruction
+falsely failed until fixed. Full backend suite green (2057/2057), `/code-review` LOW: 0 findings.
+Migrations 026+027 are **FILE-ONLY**, never applied. Still needed before go-live: Server Actions,
+the UI (`DatasetChat`/`UserChartView`), the `ATTACHMENTS_ENABLED` flag, fixtures, and the docs §7
+sweep — see the build-plan entry for the exact list. Design doc + the full 7-lens adversarial
+review: [session-briefs/2026-09-06-chat-with-data-design.md](session-briefs/2026-09-06-chat-with-data-design.md).
 
 **✅ #206 — product copy/UI text is now English, not Dutch (owner override, in-chat: "override, we
 are english now").** Applied same-session to CLAUDE.md's Conventions, [03-mvp-scope.md](03-mvp-scope.md),
@@ -46,12 +53,12 @@ terminal, still blocking only `deploy` — unrelated to this session's work, con
 gap on every one of this session's 5 CI runs), WP30c, #197's older follow-ups, #205 (a possible
 future subscription tier, explicitly parked), #208 (needs the owner's URL/path).
 
-**▶ NEXT, in order:** (a) continue WP202a — `reconstructDatasetTurn`, then Server Actions
-(`web/app/dataset-actions.ts`), then the UI (`DatasetChat`/`UserChartView`, wiring the two buttons
-already shipped in `chat.tsx`), then the flag + fixtures + docs sweep, THEN the owner-supervised
-migration apply + go-live — see [08-build-plan.md](08-build-plan.md)'s WP202a section for the exact
-remaining list; (b) the 3 `gh secret set` commands for Route B; (c) WP30c + #197's older
-follow-ups — owner-menu, no rush.
+**▶ NEXT, in order:** (a) continue WP202a — `reconstructDatasetTurn` done (session 85); next is
+Server Actions (`web/app/dataset-actions.ts`), then the UI (`DatasetChat`/`UserChartView`, wiring
+the two buttons already shipped in `chat.tsx`), then the flag + fixtures + docs sweep, THEN the
+owner-supervised migration apply + go-live — see [08-build-plan.md](08-build-plan.md)'s WP202a
+section for the exact remaining list; (b) the 3 `gh secret set` commands for Route B; (c) WP30c +
+#197's older follow-ups — owner-menu, no rush.
 
 
 **(Historical — the pause, 2026-08-15 to 2026-08-26.)** Project was paused ~2 months (owner decision) and the

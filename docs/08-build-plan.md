@@ -399,12 +399,20 @@ top of it), benchmark gate PASS (14/14 + 6/6 + 0 fabricated, CBS pipeline untouc
 typecheck clean, CI `gate` job green on every one of the 5 commits (`deploy` fails on all of them
 on the same pre-existing Route B Vercel-secrets gap tracked in [open-questions #132](open-questions.md) — unrelated to this WP).
 
+**Built this session (session 85):** `reconstructDatasetTurn` + `redactedTurnIntegrityReport`
+(`src/attachments/reconstruct.ts`, the R8/D9 analog — same `{ok, problems}` shape as the CBS
+side's `reconstructionReport`), `getDatasetTurnById` (`src/attachments/read.ts`, the AuditRecord
+analog reader), and `scripts/verify-dataset-turns.ts` (`npm run attachments:verify -- <fromId>
+<toId>`, mirrors `verify-audit-rows.ts`). One real bug found and fixed while writing this slice's
+own tests, not in review: the module's `stableStringify` (duplicated locally per ADR 001's module
+boundary, not imported from `src/answer/llm/client.ts`) didn't special-case `Date` — the pg/PGlite
+driver hands back a live `Date` for `timestamptz` columns despite `UserDataset.createdAt` being
+typed `string`, so a freshly-fetched dataset's `createdAt` serialized as `{}` and made EVERY chart
+turn falsely fail reconstruction. 12 new tests (`tests/attachments/reconstruct.test.ts` +
+`read.test.ts`), full backend suite green (2057/2057), typecheck clean, `/code-review` LOW: 0
+findings. Migrations 026/027 are still file-only — nothing here touches a real database.
+
 **Not yet built (WP202a's own remaining scope, in dependency order):**
-- `reconstructDatasetTurn` — the R8-analog reconstruction check for `dataset_turns` rows. No new
-  design needed: wire `buildUserChartSpec` + `templates.ts`'s `reconstructChartText` against a
-  stored turn's `instruction` + the dataset's current `cells`, matching the CBS-side
-  `reconstructionReport` shape (`{ok, problems}`), then a second `scripts/verify-audit-rows.ts`
-  report.
 - **Server Actions** (`web/app/dataset-actions.ts`) — `ingestFile`, `askDataset`,
   `decideDatasetFormat`, `deleteMyDataset`. The whole missing wire is one line:
   `chargeAndRunDataset(db, userId, requestId, () => respondToDatasetQuestion(db, {...}))`, plus
