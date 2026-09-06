@@ -28,13 +28,15 @@ export const DATASET_TURN_ENVELOPE_VERSION = 1 as const;
  * every export — the one line that keeps this tier honest about what it is
  * (D0/D11). Never combined with, or substituted for, the CBS attribution
  * line — a UserChartSpec has no `license`/`attribution` field to combine it
- * with in the first place. */
-export const USER_DATA_DISCLAIMER =
-  'Eigen data van de gebruiker — niet door checkdecijfers geverifieerd.' as const;
+ * with in the first place. English (session-brief §8 Q6, superseded by the
+ * later "product copy/UI text is English" decision, open-questions #206 —
+ * the original design's Dutch wording is recorded there for history). */
+export const USER_DATA_DISCLAIMER = 'User-uploaded data — not verified by checkdecijfers.' as const;
 
 /** Redaction placeholder for a dataset_turns row (D9/D13) — the D9 sentinel,
- * mirroring src/answer/audit/retention.ts's REDACTED_QUESTION_TEXT shape. */
-export const REDACTED_DATASET_TEXT = '[verwijderde vraag]' as const;
+ * mirroring src/answer/audit/retention.ts's REDACTED_QUESTION_TEXT shape.
+ * English, per the same #206 decision. */
+export const REDACTED_DATASET_TEXT = '[deleted question]' as const;
 
 export type SourceKind = 'file_csv' | 'file_tsv' | 'file_xlsx' | 'url_html' | 'file_pdf';
 

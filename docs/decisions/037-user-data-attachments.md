@@ -50,7 +50,8 @@ differently:**
    `src/query/derivations.ts`'s discipline.
 4. **H2 is a distinct type, not a style:** `UserChartSpec` cannot parse as a `ChartSpec`
    (`chartSpecSchema` is `strictObject`, no attribution/license fields exist) — `ChartView` refuses
-   it outright. Every user-data chart carries a permanent "Eigen data · niet geverifieerd" badge, a
+   it outright. Every user-data chart carries a permanent "Your data · unverified" badge (English —
+   session-brief §8 Q6, superseded by the later product-copy-is-English decision, #206), a
    dashed frame, no CBS source badge/StatLine link/CC BY line — baked into exports too.
 5. **File bytes live in Postgres `bytea` behind a `FileStore` interface in v1** (not Supabase
    Storage) — the product only needs the extracted cells to chart; keeping bytes in the same
