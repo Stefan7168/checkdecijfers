@@ -217,6 +217,58 @@ export async function reserveWebSearchDebit(
   });
 }
 
+/** Idempotent dataset-chat-turn debit: a repeated (userId, requestId) is a
+ * no-op (returns null), mirroring debitWebSearch's contract for the new
+ * 'dataset_cost' reason (migration 027, WP202a / ADR 037). Kept as its own
+ * function for the same reason debitWebSearch is separate from
+ * debitQuestion above — reserveDebit is the hot path, untouched by this
+ * design. Reserved by askDataset right before the instruct LLM call
+ * (debit-before-spend); refunded via compensate() with `auditAnswerId:
+ * null` always (dataset turns live in dataset_turns, never audit_answers —
+ * see LedgerReason's dataset_cost doc comment). CSV/TSV ingest itself is
+ * free and never calls this at all (ADR 037 D12). */
+export async function debitDataset(
+  db: Db,
+  userId: string,
+  requestId: string,
+  credits: number,
+): Promise<LedgerEntry | null> {
+  const { rows } = await db.query(
+    `insert into credit_transactions (user_id, delta, reason, request_id, note)
+     values ($1, $2, 'dataset_cost', $3, 'dataset-chat turn debit')
+     on conflict (user_id, request_id) where reason = 'dataset_cost' do nothing
+     returning id`,
+    [userId, -credits, requestId],
+  );
+  const row = rows[0];
+  return row === undefined ? null : { id: Number(row.id) };
+}
+
+export type ReserveDatasetDebitResult =
+  | { kind: 'debited'; entry: LedgerEntry }
+  | { kind: 'insufficient'; balance: number }
+  | { kind: 'duplicate' };
+
+/** The dataset-chat sibling of reserveDebit (WP202a / ADR 037): same
+ * per-user advisory-lock check-and-debit pattern, applied to the
+ * 'dataset_cost' reason instead of 'question_cost'. */
+export async function reserveDatasetDebit(
+  db: Db,
+  userId: string,
+  requestId: string,
+  required: number,
+): Promise<ReserveDatasetDebitResult> {
+  return db.withTransaction(async (tx) => {
+    await tx.query('select pg_advisory_xact_lock(hashtext($1))', [userId]);
+    const balance = await getBalance(tx, userId);
+    if (balance < required) {
+      return { kind: 'insufficient', balance };
+    }
+    const entry = await debitDataset(tx, userId, requestId, required);
+    return entry === null ? { kind: 'duplicate' } : { kind: 'debited', entry };
+  });
+}
+
 /** Idempotent compensation: a repeated call for the same debitId is a no-op —
  * a structural backstop (gate.ts's own request_id dedup on the debit is the
  * primary defense against re-entry; this protects against the gate itself

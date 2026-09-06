@@ -5,6 +5,7 @@
 // (gate.ts) -- nothing in src/answer/intent|compose, src/query, or src/chart
 // changes.
 import type { AuditedResponse } from '../answer/audit/index.ts';
+import type { DatasetTurnEnvelope } from '../attachments/types.ts';
 
 // 'onboarding_cost' added WP16 sub-part 2 (migration 012, ADR 026): the
 // 100-credit debit that funds an on-demand CBS table onboarding, alongside
@@ -13,13 +14,21 @@ import type { AuditedResponse } from '../answer/audit/index.ts';
 // add-on for a web-search-augmented turn — a sibling negative-delta,
 // request_id-scoped reason, one per (user, request), reversible by a
 // compensation exactly like the other two debits.
+// 'dataset_cost' added WP202a (migration 027, ADR 037): the "Eigen data"
+// attachments tier's dataset-chat turn debit — same negative-delta,
+// request_id-scoped, one-per-(user,request) shape as websearch_cost.
+// IMPORTANT (migration 027's own note, a mistake the review caught once
+// already): a compensation reversing a dataset_cost debit must always pass
+// auditAnswerId: null — dataset turns live in dataset_turns, never
+// audit_answers, so that FK has no valid target for them.
 export type LedgerReason =
   | 'signup_grant'
   | 'purchase'
   | 'question_cost'
   | 'compensation'
   | 'onboarding_cost'
-  | 'websearch_cost';
+  | 'websearch_cost'
+  | 'dataset_cost';
 
 /** Phase 1 note (docs/08-build-plan.md WP13, open-questions #4): every
  * current ANSWER is 'simple' -- no code path yet produces 'analysis'/'heavy'.
@@ -34,8 +43,27 @@ export type LedgerReason =
  * price of the web-search add-on, read by web/app/actions.ts when the
  * "Internet" chip is on and charged as a separate 'websearch_cost' debit. It
  * is well below 'simple', so the clarification-price trigger (migration 008,
- * which only relates 'clarification' to 'simple') is unaffected. */
-export type ActionClass = 'simple' | 'analysis' | 'heavy' | 'clarification' | 'web_addon';
+ * which only relates 'clarification' to 'simple') is unaffected.
+ *
+ * 'dataset_turn' (WP202a, migration 027, ADR 037): the price of one
+ * dataset-chat turn (askDataset), charged as a 'dataset_cost' debit.
+ * 'dataset_ingest' (same migration): a FUTURE paid ingest kind only
+ * (PDF/HTML) — v1's free CSV/TSV ingest never looks this row up at all
+ * (ADR 037 D12: "free" means skip the reserve call entirely, not a $0
+ * price row, since the ledger's own CHECK forbids a non-positive credits
+ * value). Settlement for a dataset-chat turn reuses the SAME
+ * 'clarification' price as the CBS side (ADR 037 D12's literal wording:
+ * "compensates down to the flat `clarification` price") — a deliberate
+ * simplification, not yet a dataset-specific clarification price; revisit
+ * if the owner wants them priced differently. */
+export type ActionClass =
+  | 'simple'
+  | 'analysis'
+  | 'heavy'
+  | 'clarification'
+  | 'web_addon'
+  | 'dataset_turn'
+  | 'dataset_ingest';
 
 export interface ActionClassPrice {
   actionClass: ActionClass;
@@ -63,6 +91,27 @@ export type GatedResponse =
   // src/billing/gate.ts, where the compensation amount is already known.
   // Lets the chat UI show a per-answer cost without a second DB read.
   | ({ kind: 'ok'; netCost: number } & AuditedResponse)
+  | { kind: 'unauthenticated' }
+  | { kind: 'duplicate_request' }
+  | { kind: 'insufficient_credits'; balance: number; required: number };
+
+/** The dataset-chat sibling of AuditedResponse (WP202a / ADR 037) —
+ * src/attachments/audit.ts's `writeTurn` result plus the envelope it wrote
+ * (or would have written). `datasetGone: true` (the D9 delete-vs-write
+ * race fix) means NO turn was written at all — src/billing/dataset-gate.ts
+ * treats this the same as a full refusal for billing purposes: nothing
+ * was delivered, full refund, regardless of what `envelope.kind` says. */
+export interface AuditedDatasetTurn {
+  envelope: DatasetTurnEnvelope;
+  auditId: number | null;
+  datasetGone: boolean;
+}
+
+/** The dataset-chat sibling of GatedResponse — src/billing/dataset-gate.ts's
+ * result. Same shape/purpose as GatedResponse, one layer outside
+ * AuditedDatasetTurn. */
+export type GatedDatasetResponse =
+  | ({ kind: 'ok'; netCost: number } & AuditedDatasetTurn)
   | { kind: 'unauthenticated' }
   | { kind: 'duplicate_request' }
   | { kind: 'insufficient_credits'; balance: number; required: number };

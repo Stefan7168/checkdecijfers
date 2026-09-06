@@ -5,10 +5,12 @@ import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import {
   compensate,
+  debitDataset,
   debitQuestion,
   debitWebSearch,
   getActionClassPrice,
   getBalance,
+  reserveDatasetDebit,
   reserveDebit,
   reserveOnboardingDebit,
   reserveWebSearchDebit,
@@ -797,6 +799,74 @@ describe('debitWebSearch / reserveWebSearchDebit — the web add-on sibling (WP1
         );
         expect(Number(rows[0]!.c)).toBe(0);
       });
+    });
+  });
+});
+
+describe('debitDataset / reserveDatasetDebit — the attachments-tier sibling (WP202a, migration 027, ADR 037)', () => {
+  it('debitDataset is idempotent per (user, request): a repeated requestId returns null, never a second charge', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      const requestId = randomUUID();
+      const first = await debitDataset(db, userId, requestId, 10);
+      const second = await debitDataset(db, userId, requestId, 10);
+      expect(first).not.toBeNull();
+      expect(second).toBeNull();
+      expect(await getBalance(db, userId)).toBe(-10);
+    });
+  });
+
+  it('reserveDatasetDebit debits, reports insufficient, and dedups a repeated requestId', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      await db.query('update signup_grant_config set credits = 30');
+      await db.query('select public.grant_signup_credits($1)', [userId]); // +30
+      const requestId = randomUUID();
+      const first = await reserveDatasetDebit(db, userId, requestId, 10);
+      expect(first.kind).toBe('debited');
+      expect(await getBalance(db, userId)).toBe(20);
+      const second = await reserveDatasetDebit(db, userId, requestId, 10);
+      expect(second).toEqual({ kind: 'duplicate' });
+      expect(await getBalance(db, userId)).toBe(20);
+      await reserveDebit(db, userId, randomUUID(), 15); // balance -> 5
+      const third = await reserveDatasetDebit(db, userId, randomUUID(), 10);
+      expect(third).toEqual({ kind: 'insufficient', balance: 5 });
+    });
+  });
+
+  it('a question_cost and a dataset_cost debit for the SAME (user, requestId) coexist — different reasons, not a conflict', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      await db.query('update signup_grant_config set credits = 100');
+      await db.query('select public.grant_signup_credits($1)', [userId]); // +100
+      const requestId = randomUUID();
+      const questionDebit = await reserveDebit(db, userId, requestId, 20);
+      const datasetDebit = await reserveDatasetDebit(db, userId, requestId, 10);
+      expect(questionDebit.kind).toBe('debited');
+      expect(datasetDebit.kind).toBe('debited');
+      expect(await getBalance(db, userId)).toBe(70); // 100 - 20 - 10
+    });
+  });
+
+  it('a compensation against a dataset_cost debit inserts (trigger widened, migration 027) and is idempotent', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      const debit = await debitDataset(db, userId, randomUUID(), 10);
+      const first = await compensate(db, userId, debit!.id, 10, null);
+      const second = await compensate(db, userId, debit!.id, 10, null);
+      expect(first).not.toBeNull();
+      expect(second).toBeNull(); // one-compensation-per-debit
+      expect(await getBalance(db, userId)).toBe(0);
+    });
+  });
+
+  it('IMPORTANT (migration 027\'s own warning): a dataset_cost compensation with a non-null auditAnswerId is rejected by the real FK, never silently mislinked', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      const debit = await debitDataset(db, userId, randomUUID(), 10);
+      // 999999 is not a real audit_answers id — dataset_gate.ts must always
+      // pass null here; this proves the FK itself is the backstop.
+      await expect(compensate(db, userId, debit!.id, 10, 999999)).rejects.toThrow();
     });
   });
 });
