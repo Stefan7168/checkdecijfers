@@ -193,6 +193,25 @@ describe('dataset_turns', () => {
     });
   });
 
+  it('code-review finding, session 84: rejects a second turn for the same request_id (unique index, defense-in-depth alongside the ledger\'s own idempotency guard)', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      const datasetId = await insertDataset(db, userId);
+      const threadId = await insertThread(db, userId);
+      const requestId = randomUUID();
+      const insertOne = () =>
+        db.query(
+          `insert into dataset_turns
+             (user_id, dataset_id, thread_id, request_id, kind, question, envelope, final_text,
+              chart_emitted, prompt_versions, llm_calls)
+           values ($1, $2, $3, $4, 'chart', 'q', '{}'::jsonb, 't', true, '{}'::jsonb, '[]'::jsonb)`,
+          [userId, datasetId, threadId, requestId],
+        );
+      await insertOne();
+      await expect(insertOne()).rejects.toThrow();
+    });
+  });
+
   it('rejects a thread_id that does not exist (FK enforced)', async () => {
     await withDb(async (db) => {
       const userId = randomUUID();

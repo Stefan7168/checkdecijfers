@@ -117,9 +117,15 @@ end $$;
 
 create index dataset_turns_by_dataset on dataset_turns (dataset_id, created_at);
 create index dataset_turns_by_thread on dataset_turns (thread_id, created_at);
--- The reconstruction/verify-audit-rows read path (D9) and history dashboards
--- look turns up by their own request_id.
-create index dataset_turns_by_request on dataset_turns (request_id);
+-- Code-review finding, session 84 (this migration was FILE-ONLY, never
+-- applied anywhere, so fixed here directly rather than via a follow-up
+-- migration): UNIQUE, not just an index — defense-in-depth against a
+-- duplicate audit row for one logical dataset-chat turn (mirroring
+-- credit_transactions_one_dataset_per_request, migration 027's ledger-side
+-- idempotency guard). writeTurn's (audit.ts) fail-closed fallback insert
+-- path is the one place a retried insert for the same request_id could
+-- otherwise slip through with no schema-level guard at all.
+create unique index dataset_turns_one_per_request on dataset_turns (request_id);
 
 -- --------------------------------------------------------------------------
 -- chat_threads.dataset_id — additive, nullable: NULL means "a CBS thread",
