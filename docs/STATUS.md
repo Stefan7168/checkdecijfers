@@ -42,7 +42,10 @@ neither fix addressed (quarter-period word order, a duplicate-unit-mention bug).
 
 **✅ #162 CLOSED (Stefan, in-chat: "Accept as final on #162").** Round 5 stands as the experiment's final
 verdict. `SLOT_PHRASING_ENABLED` stays unset/off PERMANENTLY (no round 6); the ADR-draft is NOT promoted.
-`experiment/162-slot-filling-ab` stays parked, local-only, unmerged, as documented history. Updated in the
+`experiment/162-slot-filling-ab` stays parked as a plain branch (never pushed, all 5 rounds' history intact)
+— its worktree was removed now that the experiment is closed, matching the "no stray worktrees" wrap-up
+discipline; the redundant auto-generated `worktree-agent-ad8ec20c3cba7eebd` branch (a pure ancestor of the
+experiment branch, confirmed via `git merge-base --is-ancestor` before deleting) went with it. Updated in the
 same change: [open-questions.md](open-questions.md) #162, the [04-architecture.md](04-architecture.md)
 capability row, and [RUNBOOK.md](RUNBOOK.md)'s `SLOT_PHRASING_ENABLED` entry.
 

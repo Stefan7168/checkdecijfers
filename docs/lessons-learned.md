@@ -6,6 +6,63 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 83 — 2026-09-06, owner present — a false-positive archive gap corrected, #162 closed after a worse round 5
+
+Full narrative: [status-archive.md](status-archive.md) session-83 entry.
+
+- **Session 82's "44-58 archive gap" was itself wrong — its own grep only checked ONE heading format, and
+  `status-archive.md` uses three.** Before spending any effort backfilling, this session re-verified the
+  claim rather than trusting it (per CLAUDE.md's own rule: "before telling the owner something isn't
+  archived, check first — a recorded finding outranks nothing, but it's still worth re-deriving from the
+  source"). Session 82's check matched only `^\*\*Last updated` headers; two of the "missing" entries used
+  different forms the archive has used for a while — a bare `**DATE (session N — ...)**` (session 50) and a
+  `**Previous (DATE, ...)**` (the design marathon) — both fully present, just not matching that one regex.
+  **The generalizable lesson: a grep-based "X is missing" claim is only as strong as the pattern it searched
+  for — before concluding something absent, either search by CONTENT (a distinctive phrase, a commit hash)
+  rather than by assumed heading shape, or explicitly enumerate every heading format the target file is
+  known to use.** This is the second time in this file's history a session's own diagnostic method was the
+  actual bug (see session 80/81's imprecise-reason lesson, one entry below) — worth treating "I grepped and
+  found nothing" as a hypothesis to spot-check by content, not a conclusion, especially before proposing a
+  multi-hour remediation task (the backfill session 82 recommended would have been wasted work chasing a
+  gap that didn't exist).
+- **Before spending on a live-LLM re-recording, reading the actual script beat extrapolating from the last
+  measurement's headline number.** Asked the owner to authorize "#162 round 5 (~$0.20)" — a number pattern-
+  matched from round 4's JUDGE cost alone. Before actually spending anything, reading
+  `scripts/ab-162-experiment.ts` and the last full recording report showed a fresh FULL re-recording is
+  required whenever the prompt changes (not just re-judging existing bodies), at ~$0.46 on top of the judge's
+  ~$0.17 — corrected the estimate to ~$0.60 in the transcript before running anything, rather than either
+  silently 3×-ing the quoted spend or stopping to re-ask for an amount that (once checked) sat comfortably
+  inside the experiment's own pre-established ~€1-2 budget. Generalizable: a spend estimate quoted from
+  memory of a DIFFERENT prior measurement (the judge run) is not the same claim as the cost of the ACTUAL
+  next action (recording + judging) — check the mechanism before quoting a number attached to a permission
+  ask, not just before spending past it.
+- **A hard-gate regression after a change is not evidence the change caused it — tracing every failure to
+  its exact mechanism before drawing that conclusion mattered here.** Round 5's fresh recording showed 4
+  template-falls versus round 4's baseline of ~0-1, which could easily have been misread as "the new prompt
+  rules broke something." Reading the actual failing fixture bodies showed all four were the SAME digit leak
+  (the model echoing "1 januari" from a measure's own `definitionLabel` text, unrelated to either of the two
+  new rules) — a pre-existing, already-documented residual (A068, rounds 3-4) that simply resampled
+  unluckily this round. Proceeding to the judge only after confirming that, rather than either blocking on
+  an apparent-but-unconfirmed regression or silently ignoring a real hard-gate count change, is the same
+  discipline as `systematic-debugging`'s "read the error, don't guess" — applied here to "diagnose before
+  attributing," not just "diagnose before fixing."
+- **A hook that reads a UserPromptSubmit's `prompt` field cannot currently tell a genuine owner message from
+  the session's own `ScheduleWakeup`-injected continuation text — and this session hit that gap twice.**
+  `.claude/hooks/wrapup-detect.sh` fired `[SESSION WRAP-UP SIGNAL DETECTED]` twice on this session's OWN
+  scheduled check-in prompts (both contained the literal words "wrap up" — the session's own phrasing for
+  "conclude this CI check," not an owner signal), the same false-positive SHAPE session 38 hit from a
+  kickoff-prompt quote (see the session-38 entry, [session-briefs/2026-07-18-sparring-wrapup-handoff.md] era)
+  though a DIFFERENT trigger source. Both times the false positive was harmless (advisory only, correctly
+  recognized in the transcript and not acted on), so no fix was attempted blind — the hook's JSON input
+  schema wasn't independently confirmed to carry a field distinguishing "typed by the owner" from "injected
+  by ScheduleWakeup," and guessing at that schema live risked breaking a hook that already has real,
+  hard-won false-positive suppression logic (the first-message marker, the paired-cue matching). **Recorded
+  as a genuine open item, not fixed this session:** the next session that touches this hook should check
+  whether the harness's `UserPromptSubmit` payload includes a source/origin field before adding a
+  ScheduleWakeup-aware exclusion — until then, the working pattern is what this session did both times:
+  recognize the false positive against CLAUDE.md's actual trigger definition ("the OWNER signals"), state
+  that plainly, and continue rather than running a needless full ritual mid-task.
+
 ## Session 82 — 2026-09-06, owner present — PR #6 merged, #203 fixed at the root, an archive gap found and left alone
 
 Full narrative: [status-archive.md](status-archive.md) session-82 entry.

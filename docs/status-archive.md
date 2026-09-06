@@ -1,9 +1,9 @@
 # STATUS archive — the session log
 
 **Session 83 (2026-09-06, fresh session opened from the session-82 kickoff doc, owner present throughout) —
-THREE OF THE FIVE SESSION-82 NEXT-LIST ITEMS RESOLVED: THE DEAD WORKTREE CLEANED UP, THE "44-58 ARCHIVE GAP"
-FOUND TO BE A FALSE POSITIVE (CORRECTED, NOT BACKFILLED), AND #162 ROUND 5 RUN (STILL FAILS BOTH GATES,
-WORSE THAN ROUND 4).**
+THE DEAD WORKTREE CLEANED UP, THE "44-58 ARCHIVE GAP" FOUND TO BE A FALSE POSITIVE (CORRECTED, NOT
+BACKFILLED), AND #162 RUN FOR A ROUND 5 (STILL FAILED BOTH GATES, WORSE THAN ROUND 4) THEN CLOSED
+PERMANENTLY BY THE OWNER ("Accept as final").**
 
 1. **Verified session-82's handoff against reality before acting** (`date`, `git log`, `gh pr list --state
    open` [empty, #6 merged], `gh run view --json jobs` [`gate` success / `deploy` failure, the known Route B
@@ -106,6 +106,23 @@ WORSE THAN ROUND 4).**
    build-plan.md`'s #162 mentions are historical session-54/55 narrative, not a live tracker for this
    question, and were left untouched. No code change — the branch/flag disposition was already the
    pre-committed default outcome of "accept as final."
+9. **`experiment/162-slot-filling-ab`'s worktree removed now that the experiment is permanently closed**
+   (`git worktree remove`, branch itself untouched — kept per the pre-committed "not merged, not deleted"
+   rule, still holding all 5 rounds' commits, just no longer checked out anywhere). While there: also deleted
+   the redundant auto-generated `worktree-agent-ad8ec20c3cba7eebd` branch, confirmed via `git merge-base
+   --is-ancestor` to be a pure ancestor of `experiment/162-slot-filling-ab` (no unique history) before
+   deleting — the same pattern used earlier this session for `agent-aa024a353bfdc08d5`'s equivalent orphan.
+   `git worktree list` now shows only `main`.
+10. **Full wrap-up ritual run** (owner: "wrap up", after a brief false-positive from `wrapup-detect.sh`
+    firing on the session's own scheduled check-in text rather than a real owner signal — recognized and
+    worked through rather than either ignored or over-applied mid-task). Lessons appended to
+    [lessons-learned.md](lessons-learned.md) (4 entries: the archive-gap methodology lesson, the
+    spend-estimate-correction lesson, the hard-gate-attribution lesson, and the hook false-positive —
+    recorded as an open item, not fixed blind). Memory updated: `project_session82_state.md`'s archive-gap
+    claim corrected in place (marked wrong, not deleted — struck through, not rewritten as if it were never
+    said), `project_session83_state.md` created, `MEMORY.md` index updated. This entry itself extended
+    (items 8-10) rather than superseded, since the session continued past its first "wrap up" tool call
+    (checking CI) into the genuine owner-signaled close.
 
 **Session 82 (2026-09-06, same conversation as session 81, continuing after its wrap-up — owner present
 throughout: "merge PR #6" then "continue being productive autonomously") — PR #6 MERGED, #203 FIXED AT THE
