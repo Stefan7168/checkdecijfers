@@ -31,6 +31,16 @@ Note: shadcn/ui is chosen on merits (copy-in components, Tailwind-native, Radix 
 - Every piece swaps cheaply behind its usage site; only the four constraints above are expensive to violate.
 - shadcn components are copied into the repo (not a dependency), so upstream churn is opt-in — fits the episodic-session maintenance model ([CLAUDE.md](../../CLAUDE.md) conventions).
 
+## As-built note (2026-09-06, session 83)
+
+**The shadcn/ui + Radix half of this plan was never executed.** Confirmed directly: no `components.json`,
+no `@radix-ui/*` in `web/package.json`/`package-lock.json`, no `components/ui/` directory. The session-51
+papier-en-inkt huisstijl (`docs/12-huisstijl.md`) shipped as a hand-rolled Tailwind implementation instead —
+Recharts and zod (server-side) are the only pieces of this ADR's named stack actually in use. No other ADR
+records a decision to drop the shadcn/Radix half; it was simply never picked back up. Research on whether to
+finish executing this ADR now (re-themed to the huisstijl tokens) is in
+[open-questions #204](../open-questions.md) / [session-briefs/2026-09-06-frontend-component-research.md](../session-briefs/2026-09-06-frontend-component-research.md) — not decided, pending the owner.
+
 ## Revisit triggers
 
 - Browse-page performance budget blown (JS payload / Core Web Vitals) → strip client components from that surface first, question the kit second.
