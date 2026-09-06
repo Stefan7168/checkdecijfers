@@ -116,7 +116,7 @@ describe('Workspace — WP135 shell (flag on)', () => {
   });
 
   it('renders the server-provided threads and the Nieuwe chat button', () => {
-    renderWorkspace([{ id: 1, title: 'Inflatie 2024', lastActivityAt: new Date().toISOString() }]);
+    renderWorkspace([{ id: 1, title: 'Inflatie 2024', lastActivityAt: new Date().toISOString(), kind: 'cbs' }]);
     expect(screen.getByRole('button', { name: 'Nieuwe chat' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Inflatie 2024' })).toBeInTheDocument();
   });

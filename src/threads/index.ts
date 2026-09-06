@@ -28,11 +28,16 @@ import { REDACTED_QUESTION_TEXT } from '../answer/audit/retention.ts';
 import type { ComposedResponse } from '../answer/respond/types.ts';
 
 /** Sidebar entry: identity + read-time-derived title + last activity. No text
- * is stored — `title` is computed from the audit rows every read. */
+ * is stored — `title` is computed from the audit rows every read. `kind`
+ * (ADR 037 D10) is REQUIRED, not optional as the design doc's own sketch had
+ * it — `listThreads` is this type's one producer and always knows which kind
+ * a row is, so an always-populated field is simpler and less error-prone
+ * than an optional one only some call sites remember to set. */
 export interface ThreadSummary {
   id: number;
   title: string;
   lastActivityAt: string;
+  kind: 'cbs' | 'dataset';
 }
 
 /** One thread turn, read back for replay/resume (getThreadRows). The full
@@ -185,17 +190,26 @@ export async function validateDatasetThreadOwnership(
   return rows.length === 0 ? null : threadId;
 }
 
-/** The sidebar list: a user's threads, most-recent-activity first. Each title
- * is the first NON-redacted row's question (created_at asc, id asc), truncated
- * in TS. A thread whose every row is redacted (title source NULL) is filtered
- * OUT — self-service deletion and the 2-year purge empty the sidebar with zero
- * new machinery (ADR 033 D2). Bound parameters; scoped to `userId`. */
+/** The sidebar list: a user's threads, most-recent-activity first. A CBS
+ * thread's title is the first NON-redacted audit row's question
+ * (created_at asc, id asc); a dataset thread's title (ADR 037 D10) is its
+ * dataset's `display_name` — NULL for one still redacted (status <>
+ * 'redacted' in the bind, not just a join condition), so a fully-redacted
+ * dataset thread is filtered OUT exactly like a fully-redacted CBS thread
+ * (ADR 033 D2's invariant, extended to the new kind, not narrowed to it).
+ * Truncated in TS. Bound parameters throughout; scoped to `userId` —
+ * **fixed in review**: the dataset-title subselect re-binds `user_id` on
+ * `user_datasets` too, even though `t.dataset_id` already came from a
+ * row scoped by the outer WHERE — every existing subselect in this
+ * function already re-binds `user_id` under an already-scoped join as
+ * deliberate defense-in-depth, and the new one follows the same rule. */
 export async function listThreads(db: Db, userId: string, limit = 50): Promise<ThreadSummary[]> {
   const { rows } = await db.query(
     `select
        t.id,
        t.last_activity_at,
-       (
+       t.dataset_id is not null as is_dataset,
+       case when t.dataset_id is null then (
          select a.question
          from audit_answers a
          where a.thread_id = t.id
@@ -203,7 +217,14 @@ export async function listThreads(db: Db, userId: string, limit = 50): Promise<T
            and a.question <> $2
          order by a.created_at asc, a.id asc
          limit 1
-       ) as title_source
+       ) end as cbs_title_source,
+       case when t.dataset_id is not null then (
+         select ud.display_name
+         from user_datasets ud
+         where ud.id = t.dataset_id
+           and ud.user_id = $1::uuid
+           and ud.status <> 'redacted'
+       ) end as dataset_title_source
      from chat_threads t
      where t.user_id = $1::uuid
      order by t.last_activity_at desc, t.id desc
@@ -212,11 +233,18 @@ export async function listThreads(db: Db, userId: string, limit = 50): Promise<T
   );
   const summaries: ThreadSummary[] = [];
   for (const row of rows) {
-    // title_source NULL ⇒ the thread has no non-redacted row (fully redacted,
-    // or — defensively — no rows at all): filter it out of the sidebar.
-    if (row.title_source === null || row.title_source === undefined) continue;
-    const title = String(row.title_source).slice(0, TITLE_MAX_LENGTH);
-    summaries.push({ id: Number(row.id), title, lastActivityAt: toIso(row.last_activity_at) });
+    const isDataset = Boolean(row.is_dataset);
+    const titleSource = isDataset ? row.dataset_title_source : row.cbs_title_source;
+    // title source NULL ⇒ the thread has no non-redacted content to show
+    // (fully redacted, or — defensively — no rows at all): filter it out.
+    if (titleSource === null || titleSource === undefined) continue;
+    const title = String(titleSource).slice(0, TITLE_MAX_LENGTH);
+    summaries.push({
+      id: Number(row.id),
+      title,
+      lastActivityAt: toIso(row.last_activity_at),
+      kind: isDataset ? 'dataset' : 'cbs',
+    });
   }
   return summaries;
 }

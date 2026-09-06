@@ -431,11 +431,32 @@ suite green (638/638), both typechecks clean, a real `next build` clean, `/code-
 findings both slices. Migrations 026/027 still file-only; nothing here is wired into any UI or
 reachable by a real request yet (no route calls these actions).
 
+**UI slice, in progress (session 85, third slice) — D10's thread-kind dispatch, first
+increment:** `ThreadSummary.kind: 'cbs' | 'dataset'` (`src/threads/index.ts`) — REQUIRED, not
+optional as the design doc's own sketch had it (one producer, `listThreads`, always knows which
+kind a row is). `listThreads`' SQL gained a dataset-title subselect (`user_datasets.display_name`,
+re-binding `user_id` under the join per this function's own defense-in-depth convention, `status
+<> 'redacted'` so a fully-redacted dataset thread is filtered out exactly like a fully-redacted
+CBS thread). One real bug caught by the test suite, not review: the new subselect's `ud.user_id =
+$1` needed an explicit `::uuid` cast (`user_datasets.user_id` is `uuid`; PGlite/pg infer `$1` as
+`text` without it) — `operator does not exist: uuid = text`, fixed before commit.
+`ThreadSidebar` gained its FIRST-EVER dedicated test file (`thread-sidebar.test.tsx`, 6 tests —
+a design-doc-named gap) pinning a paperclip prefix for `kind: 'dataset'` threads and BYTE-IDENTICAL
+(no prefix) rendering for `kind: 'cbs'` ones. Full backend suite green (2073/2073), full web suite
+green (644/644), both typechecks + a real `next build` clean, `/code-review` LOW: 0 findings.
+**Not yet built for the thread-dispatch leg:** `loadMyThread`'s CBS/dataset dispatch (needs
+`replayDatasetTurns` + a redaction-aware dataset-turn reader — D10's 4 "check redaction FIRST"
+new-reader call-outs are all still open), and `Workspace`'s `Handoff` discriminated union to
+mount `DatasetChat` instead of `Chat`.
+
 **Not yet built (WP202a's own remaining scope, in dependency order):**
-- **UI** — `DatasetChat`, `UserChartView`, wiring the two disabled buttons already shipped in
-  `web/components/chat.tsx` (`01a4502`, this session), `Workspace`/`ThreadSidebar`/`VisualDock`
-  changes per the design doc's D10 (with the byte-identity pins the adversarial review called
-  for — exact-value comparison, not a weak `queryByRole(...).toBeNull()`).
+- **UI, the rest of it** — `chart.tsx`'s `PlottableSpec` type-only refactor (D11, zero runtime
+  change), `UserChartView`, `DatasetChat`, wiring the two disabled buttons already shipped in
+  `web/components/chat.tsx` (`01a4502`, session 84), the `Workspace` `Handoff` dispatch +
+  `loadMyThread`/`replayDatasetTurns` backend leg (D10, see above), `VisualDock`'s `userChart`
+  branch (its own first-ever dedicated test file, matching what `ThreadSidebar` just got) — with
+  the byte-identity pins the adversarial review called for throughout (exact-value comparison,
+  never a weak `queryByRole(...).toBeNull()`).
 - `ATTACHMENTS_ENABLED` flag (the WP129/WP135 dormancy pattern), fixtures
   (`tests/fixtures/llm/attachments/`, `attachments:record`/`:eval`), the §7 docs sweep (
   `docs/05-data-rules.md`'s new U-row section, `docs/09-pricing.md`, `docs/13`,

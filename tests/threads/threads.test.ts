@@ -12,10 +12,14 @@ import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import {
   attachOrCreateThread,
+  createDatasetThread,
   getThreadRows,
   listThreads,
   validateThreadOwnership,
 } from '../../src/threads/index.ts';
+import { deleteOneDataset } from '../../src/attachments/retention.ts';
+import { insertDataset } from '../../src/attachments/store.ts';
+import type { DatasetProfile } from '../../src/attachments/types.ts';
 import { chargeAndRun } from '../../src/billing/gate.ts';
 import { compensate, debitOnboarding, debitWebSearch, getActionClassPrice } from '../../src/billing/ledger.ts';
 import { applyPricingDefaults } from '../../src/billing/pricing-apply.ts';
@@ -293,6 +297,90 @@ describe('listThreads — read-time title derivation + redaction filter (pin 1 +
       await insertRow(db, otherId, { kind: 'answer', question: 'niet van mij', threadId: theirs });
 
       expect(await listThreads(db, userId)).toEqual([]);
+    });
+  });
+});
+
+const MINIMAL_PROFILE: DatasetProfile = { columns: [], rowCount: 0 };
+
+async function seedDataset(db: Db, userId: string, displayName: string): Promise<number> {
+  const dataset = await insertDataset(db, {
+    userId,
+    sourceKind: 'file_csv',
+    displayName,
+    sourceUrl: null,
+    mimeSniffed: 'text/csv',
+    byteSize: 10,
+    contentSha256: 'deadbeef',
+    requestId: null,
+    fileBytes: null,
+    cells: [['a'], ['1']],
+    profile: MINIMAL_PROFILE,
+    status: 'ready',
+  });
+  return dataset.id;
+}
+
+describe('listThreads — dataset threads (ADR 037 D10)', () => {
+  it('a CBS thread carries kind "cbs", byte-for-byte unchanged otherwise', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      const threadId = await createThread(db, userId);
+      await insertRow(db, userId, { kind: 'answer', question: 'een CBS-vraag', threadId });
+      const [entry] = await listThreads(db, userId);
+      expect(entry).toEqual({
+        id: threadId,
+        title: 'een CBS-vraag',
+        lastActivityAt: entry!.lastActivityAt,
+        kind: 'cbs',
+      });
+    });
+  });
+
+  it('a dataset thread titles from the dataset display_name and carries kind "dataset"', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      const datasetId = await seedDataset(db, userId, 'verkoop-2024.csv');
+      const threadId = await createDatasetThread(db, userId, datasetId);
+      const [entry] = await listThreads(db, userId);
+      expect(entry).toMatchObject({ id: threadId, title: 'verkoop-2024.csv', kind: 'dataset' });
+    });
+  });
+
+  it('a fully-redacted dataset thread is filtered out, exactly like a fully-redacted CBS thread', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      const datasetId = await seedDataset(db, userId, 'te-verwijderen.csv');
+      const threadId = await createDatasetThread(db, userId, datasetId);
+      expect((await listThreads(db, userId)).map((t) => t.id)).toContain(threadId);
+      await deleteOneDataset(db, userId, datasetId);
+      expect((await listThreads(db, userId)).map((t) => t.id)).not.toContain(threadId);
+    });
+  });
+
+  it('CROSS-USER: a dataset thread never appears for a different user', async () => {
+    await withDb(async (db) => {
+      const owner = randomUUID();
+      const other = randomUUID();
+      const datasetId = await seedDataset(db, owner, 'privé.csv');
+      await createDatasetThread(db, owner, datasetId);
+      expect(await listThreads(db, other)).toEqual([]);
+    });
+  });
+
+  it('a mix of CBS and dataset threads sorts by last_activity_at like any other threads', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      const cbsThread = await createThread(db, userId, '2026-01-01T00:00:00Z');
+      await insertRow(db, userId, { kind: 'answer', question: 'oudste', threadId: cbsThread, createdAt: '2026-01-01T00:00:00Z' });
+      const datasetId = await seedDataset(db, userId, 'nieuwste.csv');
+      const datasetThreadId = await createDatasetThread(db, userId, datasetId);
+
+      const list = await listThreads(db, userId);
+      expect(list.map((t) => ({ id: t.id, kind: t.kind }))).toEqual([
+        { id: datasetThreadId, kind: 'dataset' },
+        { id: cbsThread, kind: 'cbs' },
+      ]);
     });
   });
 });

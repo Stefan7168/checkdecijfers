@@ -88,8 +88,19 @@ export function ThreadSidebar({
                     ? 'bg-paper-sunken text-ink'
                     : 'text-ink-soft hover:bg-paper-sunken')
                 }
-                title={thread.title}
+                title={thread.kind === 'dataset' ? `Your data: ${thread.title}` : thread.title}
               >
+                {/* ADR 037 D10: a dataset thread's ONLY visual distinction here
+                  * is this prefix — everything else about the row (className,
+                  * disabled state, click behavior) is identical to a CBS
+                  * thread's. Byte-identical pin (thread-sidebar.test.tsx): a
+                  * `kind: 'cbs'` thread renders with NO prefix at all, not an
+                  * empty/hidden one. */}
+                {thread.kind === 'dataset' && (
+                  <span aria-hidden="true" className="mr-1">
+                    📎
+                  </span>
+                )}
                 {thread.title}
               </button>
             ))}

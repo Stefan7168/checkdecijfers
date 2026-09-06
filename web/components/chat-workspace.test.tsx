@@ -310,7 +310,7 @@ describe('Chat — WP135 stale-submit generation guard (blocker fix)', () => {
 
 // The UX belt: the sidebar's switch controls are inert while a submit runs.
 describe('ThreadSidebar — WP135 disabled while a submit is in flight (blocker fix)', () => {
-  const threads: ThreadSummary[] = [{ id: 1, title: 'Eerste gesprek', lastActivityAt: new Date().toISOString() }];
+  const threads: ThreadSummary[] = [{ id: 1, title: 'Eerste gesprek', lastActivityAt: new Date().toISOString(), kind: 'cbs' }];
 
   it('disables Nieuwe chat + thread rows when busy, and re-enables them when idle', () => {
     const onSelect = vi.fn();
