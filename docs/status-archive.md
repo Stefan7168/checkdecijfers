@@ -97,6 +97,15 @@ WORSE THAN ROUND 4).**
      the decision stays the owner's.
 7. **STATUS.md top block rewritten** to session 83's state (worktree cleanup, the archive-gap correction,
    the #162 round-5 result); this entry prepended here per the session-41 convention.
+8. **#162 CLOSED, same session, in-chat: "Accept as final on #162".** Round 5 stands as the experiment's
+   final verdict, per the session's own recommendation. Updated in the same change: open-questions.md #162
+   (marked ✅ CLOSED, the branch/flag/ADR disposition spelled out), the 04-architecture.md capability row
+   (was still saying "no quality claim exists yet, ADR stays a draft until it runs" — now corrected to the
+   measured failure + closure), and RUNBOOK.md's `SLOT_PHRASING_ENABLED` entry (was gating on "until the
+   A/B has run and decided" — now states it ran, failed twice, and stays off permanently). `docs/08-
+   build-plan.md`'s #162 mentions are historical session-54/55 narrative, not a live tracker for this
+   question, and were left untouched. No code change — the branch/flag disposition was already the
+   pre-committed default outcome of "accept as final."
 
 **Session 82 (2026-09-06, same conversation as session 81, continuing after its wrap-up — owner present
 throughout: "merge PR #6" then "continue being productive autonomously") — PR #6 MERGED, #203 FIXED AT THE

@@ -11,8 +11,9 @@
 
 **▶ SESSION 83 (2026-09-06, fresh session from the session-82 kickoff doc, owner present throughout) —
 three NEXT-list items resolved: the dead worktree cleaned up, the "44-58 archive gap" from session 82
-found to be a FALSE POSITIVE (corrected, redundant STATUS.md narrative pruned), and #162 round 5 run
-(still FAILS both gates, worse than round 4).** Full session entry: [status-archive.md](status-archive.md).
+found to be a FALSE POSITIVE (corrected, redundant STATUS.md narrative pruned), and #162 CLOSED (round 5
+run, still FAILS both gates worse than round 4, owner accepted as final).** Full session entry:
+[status-archive.md](status-archive.md).
 
 **Worktree cleanup done** (owner go-ahead): `agent-aa024a353bfdc08d5`'s branch + worktree removed
 (`git worktree remove --force` + `git branch -D`) — the background process had already exited; the work
@@ -37,15 +38,19 @@ fixes (bare-year "in" vs "op"; don't repeat a value placeholder pointlessly) —
 0 fabricated) + judge re-run ($0.171, Haiku): win-or-tie DROPPED to 29.41% (was 41.18%, gate ≥60%), still
 9/34 grammar-flagged (same count as round 4, different pairs) — fresh sampling surfaced NEW patterns
 neither fix addressed (quarter-period word order, a duplicate-unit-mention bug). Cumulative spend across
-5 rounds: ≈$1.77. Full detail + the session's recommendation (accept as final — two failed rounds, a
-worsening trend) in [open-questions.md](open-questions.md) #162 — the decision is the owner's.
+5 rounds: ≈$1.77.
+
+**✅ #162 CLOSED (Stefan, in-chat: "Accept as final on #162").** Round 5 stands as the experiment's final
+verdict. `SLOT_PHRASING_ENABLED` stays unset/off PERMANENTLY (no round 6); the ADR-draft is NOT promoted.
+`experiment/162-slot-filling-ab` stays parked, local-only, unmerged, as documented history. Updated in the
+same change: [open-questions.md](open-questions.md) #162, the [04-architecture.md](04-architecture.md)
+capability row, and [RUNBOOK.md](RUNBOOK.md)'s `SLOT_PHRASING_ENABLED` entry.
 
 **Untouched, no owner input given specifically:** the 3 `gh secret set` commands (owner's own terminal),
 WP30c + #197's three older follow-ups.
 
-**▶ NEXT, in order:** (a) #162's round 5 verdict — accept as final (session's recommendation, see above)
-or authorize a round 6; (b) the 3 `gh secret set` commands for Route B, still blocking only `deploy`;
-(c) WP30c + #197's three older follow-ups — owner-menu, no rush.
+**▶ NEXT, in order:** (a) the 3 `gh secret set` commands for Route B, still blocking only `deploy`;
+(b) WP30c + #197's three older follow-ups — owner-menu, no rush.
 
 
 **(Historical — the pause, 2026-08-15 to 2026-08-26.)** Project was paused ~2 months (owner decision) and the
