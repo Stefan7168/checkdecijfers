@@ -1,5 +1,103 @@
 # STATUS archive — the session log
 
+**Session 83 (2026-09-06, fresh session opened from the session-82 kickoff doc, owner present throughout) —
+THREE OF THE FIVE SESSION-82 NEXT-LIST ITEMS RESOLVED: THE DEAD WORKTREE CLEANED UP, THE "44-58 ARCHIVE GAP"
+FOUND TO BE A FALSE POSITIVE (CORRECTED, NOT BACKFILLED), AND #162 ROUND 5 RUN (STILL FAILS BOTH GATES,
+WORSE THAN ROUND 4).**
+
+1. **Verified session-82's handoff against reality before acting** (`date`, `git log`, `gh pr list --state
+   open` [empty, #6 merged], `gh run view --json jobs` [`gate` success / `deploy` failure, the known Route B
+   gap], `git worktree list`, `git branch`, `ListAgents` for a second-instance check) — everything in the
+   kickoff doc checked out exactly as written. `mcp__ccd_session_mgmt__list_sessions` confirmed no live
+   peer session in this repo (the prior "Session 81 kickoff" session shows `isRunning: false`, last active
+   right after the session-82 push).
+2. **Three of session 82's five NEXT items needed an owner call before any of them could proceed** — asked
+   via `AskUserQuestion` rather than guessing or defaulting: (a) clean up the dead worktree now — YES;
+   (b) accept #162's session-80 A/B verdict as final, or authorize a round 5 (~$0.20 quoted) — AUTHORIZE
+   ROUND 5; (c) the 44-58 STATUS.md gap — backfill then prune, or leave permanently — BACKFILL THEN PRUNE.
+3. **Worktree cleanup executed:** `git worktree remove --force .claude/worktrees/agent-aa024a353bfdc08d5`
+   then `git branch -D worktree-agent-aa024a353bfdc08d5` (remove-before-delete order required — git refuses
+   to delete a branch still checked out in a worktree). `experiment/162-slot-filling-ab` is now the only
+   remaining non-main worktree.
+4. **The "44-58 archive gap" investigated further before backfilling anything — turned out to be a FALSE
+   POSITIVE, not a real gap.** Session 82's own grep-based check ("grepping for every session header in
+   STATUS.md's 44-58 range against the archive") used a pattern that only matched `^\*\*Last updated`-style
+   headers, and missed two OTHER heading formats `status-archive.md` also uses: a bare `**DATE (session N —
+   ...)**` with no literal "Last updated:" prefix (session 50 sits at archive line ~3562 under exactly this
+   form: `**2026-07-17 (session 50 — owner-present: PRs #54/#55 reviewed + merged; ...)**`), and a
+   `**Previous (DATE, ... marathon...)**` heading (the Design marathon entry sits at archive line ~3282:
+   `**Previous (2026-07-18, Fable overnight design marathon, AUTONOMOUS, docs-only — Fable's LAST session
+   before the model switch to Opus/Sonnet. Six execute-ready design docs delivered...)**`). Re-checked EVERY
+   session in the flagged range by CONTENT, not heading pattern: 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54,
+   55, "Design marathon", and "Sparring session" are all present in `status-archive.md`, each with a full,
+   detailed body matching (and generally exceeding) STATUS.md's condensed summary — spot-verified word-for-
+   word for 44/45/46/47/48/49/50/54/55 plus both named entries, not merely confirmed to exist. Concretely:
+   session 50's archive entry (lines 3562-3578) independently names PRs #54/#55, `85880NED`, `85770NED`,
+   the #167 phantom-measure mechanism, the parallel max-review, and the slow-stream escape hatch — every
+   element STATUS.md's one-line summary named, in more detail. The Design marathon's archive entry (lines
+   3282+) independently names the same six deliverables, the same commit range `8ac0e59`→`ead1ead`, and the
+   same "phase 7 deliberately SKIPPED" note.
+5. **No backfill needed — pruned STATUS.md directly instead**, matching the pattern already established for
+   sessions 56/57/68-79/80/81 (each of which already has ZERO narrative left in STATUS.md's body — archive-
+   only). Deleted STATUS.md's now-redundant lines (the Design-marathon-through-session-44 block, previously
+   between the "Sessions 58+58B" block and the "▶ TOP PRIORITY STACK" header) — the "▶ TOP PRIORITY STACK"
+   section itself (an owner decision from session 23, still load-bearing) and the "Sessions 58+58B" block
+   (out of the flagged 44-54 scope, already self-declared as archived) were left untouched, staying
+   disciplined to what was actually in question rather than scope-creeping into a bigger prune.
+   `status-archive.md` itself is NOT retroactively edited — session 82's own entry (above) stays an accurate
+   record of what session 82 believed at the time; this entry is the correction, the same pattern the
+   session-82 entry itself used for the #197 "MERGED not just PR-open" correction of session 81.
+6. **#162 round 5 run (owner-authorized after a corrected cost estimate)** — the session initially quoted
+   "~$0.20" (the judge-only cost from round 4) when asking permission; before spending, it read the actual
+   scripts (`scripts/ab-162-experiment.ts`, `scripts/ab-162-judge.ts`) and the last full recording report,
+   found a fresh full re-recording (required, since a prompt change affects every slot call) costs ~$0.43
+   on top of the ~$0.17 judge run — corrected the estimate to ~$0.60 in the transcript rather than silently
+   spending 3× the quoted figure, noted it fit comfortably inside the experiment's own pre-established
+   ~€1-2 total budget (confirmed via the round-3 report's own "well within the €2.50-this-pass / ~€1-2-total
+   budget spirit" framing), and proceeded on that basis rather than re-asking for an amount already inside
+   a blessed envelope.
+   - **Two targeted prompt fixes** added to `buildSlotSystemPrompt` (`src/answer/compose/slots.ts`,
+     `SLOT_COMPOSE_PROMPT_VERSION` 1→2): rule 10 (prefer "in" over "op" before a bare-year period
+     placeholder — periodKind 'jaar' only, since that was the one pattern with judge evidence; kwartaal/
+     maand deliberately left alone as unevidenced) and rule 11 (don't reuse a value/verschil placeholder in
+     a later sentence that adds no new information — the A085 "restates '101.085 inwoners'" pattern).
+     Typecheck clean, `tests/answer/slot-compose.test.ts` 47/47 (prompt-text change, no snapshot pinning it
+     literally), full backend suite 118/118 files 1810/1810 tests (run solo, exit code confirmed, not just
+     the log tail, per the 8GB-machine discipline).
+   - **Fresh full re-recording required** (deleted `benchmark/ab-162-pairs.json` + `-record-report.json` to
+     force it — the prompt change touches every slot call, not just previously-failing ones; new fixtures
+     coexist with old ones on request hash, confirmed directly by reading a freshly-recorded fixture's
+     stored `request.system` and finding the new rule text present). Measured: $0.463 spend, 82 slot
+     compose calls, **0 fabricated throughout**. Hard gate: 4 template-falls (B6, A025 ×2, A068) — diagnosed
+     ALL FOUR to the SAME pre-existing, out-of-scope mechanism before proceeding (not assumed): the model
+     echoing the literal "1 januari" from the woningvoorraad measure's own `definitionLabel` text (a fixed
+     part of the CBS measure's name, not a value or period placeholder) — matching the already-documented
+     A068 residual from rounds 3-4 exactly. Confirmed via the actual recorded fixture text, not inferred.
+     2 of the 4 (B6, A025) happened to template-fall on repeat 0 specifically (the repeat used as the
+     judge's `slotBody`), so those two pairs were effectively judged template-vs-legacy rather than
+     slot-vs-legacy this round — a measurement caveat, not a defect.
+   - **Judge re-run** ($0.171, Haiku, 3 votes/pair, 34 pairs): win-or-tie **10/34 = 29.41%** (gate ≥60%,
+     FAIL — worse than round 4's 41.18%); **9/34 pairs grammar-flagged** (gate 0, FAIL — same COUNT as round
+     4 but a DIFFERENT set of pairs, read individually via the verdicts file rather than assumed from the
+     count matching). The two targeted fixes did not net-improve phrasing quality. Fresh sampling surfaced
+     grammar patterns neither fix addressed: quarter-period word order ("in 2025 4e kwartaal" instead of
+     "in het 4e kwartaal van 2025" — the out-of-scope kwartaal case from rule 10's own design note, now
+     confirmed to matter), a duplicate-unit-mention bug ("mln kWh" stated twice, a pre-existing rule-5
+     violation unrelated to this round), and one pair (B13) whose judge complaint names a "logical
+     inconsistency" together with unnatural repetition — read as a plausible rule-11 side effect (the model
+     garbling period order while trying to avoid restating a value, rather than actually removing the
+     redundancy).
+   - Committed to the experiment branch (`experiment/162-slot-filling-ab`, commit `c31fd91` — code + the
+     regenerated pairs/report/votes/fixtures, 54 files); branch stays local-only (never pushed, matching
+     every prior round), un-merged, `SLOT_PHRASING_ENABLED` off. Documented in full in
+     [open-questions.md](open-questions.md) #162 on `main`. Cumulative spend across all 5 rounds: ≈$1.77.
+     **Session's recommendation to the owner: accept round 5 as the experiment's final verdict** — two
+     independent judge runs (rounds 4 and 5) have now both failed both gates, with round 5 measurably
+     worse, reading less like "two fixable bugs from parity" and more like a broader phrasing-quality gap;
+     the decision stays the owner's.
+7. **STATUS.md top block rewritten** to session 83's state (worktree cleanup, the archive-gap correction,
+   the #162 round-5 result); this entry prepended here per the session-41 convention.
+
 **Session 82 (2026-09-06, same conversation as session 81, continuing after its wrap-up — owner present
 throughout: "merge PR #6" then "continue being productive autonomously") — PR #6 MERGED, #203 FIXED AT THE
 ROOT, AND A REAL ARCHIVE GAP FOUND (SESSIONS 44-54 UNRECORDED ANYWHERE) — LEFT FOR AN EXPLICIT DECISION RATHER

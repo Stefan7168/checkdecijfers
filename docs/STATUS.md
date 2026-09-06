@@ -9,57 +9,43 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
-**▶ SESSION 82 (2026-09-06, continuing straight from session 81 in the same conversation, owner present
-throughout — "merge PR #6", then "continue being productive autonomously") — PR #6 MERGED + #203 FIXED (a
-real, currently-inert defect closed at the root); the 44-58 STATUS.md pruning attempt found a genuine archive
-gap and stopped short rather than risk it.** Full session entry: [status-archive.md](status-archive.md)
-(session 81's own entry there already covers everything through the wrap-up).
+**▶ SESSION 83 (2026-09-06, fresh session from the session-82 kickoff doc, owner present throughout) —
+three NEXT-list items resolved: the dead worktree cleaned up, the "44-58 archive gap" from session 82
+found to be a FALSE POSITIVE (corrected, redundant STATUS.md narrative pruned), and #162 round 5 run
+(still FAILS both gates, worse than round 4).** Full session entry: [status-archive.md](status-archive.md).
 
-**PR #6 merged** (owner's explicit "merge PR #6", squash `a1e16e9`) — `gate` green pre- and post-merge, `deploy`
-still pending the Route B secrets gap (unrelated to this change). Branch + worktree cleaned up
-(`superpowers:finishing-a-development-branch`). Post-merge docs sweep: open-questions #197 and the
-04-architecture row now say MERGED (not MERGED + LIVE — `deploy` is genuinely still blocked).
+**Worktree cleanup done** (owner go-ahead): `agent-aa024a353bfdc08d5`'s branch + worktree removed
+(`git worktree remove --force` + `git branch -D`) — the background process had already exited; the work
+was redundant/already-merged-elsewhere per session 82's own diligence.
 
-**#203 fixed** (`deriveDirection`/`deriveFirstLast` now refuse cells spanning >1 region, `src/query/derivations.ts`)
-— TDD (RED confirmed before the fix), verified: typecheck, backend 119/1816 (+2), benchmark GATE PASS, web
-51/610, real `next build`, `/code-review` LOW 0 findings. **Checked reachability before fixing, not assumed:**
-the bug was real but currently UNREACHABLE — `resolve.ts` already refuses "several regions AND several periods"
-at the intent layer (pinned by an existing test), and `curated.ts`'s charts are all single-national-measure —
-so this closes a latent trap for the next feature that relaxes either guard, not a live defect. One unrelated
-flaky web test surfaced during the full-suite run (`chat-workspace.test.tsx`) — confirmed zero code path to
-this change, spun off as its own task chip rather than bundled in.
+**The "44-58 archive gap" was a FALSE POSITIVE — corrected, not backfilled.** Session 82's grep-based check
+missed two heading-format variants `status-archive.md` also uses: a bare `**DATE (session N — ...)**`
+without the literal words "Last updated:" (session 50, archive line ~3562) and a `**Previous (DATE, ...
+marathon...)**` heading (the Design marathon entry, archive line ~3282). Every session in the flagged
+range — 44 through 55, plus "Design marathon" and "Sparring session" — was individually re-checked by
+CONTENT against the archive, not just heading presence (44/45/46/47/48/49/50/54/55 + both named entries
+spot-verified word-for-word against STATUS.md's own summaries: all match). **No backfill was needed** —
+the content was already safely archived, just under inconsistent heading phrasing. STATUS.md's now-redundant
+narrative (Design-marathon-through-session-44) is pruned, matching the pattern already established for
+sessions 56/57/68-79/80/81 (zero narrative left in STATUS.md's body for any of those — archive-only).
+`status-archive.md` itself is left as-is — a historical log; session 82's own archived entry stays an
+accurate record of what session 82 believed at the time, and this entry is the correction (same pattern
+as the #197 post-merge sweep).
 
-**The 44-58 `STATUS.md` pruning (flagged optional, low-priority, by sessions 80 and 81) turned out to need more
-than a closer read — it needs a real decision.** Investigated properly before touching anything: `status-archive.md`
-has sessions 56 through 81 continuously, but sessions **44 through 54 (plus two unnamed entries, "Design
-marathon" and "Sparring session") are NOT archived anywhere** — confirmed by grepping for every session header
-in STATUS.md's 44-58 range against the archive, not assumed from the header pattern matching 68-79. Deleting
-that range the way 68-79 was pruned would destroy the only copy of 11 sessions' history. The archive's own
-structure past session 56 is also more layered than it first appears (a `## Session log` heading partway down
-gates an older, separately-shaped section covering sessions ~18-22). **Not attempted this session:** backfilling
-44-54 into the archive first (the correct fix, but a real content-migration task — exact line ranges, exact
-insertion point, byte-verified — not a quick pass) versus simply deciding these 11 sessions' history lives in
-STATUS.md permanently (also a valid, cheaper choice). Left untouched pending that decision — recorded precisely
-so the next attempt doesn't have to re-discover the gap.
+**#162 round 5 run (owner-authorized) — still FAILS both gates, WORSE than round 4.** Two targeted prompt
+fixes (bare-year "in" vs "op"; don't repeat a value placeholder pointlessly) — full re-recording ($0.463,
+0 fabricated) + judge re-run ($0.171, Haiku): win-or-tie DROPPED to 29.41% (was 41.18%, gate ≥60%), still
+9/34 grammar-flagged (same count as round 4, different pairs) — fresh sampling surfaced NEW patterns
+neither fix addressed (quarter-period word order, a duplicate-unit-mention bug). Cumulative spend across
+5 rounds: ≈$1.77. Full detail + the session's recommendation (accept as final — two failed rounds, a
+worsening trend) in [open-questions.md](open-questions.md) #162 — the decision is the owner's.
 
-**Maintenance (read-only, autonomous-safe per established precedent):** `npm audit` root + web, 0
-vulnerabilities. `npm run gdpr:purge` dry-run was BLOCKED by the permission classifier (a DB-connecting script,
-even in its default report-only mode) — not run, no override attempted. Production confirmed healthy,
-`/api/health` 200.
+**Untouched, no owner input given specifically:** the 3 `gh secret set` commands (owner's own terminal),
+WP30c + #197's three older follow-ups.
 
-**`git worktree list`:** `agent-aa024a353bfdc08d5`'s background process exited (lock gone, `ps -p` confirms) —
-cleanup still blocked by the classifier pending your explicit go (commands in the session-82 kickoff doc);
-`experiment/162-slot-filling-ab` unchanged, parked; `feat/197-chart-trend-headline` gone (merged + cleaned up).
-
-**Declined by default, no owner input given on these specifically:** #162 round 5 (a fresh ~$0.20 re-judge) —
-left parked. The 3 `gh secret set` commands (owner's own terminal). WP30c + #197's three older follow-ups
-(owner-menu items) — untouched.
-
-**▶ NEXT, in order:** (a) the 3 `gh secret set` commands for Route B, still blocking only `deploy`; (b) say
-go/no-go on the `agent-aa024a353bfdc08d5` worktree cleanup (diligence already done, commands in the kickoff
-doc); (c) #162's §6 A/B verdict (clean loss, recorded session 80) — accept as final or authorize a round 5;
-(d) WP30c + #197's three older follow-ups; (e) the 44-58 STATUS.md decision above — backfill-then-prune, or
-leave it permanently as-is; both are fine, it just needs someone to pick.
+**▶ NEXT, in order:** (a) #162's round 5 verdict — accept as final (session's recommendation, see above)
+or authorize a round 6; (b) the 3 `gh secret set` commands for Route B, still blocking only `deploy`;
+(c) WP30c + #197's three older follow-ups — owner-menu, no rush.
 
 
 **(Historical — the pause, 2026-08-15 to 2026-08-26.)** Project was paused ~2 months (owner decision) and the
@@ -237,143 +223,6 @@ promptbytes, geen DDL, vlaggen blijven UIT, en geen gestapelde deploys (#173). S
 controleert de architectuur van WP26 + #154/#121/#138/#172-stap-0/#170.
 
 Full session record in [status-archive.md](status-archive.md).)**
-
-**Design marathon (2026-07-18 overnight, AUTONOMOUS docs-only — FABLE'S LAST SESSION before the model
-switch; from now sessions run Opus/Sonnet (top model = Opus; the delegation cost-tier rule survives: the session model thinks, fan-out on
-Sonnet/Haiku). SIX EXECUTE-READY DESIGNS delivered (commits `8ac0e59`→`ead1ead`, all `[skip ci]`, zero live-LLM spend / prompt bytes / DDL):
-(1) [WP26 execute-brief](session-briefs/2026-07-19-wp26-execute-brief.md) — corpus-grounded, safelist read-back doc, NO live DDL needed
-(jsonb confirmed), A2 take-path recommendation + WP26c forecast/meta rescue-chips (severable), plan €5/cap €10;
-(2) [#162 slot-filling ADR-DRAFT](session-briefs/2026-07-19-adr-draft-slot-filling.md) — typed-slot contract + A/B meetopzet; measured:
-compose fixtures are a SEPARATE hash domain, #162 does NOT trigger #164; (3) [#172 escalation
-protocol](session-briefs/2026-07-19-172-escalation-protocol.md) — structural shortlist-walk fix FIRST, RerankProfile co-calibration,
-separation-gap ≥0.05 ×4 as the go-number; (4) [#154 design](session-briefs/2026-07-19-154-design.md) — NULL-sentinel `last_seen_batch_id`,
-migration-021 plan, flag-free; (5) [WP30c beslismemo](session-briefs/2026-07-19-wp30c-rijksfinancien-dossier.md) — BOTH candidates
-live-scouted (rijksfinancien: begroot≠uitgegeven verified, Defensie 2023 18% gap, CC0, measured API bugs; politie: v3-on-dataderden
-CONFIRMED, byte-identical period codes, CC0, `47013NED` first candidate), 4 framed options, choice stays the owner's;
-(6) [small designs](session-briefs/2026-07-19-small-designs.md) — #138 (no owner question, ready), #121 (one-line owner question +
-uncaught-throw finding), 85792NED (bounded regionDimensionOverride + honest fallback). Phase 7 (#170 smalls build) deliberately SKIPPED —
-capacity went to the full wrap-up; the smalls are the ready first build task. Kickoff for the first post-Fable session:
-[session-briefs/2026-07-19-session-post-fable-kickoff.md](session-briefs/2026-07-19-session-post-fable-kickoff.md).
-▶ NEXT: owner dates (22/7 06:30 sync `85773NED` generale; 23/7 06:30 sync `83693NED` julicijfer; ~30/7 BBP+PPI syncs — 85880NED via the
-chunked escape hatch; #132 route B on/after 19/7), then the owner-decision stack — NOW WITH DESIGNS ON THE TABLE: WP26 (trial-conversion
-stake; needs the safelist read-back + 2 read-back items), #170 smalls (sparring-approved, build-ready, branch+PR per #118(b) if
-autonomous), WP30c (memo ready — 4 options), #172 (supervised WP, step-0 verify first), #154 (rider on any supervised window), #138
-(ready, no question), #121 (one-line owner call), #162 (after WP26). Trial ops: pot was 23/25 at s52 close, `npm run trialpot:set`.
-Outstanding owner clicks: GitHub Budgets (the 2026 gotcha), Resend free-confirm, optional Vercel Firewall rate-limit rule. Full session
-record in [status-archive.md](status-archive.md).)**
-
-**Session 54 (2026-07-18, owner-present — THE COVERAGE SPRINT'S TABLE SET IS COMPLETE: [#168](open-questions.md)
-RESOLVED end-to-end. ALL NINE coverage tables are LIVE AND ANSWERING (the six #4-#9 joined #1-#3): PR #56 merged `5e3a8e2` → vocab batch
-`49135ef` (10 canonical keys; prompt v6 = the deferred ADR-023 bare-'tot' fix + a grain-sibling tie-break rule SCOPED to named pairs after the
-generic first wording broke B2 4/4; ONE #164 re-record over SIX calibration rounds — final gate intent 72/72 ×3 ZERO flips, conf min 0.92 /
-median 0.95, followup 23/23, clarify 7/7, tablefinder 11/11 live + hermetic; three reasoned relabels with measured rationale; the B16
-region_unknown options gap fixed — clarifications now carry choice labels) → live syncs ×6 (batches 19-24, 136,511 rows, 0 corrections, 0
-quarantines — 85828NED's excludeMeasures proved itself live, no chunk hatch needed) + registry:apply (17 tables / 26 keys) AFTER verified
-deploy + 10 LLM-free spot-checks ALL exact incl. the regional key (NL01 479.527 / Amsterdam 630.621 & 303.925). Measured LLM spend ~€10-12
-(calibration loops multiply — NOT sub-euro; within the €25 cap). ⚠ NEW TRACKER [#172](open-questions.md): finder-chain regression
-(bijstand-stock lost 37789ksz from the Haiku chain on a byte-identical prompt — upstream drift; the class is honest-but-undeliverable via
-refuse+refund) + the measured-and-REVERTED Sonnet escalation (temperature-0 rejection + muddy confidence distribution; needs model+threshold
-CO-calibration as its own supervised WP). Also this session: the BILL-SHOCK AUDIT (owner-asked): Vercel=hobby, Supabase=free, repo public,
-Anthropic 2× hard-capped → surprise bill structurally impossible TODAY; RUNBOOK "Bill-shock protection" = the record + the Pro-upgrade
-spend-cap rule; outstanding owner clicks: GitHub Budgets (the 2026 gotcha), Resend free-confirm, optional Vercel Firewall rate-limit rule.
-The MODEL SWITCH the owner announced this day (Fable through 2026-07-19 only, then Opus/Sonnet) was executed as the overnight design
-marathon — see the ▶ block above. Full entry in [status-archive.md](status-archive.md).)**
-
-**Session 53 (2026-07-17→18, AUTONOMOUS — tables #4-#9 BUILT DORMANT on PR #56 per #118(b): measured on both platforms via 6 parallel
-agents, CC11-CC31 frozen with explicit targets, the #167 probe caught 7 slice-empty Productie-measures, the `--catalog-add` finder-fixture
-trap found and scheduled. Superseded same-day by session 54's go-live above; full entry in [status-archive.md](status-archive.md).)**
-
-**Sparring session (2026-07-18, owner-present, parallel to the s54 build session — NO build, docs-only `203a371`/`fab0433`: competitive
-teardown of nederlandinbeeld.org + aidscope.co.uk; verdienmodel doubt addressed (access ≠ answers) with a parked LLM-benchmark test
-[#169](open-questions.md); four visibility smalls owner-approved [#170](open-questions.md); API/MCP + transparency + correlation ideas
-parked with rationale [#171](open-questions.md); rijksfinancien.nl added as second-source candidate [#123](open-questions.md), DNB on the
-long-term roadmap list. Architecture sketches + analysis in
-[session-briefs/2026-07-18-sparring-competitive-analysis.md](session-briefs/2026-07-18-sparring-competitive-analysis.md) +
-[…-parked-ideas-architecture-sketches.md](session-briefs/2026-07-18-parked-ideas-architecture-sketches.md). Priority stack UNTOUCHED —
-#168 remains the single next owner-present build step. Full entry in [status-archive.md](status-archive.md).)**
-
-**Session 52 (2026-07-17 — PRODUCT-AF DELIVERED: (a) "Ontdek Nederland in grafieken" LIVE on `/` (`752af59`, ADR
-[035](decisions/035-homepage-discovery-charts.md)); (b) the #53 anonymous trial pot (`9317acb`, ADR [036](decisions/036-anonymous-trial-pot.md))
-BUILT + supervised go-live RUN same day — THE TRIAL IS LIVE on `/` (pot 23/25 after smoke; ops via `npm run trialpot:set`). ⚠ WP26 stake
-raised: both casual smoke phrasings drew honest conservative refusals — trial conversion now leans on WP26. Full entry in
-[status-archive.md](status-archive.md).)**
-
-**Session 51 (2026-07-17 — the PRODUCT-FINISH pivot: papier-en-inkt huisstijl + public landing on `/` + all surfaces restyled, live
-`4dc5273`; #98 resolved (homepage = the product's face); #53 owner refinements recorded (trial ON the homepage, empty-pot fail-safe, two
-belts). Full entry in [status-archive.md](status-archive.md).)**
-
-**Session 50 (2026-07-17 — sprint tables #2 `85880NED` (FULL ingest) + #3 `85770NED` DONE END-TO-END + LIVE (build `57be40a`; all six frozen
-cells LLM-free exact on prod); PRs #54/#55 reviewed + merged incl. the 12-finding parallel max-review dispatch `c7f6063`; #167 phantom-measure
-exclusion mechanism; slow-stream escape hatch (chunked capture + sync-from-capture — needed for every 85880NED release-day sync); ONE #164
-re-record (62/63 + ×3, os-v02 deliberately re-labelled, r-autos live-unstable but gate-deterministic). Full entry in
-[status-archive.md](status-archive.md).)**
-
-**Session 49 (2026-07-17 — coverage-sprint table #1 `83693NED` DONE END-TO-END + LIVE (build `c4134bc`, sync batch 15, registry:apply 9/11,
-#165 trim 115/115, LLM-free verify −39); sprint-wide finds #164/#165/#166 recorded; #118 code-review-LOW governance addition `09b6191`;
-overnight addendum: PR #54 (#166 guard) + PR #55 (table #3 prep) built awaiting review, tables #2-#9 measured (specs doc), "80590NED v3-only"
-REFUTED, table #2 descoped pending the slice decision (since resolved s50). Parallel review session same day: PR #54 max-review 12 findings
-(dispatched s50), dependabot #51-#53 merged, #53 deploy-red → TS ^5 pin `eec3973`. Full entries in [status-archive.md](status-archive.md).)**
-
-**Session 48 (2026-07-17 — the parallel owner-"spar" strategy session, docs-only: ELEVEN owner decisions #153-upd/#158–#163 + the #118
-standing-push revision; #153 proefrit executed (wbn.nl ❌ −4% claimed vs +13,7% CBS-measured); coverage sprint scouted + briefed (8 gap tables,
-two load-bearing finds: no full-gemeente price index anywhere [CONFIRMED s49]; "80590NED is v3-only" [REFUTED s49 overnight — v4 works with the lowercase id, docs/07 quirk #1]). Full entry in [status-archive.md](status-archive.md).)**
-
-**Session 47 (2026-07-16→17 — THREE adversarial security/data-integrity hunts (each 4-6 lenses, dual-verified, Sonnet
-fan-out) + a frontend-render scout. THREE fixes merged+live, each on an EXPLICIT owner word (#118b). (1) BILLING/MONEY-PATH: NO live credit-
-conservation bug; one reachable-today gap FIXED ([#145], PR #48 `7e42656`) — `guardPending` bounds the untrusted reply-turn `pending`. (2) GDPR-
-REDACTION: a real HIGH leak the inline scout MISSED — `pending_table_requests.fit_note` (LLM sentence paraphrasing the question) + topic-disclosing
-table-ids survived erasure; FIXED ([#151], PR #49 `af287e1`; fit_note all rows, table-ids terminal only). (3) INGESTION/DATA-INTEGRITY: quarantine
-ENFORCEMENT on the value path is airtight (`resolve.ts:306` refuses a needs_review table before any cell is served); two hardenings FIXED ([#155]
-freshestForCanonical status gate + [#156] one validated dimension set per sync, PR #50 `b654010`). CLEAN lenses: money-conservation, cross-user,
-derived-surface, frontend XSS/injection. Tracked NOT built: [#146] Stripe payment_status (dormant, card-only; RUNBOOK pre-delayed-method gate added),
-[#147]-[#150] billing low/latent, [#152] feedback insert-race (self-healing), [#154] retained-cell false-fresh date (MEDIUM-HIGH, a DESIGN WP — the
-finder's batch_id sketch is flawed), [#157] a/b deliberately dropped. ⚠ [#151] is FORWARD-ONLY: pre-deploy prod rows keep unredacted fit_note/table-
-ids until a purge/re-deletion — a one-off backfill is a supervised step. See open-questions #145-157.)**
-
-**Session 46 (2026-07-16 — #144 DONE END-TO-END in ONE session:** built + adversarially reviewed + merged (PR #47, squash `94b90e4`, owner in-chat
-approval per #118(b)) + the supervised go-live EXECUTED (calibration, fail-open+admin-alert decision, flag flip, live smoke). The semantic checker is
-LIVE and ACTIVE in production; the whole session-44 data-integrity hunt list is now CLOSED.)
-
-- **#144 — the semantic fabrication check — ✅ DONE END-TO-END (ADR [034](decisions/034-semantic-fabrication-check.md); PR
-  PR #47 squash `94b90e4` + go-live commits `8eef383`/`deabbfb`; all gates + deploys green,
-  prod HTTP 307).** The additive REJECT-ONLY cheap-tier LLM checker over validated bodies that leaned on a residual-prone exemption
-  (`ClassifiedToken.soft`) — the shared close for the #140 (descriptor-echo) and #141 (temporal-marker+un-listed-noun) deterministic ceilings.
-  Corpus-MEASURED scope (the brief's "most answers skip the call" assumption inverted: naive = 100% trigger on the 18 stored legit bodies →
-  shipped = 0%, while both residual shapes still fire); a fabricated verdict takes the same R3 ladder (regenerate → template); verdict stored on
-  the envelope, recorded-not-rederived, its SCOPE re-derived by R8 with tamper teeth; checker calls = `llm_calls` role `semantic_check`; wired on
-  all three answer paths (question, reply, onboarding delivery). **Adversarial review (5 lenses × dual refute-verify + a SERIALIZED mutation
-  probe, 26 agents, cheap tier): 1 CRITICAL confirmed with executed repro + closed same day (the date-form compound-noun bypass — "nog 31
-  januari-meldingen extra" skipped the checker gate; DATE_FORM_AFTER now requires a year/punctuation after the month), 2 refuted-but-adopted
-  hardenings (maxTokens scales with suspects; treat-as-data covers all payload fields), mutation probe 5/5 RED, flag-off byte-neutrality 0
-  findings.** **Go-live (owner present): calibration run 1 (prompt v1) = 8/9 — FN on the month-compound case, the model fell into the SAME trap
-  the code had; prompt v2 (teaches the DATE_FORM_AFTER rule) = 9/9 FP=0 FN=0 flips=0, also at --repeat=3; replay leg pins the calibrated behavior
-  on the gate (`tests/answer/semantic-check-replay.test.ts`, commit `8eef383`). Owner decisions in-chat: merge ✓; FAIL-OPEN + ADMIN ALERT per
-  skip (`src/answer/audit/alerts.ts` → e-mail via Resend to ADMIN_ALERT_EMAIL with audit row/user/question/error/meaning, console.error as the
-  floor; SEMANTIC_CHECK_FAILMODE deliberately unset). Env flags set via vercel CLI; the flip-deploy (`deabbfb`, run 29513127181) gate+deploy ✓;
-  live smoke: owner question → audit row 253 carries `skipped_no_suspects` (prompt v2, ZERO extra LLM calls), pre-#144 row 252 has no key (A1),
-  `npm run audit:verify -- 253 253` exit 0.** Merge-block verification: backend 1333/1333, web 314/314 (solo re-run; 2 parallel-load flakes),
-  benchmark 14/14 + 6/6 + 0 fabricated, real next build, `audit:verify -- 1 252` exit 0 (225/227 + the 2 pre-existing pinned divergences).
-
-**Session 45 (2026-07-16, THREE PRs merged + LIVE, all data-integrity; full entries in [status-archive.md](status-archive.md)):** #141 HIGH
-period-exemption hole (PR #44 `d192775`), the #142/#143/row-227 trio (PR #45 `6291dfc`), format.ts raw-NUL cleanup (PR #46 `f909e66`); merges
-that session in-chat DELEGATED (#118(b) precedent — NOT automatically renewed; session 46 asked and received explicit per-merge approval);
-the #144 design brief was written there and executed by session 46.
-
-**Session 44 (2026-07-13 → 2026-07-16, 3 PRs merged: #134(b) too-old retry chip PR #41 `12518eb`, auth/ownership hunt CLEAN + open-redirect fix
-PR #42 `4e2a2fd`, the #140 validator narrowing PR #43 `882c808`; full entries in [status-archive.md](status-archive.md)).**
-
-- **Next — the coverage sprint ([#163](open-questions.md)(3), owner-approved 2026-07-17):** build order, validated slices and caveats in
-  [session-briefs/2026-07-17-coverage-sprint-brief.md](session-briefs/2026-07-17-coverage-sprint-brief.md); per-table measured record in
-  [11-coverage-table-set.md](11-coverage-table-set.md). **Table #1 `83693NED` ✅ DONE + LIVE (session 49); next = #2 `85880NED` + #3 `85770NED`
-  before 30/7 as ONE batch (#164 re-record constraint).**
-  **Fresh hunts are PAUSED per #163(1)** — un-hunted surfaces (auth/session-flow, answer-composition/LLM-harness) stay listed for when hunts
-  resume. Tracked follow-ups #146-150 + #152 low/latent; #151 backfill sweep = supervised; #154 = a design WP, owner's call on priority.
-- **Next — owner decisions (queue behind the sprint per #163) — every item below now has an execute-ready design from the 2026-07-18
-  overnight marathon (see the ▶ block above for links):** **#138 ✅ DONE + LIVE (session 55, `f2d015a` — off this menu)**, **WP26**
-  (execute-brief ready — safelist read-back + 2 read-back items), **#121** (one-line owner question), **#131** (multilingual L1 — no
-  design yet), **WP30c** (beslismemo ready, 4 options), **#162** (ADR-draft ready — after WP26). Tracked-not-focus: #132 route B
-  ~2026-07-19 (check on/after 19 juli), #104/#112 (need live-LLM spend). (The /login header cosmetic that used to be
-  listed here was FIXED 2026-07-24, session 55 — see the ▶ block.)
 
 
 **▶ TOP PRIORITY STACK — owner decision, session 23 (2026-07-05); this ORDER overrides the "decision-gated" framing below.** The owner set an explicit
