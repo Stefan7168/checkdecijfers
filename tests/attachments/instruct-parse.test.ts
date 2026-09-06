@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildDatasetInstructRequest,
   DATASET_INSTRUCT_MODEL,
+  DatasetInstructFailure,
   parseDatasetInstruction,
 } from '../../src/attachments/instruct/parse.ts';
 import { InstructionValidationError } from '../../src/attachments/instruct/schema.ts';
@@ -63,24 +64,39 @@ describe('buildDatasetInstructRequest', () => {
 });
 
 describe('parseDatasetInstruction', () => {
-  it('returns a validated ChartInstruction for well-formed model output', async () => {
+  it('returns a validated ChartInstruction plus the real LLM usage/model', async () => {
     const client = fakeClient(validOutput());
     const result = await parseDatasetInstruction(PROFILE, null, 'show revenue per year', { client });
-    expect(result.x).toBe('c0');
-    expect(result.y).toEqual(['c1']);
+    expect(result.instruction.x).toBe('c0');
+    expect(result.instruction.y).toEqual(['c1']);
+    expect(result.model).toBe(DATASET_INSTRUCT_MODEL);
+    expect(result.usage).toEqual({ inputTokens: 10, outputTokens: 5 });
   });
 
-  it('throws InstructionValidationError for off-allowlist model output, never returns a partial result', async () => {
+  it('throws DatasetInstructFailure (carrying real usage) for off-allowlist model output, never returns a partial result', async () => {
     const client = fakeClient(validOutput({ x: 'c99' }));
     await expect(parseDatasetInstruction(PROFILE, null, 'q', { client })).rejects.toThrow(
-      InstructionValidationError,
+      DatasetInstructFailure,
     );
+  });
+
+  it('a caught DatasetInstructFailure carries the real usage so the turn can still be billed/recorded truthfully', async () => {
+    const client = fakeClient(validOutput({ x: 'c99' }));
+    let caught: unknown;
+    await parseDatasetInstruction(PROFILE, null, 'q', { client }).catch((error) => {
+      caught = error;
+    });
+    expect(caught).toBeInstanceOf(DatasetInstructFailure);
+    const failure = caught as DatasetInstructFailure;
+    expect(failure.usage).toEqual({ inputTokens: 10, outputTokens: 5 });
+    expect(failure.model).toBe(DATASET_INSTRUCT_MODEL);
+    expect(failure.cause).toBeInstanceOf(InstructionValidationError);
   });
 
   it('throws for malformed JSON from the model', async () => {
     const client = fakeClient('{not json');
     await expect(parseDatasetInstruction(PROFILE, null, 'q', { client })).rejects.toThrow(
-      InstructionValidationError,
+      DatasetInstructFailure,
     );
   });
 });

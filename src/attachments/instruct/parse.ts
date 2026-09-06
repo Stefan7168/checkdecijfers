@@ -6,10 +6,31 @@
 // narrow role as table rerank/intent parsing — so it runs on the small/fast
 // tier (delegation cost-tier rule), not Fable. A future escalation needs
 // threshold co-calibration (#172's lesson), not a one-line model swap.
-import type { LlmClient, LlmRequest } from '../../answer/llm/client.ts';
+import type { LlmClient, LlmRequest, LlmUsage } from '../../answer/llm/client.ts';
 import type { ChartInstruction, ClientChartInstruction, DatasetProfile } from '../types.ts';
 import { buildDatasetInstructSystemPrompt, serializeDatasetInstructRequest } from './prompt.ts';
-import { chartInstructionJsonSchema, validateInstruction } from './schema.ts';
+import { chartInstructionJsonSchema, InstructionValidationError, validateInstruction } from './schema.ts';
+
+/** Carries the real LLM usage/model alongside a validation failure —
+ * code-review finding, session 84: the original draft's caller (respond.ts)
+ * had no way to record real token/latency usage for a turn whose model
+ * output failed validation, since a thrown InstructionValidationError alone
+ * carries no usage info. Wraps the validation error rather than adding
+ * LLM-specific fields to InstructionValidationError itself, which stays a
+ * pure, LLM-agnostic validator error. */
+export class DatasetInstructFailure extends Error {
+  readonly cause: InstructionValidationError;
+  readonly usage: LlmUsage;
+  readonly model: string;
+
+  constructor(cause: InstructionValidationError, usage: LlmUsage, model: string) {
+    super(cause.message);
+    this.name = 'DatasetInstructFailure';
+    this.cause = cause;
+    this.usage = usage;
+    this.model = model;
+  }
+}
 
 export const DATASET_INSTRUCT_MODEL = 'claude-haiku-4-5';
 
@@ -42,20 +63,37 @@ export function buildDatasetInstructRequest(
   };
 }
 
+export interface ParsedDatasetInstruction {
+  instruction: ChartInstruction;
+  usage: LlmUsage;
+  model: string;
+}
+
 /**
- * Parses one dataset-chat turn's question into a validated ChartInstruction.
- * Throws InstructionValidationError (src/attachments/instruct/schema.ts) on
- * malformed or off-allowlist output — the orchestrator (respond.ts) catches
- * it and routes to a clarification, never to a chart (principle c: a
- * validation failure can only cost a turn, never produce a wrong picture).
+ * Parses one dataset-chat turn's question into a validated ChartInstruction,
+ * alongside the real LLM usage/model (code-review fix: the caller needs
+ * this even when validation FAILS, so a wasted-but-real call is still
+ * recorded truthfully — see DatasetInstructFailure). Throws
+ * DatasetInstructFailure on malformed or off-allowlist output — the
+ * orchestrator (respond.ts) catches it and routes to a clarification,
+ * never to a chart (principle c: a validation failure can only cost a
+ * turn, never produce a wrong picture).
  */
 export async function parseDatasetInstruction(
   profile: DatasetProfile,
   previousInstruction: ClientChartInstruction | null,
   question: string,
   options: DatasetInstructOptions,
-): Promise<ChartInstruction> {
+): Promise<ParsedDatasetInstruction> {
   const request = buildDatasetInstructRequest(profile, previousInstruction, question, options);
   const response = await options.client.complete(request);
-  return validateInstruction(response.outputText, profile);
+  try {
+    const instruction = validateInstruction(response.outputText, profile);
+    return { instruction, usage: response.usage, model: response.model };
+  } catch (error) {
+    if (error instanceof InstructionValidationError) {
+      throw new DatasetInstructFailure(error, response.usage, response.model);
+    }
+    throw error;
+  }
 }

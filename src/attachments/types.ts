@@ -177,6 +177,34 @@ export function toClientInstruction(instruction: ChartInstruction): ClientChartI
   };
 }
 
+/**
+ * The inverse of toClientInstruction, used ONLY to revalidate a
+ * client-held `rawState.lastInstruction` (D8 step 2) through the existing
+ * `validateInstruction` allowlist without duplicating its logic. Fills the
+ * server-only fields with harmless placeholders (`reading: ''`,
+ * `confidence: 1`, `unsupported.detail: ''`) that satisfy the schema's
+ * shape but play no role in the allowlist/range checks — those checks
+ * only ever inspect the fields ClientChartInstruction already carries.
+ * Never used to reconstruct a value a user could see; the revived
+ * `reading`/`detail` are immediately discarded by the next
+ * toClientInstruction call in the turn's own response.
+ */
+export function reviveClientInstruction(client: ClientChartInstruction): ChartInstruction {
+  return {
+    version: client.version,
+    kind: client.kind,
+    x: client.x,
+    y: client.y,
+    seriesBy: client.seriesBy,
+    filters: client.filters,
+    sort: client.sort,
+    limit: client.limit,
+    confidence: 1,
+    reading: '',
+    unsupported: client.unsupported === null ? null : { reason: client.unsupported.reason, detail: '' },
+  };
+}
+
 /** Why a plotted point is null — the R11 analog: a gap is shown, never
  * silently omitted (U11). */
 export type MissingValueReason = 'leeg in bron' | 'geen getal';
@@ -285,11 +313,17 @@ export type DatasetTurnEnvelope =
       kind: 'refusal';
       question: string;
       text: string;
+      // Fixed while building respond.ts: widened to the full UnsupportedReason
+      // set ('computation'/'other' were missing) plus this tier's own
+      // execution-level reasons — a refusal built from a validated
+      // instruction's `unsupported` field must always have a home here.
       reason:
         | 'aggregation'
+        | 'computation'
         | 'compare_with_cbs'
-        | 'too_many_points'
         | 'not_chartable'
+        | 'other'
+        | 'too_many_points'
         | 'export_hint'
         | 'empty_question'
         | 'internal';
