@@ -57,7 +57,7 @@ Pass → proceed to Phase 1 (see roadmap). Fail → iterate on the pipeline with
 | User-facing audit-trail UI | Phase 2+ | Phase 0 keeps audit records backend-verifiable only |
 | Enrichment sources (PDOK/Kadaster, RIVM, UWV, …) = new data sources beyond CBS | **Reprioritized to build priority #2 (owner, session 23, 2026-07-05) — right after WP16, no longer Phase 3+; still not in Phase 0.** | Separate ingestion adapters; broadens the claim from "CBS cell" to "official sources" ([open-questions #102](open-questions.md)) |
 | Answer caching / Redis / rate limiting | Phase 1–2, trigger-based | ADR [005](decisions/005-caching-strategy.md) |
-| Non-Dutch UI | Not planned | Product copy is Dutch by convention |
+| Full NL/EN i18n toggle | Not planned yet | **UI copy itself is now English** (owner override, 2026-09-06, session 84, CLAUDE.md) — a user-facing language TOGGLE is the still-not-planned part, not the copy language itself |
 
 ## What Phase 0 deliberately risks
 

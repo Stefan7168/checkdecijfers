@@ -45,8 +45,11 @@ NEVER raw zinc-*/blue-* palette classes and never hex values.
    placeholder:text-ink-muted` + the focus rule.
 7. **Attribution/definition lines under answers stay quiet:** `text-xs text-ink-muted` with a `border-t
    border-line` — present, honest, never shouting (R4 inline attribution is sacred; styling may not hide it).
-8. **Copy is Dutch, calm and concrete** (no marketing superlatives); restyling never rewrites copy — text
-   changes are their own reviewed change.
+8. **Copy is English (owner override, 2026-09-06, session 84 — was Dutch), calm and concrete** (no marketing
+   superlatives); restyling never rewrites copy — text changes are their own reviewed change. Scope: new
+   product-copy/UI-text surfaces (buttons, badges, chat chrome). The CBS chat/answer pipeline's own Dutch
+   output (intent parsing, phrasing, validated answer text) and benchmark task phrasing are unchanged —
+   see CLAUDE.md's Conventions section for the exact scope note.
 
 ## Voice of the product (for future surfaces)
 
