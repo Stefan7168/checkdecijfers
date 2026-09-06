@@ -36,6 +36,22 @@ function checkComputable(cells: ResultCell[]): string | null {
   return null;
 }
 
+/** #203: a "first cell vs last cell" derivation (direction, first_last) is
+ * only meaningful when every cell tracks the SAME place over time — mixing
+ * regions turns "first vs last" into an arbitrary cross-region diff, not a
+ * trend. No current caller passes a multi-region cells array here
+ * (resolve.ts refuses "several regions AND several periods" before a
+ * StructuredQuery is ever built; no other caller constructs one either) —
+ * this guard means that stays true even if a future caller's own discipline
+ * doesn't, rather than relying on every future call site to remember. */
+function checkSingleRegion(cells: ResultCell[]): string | null {
+  const regions = new Set(cells.map((c) => c.regionCode));
+  if (regions.size > 1) {
+    return `source cells span ${regions.size} different regions — a first-vs-last comparison across regions is not a trend`;
+  }
+  return null;
+}
+
 /** B13-style growth: later period minus earlier period, one coordinate.
  * Requires exactly two cells at the same region/dims, different periods;
  * cells arrive period-ordered from run.ts. */
@@ -108,7 +124,7 @@ export function deriveDirection(cells: ResultCell[]): DerivationResult {
   if (cells.length < 2) {
     return refuse(`direction needs at least 2 source cells, got ${cells.length}`);
   }
-  const problem = checkComputable(cells);
+  const problem = checkComputable(cells) ?? checkSingleRegion(cells);
   if (problem) return refuse(problem);
   const first = cells[0] as ResultCell;
   const last = cells[cells.length - 1] as ResultCell;
@@ -212,6 +228,8 @@ export function deriveFirstLast(cells: ResultCell[]): DerivationResult {
   if (cells.length < 2) {
     return refuse(`first_last needs at least 2 source cells, got ${cells.length}`);
   }
+  const regionProblem = checkSingleRegion(cells);
+  if (regionProblem) return refuse(regionProblem);
   const first = cells[0] as ResultCell;
   const last = cells[cells.length - 1] as ResultCell;
   return {

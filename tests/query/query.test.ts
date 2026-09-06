@@ -5,7 +5,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { enumeratePeriods, runQuery, contiguousPeriodCodes } from '../../src/query/index.ts';
 import type { QueryRefusal, ResultCell, StructuredIntent } from '../../src/query/index.ts';
-import { deriveDifference, deriveDirection, deriveMax } from '../../src/query/derivations.ts';
+import { deriveDifference, deriveDirection, deriveFirstLast, deriveMax } from '../../src/query/derivations.ts';
 import { parsePeriodCode } from '../../src/ingestion/periods.ts';
 import type { Db } from '../../src/db/types.ts';
 import { createIngestedDb } from '../helpers/ingested-db.ts';
@@ -134,6 +134,40 @@ describe('derivation semantics (pure — the independent oracle for what these w
     expect(deriveDirection(series(1, null, 3)).ok).toBe(false);
     expect(deriveDifference(series(null, 3)).ok).toBe(false);
     expect(deriveMax([cellAt('2024JJ00', 'A', null), cellAt('2024JJ00', 'B', 2)], false).ok).toBe(false);
+  });
+
+  // #203: run.ts's own pre-registration guard (periodCodes.length > 1) says
+  // nothing about region count, so a multi-region multi-period cells array
+  // (period-major, region-minor — run.ts's own build order) puts DIFFERENT
+  // regions at cells[0] and cells[last]. resolve.ts refuses this shape at the
+  // intent layer today ('several regions AND several periods... not
+  // supported'), and no current caller of runQuery constructs it either — but
+  // deriveDirection/deriveFirstLast had no guard of their own, so the very
+  // next caller that DOES build this shape (a future multi-region trend
+  // feature, or a relaxed resolve.ts guard) would silently get a cross-region
+  // claim with nothing to catch it. These pin the derivations refusing it
+  // themselves, independent of any caller's own discipline.
+  it('direction and first_last refuse cells that span more than one region (period-major, region-minor order)', () => {
+    const crossRegion = [
+      cellAt('2019JJ00', 'GM0363', 10),
+      cellAt('2019JJ00', 'GM0599', 20),
+      cellAt('2020JJ00', 'GM0363', 15),
+      cellAt('2020JJ00', 'GM0599', 5),
+    ];
+    expect(deriveDirection(crossRegion).ok).toBe(false);
+    expect(deriveFirstLast(crossRegion).ok).toBe(false);
+  });
+
+  it('direction and first_last still work normally over a genuine single-region series', () => {
+    const oneRegion = series(100, 120);
+    const direction = deriveDirection(oneRegion);
+    if (!direction.ok || direction.record.kind !== 'direction') throw new Error('expected direction');
+    expect(direction.record.direction).toBe('up');
+
+    const firstLast = deriveFirstLast(oneRegion);
+    if (!firstLast.ok || firstLast.record.kind !== 'first_last') throw new Error('expected first_last');
+    expect(firstLast.record.firstResultId).toBe(oneRegion[0]!.resultId);
+    expect(firstLast.record.lastResultId).toBe(oneRegion[oneRegion.length - 1]!.resultId);
   });
 });
 
