@@ -1,5 +1,81 @@
 # STATUS archive — the session log
 
+**Session 82 (2026-09-06, same conversation as session 81, continuing after its wrap-up — owner present
+throughout: "merge PR #6" then "continue being productive autonomously") — PR #6 MERGED, #203 FIXED AT THE
+ROOT, AND A REAL ARCHIVE GAP FOUND (SESSIONS 44-54 UNRECORDED ANYWHERE) — LEFT FOR AN EXPLICIT DECISION RATHER
+THAN RISKED.**
+
+1. **PR #6 merged on explicit owner instruction ("merge PR #6").** Re-verified green/clean immediately before
+   merging (`gh pr view 6`), squash-merged (`gh pr merge 6 --squash --match-head-commit`, resulting SHA
+   `a1e16e9`), fast-forwarded local `main` to match. CI on the merge commit: `gate` success, `deploy` failure
+   (the same pre-existing Route B Vercel-secrets gap as every push since session 79, not caused by this merge —
+   confirmed via `gh run view --json jobs`, not the top-level conclusion). Branch (`feat/197-chart-trend-headline`)
+   and its worktree cleaned up via `superpowers:finishing-a-development-branch` (worktree removed, local branch
+   deleted, remote branch deleted) — `git branch -d` warned about squash-merge ancestry (expected: the individual
+   commits aren't literally in `main`'s history, only their squashed equivalent is; independently confirmed safe
+   via the PR's own `state: MERGED` and the fast-forward diff matching all 15 expected files). Post-merge docs
+   sweep: `docs/open-questions.md` #197 and the `04-architecture.md` capability row corrected from "PR open, not
+   merged" to "MERGED" (deliberately not "MERGED + LIVE" — `deploy` is genuinely still blocked, unrelated to
+   this change).
+
+2. **#203 fixed at the root, after checking — not assuming — that it was worth fixing.** The owner's "continue
+   being productive autonomously" was read against the one item explicitly marked as needing no owner decision
+   to start: [#203](open-questions.md) (`deriveDirection`/`deriveFirstLast` have no region guard). Before writing
+   any code, dispatched research (a background Explore-style agent) into existing test coverage and consumers —
+   this surfaced something the original #203 write-up didn't know: **`src/query/resolve.ts` already refuses
+   "several regions AND several periods in one question" at the intent layer** (`invalid_intent`, pinned by an
+   existing test, `tests/query/query.test.ts`'s `'several regions AND several periods at once is out of
+   contract'`), and `src/chart/curated.ts` (the only other caller of `runQuery`) never constructs a multi-region
+   query either (its 5 canonical charts are all single-national-measure). So the cross-region defect in
+   `deriveDirection`/`deriveFirstLast` — real, exactly as #197's review described it — was **currently
+   unreachable by any actual caller today**, not just "unmeasured" as the original row hedged. Fixed anyway,
+   correctly framed as hardening a latent trap rather than patching a live bug: a new shared `checkSingleRegion`
+   guard (alongside the existing `checkComputable`) in `src/query/derivations.ts`, used by both functions, so
+   the guarantee lives in the derivation functions themselves rather than depending on every future caller
+   (`resolve.ts`, or whatever relaxes it next) remembering to gate around them. TDD throughout: a failing test
+   reproducing the exact cross-region cells shape directly against both functions (RED confirmed against the
+   unmodified code before touching it), a normal-single-region case pinning unaffected behavior, both added to
+   the existing `tests/query/query.test.ts` "derivation semantics" block (which already tested `deriveDirection`
+   but had ZERO prior coverage of `deriveFirstLast` at all). Full verification: typecheck clean, backend 119
+   files/1816 tests (+2 over the post-#197 baseline), benchmark GATE PASS (14/14+6/6+0 fabricated), web 51
+   files/610 tests, real `next build`, `/code-review` LOW pass 0 findings.
+
+3. **One unrelated flaky test surfaced during the full web-suite run, confirmed not caused by this session's
+   change, spun off rather than bundled in or ignored.** `web/components/chat-workspace.test.tsx`'s "activating
+   the reference chip reports its visual id to the workspace" failed once (`Unable to find an element with the
+   text: /Kaart in het paneel/`, stuck at a loading state). Per `superpowers:systematic-debugging` discipline —
+   read the error, don't guess, isolate the variable — confirmed via three separate checks before concluding
+   anything: (a) the test passed when run standalone; (b) it passed again on an immediate full-suite re-run
+   (610/610 clean); (c) its own backend call (`askQuestion`) is fully `vi.mock`ed, so there is literally no code
+   path from `src/query/derivations.ts` to this test. Conclusively a pre-existing, one-off timing/ordering flake
+   in the web suite, unrelated to anything this session touched. Flagged as a task chip (`task_13444964`) for a
+   dedicated look rather than silently ignored or wastefully "fixed" by guessing at a retry/timeout.
+
+4. **The 44-58 `STATUS.md` pruning — flagged "optional, low-priority" by both sessions 80 and 81 — turned out
+   to need a real decision, not just a closer read, and this session stopped short of the risky part rather
+   than push through on a plausible-sounding justification.** Investigated properly: compiled every session
+   header STATUS.md's lines 73-380 actually contain (Sessions 58+58B down through 44, plus two unnamed entries,
+   "Design marathon" and "Sparring session") and cross-checked EVERY one against `status-archive.md` by grep,
+   rather than assuming the 68-79 precedent generalizes. Result: sessions **56 through 81 are continuously
+   archived, but 44 through 54 (and the two unnamed entries) are not archived ANYWHERE** — `status-archive.md`
+   has zero entries for them, confirmed by a broad grep, not just a header-format mismatch. The file's structure
+   past session 56 is also more layered than the 68-79 pruning suggested: a `## Session log — "Last updated"
+   entries (newest on top)` heading partway down the archive gates an older, separately-shaped section covering
+   sessions in the ~18-22 range, meaning "the archive" is not one uniform newest-first list end to end. Deleting
+   STATUS.md's 44-58 range the way 68-79 was mechanically pruned would have destroyed the ONLY copy of 11
+   sessions' history — caught before making a single edit, not caught by reverting one. **Correctly stopped
+   here rather than attempting the actual fix (backfilling 44-54 into the archive at the right point, verified
+   byte-for-byte, then pruning STATUS.md) in the same pass that discovered the problem** — that is real content
+   migration work deserving its own dedicated attention, not something to rush through under a "continue being
+   productive" instruction just because the investigation was already paid for. Recorded precisely in STATUS.md
+   so a future session (or the owner) can decide: backfill-then-prune, or accept that these 11 sessions' history
+   lives in STATUS.md permanently — either is a legitimate call, it just needs someone to make it deliberately.
+
+Full facts verified before writing any of the above (GOLDEN RULE): `gh pr view 6`/`gh run view --json jobs` for
+the merge and CI claims, direct `grep` cross-checks (not assumption) for both the reachability claim in #203
+and the archive-gap claim in item 4, three independent reproductions for the flaky-test claim — nothing above
+is from memory or an earlier chat message.
+
 **Session 81 (2026-09-05 into 2026-09-06, spans midnight — AUTONOMOUS first, owner pasted the session-81
 kickoff then said "I will sleep. Work autonousmly for hours and hours, I expect great process tomorrow. Go.";
 OWNER PRESENT again at the close for the final wrap-up) — #197 IDEA 4 FULLY BUILT, REVIEWED (FOUND 2 CRITICAL

@@ -9,59 +9,57 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
-**▶ SESSION 81 (2026-09-05 into 2026-09-06, spans midnight — AUTONOMOUS first ("I will sleep. Work
-autonomously for hours and hours"), OWNER PRESENT again at the close) — #197 IDEA 4 FULLY BUILT + REVIEWED +
-FIXED, PR #6 OPEN (not merged); STATUS.md pruning finished for sessions 68-79; one stale-worktree cleanup
-flagged for you below (classifier-blocked).** Kickoff verified clean against
-`docs/session-briefs/2026-09-05-session-81-kickoff.md`. Full session entry: [status-archive.md](status-archive.md).
+**▶ SESSION 82 (2026-09-06, continuing straight from session 81 in the same conversation, owner present
+throughout — "merge PR #6", then "continue being productive autonomously") — PR #6 MERGED + #203 FIXED (a
+real, currently-inert defect closed at the root); the 44-58 STATUS.md pruning attempt found a genuine archive
+gap and stopped short rather than risk it.** Full session entry: [status-archive.md](status-archive.md)
+(session 81's own entry there already covers everything through the wrap-up).
 
-**#197 idea 4: Task 3 done (`7944fd7`), then the final whole-branch review (opus) found 2 CRITICAL + 2
-IMPORTANT issues, all real and reproduced against the actual code, not hypothetical** — a multi-region chart's
-`direction` derivation silently diffed across DIFFERENT regions (a false, unqualified trend claim); every
-historical chart row with a `direction` derivation would have failed R8 audit reconstruction once this shipped.
-Fixed in one round (`af21ab8`), independently re-reviewed (a second opus pass checking the fix against the real
-`deriveDirection`/`monotonic` code, not just the fix report) and confirmed correct with 0 new issues. Docs added
-(`b7e0c7e`, `d78cfb5`): open-questions #197 + new #203 (the pre-existing, not-a-branch-regression
-`deriveDirection` region-guard gap the review surfaced, cross-ref #100), ADR 014 as-built notes,
-`known-divergences.ts` header, a 04-architecture capability row. `/code-review` LOW pass: 0 findings. **PR #6
-opened; merged `main` into it to resolve a docs-only conflict (the worktree's `open-questions.md` predated
-session 80's later `main` commits) — both `gate` runs green, `mergeStateStatus: CLEAN`. NOT merged — autonomous
-session + core-product code, #118(b) requires owner review before merge.** Final measured state on the branch: typecheck ×2, backend 119 files/1814 tests, benchmark
-GATE PASS (14/14+6/6+0 fabricated), web 51 files/610 tests, real `next build` clean.
+**PR #6 merged** (owner's explicit "merge PR #6", squash `a1e16e9`) — `gate` green pre- and post-merge, `deploy`
+still pending the Route B secrets gap (unrelated to this change). Branch + worktree cleaned up
+(`superpowers:finishing-a-development-branch`). Post-merge docs sweep: open-questions #197 and the
+04-architecture row now say MERGED (not MERGED + LIVE — `deploy` is genuinely still blocked).
 
-**`docs/STATUS.md` pruning finished** — removed sessions 68-79's full un-trimmed blocks (582 lines, session
-80's kickoff had flagged 71-79; three more turned out to need it too), verified every session header already
-existed verbatim in [status-archive.md](status-archive.md) before deleting, `npm run test:docs` 11/11 after.
-Older 44-58 content deliberately left untouched (interleaved with still-referenced standing decisions, not pure
-superseded narrative — needs a closer read than a mechanical prune). Pushed direct to `main` (`b18817a`,
-docs-only, matches the established autonomous-session convention).
+**#203 fixed** (`deriveDirection`/`deriveFirstLast` now refuse cells spanning >1 region, `src/query/derivations.ts`)
+— TDD (RED confirmed before the fix), verified: typecheck, backend 119/1816 (+2), benchmark GATE PASS, web
+51/610, real `next build`, `/code-review` LOW 0 findings. **Checked reachability before fixing, not assumed:**
+the bug was real but currently UNREACHABLE — `resolve.ts` already refuses "several regions AND several periods"
+at the intent layer (pinned by an existing test), and `curated.ts`'s charts are all single-national-measure —
+so this closes a latent trap for the next feature that relaxes either guard, not a live defect. One unrelated
+flaky web test surfaced during the full-suite run (`chat-workspace.test.tsx`) — confirmed zero code path to
+this change, spun off as its own task chip rather than bundled in.
+
+**The 44-58 `STATUS.md` pruning (flagged optional, low-priority, by sessions 80 and 81) turned out to need more
+than a closer read — it needs a real decision.** Investigated properly before touching anything: `status-archive.md`
+has sessions 56 through 81 continuously, but sessions **44 through 54 (plus two unnamed entries, "Design
+marathon" and "Sparring session") are NOT archived anywhere** — confirmed by grepping for every session header
+in STATUS.md's 44-58 range against the archive, not assumed from the header pattern matching 68-79. Deleting
+that range the way 68-79 was pruned would destroy the only copy of 11 sessions' history. The archive's own
+structure past session 56 is also more layered than it first appears (a `## Session log` heading partway down
+gates an older, separately-shaped section covering sessions ~18-22). **Not attempted this session:** backfilling
+44-54 into the archive first (the correct fix, but a real content-migration task — exact line ranges, exact
+insertion point, byte-verified — not a quick pass) versus simply deciding these 11 sessions' history lives in
+STATUS.md permanently (also a valid, cheaper choice). Left untouched pending that decision — recorded precisely
+so the next attempt doesn't have to re-discover the gap.
 
 **Maintenance (read-only, autonomous-safe per established precedent):** `npm audit` root + web, 0
 vulnerabilities. `npm run gdpr:purge` dry-run was BLOCKED by the permission classifier (a DB-connecting script,
 even in its default report-only mode) — not run, no override attempted. Production confirmed healthy,
 `/api/health` 200.
 
-**Declined by default, no owner input available tonight:** #162 round 5 (a fresh ~$0.20 re-judge) — left
-parked, per session 80's own "leave parked, default if nothing said." The 3 `gh secret set` commands (owner's
-own terminal). WP30c + #197's three older follow-ups (owner-menu items) — untouched.
+**`git worktree list`:** `agent-aa024a353bfdc08d5`'s background process exited (lock gone, `ps -p` confirms) —
+cleanup still blocked by the classifier pending your explicit go (commands in the session-82 kickoff doc);
+`experiment/162-slot-filling-ab` unchanged, parked; `feat/197-chart-trend-headline` gone (merged + cleaned up).
 
-**`git worktree list` re-verified, state CHANGED since the autonomous portion:** `agent-aa024a353bfdc08d5`'s
-background process (alive 13h16m earlier this session) has now EXITED (`ps -p` confirms gone, lock file gone)
-— but left uncommitted `package.json`/`package-lock.json` edits behind. Inspected: superseded, safe-to-discard
-(4 of 5 bumps match session 76's own prior safe-verification and are already live via merged Dependabot PRs
-#4/#5; branch tip already an ancestor of `main` via `git merge-base --is-ancestor`, so deleting it loses no
-history). `git branch -D` + `git worktree remove --force` were both BLOCKED by the auto-mode classifier despite
-that diligence — see `docs/session-briefs/2026-09-05-session-82-kickoff.md` for the exact commands if you want
-to run them yourself. `experiment/162-slot-filling-ab` unchanged, parked. `feat/197-chart-trend-headline` now
-PR #6, unmerged, still green.
+**Declined by default, no owner input given on these specifically:** #162 round 5 (a fresh ~$0.20 re-judge) —
+left parked. The 3 `gh secret set` commands (owner's own terminal). WP30c + #197's three older follow-ups
+(owner-menu items) — untouched.
 
-**▶ NEXT, in order:** (a) review + merge PR #6 — green, conflict-free, nothing else needed from you but the
-merge click; (b) the 3 `gh secret set` commands for Route B, still blocking only `deploy`; (c) #162's §6 A/B
-verdict (clean loss, recorded session 80) — accept as final or authorize a round 5; (d) WP30c + #197's three
-older follow-ups; (e) new row [#203](open-questions.md) (`deriveDirection` has no region guard — pre-existing,
-low urgency, no owner decision needed to start whenever a session picks it up); (f) the `agent-aa024a353bfdc08d5`
-worktree cleanup above — your call, the diligence is already done, just needs someone who can run a
-force-delete to say go.
+**▶ NEXT, in order:** (a) the 3 `gh secret set` commands for Route B, still blocking only `deploy`; (b) say
+go/no-go on the `agent-aa024a353bfdc08d5` worktree cleanup (diligence already done, commands in the kickoff
+doc); (c) #162's §6 A/B verdict (clean loss, recorded session 80) — accept as final or authorize a round 5;
+(d) WP30c + #197's three older follow-ups; (e) the 44-58 STATUS.md decision above — backfill-then-prune, or
+leave it permanently as-is; both are fine, it just needs someone to pick.
 
 
 **(Historical — the pause, 2026-08-15 to 2026-08-26.)** Project was paused ~2 months (owner decision) and the

@@ -6,6 +6,47 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 82 — 2026-09-06, owner present — PR #6 merged, #203 fixed at the root, an archive gap found and left alone
+
+Full narrative: [status-archive.md](status-archive.md) session-82 entry.
+
+- **Checking whether a bug is actually reachable before fixing it changed the whole framing of the fix, and was
+  worth the extra research step.** #203 (`deriveDirection`/`deriveFirstLast` have no region guard) read, from
+  its own write-up, like a real-but-unmeasured production hazard. A background research pass before writing any
+  code found that `resolve.ts` already refuses the one input shape that would trigger it, and the only other
+  caller (`curated.ts`) never constructs that shape either — so the defect was real but currently INERT, not a
+  live one. This didn't change whether to fix it (a latent trap in shared code is still worth closing before the
+  next caller relaxes the guard that's currently the only thing preventing it), but it completely changed how to
+  describe the fix honestly — "hardening a currently-unreachable gap" is a true claim; "fixing a live bug" would
+  not have been, and writing the second when the first is true is exactly the kind of overclaim this project's
+  own GOLDEN RULE exists to catch. Worth generalizing: when a review or a prior session flags "X could produce a
+  wrong claim" without saying it MEASURABLY did, check reachability as its own step before fixing — the fix
+  itself may be identical either way, but the record of what was actually true won't be.
+- **A test that fails once in a full-suite run and passes standalone AND on immediate re-run is not evidence
+  against the change you just made — but confirming that took three separate checks, not one.** A web test
+  failed during this session's `#203` verification; `systematic-debugging`'s "read the error, don't guess"
+  discipline meant checking (a) standalone pass, (b) full-suite re-run pass, (c) the actual code path (the test's
+  own backend call is `vi.mock`ed, so there is structurally no route from `src/query/` to it) before concluding
+  it was unrelated — any ONE of those three alone would have been a weaker claim than the finding actually
+  supports. Spun off as a task chip rather than either silently ignoring a real (if unrelated) flake or spending
+  time diagnosing it inline under an unrelated task's verification pass.
+- **A doc-pruning task flagged "optional, low-priority" by TWO prior sessions turned out to be gating a real
+  landmine, and the flag itself ("needs a closer read") undersold how load-bearing that closer read actually
+  was.** Sessions 80 and 81 both correctly declined to mechanically prune `STATUS.md`'s older 44-58 session-log
+  range using the same line-range-delete approach that safely worked for 68-79, but described the reason as
+  "interleaved with still-referenced standing decisions" — true, but incomplete. The ACTUAL blocker, found only
+  by cross-checking every session header in that range against `status-archive.md` individually rather than
+  trusting the header-pattern match that worked for 68-79: **sessions 44 through 54, plus two unnamed session
+  entries, are not archived anywhere at all** — a straight mechanical prune would have destroyed the only copy
+  of 11 sessions' history. Two things worth carrying forward: (1) a "low-priority, optional" label on a
+  deferred task doesn't mean the task is actually low-risk — it can mean two prior sessions correctly sensed
+  risk without fully diagnosing its shape; (2) when a prior session's own stated reason for deferring something
+  turns out to be imprecise once you actually investigate, that imprecision is itself worth recording — the next
+  session (or this one, later) should not have to re-derive the real reason from scratch a third time. Stopped
+  short of the actual archive-migration fix in the same pass that found the problem, deliberately — diagnosing a
+  risk and then rushing the risky part anyway under "keep being productive" would have defeated the entire point
+  of having noticed it.
+
 ## Session 81 — 2026-09-05, autonomous (owner asleep) — #197 idea 4 finished, reviewed, fixed, PR opened
 
 Full narrative: [status-archive.md](status-archive.md) session-81 entry.
