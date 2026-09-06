@@ -129,9 +129,12 @@ export interface ParsedCsv {
 
 /**
  * Parses untrusted CSV/TSV bytes. Every cap is a hard refusal (thrown),
- * never silent truncation — the caller (respond.ts) turns this into an
- * honest "dit bestand is te groot" refusal, never a partially-charted file
- * the user doesn't know is incomplete.
+ * never silent truncation — the caller (`ingestFile`,
+ * web/app/dataset-actions.ts) catches `CsvTooLargeError` and shows the fixed
+ * English `ingestFileTooLargeText()` template (templates.ts); this error's
+ * own Dutch message is server-side diagnostic detail only, never shown
+ * verbatim (pre-dates #206's English-copy decision). Never a
+ * partially-charted file the user doesn't know is incomplete.
  */
 export function parseCsv(text: string): ParsedCsv {
   const stripped = stripBom(text);

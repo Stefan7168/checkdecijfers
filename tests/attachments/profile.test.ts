@@ -2,7 +2,7 @@
 // content that ever reaches an LLM prompt. Every case here proves the
 // profile is built strictly from the file's own cells, never guessed.
 import { describe, expect, it } from 'vitest';
-import { buildDatasetProfile } from '../../src/attachments/ingest/profile.ts';
+import { buildDatasetProfile, resolveAmbiguousFormats } from '../../src/attachments/ingest/profile.ts';
 
 const CELLS = [
   ['Jaar', 'Gemeente', 'Omzet'],
@@ -129,5 +129,49 @@ describe('buildDatasetProfile — nulls and sample', () => {
   it('carries a few raw, non-missing samples', () => {
     const profile = buildDatasetProfile(CELLS);
     expect(profile.columns[1]!.sample).toEqual(['Amsterdam', 'Rotterdam', 'Amsterdam']);
+  });
+});
+
+describe('resolveAmbiguousFormats — D5 profile-card two-chip decision', () => {
+  const AMBIGUOUS_CELLS = [
+    ['Jaar', 'Omzet'],
+    ['2020', '9.800'],
+    ['2021', '1.500'],
+  ];
+
+  it('applies the "nl" decision: dot is the thousands separator', () => {
+    const profile = buildDatasetProfile(AMBIGUOUS_CELLS);
+    expect(profile.columns[1]!.numberFormat).toBe('ambiguous');
+    const resolved = resolveAmbiguousFormats(AMBIGUOUS_CELLS, profile, { c1: 'nl' });
+    expect(resolved.columns[1]!.numberFormat).toBe('nl');
+    expect(resolved.columns[1]!.min).toBe(1500);
+    expect(resolved.columns[1]!.max).toBe(9800);
+  });
+
+  it('applies the "en" decision: dot is the decimal point', () => {
+    const profile = buildDatasetProfile(AMBIGUOUS_CELLS);
+    const resolved = resolveAmbiguousFormats(AMBIGUOUS_CELLS, profile, { c1: 'en' });
+    expect(resolved.columns[1]!.numberFormat).toBe('en');
+    expect(resolved.columns[1]!.min).toBe(1.5);
+    expect(resolved.columns[1]!.max).toBe(9.8);
+  });
+
+  it('leaves every non-ambiguous column byte-identical', () => {
+    const profile = buildDatasetProfile(AMBIGUOUS_CELLS);
+    const resolved = resolveAmbiguousFormats(AMBIGUOUS_CELLS, profile, { c1: 'nl' });
+    expect(resolved.columns[0]).toEqual(profile.columns[0]);
+    expect(resolved.rowCount).toBe(profile.rowCount);
+  });
+
+  it('throws when a decision is missing for a still-ambiguous column', () => {
+    const profile = buildDatasetProfile(AMBIGUOUS_CELLS);
+    expect(() => resolveAmbiguousFormats(AMBIGUOUS_CELLS, profile, {})).toThrow(/no decision given/);
+  });
+
+  it('throws when a decision names a column that is not ambiguous', () => {
+    const profile = buildDatasetProfile(AMBIGUOUS_CELLS);
+    expect(() => resolveAmbiguousFormats(AMBIGUOUS_CELLS, profile, { c0: 'nl', c1: 'nl' })).toThrow(
+      /is not currently ambiguous/,
+    );
   });
 });

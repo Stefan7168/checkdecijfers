@@ -3,7 +3,8 @@
 // produced; instruct/schema.ts trusts every id/range/distinct-list it
 // contains because this function built it directly from the dataset's own
 // stored cells.
-import type { ColumnProfile, ColumnType, DatasetProfile, NumberFormat } from '../types.ts';
+import type { ColumnId, ColumnProfile, ColumnType, DatasetProfile, NumberFormat } from '../types.ts';
+import { columnIndex } from '../columns.ts';
 import { MAX_DISTINCT_VALUES } from '../limits.ts';
 import { detectNumberFormat, parseNumber } from './numbers.ts';
 
@@ -144,4 +145,51 @@ export function buildDatasetProfile(cells: readonly string[][]): DatasetProfile 
     return buildColumnProfile(`c${index}`, columnHeader, values);
   });
   return { columns, rowCount: dataRows.length };
+}
+
+/**
+ * Re-derives a profile after the user resolves one or more ambiguous
+ * columns' `numberFormat` via the profile-card two-chip decision (D5,
+ * `decideDatasetFormat` in web/app/dataset-actions.ts). Every column NOT
+ * currently `numberFormat === 'ambiguous'` is copied through byte-identical
+ * — this never re-classifies a column's type or re-derives an already-decided
+ * numeric column, only patches the specific ones the user was asked about.
+ *
+ * Throws (never silently ignores, principle c) if `decisions` is missing an
+ * entry for any column still ambiguous, or names a column that is not
+ * currently ambiguous — `resolveDatasetDecision`'s caller must never be able
+ * to move a dataset to `'ready'` while a column profile still says
+ * `'ambiguous'` (D5's "never guess" rule, made mechanical, not just a
+ * convention at the call site).
+ */
+export function resolveAmbiguousFormats(
+  cells: readonly string[][],
+  profile: DatasetProfile,
+  decisions: Readonly<Record<ColumnId, Exclude<NumberFormat, 'ambiguous'>>>,
+): DatasetProfile {
+  const ambiguousIds = new Set(profile.columns.filter((c) => c.numberFormat === 'ambiguous').map((c) => c.id));
+  for (const id of Object.keys(decisions)) {
+    if (!ambiguousIds.has(id)) {
+      throw new Error(`resolveAmbiguousFormats: column '${id}' is not currently ambiguous`);
+    }
+  }
+
+  const dataRows = cells.slice(1);
+  const columns = profile.columns.map((column): ColumnProfile => {
+    if (column.numberFormat !== 'ambiguous') return column;
+    const format = decisions[column.id];
+    if (format === undefined) {
+      throw new Error(`resolveAmbiguousFormats: no decision given for ambiguous column '${column.id}'`);
+    }
+    const index = columnIndex(column.id);
+    const values = dataRows.map((row) => row[index] ?? '');
+    const { min, max } = numericRange(values, format);
+    const resolved: ColumnProfile = { ...column, numberFormat: format };
+    if (min !== undefined) resolved.min = min;
+    else delete resolved.min;
+    if (max !== undefined) resolved.max = max;
+    else delete resolved.max;
+    return resolved;
+  });
+  return { columns, rowCount: profile.rowCount };
 }

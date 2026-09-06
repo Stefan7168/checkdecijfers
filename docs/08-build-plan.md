@@ -412,11 +412,26 @@ turn falsely fail reconstruction. 12 new tests (`tests/attachments/reconstruct.t
 `read.test.ts`), full backend suite green (2057/2057), typecheck clean, `/code-review` LOW: 0
 findings. Migrations 026/027 are still file-only — nothing here touches a real database.
 
+**Built this session (session 85, second slice):** `web/app/dataset-actions.ts` —
+`ingestFile`, `decideDatasetFormat`, `askDataset`, `deleteMyDataset`. Turned out to be
+considerably more than "one line": CSV/TSV-only ingest (extension-sniffed, not MIME —
+XLSX/HTML/PDF have no parser yet), the per-user quota checks (D12 §4), a NEW
+`resolveAmbiguousFormats` (`src/attachments/ingest/profile.ts`) for D5's two-chip numeric-format
+decision, a NEW eager dataset-thread creation path (`createDatasetThread`,
+`src/threads/index.ts` — a deliberate SECOND creation path alongside the existing lazy
+`attachOrCreateThread`, its own stale "ONLY place" comment fixed to say so), and a NEW
+`validateDatasetThreadOwnership` twin that double-binds a turn's thread to BOTH the caller AND
+the specific dataset (nothing at the schema level otherwise stops a caller's own valid
+`datasetId` pairing with a different one of their own threads). New English ingest-copy
+templates (`ingestUnsupportedFileTypeText`/`ingestFileTooLargeText`/`ingestQuotaExceededText`,
+`src/attachments/templates.ts`, #206). 33 new tests across `tests/attachments/profile.test.ts`,
+`tests/threads/dataset-threads.test.ts`, and `web/app/dataset-actions.test.ts` (the last mirrors
+`actions.test.ts`'s mocked-module convention). Full backend suite green (2068/2068), full web
+suite green (638/638), both typechecks clean, a real `next build` clean, `/code-review` LOW: 0
+findings both slices. Migrations 026/027 still file-only; nothing here is wired into any UI or
+reachable by a real request yet (no route calls these actions).
+
 **Not yet built (WP202a's own remaining scope, in dependency order):**
-- **Server Actions** (`web/app/dataset-actions.ts`) — `ingestFile`, `askDataset`,
-  `decideDatasetFormat`, `deleteMyDataset`. The whole missing wire is one line:
-  `chargeAndRunDataset(db, userId, requestId, () => respondToDatasetQuestion(db, {...}))`, plus
-  the ownership/status pre-check (D8 step 1) and the CSV-parse-then-`insertDataset` ingest path.
 - **UI** — `DatasetChat`, `UserChartView`, wiring the two disabled buttons already shipped in
   `web/components/chat.tsx` (`01a4502`, this session), `Workspace`/`ThreadSidebar`/`VisualDock`
   changes per the design doc's D10 (with the byte-identity pins the adversarial review called

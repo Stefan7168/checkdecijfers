@@ -95,11 +95,15 @@ export async function validateThreadOwnership(
   return rows.length === 0 ? null : threadId;
 }
 
-/** ⟨A1⟩ The ONLY place a chat_threads row is created — atomically, and ONLY
- * called on a gated-ok outcome with a real audit id (insufficient_credits,
- * duplicate_request, the ⟨W4⟩ early return, and thrown pipeline exceptions
- * never reach this call). Thread creation is thereby lazy BY CONSTRUCTION (ADR
- * 033 D1: no empty threads).
+/** ⟨A1⟩ The ONLY place a CBS-thread `chat_threads` row is created —
+ * atomically, and ONLY called on a gated-ok outcome with a real audit id
+ * (insufficient_credits, duplicate_request, the ⟨W4⟩ early return, and thrown
+ * pipeline exceptions never reach this call). Thread creation is thereby lazy
+ * BY CONSTRUCTION (ADR 033 D1: no empty threads). `createDatasetThread`
+ * below is a SECOND, deliberately different creation path (ADR 037 D10): a
+ * dataset thread is created EAGERLY, at upload time, because the upload
+ * itself is the first meaningful event — there is no "empty thread" risk to
+ * guard against there the way there is for a lazily-attached CBS answer.
  *
  * One transaction: create the thread if `validatedThreadId` is null, then
  * attach the audit row (UPDATE scoped by the caller's `user_id`, only when
@@ -142,6 +146,43 @@ export async function attachOrCreateThread(
     await tx.query('update chat_threads set last_activity_at = now() where id = $1', [threadId]);
     return threadId;
   });
+}
+
+/** ADR 037 D10: creates a dataset thread EAGERLY, at upload time — a
+ * `chat_threads` row with `dataset_id` set from the moment the upload
+ * completes, unlike attachOrCreateThread's lazy CBS-thread creation above.
+ * Called from `web/app/dataset-actions.ts`'s `ingestFile`, immediately after
+ * the dataset row itself commits; `datasetId` is the caller's own
+ * just-inserted, already-ownership-bound id (never a client-supplied one),
+ * so there is no ownership check to make here beyond binding `user_id`. */
+export async function createDatasetThread(db: Db, userId: string, datasetId: number): Promise<number> {
+  const { rows } = await db.query(
+    'insert into chat_threads (user_id, dataset_id) values ($1::uuid, $2) returning id',
+    [userId, datasetId],
+  );
+  return Number(rows[0]!.id);
+}
+
+/** ADR 037 D8 step 1: an `askDataset` call binds BOTH the dataset and the
+ * thread to the SAME caller, AND to each other — nothing at the schema level
+ * otherwise stops a caller's own valid `datasetId` from being paired with a
+ * DIFFERENT one of their own threads (even a CBS one, whose `dataset_id` is
+ * NULL). Returns the validated thread id, or null for any mismatch (unowned
+ * thread, wrong dataset, or a threadless/CBS thread) — the same
+ * indistinguishable-on-purpose contract as `validateThreadOwnership`. */
+export async function validateDatasetThreadOwnership(
+  db: Db,
+  userId: string,
+  rawThreadId: unknown,
+  datasetId: number,
+): Promise<number | null> {
+  const threadId = coerceThreadId(rawThreadId);
+  if (threadId === null) return null;
+  const { rows } = await db.query(
+    'select id from chat_threads where id = $1 and user_id = $2::uuid and dataset_id = $3',
+    [threadId, userId, datasetId],
+  );
+  return rows.length === 0 ? null : threadId;
 }
 
 /** The sidebar list: a user's threads, most-recent-activity first. Each title

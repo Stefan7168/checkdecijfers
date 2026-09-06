@@ -94,3 +94,24 @@ export function refusalText(reason: keyof typeof REFUSAL_TEXT): string {
 export function reconstructChartText(_instruction: ChartInstruction): string {
   return chartReplyText();
 }
+
+// --- Ingest-time copy (web/app/dataset-actions.ts's ingestFile) ---
+// These are the ONE English sentence shown for each cap/rejection kind — the
+// same "log the diagnostic, show the fixed template" split respond.ts's own
+// NoRowsError/TooManyPointsError catches already use: parseCsv's own thrown
+// messages (ingest/csv.ts) are server-side diagnostic detail only (currently
+// Dutch — pre-dating #206, never user-facing), never surfaced verbatim here.
+
+export function ingestUnsupportedFileTypeText(): string {
+  return 'Only CSV and TSV files are supported right now.';
+}
+
+export function ingestFileTooLargeText(): string {
+  return "This file is too large, or has too many rows or columns, for us to read.";
+}
+
+export function ingestQuotaExceededText(reason: 'count' | 'bytes'): string {
+  return reason === 'count'
+    ? "You've reached the maximum number of uploaded files. Delete one to upload another."
+    : "You've reached your storage limit. Delete a file to free up space.";
+}

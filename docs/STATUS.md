@@ -30,10 +30,18 @@ One real bug found+fixed while writing its tests (not in review): the module's l
 `stableStringify` didn't special-case `Date` — pg/PGlite hand back a live `Date` for `timestamptz`
 columns despite `UserDataset.createdAt` being typed `string`, so every chart turn's reconstruction
 falsely failed until fixed. Full backend suite green (2057/2057), `/code-review` LOW: 0 findings.
-Migrations 026+027 are **FILE-ONLY**, never applied. Still needed before go-live: Server Actions,
-the UI (`DatasetChat`/`UserChartView`), the `ATTACHMENTS_ENABLED` flag, fixtures, and the docs §7
-sweep — see the build-plan entry for the exact list. Design doc + the full 7-lens adversarial
-review: [session-briefs/2026-09-06-chat-with-data-design.md](session-briefs/2026-09-06-chat-with-data-design.md).
+**Session 85 also built the Server Actions** (`web/app/dataset-actions.ts`: `ingestFile`,
+`decideDatasetFormat`, `askDataset`, `deleteMyDataset`) — considerably more than the build-plan's
+"one line" framing implied: CSV/TSV-only ingest, per-user quota checks, a new
+`resolveAmbiguousFormats` for D5's numeric-format decision, and a new eager dataset-thread
+creation path in `src/threads/index.ts` (`createDatasetThread` + `validateDatasetThreadOwnership`,
+which double-binds a turn's thread to both the caller and the specific dataset). Full backend
+suite green (2068/2068), full web suite green (638/638), both typechecks + a real `next build`
+clean, `/code-review` LOW: 0 findings on both of today's slices. Migrations 026+027 are
+**FILE-ONLY**, never applied — and nothing built today is wired into any route or UI yet. Still
+needed before go-live: the UI (`DatasetChat`/`UserChartView`), the `ATTACHMENTS_ENABLED` flag,
+fixtures, and the docs §7 sweep — see the build-plan entry for the exact list. Design doc + the
+full 7-lens adversarial review: [session-briefs/2026-09-06-chat-with-data-design.md](session-briefs/2026-09-06-chat-with-data-design.md).
 
 **✅ #206 — product copy/UI text is now English, not Dutch (owner override, in-chat: "override, we
 are english now").** Applied same-session to CLAUDE.md's Conventions, [03-mvp-scope.md](03-mvp-scope.md),
@@ -53,12 +61,13 @@ terminal, still blocking only `deploy` — unrelated to this session's work, con
 gap on every one of this session's 5 CI runs), WP30c, #197's older follow-ups, #205 (a possible
 future subscription tier, explicitly parked), #208 (needs the owner's URL/path).
 
-**▶ NEXT, in order:** (a) continue WP202a — `reconstructDatasetTurn` done (session 85); next is
-Server Actions (`web/app/dataset-actions.ts`), then the UI (`DatasetChat`/`UserChartView`, wiring
-the two buttons already shipped in `chat.tsx`), then the flag + fixtures + docs sweep, THEN the
-owner-supervised migration apply + go-live — see [08-build-plan.md](08-build-plan.md)'s WP202a
-section for the exact remaining list; (b) the 3 `gh secret set` commands for Route B; (c) WP30c +
-#197's older follow-ups — owner-menu, no rush.
+**▶ NEXT, in order:** (a) continue WP202a — `reconstructDatasetTurn` and the Server Actions are
+both done (session 85); next is the UI (`DatasetChat`/`UserChartView`, wiring the two buttons
+already shipped in `chat.tsx`, `Workspace`/`ThreadSidebar`/`VisualDock` changes per D10), then the
+`ATTACHMENTS_ENABLED` flag + fixtures + docs sweep, THEN the owner-supervised migration apply +
+go-live — see [08-build-plan.md](08-build-plan.md)'s WP202a section for the exact remaining list;
+(b) the 3 `gh secret set` commands for Route B; (c) WP30c + #197's older follow-ups —
+owner-menu, no rush.
 
 
 **(Historical — the pause, 2026-08-15 to 2026-08-26.)** Project was paused ~2 months (owner decision) and the
