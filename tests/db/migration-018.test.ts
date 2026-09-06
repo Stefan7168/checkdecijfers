@@ -172,7 +172,10 @@ describe('credit_transactions_validate_compensation — widened to reverse a web
            values ($1, 5, 'compensation', $2, 'wrong reason target')`,
           [userId, grantId],
         ),
-      ).rejects.toThrow(/must reverse a question_cost, onboarding_cost or websearch_cost row/);
+        // Migration 027 (ADR 037) widens the allowlist once more to add
+        // 'dataset_cost' — all migrations run in these hermetic tests, so the
+        // message names all four permitted reasons.
+      ).rejects.toThrow(/must reverse a question_cost, onboarding_cost, websearch_cost or dataset_cost row/);
     });
   });
 });

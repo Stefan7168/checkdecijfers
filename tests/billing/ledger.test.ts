@@ -147,10 +147,12 @@ describe('credit_transactions_validate_compensation (migration 008, adversarial-
           [userId, grantId],
         ),
         // Migration 013 widened the allowlist to {question_cost, onboarding_cost}
-        // (WP16 sub-part 2), and migration 018 widened it again to add
-        // 'websearch_cost' (WP129+130) — a signup_grant is still correctly
-        // rejected, but the error text now names all three permitted reasons.
-      ).rejects.toThrow(/must reverse a question_cost, onboarding_cost or websearch_cost row/);
+        // (WP16 sub-part 2), migration 018 widened it again to add
+        // 'websearch_cost' (WP129+130), and migration 027 widened it once
+        // more to add 'dataset_cost' (ADR 037) — a signup_grant is still
+        // correctly rejected, but the error text now names all four
+        // permitted reasons.
+      ).rejects.toThrow(/must reverse a question_cost, onboarding_cost, websearch_cost or dataset_cost row/);
     });
   });
 
