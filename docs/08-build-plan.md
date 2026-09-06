@@ -347,4 +347,76 @@ defaults the owner vetoes by exception; as-built record in [open-questions #197]
   multiples) BUILT + MERGED + LIVE** (session 79, 2026-09-05). Idea 5 (revision history) still needs a migration
   (owner-supervised), unscheduled. Idea 7 unscheduled.
 
+## WP202a — "Eigen data" attachments: chat with your own data + charts (ADR 037, #201/#202)
+
+Owner idea (session 79, 2026-09-05) → brainstormed + designed + adversarially reviewed + owner
+read-back, all same session (84, 2026-09-06) → build started same session. Full design + the
+7-lens adversarial review + every "Fixed in review" correction:
+[session-briefs/2026-09-06-chat-with-data-design.md](session-briefs/2026-09-06-chat-with-data-design.md).
+Accepted decision record: [ADR 037](decisions/037-user-data-attachments.md). The two owner
+decisions that shape this WP: **(H1)** the LLM only ever emits a structured, validated
+instruction — deterministic code alone renders the chart from the user's stored data; **(H2)** a
+user-data chart must be visibly/structurally impossible to confuse with a CBS chart. Product copy
+is English throughout (open-questions #206), a departure from this file's other Dutch-copy WPs.
+
+**Backend is fully built and tested; nothing is live.** Five slices, each with its own full
+verification block + `/code-review` LOW pass (real findings caught and fixed in every slice —
+see the commits for specifics):
+
+1. **Core engine** (`1e090c3`) — `src/attachments/`: types (the `ChartInstruction`/
+   `ClientChartInstruction` split that keeps LLM free-text server-only), limits, CSV/TSV ingest
+   (own RFC 4180 parser — no prior art in this repo), numeric-format detection (nl/en/ambiguous),
+   `DatasetProfile` construction, the closed-vocabulary validator (`instruct/schema.ts`, mirrors
+   `src/catalog/rerank-schema.ts`), `execute.ts` + `chart.ts` (the only producer of
+   `UserChartSpec`). Migrations 026 (`user_datasets`/`dataset_turns`) + 027 (ledger widening) —
+   **FILE-ONLY, not applied to any real database.**
+2. **DB/audit/GDPR** (`01840ee`) — `store.ts`, `file-store.ts` (Postgres `bytea`, verified via a
+   real PGlite round-trip test, not left as an assumption), `audit.ts` (`writeTurn` — the
+   delete-vs-write race fix: re-locks + re-checks dataset status as the first statement of its
+   own transaction, writes NO turn at all if the dataset is gone mid-flight), `retention.ts`
+   (self-service delete + per-file delete + the two-cutoff purge: 2yr for cells/turns matching
+   #14, 90d for raw file bytes). Deliberately runs as its OWN transaction, not folded into
+   `src/answer/audit/retention.ts`'s `redactMatchingRows` — documented trade-off, see the file.
+3. **Billing** (`ce5dd5f`) — `debitDataset`/`reserveDatasetDebit` (ledger siblings of
+   `debitWebSearch`), `src/billing/dataset-gate.ts`'s `chargeAndRunDataset` (the `chargeAndRun`
+   pattern for the 3-kind envelope). `dataset_turn`/`dataset_ingest` prices deliberately NOT in
+   `pricing-defaults.ts` yet — mechanism decided, exact credit amounts still open (§8 Q1).
+4. **LLM harness** (`d60edb7`) — `instruct/prompt.ts` + `parse.ts`, mirrors
+   `src/catalog/rerank-prompt.ts`/`rerank.ts`. `DATASET_INSTRUCT_MODEL = 'claude-haiku-4-5'`,
+   temperature 0. English prompt (new text, not a rewrite of the CBS-side Dutch prompts).
+5. **Turn orchestration** (`fd3df3b`) — `respond.ts` (the `run()` callback
+   `chargeAndRunDataset` invokes): pre-checks → rawState revalidation → the one LLM call →
+   threshold/unsupported handling → execute/build → `writeTurn`. `templates.ts` holds every reply
+   string, zero LLM prose in this tier (D8/ADR 015 rule reused).
+
+Also: [ADR 037](decisions/037-user-data-attachments.md)'s own §8 Q6 copy was decided in Dutch
+before the owner's later "we are english now" override (#206) landed in the same session —
+translated in a small follow-up commit (`13751b5`) so the doc and code never contradicted #206.
+
+**Verified state at session end (2026-09-06):** full backend suite green (2045/2045 on the last
+complete run; the newest slice's own `tests/attachments/` suite — 183/183 — re-run separately on
+top of it), benchmark gate PASS (14/14 + 6/6 + 0 fabricated, CBS pipeline untouched throughout),
+typecheck clean, CI `gate` job green on every one of the 5 commits (`deploy` fails on all of them
+on the same pre-existing Route B Vercel-secrets gap tracked in [open-questions #132](open-questions.md) — unrelated to this WP).
+
+**Not yet built (WP202a's own remaining scope, in dependency order):**
+- `reconstructDatasetTurn` — the R8-analog reconstruction check for `dataset_turns` rows. No new
+  design needed: wire `buildUserChartSpec` + `templates.ts`'s `reconstructChartText` against a
+  stored turn's `instruction` + the dataset's current `cells`, matching the CBS-side
+  `reconstructionReport` shape (`{ok, problems}`), then a second `scripts/verify-audit-rows.ts`
+  report.
+- **Server Actions** (`web/app/dataset-actions.ts`) — `ingestFile`, `askDataset`,
+  `decideDatasetFormat`, `deleteMyDataset`. The whole missing wire is one line:
+  `chargeAndRunDataset(db, userId, requestId, () => respondToDatasetQuestion(db, {...}))`, plus
+  the ownership/status pre-check (D8 step 1) and the CSV-parse-then-`insertDataset` ingest path.
+- **UI** — `DatasetChat`, `UserChartView`, wiring the two disabled buttons already shipped in
+  `web/components/chat.tsx` (`01a4502`, this session), `Workspace`/`ThreadSidebar`/`VisualDock`
+  changes per the design doc's D10 (with the byte-identity pins the adversarial review called
+  for — exact-value comparison, not a weak `queryByRole(...).toBeNull()`).
+- `ATTACHMENTS_ENABLED` flag (the WP129/WP135 dormancy pattern), fixtures
+  (`tests/fixtures/llm/attachments/`, `attachments:record`/`:eval`), the §7 docs sweep (
+  `docs/05-data-rules.md`'s new U-row section, `docs/09-pricing.md`, `docs/13`,
+  `docs/04-architecture.md` capability rows, `docs/03-mvp-scope.md`, `docs/06-roadmap.md`,
+  RUNBOOK), then the owner-supervised migration apply + go-live.
+
 *When a WP completes: tick it in [STATUS.md](STATUS.md), record measured results, and — if a design decision here changed — update this file so it stays the plan of record.*

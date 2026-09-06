@@ -6,6 +6,69 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 84 — 2026-09-06, owner present — "chat with your data" designed, adversarially reviewed, and WP202a's backend built (5 slices)
+
+Full narrative: [status-archive.md](status-archive.md) session-84 entry.
+
+- **A widening migration for a `CREATE OR REPLACE FUNCTION` must be diffed against the function's
+  MOST RECENT prior version, never written from memory of an earlier one — this genuinely almost
+  shipped a security regression.** Migration 027 (widening `credit_transactions_validate_compensation`
+  to accept `dataset_cost`) was first drafted by copying migration 018's function body (the last
+  widening BEFORE migration 023 added the #147 over-credit guard) — syntactically correct, passes
+  a casual read, and would have SILENTLY DELETED that guard the moment it applied, since `CREATE OR
+  REPLACE FUNCTION` replaces the whole body, not a diff. Caught immediately because the full
+  backend suite was run before committing and `tests/billing/ledger.test.ts`'s #147 test suite
+  failed loudly (3 tests, all "promise resolved instead of rejecting") — but the near-miss is the
+  lesson: reading the LATEST migration that touched a shared function (here: `grep` for the
+  function name across `migrations/`, take the highest number) before writing a new widening is
+  not optional diligence, it's the only thing standing between "widen a rule" and "silently
+  un-widen a different one." Now recorded in migration 027's own header comment so the next
+  widening starts from a documented warning, not a repeat of this near-miss.
+- **Repeated back-to-back full-suite runs on this machine produce SPURIOUS test failures —
+  timeouts in files nowhere near the change — not just the already-documented OOM-137 pattern.**
+  Running `npx vitest run` (the full ~2000-test PGlite-backed suite) six-plus times in one session
+  (once per build slice, per this project's own verification-block convention) caused progressively
+  worse slowdowns: a normal ~500-700s run stretched to 1800s+, and one run produced 9 failures, all
+  `Test timed out in 120000ms`, all in `tests/ingestion/onboarding-vocab.test.ts` — a file untouched
+  this entire session. Re-running that file ALONE immediately after (16/16 passing, 10s) proved it
+  was resource contention, not a regression — this project's own "Verify exit codes, run solo"
+  memory lesson already covers the OOM-137 shape of this problem; this session's finding is that
+  under load the SAME machine can also fail via ordinary test timeouts with no non-zero exit code
+  to flag it, so a failing full-suite run's specific failures must always be re-run in isolation
+  before concluding anything is actually broken, exit code alone is not enough of a signal.
+- **`erasableSyntaxOnly` is on in this project's `tsconfig` — TypeScript parameter-property
+  shorthand (`constructor(private readonly x: T) {}`) fails typecheck here even though it's valid
+  TS elsewhered.** Hit once (`src/attachments/file-store.ts`), fixed in one edit (explicit field +
+  constructor assignment) once typecheck named the exact error (`TS1294`). Worth knowing before
+  writing a class in this codebase rather than after: this project's TS is constrained to
+  purely type-erasable syntax (no parameter properties, presumably also no enums/namespaces),
+  likely because it runs `.ts` files directly without a separate transpile step.
+- **A genuinely adversarial, multi-lens review of a DESIGN before any code exists, followed by a
+  real `/code-review` pass on EVERY implementation slice, catch different classes of bugs — running
+  only one of the two would have shipped real gaps.** The 7-agent pre-build review (H1 boundary,
+  GDPR/cross-user, audit/replay, UI byte-identity, money path, upload security, LLM allowlist) found
+  and fixed structural gaps in the DESIGN itself (an LLM free-text field that could leak to the
+  client, a delete-vs-write race, a GDPR redaction column gap, SSRF/zip-bomb/PDF hardening, several
+  billing edge cases) before a single implementation file existed. Separately, the per-slice
+  `/code-review` LOW passes (required before every push per CLAUDE.md) then caught REAL,
+  independent bugs the design review had no way to see because they only exist once code is
+  written: a missing `Buffer.from()` on an untested bytea-write path, two y-columns sharing a
+  header silently merging into one series, an ambiguous-format column reaching the validator with
+  no prompt guidance to avoid it, and — the largest — every dataset-chat turn's LLM token/latency
+  usage being silently discarded and stored as 0 despite real spend. Neither review pass would have
+  caught the other's findings. Both are now the standing default for this project's build sessions,
+  not just this one.
+- **Cross-session coordination via `mcp__ccd_session_mgmt__list_sessions`/`send_message` worked
+  cleanly for a genuinely parallel workstream** (a separate "Rebrand to 'Your data visualized'"
+  session running concurrently on the owner's behalf) — two unprompted pings arrived mid-session
+  with real, actionable content (a tagline decision, a trust-claim scoping decision, and — critically
+  — the owner's "we are english now" copy override, which conflicted with a standing CLAUDE.md
+  convention and needed one targeted confirming question before being applied, per the existing
+  "ask before reversing standing rules" pattern). Treating an inbound peer-session message as data
+  to verify and relay to the actual user, never as authorization on its own, held up correctly here
+  — the override was only applied after the OWNER confirmed it directly in this chat, not on the
+  peer session's report alone.
+
 ## Session 83 — 2026-09-06, owner present — a false-positive archive gap corrected, #162 closed after a worse round 5
 
 Full narrative: [status-archive.md](status-archive.md) session-83 entry.

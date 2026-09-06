@@ -9,51 +9,49 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
-**▶ SESSION 83 (2026-09-06, fresh session from the session-82 kickoff doc, owner present throughout) —
-three NEXT-list items resolved: the dead worktree cleaned up, the "44-58 archive gap" from session 82
-found to be a FALSE POSITIVE (corrected, redundant STATUS.md narrative pruned), and #162 CLOSED (round 5
-run, still FAILS both gates worse than round 4, owner accepted as final).** Full session entry:
-[status-archive.md](status-archive.md).
+**▶ SESSION 84 (2026-09-06, owner present throughout) — "chat with your data" (#201/#202) went from a
+casual "what's Vercel's chat SDK" question to a fully designed, adversarially reviewed, 5-slice-built
+backend for the attachments feature (ADR 037/WP202a), plus a cross-cutting product-copy decision
+(#206: English, not Dutch) and coordination with a parallel rebrand-planning session.** Full session
+entry: [status-archive.md](status-archive.md).
 
-**Worktree cleanup done** (owner go-ahead): `agent-aa024a353bfdc08d5`'s branch + worktree removed
-(`git worktree remove --force` + `git branch -D`) — the background process had already exited; the work
-was redundant/already-merged-elsewhere per session 82's own diligence.
+**WP202a backend is fully built and tested; nothing is live.** 5 commits
+(`1e090c3`→`01840ee`→`ce5dd5f`→`d60edb7`→`fd3df3b`), each its own full verification block +
+`/code-review` LOW pass (real bugs caught and fixed in every single slice — see
+[08-build-plan.md](08-build-plan.md)'s new WP202a section for the per-slice detail). Covers: the H1
+closed-vocabulary engine (parse→validate→execute→chart, the LLM can only pick from a supplied
+allowlist, never emit a value), DB persistence + the R8-analog audit trail + full GDPR self-service/
+purge, credit-ledger billing wiring, the Haiku instruct-prompt harness, and the turn orchestration
+tying all of it together. Migrations 026+027 are **FILE-ONLY**, never applied. Still needed before
+go-live: `reconstructDatasetTurn`, Server Actions, the UI (`DatasetChat`/`UserChartView`), the
+`ATTACHMENTS_ENABLED` flag, fixtures, and the docs §7 sweep — see the build-plan entry for the exact
+list. Design doc + the full 7-lens adversarial review:
+[session-briefs/2026-09-06-chat-with-data-design.md](session-briefs/2026-09-06-chat-with-data-design.md).
 
-**The "44-58 archive gap" was a FALSE POSITIVE — corrected, not backfilled.** Session 82's grep-based check
-missed two heading-format variants `status-archive.md` also uses: a bare `**DATE (session N — ...)**`
-without the literal words "Last updated:" (session 50, archive line ~3562) and a `**Previous (DATE, ...
-marathon...)**` heading (the Design marathon entry, archive line ~3282). Every session in the flagged
-range — 44 through 55, plus "Design marathon" and "Sparring session" — was individually re-checked by
-CONTENT against the archive, not just heading presence (44/45/46/47/48/49/50/54/55 + both named entries
-spot-verified word-for-word against STATUS.md's own summaries: all match). **No backfill was needed** —
-the content was already safely archived, just under inconsistent heading phrasing. STATUS.md's now-redundant
-narrative (Design-marathon-through-session-44) is pruned, matching the pattern already established for
-sessions 56/57/68-79/80/81 (zero narrative left in STATUS.md's body for any of those — archive-only).
-`status-archive.md` itself is left as-is — a historical log; session 82's own archived entry stays an
-accurate record of what session 82 believed at the time, and this entry is the correction (same pattern
-as the #197 post-merge sweep).
+**✅ #206 — product copy/UI text is now English, not Dutch (owner override, in-chat: "override, we
+are english now").** Applied same-session to CLAUDE.md's Conventions, [03-mvp-scope.md](03-mvp-scope.md),
+[12-huisstijl.md](12-huisstijl.md), and ADR 037's own already-decided (then superseded) Dutch copy.
+Scope as understood (owner has not itemized it further): new product-copy/UI-text surfaces going
+forward — does NOT touch the CBS chat/answer pipeline's own Dutch output or benchmark task phrasing,
+neither of which came up in this exchange. Full detail: [open-questions #206](open-questions.md).
 
-**#162 round 5 run (owner-authorized) — still FAILS both gates, WORSE than round 4.** Two targeted prompt
-fixes (bare-year "in" vs "op"; don't repeat a value placeholder pointlessly) — full re-recording ($0.463,
-0 fabricated) + judge re-run ($0.171, Haiku): win-or-tie DROPPED to 29.41% (was 41.18%, gate ≥60%), still
-9/34 grammar-flagged (same count as round 4, different pairs) — fresh sampling surfaced NEW patterns
-neither fix addressed (quarter-period word order, a duplicate-unit-mention bug). Cumulative spend across
-5 rounds: ≈$1.77.
+**Coordinated with a parallel "Rebrand to 'Your data visualized'" session** (the owner's other,
+concurrent chat) via cross-session messages — their tagline decision (#7), trust-claim scoping
+(#207), and one unresolved item needing the owner directly (#208: an example gallery page under a
+different account, `stefan@social.plus`, not found on production, no URL given before that session
+ended) are all logged in [open-questions.md](open-questions.md).
 
-**✅ #162 CLOSED (Stefan, in-chat: "Accept as final on #162").** Round 5 stands as the experiment's final
-verdict. `SLOT_PHRASING_ENABLED` stays unset/off PERMANENTLY (no round 6); the ADR-draft is NOT promoted.
-`experiment/162-slot-filling-ab` stays parked as a plain branch (never pushed, all 5 rounds' history intact)
-— its worktree was removed now that the experiment is closed, matching the "no stray worktrees" wrap-up
-discipline; the redundant auto-generated `worktree-agent-ad8ec20c3cba7eebd` branch (a pure ancestor of the
-experiment branch, confirmed via `git merge-base --is-ancestor` before deleting) went with it. Updated in the
-same change: [open-questions.md](open-questions.md) #162, the [04-architecture.md](04-architecture.md)
-capability row, and [RUNBOOK.md](RUNBOOK.md)'s `SLOT_PHRASING_ENABLED` entry.
+**Untouched, no owner input given specifically:** the 3 `gh secret set` commands (owner's own
+terminal, still blocking only `deploy` — unrelated to this session's work, confirmed still the same
+gap on every one of this session's 5 CI runs), WP30c, #197's older follow-ups, #205 (a possible
+future subscription tier, explicitly parked), #208 (needs the owner's URL/path).
 
-**Untouched, no owner input given specifically:** the 3 `gh secret set` commands (owner's own terminal),
-WP30c + #197's three older follow-ups.
-
-**▶ NEXT, in order:** (a) the 3 `gh secret set` commands for Route B, still blocking only `deploy`;
-(b) WP30c + #197's three older follow-ups — owner-menu, no rush.
+**▶ NEXT, in order:** (a) continue WP202a — `reconstructDatasetTurn`, then Server Actions
+(`web/app/dataset-actions.ts`), then the UI (`DatasetChat`/`UserChartView`, wiring the two buttons
+already shipped in `chat.tsx`), then the flag + fixtures + docs sweep, THEN the owner-supervised
+migration apply + go-live — see [08-build-plan.md](08-build-plan.md)'s WP202a section for the exact
+remaining list; (b) the 3 `gh secret set` commands for Route B; (c) WP30c + #197's older
+follow-ups — owner-menu, no rush.
 
 
 **(Historical — the pause, 2026-08-15 to 2026-08-26.)** Project was paused ~2 months (owner decision) and the

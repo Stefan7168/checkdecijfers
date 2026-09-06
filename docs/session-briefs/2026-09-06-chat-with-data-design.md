@@ -1,6 +1,6 @@
 # Session brief — "chat with your data" design (#201 / #202)
 
-**Date:** 2026-09-06 (session 84). **Status:** DRAFT — all 9 §8 owner decisions resolved AND the pre-build adversarial review complete, all findings fixed inline (2026-09-06, same session); nothing built yet. Next: ADR promotion (see the update notes before §0).
+**Date:** 2026-09-06 (session 84). **Status:** DRAFT — all 9 §8 owner decisions resolved AND the pre-build adversarial review complete, all findings fixed inline (2026-09-06, same session); nothing built yet. Next: ADR promotion (see the update notes before §0). **[SUPERSEDED same session — see "Update 3" below: promoted to accepted `docs/decisions/037-user-data-attachments.md`, and WP202a's entire backend built across 5 slices. This doc is kept as ADR 037's historical planning input, per the ADR's own text — read the ADR + `docs/08-build-plan.md`'s WP202a section for current status, not this line.]**
 **Provenance:** produced by a Fable 5 planning agent (`effort: max`, 115 tool calls, ~458k tokens,
 15 min), spawned per the owner's request ("spawn a Fable 5 ULTRACODE agent to create the overall
 plan"). Reviewed by the session model before being written here: ADR numbering (037 is next free,
@@ -35,13 +35,22 @@ fix in [docs/04-architecture.md](../04-architecture.md)'s GDPR section (found in
 GDPR-lens reviewer). **Next step:** promote to `docs/decisions/037-...md` + a frozen executor
 brief (per the plan's own §5 WP202-0). **No execution/build agents have been dispatched.**
 
+**Update 3 (2026-09-06, same session — supersedes the DRAFT status above and at line ~44 below):**
+promoted to accepted **[ADR 037](../decisions/037-user-data-attachments.md)**. WP202a's entire backend
+was then built across 5 verified + code-reviewed slices (core engine, DB/audit/GDPR, billing, LLM
+harness, turn orchestration — `src/attachments/` + migrations 026/027 + billing ledger additions), all
+pushed to `main`, all green. Migrations 026/027 remain FILE-ONLY (never applied to any real database);
+no Server Action or UI wires this backend to `web/` yet; no feature flag exists. Current status and the
+exact remaining-work list live in [docs/08-build-plan.md](../08-build-plan.md)'s WP202a section — this
+document itself is frozen as ADR 037's planning input and is not being updated further.
+
 ---
 
 <!-- BEGIN PLAN -->
 
 # ADR-DRAFT 037 — "Eigen data": file/link attachments, a dataset-scoped chat, and unverified user-data charts (#201 / #202)
 
-**Status:** DRAFT — planning output only (session 84, 2026-09-06; repo tip `01a4502`, the disabled placeholder buttons). Not accepted, nothing built. Promotion path per house rule: owner read-back on the numbered open points (§8) → frozen executor brief → pre-build adversarial review (the WP27/WP30b/WP129+130 pattern) → build on a branch + PR (#118(b): money path + new personal-data store).
+**Status:** DRAFT — planning output only (session 84, 2026-09-06; repo tip `01a4502`, the disabled placeholder buttons). Not accepted, nothing built. Promotion path per house rule: owner read-back on the numbered open points (§8) → frozen executor brief → pre-build adversarial review (the WP27/WP30b/WP129+130 pattern) → build on a branch + PR (#118(b): money path + new personal-data store). **[SUPERSEDED same session — see "Update 3" above: this IS now accepted, as [ADR 037](../decisions/037-user-data-attachments.md), with WP202a's backend built. Read the ADR, not this line, for current status.]**
 
 **Scope of this draft:** makes the first two placeholder buttons in `web/components/chat.tsx` (lines 951–982) real — **"Bestand uploaden"** and **"Link toevoegen"**. **"Databron verbinden" (Google Sheets / OAuth connectors) stays a disabled placeholder** — out of scope, blocked on OAuth *data-scope grants + refresh-token storage*, which do not exist. (One doc-freshness note for the #201 row: accounts *do* exist since WP13/WP28 — magic link + Google *login*, ADR 028; what is missing is Google *Sheets-scope* authorization and token storage, not user accounts. **Assumption** — confirm the row's "no accounts" wording was shorthand for that.)
 

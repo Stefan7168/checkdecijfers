@@ -1,5 +1,102 @@
 # STATUS archive — the session log
 
+**Session 84 (2026-09-06, owner present throughout, spanning a session-83 close-out then a fresh thread) —
+"CHAT WITH YOUR DATA" (#201/#202) DESIGNED, ADVERSARIALLY REVIEWED, AND ITS ENTIRE BACKEND BUILT ACROSS 5
+SLICES (ADR 037/WP202a); #206 — PRODUCT COPY/UI TEXT IS NOW ENGLISH (OWNER OVERRIDE); COORDINATED WITH A
+PARALLEL REBRAND-PLANNING SESSION.**
+
+1. **Started casually** — the owner asked via `/vercel:shadcn` whether Vercel has a "chat SDK" for
+   frontend work. Answered with a full component-fit research pass (session-briefs, [#204](open-questions.md)),
+   then the owner asked to scope a chat-attachment feature ("add buttons such as link website page, upload
+   file"). `superpowers:brainstorming` iteratively surfaced the actual vision: "click datasources -> chat
+   with the data -> create graph -> update graph by chatting" — a dataset-scoped chat where uploads become
+   queryable/chartable data, with two owner-set hard constraints: **(H1)** the LLM only ever emits a
+   structured, validated instruction, never a value — deterministic code alone renders the chart; **(H2)** a
+   user-data chart must be visibly/structurally impossible to confuse with an official CBS chart.
+2. **Shipped the two disabled entry-point buttons** in `web/components/chat.tsx` (`01a4502`) as honest
+   placeholders, then the owner asked for a Fable-5 `effort:max` planning agent (925s, 115 tool calls,
+   ~458k tokens) to produce the full architecture — landed as ADR-DRAFT 037
+   ([session-briefs/2026-09-06-chat-with-data-design.md](session-briefs/2026-09-06-chat-with-data-design.md),
+   `dfe45be`), grounded in the existing ADR 032 (websearch trust-separation)/007/014 (chart spec)/033
+   (threads)/001 (module boundary) patterns, with every factual claim (ADR/migration numbering, cited file
+   paths, git tip) independently re-verified against the repo, not taken on the agent's word.
+3. **Owner read back all 9 §8 open decisions, one at a time, via `AskUserQuestion`** (`0ee84e7`): free CSV
+   ingest + pay-per-turn credits (mechanism only, amounts still open — surfaced and PARKED a "monthly
+   subscription tier" idea as [#205](open-questions.md), since it would reverse ADR 006/020's decided
+   no-subscription model); 2-year retention for extracted data/turns, 90 days for raw file bytes; per-file
+   delete ships in v1; PDF and Excel both deferred past v1; proposed copy accepted (later superseded, see
+   below); user data and CBS data never combine in one chart for v1 (raised again mid-review, then
+   explicitly re-deferred by the owner: "these are edge cases for later"); dataset charts appear in history
+   from day one; the proposed size/quota caps accepted as starting constants.
+4. **Ran the pre-build adversarial review the design's own process called for** — 7 independent agents, one
+   lens each (the AI-never-emits-a-value boundary, GDPR/cross-user isolation, audit/replay/reconstruction,
+   UI byte-identity, the money path, upload security/SSRF, the LLM closed-vocabulary allowlist), each reading
+   the full design and trying to break it against the real repo. **The core guarantee held under all 7
+   attempts.** Real gaps found elsewhere, several independently by more than one reviewer: an LLM free-text
+   field (`reading`/`unsupported.detail`) that could leak to the client (this exact codebase had already
+   rendered the structurally identical field verbatim twice elsewhere); a delete-vs-write race; a GDPR
+   redaction gap on two plain-text columns; SSRF DNS-rebinding/zip-bomb/PDF-hidden-text hardening gaps; and
+   several billing edge cases (a compensation function's foreign key, the ledger's inability to represent a
+   $0 charge, a missing double-click guard). All fixed inline in the design doc, marked "Fixed in review"
+   (`a2e8615`), then promoted to an accepted ADR (`docs/decisions/037-user-data-attachments.md`, `1e090c3`).
+5. **Built WP202a's entire backend across 5 slices, each with its own full verification block (typecheck +
+   the whole backend suite + benchmark gate + a real `/code-review` LOW pass) — every single slice's review
+   found and fixed a genuinely real bug, not a stylistic nitpick:**
+   - **Core engine** (`1e090c3`) — `src/attachments/` types/limits/CSV-ingest/numeric-format-detection/
+     profile-building/the closed-vocabulary validator/`execute.ts`+`chart.ts`; migrations 026+027
+     (FILE-ONLY). Review found + fixed: an unresolved ambiguous numeric column could still reach a plotted
+     value; two y-columns sharing a header would silently merge into one series; duplicated column-lookup
+     helpers across two files; a manufactured (misleading) numeric range for ambiguous columns.
+   - **DB/audit/GDPR** (`01840ee`) — `store.ts`, `file-store.ts` (bytea, PGlite round-trip actually
+     verified), `audit.ts` (`writeTurn`'s delete-vs-write race fix — re-locks + re-checks dataset status as
+     the transaction's first statement, writes NO turn at all if the dataset is gone), `retention.ts`
+     (self-service + per-file delete + the 2yr/90d two-cutoff purge, its own transaction by deliberate
+     design choice — not folded into the CBS-side `redactMatchingRows`). Review found + fixed: a missing
+     `Buffer.from()` on an untested bytea-write path; a redacted-profile sentinel that violated its own
+     TypeScript shape; a lost-on-partial-failure purge result (now `PartialPurgeError`, carrying what
+     already committed); no unique constraint on `dataset_turns.request_id` (added to migration 026 directly
+     — still file-only, never applied anywhere, so fixed in place rather than via a follow-up migration).
+   - **Billing** (`ce5dd5f`) — `debitDataset`/`reserveDatasetDebit` (ledger siblings), `dataset-gate.ts`'s
+     `chargeAndRunDataset`. Review: 0 findings (a close structural mirror of the already-proven
+     `websearch_cost`/`chargeAndRun` pattern, backed by tests covering every settlement path).
+   - **LLM harness** (`d60edb7`) — `instruct/prompt.ts`+`parse.ts`, `DATASET_INSTRUCT_MODEL='claude-haiku-4-5'`,
+     temperature 0, mirrors `src/catalog/rerank-prompt.ts`/`rerank.ts`. Review found + fixed: the prompt
+     showed an ambiguous-format column with no instruction telling the model not to pick it.
+   - **Turn orchestration** (`fd3df3b`) — `respond.ts` (pre-checks → rawState revalidation → the one LLM
+     call → threshold → execute/build → `writeTurn`) + `templates.ts` (every reply string, zero LLM prose).
+     Review found + fixed: real LLM token/latency usage was being discarded and stored as 0 on every turn
+     despite real spend; `suggestionOptions` could return zero clarification chips for a narrow dataset.
+   - A small follow-up commit (`13751b5`) translated ADR 037's own already-decided (Dutch) copy to English
+     once #206 (below) landed later in the same session, so the doc and code never contradicted it.
+6. **✅ #206 — "override, we are english now" (owner, in-chat).** A cross-session ping from the parallel
+   rebrand-planning session reported English UI copy as their working direction; this session raised the
+   direct conflict with CLAUDE.md's then-standing "Dutch only for product copy/UI text" convention rather
+   than silently adopting or ignoring the peer report, and the owner then confirmed the override directly.
+   Applied same-session to CLAUDE.md's Conventions, [03-mvp-scope.md](03-mvp-scope.md),
+   [12-huisstijl.md](12-huisstijl.md) (`a654977`), and folded into ADR 037's already-decided copy
+   (`13751b5`). Scope recorded as inferred, not owner-itemized: new UI-copy surfaces going forward, not the
+   CBS pipeline's own Dutch output or the benchmark's Dutch task phrasing.
+7. **Coordinated with the parallel "Rebrand to 'Your data visualized'" session** via
+   `mcp__ccd_session_mgmt__send_message`/`list_sessions` — two unprompted pings landed mid-session: their
+   own logged decisions (#7 tagline, [#207](open-questions.md) CBS-scoped trust claim) and a final handoff
+   before that session ended, flagging [#208](open-questions.md) (an example graph/storytelling gallery the
+   owner built under a different account, not found on production, no URL given) as needing the owner
+   directly. All recorded in open-questions; nothing blocked this session's own work.
+8. **Verified state at session end:** full backend suite green (2045/2045 tests on the last complete run,
+   confirmed clean of the earlier session's transient resource-contention timeouts by isolating and re-running
+   the specific affected file — 16/16 clean — plus the newest slice's own `tests/attachments/` suite,
+   183/183, re-run directly on top of the final code); benchmark gate PASS (14/14+6/6+0 fabricated, unchanged
+   throughout — zero CBS pipeline prompt bytes touched by any of this); typecheck clean; CI `gate` job green
+   on every one of the 5 feature commits (`deploy` fails on all of them on the same pre-existing Route B
+   Vercel-secrets gap, [#132](open-questions.md) — confirmed via `gh run view --json jobs`, unrelated to this
+   session). Nothing live: migrations 026/027 are FILE-ONLY, no Server Action or UI wires the backend to the
+   web yet, no flag exists.
+
+Full lessons: [lessons-learned.md](lessons-learned.md) session-84 entry (the migration-027 near-miss that
+would have silently deleted a security guard; resource-contention timeouts as a second failure shape beyond
+the known OOM-137 pattern; an `erasableSyntaxOnly` TypeScript gotcha; why design-level review and
+per-slice code-review both stayed necessary, neither substituting for the other).
+
 **Session 83 (2026-09-06, fresh session opened from the session-82 kickoff doc, owner present throughout) —
 THE DEAD WORKTREE CLEANED UP, THE "44-58 ARCHIVE GAP" FOUND TO BE A FALSE POSITIVE (CORRECTED, NOT
 BACKFILLED), AND #162 RUN FOR A ROUND 5 (STILL FAILED BOTH GATES, WORSE THAN ROUND 4) THEN CLOSED
