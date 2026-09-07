@@ -9,6 +9,28 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
+**▶ SESSION 87 (2026-09-07, owner present then autonomous mid-session — "keep working until I say
+stop") — chat + chart visual redesign shipped and LIVE.** Fixed a real prod bug found while
+investigating an owner report ("tabs don't open"): `/geschiedenis` was frozen redirecting to `/`
+by build-time static prerendering (`a8ae15b`, same bug class as #135, fixed with
+`export const dynamic = 'force-dynamic'`). Then, per an owner request to improve the UI: 3 mockup
+options built and reviewed, owner picked Option B + 3 amendments; a Fable subagent built the full
+redesign against a committed spec (`90fda5d`), reviewed/amended/verified by the session
+(`e6f5b21`) — shadcn/ui neutral + `next-themes` dark mode, papier & inkt retired
+([12-huisstijl.md](12-huisstijl.md)), Recharts basic palette, "Over dit project" + example chips
+removed from the chat screen. **Verified LIVE** (`GET /api/health` → ok; DOM-confirmed the new
+chat screen renders correctly in production — no screenshot possible, the owner's machine screen
+appears locked while away, but `get_page_text`/`read_page` work fine regardless). Full verification
+every push: web 701/701, backend 2089/2089, both typechecks, real `next build`, `/code-review` LOW
+clean. Stale "papier & inkt"/`--series-1..4` references swept across ADRs 008/014/018/035,
+08-build-plan.md, 10-ux-design-brief.md, 04-architecture.md; open-questions #204 resolved.
+`03-mvp-scope.md`'s chart-studio non-goal narrowed (owner: conversational chart editing for CBS
+charts pulled into scope as sub-project 3). Two research briefs produced (chat interaction
+polish — a real streaming/honesty tension found, not yet resolved; conversational chart editing —
+invariant risk assessed, tier-3 "ask for different data" empirically confirmed already-working live
+on production). 11 terminally-closed open-questions rows archived (`6327864`). Full session entry:
+[status-archive.md](status-archive.md).
+
 **▶ SESSION 86 (2026-09-07, owner present, mixed autonomous/interactive) — the CI `deploy` job is
 FIXED and LIVE for the first time in weeks, and that exposed + fixed a real production incident.**
 The 3 long-pending `gh secret set` commands finally ran (two non-secret ones by the session, the
