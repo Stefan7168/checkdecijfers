@@ -40,7 +40,7 @@ exactly like a CBS chart does, instead of always rendering inline. `DockVisual` 
 `userChart: UserChartSpec | null` field (zero behavior change to the CBS path, confirmed by the
 full pre-existing suite passing byte-identical), `deriveDatasetVisuals` is the `deriveVisuals`
 analog, and `DatasetChat` gained `dockMode`/`onVisualsChange`/`activeVisualId`/`onActivateVisual`
-props mirroring `Chat`'s own. 21 new tests, full web suite green (703/703). Full detail:
+props mirroring `Chat`'s own. 15 new tests, full web suite green (697/697). Full detail:
 [08-build-plan.md](08-build-plan.md)'s WP202a section.
 
 **✅ #206 — product copy/UI text is English, not Dutch (owner override, session 84)** — every new

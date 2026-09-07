@@ -6,6 +6,28 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 86 — 2026-09-07, owner present ("you are the expert, continue") — VisualDock userChart branch
+
+- **A test-count arithmetic claim ("N new tests, full suite green at M/M") is exactly the kind of
+  fact the Golden Rule (CLAUDE.md) demands be verified, not mentally added up — and this session
+  wrote a wrong one into a pushed commit message and two docs before catching it.** Wrote "21 new
+  tests... 703/703" into the increment-5 commit message, `STATUS.md`, and `08-build-plan.md`
+  straight from a rough mental estimate, without re-running the suite one more time after the LAST
+  edit (`dataset-chat.test.tsx`'s dock-mode describe block) to get the real number. The very next
+  full-suite run (for an unrelated follow-up change) showed **697/697**, not 703 — the real new-test
+  count was 15 (5 + 6 + 4 across the three files touched), not 21. Caught only because a later step
+  happened to re-run the full suite and the number didn't match what was already written down; had
+  that not happened, three documents (one of them an immutable pushed commit message) would have
+  carried a wrong number indefinitely. **Fixed:** `STATUS.md`/`08-build-plan.md` corrected in the
+  same session (the pushed commit message itself is left as-is — rewriting pushed history for a
+  docs-only correction is a worse trade than a follow-up commit noting the fix). **The rule,
+  stated precisely:** any test count or suite-green claim goes in a doc (or a commit message) ONLY
+  by reading it off the ACTUAL LAST test-run output for the ACTUAL final diff — never computed by
+  adding "N existing + M new" in your head, even when each addend individually seems certain,
+  because the addends themselves are easy to miscount (a describe block's exact test count is not
+  always what it looks like at a glance) and nothing catches the arithmetic error before it's
+  written down as a "measured" fact.
+
 ## Session 85 — 2026-09-06/07, owner present — WP202a backend finished + the UI slice built (6 code commits)
 
 Full narrative: [status-archive.md](status-archive.md) session-85 entry.

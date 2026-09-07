@@ -563,9 +563,9 @@ stays the default, so every prior test/call site is unaffected). `Workspace`'s d
 already driving the CBS side, since `visuals`/`activeVisualId` reset on every thread switch
 regardless of kind. This closes WP202a's last documented "no dock support" scope gap (ADR 037,
 `docs/08-build-plan.md`'s own prior wording here, `dataset-chat.tsx`'s header comment — all updated
-in the same change). 21 new tests (`web/lib/dock-visuals.test.ts` — new file, the module's first —
+in the same change). 15 new tests (`web/lib/dock-visuals.test.ts` — new file, the module's first —
 plus `visual-dock.test.tsx` and 4 new `dataset-chat.test.tsx` cases). Full backend suite green,
-full web suite green (703/703), both typechecks + a real `next build` clean.
+full web suite green (697/697), both typechecks + a real `next build` clean.
 
 **Not yet built (WP202a's own remaining scope):**
 - `ATTACHMENTS_ENABLED` flag (the WP129/WP135 dormancy pattern — `Chat`/`Workspace` are already
