@@ -8,6 +8,13 @@
 // ships DARK: while WORKSPACE_ENABLED is off it redirects to / (no new
 // surface reachable pre-flip); flag on ⇒ auth-guarded, with the site header
 // like every other authenticated page.
+//
+// #135 residual (same bug as /login, fixed session 55): the WORKSPACE_ENABLED
+// read above is the first thing this page does, so a build-time prerender
+// with the flag off freezes the redirect forever — the flag flipping ON in
+// production afterwards never takes effect until a fresh build. Same fix:
+// opt out of prerendering so the flag is read per request.
+export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 import { redirect } from 'next/navigation';

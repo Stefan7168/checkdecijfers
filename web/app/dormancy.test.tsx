@@ -42,7 +42,7 @@ import { redirect } from 'next/navigation';
 import Home from './page.tsx';
 import CreditsPage from './credits/page.tsx';
 import LoginPage from './login/page.tsx';
-import GeschiedenisPage from './geschiedenis/page.tsx';
+import GeschiedenisPage, { dynamic as geschiedenisDynamic } from './geschiedenis/page.tsx';
 
 beforeEach(() => {
   currentUserId.mockResolvedValue('user-1');
@@ -82,6 +82,10 @@ describe('WP135 dormancy — flag OFF renders today, byte-identical (⟨A5⟩)',
   it('/geschiedenis redirects to /', async () => {
     await expect(GeschiedenisPage()).rejects.toThrow('REDIRECT:/');
     expect(redirect).toHaveBeenCalledWith('/');
+  });
+
+  it('/geschiedenis opts out of static prerendering (#135 residual, same bug as /login)', () => {
+    expect(geschiedenisDynamic).toBe('force-dynamic');
   });
 });
 
