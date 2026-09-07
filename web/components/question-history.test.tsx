@@ -307,12 +307,12 @@ describe('QuestionHistory', () => {
           ]}
         />,
       );
-      expect(container.querySelector('.bg-warn-soft')).toBeNull();
+      expect(container.querySelector('.bg-warning-soft')).toBeNull();
     });
 
     it('applies the amber pending styling to a pending entry', () => {
       const { container } = render(<QuestionHistory items={[onboardingEntry()]} />);
-      expect(container.querySelector('.bg-warn-soft')).not.toBeNull();
+      expect(container.querySelector('.bg-warning-soft')).not.toBeNull();
     });
 
     it('#116 residual: renders an id the delivery email anchors on ("onboarding-{id}", matching the existing source-scoped React key)', () => {

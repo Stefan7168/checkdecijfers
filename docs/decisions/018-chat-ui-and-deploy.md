@@ -62,3 +62,8 @@ every surface, `/` serves a PUBLIC landing to logged-out visitors ([#98](../open
 `proxy.ts` allowlists `/` exact-match), and a site-wide footer carries the CBS/CC BY line. Everything
 structural in this ADR (independent `web/` project, server actions, non-streaming spinner, no regenerate)
 stands unchanged.
+
+**Further update (session 87, 2026-09-07):** the papier-en-inkt huisstijl itself is now RETIRED — see
+[12-huisstijl.md](../12-huisstijl.md) (current: shadcn/ui neutral, light + dark) and [open-questions
+#204](../open-questions.md) (resolved, superseding this addendum's premise for VISUALS only). Structural
+decisions here are still unaffected.

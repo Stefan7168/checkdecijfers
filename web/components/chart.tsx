@@ -77,29 +77,23 @@ export interface SeriesMeta {
   key: string;
   label: string;
   color: string;
-  /** Non-colour encoding (#197): undefined = solid, else an SVG dash pattern.
-   * Recharts' legend icon picks it up automatically. */
-  dasharray: string | undefined;
 }
 
-// #197 series palette — the one sanctioned exception to the huisstijl's "one
-// accent" rule (docs/12-huisstijl.md): data series need distinguishable hues.
-// Tokens live in app/globals.css (`--series-1..4`: the accent for brand
-// continuity, then Okabe-Ito vermillion / bluish green and Tol purple — a
-// colour-blind-safe set, each ≥ 3:1 against both paper surfaces, measured
-// 2026-09-02). The old palette reused the semantic --danger/--ok/--warn
-// tokens as series colours: red-vs-green at 1.10:1 lightness contrast AND the
-// hue pair deuteranopia collapses. Series five and beyond render in muted ink
-// — the chart stops pretending to tell them apart by hue (the table view is
-// the honest surface for many series) — and every series after the first
-// carries a dash pattern so colour is never the only difference (WCAG 1.4.1).
-const SERIES_COLORS = ['var(--series-1)', 'var(--series-2)', 'var(--series-3)', 'var(--series-4)'];
-const SERIES_DASHES = ['6 3', '2 2', '8 3 2 3', '1 3'];
+// Series palette — session 87 visual redesign (owner decision, docs/
+// superpowers/specs/2026-09-07-chat-chart-visual-redesign-design.md): "use the
+// basic Recharts style". Recharts has no built-in categorical palette (every
+// series would default to the same #3182bd), so "basic Recharts" means the
+// colours its own documentation examples use — the look everyone recognises
+// as a stock Recharts chart. This supersedes the #197 colour-blind-safe token
+// palette + dash patterns (session 69): the owner accepted that the default
+// palette may be colour-blind-unsafe as a trade-off of this decision; the
+// hollow/hatched provisional marker (R11) is untouched — that is honesty, not
+// styling. The palette cycles for series nine and up; the Tabel view remains
+// the honest surface for many series.
+export const RECHARTS_PALETTE = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#0088fe', '#00c49f', '#ffbb28', '#ff8042'];
 
-export function seriesStyle(index: number): { color: string; dasharray: string | undefined } {
-  const color = index < SERIES_COLORS.length ? SERIES_COLORS[index] : 'var(--ink-muted)';
-  const dasharray = index === 0 ? undefined : SERIES_DASHES[(index - 1) % SERIES_DASHES.length];
-  return { color, dasharray };
+export function seriesStyle(index: number): { color: string } {
+  return { color: RECHARTS_PALETTE[index % RECHARTS_PALETTE.length]! };
 }
 
 // Y-axis honesty policy (open-questions #48, resolved 2026-07-04): a bar
@@ -370,9 +364,9 @@ export function ChartTooltip({
     <div
       role="status"
       aria-live="polite"
-      className="rounded-md border border-line-strong bg-paper-raised px-3 py-2 text-sm shadow-sm"
+      className="rounded-lg border border-border bg-popover px-3 py-2 text-sm text-popover-foreground shadow-md"
     >
-      <div className="font-medium text-ink">{label}</div>
+      <div className="font-medium">{label}</div>
       {payload.map((entry) => {
         const display = entry.payload[`${entry.dataKey}_display`];
         if (display == null) return null;
@@ -424,13 +418,13 @@ function SeriesLegend({
             aria-pressed={!hidden}
             onClick={() => onToggle(s.key)}
             className={
-              'inline-flex min-h-6 items-center gap-1.5 rounded px-1 text-xs ' +
-              (hidden ? 'text-ink-muted line-through' : 'text-ink')
+              'inline-flex min-h-6 items-center gap-1.5 rounded-md px-1.5 text-xs hover:bg-muted ' +
+              (hidden ? 'text-muted-foreground line-through' : 'text-foreground')
             }
           >
             <span
               aria-hidden="true"
-              style={{ backgroundColor: hidden ? 'var(--ink-muted)' : s.color }}
+              style={{ backgroundColor: hidden ? 'var(--muted-foreground)' : s.color }}
               className="inline-block h-2.5 w-2.5 rounded-full"
             />
             {s.label}
@@ -462,7 +456,7 @@ function SeriesDot(seriesKey: string, endLabel: PointLabel | undefined) {
           cx={cx}
           cy={cy}
           r={4}
-          fill={provisional ? 'var(--paper-raised)' : color}
+          fill={provisional ? 'var(--card)' : color}
           stroke={color}
           strokeWidth={2}
           data-point="value"
@@ -473,7 +467,7 @@ function SeriesDot(seriesKey: string, endLabel: PointLabel | undefined) {
             x={cx + 8}
             y={cy + 4}
             fontSize={11}
-            fill="var(--ink)"
+            fill="var(--foreground)"
             textAnchor="start"
             data-role="end-label"
             data-label-for={endLabel.resultId}
@@ -517,7 +511,7 @@ function SeriesBar(seriesKey: string, color: string, patternId: string, labelByP
             x={x + width / 2}
             y={negative ? y + height + 12 : y - 4}
             fontSize={11}
-            fill="var(--ink)"
+            fill="var(--foreground)"
             textAnchor="middle"
             data-role="bar-label"
             data-label-for={label.resultId}
@@ -547,7 +541,7 @@ export function AxisTick(tickByValue: Map<number, AxisTickLabel>) {
         y={props.y}
         dy={4}
         fontSize={11}
-        fill="var(--ink-muted)"
+        fill="var(--muted-foreground)"
         textAnchor="end"
         data-role="axis-tick"
         data-label-for={tick.resultId}
@@ -582,8 +576,19 @@ function labelWidthPx(text: string): number {
   return Math.ceil(text.length * 6.5) + 12;
 }
 
-export function ChartView({ spec }: { spec: ChartSpec }) {
+export function ChartView({
+  spec,
+  frameless = false,
+}: {
+  spec: ChartSpec;
+  /** Session 87 (purely presentational): drop the component's own card frame
+   * when the mount point already IS a card (the visual dock) — a card inside a
+   * card is the one thing the shadcn direction says not to do. Inline in the
+   * conversation and on Ontdek the frame stays. */
+  frameless?: boolean;
+}) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
+  const frameClass = frameless ? '' : 'mt-3 rounded-xl border border-border bg-card p-4 text-card-foreground';
   const rawId = useId();
   const domId = rawId.replace(/[^a-zA-Z0-9_-]/g, '');
   const coarsePointer = useCoarsePointer();
@@ -639,16 +644,16 @@ export function ChartView({ spec }: { spec: ChartSpec }) {
     // guard src/chart/render.ts has always had, and this wrapper lacked
     // until #197 (a v2 spec would have rendered silently, possibly wrong).
     return (
-      <div className="mt-3 rounded-lg border border-line bg-paper-raised p-3">
-        <div role="heading" aria-level={3} className="text-sm font-semibold text-ink">
+      <div className={frameClass}>
+        <div role="heading" aria-level={3} className="text-sm font-semibold text-foreground">
           {spec.title}
         </div>
-        <p className="mt-2 text-sm text-warn">
+        <p className="mt-2 text-sm text-warning">
           Deze grafiek is gemaakt in een nieuwere versie dan deze pagina kan tonen. De cijfers staan in het
           antwoord zelf.
         </p>
         <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
-          <p className="text-xs text-ink-muted">{spec.attributionLine}</p>
+          <p className="text-xs text-muted-foreground">{spec.attributionLine}</p>
           <SourceBadge tableId={spec.attribution.tableId} syncedAt={spec.attribution.syncedAt} />
         </div>
       </div>
@@ -695,22 +700,35 @@ export function ChartView({ spec }: { spec: ChartSpec }) {
     }
   }
 
+  // Session 87 (mockup Option B): the Grafiek/Tabel switch is a shadcn-style
+  // segment (muted track, raised active segment); the small-multiples and
+  // axis toggles are quiet pills.
+  const segmentTab = (active: boolean): string =>
+    'min-h-6 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ' +
+    (active ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground');
   const tabClass = (active: boolean): string =>
     'min-h-6 rounded-full border px-2.5 py-1 text-xs ' +
-    (active ? 'border-line-strong bg-paper-sunken text-ink' : 'border-line-strong text-ink-soft hover:bg-paper-sunken');
+    (active
+      ? 'border-transparent bg-secondary text-foreground'
+      : 'border-border text-muted-foreground hover:bg-muted hover:text-foreground');
 
   return (
-    <div className="mt-3 rounded-lg border border-line bg-paper-raised p-3">
-      <div role="heading" aria-level={3} className="text-sm font-semibold text-ink">
+    <div className={frameClass}>
+      <div role="heading" aria-level={3} className="text-sm font-semibold text-foreground">
         {spec.title}
       </div>
       {dimEntries.length > 0 ? (
-        <div className="text-xs text-ink-muted">
+        <div className="text-xs text-muted-foreground">
           {dimEntries.map(([k, v]) => `${k}: ${v}`).join(' · ')}
         </div>
       ) : null}
-      <div className="text-xs text-ink-muted">{spec.unit}</div>
-      <div role="tablist" aria-label="Weergave" onKeyDown={onTabKeyDown} className="mt-2 flex flex-wrap gap-2">
+      <div className="text-xs text-muted-foreground">{spec.unit}</div>
+      <div
+        role="tablist"
+        aria-label="Weergave"
+        onKeyDown={onTabKeyDown}
+        className="mt-3 inline-flex items-center gap-0.5 rounded-lg bg-muted p-0.5"
+      >
         <button
           ref={chartTabRef}
           type="button"
@@ -719,7 +737,7 @@ export function ChartView({ spec }: { spec: ChartSpec }) {
           aria-controls={panelId}
           tabIndex={view === 'chart' ? 0 : -1}
           onClick={() => selectView('chart')}
-          className={tabClass(view === 'chart')}
+          className={segmentTab(view === 'chart')}
         >
           Grafiek
         </button>
@@ -731,7 +749,7 @@ export function ChartView({ spec }: { spec: ChartSpec }) {
           aria-controls={panelId}
           tabIndex={view === 'table' ? 0 : -1}
           onClick={() => selectView('table')}
-          className={tabClass(view === 'table')}
+          className={segmentTab(view === 'table')}
         >
           Tabel
         </button>
@@ -742,7 +760,7 @@ export function ChartView({ spec }: { spec: ChartSpec }) {
             <thead>
               <tr>
                 {table.header.map((h) => (
-                  <th key={h} scope="col" className="border-b border-line-strong px-2 py-1 text-left font-medium text-ink-soft">
+                  <th key={h} scope="col" className="border-b border-border px-2 py-1 text-left font-medium text-muted-foreground">
                     {h}
                   </th>
                 ))}
@@ -750,14 +768,14 @@ export function ChartView({ spec }: { spec: ChartSpec }) {
             </thead>
             <tbody>
               {table.rows.map((row) => (
-                <tr key={row.label} className="border-b border-line">
-                  <th scope="row" className="px-2 py-1 text-left font-normal text-ink">
+                <tr key={row.label} className="border-b border-border">
+                  <th scope="row" className="px-2 py-1 text-left font-normal text-foreground">
                     {row.label}
                   </th>
                   {row.cells.map((cell, i) => (
                     <td
                       key={table.header[i + 1] ?? i}
-                      className="px-2 py-1 text-right text-ink"
+                      className="px-2 py-1 text-right text-foreground"
                       data-label-for={cell.resultId ?? undefined}
                     >
                       {cell.text}
@@ -798,8 +816,11 @@ export function ChartView({ spec }: { spec: ChartSpec }) {
               desc={KEYBOARD_HINT}
               aria-label={accessibleName}
             >
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" />
-              <XAxis dataKey="periodLabel" tick={{ fontSize: 11, fill: 'var(--ink-muted)' }} />
+              {/* Recharts' own default grid + axis styling (session 87: the
+                * "basic Recharts look"); only the honesty-bound custom ticks
+                * and labels below are ours. */}
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="periodLabel" />
               {/* #197 idea 6: axis ticks come from the full spec (valueLabelPlan
                 * doesn't know about hiddenKeys) and are NOT recomputed when a
                 * series is hidden — an accepted v1 limitation, not a bug: the
@@ -824,7 +845,7 @@ export function ChartView({ spec }: { spec: ChartSpec }) {
                 <ReferenceLine
                   key={m.periodLabel}
                   x={m.periodLabel}
-                  stroke="var(--ink-muted)"
+                  stroke="var(--muted-foreground)"
                   strokeDasharray="3 3"
                 />
               ))}
@@ -838,7 +859,6 @@ export function ChartView({ spec }: { spec: ChartSpec }) {
                     name={s.label}
                     stroke={s.color}
                     strokeWidth={2}
-                    strokeDasharray={s.dasharray}
                     connectNulls={false}
                     dot={SeriesDot(s.key, endLabelByKey.get(s.key))}
                     isAnimationActive={false}
@@ -862,13 +882,16 @@ export function ChartView({ spec }: { spec: ChartSpec }) {
                     height={6}
                     patternTransform="rotate(45)"
                   >
-                    <rect width={6} height={6} fill="var(--paper-raised)" />
+                    <rect width={6} height={6} fill="var(--card)" />
                     <line x1={0} y1={0} x2={0} y2={6} stroke={s.color} strokeWidth={2} />
                   </pattern>
                 ))}
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" />
-              <XAxis dataKey="periodLabel" tick={{ fontSize: 11, fill: 'var(--ink-muted)' }} />
+              {/* Recharts' own default grid + axis styling (session 87: the
+                * "basic Recharts look"); only the honesty-bound custom ticks
+                * and labels below are ours. */}
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="periodLabel" />
               <YAxis tick={false} width={16} domain={yAxisDomain(spec.kind)} />
               <Tooltip trigger={tooltipTrigger} content={<ChartTooltip seriesMeta={seriesMeta} />} />
               {seriesMeta
@@ -895,7 +918,7 @@ export function ChartView({ spec }: { spec: ChartSpec }) {
       </div>
       )}
       {view === 'chart' && spec.attribution.trendHeadline !== undefined ? (
-        <p data-testid="trend-headline" className="mt-1 text-sm text-ink">
+        <p data-testid="trend-headline" className="mt-1 text-sm text-foreground">
           {spec.attribution.trendHeadline}
         </p>
       ) : null}
@@ -903,7 +926,7 @@ export function ChartView({ spec }: { spec: ChartSpec }) {
         <>
           <SeriesLegend seriesMeta={seriesMeta} hiddenKeys={hiddenKeys} onToggle={toggleSeries} />
           {hiddenKeys.size > 0 ? (
-            <p className="mt-1 text-xs text-ink-muted">
+            <p className="mt-1 text-xs text-muted-foreground">
               {hiddenKeys.size} van {seriesMeta.length} reeksen verborgen
             </p>
           ) : null}
@@ -944,24 +967,24 @@ export function ChartView({ spec }: { spec: ChartSpec }) {
       {/* #197: the hollow marker needs a key a lay reader can decode without
         * reading the note first; rendered exactly when the spec says a
         * provisional point exists (R11's provisionalNote is present iff). */}
-      {spec.provisionalNote ? <p className="mt-1 text-xs text-ink-muted">○ = voorlopig cijfer</p> : null}
+      {spec.provisionalNote ? <p className="mt-1 text-xs text-muted-foreground">○ = voorlopig cijfer</p> : null}
       {/* WP23 (#92): caveats read like caveats — warn and a step larger than
         * the source credit, which stays smallest/lightest (photo-credit
         * style). Content untouched: same strings from the same one builder
         * (R4); only presentation changes here. */}
-      {spec.provisionalNote ? <p className="mt-2 text-sm text-warn">{spec.provisionalNote}</p> : null}
+      {spec.provisionalNote ? <p className="mt-2 text-sm text-warning">{spec.provisionalNote}</p> : null}
       {spec.nullNotes.map((note) => (
-        <p key={note} className="text-sm text-warn">
+        <p key={note} className="text-sm text-warning">
           {note}
         </p>
       ))}
-      {spec.definitionLine ? <p className="mt-2 text-xs text-ink-muted">{spec.definitionLine}</p> : null}
+      {spec.definitionLine ? <p className="mt-2 text-xs text-muted-foreground">{spec.definitionLine}</p> : null}
       {/* #170(4): curated event markers, always-visible text (never
         * hover-only — see the ReferenceLine comment above). Neutral tone
-        * (text-ink-muted), distinct from the #92 amber caveats above: this
+        * (text-muted-foreground), distinct from the #92 amber caveats above: this
         * is contextual metadata, not a data-quality warning. */}
       {markers.map((m) => (
-        <p key={m.label} className="text-xs text-ink-muted">
+        <p key={m.label} className="text-xs text-muted-foreground">
           Gemarkeerd in de grafiek: {m.label}
         </p>
       ))}
@@ -972,7 +995,7 @@ export function ChartView({ spec }: { spec: ChartSpec }) {
         * none). Ontdek reuses this component, so the homepage charts get the
         * identical badge for free. */}
       <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
-        <p className="text-xs text-ink-muted">{spec.attributionLine}</p>
+        <p className="text-xs text-muted-foreground">{spec.attributionLine}</p>
         <SourceBadge tableId={spec.attribution.tableId} syncedAt={spec.attribution.syncedAt} />
         {/* #170(3): download-as-image, PNG or SVG, attribution baked into
           * the file itself — not just shown on this page — via the SAME

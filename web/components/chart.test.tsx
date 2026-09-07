@@ -10,6 +10,7 @@ import {
   buildRows,
   ChartTooltip,
   ChartView,
+  RECHARTS_PALETTE,
   seriesStyle,
   tableModel,
   valueLabelPlan,
@@ -182,13 +183,13 @@ describe('ChartView — footer arrangement (#92)', () => {
     });
     const { container } = render(<ChartView spec={s} />);
     const caveat = screen.getByText('Voorlopige cijfers zijn gemarkeeerd met *.');
-    expect(caveat.className).toContain('text-warn');
+    expect(caveat.className).toContain('text-warning');
     expect(caveat.className).toContain('text-sm');
     const nullNote = screen.getByText('2022: geen gegevens beschikbaar (geheim).');
-    expect(nullNote.className).toContain('text-warn');
+    expect(nullNote.className).toContain('text-warning');
     const credit = screen.getByText(s.attributionLine);
     expect(credit.className).toContain('text-xs');
-    expect(credit.className).toContain('text-ink-muted');
+    expect(credit.className).toContain('text-muted-foreground');
     // Order: the caveat precedes the credit in the DOM.
     const all: HTMLElement[] = [...container.querySelectorAll('p')];
     expect(all.indexOf(caveat)).toBeLessThan(all.indexOf(credit));
@@ -320,8 +321,8 @@ describe('ChartView', () => {
     const s = spec({ annotations: [{ periodCode: '2024JJ00', label: 'Testgebeurtenis 2024' }] });
     render(<ChartView spec={s} />);
     const marker = screen.getByText('Gemarkeerd in de grafiek: Testgebeurtenis 2024');
-    expect(marker.className).toContain('text-ink-muted');
-    expect(marker.className).not.toContain('text-warn');
+    expect(marker.className).toContain('text-muted-foreground');
+    expect(marker.className).not.toContain('text-warning');
   });
 
   it('#170(4): renders nothing extra when the spec carries no annotations (unchanged default)', () => {
@@ -443,22 +444,20 @@ function twoSeriesSpec(overrides: Partial<ChartSpec> = {}): ChartSpec {
   });
 }
 
-describe('seriesStyle (#197: colour-blind-safe series palette + non-colour encoding)', () => {
-  it('draws the first four series in the dedicated series tokens, never the semantic status colours', () => {
+// Session 87 visual redesign (owner decision: "use the basic Recharts style")
+// superseded the #197 colour-blind-safe token palette + dash patterns.
+describe('seriesStyle (session 87: the stock Recharts example palette)', () => {
+  it('draws series in the Recharts documentation palette, in order, as literal hex (no theme tokens)', () => {
     const colors = [0, 1, 2, 3].map((i) => seriesStyle(i).color);
-    expect(colors).toEqual(['var(--series-1)', 'var(--series-2)', 'var(--series-3)', 'var(--series-4)']);
+    expect(colors).toEqual(RECHARTS_PALETTE.slice(0, 4));
+    expect(RECHARTS_PALETTE[0]).toBe('#8884d8');
+    for (const c of RECHARTS_PALETTE) expect(c).toMatch(/^#[0-9a-f]{6}$/);
   });
 
-  it('renders series five and beyond in the muted ink token — the chart stops pretending to tell them apart by hue', () => {
-    expect(seriesStyle(4).color).toBe('var(--ink-muted)');
-    expect(seriesStyle(9).color).toBe('var(--ink-muted)');
-  });
-
-  it('gives every series after the first a distinct dash pattern, so colour is never the only difference', () => {
-    expect(seriesStyle(0).dasharray).toBeUndefined();
-    const dashes = [1, 2, 3, 4].map((i) => seriesStyle(i).dasharray);
-    for (const d of dashes) expect(d).toBeTruthy();
-    expect(new Set(dashes).size).toBe(4);
+  it('cycles the palette for series beyond its length — still a distinct, deterministic colour per index', () => {
+    expect(seriesStyle(RECHARTS_PALETTE.length).color).toBe(RECHARTS_PALETTE[0]);
+    expect(seriesStyle(RECHARTS_PALETTE.length + 1).color).toBe(RECHARTS_PALETTE[1]);
+    expect(new Set(RECHARTS_PALETTE).size).toBe(RECHARTS_PALETTE.length);
   });
 });
 
@@ -581,7 +580,7 @@ describe('ChartView — #197 step 1, rendered against the real svg', () => {
     const provisionalBar = container.querySelector('svg [data-point="value"][data-result-id="utr"]');
     expect(provisionalBar?.getAttribute('fill')).toMatch(/^url\(#/);
     const finalBar = container.querySelector('svg [data-point="value"][data-result-id="ams"]');
-    expect(finalBar?.getAttribute('fill')).toBe('var(--series-1)');
+    expect(finalBar?.getAttribute('fill')).toBe(RECHARTS_PALETTE[0]);
   });
 
   it('gives the chart an accessible name from spec strings and a keyboard hint in its <desc>', () => {

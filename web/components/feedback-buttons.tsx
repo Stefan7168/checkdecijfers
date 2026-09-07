@@ -51,8 +51,8 @@ export function FeedbackButtons({
   const buttonClass = (active: boolean) =>
     'rounded-full border px-2 py-0.5 text-xs ' +
     (active
-      ? 'border-line-strong bg-paper-sunken text-ink'
-      : 'border-line-strong text-ink-soft hover:bg-paper-sunken');
+      ? 'border-border bg-muted text-foreground'
+      : 'border-border text-muted-foreground hover:bg-muted');
 
   return (
     <div className="mt-1">
@@ -78,10 +78,10 @@ export function FeedbackButtons({
           👎
         </button>
         {status === 'thanks' ? (
-          <span className="text-xs text-ink-muted">Bedankt voor je feedback.</span>
+          <span className="text-xs text-muted-foreground">Bedankt voor je feedback.</span>
         ) : null}
         {status === 'failed' ? (
-          <span className="text-xs text-ink-muted">Feedback kon niet worden opgeslagen.</span>
+          <span className="text-xs text-muted-foreground">Feedback kon niet worden opgeslagen.</span>
         ) : null}
       </div>
       {panelOpen ? (
@@ -92,14 +92,14 @@ export function FeedbackButtons({
             placeholder="Wat kon beter? (optioneel)"
             maxLength={2000}
             rows={3}
-            className="w-full rounded-md border border-line-strong bg-paper-raised p-2 text-sm text-ink placeholder:text-ink-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            className="w-full rounded-md border border-border bg-card p-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           />
           <div className="flex gap-2">
             <button
               type="button"
               disabled={busy}
               onClick={() => send('down', text.trim() === '' ? undefined : text)}
-              className="rounded-md bg-accent px-3 py-1 text-xs text-white hover:bg-accent-strong disabled:opacity-50"
+              className="rounded-md bg-primary px-3 py-1 text-xs text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
             >
               Verstuur feedback
             </button>
@@ -107,7 +107,7 @@ export function FeedbackButtons({
               type="button"
               disabled={busy}
               onClick={() => send('down')}
-              className="rounded-md border border-line-strong bg-paper-raised px-3 py-1 text-xs text-ink hover:bg-paper-sunken"
+              className="rounded-md border border-border bg-card px-3 py-1 text-xs text-foreground hover:bg-muted"
             >
               Overslaan
             </button>

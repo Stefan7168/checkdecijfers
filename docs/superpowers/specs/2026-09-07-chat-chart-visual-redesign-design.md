@@ -42,10 +42,25 @@ must not touch `src/` or any `web/backend/` (`src/` symlink) code at all).
   dock render as two separate cards, each with its own header bar (thread
   title, theme control); user messages are outlined cards; dock uses
   underline tabs plus a Chart/Table switch.
-  - **Owner amendment**: in Option B's mockup the row of chips (source
+  - **Owner amendment 1**: in Option B's mockup the row of chips (source
     toggles — "CBS data" / "Internet" — plus "Add link" / "Upload file" /
     the disabled "soon" affordances) sat *above* the message input. Move
     that row to sit **below** the input instead.
+  - **Owner amendment 2**: Option B's mockup used a small `[+]` icon button
+    for "new chat", next to the search field. Replace it with a full
+    **"New chat" text button placed above the "Search chats" field**,
+    matching the search field's width and height exactly (same sidebar
+    column, stacked: New chat button, then Search chats field, then the
+    thread list).
+  - **Owner amendment 3**: the chip row (see amendment 1 — now below the
+    input) must include a disabled "Connect database" chip labeled/marked
+    **SOON**, placed immediately to the right of "Upload file". This is not
+    new functionality — it is the existing disabled "Databron verbinden /
+    Binnenkort beschikbaar: verbind een databron (bijv. Google Sheets)"
+    affordance already in the current app (`web/components/chat.tsx`),
+    carried into the redesign under its English copy, positioned right
+    after Upload file. Final chip row order: CBS data, Internet, Add link,
+    Upload file, Connect database (soon).
 - **Chat screen content removal** (chat screen only — the logged-out landing
   page, `web/components/landing.tsx`, keeps its own copy untouched):
   - Remove the "Over dit project" paragraph currently rendered in

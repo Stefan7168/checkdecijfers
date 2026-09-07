@@ -36,11 +36,11 @@ const NOTICE_TEXT: Record<Exclude<Notice, null>, string> = {
 
 export function LoginNudge({ text }: { text: string }) {
   return (
-    <div className="rounded-lg border border-line bg-paper-raised px-4 py-3">
-      <p className="text-ink-soft">{text}</p>
+    <div className="rounded-lg border border-border bg-card px-4 py-3">
+      <p className="text-muted-foreground">{text}</p>
       <Link
         href="/login"
-        className="mt-3 inline-block rounded-md bg-accent px-4 py-2 font-medium text-white hover:bg-accent-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+        className="mt-3 inline-block rounded-md bg-primary px-4 py-2 font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
       >
         Maak gratis een account
       </Link>
@@ -93,12 +93,12 @@ export function TrialChat({ initialQuestionsLeft }: { initialQuestionsLeft: numb
     <div className="space-y-3">
       {messages.map((message, i) =>
         message.role === 'user' ? (
-          <div key={i} className="ml-auto max-w-md rounded-lg bg-paper-sunken px-4 py-3 text-ink">
+          <div key={i} className="ml-auto max-w-md rounded-lg bg-muted px-4 py-3 text-foreground">
             {message.text}
           </div>
         ) : (
-          <div key={i} className="max-w-xl rounded-lg border border-line bg-paper-raised px-4 py-3">
-            <p className="whitespace-pre-wrap text-ink">{message.text}</p>
+          <div key={i} className="max-w-xl rounded-lg border border-border bg-card px-4 py-3">
+            <p className="whitespace-pre-wrap text-foreground">{message.text}</p>
             {message.response?.kind === 'answer' && message.response.chart !== null ? (
               <ChartView spec={message.response.chart} />
             ) : null}
@@ -106,10 +106,10 @@ export function TrialChat({ initialQuestionsLeft }: { initialQuestionsLeft: numb
               // ADR 036 D5 (build revision 1): the trial has no reply round —
               // the clarification is read-only; doorvragen needs an account
               // (or the visitor's next trial question, better phrased).
-              <p className="mt-2 border-t border-line pt-2 text-xs text-ink-muted">
+              <p className="mt-2 border-t border-border pt-2 text-xs text-muted-foreground">
                 In het proefpotje kun je niet doorvragen op een verduidelijking — stel je
                 vraag preciezer opnieuw, of{' '}
-                <Link href="/login" className="text-accent hover:text-accent-strong">
+                <Link href="/login" className="text-primary hover:text-primary/80">
                   maak een gratis account
                 </Link>
                 .
@@ -123,7 +123,7 @@ export function TrialChat({ initialQuestionsLeft }: { initialQuestionsLeft: numb
         <LoginNudge text={NOTICE_TEXT[notice]} />
       ) : (
         <>
-          {notice === 'error' ? <p className="text-sm text-warn">{NOTICE_TEXT.error}</p> : null}
+          {notice === 'error' ? <p className="text-sm text-warning">{NOTICE_TEXT.error}</p> : null}
           <form onSubmit={submit} className="flex gap-2">
             <input
               type="text"
@@ -133,17 +133,17 @@ export function TrialChat({ initialQuestionsLeft }: { initialQuestionsLeft: numb
               placeholder="Bijv. wat is de inflatie nu?"
               aria-label="Stel je gratis proefvraag"
               disabled={busy}
-              className="w-full rounded-md border border-line-strong bg-paper-raised px-3 py-2 text-ink placeholder:text-ink-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+              className="w-full rounded-md border border-border bg-card px-3 py-2 text-foreground placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             />
             <button
               type="submit"
               disabled={busy || input.trim().length === 0}
-              className="rounded-md bg-accent px-4 py-2 font-medium text-white hover:bg-accent-strong disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+              className="rounded-md bg-primary px-4 py-2 font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
               {busy ? 'Rekenen…' : 'Vraag'}
             </button>
           </form>
-          <p className="text-xs text-ink-muted">
+          <p className="text-xs text-muted-foreground">
             <span className="tnum">{left}</span> van <span className="tnum">2</span> gratis
             proefvragen over — geen account nodig.
           </p>

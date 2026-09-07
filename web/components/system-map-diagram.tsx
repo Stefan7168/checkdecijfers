@@ -86,7 +86,7 @@ export function SystemMapDiagram({ lang }: { lang: 'en' | 'nl' }) {
       viewBox="0 0 760 470"
       role="img"
       aria-label={t.ariaLabel}
-      className="block w-full min-w-[640px] text-ink"
+      className="block w-full min-w-[640px] text-foreground"
     >
       <defs>
         <marker
@@ -103,7 +103,7 @@ export function SystemMapDiagram({ lang }: { lang: 'en' | 'nl' }) {
       </defs>
 
       {/* Visitor */}
-      <rect x="290" y="10" width="180" height="55" rx="10" className="fill-paper-raised" stroke="currentColor" strokeWidth="1.5" />
+      <rect x="290" y="10" width="180" height="55" rx="10" className="fill-card" stroke="currentColor" strokeWidth="1.5" />
       <text x="380" y="32" textAnchor="middle" fontSize="14" fontWeight="700" fill="currentColor">
         {t.visitor}
       </text>
@@ -120,7 +120,7 @@ export function SystemMapDiagram({ lang }: { lang: 'en' | 'nl' }) {
       </text>
 
       {/* Website */}
-      <rect x="250" y="96" width="260" height="76" rx="10" className="fill-paper-raised" stroke="currentColor" strokeWidth="1.5" />
+      <rect x="250" y="96" width="260" height="76" rx="10" className="fill-card" stroke="currentColor" strokeWidth="1.5" />
       <text x="380" y="120" textAnchor="middle" fontSize="14" fontWeight="700" fill="currentColor">
         {t.website}
       </text>
@@ -150,7 +150,7 @@ export function SystemMapDiagram({ lang }: { lang: 'en' | 'nl' }) {
       </text>
 
       {/* Database */}
-      <rect x="20" y="210" width="230" height="102" rx="10" className="fill-paper-raised" stroke="currentColor" strokeWidth="1.5" />
+      <rect x="20" y="210" width="230" height="102" rx="10" className="fill-card" stroke="currentColor" strokeWidth="1.5" />
       <text x="135" y="233" textAnchor="middle" fontSize="13" fontWeight="700" fill="currentColor">
         {t.database}
       </text>
@@ -168,7 +168,7 @@ export function SystemMapDiagram({ lang }: { lang: 'en' | 'nl' }) {
       </text>
 
       {/* Claude */}
-      <rect x="270" y="210" width="220" height="102" rx="10" className="fill-paper-raised" stroke="currentColor" strokeWidth="1.5" />
+      <rect x="270" y="210" width="220" height="102" rx="10" className="fill-card" stroke="currentColor" strokeWidth="1.5" />
       <text x="380" y="233" textAnchor="middle" fontSize="13" fontWeight="700" fill="currentColor">
         {t.claude}
       </text>
@@ -186,7 +186,7 @@ export function SystemMapDiagram({ lang }: { lang: 'en' | 'nl' }) {
       </text>
 
       {/* Stripe + Resend */}
-      <rect x="515" y="210" width="225" height="102" rx="10" className="fill-paper-raised" stroke="currentColor" strokeWidth="1.5" />
+      <rect x="515" y="210" width="225" height="102" rx="10" className="fill-card" stroke="currentColor" strokeWidth="1.5" />
       <text x="627" y="233" textAnchor="middle" fontSize="13" fontWeight="700" fill="currentColor">
         {t.stripeResend}
       </text>
@@ -199,8 +199,8 @@ export function SystemMapDiagram({ lang }: { lang: 'en' | 'nl' }) {
       <text x="627" y="280" textAnchor="middle" fontSize="10.5" fill="currentColor">
         {t.stripeResendLine2}
       </text>
-      <rect x="565" y="288" width="125" height="17" rx="8.5" className="fill-warn-soft" stroke="currentColor" strokeOpacity="0.4" strokeWidth="1" />
-      <text x="627" y="300" textAnchor="middle" fontSize="9.5" fontWeight="800" className="fill-warn">
+      <rect x="565" y="288" width="125" height="17" rx="8.5" className="fill-warning-soft" stroke="currentColor" strokeOpacity="0.4" strokeWidth="1" />
+      <text x="627" y="300" textAnchor="middle" fontSize="9.5" fontWeight="800" className="fill-warning">
         {t.stripeTestOnly}
       </text>
 
@@ -220,7 +220,7 @@ export function SystemMapDiagram({ lang }: { lang: 'en' | 'nl' }) {
       </text>
 
       {/* CBS StatLine */}
-      <rect x="20" y="352" width="230" height="98" rx="10" className="fill-paper-raised" stroke="currentColor" strokeWidth="1.5" />
+      <rect x="20" y="352" width="230" height="98" rx="10" className="fill-card" stroke="currentColor" strokeWidth="1.5" />
       <text x="135" y="375" textAnchor="middle" fontSize="13" fontWeight="700" fill="currentColor">
         {t.cbs}
       </text>

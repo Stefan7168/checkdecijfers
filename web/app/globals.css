@@ -1,105 +1,168 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
 
 /* ---------------------------------------------------------------------------
- * Check de Cijfers — redactionele huisstijl ("papier & inkt")
- * Owner decision session 51 (2026-07-17): editorial direction — serif display
- * headings, tabular figures for every number, warm paper background, ink text,
- * ONE trustworthy ink-blue accent. Light-first by design: the previous
- * scaffold's auto-dark media query produced the half-dark "black void" login;
- * a real dark counterpart is a tracked follow-up, not a default.
+ * Check de Cijfers — token layer.
+ *
+ * Session 87 (2026-09-07, owner decision, docs/12-huisstijl.md): the
+ * "papier & inkt" editorial house style (session 51) is RETIRED. The tokens
+ * below are shadcn/ui's own neutral palette, light + dark (`.dark` on <html>,
+ * toggled by next-themes) — no custom brand theme. Components use the shadcn
+ * utilities (bg-background, bg-card, text-foreground, text-muted-foreground,
+ * border-border, bg-primary, …) and never raw palette classes or hex values
+ * for surfaces.
+ *
+ * The three `--warning*` / `--success` tokens are the one product-specific
+ * extension: shadcn ships only `destructive`, and this product needs an
+ * honest "voorlopig / stale / caveat" amber and a "payment landed" green.
  * ------------------------------------------------------------------------- */
 
 :root {
-  color-scheme: light;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
 
-  /* paper & ink */
-  --paper: #faf8f5;        /* page background — warm off-white */
-  --paper-raised: #ffffff; /* cards, panels, chat bubbles */
-  --paper-sunken: #f3efe9; /* wells, zebra rows, input backgrounds */
-  --ink: #1c1917;          /* primary text */
-  --ink-soft: #44403c;     /* secondary text */
-  --ink-muted: #78716c;    /* captions, metadata, placeholders */
-  --line: #e5e0d8;         /* hairlines, borders */
-  --line-strong: #d6cfc4;  /* emphasized rules (masthead, table header) */
+  /* product-specific status tokens (see header comment) */
+  --warning: oklch(0.47 0.14 60);        /* ~ amber-800 */
+  --warning-soft: oklch(0.97 0.03 85);   /* ~ amber-50 */
+  --success: oklch(0.45 0.13 150);       /* ~ green-800 */
+}
 
-  /* the one accent — trustworthy ink-blue */
-  --accent: #1e40af;
-  --accent-strong: #1e3a8a; /* hover/active */
-  --accent-soft: #eef2fc;   /* selected states / washes behind accent text */
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
 
-  /* semantic — used sparingly */
-  --ok: #166534;
-  --warn: #92400e;          /* "voorlopig" badge, low balance */
-  --warn-soft: #fdf3e3;
-  --danger: #b91c1c;
-
-  /* #197 (session 69): chart SERIES colours — the one sanctioned exception to
-   * "one accent" (docs/12-huisstijl.md house rule 3): data series need
-   * distinguishable hues, and the semantic tokens above must never be reused
-   * for that (they used to be: red-vs-green at 1.10:1, the pair colour-blind
-   * readers cannot tell apart by hue either). Colour-blind-safe set: the
-   * accent for brand continuity, then Okabe-Ito vermillion and bluish green,
-   * then Tol purple — each ≥ 3:1 against both paper surfaces (WCAG 1.4.11;
-   * measured 2026-09-02 vs white: 8.7 / 3.9 / 3.4 / 6.1). Series five and up
-   * fall back to --ink-muted; dash patterns carry what colour cannot
-   * (web/components/chart.tsx, seriesStyle). Any huisstijl substitution must
-   * re-pass the same contrast check before it ships. */
-  --series-1: var(--accent);
-  --series-2: #d55e00;
-  --series-3: #009e73;
-  --series-4: #aa3377;
-
-  --background: var(--paper);
-  --foreground: var(--ink);
+  --warning: oklch(0.83 0.14 80);        /* ~ amber-400 */
+  --warning-soft: oklch(0.28 0.05 60);   /* deep amber wash */
+  --success: oklch(0.79 0.16 150);       /* ~ green-400 */
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-
-  /* the palette as Tailwind utilities (bg-paper, text-ink, border-line, …) */
-  --color-paper: var(--paper);
-  --color-paper-raised: var(--paper-raised);
-  --color-paper-sunken: var(--paper-sunken);
-  --color-ink: var(--ink);
-  --color-ink-soft: var(--ink-soft);
-  --color-ink-muted: var(--ink-muted);
-  --color-line: var(--line);
-  --color-line-strong: var(--line-strong);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
-  --color-accent-strong: var(--accent-strong);
-  --color-accent-soft: var(--accent-soft);
-  --color-ok: var(--ok);
-  --color-warn: var(--warn);
-  --color-warn-soft: var(--warn-soft);
-  --color-danger: var(--danger);
-  --color-series-1: var(--series-1);
-  --color-series-2: var(--series-2);
-  --color-series-3: var(--series-3);
-  --color-series-4: var(--series-4);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-success: var(--success);
 
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-serif: var(--font-newsreader);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* next/font sets --font-inter / --font-geist-mono on <html> (app/layout.tsx). */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-heading: var(--font-sans);
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
 }
 
-/* Editorial display type: serif headings are the house style, site-wide. */
-h1,
-h2,
-h3,
-.font-display {
-  font-family: var(--font-newsreader), Georgia, serif;
-  letter-spacing: -0.01em;
-}
-
-/* Every number in this product lines up: tabular figures are the house rule
- * (#91, owner-approved) — global instead of per-component. */
+/* Every number in this product lines up (#91, owner-approved): tabular
+ * figures, global instead of per-component. A product convention, not part
+ * of the retired editorial identity — it survives the restyle. */
 .tnum,
 table,
 [data-numeric] {

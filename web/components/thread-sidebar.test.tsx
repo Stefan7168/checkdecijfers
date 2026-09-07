@@ -49,8 +49,10 @@ describe('ThreadSidebar — kind-absent (CBS) rendering stays byte-identical', (
       />,
     );
     const button = screen.getByRole('button', { name: 'Hoeveel inwoners heeft Nederland?' });
+    // Session 87 restyle (dense sidebar rows on the grey ground); still one
+    // literal string so the CBS/dataset row parity stays a deliberate diff.
     expect(button.className).toBe(
-      'truncate rounded px-2 py-1.5 text-left text-sm disabled:cursor-not-allowed disabled:opacity-50 bg-paper-sunken text-ink',
+      'block w-full truncate rounded-md px-2.5 py-1.5 text-left text-[13px] disabled:cursor-not-allowed disabled:opacity-50 bg-accent text-foreground',
     );
     expect(button.getAttribute('aria-current')).toBe('true');
     expect(button).not.toBeDisabled();

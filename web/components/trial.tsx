@@ -30,9 +30,9 @@ export async function TrialGate() {
   const state = await getTrialGateState();
   if (state.kind === 'dormant') return null;
   return (
-    <section className="border-b border-line py-12">
-      <h2 className="text-2xl text-ink">Probeer het direct</h2>
-      <p className="mt-3 max-w-xl text-ink-soft">
+    <section className="border-b border-border py-12">
+      <h2 className="text-2xl text-foreground">Probeer het direct</h2>
+      <p className="mt-3 max-w-xl text-muted-foreground">
         Twee gratis proefvragen, zonder account. Elk antwoord komt uit officiële
         CBS-cijfers, met bron en datum erbij.
       </p>

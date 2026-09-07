@@ -70,7 +70,7 @@ export function OnboardingLiveStatus({ inFlightCount }: { inFlightCount: number 
   return (
     // role="status": a polite live region — screen readers announce the
     // count changing (or the line disappearing content-wise) after a refresh.
-    <p role="status" className="rounded-lg border border-warn bg-warn-soft p-2 text-xs text-warn">
+    <p role="status" className="rounded-lg border border-warning bg-warning-soft p-2 text-xs text-warning">
       {inFlightCount === 1
         ? 'Er is 1 aanvraag bij het CBS in behandeling — de status hieronder wordt automatisch bijgewerkt.'
         : `Er zijn ${inFlightCount} aanvragen bij het CBS in behandeling — de status hieronder wordt automatisch bijgewerkt.`}

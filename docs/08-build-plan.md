@@ -318,7 +318,8 @@ Not a numbered WP: an owner-initiated research → build thread. The brief IS th
 defaults the owner vetoes by exception; as-built record in [open-questions #197](open-questions.md)).
 
 - **Step 1 ✅ `da47566`** — numbers on the chart (axis min/max, end-of-line, per-bar labels; spec strings
-  only, bound via `data-label-for`), colour-blind-safe `--series-1..4` palette + dash patterns + hatched
+  only, bound via `data-label-for`), colour-blind-safe `--series-1..4` palette + dash patterns (**superseded
+  session 87: Recharts' own stock palette, dash patterns dropped — [12-huisstijl.md](12-huisstijl.md)**) + hatched
   provisional bars, accessible name + announced tooltip, tap-to-pin on touch, menu-button semantics on the
   download menu, computed-paint inlining in the export (the #170(3) export was blank outside the page),
   toggle as a radiogroup, `schemaVersion` guard in `chart.tsx`, ADR 014 as-built rule for optional v1 fields.

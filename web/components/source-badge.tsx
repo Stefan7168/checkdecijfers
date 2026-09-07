@@ -39,7 +39,7 @@ export function SourceBadge({ tableId, source, syncedAt }: SourceBadgeProps) {
   const text = `${info.displayName} ${tableId}${date ? ` · gesynchroniseerd ${date}` : ''}`;
   const url = sourceTableUrl(key, tableId);
   const pill =
-    'inline-flex items-center gap-1 rounded-full bg-paper-sunken px-2 py-0.5 text-xs text-ink-soft';
+    'inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground';
   if (url === null) return <span className={pill}>{text}</span>;
   return (
     <a

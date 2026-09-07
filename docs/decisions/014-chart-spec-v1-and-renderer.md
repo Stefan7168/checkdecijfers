@@ -116,7 +116,10 @@ only, which is the safe direction.
   and the SVG renderer are untouched:** axis min/max ticks, end-of-line and per-bar labels (all
   `formattedValue` strings bound via `data-label-for`; WHICH points get a label is a count-based
   presentation rule, WHAT they say is never computed here), a colour-blind-safe series palette
-  (`--series-1..4`, dash patterns as the non-colour channel, hatch fill for provisional bars), an
+  (`--series-1..4`, dash patterns as the non-colour channel — **superseded session 87: now Recharts' own
+  stock example colours, `RECHARTS_PALETTE` in `web/components/chart.tsx`, dash patterns dropped, an
+  accepted trade-off of the owner's "basic Recharts style" decision, see [12-huisstijl.md](../12-huisstijl.md)**),
+  hatch fill for provisional bars (unchanged — honesty marking, not styling), an
   accessible name + announced tooltip, tap-to-pin on touch devices, and `initialDimension` on the
   responsive container (which is also what lets jsdom render the real svg in the component tests).
 - **The `table` kind never became a spec kind — it became a VIEW (session 69, #197 step 2).** ADR 007's

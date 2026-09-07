@@ -35,8 +35,10 @@ The section renders each spec with the SAME `web/components/chart.tsx` (Recharts
 The session-52 kickoff sketched the pure SVG renderer (`src/chart/render.ts`), but measured against the real
 job it loses: the SVG renderer labels EVERY point at fixed font sizes inside a fixed viewBox — correct for
 the ≤8-point benchmark charts it gates, unreadable for 24-month windows and unscalable on mobile (scaled-down
-6px text), and its hardcoded hex colors predate the huisstijl. ChartView is already huisstijl-tokenized
-(s51), responsive, shows values via the bound tooltip instead of colliding labels, renders the R4/R11/
+6px text), and its hardcoded hex colors predate the huisstijl. ChartView is already tokenized (s51 huisstijl, restyled
+to shadcn/ui neutral tokens session 87 — see [12-huisstijl.md](../12-huisstijl.md); the tokenization property
+this decision relies on, not which specific token set, is what matters here), responsive, shows values via
+the bound tooltip instead of colliding labels, renders the R4/R11/
 definition lines, and ships in `/`'s client bundle TODAY (page.tsx's logged-in branches import it) — so this
 adds ~zero bundle weight and the visitor sees exactly the chart surface a customer gets. Data work stays
 server-side; only pixel drawing is client-side, same as every product chart.

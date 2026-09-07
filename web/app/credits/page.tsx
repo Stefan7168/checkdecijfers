@@ -31,22 +31,22 @@ export default async function CreditsPage({
       {showShell ? <SiteHeader balance={balance} /> : null}
       <div className="mx-auto flex w-full max-w-md flex-col gap-4 p-4">
       <h1 className="text-lg">Credits — Check de Cijfers</h1>
-      <p className="text-sm text-ink-soft">
+      <p className="text-sm text-muted-foreground">
         Je huidige saldo: <strong className="tnum">{balance}</strong> credits.
       </p>
       {purchase === 'success' ? (
-        <p className="text-sm text-ok">
+        <p className="text-sm text-success">
           Betaling gelukt — je credits worden bijgeschreven zodra Stripe de betaling bevestigt.
         </p>
       ) : null}
-      {purchase === 'cancelled' ? <p className="text-sm text-ink-muted">Betaling geannuleerd.</p> : null}
+      {purchase === 'cancelled' ? <p className="text-sm text-muted-foreground">Betaling geannuleerd.</p> : null}
       <div className="flex flex-col gap-3">
         {packs.map((pack) => (
           <div
             key={pack.id}
-            className="flex items-center justify-between rounded-lg border border-line bg-paper-raised p-3"
+            className="flex items-center justify-between rounded-lg border border-border bg-card p-3"
           >
-            <span className="text-sm text-ink tnum">{pack.label}</span>
+            <span className="text-sm text-foreground tnum">{pack.label}</span>
             <BuyButton packId={pack.id} />
           </div>
         ))}

@@ -6,6 +6,10 @@
 // only) — no balance, no menu, so it needs no auth. The per-page guard pattern
 // stays (WP24 spec): each page decides whether to render this, gated by
 // WORKSPACE_ENABLED; layout.tsx is untouched.
+//
+// Session 87 visual redesign: a slim, transparent bar with a hairline — it
+// sits on whatever ground the page paints (the workspace's grey sidebar
+// ground, the landing's white). Behavior and copy unchanged.
 'use client';
 
 import Link from 'next/link';
@@ -13,6 +17,8 @@ import { useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { signOut } from '../app/actions.ts';
 import { DeleteHistoryButton } from './delete-history-button.tsx';
+import { Badge } from './ui/badge.tsx';
+import { Button } from './ui/button.tsx';
 
 const WORDMARK = 'Check de Cijfers';
 
@@ -29,7 +35,7 @@ function LogoutButton() {
       type="submit"
       disabled={pending}
       aria-disabled={pending}
-      className="text-left text-ink-soft hover:text-ink disabled:opacity-60"
+      className="text-left text-muted-foreground hover:text-foreground disabled:opacity-60"
     >
       {pending ? 'Bezig…' : 'Log uit'}
     </button>
@@ -49,8 +55,8 @@ export function SiteHeader({
 
   if (stripped) {
     return (
-      <header className="flex items-center border-b border-line-strong px-4 py-3">
-        <Link href="/" className="font-display text-base font-semibold text-ink">
+      <header className="flex h-12 shrink-0 items-center border-b border-border px-4">
+        <Link href="/" className="text-sm font-semibold text-foreground">
           {WORDMARK}
         </Link>
       </header>
@@ -58,38 +64,39 @@ export function SiteHeader({
   }
 
   return (
-    <header className="flex items-center justify-between border-b border-line-strong px-4 py-3">
-      <Link href="/" className="font-display text-base font-semibold text-ink">
+    <header className="flex h-12 shrink-0 items-center justify-between border-b border-border px-4">
+      <Link href="/" className="text-sm font-semibold text-foreground">
         {WORDMARK}
       </Link>
       <div className="flex items-center gap-3 text-sm">
         {/* ADR 006: the balance is read live and passed in — never a hardcoded
           * number. .tnum so digits align (the #91 FT/NRC convention). */}
         {balance !== undefined ? (
-          <span className="tnum rounded-full bg-paper-sunken px-3 py-1 text-xs text-ink-soft">
+          <Badge variant="secondary" className="tnum font-normal text-muted-foreground">
             {balance} credits
-          </span>
+          </Badge>
         ) : null}
-        <Link href="/credits" className="text-ink-muted hover:text-ink">
+        <Link href="/credits" className="text-muted-foreground hover:text-foreground">
           Credits kopen
         </Link>
-        <Link href="/geschiedenis" className="text-ink-muted hover:text-ink">
+        <Link href="/geschiedenis" className="text-muted-foreground hover:text-foreground">
           Geschiedenis
         </Link>
         <div className="relative">
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="sm"
             aria-haspopup="menu"
             aria-expanded={menuOpen}
             onClick={() => setMenuOpen((open) => !open)}
-            className="rounded border border-line-strong px-3 py-1 text-xs text-ink-soft hover:bg-paper-sunken"
           >
             Account
-          </button>
+          </Button>
           {menuOpen ? (
             <div
               role="menu"
-              className="absolute right-0 z-10 mt-1 flex w-56 flex-col gap-2 rounded border border-line bg-paper-raised p-3 text-sm shadow-sm"
+              className="absolute right-0 z-10 mt-1 flex w-56 flex-col gap-2 rounded-lg border border-border bg-popover p-3 text-sm text-popover-foreground shadow-md"
             >
               {/* The genuinely-new logout: a server action via a form so it
                 * works without client JS wiring and can redirect server-side.
@@ -98,7 +105,7 @@ export function SiteHeader({
               <form action={signOut}>
                 <LogoutButton />
               </form>
-              <div className="border-t border-line pt-2">
+              <div className="border-t border-border pt-2">
                 <DeleteHistoryButton />
               </div>
             </div>

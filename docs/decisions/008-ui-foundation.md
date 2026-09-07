@@ -41,6 +41,13 @@ records a decision to drop the shadcn/Radix half; it was simply never picked bac
 finish executing this ADR now (re-themed to the huisstijl tokens) is in
 [open-questions #204](../open-questions.md) / [session-briefs/2026-09-06-frontend-component-research.md](../session-briefs/2026-09-06-frontend-component-research.md) — not decided, pending the owner.
 
+**As-built update (session 87, 2026-09-07):** the shadcn/ui half of this ADR IS now executed — `shadcn init`,
+`web/components.json`, `web/components/ui/*` all exist. Not as #204 recommended, though: the owner chose
+shadcn's own neutral defaults over a huisstijl-tokenized re-theme, and retired papier-en-inkt outright rather
+than migrating existing surfaces opportunistically (see #204's resolution and
+[12-huisstijl.md](../12-huisstijl.md)). This ADR's non-visual reasoning (mainstream stack, cheap swaps,
+copied-not-dependency components) stands; its "editorial/light-mode" framing is superseded.
+
 ## Revisit triggers
 
 - Browse-page performance budget blown (JS payload / Core Web Vitals) → strip client components from that surface first, question the kit second.

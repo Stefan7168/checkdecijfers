@@ -56,14 +56,17 @@ export function ChartSmallMultiples({
         const ownTicks = axisMode === 'own' ? valueLabelPlan({ ...spec, series: [spec.series[i]] }).axisTicks : [];
         const tickByValue = new Map(ownTicks.map((t) => [t.value, t]));
         return (
-          <div key={s.key} className="rounded border border-line p-1">
-            <div className="truncate text-xs text-ink-soft" title={s.label}>
+          <div key={s.key} className="rounded-lg border border-border p-1.5">
+            <div className="truncate text-xs text-muted-foreground" title={s.label}>
               {s.label}
             </div>
             <div className="h-24 w-full" data-panel-for={s.key}>
               <ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 200, height: 96 }}>
                 <LineChart data={rows} margin={{ top: 4, right: 4, left: 4, bottom: 4 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" />
+                  {/* Recharts' own default grid/axis styling (session 87:
+                    * "basic Recharts look"); only the honesty-bound tick
+                    * mechanism is custom. */}
+                  <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="periodLabel" tick={false} />
                   <YAxis
                     ticks={ownTicks.map((t) => t.value)}
@@ -77,7 +80,6 @@ export function ChartSmallMultiples({
                     dataKey={s.key}
                     stroke={s.color}
                     strokeWidth={2}
-                    strokeDasharray={s.dasharray}
                     connectNulls={false}
                     dot={false}
                     isAnimationActive={false}

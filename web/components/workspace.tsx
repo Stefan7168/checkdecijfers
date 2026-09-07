@@ -21,6 +21,7 @@ import { useMediaQuery } from '../lib/use-media-query.ts';
 import { Chat } from './chat.tsx';
 import { DatasetChat } from './dataset-chat.tsx';
 import { SiteHeader } from './site-header.tsx';
+import { ThemeToggle } from './theme-toggle.tsx';
 import { ThreadSidebar } from './thread-sidebar.tsx';
 import { VisualDock } from './visual-dock.tsx';
 
@@ -236,11 +237,24 @@ export function Workspace({
     window.history.replaceState(null, '', window.location.pathname);
   }
 
+  // Session 87 visual redesign: the chat card's header bar names the thread
+  // (or "Nieuwe chat" for a fresh one) — read-time thread titles from the
+  // sidebar list, the dataset's display name for a dataset thread.
+  const cardTitle =
+    handoff.kind === 'dataset'
+      ? handoff.displayName
+      : (threads.find((thread) => thread.id === activeThreadId)?.title ?? 'Nieuwe chat');
+
   return (
-    <div className="flex min-h-screen flex-col">
+    // Session 87 visual redesign (mockup Option B, "Inset Cards"): the whole
+    // screen sits on the grey sidebar ground; the sidebar is borderless on it,
+    // and the chat column + the visual dock are two separate white cards, each
+    // with its own header bar. Fills the app-shell region app/layout.tsx
+    // provides (the footer stays below, always in view).
+    <div className="flex h-full min-h-0 flex-1 flex-col bg-sidebar text-sidebar-foreground">
       <SiteHeader balance={balance} />
       {showPurchaseBanner ? (
-        <div className="mx-4 mt-4 flex items-start justify-between gap-3 rounded border border-line-strong bg-paper-sunken px-4 py-3 text-sm text-ok">
+        <div className="mx-2 mt-2 flex items-start justify-between gap-3 rounded-lg border border-border bg-card px-4 py-3 text-sm text-success">
           <p>
             Betaling gelukt — je credits worden bijgeschreven zodra Stripe de betaling bevestigt
             (meestal een paar seconden). Ververs daarna de pagina om je nieuwe saldo te zien.
@@ -248,14 +262,14 @@ export function Workspace({
           <button
             type="button"
             onClick={dismissPurchaseBanner}
-            className="shrink-0 text-xs text-ok underline"
+            className="shrink-0 text-xs text-success underline"
           >
             Sluiten
           </button>
         </div>
       ) : null}
 
-      <div className="flex min-h-0 flex-1">
+      <div className="flex min-h-0 flex-1 gap-2 p-2 pl-0">
         <div className={sidebarCollapsed ? 'w-12 shrink-0' : 'w-64 shrink-0'}>
           <ThreadSidebar
             threads={threads}
@@ -268,7 +282,17 @@ export function Workspace({
           />
         </div>
 
-        <div className="min-w-0 flex-1 p-4">
+        <section
+          aria-label="Chat"
+          className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-border bg-card text-card-foreground"
+        >
+          <div className="flex h-12 shrink-0 items-center gap-3 border-b border-border px-4">
+            <h1 className="truncate text-[13.5px] font-medium" title={cardTitle}>
+              {cardTitle}
+            </h1>
+            <div className="flex-1" />
+            <ThemeToggle />
+          </div>
           {handoff.kind === 'dataset' ? (
             // ADR 037 D10: dock wiring mirrors Chat's own below exactly —
             // same isWide-gated dockMode, same handleVisualsChange/
@@ -323,29 +347,19 @@ export function Workspace({
               onBusyChange={setChatBusy}
             />
           )}
-        </div>
+        </section>
 
         {showDock ? (
-          <div className="w-96 shrink-0 p-4">
+          <div className="w-96 shrink-0">
             <VisualDock visuals={visuals} activeVisualId={activeVisualId} onSelect={activateVisual} />
           </div>
         ) : null}
       </div>
-
-      <section id="over-dit-project" className="mx-4 mt-6 max-w-2xl text-sm text-ink-soft">
-        <h2 className="mb-1 font-semibold text-ink">Over dit project</h2>
-        <p>
-          Check de Cijfers beantwoordt vragen over officiële cijfers van het CBS. Elk getal wordt
-          door vaste, controleerbare code berekend en gecontroleerd; het taalmodel begrijpt alleen
-          je vraag en formuleert het antwoord. Zo is elk getal herleidbaar tot een officiële
-          CBS-tabel, met bron en datum erbij — en verzinnen we nooit een cijfer. Als data ontbreekt
-          of onduidelijk is, vragen we door of zeggen we het eerlijk.
-        </p>
-      </section>
-      {/* The footer line (ADR 033 D6) is rendered ONCE, site-wide, by
-          components/site-footer.tsx in app/layout.tsx — it carries the
-          "Over dit project" anchor to the section above on this page. Until
-          2026-09-03 a second copy lived here (two footer bars — owner report). */}
+      {/* Session 87 visual redesign (owner decision): the "Over dit project"
+          explainer that used to sit under the chat is gone from the logged-in
+          screen — a bare LLM-chat layout. The logged-out Landing keeps its
+          copy; the site footer (components/site-footer.tsx, mounted in
+          app/layout.tsx) only links the anchor when that section exists. */}
     </div>
   );
 }

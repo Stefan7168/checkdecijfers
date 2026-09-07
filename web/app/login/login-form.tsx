@@ -48,7 +48,7 @@ export function LoginForm() {
   }
 
   if (sent) {
-    return <p className="text-sm text-ink">Check je e-mail voor de inloglink.</p>;
+    return <p className="text-sm text-foreground">Check je e-mail voor de inloglink.</p>;
   }
 
   return (
@@ -60,27 +60,27 @@ export function LoginForm() {
           required
           placeholder="jij@voorbeeld.nl"
           disabled={busy}
-          className="rounded-md border border-line-strong bg-paper-raised px-3 py-2 text-sm text-ink placeholder:text-ink-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:bg-paper-sunken"
+          className="rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:bg-muted"
         />
         <button
           type="submit"
           disabled={busy}
-          className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-50"
+          className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-50"
         >
           Stuur inloglink
         </button>
-        {error ? <p className="text-sm text-danger">{error}</p> : null}
+        {error ? <p className="text-sm text-destructive">{error}</p> : null}
       </form>
-      <div className="flex items-center gap-3 text-xs text-ink-muted" aria-hidden="true">
-        <span className="h-px flex-1 bg-line" />
+      <div className="flex items-center gap-3 text-xs text-muted-foreground" aria-hidden="true">
+        <span className="h-px flex-1 bg-border" />
         of
-        <span className="h-px flex-1 bg-line" />
+        <span className="h-px flex-1 bg-border" />
       </div>
       <button
         type="button"
         disabled={busy}
         onClick={handleGoogleClick}
-        className="rounded-md border border-line-strong bg-paper-raised px-4 py-2 text-sm font-medium text-ink hover:bg-paper-sunken focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-50"
+        className="rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-50"
       >
         Doorgaan met Google
       </button>

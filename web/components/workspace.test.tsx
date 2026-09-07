@@ -35,10 +35,20 @@ import { SiteHeader } from './site-header.tsx';
 import { FOOTER_ABOUT_LABEL, FOOTER_ATTRIBUTION, FOOTER_PREFIX, SiteFooter } from './site-footer.tsx';
 import { Landing } from './landing.tsx';
 
-// The site footer reads the pathname to decide whether the "Over dit project"
-// anchor (a section that only exists on the home page) is rendered.
+// The site footer reads the pathname AND checks that the "Over dit project"
+// anchor target actually exists in the document before rendering the link
+// (session 87: the logged-in chat screen dropped the section; the logged-out
+// Landing still has it — same '/' pathname, so the pathname alone can't tell).
 const pathname = vi.hoisted(() => ({ current: '/' }));
 vi.mock('next/navigation', () => ({ usePathname: () => pathname.current }));
+// Landing embeds OntdekCharts, an ASYNC Server Component inside a Suspense
+// boundary. jsdom renders client-side, where React cannot resolve an async
+// component — the boundary never settles and the root's passive effects
+// (incl. the footer's anchor-target probe) never run. In production Landing
+// is server-rendered HTML, so the probe simply finds the section. Stub the
+// section here; the Landing assertions that matter (the anchor target, the
+// copy) live outside it.
+vi.mock('./ontdek.tsx', () => ({ OntdekSectie: () => null }));
 
 Element.prototype.scrollIntoView = vi.fn();
 
@@ -82,13 +92,33 @@ describe('Workspace — WP135 shell (flag on)', () => {
   it('renders NO footer of its own — the site footer is the only one (owner report 2026-09-03)', () => {
     renderWorkspace();
     expect(document.querySelector('footer')).toBeNull();
-    // The anchor target the site footer links to still exists on this page.
-    expect(document.getElementById('over-dit-project')).not.toBeNull();
+    // Session 87 visual redesign (owner decision): the "Over dit project"
+    // explainer is gone from the logged-in chat screen — a bare LLM chat.
+    expect(document.getElementById('over-dit-project')).toBeNull();
+    expect(screen.queryByText('Over dit project')).toBeNull();
   });
 
-  it('site footer on the home page: the EXACT byte-pinned attribution string + the gear link', () => {
+  it('site footer on the logged-in home (no anchor target): attribution only, NO dead "Over dit project" link', () => {
     pathname.current = '/';
-    render(<SiteFooter />);
+    render(
+      <>
+        <Workspace initialBalance={100} simplePrice={20} clarificationPrice={10} initialThreads={[]} />
+        <SiteFooter />
+      </>,
+    );
+    const footer = document.querySelector('footer')!;
+    expect(footer.textContent).toBe(FOOTER_ATTRIBUTION);
+    expect(footer.querySelector('a[href="#over-dit-project"]')).toBeNull();
+  });
+
+  it('site footer on the home page WITH the section (Landing): the EXACT byte-pinned attribution string + the gear link', () => {
+    pathname.current = '/';
+    render(
+      <>
+        <Landing />
+        <SiteFooter />
+      </>,
+    );
     const footers = document.querySelectorAll('footer');
     expect(footers).toHaveLength(1);
     const footer = footers[0]!;
@@ -219,9 +249,9 @@ describe('Workspace — mixed CBS + dataset thread list (ADR 037 D10 invariant)'
 });
 
 describe('Workspace — handleUploadFile (ADR 037 D10/D14, attachments prop)', () => {
-  it('without the attachments prop, "Bestand uploaden" stays disabled and ingestFile is never wired', () => {
+  it('without the attachments prop, "Upload file" stays disabled and ingestFile is never wired', () => {
     renderWorkspace();
-    expect(screen.getByRole('button', { name: 'Bestand uploaden' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Upload file' })).toBeDisabled();
     expect(document.querySelector('input[type="file"]')).toBeNull();
   });
 

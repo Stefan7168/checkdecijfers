@@ -75,19 +75,21 @@ export function UserChartView({ spec }: { spec: UserChartSpec }) {
   const provenanceLine = `From file ${spec.provenance.displayName}, uploaded ${uploadedOn} · ${rows.length} points plotted`;
 
   return (
-    <div className="mt-3 rounded-lg border-2 border-dashed border-line-strong bg-paper-raised p-3">
-      <div className="mb-2 inline-flex items-center rounded-full bg-warn-soft px-2 py-0.5 text-xs font-medium text-warn">
+    // H2: the dashed frame is what tells a user-data chart apart from a CBS
+    // one at a glance — it stays in every mount point, dock included.
+    <div className="mt-3 rounded-xl border-2 border-dashed border-border bg-card p-4 text-card-foreground">
+      <div className="mb-2 inline-flex items-center rounded-full bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning">
         {USER_DATA_BADGE}
       </div>
-      <div role="heading" aria-level={3} className="font-serif text-sm font-semibold text-ink">
+      <div role="heading" aria-level={3} className="text-sm font-semibold text-foreground">
         {heading}
       </div>
       <div ref={containerRef} className="mt-2 h-64 w-full touch-pan-y">
         <ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 640, height: 256 }}>
           {spec.kind === 'line' ? (
             <LineChart data={rows} margin={{ top: 8, right: 8, left: 8, bottom: 8 }} desc={KEYBOARD_HINT} aria-label={accessibleName}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" />
-              <XAxis dataKey="periodLabel" tick={{ fontSize: 11, fill: 'var(--ink-muted)' }} />
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="periodLabel" />
               <YAxis
                 ticks={plan.axisTicks.map((t) => t.value)}
                 interval={0}
@@ -104,7 +106,6 @@ export function UserChartView({ spec }: { spec: UserChartSpec }) {
                   name={s.label}
                   stroke={s.color}
                   strokeWidth={2}
-                  strokeDasharray={s.dasharray}
                   connectNulls={false}
                   isAnimationActive={false}
                 />
@@ -112,8 +113,8 @@ export function UserChartView({ spec }: { spec: UserChartSpec }) {
             </LineChart>
           ) : (
             <BarChart data={rows} margin={{ top: 8, right: 8, left: 8, bottom: 8 }} desc={KEYBOARD_HINT} aria-label={accessibleName}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" />
-              <XAxis dataKey="periodLabel" tick={{ fontSize: 11, fill: 'var(--ink-muted)' }} />
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="periodLabel" />
               <YAxis tick={false} width={16} domain={yAxisDomain(spec.kind)} />
               <Tooltip content={<ChartTooltip seriesMeta={seriesMeta} />} />
               {seriesMeta.map((s) => (
@@ -124,7 +125,7 @@ export function UserChartView({ spec }: { spec: UserChartSpec }) {
         </ResponsiveContainer>
       </div>
       {seriesMeta.length > 1 ? (
-        <ul className="mt-2 flex flex-wrap gap-3 text-xs text-ink-soft">
+        <ul className="mt-2 flex flex-wrap gap-3 text-xs text-muted-foreground">
           {seriesMeta.map((s) => (
             <li key={s.key} className="flex items-center gap-1.5">
               <span aria-hidden="true" className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: s.color }} />
@@ -134,7 +135,7 @@ export function UserChartView({ spec }: { spec: UserChartSpec }) {
         </ul>
       ) : null}
       <div className="mt-2 flex items-center justify-between gap-2">
-        <div className="text-xs text-ink-muted">
+        <div className="text-xs text-muted-foreground">
           <p>{provenanceLine}</p>
           <p>{spec.disclaimerLine}</p>
         </div>

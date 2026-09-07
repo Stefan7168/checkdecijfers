@@ -1,6 +1,6 @@
 # UX design brief — site shell (navigation/footer), dashboard, homepage/chatbox
 
-**Status:** LARGELY BUILT — shell (header/footer/logout) via WP135 + session 51; #98 RESOLVED session 51 (`/` = public landing, see open-questions); visual design (explicitly out of scope here) landed as the papier-en-inkt huisstijl, [12-huisstijl.md](12-huisstijl.md). Kept as the design rationale record. Written 2026-07-05/06 (session 21/22 boundary), from reading the current app as it stands, not from a redesign wishlist.
+**Status:** LARGELY BUILT — shell (header/footer/logout) via WP135 + session 51; #98 RESOLVED session 51 (`/` = public landing, see open-questions); visual design (explicitly out of scope here) landed as the papier-en-inkt huisstijl, [12-huisstijl.md](12-huisstijl.md) — **papier-en-inkt itself was retired session 87 (2026-09-07) for a shadcn/ui neutral direction; see the current 12-huisstijl.md for what's live now.** Kept as the design rationale record. Written 2026-07-05/06 (session 21/22 boundary), from reading the current app as it stands, not from a redesign wishlist.
 
 ## How to use this document
 

@@ -549,7 +549,7 @@ describe('Chat — WP23 display smalls', () => {
     render(<Chat />);
     await submit('Hoeveel werklozen zijn er?');
     const bubble = await screen.findByText('Welke gemeente bedoel je?');
-    expect(bubble.className).toContain('bg-warn-soft');
+    expect(bubble.className).toContain('bg-warning-soft');
     expect(screen.queryByText('Dit kon ik niet beantwoorden')).toBeNull();
   });
 
@@ -647,24 +647,21 @@ describe('Chat — WP23 display smalls', () => {
     render(<Chat />);
     await submit('Hoeveel inwoners heeft Nederland?');
     const bubble = await screen.findByText('Nederland telt 18.044.027 inwoners.');
-    expect(bubble.className).not.toContain('bg-warn-soft');
+    expect(bubble.className).not.toContain('bg-warning-soft');
     expect(screen.queryByText('Dit kon ik niet beantwoorden')).toBeNull();
     expect(screen.queryByText('geen antwoord = geen gok')).toBeNull();
   });
 
-  it('offers example chips on the empty chat that FILL the input, never send (#75)', async () => {
+  // Session 87 visual redesign (owner decision): the #75 example-question
+  // chips and the "bijvoorbeeld" prompt are gone — the empty state is a bare
+  // composer. The fill-don't-send behavior lives on in the #73 follow-up
+  // chips, tested below.
+  it('renders a bare empty state: no example chips, no explanatory copy, just the composer (session 87)', () => {
     render(<Chat />);
-    const chip = screen.getByRole('button', { name: 'Wat was de inflatie in 2024?' });
-    fireEvent.click(chip);
-    expect(screen.getByPlaceholderText('Stel een vraag…')).toHaveValue('Wat was de inflatie in 2024?');
-    expect(askQuestion).not.toHaveBeenCalled();
-  });
-
-  it('hides the example chips once a conversation exists (#75)', async () => {
-    askQuestion.mockResolvedValue(outcome(fakeAnswer('Nederland telt 18.044.027 inwoners.')));
-    render(<Chat />);
-    await submit('Hoeveel inwoners heeft Nederland?');
     expect(screen.queryByRole('button', { name: 'Wat was de inflatie in 2024?' })).toBeNull();
+    expect(screen.queryByText(/bijvoorbeeld/)).toBeNull();
+    expect(screen.getByPlaceholderText('Stel een vraag…')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Verstuur' })).toBeInTheDocument();
   });
 });
 
@@ -1611,17 +1608,17 @@ describe('Chat — #197 step 3 comparison chips on an answer (chip-carrier pendi
 });
 
 describe('Chat — attachment entry points (#201/#202, session 83 scoping; ADR 037 D10)', () => {
-  it('renders upload/data-source buttons as disabled, explanatory placeholders; "Link toevoegen" is clickable', () => {
+  it('renders upload/data-source buttons as disabled, explanatory placeholders; "Add link" is clickable', () => {
     render(<Chat />);
     for (const [name, hint] of [
-      ['Bestand uploaden', 'upload een bestand'],
-      ['Databron verbinden', 'verbind een databron'],
+      ['Upload file', 'upload een bestand'],
+      ['Connect database', 'verbind een databron'],
     ] as const) {
       const button = screen.getByRole('button', { name });
       expect(button).toBeDisabled();
       expect(button).toHaveAttribute('title', expect.stringContaining(hint));
     }
-    const linkButton = screen.getByRole('button', { name: 'Link toevoegen' });
+    const linkButton = screen.getByRole('button', { name: 'Add link' });
     expect(linkButton).not.toBeDisabled();
     expect(linkButton).not.toHaveAttribute('title');
   });
@@ -1631,11 +1628,13 @@ describe('Chat — attachment entry points (#201/#202, session 83 scoping; ADR 0
   // weaker assertion while breaking real byte-identity. Pinned against the
   // literal strings so any future edit to this markup is a deliberate,
   // reviewed diff to this test, not a silent drift.
-  it('the "Bestand uploaden" button is byte-identical to before D10 when attachments is absent', () => {
+  it('the "Upload file" button is byte-identical to before D10 when attachments is absent', () => {
     render(<Chat />);
-    const button = screen.getByRole('button', { name: 'Bestand uploaden' });
+    const button = screen.getByRole('button', { name: 'Upload file' });
+    // Session 87 restyle: the "soon" chip (dashed outline, dimmed) — still one
+    // literal string, so any future markup edit is a deliberate diff here.
     expect(button.className).toBe(
-      'rounded-full border border-line-strong px-3 py-1 text-xs text-ink-muted disabled:cursor-not-allowed disabled:opacity-60',
+      'inline-flex h-7 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium border-dashed border-border bg-background text-muted-foreground opacity-60 disabled:cursor-not-allowed',
     );
     expect(button.getAttribute('title')).toBe('Binnenkort beschikbaar: upload een bestand (bijv. PDF)');
     expect(button).toBeDisabled();
@@ -1644,10 +1643,10 @@ describe('Chat — attachment entry points (#201/#202, session 83 scoping; ADR 0
     expect(screen.queryByText('Bestand wordt gelezen…')).not.toBeInTheDocument();
   });
 
-  it('enables "Bestand uploaden" and wires it to onUploadFile when attachments is present', async () => {
+  it('enables "Upload file" and wires it to onUploadFile when attachments is present', async () => {
     const onUploadFile = vi.fn().mockResolvedValue({ ok: true });
     render(<Chat attachments={{ enabled: true, onUploadFile }} />);
-    const button = screen.getByRole('button', { name: 'Bestand uploaden' });
+    const button = screen.getByRole('button', { name: 'Upload file' });
     expect(button).not.toBeDisabled();
     expect(button).not.toHaveAttribute('title');
     const input = document.querySelector('input[type="file"]') as HTMLInputElement;
@@ -1680,15 +1679,15 @@ describe('Chat — attachment entry points (#201/#202, session 83 scoping; ADR 0
     expect(await screen.findByText('This file is too large.')).toBeInTheDocument();
   });
 
-  it('"Databron verbinden" stays disabled even when attachments is present; "Link toevoegen" stays clickable', () => {
+  it('"Connect database" stays disabled even when attachments is present; "Add link" stays clickable', () => {
     const onUploadFile = vi.fn();
     render(<Chat attachments={{ enabled: true, onUploadFile }} />);
-    expect(screen.getByRole('button', { name: 'Databron verbinden' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Link toevoegen' })).not.toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Connect database' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Add link' })).not.toBeDisabled();
   });
 });
 
-describe('Chat — "Link toevoegen" preview row (session 86, no backend yet)', () => {
+describe('Chat — "Add link" preview row (session 86, no backend yet)', () => {
   it('is closed by default, with no URL input in the tree', () => {
     render(<Chat />);
     expect(screen.queryByPlaceholderText('https://example.com/page-with-a-table')).not.toBeInTheDocument();
@@ -1696,7 +1695,7 @@ describe('Chat — "Link toevoegen" preview row (session 86, no backend yet)', (
 
   it('opens the URL row on click and closes it again on a second click', () => {
     render(<Chat />);
-    const button = screen.getByRole('button', { name: 'Link toevoegen' });
+    const button = screen.getByRole('button', { name: 'Add link' });
     fireEvent.click(button);
     expect(screen.getByPlaceholderText('https://example.com/page-with-a-table')).toBeInTheDocument();
     fireEvent.click(button);
@@ -1705,7 +1704,7 @@ describe('Chat — "Link toevoegen" preview row (session 86, no backend yet)', (
 
   it('the Fetch button stays disabled until a URL is typed', () => {
     render(<Chat />);
-    fireEvent.click(screen.getByRole('button', { name: 'Link toevoegen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add link' }));
     expect(screen.getByRole('button', { name: 'Fetch' })).toBeDisabled();
     fireEvent.change(screen.getByPlaceholderText('https://example.com/page-with-a-table'), {
       target: { value: 'https://example.com/tabel' },
@@ -1715,7 +1714,7 @@ describe('Chat — "Link toevoegen" preview row (session 86, no backend yet)', (
 
   it('submitting shows an honest "not yet available" message and never calls any network/backend function', () => {
     render(<Chat />);
-    fireEvent.click(screen.getByRole('button', { name: 'Link toevoegen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add link' }));
     fireEvent.change(screen.getByPlaceholderText('https://example.com/page-with-a-table'), {
       target: { value: 'https://example.com/tabel' },
     });

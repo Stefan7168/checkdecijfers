@@ -28,6 +28,8 @@ import type { RawDatasetState } from '../backend/attachments/respond.ts';
 import { ambiguousFormatClarificationText, AMBIGUOUS_FORMAT_OPTIONS } from '../backend/attachments/templates.ts';
 import type { ColumnProfile, DatasetProfile, DatasetStatus, NumberFormat } from '../backend/attachments/types.ts';
 import { datasetMessageHasVisual, deriveDatasetVisuals, visualId, type DockVisual } from '../lib/dock-visuals.ts';
+import { Button } from './ui/button.tsx';
+import { Input } from './ui/input.tsx';
 import { UserChartView } from './user-chart.tsx';
 
 /** The one ambiguous-format decision UI needs from a resumed/fresh dataset:
@@ -175,11 +177,10 @@ export function DatasetChat({
     const columns = ambiguousColumns(profile);
     const column = columns[pendingColumnIndex] ?? columns[0];
     return (
-      <div className="flex h-[65vh] w-full flex-col rounded border border-line p-4">
-        <h1 className="mb-4 text-lg font-semibold">{displayName}</h1>
+      <section aria-label={displayName} className="flex h-full min-h-0 w-full flex-1 flex-col p-4">
         {column ? (
           <div className="flex-1 space-y-3">
-            <p className="text-sm text-ink">{ambiguousFormatClarificationText(column)}</p>
+            <p className="text-sm text-foreground">{ambiguousFormatClarificationText(column)}</p>
             <div className="flex flex-wrap gap-2">
               {AMBIGUOUS_FORMAT_OPTIONS.map((label, i) => (
                 <button
@@ -187,30 +188,33 @@ export function DatasetChat({
                   type="button"
                   disabled={busy}
                   onClick={() => void submitDecision(i === 0 ? 'nl' : 'en')}
-                  className="rounded-full border border-line-strong px-3 py-1 text-xs text-ink-soft hover:bg-paper-sunken disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-full border border-border px-3 py-1 text-xs text-muted-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {label}
                 </button>
               ))}
             </div>
-            {error ? <div className="text-sm text-danger">{error}</div> : null}
+            {error ? <div className="text-sm text-destructive">{error}</div> : null}
           </div>
         ) : (
-          <p className="text-sm text-ink-muted">Nothing left to decide.</p>
+          <p className="text-sm text-muted-foreground">Nothing left to decide.</p>
         )}
-      </div>
+      </section>
     );
   }
 
   return (
-    <div className="flex h-[65vh] w-full flex-col rounded border border-line p-4">
-      <h1 className="mb-4 text-lg font-semibold">{displayName}</h1>
-      <div className="flex-1 space-y-3 overflow-y-auto tnum">
+    // Session 87 visual redesign: same shell as Chat — frameless (the
+    // workspace card supplies border + header bar with the dataset name),
+    // messages scroll in the middle, composer in a bottom band.
+    <section aria-label={displayName} className="flex h-full min-h-0 w-full flex-1 flex-col">
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-6 tnum">
+        <div className="mx-auto flex w-full max-w-2xl flex-col gap-5">
         {messages.map((message, i) => {
           if (message.role === 'redacted') {
             return (
               <div key={i} className="text-left">
-                <p className="text-sm italic text-ink-muted">This question has been deleted.</p>
+                <p className="text-sm italic text-muted-foreground">This question has been deleted.</p>
               </div>
             );
           }
@@ -218,23 +222,21 @@ export function DatasetChat({
           // (dockMode AND this message contributes a visual).
           const docked = dockMode && datasetMessageHasVisual(message);
           return (
-            <div key={i} className={message.role === 'user' ? 'text-right' : 'text-left'}>
+            <div key={i} className={message.role === 'user' ? 'flex flex-col items-end text-right' : 'text-left'}>
               <div
                 className={
-                  'inline-block max-w-full whitespace-pre-wrap rounded-lg px-3 py-2 text-sm ' +
+                  'max-w-full whitespace-pre-wrap text-sm ' +
                   (message.role === 'user'
-                    ? 'bg-paper-sunken text-ink'
+                    ? 'max-w-[85%] rounded-lg border border-border bg-background px-3.5 py-2.5 text-left text-foreground'
                     : message.kind === 'clarification'
-                      ? 'border border-line-strong bg-warn-soft text-ink'
-                      : message.kind === 'refusal'
-                        ? 'border border-line bg-paper-sunken text-ink'
-                        : 'border border-line bg-paper-raised text-ink')
+                      ? 'inline-block rounded-lg border border-warning/30 bg-warning-soft px-3.5 py-2.5 text-foreground'
+                      : 'text-[15px] leading-relaxed text-foreground')
                 }
               >
                 {message.text}
               </div>
               {message.role === 'assistant' && message.kind === 'refusal' && message.guidance ? (
-                <p className="mt-1 text-xs text-ink-muted">{message.guidance}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{message.guidance}</p>
               ) : null}
               {message.role === 'assistant' && message.kind === 'clarification' && message.options.length > 0 ? (
                 <div className="mt-2 flex flex-wrap gap-2">
@@ -243,7 +245,7 @@ export function DatasetChat({
                       key={option}
                       type="button"
                       onClick={() => setInput(option)}
-                      className="rounded-full border border-line-strong px-3 py-1 text-xs text-ink-soft hover:bg-paper-sunken"
+                      className="rounded-full border border-border px-3 py-1 text-xs text-muted-foreground hover:bg-muted"
                     >
                       {option}
                     </button>
@@ -262,8 +264,8 @@ export function DatasetChat({
                     className={
                       'mt-2 inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs ' +
                       (activeVisualId === visualId(i)
-                        ? 'border-line-strong bg-paper-sunken text-ink'
-                        : 'border-line-strong text-ink-soft hover:bg-paper-sunken')
+                        ? 'border-transparent bg-secondary text-foreground'
+                        : 'border-border text-muted-foreground hover:bg-muted hover:text-foreground')
                     }
                   >
                     Chart in panel →
@@ -275,28 +277,27 @@ export function DatasetChat({
             </div>
           );
         })}
-        {busy ? <div className="text-left text-sm text-ink-muted">Working on it…</div> : null}
-        {error ? <div className="text-sm text-danger">{error}</div> : null}
+        {busy ? <div className="text-left text-sm text-muted-foreground">Working on it…</div> : null}
+        {error ? <div className="text-sm text-destructive">{error}</div> : null}
         <div ref={bottomRef} />
+        </div>
       </div>
-      <form onSubmit={(e) => void handleSubmit(e)} className="mt-4 flex gap-2">
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          disabled={busy}
-          maxLength={500}
-          placeholder="Ask about your data…"
-          className="flex-1 rounded-md border border-line-strong bg-paper-raised px-3 py-2 text-sm text-ink placeholder:text-ink-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:bg-paper-sunken"
-        />
-        <button
-          type="submit"
-          disabled={busy || !input.trim()}
-          className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-50"
-        >
-          Send
-        </button>
-      </form>
-    </div>
+      <div className="shrink-0 border-t border-border px-4 py-3">
+        <form onSubmit={(e) => void handleSubmit(e)} className="mx-auto flex w-full max-w-2xl gap-2">
+          <Input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            disabled={busy}
+            maxLength={500}
+            placeholder="Ask about your data…"
+            className="h-10 flex-1 bg-background px-3.5"
+          />
+          <Button type="submit" size="lg" className="h-10 px-4" disabled={busy || !input.trim()}>
+            Send
+          </Button>
+        </form>
+      </div>
+    </section>
   );
 }

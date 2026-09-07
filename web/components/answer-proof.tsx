@@ -17,7 +17,7 @@ import { memo, useId, useState } from 'react';
 import { DERIVED_DATA_MARKING } from '../backend/query/types.ts';
 import type { AnswerProof as AnswerProofData } from '../lib/answer-proof.ts';
 
-const LABEL_CLASS = 'text-xs text-ink-muted underline';
+const LABEL_CLASS = 'text-xs text-muted-foreground underline';
 
 function CellTable({ proof, technical }: { proof: AnswerProofData; technical: boolean }) {
   const dimKeys = [...new Set(proof.cells.flatMap((cell) => Object.keys(cell.dims)))].sort();
@@ -25,11 +25,11 @@ function CellTable({ proof, technical }: { proof: AnswerProofData; technical: bo
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-max border-collapse text-left text-xs">
-        <caption className="mb-1 text-left text-ink-muted">
+        <caption className="mb-1 text-left text-muted-foreground">
           {`Tabel ${proof.tableId} — ${proof.tableTitle} · versie ${proof.tableVersion} · gesynchroniseerd ${date} · licentie ${proof.license}`}
         </caption>
         <thead>
-          <tr className="border-b border-line">
+          <tr className="border-b border-border">
             <th scope="col" className="py-1 pr-3 font-medium">Onderwerp</th>
             <th scope="col" className="py-1 pr-3 font-medium">Regio</th>
             <th scope="col" className="py-1 pr-3 font-medium">Periode</th>
@@ -51,7 +51,7 @@ function CellTable({ proof, technical }: { proof: AnswerProofData; technical: bo
         </thead>
         <tbody>
           {proof.cells.map((cell) => (
-            <tr key={cell.resultId} className="border-b border-line last:border-0">
+            <tr key={cell.resultId} className="border-b border-border last:border-0">
               <td className="py-1 pr-3">{cell.measureTitle}</td>
               <td className="py-1 pr-3">{cell.regionLabel ?? ''}</td>
               <td className="py-1 pr-3">{cell.periodLabel}</td>
@@ -103,7 +103,7 @@ export const AnswerProof = memo(function AnswerProof({ proof }: { proof: AnswerP
           id={panelId}
           role="region"
           aria-label="Onderbouwing van dit antwoord"
-          className="order-last mt-2 w-full basis-full rounded border border-line bg-paper-sunken p-3 text-xs text-ink-soft"
+          className="order-last mt-2 w-full basis-full rounded border border-border bg-muted p-3 text-xs text-muted-foreground"
         >
           <button
             type="button"
@@ -115,7 +115,7 @@ export const AnswerProof = memo(function AnswerProof({ proof }: { proof: AnswerP
           </button>
 
           <div className="mb-3">
-            <h4 className="mb-1 font-medium text-ink-muted">Waarom dit antwoord</h4>
+            <h4 className="mb-1 font-medium text-muted-foreground">Waarom dit antwoord</h4>
             <p>{`Gebruikte lezing: ${proof.reading}.`}</p>
             {proof.periodSemantics !== null ? <p>{`Periodebetekenis: ${proof.periodSemantics}`}</p> : null}
             {proof.alternates.length > 0 ? (
@@ -131,12 +131,12 @@ export const AnswerProof = memo(function AnswerProof({ proof }: { proof: AnswerP
           </div>
 
           <div className="mb-3">
-            <h4 className="mb-1 font-medium text-ink-muted">De gebruikte cellen</h4>
+            <h4 className="mb-1 font-medium text-muted-foreground">De gebruikte cellen</h4>
             <CellTable proof={proof} technical={technical} />
           </div>
 
           <div>
-            <h4 className="mb-1 font-medium text-ink-muted">Stap voor stap</h4>
+            <h4 className="mb-1 font-medium text-muted-foreground">Stap voor stap</h4>
             <ol className="list-decimal space-y-0.5 pl-4">
               {proof.steps.map((step, i) => (
                 <li key={i}>

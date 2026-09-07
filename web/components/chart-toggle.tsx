@@ -25,8 +25,8 @@ function buttonClass(active: boolean): string {
   return (
     'min-h-6 rounded-full border px-2.5 py-1 text-xs ' +
     (active
-      ? 'border-line-strong bg-paper-sunken text-ink'
-      : 'border-line-strong text-ink-soft hover:bg-paper-sunken')
+      ? 'border-border bg-muted text-foreground'
+      : 'border-border text-muted-foreground hover:bg-muted')
   );
 }
 

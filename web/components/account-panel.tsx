@@ -29,24 +29,24 @@ export function AccountPanel({
   const grantQuestions = simplePrice > 0 ? Math.floor(signupGrantCredits / simplePrice) : null;
 
   return (
-    <div className="flex flex-col gap-3 rounded-lg border border-line bg-paper-raised p-4">
+    <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4">
       <div>
-        <p className="text-xs text-ink-muted">Saldo</p>
+        <p className="text-xs text-muted-foreground">Saldo</p>
         {/* WP23 (#91): tabular figures — digits align, FT/NRC-style. */}
-        <p className="font-display tnum text-2xl font-semibold">{balance} credits</p>
+        <p className=" tnum text-2xl font-semibold">{balance} credits</p>
       </div>
       {lowBalance ? (
-        <p role="status" className="rounded-md bg-warn-soft px-3 py-2 text-sm text-warn">
+        <p role="status" className="rounded-md bg-warning-soft px-3 py-2 text-sm text-warning">
           Je saldo is bijna op — er is nog genoeg voor één vraag.
         </p>
       ) : null}
       <Link
         href="/credits"
-        className="rounded-md bg-accent px-4 py-2 text-center text-sm font-medium text-white hover:bg-accent-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+        className="rounded-md bg-primary px-4 py-2 text-center text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
       >
         Credits kopen
       </Link>
-      <p className="text-xs text-ink-muted">
+      <p className="text-xs text-muted-foreground">
         {`Bij aanmelding krijg je eenmalig ${signupGrantCredits} credits. Een gewone vraag kost ${simplePrice} credits` +
           (grantQuestions === null
             ? '.'
@@ -55,7 +55,7 @@ export function AccountPanel({
       {/* #14 (GDPR self-service deletion): own row, visually separated from
         * the buy-credits flow above -- a destructive account action, not
         * part of the purchase funnel. */}
-      <div className="border-t border-line pt-3">
+      <div className="border-t border-border pt-3">
         <DeleteHistoryButton />
       </div>
     </div>

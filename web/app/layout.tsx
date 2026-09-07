@@ -1,24 +1,21 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Newsreader } from "next/font/google";
+import { Geist_Mono, Inter } from "next/font/google";
 import "./globals.css";
 import { SiteFooter } from "../components/site-footer.tsx";
+import { ThemeProvider } from "../components/theme-provider.tsx";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+// Session 87 visual redesign (docs/12-huisstijl.md): the chosen mockup
+// (Option B, "Inset Cards") sets interface text in Inter; Geist Mono stays for
+// code/ids. The Newsreader serif display face went with the retired
+// "papier & inkt" identity.
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
-});
-
-// Redactionele huisstijl (owner decision, session 51): serif display face for
-// headings/wordmark. Optical sizing on — Newsreader is designed for it.
-const newsreader = Newsreader({
-  variable: "--font-newsreader",
-  subsets: ["latin"],
-  style: ["normal", "italic"],
 });
 
 export const metadata: Metadata = {
@@ -40,13 +37,22 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
+    // suppressHydrationWarning: next-themes writes the `dark` class onto <html>
+    // before React hydrates (its inline script), which is the documented,
+    // expected mismatch for exactly this element.
     <html
       lang="nl"
-      className={`${geistSans.variable} ${geistMono.variable} ${newsreader.variable} h-full antialiased`}
+      suppressHydrationWarning
+      className={`${inter.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
-        {children}
-        <SiteFooter />
+      {/* App shell: the page scrolls inside the flex-1 region so the one
+          site-wide footer (ADR 033 D6) stays in view and the chat workspace
+          can size its cards to the viewport. */}
+      <body className="flex h-dvh flex-col">
+        <ThemeProvider>
+          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">{children}</div>
+          <SiteFooter />
+        </ThemeProvider>
       </body>
     </html>
   );

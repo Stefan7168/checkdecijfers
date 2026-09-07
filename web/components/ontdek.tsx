@@ -18,9 +18,9 @@ export async function OntdekCharts() {
   const charts = await getOntdekCharts();
   if (charts.length === 0) return null;
   return (
-    <section className="border-b border-line py-12">
-      <h2 className="text-2xl text-ink">Ontdek Nederland in grafieken</h2>
-      <p className="mt-3 max-w-xl text-ink-soft">
+    <section className="border-b border-border py-12">
+      <h2 className="text-2xl text-foreground">Ontdek Nederland in grafieken</h2>
+      <p className="mt-3 max-w-xl text-muted-foreground">
         Rechtstreeks uit onze database met officiële CBS-cijfers:
         consumentenvertrouwen, economische groei, inflatie, de gemiddelde
         verkoopprijs van woningen en de werkloosheid. Elk punt is herleidbaar

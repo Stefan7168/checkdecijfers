@@ -12,6 +12,7 @@
 // branch here explicitly and must never fall into the generic catch below.
 'use client';
 
+import { Database, Globe, Link2, Paperclip, Plug } from 'lucide-react';
 import { unstable_isUnrecognizedActionError } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { askQuestion, replyToClarification } from '../app/actions.ts';
@@ -47,15 +48,25 @@ import { ChartView } from './chart.tsx';
 import { FeedbackButtons } from './feedback-buttons.tsx';
 import { SourceBadge } from './source-badge.tsx';
 import { StatCard } from './stat-card.tsx';
+import { Badge } from './ui/badge.tsx';
+import { Button } from './ui/button.tsx';
+import { Input } from './ui/input.tsx';
 
-/** WP23 (#75): clickable examples on the empty chat — each a benchmark-
- * proven answerable shape. Clicking FILLS the input, never auto-sends: the
- * user sees the #82 cost line and presses Verstuur themselves. */
-const EXAMPLE_QUESTIONS = [
-  'Wat was de inflatie in 2024?',
-  'Hoeveel inwoners heeft Nederland?',
-  'Maak een grafiek van de inflatie van 2020 tot en met 2024.',
-] as const;
+// Session 87 visual redesign (owner decision, docs/superpowers/specs/
+// 2026-09-07-chat-chart-visual-redesign-design.md): the #75 example-question
+// chips and the "Stel een vraag … bijvoorbeeld" prompt are gone from the
+// empty state — it is a bare composer now, like a blank LLM chat. The
+// follow-up chips (#73) keep the identical fill-don't-send handler.
+
+/** Session 87 (mockup Option B): the squared chips in the row UNDER the
+ * composer (owner amendment 1) — source toggles and attachment entry points. */
+const CHIP_BASE = 'inline-flex h-7 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium';
+const CHIP_ON = `${CHIP_BASE} border-transparent bg-secondary text-foreground`;
+const CHIP_OFF = `${CHIP_BASE} border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground`;
+const CHIP_ACTION = `${CHIP_BASE} border-border bg-background text-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60`;
+const CHIP_SOON = `${CHIP_BASE} border-dashed border-border bg-background text-muted-foreground opacity-60 disabled:cursor-not-allowed`;
+/** Follow-up chips (#73) and the docked-visual reference chip: pills under a message. */
+const PILL = 'rounded-full border border-border px-3 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground';
 
 /** WP20 #82: live pricing for the pre-send cost surfaces — read from the
  * pricing tables by the page (ADR 006), threaded via Dashboard. `balance` is
@@ -121,11 +132,11 @@ function WebSectionView({ section }: { section: WebSection }) {
       section.code === 'insufficient_balance'
         ? 'De webzoekopdracht is niet uitgevoerd (onvoldoende saldo) — geen extra kosten.'
         : 'De webzoekopdracht is niet gelukt — geen extra kosten.';
-    return <p className="mt-2 text-xs text-ink-muted">{line}</p>;
+    return <p className="mt-2 text-xs text-muted-foreground">{line}</p>;
   }
   return (
-    <div className="mt-2 max-w-full rounded border border-line bg-paper-sunken px-3 py-2 text-xs text-ink-soft">
-      <p className="mb-1 font-medium text-ink-muted">{WEB_SECTION_HEADER}</p>
+    <div className="mt-2 max-w-full rounded border border-border bg-muted px-3 py-2 text-xs text-muted-foreground">
+      <p className="mb-1 font-medium text-muted-foreground">{WEB_SECTION_HEADER}</p>
       <ul className="space-y-1">
         {section.findings.slice(0, 4).map((finding, i) => (
           <li key={i}>
@@ -158,7 +169,7 @@ function DownloadCsvButton({ csv }: { csv: AnswerCsv }) {
     <>
       <button
         type="button"
-        className="text-xs text-ink-muted underline"
+        className="text-xs text-muted-foreground underline"
         onClick={() => {
           try {
             const url = URL.createObjectURL(
@@ -177,7 +188,7 @@ function DownloadCsvButton({ csv }: { csv: AnswerCsv }) {
         Download als CSV
       </button>
       {failed ? (
-        <span className="text-xs text-danger">Downloaden lukte niet in deze browser.</span>
+        <span className="text-xs text-destructive">Downloaden lukte niet in deze browser.</span>
       ) : null}
     </>
   );
@@ -189,7 +200,7 @@ function CopyCitationButton({ citation }: { citation: string }) {
   return (
     <button
       type="button"
-      className="text-xs text-ink-muted underline"
+      className="text-xs text-muted-foreground underline"
       onClick={async () => {
         try {
           await navigator.clipboard.writeText(citation);
@@ -718,28 +729,14 @@ export function Chat({
   }
 
   return (
-    <div className="flex h-[65vh] w-full flex-col rounded border border-line p-4">
-      <h1 className="mb-4 text-lg font-semibold">Check de Cijfers</h1>
-      <div className="flex-1 space-y-3 overflow-y-auto tnum">
-        {messages.length === 0 ? (
-          <div>
-            <p className="text-sm text-ink-muted">
-              Stel een vraag over officiële CBS-cijfers, bijvoorbeeld:
-            </p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {EXAMPLE_QUESTIONS.map((question) => (
-                <button
-                  key={question}
-                  type="button"
-                  onClick={() => setInput(question)}
-                  className="rounded-full border border-line-strong px-3 py-1 text-xs text-ink-soft hover:bg-paper-sunken"
-                >
-                  {question}
-                </button>
-              ))}
-            </div>
-          </div>
-        ) : null}
+    // Session 87 visual redesign: no frame of its own — the workspace card
+    // (workspace.tsx) supplies the border and the header bar. Messages scroll
+    // in the middle; the composer sits in a bottom band with the chip row
+    // BELOW the input (owner amendment 1). An empty conversation renders
+    // nothing above the composer (bare chat, no example chips).
+    <div className="flex h-full min-h-0 w-full flex-1 flex-col">
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-6 tnum">
+        <div className="mx-auto flex w-full max-w-2xl flex-col gap-5">
         {messages.map((message, i) => {
           // WP135 ⟨A7⟩: a redacted row replays as ONE muted placeholder — no
           // user+assistant sentinel pair, no envelope (the chat-side isDeleted
@@ -747,7 +744,7 @@ export function Chat({
           if (message.role === 'redacted') {
             return (
               <div key={i} className="text-left">
-                <p className="text-sm italic text-ink-muted">Deze vraag is verwijderd.</p>
+                <p className="text-sm italic text-muted-foreground">Deze vraag is verwijderd.</p>
               </div>
             );
           }
@@ -759,15 +756,15 @@ export function Chat({
           return (
           <div
             key={i}
-            className={message.role === 'user' ? 'text-right' : 'text-left'}
+            className={message.role === 'user' ? 'flex flex-col items-end text-right' : 'text-left'}
           >
             {!dockMode && message.card ? <StatCard data={message.card} /> : null}
             {/* WP23 (#84): a refusal announces itself — the two fixed Dutch
               * strings from the owner-approved row. */}
             {message.kind === 'refusal' ? (
               <div className="mb-0.5 flex items-center gap-2 text-xs">
-                <span className="font-semibold text-ink-soft">Dit kon ik niet beantwoorden</span>
-                <span className="rounded-full bg-paper-sunken px-2 py-0.5 text-ink-soft">
+                <span className="font-semibold text-muted-foreground">Dit kon ik niet beantwoorden</span>
+                <span className="rounded-full bg-muted px-2 py-0.5 text-muted-foreground">
                   geen antwoord = geen gok
                 </span>
               </div>
@@ -779,16 +776,18 @@ export function Chat({
                 ❓
               </span>
             ) : null}
+            {/* Session 87 (mockup Option B): a user message is an outlined
+              * card aligned right; assistant text is plain, aligned left. A
+              * clarification keeps its amber wash (#84: it must read as a
+              * question back, not as an answer). */}
             <div
               className={
-                'inline-block max-w-full whitespace-pre-wrap rounded-lg px-3 py-2 text-sm ' +
+                'max-w-full whitespace-pre-wrap text-sm ' +
                 (message.role === 'user'
-                  ? 'bg-paper-sunken text-ink'
+                  ? 'max-w-[85%] rounded-lg border border-border bg-background px-3.5 py-2.5 text-left text-foreground'
                   : message.kind === 'clarification'
-                    ? 'border border-line-strong bg-warn-soft text-ink'
-                    : message.kind === 'refusal'
-                      ? 'border border-line bg-paper-sunken text-ink'
-                      : 'border border-line bg-paper-raised text-ink')
+                    ? 'inline-block rounded-lg border border-warning/30 bg-warning-soft px-3.5 py-2.5 text-foreground'
+                    : 'text-[15px] leading-relaxed text-foreground')
               }
             >
               {message.answerView ? message.answerView.body : message.text}
@@ -802,28 +801,28 @@ export function Chat({
               * Burying it would keep the letter of the safelist and lose its
               * point. */}
             {message.answerView?.assumptionLine ? (
-              <p className="mt-1 text-sm text-ink-soft">{message.answerView.assumptionLine}</p>
+              <p className="mt-1 text-sm text-muted-foreground">{message.answerView.assumptionLine}</p>
             ) : null}
             {message.answerView?.stalenessWarning ? (
-              <p className="mt-1 text-sm text-warn">{message.answerView.stalenessWarning}</p>
+              <p className="mt-1 text-sm text-warning">{message.answerView.stalenessWarning}</p>
             ) : null}
             {message.answerView?.definitionLine ? (
-              <p className="mt-1 text-xs text-ink-muted">{message.answerView.definitionLine}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{message.answerView.definitionLine}</p>
             ) : null}
             {/* #39: the alternate-reading disclosure — plain text under the
               * definition it qualifies (the clickable affordance is #89,
               * deliberately not built here). */}
             {message.answerView?.alternatesLine ? (
-              <p className="mt-1 text-xs text-ink-muted">{message.answerView.alternatesLine}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{message.answerView.alternatesLine}</p>
             ) : null}
             {message.answerView?.markingLine ? (
-              <p className="mt-1 text-xs text-ink-muted">{message.answerView.markingLine}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{message.answerView.markingLine}</p>
             ) : null}
             {message.answerView ? (
-              <div className="mt-1 flex max-w-full flex-wrap items-center gap-2 border-t border-line pt-1">
+              <div className="mt-1 flex max-w-full flex-wrap items-center gap-2 border-t border-border pt-1">
                 {/* WP23 (#71): the voorlopig pill at message level. */}
                 {message.provisional ? (
-                  <span className="rounded-full bg-warn-soft px-2 py-0.5 text-xs font-medium text-warn">
+                  <span className="rounded-full bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning">
                     voorlopig
                   </span>
                 ) : null}
@@ -831,8 +830,8 @@ export function Chat({
                   * sentence, always visible; the #86 deep-link now rides the
                   * SourceBadge (table id + measured sync date, same pinned
                   * URL builder). Huisstijl rule 7: attribution stays quiet —
-                  * text-xs text-ink-muted. */}
-                <span className="inline-flex max-w-full flex-wrap items-center gap-2 text-xs text-ink-muted">
+                  * text-xs text-muted-foreground. */}
+                <span className="inline-flex max-w-full flex-wrap items-center gap-2 text-xs text-muted-foreground">
                   <span>{message.answerView.attribution}</span>
                   <SourceBadge
                     tableId={message.answerView.tableId}
@@ -851,7 +850,7 @@ export function Chat({
               <FeedbackButtons auditId={message.auditId} />
             ) : null}
             {message.cost !== null ? (
-              <div className="mt-0.5 text-xs text-ink-muted tnum">
+              <div className="mt-0.5 text-xs text-muted-foreground tnum">
                 {message.cost} credits
                 {/* WP20 #82(c): the reply's price, stated AT the clarifying
                   * question — client-side caption; the pipeline's own
@@ -888,10 +887,10 @@ export function Chat({
                 onClick={() => onActivateVisual?.(visualId(i))}
                 aria-pressed={activeVisualId === visualId(i)}
                 className={
-                  'mt-2 inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs ' +
+                  'mt-2 inline-flex items-center gap-1 ' +
                   (activeVisualId === visualId(i)
-                    ? 'border-line-strong bg-paper-sunken text-ink'
-                    : 'border-line-strong text-ink-soft hover:bg-paper-sunken')
+                    ? 'rounded-full border border-transparent bg-secondary px-3 py-1 text-xs text-foreground'
+                    : PILL)
                 }
               >
                 {message.chart !== null ? 'Grafiek' : 'Kaart'} in het paneel →
@@ -924,7 +923,7 @@ export function Chat({
                         : null;
                       setInput(question);
                     }}
-                    className="rounded-full border border-line-strong px-3 py-1 text-xs text-ink-soft hover:bg-paper-sunken"
+                    className={PILL}
                   >
                     {question}
                   </button>
@@ -941,7 +940,7 @@ export function Chat({
           );
         })}
         {busy ? (
-          <div className="text-left text-sm text-ink-muted">
+          <div className="text-left text-sm text-muted-foreground">
             {/* WP129+130 go-live feedback (owner, 2026-07-12): with the Internet
               * chip on, the wait covers the web search too — say so honestly.
               * Web-only (CBS deselected) names only the web. */}
@@ -952,9 +951,9 @@ export function Chat({
                 : 'Bezig met het doorzoeken van CBS-cijfers…'}
           </div>
         ) : null}
-        {error ? <div className="text-sm text-danger">{error}</div> : null}
+        {error ? <div className="text-sm text-destructive">{error}</div> : null}
         {staleDeploy ? (
-          <div className="text-sm text-warn">
+          <div className="text-sm text-warning">
             De site is net bijgewerkt, waardoor deze vraag niet is verstuurd (er zijn geen credits
             afgeschreven).{' '}
             <button
@@ -968,16 +967,40 @@ export function Chat({
           </div>
         ) : null}
         <div ref={bottomRef} />
+        </div>
       </div>
+      <div className="shrink-0 border-t border-border px-4 py-3">
+        <div className="mx-auto flex w-full max-w-2xl flex-col gap-2">
+      <form onSubmit={handleSubmit} className="flex gap-2">
+        <Input
+          type="text"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          disabled={busy}
+          maxLength={500}
+          placeholder={
+            // WP26c: a RESCUE pending must not make the box look like it is
+            // waiting for an answer — nothing was asked. Only a real
+            // clarification round echoes its question here.
+            pending && pending.rescueOnly !== true ? pending.questionNl : 'Stel een vraag…'
+          }
+          className="h-10 flex-1 bg-background px-3.5"
+        />
+        <Button type="submit" size="lg" className="h-10 px-4" disabled={busy || !input.trim() || nothingSelected}>
+          Verstuur
+        </Button>
+      </form>
       {/* WP129+130 (#129, ADR 032): the source-tags chips — one per registered
         * source (label "<displayName> data", PRE-checked) plus the "Internet"
-        * channel (default OFF). Toggle buttons carry aria-pressed; selected
-        * chips get the FeedbackButtons active-state styling + a trailing ✕
-        * affordance (aria-hidden, so the accessible name stays the label). Only
-        * shown when the websearch prop is present — a lone CBS chip is the
-        * choice-noise the owner rejected. */}
+        * channel (default OFF). Toggle buttons carry aria-pressed; a selected
+        * chip is filled, an unselected one outlined (icons are aria-hidden, so
+        * the accessible name stays the label). Only shown when the websearch
+        * prop is present — a lone CBS chip is the choice-noise the owner
+        * rejected. Session 87: the row sits UNDER the input (owner amendment 1)
+        * and shares one row with the attachment entry points below. */}
+      <div className="flex flex-wrap items-center gap-1.5">
       {websearch ? (
-        <div className="mt-3 flex flex-wrap items-center gap-2">
+        <>
           {Object.keys(SOURCES).map((key) => {
             const active = selectedSources.has(key);
             return (
@@ -986,15 +1009,10 @@ export function Chat({
                 type="button"
                 aria-pressed={active}
                 onClick={() => toggleSource(key)}
-                className={
-                  'rounded-full border px-3 py-1 text-xs ' +
-                  (active
-                    ? 'border-line-strong bg-paper-sunken text-ink'
-                    : 'border-line-strong text-ink-soft hover:bg-paper-sunken')
-                }
+                className={active ? CHIP_ON : CHIP_OFF}
               >
+                <Database aria-hidden="true" className="size-3.5" />
                 {`${SOURCES[key]!.displayName} data`}
-                {active ? <span aria-hidden="true"> ✕</span> : null}
               </button>
             );
           })}
@@ -1002,20 +1020,12 @@ export function Chat({
             type="button"
             aria-pressed={webSelected}
             onClick={() => setWebSelected((v) => !v)}
-            className={
-              'rounded-full border px-3 py-1 text-xs ' +
-              (webSelected
-                ? 'border-line-strong bg-paper-sunken text-ink'
-                : 'border-line-strong text-ink-soft hover:bg-paper-sunken')
-            }
+            className={webSelected ? CHIP_ON : CHIP_OFF}
           >
+            <Globe aria-hidden="true" className="size-3.5" />
             Internet
-            {webSelected ? <span aria-hidden="true"> ✕</span> : null}
           </button>
-        </div>
-      ) : null}
-      {nothingSelected ? (
-        <p className="mt-1 text-xs text-danger">Selecteer minstens één bron.</p>
+        </>
       ) : null}
       {/* #201/#202 (open-questions, session 83 scoping): attachment entry
         * points. "Databron verbinden" stays disabled regardless of
@@ -1031,14 +1041,14 @@ export function Chat({
         * D10 presence-driven exception: enabled ONLY when `attachments` is
         * present; byte-identical to today (same disabled button, same
         * title, no file input in the DOM at all) when it is absent. */}
-      <div className="mt-3 flex flex-wrap items-center gap-2">
         <button
           type="button"
           onClick={() => setLinkRowOpen((open) => !open)}
           aria-expanded={linkRowOpen}
-          className="rounded-full border border-line-strong px-3 py-1 text-xs text-ink-soft hover:bg-paper-sunken"
+          className={CHIP_ACTION}
         >
-          Link toevoegen
+          <Link2 aria-hidden="true" className="size-3.5" />
+          Add link
         </button>
         {attachments ? (
           <>
@@ -1053,9 +1063,10 @@ export function Chat({
               type="button"
               disabled={uploadBusy}
               onClick={() => fileInputRef.current?.click()}
-              className="rounded-full border border-line-strong px-3 py-1 text-xs text-ink-soft hover:bg-paper-sunken disabled:cursor-not-allowed disabled:opacity-60"
+              className={CHIP_ACTION}
             >
-              Bestand uploaden
+              <Paperclip aria-hidden="true" className="size-3.5" />
+              Upload file
             </button>
           </>
         ) : (
@@ -1063,26 +1074,34 @@ export function Chat({
             type="button"
             disabled
             title="Binnenkort beschikbaar: upload een bestand (bijv. PDF)"
-            className="rounded-full border border-line-strong px-3 py-1 text-xs text-ink-muted disabled:cursor-not-allowed disabled:opacity-60"
+            className={CHIP_SOON}
           >
-            Bestand uploaden
+            <Paperclip aria-hidden="true" className="size-3.5" />
+            Upload file
           </button>
         )}
         <button
           type="button"
           disabled
           title="Binnenkort beschikbaar: verbind een databron (bijv. Google Sheets)"
-          className="rounded-full border border-line-strong px-3 py-1 text-xs text-ink-muted disabled:cursor-not-allowed disabled:opacity-60"
+          className={CHIP_SOON}
         >
-          Databron verbinden
+          <Plug aria-hidden="true" className="size-3.5" />
+          Connect database
+          <Badge aria-hidden="true" variant="outline" className="h-4 px-1 text-[10px] leading-none">
+            Soon
+          </Badge>
         </button>
       </div>
+      {nothingSelected ? (
+        <p className="text-xs text-destructive">Selecteer minstens één bron.</p>
+      ) : null}
       {linkRowOpen ? (
         <form
           onSubmit={handleLinkSubmit}
-          className="mt-2 flex flex-wrap items-center gap-2"
+          className="flex flex-wrap items-center gap-2"
         >
-          <input
+          <Input
             type="url"
             value={linkUrl}
             onChange={(e) => {
@@ -1090,51 +1109,24 @@ export function Chat({
               setLinkComingSoon(false);
             }}
             placeholder="https://example.com/page-with-a-table"
-            className="min-w-0 flex-1 rounded-md border border-line-strong bg-paper-raised px-3 py-2 text-sm text-ink placeholder:text-ink-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            className="min-w-0 flex-1 bg-background"
           />
-          <button
-            type="submit"
-            disabled={!linkUrl.trim()}
-            className="rounded-md border border-line-strong bg-paper-raised px-4 py-2 text-sm font-medium text-ink hover:bg-paper-sunken disabled:cursor-not-allowed disabled:opacity-60"
-          >
+          <Button type="submit" variant="outline" disabled={!linkUrl.trim()}>
             Fetch
-          </button>
+          </Button>
         </form>
       ) : null}
       {linkComingSoon ? (
-        <p className="mt-1 text-xs text-ink-muted">
+        <p className="text-xs text-muted-foreground">
           This isn&apos;t available yet — coming soon.
         </p>
       ) : null}
       {attachments && uploadBusy ? (
-        <p className="mt-1 text-xs text-ink-muted">Bestand wordt gelezen…</p>
+        <p className="text-xs text-muted-foreground">Bestand wordt gelezen…</p>
       ) : null}
       {attachments && uploadError ? (
-        <p className="mt-1 text-xs text-danger">{uploadError}</p>
+        <p className="text-xs text-destructive">{uploadError}</p>
       ) : null}
-      <form onSubmit={handleSubmit} className="mt-4 flex gap-2">
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          disabled={busy}
-          maxLength={500}
-          placeholder={
-            // WP26c: a RESCUE pending must not make the box look like it is
-            // waiting for an answer — nothing was asked. Only a real
-            // clarification round echoes its question here.
-            pending && pending.rescueOnly !== true ? pending.questionNl : 'Stel een vraag…'
-          }
-          className="flex-1 rounded-md border border-line-strong bg-paper-raised px-3 py-2 text-sm text-ink placeholder:text-ink-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:bg-paper-sunken"
-        />
-        <button
-          type="submit"
-          disabled={busy || !input.trim() || nothingSelected}
-          className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-50"
-        >
-          Verstuur
-        </button>
-      </form>
       {/* WP20 #82(a)+(b): pre-send cost line from LIVE pricing + the live
         * balance, and the honest static clarification hint (a
         * confidence-conditional hint is impossible before the parse runs —
@@ -1146,7 +1138,7 @@ export function Chat({
         * wordt tijdelijk 30 gereserveerd)"; internet off / no websearch prop ⇒
         * unchanged. */}
       {pricing ? (
-        <p className="mt-1 text-xs text-ink-muted">
+        <p className="text-xs text-muted-foreground">
           {websearch && webSelected && selectedSources.size > 0
             ? `Een vraag kost ~${pricing.simple + websearch.addonPrice} credits (waarvan ${websearch.addonPrice} voor internet) · saldo: ${pricing.balance} credits. ` +
               `Stel ik eerst een verduidelijkingsvraag, dan kost die ${pricing.clarification} credits en krijg je de rest terug.`
@@ -1156,6 +1148,8 @@ export function Chat({
                 `Stel ik eerst een verduidelijkingsvraag, dan kost die ${pricing.clarification} credits en krijg je de rest terug.`}
         </p>
       ) : null}
+        </div>
+      </div>
     </div>
   );
 }

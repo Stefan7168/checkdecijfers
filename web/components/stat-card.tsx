@@ -70,7 +70,7 @@ export function StatCard({ data }: { data: StatCardData }) {
         xmlns="http://www.w3.org/2000/svg"
         role="img"
         aria-label={`${data.measureTitle}: ${data.value}${data.unitSuffix}`}
-        className="h-auto w-full max-w-[420px] rounded-lg border border-line"
+        className="h-auto w-full max-w-[420px] rounded-xl border border-border"
       >
         <rect x="0" y="0" width="600" height="315" fill="#ffffff" />
         <text x="32" y="56" fontFamily={FONT} fontSize="22" fill="#52525b">
@@ -107,11 +107,11 @@ export function StatCard({ data }: { data: StatCardData }) {
         <button
           type="button"
           onClick={downloadPng}
-          className="text-xs text-ink-muted underline"
+          className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
         >
           Download als afbeelding
         </button>
-        {failed ? <span className="ml-2 text-xs text-danger">Downloaden lukte niet in deze browser.</span> : null}
+        {failed ? <span className="ml-2 text-xs text-destructive">Downloaden lukte niet in deze browser.</span> : null}
       </div>
     </div>
   );

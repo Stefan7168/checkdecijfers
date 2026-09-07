@@ -202,7 +202,7 @@ function downloadPng(
   image.src = svgUrl;
 }
 
-const MENU_ITEM_CLASS = 'block w-full px-3 py-1.5 text-left text-xs text-ink hover:bg-paper-sunken';
+const MENU_ITEM_CLASS = 'block w-full px-3 py-1.5 text-left text-xs text-foreground hover:bg-muted';
 
 export function ChartDownloadMenu({
   containerRef,
@@ -279,7 +279,7 @@ export function ChartDownloadMenu({
         aria-expanded={open}
         aria-controls={menuId}
         onClick={() => setOpen((o) => !o)}
-        className="min-h-6 px-1 text-xs text-ink-muted underline"
+        className="min-h-6 px-1 text-xs text-muted-foreground underline"
       >
         Download
       </button>
@@ -289,7 +289,7 @@ export function ChartDownloadMenu({
           role="menu"
           aria-label="Downloadformaat"
           onKeyDown={onMenuKeyDown}
-          className="absolute right-0 z-10 mt-1 whitespace-nowrap rounded-md border border-line bg-paper-raised py-1 shadow-sm"
+          className="absolute right-0 z-10 mt-1 whitespace-nowrap rounded-md border border-border bg-card py-1 shadow-sm"
         >
           <button
             ref={firstItemRef}
@@ -314,7 +314,7 @@ export function ChartDownloadMenu({
         </div>
       ) : null}
       {failed ? (
-        <span role="alert" className="ml-2 text-xs text-danger">
+        <span role="alert" className="ml-2 text-xs text-destructive">
           Downloaden lukte niet in deze browser.
         </span>
       ) : null}

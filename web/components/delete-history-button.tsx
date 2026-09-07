@@ -37,8 +37,8 @@ export function DeleteHistoryButton() {
 
   if (stage === 'confirming' || stage === 'deleting') {
     return (
-      <div className="flex flex-col gap-2 rounded-lg border border-danger bg-paper-sunken p-3 text-sm">
-        <p className="text-danger">
+      <div className="flex flex-col gap-2 rounded-lg border border-destructive bg-muted p-3 text-sm">
+        <p className="text-destructive">
           Weet je het zeker? Je vraagteksten worden permanent verwijderd. Dit kan niet ongedaan
           worden gemaakt.
         </p>
@@ -47,7 +47,7 @@ export function DeleteHistoryButton() {
             type="button"
             onClick={handleConfirm}
             disabled={stage === 'deleting'}
-            className="rounded-md bg-danger px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60"
+            className="rounded-md bg-destructive px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60"
           >
             {stage === 'deleting' ? 'Bezig…' : 'Ja, verwijder'}
           </button>
@@ -55,7 +55,7 @@ export function DeleteHistoryButton() {
             type="button"
             onClick={() => setStage('idle')}
             disabled={stage === 'deleting'}
-            className="rounded-md border border-line-strong bg-paper-raised px-3 py-1.5 text-xs font-medium text-ink hover:bg-paper-sunken disabled:opacity-60"
+            className="rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted disabled:opacity-60"
           >
             Annuleren
           </button>
@@ -69,12 +69,12 @@ export function DeleteHistoryButton() {
       <button
         type="button"
         onClick={() => setStage('confirming')}
-        className="text-left text-xs text-danger underline"
+        className="text-left text-xs text-destructive underline"
       >
         Verwijder mijn vraaggeschiedenis
       </button>
       {stage === 'error' ? (
-        <p role="alert" className="text-xs text-danger">
+        <p role="alert" className="text-xs text-destructive">
           Verwijderen is niet gelukt. Probeer het later opnieuw.
         </p>
       ) : null}

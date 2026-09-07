@@ -16,9 +16,9 @@ type StatusKind = 'live' | 'frozen' | 'planned';
 const STORAGE_KEY = 'systeemoverzicht-lang';
 
 const STATUS_STYLES: Record<StatusKind, string> = {
-  live: 'bg-ok/10 text-ok',
-  frozen: 'bg-warn-soft text-warn',
-  planned: 'bg-paper-sunken text-ink-soft',
+  live: 'bg-ok/10 text-success',
+  frozen: 'bg-warning-soft text-warning',
+  planned: 'bg-muted text-muted-foreground',
 };
 
 type JourneyStep = { status: StatusKind; title: string; body: string };
@@ -450,7 +450,7 @@ function LangToggle({ lang, onChange }: { lang: Lang; onChange: (lang: Lang) => 
     { value: 'nl', label: 'NL' },
   ];
   return (
-    <div className="inline-flex shrink-0 items-center rounded-full border border-line-strong p-0.5 text-xs font-semibold">
+    <div className="inline-flex shrink-0 items-center rounded-full border border-border p-0.5 text-xs font-semibold">
       {options.map((opt) => (
         <button
           key={opt.value}
@@ -458,7 +458,7 @@ function LangToggle({ lang, onChange }: { lang: Lang; onChange: (lang: Lang) => 
           onClick={() => onChange(opt.value)}
           aria-pressed={lang === opt.value}
           className={`rounded-full px-2.5 py-1 ${
-            lang === opt.value ? 'bg-accent text-paper-raised' : 'text-ink-muted hover:text-ink'
+            lang === opt.value ? 'bg-primary text-card' : 'text-muted-foreground hover:text-foreground'
           }`}
         >
           {opt.label}
@@ -510,47 +510,47 @@ export function SystemMapContent() {
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-10 px-4 py-10">
       <header className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-accent">{t.kicker}</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-primary">{t.kicker}</p>
           <LangToggle lang={lang} onChange={handleChange} />
         </div>
-        <h1 className="font-display text-3xl text-ink">{t.title}</h1>
-        <p className="text-ink-soft">{t.tagline}</p>
-        <p className="text-xs text-ink-muted">{t.drawnOn}</p>
-        <p className="text-sm leading-relaxed text-ink-soft">{t.intro}</p>
+        <h1 className=" text-3xl text-foreground">{t.title}</h1>
+        <p className="text-muted-foreground">{t.tagline}</p>
+        <p className="text-xs text-muted-foreground">{t.drawnOn}</p>
+        <p className="text-sm leading-relaxed text-muted-foreground">{t.intro}</p>
       </header>
 
-      <div className="grid grid-cols-1 gap-3 rounded-lg border border-line bg-paper-raised p-4 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 rounded-lg border border-border bg-card p-4 sm:grid-cols-3">
         {t.legend.map(({ kind, description }) => (
           <div key={kind}>
             <StatusPill kind={kind} labels={t.statusLabels} />
-            <p className="mt-1.5 text-xs text-ink-muted">{description}</p>
+            <p className="mt-1.5 text-xs text-muted-foreground">{description}</p>
           </div>
         ))}
       </div>
 
       <section className="flex flex-col gap-4">
-        <h2 className="font-display text-xl text-ink">{t.diagramHeading}</h2>
-        <p className="text-sm text-ink-soft">{t.diagramCaption}</p>
-        <div className="overflow-x-auto rounded-lg border border-line bg-paper-raised p-4">
+        <h2 className=" text-xl text-foreground">{t.diagramHeading}</h2>
+        <p className="text-sm text-muted-foreground">{t.diagramCaption}</p>
+        <div className="overflow-x-auto rounded-lg border border-border bg-card p-4">
           <SystemMapDiagram lang={lang} />
         </div>
       </section>
 
       <section className="flex flex-col gap-4">
-        <h2 className="font-display text-xl text-ink">{t.journeyHeading}</h2>
-        <p className="text-sm text-ink-soft">{t.journeyIntro}</p>
+        <h2 className=" text-xl text-foreground">{t.journeyHeading}</h2>
+        <p className="text-sm text-muted-foreground">{t.journeyIntro}</p>
         <ol className="flex flex-col gap-3">
           {t.journeySteps.map((step, i) => (
-            <li key={step.title} className="flex gap-4 rounded-lg border border-line bg-paper-raised p-4">
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-line-strong text-sm font-semibold tnum text-ink-soft">
+            <li key={step.title} className="flex gap-4 rounded-lg border border-border bg-card p-4">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border text-sm font-semibold tnum text-muted-foreground">
                 {i + 1}
               </span>
               <div className="flex flex-col gap-1.5">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="font-semibold text-ink">{step.title}</h3>
+                  <h3 className="font-semibold text-foreground">{step.title}</h3>
                   <StatusPill kind={step.status} labels={t.statusLabels} />
                 </div>
-                <p className="text-sm leading-relaxed text-ink-soft">{step.body}</p>
+                <p className="text-sm leading-relaxed text-muted-foreground">{step.body}</p>
               </div>
             </li>
           ))}
@@ -558,19 +558,19 @@ export function SystemMapContent() {
       </section>
 
       <section className="flex flex-col gap-4">
-        <h2 className="font-display text-xl text-ink">{t.allowedNeverHeading}</h2>
+        <h2 className=" text-xl text-foreground">{t.allowedNeverHeading}</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="rounded-lg border border-line bg-paper-raised p-4">
-            <h3 className="text-sm font-semibold text-ok">{t.allowedLabel}</h3>
-            <ul className="mt-2 flex flex-col gap-1.5 text-sm text-ink-soft">
+          <div className="rounded-lg border border-border bg-card p-4">
+            <h3 className="text-sm font-semibold text-success">{t.allowedLabel}</h3>
+            <ul className="mt-2 flex flex-col gap-1.5 text-sm text-muted-foreground">
               {t.allowedItems.map((item) => (
                 <li key={item}>· {item}</li>
               ))}
             </ul>
           </div>
-          <div className="rounded-lg border border-line bg-paper-raised p-4">
-            <h3 className="text-sm font-semibold text-danger">{t.neverLabel}</h3>
-            <ul className="mt-2 flex flex-col gap-1.5 text-sm text-ink-soft">
+          <div className="rounded-lg border border-border bg-card p-4">
+            <h3 className="text-sm font-semibold text-destructive">{t.neverLabel}</h3>
+            <ul className="mt-2 flex flex-col gap-1.5 text-sm text-muted-foreground">
               {t.neverItems.map((item) => (
                 <li key={item}>· {item}</li>
               ))}
@@ -580,24 +580,24 @@ export function SystemMapContent() {
       </section>
 
       <section className="flex flex-col gap-4">
-        <h2 className="font-display text-xl text-ink">{t.servicesHeading}</h2>
-        <p className="text-sm text-ink-soft">{t.servicesIntro}</p>
+        <h2 className=" text-xl text-foreground">{t.servicesHeading}</h2>
+        <p className="text-sm text-muted-foreground">{t.servicesIntro}</p>
         <div className="flex flex-col gap-3">
           {t.services.map((s) => (
-            <div key={s.name} className="rounded-lg border border-line bg-paper-raised p-4">
+            <div key={s.name} className="rounded-lg border border-border bg-card p-4">
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">{s.role}</p>
-                  <h3 className="font-semibold text-ink">{s.name}</h3>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{s.role}</p>
+                  <h3 className="font-semibold text-foreground">{s.name}</h3>
                 </div>
                 <StatusPill kind={s.status} labels={t.statusLabels} />
               </div>
-              <p className="mt-2 text-sm text-ink-soft">{s.detail}</p>
-              <p className="mt-2 text-xs text-ink-muted">
+              <p className="mt-2 text-sm text-muted-foreground">{s.detail}</p>
+              <p className="mt-2 text-xs text-muted-foreground">
                 {t.whyPrefix}
                 {s.why}
               </p>
-              <p className="mt-1 text-xs text-ink-muted">
+              <p className="mt-1 text-xs text-muted-foreground">
                 {t.costPrefix}
                 {s.cost}
               </p>
@@ -607,11 +607,11 @@ export function SystemMapContent() {
       </section>
 
       <section className="flex flex-col gap-4">
-        <h2 className="font-display text-xl text-ink">{t.automationsHeading}</h2>
-        <div className="overflow-x-auto rounded-lg border border-line bg-paper-raised">
+        <h2 className=" text-xl text-foreground">{t.automationsHeading}</h2>
+        <div className="overflow-x-auto rounded-lg border border-border bg-card">
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-line text-xs uppercase tracking-wide text-ink-muted">
+              <tr className="border-b border-border text-xs uppercase tracking-wide text-muted-foreground">
                 <th className="px-4 py-2.5 font-semibold">{t.automationHeaders.task}</th>
                 <th className="px-4 py-2.5 font-semibold">{t.automationHeaders.schedule}</th>
                 <th className="px-4 py-2.5 font-semibold">{t.automationHeaders.purpose}</th>
@@ -620,10 +620,10 @@ export function SystemMapContent() {
             </thead>
             <tbody>
               {t.automations.map((a) => (
-                <tr key={a.name} className="border-b border-line last:border-0">
-                  <td className="px-4 py-2.5 font-medium text-ink">{a.name}</td>
-                  <td className="px-4 py-2.5 text-ink-soft">{a.schedule}</td>
-                  <td className="px-4 py-2.5 text-ink-soft">{a.purpose}</td>
+                <tr key={a.name} className="border-b border-border last:border-0">
+                  <td className="px-4 py-2.5 font-medium text-foreground">{a.name}</td>
+                  <td className="px-4 py-2.5 text-muted-foreground">{a.schedule}</td>
+                  <td className="px-4 py-2.5 text-muted-foreground">{a.purpose}</td>
                   <td className="px-4 py-2.5">
                     <StatusPill kind={a.status} labels={t.statusLabels} />
                   </td>
@@ -635,12 +635,12 @@ export function SystemMapContent() {
       </section>
 
       <section className="flex flex-col gap-4">
-        <h2 className="font-display text-xl text-ink">{t.builtFrozenHeading}</h2>
-        <p className="text-sm text-ink-soft">{t.builtFrozenIntro}</p>
-        <ul className="flex flex-col gap-2 text-sm text-ink-soft">
+        <h2 className=" text-xl text-foreground">{t.builtFrozenHeading}</h2>
+        <p className="text-sm text-muted-foreground">{t.builtFrozenIntro}</p>
+        <ul className="flex flex-col gap-2 text-sm text-muted-foreground">
           {t.builtFrozenItems.map((item) => (
-            <li key={item.title} className="rounded-lg border border-line bg-paper-raised p-3">
-              <strong className="text-ink">{item.title}</strong> — {item.body}
+            <li key={item.title} className="rounded-lg border border-border bg-card p-3">
+              <strong className="text-foreground">{item.title}</strong> — {item.body}
             </li>
           ))}
         </ul>
