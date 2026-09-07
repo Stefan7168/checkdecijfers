@@ -104,15 +104,15 @@ describe('VisualDock — chart/card visuals stay byte-identical (userChart: null
 
 describe('VisualDock — the userChart branch (ADR 037 D10/WP202a)', () => {
   it('renders UserChartView (its H2 badge/chrome) for a userChart visual', () => {
-    const visual: DockVisual = { id: 'visual-0', kind: 'userChart', label: 'My chart 1', question: 'show revenue by year', chart: null, card: null, userChart: USER_CHART_SPEC };
+    const visual: DockVisual = { id: 'visual-0', kind: 'userChart', label: 'Your chart 1', question: 'show revenue by year', chart: null, card: null, userChart: USER_CHART_SPEC };
     render(<VisualDock visuals={[visual]} activeVisualId="visual-0" onSelect={vi.fn()} />);
-    expect(screen.getByRole('tab', { name: /My chart 1/ })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /Your chart 1/ })).toBeInTheDocument();
     expect(screen.getByText('Your data · unverified')).toBeInTheDocument();
   });
 
   it('a userChart tab sits alongside CBS tabs, switching renders the right component for each', () => {
     const onSelect = vi.fn();
-    const visuals = [chartVisual({ id: 'visual-0', label: 'Grafiek 1' }), { id: 'visual-1', kind: 'userChart' as const, label: 'My chart 1', question: 'q', chart: null, card: null, userChart: USER_CHART_SPEC }];
+    const visuals = [chartVisual({ id: 'visual-0', label: 'Grafiek 1' }), { id: 'visual-1', kind: 'userChart' as const, label: 'Your chart 1', question: 'q', chart: null, card: null, userChart: USER_CHART_SPEC }];
     const { rerender } = render(<VisualDock visuals={visuals} activeVisualId="visual-0" onSelect={onSelect} />);
     expect(screen.queryByText('Your data · unverified')).not.toBeInTheDocument();
     rerender(<VisualDock visuals={visuals} activeVisualId="visual-1" onSelect={onSelect} />);

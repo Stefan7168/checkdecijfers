@@ -59,14 +59,14 @@ describe('deriveDatasetVisuals', () => {
     expect(visuals[0]).toEqual({
       id: 'visual-1',
       kind: 'userChart',
-      label: 'My chart 1',
+      label: 'Your chart 1',
       question: 'show revenue by year',
       chart: null,
       card: null,
       userChart: CHART_SPEC,
     });
     expect(visuals[1]!.id).toBe('visual-3');
-    expect(visuals[1]!.label).toBe('My chart 2');
+    expect(visuals[1]!.label).toBe('Your chart 2');
     expect(visuals[1]!.question).toBe('now as a bar chart');
   });
 

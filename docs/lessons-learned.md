@@ -8,6 +8,21 @@ on top.
 
 ## Session 86 — 2026-09-07, owner present ("you are the expert, continue") — VisualDock userChart branch
 
+- **New user-facing copy needs a check against the design doc's own §8 decisions BEFORE writing
+  it, not after — this session invented a plausible-sounding string that a prior session had
+  already decided differently.** The dock-tab label for a user-data chart is genuinely new copy
+  (no dock support existed before this increment, so no prior code committed to a string) — but
+  [session-briefs/2026-09-06-chat-with-data-design.md](session-briefs/2026-09-06-chat-with-data-design.md)'s
+  §8 Q6 had ALREADY decided it, in the same read-back that fixed the badge ("Your data ·
+  unverified") and disclaimer copy: **"chart tab name 'Your chart n'."** This session wrote `"My
+  chart n"` instead — a reasonable-sounding invention, shipped, tested, and pushed to `main` in
+  the increment-5 commit — without re-reading the design doc's §8 first (only `08-build-plan.md`'s
+  own WP202a section and the design doc's dock-specific D10/D11 paragraphs were checked, not the
+  Q&A section). Caught only by deciding to start the docs §7 sweep next and re-reading §7's own
+  list, which happened to sit two sections above §8. **The rule:** before inventing ANY new
+  user-facing string for a feature that has a design-doc §8 (or equivalent owner-decisions
+  section), grep that section for the string's own name/purpose first — "this string doesn't
+  exist in code yet" is not evidence nobody already decided what it should say.
 - **A test-count arithmetic claim ("N new tests, full suite green at M/M") is exactly the kind of
   fact the Golden Rule (CLAUDE.md) demands be verified, not mentally added up — and this session
   wrote a wrong one into a pushed commit message and two docs before catching it.** Wrote "21 new

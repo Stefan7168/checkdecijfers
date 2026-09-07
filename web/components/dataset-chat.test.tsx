@@ -212,7 +212,7 @@ describe('DatasetChat — dock mode (ADR 037 D10/WP202a)', () => {
     await submit('show revenue by year');
     const lastCall = onVisualsChange.mock.calls.at(-1)![0];
     expect(lastCall).toHaveLength(1);
-    expect(lastCall[0]).toMatchObject({ id: 'visual-1', kind: 'userChart', label: 'My chart 1', userChart: CHART_SPEC });
+    expect(lastCall[0]).toMatchObject({ id: 'visual-1', kind: 'userChart', label: 'Your chart 1', userChart: CHART_SPEC });
   });
 });
 

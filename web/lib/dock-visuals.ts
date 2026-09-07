@@ -10,10 +10,9 @@
 // a DatasetChatMessage array, for DatasetChat's own dock support. `userChart`
 // is an ADDITIVE field on `DockVisual` (never touches the `chart`/`card`
 // producer above) — a CBS-derived visual always carries `userChart: null`.
-// Labels are English ("My chart n", #206) — new copy, not a translation of
-// "Grafiek n": CBS and dataset visuals never share one dock (a thread switch
-// always clears `visuals` first), so the label's job is just to read
-// naturally on its own, not to disambiguate from a CBS tab that's never there.
+// Labels are English ("Your chart n") — the design doc's own §8 Q6 decided
+// this exact string (session 84's Dutch→English translation, alongside the
+// badge/disclaimer copy), not a fresh naming choice made here.
 import type { ChatMessage } from './chat-message.ts';
 import type { DatasetChatMessage } from '../backend/attachments/replay.ts';
 import type { UserChartSpec } from '../backend/attachments/types.ts';
@@ -27,7 +26,7 @@ export interface DockVisual {
    * the index to wire their reference chip to this tab). */
   id: string;
   kind: 'chart' | 'card' | 'userChart';
-  /** "Grafiek 1" / "Kaart 2" / "My chart 1" — deterministic, per-kind running count. */
+  /** "Grafiek 1" / "Kaart 2" / "Your chart 1" — deterministic, per-kind running count. */
   label: string;
   /** The originating question (nearest preceding user turn), truncated. */
   question: string;
@@ -121,7 +120,7 @@ export function deriveDatasetVisuals(messages: DatasetChatMessage[]): DockVisual
     visuals.push({
       id: visualId(index),
       kind: 'userChart',
-      label: `My chart ${chartCount}`,
+      label: `Your chart ${chartCount}`,
       question: truncate(lastQuestion),
       chart: null,
       card: null,

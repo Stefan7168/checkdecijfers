@@ -548,10 +548,11 @@ Full backend suite green (2087/2087), full web suite green (682/682), both typec
 existing `chart`/`card` producer now sets it `null` — zero behavior change, confirmed by the full
 pre-existing suite passing byte-identical) plus `datasetMessageHasVisual`/`deriveDatasetVisuals` —
 the `messageHasVisual`/`deriveVisuals` analogs over `DatasetChatMessage[]`, one tab per chart-kind
-assistant turn, labeled `"My chart n"` (new English copy per #206 — not a translation of the design
-doc's own Dutch sketch `"Eigen grafiek n"`, since CBS and dataset visuals never share one dock: a
-thread switch always clears `visuals` first, so the label only ever has to read naturally on its
-own). `VisualDock` gained the `userChart` render branch (`UserChartView`) — its own first-ever
+assistant turn, labeled `"Your chart n"` — the design doc's own §8 Q6 decided this exact English
+string (session 84's translation, alongside the badge/disclaimer copy), not a fresh naming choice;
+**first shipped as `"My chart n"` in this increment's initial commit, caught and corrected the same
+session** (the design doc's §8 wasn't checked before naming a brand-new string — see
+lessons-learned.md). `VisualDock` gained the `userChart` render branch (`UserChartView`) — its own first-ever
 dedicated test file, `visual-dock.test.tsx` (design doc's own "fixed in review" finding), pinning
 both the chart/card path's byte-identity (`userChart: null` visuals render exactly as before) and
 the new branch. `DatasetChat` gained `dockMode`/`onVisualsChange`/`activeVisualId`/
