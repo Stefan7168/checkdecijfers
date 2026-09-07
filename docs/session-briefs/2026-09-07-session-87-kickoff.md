@@ -13,10 +13,9 @@ GitHub Actions secrets) FINALLY completed" section (the Vercel token-scope gotch
 docs/08-build-plan.md's WP202a section (the exact remaining-work list).
 
 **Verify yourself first, don't trust this file blindly:**
-- `date +%Y-%m-%d`, `git log -10 --oneline` (expect `7333c5f` at the tip — a
-  `docs: session-86 deploy-fix incident record...` commit, with `03addbd`/`37ef605`/`829b00c`/
-  `cb2e9ed`/`4d4ab7e`/`9367211`/`4814e01` below it — 7 of session 86's 8 commits; the 8th,
-  this wrap-up's own docs commit, may already be on top by the time you read this).
+- `date +%Y-%m-%d`, `git log -10 --oneline` (expect `4018619` at the tip — this wrap-up's own
+  final docs commit, with `7333c5f`/`03addbd`/`37ef605`/`829b00c`/`cb2e9ed`/`4d4ab7e`/`9367211`/
+  `4814e01` below it — the 8 substantive session-86 commits, oldest last).
 - `gh run list --branch main -L 3 --json databaseId,headSha,status` then
   `gh run view <id> --json jobs -q '.jobs[]'` for the top one — expect BOTH `gate` and `deploy`
   green (this is new: `deploy` had been broken for weeks before this session).
@@ -65,10 +64,13 @@ docs/08-build-plan.md's WP202a section (the exact remaining-work list).
    executed — closed now, cross-referenced from RUNBOOK.
 5. **Verified, not assumed, throughout**: full backend suite green after every code commit (final
    2089/2089), full web suite green (final 701/701), both typechecks + a real `next build` clean
-   on every code push, `/code-review` LOW 0 findings every pass. 9 commits total this session, CI
-   `gate` green on all of them; `deploy` failed on the first 6 (pre-secrets-fix) and succeeded on
-   the rest — confirmed per-commit via `gh run view --json jobs`, never the misleading top-level
-   run conclusion.
+   on every code push, `/code-review` LOW 0 findings every pass. 8 substantive commits this session
+   (`4814e01` through `7333c5f`), CI `gate` green on all 8; `deploy` failed on the first 6
+   (pre-secrets-fix) and succeeded on the last 2 (`03addbd`, `7333c5f`) — confirmed per-commit via
+   `gh run view --json jobs`, never the misleading top-level run conclusion. This wrap-up's own
+   final docs commit (`4018619`) was still mid-CI-run at the time this file was written — check
+   its actual result yourself with the "Verify yourself first" steps above rather than trusting a
+   number written before that run finished.
 
 ## ▶ NEXT, in order
 
