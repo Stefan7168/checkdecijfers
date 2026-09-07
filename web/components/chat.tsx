@@ -72,6 +72,21 @@ export interface ChatPricing {
   websearch?: { enabled: true; addonPrice: number };
 }
 
+/** ADR 037 D10: the same presence-driven contract as `ChatPricing.websearch`
+ * — present ONLY when `ATTACHMENTS_ENABLED='1'` (not wired yet; the flag
+ * doesn't exist as of this commit). Its PRESENCE is what enables the
+ * "Bestand uploaden" button; absent ⇒ the button stays disabled exactly as
+ * today, byte-identical. `onUploadFile` OWNS the actual `ingestFile` call
+ * and, on success, the workspace-level handoff switch to the new dataset
+ * thread (mirroring `onThreadId`'s "report up, the parent acts" shape) —
+ * this component only needs to know whether to show an inline error.
+ * "Link toevoegen" stays disabled regardless of this prop: url_html ingest
+ * (WP202b) has no parser built at all yet, unlike file_csv/file_tsv. */
+export interface ChatAttachments {
+  enabled: true;
+  onUploadFile: (file: File) => Promise<{ ok: boolean; message?: string }>;
+}
+
 /** WP129+130 (#130, ADR 032): the header on the unverified-web block — a fixed
  * constant so the disclaimer copy is one reviewable source (owner-approved,
  * Q1/Q3). */
@@ -210,6 +225,7 @@ function gatedMessageText(result: Exclude<GatedResponse, { kind: 'ok' }>): strin
 export function Chat({
   onOutcome,
   pricing,
+  attachments,
   // WP135 (ADR 033): workspace wiring. ALL optional — a prop-less / Dashboard
   // call site is byte-identical to today (no threadId ever leaves the client,
   // the dock never engages, the reset effect no-ops). `onThreadId`'s PRESENCE
@@ -229,6 +245,7 @@ export function Chat({
 }: {
   onOutcome?: (gated: GatedResponse) => void;
   pricing?: ChatPricing;
+  attachments?: ChatAttachments;
   /** ≥ lg AND the workspace is active: visuals move to the right-pane dock and
    * render here as an in-flow reference chip instead (each visual exactly
    * once). Below lg / on the Dashboard this is false and visuals render inline
@@ -404,6 +421,38 @@ export function Chat({
   useEffect(() => {
     onVisualsChange?.(deriveVisuals(messages));
   }, [messages, onVisualsChange]);
+
+  // ADR 037 D10: the upload button's OWN local busy/error state — fixed in
+  // review, explicitly NOT this component's main `busy`/`onBusyChange` (that
+  // would lock the sidebar's thread-switch controls for the full ~45s ingest
+  // budget, a real behavior widening nothing asked for). Declared here,
+  // appended strictly after every existing hook/ref above (D10 point 2) —
+  // unconditionally, regardless of whether `attachments` is present, exactly
+  // like `websearch`'s own state above.
+  const [uploadBusy, setUploadBusy] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  async function handleFileChosen(e: React.ChangeEvent<HTMLInputElement>): Promise<void> {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // allow re-choosing the same file name later
+    if (!file || !attachments) return;
+    setUploadBusy(true);
+    setUploadError(null);
+    try {
+      const result = await attachments.onUploadFile(file);
+      if (!result.ok) {
+        setUploadError(result.message ?? 'Something went wrong reading that file. Please try again.');
+      }
+      // A success switches the workspace's handoff to the new dataset thread
+      // (onUploadFile's own job, mirroring onThreadId) — this component has
+      // nothing further to render; it is about to unmount.
+    } catch {
+      setUploadError('Something went wrong reading that file. Please try again.');
+    } finally {
+      setUploadBusy(false);
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -949,11 +998,16 @@ export function Chat({
         <p className="mt-1 text-xs text-danger">Selecteer minstens één bron.</p>
       ) : null}
       {/* #201/#202 (open-questions, session 83 scoping): attachment entry
-        * points — none of these are wired up yet (see
-        * docs/session-briefs/2026-09-06-chat-attachments-*.md once written).
-        * Disabled with an explanatory title rather than removed, so the
-        * button honestly signals "coming soon" instead of silently doing
-        * nothing or pretending to work (principle c: never fake it). */}
+        * points. "Link toevoegen"/"Databron verbinden" stay disabled
+        * regardless of `attachments` (session 83 scoping (open-questions
+        * #201/#202) and D5: url_html/OAuth ingest have no backend at all
+        * yet) — disabled with an explanatory title rather than removed, so
+        * the button honestly signals "coming soon" instead of silently
+        * doing nothing or pretending to work (principle c: never fake it).
+        * "Bestand uploaden" is the ADR 037 D10 presence-driven exception:
+        * enabled ONLY when `attachments` is present; byte-identical to
+        * today (same disabled button, same title, no file input in the DOM
+        * at all) when it is absent. */}
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <button
           type="button"
@@ -963,14 +1017,34 @@ export function Chat({
         >
           Link toevoegen
         </button>
-        <button
-          type="button"
-          disabled
-          title="Binnenkort beschikbaar: upload een bestand (bijv. PDF)"
-          className="rounded-full border border-line-strong px-3 py-1 text-xs text-ink-muted disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          Bestand uploaden
-        </button>
+        {attachments ? (
+          <>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv,.tsv,text/csv,text/tab-separated-values"
+              onChange={(e) => void handleFileChosen(e)}
+              className="hidden"
+            />
+            <button
+              type="button"
+              disabled={uploadBusy}
+              onClick={() => fileInputRef.current?.click()}
+              className="rounded-full border border-line-strong px-3 py-1 text-xs text-ink-soft hover:bg-paper-sunken disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Bestand uploaden
+            </button>
+          </>
+        ) : (
+          <button
+            type="button"
+            disabled
+            title="Binnenkort beschikbaar: upload een bestand (bijv. PDF)"
+            className="rounded-full border border-line-strong px-3 py-1 text-xs text-ink-muted disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Bestand uploaden
+          </button>
+        )}
         <button
           type="button"
           disabled
@@ -980,6 +1054,12 @@ export function Chat({
           Databron verbinden
         </button>
       </div>
+      {attachments && uploadBusy ? (
+        <p className="mt-1 text-xs text-ink-muted">Bestand wordt gelezen…</p>
+      ) : null}
+      {attachments && uploadError ? (
+        <p className="mt-1 text-xs text-danger">{uploadError}</p>
+      ) : null}
       <form onSubmit={handleSubmit} className="mt-4 flex gap-2">
         <input
           type="text"

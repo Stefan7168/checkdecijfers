@@ -88,6 +88,14 @@ export type IngestOutcome =
       kind: 'ok';
       datasetId: number;
       threadId: number;
+      /** The ACTUAL stored `display_name` (trimmed + capped, `'bestand'` on
+       * empty) — code-review finding: a caller (`Workspace.handleUploadFile`)
+       * must never reuse the client's raw `File.name` here instead, since
+       * that string can differ from what this action actually persisted
+       * (the trim/cap/empty-fallback above). Every displayed string must
+       * trace to stored data, the same rule this codebase applies to
+       * CBS answers (R6). */
+      displayName: string;
       status: DatasetStatus;
       profile: DatasetProfile;
       ambiguousColumnIds: ColumnId[];
@@ -168,7 +176,7 @@ export async function ingestFile(formData: FormData): Promise<IngestOutcome> {
     });
     const threadId = await createDatasetThread(db, userId, dataset.id);
 
-    return { kind: 'ok', datasetId: dataset.id, threadId, status, profile, ambiguousColumnIds };
+    return { kind: 'ok', datasetId: dataset.id, threadId, displayName: dataset.displayName, status, profile, ambiguousColumnIds };
   } catch (error) {
     console.error('ingestFile failed:', error);
     await reportError('ingestFile', error, { userId });

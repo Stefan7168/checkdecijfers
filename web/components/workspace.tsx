@@ -8,6 +8,7 @@
 
 import { useCallback, useRef, useState } from 'react';
 import { listMyThreads, loadMyThread } from '../app/actions.ts';
+import { ingestFile } from '../app/dataset-actions.ts';
 import type { GatedResponse } from '../backend/billing/index.ts';
 import type { ConversationContext } from '../backend/answer/context/index.ts';
 import type { DatasetChatMessage } from '../backend/attachments/replay.ts';
@@ -50,6 +51,7 @@ export function Workspace({
   initialThreads,
   purchaseSuccess = false,
   websearch,
+  attachments,
 }: {
   initialBalance: number;
   simplePrice: number;
@@ -61,6 +63,12 @@ export function Workspace({
   /** WP129+130: present ONLY when WEBSEARCH_ENABLED='1' (page.tsx reads the
    * add-on price behind the flag). Threaded into Chat's pricing prop. */
   websearch?: { enabled: true; addonPrice: number };
+  /** ADR 037 D10/D14: present ONLY when ATTACHMENTS_ENABLED='1' — the same
+   * dormancy pattern as `websearch` above. NOT wired from page.tsx yet (the
+   * flag doesn't exist as of this commit, tracked as WP202a's own remaining
+   * bullet); this prop and `handleUploadFile` below are built and tested
+   * now so flipping the flag later is the only remaining step. */
+  attachments?: { enabled: true };
 }) {
   const [balance, setBalance] = useState(initialBalance);
   const [threads, setThreads] = useState<ThreadSummary[]>(initialThreads);
@@ -153,6 +161,49 @@ export function Workspace({
       setActiveVisualId(null);
       prevVisualCount.current = 0;
       setLoadNonce((nonce) => nonce + 1);
+    },
+    [refreshThreads],
+  );
+
+  // ADR 037 D10: Chat's "Bestand uploaden" button calls THIS (via the
+  // `attachments` prop), never `ingestFile` directly — mirroring
+  // `onThreadId`'s "report up, the parent acts" shape. Owns the whole
+  // ingest→handoff flow: on success, switches straight to the new dataset
+  // thread (no `loadMyThread` round trip needed — a fresh dataset has no
+  // turns to replay yet) and refreshes the sidebar so it appears; Chat
+  // never renders a success state itself because it is about to unmount.
+  // On a refusal/auth failure, returns the message for Chat's own inline
+  // display instead — the handoff is untouched.
+  const handleUploadFile = useCallback(
+    async (file: File): Promise<{ ok: boolean; message?: string }> => {
+      const formData = new FormData();
+      formData.set('file', file);
+      const result = await ingestFile(formData);
+      if (result.kind === 'unauthenticated') {
+        return { ok: false, message: 'Your session has expired. Please refresh the page.' };
+      }
+      if (result.kind === 'refused') {
+        return { ok: false, message: result.message };
+      }
+      setActiveThreadId(result.threadId);
+      setHandoff({
+        kind: 'dataset',
+        threadId: result.threadId,
+        datasetId: result.datasetId,
+        // The ACTUAL stored name (trimmed/capped server-side), never the
+        // client's raw File.name — code-review finding: those can differ.
+        displayName: result.displayName,
+        status: result.status,
+        profile: result.profile,
+        messages: [],
+        rawState: null,
+      });
+      setVisuals([]);
+      setActiveVisualId(null);
+      prevVisualCount.current = 0;
+      setLoadNonce((nonce) => nonce + 1);
+      void refreshThreads();
+      return { ok: true };
     },
     [refreshThreads],
   );
@@ -253,6 +304,7 @@ export function Workspace({
                 balance,
                 ...(websearch ? { websearch } : {}),
               }}
+              {...(attachments ? { attachments: { enabled: true, onUploadFile: handleUploadFile } } : {})}
               dockMode={isWide}
               initialMessages={handoff.messages}
               initialContext={handoff.context}

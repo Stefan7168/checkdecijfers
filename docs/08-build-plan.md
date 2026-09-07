@@ -513,17 +513,47 @@ Full backend suite green (2087/2087 — one earlier parallel run hit 3 PGlite re
 flakes, a documented pre-existing class of issue; a clean re-run confirmed 0 real failures), full
 web suite green (673/673), both typechecks + a real `next build` clean.
 
+**UI slice, fourth increment — wiring "Bestand uploaden" to `ingestFile` (D10):** `chat.tsx`
+gains a presence-driven `attachments?: ChatAttachments` prop (the `websearch` pattern) — a NEW
+`ChatAttachments` type (`{enabled: true; onUploadFile: (file: File) => Promise<{ok, message?}>}`)
+enables the button, wires a hidden `<input type="file" accept=".csv,.tsv,...">`, and owns its own
+LOCAL busy/error state (explicitly NOT the main `busy`/`onBusyChange`, per D10's own fixed-in-
+review note — reusing the main one would lock the sidebar for the full ~45s ingest budget). New
+hooks/ref appended strictly after every existing one (D10 point 2). "Link toevoegen" and
+"Databron verbinden" stay disabled regardless — their backends (url_html ingest, OAuth data
+sources) don't exist yet. `Workspace` gains `handleUploadFile` (calls `ingestFile`, and on
+success switches the handoff straight to the new dataset thread — no `loadMyThread` round trip
+needed for a dataset with no turns yet — instead of Chat rendering any success state itself,
+since it's about to unmount) plus a dormant `attachments?: {enabled: true}` prop mirroring
+`websearch`'s own (not threaded from `page.tsx` yet — the flag doesn't exist).
+
+**A real correctness finding from `/code-review` LOW, fixed before commit:** `handleUploadFile`
+built the dataset handoff's `displayName` from the client's raw `File.name` instead of the
+SERVER-persisted `display_name` `ingestFile` actually stored (which trims, caps at 200 chars,
+and falls back to `'bestand'` on an empty name) — a long, whitespace-padded, or empty filename
+could show a UI heading that didn't match what was actually in the database. Fixed by adding
+`displayName` to `IngestOutcome`'s `'ok'` variant (the ACTUAL stored value) and having
+`Workspace` use that instead of re-deriving it client-side — the same "every displayed string
+traces to stored data" rule (R6) this codebase already applies to CBS answers. `chat.test.tsx`
+gained the D10 fix #1 byte-identity pin (exact className/title + zero `input[type="file"]` nodes
+when `attachments` is absent) plus 4 new tests for the enabled case; `workspace.test.tsx` gained
+3 new tests including one proving the displayName fix (a deliberately-mismatched mock
+`File.name` vs. the mocked stored name).
+
+Full backend suite green (2087/2087), full web suite green (682/682), both typechecks + a real
+`next build` clean.
+
 **Not yet built (WP202a's own remaining scope, in dependency order):**
-- **UI, the rest of it** — wiring the two disabled buttons already shipped in
-  `web/components/chat.tsx` (`01a4502`, session 84) to `ingestFile` (the upload/link entry
-  points — nothing calls `ingestFile` from any UI yet), `VisualDock`'s `userChart` branch (its
-  own first-ever dedicated test file, matching what `ThreadSidebar` just got) — with the
-  byte-identity pins the adversarial review called for throughout (exact-value comparison, never
-  a weak `queryByRole(...).toBeNull()`).
-- `ATTACHMENTS_ENABLED` flag (the WP129/WP135 dormancy pattern), fixtures
-  (`tests/fixtures/llm/attachments/`, `attachments:record`/`:eval`), the §7 docs sweep (
-  `docs/05-data-rules.md`'s new U-row section, `docs/09-pricing.md`, `docs/13`,
-  `docs/04-architecture.md` capability rows, `docs/03-mvp-scope.md`, `docs/06-roadmap.md`,
-  RUNBOOK), then the owner-supervised migration apply + go-live.
+- **UI, the rest of it** — `VisualDock`'s `userChart` branch (its own first-ever dedicated test
+  file, matching what `ThreadSidebar` just got) — with the byte-identity pins the adversarial
+  review called for throughout (exact-value comparison, never a weak
+  `queryByRole(...).toBeNull()`).
+- `ATTACHMENTS_ENABLED` flag (the WP129/WP135 dormancy pattern — `Chat`/`Workspace` are already
+  built and tested against its presence, so flipping it is now the remaining step, alongside
+  threading it through `page.tsx`), fixtures (`tests/fixtures/llm/attachments/`,
+  `attachments:record`/`:eval`), the §7 docs sweep (`docs/05-data-rules.md`'s new U-row section,
+  `docs/09-pricing.md`, `docs/13`, `docs/04-architecture.md` capability rows,
+  `docs/03-mvp-scope.md`, `docs/06-roadmap.md`, RUNBOOK), then the owner-supervised migration
+  apply + go-live.
 
 *When a WP completes: tick it in [STATUS.md](STATUS.md), record measured results, and — if a design decision here changed — update this file so it stays the plan of record.*

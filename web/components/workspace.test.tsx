@@ -26,7 +26,7 @@ vi.mock('../app/actions.ts', () => actions);
 // ADR 037 D10: DatasetChat (mounted for a dataset-kind Handoff) imports its
 // own Server Action module — mocked here too so a mixed CBS/dataset thread
 // list can be exercised through Workspace without ever really calling out.
-const datasetActions = vi.hoisted(() => ({ askDataset: vi.fn(), decideDatasetFormat: vi.fn() }));
+const datasetActions = vi.hoisted(() => ({ askDataset: vi.fn(), decideDatasetFormat: vi.fn(), ingestFile: vi.fn() }));
 vi.mock('../app/dataset-actions.ts', () => datasetActions);
 
 import type { ThreadSummary } from '../backend/threads/index.ts';
@@ -66,9 +66,15 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-function renderWorkspace(initialThreads: ThreadSummary[] = []) {
+function renderWorkspace(initialThreads: ThreadSummary[] = [], opts: { attachments?: { enabled: true } } = {}) {
   return render(
-    <Workspace initialBalance={100} simplePrice={20} clarificationPrice={10} initialThreads={initialThreads} />,
+    <Workspace
+      initialBalance={100}
+      simplePrice={20}
+      clarificationPrice={10}
+      initialThreads={initialThreads}
+      {...opts}
+    />,
   );
 }
 
@@ -209,6 +215,49 @@ describe('Workspace — mixed CBS + dataset thread list (ADR 037 D10 invariant)'
     fireEvent.click(screen.getByRole('button', { name: /verkoop\.csv/ }));
     expect(await screen.findByPlaceholderText('Ask about your data…')).toBeInTheDocument();
     expect(screen.queryByPlaceholderText('Stel een vraag…')).not.toBeInTheDocument();
+  });
+});
+
+describe('Workspace — handleUploadFile (ADR 037 D10/D14, attachments prop)', () => {
+  it('without the attachments prop, "Bestand uploaden" stays disabled and ingestFile is never wired', () => {
+    renderWorkspace();
+    expect(screen.getByRole('button', { name: 'Bestand uploaden' })).toBeDisabled();
+    expect(document.querySelector('input[type="file"]')).toBeNull();
+  });
+
+  it('a successful upload switches straight to the new dataset thread, no loadMyThread round trip', async () => {
+    // The mocked displayName deliberately differs from the raw File.name
+    // below — proves the handoff uses the SERVER's stored name (code-review
+    // finding: the client's raw File.name can differ from what ingestFile
+    // actually persisted, e.g. after its trim/cap), never the client's own.
+    datasetActions.ingestFile.mockResolvedValue({
+      kind: 'ok',
+      datasetId: 9,
+      threadId: 11,
+      displayName: 'verkoop (2).csv',
+      status: 'ready',
+      profile: { columns: [], rowCount: 0 },
+      ambiguousColumnIds: [],
+    });
+    renderWorkspace([], { attachments: { enabled: true } });
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const file = new File(['Year\n2020\n'], 'verkoop.csv', { type: 'text/csv' });
+    fireEvent.change(input, { target: { files: [file] } });
+    expect(await screen.findByRole('heading', { name: 'verkoop (2).csv' })).toBeInTheDocument();
+    expect(actions.loadMyThread).not.toHaveBeenCalled();
+    expect(datasetActions.ingestFile).toHaveBeenCalledTimes(1);
+    const formData = datasetActions.ingestFile.mock.calls[0]![0] as FormData;
+    expect(formData.get('file')).toBe(file);
+  });
+
+  it('a refused upload shows the message inline and stays on Chat', async () => {
+    datasetActions.ingestFile.mockResolvedValue({ kind: 'refused', message: 'This file is too large.' });
+    renderWorkspace([], { attachments: { enabled: true } });
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const file = new File(['x'], 'x.csv', { type: 'text/csv' });
+    fireEvent.change(input, { target: { files: [file] } });
+    expect(await screen.findByText('This file is too large.')).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText('Ask about your data…')).not.toBeInTheDocument();
   });
 });
 

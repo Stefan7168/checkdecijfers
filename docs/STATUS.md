@@ -54,14 +54,21 @@ increment 3**, not a nitpick: `DatasetChat` mounted with no `key` in `Workspace`
 between two dataset threads showed the wrong thread's stale messages — fixed with
 `key={threadId}` (verified: removed the fix, watched the regression test fail, restored it).
 Also fixed: an inert `generationRef` guard, and `getThreadDatasetId` hardened to bind `user_id`
-matching this module's own defense-in-depth convention. Full backend suite green (2087/2087 —
-one earlier parallel run hit 3 PGlite resource-contention flakes, a documented pre-existing
-issue; a clean re-run confirmed 0 real failures), full web suite green (673/673), both
-typechecks + a real `next build` clean. Full detail in [08-build-plan.md](08-build-plan.md)'s
-WP202a section. Still needed: wiring `ingestFile` to the two disabled buttons in `chat.tsx`,
-`VisualDock`'s `userChart` branch, the `ATTACHMENTS_ENABLED` flag, fixtures, and the docs §7
-sweep — see the build-plan entry for the exact list. Design doc + the full 7-lens adversarial
-review: [session-briefs/2026-09-06-chat-with-data-design.md](session-briefs/2026-09-06-chat-with-data-design.md).
+matching this module's own defense-in-depth convention. (4) Wired "Bestand uploaden" to
+`ingestFile`: `Chat` gains a presence-driven `attachments?: ChatAttachments` prop (the
+`websearch` pattern, its own local busy/error state) and `Workspace` gains `handleUploadFile`
+(switches the handoff straight to the new dataset thread on success, no `loadMyThread` round
+trip needed). **`/code-review` LOW caught one more real bug**: the handoff used the client's raw
+`File.name` instead of the server-persisted (trimmed/capped) `display_name` `ingestFile`
+actually stored — fixed by adding `displayName` to `IngestOutcome`'s `ok` variant. Full backend
+suite green (2087/2087 — one earlier parallel run hit 3 PGlite resource-contention flakes, a
+documented pre-existing issue; a clean re-run confirmed 0 real failures), full web suite green
+(682/682), both typechecks + a real `next build` clean. Full detail in
+[08-build-plan.md](08-build-plan.md)'s WP202a section. Still needed: `VisualDock`'s `userChart`
+branch, the `ATTACHMENTS_ENABLED` flag (`Chat`/`Workspace` already built+tested against its
+presence — flipping it + threading it through `page.tsx` is the remaining step), fixtures, and
+the docs §7 sweep — see the build-plan entry for the exact list. Design doc + the full 7-lens
+adversarial review: [session-briefs/2026-09-06-chat-with-data-design.md](session-briefs/2026-09-06-chat-with-data-design.md).
 
 **✅ #206 — product copy/UI text is now English, not Dutch (owner override, in-chat: "override, we
 are english now").** Applied same-session to CLAUDE.md's Conventions, [03-mvp-scope.md](03-mvp-scope.md),

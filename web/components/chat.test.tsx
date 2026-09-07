@@ -1610,7 +1610,7 @@ describe('Chat — #197 step 3 comparison chips on an answer (chip-carrier pendi
   });
 });
 
-describe('Chat — attachment entry points (#201/#202, session 83 scoping)', () => {
+describe('Chat — attachment entry points (#201/#202, session 83 scoping; ADR 037 D10)', () => {
   it('renders link/upload/data-source buttons as disabled, explanatory placeholders', () => {
     render(<Chat />);
     for (const [name, hint] of [
@@ -1622,5 +1622,66 @@ describe('Chat — attachment entry points (#201/#202, session 83 scoping)', () 
       expect(button).toBeDisabled();
       expect(button).toHaveAttribute('title', expect.stringContaining(hint));
     }
+  });
+
+  // D10 fix #1: EXACT-value comparison, not a weaker toBeDisabled()-only
+  // check — a widened className or a hidden-but-present node would pass a
+  // weaker assertion while breaking real byte-identity. Pinned against the
+  // literal strings so any future edit to this markup is a deliberate,
+  // reviewed diff to this test, not a silent drift.
+  it('the "Bestand uploaden" button is byte-identical to before D10 when attachments is absent', () => {
+    render(<Chat />);
+    const button = screen.getByRole('button', { name: 'Bestand uploaden' });
+    expect(button.className).toBe(
+      'rounded-full border border-line-strong px-3 py-1 text-xs text-ink-muted disabled:cursor-not-allowed disabled:opacity-60',
+    );
+    expect(button.getAttribute('title')).toBe('Binnenkort beschikbaar: upload een bestand (bijv. PDF)');
+    expect(button).toBeDisabled();
+    // No attachment-related DOM node exists AT ALL — not merely hidden.
+    expect(document.querySelector('input[type="file"]')).toBeNull();
+    expect(screen.queryByText('Bestand wordt gelezen…')).not.toBeInTheDocument();
+  });
+
+  it('enables "Bestand uploaden" and wires it to onUploadFile when attachments is present', async () => {
+    const onUploadFile = vi.fn().mockResolvedValue({ ok: true });
+    render(<Chat attachments={{ enabled: true, onUploadFile }} />);
+    const button = screen.getByRole('button', { name: 'Bestand uploaden' });
+    expect(button).not.toBeDisabled();
+    expect(button).not.toHaveAttribute('title');
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    expect(input).not.toBeNull();
+    expect(input).toHaveAttribute('accept', '.csv,.tsv,text/csv,text/tab-separated-values');
+
+    const file = new File(['Year\n2020\n'], 'x.csv', { type: 'text/csv' });
+    fireEvent.change(input, { target: { files: [file] } });
+    await waitFor(() => expect(onUploadFile).toHaveBeenCalledWith(file));
+  });
+
+  it('shows a busy caption while onUploadFile is in flight, and clears it after', async () => {
+    let resolve!: (value: { ok: boolean }) => void;
+    const onUploadFile = vi.fn().mockReturnValue(new Promise((r) => { resolve = r; }));
+    render(<Chat attachments={{ enabled: true, onUploadFile }} />);
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const file = new File(['Year\n2020\n'], 'x.csv', { type: 'text/csv' });
+    fireEvent.change(input, { target: { files: [file] } });
+    expect(await screen.findByText('Bestand wordt gelezen…')).toBeInTheDocument();
+    resolve({ ok: true });
+    await waitFor(() => expect(screen.queryByText('Bestand wordt gelezen…')).not.toBeInTheDocument());
+  });
+
+  it('shows the refusal message inline when onUploadFile reports ok: false', async () => {
+    const onUploadFile = vi.fn().mockResolvedValue({ ok: false, message: 'This file is too large.' });
+    render(<Chat attachments={{ enabled: true, onUploadFile }} />);
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const file = new File(['x'.repeat(10)], 'x.csv', { type: 'text/csv' });
+    fireEvent.change(input, { target: { files: [file] } });
+    expect(await screen.findByText('This file is too large.')).toBeInTheDocument();
+  });
+
+  it('"Link toevoegen" and "Databron verbinden" stay disabled even when attachments is present', () => {
+    const onUploadFile = vi.fn();
+    render(<Chat attachments={{ enabled: true, onUploadFile }} />);
+    expect(screen.getByRole('button', { name: 'Link toevoegen' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Databron verbinden' })).toBeDisabled();
   });
 });

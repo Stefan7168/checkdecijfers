@@ -144,6 +144,15 @@ describe('ingestFile', () => {
     expect(threads.createDatasetThread).toHaveBeenCalledWith(fakeDb, 'user-1', fakeDataset().id);
   });
 
+  it('returns the ACTUAL stored display_name, not the raw upload name (code-review finding)', async () => {
+    // The stored dataset's display_name can differ from the client's raw
+    // File.name (this function's own trim/cap/empty-fallback) — a caller
+    // must use the value THIS action returns, never re-derive it client-side.
+    store.insertDataset.mockResolvedValue(fakeDataset({ displayName: 'year, city (trimmed).csv' }));
+    const result = await ingestFile(csvFile('Year,City\n2020,Amsterdam\n', '  year, city (trimmed).csv'));
+    expect(result).toMatchObject({ kind: 'ok', displayName: 'year, city (trimmed).csv' });
+  });
+
   it('ingests a .tsv file as sourceKind file_tsv', async () => {
     await ingestFile(csvFile('Year\tCity\n2020\tAmsterdam\n', 'x.tsv'));
     const params = store.insertDataset.mock.calls[0]![1];
