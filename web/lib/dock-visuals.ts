@@ -5,22 +5,35 @@
 // originating question), so no LLM is ever involved. Pure leaf: shared by
 // Chat (which renders the in-flow reference chip) and Workspace (which renders
 // the dock) so both agree on the tab identity for a given message.
+//
+// ADR 037 D10/WP202a: `deriveDatasetVisuals` below is the same derivation over
+// a DatasetChatMessage array, for DatasetChat's own dock support. `userChart`
+// is an ADDITIVE field on `DockVisual` (never touches the `chart`/`card`
+// producer above) — a CBS-derived visual always carries `userChart: null`.
+// Labels are English ("My chart n", #206) — new copy, not a translation of
+// "Grafiek n": CBS and dataset visuals never share one dock (a thread switch
+// always clears `visuals` first), so the label's job is just to read
+// naturally on its own, not to disambiguate from a CBS tab that's never there.
 import type { ChatMessage } from './chat-message.ts';
+import type { DatasetChatMessage } from '../backend/attachments/replay.ts';
+import type { UserChartSpec } from '../backend/attachments/types.ts';
 
-/** One dockable visual. `chart`/`card` carry the payload verbatim so the dock
- * renders the SAME ChartView/StatCard components, internally unchanged. */
+/** One dockable visual. `chart`/`card`/`userChart` carry the payload verbatim
+ * so the dock renders the SAME ChartView/StatCard/UserChartView components,
+ * internally unchanged. */
 export interface DockVisual {
   /** Deterministic, stable within a session: messages only ever append, so
-   * the index is a stable identity (Chat computes the same id from the index
-   * to wire its reference chip to this tab). */
+   * the index is a stable identity (Chat/DatasetChat compute the same id from
+   * the index to wire their reference chip to this tab). */
   id: string;
-  kind: 'chart' | 'card';
-  /** "Grafiek 1" / "Kaart 2" — deterministic, per-kind running count. */
+  kind: 'chart' | 'card' | 'userChart';
+  /** "Grafiek 1" / "Kaart 2" / "My chart 1" — deterministic, per-kind running count. */
   label: string;
   /** The originating question (nearest preceding user turn), truncated. */
   question: string;
   chart: ChatMessage['chart'];
   card: ChatMessage['card'];
+  userChart: UserChartSpec | null;
 }
 
 const QUESTION_MAX_LENGTH = 48;
@@ -45,6 +58,13 @@ export function messageHasVisual(message: ChatMessage): boolean {
   return message.role === 'assistant' && (message.chart !== null || message.card !== null);
 }
 
+/** The DatasetChat analog of `messageHasVisual`: a chart-kind assistant turn
+ * is the only dataset message that ever contributes a dock tab (there is no
+ * dataset-side stat-card concept). */
+export function datasetMessageHasVisual(message: DatasetChatMessage): boolean {
+  return message.role === 'assistant' && message.kind === 'chart';
+}
+
 /** Derive the ordered dock visuals from the full messages array. */
 export function deriveVisuals(messages: ChatMessage[]): DockVisual[] {
   const visuals: DockVisual[] = [];
@@ -66,6 +86,7 @@ export function deriveVisuals(messages: ChatMessage[]): DockVisual[] {
         question: truncate(lastQuestion),
         chart: message.chart,
         card: null,
+        userChart: null,
       });
     } else if (message.card !== null) {
       cardCount += 1;
@@ -76,8 +97,36 @@ export function deriveVisuals(messages: ChatMessage[]): DockVisual[] {
         question: truncate(lastQuestion),
         chart: null,
         card: message.card,
+        userChart: null,
       });
     }
+  });
+  return visuals;
+}
+
+/** The DatasetChat analog of `deriveVisuals` (ADR 037 D10): one tab per
+ * chart-kind assistant turn, in stored/sent order. Never stored — a resumed
+ * dataset thread reconstructs its dock for free, exactly like the CBS side. */
+export function deriveDatasetVisuals(messages: DatasetChatMessage[]): DockVisual[] {
+  const visuals: DockVisual[] = [];
+  let chartCount = 0;
+  let lastQuestion = '';
+  messages.forEach((message, index) => {
+    if (message.role === 'user') {
+      lastQuestion = message.text;
+      return;
+    }
+    if (!datasetMessageHasVisual(message) || message.role !== 'assistant' || message.kind !== 'chart') return;
+    chartCount += 1;
+    visuals.push({
+      id: visualId(index),
+      kind: 'userChart',
+      label: `My chart ${chartCount}`,
+      question: truncate(lastQuestion),
+      chart: null,
+      card: null,
+      userChart: message.chart,
+    });
   });
   return visuals;
 }

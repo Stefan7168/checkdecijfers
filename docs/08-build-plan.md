@@ -543,11 +543,31 @@ when `attachments` is absent) plus 4 new tests for the enabled case; `workspace.
 Full backend suite green (2087/2087), full web suite green (682/682), both typechecks + a real
 `next build` clean.
 
-**Not yet built (WP202a's own remaining scope, in dependency order):**
-- **UI, the rest of it** — `VisualDock`'s `userChart` branch (its own first-ever dedicated test
-  file, matching what `ThreadSidebar` just got) — with the byte-identity pins the adversarial
-  review called for throughout (exact-value comparison, never a weak
-  `queryByRole(...).toBeNull()`).
+**UI slice, fifth increment (session 86) — `VisualDock`'s `userChart` branch:** `DockVisual`
+(`web/lib/dock-visuals.ts`) gained an additive `userChart: UserChartSpec | null` field (every
+existing `chart`/`card` producer now sets it `null` — zero behavior change, confirmed by the full
+pre-existing suite passing byte-identical) plus `datasetMessageHasVisual`/`deriveDatasetVisuals` —
+the `messageHasVisual`/`deriveVisuals` analogs over `DatasetChatMessage[]`, one tab per chart-kind
+assistant turn, labeled `"My chart n"` (new English copy per #206 — not a translation of the design
+doc's own Dutch sketch `"Eigen grafiek n"`, since CBS and dataset visuals never share one dock: a
+thread switch always clears `visuals` first, so the label only ever has to read naturally on its
+own). `VisualDock` gained the `userChart` render branch (`UserChartView`) — its own first-ever
+dedicated test file, `visual-dock.test.tsx` (design doc's own "fixed in review" finding), pinning
+both the chart/card path's byte-identity (`userChart: null` visuals render exactly as before) and
+the new branch. `DatasetChat` gained `dockMode`/`onVisualsChange`/`activeVisualId`/
+`onActivateVisual` props mirroring `Chat`'s own exactly (all optional, all no-ops without their
+callback) — a chart turn now shows the same in-flow reference chip pattern as `Chat`'s own
+("Chart in panel →") when docked, and renders inline exactly as before when not (`dockMode=false`
+stays the default, so every prior test/call site is unaffected). `Workspace`'s dataset branch wires
+`dockMode={isWide}`/`handleVisualsChange`/`activeVisualId`/`activateVisual` — the same handlers
+already driving the CBS side, since `visuals`/`activeVisualId` reset on every thread switch
+regardless of kind. This closes WP202a's last documented "no dock support" scope gap (ADR 037,
+`docs/08-build-plan.md`'s own prior wording here, `dataset-chat.tsx`'s header comment — all updated
+in the same change). 21 new tests (`web/lib/dock-visuals.test.ts` — new file, the module's first —
+plus `visual-dock.test.tsx` and 4 new `dataset-chat.test.tsx` cases). Full backend suite green,
+full web suite green (703/703), both typechecks + a real `next build` clean.
+
+**Not yet built (WP202a's own remaining scope):**
 - `ATTACHMENTS_ENABLED` flag (the WP129/WP135 dormancy pattern — `Chat`/`Workspace` are already
   built and tested against its presence, so flipping it is now the remaining step, alongside
   threading it through `page.tsx`), fixtures (`tests/fixtures/llm/attachments/`,

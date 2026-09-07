@@ -24,16 +24,24 @@ regression test fail), and the upload UI showing the client's raw filename inste
 server-persisted one. Full per-commit detail: [08-build-plan.md](08-build-plan.md)'s WP202a
 section — read that for the exact scope, not this summary.
 
-**v1 scope is deliberately smaller than the CBS chat, documented not silently cut**: no dock
-support for user charts (`VisualDock`'s `userChart` branch is unbuilt — charts render inline
-only), no resumed-turn cost captions, no small multiples/table view/value labels/trend
-headline/CSV export on `UserChartView`, "Link toevoegen"/"Databron verbinden" stay disabled
-(their backends don't exist).
+**v1 scope is deliberately smaller than the CBS chat, documented not silently cut**: no resumed-turn
+cost captions, no small multiples/table view/value labels/trend headline/CSV export on
+`UserChartView`, "Link toevoegen"/"Databron verbinden" stay disabled (their backends don't exist).
 
 **Given a 3-way choice (continue into `VisualDock` / stop / skip to the flag+docs sweep), the
-owner chose to stop here.** Migrations 026/027 remain **FILE-ONLY**. Full backend suite green
-(2087/2087), full web suite green (682/682), CI `gate` green on all 6 commits (`deploy` failing
-on all of them on the same pre-existing Route B secrets gap, [#132](open-questions.md)).
+owner chose to stop here (session 85).** Migrations 026/027 remain **FILE-ONLY**. Full backend
+suite green (2087/2087), full web suite green (682/682), CI `gate` green on all 6 commits (`deploy`
+failing on all of them on the same pre-existing Route B secrets gap, [#132](open-questions.md)).
+
+**▶ SESSION 86 (2026-09-07, owner present, "you are the expert, continue") — `VisualDock`'s
+`userChart` branch built:** the one purely-additive, non-owner-supervised bullet session 85 left in
+WP202a's remaining scope. At `lg`+, a dataset-thread chart now docks with an in-flow reference chip
+exactly like a CBS chart does, instead of always rendering inline. `DockVisual` gained an additive
+`userChart: UserChartSpec | null` field (zero behavior change to the CBS path, confirmed by the
+full pre-existing suite passing byte-identical), `deriveDatasetVisuals` is the `deriveVisuals`
+analog, and `DatasetChat` gained `dockMode`/`onVisualsChange`/`activeVisualId`/`onActivateVisual`
+props mirroring `Chat`'s own. 21 new tests, full web suite green (703/703). Full detail:
+[08-build-plan.md](08-build-plan.md)'s WP202a section.
 
 **✅ #206 — product copy/UI text is English, not Dutch (owner override, session 84)** — every new
 string session 85 wrote (buttons, badges, error messages) followed this convention throughout;
@@ -43,12 +51,12 @@ still does not touch the CBS chat/answer pipeline's own Dutch output or benchmar
 terminal, still blocking only `deploy`), WP30c, #197's older follow-ups, #205 (a possible future
 subscription tier, explicitly parked), #208 (needs the owner's URL/path).
 
-**▶ NEXT, in order:** (a) WP202a's remaining scope — `VisualDock`'s `userChart` branch, the
-`ATTACHMENTS_ENABLED` flag (`Chat`/`Workspace` already built+tested against its presence —
-flipping it + threading it through `page.tsx` is the remaining step), fixtures, the docs §7
-sweep, THEN the owner-supervised migration apply + go-live — see
-[08-build-plan.md](08-build-plan.md)'s WP202a section for the exact list; (b) the 3
-`gh secret set` commands for Route B; (c) WP30c + #197's older follow-ups — owner-menu, no rush.
+**▶ NEXT, in order:** (a) WP202a's remaining scope — the `ATTACHMENTS_ENABLED` flag
+(`Chat`/`Workspace` already built+tested against its presence — flipping it + threading it through
+`page.tsx` is the remaining step), fixtures, the docs §7 sweep, THEN the owner-supervised migration
+apply + go-live — see [08-build-plan.md](08-build-plan.md)'s WP202a section for the exact list;
+(b) the 3 `gh secret set` commands for Route B; (c) WP30c + #197's older follow-ups — owner-menu,
+no rush.
 
 
 **(Historical — the pause, 2026-08-15 to 2026-08-26.)** Project was paused ~2 months (owner decision) and the

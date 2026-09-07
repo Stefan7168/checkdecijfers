@@ -4,11 +4,16 @@
 // internally unchanged (honesty bindings, PNG export, footer untouched). Tab
 // state is never stored — a resumed thread reconstructs it for free. The web
 // section NEVER docks (ADR 032): it stays last-in-bubble in the conversation.
+//
+// ADR 037 D10/WP202a: the `userChart` branch renders UserChartView — its own
+// H2 chrome (badge, dashed border, disclaimer) is untouched by mounting it
+// here instead of inline, exactly like ChartView/StatCard above.
 'use client';
 
 import type { DockVisual } from '../lib/dock-visuals.ts';
 import { ChartView } from './chart.tsx';
 import { StatCard } from './stat-card.tsx';
+import { UserChartView } from './user-chart.tsx';
 
 export function VisualDock({
   visuals,
@@ -52,6 +57,8 @@ export function VisualDock({
       <div className="min-w-0">
         {active.kind === 'chart' && active.chart !== null ? (
           <ChartView spec={active.chart} />
+        ) : active.kind === 'userChart' && active.userChart !== null ? (
+          <UserChartView spec={active.userChart} />
         ) : active.card !== null ? (
           <StatCard data={active.card} />
         ) : null}

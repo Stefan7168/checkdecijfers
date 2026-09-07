@@ -270,9 +270,11 @@ export function Workspace({
 
         <div className="min-w-0 flex-1 p-4">
           {handoff.kind === 'dataset' ? (
-            // ADR 037 D10: v1 scope note (dataset-chat.tsx's own header) — no
-            // dock support yet, so no onVisualsChange/activeVisualId wiring
-            // here; a dataset thread's charts always render inline.
+            // ADR 037 D10: dock wiring mirrors Chat's own below exactly —
+            // same isWide-gated dockMode, same handleVisualsChange/
+            // activateVisual handlers (visuals/activeVisualId are already
+            // reset on every thread switch, so a dataset thread's dock starts
+            // clean like a CBS one).
             <DatasetChat
               // React reuses the SAME DatasetChat instance across two dataset
               // threads (same element type, same tree position) unless keyed
@@ -294,6 +296,10 @@ export function Workspace({
               initialRawState={handoff.rawState}
               onThreadId={handleThreadId}
               onBusyChange={setChatBusy}
+              dockMode={isWide}
+              onVisualsChange={handleVisualsChange}
+              activeVisualId={activeVisualId}
+              onActivateVisual={activateVisual}
             />
           ) : (
             <Chat

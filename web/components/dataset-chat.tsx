@@ -7,12 +7,17 @@
 // websearch chips, no citation/CSV/StatCard/proof machinery.
 //
 // v1 scope, deliberately smaller than Chat (documented, not silently cut):
-// no dock support — `UserChartView` always renders inline, even on wide
-// screens, so `VisualDock`'s `userChart` branch (a separate, not-yet-built
-// increment) is not a dependency of this component at all. No resumed-turn
-// cost captions (no ledger join built for dataset-turn replay yet — showing
-// one would mean inventing a number `getDatasetTurnsByThread` cannot
-// currently back); a freshly-sent turn DOES show its live `netCost`.
+// no resumed-turn cost captions (no ledger join built for dataset-turn replay
+// yet — showing one would mean inventing a number `getDatasetTurnsByThread`
+// cannot currently back); a freshly-sent turn DOES show its live `netCost`.
+//
+// ADR 037 D10/WP202a: dock support mirrors Chat's own dockMode/onVisualsChange/
+// activeVisualId/onActivateVisual props exactly (all optional, all no-ops
+// without their callback — the needs_decision screen / test call sites that
+// omit them). In dock mode a chart turn's `UserChartView` moves to the right
+// pane and this bubble shows the same in-flow reference-chip pattern as
+// Chat's own docked chart/card chip; below `lg` (dockMode=false) a chart
+// still renders inline exactly as before this increment (D4 symmetry).
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
@@ -22,6 +27,7 @@ import type { DatasetChatMessage } from '../backend/attachments/replay.ts';
 import type { RawDatasetState } from '../backend/attachments/respond.ts';
 import { ambiguousFormatClarificationText, AMBIGUOUS_FORMAT_OPTIONS } from '../backend/attachments/templates.ts';
 import type { ColumnProfile, DatasetProfile, DatasetStatus, NumberFormat } from '../backend/attachments/types.ts';
+import { datasetMessageHasVisual, deriveDatasetVisuals, visualId, type DockVisual } from '../lib/dock-visuals.ts';
 import { UserChartView } from './user-chart.tsx';
 
 /** The one ambiguous-format decision UI needs from a resumed/fresh dataset:
@@ -37,6 +43,15 @@ export interface DatasetChatProps {
   initialRawState: RawDatasetState | null;
   onThreadId?: (threadId: number) => void;
   onBusyChange?: (busy: boolean) => void;
+  /** ADR 037 D10: mirrors Chat's own `dockMode` — true only at `lg`+ AND with
+   * a live dock (Workspace decides both). A no-op default (false) keeps every
+   * existing call site (including this file's own tests) byte-identical. */
+  dockMode?: boolean;
+  /** Reports the dockable visuals derived from `messages`, mirroring Chat's
+   * own `onVisualsChange` — a no-op without the callback. */
+  onVisualsChange?: (visuals: DockVisual[]) => void;
+  activeVisualId?: string | null;
+  onActivateVisual?: (visualId: string) => void;
 }
 
 function ambiguousColumns(profile: DatasetProfile): ColumnProfile[] {
@@ -53,6 +68,10 @@ export function DatasetChat({
   initialRawState,
   onThreadId,
   onBusyChange,
+  dockMode = false,
+  onVisualsChange,
+  activeVisualId = null,
+  onActivateVisual,
 }: DatasetChatProps) {
   const [status, setStatus] = useState(initialStatus);
   const [profile, setProfile] = useState(initialProfile);
@@ -76,6 +95,10 @@ export function DatasetChat({
   useEffect(() => {
     onThreadId?.(threadId);
   }, [threadId, onThreadId]);
+
+  useEffect(() => {
+    onVisualsChange?.(deriveDatasetVisuals(messages));
+  }, [messages, onVisualsChange]);
 
   async function submitDecision(format: NumberFormat): Promise<void> {
     const columns = ambiguousColumns(profile);
@@ -191,6 +214,9 @@ export function DatasetChat({
               </div>
             );
           }
+          // ADR 037 D10: mirrors chat.tsx's own `docked` computation exactly
+          // (dockMode AND this message contributes a visual).
+          const docked = dockMode && datasetMessageHasVisual(message);
           return (
             <div key={i} className={message.role === 'user' ? 'text-right' : 'text-left'}>
               <div
@@ -224,7 +250,28 @@ export function DatasetChat({
                   ))}
                 </div>
               ) : null}
-              {message.role === 'assistant' && message.kind === 'chart' ? <UserChartView spec={message.chart} /> : null}
+              {message.role === 'assistant' && message.kind === 'chart' ? (
+                docked ? (
+                  // ADR 037 D10: the in-flow reference chip standing in for a
+                  // docked chart — mirrors chat.tsx's own chip exactly, English
+                  // copy per #206.
+                  <button
+                    type="button"
+                    onClick={() => onActivateVisual?.(visualId(i))}
+                    aria-pressed={activeVisualId === visualId(i)}
+                    className={
+                      'mt-2 inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs ' +
+                      (activeVisualId === visualId(i)
+                        ? 'border-line-strong bg-paper-sunken text-ink'
+                        : 'border-line-strong text-ink-soft hover:bg-paper-sunken')
+                    }
+                  >
+                    Chart in panel →
+                  </button>
+                ) : (
+                  <UserChartView spec={message.chart} />
+                )
+              ) : null}
             </div>
           );
         })}

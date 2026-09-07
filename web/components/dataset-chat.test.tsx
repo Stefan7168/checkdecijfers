@@ -160,6 +160,62 @@ describe('DatasetChat — normal turn flow', () => {
   });
 });
 
+describe('DatasetChat — dock mode (ADR 037 D10/WP202a)', () => {
+  function chartOutcome(): AskDatasetOutcome {
+    return {
+      kind: 'ok',
+      auditId: 1,
+      datasetGone: false,
+      netCost: 5,
+      envelope: {
+        schemaVersion: 1,
+        kind: 'chart',
+        question: 'show revenue by year',
+        text: "Here's your chart.",
+        instruction: { version: 1, kind: 'line', x: 'c0', y: ['c1'], seriesBy: null, filters: [], sort: null, limit: null, confidence: 0.9, reading: 'r', unsupported: null },
+        chart: CHART_SPEC,
+        state: { datasetId: 1, lastInstruction: { version: 1, kind: 'line', x: 'c0', y: ['c1'], seriesBy: null, filters: [], sort: null, limit: null, unsupported: null } },
+      },
+    };
+  }
+
+  it('dockMode=false (default) renders UserChartView inline, no reference chip — byte-identical to before this increment', async () => {
+    askDataset.mockResolvedValue(chartOutcome());
+    render(<DatasetChat {...baseProps()} />);
+    await submit('show revenue by year');
+    expect(await screen.findByText('Your data · unverified')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Chart in panel/ })).not.toBeInTheDocument();
+  });
+
+  it('dockMode=true renders the reference chip instead of UserChartView inline', async () => {
+    askDataset.mockResolvedValue(chartOutcome());
+    render(<DatasetChat {...baseProps()} dockMode />);
+    await submit('show revenue by year');
+    expect(await screen.findByRole('button', { name: /Chart in panel/ })).toBeInTheDocument();
+    expect(screen.queryByText('Your data · unverified')).not.toBeInTheDocument();
+  });
+
+  it('clicking the reference chip calls onActivateVisual with the message-derived visual id', async () => {
+    askDataset.mockResolvedValue(chartOutcome());
+    const onActivateVisual = vi.fn();
+    render(<DatasetChat {...baseProps()} dockMode onActivateVisual={onActivateVisual} />);
+    await submit('show revenue by year');
+    fireEvent.click(await screen.findByRole('button', { name: /Chart in panel/ }));
+    expect(onActivateVisual).toHaveBeenCalledWith('visual-1');
+  });
+
+  it('reports the derived dock visuals via onVisualsChange as messages change', async () => {
+    askDataset.mockResolvedValue(chartOutcome());
+    const onVisualsChange = vi.fn();
+    render(<DatasetChat {...baseProps()} onVisualsChange={onVisualsChange} />);
+    expect(onVisualsChange).toHaveBeenCalledWith([]);
+    await submit('show revenue by year');
+    const lastCall = onVisualsChange.mock.calls.at(-1)![0];
+    expect(lastCall).toHaveLength(1);
+    expect(lastCall[0]).toMatchObject({ id: 'visual-1', kind: 'userChart', label: 'My chart 1', userChart: CHART_SPEC });
+  });
+});
+
 describe('DatasetChat — needs_decision (D5 profile-card two-chip decision)', () => {
   const AMBIGUOUS_PROFILE: DatasetProfile = {
     columns: [{ id: 'c0', header: 'Omzet', type: 'number', numberFormat: 'ambiguous', nulls: 0 }],

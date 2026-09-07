@@ -9,10 +9,19 @@ live in [session-briefs/2026-09-06-chat-with-data-design.md](../session-briefs/2
 **As-built (session 85, 2026-09-06/07):** the backend (session 84) and the ENTIRE UI (session 85 —
 thread-kind dispatch, `UserChartView`, `DatasetChat`, the upload button wired to `ingestFile`) are
 now built, tested, and pushed to `main`; chat-with-your-data works end to end. Still NOT live:
-`VisualDock`'s dock branch for user charts (v1 renders them inline only, a documented scope cut),
 the `ATTACHMENTS_ENABLED` flag, fixtures, and migrations 026/027 remain file-only pending the
 owner-supervised apply. Exact remaining list: [docs/08-build-plan.md](../08-build-plan.md)'s
 WP202a section.
+
+**As-built (session 86):** `VisualDock`'s dock branch for user charts is now built — `DockVisual`
+gained an additive `userChart: UserChartSpec | null` field, `deriveDatasetVisuals` (the
+`deriveVisuals` analog over `DatasetChatMessage[]`), and `VisualDock` gained the render branch.
+`DatasetChat` gained `dockMode`/`onVisualsChange`/`activeVisualId`/`onActivateVisual` props
+mirroring `Chat`'s own exactly — at `lg`+ a chart turn now docks with an in-flow reference chip
+("Chart in panel →", English per #206) instead of always rendering inline; below `lg` nothing
+changed (D4 symmetry). This was the one purely-additive, non-owner-supervised bullet left in
+WP202a's remaining scope — the `ATTACHMENTS_ENABLED` flag and the owner-supervised migration apply
+are still open, see [docs/08-build-plan.md](../08-build-plan.md)'s WP202a section.
 
 ## Context
 
