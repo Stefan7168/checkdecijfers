@@ -383,6 +383,31 @@ describe('listThreads — dataset threads (ADR 037 D10)', () => {
       ]);
     });
   });
+
+  // Emergency fix regression (2026-09-07, session 86): reproduces the real
+  // pre-migration-026 production shape (neither user_datasets nor
+  // chat_threads.dataset_id exist — the same #154-class bug as
+  // getThreadDatasetId's own regression test in dataset-threads.test.ts).
+  // Before this fix, listThreads threw "column dataset_id does not exist"
+  // for EVERY call — breaking the workspace sidebar, /api/health's
+  // threads-read check, and thread resume for every signed-in user the
+  // moment the long-broken CI deploy pipeline started working again.
+  it('pre-migration (dataset_id column and user_datasets table absent): behaves exactly like before ADR 037, never throws', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      const threadId = await createThread(db, userId);
+      await insertRow(db, userId, { kind: 'answer', question: 'een CBS-vraag', threadId });
+      await db.query('alter table chat_threads drop column dataset_id', []);
+      await db.query('drop table if exists user_datasets cascade', []);
+      const [entry] = await listThreads(db, userId);
+      expect(entry).toEqual({
+        id: threadId,
+        title: 'een CBS-vraag',
+        lastActivityAt: entry!.lastActivityAt,
+        kind: 'cbs',
+      });
+    });
+  });
 });
 
 describe('getThreadRows — thread turns + ledger cost (pin 1)', () => {

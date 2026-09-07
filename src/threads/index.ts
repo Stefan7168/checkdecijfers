@@ -203,12 +203,35 @@ export async function validateDatasetThreadOwnership(
  * exists — that is `getDataset`'s ownership check to make next, not this
  * function's job. */
 export async function getThreadDatasetId(db: Db, userId: string, threadId: number): Promise<number | null> {
+  // Emergency fix (2026-09-07, session 86): migrations 026/027 add BOTH
+  // `user_datasets` and this very `chat_threads.dataset_id` column — until
+  // the owner-supervised apply runs, `dataset_id` does not exist in the real
+  // database at all, and this SELECT throws (column does not exist), not
+  // just returns an empty/null result. That is exactly the #154 lesson this
+  // repo's own RUNBOOK names ("the design's 'apply the migration later'
+  // claim is worthless the moment the code SELECTs the new column"), missed
+  // when this thread-kind dispatch was added — deploy had been broken for
+  // weeks, so this never actually ran against production until today's
+  // deploy-pipeline fix exposed it as a live 500 on every thread selection.
+  // Every thread is a CBS thread pre-migration by construction, so the safe
+  // answer is `null` with no query at all.
+  if (!(await userDatasetsTableExists(db))) return null;
   const { rows } = await db.query('select dataset_id from chat_threads where id = $1 and user_id = $2::uuid', [
     threadId,
     userId,
   ]);
   const value = (rows[0] as { dataset_id: number | string | null } | undefined)?.dataset_id ?? null;
   return value === null ? null : Number(value);
+}
+
+/** Check-not-catch (the retention-job.ts precedent, `trialTableExists`/
+ * `errorLogTableExists`): `user_datasets` and `chat_threads.dataset_id` are
+ * both added by migration 026 in one file, so this single check stands in
+ * for both — a table probe is enough, since a column can't exist without its
+ * own migration having run. */
+async function userDatasetsTableExists(db: Db): Promise<boolean> {
+  const { rows } = await db.query(`select to_regclass('public.user_datasets') as t`, []);
+  return rows[0]?.t != null;
 }
 
 /** The sidebar list: a user's threads, most-recent-activity first. A CBS
@@ -225,8 +248,18 @@ export async function getThreadDatasetId(db: Db, userId: string, threadId: numbe
  * function already re-binds `user_id` under an already-scoped join as
  * deliberate defense-in-depth, and the new one follows the same rule. */
 export async function listThreads(db: Db, userId: string, limit = 50): Promise<ThreadSummary[]> {
+  // Emergency fix (2026-09-07, session 86): same #154-class bug as
+  // `getThreadDatasetId` above — `t.dataset_id`/`user_datasets` don't exist
+  // pre-migration-026, so the dataset-aware query below throws (not just
+  // returns empty) against the real, not-yet-migrated database. Every
+  // thread is a CBS thread pre-migration, so the fallback is exactly the
+  // pre-ADR-037 query (byte-identical to before WP202a), with the two new
+  // columns hardcoded to their CBS-only values so the row-processing loop
+  // below is unchanged either way.
+  const datasetAware = await userDatasetsTableExists(db);
   const { rows } = await db.query(
-    `select
+    datasetAware
+      ? `select
        t.id,
        t.last_activity_at,
        t.dataset_id is not null as is_dataset,
@@ -246,6 +279,24 @@ export async function listThreads(db: Db, userId: string, limit = 50): Promise<T
            and ud.user_id = $1::uuid
            and ud.status <> 'redacted'
        ) end as dataset_title_source
+     from chat_threads t
+     where t.user_id = $1::uuid
+     order by t.last_activity_at desc, t.id desc
+     limit $3`
+      : `select
+       t.id,
+       t.last_activity_at,
+       false as is_dataset,
+       (
+         select a.question
+         from audit_answers a
+         where a.thread_id = t.id
+           and a.user_id = $1
+           and a.question <> $2
+         order by a.created_at asc, a.id asc
+         limit 1
+       ) as cbs_title_source,
+       null as dataset_title_source
      from chat_threads t
      where t.user_id = $1::uuid
      order by t.last_activity_at desc, t.id desc

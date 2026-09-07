@@ -132,4 +132,31 @@ describe('getThreadDatasetId — loadMyThread\'s dispatch point (ADR 037 D10)', 
       expect(await getThreadDatasetId(db, attacker, threadId)).toBeNull();
     });
   });
+
+  // Emergency fix regression (2026-09-07, session 86): migrations 026/027 add
+  // BOTH user_datasets and chat_threads.dataset_id in one file, so dropping
+  // user_datasets reproduces the real pre-migration-apply production shape
+  // (the column literally doesn't exist either) — mirrors the
+  // trialTableExists/errorLogTableExists drop-table precedent in
+  // tests/audit/retention-job.test.ts. Before this fix, this threw
+  // "column dataset_id does not exist" instead of returning null — the exact
+  // bug that broke every real thread selection in production once the
+  // long-broken CI deploy pipeline started working again.
+  it('pre-migration (dataset_id column and user_datasets table absent): returns null instead of throwing', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      const { rows } = await db.query('insert into chat_threads (user_id) values ($1::uuid) returning id', [
+        userId,
+      ]);
+      const threadId = Number(rows[0]!.id);
+      // Reproduces the real pre-migration-026 production shape exactly:
+      // that migration adds BOTH the column and the table in one file, so
+      // dropping only user_datasets would leave dataset_id intact (still
+      // NULL, not actually exercising the fix) — drop the column too, or
+      // this test would pass even without the userDatasetsTableExists guard.
+      await db.query('alter table chat_threads drop column dataset_id', []);
+      await db.query('drop table if exists user_datasets cascade', []);
+      expect(await getThreadDatasetId(db, userId, threadId)).toBeNull();
+    });
+  });
 });
