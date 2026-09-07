@@ -6,7 +6,7 @@
 // (no privacy link until the #14(d) policy exists — no dead links).
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { listMyThreads, loadMyThread } from '../app/actions.ts';
 import { ingestFile } from '../app/dataset-actions.ts';
 import type { GatedResponse } from '../backend/billing/index.ts';
@@ -94,6 +94,17 @@ export function Workspace({
   // inline in the message exactly as today (zero mobile regression).
   const isWide = useMediaQuery('(min-width: 1024px)');
   const showDock = isWide && visuals.length > 0;
+
+  // #213 (found session 87): the sidebar itself had no responsive breakpoint
+  // at all — a fixed w-64 squeezed the chat card to ~220px on a phone. Reuses
+  // the EXISTING collapsed-sidebar UI (already built, already tested), no new
+  // pattern: auto-collapse once on crossing into a narrow viewport, but the
+  // user's own manual toggle afterward still wins (the effect only fires
+  // again when isNarrow itself flips, not on every collapse/expand click).
+  const isNarrow = useMediaQuery('(max-width: 767px)');
+  useEffect(() => {
+    if (isNarrow) setSidebarCollapsed(true);
+  }, [isNarrow]);
 
   // Refresh the sidebar after a turn (an event, not a mount effect — the initial
   // list is server-rendered).
