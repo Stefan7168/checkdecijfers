@@ -19,9 +19,22 @@ gained an additive `userChart: UserChartSpec | null` field, `deriveDatasetVisual
 `DatasetChat` gained `dockMode`/`onVisualsChange`/`activeVisualId`/`onActivateVisual` props
 mirroring `Chat`'s own exactly — at `lg`+ a chart turn now docks with an in-flow reference chip
 ("Chart in panel →", English per #206) instead of always rendering inline; below `lg` nothing
-changed (D4 symmetry). This was the one purely-additive, non-owner-supervised bullet left in
-WP202a's remaining scope — the `ATTACHMENTS_ENABLED` flag and the owner-supervised migration apply
-are still open, see [docs/08-build-plan.md](../08-build-plan.md)'s WP202a section.
+changed (D4 symmetry). `ATTACHMENTS_ENABLED` is now threaded through `page.tsx` (D14, still unset
+in Vercel — code-only, zero behavior change). "Link toevoegen" opens a demo-only URL-input preview
+(owner request, no backend, no SSRF surface — WP202b itself is unbuilt). The §7 docs sweep is DONE.
+
+**Critical fix, same session (`03addbd`):** the CI `deploy` job started working again this session
+after weeks broken (unrelated GitHub Actions secrets gap) — and the very first real deploy shipped
+`listThreads`/`getThreadDatasetId`'s `t.dataset_id`/`user_datasets` references live for the first
+time, which threw against the real database (migrations 026/027 are still file-only), breaking
+thread selection for every signed-in user since `WORKSPACE_ENABLED` is live. Fixed with a
+`userDatasetsTableExists()` check-not-catch — both functions fall back to the pre-ADR-037 CBS-only
+behavior until the migration actually runs. Verified live. Full detail: STATUS.md/
+lessons-learned.md's session-86 entries.
+
+**Remaining, unchanged:** the `ATTACHMENTS_ENABLED` flag stays unset, fixtures are unbuilt
+(real-LLM-spend, owner-supervised), and migrations 026/027 remain file-only pending the
+owner-supervised apply. See [docs/08-build-plan.md](../08-build-plan.md)'s WP202a section.
 
 ## Context
 

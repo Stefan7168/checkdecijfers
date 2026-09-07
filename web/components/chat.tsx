@@ -73,15 +73,17 @@ export interface ChatPricing {
 }
 
 /** ADR 037 D10: the same presence-driven contract as `ChatPricing.websearch`
- * — present ONLY when `ATTACHMENTS_ENABLED='1'` (not wired yet; the flag
- * doesn't exist as of this commit). Its PRESENCE is what enables the
+ * — present ONLY when `ATTACHMENTS_ENABLED='1'` (threaded through `page.tsx`
+ * since session 86, still unset in Vercel). Its PRESENCE is what enables the
  * "Bestand uploaden" button; absent ⇒ the button stays disabled exactly as
  * today, byte-identical. `onUploadFile` OWNS the actual `ingestFile` call
  * and, on success, the workspace-level handoff switch to the new dataset
  * thread (mirroring `onThreadId`'s "report up, the parent acts" shape) —
  * this component only needs to know whether to show an inline error.
- * "Link toevoegen" stays disabled regardless of this prop: url_html ingest
- * (WP202b) has no parser built at all yet, unlike file_csv/file_tsv. */
+ * "Link toevoegen" is independent of this prop (session 86): it opens a
+ * demo-only URL-input preview regardless, since url_html ingest (WP202b)
+ * has no backend at all yet either way — see that button's own comment
+ * near its render. */
 export interface ChatAttachments {
   enabled: true;
   onUploadFile: (file: File) => Promise<{ ok: boolean; message?: string }>;

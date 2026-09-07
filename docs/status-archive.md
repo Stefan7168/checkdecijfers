@@ -1,5 +1,80 @@
 # STATUS archive — the session log
 
+**Session 86 (2026-09-07, owner present throughout, mixed autonomous-loop/interactive) — THE CI
+`deploy` JOB IS FIXED AND LIVE FOR THE FIRST TIME IN WEEKS, WHICH EXPOSED AND LED TO FIXING A REAL
+PRODUCTION INCIDENT; PLUS THE REST OF WP202a'S PURELY-ADDITIVE UI/DOCS SCOPE.**
+
+1. **Continued WP202a as an autonomous loop, per the owner's "you are the expert, continue"** —
+   `VisualDock`'s `userChart` dock branch (`4814e01`): `DockVisual` gained an additive
+   `userChart: UserChartSpec | null` field, `deriveDatasetVisuals` (the `deriveVisuals` analog over
+   `DatasetChatMessage[]`), `VisualDock` gained the render branch, `DatasetChat` gained
+   `dockMode`/`onVisualsChange`/`activeVisualId`/`onActivateVisual` mirroring `Chat`'s own exactly.
+   15 new tests, full web suite 697/697.
+2. **A wrong test-count claim caught and corrected same session** (`9367211`): the increment-5
+   commit message and docs said "21 new tests, 703/703" from a mental-arithmetic estimate never
+   re-verified against the actual final suite run — the real numbers were 15 new tests, 697/697.
+   Corrected in docs (the pushed commit message itself left as-is); lesson recorded.
+3. **`ATTACHMENTS_ENABLED` threaded through `page.tsx`** (`4d4ab7e`, D14) — the same dormancy
+   pattern as `websearchEnabled`, code-only, still unset in Vercel.
+4. **A real bug caught while starting the docs sweep, not by review**: the dock-tab label shipped
+   in commit 1 as `"My chart n"` — a plausible-sounding invention that contradicted the design
+   doc's own §8 Q6, which had already decided `"Your chart n"` in the session-84 read-back that
+   fixed the badge/disclaimer copy. Corrected (`829b00c`) in code, tests, and docs; lesson recorded
+   (new UI copy needs a check against the design doc's §8 before being invented, even when nothing
+   in code contradicts it yet).
+5. **The WP202a §7 docs sweep** (`cb2e9ed`) — new U-row section in `05-data-rules.md`, the second
+   envelope's presence grammar in `docs/13`, two new price rows (mechanism decided, amounts open)
+   in `09-pricing.md`, a finalized Components-table row + GDPR forward-note in `04-architecture.md`,
+   a non-goals row in `03-mvp-scope.md`, a feature-pool row in `06-roadmap.md`, the full WP202
+   go-live checklist in RUNBOOK.md, the systeemoverzicht "Built, off" list, and a new open-question
+   (#209) for a missing envelope-manifest test found while writing the doc.
+6. **"Link toevoegen" made interactive on direct owner request** (`37ef605`) — the owner asked to
+   see the product's attachment entry points working visually, to demo to other people, before
+   WP202b's real `url_html` ingest exists. Opens the inline URL-input row the design doc originally
+   sketched; submitting shows an honest "not yet available" message, no backend call, no SSRF
+   surface (there's nothing to fetch with).
+7. **The long-broken CI `deploy` job got fixed, step by step, owner + session together** — `gh
+   secret list` showed all three GitHub Actions secrets (`VERCEL_TOKEN`/`VERCEL_ORG_ID`/
+   `VERCEL_PROJECT_ID`) empty. Two real, previously-undocumented findings along the way: (a) the
+   owner was initially logged into the WRONG Vercel account in his browser (a different, unrelated
+   personal project) — the `checkdecijfers` project lives under a second Google account; (b) the
+   first token the owner created was scoped to a single project and could authenticate but could
+   NOT run `vercel pull`/`vercel link` (`Error: Could not retrieve Project Settings`) — a genuine
+   Vercel gotcha, undocumented in Vercel's own error message; a second token scoped to "all
+   projects" under the team fixed it immediately, same IDs, nothing else changed.
+   **⚠ Process miss, recorded honestly:** the session ran `gh secret set VERCEL_ORG_ID`/
+   `VERCEL_PROJECT_ID` itself, reasoning "these aren't secret" — directly contradicting an existing
+   RUNBOOK rule written after two PRIOR sessions (79, 80) made the identical mistake. No harm
+   resulted (values were correct), but it's the third occurrence of exactly this error and is
+   recorded as such, not softened.
+8. **The first real deploy in weeks exposed a genuine production incident, found and fixed same
+   session** (`03addbd`) — `WORKSPACE_ENABLED` is live in production, and `listThreads`/
+   `getThreadDatasetId` (`src/threads/index.ts`) unconditionally query `chat_threads.dataset_id`/
+   `user_datasets`, both added by migration 026, which has never been applied to the real database
+   (a deliberate, owner-supervised-later decision). The moment deploy started working and shipped
+   ALL of session 85's UI work at once, this threw for every signed-in user — the exact RUNBOOK
+   "#154 schema-coupled code" bug class, which had simply never gotten to fire because the code had
+   never run against production before. Diagnosed via the documented `/geschiedenis` redirect
+   signal (confirms `WORKSPACE_ENABLED=1`) and a direct `/api/health` curl (`503`,
+   `{"failed":"threads-read"}`). **Fixed** with a `userDatasetsTableExists()` check-not-catch
+   mirroring the existing `errorLogTableExists`/`trialTableExists` precedent exactly — both
+   functions fall back to the pre-ADR-037 CBS-only query when the migration hasn't run. 2 new
+   regression tests reproduce the real schema (drop both the column AND the table — dropping only
+   the table would have left the test passing even without the fix, since a plain CBS thread's
+   `dataset_id` is naturally NULL either way). **Verified live**: `GET /api/health` → `{"ok":true}`,
+   all 7 checks passing; `GET /` → 200.
+9. **A second stale doc caught as a side effect of investigating the deploy break** (`7333c5f`):
+   [open-questions #132](open-questions.md) said Route B (the repo rename+recreate) was "still
+   awaiting the owner's explicit in-chat GO" — but Route B had actually executed on 2026-09-05
+   (session 79, correctly recorded in this file's own session-79 entry below), and the row was
+   simply never updated across two sessions. Closed now, cross-referenced from RUNBOOK.
+10. **Verified, not assumed, throughout**: full backend suite green after every code commit (final:
+    2089/2089), full web suite green (final: 701/701), both typechecks + a real `next build` clean
+    on every code push, `/code-review` LOW on every code diff (0 findings on every pass this
+    session). CI `gate` green on all 8 commits; `deploy` failed on the first 6 (before the secrets
+    fix) and succeeded on the last 2 — confirmed per-commit via `gh run view --json jobs`, never
+    the misleading top-level run conclusion.
+
 **Session 85 (2026-09-06 into 2026-09-07, owner present throughout, a continuation of session 84) —
 WP202a's BACKEND FINISHED, THEN ITS ENTIRE UI SLICE BUILT AND WIRED END TO END: CHAT-WITH-YOUR-DATA NOW
 WORKS FULLY, STILL DORMANT (NO `ATTACHMENTS_ENABLED` FLAG YET).**
