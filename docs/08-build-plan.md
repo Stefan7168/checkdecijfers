@@ -449,6 +449,23 @@ green (644/644), both typechecks + a real `next build` clean, `/code-review` LOW
 new-reader call-outs are all still open), and `Workspace`'s `Handoff` discriminated union to
 mount `DatasetChat` instead of `Chat`.
 
+**UI slice, second increment — D11's chart rendering:** `chart.tsx`'s `PlottableSpec` type-only
+refactor (`buildRows`/`valueLabelPlan` now take the minimal structural subset they actually
+touch, not the full `ChartSpec` — zero runtime change, confirmed by typecheck alone plus the
+full existing `chart.test.tsx` suite passing byte-identical) and `web/components/user-chart.tsx`
+(`UserChartView`) — the H2 renderer, its own first-ever test file (9 tests) pinning the badge,
+dashed chrome, provenance+disclaimer footer, and the ABSENCE of anything CBS-shaped. New
+`USER_DATA_BADGE` constant (`src/attachments/types.ts`, alongside the existing
+`USER_DATA_DISCLAIMER`). v1 scope is deliberately smaller than `ChartView`: no small multiples,
+no table view, no per-point/bar value labels (those render via chart.tsx-internal
+`SeriesDot`/`SeriesBar`, not in the design doc's reuse list), no trend headline, **no CSV export**
+(D11's CSV-injection defense for a "Download as CSV" of user data is not built — tracked as a
+follow-up alongside the table view). Two real dead-code findings caught by `/code-review` LOW and
+fixed before commit: an unused `useId()`/`domId` left over from adapting `ChartView`'s pattern,
+and an unused direct `seriesStyle` import (it's genuinely reused, just indirectly via
+`buildRows`). Full backend suite green (2073/2073), full web suite green (653/653, post-fix), both
+typechecks + a real `next build` clean.
+
 **Not yet built (WP202a's own remaining scope, in dependency order):**
 - **UI, the rest of it** — `chart.tsx`'s `PlottableSpec` type-only refactor (D11, zero runtime
   change), `UserChartView`, `DatasetChat`, wiring the two disabled buttons already shipped in

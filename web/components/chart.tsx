@@ -42,6 +42,35 @@ import { ChartDownloadMenu } from './chart-download.tsx';
 import { ChartSmallMultiples } from './chart-small-multiples.tsx';
 import { SourceBadge } from './source-badge.tsx';
 
+/**
+ * ADR 037 D11: the minimal structural subset `buildRows`/`valueLabelPlan`
+ * actually touch — extracted so a `UserChartSpec`-derived adapter (never a
+ * real `ChartSpec`, per H2) can satisfy the same interface without being
+ * one. Type-only change: a real `ChartSpec`/`ChartPoint` already carries
+ * every field here plus more, so it satisfies `PlottableSpec` structurally
+ * with zero call-site changes — `ChartView` (and every existing chart.tsx
+ * test) is byte-identical, unaffected by this file at all. `yAxisDomain`
+ * needs no change; it already takes only `ChartSpec['kind']`.
+ */
+export interface PlottablePoint {
+  periodCode: string;
+  periodLabel: string;
+  value: number | null;
+  formattedValue: string | null;
+  provisional: boolean;
+  resultId: string;
+}
+
+export interface PlottableSeries {
+  label: string;
+  points: PlottablePoint[];
+}
+
+export interface PlottableSpec {
+  kind: 'line' | 'bar';
+  series: PlottableSeries[];
+}
+
 export type Row = Record<string, string | number | boolean | null>;
 
 export interface SeriesMeta {
@@ -87,7 +116,7 @@ export function yAxisDomain(kind: ChartSpec['kind']): [0 | 'auto', 'auto'] {
   return kind === 'bar' ? [0, 'auto'] : ['auto', 'auto'];
 }
 
-export function buildRows(spec: ChartSpec): { rows: Row[]; seriesMeta: SeriesMeta[] } {
+export function buildRows(spec: PlottableSpec): { rows: Row[]; seriesMeta: SeriesMeta[] } {
   const periodCodes = new Set<string>();
   for (const series of spec.series) {
     for (const point of series.points) periodCodes.add(point.periodCode);
@@ -184,11 +213,11 @@ export interface ValueLabelPlan {
  * bank's >15-categories rule says a table is the honest view there. */
 export const BAR_LABEL_MAX = 15;
 
-function pointLabelText(point: ChartPoint): string {
+function pointLabelText(point: PlottablePoint): string {
   return `${point.formattedValue ?? ''}${point.provisional ? '*' : ''}`;
 }
 
-export function valueLabelPlan(spec: ChartSpec): ValueLabelPlan {
+export function valueLabelPlan(spec: PlottableSpec): ValueLabelPlan {
   const empty: ValueLabelPlan = { axisTicks: [], endLabels: [], barLabels: [] };
   const plotted = spec.series.flatMap((series, i) =>
     series.points
@@ -217,7 +246,7 @@ export function valueLabelPlan(spec: ChartSpec): ValueLabelPlan {
     if ((entry.point.value as number) < (lo.point.value as number)) lo = entry;
     if ((entry.point.value as number) > (hi.point.value as number)) hi = entry;
   }
-  const tick = (entry: { point: ChartPoint }): AxisTickLabel => ({
+  const tick = (entry: { point: PlottablePoint }): AxisTickLabel => ({
     value: entry.point.value as number,
     display: entry.point.formattedValue as string,
     resultId: entry.point.resultId,

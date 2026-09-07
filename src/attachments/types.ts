@@ -33,6 +33,12 @@ export const DATASET_TURN_ENVELOPE_VERSION = 1 as const;
  * the original design's Dutch wording is recorded there for history). */
 export const USER_DATA_DISCLAIMER = 'User-uploaded data — not verified by checkdecijfers.' as const;
 
+/** The persistent top-left badge on a user-data chart (D11, H2) — a
+ * SEPARATE, shorter string from `USER_DATA_DISCLAIMER` above (that one is
+ * the full footer sentence baked into exports; this one is the always-
+ * visible chrome label). English, same #206 decision. */
+export const USER_DATA_BADGE = 'Your data · unverified' as const;
+
 /** Redaction placeholder for a dataset_turns row (D9/D13) — the D9 sentinel,
  * mirroring src/answer/audit/retention.ts's REDACTED_QUESTION_TEXT shape.
  * English, per the same #206 decision. */
