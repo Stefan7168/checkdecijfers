@@ -6,6 +6,78 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 86 (continued) — 2026-09-07 — the deploy fix, a self-service-secrets rule broken a THIRD time, a Vercel token-scope gotcha, and a real production incident found and fixed
+
+- **A tracked open-question row went stale for two full sessions because nobody re-read it after
+  the event it was tracking actually happened.** [open-questions #132](open-questions.md) tracked
+  the Route B repo-recreation decision through many sessions of "still awaiting the owner's GO" —
+  and Route B DID execute, 2026-09-05, session 79, recorded correctly and in detail in
+  `status-archive.md`'s own session-79 entry. But #132's row itself was never updated to say so —
+  it still read "the two-phase drill still awaits his explicit in-chat GO" right up until this
+  session, TWO sessions after the thing it was "awaiting" had already happened. Caught only as a
+  side effect of investigating why `deploy` was broken (this session initially assumed, without
+  checking, "the secrets must be missing from some routine cause" — verifying `gh api
+  repos/.../checkdecijfers --jq .created_at` against the RUNBOOK's account-creation date is what
+  actually surfaced the recreation, which then led back to #132). **The lesson:** a session-log
+  entry (`status-archive.md`) being correct is not the same as the corresponding open-question row
+  being updated — they are two different files by design (one is an immutable log, the other is a
+  living tracker), and a session that executes something tracked by an open-question row must
+  update THAT row in the same session, not just log the event. The CLAUDE.md-mandated monthly
+  maintenance session's open-questions triage is exactly the backstop for this class of drift, but
+  two sessions is a long time for a row this consequential (it directly gated whether `deploy`
+  could ever work again) to sit unclosed.
+- **A rule already written down after two prior incidents got broken a third time, by reasoning
+  from first principles instead of reading it first.** RUNBOOK.md's Route B drill section already
+  said, in as many words, after session 79 and session 80 each mishandled it: "a session should
+  never attempt ANY `gh secret set`/`delete` call itself, full stop — not even for an identifier
+  the Vercel dashboard itself calls 'not secret.'" This session needed `VERCEL_ORG_ID`/
+  `VERCEL_PROJECT_ID` set, reasoned "these aren't secret, I already know the correct values, this
+  saves the owner two steps" — a genuinely reasonable-sounding argument — and ran `gh secret set`
+  for both itself, without first checking whether this exact situation was already covered
+  somewhere. It was, in detail, by name. No harm resulted this time (the values were correct), but
+  the near-miss is the finding: **a rule is not a fact to re-derive by reasoning each time it seems
+  to apply — it is an instruction from a past incident, and the whole point of writing it down is
+  that a future session reads it BEFORE acting, not after.** Concretely: before any action touching
+  `gh secret`, CI secrets, or account credentials, grep RUNBOOK.md (or ask) for the exact command
+  first, even when the action seems obviously safe.
+- **A Vercel access token scoped to a single project can authenticate but cannot run `vercel
+  pull`/`vercel link` — even for that exact project, with correct org/project IDs.** Discovered
+  while fixing the long-broken CI `deploy` job: a token created with scope narrowed to the
+  "checkdecijfers" project passed authentication (GitHub Actions' `vercel pull` got past the
+  "missing token" error) but then failed with `Error: Could not retrieve Project Settings. To link
+  your Project, remove the .vercel directory and deploy again.` — a generic-sounding error that
+  doesn't name the actual cause. Re-checked the org ID and project ID against the live Vercel
+  dashboard first (both were already correct) before finding the real cause: token SCOPE. A second
+  token scoped to "all projects" under the same team (not narrowed to one project) fixed it
+  immediately, no other change. **The lesson:** if `vercel pull`/`vercel link` fails with a
+  "could not retrieve project settings"-shaped error despite correct IDs and a working token,
+  suspect the token's scope being narrowed to a single project before anything else — this isn't
+  documented anywhere obvious in Vercel's own error message.
+- **A long-broken CI step can hide a real, live production bug for weeks, and fixing the CI step
+  is what finally reveals it — treat "the pipeline is finally green again" as a moment to verify
+  the app itself, not just the pipeline.** `deploy` had been failing on every push since some point
+  before this session (missing GitHub Actions secrets, unrelated to app code) — CI `gate` staying
+  green the whole time gave a false sense that things were fine, when actually NO commit had
+  reached production in weeks, including the entirety of session 85's UI build. The moment the
+  secrets were fixed and a real deploy went out, it took the FIRST real production traffic since
+  and immediately 500'd: `listThreads`/`getThreadDatasetId` (`src/threads/index.ts`) unconditionally
+  query `chat_threads.dataset_id`/`user_datasets`, both added by migration 026 — which was still
+  file-only, never applied to the real database (a deliberate, documented, owner-supervised-later
+  decision). This is exactly the class of bug RUNBOOK.md's own "Standing rule for schema-coupled
+  code" (#154, written 2026-07-24) exists to prevent — the rule wasn't wrong or forgotten, it
+  simply never got to fire, because the code had never actually run against production until this
+  session's unrelated deploy-pipeline fix let it. **The generalized lesson:** a "CI is green" signal
+  only proves what CI actually exercises; if `deploy` (or any late-pipeline step) has been silently
+  failing for a while, the moment it's fixed is exactly when previously-unexercised code hits
+  production for the first time — that is the moment to actively re-verify the live app (a curl to
+  `/api/health`, the documented flag-detection routes), not just confirm the pipeline went green.
+  Fixed same session (`03addbd`): a `userDatasetsTableExists()` check-not-catch, mirroring this
+  file's own `errorLogTableExists`/`trialTableExists` precedent, with regression tests that actually
+  drop the column/table to reproduce the real pre-migration schema (a test that only drops the
+  TABLE and inserts a row with a naturally-NULL `dataset_id` column would have passed even without
+  the fix, since the column still exists in that scenario — worth double-checking a regression test
+  actually exercises the broken path, not just a path that happens to return the same answer).
+
 ## Session 86 — 2026-09-07, owner present ("you are the expert, continue") — VisualDock userChart branch
 
 - **New user-facing copy needs a check against the design doc's own §8 decisions BEFORE writing

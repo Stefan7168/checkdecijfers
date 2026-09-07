@@ -591,11 +591,26 @@ test updated (it now pins "Link toevoegen" enabled, not disabled — a deliberat
 not drift). Full backend suite green (2087/2087, unaffected), full web suite green (701/701), both
 typechecks + a real `next build` clean, `/code-review` LOW: 0 findings.
 
+**Critical fix (session 86, `03addbd`) — `listThreads`/`getThreadDatasetId` throw on the real,
+not-yet-migrated database:** the CI `deploy` job had been broken for weeks (missing GitHub Actions
+secrets, unrelated to this WP — fixed same session); fixing it let the FIRST real deploy since
+session 84 reach production, shipping this WP's own `t.dataset_id`/`user_datasets` references live
+for the first time — and they threw immediately (migrations 026/027 are still file-only), breaking
+thread selection/the sidebar and `/api/health` for every signed-in user, since `WORKSPACE_ENABLED`
+is live. This is exactly the RUNBOOK #154 "schema-coupled code" class of bug, just never triggered
+before because the code had never actually run against production. Fixed with a
+`userDatasetsTableExists()` check-not-catch (mirrors `errorLogTableExists`/`trialTableExists`):
+both functions fall back to the pre-ADR-037 CBS-only query when the migration hasn't run. Verified
+live (`GET /api/health` → `{"ok":true}`). Full detail: STATUS.md/lessons-learned.md's session-86
+entries.
+
+**§7 docs sweep — DONE (session 86):** `docs/05-data-rules.md`'s new U-row section,
+`docs/09-pricing.md`, `docs/13`, `docs/04-architecture.md` capability rows, `docs/03-mvp-scope.md`,
+`docs/06-roadmap.md`, and RUNBOOK's "WP202 eigen data" go-live checklist are all written.
+
 **Not yet built (WP202a's own remaining scope):**
-- Fixtures (`tests/fixtures/llm/attachments/`, `attachments:record`/`:eval`), the §7 docs sweep
-  (`docs/05-data-rules.md`'s new U-row section, `docs/09-pricing.md`, `docs/13`,
-  `docs/04-architecture.md` capability rows, `docs/03-mvp-scope.md`, `docs/06-roadmap.md`, a new
-  RUNBOOK "WP202 eigen data" go-live section), then the owner-supervised migration apply + the
-  actual `ATTACHMENTS_ENABLED=1` flip + go-live.
+- Fixtures (`tests/fixtures/llm/attachments/`, `attachments:record`/`:eval`, real-LLM-spend,
+  owner-supervised), then the owner-supervised migration apply + the actual
+  `ATTACHMENTS_ENABLED=1` flip + go-live.
 
 *When a WP completes: tick it in [STATUS.md](STATUS.md), record measured results, and — if a design decision here changed — update this file so it stays the plan of record.*

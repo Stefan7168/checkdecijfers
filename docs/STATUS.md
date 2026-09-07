@@ -9,6 +9,28 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
+**▶ SESSION 86 (2026-09-07, owner present, mixed autonomous/interactive) — the CI `deploy` job is
+FIXED and LIVE for the first time in weeks, and that exposed + fixed a real production incident.**
+The 3 long-pending `gh secret set` commands finally ran (two non-secret ones by the session, the
+`VERCEL_TOKEN` by the owner — twice: the first token was scoped to a single project and could not
+run `vercel pull`, a genuine Vercel gotcha; a second, team-wide-scoped token fixed it). The very
+first real deploy since session-84's close-out (`22618d3c`) shipped ALL of session 85's UI work to
+production at once — and immediately exposed that `listThreads`/`getThreadDatasetId`
+(`src/threads/index.ts`) unconditionally query `chat_threads.dataset_id`/`user_datasets`, both
+added by migration 026, which has **never been applied to the real database**. Since
+`WORKSPACE_ENABLED` is live in production, this broke thread selection/the sidebar and
+`/api/health`'s `threads-read` check for every signed-in user — a real instance of the
+already-documented RUNBOOK "#154 schema-coupled code" lesson, just never triggered before because
+deploy had been broken. **Fixed same session** (`03addbd`, a `userDatasetsTableExists()`
+check-not-catch mirroring the `errorLogTableExists`/`trialTableExists` precedent exactly): both
+functions fall back to the pre-ADR-037 CBS-only query when the migration hasn't run, and pick up
+real dataset behavior automatically once it does. **Verified live**: `GET /api/health` →
+`{"ok":true}`, all checks passing. Also this session: WP202a's docs §7 sweep (05-data-rules U-rows,
+09-pricing, 13-envelope-grammar, 04-architecture, 03-mvp-scope, 06-roadmap, RUNBOOK's WP202 go-live
+checklist), `VisualDock`'s `userChart` dock branch, `ATTACHMENTS_ENABLED` threaded through
+`page.tsx` (still unset in Vercel — WP202a itself is still not live), and a demo-only "Link
+toevoegen" URL-preview (owner request, no backend). Full session entry: [status-archive.md](status-archive.md).
+
 **▶ SESSION 85 (2026-09-06 into 2026-09-07, owner present throughout, continuing session 84) —
 WP202a's backend finished, then its ENTIRE UI slice built and wired end to end: chat-with-your-data
 now works fully, still dormant (no `ATTACHMENTS_ENABLED` flag).** Full session entry:
@@ -51,15 +73,17 @@ still **OFF in Vercel**). Full detail: [08-build-plan.md](08-build-plan.md)'s WP
 string session 85 wrote (buttons, badges, error messages) followed this convention throughout;
 still does not touch the CBS chat/answer pipeline's own Dutch output or benchmark task phrasing.
 
-**Untouched, no owner input given specifically:** the 3 `gh secret set` commands (owner's own
-terminal, still blocking only `deploy`), WP30c, #197's older follow-ups, #205 (a possible future
-subscription tier, explicitly parked), #208 (needs the owner's URL/path).
+**Untouched, no owner input given specifically:** WP30c, #197's older follow-ups, #205 (a possible
+future subscription tier, explicitly parked), #208 (needs the owner's URL/path).
 
-**▶ NEXT, in order:** (a) WP202a's remaining scope — fixtures (`tests/fixtures/llm/attachments/`),
-the docs §7 sweep, THEN the owner-supervised migration apply + the actual `ATTACHMENTS_ENABLED=1`
-flip + go-live — see [08-build-plan.md](08-build-plan.md)'s WP202a section for the exact list;
-(b) the 3 `gh secret set` commands for Route B; (c) WP30c + #197's older follow-ups — owner-menu,
-no rush.
+**✅ session 86 — the 3 `gh secret set` commands for Route B are DONE** (see the session-86 entry
+above) — `deploy` is green again, no longer a standing blocker.
+
+**▶ NEXT, in order:** (a) WP202a's remaining scope — fixtures (`tests/fixtures/llm/attachments/`,
+real-LLM-spend, owner-supervised), THEN the owner-supervised migration apply + the actual
+`ATTACHMENTS_ENABLED=1` flip + go-live — see [08-build-plan.md](08-build-plan.md)'s WP202a section
+for the exact list (the docs §7 sweep itself is DONE, session 86); (b) WP30c + #197's older
+follow-ups — owner-menu, no rush.
 
 
 **(Historical — the pause, 2026-08-15 to 2026-08-26.)** Project was paused ~2 months (owner decision) and the
