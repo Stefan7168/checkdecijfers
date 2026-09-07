@@ -579,6 +579,18 @@ suite green (697/697, unaffected — no new test needed at this layer, matching 
 `websearchEnabled`/`WORKSPACE_ENABLED` precedent of no page-level test file), both typechecks + a
 real `next build` clean, `/code-review` LOW: 0 findings.
 
+**"Link toevoegen" demo preview (session 86, owner request — NOT WP202b):** the owner asked to see
+the attachment entry points for demoing the product to other people, before WP202b's real
+`url_html` ingest is designed/built. `chat.tsx`'s "Link toevoegen" button is now clickable — it
+opens the inline URL-input row the original design doc sketched (D10), and submitting shows an
+honest "This isn't available yet — coming soon." message rather than fetching anything (principle
+c: never fake it). Pure `web/`-only UI state, no dependency on `attachments`/any flag, no backend
+call, no SSRF surface introduced (there is nothing to fetch with). "Databron verbinden" and
+"Bestand uploaden" are unchanged. 4 new tests in `chat.test.tsx`, plus the existing byte-identity
+test updated (it now pins "Link toevoegen" enabled, not disabled — a deliberate, reviewed change,
+not drift). Full backend suite green (2087/2087, unaffected), full web suite green (701/701), both
+typechecks + a real `next build` clean, `/code-review` LOW: 0 findings.
+
 **Not yet built (WP202a's own remaining scope):**
 - Fixtures (`tests/fixtures/llm/attachments/`, `attachments:record`/`:eval`), the §7 docs sweep
   (`docs/05-data-rules.md`'s new U-row section, `docs/09-pricing.md`, `docs/13`,

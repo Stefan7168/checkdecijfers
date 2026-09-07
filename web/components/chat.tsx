@@ -433,6 +433,24 @@ export function Chat({
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // WP202b preview (owner request, session 86): "Link toevoegen" opens the
+  // inline URL row the original design sketched (D10), so the intended flow
+  // is visible for demos, WITHOUT a working backend behind it (url_html
+  // ingest has no `src/attachments/` module yet — no SSRF guard exists to
+  // fetch anything through safely). Submitting shows an honest "not yet"
+  // message, never a fake fetch — principle (c), same posture as every other
+  // disabled-with-a-reason button in this row. Pure UI state, no dependency
+  // on `attachments`/any flag — appended after every existing hook, per this
+  // file's own convention.
+  const [linkRowOpen, setLinkRowOpen] = useState(false);
+  const [linkUrl, setLinkUrl] = useState('');
+  const [linkComingSoon, setLinkComingSoon] = useState(false);
+
+  function handleLinkSubmit(e: React.FormEvent): void {
+    e.preventDefault();
+    setLinkComingSoon(true);
+  }
+
   async function handleFileChosen(e: React.ChangeEvent<HTMLInputElement>): Promise<void> {
     const file = e.target.files?.[0];
     e.target.value = ''; // allow re-choosing the same file name later
@@ -998,22 +1016,25 @@ export function Chat({
         <p className="mt-1 text-xs text-danger">Selecteer minstens één bron.</p>
       ) : null}
       {/* #201/#202 (open-questions, session 83 scoping): attachment entry
-        * points. "Link toevoegen"/"Databron verbinden" stay disabled
-        * regardless of `attachments` (session 83 scoping (open-questions
-        * #201/#202) and D5: url_html/OAuth ingest have no backend at all
-        * yet) — disabled with an explanatory title rather than removed, so
-        * the button honestly signals "coming soon" instead of silently
-        * doing nothing or pretending to work (principle c: never fake it).
-        * "Bestand uploaden" is the ADR 037 D10 presence-driven exception:
-        * enabled ONLY when `attachments` is present; byte-identical to
-        * today (same disabled button, same title, no file input in the DOM
-        * at all) when it is absent. */}
+        * points. "Databron verbinden" stays disabled regardless of
+        * `attachments` (D5: OAuth data sources have no backend at all yet)
+        * — disabled with an explanatory title rather than removed, so the
+        * button honestly signals "coming soon" instead of silently doing
+        * nothing or pretending to work (principle c: never fake it).
+        * "Link toevoegen" (session 86, owner request) is clickable — it
+        * opens the inline URL row below, so the intended flow is visible
+        * for demos, but url_html ingest itself still has no backend (WP202b,
+        * not built): submitting shows the same honest "not yet" message
+        * rather than fetching anything. "Bestand uploaden" is the ADR 037
+        * D10 presence-driven exception: enabled ONLY when `attachments` is
+        * present; byte-identical to today (same disabled button, same
+        * title, no file input in the DOM at all) when it is absent. */}
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <button
           type="button"
-          disabled
-          title="Binnenkort beschikbaar: voeg een link naar een webpagina toe"
-          className="rounded-full border border-line-strong px-3 py-1 text-xs text-ink-muted disabled:cursor-not-allowed disabled:opacity-60"
+          onClick={() => setLinkRowOpen((open) => !open)}
+          aria-expanded={linkRowOpen}
+          className="rounded-full border border-line-strong px-3 py-1 text-xs text-ink-soft hover:bg-paper-sunken"
         >
           Link toevoegen
         </button>
@@ -1054,6 +1075,35 @@ export function Chat({
           Databron verbinden
         </button>
       </div>
+      {linkRowOpen ? (
+        <form
+          onSubmit={handleLinkSubmit}
+          className="mt-2 flex flex-wrap items-center gap-2"
+        >
+          <input
+            type="url"
+            value={linkUrl}
+            onChange={(e) => {
+              setLinkUrl(e.target.value);
+              setLinkComingSoon(false);
+            }}
+            placeholder="https://example.com/page-with-a-table"
+            className="min-w-0 flex-1 rounded-md border border-line-strong bg-paper-raised px-3 py-2 text-sm text-ink placeholder:text-ink-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+          />
+          <button
+            type="submit"
+            disabled={!linkUrl.trim()}
+            className="rounded-md border border-line-strong bg-paper-raised px-4 py-2 text-sm font-medium text-ink hover:bg-paper-sunken disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Fetch
+          </button>
+        </form>
+      ) : null}
+      {linkComingSoon ? (
+        <p className="mt-1 text-xs text-ink-muted">
+          This isn&apos;t available yet — coming soon.
+        </p>
+      ) : null}
       {attachments && uploadBusy ? (
         <p className="mt-1 text-xs text-ink-muted">Bestand wordt gelezen…</p>
       ) : null}

@@ -27,6 +27,9 @@ section — read that for the exact scope, not this summary.
 **v1 scope is deliberately smaller than the CBS chat, documented not silently cut**: no resumed-turn
 cost captions, no small multiples/table view/value labels/trend headline/CSV export on
 `UserChartView`, "Link toevoegen"/"Databron verbinden" stay disabled (their backends don't exist).
+**Session 86 update:** "Link toevoegen" is now clickable (a demo-only URL-input preview, owner
+request — see below); its backend (url_html ingest, WP202b) is still not built. "Databron
+verbinden" is unchanged.
 
 **Given a 3-way choice (continue into `VisualDock` / stop / skip to the flag+docs sweep), the
 owner chose to stop here (session 85).** Migrations 026/027 remain **FILE-ONLY**. Full backend

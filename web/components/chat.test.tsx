@@ -1611,10 +1611,9 @@ describe('Chat — #197 step 3 comparison chips on an answer (chip-carrier pendi
 });
 
 describe('Chat — attachment entry points (#201/#202, session 83 scoping; ADR 037 D10)', () => {
-  it('renders link/upload/data-source buttons as disabled, explanatory placeholders', () => {
+  it('renders upload/data-source buttons as disabled, explanatory placeholders; "Link toevoegen" is clickable', () => {
     render(<Chat />);
     for (const [name, hint] of [
-      ['Link toevoegen', 'link naar een webpagina'],
       ['Bestand uploaden', 'upload een bestand'],
       ['Databron verbinden', 'verbind een databron'],
     ] as const) {
@@ -1622,6 +1621,9 @@ describe('Chat — attachment entry points (#201/#202, session 83 scoping; ADR 0
       expect(button).toBeDisabled();
       expect(button).toHaveAttribute('title', expect.stringContaining(hint));
     }
+    const linkButton = screen.getByRole('button', { name: 'Link toevoegen' });
+    expect(linkButton).not.toBeDisabled();
+    expect(linkButton).not.toHaveAttribute('title');
   });
 
   // D10 fix #1: EXACT-value comparison, not a weaker toBeDisabled()-only
@@ -1678,10 +1680,46 @@ describe('Chat — attachment entry points (#201/#202, session 83 scoping; ADR 0
     expect(await screen.findByText('This file is too large.')).toBeInTheDocument();
   });
 
-  it('"Link toevoegen" and "Databron verbinden" stay disabled even when attachments is present', () => {
+  it('"Databron verbinden" stays disabled even when attachments is present; "Link toevoegen" stays clickable', () => {
     const onUploadFile = vi.fn();
     render(<Chat attachments={{ enabled: true, onUploadFile }} />);
-    expect(screen.getByRole('button', { name: 'Link toevoegen' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Databron verbinden' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Link toevoegen' })).not.toBeDisabled();
+  });
+});
+
+describe('Chat — "Link toevoegen" preview row (session 86, no backend yet)', () => {
+  it('is closed by default, with no URL input in the tree', () => {
+    render(<Chat />);
+    expect(screen.queryByPlaceholderText('https://example.com/page-with-a-table')).not.toBeInTheDocument();
+  });
+
+  it('opens the URL row on click and closes it again on a second click', () => {
+    render(<Chat />);
+    const button = screen.getByRole('button', { name: 'Link toevoegen' });
+    fireEvent.click(button);
+    expect(screen.getByPlaceholderText('https://example.com/page-with-a-table')).toBeInTheDocument();
+    fireEvent.click(button);
+    expect(screen.queryByPlaceholderText('https://example.com/page-with-a-table')).not.toBeInTheDocument();
+  });
+
+  it('the Fetch button stays disabled until a URL is typed', () => {
+    render(<Chat />);
+    fireEvent.click(screen.getByRole('button', { name: 'Link toevoegen' }));
+    expect(screen.getByRole('button', { name: 'Fetch' })).toBeDisabled();
+    fireEvent.change(screen.getByPlaceholderText('https://example.com/page-with-a-table'), {
+      target: { value: 'https://example.com/tabel' },
+    });
+    expect(screen.getByRole('button', { name: 'Fetch' })).not.toBeDisabled();
+  });
+
+  it('submitting shows an honest "not yet available" message and never calls any network/backend function', () => {
+    render(<Chat />);
+    fireEvent.click(screen.getByRole('button', { name: 'Link toevoegen' }));
+    fireEvent.change(screen.getByPlaceholderText('https://example.com/page-with-a-table'), {
+      target: { value: 'https://example.com/tabel' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Fetch' }));
+    expect(screen.getByText("This isn't available yet — coming soon.")).toBeInTheDocument();
   });
 });
