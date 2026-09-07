@@ -9,92 +9,46 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
-**▶ SESSION 84 (2026-09-06, owner present throughout) — "chat with your data" (#201/#202) went from a
-casual "what's Vercel's chat SDK" question to a fully designed, adversarially reviewed, 5-slice-built
-backend for the attachments feature (ADR 037/WP202a), plus a cross-cutting product-copy decision
-(#206: English, not Dutch) and coordination with a parallel rebrand-planning session.** Full session
-entry: [status-archive.md](status-archive.md).
+**▶ SESSION 85 (2026-09-06 into 2026-09-07, owner present throughout, continuing session 84) —
+WP202a's backend finished, then its ENTIRE UI slice built and wired end to end: chat-with-your-data
+now works fully, still dormant (no `ATTACHMENTS_ENABLED` flag).** Full session entry:
+[status-archive.md](status-archive.md).
 
-**WP202a backend is fully built and tested; nothing is live.** 5 session-84 commits
-(`1e090c3`→`01840ee`→`ce5dd5f`→`d60edb7`→`fd3df3b`), each its own full verification block +
-`/code-review` LOW pass (real bugs caught and fixed in every single slice — see
-[08-build-plan.md](08-build-plan.md)'s WP202a section for the per-slice detail). Covers: the H1
-closed-vocabulary engine (parse→validate→execute→chart, the LLM can only pick from a supplied
-allowlist, never emit a value), DB persistence + the R8-analog audit trail + full GDPR self-service/
-purge, credit-ledger billing wiring, the Haiku instruct-prompt harness, and the turn orchestration
-tying all of it together. **Session 85 (still in progress) added `reconstructDatasetTurn` +
-`redactedTurnIntegrityReport`** (`src/attachments/reconstruct.ts`) + `getDatasetTurnById`
-(`read.ts`) + `scripts/verify-dataset-turns.ts` (`npm run attachments:verify`) — the R8/D9
-reconstruction check, mirroring the CBS side's own `reconstructionReport`/`verify-audit-rows.ts`.
-One real bug found+fixed while writing its tests (not in review): the module's local
-`stableStringify` didn't special-case `Date` — pg/PGlite hand back a live `Date` for `timestamptz`
-columns despite `UserDataset.createdAt` being typed `string`, so every chart turn's reconstruction
-falsely failed until fixed. Full backend suite green (2057/2057), `/code-review` LOW: 0 findings.
-**Session 85 also built the Server Actions** (`web/app/dataset-actions.ts`: `ingestFile`,
-`decideDatasetFormat`, `askDataset`, `deleteMyDataset`) — considerably more than the build-plan's
-"one line" framing implied: CSV/TSV-only ingest, per-user quota checks, a new
-`resolveAmbiguousFormats` for D5's numeric-format decision, and a new eager dataset-thread
-creation path in `src/threads/index.ts` (`createDatasetThread` + `validateDatasetThreadOwnership`,
-which double-binds a turn's thread to both the caller and the specific dataset). Full backend
-suite green (2068/2068), full web suite green (638/638), both typechecks + a real `next build`
-clean, `/code-review` LOW: 0 findings on both of today's slices. Migrations 026+027 are
-**FILE-ONLY**, never applied — and nothing built today is wired into any route or UI yet.
-**Session 85 is now in the UI slice** — three increments done: (1) `ThreadSummary.kind`
-(`'cbs'|'dataset'`) + `listThreads`' dataset-title subselect + `ThreadSidebar`'s first-ever test
-file; (2) `chart.tsx`'s `PlottableSpec` type-only refactor (D11, zero runtime change) +
-`UserChartView`, its own first-ever test file (9 tests) — v1 deliberately smaller than
-`ChartView` (no small multiples/table view/value labels/trend headline/CSV export); (3) the full
-dataset-thread dispatch (`getDatasetTurnsByThread`, NEW `src/attachments/replay.ts`,
-`getThreadDatasetId`) + `loadMyThread` widened to a discriminated union + its first-ever test
-file + `DatasetChat` (`web/components/dataset-chat.tsx`, the turn loop + the D5 two-chip
-decision UI) + `Workspace`'s `Handoff` union mounting `DatasetChat`, with a mixed-thread-list
-test proving a CBS thread resumes byte-identically regardless of dataset threads sharing the
-sidebar (the explicit D10 invariant). **`/code-review` LOW caught a real correctness bug in
-increment 3**, not a nitpick: `DatasetChat` mounted with no `key` in `Workspace` meant switching
-between two dataset threads showed the wrong thread's stale messages — fixed with
-`key={threadId}` (verified: removed the fix, watched the regression test fail, restored it).
-Also fixed: an inert `generationRef` guard, and `getThreadDatasetId` hardened to bind `user_id`
-matching this module's own defense-in-depth convention. (4) Wired "Bestand uploaden" to
-`ingestFile`: `Chat` gains a presence-driven `attachments?: ChatAttachments` prop (the
-`websearch` pattern, its own local busy/error state) and `Workspace` gains `handleUploadFile`
-(switches the handoff straight to the new dataset thread on success, no `loadMyThread` round
-trip needed). **`/code-review` LOW caught one more real bug**: the handoff used the client's raw
-`File.name` instead of the server-persisted (trimmed/capped) `display_name` `ingestFile`
-actually stored — fixed by adding `displayName` to `IngestOutcome`'s `ok` variant. Full backend
-suite green (2087/2087 — one earlier parallel run hit 3 PGlite resource-contention flakes, a
-documented pre-existing issue; a clean re-run confirmed 0 real failures), full web suite green
-(682/682), both typechecks + a real `next build` clean. Full detail in
-[08-build-plan.md](08-build-plan.md)'s WP202a section. Still needed: `VisualDock`'s `userChart`
-branch, the `ATTACHMENTS_ENABLED` flag (`Chat`/`Workspace` already built+tested against its
-presence — flipping it + threading it through `page.tsx` is the remaining step), fixtures, and
-the docs §7 sweep — see the build-plan entry for the exact list. Design doc + the full 7-lens
-adversarial review: [session-briefs/2026-09-06-chat-with-data-design.md](session-briefs/2026-09-06-chat-with-data-design.md).
+**Chat-with-your-data (#201/#202, ADR 037/WP202a) is feature-complete, not yet live.** 6 commits
+today (`6a3f697`→`5593f3d`→`90c63c0`→`d35c87c`→`52d5fc9`→`49376b0`), each its own full
+verification block (typecheck + full backend suite + full web suite + a real `next build`) +
+`/code-review` LOW pass — **3 real bugs caught and fixed, none by pre-existing tests**: a bound-
+SQL-parameter type-inference miss (`uuid = text`), `DatasetChat` reusing stale state across a
+thread switch (missing `key={threadId}`, verified by reverting the fix and watching the
+regression test fail), and the upload UI showing the client's raw filename instead of the
+server-persisted one. Full per-commit detail: [08-build-plan.md](08-build-plan.md)'s WP202a
+section — read that for the exact scope, not this summary.
 
-**✅ #206 — product copy/UI text is now English, not Dutch (owner override, in-chat: "override, we
-are english now").** Applied same-session to CLAUDE.md's Conventions, [03-mvp-scope.md](03-mvp-scope.md),
-[12-huisstijl.md](12-huisstijl.md), and ADR 037's own already-decided (then superseded) Dutch copy.
-Scope as understood (owner has not itemized it further): new product-copy/UI-text surfaces going
-forward — does NOT touch the CBS chat/answer pipeline's own Dutch output or benchmark task phrasing,
-neither of which came up in this exchange. Full detail: [open-questions #206](open-questions.md).
+**v1 scope is deliberately smaller than the CBS chat, documented not silently cut**: no dock
+support for user charts (`VisualDock`'s `userChart` branch is unbuilt — charts render inline
+only), no resumed-turn cost captions, no small multiples/table view/value labels/trend
+headline/CSV export on `UserChartView`, "Link toevoegen"/"Databron verbinden" stay disabled
+(their backends don't exist).
 
-**Coordinated with a parallel "Rebrand to 'Your data visualized'" session** (the owner's other,
-concurrent chat) via cross-session messages — their tagline decision (#7), trust-claim scoping
-(#207), and one unresolved item needing the owner directly (#208: an example gallery page under a
-different account, `stefan@social.plus`, not found on production, no URL given before that session
-ended) are all logged in [open-questions.md](open-questions.md).
+**Given a 3-way choice (continue into `VisualDock` / stop / skip to the flag+docs sweep), the
+owner chose to stop here.** Migrations 026/027 remain **FILE-ONLY**. Full backend suite green
+(2087/2087), full web suite green (682/682), CI `gate` green on all 6 commits (`deploy` failing
+on all of them on the same pre-existing Route B secrets gap, [#132](open-questions.md)).
+
+**✅ #206 — product copy/UI text is English, not Dutch (owner override, session 84)** — every new
+string session 85 wrote (buttons, badges, error messages) followed this convention throughout;
+still does not touch the CBS chat/answer pipeline's own Dutch output or benchmark task phrasing.
 
 **Untouched, no owner input given specifically:** the 3 `gh secret set` commands (owner's own
-terminal, still blocking only `deploy` — unrelated to this session's work, confirmed still the same
-gap on every one of this session's 5 CI runs), WP30c, #197's older follow-ups, #205 (a possible
-future subscription tier, explicitly parked), #208 (needs the owner's URL/path).
+terminal, still blocking only `deploy`), WP30c, #197's older follow-ups, #205 (a possible future
+subscription tier, explicitly parked), #208 (needs the owner's URL/path).
 
-**▶ NEXT, in order:** (a) continue WP202a — `reconstructDatasetTurn` and the Server Actions are
-both done (session 85); next is the UI (`DatasetChat`/`UserChartView`, wiring the two buttons
-already shipped in `chat.tsx`, `Workspace`/`ThreadSidebar`/`VisualDock` changes per D10), then the
-`ATTACHMENTS_ENABLED` flag + fixtures + docs sweep, THEN the owner-supervised migration apply +
-go-live — see [08-build-plan.md](08-build-plan.md)'s WP202a section for the exact remaining list;
-(b) the 3 `gh secret set` commands for Route B; (c) WP30c + #197's older follow-ups —
-owner-menu, no rush.
+**▶ NEXT, in order:** (a) WP202a's remaining scope — `VisualDock`'s `userChart` branch, the
+`ATTACHMENTS_ENABLED` flag (`Chat`/`Workspace` already built+tested against its presence —
+flipping it + threading it through `page.tsx` is the remaining step), fixtures, the docs §7
+sweep, THEN the owner-supervised migration apply + go-live — see
+[08-build-plan.md](08-build-plan.md)'s WP202a section for the exact list; (b) the 3
+`gh secret set` commands for Route B; (c) WP30c + #197's older follow-ups — owner-menu, no rush.
 
 
 **(Historical — the pause, 2026-08-15 to 2026-08-26.)** Project was paused ~2 months (owner decision) and the

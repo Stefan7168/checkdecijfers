@@ -6,6 +6,68 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 85 — 2026-09-06/07, owner present — WP202a backend finished + the UI slice built (6 code commits)
+
+Full narrative: [status-archive.md](status-archive.md) session-85 entry.
+
+- **A bound parameter used MULTIPLE times in one SQL statement gets ONE inferred type for the
+  whole statement — a bare `col = $1` fails if `$1` is also cast/compared elsewhere in the same
+  query against a different column type, even though the SAME bare form works fine as a
+  standalone query.** `listThreads`' new dataset-title subselect added `ud.user_id = $1` (no
+  cast) to a query where `$1` was ALSO already bound to `audit_answers.user_id` (`text`) and
+  explicitly cast `$1::uuid` for `chat_threads.user_id` — Postgres resolved `$1`'s type from the
+  dominant/earlier usage, so the bare `user_datasets.user_id` (`uuid`) comparison failed with
+  `operator does not exist: uuid = text`. The general form of this bug already bit this project
+  once before (session 84 recorded a similar single-query cast miss); this session's addition is
+  the multi-usage-per-parameter-number nuance — `getDatasetTurnsByThread`'s own bare
+  `t.user_id = $2` in a DIFFERENT query worked fine with no cast, because `$2` there is used
+  EXACTLY ONCE. The rule: a parameter needs an explicit cast whenever the SAME parameter number
+  is compared against more than one differently-typed column in the same statement — not
+  whenever it's compared against a `uuid` column at all. Caught by the test suite in both
+  directions (a passing test for the safe case, a failing one for the unsafe case) — never by
+  typecheck, since bound SQL parameters are opaque to TypeScript.
+- **React reuses a component instance across two logically different resources unless something
+  keys them apart — `useState(initialProp)` silently ignores a LATER prop change from the SAME
+  render position, which reads as "it works" until the specific reuse case is tested.**
+  `DatasetChat` mounted with no `key` in `Workspace`; switching between two dataset threads kept
+  `handoff.kind === 'dataset'` true on both renders, so React updated the SAME instance rather
+  than remounting — and `useState(initialMessages)` etc. only ever reads its argument on first
+  mount, so the second thread silently showed the first thread's stale messages. Every existing
+  test (including this session's own new ones, until a dedicated mixed-thread-list test was
+  written) passed anyway, because none of them switched between two dataset threads in one
+  render tree. The general lesson: a component seeded from `initial*` props needs either (a) an
+  explicit reset effect keyed on something that changes per logical resource (`chat.tsx`'s own
+  `loadNonce` pattern, kept because it has other state worth preserving across a switch) or (b) a
+  `key` prop forcing a full remount (simpler, and the right choice here since `DatasetChat` has
+  no cross-thread state worth preserving) — and the ONLY way to catch a missing one is a test that
+  actually performs the switch, not a test that renders each state in isolation. Verified the fix
+  is real, not vacuous, by temporarily reverting it, watching the new regression test fail, then
+  restoring it — worth doing explicitly for this whole class of bug, since a wrongly-passing "fix
+  verification" test is exactly as convincing as no test at all.
+- **Never launch a long-running background command with its own output piped through `tail -N`
+  — it discards everything needed to diagnose a failure, including which test file failed.**
+  Ran the ~10-minute full backend suite in the background as `npm test 2>&1 | tail -20`; when 3
+  tests failed, the saved output contained only the LAST 20 lines (a stack trace fragment + the
+  summary counts) with no test file name or assertion detail at all, wasting a full ~10-minute
+  re-run (redirected to a plain file this time) just to get a untruncated log — which then showed
+  the 3 failures were transient PGlite resource-contention flakes (the session-84 lesson above,
+  confirmed still true), not a real regression, but that couldn't be determined from the
+  truncated log alone. Redirect a background command's own output straight to a file
+  (`command > file.log 2>&1`) and read the file afterward; only pipe through `tail` for output
+  you're reading interactively in the same turn.
+- **A Server Action's returned "success" object should carry every value a caller might need to
+  DISPLAY, not make the caller re-derive one from its own (possibly different) input — client
+  input and server-persisted state can silently diverge the moment the server does ANY
+  normalization.** `ingestFile`'s `IngestOutcome` originally omitted the dataset's stored
+  `display_name`; the only caller (`Workspace.handleUploadFile`) filled the gap with the raw
+  client-side `File.name` instead — plausible-looking, and wrong the moment the two diverge
+  (`ingestFile` trims, caps at 200 chars, and falls back to `'bestand'` on an empty name before
+  persisting). Caught by `/code-review` LOW, not by any test, because no existing test happened
+  to pick a filename that would actually trigger the divergence. Fixed by adding the real stored
+  value to the action's return type — the general form of this project's existing "every
+  displayed string must trace to stored data" rule (R6), now confirmed to apply just as much to
+  new attachments-tier UI as it does to CBS answers.
+
 ## Session 84 — 2026-09-06, owner present — "chat with your data" designed, adversarially reviewed, and WP202a's backend built (5 slices)
 
 Full narrative: [status-archive.md](status-archive.md) session-84 entry.

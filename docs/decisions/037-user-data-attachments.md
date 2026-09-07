@@ -6,6 +6,14 @@ session. Full design detail, the 7-lens adversarial review, and every "Fixed in 
 live in [session-briefs/2026-09-06-chat-with-data-design.md](../session-briefs/2026-09-06-chat-with-data-design.md)
 — this ADR records the accepted decision; that doc is the executor brief.
 
+**As-built (session 85, 2026-09-06/07):** the backend (session 84) and the ENTIRE UI (session 85 —
+thread-kind dispatch, `UserChartView`, `DatasetChat`, the upload button wired to `ingestFile`) are
+now built, tested, and pushed to `main`; chat-with-your-data works end to end. Still NOT live:
+`VisualDock`'s dock branch for user charts (v1 renders them inline only, a documented scope cut),
+the `ATTACHMENTS_ENABLED` flag, fixtures, and migrations 026/027 remain file-only pending the
+owner-supervised apply. Exact remaining list: [docs/08-build-plan.md](../08-build-plan.md)'s
+WP202a section.
+
 ## Context
 
 Open-questions [#201](../open-questions.md) (Google Sheets as a data source) and

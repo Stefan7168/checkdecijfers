@@ -1,5 +1,77 @@
 # STATUS archive — the session log
 
+**Session 85 (2026-09-06 into 2026-09-07, owner present throughout, a continuation of session 84) —
+WP202a's BACKEND FINISHED, THEN ITS ENTIRE UI SLICE BUILT AND WIRED END TO END: CHAT-WITH-YOUR-DATA NOW
+WORKS FULLY, STILL DORMANT (NO `ATTACHMENTS_ENABLED` FLAG YET).**
+
+1. **Picked up where session 84 left off** — the owner said "continue WP202a," then later specifically
+   "with the DatasetChat/UserChartView UI slice." Two backend pieces were still missing before any UI
+   could be meaningful: `reconstructDatasetTurn` (the R8/D9 reconstruction analog) and the Server
+   Actions layer — built first, each its own commit with the session-84 discipline (full backend suite +
+   typecheck + `/code-review` LOW before push).
+2. **`reconstructDatasetTurn`/`redactedTurnIntegrityReport`** (`6a3f697`) — mirrors
+   `src/answer/audit/reconstruct.ts`'s shape, adapted for the one structural difference this tier has:
+   a `UserChartSpec`'s source cells live in a SEPARATE `user_datasets` row, not embedded in the turn
+   itself, so reconstruction takes the current dataset row as an explicit second argument. **A real bug
+   found while writing this slice's own tests, not by review**: the module's local `stableStringify`
+   (duplicated per ADR 001's module boundary) didn't special-case `Date` — pg/PGlite hand back a live
+   `Date` for `timestamptz` columns despite `UserDataset.createdAt` being typed `string`, so every chart
+   turn's reconstruction falsely failed until fixed.
+3. **The Server Actions** (`5593f3d`) — `ingestFile`/`decideDatasetFormat`/`askDataset`/`deleteMyDataset`
+   (`web/app/dataset-actions.ts`), considerably more than the build-plan's own "one line" framing
+   implied: CSV/TSV-only ingest (extension-sniffed — XLSX/HTML/PDF have no parser at all), per-user
+   quota checks, a new `resolveAmbiguousFormats` for D5's numeric-format decision, and a new EAGER
+   dataset-thread creation path (`createDatasetThread`/`validateDatasetThreadOwnership`) alongside the
+   existing lazy CBS one.
+4. **The UI slice turned out to need real backend prerequisites first, not just components** — a
+   thorough research pass (an Explore-agent survey of chat.tsx/workspace.tsx/thread-sidebar/visual-dock/
+   chart.tsx) found `ThreadSummary` had no `kind` field, `loadMyThread` had no dataset-thread dispatch at
+   all, and `Workspace`'s `Handoff` was a single CBS-shaped type — all needed before `DatasetChat` could
+   be mounted. Built in dependency order, each its own verified+reviewed commit:
+   - `90c63c0` — `ThreadSummary.kind`, `listThreads`' dataset-title subselect, `ThreadSidebar`'s
+     first-ever dedicated test file (a paperclip prefix for dataset threads). **Real bug caught by the
+     test suite**: the new subselect's bare `ud.user_id = $1` failed with `uuid = text` because `$1` was
+     ALSO used elsewhere in the same query against a `text` column — Postgres infers one type per
+     parameter number per statement, not per occurrence.
+   - `d35c87c` — `chart.tsx`'s `PlottableSpec` type-only refactor (D11, zero runtime change — a real
+     `ChartSpec` already satisfies it structurally) + `UserChartView`, the H2-compliant chart renderer,
+     its own first-ever test file. **Two dead-code findings from `/code-review` LOW**, fixed before
+     commit: an unused `useId()`/`domId`, an unused direct `seriesStyle` import.
+   - `52d5fc9` — the full dataset-thread resume path (`getDatasetTurnsByThread`, new
+     `src/attachments/replay.ts`'s `replayDatasetTurns`/`lastChartState`, `getThreadDatasetId`),
+     `loadMyThread` widened to a discriminated union with its own first-ever test file, `DatasetChat`
+     (the turn loop, mirroring `chat.tsx`'s double-click guard and finally wiring the D5 two-chip
+     decision UI), and `Workspace`'s `Handoff` widened to mount `DatasetChat` instead of `Chat`, proven
+     byte-identical for CBS threads via a new mixed-thread-list test. **The most significant finding of
+     the session**: `DatasetChat` was mounted with no `key` in `Workspace`, so switching between two
+     dataset threads reused the same component instance and showed the wrong thread's stale messages
+     (`useState(initialMessages)` only reads its argument on first mount) — fixed with
+     `key={threadId}`, and the fix was verified by deliberately reverting it, watching the new
+     regression test fail, then restoring it. Also fixed: an inert `generationRef` guard, and
+     `getThreadDatasetId` hardened to bind `user_id` matching this module's own defense-in-depth rule.
+   - `49376b0` — wired "Bestand uploaden" to `ingestFile`: `chat.tsx` gains a presence-driven
+     `attachments?: ChatAttachments` prop (the `websearch` pattern) with its own LOCAL busy/error state
+     (explicitly not the main `busy`/`onBusyChange`, per D10's own fixed-in-review note), `Workspace`
+     gains `handleUploadFile`. **Another real bug from `/code-review` LOW**: the upload handoff used the
+     client's raw `File.name` instead of the server-persisted (trimmed/capped) `display_name`
+     `ingestFile` actually stored — fixed by returning the real value from the action.
+5. **v1 scope is deliberately smaller than the CBS chat, in named and documented ways**: no dock support
+   for user charts (`VisualDock`'s `userChart` branch is a separate, un-started increment — charts
+   always render inline), no resumed-turn cost captions (no ledger join built for dataset-turn replay),
+   no small multiples/table view/per-point value labels/trend headline/CSV export on `UserChartView`,
+   and "Link toevoegen"/"Databron verbinden" stay disabled (their backends don't exist at all).
+6. **Given a 3-way choice** (continue into `VisualDock` / stop here / skip straight to the
+   `ATTACHMENTS_ENABLED` flag + docs sweep) once the core feature worked end to end, **the owner chose
+   to stop.** Remaining before go-live, in order: `VisualDock`'s dock branch, the `ATTACHMENTS_ENABLED`
+   flag (`Chat`/`Workspace` already built and tested against its presence), fixtures, the docs §7 sweep,
+   then the owner-supervised migration apply (026/027 are still file-only).
+7. **Verified, not assumed, throughout**: full backend suite 2087/2087 on the final clean run (one
+   parallel run mid-session hit 3 PGlite resource-contention flakes, confirmed transient by an isolated
+   re-run — see `docs/lessons-learned.md`), full web suite 682/682, both typechecks + a real `next build`
+   clean on every commit, CI `gate` green on all 6 commits (`deploy` failing on all of them on the same
+   pre-existing Route B secrets gap, [#132](open-questions.md), confirmed via `gh run view --json jobs`
+   each time — never the top-level conclusion).
+
 **Session 84 (2026-09-06, owner present throughout, spanning a session-83 close-out then a fresh thread) —
 "CHAT WITH YOUR DATA" (#201/#202) DESIGNED, ADVERSARIALLY REVIEWED, AND ITS ENTIRE BACKEND BUILT ACROSS 5
 SLICES (ADR 037/WP202a); #206 — PRODUCT COPY/UI TEXT IS NOW ENGLISH (OWNER OVERRIDE); COORDINATED WITH A
