@@ -92,6 +92,40 @@ unconditionally uses its natural empty value.** If `CLARIFY_CLICK_ENABLED` is ev
 converting the clarification field to the unconditional shape is a deliberate migration, not a tidy-up — every
 stored clarification row from the flag-off era would then have a key its readers must still tolerate missing.
 
+## The second envelope: `DatasetTurnEnvelope` (ADR 037/WP202a)
+
+A structurally separate tier ([05-data-rules.md](05-data-rules.md)'s U-rows) gets its own stored
+envelope, `DatasetTurnEnvelope` ([src/attachments/types.ts](../src/attachments/types.ts)) — the
+R8 analog for a dataset-chat turn, stored verbatim in `dataset_turns.envelope`. Unlike
+`ComposedResponse`, it is a plain three-way discriminated union on `kind` (`'chart'` |
+`'clarification'` | `'refusal'`) with **no present-only (`?`) fields at all in this first release**:
+every field is either always-present within its kind, or required-nullable. That is a property of
+when it was designed (accepted and built in one shot, session 84/85 — no flag ever toggled mid-way
+through its history the way `regionDefaulted`/`slotPhrasing` did on the CBS side), not a different
+rule; the shapes below still apply to it, and any FUTURE field this tier's WP202b/c/d work adds
+must default to present-only for exactly the reason stated above (byte-identical old rows, no
+migration needed).
+
+| Field | Shape | Notes |
+|---|---|---|
+| `schemaVersion`, `kind`, `question`, `text` | Always present | On every kind. |
+| `chart`'s `instruction`, `chart`, `state` | Always present | Only exist on the `'chart'` kind — a discriminant, not an absence. |
+| `clarification`'s `instruction` | Required-nullable (`ChartInstruction \| null`) | `null` when the LLM call itself failed validation before producing any instruction to clarify against. |
+| `refusal`'s `guidance` | Required-nullable (`string \| null`) | Mirrors `RefusalResponse.guidance` on the CBS side — some refusal reasons have nothing further to suggest. |
+
+The redaction sentinel (`RedactedDatasetEnvelope`, D9/D13) is its own, much smaller shape —
+`{ schemaVersion, kind, question: REDACTED, text: REDACTED, redacted: true }` — mirroring
+`redactedResponse()`'s pattern one field renamed. A reader must check `'redacted' in envelope`
+FIRST, before touching any kind-specific field (the design doc's own review finding: this
+discipline has to be named at every new reader, not left implicit — `replayDatasetTurns`,
+`reconstructDatasetTurn`, `verify-dataset-turns.ts`, and the eventual `/geschiedenis` `UNION` all
+gate on it). **Verified against the code, not assumed:** as of this writing there is no dedicated
+`envelope-key-manifest.test.ts` analog for `DatasetTurnEnvelope` in
+[tests/attachments/](../tests/attachments/) — the manifest DISCIPLINE above (the `docs/13` rule)
+applies, but the mechanical enforcement that catches a drift automatically does not exist yet for
+this tier. Tracked at [open-questions #209](open-questions.md) as a gap to close before or shortly
+after WP202b/c/d's first optional field, mirroring the CBS side's own manifest test.
+
 ## What this does NOT govern
 
 Nothing here changes what R8 *checks*. A present-only field is not thereby exempt from reconstruction, and a

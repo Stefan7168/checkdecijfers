@@ -50,6 +50,54 @@ machinery instead — specs are built by the same `runQuery` → `buildChartSpec
 traceability handle, structurally in the spec), and render R4/R7/R11 through the same ChartView. If view-level audit for public
 surfaces is ever wanted, that is a new owner decision (flagged in ADR 035 D4).
 
+## User-supplied data — structurally outside R1–R11 (ADR 037/WP202a, "chat with your own data")
+
+**A second, structurally separate trust tier (ADR 032's shape, applied end to end — ADR 037 D1).**
+When a user uploads a file (CSV/TSV in v1) and asks questions about it, the answer runs through
+`src/attachments/`, never through the R1–R11 pipeline above: no CBS provenance, no `audit_answers`
+row, no benchmark exposure, and — the owner's hard constraint (H1) — the LLM only ever emits a
+closed, structured chart *instruction* (which columns, which filter, which chart kind); it never
+sees or emits a plotted value. Deterministic code (`execute.ts` + `buildUserChartSpec`) is the
+**only** producer of a value that reaches the user. **(H2)** a user-data chart must be
+structurally impossible to confuse with a CBS chart — a separate `UserChartSpec` type that cannot
+parse as `ChartSpec`, rendered by a separate component (`UserChartView`) with its own badge/border
+chrome and no CBS attribution. R1–R11 above are **untouched by construction**: zero attachments
+code in `intent/`/`compose/`/`clarify`/`followup`, zero prompt bytes, every CBS fixture and the
+14/14 + 6/6 + 0-fabricated benchmark gate replay unchanged.
+
+| U | Invariant | R analog | Verified by |
+|---|---|---|---|
+| **U1** | Every plotted value traces to one stored cell (`rowRef` = row index + column id). | R1 | Spec test: each point's `value` equals `parseNumber(cells[row][col])`; a swapped-row mutation test fails. |
+| **U2** | The instruction prompt receives only the `DatasetProfile` (headers, types, capped distincts/samples, ranges) + the previous *validated* instruction + the question — never full rows, never prior chat text. | R2 | Serialized-request pin: no cell beyond the profile's capped samples, no prior question text. |
+| **U3** | No LLM-emitted number or free text can reach a chart, the reply text, or any client-visible state: the instruction carries selectors only; reply text is a deterministic template; the server-only `reading`/`unsupported.detail` free-text fields never leave the server (the `ClientChartInstruction` projection has no prose fields). | R3 | Type-level (instruction has no value fields); a pin that envelope `text` is template output; digit-scan of templates against profile/instruction only. |
+| **U4** | Provenance + disclaimer are in the spec and always rendered; no CBS attribution/badge/license on a user chart. | R4 | Rendering test: badge + disclaimer present, `SourceBadge`/"CC BY" absent; export markup carries the disclaimer. |
+| **U5** | v1 computes nothing; any aggregation refuses with `unsupported.reason='aggregation'`; a future aggregation would be a registered function marked as a derivation, with source rowRefs. | R5 | Executor has no arithmetic path (test enumerates ops); refusal template pin. |
+| **U6** | `buildUserChartSpec` is the only producer; the renderer computes layout only; every visible numeric string is a spec string bound via `data-label-for`. | R6 | jsdom render: every numeric token appears in the spec; binding test. |
+| **U7** | An off-allowlist column/value, an out-of-range filter, low confidence, or `unsupported` → clarification/refusal with profile-derived options; never a best guess; one round. | R7 | Validator throw suite (mirrors `rerank-schema`'s tests). |
+| **U8** | A turn is written before shown; fails closed to an `internal` refusal + refund on a store failure; `chart`/`text` re-derive byte-identically from the stored instruction + cells; `instruction`/any extraction is recorded-not-rederived; a redacted row has its own sentinel-shape check. | R8 | Audit tests incl. tamper cases; a manifest test for the envelope keys (`docs/13`). |
+| **U9** | Axis/series labels are the file's own headers and cell texts, verbatim — no rewording. | R9 | Spec pins. |
+| **U10** | Units are never inferred; a header like "Omzet (x 1.000 euro)" is shown verbatim as the header, never parsed into a unit; the spec's `unit` field is always `null`. | R10 | Schema literal + render pin. |
+| **U11** | Empty/unparseable cells stay in the spec as `null` with a reason and render as gaps, never silently omitted; an ambiguous numeric format (`,`/`.` as decimal vs. thousands separator) blocks charting until the user picks one. | R11 | Parser/profile fixtures (delimiter/decimal-comma/thousands-dot ambiguity, BOM, quoted fields, blanks). |
+| **U12** | `user_datasets.cells`/`.profile` are immutable once `status` first becomes `'ready'`, except through the redaction transaction — no code path re-interprets an already-`ready` dataset's stored content in place. | R8 (reconstruction "from the row alone") | A mutation test asserting no code path updates `cells`/`profile` outside `ingest*`/redaction. |
+
+**Separation pins (the ADR 032 list, transposed):** user-data text/values never appear in any CBS
+prompt request (a serialized-prompt scan over the CBS harness with a dataset thread active), never
+in `audit_answers`, never in a `ChartSpec` (a `UserChartSpec` fails `chartSpecSchema`), never in a
+`ConversationContext`; a dataset thread's state never becomes a CBS turn's context and vice versa;
+the benchmark constructs no attachments machinery; a CBS URL is never ingested as user data.
+
+**Retention (ADR 037 D13, the same #14/#120 machinery, extended structurally):** `user_datasets`
+and `dataset_turns` are personal data — and an uploaded file may carry a **third party's** personal
+data (a journalist's spreadsheet of names) — so both tables are inside the redaction scope from
+their first commit. Self-service delete ("Verwijder mijn vraaggeschiedenis") redacts them in the
+SAME transaction as the CBS redaction above; a per-dataset "Verwijder dit bestand" delete is also
+in v1. Purge windows: the existing **2-year** account window for `cells`/`profile`/turns, and a
+separate, **shorter 90-day** window for the raw uploaded `file_bytes` only (bytes serve
+re-extraction/download, not the chart record itself — the same "retention without purpose"
+reasoning as the #181 anonymous-trial window above). As of this writing migrations 026/027 are
+**file-only**, so none of this runs against a real database yet — see [ADR 037](decisions/037-user-data-attachments.md)
+and [08-build-plan.md](08-build-plan.md)'s WP202a section for exact status.
+
 ## Failure behavior (confirmed principle: refuse, don't guess)
 
 | Condition | Behavior | Regression test |

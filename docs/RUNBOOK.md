@@ -752,6 +752,71 @@ alias; the deploy job's log of each run prints the SHA it shipped (`gh run view 
 the deployment built from the newest commit (the `vercel deploy` line in that run's deploy log). Habit that
 avoids it entirely: after a merge, let its run finish before pushing anything else.
 
+## WP202 eigen data (chat with your own data) — the supervised go-live (⏳ NOT YET RUN, added 2026-09-07, session 86)
+
+**Status when this section was written:** the entire feature (backend + UI) is built, tested, and
+merged on `main` — see [08-build-plan.md](08-build-plan.md)'s WP202a section for the full commit
+history. Migrations 026/027 are **file-only**, `ATTACHMENTS_ENABLED` does not exist as a Vercel env
+var, and `dataset_ingest`/`dataset_turn` have no price rows at all yet. **No steps below have been
+executed.** This section is written in advance, the WP135/WP26 way, so the actual go-live session
+has a checklist rather than a from-scratch design conversation.
+
+**No new secrets needed** (ADR 037 D14/§4): the LLM harness (`instruct/prompt.ts`) reuses the
+existing `ANTHROPIC_API_KEY` on the SAME model family already in production
+(`DATASET_INSTRUCT_MODEL = 'claude-haiku-4-5'`), file bytes live in the existing Postgres database
+as `bytea` (no object-storage credential), and there is no third-party API this feature calls.
+
+Steps, in order, owner present:
+
+1. **Decide the `dataset_turn` credit amount** (mechanism decided, §8 Q1 — "sized near the +10 web
+   add-on," exact number still open, [09-pricing.md](09-pricing.md)). Add it to
+   `src/billing/pricing-defaults.ts` alongside the existing rows; `dataset_ingest` needs **no**
+   price row at all for v1 — CSV/TSV ingest is free by the code SKIPPING the reserve call
+   entirely (D12), not a `0`-credit row (the schema's `credits > 0` CHECK forbids that).
+2. **Apply migrations 026 + 027** — `npm run db:migrate` (adds `user_datasets`, `dataset_turns`,
+   `chat_threads.dataset_id`, and widens `credit_transactions`' reason/delta-sign/request-id-scope
+   CHECK constraints to include `dataset_cost`). Additive only; run together in one invocation,
+   same as the 016+017 and 022+024+025 precedents above.
+3. **Run `npm run pricing:apply`** to sync the new `dataset_turn` price row into
+   `action_class_prices` (needed BEFORE the flag flip — `chargeAndRunDataset` will look up a price
+   row that must already exist for the first real turn to settle correctly).
+4. **Verify the guarded FKs exist on prod** (CI is structurally blind to these — the hermetic test
+   DB has no `auth` schema). Read-only:
+   `select conname from pg_constraint where conrelid in ('user_datasets'::regclass, 'dataset_turns'::regclass);`
+   — expect `user_datasets_user_id_fkey` and `dataset_turns_user_id_fkey` (plus each table's PK and
+   `dataset_turns`' FKs to `user_datasets`/`chat_threads`). Also confirm grants/RLS inherited
+   locked on both new tables: 0 anon/authenticated grants, RLS on, 0 policies (the migration-003
+   posture, same check as every prior new-table go-live above).
+5. **Set the flag** — in Vercel: add env var `ATTACHMENTS_ENABLED=1` (Production), then redeploy.
+   (Requires `WORKSPACE_ENABLED=1` to already be set — the attachments UI only exists inside the
+   `Workspace` component, not the older `Dashboard`.)
+6. **Live smoke test (real spend: one free CSV ingest + at least one real dataset-turn charge):**
+   (a) click "Bestand uploaden," pick a small real CSV → a NEW dataset thread appears in the
+   sidebar with a paperclip prefix, no charge on the balance chip; (b) ask a chartable question →
+   a chart renders inline (or docks at `lg`+ with a "Chart in panel →" chip — session 86) with the
+   "Your data · unverified" badge and the dashed border, balance drops by the `dataset_turn`
+   price; (c) ask a follow-up refinement ("maak er een staafdiagram van") → the SAME dataset
+   thread, a new chart; (d) switch to a different (or new) CBS thread and back — the CBS thread's
+   history is unaffected (the D10 invariant); (e) resume the dataset thread from a fresh page
+   load → the same messages replay with no LLM call. Verify read-only:
+   `select id, user_id, source_kind, status, created_at from user_datasets;` and
+   `select id, dataset_id, kind, chart_emitted, created_at from dataset_turns;` — one dataset row
+   per upload, one turn row per question, no orphans.
+7. **GDPR spot-check, on a THROWAWAY dataset only:** (a) "Verwijder dit bestand" on the test
+   dataset from step 6 → its thread disappears from the sidebar, `user_datasets.status` becomes
+   `'redacted'`; (b) confirm `npm run gdpr:purge` (dry-run, no `--apply`) does not error when it
+   scans the new tables — a real purge-window test needs 90 real days to elapse, not exercised
+   here.
+
+Rollback at any point: unset `ATTACHMENTS_ENABLED` and redeploy — the upload button goes back to
+its disabled placeholder, so no NEW dataset thread can be created. **Not a full rollback of
+already-created ones:** thread-kind dispatch (`listThreads`/`loadMyThread`) is unconditional, not
+gated by this flag at all — a dataset thread created before the rollback stays fully visible and
+resumable in the sidebar exactly as before, since `Workspace` mounts `DatasetChat` for it either
+way. A true full rollback (hiding existing dataset threads too) would need gating the dispatch
+itself, not built and not needed for a same-day flag-flip revert. Migrations 026/027 are harmless
+to leave applied either way.
+
 ## Resuming after a long pause (written 2026-08-15, at the ~2-month halt)
 
 **✅ RUN 2026-08-26 (session 62, autonomous) — ~11 days into the pause, not the full ~2 months, by owner

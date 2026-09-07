@@ -240,6 +240,10 @@ const CONTENT: Record<Lang, Content> = {
         title: 'Number-free phrasing',
         body: 'Filling the text around a figure through fixed placeholders instead of free text, so a fabricated number becomes impossible instead of caught after the fact.',
       },
+      {
+        title: 'Chat with your own data',
+        body: 'Upload a CSV/TSV file and ask questions about it — a separate, clearly-marked kind of chart from the official CBS ones, built end to end but not yet turned on.',
+      },
     ],
   },
   nl: {
@@ -421,6 +425,10 @@ const CONTENT: Record<Lang, Content> = {
       {
         title: 'Getalvrij verwoorden',
         body: 'De tekst rond een cijfer laten invullen via vaste plekhouders in plaats van vrije tekst, zodat een verzonnen getal onmogelijk wordt in plaats van achteraf betrapt.',
+      },
+      {
+        title: 'Chatten met je eigen data',
+        body: 'Upload een CSV/TSV-bestand en stel er vragen over — een apart, duidelijk gemarkeerd soort grafiek naast de officiële CBS-grafieken, helemaal gebouwd maar nog niet aangezet.',
       },
     ],
   },
