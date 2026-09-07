@@ -26,7 +26,7 @@ check-not-catch mirroring the `errorLogTableExists`/`trialTableExists` precedent
 functions fall back to the pre-ADR-037 CBS-only query when the migration hasn't run, and pick up
 real dataset behavior automatically once it does. **Verified live**: `GET /api/health` →
 `{"ok":true}`, all checks passing. Also this session: WP202a's docs §7 sweep (05-data-rules U-rows,
-09-pricing, 13-envelope-grammar, 04-architecture, 03-mvp-scope, 06-roadmap, RUNBOOK's WP202 go-live
+09-pricing, 13-envelope-presence-grammar, 04-architecture, 03-mvp-scope, 06-roadmap, RUNBOOK's WP202 go-live
 checklist), `VisualDock`'s `userChart` dock branch, `ATTACHMENTS_ENABLED` threaded through
 `page.tsx` (still unset in Vercel — WP202a itself is still not live), and a demo-only "Link
 toevoegen" URL-preview (owner request, no backend). Full session entry: [status-archive.md](status-archive.md).
