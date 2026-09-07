@@ -40,8 +40,9 @@ exactly like a CBS chart does, instead of always rendering inline. `DockVisual` 
 `userChart: UserChartSpec | null` field (zero behavior change to the CBS path, confirmed by the
 full pre-existing suite passing byte-identical), `deriveDatasetVisuals` is the `deriveVisuals`
 analog, and `DatasetChat` gained `dockMode`/`onVisualsChange`/`activeVisualId`/`onActivateVisual`
-props mirroring `Chat`'s own. 15 new tests, full web suite green (697/697). Full detail:
-[08-build-plan.md](08-build-plan.md)'s WP202a section.
+props mirroring `Chat`'s own. 15 new tests, full web suite green (697/697). Also threaded
+`ATTACHMENTS_ENABLED` through `page.tsx` (the `websearchEnabled` dormancy pattern, code-only —
+still **OFF in Vercel**). Full detail: [08-build-plan.md](08-build-plan.md)'s WP202a section.
 
 **✅ #206 — product copy/UI text is English, not Dutch (owner override, session 84)** — every new
 string session 85 wrote (buttons, badges, error messages) followed this convention throughout;
@@ -51,10 +52,9 @@ still does not touch the CBS chat/answer pipeline's own Dutch output or benchmar
 terminal, still blocking only `deploy`), WP30c, #197's older follow-ups, #205 (a possible future
 subscription tier, explicitly parked), #208 (needs the owner's URL/path).
 
-**▶ NEXT, in order:** (a) WP202a's remaining scope — the `ATTACHMENTS_ENABLED` flag
-(`Chat`/`Workspace` already built+tested against its presence — flipping it + threading it through
-`page.tsx` is the remaining step), fixtures, the docs §7 sweep, THEN the owner-supervised migration
-apply + go-live — see [08-build-plan.md](08-build-plan.md)'s WP202a section for the exact list;
+**▶ NEXT, in order:** (a) WP202a's remaining scope — fixtures (`tests/fixtures/llm/attachments/`),
+the docs §7 sweep, THEN the owner-supervised migration apply + the actual `ATTACHMENTS_ENABLED=1`
+flip + go-live — see [08-build-plan.md](08-build-plan.md)'s WP202a section for the exact list;
 (b) the 3 `gh secret set` commands for Route B; (c) WP30c + #197's older follow-ups — owner-menu,
 no rush.
 

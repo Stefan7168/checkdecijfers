@@ -567,13 +567,22 @@ in the same change). 15 new tests (`web/lib/dock-visuals.test.ts` — new file, 
 plus `visual-dock.test.tsx` and 4 new `dataset-chat.test.tsx` cases). Full backend suite green,
 full web suite green (697/697), both typechecks + a real `next build` clean.
 
+**`ATTACHMENTS_ENABLED` threaded through `page.tsx` (session 86):** the WP129/WP135 dormancy
+pattern, mirroring `websearchEnabled` exactly — `const attachmentsEnabled = process.env
+.ATTACHMENTS_ENABLED === '1'`, spread into `Workspace`'s `attachments` prop only inside the
+`WORKSPACE_ENABLED` branch (Dashboard has no dataset-chat integration at all, so it's irrelevant
+there). No price read needed (`dataset_turn`/`dataset_ingest` prices still aren't in
+`pricing-defaults.ts`, §8 Q1 unrelated to this). Still **OFF in Vercel** — this is code-only, zero
+behavior change until the owner sets the env var. Full backend suite green (2087/2087), full web
+suite green (697/697, unaffected — no new test needed at this layer, matching the existing
+`websearchEnabled`/`WORKSPACE_ENABLED` precedent of no page-level test file), both typechecks + a
+real `next build` clean, `/code-review` LOW: 0 findings.
+
 **Not yet built (WP202a's own remaining scope):**
-- `ATTACHMENTS_ENABLED` flag (the WP129/WP135 dormancy pattern — `Chat`/`Workspace` are already
-  built and tested against its presence, so flipping it is now the remaining step, alongside
-  threading it through `page.tsx`), fixtures (`tests/fixtures/llm/attachments/`,
-  `attachments:record`/`:eval`), the §7 docs sweep (`docs/05-data-rules.md`'s new U-row section,
-  `docs/09-pricing.md`, `docs/13`, `docs/04-architecture.md` capability rows,
-  `docs/03-mvp-scope.md`, `docs/06-roadmap.md`, RUNBOOK), then the owner-supervised migration
-  apply + go-live.
+- Fixtures (`tests/fixtures/llm/attachments/`, `attachments:record`/`:eval`), the §7 docs sweep
+  (`docs/05-data-rules.md`'s new U-row section, `docs/09-pricing.md`, `docs/13`,
+  `docs/04-architecture.md` capability rows, `docs/03-mvp-scope.md`, `docs/06-roadmap.md`, a new
+  RUNBOOK "WP202 eigen data" go-live section), then the owner-supervised migration apply + the
+  actual `ATTACHMENTS_ENABLED=1` flip + go-live.
 
 *When a WP completes: tick it in [STATUS.md](STATUS.md), record measured results, and — if a design decision here changed — update this file so it stays the plan of record.*

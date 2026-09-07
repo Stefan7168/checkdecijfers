@@ -58,6 +58,15 @@ export default async function Home({
   // and behaves byte-identically to today (deploy-order-safe).
   const websearchEnabled = process.env.WEBSEARCH_ENABLED === '1';
 
+  // ADR 037 D14/WP202a: the same dormancy pattern as `websearchEnabled` above
+  // — Workspace/Chat are already built and tested against `attachments`'
+  // presence, so this flag is the ONLY remaining step to reach it (no price
+  // read needed here: dataset_turn/dataset_ingest prices aren't in
+  // pricing-defaults.ts yet, §8 Q1 still open, unrelated to this flag).
+  // Dashboard has no dataset-chat integration at all, so this only ever
+  // matters inside the WORKSPACE_ENABLED branch below.
+  const attachmentsEnabled = process.env.ATTACHMENTS_ENABLED === '1';
+
   // WP135 (ADR 033 D7): dormant behind WORKSPACE_ENABLED (the WP129 pattern).
   // Flag ON → the chat workspace + site shell. Flag OFF → today's <Dashboard>,
   // rendered byte-identically below (no new props, no thread reads). The
@@ -84,6 +93,7 @@ export default async function Home({
         {...(websearchEnabled && wsWebAddonPrice !== null
           ? { websearch: { enabled: true as const, addonPrice: wsWebAddonPrice } }
           : {})}
+        {...(attachmentsEnabled ? { attachments: { enabled: true as const } } : {})}
       />
     );
   }
