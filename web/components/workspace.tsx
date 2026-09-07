@@ -10,22 +10,38 @@ import { useCallback, useRef, useState } from 'react';
 import { listMyThreads, loadMyThread } from '../app/actions.ts';
 import type { GatedResponse } from '../backend/billing/index.ts';
 import type { ConversationContext } from '../backend/answer/context/index.ts';
+import type { DatasetChatMessage } from '../backend/attachments/replay.ts';
+import type { RawDatasetState } from '../backend/attachments/respond.ts';
+import type { DatasetProfile, DatasetStatus } from '../backend/attachments/types.ts';
 import type { ThreadSummary } from '../backend/threads/index.ts';
 import type { ChatMessage } from '../lib/chat-message.ts';
 import type { DockVisual } from '../lib/dock-visuals.ts';
 import { useMediaQuery } from '../lib/use-media-query.ts';
 import { Chat } from './chat.tsx';
+import { DatasetChat } from './dataset-chat.tsx';
 import { SiteHeader } from './site-header.tsx';
 import { ThreadSidebar } from './thread-sidebar.tsx';
 import { VisualDock } from './visual-dock.tsx';
 
-interface Handoff {
-  messages: ChatMessage[];
-  context: ConversationContext | null;
-  threadId: number | null;
-}
+// ADR 037 D10: a discriminated union, not a bypass — mounting DatasetChat
+// instead of Chat needs a handoff shaped for whichever kind is active. The
+// CBS variant's fields are unchanged from before this union existed; a CBS
+// thread selected/created/resumed through Workspace while dataset threads
+// also exist in the sidebar is an explicit invariant (workspace.test.tsx).
+type Handoff =
+  | { kind: 'cbs'; messages: ChatMessage[]; context: ConversationContext | null; threadId: number | null }
+  | {
+      kind: 'dataset';
+      threadId: number;
+      datasetId: number;
+      displayName: string;
+      status: DatasetStatus;
+      profile: DatasetProfile;
+      messages: DatasetChatMessage[];
+      rawState: RawDatasetState | null;
+    };
 
-const EMPTY_HANDOFF: Handoff = { messages: [], context: null, threadId: null };
+const EMPTY_HANDOFF: Handoff = { kind: 'cbs', messages: [], context: null, threadId: null };
 
 export function Workspace({
   initialBalance,
@@ -114,12 +130,25 @@ export function Workspace({
   const selectThread = useCallback(
     async (threadId: number) => {
       const loaded = await loadMyThread(threadId);
-      if (loaded.threadId === null) {
+      if (loaded.kind === 'empty') {
         void refreshThreads();
         return;
       }
       setActiveThreadId(loaded.threadId);
-      setHandoff({ messages: loaded.messages, context: loaded.context, threadId: loaded.threadId });
+      setHandoff(
+        loaded.kind === 'dataset'
+          ? {
+              kind: 'dataset',
+              threadId: loaded.threadId,
+              datasetId: loaded.datasetId,
+              displayName: loaded.displayName,
+              status: loaded.status,
+              profile: loaded.profile,
+              messages: loaded.messages,
+              rawState: loaded.rawState,
+            }
+          : { kind: 'cbs', messages: loaded.messages, context: loaded.context, threadId: loaded.threadId },
+      );
       setVisuals([]);
       setActiveVisualId(null);
       prevVisualCount.current = 0;
@@ -189,25 +218,53 @@ export function Workspace({
         </div>
 
         <div className="min-w-0 flex-1 p-4">
-          <Chat
-            onOutcome={handleOutcome}
-            pricing={{
-              simple: simplePrice,
-              clarification: clarificationPrice,
-              balance,
-              ...(websearch ? { websearch } : {}),
-            }}
-            dockMode={isWide}
-            initialMessages={handoff.messages}
-            initialContext={handoff.context}
-            threadId={handoff.threadId}
-            loadNonce={loadNonce}
-            onThreadId={handleThreadId}
-            onVisualsChange={handleVisualsChange}
-            activeVisualId={activeVisualId}
-            onActivateVisual={activateVisual}
-            onBusyChange={setChatBusy}
-          />
+          {handoff.kind === 'dataset' ? (
+            // ADR 037 D10: v1 scope note (dataset-chat.tsx's own header) — no
+            // dock support yet, so no onVisualsChange/activeVisualId wiring
+            // here; a dataset thread's charts always render inline.
+            <DatasetChat
+              // React reuses the SAME DatasetChat instance across two dataset
+              // threads (same element type, same tree position) unless keyed
+              // apart — without this, switching from one dataset thread to
+              // another would silently keep showing the FIRST thread's
+              // messages/profile, since useState(initialMessages) etc. only
+              // ever reads its argument on the instance's first mount. Chat
+              // solves the analogous problem with a loadNonce-driven reset
+              // effect (it has state worth preserving across a switch,
+              // e.g. selectedSources/webSelected); DatasetChat has none, so a
+              // full remount is the simpler, equally correct fix here.
+              key={handoff.threadId}
+              datasetId={handoff.datasetId}
+              threadId={handoff.threadId}
+              displayName={handoff.displayName}
+              initialStatus={handoff.status}
+              initialProfile={handoff.profile}
+              initialMessages={handoff.messages}
+              initialRawState={handoff.rawState}
+              onThreadId={handleThreadId}
+              onBusyChange={setChatBusy}
+            />
+          ) : (
+            <Chat
+              onOutcome={handleOutcome}
+              pricing={{
+                simple: simplePrice,
+                clarification: clarificationPrice,
+                balance,
+                ...(websearch ? { websearch } : {}),
+              }}
+              dockMode={isWide}
+              initialMessages={handoff.messages}
+              initialContext={handoff.context}
+              threadId={handoff.threadId}
+              loadNonce={loadNonce}
+              onThreadId={handleThreadId}
+              onVisualsChange={handleVisualsChange}
+              activeVisualId={activeVisualId}
+              onActivateVisual={activateVisual}
+              onBusyChange={setChatBusy}
+            />
+          )}
         </div>
 
         {showDock ? (

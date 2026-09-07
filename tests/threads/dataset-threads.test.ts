@@ -4,7 +4,7 @@
 // thread must belong to the caller AND be paired with THIS dataset).
 import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-import { createDatasetThread, validateDatasetThreadOwnership } from '../../src/threads/index.ts';
+import { createDatasetThread, getThreadDatasetId, validateDatasetThreadOwnership } from '../../src/threads/index.ts';
 import { insertDataset } from '../../src/attachments/store.ts';
 import type { DatasetProfile } from '../../src/attachments/types.ts';
 import type { Db } from '../../src/db/types.ts';
@@ -99,6 +99,37 @@ describe('validateDatasetThreadOwnership', () => {
       const datasetId = await seedDataset(db, userId);
       expect(await validateDatasetThreadOwnership(db, userId, 'not-an-id', datasetId)).toBeNull();
       expect(await validateDatasetThreadOwnership(db, userId, -1, datasetId)).toBeNull();
+    });
+  });
+});
+
+describe('getThreadDatasetId — loadMyThread\'s dispatch point (ADR 037 D10)', () => {
+  it('returns the dataset id for a dataset thread', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      const datasetId = await seedDataset(db, userId);
+      const threadId = await createDatasetThread(db, userId, datasetId);
+      expect(await getThreadDatasetId(db, userId, threadId)).toBe(datasetId);
+    });
+  });
+
+  it('returns null for a CBS thread', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      const { rows } = await db.query('insert into chat_threads (user_id) values ($1::uuid) returning id', [
+        userId,
+      ]);
+      expect(await getThreadDatasetId(db, userId, Number(rows[0]!.id))).toBeNull();
+    });
+  });
+
+  it('CROSS-USER: returns null for a real dataset thread bound to a different user', async () => {
+    await withDb(async (db) => {
+      const owner = randomUUID();
+      const attacker = randomUUID();
+      const datasetId = await seedDataset(db, owner);
+      const threadId = await createDatasetThread(db, owner, datasetId);
+      expect(await getThreadDatasetId(db, attacker, threadId)).toBeNull();
     });
   });
 });

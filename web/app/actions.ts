@@ -54,10 +54,19 @@ import type { OnboardedMeasure } from '../backend/answer/intent/prompt.ts';
 // ledger); replay + context rebuild are existing deterministic code (zero LLM).
 import {
   attachOrCreateThread,
+  getThreadDatasetId,
   getThreadRows,
   listThreads,
   validateThreadOwnership,
 } from '../backend/threads/index.ts';
+// ADR 037 D10: loadMyThread's dataset-thread dispatch leg — deterministic,
+// zero LLM, exactly like the CBS replay it sits beside.
+import { getDatasetTurnsByThread } from '../backend/attachments/read.ts';
+import { lastChartState, replayDatasetTurns } from '../backend/attachments/replay.ts';
+import type { DatasetChatMessage } from '../backend/attachments/replay.ts';
+import type { RawDatasetState } from '../backend/attachments/respond.ts';
+import { getDataset } from '../backend/attachments/store.ts';
+import type { DatasetProfile, DatasetStatus } from '../backend/attachments/types.ts';
 import type { ThreadSummary } from '../backend/threads/index.ts';
 import { rebuildContext, replayParts } from '../backend/threads/replay.ts';
 import { assembleMessages } from '../lib/replay-assemble.ts';
@@ -886,11 +895,53 @@ export async function listMyThreads(): Promise<ThreadSummary[]> {
 
 /** WP135 (ADR 033 D3): a resumed thread's replayed messages + its next-turn
  * conversation context. An empty result (never an error) for a thread not owned
- * by the caller. */
-export interface LoadedThread {
-  threadId: number | null;
-  messages: ChatMessage[];
-  context: ConversationContext | null;
+ * by the caller.
+ *
+ * ADR 037 D10: widened to a discriminated union so a dataset thread's
+ * resumption carries what IT needs (the profile for a still-`needs_decision`
+ * dataset, the D8-step-2 `rawState` referent for a `ready` one) rather than
+ * CBS-shaped fields that don't apply. `kind: 'empty'` replaces the old
+ * `threadId: null` sentinel — every existing CBS-thread caller already
+ * branches on the result shape (`Workspace.selectThread`), so this is the
+ * same "shared-code surgery, not a bypass" D10 itself calls for. */
+export type LoadedThread =
+  | { kind: 'empty' }
+  | { kind: 'cbs'; threadId: number; messages: ChatMessage[]; context: ConversationContext | null }
+  | {
+      kind: 'dataset';
+      threadId: number;
+      datasetId: number;
+      displayName: string;
+      status: DatasetStatus;
+      profile: DatasetProfile;
+      messages: DatasetChatMessage[];
+      rawState: RawDatasetState | null;
+    };
+
+const EMPTY_LOADED_THREAD: LoadedThread = { kind: 'empty' };
+
+/** The dataset-thread leg (ADR 037 D10): deterministic replay of the stored
+ * `dataset_turns` rows, zero LLM, mirroring the CBS leg's shape below. A
+ * dataset that no longer exists (the redact-not-delete posture means this
+ * should not happen for a validated thread, but `getDataset`'s ownership
+ * check is the authority, not an assumption) degrades to the empty result —
+ * same fail-safe posture as an unowned thread. */
+async function loadDatasetThread(userId: string, threadId: number, datasetId: number): Promise<LoadedThread> {
+  const dataset = await getDataset(getDb(), userId, datasetId);
+  if (dataset === null) return EMPTY_LOADED_THREAD;
+  const rows = await getDatasetTurnsByThread(getDb(), userId, threadId);
+  const messages = replayDatasetTurns(rows);
+  const state = lastChartState(rows);
+  return {
+    kind: 'dataset',
+    threadId,
+    datasetId,
+    displayName: dataset.displayName,
+    status: dataset.status,
+    profile: dataset.profile,
+    messages,
+    rawState: state === null ? null : { datasetId, lastInstruction: state.lastInstruction },
+  };
 }
 
 // Resume = deterministic replay of the thread's stored envelopes (zero LLM) +
@@ -901,20 +952,23 @@ export interface LoadedThread {
 // registry here (brief §3), so a stale referent degrades honestly on the next
 // turn rather than answering from a moved-on registry.
 export async function loadMyThread(rawThreadId: unknown): Promise<LoadedThread> {
-  const empty: LoadedThread = { threadId: null, messages: [], context: null };
   try {
     const userId = await currentUserId();
-    if (userId === null) return empty;
+    if (userId === null) return EMPTY_LOADED_THREAD;
     const threadId = await validateThreadOwnership(getDb(), userId, rawThreadId);
-    if (threadId === null) return empty;
+    if (threadId === null) return EMPTY_LOADED_THREAD;
+    // ADR 037 D10: dispatch BEFORE doing any CBS-shaped work — a dataset
+    // thread has no audit_answers rows to replay at all.
+    const datasetId = await getThreadDatasetId(getDb(), userId, threadId);
+    if (datasetId !== null) return loadDatasetThread(userId, threadId, datasetId);
     const rows = await getThreadRows(getDb(), userId, threadId);
     const messages = assembleMessages(replayParts(rows));
     const rebuilt = await rebuildContext(getDb(), rows);
     const context = await validateConversationContext(getDb(), rebuilt);
-    return { threadId, messages, context };
+    return { kind: 'cbs', threadId, messages, context };
   } catch (error) {
     console.error('loadMyThread failed:', error);
-    return empty;
+    return EMPTY_LOADED_THREAD;
   }
 }
 

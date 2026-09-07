@@ -57,3 +57,20 @@ export async function getDatasetTurnById(db: Db, id: number): Promise<DatasetTur
   const raw = rows[0]?.record as RawRow | undefined;
   return raw === undefined ? null : toRecord(raw);
 }
+
+/** ADR 037 D10: a dataset thread's turns for replay/resume — the
+ * ownership-checked counterpart to `getDatasetTurnById`'s unscoped ops
+ * reader. Scoped by BOTH `user_id` and `thread_id`, in stored order
+ * (created_at asc, id asc — same convention as `src/threads/index.ts`'s
+ * `getThreadRows`), so a caller (`web/app/actions.ts`'s `loadMyThread`) can
+ * hand the result straight to `replayDatasetTurns`. */
+export async function getDatasetTurnsByThread(db: Db, userId: string, threadId: number): Promise<DatasetTurnRecord[]> {
+  const { rows } = await db.query(
+    `select to_jsonb(t) as record
+     from dataset_turns t
+     where t.thread_id = $1 and t.user_id = $2
+     order by t.created_at asc, t.id asc`,
+    [threadId, userId],
+  );
+  return rows.map((row) => toRecord(row.record as RawRow));
+}

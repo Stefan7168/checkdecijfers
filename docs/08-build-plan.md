@@ -466,14 +466,60 @@ and an unused direct `seriesStyle` import (it's genuinely reused, just indirectl
 `buildRows`). Full backend suite green (2073/2073), full web suite green (653/653, post-fix), both
 typechecks + a real `next build` clean.
 
+**UI slice, third increment — the full dataset-thread dispatch + `DatasetChat` (D8/D10):**
+`getDatasetTurnsByThread` (`src/attachments/read.ts`) + `replayDatasetTurns`/`lastChartState`
+(NEW `src/attachments/replay.ts` — deliberately produces the FINAL `DatasetChatMessage` shape
+directly, unlike the CBS split in `src/threads/replay.ts`, since a `DatasetTurnEnvelope` already
+carries everything needed with no web-only builder stage required; redaction-checked FIRST,
+matching D9's explicit new-reader discipline) + `getThreadDatasetId` (`src/threads/index.ts`,
+`loadMyThread`'s dispatch point). `web/app/actions.ts`'s `LoadedThread` widened to a
+discriminated union (`'empty' | 'cbs' | 'dataset'`) and `loadMyThread` dispatches on
+`getThreadDatasetId` BEFORE doing any CBS-shaped work; its own first-ever dedicated test file
+(`actions-loadmythread.test.ts`, 7 tests — another design-doc-named gap). `web/components/
+dataset-chat.tsx` (`DatasetChat`) — the turn loop, mirroring `chat.tsx`'s double-click guard
+(one `crypto.randomUUID()` per submit, send disabled while in flight) and the D5 profile-card
+two-chip decision UI (finally wiring `ambiguousFormatClarificationText`/
+`AMBIGUOUS_FORMAT_OPTIONS`, dead code since the backend slice). `Workspace`'s `Handoff` widened
+to a discriminated union mounting `DatasetChat` instead of `Chat`; a new mixed-CBS-and-dataset
+thread-list test suite in `workspace.test.tsx` proves a CBS thread resumes byte-identically
+regardless of dataset threads sharing the sidebar (the explicit D10 invariant).
+
+v1 scope, deliberately smaller than `Chat` (documented, not silently cut): no dock support (
+`UserChartView` always renders inline — `VisualDock`'s `userChart` branch is its own,
+not-yet-built increment and not a dependency of `DatasetChat` at all), no resumed-turn cost
+captions (no ledger join built for dataset-turn replay — `dataset_turn`/`dataset_ingest` prices
+aren't even in `pricing-defaults.ts` yet).
+
+**Three real findings caught by `/code-review` LOW and fixed before commit — the most
+significant of this WP so far:**
+1. **A real correctness bug**, not a nitpick: `DatasetChat` was mounted with no `key` in
+   `Workspace`, so switching between two dataset threads reused the SAME component instance —
+   `useState(initialMessages)` etc. only reads its argument on first mount, so the SECOND
+   thread silently rendered the FIRST thread's stale messages. Fixed with `key={handoff.threadId}`
+   (a full remount is simpler and equally correct here — unlike `Chat`, `DatasetChat` has no
+   cross-thread state worth preserving via a `loadNonce`-style reset effect instead). A
+   regression test in `workspace.test.tsx` was verified to actually fail without the fix (removed
+   it, watched the test fail, restored it) before being counted as passing.
+2. `DatasetChat`'s `generationRef` stale-response guard was declared and read but never
+   incremented anywhere — inert, dead protection; removed (the `key` fix above makes an unmount
+   the real guard, since React discards a stale response against an unmounted instance).
+3. `getThreadDatasetId` took no `userId` parameter, unlike every other reader in
+   `src/threads/index.ts`, which re-binds `user_id` under an already-scoped join as deliberate
+   defense-in-depth even where a caller mistake is the only way it would ever matter. Hardened to
+   match (not exploitable today — the sole caller only ever passes an already-validated
+   `threadId` — but consistent with this module's own stated invariant).
+
+Full backend suite green (2087/2087 — one earlier parallel run hit 3 PGlite resource-contention
+flakes, a documented pre-existing class of issue; a clean re-run confirmed 0 real failures), full
+web suite green (673/673), both typechecks + a real `next build` clean.
+
 **Not yet built (WP202a's own remaining scope, in dependency order):**
-- **UI, the rest of it** — `chart.tsx`'s `PlottableSpec` type-only refactor (D11, zero runtime
-  change), `UserChartView`, `DatasetChat`, wiring the two disabled buttons already shipped in
-  `web/components/chat.tsx` (`01a4502`, session 84), the `Workspace` `Handoff` dispatch +
-  `loadMyThread`/`replayDatasetTurns` backend leg (D10, see above), `VisualDock`'s `userChart`
-  branch (its own first-ever dedicated test file, matching what `ThreadSidebar` just got) — with
-  the byte-identity pins the adversarial review called for throughout (exact-value comparison,
-  never a weak `queryByRole(...).toBeNull()`).
+- **UI, the rest of it** — wiring the two disabled buttons already shipped in
+  `web/components/chat.tsx` (`01a4502`, session 84) to `ingestFile` (the upload/link entry
+  points — nothing calls `ingestFile` from any UI yet), `VisualDock`'s `userChart` branch (its
+  own first-ever dedicated test file, matching what `ThreadSidebar` just got) — with the
+  byte-identity pins the adversarial review called for throughout (exact-value comparison, never
+  a weak `queryByRole(...).toBeNull()`).
 - `ATTACHMENTS_ENABLED` flag (the WP129/WP135 dormancy pattern), fixtures
   (`tests/fixtures/llm/attachments/`, `attachments:record`/`:eval`), the §7 docs sweep (
   `docs/05-data-rules.md`'s new U-row section, `docs/09-pricing.md`, `docs/13`,

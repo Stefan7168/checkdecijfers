@@ -4,17 +4,30 @@
 // control, and that the workspace fetches its thread list on mount.
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { LoadedThread } from '../app/actions.ts';
 
+// loadMyThread is typed explicitly against the real LoadedThread union
+// (the chat.test.tsx precedent, same reason: an untyped vi.fn()'s
+// mockResolvedValue argument is never checked against the real return type,
+// so a stale shape — e.g. the pre-ADR-037 `{ threadId, messages, context }`
+// — would pass typecheck AND this suite forever, even after LoadedThread
+// became a discriminated union with `kind`).
 const actions = vi.hoisted(() => ({
   askQuestion: vi.fn(),
   replyToClarification: vi.fn(),
   submitAnswerFeedback: vi.fn(),
   listMyThreads: vi.fn(),
-  loadMyThread: vi.fn(),
+  loadMyThread: vi.fn<() => Promise<LoadedThread>>(),
   signOut: vi.fn(),
   deleteMyQuestionHistory: vi.fn(),
 }));
 vi.mock('../app/actions.ts', () => actions);
+
+// ADR 037 D10: DatasetChat (mounted for a dataset-kind Handoff) imports its
+// own Server Action module — mocked here too so a mixed CBS/dataset thread
+// list can be exercised through Workspace without ever really calling out.
+const datasetActions = vi.hoisted(() => ({ askDataset: vi.fn(), decideDatasetFormat: vi.fn() }));
+vi.mock('../app/dataset-actions.ts', () => datasetActions);
 
 import type { ThreadSummary } from '../backend/threads/index.ts';
 import { Workspace } from './workspace.tsx';
@@ -34,7 +47,7 @@ const FOOTER_EXACT =
 
 beforeEach(() => {
   actions.listMyThreads.mockResolvedValue([]);
-  actions.loadMyThread.mockResolvedValue({ threadId: null, messages: [], context: null });
+  actions.loadMyThread.mockResolvedValue({ kind: 'empty' });
   // jsdom has no matchMedia — the dock's media query needs it (default: not wide).
   window.matchMedia = vi.fn().mockImplementation((query: string) => ({
     matches: false,
@@ -119,6 +132,83 @@ describe('Workspace — WP135 shell (flag on)', () => {
     renderWorkspace([{ id: 1, title: 'Inflatie 2024', lastActivityAt: new Date().toISOString(), kind: 'cbs' }]);
     expect(screen.getByRole('button', { name: 'Nieuwe chat' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Inflatie 2024' })).toBeInTheDocument();
+  });
+});
+
+describe('Workspace — mixed CBS + dataset thread list (ADR 037 D10 invariant)', () => {
+  const MIXED_THREADS: ThreadSummary[] = [
+    { id: 1, title: 'Inflatie 2024', lastActivityAt: new Date().toISOString(), kind: 'cbs' },
+    { id: 2, title: 'verkoop.csv', lastActivityAt: new Date().toISOString(), kind: 'dataset' },
+  ];
+
+  it('renders both kinds side by side, the dataset one prefixed', () => {
+    renderWorkspace(MIXED_THREADS);
+    expect(screen.getByRole('button', { name: 'Inflatie 2024' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /verkoop\.csv/ }).textContent).toBe('📎verkoop.csv');
+  });
+
+  // The explicit invariant D10 calls for: selecting a CBS thread through
+  // Workspace behaves IDENTICALLY whether or not dataset threads also exist
+  // in the same sidebar — real shared-code surgery (the Handoff union, the
+  // render branch), not a bypass that only happens to work when no dataset
+  // thread is around.
+  it('selecting a CBS thread mounts Chat, unaffected by dataset threads sharing the sidebar', async () => {
+    actions.loadMyThread.mockResolvedValue({ kind: 'cbs', threadId: 1, messages: [], context: null });
+    renderWorkspace(MIXED_THREADS);
+    fireEvent.click(screen.getByRole('button', { name: 'Inflatie 2024' }));
+    expect(await screen.findByPlaceholderText('Stel een vraag…')).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText('Ask about your data…')).not.toBeInTheDocument();
+  });
+
+  it('switching between two dataset threads resets DatasetChat to the NEW thread\'s messages (the key={threadId} remount)', async () => {
+    const DATASETS: ThreadSummary[] = [
+      { id: 2, title: 'verkoop.csv', lastActivityAt: new Date().toISOString(), kind: 'dataset' },
+      { id: 3, title: 'inkoop.csv', lastActivityAt: new Date().toISOString(), kind: 'dataset' },
+    ];
+    actions.loadMyThread
+      .mockResolvedValueOnce({
+        kind: 'dataset',
+        threadId: 2,
+        datasetId: 5,
+        displayName: 'verkoop.csv',
+        status: 'ready',
+        profile: { columns: [], rowCount: 0 },
+        messages: [{ role: 'user', text: 'omzet vorig jaar' }],
+        rawState: null,
+      })
+      .mockResolvedValueOnce({
+        kind: 'dataset',
+        threadId: 3,
+        datasetId: 6,
+        displayName: 'inkoop.csv',
+        status: 'ready',
+        profile: { columns: [], rowCount: 0 },
+        messages: [{ role: 'user', text: 'kosten vorig jaar' }],
+        rawState: null,
+      });
+    renderWorkspace(DATASETS);
+    fireEvent.click(screen.getByRole('button', { name: /verkoop\.csv/ }));
+    expect(await screen.findByText('omzet vorig jaar')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /inkoop\.csv/ }));
+    expect(await screen.findByText('kosten vorig jaar')).toBeInTheDocument();
+    expect(screen.queryByText('omzet vorig jaar')).not.toBeInTheDocument();
+  });
+
+  it('selecting a dataset thread mounts DatasetChat instead of Chat', async () => {
+    actions.loadMyThread.mockResolvedValue({
+      kind: 'dataset',
+      threadId: 2,
+      datasetId: 5,
+      displayName: 'verkoop.csv',
+      status: 'ready',
+      profile: { columns: [], rowCount: 0 },
+      messages: [],
+      rawState: null,
+    });
+    renderWorkspace(MIXED_THREADS);
+    fireEvent.click(screen.getByRole('button', { name: /verkoop\.csv/ }));
+    expect(await screen.findByPlaceholderText('Ask about your data…')).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText('Stel een vraag…')).not.toBeInTheDocument();
   });
 });
 

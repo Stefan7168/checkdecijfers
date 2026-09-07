@@ -39,17 +39,26 @@ which double-binds a turn's thread to both the caller and the specific dataset).
 suite green (2068/2068), full web suite green (638/638), both typechecks + a real `next build`
 clean, `/code-review` LOW: 0 findings on both of today's slices. Migrations 026+027 are
 **FILE-ONLY**, never applied — and nothing built today is wired into any route or UI yet.
-**Session 85 is now in the UI slice** — two increments done: (1) `ThreadSummary.kind`
-(`'cbs'|'dataset'`) + `listThreads`' dataset-title subselect (`src/threads/index.ts`) and
-`ThreadSidebar`'s first-ever dedicated test file (paperclip prefix, byte-identical CBS-thread
-pin); (2) `chart.tsx`'s `PlottableSpec` type-only refactor (D11, zero runtime change) +
-`UserChartView` (`web/components/user-chart.tsx`), its own first-ever test file (9 tests) —
-v1 deliberately smaller than `ChartView` (no small multiples/table view/value labels/trend
-headline/CSV export). Full backend suite green (2073/2073), full web suite green (653/653), both
-typechecks + a real `next build` clean, `/code-review` LOW: 2 real dead-code findings caught and
-fixed (an unused `useId()`, an unused `seriesStyle` import). Full detail in
-[08-build-plan.md](08-build-plan.md)'s WP202a section. Still needed: `DatasetChat`,
-`loadMyThread`'s dataset dispatch (+ `replayDatasetTurns`), `Workspace`'s `Handoff` union,
+**Session 85 is now in the UI slice** — three increments done: (1) `ThreadSummary.kind`
+(`'cbs'|'dataset'`) + `listThreads`' dataset-title subselect + `ThreadSidebar`'s first-ever test
+file; (2) `chart.tsx`'s `PlottableSpec` type-only refactor (D11, zero runtime change) +
+`UserChartView`, its own first-ever test file (9 tests) — v1 deliberately smaller than
+`ChartView` (no small multiples/table view/value labels/trend headline/CSV export); (3) the full
+dataset-thread dispatch (`getDatasetTurnsByThread`, NEW `src/attachments/replay.ts`,
+`getThreadDatasetId`) + `loadMyThread` widened to a discriminated union + its first-ever test
+file + `DatasetChat` (`web/components/dataset-chat.tsx`, the turn loop + the D5 two-chip
+decision UI) + `Workspace`'s `Handoff` union mounting `DatasetChat`, with a mixed-thread-list
+test proving a CBS thread resumes byte-identically regardless of dataset threads sharing the
+sidebar (the explicit D10 invariant). **`/code-review` LOW caught a real correctness bug in
+increment 3**, not a nitpick: `DatasetChat` mounted with no `key` in `Workspace` meant switching
+between two dataset threads showed the wrong thread's stale messages — fixed with
+`key={threadId}` (verified: removed the fix, watched the regression test fail, restored it).
+Also fixed: an inert `generationRef` guard, and `getThreadDatasetId` hardened to bind `user_id`
+matching this module's own defense-in-depth convention. Full backend suite green (2087/2087 —
+one earlier parallel run hit 3 PGlite resource-contention flakes, a documented pre-existing
+issue; a clean re-run confirmed 0 real failures), full web suite green (673/673), both
+typechecks + a real `next build` clean. Full detail in [08-build-plan.md](08-build-plan.md)'s
+WP202a section. Still needed: wiring `ingestFile` to the two disabled buttons in `chat.tsx`,
 `VisualDock`'s `userChart` branch, the `ATTACHMENTS_ENABLED` flag, fixtures, and the docs §7
 sweep — see the build-plan entry for the exact list. Design doc + the full 7-lens adversarial
 review: [session-briefs/2026-09-06-chat-with-data-design.md](session-briefs/2026-09-06-chat-with-data-design.md).

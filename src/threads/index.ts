@@ -190,6 +190,27 @@ export async function validateDatasetThreadOwnership(
   return rows.length === 0 ? null : threadId;
 }
 
+/** ADR 037 D10: `loadMyThread`'s (web/app/actions.ts) dispatch point — does
+ * this ALREADY-ownership-validated thread carry a dataset, or is it a CBS
+ * thread? Takes a validated `threadId` (from `validateThreadOwnership`), not
+ * a raw one — this function does no EXISTENCE check of its own, it only
+ * reads one column off a row the caller already proved is theirs. `userId`
+ * is re-bound anyway (this module's own defense-in-depth convention, applied
+ * even where a caller mistake is the only way it would ever matter — every
+ * other reader here does the same under an already-scoped join). Returns
+ * null for a CBS thread (`dataset_id` NULL) OR a threadId that doesn't
+ * actually belong to `userId`; never throws for a dataset that no longer
+ * exists — that is `getDataset`'s ownership check to make next, not this
+ * function's job. */
+export async function getThreadDatasetId(db: Db, userId: string, threadId: number): Promise<number | null> {
+  const { rows } = await db.query('select dataset_id from chat_threads where id = $1 and user_id = $2::uuid', [
+    threadId,
+    userId,
+  ]);
+  const value = (rows[0] as { dataset_id: number | string | null } | undefined)?.dataset_id ?? null;
+  return value === null ? null : Number(value);
+}
+
 /** The sidebar list: a user's threads, most-recent-activity first. A CBS
  * thread's title is the first NON-redacted audit row's question
  * (created_at asc, id asc); a dataset thread's title (ADR 037 D10) is its
