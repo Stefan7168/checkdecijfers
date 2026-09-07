@@ -16,6 +16,7 @@
 // user-data-vs-CBS distinction, not decoration.
 'use client';
 
+import { useEffect, useRef } from 'react';
 import type { DockVisual } from '../lib/dock-visuals.ts';
 import { cn } from '../lib/utils.ts';
 import { ChartView } from './chart.tsx';
@@ -31,9 +32,24 @@ export function VisualDock({
   activeVisualId: string | null;
   onSelect: (visualId: string) => void;
 }) {
-  if (visuals.length === 0) return null;
+  const activeTabRef = useRef<HTMLButtonElement>(null);
   const active =
-    visuals.find((visual) => visual.id === activeVisualId) ?? visuals[visuals.length - 1]!;
+    visuals.find((visual) => visual.id === activeVisualId) ?? visuals[visuals.length - 1] ?? null;
+  const activeId = active?.id ?? null;
+
+  // Session 87 deep review: the underline tabs scroll horizontally (the old
+  // dock wrapped them), and at the default w-96 dock width two tabs already
+  // overflow — the newest (auto-activated) tab was rendered half clipped with
+  // no scroll affordance. Keep the active tab in view whenever it changes.
+  // `scrollIntoView` is absent in jsdom, hence the guard.
+  useEffect(() => {
+    const tab = activeTabRef.current;
+    if (tab && typeof tab.scrollIntoView === 'function') {
+      tab.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }
+  }, [activeId]);
+
+  if (active === null) return null;
 
   return (
     <aside className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-card text-card-foreground">
@@ -51,12 +67,15 @@ export function VisualDock({
           return (
             <button
               key={visual.id}
+              ref={selected ? activeTabRef : undefined}
               type="button"
               role="tab"
               aria-selected={selected}
               onClick={() => onSelect(visual.id)}
               className={cn(
-                '-mb-px max-w-56 shrink-0 truncate border-b-2 py-2.5 text-[13px] font-medium transition-colors',
+                // min-w-24/shrink (deep review): a few tabs share the row by
+                // truncating instead of overflowing; many tabs still scroll.
+                '-mb-px min-w-24 max-w-56 shrink truncate border-b-2 py-2.5 text-[13px] font-medium transition-colors',
                 selected
                   ? 'border-foreground text-foreground'
                   : 'border-transparent text-muted-foreground hover:text-foreground',

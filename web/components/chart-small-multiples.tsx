@@ -7,7 +7,7 @@
 
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, XAxis, YAxis } from 'recharts';
 import type { ChartSpec } from '../backend/chart/types.ts';
-import { AxisTick, buildRows, valueLabelPlan, yAxisDomain } from './chart.tsx';
+import { AXIS_COLOR, AxisTick, buildRows, GRID_COLOR, valueLabelPlan, yAxisDomain } from './chart.tsx';
 
 // Exported for direct testing (same pattern as chart.tsx's buildRows/
 // seriesStyle/valueLabelPlan): the actual y-domain math is what "gelijke
@@ -63,17 +63,20 @@ export function ChartSmallMultiples({
             <div className="h-24 w-full" data-panel-for={s.key}>
               <ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 200, height: 96 }}>
                 <LineChart data={rows} margin={{ top: 4, right: 4, left: 4, bottom: 4 }}>
-                  {/* Recharts' own default grid/axis styling (session 87:
-                    * "basic Recharts look"); only the honesty-bound tick
+                  {/* Recharts' own default grid/axis geometry (session 87:
+                    * "basic Recharts look") in theme colours (AXIS_COLOR/
+                    * GRID_COLOR, chart.tsx — the literal #666/#ccc defaults
+                    * are illegible in dark mode); only the honesty-bound tick
                     * mechanism is custom. */}
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="periodLabel" tick={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} />
+                  <XAxis dataKey="periodLabel" tick={false} stroke={AXIS_COLOR} />
                   <YAxis
                     ticks={ownTicks.map((t) => t.value)}
                     interval={0}
                     tick={ownTicks.length > 0 ? AxisTick(tickByValue) : false}
                     width={ownTicks.length > 0 ? 28 : 0}
                     domain={domain ?? yAxisDomain(spec.kind)}
+                    stroke={AXIS_COLOR}
                   />
                   <Line
                     type="linear"

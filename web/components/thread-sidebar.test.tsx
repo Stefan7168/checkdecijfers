@@ -52,7 +52,7 @@ describe('ThreadSidebar — kind-absent (CBS) rendering stays byte-identical', (
     // Session 87 restyle (dense sidebar rows on the grey ground); still one
     // literal string so the CBS/dataset row parity stays a deliberate diff.
     expect(button.className).toBe(
-      'block w-full truncate rounded-md px-2.5 py-1.5 text-left text-[13px] disabled:cursor-not-allowed disabled:opacity-50 bg-accent text-foreground',
+      'block w-full truncate rounded-md px-2.5 py-1.5 text-left text-[13px] disabled:cursor-not-allowed disabled:opacity-50 bg-accent font-medium text-foreground',
     );
     expect(button.getAttribute('aria-current')).toBe('true');
     expect(button).not.toBeDisabled();

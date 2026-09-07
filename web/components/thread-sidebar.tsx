@@ -116,8 +116,13 @@ export function ThreadSidebar({
                   aria-current={thread.id === activeThreadId ? 'true' : undefined}
                   className={cn(
                     'block w-full truncate rounded-md px-2.5 py-1.5 text-left text-[13px] disabled:cursor-not-allowed disabled:opacity-50',
+                    // font-medium (session 87 deep review): in light mode the
+                    // active row's bg-accent (oklch .97) on the bg-sidebar ground
+                    // (oklch .985) is a ~1.04:1 difference — colour alone did
+                    // not mark the current thread (WCAG 1.4.1). Weight is the
+                    // non-colour cue, as shadcn's own sidebar active state does.
                     thread.id === activeThreadId
-                      ? 'bg-accent text-foreground'
+                      ? 'bg-accent font-medium text-foreground'
                       : 'text-foreground/80 hover:bg-accent/60 hover:text-foreground',
                   )}
                   title={thread.kind === 'dataset' ? `Your data: ${thread.title}` : thread.title}

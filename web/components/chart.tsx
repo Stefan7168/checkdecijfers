@@ -96,6 +96,16 @@ export function seriesStyle(index: number): { color: string } {
   return { color: RECHARTS_PALETTE[index % RECHARTS_PALETTE.length]! };
 }
 
+// Axis + grid colours (session 87 deep review): Recharts' own defaults are
+// literal light-mode greys (#666 axis/ticks, #ccc grid) that it hardcodes on
+// the SVG, so in dark mode the x-axis period labels rendered at ~3:1 against
+// the card and the grid became the brightest thing on the chart. The
+// geometry stays Recharts-default (the "basic Recharts look"); only the
+// colours ride the theme tokens, like every other text in the product. One
+// definition, reused by UserChartView and ChartSmallMultiples.
+export const AXIS_COLOR = 'var(--muted-foreground)';
+export const GRID_COLOR = 'var(--border)';
+
 // Y-axis honesty policy (open-questions #48, resolved 2026-07-04): a bar
 // encodes LENGTH, so a non-zero baseline visually lies about ratios — bars
 // must floor at zero. A line encodes POSITION, so it may zoom to show real
@@ -372,14 +382,26 @@ export function ChartTooltip({
         if (display == null) return null;
         const provisional = entry.payload[`${entry.dataKey}_provisional`];
         const resultId = entry.payload[`${entry.dataKey}_resultId`];
+        // Session 87 deep review: the series colour is a SWATCH, not the text
+        // colour — with the Recharts default palette two of the first three
+        // colours (#82ca9d, #ffc658) read at <2:1 on the white popover, and
+        // this tooltip is the one place an arbitrary point's exact value is
+        // shown. The text itself stays popover-foreground in both themes.
         return (
           <div
             key={entry.dataKey}
-            style={{ color: entry.color }}
+            className="flex items-center gap-1.5"
             data-label-for={resultId == null ? undefined : String(resultId)}
           >
-            {labelByKey.get(entry.dataKey)}: {String(display)}
-            {provisional ? ' *' : ''}
+            <span
+              aria-hidden="true"
+              className="inline-block size-2.5 shrink-0 rounded-full"
+              style={{ backgroundColor: entry.color }}
+            />
+            <span>
+              {labelByKey.get(entry.dataKey)}: {String(display)}
+              {provisional ? ' *' : ''}
+            </span>
           </div>
         );
       })}
@@ -816,11 +838,12 @@ export function ChartView({
               desc={KEYBOARD_HINT}
               aria-label={accessibleName}
             >
-              {/* Recharts' own default grid + axis styling (session 87: the
-                * "basic Recharts look"); only the honesty-bound custom ticks
-                * and labels below are ours. */}
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="periodLabel" />
+              {/* Recharts' own default grid + axis geometry (session 87: the
+                * "basic Recharts look") in theme colours (AXIS_COLOR/GRID_COLOR:
+                * dark mode); only the honesty-bound custom ticks and labels
+                * below are ours. */}
+              <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} />
+              <XAxis dataKey="periodLabel" stroke={AXIS_COLOR} tick={{ fill: AXIS_COLOR }} />
               {/* #197 idea 6: axis ticks come from the full spec (valueLabelPlan
                 * doesn't know about hiddenKeys) and are NOT recomputed when a
                 * series is hidden — an accepted v1 limitation, not a bug: the
@@ -832,6 +855,7 @@ export function ChartView({
                 tick={plan.axisTicks.length > 0 ? AxisTick(tickByValue) : false}
                 width={yAxisWidth}
                 domain={yAxisDomain(spec.kind)}
+                stroke={AXIS_COLOR}
               />
               <Tooltip trigger={tooltipTrigger} content={<ChartTooltip seriesMeta={seriesMeta} />} />
               {/* #170(4): curated event markers — drawn before the series so
@@ -887,12 +911,13 @@ export function ChartView({
                   </pattern>
                 ))}
               </defs>
-              {/* Recharts' own default grid + axis styling (session 87: the
-                * "basic Recharts look"); only the honesty-bound custom ticks
-                * and labels below are ours. */}
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="periodLabel" />
-              <YAxis tick={false} width={16} domain={yAxisDomain(spec.kind)} />
+              {/* Recharts' own default grid + axis geometry (session 87: the
+                * "basic Recharts look") in theme colours (AXIS_COLOR/GRID_COLOR:
+                * dark mode); only the honesty-bound custom ticks and labels
+                * below are ours. */}
+              <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} />
+              <XAxis dataKey="periodLabel" stroke={AXIS_COLOR} tick={{ fill: AXIS_COLOR }} />
+              <YAxis tick={false} width={16} domain={yAxisDomain(spec.kind)} stroke={AXIS_COLOR} />
               <Tooltip trigger={tooltipTrigger} content={<ChartTooltip seriesMeta={seriesMeta} />} />
               {seriesMeta
                 .filter((s) => !hiddenKeys.has(s.key))

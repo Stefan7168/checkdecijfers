@@ -158,6 +158,18 @@
   body {
     @apply bg-background text-foreground;
   }
+  /* Keyboard focus on the plain <button>/<a> elements the chat still uses
+   * (source/attachment chips, follow-up pills, thread rows, dock tabs, the
+   * Grafiek/Tabel segment, legend toggles). The session-87 restyle dropped
+   * their explicit focus-visible rings and the fallback was the browser's
+   * 1px `auto` ring in the 50%-alpha `outline-ring/50` colour from `*` above —
+   * near-invisible in both themes. The shadcn components (Button, Input) set
+   * `outline-none` + their own ring utility, which wins over this base rule,
+   * so they are unaffected. */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
 }
 
 /* Every number in this product lines up (#91, owner-approved): tabular

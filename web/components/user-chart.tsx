@@ -25,7 +25,9 @@ import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Too
 import {
   AxisTick,
   buildRows,
+  AXIS_COLOR,
   ChartTooltip,
+  GRID_COLOR,
   valueLabelPlan,
   yAxisDomain,
   type PlottableSpec,
@@ -88,14 +90,17 @@ export function UserChartView({ spec }: { spec: UserChartSpec }) {
         <ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 640, height: 256 }}>
           {spec.kind === 'line' ? (
             <LineChart data={rows} margin={{ top: 8, right: 8, left: 8, bottom: 8 }} desc={KEYBOARD_HINT} aria-label={accessibleName}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="periodLabel" />
+              {/* Theme axis/grid colours (AXIS_COLOR/GRID_COLOR, chart.tsx):
+                * Recharts' literal #666/#ccc defaults are illegible in dark mode. */}
+              <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} />
+              <XAxis dataKey="periodLabel" stroke={AXIS_COLOR} tick={{ fill: AXIS_COLOR }} />
               <YAxis
                 ticks={plan.axisTicks.map((t) => t.value)}
                 interval={0}
                 tick={plan.axisTicks.length > 0 ? AxisTick(tickByValue) : false}
                 width={plan.axisTicks.length > 0 ? 48 : 16}
                 domain={yAxisDomain(spec.kind)}
+                stroke={AXIS_COLOR}
               />
               <Tooltip content={<ChartTooltip seriesMeta={seriesMeta} />} />
               {seriesMeta.map((s) => (
@@ -113,9 +118,9 @@ export function UserChartView({ spec }: { spec: UserChartSpec }) {
             </LineChart>
           ) : (
             <BarChart data={rows} margin={{ top: 8, right: 8, left: 8, bottom: 8 }} desc={KEYBOARD_HINT} aria-label={accessibleName}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="periodLabel" />
-              <YAxis tick={false} width={16} domain={yAxisDomain(spec.kind)} />
+              <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} />
+              <XAxis dataKey="periodLabel" stroke={AXIS_COLOR} tick={{ fill: AXIS_COLOR }} />
+              <YAxis tick={false} width={16} domain={yAxisDomain(spec.kind)} stroke={AXIS_COLOR} />
               <Tooltip content={<ChartTooltip seriesMeta={seriesMeta} />} />
               {seriesMeta.map((s) => (
                 <Bar key={s.key} dataKey={s.key} name={s.label} fill={s.color} isAnimationActive={false} />
