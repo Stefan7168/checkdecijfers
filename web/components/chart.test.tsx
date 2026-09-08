@@ -1955,6 +1955,23 @@ describe('WP218 phase 2 — account default for chart styling (owner C)', () => 
     expect(screen.queryByText('Mijn standaard is actief.')).toBeNull();
   });
 
+  it('save flow: keys the resolver locked for the current form are NOT saved (a bar-forced zero baseline never becomes a line chart\'s default)', async () => {
+    chartStyleActions.saveMyChartStyle.mockResolvedValue({ ok: true });
+    render(
+      <ChartStyleProvider initial={{}}>
+        <ChartView spec={threePointSpec()} />
+      </ChartStyleProvider>,
+    );
+    fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Bewaar als mijn standaard' }));
+    expect(await screen.findByRole('status')).toHaveTextContent('Opgeslagen.');
+    const saved = chartStyleActions.saveMyChartStyle.mock.calls[0][0] as Record<string, unknown>;
+    expect(saved).not.toHaveProperty('zeroBaseline');
+    expect(saved).not.toHaveProperty('valueLabels');
+    expect(saved).toHaveProperty('grid', 'both');
+  });
+
   it('save flow: a successful mocked save shows Opgeslagen. and the usage sink receives default_saved', async () => {
     chartStyleActions.saveMyChartStyle.mockResolvedValue({ ok: true });
     const sink = vi.fn<(event: ChartStyleEvent) => void>();

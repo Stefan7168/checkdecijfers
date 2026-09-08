@@ -1194,10 +1194,18 @@ export function ChartView({
                       // The EFFECTIVE values (base + whatever per-chart
                       // tweaks are currently showing) become the new
                       // account default — "what's on screen" is what
-                      // "Bewaar als mijn standaard" promises to save.
-                      const r = await saveMyChartStyle(resolved.values);
+                      // "Bewaar als mijn standaard" promises to save —
+                      // MINUS the keys the resolver LOCKED for this form
+                      // (P2 task-4 review): saving while a bar chart is on
+                      // screen must not bake the bar-forced zero baseline
+                      // into every future line chart. A locked value was
+                      // never the reader's choice, so it is not saved.
+                      const chosen = Object.fromEntries(
+                        Object.entries(resolved.values).filter(([key]) => !(key in resolved.locks)),
+                      ) as Partial<typeof resolved.values>;
+                      const r = await saveMyChartStyle(chosen);
                       if (r.ok) {
-                        setAccountStyle(resolved.values);
+                        setAccountStyle(chosen);
                         trackChartStyleEvent('default_saved');
                       }
                       return r.ok ? 'saved' : r.reason === 'unavailable' ? 'unavailable' : 'error';
