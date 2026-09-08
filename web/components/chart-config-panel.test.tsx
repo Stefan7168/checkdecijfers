@@ -165,6 +165,11 @@ describe('ChartConfigPanel — Grafiek tab', () => {
           onChange={vi.fn()}
           onReset={vi.fn()}
           idPrefix={lang}
+          // WP218 phase 3 (owner B): the Merkkleuren block's copy joins this
+          // scan too — a `brand` prop with an unused stub is enough to render
+          // the heading/intro/button text (the need_website input only
+          // appears after a real lookup, tested separately below).
+          brand={{ lookup: vi.fn() }}
         />,
       );
       fireEvent.click(screen.getByRole('button', { name: lang === 'nl' ? 'Opmaak' : 'Style' }));
@@ -501,6 +506,231 @@ describe('ChartConfigPanel — Kleuren tab', () => {
     fireEvent.change(picker, { target: { value: '#fefefe' } });
     expect(onChange).not.toHaveBeenCalled();
     expect(screen.getByRole('alert')).toBeInTheDocument();
+  });
+});
+
+// WP218 phase 3 (#218 chart styling, owner decision B): the "Merkkleuren"
+// block, under the series rows in the Kleuren tab. `brand` is a dumb
+// lookup-only interface (chart.tsx supplies the real lookupBrand Server
+// Action) — these tests drive it with plain vi.fn() stubs, exactly like the
+// account-default row's onSave/onForget below.
+describe('ChartConfigPanel — WP218 phase 3 (owner B): Merkkleuren block', () => {
+  it('no brand prop → no block at all', () => {
+    render(
+      <ChartConfigPanel
+        resolved={resolvePresentation(lineCtx, {})}
+        seriesMeta={colorMeta}
+        onChange={vi.fn()}
+        onReset={vi.fn()}
+        idPrefix="br0"
+      />,
+    );
+    openTab('Kleuren');
+    expect(screen.queryByText('Merkkleuren')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Pas merkkleuren toe' })).toBeNull();
+  });
+
+  it('success: applies only the accepted colours (a near-white brand colour is skipped) plus the font, in one onChange call; shows the status line and hands the applied brand to onBrandApplied', async () => {
+    const onChange = vi.fn();
+    const onBrandApplied = vi.fn();
+    const lookup = vi.fn().mockResolvedValue({
+      ok: true,
+      brand: {
+        name: 'Voorbeeld BV',
+        domain: 'voorbeeld.nl',
+        colors: ['#ff7300', '#fefefe'],
+        font: { family: 'Lato', origin: 'google' },
+        fetchedAt: '2026-01-01T00:00:00.000Z',
+        cached: false,
+      },
+    });
+    render(
+      <ChartConfigPanel
+        resolved={resolvePresentation(lineCtx, {})}
+        seriesMeta={colorMeta}
+        onChange={onChange}
+        onReset={vi.fn()}
+        idPrefix="br1"
+        brand={{ lookup }}
+        onBrandApplied={onBrandApplied}
+      />,
+    );
+    openTab('Kleuren');
+    fireEvent.click(screen.getByRole('button', { name: 'Pas merkkleuren toe' }));
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'Kleuren en lettertype van Voorbeeld BV toegepast, via Brandfetch.',
+    );
+    expect(onChange).toHaveBeenCalledTimes(1);
+    // #fefefe (near-white) fails judgeColor — index 1 is skipped entirely,
+    // not swapped in for a different colour.
+    expect(onChange).toHaveBeenCalledWith({ seriesColors: { 0: '#ff7300' }, fontFamily: 'Lato' });
+    expect(screen.queryByText('Een lettertype dat niet vrij beschikbaar is, is overgeslagen.')).toBeNull();
+    expect(onBrandApplied).toHaveBeenCalledWith({
+      domain: 'voorbeeld.nl',
+      name: 'Voorbeeld BV',
+      fetchedAt: '2026-01-01T00:00:00.000Z',
+    });
+  });
+
+  it('success with no font: fontFamily is omitted from the patch (an existing font choice is never cleared) and the skipped-font note shows', async () => {
+    const onChange = vi.fn();
+    const lookup = vi.fn().mockResolvedValue({
+      ok: true,
+      brand: {
+        name: 'Voorbeeld BV',
+        domain: 'voorbeeld.nl',
+        colors: ['#ff7300'],
+        font: null,
+        fetchedAt: '2026-01-01T00:00:00.000Z',
+        cached: false,
+      },
+    });
+    render(
+      <ChartConfigPanel
+        resolved={resolvePresentation(lineCtx, {})}
+        seriesMeta={colorMeta}
+        onChange={onChange}
+        onReset={vi.fn()}
+        idPrefix="br2"
+        brand={{ lookup }}
+      />,
+    );
+    openTab('Kleuren');
+    fireEvent.click(screen.getByRole('button', { name: 'Pas merkkleuren toe' }));
+    await screen.findByRole('status');
+    expect(onChange).toHaveBeenCalledTimes(1);
+    const patch = onChange.mock.calls[0]![0] as Record<string, unknown>;
+    expect(patch).not.toHaveProperty('fontFamily');
+    expect(patch).toEqual({ seriesColors: { 0: '#ff7300' } });
+    expect(screen.getByText('Een lettertype dat niet vrij beschikbaar is, is overgeslagen.')).toBeInTheDocument();
+  });
+
+  it('need_website: reveals the website input, and the retry call carries the typed domain', async () => {
+    const lookup = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: false, reason: 'need_website' })
+      .mockResolvedValueOnce({
+        ok: true,
+        brand: {
+          name: 'Voorbeeld BV',
+          domain: 'voorbeeld.nl',
+          colors: ['#ff7300'],
+          font: null,
+          fetchedAt: '2026-01-01T00:00:00.000Z',
+          cached: false,
+        },
+      });
+    render(
+      <ChartConfigPanel
+        resolved={resolvePresentation(lineCtx, {})}
+        seriesMeta={colorMeta}
+        onChange={vi.fn()}
+        onReset={vi.fn()}
+        idPrefix="br3"
+        brand={{ lookup }}
+      />,
+    );
+    openTab('Kleuren');
+    fireEvent.click(screen.getByRole('button', { name: 'Pas merkkleuren toe' }));
+    const input = await screen.findByRole('textbox', { name: 'Website van je organisatie' });
+    expect(input).toHaveAttribute('placeholder', 'bijv. jouworganisatie.nl');
+    fireEvent.change(input, { target: { value: 'voorbeeld.nl' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Pas merkkleuren toe' }));
+    await screen.findByRole('status');
+    expect(lookup).toHaveBeenNthCalledWith(2, 'voorbeeld.nl');
+  });
+
+  it('shows the digit-free copy for every failure reason and never calls onChange', async () => {
+    const reasons: [string, string][] = [
+      ['unavailable', 'Merkkleuren ophalen is op dit moment niet mogelijk.'],
+      ['not_found', 'Voor dit domein is geen merk gevonden.'],
+      ['invalid_domain', 'Dat ziet er niet uit als een website.'],
+      ['rate_limited', 'Probeer het later nog eens.'],
+      ['daily_cap', 'Probeer het later nog eens.'],
+      ['error', 'Er ging iets mis. Probeer het later opnieuw.'],
+      ['unauthenticated', 'Merkkleuren ophalen is op dit moment niet mogelijk.'],
+    ];
+    for (const [reason, expectedText] of reasons) {
+      const onChange = vi.fn();
+      const lookup = vi.fn().mockResolvedValue({ ok: false, reason });
+      const { unmount } = render(
+        <ChartConfigPanel
+          resolved={resolvePresentation(lineCtx, {})}
+          seriesMeta={colorMeta}
+          onChange={onChange}
+          onReset={vi.fn()}
+          idPrefix={`brf-${reason}`}
+          brand={{ lookup }}
+        />,
+      );
+      openTab('Kleuren');
+      fireEvent.click(screen.getByRole('button', { name: 'Pas merkkleuren toe' }));
+      expect(await screen.findByRole('status')).toHaveTextContent(expectedText);
+      expect(onChange).not.toHaveBeenCalled();
+      unmount();
+    }
+  });
+
+  it('busy-disables the apply button while a lookup is pending, re-enables once it settles', async () => {
+    let resolveLookup!: (value: { ok: false; reason: 'unavailable' }) => void;
+    const lookup = vi.fn(
+      () =>
+        new Promise<{ ok: false; reason: 'unavailable' }>((resolve) => {
+          resolveLookup = resolve;
+        }),
+    );
+    render(
+      <ChartConfigPanel
+        resolved={resolvePresentation(lineCtx, {})}
+        seriesMeta={colorMeta}
+        onChange={vi.fn()}
+        onReset={vi.fn()}
+        idPrefix="br4"
+        brand={{ lookup }}
+      />,
+    );
+    openTab('Kleuren');
+    const button = screen.getByRole('button', { name: 'Pas merkkleuren toe' });
+    fireEvent.click(button);
+    expect(button).toBeDisabled();
+    resolveLookup({ ok: false, reason: 'unavailable' });
+    await screen.findByRole('status');
+    expect(button).not.toBeDisabled();
+  });
+
+  it('English: heading/intro/button copy, applied status text, and stays digit-free', async () => {
+    const lookup = vi.fn().mockResolvedValue({
+      ok: true,
+      brand: {
+        name: 'Example BV',
+        domain: 'example.com',
+        colors: ['#ff7300'],
+        font: { family: 'Lato', origin: 'google' },
+        fetchedAt: '2026-01-01T00:00:00.000Z',
+        cached: false,
+      },
+    });
+    render(
+      <ChartConfigPanel
+        lang="en"
+        resolved={resolvePresentation(lineCtx, {})}
+        seriesMeta={colorMeta}
+        onChange={vi.fn()}
+        onReset={vi.fn()}
+        idPrefix="br5"
+        brand={{ lookup }}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Style' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Colours' }));
+    expect(screen.getByText('Brand colours')).toBeInTheDocument();
+    expect(screen.getByText("Fetch your organisation's colours and font.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Apply brand colours' }));
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'Colours and font of Example BV applied, via Brandfetch.',
+    );
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    for (let n = walker.nextNode(); n; n = walker.nextNode()) expect(n.textContent).not.toMatch(/\d/);
   });
 });
 

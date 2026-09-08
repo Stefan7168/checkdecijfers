@@ -93,6 +93,23 @@ interface PanelCopyShape {
   accountUnavailable: string;
   accountError: string;
   accountHint: string;
+  /** WP218 phase 3 (owner B): the "Merkkleuren" (brand colours) block, under
+   * the series rows in the Kleuren tab. Only rendered when the `brand` prop
+   * is present (chart.tsx wires it exactly when `useChartStyle().signedIn`,
+   * same gate as `account`). `brandApplied` takes the applied brand's name
+   * via a `{name}` placeholder (substituted, never interpolated as markup). */
+  brandHeading: string;
+  brandIntro: string;
+  brandApply: string;
+  brandWebsiteLabel: string;
+  brandWebsitePlaceholder: string;
+  brandApplied: string;
+  brandFontSkipped: string;
+  brandUnavailable: string;
+  brandNotFound: string;
+  brandInvalidDomain: string;
+  brandTryLater: string;
+  brandError: string;
 }
 
 export const PANEL_COPY: Record<PanelLang, PanelCopyShape> = {
@@ -133,6 +150,18 @@ export const PANEL_COPY: Record<PanelLang, PanelCopyShape> = {
     accountUnavailable: 'Opslaan is op dit moment niet mogelijk.',
     accountError: 'Er ging iets mis. Probeer het later opnieuw.',
     accountHint: 'Mijn standaard is actief.',
+    brandHeading: 'Merkkleuren',
+    brandIntro: 'Haal de kleuren en het lettertype van je organisatie op.',
+    brandApply: 'Pas merkkleuren toe',
+    brandWebsiteLabel: 'Website van je organisatie',
+    brandWebsitePlaceholder: 'bijv. jouworganisatie.nl',
+    brandApplied: 'Kleuren en lettertype van {name} toegepast, via Brandfetch.',
+    brandFontSkipped: 'Een lettertype dat niet vrij beschikbaar is, is overgeslagen.',
+    brandUnavailable: 'Merkkleuren ophalen is op dit moment niet mogelijk.',
+    brandNotFound: 'Voor dit domein is geen merk gevonden.',
+    brandInvalidDomain: 'Dat ziet er niet uit als een website.',
+    brandTryLater: 'Probeer het later nog eens.',
+    brandError: 'Er ging iets mis. Probeer het later opnieuw.',
   },
   en: {
     trigger: 'Style',
@@ -171,6 +200,18 @@ export const PANEL_COPY: Record<PanelLang, PanelCopyShape> = {
     accountUnavailable: 'Saving is not possible right now.',
     accountError: 'Something went wrong. Try again later.',
     accountHint: 'My default is active.',
+    brandHeading: 'Brand colours',
+    brandIntro: "Fetch your organisation's colours and font.",
+    brandApply: 'Apply brand colours',
+    brandWebsiteLabel: "Your organisation's website",
+    brandWebsitePlaceholder: 'e.g. yourorganisation.com',
+    brandApplied: 'Colours and font of {name} applied, via Brandfetch.',
+    brandFontSkipped: "A font that isn't freely available was skipped.",
+    brandUnavailable: 'Fetching brand colours is not possible right now.',
+    brandNotFound: 'No brand was found for this domain.',
+    brandInvalidDomain: "That doesn't look like a website.",
+    brandTryLater: 'Try again later.',
+    brandError: 'Something went wrong. Try again later.',
   },
 };
 
@@ -326,6 +367,59 @@ export interface ChartConfigPanelAccount {
   onForget: () => Promise<'forgotten' | 'error'>;
 }
 
+/** WP218 phase 3 (owner decision B): "Pas merkkleuren toe" in the Kleuren
+ * tab. `lookup` is the ONLY thing this dumb panel knows about Brandfetch —
+ * chart.tsx supplies the real `lookupBrand` Server Action exactly when
+ * `useChartStyle().signedIn`, mirroring `account` above.
+ *
+ * `BrandLookupOutcome` is declared locally (not imported from
+ * `../app/chart-style-actions.ts`'s `LookupBrandResponse`) on purpose: this
+ * file never imports a `'use server'` module, matching `ChartConfigPanelAccount`
+ * above, whose `onSave`/`onForget` return types are hand-written string
+ * unions rather than re-exports of the real Server Action's return type.
+ * TypeScript's structural typing makes the two shapes interchangeable at the
+ * chart.tsx call site without either file needing to import the other. */
+export type BrandLookupOutcome =
+  | {
+      ok: true;
+      brand: {
+        name: string;
+        domain: string;
+        colors: string[];
+        font: { family: string; origin: 'google' | 'system' } | null;
+        fetchedAt: string;
+        cached: boolean;
+      };
+    }
+  | {
+      ok: false;
+      reason:
+        | 'unauthenticated'
+        | 'unavailable'
+        | 'need_website'
+        | 'invalid_domain'
+        | 'not_found'
+        | 'rate_limited'
+        | 'daily_cap'
+        | 'error';
+    };
+
+export interface ChartConfigPanelBrand {
+  lookup: (website?: string) => Promise<BrandLookupOutcome>;
+}
+
+type BrandFailureReason = Extract<BrandLookupOutcome, { ok: false }>['reason'];
+
+/** What chart.tsx needs from a successful apply to later hand to
+ * `saveMyChartStyle`'s `brandApplied` argument on the next "Bewaar als mijn
+ * standaard" — applying a brand and saving it as the account default are
+ * deliberately separate, later, actions (see `lookupBrand`'s own header). */
+export interface AppliedBrand {
+  domain: string;
+  name: string;
+  fetchedAt: string;
+}
+
 export interface ChartConfigPanelProps {
   resolved: ResolvedPresentation;
   seriesMeta: { key: string; label: string; color: string }[];
@@ -340,6 +434,14 @@ export interface ChartConfigPanelProps {
    * (chart.tsx passes it exactly when `useChartStyle().signedIn`) — absent
    * for Ontdek/trial, which renders no account-default row at all. */
   account?: ChartConfigPanelAccount;
+  /** WP218 phase 3 (owner B): present only for a signed-in visitor, same gate
+   * as `account` — absent for Ontdek/trial, which renders no Merkkleuren
+   * block at all. */
+  brand?: ChartConfigPanelBrand;
+  /** Fired once, on a successful apply, with just enough to identify which
+   * brand it was — chart.tsx remembers it and hands it to `saveMyChartStyle`
+   * as `brandApplied` on the next account-default save. */
+  onBrandApplied?: (applied: AppliedBrand) => void;
 }
 
 export function ChartConfigPanel({
@@ -351,6 +453,8 @@ export function ChartConfigPanel({
   lang = 'nl',
   onOpen,
   account,
+  brand,
+  onBrandApplied,
 }: ChartConfigPanelProps) {
   const copy = PANEL_COPY[lang];
   const [open, setOpen] = useState(false);
@@ -389,6 +493,67 @@ export function ChartConfigPanel({
     if (status === 'unavailable') return copy.accountUnavailable;
     return copy.accountError;
   }
+
+  // WP218 phase 3 (owner decision B): "Pas merkkleuren toe" — a single round
+  // trip that both fetches a brand's colours/font (`brand.lookup`) and
+  // applies them, so this state only needs to track what the account block
+  // above didn't: the `need_website` follow-up input and its typed value,
+  // and the one outcome (applied, or a failure reason) to show as the
+  // status line below.
+  const [brandBusy, setBrandBusy] = useState(false);
+  const [brandNeedsWebsite, setBrandNeedsWebsite] = useState(false);
+  const [brandWebsite, setBrandWebsite] = useState('');
+  const [brandOutcome, setBrandOutcome] = useState<
+    { kind: 'applied'; name: string; fontSkipped: boolean } | { kind: 'failure'; reason: BrandFailureReason } | null
+  >(null);
+
+  async function handleApplyBrand(): Promise<void> {
+    if (!brand) return;
+    setBrandBusy(true);
+    try {
+      const result = await brand.lookup(brandNeedsWebsite ? brandWebsite : undefined);
+      if (!result.ok) {
+        if (result.reason === 'need_website') setBrandNeedsWebsite(true);
+        setBrandOutcome({ kind: 'failure', reason: result.reason });
+        return;
+      }
+      setBrandNeedsWebsite(false);
+      const { colors, font, name, domain, fetchedAt } = result.brand;
+      // Bounded by seriesMeta.length, not just colors.length: an index with
+      // no matching series on THIS chart would otherwise sit unused in a
+      // saved account default and silently colour an unrelated series on a
+      // later chart that happens to have more series than this one did.
+      const accepted: Record<number, string> = {};
+      const limit = Math.min(colors.length, seriesMeta.length);
+      for (let i = 0; i < limit; i++) {
+        const hex = colors[i]!;
+        if (judgeColor(hex).ok) accepted[i] = hex;
+      }
+      // One onChange call for the whole apply — seriesColors here is the
+      // COMPLETE new colour scheme (like Standaardkleuren's `{}`), not
+      // merged with whatever per-series edits were already showing: this is
+      // an explicit, deliberate "apply the brand's own palette" action.
+      const patch: PresentationOverrides = { seriesColors: accepted };
+      if (font !== null) patch.fontFamily = font.family; // omit when null — never clear an existing choice
+      onChange(patch);
+      setBrandOutcome({ kind: 'applied', name, fontSkipped: font === null });
+      onBrandApplied?.({ domain, name, fetchedAt });
+    } finally {
+      setBrandBusy(false);
+    }
+  }
+
+  function brandFailureText(reason: BrandFailureReason): string {
+    if (reason === 'not_found') return copy.brandNotFound;
+    if (reason === 'invalid_domain') return copy.brandInvalidDomain;
+    if (reason === 'rate_limited' || reason === 'daily_cap') return copy.brandTryLater;
+    if (reason === 'error') return copy.brandError;
+    // 'unavailable' and 'unauthenticated' — the latter should never actually
+    // reach this panel (chart.tsx only offers `brand` when signed in), but a
+    // dumb component still needs SOME digit-free line for it defensively.
+    return copy.brandUnavailable;
+  }
+
   const chartTabRef = useRef<HTMLButtonElement>(null);
   const colorsTabRef = useRef<HTMLButtonElement>(null);
   const fontTabRef = useRef<HTMLButtonElement>(null);
@@ -745,6 +910,52 @@ export function ChartConfigPanel({
                   >
                     {copy.resetColors}
                   </Button>
+
+                  {/* WP218 phase 3 (owner B): under the series rows, gated on
+                    * `brand` the same way the account footer is gated on
+                    * `account` — absent entirely for Ontdek/trial. */}
+                  {brand ? (
+                    <div className="mt-1 flex w-full flex-col items-start gap-2 border-t border-border pt-3">
+                      <span className="font-medium text-foreground">{copy.brandHeading}</span>
+                      <p className="text-muted-foreground">{copy.brandIntro}</p>
+                      {brandNeedsWebsite ? (
+                        <Input
+                          type="text"
+                          inputMode="text"
+                          aria-label={copy.brandWebsiteLabel}
+                          placeholder={copy.brandWebsitePlaceholder}
+                          value={brandWebsite}
+                          onChange={(e) => setBrandWebsite(e.target.value)}
+                          className="w-48"
+                        />
+                      ) : null}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="xs"
+                        disabled={brandBusy}
+                        onClick={() => void handleApplyBrand()}
+                      >
+                        {copy.brandApply}
+                      </Button>
+                      {brandOutcome ? (
+                        brandOutcome.kind === 'applied' ? (
+                          <>
+                            <p role="status" className="w-full text-muted-foreground">
+                              {copy.brandApplied.replace('{name}', brandOutcome.name)}
+                            </p>
+                            {brandOutcome.fontSkipped ? (
+                              <p className="w-full text-muted-foreground">{copy.brandFontSkipped}</p>
+                            ) : null}
+                          </>
+                        ) : (
+                          <p role="status" className="w-full text-muted-foreground">
+                            {brandFailureText(brandOutcome.reason)}
+                          </p>
+                        )
+                      ) : null}
+                    </div>
+                  ) : null}
                 </>
               ) : null}
             </div>

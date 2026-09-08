@@ -2,7 +2,7 @@
 // every displayed numeric STRING must be a point's own formattedValue, and
 // periods must sort chronologically by code, not label/insertion order —
 // mirroring the checks ADR 014's SVG-renderer test suite already runs.
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ChartSpec } from '../backend/chart/types.ts';
 import type { ChartStyleEvent } from '../backend/chart/user-styles.ts';
@@ -15,9 +15,12 @@ import { attributedSvgMarkup } from './chart-download.tsx';
 // actions.ts's own header) — mocked here so the account-default save/forget
 // flow tests below never touch a real db/auth boundary, mirroring how the
 // phase-6 usage counter is exercised only through its own injectable sink.
+// `lookupBrand` (WP218 phase 3, owner B) joins the same mock for the same
+// reason.
 const chartStyleActions = vi.hoisted(() => ({
   saveMyChartStyle: vi.fn(),
   forgetMyChartStyle: vi.fn(),
+  lookupBrand: vi.fn(),
 }));
 vi.mock('../app/chart-style-actions.ts', () => chartStyleActions);
 import {
@@ -1986,8 +1989,11 @@ describe('WP218 phase 2 — account default for chart styling (owner C)', () => 
       fireEvent.click(screen.getByRole('button', { name: 'Bewaar als mijn standaard' }));
 
       expect(await screen.findByRole('status')).toHaveTextContent('Opgeslagen.');
+      // WP218 phase 3 (owner B): the second argument is always passed —
+      // `undefined` here since no brand was applied on this chart.
       expect(chartStyleActions.saveMyChartStyle).toHaveBeenCalledWith(
         expect.objectContaining({ lineWidth: 'thick' }),
+        undefined,
       );
       expect(sink).toHaveBeenCalledWith('default_saved');
       // The hint keeps showing afterward: the just-saved default IS what's
@@ -2019,5 +2025,89 @@ describe('WP218 phase 2 — account default for chart styling (owner C)', () => 
     } finally {
       setChartUsageSink(null);
     }
+  });
+});
+
+// WP218 phase 3 (#218 chart styling, owner decision B): "Pas merkkleuren
+// toe" wired into ChartView. `brand` is offered to the panel only when
+// signedIn (the same ChartStyleProvider gate as `account`); a successful
+// apply is remembered in ChartView state and handed to the NEXT
+// saveMyChartStyle call as its `brandApplied` argument.
+describe('WP218 phase 3 — brand colours wired into ChartView (owner B)', () => {
+  beforeEach(() => {
+    chartStyleActions.lookupBrand.mockReset();
+    chartStyleActions.saveMyChartStyle.mockReset();
+  });
+
+  it('without a provider (not signed in): no Merkkleuren block at all', () => {
+    render(<ChartView spec={twoSeriesLineSpec()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Kleuren' }));
+    expect(screen.queryByRole('button', { name: 'Pas merkkleuren toe' })).toBeNull();
+  });
+
+  it('applying a brand recolours the first series and the usage sink receives brand_applied', async () => {
+    chartStyleActions.lookupBrand.mockResolvedValue({
+      ok: true,
+      brand: {
+        name: 'Voorbeeld BV',
+        domain: 'voorbeeld.nl',
+        colors: ['#ff0000', '#00ff00'],
+        font: null,
+        fetchedAt: '2026-01-01T00:00:00.000Z',
+        cached: false,
+      },
+    });
+    const sink = vi.fn<(event: ChartStyleEvent) => void>();
+    setChartUsageSink(sink);
+    try {
+      const { container } = render(
+        <ChartStyleProvider initial={{}}>
+          <ChartView spec={twoSeriesLineSpec()} />
+        </ChartStyleProvider>,
+      );
+      fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+      fireEvent.click(screen.getByRole('tab', { name: 'Kleuren' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Pas merkkleuren toe' }));
+
+      await screen.findByRole('status');
+      expect(container.querySelector('.recharts-line-curve')?.getAttribute('stroke')).toBe('#ff0000');
+      expect(chartStyleActions.lookupBrand).toHaveBeenCalledWith(undefined);
+      expect(sink).toHaveBeenCalledWith('brand_applied');
+    } finally {
+      setChartUsageSink(null);
+    }
+  });
+
+  it('a subsequent "Bewaar als mijn standaard" passes the just-applied brand as brandApplied', async () => {
+    chartStyleActions.lookupBrand.mockResolvedValue({
+      ok: true,
+      brand: {
+        name: 'Voorbeeld BV',
+        domain: 'voorbeeld.nl',
+        colors: ['#ff0000'],
+        font: null,
+        fetchedAt: '2026-01-01T00:00:00.000Z',
+        cached: false,
+      },
+    });
+    chartStyleActions.saveMyChartStyle.mockResolvedValue({ ok: true });
+    render(
+      <ChartStyleProvider initial={{}}>
+        <ChartView spec={twoSeriesLineSpec()} />
+      </ChartStyleProvider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Kleuren' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Pas merkkleuren toe' }));
+    await waitFor(() => expect(chartStyleActions.lookupBrand).toHaveBeenCalledTimes(1));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Bewaar als mijn standaard' }));
+    await waitFor(() => expect(chartStyleActions.saveMyChartStyle).toHaveBeenCalledTimes(1));
+    expect(chartStyleActions.saveMyChartStyle).toHaveBeenCalledWith(expect.anything(), {
+      domain: 'voorbeeld.nl',
+      name: 'Voorbeeld BV',
+      fetchedAt: '2026-01-01T00:00:00.000Z',
+    });
   });
 });

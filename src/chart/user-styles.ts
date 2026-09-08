@@ -22,6 +22,8 @@ export const CHART_STYLE_EVENTS = [
   'option_changed',
   'default_saved',
   'default_forgotten',
+  // WP218 phase 3 (owner B): fired once per successful "Pas merkkleuren toe".
+  'brand_applied',
 ] as const;
 export type ChartStyleEvent = (typeof CHART_STYLE_EVENTS)[number];
 

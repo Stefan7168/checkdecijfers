@@ -14,7 +14,10 @@ vi.mock('../lib/db.ts', () => ({ getDb }));
 const store = vi.hoisted(() => ({ recordChartStyleEvent: vi.fn() }));
 vi.mock('../backend/chart/user-styles.ts', () => ({
   ...store,
-  CHART_STYLE_EVENTS: ['panel_open', 'option_changed', 'default_saved', 'default_forgotten'],
+  // WP218 phase 3 (owner B): 'brand_applied' joined the real enum
+  // (src/chart/user-styles.ts) — mirrored here so this mock never drifts
+  // from what isChartStyleEvent actually validates against.
+  CHART_STYLE_EVENTS: ['panel_open', 'option_changed', 'default_saved', 'default_forgotten', 'brand_applied'],
 }));
 
 const { reportError } = vi.hoisted(() => ({ reportError: vi.fn() }));
@@ -35,7 +38,7 @@ afterEach(() => {
 });
 
 describe('countChartStyleEvent', () => {
-  it.each(['panel_open', 'option_changed', 'default_saved', 'default_forgotten'] as const)(
+  it.each(['panel_open', 'option_changed', 'default_saved', 'default_forgotten', 'brand_applied'] as const)(
     'records a valid event (%s) via the store, using the real db and a fresh date',
     async (event) => {
       await countChartStyleEvent(event);

@@ -55,7 +55,7 @@ import { trackChartStyleEvent } from '../lib/chart-usage-client.ts';
 // WP218 phase 2 (owner C): the account-default Server Actions live in their
 // OWN tiny-import-graph file, never web/app/actions.ts — see that file's own
 // header for why (the usage-actions.ts precedent this mirrors).
-import { forgetMyChartStyle, saveMyChartStyle } from '../app/chart-style-actions.ts';
+import { forgetMyChartStyle, lookupBrand, saveMyChartStyle } from '../app/chart-style-actions.ts';
 import { ensureFontLoaded } from '../lib/font-loader.ts';
 import { ChartConfigPanel } from './chart-config-panel.tsx';
 import { ChartDownloadMenu } from './chart-download.tsx';
@@ -867,6 +867,17 @@ export function ChartView({
   // chart's series. The panel is remounted per chart via this epoch — the
   // same "each chart starts fresh" the reducer's `reset` gives the overrides.
   const [chartEpoch, setChartEpoch] = useState(0);
+  // WP218 phase 3 (owner B): the last brand a signed-in visitor actually
+  // applied via "Pas merkkleuren toe" — deliberately NOT reset by the spec-
+  // swap block below (unlike notes/pendingPoint), because it describes
+  // something about the ACCOUNT, not this one chart, exactly like
+  // `accountStyle` itself. Handed to `saveMyChartStyle` as `brandApplied` on
+  // the next "Bewaar als mijn standaard", whichever chart that happens on.
+  const [lastAppliedBrand, setLastAppliedBrand] = useState<{
+    domain: string;
+    name: string;
+    fetchedAt: string;
+  } | null>(null);
   if (specIdentity !== lastSpecIdentity) {
     setLastSpecIdentity(specIdentity);
     setChartEpoch((n) => n + 1);
@@ -1203,7 +1214,12 @@ export function ChartView({
                       const chosen = Object.fromEntries(
                         Object.entries(resolved.values).filter(([key]) => !(key in resolved.locks)),
                       ) as Partial<typeof resolved.values>;
-                      const r = await saveMyChartStyle(chosen);
+                      // WP218 phase 3 (owner B): the last brand applied on
+                      // ANY chart (not just this one — see lastAppliedBrand's
+                      // own comment) rides along as the account-default
+                      // save's `brandApplied` argument, so the persisted
+                      // default can record which brand it came from.
+                      const r = await saveMyChartStyle(chosen, lastAppliedBrand ?? undefined);
                       if (r.ok) {
                         setAccountStyle(chosen);
                         trackChartStyleEvent('default_saved');
@@ -1221,6 +1237,13 @@ export function ChartView({
                   }
                 : undefined
             }
+            // WP218 phase 3 (owner B): same signedIn gate as `account` —
+            // Ontdek/trial gets no Merkkleuren block at all.
+            brand={signedIn ? { lookup: (website) => lookupBrand(website) } : undefined}
+            onBrandApplied={(applied) => {
+              setLastAppliedBrand(applied);
+              trackChartStyleEvent('brand_applied');
+            }}
           />
         ) : null}
       </div>
