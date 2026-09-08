@@ -54,16 +54,14 @@ at submit time — the untouched billing gate always holds the base 20 before th
 and the 10-credit web reserve happens before that hold is refunded. Web-only therefore *nets*
 10 but *requires* 30 available. The chat UI's cost line states this.
 
-## Chat-with-your-data add-on (ADR 037/WP202a — mechanism decided, amounts NOT yet set)
-
-Two NEW price rows, not yet in `ACTION_CLASS_PRICES` (owner decision §8 Q1, 2026-09-06):
+## Chat-with-your-data add-on (ADR 037/WP202a — mechanism decided; `dataset_turn` amount set 2026-09-08)
 
 | Class | Credits | Status |
 |---|---|---|
 | `dataset_ingest` | **Free for CSV/TSV in v1** (no AI work happens at ingest, so nothing to charge for) — a future LLM-assisted ingest (PDF/HTML, WP202c) would charge here | Mechanism decided; not yet wired into billing at all for CSV/TSV — `action_class_prices.credits` has a `> 0` CHECK constraint, so "free" cannot be a `0`-credit row. `chargeAndRunDataset` instead skips the reserve/settle call entirely for `source_kind in ('file_csv', 'file_tsv')` — a source-kind gate in code, never a price-value check |
-| `dataset_turn` | **Not yet set** — decided to be sized "near the +10 web add-on," exact number open | Mechanism decided (settles like `chargeAndRun`: a chart keeps the debit, a clarification compensates down to the flat `clarification` price, a refusal/throw refunds in full); no row exists in `pricing-defaults.ts` yet |
+| `dataset_turn` | **20** (owner decision, WP202 go-live checklist step 1, 2026-09-08 — mirrors the `simple`/`clarification` pair exactly rather than introduce a new discount shape, instead of the originally-floated "near the +10 web add-on" framing) | In `ACTION_CLASS_PRICES` (`src/billing/pricing-defaults.ts`). Settles like `chargeAndRun`: a chart keeps the full 20-credit debit, a clarification compensates down to the flat `clarification` price (10), a refusal/throw refunds in full. Not yet applied to the production `action_class_prices` table — that's `npm run pricing:apply`, part of the WP202 go-live checklist, still pending |
 
-**Not live regardless of the numbers above:** `ATTACHMENTS_ENABLED` doesn't exist as a flag yet and
+**Not live regardless of the number above:** `ATTACHMENTS_ENABLED` doesn't exist as a flag yet and
 migrations 026/027 (which would carry the `dataset_cost` ledger reason) are file-only — see
 [08-build-plan.md](08-build-plan.md)'s WP202a section. Settlement/ledger mechanism detail: ADR
 [037](decisions/037-user-data-attachments.md) D12.

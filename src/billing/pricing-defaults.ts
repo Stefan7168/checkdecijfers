@@ -31,6 +31,19 @@ export const ACTION_CLASS_PRICES: ActionClassPrice[] = [
   // (migration 018), not part of any answer class — priced here so it stays a
   // one-line code diff like every other price. See docs/09-pricing.md.
   { actionClass: 'web_addon', credits: 10 },
+  // WP202a (ADR 037, §8 Q1): a dataset-thread chat turn. Owner decision
+  // (2026-09-06) sized this "near the +10 web add-on," exact number left
+  // open until the go-live session. Set here at the go-live checklist's
+  // first step (2026-09-08, owner present) to mirror the existing
+  // 'simple'/'clarification' pair exactly, rather than introduce a new
+  // discount shape: 20 up front, compensated down to the flat
+  // 'clarification' price (10) on a clarify, refunded in full on a
+  // refusal/throw (docs/RUNBOOK.md WP202 step 1; settlement mechanism ADR
+  // 037 D12). CSV/TSV ingest itself stays free in v1 and deliberately gets
+  // NO row here at all — `chargeAndRunDataset` skips the reserve call
+  // entirely for that source kind, since `credits` has a `> 0` CHECK
+  // constraint and "free" can never be a 0-credit row.
+  { actionClass: 'dataset_turn', credits: 20 },
 ];
 
 // Owner decision (2026-07-04, open-questions #4): launch packs, credits

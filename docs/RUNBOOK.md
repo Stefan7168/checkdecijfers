@@ -805,11 +805,14 @@ as `bytea` (no object-storage credential), and there is no third-party API this 
 
 Steps, in order, owner present:
 
-1. **Decide the `dataset_turn` credit amount** (mechanism decided, §8 Q1 — "sized near the +10 web
-   add-on," exact number still open, [09-pricing.md](09-pricing.md)). Add it to
-   `src/billing/pricing-defaults.ts` alongside the existing rows; `dataset_ingest` needs **no**
-   price row at all for v1 — CSV/TSV ingest is free by the code SKIPPING the reserve call
-   entirely (D12), not a `0`-credit row (the schema's `credits > 0` CHECK forbids that).
+1. **✅ DONE (2026-09-08, owner present) — `dataset_turn` credit amount decided: 20**, mirroring
+   the `simple`/`clarification` pair exactly rather than a new discount shape. Added to
+   `src/billing/pricing-defaults.ts`; [09-pricing.md](09-pricing.md) updated;
+   `tests/billing/dataset-gate.test.ts`'s test-only seed removed now that a real default row
+   exists (144/144 billing suite green). `dataset_ingest` still has **no** price row for v1 —
+   CSV/TSV ingest is free by the code SKIPPING the reserve call entirely (D12), not a `0`-credit
+   row (the schema's `credits > 0` CHECK forbids that). **Not yet applied to production** — that's
+   step 3 below, `npm run pricing:apply`, still pending along with steps 2, 4, 5, 6.
 2. **Apply migrations 026 + 027** — `npm run db:migrate` (adds `user_datasets`, `dataset_turns`,
    `chat_threads.dataset_id`, and widens `credit_transactions`' reason/delta-sign/request-id-scope
    CHECK constraints to include `dataset_cost`). Additive only; run together in one invocation,

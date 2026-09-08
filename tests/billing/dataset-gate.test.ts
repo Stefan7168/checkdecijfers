@@ -3,10 +3,12 @@
 // stubbed (same shallow-fake discipline as tests/billing/gate.test.ts:
 // dataset-gate.ts only ever reads `envelope.kind`/`auditId`/`datasetGone`).
 //
-// dataset_turn/dataset_ingest are NOT in pricing-defaults.ts (the owner
-// hasn't picked exact amounts yet, ADR 037 §8 Q1 — only the MECHANISM is
-// decided) — this file seeds a test-only price directly rather than via
-// applyPricingDefaults, which only seeds decided prices.
+// dataset_turn is now in pricing-defaults.ts (owner decision, WP202
+// go-live checklist step 1, 2026-09-08 — 20 credits, mirroring the
+// 'simple'/'clarification' pair). dataset_ingest still isn't and never will
+// be a price row: CSV/TSV ingest stays free in v1 by `chargeAndRunDataset`
+// skipping the reserve call entirely for that source kind (a `> 0` CHECK
+// constraint means "free" can never be a 0-credit row).
 import { randomUUID } from 'node:crypto';
 import { describe, expect, it, vi } from 'vitest';
 import { chargeAndRunDataset } from '../../src/billing/dataset-gate.ts';
@@ -16,7 +18,7 @@ import type { AuditedDatasetTurn } from '../../src/billing/types.ts';
 import type { Db } from '../../src/db/types.ts';
 import { createTestDb } from '../helpers/pglite-db.ts';
 
-const DATASET_TURN_PRICE = 15;
+const DATASET_TURN_PRICE = 20; // docs/09-pricing.md reference value, matches pricing-defaults.ts
 
 function fakeTurn(
   kind: 'chart' | 'clarification' | 'refusal',
@@ -34,12 +36,6 @@ async function withPricedDb(fn: (db: Db) => Promise<void>): Promise<void> {
   const { db, close } = await createTestDb();
   try {
     await applyPricingDefaults(db);
-    // Test-only seed: the owner hasn't decided real dataset_turn/dataset_ingest
-    // amounts yet (ADR 037 §8 Q1) — this stays out of pricing-defaults.ts.
-    await db.query(
-      `insert into action_class_prices (action_class, credits) values ('dataset_turn', $1)`,
-      [DATASET_TURN_PRICE],
-    );
     await fn(db);
   } finally {
     await close();
