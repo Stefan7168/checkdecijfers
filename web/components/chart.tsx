@@ -766,6 +766,15 @@ export function ChartView({
   // clicks must not carry over another chart's notes).
   const [notes, setNotes] = useState<ChartNote[]>([]);
   const [pendingPoint, setPendingPoint] = useState<PendingPoint | null>(null);
+  // Final review finding: a new note's id used to be
+  // `${resultId}-${prev.length}`, but `prev.length` is not monotonic — it
+  // shrinks on delete — so two notes on the same point could end up with the
+  // identical id after a delete-then-recreate sequence. `onDelete` filters by
+  // id, so a duplicate id meant clicking delete on ONE note silently deleted
+  // BOTH. A ref-backed counter only ever increases, regardless of deletion
+  // order, and (unlike component state) incrementing it never itself
+  // triggers a re-render.
+  const noteIdCounter = useRef(0);
 
   // Stable per-chart identity, not object identity: a fresh spec object can
   // represent the exact same chart across a re-render. Resets ALL
@@ -860,10 +869,31 @@ export function ChartView({
   // an earlier allowed spec would carry straight into a freshly-swapped
   // multi-region spec where canUseLine is now false, rendering the exact
   // connected-line-across-regions the honesty rule exists to forbid.
-  const effectiveKind: ChartSpec['kind'] =
-    state.form === 'table' ? spec.kind : state.form === 'line' && !canUseLine ? 'bar' : state.form;
+  //
+  // `activeForm` is the single derived source for what is actually ON
+  // SCREEN — every read below (effectiveKind, the tablist's
+  // aria-selected/tabIndex/segment styling, and onFormTabKeyDown's
+  // FORM_ORDER lookup) shares this one value rather than each re-deriving
+  // the same ternary. It is a display-only projection: `state.form` itself
+  // is untouched, so the reset-preserves-form behaviour above still works
+  // (the stored 'line' choice survives a spec swap even while it renders as
+  // 'bar'). Final review finding: with three separate re-derivations of
+  // this ternary, the tablist's copy used to be missing, so a stale 'line'
+  // form meeting a newly-disallowed multi-region spec made the (disabled)
+  // Lijn tab both aria-selected and tabIndex=0 while neither Staaf nor
+  // Tabel got tabIndex=0 — no tab was keyboard-reachable at all.
+  const activeForm: ChartForm = state.form === 'line' && !canUseLine ? 'bar' : state.form;
+  const effectiveKind: ChartSpec['kind'] = activeForm === 'table' ? spec.kind : activeForm;
   const dimEntries = Object.entries(spec.dimLabels);
-  const markers = annotationMarkers(viewSpec, rows);
+  // Final review finding: this used to read `viewSpec` (the ORIGINAL
+  // spec.kind) directly, so a line-kind chart's curated annotations stayed
+  // non-empty even after switching to Staaf — but the <ReferenceLine>
+  // markers that actually draw them only render in the LineChart branch
+  // below, never BarChart. The "Gemarkeerd in de grafiek" footer text would
+  // then claim something is marked in the chart when nothing visually is.
+  // Composing `effectiveKind` here, exactly as `valueLabelPlan` already does
+  // below, keeps the claim and the render in sync.
+  const markers = annotationMarkers({ ...viewSpec, kind: effectiveKind }, rows);
   const plan = valueLabelPlan({ ...viewSpec, kind: effectiveKind });
   const tickByValue = new Map(plan.axisTicks.map((t) => [t.value, t]));
   const endLabelByKey = new Map(plan.endLabels.map((l) => [l.seriesKey, l]));
@@ -912,7 +942,7 @@ export function ChartView({
     if (!['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp'].includes(event.key)) return;
     event.preventDefault();
     const dir = event.key === 'ArrowRight' || event.key === 'ArrowDown' ? 1 : -1;
-    const idx = FORM_ORDER.indexOf(state.form === 'line' && !canUseLine ? 'bar' : state.form);
+    const idx = FORM_ORDER.indexOf(activeForm);
     const nextIdx = (idx + dir + FORM_ORDER.length) % FORM_ORDER.length;
     selectForm(FORM_ORDER[nextIdx]);
   }
@@ -950,13 +980,13 @@ export function ChartView({
           ref={lineTabRef}
           type="button"
           role="tab"
-          aria-selected={state.form === 'line'}
+          aria-selected={activeForm === 'line'}
           aria-controls={panelId}
-          tabIndex={state.form === 'line' ? 0 : -1}
+          tabIndex={activeForm === 'line' ? 0 : -1}
           disabled={!canUseLine}
           title={canUseLine ? undefined : 'Een lijn tussen regio’s zou een trend suggereren die niet is gemeten.'}
           onClick={() => selectForm('line')}
-          className={segmentTab(state.form === 'line') + (canUseLine ? '' : ' cursor-not-allowed opacity-40')}
+          className={segmentTab(activeForm === 'line') + (canUseLine ? '' : ' cursor-not-allowed opacity-40')}
         >
           Lijn
         </button>
@@ -964,11 +994,11 @@ export function ChartView({
           ref={barTabRef}
           type="button"
           role="tab"
-          aria-selected={state.form === 'bar'}
+          aria-selected={activeForm === 'bar'}
           aria-controls={panelId}
-          tabIndex={state.form === 'bar' ? 0 : -1}
+          tabIndex={activeForm === 'bar' ? 0 : -1}
           onClick={() => selectForm('bar')}
-          className={segmentTab(state.form === 'bar')}
+          className={segmentTab(activeForm === 'bar')}
         >
           Staaf
         </button>
@@ -976,11 +1006,11 @@ export function ChartView({
           ref={tableTabRef}
           type="button"
           role="tab"
-          aria-selected={state.form === 'table'}
+          aria-selected={activeForm === 'table'}
           aria-controls={panelId}
-          tabIndex={state.form === 'table' ? 0 : -1}
+          tabIndex={activeForm === 'table' ? 0 : -1}
           onClick={() => selectForm('table')}
-          className={segmentTab(state.form === 'table')}
+          className={segmentTab(activeForm === 'table')}
         >
           Tabel
         </button>
@@ -1312,7 +1342,7 @@ export function ChartView({
           idPrefix={domId}
           onSave={(text) => {
             if (!pendingPoint) return;
-            setNotes((prev) => [...prev, { id: `${pendingPoint.resultId}-${prev.length}`, ...pendingPoint, text }]);
+            setNotes((prev) => [...prev, { id: `${pendingPoint.resultId}-${noteIdCounter.current++}`, ...pendingPoint, text }]);
             setPendingPoint(null);
           }}
           onCancelPending={() => setPendingPoint(null)}

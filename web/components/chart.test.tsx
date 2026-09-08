@@ -325,6 +325,33 @@ describe('ChartView', () => {
     expect(marker.className).not.toContain('text-warning');
   });
 
+  // Final review finding: annotationMarkers(viewSpec, rows) used to be called
+  // against the spec's ORIGINAL kind, so a line-kind chart's curated
+  // annotations stayed non-empty even after switching to Staaf -- but the
+  // <ReferenceLine> elements that actually draw a marker only render inside
+  // the LineChart JSX branch, never BarChart. The footer text below would
+  // then claim "Gemarkeerd in de grafiek" (marked in the chart) while nothing
+  // was visually marked, a false on-screen claim. Fixed by composing
+  // `effectiveKind` into the call, mirroring how `valueLabelPlan` already
+  // does it.
+  it('#170(4)/honesty: stops claiming a marker is on the chart once a line-kind spec with a curated annotation is switched to Staaf', () => {
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      },
+    );
+    const s = spec({ annotations: [{ periodCode: '2024JJ00', label: 'Testgebeurtenis 2024' }] });
+    render(<ChartView spec={s} />);
+    expect(screen.getByText('Gemarkeerd in de grafiek: Testgebeurtenis 2024')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
+
+    expect(screen.queryByText(/Gemarkeerd in de grafiek/)).not.toBeInTheDocument();
+  });
+
   it('#170(4): renders nothing extra when the spec carries no annotations (unchanged default)', () => {
     vi.stubGlobal(
       'ResizeObserver',
@@ -1075,6 +1102,41 @@ describe('ChartView form switch', () => {
     expect(container.querySelector('.recharts-bar')).not.toBeNull();
   });
 
+  // Final review finding: aria-selected/tabIndex/segment styling on the three
+  // tab buttons used to read `state.form` directly. In the exact scenario
+  // above (a stale 'line' form surviving a same-instance spec swap into a
+  // newly-disallowed multi-region spec), that made the Lijn tab both
+  // aria-selected={true} and tabIndex={0} while also `disabled` -- and,
+  // because the code assumed exactly one tab matches `state.form`, neither
+  // Staaf nor Tabel got tabIndex={0} either. No tab in the tablist was
+  // reachable by keyboard Tab at all. Fixed by deriving one `activeForm`
+  // value (the same "disallowed line falls back to bar" projection
+  // `effectiveKind` already used) and reading it everywhere the tablist
+  // decides aria-selected/tabIndex.
+  it('keeps exactly one tab keyboard-reachable when a stale Lijn form meets a newly-disallowed multi-region spec', () => {
+    const { rerender } = render(<ChartView spec={twoSeriesLineSpec()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Lijn' }));
+    expect(screen.getByRole('tab', { name: 'Lijn' }).tabIndex).toBe(0);
+
+    // No `key` change -- same mounted ChartView instance, same as the test
+    // above. The reducer's `reset` action preserves `state.form === 'line'`
+    // across the swap, but this new spec has 3 series and kind 'bar', so
+    // canUseLine is now false.
+    rerender(<ChartView spec={multiRegionBarSpec()} />);
+
+    const lineTab = screen.getByRole('tab', { name: 'Lijn' });
+    const barTab = screen.getByRole('tab', { name: 'Staaf' });
+    const tableTab = screen.getByRole('tab', { name: 'Tabel' });
+    expect(lineTab).toBeDisabled();
+
+    const focusable = [lineTab, barTab, tableTab].filter((tab) => tab.tabIndex === 0);
+    expect(focusable).toHaveLength(1);
+    expect(focusable[0]).toBe(barTab);
+    expect(barTab).toHaveAttribute('aria-selected', 'true');
+    expect(lineTab).toHaveAttribute('aria-selected', 'false');
+    expect(tableTab).toHaveAttribute('aria-selected', 'false');
+  });
+
   // Regression: valueLabelPlan(spec) branched on the ORIGINAL spec.kind, not
   // effectiveKind, so a spec switched to a different form kept the labels of
   // its original kind — always empty for the new one. A line-kind spec shown
@@ -1360,5 +1422,48 @@ describe('ChartView click-to-annotate', () => {
     const dot = document.querySelector('circle[data-point="value"]')!;
     fireEvent.keyDown(dot, { key: ' ' });
     expect(screen.getByRole('textbox')).toBeInTheDocument();
+  });
+
+  // Final review finding: a new note's id used to be
+  // `${resultId}-${prev.length}` -- not monotonic, since `prev.length`
+  // shrinks on delete. Two notes on the SAME point could end up with an
+  // identical id after a delete-then-recreate sequence, and `onDelete`
+  // filters by id, so deleting ONE of them silently deleted BOTH. This
+  // reproduces that exact sequence: a note on P1, a note on P2, delete the P1
+  // note (shrinking the notes array), a second note on P2 (recreating the
+  // collision under the old scheme), then delete one of the two P2 notes.
+  it('deleting one note leaves the other note on the same point intact, even after a delete-then-recreate sequence', () => {
+    const s = twoSeriesLineSpec();
+    render(<ChartView spec={s} />);
+
+    const dotFor = (resultId: string): Element =>
+      Array.from(document.querySelectorAll('circle[data-point="value"]')).find(
+        (el) => el.getAttribute('data-result-id') === resultId,
+      )!;
+    const addNote = (resultId: string, text: string): void => {
+      fireEvent.click(dotFor(resultId));
+      fireEvent.change(screen.getByRole('textbox'), { target: { value: text } });
+      fireEvent.click(screen.getByRole('button', { name: /opslaan/i }));
+    };
+    const noteItems = (): HTMLElement[] => Array.from(document.querySelectorAll('ul li'));
+    const deleteNoteByText = (text: string): void => {
+      const li = noteItems().find((el) => el.textContent?.includes(text))!;
+      fireEvent.click(within(li).getByRole('button', { name: /verwijder/i }));
+    };
+
+    // twoSeriesLineSpec's points carry resultIds 'nl-2020'/'nl-2021'
+    // (Nederland, P1) and 'ut-2020'/'ut-2021' (Utrecht, P2).
+    addNote('nl-2020', 'P1 note');
+    addNote('ut-2020', 'P2 note A');
+    deleteNoteByText('P1 note');
+    addNote('ut-2020', 'P2 note B');
+
+    expect(noteItems()).toHaveLength(2);
+    deleteNoteByText('P2 note A');
+
+    expect(screen.queryByText(/P1 note/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/P2 note A/)).not.toBeInTheDocument();
+    expect(screen.getByText(/P2 note B/)).toBeInTheDocument();
+    expect(noteItems()).toHaveLength(1);
   });
 });
