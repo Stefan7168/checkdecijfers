@@ -391,24 +391,33 @@ export function Workspace({
           />
         </div>
 
-        {showDock ? (
-          <ResizablePanelGroup
-            orientation="horizontal"
-            defaultLayout={defaultLayout}
-            onLayoutChanged={onLayoutChanged}
-            className="min-h-0 flex-1"
-          >
-            <ResizablePanel id="chat-panel" minSize="55">
-              {chatSection}
-            </ResizablePanel>
-            <ResizableHandle withHandle className="mx-1" />
-            <ResizablePanel id="dock-panel" defaultSize="33" minSize="18" maxSize="40">
-              <VisualDock busy={chatBusy} visuals={visuals} activeVisualId={activeVisualId} onSelect={activateVisual} />
-            </ResizablePanel>
-          </ResizablePanelGroup>
-        ) : (
-          <div className="min-h-0 min-w-0 flex-1">{chatSection}</div>
-        )}
+        {/* #211 (chat interaction polish, session 88) code-review finding: the
+            ResizablePanelGroup wrapper is ALWAYS rendered now, never swapped
+            for a plain <div> based on showDock -- the chat-panel Panel around
+            chatSection stays the same type at the same tree position in both
+            cases, so Chat/DatasetChat never remounts (and loses its live,
+            in-progress state) purely because a chart appeared for the first
+            time or the viewport crossed the isWide breakpoint. Only the
+            trailing handle + dock panel are conditionally added/removed as
+            siblings, which doesn't affect the first child's identity. */}
+        <ResizablePanelGroup
+          orientation="horizontal"
+          defaultLayout={defaultLayout}
+          onLayoutChanged={onLayoutChanged}
+          className="min-h-0 min-w-0 flex-1"
+        >
+          <ResizablePanel id="chat-panel" minSize="55">
+            {chatSection}
+          </ResizablePanel>
+          {showDock ? (
+            <>
+              <ResizableHandle withHandle className="mx-1" />
+              <ResizablePanel id="dock-panel" defaultSize="33" minSize="18" maxSize="40">
+                <VisualDock busy={chatBusy} visuals={visuals} activeVisualId={activeVisualId} onSelect={activateVisual} />
+              </ResizablePanel>
+            </>
+          ) : null}
+        </ResizablePanelGroup>
       </div>
       {/* Session 87 visual redesign (owner decision): the "Over dit project"
           explainer that used to sit under the chat is gone from the logged-in

@@ -52,6 +52,21 @@ vi.mock('./ontdek.tsx', () => ({ OntdekSectie: () => null }));
 
 Element.prototype.scrollIntoView = vi.fn();
 
+// #211 (chat interaction polish, session 88) code-review fix: the resizable
+// panel group is now ALWAYS mounted (see workspace.tsx), so every test in
+// this file needs ResizeObserver -- jsdom doesn't implement it, and
+// react-resizable-panels' Group uses it internally. Same stub shape/scoping
+// choice chart.test.tsx already makes for the same reason, just global here
+// since it's now unconditional rather than isolated to a few tests.
+vi.stubGlobal(
+  'ResizeObserver',
+  class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  },
+);
+
 const FOOTER_EXACT =
   'Cijfers: CBS StatLine (CC BY 4.0) · Elk getal herleidbaar tot een officiële CBS-tabel · Over dit project';
 
@@ -322,8 +337,14 @@ describe('SiteHeader — WP135 presence rules', () => {
 });
 
 describe('Workspace — resizable chart panel (session 88)', () => {
-  it('never mounts the resizable panel group when the dock is not shown (no visuals yet)', () => {
+  // Code-review finding (session 88): the panel group is ALWAYS mounted now
+  // (not swapped for a plain <div> based on showDock) specifically so the
+  // chat panel's identity/position never changes -- Chat/DatasetChat must
+  // not remount just because a chart appears or the dock panel toggles.
+  it('always mounts the resizable panel group, but only mounts the dock panel once a visual exists', () => {
     renderWorkspace();
-    expect(document.querySelector('[data-slot="resizable-panel-group"]')).toBeNull();
+    expect(document.querySelector('[data-slot="resizable-panel-group"]')).not.toBeNull();
+    expect(document.querySelectorAll('[data-slot="resizable-panel"]').length).toBe(1);
+    expect(document.querySelector('[data-slot="resizable-handle"]')).toBeNull();
   });
 });
