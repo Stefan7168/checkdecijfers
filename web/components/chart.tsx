@@ -647,7 +647,7 @@ export function ChartView({
   const [lastSpecIdentity, setLastSpecIdentity] = useState(specIdentity);
   if (specIdentity !== lastSpecIdentity) {
     setLastSpecIdentity(specIdentity);
-    dispatch({ type: 'reset', initialForm });
+    dispatch({ type: 'reset', initialForm: state.form });
     setSmallMultiples(false);
     setAxisMode('shared');
   }

@@ -781,6 +781,22 @@ describe('ChartView — #197 step 2, the Tabel view', () => {
       expect(specStrings.some((str) => str.includes(tok)), `token "${tok}" has no source in the spec`).toBe(true);
     }
   });
+
+  it('keeps the user-chosen Tabel view when the SAME ChartView instance is handed a different spec without remounting, instead of reverting to that new spec\'s own default form', () => {
+    // Mirrors the old (pre-reducer) code's deliberate `view` exemption from
+    // the spec-swap reset: view is presentationally valid for ANY spec, so
+    // carrying it across a swap is not a leak worth clearing. Both specs
+    // here are plain single-series line charts, so each one's OWN default
+    // form is 'line' (Grafiek) -- if the swap silently reset to that
+    // default, this would catch it.
+    const { rerender } = render(<ChartView spec={threePointSpec()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Tabel' }));
+    expect(screen.getByRole('tab', { name: 'Tabel' })).toHaveAttribute('aria-selected', 'true');
+
+    rerender(<ChartView spec={threePointSpec({ title: 'Andere reeks' })} />);
+    expect(screen.getByRole('tab', { name: 'Tabel' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('table', { name: 'Andere reeks (%)' })).toBeInTheDocument();
+  });
 });
 
 describe('ChartView — series legend and hide/show (idea 6)', () => {
