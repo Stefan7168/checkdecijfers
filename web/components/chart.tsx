@@ -696,7 +696,7 @@ export function ChartView({
     state.form === 'table' ? spec.kind : state.form === 'line' && !canUseLine ? 'bar' : state.form;
   const dimEntries = Object.entries(spec.dimLabels);
   const markers = annotationMarkers(spec, rows);
-  const plan = valueLabelPlan(spec);
+  const plan = valueLabelPlan({ ...spec, kind: effectiveKind });
   const tickByValue = new Map(plan.axisTicks.map((t) => [t.value, t]));
   const endLabelByKey = new Map(plan.endLabels.map((l) => [l.seriesKey, l]));
   const barLabelsByKey = new Map<string, Map<string, PointLabel>>();

@@ -1011,6 +1011,22 @@ function negativeValueLineSpec(): ChartSpec {
   });
 }
 
+// Single-series bar-kind spec: unlike multiRegionBarSpec (3 series, Lijn
+// disabled by the honesty guard), one series means Lijn stays allowed — the
+// case this switches into a line form whose spec.kind was always 'bar'.
+function singleRegionBarSpec(): ChartSpec {
+  return spec({
+    kind: 'bar',
+    series: [
+      {
+        label: 'Groningen',
+        regionCode: 'PV20',
+        points: [point({ resultId: 'gr-2021', periodCode: '2021', periodLabel: '2021', value: 10, formattedValue: '10' })],
+      },
+    ],
+  });
+}
+
 describe('ChartView form switch', () => {
   it('offers Lijn, Staaf and Tabel controls', () => {
     const s = twoSeriesLineSpec();
@@ -1057,6 +1073,33 @@ describe('ChartView form switch', () => {
     rerender(<ChartView spec={multiRegionBarSpec()} />);
     expect(container.querySelector('.recharts-line')).toBeNull();
     expect(container.querySelector('.recharts-bar')).not.toBeNull();
+  });
+
+  // Regression: valueLabelPlan(spec) branched on the ORIGINAL spec.kind, not
+  // effectiveKind, so a spec switched to a different form kept the labels of
+  // its original kind — always empty for the new one. A line-kind spec shown
+  // as Staaf got no bar labels; a bar-kind spec shown as Lijn got no axis
+  // ticks/end labels. Both would silently strip the "honesty-bound custom
+  // ticks and labels" this file's own top-of-file comment describes as
+  // load-bearing.
+  it('shows bar value labels when a line-kind spec is switched to Staaf', () => {
+    const s = twoSeriesLineSpec();
+    const { container } = render(<ChartView spec={s} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
+    expect(container.querySelector('.recharts-bar')).not.toBeNull();
+    expect(container.querySelector('[data-role="bar-label"]')).not.toBeNull();
+  });
+
+  it('shows axis tick / end-of-line labels when a single-series bar-kind spec is switched to Lijn', () => {
+    const s = singleRegionBarSpec();
+    const { container } = render(<ChartView spec={s} />);
+    const lineTab = screen.getByRole('tab', { name: 'Lijn' });
+    expect(lineTab).not.toBeDisabled();
+    fireEvent.click(lineTab);
+    expect(container.querySelector('.recharts-line')).not.toBeNull();
+    expect(
+      container.querySelector('[data-role="axis-tick"], [data-role="end-label"]'),
+    ).not.toBeNull();
   });
 });
 
