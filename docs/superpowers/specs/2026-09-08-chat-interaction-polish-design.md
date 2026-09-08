@@ -2,6 +2,8 @@
 
 Design spec for the concrete slice of sub-project 2 ([#210](../../open-questions.md)/[#211](../../open-questions.md)) that the owner approved building, 2026-09-08. Brainstormed conversationally with the owner; this doc is the durable record.
 
+**As shipped, 2026-09-08:** everything below built as designed EXCEPT the resizable panel's cross-visit persistence (§5) — real-browser verification found `react-resizable-panels@4.12.4`'s own layout-restore path genuinely broken (a saved width comes back swapped/wrong on reload, violating the chat panel's own configured minimum). Owner decision: ship drag-to-resize without persistence rather than chase a defect in a very recent library release. The `autoSaveId`/localStorage mechanism §5 describes was never actually available in the installed version anyway (see the implementation plan's Task 6 for the real, verified API) — persistence was attempted via `useDefaultLayout` instead, then dropped for the reason above. See [docs/superpowers/plans/2026-09-08-chat-interaction-polish.md](../plans/2026-09-08-chat-interaction-polish.md) for the full trace.
+
 ## Scope
 
 Two independent UI-feedback features, both **pure client-side polish** — no answer-pipeline, billing, or CBS-data code touched, so no invariant (R1–R11) is at risk and no ADR is needed (mechanical UI choice, same class as the sidebar auto-collapse fix in [#213](../../open-questions.md)).
