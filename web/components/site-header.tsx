@@ -10,13 +10,22 @@
 // Session 87 visual redesign: a slim, transparent bar with a hairline — it
 // sits on whatever ground the page paints (the workspace's grey sidebar
 // ground, the landing's white). Behavior and copy unchanged.
+//
+// WP218 phase 4 (#219): every visible string now goes through the i18n
+// catalogue (web/lib/i18n/messages.ts) via useT(); the Dutch entries are
+// byte-identical to what used to be hardcoded here, so this component
+// renders the same Dutch as before when there is no LangProvider above it
+// (useLang()'s own default). Both variants — the workspace header and the
+// stripped /login + landing one — also get the NL|EN switch.
 'use client';
 
 import Link from 'next/link';
 import { useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { signOut } from '../app/actions.ts';
+import { useT } from '../lib/i18n/lang-provider.tsx';
 import { DeleteHistoryButton } from './delete-history-button.tsx';
+import { LanguageSwitch } from './language-switch.tsx';
 import { Badge } from './ui/badge.tsx';
 import { Button } from './ui/button.tsx';
 
@@ -30,6 +39,7 @@ const WORDMARK = 'Check de Cijfers';
 // convention in this same menu.
 function LogoutButton() {
   const { pending } = useFormStatus();
+  const t = useT();
   return (
     <button
       type="submit"
@@ -37,7 +47,7 @@ function LogoutButton() {
       aria-disabled={pending}
       className="text-left text-muted-foreground hover:text-foreground disabled:opacity-60"
     >
-      {pending ? 'Bezig…' : 'Log uit'}
+      {pending ? t('header.busy') : t('header.logout')}
     </button>
   );
 }
@@ -52,13 +62,15 @@ export function SiteHeader({
   stripped?: boolean;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const t = useT();
 
   if (stripped) {
     return (
-      <header className="flex h-12 shrink-0 items-center border-b border-border px-4">
+      <header className="flex h-12 shrink-0 items-center justify-between border-b border-border px-4">
         <Link href="/" className="text-sm font-semibold text-foreground">
           {WORDMARK}
         </Link>
+        <LanguageSwitch />
       </header>
     );
   }
@@ -73,15 +85,16 @@ export function SiteHeader({
           * number. .tnum so digits align (the #91 FT/NRC convention). */}
         {balance !== undefined ? (
           <Badge variant="secondary" className="tnum font-normal text-muted-foreground">
-            {balance} credits
+            {t('header.balance', { n: balance })}
           </Badge>
         ) : null}
         <Link href="/credits" className="text-muted-foreground hover:text-foreground">
-          Credits kopen
+          {t('header.credits')}
         </Link>
         <Link href="/geschiedenis" className="text-muted-foreground hover:text-foreground">
-          Geschiedenis
+          {t('header.history')}
         </Link>
+        <LanguageSwitch />
         <div className="relative">
           <Button
             type="button"
@@ -91,7 +104,7 @@ export function SiteHeader({
             aria-expanded={menuOpen}
             onClick={() => setMenuOpen((open) => !open)}
           >
-            Account
+            {t('header.account')}
           </Button>
           {menuOpen ? (
             <div

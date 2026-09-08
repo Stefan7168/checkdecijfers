@@ -4,8 +4,12 @@
 // there) — so prod never showed the header. Two pins: the page opts out of
 // prerendering, and the flag actually toggles the header.
 import { cleanup, render, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import LoginPage, { dynamic } from './page.tsx';
+
+// WP218 phase 4 (#219): the stripped SiteHeader now renders
+// <LanguageSwitch/>, which calls useRouter().
+vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 
 afterEach(() => {
   cleanup();

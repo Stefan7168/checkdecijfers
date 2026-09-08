@@ -4,6 +4,8 @@ import "./globals.css";
 import { ChartUsageTracker } from "../components/chart-usage-tracker.tsx";
 import { SiteFooter } from "../components/site-footer.tsx";
 import { ThemeProvider } from "../components/theme-provider.tsx";
+import { getLang } from "../lib/i18n/server.ts";
+import { LangProvider } from "../lib/i18n/lang-provider.tsx";
 
 // Session 87 visual redesign (docs/12-huisstijl.md): the chosen mockup
 // (Option B, "Inset Cards") sets interface text in Inter; Geist Mono stays for
@@ -32,17 +34,23 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // WP218 phase 4 (#219): cookie -> Accept-Language -> 'nl'
+  // (docs/superpowers/specs/2026-09-09-language-switch-design.md §2.4). The
+  // layout was already dynamic (every page reads the Supabase session), so
+  // this adds no new dynamic-rendering behaviour.
+  const lang = await getLang();
+
   return (
     // suppressHydrationWarning: next-themes writes the `dark` class onto <html>
     // before React hydrates (its inline script), which is the documented,
     // expected mismatch for exactly this element.
     <html
-      lang="nl"
+      lang={lang}
       suppressHydrationWarning
       className={`${inter.variable} ${geistMono.variable} h-full antialiased`}
     >
@@ -50,14 +58,16 @@ export default function RootLayout({
           site-wide footer (ADR 033 D6) stays in view and the chat workspace
           can size its cards to the viewport. */}
       <body className="flex h-dvh flex-col">
-        <ThemeProvider>
-          {/* Anonymous style-panel usage counter (WP218 phase 6, #220): pure
-              wiring, renders nothing. Mounted once here so it's live for
-              every page, not tied to any one chart mount. */}
-          <ChartUsageTracker />
-          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">{children}</div>
-          <SiteFooter />
-        </ThemeProvider>
+        <LangProvider lang={lang}>
+          <ThemeProvider>
+            {/* Anonymous style-panel usage counter (WP218 phase 6, #220): pure
+                wiring, renders nothing. Mounted once here so it's live for
+                every page, not tied to any one chart mount. */}
+            <ChartUsageTracker />
+            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">{children}</div>
+            <SiteFooter />
+          </ThemeProvider>
+        </LangProvider>
       </body>
     </html>
   );

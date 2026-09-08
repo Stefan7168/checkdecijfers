@@ -41,7 +41,10 @@ import { Landing } from './landing.tsx';
 // (session 87: the logged-in chat screen dropped the section; the logged-out
 // Landing still has it — same '/' pathname, so the pathname alone can't tell).
 const pathname = vi.hoisted(() => ({ current: '/' }));
-vi.mock('next/navigation', () => ({ usePathname: () => pathname.current }));
+// WP218 phase 4 (#219): SiteHeader now renders <LanguageSwitch/>, which calls
+// useRouter() (router.refresh() after the language cookie is set) — added
+// here alongside the pre-existing usePathname mock the site footer needs.
+vi.mock('next/navigation', () => ({ usePathname: () => pathname.current, useRouter: () => ({ refresh: vi.fn() }) }));
 // Landing embeds OntdekCharts, an ASYNC Server Component inside a Suspense
 // boundary. jsdom renders client-side, where React cannot resolve an async
 // component — the boundary never settles and the root's passive effects
