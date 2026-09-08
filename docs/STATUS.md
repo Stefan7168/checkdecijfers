@@ -33,7 +33,7 @@ presentational change); a Fable subagent researched an external demo site for su
 future brainstorm — its "storytelling mode" uses ZERO LLM calls (fixed templates over stats the
 product's own R5 derivations already register), reframing the owner's "very API heavy" concern to
 apply only to an LLM-authored alternative. **Verified LIVE throughout** (`GET /api/health` → ok
-after every one of 4 pushes). 18 commits (`5eec334`→`0360af1`), full verification block
+after every one of 5 pushes). 18 commits (`5eec334`→`0360af1`), full verification block
 (typecheck ×2, web 717/717, backend 2089/2089, real `next build`, `/code-review` LOW) before every
 push, every push's own CI individually watched green. Full session entry:
 [status-archive.md](status-archive.md).
