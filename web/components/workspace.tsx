@@ -20,6 +20,7 @@ import type { DockVisual } from '../lib/dock-visuals.ts';
 import { useMediaQuery } from '../lib/use-media-query.ts';
 import { Chat } from './chat.tsx';
 import { DatasetChat } from './dataset-chat.tsx';
+import { AnswerSkeleton } from './loading-skeletons.tsx';
 import { SiteHeader } from './site-header.tsx';
 import { ThemeToggle } from './theme-toggle.tsx';
 import { ThreadSidebar } from './thread-sidebar.tsx';
@@ -86,6 +87,10 @@ export function Workspace({
   // response land in the wrong thread (the chat's own generation guard is the
   // correctness backstop; this is the UX belt).
   const [chatBusy, setChatBusy] = useState(false);
+  // #211 (chat interaction polish, session 88): true only for the span of a
+  // clicked-thread load — false the rest of the time, including for the
+  // "Nieuwe chat" reset (startNewChat sets no async work in flight).
+  const [threadLoading, setThreadLoading] = useState(false);
   // Tracks the dock-visual count across reports so a NEW visual becomes active
   // (updated in handleVisualsChange, an event handler — never in an effect).
   const prevVisualCount = useRef(0);
@@ -149,30 +154,35 @@ export function Workspace({
   // the stale entry.
   const selectThread = useCallback(
     async (threadId: number) => {
-      const loaded = await loadMyThread(threadId);
-      if (loaded.kind === 'empty') {
-        void refreshThreads();
-        return;
+      setThreadLoading(true);
+      try {
+        const loaded = await loadMyThread(threadId);
+        if (loaded.kind === 'empty') {
+          void refreshThreads();
+          return;
+        }
+        setActiveThreadId(loaded.threadId);
+        setHandoff(
+          loaded.kind === 'dataset'
+            ? {
+                kind: 'dataset',
+                threadId: loaded.threadId,
+                datasetId: loaded.datasetId,
+                displayName: loaded.displayName,
+                status: loaded.status,
+                profile: loaded.profile,
+                messages: loaded.messages,
+                rawState: loaded.rawState,
+              }
+            : { kind: 'cbs', messages: loaded.messages, context: loaded.context, threadId: loaded.threadId },
+        );
+        setVisuals([]);
+        setActiveVisualId(null);
+        prevVisualCount.current = 0;
+        setLoadNonce((nonce) => nonce + 1);
+      } finally {
+        setThreadLoading(false);
       }
-      setActiveThreadId(loaded.threadId);
-      setHandoff(
-        loaded.kind === 'dataset'
-          ? {
-              kind: 'dataset',
-              threadId: loaded.threadId,
-              datasetId: loaded.datasetId,
-              displayName: loaded.displayName,
-              status: loaded.status,
-              profile: loaded.profile,
-              messages: loaded.messages,
-              rawState: loaded.rawState,
-            }
-          : { kind: 'cbs', messages: loaded.messages, context: loaded.context, threadId: loaded.threadId },
-      );
-      setVisuals([]);
-      setActiveVisualId(null);
-      prevVisualCount.current = 0;
-      setLoadNonce((nonce) => nonce + 1);
     },
     [refreshThreads],
   );
@@ -304,7 +314,14 @@ export function Workspace({
             <div className="flex-1" />
             <ThemeToggle />
           </div>
-          {handoff.kind === 'dataset' ? (
+          {threadLoading ? (
+            <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
+              <AnswerSkeleton />
+              <div className="ml-auto w-2/3">
+                <AnswerSkeleton />
+              </div>
+            </div>
+          ) : handoff.kind === 'dataset' ? (
             // ADR 037 D10: dock wiring mirrors Chat's own below exactly —
             // same isWide-gated dockMode, same handleVisualsChange/
             // activateVisual handlers (visuals/activeVisualId are already

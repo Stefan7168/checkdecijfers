@@ -2,7 +2,7 @@
 // byte-pinned attribution string, the header presence rules (stripped vs full),
 // the account menu holding "Log uit" (signOut) + the relocated delete-history
 // control, and that the workspace fetches its thread list on mount.
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { LoadedThread } from '../app/actions.ts';
 
@@ -194,6 +194,21 @@ describe('Workspace — mixed CBS + dataset thread list (ADR 037 D10 invariant)'
     fireEvent.click(screen.getByRole('button', { name: 'Inflatie 2024' }));
     expect(await screen.findByPlaceholderText('Stel een vraag…')).toBeInTheDocument();
     expect(screen.queryByPlaceholderText('Ask about your data…')).not.toBeInTheDocument();
+  });
+
+  it('shows a skeleton message list while a clicked thread is loading, then the real messages', async () => {
+    let resolveLoad!: (value: LoadedThread) => void;
+    actions.loadMyThread.mockImplementation(
+      () => new Promise<LoadedThread>((resolve) => { resolveLoad = resolve; }),
+    );
+    renderWorkspace(MIXED_THREADS);
+    fireEvent.click(screen.getByRole('button', { name: 'Inflatie 2024' }));
+    await waitFor(() => {
+      expect(document.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThan(0);
+    });
+    resolveLoad({ kind: 'cbs', threadId: 1, messages: [], context: null });
+    await screen.findByPlaceholderText('Stel een vraag…');
+    expect(document.querySelectorAll('[data-slot="skeleton"]').length).toBe(0);
   });
 
   it('switching between two dataset threads resets DatasetChat to the NEW thread\'s messages (the key={threadId} remount)', async () => {
