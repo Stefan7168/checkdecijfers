@@ -16,8 +16,7 @@
 import { memo, useId, useState } from 'react';
 import { DERIVED_DATA_MARKING } from '../backend/query/types.ts';
 import type { AnswerProof as AnswerProofData } from '../lib/answer-proof.ts';
-
-const LABEL_CLASS = 'text-xs text-muted-foreground underline';
+import { Button } from './ui/button.tsx';
 
 function CellTable({ proof, technical }: { proof: AnswerProofData; technical: boolean }) {
   const dimKeys = [...new Set(proof.cells.flatMap((cell) => Object.keys(cell.dims)))].sort();
@@ -89,15 +88,16 @@ export const AnswerProof = memo(function AnswerProof({ proof }: { proof: AnswerP
 
   return (
     <>
-      <button
+      <Button
         type="button"
+        variant="link"
+        size="sm"
         aria-expanded={open}
         aria-controls={panelId}
         onClick={() => setOpen((o) => !o)}
-        className={LABEL_CLASS}
       >
         {triggerLabel}
-      </button>
+      </Button>
       {open ? (
         <div
           id={panelId}
@@ -105,14 +105,16 @@ export const AnswerProof = memo(function AnswerProof({ proof }: { proof: AnswerP
           aria-label="Onderbouwing van dit antwoord"
           className="order-last mt-2 w-full basis-full rounded border border-border bg-muted p-3 text-xs text-muted-foreground"
         >
-          <button
+          <Button
             type="button"
+            variant="link"
+            size="sm"
+            className="mb-3"
             aria-pressed={technical}
             onClick={() => setTechnical((t) => !t)}
-            className={`${LABEL_CLASS} mb-3`}
           >
             Technische details
-          </button>
+          </Button>
 
           <div className="mb-3">
             <h4 className="mb-1 font-medium text-muted-foreground">Waarom dit antwoord</h4>

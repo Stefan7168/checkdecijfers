@@ -168,9 +168,10 @@ function DownloadCsvButton({ csv }: { csv: AnswerCsv }) {
   const [failed, setFailed] = useState(false);
   return (
     <>
-      <button
+      <Button
         type="button"
-        className="text-xs text-muted-foreground underline"
+        variant="link"
+        size="sm"
         onClick={() => {
           try {
             const url = URL.createObjectURL(
@@ -187,7 +188,7 @@ function DownloadCsvButton({ csv }: { csv: AnswerCsv }) {
         }}
       >
         Download als CSV
-      </button>
+      </Button>
       {failed ? (
         <span className="text-xs text-destructive">Downloaden lukte niet in deze browser.</span>
       ) : null}
@@ -199,9 +200,10 @@ function DownloadCsvButton({ csv }: { csv: AnswerCsv }) {
 function CopyCitationButton({ citation }: { citation: string }) {
   const [copied, setCopied] = useState(false);
   return (
-    <button
+    <Button
       type="button"
-      className="text-xs text-muted-foreground underline"
+      variant="link"
+      size="sm"
       onClick={async () => {
         try {
           await navigator.clipboard.writeText(citation);
@@ -214,7 +216,7 @@ function CopyCitationButton({ citation }: { citation: string }) {
       }}
     >
       {copied ? 'Gekopieerd!' : 'Kopieer als citaat'}
-    </button>
+    </Button>
   );
 }
 

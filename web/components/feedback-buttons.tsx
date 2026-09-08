@@ -11,6 +11,7 @@
 // display above it.
 import { useState } from 'react';
 import { submitAnswerFeedback } from '../app/actions.ts';
+import { Button } from './ui/button.tsx';
 
 type Verdict = 'up' | 'down';
 
@@ -48,35 +49,31 @@ export function FeedbackButtons({
     }
   }
 
-  const buttonClass = (active: boolean) =>
-    'rounded-full border px-2 py-0.5 text-xs ' +
-    (active
-      ? 'border-border bg-muted text-foreground'
-      : 'border-border text-muted-foreground hover:bg-muted');
-
   return (
     <div className="mt-1">
       <div className="flex flex-wrap items-center gap-2">
-        <button
+        <Button
           type="button"
+          variant={chosen === 'up' ? 'secondary' : 'outline'}
+          size="icon-xs"
           aria-label="Nuttig antwoord"
           aria-pressed={chosen === 'up'}
           disabled={busy}
           onClick={() => send('up')}
-          className={buttonClass(chosen === 'up')}
         >
           👍
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
+          variant={chosen === 'down' ? 'secondary' : 'outline'}
+          size="icon-xs"
           aria-label="Niet nuttig"
           aria-pressed={chosen === 'down'}
           disabled={busy}
           onClick={() => setPanelOpen(true)}
-          className={buttonClass(chosen === 'down')}
         >
           👎
-        </button>
+        </Button>
         {status === 'thanks' ? (
           <span className="text-xs text-muted-foreground">Bedankt voor je feedback.</span>
         ) : null}
@@ -95,22 +92,23 @@ export function FeedbackButtons({
             className="w-full rounded-md border border-border bg-card p-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           />
           <div className="flex gap-2">
-            <button
+            <Button
               type="button"
+              size="sm"
               disabled={busy}
               onClick={() => send('down', text.trim() === '' ? undefined : text)}
-              className="rounded-md bg-primary px-3 py-1 text-xs text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
             >
               Verstuur feedback
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
               disabled={busy}
               onClick={() => send('down')}
-              className="rounded-md border border-border bg-card px-3 py-1 text-xs text-foreground hover:bg-muted"
             >
               Overslaan
-            </button>
+            </Button>
           </div>
         </div>
       ) : null}
