@@ -92,7 +92,10 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-function renderWorkspace(initialThreads: ThreadSummary[] = [], opts: { attachments?: { enabled: true } } = {}) {
+function renderWorkspace(
+  initialThreads: ThreadSummary[] = [],
+  opts: { attachments?: { enabled: true }; chartStyle?: unknown } = {},
+) {
   return render(
     <Workspace
       initialBalance={100}
@@ -184,6 +187,36 @@ describe('Workspace — WP135 shell (flag on)', () => {
     renderWorkspace([{ id: 1, title: 'Inflatie 2024', lastActivityAt: new Date().toISOString(), kind: 'cbs' }]);
     expect(screen.getByRole('button', { name: 'Nieuwe chat' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Inflatie 2024' })).toBeInTheDocument();
+  });
+});
+
+// WP218 phase 2 (owner C): Workspace ALWAYS wraps its tree in
+// ChartStyleProvider (chart-style-context.tsx) — the provider's own
+// presence is what "signed in" means to every ChartView underneath, not the
+// `chartStyle` value it was mounted with. These tests are the workspace-level
+// smoke check that the prop's absence/null/valid/garbage shapes all render
+// without incident; ChartStyleProvider's own sanitising and ChartView's
+// actual use of the account default as `resolvePresentation`'s base are
+// covered directly in chart-style-context.test.tsx and chart.test.tsx.
+describe('Workspace — WP218 phase 2: chartStyle prop (account default provider)', () => {
+  it('renders normally when chartStyle is absent (no prop passed)', () => {
+    renderWorkspace();
+    expect(screen.getByRole('button', { name: 'Nieuwe chat' })).toBeInTheDocument();
+  });
+
+  it('renders normally when chartStyle is null (no saved default)', () => {
+    renderWorkspace([], { chartStyle: null });
+    expect(screen.getByRole('button', { name: 'Nieuwe chat' })).toBeInTheDocument();
+  });
+
+  it('renders normally when chartStyle is a valid saved default', () => {
+    renderWorkspace([], { chartStyle: { lineWidth: 'thick' } });
+    expect(screen.getByRole('button', { name: 'Nieuwe chat' })).toBeInTheDocument();
+  });
+
+  it('renders normally when chartStyle is garbage (sanitised away, never throws)', () => {
+    renderWorkspace([], { chartStyle: { bogus: 1, lineWidth: 'huge' } });
+    expect(screen.getByRole('button', { name: 'Nieuwe chat' })).toBeInTheDocument();
   });
 });
 

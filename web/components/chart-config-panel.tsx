@@ -82,6 +82,17 @@ interface PanelCopyShape {
   /** Lettertype tab (Task 6). */
   font: string;
   fontDefault: string;
+  /** WP218 phase 2 (owner C): the account-default footer row and its
+   * `role="status"` outcome line, plus the pristine-and-has-a-default hint
+   * shown above the Grafiek tab's controls. Only rendered when the `account`
+   * prop is present (a signed-in visitor — Ontdek/trial gets no row at all). */
+  accountSave: string;
+  accountForget: string;
+  accountSaved: string;
+  accountForgotten: string;
+  accountUnavailable: string;
+  accountError: string;
+  accountHint: string;
 }
 
 export const PANEL_COPY: Record<PanelLang, PanelCopyShape> = {
@@ -115,6 +126,13 @@ export const PANEL_COPY: Record<PanelLang, PanelCopyShape> = {
     warnBoth: 'Deze kleur is slecht leesbaar in beide thema’s.',
     font: 'Lettertype',
     fontDefault: 'Standaard',
+    accountSave: 'Bewaar als mijn standaard',
+    accountForget: 'Vergeet mijn standaard',
+    accountSaved: 'Opgeslagen.',
+    accountForgotten: 'Vergeten.',
+    accountUnavailable: 'Opslaan is op dit moment niet mogelijk.',
+    accountError: 'Er ging iets mis. Probeer het later opnieuw.',
+    accountHint: 'Mijn standaard is actief.',
   },
   en: {
     trigger: 'Style',
@@ -146,6 +164,13 @@ export const PANEL_COPY: Record<PanelLang, PanelCopyShape> = {
     warnBoth: 'This colour is hard to read in both themes.',
     font: 'Font',
     fontDefault: 'Default',
+    accountSave: 'Save as my default',
+    accountForget: 'Forget my default',
+    accountSaved: 'Saved.',
+    accountForgotten: 'Forgotten.',
+    accountUnavailable: 'Saving is not possible right now.',
+    accountError: 'Something went wrong. Try again later.',
+    accountHint: 'My default is active.',
   },
 };
 
@@ -287,6 +312,20 @@ function onRadioGroupKeyDown(event: KeyboardEvent<HTMLDivElement>): void {
   radios[nextIdx].click();
 }
 
+/** WP218 phase 2 (owner C): the outcome the panel needs to show a status
+ * line for — `onSave`/`onForget` do the actual server round trip (chart.tsx
+ * owns the client-only pieces: applying the sanitised effective values to
+ * `useChartStyle()`'s local state and firing the usage-counter event on
+ * success) and hand back only which digit-free line to display. */
+export interface ChartConfigPanelAccount {
+  /** Whether the signed-in account currently has a saved default — governs
+   * whether "Vergeet mijn standaard" is offered at all, and (with
+   * `resolved.pristine`) whether the "Mijn standaard is actief." hint shows. */
+  hasDefault: boolean;
+  onSave: () => Promise<'saved' | 'unavailable' | 'error'>;
+  onForget: () => Promise<'forgotten' | 'error'>;
+}
+
 export interface ChartConfigPanelProps {
   resolved: ResolvedPresentation;
   seriesMeta: { key: string; label: string; color: string }[];
@@ -297,6 +336,10 @@ export interface ChartConfigPanelProps {
   /** WP218 phase 6: fired once each time the panel opens; optional and
    * unused by this task (no phase-6 consumer exists yet). */
   onOpen?: () => void;
+  /** WP218 phase 2 (owner C): present only for a signed-in visitor
+   * (chart.tsx passes it exactly when `useChartStyle().signedIn`) — absent
+   * for Ontdek/trial, which renders no account-default row at all. */
+  account?: ChartConfigPanelAccount;
 }
 
 export function ChartConfigPanel({
@@ -307,10 +350,45 @@ export function ChartConfigPanel({
   idPrefix,
   lang = 'nl',
   onOpen,
+  account,
 }: ChartConfigPanelProps) {
   const copy = PANEL_COPY[lang];
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabKey>('chart');
+  // WP218 phase 2: shared by both account-row buttons — a save/forget round
+  // trip disables both while pending (never two in flight for the same
+  // panel instance) and the outcome status line persists until the next
+  // attempt, matching the Kleuren tab's own "state survives until something
+  // changes it" pattern rather than auto-clearing on a timer.
+  const [accountBusy, setAccountBusy] = useState(false);
+  const [accountStatus, setAccountStatus] = useState<'saved' | 'forgotten' | 'unavailable' | 'error' | null>(null);
+
+  async function handleAccountSave(): Promise<void> {
+    if (!account) return;
+    setAccountBusy(true);
+    try {
+      setAccountStatus(await account.onSave());
+    } finally {
+      setAccountBusy(false);
+    }
+  }
+
+  async function handleAccountForget(): Promise<void> {
+    if (!account) return;
+    setAccountBusy(true);
+    try {
+      setAccountStatus(await account.onForget());
+    } finally {
+      setAccountBusy(false);
+    }
+  }
+
+  function accountStatusText(status: 'saved' | 'forgotten' | 'unavailable' | 'error'): string {
+    if (status === 'saved') return copy.accountSaved;
+    if (status === 'forgotten') return copy.accountForgotten;
+    if (status === 'unavailable') return copy.accountUnavailable;
+    return copy.accountError;
+  }
   const chartTabRef = useRef<HTMLButtonElement>(null);
   const colorsTabRef = useRef<HTMLButtonElement>(null);
   const fontTabRef = useRef<HTMLButtonElement>(null);
@@ -503,6 +581,13 @@ export function ChartConfigPanel({
               aria-labelledby={tabId('chart')}
               className="mt-3 flex flex-col items-start gap-3"
             >
+              {/* WP218 phase 2 (owner C): only when the account default is
+                * actually what's on screen — a non-pristine panel means the
+                * reader's own per-chart tweaks are showing, not the saved
+                * default, so the hint would misrepresent what's rendered. */}
+              {account?.hasDefault && resolved.pristine ? (
+                <p className="w-full text-muted-foreground">{copy.accountHint}</p>
+              ) : null}
               {radioGroups.map((group) => {
                 if (!resolved.applicable.has(group.key)) return null;
                 const reason = resolved.locks[group.key];
@@ -687,6 +772,35 @@ export function ChartConfigPanel({
                   </option>
                 ))}
               </select>
+            </div>
+          ) : null}
+
+          {/* WP218 phase 2 (owner C): a footer row visible regardless of the
+            * active tab (unlike the tabpanel bodies above) — the account
+            * default is a property of the whole panel, not any one tab.
+            * Absent entirely for a signed-out/trial visitor (no `account`
+            * prop at all — chart.tsx never passes one then). */}
+          {account ? (
+            <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border pt-3">
+              <Button type="button" variant="outline" size="xs" disabled={accountBusy} onClick={() => void handleAccountSave()}>
+                {copy.accountSave}
+              </Button>
+              {account.hasDefault ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="xs"
+                  disabled={accountBusy}
+                  onClick={() => void handleAccountForget()}
+                >
+                  {copy.accountForget}
+                </Button>
+              ) : null}
+              {accountStatus ? (
+                <p role="status" className="w-full text-muted-foreground">
+                  {accountStatusText(accountStatus)}
+                </p>
+              ) : null}
             </div>
           ) : null}
         </section>

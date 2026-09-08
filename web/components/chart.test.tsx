@@ -7,7 +7,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ChartSpec } from '../backend/chart/types.ts';
 import type { ChartStyleEvent } from '../backend/chart/user-styles.ts';
 import { setChartUsageSink } from '../lib/chart-usage-client.ts';
+import { ChartStyleProvider } from '../lib/chart-style-context.tsx';
 import { attributedSvgMarkup } from './chart-download.tsx';
+
+// WP218 phase 2 (owner C): chart.tsx imports the account-default Server
+// Actions from THIS tiny file, never web/app/actions.ts (see chart-style-
+// actions.ts's own header) — mocked here so the account-default save/forget
+// flow tests below never touch a real db/auth boundary, mirroring how the
+// phase-6 usage counter is exercised only through its own injectable sink.
+const chartStyleActions = vi.hoisted(() => ({
+  saveMyChartStyle: vi.fn(),
+  forgetMyChartStyle: vi.fn(),
+}));
+vi.mock('../app/chart-style-actions.ts', () => chartStyleActions);
 import {
   annotationMarkers,
   buildRows,
@@ -1871,5 +1883,124 @@ describe('WP218 phase 6 — anonymous style-panel usage counter', () => {
     fireEvent.click(screen.getByRole('radio', { name: 'Dik' }));
     expect(sink).toHaveBeenCalledTimes(2);
     expect(sink).toHaveBeenNthCalledWith(2, 'option_changed');
+  });
+});
+
+// WP218 phase 2 (#218 chart styling, owner decision C): the account default
+// as resolvePresentation's `base` — a signed-in visitor's saved style
+// (ChartStyleProvider, mounted by Workspace in real use) governs what a
+// FRESH/reset chart looks like, per-chart tweaks still win on top of it, and
+// "Standaard" resets to it, never to the hardcoded stock look, matching
+// owner E ("each chart starts fresh" against THIS base).
+describe('WP218 phase 2 — account default for chart styling (owner C)', () => {
+  beforeEach(() => {
+    chartStyleActions.saveMyChartStyle.mockReset();
+    chartStyleActions.forgetMyChartStyle.mockReset();
+  });
+
+  it('a saved lineWidth:thick default renders at 3 px, panel pristine, Dik checked, hint shown', () => {
+    const { container } = render(
+      <ChartStyleProvider initial={{ lineWidth: 'thick' }}>
+        <ChartView spec={threePointSpec()} />
+      </ChartStyleProvider>,
+    );
+    expect(container.querySelector('.recharts-line-curve')?.getAttribute('stroke-width')).toBe('3');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    expect(screen.getByRole('radio', { name: 'Dik' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('button', { name: 'Standaard' })).toBeDisabled();
+    expect(screen.getByText('Mijn standaard is actief.')).toBeInTheDocument();
+  });
+
+  it('clicking Dun then Standaard returns to 3 px — the account default, not stock', () => {
+    const { container } = render(
+      <ChartStyleProvider initial={{ lineWidth: 'thick' }}>
+        <ChartView spec={threePointSpec()} />
+      </ChartStyleProvider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Dun' }));
+    expect(container.querySelector('.recharts-line-curve')?.getAttribute('stroke-width')).toBe('1');
+    expect(screen.queryByText('Mijn standaard is actief.')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Standaard' }));
+    expect(container.querySelector('.recharts-line-curve')?.getAttribute('stroke-width')).toBe('3');
+  });
+
+  it('a spec swap keeps the account default as the base while clearing per-chart tweaks', () => {
+    const { container, rerender } = render(
+      <ChartStyleProvider initial={{ lineWidth: 'thick' }}>
+        <ChartView spec={threePointSpec()} />
+      </ChartStyleProvider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Dun' }));
+    expect(container.querySelector('.recharts-line-curve')?.getAttribute('stroke-width')).toBe('1');
+
+    rerender(
+      <ChartStyleProvider initial={{ lineWidth: 'thick' }}>
+        <ChartView spec={threePointSpec({ title: 'Een andere grafiek' })} />
+      </ChartStyleProvider>,
+    );
+    expect(container.querySelector('.recharts-line-curve')?.getAttribute('stroke-width')).toBe('3');
+  });
+
+  it('without a provider: the stock look, and no account row at all', () => {
+    const { container } = render(<ChartView spec={threePointSpec()} />);
+    expect(container.querySelector('.recharts-line-curve')?.getAttribute('stroke-width')).toBe('2');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    expect(screen.queryByRole('button', { name: 'Bewaar als mijn standaard' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Vergeet mijn standaard' })).toBeNull();
+    expect(screen.queryByText('Mijn standaard is actief.')).toBeNull();
+  });
+
+  it('save flow: a successful mocked save shows Opgeslagen. and the usage sink receives default_saved', async () => {
+    chartStyleActions.saveMyChartStyle.mockResolvedValue({ ok: true });
+    const sink = vi.fn<(event: ChartStyleEvent) => void>();
+    setChartUsageSink(sink);
+    try {
+      render(
+        <ChartStyleProvider initial={{ lineWidth: 'thick' }}>
+          <ChartView spec={threePointSpec()} />
+        </ChartStyleProvider>,
+      );
+      fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Bewaar als mijn standaard' }));
+
+      expect(await screen.findByRole('status')).toHaveTextContent('Opgeslagen.');
+      expect(chartStyleActions.saveMyChartStyle).toHaveBeenCalledWith(
+        expect.objectContaining({ lineWidth: 'thick' }),
+      );
+      expect(sink).toHaveBeenCalledWith('default_saved');
+      // The hint keeps showing afterward: the just-saved default IS what's
+      // still on screen (pristine, hasDefault still true).
+      expect(screen.getByText('Mijn standaard is actief.')).toBeInTheDocument();
+    } finally {
+      setChartUsageSink(null);
+    }
+  });
+
+  it('forget flow: a successful mocked forget shows Vergeten. and the usage sink receives default_forgotten, hint gone', async () => {
+    chartStyleActions.forgetMyChartStyle.mockResolvedValue({ ok: true });
+    const sink = vi.fn<(event: ChartStyleEvent) => void>();
+    setChartUsageSink(sink);
+    try {
+      const { container } = render(
+        <ChartStyleProvider initial={{ lineWidth: 'thick' }}>
+          <ChartView spec={threePointSpec()} />
+        </ChartStyleProvider>,
+      );
+      fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Vergeet mijn standaard' }));
+
+      expect(await screen.findByRole('status')).toHaveTextContent('Vergeten.');
+      expect(sink).toHaveBeenCalledWith('default_forgotten');
+      expect(screen.queryByText('Mijn standaard is actief.')).toBeNull();
+      // accountStyle is now null ⇒ base is stock again.
+      expect(container.querySelector('.recharts-line-curve')?.getAttribute('stroke-width')).toBe('2');
+    } finally {
+      setChartUsageSink(null);
+    }
   });
 });

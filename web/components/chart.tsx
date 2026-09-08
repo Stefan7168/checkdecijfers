@@ -46,10 +46,16 @@ import {
   RECHARTS_PALETTE,
   resolvePresentation,
   seriesColor,
+  withAccountDefault,
   xAxisHeight,
   xLabelOverhang,
 } from '../lib/chart-presentation.ts';
+import { useChartStyle } from '../lib/chart-style-context.tsx';
 import { trackChartStyleEvent } from '../lib/chart-usage-client.ts';
+// WP218 phase 2 (owner C): the account-default Server Actions live in their
+// OWN tiny-import-graph file, never web/app/actions.ts — see that file's own
+// header for why (the usage-actions.ts precedent this mirrors).
+import { forgetMyChartStyle, saveMyChartStyle } from '../app/chart-style-actions.ts';
 import { ensureFontLoaded } from '../lib/font-loader.ts';
 import { ChartConfigPanel } from './chart-config-panel.tsx';
 import { ChartDownloadMenu } from './chart-download.tsx';
@@ -926,9 +932,20 @@ export function ChartView({
   // current zoom window still governs the honesty-locked defaults, the same
   // pattern spec.attribution uses elsewhere in this file.
   const hasProvisional = spec.series.some((s) => s.points.some((p) => p.provisional));
+  // WP218 phase 2 (owner C): the signed-in account's saved style is the
+  // `base` every chart resolves ON TOP OF — `withAccountDefault` degrades
+  // anything invalid/absent to the stock look, so a logged-out visitor
+  // (useChartStyle()'s no-provider default) or an account with no saved
+  // default both resolve exactly as before this task. Per-chart overrides
+  // (`state.presentation`) still win over the account default (owner E is
+  // untouched: a spec swap clears `state.presentation`, not `accountStyle`,
+  // so "Standaard" and a fresh chart both fall back to THIS base, not stock).
+  const { accountStyle, signedIn, setAccountStyle } = useChartStyle();
+  const base = withAccountDefault(accountStyle);
   const resolved = resolvePresentation(
     { kind: spec.kind, form: activeForm, seriesCount: spec.series.length, hasProvisional },
     state.presentation,
+    base,
   );
   const pres = resolved.values;
   // This is the one Hook `pres` feeds, so it must run unconditionally on
@@ -1169,6 +1186,33 @@ export function ChartView({
             onReset={() => dispatch({ type: 'resetPresentation' })}
             onOpen={() => trackChartStyleEvent('panel_open')}
             idPrefix={domId}
+            account={
+              signedIn
+                ? {
+                    hasDefault: accountStyle !== null,
+                    onSave: async () => {
+                      // The EFFECTIVE values (base + whatever per-chart
+                      // tweaks are currently showing) become the new
+                      // account default — "what's on screen" is what
+                      // "Bewaar als mijn standaard" promises to save.
+                      const r = await saveMyChartStyle(resolved.values);
+                      if (r.ok) {
+                        setAccountStyle(resolved.values);
+                        trackChartStyleEvent('default_saved');
+                      }
+                      return r.ok ? 'saved' : r.reason === 'unavailable' ? 'unavailable' : 'error';
+                    },
+                    onForget: async () => {
+                      const r = await forgetMyChartStyle();
+                      if (r.ok) {
+                        setAccountStyle(null);
+                        trackChartStyleEvent('default_forgotten');
+                      }
+                      return r.ok ? 'forgotten' : 'error';
+                    },
+                  }
+                : undefined
+            }
           />
         ) : null}
       </div>

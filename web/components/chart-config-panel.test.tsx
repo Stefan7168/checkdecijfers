@@ -542,3 +542,194 @@ describe('ChartConfigPanel — Lettertype tab', () => {
     expect(onChange).toHaveBeenCalledWith({ fontFamily: null });
   });
 });
+
+// WP218 phase 2 (#218 chart styling, owner C): the account-default footer
+// row + status line + the "Mijn standaard is actief." hint. `account` is a
+// dumb outcome-reporting interface here (chart.tsx owns the real server
+// round trip and the useChartStyle()/usage-counter side effects) — these
+// tests drive it with plain vi.fn() stubs.
+describe('ChartConfigPanel — WP218 phase 2 (owner C): account default row', () => {
+  it('no account prop → no row at all (Ontdek/trial)', () => {
+    render(
+      <ChartConfigPanel
+        resolved={resolvePresentation(lineCtx, {})}
+        seriesMeta={meta}
+        onChange={vi.fn()}
+        onReset={vi.fn()}
+        idPrefix="acc0"
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    expect(screen.queryByRole('button', { name: 'Bewaar als mijn standaard' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Vergeet mijn standaard' })).toBeNull();
+  });
+
+  it('hasDefault false: only the save button is offered', () => {
+    render(
+      <ChartConfigPanel
+        resolved={resolvePresentation(lineCtx, {})}
+        seriesMeta={meta}
+        onChange={vi.fn()}
+        onReset={vi.fn()}
+        idPrefix="acc1"
+        account={{ hasDefault: false, onSave: vi.fn(), onForget: vi.fn() }}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    expect(screen.getByRole('button', { name: 'Bewaar als mijn standaard' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Vergeet mijn standaard' })).toBeNull();
+    expect(screen.queryByText('Mijn standaard is actief.')).toBeNull();
+  });
+
+  it('hasDefault true + pristine: the hint shows above the Grafiek controls; a per-chart tweak hides it again', () => {
+    const account = { hasDefault: true, onSave: vi.fn(), onForget: vi.fn() };
+    const { rerender } = render(
+      <ChartConfigPanel
+        resolved={resolvePresentation(lineCtx, {})}
+        seriesMeta={meta}
+        onChange={vi.fn()}
+        onReset={vi.fn()}
+        idPrefix="acc2"
+        account={account}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    expect(screen.getByText('Mijn standaard is actief.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Vergeet mijn standaard' })).toBeInTheDocument();
+
+    rerender(
+      <ChartConfigPanel
+        resolved={resolvePresentation(lineCtx, { lineWidth: 'thick' })}
+        seriesMeta={meta}
+        onChange={vi.fn()}
+        onReset={vi.fn()}
+        idPrefix="acc2"
+        account={account}
+      />,
+    );
+    expect(screen.queryByText('Mijn standaard is actief.')).toBeNull();
+  });
+
+  it('save flow: Opgeslagen. on ok, calls onSave exactly once', async () => {
+    const onSave = vi.fn().mockResolvedValue('saved');
+    render(
+      <ChartConfigPanel
+        resolved={resolvePresentation(lineCtx, {})}
+        seriesMeta={meta}
+        onChange={vi.fn()}
+        onReset={vi.fn()}
+        idPrefix="acc3"
+        account={{ hasDefault: false, onSave, onForget: vi.fn() }}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Bewaar als mijn standaard' }));
+    expect(await screen.findByRole('status')).toHaveTextContent('Opgeslagen.');
+    expect(onSave).toHaveBeenCalledTimes(1);
+  });
+
+  it('save flow: the digit-free "unavailable" line on that outcome', async () => {
+    const onSave = vi.fn().mockResolvedValue('unavailable');
+    render(
+      <ChartConfigPanel
+        resolved={resolvePresentation(lineCtx, {})}
+        seriesMeta={meta}
+        onChange={vi.fn()}
+        onReset={vi.fn()}
+        idPrefix="acc4"
+        account={{ hasDefault: false, onSave, onForget: vi.fn() }}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Bewaar als mijn standaard' }));
+    expect(await screen.findByRole('status')).toHaveTextContent('Opslaan is op dit moment niet mogelijk.');
+  });
+
+  it('save flow: the generic error line on a thrown/failed outcome', async () => {
+    const onSave = vi.fn().mockResolvedValue('error');
+    render(
+      <ChartConfigPanel
+        resolved={resolvePresentation(lineCtx, {})}
+        seriesMeta={meta}
+        onChange={vi.fn()}
+        onReset={vi.fn()}
+        idPrefix="acc5"
+        account={{ hasDefault: false, onSave, onForget: vi.fn() }}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Bewaar als mijn standaard' }));
+    expect(await screen.findByRole('status')).toHaveTextContent('Er ging iets mis. Probeer het later opnieuw.');
+  });
+
+  it('forget flow: Vergeten. on success, calls onForget exactly once', async () => {
+    const onForget = vi.fn().mockResolvedValue('forgotten');
+    render(
+      <ChartConfigPanel
+        resolved={resolvePresentation(lineCtx, {})}
+        seriesMeta={meta}
+        onChange={vi.fn()}
+        onReset={vi.fn()}
+        idPrefix="acc6"
+        account={{ hasDefault: true, onSave: vi.fn(), onForget }}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Vergeet mijn standaard' }));
+    expect(await screen.findByRole('status')).toHaveTextContent('Vergeten.');
+    expect(onForget).toHaveBeenCalledTimes(1);
+  });
+
+  it('busy-disables both buttons while a save is pending, re-enables once it settles', async () => {
+    let resolveSave!: (value: 'saved') => void;
+    const onSave = vi.fn(
+      () =>
+        new Promise<'saved'>((resolve) => {
+          resolveSave = resolve;
+        }),
+    );
+    render(
+      <ChartConfigPanel
+        resolved={resolvePresentation(lineCtx, {})}
+        seriesMeta={meta}
+        onChange={vi.fn()}
+        onReset={vi.fn()}
+        idPrefix="acc7"
+        account={{ hasDefault: true, onSave, onForget: vi.fn() }}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    const saveButton = screen.getByRole('button', { name: 'Bewaar als mijn standaard' });
+    const forgetButton = screen.getByRole('button', { name: 'Vergeet mijn standaard' });
+    fireEvent.click(saveButton);
+    expect(saveButton).toBeDisabled();
+    expect(forgetButton).toBeDisabled();
+    resolveSave('saved');
+    await screen.findByRole('status');
+    expect(saveButton).not.toBeDisabled();
+    expect(forgetButton).not.toBeDisabled();
+  });
+
+  it('English: row + hint copy, and every text node stays digit-free with the row shown', async () => {
+    const onSave = vi.fn().mockResolvedValue('saved');
+    render(
+      <ChartConfigPanel
+        lang="en"
+        resolved={resolvePresentation(lineCtx, {})}
+        seriesMeta={meta}
+        onChange={vi.fn()}
+        onReset={vi.fn()}
+        idPrefix="acc8"
+        account={{ hasDefault: true, onSave, onForget: vi.fn() }}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Style' }));
+    expect(screen.getByText('My default is active.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save as my default' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Forget my default' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Save as my default' }));
+    expect(await screen.findByRole('status')).toHaveTextContent('Saved.');
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    for (let n = walker.nextNode(); n; n = walker.nextNode()) expect(n.textContent).not.toMatch(/\d/);
+  });
+});

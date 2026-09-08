@@ -98,6 +98,19 @@ export function sanitizeOverrides(raw: unknown): PresentationOverrides {
   return out;
 }
 
+/** WP218 phase 2 (owner decision C): turns whatever is stored as the
+ * signed-in user's account default (an unknown JSON blob, straight off the
+ * `user_chart_styles` row) into a full `ChartPresentation` to use as
+ * `resolvePresentation`'s `base` — the same allow-list sanitiser as any
+ * other untrusted overrides input, so garbage or a stale/removed key can
+ * never reach the resolver. Junk (not an object, or an object with no valid
+ * keys) collapses to the stock look; a valid partial degrades the rest to
+ * stock, exactly like an ordinary per-chart override would. */
+export function withAccountDefault(account: unknown): ChartPresentation {
+  const clean = sanitizeOverrides(account);
+  return { ...STOCK_PRESENTATION, ...clean, seriesColors: { ...(clean.seriesColors ?? {}) } };
+}
+
 export interface PresentationContext {
   kind: 'line' | 'bar';
   form: 'line' | 'bar' | 'table';

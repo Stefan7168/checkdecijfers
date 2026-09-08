@@ -15,6 +15,7 @@ import {
   resolvePresentation,
   sanitizeOverrides,
   seriesColor,
+  withAccountDefault,
   xAxisHeight,
   xLabelOverhang,
   type PresentationContext,
@@ -97,6 +98,30 @@ describe('resolvePresentation', () => {
 
   it('an empty seriesColors override still counts as pristine', () => {
     expect(resolvePresentation(lineCtx, { seriesColors: {} }).pristine).toBe(true);
+  });
+});
+
+describe('withAccountDefault — WP218 phase 2 (owner C): the account default as resolvePresentation\'s base', () => {
+  it('junk collapses to the stock look', () => {
+    expect(withAccountDefault(null)).toEqual(STOCK_PRESENTATION);
+    expect(withAccountDefault(undefined)).toEqual(STOCK_PRESENTATION);
+    expect(withAccountDefault('nonsense')).toEqual(STOCK_PRESENTATION);
+    expect(withAccountDefault({ bogus: 1, lineWidth: 'huge' })).toEqual(STOCK_PRESENTATION);
+  });
+
+  it('a valid partial merges on top of stock, the rest staying stock', () => {
+    expect(withAccountDefault({ lineWidth: 'thick', grid: 'none' })).toEqual({
+      ...STOCK_PRESENTATION,
+      lineWidth: 'thick',
+      grid: 'none',
+    });
+  });
+
+  it('a valid seriesColors partial replaces the (empty) stock map, junk entries dropped', () => {
+    expect(withAccountDefault({ seriesColors: { 0: '#ABCDEF', 1: 'not-a-colour' } })).toEqual({
+      ...STOCK_PRESENTATION,
+      seriesColors: { 0: '#abcdef' },
+    });
   });
 });
 

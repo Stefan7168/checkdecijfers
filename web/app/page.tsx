@@ -24,6 +24,7 @@ import { Dashboard } from '../components/dashboard.tsx';
 import { QuestionHistory } from '../components/question-history.tsx';
 import { Workspace } from '../components/workspace.tsx';
 import { listThreads } from '../backend/threads/index.ts';
+import { getUserChartStyle } from '../backend/chart/user-styles.ts';
 import { currentUserId } from '../lib/current-user.ts';
 import { Landing } from '../components/landing.tsx';
 import { getDb } from '../lib/db.ts';
@@ -75,13 +76,21 @@ export default async function Home({
   if (process.env.WORKSPACE_ENABLED === '1') {
     // Threads read server-side (like every other page read), handed to the
     // workspace as initialThreads — no client fetch-on-mount.
-    const [wsBalance, wsSimplePrice, wsClarificationPrice, wsThreads, wsWebAddonPrice] =
+    const [wsBalance, wsSimplePrice, wsClarificationPrice, wsThreads, wsWebAddonPrice, wsChartStyle] =
       await Promise.all([
         getBalance(db, userId),
         getActionClassPrice(db, 'simple'),
         getActionClassPrice(db, 'clarification'),
         listThreads(db, userId),
         websearchEnabled ? getActionClassPrice(db, 'web_addon') : Promise.resolve(null),
+        // WP218 phase 2 (owner C): the account default for chart styling.
+        // getUserChartStyle already degrades to null on an absent table
+        // (deploy-order safety, see the store's own header); this extra
+        // `.catch` is belt-and-suspenders against any OTHER throw (a real
+        // connection failure, say) so a chart-style read can never take
+        // down the whole workspace page the way an un-caught Promise.all
+        // rejection would.
+        getUserChartStyle(db, userId).catch(() => null),
       ]);
     return (
       <Workspace
@@ -90,6 +99,7 @@ export default async function Home({
         clarificationPrice={wsClarificationPrice}
         initialThreads={wsThreads}
         purchaseSuccess={purchase === PURCHASE_SUCCESS_VALUE}
+        chartStyle={wsChartStyle?.style ?? null}
         {...(websearchEnabled && wsWebAddonPrice !== null
           ? { websearch: { enabled: true as const, addonPrice: wsWebAddonPrice } }
           : {})}
