@@ -5,6 +5,7 @@
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ChartSpec } from '../backend/chart/types.ts';
+import { attributedSvgMarkup } from './chart-download.tsx';
 import {
   annotationMarkers,
   buildRows,
@@ -614,7 +615,10 @@ describe('ChartView — #197 step 1, rendered against the real svg', () => {
 
   it('gives the chart an accessible name from spec strings and a keyboard hint in its <desc>', () => {
     const { container } = render(<ChartView spec={threePointSpec()} />);
-    const svg = container.querySelector('svg')!;
+    // WP218 phase 1: the Opmaak trigger's own icon is an <svg> too, rendered
+    // ahead of the chart in DOM order — scoped to Recharts' own root class so
+    // this keeps finding the CHART svg specifically, not the icon.
+    const svg = container.querySelector('svg.recharts-surface')!;
     expect(svg.getAttribute('aria-label')).toContain('Testreeks');
     expect(svg.querySelector('desc')?.textContent).toMatch(/pijltjestoetsen/);
   });
@@ -640,7 +644,10 @@ describe('ChartView — #197 step 1, rendered against the real svg', () => {
       definitionLine: 'Definitie: testdefinitie 2020.',
     });
     const { container } = render(<ChartView spec={s} />);
-    expect(container.querySelector('svg')).not.toBeNull();
+    // WP218 phase 1: scoped past the Opmaak trigger's own icon <svg> — see
+    // the accessible-name test above for why a bare 'svg' selector is now
+    // ambiguous in this card.
+    expect(container.querySelector('svg.recharts-surface')).not.toBeNull();
     const specStrings = [
       s.title,
       s.unit,
@@ -787,18 +794,18 @@ describe('ChartView — #197 step 2, the Tabel view', () => {
     // form it actually renders ("Lijn", since threePointSpec is kind: 'line').
     const { container } = render(<ChartView spec={threePointSpec()} />);
     expect(screen.getByRole('tab', { name: 'Lijn' })).toHaveAttribute('aria-selected', 'true');
-    expect(container.querySelector('svg')).not.toBeNull();
+    expect(container.querySelector('svg.recharts-surface')).not.toBeNull();
     expect(container.querySelector('table')).toBeNull();
     fireEvent.click(screen.getByRole('tab', { name: 'Tabel' }));
     expect(screen.getByRole('tab', { name: 'Tabel' })).toHaveAttribute('aria-selected', 'true');
-    expect(container.querySelector('svg')).toBeNull();
+    expect(container.querySelector('svg.recharts-surface')).toBeNull();
     const table = screen.getByRole('table', { name: 'Testreeks (%)' });
     expect(table.querySelector('[data-label-for="lo"]')?.textContent).toBe('1,5');
     expect(table.querySelector('[data-label-for="hi"]')?.textContent).toBe('3,3');
     // Image download makes no sense for a table — the menu is not offered there.
     expect(screen.queryByRole('button', { name: 'Download' })).toBeNull();
     fireEvent.click(screen.getByRole('tab', { name: 'Lijn' }));
-    expect(container.querySelector('svg')).not.toBeNull();
+    expect(container.querySelector('svg.recharts-surface')).not.toBeNull();
   });
 
   it('opens on the table when a comparison has more series than a chart can label (the idea-bank >15 rule)', () => {
@@ -810,7 +817,7 @@ describe('ChartView — #197 step 2, the Tabel view', () => {
     const { container } = render(<ChartView spec={spec({ kind: 'bar', series })} />);
     expect(screen.getByRole('tab', { name: 'Tabel' })).toHaveAttribute('aria-selected', 'true');
     expect(container.querySelector('table')).not.toBeNull();
-    expect(container.querySelector('svg')).toBeNull();
+    expect(container.querySelector('svg.recharts-surface')).toBeNull();
   });
 
   it('shows no numeric token in the table that is not a spec string', () => {
@@ -1546,5 +1553,278 @@ describe('ChartView click-to-annotate', () => {
     expect(screen.queryByText(/P2 note A/)).not.toBeInTheDocument();
     expect(screen.getByText(/P2 note B/)).toBeInTheDocument();
     expect(noteItems()).toHaveLength(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// WP218 phase 1, Task 7 (#218 chart styling): mounting the Opmaak panel on
+// every ChartView. Phase 0 already wired every Recharts prop to
+// `resolvePresentation`'s output (`pres`) and Task 5/6 already built
+// ChartConfigPanel as a dumb component over that resolver (tested in
+// chart-config-panel.test.tsx in isolation) — this task's own job is purely
+// the WIRING: mount the panel as a sibling of the Weergave tablist,
+// `onChange`/`onReset` into the reducer's `setPresentation`/
+// `resetPresentation` actions, and an `aria-describedby` bridge from the
+// disabled Lijn tab's existing `title` to a visually-hidden reason span. The
+// tests below prove the END-TO-END path (a click in the panel really changes
+// the rendered chart), not the resolver's own logic (chart-presentation.
+// test.ts) or the panel's own rendering rules (chart-config-panel.test.tsx).
+// ---------------------------------------------------------------------------
+
+/** Same walker as the two membership tests above ("ADR 018 membership
+ * check" and "membership over the REAL svg"), factored out here because this
+ * describe block runs it twice (a line spec and a bar spec) with the panel
+ * open on every one of its own tabs. */
+function scanForUnboundDigits(container: HTMLElement, specStrings: string[]): void {
+  const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+  const tokens: string[] = [];
+  for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+    tokens.push(...((node.textContent ?? '').match(/\d[\d.,]*/g) ?? []));
+  }
+  expect(tokens.length).toBeGreaterThan(0);
+  for (const tok of tokens) {
+    expect(
+      specStrings.some((str) => str.includes(tok)),
+      `numeric token "${tok}" in the rendered DOM has no source in the spec's own strings`,
+    ).toBe(true);
+  }
+}
+
+describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
+  it('pre-fills with what is on screen: after Dik, the line is 3 px and the panel says Dik; after Lijn→Staaf→Lijn it still says Dik', () => {
+    const { container } = render(<ChartView spec={threePointSpec()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Dik' }));
+    expect(container.querySelector('.recharts-line-curve')?.getAttribute('stroke-width')).toBe('3');
+    fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Lijn' }));
+    expect(screen.getByRole('radio', { name: 'Dik' })).toHaveAttribute('aria-checked', 'true');
+  });
+
+  it('R11: with "Alleen voorlopige" the hollow marker stays, final dots are transparent but still present as points', () => {
+    const s = threePointSpec({
+      series: [
+        {
+          label: 'Nederland',
+          regionCode: 'NL01',
+          points: [
+            point({ resultId: 'lo', periodCode: '2022JJ00', periodLabel: '2022', value: 1.5, formattedValue: '1,5' }),
+            point({
+              resultId: 'mid',
+              periodCode: '2023JJ00',
+              periodLabel: '2023',
+              value: 2,
+              formattedValue: '2,0',
+              provisional: true,
+            }),
+            point({ resultId: 'hi', periodCode: '2024JJ00', periodLabel: '2024', value: 3.25, formattedValue: '3,3' }),
+          ],
+        },
+      ],
+    });
+    const { container } = render(<ChartView spec={s} />);
+    const before = container.querySelectorAll('[data-point="value"]').length;
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Alleen voorlopige' }));
+    expect(container.querySelectorAll('[data-point="value"]').length).toBe(before);
+    expect(container.querySelectorAll('circle[data-marker="hidden"]').length).toBe(before - 1);
+    const hollow = [...container.querySelectorAll('circle[data-point="value"]')].find(
+      (c) => c.getAttribute('fill') === 'var(--card)',
+    );
+    expect(hollow?.getAttribute('opacity')).not.toBe('0');
+  });
+
+  it('grid Geen removes the grid; Aslijnen off removes axis lines; Schuin tilts the x labels and reserves height', () => {
+    const { container } = render(<ChartView spec={threePointSpec()} />);
+    const flatBottom = Number(
+      container.querySelector('.recharts-yAxis .recharts-cartesian-axis-line')?.getAttribute('y2'),
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Schuin' }));
+    // Recharts' own default axis <Text> renders nothing in jsdom (see this
+    // file's #197 top-of-file comment), so the tilt itself can't be read off
+    // a tick's own transform here — xAxisHeight's pixel math is unit-pinned
+    // in chart-presentation.test.ts. What IS observable end-to-end is the
+    // reserved height actually reaching the render: tilting reserves MORE
+    // x-axis height, so the plot area — and the y-axis line drawn across it
+    // — shrinks.
+    const tiltedBottom = Number(
+      container.querySelector('.recharts-yAxis .recharts-cartesian-axis-line')?.getAttribute('y2'),
+    );
+    expect(tiltedBottom).toBeLessThan(flatBottom);
+
+    fireEvent.click(screen.getByRole('radio', { name: 'Geen' }));
+    expect(container.querySelector('.recharts-cartesian-grid-horizontal')).toBeNull();
+    expect(container.querySelector('.recharts-cartesian-grid-vertical')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Aslijnen tonen' }));
+    expect(container.querySelector('.recharts-xAxis .recharts-cartesian-axis-line')).toBeNull();
+    expect(container.querySelector('.recharts-yAxis .recharts-cartesian-axis-line')).toBeNull();
+  });
+
+  it('Y-as vanaf nul on a line switches the domain to zero (bar is always zero regardless)', () => {
+    const s = threePointSpec({
+      series: [
+        {
+          label: 'Nederland',
+          regionCode: 'NL01',
+          points: [
+            point({ resultId: 'lo', periodCode: '2022JJ00', periodLabel: '2022', value: 50, formattedValue: '50' }),
+            point({ resultId: 'hi', periodCode: '2024JJ00', periodLabel: '2024', value: 60, formattedValue: '60' }),
+          ],
+        },
+      ],
+    });
+    const { container } = render(<ChartView spec={s} />);
+    const beforeY = Number(container.querySelector('[data-role="axis-tick"][data-label-for="lo"]')?.getAttribute('y'));
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Y-as vanaf nul' }));
+    const afterY = Number(container.querySelector('[data-role="axis-tick"][data-label-for="lo"]')?.getAttribute('y'));
+    // The exact pixel is Recharts' own scale math; the meaningful, large
+    // shift proves the domain actually changed, not a no-op click.
+    expect(afterY).toBeLessThan(beforeY - 50);
+
+    cleanup();
+    render(<ChartView spec={multiRegionBarSpec()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    // Bar form deletes 'zeroBaseline' from `applicable` entirely (chart-
+    // presentation.ts resolvePresentation) — the control is never offered
+    // because a bar's own render always floors at zero unconditionally.
+    expect(screen.queryByRole('button', { name: 'Y-as vanaf nul' })).toBeNull();
+    expect(yAxisDomain('bar')).toEqual([0, 'auto']);
+  });
+
+  it('a colour change recolours line, legend swatch and tooltip swatch together', () => {
+    const { container } = render(<ChartView spec={twoSeriesLineSpec()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Kleuren' }));
+    const hexInput = screen.getByRole('textbox', { name: /Kleur van Nederland/ });
+    fireEvent.change(hexInput, { target: { value: '#ff0000' } });
+    fireEvent.keyDown(hexInput, { key: 'Enter' });
+
+    const line = container.querySelector('.recharts-line-curve');
+    expect(line?.getAttribute('stroke')).toBe('#ff0000');
+    const swatch = container.querySelector(
+      '[role="group"][aria-label="Reeksen"] span[aria-hidden="true"]',
+    ) as HTMLElement;
+    expect(swatch.style.backgroundColor).toBe('rgb(255, 0, 0)');
+    // The tooltip's own swatch (ChartTooltip) is fed the identical
+    // `seriesMeta[i].color` via Recharts' payload.color — buildRows resolves
+    // it ONCE, above, into the very same seriesMeta array that both the
+    // Line's stroke and the legend swatch just proved reads the new colour.
+    // Driving Recharts' real hover/pin tooltip open in jsdom to read a third
+    // DOM node is impractical here — this file's own ChartTooltip tests
+    // (search "ChartTooltip") always render it directly with a hand-built
+    // payload rather than trigger it through hover, for the same reason —
+    // so this is proven by construction (one shared value, two independent
+    // readings already checked) rather than a third DOM read.
+  });
+
+  it('a spec swap on the same mounted chart clears the presentation (owner E)', () => {
+    const { container, rerender } = render(<ChartView spec={threePointSpec()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Dik' }));
+    expect(container.querySelector('.recharts-line-curve')?.getAttribute('stroke-width')).toBe('3');
+    rerender(<ChartView spec={threePointSpec({ title: 'Ander' })} />);
+    expect(container.querySelector('.recharts-line-curve')?.getAttribute('stroke-width')).toBe('2');
+  });
+
+  it('Standaard restores the byte-identical stock svg', () => {
+    const { container } = render(<ChartView spec={threePointSpec()} />);
+    // WP218 phase 1: scoped past the Opmaak trigger's own icon <svg> — see
+    // the accessible-name test earlier in this file for why a bare 'svg'
+    // selector is ambiguous in this card now that the panel is mounted.
+    const stock = container.querySelector('svg.recharts-surface')!.outerHTML;
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Dik' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Geen' }));
+    expect(container.querySelector('svg.recharts-surface')!.outerHTML).not.toBe(stock);
+    fireEvent.click(screen.getByRole('button', { name: 'Standaard' }));
+    expect(container.querySelector('svg.recharts-surface')!.outerHTML).toBe(stock);
+  });
+
+  it('the whole-card digit scan still passes with the panel open on every tab (line and bar)', () => {
+    const lineSpec = threePointSpec({
+      provisionalNote: 'Voorlopige cijfers (2024) zijn gemarkeerd met *.',
+      nullNotes: ['2021: geen gegevens beschikbaar (geheim).'],
+      definitionLine: 'Definitie: testdefinitie 2020.',
+    });
+    const { container: lineContainer } = render(<ChartView spec={lineSpec} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    for (const tab of screen.getAllByRole('tab', { name: /Grafiek|Kleuren|Lettertype/ })) fireEvent.click(tab);
+    scanForUnboundDigits(
+      lineContainer,
+      [
+        lineSpec.title,
+        lineSpec.unit,
+        lineSpec.attributionLine,
+        lineSpec.attribution.tableId,
+        lineSpec.attribution.syncedAt,
+        lineSpec.definitionLine ?? '',
+        lineSpec.provisionalNote ?? '',
+        ...lineSpec.nullNotes,
+        ...Object.keys(lineSpec.dimLabels),
+        ...Object.values(lineSpec.dimLabels),
+        ...lineSpec.series.flatMap((se) => se.points.flatMap((p) => [p.formattedValue ?? '', p.periodLabel])),
+      ].filter(Boolean),
+    );
+    cleanup();
+
+    const barSpec = multiRegionBarSpec();
+    const { container: barContainer } = render(<ChartView spec={barSpec} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    for (const tab of screen.getAllByRole('tab', { name: /Grafiek|Kleuren|Lettertype/ })) fireEvent.click(tab);
+    scanForUnboundDigits(
+      barContainer,
+      [
+        barSpec.title,
+        barSpec.unit,
+        barSpec.attributionLine,
+        barSpec.attribution.tableId,
+        barSpec.attribution.syncedAt,
+        ...Object.keys(barSpec.dimLabels),
+        ...Object.values(barSpec.dimLabels),
+        ...barSpec.series.flatMap((se) => se.points.flatMap((p) => [p.formattedValue ?? '', p.periodLabel])),
+      ].filter(Boolean),
+    );
+  });
+
+  it('the panel is not offered in Tabel form and lives outside the export container', () => {
+    const { container } = render(<ChartView spec={threePointSpec()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Tabel' }));
+    expect(screen.queryByRole('button', { name: 'Opmaak' })).toBeNull();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Lijn' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    // Not screen.getByRole('tabpanel', { name: 'Grafiek' }): the panel's own
+    // "Grafiek" sub-tab labels ITS tabpanel via aria-labelledby pointing at
+    // that tab button's text, which is also "Grafiek" — the exact same
+    // accessible name as the chart's own tabpanel. An attribute selector on
+    // the literal aria-label sidesteps that collision.
+    const chartTabpanel = container.querySelector('[role="tabpanel"][aria-label="Grafiek"]') as HTMLElement;
+    expect(chartTabpanel).not.toBeNull();
+    expect(within(chartTabpanel).queryByRole('region', { name: 'Opmaak van de grafiek' })).toBeNull();
+    expect(screen.getByRole('region', { name: 'Opmaak van de grafiek' })).toBeInTheDocument();
+  });
+
+  it('the disabled Lijn tab on a region comparison carries its reason via aria-describedby', () => {
+    render(<ChartView spec={multiRegionBarSpec()} />);
+    const lineTab = screen.getByRole('tab', { name: 'Lijn' });
+    expect(lineTab).toBeDisabled();
+    const describedById = lineTab.getAttribute('aria-describedby');
+    expect(describedById).toBeTruthy();
+    const reason = document.getElementById(describedById!);
+    expect(reason?.textContent).toMatch(/regio/);
+    expect(lineTab).toHaveAttribute('title', expect.stringContaining('regio'));
+  });
+
+  it('the SVG export carries the chosen stroke-width verbatim', () => {
+    const { container } = render(<ChartView spec={threePointSpec()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Dik' }));
+    const svg = container.querySelector('svg.recharts-surface') as unknown as SVGSVGElement;
+    const markup = attributedSvgMarkup(svg, 'x', () => ({}));
+    expect(markup).toContain('stroke-width="3"');
   });
 });

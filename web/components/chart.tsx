@@ -49,6 +49,7 @@ import {
   xAxisHeight,
 } from '../lib/chart-presentation.ts';
 import { ensureFontLoaded } from '../lib/font-loader.ts';
+import { ChartConfigPanel } from './chart-config-panel.tsx';
 import { ChartDownloadMenu } from './chart-download.tsx';
 import { ChartNotes, type ChartNote, type PendingPoint } from './chart-notes.tsx';
 import { ChartSmallMultiples } from './chart-small-multiples.tsx';
@@ -775,6 +776,13 @@ function useCoarsePointer(): boolean {
 
 const KEYBOARD_HINT = 'Gebruik de pijltjestoetsen om de punten van de grafiek te doorlopen.';
 
+// WP218 phase 1 (Task 7): the disabled Lijn tab's reason, shared verbatim
+// between its `title` (pointer/tooltip) and a visually-hidden span reached
+// via `aria-describedby` — a `title` alone is invisible to a screen reader,
+// and a keyboard/AT user hits exactly the same disabled control a mouse user
+// does, so the same explanation must be reachable both ways.
+const LINE_DISABLED_REASON = 'Een lijn tussen regio’s zou een trend suggereren die niet is gemeten.';
+
 /** Approximate text width at the 11px label font — layout only, so the plot
  * leaves room for the end-of-line label instead of clipping it. */
 function labelWidthPx(text: string): number {
@@ -1075,50 +1083,76 @@ export function ChartView({
         </div>
       ) : null}
       <div className="text-xs text-muted-foreground">{spec.unit}</div>
-      <div
-        role="tablist"
-        aria-label="Weergave"
-        onKeyDown={onFormTabKeyDown}
-        className="mt-3 inline-flex items-center gap-0.5 rounded-lg bg-muted p-0.5"
-      >
-        <button
-          ref={lineTabRef}
-          type="button"
-          role="tab"
-          aria-selected={activeForm === 'line'}
-          aria-controls={panelId}
-          tabIndex={activeForm === 'line' ? 0 : -1}
-          disabled={!canUseLine}
-          title={canUseLine ? undefined : 'Een lijn tussen regio’s zou een trend suggereren die niet is gemeten.'}
-          onClick={() => selectForm('line')}
-          className={segmentTab(activeForm === 'line') + (canUseLine ? '' : ' cursor-not-allowed opacity-40')}
+      {/* WP218 phase 1 (Task 7): the Weergave tablist and the Opmaak panel
+        * share one row (the panel wraps under it via its own `basis-full` —
+        * see ChartConfigPanel) — the tablist's own `mt-3` moved up onto this
+        * wrapper so the row keeps its original top spacing regardless of
+        * whether the panel is offered. */}
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <div
+          role="tablist"
+          aria-label="Weergave"
+          onKeyDown={onFormTabKeyDown}
+          className="inline-flex items-center gap-0.5 rounded-lg bg-muted p-0.5"
         >
-          Lijn
-        </button>
-        <button
-          ref={barTabRef}
-          type="button"
-          role="tab"
-          aria-selected={activeForm === 'bar'}
-          aria-controls={panelId}
-          tabIndex={activeForm === 'bar' ? 0 : -1}
-          onClick={() => selectForm('bar')}
-          className={segmentTab(activeForm === 'bar')}
-        >
-          Staaf
-        </button>
-        <button
-          ref={tableTabRef}
-          type="button"
-          role="tab"
-          aria-selected={activeForm === 'table'}
-          aria-controls={panelId}
-          tabIndex={activeForm === 'table' ? 0 : -1}
-          onClick={() => selectForm('table')}
-          className={segmentTab(activeForm === 'table')}
-        >
-          Tabel
-        </button>
+          <button
+            ref={lineTabRef}
+            type="button"
+            role="tab"
+            aria-selected={activeForm === 'line'}
+            aria-controls={panelId}
+            aria-describedby={canUseLine ? undefined : `${domId}-line-reason`}
+            tabIndex={activeForm === 'line' ? 0 : -1}
+            disabled={!canUseLine}
+            title={canUseLine ? undefined : LINE_DISABLED_REASON}
+            onClick={() => selectForm('line')}
+            className={segmentTab(activeForm === 'line') + (canUseLine ? '' : ' cursor-not-allowed opacity-40')}
+          >
+            Lijn
+          </button>
+          <button
+            ref={barTabRef}
+            type="button"
+            role="tab"
+            aria-selected={activeForm === 'bar'}
+            aria-controls={panelId}
+            tabIndex={activeForm === 'bar' ? 0 : -1}
+            onClick={() => selectForm('bar')}
+            className={segmentTab(activeForm === 'bar')}
+          >
+            Staaf
+          </button>
+          <button
+            ref={tableTabRef}
+            type="button"
+            role="tab"
+            aria-selected={activeForm === 'table'}
+            aria-controls={panelId}
+            tabIndex={activeForm === 'table' ? 0 : -1}
+            onClick={() => selectForm('table')}
+            className={segmentTab(activeForm === 'table')}
+          >
+            Tabel
+          </button>
+        </div>
+        {/* Reachable via the disabled Lijn tab's aria-describedby above — a
+          * plain `title` (kept, for pointer users) is invisible to a screen
+          * reader, and a disabled control still needs its reason available
+          * to whoever reaches it by keyboard/AT. */}
+        {!canUseLine ? (
+          <span id={`${domId}-line-reason`} className="sr-only">
+            {LINE_DISABLED_REASON}
+          </span>
+        ) : null}
+        {state.form !== 'table' ? (
+          <ChartConfigPanel
+            resolved={resolved}
+            seriesMeta={seriesMeta}
+            onChange={(patch) => dispatch({ type: 'setPresentation', patch })}
+            onReset={() => dispatch({ type: 'resetPresentation' })}
+            idPrefix={domId}
+          />
+        ) : null}
       </div>
       {zoomAvailable ? (
         <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
