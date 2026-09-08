@@ -313,10 +313,11 @@ export function ChartConfigPanel({
   const panelId = (key: TabKey) => `${idPrefix}-style-panel-${key}`;
 
   function toggleOpen(): void {
-    setOpen((wasOpen) => {
-      if (!wasOpen) onOpen?.();
-      return !wasOpen;
-    });
+    // Side effect outside the state updater: React may invoke an updater
+    // twice (Strict Mode) and requires it to be pure — `onOpen` must fire
+    // exactly once per open (task-5 review finding).
+    if (!open) onOpen?.();
+    setOpen(!open);
   }
 
   function closeAndRefocus(): void {
