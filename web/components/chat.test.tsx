@@ -1023,6 +1023,23 @@ describe('Chat — WP129+130 source chips (#129)', () => {
     expect(screen.getByRole('button', { name: 'CBS data', pressed: false })).toBeInTheDocument();
   });
 
+  it('a selected chip shows a checkmark; an unselected one does not', () => {
+    render(<Chat pricing={{ simple: 20, clarification: 10, balance: 100, websearch: { enabled: true, addonPrice: 10 } }} />);
+    const cbsChip = screen.getByRole('button', { name: /CBS data/ });
+    expect(cbsChip.querySelector('svg.lucide-check')).not.toBeNull();
+    const internetChip = screen.getByRole('button', { name: 'Internet' });
+    expect(internetChip.querySelector('svg.lucide-check')).toBeNull();
+    fireEvent.click(internetChip);
+    expect(internetChip.querySelector('svg.lucide-check')).not.toBeNull();
+  });
+
+  it('"Add link" reads the same as an unselected source chip, not the always-on action style', () => {
+    render(<Chat pricing={{ simple: 20, clarification: 10, balance: 100, websearch: { enabled: true, addonPrice: 10 } }} />);
+    const addLink = screen.getByRole('button', { name: 'Add link' });
+    const internetChip = screen.getByRole('button', { name: 'Internet' }); // starts unselected (CHIP_OFF)
+    expect(addLink.className).toBe(internetChip.className);
+  });
+
   it('sends the selection payload as the 4th arg on submit (default: cbs, web:false)', async () => {
     askQuestion.mockResolvedValue(outcome(fakeAnswer('Nederland telt 18.044.027 inwoners.')));
     render(<Chat pricing={pricing} />);
@@ -1638,6 +1655,12 @@ describe('Chat — attachment entry points (#201/#202, session 83 scoping; ADR 0
     const linkButton = screen.getByRole('button', { name: 'Add link' });
     expect(linkButton).not.toBeDisabled();
     expect(linkButton).not.toHaveAttribute('title');
+  });
+
+  it('"Connect database" no longer shows a "Soon" badge (owner feedback, session 88)', () => {
+    render(<Chat />);
+    const button = screen.getByRole('button', { name: 'Connect database' });
+    expect(within(button).queryByText('Soon')).toBeNull();
   });
 
   // D10 fix #1: EXACT-value comparison, not a weaker toBeDisabled()-only

@@ -12,7 +12,7 @@
 // branch here explicitly and must never fall into the generic catch below.
 'use client';
 
-import { Database, Globe, Link2, Paperclip, Plug } from 'lucide-react';
+import { Check, Database, Globe, Link2, Paperclip, Plug } from 'lucide-react';
 import { unstable_isUnrecognizedActionError } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { askQuestion, replyToClarification } from '../app/actions.ts';
@@ -49,7 +49,6 @@ import { FeedbackButtons } from './feedback-buttons.tsx';
 import { AnswerSkeleton } from './loading-skeletons.tsx';
 import { SourceBadge } from './source-badge.tsx';
 import { StatCard } from './stat-card.tsx';
-import { Badge } from './ui/badge.tsx';
 import { Button } from './ui/button.tsx';
 import { Input } from './ui/input.tsx';
 
@@ -1017,7 +1016,7 @@ export function Chat({
                 onClick={() => toggleSource(key)}
                 className={active ? CHIP_ON : CHIP_OFF}
               >
-                <Database aria-hidden="true" className="size-3.5" />
+                {active ? <Check aria-hidden="true" className="size-3.5" /> : <Database aria-hidden="true" className="size-3.5" />}
                 {`${SOURCES[key]!.displayName} data`}
               </button>
             );
@@ -1028,7 +1027,7 @@ export function Chat({
             onClick={() => setWebSelected((v) => !v)}
             className={webSelected ? CHIP_ON : CHIP_OFF}
           >
-            <Globe aria-hidden="true" className="size-3.5" />
+            {webSelected ? <Check aria-hidden="true" className="size-3.5" /> : <Globe aria-hidden="true" className="size-3.5" />}
             Internet
           </button>
         </>
@@ -1051,7 +1050,7 @@ export function Chat({
           type="button"
           onClick={() => setLinkRowOpen((open) => !open)}
           aria-expanded={linkRowOpen}
-          className={CHIP_ACTION}
+          className={CHIP_OFF}
         >
           <Link2 aria-hidden="true" className="size-3.5" />
           Add link
@@ -1094,9 +1093,6 @@ export function Chat({
         >
           <Plug aria-hidden="true" className="size-3.5" />
           Connect database
-          <Badge aria-hidden="true" variant="outline" className="h-4 px-1 text-[10px] leading-none">
-            Soon
-          </Badge>
         </button>
       </div>
       {nothingSelected ? (
