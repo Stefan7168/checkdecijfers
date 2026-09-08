@@ -32,6 +32,7 @@ vi.mock('../app/dataset-actions.ts', () => datasetActions);
 
 import type { ThreadSummary } from '../backend/threads/index.ts';
 import { Workspace } from './workspace.tsx';
+import { LangProvider } from '../lib/i18n/lang-provider.tsx';
 import { SiteHeader } from './site-header.tsx';
 import { FOOTER_ABOUT_LABEL, FOOTER_ATTRIBUTION, FOOTER_PREFIX, SiteFooter } from './site-footer.tsx';
 import { Landing } from './landing.tsx';
@@ -116,6 +117,16 @@ function renderWorkspace(
 }
 
 describe('Workspace — WP135 shell (flag on)', () => {
+  it('renders English under the language provider (WP218 phase 4): the purchase banner dismiss reads Close', () => {
+    render(
+      <LangProvider lang="en">
+        <Workspace initialBalance={100} simplePrice={20} clarificationPrice={10} initialThreads={[]} purchaseSuccess />
+      </LangProvider>,
+    );
+    expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
+    expect(screen.queryByText('Sluiten')).toBeNull();
+  });
+
   it('renders NO footer of its own — the site footer is the only one (owner report 2026-09-03)', () => {
     renderWorkspace();
     expect(document.querySelector('footer')).toBeNull();
