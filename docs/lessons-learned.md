@@ -6,6 +6,41 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 89 — 2026-09-08 — autonomous chart-editing build: a whole-branch review found 5 real
+composition-seam bugs that 7 individually-approved task reviews structurally could not, and a
+design-panel's own illustrative code contained real library-behavior mistakes
+
+- **A required final whole-branch review found 5 Important cross-task composition-seam bugs
+  that 7 separate task-scoped SDD reviews — each thorough, each with its own fix loop, each
+  independently approved — structurally could not see, because two tasks had each correctly
+  built its own piece and only their COMBINATION was wrong.** Concretely: `annotationMarkers`
+  (built in an earlier task) never composed the `effectiveKind` form switch (built in a later
+  task), so a note placed while viewing the line form would still claim "Gemarkeerd in de
+  grafiek" on a Staaf (bar) view where the marker doesn't actually render there — each piece
+  was correct in isolation, reviewed and approved on its own, and only wrong together.
+  Similarly, a note-id counter derived from `prev.length` (fine when notes are only added)
+  silently broke once the delete feature from a different task existed alongside it — deleting
+  one note could collide onto and delete a second. **Lesson: this is the same class of bug
+  session 88's lesson already named (component remount from a changed ancestor element type),
+  but this session shows it recurring on a DIFFERENT axis — feature composition, not JSX
+  structure — which means "do a final whole-diff review" is not a one-off fix for one bug
+  shape, it is a structurally necessary step for any multi-task SDD build that touches a shared
+  file, no matter how rigorous the per-task reviews were.**
+- **An architecture panel's own illustrative sample code (session 88's synthesis artifact,
+  carried into this session's plan) contained real, verifiable bugs that an implementer caught
+  only by checking actual library behavior rather than trusting the snippet:** the plan's
+  sample for series-highlight dimming set `fillOpacity` as a prop expecting Recharts to forward
+  it into a custom bar shape function, but Recharts 3.10.1 does not auto-forward `fillOpacity`
+  into a custom `<rect>` shape — it would have silently done nothing on bar-form charts. The
+  same task's brief also named the wrong DOM selector for verifying a dimmed line series
+  (`.recharts-line`, the wrapper `<g>`) when the class that actually carries the dimming lives
+  on `.recharts-line-curve`, the inner `<path>`. Both were caught only because the implementer
+  (and then the reviewer, independently) checked the installed library's actual source rather
+  than treating the brief's code as ground truth. **Lesson: a plan's own sample/illustrative
+  code, even from a deep multi-agent design panel, is a description of INTENT, not verified
+  fact about a third-party library's behavior — implementers should keep verifying library
+  internals for any snippet that depends on undocumented or easy-to-assume behavior, exactly as
+  they would for unfamiliar first-party code.**
 ## Session 88 — 2026-09-08 — two owner-present builds run via Subagent-Driven Development, a real
 library defect chased and correctly abandoned, a code-review pass that caught what six task-level
 reviews missed, and several tool-behavior gotchas worth recording

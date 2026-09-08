@@ -1,5 +1,168 @@
 # STATUS archive — the session log
 
+**Session 89 (2026-09-08, autonomous session, no owner present) — PHASES 1-3 OF SESSION-88'S
+CHART-EDITING ARCHITECTURE PANEL BUILT VIA SUBAGENT-DRIVEN DEVELOPMENT, ON A FEATURE BRANCH,
+NOT MERGED.**
+
+1. **Kickoff and scope.** Dispatched to build what session-88's architecture panel
+   ([open-questions #212](open-questions.md), synthesis artifact:
+   https://claude.ai/code/artifact/91b16e9d-d5aa-4223-a6cf-ff3a7001c938) had judged safe to
+   build without an owner sign-off on its 8 lettered decisions (A-H) — the owner's own recorded
+   response was "Great plan on most items so far," not a line-by-line approval. Scoped
+   explicitly to the plan's own Phase 1-3 (line/bar/table form switch, period-range zoom,
+   series hide/highlight, click-to-annotate notes): no LLM instruction schema, no DDL, zero
+   prompt-byte changes, using the plan's own stated defaults where one was given. Plan:
+   [docs/superpowers/plans/2026-09-08-chart-view-state-editing.md](superpowers/plans/2026-09-08-chart-view-state-editing.md).
+   Branch `feat/chart-editing-p1` cut from `main` at `e91cdd1` (session-88's own final commit).
+   Because no owner is present in this session,
+   [#118](https://github.com/Stefan7168/checkdecijfers/issues/118)'s autonomous-session rule
+   applies: a feature branch and a PR for owner review, never a direct push to `main`.
+2. **Executed as 7 tasks via `superpowers:writing-plans` +
+   `superpowers:subagent-driven-development`** — a fresh implementer subagent and a dedicated
+   reviewer subagent per task, review-then-fix loop required before each commit landed:
+   - **Task 1** (`f3bba6b`..`2720197`): a pure `chartViewReducer` + `windowSpec` projection in
+     `web/lib/chart-view-state.ts` — no React, no `src/chart/` touch. Review: Approved, 3 Minor
+     notes (a vague ADR pointer per the plan's own mandated wording, no from>to guard on
+     `windowSpec`, an unreachable reducer default branch) — none blocking.
+   - **Task 2** (`2720197`..`5a66d41`, i.e. `a297166` + fix `5a66d41`): consolidated
+     `chart.tsx`'s presentation `useState`s into the reducer. Review: 1 Important fix — the
+     plan's own reset-dispatch code silently discarded a user's chosen chart form on a spec
+     swap, contradicting the old code's documented view-exemption behavior; fixed by resetting
+     with `state.form` instead of the new chart's default, with a verified regression test
+     added. 59/59 `chart.test.tsx`.
+   - **Task 3** (`5a66d41`..`651b97c`, i.e. `89ac67f` + fix `651b97c`): the line/bar/table form
+     switch with the multi-region-line guard. Review: 1 Important fix — `valueLabelPlan` was
+     keyed on `spec.kind` instead of the effective (user-chosen) form, silently dropping value
+     labels on a cross-form display; fixed to key off `effectiveKind`, with 2 regression tests.
+     The implementer also independently caught and fixed a real stale-form honesty-guard gap of
+     its own — Task 2's form-preserving reset could carry an allowed `'line'` form into a
+     newly-shown spec where multiple regions make line disallowed — with its own regression
+     test verified at the render level, not just the button level. 66/66 `chart.test.tsx`,
+     typecheck clean, `src/chart/` untouched.
+   - **Task 4** (`651b97c`..`a66ba24`, i.e. `ed74af5` + fix `a66ba24`): Vanaf/Tot period-range
+     zoom with an on-screen and export disclosure sentence. Review: 1 Important fix —
+     `ChartSmallMultiples` was fed the raw spec instead of the zoom-windowed `viewSpec`,
+     letting small multiples silently show the full unwindowed range with no disclosure while
+     zoomed; fixed with a 1-line prop change plus a regression test verified via the panels'
+     own axis data-label-for attributes. All 4 brief-named data sites
+     (`buildRows`/`annotationMarkers`/`valueLabelPlan`/`tableModel`) had correctly used
+     `viewSpec` from the start. 71/71 `chart.test.tsx`, typecheck clean, `src/chart/`
+     untouched.
+   - **Task 5** (`a66ba24`..`08580e0`, i.e. `ec127a2` + fix `08580e0`): series highlight (dim
+     others) alongside the existing hide toggle. Review: 1 Important fix — hiding the
+     currently-highlighted series left the other series stuck dimmed with no highlight and no
+     UI escape; fixed at the reducer level (`toggleSeries` clears `highlightedKey` when the
+     newly-hidden key was the highlighted one), with 3 reducer tests plus 1 integration test
+     verified causally via a `data-series-dimmed` attribute. The implementer independently
+     caught and fixed 2 real defects in the plan's OWN sample code: bar-form opacity never
+     actually reached `SeriesBar`'s custom `<rect>` (Recharts doesn't auto-forward
+     `fillOpacity` into a custom shape function), and the brief's own dimmed-series selector
+     target was wrong (`.recharts-line-curve` path, not the `.recharts-line` wrapper `<g>`) —
+     both verified against actual Recharts 3.10.1 source by the reviewer, not assumed. 17/17
+     `chart-view-state.test.ts`, 75/75 `chart.test.tsx`, typecheck clean, `src/chart/`
+     untouched. Noted (not this session's regression): `npm run lint` is broken pre-existing in
+     this environment on a `typescript-eslint` version mismatch.
+   - **Task 6** (`08580e0`..`277cc0d`, i.e. `9abf3da` + fix `277cc0d`): click-to-annotate notes
+     (`ChartNotes`), session-only, mounted outside `chartContainerRef` so they can never enter
+     a PNG/SVG export. Review: 3 Important fixes — stale draft text could be mis-attributed to
+     a newly-clicked point (fixed with a `useEffect` clearing the draft, keyed on
+     `pendingPoint?.resultId`); a hardcoded `'chart-note-draft'` DOM id would collide across
+     simultaneous `ChartView` instances (e.g. the Ontdek grid) (fixed via an `idPrefix` prop
+     threaded from `ChartView`'s own `domId`); point-click targets carried `role="button"` with
+     no keyboard activation (fixed with an `onKeyDown` handler for Enter/Space, via a shared
+     `activate()` closure, on both `SeriesDot` and `SeriesBar`). The safety-critical property —
+     notes structurally excluded from export — was independently traced and verified airtight
+     in BOTH review rounds; session-only storage confirmed (no
+     `localStorage`/`fetch`/persistence anywhere in the diff). 8/8 `chart-notes.test.tsx`,
+     80/80 `chart.test.tsx`, typecheck clean, `src/chart/` untouched.
+   - **Task 7** (`d92b7d8`): [ADR 038](decisions/038-chart-view-state-editing.md) and the
+     [#212](open-questions.md) addendum. Review: Approved, 0 findings — the addendum verified
+     as a byte-level append (no pre-existing #212 text altered); the A-H accounting
+     cross-checked consistent between the ADR and the addendum; all commit SHAs/counts in both
+     docs independently verified against real `git log`, not copied from the plan.
+3. **A required final whole-branch review** (opus, merge-base `e91cdd1` — confirmed via `git
+   merge-base main feat/chart-editing-p1`), run after all 7 tasks were individually approved,
+   **found 5 further Important cross-task composition-seam bugs that no single task-scoped
+   review could structurally see** — each of two tasks had correctly built its own piece, but
+   the combination was wrong:
+   - `annotationMarkers` never composed the active (`effectiveKind`) form, so a note placed
+     while viewing the line form would still render its "Gemarkeerd in de grafiek" claim on a
+     Staaf (bar) view where the marker itself doesn't actually show — a false claim about
+     what's displayed.
+   - note ids were assigned from `prev.length`, which is not monotonic once a note is deleted —
+     deleting one note could silently cause a second, later note to collide onto the same id
+     and be deleted along with it.
+   - a tablist keyboard-trap: when a stale allowed `'line'` form met a newly-disallowed
+     multi-region spec, keyboard navigation through the form tablist could get stuck.
+   - a chosen chart form persisting across a swap to a completely unrelated chart (flagged, not
+     fixed — see the deferred list below), and small multiples ignoring the form switch
+     entirely (flagged, not fixed — see below), plus an inverted zoom-range gap (flagged, not
+     fixed — see below) and several further Minor items.
+   Fixed the 3 recommended must-fix items in one consolidated commit (`1a5e968`):
+   `effectiveKind` composed into `annotationMarkers`, a monotonic note-id counter via `useRef`
+   replacing the `prev.length` scheme, and a new `activeForm` derived value unifying the
+   tablist and keyboard navigation with the existing `effectiveKind` fallback. Re-reviewed
+   (opus): all 3 confirmed resolved with real regression tests, the export-exclusion property
+   re-verified intact, and the deferred findings confirmed genuinely left untouched rather than
+   silently fixed. Verdict: ready to open as a PR for owner review.
+4. **Deferred for the PR description** (the owner should see these, not have them silently
+   resolved):
+   - **Symptom A** — a user's chosen chart form (line/bar/table) persists across a swap to a
+     COMPLETELY DIFFERENT chart on the same mounted `ChartView` (dock-tab switching) — e.g.
+     viewing a bar comparison, then switching dock tabs to a time series, and the time series
+     renders as bars because the prior chart's form choice carried over. This is what Task 2's
+     fix intentionally restored (matching the old `view`-exemption behavior for Tabel),
+     extended by Task 3 to line/bar too — arguably correct (it matches old semantics) but worth
+     an explicit owner read since it's a real UX quirk.
+   - **Small multiples ignores the Staaf switch entirely** — it always renders line panels
+     regardless of `effectiveKind`, so switching to Staaf while small multiples is on silently
+     fails to show bars there, even though the main chart correctly shows bars. Two fixes are
+     possible (gate small multiples off when `effectiveKind !== 'line'`, or give it its own bar
+     path); left to the owner/next session per YAGNI, not required by the plan's Phase 1-3
+     scope.
+   - **The Vanaf/Tot zoom selectors don't clamp against each other** — selecting Vanaf > Tot
+     produces an empty chart plus a nonsense disclosure sentence ("Getoond: 2021-2019 van
+     2018-2021") baked into both the on-screen note and the PNG/SVG export's own attribution
+     text. No data is fabricated (`windowSpec` correctly returns zero points), but the UX is
+     confusing. A cheap fix (clamp one selector when it crosses the other) is left to the
+     owner/next session.
+   - **Minor, also flagged but not fixed:** dimmed-opacity logic duplicated between the Line
+     and Bar series components; series highlight isn't disclosed in exports the way hide/zoom
+     already are; highlight has no effect in the small-multiples view; `chart.tsx` has grown to
+     roughly 1,380 lines across the 6 feature/fix task pairs — proportionate per the reviewer
+     given the scope, but flagged as a future extraction candidate for the pure model helpers
+     into a new `web/lib/chart-model.ts`.
+5. **Owner decisions A-H, resolution recap** (already recorded on [#212](open-questions.md) and
+   in [ADR 038](decisions/038-chart-view-state-editing.md); restated here for the session log):
+   A (trend-headline rewriting under a zoom), C/D (visually distinguishing an
+   annotation/disclosure from official data), and E (whether notes appear in downloads) were
+   **resolved by the mechanism this build chose**, not by an independent owner call —
+   suppressing the headline outright, a separate clearly-labelled disclosure/note affordance,
+   and mounting notes outside the export container, respectively. B (bar Y-axis always zero)
+   and F (notes session-only, no persistence table) were built to their **most conservative,
+   reversible default** — always-zero axis, no schema change — **because the owner had not
+   resolved them by the time this autonomous session ran, explicitly NOT a formal owner
+   decision**; both are flagged in ADR 038 for explicit owner review. G (transparent PNG
+   export) and H (map view) are **untouched, fully out of scope** for this build.
+6. **Branch and PR status.** All 14 commits (`f3bba6b`..`1a5e968`) live only on
+   `feat/chart-editing-p1`; none were pushed to `origin` by this documentation step. Per
+   [#118](https://github.com/Stefan7168/checkdecijfers/issues/118)'s autonomous-session rule
+   (no owner present this session), this session's controller pushes the branch and opens the
+   PR against `main` immediately after this docs commit lands — the diff is reviewable there,
+   not merged or deployed by this session.
+
+**Verified facts, session close:** 14 commits (`f3bba6b`..`1a5e968`) on
+`feat/chart-editing-p1`, merge-base `e91cdd1` confirmed against `main` via `git merge-base`,
+not assumed from the plan's stated starting commit (`c5a5eec`, an earlier session-88 commit
+that predates session-88's own later self-audit commits — `e91cdd1` is the true branch point).
+Final measured suite counts, already independently verified live by the controller during the
+whole-branch review and restated here after cross-checking the ledger: web 767/767, backend
+2089/2089 (unchanged — `src/` was never touched this session; every task's own review notes
+confirm `src/chart/` untouched, and no backend work was in scope). Both typechecks clean, real
+`next build` clean. ADR number (038) confirmed via `ls docs/decisions/` — the next sequential
+number after session-88's own 037. No dependency changes this session. Working tree clean prior
+to this docs commit (`git status --short` empty).
+
 **Session 88 (2026-09-08, owner present throughout) — TWO PLANS EXECUTED VIA SUBAGENT-DRIVEN
 DEVELOPMENT AND SHIPPED LIVE, A REAL LIBRARY DEFECT TRACED AND CORRECTLY WORKED AROUND, AND A
 CODE-REVIEW PASS THAT CAUGHT A CRITICAL BUG SIX TASK-LEVEL REVIEWS HAD MISSED.**

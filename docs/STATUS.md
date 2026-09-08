@@ -9,58 +9,37 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
-**▶ SESSION 88 (2026-09-08, owner present throughout) — two plans shipped LIVE via Subagent-Driven
-Development, plus a real library defect found and correctly worked around.** Brainstormed
-sub-project 2 ([#211](open-questions.md)) — the owner's real ask was missing loading FEEDBACK, not
-live-typed streaming, sidestepping the streaming/validation tension (still undecided) instead of
-resolving it. **Plan 1** (9 tasks): chat-answer/chart-panel/thread-switch loading skeletons +
-drag-to-resize chart panel. A LOW-effort `/code-review` pass over the whole plan's diff caught a
-real Critical bug six independent task-level reviews had all missed: `Workspace`'s chat section
-changed its wrapping element TYPE depending on `showDock`, so React unmounted/remounted `Chat`
-(losing live conversation state) every time the dock toggled — fixed by keeping the panel group
-always mounted. Real-browser verification then found `react-resizable-panels@4.12.4`'s own
-`defaultLayout` restoration genuinely broken (a saved width comes back swapped/wrong on reload,
-even violating a panel's own configured minimum) — traced across 3 fix attempts before confirming
-it's a real library defect, not our code; owner decision: ship resize WITHOUT cross-visit
-persistence. **Plan 2** (7 tasks, from live owner feedback on the running app): removed a "Soon"
-badge, unified 3 chip styles with a selected-state checkmark, moved the pre-send pricing line into
-the site's global footer via a new `PricingHintContext` — caught and fixed a real sequencing bug in
-the plan's own Task 3 (its tests were correctly red pending Task 4, not a defect) and a real gap
-where `Dashboard` (the still-live `WORKSPACE_ENABLED=0` rollback fallback, not dead code) was never
-accounted for as a second consumer of the removed pricing text. Also this session: a shadcn
-`Button` conversion for the answer card's action row (owner feedback on a live screenshot, pure
-presentational change); a Fable subagent researched an external demo site for sub-project 3's
-future brainstorm — its "storytelling mode" uses ZERO LLM calls (fixed templates over stats the
-product's own R5 derivations already register), reframing the owner's "very API heavy" concern to
-apply only to an LLM-authored alternative. **Later same day, docs-only (no code):** owner gave two
-more in-passing feedback items explicitly NOT to act on immediately (chart download → PDF/
-transparent-PNG, [#215](open-questions.md)) and a click-to-annotate steer on [#212](open-questions.md);
-both recorded. Owner then added a standing convention — **default every new feature to the
-cheapest viable mechanism first (no AI call, no schema/DB change, no added cost), escalate only on
-measured evidence** — now in [CLAUDE.md](../CLAUDE.md)'s Conventions. Owner then explicitly invoked
-ultracode for a chart-editing (sub-project 3 / annotations / map / storytelling) architecture +
-phased plan: a 5-agent Workflow (4-angle design panel + synthesis, model `fable`) converged on **no
-LLM instruction schema in v1** — a deterministic view-state reducer driven by direct on-screen
-controls (chart-type switch, period zoom, series hide, click-to-annotate), a chat-routed producer
-explicitly deferred to a conditional later phase (usage-evidence-gated, not spec-gated), and a map
-view gated behind a not-yet-built "region-set" query capability (a data-honesty gate, not an
-engineering one). Full synthesis — phased plan, R1/R9/R10 compliance table, 10 rejected
-alternatives, 8 open owner decisions A–H — published as a reviewable artifact:
-https://claude.ai/code/artifact/91b16e9d-d5aa-4223-a6cf-ff3a7001c938 (also recorded on
-[#212](open-questions.md)). **Owner response: "Great plan on most items so far" — not a
-line-by-line sign-off on A–H**, followed by a request to dispatch an autonomous session to build
-what's safe from it while the owner is away; that session's kickoff explicitly scopes it to the
-plan's own Phase 1–3 (no LLM, no DDL, zero prompt-byte changes) using the plan's stated defaults
-where given, and — since the owner is NOT present in that session — requires branch+PR+review
-before merge per [#118](https://github.com/Stefan7168/checkdecijfers/issues/118), not the
-owner-present direct-push path. **Verified LIVE throughout** (`GET /api/health` → ok
-after every one of 5 code pushes). 26 commits total across 13 pushes (`5eec334`→`c5a5eec`: 18
-build-range commits/5 pushes + 4 wrap-up-ritual commits/4 pushes + 4 later-same-day docs
-commits/4 pushes — recount corrected via `git log`/`gh run list` after an earlier undercount, see
-[status-archive.md](status-archive.md)'s closing paragraph), full verification block (typecheck
-×2, web 717/717, backend 2089/2089, real `next build`, `/code-review` LOW) before every code push,
-every push's own CI individually watched green including all 8 docs-only pushes. Full
-session entry: [status-archive.md](status-archive.md).
+**▶ SESSION 89 (2026-09-08, autonomous, no owner present) — Phases 1-3 of session-88's
+chart-editing architecture panel built end-to-end via Subagent-Driven Development, branch
+`feat/chart-editing-p1`, NOT merged.** Built a pure client-only view-state reducer for CBS
+charts (`web/lib/chart-view-state.ts`) driving 4 user-facing pieces with zero LLM
+calls/DDL/prompt-byte changes: a line/bar/table form switch with a multi-region-line guard,
+Vanaf/Tot period-range zoom (on-screen + export disclosure), series hide + highlight
+(dim-others), and click-to-annotate notes (session-only, mounted outside the export container
+so they can never leak into a PNG/SVG download). Executed as 7
+`superpowers:subagent-driven-development` tasks (fresh implementer + reviewer per task):
+task-level review fix loops caught and fixed real bugs before each commit landed — a stale-form
+honesty-guard gap (a disallowed multi-region spec could inherit a stale 'line' form), a
+small-multiples zoom leak (small multiples silently ignored the zoom window), and a
+highlighted-then-hidden series left permanently dimmed with no UI escape. **A required final
+whole-branch review (opus, merge-base `e91cdd1`) then found 5 further Important cross-task
+composition-seam bugs invisible to any single task-scoped review** — e.g. annotation markers
+not composing the active form (a false "Gemarkeerd in de grafiek" claim would render on a Staaf
+view) and a non-monotonic note-id counter where deleting one note could silently delete two —
+fixed in one consolidated commit (`1a5e968`), re-reviewed clean.
+[ADR 038](decisions/038-chart-view-state-editing.md) records the as-built mechanism and how
+open decisions A-H from session 88's panel resolved: A/C/D/E by the mechanism chosen, B/F to
+the most conservative default (explicitly NOT an owner decision), G/H untouched; addendum on
+[#212](open-questions.md). **Deferred to the PR description for owner review, not silently
+resolved:** a chosen chart form persists across a swap to a completely different chart on the
+same mounted view (dock-tab switching); small multiples ignores the Staaf switch and always
+renders line panels; the Vanaf/Tot zoom selectors don't clamp against each other (an inverted
+range produces an empty chart with a nonsense disclosure sentence baked into it). 14 commits
+(`f3bba6b`..`1a5e968`) on `feat/chart-editing-p1`, **committed only — not pushed, not merged**,
+per [#118](https://github.com/Stefan7168/checkdecijfers/issues/118)'s autonomous-session
+branch+PR rule (no owner present this session). Verified: web 767/767, backend 2089/2089
+(unchanged), both typechecks clean, `next build` clean. Full session entry:
+[status-archive.md](status-archive.md).
 
 **▶ SESSION 86 (2026-09-07, owner present, mixed autonomous/interactive) — the CI `deploy` job is
 FIXED and LIVE for the first time in weeks, and that exposed + fixed a real production incident.**
