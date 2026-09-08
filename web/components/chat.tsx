@@ -32,6 +32,7 @@ import { buildCitation } from '../lib/citation.ts';
 import { buildAnswerCsv } from '../lib/csv.ts';
 import type { AnswerCsv } from '../lib/csv.ts';
 import { statCardData } from '../lib/stat-card-data.ts';
+import { usePricingHint } from '../lib/pricing-hint-context.tsx';
 // WP135 (ADR 033 ⟨A3⟩): the ChatMessage/AnswerView shape and the meta/smalltalk
 // kind reclassification live in a shared pure leaf so thread replay
 // (web/lib/replay-assemble.ts, called from a Server Action) reconstructs the
@@ -288,6 +289,10 @@ export function Chat({
   onBusyChange?: (busy: boolean) => void;
 } = {}) {
   const threadAware = onThreadId !== undefined;
+  // #211 chat interaction polish, session 88: the pre-send pricing line now
+  // lives in the global footer (SiteFooter) rather than rendered inline here
+  // — see the effect near the bottom of this component that feeds it.
+  const { setPricingHint } = usePricingHint();
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages ?? []);
   const [pending, setPending] = useState<PendingClarification | null>(null);
   // WP135 (ADR 033 D1): the thread this chat is currently in — seeded from the
@@ -728,6 +733,27 @@ export function Chat({
     }
   }
 
+  // #211 chat interaction polish, session 88: this used to render its own
+  // <p> here. It now feeds the SAME three text variants into the global
+  // footer instead (SiteFooter, via PricingHintContext) -- the owner asked
+  // for the pricing line to live in the footer, not just be restyled here.
+  useEffect(() => {
+    if (!pricing) {
+      setPricingHint(null);
+      return;
+    }
+    const hint =
+      websearch && webSelected && selectedSources.size > 0
+        ? `Een vraag kost ~${pricing.simple + websearch.addonPrice} credits (waarvan ${websearch.addonPrice} voor internet) · saldo: ${pricing.balance} credits. ` +
+          `Stel ik eerst een verduidelijkingsvraag, dan kost die ${pricing.clarification} credits en krijg je de rest terug.`
+        : websearch && webSelected
+          ? `Een vraag kost ~${websearch.addonPrice} credits (er wordt tijdelijk ${pricing.simple + websearch.addonPrice} gereserveerd) · saldo: ${pricing.balance} credits.`
+          : `Een vraag kost ~${pricing.simple} credits · saldo: ${pricing.balance} credits. ` +
+            `Stel ik eerst een verduidelijkingsvraag, dan kost die ${pricing.clarification} credits en krijg je de rest terug.`;
+    setPricingHint(hint);
+    return () => setPricingHint(null);
+  }, [pricing, websearch, webSelected, selectedSources, setPricingHint]);
+
   return (
     // Session 87 visual redesign: no frame of its own — the workspace card
     // (workspace.tsx) supplies the border and the header bar. Messages scroll
@@ -1128,27 +1154,6 @@ export function Chat({
       ) : null}
       {attachments && uploadError ? (
         <p className="text-xs text-destructive">{uploadError}</p>
-      ) : null}
-      {/* WP20 #82(a)+(b): pre-send cost line from LIVE pricing + the live
-        * balance, and the honest static clarification hint (a
-        * confidence-conditional hint is impossible before the parse runs —
-        * open-questions #82).
-        * ⟨W4⟩ (WP129+130, ADR 032): three variants when the Internet chip is on.
-        * The numbers state the TRUE transient hold and are honest about the
-        * per-mode net (web-only nets ~10 but 30 is reserved): CBS + internet ⇒
-        * "~30 credits (waarvan 10 voor internet)"; web-only ⇒ "~10 credits (er
-        * wordt tijdelijk 30 gereserveerd)"; internet off / no websearch prop ⇒
-        * unchanged. */}
-      {pricing ? (
-        <p className="text-xs text-muted-foreground">
-          {websearch && webSelected && selectedSources.size > 0
-            ? `Een vraag kost ~${pricing.simple + websearch.addonPrice} credits (waarvan ${websearch.addonPrice} voor internet) · saldo: ${pricing.balance} credits. ` +
-              `Stel ik eerst een verduidelijkingsvraag, dan kost die ${pricing.clarification} credits en krijg je de rest terug.`
-            : websearch && webSelected
-              ? `Een vraag kost ~${websearch.addonPrice} credits (er wordt tijdelijk ${pricing.simple + websearch.addonPrice} gereserveerd) · saldo: ${pricing.balance} credits.`
-              : `Een vraag kost ~${pricing.simple} credits · saldo: ${pricing.balance} credits. ` +
-                `Stel ik eerst een verduidelijkingsvraag, dan kost die ${pricing.clarification} credits en krijg je de rest terug.`}
-        </p>
       ) : null}
         </div>
       </div>

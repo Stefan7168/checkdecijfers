@@ -14,7 +14,21 @@ import type { WebSection } from '../backend/websearch/types.ts';
 import { UnrecognizedActionError } from 'next/dist/client/components/unrecognized-action-error';
 import { buildAnswerCsv } from '../lib/csv.ts';
 import { fakeAnswerResponse, fakeCell } from '../test/fake-answer.ts';
+import { PricingHintProvider } from '../lib/pricing-hint-context.tsx';
 import { Chat } from './chat.tsx';
+import { SiteFooter } from './site-footer.tsx';
+
+// #211 (Task 3): SiteFooter needs usePathname. '/chat' (not '/') deliberately
+// keeps its "Over dit project" anchor-probe branch inert here, matching the
+// real logged-in chat route. chat.tsx itself also imports
+// unstable_isUnrecognizedActionError from this module (the WP135 stale-deploy
+// detection tested below) -- a blanket mock without importOriginal would
+// silently drop that export and break those tests, so this preserves the rest
+// of the real module and only overrides usePathname.
+vi.mock('next/navigation', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('next/navigation')>()),
+  usePathname: () => '/chat',
+}));
 
 // jsdom does not implement scrollIntoView (pre-existing chat.tsx effect,
 // unrelated to WP13) — stubbed here rather than in the shared setup file,
@@ -837,13 +851,16 @@ describe('Chat — WP22 stale-deploy action failure (#96a)', () => {
 describe('Chat — WP20 cost transparency (#82)', () => {
   const pricing = { simple: 20, clarification: 10, balance: 100 };
 
-  it('shows the pre-send cost line with live prices and balance', () => {
-    render(<Chat pricing={pricing} />);
-    expect(
-      screen.getByText(
-        'Een vraag kost ~20 credits · saldo: 100 credits. Stel ik eerst een verduidelijkingsvraag, dan kost die 10 credits en krijg je de rest terug.',
-      ),
-    ).toBeInTheDocument();
+  it('shows the pre-send cost line with live prices and balance, in the footer', () => {
+    render(
+      <PricingHintProvider>
+        <Chat pricing={pricing} />
+        <SiteFooter />
+      </PricingHintProvider>,
+    );
+    expect(document.querySelector('footer')!.textContent).toContain(
+      'Een vraag kost ~20 credits · saldo: 100 credits. Stel ik eerst een verduidelijkingsvraag, dan kost die 10 credits en krijg je de rest terug.',
+    );
   });
 
   it('repeats the reply price at the clarification message itself', async () => {
@@ -1149,21 +1166,36 @@ describe('Chat — WP129+130 cost-line variants (⟨W4⟩)', () => {
   const pricing = { simple: 20, clarification: 10, balance: 100, websearch: { enabled: true as const, addonPrice: 10 } };
 
   it('shows the base line when Internet is off', () => {
-    render(<Chat pricing={pricing} />);
-    expect(screen.getByText(/Een vraag kost ~20 credits · saldo: 100 credits/)).toBeInTheDocument();
+    render(
+      <PricingHintProvider>
+        <Chat pricing={pricing} />
+        <SiteFooter />
+      </PricingHintProvider>,
+    );
+    expect(document.querySelector('footer')!.textContent).toMatch(/Een vraag kost ~20 credits · saldo: 100 credits/);
   });
 
   it('CBS + internet: "~30 credits (waarvan 10 voor internet)"', () => {
-    render(<Chat pricing={pricing} />);
+    render(
+      <PricingHintProvider>
+        <Chat pricing={pricing} />
+        <SiteFooter />
+      </PricingHintProvider>,
+    );
     fireEvent.click(screen.getByRole('button', { name: 'Internet' }));
-    expect(screen.getByText(/~30 credits \(waarvan 10 voor internet\)/)).toBeInTheDocument();
+    expect(document.querySelector('footer')!.textContent).toMatch(/~30 credits \(waarvan 10 voor internet\)/);
   });
 
   it('web-only: "~10 credits (er wordt tijdelijk 30 gereserveerd)"', () => {
-    render(<Chat pricing={pricing} />);
+    render(
+      <PricingHintProvider>
+        <Chat pricing={pricing} />
+        <SiteFooter />
+      </PricingHintProvider>,
+    );
     fireEvent.click(screen.getByRole('button', { name: 'Internet' })); // web on
     fireEvent.click(screen.getByRole('button', { name: 'CBS data' })); // cbs off
-    expect(screen.getByText(/~10 credits \(er wordt tijdelijk 30 gereserveerd\)/)).toBeInTheDocument();
+    expect(document.querySelector('footer')!.textContent).toMatch(/~10 credits \(er wordt tijdelijk 30 gereserveerd\)/);
   });
 });
 
