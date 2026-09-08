@@ -11,7 +11,7 @@
 // in either language.
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { resolvePresentation, type PresentationContext } from '../lib/chart-presentation.ts';
+import { FONT_OPTIONS, resolvePresentation, type PresentationContext } from '../lib/chart-presentation.ts';
 import { ChartConfigPanel } from './chart-config-panel.tsx';
 
 afterEach(() => {
@@ -24,6 +24,20 @@ const meta = [
   { key: 'a', label: 'Nederland', color: '#8884d8' },
   { key: 'b', label: 'Duitsland', color: '#82ca9d' },
 ];
+// A distinct fixture for the Kleuren/Lettertype tests (own labels, so a
+// mistaken match against the Grafiek describe block's fixture would fail
+// loudly rather than silently pass on the wrong element).
+const colorMeta = [
+  { key: 'ams', label: 'Amsterdam', color: '#8884d8' },
+  { key: 'rot', label: 'Rotterdam', color: '#82ca9d' },
+];
+
+/** Opens the panel and switches to the given tab — shared by every
+ * Kleuren/Lettertype test below. */
+function openTab(tab: 'Kleuren' | 'Lettertype'): void {
+  fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+  fireEvent.click(screen.getByRole('tab', { name: tab }));
+}
 
 describe('ChartConfigPanel — Grafiek tab', () => {
   it('is closed by default and opens into a labelled region with three tabs', () => {
@@ -159,5 +173,207 @@ describe('ChartConfigPanel — Grafiek tab', () => {
       for (let n = walker.nextNode(); n; n = walker.nextNode()) expect(n.textContent).not.toMatch(/\d/);
       unmount();
     }
+  });
+});
+
+describe('ChartConfigPanel — Kleuren tab', () => {
+  it('one row per series with swatch, hex input and colour picker pre-filled with the effective colour', () => {
+    render(
+      <ChartConfigPanel
+        resolved={resolvePresentation(lineCtx, {})}
+        seriesMeta={colorMeta}
+        onChange={vi.fn()}
+        onReset={vi.fn()}
+        idPrefix="k1"
+      />,
+    );
+    openTab('Kleuren');
+    expect(screen.getByRole('group', { name: 'Amsterdam' })).toBeInTheDocument();
+    const hex = screen.getByRole('textbox', { name: 'Kleur van Amsterdam (hex-code)' }) as HTMLInputElement;
+    expect(hex.value).toBe('#8884d8');
+    expect((screen.getByLabelText('Kleur van Amsterdam kiezen') as HTMLInputElement).value).toBe('#8884d8');
+    const hex2 = screen.getByRole('textbox', { name: 'Kleur van Rotterdam (hex-code)' }) as HTMLInputElement;
+    expect(hex2.value).toBe('#82ca9d');
+  });
+
+  it('a valid hex commits on Enter as a per-index patch; a weak colour also shows a per-theme warning', () => {
+    const onChange = vi.fn();
+    render(
+      <ChartConfigPanel
+        resolved={resolvePresentation(lineCtx, {})}
+        seriesMeta={colorMeta}
+        onChange={onChange}
+        onReset={vi.fn()}
+        idPrefix="k2"
+      />,
+    );
+    openTab('Kleuren');
+    const hex = screen.getByRole('textbox', { name: 'Kleur van Amsterdam (hex-code)' }) as HTMLInputElement;
+    fireEvent.change(hex, { target: { value: 'ffc658' } });
+    fireEvent.keyDown(hex, { key: 'Enter' });
+    expect(onChange).toHaveBeenCalledWith({ seriesColors: { 0: '#ffc658' } });
+    expect(screen.getByText('Deze kleur is slecht leesbaar in het lichte thema.')).toBeInTheDocument();
+  });
+
+  it('a valid hex also commits on blur (no Enter needed)', () => {
+    const onChange = vi.fn();
+    render(
+      <ChartConfigPanel
+        resolved={resolvePresentation(lineCtx, {})}
+        seriesMeta={colorMeta}
+        onChange={onChange}
+        onReset={vi.fn()}
+        idPrefix="k2b"
+      />,
+    );
+    openTab('Kleuren');
+    const hex = screen.getByRole('textbox', { name: 'Kleur van Amsterdam (hex-code)' }) as HTMLInputElement;
+    fireEvent.change(hex, { target: { value: '#0088fe' } });
+    fireEvent.blur(hex);
+    expect(onChange).toHaveBeenCalledWith({ seriesColors: { 0: '#0088fe' } });
+  });
+
+  it('a colour that would hide the hollow provisional ring is refused with a reason and not emitted', () => {
+    const onChange = vi.fn();
+    render(
+      <ChartConfigPanel
+        resolved={resolvePresentation(lineCtx, {})}
+        seriesMeta={colorMeta}
+        onChange={onChange}
+        onReset={vi.fn()}
+        idPrefix="k3"
+      />,
+    );
+    openTab('Kleuren');
+    const hex = screen.getByRole('textbox', { name: 'Kleur van Amsterdam (hex-code)' }) as HTMLInputElement;
+    fireEvent.change(hex, { target: { value: '#fefefe' } });
+    fireEvent.blur(hex);
+    expect(onChange).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert').textContent).toMatch(/voorlopige cijfers/);
+    expect(hex.value).toBe('#8884d8'); // snapped back
+  });
+
+  it('garbage in the hex box is ignored and snaps back', () => {
+    const onChange = vi.fn();
+    render(
+      <ChartConfigPanel
+        resolved={resolvePresentation(lineCtx, {})}
+        seriesMeta={colorMeta}
+        onChange={onChange}
+        onReset={vi.fn()}
+        idPrefix="k4"
+      />,
+    );
+    openTab('Kleuren');
+    const hex = screen.getByRole('textbox', { name: 'Kleur van Amsterdam (hex-code)' }) as HTMLInputElement;
+    fireEvent.change(hex, { target: { value: 'red' } });
+    fireEvent.blur(hex);
+    expect(onChange).not.toHaveBeenCalled();
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(hex.value).toBe('#8884d8'); // snapped back silently
+  });
+
+  it('the colour picker commits through the same judge path as the hex box', () => {
+    const onChange = vi.fn();
+    render(
+      <ChartConfigPanel
+        resolved={resolvePresentation(lineCtx, {})}
+        seriesMeta={colorMeta}
+        onChange={onChange}
+        onReset={vi.fn()}
+        idPrefix="k5"
+      />,
+    );
+    openTab('Kleuren');
+    const picker = screen.getByLabelText('Kleur van Amsterdam kiezen') as HTMLInputElement;
+    fireEvent.change(picker, { target: { value: '#ffc658' } });
+    expect(onChange).toHaveBeenCalledWith({ seriesColors: { 0: '#ffc658' } });
+    expect(screen.getByText('Deze kleur is slecht leesbaar in het lichte thema.')).toBeInTheDocument();
+  });
+
+  it('Standaardkleuren is disabled while no colour override exists', () => {
+    render(
+      <ChartConfigPanel
+        resolved={resolvePresentation(lineCtx, {})}
+        seriesMeta={colorMeta}
+        onChange={vi.fn()}
+        onReset={vi.fn()}
+        idPrefix="k6"
+      />,
+    );
+    openTab('Kleuren');
+    expect(screen.getByRole('button', { name: 'Standaardkleuren' })).toBeDisabled();
+  });
+
+  it('Standaardkleuren clears all colour overrides', () => {
+    const onChange = vi.fn();
+    render(
+      <ChartConfigPanel
+        resolved={resolvePresentation(lineCtx, { seriesColors: { 0: '#ffc658' } })}
+        seriesMeta={colorMeta}
+        onChange={onChange}
+        onReset={vi.fn()}
+        idPrefix="k6b"
+      />,
+    );
+    openTab('Kleuren');
+    const resetColors = screen.getByRole('button', { name: 'Standaardkleuren' });
+    expect(resetColors).not.toBeDisabled();
+    fireEvent.click(resetColors);
+    expect(onChange).toHaveBeenCalledWith({ seriesColors: {} });
+  });
+
+  it('hex codes never appear as text nodes (only as input values)', () => {
+    const { container } = render(
+      <ChartConfigPanel
+        resolved={resolvePresentation(lineCtx, {})}
+        seriesMeta={colorMeta}
+        onChange={vi.fn()}
+        onReset={vi.fn()}
+        idPrefix="k7"
+      />,
+    );
+    openTab('Kleuren');
+    const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+    for (let n = walker.nextNode(); n; n = walker.nextNode()) expect(n.textContent).not.toMatch(/\d/);
+  });
+});
+
+describe('ChartConfigPanel — Lettertype tab', () => {
+  it('lists Standaard + the curated families and emits fontFamily', () => {
+    const onChange = vi.fn();
+    render(
+      <ChartConfigPanel
+        resolved={resolvePresentation(lineCtx, {})}
+        seriesMeta={colorMeta}
+        onChange={onChange}
+        onReset={vi.fn()}
+        idPrefix="f1"
+      />,
+    );
+    openTab('Lettertype');
+    const select = screen.getByRole('combobox', { name: 'Lettertype' }) as HTMLSelectElement;
+    const optionLabels = Array.from(select.options).map((o) => o.textContent);
+    expect(optionLabels).toEqual(['Standaard', ...FONT_OPTIONS.map((f) => f.family)]);
+    fireEvent.change(select, { target: { value: 'Roboto' } });
+    expect(onChange).toHaveBeenCalledWith({ fontFamily: 'Roboto' });
+  });
+
+  it('pre-fills from the resolved font, and choosing Standaard clears it', () => {
+    const onChange = vi.fn();
+    render(
+      <ChartConfigPanel
+        resolved={resolvePresentation(lineCtx, { fontFamily: 'Lato' })}
+        seriesMeta={colorMeta}
+        onChange={onChange}
+        onReset={vi.fn()}
+        idPrefix="f2"
+      />,
+    );
+    openTab('Lettertype');
+    const select = screen.getByRole('combobox', { name: 'Lettertype' }) as HTMLSelectElement;
+    expect(select.value).toBe('Lato');
+    fireEvent.change(select, { target: { value: '' } });
+    expect(onChange).toHaveBeenCalledWith({ fontFamily: null });
   });
 });

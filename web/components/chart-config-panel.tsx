@@ -29,9 +29,17 @@
 // tab but already part of the props contract so Task 6 is additive).
 import { useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { SlidersHorizontal } from 'lucide-react';
-import type { PresentationKey, PresentationOverrides, ResolvedPresentation } from '../lib/chart-presentation.ts';
+import {
+  FONT_OPTIONS,
+  judgeColor,
+  normalizeHex,
+  type PresentationKey,
+  type PresentationOverrides,
+  type ResolvedPresentation,
+} from '../lib/chart-presentation.ts';
 import { cn } from '../lib/utils.ts';
 import { Button } from './ui/button.tsx';
+import { Input } from './ui/input.tsx';
 
 export type PanelLang = 'nl' | 'en';
 
@@ -58,6 +66,21 @@ interface PanelCopyShape {
   zeroBaseline: string;
   reset: string;
   options: PanelCopyOptions;
+  /** Kleuren tab (Task 6). `colourOf`/`hexSuffix`/`pickSuffix` assemble into
+   * the per-row accessible names: "{colourOf} {label} {hexSuffix}" for the
+   * hex box, "{colourOf} {label} {pickSuffix}" for the native colour picker —
+   * kept as separate atoms (not two pre-joined templates) so a future label
+   * wording change can't accidentally desync the two names from each other. */
+  colourOf: string;
+  hexSuffix: string;
+  pickSuffix: string;
+  resetColors: string;
+  warnLight: string;
+  warnDark: string;
+  warnBoth: string;
+  /** Lettertype tab (Task 6). */
+  font: string;
+  fontDefault: string;
 }
 
 export const PANEL_COPY: Record<PanelLang, PanelCopyShape> = {
@@ -82,6 +105,15 @@ export const PANEL_COPY: Record<PanelLang, PanelCopyShape> = {
       grid: ['Beide', 'Alleen horizontaal', 'Geen'],
       xLabels: ['Horizontaal', 'Schuin'],
     },
+    colourOf: 'Kleur van',
+    hexSuffix: '(hex-code)',
+    pickSuffix: 'kiezen',
+    resetColors: 'Standaardkleuren',
+    warnLight: 'Deze kleur is slecht leesbaar in het lichte thema.',
+    warnDark: 'Deze kleur is slecht leesbaar in het donkere thema.',
+    warnBoth: 'Deze kleur is slecht leesbaar in beide thema’s.',
+    font: 'Lettertype',
+    fontDefault: 'Standaard',
   },
   en: {
     trigger: 'Style',
@@ -104,6 +136,15 @@ export const PANEL_COPY: Record<PanelLang, PanelCopyShape> = {
       grid: ['Both', 'Horizontal only', 'None'],
       xLabels: ['Flat', 'Tilted'],
     },
+    colourOf: 'Colour of',
+    hexSuffix: '(hex code)',
+    pickSuffix: 'picker',
+    resetColors: 'Default colours',
+    warnLight: 'This colour is hard to read in the light theme.',
+    warnDark: 'This colour is hard to read in the dark theme.',
+    warnBoth: 'This colour is hard to read in both themes.',
+    font: 'Font',
+    fontDefault: 'Default',
   },
 };
 
@@ -174,6 +215,13 @@ function pillClass(active: boolean): string {
   );
 }
 
+function warningText(copy: PanelCopyShape, warning: 'light' | 'dark' | 'both' | null): string | null {
+  if (warning === 'light') return copy.warnLight;
+  if (warning === 'dark') return copy.warnDark;
+  if (warning === 'both') return copy.warnBoth;
+  return null;
+}
+
 const ARROW_KEYS = ['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp'];
 
 /** Roving-tabindex arrow-key move for a radiogroup built as a plain loop
@@ -207,10 +255,7 @@ export interface ChartConfigPanelProps {
 
 export function ChartConfigPanel({
   resolved,
-  // Not read by the Grafiek tab; kept in the signature now so Task 6's
-  // Kleuren tab (which needs the series list to offer a colour per series)
-  // is an additive change to this component, not a prop-contract break.
-  seriesMeta: _seriesMeta,
+  seriesMeta,
   onChange,
   onReset,
   idPrefix,
@@ -228,6 +273,39 @@ export function ChartConfigPanel({
     colors: colorsTabRef,
     font: fontTabRef,
   };
+
+  // Kleuren tab: a local edit buffer per series index. `resolved.values
+  // .seriesColors` (via `seriesMeta[i].color`, the already-resolved effective
+  // colour) is the source of truth; a draft exists only for text the user is
+  // actively typing or that a refused/garbage commit snapped back from. A
+  // successful commit still records its normalised hex here rather than
+  // clearing it, so the hex box shows the just-picked colour immediately
+  // instead of flashing back to the old prop value until the caller's
+  // reducer re-resolves and a new `seriesMeta` prop arrives.
+  const [colorDrafts, setColorDrafts] = useState<Record<number, string>>({});
+  const [colorWarnings, setColorWarnings] = useState<Record<number, 'light' | 'dark' | 'both' | null>>({});
+  const [colorAlerts, setColorAlerts] = useState<Record<number, string | null>>({});
+  const currentColors = resolved.values.seriesColors;
+
+  function commitColor(index: number, effectiveColor: string, rawValue: string): void {
+    const hex = normalizeHex(rawValue);
+    if (hex === null) {
+      // Garbage: snap back without a word — nothing valid was ever offered.
+      setColorDrafts((d) => ({ ...d, [index]: effectiveColor }));
+      setColorAlerts((a) => ({ ...a, [index]: null }));
+      return;
+    }
+    const verdict = judgeColor(hex);
+    if (!verdict.ok) {
+      setColorDrafts((d) => ({ ...d, [index]: effectiveColor }));
+      setColorAlerts((a) => ({ ...a, [index]: verdict.reason }));
+      return;
+    }
+    setColorAlerts((a) => ({ ...a, [index]: null }));
+    setColorWarnings((w) => ({ ...w, [index]: verdict.warning }));
+    setColorDrafts((d) => ({ ...d, [index]: hex }));
+    onChange({ seriesColors: { ...currentColors, [index]: hex } });
+  }
 
   const triggerId = `${idPrefix}-style-trigger`;
   const regionId = `${idPrefix}-style`;
@@ -412,11 +490,98 @@ export function ChartConfigPanel({
           ) : null}
 
           {activeTab === 'colors' ? (
-            <div id={panelId('colors')} role="tabpanel" aria-labelledby={tabId('colors')} className="mt-3" />
+            <div
+              id={panelId('colors')}
+              role="tabpanel"
+              aria-labelledby={tabId('colors')}
+              className="mt-3 flex flex-col items-start gap-3"
+            >
+              {resolved.applicable.has('seriesColors') ? (
+                <>
+                  {seriesMeta.map((series, index) => {
+                    const draft = colorDrafts[index] ?? series.color;
+                    const warning = colorWarnings[index] ?? null;
+                    const alert = colorAlerts[index] ?? null;
+                    const warnId = `${idPrefix}-style-color-warn-${index}`;
+                    const alertId = `${idPrefix}-style-color-alert-${index}`;
+                    return (
+                      <div key={series.key} role="group" aria-label={series.label} className="flex flex-wrap items-center gap-2">
+                        <span
+                          aria-hidden
+                          style={{ backgroundColor: series.color }}
+                          className="inline-block size-4 rounded-full border border-border"
+                        />
+                        <span className="font-medium text-foreground">{series.label}</span>
+                        <Input
+                          type="text"
+                          inputMode="text"
+                          aria-label={`${copy.colourOf} ${series.label} ${copy.hexSuffix}`}
+                          aria-describedby={alert ? alertId : warning ? warnId : undefined}
+                          value={draft}
+                          onChange={(e) => setColorDrafts((d) => ({ ...d, [index]: e.target.value }))}
+                          onBlur={(e) => commitColor(index, series.color, e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') commitColor(index, series.color, e.currentTarget.value);
+                          }}
+                          className="w-24"
+                        />
+                        <input
+                          type="color"
+                          aria-label={`${copy.colourOf} ${series.label} ${copy.pickSuffix}`}
+                          value={series.color}
+                          onChange={(e) => commitColor(index, series.color, e.target.value)}
+                        />
+                        {warning ? (
+                          <p id={warnId} className="w-full text-muted-foreground">
+                            {warningText(copy, warning)}
+                          </p>
+                        ) : null}
+                        {alert ? (
+                          <p id={alertId} role="alert" className="w-full text-destructive">
+                            {alert}
+                          </p>
+                        ) : null}
+                      </div>
+                    );
+                  })}
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="xs"
+                    disabled={Object.keys(currentColors).length === 0}
+                    onClick={() => onChange({ seriesColors: {} })}
+                  >
+                    {copy.resetColors}
+                  </Button>
+                </>
+              ) : null}
+            </div>
           ) : null}
 
           {activeTab === 'font' ? (
-            <div id={panelId('font')} role="tabpanel" aria-labelledby={tabId('font')} className="mt-3" />
+            <div
+              id={panelId('font')}
+              role="tabpanel"
+              aria-labelledby={tabId('font')}
+              className="mt-3 flex flex-wrap items-center gap-2"
+            >
+              <label htmlFor={`${idPrefix}-style-font`}>{copy.font}</label>
+              <select
+                id={`${idPrefix}-style-font`}
+                aria-label={copy.font}
+                value={resolved.values.fontFamily ?? ''}
+                onChange={(e) => onChange({ fontFamily: e.target.value || null })}
+                className="rounded-md border border-border bg-background px-1.5 py-0.5 text-foreground"
+              >
+                <option value="">{copy.fontDefault}</option>
+                {FONT_OPTIONS.map((f) => (
+                  <option key={f.family} value={f.family}>
+                    {f.family}
+                  </option>
+                ))}
+              </select>
+            </div>
           ) : null}
         </section>
       ) : null}
