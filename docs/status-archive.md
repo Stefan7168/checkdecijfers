@@ -114,7 +114,7 @@ CODE-REVIEW PASS THAT CAUGHT A CRITICAL BUG SIX TASK-LEVEL REVIEWS HAD MISSED.**
    Subagent-Driven Development dispatches in this repo should say "commit only, do not push"
    explicitly to preserve the intended review-before-push order.
 
-**Verified facts, session close:** 17 commits (`5eec334`→`0360af1`) landed across 5 pushes, each
+**Verified facts, session close:** 18 commits (`5eec334`→`0360af1`) landed across 5 pushes, each
 its own green CI run watched to completion before the next push started, no exceptions —
 `0ca8853` (run 34185419337), `c83d572` (34189796385, Plan 1 complete), `0e0d219` (34190520643,
 Plan 2's Task 1 — see the process note above on why this one push wasn't the controller's own),
