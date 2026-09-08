@@ -34,6 +34,17 @@ import {
   purgeExpiredTrialBookkeeping,
   trialRetentionCutoff,
 } from '../../../backend/billing/index.ts';
+// WP218 phase 2: the chart-style preference sweep (migration 028, file-only —
+// see that migration's own header). Imported directly from the module, not
+// through backend/chart/index.ts's barrel: that barrel is the PUBLIC chart
+// surface, and this store stays file-only (unwired) until its own supervised
+// apply, same posture as the other legs before their migrations went live.
+import {
+  chartStyleRetentionCutoff,
+  chartStylesTablePresent,
+  countPurgeableChartStyles,
+  purgeExpiredChartStyles,
+} from '../../../backend/chart/user-styles.ts';
 import { getDb } from '../../../lib/db.ts';
 
 // Injected, not imported by the job — ADR 001's arrow points billing → answer,
@@ -44,6 +55,19 @@ const TRIAL_LEG = {
   cutoff: trialRetentionCutoff,
   count: countPurgeableTrialBookkeeping,
   purge: purgeExpiredTrialBookkeeping,
+};
+
+// WP218 phase 2's leg, injected the same way — both composition roots wire in
+// the SAME four functions so the cron and the CLI cannot describe different
+// work. Unlike TRIAL_LEG, this sets `present`: there is no hardcoded
+// to_regclass check for user_chart_styles inside the job
+// (chartStylesTablePresent already exists for it), so InjectedRetentionLeg's
+// optional `present` gate is what the job calls before running `count`/`purge`.
+const CHART_STYLES_LEG = {
+  cutoff: chartStyleRetentionCutoff,
+  count: countPurgeableChartStyles,
+  purge: purgeExpiredChartStyles,
+  present: chartStylesTablePresent,
 };
 
 export async function GET(request: Request): Promise<Response> {
@@ -70,6 +94,7 @@ export async function GET(request: Request): Promise<Response> {
       now: new Date(),
       apply,
       trial: TRIAL_LEG,
+      chartStyles: CHART_STYLES_LEG,
     });
     // The same operator line the CLI prints — Vercel logs are the owner's only
     // production visibility (WP12 review), and two descriptions of one run is
@@ -105,7 +130,9 @@ export async function GET(request: Request): Promise<Response> {
           `${
             error.leg === 'trial'
               ? 'the 2-year leg ran, only the 90-day trial leg did not.'
-              : 'the 2-year leg and the 90-day trial leg both ran; only the error_log leg did not.'
+              : error.leg === 'errorLog'
+                ? 'the 2-year leg and the 90-day trial leg both ran; only the error_log leg did not.'
+                : 'the 2-year leg, the 90-day trial leg, and the error_log leg all ran; only the chart-style leg did not.'
           }`
         : error instanceof Error
           ? error.message

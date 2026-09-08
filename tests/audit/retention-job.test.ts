@@ -15,10 +15,12 @@
 // one — that a FAILING trial read propagates instead of being reported as an
 // honest skip.
 import { describe, expect, it } from 'vitest';
+import { randomUUID } from 'node:crypto';
 import {
   describeRetentionPurge,
   RetentionPurgePartialError,
   runRetentionPurge,
+  type InjectedRetentionLeg,
   type TrialRetentionLeg,
 } from '../../src/answer/audit/retention-job.ts';
 import { REDACTED_QUESTION_TEXT } from '../../src/answer/audit/retention.ts';
@@ -29,6 +31,12 @@ import {
   takeTrialQuestion,
   trialRetentionCutoff,
 } from '../../src/billing/index.ts';
+import {
+  chartStyleRetentionCutoff,
+  chartStylesTablePresent,
+  countPurgeableChartStyles,
+  purgeExpiredChartStyles,
+} from '../../src/chart/user-styles.ts';
 import type { Db } from '../../src/db/types.ts';
 import { createTestDb } from '../helpers/pglite-db.ts';
 
@@ -37,6 +45,16 @@ const TRIAL_LEG: TrialRetentionLeg = {
   cutoff: trialRetentionCutoff,
   count: countPurgeableTrialBookkeeping,
   purge: purgeExpiredTrialBookkeeping,
+};
+
+/** The same injection both composition roots use for the WP218 phase 2 leg —
+ * unlike TRIAL_LEG, this one sets `present` (chartStylesTablePresent), since
+ * there is no hardcoded to_regclass check for this table inside the job. */
+const CHART_STYLES_LEG: InjectedRetentionLeg = {
+  cutoff: chartStyleRetentionCutoff,
+  count: countPurgeableChartStyles,
+  purge: purgeExpiredChartStyles,
+  present: chartStylesTablePresent,
 };
 
 const NOW = new Date('2026-07-25T12:00:00.000Z');
@@ -79,7 +97,7 @@ describe('#189 runRetentionPurge — the shared job behind the CLI and the cron'
     await withDb(async (db) => {
       const auditId = await seedExpired(db);
 
-      const summary = await runRetentionPurge({ db, now: NOW, apply: false, trial: TRIAL_LEG });
+      const summary = await runRetentionPurge({ db, now: NOW, apply: false, trial: TRIAL_LEG, chartStyles: null });
 
       expect(summary.mode).toBe('dry-run');
       expect(summary.auditRows).toBe(1);
@@ -100,7 +118,7 @@ describe('#189 runRetentionPurge — the shared job behind the CLI and the cron'
     await withDb(async (db) => {
       const auditId = await seedExpired(db);
 
-      const summary = await runRetentionPurge({ db, now: NOW, apply: true, trial: TRIAL_LEG });
+      const summary = await runRetentionPurge({ db, now: NOW, apply: true, trial: TRIAL_LEG, chartStyles: null });
 
       expect(summary.mode).toBe('applied');
       expect(summary.auditRows).toBe(1);
@@ -119,8 +137,8 @@ describe('#189 runRetentionPurge — the shared job behind the CLI and the cron'
   it('is idempotent for a fixed clock — a second apply finds nothing new', async () => {
     await withDb(async (db) => {
       await seedExpired(db);
-      await runRetentionPurge({ db, now: NOW, apply: true, trial: TRIAL_LEG });
-      const second = await runRetentionPurge({ db, now: NOW, apply: true, trial: TRIAL_LEG });
+      await runRetentionPurge({ db, now: NOW, apply: true, trial: TRIAL_LEG, chartStyles: null });
+      const second = await runRetentionPurge({ db, now: NOW, apply: true, trial: TRIAL_LEG, chartStyles: null });
       expect(second.trial).toMatchObject({ rows: 0 });
     });
   });
@@ -135,7 +153,7 @@ describe('#189 runRetentionPurge — the shared job behind the CLI and the cron'
                  '{}'::jsonb, 0, $1)`,
         [new Date('2026-07-01T00:00:00.000Z').toISOString()],
       );
-      const summary = await runRetentionPurge({ db, now: NOW, apply: true, trial: TRIAL_LEG });
+      const summary = await runRetentionPurge({ db, now: NOW, apply: true, trial: TRIAL_LEG, chartStyles: null });
       expect(summary.auditRows).toBe(0);
     });
   });
@@ -156,7 +174,7 @@ describe('#189 runRetentionPurge — the shared job behind the CLI and the cron'
         purge: () => Promise.reject(new Error('lock timeout')),
       };
       await expect(
-        runRetentionPurge({ db, now: NOW, apply: false, trial: exploding }),
+        runRetentionPurge({ db, now: NOW, apply: false, trial: exploding, chartStyles: null }),
       ).rejects.toThrow('lock timeout');
     });
   });
@@ -175,7 +193,7 @@ describe('#189 runRetentionPurge — the shared job behind the CLI and the cron'
         count: () => Promise.reject(new Error('lock timeout')),
         purge: () => Promise.reject(new Error('lock timeout')),
       };
-      const err = await runRetentionPurge({ db, now: NOW, apply: true, trial: exploding }).then(
+      const err = await runRetentionPurge({ db, now: NOW, apply: true, trial: exploding, chartStyles: null }).then(
         () => null,
         (e: unknown) => e,
       );
@@ -204,7 +222,7 @@ describe('#189 runRetentionPurge — the shared job behind the CLI and the cron'
       // once its expected column is gone — the read itself then throws, the
       // same "check-not-catch" shape as the trial leg's exploding mock above.
       await db.query('alter table error_log rename column occurred_at to renamed_away', []);
-      const err = await runRetentionPurge({ db, now: NOW, apply: true, trial: TRIAL_LEG }).then(
+      const err = await runRetentionPurge({ db, now: NOW, apply: true, trial: TRIAL_LEG, chartStyles: null }).then(
         () => null,
         (e: unknown) => e,
       );
@@ -223,7 +241,7 @@ describe('#189 runRetentionPurge — the shared job behind the CLI and the cron'
   it('reports table-absent ONLY when the table is genuinely gone', async () => {
     await withDb(async (db) => {
       await db.query('drop table if exists trial_questions cascade', []);
-      const summary = await runRetentionPurge({ db, now: NOW, apply: false, trial: TRIAL_LEG });
+      const summary = await runRetentionPurge({ db, now: NOW, apply: false, trial: TRIAL_LEG, chartStyles: null });
       expect(summary.trial).toEqual({ skipped: 'table-absent' });
     });
   });
@@ -232,12 +250,12 @@ describe('#189 runRetentionPurge — the shared job behind the CLI and the cron'
     await withDb(async (db) => {
       await seedExpired(db);
       const dry = describeRetentionPurge(
-        await runRetentionPurge({ db, now: NOW, apply: false, trial: TRIAL_LEG }),
+        await runRetentionPurge({ db, now: NOW, apply: false, trial: TRIAL_LEG, chartStyles: null }),
       );
       expect(dry).toContain('DRY RUN');
       expect(dry).toContain('WOULD be');
       const none = describeRetentionPurge(
-        await runRetentionPurge({ db, now: NOW, apply: false, trial: null }),
+        await runRetentionPurge({ db, now: NOW, apply: false, trial: null, chartStyles: null }),
       );
       expect(none).toContain('trial leg not configured');
     });
@@ -258,11 +276,11 @@ describe('#189 runRetentionPurge — the shared job behind the CLI and the cron'
         await seedErrorLogRow(db, '2026-04-25T00:00:00.000Z', 'old failure');
         await seedErrorLogRow(db, '2026-07-24T00:00:00.000Z', 'recent failure');
 
-        const dry = await runRetentionPurge({ db, now: NOW, apply: false, trial: TRIAL_LEG });
+        const dry = await runRetentionPurge({ db, now: NOW, apply: false, trial: TRIAL_LEG, chartStyles: null });
         expect(dry.errorLog).toMatchObject({ rows: 1 });
         expect(Number((await db.query('select count(*)::int as n from error_log', [])).rows[0]!.n)).toBe(2);
 
-        const applied = await runRetentionPurge({ db, now: NOW, apply: true, trial: TRIAL_LEG });
+        const applied = await runRetentionPurge({ db, now: NOW, apply: true, trial: TRIAL_LEG, chartStyles: null });
         // ⟨F2⟩: apply deleted what the dry run promised.
         expect(applied.errorLog).toEqual(dry.errorLog);
         const left = await db.query('select message from error_log', []);
@@ -270,7 +288,7 @@ describe('#189 runRetentionPurge — the shared job behind the CLI and the cron'
         expect(left.rows[0]!.message).toBe('recent failure');
 
         // Idempotent for a fixed clock.
-        const second = await runRetentionPurge({ db, now: NOW, apply: true, trial: TRIAL_LEG });
+        const second = await runRetentionPurge({ db, now: NOW, apply: true, trial: TRIAL_LEG, chartStyles: null });
         expect(second.errorLog).toMatchObject({ rows: 0 });
       });
     });
@@ -281,7 +299,7 @@ describe('#189 runRetentionPurge — the shared job behind the CLI and the cron'
         // migration 024 has not had its supervised apply yet. The job must
         // skip honestly and keep running the GDPR legs.
         await db.query('drop table if exists error_log cascade', []);
-        const summary = await runRetentionPurge({ db, now: NOW, apply: true, trial: TRIAL_LEG });
+        const summary = await runRetentionPurge({ db, now: NOW, apply: true, trial: TRIAL_LEG, chartStyles: null });
         expect(summary.errorLog).toEqual({ skipped: 'table-absent' });
         const line = describeRetentionPurge(summary);
         expect(line).toContain('migration 024 not applied yet');
@@ -293,10 +311,153 @@ describe('#189 runRetentionPurge — the shared job behind the CLI and the cron'
       await withDb(async (db) => {
         await seedErrorLogRow(db, '2026-04-25T00:00:00.000Z', 'old failure');
         const line = describeRetentionPurge(
-          await runRetentionPurge({ db, now: NOW, apply: false, trial: TRIAL_LEG }),
+          await runRetentionPurge({ db, now: NOW, apply: false, trial: TRIAL_LEG, chartStyles: null }),
         );
         expect(line).toContain('1 error_log row(s) WOULD be DELETED');
         expect(line).toContain('90-day ops-log retention');
+      });
+    });
+  });
+
+  // WP218 phase 2: the chart-style preference sweep — a fourth clock on the
+  // same job, same two-year account window as the audit leg, injected exactly
+  // like `trial` but with its own `present` gate (chartStylesTablePresent)
+  // rather than a hardcoded to_regclass query inside the job.
+  describe('the chart-styles leg (WP218 phase 2): 2-year DELETE, table-absent honest skip', () => {
+    async function seedChartStyleRow(db: Db, userId: string, updatedAt: string): Promise<void> {
+      await db.query(
+        `insert into user_chart_styles (user_id, style, updated_at) values ($1, '{}'::jsonb, $2)`,
+        [userId, updatedAt],
+      );
+    }
+
+    it('dry run counts expired rows and deletes nothing; apply DELETEs exactly those', async () => {
+      await withDb(async (db) => {
+        // Older than 2 years before NOW (2026-07-25): expired. 1 day before
+        // NOW: must survive.
+        await seedChartStyleRow(db, randomUUID(), '2024-01-01T00:00:00.000Z');
+        await seedChartStyleRow(db, randomUUID(), '2026-07-24T00:00:00.000Z');
+
+        const dry = await runRetentionPurge({
+          db,
+          now: NOW,
+          apply: false,
+          trial: TRIAL_LEG,
+          chartStyles: CHART_STYLES_LEG,
+        });
+        expect(dry.chartStyles).toEqual({
+          cutoff: chartStyleRetentionCutoff(NOW).toISOString(),
+          rows: 1,
+        });
+        expect(
+          Number((await db.query('select count(*)::int as n from user_chart_styles', [])).rows[0]!.n),
+        ).toBe(2);
+
+        const applied = await runRetentionPurge({
+          db,
+          now: NOW,
+          apply: true,
+          trial: TRIAL_LEG,
+          chartStyles: CHART_STYLES_LEG,
+        });
+        // ⟨F2⟩: apply deleted what the dry run promised.
+        expect(applied.chartStyles).toEqual(dry.chartStyles);
+        const left = await db.query('select updated_at from user_chart_styles', []);
+        expect(left.rows).toHaveLength(1);
+
+        // Idempotent for a fixed clock.
+        const second = await runRetentionPurge({
+          db,
+          now: NOW,
+          apply: true,
+          trial: TRIAL_LEG,
+          chartStyles: CHART_STYLES_LEG,
+        });
+        expect(second.chartStyles).toMatchObject({ rows: 0 });
+      });
+    });
+
+    it('reports not-configured when the caller passes null, and never invents a chart-style line', async () => {
+      await withDb(async (db) => {
+        const summary = await runRetentionPurge({
+          db,
+          now: NOW,
+          apply: false,
+          trial: TRIAL_LEG,
+          chartStyles: null,
+        });
+        expect(summary.chartStyles).toEqual({ skipped: 'not-configured' });
+        const line = describeRetentionPurge(summary);
+        expect(line).toContain('chart-style leg not configured');
+      });
+    });
+
+    it('reports table-absent when migration 028 is not applied — the EXPECTED pre-apply state, never a throw', async () => {
+      await withDb(async (db) => {
+        // Production today: migration 028 is file-only, no supervised apply
+        // yet. The job must skip honestly and keep running the other legs.
+        await db.query('drop table if exists user_chart_styles cascade', []);
+        const summary = await runRetentionPurge({
+          db,
+          now: NOW,
+          apply: true,
+          trial: TRIAL_LEG,
+          chartStyles: CHART_STYLES_LEG,
+        });
+        expect(summary.chartStyles).toEqual({ skipped: 'table-absent' });
+        const line = describeRetentionPurge(summary);
+        expect(line).toContain('migration 028 not applied');
+        expect(line).toContain('chart-style leg skipped');
+      });
+    });
+
+    // The symmetric case to the trial-leg and error_log-leg partial-failure
+    // tests above: the chart-styles leg can ALSO throw after the audit leg
+    // (and the trial and error_log legs) have already run, and its own `leg`
+    // tag is what both composition roots depend on to say which leg failed.
+    it('throws RetentionPurgePartialError tagged leg:chartStyles when the chart-styles leg fails after commit', async () => {
+      await withDb(async (db) => {
+        await seedExpired(db);
+        // chartStylesTablePresent checks to_regclass, which still finds the
+        // table once its expected column is gone — the read itself then
+        // throws, the same "check-not-catch" shape as the other legs' mocks.
+        await db.query('alter table user_chart_styles rename column updated_at to renamed_away', []);
+        const err = await runRetentionPurge({
+          db,
+          now: NOW,
+          apply: true,
+          trial: TRIAL_LEG,
+          chartStyles: CHART_STYLES_LEG,
+        }).then(
+          () => null,
+          (e: unknown) => e,
+        );
+        expect(err).toBeInstanceOf(RetentionPurgePartialError);
+        const partial = err as RetentionPurgePartialError;
+        expect(partial.leg).toBe('chartStyles');
+        expect(partial.auditRowsRedacted).toBe(1);
+        expect(partial.message).toContain('chart-style leg failed');
+        expect(partial.message).toContain('the trial leg and the error_log leg also already ran');
+        // The audit leg really did commit, same guarantee as the other legs.
+        const audit = await db.query('select question from audit_answers limit 1', []);
+        expect(audit.rows[0]!.question).toBe(REDACTED_QUESTION_TEXT);
+      });
+    });
+
+    it('the operator line names the chart-style leg on a real run', async () => {
+      await withDb(async (db) => {
+        await seedChartStyleRow(db, randomUUID(), '2024-01-01T00:00:00.000Z');
+        const line = describeRetentionPurge(
+          await runRetentionPurge({
+            db,
+            now: NOW,
+            apply: false,
+            trial: TRIAL_LEG,
+            chartStyles: CHART_STYLES_LEG,
+          }),
+        );
+        expect(line).toContain('1 user_chart_styles row(s) WOULD be DELETED');
+        expect(line).toContain('WP218 phase 2');
       });
     });
   });
@@ -323,7 +484,7 @@ describe('#189 runRetentionPurge — the shared job behind the CLI and the cron'
         await seedExpired(db); // one 2023 ACCOUNT row
         // 91 days before NOW: past the anonymous window, far inside the account one.
         await seedAnonymous(db, 'Wat is de inflatie?', '2026-04-24T00:00:00.000Z');
-        const summary = await runRetentionPurge({ db, now: NOW, apply: false, trial: TRIAL_LEG });
+        const summary = await runRetentionPurge({ db, now: NOW, apply: false, trial: TRIAL_LEG, chartStyles: null });
         expect(summary.accountRows).toBe(1);
         expect(summary.anonymousTrialRows).toBe(1);
         expect(summary.auditRows).toBe(2);
@@ -343,7 +504,7 @@ describe('#189 runRetentionPurge — the shared job behind the CLI and the cron'
       await withDb(async (db) => {
         await seedExpired(db);
         await seedAnonymous(db, 'Wat is de inflatie?', '2026-04-24T00:00:00.000Z');
-        const summary = await runRetentionPurge({ db, now: NOW, apply: true, trial: TRIAL_LEG });
+        const summary = await runRetentionPurge({ db, now: NOW, apply: true, trial: TRIAL_LEG, chartStyles: null });
         expect(summary.auditRows).toBe(2);
         const line = describeRetentionPurge(summary);
         expect(line).toContain('anonymous_trial @ 90 days');
@@ -362,8 +523,8 @@ describe('#189 runRetentionPurge — the shared job behind the CLI and the cron'
         await seedExpired(db);
         await seedAnonymous(db, 'Wat is de inflatie?', '2026-04-24T00:00:00.000Z');
         await seedAnonymous(db, 'En het bbp?', '2026-07-24T00:00:00.000Z'); // 1 day old, survives
-        const dry = await runRetentionPurge({ db, now: NOW, apply: false, trial: TRIAL_LEG });
-        const applied = await runRetentionPurge({ db, now: NOW, apply: true, trial: TRIAL_LEG });
+        const dry = await runRetentionPurge({ db, now: NOW, apply: false, trial: TRIAL_LEG, chartStyles: null });
+        const applied = await runRetentionPurge({ db, now: NOW, apply: true, trial: TRIAL_LEG, chartStyles: null });
         expect(applied.auditRows).toBe(dry.auditRows);
         expect((dry.accountRows ?? 0) + (dry.anonymousTrialRows ?? 0)).toBe(applied.auditRows);
       });
