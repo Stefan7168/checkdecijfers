@@ -857,6 +857,32 @@ way. A true full rollback (hiding existing dataset threads too) would need gatin
 itself, not built and not needed for a same-day flag-flip revert. Migrations 026/027 are harmless
 to leave applied either way.
 
+## Running the web app locally WITH the real database (added 2026-09-09, session 90)
+
+`npm run web:dev` (or the `web` entry in `.claude/launch.json`) starts `next dev` with only
+`web/.env.local` (the three `NEXT_PUBLIC_*` values, by design — secrets table above), so the
+logged-in workspace renders "DATABASE_URL is not set" errors. To run it against the real database:
+
+- **From a terminal:** `node scripts/dev-web.mjs` — loads the root `.env` (`DATABASE_URL`,
+  `ANTHROPIC_API_KEY`) into the process with `process.loadEnvFile` and spawns `npm --prefix web run
+  dev` with that environment. Prints no values.
+- **From the in-app browser pane:** the `web-db` entry in `.claude/launch.json` runs that same
+  wrapper. (Two things that do NOT work there, measured session 90: a `sh -c '. ./.env'` launch fails
+  with macOS "Operation not permitted" for `/bin/sh` inside Documents, and `node --env-file=.env
+  next dev` fails because `next` re-spawns itself with `NODE_OPTIONS`, where `--env-file` is refused.)
+- **Port:** 3000 is normally held by the sibling project (`~/Documents/Glaibaan/scripts/dev-web.mjs`),
+  so the app lands on a random port (`autoPort`). That is fine for logged-OUT pages.
+- **Logged-in pages cannot be reached locally as long as that is true:** the magic-link callback
+  is only allowed for `http://localhost:3000/auth/callback` (Supabase Auth → URL Configuration,
+  step above), so a login started on the random port never lands. Options: stop the sibling server
+  first (owner's call — it is his other project), or add a second allowed redirect URL for a fixed
+  alternate port (e.g. `http://localhost:3010/auth/callback`) in the Supabase dashboard (owner step)
+  and run `PORT=3010 node scripts/dev-web.mjs`. Until then, verify logged-in UI on production after
+  the deploy, in the owner's logged-in Chrome — and say so in the session log.
+- **It is the PRODUCTION database.** Asking a question locally charges real credits and writes real
+  audit rows; deleting a chat locally redacts real rows. Read-only browsing is fine; anything that
+  writes is a real write.
+
 ## Resuming after a long pause (written 2026-08-15, at the ~2-month halt)
 
 **✅ RUN 2026-08-26 (session 62, autonomous) — ~11 days into the pause, not the full ~2 months, by owner

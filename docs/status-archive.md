@@ -1,5 +1,84 @@
 # STATUS archive — the session log
 
+**Session 90 (2026-09-09, owner present) — #218 CHART-CONFIGURATION ARCHITECTURE PANEL RUN, OWNER
+DECISIONS A–H COLLECTED, WP218 PROGRAMME DOCUMENTED (NOT BUILT); COMPOSER LAYOUT MOVE, "LINK WITH
+SHEET" CHIP, PLUS ICON AND PER-CHAT DELETE SHIPPED TO `main`.**
+
+1. **Kickoff verified against reality first** (`git log`, `gh run list`, `curl` prod): HEAD `813a0f4`
+   (one docs commit past the `4847f48` the kickoff named — its own self-audit fix), tree clean, CI
+   green, prod `{"ok":true}` with 7 checks. Read STATUS → kickoff → archive s89 → lessons → #218/
+   #216/#217/#212 → RUNBOOK WP202 → ADR 038 → the chart code (`chart.tsx`, `chart-view-state.ts`,
+   `chart-download.tsx`, small multiples, user-chart) → the reference tool (tillitsdone.com/tools/
+   rechart, read live in the browser pane: 14 controls, code-snippet output) → the session-88 panel
+   script found on disk under the session directory and reused as the template.
+2. **#218 architecture panel** — Workflow `chart-config-tool-architecture`: 4 Fable design agents
+   (presets-only, per-chart-panel, saved-defaults-and-types, spec-seam) + 1 Fable synthesis that
+   re-read the code where they disagreed. 5 agents, 1,014,545 subagent tokens, 180 tool calls,
+   19.5 min. First submit failed on backticks inside the script's template literal (fixed, resent).
+   Synthesis (10 sections: owner decisions A–H, plain-language summary, mechanism, a 26-row control
+   inventory, chart-type rules, build order, honesty table, 19 rejected alternatives, answers to the
+   owner's 3 questions, what stays Studio scope) published as artifact
+   https://claude.ai/code/artifact/5a971401-ce68-40d5-ad28-1a74f2246c39 and saved verbatim to
+   `docs/session-briefs/2026-09-09-session-90-chart-config-tool-synthesis.md` (+ the script).
+   Three panel facts spot-verified by the session before handing over: `renderChartSvg` has only
+   test callers; `chart-download.tsx` rewrites only paint/font attributes; `chart-small-multiples.tsx`
+   draws `dot={false}` (a real R11 gap). The panel also caught ADR 038's imprecise "the R6 token-scan
+   only ever inspects the exported svg" — verified (`chart.test.tsx` scans the whole card's
+   `textContent` for digits) and corrected in ADR 038 with a dated note.
+3. **Owner UI asks, built and shipped (owner present):** (a) pricing line directly under the input,
+   chip row directly above it — the WHOLE row (sources + attachment chips) moved up together so
+   input + price line form one block (a judgment call, stated to the owner; easy to split);
+   session-88's `PricingHintContext`, its provider in `layout.tsx`, the footer read and its test
+   deleted; 4 tests converted back to Chat's own DOM + 1 new structural placement test; (b) a
+   disabled "Link with sheet" chip (`FileSpreadsheet` icon) before "Connect database" (whose
+   example moved to a Postgres database); (c) a plus icon in "Nieuwe chat"; (d) per-chat delete:
+   `⋯` "Chat options" (hover/focus-revealed, always on touch, `aria-describedby` → the row title so
+   the button's NAME stays constant and existing name lookups keep resolving) → shadcn
+   `DropdownMenu` (Base UI; added via `npx shadcn add dropdown-menu`) → "Delete chat" → inline
+   confirm (session-23 UX) → `deleteMyThread` (ownership-validated; dataset thread →
+   `deleteOneDataset`; CBS thread → new `deleteThreadQuestionHistory`, the #14 redaction narrowed
+   to one thread with feedback + pending-request legs scoped alongside; fail-soft + #65 report);
+   Workspace resets to a fresh chat when the ACTIVE chat is deleted and re-lists. Tests: 4 new
+   retention tests (thread-only scoping, foreign thread matches nothing, disappears from
+   `listThreads`, ledger untouched), 5 action tests, 6 sidebar tests (Base UI menu opens under
+   jsdom with plain `fireEvent.click`), 2 workspace tests.
+4. **Verification block (all measured):** typecheck ×2 clean; web 784/784 (was 772); backend
+   2093/2093 (was 2089; took 34 min on this machine — >600 s, backgrounded, run solo after stopping
+   the dev server); hermetic benchmark 14/14 + 6/6 + 0 fabricated, GATE PASS; real `next build`;
+   `/code-review` LOW: 0 findings (one comment/params tidy done anyway, retention + feedback suites
+   re-run 36/36). Pushed as `6e2a66b` (composer + chip), `2880b57` (sidebar delete + plus + dev-web
+   wrapper), `e6a7ede` (#218 docs); CI run `34261331269` in progress at wrap-up time.
+5. **Visual verification: partial.** A logged-in local check proved impossible: the in-app browser
+   pane and the owner's Chrome both had no localhost session, and a magic-link login can't land —
+   Supabase's redirect allow-list has `localhost:3000` only, and port 3000 is held by the sibling
+   project (`Glaibaan/scripts/dev-web.mjs`). Along the way: the preview harness's `sh` cannot read
+   `./.env` (TCC "Operation not permitted" in Documents) and `node --env-file` is refused when
+   `next` re-spawns with `NODE_OPTIONS` → `scripts/dev-web.mjs` (`process.loadEnvFile` + spawn npm)
+   and a `web-db` entry in `.claude/launch.json` now run the local web app WITH the database. The
+   logged-out landing rendered fine on it. **The light/dark check of the composer + sidebar menu
+   on production (owner's Chrome, logged in) is the first post-compaction step.**
+6. **Owner decisions A–H on #218, given in chat, plain-English restated and confirmed** — recorded
+   on #218 (+ new rows #219 EN/NL switch, #220 usage counter) and as the 6-phase WP218 programme in
+   08-build-plan: A EN/NL top-nav switch + per-chart language dropdown (CBS's own words via a
+   maintained word list, never machine translation); B Colours tab (swatch/hex/picker; library
+   default; "Apply brand colours" via Brandfetch by email domain, with a website box for gmail-like
+   addresses — "whatever, it needs to work") + fonts likewise; C saved in the account (database,
+   supervised); D best-practice research on chart-type choice, then a dropdown; E each chart starts
+   fresh (account default underneath); F a simple anonymous counter; G panel everywhere; H four
+   named thickness steps. Sanity check stated to the owner: B and C override his own 2026-09-08
+   cheapest-first rule — his call. **Open: the owner's "go" and the phase order.**
+7. **Owner steer → standing rule:** the first A–H list was written in shorthand and the owner
+   pushed back hard ("You have no idea what you mean by the rest. Didn't I tell you to use plain,
+   normal English?"). Re-explained in full sentences, then asked the last four via the ask module
+   with a recommended default each. Memory `feedback_plain_english_no_jargon` + lessons entry.
+8. **Docs touched:** STATUS top block, this entry, lessons-learned (s90), open-questions (#218
+   expanded; #219, #220 new), 08-build-plan (WP218 section), 03-mvp-scope row 55, CLAUDE.md
+   (i18n-deferred sentence now points at #219), 12-huisstijl (composer + sidebar), 05-data-rules
+   (per-thread deletion), 04-architecture (threads row), ADR 033 as-built, ADR 038 correction, RUNBOOK
+   (local web app with DB + the login gotcha), the s88 chip/footer spec (superseded note), memory
+   (`project_session90_state`, `feedback_plain_english_no_jargon`), and the post-compaction kickoff
+   in `docs/session-briefs/`.
+
 **Session 89 (2026-09-08, started autonomous/no owner present, owner returned mid-session) —
 PHASES 1-3 OF SESSION-88'S CHART-EDITING ARCHITECTURE PANEL BUILT VIA SUBAGENT-DRIVEN
 DEVELOPMENT, MERGED TO `main` AND LIVE.** (Item 1 below describes the autonomous-session

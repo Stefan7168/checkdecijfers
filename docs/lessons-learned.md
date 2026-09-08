@@ -6,6 +6,66 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 90 — 2026-09-09 — owner-present: an owner-facing decision list written in shorthand
+stalled the decision; a logged-in local visual check is structurally blocked on this machine; two
+harness gotchas around `.env`; a Workflow script's template literal cannot contain backticks
+
+- **A decision list the owner cannot read is not a decision list.** The #218 panel's eight owner
+  decisions were first put to the owner as compressed one-liners ("keep-or-clear on a dock spec
+  swap", "what counts as measured evidence") — fine for a session, unreadable for a non-developer
+  owner, who said so sharply. Re-explained as full sentences about what happens on screen and what it
+  costs, then asked via the ask module with a recommended default per question, all eight were
+  answered in minutes. **Lesson: when asking the owner for a decision, every option is a plain
+  sentence a newsroom reader would understand — no invariant codes, no file names, no internal
+  shorthand; the ask module with a recommended first option is the right vehicle for 2–4 of them.**
+  (Standing rule now in memory `feedback_plain_english_no_jargon`.)
+- **A logged-in visual check of the local web app is structurally impossible on this machine as
+  configured, so plan it on production.** Neither the in-app browser pane nor the owner's Chrome had
+  a localhost session, and a magic-link login cannot be completed: Supabase's redirect allow-list
+  contains `http://localhost:3000/auth/callback` only, and port 3000 is permanently held by the
+  sibling project's dev server (`~/Documents/Glaibaan/scripts/dev-web.mjs`), so the app lands on a
+  random port the callback can never reach. The honest path is: jsdom tests pin the DOM structure,
+  push after the full verification block, then do the light/dark check on production in the
+  owner's Chrome right after the deploy — say so instead of claiming a browser check that didn't
+  happen. (Adding a second redirect URL for a fixed alternate port, e.g. 3010, is the cheap fix if
+  local logged-in checks become routine — an owner-run Supabase dashboard step.)
+- **Two harness gotchas around running the local web app WITH the database:** (1) `next dev` reads
+  only `web/.env.local` (by design just the `NEXT_PUBLIC_*` values), so the workspace renders
+  "DATABASE_URL is not set"; (2) the preview harness's launch entries can't fix that with a shell
+  (`sh -c 'set -a; . ./.env'` fails with macOS TCC "Operation not permitted" inside Documents) nor
+  with `node --env-file` (next re-spawns itself with `NODE_OPTIONS`, where `--env-file` is refused
+  — exit code 9). What works: a tiny wrapper (`scripts/dev-web.mjs`, `process.loadEnvFile` then
+  spawn `npm --prefix web run dev` with the inherited env) as the launch target — now committed
+  with a `web-db` entry in `.claude/launch.json`. Also: a preview server started with the plain
+  `web` entry exited by itself after ~30 s the first time; restart rather than diagnose.
+- **A Workflow script is a plain JS file whose prompts are template literals — a backtick inside a
+  prompt is a parse error.** The first #218 panel submit failed on `swap \`spec\``-style
+  backticks in the shared context; the fix is to quote code identifiers with plain quotes inside
+  workflow prompts. Cheap to hit, cheap to fix, easy to forget.
+- **The full backend suite takes ~34 minutes on this 8 GB machine when anything else is running**
+  (2093 tests, PGlite per file): it exceeded the 600 s foreground limit and was backgrounded;
+  free memory was ~65 MB with the dev server + a Chrome tab open. Stop the dev server, don't run
+  agents, and expect >10 minutes; the earlier "OOM-killed next to agents" lesson is the same
+  constraint from the other side.
+- **`npx shadcn add dropdown-menu` on the `base-nova` (Base UI) style is a clean, network-only
+  add** — one file, no dependency change — and the resulting Base UI `Menu` opens under jsdom with
+  plain `fireEvent.click` (no `user-event` needed), so menu tests stay cheap. Its `DropdownMenuContent`
+  defaults to the anchor's width (`w-(--anchor-width)`), which for an icon-button trigger is 24 px —
+  override with `w-auto min-w-*`.
+- **When the row title must stay findable by name, describe the row's action button, don't name it
+  after the title.** Giving the sidebar's ⋯ button `aria-label="Chat options"` + `aria-describedby`
+  (the title button's id) keeps screen-reader context ("Chat options, Inflatie 2024") while every
+  existing `getByRole('button', { name: /title/ })` lookup still resolves to exactly one element;
+  putting the title in the label would have made those lookups ambiguous.
+- **Design-panel synthesis claims about the codebase are worth a 30-second grep before they go into
+  a doc** — this session's panel correctly caught ADR 038's imprecise "only the exported svg is
+  scanned" sentence and the small-multiples `dot={false}` gap; both were verified against the files
+  before being written into ADR 038 / open-questions, per the standing "verify a subagent's evidence"
+  rule. Nothing it claimed turned out wrong, which is exactly what the check is for.
+- **Owner-side scope answers can reverse a panel's cheapest-first recommendation (B colour picker +
+  Brandfetch, C database persistence) — record the override explicitly rather than silently
+  re-planning.** Named once in the sanity check, accepted as the owner's call, then documented as
+  such in #218/08-build-plan; the house rule still shapes the ORDER (free phases first).
 ## Session 89 — 2026-09-08 — autonomous chart-editing build: a whole-branch review found 5 real
 composition-seam bugs that 7 individually-approved task reviews structurally could not, and a
 design-panel's own illustrative code contained real library-behavior mistakes

@@ -9,6 +9,53 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
+**▶ SESSION 90 (2026-09-09, owner present — the owner pasted the session-89 kickoff and stayed in
+the chat) — the #218 chart-configuration ARCHITECTURE PANEL RAN and the owner answered its 8
+decisions; three small owner UI asks + a per-chat delete SHIPPED to `main`.**
+- **#218 architecture pass** (the single next priority from the kickoff): a 4-angle Fable design
+  panel + Fable synthesis via the Workflow tool (5 agents, 1,014,545 tokens, 19.5 min; angles:
+  presets-only / per-chart-panel / saved-defaults-and-types / spec-seam), the same shape as session
+  88's panel. Synthesis published as an artifact (https://claude.ai/code/artifact/5a971401-ce68-40d5-ad28-1a74f2246c39)
+  and saved verbatim in [session-briefs/2026-09-09-session-90-chart-config-tool-synthesis.md](session-briefs/2026-09-09-session-90-chart-config-tool-synthesis.md)
+  (+ the panel script beside it). Converged mechanism: a `presentation` slice on the session-89
+  chart reducer + one pure resolver yielding the EFFECTIVE values and per-option honesty locks, so
+  the "Opmaak" panel always shows what is on screen. **The owner then answered decisions A–H in
+  chat** (recorded on [#218](open-questions.md)): A an EN/NL switch in the top navigation for the
+  whole app, charts following it with a per-chart language dropdown ([#219](open-questions.md));
+  B a Colours tab (swatch + hex + colour picker, library colours as default) with an "Apply brand
+  colours" button via the Brandfetch API, and the same for fonts; C styles saved in the user's
+  ACCOUNT (database); D the app keeps choosing the best type but a dropdown offers more, after a
+  best-practice research piece; E each chart starts fresh; F add a simple anonymous usage counter
+  ([#220](open-questions.md)); G the panel appears everywhere incl. homepage + trial; H line
+  thickness as four named steps. Turned into the 6-phase **WP218 chart styling programme** in
+  [08-build-plan.md](08-build-plan.md) — **awaiting the owner's "go" and phase order** (cheapest-first
+  proposed: panel → account save → Brandfetch → EN/NL switch → chart types → counter; the owner
+  may want the language switch earlier). **Nothing of #218 is built.** B and C knowingly override
+  the owner's own 2026-09-08 cheapest-mechanism default (outside service + database now); named
+  in chat, the owner's call.
+- **Shipped, 3 commits on `main` (`6e2a66b`, `2880b57`, `e6a7ede`), owner-present direct push after
+  the full verification block:** (1) the pre-send pricing line sits directly UNDER the "Stel een
+  vraag" input again and the whole chip row directly ABOVE it (session-88's `PricingHintContext`
+  + footer segment removed as dead plumbing); a disabled "Link with sheet" chip before "Connect
+  database"; (2) a plus icon in "Nieuwe chat" and a per-row ⋯ "Chat options" → "Delete chat" →
+  inline confirm in the sidebar, backed by `deleteThreadQuestionHistory` (the #14 GDPR redaction
+  narrowed to one thread; dataset threads route to `deleteOneDataset`) — no schema change, the
+  thread vanishes because its derived title source is gone; shadcn `dropdown-menu` (Base UI)
+  added; `scripts/dev-web.mjs` + a `web-db` launch entry run the local web app with the root
+  `.env`; (3) the #218 docs. Verified before push: typecheck ×2, web 784/784 (+12), backend
+  2093/2093 (+4, incl. a foreign-thread and a ledger-untouched pin), hermetic benchmark 14/14 +
+  6/6 + 0 fabricated, real `next build`, `/code-review` LOW 0 findings.
+- **Not yet done at wrap-up:** the light/dark visual check of the shipped UI on production in the
+  owner's Chrome (CI run `34261331269` was still in progress; a logged-in LOCAL check is impossible —
+  the magic-link redirect allow-list is `localhost:3000`, held by the sibling project). **First thing
+  after compaction: confirm CI green, then check the composer + sidebar menu on production.**
+- **Owner steer, recorded as a standing rule:** decision lists in shorthand were unreadable
+  ("Didn't I tell you to use plain, normal English?") — every owner-facing option is now a plain
+  full sentence (memory `feedback_plain_english_no_jargon`, lessons-learned).
+- Unchanged: WP202a go-live steps 2–6 pending (RUNBOOK); #216 (B20 recalibration), #217
+  (model-independence), #172, #214, #215 tracked, not touched.
+Full session entry: [status-archive.md](status-archive.md).
+
 **▶ SESSION 89 (2026-09-08, started autonomous/no owner present, owner returned mid-session and
 authorized direct merge — "you are the expert, continue") — Phases 1-3 of session-88's
 chart-editing architecture panel built end-to-end via Subagent-Driven Development, MERGED and
