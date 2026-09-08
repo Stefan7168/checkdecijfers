@@ -425,11 +425,13 @@ export function ChartTooltip({
  * Task 5 (#212 series highlight): a second, independent button per series —
  * "Markeer X" — dims every OTHER series (strokeOpacity/fillOpacity on the
  * Line/Bar elements below) without hiding them. Independent of the hide
- * toggle: a highlighted series can still be hidden, and hiding the currently
- * highlighted series just leaves it highlighted-but-absent (no reducer
- * coupling needed — the Line/Bar for a hidden key isn't rendered at all).
- * The highlight button is disabled while its own series is hidden, since
- * "highlight a series that isn't drawn" has nothing to dim relative to. */
+ * toggle: a highlighted series can still be hidden. Hiding the currently
+ * highlighted series clears the highlight too (chartViewReducer's
+ * 'toggleSeries' case) — otherwise every OTHER visible series would stay
+ * dimmed with nothing actually highlighted on screen, a confusing dead state
+ * a review caught after this landed. The highlight button is disabled while
+ * its own series is hidden, since "highlight a series that isn't drawn" has
+ * nothing to dim relative to. */
 function SeriesLegend({
   seriesMeta,
   hiddenKeys,

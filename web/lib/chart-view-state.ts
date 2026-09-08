@@ -32,9 +32,17 @@ export function chartViewReducer(state: ChartViewState, action: ChartViewAction)
       return { ...state, form: action.form };
     case 'toggleSeries': {
       const next = new Set(state.hiddenKeys);
+      const hiding = !next.has(action.key);
       if (next.has(action.key)) next.delete(action.key);
       else next.add(action.key);
-      return { ...state, hiddenKeys: next };
+      // Hiding the currently-highlighted series must clear the highlight in
+      // the same action: otherwise `highlightedKey` keeps pointing at a
+      // series that is no longer drawn, leaving every OTHER visible series
+      // dimmed to 0.25 opacity with nothing actually highlighted on screen
+      // (#212 review finding). Re-showing a series never touches the
+      // highlight -- only the hide direction is coupled.
+      const highlightedKey = hiding && state.highlightedKey === action.key ? null : state.highlightedKey;
+      return { ...state, hiddenKeys: next, highlightedKey };
     }
     case 'setHighlight':
       return { ...state, highlightedKey: action.key };

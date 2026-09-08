@@ -1278,4 +1278,29 @@ describe('ChartView series highlight', () => {
     expect(btn).toHaveAttribute('aria-pressed', 'false');
     expect(document.querySelector('[data-series-dimmed="true"]')).toBeNull();
   });
+
+  // Review finding (#212): hiding the currently-highlighted series left
+  // `highlightedKey` pointing at a series no longer drawn, so the OTHER
+  // still-visible series stayed dimmed to 0.25 opacity with nothing actually
+  // highlighted -- a confusing, reachable dead state. Fixed at the reducer
+  // level (chartViewReducer's 'toggleSeries' case clears highlightedKey when
+  // the key being hidden was the highlighted one), so this asserts the
+  // observable effect: hiding the highlighted series un-dims the remaining
+  // visible one and drops its own now-meaningless pressed state.
+  it('hiding the highlighted series clears the highlight instead of leaving the other series dimmed', () => {
+    const s = twoSeriesLineSpec();
+    render(<ChartView spec={s} />);
+    const highlightBtn = screen.getByRole('button', { name: /Markeer Nederland/ });
+    fireEvent.click(highlightBtn);
+    expect(highlightBtn).toHaveAttribute('aria-pressed', 'true');
+    expect(document.querySelector('[data-series-dimmed="true"]')).not.toBeNull();
+
+    // Hide the highlighted series ("Nederland") via its pre-existing hide
+    // toggle -- the first button in its legend entry, accessible name is
+    // just the series label.
+    fireEvent.click(screen.getByRole('button', { name: 'Nederland' }));
+
+    expect(highlightBtn).toHaveAttribute('aria-pressed', 'false');
+    expect(document.querySelector('[data-series-dimmed="true"]')).toBeNull();
+  });
 });

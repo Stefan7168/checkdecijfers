@@ -92,6 +92,31 @@ describe('chartViewReducer', () => {
     expect(state.highlightedKey).toBeNull();
   });
 
+  it('toggleSeries clears the highlight when the newly-hidden key was highlighted', () => {
+    let state = initialViewState('line');
+    state = chartViewReducer(state, { type: 'setHighlight', key: 's0' });
+    state = chartViewReducer(state, { type: 'toggleSeries', key: 's0' });
+    expect(state.hiddenKeys.has('s0')).toBe(true);
+    expect(state.highlightedKey).toBeNull();
+  });
+
+  it('toggleSeries leaves an unrelated highlight untouched when hiding a different series', () => {
+    let state = initialViewState('line');
+    state = chartViewReducer(state, { type: 'setHighlight', key: 's1' });
+    state = chartViewReducer(state, { type: 'toggleSeries', key: 's0' });
+    expect(state.hiddenKeys.has('s0')).toBe(true);
+    expect(state.highlightedKey).toBe('s1');
+  });
+
+  it('toggleSeries does not touch the highlight when re-showing the highlighted series', () => {
+    let state = initialViewState('line');
+    state = chartViewReducer(state, { type: 'toggleSeries', key: 's0' }); // hide s0
+    state = chartViewReducer(state, { type: 'setHighlight', key: 's0' }); // highlight while hidden
+    state = chartViewReducer(state, { type: 'toggleSeries', key: 's0' }); // show s0 again
+    expect(state.hiddenKeys.has('s0')).toBe(false);
+    expect(state.highlightedKey).toBe('s0');
+  });
+
   it('setPeriodRange sets and clears the range', () => {
     let state = initialViewState('line');
     state = chartViewReducer(state, { type: 'setPeriodRange', range: ['2018', '2022'] });
