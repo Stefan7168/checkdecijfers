@@ -17,6 +17,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { usePricingHint } from '../lib/pricing-hint-context.tsx';
 
 /** The attribution sentence without the trailing separator. */
 export const FOOTER_ATTRIBUTION =
@@ -49,6 +50,7 @@ function useAboutTargetPresent(pathname: string | null): boolean {
 export function SiteFooter() {
   const pathname = usePathname();
   const showAbout = useAboutTargetPresent(pathname);
+  const { pricingHint } = usePricingHint();
   return (
     <footer className="flex shrink-0 items-center justify-between gap-3 border-t border-border px-4 py-2.5 text-xs text-muted-foreground">
       <span>
@@ -58,6 +60,7 @@ export function SiteFooter() {
             {FOOTER_ABOUT_LABEL}
           </a>
         ) : null}
+        {pricingHint ? ` · ${pricingHint}` : null}
       </span>
       <Link
         href="/systeemoverzicht"
