@@ -54,10 +54,12 @@ plan's own Phase 1–3 (no LLM, no DDL, zero prompt-byte changes) using the plan
 where given, and — since the owner is NOT present in that session — requires branch+PR+review
 before merge per [#118](https://github.com/Stefan7168/checkdecijfers/issues/118), not the
 owner-present direct-push path. **Verified LIVE throughout** (`GET /api/health` → ok
-after every one of 5 pushes). 21 commits total (18 build-range `5eec334`→`0360af1` + 3 docs-only
-`0973988`/`1dad9fa`/`834babe`), full verification block (typecheck ×2, web 717/717, backend
-2089/2089, real `next build`, `/code-review` LOW) before every code push, every push's own CI
-individually watched green (including the 3 docs-only pushes, confirmed via `gh run list`). Full
+after every one of 5 code pushes). 26 commits total across 13 pushes (`5eec334`→`c5a5eec`: 18
+build-range commits/5 pushes + 4 wrap-up-ritual commits/4 pushes + 4 later-same-day docs
+commits/4 pushes — recount corrected via `git log`/`gh run list` after an earlier undercount, see
+[status-archive.md](status-archive.md)'s closing paragraph), full verification block (typecheck
+×2, web 717/717, backend 2089/2089, real `next build`, `/code-review` LOW) before every code push,
+every push's own CI individually watched green including all 8 docs-only pushes. Full
 session entry: [status-archive.md](status-archive.md).
 
 **▶ SESSION 86 (2026-09-07, owner present, mixed autonomous/interactive) — the CI `deploy` job is

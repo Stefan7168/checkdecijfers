@@ -161,14 +161,22 @@ CODE-REVIEW PASS THAT CAUGHT A CRITICAL BUG SIX TASK-LEVEL REVIEWS HAD MISSED.**
     stated explicitly in its kickoff message since it's the one thing that session has no other way
     to know applies to it.
 
-**Verified facts, session close:** 21 commits total — 18 build-range (`5eec334`→`0360af1`) plus 3
-docs-only (`0973988`→`1dad9fa`→`834babe`) — landed across 6 pushes (5 code + 1 final docs push,
-each its own green CI run watched to completion before the next push started, no exceptions —
-`0ca8853` (run 34185419337), `c83d572` (34189796385, Plan 1 complete), `0e0d219` (34190520643,
-Plan 2's Task 1 — see the process note above on why this one push wasn't the controller's own),
-`e2f442e` (34192537302, Plan 2 complete), `0360af1` (34193704391, the Button conversion),
-`834babe` (run 34203170081, the CLAUDE.md convention + this docs sweep) — all `gh run view`/
-`gh run list` confirmed `success`. Final measured suite counts (from the code-build portion): web
+**Verified facts, session close:** 26 commits total (`5eec334`→`c5a5eec`) across 13 pushes, every
+single one its own green CI run watched to completion before the next push started, no
+exceptions — verified via `gh run list` against the full commit range, not from memory. Three
+groups: (a) **18 build commits / 5 pushes** — `5eec334`→`0360af1`: `0ca8853` (run 34185419337),
+`c83d572` (34189796385, Plan 1 complete), `0e0d219` (34190520643, Plan 2's Task 1 — see the process
+note above on why this one push wasn't the controller's own), `e2f442e` (34192537302, Plan 2
+complete), `0360af1` (34193704391, the Button conversion); (b) **4 wrap-up-ritual commits / 4
+pushes** — `da51d86`→`21d4c39` (runs 34197381002/34197973877/34198922679/34199411132): the
+original session-88 close-out plus its own three self-audit correction commits (a session-88
+commit-count fix, a push-count fix, and a kickoff-file self-audit-proofing fix — see
+`docs/lessons-learned.md`'s session-88 entry for what each caught); (c) **4 later-same-day docs
+commits / 4 pushes** — `0973988`→`c5a5eec` (runs 34200210266/34200287914/34203170081/34204670618):
+items 7-10 above, this section, plus a further self-audit correction to this exact paragraph
+(the original draft undercounted (a)+(b)+(c) as "21 commits / 6 pushes" — fixed here after
+re-checking `git log`/`gh run list` rather than trusting the earlier count). Final measured suite
+counts (from the code-build portion): web
 717/717, backend 2089/2089 (`src/` was never touched at all this session — every commit was
 `web/` or `docs/` only — confirmed via `git diff --stat` across the full session range; the
 backend count is a final sanity re-run, not evidence of anything this session could have broken).
