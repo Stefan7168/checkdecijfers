@@ -114,21 +114,71 @@ CODE-REVIEW PASS THAT CAUGHT A CRITICAL BUG SIX TASK-LEVEL REVIEWS HAD MISSED.**
    Subagent-Driven Development dispatches in this repo should say "commit only, do not push"
    explicitly to preserve the intended review-before-push order.
 
-**Verified facts, session close:** 18 commits (`5eec334`→`0360af1`) landed across 5 pushes, each
-its own green CI run watched to completion before the next push started, no exceptions —
+7. **Later the same day, docs-only (no code, no build):** two more owner feedback items given
+   explicitly "in passing" (owner's own words: *"dat betekend niet dat je er nu aan hoeft te
+   werken"* — that doesn't mean you need to work on it now) — chart download should offer a real
+   vector PDF (not the current SVG) and a transparent, no-baked-in-text, smaller PNG (currently
+   `PNG_SCALE = 2`, deliberately baking attribution text into both formats per the code's own
+   comment — recorded as [#215](open-questions.md), grounded against the actual
+   `web/components/chart-download.tsx` code, not assumed); and a click-to-annotate steer on
+   [#212](open-questions.md) (owner leans toward direct click-and-write on the chart, not
+   chat-routed). Both recorded, neither built.
+8. **Owner instruction, recorded verbatim as a new standing convention in `CLAUDE.md`:** *"this
+   should ALWAYS be the first we think of: No AI, no database change, no cost"* — every new feature
+   now defaults to the cheapest viable mechanism first, escalating to AI/DDL/added cost only on
+   measured evidence, not speculation. Committed `834babe`.
+9. **Owner explicitly invoked `ultracode`** for a chart-editing (sub-project 3: chart-type
+   switching, annotations, map, storytelling) architecture and phased execution plan, "so we can
+   execute on that today, using multiple agents." Ran a 5-agent Workflow — 4 independent design
+   angles + 1 synthesis, model `fable` pinned per the owner's own request — each angle re-reading
+   `docs/05-data-rules.md`, ADR 037, and the actual current chart code from scratch (not trusting
+   any prior summary). **Converged decision: no LLM instruction schema in v1.** A deterministic
+   view-state reducer (`src/chart/view.ts`, pure, no React) driven by direct on-screen controls —
+   chart-type switch, period-range zoom, series hide/highlight, click-to-annotate notes anchored by
+   `resultId` and rendered structurally outside `ChartView`'s root (so no R6 token-scan exemption is
+   ever needed) — matches the owner's own click-first steer on #212 and needs zero prompt bytes,
+   zero LLM cost, and no DB schema change for its first phases, itself the worked example of item 8
+   above. A chat-routed producer (a thin schema mirroring ADR 037's *shape*, not its code) is
+   designed but explicitly deferred to a conditional later phase, gated on usage evidence, not
+   built on spec alone. A map view is gated behind a NEW prerequisite the product doesn't have yet
+   (a "region-set" query capability — today's CBS results only ever contain the 2-5 regions one
+   question named, so a map of them would visually claim "no data" everywhere else, a data-honesty
+   problem, not an engineering one) — explicitly not a v1-adjacent option. Full synthesis (phased
+   plan, a per-piece R1/R9/R10 compliance table, 10 explicitly-rejected alternatives, and 8 open
+   owner decisions lettered A–H) published as a reviewable artifact:
+   https://claude.ai/code/artifact/91b16e9d-d5aa-4223-a6cf-ff3a7001c938 — recorded on
+   [#212](open-questions.md). **Owner response: "Great plan on most items so far, how can we make
+   our webapp even better?"** — read as approval of the plan's overall direction, explicitly NOT as
+   a line-by-line resolution of decisions A–H, which remain open for whoever picks this up.
+10. **Owner then asked for an autonomous continuation while away** ("ping the session with a name
+    'Continue'... I expect... to spawn as many sub-agents as you need... extremely productive in
+    the coming hours"), scoped by this session to the synthesized plan's own Phase 1–3 (the
+    deterministic reducer, chart-type switch, period sub-range, click-to-annotate — no LLM, no DDL,
+    zero prompt-byte changes to the CBS pipeline) using the plan's stated defaults for A–H where
+    given. Since the owner will NOT be present in that session, it was dispatched under
+    [#118](https://github.com/Stefan7168/checkdecijfers/issues/118)'s autonomous-session rule:
+    branch + PR + owner review required before merge, never the owner-present direct-push path —
+    stated explicitly in its kickoff message since it's the one thing that session has no other way
+    to know applies to it.
+
+**Verified facts, session close:** 21 commits total — 18 build-range (`5eec334`→`0360af1`) plus 3
+docs-only (`0973988`→`1dad9fa`→`834babe`) — landed across 6 pushes (5 code + 1 final docs push,
+each its own green CI run watched to completion before the next push started, no exceptions —
 `0ca8853` (run 34185419337), `c83d572` (34189796385, Plan 1 complete), `0e0d219` (34190520643,
 Plan 2's Task 1 — see the process note above on why this one push wasn't the controller's own),
-`e2f442e` (34192537302, Plan 2 complete), `0360af1` (34193704391, the Button conversion) — all
-`gh run view` confirmed `success`. Final measured suite counts: web 717/717, backend
-2089/2089 (`src/` was never touched at all this session — every commit was `web/` or `docs/` only
-— confirmed via `git diff --stat` across the full session range; the backend count is a final
-sanity re-run, not evidence of anything this session could have broken). Both typechecks clean,
-real `next build` clean, on every push. Production
-confirmed live and current on the final commit (`GET /api/health` → `{"ok":true}`, all 7 checks).
-Dependency/security check not re-run this session (last clean check was session 87; no dependency
-changes this session besides `react-resizable-panels`, added and verified via its own installed
-`.d.ts`, not from memory). Working tree clean, single worktree, no stray scratch files (every
-throwaway preview route deleted, confirmed via `git status`, before its own commit).
+`e2f442e` (34192537302, Plan 2 complete), `0360af1` (34193704391, the Button conversion),
+`834babe` (run 34203170081, the CLAUDE.md convention + this docs sweep) — all `gh run view`/
+`gh run list` confirmed `success`. Final measured suite counts (from the code-build portion): web
+717/717, backend 2089/2089 (`src/` was never touched at all this session — every commit was
+`web/` or `docs/` only — confirmed via `git diff --stat` across the full session range; the
+backend count is a final sanity re-run, not evidence of anything this session could have broken).
+Both typechecks clean, real `next build` clean, on every code push (docs-only pushes exempt per
+`CLAUDE.md`). Production confirmed live and current on the final code commit (`GET /api/health` →
+`{"ok":true}`, all 7 checks). Dependency/security check not re-run this session (last clean check
+was session 87; no dependency changes this session besides `react-resizable-panels`, added and
+verified via its own installed `.d.ts`, not from memory). Working tree clean, single worktree, no
+stray scratch files (every throwaway preview route deleted, confirmed via `git status`, before its
+own commit).
 
 **Session 87 (2026-09-07 owner-present start, then explicit "continue working autonomously"
 overnight into 2026-09-08) — A REAL PRODUCTION BUG FOUND AND FIXED, THE CHAT+CHART VISUAL REDESIGN

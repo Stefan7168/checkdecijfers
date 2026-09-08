@@ -32,11 +32,33 @@ accounted for as a second consumer of the removed pricing text. Also this sessio
 presentational change); a Fable subagent researched an external demo site for sub-project 3's
 future brainstorm — its "storytelling mode" uses ZERO LLM calls (fixed templates over stats the
 product's own R5 derivations already register), reframing the owner's "very API heavy" concern to
-apply only to an LLM-authored alternative. **Verified LIVE throughout** (`GET /api/health` → ok
-after every one of 5 pushes). 18 commits (`5eec334`→`0360af1`), full verification block
-(typecheck ×2, web 717/717, backend 2089/2089, real `next build`, `/code-review` LOW) before every
-push, every push's own CI individually watched green. Full session entry:
-[status-archive.md](status-archive.md).
+apply only to an LLM-authored alternative. **Later same day, docs-only (no code):** owner gave two
+more in-passing feedback items explicitly NOT to act on immediately (chart download → PDF/
+transparent-PNG, [#215](open-questions.md)) and a click-to-annotate steer on [#212](open-questions.md);
+both recorded. Owner then added a standing convention — **default every new feature to the
+cheapest viable mechanism first (no AI call, no schema/DB change, no added cost), escalate only on
+measured evidence** — now in [CLAUDE.md](../CLAUDE.md)'s Conventions. Owner then explicitly invoked
+ultracode for a chart-editing (sub-project 3 / annotations / map / storytelling) architecture +
+phased plan: a 5-agent Workflow (4-angle design panel + synthesis, model `fable`) converged on **no
+LLM instruction schema in v1** — a deterministic view-state reducer driven by direct on-screen
+controls (chart-type switch, period zoom, series hide, click-to-annotate), a chat-routed producer
+explicitly deferred to a conditional later phase (usage-evidence-gated, not spec-gated), and a map
+view gated behind a not-yet-built "region-set" query capability (a data-honesty gate, not an
+engineering one). Full synthesis — phased plan, R1/R9/R10 compliance table, 10 rejected
+alternatives, 8 open owner decisions A–H — published as a reviewable artifact:
+https://claude.ai/code/artifact/91b16e9d-d5aa-4223-a6cf-ff3a7001c938 (also recorded on
+[#212](open-questions.md)). **Owner response: "Great plan on most items so far" — not a
+line-by-line sign-off on A–H**, followed by a request to dispatch an autonomous session to build
+what's safe from it while the owner is away; that session's kickoff explicitly scopes it to the
+plan's own Phase 1–3 (no LLM, no DDL, zero prompt-byte changes) using the plan's stated defaults
+where given, and — since the owner is NOT present in that session — requires branch+PR+review
+before merge per [#118](https://github.com/Stefan7168/checkdecijfers/issues/118), not the
+owner-present direct-push path. **Verified LIVE throughout** (`GET /api/health` → ok
+after every one of 5 pushes). 21 commits total (18 build-range `5eec334`→`0360af1` + 3 docs-only
+`0973988`/`1dad9fa`/`834babe`), full verification block (typecheck ×2, web 717/717, backend
+2089/2089, real `next build`, `/code-review` LOW) before every code push, every push's own CI
+individually watched green (including the 3 docs-only pushes, confirmed via `gh run list`). Full
+session entry: [status-archive.md](status-archive.md).
 
 **▶ SESSION 86 (2026-09-07, owner present, mixed autonomous/interactive) — the CI `deploy` job is
 FIXED and LIVE for the first time in weeks, and that exposed + fixed a real production incident.**
