@@ -605,6 +605,47 @@ describe('ChartConfigPanel — WP218 phase 3 (owner B): Merkkleuren block', () =
     expect(screen.getByText('Een lettertype dat niet vrij beschikbaar is, is overgeslagen.')).toBeInTheDocument();
   });
 
+  it('need_website shows NO failure line — it just asks for the website (P3 task-4 review)', async () => {
+    const lookup = vi.fn().mockResolvedValue({ ok: false, reason: 'need_website' });
+    render(
+      <ChartConfigPanel
+        resolved={resolvePresentation(lineCtx, {})}
+        seriesMeta={colorMeta}
+        onChange={vi.fn()}
+        onReset={vi.fn()}
+        idPrefix="brnw"
+        brand={{ lookup }}
+      />,
+    );
+    openTab('Kleuren');
+    fireEvent.click(screen.getByRole('button', { name: 'Pas merkkleuren toe' }));
+    expect(await screen.findByLabelText('Website van je organisatie')).toBeInTheDocument();
+    expect(screen.queryByText(/niet mogelijk|ging iets mis|geen merk|Probeer het later/)).toBeNull();
+  });
+
+  it('more brand colours than series: extra colours are dropped (bounded by the chart, never a stray index in the patch)', async () => {
+    const onChange = vi.fn();
+    const lookup = vi.fn().mockResolvedValue({
+      ok: true,
+      brand: { name: 'Drie BV', domain: 'drie.nl', colors: ['#ff7300', '#0088fe', '#00c49f'], font: null, fetchedAt: '2026-01-01T00:00:00.000Z', cached: false },
+    });
+    render(
+      <ChartConfigPanel
+        resolved={resolvePresentation(lineCtx, {})}
+        seriesMeta={colorMeta}
+        onChange={onChange}
+        onReset={vi.fn()}
+        idPrefix="br3c"
+        brand={{ lookup }}
+      />,
+    );
+    openTab('Kleuren');
+    fireEvent.click(screen.getByRole('button', { name: 'Pas merkkleuren toe' }));
+    await screen.findByRole('status');
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange.mock.calls[0][0]).toEqual({ seriesColors: { 0: '#ff7300', 1: '#0088fe' } });
+  });
+
   it('need_website: reveals the website input, and the retry call carries the typed domain', async () => {
     const lookup = vi
       .fn()

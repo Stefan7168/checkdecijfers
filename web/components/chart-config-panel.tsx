@@ -513,7 +513,13 @@ export function ChartConfigPanel({
     try {
       const result = await brand.lookup(brandNeedsWebsite ? brandWebsite : undefined);
       if (!result.ok) {
-        if (result.reason === 'need_website') setBrandNeedsWebsite(true);
+        if (result.reason === 'need_website') {
+          // Not a failure: the routine outcome for a free-mail login. Reveal
+          // the website box and say nothing else (P3 task-4 review).
+          setBrandNeedsWebsite(true);
+          setBrandOutcome(null);
+          return;
+        }
         setBrandOutcome({ kind: 'failure', reason: result.reason });
         return;
       }
