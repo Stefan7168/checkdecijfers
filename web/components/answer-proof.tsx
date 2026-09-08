@@ -15,35 +15,43 @@
 // not a side panel).
 import { memo, useId, useState } from 'react';
 import { DERIVED_DATA_MARKING } from '../backend/query/types.ts';
+import { useT } from '../lib/i18n/lang-provider.tsx';
 import type { AnswerProof as AnswerProofData } from '../lib/answer-proof.ts';
 import { Button } from './ui/button.tsx';
 
 function CellTable({ proof, technical }: { proof: AnswerProofData; technical: boolean }) {
+  const t = useT();
   const dimKeys = [...new Set(proof.cells.flatMap((cell) => Object.keys(cell.dims)))].sort();
-  const date = proof.syncedAt ?? 'onbekend';
+  const date = proof.syncedAt ?? t('answerProof.dateUnknown');
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-max border-collapse text-left text-xs">
         <caption className="mb-1 text-left text-muted-foreground">
-          {`Tabel ${proof.tableId} — ${proof.tableTitle} · versie ${proof.tableVersion} · gesynchroniseerd ${date} · licentie ${proof.license}`}
+          {t('answerProof.tableCaption', {
+            tableId: proof.tableId,
+            tableTitle: proof.tableTitle,
+            version: proof.tableVersion,
+            date,
+            license: proof.license,
+          })}
         </caption>
         <thead>
           <tr className="border-b border-border">
-            <th scope="col" className="py-1 pr-3 font-medium">Onderwerp</th>
-            <th scope="col" className="py-1 pr-3 font-medium">Regio</th>
-            <th scope="col" className="py-1 pr-3 font-medium">Periode</th>
+            <th scope="col" className="py-1 pr-3 font-medium">{t('answerProof.colSubject')}</th>
+            <th scope="col" className="py-1 pr-3 font-medium">{t('answerProof.colRegion')}</th>
+            <th scope="col" className="py-1 pr-3 font-medium">{t('answerProof.colPeriod')}</th>
             {dimKeys.map((key) => (
               <th key={key} scope="col" className="py-1 pr-3 font-medium">{key}</th>
             ))}
-            <th scope="col" className="py-1 pr-3 font-medium">Waarde</th>
-            <th scope="col" className="py-1 pr-3 font-medium">Status</th>
+            <th scope="col" className="py-1 pr-3 font-medium">{t('answerProof.colValue')}</th>
+            <th scope="col" className="py-1 pr-3 font-medium">{t('answerProof.colStatus')}</th>
             {technical ? (
               <>
-                <th scope="col" className="py-1 pr-3 font-medium">Cel-id</th>
-                <th scope="col" className="py-1 pr-3 font-medium">Meetcode</th>
-                <th scope="col" className="py-1 pr-3 font-medium">Regiocode</th>
-                <th scope="col" className="py-1 pr-3 font-medium">Periodecode</th>
-                <th scope="col" className="py-1 pr-3 font-medium">Batch</th>
+                <th scope="col" className="py-1 pr-3 font-medium">{t('answerProof.colCellId')}</th>
+                <th scope="col" className="py-1 pr-3 font-medium">{t('answerProof.colMeasureCode')}</th>
+                <th scope="col" className="py-1 pr-3 font-medium">{t('answerProof.colRegionCode')}</th>
+                <th scope="col" className="py-1 pr-3 font-medium">{t('answerProof.colPeriodCode')}</th>
+                <th scope="col" className="py-1 pr-3 font-medium">{t('answerProof.colBatch')}</th>
               </>
             ) : null}
           </tr>
@@ -84,7 +92,8 @@ export const AnswerProof = memo(function AnswerProof({ proof }: { proof: AnswerP
   const [open, setOpen] = useState(false);
   const [technical, setTechnical] = useState(false);
   const panelId = useId();
-  const triggerLabel = proof.cells.length === 1 ? 'Bewijs dit cijfer' : 'Bewijs deze cijfers';
+  const t = useT();
+  const triggerLabel = proof.cells.length === 1 ? t('answerProof.triggerSingle') : t('answerProof.triggerPlural');
 
   return (
     <>
@@ -102,7 +111,7 @@ export const AnswerProof = memo(function AnswerProof({ proof }: { proof: AnswerP
         <div
           id={panelId}
           role="region"
-          aria-label="Onderbouwing van dit antwoord"
+          aria-label={t('answerProof.regionLabel')}
           className="order-last mt-2 w-full basis-full rounded border border-border bg-muted p-3 text-xs text-muted-foreground"
         >
           <Button
@@ -113,18 +122,20 @@ export const AnswerProof = memo(function AnswerProof({ proof }: { proof: AnswerP
             aria-pressed={technical}
             onClick={() => setTechnical((t) => !t)}
           >
-            Technische details
+            {t('answerProof.technicalToggle')}
           </Button>
 
           <div className="mb-3">
-            <h4 className="mb-1 font-medium text-muted-foreground">Waarom dit antwoord</h4>
-            <p>{`Gebruikte lezing: ${proof.reading}.`}</p>
-            {proof.periodSemantics !== null ? <p>{`Periodebetekenis: ${proof.periodSemantics}`}</p> : null}
+            <h4 className="mb-1 font-medium text-muted-foreground">{t('answerProof.whyHeading')}</h4>
+            <p>{t('answerProof.readingLine', { reading: proof.reading })}</p>
+            {proof.periodSemantics !== null ? (
+              <p>{t('answerProof.periodSemanticsLine', { value: proof.periodSemantics })}</p>
+            ) : null}
             {proof.alternates.length > 0 ? (
               <ul className="mt-1 space-y-0.5">
                 {proof.alternates.map((alternate, i) => (
                   <li key={i}>
-                    {`Niet gekozen: ${alternate.label}`}
+                    {t('answerProof.notChosenLine', { label: alternate.label })}
                     {technical && alternate.technical !== null ? alternate.technical : ''}
                   </li>
                 ))}
@@ -133,12 +144,12 @@ export const AnswerProof = memo(function AnswerProof({ proof }: { proof: AnswerP
           </div>
 
           <div className="mb-3">
-            <h4 className="mb-1 font-medium text-muted-foreground">De gebruikte cellen</h4>
+            <h4 className="mb-1 font-medium text-muted-foreground">{t('answerProof.cellsHeading')}</h4>
             <CellTable proof={proof} technical={technical} />
           </div>
 
           <div>
-            <h4 className="mb-1 font-medium text-muted-foreground">Stap voor stap</h4>
+            <h4 className="mb-1 font-medium text-muted-foreground">{t('answerProof.stepsHeading')}</h4>
             <ol className="list-decimal space-y-0.5 pl-4">
               {proof.steps.map((step, i) => (
                 <li key={i}>

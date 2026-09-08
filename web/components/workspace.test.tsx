@@ -245,7 +245,7 @@ describe('Workspace — mixed CBS + dataset thread list (ADR 037 D10 invariant)'
     renderWorkspace(MIXED_THREADS);
     fireEvent.click(screen.getByRole('button', { name: 'Inflatie 2024' }));
     expect(await screen.findByPlaceholderText('Stel een vraag…')).toBeInTheDocument();
-    expect(screen.queryByPlaceholderText('Ask about your data…')).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText('Stel een vraag over je data…')).not.toBeInTheDocument();
   });
 
   it('shows a skeleton message list while a clicked thread is loading, then the real messages', async () => {
@@ -310,7 +310,7 @@ describe('Workspace — mixed CBS + dataset thread list (ADR 037 D10 invariant)'
     });
     renderWorkspace(MIXED_THREADS);
     fireEvent.click(screen.getByRole('button', { name: /verkoop\.csv/ }));
-    expect(await screen.findByPlaceholderText('Ask about your data…')).toBeInTheDocument();
+    expect(await screen.findByPlaceholderText('Stel een vraag over je data…')).toBeInTheDocument();
     expect(screen.queryByPlaceholderText('Stel een vraag…')).not.toBeInTheDocument();
   });
 });
@@ -318,7 +318,7 @@ describe('Workspace — mixed CBS + dataset thread list (ADR 037 D10 invariant)'
 describe('Workspace — handleUploadFile (ADR 037 D10/D14, attachments prop)', () => {
   it('without the attachments prop, "Upload file" stays disabled and ingestFile is never wired', () => {
     renderWorkspace();
-    expect(screen.getByRole('button', { name: 'Upload file' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Bestand uploaden' })).toBeDisabled();
     expect(document.querySelector('input[type="file"]')).toBeNull();
   });
 
@@ -354,7 +354,7 @@ describe('Workspace — handleUploadFile (ADR 037 D10/D14, attachments prop)', (
     const file = new File(['x'], 'x.csv', { type: 'text/csv' });
     fireEvent.change(input, { target: { files: [file] } });
     expect(await screen.findByText('This file is too large.')).toBeInTheDocument();
-    expect(screen.queryByPlaceholderText('Ask about your data…')).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText('Stel een vraag over je data…')).not.toBeInTheDocument();
   });
 });
 
@@ -392,10 +392,10 @@ describe('Workspace — session 90: deleting a chat from the sidebar', () => {
     actions.listMyThreads.mockResolvedValue([]);
     renderWorkspace([{ id: 11, title: 'Inflatie 2024', lastActivityAt: new Date().toISOString(), kind: 'cbs' }]);
     expect(screen.getByRole('button', { name: 'Inflatie 2024' })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Chat options' }));
-    fireEvent.click(await screen.findByRole('menuitem', { name: 'Delete chat' }));
-    const confirm = await screen.findByRole('group', { name: 'Delete this chat?' });
-    fireEvent.click(within(confirm).getByRole('button', { name: 'Delete' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Chatopties' }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Chat verwijderen' }));
+    const confirm = await screen.findByRole('group', { name: 'Chat verwijderen?' });
+    fireEvent.click(within(confirm).getByRole('button', { name: 'Verwijder' }));
     await waitFor(() => expect(actions.deleteMyThread).toHaveBeenCalledWith(11));
     await waitFor(() => expect(actions.listMyThreads).toHaveBeenCalled());
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Inflatie 2024' })).toBeNull());
@@ -404,11 +404,11 @@ describe('Workspace — session 90: deleting a chat from the sidebar', () => {
   it('a failed delete keeps the row and shows the error line — nothing is re-listed', async () => {
     actions.deleteMyThread.mockResolvedValue({ ok: false });
     renderWorkspace([{ id: 12, title: 'Werkloosheid', lastActivityAt: new Date().toISOString(), kind: 'cbs' }]);
-    fireEvent.click(screen.getByRole('button', { name: 'Chat options' }));
-    fireEvent.click(await screen.findByRole('menuitem', { name: 'Delete chat' }));
-    const confirm = await screen.findByRole('group', { name: 'Delete this chat?' });
-    fireEvent.click(within(confirm).getByRole('button', { name: 'Delete' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('Couldn’t delete this chat');
+    fireEvent.click(screen.getByRole('button', { name: 'Chatopties' }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Chat verwijderen' }));
+    const confirm = await screen.findByRole('group', { name: 'Chat verwijderen?' });
+    fireEvent.click(within(confirm).getByRole('button', { name: 'Verwijder' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Kon deze chat niet verwijderen');
     expect(screen.getByRole('button', { name: 'Werkloosheid' })).toBeInTheDocument();
     expect(actions.listMyThreads).not.toHaveBeenCalled();
   });

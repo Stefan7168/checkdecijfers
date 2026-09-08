@@ -28,6 +28,7 @@ import type { RawDatasetState } from '../backend/attachments/respond.ts';
 import { ambiguousFormatClarificationText, AMBIGUOUS_FORMAT_OPTIONS } from '../backend/attachments/templates.ts';
 import type { ColumnProfile, DatasetProfile, DatasetStatus, NumberFormat } from '../backend/attachments/types.ts';
 import { datasetMessageHasVisual, deriveDatasetVisuals, visualId, type DockVisual } from '../lib/dock-visuals.ts';
+import { useT } from '../lib/i18n/lang-provider.tsx';
 import { Button } from './ui/button.tsx';
 import { Input } from './ui/input.tsx';
 import { UserChartView } from './user-chart.tsx';
@@ -85,6 +86,7 @@ export function DatasetChat({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const t = useT();
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: 'nearest' });
@@ -122,12 +124,12 @@ export function DatasetChat({
         setDecisions({});
         setPendingColumnIndex(0);
       } else if (result.kind === 'unauthenticated') {
-        setError('Your session has expired. Please refresh the page.');
+        setError(t('common.sessionExpired'));
       } else {
-        setError('This file no longer needs a decision — it may have been deleted.');
+        setError(t('datasetChat.noLongerNeedsDecision'));
       }
     } catch {
-      setError('Something went wrong saving that choice. Please try again.');
+      setError(t('datasetChat.saveChoiceError'));
     } finally {
       setBusy(false);
     }
@@ -145,13 +147,13 @@ export function DatasetChat({
     try {
       const result: AskDatasetOutcome = await askDataset(datasetId, threadId, text, requestId, rawState);
       if (result.kind === 'unauthenticated') {
-        setError('Your session has expired. Please refresh the page.');
+        setError(t('common.sessionExpired'));
       } else if (result.kind === 'duplicate_request') {
         // A client retry of an already-processed submit — nothing new to show.
       } else if (result.kind === 'insufficient_credits') {
-        setError(`Not enough credits (need ${result.required}, you have ${result.balance}).`);
+        setError(t('datasetChat.insufficientCredits', { required: result.required, balance: result.balance }));
       } else if (result.kind === 'not_found') {
-        setError('This file is no longer available.');
+        setError(t('datasetChat.notFound'));
       } else if (result.kind === 'needs_decision') {
         setProfile(result.profile);
         setStatus('needs_decision');
@@ -167,7 +169,7 @@ export function DatasetChat({
         }
       }
     } catch {
-      setError('Something went wrong answering that question. Please try again.');
+      setError(t('datasetChat.answerError'));
     } finally {
       setBusy(false);
     }
@@ -197,7 +199,7 @@ export function DatasetChat({
             {error ? <div className="text-sm text-destructive">{error}</div> : null}
           </div>
         ) : (
-          <p className="text-sm text-muted-foreground">Nothing left to decide.</p>
+          <p className="text-sm text-muted-foreground">{t('datasetChat.needsDecisionFallback')}</p>
         )}
       </section>
     );
@@ -214,7 +216,7 @@ export function DatasetChat({
           if (message.role === 'redacted') {
             return (
               <div key={i} className="text-left">
-                <p className="text-sm italic text-muted-foreground">This question has been deleted.</p>
+                <p className="text-sm italic text-muted-foreground">{t('datasetChat.redactedMessage')}</p>
               </div>
             );
           }
@@ -268,7 +270,7 @@ export function DatasetChat({
                         : 'border-border text-muted-foreground hover:bg-muted hover:text-foreground')
                     }
                   >
-                    Chart in panel →
+                    {t('datasetChat.chipChartInPanel')}
                   </button>
                 ) : (
                   <UserChartView spec={message.chart} />
@@ -277,7 +279,7 @@ export function DatasetChat({
             </div>
           );
         })}
-        {busy ? <div className="text-left text-sm text-muted-foreground">Working on it…</div> : null}
+        {busy ? <div className="text-left text-sm text-muted-foreground">{t('datasetChat.busy')}</div> : null}
         {error ? <div className="text-sm text-destructive">{error}</div> : null}
         <div ref={bottomRef} />
         </div>
@@ -290,11 +292,11 @@ export function DatasetChat({
             onChange={(e) => setInput(e.target.value)}
             disabled={busy}
             maxLength={500}
-            placeholder="Ask about your data…"
+            placeholder={t('datasetChat.placeholder')}
             className="h-10 flex-1 bg-background px-3.5"
           />
           <Button type="submit" size="lg" className="h-10 px-4" disabled={busy || !input.trim()}>
-            Send
+            {t('datasetChat.send')}
           </Button>
         </form>
       </div>

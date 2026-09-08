@@ -13,6 +13,7 @@ import type { ComposedResponse } from '../backend/answer/respond/types.ts';
 import type { WebSection } from '../backend/websearch/types.ts';
 import { UnrecognizedActionError } from 'next/dist/client/components/unrecognized-action-error';
 import { buildAnswerCsv } from '../lib/csv.ts';
+import { LangProvider } from '../lib/i18n/lang-provider.tsx';
 import { fakeAnswerResponse, fakeCell } from '../test/fake-answer.ts';
 import { Chat } from './chat.tsx';
 
@@ -1047,7 +1048,7 @@ describe('Chat — WP129+130 source chips (#129)', () => {
 
   it('"Add link" reads the same as an unselected source chip, not the always-on action style', () => {
     render(<Chat pricing={{ simple: 20, clarification: 10, balance: 100, websearch: { enabled: true, addonPrice: 10 } }} />);
-    const addLink = screen.getByRole('button', { name: 'Add link' });
+    const addLink = screen.getByRole('button', { name: 'Link toevoegen' });
     const internetChip = screen.getByRole('button', { name: 'Internet' }); // starts unselected (CHIP_OFF)
     expect(addLink.className).toBe(internetChip.className);
   });
@@ -1674,30 +1675,30 @@ describe('Chat — attachment entry points (#201/#202, session 83 scoping; ADR 0
   it('renders upload/data-source buttons as disabled, explanatory placeholders; "Add link" is clickable', () => {
     render(<Chat />);
     for (const [name, hint] of [
-      ['Upload file', 'upload een bestand'],
-      ['Link with sheet', 'koppel een spreadsheet'],
-      ['Connect database', 'verbind een databron'],
+      ['Bestand uploaden', 'upload een bestand'],
+      ['Koppel een spreadsheet', 'koppel een spreadsheet'],
+      ['Database koppelen', 'verbind een databron'],
     ] as const) {
       const button = screen.getByRole('button', { name });
       expect(button).toBeDisabled();
       expect(button).toHaveAttribute('title', expect.stringContaining(hint));
     }
-    const linkButton = screen.getByRole('button', { name: 'Add link' });
+    const linkButton = screen.getByRole('button', { name: 'Link toevoegen' });
     expect(linkButton).not.toBeDisabled();
     expect(linkButton).not.toHaveAttribute('title');
   });
 
   it('"Link with sheet" sits directly before "Connect database" in the chip row (owner request, session 90)', () => {
     render(<Chat />);
-    const sheet = screen.getByRole('button', { name: 'Link with sheet' });
-    const database = screen.getByRole('button', { name: 'Connect database' });
+    const sheet = screen.getByRole('button', { name: 'Koppel een spreadsheet' });
+    const database = screen.getByRole('button', { name: 'Database koppelen' });
     expect(sheet.nextElementSibling).toBe(database);
     expect(sheet.className).toBe(database.className);
   });
 
   it('"Connect database" no longer shows a "Soon" badge (owner feedback, session 88)', () => {
     render(<Chat />);
-    const button = screen.getByRole('button', { name: 'Connect database' });
+    const button = screen.getByRole('button', { name: 'Database koppelen' });
     expect(within(button).queryByText('Soon')).toBeNull();
   });
 
@@ -1708,7 +1709,7 @@ describe('Chat — attachment entry points (#201/#202, session 83 scoping; ADR 0
   // reviewed diff to this test, not a silent drift.
   it('the "Upload file" button is byte-identical to before D10 when attachments is absent', () => {
     render(<Chat />);
-    const button = screen.getByRole('button', { name: 'Upload file' });
+    const button = screen.getByRole('button', { name: 'Bestand uploaden' });
     // Session 87 restyle: the "soon" chip (dashed outline, dimmed) — still one
     // literal string, so any future markup edit is a deliberate diff here.
     expect(button.className).toBe(
@@ -1724,7 +1725,7 @@ describe('Chat — attachment entry points (#201/#202, session 83 scoping; ADR 0
   it('enables "Upload file" and wires it to onUploadFile when attachments is present', async () => {
     const onUploadFile = vi.fn().mockResolvedValue({ ok: true });
     render(<Chat attachments={{ enabled: true, onUploadFile }} />);
-    const button = screen.getByRole('button', { name: 'Upload file' });
+    const button = screen.getByRole('button', { name: 'Bestand uploaden' });
     expect(button).not.toBeDisabled();
     expect(button).not.toHaveAttribute('title');
     const input = document.querySelector('input[type="file"]') as HTMLInputElement;
@@ -1760,8 +1761,8 @@ describe('Chat — attachment entry points (#201/#202, session 83 scoping; ADR 0
   it('"Connect database" stays disabled even when attachments is present; "Add link" stays clickable', () => {
     const onUploadFile = vi.fn();
     render(<Chat attachments={{ enabled: true, onUploadFile }} />);
-    expect(screen.getByRole('button', { name: 'Connect database' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Add link' })).not.toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Database koppelen' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Link toevoegen' })).not.toBeDisabled();
   });
 });
 
@@ -1773,7 +1774,7 @@ describe('Chat — "Add link" preview row (session 86, no backend yet)', () => {
 
   it('opens the URL row on click and closes it again on a second click', () => {
     render(<Chat />);
-    const button = screen.getByRole('button', { name: 'Add link' });
+    const button = screen.getByRole('button', { name: 'Link toevoegen' });
     fireEvent.click(button);
     expect(screen.getByPlaceholderText('https://example.com/page-with-a-table')).toBeInTheDocument();
     fireEvent.click(button);
@@ -1782,21 +1783,49 @@ describe('Chat — "Add link" preview row (session 86, no backend yet)', () => {
 
   it('the Fetch button stays disabled until a URL is typed', () => {
     render(<Chat />);
-    fireEvent.click(screen.getByRole('button', { name: 'Add link' }));
-    expect(screen.getByRole('button', { name: 'Fetch' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Link toevoegen' }));
+    expect(screen.getByRole('button', { name: 'Ophalen' })).toBeDisabled();
     fireEvent.change(screen.getByPlaceholderText('https://example.com/page-with-a-table'), {
       target: { value: 'https://example.com/tabel' },
     });
-    expect(screen.getByRole('button', { name: 'Fetch' })).not.toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Ophalen' })).not.toBeDisabled();
   });
 
   it('submitting shows an honest "not yet available" message and never calls any network/backend function', () => {
     render(<Chat />);
-    fireEvent.click(screen.getByRole('button', { name: 'Add link' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Link toevoegen' }));
     fireEvent.change(screen.getByPlaceholderText('https://example.com/page-with-a-table'), {
       target: { value: 'https://example.com/tabel' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Fetch' }));
-    expect(screen.getByText("This isn't available yet — coming soon.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Ophalen' }));
+    expect(screen.getByText('Dit is nog niet beschikbaar — binnenkort wel.')).toBeInTheDocument();
+  });
+});
+
+// WP218 phase 4 (#219): proves the language switch reaches this surface. Only
+// this component's OWN chrome is asserted — answer text, refusal copy, and
+// attribution lines are backend-composed and stay Dutch regardless of app
+// language (design §1).
+describe('Chat — en', () => {
+  it('renders the English placeholder and Send button under LangProvider lang="en"', () => {
+    render(
+      <LangProvider lang="en">
+        <Chat />
+      </LangProvider>,
+    );
+    expect(screen.getByPlaceholderText('Ask a question…')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Send' })).toBeInTheDocument();
+  });
+
+  it('renders the English attachment chip labels', () => {
+    render(
+      <LangProvider lang="en">
+        <Chat />
+      </LangProvider>,
+    );
+    expect(screen.getByRole('button', { name: 'Add link' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Upload file' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Link with sheet' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Connect database' })).toBeInTheDocument();
   });
 });

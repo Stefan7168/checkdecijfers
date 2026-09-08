@@ -9,6 +9,7 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { AnswerProof as AnswerProofData, ProofCell } from '../lib/answer-proof.ts';
+import { LangProvider } from '../lib/i18n/lang-provider.tsx';
 import { AnswerProof } from './answer-proof.tsx';
 
 afterEach(cleanup);
@@ -195,5 +196,24 @@ describe('AnswerProof — keyboard reachability', () => {
     for (const button of screen.getAllByRole('button')) {
       expect(button.tagName).toBe('BUTTON');
     }
+  });
+});
+
+// WP218 phase 4 (#219): proves the language switch reaches this surface. The
+// proof's own prose (proof.reading etc.) is backend-composed and stays Dutch
+// regardless of app language (docs/superpowers/specs/2026-09-09-language-
+// switch-design.md §1) — only the static chrome this component itself
+// authors (trigger label, headings, toggle) is asserted here.
+describe('AnswerProof — en', () => {
+  it('renders the English chrome under LangProvider lang="en"', () => {
+    render(
+      <LangProvider lang="en">
+        <AnswerProof proof={fakeProof()} />
+      </LangProvider>,
+    );
+    const trigger = screen.getByRole('button', { name: 'Prove this number' });
+    fireEvent.click(trigger);
+    expect(screen.getByRole('region', { name: 'Evidence for this answer' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Technical details' })).toBeInTheDocument();
   });
 });

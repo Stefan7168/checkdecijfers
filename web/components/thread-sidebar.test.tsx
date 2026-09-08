@@ -7,6 +7,7 @@
 // nothing else about its row differs (same className, same click wiring).
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { LangProvider } from '../lib/i18n/lang-provider.tsx';
 import { ThreadSidebar } from './thread-sidebar.tsx';
 import type { ThreadSummary } from '../backend/threads/index.ts';
 
@@ -73,7 +74,7 @@ describe('ThreadSidebar — dataset threads (ADR 037 D10)', () => {
     );
     const button = screen.getByRole('button', { name: /verkoop-2024\.csv/ });
     expect(button.textContent).toBe('📎verkoop-2024.csv');
-    expect(button.getAttribute('title')).toBe('Your data: verkoop-2024.csv');
+    expect(button.getAttribute('title')).toBe('Jouw data: verkoop-2024.csv');
   });
 
   it('a dataset thread row is clickable exactly like a CBS one', () => {
@@ -152,50 +153,70 @@ describe('ThreadSidebar — session 90: plus icon, per-row ⋯ menu, delete with
     render(
       <ThreadSidebar threads={[cbsThread()]} activeThreadId={null} collapsed={false} onSelect={vi.fn()} onNewChat={vi.fn()} onToggleCollapse={vi.fn()} />,
     );
-    expect(screen.queryByRole('button', { name: 'Chat options' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Chatopties' })).toBeNull();
   });
 
   it('⋯ opens a menu whose "Delete chat" asks for confirmation; confirming calls onDelete(id) and the block closes on success', async () => {
     const onDelete = vi.fn().mockResolvedValue(true);
     renderWithDelete(onDelete);
-    const options = screen.getByRole('button', { name: 'Chat options' });
+    const options = screen.getByRole('button', { name: 'Chatopties' });
     // Described by the row's own title, so a screen reader hears which chat.
     expect(document.getElementById(options.getAttribute('aria-describedby')!)!.textContent).toBe('Inflatie 2024');
     expect(onDelete).not.toHaveBeenCalled();
     fireEvent.click(options);
-    fireEvent.click(await screen.findByRole('menuitem', { name: 'Delete chat' }));
-    const confirm = await screen.findByRole('group', { name: 'Delete this chat?' });
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Chat verwijderen' }));
+    const confirm = await screen.findByRole('group', { name: 'Chat verwijderen?' });
     expect(onDelete).not.toHaveBeenCalled(); // nothing happens before the explicit confirm
-    fireEvent.click(within(confirm).getByRole('button', { name: 'Delete' }));
+    fireEvent.click(within(confirm).getByRole('button', { name: 'Verwijder' }));
     await waitFor(() => expect(onDelete).toHaveBeenCalledWith(5));
-    await waitFor(() => expect(screen.queryByRole('group', { name: 'Delete this chat?' })).toBeNull());
+    await waitFor(() => expect(screen.queryByRole('group', { name: 'Chat verwijderen?' })).toBeNull());
   });
 
   it('Cancel closes the confirmation without calling onDelete', async () => {
     const onDelete = vi.fn().mockResolvedValue(true);
     renderWithDelete(onDelete);
-    fireEvent.click(screen.getByRole('button', { name: 'Chat options' }));
-    fireEvent.click(await screen.findByRole('menuitem', { name: 'Delete chat' }));
-    const confirm = await screen.findByRole('group', { name: 'Delete this chat?' });
-    fireEvent.click(within(confirm).getByRole('button', { name: 'Cancel' }));
-    expect(screen.queryByRole('group', { name: 'Delete this chat?' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Chatopties' }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Chat verwijderen' }));
+    const confirm = await screen.findByRole('group', { name: 'Chat verwijderen?' });
+    fireEvent.click(within(confirm).getByRole('button', { name: 'Annuleren' }));
+    expect(screen.queryByRole('group', { name: 'Chat verwijderen?' })).toBeNull();
     expect(onDelete).not.toHaveBeenCalled();
   });
 
   it('a failed delete shows an error line and keeps the confirmation open', async () => {
     const onDelete = vi.fn().mockResolvedValue(false);
     renderWithDelete(onDelete);
-    fireEvent.click(screen.getByRole('button', { name: 'Chat options' }));
-    fireEvent.click(await screen.findByRole('menuitem', { name: 'Delete chat' }));
-    const confirm = await screen.findByRole('group', { name: 'Delete this chat?' });
-    fireEvent.click(within(confirm).getByRole('button', { name: 'Delete' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('Couldn’t delete this chat');
-    expect(screen.getByRole('group', { name: 'Delete this chat?' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Chatopties' }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Chat verwijderen' }));
+    const confirm = await screen.findByRole('group', { name: 'Chat verwijderen?' });
+    fireEvent.click(within(confirm).getByRole('button', { name: 'Verwijder' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Kon deze chat niet verwijderen');
+    expect(screen.getByRole('group', { name: 'Chat verwijderen?' })).toBeInTheDocument();
   });
 
   it('busy disables the options button like the row itself', () => {
     renderWithDelete(vi.fn().mockResolvedValue(true), { busy: true });
-    expect(screen.getByRole('button', { name: 'Chat options' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Chatopties' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Inflatie 2024' })).toBeDisabled();
+  });
+});
+
+// WP218 phase 4 (#219): proves the language switch reaches this surface.
+describe('ThreadSidebar — en', () => {
+  it('renders the English chrome under LangProvider lang="en"', () => {
+    render(
+      <LangProvider lang="en">
+        <ThreadSidebar
+          threads={[cbsThread()]}
+          activeThreadId={null}
+          collapsed={false}
+          onSelect={vi.fn()}
+          onNewChat={vi.fn()}
+          onToggleCollapse={vi.fn()}
+        />
+      </LangProvider>,
+    );
+    expect(screen.getByRole('button', { name: 'New chat' })).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Search chats')).toBeInTheDocument();
   });
 });

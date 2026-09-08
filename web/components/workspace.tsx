@@ -18,6 +18,7 @@ import type { ThreadSummary } from '../backend/threads/index.ts';
 import type { ChatMessage } from '../lib/chat-message.ts';
 import { ChartStyleProvider } from '../lib/chart-style-context.tsx';
 import type { DockVisual } from '../lib/dock-visuals.ts';
+import { useT } from '../lib/i18n/lang-provider.tsx';
 import { useMediaQuery } from '../lib/use-media-query.ts';
 import { Chat } from './chat.tsx';
 import { DatasetChat } from './dataset-chat.tsx';
@@ -95,6 +96,7 @@ export function Workspace({
   const [activeVisualId, setActiveVisualId] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showPurchaseBanner, setShowPurchaseBanner] = useState(purchaseSuccess);
+  const t = useT();
   // WP135 (blocker fix): the chat reports its in-flight state here so the
   // sidebar's thread-switch / nieuwe-chat controls are disabled while a submit
   // runs — a switch mid-flight would otherwise reset the chat and let the late
@@ -245,7 +247,7 @@ export function Workspace({
       formData.set('file', file);
       const result = await ingestFile(formData);
       if (result.kind === 'unauthenticated') {
-        return { ok: false, message: 'Your session has expired. Please refresh the page.' };
+        return { ok: false, message: t('common.sessionExpired') };
       }
       if (result.kind === 'refused') {
         return { ok: false, message: result.message };
@@ -270,7 +272,7 @@ export function Workspace({
       void refreshThreads();
       return { ok: true };
     },
-    [refreshThreads],
+    [refreshThreads, t],
   );
 
   // The chat reports its dockable visuals here (an EVENT, not an effect): set the
@@ -307,11 +309,11 @@ export function Workspace({
   const cardTitle =
     handoff.kind === 'dataset'
       ? handoff.displayName
-      : (threads.find((thread) => thread.id === activeThreadId)?.title ?? 'Nieuwe chat');
+      : (threads.find((thread) => thread.id === activeThreadId)?.title ?? t('workspace.newChatTitle'));
 
   const chatSection = (
     <section
-      aria-label="Chat"
+      aria-label={t('workspace.chatSectionLabel')}
       className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-card text-card-foreground"
     >
       <div className="flex h-12 shrink-0 items-center gap-3 border-b border-border px-4">
@@ -400,16 +402,13 @@ export function Workspace({
         <SiteHeader balance={balance} />
         {showPurchaseBanner ? (
           <div className="mx-2 mt-2 flex items-start justify-between gap-3 rounded-lg border border-border bg-card px-4 py-3 text-sm text-success">
-            <p>
-              Betaling gelukt — je credits worden bijgeschreven zodra Stripe de betaling bevestigt
-              (meestal een paar seconden). Ververs daarna de pagina om je nieuwe saldo te zien.
-            </p>
+            <p>{t('workspace.purchaseSuccessMessage')}</p>
             <button
               type="button"
               onClick={dismissPurchaseBanner}
               className="shrink-0 text-xs text-success underline"
             >
-              Sluiten
+              {t('workspace.purchaseSuccessDismiss')}
             </button>
           </div>
         ) : null}

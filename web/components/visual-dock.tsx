@@ -18,6 +18,7 @@
 
 import { useEffect, useRef } from 'react';
 import type { DockVisual } from '../lib/dock-visuals.ts';
+import { useT } from '../lib/i18n/lang-provider.tsx';
 import { cn } from '../lib/utils.ts';
 import { ChartView } from './chart.tsx';
 import { ChartSkeleton } from './loading-skeletons.tsx';
@@ -36,6 +37,7 @@ export function VisualDock({
   busy: boolean;
 }) {
   const activeTabRef = useRef<HTMLButtonElement>(null);
+  const t = useT();
   const active =
     visuals.find((visual) => visual.id === activeVisualId) ?? visuals[visuals.length - 1] ?? null;
   const activeId = active?.id ?? null;
@@ -57,12 +59,12 @@ export function VisualDock({
   return (
     <aside className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-card text-card-foreground">
       <div className="flex h-12 shrink-0 items-center gap-2 border-b border-border px-4">
-        <span className="text-sm font-semibold">Charts</span>
+        <span className="text-sm font-semibold">{t('dock.header')}</span>
         <span className="text-[13px] text-muted-foreground tnum">{visuals.length}</span>
       </div>
       <div
         role="tablist"
-        aria-label="Visualisaties"
+        aria-label={t('dock.tablistLabel')}
         className="flex shrink-0 gap-4 overflow-x-auto border-b border-border px-4"
       >
         {visuals.map((visual) => {

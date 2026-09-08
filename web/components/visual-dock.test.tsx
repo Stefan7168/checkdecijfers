@@ -10,6 +10,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ChartSpec } from '../backend/chart/types.ts';
 import type { UserChartSpec } from '../backend/attachments/types.ts';
 import type { DockVisual } from '../lib/dock-visuals.ts';
+import { LangProvider } from '../lib/i18n/lang-provider.tsx';
 import { VisualDock } from './visual-dock.tsx';
 
 afterEach(cleanup);
@@ -140,5 +141,19 @@ describe('VisualDock — busy skeleton (chat interaction polish, session 88)', (
     expect(document.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThan(0);
     rerender(<VisualDock visuals={[chartVisual()]} activeVisualId="visual-0" onSelect={vi.fn()} busy={false} />);
     expect(document.querySelectorAll('[data-slot="skeleton"]').length).toBe(0);
+  });
+});
+
+// WP218 phase 4 (#219): proves the language switch reaches the dock's own
+// chrome (the tab labels/questions are DockVisual data, out of scope here).
+describe('VisualDock — en', () => {
+  it('renders the English header + tablist label under LangProvider lang="en"', () => {
+    render(
+      <LangProvider lang="en">
+        <VisualDock visuals={[chartVisual()]} activeVisualId="visual-0" onSelect={vi.fn()} busy={false} />
+      </LangProvider>,
+    );
+    expect(screen.getByText('Charts')).toBeInTheDocument();
+    expect(screen.getByRole('tablist', { name: 'Visualizations' })).toBeInTheDocument();
   });
 });

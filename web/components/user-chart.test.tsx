@@ -8,6 +8,7 @@
 // pins for ChartView).
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
+import { LangProvider } from '../lib/i18n/lang-provider.tsx';
 import { UserChartView } from './user-chart.tsx';
 import type { UserChartSpec } from '../backend/attachments/types.ts';
 
@@ -72,12 +73,12 @@ describe('UserChartView — H2 structural distinction from ChartView', () => {
 
   it('shows a provenance line built from the file name, upload date, and points plotted', () => {
     render(<UserChartView spec={spec()} />);
-    expect(screen.getByText('From file verkoop-2024.csv, uploaded 2026-09-06 · 1 points plotted')).toBeInTheDocument();
+    expect(screen.getByText('Uit bestand verkoop-2024.csv, geüpload op 2026-09-06 · 1 punten weergegeven')).toBeInTheDocument();
   });
 
   it('shows the heading built from the spec\'s own headers, verbatim (U9)', () => {
     render(<UserChartView spec={spec()} />);
-    expect(screen.getByRole('heading', { level: 3 })).toHaveTextContent('Revenue by Year');
+    expect(screen.getByRole('heading', { level: 3 })).toHaveTextContent('Revenue per Year');
   });
 });
 
@@ -109,5 +110,20 @@ describe('UserChartView — honesty contract (mirrors chart.test.tsx)', () => {
 
   it('accepts a bar-kind spec without throwing', () => {
     expect(() => render(<UserChartView spec={spec({ kind: 'bar' })} />)).not.toThrow();
+  });
+});
+
+// WP218 phase 4 (#219): proves the language switch reaches this surface (the
+// heading/provenance line the component itself composes; disclaimerLine is
+// backend data and stays as given regardless of language).
+describe('UserChartView — en', () => {
+  it('renders the English heading + provenance line under LangProvider lang="en"', () => {
+    render(
+      <LangProvider lang="en">
+        <UserChartView spec={spec()} />
+      </LangProvider>,
+    );
+    expect(screen.getByRole('heading', { level: 3 })).toHaveTextContent('Revenue by Year');
+    expect(screen.getByText('From file verkoop-2024.csv, uploaded 2026-09-06 · 1 points plotted')).toBeInTheDocument();
   });
 });
