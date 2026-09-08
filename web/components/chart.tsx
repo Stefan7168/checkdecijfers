@@ -529,6 +529,19 @@ function SeriesDot(
     const resultId = payload[`${seriesKey}_resultId`];
     const color = props.stroke ?? 'currentColor';
     const isEnd = endLabel !== undefined && payload.periodCode === endLabel.periodCode;
+    // Task 6 keyboard-operability fix (#212 follow-up): a synthetic
+    // role="button" on an SVG element gets no native Enter/Space activation
+    // from the browser the way a real <button> would, so onKeyDown has to
+    // reproduce onClick's exact logic — factored here so both handlers stay
+    // in sync.
+    const activate = (): void => {
+      if (resultId == null || !onPointClick) return;
+      onPointClick({
+        resultId: String(resultId),
+        periodLabel: String(payload.periodLabel),
+        seriesLabel: seriesLabel ?? '',
+      });
+    };
     return (
       <g>
         <circle
@@ -546,15 +559,14 @@ function SeriesDot(
           tabIndex={onPointClick ? 0 : undefined}
           aria-label={onPointClick ? `Voeg notitie toe bij ${seriesLabel ?? ''}, ${String(payload.periodLabel)}` : undefined}
           style={onPointClick ? { cursor: 'pointer' } : undefined}
-          onClick={
+          onClick={onPointClick ? activate : undefined}
+          onKeyDown={
             onPointClick
-              ? () =>
-                  resultId != null &&
-                  onPointClick({
-                    resultId: String(resultId),
-                    periodLabel: String(payload.periodLabel),
-                    seriesLabel: seriesLabel ?? '',
-                  })
+              ? (event: KeyboardEvent<SVGCircleElement>) => {
+                  if (event.key !== 'Enter' && event.key !== ' ') return;
+                  event.preventDefault();
+                  activate();
+                }
               : undefined
           }
         />
@@ -609,6 +621,18 @@ function SeriesBar(
     const resultId = payload[`${seriesKey}_resultId`];
     const label = labelByPeriod.get(String(payload.periodCode));
     const negative = typeof value === 'number' && value < 0;
+    // Task 6 keyboard-operability fix (#212 follow-up): same rationale as
+    // SeriesDot's `activate` above — a synthetic role="button" on an SVG
+    // element gets no native Enter/Space activation, so onKeyDown has to
+    // reproduce onClick's exact logic.
+    const activate = (): void => {
+      if (resultId == null || !onPointClick) return;
+      onPointClick({
+        resultId: String(resultId),
+        periodLabel: String(payload.periodLabel),
+        seriesLabel: seriesLabel ?? '',
+      });
+    };
     return (
       <g>
         <rect
@@ -627,15 +651,14 @@ function SeriesBar(
           tabIndex={onPointClick ? 0 : undefined}
           aria-label={onPointClick ? `Voeg notitie toe bij ${seriesLabel ?? ''}, ${String(payload.periodLabel)}` : undefined}
           style={onPointClick ? { cursor: 'pointer' } : undefined}
-          onClick={
+          onClick={onPointClick ? activate : undefined}
+          onKeyDown={
             onPointClick
-              ? () =>
-                  resultId != null &&
-                  onPointClick({
-                    resultId: String(resultId),
-                    periodLabel: String(payload.periodLabel),
-                    seriesLabel: seriesLabel ?? '',
-                  })
+              ? (event: KeyboardEvent<SVGRectElement>) => {
+                  if (event.key !== 'Enter' && event.key !== ' ') return;
+                  event.preventDefault();
+                  activate();
+                }
               : undefined
           }
         />
@@ -1286,6 +1309,7 @@ export function ChartView({
         <ChartNotes
           notes={notes}
           pendingPoint={pendingPoint}
+          idPrefix={domId}
           onSave={(text) => {
             if (!pendingPoint) return;
             setNotes((prev) => [...prev, { id: `${pendingPoint.resultId}-${prev.length}`, ...pendingPoint, text }]);

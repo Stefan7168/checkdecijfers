@@ -1339,4 +1339,26 @@ describe('ChartView click-to-annotate', () => {
     expect(screen.queryByText('Blijft niet over')).not.toBeInTheDocument();
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
   });
+
+  // Fix 3 (#212 review): the clickable point marker has role="button" and
+  // tabIndex={0} so a keyboard user can Tab to it and hear its aria-label,
+  // but an SVG element with a synthetic role="button" gets no native
+  // Enter/Space activation from the browser the way a real <button> would.
+  // Without an onKeyDown handler mirroring onClick, pressing Enter or Space
+  // on a focused point silently does nothing.
+  it('pressing Enter on a focused chart point opens the note entry form, same as a click', () => {
+    const s = twoSeriesLineSpec();
+    render(<ChartView spec={s} />);
+    const dot = document.querySelector('circle[data-point="value"]')!;
+    fireEvent.keyDown(dot, { key: 'Enter' });
+    expect(screen.getByRole('textbox')).toBeInTheDocument();
+  });
+
+  it('pressing Space on a focused chart point also opens the note entry form', () => {
+    const s = twoSeriesLineSpec();
+    render(<ChartView spec={s} />);
+    const dot = document.querySelector('circle[data-point="value"]')!;
+    fireEvent.keyDown(dot, { key: ' ' });
+    expect(screen.getByRole('textbox')).toBeInTheDocument();
+  });
 });

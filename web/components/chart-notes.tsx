@@ -9,7 +9,7 @@
 // excluded from the PNG/SVG export (which only ever reads the live <svg>
 // inside chartContainerRef). Session-only by owner decision (F): no
 // persistence, nothing here survives a reload.
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 export interface ChartNote {
   id: string;
@@ -28,17 +28,36 @@ export interface PendingPoint {
 export function ChartNotes({
   notes,
   pendingPoint,
+  idPrefix,
   onSave,
   onCancelPending,
   onDelete,
 }: {
   notes: ChartNote[];
   pendingPoint: PendingPoint | null;
+  /** Unique id prefix for this instance's form controls (e.g. a chart's own
+   * `domId`), so two ChartNotes forms open at once on the same page — as
+   * happens when Ontdek renders several ChartViews in a grid — never emit
+   * the same textarea id. */
+  idPrefix: string;
   onSave: (text: string) => void;
   onCancelPending: () => void;
   onDelete: (id: string) => void;
 }) {
   const [draft, setDraft] = useState('');
+
+  // A click on a DIFFERENT chart point swaps `pendingPoint` (chart.tsx calls
+  // setPendingPoint(p) unconditionally on every point click) while this
+  // component instance stays mounted. Without this, whatever text was typed
+  // for the PREVIOUS point survives into the new point's form and gets
+  // saved under the wrong resultId/period/series on the next Opslaan.
+  // Compare by resultId — the unique anchor — so this does not also fire
+  // (and needlessly reset the same in-progress draft) on unrelated re-renders.
+  useEffect(() => {
+    setDraft('');
+  }, [pendingPoint?.resultId]);
+
+  const noteDraftId = `${idPrefix}-note-draft`;
 
   if (notes.length === 0 && !pendingPoint) return null;
 
@@ -77,11 +96,11 @@ export function ChartNotes({
       ) : null}
       {pendingPoint ? (
         <div className="mt-2 flex flex-col gap-1.5">
-          <label htmlFor="chart-note-draft" className="text-xs text-muted-foreground">
+          <label htmlFor={noteDraftId} className="text-xs text-muted-foreground">
             Notitie bij {pendingPoint.seriesLabel} · {pendingPoint.periodLabel}
           </label>
           <textarea
-            id="chart-note-draft"
+            id={noteDraftId}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => {
