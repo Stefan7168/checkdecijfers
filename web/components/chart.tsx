@@ -420,44 +420,72 @@ export function ChartTooltip({
  * default. One button per series toggles it in/out of the chart; hidden
  * series stay listed (dimmed) so they can be brought back. Client-side
  * presentation only — never touches the spec or the audit record
- * (open-questions #46(b)). */
+ * (open-questions #46(b)).
+ *
+ * Task 5 (#212 series highlight): a second, independent button per series —
+ * "Markeer X" — dims every OTHER series (strokeOpacity/fillOpacity on the
+ * Line/Bar elements below) without hiding them. Independent of the hide
+ * toggle: a highlighted series can still be hidden, and hiding the currently
+ * highlighted series just leaves it highlighted-but-absent (no reducer
+ * coupling needed — the Line/Bar for a hidden key isn't rendered at all).
+ * The highlight button is disabled while its own series is hidden, since
+ * "highlight a series that isn't drawn" has nothing to dim relative to. */
 function SeriesLegend({
   seriesMeta,
   hiddenKeys,
+  highlightedKey,
   onToggle,
+  onHighlight,
 }: {
   seriesMeta: SeriesMeta[];
   hiddenKeys: Set<string>;
+  highlightedKey: string | null;
   onToggle: (key: string) => void;
+  onHighlight: (key: string | null) => void;
 }) {
   return (
     <div role="group" aria-label="Reeksen" className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
       {seriesMeta.map((s) => {
         const hidden = hiddenKeys.has(s.key);
+        const highlighted = highlightedKey === s.key;
         return (
-          <button
-            key={s.key}
-            type="button"
-            /* Pressed = shown (the toggle's "on" state), not "is hidden" --
-             * the accessible name is just the series label ("Nederland"), so
-             * aria-pressed={hidden} would announce "pressed" exactly when
-             * the series is OFF. Matches the fix already applied once
-             * elsewhere in this codebase for the same mistake (see
-             * chart-toggle.tsx). */
-            aria-pressed={!hidden}
-            onClick={() => onToggle(s.key)}
-            className={
-              'inline-flex min-h-6 items-center gap-1.5 rounded-md px-1.5 text-xs hover:bg-muted ' +
-              (hidden ? 'text-muted-foreground line-through' : 'text-foreground')
-            }
-          >
-            <span
-              aria-hidden="true"
-              style={{ backgroundColor: hidden ? 'var(--muted-foreground)' : s.color }}
-              className="inline-block h-2.5 w-2.5 rounded-full"
-            />
-            {s.label}
-          </button>
+          <span key={s.key} className="inline-flex items-center gap-1">
+            <button
+              type="button"
+              /* Pressed = shown (the toggle's "on" state), not "is hidden" --
+               * the accessible name is just the series label ("Nederland"), so
+               * aria-pressed={hidden} would announce "pressed" exactly when
+               * the series is OFF. Matches the fix already applied once
+               * elsewhere in this codebase for the same mistake (see
+               * chart-toggle.tsx). */
+              aria-pressed={!hidden}
+              onClick={() => onToggle(s.key)}
+              className={
+                'inline-flex min-h-6 items-center gap-1.5 rounded-md px-1.5 text-xs hover:bg-muted ' +
+                (hidden ? 'text-muted-foreground line-through' : 'text-foreground')
+              }
+            >
+              <span
+                aria-hidden="true"
+                style={{ backgroundColor: hidden ? 'var(--muted-foreground)' : s.color }}
+                className="inline-block h-2.5 w-2.5 rounded-full"
+              />
+              {s.label}
+            </button>
+            <button
+              type="button"
+              aria-pressed={highlighted}
+              disabled={hidden}
+              onClick={() => onHighlight(highlighted ? null : s.key)}
+              title={`Markeer ${s.label}, andere reeksen worden gedimd`}
+              className={
+                'min-h-6 rounded-md px-1 text-xs hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40 ' +
+                (highlighted ? 'text-foreground font-semibold' : 'text-muted-foreground')
+              }
+            >
+              {`Markeer ${s.label}`}
+            </button>
+          </span>
         );
       })}
     </div>
@@ -468,8 +496,16 @@ function SeriesLegend({
  * provisional (R11, same convention as render.ts), plus the #197 end-of-line
  * label on the series' last plotted point. Recharts passes the Line's own
  * `stroke` into a custom dot's props, so the marker follows the series colour
- * without a second palette lookup. */
-function SeriesDot(seriesKey: string, endLabel: PointLabel | undefined) {
+ * without a second palette lookup.
+ *
+ * Task 5: `opacity` mirrors the `strokeOpacity` passed to the enclosing
+ * `<Line>`. Recharts DOES merge the Line's own svg-safe props (including
+ * `strokeOpacity`) into what it hands a custom `dot` render function — but
+ * only as an extra, ignorable prop; nothing forwards it onto the `<circle>`
+ * this function draws unless done explicitly here. Without this, the
+ * highlighted-series dimming would visibly stop at the line stroke and leave
+ * every point marker at full opacity. */
+function SeriesDot(seriesKey: string, endLabel: PointLabel | undefined, opacity = 1) {
   return function Dot(props: { cx?: number; cy?: number; payload?: Row; stroke?: string }) {
     const { cx, cy, payload } = props;
     if (cx == null || cy == null || !payload) return null;
@@ -488,6 +524,8 @@ function SeriesDot(seriesKey: string, endLabel: PointLabel | undefined) {
           fill={provisional ? 'var(--card)' : color}
           stroke={color}
           strokeWidth={2}
+          strokeOpacity={opacity}
+          fillOpacity={opacity}
           data-point="value"
           data-result-id={resultId == null ? undefined : String(resultId)}
         />
@@ -511,8 +549,22 @@ function SeriesDot(seriesKey: string, endLabel: PointLabel | undefined) {
 
 /** Bar-chart bar: the series colour, or a hatch pattern in that colour when
  * provisional (a provisional bar used to be indistinguishable from a final
- * one — only the prose note said so), plus the #197 value label. */
-function SeriesBar(seriesKey: string, color: string, patternId: string, labelByPeriod: Map<string, PointLabel>) {
+ * one — only the prose note said so), plus the #197 value label.
+ *
+ * Task 5: `opacity` mirrors the `fillOpacity` passed to the enclosing
+ * `<Bar>`. A custom `shape` render function completely REPLACES how Recharts
+ * draws the bar — Recharts still merges `fillOpacity`/`data-series-dimmed`
+ * into the props this function receives, but nothing forwards them onto the
+ * `<rect>` actually drawn below unless done explicitly here. Without this,
+ * highlighting a series would have no visible effect at all in Staaf
+ * (bar) form. */
+function SeriesBar(
+  seriesKey: string,
+  color: string,
+  patternId: string,
+  labelByPeriod: Map<string, PointLabel>,
+  opacity = 1,
+) {
   return function Shape(props: { x?: number; y?: number; width?: number; height?: number; payload?: Row }) {
     const { x, y, width, height, payload } = props;
     if (x == null || y == null || width == null || height == null || !payload) return null;
@@ -530,7 +582,9 @@ function SeriesBar(seriesKey: string, color: string, patternId: string, labelByP
           width={width}
           height={height}
           fill={provisional ? `url(#${patternId})` : color}
+          fillOpacity={opacity}
           stroke={provisional ? color : undefined}
+          strokeOpacity={provisional ? opacity : undefined}
           strokeWidth={provisional ? 1 : undefined}
           data-point="value"
           data-result-id={resultId == null ? undefined : String(resultId)}
@@ -1000,19 +1054,24 @@ export function ChartView({
               ))}
               {seriesMeta
                 .filter((s) => !state.hiddenKeys.has(s.key))
-                .map((s) => (
-                  <Line
-                    key={s.key}
-                    type="linear"
-                    dataKey={s.key}
-                    name={s.label}
-                    stroke={s.color}
-                    strokeWidth={2}
-                    connectNulls={false}
-                    dot={SeriesDot(s.key, endLabelByKey.get(s.key))}
-                    isAnimationActive={false}
-                  />
-                ))}
+                .map((s) => {
+                  const dimmed = state.highlightedKey !== null && state.highlightedKey !== s.key;
+                  return (
+                    <Line
+                      key={s.key}
+                      type="linear"
+                      dataKey={s.key}
+                      name={s.label}
+                      stroke={s.color}
+                      strokeWidth={2}
+                      strokeOpacity={dimmed ? 0.25 : 1}
+                      data-series-dimmed={dimmed ? 'true' : undefined}
+                      connectNulls={false}
+                      dot={SeriesDot(s.key, endLabelByKey.get(s.key), dimmed ? 0.25 : 1)}
+                      isAnimationActive={false}
+                    />
+                  );
+                })}
             </LineChart>
           ) : (
             <BarChart
@@ -1046,21 +1105,27 @@ export function ChartView({
               <Tooltip trigger={tooltipTrigger} content={<ChartTooltip seriesMeta={seriesMeta} />} />
               {seriesMeta
                 .filter((s) => !state.hiddenKeys.has(s.key))
-                .map((s) => (
-                  <Bar
-                    key={s.key}
-                    dataKey={s.key}
-                    name={s.label}
-                    fill={s.color}
-                    isAnimationActive={false}
-                    shape={SeriesBar(
-                      s.key,
-                      s.color,
-                      `hatch-${domId}-${s.key}`,
-                      barLabelsByKey.get(s.key) ?? new Map<string, PointLabel>(),
-                    )}
-                  />
-                ))}
+                .map((s) => {
+                  const dimmed = state.highlightedKey !== null && state.highlightedKey !== s.key;
+                  return (
+                    <Bar
+                      key={s.key}
+                      dataKey={s.key}
+                      name={s.label}
+                      fill={s.color}
+                      fillOpacity={dimmed ? 0.25 : 1}
+                      data-series-dimmed={dimmed ? 'true' : undefined}
+                      isAnimationActive={false}
+                      shape={SeriesBar(
+                        s.key,
+                        s.color,
+                        `hatch-${domId}-${s.key}`,
+                        barLabelsByKey.get(s.key) ?? new Map<string, PointLabel>(),
+                        dimmed ? 0.25 : 1,
+                      )}
+                    />
+                  );
+                })}
             </BarChart>
           )}
         </ResponsiveContainer>
@@ -1077,7 +1142,9 @@ export function ChartView({
           <SeriesLegend
             seriesMeta={seriesMeta}
             hiddenKeys={state.hiddenKeys}
+            highlightedKey={state.highlightedKey}
             onToggle={(key) => dispatch({ type: 'toggleSeries', key })}
+            onHighlight={(key) => dispatch({ type: 'setHighlight', key })}
           />
           {state.hiddenKeys.size > 0 ? (
             <p className="mt-1 text-xs text-muted-foreground">

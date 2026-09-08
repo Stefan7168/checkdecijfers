@@ -1239,3 +1239,43 @@ describe('ChartView period-range zoom', () => {
     expect(nlPanel.querySelector('[data-role="axis-tick"][data-label-for="nl-2021"]')).not.toBeNull();
   });
 });
+
+// Task 5 (#212 series highlight): a second, independent legend interaction —
+// highlighting a series dims the others via strokeOpacity/fillOpacity,
+// without hiding them (that stays the existing toggle's job). Reuses
+// twoSeriesLineSpec (Task 3 fixture, series labelled 'Nederland'/'Utrecht')
+// rather than duplicating a spec factory.
+describe('ChartView series highlight', () => {
+  it('offers a highlight control per series alongside the hide toggle', () => {
+    const s = twoSeriesLineSpec();
+    render(<ChartView spec={s} />);
+    expect(screen.getByRole('button', { name: /Markeer Nederland/ })).toBeInTheDocument();
+  });
+
+  it('marks the highlighted series pressed and dims the un-highlighted one', () => {
+    const s = twoSeriesLineSpec();
+    render(<ChartView spec={s} />);
+    fireEvent.click(screen.getByRole('button', { name: /Markeer Nederland/ }));
+    expect(screen.getByRole('button', { name: /Markeer Nederland/ })).toHaveAttribute('aria-pressed', 'true');
+    // Empirically verified against the installed Recharts (3.10.1): the
+    // `data-series-dimmed`/`stroke-opacity` props passed to <Line> land on
+    // its rendered `<path class="recharts-curve recharts-line-curve" ...>`,
+    // not on a `.recharts-line`-classed node as the plan assumed (that class
+    // is on the outer <g> wrapper, one level up, which never receives this
+    // custom prop) -- so this asserts the attribute directly rather than
+    // requiring a specific wrapper class.
+    const dimmedLine = document.querySelector('[data-series-dimmed="true"]');
+    expect(dimmedLine).not.toBeNull();
+    expect(dimmedLine).toHaveAttribute('stroke-opacity', '0.25');
+  });
+
+  it('clicking the same highlight button again clears the highlight', () => {
+    const s = twoSeriesLineSpec();
+    render(<ChartView spec={s} />);
+    const btn = screen.getByRole('button', { name: /Markeer Nederland/ });
+    fireEvent.click(btn);
+    fireEvent.click(btn);
+    expect(btn).toHaveAttribute('aria-pressed', 'false');
+    expect(document.querySelector('[data-series-dimmed="true"]')).toBeNull();
+  });
+});
