@@ -9,7 +9,7 @@ truth) → this file → `docs/status-archive.md` (session-90 entry, top, 8 item
 
 ## What is true right now (verified 2026-09-09)
 
-- `main` HEAD is `4ab390d` (the session-90 docs commit) on top of three session-90 code/docs commits
+- `main` HEAD is `f3d34b6` (the final session-90 docs commit, after `4ab390d`) on top of three session-90 code/docs commits
   `6e2a66b` (composer layout + "Link with sheet" chip), `2880b57` (sidebar ⋯ delete + plus icon +
   `scripts/dev-web.mjs`), `e6a7ede` (#218 panel docs), all on `813a0f4`. Working tree clean, single
   worktree. CI: run `34261331269` gate green (deploy skipped by design because main had moved on),
