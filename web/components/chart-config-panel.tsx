@@ -31,6 +31,7 @@ import { useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { SlidersHorizontal } from 'lucide-react';
 import {
   FONT_OPTIONS,
+  HEX_COLOR,
   judgeColor,
   normalizeHex,
   type PresentationKey,
@@ -222,6 +223,51 @@ function warningText(copy: PanelCopyShape, warning: 'light' | 'dark' | 'both' | 
   return null;
 }
 
+function warningFor(hex: string): 'light' | 'dark' | 'both' | null {
+  const verdict = judgeColor(hex);
+  return verdict.ok ? verdict.warning : null;
+}
+
+/** A Kleuren-row local record, valid only "for" the effective colour it was
+ * captured against — the review fix's re-sync mechanism (finding #1).
+ * `committed` distinguishes a live, uncommitted keystroke (may look like a
+ * well-formed hex by coincidence, e.g. the user typed "#0088fe" themselves)
+ * from the normalised hex of an actual successful commit — only the latter
+ * is eligible to stand in for `series.color` when judging the warning or
+ * guarding against a duplicate commit (finding #2). */
+interface ColorDraft {
+  text: string;
+  forColor: string;
+  committed: boolean;
+}
+interface ColorAlert {
+  reason: string;
+  forColor: string;
+}
+
+/** React's documented "adjust state when a prop changes" pattern, applied to
+ * a whole per-key map at once: drop every entry whose `forColor` no longer
+ * matches the row's CURRENT effective colour (looked up by `series.key` in
+ * `colorByKey`) — including a key that has disappeared entirely (a spec
+ * swap). Compared during render, not in a `useEffect`; returns `null` when
+ * nothing needs dropping so the caller can skip the `setState` call. */
+function reconcileColorState<T extends { forColor: string }>(
+  store: Record<string, T>,
+  colorByKey: ReadonlyMap<string, string>,
+): Record<string, T> | null {
+  let changed = false;
+  const next: Record<string, T> = {};
+  for (const key of Object.keys(store)) {
+    const entry = store[key]!;
+    if (colorByKey.get(key) === entry.forColor) {
+      next[key] = entry;
+    } else {
+      changed = true;
+    }
+  }
+  return changed ? next : null;
+}
+
 const ARROW_KEYS = ['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp'];
 
 /** Roving-tabindex arrow-key move for a radiogroup built as a plain loop
@@ -274,36 +320,83 @@ export function ChartConfigPanel({
     font: fontTabRef,
   };
 
-  // Kleuren tab: a local edit buffer per series index. `resolved.values
-  // .seriesColors` (via `seriesMeta[i].color`, the already-resolved effective
-  // colour) is the source of truth; a draft exists only for text the user is
-  // actively typing or that a refused/garbage commit snapped back from. A
-  // successful commit still records its normalised hex here rather than
-  // clearing it, so the hex box shows the just-picked colour immediately
-  // instead of flashing back to the old prop value until the caller's
-  // reducer re-resolves and a new `seriesMeta` prop arrives.
-  const [colorDrafts, setColorDrafts] = useState<Record<number, string>>({});
-  const [colorWarnings, setColorWarnings] = useState<Record<number, 'light' | 'dark' | 'both' | null>>({});
-  const [colorAlerts, setColorAlerts] = useState<Record<number, string | null>>({});
+  // Kleuren tab: a local edit buffer per series KEY (not index — an index
+  // can point at a different series after a spec swap). `seriesMeta[i]
+  // .color` (the already-resolved effective colour) is the only source of
+  // truth for the WARNING (always re-derived via judgeColor, never stored)
+  // and for whether a draft/alert is still live: each entry remembers the
+  // effective colour it was captured against (`forColor`) and is dropped —
+  // via React's "adjust state when a prop changes" pattern, compared during
+  // render below, no effect — the moment that colour changes from outside
+  // (Standaardkleuren, Standaard reset, a spec swap on the same mounted
+  // chart). Review findings on the first cut of this tab (index-keyed state
+  // that never re-synced) — see chart-config-panel.test.tsx's "Kleuren tab"
+  // re-sync tests.
+  const [colorDrafts, setColorDrafts] = useState<Record<string, ColorDraft>>({});
+  const [colorAlerts, setColorAlerts] = useState<Record<string, ColorAlert>>({});
   const currentColors = resolved.values.seriesColors;
 
-  function commitColor(index: number, effectiveColor: string, rawValue: string): void {
+  const colorByKey = new Map(seriesMeta.map((s) => [s.key, s.color] as const));
+  const reconciledDrafts = reconcileColorState(colorDrafts, colorByKey);
+  if (reconciledDrafts) setColorDrafts(reconciledDrafts);
+  const reconciledAlerts = reconcileColorState(colorAlerts, colorByKey);
+  if (reconciledAlerts) setColorAlerts(reconciledAlerts);
+  const liveDrafts = reconciledDrafts ?? colorDrafts;
+  const liveAlerts = reconciledAlerts ?? colorAlerts;
+
+  /** Whatever `judgeColor` should judge for this row right now: the fresh
+   * draft's own (already-normalised) hex once it's a settled COMMIT, else
+   * the effective colour — reconciliation above already guarantees any
+   * draft present here has `forColor === effectiveColor`, so only the
+   * `committed` + well-formed check remains (uncommitted live typing must
+   * never stand in for a real colour, even if it happens to look like one). */
+  function settledColorFor(key: string, effectiveColor: string): string {
+    const draft = liveDrafts[key];
+    return draft !== undefined && draft.committed && HEX_COLOR.test(draft.text) ? draft.text : effectiveColor;
+  }
+
+  function commitColor(key: string, index: number, effectiveColor: string, rawValue: string): void {
     const hex = normalizeHex(rawValue);
     if (hex === null) {
       // Garbage: snap back without a word — nothing valid was ever offered.
-      setColorDrafts((d) => ({ ...d, [index]: effectiveColor }));
-      setColorAlerts((a) => ({ ...a, [index]: null }));
+      setColorDrafts((d) => {
+        const next = { ...d };
+        delete next[key];
+        return next;
+      });
+      setColorAlerts((a) => {
+        const next = { ...a };
+        delete next[key];
+        return next;
+      });
+      return;
+    }
+    // Enter followed by blur re-submits the same, already-effective hex —
+    // treat it as already handled rather than emitting a duplicate patch.
+    if (hex === settledColorFor(key, effectiveColor)) {
+      setColorAlerts((a) => {
+        const next = { ...a };
+        delete next[key];
+        return next;
+      });
       return;
     }
     const verdict = judgeColor(hex);
     if (!verdict.ok) {
-      setColorDrafts((d) => ({ ...d, [index]: effectiveColor }));
-      setColorAlerts((a) => ({ ...a, [index]: verdict.reason }));
+      setColorDrafts((d) => {
+        const next = { ...d };
+        delete next[key];
+        return next;
+      });
+      setColorAlerts((a) => ({ ...a, [key]: { reason: verdict.reason, forColor: effectiveColor } }));
       return;
     }
-    setColorAlerts((a) => ({ ...a, [index]: null }));
-    setColorWarnings((w) => ({ ...w, [index]: verdict.warning }));
-    setColorDrafts((d) => ({ ...d, [index]: hex }));
+    setColorAlerts((a) => {
+      const next = { ...a };
+      delete next[key];
+      return next;
+    });
+    setColorDrafts((d) => ({ ...d, [key]: { text: hex, forColor: effectiveColor, committed: true } }));
     onChange({ seriesColors: { ...currentColors, [index]: hex } });
   }
 
@@ -500,9 +593,11 @@ export function ChartConfigPanel({
               {resolved.applicable.has('seriesColors') ? (
                 <>
                   {seriesMeta.map((series, index) => {
-                    const draft = colorDrafts[index] ?? series.color;
-                    const warning = colorWarnings[index] ?? null;
-                    const alert = colorAlerts[index] ?? null;
+                    const draft = liveDrafts[series.key];
+                    const displayText = draft !== undefined ? draft.text : series.color;
+                    const warning = warningFor(settledColorFor(series.key, series.color));
+                    const alertEntry = liveAlerts[series.key];
+                    const alert = alertEntry !== undefined ? alertEntry.reason : null;
                     const warnId = `${idPrefix}-style-color-warn-${index}`;
                     const alertId = `${idPrefix}-style-color-alert-${index}`;
                     return (
@@ -518,11 +613,16 @@ export function ChartConfigPanel({
                           inputMode="text"
                           aria-label={`${copy.colourOf} ${series.label} ${copy.hexSuffix}`}
                           aria-describedby={alert ? alertId : warning ? warnId : undefined}
-                          value={draft}
-                          onChange={(e) => setColorDrafts((d) => ({ ...d, [index]: e.target.value }))}
-                          onBlur={(e) => commitColor(index, series.color, e.target.value)}
+                          value={displayText}
+                          onChange={(e) =>
+                            setColorDrafts((d) => ({
+                              ...d,
+                              [series.key]: { text: e.target.value, forColor: series.color, committed: false },
+                            }))
+                          }
+                          onBlur={(e) => commitColor(series.key, index, series.color, e.target.value)}
                           onKeyDown={(e) => {
-                            if (e.key === 'Enter') commitColor(index, series.color, e.currentTarget.value);
+                            if (e.key === 'Enter') commitColor(series.key, index, series.color, e.currentTarget.value);
                           }}
                           className="w-24"
                         />
@@ -530,7 +630,7 @@ export function ChartConfigPanel({
                           type="color"
                           aria-label={`${copy.colourOf} ${series.label} ${copy.pickSuffix}`}
                           value={series.color}
-                          onChange={(e) => commitColor(index, series.color, e.target.value)}
+                          onChange={(e) => commitColor(series.key, index, series.color, e.target.value)}
                         />
                         {warning ? (
                           <p id={warnId} className="w-full text-muted-foreground">

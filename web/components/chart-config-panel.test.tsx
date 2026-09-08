@@ -212,7 +212,8 @@ describe('ChartConfigPanel — Kleuren tab', () => {
     fireEvent.change(hex, { target: { value: 'ffc658' } });
     fireEvent.keyDown(hex, { key: 'Enter' });
     expect(onChange).toHaveBeenCalledWith({ seriesColors: { 0: '#ffc658' } });
-    expect(screen.getByText('Deze kleur is slecht leesbaar in het lichte thema.')).toBeInTheDocument();
+    const amsterdamRow = screen.getByRole('group', { name: 'Amsterdam' });
+    expect(within(amsterdamRow).getByText('Deze kleur is slecht leesbaar in het lichte thema.')).toBeInTheDocument();
   });
 
   it('a valid hex also commits on blur (no Enter needed)', () => {
@@ -288,7 +289,8 @@ describe('ChartConfigPanel — Kleuren tab', () => {
     const picker = screen.getByLabelText('Kleur van Amsterdam kiezen') as HTMLInputElement;
     fireEvent.change(picker, { target: { value: '#ffc658' } });
     expect(onChange).toHaveBeenCalledWith({ seriesColors: { 0: '#ffc658' } });
-    expect(screen.getByText('Deze kleur is slecht leesbaar in het lichte thema.')).toBeInTheDocument();
+    const amsterdamRow = screen.getByRole('group', { name: 'Amsterdam' });
+    expect(within(amsterdamRow).getByText('Deze kleur is slecht leesbaar in het lichte thema.')).toBeInTheDocument();
   });
 
   it('Standaardkleuren is disabled while no colour override exists', () => {
@@ -336,6 +338,155 @@ describe('ChartConfigPanel — Kleuren tab', () => {
     openTab('Kleuren');
     const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
     for (let n = walker.nextNode(); n; n = walker.nextNode()) expect(n.textContent).not.toMatch(/\d/);
+  });
+
+  // Review findings (post-Task-6): the local draft/warning/alert state is
+  // keyed by series.key and must re-sync whenever the EFFECTIVE colour
+  // (seriesMeta[i].color) changes from OUTSIDE the row — Standaardkleuren, a
+  // Standaard reset, or a spec swap on the same mounted chart — rather than
+  // holding on to whatever was last typed/committed forever.
+  it('re-syncs the hex textbox and clears the warning once the effective colour resets to the palette default (Standaardkleuren)', () => {
+    const onChange = vi.fn();
+    const { rerender } = render(
+      <ChartConfigPanel
+        resolved={resolvePresentation(lineCtx, {})}
+        seriesMeta={colorMeta}
+        onChange={onChange}
+        onReset={vi.fn()}
+        idPrefix="k8"
+      />,
+    );
+    openTab('Kleuren');
+    const hex = screen.getByRole('textbox', { name: 'Kleur van Amsterdam (hex-code)' }) as HTMLInputElement;
+    fireEvent.change(hex, { target: { value: 'ffc658' } });
+    fireEvent.keyDown(hex, { key: 'Enter' });
+    expect(onChange).toHaveBeenCalledWith({ seriesColors: { 0: '#ffc658' } });
+
+    // The parent applies the patch and re-resolves (the real chart.tsx
+    // flow): the effective colour for Amsterdam now reflects the commit.
+    rerender(
+      <ChartConfigPanel
+        resolved={resolvePresentation(lineCtx, { seriesColors: { 0: '#ffc658' } })}
+        seriesMeta={[{ ...colorMeta[0]!, color: '#ffc658' }, colorMeta[1]!]}
+        onChange={onChange}
+        onReset={vi.fn()}
+        idPrefix="k8"
+      />,
+    );
+
+    // Standaardkleuren: overrides cleared, Amsterdam back to its default.
+    rerender(
+      <ChartConfigPanel
+        resolved={resolvePresentation(lineCtx, {})}
+        seriesMeta={colorMeta}
+        onChange={onChange}
+        onReset={vi.fn()}
+        idPrefix="k8"
+      />,
+    );
+    const hexAfter = screen.getByRole('textbox', { name: 'Kleur van Amsterdam (hex-code)' }) as HTMLInputElement;
+    expect(hexAfter.value).toBe('#8884d8');
+    expect(
+      within(screen.getByRole('group', { name: 'Amsterdam' })).queryByText(
+        'Deze kleur is slecht leesbaar in het lichte thema.',
+      ),
+    ).toBeNull();
+  });
+
+  it('a warning shown right after a commit disappears once the effective colour changes to something else', () => {
+    const onChange = vi.fn();
+    const { rerender } = render(
+      <ChartConfigPanel
+        resolved={resolvePresentation(lineCtx, {})}
+        seriesMeta={colorMeta}
+        onChange={onChange}
+        onReset={vi.fn()}
+        idPrefix="k9"
+      />,
+    );
+    openTab('Kleuren');
+    const hex = screen.getByRole('textbox', { name: 'Kleur van Amsterdam (hex-code)' }) as HTMLInputElement;
+    fireEvent.change(hex, { target: { value: 'ffc658' } });
+    fireEvent.keyDown(hex, { key: 'Enter' });
+    const amsterdamRow = () => screen.getByRole('group', { name: 'Amsterdam' });
+    expect(within(amsterdamRow()).getByText('Deze kleur is slecht leesbaar in het lichte thema.')).toBeInTheDocument();
+
+    rerender(
+      <ChartConfigPanel
+        resolved={resolvePresentation(lineCtx, { seriesColors: { 0: '#ff0000' } })}
+        seriesMeta={[{ ...colorMeta[0]!, color: '#ff0000' }, colorMeta[1]!]}
+        onChange={onChange}
+        onReset={vi.fn()}
+        idPrefix="k9"
+      />,
+    );
+    expect(within(amsterdamRow()).queryByText('Deze kleur is slecht leesbaar in het lichte thema.')).toBeNull();
+  });
+
+  it('a refusal alert clears once the effective colour changes from outside', () => {
+    const onChange = vi.fn();
+    const { rerender } = render(
+      <ChartConfigPanel
+        resolved={resolvePresentation(lineCtx, {})}
+        seriesMeta={colorMeta}
+        onChange={onChange}
+        onReset={vi.fn()}
+        idPrefix="k10"
+      />,
+    );
+    openTab('Kleuren');
+    const hex = screen.getByRole('textbox', { name: 'Kleur van Amsterdam (hex-code)' }) as HTMLInputElement;
+    fireEvent.change(hex, { target: { value: '#fefefe' } });
+    fireEvent.blur(hex);
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+
+    rerender(
+      <ChartConfigPanel
+        resolved={resolvePresentation(lineCtx, { seriesColors: { 0: '#ff0000' } })}
+        seriesMeta={[{ ...colorMeta[0]!, color: '#ff0000' }, colorMeta[1]!]}
+        onChange={onChange}
+        onReset={vi.fn()}
+        idPrefix="k10"
+      />,
+    );
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('Enter followed by blur with the identical value commits only once', () => {
+    const onChange = vi.fn();
+    render(
+      <ChartConfigPanel
+        resolved={resolvePresentation(lineCtx, {})}
+        seriesMeta={colorMeta}
+        onChange={onChange}
+        onReset={vi.fn()}
+        idPrefix="k11"
+      />,
+    );
+    openTab('Kleuren');
+    const hex = screen.getByRole('textbox', { name: 'Kleur van Amsterdam (hex-code)' }) as HTMLInputElement;
+    fireEvent.change(hex, { target: { value: '#0088fe' } });
+    fireEvent.keyDown(hex, { key: 'Enter' });
+    fireEvent.blur(hex);
+    expect(onChange).toHaveBeenCalledTimes(1);
+  });
+
+  it('the colour picker also refuses a bad colour without emitting onChange', () => {
+    const onChange = vi.fn();
+    render(
+      <ChartConfigPanel
+        resolved={resolvePresentation(lineCtx, {})}
+        seriesMeta={colorMeta}
+        onChange={onChange}
+        onReset={vi.fn()}
+        idPrefix="k12"
+      />,
+    );
+    openTab('Kleuren');
+    const picker = screen.getByLabelText('Kleur van Amsterdam kiezen') as HTMLInputElement;
+    fireEvent.change(picker, { target: { value: '#fefefe' } });
+    expect(onChange).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert')).toBeInTheDocument();
   });
 });
 
