@@ -24,7 +24,7 @@ Add shadcn's stock `Skeleton` component (`web/components/ui/skeleton.tsx`) — a
 
 ## 2. Chat answer skeleton
 
-`web/components/chat.tsx` (~line 942–953): while `busy` is true, replace today's plain busy-text line with a skeleton "answer card" — a few pulsing placeholder lines shaped like a text answer, in the position the real `StatCard`/answer text will occupy. Drop the busy-text caption; the skeleton itself communicates "loading."
+`web/components/chat.tsx` (~line 942–953): while `busy` is true, add a skeleton "answer card" — a few pulsing placeholder lines shaped like a text answer — below today's busy-text line, not instead of it. **Keep the existing text.** It isn't decorative: it differentiates "searching CBS," "searching CBS and the web," and "searching the web only" (an explicit owner-requested honesty fix from the WP129+130 go-live, 2026-07-12, predating this redesign) — dropping it would silently remove that distinction. The skeleton adds visual weight to an already-correct message; it doesn't replace it.
 
 ## 3. Chart panel skeleton
 
