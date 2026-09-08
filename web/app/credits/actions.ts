@@ -12,9 +12,15 @@ import Stripe from 'stripe';
 import { buildCheckoutSessionParams, getPack } from '../../backend/billing/index.ts';
 import { currentUserId } from '../../lib/current-user.ts';
 import { getDb } from '../../lib/db.ts';
+import { getLang } from '../../lib/i18n/server.ts';
+import { t } from '../../lib/i18n/messages.ts';
 import { purchaseSuccessUrl } from '../../lib/purchase.ts';
 
+// WP218 phase 4 (#219): a Server Action cannot see the client's
+// LangProvider, so it reads getLang() itself and returns the already-
+// translated string (design doc §2.4/§3).
 export async function createCheckoutSession(packId: string): Promise<{ error: string } | undefined> {
+  const lang = await getLang();
   // Server Action arguments are attacker-controlled and their declared types
   // are erased at runtime — the same belt actions.ts applies to `question` /
   // `reply` / `requestId`. Benign here (the checkout amount and currency come
@@ -22,23 +28,23 @@ export async function createCheckoutSession(packId: string): Promise<{ error: st
   // action argument that did not meet the standard, and an unchecked value
   // reaching a query parameter is not a habit worth keeping.
   if (typeof packId !== 'string' || packId.length === 0 || packId.length > 100) {
-    return { error: 'Onbekend of niet meer beschikbaar pakket.' };
+    return { error: t(lang, 'credits.unknownPack') };
   }
 
   const userId = await currentUserId();
   if (userId === null) {
-    return { error: 'Je bent niet ingelogd.' };
+    return { error: t(lang, 'credits.notLoggedIn') };
   }
 
   const pack = await getPack(getDb(), packId);
   if (pack === null) {
-    return { error: 'Onbekend of niet meer beschikbaar pakket.' };
+    return { error: t(lang, 'credits.unknownPack') };
   }
 
   const secretKey = process.env.STRIPE_SECRET_KEY;
   if (!secretKey) {
     console.error('createCheckoutSession: STRIPE_SECRET_KEY is not set');
-    return { error: 'Betalen is momenteel niet beschikbaar.' };
+    return { error: t(lang, 'credits.unavailable') };
   }
 
   const origin = process.env.NEXT_PUBLIC_APP_URL ?? (await headers()).get('origin') ?? '';
@@ -58,11 +64,11 @@ export async function createCheckoutSession(packId: string): Promise<{ error: st
     url = session.url;
   } catch (error) {
     console.error('createCheckoutSession failed:', error);
-    return { error: 'Er ging iets mis bij het starten van de betaling.' };
+    return { error: t(lang, 'credits.startFailed') };
   }
 
   if (!url) {
-    return { error: 'Stripe gaf geen checkout-URL terug.' };
+    return { error: t(lang, 'credits.noCheckoutUrl') };
   }
   // redirect() throws internally (Next's own control-flow mechanism) — kept
   // OUTSIDE the try/catch above so that throw is never accidentally caught

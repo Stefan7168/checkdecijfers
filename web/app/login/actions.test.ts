@@ -32,6 +32,12 @@ vi.mock('../../lib/supabase-server.ts', () => ({
   createClient: async () => ({ auth: { signInWithOAuth, signInWithOtp } }),
 }));
 
+// WP218 phase 4 (#219): both actions now read getLang() themselves (a Server
+// Action cannot see the client's LangProvider) — default 'nl' so every
+// existing Dutch-copy pin below keeps passing; overridden per test for 'en'.
+const { getLang } = vi.hoisted(() => ({ getLang: vi.fn() }));
+vi.mock('../../lib/i18n/server.ts', () => ({ getLang }));
+
 /** Calls signInWithGoogle expecting the redirect throw; returns the
  * destination URL parsed from the NEXT_REDIRECT digest
  * (`NEXT_REDIRECT;{type};{url};{status};` — same slice the framework's own
@@ -48,11 +54,13 @@ async function callExpectingRedirect(): Promise<string> {
 
 beforeEach(() => {
   process.env.NEXT_PUBLIC_APP_URL = 'https://checkdecijfers.test';
+  getLang.mockResolvedValue('nl');
 });
 
 afterEach(() => {
   signInWithOAuth.mockReset();
   signInWithOtp.mockReset();
+  getLang.mockReset();
   vi.restoreAllMocks();
 });
 
@@ -135,5 +143,26 @@ describe('signInWithGoogle (WP28, ADR 028)', () => {
     // …is a path the session proxy lets through without a session.
     expect(isPublicPath(new URL(redirectTo!).pathname)).toBe(true);
     expect(isPublicPath('/auth/callback')).toBe(true);
+  });
+});
+
+// WP218 phase 4 (#219): proves both actions translate via getLang() -> 'en'.
+describe('login/actions — en', () => {
+  it('signInWithMagicLink returns the English required-field error', async () => {
+    getLang.mockResolvedValue('en');
+    const formData = new FormData();
+    const result = await signInWithMagicLink(formData);
+    expect(result).toEqual({ ok: false, error: 'Email address is required.' });
+  });
+
+  it('signInWithGoogle returns the English fail-soft error', async () => {
+    getLang.mockResolvedValue('en');
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    signInWithOAuth.mockResolvedValue({ data: null, error: { message: 'provider is not enabled' } });
+    const result = await signInWithGoogle();
+    expect(result).toEqual({
+      ok: false,
+      error: 'Signing in with Google did not work. Please try again or use the login link.',
+    });
   });
 });

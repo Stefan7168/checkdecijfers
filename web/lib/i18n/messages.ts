@@ -174,6 +174,155 @@ const nl = {
   'answerProof.colBatch': 'Batch',
   'answerProof.dateUnknown': 'onbekend',
   'answerProof.tableCaption': 'Tabel {tableId} — {tableTitle} · versie {version} · gesynchroniseerd {date} · licentie {license}',
+
+  // WP218 phase 4 (#219), Task 3 (Sweep B: pages + shell).
+  // landing.tsx. The owner asked (session 90) to keep the Dutch headline
+  // UNCHANGED verbatim; the English value below is a faithful MEANING
+  // translation, not a literal one.
+  'landing.heroTitle': 'Chat met de officiële cijfers van Nederland',
+  'landing.heroSubtitle':
+    'Stel je vraag in gewone taal. Check de Cijfers rekent het antwoord uit op officiële CBS-statistieken — elk getal herleidbaar tot een CBS-tabel, met bron en datum erbij.',
+  'landing.ctaStart': 'Begin met vragen',
+  'landing.ctaHowItWorks': 'Hoe het werkt',
+  'landing.exampleLabel': 'Zo antwoordt het product — echt voorbeeld',
+  'landing.howItWorksHeading': 'Geen gokwerk, maar rekenwerk',
+  'landing.step1Title': 'Jij vraagt',
+  'landing.step1Body': 'In gewone taal — “wat doet de inflatie?”, “hoe hard groeide de economie?”',
+  'landing.step2Title': 'Code rekent',
+  'landing.step2Body':
+    'Het antwoord komt uit onze database met officiële CBS-cijfers — deterministische berekening, geen taalmodel dat cijfers verzint.',
+  'landing.step3Title': 'Bron erbij',
+  'landing.step3Body':
+    'Elk getal met CBS-tabel, periode en publicatiestatus. Weten we het niet zeker, dan zeggen we dat — liever geen antwoord dan een verzonnen antwoord.',
+  'landing.pricingHeading': 'Eerlijke prijs per vraag',
+  'landing.pricingBody':
+    'Je betaalt per vraag met credits — geen abonnement. Een account aanmaken is gratis en zo gebeurd: e-mailadres invullen, inloglink aanklikken, vragen maar.',
+  // Shared with trial-chat.tsx's LoginNudge (same CTA, same purpose) — one
+  // key so the two never drift (the common.sessionExpired precedent).
+  'common.createFreeAccount': 'Maak gratis een account',
+
+  // login/login-form.tsx, login/page.tsx, login/actions.ts. googleFailed is
+  // shared between the server action's own return value and the client's
+  // (near-unreachable) post-unstable_rethrow fallback — one sentence, one key.
+  'login.pageHeading': 'Inloggen — Check de Cijfers',
+  'login.pageBody': 'Vul je e-mailadres in; je krijgt een inloglink toegestuurd. Geen wachtwoord nodig.',
+  'login.sentMessage': 'Check je e-mail voor de inloglink.',
+  'login.emailPlaceholder': 'jij@voorbeeld.nl',
+  'login.sendMagicLink': 'Stuur inloglink',
+  'login.or': 'of',
+  'login.continueWithGoogle': 'Doorgaan met Google',
+  'login.emailRequired': 'E-mailadres is verplicht.',
+  'login.magicLinkFailed': 'Er ging iets mis bij het versturen van de inloglink. Probeer het opnieuw.',
+  'login.googleFailed': 'Inloggen met Google is niet gelukt. Probeer het opnieuw of gebruik de inloglink.',
+
+  // app/credits/*.
+  'credits.pageHeading': 'Credits — Check de Cijfers',
+  'credits.balancePrefix': 'Je huidige saldo:',
+  'credits.creditsWord': 'credits.',
+  'credits.purchaseSuccess': 'Betaling gelukt — je credits worden bijgeschreven zodra Stripe de betaling bevestigt.',
+  'credits.purchaseCancelled': 'Betaling geannuleerd.',
+  'credits.buy': 'Kopen',
+  'credits.unknownPack': 'Onbekend of niet meer beschikbaar pakket.',
+  'credits.notLoggedIn': 'Je bent niet ingelogd.',
+  'credits.unavailable': 'Betalen is momenteel niet beschikbaar.',
+  'credits.startFailed': 'Er ging iets mis bij het starten van de betaling.',
+  'credits.noCheckoutUrl': 'Stripe gaf geen checkout-URL terug.',
+
+  // app/geschiedenis/page.tsx.
+  'history.pageHeading': 'Geschiedenis — Check de Cijfers',
+
+  // question-history.tsx (Server Component; onboarding.failureSummary itself
+  // is backend text and is never translated — only the fixed template words
+  // around it go through the catalogue).
+  'history.empty': 'Nog geen eerdere vragen.',
+  'history.heading': 'Eerdere vragen',
+  'history.creditsInline': '{n} credits · ',
+  'history.creditsInlineTotal': '{n} credits totaal · ',
+  'history.deletedQuestionLabel': 'Verwijderde vraag',
+  'history.deletedBody': 'De tekst van deze vraag is verwijderd.',
+  'history.clarificationLabel': 'Verduidelijkingsvraag',
+  'history.yourReplyLabel': 'Jouw antwoord',
+  'history.moreAboutMeasurement': 'Meer over deze meting',
+  'history.onboardingPreparingLabel': 'Wordt voorbereid',
+  'history.onboardingPreparingBody':
+    'We vragen de cijfers over "{topic}" nu automatisch op bij het CBS en controleren ze. Je krijgt een e-mail zodra je vraag beantwoord kan worden.',
+  'history.onboardingFailedLabel': 'Kon niet worden opgehaald',
+  'history.onboardingFailedFallback': 'Het ophalen van deze cijfers is niet gelukt.',
+  'history.onboardingFailedRefundSuffix': ' De credits zijn teruggestort.',
+
+  // onboarding-live-status.tsx.
+  'status.inFlightSingular':
+    'Er is 1 aanvraag bij het CBS in behandeling — de status hieronder wordt automatisch bijgewerkt.',
+  'status.inFlightPlural':
+    'Er zijn {n} aanvragen bij het CBS in behandeling — de status hieronder wordt automatisch bijgewerkt.',
+
+  // account-panel.tsx (rendered only inside the client Dashboard — treated as
+  // a client surface; header.credits is reused below for the identical "Buy
+  // credits" CTA, workspace.purchaseSuccessMessage/Dismiss reused in
+  // dashboard.tsx for the identical #95 banner).
+  'account.balanceLabel': 'Saldo',
+  'account.lowBalanceWarning': 'Je saldo is bijna op — er is nog genoeg voor één vraag.',
+  'account.explainerWithQuestions':
+    "Bij aanmelding krijg je eenmalig {grant} credits. Een gewone vraag kost {price} credits — {grant} credits zijn dus goed voor zo'n {questions} vragen.",
+  'account.explainerNoQuestions': 'Bij aanmelding krijg je eenmalig {grant} credits. Een gewone vraag kost {price} credits.',
+
+  // site-footer.tsx (FOOTER_ATTRIBUTION itself stays byte-pinned, untranslated).
+  'footer.aboutLabel': 'Over dit project',
+  'footer.systemMapLabel': 'Systeemoverzicht',
+
+  // delete-history-button.tsx.
+  'deleteHistory.confirmText':
+    'Weet je het zeker? Je vraagteksten worden permanent verwijderd. Dit kan niet ongedaan worden gemaakt.',
+  'deleteHistory.confirmYes': 'Ja, verwijder',
+  'deleteHistory.cancel': 'Annuleren',
+  'deleteHistory.trigger': 'Verwijder mijn vraaggeschiedenis',
+  'deleteHistory.failed': 'Verwijderen is niet gelukt. Probeer het later opnieuw.',
+
+  // trial.tsx / trial-chat.tsx (formerly lib/trial-copy.ts's TRIAL_COPY,
+  // folded into the one catalogue — the #184 "single-sourced copy" intent
+  // now lives here instead of a second file).
+  'trial.heading': 'Probeer het direct',
+  'trial.subheading':
+    'Twee gratis proefvragen, zonder account. Elk antwoord komt uit officiële CBS-cijfers, met bron en datum erbij.',
+  'trial.potEmpty': 'Het gratis proefpotje is op dit moment leeg. Log in om verder te gaan — een account is gratis.',
+  'trial.unavailable':
+    'De gratis proefvragen zijn nu even niet beschikbaar. Log in om verder te gaan — een account is gratis.',
+  'trial.usedUp': 'Je hebt je gratis proefvragen gebruikt. Maak een gratis account om verder te gaan.',
+  'trial.ipLimit': 'Vanaf dit netwerk zijn de gratis proefvragen voor vandaag op. Maak een gratis account om verder te gaan.',
+  'trial.error': 'Er ging iets mis; je proefvraag is niet verbruikt. Probeer het zo nog eens.',
+  'trial.clarificationPrefix':
+    'In het proefpotje kun je niet doorvragen op een verduidelijking — stel je vraag preciezer opnieuw, of ',
+  'trial.createAccountInline': 'maak een gratis account',
+  'trial.inputPlaceholder': 'Bijv. wat is de inflatie nu?',
+  'trial.inputAriaLabel': 'Stel je gratis proefvraag',
+  'trial.submitBusy': 'Rekenen…',
+  'trial.submitIdle': 'Vraag',
+  'trial.of': 'van',
+  'trial.freeQuestionsLeft': 'gratis proefvragen over — geen account nodig.',
+
+  // ontdek.tsx.
+  'ontdek.heading': 'Ontdek Nederland in grafieken',
+  'ontdek.body':
+    'Rechtstreeks uit onze database met officiële CBS-cijfers: consumentenvertrouwen, economische groei, inflatie, de gemiddelde verkoopprijs van woningen en de werkloosheid. Elk punt is herleidbaar tot een CBS-tabel — bron en datum staan erbij.',
+
+  // source-badge.tsx (Client — always rendered from chart.tsx/chat.tsx).
+  'sourceBadge.syncedLabel': 'gesynchroniseerd {date}',
+
+  // stat-card.tsx.
+  'statCard.provisional': 'voorlopig',
+  'statCard.downloadPng': 'Download als afbeelding',
+  'statCard.downloadFailed': 'Downloaden lukte niet in deze browser.',
+
+  // theme-toggle.tsx — English today, Dutch added as the nl default (design
+  // §3): the pins move from the literal English strings to these nl values.
+  'themeToggle.groupLabel': 'Thema',
+  'themeToggle.light': 'Licht thema',
+  'themeToggle.dark': 'Donker thema',
+  'themeToggle.system': 'Systeemthema',
+
+  // app/layout.tsx metadata (generateMetadata).
+  'meta.title': 'Check de Cijfers',
+  'meta.description': 'Chat met officiële CBS-cijfers — elk getal herleidbaar tot een CBS-tabel.',
 };
 
 // `Messages` is derived from the (widened, non-`const`) Dutch object above,
@@ -322,6 +471,127 @@ const en: Messages = {
   'answerProof.colBatch': 'Batch',
   'answerProof.dateUnknown': 'unknown',
   'answerProof.tableCaption': 'Table {tableId} — {tableTitle} · version {version} · synced {date} · license {license}',
+
+  // WP218 phase 4 (#219), Task 3 (Sweep B). Faithful MEANING translations of
+  // the Dutch marketing copy — the Dutch headline stays owner-pinned verbatim
+  // (see the nl block); this is not a literal word-for-word rendering.
+  'landing.heroTitle': "Chat with the Netherlands' official statistics",
+  'landing.heroSubtitle':
+    'Ask your question in plain language. Check de Cijfers computes the answer from official CBS statistics — every figure traceable to a CBS table, with source and date shown.',
+  'landing.ctaStart': 'Start asking',
+  'landing.ctaHowItWorks': 'How it works',
+  'landing.exampleLabel': 'How the product answers — a real example',
+  'landing.howItWorksHeading': 'No guesswork, just computation',
+  'landing.step1Title': 'You ask',
+  'landing.step1Body': 'In plain language — “what’s inflation doing?”, “how fast did the economy grow?”',
+  'landing.step2Title': 'Code computes',
+  'landing.step2Body':
+    'The answer comes from our database of official CBS figures — deterministic calculation, no language model inventing numbers.',
+  'landing.step3Title': 'Source included',
+  'landing.step3Body':
+    'Every figure comes with its CBS table, period and publication status. When we are not sure, we say so — no answer beats a made-up one.',
+  'landing.pricingHeading': 'Honest, per-question pricing',
+  'landing.pricingBody':
+    'You pay per question with credits — no subscription. Creating an account is free and takes seconds: enter your email, click the login link, start asking.',
+  'common.createFreeAccount': 'Create a free account',
+
+  'login.pageHeading': 'Log in — Check de Cijfers',
+  'login.pageBody': 'Enter your email address; you will get a login link. No password needed.',
+  'login.sentMessage': 'Check your email for the login link.',
+  'login.emailPlaceholder': 'you@example.com',
+  'login.sendMagicLink': 'Send login link',
+  'login.or': 'or',
+  'login.continueWithGoogle': 'Continue with Google',
+  'login.emailRequired': 'Email address is required.',
+  'login.magicLinkFailed': 'Something went wrong sending the login link. Please try again.',
+  'login.googleFailed': 'Signing in with Google did not work. Please try again or use the login link.',
+
+  'credits.pageHeading': 'Credits — Check de Cijfers',
+  'credits.balancePrefix': 'Your current balance:',
+  'credits.creditsWord': 'credits.',
+  'credits.purchaseSuccess': 'Payment successful — your credits will be added once Stripe confirms the payment.',
+  'credits.purchaseCancelled': 'Payment cancelled.',
+  'credits.buy': 'Buy',
+  'credits.unknownPack': 'Unknown or no longer available pack.',
+  'credits.notLoggedIn': 'You are not logged in.',
+  'credits.unavailable': 'Payments are not available right now.',
+  'credits.startFailed': 'Something went wrong starting the payment.',
+  'credits.noCheckoutUrl': 'Stripe did not return a checkout URL.',
+
+  'history.pageHeading': 'History — Check de Cijfers',
+
+  'history.empty': 'No previous questions yet.',
+  'history.heading': 'Previous questions',
+  'history.creditsInline': '{n} credits · ',
+  'history.creditsInlineTotal': '{n} credits total · ',
+  'history.deletedQuestionLabel': 'Deleted question',
+  'history.deletedBody': 'The text of this question has been deleted.',
+  'history.clarificationLabel': 'Clarifying question',
+  'history.yourReplyLabel': 'Your reply',
+  'history.moreAboutMeasurement': 'More about this measurement',
+  'history.onboardingPreparingLabel': 'Being prepared',
+  'history.onboardingPreparingBody':
+    'We are automatically requesting the figures about "{topic}" from CBS now and checking them. You will get an email once your question can be answered.',
+  'history.onboardingFailedLabel': 'Could not be retrieved',
+  'history.onboardingFailedFallback': 'Retrieving these figures did not work.',
+  'history.onboardingFailedRefundSuffix': ' The credits have been refunded.',
+
+  'status.inFlightSingular':
+    'There is 1 request being processed at CBS — the status below updates automatically.',
+  'status.inFlightPlural':
+    'There are {n} requests being processed at CBS — the status below updates automatically.',
+
+  'account.balanceLabel': 'Balance',
+  'account.lowBalanceWarning': 'Your balance is almost gone — there is still enough for one more question.',
+  'account.explainerWithQuestions':
+    "Signing up gets you {grant} credits once. An ordinary question costs {price} credits — so {grant} credits is good for about {questions} questions.",
+  'account.explainerNoQuestions': 'Signing up gets you {grant} credits once. An ordinary question costs {price} credits.',
+
+  'footer.aboutLabel': 'About this project',
+  'footer.systemMapLabel': 'System map',
+
+  'deleteHistory.confirmText':
+    'Are you sure? Your question texts will be permanently deleted. This cannot be undone.',
+  'deleteHistory.confirmYes': 'Yes, delete',
+  'deleteHistory.cancel': 'Cancel',
+  'deleteHistory.trigger': 'Delete my question history',
+  'deleteHistory.failed': 'Deleting did not work. Please try again later.',
+
+  'trial.heading': 'Try it now',
+  'trial.subheading':
+    'Two free trial questions, no account needed. Every answer comes from official CBS figures, with source and date shown.',
+  'trial.potEmpty': 'The free trial pot is empty right now. Log in to continue — an account is free.',
+  'trial.unavailable': 'The free trial questions are not available right now. Log in to continue — an account is free.',
+  'trial.usedUp': 'You have used your free trial questions. Create a free account to continue.',
+  'trial.ipLimit': "This network's free trial questions are used up for today. Create a free account to continue.",
+  'trial.error': 'Something went wrong; your trial question was not used. Please try again shortly.',
+  'trial.clarificationPrefix':
+    "The trial has no follow-up round — rephrase your question more precisely, or ",
+  'trial.createAccountInline': 'create a free account',
+  'trial.inputPlaceholder': 'E.g. what is inflation right now?',
+  'trial.inputAriaLabel': 'Ask your free trial question',
+  'trial.submitBusy': 'Computing…',
+  'trial.submitIdle': 'Ask',
+  'trial.of': 'of',
+  'trial.freeQuestionsLeft': 'free trial questions left — no account needed.',
+
+  'ontdek.heading': 'Discover the Netherlands in charts',
+  'ontdek.body':
+    'Straight from our database of official CBS figures: consumer confidence, economic growth, inflation, the average house sale price and unemployment. Every point is traceable to a CBS table — source and date included.',
+
+  'sourceBadge.syncedLabel': 'synced {date}',
+
+  'statCard.provisional': 'provisional',
+  'statCard.downloadPng': 'Download as image',
+  'statCard.downloadFailed': 'Download did not work in this browser.',
+
+  'themeToggle.groupLabel': 'Theme',
+  'themeToggle.light': 'Light theme',
+  'themeToggle.dark': 'Dark theme',
+  'themeToggle.system': 'System theme',
+
+  'meta.title': 'Check de Cijfers',
+  'meta.description': 'Chat with official CBS statistics — every figure traceable to a CBS table.',
 };
 
 export const MESSAGES = { nl, en } as const satisfies Record<Lang, Messages>;

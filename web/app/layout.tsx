@@ -5,6 +5,7 @@ import { ChartUsageTracker } from "../components/chart-usage-tracker.tsx";
 import { SiteFooter } from "../components/site-footer.tsx";
 import { ThemeProvider } from "../components/theme-provider.tsx";
 import { getLang } from "../lib/i18n/server.ts";
+import { t } from "../lib/i18n/messages.ts";
 import { LangProvider } from "../lib/i18n/lang-provider.tsx";
 
 // Session 87 visual redesign (docs/12-huisstijl.md): the chosen mockup
@@ -21,18 +22,26 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  title: "Check de Cijfers",
-  description: "Chat met officiële CBS-cijfers — elk getal herleidbaar tot een CBS-tabel.",
-  // Phase 0: internal/testing deployment on a *.vercel.app subdomain, not the
-  // public launch (docs/03-mvp-scope.md — browse pages/SEO are a later
-  // phase; the checkdecijfers.nl domain isn't even confirmed yet per
-  // RUNBOOK.md). Remove this when the real public launch is ready.
-  robots: {
-    index: false,
-    follow: false,
-  },
-};
+// WP218 phase 4 (#219): generateMetadata (rather than a static `metadata`
+// export) so the title/description can read getLang() — the same cookie ->
+// Accept-Language -> 'nl' resolution the layout itself uses below. The
+// layout was already dynamic (every page reads the Supabase session), so
+// this second getLang() read adds no new dynamic-rendering behaviour.
+export async function generateMetadata(): Promise<Metadata> {
+  const lang = await getLang();
+  return {
+    title: t(lang, "meta.title"),
+    description: t(lang, "meta.description"),
+    // Phase 0: internal/testing deployment on a *.vercel.app subdomain, not
+    // the public launch (docs/03-mvp-scope.md — browse pages/SEO are a later
+    // phase; the checkdecijfers.nl domain isn't even confirmed yet per
+    // RUNBOOK.md). Remove this when the real public launch is ready.
+    robots: {
+      index: false,
+      follow: false,
+    },
+  };
+}
 
 export default async function RootLayout({
   children,

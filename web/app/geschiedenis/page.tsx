@@ -23,6 +23,8 @@ import { QuestionHistory } from '../../components/question-history.tsx';
 import { SiteHeader } from '../../components/site-header.tsx';
 import { currentUserId } from '../../lib/current-user.ts';
 import { getDb } from '../../lib/db.ts';
+import { getLang } from '../../lib/i18n/server.ts';
+import { t } from '../../lib/i18n/messages.ts';
 
 export default async function GeschiedenisPage() {
   if (process.env.WORKSPACE_ENABLED !== '1') {
@@ -33,17 +35,18 @@ export default async function GeschiedenisPage() {
     redirect('/login');
   }
   const db = getDb();
-  const [balance, history] = await Promise.all([
+  const [balance, history, lang] = await Promise.all([
     getBalance(db, userId),
     // Same master-switch guard as page.tsx: while ONBOARDING_ENABLED is unset,
     // the read never touches the not-yet-migrated pending_table_requests table.
     getQuestionHistory(db, userId, { includeOnboarding: process.env.ONBOARDING_ENABLED === '1' }),
+    getLang(),
   ]);
   return (
     <>
       <SiteHeader balance={balance} />
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 p-4">
-        <h1 className="text-lg">Geschiedenis — Check de Cijfers</h1>
+        <h1 className="text-lg">{t(lang, 'history.pageHeading')}</h1>
         <QuestionHistory items={history} />
       </div>
     </>

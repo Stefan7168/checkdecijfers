@@ -1,11 +1,13 @@
 'use client';
 
 import { useState } from 'react';
+import { useT } from '../../lib/i18n/lang-provider.tsx';
 import { createCheckoutSession } from './actions.ts';
 
 export function BuyButton({ packId }: { packId: string }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const t = useT();
 
   async function handleClick() {
     setBusy(true);
@@ -26,7 +28,7 @@ export function BuyButton({ packId }: { packId: string }) {
         disabled={busy}
         className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
       >
-        Kopen
+        {t('credits.buy')}
       </button>
       {error ? <span className="text-xs text-red-600">{error}</span> : null}
     </div>

@@ -4,6 +4,8 @@ import { redirect } from 'next/navigation';
 import { getActivePacks, getBalance } from '../../backend/billing/index.ts';
 import { currentUserId } from '../../lib/current-user.ts';
 import { getDb } from '../../lib/db.ts';
+import { getLang } from '../../lib/i18n/server.ts';
+import { t } from '../../lib/i18n/messages.ts';
 import { SiteHeader } from '../../components/site-header.tsx';
 import { BuyButton } from './buy-button.tsx';
 
@@ -20,6 +22,7 @@ export default async function CreditsPage({
   const db = getDb();
   const [balance, packs] = await Promise.all([getBalance(db, userId), getActivePacks(db)]);
   const { purchase } = await searchParams;
+  const lang = await getLang();
 
   // WP135 (ADR 033 ⟨A5⟩): the shell rides the SAME WORKSPACE_ENABLED flag as the
   // workspace. Flag off ⇒ NO header, byte-identical to today; flag on ⇒ the
@@ -30,16 +33,14 @@ export default async function CreditsPage({
     <>
       {showShell ? <SiteHeader balance={balance} /> : null}
       <div className="mx-auto flex w-full max-w-md flex-col gap-4 p-4">
-      <h1 className="text-lg">Credits — Check de Cijfers</h1>
+      <h1 className="text-lg">{t(lang, 'credits.pageHeading')}</h1>
       <p className="text-sm text-muted-foreground">
-        Je huidige saldo: <strong className="tnum">{balance}</strong> credits.
+        {t(lang, 'credits.balancePrefix')} <strong className="tnum">{balance}</strong> {t(lang, 'credits.creditsWord')}
       </p>
       {purchase === 'success' ? (
-        <p className="text-sm text-success">
-          Betaling gelukt — je credits worden bijgeschreven zodra Stripe de betaling bevestigt.
-        </p>
+        <p className="text-sm text-success">{t(lang, 'credits.purchaseSuccess')}</p>
       ) : null}
-      {purchase === 'cancelled' ? <p className="text-sm text-muted-foreground">Betaling geannuleerd.</p> : null}
+      {purchase === 'cancelled' ? <p className="text-sm text-muted-foreground">{t(lang, 'credits.purchaseCancelled')}</p> : null}
       <div className="flex flex-col gap-3">
         {packs.map((pack) => (
           <div

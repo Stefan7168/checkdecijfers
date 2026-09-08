@@ -2,12 +2,14 @@
 
 import { useState } from 'react';
 import { unstable_rethrow } from 'next/navigation';
+import { useT } from '../../lib/i18n/lang-provider.tsx';
 import { signInWithGoogle, signInWithMagicLink, type SignInResult } from './actions.ts';
 
 export function LoginForm() {
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const t = useT();
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -43,12 +45,12 @@ export function LoginForm() {
       // documented pattern (node_modules/next/dist/docs, unstable_rethrow.md).
       unstable_rethrow(err);
       setBusy(false);
-      setError('Inloggen met Google is niet gelukt. Probeer het opnieuw of gebruik de inloglink.');
+      setError(t('login.googleFailed'));
     }
   }
 
   if (sent) {
-    return <p className="text-sm text-foreground">Check je e-mail voor de inloglink.</p>;
+    return <p className="text-sm text-foreground">{t('login.sentMessage')}</p>;
   }
 
   return (
@@ -58,7 +60,7 @@ export function LoginForm() {
           type="email"
           name="email"
           required
-          placeholder="jij@voorbeeld.nl"
+          placeholder={t('login.emailPlaceholder')}
           disabled={busy}
           className="rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:bg-muted"
         />
@@ -67,13 +69,13 @@ export function LoginForm() {
           disabled={busy}
           className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-50"
         >
-          Stuur inloglink
+          {t('login.sendMagicLink')}
         </button>
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
       </form>
       <div className="flex items-center gap-3 text-xs text-muted-foreground" aria-hidden="true">
         <span className="h-px flex-1 bg-border" />
-        of
+        {t('login.or')}
         <span className="h-px flex-1 bg-border" />
       </div>
       <button
@@ -82,7 +84,7 @@ export function LoginForm() {
         onClick={handleGoogleClick}
         className="rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-50"
       >
-        Doorgaan met Google
+        {t('login.continueWithGoogle')}
       </button>
     </div>
   );

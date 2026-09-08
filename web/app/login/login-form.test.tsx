@@ -7,6 +7,7 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { LangProvider } from '../../lib/i18n/lang-provider.tsx';
 import type { SignInResult } from './actions.ts';
 import { LoginForm } from './login-form.tsx';
 
@@ -91,6 +92,20 @@ describe('LoginForm (WP28: magic link + Google)', () => {
     resolveGoogle({ ok: false, error: 'x' });
     expect(await screen.findByText('x')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Doorgaan met Google' })).toBeEnabled();
+  });
+});
+
+// WP218 phase 4 (#219): proves the language switch reaches this surface.
+describe('LoginForm — en', () => {
+  it('renders the English labels under LangProvider lang="en"', () => {
+    render(
+      <LangProvider lang="en">
+        <LoginForm />
+      </LangProvider>,
+    );
+    expect(screen.getByRole('button', { name: 'Send login link' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Continue with Google' })).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('you@example.com')).toBeInTheDocument();
   });
 });
 
