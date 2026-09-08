@@ -38,6 +38,7 @@ import {
   YAxis,
 } from 'recharts';
 import type { ChartPoint, ChartSpec } from '../backend/chart/types.ts';
+import { RECHARTS_PALETTE } from '../lib/chart-presentation.ts';
 import { ChartDownloadMenu } from './chart-download.tsx';
 import { ChartNotes, type ChartNote, type PendingPoint } from './chart-notes.tsx';
 import { ChartSmallMultiples } from './chart-small-multiples.tsx';
@@ -98,7 +99,7 @@ export interface SeriesMeta {
 // hollow/hatched provisional marker (R11) is untouched — that is honesty, not
 // styling. The palette cycles for series nine and up; the Tabel view remains
 // the honest surface for many series.
-export const RECHARTS_PALETTE = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#0088fe', '#00c49f', '#ffbb28', '#ff8042'];
+export { RECHARTS_PALETTE } from '../lib/chart-presentation.ts';
 
 export function seriesStyle(index: number): { color: string } {
   return { color: RECHARTS_PALETTE[index % RECHARTS_PALETTE.length]! };
