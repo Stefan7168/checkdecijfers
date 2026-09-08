@@ -118,7 +118,10 @@ badge? drop secondary links behind "Account"?), no existing collapsed-header UI 
 WP202a's remaining scope — fixtures (`tests/fixtures/llm/attachments/`, real-LLM-spend,
 owner-supervised), THEN the owner-supervised migration apply + the actual `ATTACHMENTS_ENABLED=1`
 flip + go-live — see [08-build-plan.md](08-build-plan.md)'s WP202a section for the exact list; (d)
-WP30c + #197's older follow-ups — owner-menu, no rush.
+WP30c + #197's older follow-ups — owner-menu, no rush. **Also queued, both explicitly "not now" per
+the owner (session 88):** [#215](open-questions.md) (chart download: PDF not SVG for vector, PNG
+transparent/no baked-in text/smaller) and the click-to-annotate chart-editing preference folded
+into [#212](open-questions.md)'s own row — neither designed or scheduled yet.
 
 
 **(Historical — the pause, 2026-08-15 to 2026-08-26.)** Project was paused ~2 months (owner decision) and the

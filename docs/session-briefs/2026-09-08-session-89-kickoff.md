@@ -123,6 +123,15 @@ State after session 88 (2026-09-08, owner present throughout)
    (e) live smoke test + GDPR spot-check. See `docs/RUNBOOK.md`'s WP202 go-live checklist for the
    exact steps.
 4. WP30c + #197's older follow-ups — owner-menu, no rush, untouched again this session.
+5. **Two more feedback items, given at the very end of session 88 (in passing — the owner
+   explicitly said not to act on them then), neither designed nor scheduled yet:**
+   [#215](../open-questions.md) — chart download: the "vector" option should be a PDF, not the
+   current SVG; the PNG option should be transparent, with no baked-in source/attribution text,
+   and smaller (currently `PNG_SCALE = 2`) — note the current baked-in-text behavior is a
+   *deliberate* invariant per the code's own comment ("both formats serialize the SAME SVG
+   markup"), so dropping it for PNG is a real product decision to confirm with the owner, not a
+   silent bugfix. And an addendum on [#212](../open-questions.md) — the owner leans toward chart
+   annotations being a direct click-and-write interaction, not routed through chat.
 
 Binding frames, unchanged from prior kickoffs
 Principles (a)/(b)/(c); no prompt-byte changes to the CBS pipeline without owner sign-off; no live
