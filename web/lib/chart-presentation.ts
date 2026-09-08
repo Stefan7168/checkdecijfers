@@ -6,6 +6,7 @@
 // audit record — it projects an unchanged server-built spec for display,
 // exactly like windowSpec in chart-view-state.ts.
 import { z } from 'zod';
+import type { Lang } from './i18n/messages.ts';
 
 export type LineWidth = 'thin' | 'normal' | 'thick' | 'extraThick';
 export const LINE_WIDTH_PX: Record<LineWidth, number> = { thin: 1, normal: 2, thick: 3, extraThick: 4 };
@@ -27,6 +28,13 @@ export interface ChartPresentation {
   seriesColors: Record<number, string>;
   /** A family name from FONT_OPTIONS (or, later, a brand font); null = the page font. */
   fontFamily: string | null;
+  /** WP218 phase 4 (#219, design §4): the language THIS chart's card copy is
+   * shown in. null = follow the app language (`useLang()`); 'nl'/'en' pins
+   * the chart regardless of the app's own switch. Always applicable
+   * (offered on every form, table included) and never locked — unlike every
+   * other key here it has no honesty consequence, so no form ever overrides
+   * or disables it. */
+  language: Lang | null;
 }
 export type PresentationOverrides = Partial<ChartPresentation>;
 export type PresentationKey = keyof ChartPresentation;
@@ -50,6 +58,7 @@ export const STOCK_PRESENTATION: ChartPresentation = {
   zeroBaseline: 'auto',
   seriesColors: {},
   fontFamily: null,
+  language: null,
 };
 
 export const HEX_COLOR = /^#[0-9a-f]{6}$/;
@@ -68,6 +77,7 @@ const overridesSchema = z.object({
   zeroBaseline: z.enum(['auto', 'zero']).optional(),
   seriesColors: z.record(z.string(), z.unknown()).optional(),
   fontFamily: z.string().regex(FONT_FAMILY_NAME).nullable().optional(),
+  language: z.enum(['nl', 'en']).nullable().optional(),
 });
 
 /** Allow-list parse of anything claiming to be overrides (a reducer patch, a
@@ -164,6 +174,10 @@ export function resolvePresentation(
       locks.zeroBaseline = LOCK_REASONS.zeroBaselineBar;
     }
   }
+  // WP218 phase 4: unlike every other key, `language` has no honesty
+  // consequence for any chart form — it is always offered, never locked, on
+  // a table exactly like on a line or bar chart.
+  applicable.add('language');
   const pristine = Object.keys(clean).every((k) => k === 'seriesColors' && Object.keys(clean.seriesColors ?? {}).length === 0);
   return { values, locks, applicable, pristine };
 }

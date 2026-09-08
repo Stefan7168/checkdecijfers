@@ -37,6 +37,7 @@ describe('STOCK_PRESENTATION — the session-87 stock look, pinned', () => {
       zeroBaseline: 'auto',
       seriesColors: {},
       fontFamily: null,
+      language: null,
     });
     expect(LINE_WIDTH_PX.normal).toBe(2);
     expect(RECHARTS_PALETTE).toEqual(['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#0088fe', '#00c49f', '#ffbb28', '#ff8042']);
@@ -50,7 +51,7 @@ describe('resolvePresentation', () => {
     expect(r.locks).toEqual({});
     expect(r.pristine).toBe(true);
     expect([...r.applicable].sort()).toEqual(
-      ['axisLines', 'fontFamily', 'grid', 'lineWidth', 'markers', 'seriesColors', 'valueLabels', 'xLabels', 'zeroBaseline'].sort(),
+      ['axisLines', 'fontFamily', 'grid', 'language', 'lineWidth', 'markers', 'seriesColors', 'valueLabels', 'xLabels', 'zeroBaseline'].sort(),
     );
   });
 
@@ -75,9 +76,22 @@ describe('resolvePresentation', () => {
     expect(r.applicable.has('grid')).toBe(true);
   });
 
-  it('table form: only the font is applicable', () => {
+  it('table form: only the font and the chart language are applicable', () => {
     const r = resolvePresentation(tableCtx, { lineWidth: 'thick' });
-    expect([...r.applicable]).toEqual(['fontFamily']);
+    expect([...r.applicable]).toEqual(['fontFamily', 'language']);
+  });
+
+  it('WP218 phase 4: language is always applicable and never locked, on every form', () => {
+    for (const ctx of [lineCtx, barCtx, tableCtx]) {
+      const r = resolvePresentation(ctx, {});
+      expect(r.applicable.has('language')).toBe(true);
+      expect(r.locks.language).toBeUndefined();
+    }
+  });
+
+  it('WP218 phase 4: a language override is not pristine, exactly like any other chosen value', () => {
+    expect(resolvePresentation(lineCtx, { language: 'en' }).pristine).toBe(false);
+    expect(resolvePresentation(lineCtx, { language: null }).pristine).toBe(false);
   });
 
   it('a stale override for a locked key never leaks into the values (locks re-run per call)', () => {
@@ -117,6 +131,10 @@ describe('withAccountDefault — WP218 phase 2 (owner C): the account default as
     });
   });
 
+  it('WP218 phase 4: a saved language default round-trips through withAccountDefault', () => {
+    expect(withAccountDefault({ language: 'en' })).toEqual({ ...STOCK_PRESENTATION, language: 'en' });
+  });
+
   it('a valid seriesColors partial replaces the (empty) stock map, junk entries dropped', () => {
     expect(withAccountDefault({ seriesColors: { 0: '#ABCDEF', 1: 'not-a-colour' } })).toEqual({
       ...STOCK_PRESENTATION,
@@ -134,6 +152,14 @@ describe('sanitizeOverrides — allow-list, never throws', () => {
     expect(sanitizeOverrides({ fontFamily: 'Roboto' })).toEqual({ fontFamily: 'Roboto' });
     expect(sanitizeOverrides({ fontFamily: '<script>' })).toEqual({});
     expect(sanitizeOverrides({ fontFamily: null })).toEqual({ fontFamily: null });
+  });
+
+  it('WP218 phase 4: language accepts nl/en/null, drops any other value', () => {
+    expect(sanitizeOverrides({ language: 'en' })).toEqual({ language: 'en' });
+    expect(sanitizeOverrides({ language: 'nl' })).toEqual({ language: 'nl' });
+    expect(sanitizeOverrides({ language: null })).toEqual({ language: null });
+    expect(sanitizeOverrides({ language: 'fr' })).toEqual({});
+    expect(sanitizeOverrides({ language: 1 })).toEqual({});
   });
 });
 
