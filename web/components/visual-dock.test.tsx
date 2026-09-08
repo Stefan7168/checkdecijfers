@@ -68,12 +68,12 @@ function chartVisual(overrides: Partial<DockVisual> = {}): DockVisual {
 
 describe('VisualDock — chart/card visuals stay byte-identical (userChart: null)', () => {
   it('renders no dock when there are no visuals', () => {
-    const { container } = render(<VisualDock visuals={[]} activeVisualId={null} onSelect={vi.fn()} />);
+    const { container } = render(<VisualDock visuals={[]} activeVisualId={null} onSelect={vi.fn()} busy={false} />);
     expect(container).toBeEmptyDOMElement();
   });
 
   it('renders the ChartView for a chart visual and no UserChartView-only chrome', () => {
-    render(<VisualDock visuals={[chartVisual()]} activeVisualId="visual-0" onSelect={vi.fn()} />);
+    render(<VisualDock visuals={[chartVisual()]} activeVisualId="visual-0" onSelect={vi.fn()} busy={false} />);
     expect(screen.getByRole('tab', { name: /Grafiek 1/ })).toBeInTheDocument();
     expect(screen.queryByText('Your data · unverified')).not.toBeInTheDocument();
   });
@@ -88,14 +88,14 @@ describe('VisualDock — chart/card visuals stay byte-identical (userChart: null
       userChart: null,
       card: { value: '42,0', unitSuffix: '%', measureTitle: 'Test', context: 'Nederland', provisional: false, tableId: '12345NED', sourceLabel: 'CBS StatLine', syncedDate: '2026-07-01' },
     };
-    render(<VisualDock visuals={[cardVisual]} activeVisualId="visual-1" onSelect={vi.fn()} />);
+    render(<VisualDock visuals={[cardVisual]} activeVisualId="visual-1" onSelect={vi.fn()} busy={false} />);
     expect(screen.getByText('42,0')).toBeInTheDocument();
   });
 
   it('falls back to the last visual when activeVisualId matches none, and switches on tab click', () => {
     const onSelect = vi.fn();
     const visuals = [chartVisual({ id: 'visual-0', label: 'Grafiek 1' }), chartVisual({ id: 'visual-1', label: 'Grafiek 2' })];
-    render(<VisualDock visuals={visuals} activeVisualId="nonexistent" onSelect={onSelect} />);
+    render(<VisualDock visuals={visuals} activeVisualId="nonexistent" onSelect={onSelect} busy={false} />);
     expect(screen.getByRole('tab', { name: /Grafiek 2/ })).toHaveAttribute('aria-selected', 'true');
     fireEvent.click(screen.getByRole('tab', { name: /Grafiek 1/ }));
     expect(onSelect).toHaveBeenCalledWith('visual-0');
@@ -105,7 +105,7 @@ describe('VisualDock — chart/card visuals stay byte-identical (userChart: null
 describe('VisualDock — the userChart branch (ADR 037 D10/WP202a)', () => {
   it('renders UserChartView (its H2 badge/chrome) for a userChart visual', () => {
     const visual: DockVisual = { id: 'visual-0', kind: 'userChart', label: 'Your chart 1', question: 'show revenue by year', chart: null, card: null, userChart: USER_CHART_SPEC };
-    render(<VisualDock visuals={[visual]} activeVisualId="visual-0" onSelect={vi.fn()} />);
+    render(<VisualDock visuals={[visual]} activeVisualId="visual-0" onSelect={vi.fn()} busy={false} />);
     expect(screen.getByRole('tab', { name: /Your chart 1/ })).toBeInTheDocument();
     expect(screen.getByText('Your data · unverified')).toBeInTheDocument();
   });
@@ -113,9 +113,32 @@ describe('VisualDock — the userChart branch (ADR 037 D10/WP202a)', () => {
   it('a userChart tab sits alongside CBS tabs, switching renders the right component for each', () => {
     const onSelect = vi.fn();
     const visuals = [chartVisual({ id: 'visual-0', label: 'Grafiek 1' }), { id: 'visual-1', kind: 'userChart' as const, label: 'Your chart 1', question: 'q', chart: null, card: null, userChart: USER_CHART_SPEC }];
-    const { rerender } = render(<VisualDock visuals={visuals} activeVisualId="visual-0" onSelect={onSelect} />);
+    const { rerender } = render(<VisualDock visuals={visuals} activeVisualId="visual-0" onSelect={onSelect} busy={false} />);
     expect(screen.queryByText('Your data · unverified')).not.toBeInTheDocument();
-    rerender(<VisualDock visuals={visuals} activeVisualId="visual-1" onSelect={onSelect} />);
+    rerender(<VisualDock visuals={visuals} activeVisualId="visual-1" onSelect={onSelect} busy={false} />);
     expect(screen.getByText('Your data · unverified')).toBeInTheDocument();
+  });
+});
+
+describe('VisualDock — busy skeleton (chat interaction polish, session 88)', () => {
+  it('shows a chart skeleton instead of the active visual while busy', () => {
+    render(<VisualDock visuals={[chartVisual()]} activeVisualId="visual-0" onSelect={vi.fn()} busy={true} />);
+    expect(document.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThan(0);
+    expect(screen.queryByRole('img', { hidden: true })).toBeNull();
+  });
+
+  it('keeps the tabs visible and clickable while busy', () => {
+    const onSelect = vi.fn();
+    const visuals = [chartVisual({ id: 'visual-0', label: 'Grafiek 1' }), chartVisual({ id: 'visual-1', label: 'Grafiek 2' })];
+    render(<VisualDock visuals={visuals} activeVisualId="visual-1" onSelect={onSelect} busy={true} />);
+    fireEvent.click(screen.getByRole('tab', { name: /Grafiek 1/ }));
+    expect(onSelect).toHaveBeenCalledWith('visual-0');
+  });
+
+  it('shows the real chart again once busy clears', () => {
+    const { rerender } = render(<VisualDock visuals={[chartVisual()]} activeVisualId="visual-0" onSelect={vi.fn()} busy={true} />);
+    expect(document.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThan(0);
+    rerender(<VisualDock visuals={[chartVisual()]} activeVisualId="visual-0" onSelect={vi.fn()} busy={false} />);
+    expect(document.querySelectorAll('[data-slot="skeleton"]').length).toBe(0);
   });
 });

@@ -20,6 +20,7 @@ import { useEffect, useRef } from 'react';
 import type { DockVisual } from '../lib/dock-visuals.ts';
 import { cn } from '../lib/utils.ts';
 import { ChartView } from './chart.tsx';
+import { ChartSkeleton } from './loading-skeletons.tsx';
 import { StatCard } from './stat-card.tsx';
 import { UserChartView } from './user-chart.tsx';
 
@@ -27,10 +28,12 @@ export function VisualDock({
   visuals,
   activeVisualId,
   onSelect,
+  busy,
 }: {
   visuals: DockVisual[];
   activeVisualId: string | null;
   onSelect: (visualId: string) => void;
+  busy: boolean;
 }) {
   const activeTabRef = useRef<HTMLButtonElement>(null);
   const active =
@@ -89,7 +92,9 @@ export function VisualDock({
         })}
       </div>
       <div className="min-h-0 min-w-0 flex-1 overflow-y-auto p-4">
-        {active.kind === 'chart' && active.chart !== null ? (
+        {busy ? (
+          <ChartSkeleton />
+        ) : active.kind === 'chart' && active.chart !== null ? (
           <ChartView spec={active.chart} frameless />
         ) : active.kind === 'userChart' && active.userChart !== null ? (
           <UserChartView spec={active.userChart} />
