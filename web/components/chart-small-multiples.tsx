@@ -7,7 +7,37 @@
 
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, XAxis, YAxis } from 'recharts';
 import type { ChartSpec } from '../backend/chart/types.ts';
-import { AXIS_COLOR, AxisTick, buildRows, GRID_COLOR, valueLabelPlan, yAxisDomain } from './chart.tsx';
+import { dotGeometry, LINE_WIDTH_PX, seriesColor, type ChartPresentation } from '../lib/chart-presentation.ts';
+import { AXIS_COLOR, AxisTick, buildRows, GRID_COLOR, type Row, valueLabelPlan, yAxisDomain } from './chart.tsx';
+
+/** R11 (WP218 gap fix): the hollow provisional marker, same convention as
+ * chart.tsx's SeriesDot — but ONLY for a provisional point; a final point
+ * renders nothing, exactly like the plain `dot={false}` this replaces. Not
+ * reusing SeriesDot itself: that function also carries the end-of-line
+ * label and click-to-annotate handlers, neither of which a mini panel
+ * offers (no room for either at this size). */
+function ProvisionalDot(seriesKey: string, color: string, geometry: { r: number; ring: number }) {
+  return function Dot(props: { cx?: number; cy?: number; payload?: Row }) {
+    const { cx, cy, payload } = props;
+    if (cx == null || cy == null || !payload) return null;
+    const value = payload[seriesKey];
+    if (value == null) return null;
+    if (!payload[`${seriesKey}_provisional`]) return null;
+    const resultId = payload[`${seriesKey}_resultId`];
+    return (
+      <circle
+        cx={cx}
+        cy={cy}
+        r={geometry.r}
+        fill="var(--card)"
+        stroke={color}
+        strokeWidth={geometry.ring}
+        data-point="value"
+        data-result-id={resultId == null ? undefined : String(resultId)}
+      />
+    );
+  };
+}
 
 // Exported for direct testing (same pattern as chart.tsx's buildRows/
 // seriesStyle/valueLabelPlan): the actual y-domain math is what "gelijke
@@ -32,14 +62,21 @@ export function ChartSmallMultiples({
   spec,
   hiddenKeys,
   axisMode,
+  presentation,
 }: {
   spec: ChartSpec;
   hiddenKeys: Set<string>;
   axisMode: 'shared' | 'own';
+  /** WP218 (ADR 039) Phase 0: the resolved effective values from ChartView's
+   * own `resolvePresentation` call — this component never resolves overrides
+   * itself, only draws them, same division of labour as the combined chart. */
+  presentation: ChartPresentation;
 }) {
-  const { rows, seriesMeta } = buildRows(spec);
+  const colorFor = (i: number) => seriesColor(presentation, i);
+  const { rows, seriesMeta } = buildRows(spec, colorFor);
   const visible = seriesMeta.map((s, i) => ({ s, i })).filter(({ s }) => !hiddenKeys.has(s.key));
   const domain = axisMode === 'shared' ? sharedLineDomain(spec, visible.map(({ i }) => i)) : undefined;
+  const geometry = dotGeometry(presentation.lineWidth);
 
   return (
     <div role="group" aria-label="Kleine grafieken per reeks" className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -67,8 +104,19 @@ export function ChartSmallMultiples({
                     * "basic Recharts look") in theme colours (AXIS_COLOR/
                     * GRID_COLOR, chart.tsx — the literal #666/#ccc defaults
                     * are illegible in dark mode); only the honesty-bound tick
-                    * mechanism is custom. */}
-                  <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} />
+                    * mechanism is custom. WP218: grid on/off follows
+                    * `presentation.grid`, same as the combined chart. */}
+                  {presentation.grid !== 'none' ? (
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke={GRID_COLOR}
+                      // Always true: this element only renders inside the
+                      // `presentation.grid !== 'none'` branch above, and
+                      // GridMode has no vertical-only option.
+                      horizontal
+                      vertical={presentation.grid === 'both'}
+                    />
+                  ) : null}
                   <XAxis dataKey="periodLabel" tick={false} stroke={AXIS_COLOR} />
                   <YAxis
                     ticks={ownTicks.map((t) => t.value)}
@@ -82,9 +130,9 @@ export function ChartSmallMultiples({
                     type="linear"
                     dataKey={s.key}
                     stroke={s.color}
-                    strokeWidth={2}
+                    strokeWidth={LINE_WIDTH_PX[presentation.lineWidth]}
                     connectNulls={false}
-                    dot={false}
+                    dot={ProvisionalDot(s.key, s.color, geometry)}
                     isAnimationActive={false}
                   />
                 </LineChart>

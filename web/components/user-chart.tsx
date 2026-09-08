@@ -22,6 +22,7 @@
 
 import { useRef } from 'react';
 import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { LINE_WIDTH_PX, STOCK_PRESENTATION } from '../lib/chart-presentation.ts';
 import {
   AxisTick,
   buildRows,
@@ -110,7 +111,7 @@ export function UserChartView({ spec }: { spec: UserChartSpec }) {
                   dataKey={s.key}
                   name={s.label}
                   stroke={s.color}
-                  strokeWidth={2}
+                  strokeWidth={LINE_WIDTH_PX[STOCK_PRESENTATION.lineWidth]}
                   connectNulls={false}
                   isAnimationActive={false}
                 />

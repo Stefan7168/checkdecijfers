@@ -38,7 +38,17 @@ import {
   YAxis,
 } from 'recharts';
 import type { ChartPoint, ChartSpec } from '../backend/chart/types.ts';
-import { RECHARTS_PALETTE } from '../lib/chart-presentation.ts';
+import {
+  dotGeometry,
+  findFont,
+  fontStack,
+  LINE_WIDTH_PX,
+  RECHARTS_PALETTE,
+  resolvePresentation,
+  seriesColor,
+  xAxisHeight,
+} from '../lib/chart-presentation.ts';
+import { ensureFontLoaded } from '../lib/font-loader.ts';
 import { ChartDownloadMenu } from './chart-download.tsx';
 import { ChartNotes, type ChartNote, type PendingPoint } from './chart-notes.tsx';
 import { ChartSmallMultiples } from './chart-small-multiples.tsx';
@@ -145,7 +155,17 @@ export function clampTotChange(from: string, to: string): [string, string] {
   return from > to ? [to, to] : [from, to];
 }
 
-export function buildRows(spec: PlottableSpec): { rows: Row[]; seriesMeta: SeriesMeta[] } {
+export function buildRows(
+  spec: PlottableSpec,
+  // WP218 (ADR 039) Phase 0: optional effective-colour resolver, so a caller
+  // that has already run the presentation resolver (ChartView, Chart
+  // SmallMultiples) can feed its resolved series colours straight into
+  // `seriesMeta[i].color` — the ONE place every legend swatch, tooltip
+  // swatch and hatch pattern reads its colour from. Default = today's
+  // literal palette lookup, so every existing caller (UserChartView
+  // included, per ADR 037 H2) keeps its current behaviour unchanged.
+  colors: (index: number) => string = (i) => seriesStyle(i).color,
+): { rows: Row[]; seriesMeta: SeriesMeta[] } {
   const periodCodes = new Set<string>();
   for (const series of spec.series) {
     for (const point of series.points) periodCodes.add(point.periodCode);
@@ -155,7 +175,7 @@ export function buildRows(spec: PlottableSpec): { rows: Row[]; seriesMeta: Serie
   const seriesMeta: SeriesMeta[] = spec.series.map((series, i) => ({
     key: `s${i}`,
     label: series.label,
-    ...seriesStyle(i),
+    color: colors(i),
   }));
 
   const rows: Row[] = sortedCodes.map((code) => {
@@ -536,6 +556,15 @@ function SeriesDot(
   opacity = 1,
   seriesLabel?: string,
   onPointClick?: (point: PendingPoint) => void,
+  // WP218 (ADR 039) Phase 0: r/ring follow the resolved line width (R11: the
+  // hollow ring must stay legible at every stroke width — see `dotGeometry`)
+  // and `hideFinal` draws every NON-provisional marker invisible
+  // (opacity 0, never removed from the DOM) when the "alleen voorlopig"
+  // marker mode is chosen, so the `[data-point]` count, keyboard walking
+  // (#212) and click-to-annotate all keep working identically either way.
+  // Defaulted to today's literal geometry (r 4, ring 2, hideFinal false) so
+  // every existing call site/test keeps its current arity and rendering.
+  geometry: { r: number; ring: number; hideFinal: boolean } = { ...dotGeometry('normal'), hideFinal: false },
 ) {
   return function Dot(props: { cx?: number; cy?: number; payload?: Row; stroke?: string }) {
     const { cx, cy, payload } = props;
@@ -546,6 +575,7 @@ function SeriesDot(
     const resultId = payload[`${seriesKey}_resultId`];
     const color = props.stroke ?? 'currentColor';
     const isEnd = endLabel !== undefined && payload.periodCode === endLabel.periodCode;
+    const hiddenFinal = geometry.hideFinal && !provisional;
     // Task 6 keyboard-operability fix (#212 follow-up): a synthetic
     // role="button" on an SVG element gets no native Enter/Space activation
     // from the browser the way a real <button> would, so onKeyDown has to
@@ -564,13 +594,15 @@ function SeriesDot(
         <circle
           cx={cx}
           cy={cy}
-          r={4}
+          r={geometry.r}
           fill={provisional ? 'var(--card)' : color}
           stroke={color}
-          strokeWidth={2}
+          strokeWidth={geometry.ring}
           strokeOpacity={opacity}
           fillOpacity={opacity}
+          opacity={hiddenFinal ? 0 : undefined}
           data-point="value"
+          data-marker={hiddenFinal ? 'hidden' : undefined}
           data-result-id={resultId == null ? undefined : String(resultId)}
           role={onPointClick ? 'button' : undefined}
           tabIndex={onPointClick ? 0 : undefined}
@@ -821,6 +853,75 @@ export function ChartView({
     setPendingPoint(null);
   }
 
+  // Task 3: a real three-way Lijn/Staaf/Tabel switch. Computed here, ABOVE
+  // the schemaVersion guard below, purely so the font-loading Hook right
+  // after (WP218) stays unconditional — neither `canUseLine`, `activeForm`
+  // nor `effectiveKind` reads anything the guard gates (only `spec` and
+  // `state`), so moving them earlier changes nothing about what they
+  // compute; `seriesMeta.length` (used before this move) always equals
+  // `spec.series.length` (filtering periods never removes a whole series —
+  // see the buildRows call further below).
+  //
+  // Guarded, not just `state.form` verbatim: the visual dock and Ontdek's
+  // reading toggle swap `spec` on the SAME mounted ChartView (no `key`), and
+  // the reducer's `reset` action deliberately PRESERVES the previously
+  // chosen form across that swap (so a user-picked Tabel view survives —
+  // see the reset test below). Without this guard, a 'line' form chosen on
+  // an earlier allowed spec would carry straight into a freshly-swapped
+  // multi-region spec where canUseLine is now false, rendering the exact
+  // connected-line-across-regions the honesty rule exists to forbid.
+  //
+  // `activeForm` is the single derived source for what is actually ON
+  // SCREEN — every read below (effectiveKind, the tablist's
+  // aria-selected/tabIndex/segment styling, and onFormTabKeyDown's
+  // FORM_ORDER lookup) shares this one value rather than each re-deriving
+  // the same ternary. It is a display-only projection: `state.form` itself
+  // is untouched, so the reset-preserves-form behaviour above still works
+  // (the stored 'line' choice survives a spec swap even while it renders as
+  // 'bar'). Final review finding: with three separate re-derivations of
+  // this ternary, the tablist's copy used to be missing, so a stale 'line'
+  // form meeting a newly-disallowed multi-region spec made the (disabled)
+  // Lijn tab both aria-selected and tabIndex=0 while neither Staaf nor
+  // Tabel got tabIndex=0 — no tab was keyboard-reachable at all.
+  //
+  // Owner decision B (session 88): a multi-region comparison (bar, >1 series
+  // — one point per region, no time axis) may never be shown as a connected
+  // line — that would imply a trend across regions that was never measured.
+  // `effectiveKind` is what actually drives the Recharts dispatch and both
+  // Y-axis domains below, so the honesty rule and the rendered chart can
+  // never drift apart (WP12 review lesson: a policy the render doesn't
+  // actually use is not a guard). Reads the ORIGINAL spec.kind (the honesty
+  // rule is about the chart's true shape, not the current zoom window).
+  const canUseLine = lineFormAllowed(spec, spec.series.length);
+  const activeForm: ChartForm = state.form === 'line' && !canUseLine ? 'bar' : state.form;
+  const effectiveKind: ChartSpec['kind'] = activeForm === 'table' ? spec.kind : activeForm;
+
+  // WP218 (ADR 039) Phase 0: the presentation resolver, run once per render
+  // with the ACTUAL rendered form (`activeForm`, not raw `state.form` — the
+  // bar-lock rules on valueLabels/zeroBaseline must apply exactly when Staaf
+  // is what's on screen, not whatever `state.form` said before the
+  // canUseLine guard above). `pres` feeds the colour resolver passed into
+  // `buildRows` further below (so every legend swatch, tooltip swatch and
+  // hatch pattern follows the SAME effective colour automatically) plus
+  // every Recharts prop this task wires. `hasProvisional` reads the RAW
+  // spec (not the zoomed viewSpec) — a provisional point outside the
+  // current zoom window still governs the honesty-locked defaults, the same
+  // pattern spec.attribution uses elsewhere in this file.
+  const hasProvisional = spec.series.some((s) => s.points.some((p) => p.provisional));
+  const resolved = resolvePresentation(
+    { kind: spec.kind, form: activeForm, seriesCount: spec.series.length, hasProvisional },
+    state.presentation,
+  );
+  const pres = resolved.values;
+  // This is the one Hook `pres` feeds, so it must run unconditionally on
+  // every render — ABOVE the schemaVersion guard below, which a live spec
+  // swap on this same mounted instance (see the specIdentity block above)
+  // could otherwise flip between renders and skip this call on some of them.
+  useEffect(() => {
+    const font = findFont(pres.fontFamily);
+    if (font && font.source === 'google') ensureFontLoaded(font);
+  }, [pres.fontFamily]);
+
   if (spec.schemaVersion !== 1) {
     // Renderers dispatch on the schema version (ADR 007); this one only
     // speaks v1 and must say so rather than misrender a future spec — the
@@ -864,43 +965,12 @@ export function ChartView({
   const zoomAvailable = spec.kind === 'line' && allPeriodCodes.length > 1;
   const viewSpec = zoomAvailable ? windowSpec(spec, state.periodRange) : spec;
 
-  const { rows, seriesMeta } = buildRows(viewSpec);
-  // Owner decision B (session 88): a multi-region comparison (bar, >1 series
-  // — one point per region, no time axis) may never be shown as a connected
-  // line — that would imply a trend across regions that was never measured.
-  // `effectiveKind` is what actually drives the Recharts dispatch and both
-  // Y-axis domains below, so the honesty rule and the rendered chart can
-  // never drift apart (WP12 review lesson: a policy the render doesn't
-  // actually use is not a guard).
-  // Reads the ORIGINAL spec.kind (the honesty rule is about the chart's true
-  // shape, not the current zoom window) — `seriesMeta` above now comes from
-  // `buildRows(viewSpec)`, whose `.length` is unaffected by period filtering
-  // (filtering periods never removes a whole series), so this stays correct
-  // unchanged.
-  const canUseLine = lineFormAllowed(spec, seriesMeta.length);
-  // Guarded, not just `state.form` verbatim: the visual dock and Ontdek's
-  // reading toggle swap `spec` on the SAME mounted ChartView (no `key`), and
-  // the reducer's `reset` action deliberately PRESERVES the previously
-  // chosen form across that swap (so a user-picked Tabel view survives —
-  // see the reset test below). Without this guard, a 'line' form chosen on
-  // an earlier allowed spec would carry straight into a freshly-swapped
-  // multi-region spec where canUseLine is now false, rendering the exact
-  // connected-line-across-regions the honesty rule exists to forbid.
-  //
-  // `activeForm` is the single derived source for what is actually ON
-  // SCREEN — every read below (effectiveKind, the tablist's
-  // aria-selected/tabIndex/segment styling, and onFormTabKeyDown's
-  // FORM_ORDER lookup) shares this one value rather than each re-deriving
-  // the same ternary. It is a display-only projection: `state.form` itself
-  // is untouched, so the reset-preserves-form behaviour above still works
-  // (the stored 'line' choice survives a spec swap even while it renders as
-  // 'bar'). Final review finding: with three separate re-derivations of
-  // this ternary, the tablist's copy used to be missing, so a stale 'line'
-  // form meeting a newly-disallowed multi-region spec made the (disabled)
-  // Lijn tab both aria-selected and tabIndex=0 while neither Staaf nor
-  // Tabel got tabIndex=0 — no tab was keyboard-reachable at all.
-  const activeForm: ChartForm = state.form === 'line' && !canUseLine ? 'bar' : state.form;
-  const effectiveKind: ChartSpec['kind'] = activeForm === 'table' ? spec.kind : activeForm;
+  // WP218 (ADR 039) Phase 0: `pres` (canUseLine/activeForm/effectiveKind
+  // included) is computed above, ahead of the schemaVersion guard — see the
+  // comment there. `colorFor` feeds buildRows so every legend swatch,
+  // tooltip swatch and hatch pattern reads the SAME effective colour.
+  const colorFor = (i: number) => seriesColor(pres, i);
+  const { rows, seriesMeta } = buildRows(viewSpec, colorFor);
   const dimEntries = Object.entries(spec.dimLabels);
   // Final review finding: this used to read `viewSpec` (the ORIGINAL
   // spec.kind) directly, so a line-kind chart's curated annotations stayed
@@ -928,6 +998,17 @@ export function ChartView({
     plan.endLabels.length > 0
       ? Math.min(140, plan.endLabels.reduce((w, l) => Math.max(w, labelWidthPx(l.text)), 0))
       : 8;
+  // WP218: reserved x-axis height for tilted labels (xAxisHeight) needs the
+  // longest label actually plotted — `rows`, never a re-derivation, so a
+  // zoomed viewSpec's shorter label set reserves less height too.
+  const longestPeriodLabel = rows.reduce(
+    (longest, row) => (String(row.periodLabel).length > longest.length ? String(row.periodLabel) : longest),
+    '',
+  );
+  // undefined (flat labels, the stock look) reserves no extra height —
+  // spread only when defined so Recharts' own XAxis default height applies,
+  // exactly as if the prop were never passed.
+  const xAxisHeightPx = xAxisHeight(pres.xLabels, longestPeriodLabel);
   const accessibleName = `Grafiek: ${spec.title} (${spec.unit})`;
   // Final review finding (owner-directed follow-up): small multiples always
   // drew line panels regardless of the form switch, so choosing Staaf while
@@ -1145,9 +1226,16 @@ export function ChartView({
           (smallMultiples && smallMultiplesAvailable ? 'h-auto' : 'h-64')
         }
         data-tooltip-trigger={tooltipTrigger}
+        // WP218: SVG <text> inherits font-family via CSS, so setting it once
+        // on this container reaches every axis tick/point/end/bar label
+        // drawn below; chart-download.tsx's inlineComputedPaint writes the
+        // computed family onto every text node, so the PNG/SVG export
+        // carries it too. undefined (the stock look: no font override)
+        // leaves the page's own font untouched, same as today.
+        style={fontStack(pres.fontFamily) ? { fontFamily: fontStack(pres.fontFamily) } : undefined}
       >
         {smallMultiples && smallMultiplesAvailable ? (
-          <ChartSmallMultiples spec={viewSpec} hiddenKeys={state.hiddenKeys} axisMode={axisMode} />
+          <ChartSmallMultiples spec={viewSpec} hiddenKeys={state.hiddenKeys} axisMode={axisMode} presentation={pres} />
         ) : (
         <ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 640, height: 256 }}>
           {effectiveKind === 'line' ? (
@@ -1160,9 +1248,29 @@ export function ChartView({
               {/* Recharts' own default grid + axis geometry (session 87: the
                 * "basic Recharts look") in theme colours (AXIS_COLOR/GRID_COLOR:
                 * dark mode); only the honesty-bound custom ticks and labels
-                * below are ours. */}
-              <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} />
-              <XAxis dataKey="periodLabel" stroke={AXIS_COLOR} tick={{ fill: AXIS_COLOR }} />
+                * below are ours. WP218: horizontal/vertical/no-grid-at-all
+                * follow `pres.grid`. */}
+              {pres.grid !== 'none' ? (
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke={GRID_COLOR}
+                  // Always true: this element only renders inside the
+                  // `pres.grid !== 'none'` branch above, and GridMode has no
+                  // vertical-only option — 'both'/'horizontal' both want it.
+                  horizontal
+                  vertical={pres.grid === 'both'}
+                />
+              ) : null}
+              <XAxis
+                dataKey="periodLabel"
+                stroke={AXIS_COLOR}
+                tick={{ fill: AXIS_COLOR }}
+                axisLine={pres.axisLines === 'shown'}
+                tickLine={pres.axisLines === 'shown'}
+                angle={pres.xLabels === 'tilted' ? -45 : 0}
+                textAnchor={pres.xLabels === 'tilted' ? 'end' : 'middle'}
+                {...(xAxisHeightPx !== undefined ? { height: xAxisHeightPx } : {})}
+              />
               {/* #197 idea 6: axis ticks come from the full spec (valueLabelPlan
                 * doesn't know about hiddenKeys) and are NOT recomputed when a
                 * series is hidden — an accepted v1 limitation, not a bug: the
@@ -1173,8 +1281,10 @@ export function ChartView({
                 interval={0}
                 tick={plan.axisTicks.length > 0 ? AxisTick(tickByValue) : false}
                 width={yAxisWidth}
-                domain={yAxisDomain(effectiveKind)}
+                domain={pres.zeroBaseline === 'zero' ? [0, 'auto'] : yAxisDomain(effectiveKind)}
                 stroke={AXIS_COLOR}
+                axisLine={pres.axisLines === 'shown'}
+                tickLine={pres.axisLines === 'shown'}
               />
               <Tooltip trigger={tooltipTrigger} content={<ChartTooltip seriesMeta={seriesMeta} />} />
               {/* #170(4): curated event markers — drawn before the series so
@@ -1203,11 +1313,18 @@ export function ChartView({
                       dataKey={s.key}
                       name={s.label}
                       stroke={s.color}
-                      strokeWidth={2}
+                      strokeWidth={LINE_WIDTH_PX[pres.lineWidth]}
                       strokeOpacity={dimmed ? 0.25 : 1}
                       data-series-dimmed={dimmed ? 'true' : undefined}
                       connectNulls={false}
-                      dot={SeriesDot(s.key, endLabelByKey.get(s.key), dimmed ? 0.25 : 1, s.label, (p) => setPendingPoint(p))}
+                      dot={SeriesDot(
+                        s.key,
+                        pres.valueLabels === 'shown' ? endLabelByKey.get(s.key) : undefined,
+                        dimmed ? 0.25 : 1,
+                        s.label,
+                        (p) => setPendingPoint(p),
+                        { ...dotGeometry(pres.lineWidth), hideFinal: pres.markers === 'provisionalOnly' },
+                      )}
                       isAnimationActive={false}
                     />
                   );
@@ -1238,10 +1355,38 @@ export function ChartView({
               {/* Recharts' own default grid + axis geometry (session 87: the
                 * "basic Recharts look") in theme colours (AXIS_COLOR/GRID_COLOR:
                 * dark mode); only the honesty-bound custom ticks and labels
-                * below are ours. */}
-              <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} />
-              <XAxis dataKey="periodLabel" stroke={AXIS_COLOR} tick={{ fill: AXIS_COLOR }} />
-              <YAxis tick={false} width={16} domain={yAxisDomain(effectiveKind)} stroke={AXIS_COLOR} />
+                * below are ours. WP218: grid/axis props mirror the line
+                * branch above; the Y domain stays unconditionally zero-based
+                * here (bar honesty rule, never overridden by zeroBaseline). */}
+              {pres.grid !== 'none' ? (
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke={GRID_COLOR}
+                  // Always true: this element only renders inside the
+                  // `pres.grid !== 'none'` branch above, and GridMode has no
+                  // vertical-only option — 'both'/'horizontal' both want it.
+                  horizontal
+                  vertical={pres.grid === 'both'}
+                />
+              ) : null}
+              <XAxis
+                dataKey="periodLabel"
+                stroke={AXIS_COLOR}
+                tick={{ fill: AXIS_COLOR }}
+                axisLine={pres.axisLines === 'shown'}
+                tickLine={pres.axisLines === 'shown'}
+                angle={pres.xLabels === 'tilted' ? -45 : 0}
+                textAnchor={pres.xLabels === 'tilted' ? 'end' : 'middle'}
+                {...(xAxisHeightPx !== undefined ? { height: xAxisHeightPx } : {})}
+              />
+              <YAxis
+                tick={false}
+                width={16}
+                domain={yAxisDomain(effectiveKind)}
+                stroke={AXIS_COLOR}
+                axisLine={pres.axisLines === 'shown'}
+                tickLine={pres.axisLines === 'shown'}
+              />
               <Tooltip trigger={tooltipTrigger} content={<ChartTooltip seriesMeta={seriesMeta} />} />
               {seriesMeta
                 .filter((s) => !state.hiddenKeys.has(s.key))

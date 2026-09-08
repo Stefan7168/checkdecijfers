@@ -676,6 +676,32 @@ describe('ChartView — #197 step 1, rendered against the real svg', () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// WP218 (ADR 039) Phase 0: ChartView now reads every one of these literals
+// from the presentation resolver (chart-presentation.ts) instead of hardcoding
+// them, but with NO overrides applied (state.presentation starts `{}`) the
+// resolver's effective values equal STOCK_PRESENTATION exactly — so the
+// stock render must stay byte-identical to what these literals were before
+// this task. This is the regression guard for that refactor, not a test of
+// the resolver itself (that's chart-presentation.test.ts).
+// ---------------------------------------------------------------------------
+
+describe('WP218 phase 0 — the stock look still renders exactly today\'s literals', () => {
+  beforeEach(() => vi.unstubAllGlobals());
+
+  it('line stroke-width 2, dot r 4 ring 2, grid both, axis lines on', () => {
+    const { container } = render(<ChartView spec={threePointSpec()} />);
+    const path = container.querySelector('.recharts-line-curve');
+    expect(path?.getAttribute('stroke-width')).toBe('2');
+    const dot = container.querySelector('circle[data-point="value"]');
+    expect(dot?.getAttribute('r')).toBe('4');
+    expect(dot?.getAttribute('stroke-width')).toBe('2');
+    expect(container.querySelector('.recharts-cartesian-grid-horizontal')).not.toBeNull();
+    expect(container.querySelector('.recharts-cartesian-grid-vertical')).not.toBeNull();
+    expect(container.querySelector('.recharts-xAxis .recharts-cartesian-axis-line')).not.toBeNull();
+  });
+});
+
 describe('ChartTooltip — #197: announced, not just shown', () => {
   it('is a polite live region, so keyboard point-walking through the chart is read out', () => {
     const s = threePointSpec();
