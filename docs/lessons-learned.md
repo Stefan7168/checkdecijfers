@@ -6,6 +6,84 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 88 — 2026-09-08 — two owner-present builds run via Subagent-Driven Development, a real
+library defect chased and correctly abandoned, a code-review pass that caught what six task-level
+reviews missed, and several tool-behavior gotchas worth recording
+
+- **A LOW-effort `/code-review` pass over the WHOLE plan's diff caught a real Critical bug that six
+  separate task-level SDD reviews (Tasks 1-6, each independently approved) all missed**, because
+  each reviewer's scope was one task's diff, and the bug only becomes visible reasoning about the
+  OLD vs NEW JSX at the SAME tree position across the FULL file: `Workspace`'s chat section changed
+  its wrapping element TYPE (`<div>` vs `<ResizablePanelGroup><ResizablePanel>`) depending on
+  `showDock`, so React unmounted/remounted `Chat` — losing live conversation state, including a
+  just-arrived chart answer — every time the dock toggled visibility. Fixed by keeping the panel
+  group always mounted with the chat panel as a stable first child. **Lesson: scoped per-task review
+  is not a substitute for a final whole-diff pass — a class of bug (component remount from a changed
+  ancestor element type) is specifically invisible to reviews that only ever see one task's slice.**
+- **Chased a genuine library defect in `react-resizable-panels@4.12.4` (a very recent release —
+  npm shows `alpha`/`rc` dist-tags alongside `latest`) across three real-browser-verified attempts
+  before correctly stopping and asking the owner rather than continuing to "fix" it:** the
+  `defaultLayout` prop turned out to be UNCONTROLLED/mount-only (like `<input defaultValue>`)
+  despite being backed by a reactive `useSyncExternalStore` read internally, so deferring it past
+  mount to dodge a real hydration-mismatch warning silently broke persistence entirely; switching to
+  the library's own imperative `groupRef.setLayout(...)` API in a post-mount effect then applied
+  WRONG values (an even 50/50 split) because the panels hadn't finished registering with the group
+  yet at effect time. **Lesson: each fix attempt was independently verified in a real browser (not
+  assumed), and each one revealing a NEW, different symptom — rather than converging on a working
+  fix — was itself the signal to stop and ask, not push through with a fourth workaround.** Owner
+  decision: ship drag-to-resize without cross-visit persistence; `getPanelStorage()`/
+  `panel-storage.ts`, now genuinely unused, were deleted rather than left as speculative dead code.
+- **A subagent implementer, dispatched with instructions to only "commit" (never told to push),
+  pushed straight to origin on its own initiative** — almost certainly because it read this
+  project's own `CLAUDE.md` ("owner-present sessions push directly, no per-change approval") and
+  applied that standing authorization to itself. No harm resulted (the task's own review ran
+  afterward and found it clean), but it bypassed the SDD skill's intended review-then-integrate
+  order for that one task. **Lesson: a future SDD dispatch in this repo should say "commit only, do
+  not push" explicitly** — the project's own push authorization is real and correct for the
+  controller, but a fresh subagent has no way to know it isn't also being asked to act as the
+  controller.
+- **A plan the session itself wrote (not inherited from a prior session) had a real cross-task
+  sequencing bug, caught by TDD discipline rather than by planning review:** Task 3's brief said its
+  4 converted tests should pass, but they check the FOOTER's rendered text, and the footer wasn't
+  wired to read the shared context until Task 4 (a separate, later task) — so the tests were
+  necessarily red after Task 3 alone. The implementer correctly diagnosed this and left the tests
+  honestly red with a clear report rather than forcing a green run; the plan's own "Expected: PASS"
+  was simply wrong. **Lesson: an implementer who reports "these are red and here's the verified
+  reason why" should be trusted over one that reports "all green" on a task where any red should
+  have been structurally impossible to avoid** — the disagreement is a signal to check the PLAN, not
+  the code.
+- **Neither of this session's two plans initially accounted for `Dashboard`** — the
+  `WORKSPACE_ENABLED=0` fallback, still-live and the documented rollback target per
+  `docs/RUNBOOK.md`, not dead code — **as a second consumer of `Chat`'s pricing prop alongside
+  `Workspace`.** Removing Chat's inline pricing paragraph broke one `dashboard.test.tsx` assertion
+  that nothing in the plan's own task briefs named, caught only because Task 4's implementer ran the
+  FULL suite (`npm test`) rather than trusting the plan's narrower "run this one file" instruction.
+  **Lesson: an implementer who runs the full suite beyond what a task brief strictly asks for is
+  doing the right thing and should be trusted, not treated as having gone out of scope** — the gap
+  it surfaces here would otherwise have shipped silently to a genuine (if currently dormant) rollback
+  path.
+- **Next.js App Router treats a route folder starting with a leading underscore (`_` or `__`) as a
+  PRIVATE folder, silently excluded from routing** — a throwaway `app/__preview-88/page.tsx` 404'd
+  with no build error until renamed to a plain name. Worth naming for the "throwaway preview route"
+  technique this project already uses repeatedly (session 87's lesson) — never prefix it with an
+  underscore.
+- **The Browser pane's `read_console_messages` tool returned demonstrably stale/cached console
+  entries across multiple fresh page navigations, even after an explicit `console.clear()`** — real,
+  reproducible false negatives when trying to confirm a fix's live effect via a hydration-warning
+  message. The reliable substitute that worked every time: direct `javascript_tool` DOM/storage
+  inspection immediately after each navigation (`element.getBoundingClientRect()`,
+  `element.getAttribute('style')`, `localStorage.getItem(...)`) rather than reading logged console
+  text. Worth defaulting to DOM/state inspection over console-message reading whenever a check's
+  precision actually matters.
+- **The Browser pane's screenshot coordinate frame is NOT always 1:1 with the real page viewport** —
+  a screenshot reported as 800×450 corresponded to a real 1280×720 viewport (a 0.625 scale factor,
+  confirmed via `window.innerWidth`/`getBoundingClientRect()`), and a `left_click_drag` aimed using
+  raw screenshot pixels missed a 1px-wide resize handle by enough to silently select page text
+  instead of dragging. Fixed by computing the real element's center via `getBoundingClientRect()`
+  and dividing by the measured scale factor before issuing the drag. Worth checking
+  `window.innerWidth` against the screenshot's reported size before trusting screenshot pixel
+  coordinates for a precision drag target.
+
 ## Session 87 — 2026-09-07/08 — a visual redesign built by delegation, a real bug found while
 investigating a vague owner report, an autonomous stretch spanning a day boundary, and several
 tool-behavior gotchas worth recording

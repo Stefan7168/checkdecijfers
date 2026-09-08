@@ -9,33 +9,34 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
-**▶ SESSION 87 (2026-09-07 owner-present, then explicit "continue working autonomously" overnight
-into 2026-09-08) — chat + chart visual redesign shipped, deep-reviewed, and LIVE; a real prod bug
-fixed; a full open-questions re-triage.** Fixed a real prod bug found while investigating an owner
-report ("tabs don't open"): `/geschiedenis` was frozen redirecting to `/` by build-time static
-prerendering (`a8ae15b`, same bug class as #135). Then, per an owner request to improve the UI: 3
-mockup options built and reviewed, owner picked Option B + 3 amendments; a Fable subagent built the
-full redesign against a committed spec (`90fda5d`→`e6f5b21`) — shadcn/ui neutral + `next-themes`
-dark mode, papier & inkt retired ([12-huisstijl.md](12-huisstijl.md)), Recharts basic palette, two
-homepage-style blocks removed from the chat screen. A deeper adversarial pass (real browser +
-measured contrast, not just a diff read) then caught and fixed 5 real regressions the mechanical
-restyle introduced (`8350988`): dark-mode chart illegibility, tooltip contrast, missing focus
-rings, a colour-only active-thread indicator, dock tabs overflowing their container. A
-mobile-viewport check found the sidebar had NO responsive breakpoint at all (pre-existing, not a
-regression) — fixed by auto-collapsing it via the SAME existing collapsed-sidebar UI (`b912175`,
-[#213](open-questions.md)); the header's own mobile wrapping was flagged but NOT fixed (new nav UI
-needed, [#214](open-questions.md)). Two research briefs produced for sub-projects 2/3 — no product
-decisions made unsupervised; sub-project 2 surfaced a real streaming/validation-timing tension
-(unresolved, needs a brainstorm); sub-project 3's tier-3 claim ("different data needs no new code")
-empirically confirmed live on production. **A full open-questions re-triage** (first complete one
-since session 71, every row read across 5 parallel agents) archived 32 rows total this session and
-fixed several real stale/contradictory claims found in the process. Dependency/security check: 0
-vulnerabilities, 0 Dependabot alerts. **Verified LIVE throughout** (`GET /api/health` → ok on every
-deploy; DOM-confirmed correct rendering — no screenshot possible while the owner's machine screen
-was locked, but `get_page_text`/`read_page`/`form_input`/`javascript_tool` all work regardless). 16
-commits (`a8ae15b`→`468a8e6`), full verification block (typecheck ×2, web 701/701, backend
-2089/2089, real `next build`, `/code-review` LOW) before every one, every push's own CI watched
-green. Full session entry: [status-archive.md](status-archive.md).
+**▶ SESSION 88 (2026-09-08, owner present throughout) — two plans shipped LIVE via Subagent-Driven
+Development, plus a real library defect found and correctly worked around.** Brainstormed
+sub-project 2 ([#211](open-questions.md)) — the owner's real ask was missing loading FEEDBACK, not
+live-typed streaming, sidestepping the streaming/validation tension (still undecided) instead of
+resolving it. **Plan 1** (9 tasks): chat-answer/chart-panel/thread-switch loading skeletons +
+drag-to-resize chart panel. A LOW-effort `/code-review` pass over the whole plan's diff caught a
+real Critical bug six independent task-level reviews had all missed: `Workspace`'s chat section
+changed its wrapping element TYPE depending on `showDock`, so React unmounted/remounted `Chat`
+(losing live conversation state) every time the dock toggled — fixed by keeping the panel group
+always mounted. Real-browser verification then found `react-resizable-panels@4.12.4`'s own
+`defaultLayout` restoration genuinely broken (a saved width comes back swapped/wrong on reload,
+even violating a panel's own configured minimum) — traced across 3 fix attempts before confirming
+it's a real library defect, not our code; owner decision: ship resize WITHOUT cross-visit
+persistence. **Plan 2** (7 tasks, from live owner feedback on the running app): removed a "Soon"
+badge, unified 3 chip styles with a selected-state checkmark, moved the pre-send pricing line into
+the site's global footer via a new `PricingHintContext` — caught and fixed a real sequencing bug in
+the plan's own Task 3 (its tests were correctly red pending Task 4, not a defect) and a real gap
+where `Dashboard` (the still-live `WORKSPACE_ENABLED=0` rollback fallback, not dead code) was never
+accounted for as a second consumer of the removed pricing text. Also this session: a shadcn
+`Button` conversion for the answer card's action row (owner feedback on a live screenshot, pure
+presentational change); a Fable subagent researched an external demo site for sub-project 3's
+future brainstorm — its "storytelling mode" uses ZERO LLM calls (fixed templates over stats the
+product's own R5 derivations already register), reframing the owner's "very API heavy" concern to
+apply only to an LLM-authored alternative. **Verified LIVE throughout** (`GET /api/health` → ok
+after every one of 4 pushes). 17 commits (`5eec334`→`0360af1`), full verification block
+(typecheck ×2, web 717/717, backend 2089/2089, real `next build`, `/code-review` LOW) before every
+push, every push's own CI individually watched green. Full session entry:
+[status-archive.md](status-archive.md).
 
 **▶ SESSION 86 (2026-09-07, owner present, mixed autonomous/interactive) — the CI `deploy` job is
 FIXED and LIVE for the first time in weeks, and that exposed + fixed a real production incident.**
@@ -107,11 +108,17 @@ future subscription tier, explicitly parked), #208 (needs the owner's URL/path).
 **✅ session 86 — the 3 `gh secret set` commands for Route B are DONE** (see the session-86 entry
 above) — `deploy` is green again, no longer a standing blocker.
 
-**▶ NEXT, in order:** (a) WP202a's remaining scope — fixtures (`tests/fixtures/llm/attachments/`,
-real-LLM-spend, owner-supervised), THEN the owner-supervised migration apply + the actual
-`ATTACHMENTS_ENABLED=1` flip + go-live — see [08-build-plan.md](08-build-plan.md)'s WP202a section
-for the exact list (the docs §7 sweep itself is DONE, session 86); (b) WP30c + #197's older
-follow-ups — owner-menu, no rush.
+**▶ NEXT, in order:** (a) sub-project 2's ([#211](open-questions.md)) or sub-project 3's
+([#212](open-questions.md)) real design brainstorm with the owner — both still need one before any
+build; sub-project 3 is arguably lower-risk to start (tier 3 already confirmed working live, tiers
+1-2 have 3 concrete approach options on the table); sub-project 2 has a real unresolved
+streaming/validation-timing tension that needs settling first; (b) [#214](open-questions.md), the
+mobile header wrapping — needs a real design decision (hamburger/overflow menu? hide the balance
+badge? drop secondary links behind "Account"?), no existing collapsed-header UI to reuse; (c)
+WP202a's remaining scope — fixtures (`tests/fixtures/llm/attachments/`, real-LLM-spend,
+owner-supervised), THEN the owner-supervised migration apply + the actual `ATTACHMENTS_ENABLED=1`
+flip + go-live — see [08-build-plan.md](08-build-plan.md)'s WP202a section for the exact list; (d)
+WP30c + #197's older follow-ups — owner-menu, no rush.
 
 
 **(Historical — the pause, 2026-08-15 to 2026-08-26.)** Project was paused ~2 months (owner decision) and the

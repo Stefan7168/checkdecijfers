@@ -1,5 +1,135 @@
 # STATUS archive — the session log
 
+**Session 88 (2026-09-08, owner present throughout) — TWO PLANS EXECUTED VIA SUBAGENT-DRIVEN
+DEVELOPMENT AND SHIPPED LIVE, A REAL LIBRARY DEFECT TRACED AND CORRECTLY WORKED AROUND, AND A
+CODE-REVIEW PASS THAT CAUGHT A CRITICAL BUG SIX TASK-LEVEL REVIEWS HAD MISSED.**
+
+1. **Brainstormed sub-project 2 ("chat interaction polish," [#211](open-questions.md)) with the
+   owner.** The owner's actual complaint turned out to be missing loading FEEDBACK (no spinner/
+   skeleton while waiting), not the absence of live-typed streaming text — this sidesteps the
+   validate-after-generate/stream-as-you-generate architectural tension session 87's research brief
+   surfaced entirely, rather than resolving it (that tension is STILL undecided). Design spec
+   written and committed
+   ([docs/superpowers/specs/2026-09-08-chat-interaction-polish-design.md](superpowers/specs/2026-09-08-chat-interaction-polish-design.md))
+   before any build began.
+2. **Plan 1 — loading skeletons + resizable chart panel** (9 tasks, plan:
+   [docs/superpowers/plans/2026-09-08-chat-interaction-polish.md](superpowers/plans/2026-09-08-chat-interaction-polish.md)),
+   executed via `superpowers:subagent-driven-development` — a fresh implementer subagent per task,
+   a dedicated reviewer per task, model tier picked by task complexity (Haiku for
+   fully-specified/mechanical tasks, Sonnet for multi-file integration work). Built: chat-answer
+   skeleton alongside the existing busy text (kept verbatim — it carries an owner-mandated CBS/web
+   honesty distinction from the WP129+130 go-live), chart-panel skeleton (only when the dock is
+   already open from an earlier turn — never implying a chart is coming on a brand-new question),
+   thread-switch skeleton, and a drag-to-resize chart panel (`react-resizable-panels`, an
+   SSR-safety helper for its `useDefaultLayout` hook).
+   - **A mandatory LOW-effort `/code-review` pass over the WHOLE plan's diff — required before any
+     push per `CLAUDE.md`, run even though all 6 tasks had already been individually approved —
+     caught a real Critical bug none of those 6 task-level reviews had seen:** `Workspace`'s chat
+     section changed its wrapping element TYPE (`<div>` vs `<ResizablePanelGroup><ResizablePanel>`)
+     depending on `showDock`, so React unmounted/remounted `Chat` — losing all live conversation
+     state, including a just-arrived chart answer — every single time the dock toggled visibility
+     (a chart's first appearance, or the viewport crossing the `isWide` breakpoint). Invisible to
+     scoped task reviews because it only shows up reasoning about the OLD vs NEW JSX at the SAME
+     tree position across the FULL file. Fixed by keeping the panel group always mounted with the
+     chat panel as a stable first child, only the trailing handle+dock panel conditional. This also
+     surfaced that `ResizablePanelGroup` had never actually been exercised by any test before
+     (jsdom lacks `ResizeObserver`, which the library needs internally) — fixed with the same stub
+     `chart.test.tsx` already uses for the same reason.
+   - **Real-browser verification (a throwaway preview route, deleted after each check) found
+     `react-resizable-panels@4.12.4`'s own cross-visit persistence genuinely broken** — a correctly
+     -saved width comes back swapped/wrong on reload, even violating the chat panel's own
+     configured minimum width. Traced across THREE independently real-browser-verified fix
+     attempts, each revealing a NEW symptom rather than converging (deferring `defaultLayout` past
+     mount silently broke persistence entirely — it's an uncontrolled/mount-only prop despite being
+     backed by a reactive read internally; switching to the library's imperative
+     `groupRef.setLayout(...)` API applied WRONG values, an even 50/50 split, because panels hadn't
+     finished registering with the group yet at effect time) before correctly stopping and asking
+     the owner rather than attempting a fourth workaround. **Owner decision: ship drag-to-resize
+     WITHOUT cross-visit persistence** — the now-unused SSR-safety helper (`getPanelStorage()`/
+     `panel-storage.ts`) was deleted rather than left as speculative dead code.
+   - Verified: web suite 710/710 at Plan 1's own close (712/712 immediately after Task 6, before
+     dropping 2 persistence-only tests along with the removed code), `tsc` clean, real `next build`
+     clean throughout;
+     real-browser check of all three skeletons, the resize drag, both min/max clamps (18%/40%), and
+     both light/dark mode.
+3. **Plan 2 — chip consistency + footer pricing** (7 tasks, plan:
+   [docs/superpowers/plans/2026-09-08-chip-consistency-and-footer-pricing.md](superpowers/plans/2026-09-08-chip-consistency-and-footer-pricing.md)),
+   from live owner feedback given while looking at the running app mid-session. Removed the "Soon"
+   badge from the disabled "Connect database" chip; unified "Add link"'s style with an unselected
+   source/Internet chip (`CHIP_OFF`) and added a checkmark to the selected state (previously only a
+   subtle background/text-colour shift); moved the pre-send pricing line from rendering inline in
+   `Chat` into the site's global footer via a new `PricingHintContext` (`SiteFooter` is mounted as a
+   layout SIBLING of the page content, not a descendant of `Workspace`/`Chat`, so a shared context
+   was the only way to bridge the two without prop-drilling through unrelated components; the
+   context's default value has a deliberate no-op setter, which is what keeps every existing
+   byte-pinned footer test passing unmodified).
+   - **Caught and fixed a real cross-task sequencing bug in the plan's own authorship:** Task 3's 4
+     converted tests check the FOOTER's rendered text, but the footer wasn't wired to read the
+     shared context until Task 4 (a separate, later task) — so those tests were structurally
+     guaranteed to be red after Task 3 alone, and the plan's own "Expected: PASS" for that step was
+     simply wrong. The implementer correctly left them honestly red with a clear diagnosis rather
+     than forcing a green run; verified as a genuine plan-authoring gap, not an implementation
+     defect, before proceeding.
+   - **Caught and fixed a real gap neither plan initially accounted for:** `Dashboard` — the
+     `WORKSPACE_ENABLED=0` fallback, still-live and the documented rollback target per
+     `docs/RUNBOOK.md`, NOT dead code — also renders `Chat` with a `pricing` prop, and its own test
+     still asserted the OLD inline pricing text Task 3 removed. Caught only because Task 4's
+     implementer ran the FULL suite (`npm test`) rather than trusting the plan's narrower
+     instruction to run one file. Confirmed NOT a production bug (`app/layout.tsx` already wrapped
+     both `Dashboard` and `Workspace` in the same provider+footer correctly) — a pure
+     test-isolation gap, fixed the same way Task 3 converted `chat.test.tsx`.
+   - Verified: full web suite 717/717, `tsc` clean, real `next build` clean, `/code-review` LOW 0
+     findings on a fresh whole-diff pass; real-browser check (a throwaway preview route) confirmed
+     the checkmark, chip consistency, the Soon badge's removal, and the footer's pricing text —
+     matching the owner's own originally-pasted example text exactly — in both light and dark mode.
+4. **A Fable subagent researched an external demo site** (`checkdecijfers-3d-demo.vercel.app`) for
+   sub-project 3's ("conversational chart editing") future brainstorm, per an owner request mid-
+   session. Key finding: the demo's "storytelling mode" — scrollytelling narratives over CBS-style
+   3D map data — uses ZERO LLM calls; it's fixed Dutch templates over computed stats (max, min,
+   change, rank) that this product's own R5 derivations already register. Reframes the owner's
+   "very API heavy" framing: the real fork isn't chart-type-choice vs. storytelling, it's
+   *deterministic* storytelling (near-zero LLM calls, reuses existing derivations) vs.
+   *LLM-authored* storytelling (multiple calls per story, a new fabrication surface) — chart-type
+   choice is a prerequisite to either, not a competing option. Also flagged two real constraint
+   risks if ever built here: the demo fetches CBS data live client-side (violates principle b), and
+   its templates are unit-blind, producing correct numbers with wrong sentences (the exact
+   %/procentpunt trap R10 guards against). Report saved to session-local scratch
+   (`.superpowers/sdd/fable-chart-editing-research.md`, gitignored) — fold into the actual
+   brainstorm doc if/when that round happens; not committed as this session's own artifact.
+5. **shadcn `Button` conversion for the answer card's action row**, from owner feedback on a live
+   screenshot: "Bewijs dit cijfer"/"Kopieer als citaat"/"Download als CSV"/"Technische details" and
+   the 👍/👎 feedback buttons were hand-rolled `<button>` elements with manually duplicated Tailwind
+   classes across `chat.tsx`, `answer-proof.tsx`, and `feedback-buttons.tsx` — never using the
+   shadcn `Button` component the rest of the session-87 redesign already relies on. Converted to
+   `Button variant="link" size="sm"` (proof/citation/CSV/technical-details links) and
+   `Button variant="outline"/"secondary" size="icon-xs"` (feedback thumbs, matching the app's
+   `rounded-lg` language instead of a fully-round pill that matched nothing else). Pure
+   presentational swap — every `aria-pressed`/`aria-expanded`/`disabled`/`onClick` prop preserved
+   verbatim. Verified in a real browser, light and dark mode.
+6. **Process note, corrected in this same session:** a Plan 2 implementer subagent, dispatched with
+   instructions to only "commit" (never told to push), pushed straight to origin on its own
+   initiative — almost certainly reading this project's own `CLAUDE.md` standing push authorization
+   as applying to itself. No harm resulted (that task's own review ran afterward and found it
+   clean, confirmed via `git log origin/main` that no other task self-pushed), but future
+   Subagent-Driven Development dispatches in this repo should say "commit only, do not push"
+   explicitly to preserve the intended review-before-push order.
+
+**Verified facts, session close:** 17 commits (`5eec334`→`0360af1`) landed across 5 pushes, each
+its own green CI run watched to completion before the next push started, no exceptions —
+`0ca8853` (run 34185419337), `c83d572` (34189796385, Plan 1 complete), `0e0d219` (34190520643,
+Plan 2's Task 1 — see the process note above on why this one push wasn't the controller's own),
+`e2f442e` (34192537302, Plan 2 complete), `0360af1` (34193704391, the Button conversion) — all
+`gh run view` confirmed `success`. Final measured suite counts: web 717/717, backend
+2089/2089 (`src/` was never touched at all this session — every commit was `web/` or `docs/` only
+— confirmed via `git diff --stat` across the full session range; the backend count is a final
+sanity re-run, not evidence of anything this session could have broken). Both typechecks clean,
+real `next build` clean, on every push. Production
+confirmed live and current on the final commit (`GET /api/health` → `{"ok":true}`, all 7 checks).
+Dependency/security check not re-run this session (last clean check was session 87; no dependency
+changes this session besides `react-resizable-panels`, added and verified via its own installed
+`.d.ts`, not from memory). Working tree clean, single worktree, no stray scratch files (every
+throwaway preview route deleted, confirmed via `git status`, before its own commit).
+
 **Session 87 (2026-09-07 owner-present start, then explicit "continue working autonomously"
 overnight into 2026-09-08) — A REAL PRODUCTION BUG FOUND AND FIXED, THE CHAT+CHART VISUAL REDESIGN
 BUILT/DEEP-REVIEWED/SHIPPED/LIVE, AND THE FIRST FULL OPEN-QUESTIONS RE-TRIAGE SINCE SESSION 71.**
