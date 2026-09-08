@@ -145,6 +145,116 @@ export async function deleteUserChartStyle(db: Db, userId: string): Promise<bool
   }
 }
 
+/** Per-user daily cap on brand lookups (WP218 phase 3, ADR 039) — each
+ * lookup hits Brandfetch's paid API (via brand-cache.ts's cache miss path),
+ * so this bounds how many a single user can trigger in a day regardless of
+ * how many distinct domains they try. */
+export const BRAND_LOOKUPS_PER_DAY = 5;
+
+interface BrandLookups {
+  day: string;
+  count: number;
+}
+
+/** Reads `brand.lookups` off an already-decoded `brand` object, tolerating
+ * anything a corrupted or hand-edited row might contain (never trust a
+ * stored row blindly — the brand-cache.ts module documents the same
+ * discipline for its own cached payload). */
+function readLookups(brand: Record<string, unknown>): BrandLookups | null {
+  const lookups = brand.lookups;
+  if (typeof lookups !== 'object' || lookups === null) return null;
+  const record = lookups as Record<string, unknown>;
+  if (typeof record.day !== 'string' || typeof record.count !== 'number') return null;
+  return { day: record.day, count: record.count };
+}
+
+/**
+ * Bumps today's brand-lookup count for `userId`, creating the row (with
+ * `style: '{}'`) on first use, resetting the count when `day` differs from
+ * what's stored, and refusing at `BRAND_LOOKUPS_PER_DAY` WITHOUT
+ * incrementing past it. `{ allowed: false, count: 0 }` when the table
+ * doesn't exist yet.
+ *
+ * Read-modify-write inside a transaction, not a single SQL statement: the
+ * "reset on a new day, refuse at the cap without incrementing past it"
+ * logic branches on the CURRENT count before deciding what to write, which
+ * a plain `coalesce(brand, '{}') || jsonb` merge (see `setAppliedBrand`
+ * below) can't express — there's no conditional business logic to express
+ * in that operator, only a key replacement. `for update` locks the row for
+ * the transaction's duration so two concurrent calls can't both read the
+ * same pre-increment count and both believe they got the 5th lookup.
+ */
+export async function bumpBrandLookups(
+  db: Db,
+  userId: string,
+  day: string,
+): Promise<{ allowed: boolean; count: number }> {
+  if (!(await chartStylesTablePresent(db))) return { allowed: false, count: 0 };
+  try {
+    return await db.withTransaction(async (tx) => {
+      await tx.query(
+        `insert into user_chart_styles (user_id, style)
+         values ($1, '{}'::jsonb)
+         on conflict (user_id) do nothing`,
+        [userId],
+      );
+      const { rows } = await tx.query(`select brand from user_chart_styles where user_id = $1 for update`, [
+        userId,
+      ]);
+      const brand = rows[0]?.brand == null ? {} : decodeJsonb(rows[0].brand);
+      const existing = readLookups(brand);
+      const currentCount = existing !== null && existing.day === day ? existing.count : 0;
+
+      if (currentCount >= BRAND_LOOKUPS_PER_DAY) {
+        return { allowed: false, count: currentCount };
+      }
+
+      const nextCount = currentCount + 1;
+      const nextBrand = { ...brand, lookups: { day, count: nextCount } };
+      await tx.query(`update user_chart_styles set brand = $2::jsonb, updated_at = now() where user_id = $1`, [
+        userId,
+        JSON.stringify(nextBrand),
+      ]);
+      return { allowed: true, count: nextCount };
+    });
+  } catch (err) {
+    if (isUndefinedTableError(err)) return { allowed: false, count: 0 };
+    throw err;
+  }
+}
+
+/**
+ * Merges `applied` into the user's `brand` column, leaving any `lookups`
+ * counter untouched, and creates the row (with `style: '{}'`) on first use.
+ *
+ * A single SQL statement, not a read-modify-write: unlike
+ * `bumpBrandLookups` there's no conditional business logic to branch on —
+ * just a top-level key replacement — so `coalesce(brand, '{}') ||
+ * jsonb_build_object('applied', $2)` does it atomically: jsonb `||`
+ * replaces only the keys present on its right-hand side, so a sibling
+ * `lookups` key already in `brand` survives untouched.
+ */
+export async function setAppliedBrand(
+  db: Db,
+  userId: string,
+  applied: { domain: string; name: string; fetchedAt: string } | null,
+): Promise<void> {
+  if (!(await chartStylesTablePresent(db))) return;
+  try {
+    await db.query(
+      `insert into user_chart_styles (user_id, style, brand)
+       values ($1, '{}'::jsonb, jsonb_build_object('applied', $2::jsonb))
+       on conflict (user_id) do update
+         set brand = coalesce(user_chart_styles.brand, '{}'::jsonb) || jsonb_build_object('applied', $2::jsonb),
+             updated_at = now()`,
+      [userId, JSON.stringify(applied)],
+    );
+  } catch (err) {
+    if (isUndefinedTableError(err)) return;
+    throw err;
+  }
+}
+
 /** Anonymous usage tally (open-questions #220): event × day × count, no
  * user id, no IP. A silent no-op when the table is absent — this counter is
  * pure telemetry, never load-bearing for a real answer, so the fail-safe

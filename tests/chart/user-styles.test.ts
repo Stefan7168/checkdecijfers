@@ -7,6 +7,8 @@
 import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import {
+  BRAND_LOOKUPS_PER_DAY,
+  bumpBrandLookups,
   chartStyleRetentionCutoff,
   chartStylesTablePresent,
   countPurgeableChartStyles,
@@ -15,6 +17,7 @@ import {
   purgeExpiredChartStyles,
   recordChartStyleEvent,
   saveUserChartStyle,
+  setAppliedBrand,
   USER_CHART_STYLE_MAX_JSON,
 } from '../../src/chart/user-styles.ts';
 import type { Db } from '../../src/db/types.ts';
@@ -117,6 +120,159 @@ describe('getUserChartStyle / saveUserChartStyle / deleteUserChartStyle', () => 
       expect(await deleteUserChartStyle(db, userId)).toBe(true);
       expect(await deleteUserChartStyle(db, userId)).toBe(false);
       expect(await getUserChartStyle(db, userId)).toBeNull();
+    });
+  });
+});
+
+describe('bumpBrandLookups', () => {
+  it('creates the row (style {}) on first use and allows up to the daily cap', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      const day = '2026-09-09';
+
+      for (let i = 1; i <= BRAND_LOOKUPS_PER_DAY; i++) {
+        expect(await bumpBrandLookups(db, userId, day)).toEqual({ allowed: true, count: i });
+      }
+
+      const row = await getUserChartStyle(db, userId);
+      expect(row!.style).toEqual({});
+    });
+  });
+
+  it('refuses the call past the cap, without incrementing the stored count further', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      const day = '2026-09-09';
+      for (let i = 0; i < BRAND_LOOKUPS_PER_DAY; i++) {
+        await bumpBrandLookups(db, userId, day);
+      }
+
+      expect(await bumpBrandLookups(db, userId, day)).toEqual({
+        allowed: false,
+        count: BRAND_LOOKUPS_PER_DAY,
+      });
+      expect(await bumpBrandLookups(db, userId, day)).toEqual({
+        allowed: false,
+        count: BRAND_LOOKUPS_PER_DAY,
+      });
+    });
+  });
+
+  it('resets the count on a new day', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      for (let i = 0; i < BRAND_LOOKUPS_PER_DAY; i++) {
+        await bumpBrandLookups(db, userId, '2026-09-09');
+      }
+      expect(await bumpBrandLookups(db, userId, '2026-09-09')).toEqual({
+        allowed: false,
+        count: BRAND_LOOKUPS_PER_DAY,
+      });
+
+      expect(await bumpBrandLookups(db, userId, '2026-09-10')).toEqual({ allowed: true, count: 1 });
+    });
+  });
+
+  it('does not clobber an existing saved style', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      await saveUserChartStyle(db, userId, { theme: 'dark' });
+
+      await bumpBrandLookups(db, userId, '2026-09-09');
+
+      const row = await getUserChartStyle(db, userId);
+      expect(row!.style).toEqual({ theme: 'dark' });
+    });
+  });
+
+  it('is unavailable (never throws) when the table is gone', async () => {
+    await withDb(async (db) => {
+      await db.query('drop table if exists user_chart_styles cascade', []);
+      expect(await bumpBrandLookups(db, randomUUID(), '2026-09-09')).toEqual({
+        allowed: false,
+        count: 0,
+      });
+    });
+  });
+});
+
+describe('setAppliedBrand', () => {
+  const APPLIED = { domain: 'example.com', name: 'Example BV', fetchedAt: '2026-09-09T00:00:00.000Z' };
+
+  it('creates the row (style {}) and sets brand.applied', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+
+      await setAppliedBrand(db, userId, APPLIED);
+
+      const row = await getUserChartStyle(db, userId);
+      expect(row!.style).toEqual({});
+      expect(row!.brand).toEqual({ applied: APPLIED });
+    });
+  });
+
+  it('merges applied without touching an existing lookups counter', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      await bumpBrandLookups(db, userId, '2026-09-09');
+
+      await setAppliedBrand(db, userId, APPLIED);
+
+      const row = await getUserChartStyle(db, userId);
+      expect(row!.brand).toEqual({ applied: APPLIED, lookups: { day: '2026-09-09', count: 1 } });
+    });
+  });
+
+  it('a later bumpBrandLookups call does not touch the applied brand', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      await setAppliedBrand(db, userId, APPLIED);
+
+      await bumpBrandLookups(db, userId, '2026-09-09');
+
+      const row = await getUserChartStyle(db, userId);
+      expect(row!.brand).toEqual({ applied: APPLIED, lookups: { day: '2026-09-09', count: 1 } });
+    });
+  });
+
+  it('can clear the applied brand back to null without disturbing style', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      await saveUserChartStyle(db, userId, { theme: 'dark' });
+      await setAppliedBrand(db, userId, APPLIED);
+
+      await setAppliedBrand(db, userId, null);
+
+      const row = await getUserChartStyle(db, userId);
+      expect(row!.style).toEqual({ theme: 'dark' });
+      expect(row!.brand).toEqual({ applied: null });
+    });
+  });
+
+  it('resolves without throwing when the table is gone', async () => {
+    await withDb(async (db) => {
+      await db.query('drop table if exists user_chart_styles cascade', []);
+      await expect(setAppliedBrand(db, randomUUID(), APPLIED)).resolves.toBeUndefined();
+    });
+  });
+});
+
+describe('deleteUserChartStyle removes brand along with the row', () => {
+  it('a deleted row leaves no trace of lookups or the applied brand', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      await bumpBrandLookups(db, userId, '2026-09-09');
+      await setAppliedBrand(db, userId, {
+        domain: 'example.com',
+        name: 'Example BV',
+        fetchedAt: '2026-09-09T00:00:00.000Z',
+      });
+
+      expect(await deleteUserChartStyle(db, userId)).toBe(true);
+      expect(await getUserChartStyle(db, userId)).toBeNull();
+
+      const { rows } = await db.query('select 1 from user_chart_styles where user_id = $1', [userId]);
+      expect(rows).toHaveLength(0);
     });
   });
 });
