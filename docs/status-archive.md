@@ -123,8 +123,10 @@ BUILT/DEEP-REVIEWED/SHIPPED/LIVE, AND THE FIRST FULL OPEN-QUESTIONS RE-TRIAGE SI
 own green CI run (`c1ba880` was pushed together with `728372e` in one push — GitHub Actions runs
 once per push on the tip SHA, so its content was validated as part of `728372e`'s green run, not
 separately). Every push's CI was individually watched to completion before the next push, no
-exceptions. Full backend suite 2089/2089 and full web suite 701/701 held green throughout (both grew
-slightly across the redesign's own test-file updates). Production confirmed live and current on the
+exceptions. Full backend suite 2089/2089 (measured once, after `e6f5b21` — the last commit to touch
+`src/` this session; every commit after it stayed within `web/`/`docs/`, so per the repo's own
+established practice it was correctly not rerun for those) and full web suite 701/701 (rerun and
+reconfirmed after every commit that touched `web/`) held green. Production confirmed live and current on the
 final commit (`GET /api/health` → `{"ok":true}` with all 7 checks passing; the deploy job's real
 steps — Install Vercel CLI, Build, Deploy prebuilt output, Post-deploy smoke check — ran, not
 skipped). Working tree clean, single worktree, no stray scratch files (every throwaway `zzdel-*`
