@@ -46,6 +46,7 @@ import { deriveVisuals, messageHasVisual, visualId } from '../lib/dock-visuals.t
 import { AnswerProof } from './answer-proof.tsx';
 import { ChartView } from './chart.tsx';
 import { FeedbackButtons } from './feedback-buttons.tsx';
+import { AnswerSkeleton } from './loading-skeletons.tsx';
 import { SourceBadge } from './source-badge.tsx';
 import { StatCard } from './stat-card.tsx';
 import { Badge } from './ui/badge.tsx';
@@ -940,16 +941,21 @@ export function Chat({
           );
         })}
         {busy ? (
-          <div className="text-left text-sm text-muted-foreground">
-            {/* WP129+130 go-live feedback (owner, 2026-07-12): with the Internet
-              * chip on, the wait covers the web search too — say so honestly.
-              * Web-only (CBS deselected) names only the web. */}
-            {websearch && webSelected && selectedSources.size > 0
-              ? 'Bezig met het doorzoeken van CBS-cijfers en het web…'
-              : websearch && webSelected
-                ? 'Bezig met het doorzoeken van het web…'
-                : 'Bezig met het doorzoeken van CBS-cijfers…'}
-          </div>
+          <>
+            <div className="text-left text-sm text-muted-foreground">
+              {/* WP129+130 go-live feedback (owner, 2026-07-12): with the Internet
+                * chip on, the wait covers the web search too — say so honestly.
+                * Web-only (CBS deselected) names only the web. Session 88:
+                * an AnswerSkeleton was ADDED below, this text was NOT removed
+                * — it carries a distinction the skeleton can't. */}
+              {websearch && webSelected && selectedSources.size > 0
+                ? 'Bezig met het doorzoeken van CBS-cijfers en het web…'
+                : websearch && webSelected
+                  ? 'Bezig met het doorzoeken van het web…'
+                  : 'Bezig met het doorzoeken van CBS-cijfers…'}
+            </div>
+            <AnswerSkeleton />
+          </>
         ) : null}
         {error ? <div className="text-sm text-destructive">{error}</div> : null}
         {staleDeploy ? (

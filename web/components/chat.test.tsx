@@ -1088,6 +1088,15 @@ describe('Chat — WP129+130 source chips (#129)', () => {
     ).toBeInTheDocument();
   });
 
+  it('shows a pulsing answer skeleton alongside the busy text, gone once the answer resolves', async () => {
+    askQuestion.mockReturnValue(new Promise<AskOutcome>(() => {})); // never resolves — stays busy
+    render(<Chat pricing={pricing} />);
+    fireEvent.change(screen.getByPlaceholderText('Stel een vraag…'), { target: { value: 'Hoeveel inwoners?' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Verstuur' }));
+    await screen.findByText('Bezig met het doorzoeken van CBS-cijfers…');
+    expect(document.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThan(0);
+  });
+
   it('sends the selection payload on the CLARIFICATION-REPLY path too (post-build review: the pending+websearch leg)', async () => {
     // The brief's "sent on EVERY submit (both actions)" claim: the reply turn
     // carries the same chips state as the question turn — a dropped 4th arg or
