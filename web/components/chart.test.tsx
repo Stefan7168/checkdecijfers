@@ -1148,6 +1148,42 @@ function trendHeadlineLineSpec(): ChartSpec {
   return { ...base, attribution: { ...base.attribution, trendHeadline: 'Nederland steeg gestaag sinds 2018.' } };
 }
 
+// Two-series, four-period line spec used to prove ChartSmallMultiples
+// receives the *windowed* spec (viewSpec), not the raw unwindowed one.
+// Nederland's own min sits on the period that gets zoomed out (2018) and its
+// max sits on a period that survives (2021), so valueLabelPlan's own-axis
+// endpoint ticks (see ChartSmallMultiples' "Eigen assen" mode) shift once
+// windowed: the 2018-tagged tick must disappear and a tick tagged to a
+// surviving period must appear in its place.
+function twoSeriesFourYearLineSpec(): ChartSpec {
+  return spec({
+    kind: 'line',
+    attribution: { ...spec().attribution, coveredPeriods: { from: '2018', to: '2021' } },
+    series: [
+      {
+        label: 'Nederland',
+        regionCode: null,
+        points: [
+          point({ resultId: 'nl-2018', periodCode: '2018', periodLabel: '2018', value: 50, formattedValue: '50' }),
+          point({ resultId: 'nl-2019', periodCode: '2019', periodLabel: '2019', value: 100, formattedValue: '100' }),
+          point({ resultId: 'nl-2020', periodCode: '2020', periodLabel: '2020', value: 105, formattedValue: '105' }),
+          point({ resultId: 'nl-2021', periodCode: '2021', periodLabel: '2021', value: 110, formattedValue: '110' }),
+        ],
+      },
+      {
+        label: 'Utrecht',
+        regionCode: 'GM0344',
+        points: [
+          point({ resultId: 'ut-2018', periodCode: '2018', periodLabel: '2018', value: 30, formattedValue: '30' }),
+          point({ resultId: 'ut-2019', periodCode: '2019', periodLabel: '2019', value: 40, formattedValue: '40' }),
+          point({ resultId: 'ut-2020', periodCode: '2020', periodLabel: '2020', value: 42, formattedValue: '42' }),
+          point({ resultId: 'ut-2021', periodCode: '2021', periodLabel: '2021', value: 44, formattedValue: '44' }),
+        ],
+      },
+    ],
+  });
+}
+
 describe('ChartView period-range zoom', () => {
   it('offers Vanaf/Tot period selectors for a line-kind chart with multiple periods', () => {
     const s = fourYearLineSpec();
@@ -1183,5 +1219,23 @@ describe('ChartView period-range zoom', () => {
     const s = multiRegionBarSpec();
     render(<ChartView spec={s} />);
     expect(screen.queryByLabelText('Vanaf')).not.toBeInTheDocument();
+  });
+
+  // Regression: ChartSmallMultiples was still being handed the raw,
+  // unwindowed spec, so zooming the main view did nothing to the small
+  // multiples panels -- a silent honesty gap (they'd show the full range
+  // with no indication they differ from the just-zoomed main view).
+  it('also windows the small-multiples panels once zoomed (not just the main chart)', () => {
+    const s = twoSeriesFourYearLineSpec();
+    const { container } = render(<ChartView spec={s} />);
+    fireEvent.change(screen.getByLabelText('Vanaf'), { target: { value: '2019' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Kleine grafieken' }));
+    // "Eigen assen" is the mode whose own-axis endpoint ticks are bound to a
+    // resultId (data-label-for) -- the same axis-tick technique the #197
+    // step-1 tests already use (svg [data-role="axis-tick"][data-label-for]).
+    fireEvent.click(screen.getByRole('button', { name: 'Eigen assen' }));
+    const nlPanel = container.querySelector('[data-panel-for="s0"]') as HTMLElement;
+    expect(nlPanel.querySelector('[data-role="axis-tick"][data-label-for="nl-2018"]')).toBeNull();
+    expect(nlPanel.querySelector('[data-role="axis-tick"][data-label-for="nl-2021"]')).not.toBeNull();
   });
 });

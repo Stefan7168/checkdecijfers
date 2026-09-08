@@ -953,7 +953,7 @@ export function ChartView({
         data-tooltip-trigger={tooltipTrigger}
       >
         {smallMultiples && smallMultiplesAvailable ? (
-          <ChartSmallMultiples spec={spec} hiddenKeys={state.hiddenKeys} axisMode={axisMode} />
+          <ChartSmallMultiples spec={viewSpec} hiddenKeys={state.hiddenKeys} axisMode={axisMode} />
         ) : (
         <ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 640, height: 256 }}>
           {effectiveKind === 'line' ? (
