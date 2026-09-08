@@ -853,8 +853,16 @@ export function ChartView({
   // setters directly during render.
   const specIdentity = JSON.stringify(spec);
   const [lastSpecIdentity, setLastSpecIdentity] = useState(specIdentity);
+  // WP218 (ADR 039, task-6 re-review): the Opmaak panel keeps small local
+  // state per series row (an uncommitted hex draft, a refusal alert). Series
+  // keys are positional (`s0`, `s1` — buildRows), so after a spec swap on this
+  // same mounted instance a leftover row state would land on a DIFFERENT
+  // chart's series. The panel is remounted per chart via this epoch — the
+  // same "each chart starts fresh" the reducer's `reset` gives the overrides.
+  const [chartEpoch, setChartEpoch] = useState(0);
   if (specIdentity !== lastSpecIdentity) {
     setLastSpecIdentity(specIdentity);
+    setChartEpoch((n) => n + 1);
     dispatch({ type: 'reset', initialForm: state.form });
     setSmallMultiples(false);
     setAxisMode('shared');
@@ -1150,6 +1158,7 @@ export function ChartView({
         ) : null}
         {state.form !== 'table' ? (
           <ChartConfigPanel
+            key={chartEpoch}
             resolved={resolved}
             seriesMeta={seriesMeta}
             onChange={(patch) => dispatch({ type: 'setPresentation', patch })}

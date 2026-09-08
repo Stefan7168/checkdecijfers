@@ -1721,6 +1721,20 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
     // readings already checked) rather than a third DOM read.
   });
 
+  it('a spec swap on the same mounted chart also drops the panel\'s per-row state (a refusal alert typed for the old chart never shows on the new one)', () => {
+    const { container, rerender } = render(<ChartView spec={threePointSpec()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Kleuren' }));
+    const hex = screen.getByRole('textbox', { name: /hex-code/ }) as HTMLInputElement;
+    fireEvent.change(hex, { target: { value: '#fefefe' } });
+    fireEvent.keyDown(hex, { key: 'Enter' });
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    rerender(<ChartView spec={threePointSpec({ title: 'Een andere grafiek' })} />);
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Opmaak' })).toHaveAttribute('aria-expanded', 'false');
+    expect(container.querySelector('.recharts-line-curve')?.getAttribute('stroke-width')).toBe('2');
+  });
+
   it('a spec swap on the same mounted chart clears the presentation (owner E)', () => {
     const { container, rerender } = render(<ChartView spec={threePointSpec()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
