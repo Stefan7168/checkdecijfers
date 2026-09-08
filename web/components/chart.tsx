@@ -39,6 +39,7 @@ import {
 } from 'recharts';
 import type { ChartPoint, ChartSpec } from '../backend/chart/types.ts';
 import { ChartDownloadMenu } from './chart-download.tsx';
+import { ChartNotes, type ChartNote, type PendingPoint } from './chart-notes.tsx';
 import { ChartSmallMultiples } from './chart-small-multiples.tsx';
 import { SourceBadge } from './source-badge.tsx';
 import {
@@ -506,8 +507,19 @@ function SeriesLegend({
  * only as an extra, ignorable prop; nothing forwards it onto the `<circle>`
  * this function draws unless done explicitly here. Without this, the
  * highlighted-series dimming would visibly stop at the line stroke and leave
- * every point marker at full opacity. */
-function SeriesDot(seriesKey: string, endLabel: PointLabel | undefined, opacity = 1) {
+ * every point marker at full opacity.
+ *
+ * Task 6 (#212 click-to-annotate): `seriesLabel`/`onPointClick` let a click on
+ * the point report itself (resultId/periodLabel/seriesLabel) up to ChartView,
+ * which opens the note entry form — see chart-notes.tsx. Added alongside
+ * Task 5's `opacity` param, not in place of it. */
+function SeriesDot(
+  seriesKey: string,
+  endLabel: PointLabel | undefined,
+  opacity = 1,
+  seriesLabel?: string,
+  onPointClick?: (point: PendingPoint) => void,
+) {
   return function Dot(props: { cx?: number; cy?: number; payload?: Row; stroke?: string }) {
     const { cx, cy, payload } = props;
     if (cx == null || cy == null || !payload) return null;
@@ -530,6 +542,21 @@ function SeriesDot(seriesKey: string, endLabel: PointLabel | undefined, opacity 
           fillOpacity={opacity}
           data-point="value"
           data-result-id={resultId == null ? undefined : String(resultId)}
+          role={onPointClick ? 'button' : undefined}
+          tabIndex={onPointClick ? 0 : undefined}
+          aria-label={onPointClick ? `Voeg notitie toe bij ${seriesLabel ?? ''}, ${String(payload.periodLabel)}` : undefined}
+          style={onPointClick ? { cursor: 'pointer' } : undefined}
+          onClick={
+            onPointClick
+              ? () =>
+                  resultId != null &&
+                  onPointClick({
+                    resultId: String(resultId),
+                    periodLabel: String(payload.periodLabel),
+                    seriesLabel: seriesLabel ?? '',
+                  })
+              : undefined
+          }
         />
         {isEnd ? (
           <text
@@ -559,13 +586,19 @@ function SeriesDot(seriesKey: string, endLabel: PointLabel | undefined, opacity 
  * into the props this function receives, but nothing forwards them onto the
  * `<rect>` actually drawn below unless done explicitly here. Without this,
  * highlighting a series would have no visible effect at all in Staaf
- * (bar) form. */
+ * (bar) form.
+ *
+ * Task 6 (#212 click-to-annotate): `seriesLabel`/`onPointClick`, same
+ * contract as SeriesDot above — added alongside Task 5's `opacity` param,
+ * not in place of it. */
 function SeriesBar(
   seriesKey: string,
   color: string,
   patternId: string,
   labelByPeriod: Map<string, PointLabel>,
   opacity = 1,
+  seriesLabel?: string,
+  onPointClick?: (point: PendingPoint) => void,
 ) {
   return function Shape(props: { x?: number; y?: number; width?: number; height?: number; payload?: Row }) {
     const { x, y, width, height, payload } = props;
@@ -590,6 +623,21 @@ function SeriesBar(
           strokeWidth={provisional ? 1 : undefined}
           data-point="value"
           data-result-id={resultId == null ? undefined : String(resultId)}
+          role={onPointClick ? 'button' : undefined}
+          tabIndex={onPointClick ? 0 : undefined}
+          aria-label={onPointClick ? `Voeg notitie toe bij ${seriesLabel ?? ''}, ${String(payload.periodLabel)}` : undefined}
+          style={onPointClick ? { cursor: 'pointer' } : undefined}
+          onClick={
+            onPointClick
+              ? () =>
+                  resultId != null &&
+                  onPointClick({
+                    resultId: String(resultId),
+                    periodLabel: String(payload.periodLabel),
+                    seriesLabel: seriesLabel ?? '',
+                  })
+              : undefined
+          }
         />
         {label ? (
           <text
@@ -689,6 +737,13 @@ export function ChartView({
   const [smallMultiples, setSmallMultiples] = useState(false);
   const [axisMode, setAxisMode] = useState<'shared' | 'own'>('shared');
 
+  // Task 6 (#212 click-to-annotate): session-only, plain component state —
+  // never persisted, never sent anywhere, never touches ChartSpec or the
+  // audit record. Reset by the same specIdentity guard below (a new chart's
+  // clicks must not carry over another chart's notes).
+  const [notes, setNotes] = useState<ChartNote[]>([]);
+  const [pendingPoint, setPendingPoint] = useState<PendingPoint | null>(null);
+
   // Stable per-chart identity, not object identity: a fresh spec object can
   // represent the exact same chart across a re-render. Resets ALL
   // presentation state below when the viewer is shown a genuinely DIFFERENT
@@ -713,6 +768,8 @@ export function ChartView({
     dispatch({ type: 'reset', initialForm: state.form });
     setSmallMultiples(false);
     setAxisMode('shared');
+    setNotes([]);
+    setPendingPoint(null);
   }
 
   if (spec.schemaVersion !== 1) {
@@ -1069,7 +1126,7 @@ export function ChartView({
                       strokeOpacity={dimmed ? 0.25 : 1}
                       data-series-dimmed={dimmed ? 'true' : undefined}
                       connectNulls={false}
-                      dot={SeriesDot(s.key, endLabelByKey.get(s.key), dimmed ? 0.25 : 1)}
+                      dot={SeriesDot(s.key, endLabelByKey.get(s.key), dimmed ? 0.25 : 1, s.label, (p) => setPendingPoint(p))}
                       isAnimationActive={false}
                     />
                   );
@@ -1124,6 +1181,8 @@ export function ChartView({
                         `hatch-${domId}-${s.key}`,
                         barLabelsByKey.get(s.key) ?? new Map<string, PointLabel>(),
                         dimmed ? 0.25 : 1,
+                        s.label,
+                        (p) => setPendingPoint(p),
                       )}
                     />
                   );
@@ -1215,6 +1274,27 @@ export function ChartView({
           Gemarkeerd in de grafiek: {m.label}
         </p>
       ))}
+      {/* Task 6 (#212 click-to-annotate): mounted as a SIBLING here, entirely
+        * outside the chartContainerRef-wrapped block above — that placement
+        * is the whole safety property. ChartDownloadMenu (PNG/SVG export)
+        * only ever reads the live <svg> inside chartContainerRef, so a note
+        * rendered here can never be scanned as chart data or exported by
+        * construction, with no separate exemption to maintain. Only offered
+        * for chart forms (state.form !== 'table'): notes anchor to a clicked
+        * chart point, not a table cell. */}
+      {state.form !== 'table' ? (
+        <ChartNotes
+          notes={notes}
+          pendingPoint={pendingPoint}
+          onSave={(text) => {
+            if (!pendingPoint) return;
+            setNotes((prev) => [...prev, { id: `${pendingPoint.resultId}-${prev.length}`, ...pendingPoint, text }]);
+            setPendingPoint(null);
+          }}
+          onCancelPending={() => setPendingPoint(null)}
+          onDelete={(id) => setNotes((prev) => prev.filter((n) => n.id !== id))}
+        />
+      ) : null}
       {/* #170(1): the R4 prose credit keeps its photo-credit size (#92); the
         * badge is the same attribution made SCANNABLE — table id + measured
         * sync date + deep link, from spec.attribution only (the source key is

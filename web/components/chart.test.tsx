@@ -1304,3 +1304,39 @@ describe('ChartView series highlight', () => {
     expect(document.querySelector('[data-series-dimmed="true"]')).toBeNull();
   });
 });
+
+describe('ChartView click-to-annotate', () => {
+  it('clicking a chart point opens the note entry form for that point', () => {
+    const s = twoSeriesLineSpec();
+    render(<ChartView spec={s} />);
+    const dot = document.querySelector('circle[data-point="value"]')!;
+    fireEvent.click(dot);
+    expect(screen.getByRole('textbox')).toBeInTheDocument();
+  });
+
+  it('a saved note is never rendered inside the chart export container', () => {
+    const s = twoSeriesLineSpec();
+    const { container } = render(<ChartView spec={s} />);
+    const dot = document.querySelector('circle[data-point="value"]')!;
+    fireEvent.click(dot);
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Test notitie' } });
+    fireEvent.click(screen.getByRole('button', { name: /opslaan/i }));
+    const exportContainer = container.querySelector('[role="tabpanel"][aria-label="Grafiek"]');
+    expect(exportContainer?.textContent).not.toContain('Test notitie');
+    expect(screen.getByText('Test notitie')).toBeInTheDocument();
+  });
+
+  it('does not carry a pending click or a saved note over to a different spec on the same mounted instance', () => {
+    const s = twoSeriesLineSpec();
+    const { rerender } = render(<ChartView spec={s} />);
+    const dot = document.querySelector('circle[data-point="value"]')!;
+    fireEvent.click(dot);
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Blijft niet over' } });
+    fireEvent.click(screen.getByRole('button', { name: /opslaan/i }));
+    expect(screen.getByText('Blijft niet over')).toBeInTheDocument();
+
+    rerender(<ChartView spec={multiRegionBarSpec()} />);
+    expect(screen.queryByText('Blijft niet over')).not.toBeInTheDocument();
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+  });
+});
