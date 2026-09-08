@@ -320,3 +320,10 @@ describe('SiteHeader — WP135 presence rules', () => {
     expect(screen.queryByText(/credits/)).toBeNull();
   });
 });
+
+describe('Workspace — resizable chart panel (session 88)', () => {
+  it('never mounts the resizable panel group when the dock is not shown (no visuals yet)', () => {
+    renderWorkspace();
+    expect(document.querySelector('[data-slot="resizable-panel-group"]')).toBeNull();
+  });
+});

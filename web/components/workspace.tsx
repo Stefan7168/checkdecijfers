@@ -7,6 +7,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useDefaultLayout } from 'react-resizable-panels';
 import { listMyThreads, loadMyThread } from '../app/actions.ts';
 import { ingestFile } from '../app/dataset-actions.ts';
 import type { GatedResponse } from '../backend/billing/index.ts';
@@ -17,6 +18,7 @@ import type { DatasetProfile, DatasetStatus } from '../backend/attachments/types
 import type { ThreadSummary } from '../backend/threads/index.ts';
 import type { ChatMessage } from '../lib/chat-message.ts';
 import type { DockVisual } from '../lib/dock-visuals.ts';
+import { getPanelStorage } from '../lib/panel-storage.ts';
 import { useMediaQuery } from '../lib/use-media-query.ts';
 import { Chat } from './chat.tsx';
 import { DatasetChat } from './dataset-chat.tsx';
@@ -24,6 +26,7 @@ import { AnswerSkeleton } from './loading-skeletons.tsx';
 import { SiteHeader } from './site-header.tsx';
 import { ThemeToggle } from './theme-toggle.tsx';
 import { ThreadSidebar } from './thread-sidebar.tsx';
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from './ui/resizable.tsx';
 import { VisualDock } from './visual-dock.tsx';
 
 // ADR 037 D10: a discriminated union, not a bypass — mounting DatasetChat
@@ -110,6 +113,15 @@ export function Workspace({
   useEffect(() => {
     if (isNarrow) setSidebarCollapsed(true);
   }, [isNarrow]);
+
+  // #211 (chat interaction polish, session 88): remembers the dock's width
+  // across visits. `getPanelStorage()` is REQUIRED here — the hook's own
+  // default `storage` value is unsafe during server rendering (see
+  // web/lib/panel-storage.ts).
+  const { defaultLayout, onLayoutChanged } = useDefaultLayout({
+    id: 'dock-panel-width',
+    storage: getPanelStorage(),
+  });
 
   // Refresh the sidebar after a turn (an event, not a mount effect — the initial
   // list is server-rendered).
@@ -266,6 +278,82 @@ export function Workspace({
       ? handoff.displayName
       : (threads.find((thread) => thread.id === activeThreadId)?.title ?? 'Nieuwe chat');
 
+  const chatSection = (
+    <section
+      aria-label="Chat"
+      className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-card text-card-foreground"
+    >
+      <div className="flex h-12 shrink-0 items-center gap-3 border-b border-border px-4">
+        <h1 className="truncate text-[13.5px] font-medium" title={cardTitle}>
+          {cardTitle}
+        </h1>
+        <div className="flex-1" />
+        <ThemeToggle />
+      </div>
+      {threadLoading ? (
+        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
+          <AnswerSkeleton />
+          <div className="ml-auto w-2/3">
+            <AnswerSkeleton />
+          </div>
+        </div>
+      ) : handoff.kind === 'dataset' ? (
+        // ADR 037 D10: dock wiring mirrors Chat's own below exactly —
+        // same isWide-gated dockMode, same handleVisualsChange/
+        // activateVisual handlers (visuals/activeVisualId are already
+        // reset on every thread switch, so a dataset thread's dock starts
+        // clean like a CBS one).
+        <DatasetChat
+          // React reuses the SAME DatasetChat instance across two dataset
+          // threads (same element type, same tree position) unless keyed
+          // apart — without this, switching from one dataset thread to
+          // another would silently keep showing the FIRST thread's
+          // messages/profile, since useState(initialMessages) etc. only
+          // ever reads its argument on the instance's first mount. Chat
+          // solves the analogous problem with a loadNonce-driven reset
+          // effect (it has state worth preserving across a switch,
+          // e.g. selectedSources/webSelected); DatasetChat has none, so a
+          // full remount is the simpler, equally correct fix here.
+          key={handoff.threadId}
+          datasetId={handoff.datasetId}
+          threadId={handoff.threadId}
+          displayName={handoff.displayName}
+          initialStatus={handoff.status}
+          initialProfile={handoff.profile}
+          initialMessages={handoff.messages}
+          initialRawState={handoff.rawState}
+          onThreadId={handleThreadId}
+          onBusyChange={setChatBusy}
+          dockMode={isWide}
+          onVisualsChange={handleVisualsChange}
+          activeVisualId={activeVisualId}
+          onActivateVisual={activateVisual}
+        />
+      ) : (
+        <Chat
+          onOutcome={handleOutcome}
+          pricing={{
+            simple: simplePrice,
+            clarification: clarificationPrice,
+            balance,
+            ...(websearch ? { websearch } : {}),
+          }}
+          {...(attachments ? { attachments: { enabled: true, onUploadFile: handleUploadFile } } : {})}
+          dockMode={isWide}
+          initialMessages={handoff.messages}
+          initialContext={handoff.context}
+          threadId={handoff.threadId}
+          loadNonce={loadNonce}
+          onThreadId={handleThreadId}
+          onVisualsChange={handleVisualsChange}
+          activeVisualId={activeVisualId}
+          onActivateVisual={activateVisual}
+          onBusyChange={setChatBusy}
+        />
+      )}
+    </section>
+  );
+
   return (
     // Session 87 visual redesign (mockup Option B, "Inset Cards"): the whole
     // screen sits on the grey sidebar ground; the sidebar is borderless on it,
@@ -303,85 +391,24 @@ export function Workspace({
           />
         </div>
 
-        <section
-          aria-label="Chat"
-          className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-border bg-card text-card-foreground"
-        >
-          <div className="flex h-12 shrink-0 items-center gap-3 border-b border-border px-4">
-            <h1 className="truncate text-[13.5px] font-medium" title={cardTitle}>
-              {cardTitle}
-            </h1>
-            <div className="flex-1" />
-            <ThemeToggle />
-          </div>
-          {threadLoading ? (
-            <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
-              <AnswerSkeleton />
-              <div className="ml-auto w-2/3">
-                <AnswerSkeleton />
-              </div>
-            </div>
-          ) : handoff.kind === 'dataset' ? (
-            // ADR 037 D10: dock wiring mirrors Chat's own below exactly —
-            // same isWide-gated dockMode, same handleVisualsChange/
-            // activateVisual handlers (visuals/activeVisualId are already
-            // reset on every thread switch, so a dataset thread's dock starts
-            // clean like a CBS one).
-            <DatasetChat
-              // React reuses the SAME DatasetChat instance across two dataset
-              // threads (same element type, same tree position) unless keyed
-              // apart — without this, switching from one dataset thread to
-              // another would silently keep showing the FIRST thread's
-              // messages/profile, since useState(initialMessages) etc. only
-              // ever reads its argument on the instance's first mount. Chat
-              // solves the analogous problem with a loadNonce-driven reset
-              // effect (it has state worth preserving across a switch,
-              // e.g. selectedSources/webSelected); DatasetChat has none, so a
-              // full remount is the simpler, equally correct fix here.
-              key={handoff.threadId}
-              datasetId={handoff.datasetId}
-              threadId={handoff.threadId}
-              displayName={handoff.displayName}
-              initialStatus={handoff.status}
-              initialProfile={handoff.profile}
-              initialMessages={handoff.messages}
-              initialRawState={handoff.rawState}
-              onThreadId={handleThreadId}
-              onBusyChange={setChatBusy}
-              dockMode={isWide}
-              onVisualsChange={handleVisualsChange}
-              activeVisualId={activeVisualId}
-              onActivateVisual={activateVisual}
-            />
-          ) : (
-            <Chat
-              onOutcome={handleOutcome}
-              pricing={{
-                simple: simplePrice,
-                clarification: clarificationPrice,
-                balance,
-                ...(websearch ? { websearch } : {}),
-              }}
-              {...(attachments ? { attachments: { enabled: true, onUploadFile: handleUploadFile } } : {})}
-              dockMode={isWide}
-              initialMessages={handoff.messages}
-              initialContext={handoff.context}
-              threadId={handoff.threadId}
-              loadNonce={loadNonce}
-              onThreadId={handleThreadId}
-              onVisualsChange={handleVisualsChange}
-              activeVisualId={activeVisualId}
-              onActivateVisual={activateVisual}
-              onBusyChange={setChatBusy}
-            />
-          )}
-        </section>
-
         {showDock ? (
-          <div className="w-96 shrink-0">
-            <VisualDock visuals={visuals} activeVisualId={activeVisualId} onSelect={activateVisual} />
-          </div>
-        ) : null}
+          <ResizablePanelGroup
+            orientation="horizontal"
+            defaultLayout={defaultLayout}
+            onLayoutChanged={onLayoutChanged}
+            className="min-h-0 flex-1"
+          >
+            <ResizablePanel id="chat-panel" minSize="55">
+              {chatSection}
+            </ResizablePanel>
+            <ResizableHandle withHandle className="mx-1" />
+            <ResizablePanel id="dock-panel" defaultSize="33" minSize="18" maxSize="40">
+              <VisualDock busy={chatBusy} visuals={visuals} activeVisualId={activeVisualId} onSelect={activateVisual} />
+            </ResizablePanel>
+          </ResizablePanelGroup>
+        ) : (
+          <div className="min-h-0 min-w-0 flex-1">{chatSection}</div>
+        )}
       </div>
       {/* Session 87 visual redesign (owner decision): the "Over dit project"
           explainer that used to sit under the chat is gone from the logged-in
