@@ -1,8 +1,10 @@
 # STATUS archive — the session log
 
-**Session 89 (2026-09-08, autonomous session, no owner present) — PHASES 1-3 OF SESSION-88'S
-CHART-EDITING ARCHITECTURE PANEL BUILT VIA SUBAGENT-DRIVEN DEVELOPMENT, ON A FEATURE BRANCH,
-NOT MERGED.**
+**Session 89 (2026-09-08, started autonomous/no owner present, owner returned mid-session) —
+PHASES 1-3 OF SESSION-88'S CHART-EDITING ARCHITECTURE PANEL BUILT VIA SUBAGENT-DRIVEN
+DEVELOPMENT, MERGED TO `main` AND LIVE.** (Item 1 below describes the autonomous-session
+branch+PR rule that governed the BUILD; see the final item for how it actually ended — the
+owner returned before the branch was pushed and authorized a direct merge instead.)
 
 1. **Kickoff and scope.** Dispatched to build what session-88's architecture panel
    ([open-questions #212](open-questions.md), synthesis artifact:
@@ -144,24 +146,41 @@ NOT MERGED.**
    resolved them by the time this autonomous session ran, explicitly NOT a formal owner
    decision**; both are flagged in ADR 038 for explicit owner review. G (transparent PNG
    export) and H (map view) are **untouched, fully out of scope** for this build.
-6. **Branch and PR status.** All 14 commits (`f3bba6b`..`1a5e968`) live only on
-   `feat/chart-editing-p1`; none were pushed to `origin` by this documentation step. Per
+6. **Branch and PR status at the point this documentation step landed.** All 14 code/docs
+   commits (`f3bba6b`..`1a5e968`) plus a 15th docs-wrap commit (`3a92b61`) lived only on
+   `feat/chart-editing-p1`, none yet pushed to `origin`. Per
    [#118](https://github.com/Stefan7168/checkdecijfers/issues/118)'s autonomous-session rule
-   (no owner present this session), this session's controller pushes the branch and opens the
-   PR against `main` immediately after this docs commit lands — the diff is reviewable there,
-   not merged or deployed by this session.
+   (no owner present up to this point), the plan was for this session's controller to push the
+   branch and open a PR against `main` for owner review, not merge it directly.
+7. **What actually happened: the owner returned before the branch was pushed.** The controller
+   summarized the completed work (including the items deferred for review, restated in item 4
+   above) and asked in chat whether to push the branch as a PR or wait for a direct review. The
+   owner replied "You are the expert, continue working," then — after the controller reiterated
+   the specific action it wanted to take (fast-forward-merge onto `main` and push, per
+   CLAUDE.md's owner-present direct-push convention, since the owner was now present in-session)
+   — explicitly said "Go ahead, merge and push it." The controller confirmed `main` had not
+   moved since the branch was cut (`git fetch` + `git rev-parse main origin/main` both
+   `e91cdd1`), re-ran the FULL verification block one more time before merging (see below),
+   fast-forward-merged `feat/chart-editing-p1` onto `main` (`git merge --ff-only`, no merge
+   commit — a clean fast-forward), pushed `main` to `origin`, and deleted the now-fully-merged
+   feature branch (local delete succeeded; remote delete correctly no-op'd since the branch was
+   never pushed to `origin` in the first place).
 
-**Verified facts, session close:** 14 commits (`f3bba6b`..`1a5e968`) on
-`feat/chart-editing-p1`, merge-base `e91cdd1` confirmed against `main` via `git merge-base`,
-not assumed from the plan's stated starting commit (`c5a5eec`, an earlier session-88 commit
-that predates session-88's own later self-audit commits — `e91cdd1` is the true branch point).
-Final measured suite counts, already independently verified live by the controller during the
-whole-branch review and restated here after cross-checking the ledger: web 767/767, backend
-2089/2089 (unchanged — `src/` was never touched this session; every task's own review notes
-confirm `src/chart/` untouched, and no backend work was in scope). Both typechecks clean, real
-`next build` clean. ADR number (038) confirmed via `ls docs/decisions/` — the next sequential
-number after session-88's own 037. No dependency changes this session. Working tree clean prior
-to this docs commit (`git status --short` empty).
+**Verified facts, session close:** 15 commits (`f3bba6b`..`3a92b61`) merged onto `main` via a
+clean fast-forward from merge-base `e91cdd1` (confirmed against `main` via `git merge-base`, not
+assumed from the plan's stated starting commit `c5a5eec`, an earlier session-88 commit that
+predates session-88's own later self-audit commits — `e91cdd1` is the true branch point). Full
+verification block re-run immediately before the merge (not just trusted from earlier in the
+session): `npm run typecheck` and `npm run web:typecheck` both clean; `npm run benchmark:run` +
+`npm run benchmark:score` → 14/14 answerable (gate ≥12), 6/6 refusal/clarify (gate 6/6), 0
+fabricated numbers, GATE VERDICT: PASS (unchanged from the pre-session baseline — this branch
+never touches the answer pipeline, `src/chart/` untouched throughout); web suite 767/767, backend
+suite 2089/2089 (unchanged); real `next build` clean. ADR number (038) confirmed via
+`ls docs/decisions/` — the next sequential number after session-88's own 037. No dependency
+changes this session. **Pushed and verified LIVE:** `git push origin main` → `e91cdd1..3a92b61`;
+CI run `34226204304` on `main` watched to completion (`gh run view`) → `completed success`;
+`curl https://checkdecijfers.vercel.app/api/health` → `{"ok":true,"checks":[...7 checks...]}`,
+all passing. Working tree clean after every commit (`git status --short` empty).
 
 **Session 88 (2026-09-08, owner present throughout) — TWO PLANS EXECUTED VIA SUBAGENT-DRIVEN
 DEVELOPMENT AND SHIPPED LIVE, A REAL LIBRARY DEFECT TRACED AND CORRECTLY WORKED AROUND, AND A

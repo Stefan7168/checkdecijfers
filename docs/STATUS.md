@@ -9,9 +9,10 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
-**▶ SESSION 89 (2026-09-08, autonomous, no owner present) — Phases 1-3 of session-88's
-chart-editing architecture panel built end-to-end via Subagent-Driven Development, branch
-`feat/chart-editing-p1`, NOT merged.** Built a pure client-only view-state reducer for CBS
+**▶ SESSION 89 (2026-09-08, started autonomous/no owner present, owner returned mid-session and
+authorized direct merge — "you are the expert, continue") — Phases 1-3 of session-88's
+chart-editing architecture panel built end-to-end via Subagent-Driven Development, MERGED and
+LIVE.** Built a pure client-only view-state reducer for CBS
 charts (`web/lib/chart-view-state.ts`) driving 4 user-facing pieces with zero LLM
 calls/DDL/prompt-byte changes: a line/bar/table form switch with a multi-region-line guard,
 Vanaf/Tot period-range zoom (on-screen + export disclosure), series hide + highlight
@@ -30,15 +31,21 @@ fixed in one consolidated commit (`1a5e968`), re-reviewed clean.
 [ADR 038](decisions/038-chart-view-state-editing.md) records the as-built mechanism and how
 open decisions A-H from session 88's panel resolved: A/C/D/E by the mechanism chosen, B/F to
 the most conservative default (explicitly NOT an owner decision), G/H untouched; addendum on
-[#212](open-questions.md). **Deferred to the PR description for owner review, not silently
-resolved:** a chosen chart form persists across a swap to a completely different chart on the
-same mounted view (dock-tab switching); small multiples ignores the Staaf switch and always
+[#212](open-questions.md). **Flagged to the owner directly in chat, not silently resolved — still open, tracked here for a
+future session:** a chosen chart form persists across a swap to a completely different chart on
+the same mounted view (dock-tab switching); small multiples ignores the Staaf switch and always
 renders line panels; the Vanaf/Tot zoom selectors don't clamp against each other (an inverted
-range produces an empty chart with a nonsense disclosure sentence baked into it). 14 commits
-(`f3bba6b`..`1a5e968`) on `feat/chart-editing-p1`, **committed only — not pushed, not merged**,
-per [#118](https://github.com/Stefan7168/checkdecijfers/issues/118)'s autonomous-session
-branch+PR rule (no owner present this session). Verified: web 767/767, backend 2089/2089
-(unchanged), both typechecks clean, `next build` clean. Full session entry:
+range produces an empty chart with a nonsense disclosure sentence baked into it). Built
+autonomously on `feat/chart-editing-p1` per [#118](https://github.com/Stefan7168/checkdecijfers/issues/118)'s
+branch+PR rule (no owner present during the build); **owner returned before the branch was
+pushed, reviewed this summary, and gave standing owner-present authorization to merge directly**
+— fast-forwarded onto `main` (clean, `main` had not moved) and pushed, per CLAUDE.md's
+owner-present direct-push convention; the feature branch was then deleted (never pushed to the
+remote). 15 commits (`f3bba6b`..`3a92b61`) on `main`. Full verification block re-run immediately
+before the merge: typecheck ×2, web 767/767, backend 2089/2089 (unchanged), benchmark
+14/14 + 6/6 + 0 fabricated (unchanged — this branch never touches the answer pipeline), real
+`next build`. **Verified LIVE:** CI run `34226204304` green; `GET /api/health` on
+`https://checkdecijfers.vercel.app` → `{"ok":true}`, all 7 checks passing. Full session entry:
 [status-archive.md](status-archive.md).
 
 **▶ SESSION 86 (2026-09-07, owner present, mixed autonomous/interactive) — the CI `deploy` job is
