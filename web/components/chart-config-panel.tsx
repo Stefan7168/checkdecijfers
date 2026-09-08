@@ -595,7 +595,12 @@ export function ChartConfigPanel({
                   {seriesMeta.map((series, index) => {
                     const draft = liveDrafts[series.key];
                     const displayText = draft !== undefined ? draft.text : series.color;
-                    const warning = warningFor(settledColorFor(series.key, series.color));
+                    // Warn only about a colour the reader CHOSE: the stock palette's own
+                    // weak entries (e.g. the yellow on white) are the owner's accepted
+                    // session-87 trade-off, not something to nag about untouched.
+                    const settled = settledColorFor(series.key, series.color);
+                    const chosen = resolved.values.seriesColors[index] !== undefined || settled !== series.color;
+                    const warning = chosen ? warningFor(settled) : null;
                     const alertEntry = liveAlerts[series.key];
                     const alert = alertEntry !== undefined ? alertEntry.reason : null;
                     const warnId = `${idPrefix}-style-color-warn-${index}`;

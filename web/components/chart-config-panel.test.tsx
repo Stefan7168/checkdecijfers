@@ -177,6 +177,20 @@ describe('ChartConfigPanel — Grafiek tab', () => {
 });
 
 describe('ChartConfigPanel — Kleuren tab', () => {
+  it('an untouched default colour never warns, even a weak palette entry (the stock look is the owner\'s accepted trade-off)', () => {
+    render(
+      <ChartConfigPanel
+        resolved={resolvePresentation(lineCtx, {})}
+        seriesMeta={colorMeta}
+        onChange={vi.fn()}
+        onReset={vi.fn()}
+        idPrefix="k0"
+      />,
+    );
+    openTab('Kleuren');
+    expect(screen.queryByText(/slecht leesbaar/)).toBeNull();
+  });
+
   it('one row per series with swatch, hex input and colour picker pre-filled with the effective colour', () => {
     render(
       <ChartConfigPanel
