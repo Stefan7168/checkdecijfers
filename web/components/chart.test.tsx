@@ -2,7 +2,7 @@
 // every displayed numeric STRING must be a point's own formattedValue, and
 // periods must sort chronologically by code, not label/insertion order —
 // mirroring the checks ADR 014's SVG-renderer test suite already runs.
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ChartSpec } from '../backend/chart/types.ts';
 import {
@@ -1116,5 +1116,72 @@ describe('trend headline (#197 idea 4)', () => {
   it('renders nothing extra when trendHeadline is absent (old specs unaffected)', () => {
     const { container } = render(<ChartView spec={spec()} />);
     expect(container.querySelector('[data-testid="trend-headline"]')).toBeNull();
+  });
+});
+
+// Task 4: single-series line-kind spec spanning four periods, used to test
+// the Vanaf/Tot period-range zoom control.
+function fourYearLineSpec(): ChartSpec {
+  return spec({
+    kind: 'line',
+    attribution: { ...spec().attribution, coveredPeriods: { from: '2018', to: '2021' } },
+    series: [
+      {
+        label: 'Nederland',
+        regionCode: null,
+        points: [
+          point({ resultId: 'nl-2018', periodCode: '2018', periodLabel: '2018', value: 100, formattedValue: '100' }),
+          point({ resultId: 'nl-2019', periodCode: '2019', periodLabel: '2019', value: 105, formattedValue: '105' }),
+          point({ resultId: 'nl-2020', periodCode: '2020', periodLabel: '2020', value: 110, formattedValue: '110' }),
+          point({ resultId: 'nl-2021', periodCode: '2021', periodLabel: '2021', value: 115, formattedValue: '115' }),
+        ],
+      },
+    ],
+  });
+}
+
+// Extends fourYearLineSpec with attribution.trendHeadline set, to test that
+// zooming suppresses the trend headline (it describes the full range, not a
+// narrowed one).
+function trendHeadlineLineSpec(): ChartSpec {
+  const base = fourYearLineSpec();
+  return { ...base, attribution: { ...base.attribution, trendHeadline: 'Nederland steeg gestaag sinds 2018.' } };
+}
+
+describe('ChartView period-range zoom', () => {
+  it('offers Vanaf/Tot period selectors for a line-kind chart with multiple periods', () => {
+    const s = fourYearLineSpec();
+    render(<ChartView spec={s} />);
+    expect(screen.getByLabelText('Vanaf')).toBeInTheDocument();
+    expect(screen.getByLabelText('Tot')).toBeInTheDocument();
+  });
+
+  it('narrowing the range hides points outside it and shows a disclosure note', () => {
+    const s = fourYearLineSpec();
+    const { container } = render(<ChartView spec={s} />);
+    fireEvent.change(screen.getByLabelText('Vanaf'), { target: { value: '2019' } });
+    fireEvent.change(screen.getByLabelText('Tot'), { target: { value: '2020' } });
+    expect(screen.getByText(/2019.*2020/)).toBeInTheDocument();
+    // Scoped to the plotted chart panel, not the whole screen: the Vanaf/Tot
+    // selects deliberately keep listing every period (including 2018) so the
+    // zoom can be widened back out — that's an available *option*, not
+    // plotted data. What must actually disappear once windowed is 2018 as a
+    // point on the chart itself.
+    const chartPanel = container.querySelector('[role="tabpanel"][aria-label="Grafiek"]') as HTMLElement;
+    expect(within(chartPanel).queryByText('2018')).not.toBeInTheDocument();
+  });
+
+  it('suppresses the trend headline while a period range is active', () => {
+    const s = trendHeadlineLineSpec();
+    render(<ChartView spec={s} />);
+    expect(screen.getByTestId('trend-headline')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Vanaf'), { target: { value: '2019' } });
+    expect(screen.queryByTestId('trend-headline')).not.toBeInTheDocument();
+  });
+
+  it('does not offer a zoom control for a bar (comparison) chart', () => {
+    const s = multiRegionBarSpec();
+    render(<ChartView spec={s} />);
+    expect(screen.queryByLabelText('Vanaf')).not.toBeInTheDocument();
   });
 });

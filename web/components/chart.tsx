@@ -41,7 +41,13 @@ import type { ChartPoint, ChartSpec } from '../backend/chart/types.ts';
 import { ChartDownloadMenu } from './chart-download.tsx';
 import { ChartSmallMultiples } from './chart-small-multiples.tsx';
 import { SourceBadge } from './source-badge.tsx';
-import { chartViewReducer, initialViewState, lineFormAllowed, type ChartForm } from '../lib/chart-view-state.ts';
+import {
+  chartViewReducer,
+  initialViewState,
+  lineFormAllowed,
+  windowSpec,
+  type ChartForm,
+} from '../lib/chart-view-state.ts';
 
 /**
  * ADR 037 D11: the minimal structural subset `buildRows`/`valueLabelPlan`
@@ -675,7 +681,28 @@ export function ChartView({
     );
   }
 
-  const { rows, seriesMeta } = buildRows(spec);
+  // Task 4 (#212 period-range zoom): the full period-code list for the
+  // Vanaf/Tot selectors, and `viewSpec` — the spec windowed to the currently
+  // selected [from, to] range, or the untouched `spec` when no window is
+  // active or zoom isn't offered at all. Only offered for a line-kind chart
+  // with more than one period: a bar/comparison chart has one period per
+  // region, so there is nothing to zoom into. `windowSpec` only ever filters
+  // `series[].points` (R6 verbatim projection) — it never touches
+  // `spec.kind`/`spec.attribution`/`spec.title`/`spec.unit`, which describe
+  // the chart's identity, not its windowed content. Every DATA-derivation
+  // call below (buildRows/annotationMarkers/valueLabelPlan/tableModel) reads
+  // `viewSpec`; every IDENTITY read (spec.kind, spec.attribution, spec.title,
+  // spec.unit) stays on the raw `spec`.
+  const allPeriodCodes = Array.from(
+    new Set(spec.series.flatMap((s) => s.points.map((p) => p.periodCode))),
+  ).sort((a, b) => a.localeCompare(b));
+  const periodLabelByCode = new Map(
+    spec.series.flatMap((s) => s.points.map((p): [string, string] => [p.periodCode, p.periodLabel])),
+  );
+  const zoomAvailable = spec.kind === 'line' && allPeriodCodes.length > 1;
+  const viewSpec = zoomAvailable ? windowSpec(spec, state.periodRange) : spec;
+
+  const { rows, seriesMeta } = buildRows(viewSpec);
   // Owner decision B (session 88): a multi-region comparison (bar, >1 series
   // — one point per region, no time axis) may never be shown as a connected
   // line — that would imply a trend across regions that was never measured.
@@ -683,6 +710,11 @@ export function ChartView({
   // Y-axis domains below, so the honesty rule and the rendered chart can
   // never drift apart (WP12 review lesson: a policy the render doesn't
   // actually use is not a guard).
+  // Reads the ORIGINAL spec.kind (the honesty rule is about the chart's true
+  // shape, not the current zoom window) — `seriesMeta` above now comes from
+  // `buildRows(viewSpec)`, whose `.length` is unaffected by period filtering
+  // (filtering periods never removes a whole series), so this stays correct
+  // unchanged.
   const canUseLine = lineFormAllowed(spec, seriesMeta.length);
   // Guarded, not just `state.form` verbatim: the visual dock and Ontdek's
   // reading toggle swap `spec` on the SAME mounted ChartView (no `key`), and
@@ -695,8 +727,8 @@ export function ChartView({
   const effectiveKind: ChartSpec['kind'] =
     state.form === 'table' ? spec.kind : state.form === 'line' && !canUseLine ? 'bar' : state.form;
   const dimEntries = Object.entries(spec.dimLabels);
-  const markers = annotationMarkers(spec, rows);
-  const plan = valueLabelPlan({ ...spec, kind: effectiveKind });
+  const markers = annotationMarkers(viewSpec, rows);
+  const plan = valueLabelPlan({ ...viewSpec, kind: effectiveKind });
   const tickByValue = new Map(plan.axisTicks.map((t) => [t.value, t]));
   const endLabelByKey = new Map(plan.endLabels.map((l) => [l.seriesKey, l]));
   const barLabelsByKey = new Map<string, Map<string, PointLabel>>();
@@ -717,8 +749,15 @@ export function ChartView({
   const smallMultiplesAvailable = spec.kind === 'line' && seriesMeta.length > 1;
   const hiddenDisclosure =
     state.hiddenKeys.size > 0 ? ` ${state.hiddenKeys.size} van ${seriesMeta.length} reeksen verborgen.` : '';
+  // Task 4: describes the currently shown window against the chart's full
+  // covered range — from the ORIGINAL spec.attribution (identity, not
+  // windowed content), never recomputed from viewSpec's own filtered points.
+  const zoomDisclosure = state.periodRange
+    ? ` Getoond: ${periodLabelByCode.get(state.periodRange[0])}–${periodLabelByCode.get(state.periodRange[1])} van ${spec.attribution.coveredPeriods.from}–${spec.attribution.coveredPeriods.to}.`
+    : '';
+  const viewDisclosure = `${hiddenDisclosure}${zoomDisclosure}`;
   const tooltipTrigger = coarsePointer ? 'click' : 'hover';
-  const table = tableModel(spec);
+  const table = tableModel(viewSpec);
   const panelId = `${domId}-panel`;
 
   // Task 3: a real three-way Lijn/Staaf/Tabel switch. Lijn is skipped from
@@ -810,6 +849,58 @@ export function ChartView({
           Tabel
         </button>
       </div>
+      {zoomAvailable ? (
+        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          <label htmlFor={`${domId}-from`}>Vanaf</label>
+          <select
+            id={`${domId}-from`}
+            aria-label="Vanaf"
+            value={state.periodRange?.[0] ?? allPeriodCodes[0]}
+            onChange={(e) => {
+              const to = state.periodRange?.[1] ?? allPeriodCodes[allPeriodCodes.length - 1];
+              const from = e.target.value;
+              dispatch({
+                type: 'setPeriodRange',
+                range:
+                  from === allPeriodCodes[0] && to === allPeriodCodes[allPeriodCodes.length - 1]
+                    ? null
+                    : [from, to],
+              });
+            }}
+            className="rounded-md border border-border bg-background px-1.5 py-0.5 text-foreground"
+          >
+            {allPeriodCodes.map((code) => (
+              <option key={code} value={code}>
+                {periodLabelByCode.get(code)}
+              </option>
+            ))}
+          </select>
+          <label htmlFor={`${domId}-to`}>Tot</label>
+          <select
+            id={`${domId}-to`}
+            aria-label="Tot"
+            value={state.periodRange?.[1] ?? allPeriodCodes[allPeriodCodes.length - 1]}
+            onChange={(e) => {
+              const from = state.periodRange?.[0] ?? allPeriodCodes[0];
+              const to = e.target.value;
+              dispatch({
+                type: 'setPeriodRange',
+                range:
+                  from === allPeriodCodes[0] && to === allPeriodCodes[allPeriodCodes.length - 1]
+                    ? null
+                    : [from, to],
+              });
+            }}
+            className="rounded-md border border-border bg-background px-1.5 py-0.5 text-foreground"
+          >
+            {allPeriodCodes.map((code) => (
+              <option key={code} value={code}>
+                {periodLabelByCode.get(code)}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : null}
       {state.form === 'table' ? (
         <div id={panelId} role="tabpanel" aria-label="Tabel" className="mt-2 overflow-x-auto">
           <table className="w-full text-sm" aria-label={table.caption}>
@@ -976,7 +1067,7 @@ export function ChartView({
         )}
       </div>
       )}
-      {state.form !== 'table' && spec.attribution.trendHeadline !== undefined ? (
+      {state.form !== 'table' && !state.periodRange && spec.attribution.trendHeadline !== undefined ? (
         <p data-testid="trend-headline" className="mt-1 text-sm text-foreground">
           {spec.attribution.trendHeadline}
         </p>
@@ -995,6 +1086,10 @@ export function ChartView({
           ) : null}
         </>
       ) : null}
+      {/* Task 4: shown whenever a period-range zoom is active, independent of
+        * the series-legend block above (which only renders for >1 series) —
+        * a single-series chart can be zoomed too. */}
+      {zoomDisclosure ? <p className="mt-1 text-xs text-muted-foreground">{zoomDisclosure.trim()}</p> : null}
       {state.form !== 'table' && smallMultiplesAvailable ? (
         <div className="mt-2 flex flex-wrap items-center gap-3">
           <button
@@ -1073,7 +1168,7 @@ export function ChartView({
         {state.form !== 'table' && !smallMultiples ? (
           <ChartDownloadMenu
             containerRef={chartContainerRef}
-            attributionText={`${spec.attributionLine} checkdecijfers.nl${hiddenDisclosure}`}
+            attributionText={`${spec.attributionLine} checkdecijfers.nl${viewDisclosure}`}
             filenameBase={`checkdecijfers-${spec.attribution.tableId}`}
           />
         ) : null}
