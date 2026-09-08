@@ -13,10 +13,12 @@ this session).
 
 Verify yourself first, don't trust this file blindly:
 
-* `date +%Y-%m-%d`, `git log -20 --oneline` (expect `da51d86` at the tip — the wrap-up docs commit —
-  with `0360af1`/`e2f442e`/`ad538e5`/`90a93ed`/`f7c1477`/`0e0d219`/`c83d572`/`0aacc5e`/`8ff24ce`/
-  `33f1cf6`/`50761d6`/`1213358`/`c87afbe`/`734f7ea`/`0d11e8a`/`6621ef9`/`0ca8853`/`5eec334` below it
-  — the 19 session-88 commits, 18 build-range + 1 final wrap-up docs commit).
+* `date +%Y-%m-%d`, `git log -20 --oneline` — expect one or more small self-audit `docs:` fix
+  commits at the very tip (this file was written before the wrap-up ritual's own final self-audit
+  pass finished catching its own mistakes — trust `git log` over any exact SHA named in this file),
+  then `0360af1`/`e2f442e`/`ad538e5`/`90a93ed`/`f7c1477`/`0e0d219`/`c83d572`/`0aacc5e`/`8ff24ce`/
+  `33f1cf6`/`50761d6`/`1213358`/`c87afbe`/`734f7ea`/`0d11e8a`/`6621ef9`/`0ca8853`/`5eec334` below
+  that — the 18 build-range session-88 commits.
 * `gh run list --branch main -L 3 --json databaseId,headSha,status,conclusion` then confirm the HEAD
   run's `gate` AND `deploy` jobs are both green (deploy actually ran its real steps, not "skip the
   deploy when main has moved on" — check via `gh run view <id> --json jobs -q '.jobs[] | select(.name=="deploy") | .steps[]'`
