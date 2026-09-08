@@ -41,7 +41,7 @@ import type { ChartPoint, ChartSpec } from '../backend/chart/types.ts';
 import { ChartDownloadMenu } from './chart-download.tsx';
 import { ChartSmallMultiples } from './chart-small-multiples.tsx';
 import { SourceBadge } from './source-badge.tsx';
-import { chartViewReducer, initialViewState } from '../lib/chart-view-state.ts';
+import { chartViewReducer, initialViewState, lineFormAllowed, type ChartForm } from '../lib/chart-view-state.ts';
 
 /**
  * ADR 037 D11: the minimal structural subset `buildRows`/`valueLabelPlan`
@@ -620,7 +620,8 @@ export function ChartView({
   // honest view for many series.
   const initialForm = spec.series.length > BAR_LABEL_MAX ? 'table' : spec.kind;
   const [state, dispatch] = useReducer(chartViewReducer, initialForm, initialViewState);
-  const chartTabRef = useRef<HTMLButtonElement>(null);
+  const lineTabRef = useRef<HTMLButtonElement>(null);
+  const barTabRef = useRef<HTMLButtonElement>(null);
   const tableTabRef = useRef<HTMLButtonElement>(null);
 
   const [smallMultiples, setSmallMultiples] = useState(false);
@@ -675,6 +676,24 @@ export function ChartView({
   }
 
   const { rows, seriesMeta } = buildRows(spec);
+  // Owner decision B (session 88): a multi-region comparison (bar, >1 series
+  // — one point per region, no time axis) may never be shown as a connected
+  // line — that would imply a trend across regions that was never measured.
+  // `effectiveKind` is what actually drives the Recharts dispatch and both
+  // Y-axis domains below, so the honesty rule and the rendered chart can
+  // never drift apart (WP12 review lesson: a policy the render doesn't
+  // actually use is not a guard).
+  const canUseLine = lineFormAllowed(spec, seriesMeta.length);
+  // Guarded, not just `state.form` verbatim: the visual dock and Ontdek's
+  // reading toggle swap `spec` on the SAME mounted ChartView (no `key`), and
+  // the reducer's `reset` action deliberately PRESERVES the previously
+  // chosen form across that swap (so a user-picked Tabel view survives —
+  // see the reset test below). Without this guard, a 'line' form chosen on
+  // an earlier allowed spec would carry straight into a freshly-swapped
+  // multi-region spec where canUseLine is now false, rendering the exact
+  // connected-line-across-regions the honesty rule exists to forbid.
+  const effectiveKind: ChartSpec['kind'] =
+    state.form === 'table' ? spec.kind : state.form === 'line' && !canUseLine ? 'bar' : state.form;
   const dimEntries = Object.entries(spec.dimLabels);
   const markers = annotationMarkers(spec, rows);
   const plan = valueLabelPlan(spec);
@@ -702,16 +721,25 @@ export function ChartView({
   const table = tableModel(spec);
   const panelId = `${domId}-panel`;
 
-  function selectView(next: 'chart' | 'table'): void {
-    dispatch({ type: 'setForm', form: next === 'table' ? 'table' : initialForm === 'bar' ? 'bar' : 'line' });
-    (next === 'chart' ? chartTabRef : tableTabRef).current?.focus();
+  // Task 3: a real three-way Lijn/Staaf/Tabel switch. Lijn is skipped from
+  // the keyboard order entirely when disabled (canUseLine === false) so
+  // arrow-key navigation never lands on a control the pointer can't activate
+  // either.
+  const FORM_ORDER: ChartForm[] = canUseLine ? ['line', 'bar', 'table'] : ['bar', 'table'];
+  const formTabRef: Record<ChartForm, typeof lineTabRef> = { line: lineTabRef, bar: barTabRef, table: tableTabRef };
+
+  function selectForm(next: ChartForm): void {
+    dispatch({ type: 'setForm', form: next });
+    formTabRef[next].current?.focus();
   }
 
-  function onTabKeyDown(event: KeyboardEvent<HTMLDivElement>): void {
-    if (['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp'].includes(event.key)) {
-      event.preventDefault();
-      selectView(state.form === 'table' ? 'chart' : 'table');
-    }
+  function onFormTabKeyDown(event: KeyboardEvent<HTMLDivElement>): void {
+    if (!['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp'].includes(event.key)) return;
+    event.preventDefault();
+    const dir = event.key === 'ArrowRight' || event.key === 'ArrowDown' ? 1 : -1;
+    const idx = FORM_ORDER.indexOf(state.form === 'line' && !canUseLine ? 'bar' : state.form);
+    const nextIdx = (idx + dir + FORM_ORDER.length) % FORM_ORDER.length;
+    selectForm(FORM_ORDER[nextIdx]);
   }
 
   // Session 87 (mockup Option B): the Grafiek/Tabel switch is a shadcn-style
@@ -740,20 +768,34 @@ export function ChartView({
       <div
         role="tablist"
         aria-label="Weergave"
-        onKeyDown={onTabKeyDown}
+        onKeyDown={onFormTabKeyDown}
         className="mt-3 inline-flex items-center gap-0.5 rounded-lg bg-muted p-0.5"
       >
         <button
-          ref={chartTabRef}
+          ref={lineTabRef}
           type="button"
           role="tab"
-          aria-selected={state.form !== 'table'}
+          aria-selected={state.form === 'line'}
           aria-controls={panelId}
-          tabIndex={state.form !== 'table' ? 0 : -1}
-          onClick={() => selectView('chart')}
-          className={segmentTab(state.form !== 'table')}
+          tabIndex={state.form === 'line' ? 0 : -1}
+          disabled={!canUseLine}
+          title={canUseLine ? undefined : 'Een lijn tussen regio’s zou een trend suggereren die niet is gemeten.'}
+          onClick={() => selectForm('line')}
+          className={segmentTab(state.form === 'line') + (canUseLine ? '' : ' cursor-not-allowed opacity-40')}
         >
-          Grafiek
+          Lijn
+        </button>
+        <button
+          ref={barTabRef}
+          type="button"
+          role="tab"
+          aria-selected={state.form === 'bar'}
+          aria-controls={panelId}
+          tabIndex={state.form === 'bar' ? 0 : -1}
+          onClick={() => selectForm('bar')}
+          className={segmentTab(state.form === 'bar')}
+        >
+          Staaf
         </button>
         <button
           ref={tableTabRef}
@@ -762,7 +804,7 @@ export function ChartView({
           aria-selected={state.form === 'table'}
           aria-controls={panelId}
           tabIndex={state.form === 'table' ? 0 : -1}
-          onClick={() => selectView('table')}
+          onClick={() => selectForm('table')}
           className={segmentTab(state.form === 'table')}
         >
           Tabel
@@ -823,7 +865,7 @@ export function ChartView({
           <ChartSmallMultiples spec={spec} hiddenKeys={state.hiddenKeys} axisMode={axisMode} />
         ) : (
         <ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 640, height: 256 }}>
-          {spec.kind === 'line' ? (
+          {effectiveKind === 'line' ? (
             <LineChart
               data={rows}
               margin={{ top: 8, right: rightMargin, left: 8, bottom: 8 }}
@@ -846,7 +888,7 @@ export function ChartView({
                 interval={0}
                 tick={plan.axisTicks.length > 0 ? AxisTick(tickByValue) : false}
                 width={yAxisWidth}
-                domain={yAxisDomain(spec.kind)}
+                domain={yAxisDomain(effectiveKind)}
                 stroke={AXIS_COLOR}
               />
               <Tooltip trigger={tooltipTrigger} content={<ChartTooltip seriesMeta={seriesMeta} />} />
@@ -909,7 +951,7 @@ export function ChartView({
                 * below are ours. */}
               <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} />
               <XAxis dataKey="periodLabel" stroke={AXIS_COLOR} tick={{ fill: AXIS_COLOR }} />
-              <YAxis tick={false} width={16} domain={yAxisDomain(spec.kind)} stroke={AXIS_COLOR} />
+              <YAxis tick={false} width={16} domain={yAxisDomain(effectiveKind)} stroke={AXIS_COLOR} />
               <Tooltip trigger={tooltipTrigger} content={<ChartTooltip seriesMeta={seriesMeta} />} />
               {seriesMeta
                 .filter((s) => !state.hiddenKeys.has(s.key))

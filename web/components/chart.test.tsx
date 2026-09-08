@@ -727,9 +727,11 @@ describe('tableModel (#197 step 2)', () => {
 describe('ChartView — #197 step 2, the Tabel view', () => {
   beforeEach(() => vi.unstubAllGlobals());
 
-  it('offers a Grafiek/Tabel switch, chart first, and swaps to a table bound cell-by-cell to the spec', () => {
+  it('offers a Lijn/Tabel switch, chart first, and swaps to a table bound cell-by-cell to the spec', () => {
+    // Task 3 renamed the chart tab from the old generic "Grafiek" to the
+    // form it actually renders ("Lijn", since threePointSpec is kind: 'line').
     const { container } = render(<ChartView spec={threePointSpec()} />);
-    expect(screen.getByRole('tab', { name: 'Grafiek' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Lijn' })).toHaveAttribute('aria-selected', 'true');
     expect(container.querySelector('svg')).not.toBeNull();
     expect(container.querySelector('table')).toBeNull();
     fireEvent.click(screen.getByRole('tab', { name: 'Tabel' }));
@@ -740,7 +742,7 @@ describe('ChartView — #197 step 2, the Tabel view', () => {
     expect(table.querySelector('[data-label-for="hi"]')?.textContent).toBe('3,3');
     // Image download makes no sense for a table — the menu is not offered there.
     expect(screen.queryByRole('button', { name: 'Download' })).toBeNull();
-    fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Lijn' }));
     expect(container.querySelector('svg')).not.toBeNull();
   });
 
@@ -787,7 +789,7 @@ describe('ChartView — #197 step 2, the Tabel view', () => {
     // the spec-swap reset: view is presentationally valid for ANY spec, so
     // carrying it across a swap is not a leak worth clearing. Both specs
     // here are plain single-series line charts, so each one's OWN default
-    // form is 'line' (Grafiek) -- if the swap silently reset to that
+    // form is 'line' (Lijn) -- if the swap silently reset to that
     // default, this would catch it.
     const { rerender } = render(<ChartView spec={threePointSpec()} />);
     fireEvent.click(screen.getByRole('tab', { name: 'Tabel' }));
@@ -940,6 +942,121 @@ describe('ChartView — small multiples toggle (idea 8)', () => {
     // again; that's correct and unrelated to whether it has a panel here.
     const grid = screen.getByRole('group', { name: 'Kleine grafieken per reeks' });
     expect(grid.textContent).not.toContain('Utrecht');
+  });
+});
+
+// Task 3 (line/bar/table form switch) fixtures — self-contained per-spec
+// factories built on the file's own point()/spec() helpers rather than
+// duplicating them, per the plan's "reuse the existing declaration" note.
+function twoSeriesLineSpec(): ChartSpec {
+  return spec({
+    kind: 'line',
+    series: [
+      {
+        label: 'Nederland',
+        regionCode: null,
+        points: [
+          point({ resultId: 'nl-2020', periodCode: '2020', periodLabel: '2020', value: 100, formattedValue: '100' }),
+          point({ resultId: 'nl-2021', periodCode: '2021', periodLabel: '2021', value: 110, formattedValue: '110' }),
+        ],
+      },
+      {
+        label: 'Utrecht',
+        regionCode: 'GM0344',
+        points: [
+          point({ resultId: 'ut-2020', periodCode: '2020', periodLabel: '2020', value: 50, formattedValue: '50' }),
+          point({ resultId: 'ut-2021', periodCode: '2021', periodLabel: '2021', value: 55, formattedValue: '55' }),
+        ],
+      },
+    ],
+  });
+}
+
+function multiRegionBarSpec(): ChartSpec {
+  return spec({
+    kind: 'bar',
+    series: [
+      {
+        label: 'Groningen',
+        regionCode: 'PV20',
+        points: [point({ resultId: 'gr-2021', periodCode: '2021', periodLabel: '2021', value: 10, formattedValue: '10' })],
+      },
+      {
+        label: 'Friesland',
+        regionCode: 'PV21',
+        points: [point({ resultId: 'fr-2021', periodCode: '2021', periodLabel: '2021', value: 20, formattedValue: '20' })],
+      },
+      {
+        label: 'Drenthe',
+        regionCode: 'PV22',
+        points: [point({ resultId: 'dr-2021', periodCode: '2021', periodLabel: '2021', value: 15, formattedValue: '15' })],
+      },
+    ],
+  });
+}
+
+function negativeValueLineSpec(): ChartSpec {
+  return spec({
+    kind: 'line',
+    series: [
+      {
+        label: 'Nederland',
+        regionCode: null,
+        points: [
+          point({ resultId: 'neg-2020', periodCode: '2020', periodLabel: '2020', value: -5, formattedValue: '-5' }),
+          point({ resultId: 'neg-2021', periodCode: '2021', periodLabel: '2021', value: 10, formattedValue: '10' }),
+        ],
+      },
+    ],
+  });
+}
+
+describe('ChartView form switch', () => {
+  it('offers Lijn, Staaf and Tabel controls', () => {
+    const s = twoSeriesLineSpec();
+    render(<ChartView spec={s} />);
+    expect(screen.getByRole('tab', { name: 'Lijn' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Staaf' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Tabel' })).toBeInTheDocument();
+  });
+
+  it('disables Lijn for a multi-region comparison (bar) chart and explains why', () => {
+    const s = multiRegionBarSpec();
+    render(<ChartView spec={s} />);
+    const lineTab = screen.getByRole('tab', { name: 'Lijn' });
+    expect(lineTab).toBeDisabled();
+    expect(lineTab).toHaveAttribute('title', expect.stringContaining('regio'));
+  });
+
+  it('switching to Staaf renders a BarChart-shaped structure for a line-kind spec', () => {
+    const s = twoSeriesLineSpec();
+    render(<ChartView spec={s} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
+    expect(document.querySelector('.recharts-bar')).not.toBeNull();
+  });
+
+  it('bar form always domains the Y-axis at zero, even for an originally line-kind spec', () => {
+    const s = negativeValueLineSpec();
+    render(<ChartView spec={s} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
+    // yAxisDomain is exercised indirectly via Recharts' rendered axis; assert
+    // the exported yAxisDomain function directly instead for a hermetic check:
+    expect(yAxisDomain('bar')).toEqual([0, 'auto']);
+  });
+
+  it('never renders a connected line across regions after a same-instance spec swap into a disallowed multi-region comparison', () => {
+    // The visual dock and Ontdek's reading toggle swap `spec` on the SAME
+    // mounted ChartView (no `key`), and the reset action deliberately
+    // preserves the previously chosen form across that swap. Picking Lijn
+    // on an allowed spec, then handing the same instance a multi-region bar
+    // spec, must not carry the 'line' form into a spec where it's forbidden.
+    const { container, rerender } = render(<ChartView spec={twoSeriesLineSpec()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Lijn' }));
+    expect(container.querySelector('.recharts-line')).not.toBeNull();
+
+    rerender(<ChartView spec={multiRegionBarSpec()} />);
+    expect(container.querySelector('.recharts-line')).toBeNull();
+    expect(container.querySelector('.recharts-bar')).not.toBeNull();
   });
 });
 
