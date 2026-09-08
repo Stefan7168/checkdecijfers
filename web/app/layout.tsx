@@ -3,7 +3,6 @@ import { Geist_Mono, Inter } from "next/font/google";
 import "./globals.css";
 import { SiteFooter } from "../components/site-footer.tsx";
 import { ThemeProvider } from "../components/theme-provider.tsx";
-import { PricingHintProvider } from "../lib/pricing-hint-context.tsx";
 
 // Session 87 visual redesign (docs/12-huisstijl.md): the chosen mockup
 // (Option B, "Inset Cards") sets interface text in Inter; Geist Mono stays for
@@ -51,10 +50,8 @@ export default function RootLayout({
           can size its cards to the viewport. */}
       <body className="flex h-dvh flex-col">
         <ThemeProvider>
-          <PricingHintProvider>
-            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">{children}</div>
-            <SiteFooter />
-          </PricingHintProvider>
+          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">{children}</div>
+          <SiteFooter />
         </ThemeProvider>
       </body>
     </html>

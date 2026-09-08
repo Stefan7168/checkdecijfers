@@ -14,9 +14,7 @@ import type { WebSection } from '../backend/websearch/types.ts';
 import { UnrecognizedActionError } from 'next/dist/client/components/unrecognized-action-error';
 import { buildAnswerCsv } from '../lib/csv.ts';
 import { fakeAnswerResponse, fakeCell } from '../test/fake-answer.ts';
-import { PricingHintProvider } from '../lib/pricing-hint-context.tsx';
 import { Chat } from './chat.tsx';
-import { SiteFooter } from './site-footer.tsx';
 
 // #211 (Task 3): SiteFooter needs usePathname. '/chat' (not '/') deliberately
 // keeps its "Over dit project" anchor-probe branch inert here, matching the
@@ -851,16 +849,13 @@ describe('Chat — WP22 stale-deploy action failure (#96a)', () => {
 describe('Chat — WP20 cost transparency (#82)', () => {
   const pricing = { simple: 20, clarification: 10, balance: 100 };
 
-  it('shows the pre-send cost line with live prices and balance, in the footer', () => {
-    render(
-      <PricingHintProvider>
-        <Chat pricing={pricing} />
-        <SiteFooter />
-      </PricingHintProvider>,
-    );
-    expect(document.querySelector('footer')!.textContent).toContain(
-      'Een vraag kost ~20 credits · saldo: 100 credits. Stel ik eerst een verduidelijkingsvraag, dan kost die 10 credits en krijg je de rest terug.',
-    );
+  it('shows the pre-send cost line with live prices and balance, directly under the input', () => {
+    render(<Chat pricing={pricing} />);
+    expect(
+      screen.getByText(
+        'Een vraag kost ~20 credits · saldo: 100 credits. Stel ik eerst een verduidelijkingsvraag, dan kost die 10 credits en krijg je de rest terug.',
+      ),
+    ).toBeInTheDocument();
   });
 
   it('repeats the reply price at the clarification message itself', async () => {
@@ -1166,36 +1161,38 @@ describe('Chat — WP129+130 cost-line variants (⟨W4⟩)', () => {
   const pricing = { simple: 20, clarification: 10, balance: 100, websearch: { enabled: true as const, addonPrice: 10 } };
 
   it('shows the base line when Internet is off', () => {
-    render(
-      <PricingHintProvider>
-        <Chat pricing={pricing} />
-        <SiteFooter />
-      </PricingHintProvider>,
-    );
-    expect(document.querySelector('footer')!.textContent).toMatch(/Een vraag kost ~20 credits · saldo: 100 credits/);
+    render(<Chat pricing={pricing} />);
+    expect(screen.getByText(/Een vraag kost ~20 credits · saldo: 100 credits/)).toBeInTheDocument();
   });
 
   it('CBS + internet: "~30 credits (waarvan 10 voor internet)"', () => {
-    render(
-      <PricingHintProvider>
-        <Chat pricing={pricing} />
-        <SiteFooter />
-      </PricingHintProvider>,
-    );
+    render(<Chat pricing={pricing} />);
     fireEvent.click(screen.getByRole('button', { name: 'Internet' }));
-    expect(document.querySelector('footer')!.textContent).toMatch(/~30 credits \(waarvan 10 voor internet\)/);
+    expect(screen.getByText(/~30 credits \(waarvan 10 voor internet\)/)).toBeInTheDocument();
   });
 
   it('web-only: "~10 credits (er wordt tijdelijk 30 gereserveerd)"', () => {
-    render(
-      <PricingHintProvider>
-        <Chat pricing={pricing} />
-        <SiteFooter />
-      </PricingHintProvider>,
-    );
+    render(<Chat pricing={pricing} />);
     fireEvent.click(screen.getByRole('button', { name: 'Internet' })); // web on
     fireEvent.click(screen.getByRole('button', { name: 'CBS data' })); // cbs off
-    expect(document.querySelector('footer')!.textContent).toMatch(/~10 credits \(er wordt tijdelijk 30 gereserveerd\)/);
+    expect(screen.getByText(/~10 credits \(er wordt tijdelijk 30 gereserveerd\)/)).toBeInTheDocument();
+  });
+
+  // Session 90 layout (owner request at the session-89 close-out): the
+  // data-source pills sit directly ABOVE the input box and the pre-send
+  // pricing line directly BELOW it — pinned structurally (DOM order and
+  // adjacency), not by class names, so a restyle can't silently undo it.
+  it('places the source pills above the input and the cost line directly below it', () => {
+    render(<Chat pricing={pricing} />);
+    const form = screen.getByPlaceholderText('Stel een vraag…').closest('form')!;
+    const hint = screen.getByText(/Een vraag kost ~20 credits · saldo: 100 credits/);
+    expect(form.nextElementSibling).toBe(hint);
+    const cbsChip = screen.getByRole('button', { name: 'CBS data' });
+    const internetChip = screen.getByRole('button', { name: 'Internet' });
+    for (const chip of [cbsChip, internetChip]) {
+      expect(chip.compareDocumentPosition(form) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    }
+    expect(document.querySelector('footer')).toBeNull();
   });
 });
 
@@ -1678,6 +1675,7 @@ describe('Chat — attachment entry points (#201/#202, session 83 scoping; ADR 0
     render(<Chat />);
     for (const [name, hint] of [
       ['Upload file', 'upload een bestand'],
+      ['Link with sheet', 'koppel een spreadsheet'],
       ['Connect database', 'verbind een databron'],
     ] as const) {
       const button = screen.getByRole('button', { name });
@@ -1687,6 +1685,14 @@ describe('Chat — attachment entry points (#201/#202, session 83 scoping; ADR 0
     const linkButton = screen.getByRole('button', { name: 'Add link' });
     expect(linkButton).not.toBeDisabled();
     expect(linkButton).not.toHaveAttribute('title');
+  });
+
+  it('"Link with sheet" sits directly before "Connect database" in the chip row (owner request, session 90)', () => {
+    render(<Chat />);
+    const sheet = screen.getByRole('button', { name: 'Link with sheet' });
+    const database = screen.getByRole('button', { name: 'Connect database' });
+    expect(sheet.nextElementSibling).toBe(database);
+    expect(sheet.className).toBe(database.className);
   });
 
   it('"Connect database" no longer shows a "Soon" badge (owner feedback, session 88)', () => {

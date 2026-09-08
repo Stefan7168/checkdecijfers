@@ -1,5 +1,11 @@
 # Chip styling consistency + footer pricing line
 
+> **Superseded in part (session 90, 2026-09-09):** item 4 below (the pricing line in the site footer) was
+> reversed by the owner at the session-89 close-out — the pre-send pricing line now renders directly under
+> the "Stel een vraag" input again, and the data-source chip row moved directly above that input.
+> `PricingHintContext` was removed with it. Items 1–3 (the chip fixes) stand. See
+> [docs/12-huisstijl.md](../../12-huisstijl.md) (Composer) for the current layout.
+
 Design spec for a small batch of UI feedback given live by the owner while looking at the running app, 2026-09-08 (same session as [2026-09-08-chat-interaction-polish-design.md](2026-09-08-chat-interaction-polish-design.md), a separate/independent piece of work). Pure client-side UI, no answer-pipeline/billing/CBS-data code touched, no ADR needed for the chip fixes — the footer relocation introduces one small piece of shared client state (see below), still UI-only.
 
 ## Scope

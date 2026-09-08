@@ -14,10 +14,13 @@
 // sentence directly above this one — two footer bars on the logged-in page
 // (owner report, session 71). The workspace footer is gone; this is the only
 // one. /privacy and /over still don't exist (#14(d)).
+// Session 88 (#211) also appended the chat's pre-send pricing line here via a
+// PricingHintContext; session 90 moved that line back into the composer
+// (directly under the input, owner request) and removed the context — the
+// footer is attribution (+ the home-page anchor, + the gear link) only.
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { usePricingHint } from '../lib/pricing-hint-context.tsx';
 
 /** The attribution sentence without the trailing separator. */
 export const FOOTER_ATTRIBUTION =
@@ -50,7 +53,6 @@ function useAboutTargetPresent(pathname: string | null): boolean {
 export function SiteFooter() {
   const pathname = usePathname();
   const showAbout = useAboutTargetPresent(pathname);
-  const { pricingHint } = usePricingHint();
   return (
     <footer className="flex shrink-0 items-center justify-between gap-3 border-t border-border px-4 py-2.5 text-xs text-muted-foreground">
       <span>
@@ -60,7 +62,6 @@ export function SiteFooter() {
             {FOOTER_ABOUT_LABEL}
           </a>
         ) : null}
-        {pricingHint ? ` · ${pricingHint}` : null}
       </span>
       <Link
         href="/systeemoverzicht"

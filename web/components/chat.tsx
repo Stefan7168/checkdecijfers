@@ -12,7 +12,7 @@
 // branch here explicitly and must never fall into the generic catch below.
 'use client';
 
-import { Check, Database, Globe, Link2, Paperclip, Plug } from 'lucide-react';
+import { Check, Database, FileSpreadsheet, Globe, Link2, Paperclip, Plug } from 'lucide-react';
 import { unstable_isUnrecognizedActionError } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { askQuestion, replyToClarification } from '../app/actions.ts';
@@ -32,7 +32,6 @@ import { buildCitation } from '../lib/citation.ts';
 import { buildAnswerCsv } from '../lib/csv.ts';
 import type { AnswerCsv } from '../lib/csv.ts';
 import { statCardData } from '../lib/stat-card-data.ts';
-import { usePricingHint } from '../lib/pricing-hint-context.tsx';
 // WP135 (ADR 033 ⟨A3⟩): the ChatMessage/AnswerView shape and the meta/smalltalk
 // kind reclassification live in a shared pure leaf so thread replay
 // (web/lib/replay-assemble.ts, called from a Server Action) reconstructs the
@@ -59,8 +58,9 @@ import { Input } from './ui/input.tsx';
 // empty state — it is a bare composer now, like a blank LLM chat. The
 // follow-up chips (#73) keep the identical fill-don't-send handler.
 
-/** Session 87 (mockup Option B): the squared chips in the row UNDER the
- * composer (owner amendment 1) — source toggles and attachment entry points. */
+/** Session 87 (mockup Option B): the squared chips — source toggles and
+ * attachment entry points. Their row sat UNDER the composer (owner amendment
+ * 1) until session 90 moved it directly ABOVE the input (owner request). */
 const CHIP_BASE = 'inline-flex h-7 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium';
 const CHIP_ON = `${CHIP_BASE} border-transparent bg-secondary text-foreground`;
 const CHIP_OFF = `${CHIP_BASE} border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground`;
@@ -291,10 +291,6 @@ export function Chat({
   onBusyChange?: (busy: boolean) => void;
 } = {}) {
   const threadAware = onThreadId !== undefined;
-  // #211 chat interaction polish, session 88: the pre-send pricing line now
-  // lives in the global footer (SiteFooter) rather than rendered inline here
-  // — see the effect near the bottom of this component that feeds it.
-  const { setPricingHint } = usePricingHint();
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages ?? []);
   const [pending, setPending] = useState<PendingClarification | null>(null);
   // WP135 (ADR 033 D1): the thread this chat is currently in — seeded from the
@@ -735,26 +731,21 @@ export function Chat({
     }
   }
 
-  // #211 chat interaction polish, session 88: this used to render its own
-  // <p> here. It now feeds the SAME three text variants into the global
-  // footer instead (SiteFooter, via PricingHintContext) -- the owner asked
-  // for the pricing line to live in the footer, not just be restyled here.
-  useEffect(() => {
-    if (!pricing) {
-      setPricingHint(null);
-      return;
-    }
-    const hint =
-      websearch && webSelected && selectedSources.size > 0
-        ? `Een vraag kost ~${pricing.simple + websearch.addonPrice} credits (waarvan ${websearch.addonPrice} voor internet) · saldo: ${pricing.balance} credits. ` +
-          `Stel ik eerst een verduidelijkingsvraag, dan kost die ${pricing.clarification} credits en krijg je de rest terug.`
-        : websearch && webSelected
-          ? `Een vraag kost ~${websearch.addonPrice} credits (er wordt tijdelijk ${pricing.simple + websearch.addonPrice} gereserveerd) · saldo: ${pricing.balance} credits.`
-          : `Een vraag kost ~${pricing.simple} credits · saldo: ${pricing.balance} credits. ` +
-            `Stel ik eerst een verduidelijkingsvraag, dan kost die ${pricing.clarification} credits en krijg je de rest terug.`;
-    setPricingHint(hint);
-    return () => setPricingHint(null);
-  }, [pricing, websearch, webSelected, selectedSources, setPricingHint]);
+  // The pre-send pricing line (WP20 #82; WP129+130 added the Internet
+  // variants). Session 88 (#211) moved it into the global footer through a
+  // PricingHintContext; the owner then asked (session-89 close-out, built
+  // session 90) for it to sit DIRECTLY UNDER the input box instead, so it is
+  // a plain derived string rendered inline again and the context plumbing is
+  // gone. Same three text variants, same conditions, same numbers.
+  const pricingHint = !pricing
+    ? null
+    : websearch && webSelected && selectedSources.size > 0
+      ? `Een vraag kost ~${pricing.simple + websearch.addonPrice} credits (waarvan ${websearch.addonPrice} voor internet) · saldo: ${pricing.balance} credits. ` +
+        `Stel ik eerst een verduidelijkingsvraag, dan kost die ${pricing.clarification} credits en krijg je de rest terug.`
+      : websearch && webSelected
+        ? `Een vraag kost ~${websearch.addonPrice} credits (er wordt tijdelijk ${pricing.simple + websearch.addonPrice} gereserveerd) · saldo: ${pricing.balance} credits.`
+        : `Een vraag kost ~${pricing.simple} credits · saldo: ${pricing.balance} credits. ` +
+          `Stel ik eerst een verduidelijkingsvraag, dan kost die ${pricing.clarification} credits en krijg je de rest terug.`;
 
   return (
     // Session 87 visual redesign: no frame of its own — the workspace card
@@ -1004,33 +995,19 @@ export function Chat({
       </div>
       <div className="shrink-0 border-t border-border px-4 py-3">
         <div className="mx-auto flex w-full max-w-2xl flex-col gap-2">
-      <form onSubmit={handleSubmit} className="flex gap-2">
-        <Input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          disabled={busy}
-          maxLength={500}
-          placeholder={
-            // WP26c: a RESCUE pending must not make the box look like it is
-            // waiting for an answer — nothing was asked. Only a real
-            // clarification round echoes its question here.
-            pending && pending.rescueOnly !== true ? pending.questionNl : 'Stel een vraag…'
-          }
-          className="h-10 flex-1 bg-background px-3.5"
-        />
-        <Button type="submit" size="lg" className="h-10 px-4" disabled={busy || !input.trim() || nothingSelected}>
-          Verstuur
-        </Button>
-      </form>
       {/* WP129+130 (#129, ADR 032): the source-tags chips — one per registered
         * source (label "<displayName> data", PRE-checked) plus the "Internet"
         * channel (default OFF). Toggle buttons carry aria-pressed; a selected
         * chip is filled, an unselected one outlined (icons are aria-hidden, so
         * the accessible name stays the label). Only shown when the websearch
         * prop is present — a lone CBS chip is the choice-noise the owner
-        * rejected. Session 87: the row sits UNDER the input (owner amendment 1)
-        * and shares one row with the attachment entry points below. */}
+        * rejected. Session 87 put the row UNDER the input (owner amendment 1);
+        * the owner then asked (session-89 close-out, built session 90) for the
+        * data-source pills to sit directly ABOVE the input box, with the
+        * pre-send pricing line directly BELOW it. The whole chip row moved up
+        * together — sources and the attachment entry points share one row, and
+        * the link/upload feedback lines stay next to the chips they belong to,
+        * so the input + pricing line form one uninterrupted block underneath. */}
       <div className="flex flex-wrap items-center gap-1.5">
       {websearch ? (
         <>
@@ -1113,10 +1090,27 @@ export function Chat({
             Upload file
           </button>
         )}
+        {/* Session 90 (owner request, in chat): a "Link with sheet" entry
+          * point BEFORE "Connect database" — a spreadsheet link (Google
+          * Sheets and the like) is a different, lighter ask than a database
+          * connection, so it gets its own chip. Same honest "coming soon"
+          * treatment as its neighbour: disabled with an explanatory title,
+          * no backend yet (WP202b territory). "Connect database"'s example
+          * moved from Google Sheets to a real database now that sheets have
+          * their own chip. */}
         <button
           type="button"
           disabled
-          title="Binnenkort beschikbaar: verbind een databron (bijv. Google Sheets)"
+          title="Binnenkort beschikbaar: koppel een spreadsheet (bijv. Google Sheets)"
+          className={CHIP_SOON}
+        >
+          <FileSpreadsheet aria-hidden="true" className="size-3.5" />
+          Link with sheet
+        </button>
+        <button
+          type="button"
+          disabled
+          title="Binnenkort beschikbaar: verbind een databron (bijv. een Postgres-database)"
           className={CHIP_SOON}
         >
           <Plug aria-hidden="true" className="size-3.5" />
@@ -1157,6 +1151,26 @@ export function Chat({
       {attachments && uploadError ? (
         <p className="text-xs text-destructive">{uploadError}</p>
       ) : null}
+      <form onSubmit={handleSubmit} className="flex gap-2">
+        <Input
+          type="text"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          disabled={busy}
+          maxLength={500}
+          placeholder={
+            // WP26c: a RESCUE pending must not make the box look like it is
+            // waiting for an answer — nothing was asked. Only a real
+            // clarification round echoes its question here.
+            pending && pending.rescueOnly !== true ? pending.questionNl : 'Stel een vraag…'
+          }
+          className="h-10 flex-1 bg-background px-3.5"
+        />
+        <Button type="submit" size="lg" className="h-10 px-4" disabled={busy || !input.trim() || nothingSelected}>
+          Verstuur
+        </Button>
+      </form>
+      {pricingHint ? <p className="text-xs text-muted-foreground">{pricingHint}</p> : null}
         </div>
       </div>
     </div>
