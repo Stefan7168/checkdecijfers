@@ -6,6 +6,77 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 87 — 2026-09-07/08 — a visual redesign built by delegation, a real bug found while
+investigating a vague owner report, an autonomous stretch spanning a day boundary, and several
+tool-behavior gotchas worth recording
+
+- **This harness has no mechanism to resume/continue an already-running background subagent —
+  calling the Agent tool again with a follow-up prompt spawns a completely independent NEW agent,
+  not a continuation.** Mid-build, a small spec amendment needed relaying to the in-progress
+  redesign-build agent; the natural-seeming move (call Agent again, describe the amendment) instead
+  created a second, fully independent agent with no memory of the original brief, which would have
+  started its own competing pass over the same files had it not been caught and stopped
+  (`TaskStop`) within the same turn, before it touched anything. **The lesson:** in this
+  environment, don't attempt to "message" a running subagent via a second Agent call — either hold
+  the amendment and apply it yourself once the original agent reports back (what worked here, twice,
+  for small UI tweaks), or accept that a genuine mid-flight steer requires stopping and restarting
+  the original task with the amendment folded into a fresh brief.
+- **`computer` actions (synthetic OS-level clicks/keystrokes/screenshots) silently no-op when the
+  target machine's screen is locked or inactive — reported as `0x0` viewport / "Cannot take
+  screenshot with 0 width" — while DOM-level tools (`get_page_text`, `read_page`, `find`,
+  `form_input`, `javascript_tool`) keep working perfectly regardless.** Discovered live: the owner
+  stepped away mid-session, and a `computer` click + type into the chat input silently did nothing
+  (no error, no effect) while `read_page` correctly reported the field as still empty. The fix that
+  worked every time afterward: use `form_input` to set values and `javascript_tool` to
+  `element.click()` instead of synthetic input — these operate on the DOM directly and don't need a
+  live compositor. Worth knowing before concluding a page is unresponsive or a click "didn't
+  register" during an unattended stretch — check whether it's the input path, not the page.
+- **A markdown table row in `open-questions.md`/`open-questions-archive.md` can validly contain an
+  embedded literal newline (very long rows wrap across physical lines while remaining one logical
+  row) — and BRE-mode `grep -c "^\| [0-9]"` silently gives a WRONG count on files with this shape**,
+  because GNU grep parses `\|` as alternation (splitting the pattern into `^` — which matches every
+  line — and a leftover fragment), not as an escaped literal pipe. Two different files each showed a
+  count exactly equal to their own total line count under this pattern, which should have been the
+  tell. **Fixed by switching to a small Python script** (`re.match(r'^\| \d+ \|', line)`, correctly
+  quoted) for every row-count check and for the row extraction/insertion itself when archiving
+  closed rows — mechanical, verifiable (`MISSING: set()`, exact arithmetic on row counts before/
+  after), and immune to shell quoting surprises. Recommended default for any future archival pass on
+  this file: don't hand-edit or sed/awk long rows, script the extraction.
+- **A reusable pattern, used repeatedly this session by both the main session and a delegated build
+  agent: a throwaway `web/app/login/zz*/page.tsx` route, mounting real components directly with
+  fixture props, to visually verify authenticated-app UI (workspace, chat, dock) without needing a
+  real login.** It works because `proxy.ts` allowlists the `/login` prefix for logged-out access.
+  Used for: verifying the redesign's empty/mid-conversation states in light+dark, verifying a chip-
+  row edit, and verifying the mobile-sidebar fix. Always deleted before the next commit (confirmed
+  via `git status` showing nothing untracked each time). Worth naming as the standard technique
+  rather than re-inventing it each session — grep git history for `zzdel` if a future session wants
+  a worked example.
+- **Recharts' `CartesianGrid`/`XAxis`/`YAxis` fall back to hardcoded literal colours (`#666` axis,
+  `#ccc` grid) that do NOT respond to CSS custom properties or a dark-mode class toggle — this is
+  invisible in jsdom tests (no contrast is ever measured) and only surfaces via an actual browser +
+  real contrast measurement.** The session-87 redesign initially shipped exactly this bug (dark-mode
+  axis labels at ~3:1 contrast, the grid the brightest element on the chart) and it passed the full
+  test suite, both typechecks, and a LOW-effort `/code-review` pass cleanly — none of those check
+  rendered contrast. Caught only by a deliberately deeper pass (real browser + programmatic
+  oklch→sRGB contrast auditing). **Lesson for any future theme/dark-mode work touching Recharts:**
+  always pass `stroke`/`tick.fill` explicitly, referencing the current theme's CSS vars — never rely
+  on Recharts' own defaults surviving a theme migration, and don't trust a green test suite alone to
+  catch this class of bug; a real visual pass in both themes is a separate, necessary step.
+- **The two false "session wrap-up" hook triggers today both fired with NO accompanying user
+  message, and both times a genuine, contradicting user message ("keep working," "continue working
+  autonomously") arrived in the same or a following turn.** The one that mattered (this entry's own
+  trigger) arrived WITH a real, explicit user message ("wrap up per docs"). Pattern worth recording
+  for a future session: treat a wrap-up-signal hook with no accompanying user text as very likely a
+  false positive, especially against a recent explicit "don't stop" instruction — but never
+  disregard one that arrives alongside real user text saying so, however short.
+- **An autonomous stretch spanning a day boundary (2026-09-07 into 2026-09-08) with the owner away
+  worked well precisely because every single push got its own full verification block (typecheck ×2,
+  full test suites, real `next build`, `/code-review` LOW) and its own watched CI run before the
+  next one started** — nothing was ever pushed on the assumption that "the previous push was fine so
+  this one probably is too." The one genuinely risky moment (see the Agent-duplication lesson above)
+  was caught and reversed within the same turn specifically because of that pattern of never
+  proceeding past a verification step just to save time.
+
 ## Session 86 (continued) — 2026-09-07 — the deploy fix, a self-service-secrets rule broken a THIRD time, a Vercel token-scope gotcha, and a real production incident found and fixed
 
 - **A tracked open-question row went stale for two full sessions because nobody re-read it after

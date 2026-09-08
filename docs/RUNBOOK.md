@@ -432,6 +432,13 @@ deliberately skipped (optional, owner's call). Rollback unchanged: unset the fla
 **[Update 2026-07-24, session 55: the cosmetic residual is FIXED — `/login` is now `force-dynamic` (commit `0cfbd3d`), so the header
 renders and the route reads env vars per request. That also retires the "⚠ /login HTML is a FALSE NEGATIVE" caveat above: `/login` is
 no longer statically prerendered. The `/geschiedenis`-redirect signal still works and remains the belt-and-braces check.]**
+**[Correction, 2026-09-07, session 87: the claim above was WRONG from this point until fixed — `/geschiedenis` was NEVER given the same
+`force-dynamic` fix `/login` got in this same session, so it stayed statically prerendered and its redirect FROZE at whatever
+`WORKSPACE_ENABLED`'s value was at the last build — meaning this exact "belt-and-braces check" silently gave a false result for any
+session that relied on it between 2026-07-24 and 2026-09-07. Found while investigating an unrelated owner report ("tabs don't open");
+fixed same-day (`a8ae15b`, `export const dynamic = 'force-dynamic'`), verified live. The check is now genuinely reliable again — but this
+is the second time a `force-dynamic` fix landed on one route ([#135](open-questions.md)-class bug) without a sweep for the same pattern
+elsewhere; a session-87 audit (see [lessons-learned.md](lessons-learned.md)) confirmed no other routes carry this bug as of today.]**
 
 The workspace (conversation sidebar + right-pane dock + site shell) ships DORMANT behind
 `WORKSPACE_ENABLED`: until every step below is done, production behaves byte-identically to

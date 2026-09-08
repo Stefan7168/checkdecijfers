@@ -9,27 +9,33 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
-**▶ SESSION 87 (2026-09-07, owner present then autonomous mid-session — "keep working until I say
-stop") — chat + chart visual redesign shipped and LIVE.** Fixed a real prod bug found while
-investigating an owner report ("tabs don't open"): `/geschiedenis` was frozen redirecting to `/`
-by build-time static prerendering (`a8ae15b`, same bug class as #135, fixed with
-`export const dynamic = 'force-dynamic'`). Then, per an owner request to improve the UI: 3 mockup
-options built and reviewed, owner picked Option B + 3 amendments; a Fable subagent built the full
-redesign against a committed spec (`90fda5d`), reviewed/amended/verified by the session
-(`e6f5b21`) — shadcn/ui neutral + `next-themes` dark mode, papier & inkt retired
-([12-huisstijl.md](12-huisstijl.md)), Recharts basic palette, "Over dit project" + example chips
-removed from the chat screen. **Verified LIVE** (`GET /api/health` → ok; DOM-confirmed the new
-chat screen renders correctly in production — no screenshot possible, the owner's machine screen
-appears locked while away, but `get_page_text`/`read_page` work fine regardless). Full verification
-every push: web 701/701, backend 2089/2089, both typechecks, real `next build`, `/code-review` LOW
-clean. Stale "papier & inkt"/`--series-1..4` references swept across ADRs 008/014/018/035,
-08-build-plan.md, 10-ux-design-brief.md, 04-architecture.md; open-questions #204 resolved.
-`03-mvp-scope.md`'s chart-studio non-goal narrowed (owner: conversational chart editing for CBS
-charts pulled into scope as sub-project 3). Two research briefs produced (chat interaction
-polish — a real streaming/honesty tension found, not yet resolved; conversational chart editing —
-invariant risk assessed, tier-3 "ask for different data" empirically confirmed already-working live
-on production). 11 terminally-closed open-questions rows archived (`6327864`). Full session entry:
-[status-archive.md](status-archive.md).
+**▶ SESSION 87 (2026-09-07 owner-present, then explicit "continue working autonomously" overnight
+into 2026-09-08) — chat + chart visual redesign shipped, deep-reviewed, and LIVE; a real prod bug
+fixed; a full open-questions re-triage.** Fixed a real prod bug found while investigating an owner
+report ("tabs don't open"): `/geschiedenis` was frozen redirecting to `/` by build-time static
+prerendering (`a8ae15b`, same bug class as #135). Then, per an owner request to improve the UI: 3
+mockup options built and reviewed, owner picked Option B + 3 amendments; a Fable subagent built the
+full redesign against a committed spec (`90fda5d`→`e6f5b21`) — shadcn/ui neutral + `next-themes`
+dark mode, papier & inkt retired ([12-huisstijl.md](12-huisstijl.md)), Recharts basic palette, two
+homepage-style blocks removed from the chat screen. A deeper adversarial pass (real browser +
+measured contrast, not just a diff read) then caught and fixed 5 real regressions the mechanical
+restyle introduced (`8350988`): dark-mode chart illegibility, tooltip contrast, missing focus
+rings, a colour-only active-thread indicator, dock tabs overflowing their container. A
+mobile-viewport check found the sidebar had NO responsive breakpoint at all (pre-existing, not a
+regression) — fixed by auto-collapsing it via the SAME existing collapsed-sidebar UI (`b912175`,
+[#213](open-questions.md)); the header's own mobile wrapping was flagged but NOT fixed (new nav UI
+needed, [#214](open-questions.md)). Two research briefs produced for sub-projects 2/3 — no product
+decisions made unsupervised; sub-project 2 surfaced a real streaming/validation-timing tension
+(unresolved, needs a brainstorm); sub-project 3's tier-3 claim ("different data needs no new code")
+empirically confirmed live on production. **A full open-questions re-triage** (first complete one
+since session 71, every row read across 5 parallel agents) archived 32 rows total this session and
+fixed several real stale/contradictory claims found in the process. Dependency/security check: 0
+vulnerabilities, 0 Dependabot alerts. **Verified LIVE throughout** (`GET /api/health` → ok on every
+deploy; DOM-confirmed correct rendering — no screenshot possible while the owner's machine screen
+was locked, but `get_page_text`/`read_page`/`form_input`/`javascript_tool` all work regardless). 16
+commits (`a8ae15b`→`468a8e6`), full verification block (typecheck ×2, web 701/701, backend
+2089/2089, real `next build`, `/code-review` LOW) before every one, every push's own CI watched
+green. Full session entry: [status-archive.md](status-archive.md).
 
 **▶ SESSION 86 (2026-09-07, owner present, mixed autonomous/interactive) — the CI `deploy` job is
 FIXED and LIVE for the first time in weeks, and that exposed + fixed a real production incident.**

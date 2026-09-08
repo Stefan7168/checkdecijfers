@@ -1,5 +1,141 @@
 # STATUS archive — the session log
 
+**Session 87 (2026-09-07 owner-present start, then explicit "continue working autonomously"
+overnight into 2026-09-08) — A REAL PRODUCTION BUG FOUND AND FIXED, THE CHAT+CHART VISUAL REDESIGN
+BUILT/DEEP-REVIEWED/SHIPPED/LIVE, AND THE FIRST FULL OPEN-QUESTIONS RE-TRIAGE SINCE SESSION 71.**
+
+1. **Investigated a vague owner report ("tabs don't open") and found a real production bug**
+   (`a8ae15b`): `/geschiedenis` was frozen redirecting to `/` in production — the same bug class as
+   an earlier `/login` fix ([#135](open-questions.md), session 55): the page checked
+   `WORKSPACE_ENABLED` as its very first action, before any dynamic API call, so Next.js statically
+   prerendered it at build time and froze the redirect regardless of the flag's real runtime value.
+   Fixed with `export const dynamic = 'force-dynamic'`, verified live. A follow-up audit of every
+   other route for the same pattern (`/credits`, `/`, `/systeemoverzicht`, `/login`) found no other
+   instances — both genuine cases (`/geschiedenis`, `/login`) already carried the fix.
+2. **Owner asked to improve the UI, the chart look, and the overall chat experience.**
+   Brainstormed into 3 sequenced sub-projects: (1) visual polish, (2) chat interaction polish, (3)
+   conversational chart editing for CBS charts. Built 3 mockup options as a published Artifact
+   (Fable subagent) for the owner to compare; owner picked "Option B — Inset Cards" plus 3
+   amendments (chip row moved below the composer; a full-width "New chat" button above "Search
+   chats" replacing a small `[+]` icon; a visible "Connect database — Soon" chip after "Upload
+   file"). A design spec was written and committed
+   ([docs/superpowers/specs/2026-09-07-chat-chart-visual-redesign-design.md](superpowers/specs/2026-09-07-chat-chart-visual-redesign-design.md), `90fda5d`)
+   before any build began.
+3. **Sub-project 1 (visual redesign) built by a Fable subagent against the committed spec, then
+   reviewed, amended, and verified by the session** (`e6f5b21`): shadcn/ui init (neutral base,
+   Tailwind v4), `next-themes` light/dark mode, the entire `globals.css` token layer rewritten,
+   ~34 components restyled. The "papier & inkt" house style (session 51) is RETIRED —
+   [docs/12-huisstijl.md](12-huisstijl.md) rewritten to record the new direction. Charts moved to
+   Recharts' own basic/default palette, dropping the session-69 colour-blind-safe palette + dash
+   patterns as an accepted trade-off of "use the basic Recharts style" (owner decision). The "Over
+   dit project" blurb and the example-question chips were removed from the chat screen only (the
+   logged-out landing page keeps its own copy). Three owner amendments applied during the build via
+   a session-held-and-relayed-after pattern (see lesson 8 below, not a live mid-flight message to the
+   agent). Full verification before push: web 701/701, backend 2089/2089, both typechecks clean,
+   real `next build`, `/code-review` LOW clean, visually verified light/dark via a throwaway preview
+   route (deleted after). Stale "papier & inkt"/`--series-1..4` references swept across ADRs
+   008/014/018/035, `08-build-plan.md`, `10-ux-design-brief.md`, `04-architecture.md` (each got its
+   own as-built addendum); [open-questions #204](open-questions.md) resolved.
+   `docs/03-mvp-scope.md`'s "interactive chart studio" non-goal row narrowed: the full drag-and-drop
+   studio stays Phase 2–3, but conversational chart editing for CBS charts specifically is pulled
+   into scope as sub-project 3 ([#212](open-questions.md)).
+4. **A deeper adversarial review, deliberately going further than the LOW-effort `/code-review` pass
+   covers** (Fable subagent, real browser + programmatic oklch→sRGB contrast auditing, `8350988`):
+   found and fixed 5 real regressions the mechanical restyle introduced. Dark-mode chart axes/grid
+   used Recharts' hardcoded `#666`/`#ccc` literal defaults (illegible in dark — x-axis labels
+   measured ~3:1, now 6.94:1 via new `AXIS_COLOR`/`GRID_COLOR` theme tokens). The chart tooltip
+   coloured its text by series — two of the default palette's colours read below 2:1 on the white
+   popover — now a colour swatch instead of coloured text (19.8:1). Plain `<button>` elements (chips,
+   pills, thread rows, dock tabs, segment tabs, legend) lost their explicit focus-visible ring in the
+   restyle, falling back to a near-invisible 50%-alpha default — fixed with a base-layer
+   `:focus-visible` rule. The active sidebar thread was colour-only distinguishable in light mode
+   (~1.04:1, a real WCAG 1.4.1 issue) — added `font-medium` as the non-colour cue. The visual dock's
+   tabs could literally overflow their container (2 tabs already exceeded the w-96 width) with no
+   scroll affordance — now `min-w-24`/`shrink` so more tabs fit, and the active tab
+   `scrollIntoView()`s on change. Verified: web 701/701, both typechecks, real `next build`,
+   `/code-review` LOW clean. Left for an explicit owner call, not fixed: `--muted-foreground` on
+   `--muted`/`--secondary` measures 4.35:1 in light mode (needs 4.5:1) on the stock shadcn token
+   pairing — fixing it means departing from the spec's "stock shadcn, no custom theme" decision.
+5. **A mobile-viewport check found the chat workspace sidebar had NO responsive breakpoint at all**
+   (`6499ab6` to flag it, `b912175` to fix it, [#213](open-questions.md)) — confirmed pre-existing
+   (identical in the commit immediately before the redesign), not a regression. Fixed by reusing the
+   EXISTING collapsed-sidebar UI (already built, already tested): auto-collapse once on crossing into
+   a narrow viewport (`max-width: 767px`, the same `useMediaQuery` pattern already used for the
+   dock's `isWide` gate), with the user's own manual expand toggle still winning afterward (verified:
+   expanding while narrow persists, doesn't immediately re-collapse). Chosen because it's a bounded,
+   reversible, zero-new-UI change squarely inside the redesign's own mandate — unlike sub-projects
+   2/3, no product/invariant tension, no new visual pattern needing approval. The site header's own
+   mobile wrapping was found in the same pass but deliberately NOT fixed
+   ([#214](open-questions.md)) — there's no already-built "collapsed header" to reuse, so a real fix
+   means designing new mobile-nav UI, a genuine design decision, flagged for the owner instead.
+6. **Two research briefs produced for sub-projects 2 and 3 — investigation only, no product
+   decisions made unsupervised.** Sub-project 2 (chat interaction polish / streaming,
+   [#211](open-questions.md)): real token-by-token streaming is architecturally plausible for the
+   phrasing-only LLM call (numbers are validated before it runs), BUT the pipeline validates the
+   LLM's FULL output only AFTER generation and can silently retry/fall back to a different body — a
+   genuine tension between "stream what's generating" and "only show what's validated" that needs an
+   owner decision, not a workaround. The brief's own "no architecture change" fallback option (staged
+   busy-state text) was re-examined before building it and found to not hold up either — the client
+   has no real signal for which pipeline stage is active, so "staged" text would have to be
+   fake/time-based, conflicting with the product's own never-fake-it principle; left for the
+   brainstorm rather than shipped. Sub-project 3 (conversational chart editing,
+   [#212](open-questions.md)): the ADR-037 `ChartInstruction` MECHANISM transfers to CBS charts, but
+   the DATA SCOPE doesn't (CBS `ValidatedResult.cells` only ever contains the narrow cell set one
+   specific intent asked for, unlike a full uploaded dataset) — invariant risk assessed per edit
+   tier, presentation/in-hand-filtering judged low-risk if built ADR-037-style. The tier-3 claim
+   ("asking for different data needs no new code, it's just the existing follow-up flow") was
+   EMPIRICALLY CONFIRMED live on production: a real follow-up for a different region (Rotterdam →
+   Utrecht) worked correctly end-to-end, including an honest PV-vs-gemeente disambiguation, with zero
+   new code.
+7. **A full re-triage of `docs/open-questions.md` — the first complete one since session 71's**
+   (every row read, across 5 parallel agents, cross-checked against git history where load-bearing,
+   `49bbc23` + `6327864` for the two archival batches). Archived 32 rows total this session: 11 from
+   an initial spot-check (`6327864`: #137, #138, #147–151, #162, #189, #199, #203) and 21 more from
+   the full pass (`49bbc23`: #3, #4, #39, #58, #65, #66, #70, #74, #79, #89, #98, #117, #119, #133,
+   #143, #144, #154, #175, #180, #195, #204). Fixed several real stale/contradictory claims surfaced
+   in the process rather than just archiving: `#134`'s cross-reference said `#138` was "still
+   deferred" though `#138` shipped in session 55 (2026-07-18) and was itself being archived the same
+   day; `#14`'s GDPR row said the live purge had never run in production, though it has since session
+   78 (`GDPR_PURGE_APPLY=1`); `#170`/`#176` had status labels overclaiming relative to their own body
+   text (cb262df); `#23`'s "alerting channel finalized" claim was verified against the actual code
+   and found to be true only narrowly (Resend IS wired, but only for one specific alert type, not the
+   row's original broader ask — `468a8e6`). Noted a doc-wide finding without chasing it row by row:
+   historical PR-number citations throughout the doc and its archive point at a prior GitHub repo
+   instance (recreated 2026-09-05) and will 404 — the underlying commit SHAs remain independently
+   verified true, added as a standing header note rather than fixed per-row.
+8. **Genuinely new tool-behavior lessons, recorded in full in
+   [lessons-learned.md](lessons-learned.md)'s own session-87 entry:** the Agent tool has no
+   "resume a running subagent" mechanism — a second call spawns an independent duplicate (near-miss,
+   caught and stopped within the same turn before any file was touched); `computer` actions
+   (synthetic clicks/keystrokes/screenshots) silently no-op when the target screen is locked/inactive
+   while DOM-level tools (`get_page_text`/`read_page`/`find`/`form_input`/`javascript_tool`) keep
+   working regardless — this is how the session verified production and kept testing while the
+   owner's machine was locked; Recharts' axis/grid components default to hardcoded literal colours
+   invisible to any jsdom-based test, only caught by an actual browser + measured-contrast pass; a
+   markdown table row in this doc's own files can validly contain an embedded literal newline, which
+   silently breaks naive `grep -c "^\| [0-9]"` row-counting (GNU grep's BRE `\|` is alternation, not
+   an escaped pipe) — a small Python script doing the row extraction/counting is the reliable
+   approach used for both archival batches.
+9. **Dependency/security check: 0 npm audit vulnerabilities (root + web), 0 open GitHub Dependabot
+   alerts, 0 open PRs.** Clean.
+
+**Measured, verified facts as of session close:** 16 commits (`a8ae15b`→`468a8e6`), 15 with their
+own green CI run (`c1ba880` was pushed together with `728372e` in one push — GitHub Actions runs
+once per push on the tip SHA, so its content was validated as part of `728372e`'s green run, not
+separately). Every push's CI was individually watched to completion before the next push, no
+exceptions. Full backend suite 2089/2089 and full web suite 701/701 held green throughout (both grew
+slightly across the redesign's own test-file updates). Production confirmed live and current on the
+final commit (`GET /api/health` → `{"ok":true}` with all 7 checks passing; the deploy job's real
+steps — Install Vercel CLI, Build, Deploy prebuilt output, Post-deploy smoke check — ran, not
+skipped). Working tree clean, single worktree, no stray scratch files (every throwaway `zzdel-*`
+preview route created this session was confirmed deleted via `git status` before its commit).
+
+**Not touched this session, correctly left for the owner:** WP202a's actual go-live (the
+`dataset_turn` pricing decision, the migration 026/027 apply, the `ATTACHMENTS_ENABLED` flag flip —
+all owner-supervised); sub-projects 2 and 3's actual design/build (both need a real brainstorming
+round, not a session's unilateral call); the mobile header redesign
+([#214](open-questions.md), needs new nav UI, a genuine design decision).
+
 **Session 86 (2026-09-07, owner present throughout, mixed autonomous-loop/interactive) — THE CI
 `deploy` JOB IS FIXED AND LIVE FOR THE FIRST TIME IN WEEKS, WHICH EXPOSED AND LED TO FIXING A REAL
 PRODUCTION INCIDENT; PLUS THE REST OF WP202a'S PURELY-ADDITIVE UI/DOCS SCOPE.**

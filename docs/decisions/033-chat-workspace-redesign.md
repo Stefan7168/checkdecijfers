@@ -130,6 +130,15 @@ lives on that page); elsewhere the attribution sentence only (no dead anchor —
 The byte pin moved from `workspace.test.tsx` to the same file's site-footer cases. Verified locally on the
 production build: `/login` and `/systeemoverzicht` each have exactly one `contentinfo` and one gear link.
 
+**Superseded, 2026-09-07 (session 87, visual redesign):** a plain `pathname === '/'` check is no longer
+correct — the redesign removed the "Over dit project" section from the logged-in workspace's `/` (a bare
+LLM-chat screen, no explanatory copy) while the logged-out Landing's `/` keeps its own copy, so the SAME
+route now sometimes has the anchor and sometimes doesn't. `SiteFooter` now probes the actual DOM
+(`useAboutTargetPresent`, `document.getElementById(ABOUT_ANCHOR_ID)`, re-checked via a `MutationObserver`
+while on `/`) rather than trusting the pathname alone — see `docs/superpowers/specs/2026-09-07-chat-chart-visual-redesign-design.md`
+and `web/components/site-footer.tsx`. D6's rule (no dead anchor links) is unchanged; only the detection
+mechanism is.
+
 ### D7 — Dormant-until-flag rollout
 
 The workspace ships behind `WORKSPACE_ENABLED` (the WP129+130 pattern): flag off → today's
