@@ -380,8 +380,14 @@ see the commits for specifics):
    `src/answer/audit/retention.ts`'s `redactMatchingRows` — documented trade-off, see the file.
 3. **Billing** (`ce5dd5f`) — `debitDataset`/`reserveDatasetDebit` (ledger siblings of
    `debitWebSearch`), `src/billing/dataset-gate.ts`'s `chargeAndRunDataset` (the `chargeAndRun`
-   pattern for the 3-kind envelope). `dataset_turn`/`dataset_ingest` prices deliberately NOT in
-   `pricing-defaults.ts` yet — mechanism decided, exact credit amounts still open (§8 Q1).
+   pattern for the 3-kind envelope). `dataset_turn`/`dataset_ingest` prices were deliberately NOT
+   in `pricing-defaults.ts` at build time — mechanism decided, exact credit amounts left open
+   (§8 Q1). **✅ `dataset_turn` decided session 89 (2026-09-08, owner present, WP202 go-live
+   checklist step 1): 20 credits**, now in `ACTION_CLASS_PRICES` (`478c943`) — see
+   [09-pricing.md](09-pricing.md) and [RUNBOOK.md](RUNBOOK.md)'s WP202 checklist for the exact
+   value and rationale. `dataset_ingest` still has, and always will have, no price row (CSV/TSV
+   stays free in v1 by skipping the reserve call in code, D12). Not yet applied to production —
+   RUNBOOK steps 2-6 (migrate, `pricing:apply`, flag flip, live smoke test) are still pending.
 4. **LLM harness** (`d60edb7`) — `instruct/prompt.ts` + `parse.ts`, mirrors
    `src/catalog/rerank-prompt.ts`/`rerank.ts`. `DATASET_INSTRUCT_MODEL = 'claude-haiku-4-5'`,
    temperature 0. English prompt (new text, not a rewrite of the CBS-side Dutch prompts).
