@@ -45,10 +45,14 @@ decisions; three small owner UI asks + a per-chat delete SHIPPED to `main`.**
   `.env`; (3) the #218 docs. Verified before push: typecheck ×2, web 784/784 (+12), backend
   2093/2093 (+4, incl. a foreign-thread and a ledger-untouched pin), hermetic benchmark 14/14 +
   6/6 + 0 fabricated, real `next build`, `/code-review` LOW 0 findings.
-- **Not yet done at wrap-up:** the light/dark visual check of the shipped UI on production in the
-  owner's Chrome (CI run `34261331269` was still in progress; a logged-in LOCAL check is impossible —
-  the magic-link redirect allow-list is `localhost:3000`, held by the sibling project). **First thing
-  after compaction: confirm CI green, then check the composer + sidebar menu on production.**
+- **CI + production, verified at the end of the session:** run `34261331269` (code push) gate green,
+  its deploy step skipped BY DESIGN ("main is already at 4ab390d; that commit's own run deploys it");
+  run `34262171903` (docs push `4ab390d`) gate green + deploy green; `/api/health` `{"ok":true}`.
+  **Visual check done on production in the owner's logged-in Chrome, light AND dark:** chip row
+  above the input, pricing line directly under it, "Link with sheet" before "Connect database", plus
+  icon in "Nieuwe chat", ⋯ appears on row hover, "Delete chat" menu opens (closed with Escape, nothing
+  deleted), footer without a pricing segment. (A logged-in LOCAL check is impossible as configured —
+  RUNBOOK § "Running the web app locally WITH the real database".)
 - **Owner steer, recorded as a standing rule:** decision lists in shorthand were unreadable
   ("Didn't I tell you to use plain, normal English?") — every owner-facing option is now a plain
   full sentence (memory `feedback_plain_english_no_jargon`, lessons-learned).

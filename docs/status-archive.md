@@ -47,7 +47,9 @@ SHEET" CHIP, PLUS ICON AND PER-CHAT DELETE SHIPPED TO `main`.**
    the dev server); hermetic benchmark 14/14 + 6/6 + 0 fabricated, GATE PASS; real `next build`;
    `/code-review` LOW: 0 findings (one comment/params tidy done anyway, retention + feedback suites
    re-run 36/36). Pushed as `6e2a66b` (composer + chip), `2880b57` (sidebar delete + plus + dev-web
-   wrapper), `e6a7ede` (#218 docs); CI run `34261331269` in progress at wrap-up time.
+   wrapper), `e6a7ede` (#218 docs); CI run `34261331269`: gate green, deploy step skipped by design
+   (main had already moved on to the docs commit `4ab390d`, whose own run `34262171903` went gate
+   green + deploy green); production `/api/health` `{"ok":true}` afterwards.
 5. **Visual verification: partial.** A logged-in local check proved impossible: the in-app browser
    pane and the owner's Chrome both had no localhost session, and a magic-link login can't land —
    Supabase's redirect allow-list has `localhost:3000` only, and port 3000 is held by the sibling
@@ -55,8 +57,11 @@ SHEET" CHIP, PLUS ICON AND PER-CHAT DELETE SHIPPED TO `main`.**
    `./.env` (TCC "Operation not permitted" in Documents) and `node --env-file` is refused when
    `next` re-spawns with `NODE_OPTIONS` → `scripts/dev-web.mjs` (`process.loadEnvFile` + spawn npm)
    and a `web-db` entry in `.claude/launch.json` now run the local web app WITH the database. The
-   logged-out landing rendered fine on it. **The light/dark check of the composer + sidebar menu
-   on production (owner's Chrome, logged in) is the first post-compaction step.**
+   logged-out landing rendered fine on it. **Then verified on production after the deploy, in the
+   owner's logged-in Chrome, light AND dark:** chip row above the input, pricing line directly under
+   it, "Link with sheet" before "Connect database", plus icon in "Nieuwe chat", ⋯ revealed on row
+   hover, the "Delete chat" menu opening (closed with Escape — nothing deleted), footer without a
+   pricing segment; theme restored to light afterwards.
 6. **Owner decisions A–H on #218, given in chat, plain-English restated and confirmed** — recorded
    on #218 (+ new rows #219 EN/NL switch, #220 usage counter) and as the 6-phase WP218 programme in
    08-build-plan: A EN/NL top-nav switch + per-chart language dropdown (CBS's own words via a

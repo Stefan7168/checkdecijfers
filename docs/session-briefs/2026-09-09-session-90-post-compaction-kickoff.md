@@ -9,19 +9,17 @@ truth) → this file → `docs/status-archive.md` (session-90 entry, top, 8 item
 
 ## What is true right now (verified 2026-09-09)
 
-- `main` HEAD is `e6a7ede`; three session-90 commits sit on top of `813a0f4`: `6e2a66b` (composer
-  layout + "Link with sheet" chip), `2880b57` (sidebar ⋯ delete + plus icon + `scripts/dev-web.mjs`),
-  `e6a7ede` (#218 panel docs). Working tree clean, single worktree. **CI run `34261331269` was still IN
-  PROGRESS when this was written — check `gh run view 34261331269` first; if red, fix before anything
-  else.** Production `/api/health` was `{"ok":true}` (7 checks) on the previous deploy.
+- `main` HEAD is `4ab390d` (the session-90 docs commit) on top of three session-90 code/docs commits
+  `6e2a66b` (composer layout + "Link with sheet" chip), `2880b57` (sidebar ⋯ delete + plus icon +
+  `scripts/dev-web.mjs`), `e6a7ede` (#218 panel docs), all on `813a0f4`. Working tree clean, single
+  worktree. CI: run `34261331269` gate green (deploy skipped by design because main had moved on),
+  run `34262171903` gate green + deploy green. Production `/api/health` `{"ok":true}` (7 checks).
 - Verification that DID run before the push: typecheck ×2, web 784/784, backend 2093/2093, hermetic
   benchmark 14/14 + 6/6 + 0 fabricated, real `next build`, `/code-review` LOW with 0 findings.
-- **NOT done: the light/dark visual check of the shipped UI on production.** Do it first, in the
-  owner's Chrome (logged in on https://checkdecijfers.vercel.app): the chip row above the input, the
-  pricing line directly under it, the "Link with sheet" chip before "Connect database", the plus icon in
-  "Nieuwe chat", and hover a sidebar row → ⋯ → "Delete chat" → **Cancel** (do not delete the owner's real
-  chats). A logged-in LOCAL check is impossible as configured — RUNBOOK § "Running the web app locally
-  WITH the real database" explains why and the two ways to fix it (owner steps).
+- The shipped UI was verified on production in the owner's logged-in Chrome, light and dark (chip row
+  above the input, pricing line under it, "Link with sheet" chip, plus icon, ⋯ → "Delete chat" menu).
+  A logged-in LOCAL check is impossible as configured — RUNBOOK § "Running the web app locally WITH the
+  real database" explains why and the two owner-side ways to fix it.
 
 ## The single next priority — owner-chosen
 
