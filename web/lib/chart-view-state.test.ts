@@ -58,6 +58,7 @@ describe('initialViewState', () => {
       hiddenKeys: new Set(),
       highlightedKey: null,
       periodRange: null,
+      presentation: {},
     });
   });
 });
@@ -135,6 +136,7 @@ describe('chartViewReducer', () => {
       hiddenKeys: new Set(),
       highlightedKey: null,
       periodRange: null,
+      presentation: {},
     });
   });
 });
@@ -184,5 +186,41 @@ describe('windowSpec', () => {
     expect(windowed.attribution).toBe(s.attribution);
     expect(windowed.unit).toBe(s.unit);
     expect(windowed.kind).toBe(s.kind);
+  });
+});
+
+describe('presentation slice (WP218)', () => {
+  it('starts empty', () => {
+    expect(initialViewState('line').presentation).toEqual({});
+  });
+  it('setPresentation merges a patch shallowly (a later key wins, others survive)', () => {
+    let s = initialViewState('line');
+    s = chartViewReducer(s, { type: 'setPresentation', patch: { lineWidth: 'thick' } });
+    s = chartViewReducer(s, { type: 'setPresentation', patch: { grid: 'none' } });
+    expect(s.presentation).toEqual({ lineWidth: 'thick', grid: 'none' });
+    s = chartViewReducer(s, { type: 'setPresentation', patch: { lineWidth: 'thin' } });
+    expect(s.presentation.lineWidth).toBe('thin');
+  });
+  it('setPresentation replaces seriesColors wholesale (the panel computes the new map)', () => {
+    let s = initialViewState('line');
+    s = chartViewReducer(s, { type: 'setPresentation', patch: { seriesColors: { 0: '#ff0000', 1: '#00ff00' } } });
+    s = chartViewReducer(s, { type: 'setPresentation', patch: { seriesColors: { 1: '#0000ff' } } });
+    expect(s.presentation.seriesColors).toEqual({ 1: '#0000ff' });
+  });
+  it('resetPresentation clears only the presentation, keeping form/zoom/hidden series', () => {
+    let s = initialViewState('line');
+    s = chartViewReducer(s, { type: 'setForm', form: 'bar' });
+    s = chartViewReducer(s, { type: 'toggleSeries', key: 's0' });
+    s = chartViewReducer(s, { type: 'setPresentation', patch: { grid: 'none' } });
+    s = chartViewReducer(s, { type: 'resetPresentation' });
+    expect(s.presentation).toEqual({});
+    expect(s.form).toBe('bar');
+    expect(s.hiddenKeys.has('s0')).toBe(true);
+  });
+  it('reset (a spec swap on the same mounted chart) clears the presentation — owner decision E: each chart starts fresh', () => {
+    let s = initialViewState('line');
+    s = chartViewReducer(s, { type: 'setPresentation', patch: { lineWidth: 'thick' } });
+    s = chartViewReducer(s, { type: 'reset', initialForm: 'line' });
+    expect(s.presentation).toEqual({});
   });
 });

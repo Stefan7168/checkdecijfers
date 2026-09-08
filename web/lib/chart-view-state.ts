@@ -4,6 +4,7 @@
 // server-built ChartSpec for on-screen display. See docs/decisions/ for the
 // full ADR.
 import type { ChartSpec } from '../backend/chart/types.ts';
+import type { PresentationOverrides } from './chart-presentation.ts';
 
 export type ChartForm = 'line' | 'bar' | 'table';
 
@@ -13,6 +14,11 @@ export interface ChartViewState {
   highlightedKey: string | null;
   /** Inclusive [fromPeriodCode, toPeriodCode], or null for the full fetched range. */
   periodRange: [string, string] | null;
+  /** WP218 (ADR 039): plain user overrides on the stock look; the resolver
+   * (chart-presentation.ts) turns them into effective values per render, so a
+   * stale override can never apply to a newly-unsafe spec. Cleared by
+   * `reset` — owner decision E (session 90): each chart starts fresh. */
+  presentation: PresentationOverrides;
 }
 
 export type ChartViewAction =
@@ -20,10 +26,12 @@ export type ChartViewAction =
   | { type: 'toggleSeries'; key: string }
   | { type: 'setHighlight'; key: string | null }
   | { type: 'setPeriodRange'; range: [string, string] | null }
+  | { type: 'setPresentation'; patch: PresentationOverrides }
+  | { type: 'resetPresentation' }
   | { type: 'reset'; initialForm: ChartForm };
 
 export function initialViewState(initialForm: ChartForm): ChartViewState {
-  return { form: initialForm, hiddenKeys: new Set(), highlightedKey: null, periodRange: null };
+  return { form: initialForm, hiddenKeys: new Set(), highlightedKey: null, periodRange: null, presentation: {} };
 }
 
 export function chartViewReducer(state: ChartViewState, action: ChartViewAction): ChartViewState {
@@ -48,6 +56,10 @@ export function chartViewReducer(state: ChartViewState, action: ChartViewAction)
       return { ...state, highlightedKey: action.key };
     case 'setPeriodRange':
       return { ...state, periodRange: action.range };
+    case 'setPresentation':
+      return { ...state, presentation: { ...state.presentation, ...action.patch } };
+    case 'resetPresentation':
+      return { ...state, presentation: {} };
     case 'reset':
       return initialViewState(action.initialForm);
     default:
