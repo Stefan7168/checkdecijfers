@@ -14,6 +14,7 @@ import {
   answerClarificationReplyAudited,
   answerQuestionAudited,
   deleteUserQuestionHistory,
+  deleteThreadQuestionHistory,
   FEEDBACK_TEXT_MAX_LENGTH,
   upsertAnswerFeedback,
 } from '../backend/answer/audit/index.ts';
@@ -62,6 +63,7 @@ import {
 // ADR 037 D10: loadMyThread's dataset-thread dispatch leg — deterministic,
 // zero LLM, exactly like the CBS replay it sits beside.
 import { getDatasetTurnsByThread } from '../backend/attachments/read.ts';
+import { deleteOneDataset } from '../backend/attachments/retention.ts';
 import { lastChartState, replayDatasetTurns } from '../backend/attachments/replay.ts';
 import type { DatasetChatMessage } from '../backend/attachments/replay.ts';
 import type { RawDatasetState } from '../backend/attachments/respond.ts';
@@ -890,6 +892,39 @@ export async function listMyThreads(): Promise<ThreadSummary[]> {
   } catch (error) {
     console.error('listMyThreads failed:', error);
     return [];
+  }
+}
+
+/** Session 90 (owner request, in chat): delete ONE chat from the sidebar (the
+ * ⋯ menu on a thread row). Ownership is validated first, exactly like
+ * loadMyThread — a forged/foreign/unknown id is `{ ok: false }`, never an
+ * error that could leak a thread's existence. Then the thread-kind dispatch
+ * (ADR 037 D10): a dataset thread deletes its dataset (`deleteOneDataset`,
+ * the same leg "Verwijder dit bestand" uses — its turns redact with it), a
+ * CBS thread redacts its own audit rows (`deleteThreadQuestionHistory`, the
+ * per-thread twin of deleteMyQuestionHistory above: redact-not-delete, ledger
+ * never touched). Either way the thread vanishes from `listThreads` by
+ * construction — its title source is gone — with no `chat_threads` write and
+ * no schema change. Fail-soft like the rest of the thread family (the sidebar
+ * shows an inline "couldn't delete" line on `{ ok: false }`), but reported
+ * durably (#65) since a silent failure here would look like a working delete. */
+export async function deleteMyThread(rawThreadId: unknown): Promise<{ ok: boolean }> {
+  let userId: string | null = null;
+  try {
+    userId = await currentUserId();
+    if (userId === null) return { ok: false };
+    const threadId = await validateThreadOwnership(getDb(), userId, rawThreadId);
+    if (threadId === null) return { ok: false };
+    const datasetId = await getThreadDatasetId(getDb(), userId, threadId);
+    if (datasetId !== null) {
+      return { ok: await deleteOneDataset(getDb(), userId, datasetId) };
+    }
+    await deleteThreadQuestionHistory(getDb(), userId, threadId);
+    return { ok: true };
+  } catch (error) {
+    console.error('deleteMyThread failed:', error);
+    await reportError('deleteMyThread', error, { userId });
+    return { ok: false };
   }
 }
 

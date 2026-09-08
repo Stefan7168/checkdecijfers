@@ -34,19 +34,27 @@ and caveat lines and a green for "payment landed". Both light and dark values ar
 ## Layout (chat screen, mockup Option B)
 
 - The whole logged-in screen sits on the grey ground (`bg-sidebar`); the slim site header is transparent on it.
-- **Sidebar** (borderless, on the ground): a full-width **"Nieuwe chat"** button stacked above a same-size
-  **"Search chats"** field (owner amendment 2 — a client-side title filter, no request), then dense thread
-  rows under small uppercase day-group labels.
+- **Sidebar** (borderless, on the ground): a full-width **"Nieuwe chat"** button (with a plus icon, session 90)
+  stacked above a same-size **"Search chats"** field (owner amendment 2 — a client-side title filter, no
+  request), then dense thread rows under small uppercase day-group labels. **Session 90 (owner request):**
+  every row has a ⋯ "Chat options" button (revealed on hover/focus, always on touch) opening a one-item
+  shadcn `DropdownMenu` — "Delete chat" — which asks for an inline confirmation (the session-23 delete UX)
+  before the server redacts that chat's own rows (`deleteMyThread`; redact-not-delete, ledger untouched, the
+  thread disappears because its title source is gone — no schema change).
 - **Chat** and the **visual dock** are two separate white cards (`rounded-xl border bg-card`), each with a
   48px header bar: the chat card names the thread (or "Nieuwe chat") and carries the three-way
   light/dark/system theme toggle; the dock card says "Charts" + count and uses **underline tabs**.
 - **Messages:** user messages are outlined cards aligned right (`border bg-background rounded-lg`);
   assistant answers are plain text aligned left. A clarification keeps a quiet amber wash (`bg-warning-soft`) so
   it reads as a question back, not an answer (#84). Refusals keep their fixed header line.
-- **Composer:** the input + "Verstuur" button, with the chip row **below** it (owner amendment 1): source
-  toggles ("CBS data", "Internet" — only when web search is enabled), "Link toevoegen", "Bestand uploaden",
-  "Databron verbinden". Squared chips: selected = filled `bg-secondary`, unselected = outlined,
-  "coming soon" = dashed + dimmed. The cost line stays last.
+- **Composer (layout revised session 90, 2026-09-09, owner request at the session-89 close-out):** the chip
+  row sits directly **above** the input — source toggles ("CBS data", "Internet" — only when web search is
+  enabled), "Add link", "Upload file", "Link with sheet" (session 90, disabled/coming-soon like its
+  neighbour), "Connect database" — then the input + "Verstuur" button, then the
+  pre-send cost line directly **below** the input. (Session 87's owner amendment 1 had the chip row *below*
+  the input, and session 88 (#211) briefly moved the cost line into the site footer; both superseded.)
+  Squared chips: selected = filled `bg-secondary` + checkmark, unselected = outlined, "coming soon" = dashed
+  + dimmed.
 - **Empty state:** a bare composer — no explanatory copy, no example-question chips (the #75 chips were removed
   from the chat screen; the logged-out landing page keeps its own copy).
 - Structure is unchanged from ADR 033: sidebar / chat column / right-hand dock at ≥ lg with ≥ 1 visual.

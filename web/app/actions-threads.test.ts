@@ -35,6 +35,7 @@ const audit = vi.hoisted(() => ({
   answerQuestionAudited: vi.fn(),
   answerClarificationReplyAudited: vi.fn(),
   deleteUserQuestionHistory: vi.fn(),
+  deleteThreadQuestionHistory: vi.fn(),
   FEEDBACK_TEXT_MAX_LENGTH: 2000,
   upsertAnswerFeedback: vi.fn(),
 }));
@@ -54,10 +55,15 @@ const threads = vi.hoisted(() => ({
   attachOrCreateThread: vi.fn(),
   listThreads: vi.fn(),
   getThreadRows: vi.fn(),
+  getThreadDatasetId: vi.fn(),
 }));
 vi.mock('../backend/threads/index.ts', () => threads);
 
-import { askQuestion, replyToClarification } from './actions.ts';
+// Session 90: the dataset leg of deleteMyThread (ADR 037 D10 dispatch).
+const attachmentsRetention = vi.hoisted(() => ({ deleteOneDataset: vi.fn() }));
+vi.mock('../backend/attachments/retention.ts', () => attachmentsRetention);
+
+import { askQuestion, deleteMyThread, replyToClarification } from './actions.ts';
 
 const fakeDb = {} as Db;
 // #149: guardRequestId now validates UUID shape — every call site needs a
@@ -194,5 +200,48 @@ describe('replyToClarification — WP135 ⟨A6⟩ captured-thread binding', () =
     driveOk(fakeAnswer(), 8);
     await replyToClarification(pending, '2024', RID);
     expect(threads.attachOrCreateThread).not.toHaveBeenCalled();
+  });
+});
+
+describe('deleteMyThread — session 90: one chat from the sidebar, ownership-validated, kind-dispatched', () => {
+  beforeEach(() => {
+    audit.deleteThreadQuestionHistory.mockReset().mockResolvedValue([{ id: 1, kind: 'answer' }]);
+    attachmentsRetention.deleteOneDataset.mockReset().mockResolvedValue(true);
+    threads.getThreadDatasetId.mockReset().mockResolvedValue(null);
+  });
+
+  it('a CBS thread the caller owns: redacts that thread only, via deleteThreadQuestionHistory', async () => {
+    threads.validateThreadOwnership.mockResolvedValue(7);
+    await expect(deleteMyThread(7)).resolves.toEqual({ ok: true });
+    expect(threads.validateThreadOwnership).toHaveBeenCalledWith(fakeDb, 'user-1', 7);
+    expect(audit.deleteThreadQuestionHistory).toHaveBeenCalledWith(fakeDb, 'user-1', 7);
+    expect(attachmentsRetention.deleteOneDataset).not.toHaveBeenCalled();
+  });
+
+  it('a dataset thread: deletes the dataset (the "Verwijder dit bestand" leg), never the audit-row leg', async () => {
+    threads.validateThreadOwnership.mockResolvedValue(9);
+    threads.getThreadDatasetId.mockResolvedValue(42);
+    await expect(deleteMyThread(9)).resolves.toEqual({ ok: true });
+    expect(attachmentsRetention.deleteOneDataset).toHaveBeenCalledWith(fakeDb, 'user-1', 42);
+    expect(audit.deleteThreadQuestionHistory).not.toHaveBeenCalled();
+  });
+
+  it('a forged/foreign/unknown id validates to null → { ok: false } and NOTHING is redacted', async () => {
+    threads.validateThreadOwnership.mockResolvedValue(null);
+    await expect(deleteMyThread(999)).resolves.toEqual({ ok: false });
+    expect(audit.deleteThreadQuestionHistory).not.toHaveBeenCalled();
+    expect(attachmentsRetention.deleteOneDataset).not.toHaveBeenCalled();
+  });
+
+  it('unauthenticated → { ok: false } before any ownership lookup', async () => {
+    currentUserId.mockResolvedValue(null);
+    await expect(deleteMyThread(7)).resolves.toEqual({ ok: false });
+    expect(threads.validateThreadOwnership).not.toHaveBeenCalled();
+  });
+
+  it('a thrown redaction error is fail-soft: { ok: false }, never a thrown server error', async () => {
+    threads.validateThreadOwnership.mockResolvedValue(7);
+    audit.deleteThreadQuestionHistory.mockRejectedValue(new Error('db down'));
+    await expect(deleteMyThread(7)).resolves.toEqual({ ok: false });
   });
 });

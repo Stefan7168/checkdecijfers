@@ -303,3 +303,14 @@ statically prerendered and sensitive env vars are empty at build (cosmetic; the 
 `dynamic = 'force-dynamic'` (commit `0cfbd3d`) so the `WORKSPACE_ENABLED` read happens per request instead of being
 frozen at build time; pinned by `web/app/login/page.test.tsx` (prerender opt-out + flag-on/off render) and verified
 live on production HTML. The ⟨A5⟩ flag semantics are unchanged.
+
+**As-built update (2026-09-09, session 90, owner present):** the sidebar (D5) gained three owner-requested touches — a
+plus icon inside "Nieuwe chat", and a per-row ⋯ "Chat options" button (hover/focus-revealed, always visible on touch)
+opening a one-item shadcn `DropdownMenu` (Base UI) whose "Delete chat" asks for an inline confirmation (the session-23
+delete UX) and then calls `deleteMyThread` (`web/app/actions.ts`). Deletion is D2's own mechanism turned per-thread:
+`deleteThreadQuestionHistory` (`src/answer/audit/retention.ts`) redacts that thread's audit rows — feedback and
+pending-request legs scoped alongside — so `listThreads` drops the thread because its derived title source is gone;
+a dataset thread routes to ADR 037 D13's `deleteOneDataset` instead. No `chat_threads` write, no migration; D1's
+"timestamps only, no text" holds. Deleting the ACTIVE chat resets to a fresh chat (the D5 explicit reset), since its
+messages no longer exist server-side. Pins: `tests/audit/retention.test.ts`, `web/app/actions-threads.test.ts`,
+`web/components/thread-sidebar.test.tsx`, `web/components/workspace.test.tsx`.

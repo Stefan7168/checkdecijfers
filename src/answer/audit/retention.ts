@@ -318,6 +318,61 @@ export async function deleteUserQuestionHistory(db: Db, userId: string): Promise
   );
 }
 
+/** Per-thread self-service deletion (session 90, 2026-09-09, owner request:
+ * "remove a question from the sidebar" — a ⋯ menu on each chat row). The SAME
+ * redaction as `deleteUserQuestionHistory` above, narrowed to ONE thread: every
+ * in-scope audit row of THIS user whose `thread_id` is the given thread. Both
+ * predicates are bound parameters (no dynamic SQL), so a caller can never reach
+ * another user's thread by id alone — a foreign or unknown thread id simply
+ * matches zero rows (indistinguishable on purpose, same contract as
+ * `validateThreadOwnership`). No schema change and no `chat_threads` delete:
+ * a thread whose rows are all redacted disappears from the sidebar BY
+ * CONSTRUCTION, because `listThreads` (src/threads/index.ts) derives a thread's
+ * title from its first NON-redacted row and filters out a thread with none,
+ * while `chat_threads` itself holds no text at all (ADR 033 D1). The two paired
+ * legs mirror the whole-history version, scoped the same way: feedback rows
+ * pointing at these audit rows are hard-deleted, and pending onboarding
+ * requests whose acknowledgment or delivery turn lives in this thread get their
+ * free text redacted (migration 012's `ack_audit_answer_id` /
+ * `delivery_audit_answer_id` links). Idempotent, ledger-untouched. */
+export async function deleteThreadQuestionHistory(
+  db: Db,
+  userId: string,
+  threadId: number,
+): Promise<RedactedRow[]> {
+  return redactMatchingRows(
+    db,
+    `user_id = $1 and thread_id = $2 and ${AUDIT_SCOPE}`,
+    [userId, threadId],
+    {
+      // answer_feedback.user_id and audit_answers.user_id are both text, so
+      // one bound `$1` serves both predicates.
+      sql: `delete from answer_feedback
+            where user_id = $1
+              and audit_answer_id in (
+                select id from audit_answers where user_id = $1 and thread_id = $2
+              )`,
+      params: [userId, threadId],
+    },
+    {
+      // `$5` is the same userId again, bound separately: pending_table_requests
+      // .user_id is uuid while audit_answers.user_id is text, and one parameter
+      // cannot be inferred as both types.
+      sql: `update pending_table_requests set ${PENDING_REDACTION_SET}
+            where user_id = $1
+              and (
+                ack_audit_answer_id in (
+                  select id from audit_answers where user_id = $5 and thread_id = $4
+                )
+                or delivery_audit_answer_id in (
+                  select id from audit_answers where user_id = $5 and thread_id = $4
+                )
+              )`,
+      params: [userId, REDACTED_QUESTION_TEXT, REDACTED_TABLE_ID, threadId, userId],
+    },
+  );
+}
+
 /** Retention purge (#14 piece 1): every in-scope audit row older than ITS OWN
  * window, across ALL users — account-held content at `cutoff` (2 years),
  * anonymous-trial content at `anonymousCutoff` (90 days, #181) — PLUS

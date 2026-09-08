@@ -2,7 +2,7 @@
 // byte-pinned attribution string, the header presence rules (stripped vs full),
 // the account menu holding "Log uit" (signOut) + the relocated delete-history
 // control, and that the workspace fetches its thread list on mount.
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { LoadedThread } from '../app/actions.ts';
 
@@ -20,6 +20,7 @@ const actions = vi.hoisted(() => ({
   loadMyThread: vi.fn<() => Promise<LoadedThread>>(),
   signOut: vi.fn(),
   deleteMyQuestionHistory: vi.fn(),
+  deleteMyThread: vi.fn(),
 }));
 vi.mock('../app/actions.ts', () => actions);
 
@@ -346,5 +347,33 @@ describe('Workspace — resizable chart panel (session 88)', () => {
     expect(document.querySelector('[data-slot="resizable-panel-group"]')).not.toBeNull();
     expect(document.querySelectorAll('[data-slot="resizable-panel"]').length).toBe(1);
     expect(document.querySelector('[data-slot="resizable-handle"]')).toBeNull();
+  });
+});
+
+describe('Workspace — session 90: deleting a chat from the sidebar', () => {
+  it('confirmed delete calls deleteMyThread(id), re-lists the threads, and the row is gone', async () => {
+    actions.deleteMyThread.mockResolvedValue({ ok: true });
+    actions.listMyThreads.mockResolvedValue([]);
+    renderWorkspace([{ id: 11, title: 'Inflatie 2024', lastActivityAt: new Date().toISOString(), kind: 'cbs' }]);
+    expect(screen.getByRole('button', { name: 'Inflatie 2024' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Chat options' }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Delete chat' }));
+    const confirm = await screen.findByRole('group', { name: 'Delete this chat?' });
+    fireEvent.click(within(confirm).getByRole('button', { name: 'Delete' }));
+    await waitFor(() => expect(actions.deleteMyThread).toHaveBeenCalledWith(11));
+    await waitFor(() => expect(actions.listMyThreads).toHaveBeenCalled());
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Inflatie 2024' })).toBeNull());
+  });
+
+  it('a failed delete keeps the row and shows the error line — nothing is re-listed', async () => {
+    actions.deleteMyThread.mockResolvedValue({ ok: false });
+    renderWorkspace([{ id: 12, title: 'Werkloosheid', lastActivityAt: new Date().toISOString(), kind: 'cbs' }]);
+    fireEvent.click(screen.getByRole('button', { name: 'Chat options' }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Delete chat' }));
+    const confirm = await screen.findByRole('group', { name: 'Delete this chat?' });
+    fireEvent.click(within(confirm).getByRole('button', { name: 'Delete' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Couldn’t delete this chat');
+    expect(screen.getByRole('button', { name: 'Werkloosheid' })).toBeInTheDocument();
+    expect(actions.listMyThreads).not.toHaveBeenCalled();
   });
 });

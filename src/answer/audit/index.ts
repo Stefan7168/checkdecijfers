@@ -21,6 +21,7 @@ export { LlmCallTracker } from './track.ts';
 export {
   REDACTED_QUESTION_TEXT,
   deleteUserQuestionHistory,
+  deleteThreadQuestionHistory,
   purgeExpiredQuestionHistory,
   countPurgeableQuestionHistory,
   twoYearsBefore,

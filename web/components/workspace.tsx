@@ -7,7 +7,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { listMyThreads, loadMyThread } from '../app/actions.ts';
+import { deleteMyThread, listMyThreads, loadMyThread } from '../app/actions.ts';
 import { ingestFile } from '../app/dataset-actions.ts';
 import type { GatedResponse } from '../backend/billing/index.ts';
 import type { ConversationContext } from '../backend/answer/context/index.ts';
@@ -199,6 +199,24 @@ export function Workspace({
     [refreshThreads],
   );
 
+  // Session 90: the sidebar's per-row "Delete chat" (after its own inline
+  // confirmation) lands here. The server action validates ownership and
+  // redacts; on success, a deleted ACTIVE chat resets to a fresh chat (the
+  // same explicit reset as "Nieuwe chat" — its messages are gone server-side
+  // too, so leaving them on screen would misrepresent what still exists) and
+  // the sidebar re-lists. Returns the outcome so the row can show its own
+  // failure line instead of silently staying.
+  const deleteThread = useCallback(
+    async (threadId: number): Promise<boolean> => {
+      const result = await deleteMyThread(threadId);
+      if (!result.ok) return false;
+      if (threadId === activeThreadId) startNewChat();
+      await refreshThreads();
+      return true;
+    },
+    [activeThreadId, refreshThreads, startNewChat],
+  );
+
   // ADR 037 D10: Chat's "Bestand uploaden" button calls THIS (via the
   // `attachments` prop), never `ingestFile` directly — mirroring
   // `onThreadId`'s "report up, the parent acts" shape. Owns the whole
@@ -388,6 +406,7 @@ export function Workspace({
             onSelect={(id) => void selectThread(id)}
             onNewChat={startNewChat}
             onToggleCollapse={() => setSidebarCollapsed((collapsed) => !collapsed)}
+            onDelete={deleteThread}
           />
         </div>
 

@@ -6,7 +6,7 @@
 // tree at all; (2) a `kind: 'dataset'` thread gets the paperclip prefix and
 // nothing else about its row differs (same className, same click wiring).
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { ThreadSidebar } from './thread-sidebar.tsx';
 import type { ThreadSummary } from '../backend/threads/index.ts';
 
@@ -52,7 +52,7 @@ describe('ThreadSidebar — kind-absent (CBS) rendering stays byte-identical', (
     // Session 87 restyle (dense sidebar rows on the grey ground); still one
     // literal string so the CBS/dataset row parity stays a deliberate diff.
     expect(button.className).toBe(
-      'block w-full truncate rounded-md px-2.5 py-1.5 text-left text-[13px] disabled:cursor-not-allowed disabled:opacity-50 bg-accent font-medium text-foreground',
+      'block min-w-0 flex-1 truncate rounded-md px-2.5 py-1.5 text-left text-[13px] disabled:cursor-not-allowed disabled:opacity-50 bg-accent font-medium text-foreground',
     );
     expect(button.getAttribute('aria-current')).toBe('true');
     expect(button).not.toBeDisabled();
@@ -120,5 +120,82 @@ describe('ThreadSidebar — dataset threads (ADR 037 D10)', () => {
       />,
     );
     expect(screen.getByRole('button', { name: /x\.csv/ })).toBeDisabled();
+  });
+});
+
+describe('ThreadSidebar — session 90: plus icon, per-row ⋯ menu, delete with inline confirmation', () => {
+  function renderWithDelete(onDelete: (id: number) => Promise<boolean>, extra: Partial<Parameters<typeof ThreadSidebar>[0]> = {}) {
+    return render(
+      <ThreadSidebar
+        threads={[cbsThread({ id: 5, title: 'Inflatie 2024' })]}
+        activeThreadId={null}
+        collapsed={false}
+        onSelect={vi.fn()}
+        onNewChat={vi.fn()}
+        onToggleCollapse={vi.fn()}
+        onDelete={onDelete}
+        {...extra}
+      />,
+    );
+  }
+
+  it('the Nieuwe chat button carries a plus icon and keeps its accessible name', () => {
+    render(
+      <ThreadSidebar threads={[]} activeThreadId={null} collapsed={false} onSelect={vi.fn()} onNewChat={vi.fn()} onToggleCollapse={vi.fn()} />,
+    );
+    const button = screen.getByRole('button', { name: 'Nieuwe chat' });
+    expect(button.querySelector('svg')).not.toBeNull();
+    expect(button.querySelector('svg')!.getAttribute('aria-hidden')).toBe('true');
+  });
+
+  it('without onDelete there is no options button in the tree at all (rows byte-identical to before)', () => {
+    render(
+      <ThreadSidebar threads={[cbsThread()]} activeThreadId={null} collapsed={false} onSelect={vi.fn()} onNewChat={vi.fn()} onToggleCollapse={vi.fn()} />,
+    );
+    expect(screen.queryByRole('button', { name: 'Chat options' })).toBeNull();
+  });
+
+  it('⋯ opens a menu whose "Delete chat" asks for confirmation; confirming calls onDelete(id) and the block closes on success', async () => {
+    const onDelete = vi.fn().mockResolvedValue(true);
+    renderWithDelete(onDelete);
+    const options = screen.getByRole('button', { name: 'Chat options' });
+    // Described by the row's own title, so a screen reader hears which chat.
+    expect(document.getElementById(options.getAttribute('aria-describedby')!)!.textContent).toBe('Inflatie 2024');
+    expect(onDelete).not.toHaveBeenCalled();
+    fireEvent.click(options);
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Delete chat' }));
+    const confirm = await screen.findByRole('group', { name: 'Delete this chat?' });
+    expect(onDelete).not.toHaveBeenCalled(); // nothing happens before the explicit confirm
+    fireEvent.click(within(confirm).getByRole('button', { name: 'Delete' }));
+    await waitFor(() => expect(onDelete).toHaveBeenCalledWith(5));
+    await waitFor(() => expect(screen.queryByRole('group', { name: 'Delete this chat?' })).toBeNull());
+  });
+
+  it('Cancel closes the confirmation without calling onDelete', async () => {
+    const onDelete = vi.fn().mockResolvedValue(true);
+    renderWithDelete(onDelete);
+    fireEvent.click(screen.getByRole('button', { name: 'Chat options' }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Delete chat' }));
+    const confirm = await screen.findByRole('group', { name: 'Delete this chat?' });
+    fireEvent.click(within(confirm).getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByRole('group', { name: 'Delete this chat?' })).toBeNull();
+    expect(onDelete).not.toHaveBeenCalled();
+  });
+
+  it('a failed delete shows an error line and keeps the confirmation open', async () => {
+    const onDelete = vi.fn().mockResolvedValue(false);
+    renderWithDelete(onDelete);
+    fireEvent.click(screen.getByRole('button', { name: 'Chat options' }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Delete chat' }));
+    const confirm = await screen.findByRole('group', { name: 'Delete this chat?' });
+    fireEvent.click(within(confirm).getByRole('button', { name: 'Delete' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Couldn’t delete this chat');
+    expect(screen.getByRole('group', { name: 'Delete this chat?' })).toBeInTheDocument();
+  });
+
+  it('busy disables the options button like the row itself', () => {
+    renderWithDelete(vi.fn().mockResolvedValue(true), { busy: true });
+    expect(screen.getByRole('button', { name: 'Chat options' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Inflatie 2024' })).toBeDisabled();
   });
 });

@@ -24,6 +24,15 @@
       ],
       "port": 3001,
       "autoPort": true
+    },
+    {
+      "name": "web-db",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "/Users/amity/Documents/Check de Cijfers/scripts/dev-web.mjs"
+      ],
+      "port": 3000,
+      "autoPort": true
     }
   ]
 }

@@ -12,10 +12,12 @@ import {
   ANONYMOUS_TRIAL_RETENTION_DAYS,
   REDACTED_QUESTION_TEXT,
   anonymousTrialCutoff,
+  deleteThreadQuestionHistory,
   deleteUserQuestionHistory,
   purgeExpiredQuestionHistory,
   twoYearsBefore,
 } from '../../src/answer/audit/retention.ts';
+import { listThreads } from '../../src/threads/index.ts';
 import {
   TRIAL_BOOKKEEPING_RETENTION_DAYS,
   trialRetentionCutoff,
@@ -261,6 +263,100 @@ describe('deleteUserQuestionHistory — THE CRITICAL SECURITY PIN: scoped to the
       expect(redacted.map((r) => r.id)).toEqual([realId]);
       expect((await loadRow(db, benchmarkId))!.question).toBe('benchmark fixture vraag');
       expect((await loadRow(db, validationId))!.question).toBe('validation fixture vraag');
+    });
+  });
+});
+
+describe('deleteThreadQuestionHistory — ONE thread only, still scoped to the calling user (session 90)', () => {
+  async function insertThread(db: Db, userId: string): Promise<number> {
+    const { rows } = await db.query('insert into chat_threads (user_id) values ($1::uuid) returning id', [userId]);
+    return Number(rows[0]!.id);
+  }
+  async function attach(db: Db, auditId: number, threadId: number): Promise<void> {
+    await db.query('update audit_answers set thread_id = $2 where id = $1', [auditId, threadId]);
+  }
+
+  it('redacts only the rows of THAT thread: the same user\'s other thread and another user\'s rows survive', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      const otherUserId = randomUUID();
+      const threadA = await insertThread(db, userId);
+      const threadB = await insertThread(db, userId);
+      const a1 = await insertAuditRow(db, userId, { kind: 'answer', question: 'A vraag 1' });
+      const a2 = await insertAuditRow(db, userId, { kind: 'refusal', question: 'A vraag 2' });
+      const b1 = await insertAuditRow(db, userId, { kind: 'answer', question: 'B vraag' });
+      const theirs = await insertAuditRow(db, otherUserId, { kind: 'answer', question: 'hun vraag' });
+      await attach(db, a1, threadA);
+      await attach(db, a2, threadA);
+      await attach(db, b1, threadB);
+
+      const redacted = await deleteThreadQuestionHistory(db, userId, threadA);
+      expect(redacted.map((r) => r.id).sort()).toEqual([a1, a2].sort());
+      expect((await loadRow(db, a1))!.question).toBe(REDACTED_QUESTION_TEXT);
+      expect((await loadRow(db, a2))!.question).toBe(REDACTED_QUESTION_TEXT);
+      expect((await loadRow(db, b1))!.question).toBe('B vraag');
+      expect((await loadRow(db, theirs))!.question).toBe('hun vraag');
+      // The skeleton keeps its thread link (redact-not-delete): the ledger join
+      // and the "verwijderde vraag" placeholder still resolve.
+      const { rows } = await db.query('select thread_id from audit_answers where id = $1', [a1]);
+      expect(Number(rows[0]!.thread_id)).toBe(threadA);
+    });
+  });
+
+  it('a thread belonging to another user matches nothing — the caller cannot delete a foreign thread by id', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      const otherUserId = randomUUID();
+      const theirThread = await insertThread(db, otherUserId);
+      const theirs = await insertAuditRow(db, otherUserId, { kind: 'answer', question: 'hun vraag' });
+      await attach(db, theirs, theirThread);
+
+      const redacted = await deleteThreadQuestionHistory(db, userId, theirThread);
+      expect(redacted).toEqual([]);
+      expect((await loadRow(db, theirs))!.question).toBe('hun vraag');
+    });
+  });
+
+  it('the deleted thread disappears from the sidebar list by construction (listThreads derives titles from non-redacted rows)', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      const threadA = await insertThread(db, userId);
+      const threadB = await insertThread(db, userId);
+      const a1 = await insertAuditRow(db, userId, { kind: 'answer', question: 'A vraag' });
+      const b1 = await insertAuditRow(db, userId, { kind: 'answer', question: 'B vraag' });
+      await attach(db, a1, threadA);
+      await attach(db, b1, threadB);
+      expect((await listThreads(db, userId)).map((t) => t.id).sort()).toEqual([threadA, threadB].sort());
+
+      await deleteThreadQuestionHistory(db, userId, threadA);
+      expect((await listThreads(db, userId)).map((t) => t.id)).toEqual([threadB]);
+      // Idempotent: a second delete of the same thread is a harmless no-op.
+      const again = await deleteThreadQuestionHistory(db, userId, threadA);
+      expect(again.map((r) => r.id)).toEqual([a1]);
+      expect((await listThreads(db, userId)).map((t) => t.id)).toEqual([threadB]);
+    });
+  });
+
+  it('ledger-untouched: credit_transactions rows are byte-identical after a per-thread deletion', async () => {
+    await withDb(async (db) => {
+      await applyPricingDefaults(db);
+      const userId = randomUUID();
+      await db.query('select public.grant_signup_credits($1)', [userId]);
+      // A REAL charge through the REAL gate (same shape as the whole-history
+      // ledger test below), attached to a thread — then delete that thread.
+      const requestId = randomUUID();
+      const threadA = await insertThread(db, userId);
+      const auditId = await insertAuditRow(db, userId, { kind: 'answer', question: 'A vraag', requestId });
+      await attach(db, auditId, threadA);
+      const gated = await chargeAndRun(db, userId, requestId, async (): Promise<AuditedResponse> => ({
+        response: { kind: 'answer', question: 'x', text: 'y' } as unknown as AuditedResponse['response'],
+        auditId,
+      }));
+      if (gated.kind !== 'ok') throw new Error(`expected ok, got ${gated.kind}`);
+      const before = await ledgerRows(db, userId);
+      expect(before.length).toBeGreaterThan(0);
+      await deleteThreadQuestionHistory(db, userId, threadA);
+      expect(await ledgerRows(db, userId)).toEqual(before);
     });
   });
 });
