@@ -1088,13 +1088,21 @@ describe('Chat — WP129+130 source chips (#129)', () => {
     ).toBeInTheDocument();
   });
 
-  it('shows a pulsing answer skeleton alongside the busy text, gone once the answer resolves', async () => {
+  it('shows a pulsing answer skeleton while busy', async () => {
     askQuestion.mockReturnValue(new Promise<AskOutcome>(() => {})); // never resolves — stays busy
     render(<Chat pricing={pricing} />);
     fireEvent.change(screen.getByPlaceholderText('Stel een vraag…'), { target: { value: 'Hoeveel inwoners?' } });
     fireEvent.click(screen.getByRole('button', { name: 'Verstuur' }));
     await screen.findByText('Bezig met het doorzoeken van CBS-cijfers…');
     expect(document.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThan(0);
+  });
+
+  it('the answer skeleton is gone once the answer resolves', async () => {
+    askQuestion.mockResolvedValue(outcome(fakeAnswer('Nederland telt 18.044.027 inwoners.')));
+    render(<Chat pricing={pricing} />);
+    await submit('Hoeveel inwoners heeft Nederland?');
+    expect(await screen.findByText('Nederland telt 18.044.027 inwoners.')).toBeInTheDocument();
+    expect(document.querySelectorAll('[data-slot="skeleton"]').length).toBe(0);
   });
 
   it('sends the selection payload on the CLARIFICATION-REPLY path too (post-build review: the pending+websearch leg)', async () => {
