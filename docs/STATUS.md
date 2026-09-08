@@ -53,7 +53,25 @@ before the merge: typecheck ×2, web 767/767, backend 2089/2089 (unchanged), ben
 session** (docs correction `be2d309`, then the 2 deferred-item fixes `92821a1`): full
 verification block re-run before each push (typecheck ×2, web 772/772, backend 2089/2089
 unchanged), CI runs `34227783282` and `34234407567` both green, `/api/health` reconfirmed
-`{"ok":true}` after each deploy. Full session entry: [status-archive.md](status-archive.md).
+`{"ok":true}` after each deploy. **Also same session:** the WP202a go-live checklist's step 1 —
+`dataset_turn` credit price decided (20, mirrors `simple`/`clarification`) — landed in
+`478c943`, not yet applied to production (steps 2-6 of [RUNBOOK.md](RUNBOOK.md)'s WP202 checklist
+still pending). **Then, owner request ("it becomes costly"): `PHRASING_MODEL` and
+`WEBSEARCH_MODEL` switched Sonnet→Haiku** (every other model in the codebase was already Haiku).
+Live re-record surfaced ONE real gap (B8, a 6-period series: Haiku omitted intermediate years
+while still describing the trend shape correctly — no fabrication, an omission) — fixed by a new
+explicit prompt rule (6b: state every period's value) rather than accepted as-is,
+`COMPOSE_PROMPT_VERSION` bumped to 4, re-recorded clean (14/14). `WEBSEARCH_MODEL`'s citation
+behavior on the untested Haiku+BASIC-variant combination was verified with a real live call
+(4/4 findings cited) before shipping, not assumed. Full verification + a LIVE benchmark run
+surfaced a second, unrelated finding — [#216](open-questions.md): B20's freshness-refusal
+condition has simply been overtaken by real CBS data catching up, a benchmark-maintenance gap,
+not a phrasing regression (root-caused, not guessed). Owner's stated further goal — true
+model-independence — recorded as [#217](open-questions.md), pointing at the unshipped `#162`
+`SLOT_PHRASING_ENABLED` slot-filling mechanism as the real architectural answer, not something to
+build today. Full details incl. as-built notes on [ADR 013](decisions/013-answer-composition.md)
+and [ADR 032](decisions/032-websearch-augmentation.md). Full session entry:
+[status-archive.md](status-archive.md).
 
 **▶ SESSION 86 (2026-09-07, owner present, mixed autonomous/interactive) — the CI `deploy` job is
 FIXED and LIVE for the first time in weeks, and that exposed + fixed a real production incident.**

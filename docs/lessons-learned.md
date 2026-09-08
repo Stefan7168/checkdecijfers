@@ -41,6 +41,30 @@ design-panel's own illustrative code contained real library-behavior mistakes
   fact about a third-party library's behavior — implementers should keep verifying library
   internals for any snippet that depends on undocumented or easy-to-assume behavior, exactly as
   they would for unfamiliar first-party code.**
+- **A model-tier swap (Sonnet↔Haiku) is never a one-line constant edit in this codebase, and
+  treating it as one would have shipped a real quality gap.** Switching `PHRASING_MODEL` and
+  `WEBSEARCH_MODEL` to Haiku (owner: "it becomes costly") required, in order: (1) swapping the
+  sampling params too (Sonnet rejects `temperature: 0` and needs `thinking: 'disabled'`; every
+  existing Haiku call in the codebase does the reverse) — [#172](open-questions.md) already
+  documents the reverse swap API-erroring every call for exactly this reason; (2) a real, live
+  re-record (`npm run answer:record`, real spend) because the model is part of the request hash
+  that keys every committed fixture — a stale fixture "fails loudly" by design, it does not
+  silently pass; (3) actually reading the live output rather than trusting a green re-record
+  count: the first pass was 13/14, and the one failure (B8) was a real, measurable prompt-
+  compliance gap (Haiku omitted intermediate years in a multi-period series that Sonnet had
+  always — but was never explicitly told to — enumerate in full) that a less careful pass could
+  have "fixed" by just re-freezing the expected answer to Haiku's incomplete output instead of
+  tightening the prompt (rule 6b, `COMPOSE_PROMPT_VERSION` v4) and re-verifying 14/14.
+- **A LIVE benchmark run (real API + real database) can surface findings that are NOT regressions
+  from whatever you just changed — root-cause before reacting.** The same session's live run
+  (`npm run benchmark:run:live`) showed `GATE VERDICT: FAIL` on a refusal task (B20) after the
+  model switch, which would be easy to blame on Haiku. It wasn't: B20's refusal condition is
+  explicitly time-relative ("the loaded CPI table does not yet cover last month"), and the real,
+  live CBS table had simply been synced through the relevant month since the task was last
+  calibrated — any model would correctly answer once real data closes that gap. The hermetic (CI)
+  gate, which replays pinned fixtures immune to this kind of drift, stayed green throughout. Check
+  a live-only failure's task DEFINITION for a time- or environment-dependent condition before
+  concluding a code or model change caused it.
 ## Session 88 — 2026-09-08 — two owner-present builds run via Subagent-Driven Development, a real
 library defect chased and correctly abandoned, a code-review pass that caught what six task-level
 reviews missed, and several tool-behavior gotchas worth recording

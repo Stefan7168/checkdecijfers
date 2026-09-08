@@ -203,6 +203,81 @@ all passing. Working tree clean after every commit (`git status --short` empty).
    not a code defect; re-run confirmed clean), real `next build` clean. Pushed and verified live:
    CI run `34234407567` completed success, `GET /api/health` → `{"ok":true}`, all 7 checks
    passing.
+9. **WP202 go-live checklist step 1: the `dataset_turn` credit price decided.** Owner present,
+   asked "whats next" and chose to tackle everything on the list. Step 1 of
+   [RUNBOOK.md](RUNBOOK.md)'s WP202 go-live checklist: 20 credits, mirroring the
+   `simple`/`clarification` pair exactly (a chart keeps the full debit, a clarification
+   compensates down to the flat `clarification` price, a refusal/throw refunds in full) rather
+   than the vaguer "near the +10 web add-on" framing the pricing doc had carried since session 84.
+   `src/billing/pricing-defaults.ts` gained the row; `tests/billing/dataset-gate.test.ts`'s
+   test-only seed (which existed specifically because no real price existed yet) was removed now
+   that `applyPricingDefaults` seeds a real one; `docs/09-pricing.md` and
+   [RUNBOOK.md](RUNBOOK.md) updated. Commit `478c943`. Full verification: typecheck ×2, backend
+   144/144 (billing suite) + 2089/2089 (full), web 772/772, hermetic benchmark 14/14+6/6+0
+   (unchanged), real `next build`, `/code-review` LOW clean. Pushed and verified live.
+   **Explicitly NOT done — steps 2-6 of the checklist** (apply migrations 026+027 to production,
+   `pricing:apply`, the FK/RLS verification query, the `ATTACHMENTS_ENABLED=1` flag flip, and the
+   live smoke test with real spend) are still pending; the controller paused before touching
+   production DDL/flags/spend per CLAUDE.md's standing owner-supervision rule for exactly those
+   three categories, even in an owner-present session, and the owner's attention moved to a
+   different request (item 10) before returning to this one.
+10. **Owner request: switch `PHRASING_MODEL` and `WEBSEARCH_MODEL` from Sonnet to Haiku ("it
+    becomes costly").** Before touching code, clarified WHICH model — the owner briefly thought
+    the session might be in the wrong project (it wasn't; confirmed `pwd`) — then confirmed both.
+    Grounded first: every other model constant in the codebase (`INTENT_MODEL`,
+    `SEMANTIC_CHECK_MODEL`, `TABLE_RERANK_MODEL`, `MEASURE_FIT_MODEL`, `DATASET_INSTRUCT_MODEL`)
+    was already `claude-haiku-4-5`; only `PHRASING_MODEL` and `WEBSEARCH_MODEL` were still
+    `claude-sonnet-5`. [Open-questions #172](open-questions.md) already documents the reverse
+    swap's real failure mode (an un-adapted sampling param API-errors every call) — so this was
+    treated as a real model-tier change, not a one-line constant edit, matching this project's own
+    established rigor for that class of decision.
+    - **Sampling parameters swapped correctly, not just the model ID:** Sonnet 5 rejects
+      `temperature: 0` and needed `thinking: 'disabled'` to opt out of adaptive thinking; every
+      existing Haiku call in this codebase does the reverse (`temperature: 0`, no `thinking` key).
+      `buildPhrasingRequest` (`src/answer/compose/prompt.ts`) updated to match.
+    - **Fixtures re-recorded live (`npm run answer:record`, real spend), a real gap found and
+      fixed, not shipped as-is:** first pass scored 13/14 — B8 (a 6-period house-price series)
+      had Haiku correctly summarize the trend shape (rule 6) but omit two intermediate years'
+      values instead of stating all six, something no existing rule explicitly required (a
+      5-period series, B4, had always gotten full enumeration from Sonnet's own habitual style,
+      never because a rule demanded it). Added rule 6b ("state every period's value for a series
+      with more than two periods"), bumped `COMPOSE_PROMPT_VERSION` to 4, re-recorded: 14/14.
+      Every number Haiku used throughout was real and correctly formatted — this was an omission,
+      never a fabrication.
+    - **`WEBSEARCH_MODEL`'s citation behavior verified live, not assumed:** the BASIC
+      `web_search_20250305` tool variant's citations were only ever measured on Sonnet (the
+      session-40 go-live correction is direct precedent that a model/variant combination can
+      silently return `citations: null`). A real live call on Haiku returned 4/4 findings with
+      real citation URLs — no regression. `WEBSEARCH_MAX_TOKENS`'s stale Sonnet-specific rationale
+      comment corrected in the same pass (a `/code-review` LOW finding).
+    - **Full verification, including a live end-to-end benchmark run, not just hermetic:**
+      typecheck ×2, backend 2089/2089, web 772/772, real `next build`, hermetic benchmark
+      14/14+6/6+0 fabricated (unchanged). `npm run benchmark:run:live` (real API calls, real
+      database) then surfaced a SECOND finding — B20 (freshness refusal) got a real answer instead
+      — root-caused before treating it as a phrasing regression: the live CBS CPI table has simply
+      been synced through July 2026 since this task's freshness gap was last calibrated, so
+      answering (correctly, attributed, marked provisional) is now the honest behavior regardless
+      of model. Unrelated to today's change; recorded as [#216](open-questions.md), a
+      benchmark-maintenance task, not fixed today. The hermetic CI gate (pinned fixtures, immune
+      to real-world data drift) was green throughout — this was only visible on the supplementary
+      live run.
+    - **Owner's further goal, recorded not built:** after seeing the B8 gap, the owner asked to be
+      "model-independent... at any time" without a manual prompt-tuning cycle per switch. Pointed
+      at the real existing answer — the unshipped `#162` `SLOT_PHRASING_ENABLED` slot-filling
+      experiment (deterministic code fills every value into model-written placeholders, making a
+      dropped/fabricated number structurally impossible regardless of model) — as a separate,
+      real initiative, not something to build inside a cost-driven swap. Recorded as
+      [#217](open-questions.md).
+    - **Documentation:** as-built addenda on [ADR 013](decisions/013-answer-composition.md)
+      (phrasing) and [ADR 032](decisions/032-websearch-augmentation.md) (websearch); this item.
+    - Commit `d15ebcb` (model + sampling params + prompt rule 6b + re-recorded fixtures +
+      `tests/answer/suggestions.test.ts`'s frozen-literal update for the new phrasing, all
+      together — the fixture re-record and the prompt fix could not be split into separate
+      commits without an intermediate broken state).
+      **Verified facts:** every fixture/test-count/gate-result claim above was read directly from
+      the actual command output in this session, not recalled — see the commit diff and
+      `benchmark/live-benchmark-report.json`/`answer-eval-report.json` (both committed) for the
+      raw evidence.
 
 **Session 88 (2026-09-08, owner present throughout) — TWO PLANS EXECUTED VIA SUBAGENT-DRIVEN
 DEVELOPMENT AND SHIPPED LIVE, A REAL LIBRARY DEFECT TRACED AND CORRECTLY WORKED AROUND, AND A
