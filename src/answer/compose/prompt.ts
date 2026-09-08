@@ -14,13 +14,21 @@ import { formatValueNl } from './format.ts';
 import { nullReasonText } from './template.ts';
 import { baseRegionLabel } from './validate.ts';
 
-/** Mid-tier model for phrasing per ADR 004 ("model per task"); concrete ID is
- * an implementation-time choice (ADR 013), revisited via ADR 004's triggers.
- * Sonnet 5 rejects non-default sampling params (no temperature 0) and runs
- * adaptive thinking unless disabled — hence temperature omitted and
- * thinking: 'disabled' below; determinism comes from the replay fixtures and
- * correctness from the validator, not from sampling. */
-export const PHRASING_MODEL = 'claude-sonnet-5';
+/** Small/fast-tier model for phrasing per ADR 004 ("model per task"); concrete
+ * ID is an implementation-time choice (ADR 013), revisited via ADR 004's own
+ * listed triggers — spend among them. Owner decision (2026-09-08, present in
+ * session, "it becomes costly"): switched from `claude-sonnet-5` to Haiku,
+ * matching every other model in this codebase except WEBSEARCH_MODEL. Haiku
+ * supports `temperature: 0` (Sonnet 5 rejected it) and needs no
+ * `thinking: 'disabled'` override (Sonnet 5's adaptive-thinking default is
+ * what that flag exists to opt out of) — see `buildPhrasingRequest` below.
+ * Correctness still comes from the R3/R9/R10/R11 validator, not from
+ * sampling; `temperature: 0` is for determinism only. This orphans every
+ * committed answer fixture (the model is part of the request hash,
+ * src/answer/llm/client.ts) — re-recorded same session, live eval run to
+ * confirm phrasing quality holds before this shipped; see
+ * docs/decisions/013-answer-composition.md's as-built note. */
+export const PHRASING_MODEL = 'claude-haiku-4-5';
 
 /** Bump when the prompt's structure or rules change meaningfully — recorded
  * in the audit record (R8, WP10) and in every fixture.
@@ -31,8 +39,18 @@ export const PHRASING_MODEL = 'claude-sonnet-5';
  * negative change is stated as a positive number.
  * v3 (2026-07-03): the digits-for-counts rule got its own numbered rule with
  * a good/bad example — the first v2 live run showed the model writing 'de
- * twee gemeenten'/'de vier G4-gemeenten' (B10/B14 fell to template). */
-export const COMPOSE_PROMPT_VERSION = 3;
+ * twee gemeenten'/'de vier G4-gemeenten' (B10/B14 fell to template).
+ * v4 (2026-09-08, PHRASING_MODEL Sonnet→Haiku cost switch): new rule 6b —
+ * a series with more than two periods must state EVERY period's value, not
+ * just first/last. Haiku's first live pass (13/14) dropped intermediate
+ * years on B8 (a 6-point series) while still summarizing the trend shape
+ * correctly per rule 6 — every value it used was real, just incomplete
+ * coverage, not fabrication. No rule previously said "every point,
+ * explicitly" (B4's 5-point series happened to get full enumeration from
+ * Sonnet's own habitual style, never required); this makes it a
+ * requirement so the answer format doesn't depend on which model writes
+ * it. */
+export const COMPOSE_PROMPT_VERSION = 4;
 
 /** Exported since #162: the slot payload (slots.ts) hands the model the SAME
  * trend words, so the two payload shapes can never phrase a direction apart. */
@@ -155,6 +173,7 @@ export function buildComposeSystemPrompt(): string {
     "4. Niveaus in % zijn procenten; een VERSCHIL tussen twee %-waarden heet 'procentpunt' (het veld 'unit' van de derivation geeft dit aan). Verwissel die twee nooit.",
     "5. Noem in dezelfde zin als elk getal de periode (periodLabel) en, indien aanwezig, de regio (regionLabel) waar het bij hoort. Bij een verschil- of veranderingswaarde: noem BEIDE periodes in dezelfde zin. Gebruik regionamen exact zoals gegeven.",
     "6. Een stijging/daling/'meeste'/'meer dan' mag je alleen beweren als het blok 'derivations' die richting of ranking expliciet bevat (direction, difference of max). Volg het veld 'trendWord'. Is de richting 'down' en noem je de waarde als positief getal, gebruik dan altijd een dalingswoord in dezelfde zin. Bij monotonic=false: zeg dat de reeks niet in een rechte lijn bewoog, en koppel een tussentijdse stijging of daling altijd aan het jaartal waarin die plaatsvond.",
+    "6b. Bij een reeks met meer dan twee periodes: noem de waarde van ELKE periode uit de reeks (bijvoorbeeld in één opsommende zin), nooit alleen de eerste en de laatste — ook wanneer je daarna in een aparte zin de vorm van de ontwikkeling beschrijft.",
     "7. Markeer elke waarde met provisional=true met '(voorlopig cijfer)', direct achter de waarde, in dezelfde zin.",
     "8. Waarden met value=null: noem geen getal, noem de reden uit 'nullReason'.",
     "9. Voeg GEEN bronvermelding, definitie- of licentieregel toe — die worden automatisch toegevoegd. Geen inleiding ('Hier is…'), geen mening, geen duiding buiten de gegeven cijfers. Lengte: 1 tot 4 zinnen.",
@@ -180,8 +199,8 @@ export function buildPhrasingRequest(result: ValidatedResult, options: PhrasingR
   return {
     model: options.model ?? PHRASING_MODEL,
     maxTokens: options.maxTokens ?? 1024,
+    temperature: 0,
     system: buildComposeSystemPrompt() + (options.strict ? RETRY_SUFFIX : ''),
     question: `GEVALIDEERDE CIJFERS:\n${JSON.stringify(payload, null, 2)}\n\nSchrijf nu het antwoord.`,
-    thinking: 'disabled',
   };
 }

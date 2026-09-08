@@ -21,10 +21,18 @@ import Anthropic from '@anthropic-ai/sdk';
 import type { WebFinding, WebSection } from './types.ts';
 import { WEBSEARCH_PROMPT, WEBSEARCH_PROMPT_VERSION } from './prompt.ts';
 
-/** Mid-tier per ADR 032. A named config constant — the TABLE_RERANK_MODEL
- * discipline, never a hardcoded model string at the call site. Recorded
+/** Owner decision (2026-09-08, present in session, "it becomes costly"):
+ * switched from `claude-sonnet-5` to Haiku, matching PHRASING_MODEL's same-
+ * session change. A named config constant — the TABLE_RERANK_MODEL
+ * discipline, never a hardcoded model string at the call site. This call is
+ * hermetic via a hand-authored fake, not fixture replay (see the header
+ * comment), so no committed fixture is orphaned by this change — but the
+ * BASIC `web_search_20250305` tool variant's citation behavior was only ever
+ * MEASURED live on `claude-sonnet-5` (see the header comment's 20260209
+ * correction); Haiku's citation behavior on the same variant is unmeasured
+ * and was verified live before this shipped, not assumed. Recorded prior
  * alternative: 'claude-sonnet-4-6'. */
-export const WEBSEARCH_MODEL = 'claude-sonnet-5';
+export const WEBSEARCH_MODEL = 'claude-haiku-4-5';
 /** The BASIC search variant — see the header comment: the 20260209 filtering
  * variant returns citation-less text blocks (measured live), and a finding
  * without a citation is unrenderable under ADR 032's honesty model. */
@@ -34,9 +42,13 @@ export const WEBSEARCH_MAX_USES = 3;
 /** ⟨W2⟩ Per-request timeout — must fit inside the raised 90s Server Action
  * budget alongside the ~14s CBS pipeline max + margin (web/app/page.tsx). */
 export const WEBSEARCH_TIMEOUT_MS = 45_000;
-/** ⟨W7⟩ sonnet-5 runs ADAPTIVE thinking by default and thinking tokens share
- * the max_tokens budget — 4096 risked routine truncation on 3-search rounds;
- * 16K costs nothing extra unless generated. */
+/** ⟨W7⟩ Sized when WEBSEARCH_MODEL was `claude-sonnet-5`, which runs
+ * ADAPTIVE thinking by default and shares thinking tokens out of this same
+ * budget — 4096 risked routine truncation on 3-search rounds; 16K cost
+ * nothing extra unless generated. Left unchanged for the 2026-09-08 switch
+ * to Haiku (no request field here opts into extended thinking either way,
+ * so the budget is generous rather than load-bearing) — revisit only if a
+ * real truncation is ever measured. */
 export const WEBSEARCH_MAX_TOKENS = 16_000;
 
 /** ADR 032 section shape: one short sentence per finding, at most four. */

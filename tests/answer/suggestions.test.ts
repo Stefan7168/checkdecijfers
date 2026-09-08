@@ -255,8 +255,14 @@ describe('the envelope: suggestions ride the response, text is byte-untouched (R
     // registry-recorded alternate. A deliberate, documented update of the
     // frozen text (the alternate is registry data, not a new number source),
     // not drift: every other byte is the 2026-07-11 literal.
+    // 2026-09-08 (PHRASING_MODEL Sonnet→Haiku, COMPOSE_PROMPT_VERSION v4): the
+    // first sentence re-recorded live against the new model/prompt — same
+    // number, unit and period, different (also rule-compliant) phrasing.
+    // Everything below the first line is byte-identical to the 2026-07-11
+    // literal, confirming the definition/alternate-reading/attribution lines
+    // never depended on the phrasing model at all.
     expect(response.text).toBe(
-      'De inflatie (jaarmutatie CPI, alle bestedingen) bedroeg in 2024 3,3%.\n\n' +
+      'De inflatie bedroeg in 2024 gemiddeld 3,3 %.\n\n' +
         'Definitie: inflatie (jaarmutatie CPI, alle bestedingen).\n' +
         'Er is ook een andere lezing beschikbaar: CPI indexniveau (2025=100), geen mutatiepercentage.\n' +
         `Bron: CBS StatLine, tabel 86141NED — Consumentenprijzen; CPI 2025=100, index en mutaties. ` +

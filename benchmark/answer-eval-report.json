@@ -1,20 +1,21 @@
 {
-  "generatedAt": "2026-07-03T07:44:20.584Z",
+  "generatedAt": "2026-09-08T15:12:24.257Z",
   "mode": "record",
-  "repeat": 2,
-  "model": "claude-sonnet-5",
+  "repeat": 1,
+  "pipeline": "legacy",
+  "model": "claude-haiku-4-5",
   "totals": {
     "pass": 14,
     "total": 14
   },
   "sources": {
-    "llm": 14,
+    "llm": 13,
     "llm_retry": 0,
-    "template": 0
+    "template": 1
   },
   "usage": {
-    "inputTokens": 43453,
-    "outputTokens": 2131
+    "inputTokens": 17297,
+    "outputTokens": 810
   },
   "unstable": [],
   "cases": [
@@ -26,7 +27,7 @@
       "attemptProblems": [
         []
       ],
-      "text": "Op 1 januari 2025 telde Nederland 18.044.027 inwoners.\n\nDefinitie: bevolking op 1 januari.\nBron: CBS StatLine, tabel 03759ned — Bevolking op 1 januari en gemiddeld; geslacht, leeftijd en regio. Gegevens gesynchroniseerd op 2026-07-03. Periode: 2025. Licentie: CC BY 4.0."
+      "text": "Op 1 januari 2025 telde Nederland 18.044.027 inwoners.\n\nDefinitie: bevolking op 1 januari.\nEr is ook een andere lezing beschikbaar: Gemiddelde bevolking (jaargemiddelde, geen standcijfer).\nBron: CBS StatLine, tabel 03759ned — Bevolking op 1 januari en gemiddeld; geslacht, leeftijd en regio. Gegevens gesynchroniseerd op 2026-09-08. Periode: 2025. Licentie: CC BY 4.0."
     },
     {
       "id": "B2",
@@ -36,7 +37,7 @@
       "attemptProblems": [
         []
       ],
-      "text": "Op 1 januari 2024 telde Utrecht 374.238 inwoners.\n\nDefinitie: bevolking op 1 januari.\nBron: CBS StatLine, tabel 03759ned — Bevolking op 1 januari en gemiddeld; geslacht, leeftijd en regio. Gegevens gesynchroniseerd op 2026-07-03. Periode: 2024. Licentie: CC BY 4.0."
+      "text": "Op 1 januari 2024 telde Utrecht 374.238 inwoners.\n\nDefinitie: bevolking op 1 januari.\nEr is ook een andere lezing beschikbaar: Gemiddelde bevolking (jaargemiddelde, geen standcijfer).\nBron: CBS StatLine, tabel 03759ned — Bevolking op 1 januari en gemiddeld; geslacht, leeftijd en regio. Gegevens gesynchroniseerd op 2026-09-08. Periode: 2024. Licentie: CC BY 4.0."
     },
     {
       "id": "B3",
@@ -46,7 +47,7 @@
       "attemptProblems": [
         []
       ],
-      "text": "De inflatie (jaarmutatie CPI, alle bestedingen) bedroeg in 2024 3,3%.\n\nDefinitie: inflatie (jaarmutatie CPI, alle bestedingen).\nBron: CBS StatLine, tabel 86141NED — Consumentenprijzen; CPI 2025=100, index en mutaties. Gegevens gesynchroniseerd op 2026-07-03. Periode: 2024. Licentie: CC BY 4.0."
+      "text": "De inflatie bedroeg in 2024 gemiddeld 3,3 %.\n\nDefinitie: inflatie (jaarmutatie CPI, alle bestedingen).\nEr is ook een andere lezing beschikbaar: CPI indexniveau (2025=100), geen mutatiepercentage.\nBron: CBS StatLine, tabel 86141NED — Consumentenprijzen; CPI 2025=100, index en mutaties. Gegevens gesynchroniseerd op 2026-09-08. Periode: 2024. Licentie: CC BY 4.0."
     },
     {
       "id": "B4",
@@ -56,17 +57,22 @@
       "attemptProblems": [
         []
       ],
-      "text": "De inflatie bedroeg 1,3% in 2020 en steeg naar 2,7% in 2021 en 10,0% in 2022, waarna ze weer afnam naar 3,8% in 2023 en 3,3% in 2024. De reeks bewoog niet in een rechte lijn: na de stijging tot en met 2022 volgde een daling in de jaren daarna. Tussen 2020 en 2024 was per saldo sprake van een stijging van 2,0 procentpunt.\n\nDefinitie: inflatie (jaarmutatie CPI, alle bestedingen).\n— bewerking van CBS-gegevens door checkdecijfers.nl\nBron: CBS StatLine, tabel 86141NED — Consumentenprijzen; CPI 2025=100, index en mutaties. Gegevens gesynchroniseerd op 2026-07-03. Periode: 2020 t/m 2024. Licentie: CC BY 4.0."
+      "text": "De inflatie bedroeg in 2020 1,3 %, in 2021 2,7 %, in 2022 10,0 %, in 2023 3,8 % en in 2024 3,3 %. Over de gehele periode van 2020 tot en met 2024 steeg de inflatie met 2,0 procentpunt, maar deze ontwikkeling verliep niet in een rechte lijn: na een sterke stijging in 2022 volgde een daling in 2023 en 2024.\n\nDefinitie: inflatie (jaarmutatie CPI, alle bestedingen).\nEr is ook een andere lezing beschikbaar: CPI indexniveau (2025=100), geen mutatiepercentage.\n— bewerking van CBS-gegevens door checkdecijfers.nl\nBron: CBS StatLine, tabel 86141NED — Consumentenprijzen; CPI 2025=100, index en mutaties. Gegevens gesynchroniseerd op 2026-09-08. Periode: 2020 t/m 2024. Licentie: CC BY 4.0."
     },
     {
       "id": "B5",
-      "source": "llm",
+      "source": "template",
       "pass": true,
       "problems": [],
       "attemptProblems": [
-        []
+        [
+          "R9: het antwoord noemt de periode '2025 4e kwartaal' nergens"
+        ],
+        [
+          "R9: het antwoord noemt de periode '2025 4e kwartaal' nergens"
+        ]
       ],
-      "text": "Het werkloosheidspercentage, seizoengecorrigeerd, bedroeg in het 4e kwartaal van 2025 4,0%.\n\nDefinitie: werkloosheidspercentage, seizoengecorrigeerd.\nBron: CBS StatLine, tabel 85224NED — Arbeidsdeelname; kerncijfers seizoengecorrigeerd. Gegevens gesynchroniseerd op 2026-07-03. Periode: 2025 4e kwartaal. Licentie: CC BY 4.0."
+      "text": "Werkloosheidspercentage, seizoengecorrigeerd was in 2025 4e kwartaal 4,0%.\n\nDefinitie: werkloosheidspercentage, seizoengecorrigeerd.\nEr is ook een andere lezing beschikbaar: oorspronkelijke, ongecorrigeerde cijfers.\nBron: CBS StatLine, tabel 85224NED — Arbeidsdeelname; kerncijfers seizoengecorrigeerd. Gegevens gesynchroniseerd op 2026-09-08. Periode: 2025 4e kwartaal. Licentie: CC BY 4.0."
     },
     {
       "id": "B6",
@@ -76,7 +82,7 @@
       "attemptProblems": [
         []
       ],
-      "text": "De woningvoorraad per 1 januari 2024 bedroeg 8.204 x 1 000 woningen.\n\nDefinitie: woningvoorraad per 1 januari.\nBron: CBS StatLine, tabel 82235NED — Voorraad woningen; standen en mutaties vanaf 1921. Gegevens gesynchroniseerd op 2026-07-03. Periode: 2024. Licentie: CC BY 4.0."
+      "text": "De woningvoorraad bedroeg per 1 januari 2024 8.204 x 1 000 (= 8.204.000) woningen.\n\nDefinitie: woningvoorraad per 1 januari.\nEr is ook een andere lezing beschikbaar: stand per 31 december (Eindstand Voorraad).\n— bewerking van CBS-gegevens door checkdecijfers.nl\nBron: CBS StatLine, tabel 82235NED — Voorraad woningen; standen en mutaties vanaf 1921. Gegevens gesynchroniseerd op 2026-09-08. Periode: 2024. Licentie: CC BY 4.0."
     },
     {
       "id": "B7",
@@ -86,7 +92,7 @@
       "attemptProblems": [
         []
       ],
-      "text": "De gemiddelde verkoopprijs van bestaande koopwoningen bedroeg in 2024 450.985 euro.\n\nDefinitie: gemiddelde verkoopprijs van bestaande koopwoningen.\nBron: CBS StatLine, tabel 85773NED — Bestaande koopwoningen; verkoopprijzen prijsindex 2020=100. Gegevens gesynchroniseerd op 2026-07-03. Periode: 2024. Licentie: CC BY 4.0."
+      "text": "De gemiddelde verkoopprijs van bestaande koopwoningen bedroeg in 2024 450.985 euro.\n\nDefinitie: gemiddelde verkoopprijs van bestaande koopwoningen.\nEr is ook een andere lezing beschikbaar: prijsindex verkoopprijzen (marktontwikkeling, niet composition-adjusted vs. de gemiddelde prijs).\nBron: CBS StatLine, tabel 85773NED — Bestaande koopwoningen; verkoopprijzen prijsindex 2020=100. Gegevens gesynchroniseerd op 2026-09-08. Periode: 2024. Licentie: CC BY 4.0."
     },
     {
       "id": "B8",
@@ -96,7 +102,7 @@
       "attemptProblems": [
         []
       ],
-      "text": "De gemiddelde verkoopprijs van bestaande koopwoningen steeg van 307.978 euro in 2019 naar 450.985 euro in 2024, een stijging van 143.007 euro. Deze reeks bewoog niet in een rechte lijn: na een stijging tot 428.591 euro in 2022 daalde de gemiddelde verkoopprijs in 2023 naar 416.153 euro, waarna deze in 2024 weer toenam. Tussenliggende jaargemiddelden bedroegen 334.488 euro in 2020 en 386.714 euro in 2021.\n\nDefinitie: gemiddelde verkoopprijs van bestaande koopwoningen.\n— bewerking van CBS-gegevens door checkdecijfers.nl\nBron: CBS StatLine, tabel 85773NED — Bestaande koopwoningen; verkoopprijzen prijsindex 2020=100. Gegevens gesynchroniseerd op 2026-07-03. Periode: 2019 t/m 2024. Licentie: CC BY 4.0."
+      "text": "De gemiddelde verkoopprijs van bestaande koopwoningen bedroeg 307.978 euro in 2019, 334.488 euro in 2020, 386.714 euro in 2021, 428.591 euro in 2022, 416.153 euro in 2023 en 450.985 euro in 2024. Over deze periode was sprake van een stijging van 143.007 euro, hoewel de reeks niet in een rechte lijn omhoog bewoog: in 2023 daalde de prijs ten opzichte van 2022, waarna deze in 2024 weer steeg.\n\nDefinitie: gemiddelde verkoopprijs van bestaande koopwoningen.\nEr is ook een andere lezing beschikbaar: prijsindex verkoopprijzen (marktontwikkeling, niet composition-adjusted vs. de gemiddelde prijs).\n— bewerking van CBS-gegevens door checkdecijfers.nl\nBron: CBS StatLine, tabel 85773NED — Bestaande koopwoningen; verkoopprijzen prijsindex 2020=100. Gegevens gesynchroniseerd op 2026-09-08. Periode: 2019 t/m 2024. Licentie: CC BY 4.0."
     },
     {
       "id": "B9",
@@ -106,7 +112,7 @@
       "attemptProblems": [
         []
       ],
-      "text": "In 2025 zijn er 3.226 faillissementen van bedrijven en instellingen uitgesproken.\n\nDefinitie: faillissementen van bedrijven en instellingen.\nBron: CBS StatLine, tabel 82242NED — Faillissementen; kerncijfers. Gegevens gesynchroniseerd op 2026-07-03. Periode: 2025. Licentie: CC BY 4.0."
+      "text": "In 2025 bedroeg het aantal faillissementen van bedrijven en instellingen 3.226 aantal.\n\nDefinitie: faillissementen van bedrijven en instellingen.\nEr is ook een andere lezing beschikbaar: totaal rechtsvormen (incl. particuliere faillissementen).\nBron: CBS StatLine, tabel 82242NED — Faillissementen; kerncijfers. Gegevens gesynchroniseerd op 2026-09-08. Periode: 2025. Licentie: CC BY 4.0."
     },
     {
       "id": "B10",
@@ -116,7 +122,7 @@
       "attemptProblems": [
         []
       ],
-      "text": "Op 1 januari 2024 telde Amsterdam 931.298 inwoners, tegenover 670.610 inwoners in Rotterdam. Amsterdam had daarmee de meeste inwoners van de 2 gemeenten.\n\nDefinitie: bevolking op 1 januari.\n— bewerking van CBS-gegevens door checkdecijfers.nl\nBron: CBS StatLine, tabel 03759ned — Bevolking op 1 januari en gemiddeld; geslacht, leeftijd en regio. Gegevens gesynchroniseerd op 2026-07-03. Periode: 2024. Licentie: CC BY 4.0."
+      "text": "Op 1 januari 2024 had Amsterdam 931.298 aantal inwoners en Rotterdam 670.610 aantal inwoners. Amsterdam had van deze 2 steden het grootste aantal inwoners.\n\nDefinitie: bevolking op 1 januari.\nEr is ook een andere lezing beschikbaar: Gemiddelde bevolking (jaargemiddelde, geen standcijfer).\n— bewerking van CBS-gegevens door checkdecijfers.nl\nBron: CBS StatLine, tabel 03759ned — Bevolking op 1 januari en gemiddeld; geslacht, leeftijd en regio. Gegevens gesynchroniseerd op 2026-09-08. Periode: 2024. Licentie: CC BY 4.0."
     },
     {
       "id": "B11",
@@ -126,7 +132,7 @@
       "attemptProblems": [
         []
       ],
-      "text": "De bruto elektriciteitsproductie uit zonnestroom bedroeg in 2024 21.822 mln kWh (voorlopig cijfer).\n\nDefinitie: bruto elektriciteitsproductie uit zonnestroom.\nBron: CBS StatLine, tabel 82610NED — Hernieuwbare elektriciteit; productie en vermogen. Gegevens gesynchroniseerd op 2026-07-03. Periode: 2024. Licentie: CC BY 4.0."
+      "text": "De bruto elektriciteitsproductie uit zonnestroom bedroeg in 2024 21.822 mln kWh (voorlopig cijfer).\n\nDefinitie: bruto elektriciteitsproductie uit zonnestroom.\nBron: CBS StatLine, tabel 82610NED — Hernieuwbare elektriciteit; productie en vermogen. Gegevens gesynchroniseerd op 2026-09-08. Periode: 2024. Licentie: CC BY 4.0."
     },
     {
       "id": "B12",
@@ -136,7 +142,7 @@
       "attemptProblems": [
         []
       ],
-      "text": "Het gemiddeld besteedbaar inkomen van huishoudens bedroeg in 2023 57,6 1 000 euro.\n\nDefinitie: gemiddeld besteedbaar inkomen van huishoudens.\nBron: CBS StatLine, tabel 83932NED — Inkomen van huishoudens; inkomensklassen, huishoudenskenmerken. Gegevens gesynchroniseerd op 2026-07-03. Periode: 2023. Licentie: CC BY 4.0."
+      "text": "Het gemiddeld besteedbaar inkomen van huishoudens bedroeg in 2023 57,6 1 000 euro.\n\nDefinitie: gemiddeld besteedbaar inkomen van huishoudens.\nEr zijn ook andere lezingen beschikbaar: primair inkomen; bruto inkomen; gestandaardiseerd inkomen.\nBron: CBS StatLine, tabel 83932NED — Inkomen van huishoudens; inkomensklassen, huishoudenskenmerken. Gegevens gesynchroniseerd op 2026-09-08. Periode: 2023. Licentie: CC BY 4.0."
     },
     {
       "id": "B13",
@@ -146,7 +152,7 @@
       "attemptProblems": [
         []
       ],
-      "text": "De bevolking van Nederland groeide van 17.942.942 inwoners op 1 januari 2024 naar 18.044.027 inwoners op 1 januari 2025. Dat is een stijging van 101.085 inwoners tussen 2024 en 2025.\n\nDefinitie: bevolking op 1 januari.\n— bewerking van CBS-gegevens door checkdecijfers.nl\nBron: CBS StatLine, tabel 03759ned — Bevolking op 1 januari en gemiddeld; geslacht, leeftijd en regio. Gegevens gesynchroniseerd op 2026-07-03. Periode: 2024 t/m 2025. Licentie: CC BY 4.0."
+      "text": "Op 1 januari 2024 telde Nederland 17.942.942 inwoners, op 1 januari 2025 waren dat 18.044.027 inwoners. Dit betekent een stijging van 101.085 inwoners tussen 2024 en 2025.\n\nDefinitie: bevolking op 1 januari.\nEr is ook een andere lezing beschikbaar: Gemiddelde bevolking (jaargemiddelde, geen standcijfer).\n— bewerking van CBS-gegevens door checkdecijfers.nl\nBron: CBS StatLine, tabel 03759ned — Bevolking op 1 januari en gemiddeld; geslacht, leeftijd en regio. Gegevens gesynchroniseerd op 2026-09-08. Periode: 2024 t/m 2025. Licentie: CC BY 4.0."
     },
     {
       "id": "B14",
@@ -156,7 +162,7 @@
       "attemptProblems": [
         []
       ],
-      "text": "Op 1 januari 2025 telde Amsterdam 934.526 inwoners, de meeste van de 4 gemeenten. Rotterdam had op 1 januari 2025 672.960 inwoners, 's-Gravenhage 568.945 inwoners en Utrecht 376.757 inwoners.\n\nDefinitie: bevolking op 1 januari.\n— bewerking van CBS-gegevens door checkdecijfers.nl\nBron: CBS StatLine, tabel 03759ned — Bevolking op 1 januari en gemiddeld; geslacht, leeftijd en regio. Gegevens gesynchroniseerd op 2026-07-03. Periode: 2025. Licentie: CC BY 4.0."
+      "text": "Op 1 januari 2025 had Amsterdam 934.526 inwoners, Rotterdam 672.960 inwoners, 's-Gravenhage 568.945 inwoners en Utrecht 376.757 inwoners. Amsterdam was de grootste van deze 4 gemeenten.\n\nDefinitie: bevolking op 1 januari.\nEr is ook een andere lezing beschikbaar: Gemiddelde bevolking (jaargemiddelde, geen standcijfer).\n— bewerking van CBS-gegevens door checkdecijfers.nl\nBron: CBS StatLine, tabel 03759ned — Bevolking op 1 januari en gemiddeld; geslacht, leeftijd en regio. Gegevens gesynchroniseerd op 2026-09-08. Periode: 2025. Licentie: CC BY 4.0."
     }
   ],
   "history": [
@@ -234,6 +240,46 @@
       "usage": {
         "inputTokens": 43453,
         "outputTokens": 2131
+      }
+    },
+    {
+      "generatedAt": "2026-09-08T15:00:22.148Z",
+      "mode": "record",
+      "repeat": 1,
+      "pipeline": "legacy",
+      "model": "claude-haiku-4-5",
+      "totals": {
+        "pass": 13,
+        "total": 14
+      },
+      "sources": {
+        "llm": 13,
+        "llm_retry": 0,
+        "template": 1
+      },
+      "usage": {
+        "inputTokens": 16217,
+        "outputTokens": 758
+      }
+    },
+    {
+      "generatedAt": "2026-09-08T15:12:24.257Z",
+      "mode": "record",
+      "repeat": 1,
+      "pipeline": "legacy",
+      "model": "claude-haiku-4-5",
+      "totals": {
+        "pass": 14,
+        "total": 14
+      },
+      "sources": {
+        "llm": 13,
+        "llm_retry": 0,
+        "template": 1
+      },
+      "usage": {
+        "inputTokens": 17297,
+        "outputTokens": 810
       }
     }
   ]
