@@ -15,9 +15,9 @@ Verify yourself first, don't trust this file blindly:
 
 ## What's true right now (verified 2026-09-08)
 
-- `main` HEAD is `0ed1205`. Working tree clean, single worktree, nothing uncommitted, nothing
-  unpushed. CI green on every one of today's ~14 pushes to `main` (all owner-present direct
-  pushes — no open PRs, no feature branches).
+- `main` HEAD is `4847f48`. Working tree clean, single worktree, nothing uncommitted, nothing
+  unpushed. CI green on every push to `main` today (all owner-present direct pushes — no open
+  PRs, no feature branches).
 - Production live and healthy: `curl https://checkdecijfers.vercel.app/api/health` →
   `{"ok":true,"checks":[7 checks]}`.
 - **Chart view-state editing (Phases 1-3, [#212](../open-questions.md)) is merged and LIVE.**
