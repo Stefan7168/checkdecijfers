@@ -30,6 +30,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
+import { useT } from '../lib/i18n/lang-provider.tsx';
 
 /** 20s: sane middle of the #117 "light poll" range — fast enough that a
  * minutes-scale delivery appears promptly, slow enough that the re-run of the
@@ -46,6 +47,7 @@ export const ONBOARDING_POLL_INTERVAL_MS = 20_000;
  */
 export function OnboardingLiveStatus({ inFlightCount }: { inFlightCount: number }) {
   const router = useRouter();
+  const t = useT();
 
   useEffect(() => {
     if (inFlightCount === 0) return;
@@ -72,8 +74,8 @@ export function OnboardingLiveStatus({ inFlightCount }: { inFlightCount: number 
     // count changing (or the line disappearing content-wise) after a refresh.
     <p role="status" className="rounded-lg border border-warning bg-warning-soft p-2 text-xs text-warning">
       {inFlightCount === 1
-        ? 'Er is 1 aanvraag bij het CBS in behandeling — de status hieronder wordt automatisch bijgewerkt.'
-        : `Er zijn ${inFlightCount} aanvragen bij het CBS in behandeling — de status hieronder wordt automatisch bijgewerkt.`}
+        ? t('status.inFlightSingular')
+        : t('status.inFlightPlural', { n: inFlightCount })}
     </p>
   );
 }

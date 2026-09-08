@@ -53,6 +53,11 @@ vi.mock('next/navigation', () => ({ usePathname: () => pathname.current, useRout
 // section here; the Landing assertions that matter (the anchor target, the
 // copy) live outside it.
 vi.mock('./ontdek.tsx', () => ({ OntdekSectie: () => null }));
+// WP218 phase 4 (#219): Landing is now an async Server Component (await
+// getLang()) — jsdom has no Next.js request context for the real
+// cookies()/headers() reads, so it's mocked here the way every other
+// server-action test in this repo mocks its next/headers-touching seam.
+vi.mock('../lib/i18n/server.ts', () => ({ getLang: vi.fn().mockResolvedValue('nl') }));
 
 Element.prototype.scrollIntoView = vi.fn();
 
@@ -133,11 +138,11 @@ describe('Workspace — WP135 shell (flag on)', () => {
     expect(footer.querySelector('a[href="#over-dit-project"]')).toBeNull();
   });
 
-  it('site footer on the home page WITH the section (Landing): the EXACT byte-pinned attribution string + the gear link', () => {
+  it('site footer on the home page WITH the section (Landing): the EXACT byte-pinned attribution string + the gear link', async () => {
     pathname.current = '/';
     render(
       <>
-        <Landing />
+        {await Landing()}
         <SiteFooter />
       </>,
     );
@@ -155,8 +160,8 @@ describe('Workspace — WP135 shell (flag on)', () => {
     expect(footer.textContent).not.toMatch(/privacy/i);
   });
 
-  it('the home-page anchor target exists on the logged-OUT home too (Landing) — no dead link for visitors', () => {
-    render(<Landing />);
+  it('the home-page anchor target exists on the logged-OUT home too (Landing) — no dead link for visitors', async () => {
+    render(await Landing());
     expect(document.getElementById('over-dit-project')).not.toBeNull();
   });
 

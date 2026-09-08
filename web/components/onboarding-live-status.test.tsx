@@ -7,6 +7,7 @@
 // under test, not Next's refresh implementation.
 import { act, cleanup, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { LangProvider } from '../lib/i18n/lang-provider.tsx';
 
 const { refresh } = vi.hoisted(() => ({ refresh: vi.fn() }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh }) }));
@@ -105,5 +106,27 @@ describe('OnboardingLiveStatus', () => {
     unmount();
     advance(ONBOARDING_POLL_INTERVAL_MS * 2);
     expect(refresh).not.toHaveBeenCalled();
+  });
+});
+
+// WP218 phase 4 (#219): proves the language switch reaches this surface.
+describe('OnboardingLiveStatus — en', () => {
+  it('renders the English singular/plural lines under LangProvider lang="en"', () => {
+    const { rerender } = render(
+      <LangProvider lang="en">
+        <OnboardingLiveStatus inFlightCount={1} />
+      </LangProvider>,
+    );
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'There is 1 request being processed at CBS — the status below updates automatically.',
+    );
+    rerender(
+      <LangProvider lang="en">
+        <OnboardingLiveStatus inFlightCount={3} />
+      </LangProvider>,
+    );
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'There are 3 requests being processed at CBS',
+    );
   });
 });

@@ -3,6 +3,7 @@
 // badge appears exactly when flagged.
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { LangProvider } from '../lib/i18n/lang-provider.tsx';
 import type { StatCardData } from '../lib/stat-card-data.ts';
 import { StatCard } from './stat-card.tsx';
 
@@ -75,6 +76,19 @@ describe('StatCard', () => {
   it('truncates a 49-char context to 47 chars plus the ellipsis', () => {
     render(<StatCard data={data({ context: 'C'.repeat(49) })} />);
     expect(screen.getByText(`${'C'.repeat(47)}…`)).toBeInTheDocument();
+  });
+});
+
+// WP218 phase 4 (#219): proves the language switch reaches this surface.
+describe('StatCard — en', () => {
+  it('renders the English provisional badge and download label under LangProvider lang="en"', () => {
+    render(
+      <LangProvider lang="en">
+        <StatCard data={data({ provisional: true })} />
+      </LangProvider>,
+    );
+    expect(screen.getByText('provisional')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Download as image' })).toBeInTheDocument();
   });
 });
 

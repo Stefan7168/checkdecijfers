@@ -27,14 +27,30 @@
 // built and DORMANT: <TrialSectie /> renders nothing until the supervised
 // go-live sets TRIAL_ENABLED + the trial key + the ip-hash secret and seeds
 // the pot — until then the CTA routes to /login, byte-identically.
+//
+// WP218 phase 4 (#219), Task 3 (Sweep B): every visible string now goes
+// through the i18n catalogue via getLang()/t() (Server Component). The ONE
+// deliberate exception is the "real example" answer block below — it mimics
+// the product's own real answer shape (body + R4 attribution line), and the
+// backend answer pipeline that produces that shape stays Dutch-only (out of
+// scope per the design doc's own owner decision) — translating this frozen
+// demo to English would show a shape the live product cannot actually
+// produce in English, which is a worse inaccuracy than a Dutch demo on an
+// English page. It stays Dutch verbatim in both languages, same as
+// FOOTER_ATTRIBUTION and the other backend-built strings this sweep leaves
+// untouched (see docs/superpowers/specs/2026-09-09-language-switch-design.md
+// §1).
 import Link from 'next/link';
+import { getLang } from '../lib/i18n/server.ts';
+import { t } from '../lib/i18n/messages.ts';
 import { OntdekSectie } from './ontdek.tsx';
 import { SiteHeader } from './site-header.tsx';
 import { TrialSectie } from './trial.tsx';
 
 const EXAMPLE_QUESTION = 'Wat is het consumentenvertrouwen in juni 2026?';
 
-export function Landing() {
+export async function Landing() {
+  const lang = await getLang();
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <SiteHeader stripped />
@@ -42,25 +58,23 @@ export function Landing() {
         {/* Masthead */}
         <section className="border-b border-border py-14 text-center sm:py-20">
           <h1 className="mx-auto max-w-2xl text-4xl leading-tight text-foreground sm:text-5xl">
-            Chat met de officiële cijfers van Nederland
+            {t(lang, 'landing.heroTitle')}
           </h1>
           <p className="mx-auto mt-5 max-w-xl text-lg text-muted-foreground">
-            Stel je vraag in gewone taal. Check de Cijfers rekent het antwoord uit
-            op officiële CBS-statistieken — elk getal herleidbaar tot een
-            CBS-tabel, met bron en datum erbij.
+            {t(lang, 'landing.heroSubtitle')}
           </p>
           <div className="mt-8 flex items-center justify-center gap-3">
             <Link
               href="/login"
               className="rounded-md bg-primary px-5 py-2.5 font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
-              Begin met vragen
+              {t(lang, 'landing.ctaStart')}
             </Link>
             <a
               href="#hoe-het-werkt"
               className="rounded-md border border-border bg-card px-5 py-2.5 font-medium text-foreground hover:bg-muted"
             >
-              Hoe het werkt
+              {t(lang, 'landing.ctaHowItWorks')}
             </a>
           </div>
         </section>
@@ -68,10 +82,10 @@ export function Landing() {
         {/* The #53 anonymous trial — dormant until the supervised go-live (ADR 036) */}
         <TrialSectie />
 
-        {/* A real answer, in the product's real shape */}
+        {/* A real answer, in the product's real shape — Dutch verbatim always, see the file-header note. */}
         <section className="border-b border-border py-12">
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            Zo antwoordt het product — echt voorbeeld
+            {t(lang, 'landing.exampleLabel')}
           </p>
           <div className="mt-4 space-y-3">
             <div className="ml-auto max-w-md rounded-lg bg-muted px-4 py-3 text-foreground">
@@ -98,33 +112,23 @@ export function Landing() {
               a section with that id, the logged-out landing points it at this
               how-it-works heading — never a dead link (ADR 033 D6). */}
           <h2 id="over-dit-project" className="text-2xl text-foreground">
-            Geen gokwerk, maar rekenwerk
+            {t(lang, 'landing.howItWorksHeading')}
           </h2>
           <ol className="mt-6 grid gap-6 sm:grid-cols-3">
             <li>
               <p className="tnum text-sm font-semibold text-primary">1</p>
-              <h3 className="mt-1 text-lg text-foreground">Jij vraagt</h3>
-              <p className="mt-1 text-sm text-muted-foreground">
-                In gewone taal — &ldquo;wat doet de inflatie?&rdquo;, &ldquo;hoe
-                hard groeide de economie?&rdquo;
-              </p>
+              <h3 className="mt-1 text-lg text-foreground">{t(lang, 'landing.step1Title')}</h3>
+              <p className="mt-1 text-sm text-muted-foreground">{t(lang, 'landing.step1Body')}</p>
             </li>
             <li>
               <p className="tnum text-sm font-semibold text-primary">2</p>
-              <h3 className="mt-1 text-lg text-foreground">Code rekent</h3>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Het antwoord komt uit onze database met officiële CBS-cijfers —
-                deterministische berekening, geen taalmodel dat cijfers verzint.
-              </p>
+              <h3 className="mt-1 text-lg text-foreground">{t(lang, 'landing.step2Title')}</h3>
+              <p className="mt-1 text-sm text-muted-foreground">{t(lang, 'landing.step2Body')}</p>
             </li>
             <li>
               <p className="tnum text-sm font-semibold text-primary">3</p>
-              <h3 className="mt-1 text-lg text-foreground">Bron erbij</h3>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Elk getal met CBS-tabel, periode en publicatiestatus. Weten we het
-                niet zeker, dan zeggen we dat — liever geen antwoord dan een
-                verzonnen antwoord.
-              </p>
+              <h3 className="mt-1 text-lg text-foreground">{t(lang, 'landing.step3Title')}</h3>
+              <p className="mt-1 text-sm text-muted-foreground">{t(lang, 'landing.step3Body')}</p>
             </li>
           </ol>
         </section>
@@ -134,17 +138,13 @@ export function Landing() {
 
         {/* Credits, plainly */}
         <section className="py-12">
-          <h2 className="text-2xl text-foreground">Eerlijke prijs per vraag</h2>
-          <p className="mt-3 max-w-xl text-muted-foreground">
-            Je betaalt per vraag met credits — geen abonnement. Een account
-            aanmaken is gratis en zo gebeurd: e-mailadres invullen, inloglink
-            aanklikken, vragen maar.
-          </p>
+          <h2 className="text-2xl text-foreground">{t(lang, 'landing.pricingHeading')}</h2>
+          <p className="mt-3 max-w-xl text-muted-foreground">{t(lang, 'landing.pricingBody')}</p>
           <Link
             href="/login"
             className="mt-6 inline-block rounded-md bg-primary px-5 py-2.5 font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >
-            Maak gratis een account
+            {t(lang, 'common.createFreeAccount')}
           </Link>
         </section>
       </main>

@@ -3,7 +3,7 @@
 // configured ⇒ open renders the chat, closed/used_up render the owner's
 // "log in om verder te gaan" degrade — never a broken section.
 import { cleanup, render, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { getTrialGateState } = vi.hoisted(() => ({ getTrialGateState: vi.fn() }));
 vi.mock('../lib/trial.ts', async (importOriginal) => ({
@@ -18,7 +18,18 @@ vi.mock('./trial-chat.tsx', () => ({
 }));
 
 import { TrialGate, TrialSectie } from './trial.tsx';
-import { TRIAL_COPY } from '../lib/trial-copy.ts';
+import { MESSAGES } from '../lib/i18n/messages.ts';
+
+// WP218 phase 4 (#219): TRIAL_COPY (formerly lib/trial-copy.ts) is folded
+// into the one message catalogue -- getLang() is mocked so TrialGate renders
+// deterministically (jsdom has no Next.js request context for the real
+// cookies()/headers() reads).
+const { getLang } = vi.hoisted(() => ({ getLang: vi.fn() }));
+vi.mock('../lib/i18n/server.ts', () => ({ getLang }));
+
+beforeEach(() => {
+  getLang.mockResolvedValue('nl');
+});
 
 afterEach(() => {
   cleanup();
@@ -89,19 +100,36 @@ describe('TrialGate', () => {
     expect(screen.queryByTestId('trial-chat')).toBeNull();
   });
 
-  // A GUARD on the shared copy CONSTANT, not a proof that both surfaces render
-  // it — labelled honestly after a review pointed out the earlier name promised
-  // more than it delivered. trial-chat.tsx is mocked out in this file, so this
-  // would NOT catch it hardcoding a similar-but-different string; what it does
-  // catch is the constant itself drifting or two states collapsing onto one
-  // sentence. The single-sourcing itself is enforced by the import, not here.
-  it('keeps one distinct sentence per state in the shared copy (#184)', () => {
-    expect(TRIAL_COPY.ip_limit).toContain('Vanaf dit netwerk');
-    expect(new Set(Object.values(TRIAL_COPY)).size).toBe(Object.keys(TRIAL_COPY).length);
+  // A GUARD on the shared copy in the catalogue, not a proof that both
+  // surfaces render it — labelled honestly after a review pointed out the
+  // earlier name promised more than it delivered. trial-chat.tsx is mocked
+  // out in this file, so this would NOT catch it hardcoding a
+  // similar-but-different string; what it does catch is the catalogue itself
+  // drifting or two states collapsing onto one sentence. The single-sourcing
+  // itself is enforced by the import, not here.
+  it('keeps one distinct sentence per state in the shared catalogue (#184)', () => {
+    const TRIAL_KEYS = ['trial.potEmpty', 'trial.unavailable', 'trial.usedUp', 'trial.ipLimit', 'trial.error'] as const;
+    expect(MESSAGES.nl['trial.ipLimit']).toContain('Vanaf dit netwerk');
+    const values = TRIAL_KEYS.map((key) => MESSAGES.nl[key]);
+    expect(new Set(values).size).toBe(values.length);
   });
 
   it('renders nothing at all when the gate reads dormant', async () => {
     getTrialGateState.mockResolvedValue({ kind: 'dormant' });
     expect(await TrialGate()).toBeNull();
+  });
+});
+
+// WP218 phase 4 (#219): proves the language switch reaches this Server
+// Component.
+describe('TrialGate — en', () => {
+  it('renders the English heading, subheading and degrade copy', async () => {
+    getLang.mockResolvedValue('en');
+    getTrialGateState.mockResolvedValue({ kind: 'used_up' });
+    render(await TrialGate());
+    expect(screen.getByText('Try it now')).toBeInTheDocument();
+    expect(
+      screen.getByTestId('login-nudge'),
+    ).toHaveTextContent('You have used your free trial questions. Create a free account to continue.');
   });
 });

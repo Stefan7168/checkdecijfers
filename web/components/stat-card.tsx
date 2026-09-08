@@ -8,6 +8,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
+import { useT } from '../lib/i18n/lang-provider.tsx';
 import type { StatCardData } from '../lib/stat-card-data.ts';
 
 /** Display-only truncation for the fixed card width. */
@@ -20,6 +21,7 @@ const FONT = 'system-ui, -apple-system, sans-serif';
 export function StatCard({ data }: { data: StatCardData }) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [failed, setFailed] = useState(false);
+  const t = useT();
 
   function downloadPng(): void {
     const svg = svgRef.current;
@@ -80,7 +82,7 @@ export function StatCard({ data }: { data: StatCardData }) {
           <g>
             <rect x="472" y="28" width="96" height="34" rx="6" fill="#fef3c7" />
             <text x="520" y="51" fontFamily={FONT} fontSize="17" fill="#b45309" textAnchor="middle">
-              voorlopig
+              {t('statCard.provisional')}
             </text>
           </g>
         ) : null}
@@ -109,9 +111,9 @@ export function StatCard({ data }: { data: StatCardData }) {
           onClick={downloadPng}
           className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
         >
-          Download als afbeelding
+          {t('statCard.downloadPng')}
         </button>
-        {failed ? <span className="ml-2 text-xs text-destructive">Downloaden lukte niet in deze browser.</span> : null}
+        {failed ? <span className="ml-2 text-xs text-destructive">{t('statCard.downloadFailed')}</span> : null}
       </div>
     </div>
   );

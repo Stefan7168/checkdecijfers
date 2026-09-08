@@ -52,6 +52,8 @@
 import type { QuestionHistoryEntry } from '../backend/billing/index.ts';
 import { splitDefinitionForDisplay } from '../lib/definition-display.ts';
 import { buildAnswerProof } from '../lib/answer-proof.ts';
+import { getLang } from '../lib/i18n/server.ts';
+import { t, type Lang } from '../lib/i18n/messages.ts';
 import { AnswerProof } from './answer-proof.tsx';
 import { OnboardingLiveStatus } from './onboarding-live-status.tsx';
 
@@ -61,9 +63,11 @@ function isInFlight(onboarding: NonNullable<QuestionHistoryEntry['onboarding']>)
   return onboarding.status === 'pending' || onboarding.status === 'running';
 }
 
-/** Dutch, deterministic, owner-readable -- no LLM involved in producing any
- * of this (CLAUDE.md: Dutch product copy is always a fixed template). */
-function onboardingStatusCopy(entry: QuestionHistoryEntry): { label: string; body: string } {
+/** Deterministic, owner-readable -- no LLM involved in producing any of this
+ * (CLAUDE.md: product copy is always a fixed template). `onboarding.
+ * failureSummary` itself is backend-produced text and is never translated --
+ * only the fixed catalogue words around it (WP218 phase 4, #219). */
+function onboardingStatusCopy(lang: Lang, entry: QuestionHistoryEntry): { label: string; body: string } {
   const onboarding = entry.onboarding;
   if (onboarding === null) {
     // Unreachable given the callers below only invoke this when onboarding
@@ -74,16 +78,16 @@ function onboardingStatusCopy(entry: QuestionHistoryEntry): { label: string; bod
     case 'pending':
     case 'running':
       return {
-        label: 'Wordt voorbereid',
-        body: `We vragen de cijfers over "${onboarding.topicTerm}" nu automatisch op bij het CBS en controleren ze. Je krijgt een e-mail zodra je vraag beantwoord kan worden.`,
+        label: t(lang, 'history.onboardingPreparingLabel'),
+        body: t(lang, 'history.onboardingPreparingBody', { topic: onboarding.topicTerm }),
       };
     case 'failed':
     case 'unanswerable':
       return {
-        label: 'Kon niet worden opgehaald',
+        label: t(lang, 'history.onboardingFailedLabel'),
         body:
-          (onboarding.failureSummary ?? 'Het ophalen van deze cijfers is niet gelukt.') +
-          ' De credits zijn teruggestort.',
+          (onboarding.failureSummary ?? t(lang, 'history.onboardingFailedFallback')) +
+          t(lang, 'history.onboardingFailedRefundSuffix'),
       };
     case 'delivered':
       // Never reached (delivered requests are represented by their own
@@ -103,7 +107,7 @@ function snippet(text: string): string {
  * so a long definition can fold without touching the body, marking or
  * attribution. Only rendered when history.ts vouched for zero loss (body +
  * attribution both present in the stored envelope). */
-function AnswerBody({ parts }: { parts: NonNullable<QuestionHistoryEntry['answerParts']> }) {
+function AnswerBody({ lang, parts }: { lang: Lang; parts: NonNullable<QuestionHistoryEntry['answerParts']> }) {
   const definition = parts.definitionLine === null ? null : splitDefinitionForDisplay(parts.definitionLine);
   return (
     <div className="mt-2 flex flex-col gap-1.5 text-sm text-muted-foreground">
@@ -116,7 +120,9 @@ function AnswerBody({ parts }: { parts: NonNullable<QuestionHistoryEntry['answer
           {definition.inline === null ? null : <p className="text-xs text-muted-foreground">{definition.inline}</p>}
           {definition.folded === null ? null : (
             <details className="text-xs text-muted-foreground">
-              <summary className="cursor-pointer font-medium text-muted-foreground">Meer over deze meting</summary>
+              <summary className="cursor-pointer font-medium text-muted-foreground">
+                {t(lang, 'history.moreAboutMeasurement')}
+              </summary>
               <p className="mt-1 whitespace-pre-wrap">{definition.folded}</p>
             </details>
           )}
@@ -129,8 +135,9 @@ function AnswerBody({ parts }: { parts: NonNullable<QuestionHistoryEntry['answer
   );
 }
 
-function formatDate(iso: string): string {
-  return new Intl.DateTimeFormat('nl-NL', {
+// WP218 phase 4 (#219), design §2.7: DISPLAY dates switch locale by lang.
+function formatDate(lang: Lang, iso: string): string {
+  return new Intl.DateTimeFormat(lang === 'en' ? 'en-GB' : 'nl-NL', {
     timeZone: 'Europe/Amsterdam',
     day: 'numeric',
     month: 'long',
@@ -140,9 +147,23 @@ function formatDate(iso: string): string {
   }).format(new Date(iso));
 }
 
-export function QuestionHistory({ items }: { items: QuestionHistoryEntry[] }) {
+/** The credits-charged inline fragment ("{n} credits · " / "{n} credits
+ * totaal · "), reused by both the onboarding branch (never a total) and the
+ * ordinary answer branch (a total exactly when a clarification round was
+ * collapsed into this entry). */
+function creditsLine(lang: Lang, n: number, isTotal: boolean): string {
+  return isTotal ? t(lang, 'history.creditsInlineTotal', { n }) : t(lang, 'history.creditsInline', { n });
+}
+
+// WP218 phase 4 (#219): Server Component -- takes lang from getLang()
+// directly (design §2.4). Async, so tests call `await QuestionHistory({...})`
+// rather than rendering `<QuestionHistory/>` directly (the trial.tsx /
+// ontdek.tsx precedent) -- jsdom's client renderer cannot invoke an async
+// function component itself.
+export async function QuestionHistory({ items }: { items: QuestionHistoryEntry[] }) {
+  const lang = await getLang();
   if (items.length === 0) {
-    return <p className="text-sm text-muted-foreground">Nog geen eerdere vragen.</p>;
+    return <p className="text-sm text-muted-foreground">{t(lang, 'history.empty')}</p>;
   }
 
   const inFlightCount = items.filter(
@@ -151,7 +172,7 @@ export function QuestionHistory({ items }: { items: QuestionHistoryEntry[] }) {
 
   return (
     <div className="flex flex-col gap-2">
-      <h2 className="text-sm font-semibold text-muted-foreground">Eerdere vragen</h2>
+      <h2 className="text-sm font-semibold text-muted-foreground">{t(lang, 'history.heading')}</h2>
       <OnboardingLiveStatus inFlightCount={inFlightCount} />
       {items.map((item) => {
         // WP16 sub-part 2: an onboarding-queue entry (pending/running/failed/
@@ -160,7 +181,7 @@ export function QuestionHistory({ items }: { items: QuestionHistoryEntry[] }) {
         // below (which only ever apply to an ordinary audit-row entry).
         if (item.onboarding !== null) {
           const inFlight = isInFlight(item.onboarding);
-          const { label, body } = onboardingStatusCopy(item);
+          const { label, body } = onboardingStatusCopy(lang, item);
           return (
             <details
               // Scoped by source (WP16 sub-part 2): pending_table_requests and
@@ -179,8 +200,8 @@ export function QuestionHistory({ items }: { items: QuestionHistoryEntry[] }) {
               <summary className="cursor-pointer text-sm">
                 <span className="font-medium">{item.question}</span>
                 <span className="ml-2 text-xs text-muted-foreground">
-                  {item.creditsCharged !== null ? `${item.creditsCharged} credits · ` : ''}
-                  {formatDate(item.createdAt)}
+                  {item.creditsCharged !== null ? creditsLine(lang, item.creditsCharged, false) : ''}
+                  {formatDate(lang, item.createdAt)}
                 </span>
                 <div className={'mt-0.5 text-xs font-medium ' + (inFlight ? 'text-warning' : 'text-muted-foreground')}>
                   {label}
@@ -201,7 +222,7 @@ export function QuestionHistory({ items }: { items: QuestionHistoryEntry[] }) {
           >
             <summary className="cursor-pointer text-sm">
               <span className={item.isDeleted ? 'italic text-muted-foreground' : 'font-medium'}>
-                {item.isDeleted ? 'Verwijderde vraag' : item.question}
+                {item.isDeleted ? t(lang, 'history.deletedQuestionLabel') : item.question}
               </span>
               <span className="ml-2 text-xs text-muted-foreground">
                 {/* A collapsed round's number is the SUM of two turns -- say so
@@ -209,34 +230,32 @@ export function QuestionHistory({ items }: { items: QuestionHistoryEntry[] }) {
                   * answer's price). The credit amount survives deletion
                   * (#14) -- only the question/answer text is redacted. */}
                 {item.creditsCharged !== null
-                  ? `${item.creditsCharged} credits${item.clarification !== null ? ' totaal' : ''} · `
+                  ? creditsLine(lang, item.creditsCharged, item.clarification !== null)
                   : ''}
-                {formatDate(item.createdAt)}
+                {formatDate(lang, item.createdAt)}
               </span>
               {item.isDeleted ? null : (
                 <div className="mt-0.5 truncate text-xs text-muted-foreground">{snippet(item.finalText)}</div>
               )}
             </summary>
             {item.isDeleted ? (
-              <p className="mt-2 text-sm italic text-muted-foreground">
-                De tekst van deze vraag is verwijderd.
-              </p>
+              <p className="mt-2 text-sm italic text-muted-foreground">{t(lang, 'history.deletedBody')}</p>
             ) : (
               <>
                 {item.clarification ? (
                   <div className="mt-2 flex flex-col gap-1 border-l-2 border-border pl-2 text-sm">
                     <div>
-                      <span className="text-xs text-muted-foreground">Verduidelijkingsvraag</span>
+                      <span className="text-xs text-muted-foreground">{t(lang, 'history.clarificationLabel')}</span>
                       <div className="whitespace-pre-wrap text-muted-foreground">{item.clarification.text}</div>
                     </div>
                     <div>
-                      <span className="text-xs text-muted-foreground">Jouw antwoord</span>
+                      <span className="text-xs text-muted-foreground">{t(lang, 'history.yourReplyLabel')}</span>
                       <div className="whitespace-pre-wrap text-muted-foreground">{item.clarification.reply}</div>
                     </div>
                   </div>
                 ) : null}
                 {item.answerParts !== null ? (
-                  <AnswerBody parts={item.answerParts} />
+                  <AnswerBody lang={lang} parts={item.answerParts} />
                 ) : (
                   <div className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">{item.finalText}</div>
                 )}

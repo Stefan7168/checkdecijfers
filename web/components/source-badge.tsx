@@ -7,7 +7,16 @@
 // the deep link reuses the pinned #86 builder so the badge cannot drift from
 // the tested URL shape. One component for BOTH chat answers and charts
 // (Ontdek included) — R4's "every source rides the one badge format".
+//
+// WP218 phase 4 (#219): only ever rendered from client components
+// (chart.tsx, chat.tsx, user-chart.tsx) -- 'use client' + useT(), same as
+// any other leaf under those boundaries. `sourceLinkLabel(key)` (the title
+// attribute) is unlisted lib copy this sweep doesn't touch -- see the task
+// report.
+'use client';
+
 import { resolveSource, sourceKeyForTableId } from '../backend/sources/registry.ts';
+import { useT } from '../lib/i18n/lang-provider.tsx';
 import { sourceLinkLabel, sourceTableUrl } from '../lib/statline.ts';
 
 export interface SourceBadgeProps {
@@ -30,13 +39,14 @@ export function syncDateLabel(syncedAt: string | null | undefined): string | nul
 }
 
 export function SourceBadge({ tableId, source, syncedAt }: SourceBadgeProps) {
+  const t = useT();
   // An old/minimal replay envelope can lack a table id — render nothing
   // rather than a badge pointing nowhere (principle c: never guess).
   if (tableId === '') return null;
   const key = source ?? sourceKeyForTableId(tableId);
   const info = resolveSource(key);
   const date = syncDateLabel(syncedAt);
-  const text = `${info.displayName} ${tableId}${date ? ` · gesynchroniseerd ${date}` : ''}`;
+  const text = `${info.displayName} ${tableId}${date ? ` · ${t('sourceBadge.syncedLabel', { date })}` : ''}`;
   const url = sourceTableUrl(key, tableId);
   const pill =
     'inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground';

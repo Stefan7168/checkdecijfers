@@ -6,12 +6,17 @@
 import { Monitor, Moon, Sun } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useSyncExternalStore } from 'react';
+import { useT } from '../lib/i18n/lang-provider.tsx';
 import { cn } from '../lib/utils.ts';
 
+// WP218 phase 4 (#219): the labels were English-only before this sweep — the
+// design's "Dutch entries are today's strings verbatim" rule doesn't apply
+// here (there were no Dutch strings yet), so nl gets NEW Dutch copy and the
+// English text below moves into the en catalogue (design §3).
 const OPTIONS = [
-  { value: 'light', label: 'Light theme', Icon: Sun },
-  { value: 'dark', label: 'Dark theme', Icon: Moon },
-  { value: 'system', label: 'System theme', Icon: Monitor },
+  { value: 'light', msgKey: 'themeToggle.light', Icon: Sun },
+  { value: 'dark', msgKey: 'themeToggle.dark', Icon: Moon },
+  { value: 'system', msgKey: 'themeToggle.system', Icon: Monitor },
 ] as const;
 
 // The stored theme is only known on the client; until hydration finishes no
@@ -24,14 +29,16 @@ function useMounted(): boolean {
 export function ThemeToggle({ className }: { className?: string }) {
   const { theme, setTheme } = useTheme();
   const mounted = useMounted();
+  const t = useT();
   const current = mounted ? (theme ?? 'system') : null;
   return (
     <div
       role="group"
-      aria-label="Theme"
+      aria-label={t('themeToggle.groupLabel')}
       className={cn('inline-flex items-center gap-px rounded-lg border border-border p-0.5', className)}
     >
-      {OPTIONS.map(({ value, label, Icon }) => {
+      {OPTIONS.map(({ value, msgKey, Icon }) => {
+        const label = t(msgKey);
         const active = current === value;
         return (
           <button

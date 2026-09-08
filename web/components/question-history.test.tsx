@@ -2,7 +2,7 @@
 // truncation, cost/date display, and the empty state -- the actual logic
 // worth pinning in this otherwise-plain Server Component.
 import { cleanup, render, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { QuestionHistoryEntry } from '../backend/billing/index.ts';
 import { fakeAnswerResponse, fakeCell } from '../test/fake-answer.ts';
 
@@ -12,9 +12,23 @@ import { fakeAnswerResponse, fakeCell } from '../test/fake-answer.ts';
 // (onboarding-live-status.test.tsx); here it only needs to render.
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 
+// WP218 phase 4 (#219): QuestionHistory is now an async Server Component
+// (await getLang()) -- jsdom has no Next.js request context for the real
+// cookies()/headers() reads. Default 'nl' so every existing Dutch-copy pin
+// below keeps passing; overridden for the "en" suite at the bottom.
+const { getLang } = vi.hoisted(() => ({ getLang: vi.fn() }));
+vi.mock('../lib/i18n/server.ts', () => ({ getLang }));
+
 import { QuestionHistory } from './question-history.tsx';
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  getLang.mockReset();
+});
+
+beforeEach(() => {
+  getLang.mockResolvedValue('nl');
+});
 
 function entry(overrides: Partial<QuestionHistoryEntry> = {}): QuestionHistoryEntry {
   return {
@@ -74,13 +88,13 @@ function entryWithProof(): QuestionHistoryEntry {
 }
 
 describe('QuestionHistory', () => {
-  it('shows an empty-state message when there are no past questions', () => {
-    render(<QuestionHistory items={[]} />);
+  it('shows an empty-state message when there are no past questions', async () => {
+    render((await QuestionHistory({ items:[] })));
     expect(screen.getByText('Nog geen eerdere vragen.')).toBeInTheDocument();
   });
 
-  it('renders the question, credits charged, and the full answer text (available even collapsed)', () => {
-    render(<QuestionHistory items={[entry()]} />);
+  it('renders the question, credits charged, and the full answer text (available even collapsed)', async () => {
+    render((await QuestionHistory({ items:[entry()] })));
     expect(screen.getByText('Hoeveel inwoners heeft Nederland?')).toBeInTheDocument();
     expect(screen.getByText(/20 credits/)).toBeInTheDocument();
     // Short text isn't truncated, so it legitimately appears twice (the
@@ -89,28 +103,27 @@ describe('QuestionHistory', () => {
     expect(screen.getAllByText('Nederland telt 18.044.027 inwoners.').length).toBeGreaterThanOrEqual(1);
   });
 
-  it('#116 residual: renders an id the delivery email anchors on ("audit-{id}", matching the existing source-scoped React key)', () => {
-    const { container } = render(<QuestionHistory items={[entry({ id: 314 })]} />);
+  it('#116 residual: renders an id the delivery email anchors on ("audit-{id}", matching the existing source-scoped React key)', async () => {
+    const { container } = render((await QuestionHistory({ items:[entry({ id: 314 })] })));
     expect(container.querySelector('#audit-314')).not.toBeNull();
   });
 
-  it('truncates a long answer in the collapsed snippet', () => {
+  it('truncates a long answer in the collapsed snippet', async () => {
     const longText = 'A'.repeat(200);
-    render(<QuestionHistory items={[entry({ finalText: longText })]} />);
+    render((await QuestionHistory({ items:[entry({ finalText: longText })] })));
     expect(screen.getByText(`${'A'.repeat(120)}…`)).toBeInTheDocument();
   });
 
-  it('omits the credits label when creditsCharged is null (a row with no attributable debit)', () => {
-    render(<QuestionHistory items={[entry({ creditsCharged: null })]} />);
+  it('omits the credits label when creditsCharged is null (a row with no attributable debit)', async () => {
+    render((await QuestionHistory({ items:[entry({ creditsCharged: null })] })));
     expect(screen.queryByText(/credits/)).toBeNull();
   });
 
   // WP19 (open-questions #67): a collapsed clarification round renders as ONE
   // item -- original question, the exchange inside the fold, final outcome.
-  it('renders a collapsed clarification round as one item with the full exchange', () => {
+  it('renders a collapsed clarification round as one item with the full exchange', async () => {
     render(
-      <QuestionHistory
-        items={[
+      (await QuestionHistory({ items:[
           entry({
             kind: 'answer',
             question: 'Hoeveel inwoners heeft de gemeente?',
@@ -118,8 +131,7 @@ describe('QuestionHistory', () => {
             creditsCharged: 30,
             clarification: { text: 'Welke gemeente bedoel je?', reply: 'Amsterdam' },
           }),
-        ]}
-      />,
+        ] })),
     );
     // One entry, one summary line -- never two rows for the same question.
     expect(screen.getAllByRole('group')).toHaveLength(1);
@@ -132,8 +144,8 @@ describe('QuestionHistory', () => {
     expect(screen.getAllByText('Amsterdam telt 931.298 inwoners.').length).toBeGreaterThanOrEqual(1);
   });
 
-  it('renders no exchange block and no "totaal" label when clarification is null', () => {
-    render(<QuestionHistory items={[entry()]} />);
+  it('renders no exchange block and no "totaal" label when clarification is null', async () => {
+    render((await QuestionHistory({ items:[entry()] })));
     expect(screen.queryByText('Verduidelijkingsvraag')).toBeNull();
     expect(screen.queryByText('Jouw antwoord')).toBeNull();
     // Binding both ways: a single-turn answer's price must NOT be labeled
@@ -146,18 +158,16 @@ describe('QuestionHistory', () => {
   // itself, and its credit amount, must stay visible), never leaking the
   // original question or answer text.
   describe('deleted-question placeholder (#14)', () => {
-    it('shows the placeholder label instead of the question, keeps the credit amount visible', () => {
+    it('shows the placeholder label instead of the question, keeps the credit amount visible', async () => {
       render(
-        <QuestionHistory
-          items={[
+        (await QuestionHistory({ items:[
             entry({
               question: 'Deze vraag is verwijderd.',
               finalText: 'Deze vraag is verwijderd.',
               creditsCharged: 20,
               isDeleted: true,
             }),
-          ]}
-        />,
+          ] })),
       );
       expect(screen.getByText('Verwijderde vraag')).toBeInTheDocument();
       expect(screen.getByText(/20 credits/)).toBeInTheDocument();
@@ -166,48 +176,42 @@ describe('QuestionHistory', () => {
       expect(screen.getByText('De tekst van deze vraag is verwijderd.')).toBeInTheDocument();
     });
 
-    it('never renders the raw redaction sentinel text as if it were real content', () => {
+    it('never renders the raw redaction sentinel text as if it were real content', async () => {
       render(
-        <QuestionHistory
-          items={[
+        (await QuestionHistory({ items:[
             entry({
               question: 'Deze vraag is verwijderd.',
               finalText: 'Deze vraag is verwijderd.',
               isDeleted: true,
             }),
-          ]}
-        />,
+          ] })),
       );
       // The sentinel string must not appear verbatim anywhere in the
       // rendered output -- only the distinct placeholder copy should.
       expect(screen.queryByText('Deze vraag is verwijderd.', { exact: true })).toBeNull();
     });
 
-    it('renders no clarification exchange for a deleted round, even if one was recorded', () => {
+    it('renders no clarification exchange for a deleted round, even if one was recorded', async () => {
       render(
-        <QuestionHistory
-          items={[
+        (await QuestionHistory({ items:[
             entry({
               question: 'Deze vraag is verwijderd.',
               finalText: 'Deze vraag is verwijderd.',
               clarification: { text: 'Welke gemeente bedoel je?', reply: 'Amsterdam' },
               isDeleted: true,
             }),
-          ]}
-        />,
+          ] })),
       );
       expect(screen.queryByText('Welke gemeente bedoel je?')).toBeNull();
       expect(screen.queryByText('Amsterdam')).toBeNull();
     });
 
-    it('a non-deleted row renders normally alongside a deleted one', () => {
+    it('a non-deleted row renders normally alongside a deleted one', async () => {
       render(
-        <QuestionHistory
-          items={[
+        (await QuestionHistory({ items:[
             entry({ id: 1, question: 'Deze vraag is verwijderd.', finalText: 'Deze vraag is verwijderd.', isDeleted: true }),
             entry({ id: 2, question: 'Hoeveel inwoners heeft Nederland?', isDeleted: false }),
-          ]}
-        />,
+          ] })),
       );
       expect(screen.getByText('Verwijderde vraag')).toBeInTheDocument();
       expect(screen.getByText('Hoeveel inwoners heeft Nederland?')).toBeInTheDocument();
@@ -233,8 +237,8 @@ describe('QuestionHistory', () => {
       });
     }
 
-    it('renders a pending request as "Wordt voorbereid" naming the topic, cost 100', () => {
-      render(<QuestionHistory items={[onboardingEntry()]} />);
+    it('renders a pending request as "Wordt voorbereid" naming the topic, cost 100', async () => {
+      render((await QuestionHistory({ items:[onboardingEntry()] })));
       expect(screen.getByText('hoeveel zonnestroom werd er opgewekt in 2024')).toBeInTheDocument();
       expect(screen.getByText('Wordt voorbereid')).toBeInTheDocument();
       // The topic name appears both in the summary body copy and (as part of
@@ -247,19 +251,16 @@ describe('QuestionHistory', () => {
       expect(screen.getByText(/^100 credits/)).toBeInTheDocument();
     });
 
-    it('renders a running request the same as pending -- both are "in flight" to the user', () => {
+    it('renders a running request the same as pending -- both are "in flight" to the user', async () => {
       render(
-        <QuestionHistory
-          items={[onboardingEntry({ onboarding: { status: 'running', topicTerm: 'zonnestroom', failureSummary: null } })]}
-        />,
+        (await QuestionHistory({ items:[onboardingEntry({ onboarding: { status: 'running', topicTerm: 'zonnestroom', failureSummary: null } })] })),
       );
       expect(screen.getByText('Wordt voorbereid')).toBeInTheDocument();
     });
 
-    it('renders a failed request as an honest refunded state, net 0, with the plain-language reason', () => {
+    it('renders a failed request as an honest refunded state, net 0, with the plain-language reason', async () => {
       render(
-        <QuestionHistory
-          items={[
+        (await QuestionHistory({ items:[
             onboardingEntry({
               creditsCharged: 0,
               onboarding: {
@@ -268,8 +269,7 @@ describe('QuestionHistory', () => {
                 failureSummary: 'Het inladen van tabel 82610NED bij het CBS is mislukt (stap: fetch).',
               },
             }),
-          ]}
-        />,
+          ] })),
       );
       expect(screen.getByText('Kon niet worden opgehaald')).toBeInTheDocument();
       expect(screen.getByText(/Het inladen van tabel 82610NED bij het CBS is mislukt/)).toBeInTheDocument();
@@ -277,10 +277,9 @@ describe('QuestionHistory', () => {
       expect(screen.getByText(/0 credits/)).toBeInTheDocument();
     });
 
-    it('renders an unanswerable request the same as failed -- both are an honest non-delivery', () => {
+    it('renders an unanswerable request the same as failed -- both are an honest non-delivery', async () => {
       render(
-        <QuestionHistory
-          items={[
+        (await QuestionHistory({ items:[
             onboardingEntry({
               creditsCharged: 0,
               onboarding: {
@@ -289,34 +288,31 @@ describe('QuestionHistory', () => {
                 failureSummary: 'De vraag kon niet betrouwbaar worden beantwoord met de opgehaalde cijfers.',
               },
             }),
-          ]}
-        />,
+          ] })),
       );
       expect(screen.getByText('Kon niet worden opgehaald')).toBeInTheDocument();
       expect(screen.getByText(/niet betrouwbaar worden beantwoord/)).toBeInTheDocument();
     });
 
-    it('does not apply the amber pending styling to a failed/refunded entry', () => {
+    it('does not apply the amber pending styling to a failed/refunded entry', async () => {
       const { container } = render(
-        <QuestionHistory
-          items={[
+        (await QuestionHistory({ items:[
             onboardingEntry({
               creditsCharged: 0,
               onboarding: { status: 'failed', topicTerm: 'zonnestroom', failureSummary: 'mislukt' },
             }),
-          ]}
-        />,
+          ] })),
       );
       expect(container.querySelector('.bg-warning-soft')).toBeNull();
     });
 
-    it('applies the amber pending styling to a pending entry', () => {
-      const { container } = render(<QuestionHistory items={[onboardingEntry()]} />);
+    it('applies the amber pending styling to a pending entry', async () => {
+      const { container } = render((await QuestionHistory({ items:[onboardingEntry()] })));
       expect(container.querySelector('.bg-warning-soft')).not.toBeNull();
     });
 
-    it('#116 residual: renders an id the delivery email anchors on ("onboarding-{id}", matching the existing source-scoped React key)', () => {
-      const { container } = render(<QuestionHistory items={[onboardingEntry({ id: 42 })]} />);
+    it('#116 residual: renders an id the delivery email anchors on ("onboarding-{id}", matching the existing source-scoped React key)', async () => {
+      const { container } = render((await QuestionHistory({ items:[onboardingEntry({ id: 42 })] })));
       expect(container.querySelector('#onboarding-42')).not.toBeNull();
     });
 
@@ -326,54 +322,49 @@ describe('QuestionHistory', () => {
     // glance, and the poll's stop condition (count 0 on a refreshed render)
     // is decided HERE, from the server-rendered items.
     describe('live-status line (#74/#117)', () => {
-      it('shows the in-behandeling line when a pending request exists', () => {
-        render(<QuestionHistory items={[entry(), onboardingEntry()]} />);
+      it('shows the in-behandeling line when a pending request exists', async () => {
+        render((await QuestionHistory({ items:[entry(), onboardingEntry()] })));
         expect(screen.getByRole('status')).toHaveTextContent(
           'Er is 1 aanvraag bij het CBS in behandeling',
         );
       });
 
-      it('counts pending AND running requests together', () => {
+      it('counts pending AND running requests together', async () => {
         render(
-          <QuestionHistory
-            items={[
+          (await QuestionHistory({ items:[
               onboardingEntry(),
               onboardingEntry({
                 id: 2,
                 onboarding: { status: 'running', topicTerm: 'windenergie', failureSummary: null },
               }),
-            ]}
-          />,
+            ] })),
         );
         expect(screen.getByRole('status')).toHaveTextContent(
           'Er zijn 2 aanvragen bij het CBS in behandeling',
         );
       });
 
-      it('shows no line when nothing is in flight (answers and a failed request only)', () => {
+      it('shows no line when nothing is in flight (answers and a failed request only)', async () => {
         render(
-          <QuestionHistory
-            items={[
+          (await QuestionHistory({ items:[
               entry(),
               onboardingEntry({
                 creditsCharged: 0,
                 onboarding: { status: 'failed', topicTerm: 'zonnestroom', failureSummary: 'mislukt' },
               }),
-            ]}
-          />,
+            ] })),
         );
         expect(screen.queryByRole('status')).toBeNull();
       });
     });
 
-    it('a delivered onboarding answer renders through the ORDINARY answer branch, not the onboarding branch', () => {
+    it('a delivered onboarding answer renders through the ORDINARY answer branch, not the onboarding branch', async () => {
       // A delivered request never reaches QuestionHistory as an
       // onboarding-sourced entry (history.ts skips it) -- it arrives exactly
       // like any other answered question. Regression guard: it must never
       // show the amber box or the onboarding labels.
       render(
-        <QuestionHistory
-          items={[
+        (await QuestionHistory({ items:[
             entry({
               source: 'audit',
               kind: 'answer',
@@ -382,8 +373,7 @@ describe('QuestionHistory', () => {
               creditsCharged: 100,
               onboarding: null,
             }),
-          ]}
-        />,
+          ] })),
       );
       // Short text legitimately appears twice (collapsed snippet + full text,
       // same as the non-onboarding case tested above) -- assert presence.
@@ -392,19 +382,17 @@ describe('QuestionHistory', () => {
       expect(screen.queryByText('Kon niet worden opgehaald')).toBeNull();
     });
 
-    it('keys onboarding and audit entries independently even if their numeric ids collide', () => {
+    it('keys onboarding and audit entries independently even if their numeric ids collide', async () => {
       // pending_table_requests.id and audit_answers.id are independent bigint
       // sequences -- id=1 on both is a real possible collision, not a
       // contrived one. Both entries must render (a naive `key={item.id}`
       // would not crash React here since content differs, but this pins the
       // fix at the presence level regardless).
       render(
-        <QuestionHistory
-          items={[
+        (await QuestionHistory({ items:[
             entry({ id: 1, source: 'audit', question: 'gewone vraag' }),
             onboardingEntry({ id: 1, question: 'onboarding vraag' }),
-          ]}
-        />,
+          ] })),
       );
       expect(screen.getByText('gewone vraag')).toBeInTheDocument();
       expect(screen.getByText('onboarding vraag')).toBeInTheDocument();
@@ -417,8 +405,8 @@ describe('QuestionHistory', () => {
 // "Meer over deze meting" (scale sentence visible), and ALWAYS shows the full
 // R4 attribution sentence (#90: never behind a click).
 describe('QuestionHistory — structured answer parts (#115)', () => {
-  it('renders body, visible scale sentence, folded definition and the full attribution', () => {
-    render(<QuestionHistory items={[onboardedAnswerEntry()]} />);
+  it('renders body, visible scale sentence, folded definition and the full attribution', async () => {
+    render((await QuestionHistory({ items:[onboardedAnswerEntry()] })));
     // The core answer, prominent.
     expect(
       screen.getByText('Consumentenvertrouwen was in 2024 -24 (gemiddelde saldo van de deelvragen).'),
@@ -443,34 +431,34 @@ describe('QuestionHistory — structured answer parts (#115)', () => {
     ).toBeLessThanOrEqual(1);
   });
 
-  it('keeps a short curated definition inline with no expander (seed answers unchanged)', () => {
+  it('keeps a short curated definition inline with no expander (seed answers unchanged)', async () => {
     const item = onboardedAnswerEntry();
     item.answerParts = {
       ...item.answerParts!,
       definitionLine: 'Definitie: inwoners op 1 januari.',
     };
-    render(<QuestionHistory items={[item]} />);
+    render((await QuestionHistory({ items:[item] })));
     expect(screen.getByText('Definitie: inwoners op 1 januari.')).toBeInTheDocument();
     expect(screen.queryByText('Meer over deze meting')).toBeNull();
   });
 
-  it('renders a staleness warning when the envelope carries one', () => {
+  it('renders a staleness warning when the envelope carries one', async () => {
     const item = onboardedAnswerEntry();
     item.answerParts = { ...item.answerParts!, stalenessWarning: 'Let op: deze cijfers zijn ouder dan verwacht.' };
-    render(<QuestionHistory items={[item]} />);
+    render((await QuestionHistory({ items:[item] })));
     expect(screen.getByText('Let op: deze cijfers zijn ouder dan verwacht.')).toBeInTheDocument();
   });
 
-  it('falls back to the finalText blob when answerParts is null (legacy/refusal rows)', () => {
-    render(<QuestionHistory items={[entry({ finalText: 'gewone blob-weergave' })]} />);
+  it('falls back to the finalText blob when answerParts is null (legacy/refusal rows)', async () => {
+    render((await QuestionHistory({ items:[entry({ finalText: 'gewone blob-weergave' })] })));
     expect(screen.getAllByText('gewone blob-weergave').length).toBeGreaterThanOrEqual(1);
     expect(screen.queryByText('Meer over deze meting')).toBeNull();
   });
 });
 
 describe('proof panel (#199)', () => {
-  it('renders the proof panel when the entry has an answerEnvelope', () => {
-    render(<QuestionHistory items={[entryWithProof()]} />);
+  it('renders the proof panel when the entry has an answerEnvelope', async () => {
+    render((await QuestionHistory({ items:[entryWithProof()] })));
     // AnswerProof's own trigger button text (answer-proof.tsx:88) — 'Bewijs
     // dit cijfer' singular because fakeAnswerResponse's default is one cell
     // (fakeCell()); confirms the panel mounted without depending on its
@@ -478,13 +466,64 @@ describe('proof panel (#199)', () => {
     expect(screen.getByText('Bewijs dit cijfer')).toBeInTheDocument();
   });
 
-  it('renders no proof panel when answerEnvelope is null', () => {
-    render(<QuestionHistory items={[entry()]} />);
+  it('renders no proof panel when answerEnvelope is null', async () => {
+    render((await QuestionHistory({ items:[entry()] })));
     expect(screen.queryByText('Bewijs dit cijfer')).not.toBeInTheDocument();
   });
 
-  it('renders no proof panel for a deleted entry, even if an envelope was recorded', () => {
-    render(<QuestionHistory items={[{ ...entryWithProof(), isDeleted: true }]} />);
+  it('renders no proof panel for a deleted entry, even if an envelope was recorded', async () => {
+    render((await QuestionHistory({ items:[{ ...entryWithProof(), isDeleted: true }] })));
     expect(screen.queryByText('Bewijs dit cijfer')).not.toBeInTheDocument();
+  });
+});
+
+// WP218 phase 4 (#219): proves the language switch reaches this Server
+// Component. Backend-built text (question, finalText, onboarding.
+// failureSummary) is never translated -- only the catalogue chrome around it.
+describe('QuestionHistory — en', () => {
+  it('renders the empty state and heading in English', async () => {
+    getLang.mockResolvedValue('en');
+    render(await QuestionHistory({ items: [] }));
+    expect(screen.getByText('No previous questions yet.')).toBeInTheDocument();
+  });
+
+  it('renders the credits/date chrome, the deleted placeholder and the clarification labels in English', async () => {
+    getLang.mockResolvedValue('en');
+    render(
+      await QuestionHistory({
+        items: [
+          entry({
+            question: 'Deze vraag is verwijderd.',
+            finalText: 'Deze vraag is verwijderd.',
+            creditsCharged: 30,
+            isDeleted: true,
+            clarification: { text: 'Welke gemeente bedoel je?', reply: 'Amsterdam' },
+          }),
+        ],
+      }),
+    );
+    expect(screen.getByText('Deleted question')).toBeInTheDocument();
+    expect(screen.getByText('The text of this question has been deleted.')).toBeInTheDocument();
+    expect(screen.getByText(/30 credits/)).toBeInTheDocument();
+  });
+
+  it('renders the onboarding "being prepared" and "could not be retrieved" copy in English', async () => {
+    getLang.mockResolvedValue('en');
+    render(
+      await QuestionHistory({
+        items: [
+          entry({
+            source: 'onboarding',
+            kind: 'onboarding_pending',
+            question: 'hoeveel zonnestroom werd er opgewekt in 2024',
+            finalText: '',
+            creditsCharged: 100,
+            onboarding: { status: 'pending', topicTerm: 'zonnestroom', failureSummary: null },
+          }),
+        ],
+      }),
+    );
+    expect(screen.getByText('Being prepared')).toBeInTheDocument();
+    expect(screen.getByText(/We are automatically requesting the figures about "zonnestroom" from CBS now/)).toBeInTheDocument();
   });
 });

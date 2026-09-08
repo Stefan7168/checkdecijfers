@@ -11,21 +11,18 @@
 // boundary keeps the hero streaming ahead of the database read.
 import { Suspense } from 'react';
 import { getOntdekCharts } from '../lib/ontdek.ts';
+import { getLang } from '../lib/i18n/server.ts';
+import { t } from '../lib/i18n/messages.ts';
 import { ChartView } from './chart.tsx';
 import { ChartWithToggle } from './chart-toggle.tsx';
 
 export async function OntdekCharts() {
-  const charts = await getOntdekCharts();
+  const [charts, lang] = await Promise.all([getOntdekCharts(), getLang()]);
   if (charts.length === 0) return null;
   return (
     <section className="border-b border-border py-12">
-      <h2 className="text-2xl text-foreground">Ontdek Nederland in grafieken</h2>
-      <p className="mt-3 max-w-xl text-muted-foreground">
-        Rechtstreeks uit onze database met officiële CBS-cijfers:
-        consumentenvertrouwen, economische groei, inflatie, de gemiddelde
-        verkoopprijs van woningen en de werkloosheid. Elk punt is herleidbaar
-        tot een CBS-tabel — bron en datum staan erbij.
-      </p>
+      <h2 className="text-2xl text-foreground">{t(lang, 'ontdek.heading')}</h2>
+      <p className="mt-3 max-w-xl text-muted-foreground">{t(lang, 'ontdek.body')}</p>
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
         {charts.map((chart) =>
           // #170(4): a chart with a built toggle gets the client switcher;

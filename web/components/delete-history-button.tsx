@@ -18,11 +18,13 @@
 
 import { useState } from 'react';
 import { deleteMyQuestionHistory } from '../app/actions.ts';
+import { useT } from '../lib/i18n/lang-provider.tsx';
 
 type Stage = 'idle' | 'confirming' | 'deleting' | 'error';
 
 export function DeleteHistoryButton() {
   const [stage, setStage] = useState<Stage>('idle');
+  const t = useT();
 
   async function handleConfirm(): Promise<void> {
     setStage('deleting');
@@ -38,10 +40,7 @@ export function DeleteHistoryButton() {
   if (stage === 'confirming' || stage === 'deleting') {
     return (
       <div className="flex flex-col gap-2 rounded-lg border border-destructive bg-muted p-3 text-sm">
-        <p className="text-destructive">
-          Weet je het zeker? Je vraagteksten worden permanent verwijderd. Dit kan niet ongedaan
-          worden gemaakt.
-        </p>
+        <p className="text-destructive">{t('deleteHistory.confirmText')}</p>
         <div className="flex gap-2">
           <button
             type="button"
@@ -49,7 +48,7 @@ export function DeleteHistoryButton() {
             disabled={stage === 'deleting'}
             className="rounded-md bg-destructive px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60"
           >
-            {stage === 'deleting' ? 'Bezig…' : 'Ja, verwijder'}
+            {stage === 'deleting' ? t('header.busy') : t('deleteHistory.confirmYes')}
           </button>
           <button
             type="button"
@@ -57,7 +56,7 @@ export function DeleteHistoryButton() {
             disabled={stage === 'deleting'}
             className="rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted disabled:opacity-60"
           >
-            Annuleren
+            {t('deleteHistory.cancel')}
           </button>
         </div>
       </div>
@@ -71,11 +70,11 @@ export function DeleteHistoryButton() {
         onClick={() => setStage('confirming')}
         className="text-left text-xs text-destructive underline"
       >
-        Verwijder mijn vraaggeschiedenis
+        {t('deleteHistory.trigger')}
       </button>
       {stage === 'error' ? (
         <p role="alert" className="text-xs text-destructive">
-          Verwijderen is niet gelukt. Probeer het later opnieuw.
+          {t('deleteHistory.failed')}
         </p>
       ) : null}
     </div>

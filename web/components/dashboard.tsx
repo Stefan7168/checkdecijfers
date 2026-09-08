@@ -16,6 +16,7 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { GatedResponse } from '../backend/billing/index.ts';
+import { useT } from '../lib/i18n/lang-provider.tsx';
 import { AccountPanel } from './account-panel.tsx';
 import { Chat } from './chat.tsx';
 
@@ -44,6 +45,7 @@ export function Dashboard({
   websearch?: { enabled: true; addonPrice: number };
 }) {
   const router = useRouter();
+  const t = useT();
   const [balance, setBalance] = useState(initialBalance);
   const [showPurchaseBanner, setShowPurchaseBanner] = useState(purchaseSuccess);
 
@@ -91,16 +93,16 @@ export function Dashboard({
             * redirect — never promise a fixed time, and say a reload is what
             * shows the new balance (the #68 live updates move on question
             * outcomes, not on webhook credits). */}
-          <p>
-            Betaling gelukt — je credits worden bijgeschreven zodra Stripe de betaling bevestigt
-            (meestal een paar seconden). Ververs daarna de pagina om je nieuwe saldo te zien.
-          </p>
+          {/* Same #95 banner as workspace.tsx's WORKSPACE_ENABLED branch —
+            * one shared key so the two never drift (the common.sessionExpired
+            * precedent). */}
+          <p>{t('workspace.purchaseSuccessMessage')}</p>
           <button
             type="button"
             onClick={dismissPurchaseBanner}
             className="shrink-0 text-xs text-success underline"
           >
-            Sluiten
+            {t('workspace.purchaseSuccessDismiss')}
           </button>
         </div>
       ) : null}
