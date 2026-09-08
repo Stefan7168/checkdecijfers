@@ -54,6 +54,15 @@ Click-to-annotate notes render in a new sibling component, `ChartNotes`, mounted
 for PNG/SVG export — so notes are excluded from every export by construction, with no new
 exemption needed in the R6 token-scan (which only ever inspects the exported `<svg>`).
 
+*Correction (2026-09-09, session 90, found by the #218 architecture panel and verified against
+`web/components/chart.test.tsx`): the sentence above is precise for the EXPORT-side scan
+(`tests/chart/*` inspect the exported `<svg>`), but the WEB-side membership tests walk the whole
+card's `textContent` for digit tokens — `chart.test.tsx` collects every `\d[\d.,]*` match under the
+render root — so mounting outside `chartContainerRef` keeps a component out of the download, not
+out of that scan. Anything rendered inside `ChartView`'s card must therefore stay digit-free
+unless the digits are spec strings; the notes tests pass because their fixture notes carry no
+digits, not because notes are exempt.*
+
 ## Alternatives considered
 
 (As catalogued in more detail by the session-88 architecture panel's published artifact.)
@@ -69,8 +78,9 @@ exemption needed in the R6 token-scan (which only ever inspects the exported `<s
    put directly on screen; per the CLAUDE.md "cheapest mechanism first" convention, a prompt-byte
    change is not justified until usage data shows the deterministic controls aren't enough.
 3. **Draw annotation notes inside the chart's own SVG** (e.g. as a Recharts overlay layer).
-   Rejected — would require a new R6 token-scan exemption for the annotation text (currently the
-   scan only ever inspects the exported `<svg>`, so anything drawn inside it needs a carve-out) and
+   Rejected — would require a new R6 token-scan exemption for the annotation text (the export-side
+   scan inspects the exported `<svg>`, so anything drawn inside it needs a carve-out; see the
+   session-90 correction above for the web-side scans) and
    risks a personal note being mistaken for official CBS data on a shared screenshot. Mounting
    `ChartNotes` as a structurally separate sibling, outside the exported container, avoids both.
 
