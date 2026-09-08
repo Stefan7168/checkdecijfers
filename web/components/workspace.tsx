@@ -7,7 +7,6 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useDefaultLayout } from 'react-resizable-panels';
 import { listMyThreads, loadMyThread } from '../app/actions.ts';
 import { ingestFile } from '../app/dataset-actions.ts';
 import type { GatedResponse } from '../backend/billing/index.ts';
@@ -18,7 +17,6 @@ import type { DatasetProfile, DatasetStatus } from '../backend/attachments/types
 import type { ThreadSummary } from '../backend/threads/index.ts';
 import type { ChatMessage } from '../lib/chat-message.ts';
 import type { DockVisual } from '../lib/dock-visuals.ts';
-import { getPanelStorage } from '../lib/panel-storage.ts';
 import { useMediaQuery } from '../lib/use-media-query.ts';
 import { Chat } from './chat.tsx';
 import { DatasetChat } from './dataset-chat.tsx';
@@ -114,14 +112,16 @@ export function Workspace({
     if (isNarrow) setSidebarCollapsed(true);
   }, [isNarrow]);
 
-  // #211 (chat interaction polish, session 88): remembers the dock's width
-  // across visits. `getPanelStorage()` is REQUIRED here — the hook's own
-  // default `storage` value is unsafe during server rendering (see
-  // web/lib/panel-storage.ts).
-  const { defaultLayout, onLayoutChanged } = useDefaultLayout({
-    id: 'dock-panel-width',
-    storage: getPanelStorage(),
-  });
+  // #211 (chat interaction polish, session 88): the dock's width is
+  // resizable within a session (minSize/maxSize on the Panel below) but
+  // does NOT persist across visits — real-browser verification found
+  // react-resizable-panels@4.12.4's own layout-restore path is broken: a
+  // saved width comes back swapped/wrong on reload, even violating a
+  // panel's own configured minSize. Owner decision: ship resize without
+  // persistence rather than chase a bug in a very recent (alpha/rc-tagged
+  // alongside `latest`) library release; revisit by checking whether a
+  // different `react-resizable-panels` version fixes its own
+  // `defaultLayout` restoration first.
 
   // Refresh the sidebar after a turn (an event, not a mount effect — the initial
   // list is server-rendered).
@@ -400,12 +400,7 @@ export function Workspace({
             time or the viewport crossed the isWide breakpoint. Only the
             trailing handle + dock panel are conditionally added/removed as
             siblings, which doesn't affect the first child's identity. */}
-        <ResizablePanelGroup
-          orientation="horizontal"
-          defaultLayout={defaultLayout}
-          onLayoutChanged={onLayoutChanged}
-          className="min-h-0 min-w-0 flex-1"
-        >
+        <ResizablePanelGroup orientation="horizontal" className="min-h-0 min-w-0 flex-1">
           <ResizablePanel id="chat-panel" minSize="55">
             {chatSection}
           </ResizablePanel>
