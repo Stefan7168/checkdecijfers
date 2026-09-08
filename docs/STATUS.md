@@ -31,11 +31,15 @@ fixed in one consolidated commit (`1a5e968`), re-reviewed clean.
 [ADR 038](decisions/038-chart-view-state-editing.md) records the as-built mechanism and how
 open decisions A-H from session 88's panel resolved: A/C/D/E by the mechanism chosen, B/F to
 the most conservative default (explicitly NOT an owner decision), G/H untouched; addendum on
-[#212](open-questions.md). **Flagged to the owner directly in chat, not silently resolved — still open, tracked here for a
-future session:** a chosen chart form persists across a swap to a completely different chart on
-the same mounted view (dock-tab switching); small multiples ignores the Staaf switch and always
-renders line panels; the Vanaf/Tot zoom selectors don't clamp against each other (an inverted
-range produces an empty chart with a nonsense disclosure sentence baked into it). Built
+[#212](open-questions.md). **Flagged to the owner directly in chat; 2 of 3 fixed same session
+(commit `92821a1`, owner: "let's do everything"):** small multiples now gates off (disabled)
+once the form is switched away from Lijn, instead of silently continuing to draw line panels;
+the Vanaf/Tot zoom selectors now clamp against each other (moving one endpoint past the other
+drags it along, closing the inverted-range/nonsense-disclosure gap) — the clamp logic itself was
+extracted into two named, unit-tested pure functions per a same-session LOW code-review finding
+(the first version duplicated it inline in both onChange handlers). **Left as-is, decided NOT a
+bug:** a chosen chart form persisting across a swap to a completely different chart correctly
+extends the pre-existing Tabel-persistence behavior to line/bar consistently. Built
 autonomously on `feat/chart-editing-p1` per [#118](https://github.com/Stefan7168/checkdecijfers/issues/118)'s
 branch+PR rule (no owner present during the build); **owner returned before the branch was
 pushed, reviewed this summary, and gave standing owner-present authorization to merge directly**
@@ -45,8 +49,11 @@ remote). 15 commits (`f3bba6b`..`3a92b61`) on `main`. Full verification block re
 before the merge: typecheck ×2, web 767/767, backend 2089/2089 (unchanged), benchmark
 14/14 + 6/6 + 0 fabricated (unchanged — this branch never touches the answer pipeline), real
 `next build`. **Verified LIVE:** CI run `34226204304` green; `GET /api/health` on
-`https://checkdecijfers.vercel.app` → `{"ok":true}`, all 7 checks passing. Full session entry:
-[status-archive.md](status-archive.md).
+`https://checkdecijfers.vercel.app` → `{"ok":true}`, all 7 checks passing. **Follow-up same
+session** (docs correction `be2d309`, then the 2 deferred-item fixes `92821a1`): full
+verification block re-run before each push (typecheck ×2, web 772/772, backend 2089/2089
+unchanged), CI runs `34227783282` and `34234407567` both green, `/api/health` reconfirmed
+`{"ok":true}` after each deploy. Full session entry: [status-archive.md](status-archive.md).
 
 **▶ SESSION 86 (2026-09-07, owner present, mixed autonomous/interactive) — the CI `deploy` job is
 FIXED and LIVE for the first time in weeks, and that exposed + fixed a real production incident.**

@@ -182,6 +182,28 @@ CI run `34226204304` on `main` watched to completion (`gh run view`) → `comple
 `curl https://checkdecijfers.vercel.app/api/health` → `{"ok":true,"checks":[...7 checks...]}`,
 all passing. Working tree clean after every commit (`git status --short` empty).
 
+8. **Same-session follow-up: docs correction, then 2 of the 3 deferred items fixed.** After the
+   above, the owner asked "whats next" (answered with the standing priority list — WP202a go-live
+   at the top, these 3 deferred chart items, and open-questions #214) and then said "Let's do
+   everything first!" The controller corrected the wrap-up docs (`be2d309`, since they were
+   written while the branch was still unpushed and are now stale in that respect), then fixed two
+   of the three deferred chart items directly (owner present, general delegation): small
+   multiples now gates off once the form is switched away from Lijn (`smallMultiplesAvailable`
+   keyed on `effectiveKind` instead of `spec.kind`) instead of silently continuing to draw line
+   panels; the Vanaf/Tot zoom selects now clamp against each other instead of allowing an inverted
+   range. A same-session LOW `/code-review` pass on the first version of the clamp fix found the
+   clamp logic duplicated inline in both `onChange` handlers — extracted into two named, unit-
+   tested pure functions (`clampVanafChange`/`clampTotChange`) in the same commit. The third item
+   (a chosen form persisting across a swap to a completely different chart) was reviewed and left
+   as-is: it correctly extends the pre-existing `Tabel`-persistence behavior to line/bar
+   consistently, not a bug. Commit `92821a1`. Full verification block: typecheck ×2, web 772/772
+   (770 + 2 new pure-function unit tests), backend 2089/2089 (re-run clean after an earlier run in
+   this same follow-up was accidentally invalidated by the controller killing a shared worker
+   process while trying to relieve system-wide resource contention — a genuine environment issue,
+   not a code defect; re-run confirmed clean), real `next build` clean. Pushed and verified live:
+   CI run `34234407567` completed success, `GET /api/health` → `{"ok":true}`, all 7 checks
+   passing.
+
 **Session 88 (2026-09-08, owner present throughout) — TWO PLANS EXECUTED VIA SUBAGENT-DRIVEN
 DEVELOPMENT AND SHIPPED LIVE, A REAL LIBRARY DEFECT TRACED AND CORRECTLY WORKED AROUND, AND A
 CODE-REVIEW PASS THAT CAUGHT A CRITICAL BUG SIX TASK-LEVEL REVIEWS HAD MISSED.**
