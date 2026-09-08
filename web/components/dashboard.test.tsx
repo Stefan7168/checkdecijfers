@@ -9,7 +9,9 @@ import type { AskOutcome } from '../app/actions.ts';
 import type { GatedResponse } from '../backend/billing/index.ts';
 import type { ComposedResponse } from '../backend/answer/respond/types.ts';
 import { fakeAnswerResponse } from '../test/fake-answer.ts';
+import { PricingHintProvider } from '../lib/pricing-hint-context.tsx';
 import { Dashboard } from './dashboard.tsx';
+import { SiteFooter } from './site-footer.tsx';
 
 Element.prototype.scrollIntoView = vi.fn();
 
@@ -36,7 +38,7 @@ vi.mock('../app/actions.ts', () => ({
 // #74/#117: Dashboard calls useRouter().refresh() after an onboarding
 // acknowledgment (jsdom has no App Router context, so the hook is mocked).
 const { routerRefresh } = vi.hoisted(() => ({ routerRefresh: vi.fn() }));
-vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: routerRefresh }) }));
+vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: routerRefresh }), usePathname: () => '/' }));
 
 afterEach(() => {
   cleanup();
@@ -193,14 +195,30 @@ describe('Dashboard — live balance (#68)', () => {
 
 describe('Dashboard — the pre-send cost line tracks the LIVE balance (#82 x #68, WP20)', () => {
   it('moves the saldo in the cost line after a charge, without a reload', async () => {
+    // #211 (session 88): the pre-send pricing line moved out of Chat's own
+    // DOM into the site footer (PricingHintContext) — SiteFooter is a
+    // sibling of Dashboard/Workspace in the real app/layout.tsx, wrapped
+    // here the same way to exercise the real behavior, not Chat's isolated
+    // internals.
     askQuestion.mockResolvedValue(outcome(fakeAnswer('Nederland telt 18.044.027 inwoners.', 20)));
-    renderDashboard(100);
-    expect(screen.getByText(/saldo: 100 credits/)).toBeInTheDocument();
+    render(
+      <PricingHintProvider>
+        <Dashboard
+          initialBalance={100}
+          simplePrice={20}
+          clarificationPrice={10}
+          signupGrantCredits={100}
+          history={<div data-testid="history-slot" />}
+        />
+        <SiteFooter />
+      </PricingHintProvider>,
+    );
+    expect(document.querySelector('footer')!.textContent).toMatch(/saldo: 100 credits/);
 
     await submit('Hoeveel inwoners heeft Nederland?');
     await screen.findByText('Nederland telt 18.044.027 inwoners.');
-    expect(screen.getByText(/saldo: 80 credits/)).toBeInTheDocument();
-    expect(screen.queryByText(/saldo: 100 credits/)).toBeNull();
+    expect(document.querySelector('footer')!.textContent).toMatch(/saldo: 80 credits/);
+    expect(document.querySelector('footer')!.textContent).not.toMatch(/saldo: 100 credits/);
   });
 });
 
