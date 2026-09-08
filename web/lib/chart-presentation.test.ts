@@ -16,6 +16,7 @@ import {
   sanitizeOverrides,
   seriesColor,
   xAxisHeight,
+  xLabelOverhang,
   type PresentationContext,
 } from './chart-presentation.ts';
 
@@ -117,6 +118,11 @@ describe('geometry helpers', () => {
     expect(dotGeometry('normal')).toEqual({ r: 4, ring: 2 });
     expect(dotGeometry('thick')).toEqual({ r: 5, ring: 2 });
     expect(dotGeometry('extraThick')).toEqual({ r: 6, ring: 2 });
+  });
+  it('xLabelOverhang reserves left margin only for tilted labels, capped (browser-pass clipping fix)', () => {
+    expect(xLabelOverhang('flat', '2024 november')).toBe(0);
+    expect(xLabelOverhang('tilted', '2024 november')).toBe(Math.ceil(13 * 6.5 * 0.71));
+    expect(xLabelOverhang('tilted', 'x'.repeat(200))).toBe(96);
   });
   it('xAxisHeight reserves room only for tilted labels, capped', () => {
     expect(xAxisHeight('flat', '2021 1e kwartaal')).toBeUndefined();

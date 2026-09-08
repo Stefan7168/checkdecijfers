@@ -47,6 +47,7 @@ import {
   resolvePresentation,
   seriesColor,
   xAxisHeight,
+  xLabelOverhang,
 } from '../lib/chart-presentation.ts';
 import { ensureFontLoaded } from '../lib/font-loader.ts';
 import { ChartConfigPanel } from './chart-config-panel.tsx';
@@ -1017,6 +1018,9 @@ export function ChartView({
   // spread only when defined so Recharts' own XAxis default height applies,
   // exactly as if the prop were never passed.
   const xAxisHeightPx = xAxisHeight(pres.xLabels, longestPeriodLabel);
+  // Tilted labels overhang the first tick to the left; reserve what the y-axis
+  // width does not already cover (see xLabelOverhang).
+  const leftMargin = 8 + Math.max(0, xLabelOverhang(pres.xLabels, longestPeriodLabel) - yAxisWidth);
   const accessibleName = `Grafiek: ${spec.title} (${spec.unit})`;
   // Final review finding (owner-directed follow-up): small multiples always
   // drew line panels regardless of the form switch, so choosing Staaf while
@@ -1275,7 +1279,7 @@ export function ChartView({
           {effectiveKind === 'line' ? (
             <LineChart
               data={rows}
-              margin={{ top: 8, right: rightMargin, left: 8, bottom: 8 }}
+              margin={{ top: 8, right: rightMargin, left: leftMargin, bottom: 8 }}
               desc={KEYBOARD_HINT}
               aria-label={accessibleName}
             >
@@ -1367,7 +1371,7 @@ export function ChartView({
           ) : (
             <BarChart
               data={rows}
-              margin={{ top: 16, right: 8, left: 8, bottom: 8 }}
+              margin={{ top: 16, right: 8, left: leftMargin, bottom: 8 }}
               desc={KEYBOARD_HINT}
               aria-label={accessibleName}
             >

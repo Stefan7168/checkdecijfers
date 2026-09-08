@@ -164,6 +164,16 @@ export function dotGeometry(w: LineWidth): { r: number; ring: number } {
 /** Tilted x labels need reserved axis height or the export clips them (the
  * svg height is fixed by the container). 6.5 px/char at the 11 px label font
  * (labelWidthPx in chart.tsx) × sin 45° ≈ 0.71, plus padding, capped. */
+/** A tilted label hangs to the LEFT of its tick (text-anchor end, −45°); the
+ * first tick sits at the plot's left edge, so the chart needs that much extra
+ * left margin beyond the y-axis or the label is clipped by the card (found in
+ * the WP218 phase-1 browser pass at desktop and 375 px). Same 6.5 px/char ×
+ * cos 45° estimate as xAxisHeight. */
+export function xLabelOverhang(mode: XLabelMode, longestLabel: string): number {
+  if (mode === 'flat') return 0;
+  return Math.min(96, Math.ceil(longestLabel.length * 6.5 * 0.71));
+}
+
 export function xAxisHeight(mode: XLabelMode, longestLabel: string): number | undefined {
   if (mode === 'flat') return undefined;
   return Math.min(96, Math.ceil(longestLabel.length * 6.5 * 0.71) + 20);
