@@ -7,7 +7,7 @@ writing — not recalled from memory.
 
 Read in this order before doing anything: `CLAUDE.md` → `docs/STATUS.md` (the top block is the
 truth) → this file → `docs/status-archive.md` (session-89 entry, top, 10 numbered items) →
-`docs/lessons-learned.md` (session-89 entries, top) → `docs/open-questions.md` rows #216/#217/#212
+`docs/lessons-learned.md` (session-89 entries, top) → `docs/open-questions.md` rows #218/#216/#217/#212
 (this session's own new/touched rows) → `docs/RUNBOOK.md`'s WP202 go-live checklist (step 1 done,
 steps 2-6 the actual next owner-supervised action).
 
@@ -39,11 +39,40 @@ Verify yourself first, don't trust this file blindly:
   `ATTACHMENTS_ENABLED` doesn't exist as a Vercel env var, no live spend has happened. This is the
   single most valuable "ready but idle" thing in the codebase right now.
 
-## The single next priority
+## The single next priority — owner-chosen, given at session-89 close-out
 
-**WP202a go-live, steps 2-6** ([RUNBOOK.md](../RUNBOOK.md)'s WP202 section). Chat-with-your-own-data
-is fully built and tested, priced, and has been sitting idle since session 86. Remaining, in order,
-owner present: (2) `npm run db:migrate` (migrations 026+027, additive-only); (3) `npm run
+**A Fable-led architecture pass for a chart CONFIGURATION tool ([#218](../open-questions.md)).**
+Owner request, same day as the chart view-state editing merge: a Recharts-style tool where a
+person picks a chart type and adjusts presentation options (their example: line size/thickness),
+with the tool PRE-FILLED with whatever the chart currently uses (never blank defaults) — reference:
+tillitsdone.com/tools/rechart (a Recharts config generator/playground, not an end-user
+already-answered-chart editor — a materially different, BROADER shape of tool than what shipped
+today). **Checked against the docs before proceeding (owner explicitly asked "should already be
+determined somewhere, can you check"): this maps to `docs/03-mvp-scope.md`'s existing non-goal,
+"a full drag-and-drop 'Visualisatie Studio' chart-authoring tool," reserved for Phase 2-3** — wider
+scope than session 89's "adjust an already-shown chart" slice, and not covered by any of ADR 038's
+8 lettered decisions (A-H). Owner's explicit call on hearing this: **proceed, but treat it as
+needing real architecture — dispatch a Fable-model design/architecture pass**, matching the
+session-88 precedent (the 5-agent ultracode Workflow that produced ADR 038's own plan and phased
+build). Start there: run that architecture pass (design panel + synthesis, model `fable`, scoped to
+chart-type selection + adjustable presentation options with current-value defaults + how far
+"people can choose which one they want" extends — per-chart? a saved per-user preset?), synthesize
+a plan, then confirm the resulting phase-1 scope with the owner before building anything — don't
+build straight from this summary alone.
+
+**Also flagged, small, do early if convenient:** move the pre-send pricing hint ("Een vraag kost
+~20 credits · saldo: N credits. Stel ik eerst een verduidelijkingsvraag, dan kost die 10 credits en
+krijg je de rest terug.") from the site footer to directly below the "Stel een vraag" input box,
+and move the data-source pills to directly above that same input box. A layout-only change (the
+`PricingHintContext` plumbing from session 88 already carries this text; this is where it renders,
+not what it says) — verify in the real browser, light and dark mode, before considering it done.
+
+## Also pending — WP202a go-live, steps 2-6
+
+([RUNBOOK.md](../RUNBOOK.md)'s WP202 section.) Chat-with-your-own-data is fully built and tested,
+priced, and has been sitting idle since session 86 — still the single most valuable "ready but
+idle" thing in the codebase, just not what the owner asked to pick up first this time. Remaining,
+in order, owner present: (2) `npm run db:migrate` (migrations 026+027, additive-only); (3) `npm run
 pricing:apply`; (4) a read-only FK/RLS verification query against production (RUNBOOK has the exact
 SQL); (5) set `ATTACHMENTS_ENABLED=1` in Vercel and redeploy; (6) a live smoke test — upload a real
 small CSV, ask a chartable question (real ~20-credit spend), verify the balance debits correctly and
