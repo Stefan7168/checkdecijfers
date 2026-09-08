@@ -24,7 +24,7 @@
 // emits, so stored specs (R8) and `reconstruct.ts` are untouched.
 'use client';
 
-import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useId, useReducer, useRef, useState, type KeyboardEvent } from 'react';
 import {
   Bar,
   BarChart,
@@ -41,6 +41,7 @@ import type { ChartPoint, ChartSpec } from '../backend/chart/types.ts';
 import { ChartDownloadMenu } from './chart-download.tsx';
 import { ChartSmallMultiples } from './chart-small-multiples.tsx';
 import { SourceBadge } from './source-badge.tsx';
+import { chartViewReducer, initialViewState } from '../lib/chart-view-state.ts';
 
 /**
  * ADR 037 D11: the minimal structural subset `buildRows`/`valueLabelPlan`
@@ -617,47 +618,38 @@ export function ChartView({
   // #197 step 2: chart or table. A comparison with more bars than the chart
   // can label opens on the table — the idea bank's >15-categories rule, the
   // honest view for many series.
-  const [view, setView] = useState<'chart' | 'table'>(spec.series.length > BAR_LABEL_MAX ? 'table' : 'chart');
+  const initialForm = spec.series.length > BAR_LABEL_MAX ? 'table' : spec.kind;
+  const [state, dispatch] = useReducer(chartViewReducer, initialForm, initialViewState);
   const chartTabRef = useRef<HTMLButtonElement>(null);
   const tableTabRef = useRef<HTMLButtonElement>(null);
 
-  const [hiddenKeys, setHiddenKeys] = useState<Set<string>>(new Set());
   const [smallMultiples, setSmallMultiples] = useState(false);
   const [axisMode, setAxisMode] = useState<'shared' | 'own'>('shared');
 
   // Stable per-chart identity, not object identity: a fresh spec object can
-  // represent the exact same chart across a re-render. Resets the three
-  // presentation states above when the viewer is shown a genuinely DIFFERENT
+  // represent the exact same chart across a re-render. Resets ALL
+  // presentation state below when the viewer is shown a genuinely DIFFERENT
   // chart without ChartView remounting — both the visual dock
   // (visual-dock.tsx) and the Ontdek reading toggle (chart-toggle.tsx) swap
   // `spec` on the same mounted instance (no `key` at either call site), so a
-  // useState initializer only runs once and would otherwise leak state
-  // across charts. `view` (chart/table, above) is exempt on purpose: it is
-  // presentationally valid for ANY spec, so leaking it is harmless. These
-  // three are not: a stale hiddenKeys entry that happens to collide with a
-  // different chart's own series key can silently drop a real line with no
-  // visible disclosure (open-questions #46(a)) or bake a false "N van M
-  // reeksen verborgen" claim into an export (#46(c)) — found reachable via
-  // ordinary dock-tab switching in the 2026-09-05 final review of this file.
-  // React's own documented pattern for this ("adjusting state when a prop
-  // changes", no Effect): compare against the last-seen identity and, if it
-  // changed, call the setters directly during render.
+  // useState/useReducer initializer only runs once and would otherwise leak
+  // state across charts. A single reducer `reset` action now clears form,
+  // hiddenKeys, highlightedKey and periodRange atomically — replacing the
+  // three separate setState calls this used to be, which is what let a
+  // stale hiddenKeys entry collide with a different chart's own series key
+  // and silently drop a real line with no visible disclosure
+  // (open-questions #46(a); found reachable via ordinary dock-tab switching
+  // in the 2026-09-05 final review of this file). React's own documented
+  // pattern for this ("adjusting state when a prop changes", no Effect):
+  // compare against the last-seen identity and, if it changed, call the
+  // setters directly during render.
   const specIdentity = JSON.stringify(spec);
   const [lastSpecIdentity, setLastSpecIdentity] = useState(specIdentity);
   if (specIdentity !== lastSpecIdentity) {
     setLastSpecIdentity(specIdentity);
-    setHiddenKeys(new Set());
+    dispatch({ type: 'reset', initialForm });
     setSmallMultiples(false);
     setAxisMode('shared');
-  }
-
-  function toggleSeries(key: string): void {
-    setHiddenKeys((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
   }
 
   if (spec.schemaVersion !== 1) {
@@ -705,20 +697,20 @@ export function ChartView({
   const accessibleName = `Grafiek: ${spec.title} (${spec.unit})`;
   const smallMultiplesAvailable = spec.kind === 'line' && seriesMeta.length > 1;
   const hiddenDisclosure =
-    hiddenKeys.size > 0 ? ` ${hiddenKeys.size} van ${seriesMeta.length} reeksen verborgen.` : '';
+    state.hiddenKeys.size > 0 ? ` ${state.hiddenKeys.size} van ${seriesMeta.length} reeksen verborgen.` : '';
   const tooltipTrigger = coarsePointer ? 'click' : 'hover';
   const table = tableModel(spec);
   const panelId = `${domId}-panel`;
 
   function selectView(next: 'chart' | 'table'): void {
-    setView(next);
+    dispatch({ type: 'setForm', form: next === 'table' ? 'table' : initialForm === 'bar' ? 'bar' : 'line' });
     (next === 'chart' ? chartTabRef : tableTabRef).current?.focus();
   }
 
   function onTabKeyDown(event: KeyboardEvent<HTMLDivElement>): void {
     if (['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp'].includes(event.key)) {
       event.preventDefault();
-      selectView(view === 'chart' ? 'table' : 'chart');
+      selectView(state.form === 'table' ? 'chart' : 'table');
     }
   }
 
@@ -755,11 +747,11 @@ export function ChartView({
           ref={chartTabRef}
           type="button"
           role="tab"
-          aria-selected={view === 'chart'}
+          aria-selected={state.form !== 'table'}
           aria-controls={panelId}
-          tabIndex={view === 'chart' ? 0 : -1}
+          tabIndex={state.form !== 'table' ? 0 : -1}
           onClick={() => selectView('chart')}
-          className={segmentTab(view === 'chart')}
+          className={segmentTab(state.form !== 'table')}
         >
           Grafiek
         </button>
@@ -767,16 +759,16 @@ export function ChartView({
           ref={tableTabRef}
           type="button"
           role="tab"
-          aria-selected={view === 'table'}
+          aria-selected={state.form === 'table'}
           aria-controls={panelId}
-          tabIndex={view === 'table' ? 0 : -1}
+          tabIndex={state.form === 'table' ? 0 : -1}
           onClick={() => selectView('table')}
-          className={segmentTab(view === 'table')}
+          className={segmentTab(state.form === 'table')}
         >
           Tabel
         </button>
       </div>
-      {view === 'table' ? (
+      {state.form === 'table' ? (
         <div id={panelId} role="tabpanel" aria-label="Tabel" className="mt-2 overflow-x-auto">
           <table className="w-full text-sm" aria-label={table.caption}>
             <thead>
@@ -828,7 +820,7 @@ export function ChartView({
         data-tooltip-trigger={tooltipTrigger}
       >
         {smallMultiples && smallMultiplesAvailable ? (
-          <ChartSmallMultiples spec={spec} hiddenKeys={hiddenKeys} axisMode={axisMode} />
+          <ChartSmallMultiples spec={spec} hiddenKeys={state.hiddenKeys} axisMode={axisMode} />
         ) : (
         <ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 640, height: 256 }}>
           {spec.kind === 'line' ? (
@@ -874,7 +866,7 @@ export function ChartView({
                 />
               ))}
               {seriesMeta
-                .filter((s) => !hiddenKeys.has(s.key))
+                .filter((s) => !state.hiddenKeys.has(s.key))
                 .map((s) => (
                   <Line
                     key={s.key}
@@ -920,7 +912,7 @@ export function ChartView({
               <YAxis tick={false} width={16} domain={yAxisDomain(spec.kind)} stroke={AXIS_COLOR} />
               <Tooltip trigger={tooltipTrigger} content={<ChartTooltip seriesMeta={seriesMeta} />} />
               {seriesMeta
-                .filter((s) => !hiddenKeys.has(s.key))
+                .filter((s) => !state.hiddenKeys.has(s.key))
                 .map((s) => (
                   <Bar
                     key={s.key}
@@ -942,22 +934,26 @@ export function ChartView({
         )}
       </div>
       )}
-      {view === 'chart' && spec.attribution.trendHeadline !== undefined ? (
+      {state.form !== 'table' && spec.attribution.trendHeadline !== undefined ? (
         <p data-testid="trend-headline" className="mt-1 text-sm text-foreground">
           {spec.attribution.trendHeadline}
         </p>
       ) : null}
-      {view === 'chart' && seriesMeta.length > 1 ? (
+      {state.form !== 'table' && seriesMeta.length > 1 ? (
         <>
-          <SeriesLegend seriesMeta={seriesMeta} hiddenKeys={hiddenKeys} onToggle={toggleSeries} />
-          {hiddenKeys.size > 0 ? (
+          <SeriesLegend
+            seriesMeta={seriesMeta}
+            hiddenKeys={state.hiddenKeys}
+            onToggle={(key) => dispatch({ type: 'toggleSeries', key })}
+          />
+          {state.hiddenKeys.size > 0 ? (
             <p className="mt-1 text-xs text-muted-foreground">
-              {hiddenKeys.size} van {seriesMeta.length} reeksen verborgen
+              {state.hiddenKeys.size} van {seriesMeta.length} reeksen verborgen
             </p>
           ) : null}
         </>
       ) : null}
-      {view === 'chart' && smallMultiplesAvailable ? (
+      {state.form !== 'table' && smallMultiplesAvailable ? (
         <div className="mt-2 flex flex-wrap items-center gap-3">
           <button
             type="button"
@@ -1032,7 +1028,7 @@ export function ChartView({
           * silently misrepresent what's shown, the same risk #46(c) already
           * names for exports. Same precedent as the Tabel view below, which
           * has never offered a download either. */}
-        {view === 'chart' && !smallMultiples ? (
+        {state.form !== 'table' && !smallMultiples ? (
           <ChartDownloadMenu
             containerRef={chartContainerRef}
             attributionText={`${spec.attributionLine} checkdecijfers.nl${hiddenDisclosure}`}
