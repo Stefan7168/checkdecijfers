@@ -172,3 +172,79 @@ export function xAxisHeight(mode: XLabelMode, longestLabel: string): number | un
 export function seriesColor(values: Pick<ChartPresentation, 'seriesColors'>, index: number): string {
   return values.seriesColors[index] ?? RECHARTS_PALETTE[index % RECHARTS_PALETTE.length]!;
 }
+
+// --- colours -----------------------------------------------------------------
+// The card grounds the hollow R11 ring is drawn on (globals.css): light
+// --card oklch(1 0 0) = #ffffff, dark --card oklch(0.205 0 0) ≈ #171717.
+export const CARD_LIGHT = '#ffffff';
+export const CARD_DARK = '#171717';
+/** Below this ratio against a card the ring is indistinguishable from it. */
+export const COLOR_REFUSE_BELOW = 1.25;
+/** Below this the ring is visible but weak — warn, still apply. */
+export const COLOR_WARN_BELOW = 3;
+
+export function normalizeHex(input: string): string | null {
+  const s = input.trim().replace(/^#/, '').toLowerCase();
+  if (/^[0-9a-f]{6}$/.test(s)) return `#${s}`;
+  if (/^[0-9a-f]{3}$/.test(s)) return `#${s[0]}${s[0]}${s[1]}${s[1]}${s[2]}${s[2]}`;
+  return null;
+}
+
+function channel(c: number): number {
+  const v = c / 255;
+  return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+}
+function luminance(hex: string): number {
+  const n = parseInt(hex.slice(1), 16);
+  return 0.2126 * channel((n >> 16) & 255) + 0.7152 * channel((n >> 8) & 255) + 0.0722 * channel(n & 255);
+}
+export function contrastRatio(hexA: string, hexB: string): number {
+  const a = luminance(hexA);
+  const b = luminance(hexB);
+  return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+}
+
+export type ColorVerdict = { ok: true; warning: 'light' | 'dark' | 'both' | null } | { ok: false; reason: string };
+
+export const COLOR_REFUSAL =
+  'Deze kleur is niet toegepast: de open markering voor voorlopige cijfers zou in een van de thema’s onzichtbaar worden.';
+
+/** Owner decision B with the R11 guard: a colour that would hide the hollow
+ * provisional ring on EITHER theme's card is refused; a weak one is applied
+ * with a per-theme warning. Every stock palette colour passes (pinned). */
+export function judgeColor(hex: string): ColorVerdict {
+  const light = contrastRatio(hex, CARD_LIGHT);
+  const dark = contrastRatio(hex, CARD_DARK);
+  if (light < COLOR_REFUSE_BELOW || dark < COLOR_REFUSE_BELOW) return { ok: false, reason: COLOR_REFUSAL };
+  const weakLight = light < COLOR_WARN_BELOW;
+  const weakDark = dark < COLOR_WARN_BELOW;
+  return { ok: true, warning: weakLight && weakDark ? 'both' : weakLight ? 'light' : weakDark ? 'dark' : null };
+}
+
+// --- fonts -------------------------------------------------------------------
+export interface FontOption {
+  family: string;
+  source: 'system' | 'google';
+  stack: string;
+}
+const SANS = 'ui-sans-serif, system-ui, sans-serif';
+const SERIF = 'ui-serif, Georgia, serif';
+export const FONT_OPTIONS: readonly FontOption[] = [
+  { family: 'Roboto', source: 'google', stack: `"Roboto", ${SANS}` },
+  { family: 'Open Sans', source: 'google', stack: `"Open Sans", ${SANS}` },
+  { family: 'Lato', source: 'google', stack: `"Lato", ${SANS}` },
+  { family: 'Merriweather', source: 'google', stack: `"Merriweather", ${SERIF}` },
+  { family: 'Playfair Display', source: 'google', stack: `"Playfair Display", ${SERIF}` },
+  { family: 'Georgia', source: 'system', stack: `"Georgia", ${SERIF}` },
+  { family: 'Arial', source: 'system', stack: `"Arial", ${SANS}` },
+];
+export function findFont(family: string | null): FontOption | undefined {
+  return family === null ? undefined : FONT_OPTIONS.find((f) => f.family === family);
+}
+/** undefined = inherit the page font (the stock look). An unknown family
+ * (a brand font, phase 3) gets a sans stack — the name is regex-validated by
+ * sanitizeOverrides before it can reach here. */
+export function fontStack(family: string | null): string | undefined {
+  if (family === null) return undefined;
+  return findFont(family)?.stack ?? `"${family}", ${SANS}`;
+}

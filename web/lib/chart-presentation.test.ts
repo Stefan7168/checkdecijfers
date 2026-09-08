@@ -1,9 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import {
+  CARD_DARK,
+  CARD_LIGHT,
+  FONT_OPTIONS,
   LINE_WIDTH_PX,
   RECHARTS_PALETTE,
   STOCK_PRESENTATION,
+  contrastRatio,
   dotGeometry,
+  findFont,
+  fontStack,
+  judgeColor,
+  normalizeHex,
   resolvePresentation,
   sanitizeOverrides,
   seriesColor,
@@ -114,5 +122,48 @@ describe('geometry helpers', () => {
     expect(xAxisHeight('flat', '2021 1e kwartaal')).toBeUndefined();
     expect(xAxisHeight('tilted', '2021')).toBe(Math.ceil(4 * 6.5 * 0.71) + 20);
     expect(xAxisHeight('tilted', 'x'.repeat(200))).toBe(96);
+  });
+});
+
+describe('colours — normalise, contrast, judge', () => {
+  it('normalizeHex accepts 3- and 6-digit forms with or without #, lowercases, rejects the rest', () => {
+    expect(normalizeHex('#ABCDEF')).toBe('#abcdef');
+    expect(normalizeHex('abc')).toBe('#aabbcc');
+    expect(normalizeHex('#12345')).toBeNull();
+    expect(normalizeHex('red')).toBeNull();
+    expect(normalizeHex('')).toBeNull();
+  });
+  it('contrastRatio is the WCAG ratio (white/black = 21, identical = 1)', () => {
+    expect(contrastRatio('#ffffff', '#000000')).toBeCloseTo(21, 0);
+    expect(contrastRatio('#ffffff', '#ffffff')).toBeCloseTo(1, 5);
+    expect(contrastRatio('#000000', '#ffffff')).toBeCloseTo(21, 0);
+  });
+  it('every stock palette colour is accepted (never refused) — the default look must always be choosable', () => {
+    for (const hex of RECHARTS_PALETTE) expect(judgeColor(hex).ok).toBe(true);
+  });
+  it('refuses near-white (invisible on the light card) and near-black (invisible on the dark card) with a digit-free reason', () => {
+    const white = judgeColor('#fefefe');
+    expect(white.ok).toBe(false);
+    if (!white.ok) expect(white.reason).not.toMatch(/\d/);
+    expect(judgeColor(CARD_DARK).ok).toBe(false);
+    expect(judgeColor('#1a1a1a').ok).toBe(false);
+  });
+  it('warns per theme when contrast is weak but the ring is still visible', () => {
+    expect(judgeColor('#ffc658')).toEqual({ ok: true, warning: 'light' });
+    expect(judgeColor('#3a3a3a')).toEqual({ ok: true, warning: 'dark' });
+    expect(judgeColor('#ff0000')).toEqual({ ok: true, warning: null });
+    expect(contrastRatio('#ffc658', CARD_LIGHT)).toBeLessThan(3);
+  });
+});
+
+describe('fonts', () => {
+  it('offers the curated list, page font first, and builds a safe stack', () => {
+    expect(FONT_OPTIONS[0]).toEqual({ family: 'Roboto', source: 'google', stack: '"Roboto", ui-sans-serif, system-ui, sans-serif' });
+    expect(FONT_OPTIONS.map((f) => f.family)).toEqual(['Roboto', 'Open Sans', 'Lato', 'Merriweather', 'Playfair Display', 'Georgia', 'Arial']);
+    expect(fontStack(null)).toBeUndefined();
+    expect(fontStack('Georgia')).toBe('"Georgia", ui-serif, Georgia, serif');
+    expect(fontStack('Nope')).toBe('"Nope", ui-sans-serif, system-ui, sans-serif'); // an unknown (brand) family still gets a stack
+    expect(findFont('Lato')?.source).toBe('google');
+    expect(findFont('Arial')?.source).toBe('system');
   });
 });
