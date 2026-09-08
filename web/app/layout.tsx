@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist_Mono, Inter } from "next/font/google";
 import "./globals.css";
+import { ChartUsageTracker } from "../components/chart-usage-tracker.tsx";
 import { SiteFooter } from "../components/site-footer.tsx";
 import { ThemeProvider } from "../components/theme-provider.tsx";
 
@@ -50,6 +51,10 @@ export default function RootLayout({
           can size its cards to the viewport. */}
       <body className="flex h-dvh flex-col">
         <ThemeProvider>
+          {/* Anonymous style-panel usage counter (WP218 phase 6, #220): pure
+              wiring, renders nothing. Mounted once here so it's live for
+              every page, not tied to any one chart mount. */}
+          <ChartUsageTracker />
           <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">{children}</div>
           <SiteFooter />
         </ThemeProvider>

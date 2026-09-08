@@ -49,6 +49,7 @@ import {
   xAxisHeight,
   xLabelOverhang,
 } from '../lib/chart-presentation.ts';
+import { trackChartStyleEvent } from '../lib/chart-usage-client.ts';
 import { ensureFontLoaded } from '../lib/font-loader.ts';
 import { ChartConfigPanel } from './chart-config-panel.tsx';
 import { ChartDownloadMenu } from './chart-download.tsx';
@@ -1161,8 +1162,12 @@ export function ChartView({
             key={chartEpoch}
             resolved={resolved}
             seriesMeta={seriesMeta}
-            onChange={(patch) => dispatch({ type: 'setPresentation', patch })}
+            onChange={(patch) => {
+              dispatch({ type: 'setPresentation', patch });
+              trackChartStyleEvent('option_changed');
+            }}
             onReset={() => dispatch({ type: 'resetPresentation' })}
+            onOpen={() => trackChartStyleEvent('panel_open')}
             idPrefix={domId}
           />
         ) : null}

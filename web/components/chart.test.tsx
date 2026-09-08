@@ -5,6 +5,8 @@
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ChartSpec } from '../backend/chart/types.ts';
+import type { ChartStyleEvent } from '../backend/chart/user-styles.ts';
+import { setChartUsageSink } from '../lib/chart-usage-client.ts';
 import { attributedSvgMarkup } from './chart-download.tsx';
 import {
   annotationMarkers,
@@ -1840,5 +1842,34 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
     const svg = container.querySelector('svg.recharts-surface') as unknown as SVGSVGElement;
     const markup = attributedSvgMarkup(svg, 'x', () => ({}));
     expect(markup).toContain('stroke-width="3"');
+  });
+});
+
+// WP218 phase 6, Task 3 (#218/#220): the anonymous style-panel usage counter.
+// chart.tsx must never import the server action or web/app/actions.ts
+// directly — only lib/chart-usage-client.ts's injectable sink, which is what
+// these tests register a spy against.
+describe('WP218 phase 6 — anonymous style-panel usage counter', () => {
+  let sink: ReturnType<typeof vi.fn<(event: ChartStyleEvent) => void>>;
+
+  beforeEach(() => {
+    sink = vi.fn<(event: ChartStyleEvent) => void>();
+    setChartUsageSink(sink);
+  });
+
+  afterEach(() => {
+    setChartUsageSink(null);
+  });
+
+  it('tracks panel_open exactly once on open, and option_changed exactly once when Dik is clicked', () => {
+    render(<ChartView spec={threePointSpec()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    expect(sink).toHaveBeenCalledTimes(1);
+    expect(sink).toHaveBeenCalledWith('panel_open');
+
+    fireEvent.click(screen.getByRole('radio', { name: 'Dik' }));
+    expect(sink).toHaveBeenCalledTimes(2);
+    expect(sink).toHaveBeenNthCalledWith(2, 'option_changed');
   });
 });
