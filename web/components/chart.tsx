@@ -128,6 +128,22 @@ export function yAxisDomain(kind: ChartSpec['kind']): [0 | 'auto', 'auto'] {
   return kind === 'bar' ? [0, 'auto'] : ['auto', 'auto'];
 }
 
+/** Keeps a Vanaf/Tot period-range selection always non-empty: moving one
+ * endpoint past the other drags the other one along instead of producing an
+ * inverted range (`windowSpec` would then plot zero points, and the
+ * disclosure sentence would read as nonsense — "Getoond: 2021-2019 van...").
+ * Single source for both selects' onChange handlers (code-review finding:
+ * the two were previously duplicated inline with no shared name to keep
+ * them in sync) — `clampVanafChange` pins the just-picked Vanaf and drags
+ * Tot up to match; `clampTotChange` is the mirror, pinning Tot. */
+export function clampVanafChange(from: string, to: string): [string, string] {
+  return to < from ? [from, from] : [from, to];
+}
+
+export function clampTotChange(from: string, to: string): [string, string] {
+  return from > to ? [to, to] : [from, to];
+}
+
 export function buildRows(spec: PlottableSpec): { rows: Row[]; seriesMeta: SeriesMeta[] } {
   const periodCodes = new Set<string>();
   for (const series of spec.series) {
@@ -912,7 +928,14 @@ export function ChartView({
       ? Math.min(140, plan.endLabels.reduce((w, l) => Math.max(w, labelWidthPx(l.text)), 0))
       : 8;
   const accessibleName = `Grafiek: ${spec.title} (${spec.unit})`;
-  const smallMultiplesAvailable = spec.kind === 'line' && seriesMeta.length > 1;
+  // Final review finding (owner-directed follow-up): small multiples always
+  // drew line panels regardless of the form switch, so choosing Staaf while
+  // small multiples was on silently kept showing lines — the bar-zero-axis
+  // honesty rule was bypassed by drawing no bar at all, not a dishonest bar.
+  // Gated off (not given its own bar path) as the cheapest, most
+  // conservative fix: ChartSmallMultiples stays a line-only view, exactly
+  // like before this task, just no longer reachable from a non-line form.
+  const smallMultiplesAvailable = effectiveKind === 'line' && seriesMeta.length > 1;
   const hiddenDisclosure =
     state.hiddenKeys.size > 0 ? ` ${state.hiddenKeys.size} van ${seriesMeta.length} reeksen verborgen.` : '';
   // Task 4: describes the currently shown window against the chart's full
@@ -1023,14 +1046,16 @@ export function ChartView({
             aria-label="Vanaf"
             value={state.periodRange?.[0] ?? allPeriodCodes[0]}
             onChange={(e) => {
-              const to = state.periodRange?.[1] ?? allPeriodCodes[allPeriodCodes.length - 1];
-              const from = e.target.value;
+              const [from, clampedTo] = clampVanafChange(
+                e.target.value,
+                state.periodRange?.[1] ?? allPeriodCodes[allPeriodCodes.length - 1],
+              );
               dispatch({
                 type: 'setPeriodRange',
                 range:
-                  from === allPeriodCodes[0] && to === allPeriodCodes[allPeriodCodes.length - 1]
+                  from === allPeriodCodes[0] && clampedTo === allPeriodCodes[allPeriodCodes.length - 1]
                     ? null
-                    : [from, to],
+                    : [from, clampedTo],
               });
             }}
             className="rounded-md border border-border bg-background px-1.5 py-0.5 text-foreground"
@@ -1047,14 +1072,16 @@ export function ChartView({
             aria-label="Tot"
             value={state.periodRange?.[1] ?? allPeriodCodes[allPeriodCodes.length - 1]}
             onChange={(e) => {
-              const from = state.periodRange?.[0] ?? allPeriodCodes[0];
-              const to = e.target.value;
+              const [clampedFrom, to] = clampTotChange(
+                state.periodRange?.[0] ?? allPeriodCodes[0],
+                e.target.value,
+              );
               dispatch({
                 type: 'setPeriodRange',
                 range:
-                  from === allPeriodCodes[0] && to === allPeriodCodes[allPeriodCodes.length - 1]
+                  clampedFrom === allPeriodCodes[0] && to === allPeriodCodes[allPeriodCodes.length - 1]
                     ? null
-                    : [from, to],
+                    : [clampedFrom, to],
               });
             }}
             className="rounded-md border border-border bg-background px-1.5 py-0.5 text-foreground"

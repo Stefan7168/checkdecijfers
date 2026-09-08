@@ -10,6 +10,8 @@ import {
   buildRows,
   ChartTooltip,
   ChartView,
+  clampTotChange,
+  clampVanafChange,
   RECHARTS_PALETTE,
   seriesStyle,
   tableModel,
@@ -1299,6 +1301,59 @@ describe('ChartView period-range zoom', () => {
     const nlPanel = container.querySelector('[data-panel-for="s0"]') as HTMLElement;
     expect(nlPanel.querySelector('[data-role="axis-tick"][data-label-for="nl-2018"]')).toBeNull();
     expect(nlPanel.querySelector('[data-role="axis-tick"][data-label-for="nl-2021"]')).not.toBeNull();
+  });
+
+  // Code-review follow-up: the clamp logic moved out of the inline onChange
+  // handlers into two named pure functions so Vanaf and Tot can't drift out
+  // of sync independently — unit-tested directly here, hermetically.
+  it('clampVanafChange pins the new Vanaf and drags Tot up only when Tot would be before it', () => {
+    expect(clampVanafChange('2021', '2019')).toEqual(['2021', '2021']);
+    expect(clampVanafChange('2019', '2021')).toEqual(['2019', '2021']);
+    expect(clampVanafChange('2020', '2020')).toEqual(['2020', '2020']);
+  });
+
+  it('clampTotChange pins the new Tot and drags Vanaf down only when Vanaf would be after it', () => {
+    expect(clampTotChange('2021', '2019')).toEqual(['2019', '2019']);
+    expect(clampTotChange('2019', '2021')).toEqual(['2019', '2021']);
+    expect(clampTotChange('2020', '2020')).toEqual(['2020', '2020']);
+  });
+
+  // Regression: neither selector clamped against the other, so picking a
+  // Vanaf past the current Tot (or vice versa) produced an inverted range --
+  // windowSpec correctly returned zero points (never fabricated data), but
+  // the on-screen AND exported disclosure sentence read as nonsense
+  // ("Getoond: 2021-2019 van ...").
+  it('clamps Tot up to Vanaf when Vanaf is moved past it', () => {
+    const s = fourYearLineSpec();
+    render(<ChartView spec={s} />);
+    fireEvent.change(screen.getByLabelText('Tot'), { target: { value: '2019' } });
+    fireEvent.change(screen.getByLabelText('Vanaf'), { target: { value: '2021' } });
+    expect(screen.getByLabelText<HTMLSelectElement>('Vanaf').value).toBe('2021');
+    expect(screen.getByLabelText<HTMLSelectElement>('Tot').value).toBe('2021');
+    expect(screen.getByText(/2021.*2021/)).toBeInTheDocument();
+  });
+
+  it('clamps Vanaf down to Tot when Tot is moved before it', () => {
+    const s = fourYearLineSpec();
+    render(<ChartView spec={s} />);
+    fireEvent.change(screen.getByLabelText('Vanaf'), { target: { value: '2021' } });
+    fireEvent.change(screen.getByLabelText('Tot'), { target: { value: '2019' } });
+    expect(screen.getByLabelText<HTMLSelectElement>('Vanaf').value).toBe('2019');
+    expect(screen.getByLabelText<HTMLSelectElement>('Tot').value).toBe('2019');
+    expect(screen.getByText(/2019.*2019/)).toBeInTheDocument();
+  });
+
+  // Regression: small multiples always drew LineChart panels regardless of
+  // the form switch, so choosing Staaf while small multiples was on kept
+  // silently showing lines -- the bar-zero-axis rule was bypassed by
+  // drawing no bar at all, not by drawing a dishonest one. Gated off rather
+  // than given its own bar path (cheapest, most conservative fix).
+  it('turns off small multiples availability once the form is switched away from Lijn', () => {
+    const s = twoSeriesFourYearLineSpec();
+    render(<ChartView spec={s} />);
+    expect(screen.getByRole('button', { name: 'Kleine grafieken' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
+    expect(screen.queryByRole('button', { name: 'Kleine grafieken' })).not.toBeInTheDocument();
   });
 });
 
