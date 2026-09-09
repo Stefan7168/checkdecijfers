@@ -38,6 +38,7 @@ import {
   valueLabelPlan,
   yAxisDomain,
   type PlottableSpec,
+  RegionTooltip,
 } from './chart.tsx';
 
 afterEach(cleanup);
@@ -802,6 +803,33 @@ describe('WP218 phase 0 — the stock look still renders exactly today\'s litera
     expect(container.querySelector('.recharts-cartesian-grid-horizontal')).not.toBeNull();
     expect(container.querySelector('.recharts-cartesian-grid-vertical')).not.toBeNull();
     expect(container.querySelector('.recharts-xAxis .recharts-cartesian-axis-line')).not.toBeNull();
+  });
+});
+
+describe('RegionTooltip (WP218 phase 5, Liggend) — binding, not just membership', () => {
+  it('shows the region, the period and the region\'s OWN display string inside the node bound to its resultId, with the provisional mark', () => {
+    const s = spec({
+      kind: 'bar',
+      series: [
+        { label: 'Amsterdam', regionCode: 'GM0363', points: [point({ resultId: 'cell-ams', periodCode: '2023JJ00', periodLabel: '2023', value: 1.1, formattedValue: '1,1' })] },
+        { label: 'Rotterdam', regionCode: 'GM0599', points: [point({ resultId: 'cell-rot', periodCode: '2023JJ00', periodLabel: '2023', value: 2.2, formattedValue: '2,2', provisional: true, status: 'Voorlopig' })] },
+      ],
+    });
+    const { rows } = buildRegionRows(s, () => '#000000');
+    const { container } = render(<RegionTooltip active payload={[{ payload: { ...rows[1], key: 's1', color: '#000000', dimmed: false, patternId: 'p1' } }]} periodLabel="2023" />);
+    const bound = container.querySelector('[data-label-for="cell-rot"]');
+    expect(bound).not.toBeNull();
+    expect(bound!.textContent).toBe('2023: 2,2 *');
+    expect(container.textContent).toContain('Rotterdam');
+    expect(container.querySelector('[data-label-for="cell-ams"]')).toBeNull();
+    expect(container.firstElementChild!.getAttribute('role')).toBe('status');
+  });
+  it('renders nothing for a null cell or when inactive', () => {
+    const s = spec({ kind: 'bar', series: [{ label: 'X', regionCode: null, points: [] }] });
+    const { rows } = buildRegionRows(s, () => '#000000');
+    const row = { ...rows[0], key: 's0', color: '#000000', dimmed: false, patternId: 'p0' };
+    expect(render(<RegionTooltip active payload={[{ payload: row }]} periodLabel="2023" />).container.firstElementChild).toBeNull();
+    expect(render(<RegionTooltip active={false} payload={[{ payload: row }]} periodLabel="2023" />).container.firstElementChild).toBeNull();
   });
 });
 
