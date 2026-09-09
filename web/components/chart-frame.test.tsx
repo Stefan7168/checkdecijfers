@@ -128,24 +128,18 @@ describe('ChartFrame', () => {
     expect(container.querySelector('[data-slot="chart-frame-card"]')).toBeNull();
   });
 
-  it('aspect ratio sets aspect-ratio on the outer div and stretches the child area with flex', () => {
+  it('aspect ratio: no CSS aspect-ratio (it broke width on narrow cards); the ratio is recorded and the child area stretches with flex', () => {
     const { container } = render(
-      <ChartFrame frame={frame({ frameAspect: '16:9', frameBackground: { kind: 'solid', hex: '#000000' } })} image={null}>
-        <div data-testid="child">chart</div>
+      <ChartFrame frame={frame({ frameAspect: '16:9' })} image={null}>
+        <div>chart</div>
       </ChartFrame>,
     );
     const wrapper = container.querySelector('[data-slot="chart-frame"]') as HTMLElement;
-    // Final-review fix: aspectRatio is now `String(frameAspectRatio(...))` —
-    // a plain numeric CSS aspect-ratio, computed the same way
-    // chart-presentation.ts derives it, rather than a manually split
-    // "W / H" string. jsdom's CSSOM normalizes a bare number to "<n> / 1".
-    expect(wrapper.style.aspectRatio).toBe(`${16 / 9} / 1`);
+    expect(wrapper.style.aspectRatio).toBe('');
+    expect(wrapper.getAttribute('data-frame-aspect')).toBe(String(16 / 9));
     expect(wrapper.style.display).toBe('flex');
     expect(wrapper.style.flexDirection).toBe('column');
-    const child = container.querySelector('[data-testid="child"]') as HTMLElement;
-    const childArea = child.parentElement as HTMLElement;
-    expect(childArea.className).toContain('min-h-0');
-    expect(childArea.className).toContain('flex-1');
+    expect(wrapper.querySelector('.flex-1')).not.toBeNull();
   });
 
   it('an aspect ratio never shrinks the chart below its normal height: min-height = chart height + padding + inset', () => {

@@ -3,7 +3,7 @@
 // `resolvePresentation` (Task 1, chart-presentation.ts) — this component
 // reads the px maps and shadow spec from there so no frame literal is ever
 // duplicated here.
-import type { CSSProperties, ReactNode } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import {
   FRAME_CORNER_PX,
   FRAME_GRADIENT_ANGLE,
@@ -36,40 +36,48 @@ function backgroundStyle(frame: FrameValues, image: string | null): Pick<CSSProp
  * image renders a bare wrapper div with no inline style at all, so today's
  * layout (no frame feature yet) stays byte-identical. */
 export function ChartFrame({ frame, image, children }: { frame: FrameValues; image: string | null; children: ReactNode }): ReactNode {
+  // Battle test rounds 1–4 (session 92, Playwright on production): CSS
+  // `aspect-ratio` on the frame was wrong in every combination tried — it
+  // either shrank the chart to a few dozen px (ratio × narrow card), grew the
+  // frame sideways past the card, or widened the whole card past a phone's
+  // screen (the ratio feeds the box's intrinsic width). So the ratio is now
+  // applied to the HEIGHT only, from the frame's MEASURED width: height =
+  // max(the chart's normal height + padding + inset, width ÷ ratio). The width
+  // is always the card's; the export honours the exact ratio by widening its
+  // own canvas (chart-download.tsx), never by cropping.
+  const ref = useRef<HTMLDivElement>(null);
+  const [measuredWidth, setMeasuredWidth] = useState(0);
+  const aspect = frameAspectRatio(frame.frameAspect);
+  useEffect(() => {
+    if (aspect === null || typeof ResizeObserver === 'undefined' || !ref.current) return undefined;
+    const observer = new ResizeObserver((entries) => {
+      const width = entries[0]?.contentRect.width ?? 0;
+      setMeasuredWidth((current) => (Math.abs(current - width) < 0.5 ? current : width));
+    });
+    observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, [aspect]);
+
   if (isFramePristine(frame)) {
     return <div data-slot="chart-frame">{children}</div>;
   }
 
   const corner = FRAME_CORNER_PX[frame.frameCorners];
   const shadow = FRAME_SHADOW[frame.frameShadow];
-  const aspect = frameAspectRatio(frame.frameAspect);
+  const naturalHeight = CHART_MIN_HEIGHT_PX + 2 * (FRAME_PADDING_PX[frame.framePadding] + FRAME_INSET_PX[frame.frameInset]);
 
   const outerStyle: CSSProperties = {
     padding: FRAME_PADDING_PX[frame.framePadding],
     borderRadius: corner,
     boxShadow: shadow ? `${shadow.dx}px ${shadow.dy}px ${shadow.blur}px rgba(0, 0, 0, ${shadow.alpha})` : undefined,
     ...backgroundStyle(frame, image),
-    // Battle test (session 92, Playwright on production): a wide ratio on a
-    // narrow card let the frame's height fall below the chart's own, so the
-    // plot shrank to a few dozen px. The ratio may only GROW the frame — the
-    // min-height keeps the chart at least its normal height (chart.tsx's
-    // h-64) plus the frame's own padding and inset; when the ratio cannot be
-    // met at this width the export still honours it by widening the canvas.
     ...(aspect !== null
       ? {
-          aspectRatio: String(aspect),
-          // Battle test round 2: with only aspect-ratio + min-height the box
-          // grew SIDEWAYS to keep the ratio and overflowed the card; a definite
-          // width makes the ratio yield to the min-height instead.
           width: '100%',
           maxWidth: '100%',
-          // …and the frame's intrinsic (min-content) width must not be
-          // min-height × ratio either, or the CARD grows past the viewport
-          // on a phone (battle test round 3): min-width 0 drops that
-          // automatic minimum, so the card stays as wide as the screen.
           minWidth: 0,
           boxSizing: 'border-box',
-          minHeight: CHART_MIN_HEIGHT_PX + 2 * (FRAME_PADDING_PX[frame.framePadding] + FRAME_INSET_PX[frame.frameInset]),
+          minHeight: Math.max(naturalHeight, Math.round(measuredWidth / aspect)),
           display: 'flex',
           flexDirection: 'column',
         }
@@ -81,14 +89,14 @@ export function ChartFrame({ frame, image, children }: { frame: FrameValues; ima
 
   if (frame.frameInset === 'none') {
     return (
-      <div data-slot="chart-frame" style={outerStyle}>
+      <div ref={ref} data-slot="chart-frame" data-frame-aspect={aspect ?? undefined} style={outerStyle}>
         {childArea}
       </div>
     );
   }
 
   return (
-    <div data-slot="chart-frame" style={outerStyle}>
+    <div ref={ref} data-slot="chart-frame" data-frame-aspect={aspect ?? undefined} style={outerStyle}>
       <div
         data-slot="chart-frame-card"
         style={{
