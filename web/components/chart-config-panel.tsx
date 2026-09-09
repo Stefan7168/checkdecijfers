@@ -38,182 +38,83 @@ import {
   type PresentationOverrides,
   type ResolvedPresentation,
 } from '../lib/chart-presentation.ts';
+import { t, type Lang, type MessageKey } from '../lib/i18n/messages.ts';
 import { cn } from '../lib/utils.ts';
 import { Button } from './ui/button.tsx';
 import { Input } from './ui/input.tsx';
 
-export type PanelLang = 'nl' | 'en';
+/** Kept as a re-export (not a fresh alias) so the one existing external
+ * mention (chart-presentation.ts's LOCK_REASONS comment) and any future
+ * import keep resolving to the SAME type the catalogue itself uses. */
+export type PanelLang = Lang;
 
-interface PanelCopyOptions {
-  lineWidth: readonly [string, string, string, string];
-  markers: readonly [string, string];
-  grid: readonly [string, string, string];
-  xLabels: readonly [string, string];
+// WP218 phase 4 (#219), Task 4: PANEL_COPY folded into the shared catalogue
+// under `chart.panel.*` (messages.ts) — this file now only ASSEMBLES the
+// per-render copy object from `t(lang, …)` calls, never holds its own
+// hardcoded nl/en text. `lang` keeps its existing plain-prop shape (chart.tsx
+// now passes it the resolved CHART language, not always 'nl' — the whole
+// point of Task 4 — but the panel itself is unchanged: still a dumb
+// component that only ever reads the language it's given).
+function buildPanelCopy(lang: Lang) {
+  return {
+    trigger: t(lang, 'chart.panel.trigger'),
+    regionLabel: t(lang, 'chart.panel.regionLabel'),
+    tabsLabel: t(lang, 'chart.panel.tabsLabel'),
+    tabChart: t(lang, 'chart.panel.tabChart'),
+    tabColors: t(lang, 'chart.panel.tabColors'),
+    tabFont: t(lang, 'chart.panel.tabFont'),
+    reset: t(lang, 'chart.panel.reset'),
+    /** Kleuren tab. `colourOf`/`hexSuffix`/`pickSuffix` assemble into the
+     * per-row accessible names: "{colourOf} {label} {hexSuffix}" for the hex
+     * box, "{colourOf} {label} {pickSuffix}" for the native colour picker —
+     * kept as separate atoms (not two pre-joined templates) so a future
+     * label wording change can't accidentally desync the two names. */
+    colourOf: t(lang, 'chart.panel.colourOf'),
+    hexSuffix: t(lang, 'chart.panel.hexSuffix'),
+    pickSuffix: t(lang, 'chart.panel.pickSuffix'),
+    resetColors: t(lang, 'chart.panel.resetColors'),
+    warnLight: t(lang, 'chart.panel.warnLight'),
+    warnDark: t(lang, 'chart.panel.warnDark'),
+    warnBoth: t(lang, 'chart.panel.warnBoth'),
+    /** Lettertype tab. */
+    font: t(lang, 'chart.panel.font'),
+    fontDefault: t(lang, 'chart.panel.fontDefault'),
+    /** WP218 phase 2 (owner C): the account-default footer row and its
+     * `role="status"` outcome line, plus the pristine-and-has-a-default hint
+     * shown above the Grafiek tab's controls. Only rendered when the
+     * `account` prop is present (a signed-in visitor). */
+    accountSave: t(lang, 'chart.panel.accountSave'),
+    accountForget: t(lang, 'chart.panel.accountForget'),
+    accountSaved: t(lang, 'chart.panel.accountSaved'),
+    accountForgotten: t(lang, 'chart.panel.accountForgotten'),
+    accountUnavailable: t(lang, 'chart.panel.accountUnavailable'),
+    accountError: t(lang, 'chart.panel.accountError'),
+    accountHint: t(lang, 'chart.panel.accountHint'),
+    /** WP218 phase 3 (owner B): the "Merkkleuren" (brand colours) block.
+     * `brandApplied` keeps its raw `{name}` placeholder — filled at the use
+     * site via `.replace('{name}', …)`, unchanged from before this task. */
+    brandHeading: t(lang, 'chart.panel.brandHeading'),
+    brandIntro: t(lang, 'chart.panel.brandIntro'),
+    brandApply: t(lang, 'chart.panel.brandApply'),
+    brandWebsiteLabel: t(lang, 'chart.panel.brandWebsiteLabel'),
+    brandWebsitePlaceholder: t(lang, 'chart.panel.brandWebsitePlaceholder'),
+    brandApplied: t(lang, 'chart.panel.brandApplied'),
+    brandFontSkipped: t(lang, 'chart.panel.brandFontSkipped'),
+    brandUnavailable: t(lang, 'chart.panel.brandUnavailable'),
+    brandNotFound: t(lang, 'chart.panel.brandNotFound'),
+    brandInvalidDomain: t(lang, 'chart.panel.brandInvalidDomain'),
+    brandTryLater: t(lang, 'chart.panel.brandTryLater'),
+    brandError: t(lang, 'chart.panel.brandError'),
+    /** WP218 phase 4: the new "Taal van de grafiek" select. `languageNl`/
+     * `languageEn` are the languages' own self-names — identical in both
+     * languages (proper nouns), still catalogued rather than hardcoded. */
+    languageLabel: t(lang, 'chart.panel.languageLabel'),
+    languageFollowApp: t(lang, 'chart.panel.languageFollowApp'),
+    languageNl: t(lang, 'chart.panel.languageNl'),
+    languageEn: t(lang, 'chart.panel.languageEn'),
+  };
 }
-
-interface PanelCopyShape {
-  trigger: string;
-  regionLabel: string;
-  tabsLabel: string;
-  tabChart: string;
-  tabColors: string;
-  tabFont: string;
-  lineWidth: string;
-  markers: string;
-  grid: string;
-  xLabels: string;
-  axisLines: string;
-  valueLabels: string;
-  zeroBaseline: string;
-  reset: string;
-  options: PanelCopyOptions;
-  /** Kleuren tab (Task 6). `colourOf`/`hexSuffix`/`pickSuffix` assemble into
-   * the per-row accessible names: "{colourOf} {label} {hexSuffix}" for the
-   * hex box, "{colourOf} {label} {pickSuffix}" for the native colour picker —
-   * kept as separate atoms (not two pre-joined templates) so a future label
-   * wording change can't accidentally desync the two names from each other. */
-  colourOf: string;
-  hexSuffix: string;
-  pickSuffix: string;
-  resetColors: string;
-  warnLight: string;
-  warnDark: string;
-  warnBoth: string;
-  /** Lettertype tab (Task 6). */
-  font: string;
-  fontDefault: string;
-  /** WP218 phase 2 (owner C): the account-default footer row and its
-   * `role="status"` outcome line, plus the pristine-and-has-a-default hint
-   * shown above the Grafiek tab's controls. Only rendered when the `account`
-   * prop is present (a signed-in visitor — Ontdek/trial gets no row at all). */
-  accountSave: string;
-  accountForget: string;
-  accountSaved: string;
-  accountForgotten: string;
-  accountUnavailable: string;
-  accountError: string;
-  accountHint: string;
-  /** WP218 phase 3 (owner B): the "Merkkleuren" (brand colours) block, under
-   * the series rows in the Kleuren tab. Only rendered when the `brand` prop
-   * is present (chart.tsx wires it exactly when `useChartStyle().signedIn`,
-   * same gate as `account`). `brandApplied` takes the applied brand's name
-   * via a `{name}` placeholder (substituted, never interpolated as markup). */
-  brandHeading: string;
-  brandIntro: string;
-  brandApply: string;
-  brandWebsiteLabel: string;
-  brandWebsitePlaceholder: string;
-  brandApplied: string;
-  brandFontSkipped: string;
-  brandUnavailable: string;
-  brandNotFound: string;
-  brandInvalidDomain: string;
-  brandTryLater: string;
-  brandError: string;
-}
-
-export const PANEL_COPY: Record<PanelLang, PanelCopyShape> = {
-  nl: {
-    trigger: 'Opmaak',
-    regionLabel: 'Opmaak van de grafiek',
-    tabsLabel: 'Opmaak-onderdelen',
-    tabChart: 'Grafiek',
-    tabColors: 'Kleuren',
-    tabFont: 'Lettertype',
-    lineWidth: 'Lijndikte',
-    markers: 'Punten',
-    grid: 'Rasterlijnen',
-    xLabels: 'Labels op de x-as',
-    axisLines: 'Aslijnen tonen',
-    valueLabels: 'Waarden tonen',
-    zeroBaseline: 'Y-as vanaf nul',
-    reset: 'Standaard',
-    options: {
-      lineWidth: ['Dun', 'Normaal', 'Dik', 'Extra dik'],
-      markers: ['Alle punten', 'Alleen voorlopige'],
-      grid: ['Beide', 'Alleen horizontaal', 'Geen'],
-      xLabels: ['Horizontaal', 'Schuin'],
-    },
-    colourOf: 'Kleur van',
-    hexSuffix: '(hex-code)',
-    pickSuffix: 'kiezen',
-    resetColors: 'Standaardkleuren',
-    warnLight: 'Deze kleur is slecht leesbaar in het lichte thema.',
-    warnDark: 'Deze kleur is slecht leesbaar in het donkere thema.',
-    warnBoth: 'Deze kleur is slecht leesbaar in beide thema’s.',
-    font: 'Lettertype',
-    fontDefault: 'Standaard',
-    accountSave: 'Bewaar als mijn standaard',
-    accountForget: 'Vergeet mijn standaard',
-    accountSaved: 'Opgeslagen.',
-    accountForgotten: 'Vergeten.',
-    accountUnavailable: 'Opslaan is op dit moment niet mogelijk.',
-    accountError: 'Er ging iets mis. Probeer het later opnieuw.',
-    accountHint: 'Mijn standaard is actief.',
-    brandHeading: 'Merkkleuren',
-    brandIntro: 'Haal de kleuren en het lettertype van je organisatie op.',
-    brandApply: 'Pas merkkleuren toe',
-    brandWebsiteLabel: 'Website van je organisatie',
-    brandWebsitePlaceholder: 'bijv. jouworganisatie.nl',
-    brandApplied: 'Kleuren en lettertype van {name} toegepast, via Brandfetch.',
-    brandFontSkipped: 'Een lettertype dat niet vrij beschikbaar is, is overgeslagen.',
-    brandUnavailable: 'Merkkleuren ophalen is op dit moment niet mogelijk.',
-    brandNotFound: 'Voor dit domein is geen merk gevonden.',
-    brandInvalidDomain: 'Dat ziet er niet uit als een website.',
-    brandTryLater: 'Probeer het later nog eens.',
-    brandError: 'Er ging iets mis. Probeer het later opnieuw.',
-  },
-  en: {
-    trigger: 'Style',
-    regionLabel: 'Chart style',
-    tabsLabel: 'Style sections',
-    tabChart: 'Chart',
-    tabColors: 'Colours',
-    tabFont: 'Font',
-    lineWidth: 'Line thickness',
-    markers: 'Points',
-    grid: 'Gridlines',
-    xLabels: 'X-axis labels',
-    axisLines: 'Show axis lines',
-    valueLabels: 'Show values',
-    zeroBaseline: 'Y-axis from zero',
-    reset: 'Default',
-    options: {
-      lineWidth: ['Thin', 'Normal', 'Thick', 'Extra thick'],
-      markers: ['All points', 'Provisional only'],
-      grid: ['Both', 'Horizontal only', 'None'],
-      xLabels: ['Flat', 'Tilted'],
-    },
-    colourOf: 'Colour of',
-    hexSuffix: '(hex code)',
-    pickSuffix: 'picker',
-    resetColors: 'Default colours',
-    warnLight: 'This colour is hard to read in the light theme.',
-    warnDark: 'This colour is hard to read in the dark theme.',
-    warnBoth: 'This colour is hard to read in both themes.',
-    font: 'Font',
-    fontDefault: 'Default',
-    accountSave: 'Save as my default',
-    accountForget: 'Forget my default',
-    accountSaved: 'Saved.',
-    accountForgotten: 'Forgotten.',
-    accountUnavailable: 'Saving is not possible right now.',
-    accountError: 'Something went wrong. Try again later.',
-    accountHint: 'My default is active.',
-    brandHeading: 'Brand colours',
-    brandIntro: "Fetch your organisation's colours and font.",
-    brandApply: 'Apply brand colours',
-    brandWebsiteLabel: "Your organisation's website",
-    brandWebsitePlaceholder: 'e.g. yourorganisation.com',
-    brandApplied: 'Colours and font of {name} applied, via Brandfetch.',
-    brandFontSkipped: "A font that isn't freely available was skipped.",
-    brandUnavailable: 'Fetching brand colours is not possible right now.',
-    brandNotFound: 'No brand was found for this domain.',
-    brandInvalidDomain: "That doesn't look like a website.",
-    brandTryLater: 'Try again later.',
-    brandError: 'Something went wrong. Try again later.',
-  },
-};
+type PanelCopy = ReturnType<typeof buildPanelCopy>;
 
 type TabKey = 'chart' | 'colors' | 'font';
 const TAB_ORDER: readonly TabKey[] = ['chart', 'colors', 'font'];
@@ -225,21 +126,52 @@ interface RadioGroupDef {
   options: { value: string; label: string }[];
 }
 
-// Value order matches PANEL_COPY.options[<key>] index for index, so the
-// English/Dutch labels line up with the presentation values without a
-// separate mapping table.
-const RADIO_GROUPS: readonly { key: RadioKey; values: readonly string[] }[] = [
-  { key: 'lineWidth', values: ['thin', 'normal', 'thick', 'extraThick'] },
-  { key: 'markers', values: ['all', 'provisionalOnly'] },
-  { key: 'grid', values: ['both', 'horizontal', 'none'] },
-  { key: 'xLabels', values: ['flat', 'tilted'] },
+// Each option's catalogue key, spelled out (not template-composed) so a typo
+// is a compile error against the real `MessageKey` union rather than a
+// silent runtime miss.
+const RADIO_GROUPS: readonly { key: RadioKey; groupLabelKey: MessageKey; options: readonly { value: string; labelKey: MessageKey }[] }[] = [
+  {
+    key: 'lineWidth',
+    groupLabelKey: 'chart.panel.lineWidth',
+    options: [
+      { value: 'thin', labelKey: 'chart.panel.lineWidthOption.thin' },
+      { value: 'normal', labelKey: 'chart.panel.lineWidthOption.normal' },
+      { value: 'thick', labelKey: 'chart.panel.lineWidthOption.thick' },
+      { value: 'extraThick', labelKey: 'chart.panel.lineWidthOption.extraThick' },
+    ],
+  },
+  {
+    key: 'markers',
+    groupLabelKey: 'chart.panel.markers',
+    options: [
+      { value: 'all', labelKey: 'chart.panel.markersOption.all' },
+      { value: 'provisionalOnly', labelKey: 'chart.panel.markersOption.provisionalOnly' },
+    ],
+  },
+  {
+    key: 'grid',
+    groupLabelKey: 'chart.panel.grid',
+    options: [
+      { value: 'both', labelKey: 'chart.panel.gridOption.both' },
+      { value: 'horizontal', labelKey: 'chart.panel.gridOption.horizontal' },
+      { value: 'none', labelKey: 'chart.panel.gridOption.none' },
+    ],
+  },
+  {
+    key: 'xLabels',
+    groupLabelKey: 'chart.panel.xLabels',
+    options: [
+      { value: 'flat', labelKey: 'chart.panel.xLabelsOption.flat' },
+      { value: 'tilted', labelKey: 'chart.panel.xLabelsOption.tilted' },
+    ],
+  },
 ];
 
-function buildRadioGroups(copy: PanelCopyShape): RadioGroupDef[] {
-  return RADIO_GROUPS.map(({ key, values }) => ({
+function buildRadioGroups(lang: Lang): RadioGroupDef[] {
+  return RADIO_GROUPS.map(({ key, groupLabelKey, options }) => ({
     key,
-    label: copy[key],
-    options: values.map((value, i) => ({ value, label: copy.options[key][i] })),
+    label: t(lang, groupLabelKey),
+    options: options.map(({ value, labelKey }) => ({ value, label: t(lang, labelKey) })),
   }));
 }
 
@@ -251,11 +183,11 @@ interface ToggleDef {
   offValue: string;
 }
 
-function buildToggles(copy: PanelCopyShape): ToggleDef[] {
+function buildToggles(lang: Lang): ToggleDef[] {
   return [
-    { key: 'axisLines', label: copy.axisLines, onValue: 'shown', offValue: 'hidden' },
-    { key: 'valueLabels', label: copy.valueLabels, onValue: 'shown', offValue: 'hidden' },
-    { key: 'zeroBaseline', label: copy.zeroBaseline, onValue: 'zero', offValue: 'auto' },
+    { key: 'axisLines', label: t(lang, 'chart.panel.axisLines'), onValue: 'shown', offValue: 'hidden' },
+    { key: 'valueLabels', label: t(lang, 'chart.panel.valueLabels'), onValue: 'shown', offValue: 'hidden' },
+    { key: 'zeroBaseline', label: t(lang, 'chart.panel.zeroBaseline'), onValue: 'zero', offValue: 'auto' },
   ];
 }
 
@@ -282,7 +214,7 @@ function pillClass(active: boolean): string {
   );
 }
 
-function warningText(copy: PanelCopyShape, warning: 'light' | 'dark' | 'both' | null): string | null {
+function warningText(copy: PanelCopy, warning: 'light' | 'dark' | 'both' | null): string | null {
   if (warning === 'light') return copy.warnLight;
   if (warning === 'dark') return copy.warnDark;
   if (warning === 'both') return copy.warnBoth;
@@ -456,7 +388,7 @@ export function ChartConfigPanel({
   brand,
   onBrandApplied,
 }: ChartConfigPanelProps) {
-  const copy = PANEL_COPY[lang];
+  const copy = buildPanelCopy(lang);
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabKey>('chart');
   // WP218 phase 2: shared by both account-row buttons — a save/forget round
@@ -691,8 +623,8 @@ export function ChartConfigPanel({
     onChange({ [key]: value } as PresentationOverrides);
   }
 
-  const radioGroups = buildRadioGroups(copy);
-  const toggles = buildToggles(copy);
+  const radioGroups = buildRadioGroups(lang);
+  const toggles = buildToggles(lang);
 
   function tabButton(key: TabKey, label: string): ReactNode {
     return (
@@ -752,6 +684,27 @@ export function ChartConfigPanel({
               aria-labelledby={tabId('chart')}
               className="mt-3 flex flex-col items-start gap-3"
             >
+              {/* WP218 phase 4 (#219, design §4): "Taal van de grafiek" at
+                * the top of the Grafiek tab — null = follow the app language,
+                * 'nl'/'en' pins this one chart regardless of the app switch.
+                * Always applicable/never locked (chart-presentation.ts), so
+                * this renders identically on every form, table included. */}
+              <div className="w-full">
+                <label htmlFor={`${idPrefix}-style-language`} className="mb-1 block font-medium text-foreground">
+                  {copy.languageLabel}
+                </label>
+                <select
+                  id={`${idPrefix}-style-language`}
+                  aria-label={copy.languageLabel}
+                  value={resolved.values.language ?? ''}
+                  onChange={(e) => onChange({ language: e.target.value === '' ? null : (e.target.value as Lang) })}
+                  className="rounded-md border border-border bg-background px-1.5 py-0.5 text-foreground"
+                >
+                  <option value="">{copy.languageFollowApp}</option>
+                  <option value="nl">{copy.languageNl}</option>
+                  <option value="en">{copy.languageEn}</option>
+                </select>
+              </div>
               {/* WP218 phase 2 (owner C): only when the account default is
                 * actually what's on screen — a non-pristine panel means the
                 * reader's own per-chart tweaks are showing, not the saved

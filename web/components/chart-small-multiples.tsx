@@ -8,6 +8,7 @@
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, XAxis, YAxis } from 'recharts';
 import type { ChartSpec } from '../backend/chart/types.ts';
 import { dotGeometry, LINE_WIDTH_PX, seriesColor, type ChartPresentation } from '../lib/chart-presentation.ts';
+import { t, type Lang } from '../lib/i18n/messages.ts';
 import { AXIS_COLOR, AxisTick, buildRows, GRID_COLOR, type Row, valueLabelPlan, yAxisDomain } from './chart.tsx';
 
 /** R11 (WP218 gap fix): the hollow provisional marker, same convention as
@@ -63,7 +64,12 @@ export function ChartSmallMultiples({
   hiddenKeys,
   axisMode,
   presentation,
+  lang = 'nl',
 }: {
+  /** WP218 phase 4: ChartView passes its already-translated `displaySpec`
+   * (see chart.tsx's `translateSpecForDisplay`) — this component never
+   * translates anything itself, only draws whatever spec it is given, same
+   * division of labour as `presentation` below. */
   spec: ChartSpec;
   hiddenKeys: Set<string>;
   axisMode: 'shared' | 'own';
@@ -71,6 +77,9 @@ export function ChartSmallMultiples({
    * own `resolvePresentation` call — this component never resolves overrides
    * itself, only draws them, same division of labour as the combined chart. */
   presentation: ChartPresentation;
+  /** WP218 phase 4 (#219): defaults to 'nl' so an existing direct render (a
+   * test with no `lang`) keeps its current Dutch output. */
+  lang?: Lang;
 }) {
   const colorFor = (i: number) => seriesColor(presentation, i);
   const { rows, seriesMeta } = buildRows(spec, colorFor);
@@ -79,7 +88,7 @@ export function ChartSmallMultiples({
   const geometry = dotGeometry(presentation.lineWidth);
 
   return (
-    <div role="group" aria-label="Kleine grafieken per reeks" className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3">
+    <div role="group" aria-label={t(lang, 'chart.smallMultiplesGroupLabel')} className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3">
       {visible.map(({ s, i }) => {
         // "Eigen assen": each panel auto-scales to only its own data, so a
         // shape alone can't be honestly compared across panels -- label it

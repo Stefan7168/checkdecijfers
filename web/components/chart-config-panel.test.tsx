@@ -179,6 +179,38 @@ describe('ChartConfigPanel — Grafiek tab', () => {
       unmount();
     }
   });
+
+  it('WP218 phase 4: the "Taal van de grafiek" select offers Zoals de app/Nederlands/English and emits the chosen language', () => {
+    const onChange = vi.fn();
+    render(
+      <ChartConfigPanel
+        resolved={resolvePresentation(lineCtx, {})}
+        seriesMeta={meta}
+        onChange={onChange}
+        onReset={vi.fn()}
+        idPrefix="c"
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    const select = screen.getByRole('combobox', { name: 'Taal van de grafiek' }) as HTMLSelectElement;
+    expect([...select.options].map((o) => o.textContent)).toEqual(['Zoals de app', 'Nederlands', 'English']);
+    expect(select.value).toBe(''); // null -> follow the app language
+    fireEvent.change(select, { target: { value: 'en' } });
+    expect(onChange).toHaveBeenCalledWith({ language: 'en' });
+    fireEvent.change(select, { target: { value: '' } });
+    expect(onChange).toHaveBeenCalledWith({ language: null });
+  });
+
+  it('WP218 phase 4: the language select pre-fills from the resolved value and renders in English under lang="en"', () => {
+    const resolved = resolvePresentation(lineCtx, { language: 'en' });
+    render(
+      <ChartConfigPanel lang="en" resolved={resolved} seriesMeta={meta} onChange={vi.fn()} onReset={vi.fn()} idPrefix="c2" />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Style' }));
+    const select = screen.getByRole('combobox', { name: 'Chart language' }) as HTMLSelectElement;
+    expect(select.value).toBe('en');
+    expect([...select.options].map((o) => o.textContent)).toEqual(['Same as the app', 'Nederlands', 'English']);
+  });
 });
 
 describe('ChartConfigPanel — Kleuren tab', () => {

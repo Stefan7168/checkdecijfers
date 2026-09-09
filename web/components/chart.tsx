@@ -52,6 +52,15 @@ import {
 } from '../lib/chart-presentation.ts';
 import { useChartStyle } from '../lib/chart-style-context.tsx';
 import { trackChartStyleEvent } from '../lib/chart-usage-client.ts';
+import {
+  translateAttributionLine,
+  translateMeasureTitle,
+  translatePeriodLabel,
+  translateRegion,
+  translateUnit,
+} from '../lib/i18n/cbs-words.ts';
+import { useLang } from '../lib/i18n/lang-provider.tsx';
+import { t, type Lang } from '../lib/i18n/messages.ts';
 // WP218 phase 2 (owner C): the account-default Server Actions live in their
 // OWN tiny-import-graph file, never web/app/actions.ts — see that file's own
 // header for why (the usage-actions.ts precedent this mirrors).
@@ -358,14 +367,20 @@ function tableCellText(point: ChartPoint): string {
 
 const EMPTY_CELL: TableCell = { text: '', resultId: null };
 
-export function tableModel(spec: ChartSpec): TableModel {
+/** `lang` defaults to 'nl' so every existing direct call (chart.test.tsx)
+ * keeps its current signature and output. `spec` is expected to already
+ * carry translated title/unit/series-labels/periodLabels when `lang` is
+ * 'en' (ChartView feeds it `displaySpec` — see `translateSpecForDisplay` —
+ * so this function itself only needs to translate its OWN fixed header
+ * words, never re-derive CBS text from the spec a second time). */
+export function tableModel(spec: ChartSpec, lang: Lang = 'nl'): TableModel {
   const caption = `${spec.title} (${spec.unit})`;
   if (spec.kind === 'bar') {
     const periodLabels = new Set(spec.series.flatMap((s) => s.points.map((p) => p.periodLabel)));
-    const periodHeader = periodLabels.size === 1 ? [...periodLabels][0] : 'Waarde';
+    const periodHeader = periodLabels.size === 1 ? [...periodLabels][0] : t(lang, 'chart.table.value');
     return {
       caption,
-      header: ['Regio', periodHeader],
+      header: [t(lang, 'chart.table.region'), periodHeader],
       rows: spec.series.map((series) => {
         const point = series.points[0];
         return {
@@ -388,13 +403,41 @@ export function tableModel(spec: ChartSpec): TableModel {
   }
   return {
     caption,
-    header: ['Periode', ...spec.series.map((s) => s.label)],
+    header: [t(lang, 'chart.table.period'), ...spec.series.map((s) => s.label)],
     rows: codes.map((code) => ({
       label: labelByCode.get(code) ?? code,
       cells: spec.series.map((series) => {
         const point = series.points.find((p) => p.periodCode === code);
         return point ? { text: tableCellText(point), resultId: point.resultId } : EMPTY_CELL;
       }),
+    })),
+  };
+}
+
+/** WP218 phase 4 (#219, design §4): a verbatim-projection view of `spec` with
+ * only its CBS-word DISPLAY TEXT translated (title, unit, series
+ * labels/regions, period labels) — the SAME "project, never recompute"
+ * contract as `windowSpec` (chart-view-state.ts): every value/
+ * formattedValue/resultId/provisional/status/decimals/attribution/
+ * annotations field is untouched, and 'nl' returns `spec` itself unchanged
+ * (no-op fast path). Every downstream pure function (buildRows,
+ * annotationMarkers, valueLabelPlan, tableModel) reads whatever spec it is
+ * given verbatim, so feeding this one translated spec into all of them keeps
+ * every plotted numeric token bound to a spec string exactly as before —
+ * the converters never touch a value, only the label text around it.
+ * `provisionalNote`/`nullNotes`/`definitionLine`/`attribution.trendHeadline`
+ * are backend prose (documented limitation, design §4) and are NOT touched
+ * here — they stay Dutch on an English chart. */
+export function translateSpecForDisplay(spec: ChartSpec, lang: Lang): ChartSpec {
+  if (lang !== 'en') return spec;
+  return {
+    ...spec,
+    title: translateMeasureTitle(spec.title),
+    unit: translateUnit(spec.unit),
+    series: spec.series.map((series) => ({
+      ...series,
+      label: translateRegion(series.label),
+      points: series.points.map((point) => ({ ...point, periodLabel: translatePeriodLabel(point.periodLabel) })),
     })),
   };
 }
@@ -485,15 +528,17 @@ function SeriesLegend({
   highlightedKey,
   onToggle,
   onHighlight,
+  lang,
 }: {
   seriesMeta: SeriesMeta[];
   hiddenKeys: Set<string>;
   highlightedKey: string | null;
   onToggle: (key: string) => void;
   onHighlight: (key: string | null) => void;
+  lang: Lang;
 }) {
   return (
-    <div role="group" aria-label="Reeksen" className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
+    <div role="group" aria-label={t(lang, 'chart.seriesGroupLabel')} className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
       {seriesMeta.map((s) => {
         const hidden = hiddenKeys.has(s.key);
         const highlighted = highlightedKey === s.key;
@@ -526,13 +571,13 @@ function SeriesLegend({
               aria-pressed={highlighted}
               disabled={hidden}
               onClick={() => onHighlight(highlighted ? null : s.key)}
-              title={`Markeer ${s.label}, andere reeksen worden gedimd`}
+              title={t(lang, 'chart.highlightTitle', { label: s.label })}
               className={
                 'min-h-6 rounded-md px-1 text-xs hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40 ' +
                 (highlighted ? 'text-foreground font-semibold' : 'text-muted-foreground')
               }
             >
-              {`Markeer ${s.label}`}
+              {t(lang, 'chart.highlightButton', { label: s.label })}
             </button>
           </span>
         );
@@ -574,6 +619,7 @@ function SeriesDot(
   // Defaulted to today's literal geometry (r 4, ring 2, hideFinal false) so
   // every existing call site/test keeps its current arity and rendering.
   geometry: { r: number; ring: number; hideFinal: boolean } = { ...dotGeometry('normal'), hideFinal: false },
+  lang: Lang = 'nl',
 ) {
   return function Dot(props: { cx?: number; cy?: number; payload?: Row; stroke?: string }) {
     const { cx, cy, payload } = props;
@@ -615,7 +661,7 @@ function SeriesDot(
           data-result-id={resultId == null ? undefined : String(resultId)}
           role={onPointClick ? 'button' : undefined}
           tabIndex={onPointClick ? 0 : undefined}
-          aria-label={onPointClick ? `Voeg notitie toe bij ${seriesLabel ?? ''}, ${String(payload.periodLabel)}` : undefined}
+          aria-label={onPointClick ? t(lang, 'chart.noteAriaLabel', { series: seriesLabel ?? '', period: String(payload.periodLabel) }) : undefined}
           style={onPointClick ? { cursor: 'pointer' } : undefined}
           onClick={onPointClick ? activate : undefined}
           onKeyDown={
@@ -669,6 +715,7 @@ function SeriesBar(
   opacity = 1,
   seriesLabel?: string,
   onPointClick?: (point: PendingPoint) => void,
+  lang: Lang = 'nl',
 ) {
   return function Shape(props: { x?: number; y?: number; width?: number; height?: number; payload?: Row }) {
     const { x, y, width, height, payload } = props;
@@ -707,7 +754,7 @@ function SeriesBar(
           data-result-id={resultId == null ? undefined : String(resultId)}
           role={onPointClick ? 'button' : undefined}
           tabIndex={onPointClick ? 0 : undefined}
-          aria-label={onPointClick ? `Voeg notitie toe bij ${seriesLabel ?? ''}, ${String(payload.periodLabel)}` : undefined}
+          aria-label={onPointClick ? t(lang, 'chart.noteAriaLabel', { series: seriesLabel ?? '', period: String(payload.periodLabel) }) : undefined}
           style={onPointClick ? { cursor: 'pointer' } : undefined}
           onClick={onPointClick ? activate : undefined}
           onKeyDown={
@@ -782,14 +829,16 @@ function useCoarsePointer(): boolean {
   return coarse;
 }
 
-const KEYBOARD_HINT = 'Gebruik de pijltjestoetsen om de punten van de grafiek te doorlopen.';
-
-// WP218 phase 1 (Task 7): the disabled Lijn tab's reason, shared verbatim
-// between its `title` (pointer/tooltip) and a visually-hidden span reached
-// via `aria-describedby` — a `title` alone is invisible to a screen reader,
-// and a keyboard/AT user hits exactly the same disabled control a mouse user
-// does, so the same explanation must be reachable both ways.
-const LINE_DISABLED_REASON = 'Een lijn tussen regio’s zou een trend suggereren die niet is gemeten.';
+// WP218 phase 4 (#219): the keyboard hint and the disabled-Lijn reason
+// (below, `LINE_DISABLED_REASON`) moved from module-level Dutch literals to
+// `t(chartLang, …)` calls inside ChartView — 'chart.keyboardHint' and
+// 'chart.lineDisabledReason' in the catalogue (messages.ts), Dutch entries
+// byte-identical to these former literals. The disabled Lijn tab's reason is
+// shared verbatim between its `title` (pointer/tooltip) and a visually-
+// hidden span reached via `aria-describedby` — a `title` alone is invisible
+// to a screen reader, and a keyboard/AT user hits exactly the same disabled
+// control a mouse user does, so the same explanation must be reachable both
+// ways.
 
 /** Approximate text width at the 11px label font — layout only, so the plot
  * leaves room for the end-of-line label instead of clipping it. */
@@ -967,23 +1016,31 @@ export function ChartView({
     const font = findFont(pres.fontFamily);
     if (font && font.source === 'google') ensureFontLoaded(font);
   }, [pres.fontFamily]);
+  // WP218 phase 4 (#219, design §4): the chart's own language. `useLang()`
+  // is called UNCONDITIONALLY (its own statement, same reason as the Hook
+  // above it) — writing `pres.language ?? useLang()` directly would only
+  // call the hook when `pres.language` is null, a conditional Hook call that
+  // breaks React's Rules of Hooks the moment a reader toggles the per-chart
+  // select on/off. `pres.language` (null = follow the app) wins when set.
+  const appLang = useLang();
+  const chartLang: Lang = pres.language ?? appLang;
 
   if (spec.schemaVersion !== 1) {
     // Renderers dispatch on the schema version (ADR 007); this one only
     // speaks v1 and must say so rather than misrender a future spec — the
     // guard src/chart/render.ts has always had, and this wrapper lacked
     // until #197 (a v2 spec would have rendered silently, possibly wrong).
+    const refusalAttributionLine =
+      chartLang === 'en' ? translateAttributionLine(spec.attributionLine) : spec.attributionLine;
+    const refusalTitle = chartLang === 'en' ? translateMeasureTitle(spec.title) : spec.title;
     return (
       <div className={frameClass}>
         <div role="heading" aria-level={3} className="text-sm font-semibold text-foreground">
-          {spec.title}
+          {refusalTitle}
         </div>
-        <p className="mt-2 text-sm text-warning">
-          Deze grafiek is gemaakt in een nieuwere versie dan deze pagina kan tonen. De cijfers staan in het
-          antwoord zelf.
-        </p>
+        <p className="mt-2 text-sm text-warning">{t(chartLang, 'chart.schemaRefusal')}</p>
         <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
-          <p className="text-xs text-muted-foreground">{spec.attributionLine}</p>
+          <p className="text-xs text-muted-foreground">{refusalAttributionLine}</p>
           <SourceBadge tableId={spec.attribution.tableId} syncedAt={spec.attribution.syncedAt} />
         </div>
       </div>
@@ -1005,18 +1062,40 @@ export function ChartView({
   const allPeriodCodes = Array.from(
     new Set(spec.series.flatMap((s) => s.points.map((p) => p.periodCode))),
   ).sort((a, b) => a.localeCompare(b));
+  // WP218 phase 4: these feed the Vanaf/Tot <select> options and the zoom
+  // disclosure sentence below — translated via the SAME word-list converter
+  // ChartView uses everywhere else (never a second, independent translation
+  // of period text).
   const periodLabelByCode = new Map(
-    spec.series.flatMap((s) => s.points.map((p): [string, string] => [p.periodCode, p.periodLabel])),
+    spec.series.flatMap((s) =>
+      s.points.map((p): [string, string] => [
+        p.periodCode,
+        chartLang === 'en' ? translatePeriodLabel(p.periodLabel) : p.periodLabel,
+      ]),
+    ),
   );
   const zoomAvailable = spec.kind === 'line' && allPeriodCodes.length > 1;
   const viewSpec = zoomAvailable ? windowSpec(spec, state.periodRange) : spec;
+  // WP218 phase 4 (design §4): title/unit/series-labels(regions)/period-
+  // labels translated ONCE here — every derivation below (buildRows,
+  // annotationMarkers, valueLabelPlan, tableModel, the accessible name) reads
+  // `displaySpec` instead of `viewSpec`, so the honesty-bound value/
+  // formattedValue/resultId fields are untouched (translateSpecForDisplay
+  // never rewrites them) while every CBS-word label on screen matches
+  // `chartLang`. A no-op (`displaySpec === viewSpec`) when chartLang is 'nl'.
+  const displaySpec = translateSpecForDisplay(viewSpec, chartLang);
+  // WP218 phase 4: the download menu receives this SAME displayed string
+  // (never re-derived from spec.attributionLine independently), so the
+  // exported PNG/SVG's baked-in attribution matches what the card shows.
+  const displayAttributionLine =
+    chartLang === 'en' ? translateAttributionLine(spec.attributionLine) : spec.attributionLine;
 
   // WP218 (ADR 039) Phase 0: `pres` (canUseLine/activeForm/effectiveKind
   // included) is computed above, ahead of the schemaVersion guard — see the
   // comment there. `colorFor` feeds buildRows so every legend swatch,
   // tooltip swatch and hatch pattern reads the SAME effective colour.
   const colorFor = (i: number) => seriesColor(pres, i);
-  const { rows, seriesMeta } = buildRows(viewSpec, colorFor);
+  const { rows, seriesMeta } = buildRows(displaySpec, colorFor);
   const dimEntries = Object.entries(spec.dimLabels);
   // Final review finding: this used to read `viewSpec` (the ORIGINAL
   // spec.kind) directly, so a line-kind chart's curated annotations stayed
@@ -1026,8 +1105,8 @@ export function ChartView({
   // then claim something is marked in the chart when nothing visually is.
   // Composing `effectiveKind` here, exactly as `valueLabelPlan` already does
   // below, keeps the claim and the render in sync.
-  const markers = annotationMarkers({ ...viewSpec, kind: effectiveKind }, rows);
-  const plan = valueLabelPlan({ ...viewSpec, kind: effectiveKind });
+  const markers = annotationMarkers({ ...displaySpec, kind: effectiveKind }, rows);
+  const plan = valueLabelPlan({ ...displaySpec, kind: effectiveKind });
   const tickByValue = new Map(plan.axisTicks.map((t) => [t.value, t]));
   const endLabelByKey = new Map(plan.endLabels.map((l) => [l.seriesKey, l]));
   const barLabelsByKey = new Map<string, Map<string, PointLabel>>();
@@ -1058,7 +1137,7 @@ export function ChartView({
   // Tilted labels overhang the first tick to the left; reserve what the y-axis
   // width does not already cover (see xLabelOverhang).
   const leftMargin = 8 + Math.max(0, xLabelOverhang(pres.xLabels, longestPeriodLabel) - yAxisWidth);
-  const accessibleName = `Grafiek: ${spec.title} (${spec.unit})`;
+  const accessibleName = `${t(chartLang, 'chart.graphPanelLabel')}: ${displaySpec.title} (${displaySpec.unit})`;
   // Final review finding (owner-directed follow-up): small multiples always
   // drew line panels regardless of the form switch, so choosing Staaf while
   // small multiples was on silently kept showing lines — the bar-zero-axis
@@ -1068,16 +1147,23 @@ export function ChartView({
   // like before this task, just no longer reachable from a non-line form.
   const smallMultiplesAvailable = effectiveKind === 'line' && seriesMeta.length > 1;
   const hiddenDisclosure =
-    state.hiddenKeys.size > 0 ? ` ${state.hiddenKeys.size} van ${seriesMeta.length} reeksen verborgen.` : '';
+    state.hiddenKeys.size > 0
+      ? ` ${t(chartLang, 'chart.hiddenSeriesDisclosure', { n: state.hiddenKeys.size, m: seriesMeta.length })}.`
+      : '';
   // Task 4: describes the currently shown window against the chart's full
   // covered range — from the ORIGINAL spec.attribution (identity, not
   // windowed content), never recomputed from viewSpec's own filtered points.
   const zoomDisclosure = state.periodRange
-    ? ` Getoond: ${periodLabelByCode.get(state.periodRange[0])}–${periodLabelByCode.get(state.periodRange[1])} van ${spec.attribution.coveredPeriods.from}–${spec.attribution.coveredPeriods.to}.`
+    ? ` ${t(chartLang, 'chart.zoomDisclosure', {
+        from: periodLabelByCode.get(state.periodRange[0]) ?? '',
+        to: periodLabelByCode.get(state.periodRange[1]) ?? '',
+        coveredFrom: spec.attribution.coveredPeriods.from,
+        coveredTo: spec.attribution.coveredPeriods.to,
+      })}`
     : '';
   const viewDisclosure = `${hiddenDisclosure}${zoomDisclosure}`;
   const tooltipTrigger = coarsePointer ? 'click' : 'hover';
-  const table = tableModel(viewSpec);
+  const table = tableModel(displaySpec, chartLang);
   const panelId = `${domId}-panel`;
 
   // Task 3: a real three-way Lijn/Staaf/Tabel switch. Lijn is skipped from
@@ -1116,14 +1202,14 @@ export function ChartView({
   return (
     <div className={frameClass}>
       <div role="heading" aria-level={3} className="text-sm font-semibold text-foreground">
-        {spec.title}
+        {displaySpec.title}
       </div>
       {dimEntries.length > 0 ? (
         <div className="text-xs text-muted-foreground">
           {dimEntries.map(([k, v]) => `${k}: ${v}`).join(' · ')}
         </div>
       ) : null}
-      <div className="text-xs text-muted-foreground">{spec.unit}</div>
+      <div className="text-xs text-muted-foreground">{displaySpec.unit}</div>
       {/* WP218 phase 1 (Task 7): the Weergave tablist and the Opmaak panel
         * share one row (the panel wraps under it via its own `basis-full` —
         * see ChartConfigPanel) — the tablist's own `mt-3` moved up onto this
@@ -1132,7 +1218,7 @@ export function ChartView({
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <div
           role="tablist"
-          aria-label="Weergave"
+          aria-label={t(chartLang, 'chart.weergaveLabel')}
           onKeyDown={onFormTabKeyDown}
           className="inline-flex items-center gap-0.5 rounded-lg bg-muted p-0.5"
         >
@@ -1145,11 +1231,11 @@ export function ChartView({
             aria-describedby={canUseLine ? undefined : `${domId}-line-reason`}
             tabIndex={activeForm === 'line' ? 0 : -1}
             disabled={!canUseLine}
-            title={canUseLine ? undefined : LINE_DISABLED_REASON}
+            title={canUseLine ? undefined : t(chartLang, 'chart.lineDisabledReason')}
             onClick={() => selectForm('line')}
             className={segmentTab(activeForm === 'line') + (canUseLine ? '' : ' cursor-not-allowed opacity-40')}
           >
-            Lijn
+            {t(chartLang, 'chart.tabLine')}
           </button>
           <button
             ref={barTabRef}
@@ -1161,7 +1247,7 @@ export function ChartView({
             onClick={() => selectForm('bar')}
             className={segmentTab(activeForm === 'bar')}
           >
-            Staaf
+            {t(chartLang, 'chart.tabBar')}
           </button>
           <button
             ref={tableTabRef}
@@ -1173,7 +1259,7 @@ export function ChartView({
             onClick={() => selectForm('table')}
             className={segmentTab(activeForm === 'table')}
           >
-            Tabel
+            {t(chartLang, 'chart.tabTable')}
           </button>
         </div>
         {/* Reachable via the disabled Lijn tab's aria-describedby above — a
@@ -1182,7 +1268,7 @@ export function ChartView({
           * to whoever reaches it by keyboard/AT. */}
         {!canUseLine ? (
           <span id={`${domId}-line-reason`} className="sr-only">
-            {LINE_DISABLED_REASON}
+            {t(chartLang, 'chart.lineDisabledReason')}
           </span>
         ) : null}
         {state.form !== 'table' ? (
@@ -1190,6 +1276,7 @@ export function ChartView({
             key={chartEpoch}
             resolved={resolved}
             seriesMeta={seriesMeta}
+            lang={chartLang}
             onChange={(patch) => {
               dispatch({ type: 'setPresentation', patch });
               trackChartStyleEvent('option_changed');
@@ -1249,10 +1336,10 @@ export function ChartView({
       </div>
       {zoomAvailable ? (
         <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          <label htmlFor={`${domId}-from`}>Vanaf</label>
+          <label htmlFor={`${domId}-from`}>{t(chartLang, 'chart.from')}</label>
           <select
             id={`${domId}-from`}
-            aria-label="Vanaf"
+            aria-label={t(chartLang, 'chart.from')}
             value={state.periodRange?.[0] ?? allPeriodCodes[0]}
             onChange={(e) => {
               const [from, clampedTo] = clampVanafChange(
@@ -1275,10 +1362,10 @@ export function ChartView({
               </option>
             ))}
           </select>
-          <label htmlFor={`${domId}-to`}>Tot</label>
+          <label htmlFor={`${domId}-to`}>{t(chartLang, 'chart.to')}</label>
           <select
             id={`${domId}-to`}
-            aria-label="Tot"
+            aria-label={t(chartLang, 'chart.to')}
             value={state.periodRange?.[1] ?? allPeriodCodes[allPeriodCodes.length - 1]}
             onChange={(e) => {
               const [clampedFrom, to] = clampTotChange(
@@ -1304,7 +1391,7 @@ export function ChartView({
         </div>
       ) : null}
       {state.form === 'table' ? (
-        <div id={panelId} role="tabpanel" aria-label="Tabel" className="mt-2 overflow-x-auto">
+        <div id={panelId} role="tabpanel" aria-label={t(chartLang, 'chart.tabTable')} className="mt-2 overflow-x-auto">
           <table className="w-full text-sm" aria-label={table.caption}>
             <thead>
               <tr>
@@ -1341,7 +1428,7 @@ export function ChartView({
       <div
         id={panelId}
         role="tabpanel"
-        aria-label="Grafiek"
+        aria-label={t(chartLang, 'chart.graphPanelLabel')}
         ref={chartContainerRef}
         className={
           'mt-2 w-full touch-pan-y ' +
@@ -1362,14 +1449,20 @@ export function ChartView({
         style={fontStack(pres.fontFamily) ? { fontFamily: fontStack(pres.fontFamily) } : undefined}
       >
         {smallMultiples && smallMultiplesAvailable ? (
-          <ChartSmallMultiples spec={viewSpec} hiddenKeys={state.hiddenKeys} axisMode={axisMode} presentation={pres} />
+          <ChartSmallMultiples
+            spec={displaySpec}
+            hiddenKeys={state.hiddenKeys}
+            axisMode={axisMode}
+            presentation={pres}
+            lang={chartLang}
+          />
         ) : (
         <ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 640, height: 256 }}>
           {effectiveKind === 'line' ? (
             <LineChart
               data={rows}
               margin={{ top: 8, right: rightMargin, left: leftMargin, bottom: 8 }}
-              desc={KEYBOARD_HINT}
+              desc={t(chartLang, 'chart.keyboardHint')}
               aria-label={accessibleName}
             >
               {/* Recharts' own default grid + axis geometry (session 87: the
@@ -1451,6 +1544,7 @@ export function ChartView({
                         s.label,
                         (p) => setPendingPoint(p),
                         { ...dotGeometry(pres.lineWidth), hideFinal: pres.markers === 'provisionalOnly' },
+                        chartLang,
                       )}
                       isAnimationActive={false}
                     />
@@ -1461,7 +1555,7 @@ export function ChartView({
             <BarChart
               data={rows}
               margin={{ top: 16, right: 8, left: leftMargin, bottom: 8 }}
-              desc={KEYBOARD_HINT}
+              desc={t(chartLang, 'chart.keyboardHint')}
               aria-label={accessibleName}
             >
               <defs>
@@ -1536,6 +1630,7 @@ export function ChartView({
                         dimmed ? 0.25 : 1,
                         s.label,
                         (p) => setPendingPoint(p),
+                        chartLang,
                       )}
                     />
                   );
@@ -1559,10 +1654,11 @@ export function ChartView({
             highlightedKey={state.highlightedKey}
             onToggle={(key) => dispatch({ type: 'toggleSeries', key })}
             onHighlight={(key) => dispatch({ type: 'setHighlight', key })}
+            lang={chartLang}
           />
           {state.hiddenKeys.size > 0 ? (
             <p className="mt-1 text-xs text-muted-foreground">
-              {state.hiddenKeys.size} van {seriesMeta.length} reeksen verborgen
+              {t(chartLang, 'chart.hiddenSeriesDisclosure', { n: state.hiddenKeys.size, m: seriesMeta.length })}
             </p>
           ) : null}
         </>
@@ -1579,17 +1675,17 @@ export function ChartView({
             onClick={() => setSmallMultiples((v) => !v)}
             className={tabClass(smallMultiples)}
           >
-            Kleine grafieken
+            {t(chartLang, 'chart.smallMultiplesToggle')}
           </button>
           {smallMultiples ? (
-            <div role="group" aria-label="Gelijke assen of eigen assen" className="flex gap-2">
+            <div role="group" aria-label={t(chartLang, 'chart.axisGroupLabel')} className="flex gap-2">
               <button
                 type="button"
                 aria-pressed={axisMode === 'shared'}
                 onClick={() => setAxisMode('shared')}
                 className={tabClass(axisMode === 'shared')}
               >
-                Gelijke assen
+                {t(chartLang, 'chart.sharedAxes')}
               </button>
               <button
                 type="button"
@@ -1597,7 +1693,7 @@ export function ChartView({
                 onClick={() => setAxisMode('own')}
                 className={tabClass(axisMode === 'own')}
               >
-                Eigen assen
+                {t(chartLang, 'chart.ownAxes')}
               </button>
             </div>
           ) : null}
@@ -1606,7 +1702,9 @@ export function ChartView({
       {/* #197: the hollow marker needs a key a lay reader can decode without
         * reading the note first; rendered exactly when the spec says a
         * provisional point exists (R11's provisionalNote is present iff). */}
-      {spec.provisionalNote ? <p className="mt-1 text-xs text-muted-foreground">○ = voorlopig cijfer</p> : null}
+      {spec.provisionalNote ? (
+        <p className="mt-1 text-xs text-muted-foreground">{t(chartLang, 'chart.provisionalMarkerNote')}</p>
+      ) : null}
       {/* WP23 (#92): caveats read like caveats — warn and a step larger than
         * the source credit, which stays smallest/lightest (photo-credit
         * style). Content untouched: same strings from the same one builder
@@ -1624,7 +1722,7 @@ export function ChartView({
         * is contextual metadata, not a data-quality warning. */}
       {markers.map((m) => (
         <p key={m.label} className="text-xs text-muted-foreground">
-          Gemarkeerd in de grafiek: {m.label}
+          {t(chartLang, 'chart.markedInChart', { label: m.label })}
         </p>
       ))}
       {/* Task 6 (#212 click-to-annotate): mounted as a SIBLING here, entirely
@@ -1640,6 +1738,7 @@ export function ChartView({
           notes={notes}
           pendingPoint={pendingPoint}
           idPrefix={domId}
+          lang={chartLang}
           onSave={(text) => {
             if (!pendingPoint) return;
             setNotes((prev) => [...prev, { id: `${pendingPoint.resultId}-${noteIdCounter.current++}`, ...pendingPoint, text }]);
@@ -1656,23 +1755,26 @@ export function ChartView({
         * none). Ontdek reuses this component, so the homepage charts get the
         * identical badge for free. */}
       <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
-        <p className="text-xs text-muted-foreground">{spec.attributionLine}</p>
+        <p className="text-xs text-muted-foreground">{displayAttributionLine}</p>
         <SourceBadge tableId={spec.attribution.tableId} syncedAt={spec.attribution.syncedAt} />
         {/* #170(3): download-as-image, PNG or SVG, attribution baked into
           * the file itself — not just shown on this page — via the SAME
-          * spec.attributionLine string shown above (R4: one builder, one
-          * sentence, never re-derived here). Not offered in small-multiples
-          * view (idea 8): ChartDownloadMenu grabs the first <svg> under the
-          * container, which in that view is just one series' own mini panel
-          * — exporting it under the full chart's filename/attribution would
-          * silently misrepresent what's shown, the same risk #46(c) already
-          * names for exports. Same precedent as the Tabel view below, which
-          * has never offered a download either. */}
+          * displayAttributionLine string shown above (R4: one builder, one
+          * sentence, never re-derived here; WP218 phase 4: translated once,
+          * shared between the on-screen text and the export). Not offered in
+          * small-multiples view (idea 8): ChartDownloadMenu grabs the first
+          * <svg> under the container, which in that view is just one
+          * series' own mini panel — exporting it under the full chart's
+          * filename/attribution would silently misrepresent what's shown,
+          * the same risk #46(c) already names for exports. Same precedent
+          * as the Tabel view below, which has never offered a download
+          * either. */}
         {state.form !== 'table' && !smallMultiples ? (
           <ChartDownloadMenu
             containerRef={chartContainerRef}
-            attributionText={`${spec.attributionLine} checkdecijfers.nl${viewDisclosure}`}
+            attributionText={`${displayAttributionLine} checkdecijfers.nl${viewDisclosure}`}
             filenameBase={`checkdecijfers-${spec.attribution.tableId}`}
+            lang={chartLang}
           />
         ) : null}
       </div>

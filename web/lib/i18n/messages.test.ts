@@ -34,3 +34,30 @@ describe('isLang()', () => {
     expect(isLang(42)).toBe(false);
   });
 });
+
+// Design §3: "one catalogue test: every `en` key exists (type-level) and no
+// value in either language contains a digit unless the Dutch original did".
+// The `Messages` type already makes a missing/extra `en` key a COMPILE
+// error (messages.ts's own header) — this is the same guarantee enforced at
+// RUNTIME too, so a build that skips typechecking (or a future refactor that
+// loosens the type) still catches drift. The digit rule matters because the
+// chart card's whole-card digit scans (chart.test.tsx) only ever check
+// numbers are BOUND to a spec string — they never police whether a
+// TRANSLATION quietly introduced a new number that reads as a CBS figure.
+describe('MESSAGES — catalogue-wide invariants', () => {
+  it('every nl key has an en key and vice versa (runtime mirror of the Messages type)', () => {
+    const nlKeys = Object.keys(MESSAGES.nl).sort();
+    const enKeys = Object.keys(MESSAGES.en).sort();
+    expect(enKeys).toEqual(nlKeys);
+  });
+
+  it('no en value contains a digit unless the matching nl value does', () => {
+    for (const key of Object.keys(MESSAGES.nl) as (keyof typeof MESSAGES.nl)[]) {
+      const nlHasDigit = /\d/.test(MESSAGES.nl[key]);
+      const enHasDigit = /\d/.test(MESSAGES.en[key]);
+      if (enHasDigit) {
+        expect(nlHasDigit, `en['${key}'] has a digit nl['${key}'] does not: ${JSON.stringify(MESSAGES.en[key])}`).toBe(true);
+      }
+    }
+  });
+});

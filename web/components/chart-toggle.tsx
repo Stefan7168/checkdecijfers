@@ -19,6 +19,8 @@
 // touch-target minimum.
 import { useRef, useState, type KeyboardEvent } from 'react';
 import type { ChartSpec, CuratedChartToggle } from '../backend/chart/index.ts';
+import { useLang } from '../lib/i18n/lang-provider.tsx';
+import { t } from '../lib/i18n/messages.ts';
 import { ChartView } from './chart.tsx';
 
 function buttonClass(active: boolean): string {
@@ -34,6 +36,13 @@ export function ChartWithToggle({ spec, toggle }: { spec: ChartSpec; toggle: Cur
   const [alternate, setAlternate] = useState(false);
   const primaryRef = useRef<HTMLButtonElement>(null);
   const alternateRef = useRef<HTMLButtonElement>(null);
+  // WP218 phase 4 (#219): this wrapper sits OUTSIDE ChartView, so it has no
+  // visibility into the per-chart language override living in ChartView's
+  // own state (only ChartView itself can read `resolved.values.language`) —
+  // its own "Definitie wisselen" label follows the APP language via
+  // `useLang()` directly. Documented limitation: a chart pinned to English
+  // via its own select still shows this ONE label in the app's language.
+  const lang = useLang();
 
   function select(next: boolean): void {
     setAlternate(next);
@@ -51,7 +60,7 @@ export function ChartWithToggle({ spec, toggle }: { spec: ChartSpec; toggle: Cur
     <div>
       <div
         role="radiogroup"
-        aria-label="Definitie wisselen"
+        aria-label={t(lang, 'chart.toggle.definitionGroupLabel')}
         onKeyDown={onKeyDown}
         className="mb-2 flex flex-wrap items-center gap-2"
       >

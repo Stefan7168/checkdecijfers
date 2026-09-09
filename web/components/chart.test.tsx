@@ -8,6 +8,7 @@ import type { ChartSpec } from '../backend/chart/types.ts';
 import type { ChartStyleEvent } from '../backend/chart/user-styles.ts';
 import { setChartUsageSink } from '../lib/chart-usage-client.ts';
 import { ChartStyleProvider } from '../lib/chart-style-context.tsx';
+import { LangProvider } from '../lib/i18n/lang-provider.tsx';
 import { attributedSvgMarkup } from './chart-download.tsx';
 
 // WP218 phase 2 (owner C): chart.tsx imports the account-default Server
@@ -2109,5 +2110,188 @@ describe('WP218 phase 3 — brand colours wired into ChartView (owner B)', () =>
       name: 'Voorbeeld BV',
       fetchedAt: '2026-01-01T00:00:00.000Z',
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// WP218 phase 4 (#219), Task 4 (design §4): the chart card follows the app
+// language, with a per-chart override, via the CBS word list (never machine
+// translation). `chartLang = pres.language ?? useLang()` — these tests prove
+// the WHOLE pipeline: the catalogue chrome (Weergave tabs, Vanaf/Tot, the
+// panel), the word-list converters (unit/region/period-label/measure-title/
+// attribution-line) wired onto the actual spec, and the honesty invariant
+// (a translated card still passes the same digit-membership scan).
+// ---------------------------------------------------------------------------
+
+function englishWordListSpec(overrides: Partial<ChartSpec> = {}): ChartSpec {
+  return spec({
+    title: 'Consumentenvertrouwen',
+    unit: 'aantal',
+    series: [
+      {
+        label: 'Nederland',
+        regionCode: 'NL01',
+        points: [
+          point({
+            resultId: 'q1-2021',
+            periodCode: '2021KW01',
+            periodLabel: '2021 1e kwartaal',
+            value: 5,
+            formattedValue: '5,0',
+          }),
+        ],
+      },
+    ],
+    attributionLine:
+      'Bron: CBS StatLine, tabel 83693NED — Consumentenvertrouwen. Gegevens gesynchroniseerd op 2026-09-01. Periode: 2021 1e kwartaal. Licentie: CC BY 4.0.',
+    attribution: {
+      tableId: '83693NED',
+      tableTitle: 'Consumentenvertrouwen',
+      tableVersion: 1,
+      syncedAt: '2026-09-01',
+      coveredPeriods: { from: '2021KW01', to: '2021KW01' },
+      license: 'CC BY 4.0',
+    },
+    ...overrides,
+  });
+}
+
+describe('WP218 phase 4 — charts follow the app language, per-chart, via the CBS word list', () => {
+  it('an English chart shows the Line/Bar/Table tabs', () => {
+    const s = englishWordListSpec();
+    render(
+      <LangProvider lang="en">
+        <ChartView spec={s} />
+      </LangProvider>,
+    );
+    expect(screen.getByRole('tab', { name: 'Line' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Bar' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Table' })).toBeInTheDocument();
+  });
+
+  it('an English chart shows the translated title/unit/region (in the legend) and the attribution line with id/date byte-identical', () => {
+    // A second series ('Utrecht', a municipality — never translated) so the
+    // legend renders at all (a single-series chart shows no legend) and
+    // proves translateRegion is SELECTIVE: 'Nederland' becomes 'the
+    // Netherlands', 'Utrecht' stays 'Utrecht'.
+    const s = englishWordListSpec({
+      series: [
+        ...englishWordListSpec().series,
+        { label: 'Utrecht', regionCode: 'PV26', points: [point({ resultId: 'ut-2021', periodCode: '2021KW01', periodLabel: '2021 1e kwartaal', value: 4, formattedValue: '4,0' })] },
+      ],
+    });
+    render(
+      <LangProvider lang="en">
+        <ChartView spec={s} />
+      </LangProvider>,
+    );
+    expect(screen.getByRole('heading', { name: 'Consumer confidence' })).toBeInTheDocument();
+    expect(screen.getByText('number')).toBeInTheDocument(); // translateUnit('aantal')
+    expect(screen.getByRole('button', { name: 'the Netherlands' })).toBeInTheDocument(); // translateRegion('Nederland')
+    expect(screen.getByRole('button', { name: 'Utrecht' })).toBeInTheDocument(); // untranslated municipality
+    expect(
+      screen.getByText(
+        'Source: CBS StatLine, table 83693NED — Consumentenvertrouwen. Data synced on 2026-09-01. Period: 2021 1e kwartaal. License: CC BY 4.0.',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('an English chart shows the translated x-axis period label (2021 Q1) and Vanaf/Tot become From/To', () => {
+    const s = englishWordListSpec();
+    // A second period so the zoom selectors (Vanaf/Tot -> From/To) render.
+    s.series[0].points.push(
+      point({
+        resultId: 'q2-2021',
+        periodCode: '2021KW02',
+        periodLabel: '2021 2e kwartaal',
+        value: 6,
+        formattedValue: '6,0',
+      }),
+    );
+    render(
+      <LangProvider lang="en">
+        <ChartView spec={s} />
+      </LangProvider>,
+    );
+    const fromSelect = screen.getByRole('combobox', { name: 'From' });
+    const toSelect = screen.getByRole('combobox', { name: 'To' });
+    expect(within(fromSelect).getByText('2021 Q1')).toBeInTheDocument();
+    expect(within(toSelect).getByText('2021 Q2')).toBeInTheDocument();
+    // The translated label also appears bound to the plotted point itself
+    // (the axis tick's own display string), not just the range selectors.
+    expect(screen.getAllByText('2021 Q1').length).toBeGreaterThan(0);
+  });
+
+  it('the whole-card digit scan still passes on an English chart (every numeric token stays a spec string)', () => {
+    const s = englishWordListSpec({
+      provisionalNote: 'Voorlopige cijfers (2021) zijn gemarkeerd met *.',
+      nullNotes: ['2020: geen gegevens beschikbaar (geheim).'],
+    });
+    const { container } = render(
+      <LangProvider lang="en">
+        <ChartView spec={s} />
+      </LangProvider>,
+    );
+    scanForUnboundDigits(
+      container,
+      [
+        s.title,
+        s.unit,
+        s.attributionLine,
+        s.attribution.tableId,
+        s.attribution.syncedAt,
+        s.provisionalNote ?? '',
+        ...s.nullNotes,
+        ...Object.keys(s.dimLabels),
+        ...Object.values(s.dimLabels),
+        ...s.series.flatMap((se) => se.points.flatMap((p) => [p.formattedValue ?? '', p.periodLabel])),
+      ].filter(Boolean),
+    );
+  });
+
+  it('bakes the ENGLISH attribution line into the export markup, matching what the card shows', async () => {
+    let capturedBlob: Blob | undefined;
+    (URL as unknown as Record<string, unknown>).createObjectURL = vi.fn((blob: Blob) => {
+      capturedBlob = blob;
+      return 'blob:mock';
+    });
+    (URL as unknown as Record<string, unknown>).revokeObjectURL = vi.fn();
+
+    render(
+      <LangProvider lang="en">
+        <ChartView spec={englishWordListSpec()} />
+      </LangProvider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Download' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Download as SVG' }));
+
+    expect(capturedBlob).toBeDefined();
+    const markup = await capturedBlob!.text();
+    expect(markup).toContain(
+      'Source: CBS StatLine, table 83693NED — Consumentenvertrouwen. Data synced on 2026-09-01. Period: 2021 1e kwartaal. License: CC BY 4.0.',
+    );
+
+    delete (URL as unknown as Record<string, unknown>).createObjectURL;
+    delete (URL as unknown as Record<string, unknown>).revokeObjectURL;
+  });
+
+  it('a per-chart language override wins over the app language: LangProvider lang="en" + choosing Nederlands flips this ONE chart to Dutch', () => {
+    render(
+      <LangProvider lang="en">
+        <ChartView spec={englishWordListSpec()} />
+      </LangProvider>,
+    );
+    // The app is English by default: the panel trigger and tabs read English.
+    expect(screen.getByRole('tab', { name: 'Line' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Style' }));
+    const languageSelect = screen.getByRole('combobox', { name: 'Chart language' });
+    fireEvent.change(languageSelect, { target: { value: 'nl' } });
+
+    // The per-chart override now wins: the WHOLE card, panel included,
+    // switches to Dutch even though the app itself stays English.
+    expect(screen.getByRole('tab', { name: 'Lijn' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Staaf' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Opmaak' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Consumentenvertrouwen' })).toBeInTheDocument();
   });
 });
