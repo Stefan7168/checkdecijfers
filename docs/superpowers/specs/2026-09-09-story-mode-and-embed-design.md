@@ -271,3 +271,90 @@ branch + PR (#118). `EMBED_TOKEN_SECRET` and `PRO_ACCOUNT_EMAILS` are owner-set 
 the session. No migration: both features ride migration 028 for counting only. Backend suite
 solo (~35 min). Visual checks on production in the owner's Chrome (the hidden Browser pane never
 hydrates the chart subtree).
+
+---
+
+## Part C — Frame styling and the Style pop-up (owner-approved 2026-09-09, session 92, later the same day)
+
+**The ask (owner, in chat):** "when people download the graph, it looks too boring" — a background colour or
+gradient chosen by hex, or an uploaded background image, plus padding, rounded corners, shadow, inset
+and aspect ratio; it belongs with the styling, so the Style button becomes a pop-up. **Owner decisions
+(three questions, 2026-09-09):** (1) the frame shows ON SCREEN and in the download — what you see is what
+you get; (2) an uploaded image lives only in the reader's browser for this chart, never on our servers;
+(3) the Style button opens a FLOATING PANEL beside the chart (the chart stays visible and changes live),
+not a centred window and not the panel under the chart.
+
+### C1. The Style pop-up
+
+- `ChartConfigPanel` becomes a floating, non-modal panel: `role="dialog"` (not `aria-modal`), anchored
+  to the right edge of the viewport (`position: fixed; right: 1rem; top: 5rem; width: 22rem; max-height:
+  calc(100vh - 6rem); overflow-y: auto`), rendered through a portal into `document.body` so the dock's
+  `overflow-hidden` cannot clip it (the portal is for POSITION only — the open state stays in
+  `ChartView` as today, the lesson of session 91 was about moving a BUTTON with a portal). Below `lg`
+  (< 1024 px) it becomes a full-screen sheet with a fixed header holding a small live preview of the
+  chart (a second `ChartView` in `frameless preview` mode: no controls) and the tabs scrolling under it.
+- Tabs: Grafiek / Kleuren / Lettertype (unchanged) + **Kader / Frame** (C2). The header keeps the
+  chart-language select; the footer keeps Standaard, the "why no pie chart" note and the account row.
+- Open/close: the same `openPanel` state (`'style' | 'story' | null`); Escape and a Close button close
+  and refocus the trigger; a click outside does NOT close (the reader is adjusting the chart behind it).
+  One panel per page: opening Style on chart B closes it on chart A (the state lives per `ChartView`,
+  so a module-level "which chart owns the panel" signal is needed — a tiny context in the layout:
+  `StylePanelOwnerContext` holding the owning `domId`).
+- The panel under the chart (option A layout, session 91) is retired; the Story panel keeps that slot.
+
+### C2. The Frame tab — presentation keys (extend `ChartPresentation`, ADR 039)
+
+All keys are plain enums or hex strings; `sanitizeOverrides` allow-lists them; the resolver applies no
+locks (a frame is applicable in every chart form, including Tabel — the table gets the same frame).
+
+| key | values | default |
+|---|---|---|
+| `frameBackground` | `'none'` \| `{ kind: 'solid', hex }` \| `{ kind: 'gradient', from: hex, to: hex, angle: 135 }` \| `{ kind: 'image' }` | `'none'` |
+| `framePadding` | `none` \| `small` \| `medium` \| `large` (0 / 16 / 32 / 56 px) | `none` |
+| `frameCorners` | `square` \| `rounded` \| `veryRounded` (0 / 12 / 28 px) | `square` |
+| `frameShadow` | `none` \| `soft` \| `strong` | `none` |
+| `frameInset` | `none` \| `small` \| `large` (the chart sits on a card inside the background: 0 / 12 / 24 px card padding, white/`--card` fill, corners follow `frameCorners`) | `none` |
+| `frameAspect` | `auto` \| `16:9` \| `4:5` \| `1:1` \| `1.91:1` | `auto` |
+
+- Gradient presets (six, named in words: Dawn, Ocean, Forest, Berry, Slate, Sand) are pairs of hex
+  values in `chart-presentation.ts`; a custom gradient is two hex pickers. The angle is fixed at 135°.
+- **The image never enters the presentation object** (it is not serialisable into the account default
+  and must never reach the server): `ChartView` keeps `frameImage: string | null` (an object URL from
+  `URL.createObjectURL(file)`, revoked on replace/unmount/spec swap) in component state; `frameBackground
+  = { kind: 'image' }` only says "use the browser-held image"; if the image is absent (a saved default,
+  a fresh chart) the resolver degrades `{ kind: 'image' }` to `'none'`. Accepted types: png/jpeg/webp,
+  max 5 MB (refused with a plain message); the file is read with `FileReader` to a data URL for the
+  export (C3) and shown via CSS `background-image` on screen.
+- "Save as my default" saves every frame key except `{ kind: 'image' }` (dropped to `'none'`, said in
+  the status line: "the picture is not saved").
+- Contrast guard: with a background set, `judgeColor` is re-run for every series colour against the
+  frame's effective backdrop (the inset card colour when inset is on, else the background colour or the
+  gradient's two ends); a refusal keeps the palette colour and warns, exactly like the Kleuren tab.
+- Counter: `frame_changed` (once per control change) joins `CHART_STYLE_EVENTS`.
+
+### C3. Rendering and export
+
+- On screen: a `ChartFrame` wrapper (`web/components/chart-frame.tsx`) around the chart's export
+  container: background (colour / CSS gradient / `background-image` cover), padding, `border-radius`,
+  `box-shadow`, the inset card, and `aspect-ratio` on the frame with the chart scaled to fit (the
+  `ResponsiveContainer` fills the frame's inner box; the attribution line and badge stay INSIDE the
+  frame, under the chart, never cropped — the chart shrinks instead).
+- Export (`chart-download.tsx`): `attributedSvgMarkup` gains a `frame` argument and wraps the chart
+  svg in an outer `<svg>` of the frame's size: a `<rect>` (solid), a `<linearGradient>` + `<rect>`
+  (gradient) or an `<image href={dataUrl}>` with `preserveAspectRatio="xMidYMid slice"` (image),
+  `rx` for corners, an `<feDropShadow>` filter for the shadow, the inset card as a second `<rect>`, the
+  chart `<svg>` nested with `x/y/width/height` inside the padding + inset, the attribution text inside
+  the frame. PNG rasterises the outer svg (the data-URL image is inlined, so the `<img>` path still
+  works; a 5 MB cap keeps the data URL sane). SVG keeps the image as base64 (large but self-contained).
+- The Story ring/outline, highlight dimming and the zoom disclosure are unchanged; the frame carries no
+  text, so the whole-card digit scans are unaffected (a test renders a framed chart and re-runs them).
+- Embed (Part B, later): the embed route renders the frame from the query-string-free presentation
+  saved with the chart? NO — the embed is frozen from the audit record which has no presentation; a
+  framed embed is a follow-up (the frame would ride the token as a compact param set).
+
+### C4. Not in v1
+
+Free pixel inputs; custom shadow colours; image position/zoom controls; text overlays; saving the image
+with the account (owner decision 2); a frame on the homepage curated charts' download (they use the same
+`ChartView`, so it comes for free on screen — nothing to exclude); templates/presets beyond the six
+gradients.
