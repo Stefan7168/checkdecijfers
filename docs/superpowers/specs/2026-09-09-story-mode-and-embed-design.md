@@ -291,8 +291,7 @@ not a centred window and not the panel under the chart.
   calc(100vh - 6rem); overflow-y: auto`), rendered through a portal into `document.body` so the dock's
   `overflow-hidden` cannot clip it (the portal is for POSITION only — the open state stays in
   `ChartView` as today, the lesson of session 91 was about moving a BUTTON with a portal). Below `lg`
-  (< 1024 px) it becomes a full-screen sheet with a fixed header holding a small live preview of the
-  chart (a second `ChartView` in `frameless preview` mode: no controls) and the tabs scrolling under it.
+  (< 1024 px) it becomes a bottom sheet. As built: below `lg` the panel is a bottom sheet (max-height 60vh) with no preview — the chart stays partly visible above it; a preview instance was not built.
 - Tabs: Grafiek / Kleuren / Lettertype (unchanged) + **Kader / Frame** (C2). The header keeps the
   chart-language select; the footer keeps Standaard, the "why no pie chart" note and the account row.
 - Open/close: the same `openPanel` state (`'style' | 'story' | null`); Escape and a Close button close
