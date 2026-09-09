@@ -144,3 +144,14 @@ describe('StatCard — PNG download failure surfaces', () => {
     expect(await screen.findByText('Downloaden lukte niet in deze browser.')).toBeInTheDocument();
   });
 });
+
+describe('StatCard — en (WP218 phase 4)', () => {
+  it('renders the attribution line in English with the same table id and date', () => {
+    render(
+      <LangProvider lang="en">
+        <StatCard data={data()} />
+      </LangProvider>,
+    );
+    expect(screen.getByText('CBS StatLine · table 82931NED · synced 2026-07-03 · checkdecijfers.nl')).toBeInTheDocument();
+  });
+});

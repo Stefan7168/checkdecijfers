@@ -312,6 +312,7 @@ const nl = {
   'statCard.provisional': 'voorlopig',
   'statCard.downloadPng': 'Download als afbeelding',
   'statCard.downloadFailed': 'Downloaden lukte niet in deze browser.',
+  'statCard.attributionLine': '{source} · tabel {table} · gesynchroniseerd {date} · checkdecijfers.nl',
 
   // theme-toggle.tsx — English today, Dutch added as the nl default (design
   // §3): the pins move from the literal English strings to these nl values.
@@ -703,6 +704,7 @@ const en: Messages = {
   'statCard.provisional': 'provisional',
   'statCard.downloadPng': 'Download as image',
   'statCard.downloadFailed': 'Download did not work in this browser.',
+  'statCard.attributionLine': '{source} · table {table} · synced {date} · checkdecijfers.nl',
 
   'themeToggle.groupLabel': 'Theme',
   'themeToggle.light': 'Light theme',

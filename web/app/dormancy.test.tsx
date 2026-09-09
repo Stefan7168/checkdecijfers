@@ -89,6 +89,14 @@ describe('WP135 dormancy — flag OFF renders today, byte-identical (⟨A5⟩)',
     expect(redirect).toHaveBeenCalledWith('/');
   });
 
+  it('/geschiedenis renders its heading in English when the language cookie says so (WP218 phase 4)', async () => {
+    vi.stubEnv('WORKSPACE_ENABLED', '1');
+    const { getLang } = await import('../lib/i18n/server.ts');
+    vi.mocked(getLang).mockResolvedValueOnce('en');
+    render(await GeschiedenisPage());
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('History — Check de Cijfers');
+  });
+
   it('/geschiedenis opts out of static prerendering (#135 residual, same bug as /login)', () => {
     expect(geschiedenisDynamic).toBe('force-dynamic');
   });
