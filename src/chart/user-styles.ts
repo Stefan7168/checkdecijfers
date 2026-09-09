@@ -29,6 +29,11 @@ export const CHART_STYLE_EVENTS = [
   // `sumChartStyleEventsInMonth` sums to enforce `BRAND_FETCHES_PER_MONTH`
   // below.
   'brand_fetch',
+  // Story mode (session 92, spec 2026-09-09-story-mode-and-embed-design.md):
+  // once per story opened, once per step the reader lands on. Anonymous
+  // counts only, like every other event here.
+  'story_open',
+  'story_step',
 ] as const;
 export type ChartStyleEvent = (typeof CHART_STYLE_EVENTS)[number];
 

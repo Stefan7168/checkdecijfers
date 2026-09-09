@@ -18,7 +18,8 @@ vi.mock('../backend/chart/user-styles.ts', () => ({
   // (src/chart/user-styles.ts) — mirrored here so this mock never drifts
   // from what isChartStyleEvent actually validates against. 'brand_fetch'
   // joined the same enum with the global monthly Brandfetch cap (owner
-  // decision 2026-09-09).
+  // decision 2026-09-09). 'story_open' and 'story_step' joined for story
+  // mode (session 92).
   CHART_STYLE_EVENTS: [
     'panel_open',
     'option_changed',
@@ -26,6 +27,8 @@ vi.mock('../backend/chart/user-styles.ts', () => ({
     'default_forgotten',
     'brand_applied',
     'brand_fetch',
+    'story_open',
+    'story_step',
   ],
 }));
 
@@ -54,6 +57,8 @@ describe('countChartStyleEvent', () => {
     'default_forgotten',
     'brand_applied',
     'brand_fetch',
+    'story_open',
+    'story_step',
   ] as const)(
     'records a valid event (%s) via the store, using the real db and a fresh date',
     async (event) => {

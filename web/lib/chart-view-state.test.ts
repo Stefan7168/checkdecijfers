@@ -336,3 +336,28 @@ describe('presentation slice (WP218)', () => {
     expect(s.presentation).toEqual({});
   });
 });
+
+describe('setView (story mode: restore the reader\'s own view in one action)', () => {
+  it('replaces hiddenKeys, highlightedKey and periodRange together and leaves form and presentation alone', () => {
+    let state = initialViewState('line');
+    state = chartViewReducer(state, { type: 'setForm', form: 'area' });
+    state = chartViewReducer(state, { type: 'setPresentation', patch: { lineWidth: 'thick' } });
+    state = chartViewReducer(state, { type: 'toggleSeries', key: 's1' });
+    state = chartViewReducer(state, {
+      type: 'setView',
+      view: { hiddenKeys: new Set(['s2']), highlightedKey: 's0', periodRange: ['2020JJ00', '2022JJ00'] },
+    });
+    expect(state.form).toBe('area');
+    expect(state.presentation).toEqual({ lineWidth: 'thick' });
+    expect([...state.hiddenKeys]).toEqual(['s2']);
+    expect(state.highlightedKey).toBe('s0');
+    expect(state.periodRange).toEqual(['2020JJ00', '2022JJ00']);
+  });
+
+  it('copies the given Set, so a later mutation of the caller\'s Set never leaks into state', () => {
+    const hidden = new Set(['s1']);
+    const state = chartViewReducer(initialViewState('line'), { type: 'setView', view: { hiddenKeys: hidden, highlightedKey: null, periodRange: null } });
+    hidden.add('s2');
+    expect([...state.hiddenKeys]).toEqual(['s1']);
+  });
+});

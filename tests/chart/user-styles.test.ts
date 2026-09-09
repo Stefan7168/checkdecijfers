@@ -299,6 +299,18 @@ describe('recordChartStyleEvent', () => {
       ]);
     });
   });
+
+  it('accepts the story-mode events (they are plain rows in the same table)', async () => {
+    await withDb(async (db) => {
+      await recordChartStyleEvent(db, 'story_open', new Date('2026-01-02T10:00:00Z'));
+      await recordChartStyleEvent(db, 'story_step', new Date('2026-01-02T10:00:00Z'));
+      await recordChartStyleEvent(db, 'story_step', new Date('2026-01-02T11:00:00Z'));
+      expect(await usageRows(db)).toEqual([
+        { event: 'story_open', day: '2026-01-02', count: 1 },
+        { event: 'story_step', day: '2026-01-02', count: 2 },
+      ]);
+    });
+  });
 });
 
 describe('sumChartStyleEventsInMonth', () => {

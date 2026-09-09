@@ -28,6 +28,11 @@ export type ChartViewAction =
   | { type: 'setPeriodRange'; range: [string, string] | null }
   | { type: 'setPresentation'; patch: PresentationOverrides }
   | { type: 'resetPresentation' }
+  | /** Story mode (session 92): restore the reader's own hidden/highlight/zoom
+   * state in ONE action when the story closes — three separate dispatches
+   * would render three intermediate views. `form` and `presentation` are
+   * deliberately not part of this: the story never touches them. */
+  { type: 'setView'; view: Pick<ChartViewState, 'hiddenKeys' | 'highlightedKey' | 'periodRange'> }
   | { type: 'reset'; initialForm: ChartForm };
 
 export function initialViewState(initialForm: ChartForm): ChartViewState {
@@ -60,6 +65,13 @@ export function chartViewReducer(state: ChartViewState, action: ChartViewAction)
       return { ...state, presentation: { ...state.presentation, ...action.patch } };
     case 'resetPresentation':
       return { ...state, presentation: {} };
+    case 'setView':
+      return {
+        ...state,
+        hiddenKeys: new Set(action.view.hiddenKeys),
+        highlightedKey: action.view.highlightedKey,
+        periodRange: action.view.periodRange,
+      };
     case 'reset':
       return initialViewState(action.initialForm);
     default:
