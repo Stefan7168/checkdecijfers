@@ -63,6 +63,11 @@ export function ChartFrame({ frame, image, children }: { frame: FrameValues; ima
           // width makes the ratio yield to the min-height instead.
           width: '100%',
           maxWidth: '100%',
+          // …and the frame's intrinsic (min-content) width must not be
+          // min-height × ratio either, or the CARD grows past the viewport
+          // on a phone (battle test round 3): min-width 0 drops that
+          // automatic minimum, so the card stays as wide as the screen.
+          minWidth: 0,
           boxSizing: 'border-box',
           minHeight: CHART_MIN_HEIGHT_PX + 2 * (FRAME_PADDING_PX[frame.framePadding] + FRAME_INSET_PX[frame.frameInset]),
           display: 'flex',

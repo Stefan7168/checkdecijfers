@@ -159,6 +159,7 @@ describe('ChartFrame', () => {
     // …and never grows sideways past the card to keep the ratio.
     expect(wrapper.style.width).toBe('100%');
     expect(wrapper.style.maxWidth).toBe('100%');
+    expect(wrapper.style.minWidth).toBe('0px');
   });
 
   it('auto aspect (default) sets no aspect-ratio style', () => {
