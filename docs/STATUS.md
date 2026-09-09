@@ -9,6 +9,62 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
+**▶ SESSION 91 (2026-09-09, AUTONOMOUS — the owner's last words were "Start executing, work
+autonomously … when I come back I expect everything to be done") — THE WHOLE WP218 CHART STYLING
+PROGRAMME (ALL SIX PHASES) BUILT, REVIEWED AND VERIFIED ON BRANCH `wp218-chart-styling`, OPENED AS
+A PULL REQUEST FOR THE OWNER'S REVIEW (CLAUDE.md #118 rule (b): autonomous → branch + PR). NOTHING
+MERGED, NOTHING LIVE.**
+- **Built (41 commits, `867393d`..`eab25b6`, Subagent-Driven Development: 20 implementation tasks
+  on Sonnet, a fresh Sonnet reviewer per task, one Opus whole-branch review + fix round):**
+  phase 0/1 the "Opmaak" panel on every chart (Grafiek / Kleuren / Lettertype tabs; thickness in
+  four named steps, markers, grid, axis lines, label angle, value labels, baseline; per-series
+  colour with the R11 ring guard; curated Google fonts) — ADR [039](decisions/039-chart-presentation-panel.md);
+  phase 2 the account default ("Bewaar als mijn standaard", migration 028, GDPR retention leg,
+  self-service delete); phase 6 the anonymous usage counter ([#220](open-questions.md)); phase 3
+  brand colours + font via Brandfetch (cache table, migration 029, five lookups per user per day,
+  key-gated); phase 4 the NL | EN switch for the whole interface with charts following it and a
+  per-chart language choice, CBS words via a hand-written word list ([#219](open-questions.md),
+  ADR [040](decisions/040-interface-language-switch.md)); phase 5 two more honest chart types
+  (Vlak = area, Liggend = horizontal bar) grown into the Weergave switch after a research read-back.
+- **Verified before the push (all at `eab25b6`):** root + web typecheck clean; web suite 1121/1121
+  (83 files); backend suite 2191/2191 (142 files, run solo); hermetic benchmark suite 28/28 green
+  (its gates: every answer task passes, every refusal task refuses, zero fabricated numbers);
+  real `next build` clean; docs conventions test 11/11; Opus whole-branch review "Ready after
+  fixes" → all nine findings fixed in `eab25b6`, re-reviewed Approved; LOW-effort review pass on
+  the fix commit 0 findings. Browser checks on the local `web-db` server: the panel in light, dark
+  and 375 px (one real bug found + fixed: tilted labels clipped left), the language switch (cookie,
+  `<html lang>`, English headings via the word list), the five tabs with reasons, the chart-language
+  select and the "why no pie chart" note.
+- **Owner steps (RUNBOOK § "WP218 chart styling — the supervised go-live"):** review + merge the
+  PR; apply migrations 028 + 029 (`npm run db:migrate`); optionally set `BRANDFETCH_API_KEY`
+  (free tier = 100 lookups in TOTAL, then ≈ $99/month — re-check before paying). Until the
+  migrations run: saving a default says "not possible", the counter counts nothing, brand lookup is
+  refused — by design, no error pages.
+- **Decisions taken under "document, don't escalate"** (each with a rollback in ADR 039/040): a
+  two-year retention window for a saved style; a 30-day brand cache; the citation stays Dutch;
+  backend prose stays Dutch on an English chart; first visit follows the browser's language;
+  saving a default never stores a form-locked value. UNCONFIRMED without a key: the Brandfetch
+  endpoint path form (one constant).
+- **Later the same session, owner back in chat — two design canvases and two owner picks BUILT on the
+  same branch:** the owner asked "check if you can optimise the UI first, use /design". Two Claude
+  Design canvases were drawn from the real components (the chart card + its panel:
+  https://claude.ai/code/artifact/bb89df71-447a-4c22-9f19-4b66714eff20; the chat screen:
+  https://claude.ai/code/artifact/49c2358e-8ef4-40df-a51d-21ac4a7fdbc6), each showing the current build
+  beside three options. Picks: chart panel **option A** (compact two-column grid) with the chart on top
+  and the settings under it; chat **option B** (answer card with a source/actions footer) with the
+  like/dislike buttons first, white with a grey border and a light shadow. Built as `0de0390`, `810c5a6`
+  (answer card + the not-helpful panel width fix from review), `e4eee7b`, `d2eabca` (panel under the
+  chart; a first portal-based trigger did not work in a real browser and was replaced by a plain
+  controlled button — lessons-learned), `cafcafe` (throwaway preview route reverted). Web suite
+  1132/1132, typechecks clean, `next build` clean; the answer card verified in the local browser
+  (light + dark, thumbs first, full-width panels); the panel layout verified by tests + DOM order
+  (the hidden Browser pane never hydrates the chart subtree — lessons-learned).
+- **Owner question answered in chat:** GitHub's monthly newsletter is not relevant to us; our
+  GitHub cost is Actions minutes (~10 min per push to `main`); three cheap CI changes proposed
+  (skip docs-only pushes, cancel superseded runs, no double run for PR branches) — awaiting "do it".
+- Unchanged: WP202a go-live steps 2–6 pending (RUNBOOK); #216, #217, #172, #214, #215 tracked.
+Full session entry: [status-archive.md](status-archive.md).
+
 **▶ SESSION 90 (2026-09-09, owner present — the owner pasted the session-89 kickoff and stayed in
 the chat) — the #218 chart-configuration ARCHITECTURE PANEL RAN and the owner answered its 8
 decisions; three small owner UI asks + a per-chat delete SHIPPED to `main`.**
@@ -30,7 +86,7 @@ decisions; three small owner UI asks + a per-chat delete SHIPPED to `main`.**
   thickness as four named steps. Turned into the 6-phase **WP218 chart styling programme** in
   [08-build-plan.md](08-build-plan.md) — **awaiting the owner's "go" and phase order** (cheapest-first
   proposed: panel → account save → Brandfetch → EN/NL switch → chart types → counter; the owner
-  may want the language switch earlier). **Nothing of #218 is built.** B and C knowingly override
+  may want the language switch earlier). **Nothing of #218 was built in session 90 — session 91 built all six phases, see above.** B and C knowingly override
   the owner's own 2026-09-08 cheapest-mechanism default (outside service + database now); named
   in chat, the owner's call.
 - **Shipped, 3 commits on `main` (`6e2a66b`, `2880b57`, `e6a7ede`), owner-present direct push after

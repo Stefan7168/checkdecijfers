@@ -4,8 +4,9 @@
 // server-built ChartSpec for on-screen display. See docs/decisions/ for the
 // full ADR.
 import type { ChartSpec } from '../backend/chart/types.ts';
+import type { PresentationOverrides } from './chart-presentation.ts';
 
-export type ChartForm = 'line' | 'bar' | 'table';
+export type ChartForm = 'line' | 'area' | 'bar' | 'hbar' | 'table';
 
 export interface ChartViewState {
   form: ChartForm;
@@ -13,6 +14,11 @@ export interface ChartViewState {
   highlightedKey: string | null;
   /** Inclusive [fromPeriodCode, toPeriodCode], or null for the full fetched range. */
   periodRange: [string, string] | null;
+  /** WP218 (ADR 039): plain user overrides on the stock look; the resolver
+   * (chart-presentation.ts) turns them into effective values per render, so a
+   * stale override can never apply to a newly-unsafe spec. Cleared by
+   * `reset` — owner decision E (session 90): each chart starts fresh. */
+  presentation: PresentationOverrides;
 }
 
 export type ChartViewAction =
@@ -20,10 +26,12 @@ export type ChartViewAction =
   | { type: 'toggleSeries'; key: string }
   | { type: 'setHighlight'; key: string | null }
   | { type: 'setPeriodRange'; range: [string, string] | null }
+  | { type: 'setPresentation'; patch: PresentationOverrides }
+  | { type: 'resetPresentation' }
   | { type: 'reset'; initialForm: ChartForm };
 
 export function initialViewState(initialForm: ChartForm): ChartViewState {
-  return { form: initialForm, hiddenKeys: new Set(), highlightedKey: null, periodRange: null };
+  return { form: initialForm, hiddenKeys: new Set(), highlightedKey: null, periodRange: null, presentation: {} };
 }
 
 export function chartViewReducer(state: ChartViewState, action: ChartViewAction): ChartViewState {
@@ -48,6 +56,10 @@ export function chartViewReducer(state: ChartViewState, action: ChartViewAction)
       return { ...state, highlightedKey: action.key };
     case 'setPeriodRange':
       return { ...state, periodRange: action.range };
+    case 'setPresentation':
+      return { ...state, presentation: { ...state.presentation, ...action.patch } };
+    case 'resetPresentation':
+      return { ...state, presentation: {} };
     case 'reset':
       return initialViewState(action.initialForm);
     default:
@@ -65,6 +77,49 @@ export function chartViewReducer(state: ChartViewState, action: ChartViewAction)
  */
 export function lineFormAllowed(spec: Pick<ChartSpec, 'kind'>, seriesCount: number): boolean {
   return !(spec.kind === 'bar' && seriesCount > 1);
+}
+
+/**
+ * WP218 phase 5 (Global Constraints): a filled area encodes magnitude, so it
+ * is offered ONLY for a single time series — a multi-series area would cover
+ * other series' markers and gaps, and a comparison (bar-kind) has no time
+ * axis for a fill to trace across.
+ */
+export function areaFormAllowed(spec: Pick<ChartSpec, 'kind'>, seriesCount: number): boolean {
+  return spec.kind === 'line' && seriesCount === 1;
+}
+
+/**
+ * WP218 phase 5 (Global Constraints): a horizontal bar is offered ONLY for a
+ * comparison (bar-kind spec) — a time series reads chronologically
+ * left-to-right, which a category axis of regions would break.
+ */
+export function hbarFormAllowed(spec: Pick<ChartSpec, 'kind'>): boolean {
+  return spec.kind === 'bar';
+}
+
+/**
+ * WP218 phase 5 (Global Constraints): "presentation carries over on a type
+ * switch ... a form that becomes disallowed after a same-instance spec swap
+ * falls back exactly like the existing line->bar guard." One function so
+ * both the render (Task 2) and every test share the SAME fallback policy —
+ * area falls back to line when line still fits, else bar; hbar falls back
+ * to bar; line falls back to bar exactly as before this phase; bar/table are
+ * never gated and pass through unchanged.
+ */
+export function fallbackForm(form: ChartForm, spec: Pick<ChartSpec, 'kind'>, seriesCount: number): ChartForm {
+  switch (form) {
+    case 'area':
+      if (areaFormAllowed(spec, seriesCount)) return 'area';
+      return lineFormAllowed(spec, seriesCount) ? 'line' : 'bar';
+    case 'hbar':
+      return hbarFormAllowed(spec) ? 'hbar' : 'bar';
+    case 'line':
+      return lineFormAllowed(spec, seriesCount) ? 'line' : 'bar';
+    case 'bar':
+    case 'table':
+      return form;
+  }
 }
 
 /**

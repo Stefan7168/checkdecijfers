@@ -4,6 +4,8 @@
 'use server';
 
 import { redirect } from 'next/navigation';
+import { getLang } from '../../lib/i18n/server.ts';
+import { t } from '../../lib/i18n/messages.ts';
 import { createClient } from '../../lib/supabase-server.ts';
 
 export interface SignInResult {
@@ -11,10 +13,14 @@ export interface SignInResult {
   error: string | null;
 }
 
+// WP218 phase 4 (#219): a Server Action cannot see the client's LangProvider,
+// so it reads getLang() itself and returns the already-translated string
+// (design doc §2.4/§3).
 export async function signInWithMagicLink(formData: FormData): Promise<SignInResult> {
+  const lang = await getLang();
   const email = String(formData.get('email') ?? '').trim();
   if (!email) {
-    return { ok: false, error: 'E-mailadres is verplicht.' };
+    return { ok: false, error: t(lang, 'login.emailRequired') };
   }
 
   const supabase = await createClient();
@@ -27,7 +33,7 @@ export async function signInWithMagicLink(formData: FormData): Promise<SignInRes
 
   if (error) {
     console.error('signInWithMagicLink failed:', error);
-    return { ok: false, error: 'Er ging iets mis bij het versturen van de inloglink. Probeer het opnieuw.' };
+    return { ok: false, error: t(lang, 'login.magicLinkFailed') };
   }
   return { ok: true, error: null };
 }
@@ -46,7 +52,8 @@ export async function signInWithGoogle(): Promise<SignInResult> {
   });
   if (error || !data?.url) {
     console.error('signInWithGoogle failed:', error);
-    return { ok: false, error: 'Inloggen met Google is niet gelukt. Probeer het opnieuw of gebruik de inloglink.' };
+    const lang = await getLang();
+    return { ok: false, error: t(lang, 'login.googleFailed') };
   }
   redirect(data.url); // next/navigation — throws NEXT_REDIRECT, never returns
 }

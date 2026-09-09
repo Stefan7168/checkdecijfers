@@ -57,12 +57,21 @@ vi.mock('../backend/answer/context/index.ts', () => ({
 vi.mock('../backend/answer/llm/client.ts', () => ({ AnthropicLlmClient: vi.fn() }));
 vi.mock('../backend/websearch/index.ts', () => ({ AnthropicWebSearchClient: vi.fn() }));
 
-// #65: the durable error reporter — stubbed to a resolved no-op so the
-// exception-path tests below stay silent; its own behavior (fail-open, the
-// throwing-logger pin) is covered in actions-errorlog.test.ts.
-vi.mock('../lib/error-report.ts', () => ({ reportError: vi.fn().mockResolvedValue(undefined) }));
+// #65: the durable error reporter — hoisted (unlike a plain inline factory)
+// so the WP218 phase 2 tests below can assert it was called; stubbed to a
+// resolved no-op so the exception-path tests stay silent otherwise. Its own
+// fail-open behavior (the throwing-logger pin) is covered in
+// actions-errorlog.test.ts.
+const errorReport = vi.hoisted(() => ({ reportError: vi.fn().mockResolvedValue(undefined) }));
+vi.mock('../lib/error-report.ts', () => errorReport);
 
-import { askQuestion, replyToClarification } from './actions.ts';
+// WP218 phase 2: the account-level chart-style wipe deleteMyQuestionHistory
+// calls after deleteUserQuestionHistory — mocked at its own module so the
+// tests below can drive it independently of the real store.
+const chartStyles = vi.hoisted(() => ({ deleteUserChartStyle: vi.fn() }));
+vi.mock('../backend/chart/user-styles.ts', () => chartStyles);
+
+import { askQuestion, deleteMyQuestionHistory, replyToClarification } from './actions.ts';
 
 const fakeDb = {} as Db;
 // #149: guardRequestId now validates UUID shape (mirrors trial-actions.ts's
@@ -409,5 +418,39 @@ describe('replyToClarification — pending input bound (untrusted client payload
     const { gated } = await replyToClarification({ ...validPending, questionNl: atLimit }, '2024', RID);
     expect(gated.kind).toBe('ok');
     expect(billing.chargeAndRun).toHaveBeenCalledTimes(1);
+  });
+});
+
+// WP218 phase 2: the account-level chart-style wipe. deleteMyQuestionHistory
+// already redacts audit_answers rows (src/answer/audit/retention.ts); this
+// pins that it ALSO wipes the user's saved chart style (a separate store,
+// user_chart_styles) with the SAME user id, and — the important one — that a
+// throwing style delete never changes the reported deletedCount or escapes
+// the action, matching the fail-soft discipline the retention job's own
+// chartStyles leg documents for this store.
+describe('deleteMyQuestionHistory — the chart-style leg (WP218 phase 2)', () => {
+  it('calls deleteUserChartStyle with the same db and user id, after the question-history redaction', async () => {
+    audit.deleteUserQuestionHistory.mockResolvedValue([{ id: 1 }, { id: 2 }]);
+    chartStyles.deleteUserChartStyle.mockResolvedValue(true);
+
+    const result = await deleteMyQuestionHistory();
+
+    expect(result).toEqual({ deletedCount: 2 });
+    expect(chartStyles.deleteUserChartStyle).toHaveBeenCalledWith(fakeDb, 'user-1');
+    expect(errorReport.reportError).not.toHaveBeenCalled();
+  });
+
+  it('still returns the count when the style delete throws — never reported as a failed history delete', async () => {
+    audit.deleteUserQuestionHistory.mockResolvedValue([{ id: 1 }]);
+    const styleError = new Error('user_chart_styles is down');
+    chartStyles.deleteUserChartStyle.mockRejectedValue(styleError);
+
+    await expect(deleteMyQuestionHistory()).resolves.toEqual({ deletedCount: 1 });
+
+    expect(errorReport.reportError).toHaveBeenCalledWith(
+      'deleteMyQuestionHistory',
+      styleError,
+      { userId: 'user-1' },
+    );
   });
 });

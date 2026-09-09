@@ -2,13 +2,22 @@
 // the product's own ChartView (R4 attribution and all), and an empty feed
 // renders NOTHING — the fail-safe is "no section", never a broken landing.
 import { cleanup, render, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ChartSpec } from '../backend/chart/types.ts';
 
 const { getOntdekCharts } = vi.hoisted(() => ({ getOntdekCharts: vi.fn() }));
 vi.mock('../lib/ontdek.ts', () => ({ getOntdekCharts }));
 
+// WP218 phase 4 (#219): OntdekCharts now reads getLang() itself -- jsdom has
+// no Next.js request context for the real cookies()/headers() reads.
+const { getLang } = vi.hoisted(() => ({ getLang: vi.fn() }));
+vi.mock('../lib/i18n/server.ts', () => ({ getLang }));
+
 import { OntdekCharts } from './ontdek.tsx';
+
+beforeEach(() => {
+  getLang.mockResolvedValue('nl');
+});
 
 afterEach(() => {
   cleanup();
@@ -108,5 +117,16 @@ describe('OntdekCharts', () => {
     ).toBeInTheDocument();
     // Primary spec's title shows by default.
     expect(screen.getByText('Werkloosheidspercentage')).toBeInTheDocument();
+  });
+});
+
+// WP218 phase 4 (#219): proves the language switch reaches this surface.
+describe('OntdekCharts — en', () => {
+  it('renders the English heading and body under getLang() -> "en"', async () => {
+    getLang.mockResolvedValue('en');
+    getOntdekCharts.mockResolvedValue([{ slug: 'inflatie', spec: spec('Jaarmutatie CPI', '86141NED') }]);
+    render(await OntdekCharts());
+    expect(screen.getByText('Discover the Netherlands in charts')).toBeInTheDocument();
+    expect(screen.getByText(/Straight from our database of official CBS figures/)).toBeInTheDocument();
   });
 });

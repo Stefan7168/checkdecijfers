@@ -10,7 +10,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import type { ComposedResponse } from '../backend/answer/respond/types.ts';
 import type { TrialAskOutcome } from '../app/trial-actions.ts';
-import { TRIAL_COPY } from '../lib/trial-copy.ts';
+import { useT } from '../lib/i18n/lang-provider.tsx';
 import { askTrialQuestion } from '../app/trial-actions.ts';
 import { ChartView } from './chart.tsx';
 
@@ -24,17 +24,8 @@ interface TrialMessage {
 
 type Notice = 'pot_empty' | 'ip_limit' | 'used_up' | 'error' | null;
 
-// From the SHARED copy (#184): the landing gate can now discover pot_empty,
-// used_up and ip_limit at page render, and this component shows the same states
-// after a submit. Two spellings of one state is the drift this closes.
-const NOTICE_TEXT: Record<Exclude<Notice, null>, string> = {
-  pot_empty: TRIAL_COPY.pot_empty,
-  ip_limit: TRIAL_COPY.ip_limit,
-  used_up: TRIAL_COPY.used_up,
-  error: TRIAL_COPY.error,
-};
-
 export function LoginNudge({ text }: { text: string }) {
+  const t = useT();
   return (
     <div className="rounded-lg border border-border bg-card px-4 py-3">
       <p className="text-muted-foreground">{text}</p>
@@ -42,7 +33,7 @@ export function LoginNudge({ text }: { text: string }) {
         href="/login"
         className="mt-3 inline-block rounded-md bg-primary px-4 py-2 font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
       >
-        Maak gratis een account
+        {t('common.createFreeAccount')}
       </Link>
     </div>
   );
@@ -54,6 +45,17 @@ export function TrialChat({ initialQuestionsLeft }: { initialQuestionsLeft: numb
   const [busy, setBusy] = useState(false);
   const [left, setLeft] = useState(initialQuestionsLeft);
   const [notice, setNotice] = useState<Notice>(null);
+  const t = useT();
+  // From the SHARED catalogue (#184, now folded into messages.ts — WP218
+  // phase 4 #219): the landing gate can discover pot_empty, used_up and
+  // ip_limit at page render, and this component shows the same states after
+  // a submit. Two spellings of one state is the drift this closes.
+  const NOTICE_TEXT: Record<Exclude<Notice, null>, string> = {
+    pot_empty: t('trial.potEmpty'),
+    ip_limit: t('trial.ipLimit'),
+    used_up: t('trial.usedUp'),
+    error: t('trial.error'),
+  };
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -107,10 +109,9 @@ export function TrialChat({ initialQuestionsLeft }: { initialQuestionsLeft: numb
               // the clarification is read-only; doorvragen needs an account
               // (or the visitor's next trial question, better phrased).
               <p className="mt-2 border-t border-border pt-2 text-xs text-muted-foreground">
-                In het proefpotje kun je niet doorvragen op een verduidelijking — stel je
-                vraag preciezer opnieuw, of{' '}
+                {t('trial.clarificationPrefix')}
                 <Link href="/login" className="text-primary hover:text-primary/80">
-                  maak een gratis account
+                  {t('trial.createAccountInline')}
                 </Link>
                 .
               </p>
@@ -130,8 +131,8 @@ export function TrialChat({ initialQuestionsLeft }: { initialQuestionsLeft: numb
               value={input}
               maxLength={INPUT_MAX}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Bijv. wat is de inflatie nu?"
-              aria-label="Stel je gratis proefvraag"
+              placeholder={t('trial.inputPlaceholder')}
+              aria-label={t('trial.inputAriaLabel')}
               disabled={busy}
               className="w-full rounded-md border border-border bg-card px-3 py-2 text-foreground placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             />
@@ -140,12 +141,12 @@ export function TrialChat({ initialQuestionsLeft }: { initialQuestionsLeft: numb
               disabled={busy || input.trim().length === 0}
               className="rounded-md bg-primary px-4 py-2 font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
-              {busy ? 'Rekenen…' : 'Vraag'}
+              {busy ? t('trial.submitBusy') : t('trial.submitIdle')}
             </button>
           </form>
           <p className="text-xs text-muted-foreground">
-            <span className="tnum">{left}</span> van <span className="tnum">2</span> gratis
-            proefvragen over — geen account nodig.
+            <span className="tnum">{left}</span> {t('trial.of')} <span className="tnum">2</span>{' '}
+            {t('trial.freeQuestionsLeft')}
           </p>
         </>
       )}

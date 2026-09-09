@@ -5,6 +5,7 @@
 // grant in the component is caught here, not in production (ADR 006).
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
+import { LangProvider } from '../lib/i18n/lang-provider.tsx';
 import { AccountPanel } from './account-panel.tsx';
 
 afterEach(cleanup);
@@ -93,5 +94,23 @@ describe('AccountPanel — credits explainer (#76)', () => {
   it('sets the balance in tabular figures', () => {
     render(<AccountPanel balance={80} simplePrice={20} signupGrantCredits={100} />);
     expect(screen.getByText('80 credits').className).toContain('tnum');
+  });
+});
+
+// WP218 phase 4 (#219): proves the language switch reaches this surface.
+describe('AccountPanel — en', () => {
+  it('renders the English labels and explainer under LangProvider lang="en"', () => {
+    render(
+      <LangProvider lang="en">
+        <AccountPanel balance={80} simplePrice={20} signupGrantCredits={100} />
+      </LangProvider>,
+    );
+    expect(screen.getByText('Balance')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Buy credits' })).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Signing up gets you 100 credits once. An ordinary question costs 20 credits — so 100 credits is good for about 5 questions.",
+      ),
+    ).toBeInTheDocument();
   });
 });

@@ -21,6 +21,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { useT } from '../lib/i18n/lang-provider.tsx';
 
 /** The attribution sentence without the trailing separator. */
 export const FOOTER_ATTRIBUTION =
@@ -53,20 +54,21 @@ function useAboutTargetPresent(pathname: string | null): boolean {
 export function SiteFooter() {
   const pathname = usePathname();
   const showAbout = useAboutTargetPresent(pathname);
+  const t = useT();
   return (
     <footer className="flex shrink-0 items-center justify-between gap-3 border-t border-border px-4 py-2.5 text-xs text-muted-foreground">
       <span>
         {showAbout ? FOOTER_PREFIX : FOOTER_ATTRIBUTION}
         {showAbout ? (
           <a href={`#${ABOUT_ANCHOR_ID}`} className="underline underline-offset-2 hover:text-foreground">
-            {FOOTER_ABOUT_LABEL}
+            {t('footer.aboutLabel')}
           </a>
         ) : null}
       </span>
       <Link
         href="/systeemoverzicht"
-        aria-label="Systeemoverzicht"
-        title="Systeemoverzicht"
+        aria-label={t('footer.systemMapLabel')}
+        title={t('footer.systemMapLabel')}
         className="shrink-0 text-muted-foreground hover:text-foreground"
       >
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">

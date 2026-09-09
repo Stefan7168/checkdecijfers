@@ -22,6 +22,8 @@
 
 import { useRef } from 'react';
 import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { LINE_WIDTH_PX, STOCK_PRESENTATION } from '../lib/chart-presentation.ts';
+import { useT } from '../lib/i18n/lang-provider.tsx';
 import {
   AxisTick,
   buildRows,
@@ -60,21 +62,25 @@ function toPlottableSpec(spec: UserChartSpec): PlottableSpec {
   };
 }
 
-const KEYBOARD_HINT = 'Use the arrow keys to move through the chart’s points.';
-
 export function UserChartView({ spec }: { spec: UserChartSpec }) {
+  const t = useT();
   const containerRef = useRef<HTMLDivElement>(null);
   const plottable = toPlottableSpec(spec);
   const { rows, seriesMeta } = buildRows(plottable);
   const plan = valueLabelPlan(plottable);
   const tickByValue = new Map(plan.axisTicks.map((tick) => [tick.value, tick]));
-  const heading = `${spec.yHeaders.join(', ')} by ${spec.xHeader}`;
-  const accessibleName = `Chart: ${heading}`;
+  const keyboardHint = t('userChart.keyboardHint');
+  const heading = t('userChart.heading', { y: spec.yHeaders.join(', '), x: spec.xHeader });
+  const accessibleName = t('userChart.accessibleName', { heading });
   const uploadedOn = spec.provenance.capturedAt.slice(0, 10);
   // `rows.length` is THIS CHART's own plotted x-categories (post filter/limit)
   // — not the dataset's total row count (the profile card shows that,
   // elsewhere) — worded "points plotted" so the two are never conflated.
-  const provenanceLine = `From file ${spec.provenance.displayName}, uploaded ${uploadedOn} · ${rows.length} points plotted`;
+  const provenanceLine = t('userChart.provenanceLine', {
+    file: spec.provenance.displayName,
+    date: uploadedOn,
+    count: rows.length,
+  });
 
   return (
     // H2: the dashed frame is what tells a user-data chart apart from a CBS
@@ -89,7 +95,7 @@ export function UserChartView({ spec }: { spec: UserChartSpec }) {
       <div ref={containerRef} className="mt-2 h-64 w-full touch-pan-y">
         <ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 640, height: 256 }}>
           {spec.kind === 'line' ? (
-            <LineChart data={rows} margin={{ top: 8, right: 8, left: 8, bottom: 8 }} desc={KEYBOARD_HINT} aria-label={accessibleName}>
+            <LineChart data={rows} margin={{ top: 8, right: 8, left: 8, bottom: 8 }} desc={keyboardHint} aria-label={accessibleName}>
               {/* Theme axis/grid colours (AXIS_COLOR/GRID_COLOR, chart.tsx):
                 * Recharts' literal #666/#ccc defaults are illegible in dark mode. */}
               <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} />
@@ -110,14 +116,14 @@ export function UserChartView({ spec }: { spec: UserChartSpec }) {
                   dataKey={s.key}
                   name={s.label}
                   stroke={s.color}
-                  strokeWidth={2}
+                  strokeWidth={LINE_WIDTH_PX[STOCK_PRESENTATION.lineWidth]}
                   connectNulls={false}
                   isAnimationActive={false}
                 />
               ))}
             </LineChart>
           ) : (
-            <BarChart data={rows} margin={{ top: 8, right: 8, left: 8, bottom: 8 }} desc={KEYBOARD_HINT} aria-label={accessibleName}>
+            <BarChart data={rows} margin={{ top: 8, right: 8, left: 8, bottom: 8 }} desc={keyboardHint} aria-label={accessibleName}>
               <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} />
               <XAxis dataKey="periodLabel" stroke={AXIS_COLOR} tick={{ fill: AXIS_COLOR }} />
               <YAxis tick={false} width={16} domain={yAxisDomain(spec.kind)} stroke={AXIS_COLOR} />

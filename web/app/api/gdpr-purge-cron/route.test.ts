@@ -20,8 +20,12 @@ const { runRetentionPurge, maybeAlertRetentionPurge, FakePartialError } = vi.hoi
   maybeAlertRetentionPurge: vi.fn(),
   FakePartialError: class extends Error {
     auditRowsRedacted: number;
-    leg: 'trial' | 'errorLog';
-    constructor(message: string, auditRowsRedacted: number, leg: 'trial' | 'errorLog' = 'trial') {
+    leg: 'trial' | 'errorLog' | 'chartStyles';
+    constructor(
+      message: string,
+      auditRowsRedacted: number,
+      leg: 'trial' | 'errorLog' | 'chartStyles' = 'trial',
+    ) {
       super(message);
       this.name = 'RetentionPurgePartialError';
       this.auditRowsRedacted = auditRowsRedacted;
@@ -39,6 +43,15 @@ vi.mock('../../../backend/billing/index.ts', () => ({
   countPurgeableTrialBookkeeping: vi.fn(),
   purgeExpiredTrialBookkeeping: vi.fn(),
   trialRetentionCutoff: vi.fn(),
+}));
+// WP218 phase 2: the chart-style leg's four injected functions — mocked at
+// the module per the same convention as billing above, so this route's own
+// contract stays isolated from src/chart/user-styles.ts's real behavior.
+vi.mock('../../../backend/chart/user-styles.ts', () => ({
+  chartStyleRetentionCutoff: vi.fn(),
+  countPurgeableChartStyles: vi.fn(),
+  purgeExpiredChartStyles: vi.fn(),
+  chartStylesTablePresent: vi.fn(),
 }));
 vi.mock('../../../lib/db.ts', () => ({ getDb: vi.fn(() => ({ query: vi.fn() })) }));
 
@@ -140,6 +153,23 @@ describe('gdpr-purge-cron route', () => {
     expect(detail).toContain('12 redaction(s) DID commit');
     expect(detail).toContain('the 2-year leg and the 90-day trial leg both ran; only the error_log leg did not');
     expect(detail).not.toContain('only the 90-day trial leg did not');
+  });
+
+  // WP218 phase 2: the third leg value. Before this test, the route's ternary
+  // was a binary trial/errorLog branch that would have silently mislabeled a
+  // chartStyles failure as an error_log failure — exactly the
+  // self-contradicting-message bug the review above already caught once.
+  it('says what COMMITTED when the chart-style leg fails after the audit leg, without blaming the other legs', async () => {
+    runRetentionPurge.mockRejectedValue(new FakePartialError('chart-style leg failed', 12, 'chartStyles'));
+    const res = await GET(req('Bearer sekrit'));
+    expect(res.status).toBe(500);
+    const detail = maybeAlertRetentionPurge.mock.calls[0]![0].detail as string;
+    expect(detail).toContain('12 redaction(s) DID commit');
+    expect(detail).toContain(
+      'the 2-year leg, the 90-day trial leg, and the error_log leg all ran; only the chart-style leg did not',
+    );
+    expect(detail).not.toContain('only the 90-day trial leg did not');
+    expect(detail).not.toContain('only the error_log leg did not');
   });
 
   // Migration 020 has been live since the 2026-07-17 go-live, so on THIS

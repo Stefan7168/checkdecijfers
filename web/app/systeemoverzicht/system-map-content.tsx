@@ -1,14 +1,17 @@
 // The actual system-map content, as a Client Component: a Server Component
 // can't hold the language-toggle's useState (and metadata can't be exported
 // from a Client Component either — that's why this is split from page.tsx).
-// English is the default per owner instruction; Dutch is the second option.
-// Persisted per-viewer in localStorage only (never shared, never read by the
-// server) — a private convenience, not state that needs to survive anywhere
-// else.
+// WP218 phase 4 (#219): the initial language now follows the app-wide
+// switch (useLang()) instead of a hardcoded 'en' default; a visitor can
+// still flip this ONE page independently via the toggle below, persisted
+// per-viewer in localStorage only (never shared, never read by the server).
+// The page no longer overrides `document.documentElement.lang` while
+// mounted — the root layout owns that attribute now.
 'use client';
 
 import { useEffect, useState } from 'react';
 import { SystemMapDiagram } from '../../components/system-map-diagram.tsx';
+import { useLang } from '../../lib/i18n/lang-provider.tsx';
 
 type Lang = 'en' | 'nl';
 type StatusKind = 'live' | 'frozen' | 'planned';
@@ -469,30 +472,22 @@ function LangToggle({ lang, onChange }: { lang: Lang; onChange: (lang: Lang) => 
 }
 
 export function SystemMapContent() {
-  const [lang, setLang] = useState<Lang>('en');
+  const appLang = useLang();
+  const [lang, setLang] = useState<Lang>(appLang);
 
-  // Read the visitor's last choice after mount only — the server (and the
-  // first client render, to match it) always renders 'en', so there is no
-  // hydration mismatch; this effect just updates state once, afterwards.
+  // Read the visitor's last choice on this ONE page after mount only — the
+  // server (and the first client render, to match it) render the app-wide
+  // language via useLang(), so there is no hydration mismatch; this effect
+  // just updates state once, afterwards, if this page's own toggle was used
+  // before.
   useEffect(() => {
     try {
       const stored = window.localStorage.getItem(STORAGE_KEY);
       if (stored === 'en' || stored === 'nl') setLang(stored);
     } catch {
-      // Private browsing / storage blocked: fall back to the 'en' default.
+      // Private browsing / storage blocked: fall back to the app language.
     }
   }, []);
-
-  // Keep the document's lang attribute honest for assistive tech while this
-  // page is toggled to English; restore the site's own Dutch default on
-  // unmount so a client-side navigation away doesn't leak the override.
-  useEffect(() => {
-    const previous = document.documentElement.lang;
-    document.documentElement.lang = lang;
-    return () => {
-      document.documentElement.lang = previous;
-    };
-  }, [lang]);
 
   function handleChange(next: Lang) {
     setLang(next);

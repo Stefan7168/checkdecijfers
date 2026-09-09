@@ -6,6 +6,7 @@
 // the action and moves aria-pressed.
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { LangProvider } from '../lib/i18n/lang-provider.tsx';
 import { FeedbackButtons } from './feedback-buttons.tsx';
 
 afterEach(cleanup);
@@ -94,5 +95,29 @@ describe('FeedbackButtons', () => {
     await waitFor(() => expect(down).toHaveAttribute('aria-pressed', 'true'));
     expect(up).toHaveAttribute('aria-pressed', 'false');
     expect(submit).toHaveBeenCalledTimes(2);
+  });
+});
+
+// WP218 phase 4 (#219): proves the language switch reaches this surface.
+describe('FeedbackButtons — en', () => {
+  it('renders the English labels under LangProvider lang="en"', () => {
+    render(
+      <LangProvider lang="en">
+        <FeedbackButtons auditId={1} submit={okSubmit()} />
+      </LangProvider>,
+    );
+    expect(screen.getByRole('button', { name: 'Helpful answer' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Not helpful' })).toBeInTheDocument();
+  });
+});
+
+describe('FeedbackButtons — inside the answer-card footer (session 91 review)', () => {
+  it('marks its 👎 panel so the flex parents can grow to full width, and its root grows with it', () => {
+    render(<FeedbackButtons auditId={1} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Niet nuttig' }));
+    const panel = document.querySelector('[data-slot="feedback-panel"]');
+    expect(panel).not.toBeNull();
+    expect(panel!.className).toContain('basis-full');
+    expect(panel!.parentElement!.className).toContain('has-[[data-slot=feedback-panel]]:basis-full');
   });
 });

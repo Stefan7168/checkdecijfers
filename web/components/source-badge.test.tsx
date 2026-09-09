@@ -5,6 +5,7 @@
 // degrades honestly (no date without syncedAt; no badge without a table id).
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
+import { LangProvider } from '../lib/i18n/lang-provider.tsx';
 import { SourceBadge, syncDateLabel } from './source-badge.tsx';
 
 afterEach(cleanup);
@@ -54,5 +55,17 @@ describe('SourceBadge', () => {
   it('renders nothing without a table id (principle c: never a badge pointing nowhere)', () => {
     const { container } = render(<SourceBadge tableId="" source="cbs" />);
     expect(container).toBeEmptyDOMElement();
+  });
+});
+
+// WP218 phase 4 (#219): proves the language switch reaches this surface.
+describe('SourceBadge — en', () => {
+  it('translates "synced" but keeps the source name, table id and date verbatim', () => {
+    render(
+      <LangProvider lang="en">
+        <SourceBadge tableId="86141NED" source="cbs" syncedAt="2026-07-03T12:00:00.000Z" />
+      </LangProvider>,
+    );
+    expect(screen.getByRole('link', { name: 'CBS 86141NED · synced 2026-07-03' })).toBeInTheDocument();
   });
 });

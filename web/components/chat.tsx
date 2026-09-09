@@ -12,7 +12,7 @@
 // branch here explicitly and must never fall into the generic catch below.
 'use client';
 
-import { Check, Database, FileSpreadsheet, Globe, Link2, Paperclip, Plug } from 'lucide-react';
+import { Check, Copy, Database, Download, FileSpreadsheet, Globe, Link2, Paperclip, Plug } from 'lucide-react';
 import { unstable_isUnrecognizedActionError } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { askQuestion, replyToClarification } from '../app/actions.ts';
@@ -31,6 +31,8 @@ import { buildAnswerProof } from '../lib/answer-proof.ts';
 import { buildCitation } from '../lib/citation.ts';
 import { buildAnswerCsv } from '../lib/csv.ts';
 import type { AnswerCsv } from '../lib/csv.ts';
+import { useT } from '../lib/i18n/lang-provider.tsx';
+import type { MessageKey } from '../lib/i18n/messages.ts';
 import { statCardData } from '../lib/stat-card-data.ts';
 // WP135 (ADR 033 ⟨A3⟩): the ChatMessage/AnswerView shape and the meta/smalltalk
 // kind reclassification live in a shared pure leaf so thread replay
@@ -50,6 +52,7 @@ import { AnswerSkeleton } from './loading-skeletons.tsx';
 import { SourceBadge } from './source-badge.tsx';
 import { StatCard } from './stat-card.tsx';
 import { Button } from './ui/button.tsx';
+import { Card, CardContent, CardFooter } from './ui/card.tsx';
 import { Input } from './ui/input.tsx';
 
 // Session 87 visual redesign (owner decision, docs/superpowers/specs/
@@ -101,11 +104,6 @@ export interface ChatAttachments {
   onUploadFile: (file: File) => Promise<{ ok: boolean; message?: string }>;
 }
 
-/** WP129+130 (#130, ADR 032): the header on the unverified-web block — a fixed
- * constant so the disclaimer copy is one reviewable source (owner-approved,
- * Q1/Q3). */
-const WEB_SECTION_HEADER = 'Van het web (niet door checkdecijfers geverifieerd)';
-
 /** Citation links render DOMAIN-ONLY (Q3): the hostname minus a leading
  * `www.`. The URL is already http(s)-filtered server-side (src/websearch/
  * client.ts); a parse failure falls back to the raw string rather than
@@ -127,17 +125,18 @@ function citationDomain(url: string): string {
  * domain-only with rel="noopener noreferrer". Web content structurally never
  * reaches any other prompt (single-shot call) — this block is its only surface. */
 function WebSectionView({ section }: { section: WebSection }) {
+  const t = useT();
   if (section.status === 'failed') {
     // One honest line; the settlement already refunded the add-on (⟨W4⟩/Q6).
     const line =
       section.code === 'insufficient_balance'
-        ? 'De webzoekopdracht is niet uitgevoerd (onvoldoende saldo) — geen extra kosten.'
-        : 'De webzoekopdracht is niet gelukt — geen extra kosten.';
+        ? t('chat.webSectionFailedInsufficientBalance')
+        : t('chat.webSectionFailedGeneric');
     return <p className="mt-2 text-xs text-muted-foreground">{line}</p>;
   }
   return (
     <div className="mt-2 max-w-full rounded border border-border bg-muted px-3 py-2 text-xs text-muted-foreground">
-      <p className="mb-1 font-medium text-muted-foreground">{WEB_SECTION_HEADER}</p>
+      <p className="mb-1 font-medium text-muted-foreground">{t('chat.webSectionHeader')}</p>
       <ul className="space-y-1">
         {section.findings.slice(0, 4).map((finding, i) => (
           <li key={i}>
@@ -166,12 +165,13 @@ function WebSectionView({ section }: { section: WebSection }) {
  * round-trip, nothing stored. Mirrors the stat card's failure honesty. */
 function DownloadCsvButton({ csv }: { csv: AnswerCsv }) {
   const [failed, setFailed] = useState(false);
+  const t = useT();
   return (
     <>
       <Button
         type="button"
-        variant="link"
-        size="sm"
+        variant="ghost"
+        size="xs"
         onClick={() => {
           try {
             const url = URL.createObjectURL(
@@ -187,10 +187,11 @@ function DownloadCsvButton({ csv }: { csv: AnswerCsv }) {
           }
         }}
       >
-        Download als CSV
+        <Download aria-hidden className="size-3.5" />
+        {t('chat.downloadCsv')}
       </Button>
       {failed ? (
-        <span className="text-xs text-destructive">Downloaden lukte niet in deze browser.</span>
+        <span className="text-xs text-destructive">{t('chat.downloadCsvFailed')}</span>
       ) : null}
     </>
   );
@@ -199,11 +200,12 @@ function DownloadCsvButton({ csv }: { csv: AnswerCsv }) {
 /** WP20 #78: copies the citation; flips to a transient confirmation. */
 function CopyCitationButton({ citation }: { citation: string }) {
   const [copied, setCopied] = useState(false);
+  const t = useT();
   return (
     <Button
       type="button"
-      variant="link"
-      size="sm"
+      variant="ghost"
+      size="xs"
       onClick={async () => {
         try {
           await navigator.clipboard.writeText(citation);
@@ -215,21 +217,27 @@ function CopyCitationButton({ citation }: { citation: string }) {
         }
       }}
     >
-      {copied ? 'Gekopieerd!' : 'Kopieer als citaat'}
+      <Copy aria-hidden className="size-3.5" />
+      {copied ? t('chat.copyCitationCopied') : t('chat.copyCitation')}
     </Button>
   );
 }
 
 /** GatedResponse -> the plain string this chat renders for its non-'ok'
- * kinds. 'ok' is unwrapped by the caller (it carries the real answer). */
-function gatedMessageText(result: Exclude<GatedResponse, { kind: 'ok' }>): string {
+ * kinds. 'ok' is unwrapped by the caller (it carries the real answer). `t`
+ * is passed in rather than called via the hook here — this is a plain
+ * function, not a component, so it takes the caller's own `useT()` result. */
+function gatedMessageText(
+  result: Exclude<GatedResponse, { kind: 'ok' }>,
+  t: (key: MessageKey, vars?: Record<string, string | number>) => string,
+): string {
   switch (result.kind) {
     case 'unauthenticated':
-      return 'Je bent niet ingelogd. Log in via /login om een vraag te stellen.';
+      return t('chat.unauthenticated');
     case 'duplicate_request':
-      return 'Deze vraag wordt al verwerkt — even geduld.';
+      return t('chat.duplicateRequest');
     case 'insufficient_credits':
-      return `Je hebt niet genoeg credits (${result.balance} over, ${result.required} nodig). Koop credits via /credits.`;
+      return t('chat.insufficientCredits', { balance: result.balance, required: result.required });
   }
 }
 
@@ -291,6 +299,7 @@ export function Chat({
   onBusyChange?: (busy: boolean) => void;
 } = {}) {
   const threadAware = onThreadId !== undefined;
+  const t = useT();
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages ?? []);
   const [pending, setPending] = useState<PendingClarification | null>(null);
   // WP135 (ADR 033 D1): the thread this chat is currently in — seeded from the
@@ -476,13 +485,13 @@ export function Chat({
     try {
       const result = await attachments.onUploadFile(file);
       if (!result.ok) {
-        setUploadError(result.message ?? 'Something went wrong reading that file. Please try again.');
+        setUploadError(result.message ?? t('chat.fileReadError'));
       }
       // A success switches the workspace's handoff to the new dataset thread
       // (onUploadFile's own job, mirroring onThreadId) — this component has
       // nothing further to render; it is about to unmount.
     } catch {
-      setUploadError('Something went wrong reading that file. Please try again.');
+      setUploadError(t('chat.fileReadError'));
     } finally {
       setUploadBusy(false);
     }
@@ -589,7 +598,7 @@ export function Chat({
           {
             role: 'assistant',
             kind: 'info',
-            text: gatedMessageText(gated),
+            text: gatedMessageText(gated, t),
             chart: null,
             cost: null,
             citation: null,
@@ -724,7 +733,7 @@ export function Chat({
         // debit lives inside it (the billing gate is the action's first step).
         setStaleDeploy(true);
       } else {
-        setError('Er ging iets mis bij het ophalen van het antwoord. Probeer het opnieuw.');
+        setError(t('chat.genericError'));
       }
     } finally {
       setBusy(false);
@@ -740,12 +749,23 @@ export function Chat({
   const pricingHint = !pricing
     ? null
     : websearch && webSelected && selectedSources.size > 0
-      ? `Een vraag kost ~${pricing.simple + websearch.addonPrice} credits (waarvan ${websearch.addonPrice} voor internet) · saldo: ${pricing.balance} credits. ` +
-        `Stel ik eerst een verduidelijkingsvraag, dan kost die ${pricing.clarification} credits en krijg je de rest terug.`
+      ? t('chat.pricingBoth', {
+          total: pricing.simple + websearch.addonPrice,
+          addon: websearch.addonPrice,
+          balance: pricing.balance,
+          clarification: pricing.clarification,
+        })
       : websearch && webSelected
-        ? `Een vraag kost ~${websearch.addonPrice} credits (er wordt tijdelijk ${pricing.simple + websearch.addonPrice} gereserveerd) · saldo: ${pricing.balance} credits.`
-        : `Een vraag kost ~${pricing.simple} credits · saldo: ${pricing.balance} credits. ` +
-          `Stel ik eerst een verduidelijkingsvraag, dan kost die ${pricing.clarification} credits en krijg je de rest terug.`;
+        ? t('chat.pricingWebOnly', {
+            addon: websearch.addonPrice,
+            reserved: pricing.simple + websearch.addonPrice,
+            balance: pricing.balance,
+          })
+        : t('chat.pricingDefault', {
+            simple: pricing.simple,
+            balance: pricing.balance,
+            clarification: pricing.clarification,
+          });
 
   return (
     // Session 87 visual redesign: no frame of its own — the workspace card
@@ -763,7 +783,7 @@ export function Chat({
           if (message.role === 'redacted') {
             return (
               <div key={i} className="text-left">
-                <p className="text-sm italic text-muted-foreground">Deze vraag is verwijderd.</p>
+                <p className="text-sm italic text-muted-foreground">{t('chat.redactedMessage')}</p>
               </div>
             );
           }
@@ -782,9 +802,9 @@ export function Chat({
               * strings from the owner-approved row. */}
             {message.kind === 'refusal' ? (
               <div className="mb-0.5 flex items-center gap-2 text-xs">
-                <span className="font-semibold text-muted-foreground">Dit kon ik niet beantwoorden</span>
+                <span className="font-semibold text-muted-foreground">{t('chat.refusalHeader')}</span>
                 <span className="rounded-full bg-muted px-2 py-0.5 text-muted-foreground">
-                  geen antwoord = geen gok
+                  {t('chat.refusalBadge')}
                 </span>
               </div>
             ) : null}
@@ -799,103 +819,138 @@ export function Chat({
               * card aligned right; assistant text is plain, aligned left. A
               * clarification keeps its amber wash (#84: it must read as a
               * question back, not as an answer). */}
-            <div
-              className={
-                'max-w-full whitespace-pre-wrap text-sm ' +
-                (message.role === 'user'
-                  ? 'max-w-[85%] rounded-lg border border-border bg-background px-3.5 py-2.5 text-left text-foreground'
-                  : message.kind === 'clarification'
-                    ? 'inline-block rounded-lg border border-warning/30 bg-warning-soft px-3.5 py-2.5 text-foreground'
-                    : 'text-[15px] leading-relaxed text-foreground')
-              }
-            >
-              {message.answerView ? message.answerView.body : message.text}
-            </div>
-            {/* WP23 (#90): the structural lines an answer's text used to
-              * carry inline — nothing may be lost (R5/R11 surfaces). */}
-            {/* WP26 mechanism B (ADR 024): the defaulted-axis disclosure. It
-              * sits directly under the body and at BODY-adjacent weight, not as
-              * muted fine print: it qualifies the number the reader just read
-              * ("this is the national figure") and carries the correction path.
-              * Burying it would keep the letter of the safelist and lose its
-              * point. */}
-            {message.answerView?.assumptionLine ? (
-              <p className="mt-1 text-sm text-muted-foreground">{message.answerView.assumptionLine}</p>
-            ) : null}
-            {message.answerView?.stalenessWarning ? (
-              <p className="mt-1 text-sm text-warning">{message.answerView.stalenessWarning}</p>
-            ) : null}
-            {message.answerView?.definitionLine ? (
-              <p className="mt-1 text-xs text-muted-foreground">{message.answerView.definitionLine}</p>
-            ) : null}
-            {/* #39: the alternate-reading disclosure — plain text under the
-              * definition it qualifies (the clickable affordance is #89,
-              * deliberately not built here). */}
-            {message.answerView?.alternatesLine ? (
-              <p className="mt-1 text-xs text-muted-foreground">{message.answerView.alternatesLine}</p>
-            ) : null}
-            {message.answerView?.markingLine ? (
-              <p className="mt-1 text-xs text-muted-foreground">{message.answerView.markingLine}</p>
-            ) : null}
-            {message.answerView ? (
-              <div className="mt-1 flex max-w-full flex-wrap items-center gap-2 border-t border-border pt-1">
-                {/* WP23 (#71): the voorlopig pill at message level. */}
-                {message.provisional ? (
-                  <span className="rounded-full bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning">
-                    voorlopig
+            {/* Session 91 (owner-chosen "Option B — answer card"): a
+              * validated ANSWER renders inside a shadcn Card — body + the
+              * WP23/#90 structural lines in CardContent, the source +
+              * actions in a CardFooter (the old border-t attribution row
+              * collapses into it; R4 attribution stays fully visible, never
+              * shortened). Every other message kind (refusal / clarification
+              * / info) keeps exactly today's plain bubble below. */}
+            {message.kind === 'answer' && message.answerView ? (
+              <Card size="sm" className="max-w-full">
+                <CardContent className="flex flex-col gap-1">
+                  <div className="max-w-full whitespace-pre-wrap text-sm text-[15px] leading-relaxed text-foreground">
+                    {message.answerView.body}
+                  </div>
+                  {/* WP26 mechanism B (ADR 024): the defaulted-axis
+                    * disclosure. It sits directly under the body and at
+                    * BODY-adjacent weight, not as muted fine print: it
+                    * qualifies the number the reader just read ("this is the
+                    * national figure") and carries the correction path.
+                    * Burying it would keep the letter of the safelist and
+                    * lose its point. */}
+                  {message.answerView.assumptionLine ? (
+                    <p className="text-sm text-muted-foreground">{message.answerView.assumptionLine}</p>
+                  ) : null}
+                  {message.answerView.stalenessWarning ? (
+                    <p className="text-sm text-warning">{message.answerView.stalenessWarning}</p>
+                  ) : null}
+                  {message.answerView.definitionLine ? (
+                    <p className="text-xs text-muted-foreground">{message.answerView.definitionLine}</p>
+                  ) : null}
+                  {/* #39: the alternate-reading disclosure — plain text under
+                    * the definition it qualifies (the clickable affordance is
+                    * #89, deliberately not built here). */}
+                  {message.answerView.alternatesLine ? (
+                    <p className="text-xs text-muted-foreground">{message.answerView.alternatesLine}</p>
+                  ) : null}
+                  {message.answerView.markingLine ? (
+                    <p className="text-xs text-muted-foreground">{message.answerView.markingLine}</p>
+                  ) : null}
+                </CardContent>
+                <CardFooter className="flex flex-wrap items-center justify-between gap-2 border-t border-border bg-muted/40">
+                  {/* LEFT: the source — the voorlopig pill (#71), the FULL
+                    * R4 attribution sentence (always visible, never
+                    * shortened — Huisstijl rule 7: quiet, text-xs
+                    * text-muted-foreground), and the #86/#170(1) SourceBadge
+                    * deep link. */}
+                  <span className="inline-flex max-w-full flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                    {message.provisional ? (
+                      <span className="rounded-full bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning">
+                        {t('chat.provisionalBadge')}
+                      </span>
+                    ) : null}
+                    <span>{message.answerView.attribution}</span>
+                    <SourceBadge
+                      tableId={message.answerView.tableId}
+                      source={message.answerView.source}
+                      syncedAt={message.answerView.syncedAt}
+                    />
                   </span>
+                  {/* RIGHT: the actions — feedback FIRST (#128; only real
+                    * answers with a stored audit row get them — an answer
+                    * whose audit write failed, auditId null, gets none), then
+                    * the #70/#79/#89 drill-through trigger, citation, CSV,
+                    * then the cost line last. `has-[[role=region]]:basis-full`
+                    * grows this group to the footer's full width the moment
+                    * the proof panel (role="region") opens inside it, so the
+                    * panel's own order-last basis-full (answer-proof.tsx)
+                    * spans the whole footer instead of just this group's
+                    * shrink-to-fit width. */}
+                  {/* …and the same for the 👎 panel (data-slot="feedback-panel",
+                    * feedback-buttons.tsx), which the answer-card review found
+                    * squeezed to the group's width: FeedbackButtons' own root
+                    * grows to basis-full when its panel is open, and so does
+                    * this group, so the panel spans the whole footer. */}
+                  <div className="flex flex-wrap items-center gap-1 has-[[role=region]]:basis-full has-[[data-slot=feedback-panel]]:basis-full">
+                    {message.auditId !== null ? <FeedbackButtons auditId={message.auditId} /> : null}
+                    {message.proof !== null ? <AnswerProof proof={message.proof} /> : null}
+                    {message.citation !== null ? <CopyCitationButton citation={message.citation} /> : null}
+                    {message.csv !== null ? <DownloadCsvButton csv={message.csv} /> : null}
+                    {message.cost !== null ? (
+                      <span className="text-xs text-muted-foreground tnum">
+                        {t('chat.costCredits', { n: message.cost })}
+                      </span>
+                    ) : null}
+                  </div>
+                </CardFooter>
+              </Card>
+            ) : (
+              <>
+                <div
+                  className={
+                    'max-w-full whitespace-pre-wrap text-sm ' +
+                    (message.role === 'user'
+                      ? 'max-w-[85%] rounded-lg border border-border bg-background px-3.5 py-2.5 text-left text-foreground'
+                      : message.kind === 'clarification'
+                        ? 'inline-block rounded-lg border border-warning/30 bg-warning-soft px-3.5 py-2.5 text-foreground'
+                        : 'text-[15px] leading-relaxed text-foreground')
+                  }
+                >
+                  {message.text}
+                </div>
+                {message.cost !== null ? (
+                  <div className="mt-0.5 text-xs text-muted-foreground tnum">
+                    {t('chat.costCredits', { n: message.cost })}
+                    {/* WP20 #82(c): the reply's price, stated AT the
+                      * clarifying question — client-side caption; the
+                      * pipeline's own deterministic message text stays
+                      * untouched. */}
+                    {message.kind === 'clarification' && pricing
+                      ? t('chat.replyCostSuffix', { price: pricing.simple })
+                      : ''}
+                  </div>
                 ) : null}
-                {/* WP23 (#90) + #170(1): the source chip — the FULL R4
-                  * sentence, always visible; the #86 deep-link now rides the
-                  * SourceBadge (table id + measured sync date, same pinned
-                  * URL builder). Huisstijl rule 7: attribution stays quiet —
-                  * text-xs text-muted-foreground. */}
-                <span className="inline-flex max-w-full flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                  <span>{message.answerView.attribution}</span>
-                  <SourceBadge
-                    tableId={message.answerView.tableId}
-                    source={message.answerView.source}
-                    syncedAt={message.answerView.syncedAt}
-                  />
-                </span>
-              </div>
-            ) : null}
-            {/* WP128 (#128): feedback buttons — only real answers with a
-              * stored audit row get them; refusals, clarifications, info
-              * messages and answers whose audit write failed (auditId null)
-              * do not. Self-contained child: its state and its fail-soft
-              * behavior can never affect the answer display above. */}
-            {message.kind === 'answer' && message.auditId !== null ? (
-              <FeedbackButtons auditId={message.auditId} />
-            ) : null}
-            {message.cost !== null ? (
-              <div className="mt-0.5 text-xs text-muted-foreground tnum">
-                {message.cost} credits
-                {/* WP20 #82(c): the reply's price, stated AT the clarifying
-                  * question — client-side caption; the pipeline's own
-                  * deterministic message text stays untouched. */}
-                {message.kind === 'clarification' && pricing
-                  ? ` · antwoorden op de wedervraag kost ~${pricing.simple} credits`
-                  : ''}
-              </div>
-            ) : null}
-            {message.citation !== null || message.csv !== null || message.proof !== null ? (
-              <div className="mt-0.5 flex flex-wrap items-center gap-3">
-                {/* Session 72 design brief (#70/#79/#89): the drill-through
-                  * trigger is FIRST in this row, same label style as the
-                  * citation/CSV buttons; its panel (self-managed open state)
-                  * wraps onto its own line directly under the row via
-                  * basis-full — and `order-last` (orchestrator review round
-                  * 1) keeps the trigger/citation/CSV buttons together on the
-                  * row's first line regardless of the panel's DOM position,
-                  * so opening it pushes nothing out of the row itself, only
-                  * the panel wraps beneath — still before the chart / dock
-                  * chip / suggestion chips / web section below (D5). */}
-                {message.proof !== null ? <AnswerProof proof={message.proof} /> : null}
-                {message.citation !== null ? <CopyCitationButton citation={message.citation} /> : null}
-                {message.csv !== null ? <DownloadCsvButton csv={message.csv} /> : null}
-              </div>
-            ) : null}
+                {/* Deploy-window-skew fallback (A1): an 'answer' whose
+                  * stored/replayed envelope is too old/minimal for a
+                  * structural answerView (backend/threads/replay.ts's
+                  * extractAnswerView returns null when body/attributionLine
+                  * are missing) still gets its feedback + drill-through +
+                  * citation + CSV actions — just without the card/footer
+                  * treatment, exactly as before the WP218 card redesign. */}
+                {message.kind === 'answer' && message.auditId !== null ? (
+                  <FeedbackButtons auditId={message.auditId} />
+                ) : null}
+                {message.kind === 'answer' &&
+                (message.citation !== null || message.csv !== null || message.proof !== null) ? (
+                  <div className="mt-0.5 flex flex-wrap items-center gap-3">
+                    {message.proof !== null ? <AnswerProof proof={message.proof} /> : null}
+                    {message.citation !== null ? <CopyCitationButton citation={message.citation} /> : null}
+                    {message.csv !== null ? <DownloadCsvButton csv={message.csv} /> : null}
+                  </div>
+                ) : null}
+              </>
+            )}
             {!dockMode && message.chart ? <ChartView spec={message.chart} /> : null}
             {/* WP135 (ADR 033 D4): the in-flow reference chip standing in for a
               * docked visual — clicking activates its dock tab ("in het paneel").
@@ -912,7 +967,7 @@ export function Chat({
                     : PILL)
                 }
               >
-                {message.chart !== null ? 'Grafiek' : 'Kaart'} in het paneel →
+                {message.chart !== null ? t('chat.dockedChipChart') : t('chat.dockedChipCard')}
               </button>
             ) : null}
             {/* WP29 (#73, ADR 029 D3): follow-up chips — styled exactly like
@@ -967,10 +1022,10 @@ export function Chat({
                 * an AnswerSkeleton was ADDED below, this text was NOT removed
                 * — it carries a distinction the skeleton can't. */}
               {websearch && webSelected && selectedSources.size > 0
-                ? 'Bezig met het doorzoeken van CBS-cijfers en het web…'
+                ? t('chat.busyBoth')
                 : websearch && webSelected
-                  ? 'Bezig met het doorzoeken van het web…'
-                  : 'Bezig met het doorzoeken van CBS-cijfers…'}
+                  ? t('chat.busyWebOnly')
+                  : t('chat.busyCbsOnly')}
             </div>
             <AnswerSkeleton />
           </>
@@ -978,16 +1033,15 @@ export function Chat({
         {error ? <div className="text-sm text-destructive">{error}</div> : null}
         {staleDeploy ? (
           <div className="text-sm text-warning">
-            De site is net bijgewerkt, waardoor deze vraag niet is verstuurd (er zijn geen credits
-            afgeschreven).{' '}
+            {t('chat.staleDeployPrefix')}{' '}
             <button
               type="button"
               onClick={() => window.location.reload()}
               className="font-medium underline"
             >
-              Ververs de pagina
+              {t('chat.staleDeployButton')}
             </button>{' '}
-            en stel je vraag daarna opnieuw.
+            {t('chat.staleDeploySuffix')}
           </div>
         ) : null}
         <div ref={bottomRef} />
@@ -1022,7 +1076,7 @@ export function Chat({
                 className={active ? CHIP_ON : CHIP_OFF}
               >
                 {active ? <Check aria-hidden="true" className="size-3.5" /> : <Database aria-hidden="true" className="size-3.5" />}
-                {`${SOURCES[key]!.displayName} data`}
+                {t('chat.sourceDataSuffix', { name: SOURCES[key]!.displayName })}
               </button>
             );
           })}
@@ -1033,7 +1087,7 @@ export function Chat({
             className={webSelected ? CHIP_ON : CHIP_OFF}
           >
             {webSelected ? <Check aria-hidden="true" className="size-3.5" /> : <Globe aria-hidden="true" className="size-3.5" />}
-            Internet
+            {t('chat.internetChip')}
           </button>
         </>
       ) : null}
@@ -1058,7 +1112,7 @@ export function Chat({
           className={CHIP_OFF}
         >
           <Link2 aria-hidden="true" className="size-3.5" />
-          Add link
+          {t('chat.addLink')}
         </button>
         {attachments ? (
           <>
@@ -1076,18 +1130,18 @@ export function Chat({
               className={CHIP_ACTION}
             >
               <Paperclip aria-hidden="true" className="size-3.5" />
-              Upload file
+              {t('chat.uploadFile')}
             </button>
           </>
         ) : (
           <button
             type="button"
             disabled
-            title="Binnenkort beschikbaar: upload een bestand (bijv. PDF)"
+            title={t('chat.uploadFileComingSoonTitle')}
             className={CHIP_SOON}
           >
             <Paperclip aria-hidden="true" className="size-3.5" />
-            Upload file
+            {t('chat.uploadFile')}
           </button>
         )}
         {/* Session 90 (owner request, in chat): a "Link with sheet" entry
@@ -1101,24 +1155,24 @@ export function Chat({
         <button
           type="button"
           disabled
-          title="Binnenkort beschikbaar: koppel een spreadsheet (bijv. Google Sheets)"
+          title={t('chat.linkWithSheetComingSoonTitle')}
           className={CHIP_SOON}
         >
           <FileSpreadsheet aria-hidden="true" className="size-3.5" />
-          Link with sheet
+          {t('chat.linkWithSheet')}
         </button>
         <button
           type="button"
           disabled
-          title="Binnenkort beschikbaar: verbind een databron (bijv. een Postgres-database)"
+          title={t('chat.connectDatabaseComingSoonTitle')}
           className={CHIP_SOON}
         >
           <Plug aria-hidden="true" className="size-3.5" />
-          Connect database
+          {t('chat.connectDatabase')}
         </button>
       </div>
       {nothingSelected ? (
-        <p className="text-xs text-destructive">Selecteer minstens één bron.</p>
+        <p className="text-xs text-destructive">{t('chat.nothingSelectedHint')}</p>
       ) : null}
       {linkRowOpen ? (
         <form
@@ -1132,21 +1186,21 @@ export function Chat({
               setLinkUrl(e.target.value);
               setLinkComingSoon(false);
             }}
-            placeholder="https://example.com/page-with-a-table"
+            placeholder={t('chat.linkUrlPlaceholder')}
             className="min-w-0 flex-1 bg-background"
           />
           <Button type="submit" variant="outline" disabled={!linkUrl.trim()}>
-            Fetch
+            {t('chat.fetchButton')}
           </Button>
         </form>
       ) : null}
       {linkComingSoon ? (
         <p className="text-xs text-muted-foreground">
-          This isn&apos;t available yet — coming soon.
+          {t('chat.linkComingSoonMessage')}
         </p>
       ) : null}
       {attachments && uploadBusy ? (
-        <p className="text-xs text-muted-foreground">Bestand wordt gelezen…</p>
+        <p className="text-xs text-muted-foreground">{t('chat.fileReading')}</p>
       ) : null}
       {attachments && uploadError ? (
         <p className="text-xs text-destructive">{uploadError}</p>
@@ -1162,12 +1216,12 @@ export function Chat({
             // WP26c: a RESCUE pending must not make the box look like it is
             // waiting for an answer — nothing was asked. Only a real
             // clarification round echoes its question here.
-            pending && pending.rescueOnly !== true ? pending.questionNl : 'Stel een vraag…'
+            pending && pending.rescueOnly !== true ? pending.questionNl : t('chat.placeholder')
           }
           className="h-10 flex-1 bg-background px-3.5"
         />
         <Button type="submit" size="lg" className="h-10 px-4" disabled={busy || !input.trim() || nothingSelected}>
-          Verstuur
+          {t('chat.send')}
         </Button>
       </form>
       {pricingHint ? <p className="text-xs text-muted-foreground">{pricingHint}</p> : null}

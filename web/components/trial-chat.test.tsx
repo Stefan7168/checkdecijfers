@@ -4,6 +4,7 @@
 // refunded server-side).
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { LangProvider } from '../lib/i18n/lang-provider.tsx';
 
 const { askTrialQuestion } = vi.hoisted(() => ({ askTrialQuestion: vi.fn() }));
 vi.mock('../app/trial-actions.ts', () => ({ askTrialQuestion }));
@@ -76,5 +77,40 @@ describe('TrialChat', () => {
     await ask('Vraag');
     expect(await screen.findByText(/niet verbruikt/)).toBeInTheDocument();
     expect(screen.getByLabelText('Stel je gratis proefvraag')).toBeInTheDocument();
+  });
+});
+
+// WP218 phase 4 (#219): proves the language switch reaches this surface.
+describe('TrialChat — en', () => {
+  it('renders the English input, placeholder and submit label under LangProvider lang="en"', () => {
+    render(
+      <LangProvider lang="en">
+        <TrialChat initialQuestionsLeft={2} />
+      </LangProvider>,
+    );
+    expect(screen.getByLabelText('Ask your free trial question')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('E.g. what is inflation right now?')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Ask' })).toBeInTheDocument();
+    expect(screen.getByText(/free trial questions left/)).toBeInTheDocument();
+  });
+
+  it('renders the English clarification notice', async () => {
+    askTrialQuestion.mockResolvedValue({
+      kind: 'ok',
+      response: { kind: 'clarification', text: 'Monthly or yearly change?', chart: null },
+      questionsLeft: 1,
+    });
+    render(
+      <LangProvider lang="en">
+        <TrialChat initialQuestionsLeft={2} />
+      </LangProvider>,
+    );
+    fireEvent.change(screen.getByLabelText('Ask your free trial question'), {
+      target: { value: 'What is inflation doing?' },
+    });
+    fireEvent.submit(screen.getByRole('button', { name: /Ask|Computing/ }).closest('form')!);
+    await waitFor(() => expect(askTrialQuestion).toHaveBeenCalled());
+    expect(await screen.findByText(/no follow-up round/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /create a free account/ })).toBeInTheDocument();
   });
 });

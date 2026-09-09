@@ -9,8 +9,10 @@
 // Fail-soft mirror of the action: a failed submit shows the muted Dutch
 // line, resets busy so retry stays possible, and never touches the answer
 // display above it.
+import { ThumbsDown, ThumbsUp } from 'lucide-react';
 import { useState } from 'react';
 import { submitAnswerFeedback } from '../app/actions.ts';
+import { useT } from '../lib/i18n/lang-provider.tsx';
 import { Button } from './ui/button.tsx';
 
 type Verdict = 'up' | 'down';
@@ -27,6 +29,7 @@ export function FeedbackButtons({
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<'idle' | 'thanks' | 'failed'>('idle');
+  const t = useT();
 
   async function send(verdict: Verdict, feedbackText?: string) {
     if (busy) return;
@@ -50,43 +53,45 @@ export function FeedbackButtons({
   }
 
   return (
-    <div className="mt-1">
-      <div className="flex flex-wrap items-center gap-2">
-        <Button
-          type="button"
-          variant={chosen === 'up' ? 'secondary' : 'outline'}
-          size="icon-xs"
-          aria-label="Nuttig antwoord"
-          aria-pressed={chosen === 'up'}
-          disabled={busy}
-          onClick={() => send('up')}
-        >
-          👍
-        </Button>
-        <Button
-          type="button"
-          variant={chosen === 'down' ? 'secondary' : 'outline'}
-          size="icon-xs"
-          aria-label="Niet nuttig"
-          aria-pressed={chosen === 'down'}
-          disabled={busy}
-          onClick={() => setPanelOpen(true)}
-        >
-          👎
-        </Button>
-        {status === 'thanks' ? (
-          <span className="text-xs text-muted-foreground">Bedankt voor je feedback.</span>
-        ) : null}
-        {status === 'failed' ? (
-          <span className="text-xs text-muted-foreground">Feedback kon niet worden opgeslagen.</span>
-        ) : null}
-      </div>
+    <div className="flex flex-wrap items-center gap-2 has-[[data-slot=feedback-panel]]:basis-full">
+      <Button
+        type="button"
+        variant={chosen === 'up' ? 'secondary' : 'outline'}
+        size="xs"
+        className={chosen === 'up' ? undefined : 'bg-background shadow-sm'}
+        aria-label={t('feedback.helpful')}
+        aria-pressed={chosen === 'up'}
+        disabled={busy}
+        onClick={() => send('up')}
+      >
+        <ThumbsUp aria-hidden className="size-3.5" />
+        {t('feedback.helpful')}
+      </Button>
+      <Button
+        type="button"
+        variant={chosen === 'down' ? 'secondary' : 'outline'}
+        size="xs"
+        className={chosen === 'down' ? undefined : 'bg-background shadow-sm'}
+        aria-label={t('feedback.notHelpful')}
+        aria-pressed={chosen === 'down'}
+        disabled={busy}
+        onClick={() => setPanelOpen(true)}
+      >
+        <ThumbsDown aria-hidden className="size-3.5" />
+        {t('feedback.notHelpful')}
+      </Button>
+      {status === 'thanks' ? (
+        <span className="text-xs text-muted-foreground">{t('feedback.thanks')}</span>
+      ) : null}
+      {status === 'failed' ? (
+        <span className="text-xs text-muted-foreground">{t('feedback.failed')}</span>
+      ) : null}
       {panelOpen ? (
-        <div className="mt-2 flex max-w-md flex-col gap-2">
+        <div data-slot="feedback-panel" className="mt-2 flex w-full max-w-md basis-full flex-col gap-2">
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder="Wat kon beter? (optioneel)"
+            placeholder={t('feedback.textPlaceholder')}
             maxLength={2000}
             rows={3}
             className="w-full rounded-md border border-border bg-card p-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
@@ -98,7 +103,7 @@ export function FeedbackButtons({
               disabled={busy}
               onClick={() => send('down', text.trim() === '' ? undefined : text)}
             >
-              Verstuur feedback
+              {t('feedback.submitWithText')}
             </Button>
             <Button
               type="button"
@@ -107,7 +112,7 @@ export function FeedbackButtons({
               disabled={busy}
               onClick={() => send('down')}
             >
-              Overslaan
+              {t('feedback.skip')}
             </Button>
           </div>
         </div>

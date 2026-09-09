@@ -10,6 +10,7 @@
 // inside chartContainerRef). Session-only by owner decision (F): no
 // persistence, nothing here survives a reload.
 import { useEffect, useState } from 'react';
+import { t, type Lang } from '../lib/i18n/messages.ts';
 
 export interface ChartNote {
   id: string;
@@ -29,6 +30,7 @@ export function ChartNotes({
   notes,
   pendingPoint,
   idPrefix,
+  lang = 'nl',
   onSave,
   onCancelPending,
   onDelete,
@@ -40,6 +42,10 @@ export function ChartNotes({
    * happens when Ontdek renders several ChartViews in a grid — never emit
    * the same textarea id. */
   idPrefix: string;
+  /** WP218 phase 4 (#219): the resolved chart language ChartView passes down
+   * — defaults to 'nl' so an existing direct render (a test with no `lang`)
+   * keeps its current Dutch output. */
+  lang?: Lang;
   onSave: (text: string) => void;
   onCancelPending: () => void;
   onDelete: (id: string) => void;
@@ -71,7 +77,7 @@ export function ChartNotes({
   return (
     <div className="mt-3 rounded-lg border border-dashed border-border p-3">
       <div role="heading" aria-level={4} className="text-xs font-semibold text-muted-foreground">
-        Uw aantekeningen (geen CBS-data)
+        {t(lang, 'chart.notes.heading')}
       </div>
       {notes.length > 0 ? (
         <ul className="mt-2 flex flex-col gap-1.5">
@@ -88,7 +94,7 @@ export function ChartNotes({
                 onClick={() => onDelete(note.id)}
                 className="shrink-0 text-xs text-muted-foreground hover:text-foreground"
               >
-                Verwijder
+                {t(lang, 'chart.notes.delete')}
               </button>
             </li>
           ))}
@@ -97,7 +103,7 @@ export function ChartNotes({
       {pendingPoint ? (
         <div className="mt-2 flex flex-col gap-1.5">
           <label htmlFor={noteDraftId} className="text-xs text-muted-foreground">
-            Notitie bij {pendingPoint.seriesLabel} · {pendingPoint.periodLabel}
+            {t(lang, 'chart.notes.draftLabel', { series: pendingPoint.seriesLabel, period: pendingPoint.periodLabel })}
           </label>
           <textarea
             id={noteDraftId}
@@ -118,7 +124,7 @@ export function ChartNotes({
               onClick={save}
               className="min-h-6 rounded-md border border-border px-2 py-0.5 text-xs text-foreground hover:bg-muted"
             >
-              Opslaan
+              {t(lang, 'chart.notes.save')}
             </button>
             <button
               type="button"
@@ -128,7 +134,7 @@ export function ChartNotes({
               }}
               className="min-h-6 rounded-md px-2 py-0.5 text-xs text-muted-foreground hover:bg-muted"
             >
-              Annuleren
+              {t(lang, 'chart.notes.cancel')}
             </button>
           </div>
         </div>

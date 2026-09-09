@@ -19,6 +19,12 @@ import {
   upsertAnswerFeedback,
 } from '../backend/answer/audit/index.ts';
 import { buildConversationContext, validateConversationContext } from '../backend/answer/context/index.ts';
+// WP218 phase 2: the account-level chart-style wipe, called from
+// deleteMyQuestionHistory below. Imported directly from the module, not
+// through backend/chart/index.ts's barrel — that store is file-only
+// (unwired) until migration 028's supervised apply (see the migration's own
+// header), same posture as the retention-job.ts composition roots.
+import { deleteUserChartStyle } from '../backend/chart/user-styles.ts';
 import type { ConversationContext } from '../backend/answer/context/index.ts';
 import { AnthropicLlmClient } from '../backend/answer/llm/client.ts';
 import type { SemanticCheckOptions } from '../backend/answer/compose/index.ts';
@@ -833,6 +839,19 @@ export async function deleteMyQuestionHistory(): Promise<{ deletedCount: number 
     throw new Error('not authenticated');
   }
   const redacted = await deleteUserQuestionHistory(getDb(), userId);
+  // WP218 phase 2: the account-level chart-style wipe rides the same
+  // "delete my question history" action, but it is a SEPARATE store
+  // (user_chart_styles, a preference row — not question history) whose own
+  // failure must never be reported as a failure of the history delete above,
+  // which already committed by this point. deleteUserChartStyle already
+  // degrades to `false` on an absent table (pre-migration-028) instead of
+  // throwing — this try/catch is the belt for any OTHER failure (a real db
+  // error), fail-soft the same way reportError itself is fail-open.
+  try {
+    await deleteUserChartStyle(getDb(), userId);
+  } catch (error) {
+    await reportError('deleteMyQuestionHistory', error, { userId });
+  }
   return { deletedCount: redacted.length };
 }
 

@@ -32,6 +32,7 @@ vi.mock('../app/dataset-actions.ts', () => datasetActions);
 
 import type { ThreadSummary } from '../backend/threads/index.ts';
 import { Workspace } from './workspace.tsx';
+import { LangProvider } from '../lib/i18n/lang-provider.tsx';
 import { SiteHeader } from './site-header.tsx';
 import { FOOTER_ABOUT_LABEL, FOOTER_ATTRIBUTION, FOOTER_PREFIX, SiteFooter } from './site-footer.tsx';
 import { Landing } from './landing.tsx';
@@ -41,7 +42,10 @@ import { Landing } from './landing.tsx';
 // (session 87: the logged-in chat screen dropped the section; the logged-out
 // Landing still has it — same '/' pathname, so the pathname alone can't tell).
 const pathname = vi.hoisted(() => ({ current: '/' }));
-vi.mock('next/navigation', () => ({ usePathname: () => pathname.current }));
+// WP218 phase 4 (#219): SiteHeader now renders <LanguageSwitch/>, which calls
+// useRouter() (router.refresh() after the language cookie is set) — added
+// here alongside the pre-existing usePathname mock the site footer needs.
+vi.mock('next/navigation', () => ({ usePathname: () => pathname.current, useRouter: () => ({ refresh: vi.fn() }) }));
 // Landing embeds OntdekCharts, an ASYNC Server Component inside a Suspense
 // boundary. jsdom renders client-side, where React cannot resolve an async
 // component — the boundary never settles and the root's passive effects
@@ -50,6 +54,11 @@ vi.mock('next/navigation', () => ({ usePathname: () => pathname.current }));
 // section here; the Landing assertions that matter (the anchor target, the
 // copy) live outside it.
 vi.mock('./ontdek.tsx', () => ({ OntdekSectie: () => null }));
+// WP218 phase 4 (#219): Landing is now an async Server Component (await
+// getLang()) — jsdom has no Next.js request context for the real
+// cookies()/headers() reads, so it's mocked here the way every other
+// server-action test in this repo mocks its next/headers-touching seam.
+vi.mock('../lib/i18n/server.ts', () => ({ getLang: vi.fn().mockResolvedValue('nl') }));
 
 Element.prototype.scrollIntoView = vi.fn();
 
@@ -92,7 +101,10 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-function renderWorkspace(initialThreads: ThreadSummary[] = [], opts: { attachments?: { enabled: true } } = {}) {
+function renderWorkspace(
+  initialThreads: ThreadSummary[] = [],
+  opts: { attachments?: { enabled: true }; chartStyle?: unknown } = {},
+) {
   return render(
     <Workspace
       initialBalance={100}
@@ -105,6 +117,16 @@ function renderWorkspace(initialThreads: ThreadSummary[] = [], opts: { attachmen
 }
 
 describe('Workspace — WP135 shell (flag on)', () => {
+  it('renders English under the language provider (WP218 phase 4): the purchase banner dismiss reads Close', () => {
+    render(
+      <LangProvider lang="en">
+        <Workspace initialBalance={100} simplePrice={20} clarificationPrice={10} initialThreads={[]} purchaseSuccess />
+      </LangProvider>,
+    );
+    expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
+    expect(screen.queryByText('Sluiten')).toBeNull();
+  });
+
   it('renders NO footer of its own — the site footer is the only one (owner report 2026-09-03)', () => {
     renderWorkspace();
     expect(document.querySelector('footer')).toBeNull();
@@ -127,11 +149,11 @@ describe('Workspace — WP135 shell (flag on)', () => {
     expect(footer.querySelector('a[href="#over-dit-project"]')).toBeNull();
   });
 
-  it('site footer on the home page WITH the section (Landing): the EXACT byte-pinned attribution string + the gear link', () => {
+  it('site footer on the home page WITH the section (Landing): the EXACT byte-pinned attribution string + the gear link', async () => {
     pathname.current = '/';
     render(
       <>
-        <Landing />
+        {await Landing()}
         <SiteFooter />
       </>,
     );
@@ -149,8 +171,8 @@ describe('Workspace — WP135 shell (flag on)', () => {
     expect(footer.textContent).not.toMatch(/privacy/i);
   });
 
-  it('the home-page anchor target exists on the logged-OUT home too (Landing) — no dead link for visitors', () => {
-    render(<Landing />);
+  it('the home-page anchor target exists on the logged-OUT home too (Landing) — no dead link for visitors', async () => {
+    render(await Landing());
     expect(document.getElementById('over-dit-project')).not.toBeNull();
   });
 
@@ -187,6 +209,36 @@ describe('Workspace — WP135 shell (flag on)', () => {
   });
 });
 
+// WP218 phase 2 (owner C): Workspace ALWAYS wraps its tree in
+// ChartStyleProvider (chart-style-context.tsx) — the provider's own
+// presence is what "signed in" means to every ChartView underneath, not the
+// `chartStyle` value it was mounted with. These tests are the workspace-level
+// smoke check that the prop's absence/null/valid/garbage shapes all render
+// without incident; ChartStyleProvider's own sanitising and ChartView's
+// actual use of the account default as `resolvePresentation`'s base are
+// covered directly in chart-style-context.test.tsx and chart.test.tsx.
+describe('Workspace — WP218 phase 2: chartStyle prop (account default provider)', () => {
+  it('renders normally when chartStyle is absent (no prop passed)', () => {
+    renderWorkspace();
+    expect(screen.getByRole('button', { name: 'Nieuwe chat' })).toBeInTheDocument();
+  });
+
+  it('renders normally when chartStyle is null (no saved default)', () => {
+    renderWorkspace([], { chartStyle: null });
+    expect(screen.getByRole('button', { name: 'Nieuwe chat' })).toBeInTheDocument();
+  });
+
+  it('renders normally when chartStyle is a valid saved default', () => {
+    renderWorkspace([], { chartStyle: { lineWidth: 'thick' } });
+    expect(screen.getByRole('button', { name: 'Nieuwe chat' })).toBeInTheDocument();
+  });
+
+  it('renders normally when chartStyle is garbage (sanitised away, never throws)', () => {
+    renderWorkspace([], { chartStyle: { bogus: 1, lineWidth: 'huge' } });
+    expect(screen.getByRole('button', { name: 'Nieuwe chat' })).toBeInTheDocument();
+  });
+});
+
 describe('Workspace — mixed CBS + dataset thread list (ADR 037 D10 invariant)', () => {
   const MIXED_THREADS: ThreadSummary[] = [
     { id: 1, title: 'Inflatie 2024', lastActivityAt: new Date().toISOString(), kind: 'cbs' },
@@ -209,7 +261,7 @@ describe('Workspace — mixed CBS + dataset thread list (ADR 037 D10 invariant)'
     renderWorkspace(MIXED_THREADS);
     fireEvent.click(screen.getByRole('button', { name: 'Inflatie 2024' }));
     expect(await screen.findByPlaceholderText('Stel een vraag…')).toBeInTheDocument();
-    expect(screen.queryByPlaceholderText('Ask about your data…')).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText('Stel een vraag over je data…')).not.toBeInTheDocument();
   });
 
   it('shows a skeleton message list while a clicked thread is loading, then the real messages', async () => {
@@ -274,7 +326,7 @@ describe('Workspace — mixed CBS + dataset thread list (ADR 037 D10 invariant)'
     });
     renderWorkspace(MIXED_THREADS);
     fireEvent.click(screen.getByRole('button', { name: /verkoop\.csv/ }));
-    expect(await screen.findByPlaceholderText('Ask about your data…')).toBeInTheDocument();
+    expect(await screen.findByPlaceholderText('Stel een vraag over je data…')).toBeInTheDocument();
     expect(screen.queryByPlaceholderText('Stel een vraag…')).not.toBeInTheDocument();
   });
 });
@@ -282,7 +334,7 @@ describe('Workspace — mixed CBS + dataset thread list (ADR 037 D10 invariant)'
 describe('Workspace — handleUploadFile (ADR 037 D10/D14, attachments prop)', () => {
   it('without the attachments prop, "Upload file" stays disabled and ingestFile is never wired', () => {
     renderWorkspace();
-    expect(screen.getByRole('button', { name: 'Upload file' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Bestand uploaden' })).toBeDisabled();
     expect(document.querySelector('input[type="file"]')).toBeNull();
   });
 
@@ -318,7 +370,7 @@ describe('Workspace — handleUploadFile (ADR 037 D10/D14, attachments prop)', (
     const file = new File(['x'], 'x.csv', { type: 'text/csv' });
     fireEvent.change(input, { target: { files: [file] } });
     expect(await screen.findByText('This file is too large.')).toBeInTheDocument();
-    expect(screen.queryByPlaceholderText('Ask about your data…')).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText('Stel een vraag over je data…')).not.toBeInTheDocument();
   });
 });
 
@@ -356,10 +408,10 @@ describe('Workspace — session 90: deleting a chat from the sidebar', () => {
     actions.listMyThreads.mockResolvedValue([]);
     renderWorkspace([{ id: 11, title: 'Inflatie 2024', lastActivityAt: new Date().toISOString(), kind: 'cbs' }]);
     expect(screen.getByRole('button', { name: 'Inflatie 2024' })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Chat options' }));
-    fireEvent.click(await screen.findByRole('menuitem', { name: 'Delete chat' }));
-    const confirm = await screen.findByRole('group', { name: 'Delete this chat?' });
-    fireEvent.click(within(confirm).getByRole('button', { name: 'Delete' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Chatopties' }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Chat verwijderen' }));
+    const confirm = await screen.findByRole('group', { name: 'Chat verwijderen?' });
+    fireEvent.click(within(confirm).getByRole('button', { name: 'Verwijder' }));
     await waitFor(() => expect(actions.deleteMyThread).toHaveBeenCalledWith(11));
     await waitFor(() => expect(actions.listMyThreads).toHaveBeenCalled());
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Inflatie 2024' })).toBeNull());
@@ -368,11 +420,11 @@ describe('Workspace — session 90: deleting a chat from the sidebar', () => {
   it('a failed delete keeps the row and shows the error line — nothing is re-listed', async () => {
     actions.deleteMyThread.mockResolvedValue({ ok: false });
     renderWorkspace([{ id: 12, title: 'Werkloosheid', lastActivityAt: new Date().toISOString(), kind: 'cbs' }]);
-    fireEvent.click(screen.getByRole('button', { name: 'Chat options' }));
-    fireEvent.click(await screen.findByRole('menuitem', { name: 'Delete chat' }));
-    const confirm = await screen.findByRole('group', { name: 'Delete this chat?' });
-    fireEvent.click(within(confirm).getByRole('button', { name: 'Delete' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('Couldn’t delete this chat');
+    fireEvent.click(screen.getByRole('button', { name: 'Chatopties' }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Chat verwijderen' }));
+    const confirm = await screen.findByRole('group', { name: 'Chat verwijderen?' });
+    fireEvent.click(within(confirm).getByRole('button', { name: 'Verwijder' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Kon deze chat niet verwijderen');
     expect(screen.getByRole('button', { name: 'Werkloosheid' })).toBeInTheDocument();
     expect(actions.listMyThreads).not.toHaveBeenCalled();
   });

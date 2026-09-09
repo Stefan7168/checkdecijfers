@@ -1,6 +1,7 @@
 import { cleanup, render } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ChartSpec } from '../backend/chart/types.ts';
+import { STOCK_PRESENTATION } from '../lib/chart-presentation.ts';
 import { ChartSmallMultiples, sharedLineDomain } from './chart-small-multiples.tsx';
 
 function twoPointSeriesSpec(overrides: Partial<ChartSpec> = {}): ChartSpec {
@@ -114,7 +115,7 @@ describe('ChartSmallMultiples', () => {
 
   it('renders one titled panel per series, in spec order', () => {
     const { container } = render(
-      <ChartSmallMultiples spec={threeSeriesSpec()} hiddenKeys={new Set()} axisMode="shared" />,
+      <ChartSmallMultiples spec={threeSeriesSpec()} hiddenKeys={new Set()} axisMode="shared" presentation={STOCK_PRESENTATION} />,
     );
     const panels = container.querySelectorAll('[data-panel-for]');
     expect(panels.length).toBe(3);
@@ -126,7 +127,7 @@ describe('ChartSmallMultiples', () => {
 
   it('omits a panel for a hidden series', () => {
     const { container } = render(
-      <ChartSmallMultiples spec={threeSeriesSpec()} hiddenKeys={new Set(['s1'])} axisMode="shared" />,
+      <ChartSmallMultiples spec={threeSeriesSpec()} hiddenKeys={new Set(['s1'])} axisMode="shared" presentation={STOCK_PRESENTATION} />,
     );
     expect(container.querySelectorAll('[data-panel-for]').length).toBe(2);
     expect(container.textContent).not.toContain('Utrecht');
@@ -134,7 +135,7 @@ describe('ChartSmallMultiples', () => {
 
   it('"eigen assen" labels each panel with its OWN min/max, bound to its own points -- never a foreign or invented number', () => {
     const { container } = render(
-      <ChartSmallMultiples spec={twoPointSeriesSpec()} hiddenKeys={new Set()} axisMode="own" />,
+      <ChartSmallMultiples spec={twoPointSeriesSpec()} hiddenKeys={new Set()} axisMode="own" presentation={STOCK_PRESENTATION} />,
     );
     const panel = container.querySelector('[data-panel-for="s0"]')!;
     const lo = panel.querySelector('[data-role="axis-tick"][data-label-for="k-lo"]');
@@ -145,10 +146,32 @@ describe('ChartSmallMultiples', () => {
 
   it('"gelijke assen" shows no per-panel tick labels (a shared endpoint may belong to a different series\' data, which would be dishonest to label here)', () => {
     const { container } = render(
-      <ChartSmallMultiples spec={twoPointSeriesSpec()} hiddenKeys={new Set()} axisMode="shared" />,
+      <ChartSmallMultiples spec={twoPointSeriesSpec()} hiddenKeys={new Set()} axisMode="shared" presentation={STOCK_PRESENTATION} />,
     );
     const panel = container.querySelector('[data-panel-for="s0"]')!;
     expect(panel.querySelector('[data-role="axis-tick"]')).toBeNull();
+  });
+
+  function withProvisionalPoint(): ChartSpec {
+    return spec({
+      series: [
+        {
+          label: 'Nederland',
+          regionCode: 'NL01',
+          points: [point({ resultId: 'prov', value: 5, formattedValue: '5,0', provisional: true })],
+        },
+      ],
+    });
+  }
+
+  it('R11: a provisional point gets a hollow marker in a small-multiples panel (WP218 phase 0 gap fix)', () => {
+    const s = withProvisionalPoint();
+    const { container } = render(
+      <ChartSmallMultiples spec={s} hiddenKeys={new Set()} axisMode="shared" presentation={STOCK_PRESENTATION} />,
+    );
+    const hollow = container.querySelectorAll('circle[data-point="value"]');
+    expect(hollow.length).toBe(1); // exactly the provisional point, nothing else
+    expect(hollow[0].getAttribute('fill')).toBe('var(--card)');
   });
 });
 

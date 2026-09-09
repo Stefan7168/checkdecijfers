@@ -40,6 +40,17 @@ import {
   purgeExpiredTrialBookkeeping,
   trialRetentionCutoff,
 } from '../src/billing/index.ts';
+// WP218 phase 2: the chart-style preference sweep (migration 028, file-only —
+// see that migration's own header). Imported directly from the module, not
+// through src/chart/index.ts's barrel: that barrel is the PUBLIC chart
+// surface, and this store stays file-only (unwired) until its own supervised
+// apply, same posture as the other legs before their migrations went live.
+import {
+  chartStyleRetentionCutoff,
+  chartStylesTablePresent,
+  countPurgeableChartStyles,
+  purgeExpiredChartStyles,
+} from '../src/chart/user-styles.ts';
 import { connectFromEnv } from '../src/db/client.ts';
 
 // The trial leg is INJECTED, not imported by the job — ADR 001's arrow points
@@ -52,6 +63,19 @@ const TRIAL_LEG = {
   purge: purgeExpiredTrialBookkeeping,
 };
 
+// WP218 phase 2's leg, injected the same way — both composition roots wire in
+// the SAME four functions so the CLI and the cron cannot describe different
+// work. Unlike TRIAL_LEG, this sets `present`: there is no hardcoded
+// to_regclass check for user_chart_styles inside the job (chartStylesTablePresent
+// already exists for it), so InjectedRetentionLeg's optional `present` gate is
+// what the job calls before running `count`/`purge`.
+const CHART_STYLES_LEG = {
+  cutoff: chartStyleRetentionCutoff,
+  count: countPurgeableChartStyles,
+  purge: purgeExpiredChartStyles,
+  present: chartStylesTablePresent,
+};
+
 async function main(): Promise<void> {
   const apply = process.argv.includes('--apply');
   // ONE clock for both windows: two `new Date()` calls could straddle midnight
@@ -61,7 +85,13 @@ async function main(): Promise<void> {
   const { db, pool } = connectFromEnv();
   try {
     try {
-      const summary = await runRetentionPurge({ db, now, apply, trial: TRIAL_LEG });
+      const summary = await runRetentionPurge({
+        db,
+        now,
+        apply,
+        trial: TRIAL_LEG,
+        chartStyles: CHART_STYLES_LEG,
+      });
       console.log(describeRetentionPurge(summary));
       if (!apply) console.log('Re-run with --apply to actually redact/delete them.');
     } catch (error) {
@@ -71,7 +101,9 @@ async function main(): Promise<void> {
         const legFailed =
           error.leg === 'trial'
             ? 'the 90-day trial leg then failed.'
-            : 'the 90-day trial leg then ran; the error_log leg failed.';
+            : error.leg === 'errorLog'
+              ? 'the 90-day trial leg then ran; the error_log leg failed.'
+              : 'the 90-day trial leg and the error_log leg then ran; the chart-style leg failed.';
         console.error(
           `PARTIAL — ${error.auditRowsRedacted} audit redaction(s) COMMITTED under cutoff ` +
             `${error.auditCutoff}` +

@@ -7,6 +7,7 @@
 // two-stage interaction.
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { LangProvider } from '../lib/i18n/lang-provider.tsx';
 import { DeleteHistoryButton } from './delete-history-button.tsx';
 
 const { deleteMyQuestionHistory } = vi.hoisted(() => ({
@@ -89,5 +90,19 @@ describe('DeleteHistoryButton — one click + confirmation step (owner decision,
     expect(screen.getByText(/permanent verwijderd/)).toBeInTheDocument();
     // No text input anywhere in the confirm step -- a click-only confirmation.
     expect(screen.queryByRole('textbox')).toBeNull();
+  });
+});
+
+// WP218 phase 4 (#219): proves the language switch reaches this surface.
+describe('DeleteHistoryButton — en', () => {
+  it('renders the English trigger and confirmation under LangProvider lang="en"', () => {
+    render(
+      <LangProvider lang="en">
+        <DeleteHistoryButton />
+      </LangProvider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Delete my question history' }));
+    expect(screen.getByRole('button', { name: 'Yes, delete' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
   });
 });

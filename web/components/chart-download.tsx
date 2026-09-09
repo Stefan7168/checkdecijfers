@@ -18,6 +18,7 @@
 'use client';
 
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type RefObject } from 'react';
+import { t, type Lang } from '../lib/i18n/messages.ts';
 
 const FOOTER_HEIGHT = 24;
 const FOOTER_FONT = 'system-ui, -apple-system, sans-serif';
@@ -208,6 +209,7 @@ export function ChartDownloadMenu({
   containerRef,
   attributionText,
   filenameBase,
+  lang = 'nl',
 }: {
   /** The element WRAPPING the chart's ResponsiveContainer — Recharts renders
    * its own <svg> dynamically, so the live node is found at click time
@@ -215,6 +217,10 @@ export function ChartDownloadMenu({
   containerRef: RefObject<HTMLElement | null>;
   attributionText: string;
   filenameBase: string;
+  /** WP218 phase 4 (#219): the resolved chart language ChartView passes down
+   * — defaults to 'nl' so an existing direct render (a test with no `lang`)
+   * keeps its current Dutch output. */
+  lang?: Lang;
 }) {
   const [open, setOpen] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -281,13 +287,13 @@ export function ChartDownloadMenu({
         onClick={() => setOpen((o) => !o)}
         className="min-h-6 px-1 text-xs text-muted-foreground underline"
       >
-        Download
+        {t(lang, 'chart.download.trigger')}
       </button>
       {open ? (
         <div
           id={menuId}
           role="menu"
-          aria-label="Downloadformaat"
+          aria-label={t(lang, 'chart.download.menuLabel')}
           onKeyDown={onMenuKeyDown}
           className="absolute right-0 z-10 mt-1 whitespace-nowrap rounded-md border border-border bg-card py-1 shadow-sm"
         >
@@ -298,7 +304,7 @@ export function ChartDownloadMenu({
             className={MENU_ITEM_CLASS}
             onClick={() => withLiveSvg((svg) => downloadPng(svg, attributionText, filenameBase, () => setFailed(true)))}
           >
-            Download als PNG
+            {t(lang, 'chart.download.png')}
           </button>
           <button
             ref={secondItemRef}
@@ -309,13 +315,13 @@ export function ChartDownloadMenu({
               withLiveSvg((svg) => downloadSvg(svg, attributionText, filenameBase, () => setFailed(true)))
             }
           >
-            Download als SVG
+            {t(lang, 'chart.download.svg')}
           </button>
         </div>
       ) : null}
       {failed ? (
         <span role="alert" className="ml-2 text-xs text-destructive">
-          Downloaden lukte niet in deze browser.
+          {t(lang, 'chart.download.failed')}
         </span>
       ) : null}
     </div>

@@ -28,6 +28,7 @@
 import { Ellipsis, PanelLeftClose, PanelLeftOpen, Plus, Search } from 'lucide-react';
 import { useId, useState } from 'react';
 import type { ThreadSummary } from '../backend/threads/index.ts';
+import { useT } from '../lib/i18n/lang-provider.tsx';
 import { groupThreads } from '../lib/thread-groups.ts';
 import { cn } from '../lib/utils.ts';
 import { Button } from './ui/button.tsx';
@@ -65,6 +66,7 @@ export function ThreadSidebar({
   const [deleting, setDeleting] = useState(false);
   const [failedId, setFailedId] = useState<number | null>(null);
   const idPrefix = useId();
+  const t = useT();
 
   async function confirmDelete(threadId: number): Promise<void> {
     if (!onDelete) return;
@@ -89,7 +91,7 @@ export function ThreadSidebar({
           variant="ghost"
           size="icon-sm"
           onClick={onToggleCollapse}
-          aria-label="Toon gesprekken"
+          aria-label={t('sidebar.collapsedExpandLabel')}
         >
           <PanelLeftOpen aria-hidden="true" />
         </Button>
@@ -99,26 +101,26 @@ export function ThreadSidebar({
 
   const needle = query.trim().toLocaleLowerCase('nl');
   const visible =
-    needle === '' ? threads : threads.filter((t) => t.title.toLocaleLowerCase('nl').includes(needle));
+    needle === '' ? threads : threads.filter((thread) => thread.title.toLocaleLowerCase('nl').includes(needle));
   const groups = groupThreads(visible);
 
   return (
-    <nav aria-label="Gesprekken" className="flex h-full w-full flex-col gap-2 px-2 pt-2">
+    <nav aria-label={t('sidebar.navLabel')} className="flex h-full w-full flex-col gap-2 px-2 pt-2">
       <div className="flex items-center justify-between pl-2">
-        <span className="text-xs font-medium text-muted-foreground">Chats</span>
+        <span className="text-xs font-medium text-muted-foreground">{t('sidebar.header')}</span>
         <Button
           type="button"
           variant="ghost"
           size="icon-xs"
           onClick={onToggleCollapse}
-          aria-label="Verberg gesprekken"
+          aria-label={t('sidebar.collapseLabel')}
         >
           <PanelLeftClose aria-hidden="true" />
         </Button>
       </div>
       <Button type="button" onClick={onNewChat} disabled={busy} className="h-8 w-full">
         <Plus aria-hidden="true" className="size-3.5" />
-        Nieuwe chat
+        {t('sidebar.newChat')}
       </Button>
       <div className="relative">
         <Search
@@ -129,16 +131,16 @@ export function ThreadSidebar({
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search chats"
-          aria-label="Search chats"
+          placeholder={t('sidebar.searchPlaceholder')}
+          aria-label={t('sidebar.searchLabel')}
           className="h-8 bg-background pl-8 text-[13px]"
         />
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto pb-2">
         {threads.length === 0 ? (
-          <p className="px-2.5 pt-2 text-xs text-muted-foreground">Nog geen gesprekken.</p>
+          <p className="px-2.5 pt-2 text-xs text-muted-foreground">{t('sidebar.empty')}</p>
         ) : visible.length === 0 ? (
-          <p className="px-2.5 pt-2 text-xs text-muted-foreground">No chats match “{query.trim()}”.</p>
+          <p className="px-2.5 pt-2 text-xs text-muted-foreground">{t('sidebar.noMatches', { query: query.trim() })}</p>
         ) : (
           groups.map((group) => (
             <div key={group.label} className="flex flex-col gap-0.5">
@@ -171,7 +173,11 @@ export function ThreadSidebar({
                             ? 'bg-accent font-medium text-foreground'
                             : 'text-foreground/80 hover:bg-accent/60 hover:text-foreground',
                         )}
-                        title={thread.kind === 'dataset' ? `Your data: ${thread.title}` : thread.title}
+                        title={
+                          thread.kind === 'dataset'
+                            ? t('sidebar.datasetThreadTitle', { title: thread.title })
+                            : thread.title
+                        }
                       >
                         {/* ADR 037 D10: a dataset thread's ONLY visual distinction here
                           * is this prefix — everything else about the row (className,
@@ -201,7 +207,7 @@ export function ThreadSidebar({
                                 type="button"
                                 variant="ghost"
                                 size="icon-xs"
-                                aria-label="Chat options"
+                                aria-label={t('sidebar.optionsLabel')}
                                 aria-describedby={titleId}
                                 disabled={busy}
                                 className="shrink-0 opacity-0 group-hover/row:opacity-100 focus-visible:opacity-100 data-popup-open:opacity-100 [@media(hover:none)]:opacity-100"
@@ -221,7 +227,7 @@ export function ThreadSidebar({
                                 setConfirmingId(thread.id);
                               }}
                             >
-                              Delete chat
+                              {t('sidebar.deleteChat')}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -230,12 +236,10 @@ export function ThreadSidebar({
                     {confirmingId === thread.id ? (
                       <div
                         role="group"
-                        aria-label="Delete this chat?"
+                        aria-label={t('sidebar.deleteConfirmLabel')}
                         className="mx-1 my-1 flex flex-col gap-2 rounded-md border border-destructive bg-muted p-2 text-xs"
                       >
-                        <p className="text-destructive">
-                          Delete this chat? Its questions also disappear from your history. This can’t be undone.
-                        </p>
+                        <p className="text-destructive">{t('sidebar.deleteConfirmText')}</p>
                         <div className="flex gap-2">
                           <button
                             type="button"
@@ -243,7 +247,7 @@ export function ThreadSidebar({
                             disabled={deleting}
                             className="rounded-md bg-destructive px-2.5 py-1 font-medium text-white disabled:opacity-60"
                           >
-                            {deleting ? 'Deleting…' : 'Delete'}
+                            {deleting ? t('sidebar.deletingButton') : t('sidebar.deleteButton')}
                           </button>
                           <button
                             type="button"
@@ -254,12 +258,12 @@ export function ThreadSidebar({
                             disabled={deleting}
                             className="rounded-md border border-border bg-card px-2.5 py-1 font-medium text-foreground hover:bg-muted disabled:opacity-60"
                           >
-                            Cancel
+                            {t('sidebar.cancelButton')}
                           </button>
                         </div>
                         {failedId === thread.id ? (
                           <p role="alert" className="text-destructive">
-                            Couldn’t delete this chat. Try again later.
+                            {t('sidebar.deleteFailed')}
                           </p>
                         ) : null}
                       </div>

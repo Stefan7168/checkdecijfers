@@ -4,6 +4,7 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AskDatasetOutcome, DecideDatasetFormatOutcome } from '../app/dataset-actions.ts';
+import { LangProvider } from '../lib/i18n/lang-provider.tsx';
 import { DatasetChat } from './dataset-chat.tsx';
 import type { DatasetProfile } from '../backend/attachments/types.ts';
 
@@ -42,8 +43,8 @@ function baseProps(overrides: Partial<Parameters<typeof DatasetChat>[0]> = {}) {
 }
 
 async function submit(text: string) {
-  fireEvent.change(screen.getByPlaceholderText('Ask about your data…'), { target: { value: text } });
-  fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+  fireEvent.change(screen.getByPlaceholderText('Stel een vraag over je data…'), { target: { value: text } });
+  fireEvent.click(screen.getByRole('button', { name: 'Verstuur' }));
   await screen.findByText(text);
 }
 
@@ -117,7 +118,7 @@ describe('DatasetChat — normal turn flow', () => {
     await submit('x');
     expect(await screen.findByText('Did you mean one of these?')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Line chart of Revenue by Year' }));
-    expect(screen.getByPlaceholderText('Ask about your data…')).toHaveValue('Line chart of Revenue by Year');
+    expect(screen.getByPlaceholderText('Stel een vraag over je data…')).toHaveValue('Line chart of Revenue by Year');
   });
 
   it('renders a refusal with its guidance', async () => {
@@ -138,25 +139,25 @@ describe('DatasetChat — normal turn flow', () => {
     askDataset.mockResolvedValue({ kind: 'insufficient_credits', balance: 2, required: 10 });
     render(<DatasetChat {...baseProps()} />);
     await submit('x');
-    expect(await screen.findByText(/Not enough credits/)).toBeInTheDocument();
+    expect(await screen.findByText(/Niet genoeg credits/)).toBeInTheDocument();
   });
 
   it('shows an error for not_found (dataset deleted mid-session)', async () => {
     askDataset.mockResolvedValue({ kind: 'not_found' });
     render(<DatasetChat {...baseProps()} />);
     await submit('x');
-    expect(await screen.findByText('This file is no longer available.')).toBeInTheDocument();
+    expect(await screen.findByText('Dit bestand is niet meer beschikbaar.')).toBeInTheDocument();
   });
 
   it('disables the send control while a request is in flight (double-click guard)', async () => {
     let resolve!: (value: AskDatasetOutcome) => void;
     askDataset.mockReturnValue(new Promise((r) => { resolve = r; }));
     render(<DatasetChat {...baseProps()} />);
-    fireEvent.change(screen.getByPlaceholderText('Ask about your data…'), { target: { value: 'x' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Send' }));
-    expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled();
+    fireEvent.change(screen.getByPlaceholderText('Stel een vraag over je data…'), { target: { value: 'x' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Verstuur' }));
+    expect(screen.getByRole('button', { name: 'Verstuur' })).toBeDisabled();
     resolve({ kind: 'not_found' });
-    await screen.findByText('This file is no longer available.');
+    await screen.findByText('Dit bestand is niet meer beschikbaar.');
   });
 });
 
@@ -184,14 +185,14 @@ describe('DatasetChat — dock mode (ADR 037 D10/WP202a)', () => {
     render(<DatasetChat {...baseProps()} />);
     await submit('show revenue by year');
     expect(await screen.findByText('Your data · unverified')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Chart in panel/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Grafiek in het paneel/ })).not.toBeInTheDocument();
   });
 
   it('dockMode=true renders the reference chip instead of UserChartView inline', async () => {
     askDataset.mockResolvedValue(chartOutcome());
     render(<DatasetChat {...baseProps()} dockMode />);
     await submit('show revenue by year');
-    expect(await screen.findByRole('button', { name: /Chart in panel/ })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /Grafiek in het paneel/ })).toBeInTheDocument();
     expect(screen.queryByText('Your data · unverified')).not.toBeInTheDocument();
   });
 
@@ -200,7 +201,7 @@ describe('DatasetChat — dock mode (ADR 037 D10/WP202a)', () => {
     const onActivateVisual = vi.fn();
     render(<DatasetChat {...baseProps()} dockMode onActivateVisual={onActivateVisual} />);
     await submit('show revenue by year');
-    fireEvent.click(await screen.findByRole('button', { name: /Chart in panel/ }));
+    fireEvent.click(await screen.findByRole('button', { name: /Grafiek in het paneel/ }));
     expect(onActivateVisual).toHaveBeenCalledWith('visual-1');
   });
 
@@ -225,14 +226,27 @@ describe('DatasetChat — needs_decision (D5 profile-card two-chip decision)', (
   it('shows the ambiguous-format question instead of the normal chat input', () => {
     render(<DatasetChat {...baseProps({ initialStatus: 'needs_decision', initialProfile: AMBIGUOUS_PROFILE })} />);
     expect(screen.getByText(/The numbers in "Omzet" could be read two ways/)).toBeInTheDocument();
-    expect(screen.queryByPlaceholderText('Ask about your data…')).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText('Stel een vraag over je data…')).not.toBeInTheDocument();
   });
 
   it('resolves the decision and switches to the normal chat on success', async () => {
     decideDatasetFormat.mockResolvedValue({ kind: 'ok', profile: { columns: [{ id: 'c0', header: 'Omzet', type: 'number', numberFormat: 'nl', nulls: 0 }], rowCount: 2 } });
     render(<DatasetChat {...baseProps({ initialStatus: 'needs_decision', initialProfile: AMBIGUOUS_PROFILE })} />);
     fireEvent.click(screen.getByRole('button', { name: /groups thousands/ }));
-    expect(await screen.findByPlaceholderText('Ask about your data…')).toBeInTheDocument();
+    expect(await screen.findByPlaceholderText('Stel een vraag over je data…')).toBeInTheDocument();
     expect(decideDatasetFormat).toHaveBeenCalledWith(1, { c0: 'nl' });
+  });
+});
+
+// WP218 phase 4 (#219): proves the language switch reaches this surface.
+describe('DatasetChat — en', () => {
+  it('renders the English placeholder and Send button under LangProvider lang="en"', () => {
+    render(
+      <LangProvider lang="en">
+        <DatasetChat {...baseProps()} />
+      </LangProvider>,
+    );
+    expect(screen.getByPlaceholderText('Ask about your data…')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Send' })).toBeInTheDocument();
   });
 });

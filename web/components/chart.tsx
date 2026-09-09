@@ -26,6 +26,8 @@
 
 import { useEffect, useId, useReducer, useRef, useState, type KeyboardEvent } from 'react';
 import {
+  Area,
+  AreaChart,
   Bar,
   BarChart,
   CartesianGrid,
@@ -38,12 +40,44 @@ import {
   YAxis,
 } from 'recharts';
 import type { ChartPoint, ChartSpec } from '../backend/chart/types.ts';
+import {
+  dotGeometry,
+  findFont,
+  fontStack,
+  LINE_WIDTH_PX,
+  RECHARTS_PALETTE,
+  resolvePresentation,
+  seriesColor,
+  withAccountDefault,
+  xAxisHeight,
+  xLabelOverhang,
+} from '../lib/chart-presentation.ts';
+import { useChartStyle } from '../lib/chart-style-context.tsx';
+import { trackChartStyleEvent } from '../lib/chart-usage-client.ts';
+import {
+  translateAttributionLine,
+  translateMeasureTitle,
+  translatePeriodLabel,
+  translateRegion,
+  translateUnit,
+} from '../lib/i18n/cbs-words.ts';
+import { useLang } from '../lib/i18n/lang-provider.tsx';
+import { t, type Lang } from '../lib/i18n/messages.ts';
+// WP218 phase 2 (owner C): the account-default Server Actions live in their
+// OWN tiny-import-graph file, never web/app/actions.ts — see that file's own
+// header for why (the usage-actions.ts precedent this mirrors).
+import { forgetMyChartStyle, lookupBrand, saveMyChartStyle } from '../app/chart-style-actions.ts';
+import { ensureFontLoaded } from '../lib/font-loader.ts';
+import { ChartConfigPanel, ChartConfigTrigger } from './chart-config-panel.tsx';
 import { ChartDownloadMenu } from './chart-download.tsx';
 import { ChartNotes, type ChartNote, type PendingPoint } from './chart-notes.tsx';
 import { ChartSmallMultiples } from './chart-small-multiples.tsx';
 import { SourceBadge } from './source-badge.tsx';
 import {
+  areaFormAllowed,
   chartViewReducer,
+  fallbackForm,
+  hbarFormAllowed,
   initialViewState,
   lineFormAllowed,
   windowSpec,
@@ -98,7 +132,7 @@ export interface SeriesMeta {
 // hollow/hatched provisional marker (R11) is untouched — that is honesty, not
 // styling. The palette cycles for series nine and up; the Tabel view remains
 // the honest surface for many series.
-export const RECHARTS_PALETTE = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#0088fe', '#00c49f', '#ffbb28', '#ff8042'];
+export { RECHARTS_PALETTE } from '../lib/chart-presentation.ts';
 
 export function seriesStyle(index: number): { color: string } {
   return { color: RECHARTS_PALETTE[index % RECHARTS_PALETTE.length]! };
@@ -144,7 +178,17 @@ export function clampTotChange(from: string, to: string): [string, string] {
   return from > to ? [to, to] : [from, to];
 }
 
-export function buildRows(spec: PlottableSpec): { rows: Row[]; seriesMeta: SeriesMeta[] } {
+export function buildRows(
+  spec: PlottableSpec,
+  // WP218 (ADR 039) Phase 0: optional effective-colour resolver, so a caller
+  // that has already run the presentation resolver (ChartView, Chart
+  // SmallMultiples) can feed its resolved series colours straight into
+  // `seriesMeta[i].color` — the ONE place every legend swatch, tooltip
+  // swatch and hatch pattern reads its colour from. Default = today's
+  // literal palette lookup, so every existing caller (UserChartView
+  // included, per ADR 037 H2) keeps its current behaviour unchanged.
+  colors: (index: number) => string = (i) => seriesStyle(i).color,
+): { rows: Row[]; seriesMeta: SeriesMeta[] } {
   const periodCodes = new Set<string>();
   for (const series of spec.series) {
     for (const point of series.points) periodCodes.add(point.periodCode);
@@ -154,7 +198,7 @@ export function buildRows(spec: PlottableSpec): { rows: Row[]; seriesMeta: Serie
   const seriesMeta: SeriesMeta[] = spec.series.map((series, i) => ({
     key: `s${i}`,
     label: series.label,
-    ...seriesStyle(i),
+    color: colors(i),
   }));
 
   const rows: Row[] = sortedCodes.map((code) => {
@@ -178,6 +222,45 @@ export function buildRows(spec: PlottableSpec): { rows: Row[]; seriesMeta: Serie
   });
 
   return { rows, seriesMeta };
+}
+
+/**
+ * WP218 phase 5: the transposed row set for the horizontal-bar form — a
+ * comparison's spec has one series PER REGION and exactly one point per
+ * series (one period), so unlike `buildRows` (one row per period, one
+ * column per series) this is one row PER SERIES, read from that series'
+ * FIRST point. Spec order is preserved verbatim (R6: a comparison's series
+ * order is never re-sorted by value here — any ranking display is a refused
+ * chart type, see the phase-5 plan's Global Constraints), and a series with
+ * no point at all degrades to a null row rather than throwing, mirroring
+ * `buildRows`' own null-safety for a missing point.
+ */
+export interface RegionRow {
+  label: string;
+  value: number | null;
+  value_display: string | null;
+  value_provisional: boolean;
+  value_resultId: string | null;
+  colorIndex: number;
+}
+
+export function buildRegionRows(
+  spec: PlottableSpec,
+  colorFor: (index: number) => string,
+): { rows: RegionRow[]; colors: string[] } {
+  const rows: RegionRow[] = spec.series.map((series, i) => {
+    const point = series.points[0] ?? null;
+    return {
+      label: series.label,
+      value: point ? point.value : null,
+      value_display: point ? point.formattedValue : null,
+      value_provisional: point ? point.provisional : false,
+      value_resultId: point ? point.resultId : null,
+      colorIndex: i,
+    };
+  });
+  const colors = spec.series.map((_, i) => colorFor(i));
+  return { rows, colors };
 }
 
 /** #170(4): which curated annotations to draw, resolved to the exact
@@ -328,14 +411,20 @@ function tableCellText(point: ChartPoint): string {
 
 const EMPTY_CELL: TableCell = { text: '', resultId: null };
 
-export function tableModel(spec: ChartSpec): TableModel {
+/** `lang` defaults to 'nl' so every existing direct call (chart.test.tsx)
+ * keeps its current signature and output. `spec` is expected to already
+ * carry translated title/unit/series-labels/periodLabels when `lang` is
+ * 'en' (ChartView feeds it `displaySpec` — see `translateSpecForDisplay` —
+ * so this function itself only needs to translate its OWN fixed header
+ * words, never re-derive CBS text from the spec a second time). */
+export function tableModel(spec: ChartSpec, lang: Lang = 'nl'): TableModel {
   const caption = `${spec.title} (${spec.unit})`;
   if (spec.kind === 'bar') {
     const periodLabels = new Set(spec.series.flatMap((s) => s.points.map((p) => p.periodLabel)));
-    const periodHeader = periodLabels.size === 1 ? [...periodLabels][0] : 'Waarde';
+    const periodHeader = periodLabels.size === 1 ? [...periodLabels][0] : t(lang, 'chart.table.value');
     return {
       caption,
-      header: ['Regio', periodHeader],
+      header: [t(lang, 'chart.table.region'), periodHeader],
       rows: spec.series.map((series) => {
         const point = series.points[0];
         return {
@@ -358,13 +447,41 @@ export function tableModel(spec: ChartSpec): TableModel {
   }
   return {
     caption,
-    header: ['Periode', ...spec.series.map((s) => s.label)],
+    header: [t(lang, 'chart.table.period'), ...spec.series.map((s) => s.label)],
     rows: codes.map((code) => ({
       label: labelByCode.get(code) ?? code,
       cells: spec.series.map((series) => {
         const point = series.points.find((p) => p.periodCode === code);
         return point ? { text: tableCellText(point), resultId: point.resultId } : EMPTY_CELL;
       }),
+    })),
+  };
+}
+
+/** WP218 phase 4 (#219, design §4): a verbatim-projection view of `spec` with
+ * only its CBS-word DISPLAY TEXT translated (title, unit, series
+ * labels/regions, period labels) — the SAME "project, never recompute"
+ * contract as `windowSpec` (chart-view-state.ts): every value/
+ * formattedValue/resultId/provisional/status/decimals/attribution/
+ * annotations field is untouched, and 'nl' returns `spec` itself unchanged
+ * (no-op fast path). Every downstream pure function (buildRows,
+ * annotationMarkers, valueLabelPlan, tableModel) reads whatever spec it is
+ * given verbatim, so feeding this one translated spec into all of them keeps
+ * every plotted numeric token bound to a spec string exactly as before —
+ * the converters never touch a value, only the label text around it.
+ * `provisionalNote`/`nullNotes`/`definitionLine`/`attribution.trendHeadline`
+ * are backend prose (documented limitation, design §4) and are NOT touched
+ * here — they stay Dutch on an English chart. */
+export function translateSpecForDisplay(spec: ChartSpec, lang: Lang): ChartSpec {
+  if (lang !== 'en') return spec;
+  return {
+    ...spec,
+    title: translateMeasureTitle(spec.title),
+    unit: translateUnit(spec.unit),
+    series: spec.series.map((series) => ({
+      ...series,
+      label: translateRegion(series.label),
+      points: series.points.map((point) => ({ ...point, periodLabel: translatePeriodLabel(point.periodLabel) })),
     })),
   };
 }
@@ -433,6 +550,63 @@ export function ChartTooltip({
   );
 }
 
+/**
+ * WP218 phase 5 (Task 2): the horizontal-bar form's OWN render-time row —
+ * one per region, built in ChartView from `buildRegionRows` (Task 1) plus
+ * the SAME seriesKey (`s${i}`), resolved colour and hatch-pattern id every
+ * other branch derives from `seriesMeta`. Unlike `Row` (period x series,
+ * many columns) this is one row per BAR, so `RegionBar` below reads
+ * everything it needs straight off the row instead of a seriesKey-indexed
+ * lookup — there is exactly one series (the region itself) per row.
+ */
+interface RegionChartRow {
+  key: string;
+  label: string;
+  value: number | null;
+  value_display: string | null;
+  value_provisional: boolean;
+  value_resultId: string | null;
+  color: string;
+  dimmed: boolean;
+  patternId: string;
+}
+
+// Exported for direct testing, mirroring ChartTooltip: the horizontal-bar
+// form's own tooltip. One row = one region, so unlike ChartTooltip (which
+// walks a payload array of every series at a shared period) this composes a
+// SINGLE line — "{sharedPeriodLabel}: {value_display}" plus the same ' *'
+// provisional suffix used everywhere else, bound to the row's own resultId.
+// The region name comes straight off the row (payload.label, a spec string)
+// rather than Recharts' own derived tooltip `label` prop, whose exact source
+// for a layout="vertical" category axis is an internal Recharts detail this
+// file should not depend on.
+export function RegionTooltip({
+  active,
+  payload,
+  periodLabel,
+}: {
+  active?: boolean;
+  payload?: { payload: RegionChartRow }[];
+  periodLabel: string;
+}) {
+  if (!active || !payload || payload.length === 0) return null;
+  const row = payload[0].payload;
+  if (row.value_display == null) return null;
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className="rounded-lg border border-border bg-popover px-3 py-2 text-sm text-popover-foreground shadow-md"
+    >
+      <div className="font-medium">{row.label}</div>
+      <div data-label-for={row.value_resultId ?? undefined}>
+        {periodLabel}: {row.value_display}
+        {row.value_provisional ? ' *' : ''}
+      </div>
+    </div>
+  );
+}
+
 /** #197 idea 6: a real interactive legend, replacing Recharts' decorative
  * default. One button per series toggles it in/out of the chart; hidden
  * series stay listed (dimmed) so they can be brought back. Client-side
@@ -455,15 +629,17 @@ function SeriesLegend({
   highlightedKey,
   onToggle,
   onHighlight,
+  lang,
 }: {
   seriesMeta: SeriesMeta[];
   hiddenKeys: Set<string>;
   highlightedKey: string | null;
   onToggle: (key: string) => void;
   onHighlight: (key: string | null) => void;
+  lang: Lang;
 }) {
   return (
-    <div role="group" aria-label="Reeksen" className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
+    <div role="group" aria-label={t(lang, 'chart.seriesGroupLabel')} className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
       {seriesMeta.map((s) => {
         const hidden = hiddenKeys.has(s.key);
         const highlighted = highlightedKey === s.key;
@@ -496,13 +672,13 @@ function SeriesLegend({
               aria-pressed={highlighted}
               disabled={hidden}
               onClick={() => onHighlight(highlighted ? null : s.key)}
-              title={`Markeer ${s.label}, andere reeksen worden gedimd`}
+              title={t(lang, 'chart.highlightTitle', { label: s.label })}
               className={
                 'min-h-6 rounded-md px-1 text-xs hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40 ' +
                 (highlighted ? 'text-foreground font-semibold' : 'text-muted-foreground')
               }
             >
-              {`Markeer ${s.label}`}
+              {t(lang, 'chart.highlightButton', { label: s.label })}
             </button>
           </span>
         );
@@ -535,6 +711,16 @@ function SeriesDot(
   opacity = 1,
   seriesLabel?: string,
   onPointClick?: (point: PendingPoint) => void,
+  // WP218 (ADR 039) Phase 0: r/ring follow the resolved line width (R11: the
+  // hollow ring must stay legible at every stroke width — see `dotGeometry`)
+  // and `hideFinal` draws every NON-provisional marker invisible
+  // (opacity 0, never removed from the DOM) when the "alleen voorlopig"
+  // marker mode is chosen, so the `[data-point]` count, keyboard walking
+  // (#212) and click-to-annotate all keep working identically either way.
+  // Defaulted to today's literal geometry (r 4, ring 2, hideFinal false) so
+  // every existing call site/test keeps its current arity and rendering.
+  geometry: { r: number; ring: number; hideFinal: boolean } = { ...dotGeometry('normal'), hideFinal: false },
+  lang: Lang = 'nl',
 ) {
   return function Dot(props: { cx?: number; cy?: number; payload?: Row; stroke?: string }) {
     const { cx, cy, payload } = props;
@@ -545,6 +731,7 @@ function SeriesDot(
     const resultId = payload[`${seriesKey}_resultId`];
     const color = props.stroke ?? 'currentColor';
     const isEnd = endLabel !== undefined && payload.periodCode === endLabel.periodCode;
+    const hiddenFinal = geometry.hideFinal && !provisional;
     // Task 6 keyboard-operability fix (#212 follow-up): a synthetic
     // role="button" on an SVG element gets no native Enter/Space activation
     // from the browser the way a real <button> would, so onKeyDown has to
@@ -563,17 +750,19 @@ function SeriesDot(
         <circle
           cx={cx}
           cy={cy}
-          r={4}
+          r={geometry.r}
           fill={provisional ? 'var(--card)' : color}
           stroke={color}
-          strokeWidth={2}
+          strokeWidth={geometry.ring}
           strokeOpacity={opacity}
           fillOpacity={opacity}
+          opacity={hiddenFinal ? 0 : undefined}
           data-point="value"
+          data-marker={hiddenFinal ? 'hidden' : undefined}
           data-result-id={resultId == null ? undefined : String(resultId)}
           role={onPointClick ? 'button' : undefined}
           tabIndex={onPointClick ? 0 : undefined}
-          aria-label={onPointClick ? `Voeg notitie toe bij ${seriesLabel ?? ''}, ${String(payload.periodLabel)}` : undefined}
+          aria-label={onPointClick ? t(lang, 'chart.noteAriaLabel', { series: seriesLabel ?? '', period: String(payload.periodLabel) }) : undefined}
           style={onPointClick ? { cursor: 'pointer' } : undefined}
           onClick={onPointClick ? activate : undefined}
           onKeyDown={
@@ -627,6 +816,7 @@ function SeriesBar(
   opacity = 1,
   seriesLabel?: string,
   onPointClick?: (point: PendingPoint) => void,
+  lang: Lang = 'nl',
 ) {
   return function Shape(props: { x?: number; y?: number; width?: number; height?: number; payload?: Row }) {
     const { x, y, width, height, payload } = props;
@@ -665,7 +855,7 @@ function SeriesBar(
           data-result-id={resultId == null ? undefined : String(resultId)}
           role={onPointClick ? 'button' : undefined}
           tabIndex={onPointClick ? 0 : undefined}
-          aria-label={onPointClick ? `Voeg notitie toe bij ${seriesLabel ?? ''}, ${String(payload.periodLabel)}` : undefined}
+          aria-label={onPointClick ? t(lang, 'chart.noteAriaLabel', { series: seriesLabel ?? '', period: String(payload.periodLabel) }) : undefined}
           style={onPointClick ? { cursor: 'pointer' } : undefined}
           onClick={onPointClick ? activate : undefined}
           onKeyDown={
@@ -689,6 +879,87 @@ function SeriesBar(
             data-label-for={label.resultId}
           >
             {label.text}
+          </text>
+        ) : null}
+      </g>
+    );
+  };
+}
+
+/** Horizontal-bar shape: one row IS one region (RegionChartRow, built in
+ * ChartView from buildRegionRows), so unlike SeriesBar — one shape instance
+ * per SERIES, called once per period — this shape is mounted ONCE (one
+ * `<Bar dataKey="value">`) and called once per ROW; every field it needs
+ * (colour/dimmed/patternId/provisional/resultId) already rides the row
+ * itself rather than being threaded through closures the way SeriesBar
+ * threads seriesKey/labelByPeriod. Click-to-annotate mirrors SeriesBar/
+ * SeriesDot exactly: role="button" + tabIndex + Enter/Space activation,
+ * because a synthetic role on an SVG element gets no native keyboard
+ * activation from the browser the way a real <button> would. `periodLabel`
+ * is the ONE period every region in a comparison shares (resolved once in
+ * ChartView, same fallback tableModel's bar-kind header already uses). */
+function RegionBar(
+  periodLabel: string,
+  showLabels: boolean,
+  onPointClick?: (point: PendingPoint) => void,
+  lang: Lang = 'nl',
+) {
+  return function Shape(props: {
+    x?: number;
+    y?: number;
+    width?: number;
+    height?: number;
+    payload?: RegionChartRow;
+  }) {
+    const { x, y, width, height, payload } = props;
+    if (x == null || y == null || width == null || height == null || !payload) return null;
+    if (payload.value == null) return null;
+    const { label, value_display, value_provisional, value_resultId, color, dimmed, patternId } = payload;
+    const activate = (): void => {
+      if (value_resultId == null || !onPointClick) return;
+      onPointClick({ resultId: value_resultId, periodLabel, seriesLabel: label });
+    };
+    return (
+      <g>
+        <rect
+          x={x}
+          y={y}
+          width={width}
+          height={height}
+          fill={value_provisional ? `url(#${patternId})` : color}
+          fillOpacity={dimmed ? 0.25 : 1}
+          stroke={value_provisional ? color : undefined}
+          strokeOpacity={value_provisional ? (dimmed ? 0.25 : 1) : undefined}
+          strokeWidth={value_provisional ? 1 : undefined}
+          data-point="value"
+          data-result-id={value_resultId ?? undefined}
+          role={onPointClick ? 'button' : undefined}
+          tabIndex={onPointClick ? 0 : undefined}
+          aria-label={onPointClick ? t(lang, 'chart.noteAriaLabel', { series: label, period: periodLabel }) : undefined}
+          style={onPointClick ? { cursor: 'pointer' } : undefined}
+          onClick={onPointClick ? activate : undefined}
+          onKeyDown={
+            onPointClick
+              ? (event: KeyboardEvent<SVGRectElement>) => {
+                  if (event.key !== 'Enter' && event.key !== ' ') return;
+                  event.preventDefault();
+                  activate();
+                }
+              : undefined
+          }
+        />
+        {showLabels && value_display != null ? (
+          <text
+            x={x + width + 4}
+            y={y + height / 2 + 4}
+            fontSize={11}
+            fill="var(--foreground)"
+            textAnchor="start"
+            data-role="bar-label"
+            data-label-for={value_resultId ?? undefined}
+          >
+            {value_display}
+            {value_provisional ? '*' : ''}
           </text>
         ) : null}
       </g>
@@ -724,6 +995,26 @@ export function AxisTick(tickByValue: Map<number, AxisTickLabel>) {
   };
 }
 
+/** WP218 phase 5: the horizontal-bar form's category (region) axis tick.
+ * Recharts' own default axis <Text> measures glyphs and renders NOTHING in
+ * jsdom (chart.test.tsx's own top-of-file note on the #197 section) — a real
+ * browser draws it fine, but every text-bearing tick in this file is drawn
+ * by a small custom component for exactly this reason (mirrors `AxisTick`
+ * above, the numeric value-axis equivalent). Unlike `AxisTick` this needs no
+ * lookup map: a category axis's own tick payload IS the row's `label` field
+ * verbatim (a spec string, R6) — never invented text, so no `data-label-for`
+ * binding either (that contract is for NUMBERS, and a region name is not
+ * one — same as the period labels on every other form's x-axis). */
+function RegionAxisTick(props: { x?: number | string; y?: number | string; payload?: { value?: unknown } }) {
+  const value = props.payload?.value;
+  if (typeof value !== 'string' || props.x == null || props.y == null) return null;
+  return (
+    <text x={props.x} y={props.y} dy={4} fontSize={11} fill={AXIS_COLOR} textAnchor="end" data-role="region-axis-tick">
+      {value}
+    </text>
+  );
+}
+
 /** Touch-only devices (no hover): Recharts' tooltip only follows a press-and-
  * drag there, and a plain tap did nothing — so the tooltip pins on tap
  * instead. Hover-capable devices keep the hover tooltip. */
@@ -740,7 +1031,16 @@ function useCoarsePointer(): boolean {
   return coarse;
 }
 
-const KEYBOARD_HINT = 'Gebruik de pijltjestoetsen om de punten van de grafiek te doorlopen.';
+// WP218 phase 4 (#219): the keyboard hint and the disabled-Lijn reason
+// (below, `LINE_DISABLED_REASON`) moved from module-level Dutch literals to
+// `t(chartLang, …)` calls inside ChartView — 'chart.keyboardHint' and
+// 'chart.lineDisabledReason' in the catalogue (messages.ts), Dutch entries
+// byte-identical to these former literals. The disabled Lijn tab's reason is
+// shared verbatim between its `title` (pointer/tooltip) and a visually-
+// hidden span reached via `aria-describedby` — a `title` alone is invisible
+// to a screen reader, and a keyboard/AT user hits exactly the same disabled
+// control a mouse user does, so the same explanation must be reachable both
+// ways.
 
 /** Approximate text width at the 11px label font — layout only, so the plot
  * leaves room for the end-of-line label instead of clipping it. */
@@ -770,7 +1070,9 @@ export function ChartView({
   const initialForm = spec.series.length > BAR_LABEL_MAX ? 'table' : spec.kind;
   const [state, dispatch] = useReducer(chartViewReducer, initialForm, initialViewState);
   const lineTabRef = useRef<HTMLButtonElement>(null);
+  const areaTabRef = useRef<HTMLButtonElement>(null);
   const barTabRef = useRef<HTMLButtonElement>(null);
+  const hbarTabRef = useRef<HTMLButtonElement>(null);
   const tableTabRef = useRef<HTMLButtonElement>(null);
 
   const [smallMultiples, setSmallMultiples] = useState(false);
@@ -811,72 +1113,66 @@ export function ChartView({
   // setters directly during render.
   const specIdentity = JSON.stringify(spec);
   const [lastSpecIdentity, setLastSpecIdentity] = useState(specIdentity);
+  // WP218 (ADR 039, task-6 re-review): the Opmaak panel keeps small local
+  // state per series row (an uncommitted hex draft, a refusal alert). Series
+  // keys are positional (`s0`, `s1` — buildRows), so after a spec swap on this
+  // same mounted instance a leftover row state would land on a DIFFERENT
+  // chart's series. The panel is remounted per chart via this epoch — the
+  // same "each chart starts fresh" the reducer's `reset` gives the overrides.
+  const [chartEpoch, setChartEpoch] = useState(0);
+  // Review fix (chart-panel-layout, option A): the previous version of this
+  // refactor tried to keep the "Opmaak" trigger inside the Weergave tablist
+  // row by portaling it into a placeholder DOM node set via a callback ref —
+  // verified in a real browser, the portaled node never actually moved into
+  // that row and the trigger did nothing when clicked (`aria-expanded` never
+  // changed), so the panel could not be opened at all in production. Fixed
+  // by lifting just the open/closed boolean here instead: `ChartConfigPanel`
+  // is now a fully controlled component and `ChartConfigTrigger` (also
+  // exported by chart-config-panel.tsx) renders directly in the tablist row
+  // below — no portal, no placeholder node. Declared here, well above the
+  // `schemaVersion` guard below, so this `useState` call itself is never
+  // conditionally skipped — the same reason `chartLang`'s `useLang()` sits
+  // above that guard too. Reset to `false` in the spec-swap block right
+  // below (owner decision E: each chart starts fresh) — unlike the old
+  // portal version, this state now lives in THIS component, not in the
+  // remounted-per-epoch ChartConfigPanel, so it would otherwise survive a
+  // spec swap on its own.
+  const [styleOpen, setStyleOpen] = useState(false);
+  // WP218 phase 3 (owner B): the last brand a signed-in visitor actually
+  // applied via "Pas merkkleuren toe" — deliberately NOT reset by the spec-
+  // swap block below (unlike notes/pendingPoint), because it describes
+  // something that outlives a single CHART (a spec swap), not a single
+  // ACCOUNT. Final-review fix: this is `useState` inside `ChartView`, so
+  // it's scoped to THIS MOUNTED INSTANCE only — a brand applied on the
+  // inline chat chart is invisible to the dock's own separately-mounted
+  // ChartView. Handed to `saveMyChartStyle` as `brandApplied` on the next
+  // "Bewaar als mijn standaard" on THIS instance, whichever chart (via a
+  // spec swap) that happens to be showing by then.
+  const [lastAppliedBrand, setLastAppliedBrand] = useState<{
+    domain: string;
+    name: string;
+    fetchedAt: string;
+  } | null>(null);
   if (specIdentity !== lastSpecIdentity) {
     setLastSpecIdentity(specIdentity);
+    setChartEpoch((n) => n + 1);
     dispatch({ type: 'reset', initialForm: state.form });
     setSmallMultiples(false);
     setAxisMode('shared');
     setNotes([]);
     setPendingPoint(null);
+    setStyleOpen(false);
   }
 
-  if (spec.schemaVersion !== 1) {
-    // Renderers dispatch on the schema version (ADR 007); this one only
-    // speaks v1 and must say so rather than misrender a future spec — the
-    // guard src/chart/render.ts has always had, and this wrapper lacked
-    // until #197 (a v2 spec would have rendered silently, possibly wrong).
-    return (
-      <div className={frameClass}>
-        <div role="heading" aria-level={3} className="text-sm font-semibold text-foreground">
-          {spec.title}
-        </div>
-        <p className="mt-2 text-sm text-warning">
-          Deze grafiek is gemaakt in een nieuwere versie dan deze pagina kan tonen. De cijfers staan in het
-          antwoord zelf.
-        </p>
-        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
-          <p className="text-xs text-muted-foreground">{spec.attributionLine}</p>
-          <SourceBadge tableId={spec.attribution.tableId} syncedAt={spec.attribution.syncedAt} />
-        </div>
-      </div>
-    );
-  }
-
-  // Task 4 (#212 period-range zoom): the full period-code list for the
-  // Vanaf/Tot selectors, and `viewSpec` — the spec windowed to the currently
-  // selected [from, to] range, or the untouched `spec` when no window is
-  // active or zoom isn't offered at all. Only offered for a line-kind chart
-  // with more than one period: a bar/comparison chart has one period per
-  // region, so there is nothing to zoom into. `windowSpec` only ever filters
-  // `series[].points` (R6 verbatim projection) — it never touches
-  // `spec.kind`/`spec.attribution`/`spec.title`/`spec.unit`, which describe
-  // the chart's identity, not its windowed content. Every DATA-derivation
-  // call below (buildRows/annotationMarkers/valueLabelPlan/tableModel) reads
-  // `viewSpec`; every IDENTITY read (spec.kind, spec.attribution, spec.title,
-  // spec.unit) stays on the raw `spec`.
-  const allPeriodCodes = Array.from(
-    new Set(spec.series.flatMap((s) => s.points.map((p) => p.periodCode))),
-  ).sort((a, b) => a.localeCompare(b));
-  const periodLabelByCode = new Map(
-    spec.series.flatMap((s) => s.points.map((p): [string, string] => [p.periodCode, p.periodLabel])),
-  );
-  const zoomAvailable = spec.kind === 'line' && allPeriodCodes.length > 1;
-  const viewSpec = zoomAvailable ? windowSpec(spec, state.periodRange) : spec;
-
-  const { rows, seriesMeta } = buildRows(viewSpec);
-  // Owner decision B (session 88): a multi-region comparison (bar, >1 series
-  // — one point per region, no time axis) may never be shown as a connected
-  // line — that would imply a trend across regions that was never measured.
-  // `effectiveKind` is what actually drives the Recharts dispatch and both
-  // Y-axis domains below, so the honesty rule and the rendered chart can
-  // never drift apart (WP12 review lesson: a policy the render doesn't
-  // actually use is not a guard).
-  // Reads the ORIGINAL spec.kind (the honesty rule is about the chart's true
-  // shape, not the current zoom window) — `seriesMeta` above now comes from
-  // `buildRows(viewSpec)`, whose `.length` is unaffected by period filtering
-  // (filtering periods never removes a whole series), so this stays correct
-  // unchanged.
-  const canUseLine = lineFormAllowed(spec, seriesMeta.length);
+  // Task 3: a real three-way Lijn/Staaf/Tabel switch. Computed here, ABOVE
+  // the schemaVersion guard below, purely so the font-loading Hook right
+  // after (WP218) stays unconditional — neither `canUseLine`, `activeForm`
+  // nor `effectiveKind` reads anything the guard gates (only `spec` and
+  // `state`), so moving them earlier changes nothing about what they
+  // compute; `seriesMeta.length` (used before this move) always equals
+  // `spec.series.length` (filtering periods never removes a whole series —
+  // see the buildRows call further below).
+  //
   // Guarded, not just `state.form` verbatim: the visual dock and Ontdek's
   // reading toggle swap `spec` on the SAME mounted ChartView (no `key`), and
   // the reducer's `reset` action deliberately PRESERVES the previously
@@ -898,8 +1194,175 @@ export function ChartView({
   // form meeting a newly-disallowed multi-region spec made the (disabled)
   // Lijn tab both aria-selected and tabIndex=0 while neither Staaf nor
   // Tabel got tabIndex=0 — no tab was keyboard-reachable at all.
-  const activeForm: ChartForm = state.form === 'line' && !canUseLine ? 'bar' : state.form;
-  const effectiveKind: ChartSpec['kind'] = activeForm === 'table' ? spec.kind : activeForm;
+  //
+  // Owner decision B (session 88): a multi-region comparison (bar, >1 series
+  // — one point per region, no time axis) may never be shown as a connected
+  // line — that would imply a trend across regions that was never measured.
+  // `effectiveKind` is what actually drives the Recharts dispatch and both
+  // Y-axis domains below, so the honesty rule and the rendered chart can
+  // never drift apart (WP12 review lesson: a policy the render doesn't
+  // actually use is not a guard). Reads the ORIGINAL spec.kind (the honesty
+  // rule is about the chart's true shape, not the current zoom window).
+  const canUseLine = lineFormAllowed(spec, spec.series.length);
+  // WP218 phase 5 (Task 2): area/hbar get the identical guard-then-fallback
+  // treatment Lijn already had — `canUseArea`/`canUseHbar` gate the tab
+  // buttons below (disabled + reason), `fallbackForm` is the ONE function
+  // (chart-view-state.ts, shared with its own tests) both this render and a
+  // same-instance spec swap use, so "area falls back to line else bar; hbar
+  // falls back to bar; line falls back to bar" can never drift between the
+  // guard and the fallback the way three independent ternaries could. Third
+  // argument is `spec.series.length`, not `seriesMeta.length`: `seriesMeta`
+  // is built by `buildRows` further below, which itself depends on `pres`
+  // (via `colorFor`), which depends on `activeForm` computed here — the two
+  // counts are always equal regardless (filtering periods never removes a
+  // whole series), per the note this replaces.
+  const canUseArea = areaFormAllowed(spec, spec.series.length);
+  const canUseHbar = hbarFormAllowed(spec);
+  const activeForm: ChartForm = fallbackForm(state.form, spec, spec.series.length);
+  // WP218 phase 5: area renders through the SAME LineChart-shaped data model
+  // as line (one row per period, `rows`/`plan`/`markers` all reused
+  // verbatim — see the Area branch below), and hbar through the same
+  // bar-shaped `valueLabelPlan`/`annotationMarkers` inputs as bar (hbar's OWN
+  // region-row model, `buildRegionRows`, is independent and computed
+  // separately). `effectiveKind` is what actually drives the Recharts
+  // dispatch, Y-axis domain and label-plan kind below, so the honesty rule
+  // and the rendered chart can never drift apart (WP12 review lesson).
+  const effectiveKind: ChartSpec['kind'] = activeForm === 'table' ? spec.kind : activeForm === 'line' || activeForm === 'area' ? 'line' : 'bar';
+
+  // WP218 (ADR 039) Phase 0: the presentation resolver, run once per render
+  // with the ACTUAL rendered form (`activeForm`, not raw `state.form` — the
+  // bar-lock rules on valueLabels/zeroBaseline must apply exactly when Staaf
+  // is what's on screen, not whatever `state.form` said before the
+  // canUseLine guard above). `pres` feeds the colour resolver passed into
+  // `buildRows` further below (so every legend swatch, tooltip swatch and
+  // hatch pattern follows the SAME effective colour automatically) plus
+  // every Recharts prop this task wires. `hasProvisional` reads the RAW
+  // spec (not the zoomed viewSpec) — a provisional point outside the
+  // current zoom window still governs the honesty-locked defaults, the same
+  // pattern spec.attribution uses elsewhere in this file.
+  const hasProvisional = spec.series.some((s) => s.points.some((p) => p.provisional));
+  // WP218 phase 2 (owner C): the signed-in account's saved style is the
+  // `base` every chart resolves ON TOP OF — `withAccountDefault` degrades
+  // anything invalid/absent to the stock look, so a logged-out visitor
+  // (useChartStyle()'s no-provider default) or an account with no saved
+  // default both resolve exactly as before this task. Per-chart overrides
+  // (`state.presentation`) still win over the account default (owner E is
+  // untouched: a spec swap clears `state.presentation`, not `accountStyle`,
+  // so "Standaard" and a fresh chart both fall back to THIS base, not stock).
+  const { accountStyle, signedIn, setAccountStyle } = useChartStyle();
+  const base = withAccountDefault(accountStyle);
+  const resolved = resolvePresentation(
+    { kind: spec.kind, form: activeForm, seriesCount: spec.series.length, hasProvisional },
+    state.presentation,
+    base,
+  );
+  const pres = resolved.values;
+  // This is the one Hook `pres` feeds, so it must run unconditionally on
+  // every render — ABOVE the schemaVersion guard below, which a live spec
+  // swap on this same mounted instance (see the specIdentity block above)
+  // could otherwise flip between renders and skip this call on some of them.
+  useEffect(() => {
+    const family = pres.fontFamily;
+    const font = findFont(family);
+    if (font && font.source === 'google') {
+      ensureFontLoaded(font);
+    } else if (font === undefined && family !== null) {
+      // Final-review fix: `findFont` only matches the seven curated
+      // FONT_OPTIONS, but a brand font (phase 3's `pickBrandFont`) can put
+      // ANY family name straight into `fontFamily` without ever being
+      // curated — previously that family was applied as CSS (`fontStack`
+      // below) with no `<link>` ever created, so the chart silently
+      // rendered in the fallback system font while the panel's status line
+      // still said the brand font was applied. `fontFamily` doesn't carry
+      // the brand's own origin (google/system) past `handleApplyBrand`, so
+      // this speculatively requests it from Google Fonts — a family the
+      // reader's OS already has installed (a true system font) simply
+      // 404s here, which is harmless: `ensureFontLoaded` only ever adds a
+      // `<link>`, and the browser renders the already-installed family
+      // regardless of whether that link resolves.
+      ensureFontLoaded({ family, source: 'google', stack: fontStack(family)! });
+    }
+  }, [pres.fontFamily]);
+  // WP218 phase 4 (#219, design §4): the chart's own language. `useLang()`
+  // is called UNCONDITIONALLY (its own statement, same reason as the Hook
+  // above it) — writing `pres.language ?? useLang()` directly would only
+  // call the hook when `pres.language` is null, a conditional Hook call that
+  // breaks React's Rules of Hooks the moment a reader toggles the per-chart
+  // select on/off. `pres.language` (null = follow the app) wins when set.
+  const appLang = useLang();
+  const chartLang: Lang = pres.language ?? appLang;
+
+  if (spec.schemaVersion !== 1) {
+    // Renderers dispatch on the schema version (ADR 007); this one only
+    // speaks v1 and must say so rather than misrender a future spec — the
+    // guard src/chart/render.ts has always had, and this wrapper lacked
+    // until #197 (a v2 spec would have rendered silently, possibly wrong).
+    const refusalAttributionLine =
+      chartLang === 'en' ? translateAttributionLine(spec.attributionLine) : spec.attributionLine;
+    const refusalTitle = chartLang === 'en' ? translateMeasureTitle(spec.title) : spec.title;
+    return (
+      <div className={frameClass}>
+        <div role="heading" aria-level={3} className="text-sm font-semibold text-foreground">
+          {refusalTitle}
+        </div>
+        <p className="mt-2 text-sm text-warning">{t(chartLang, 'chart.schemaRefusal')}</p>
+        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+          <p className="text-xs text-muted-foreground">{refusalAttributionLine}</p>
+          <SourceBadge tableId={spec.attribution.tableId} syncedAt={spec.attribution.syncedAt} />
+        </div>
+      </div>
+    );
+  }
+
+  // Task 4 (#212 period-range zoom): the full period-code list for the
+  // Vanaf/Tot selectors, and `viewSpec` — the spec windowed to the currently
+  // selected [from, to] range, or the untouched `spec` when no window is
+  // active or zoom isn't offered at all. Only offered for a line-kind chart
+  // with more than one period: a bar/comparison chart has one period per
+  // region, so there is nothing to zoom into. `windowSpec` only ever filters
+  // `series[].points` (R6 verbatim projection) — it never touches
+  // `spec.kind`/`spec.attribution`/`spec.title`/`spec.unit`, which describe
+  // the chart's identity, not its windowed content. Every DATA-derivation
+  // call below (buildRows/annotationMarkers/valueLabelPlan/tableModel) reads
+  // `viewSpec`; every IDENTITY read (spec.kind, spec.attribution, spec.title,
+  // spec.unit) stays on the raw `spec`.
+  const allPeriodCodes = Array.from(
+    new Set(spec.series.flatMap((s) => s.points.map((p) => p.periodCode))),
+  ).sort((a, b) => a.localeCompare(b));
+  // WP218 phase 4: these feed the Vanaf/Tot <select> options and the zoom
+  // disclosure sentence below — translated via the SAME word-list converter
+  // ChartView uses everywhere else (never a second, independent translation
+  // of period text).
+  const periodLabelByCode = new Map(
+    spec.series.flatMap((s) =>
+      s.points.map((p): [string, string] => [
+        p.periodCode,
+        chartLang === 'en' ? translatePeriodLabel(p.periodLabel) : p.periodLabel,
+      ]),
+    ),
+  );
+  const zoomAvailable = spec.kind === 'line' && allPeriodCodes.length > 1;
+  const viewSpec = zoomAvailable ? windowSpec(spec, state.periodRange) : spec;
+  // WP218 phase 4 (design §4): title/unit/series-labels(regions)/period-
+  // labels translated ONCE here — every derivation below (buildRows,
+  // annotationMarkers, valueLabelPlan, tableModel, the accessible name) reads
+  // `displaySpec` instead of `viewSpec`, so the honesty-bound value/
+  // formattedValue/resultId fields are untouched (translateSpecForDisplay
+  // never rewrites them) while every CBS-word label on screen matches
+  // `chartLang`. A no-op (`displaySpec === viewSpec`) when chartLang is 'nl'.
+  const displaySpec = translateSpecForDisplay(viewSpec, chartLang);
+  // WP218 phase 4: the download menu receives this SAME displayed string
+  // (never re-derived from spec.attributionLine independently), so the
+  // exported PNG/SVG's baked-in attribution matches what the card shows.
+  const displayAttributionLine =
+    chartLang === 'en' ? translateAttributionLine(spec.attributionLine) : spec.attributionLine;
+
+  // WP218 (ADR 039) Phase 0: `pres` (canUseLine/activeForm/effectiveKind
+  // included) is computed above, ahead of the schemaVersion guard — see the
+  // comment there. `colorFor` feeds buildRows so every legend swatch,
+  // tooltip swatch and hatch pattern reads the SAME effective colour.
+  const colorFor = (i: number) => seriesColor(pres, i);
+  const { rows, seriesMeta } = buildRows(displaySpec, colorFor);
   const dimEntries = Object.entries(spec.dimLabels);
   // Final review finding: this used to read `viewSpec` (the ORIGINAL
   // spec.kind) directly, so a line-kind chart's curated annotations stayed
@@ -909,8 +1372,8 @@ export function ChartView({
   // then claim something is marked in the chart when nothing visually is.
   // Composing `effectiveKind` here, exactly as `valueLabelPlan` already does
   // below, keeps the claim and the render in sync.
-  const markers = annotationMarkers({ ...viewSpec, kind: effectiveKind }, rows);
-  const plan = valueLabelPlan({ ...viewSpec, kind: effectiveKind });
+  const markers = annotationMarkers({ ...displaySpec, kind: effectiveKind }, rows);
+  const plan = valueLabelPlan({ ...displaySpec, kind: effectiveKind });
   const tickByValue = new Map(plan.axisTicks.map((t) => [t.value, t]));
   const endLabelByKey = new Map(plan.endLabels.map((l) => [l.seriesKey, l]));
   const barLabelsByKey = new Map<string, Map<string, PointLabel>>();
@@ -927,7 +1390,21 @@ export function ChartView({
     plan.endLabels.length > 0
       ? Math.min(140, plan.endLabels.reduce((w, l) => Math.max(w, labelWidthPx(l.text)), 0))
       : 8;
-  const accessibleName = `Grafiek: ${spec.title} (${spec.unit})`;
+  // WP218: reserved x-axis height for tilted labels (xAxisHeight) needs the
+  // longest label actually plotted — `rows`, never a re-derivation, so a
+  // zoomed viewSpec's shorter label set reserves less height too.
+  const longestPeriodLabel = rows.reduce(
+    (longest, row) => (String(row.periodLabel).length > longest.length ? String(row.periodLabel) : longest),
+    '',
+  );
+  // undefined (flat labels, the stock look) reserves no extra height —
+  // spread only when defined so Recharts' own XAxis default height applies,
+  // exactly as if the prop were never passed.
+  const xAxisHeightPx = xAxisHeight(pres.xLabels, longestPeriodLabel);
+  // Tilted labels overhang the first tick to the left; reserve what the y-axis
+  // width does not already cover (see xLabelOverhang).
+  const leftMargin = 8 + Math.max(0, xLabelOverhang(pres.xLabels, longestPeriodLabel) - yAxisWidth);
+  const accessibleName = `${t(chartLang, 'chart.graphPanelLabel')}: ${displaySpec.title} (${displaySpec.unit})`;
   // Final review finding (owner-directed follow-up): small multiples always
   // drew line panels regardless of the form switch, so choosing Staaf while
   // small multiples was on silently kept showing lines — the bar-zero-axis
@@ -935,26 +1412,108 @@ export function ChartView({
   // Gated off (not given its own bar path) as the cheapest, most
   // conservative fix: ChartSmallMultiples stays a line-only view, exactly
   // like before this task, just no longer reachable from a non-line form.
-  const smallMultiplesAvailable = effectiveKind === 'line' && seriesMeta.length > 1;
+  // WP218 phase 5: narrowed from `effectiveKind === 'line'` to `activeForm
+  // === 'line'` — area's effectiveKind is ALSO 'line' (same data model,
+  // reused verbatim below), but small multiples stays a line-only view by
+  // owner design; without this narrowing it would silently become
+  // reachable from the Vlak tab too.
+  const smallMultiplesAvailable = activeForm === 'line' && seriesMeta.length > 1;
   const hiddenDisclosure =
-    state.hiddenKeys.size > 0 ? ` ${state.hiddenKeys.size} van ${seriesMeta.length} reeksen verborgen.` : '';
+    state.hiddenKeys.size > 0
+      ? ` ${t(chartLang, 'chart.hiddenSeriesDisclosure', { n: state.hiddenKeys.size, m: seriesMeta.length })}.`
+      : '';
   // Task 4: describes the currently shown window against the chart's full
   // covered range — from the ORIGINAL spec.attribution (identity, not
   // windowed content), never recomputed from viewSpec's own filtered points.
   const zoomDisclosure = state.periodRange
-    ? ` Getoond: ${periodLabelByCode.get(state.periodRange[0])}–${periodLabelByCode.get(state.periodRange[1])} van ${spec.attribution.coveredPeriods.from}–${spec.attribution.coveredPeriods.to}.`
+    ? ` ${t(chartLang, 'chart.zoomDisclosure', {
+        from: periodLabelByCode.get(state.periodRange[0]) ?? '',
+        to: periodLabelByCode.get(state.periodRange[1]) ?? '',
+        coveredFrom: spec.attribution.coveredPeriods.from,
+        coveredTo: spec.attribution.coveredPeriods.to,
+      })}`
     : '';
   const viewDisclosure = `${hiddenDisclosure}${zoomDisclosure}`;
   const tooltipTrigger = coarsePointer ? 'click' : 'hover';
-  const table = tableModel(viewSpec);
+  const table = tableModel(displaySpec, chartLang);
   const panelId = `${domId}-panel`;
 
-  // Task 3: a real three-way Lijn/Staaf/Tabel switch. Lijn is skipped from
-  // the keyboard order entirely when disabled (canUseLine === false) so
+  // WP218 phase 5 (Task 2): the horizontal-bar form's OWN transposed row
+  // model — one row per region, built from `buildRegionRows` (Task 1) over
+  // the SAME `displaySpec`/`colorFor` as `buildRows` above, so `seriesMeta`
+  // and `regionRowsAll` are index-aligned (both iterate `displaySpec.series`
+  // in spec order — R6). Independent of `rows` (period x series): the
+  // vertical forms never read this, and this never reads `rows`. Hidden
+  // regions are DROPPED (not zeroed), order kept; highlight dims every OTHER
+  // region, sharing `state.hiddenKeys`/`state.highlightedKey` with the
+  // legend exactly like the vertical bar form's series do.
+  const { rows: regionRowsAll } = buildRegionRows(displaySpec, colorFor);
+  const regionChartRowsAll: RegionChartRow[] = regionRowsAll.map((r, i) => ({
+    key: seriesMeta[i].key,
+    label: r.label,
+    value: r.value,
+    value_display: r.value_display,
+    value_provisional: r.value_provisional,
+    value_resultId: r.value_resultId,
+    color: seriesMeta[i].color,
+    dimmed: state.highlightedKey !== null && state.highlightedKey !== seriesMeta[i].key,
+    patternId: `hatch-${domId}-${seriesMeta[i].key}`,
+  }));
+  const visibleRegionRows = regionChartRowsAll.filter((r) => !state.hiddenKeys.has(r.key));
+  // Same >BAR_LABEL_MAX thinning rule as valueLabelPlan's bar branch (the
+  // idea-bank's >15-categories rule) — counted over EVERY region in the
+  // spec, not just the visible ones, so hiding a region can never make
+  // labels that were already suppressed reappear.
+  const hbarPlottedCount = regionChartRowsAll.filter((r) => r.value !== null && r.value_display !== null).length;
+  const hbarLabelsShown = hbarPlottedCount > 0 && hbarPlottedCount <= BAR_LABEL_MAX;
+  const longestRegionLabel = regionChartRowsAll.reduce(
+    (longest, r) => (r.label.length > longest.length ? r.label : longest),
+    '',
+  );
+  const hbarYAxisWidth = Math.min(160, Math.max(48, labelWidthPx(longestRegionLabel)));
+  const longestRegionValueText = regionChartRowsAll.reduce((longest, r) => {
+    const text = `${r.value_display ?? ''}${r.value_provisional ? '*' : ''}`;
+    return text.length > longest.length ? text : longest;
+  }, '');
+  const rightMarginForLabels = hbarLabelsShown && longestRegionValueText ? labelWidthPx(longestRegionValueText) : 8;
+  // A comparison has exactly one period shared by every region; this is the
+  // SAME fallback tableModel's own bar-kind header above already uses for
+  // the identical "which period label represents every region" question.
+  const regionPeriodLabels = new Set(displaySpec.series.flatMap((s) => s.points.map((p) => p.periodLabel)));
+  const regionPeriodLabel = regionPeriodLabels.size === 1 ? [...regionPeriodLabels][0]! : t(chartLang, 'chart.table.value');
+
+  // Task 3 / WP218 phase 5 Task 2: the real five-way Lijn/Vlak/Staaf/Liggend/
+  // Tabel switch, tab order per the phase-5 plan. A disallowed tab is
+  // skipped from the keyboard order entirely (as Lijn already was) so
   // arrow-key navigation never lands on a control the pointer can't activate
-  // either.
-  const FORM_ORDER: ChartForm[] = canUseLine ? ['line', 'bar', 'table'] : ['bar', 'table'];
-  const formTabRef: Record<ChartForm, typeof lineTabRef> = { line: lineTabRef, bar: barTabRef, table: tableTabRef };
+  // either; Staaf and Tabel are never gated.
+  const FORM_ORDER: ChartForm[] = [
+    ...(canUseLine ? (['line'] as const) : []),
+    ...(canUseArea ? (['area'] as const) : []),
+    'bar',
+    ...(canUseHbar ? (['hbar'] as const) : []),
+    'table',
+  ];
+  const formTabRef: Record<ChartForm, typeof lineTabRef> = {
+    line: lineTabRef,
+    area: areaTabRef,
+    bar: barTabRef,
+    hbar: hbarTabRef,
+    table: tableTabRef,
+  };
+  // WP218 phase 5 (Global Constraints): each disabled tab explains itself —
+  // the SAME reason string feeds both the pointer `title` and the
+  // screen-reader `aria-describedby` span below, mirroring the Lijn tab's
+  // existing pattern. Area has two distinct reasons depending on WHY it's
+  // disallowed: a still-line-kind spec with >1 series (the fill would cover
+  // other series' markers and gaps) vs. a comparison (bar-kind, no time
+  // axis for a fill to trace) — `areaFormAllowed` returning false for a
+  // line-kind spec only ever happens via the multi-series case, so branching
+  // on `spec.kind` alone picks the right one. Hbar has exactly one reason
+  // (disallowed only for a line-kind spec, regardless of series count).
+  const areaDisabledReason =
+    spec.kind === 'line' ? t(chartLang, 'chart.formReason.areaMultiSeries') : t(chartLang, 'chart.formReason.areaComparison');
+  const hbarDisabledReason = t(chartLang, 'chart.formReason.hbarTimeSeries');
 
   function selectForm(next: ChartForm): void {
     dispatch({ type: 'setForm', form: next });
@@ -968,6 +1527,23 @@ export function ChartView({
     const idx = FORM_ORDER.indexOf(activeForm);
     const nextIdx = (idx + dir + FORM_ORDER.length) % FORM_ORDER.length;
     selectForm(FORM_ORDER[nextIdx]);
+  }
+
+  // Review fix (chart-panel-layout, option A): these two ids are the ONLY
+  // link between the trigger rendered here and the region ChartConfigPanel
+  // renders further down — `styleControlsId` must equal exactly what
+  // ChartConfigPanel builds internally from its own `idPrefix` prop
+  // (`${idPrefix}-style`) so the trigger's `aria-controls` actually resolves.
+  const styleTriggerId = `${domId}-style-trigger`;
+  const styleControlsId = `${domId}-style`;
+
+  function toggleStylePanel(): void {
+    // Side effect outside the state updater: React may invoke an updater
+    // twice (Strict Mode) and requires it to be pure — the usage counter
+    // must fire exactly once per open (task-5 review finding, carried over
+    // from the panel's own former toggleOpen).
+    if (!styleOpen) trackChartStyleEvent('panel_open');
+    setStyleOpen((wasOpen) => !wasOpen);
   }
 
   // Session 87 (mockup Option B): the Grafiek/Tabel switch is a shadcn-style
@@ -985,65 +1561,139 @@ export function ChartView({
   return (
     <div className={frameClass}>
       <div role="heading" aria-level={3} className="text-sm font-semibold text-foreground">
-        {spec.title}
+        {displaySpec.title}
       </div>
       {dimEntries.length > 0 ? (
         <div className="text-xs text-muted-foreground">
           {dimEntries.map(([k, v]) => `${k}: ${v}`).join(' · ')}
         </div>
       ) : null}
-      <div className="text-xs text-muted-foreground">{spec.unit}</div>
-      <div
-        role="tablist"
-        aria-label="Weergave"
-        onKeyDown={onFormTabKeyDown}
-        className="mt-3 inline-flex items-center gap-0.5 rounded-lg bg-muted p-0.5"
-      >
-        <button
-          ref={lineTabRef}
-          type="button"
-          role="tab"
-          aria-selected={activeForm === 'line'}
-          aria-controls={panelId}
-          tabIndex={activeForm === 'line' ? 0 : -1}
-          disabled={!canUseLine}
-          title={canUseLine ? undefined : 'Een lijn tussen regio’s zou een trend suggereren die niet is gemeten.'}
-          onClick={() => selectForm('line')}
-          className={segmentTab(activeForm === 'line') + (canUseLine ? '' : ' cursor-not-allowed opacity-40')}
+      <div className="text-xs text-muted-foreground">{displaySpec.unit}</div>
+      {/* WP218 phase 1 (Task 7), updated by the option-A layout refactor: the
+        * Weergave tablist and the Opmaak trigger share one row — the trigger
+        * (`ChartConfigTrigger`, rendered directly here — see the review-fix
+        * comment on `styleOpen` above) is a plain row-mate of the tablist,
+        * not a child of it — the tablist's own `mt-3` moved up onto this
+        * wrapper so the row keeps its original top spacing regardless of
+        * whether the trigger is offered. */}
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <div
+          role="tablist"
+          aria-label={t(chartLang, 'chart.weergaveLabel')}
+          onKeyDown={onFormTabKeyDown}
+          className="inline-flex items-center gap-0.5 rounded-lg bg-muted p-0.5"
         >
-          Lijn
-        </button>
-        <button
-          ref={barTabRef}
-          type="button"
-          role="tab"
-          aria-selected={activeForm === 'bar'}
-          aria-controls={panelId}
-          tabIndex={activeForm === 'bar' ? 0 : -1}
-          onClick={() => selectForm('bar')}
-          className={segmentTab(activeForm === 'bar')}
-        >
-          Staaf
-        </button>
-        <button
-          ref={tableTabRef}
-          type="button"
-          role="tab"
-          aria-selected={activeForm === 'table'}
-          aria-controls={panelId}
-          tabIndex={activeForm === 'table' ? 0 : -1}
-          onClick={() => selectForm('table')}
-          className={segmentTab(activeForm === 'table')}
-        >
-          Tabel
-        </button>
+          <button
+            ref={lineTabRef}
+            type="button"
+            role="tab"
+            aria-selected={activeForm === 'line'}
+            aria-controls={panelId}
+            aria-describedby={canUseLine ? undefined : `${domId}-line-reason`}
+            tabIndex={activeForm === 'line' ? 0 : -1}
+            disabled={!canUseLine}
+            title={canUseLine ? undefined : t(chartLang, 'chart.lineDisabledReason')}
+            onClick={() => selectForm('line')}
+            className={segmentTab(activeForm === 'line') + (canUseLine ? '' : ' cursor-not-allowed opacity-40')}
+          >
+            {t(chartLang, 'chart.tabLine')}
+          </button>
+          <button
+            ref={areaTabRef}
+            type="button"
+            role="tab"
+            aria-selected={activeForm === 'area'}
+            aria-controls={panelId}
+            aria-describedby={canUseArea ? undefined : `${domId}-area-reason`}
+            tabIndex={activeForm === 'area' ? 0 : -1}
+            disabled={!canUseArea}
+            title={canUseArea ? undefined : areaDisabledReason}
+            onClick={() => selectForm('area')}
+            className={segmentTab(activeForm === 'area') + (canUseArea ? '' : ' cursor-not-allowed opacity-40')}
+          >
+            {t(chartLang, 'chart.form.area')}
+          </button>
+          <button
+            ref={barTabRef}
+            type="button"
+            role="tab"
+            aria-selected={activeForm === 'bar'}
+            aria-controls={panelId}
+            tabIndex={activeForm === 'bar' ? 0 : -1}
+            onClick={() => selectForm('bar')}
+            className={segmentTab(activeForm === 'bar')}
+          >
+            {t(chartLang, 'chart.tabBar')}
+          </button>
+          <button
+            ref={hbarTabRef}
+            type="button"
+            role="tab"
+            aria-selected={activeForm === 'hbar'}
+            aria-controls={panelId}
+            aria-describedby={canUseHbar ? undefined : `${domId}-hbar-reason`}
+            tabIndex={activeForm === 'hbar' ? 0 : -1}
+            disabled={!canUseHbar}
+            title={canUseHbar ? undefined : hbarDisabledReason}
+            onClick={() => selectForm('hbar')}
+            className={segmentTab(activeForm === 'hbar') + (canUseHbar ? '' : ' cursor-not-allowed opacity-40')}
+          >
+            {t(chartLang, 'chart.form.hbar')}
+          </button>
+          <button
+            ref={tableTabRef}
+            type="button"
+            role="tab"
+            aria-selected={activeForm === 'table'}
+            aria-controls={panelId}
+            tabIndex={activeForm === 'table' ? 0 : -1}
+            onClick={() => selectForm('table')}
+            className={segmentTab(activeForm === 'table')}
+          >
+            {t(chartLang, 'chart.tabTable')}
+          </button>
+        </div>
+        {/* Reachable via the disabled Lijn tab's aria-describedby above — a
+          * plain `title` (kept, for pointer users) is invisible to a screen
+          * reader, and a disabled control still needs its reason available
+          * to whoever reaches it by keyboard/AT. */}
+        {!canUseLine ? (
+          <span id={`${domId}-line-reason`} className="sr-only">
+            {t(chartLang, 'chart.lineDisabledReason')}
+          </span>
+        ) : null}
+        {!canUseArea ? (
+          <span id={`${domId}-area-reason`} className="sr-only">
+            {areaDisabledReason}
+          </span>
+        ) : null}
+        {!canUseHbar ? (
+          <span id={`${domId}-hbar-reason`} className="sr-only">
+            {hbarDisabledReason}
+          </span>
+        ) : null}
+        {/* Review fix (chart-panel-layout, option A): the "Opmaak" trigger
+          * now renders directly here as a row-mate of the Weergave tablist —
+          * no portal, no placeholder node. Gated on `state.form !== 'table'`
+          * exactly like the ChartConfigPanel mount further down (Tabel form
+          * offers no styling at all — chart-presentation.ts's `applicable`
+          * is empty for it), so the two stay in lockstep. */}
+        {state.form !== 'table' ? (
+          <ChartConfigTrigger
+            open={styleOpen}
+            onToggle={toggleStylePanel}
+            controlsId={styleControlsId}
+            triggerId={styleTriggerId}
+            lang={chartLang}
+          />
+        ) : null}
       </div>
       {zoomAvailable ? (
         <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          <label htmlFor={`${domId}-from`}>Vanaf</label>
+          <label htmlFor={`${domId}-from`}>{t(chartLang, 'chart.from')}</label>
           <select
             id={`${domId}-from`}
-            aria-label="Vanaf"
+            aria-label={t(chartLang, 'chart.from')}
             value={state.periodRange?.[0] ?? allPeriodCodes[0]}
             onChange={(e) => {
               const [from, clampedTo] = clampVanafChange(
@@ -1066,10 +1716,10 @@ export function ChartView({
               </option>
             ))}
           </select>
-          <label htmlFor={`${domId}-to`}>Tot</label>
+          <label htmlFor={`${domId}-to`}>{t(chartLang, 'chart.to')}</label>
           <select
             id={`${domId}-to`}
-            aria-label="Tot"
+            aria-label={t(chartLang, 'chart.to')}
             value={state.periodRange?.[1] ?? allPeriodCodes[allPeriodCodes.length - 1]}
             onChange={(e) => {
               const [clampedFrom, to] = clampTotChange(
@@ -1095,7 +1745,7 @@ export function ChartView({
         </div>
       ) : null}
       {state.form === 'table' ? (
-        <div id={panelId} role="tabpanel" aria-label="Tabel" className="mt-2 overflow-x-auto">
+        <div id={panelId} role="tabpanel" aria-label={t(chartLang, 'chart.tabTable')} className="mt-2 overflow-x-auto">
           <table className="w-full text-sm" aria-label={table.caption}>
             <thead>
               <tr>
@@ -1132,7 +1782,7 @@ export function ChartView({
       <div
         id={panelId}
         role="tabpanel"
-        aria-label="Grafiek"
+        aria-label={t(chartLang, 'chart.graphPanelLabel')}
         ref={chartContainerRef}
         className={
           'mt-2 w-full touch-pan-y ' +
@@ -1144,24 +1794,57 @@ export function ChartView({
           (smallMultiples && smallMultiplesAvailable ? 'h-auto' : 'h-64')
         }
         data-tooltip-trigger={tooltipTrigger}
+        // WP218: SVG <text> inherits font-family via CSS, so setting it once
+        // on this container reaches every axis tick/point/end/bar label
+        // drawn below; chart-download.tsx's inlineComputedPaint writes the
+        // computed family onto every text node, so the PNG/SVG export
+        // carries it too. undefined (the stock look: no font override)
+        // leaves the page's own font untouched, same as today.
+        style={fontStack(pres.fontFamily) ? { fontFamily: fontStack(pres.fontFamily) } : undefined}
       >
         {smallMultiples && smallMultiplesAvailable ? (
-          <ChartSmallMultiples spec={viewSpec} hiddenKeys={state.hiddenKeys} axisMode={axisMode} />
+          <ChartSmallMultiples
+            spec={displaySpec}
+            hiddenKeys={state.hiddenKeys}
+            axisMode={axisMode}
+            presentation={pres}
+            lang={chartLang}
+          />
         ) : (
         <ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 640, height: 256 }}>
-          {effectiveKind === 'line' ? (
+          {activeForm === 'line' ? (
             <LineChart
               data={rows}
-              margin={{ top: 8, right: rightMargin, left: 8, bottom: 8 }}
-              desc={KEYBOARD_HINT}
+              margin={{ top: 8, right: rightMargin, left: leftMargin, bottom: 8 }}
+              desc={t(chartLang, 'chart.keyboardHint')}
               aria-label={accessibleName}
             >
               {/* Recharts' own default grid + axis geometry (session 87: the
                 * "basic Recharts look") in theme colours (AXIS_COLOR/GRID_COLOR:
                 * dark mode); only the honesty-bound custom ticks and labels
-                * below are ours. */}
-              <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} />
-              <XAxis dataKey="periodLabel" stroke={AXIS_COLOR} tick={{ fill: AXIS_COLOR }} />
+                * below are ours. WP218: horizontal/vertical/no-grid-at-all
+                * follow `pres.grid`. */}
+              {pres.grid !== 'none' ? (
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke={GRID_COLOR}
+                  // Always true: this element only renders inside the
+                  // `pres.grid !== 'none'` branch above, and GridMode has no
+                  // vertical-only option — 'both'/'horizontal' both want it.
+                  horizontal
+                  vertical={pres.grid === 'both'}
+                />
+              ) : null}
+              <XAxis
+                dataKey="periodLabel"
+                stroke={AXIS_COLOR}
+                tick={{ fill: AXIS_COLOR }}
+                axisLine={pres.axisLines === 'shown'}
+                tickLine={pres.axisLines === 'shown'}
+                angle={pres.xLabels === 'tilted' ? -45 : 0}
+                textAnchor={pres.xLabels === 'tilted' ? 'end' : 'middle'}
+                {...(xAxisHeightPx !== undefined ? { height: xAxisHeightPx } : {})}
+              />
               {/* #197 idea 6: axis ticks come from the full spec (valueLabelPlan
                 * doesn't know about hiddenKeys) and are NOT recomputed when a
                 * series is hidden — an accepted v1 limitation, not a bug: the
@@ -1172,8 +1855,10 @@ export function ChartView({
                 interval={0}
                 tick={plan.axisTicks.length > 0 ? AxisTick(tickByValue) : false}
                 width={yAxisWidth}
-                domain={yAxisDomain(effectiveKind)}
+                domain={pres.zeroBaseline === 'zero' ? [0, 'auto'] : yAxisDomain(effectiveKind)}
                 stroke={AXIS_COLOR}
+                axisLine={pres.axisLines === 'shown'}
+                tickLine={pres.axisLines === 'shown'}
               />
               <Tooltip trigger={tooltipTrigger} content={<ChartTooltip seriesMeta={seriesMeta} />} />
               {/* #170(4): curated event markers — drawn before the series so
@@ -1202,21 +1887,171 @@ export function ChartView({
                       dataKey={s.key}
                       name={s.label}
                       stroke={s.color}
-                      strokeWidth={2}
+                      strokeWidth={LINE_WIDTH_PX[pres.lineWidth]}
                       strokeOpacity={dimmed ? 0.25 : 1}
                       data-series-dimmed={dimmed ? 'true' : undefined}
                       connectNulls={false}
-                      dot={SeriesDot(s.key, endLabelByKey.get(s.key), dimmed ? 0.25 : 1, s.label, (p) => setPendingPoint(p))}
+                      dot={SeriesDot(
+                        s.key,
+                        pres.valueLabels === 'shown' ? endLabelByKey.get(s.key) : undefined,
+                        dimmed ? 0.25 : 1,
+                        s.label,
+                        (p) => setPendingPoint(p),
+                        { ...dotGeometry(pres.lineWidth), hideFinal: pres.markers === 'provisionalOnly' },
+                        chartLang,
+                      )}
                       isAnimationActive={false}
                     />
                   );
                 })}
             </LineChart>
+          ) : activeForm === 'area' ? (
+            // WP218 phase 5 (Global Constraints): area is offered only for a
+            // single time series, so this is the SAME data model as the Lijn
+            // branch above (rows/plan/markers all built from `displaySpec`
+            // once, near the top of this component) with grid/axes/tooltip/
+            // reference lines copied verbatim — only the drawn element
+            // differs (a filled Area instead of a Line). The Y domain reads
+            // `pres.zeroBaseline` exactly like Lijn's — never a literal
+            // [0, 'auto'] here — so the render can never drift from the
+            // resolver's lock (LOCK_REASONS.zeroBaselineArea forces it to
+            // 'zero' for this form, chart-presentation.ts).
+            <AreaChart
+              data={rows}
+              margin={{ top: 8, right: rightMargin, left: leftMargin, bottom: 8 }}
+              desc={t(chartLang, 'chart.keyboardHint')}
+              aria-label={accessibleName}
+            >
+              {pres.grid !== 'none' ? (
+                <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} horizontal vertical={pres.grid === 'both'} />
+              ) : null}
+              <XAxis
+                dataKey="periodLabel"
+                stroke={AXIS_COLOR}
+                tick={{ fill: AXIS_COLOR }}
+                axisLine={pres.axisLines === 'shown'}
+                tickLine={pres.axisLines === 'shown'}
+                angle={pres.xLabels === 'tilted' ? -45 : 0}
+                textAnchor={pres.xLabels === 'tilted' ? 'end' : 'middle'}
+                {...(xAxisHeightPx !== undefined ? { height: xAxisHeightPx } : {})}
+              />
+              <YAxis
+                ticks={plan.axisTicks.map((t) => t.value)}
+                interval={0}
+                tick={plan.axisTicks.length > 0 ? AxisTick(tickByValue) : false}
+                width={yAxisWidth}
+                domain={pres.zeroBaseline === 'zero' ? [0, 'auto'] : yAxisDomain(effectiveKind)}
+                stroke={AXIS_COLOR}
+                axisLine={pres.axisLines === 'shown'}
+                tickLine={pres.axisLines === 'shown'}
+              />
+              <Tooltip trigger={tooltipTrigger} content={<ChartTooltip seriesMeta={seriesMeta} />} />
+              {markers.map((m) => (
+                <ReferenceLine key={m.periodLabel} x={m.periodLabel} stroke="var(--muted-foreground)" strokeDasharray="3 3" />
+              ))}
+              {seriesMeta
+                .filter((s) => !state.hiddenKeys.has(s.key))
+                .map((s) => {
+                  const dimmed = state.highlightedKey !== null && state.highlightedKey !== s.key;
+                  return (
+                    <Area
+                      key={s.key}
+                      type="linear"
+                      dataKey={s.key}
+                      name={s.label}
+                      stroke={s.color}
+                      fill={s.color}
+                      fillOpacity={dimmed ? 0.1 : 0.25}
+                      strokeWidth={LINE_WIDTH_PX[pres.lineWidth]}
+                      strokeOpacity={dimmed ? 0.25 : 1}
+                      data-series-dimmed={dimmed ? 'true' : undefined}
+                      connectNulls={false}
+                      dot={SeriesDot(
+                        s.key,
+                        pres.valueLabels === 'shown' ? endLabelByKey.get(s.key) : undefined,
+                        dimmed ? 0.25 : 1,
+                        s.label,
+                        (p) => setPendingPoint(p),
+                        { ...dotGeometry(pres.lineWidth), hideFinal: pres.markers === 'provisionalOnly' },
+                        chartLang,
+                      )}
+                      activeDot={false}
+                      isAnimationActive={false}
+                    />
+                  );
+                })}
+            </AreaChart>
+          ) : activeForm === 'hbar' ? (
+            // WP218 phase 5 (Global Constraints): hbar is offered only for a
+            // comparison — one bar per REGION in the spec's own order (R6:
+            // never sorted), region label on the category axis, the number
+            // axis from zero with no invented ticks (tick={false}), the
+            // value label at the bar's end. `regionChartRowsAll`/
+            // `visibleRegionRows`/etc. are computed once, near the top of
+            // this component, from `buildRegionRows` (Task 1) — independent
+            // of `rows` (the period x series model every other form uses).
+            <BarChart
+              layout="vertical"
+              data={visibleRegionRows}
+              margin={{ top: 8, right: rightMarginForLabels, left: 8, bottom: 8 }}
+              desc={t(chartLang, 'chart.keyboardHint')}
+              aria-label={accessibleName}
+            >
+              <defs>
+                {seriesMeta.map((s) => (
+                  <pattern
+                    key={s.key}
+                    id={`hatch-${domId}-${s.key}`}
+                    patternUnits="userSpaceOnUse"
+                    width={6}
+                    height={6}
+                    patternTransform="rotate(45)"
+                  >
+                    <rect width={6} height={6} fill="var(--card)" />
+                    <line x1={0} y1={0} x2={0} y2={6} stroke={s.color} strokeWidth={2} />
+                  </pattern>
+                ))}
+              </defs>
+              {/* WP218 phase 5: grid/vertical swap meaning here relative to
+                * the vertical forms above — the NUMBER axis is now X, so the
+                * gridlines that make values easy to read run VERTICAL
+                * (always on when grid !== 'none', keeping "Alleen
+                * horizontaal"/"Beide" semantic to the reader rather than
+                * literal); the category (region) axis's own gridlines are
+                * the extra ones, only in 'both' mode. */}
+              {pres.grid !== 'none' ? (
+                <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} vertical horizontal={pres.grid === 'both'} />
+              ) : null}
+              <XAxis
+                type="number"
+                domain={[0, 'auto']}
+                tick={false}
+                stroke={AXIS_COLOR}
+                axisLine={pres.axisLines === 'shown'}
+                tickLine={pres.axisLines === 'shown'}
+              />
+              <YAxis
+                type="category"
+                dataKey="label"
+                width={hbarYAxisWidth}
+                interval={0}
+                tick={RegionAxisTick}
+                stroke={AXIS_COLOR}
+                axisLine={pres.axisLines === 'shown'}
+                tickLine={pres.axisLines === 'shown'}
+              />
+              <Tooltip trigger={tooltipTrigger} content={<RegionTooltip periodLabel={regionPeriodLabel} />} />
+              <Bar
+                dataKey="value"
+                isAnimationActive={false}
+                shape={RegionBar(regionPeriodLabel, hbarLabelsShown, (p) => setPendingPoint(p), chartLang)}
+              />
+            </BarChart>
           ) : (
             <BarChart
               data={rows}
-              margin={{ top: 16, right: 8, left: 8, bottom: 8 }}
-              desc={KEYBOARD_HINT}
+              margin={{ top: 16, right: 8, left: leftMargin, bottom: 8 }}
+              desc={t(chartLang, 'chart.keyboardHint')}
               aria-label={accessibleName}
             >
               <defs>
@@ -1237,10 +2072,38 @@ export function ChartView({
               {/* Recharts' own default grid + axis geometry (session 87: the
                 * "basic Recharts look") in theme colours (AXIS_COLOR/GRID_COLOR:
                 * dark mode); only the honesty-bound custom ticks and labels
-                * below are ours. */}
-              <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} />
-              <XAxis dataKey="periodLabel" stroke={AXIS_COLOR} tick={{ fill: AXIS_COLOR }} />
-              <YAxis tick={false} width={16} domain={yAxisDomain(effectiveKind)} stroke={AXIS_COLOR} />
+                * below are ours. WP218: grid/axis props mirror the line
+                * branch above; the Y domain stays unconditionally zero-based
+                * here (bar honesty rule, never overridden by zeroBaseline). */}
+              {pres.grid !== 'none' ? (
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke={GRID_COLOR}
+                  // Always true: this element only renders inside the
+                  // `pres.grid !== 'none'` branch above, and GridMode has no
+                  // vertical-only option — 'both'/'horizontal' both want it.
+                  horizontal
+                  vertical={pres.grid === 'both'}
+                />
+              ) : null}
+              <XAxis
+                dataKey="periodLabel"
+                stroke={AXIS_COLOR}
+                tick={{ fill: AXIS_COLOR }}
+                axisLine={pres.axisLines === 'shown'}
+                tickLine={pres.axisLines === 'shown'}
+                angle={pres.xLabels === 'tilted' ? -45 : 0}
+                textAnchor={pres.xLabels === 'tilted' ? 'end' : 'middle'}
+                {...(xAxisHeightPx !== undefined ? { height: xAxisHeightPx } : {})}
+              />
+              <YAxis
+                tick={false}
+                width={16}
+                domain={yAxisDomain(effectiveKind)}
+                stroke={AXIS_COLOR}
+                axisLine={pres.axisLines === 'shown'}
+                tickLine={pres.axisLines === 'shown'}
+              />
               <Tooltip trigger={tooltipTrigger} content={<ChartTooltip seriesMeta={seriesMeta} />} />
               {seriesMeta
                 .filter((s) => !state.hiddenKeys.has(s.key))
@@ -1263,6 +2126,7 @@ export function ChartView({
                         dimmed ? 0.25 : 1,
                         s.label,
                         (p) => setPendingPoint(p),
+                        chartLang,
                       )}
                     />
                   );
@@ -1273,6 +2137,108 @@ export function ChartView({
         )}
       </div>
       )}
+      {/* Chart-panel-layout refactor (owner: option A — "first the graph on
+        * top, then the design settings"): the Opmaak region renders directly
+        * after the chart's own tabpanel above (`chartContainerRef`'s parent),
+        * ahead of the trend headline/legend/small-multiples toggles below —
+        * chart first, settings under it. Its trigger button lives in the
+        * Weergave tablist row instead (rendered directly there now — see the
+        * review-fix comment on `styleOpen` above); mounting the panel itself
+        * HERE, not there, is what makes the `role="region"` it renders land
+        * in this position in the DOM, since a component's own JSX return is
+        * one subtree at one place in its caller's tree. `key={chartEpoch}`
+        * is unchanged from before this refactor: a spec swap still fully
+        * remounts the panel, resetting its colour-draft/brand-status state
+        * exactly as it always has — `open` itself is no longer this
+        * component's state (it's `styleOpen` above), so it's reset
+        * separately in the spec-swap block instead of via this remount. */}
+      {state.form !== 'table' ? (
+        <ChartConfigPanel
+          key={chartEpoch}
+          resolved={resolved}
+          seriesMeta={seriesMeta}
+          lang={chartLang}
+          open={styleOpen}
+          onOpenChange={setStyleOpen}
+          triggerId={styleTriggerId}
+          onChange={(patch) => {
+            dispatch({ type: 'setPresentation', patch });
+            trackChartStyleEvent('option_changed');
+          }}
+          onReset={() => {
+            dispatch({ type: 'resetPresentation' });
+            // Final-review fix: "Standaardkleuren" (a partial reset) goes
+            // through onChange and was already counted; "Standaard" (the
+            // full reset) fired nothing, so the #220 usage counter — whose
+            // whole point is telling the owner which options readers
+            // actually touch — systematically under-counted resets.
+            trackChartStyleEvent('option_changed');
+          }}
+          idPrefix={domId}
+          account={
+            signedIn
+              ? {
+                  hasDefault: accountStyle !== null,
+                  onSave: async () => {
+                    // The EFFECTIVE values (base + whatever per-chart tweaks
+                    // are currently showing) become the new account default —
+                    // "what's on screen" is what "Bewaar als mijn standaard"
+                    // promises to save — EXCEPT the keys the resolver LOCKED
+                    // for this form (P2 task-4 review): saving while a bar
+                    // chart is on screen must not bake the bar-forced zero
+                    // baseline into every future line chart. A locked value
+                    // was never the reader's choice, so it is not saved AS
+                    // THE LOCK'S VALUE — but final-review fix: it must still
+                    // be saved as whatever `base` (the account default
+                    // already in scope) already held for that key, not
+                    // dropped outright. Omitting the key made
+                    // `saveUserChartStyle`'s full-row REPLACE (never a merge)
+                    // silently erase an earlier saved preference for that key
+                    // — e.g. turning off "Waarden tonen" on a line chart,
+                    // saving, then only changing the font on a bar/hbar/area
+                    // chart and saving again wiped the earlier valueLabels
+                    // choice because bar forms lock it. Writing back
+                    // `base[key]` keeps both properties: a form-forced value
+                    // is never persisted, and a value the reader chose on a
+                    // DIFFERENT chart form survives an unrelated save on this
+                    // one.
+                    const chosen = { ...resolved.values } as Partial<typeof resolved.values>;
+                    for (const key of Object.keys(resolved.locks) as (keyof typeof resolved.values)[]) {
+                      (chosen as Record<string, unknown>)[key] = base[key];
+                    }
+                    // WP218 phase 3 (owner B): the last brand applied on any
+                    // chart shown by THIS MOUNTED ChartView (not just
+                    // whichever chart is on screen right now — see
+                    // lastAppliedBrand's own comment) rides along as the
+                    // account-default save's `brandApplied` argument, so the
+                    // persisted default can record which brand it came from.
+                    const r = await saveMyChartStyle(chosen, lastAppliedBrand ?? undefined);
+                    if (r.ok) {
+                      setAccountStyle(chosen);
+                      trackChartStyleEvent('default_saved');
+                    }
+                    return r.ok ? 'saved' : r.reason === 'unavailable' ? 'unavailable' : 'error';
+                  },
+                  onForget: async () => {
+                    const r = await forgetMyChartStyle();
+                    if (r.ok) {
+                      setAccountStyle(null);
+                      trackChartStyleEvent('default_forgotten');
+                    }
+                    return r.ok ? 'forgotten' : 'error';
+                  },
+                }
+              : undefined
+          }
+          // WP218 phase 3 (owner B): same signedIn gate as `account` —
+          // Ontdek/trial gets no Merkkleuren block at all.
+          brand={signedIn ? { lookup: (website) => lookupBrand(website) } : undefined}
+          onBrandApplied={(applied) => {
+            setLastAppliedBrand(applied);
+            trackChartStyleEvent('brand_applied');
+          }}
+        />
+      ) : null}
       {state.form !== 'table' && !state.periodRange && spec.attribution.trendHeadline !== undefined ? (
         <p data-testid="trend-headline" className="mt-1 text-sm text-foreground">
           {spec.attribution.trendHeadline}
@@ -1286,10 +2252,11 @@ export function ChartView({
             highlightedKey={state.highlightedKey}
             onToggle={(key) => dispatch({ type: 'toggleSeries', key })}
             onHighlight={(key) => dispatch({ type: 'setHighlight', key })}
+            lang={chartLang}
           />
           {state.hiddenKeys.size > 0 ? (
             <p className="mt-1 text-xs text-muted-foreground">
-              {state.hiddenKeys.size} van {seriesMeta.length} reeksen verborgen
+              {t(chartLang, 'chart.hiddenSeriesDisclosure', { n: state.hiddenKeys.size, m: seriesMeta.length })}
             </p>
           ) : null}
         </>
@@ -1306,17 +2273,17 @@ export function ChartView({
             onClick={() => setSmallMultiples((v) => !v)}
             className={tabClass(smallMultiples)}
           >
-            Kleine grafieken
+            {t(chartLang, 'chart.smallMultiplesToggle')}
           </button>
           {smallMultiples ? (
-            <div role="group" aria-label="Gelijke assen of eigen assen" className="flex gap-2">
+            <div role="group" aria-label={t(chartLang, 'chart.axisGroupLabel')} className="flex gap-2">
               <button
                 type="button"
                 aria-pressed={axisMode === 'shared'}
                 onClick={() => setAxisMode('shared')}
                 className={tabClass(axisMode === 'shared')}
               >
-                Gelijke assen
+                {t(chartLang, 'chart.sharedAxes')}
               </button>
               <button
                 type="button"
@@ -1324,7 +2291,7 @@ export function ChartView({
                 onClick={() => setAxisMode('own')}
                 className={tabClass(axisMode === 'own')}
               >
-                Eigen assen
+                {t(chartLang, 'chart.ownAxes')}
               </button>
             </div>
           ) : null}
@@ -1333,7 +2300,9 @@ export function ChartView({
       {/* #197: the hollow marker needs a key a lay reader can decode without
         * reading the note first; rendered exactly when the spec says a
         * provisional point exists (R11's provisionalNote is present iff). */}
-      {spec.provisionalNote ? <p className="mt-1 text-xs text-muted-foreground">○ = voorlopig cijfer</p> : null}
+      {spec.provisionalNote ? (
+        <p className="mt-1 text-xs text-muted-foreground">{t(chartLang, 'chart.provisionalMarkerNote')}</p>
+      ) : null}
       {/* WP23 (#92): caveats read like caveats — warn and a step larger than
         * the source credit, which stays smallest/lightest (photo-credit
         * style). Content untouched: same strings from the same one builder
@@ -1351,7 +2320,7 @@ export function ChartView({
         * is contextual metadata, not a data-quality warning. */}
       {markers.map((m) => (
         <p key={m.label} className="text-xs text-muted-foreground">
-          Gemarkeerd in de grafiek: {m.label}
+          {t(chartLang, 'chart.markedInChart', { label: m.label })}
         </p>
       ))}
       {/* Task 6 (#212 click-to-annotate): mounted as a SIBLING here, entirely
@@ -1367,6 +2336,7 @@ export function ChartView({
           notes={notes}
           pendingPoint={pendingPoint}
           idPrefix={domId}
+          lang={chartLang}
           onSave={(text) => {
             if (!pendingPoint) return;
             setNotes((prev) => [...prev, { id: `${pendingPoint.resultId}-${noteIdCounter.current++}`, ...pendingPoint, text }]);
@@ -1383,23 +2353,34 @@ export function ChartView({
         * none). Ontdek reuses this component, so the homepage charts get the
         * identical badge for free. */}
       <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
-        <p className="text-xs text-muted-foreground">{spec.attributionLine}</p>
+        <p className="text-xs text-muted-foreground">{displayAttributionLine}</p>
         <SourceBadge tableId={spec.attribution.tableId} syncedAt={spec.attribution.syncedAt} />
         {/* #170(3): download-as-image, PNG or SVG, attribution baked into
           * the file itself — not just shown on this page — via the SAME
-          * spec.attributionLine string shown above (R4: one builder, one
-          * sentence, never re-derived here). Not offered in small-multiples
-          * view (idea 8): ChartDownloadMenu grabs the first <svg> under the
-          * container, which in that view is just one series' own mini panel
-          * — exporting it under the full chart's filename/attribution would
-          * silently misrepresent what's shown, the same risk #46(c) already
-          * names for exports. Same precedent as the Tabel view below, which
-          * has never offered a download either. */}
-        {state.form !== 'table' && !smallMultiples ? (
+          * displayAttributionLine string shown above (R4: one builder, one
+          * sentence, never re-derived here; WP218 phase 4: translated once,
+          * shared between the on-screen text and the export). Not offered in
+          * small-multiples view (idea 8): ChartDownloadMenu grabs the first
+          * <svg> under the container, which in that view is just one
+          * series' own mini panel — exporting it under the full chart's
+          * filename/attribution would silently misrepresent what's shown,
+          * the same risk #46(c) already names for exports. Same precedent
+          * as the Tabel view below, which has never offered a download
+          * either. */}
+        {/* Final-review fix: gated on the SAME compound the container/render
+          * branch use (`smallMultiples && smallMultiplesAvailable`), not on
+          * `smallMultiples` alone — leaving small multiples on in Lijn form
+          * and then switching to Staaf (or Vlak) makes
+          * `smallMultiplesAvailable` false while `smallMultiples` state is
+          * still true, so the old `!smallMultiples` guard hid Download on
+          * an ordinary bar/area chart with no way back except returning to
+          * Lijn and toggling small multiples off. */}
+        {state.form !== 'table' && !(smallMultiples && smallMultiplesAvailable) ? (
           <ChartDownloadMenu
             containerRef={chartContainerRef}
-            attributionText={`${spec.attributionLine} checkdecijfers.nl${viewDisclosure}`}
+            attributionText={`${displayAttributionLine} checkdecijfers.nl${viewDisclosure}`}
             filenameBase={`checkdecijfers-${spec.attribution.tableId}`}
+            lang={chartLang}
           />
         ) : null}
       </div>

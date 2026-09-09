@@ -37,6 +37,11 @@ vi.mock('../components/question-history.tsx', () => ({ QuestionHistory: () => <d
 vi.mock('../components/site-header.tsx', () => ({ SiteHeader: () => <div data-testid="site-header" /> }));
 vi.mock('../components/landing.tsx', () => ({ Landing: () => <div data-testid="landing" /> }));
 vi.mock('./login/login-form.tsx', () => ({ LoginForm: () => <div data-testid="login-form" /> }));
+// WP218 phase 4 (#219): CreditsPage/LoginPage/GeschiedenisPage now read
+// getLang() (jsdom has no Next.js request context for the real
+// cookies()/headers() reads) -- these tests are about which SURFACE renders,
+// not the language, so a fixed 'nl' default is enough.
+vi.mock('../lib/i18n/server.ts', () => ({ getLang: vi.fn().mockResolvedValue('nl') }));
 
 import { redirect } from 'next/navigation';
 import Home from './page.tsx';
@@ -73,8 +78,8 @@ describe('WP135 dormancy — flag OFF renders today, byte-identical (⟨A5⟩)',
     expect(screen.getByText(/Credits — Check de Cijfers/)).toBeInTheDocument();
   });
 
-  it('/login renders NO site header', () => {
-    render(LoginPage());
+  it('/login renders NO site header', async () => {
+    render(await LoginPage());
     expect(screen.queryByTestId('site-header')).toBeNull();
     expect(screen.getByText(/Inloggen — Check de Cijfers/)).toBeInTheDocument();
   });
@@ -82,6 +87,14 @@ describe('WP135 dormancy — flag OFF renders today, byte-identical (⟨A5⟩)',
   it('/geschiedenis redirects to /', async () => {
     await expect(GeschiedenisPage()).rejects.toThrow('REDIRECT:/');
     expect(redirect).toHaveBeenCalledWith('/');
+  });
+
+  it('/geschiedenis renders its heading in English when the language cookie says so (WP218 phase 4)', async () => {
+    vi.stubEnv('WORKSPACE_ENABLED', '1');
+    const { getLang } = await import('../lib/i18n/server.ts');
+    vi.mocked(getLang).mockResolvedValueOnce('en');
+    render(await GeschiedenisPage());
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('History — Check de Cijfers');
   });
 
   it('/geschiedenis opts out of static prerendering (#135 residual, same bug as /login)', () => {
@@ -117,8 +130,8 @@ describe('WP135 dormancy — flag ON renders the workspace + shell', () => {
     expect(screen.getByTestId('site-header')).toBeInTheDocument();
   });
 
-  it('/login renders the (stripped) site header', () => {
-    render(LoginPage());
+  it('/login renders the (stripped) site header', async () => {
+    render(await LoginPage());
     expect(screen.getByTestId('site-header')).toBeInTheDocument();
   });
 

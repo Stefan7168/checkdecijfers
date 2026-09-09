@@ -9,6 +9,7 @@ import type { AskOutcome } from '../app/actions.ts';
 import type { GatedResponse } from '../backend/billing/index.ts';
 import type { ComposedResponse } from '../backend/answer/respond/types.ts';
 import { fakeAnswerResponse } from '../test/fake-answer.ts';
+import { LangProvider } from '../lib/i18n/lang-provider.tsx';
 import { Dashboard } from './dashboard.tsx';
 
 Element.prototype.scrollIntoView = vi.fn();
@@ -140,6 +141,28 @@ describe('Dashboard — purchase-success banner (#95)', () => {
     renderDashboard(100, true);
     expect(screen.getByText(/meestal een paar seconden/)).toBeInTheDocument();
     expect(screen.queryByText(/direct bijgeschreven|onmiddellijk/)).toBeNull();
+  });
+
+  // WP218 phase 4 (#219): proves the language switch reaches this surface.
+  it('renders the English banner text under LangProvider lang="en"', () => {
+    render(
+      <LangProvider lang="en">
+        <Dashboard
+          initialBalance={100}
+          simplePrice={20}
+          clarificationPrice={10}
+          signupGrantCredits={100}
+          history={<div data-testid="history-slot" />}
+          purchaseSuccess
+        />
+      </LangProvider>,
+    );
+    expect(
+      screen.getByText(
+        'Payment successful — your credits will be added once Stripe confirms the payment (usually a few seconds). Refresh the page afterwards to see your new balance.',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
   });
 });
 

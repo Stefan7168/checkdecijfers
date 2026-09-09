@@ -1,5 +1,79 @@
 # STATUS archive — the session log
 
+**Session 91 (2026-09-09, AUTONOMOUS) — THE WHOLE WP218 CHART STYLING PROGRAMME (PHASES 0–6) BUILT
+VIA SUBAGENT-DRIVEN DEVELOPMENT ON BRANCH `wp218-chart-styling`, REVIEWED TASK BY TASK AND AS A WHOLE
+BRANCH, VERIFIED, OPENED AS A PULL REQUEST. NOTHING MERGED OR LIVE.**
+
+1. **The go:** after the session-90 compaction the owner wrote "Start executing, work autonomously,
+   use subagents with the best model for the job (beware to save tokens…), work for hours and
+   hours, I will leave now and when I come back I expect everything to be done." No phase order was
+   chosen, so the plan's cheapest-first order ran: 0 → 1 → 2+6 → 3 → 4 → 5. Autonomous → branch
+   + PR (CLAUDE.md #118 rule (b)); the owner said "ok" mid-way and asked one unrelated question.
+2. **Method:** five plans in `docs/superpowers/plans/2026-09-09-wp218-phase-*.md` (written by the
+   session), the i18n design in `docs/superpowers/specs/2026-09-09-language-switch-design.md`, three
+   research/inventory briefs (Brandfetch API + pricing, chart-type picker UX, the interface string
+   inventory) copied to `docs/session-briefs/2026-09-09-session-91-*.md`. Execution: 20 implementer
+   tasks on Sonnet with file-based briefs/reports/diff packages, a fresh Sonnet reviewer per task
+   (spec + quality verdicts), fixes by the controller or a fix agent, an Opus whole-branch review
+   at the end, one consolidated fix commit, a Sonnet re-review. Ledger: `.superpowers/sdd/progress.md`.
+3. **Phase 0/1 (`27db553`…`394fcfc`, `5216e9c`):** `web/lib/chart-presentation.ts` (type, test-pinned
+   `STOCK_PRESENTATION`, allow-list sanitizer, resolver with honesty locks, colour judgement with
+   the R11 ring guard, curated fonts), the reducer's `presentation` slice cleared per chart (owner
+   E), the render reading the resolver, small multiples drawing the R11 hollow marker (the panel's
+   gap), the panel (`chart-config-panel.tsx`) mounted on every `ChartView` (owner G). Review catches:
+   `onOpen` in a state updater; per-row colour state not re-syncing (three rounds, ended with a
+   per-chart remount); tilted labels clipped at the card edge (browser pass).
+4. **Phase 2 + 6 (`fef323a`, `4d51567`, `5c04af9`, `8df7b71`, `8112cb7`):** migration
+   `028_user_chart_styles.sql` (file-only) + store, the retention leg injected at both purge
+   composition roots (a latent partial-failure wording bug fixed on the way), the account-level
+   wipe, the usage counter (server action + injectable client sink + layout tracker), the account
+   default (context, page read, save/forget actions, resolver base). Review catch: saving from a
+   bar chart baked the bar-forced zero baseline into the default → locked keys excluded.
+5. **Phase 3 (`edbbf8e`, `977e093`, `3380009`, `5e68130`, `83ba1ff`):** the Brandfetch client
+   (domain rules, tolerant parser, typed never-throwing fetch), migration `029_brand_cache.sql`
+   (file-only, 30-day TTL per the terms) + the per-user daily cap, the `lookupBrand` action
+   (cache before cap, key-gated, bad key → owner's logs), the "Pas merkkleuren toe" block. Review
+   catch: `need_website` shown as a failure.
+6. **Phase 4 (`a08ccea`, `0335624`, `89c76f8`, `c052899`, `f70f967`, `c956cfb`, `4c26ccb`, `7e2651d`,
+   `372b0bb`):** the catalogue (`web/lib/i18n/messages.ts`, Dutch verbatim, `en` typed from `nl`),
+   the `lang` cookie + `getLang()` + provider + `setLanguage` + the NL | EN header switch, two
+   string sweeps (chat surfaces; pages and shell), charts following the language with a per-chart
+   choice and the CBS word list (`cbs-words.ts`: units, periods, regions, curated titles, the
+   attribution template). Review catches: a missing Workspace English test; a half-Dutch stat-card
+   line; an unhandled period shape (`2026 januari-april`, a registered table).
+7. **Phase 5 (`b0c815f`, `5f20821`, `1c5736b`, `9fd6eb4`):** research read-back → one control grown
+   in place: `ChartForm` = line | area | bar | hbar | table with guards + fallback, the
+   `AreaChart` branch (zero baseline locked), the horizontal-bar branch over verbatim region rows
+   (spec order, labels bound, hatch, hide/highlight), the collapsed "Waarom geen taart- of
+   gestapelde grafiek?" note. Review catch: `RegionTooltip` untested.
+8. **Final whole-branch review (Opus, "Ready after fixes") → `eab25b6`:** the MUST — saving a
+   default from a bar/area chart erased an earlier line-chart preference (locked keys now write
+   back the account default's value); plus the brand font never loaded, the download menu
+   vanishing after small multiples, "Standaard" uncounted, a cache-hit `fetchedAt` = now, a dead
+   table-form applicability claim, the Dutch period text inside an English credit, a comment
+   overclaim, the unauthenticated counter recorded as accepted risk. Re-reviewed Approved.
+9. **Verification at `eab25b6`:** root + web `tsc` clean; web 1121/1121 (83 files); backend
+   2191/2191 (142 files, solo); benchmark suite 28/28; `next build` clean; `npm run test:docs`
+   11/11; LOW-effort review pass 0 findings. Browser (local `web-db`): panel light/dark/375 px,
+   language switch, five tabs + reasons, chart-language select, why-not note.
+10. **Docs:** ADR 039 (+ addenda for phases 2–6), ADR 040, RUNBOOK § WP218 go-live + the
+    `BRANDFETCH_API_KEY` row + a Turbopack/symlink gotcha, 08-build-plan (WP218 ✅ built), #218/
+    #219/#220, 03-mvp-scope, 12-huisstijl, 04-architecture, 05-data-rules, CLAUDE.md (language
+    convention superseded), README, lessons-learned (session 91), memory, this entry, the session-92
+    kickoff.
+11. **Owner back in chat, later the same session — design canvases + two picks built:** "/design"
+    canvases for the chart panel and the chat screen (links in STATUS), each the current build beside
+    three options drawn in the app's own tokens; second-look agents fixed nits before handover. Owner
+    picks: chart panel option A (compact grid) with the panel UNDER the chart; chat option B (answer
+    card) with like/dislike first, white + grey border + shadow, shadcn components. Built by two Sonnet
+    implementers with reviews: answer card (`0de0390`; review found the not-helpful panel squeezed →
+    `810c5a6`), panel layout (`e4eee7b`; the portaled trigger never worked in the real browser →
+    `d2eabca`, plain controlled button), throwaway preview route reverted (`cafcafe`). Verified: web
+    1132/1132, typechecks, build; answer card in the browser light + dark; the panel by tests.
+12. **Owner-facing open items:** merge the PR (or say "merge"); apply migrations 028 + 029;
+    decide on Brandfetch (100 free lookups in total, then ≈ $99/month); "do it" on the three CI
+    minute-saving changes proposed in chat.
+
 **Session 90 (2026-09-09, owner present) — #218 CHART-CONFIGURATION ARCHITECTURE PANEL RUN, OWNER
 DECISIONS A–H COLLECTED, WP218 PROGRAMME DOCUMENTED (NOT BUILT); COMPOSER LAYOUT MOVE, "LINK WITH
 SHEET" CHIP, PLUS ICON AND PER-CHAT DELETE SHIPPED TO `main`.**

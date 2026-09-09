@@ -3,6 +3,7 @@
 // badge appears exactly when flagged.
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { LangProvider } from '../lib/i18n/lang-provider.tsx';
 import type { StatCardData } from '../lib/stat-card-data.ts';
 import { StatCard } from './stat-card.tsx';
 
@@ -78,6 +79,19 @@ describe('StatCard', () => {
   });
 });
 
+// WP218 phase 4 (#219): proves the language switch reaches this surface.
+describe('StatCard — en', () => {
+  it('renders the English provisional badge and download label under LangProvider lang="en"', () => {
+    render(
+      <LangProvider lang="en">
+        <StatCard data={data({ provisional: true })} />
+      </LangProvider>,
+    );
+    expect(screen.getByText('provisional')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Download as image' })).toBeInTheDocument();
+  });
+});
+
 // WP20 adversarial-review finding: the whole downloadPng() body and the
 // user-facing failure message were unexercised. jsdom has no real image
 // decoding or canvas, so BOTH reachable failure legs are pinned: an Image
@@ -128,5 +142,16 @@ describe('StatCard — PNG download failure surfaces', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Download als afbeelding' }));
     // jsdom's canvas.getContext('2d') returns null -> the guarded branch.
     expect(await screen.findByText('Downloaden lukte niet in deze browser.')).toBeInTheDocument();
+  });
+});
+
+describe('StatCard — en (WP218 phase 4)', () => {
+  it('renders the attribution line in English with the same table id and date', () => {
+    render(
+      <LangProvider lang="en">
+        <StatCard data={data()} />
+      </LangProvider>,
+    );
+    expect(screen.getByText('CBS StatLine · table 82931NED · synced 2026-07-03 · checkdecijfers.nl')).toBeInTheDocument();
   });
 });

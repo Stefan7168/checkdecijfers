@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  areaFormAllowed,
   chartViewReducer,
+  fallbackForm,
+  hbarFormAllowed,
   initialViewState,
   lineFormAllowed,
   windowSpec,
@@ -58,6 +61,7 @@ describe('initialViewState', () => {
       hiddenKeys: new Set(),
       highlightedKey: null,
       periodRange: null,
+      presentation: {},
     });
   });
 });
@@ -135,6 +139,7 @@ describe('chartViewReducer', () => {
       hiddenKeys: new Set(),
       highlightedKey: null,
       periodRange: null,
+      presentation: {},
     });
   });
 });
@@ -152,6 +157,115 @@ describe('lineFormAllowed', () => {
   it('blocks line form for a multi-series bar-kind (comparison) spec', () => {
     expect(lineFormAllowed({ kind: 'bar' }, 2)).toBe(false);
     expect(lineFormAllowed({ kind: 'bar' }, 8)).toBe(false);
+  });
+});
+
+// WP218 phase 5: four representative spec shapes exercised against every
+// guard and against `fallbackForm` — S1/S2 are line-kind (a single time
+// series, a multi-series time series), S3/S4 are bar-kind (a multi-region
+// comparison, a single-region "comparison" of one). Naming matches the
+// phase-5 plan (docs/superpowers/plans/2026-09-09-wp218-phase-5-chart-types.md)
+// so a reviewer can cross-reference the guards table 1:1.
+const S1 = { kind: 'line' as const, seriesCount: 1 }; // single-series time series
+const S2 = { kind: 'line' as const, seriesCount: 2 }; // multi-series time series
+const S3 = { kind: 'bar' as const, seriesCount: 2 }; // multi-region comparison
+const S4 = { kind: 'bar' as const, seriesCount: 1 }; // single-region comparison
+
+describe('areaFormAllowed — single-series time series only (fill encodes magnitude)', () => {
+  it('S1 (single-series line): allowed', () => {
+    expect(areaFormAllowed({ kind: S1.kind }, S1.seriesCount)).toBe(true);
+  });
+  it('S2 (multi-series line): blocked — filled areas would cover each other', () => {
+    expect(areaFormAllowed({ kind: S2.kind }, S2.seriesCount)).toBe(false);
+  });
+  it('S3 (multi-region comparison): blocked — a comparison has no time axis', () => {
+    expect(areaFormAllowed({ kind: S3.kind }, S3.seriesCount)).toBe(false);
+  });
+  it('S4 (single-region comparison): blocked — still a comparison, not a time series', () => {
+    expect(areaFormAllowed({ kind: S4.kind }, S4.seriesCount)).toBe(false);
+  });
+});
+
+describe('hbarFormAllowed — comparisons only (bar-kind specs)', () => {
+  it('S1 (single-series line): blocked', () => {
+    expect(hbarFormAllowed({ kind: S1.kind })).toBe(false);
+  });
+  it('S2 (multi-series line): blocked', () => {
+    expect(hbarFormAllowed({ kind: S2.kind })).toBe(false);
+  });
+  it('S3 (multi-region comparison): allowed', () => {
+    expect(hbarFormAllowed({ kind: S3.kind })).toBe(true);
+  });
+  it('S4 (single-region comparison): allowed', () => {
+    expect(hbarFormAllowed({ kind: S4.kind })).toBe(true);
+  });
+});
+
+describe('guards table — S1/S2/S3/S4 x forms (line/area/bar/hbar/table)', () => {
+  it('S1: only hbar is disallowed', () => {
+    expect(lineFormAllowed({ kind: S1.kind }, S1.seriesCount)).toBe(true);
+    expect(areaFormAllowed({ kind: S1.kind }, S1.seriesCount)).toBe(true);
+    expect(hbarFormAllowed({ kind: S1.kind })).toBe(false);
+  });
+  it('S2: area and hbar are disallowed', () => {
+    expect(lineFormAllowed({ kind: S2.kind }, S2.seriesCount)).toBe(true);
+    expect(areaFormAllowed({ kind: S2.kind }, S2.seriesCount)).toBe(false);
+    expect(hbarFormAllowed({ kind: S2.kind })).toBe(false);
+  });
+  it('S3: line and area are disallowed', () => {
+    expect(lineFormAllowed({ kind: S3.kind }, S3.seriesCount)).toBe(false);
+    expect(areaFormAllowed({ kind: S3.kind }, S3.seriesCount)).toBe(false);
+    expect(hbarFormAllowed({ kind: S3.kind })).toBe(true);
+  });
+  it('S4: only area is disallowed', () => {
+    expect(lineFormAllowed({ kind: S4.kind }, S4.seriesCount)).toBe(true);
+    expect(areaFormAllowed({ kind: S4.kind }, S4.seriesCount)).toBe(false);
+    expect(hbarFormAllowed({ kind: S4.kind })).toBe(true);
+  });
+  // bar and table are never gated — every spec shape may always show as
+  // either, mirroring the existing FORM_ORDER (`['line'?, 'bar', 'table']`).
+});
+
+describe('fallbackForm', () => {
+  it('area stays area when allowed (S1)', () => {
+    expect(fallbackForm('area', { kind: S1.kind }, S1.seriesCount)).toBe('area');
+  });
+  it('area falls back to line when disallowed but line is allowed (S2, S4)', () => {
+    expect(fallbackForm('area', { kind: S2.kind }, S2.seriesCount)).toBe('line');
+    expect(fallbackForm('area', { kind: S4.kind }, S4.seriesCount)).toBe('line');
+  });
+  it('area falls back to bar when neither area nor line is allowed (S3)', () => {
+    expect(fallbackForm('area', { kind: S3.kind }, S3.seriesCount)).toBe('bar');
+  });
+  it('hbar stays hbar when allowed (S3, S4)', () => {
+    expect(fallbackForm('hbar', { kind: S3.kind }, S3.seriesCount)).toBe('hbar');
+    expect(fallbackForm('hbar', { kind: S4.kind }, S4.seriesCount)).toBe('hbar');
+  });
+  it('hbar falls back to bar when disallowed (S1, S2)', () => {
+    expect(fallbackForm('hbar', { kind: S1.kind }, S1.seriesCount)).toBe('bar');
+    expect(fallbackForm('hbar', { kind: S2.kind }, S2.seriesCount)).toBe('bar');
+  });
+  it('line falls back to bar exactly like the existing guard (S3), stays line otherwise', () => {
+    expect(fallbackForm('line', { kind: S3.kind }, S3.seriesCount)).toBe('bar');
+    expect(fallbackForm('line', { kind: S1.kind }, S1.seriesCount)).toBe('line');
+    expect(fallbackForm('line', { kind: S4.kind }, S4.seriesCount)).toBe('line');
+  });
+  it('bar and table are always unchanged, on every spec shape', () => {
+    for (const s of [S1, S2, S3, S4]) {
+      expect(fallbackForm('bar', { kind: s.kind }, s.seriesCount)).toBe('bar');
+      expect(fallbackForm('table', { kind: s.kind }, s.seriesCount)).toBe('table');
+    }
+  });
+});
+
+describe('chartViewReducer — setForm accepts the two new forms (no other change)', () => {
+  it('setForm switches to area', () => {
+    const next = chartViewReducer(initialViewState('line'), { type: 'setForm', form: 'area' });
+    expect(next.form).toBe('area');
+  });
+  it('setForm switches to hbar', () => {
+    const next = chartViewReducer(initialViewState('bar'), { type: 'setForm', form: 'hbar' });
+    expect(next.form).toBe('hbar');
   });
 });
 
@@ -184,5 +298,41 @@ describe('windowSpec', () => {
     expect(windowed.attribution).toBe(s.attribution);
     expect(windowed.unit).toBe(s.unit);
     expect(windowed.kind).toBe(s.kind);
+  });
+});
+
+describe('presentation slice (WP218)', () => {
+  it('starts empty', () => {
+    expect(initialViewState('line').presentation).toEqual({});
+  });
+  it('setPresentation merges a patch shallowly (a later key wins, others survive)', () => {
+    let s = initialViewState('line');
+    s = chartViewReducer(s, { type: 'setPresentation', patch: { lineWidth: 'thick' } });
+    s = chartViewReducer(s, { type: 'setPresentation', patch: { grid: 'none' } });
+    expect(s.presentation).toEqual({ lineWidth: 'thick', grid: 'none' });
+    s = chartViewReducer(s, { type: 'setPresentation', patch: { lineWidth: 'thin' } });
+    expect(s.presentation.lineWidth).toBe('thin');
+  });
+  it('setPresentation replaces seriesColors wholesale (the panel computes the new map)', () => {
+    let s = initialViewState('line');
+    s = chartViewReducer(s, { type: 'setPresentation', patch: { seriesColors: { 0: '#ff0000', 1: '#00ff00' } } });
+    s = chartViewReducer(s, { type: 'setPresentation', patch: { seriesColors: { 1: '#0000ff' } } });
+    expect(s.presentation.seriesColors).toEqual({ 1: '#0000ff' });
+  });
+  it('resetPresentation clears only the presentation, keeping form/zoom/hidden series', () => {
+    let s = initialViewState('line');
+    s = chartViewReducer(s, { type: 'setForm', form: 'bar' });
+    s = chartViewReducer(s, { type: 'toggleSeries', key: 's0' });
+    s = chartViewReducer(s, { type: 'setPresentation', patch: { grid: 'none' } });
+    s = chartViewReducer(s, { type: 'resetPresentation' });
+    expect(s.presentation).toEqual({});
+    expect(s.form).toBe('bar');
+    expect(s.hiddenKeys.has('s0')).toBe(true);
+  });
+  it('reset (a spec swap on the same mounted chart) clears the presentation — owner decision E: each chart starts fresh', () => {
+    let s = initialViewState('line');
+    s = chartViewReducer(s, { type: 'setPresentation', patch: { lineWidth: 'thick' } });
+    s = chartViewReducer(s, { type: 'reset', initialForm: 'line' });
+    expect(s.presentation).toEqual({});
   });
 });

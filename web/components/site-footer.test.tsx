@@ -1,6 +1,7 @@
 // web/components/site-footer.test.tsx
-import { cleanup, render } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { LangProvider } from '../lib/i18n/lang-provider.tsx';
 import { FOOTER_ATTRIBUTION, SiteFooter } from './site-footer.tsx';
 
 vi.mock('next/navigation', () => ({ usePathname: () => '/chat' }));
@@ -17,5 +18,19 @@ describe('SiteFooter', () => {
   it('shows only the plain attribution off the home page', () => {
     render(<SiteFooter />);
     expect(document.querySelector('footer')!.textContent).toBe(FOOTER_ATTRIBUTION);
+  });
+});
+
+// WP218 phase 4 (#219): proves the language switch reaches the gear link —
+// FOOTER_ATTRIBUTION itself stays byte-pinned Dutch (never translated).
+describe('SiteFooter — en', () => {
+  it('translates the gear-link label/title but not the attribution', () => {
+    render(
+      <LangProvider lang="en">
+        <SiteFooter />
+      </LangProvider>,
+    );
+    expect(document.querySelector('footer')!.textContent).toBe(FOOTER_ATTRIBUTION);
+    expect(screen.getByRole('link', { name: 'System map' })).toHaveAttribute('title', 'System map');
   });
 });

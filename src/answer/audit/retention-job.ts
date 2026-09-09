@@ -32,13 +32,35 @@ import {
   twoYearsBefore,
 } from './retention.ts';
 
-/** The trial-bookkeeping sweep (ADR 036 D4), injected. `null` means the caller
- * deliberately runs without it — never "we could not find it". */
-export interface TrialRetentionLeg {
+/** A leg the job runs on behalf of a composition root — the trial-bookkeeping
+ * sweep (ADR 036 D4) and, from WP218 phase 2, the chart-style preference
+ * sweep. `null` means the caller deliberately runs without it — never "we
+ * could not find it".
+ *
+ * `count`/`purge` return either a plain row count (the trial leg's functions
+ * count/delete without listing what they touched) or the array of affected
+ * rows (the chart-styles leg's `{ userId }[]` shape, src/chart/user-styles.ts)
+ * — `legRowCount` below normalises either into the `rows: number` the summary
+ * reports, so a leg never has to fake a count it did not measure.
+ *
+ * `present` is an optional table-presence gate, checked BEFORE `cutoff`/
+ * `count`/`purge` run. The trial and error_log legs use their OWN hardcoded
+ * to_regclass check instead (trialTableExists/errorLogTableExists below)
+ * because there is no existing exported presence check for those tables; the
+ * chart-styles leg wires in `chartStylesTablePresent`
+ * (src/chart/user-styles.ts already exports it) here rather than duplicating
+ * a third such query inside this file. */
+export interface InjectedRetentionLeg {
   cutoff(now: Date): Date;
-  count(db: Db, cutoff: Date): Promise<number>;
-  purge(db: Db, cutoff: Date): Promise<number>;
+  count(db: Db, cutoff: Date): Promise<number | unknown[]>;
+  purge(db: Db, cutoff: Date): Promise<number | unknown[]>;
+  present?(db: Db): Promise<boolean>;
 }
+
+/** Alias kept so existing call sites — both composition roots' `TRIAL_LEG`,
+ * this module's own barrel export — do not need to change: the trial leg is
+ * exactly an `InjectedRetentionLeg` that happens not to set `present`. */
+export type TrialRetentionLeg = InjectedRetentionLeg;
 
 export interface RetentionPurgeOptions {
   db: Db;
@@ -47,6 +69,9 @@ export interface RetentionPurgeOptions {
   /** false = report only, write nothing. The route defaults to this. */
   apply: boolean;
   trial: TrialRetentionLeg | null;
+  /** WP218 phase 2: the user_chart_styles preference-row sweep, injected
+   * exactly like `trial` — `null` means this run deliberately skips it. */
+  chartStyles: InjectedRetentionLeg | null;
 }
 
 export interface RetentionPurgeSummary {
@@ -86,6 +111,24 @@ export interface RetentionPurgeSummary {
    * live apply — the composition roots must not alert on it (unlike the trial
    * leg, whose migration is live). */
   errorLog: { cutoff: string; rows: number } | { skipped: 'table-absent' };
+  /** WP218 phase 2: the user_chart_styles preference-row sweep, same
+   * two-year account window as the audit leg (ADR 037). `'table-absent'` is
+   * the EXPECTED state until migration 028's supervised apply (the file's own
+   * header says so) — mirrors the error_log leg's posture, not the trial
+   * leg's: the composition roots must not alert on it. */
+  chartStyles:
+    | { cutoff: string; rows: number }
+    | { skipped: 'table-absent' }
+    | { skipped: 'not-configured' };
+}
+
+/** Normalises a leg's count/purge result into the plain row count the
+ * summary reports. The trial leg's functions already return a count; the
+ * chart-styles leg's return the affected rows themselves (its `{ userId }[]`
+ * shape) — only the length is used here, since the summary's `rows` field is
+ * a count for every leg, trial included. */
+function legRowCount(result: number | unknown[]): number {
+  return Array.isArray(result) ? result.length : result;
 }
 
 /** A CHECK, not a catch — `retention.ts` states the rule for its own
@@ -118,7 +161,7 @@ async function errorLogTableExists(db: Db): Promise<boolean> {
 export async function runRetentionPurge(
   options: RetentionPurgeOptions,
 ): Promise<RetentionPurgeSummary> {
-  const { db, now, apply, trial } = options;
+  const { db, now, apply, trial, chartStyles } = options;
   const auditCutoff = twoYearsBefore(now);
   // #181: anonymous trial CONTENT expires with its own bookkeeping at 90 days,
   // not at the account window. Derived from the SAME injected `now` as the
@@ -129,8 +172,23 @@ export async function runRetentionPurge(
     if (trial === null) return { skipped: 'not-configured' };
     if (!(await trialTableExists(db))) return { skipped: 'table-absent' };
     const cutoff = trial.cutoff(now);
-    const rows = apply ? await trial.purge(db, cutoff) : await trial.count(db, cutoff);
-    return { cutoff: cutoff.toISOString(), rows };
+    const result = apply ? await trial.purge(db, cutoff) : await trial.count(db, cutoff);
+    return { cutoff: cutoff.toISOString(), rows: legRowCount(result) };
+  };
+
+  // WP218 phase 2: the chart-style preference sweep. Presence is checked via
+  // the leg's OWN injected `present` (chartStylesTablePresent), not a
+  // hardcoded query here — see InjectedRetentionLeg's doc comment for why.
+  const chartStylesLeg = async (): Promise<RetentionPurgeSummary['chartStyles']> => {
+    if (chartStyles === null) return { skipped: 'not-configured' };
+    if (chartStyles.present !== undefined && !(await chartStyles.present(db))) {
+      return { skipped: 'table-absent' };
+    }
+    const cutoff = chartStyles.cutoff(now);
+    const result = apply
+      ? await chartStyles.purge(db, cutoff)
+      : await chartStyles.count(db, cutoff);
+    return { cutoff: cutoff.toISOString(), rows: legRowCount(result) };
   };
 
   // #65: the 90-day error_log sweep — the same one-clock rule (cutoff derived
@@ -160,6 +218,7 @@ export async function runRetentionPurge(
       pendingRows,
       trial: await trialLeg(),
       errorLog: await errorLogLeg(),
+      chartStyles: await chartStylesLeg(),
     };
   }
 
@@ -203,6 +262,24 @@ export async function runRetentionPurge(
       redacted.length > 0 ? byKind : undefined,
     );
   }
+  // WP218 phase 2: same "carry what committed" rule as the two legs above —
+  // by here the audit leg, the trial leg and the error_log leg have all
+  // already run, so a chart-styles failure must not be reported as "nothing
+  // expired" either.
+  let chartStylesResult: RetentionPurgeSummary['chartStyles'];
+  try {
+    chartStylesResult = await chartStylesLeg();
+  } catch (error) {
+    throw new RetentionPurgePartialError(
+      `chart-style leg failed AFTER the audit leg committed ${redacted.length} redaction(s) ` +
+        `(the trial leg and the error_log leg also already ran)`,
+      redacted.length,
+      error,
+      auditCutoff.toISOString(),
+      'chartStyles',
+      redacted.length > 0 ? byKind : undefined,
+    );
+  }
   return {
     mode: 'applied',
     auditCutoff: auditCutoff.toISOString(),
@@ -212,6 +289,7 @@ export async function runRetentionPurge(
     ...(redacted.length > 0 ? { byKind } : {}),
     trial: trialResult,
     errorLog: errorLogResult,
+    chartStyles: chartStylesResult,
   };
 }
 
@@ -231,14 +309,14 @@ export class RetentionPurgePartialError extends Error {
    * composition roots hardcoding "the trial leg" regardless of which leg
    * threw, which self-contradicts this error's own `message` on an
    * error_log-leg failure. */
-  readonly leg: 'trial' | 'errorLog';
+  readonly leg: 'trial' | 'errorLog' | 'chartStyles';
 
   constructor(
     message: string,
     auditRowsRedacted: number,
     reason: unknown,
     auditCutoff: string,
-    leg: 'trial' | 'errorLog',
+    leg: 'trial' | 'errorLog' | 'chartStyles',
     byKind?: Record<string, number>,
   ) {
     super(`${message}: ${reason instanceof Error ? reason.message : String(reason)}`, {
@@ -288,5 +366,16 @@ export function describeRetentionPurge(s: RetentionPurgeSummary): string {
       ? '\n  note: error_log absent (migration 024 not applied yet — expected until its supervised apply); error-log leg skipped.'
       : `\n  error_log cutoff ${s.errorLog.cutoff}: ${s.errorLog.rows} error_log row(s) ` +
         `${s.mode === 'dry-run' ? 'WOULD be' : 'were'} DELETED (90-day ops-log retention, #65).`;
-  return head + kinds + trial + errorLog;
+  // WP218 phase 2: the chart-style line. Table-absent is EXPECTED until
+  // migration 028's supervised apply — same posture as error_log above, not
+  // trial's (whose migration is already live) — so an operator reading the
+  // daily cron log does not misread the normal pre-apply state as an incident.
+  const chartStyle =
+    'skipped' in s.chartStyles
+      ? s.chartStyles.skipped === 'table-absent'
+        ? '\n  note: user_chart_styles absent (migration 028 not applied) — chart-style leg skipped.'
+        : '\n  note: chart-style leg not configured for this run.'
+      : `\n  chart-style cutoff ${s.chartStyles.cutoff}: ${s.chartStyles.rows} user_chart_styles row(s) ` +
+        `${s.mode === 'dry-run' ? 'WOULD be' : 'were'} DELETED (WP218 phase 2, two-year account window).`;
+  return head + kinds + trial + errorLog + chartStyle;
 }

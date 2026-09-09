@@ -16,7 +16,9 @@ import type { RawDatasetState } from '../backend/attachments/respond.ts';
 import type { DatasetProfile, DatasetStatus } from '../backend/attachments/types.ts';
 import type { ThreadSummary } from '../backend/threads/index.ts';
 import type { ChatMessage } from '../lib/chat-message.ts';
+import { ChartStyleProvider } from '../lib/chart-style-context.tsx';
 import type { DockVisual } from '../lib/dock-visuals.ts';
+import { useT } from '../lib/i18n/lang-provider.tsx';
 import { useMediaQuery } from '../lib/use-media-query.ts';
 import { Chat } from './chat.tsx';
 import { DatasetChat } from './dataset-chat.tsx';
@@ -55,6 +57,7 @@ export function Workspace({
   purchaseSuccess = false,
   websearch,
   attachments,
+  chartStyle,
 }: {
   initialBalance: number;
   simplePrice: number;
@@ -72,6 +75,17 @@ export function Workspace({
    * bullet); this prop and `handleUploadFile` below are built and tested
    * now so flipping the flag later is the only remaining step. */
   attachments?: { enabled: true };
+  /** WP218 phase 2 (owner C): the signed-in account's saved chart-style
+   * default, read server-side (page.tsx, `getUserChartStyle`) — raw and
+   * unsanitised (a jsonb column value, or null on no default / a throw /
+   * an absent table). `ChartStyleProvider` below sanitises it once, so an
+   * `undefined` prop (a caller that hasn't been updated, or an old test)
+   * behaves identically to an explicit null. Every render of Workspace
+   * mounts the provider — its PRESENCE is what "signed in" means to every
+   * ChartView underneath (useChartStyle()'s `signedIn`), never the value
+   * itself, so an account with no saved style yet still gets offered the
+   * "Bewaar als mijn standaard" row. */
+  chartStyle?: unknown;
 }) {
   const [balance, setBalance] = useState(initialBalance);
   const [threads, setThreads] = useState<ThreadSummary[]>(initialThreads);
@@ -82,6 +96,7 @@ export function Workspace({
   const [activeVisualId, setActiveVisualId] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showPurchaseBanner, setShowPurchaseBanner] = useState(purchaseSuccess);
+  const t = useT();
   // WP135 (blocker fix): the chat reports its in-flight state here so the
   // sidebar's thread-switch / nieuwe-chat controls are disabled while a submit
   // runs — a switch mid-flight would otherwise reset the chat and let the late
@@ -232,7 +247,7 @@ export function Workspace({
       formData.set('file', file);
       const result = await ingestFile(formData);
       if (result.kind === 'unauthenticated') {
-        return { ok: false, message: 'Your session has expired. Please refresh the page.' };
+        return { ok: false, message: t('common.sessionExpired') };
       }
       if (result.kind === 'refused') {
         return { ok: false, message: result.message };
@@ -257,7 +272,7 @@ export function Workspace({
       void refreshThreads();
       return { ok: true };
     },
-    [refreshThreads],
+    [refreshThreads, t],
   );
 
   // The chat reports its dockable visuals here (an EVENT, not an effect): set the
@@ -294,11 +309,11 @@ export function Workspace({
   const cardTitle =
     handoff.kind === 'dataset'
       ? handoff.displayName
-      : (threads.find((thread) => thread.id === activeThreadId)?.title ?? 'Nieuwe chat');
+      : (threads.find((thread) => thread.id === activeThreadId)?.title ?? t('workspace.newChatTitle'));
 
   const chatSection = (
     <section
-      aria-label="Chat"
+      aria-label={t('workspace.chatSectionLabel')}
       className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-card text-card-foreground"
     >
       <div className="flex h-12 shrink-0 items-center gap-3 border-b border-border px-4">
@@ -373,71 +388,74 @@ export function Workspace({
   );
 
   return (
-    // Session 87 visual redesign (mockup Option B, "Inset Cards"): the whole
-    // screen sits on the grey sidebar ground; the sidebar is borderless on it,
-    // and the chat column + the visual dock are two separate white cards, each
-    // with its own header bar. Fills the app-shell region app/layout.tsx
-    // provides (the footer stays below, always in view).
-    <div className="flex h-full min-h-0 flex-1 flex-col bg-sidebar text-sidebar-foreground">
-      <SiteHeader balance={balance} />
-      {showPurchaseBanner ? (
-        <div className="mx-2 mt-2 flex items-start justify-between gap-3 rounded-lg border border-border bg-card px-4 py-3 text-sm text-success">
-          <p>
-            Betaling gelukt — je credits worden bijgeschreven zodra Stripe de betaling bevestigt
-            (meestal een paar seconden). Ververs daarna de pagina om je nieuwe saldo te zien.
-          </p>
-          <button
-            type="button"
-            onClick={dismissPurchaseBanner}
-            className="shrink-0 text-xs text-success underline"
-          >
-            Sluiten
-          </button>
-        </div>
-      ) : null}
+    // WP218 phase 2 (owner C): ALWAYS wraps the tree — the provider's own
+    // presence is what "signed in" means to useChartStyle() (see the
+    // `chartStyle` prop doc above), not the value it was mounted with, so
+    // this stays unconditional even when `chartStyle` is null/undefined.
+    <ChartStyleProvider initial={chartStyle ?? null}>
+      {/* Session 87 visual redesign (mockup Option B, "Inset Cards"): the whole
+          screen sits on the grey sidebar ground; the sidebar is borderless on it,
+          and the chat column + the visual dock are two separate white cards, each
+          with its own header bar. Fills the app-shell region app/layout.tsx
+          provides (the footer stays below, always in view). */}
+      <div className="flex h-full min-h-0 flex-1 flex-col bg-sidebar text-sidebar-foreground">
+        <SiteHeader balance={balance} />
+        {showPurchaseBanner ? (
+          <div className="mx-2 mt-2 flex items-start justify-between gap-3 rounded-lg border border-border bg-card px-4 py-3 text-sm text-success">
+            <p>{t('workspace.purchaseSuccessMessage')}</p>
+            <button
+              type="button"
+              onClick={dismissPurchaseBanner}
+              className="shrink-0 text-xs text-success underline"
+            >
+              {t('workspace.purchaseSuccessDismiss')}
+            </button>
+          </div>
+        ) : null}
 
-      <div className="flex min-h-0 flex-1 gap-2 p-2 pl-0">
-        <div className={sidebarCollapsed ? 'w-12 shrink-0' : 'w-64 shrink-0'}>
-          <ThreadSidebar
-            threads={threads}
-            activeThreadId={activeThreadId}
-            collapsed={sidebarCollapsed}
-            busy={chatBusy}
-            onSelect={(id) => void selectThread(id)}
-            onNewChat={startNewChat}
-            onToggleCollapse={() => setSidebarCollapsed((collapsed) => !collapsed)}
-            onDelete={deleteThread}
-          />
-        </div>
+        <div className="flex min-h-0 flex-1 gap-2 p-2 pl-0">
+          <div className={sidebarCollapsed ? 'w-12 shrink-0' : 'w-64 shrink-0'}>
+            <ThreadSidebar
+              threads={threads}
+              activeThreadId={activeThreadId}
+              collapsed={sidebarCollapsed}
+              busy={chatBusy}
+              onSelect={(id) => void selectThread(id)}
+              onNewChat={startNewChat}
+              onToggleCollapse={() => setSidebarCollapsed((collapsed) => !collapsed)}
+              onDelete={deleteThread}
+            />
+          </div>
 
-        {/* #211 (chat interaction polish, session 88) code-review finding: the
-            ResizablePanelGroup wrapper is ALWAYS rendered now, never swapped
-            for a plain <div> based on showDock -- the chat-panel Panel around
-            chatSection stays the same type at the same tree position in both
-            cases, so Chat/DatasetChat never remounts (and loses its live,
-            in-progress state) purely because a chart appeared for the first
-            time or the viewport crossed the isWide breakpoint. Only the
-            trailing handle + dock panel are conditionally added/removed as
-            siblings, which doesn't affect the first child's identity. */}
-        <ResizablePanelGroup orientation="horizontal" className="min-h-0 min-w-0 flex-1">
-          <ResizablePanel id="chat-panel" minSize="55">
-            {chatSection}
-          </ResizablePanel>
-          {showDock ? (
-            <>
-              <ResizableHandle withHandle className="mx-1" />
-              <ResizablePanel id="dock-panel" defaultSize="33" minSize="18" maxSize="40">
-                <VisualDock busy={chatBusy} visuals={visuals} activeVisualId={activeVisualId} onSelect={activateVisual} />
-              </ResizablePanel>
-            </>
-          ) : null}
-        </ResizablePanelGroup>
+          {/* #211 (chat interaction polish, session 88) code-review finding: the
+              ResizablePanelGroup wrapper is ALWAYS rendered now, never swapped
+              for a plain <div> based on showDock -- the chat-panel Panel around
+              chatSection stays the same type at the same tree position in both
+              cases, so Chat/DatasetChat never remounts (and loses its live,
+              in-progress state) purely because a chart appeared for the first
+              time or the viewport crossed the isWide breakpoint. Only the
+              trailing handle + dock panel are conditionally added/removed as
+              siblings, which doesn't affect the first child's identity. */}
+          <ResizablePanelGroup orientation="horizontal" className="min-h-0 min-w-0 flex-1">
+            <ResizablePanel id="chat-panel" minSize="55">
+              {chatSection}
+            </ResizablePanel>
+            {showDock ? (
+              <>
+                <ResizableHandle withHandle className="mx-1" />
+                <ResizablePanel id="dock-panel" defaultSize="33" minSize="18" maxSize="40">
+                  <VisualDock busy={chatBusy} visuals={visuals} activeVisualId={activeVisualId} onSelect={activateVisual} />
+                </ResizablePanel>
+              </>
+            ) : null}
+          </ResizablePanelGroup>
+        </div>
+        {/* Session 87 visual redesign (owner decision): the "Over dit project"
+            explainer that used to sit under the chat is gone from the logged-in
+            screen — a bare LLM-chat layout. The logged-out Landing keeps its
+            copy; the site footer (components/site-footer.tsx, mounted in
+            app/layout.tsx) only links the anchor when that section exists. */}
       </div>
-      {/* Session 87 visual redesign (owner decision): the "Over dit project"
-          explainer that used to sit under the chat is gone from the logged-in
-          screen — a bare LLM-chat layout. The logged-out Landing keeps its
-          copy; the site footer (components/site-footer.tsx, mounted in
-          app/layout.tsx) only links the anchor when that section exists. */}
-    </div>
+    </ChartStyleProvider>
   );
 }
