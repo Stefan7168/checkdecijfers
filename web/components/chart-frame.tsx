@@ -15,6 +15,9 @@ import {
   type FrameValues,
 } from '../lib/chart-presentation.ts';
 
+/** chart.tsx's `h-64` — the chart container's normal height, which a frame aspect ratio may never undercut. */
+export const CHART_MIN_HEIGHT_PX = 256;
+
 function backgroundStyle(frame: FrameValues, image: string | null): Pick<CSSProperties, 'backgroundColor' | 'backgroundImage' | 'backgroundSize' | 'backgroundPosition'> {
   const bg = frame.frameBackground;
   if (bg === 'none') return {};
@@ -46,7 +49,20 @@ export function ChartFrame({ frame, image, children }: { frame: FrameValues; ima
     borderRadius: corner,
     boxShadow: shadow ? `${shadow.dx}px ${shadow.dy}px ${shadow.blur}px rgba(0, 0, 0, ${shadow.alpha})` : undefined,
     ...backgroundStyle(frame, image),
-    ...(aspect !== null ? { aspectRatio: String(aspect), display: 'flex', flexDirection: 'column' } : {}),
+    // Battle test (session 92, Playwright on production): a wide ratio on a
+    // narrow card let the frame's height fall below the chart's own, so the
+    // plot shrank to a few dozen px. The ratio may only GROW the frame — the
+    // min-height keeps the chart at least its normal height (chart.tsx's
+    // h-64) plus the frame's own padding and inset; when the ratio cannot be
+    // met at this width the export still honours it by widening the canvas.
+    ...(aspect !== null
+      ? {
+          aspectRatio: String(aspect),
+          minHeight: CHART_MIN_HEIGHT_PX + 2 * (FRAME_PADDING_PX[frame.framePadding] + FRAME_INSET_PX[frame.frameInset]),
+          display: 'flex',
+          flexDirection: 'column',
+        }
+      : {}),
   };
 
   const inset = FRAME_INSET_PX[frame.frameInset];

@@ -5,7 +5,7 @@
 // out".
 import { describe, expect, it } from 'vitest';
 import { render } from '@testing-library/react';
-import { ChartFrame } from './chart-frame.tsx';
+import { ChartFrame, CHART_MIN_HEIGHT_PX } from './chart-frame.tsx';
 import {
   FRAME_CORNER_PX,
   FRAME_GRADIENT_ANGLE,
@@ -146,6 +146,16 @@ describe('ChartFrame', () => {
     const childArea = child.parentElement as HTMLElement;
     expect(childArea.className).toContain('min-h-0');
     expect(childArea.className).toContain('flex-1');
+  });
+
+  it('an aspect ratio never shrinks the chart below its normal height: min-height = chart height + padding + inset', () => {
+    const { container } = render(
+      <ChartFrame frame={frame({ frameAspect: '1.91:1', framePadding: 'large', frameInset: 'small' })} image={null}>
+        <div>chart</div>
+      </ChartFrame>,
+    );
+    const wrapper = container.querySelector('[data-slot="chart-frame"]') as HTMLElement;
+    expect(wrapper.style.minHeight).toBe(`${CHART_MIN_HEIGHT_PX + 2 * (FRAME_PADDING_PX.large + FRAME_INSET_PX.small)}px`);
   });
 
   it('auto aspect (default) sets no aspect-ratio style', () => {
