@@ -8,12 +8,17 @@ work; Parts A and C are built) → ADR 039 (both session-92 addenda) + ADR 040.
 
 ## What is true right now (verified 2026-09-09)
 
-- `main` = `1a23aa1`, clean, pushed; CI `34369657966` gate + deploy green; `/api/health` `{"ok":true}`.
+- `main` = `1f13e78` (after the Playwright battle test's six aspect-ratio fixes, `e18c01f`…`1f13e78`), clean,
+  pushed; CI `34379480807` gate + deploy green; `/api/health` `{"ok":true}`.
 - LIVE since session 92: Story mode, the chat polish batch (eight owner asks), frame styling + the
   floating Style panel, the chart-language select preselecting the current language.
 - Verified before the last merge: typecheck ×2, web 1275/1275 (87 files), backend 2198/2198 (solo),
   benchmark 28/28, real `next build`, docs 11/11, `/code-review` LOW 0 findings.
-- NOT yet checked interactively on production (the owner's Chrome had no chart thread; the Browser
+- CHECKED with Playwright on production (public homepage charts, desktop + 375 px): story panel, floating
+  Style panel, Frame tab, gradient + own-image exports (PNG/SVG), aspect ratio (now exact, no overflow).
+  Still worth a human glance in dark mode. Follow-up: the exported attribution line is single-line and
+  can be cut off on a narrow chart (pre-existing).
+- Previously NOT checked interactively on production (the owner's Chrome had no chart thread; the Browser
   pane never hydrates the chart subtree): the story panel, the floating Style panel, the Frame tab, and
   the aspect-ratio sizing at a phone width. Do this first, with the owner, on a chart answer.
 
@@ -23,7 +28,7 @@ work; Parts A and C are built) → ADR 039 (both session-92 addenda) + ADR 040.
    Anthropic console or wait for 1 October. ALSO check: that question came from a follow-up chip (a zero-LLM click
    take) yet reached the model — sent via a scripted chip click + Send in the owner's Chrome; verify the click-take
    carrier path still fires for a chip clicked by a real user before assuming a regression.
-0. Interactive production check above (owner's Chrome, light + dark, desktop + 375 px). Fix anything found.
+0. A dark-mode glance on production (the Playwright pass ran in light).
 1. **Embed (spec Part B)** — the single next build: `superpowers:writing-plans` → SDD. Owner-set at
    go-live (never by the session): `EMBED_TOKEN_SECRET` (a long random string, Vercel, Sensitive) and
    optionally `PRO_ACCOUNT_EMAILS` (the Pro demo switch, comma-separated); RUNBOOK rows + a go-live section.

@@ -42,6 +42,15 @@ FRAME STYLING + THE FLOATING STYLE PANEL. Embed is DESIGNED (spec Part B), not b
   the Story trigger, Style button and frame wrapper (public page); the INTERACTIVE check of the story
   panel, the floating panel, the Frame tab and the aspect-ratio sizing on a phone width is still to do
   by the owner (no chart thread existed in the account; a chart question hit a clarification).
+- **Battle test (owner ask, Playwright against production, 2026-09-09/10):** the floating panel, Frame
+  tab, story panel, gradient/image PNG + SVG exports all verified in a real browser; ONE real defect found
+  and fixed in six small rounds (`e18c01f`…`1f13e78`, last CI `34379480807` green): a frame aspect ratio
+  shrank the chart to a few dozen px, then overflowed the card, then widened the page on a phone, then
+  hid the chart. Final rule (`chart-frame.tsx`): the ratio sets an explicit HEIGHT from the frame's
+  measured width, never below the chart's normal height, never touching the width; the export honours
+  the exact ratio by widening its canvas. Verified: Portrait = 0.80 on a 375 px phone and on desktop,
+  chart present, no horizontal overflow. Remaining observation: the exported attribution line is one
+  line and can be cut off at the right on a narrow chart (pre-existing; a follow-up).
 - **Owner steps unchanged:** migrations 028 + 029 (`npm run db:migrate`), optional `BRANDFETCH_API_KEY`,
   WP202a go-live steps 2–6. **Next build:** Embed (spec Part B) — needs the owner to set
   `EMBED_TOKEN_SECRET` (+ optionally `PRO_ACCOUNT_EMAILS`) when it ships.
