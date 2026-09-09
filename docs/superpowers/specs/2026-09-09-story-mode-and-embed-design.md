@@ -72,9 +72,7 @@ disclosure) applies: the embed bakes the same disclosure text the download bakes
   `root` = the scroll area, thresholds at 0.5; jsdom fallback: the buttons drive the index
   directly). Previous/Next scroll the card into view AND set the index — both paths call the same
   `setStep(i)`.
-- On step change the panel dispatches the existing reducer actions — nothing new in
-  `chart-view-state.ts`: `setPeriodRange` (zoom to the step's period window), `setHighlight`
-  (the step's series key, or null). A point step additionally renders a marker on the chart:
+- On step change the panel dispatches the existing `setHighlight` per step (zoom is NOT used in v1 — see the Global Constraints of the plan and ADR 039's addendum; one new action `setView` restores the reader's view on close). A point step additionally renders a marker on the chart:
   `ChartView` passes `storyPoint: { seriesKey, periodCode } | null` into the render, which draws a
   filled ring around that point using `dotGeometry` (R11: the hollow provisional ring stays
   visible inside the story ring — the story ring is 4 px outside it, never on top of it).
@@ -85,7 +83,7 @@ disclosure) applies: the embed bakes the same disclosure text the download bakes
 ### A3. Steps — pure, test-pinned, no new numbers
 
 `web/lib/chart-story.ts` (pure, no React) exports `buildStorySteps(spec, lang): StoryStep[]` with
-`StoryStep = { id, title, caption, zoom: [periodCode, periodCode] | null, highlight: string | null,
+`StoryStep = { id, title, caption, highlight: string | null,
 point: { seriesKey, periodCode } | null, kind: 'overview' | 'start' | 'high' | 'low' | 'latest' |
 'series' | 'explore' }`.
 

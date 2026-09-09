@@ -86,6 +86,7 @@ Staaf · Liggend · Tabel** (line, area, bar, horizontal bar, table).
 
 - **Answers** in the chat render as a shadcn `Card` (`web/components/chat.tsx`): the answer text and its honesty lines in the body; a footer (`border-t`, `bg-muted/40`) with the full source sentence + source badge on the left and the actions on the right — like/dislike FIRST (outline buttons on `bg-background` with `shadow-sm`, lucide thumbs + visible labels), then proof / citation / CSV as `ghost` buttons with icons, then the cost. Refusals and clarifications keep their plain rendering.
 - **The chart's Opmaak panel** opens UNDER the chart (chart first, settings second), as a two-column grid (label left, pills right) with one `Tonen` row for the toggles; the chart-language select sits in the panel header, the "why no pie chart" note + `Standaard` in a footer on the Grafiek tab only.
+- **Story mode (session 92):** the "Verhaal / Story mode" trigger is the product's ONE gradient — a 2 px ring (`linear-gradient(135deg, #7c3aed, #ec4899, #f59e0b)`) around a ghost button with the lucide `WandSparkles` icon, a row-mate of the Weergave tabs after Opmaak. The story panel opens in the Opmaak slot under the chart (one open at a time) as bordered step cards in a short scroll area with Previous / Next and a dotted step list. No other control gets a gradient.
 
 ## House rules (current)
 
