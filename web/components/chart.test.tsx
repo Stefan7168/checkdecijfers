@@ -1727,6 +1727,37 @@ function scanForUnboundDigits(container: HTMLElement, specStrings: string[]): vo
   }
 }
 
+/** Task 3 (embed, spec Part B3): every `scanForUnboundDigits` call site below
+ * used to build this exact allow-list inline, by hand, with small
+ * (accidental, not meaningful) differences between copies — e.g. only the
+ * hbar-form copy included each series' own `label` (region names appear as
+ * axis-tick text there), and a couple of copies omitted `definitionLine`/
+ * `provisionalNote`/`nullNotes` simply because the spec under test in THAT
+ * describe block happened not to set them. Widening any one copy to the
+ * union every copy might need is safe — scanForUnboundDigits only checks
+ * that a rendered digit token has SOME matching source, so a field this
+ * particular spec left unset just contributes an empty string, dropped by
+ * `.filter(Boolean)` below, never a false pass for a token that has no real
+ * source. Folded into one shared helper here (rather than adding a SEVENTH
+ * hand-copied literal for the new embed tests) so every call site — old and
+ * new — draws from the one definition of "every string this spec makes
+ * true". */
+function harvestSpecStrings(s: ChartSpec): string[] {
+  return [
+    s.title,
+    s.unit,
+    s.attributionLine,
+    s.attribution.tableId,
+    s.attribution.syncedAt,
+    s.definitionLine ?? '',
+    s.provisionalNote ?? '',
+    ...s.nullNotes,
+    ...Object.keys(s.dimLabels),
+    ...Object.values(s.dimLabels),
+    ...s.series.flatMap((se) => [se.label, ...se.points.flatMap((p) => [p.formattedValue ?? '', p.periodLabel])]),
+  ].filter(Boolean);
+}
+
 describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
   it('pre-fills with what is on screen: after Dik, the line is 3 px and the panel says Dik; after Lijn→Staaf→Lijn it still says Dik', () => {
     const { container } = render(<ChartView spec={threePointSpec()} />);
@@ -1920,41 +1951,14 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
     const { container: lineContainer } = render(<ChartView spec={lineSpec} />);
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
     for (const tab of screen.getAllByRole('tab', { name: /Grafiek|Kleuren|Lettertype/ })) fireEvent.click(tab);
-    scanForUnboundDigits(
-      lineContainer,
-      [
-        lineSpec.title,
-        lineSpec.unit,
-        lineSpec.attributionLine,
-        lineSpec.attribution.tableId,
-        lineSpec.attribution.syncedAt,
-        lineSpec.definitionLine ?? '',
-        lineSpec.provisionalNote ?? '',
-        ...lineSpec.nullNotes,
-        ...Object.keys(lineSpec.dimLabels),
-        ...Object.values(lineSpec.dimLabels),
-        ...lineSpec.series.flatMap((se) => se.points.flatMap((p) => [p.formattedValue ?? '', p.periodLabel])),
-      ].filter(Boolean),
-    );
+    scanForUnboundDigits(lineContainer, harvestSpecStrings(lineSpec));
     cleanup();
 
     const barSpec = multiRegionBarSpec();
     const { container: barContainer } = render(<ChartView spec={barSpec} />);
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
     for (const tab of screen.getAllByRole('tab', { name: /Grafiek|Kleuren|Lettertype/ })) fireEvent.click(tab);
-    scanForUnboundDigits(
-      barContainer,
-      [
-        barSpec.title,
-        barSpec.unit,
-        barSpec.attributionLine,
-        barSpec.attribution.tableId,
-        barSpec.attribution.syncedAt,
-        ...Object.keys(barSpec.dimLabels),
-        ...Object.values(barSpec.dimLabels),
-        ...barSpec.series.flatMap((se) => se.points.flatMap((p) => [p.formattedValue ?? '', p.periodLabel])),
-      ].filter(Boolean),
-    );
+    scanForUnboundDigits(barContainer, harvestSpecStrings(barSpec));
   });
 
   // Final-review fix: table form gets NO frame and NO Style panel (as
@@ -2497,21 +2501,7 @@ describe('WP218 phase 4 — charts follow the app language, per-chart, via the C
         <ChartView spec={s} />
       </LangProvider>,
     );
-    scanForUnboundDigits(
-      container,
-      [
-        s.title,
-        s.unit,
-        s.attributionLine,
-        s.attribution.tableId,
-        s.attribution.syncedAt,
-        s.provisionalNote ?? '',
-        ...s.nullNotes,
-        ...Object.keys(s.dimLabels),
-        ...Object.values(s.dimLabels),
-        ...s.series.flatMap((se) => se.points.flatMap((p) => [p.formattedValue ?? '', p.periodLabel])),
-      ].filter(Boolean),
-    );
+    scanForUnboundDigits(container, harvestSpecStrings(s));
   });
 
   it('bakes the ENGLISH attribution line into the export markup, matching what the card shows', async () => {
@@ -2752,20 +2742,7 @@ describe('ChartView — area form (WP218 phase 5)', () => {
     });
     const { container } = render(<ChartView spec={s} />);
     fireEvent.click(screen.getByRole('tab', { name: 'Vlak' }));
-    const specStrings = [
-      s.title,
-      s.unit,
-      s.attributionLine,
-      s.attribution.tableId,
-      s.attribution.syncedAt,
-      s.definitionLine ?? '',
-      s.provisionalNote ?? '',
-      ...s.nullNotes,
-      ...Object.keys(s.dimLabels),
-      ...Object.values(s.dimLabels),
-      ...s.series.flatMap((se) => se.points.flatMap((p) => [p.formattedValue ?? '', p.periodLabel])),
-    ].filter(Boolean);
-    scanForUnboundDigits(container, specStrings);
+    scanForUnboundDigits(container, harvestSpecStrings(s));
   });
 });
 
@@ -2836,17 +2813,7 @@ describe('ChartView — horizontal bar form (WP218 phase 5)', () => {
     const s = multiRegionBarSpec();
     const { container } = render(<ChartView spec={s} />);
     fireEvent.click(screen.getByRole('tab', { name: 'Liggend' }));
-    const specStrings = [
-      s.title,
-      s.unit,
-      s.attributionLine,
-      s.attribution.tableId,
-      s.attribution.syncedAt,
-      ...Object.keys(s.dimLabels),
-      ...Object.values(s.dimLabels),
-      ...s.series.flatMap((se) => [se.label, ...se.points.flatMap((p) => [p.formattedValue ?? '', p.periodLabel])]),
-    ].filter(Boolean);
-    scanForUnboundDigits(container, specStrings);
+    scanForUnboundDigits(container, harvestSpecStrings(s));
   });
 
   it('the SVG export contains the region labels and the value labels', async () => {
@@ -3003,15 +2970,7 @@ describe('Story mode (session 92): a code-built story under the chart', () => {
 
   it('with the story open the whole card still shows only spec digits, in Dutch and in English', () => {
     const s = threePointSpec({ provisionalNote: 'Voorlopige cijfers (2024) zijn gemarkeerd met *.' });
-    const strings = [
-      s.title,
-      s.unit,
-      s.attributionLine,
-      s.attribution.tableId,
-      s.attribution.syncedAt,
-      s.provisionalNote ?? '',
-      ...s.series.flatMap((se) => se.points.flatMap((p) => [p.formattedValue ?? '', p.periodLabel])),
-    ].filter(Boolean);
+    const strings = harvestSpecStrings(s);
     const nl = render(<ChartView spec={s} />);
     fireEvent.click(screen.getByRole('button', { name: 'Verhaal' }));
     fireEvent.click(screen.getByRole('button', { name: 'Volgende' }));
@@ -3032,14 +2991,7 @@ describe('Story mode (session 92): a code-built story under the chart', () => {
   // spec's own strings, in Dutch and in English.
   it('with a frame on, the whole card still shows only spec digits, in Dutch and in English', () => {
     const s = threePointSpec();
-    const strings = [
-      s.title,
-      s.unit,
-      s.attributionLine,
-      s.attribution.tableId,
-      s.attribution.syncedAt,
-      ...s.series.flatMap((se) => se.points.flatMap((p) => [p.formattedValue ?? '', p.periodLabel])),
-    ].filter(Boolean);
+    const strings = harvestSpecStrings(s);
     const framedStyle = { frameBackground: { kind: 'gradient' as const, from: '#fde68a', to: '#f472b6' }, frameInset: 'large' as const };
     const nl = render(
       <ChartStyleProvider initial={framedStyle}>
@@ -3337,5 +3289,104 @@ describe('ChartView — StylePanelOwnerProvider (one Style panel per page)', () 
     expect(triggerA).toHaveAttribute('aria-expanded', 'true');
     expect(triggerB).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getAllByRole('dialog', { name: 'Opmaak van de grafiek' })).toHaveLength(2);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Task 3 (embed, spec Part B3): ChartView grows embed/embedMode/embedFooter.
+// embedMode is true ONLY for the public /embed/[token] route's own render
+// (Tasks 5/6 build that route) and strips every interactive control this
+// component owns — the Weergave tablist, the Opmaak/Verhaal triggers, the
+// Vanaf/Tot zoom selects, the small-multiples toggle, click-to-annotate
+// notes, and Download — replacing them with the route-built `embedFooter`
+// sentence plus a checkdecijfers.nl backlink. The chart itself, its title/
+// unit, the R4 attribution line and the SourceBadge are UNCHANGED. The
+// `embed` prop (Task 4's own ChartEmbedButton, mounted at the comment-marked
+// point in the footer below) does not exist as a component yet — the
+// Download half of the "hides Download and Embed" test below is this task's
+// real, load-bearing assertion; the Embed half is a forward guard that
+// becomes meaningful the moment Task 4 lands.
+// ---------------------------------------------------------------------------
+
+describe('embed mode (spec Part B3)', () => {
+  it('hides the Weergave tablist, the Opmaak trigger and the Verhaal trigger in embedMode', () => {
+    const s = threePointSpec();
+    render(<ChartView spec={s} />);
+    expect(screen.getByRole('tablist')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Opmaak' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Verhaal' })).toBeInTheDocument();
+    cleanup();
+
+    render(<ChartView spec={s} embedMode embedFooter="x" />);
+    expect(screen.queryByRole('tablist')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Opmaak' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Verhaal' })).toBeNull();
+  });
+
+  it('hides Download in embedMode, even when an embed prop is also passed', () => {
+    const s = threePointSpec();
+    render(<ChartView spec={s} />);
+    expect(screen.getByRole('button', { name: 'Download' })).toBeInTheDocument();
+    cleanup();
+
+    render(<ChartView spec={s} embedMode embed={{ auditId: 1 }} embedFooter="x" />);
+    expect(screen.queryByRole('button', { name: /download/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /embed/i })).toBeNull();
+  });
+
+  it('hides the Vanaf/Tot zoom selects and the small-multiples toggle in embedMode', () => {
+    const s = twoSeriesLineSpec();
+    render(<ChartView spec={s} />);
+    expect(screen.getByLabelText('Vanaf')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Kleine grafieken' })).toBeInTheDocument();
+    cleanup();
+
+    render(<ChartView spec={s} embedMode embedFooter="x" />);
+    expect(screen.queryByLabelText('Vanaf')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Kleine grafieken' })).toBeNull();
+  });
+
+  it('hides ChartNotes in embedMode: clicking a chart point opens no note-entry form', () => {
+    const s = threePointSpec();
+    render(<ChartView spec={s} />);
+    fireEvent.click(document.querySelector('circle[data-point="value"]')!);
+    expect(screen.getByRole('textbox')).toBeInTheDocument();
+    cleanup();
+
+    render(<ChartView spec={s} embedMode embedFooter="x" />);
+    fireEvent.click(document.querySelector('circle[data-point="value"]')!);
+    expect(screen.queryByRole('textbox')).toBeNull();
+  });
+
+  it('renders the embedFooter sentence with a checkdecijfers.nl backlink when embedMode is on', () => {
+    render(<ChartView spec={threePointSpec()} embedMode embedFooter="Frozen on 10 September 2026 ·" />);
+    expect(screen.getByText(/Frozen on 10 September 2026/)).toBeInTheDocument();
+    const link = screen.getByRole('link', { name: /checkdecijfers\.nl/i });
+    expect(link).toHaveAttribute('href', 'https://checkdecijfers.nl');
+  });
+
+  it('renders NO embed footer when embedMode is false, regardless of embedFooter', () => {
+    render(<ChartView spec={threePointSpec()} embedFooter="should not appear" />);
+    expect(screen.queryByText(/should not appear/)).toBeNull();
+  });
+
+  it('still shows the R4 attribution line and the SourceBadge in embedMode', () => {
+    const s = threePointSpec();
+    render(<ChartView spec={s} embedMode embedFooter="x" />);
+    expect(screen.getByText(s.attributionLine)).toBeInTheDocument();
+    // The attribution <p> and the SourceBadge each independently render the
+    // table id as their own text — two occurrences proves BOTH survived
+    // embedMode, not just the <p> (a plain getByText would throw here on
+    // "multiple elements", which is itself the reason this uses getAllByText).
+    expect(screen.getAllByText(new RegExp(s.attribution.tableId)).length).toBeGreaterThanOrEqual(2);
+  });
+});
+
+describe('embed digit-token scan (extends the existing whole-card scan)', () => {
+  it('every digit in an embedMode render traces to a spec string or the embedFooter prop itself', () => {
+    const s = threePointSpec();
+    const footer = 'Frozen on 10 September 2026 ·';
+    const { container } = render(<ChartView spec={s} embedMode embedFooter={footer} />);
+    scanForUnboundDigits(container, [...harvestSpecStrings(s), footer]);
   });
 });
