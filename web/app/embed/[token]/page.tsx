@@ -7,16 +7,21 @@
 //
 // Scope note (Task 5 is the FROZEN branch only): `?live=1` (spec Part B3's
 // "Live" branch, re-running the stored intent through a fresh query — Task
-// 6) is intentionally never read here. `?theme=`/`?form=` and the spec's
-// "<html lang> from ?lang" minimal layout are also out of this task's
-// two-file scope (this route + its test) — `lang` below drives only this
-// file's OWN strings (the footer, the not-available message).
+// 6) is intentionally never read here. The minimal-layout half of spec Part
+// B3 (no site header/footer, <html lang> from ?lang) is now handled by
+// web/proxy.ts + web/app/layout.tsx (fix round, Piece 1/2) — this file only
+// ever owned its OWN strings (the footer, the not-available message).
+//
+// Fix round (Task 5 review, Piece 3): `?theme=` and `?form=` — both already
+// emitted by Task 4's embed dialog (chart-embed-dialog.tsx) — are now read
+// and applied here.
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { loadAuditRecord } from '../../../backend/answer/audit/index.ts';
 import { verifyEmbedToken } from '../../../backend/chart/embed-token.ts';
 import { ChartView } from '../../../components/chart.tsx';
 import { getDb } from '../../../lib/db.ts';
+import { isChartForm, type ChartForm } from '../../../lib/chart-view-state.ts';
 import { isLang, type Lang } from '../../../lib/i18n/messages.ts';
 
 // Per-request: the token names a different audit row on every request, so
@@ -112,9 +117,37 @@ export default async function EmbedPage({
   const footerText =
     (lang === 'en' ? 'Frozen on ' : 'Bevroren op ') + formatEmbedDate(record.createdAt, lang) + ' ·';
 
+  // Fix round (Task 5 review, Piece 3): `?form=`, validated with the real
+  // isChartForm guard — never trusted raw. ChartView's own
+  // lineFormAllowed/areaFormAllowed/hbarFormAllowed guards (applied inside
+  // its initialFormOverride effect) are the SECOND, spec-aware check; this
+  // one only confirms the string names a real ChartForm at all.
+  const formOverride: ChartForm | undefined = isChartForm(query.form) ? query.form : undefined;
+
+  const chartView = (
+    <ChartView
+      spec={spec}
+      frameless
+      embedMode
+      embedFooter={footerText}
+      initialFormOverride={formOverride}
+    />
+  );
+
   return (
     <main className="p-2">
-      <ChartView spec={spec} frameless embedMode embedFooter={footerText} />
+      {/* `?theme=dark`: Tailwind's dark-mode class strategy (app/globals.css's
+          `@custom-variant dark (&:is(.dark *));`) means everything NESTED
+          inside a `.dark` ancestor renders in dark styling regardless of the
+          page's own root class — a best-effort override, not a guarantee,
+          since `?theme=light`/`auto`/absent instead falls through to
+          `prefers-color-scheme` (most third-party iframe contexts get a
+          fresh, unpartitioned storage state, so there is no
+          checkdecijfers.nl `next-themes` localStorage entry to read there
+          anyway) — a known, accepted, narrow limitation for the rare case
+          where a visitor's browser somehow carries over a dark preference
+          for our own domain into the iframe context. */}
+      {query.theme === 'dark' ? <div className="dark">{chartView}</div> : chartView}
     </main>
   );
 }

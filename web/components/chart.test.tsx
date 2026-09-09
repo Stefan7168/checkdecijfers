@@ -3467,3 +3467,64 @@ describe('embed digit-token scan (extends the existing whole-card scan)', () => 
     scanForUnboundDigits(container, [...harvestSpecStrings(s), footer]);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Fix round (Task 5 review, Piece 3): `initialFormOverride` — a one-shot
+// initial-form seam for the /embed/[token] route's own `?form=`, wired
+// through the SAME lineFormAllowed/areaFormAllowed/hbarFormAllowed guards the
+// Weergave tablist itself already uses. Deliberately independent of every
+// embedMode test above: these render WITHOUT embedMode at all, to prove the
+// prop stands on its own and isn't accidentally coupled to it.
+// ---------------------------------------------------------------------------
+describe('ChartView — initialFormOverride (fix round, Piece 3: embed ?form=)', () => {
+  it('switches to the requested form on mount, with no tab click, when the guard allows it', () => {
+    // twoSeriesLineSpec is kind: 'line' — its own default render (no prop at
+    // all) is Lijn. 'bar' is never gated (fallbackForm's own convention), so
+    // this also proves the override applies even for the "always allowed"
+    // forms, not just the ones with a real guard.
+    const { container } = render(<ChartView spec={twoSeriesLineSpec()} initialFormOverride="bar" />);
+    expect(container.querySelector('.recharts-bar')).not.toBeNull();
+    expect(container.querySelector('.recharts-line')).toBeNull();
+    expect(screen.getByRole('tab', { name: 'Staaf' })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('applies a genuinely GUARDED form (hbar) on mount when the spec allows it (a multi-region comparison)', () => {
+    // multiRegionBarSpec is kind: 'bar', 3 series — hbarFormAllowed is true,
+    // but its OWN default render (no prop) is the vertical Staaf form, same
+    // as the "horizontal bar form" describe block's own spec. Asserting the
+    // rect[data-point] shape that block uses (not .recharts-bar, which is
+    // the VERTICAL bar's own class) proves this really landed on Liggend,
+    // not just "some bar-shaped thing".
+    const { container } = render(<ChartView spec={multiRegionBarSpec()} initialFormOverride="hbar" />);
+    const bars = container.querySelectorAll('rect[data-point="value"]');
+    expect(bars).toHaveLength(3);
+    expect(screen.getByRole('tab', { name: 'Liggend' })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('does NOT override when the guard disallows it — e.g. requesting hbar on a non-comparison (line-kind) spec', () => {
+    // twoSeriesLineSpec is kind: 'line' — hbarFormAllowed requires kind ===
+    // 'bar', so this must silently fall through to the spec's own default
+    // (Lijn), never forcing a form the honesty rules forbid.
+    const { container } = render(<ChartView spec={twoSeriesLineSpec()} initialFormOverride="hbar" />);
+    expect(container.querySelector('.recharts-line')).not.toBeNull();
+    expect(container.querySelectorAll('rect[data-point="value"]')).toHaveLength(0);
+    expect(screen.getByRole('tab', { name: 'Lijn' })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('is a no-op when absent — byte-identical to every existing ChartView render with no prop at all', () => {
+    const { container } = render(<ChartView spec={twoSeriesLineSpec()} />);
+    expect(container.querySelector('.recharts-line')).not.toBeNull();
+    expect(screen.getByRole('tab', { name: 'Lijn' })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('does not disturb any of the six existing embedMode gating sites when combined with embedMode', () => {
+    const s = multiRegionBarSpec();
+    render(<ChartView spec={s} embedMode embedFooter="x" initialFormOverride="hbar" />);
+    // The override still applies (Liggend rendered on mount)...
+    expect(document.querySelectorAll('rect[data-point="value"]')).toHaveLength(3);
+    // ...and every embedMode-gated control is still gone, exactly as the
+    // "embed mode (spec Part B3)" describe block above already covers.
+    expect(screen.queryByRole('tablist')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Opmaak' })).toBeNull();
+  });
+});

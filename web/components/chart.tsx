@@ -1145,6 +1145,7 @@ export function ChartView({
   embed,
   embedMode = false,
   embedFooter,
+  initialFormOverride,
 }: {
   spec: ChartSpec;
   /** Session 87 (purely presentational): drop the component's own card frame
@@ -1175,6 +1176,20 @@ export function ChartView({
    * every embed footer has byte-identical link markup. Ignored unless
    * embedMode is true. */
   embedFooter?: string;
+  /** Fix round (Task 5 review, Piece 3): a one-shot override for the
+   * INITIAL form, set only by the /embed/[token] route (its own `?form=`,
+   * already emitted by Task 4's embed dialog for "As shown" but never wired
+   * anywhere until now) — honours the reader's own on-screen form at the
+   * moment they generated the embed code. Applied once, on mount, and ONLY
+   * when the spec's own lineFormAllowed/areaFormAllowed/hbarFormAllowed
+   * guards allow it — an invalid request (e.g. `hbar` on a non-comparison
+   * spec) is silently ignored, same as every other stale/disallowed-form
+   * fallback in this file; it never forces a form the honesty rules forbid.
+   * A new, independent, additive prop — deliberately does not touch any of
+   * the six embedMode gating sites elsewhere in this component (those hide
+   * CONTROLS; this only ever seeds the initial VALUE those controls would
+   * otherwise start from). Ignored (no effect at all) when absent. */
+  initialFormOverride?: ChartForm;
 }) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const frameClass = frameless ? '' : 'mt-3 rounded-xl border border-border bg-card p-4 text-card-foreground';
@@ -1186,6 +1201,26 @@ export function ChartView({
   // honest view for many series.
   const initialForm = spec.series.length > BAR_LABEL_MAX ? 'table' : spec.kind;
   const [state, dispatch] = useReducer(chartViewReducer, initialForm, initialViewState);
+  // Fix round (Task 5 review, Piece 3): applies `initialFormOverride` exactly
+  // once, on mount — never on a later spec swap (that's the `specIdentity`
+  // block further down, and `reset` there deliberately preserves state.form
+  // instead of re-reading this prop, so a reader's own subsequent tab choice
+  // is never clobbered by a stale query-string value). Guarded by the SAME
+  // allow functions the tablist below uses, so this can never render a form
+  // the honesty rules forbid for this spec.
+  useEffect(() => {
+    if (initialFormOverride === undefined) return;
+    const allowed =
+      initialFormOverride === 'line'
+        ? lineFormAllowed(spec, spec.series.length)
+        : initialFormOverride === 'area'
+          ? areaFormAllowed(spec, spec.series.length)
+          : initialFormOverride === 'hbar'
+            ? hbarFormAllowed(spec)
+            : true; // 'bar' and 'table' are never gated (fallbackForm's own convention, chart-view-state.ts).
+    if (allowed) dispatch({ type: 'setForm', form: initialFormOverride });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- deliberately once-on-mount only: initialFormOverride is a one-shot prop from the embed route, never expected to change on a live instance, and a later spec swap is this component's own `reset` action's job (below), not this effect re-firing.
+  }, []);
   const lineTabRef = useRef<HTMLButtonElement>(null);
   const areaTabRef = useRef<HTMLButtonElement>(null);
   const barTabRef = useRef<HTMLButtonElement>(null);

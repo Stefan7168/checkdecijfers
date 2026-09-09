@@ -94,7 +94,12 @@ function params(token: string) {
   return Promise.resolve({ token });
 }
 
-function search(query: { lang?: string } = {}) {
+// Fix round (Task 5 review, Piece 3): widened from `{ lang?: string }` to the
+// route's real full searchParams shape so ?theme=/?form= tests below don't
+// need a cast at every call site — every EXISTING call site that only ever
+// passed `{ lang }` stays valid unchanged (a narrower object literal is
+// still assignable to this wider optional-fields type).
+function search(query: { lang?: string; theme?: string; form?: string; live?: string } = {}) {
   return Promise.resolve(query);
 }
 
@@ -195,5 +200,141 @@ describe('/embed/[token] — frozen render', () => {
 
   it('sets noindex via the exported metadata', () => {
     expect(metadata.robots).toEqual({ index: false, follow: false });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Fix round (Task 5 review, Piece 3): `?theme=` and `?form=`, both already
+// emitted by Task 4's embed dialog (chart-embed-dialog.tsx) but previously
+// never read by this route at all.
+// ---------------------------------------------------------------------------
+describe('/embed/[token] — ?theme= and ?form= (fix round, Piece 3)', () => {
+  it('?form=bar results in the bar (Staaf) form actually rendering, for a spec that allows it', async () => {
+    process.env.EMBED_TOKEN_SECRET = 's3cr3t';
+    verifyEmbedToken.mockReturnValue(42);
+    loadAuditRecord.mockResolvedValue(answerRecord());
+    const { container } = render(
+      await EmbedPage({ params: params('42.sig'), searchParams: search({ form: 'bar' }) }),
+    );
+    expect(container.querySelector('.recharts-bar')).not.toBeNull();
+    expect(container.querySelector('.recharts-line')).toBeNull();
+  });
+
+  it('an invalid ?form= value is ignored — the spec\'s own default form still renders', async () => {
+    process.env.EMBED_TOKEN_SECRET = 's3cr3t';
+    verifyEmbedToken.mockReturnValue(42);
+    loadAuditRecord.mockResolvedValue(answerRecord()); // kind: 'line' -> defaults to Lijn
+    const { container } = render(
+      await EmbedPage({ params: params('42.sig'), searchParams: search({ form: 'pie' }) }),
+    );
+    expect(container.querySelector('.recharts-line')).not.toBeNull();
+  });
+
+  it('?theme=dark wraps the chart in a "dark" class, forcing Tailwind\'s dark-mode variant', async () => {
+    process.env.EMBED_TOKEN_SECRET = 's3cr3t';
+    verifyEmbedToken.mockReturnValue(42);
+    loadAuditRecord.mockResolvedValue(answerRecord());
+    const { container } = render(
+      await EmbedPage({ params: params('42.sig'), searchParams: search({ theme: 'dark' }) }),
+    );
+    expect(container.querySelector('main > div.dark')).not.toBeNull();
+  });
+
+  it.each(['light', 'auto', undefined])('?theme=%s renders with no "dark" wrapper', async (theme) => {
+    process.env.EMBED_TOKEN_SECRET = 's3cr3t';
+    verifyEmbedToken.mockReturnValue(42);
+    loadAuditRecord.mockResolvedValue(answerRecord());
+    const { container } = render(
+      await EmbedPage({ params: params('42.sig'), searchParams: search(theme ? { theme } : {}) }),
+    );
+    expect(container.querySelector('main > div.dark')).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Fix round (Task 5 review, Piece 4): the existing digit-honesty check above
+// ("shows a digit-free 'no longer available' page...") only ever scanned the
+// English not-available branch, and only with a blanket "no digit at all"
+// assertion — which only works because that page is genuinely digit-free.
+// The FROZEN chart render legitimately has digits (dates, table ids,
+// formatted values), so it needs the real membership scan, not a blanket
+// ban — reusing the exact same house helpers chart.test.tsx already built
+// for this (scanForUnboundDigits/harvestSpecStrings), copied here rather
+// than imported since chart.test.tsx doesn't export them (same "duplicated,
+// not imported" precedent as this file's own isRedacted/chartSpec/point
+// fixtures already set against chart.test.tsx's near-identical versions).
+// ---------------------------------------------------------------------------
+
+/** Identical walker to chart.test.tsx's own scanForUnboundDigits. */
+function scanForUnboundDigits(container: HTMLElement, specStrings: string[]): void {
+  const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+  const tokens: string[] = [];
+  for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+    tokens.push(...((node.textContent ?? '').match(/\d[\d.,]*/g) ?? []));
+  }
+  expect(tokens.length).toBeGreaterThan(0);
+  for (const tok of tokens) {
+    expect(
+      specStrings.some((str) => str.includes(tok)),
+      `numeric token "${tok}" in the rendered DOM has no source in the spec's own strings`,
+    ).toBe(true);
+  }
+}
+
+/** Same shape chart.test.tsx's own harvestSpecStrings reads — `spec: unknown`
+ * plus one internal cast (rather than typing this against the real
+ * ChartSpec) because this file's own chartSpec() fixture is deliberately
+ * loosely typed (see answerRecord's own comment above on why this file casts
+ * rather than tightens its fixtures). */
+function harvestSpecStrings(spec: unknown): string[] {
+  const s = spec as {
+    title: string;
+    unit: string;
+    attributionLine: string;
+    attribution: { tableId: string; syncedAt: string };
+    definitionLine: string | null;
+    provisionalNote: string | null;
+    nullNotes: string[];
+    dimLabels: Record<string, string>;
+    series: { label: string; points: { formattedValue: string | null; periodLabel: string }[] }[];
+  };
+  return [
+    s.title,
+    s.unit,
+    s.attributionLine,
+    s.attribution.tableId,
+    s.attribution.syncedAt,
+    s.definitionLine ?? '',
+    s.provisionalNote ?? '',
+    ...s.nullNotes,
+    ...Object.keys(s.dimLabels),
+    ...Object.values(s.dimLabels),
+    ...s.series.flatMap((se) => [se.label, ...se.points.flatMap((p) => [p.formattedValue ?? '', p.periodLabel])]),
+  ].filter(Boolean);
+}
+
+describe('/embed/[token] — digit-honesty scan on the FROZEN chart render (fix round, Piece 4)', () => {
+  it('nl: every digit in the frozen render traces to a spec string or the footer\'s own date', async () => {
+    process.env.EMBED_TOKEN_SECRET = 's3cr3t';
+    verifyEmbedToken.mockReturnValue(42);
+    const s = chartSpec();
+    const record = answerRecord({ response: { kind: 'answer', chart: s } });
+    loadAuditRecord.mockResolvedValue(record);
+    const { container } = render(await EmbedPage({ params: params('42.sig'), searchParams: search() }));
+    const footer = `Bevroren op ${record.createdAt.slice(0, 10)} ·`;
+    scanForUnboundDigits(container, [...harvestSpecStrings(s), footer]);
+  });
+
+  it('en: every digit in the frozen render traces to a spec string or the footer\'s own date', async () => {
+    process.env.EMBED_TOKEN_SECRET = 's3cr3t';
+    verifyEmbedToken.mockReturnValue(42);
+    const s = chartSpec();
+    const record = answerRecord({ response: { kind: 'answer', chart: s } });
+    loadAuditRecord.mockResolvedValue(record);
+    const { container } = render(
+      await EmbedPage({ params: params('42.sig'), searchParams: search({ lang: 'en' }) }),
+    );
+    const footer = `Frozen on ${record.createdAt.slice(0, 10)} ·`;
+    scanForUnboundDigits(container, [...harvestSpecStrings(s), footer]);
   });
 });
