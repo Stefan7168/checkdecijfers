@@ -70,11 +70,74 @@ export function ChartStoryPanel({ steps, index, onIndexChange, open, onClose, tr
   const scrollRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<(HTMLElement | null)[]>([]);
   // True while a button/dot/key is scrolling a card into view, so the
-  // observer's intermediate intersections don't fight the chosen step.
-  const programmatic = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // observer's intermediate intersections don't fight the chosen step. A
+  // smooth scroll can take longer than any fixed timeout, so the guard is
+  // settle-based: it lifts 150 ms after the LAST scroll event (or at once on
+  // 'scrollend' where supported), with a 1500 ms hard cap in case no scroll
+  // event ever fires (e.g. the card is already in view).
+  const programmatic = useRef(false);
+  const settleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hardCapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scrollHandlerRef = useRef<(() => void) | null>(null);
+  const scrollendHandlerRef = useRef<(() => void) | null>(null);
+  // Latest index/onIndexChange for the observer effect below, which
+  // subscribes only once per open (see that effect's comment).
+  const indexRef = useRef(index);
+  const onIndexChangeRef = useRef(onIndexChange);
+  indexRef.current = index;
+  onIndexChangeRef.current = onIndexChange;
   const regionId = `${idPrefix}-story`;
   const headingId = `${idPrefix}-story-heading`;
   const last = steps.length - 1;
+
+  function clearProgrammaticGuard(): void {
+    programmatic.current = false;
+    if (settleTimer.current) {
+      clearTimeout(settleTimer.current);
+      settleTimer.current = null;
+    }
+    if (hardCapTimer.current) {
+      clearTimeout(hardCapTimer.current);
+      hardCapTimer.current = null;
+    }
+    const area = scrollRef.current;
+    if (area) {
+      if (scrollHandlerRef.current) area.removeEventListener('scroll', scrollHandlerRef.current);
+      if (scrollendHandlerRef.current) area.removeEventListener('scrollend', scrollendHandlerRef.current);
+    }
+    scrollHandlerRef.current = null;
+    scrollendHandlerRef.current = null;
+  }
+
+  function armProgrammaticGuard(): void {
+    const area = scrollRef.current;
+    // Only one scroll listener at a time — drop the previous one (if any)
+    // before wiring the fresh one for this scroll.
+    if (area) {
+      if (scrollHandlerRef.current) area.removeEventListener('scroll', scrollHandlerRef.current);
+      if (scrollendHandlerRef.current) area.removeEventListener('scrollend', scrollendHandlerRef.current);
+    }
+    programmatic.current = true;
+
+    function armSettleTimer(): void {
+      if (settleTimer.current) clearTimeout(settleTimer.current);
+      settleTimer.current = setTimeout(clearProgrammaticGuard, 150);
+    }
+    armSettleTimer();
+
+    const onScroll = (): void => armSettleTimer();
+    scrollHandlerRef.current = onScroll;
+    area?.addEventListener('scroll', onScroll);
+
+    if (typeof window !== 'undefined' && 'onscrollend' in window) {
+      const onScrollEnd = (): void => clearProgrammaticGuard();
+      scrollendHandlerRef.current = onScrollEnd;
+      area?.addEventListener('scrollend', onScrollEnd, { once: true });
+    }
+
+    if (hardCapTimer.current) clearTimeout(hardCapTimer.current);
+    hardCapTimer.current = setTimeout(clearProgrammaticGuard, 1500);
+  }
 
   function go(next: number): void {
     const clamped = Math.max(0, Math.min(last, next));
@@ -82,10 +145,7 @@ export function ChartStoryPanel({ steps, index, onIndexChange, open, onClose, tr
     onIndexChange(clamped);
     const card = cardRefs.current[clamped];
     if (card && typeof card.scrollIntoView === 'function') {
-      if (programmatic.current) clearTimeout(programmatic.current);
-      programmatic.current = setTimeout(() => {
-        programmatic.current = null;
-      }, 500);
+      armProgrammaticGuard();
       const reduced = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
       card.scrollIntoView({ block: 'nearest', behavior: reduced ? 'auto' : 'smooth' });
     }
@@ -116,7 +176,10 @@ export function ChartStoryPanel({ steps, index, onIndexChange, open, onClose, tr
   }, [open]);
 
   // Scroll-driven steps: the card with the largest visible share of the
-  // scroll area wins. jsdom has no IntersectionObserver — the buttons cover it.
+  // scroll area wins. jsdom has no IntersectionObserver — the buttons cover
+  // it. Subscribed once per open (not on every step) — the callback reads
+  // indexRef/onIndexChangeRef so it always sees the latest values without
+  // tearing the observer down and rebuilding it on each step.
   useEffect(() => {
     if (!open || typeof IntersectionObserver === 'undefined' || !scrollRef.current) return undefined;
     const observer = new IntersectionObserver(
@@ -128,13 +191,19 @@ export function ChartStoryPanel({ steps, index, onIndexChange, open, onClose, tr
           if (!Number.isInteger(i)) continue;
           if (!best || entry.intersectionRatio > best.ratio) best = { i, ratio: entry.intersectionRatio };
         }
-        if (best && best.ratio >= 0.5 && best.i !== index) onIndexChange(best.i);
+        if (best && best.ratio >= 0.5 && best.i !== indexRef.current) onIndexChangeRef.current(best.i);
       },
       { root: scrollRef.current, threshold: [0.5, 0.75, 1] },
     );
     for (const card of cardRefs.current) if (card) observer.observe(card);
     return () => observer.disconnect();
-  }, [open, index, onIndexChange, steps.length]);
+  }, [open, steps.length]);
+
+  // Clear any pending programmatic-scroll guard (timers + listeners) on
+  // unmount and whenever the panel closes.
+  useEffect(() => {
+    return () => clearProgrammaticGuard();
+  }, [open]);
 
   if (!open) return null;
 

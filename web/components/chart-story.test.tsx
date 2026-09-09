@@ -4,7 +4,7 @@
 // closes and returns focus to the trigger; and no digit ever appears in the
 // panel that is not one of the steps' own (spec-derived) strings.
 import { useState, type ReactNode } from 'react';
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { StoryStep } from '../lib/chart-story.ts';
 import { ChartStoryPanel, ChartStoryTrigger, type ChartStoryPanelProps } from './chart-story.tsx';
@@ -96,6 +96,53 @@ describe('ChartStoryTrigger + ChartStoryPanel', () => {
     expect(screen.getByRole('region', { name: 'Story for this chart' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Next' })).toBeInTheDocument();
     expect(screen.getByText('Scroll or use the arrows')).toBeInTheDocument();
+  });
+
+  it('a chosen step is never overridden by the observer while the programmatic scroll settles', () => {
+    vi.useFakeTimers();
+    let callback: IntersectionObserverCallback | null = null;
+    const observe = vi.fn();
+    const disconnect = vi.fn();
+    class FakeObserver {
+      constructor(cb: IntersectionObserverCallback) {
+        callback = cb;
+      }
+      observe = observe;
+      disconnect = disconnect;
+      unobserve = vi.fn();
+      takeRecords = vi.fn(() => []);
+      root = null;
+      rootMargin = '';
+      thresholds = [];
+    }
+    const originalObserver = globalThis.IntersectionObserver;
+    const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
+    globalThis.IntersectionObserver = FakeObserver as unknown as typeof IntersectionObserver;
+    HTMLElement.prototype.scrollIntoView = vi.fn();
+    try {
+      const onIndexChange = vi.fn();
+      render(<Harness onIndexChange={onIndexChange} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Verhaal' }));
+      expect(observe).toHaveBeenCalledTimes(3);
+      const region = screen.getByRole('region', { name: 'Verhaal bij de grafiek' });
+      const cards = within(region).getAllByRole('article');
+      fireEvent.click(screen.getByRole('button', { name: 'Volgende' }));
+      expect(onIndexChange).toHaveBeenLastCalledWith(1);
+      const entry = (i: number, ratio: number) => ({ target: cards[i]!, intersectionRatio: ratio, isIntersecting: ratio > 0 }) as unknown as IntersectionObserverEntry;
+      // Mid-animation: the observer sees the first card — must be ignored.
+      act(() => callback!([entry(0, 1)], {} as IntersectionObserver));
+      expect(onIndexChange).toHaveBeenCalledTimes(1);
+      // The scroll settles (no scroll events for 150 ms) — the guard lifts.
+      const scrollArea = cards[0]!.parentElement!;
+      fireEvent.scroll(scrollArea);
+      act(() => { vi.advanceTimersByTime(200); });
+      act(() => callback!([entry(2, 1)], {} as IntersectionObserver));
+      expect(onIndexChange).toHaveBeenLastCalledWith(2);
+    } finally {
+      globalThis.IntersectionObserver = originalObserver;
+      HTMLElement.prototype.scrollIntoView = originalScrollIntoView;
+      vi.useRealTimers();
+    }
   });
 
   it('shows no digit that is not one of the steps\' own strings (no "step 2 of 3" anywhere)', () => {
