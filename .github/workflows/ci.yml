@@ -66,9 +66,29 @@
 # inside `deploy`'s `vercel build`, downstream of a green gate).
 name: CI
 
+# Minute-saving triggers (owner request, 2026-09-09, session 91 — GitHub bills
+# Actions minutes; a full run costs 7–12 min): (1) `push` runs only on `main`
+# — a feature branch gets its gate through its pull request, so a branch with
+# an open PR no longer runs twice per push; (2) documentation-only pushes
+# (docs/, markdown) skip the run — nothing they touch is tested or deployed,
+# and the docs-convention test runs again on the next code push; (3) a newer
+# push to the same ref cancels the superseded run (`concurrency`), so the LAST
+# push on `main` is always the one that deploys — this replaces the RUNBOOK's
+# "two runs in flight, the last deploy to finish owns production" race.
 on:
   push:
+    branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
   pull_request:
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   gate:
