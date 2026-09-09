@@ -1050,7 +1050,12 @@ export function Chat({
                 ) : null}
               </>
             )}
-            {!dockMode && message.chart ? <ChartView spec={message.chart} /> : null}
+            {!dockMode && message.chart ? (
+              <ChartView
+                spec={message.chart}
+                embed={message.auditId !== null ? { auditId: message.auditId } : undefined}
+              />
+            ) : null}
             {/* WP135 (ADR 033 D4): the in-flow reference chip standing in for a
               * docked visual — clicking activates its dock tab ("in het paneel").
               * The web section still renders below this (ADR 032). */}

@@ -72,6 +72,7 @@ import { ensureFontLoaded } from '../lib/font-loader.ts';
 import { ChartConfigPanel, ChartConfigTrigger } from './chart-config-panel.tsx';
 import { ChartFrame } from './chart-frame.tsx';
 import { ChartDownloadMenu } from './chart-download.tsx';
+import { ChartEmbedButton } from './chart-embed-dialog.tsx';
 import { buildStorySteps, type StoryStep } from '../lib/chart-story.ts';
 import { ChartStoryPanel, ChartStoryTrigger } from './chart-story.tsx';
 import { ChartNotes, type ChartNote, type PendingPoint } from './chart-notes.tsx';
@@ -2784,9 +2785,9 @@ export function ChartView({
             frameImage={frameImage}
           />
         ) : null}
-        {/* Task 4 (spec Part B1) mounts <ChartEmbedButton/> here, gated on
-          * `embed && state.form !== 'table' && !(smallMultiples && smallMultiplesAvailable) && !embedMode`
-          * — the exact same compound Download uses, plus requiring the `embed` prop. */}
+        {embed && state.form !== 'table' && !(smallMultiples && smallMultiplesAvailable) && !embedMode ? (
+          <ChartEmbedButton auditId={embed.auditId} tableId={spec.attribution.tableId} lang={chartLang} currentForm={state.form} />
+        ) : null}
       </div>
       {embedMode && embedFooter ? (
         <p className="mt-1 text-xs text-muted-foreground">

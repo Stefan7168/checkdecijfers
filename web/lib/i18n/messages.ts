@@ -537,6 +537,31 @@ const nl = {
   'chart.panel.frameBgRefused': 'Deze achtergrond maakt een reeks onleesbaar. Kies een andere kleur of zet de kaart aan.',
   'chart.panel.close': 'Sluiten',
   'chart.panel.dialogLabel': 'Opmaak',
+  // Embed (session 92, spec 2026-09-09-story-mode-and-embed-design.md Part
+  // B1): the footer button + pop-up that generates an <iframe> embed code.
+  // `chart.embed.languageNl`/`languageEn` deliberately reuse the existing
+  // `chart.panel.language*` self-name proper nouns rather than duplicating
+  // them under a new key (the panel's own convention above already
+  // catalogues 'Nederlands'/'English' for this exact concept).
+  'chart.embed.trigger': 'Insluiten',
+  'chart.embed.dialogTitle': 'Grafiek insluiten',
+  'chart.embed.dialogExplain': 'Plak deze code in een artikel om deze grafiek te tonen, met bronvermelding.',
+  'chart.embed.languageLabel': 'Taal',
+  'chart.embed.colourLabel': 'Kleuren',
+  'chart.embed.colourLight': 'Licht',
+  'chart.embed.colourDark': 'Donker',
+  'chart.embed.colourAuto': 'Volgt apparaat van de lezer',
+  'chart.embed.chartTypeLabel': 'Grafiektype',
+  'chart.embed.chartTypeAsShown': 'Zoals getoond',
+  'chart.embed.chartTypeDefault': 'Standaard',
+  'chart.embed.liveLabel': 'Live insluiten',
+  'chart.embed.liveProOnly':
+    'Onderdeel van Pro. De ingesloten grafiek werkt zichzelf automatisch bij wanneer het CBS de cijfers corrigeert of aanvult.',
+  'chart.embed.copyCode': 'Kopieer code',
+  'chart.embed.copyCodeCopied': 'Gekopieerd!',
+  'chart.embed.close': 'Sluiten',
+  'chart.embed.unavailable': 'Insluiten is nu niet beschikbaar.',
+  'chart.embed.loading': 'Code wordt gemaakt…',
 };
 
 // `Messages` is derived from the (widened, non-`const`) Dutch object above,
@@ -986,6 +1011,24 @@ const en: Messages = {
   'chart.panel.frameBgRefused': 'This background would make a series unreadable. Choose another colour or turn the inset card on.',
   'chart.panel.close': 'Close',
   'chart.panel.dialogLabel': 'Style',
+  'chart.embed.trigger': 'Embed',
+  'chart.embed.dialogTitle': 'Embed this chart',
+  'chart.embed.dialogExplain': 'Paste this code into an article to show this chart, with attribution.',
+  'chart.embed.languageLabel': 'Language',
+  'chart.embed.colourLabel': 'Colours',
+  'chart.embed.colourLight': 'Light',
+  'chart.embed.colourDark': 'Dark',
+  'chart.embed.colourAuto': "Reader's device",
+  'chart.embed.chartTypeLabel': 'Chart type',
+  'chart.embed.chartTypeAsShown': 'As shown',
+  'chart.embed.chartTypeDefault': 'Default',
+  'chart.embed.liveLabel': 'Live embed',
+  'chart.embed.liveProOnly': 'Part of Pro. The embedded chart updates automatically when CBS corrects or extends the data.',
+  'chart.embed.copyCode': 'Copy code',
+  'chart.embed.copyCodeCopied': 'Copied!',
+  'chart.embed.close': 'Close',
+  'chart.embed.unavailable': 'Embedding is not available right now.',
+  'chart.embed.loading': 'Generating code…',
 };
 
 export const MESSAGES = { nl, en } as const satisfies Record<Lang, Messages>;

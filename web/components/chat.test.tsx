@@ -9,6 +9,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AskOutcome } from '../app/actions.ts';
 import type { GatedResponse } from '../backend/billing/index.ts';
 import type { ConversationContext } from '../backend/answer/context/index.ts';
+import type { ChartSpec } from '../backend/chart/types.ts';
 import type { ComposedResponse } from '../backend/answer/respond/types.ts';
 import type { WebSection } from '../backend/websearch/types.ts';
 import { UnrecognizedActionError } from 'next/dist/client/components/unrecognized-action-error';
@@ -121,6 +122,50 @@ function fakeClarification(text: string, netCost = 10): GatedResponse {
     response: { kind: 'clarification', text, pending: { questionNl: text } } as unknown as ComposedResponse,
   };
 }
+
+/** A minimal, real ChartSpec (same discipline as fakeAnswerResponse above) —
+ * for Task 4's embed-wiring tests only, which need `message.chart !== null`
+ * on top of an otherwise-ordinary fakeAnswerResponse() (whose OWN `chart` is
+ * hardcoded null, since no other existing test here needed a chart). */
+const CHART_SPEC: ChartSpec = {
+  schemaVersion: 1,
+  kind: 'line',
+  title: 'Testreeks',
+  dims: { Kenmerk: '000000' },
+  dimLabels: { Kenmerk: 'Alle kenmerken' },
+  unit: '%',
+  series: [
+    {
+      label: 'Nederland',
+      regionCode: 'NL01',
+      points: [
+        {
+          resultId: 'r1',
+          periodCode: '2024JJ00',
+          periodLabel: '2024',
+          value: 42,
+          formattedValue: '42,0',
+          decimals: 1,
+          status: 'Definitief',
+          provisional: false,
+          valueAttribute: 'None',
+        },
+      ],
+    },
+  ],
+  provisionalNote: null,
+  nullNotes: [],
+  definitionLine: null,
+  attributionLine: 'Bron: CBS StatLine, tabel 12345NED.',
+  attribution: {
+    tableId: '12345NED',
+    tableTitle: 'Test',
+    tableVersion: 1,
+    syncedAt: '2026-07-01',
+    coveredPeriods: { from: '2020', to: '2024' },
+    license: 'CC BY 4.0',
+  },
+};
 
 /** A minimal, registry-shaped ConversationContext for testing propagation
  * only — chat.tsx never inspects its fields, only holds and forwards the
@@ -1082,6 +1127,32 @@ describe('Chat — WP128 feedback buttons (#128)', () => {
     await screen.findByText('Bedankt voor je feedback.');
     // The anchor is the reply-path answer's auditId (fakeAnswer -> 1).
     expect(submitAnswerFeedback).toHaveBeenCalledWith(1, 'up', undefined);
+  });
+});
+
+// Task 4 (spec Part B1): chat.tsx's own inline ChartView call
+// (`embed={message.auditId !== null ? { auditId: message.auditId } : undefined}`)
+// mirrors the WP128 FeedbackButtons conditional immediately above it — same
+// "auditId null vs a real number" gate, same reason (the audit write can
+// fail independently of the answer itself). These prove that mirror holds at
+// the real Chat component, not just in chart.tsx/visual-dock.tsx isolation.
+describe('Chat — Embed button wiring on the inline chart (Task 4)', () => {
+  it('an answer with a chart AND an auditId shows the Insluiten/Embed button', async () => {
+    const response = { ...fakeAnswerResponse({ body: 'Hier is de grafiek.' }), chart: CHART_SPEC } as ComposedResponse;
+    askQuestion.mockResolvedValue(outcome({ kind: 'ok', auditId: 5, netCost: 20, response }));
+    render(<Chat />);
+    await submit('Toon een grafiek');
+    await screen.findByText('Hier is de grafiek.');
+    expect(screen.getByRole('button', { name: 'Insluiten' })).toBeInTheDocument();
+  });
+
+  it('an answer with a chart but whose audit write failed (auditId null) shows NO Insluiten/Embed button', async () => {
+    const response = { ...fakeAnswerResponse({ body: 'Hier is de grafiek.' }), chart: CHART_SPEC } as ComposedResponse;
+    askQuestion.mockResolvedValue(outcome({ kind: 'ok', auditId: null, netCost: 20, response }));
+    render(<Chat />);
+    await submit('Toon een grafiek');
+    await screen.findByText('Hier is de grafiek.');
+    expect(screen.queryByRole('button', { name: 'Insluiten' })).toBeNull();
   });
 });
 

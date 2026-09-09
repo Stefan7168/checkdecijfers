@@ -36,6 +36,11 @@ export const CHART_STYLE_EVENTS = [
   'story_step',
   // WP218 phase 5 (frame task 2): fired once per frame change.
   'frame_changed',
+  // Embed (session 92, spec 2026-09-09-story-mode-and-embed-design.md Part
+  // B1): once per embed dialog opened, once per "Kopieer code"/"Copy code"
+  // click. Anonymous counts only, like every other event here.
+  'embed_open',
+  'embed_copy',
 ] as const;
 export type ChartStyleEvent = (typeof CHART_STYLE_EVENTS)[number];
 

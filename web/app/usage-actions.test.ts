@@ -20,6 +20,8 @@ vi.mock('../backend/chart/user-styles.ts', () => ({
   // joined the same enum with the global monthly Brandfetch cap (owner
   // decision 2026-09-09). 'story_open' and 'story_step' joined for story
   // mode (session 92). 'frame_changed' joined for the frame task (phase 5).
+  // 'embed_open'/'embed_copy' joined for the embed feature (Task 4, spec
+  // Part B1).
   CHART_STYLE_EVENTS: [
     'panel_open',
     'option_changed',
@@ -30,6 +32,8 @@ vi.mock('../backend/chart/user-styles.ts', () => ({
     'story_open',
     'story_step',
     'frame_changed',
+    'embed_open',
+    'embed_copy',
   ],
 }));
 
@@ -61,6 +65,8 @@ describe('countChartStyleEvent', () => {
     'story_open',
     'story_step',
     'frame_changed',
+    'embed_open',
+    'embed_copy',
   ] as const)(
     'records a valid event (%s) via the store, using the real db and a fresh date',
     async (event) => {

@@ -25,6 +25,12 @@ const chartStyleActions = vi.hoisted(() => ({
   lookupBrand: vi.fn(),
 }));
 vi.mock('../app/chart-style-actions.ts', () => chartStyleActions);
+// Task 4 (spec Part B1): ChartEmbedButton (mounted in the footer whenever
+// `embed` is passed) calls this same 'use server' action on open — mocked
+// here for the same reason as chartStyleActions above, so the Embed-button
+// wiring tests below never touch a real db/auth boundary.
+const { createEmbedCode } = vi.hoisted(() => ({ createEmbedCode: vi.fn() }));
+vi.mock('../app/embed-actions.ts', () => ({ createEmbedCode }));
 import {
   annotationMarkers,
   buildRegionRows,
@@ -3410,6 +3416,46 @@ describe('embed mode (spec Part B3)', () => {
     // embedMode, not just the <p> (a plain getByText would throw here on
     // "multiple elements", which is itself the reason this uses getAllByText).
     expect(screen.getAllByText(new RegExp(s.attribution.tableId)).length).toBeGreaterThanOrEqual(2);
+  });
+});
+
+// Task 4 (spec Part B1): the real ChartEmbedButton now mounts at the footer
+// marker Task 3 left — chart-embed-dialog.test.tsx covers the button/dialog
+// in isolation; these cover its WIRING into ChartView itself: the `embed`
+// gate (absent by default, present once passed, calling createEmbedCode with
+// the right auditId) and gating parity with ChartDownloadMenu, its
+// immediate footer sibling, which already owns the identical compound gate
+// (state.form !== 'table' && !(smallMultiples && smallMultiplesAvailable)).
+describe('Embed button wiring (spec Part B1, Task 4)', () => {
+  afterEach(() => vi.clearAllMocks());
+
+  it('is absent with no `embed` prop, appears once `embed` is passed, and opens the dialog on click', async () => {
+    const s = threePointSpec();
+    render(<ChartView spec={s} />);
+    expect(screen.queryByRole('button', { name: 'Insluiten' })).toBeNull();
+    cleanup();
+
+    createEmbedCode.mockReturnValue(new Promise(() => {}));
+    render(<ChartView spec={s} embed={{ auditId: 7 }} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Insluiten' }));
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+    expect(createEmbedCode).toHaveBeenCalledWith(7);
+  });
+
+  it('hides Embed in small-multiples view and brings it back on leaving it, exactly like Download', () => {
+    render(<ChartView spec={twoSeriesSpec()} embed={{ auditId: 1 }} />);
+    expect(screen.getByRole('button', { name: 'Insluiten' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Kleine grafieken' }));
+    expect(screen.queryByRole('button', { name: 'Insluiten' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Kleine grafieken' }));
+    expect(screen.getByRole('button', { name: 'Insluiten' })).toBeInTheDocument();
+  });
+
+  it('hides Embed on the Tabel tab', () => {
+    render(<ChartView spec={threePointSpec()} embed={{ auditId: 1 }} />);
+    expect(screen.getByRole('button', { name: 'Insluiten' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('tab', { name: 'Tabel' }));
+    expect(screen.queryByRole('button', { name: 'Insluiten' })).toBeNull();
   });
 });
 
