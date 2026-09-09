@@ -7,6 +7,7 @@ import { ThemeProvider } from "../components/theme-provider.tsx";
 import { getLang } from "../lib/i18n/server.ts";
 import { t } from "../lib/i18n/messages.ts";
 import { LangProvider } from "../lib/i18n/lang-provider.tsx";
+import { StylePanelOwnerProvider } from "../lib/style-panel-owner.tsx";
 
 // Session 87 visual redesign (docs/12-huisstijl.md): the chosen mockup
 // (Option B, "Inset Cards") sets interface text in Inter; Geist Mono stays for
@@ -69,12 +70,19 @@ export default async function RootLayout({
       <body className="flex h-dvh flex-col">
         <LangProvider lang={lang}>
           <ThemeProvider>
-            {/* Anonymous style-panel usage counter (WP218 phase 6, #220): pure
-                wiring, renders nothing. Mounted once here so it's live for
-                every page, not tied to any one chart mount. */}
-            <ChartUsageTracker />
-            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">{children}</div>
-            <SiteFooter />
+            {/* Task 6 (chart frame plan): one Style panel open per page —
+                every ChartView on the page shares this single owner slot, so
+                opening one chart's floating panel closes any other chart's
+                that was already open. Mounted once here, above every page's
+                content, same as ChartUsageTracker below. */}
+            <StylePanelOwnerProvider>
+              {/* Anonymous style-panel usage counter (WP218 phase 6, #220): pure
+                  wiring, renders nothing. Mounted once here so it's live for
+                  every page, not tied to any one chart mount. */}
+              <ChartUsageTracker />
+              <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">{children}</div>
+              <SiteFooter />
+            </StylePanelOwnerProvider>
           </ThemeProvider>
         </LangProvider>
       </body>

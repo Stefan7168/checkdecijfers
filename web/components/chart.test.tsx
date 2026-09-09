@@ -9,6 +9,7 @@ import type { ChartStyleEvent } from '../backend/chart/user-styles.ts';
 import { setChartUsageSink } from '../lib/chart-usage-client.ts';
 import { ChartStyleProvider } from '../lib/chart-style-context.tsx';
 import { LangProvider } from '../lib/i18n/lang-provider.tsx';
+import { StylePanelOwnerProvider } from '../lib/style-panel-owner.tsx';
 import { attributedSvgMarkup } from './chart-download.tsx';
 
 // WP218 phase 2 (owner C): chart.tsx imports the account-default Server
@@ -1889,7 +1890,7 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
     const trigger = screen.getByRole('button', { name: 'Opmaak' });
     fireEvent.click(trigger);
     expect(trigger).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByRole('region', { name: 'Opmaak van de grafiek' })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Opmaak van de grafiek' })).toBeInTheDocument();
 
     rerender(<ChartView spec={threePointSpec({ title: 'Een andere grafiek' })} />);
     expect(screen.getByRole('button', { name: 'Opmaak' })).toHaveAttribute('aria-expanded', 'false');
@@ -1964,7 +1965,7 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
     const { container } = render(<ChartView spec={threePointSpec()} />);
     fireEvent.click(screen.getByRole('tab', { name: 'Tabel' }));
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    const region = screen.getByRole('region', { name: 'Opmaak van de grafiek' });
+    const region = screen.getByRole('dialog', { name: 'Opmaak van de grafiek' });
     expect(within(region).queryAllByRole('radio')).toHaveLength(0);
     fireEvent.click(within(region).getByRole('tab', { name: 'Kader' }));
     expect(within(region).getByRole('radiogroup', { name: 'Achtergrond' })).toBeInTheDocument();
@@ -1980,7 +1981,7 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
     const chartTabpanel = container.querySelector('[role="tabpanel"][aria-label="Grafiek"]') as HTMLElement;
     expect(chartTabpanel).not.toBeNull();
     expect(within(chartTabpanel).queryByRole('region', { name: 'Opmaak van de grafiek' })).toBeNull();
-    expect(screen.getByRole('region', { name: 'Opmaak van de grafiek' })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Opmaak van de grafiek' })).toBeInTheDocument();
   });
 
   it('option A layout: the region follows the chart tabpanel, the trigger stays in the Weergave tablist row, and opening the panel does not move or remount the chart', () => {
@@ -1997,7 +1998,7 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
     expect((tablist.parentElement as HTMLElement).contains(trigger)).toBe(true);
 
     fireEvent.click(trigger);
-    const region = screen.getByRole('region', { name: 'Opmaak van de grafiek' });
+    const region = screen.getByRole('dialog', { name: 'Opmaak van de grafiek' });
     // "First the graph on top, then the design settings" (owner): the region
     // is a FOLLOWING sibling of the chart's own tabpanel, never a preceding
     // one — the pre-refactor layout wrapped the panel under the Weergave row
@@ -2873,7 +2874,7 @@ describe('Story mode (session 92): a code-built story under the chart', () => {
   it('opening the story closes Opmaak and vice versa (one panel under the chart)', () => {
     render(<ChartView spec={threePointSpec()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    expect(screen.getByRole('region', { name: 'Opmaak van de grafiek' })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Opmaak van de grafiek' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Verhaal' }));
     expect(screen.queryByRole('region', { name: 'Opmaak van de grafiek' })).toBeNull();
     expect(screen.getByRole('region', { name: 'Verhaal bij de grafiek' })).toBeInTheDocument();
@@ -3276,5 +3277,43 @@ describe('Task 5 — Frame tab wiring in chart.tsx', () => {
     expect(frameAfterReset).not.toBeNull();
     const styleAfterReset = window.getComputedStyle(frameAfterReset);
     expect(styleAfterReset.backgroundImage).toBe('none');
+  });
+});
+
+// Task 6 (chart frame plan): one Style panel open per page — StylePanelOwnerProvider
+// is the shared "owner" slot every ChartView on the page claims while its own
+// panel is open.
+describe('ChartView — StylePanelOwnerProvider (one Style panel per page)', () => {
+  it('opening chart B\'s Style panel closes chart A\'s, when both share one provider', () => {
+    render(
+      <StylePanelOwnerProvider>
+        <ChartView spec={threePointSpec({ title: 'Grafiek A' })} />
+        <ChartView spec={threePointSpec({ title: 'Grafiek B' })} />
+      </StylePanelOwnerProvider>,
+    );
+    const [triggerA, triggerB] = screen.getAllByRole('button', { name: 'Opmaak' });
+    fireEvent.click(triggerA!);
+    expect(triggerA).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getAllByRole('dialog', { name: 'Opmaak van de grafiek' })).toHaveLength(1);
+
+    fireEvent.click(triggerB!);
+    expect(triggerB).toHaveAttribute('aria-expanded', 'true');
+    expect(triggerA).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getAllByRole('dialog', { name: 'Opmaak van de grafiek' })).toHaveLength(1);
+  });
+
+  it('without a provider (the default), two charts each keep their own panel open independently', () => {
+    render(
+      <>
+        <ChartView spec={threePointSpec({ title: 'Grafiek A' })} />
+        <ChartView spec={threePointSpec({ title: 'Grafiek B' })} />
+      </>,
+    );
+    const [triggerA, triggerB] = screen.getAllByRole('button', { name: 'Opmaak' });
+    fireEvent.click(triggerA!);
+    fireEvent.click(triggerB!);
+    expect(triggerA).toHaveAttribute('aria-expanded', 'true');
+    expect(triggerB).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getAllByRole('dialog', { name: 'Opmaak van de grafiek' })).toHaveLength(2);
   });
 });

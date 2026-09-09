@@ -27,8 +27,9 @@
 // Kleuren/Lettertype tab bodies are empty placeholders here — Task 6 fills
 // them (the Colours tab needs `seriesMeta`, unused by this task's Grafiek
 // tab but already part of the props contract so Task 6 is additive).
-import { Fragment, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
-import { SlidersHorizontal } from 'lucide-react';
+import { Fragment, useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
+import { SlidersHorizontal, X } from 'lucide-react';
 import {
   FONT_OPTIONS,
   FRAME_GRADIENT_PRESETS,
@@ -61,6 +62,7 @@ function buildPanelCopy(lang: Lang) {
   return {
     trigger: t(lang, 'chart.panel.trigger'),
     regionLabel: t(lang, 'chart.panel.regionLabel'),
+    close: t(lang, 'chart.panel.close'),
     tabsLabel: t(lang, 'chart.panel.tabsLabel'),
     tabChart: t(lang, 'chart.panel.tabChart'),
     tabColors: t(lang, 'chart.panel.tabColors'),
@@ -986,6 +988,7 @@ export function ChartConfigPanel({
   }
 
   const regionId = `${idPrefix}-style`;
+  const headingId = `${idPrefix}-style-heading`;
   const tabId = (key: TabKey) => `${idPrefix}-style-tab-${key}`;
   const panelId = (key: TabKey) => `${idPrefix}-style-panel-${key}`;
 
@@ -1000,6 +1003,15 @@ export function ChartConfigPanel({
       closeAndRefocus();
     }
   }
+
+  // Task 6 (floating Style panel): the dialog receives focus itself when it
+  // opens (never trapped — Tab can still leave it, matching "no focus trap"
+  // in the brief), so a keyboard user landing here after activating the
+  // trigger doesn't have to hunt for it.
+  const dialogRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (open) dialogRef.current?.focus();
+  }, [open]);
 
   function selectTab(next: TabKey): void {
     setActiveTab(next);
@@ -1058,20 +1070,41 @@ export function ChartConfigPanel({
   const visibleToggles = toggles.filter((toggle) => resolved.applicable.has(toggle.key));
   const showGroupLabelId = `${idPrefix}-style-label-show`;
 
-  const region = open ? (
+  // Task 6 (floating Style panel): the panel is now a floating, non-modal
+  // dialog beside the chart, not an inline region under it — `role="dialog"`
+  // (never `aria-modal`: no outside-click close, no focus trap, the chart
+  // stays fully interactive behind it) and `createPortal`ed into
+  // `document.body` so its fixed positioning isn't clipped by an ancestor's
+  // `overflow`/`transform`. Owner call: `aria-labelledby` keeps pointing at
+  // `copy.regionLabel` ("Opmaak van de grafiek"/"Chart style"), not the new
+  // `chart.panel.dialogLabel` string the brief sketched — every existing
+  // test queries `getByRole('region'|'dialog', { name: 'Opmaak van de
+  // grafiek' })`, and there is no product reason for the two accessible
+  // names to differ, so keeping the established one avoids a needless
+  // string split. Below `lg`, the dialog becomes a bottom sheet instead of
+  // the right-side floating box — a deliberate deviation from spec §C1's
+  // "small chart preview on top" for phones, chosen to avoid mounting a
+  // second chart instance; recorded in the docs task.
+  const dialogContent = open ? (
     <section
+      ref={dialogRef}
       id={regionId}
-      role="region"
-      aria-label={copy.regionLabel}
+      role="dialog"
+      aria-labelledby={headingId}
+      tabIndex={-1}
       onKeyDown={onRegionKeyDown}
-      className="mt-2 rounded-lg border border-border bg-muted/40 p-3 text-xs"
+      className="fixed inset-x-0 bottom-0 z-40 max-h-[60vh] overflow-y-auto rounded-t-lg border-t border-border bg-card p-3 text-xs shadow-lg lg:inset-x-auto lg:bottom-auto lg:right-4 lg:top-20 lg:w-[22rem] lg:max-h-[calc(100vh-6rem)] lg:rounded-lg lg:rounded-t-lg lg:border"
     >
+      <h2 id={headingId} className="sr-only">
+        {copy.regionLabel}
+      </h2>
       {/* Layout refactor (owner: option A): the region's header row is now
         * common to every tab — the Grafiek/Kleuren/Lettertype tablist on the
-        * left, "Taal van de grafiek" on the right (its own visible <label>
-        * dropped; the select already carried an identical `aria-label`, so
-        * removing the label line loses no accessible name). Previously the
-        * language select lived inside the Grafiek tabpanel only. */}
+        * left, "Taal van de grafiek" and a Close button on the right (its
+        * own visible <label> dropped; the select already carried an
+        * identical `aria-label`, so removing the label line loses no
+        * accessible name). Previously the language select lived inside the
+        * Grafiek tabpanel only. */}
       <div className="flex items-center justify-between gap-2">
         <div
           role="tablist"
@@ -1104,6 +1137,9 @@ export function ChartConfigPanel({
           <option value="nl">{copy.languageNl}</option>
           <option value="en">{copy.languageEn}</option>
         </select>
+        <Button type="button" variant="ghost" size="sm" aria-label={copy.close} onClick={closeAndRefocus}>
+          <X aria-hidden="true" />
+        </Button>
       </div>
 
       {activeTab === 'chart' ? (
@@ -1599,5 +1635,5 @@ export function ChartConfigPanel({
     </section>
   ) : null;
 
-  return region;
+  return dialogContent && typeof document !== 'undefined' ? createPortal(dialogContent, document.body) : null;
 }

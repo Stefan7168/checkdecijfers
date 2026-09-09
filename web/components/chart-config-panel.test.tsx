@@ -79,10 +79,10 @@ describe('ChartConfigPanel — Grafiek tab', () => {
     );
     const trigger = screen.getByRole('button', { name: 'Opmaak' });
     expect(trigger).toHaveAttribute('aria-expanded', 'false');
-    expect(screen.queryByRole('region', { name: 'Opmaak van de grafiek' })).toBeNull();
+    expect(screen.queryByRole('dialog', { name: 'Opmaak van de grafiek' })).toBeNull();
     fireEvent.click(trigger);
     expect(trigger).toHaveAttribute('aria-expanded', 'true');
-    const region = screen.getByRole('region', { name: 'Opmaak van de grafiek' });
+    const region = screen.getByRole('dialog', { name: 'Opmaak van de grafiek' });
     expect(within(region).getAllByRole('tab').map((t) => t.textContent)).toEqual([
       'Grafiek',
       'Kleuren',
@@ -215,10 +215,10 @@ describe('ChartConfigPanel — Grafiek tab', () => {
     );
     const trigger = screen.getByRole('button', { name: 'Opmaak' });
     fireEvent.click(trigger);
-    const region = screen.getByRole('region', { name: 'Opmaak van de grafiek' });
+    const region = screen.getByRole('dialog', { name: 'Opmaak van de grafiek' });
     fireEvent.keyDown(region, { key: 'Escape' });
     expect(trigger).toHaveAttribute('aria-expanded', 'false');
-    expect(screen.queryByRole('region', { name: 'Opmaak van de grafiek' })).toBeNull();
+    expect(screen.queryByRole('dialog', { name: 'Opmaak van de grafiek' })).toBeNull();
     expect(document.activeElement).toBe(trigger);
   });
 
@@ -1545,5 +1545,79 @@ describe('ChartConfigPanel — WP218 phase 2 (owner C): account default row', ()
     expect(await screen.findByRole('status')).toHaveTextContent('Saved.');
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
     for (let n = walker.nextNode(); n; n = walker.nextNode()) expect(n.textContent).not.toMatch(/\d/);
+  });
+});
+
+// Task 6 (chart frame plan): the panel is now a floating, non-modal dialog
+// portaled into document.body rather than an inline region under the chart.
+describe('ChartConfigPanel — floating dialog', () => {
+  it('portals its dialog directly into document.body, not into the render root', () => {
+    const { container } = render(
+      <Harness
+        resolved={resolvePresentation(lineCtx, {})}
+        seriesMeta={meta}
+        onChange={vi.fn()}
+        onReset={vi.fn()}
+        idPrefix="portal"
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    const dialog = screen.getByRole('dialog', { name: 'Opmaak van de grafiek' });
+    // Testing Library's screen queries reach the portal fine; what this
+    // proves is that the dialog node itself is NOT a descendant of the
+    // component's own render root, i.e. it really did move to document.body.
+    expect(container.contains(dialog)).toBe(false);
+    expect(document.body.contains(dialog)).toBe(true);
+  });
+
+  it('has a Close button that closes the dialog and returns focus to the trigger', () => {
+    render(
+      <Harness
+        resolved={resolvePresentation(lineCtx, {})}
+        seriesMeta={meta}
+        onChange={vi.fn()}
+        onReset={vi.fn()}
+        idPrefix="close"
+      />,
+    );
+    const trigger = screen.getByRole('button', { name: 'Opmaak' });
+    fireEvent.click(trigger);
+    fireEvent.click(screen.getByRole('button', { name: 'Sluiten' }));
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('dialog', { name: 'Opmaak van de grafiek' })).toBeNull();
+    expect(document.activeElement).toBe(trigger);
+  });
+
+  it("the trigger's aria-controls still resolves to the dialog's id once open", () => {
+    render(
+      <Harness
+        resolved={resolvePresentation(lineCtx, {})}
+        seriesMeta={meta}
+        onChange={vi.fn()}
+        onReset={vi.fn()}
+        idPrefix="controls"
+      />,
+    );
+    const trigger = screen.getByRole('button', { name: 'Opmaak' });
+    fireEvent.click(trigger);
+    const controlsId = trigger.getAttribute('aria-controls');
+    expect(controlsId).toBeTruthy();
+    const dialog = screen.getByRole('dialog', { name: 'Opmaak van de grafiek' });
+    expect(dialog).toHaveAttribute('id', controlsId);
+  });
+
+  it('focus moves into the dialog when it opens', () => {
+    render(
+      <Harness
+        resolved={resolvePresentation(lineCtx, {})}
+        seriesMeta={meta}
+        onChange={vi.fn()}
+        onReset={vi.fn()}
+        idPrefix="focus"
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    const dialog = screen.getByRole('dialog', { name: 'Opmaak van de grafiek' });
+    expect(document.activeElement).toBe(dialog);
   });
 });

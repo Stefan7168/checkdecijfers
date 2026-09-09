@@ -65,6 +65,7 @@ import {
   translateUnit,
 } from '../lib/i18n/cbs-words.ts';
 import { useLang } from '../lib/i18n/lang-provider.tsx';
+import { useStylePanelOwner } from '../lib/style-panel-owner.tsx';
 import { t, type Lang } from '../lib/i18n/messages.ts';
 // WP218 phase 2 (owner C): the account-default Server Actions live in their
 // OWN tiny-import-graph file, never web/app/actions.ts — see that file's own
@@ -1248,6 +1249,36 @@ export function ChartView({
     }
     setOpenPanel(open ? 'style' : null);
   };
+  // Task 6 (chart frame plan): one Style panel open per page. This chart
+  // claims the shared owner slot for as long as ITS panel is open, and
+  // releases it the moment that stops being true (panel closed, or this
+  // chart unmounts) — `claim`/`release` are the no-provider default's
+  // no-ops outside `StylePanelOwnerProvider`, so a chart rendered alone
+  // (most tests) behaves exactly as before this task.
+  const { owner: stylePanelOwner, claim: claimStylePanel, release: releaseStylePanel } = useStylePanelOwner();
+  useEffect(() => {
+    if (!styleOpen) return;
+    claimStylePanel(domId);
+    return () => releaseStylePanel(domId);
+  }, [styleOpen, domId, claimStylePanel, releaseStylePanel]);
+  // Opening another chart's panel (which claims the slot with ITS domId)
+  // closes this one's. Deliberately keyed on [stylePanelOwner, domId] only
+  // (not styleOpen): on the very commit where THIS chart's own click above
+  // flips styleOpen to true, `stylePanelOwner` in context is still the
+  // PREVIOUS owner (this chart's own `claimStylePanel` call above hasn't
+  // propagated through the provider yet) — since that value is unchanged
+  // from the prior commit, this effect's dependencies haven't changed
+  // either and it correctly does not re-run, so this chart never closes the
+  // panel it just opened. It only fires once `stylePanelOwner` itself
+  // actually changes (a real claim by ANY chart, this one included, lands
+  // one commit later). The functional update reads the current `openPanel`
+  // rather than closing over a possibly-stale `styleOpen`, and leaves an
+  // open Story panel (`openPanel === 'story'`) alone — only 'style' is ever
+  // shared across charts.
+  useEffect(() => {
+    if (stylePanelOwner === null || stylePanelOwner === domId) return;
+    setOpenPanel((current) => (current === 'style' ? null : current));
+  }, [stylePanelOwner, domId]);
   const [storyIndex, setStoryIndex] = useState(0);
   // The reader's own hidden/highlight/zoom state, taken when the story opens
   // and put back when it closes (the story drives highlight itself and needs
@@ -2418,21 +2449,17 @@ export function ChartView({
           {t(chartLang, 'chart.story.controlsLocked')}
         </span>
       ) : null}
-      {/* Chart-panel-layout refactor (owner: option A — "first the graph on
-        * top, then the design settings"): the Opmaak region renders directly
-        * after the chart's own tabpanel above (`chartContainerRef`'s parent),
-        * ahead of the trend headline/legend/small-multiples toggles below —
-        * chart first, settings under it. Its trigger button lives in the
-        * Weergave tablist row instead (rendered directly there now — see the
-        * review-fix comment on `styleOpen` above); mounting the panel itself
-        * HERE, not there, is what makes the `role="region"` it renders land
-        * in this position in the DOM, since a component's own JSX return is
-        * one subtree at one place in its caller's tree. `key={chartEpoch}`
-        * is unchanged from before this refactor: a spec swap still fully
-        * remounts the panel, resetting its colour-draft/brand-status state
-        * exactly as it always has — `open` itself is no longer this
-        * component's state (it's `styleOpen` above), so it's reset
-        * separately in the spec-swap block instead of via this remount. */}
+      {/* Task 6 (chart frame plan): ChartConfigPanel now portals its dialog
+        * into `document.body` itself, so mounting it HERE no longer decides
+        * where in the DOM it lands — only the Story panel still keeps the
+        * under-chart slot. This mount point is kept anyway: it's still
+        * where `styleOpen`/`chartEpoch`/every other prop below is already in
+        * scope, and moving the mount elsewhere would change nothing about
+        * what renders. `key={chartEpoch}` is unchanged: a spec swap still
+        * fully remounts the panel, resetting its colour-draft/brand-status
+        * state exactly as it always has — `open` itself is `styleOpen`
+        * above, reset separately in the spec-swap block instead of via this
+        * remount. */}
       {/* Task 5 (design §C2): no longer gated on `state.form !== 'table'` —
         * the Frame tab is applicable (and its controls functional) in table
         * form too; the panel's other tabs already render nothing when their
