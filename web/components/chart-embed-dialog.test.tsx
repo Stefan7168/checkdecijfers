@@ -61,6 +61,17 @@ describe('ChartEmbedButton / ChartEmbedDialog', () => {
     expect(screen.queryByText(/<iframe/)).toBeNull();
   });
 
+  // Minor #3 (opus review): a rejected Server Action promise must not leave
+  // the dialog stuck on "loading" forever with an unhandled rejection — it
+  // should collapse to the same terminal 'unavailable' state as { ok: false }.
+  it('shows the unavailable message (not stuck loading) when createEmbedCode rejects', async () => {
+    createEmbedCode.mockRejectedValue(new Error('network error'));
+    render(<ChartEmbedButton auditId={42} tableId="83693NED" lang="en" />);
+    fireEvent.click(screen.getByRole('button', { name: /embed/i }));
+    await waitFor(() => expect(screen.getByText(/not available/i)).toBeInTheDocument());
+    expect(screen.queryByText(/generating/i)).toBeNull();
+  });
+
   it('disables the Live switch with a Pro-only reason when pro is false', async () => {
     createEmbedCode.mockResolvedValue({ ok: true, token: '42.abc', pro: false });
     render(<ChartEmbedButton auditId={42} tableId="83693NED" lang="en" />);
@@ -137,5 +148,47 @@ describe('ChartEmbedButton / ChartEmbedDialog', () => {
     expect(createEmbedCode).toHaveBeenCalledTimes(2);
     expect(trackChartStyleEvent).toHaveBeenCalledWith('embed_open');
     expect(trackChartStyleEvent).toHaveBeenCalledTimes(2);
+  });
+
+  // Fix round (opus review, Important #1/#2): embed_copy must count a real,
+  // successful copy only — mirroring chart.tsx's own default_saved/
+  // default_forgotten precedent, which fires its tracking call solely inside
+  // the `if (r.ok)` branch of a fallible operation, never unconditionally
+  // after it. These two tests are the copy path's first coverage.
+  describe('copying the code', () => {
+    it('copies the exact generated code, flips the button label to "Copied!", and fires embed_copy on a successful copy', async () => {
+      createEmbedCode.mockResolvedValue({ ok: true, token: '42.abc', pro: false });
+      const writeText = vi.fn().mockResolvedValue(undefined);
+      Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+      render(<ChartEmbedButton auditId={42} tableId="83693NED" lang="en" />);
+      fireEvent.click(screen.getByRole('button', { name: /embed/i }));
+      const pre = await screen.findByText(/<iframe/);
+      const expectedCode = pre.textContent;
+
+      fireEvent.click(screen.getByRole('button', { name: /^copy code$/i }));
+
+      expect(await screen.findByRole('button', { name: /^copied!$/i })).toBeInTheDocument();
+      expect(writeText).toHaveBeenCalledTimes(1);
+      expect(writeText).toHaveBeenCalledWith(expectedCode);
+      expect(trackChartStyleEvent).toHaveBeenCalledWith('embed_copy');
+    });
+
+    // RED against the pre-fix code path: the old handler called setCopied(true)
+    // and trackChartStyleEvent('embed_copy') unconditionally AFTER the
+    // try/catch, so both fired even though the write below rejects.
+    it('does NOT flip to "Copied!" and does NOT fire embed_copy when the clipboard write fails', async () => {
+      createEmbedCode.mockResolvedValue({ ok: true, token: '42.abc', pro: false });
+      const writeText = vi.fn().mockRejectedValue(new Error('clipboard denied'));
+      Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+      render(<ChartEmbedButton auditId={42} tableId="83693NED" lang="en" />);
+      fireEvent.click(screen.getByRole('button', { name: /embed/i }));
+      await screen.findByText(/<iframe/);
+
+      fireEvent.click(screen.getByRole('button', { name: /^copy code$/i }));
+
+      await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));
+      expect(screen.queryByRole('button', { name: /^copied!$/i })).toBeNull();
+      expect(trackChartStyleEvent).not.toHaveBeenCalledWith('embed_copy');
+    });
   });
 });

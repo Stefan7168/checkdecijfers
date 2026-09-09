@@ -4,6 +4,14 @@ import * as React from "react"
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog"
 import { cn } from "cn"
 
+// PATCHED from shadcn's generated `@/components/ui/button` alias: tsc/Next
+// resolve that path alias natively, but Vite/vitest do not (no
+// vite-tsconfig-paths plugin, no resolve.alias in web/vitest.config.ts), so
+// it was repointed to this relative import. This is the ONLY cross-ui/-file
+// import in this directory — no other ui/*.tsx file imports a sibling file
+// (they import only `cn` from the real npm package plus external packages)
+// — so re-running `npx shadcn add dialog` will regenerate the `@/...` alias
+// here and this one-line fix will need to be re-applied.
 import { Button } from "./button.tsx"
 import { XIcon } from "lucide-react"
 

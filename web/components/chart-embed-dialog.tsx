@@ -25,8 +25,12 @@
 // imported its own Button via the `@/components/ui/button` tsconfig path
 // alias, which tsc/Next resolve but Vite/vitest do not (no
 // vite-tsconfig-paths plugin, no resolve.alias here) — repointed to the
-// relative `./button.tsx` all sibling ui/*.tsx files already use. No
-// hand-rolled modal was needed as a result.
+// relative `./button.tsx` instead (see that import site's own comment in
+// ui/dialog.tsx). Correction (fix round, opus review): this is NOT an
+// existing convention — it is the FIRST cross-ui/-file relative import in
+// the repo; every other ui/*.tsx file imports only `cn` from the real npm
+// package plus external packages. No hand-rolled modal was needed as a
+// result.
 'use client';
 
 import { useEffect, useId, useRef, useState } from 'react';
@@ -132,10 +136,21 @@ function ChartEmbedDialog({
   // (story_open, panel_open) elsewhere in chart.tsx.
   useEffect(() => {
     let cancelled = false;
-    createEmbedCode(auditId).then((r) => {
-      if (cancelled) return;
-      setResult(r.ok ? { token: r.token, pro: r.pro } : 'unavailable');
-    });
+    createEmbedCode(auditId)
+      .then((r) => {
+        if (cancelled) return;
+        setResult(r.ok ? { token: r.token, pro: r.pro } : 'unavailable');
+      })
+      .catch(() => {
+        // A rejected Server Action promise (e.g. Next's
+        // UnrecognizedActionError, per chat.tsx's own precedent for this
+        // failure mode) must not leave the dialog stuck on "loading"
+        // forever with an unhandled rejection — collapse to the same
+        // terminal 'unavailable' state the `{ ok: false }` branch already
+        // uses above.
+        if (cancelled) return;
+        setResult('unavailable');
+      });
     trackChartStyleEvent('embed_open');
     return () => {
       cancelled = true;
@@ -228,13 +243,20 @@ function ChartEmbedDialog({
                 onClick={async () => {
                   try {
                     await navigator.clipboard.writeText(code);
+                    // embed_copy counts a real, successful copy only —
+                    // mirrors chart.tsx's own default_saved/default_forgotten
+                    // precedent, which fires its tracking call solely inside
+                    // the `if (r.ok)` branch of a fallible operation, never
+                    // unconditionally after it. Both lines below must stay
+                    // inside this try, after the await above succeeds.
+                    setCopied(true);
+                    trackChartStyleEvent('embed_copy');
                   } catch {
                     // Clipboard API unavailable/refused — the visible <pre>
-                    // above is the manual-copy fallback; nothing further to
-                    // do here.
+                    // above is the manual-copy fallback; a caught failure
+                    // just means the button doesn't flip to "Copied!" and
+                    // embed_copy does not fire. Nothing further to do here.
                   }
-                  setCopied(true);
-                  trackChartStyleEvent('embed_copy');
                 }}
               >
                 {copied ? t(lang, 'chart.embed.copyCodeCopied') : t(lang, 'chart.embed.copyCode')}
