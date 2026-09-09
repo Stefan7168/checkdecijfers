@@ -246,7 +246,7 @@ describe('ChartConfigPanel — Grafiek tab', () => {
     }
   });
 
-  it('WP218 phase 4: the "Taal van de grafiek" select offers Zoals de app/Nederlands/English and emits the chosen language', () => {
+  it('owner ask (2026-09-09): the "Taal van de grafiek" select offers only Nederlands/English, preselects the chart\'s current language (no override, lang="nl"), and emits an explicit per-chart choice', () => {
     const onChange = vi.fn();
     render(
       <Harness
@@ -259,23 +259,28 @@ describe('ChartConfigPanel — Grafiek tab', () => {
     );
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
     const select = screen.getByRole('combobox', { name: 'Taal van de grafiek' }) as HTMLSelectElement;
-    expect([...select.options].map((o) => o.textContent)).toEqual(['Zoals de app', 'Nederlands', 'English']);
-    expect(select.value).toBe(''); // null -> follow the app language
+    expect([...select.options].map((o) => o.textContent)).toEqual(['Nederlands', 'English']);
+    // No override and lang="nl" (the default) -> preselects the chart's current language, 'nl'.
+    expect(select.value).toBe('nl');
     fireEvent.change(select, { target: { value: 'en' } });
     expect(onChange).toHaveBeenCalledWith({ language: 'en' });
-    fireEvent.change(select, { target: { value: '' } });
-    expect(onChange).toHaveBeenCalledWith({ language: null });
   });
 
-  it('WP218 phase 4: the language select pre-fills from the resolved value and renders in English under lang="en"', () => {
-    const resolved = resolvePresentation(lineCtx, { language: 'en' });
+  it('owner ask (2026-09-09): with no override, the select preselects whatever language the chart currently resolves to (lang="en")', () => {
     render(
-      <Harness lang="en" resolved={resolved} seriesMeta={meta} onChange={vi.fn()} onReset={vi.fn()} idPrefix="c2" />,
+      <Harness
+        lang="en"
+        resolved={resolvePresentation(lineCtx, {})}
+        seriesMeta={meta}
+        onChange={vi.fn()}
+        onReset={vi.fn()}
+        idPrefix="c2"
+      />,
     );
     fireEvent.click(screen.getByRole('button', { name: 'Style' }));
     const select = screen.getByRole('combobox', { name: 'Chart language' }) as HTMLSelectElement;
     expect(select.value).toBe('en');
-    expect([...select.options].map((o) => o.textContent)).toEqual(['Same as the app', 'Nederlands', 'English']);
+    expect([...select.options].map((o) => o.textContent)).toEqual(['Nederlands', 'English']);
   });
 
   it('WP218 phase 5: the "why no pie or stacked chart" note is collapsed by default and opens on click', () => {

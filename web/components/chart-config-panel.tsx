@@ -110,7 +110,6 @@ function buildPanelCopy(lang: Lang) {
      * `languageEn` are the languages' own self-names — identical in both
      * languages (proper nouns), still catalogued rather than hardcoded. */
     languageLabel: t(lang, 'chart.panel.languageLabel'),
-    languageFollowApp: t(lang, 'chart.panel.languageFollowApp'),
     languageNl: t(lang, 'chart.panel.languageNl'),
     languageEn: t(lang, 'chart.panel.languageEn'),
     /** WP218 phase 5 (chart-types plan, Task 3): the collapsed "why no pie
@@ -741,18 +740,23 @@ export function ChartConfigPanel({
           {tabButton('colors', copy.tabColors)}
           {tabButton('font', copy.tabFont)}
         </div>
-        {/* WP218 phase 4 (#219, design §4): null = follow the app language,
-          * 'nl'/'en' pins this one chart regardless of the app switch.
+        {/* WP218 phase 4 (#219, design §4), owner ask (2026-09-09): the select
+          * preselects the chart's CURRENT language — `resolved.values.language
+          * ?? lang`, i.e. the per-chart override if one is set, else the
+          * resolved language the chart is actually showing right now (`lang`,
+          * which chart.tsx already computes as `pres.language ?? appLang`).
+          * Every pick is an explicit per-chart choice (`{ language: value }`);
+          * `null` — "follow the app" — remains the untouched default a chart
+          * starts with, it's just never produced by this control any more.
           * Always applicable/never locked (chart-presentation.ts), so this
           * renders identically on every form, table included. */}
         <select
           id={`${idPrefix}-style-language`}
           aria-label={copy.languageLabel}
-          value={resolved.values.language ?? ''}
-          onChange={(e) => onChange({ language: e.target.value === '' ? null : (e.target.value as Lang) })}
+          value={resolved.values.language ?? lang}
+          onChange={(e) => onChange({ language: e.target.value as Lang })}
           className="rounded-md border border-border bg-background px-1.5 py-0.5 text-foreground"
         >
-          <option value="">{copy.languageFollowApp}</option>
           <option value="nl">{copy.languageNl}</option>
           <option value="en">{copy.languageEn}</option>
         </select>

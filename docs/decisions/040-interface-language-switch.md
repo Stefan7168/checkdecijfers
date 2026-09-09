@@ -29,6 +29,10 @@ Two things are deliberately NOT interface text: everything the backend builds (a
 - Reading cookies in the root layout keeps the layout dynamic — it already was (every page reads the Supabase session); `robots.txt` and `llms.txt` are unaffected.
 - Known limitations recorded on [#219](../open-questions.md): backend Dutch prose on English surfaces; the definition toggle's label and the source badge follow the app language rather than a per-chart override; the citation stays Dutch.
 
+## Addendum 2026-09-09 (session 92, owner present) — the chart-language select preselects the current language
+
+The "Zoals de app / Same as the app" option is gone (owner: "same as the app, to preselect the current language"): the select shows the language the chart currently uses (the app language unless overridden) and any pick stores an explicit per-chart choice. Following the app remains the untouched default — decision A's "preselected to the app language" as literally built.
+
 ## Revisit triggers
 
 - A third language, or a request to translate answer prose — the latter is a pipeline decision (a second language pass through the validators), not an i18n change.

@@ -484,7 +484,6 @@ const nl = {
   // 'English') — proper nouns, identical in both languages, catalogued below
   // for the "every literal goes through t()" rule rather than hardcoded.
   'chart.panel.languageLabel': 'Taal van de grafiek',
-  'chart.panel.languageFollowApp': 'Zoals de app',
   'chart.panel.languageNl': 'Nederlands',
   'chart.panel.languageEn': 'English',
   // WP218 phase 5 (chart-types plan, Task 3): the Grafiek tab's collapsed
@@ -894,7 +893,6 @@ const en: Messages = {
   'chart.panel.brandMonthlyCap': 'Brand colours are no longer available this month; they return next month.',
   'chart.panel.brandError': 'Something went wrong. Try again later.',
   'chart.panel.languageLabel': 'Chart language',
-  'chart.panel.languageFollowApp': 'Same as the app',
   'chart.panel.languageNl': 'Nederlands',
   'chart.panel.languageEn': 'English',
   'chart.panel.whyNotTitle': 'Why no pie or stacked chart?',
