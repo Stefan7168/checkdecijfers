@@ -2491,6 +2491,8 @@ export function ChartView({
             // whole point is telling the owner which options readers
             // actually touch — systematically under-counted resets.
             trackChartStyleEvent('option_changed');
+            // Fix: clear the uploaded frame image when doing a full reset
+            setFrameImage(null);
           }}
           idPrefix={domId}
           account={

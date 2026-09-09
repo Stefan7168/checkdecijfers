@@ -3234,4 +3234,47 @@ describe('Task 5 — Frame tab wiring in chart.tsx', () => {
     const saved = chartStyleActions.saveMyChartStyle.mock.calls[0]![0] as Record<string, unknown>;
     expect(saved).toHaveProperty('frameBackground', { kind: 'solid', hex: '#ffffff' });
   });
+
+  it('clicking Standaard resets and also clears the uploaded frame image', async () => {
+    const { container } = render(
+      <ChartStyleProvider initial={{}}>
+        <ChartView spec={threePointSpec()} />
+      </ChartStyleProvider>,
+    );
+    // Open the panel (opens on Grafiek tab)
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+
+    // Navigate to Frame tab and upload an image
+    fireEvent.click(screen.getByRole('tab', { name: 'Kader' }));
+
+    // Select "Eigen afbeelding" to activate the image upload
+    fireEvent.click(screen.getByRole('radio', { name: 'Eigen afbeelding' }));
+
+    // Upload a file
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    expect(input).not.toBeNull();
+    const small = new File([new Uint8Array(1024)], 'test.png', { type: 'image/png' });
+    fireEvent.change(input, { target: { files: [small] } });
+
+    // Wait for the image to be loaded into the frame
+    await waitFor(() => {
+      const frame = container.querySelector('[data-slot="chart-frame"]') as HTMLElement;
+      const style = window.getComputedStyle(frame);
+      // The backgroundImage should be set after the file is processed
+      expect(style.backgroundImage).toBeTruthy();
+      expect(style.backgroundImage).not.toBe('none');
+    });
+
+    // Go back to Grafiek tab to access the Standaard button
+    fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
+
+    // Click Standaard to reset everything
+    fireEvent.click(screen.getByRole('button', { name: 'Standaard' }));
+
+    // Verify the frame no longer has a background-image after the reset
+    const frameAfterReset = container.querySelector('[data-slot="chart-frame"]') as HTMLElement;
+    expect(frameAfterReset).not.toBeNull();
+    const styleAfterReset = window.getComputedStyle(frameAfterReset);
+    expect(styleAfterReset.backgroundImage).toBe('none');
+  });
 });
