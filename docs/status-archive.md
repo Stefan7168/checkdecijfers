@@ -1,5 +1,44 @@
 # STATUS archive — the session log
 
+**Session 92 (2026-09-09, owner present) — STORY MODE, THE CHAT POLISH BATCH AND FRAME STYLING + THE
+FLOATING STYLE PANEL BUILT VIA SUBAGENT-DRIVEN DEVELOPMENT, WHOLE-BRANCH-REVIEWED, VERIFIED AND LIVE;
+EMBED DESIGNED (NOT BUILT).**
+
+1. **Kickoff:** read CLAUDE.md → STATUS → the session-92 kickoff → archive → lessons → RUNBOOK WP218 →
+   ADR 039/040; Dependabot's sharp 0.35.4 merged (`474d62b`), CI `34334007143` green, health ok.
+2. **Brainstorm (owner in chat, mock-ups in the inline widget):** Story mode = a scroll story IN the chat;
+   Embed = a pop-up with code + options, frozen embed served from our site, Live embed Pro-only (no Pro
+   plan exists — #205 — so a private demo switch); "scroll / map" = later. Spec
+   `docs/superpowers/specs/2026-09-09-story-mode-and-embed-design.md` (`e24f220`).
+3. **Story mode** (plan `2026-09-09-story-mode.md`, 5 tasks, branch `story-mode`): `acdfb9c`…`b8ef732`.
+   Task reviews caught: all-equal bars told twice; a flat 500 ms scroll guard (plan-mandated) → settle
+   guard; live legend/zoom during a story → locked with a reason. Opus whole-branch review "With
+   fixes" → `0276b8f` (bar outline, dashed ring, provisional on both caption values, lock span
+   conditional, snapshot guards, panel a11y). Owner ask mid-build: the chart-language select preselects
+   the current language (`15f5c31`, ADR 040 addendum). Verification block green (web 1180, backend 2197,
+   benchmark 28, build, docs, review LOW 0). Fast-forwarded to `main` at `46d22ed`; CI `34355032827`
+   green; health ok.
+4. **Chat polish** (owner's eight asks mid-turn; plan `2026-09-09-chat-polish.md`): `870c648`,
+   `c7536ab` (new pure `web/lib/copy-answer.ts`), `0b161eb`; three task reviews Approved; web 1193,
+   build, review LOW 0; merged `0b161eb`; CI `34356558637` green; seen live in the owner's Chrome.
+5. **Frame styling + floating panel** (owner ask + three decisions; spec Part C `5159452`; plan
+   `2026-09-09-chart-frame.md`, 7 tasks, branch `chart-frame`): `4b25df9`…`3536274` + `d9d7faf`.
+   Task-review fixes: SVG gradient rotated about the corner → explicit endpoints; Standaard reset forgot
+   the image. Opus whole-branch review "With fixes" (Critical: white rect behind the chart in framed
+   exports; table form half-built → decision NO frame in table form; Important: gradient length,
+   shadow without background, a background equal to a palette colour hid a series, filter clipped on a
+   rounded image) → `56ec049`; re-review "With fixes" (white ground skipped for ANY frame → only when
+   something paints; Kleuren tab must judge against the frame; 3 of 6 presets refused on the stock
+   palette → refused presets disabled with the reason) → `cc77bc4` (three agents converged on one
+   commit — lessons-learned) + `1a23aa1`. Verification block green (web 1275, backend 2198, benchmark
+   28, build, docs, review LOW 0). Merged `1a23aa1`; CI `34369657966` green; health ok.
+6. **Docs:** ADR 039 (Story mode + Frame addenda), ADR 040 addendum, #221, #222, 03-mvp-scope,
+   04-architecture, 12-huisstijl (+ stale "not merged" WP218 wording fixed, `46d22ed`), the spec, three
+   plans, lessons-learned (session 92), memory, STATUS, this entry, the session-93 kickoff.
+7. **Left for the owner:** the interactive production check (story panel, floating Style panel, Frame
+   tab, aspect ratio on a phone); migrations 028 + 029; Brandfetch key (optional); WP202a steps 2–6.
+   Next build: Embed (Part B).
+
 **Session 91 (2026-09-09, AUTONOMOUS) — THE WHOLE WP218 CHART STYLING PROGRAMME (PHASES 0–6) BUILT
 VIA SUBAGENT-DRIVEN DEVELOPMENT ON BRANCH `wp218-chart-styling`, REVIEWED TASK BY TASK AND AS A WHOLE
 BRANCH, VERIFIED, OPENED AS A PULL REQUEST — AND, THE OWNER BACK IN CHAT, EXTENDED WITH HIS TWO DESIGN

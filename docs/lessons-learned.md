@@ -6,6 +6,49 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 92 — 2026-09-09 — owner present: three features shipped in one session (Story mode, the chat
+polish batch, frame styling + the floating Style panel) via Subagent-Driven Development; the whole-branch
+review earned its cost twice; two agents "went background" and edited the same tree; presets need a
+contrast check at design time
+
+- **A whole-branch review finds what task reviews structurally cannot — again.** Story mode: four
+  Importants (a bar-form story that never reacted; a story ring readable as the provisional marker; a
+  provisional flag on only one of two caption values; a spec that asserted the opposite of the export
+  behaviour). Frame: two Criticals (a white rectangle painted behind the chart in every framed export —
+  the feature's own headline output was wrong; a half-built table-form path with three blank tabs) plus
+  five Importants. Every one of those lived on a seam between two approved tasks. Budget the final review
+  on the most capable tier and expect a fix round — twice, here.
+- **A fix round can over-correct; re-review the fix, not just the finding.** The "skip the white ground when
+  framed" fix skipped it for ANY non-pristine frame, so padding-only frames exported a transparent chart.
+  The second review caught it; the rule became "skip only when something paints behind the chart".
+- **Design-time arithmetic for presets.** Three of six gradient presets refused against the stock palette
+  at two series (contrast below the R11 floor). A five-line `contrastRatio` table at spec time would have
+  caught it; instead it surfaced as a test fixture swap. Resolution: refused presets render disabled with
+  the reason. Lesson: when a design adds curated colours next to an existing guard, compute the guard
+  against the defaults before writing the plan.
+- **Sonnet implementers sometimes "background" themselves and return early.** Two dispatches replied "the
+  task is running in the background" with one tool call each — and then kept running, editing the tree
+  while a third (opus) agent did the same work. All three converged on one commit and the tree stayed
+  consistent, but only by luck. Lesson: the dispatch prompt must say "do the edits yourself in this run,
+  do not spawn subagents, do not background" — and check `git status`/`git log` before dispatching again.
+  Prefer opus for a multi-file fix round.
+- **A plan-mandated finding is still a finding.** The Story panel's flat 500 ms scroll guard and the
+  "legend stays live during a story" gap were both in the plan's own code; the reviewers flagged them
+  labelled plan-mandated and the controller decided (settle-based guard; lock the controls). Never tell a
+  reviewer what not to flag.
+- **The owner's mid-turn messages are the backlog.** Three separate asks arrived while builds ran (the
+  frame styling, the language-select preselect, the eight-item chat polish). Queueing them in the SDD
+  ledger with a one-line decision each, and answering in the next text turn, kept the build moving
+  without losing an ask.
+- **`.superpowers/` is git-ignored** — implementer reports are local only; the ledger is the recovery map,
+  not a deliverable. The `task-brief` script still writes `task-N-brief.md` regardless of plan (session-91
+  lesson) — rename per plan immediately (`story-`, `polish-`, `frame-`).
+- **The backend suite still needs the machine to itself** (~35 min solo, 2198 tests); the web suite and
+  `next build` run fine beside reviewers. Sequence the day so the backend run overlaps with a brainstorm,
+  not with agents.
+- **Brainstorm mock-ups via the inline widget beat prose for this owner:** "Where do I look?" was the reply
+  to a text-only design; the two inline mock-ups (story panel, embed pop-up) got approvals within minutes.
+
 ## Session 91 — 2026-09-09 — autonomous, six-phase build (WP218) via Subagent-Driven Development:
 per-task reviews caught one real defect per task on average; three harness gotchas (Turbopack
 and the `web/backend` symlink, a hidden Browser pane, the automation's "Return" key); the SDD

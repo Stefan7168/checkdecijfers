@@ -620,6 +620,17 @@ entries.
   owner-supervised), then the owner-supervised migration apply + the actual
   `ATTACHMENTS_ENABLED=1` flip + go-live.
 
+## Session 92 (2026-09-09) — Story mode ✅ LIVE, chat polish ✅ LIVE, frame styling + floating Style panel ✅ LIVE; Embed DESIGNED, next
+
+Spec: [superpowers/specs/2026-09-09-story-mode-and-embed-design.md](superpowers/specs/2026-09-09-story-mode-and-embed-design.md)
+(Part A Story mode, Part B Embed, Part C Frame). Plans: `2026-09-09-story-mode.md`, `2026-09-09-chat-polish.md`,
+`2026-09-09-chart-frame.md` under [superpowers/plans/](superpowers/plans/). As built: ADR [039](decisions/039-chart-presentation-panel.md)
+addenda (Story mode; Frame styling + floating panel), ADR [040](decisions/040-interface-language-switch.md) addendum.
+**Next WP: Embed (Part B)** — write its plan with writing-plans, build via SDD; owner-set env vars `EMBED_TOKEN_SECRET`
+(signing secret) and optionally `PRO_ACCOUNT_EMAILS` (the Pro demo switch) at go-live; framing headers; a public
+`/embed/[token]` route; the Live toggle Pro-gated (#205). Follow-ups recorded in the spec (story in the embed, map chart
+type, homepage embeds, sizes).
+
 ## WP218 — chart styling programme (owner decisions on [#218](open-questions.md), session 90, 2026-09-09) — ✅ BUILT (all six phases, session 91, 2026-09-09, autonomous, branch `wp218-chart-styling`, PR for owner review) — owner steps pending: apply migrations 028 + 029, optionally set `BRANDFETCH_API_KEY` (RUNBOOK § WP218 go-live)
 
 **Source:** the session-90 architecture panel synthesis ([session-briefs/2026-09-09-session-90-chart-config-tool-synthesis.md](session-briefs/2026-09-09-session-90-chart-config-tool-synthesis.md), artifact https://claude.ai/code/artifact/5a971401-ce68-40d5-ad28-1a74f2246c39) plus the owner's answers A–H recorded on #218. The panel's mechanism stands (a `presentation` slice on the ADR 038 reducer + a pure resolver in `web/lib/chart-presentation.ts` that yields EFFECTIVE values and per-option honesty locks; the panel and the render both read only those); the owner's answers widen the scope beyond the panel's phase 1 and knowingly override two of its cheapest-first defaults (B colour picker + outside service; C database persistence).

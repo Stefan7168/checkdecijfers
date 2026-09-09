@@ -9,6 +9,44 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
+**▶ SESSION 92 (2026-09-09, owner present all day) — THREE FEATURES BUILT, REVIEWED, VERIFIED AND LIVE
+ON `main` THE SAME DAY, EACH VIA SUBAGENT-DRIVEN DEVELOPMENT: STORY MODE, THE CHAT POLISH BATCH,
+FRAME STYLING + THE FLOATING STYLE PANEL. Embed is DESIGNED (spec Part B), not built — the next build.**
+- **Kickoff item 0:** Dependabot's sharp bump merged (`474d62b`, CI `34334007143` green, health ok).
+- **Story mode (ADR 039 addendum; spec Part A; plan `2026-09-09-story-mode.md`):** a gradient-ring
+  "Verhaal / Story mode" trigger beside Style opens a story panel under the chart — code-built steps
+  from the chart's own strings (overview · start · highest · lowest · latest · explore; per-series
+  steps; highest/lowest bars), a dashed ring or bar outline on the step's point, per-step highlight,
+  legend/zoom/small-multiples locked while open, snapshot/restore of the reader's view. Assumption
+  [#221](open-questions.md) (highest/lowest = a selection, R6). Merged `46d22ed` (fast-forward), CI
+  `34355032827` gate + deploy green. Also: the chart-language select preselects the current
+  language (owner ask, ADR 040 addendum).
+- **Chat polish (eight owner asks, plan `2026-09-09-chat-polish.md`):** icon-only thumbs; "Copy" copies
+  the whole answer with the source link (HTML + text); "CSV"; the "Chart in panel →" pill inside the
+  answer card with text wrapping; a "Suggested follow-up questions:" hint; narrower side padding; more
+  room under the price line; "Connect data" / "Link sheet". Merged `0b161eb`, CI `34356558637` green.
+  Seen live in the owner's Chrome (light).
+- **Frame styling + floating Style panel (ADR 039 addendum; spec Part C; plan
+  `2026-09-09-chart-frame.md`):** a Frame tab (background colour / gradient presets / own image kept
+  only in the browser, padding, corners, shadow, inset card, aspect ratio) drawn on screen AND baked
+  into PNG/SVG (outer svg, CSS-exact gradient, attribution inside); the Style panel is now a floating
+  non-modal dialog beside the chart (one per page; bottom sheet on phones); backgrounds that would hide
+  a series are refused, series colours are judged against the active frame, refused presets show
+  disabled; no frame in table form (final-review decision). Merged `1a23aa1`, CI `34369657966` gate +
+  deploy green, `/api/health` ok. Two whole-branch review rounds (opus) found and fixed two Criticals
+  (a white rectangle behind the chart in framed exports; a half-built table path) — lessons-learned.
+  [#222](open-questions.md): dark-mode exports were always low-contrast (pre-existing).
+- **Verification before each merge:** typecheck ×2, web suite (last 1275/1275, 87 files), backend
+  2198/2198 (solo), benchmark 28/28, real `next build`, docs 11/11, `/code-review` LOW 0 findings.
+- **Production check:** the chat polish verified in the owner's Chrome; the five homepage charts render
+  the Story trigger, Style button and frame wrapper (public page); the INTERACTIVE check of the story
+  panel, the floating panel, the Frame tab and the aspect-ratio sizing on a phone width is still to do
+  by the owner (no chart thread existed in the account; a chart question hit a clarification).
+- **Owner steps unchanged:** migrations 028 + 029 (`npm run db:migrate`), optional `BRANDFETCH_API_KEY`,
+  WP202a go-live steps 2–6. **Next build:** Embed (spec Part B) — needs the owner to set
+  `EMBED_TOKEN_SECRET` (+ optionally `PRO_ACCOUNT_EMAILS`) when it ships.
+Full session entry: [status-archive.md](status-archive.md).
+
 **▶ SESSION 91 (2026-09-09, started AUTONOMOUS — "Start executing, work autonomously … I expect
 everything to be done" — the owner returned in the same session) — THE WHOLE WP218 CHART STYLING
 PROGRAMME (ALL SIX PHASES) + THE OWNER'S TWO DESIGN PICKS BUILT, REVIEWED, VERIFIED, AND — ON THE
