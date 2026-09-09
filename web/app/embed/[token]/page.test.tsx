@@ -1,10 +1,15 @@
 // Task 5 (ADR 041 / spec Part B3): the public, no-auth /embed/[token] route —
-// FROZEN render only (the `?live=1` branch is Task 6's job; this file never
-// reads that param). Follows web/app/login/page.test.tsx's idiom: mock every
+// FROZEN render. Follows web/app/login/page.test.tsx's idiom: mock every
 // dependency via vi.mock, call `EmbedPage({ params, searchParams })` directly
 // and `render(await ...)` the result — no real Next.js server context exists
 // in jsdom, so next/navigation's `notFound` is mocked to throw (matching its
 // real behaviour: it aborts rendering via a thrown, digest-tagged error).
+//
+// Task 6 adds the `?live=1` branch's own describe block at the bottom of
+// this file — `hasProPlan` and `rerunLive` are both mocked (their own real
+// behavior is covered by src/billing/pro.test.ts and
+// src/chart/embed-live.test.ts respectively); this file only proves the
+// ROUTE wires them together correctly.
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AuditRecord } from '../../../backend/answer/audit/types.ts';
@@ -24,6 +29,12 @@ vi.mock('../../../backend/answer/audit/index.ts', () => ({ loadAuditRecord }));
 
 const { getDb } = vi.hoisted(() => ({ getDb: vi.fn(() => ({})) }));
 vi.mock('../../../lib/db.ts', () => ({ getDb }));
+
+const { hasProPlan } = vi.hoisted(() => ({ hasProPlan: vi.fn(() => false) }));
+vi.mock('../../../backend/billing/pro.ts', () => ({ hasProPlan }));
+
+const { rerunLive } = vi.hoisted(() => ({ rerunLive: vi.fn() }));
+vi.mock('../../../backend/chart/embed-live.ts', () => ({ rerunLive }));
 
 import EmbedPage, { metadata } from './page.tsx';
 
@@ -336,5 +347,122 @@ describe('/embed/[token] — digit-honesty scan on the FROZEN chart render (fix 
     );
     const footer = `Frozen on ${record.createdAt.slice(0, 10)} ·`;
     scanForUnboundDigits(container, [...harvestSpecStrings(s), footer]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Task 6 (spec Part B3 "Live" branch): `?live=1`, Pro-gated on the row's
+// OWNER (record.userId), never the anonymous visitor loading this public
+// page. hasProPlan and rerunLive are mocked (see the file-header note);
+// these tests only pin the ROUTE's own wiring — the Pro gate's arguments,
+// which branch runs on success/failure/absence, and which footer/spec each
+// branch renders.
+// ---------------------------------------------------------------------------
+describe('/embed/[token] — ?live=1 (Task 6)', () => {
+  it('ignores ?live=1 entirely when absent — no hasProPlan/rerunLive call, frozen render unaffected', async () => {
+    process.env.EMBED_TOKEN_SECRET = 's3cr3t';
+    verifyEmbedToken.mockReturnValue(42);
+    loadAuditRecord.mockResolvedValue(answerRecord({ userId: 'user-1' }));
+    render(await EmbedPage({ params: params('42.sig'), searchParams: search() }));
+    expect(hasProPlan).not.toHaveBeenCalled();
+    expect(rerunLive).not.toHaveBeenCalled();
+  });
+
+  it('a non-Pro owner silently falls back to the frozen render (no live footer, rerunLive never called)', async () => {
+    process.env.EMBED_TOKEN_SECRET = 's3cr3t';
+    verifyEmbedToken.mockReturnValue(42);
+    hasProPlan.mockReturnValue(false);
+    loadAuditRecord.mockResolvedValue(answerRecord({ userId: 'user-1' }));
+    render(await EmbedPage({ params: params('42.sig'), searchParams: search({ live: '1' }) }));
+    expect(screen.getByText(/bevroren op/i)).toBeInTheDocument();
+    expect(screen.queryByText(/live/i)).not.toBeInTheDocument();
+    expect(rerunLive).not.toHaveBeenCalled();
+  });
+
+  it('passes the row\'s real userId and a null email to hasProPlan (never the anonymous visitor)', async () => {
+    process.env.EMBED_TOKEN_SECRET = 's3cr3t';
+    verifyEmbedToken.mockReturnValue(42);
+    hasProPlan.mockReturnValue(false);
+    loadAuditRecord.mockResolvedValue(answerRecord({ userId: 'owner-42' }));
+    render(await EmbedPage({ params: params('42.sig'), searchParams: search({ live: '1' }) }));
+    expect(hasProPlan).toHaveBeenCalledWith({ id: 'owner-42', email: null });
+  });
+
+  it('falls back to an empty-string id (never null/undefined) when the row has no owner (anonymous/benchmark row)', async () => {
+    process.env.EMBED_TOKEN_SECRET = 's3cr3t';
+    verifyEmbedToken.mockReturnValue(42);
+    hasProPlan.mockReturnValue(false);
+    loadAuditRecord.mockResolvedValue(answerRecord({ userId: null }));
+    render(await EmbedPage({ params: params('42.sig'), searchParams: search({ live: '1' }) }));
+    expect(hasProPlan).toHaveBeenCalledWith({ id: '', email: null });
+  });
+
+  it('a Pro owner whose live re-run succeeds renders the FRESH spec with a "Live · data as of" footer', async () => {
+    process.env.EMBED_TOKEN_SECRET = 's3cr3t';
+    verifyEmbedToken.mockReturnValue(42);
+    hasProPlan.mockReturnValue(true);
+    const liveSpec = chartSpec();
+    liveSpec.attribution.syncedAt = '2026-09-09'; // deliberately different from record.createdAt (2026-09-10)
+    rerunLive.mockResolvedValue(liveSpec);
+    loadAuditRecord.mockResolvedValue(answerRecord({ userId: 'user-1' }));
+    render(await EmbedPage({ params: params('42.sig'), searchParams: search({ live: '1', lang: 'en' }) }));
+    expect(screen.getByText(/live · data as of/i)).toBeInTheDocument();
+    // The LIVE spec's own syncedAt, not the frozen row's createdAt — proves
+    // finalFooter was built from the fresh spec, not a mislabeled frozen one.
+    // (SourceBadge's own "gesynchroniseerd {date}" text independently renders
+    // the same attribution.syncedAt, so this legitimately matches twice —
+    // same "two occurrences" shape as this file's own frozen-render test.)
+    expect(screen.getAllByText(/2026-09-09/).length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByText(/2026-09-10/)).not.toBeInTheDocument();
+  });
+
+  it('defaults the live-success footer to Dutch ("Live · gegevens van") when ?lang is absent', async () => {
+    process.env.EMBED_TOKEN_SECRET = 's3cr3t';
+    verifyEmbedToken.mockReturnValue(42);
+    hasProPlan.mockReturnValue(true);
+    rerunLive.mockResolvedValue(chartSpec());
+    loadAuditRecord.mockResolvedValue(answerRecord({ userId: 'user-1' }));
+    render(await EmbedPage({ params: params('42.sig'), searchParams: search({ live: '1' }) }));
+    expect(screen.getByText(/live · gegevens van/i)).toBeInTheDocument();
+  });
+
+  it('a Pro owner whose live re-run fails (rerunLive returns null) falls back to the frozen spec with a distinguishing footer', async () => {
+    process.env.EMBED_TOKEN_SECRET = 's3cr3t';
+    verifyEmbedToken.mockReturnValue(42);
+    hasProPlan.mockReturnValue(true);
+    rerunLive.mockResolvedValue(null);
+    loadAuditRecord.mockResolvedValue(answerRecord({ userId: 'user-1' }));
+    render(await EmbedPage({ params: params('42.sig'), searchParams: search({ live: '1', lang: 'en' }) }));
+    expect(screen.getByText(/live update not available, showing the chart of/i)).toBeInTheDocument();
+    // record.createdAt (the frozen row's own date), never a live date — there is no live spec to read one from.
+    expect(screen.getByText(/2026-09-10/)).toBeInTheDocument();
+    // Spec B3: this message is "digit-free apart from the date string" — same
+    // discipline as the Task 5 Piece 4 digit-honesty scan, applied directly
+    // to this new footer sentence rather than folded into that scan's own
+    // spec-string harvest (this string never comes from the ChartSpec).
+    const liveFailureFooter = screen.getByText(/live update not available, showing the chart of/i);
+    expect(liveFailureFooter.textContent!.replace('2026-09-10', '')).not.toMatch(/\d/);
+  });
+
+  it('defaults the live-failure footer to Dutch ("Live-update niet beschikbaar") when ?lang is absent', async () => {
+    process.env.EMBED_TOKEN_SECRET = 's3cr3t';
+    verifyEmbedToken.mockReturnValue(42);
+    hasProPlan.mockReturnValue(true);
+    rerunLive.mockResolvedValue(null);
+    loadAuditRecord.mockResolvedValue(answerRecord({ userId: 'user-1' }));
+    render(await EmbedPage({ params: params('42.sig'), searchParams: search({ live: '1' }) }));
+    expect(screen.getByText(/live-update niet beschikbaar/i)).toBeInTheDocument();
+  });
+
+  it('calls rerunLive with (db, record, { lang }) — the resolved lang, not a hardcoded one', async () => {
+    process.env.EMBED_TOKEN_SECRET = 's3cr3t';
+    verifyEmbedToken.mockReturnValue(42);
+    hasProPlan.mockReturnValue(true);
+    rerunLive.mockResolvedValue(chartSpec());
+    loadAuditRecord.mockResolvedValue(answerRecord({ userId: 'user-1' }));
+    await EmbedPage({ params: params('42.sig'), searchParams: search({ live: '1', lang: 'en' }) });
+    expect(rerunLive).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ userId: 'user-1' }), {
+      lang: 'en',
+    });
   });
 });
