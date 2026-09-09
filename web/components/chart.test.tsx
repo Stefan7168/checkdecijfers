@@ -2999,6 +2999,37 @@ describe('Story mode (session 92): a code-built story under the chart', () => {
     scanForUnboundDigits(en.container, strings);
   });
 
+  // Task 3 (design §C2): the frame renders no text of its own — with a
+  // frame on, the whole card must still show only digits traceable to the
+  // spec's own strings, in Dutch and in English.
+  it('with a frame on, the whole card still shows only spec digits, in Dutch and in English', () => {
+    const s = threePointSpec();
+    const strings = [
+      s.title,
+      s.unit,
+      s.attributionLine,
+      s.attribution.tableId,
+      s.attribution.syncedAt,
+      ...s.series.flatMap((se) => se.points.flatMap((p) => [p.formattedValue ?? '', p.periodLabel])),
+    ].filter(Boolean);
+    const framedStyle = { frameBackground: { kind: 'gradient' as const, from: '#fde68a', to: '#f472b6' }, frameInset: 'large' as const };
+    const nl = render(
+      <ChartStyleProvider initial={framedStyle}>
+        <ChartView spec={s} />
+      </ChartStyleProvider>,
+    );
+    scanForUnboundDigits(nl.container, strings);
+    nl.unmount();
+    const en = render(
+      <LangProvider lang="en">
+        <ChartStyleProvider initial={framedStyle}>
+          <ChartView spec={s} />
+        </ChartStyleProvider>
+      </LangProvider>,
+    );
+    scanForUnboundDigits(en.container, strings);
+  });
+
   it('only the story ring — never the panel text — enters the SVG export', () => {
     const { container } = render(<ChartView spec={threePointSpec()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Verhaal' }));
@@ -3012,6 +3043,24 @@ describe('Story mode (session 92): a code-built story under the chart', () => {
     expect(svg.querySelector('[data-story-marker]')).not.toBeNull();
     expect(svg.textContent).not.toContain('Hoogste punt');
     expect(svg.textContent).not.toContain('Begin');
+  });
+
+  // Task 3 (design §C2): the story ring/panel must behave identically with a
+  // frame on — the frame is decoration around the export container, so
+  // wrapping it must not change where the story marker lands or what the
+  // story panel shows.
+  it('the story ring and panel behave identically with a frame on', () => {
+    const { container } = render(
+      <ChartStyleProvider initial={{ frameBackground: { kind: 'solid', hex: '#336699' }, framePadding: 'medium' }}>
+        <ChartView spec={threePointSpec()} />
+      </ChartStyleProvider>,
+    );
+    expect(container.querySelector('[data-slot="chart-frame"]')).not.toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Verhaal' }));
+    expect(screen.getAllByRole('article')[0]).toHaveAttribute('aria-current', 'step');
+    fireEvent.click(screen.getByRole('button', { name: 'Volgende' }));
+    const svg = container.querySelector('[role="tabpanel"] svg')!;
+    expect(svg.querySelector('[data-story-marker]')).not.toBeNull();
   });
 
   // Review fix: while the story is open, every reader view control that

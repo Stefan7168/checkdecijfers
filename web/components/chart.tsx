@@ -69,6 +69,7 @@ import { t, type Lang } from '../lib/i18n/messages.ts';
 import { forgetMyChartStyle, lookupBrand, saveMyChartStyle } from '../app/chart-style-actions.ts';
 import { ensureFontLoaded } from '../lib/font-loader.ts';
 import { ChartConfigPanel, ChartConfigTrigger } from './chart-config-panel.tsx';
+import { ChartFrame } from './chart-frame.tsx';
 import { ChartDownloadMenu } from './chart-download.tsx';
 import { buildStorySteps, type StoryStep } from '../lib/chart-story.ts';
 import { ChartStoryPanel, ChartStoryTrigger } from './chart-story.tsx';
@@ -1264,6 +1265,11 @@ export function ChartView({
     name: string;
     fetchedAt: string;
   } | null>(null);
+  // Task 3 (design §C2): the frame's own image background (a data URL, once
+  // the Frame tab supports choosing one) — chart-only state, not part of
+  // `pres`/`resolvePresentation`'s account-default machinery, so it is reset
+  // here alongside every other per-chart-instance piece of state.
+  const [frameImage, setFrameImage] = useState<string | null>(null);
   if (specIdentity !== lastSpecIdentity) {
     setLastSpecIdentity(specIdentity);
     setChartEpoch((n) => n + 1);
@@ -1275,6 +1281,7 @@ export function ChartView({
     setOpenPanel(null);
     setStoryIndex(0);
     storySnapshot.current = null;
+    setFrameImage(null);
   }
 
   // Task 3: a real three-way Lijn/Staaf/Tabel switch. Computed here, ABOVE
@@ -2007,7 +2014,12 @@ export function ChartView({
         </div>
       ) : (
       /* touch-pan-y: the tooltip's press-and-drag must not fight vertical
-       * page scrolling on a phone. */
+       * page scrolling on a phone. Task 3 (design §C2): ChartFrame wraps
+       * THIS div — and only this div, the export container — so the frame
+       * is decoration around the chart, never inside the export SVG/PNG
+       * itself (chart-download.tsx only ever reads the live <svg> inside
+       * chartContainerRef, unaffected by this wrapper). */
+      <ChartFrame frame={pres} image={frameImage}>
       <div
         id={panelId}
         role="tabpanel"
@@ -2019,8 +2031,11 @@ export function ChartView({
           // fixed-height parent; small multiples lays out its own h-24
           // panels in a grid and needs the parent to grow with them
           // instead — a fixed h-64 clips anything past ~4 series (found in
-          // the 2026-09-05 final review).
-          (smallMultiples && smallMultiplesAvailable ? 'h-auto' : 'h-64')
+          // the 2026-09-05 final review). With a frame aspect ratio set,
+          // ChartFrame's own inner area (min-h-0 flex-1) is what sizes the
+          // box now, so this container grows to fill it (h-full) instead of
+          // claiming a fixed height of its own.
+          (pres.frameAspect !== 'auto' ? 'h-full' : smallMultiples && smallMultiplesAvailable ? 'h-auto' : 'h-64')
         }
         data-tooltip-trigger={tooltipTrigger}
         // WP218: SVG <text> inherits font-family via CSS, so setting it once
@@ -2368,6 +2383,7 @@ export function ChartView({
         </ResponsiveContainer>
         )}
       </div>
+      </ChartFrame>
       )}
       {/* Story mode (session 92): the same slot as the Opmaak region — chart
         * first, the story under it — and, like ChartNotes, OUTSIDE
