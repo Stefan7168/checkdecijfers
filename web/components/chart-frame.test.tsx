@@ -142,14 +142,14 @@ describe('ChartFrame', () => {
     expect(wrapper.querySelector('.flex-1')).not.toBeNull();
   });
 
-  it('an aspect ratio never shrinks the chart below its normal height: min-height = chart height + padding + inset', () => {
+  it('an aspect ratio never shrinks the chart below its normal height: an explicit height = chart height + padding + inset (before measuring)', () => {
     const { container } = render(
       <ChartFrame frame={frame({ frameAspect: '1.91:1', framePadding: 'large', frameInset: 'small' })} image={null}>
         <div>chart</div>
       </ChartFrame>,
     );
     const wrapper = container.querySelector('[data-slot="chart-frame"]') as HTMLElement;
-    expect(wrapper.style.minHeight).toBe(`${CHART_MIN_HEIGHT_PX + 2 * (FRAME_PADDING_PX.large + FRAME_INSET_PX.small)}px`);
+    expect(wrapper.style.height).toBe(`${CHART_MIN_HEIGHT_PX + 2 * (FRAME_PADDING_PX.large + FRAME_INSET_PX.small)}px`);
     // …and never grows sideways past the card to keep the ratio.
     expect(wrapper.style.width).toBe('100%');
     expect(wrapper.style.maxWidth).toBe('100%');

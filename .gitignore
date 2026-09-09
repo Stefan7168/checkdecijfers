@@ -37,3 +37,4 @@ benchmark/validation-run.json
 # never meant to be committed (added session 80, 2026-09-05, after finding it
 # wasn't ignored — nothing had actually been committed, caught before it was).
 .superpowers/
+.playwright-mcp/
