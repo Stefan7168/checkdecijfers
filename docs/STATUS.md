@@ -45,6 +45,20 @@ MERGED, NOTHING LIVE.**
   backend prose stays Dutch on an English chart; first visit follows the browser's language;
   saving a default never stores a form-locked value. UNCONFIRMED without a key: the Brandfetch
   endpoint path form (one constant).
+- **Later the same session, owner back in chat — two design canvases and two owner picks BUILT on the
+  same branch:** the owner asked "check if you can optimise the UI first, use /design". Two Claude
+  Design canvases were drawn from the real components (the chart card + its panel:
+  https://claude.ai/code/artifact/bb89df71-447a-4c22-9f19-4b66714eff20; the chat screen:
+  https://claude.ai/code/artifact/49c2358e-8ef4-40df-a51d-21ac4a7fdbc6), each showing the current build
+  beside three options. Picks: chart panel **option A** (compact two-column grid) with the chart on top
+  and the settings under it; chat **option B** (answer card with a source/actions footer) with the
+  like/dislike buttons first, white with a grey border and a light shadow. Built as `0de0390`, `810c5a6`
+  (answer card + the not-helpful panel width fix from review), `e4eee7b`, `d2eabca` (panel under the
+  chart; a first portal-based trigger did not work in a real browser and was replaced by a plain
+  controlled button — lessons-learned), `cafcafe` (throwaway preview route reverted). Web suite
+  1132/1132, typechecks clean, `next build` clean; the answer card verified in the local browser
+  (light + dark, thumbs first, full-width panels); the panel layout verified by tests + DOM order
+  (the hidden Browser pane never hydrates the chart subtree — lessons-learned).
 - **Owner question answered in chat:** GitHub's monthly newsletter is not relevant to us; our
   GitHub cost is Actions minutes (~10 min per push to `main`); three cheap CI changes proposed
   (skip docs-only pushes, cancel superseded runs, no double run for PR branches) — awaiting "do it".

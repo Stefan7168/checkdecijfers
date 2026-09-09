@@ -61,7 +61,16 @@ BRANCH, VERIFIED, OPENED AS A PULL REQUEST. NOTHING MERGED OR LIVE.**
     #219/#220, 03-mvp-scope, 12-huisstijl, 04-architecture, 05-data-rules, CLAUDE.md (language
     convention superseded), README, lessons-learned (session 91), memory, this entry, the session-92
     kickoff.
-11. **Owner-facing open items:** merge the PR (or say "merge"); apply migrations 028 + 029;
+11. **Owner back in chat, later the same session — design canvases + two picks built:** "/design"
+    canvases for the chart panel and the chat screen (links in STATUS), each the current build beside
+    three options drawn in the app's own tokens; second-look agents fixed nits before handover. Owner
+    picks: chart panel option A (compact grid) with the panel UNDER the chart; chat option B (answer
+    card) with like/dislike first, white + grey border + shadow, shadcn components. Built by two Sonnet
+    implementers with reviews: answer card (`0de0390`; review found the not-helpful panel squeezed →
+    `810c5a6`), panel layout (`e4eee7b`; the portaled trigger never worked in the real browser →
+    `d2eabca`, plain controlled button), throwaway preview route reverted (`cafcafe`). Verified: web
+    1132/1132, typechecks, build; answer card in the browser light + dark; the panel by tests.
+12. **Owner-facing open items:** merge the PR (or say "merge"); apply migrations 028 + 029;
     decide on Brandfetch (100 free lookups in total, then ≈ $99/month); "do it" on the three CI
     minute-saving changes proposed in chat.
 

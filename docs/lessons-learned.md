@@ -11,6 +11,9 @@ per-task reviews caught one real defect per task on average; three harness gotch
 and the `web/backend` symlink, a hidden Browser pane, the automation's "Return" key); the SDD
 brief script's file names collide across plans
 
+- **A React portal to move one button into another row is the wrong tool — and a real browser is the only place that shows it.** The first build of the "panel under the chart" layout portaled the Opmaak trigger into a placeholder span in the tab row; every jsdom test passed, `next build` passed, and in the real browser the button never moved and clicks did nothing (the SSR fallback rendered the button in place; the portal's target state never applied). Lifting one boolean to the parent and rendering a plain button was the fix. Lesson: when a component needs to render in two places, lift state, don't portal.
+- **A hidden Browser pane has a 0×0 viewport and the tab counts as background — React hydrates the header and then starves.** The chart cards on the homepage never got their React handlers while the pane was hidden (only the two header buttons hydrated after a full minute), which looked exactly like a broken component. Check `document.visibilityState`/`innerWidth` before concluding anything from a hidden pane; interactive checks need the pane visible.
+- **Design canvases (the `/design` preview) work as a decision tool for a non-developer owner:** two canvases drawn from the real components (current build beside three options each) got two concrete picks within minutes, with amendments ("thumbs first, white with a grey border") the owner could phrase from what he saw.
 - **Per-task reviews earned their cost — and several findings were against the PLAN's own text,
   not the implementer's.** Twenty implementation tasks, each followed by a fresh Sonnet reviewer
   reading a packaged diff. The reviews found, among others: "Bewaar als mijn standaard" saving the

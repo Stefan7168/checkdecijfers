@@ -82,6 +82,11 @@ labels, baseline, colours and fonts — with a colour guard (`judgeColor`) that 
 make the hollow provisional marker illegible. The Weergave switch now offers five forms: **Lijn · Vlak ·
 Staaf · Liggend · Tabel** (line, area, bar, horizontal bar, table).
 
+## Answer card and chart panel layout (session 91, owner-chosen from design canvases)
+
+- **Answers** in the chat render as a shadcn `Card` (`web/components/chat.tsx`): the answer text and its honesty lines in the body; a footer (`border-t`, `bg-muted/40`) with the full source sentence + source badge on the left and the actions on the right — like/dislike FIRST (outline buttons on `bg-background` with `shadow-sm`, lucide thumbs + visible labels), then proof / citation / CSV as `ghost` buttons with icons, then the cost. Refusals and clarifications keep their plain rendering.
+- **The chart's Opmaak panel** opens UNDER the chart (chart first, settings second), as a two-column grid (label left, pills right) with one `Tonen` row for the toggles; the chart-language select sits in the panel header, the "why no pie chart" note + `Standaard` in a footer on the Grafiek tab only.
+
 ## House rules (current)
 
 1. **Tokens, not colours.** Surfaces/text/borders come from the shadcn utilities above; no hex, no raw

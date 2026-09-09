@@ -9,15 +9,18 @@ entries, top) → `docs/RUNBOOK.md` § "WP218 chart styling — the supervised g
 
 ## What is true right now (verified 2026-09-09)
 
-- Branch `wp218-chart-styling` holds the whole WP218 chart styling programme (phases 0–6), 41+
-  commits on top of `main`'s `867393d`, opened as a pull request for the owner's review. `main` is
+- Branch `wp218-chart-styling` holds the whole WP218 chart styling programme (phases 0–6) PLUS the
+  owner's two design picks from the same day (answer card in the chat; the style panel under the
+  chart in a compact grid — STATUS session-91 block), 48+ commits on top of `main`'s `867393d`, opened as a pull request for the owner's review. `main` is
   unchanged since session 90. **Nothing of WP218 is merged or live.** Check `gh pr list` and
   `gh run list` first: if the PR is merged, the CI deploy of `main` has shipped the panel, the
   language switch and the new chart types; the account default, the counter and brand lookup stay
   dormant until the owner's steps below.
-- Verification at the branch head (`eab25b6` when this was written): typecheck ×2 clean, web
-  1121/1121, backend 2191/2191, benchmark suite 28/28, `next build` clean, docs test 11/11, Opus
-  whole-branch review + fix round + re-review Approved, LOW-effort review pass 0 findings.
+- Verification: at the WP218 head `eab25b6` — typecheck ×2 clean, web 1121/1121, backend 2191/2191,
+  benchmark suite 28/28, `next build` clean, docs test 11/11, Opus whole-branch review + fix round +
+  re-review Approved, LOW-effort review pass 0 findings. The later design-pick commits (`0de0390`…
+  `cafcafe`, web components only) were verified with the web suite (1132/1132), both typechecks and
+  `next build`; the backend suite was not re-run for them (no `src/` change).
 - Migrations `028_user_chart_styles.sql` and `029_brand_cache.sql` are FILE-ONLY; `BRANDFETCH_API_KEY`
   is not set anywhere. Every code path degrades honestly without them (no error pages).
 
