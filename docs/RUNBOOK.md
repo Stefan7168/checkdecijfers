@@ -91,6 +91,7 @@ A fresh machine needs to know which login owns each provider to rotate a secret 
 | `TRIAL_IP_HASH_SECRET` | Vercel env store only (**✅ SET 2026-07-17, Production — #53 go-live, session 52; generated and piped straight into `vercel env add`, value never displayed anywhere**) | Real secret you invent yourself (password-manager generator, long random string). Used ONLY to HMAC visitor IPs for the per-IP trial limit — raw IPs never persist. Rotation: replace in Vercel + redeploy; consequence is benign (per-IP counts restart) |
 | `TRIAL_ENABLED` | Vercel env store only (**✅ SET `1` 2026-07-17, Production — #53 go-live, session 52**) | Not secret — the literal value `1`. The trial master switch: while unset the whole homepage trial renders NOTHING (dormant, byte-identical landing). **Removing it is the instant kill-switch** |
 | `SLOT_PHRASING_ENABLED` | Nowhere (**NOT SET — PERMANENTLY; the [#162](open-questions.md) slot-phrasing experiment CLOSED 2026-09-06, session 83, owner: "Accept as final"**) | Not secret — the literal value `1`. The number-free-phrasing experiment rung ([session-briefs/2026-07-19-adr-draft-slot-filling.md](session-briefs/2026-07-19-adr-draft-slot-filling.md)): while unset every compose call runs the see-and-echo ladder **byte-identically** (test-pinned). **Do NOT set it — the owner-supervised A/B ran twice (rounds 4 and 5) and FAILED both phrasing gates both times, round 5 worse than round 4; the owner accepted round 5 as the experiment's final verdict.** The ADR-draft is NOT promoted to an accepted ADR. This is a closed experiment, not a paused one — re-opening it would be a fresh decision, not a "finish what's pending" continuation. Unsetting is (and remains) a complete rollback (the legacy fixtures never left the repo) |
+| `BRANDFETCH_API_KEY` | Nowhere yet (**NOT SET — WP218 phase 3, built 2026-09-09, session 91; the owner sets it in the WP218 go-live section further down, only if brand lookup is wanted**) | Real secret. developers.brandfetch.com → register (free, no card) → Developer Dashboard → API key → Vercel env store (Production, Sensitive) → redeploy. Rotation: new key in the dashboard → replace in Vercel → redeploy → revoke the old one. Without it the Kleuren tab says brand lookup is not possible; nothing else changes. Spend belt: one call per website per 30 days (cache), five lookups per user per day, signed-in only; the free tier is 100 lookups in total |
 
 **Note on `NEXT_PUBLIC_*` vars and the Vercel env store (2026-07-04, production outage post-mortem):** this Vercel team enforces the **sensitive environment-variables policy** — every env var added to the project becomes write-only, no matter how it is added (dashboard or CLI; verified against the API: every var reports `type: sensitive`). Write-only is fine for real runtime secrets (`DATABASE_URL`, `ANTHROPIC_API_KEY`, `STRIPE_*` — Vercel injects them into the running functions), but it is **fatally incompatible with `NEXT_PUBLIC_*`** vars: those must be readable at *build* time, and our builds run in GitHub Actions via `vercel pull`, which receives sensitive values as **empty strings**. Result: the middleware was compiled with empty Supabase credentials and every route returned Internal Server Error — while the deploy job stayed green (a build succeeding says nothing about the app running; the CI deploy job now ends with a post-deploy smoke check for exactly this). The three public values therefore live in **`web/.env.production`, committed to git on purpose** (they ship in every browser bundle by design — same reasoning as the committed CA certificate, ADR 018). Never add a `NEXT_PUBLIC_` var to the Vercel env store expecting CI builds to see it, and never put a real secret in `web/.env.production`.
 
@@ -273,6 +274,58 @@ inverted at build time). For a purely ADDITIVE nullable column the safe order is
 FIRST** (`npm run db:migrate`, owner-present window; the running old code ignores the new column), verify prod
 still serves, **then** push the code. Plus the standard per-migration check when a migration adds a TABLE
 (grants/RLS, migration-011 queries); a column on an existing RLS-locked table inherits its table's posture.
+
+## WP218 chart styling — the supervised go-live (⏳ NOT YET RUN, written 2026-09-09, session 91, autonomous)
+
+**Status when this section was written:** the whole programme (phases 0–6: the Opmaak panel, the
+account default, brand colours via Brandfetch, the English/Dutch switch, area + horizontal-bar
+chart types, the anonymous usage counter) is built and tested on branch `wp218-chart-styling`
+(a PR for the owner's review — the #118 rule for autonomous sessions). Everything that does NOT
+need the database or an outside service is live the moment the PR is merged and deployed: the
+panel, the language switch, the new chart types. Three things wait for you, in this order:
+
+1. **Apply migrations 028 + 029** — `npm run db:migrate` (additive only; run together in one
+   invocation, the 016+017 / 022+024+025 precedent — and if 026/027 from the WP202 section are
+   still pending they can ride the same invocation). What they add: `user_chart_styles` (one row
+   per user: the saved chart style, the applied brand, the daily brand-lookup counter),
+   `chart_style_usage` (event × day × count, no personal data) and `brand_cache` (public brand
+   facts by website domain, kept at most 30 days). **Until this runs** every "Bewaar als mijn
+   standaard" click says saving is not possible right now, the counter counts nothing, and
+   brand lookup is refused — no error pages, by design.
+2. **Verify on prod (read-only):** the guarded FK exists —
+   `select conname from pg_constraint where conrelid = 'user_chart_styles'::regclass;` → expect
+   `user_chart_styles_user_id_fkey` (plus the PK); grants/RLS inherited locked on all three new
+   tables (0 anon/authenticated grants, RLS on, 0 policies — the migration-003 posture, same check
+   as every prior new-table go-live).
+3. **Brandfetch (only if you want "Pas merkkleuren toe" to work):** sign up at
+   developers.brandfetch.com (free, no card), copy the API key from the Developer Dashboard, then
+   in Vercel add `BRANDFETCH_API_KEY` (Production, mark Sensitive) and redeploy. **Cost facts
+   (read 2026-09-09, see
+   [session-briefs/2026-09-09-session-91-brandfetch-research.md](session-briefs/2026-09-09-session-91-brandfetch-research.md)):** the free tier is 100 lookups
+   IN TOTAL (not per month); the first paid plan is about $99 a month for 2 500 lookups — re-check
+   the pricing page before paying. The app keeps calls low: one call per organisation website per
+   30 days (the cache), at most five lookups per user per day, signed-in users only. Without the
+   key the Kleuren tab simply says brand lookup is not possible; everything else works.
+
+**Smoke test after step 1 (you, logged in, on a chart):** open Opmaak → change something → "Bewaar
+als mijn standaard" → the line reads "Opgeslagen."; reload → the chart opens with your default and
+the panel says "Mijn standaard is actief."; "Vergeet mijn standaard" → back to the stock look.
+Read-only checks: `select user_id, style, brand, updated_at from user_chart_styles;` (one row, yours)
+and `select * from chart_style_usage order by day desc, event;` (a few counts). Then
+`npm run gdpr:purge` (dry run) — its output now has a "chart-style" line (0 rows expired).
+After step 3: Kleuren → "Pas merkkleuren toe" with a real organisation website → the series
+recolour and the status line names the organisation; `select domain, fetched_at from brand_cache;`
+shows one row; a second click does not call Brandfetch again (cached).
+
+**Rollback:** nothing to unset for the database part — dropping the three tables returns every
+path to "no default / not possible / not counted". For Brandfetch: remove `BRANDFETCH_API_KEY` and
+redeploy. The language switch and the chart types have no switch of their own; reverting them is a
+code revert.
+
+**The one UNCONFIRMED item:** the Brandfetch endpoint path form (`/v2/brands/{domain}` vs
+`/v2/brands/domain/{domain}`) could not be checked without a key. If the first real lookup answers
+"Voor dit domein is geen merk gevonden." for a website that certainly has a brand, tell the next
+session: it is a one-constant change in `src/chart/brandfetch.ts`.
 
 ## Supervised live step — migration 024 error_log (✅ RUN 2026-09-02, session 69, owner present — applied with 022 in one `npm run db:migrate`, verified clean; built session 66, 2026-08-27, autonomous; merged into `main` session 67, 2026-08-28, PR #110)
 
