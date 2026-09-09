@@ -27,6 +27,8 @@ entries, top) → `docs/RUNBOOK.md` § "WP218 chart styling — the supervised g
 
 ## The owner's open items (do not decide these for him)
 
+0. FIRST: Dependabot pull request number 8 (sharp 0.35.3 → 0.35.4, one HIGH alert in libheif,
+   opened 2026-09-09 while session 91 closed) — check its CI, merge, watch the deploy + `/api/health`.
 1. ~~Merge the PR~~ — done, `05ec8ed`.
 2. Apply migrations 028 + 029 with `npm run db:migrate` (owner present; RUNBOOK § WP218 go-live has
    the verification queries and the smoke test).

@@ -85,8 +85,8 @@ PICKS AND MERGED INTO `main` (`05ec8ed`) AND LIVE THE SAME DAY (items 11–12).*
     until the new cycle, so we avoid paying"):** a hard cap of 100 real Brandfetch calls per UTC
     calendar month, counted in `chart_style_usage` (event `brand_fetch`), checked after the cache and
     before the per-user cap, fail-closed when the counter table is absent; the panel says the button
-    is back next month (`03488d6`, pushed direct to `main`, owner present; chart suite 175/175, web
-    1138/1138, typechecks, build, docs test; CI run `34332236454` gate + deploy green, health ok).
+    is back next month (`03488d6`, pushed direct to `main`, owner present; web 1138/1138 re-run at the
+    close, typechecks, build, docs test; CI run `34332236454` gate + deploy green, health ok).
     Wrap-up on "wrap up this session".
 
 **Session 90 (2026-09-09, owner present) — #218 CHART-CONFIGURATION ARCHITECTURE PANEL RUN, OWNER

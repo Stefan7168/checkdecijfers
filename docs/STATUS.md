@@ -46,6 +46,9 @@ Horizontal bar · Table tabs). Migrations 028 + 029 and the Brandfetch key remai
   exceeded and no paid plan is needed; customers may miss the button for the rest of a month.** Until
   the migrations run: saving a default says "not possible", the counter counts nothing, brand lookup
   is refused — by design, no error pages.
+- **Open at the close (not this session's scope):** Dependabot opened pull request number 8 (sharp
+  0.35.3 → 0.35.4, one HIGH alert in libheif) while the session closed — first item next session:
+  wait for its CI, merge, watch the deploy.
 - **Decisions taken under "document, don't escalate"** (each with a rollback in ADR 039/040): a
   two-year retention window for a saved style; a 30-day brand cache; the citation stays Dutch;
   backend prose stays Dutch on an English chart; first visit follows the browser's language;
