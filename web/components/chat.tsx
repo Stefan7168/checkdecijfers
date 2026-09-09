@@ -835,7 +835,7 @@ export function Chat({
     // BELOW the input (owner amendment 1). An empty conversation renders
     // nothing above the composer (bare chat, no example chips).
     <div className="flex h-full min-h-0 w-full flex-1 flex-col">
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-6 tnum">
+      <div className="min-h-0 flex-1 overflow-y-auto px-3 py-6 tnum">
         <div className="mx-auto flex w-full max-w-2xl flex-col gap-5">
         {messages.map((message, i) => {
           // WP135 ⟨A7⟩: a redacted row replays as ONE muted placeholder — no
@@ -890,6 +890,28 @@ export function Chat({
             {message.kind === 'answer' && message.answerView ? (
               <Card size="sm" className="max-w-full">
                 <CardContent className="flex flex-col gap-1">
+                  {/* Task 3 (chat polish batch, owner ask): the docked-visual
+                    * reference pill moves INTO the answer card, top-right,
+                    * with body text wrapping around it — first child of
+                    * CardContent, floated right, no clearing on the body
+                    * div below so text flows beside/under it. Only answer
+                    * cards get this; refusal/clarification bubbles keep the
+                    * pill where it was (rendered further below, unchanged). */}
+                  {docked ? (
+                    <button
+                      type="button"
+                      onClick={() => onActivateVisual?.(visualId(i))}
+                      aria-pressed={activeVisualId === visualId(i)}
+                      className={
+                        'float-right ml-3 mb-1 inline-flex items-center gap-1 ' +
+                        (activeVisualId === visualId(i)
+                          ? 'rounded-full border border-transparent bg-secondary px-3 py-1 text-xs text-foreground'
+                          : PILL)
+                      }
+                    >
+                      {message.chart !== null ? t('chat.dockedChipChart') : t('chat.dockedChipCard')}
+                    </button>
+                  ) : null}
                   <div className="max-w-full whitespace-pre-wrap text-sm text-[15px] leading-relaxed text-foreground">
                     {message.answerView.body}
                   </div>
@@ -919,7 +941,7 @@ export function Chat({
                     <p className="text-xs text-muted-foreground">{message.answerView.markingLine}</p>
                   ) : null}
                 </CardContent>
-                <CardFooter className="flex flex-wrap items-center justify-between gap-2 border-t border-border bg-muted/40">
+                <CardFooter className="clear-both flex flex-wrap items-center justify-between gap-2 border-t border-border bg-muted/40">
                   {/* LEFT: the source — the voorlopig pill (#71), the FULL
                     * R4 attribution sentence (always visible, never
                     * shortened — Huisstijl rule 7: quiet, text-xs
@@ -1032,7 +1054,10 @@ export function Chat({
             {/* WP135 (ADR 033 D4): the in-flow reference chip standing in for a
               * docked visual — clicking activates its dock tab ("in het paneel").
               * The web section still renders below this (ADR 032). */}
-            {docked ? (
+            {/* Task 3: the answer card now renders its own docked pill as the
+              * first child of CardContent (above). Refusal/clarification/info
+              * messages (no answerView) keep the pill here, unchanged. */}
+            {docked && !(message.kind === 'answer' && message.answerView) ? (
               <button
                 type="button"
                 onClick={() => onActivateVisual?.(visualId(i))}
@@ -1127,7 +1152,7 @@ export function Chat({
         <div ref={bottomRef} />
         </div>
       </div>
-      <div className="shrink-0 border-t border-border px-4 py-3">
+      <div className="shrink-0 border-t border-border px-3 pt-3 pb-4" data-testid="chat-composer">
         <div className="mx-auto flex w-full max-w-2xl flex-col gap-2">
       {/* WP129+130 (#129, ADR 032): the source-tags chips — one per registered
         * source (label "<displayName> data", PRE-checked) plus the "Internet"
@@ -1304,7 +1329,7 @@ export function Chat({
           {t('chat.send')}
         </Button>
       </form>
-      {pricingHint ? <p className="text-xs text-muted-foreground">{pricingHint}</p> : null}
+      {pricingHint ? <p className="mb-2 text-xs text-muted-foreground">{pricingHint}</p> : null}
         </div>
       </div>
     </div>

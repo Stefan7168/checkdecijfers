@@ -231,6 +231,51 @@ describe('Chat — WP135 onVisualsChange reporting', () => {
   });
 });
 
+// Task 3 (chat polish batch, owner ask): the docked-visual reference pill
+// moves INTO the answer card (top-right, text wraps) instead of sitting
+// below it.
+describe('Chat — Task 3 docked pill lives inside the answer card', () => {
+  it('renders the pill as the first child of CardContent, before the body text', async () => {
+    askQuestion.mockResolvedValue(outcome(statCardAnswer()));
+    render(<Chat dockMode onThreadId={vi.fn()} onVisualsChange={vi.fn()} />);
+    await submit('Wat was de inflatie in 2024?');
+    await screen.findByText(BODY);
+
+    const pill = screen.getByText(/Kaart in het paneel/).closest('button')!;
+    const cardContent = pill.closest('[data-slot="card-content"]');
+    expect(cardContent).not.toBeNull();
+    // First child of CardContent.
+    expect(cardContent!.firstElementChild).toBe(pill);
+    // Body text is a later sibling inside the same CardContent.
+    const bodyEl = screen.getByText(BODY);
+    expect(cardContent!.contains(bodyEl)).toBe(true);
+    const children = Array.from(cardContent!.children);
+    expect(children.indexOf(pill)).toBeLessThan(children.indexOf(bodyEl.closest('div')!));
+  });
+
+  it('the pill floats (float-right) instead of being absolutely positioned, so a long body wraps around it', async () => {
+    const longBody = 'Dit is een lang antwoord. '.repeat(30).trim();
+    askQuestion.mockResolvedValue(
+      outcome({
+        kind: 'ok',
+        auditId: 1,
+        netCost: 20,
+        response: {
+          ...fakeAnswerResponse({ body: longBody, shape: 'single', cells: [fakeCell()] }),
+          webSection: null,
+        } as unknown as ComposedResponse,
+      }),
+    );
+    render(<Chat dockMode onThreadId={vi.fn()} onVisualsChange={vi.fn()} />);
+    await submit('Wat was de inflatie in 2024?');
+    await screen.findByText(longBody);
+
+    const pill = screen.getByText(/Kaart in het paneel/).closest('button')!;
+    expect(pill.className.split(/\s+/)).toContain('float-right');
+    expect(pill.className).not.toMatch(/(^|\s)absolute(\s|$)/);
+  });
+});
+
 // The blocker: a submit in flight when the workspace switches thread (or starts
 // a nieuwe chat) must NOT land its late response in the newly displayed thread.
 describe('Chat — WP135 stale-submit generation guard (blocker fix)', () => {

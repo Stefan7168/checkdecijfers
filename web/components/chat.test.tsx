@@ -2006,6 +2006,29 @@ describe('Chat — "Add link" preview row (session 86, no backend yet)', () => {
   });
 });
 
+// Task 3 (chat polish batch, owner ask): tighter side padding on the
+// messages/composer wrappers, more room under the pre-send price line.
+describe('Chat — Task 3 layout and spacing', () => {
+  it('pins px-3 on the messages wrapper and the composer wrapper', () => {
+    const { container } = render(<Chat />);
+    const messagesWrapper = container.querySelector('.overflow-y-auto')!;
+    expect(messagesWrapper.className.split(/\s+/)).toContain('px-3');
+    expect(messagesWrapper.className).not.toMatch(/(^|\s)px-4(\s|$)/);
+
+    const composer = screen.getByTestId('chat-composer');
+    expect(composer.className.split(/\s+/)).toContain('px-3');
+    expect(composer.className).not.toMatch(/(^|\s)px-4(\s|$)/);
+  });
+
+  it('pins pb-4 (was py-3) on the composer wrapper', () => {
+    render(<Chat />);
+    const composer = screen.getByTestId('chat-composer');
+    expect(composer.className.split(/\s+/)).toContain('pb-4');
+    expect(composer.className.split(/\s+/)).toContain('pt-3');
+    expect(composer.className).not.toMatch(/(^|\s)py-3(\s|$)/);
+  });
+});
+
 // WP218 phase 4 (#219): proves the language switch reaches this surface. Only
 // this component's OWN chrome is asserted — answer text, refusal copy, and
 // attribution lines are backend-composed and stay Dutch regardless of app
