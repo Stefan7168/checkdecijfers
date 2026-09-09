@@ -400,9 +400,13 @@ const nl = {
   'chart.panel.markers': 'Punten',
   'chart.panel.grid': 'Rasterlijnen',
   'chart.panel.xLabels': 'Labels op de x-as',
-  'chart.panel.axisLines': 'Aslijnen tonen',
-  'chart.panel.valueLabels': 'Waarden tonen',
+  // Owner decision (option A, compact grid): shortened from "Aslijnen tonen"/
+  // "Waarden tonen" now that the "Tonen" group label above them already says
+  // what the row does — see `chart.panel.showGroup` below.
+  'chart.panel.axisLines': 'Aslijnen',
+  'chart.panel.valueLabels': 'Waarden',
   'chart.panel.zeroBaseline': 'Y-as vanaf nul',
+  'chart.panel.showGroup': 'Tonen',
   'chart.panel.reset': 'Standaard',
   'chart.panel.lineWidthOption.thin': 'Dun',
   'chart.panel.lineWidthOption.normal': 'Normaal',
@@ -788,9 +792,10 @@ const en: Messages = {
   'chart.panel.markers': 'Points',
   'chart.panel.grid': 'Gridlines',
   'chart.panel.xLabels': 'X-axis labels',
-  'chart.panel.axisLines': 'Show axis lines',
-  'chart.panel.valueLabels': 'Show values',
+  'chart.panel.axisLines': 'Axis lines',
+  'chart.panel.valueLabels': 'Values',
   'chart.panel.zeroBaseline': 'Y-axis from zero',
+  'chart.panel.showGroup': 'Show',
   'chart.panel.reset': 'Default',
   'chart.panel.lineWidthOption.thin': 'Thin',
   'chart.panel.lineWidthOption.normal': 'Normal',

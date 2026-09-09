@@ -27,7 +27,8 @@
 // Kleuren/Lettertype tab bodies are empty placeholders here — Task 6 fills
 // them (the Colours tab needs `seriesMeta`, unused by this task's Grafiek
 // tab but already part of the props contract so Task 6 is additive).
-import { useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { Fragment, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { SlidersHorizontal } from 'lucide-react';
 import {
   FONT_OPTIONS,
@@ -113,9 +114,16 @@ function buildPanelCopy(lang: Lang) {
     languageNl: t(lang, 'chart.panel.languageNl'),
     languageEn: t(lang, 'chart.panel.languageEn'),
     /** WP218 phase 5 (chart-types plan, Task 3): the collapsed "why no pie
-     * or stacked chart" note at the end of the Grafiek tab. */
+     * or stacked chart" note, now in the region's common footer row (moved
+     * there by the Option A layout below) rather than inside the Grafiek
+     * tabpanel — it and Standaard are properties of the whole panel, like
+     * the account row already was. */
     whyNotTitle: t(lang, 'chart.panel.whyNotTitle'),
     whyNotBody: t(lang, 'chart.panel.whyNotBody'),
+    /** Owner decision (option A, compact grid): the group label above the
+     * three "on/off" toggles (Aslijnen/Waarden/Y-as vanaf nul), now shortened
+     * since "Tonen" already says what the group does. */
+    showGroup: t(lang, 'chart.panel.showGroup'),
   };
 }
 type PanelCopy = ReturnType<typeof buildPanelCopy>;
@@ -363,6 +371,23 @@ export interface ChartConfigPanelProps {
   onReset: () => void;
   idPrefix: string;
   lang?: PanelLang;
+  /** Chart-panel-layout refactor (owner: option A — the "Opmaak" trigger
+   * stays in the Weergave tablist row, the region it opens now renders below
+   * the chart instead of wrapping under that same row). A component's
+   * return value is one subtree at one place in its caller's tree, so this
+   * component can't place its own trigger and region in two different spots
+   * of chart.tsx's JSX by itself — `triggerSlot`, when given, is a DOM node
+   * chart.tsx renders inside its Weergave tablist row; the trigger button
+   * portals into it (`react-dom`'s `createPortal`) instead of rendering
+   * inline, while the region still renders in place (wherever chart.tsx
+   * mounts this component — right after the chart's own tabpanel). Optional:
+   * omitted, this component renders exactly as it did before this refactor
+   * (trigger and region as adjacent siblings) — chart-config-panel.test.tsx
+   * never passes it, so every existing assertion keeps finding the trigger
+   * inline. chart.tsx keeps mounting this component with `key={chartEpoch}`
+   * exactly as before — the remount-per-chart behaviour (open/colour-draft/
+   * brand-status state reset on a spec swap) is unchanged by this prop. */
+  triggerSlot?: HTMLElement | null;
   /** WP218 phase 6: fired once each time the panel opens; optional and
    * unused by this task (no phase-6 consumer exists yet). */
   onOpen?: () => void;
@@ -387,11 +412,12 @@ export function ChartConfigPanel({
   onReset,
   idPrefix,
   lang = 'nl',
+  triggerSlot,
   onOpen,
   account,
   brand,
   onBrandApplied,
-}: ChartConfigPanelProps) {
+}: ChartConfigPanelProps): ReactNode {
   const copy = buildPanelCopy(lang);
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabKey>('chart');
@@ -648,358 +674,414 @@ export function ChartConfigPanel({
     );
   }
 
-  return (
-    <>
-      <Button
-        id={triggerId}
-        type="button"
-        variant="ghost"
-        size="sm"
-        aria-expanded={open}
-        aria-controls={regionId}
-        onClick={toggleOpen}
-      >
-        <SlidersHorizontal aria-hidden="true" />
-        {copy.trigger}
-      </Button>
-      {open ? (
-        <section
-          id={regionId}
-          role="region"
-          aria-label={copy.regionLabel}
-          onKeyDown={onRegionKeyDown}
-          className="basis-full mt-2 rounded-lg border border-border bg-muted/40 p-3 text-xs"
+  // Owner decision (option A, compact grid): the two-column layout for the
+  // Grafiek tab's option groups — a fixed-width label column, a wrapping
+  // pills column. `sm:` keeps a single stacked column on narrow viewports
+  // (the label column would otherwise crush the pills). Declared once here
+  // (not inlined per group) so the grid and its row column-count can never
+  // drift apart between the radio groups and the "Tonen" toggle row below.
+  const GRID_CLASS = 'grid w-full grid-cols-1 sm:grid-cols-[112px_minmax(0,1fr)] gap-x-3 gap-y-2 items-start';
+  const visibleToggles = toggles.filter((toggle) => resolved.applicable.has(toggle.key));
+  const showGroupLabelId = `${idPrefix}-style-label-show`;
+
+  const triggerNode = (
+    <Button
+      id={triggerId}
+      type="button"
+      variant="ghost"
+      size="sm"
+      aria-expanded={open}
+      aria-controls={regionId}
+      onClick={toggleOpen}
+    >
+      <SlidersHorizontal aria-hidden="true" />
+      {copy.trigger}
+    </Button>
+  );
+  // `triggerSlot`'s own comment on ChartConfigPanelProps: portal the trigger
+  // there when chart.tsx supplies one (option A layout), else render it
+  // inline exactly as before — the branch chart-config-panel.test.tsx
+  // exercises, since it never passes `triggerSlot`.
+  const trigger = triggerSlot ? createPortal(triggerNode, triggerSlot) : triggerNode;
+
+  const region = open ? (
+    <section
+      id={regionId}
+      role="region"
+      aria-label={copy.regionLabel}
+      onKeyDown={onRegionKeyDown}
+      className="basis-full mt-2 rounded-lg border border-border bg-muted/40 p-3 text-xs"
+    >
+      {/* Layout refactor (owner: option A): the region's header row is now
+        * common to every tab — the Grafiek/Kleuren/Lettertype tablist on the
+        * left, "Taal van de grafiek" on the right (its own visible <label>
+        * dropped; the select already carried an identical `aria-label`, so
+        * removing the label line loses no accessible name). Previously the
+        * language select lived inside the Grafiek tabpanel only. */}
+      <div className="flex items-center justify-between gap-2">
+        <div
+          role="tablist"
+          aria-label={copy.tabsLabel}
+          onKeyDown={onTabsKeyDown}
+          className="inline-flex items-center gap-0.5 rounded-lg bg-muted p-0.5"
         >
-          <div
-            role="tablist"
-            aria-label={copy.tabsLabel}
-            onKeyDown={onTabsKeyDown}
-            className="inline-flex items-center gap-0.5 rounded-lg bg-muted p-0.5"
-          >
-            {tabButton('chart', copy.tabChart)}
-            {tabButton('colors', copy.tabColors)}
-            {tabButton('font', copy.tabFont)}
-          </div>
+          {tabButton('chart', copy.tabChart)}
+          {tabButton('colors', copy.tabColors)}
+          {tabButton('font', copy.tabFont)}
+        </div>
+        {/* WP218 phase 4 (#219, design §4): null = follow the app language,
+          * 'nl'/'en' pins this one chart regardless of the app switch.
+          * Always applicable/never locked (chart-presentation.ts), so this
+          * renders identically on every form, table included. */}
+        <select
+          id={`${idPrefix}-style-language`}
+          aria-label={copy.languageLabel}
+          value={resolved.values.language ?? ''}
+          onChange={(e) => onChange({ language: e.target.value === '' ? null : (e.target.value as Lang) })}
+          className="rounded-md border border-border bg-background px-1.5 py-0.5 text-foreground"
+        >
+          <option value="">{copy.languageFollowApp}</option>
+          <option value="nl">{copy.languageNl}</option>
+          <option value="en">{copy.languageEn}</option>
+        </select>
+      </div>
 
-          {activeTab === 'chart' ? (
-            <div
-              id={panelId('chart')}
-              role="tabpanel"
-              aria-labelledby={tabId('chart')}
-              className="mt-3 flex flex-col items-start gap-3"
-            >
-              {/* WP218 phase 4 (#219, design §4): "Taal van de grafiek" at
-                * the top of the Grafiek tab — null = follow the app language,
-                * 'nl'/'en' pins this one chart regardless of the app switch.
-                * Always applicable/never locked (chart-presentation.ts), so
-                * this renders identically on every form, table included. */}
-              <div className="w-full">
-                <label htmlFor={`${idPrefix}-style-language`} className="mb-1 block font-medium text-foreground">
-                  {copy.languageLabel}
-                </label>
-                <select
-                  id={`${idPrefix}-style-language`}
-                  aria-label={copy.languageLabel}
-                  value={resolved.values.language ?? ''}
-                  onChange={(e) => onChange({ language: e.target.value === '' ? null : (e.target.value as Lang) })}
-                  className="rounded-md border border-border bg-background px-1.5 py-0.5 text-foreground"
-                >
-                  <option value="">{copy.languageFollowApp}</option>
-                  <option value="nl">{copy.languageNl}</option>
-                  <option value="en">{copy.languageEn}</option>
-                </select>
-              </div>
-              {/* WP218 phase 2 (owner C): only when the account default is
-                * actually what's on screen — a non-pristine panel means the
-                * reader's own per-chart tweaks are showing, not the saved
-                * default, so the hint would misrepresent what's rendered. */}
-              {account?.hasDefault && resolved.pristine ? (
-                <p className="w-full text-muted-foreground">{copy.accountHint}</p>
-              ) : null}
-              {radioGroups.map((group) => {
-                if (!resolved.applicable.has(group.key)) return null;
-                const reason = resolved.locks[group.key];
-                const locked = reason !== undefined;
-                const groupLabelId = `${idPrefix}-style-label-${group.key}`;
-                const reasonId = locked ? `${idPrefix}-style-reason-${group.key}` : undefined;
-                const current = resolved.values[group.key] as string;
-                return (
-                  <div key={group.key}>
-                    <span id={groupLabelId} className="mb-1 block font-medium text-foreground">
-                      {group.label}
-                    </span>
-                    <div
-                      role="radiogroup"
-                      aria-labelledby={groupLabelId}
-                      aria-describedby={reasonId}
-                      onKeyDown={onRadioGroupKeyDown}
-                      className="flex flex-wrap gap-1.5"
-                    >
-                      {group.options.map((opt) => {
-                        const checked = current === opt.value;
-                        return (
-                          <button
-                            key={opt.value}
-                            type="button"
-                            role="radio"
-                            aria-checked={checked}
-                            aria-describedby={reasonId}
-                            disabled={locked}
-                            tabIndex={checked ? 0 : -1}
-                            onClick={() => emit(group.key, opt.value)}
-                            className={pillClass(checked)}
-                          >
-                            {opt.label}
-                          </button>
-                        );
-                      })}
-                    </div>
-                    {locked ? (
-                      <span id={reasonId} className="sr-only">
-                        {reason}
-                      </span>
-                    ) : null}
-                  </div>
-                );
-              })}
-
-              {toggles.map((t) => {
-                if (!resolved.applicable.has(t.key)) return null;
-                const reason = resolved.locks[t.key];
-                const locked = reason !== undefined;
-                const reasonId = locked ? `${idPrefix}-style-reason-${t.key}` : undefined;
-                const pressed = resolved.values[t.key] === t.onValue;
-                return (
-                  <div key={t.key}>
-                    <button
-                      type="button"
-                      aria-pressed={pressed}
-                      aria-describedby={reasonId}
-                      disabled={locked}
-                      onClick={() => emit(t.key, pressed ? t.offValue : t.onValue)}
-                      className={pillClass(pressed)}
-                    >
-                      {t.label}
-                    </button>
-                    {locked ? (
-                      <span id={reasonId} className="sr-only">
-                        {reason}
-                      </span>
-                    ) : null}
-                  </div>
-                );
-              })}
-
-              <Button type="button" variant="outline" size="xs" disabled={resolved.pristine} onClick={onReset}>
-                {copy.reset}
-              </Button>
-
-              {/* WP218 phase 5 (chart-types plan, Task 3): one collapsed note
-                * explaining why pie/donut, stacked, scatter and sorted-by-
-                * value forms are never offered — collapsed by default so it
-                * doesn't compete with the controls above, plain <details>/
-                * <summary> rather than a JS-driven disclosure (cheapest
-                * mechanism first: the browser already does open/close). */}
-              <details className="text-xs text-muted-foreground">
-                <summary>{copy.whyNotTitle}</summary>
-                <p>{copy.whyNotBody}</p>
-              </details>
-            </div>
+      {activeTab === 'chart' ? (
+        <div
+          id={panelId('chart')}
+          role="tabpanel"
+          aria-labelledby={tabId('chart')}
+          className="mt-3 flex flex-col items-start gap-3"
+        >
+          {/* WP218 phase 2 (owner C): only when the account default is
+            * actually what's on screen — a non-pristine panel means the
+            * reader's own per-chart tweaks are showing, not the saved
+            * default, so the hint would misrepresent what's rendered. */}
+          {account?.hasDefault && resolved.pristine ? (
+            <p className="w-full text-muted-foreground">{copy.accountHint}</p>
           ) : null}
+          {/* Owner decision (option A, compact grid): one row per group
+            * (Lijndikte/Punten/Rasterlijnen/Labels op de x-as), then a single
+            * "Tonen" row for the three on/off toggles — a flat list of
+            * label+value pairs as DIRECT children of one grid container
+            * (each pair wrapped in a keyed Fragment, which contributes no
+            * element of its own to the DOM) so the grid's own two-column
+            * auto-placement lines every label up against its own value,
+            * across groups, without a wrapper div per row breaking that. */}
+          <div className={GRID_CLASS}>
+            {radioGroups.map((group) => {
+              if (!resolved.applicable.has(group.key)) return null;
+              const reason = resolved.locks[group.key];
+              const locked = reason !== undefined;
+              const groupLabelId = `${idPrefix}-style-label-${group.key}`;
+              const reasonId = locked ? `${idPrefix}-style-reason-${group.key}` : undefined;
+              const current = resolved.values[group.key] as string;
+              return (
+                <Fragment key={group.key}>
+                  <span id={groupLabelId} className="text-xs text-muted-foreground pt-1">
+                    {group.label}
+                  </span>
+                  <div
+                    role="radiogroup"
+                    aria-labelledby={groupLabelId}
+                    aria-describedby={reasonId}
+                    onKeyDown={onRadioGroupKeyDown}
+                    className="flex flex-wrap gap-1.5"
+                  >
+                    {group.options.map((opt) => {
+                      const checked = current === opt.value;
+                      return (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          role="radio"
+                          aria-checked={checked}
+                          aria-describedby={reasonId}
+                          disabled={locked}
+                          tabIndex={checked ? 0 : -1}
+                          onClick={() => emit(group.key, opt.value)}
+                          className={pillClass(checked)}
+                        >
+                          {opt.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {/* A locked control's reason: `position: absolute` (Tailwind's
+                    * `sr-only`) takes it out of grid flow entirely, so this
+                    * third Fragment child never becomes a spurious third
+                    * column. */}
+                  {locked ? (
+                    <span id={reasonId} className="sr-only">
+                      {reason}
+                    </span>
+                  ) : null}
+                </Fragment>
+              );
+            })}
 
-          {activeTab === 'colors' ? (
-            <div
-              id={panelId('colors')}
-              role="tabpanel"
-              aria-labelledby={tabId('colors')}
-              className="mt-3 flex flex-col items-start gap-3"
-            >
-              {resolved.applicable.has('seriesColors') ? (
-                <>
-                  {seriesMeta.map((series, index) => {
-                    const draft = liveDrafts[series.key];
-                    const displayText = draft !== undefined ? draft.text : series.color;
-                    // Warn only about a colour the reader CHOSE: the stock palette's own
-                    // weak entries (e.g. the yellow on white) are the owner's accepted
-                    // session-87 trade-off, not something to nag about untouched.
-                    const settled = settledColorFor(series.key, series.color);
-                    const chosen = resolved.values.seriesColors[index] !== undefined || settled !== series.color;
-                    const warning = chosen ? warningFor(settled) : null;
-                    const alertEntry = liveAlerts[series.key];
-                    const alert = alertEntry !== undefined ? alertEntry.reason : null;
-                    const warnId = `${idPrefix}-style-color-warn-${index}`;
-                    const alertId = `${idPrefix}-style-color-alert-${index}`;
+            {visibleToggles.length > 0 ? (
+              <Fragment key="show-group">
+                <span id={showGroupLabelId} className="text-xs text-muted-foreground pt-1">
+                  {copy.showGroup}
+                </span>
+                <div role="group" aria-labelledby={showGroupLabelId} className="flex flex-wrap gap-1.5">
+                  {visibleToggles.map((toggle) => {
+                    const reason = resolved.locks[toggle.key];
+                    const locked = reason !== undefined;
+                    const reasonId = locked ? `${idPrefix}-style-reason-${toggle.key}` : undefined;
+                    const pressed = resolved.values[toggle.key] === toggle.onValue;
                     return (
-                      <div key={series.key} role="group" aria-label={series.label} className="flex flex-wrap items-center gap-2">
-                        <span
-                          aria-hidden
-                          style={{ backgroundColor: series.color }}
-                          className="inline-block size-4 rounded-full border border-border"
-                        />
-                        <span className="font-medium text-foreground">{series.label}</span>
-                        <Input
-                          type="text"
-                          inputMode="text"
-                          aria-label={`${copy.colourOf} ${series.label} ${copy.hexSuffix}`}
-                          aria-describedby={alert ? alertId : warning ? warnId : undefined}
-                          value={displayText}
-                          onChange={(e) =>
-                            setColorDrafts((d) => ({
-                              ...d,
-                              [series.key]: { text: e.target.value, forColor: series.color, committed: false },
-                            }))
-                          }
-                          onBlur={(e) => commitColor(series.key, index, series.color, e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') commitColor(series.key, index, series.color, e.currentTarget.value);
-                          }}
-                          className="w-24"
-                        />
-                        <input
-                          type="color"
-                          aria-label={`${copy.colourOf} ${series.label} ${copy.pickSuffix}`}
-                          value={series.color}
-                          onChange={(e) => commitColor(series.key, index, series.color, e.target.value)}
-                        />
-                        {warning ? (
-                          <p id={warnId} className="w-full text-muted-foreground">
-                            {warningText(copy, warning)}
-                          </p>
-                        ) : null}
-                        {alert ? (
-                          <p id={alertId} role="alert" className="w-full text-destructive">
-                            {alert}
-                          </p>
-                        ) : null}
-                      </div>
+                      <button
+                        key={toggle.key}
+                        type="button"
+                        aria-pressed={pressed}
+                        aria-describedby={reasonId}
+                        disabled={locked}
+                        onClick={() => emit(toggle.key, pressed ? toggle.offValue : toggle.onValue)}
+                        className={pillClass(pressed)}
+                      >
+                        {toggle.label}
+                      </button>
                     );
                   })}
+                </div>
+                {visibleToggles.map((toggle) => {
+                  const reason = resolved.locks[toggle.key];
+                  if (reason === undefined) return null;
+                  return (
+                    <span key={toggle.key} id={`${idPrefix}-style-reason-${toggle.key}`} className="sr-only">
+                      {reason}
+                    </span>
+                  );
+                })}
+              </Fragment>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
 
+      {activeTab === 'colors' ? (
+        <div
+          id={panelId('colors')}
+          role="tabpanel"
+          aria-labelledby={tabId('colors')}
+          className="mt-3 flex flex-col items-start gap-3"
+        >
+          {resolved.applicable.has('seriesColors') ? (
+            <>
+              {seriesMeta.map((series, index) => {
+                const draft = liveDrafts[series.key];
+                const displayText = draft !== undefined ? draft.text : series.color;
+                // Warn only about a colour the reader CHOSE: the stock palette's own
+                // weak entries (e.g. the yellow on white) are the owner's accepted
+                // session-87 trade-off, not something to nag about untouched.
+                const settled = settledColorFor(series.key, series.color);
+                const chosen = resolved.values.seriesColors[index] !== undefined || settled !== series.color;
+                const warning = chosen ? warningFor(settled) : null;
+                const alertEntry = liveAlerts[series.key];
+                const alert = alertEntry !== undefined ? alertEntry.reason : null;
+                const warnId = `${idPrefix}-style-color-warn-${index}`;
+                const alertId = `${idPrefix}-style-color-alert-${index}`;
+                return (
+                  <div key={series.key} role="group" aria-label={series.label} className="flex flex-wrap items-center gap-2">
+                    <span
+                      aria-hidden
+                      style={{ backgroundColor: series.color }}
+                      className="inline-block size-4 rounded-full border border-border"
+                    />
+                    <span className="font-medium text-foreground">{series.label}</span>
+                    <Input
+                      type="text"
+                      inputMode="text"
+                      aria-label={`${copy.colourOf} ${series.label} ${copy.hexSuffix}`}
+                      aria-describedby={alert ? alertId : warning ? warnId : undefined}
+                      value={displayText}
+                      onChange={(e) =>
+                        setColorDrafts((d) => ({
+                          ...d,
+                          [series.key]: { text: e.target.value, forColor: series.color, committed: false },
+                        }))
+                      }
+                      onBlur={(e) => commitColor(series.key, index, series.color, e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') commitColor(series.key, index, series.color, e.currentTarget.value);
+                      }}
+                      className="w-24"
+                    />
+                    <input
+                      type="color"
+                      aria-label={`${copy.colourOf} ${series.label} ${copy.pickSuffix}`}
+                      value={series.color}
+                      onChange={(e) => commitColor(series.key, index, series.color, e.target.value)}
+                    />
+                    {warning ? (
+                      <p id={warnId} className="w-full text-muted-foreground">
+                        {warningText(copy, warning)}
+                      </p>
+                    ) : null}
+                    {alert ? (
+                      <p id={alertId} role="alert" className="w-full text-destructive">
+                        {alert}
+                      </p>
+                    ) : null}
+                  </div>
+                );
+              })}
+
+              <Button
+                type="button"
+                variant="outline"
+                size="xs"
+                disabled={Object.keys(currentColors).length === 0}
+                onClick={() => onChange({ seriesColors: {} })}
+              >
+                {copy.resetColors}
+              </Button>
+
+              {/* WP218 phase 3 (owner B): under the series rows, gated on
+                * `brand` the same way the account footer is gated on
+                * `account` — absent entirely for Ontdek/trial. */}
+              {brand ? (
+                <div className="mt-1 flex w-full flex-col items-start gap-2 border-t border-border pt-3">
+                  <span className="font-medium text-foreground">{copy.brandHeading}</span>
+                  <p className="text-muted-foreground">{copy.brandIntro}</p>
+                  {brandNeedsWebsite ? (
+                    <Input
+                      type="text"
+                      inputMode="text"
+                      aria-label={copy.brandWebsiteLabel}
+                      placeholder={copy.brandWebsitePlaceholder}
+                      value={brandWebsite}
+                      onChange={(e) => setBrandWebsite(e.target.value)}
+                      className="w-48"
+                    />
+                  ) : null}
                   <Button
                     type="button"
                     variant="outline"
                     size="xs"
-                    disabled={Object.keys(currentColors).length === 0}
-                    onClick={() => onChange({ seriesColors: {} })}
+                    disabled={brandBusy}
+                    onClick={() => void handleApplyBrand()}
                   >
-                    {copy.resetColors}
+                    {copy.brandApply}
                   </Button>
-
-                  {/* WP218 phase 3 (owner B): under the series rows, gated on
-                    * `brand` the same way the account footer is gated on
-                    * `account` — absent entirely for Ontdek/trial. */}
-                  {brand ? (
-                    <div className="mt-1 flex w-full flex-col items-start gap-2 border-t border-border pt-3">
-                      <span className="font-medium text-foreground">{copy.brandHeading}</span>
-                      <p className="text-muted-foreground">{copy.brandIntro}</p>
-                      {brandNeedsWebsite ? (
-                        <Input
-                          type="text"
-                          inputMode="text"
-                          aria-label={copy.brandWebsiteLabel}
-                          placeholder={copy.brandWebsitePlaceholder}
-                          value={brandWebsite}
-                          onChange={(e) => setBrandWebsite(e.target.value)}
-                          className="w-48"
-                        />
-                      ) : null}
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="xs"
-                        disabled={brandBusy}
-                        onClick={() => void handleApplyBrand()}
-                      >
-                        {copy.brandApply}
-                      </Button>
-                      {brandOutcome ? (
-                        brandOutcome.kind === 'applied' ? (
-                          <>
-                            <p role="status" className="w-full text-muted-foreground">
-                              {copy.brandApplied.replace('{name}', brandOutcome.name)}
-                            </p>
-                            {brandOutcome.fontSkipped ? (
-                              <p className="w-full text-muted-foreground">{copy.brandFontSkipped}</p>
-                            ) : null}
-                          </>
-                        ) : (
-                          <p role="status" className="w-full text-muted-foreground">
-                            {brandFailureText(brandOutcome.reason)}
-                          </p>
-                        )
-                      ) : null}
-                    </div>
+                  {brandOutcome ? (
+                    brandOutcome.kind === 'applied' ? (
+                      <>
+                        <p role="status" className="w-full text-muted-foreground">
+                          {copy.brandApplied.replace('{name}', brandOutcome.name)}
+                        </p>
+                        {brandOutcome.fontSkipped ? (
+                          <p className="w-full text-muted-foreground">{copy.brandFontSkipped}</p>
+                        ) : null}
+                      </>
+                    ) : (
+                      <p role="status" className="w-full text-muted-foreground">
+                        {brandFailureText(brandOutcome.reason)}
+                      </p>
+                    )
                   ) : null}
-                </>
+                </div>
               ) : null}
-            </div>
+            </>
           ) : null}
-
-          {activeTab === 'font' ? (
-            <div
-              id={panelId('font')}
-              role="tabpanel"
-              aria-labelledby={tabId('font')}
-              className="mt-3 flex flex-wrap items-center gap-2"
-            >
-              <label htmlFor={`${idPrefix}-style-font`}>{copy.font}</label>
-              <select
-                id={`${idPrefix}-style-font`}
-                aria-label={copy.font}
-                value={resolved.values.fontFamily ?? ''}
-                onChange={(e) => onChange({ fontFamily: e.target.value || null })}
-                className="rounded-md border border-border bg-background px-1.5 py-0.5 text-foreground"
-              >
-                <option value="">{copy.fontDefault}</option>
-                {FONT_OPTIONS.map((f) => (
-                  <option key={f.family} value={f.family}>
-                    {f.family}
-                  </option>
-                ))}
-                {/* Final-review fix: an applied brand font (phase 3's
-                  * `pickBrandFont`) can be any family outside the seven
-                  * curated FONT_OPTIONS — without this, `value` above
-                  * matches none of the options and the select silently
-                  * renders blank, so touching it (even without changing
-                  * anything) looked like it discarded the brand font. */}
-                {resolved.values.fontFamily !== null &&
-                !FONT_OPTIONS.some((f) => f.family === resolved.values.fontFamily) ? (
-                  <option value={resolved.values.fontFamily}>{resolved.values.fontFamily}</option>
-                ) : null}
-              </select>
-            </div>
-          ) : null}
-
-          {/* WP218 phase 2 (owner C): a footer row visible regardless of the
-            * active tab (unlike the tabpanel bodies above) — the account
-            * default is a property of the whole panel, not any one tab.
-            * Absent entirely for a signed-out/trial visitor (no `account`
-            * prop at all — chart.tsx never passes one then). */}
-          {account ? (
-            <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border pt-3">
-              <Button type="button" variant="outline" size="xs" disabled={accountBusy} onClick={() => void handleAccountSave()}>
-                {copy.accountSave}
-              </Button>
-              {account.hasDefault ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="xs"
-                  disabled={accountBusy}
-                  onClick={() => void handleAccountForget()}
-                >
-                  {copy.accountForget}
-                </Button>
-              ) : null}
-              {accountStatus ? (
-                <p role="status" className="w-full text-muted-foreground">
-                  {accountStatusText(accountStatus)}
-                </p>
-              ) : null}
-            </div>
-          ) : null}
-        </section>
+        </div>
       ) : null}
+
+      {activeTab === 'font' ? (
+        <div
+          id={panelId('font')}
+          role="tabpanel"
+          aria-labelledby={tabId('font')}
+          className="mt-3 flex flex-wrap items-center gap-2"
+        >
+          <label htmlFor={`${idPrefix}-style-font`}>{copy.font}</label>
+          <select
+            id={`${idPrefix}-style-font`}
+            aria-label={copy.font}
+            value={resolved.values.fontFamily ?? ''}
+            onChange={(e) => onChange({ fontFamily: e.target.value || null })}
+            className="rounded-md border border-border bg-background px-1.5 py-0.5 text-foreground"
+          >
+            <option value="">{copy.fontDefault}</option>
+            {FONT_OPTIONS.map((f) => (
+              <option key={f.family} value={f.family}>
+                {f.family}
+              </option>
+            ))}
+            {/* Final-review fix: an applied brand font (phase 3's
+              * `pickBrandFont`) can be any family outside the seven
+              * curated FONT_OPTIONS — without this, `value` above
+              * matches none of the options and the select silently
+              * renders blank, so touching it (even without changing
+              * anything) looked like it discarded the brand font. */}
+            {resolved.values.fontFamily !== null &&
+            !FONT_OPTIONS.some((f) => f.family === resolved.values.fontFamily) ? (
+              <option value={resolved.values.fontFamily}>{resolved.values.fontFamily}</option>
+            ) : null}
+          </select>
+        </div>
+      ) : null}
+
+      {/* Owner decision (option A, compact grid): a footer row visible
+        * regardless of the active tab, the same "whole panel, not any one
+        * tab" reasoning as the account row just below (and, before this
+        * layout refactor, Standaard/the "why not" note lived inside the
+        * Grafiek tabpanel only — Standaard resets EVERY tab's overrides, not
+        * just Grafiek's, per `resolved.pristine`'s own definition, so moving
+        * it here means a reader can reset from Kleuren/Lettertype too). */}
+      <div className="mt-3 flex items-center justify-between gap-2 border-t border-border pt-3">
+        {/* WP218 phase 5 (chart-types plan, Task 3): one collapsed note
+          * explaining why pie/donut, stacked, scatter and sorted-by-value
+          * forms are never offered — collapsed by default so it doesn't
+          * compete with the controls above, plain <details>/<summary> rather
+          * than a JS-driven disclosure (cheapest mechanism first: the
+          * browser already does open/close). */}
+        <details className="text-xs text-muted-foreground">
+          <summary>{copy.whyNotTitle}</summary>
+          <p>{copy.whyNotBody}</p>
+        </details>
+        <Button type="button" variant="outline" size="xs" disabled={resolved.pristine} onClick={onReset}>
+          {copy.reset}
+        </Button>
+      </div>
+
+      {/* WP218 phase 2 (owner C): a footer row visible regardless of the
+        * active tab (unlike the tabpanel bodies above) — the account
+        * default is a property of the whole panel, not any one tab.
+        * Absent entirely for a signed-out/trial visitor (no `account`
+        * prop at all — chart.tsx never passes one then). */}
+      {account ? (
+        <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border pt-3">
+          <Button type="button" variant="outline" size="xs" disabled={accountBusy} onClick={() => void handleAccountSave()}>
+            {copy.accountSave}
+          </Button>
+          {account.hasDefault ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="xs"
+              disabled={accountBusy}
+              onClick={() => void handleAccountForget()}
+            >
+              {copy.accountForget}
+            </Button>
+          ) : null}
+          {accountStatus ? (
+            <p role="status" className="w-full text-muted-foreground">
+              {accountStatusText(accountStatus)}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+    </section>
+  ) : null;
+
+  return (
+    <>
+      {trigger}
+      {region}
     </>
   );
 }

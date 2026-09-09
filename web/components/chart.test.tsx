@@ -1794,7 +1794,7 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
     expect(container.querySelector('.recharts-cartesian-grid-horizontal')).toBeNull();
     expect(container.querySelector('.recharts-cartesian-grid-vertical')).toBeNull();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Aslijnen tonen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Aslijnen' }));
     expect(container.querySelector('.recharts-xAxis .recharts-cartesian-axis-line')).toBeNull();
     expect(container.querySelector('.recharts-yAxis .recharts-cartesian-axis-line')).toBeNull();
   });
@@ -1956,6 +1956,37 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
     expect(chartTabpanel).not.toBeNull();
     expect(within(chartTabpanel).queryByRole('region', { name: 'Opmaak van de grafiek' })).toBeNull();
     expect(screen.getByRole('region', { name: 'Opmaak van de grafiek' })).toBeInTheDocument();
+  });
+
+  it('option A layout: the region follows the chart tabpanel, the trigger stays in the Weergave tablist row, and opening the panel does not move or remount the chart', () => {
+    const { container } = render(<ChartView spec={threePointSpec()} />);
+    const chartTabpanel = container.querySelector('[role="tabpanel"][aria-label="Grafiek"]') as HTMLElement;
+    expect(chartTabpanel).not.toBeNull();
+
+    // The trigger is portaled into a slot inside the SAME row as the
+    // Weergave tablist (owner: option A — "the trigger stays in the tablist
+    // row") — proven via a shared ancestor that contains both, since the
+    // trigger is a row-mate of the tablist, not a DOM child of it.
+    const trigger = screen.getByRole('button', { name: 'Opmaak' });
+    const tablist = screen.getByRole('tablist', { name: 'Weergave' });
+    expect((tablist.parentElement as HTMLElement).contains(trigger)).toBe(true);
+
+    fireEvent.click(trigger);
+    const region = screen.getByRole('region', { name: 'Opmaak van de grafiek' });
+    // "First the graph on top, then the design settings" (owner): the region
+    // is a FOLLOWING sibling of the chart's own tabpanel, never a preceding
+    // one — the pre-refactor layout wrapped the panel under the Weergave row
+    // ABOVE the chart, which this compareDocumentPosition check would fail.
+    expect(Boolean(chartTabpanel.compareDocumentPosition(region) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
+    expect(Boolean(chartTabpanel.compareDocumentPosition(region) & Node.DOCUMENT_POSITION_PRECEDING)).toBe(false);
+    // Opening the panel mounts a new sibling AFTER the chart — it must not
+    // tear down and remount the chart's own tabpanel to do it.
+    expect(container.querySelector('[role="tabpanel"][aria-label="Grafiek"]')).toBe(chartTabpanel);
+
+    fireEvent.keyDown(region, { key: 'Escape' });
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('region', { name: 'Opmaak van de grafiek' })).toBeNull();
+    expect(document.activeElement).toBe(trigger);
   });
 
   it('the disabled Lijn tab on a region comparison carries its reason via aria-describedby', () => {

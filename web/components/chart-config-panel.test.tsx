@@ -63,6 +63,45 @@ describe('ChartConfigPanel — Grafiek tab', () => {
     ]);
   });
 
+  it('option A layout: each group label is its radiogroup\'s aria-labelledby target and sits in the same grid as the pills, and Tonen groups the three toggles', () => {
+    render(
+      <ChartConfigPanel
+        resolved={resolvePresentation(lineCtx, {})}
+        seriesMeta={meta}
+        onChange={vi.fn()}
+        onReset={vi.fn()}
+        idPrefix="c"
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    const lineWidthGroup = screen.getByRole('radiogroup', { name: 'Lijndikte' });
+    const grid = lineWidthGroup.parentElement as HTMLElement;
+    expect(grid.className).toMatch(/grid-cols-\[112px_minmax\(0,1fr\)\]/);
+    const label = document.getElementById(lineWidthGroup.getAttribute('aria-labelledby')!) as HTMLElement;
+    // The label is the aria-labelledby TARGET, and a direct child of the very
+    // same grid as the radiogroup it labels — not a wrapper div around the
+    // pair, which would break the grid's own two-column auto-placement.
+    expect(label.textContent).toBe('Lijndikte');
+    expect(label.parentElement).toBe(grid);
+    expect(lineWidthGroup.parentElement).toBe(grid);
+
+    // Every radiogroup in the Grafiek tab lives in the SAME grid container —
+    // one flat list of label/value pairs, not one grid per row.
+    for (const name of ['Punten', 'Rasterlijnen', 'Labels op de x-as']) {
+      expect(screen.getByRole('radiogroup', { name }).parentElement).toBe(grid);
+    }
+
+    // The three on/off toggles are grouped under one "Tonen" label, in that
+    // same grid, rather than each getting its own label row.
+    const showToggles = screen.getByRole('group', { name: 'Tonen' });
+    expect(showToggles.parentElement).toBe(grid);
+    expect(within(showToggles).getAllByRole('button').map((b) => b.textContent)).toEqual([
+      'Aslijnen',
+      'Waarden',
+      'Y-as vanaf nul',
+    ]);
+  });
+
   it('pre-fills every control from the resolved values, not from a stored default', () => {
     const resolved = resolvePresentation(lineCtx, { lineWidth: 'thick', grid: 'none', axisLines: 'hidden' });
     render(
@@ -71,7 +110,7 @@ describe('ChartConfigPanel — Grafiek tab', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
     expect(screen.getByRole('radio', { name: 'Dik' })).toHaveAttribute('aria-checked', 'true');
     expect(screen.getByRole('radio', { name: 'Geen' })).toHaveAttribute('aria-checked', 'true');
-    expect(screen.getByRole('button', { name: 'Aslijnen tonen' })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('button', { name: 'Aslijnen' })).toHaveAttribute('aria-pressed', 'false');
   });
 
   it('emits a patch for exactly the changed key', () => {
@@ -88,7 +127,7 @@ describe('ChartConfigPanel — Grafiek tab', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
     fireEvent.click(screen.getByRole('radio', { name: 'Extra dik' }));
     expect(onChange).toHaveBeenCalledWith({ lineWidth: 'extraThick' });
-    fireEvent.click(screen.getByRole('button', { name: 'Waarden tonen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Waarden' }));
     expect(onChange).toHaveBeenCalledWith({ valueLabels: 'hidden' });
   });
 
@@ -98,7 +137,7 @@ describe('ChartConfigPanel — Grafiek tab', () => {
       <ChartConfigPanel resolved={resolved} seriesMeta={meta} onChange={vi.fn()} onReset={vi.fn()} idPrefix="c" />,
     );
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    const values = screen.getByRole('button', { name: 'Waarden tonen' });
+    const values = screen.getByRole('button', { name: 'Waarden' });
     expect(values).toBeDisabled();
     expect(document.getElementById(values.getAttribute('aria-describedby')!)?.textContent).toMatch(/staafdiagram/);
     expect(screen.queryByRole('radiogroup', { name: 'Lijndikte' })).toBeNull();

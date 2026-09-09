@@ -1120,6 +1120,18 @@ export function ChartView({
   // chart's series. The panel is remounted per chart via this epoch — the
   // same "each chart starts fresh" the reducer's `reset` gives the overrides.
   const [chartEpoch, setChartEpoch] = useState(0);
+  // Chart-panel-layout refactor (owner: option A — the "Opmaak" trigger
+  // stays in the Weergave tablist row, the region it opens now renders below
+  // the chart instead of wrapping under that same row). ChartConfigPanel
+  // mounts once, below the chart (see its own JSX further down), and portals
+  // its trigger button into this DOM node instead of rendering it inline —
+  // the node itself is a placeholder rendered inside the tablist row, set via
+  // a callback ref once React actually mounts it (hence the state: a portal
+  // needs a real, already-mounted DOM node, which isn't available on the
+  // very first render). Declared here, well above the `schemaVersion` guard
+  // below, so this `useState` call itself is never conditionally skipped —
+  // the same reason `chartLang`'s `useLang()` sits above that guard too.
+  const [triggerSlot, setTriggerSlot] = useState<HTMLElement | null>(null);
   // WP218 phase 3 (owner B): the last brand a signed-in visitor actually
   // applied via "Pas merkkleuren toe" — deliberately NOT reset by the spec-
   // swap block below (unlike notes/pendingPoint), because it describes
@@ -1533,11 +1545,13 @@ export function ChartView({
         </div>
       ) : null}
       <div className="text-xs text-muted-foreground">{displaySpec.unit}</div>
-      {/* WP218 phase 1 (Task 7): the Weergave tablist and the Opmaak panel
-        * share one row (the panel wraps under it via its own `basis-full` —
-        * see ChartConfigPanel) — the tablist's own `mt-3` moved up onto this
-        * wrapper so the row keeps its original top spacing regardless of
-        * whether the panel is offered. */}
+      {/* WP218 phase 1 (Task 7), updated by the option-A layout refactor: the
+        * Weergave tablist and the Opmaak trigger share one row — the trigger
+        * itself is portaled in from ChartConfigPanel, mounted further down
+        * (see `triggerSlot` below and the panel's own mount point after the
+        * chart) — the tablist's own `mt-3` moved up onto this wrapper so the
+        * row keeps its original top spacing regardless of whether the
+        * trigger is offered. */}
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <div
           role="tablist"
@@ -1634,92 +1648,18 @@ export function ChartView({
             {hbarDisabledReason}
           </span>
         ) : null}
-        {state.form !== 'table' ? (
-          <ChartConfigPanel
-            key={chartEpoch}
-            resolved={resolved}
-            seriesMeta={seriesMeta}
-            lang={chartLang}
-            onChange={(patch) => {
-              dispatch({ type: 'setPresentation', patch });
-              trackChartStyleEvent('option_changed');
-            }}
-            onReset={() => {
-              dispatch({ type: 'resetPresentation' });
-              // Final-review fix: "Standaardkleuren" (a partial reset) goes
-              // through onChange and was already counted; "Standaard" (the
-              // full reset) fired nothing, so the #220 usage counter — whose
-              // whole point is telling the owner which options readers
-              // actually touch — systematically under-counted resets.
-              trackChartStyleEvent('option_changed');
-            }}
-            onOpen={() => trackChartStyleEvent('panel_open')}
-            idPrefix={domId}
-            account={
-              signedIn
-                ? {
-                    hasDefault: accountStyle !== null,
-                    onSave: async () => {
-                      // The EFFECTIVE values (base + whatever per-chart
-                      // tweaks are currently showing) become the new
-                      // account default — "what's on screen" is what
-                      // "Bewaar als mijn standaard" promises to save —
-                      // EXCEPT the keys the resolver LOCKED for this form
-                      // (P2 task-4 review): saving while a bar chart is on
-                      // screen must not bake the bar-forced zero baseline
-                      // into every future line chart. A locked value was
-                      // never the reader's choice, so it is not saved AS THE
-                      // LOCK'S VALUE — but final-review fix: it must still be
-                      // saved as whatever `base` (the account default already
-                      // in scope) already held for that key, not dropped
-                      // outright. Omitting the key made `saveUserChartStyle`'s
-                      // full-row REPLACE (never a merge) silently erase an
-                      // earlier saved preference for that key — e.g. turning
-                      // off "Waarden tonen" on a line chart, saving, then only
-                      // changing the font on a bar/hbar/area chart and saving
-                      // again wiped the earlier valueLabels choice because bar
-                      // forms lock it. Writing back `base[key]` keeps both
-                      // properties: a form-forced value is never persisted,
-                      // and a value the reader chose on a DIFFERENT chart form
-                      // survives an unrelated save on this one.
-                      const chosen = { ...resolved.values } as Partial<typeof resolved.values>;
-                      for (const key of Object.keys(resolved.locks) as (keyof typeof resolved.values)[]) {
-                        (chosen as Record<string, unknown>)[key] = base[key];
-                      }
-                      // WP218 phase 3 (owner B): the last brand applied on
-                      // any chart shown by THIS MOUNTED ChartView (not just
-                      // whichever chart is on screen right now — see
-                      // lastAppliedBrand's own comment) rides along as the
-                      // account-default save's `brandApplied` argument, so
-                      // the persisted
-                      // default can record which brand it came from.
-                      const r = await saveMyChartStyle(chosen, lastAppliedBrand ?? undefined);
-                      if (r.ok) {
-                        setAccountStyle(chosen);
-                        trackChartStyleEvent('default_saved');
-                      }
-                      return r.ok ? 'saved' : r.reason === 'unavailable' ? 'unavailable' : 'error';
-                    },
-                    onForget: async () => {
-                      const r = await forgetMyChartStyle();
-                      if (r.ok) {
-                        setAccountStyle(null);
-                        trackChartStyleEvent('default_forgotten');
-                      }
-                      return r.ok ? 'forgotten' : 'error';
-                    },
-                  }
-                : undefined
-            }
-            // WP218 phase 3 (owner B): same signedIn gate as `account` —
-            // Ontdek/trial gets no Merkkleuren block at all.
-            brand={signedIn ? { lookup: (website) => lookupBrand(website) } : undefined}
-            onBrandApplied={(applied) => {
-              setLastAppliedBrand(applied);
-              trackChartStyleEvent('brand_applied');
-            }}
-          />
-        ) : null}
+        {/* Chart-panel-layout refactor (owner: option A): the "Opmaak"
+          * trigger's portal target — ChartConfigPanel mounts below the chart
+          * (see its own JSX further down) and portals its trigger button
+          * here, so it still reads as part of THIS row even though the
+          * component that owns it now renders elsewhere. `contents` (not a
+          * plain span) so this wrapper contributes no box of its own — the
+          * portaled Button becomes a flex item of THIS row exactly as if it
+          * were still a direct child. Always rendered (not gated on
+          * `state.form`): an empty slot is a zero-size no-op, and keeping it
+          * mounted unconditionally means the portal target's own identity
+          * never changes across a Grafiek/Tabel switch. */}
+        <span ref={setTriggerSlot} className="contents" />
       </div>
       {zoomAvailable ? (
         <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
@@ -2170,6 +2110,104 @@ export function ChartView({
         )}
       </div>
       )}
+      {/* Chart-panel-layout refactor (owner: option A — "first the graph on
+        * top, then the design settings"): the Opmaak region renders directly
+        * after the chart's own tabpanel above (`chartContainerRef`'s parent),
+        * ahead of the trend headline/legend/small-multiples toggles below —
+        * chart first, settings under it. Its trigger button still lives in
+        * the Weergave tablist row (portaled into `triggerSlot`, set above);
+        * mounting the component itself HERE, not there, is what makes the
+        * `role="region"` this renders land in this position in the DOM,
+        * since a component's own JSX return is one subtree at one place in
+        * its caller's tree. `key={chartEpoch}` is unchanged from before this
+        * refactor: a spec swap still fully remounts the panel, resetting its
+        * open/colour-draft/brand-status state exactly as it always has. */}
+      {state.form !== 'table' ? (
+        <ChartConfigPanel
+          key={chartEpoch}
+          resolved={resolved}
+          seriesMeta={seriesMeta}
+          lang={chartLang}
+          triggerSlot={triggerSlot}
+          onChange={(patch) => {
+            dispatch({ type: 'setPresentation', patch });
+            trackChartStyleEvent('option_changed');
+          }}
+          onReset={() => {
+            dispatch({ type: 'resetPresentation' });
+            // Final-review fix: "Standaardkleuren" (a partial reset) goes
+            // through onChange and was already counted; "Standaard" (the
+            // full reset) fired nothing, so the #220 usage counter — whose
+            // whole point is telling the owner which options readers
+            // actually touch — systematically under-counted resets.
+            trackChartStyleEvent('option_changed');
+          }}
+          onOpen={() => trackChartStyleEvent('panel_open')}
+          idPrefix={domId}
+          account={
+            signedIn
+              ? {
+                  hasDefault: accountStyle !== null,
+                  onSave: async () => {
+                    // The EFFECTIVE values (base + whatever per-chart tweaks
+                    // are currently showing) become the new account default —
+                    // "what's on screen" is what "Bewaar als mijn standaard"
+                    // promises to save — EXCEPT the keys the resolver LOCKED
+                    // for this form (P2 task-4 review): saving while a bar
+                    // chart is on screen must not bake the bar-forced zero
+                    // baseline into every future line chart. A locked value
+                    // was never the reader's choice, so it is not saved AS
+                    // THE LOCK'S VALUE — but final-review fix: it must still
+                    // be saved as whatever `base` (the account default
+                    // already in scope) already held for that key, not
+                    // dropped outright. Omitting the key made
+                    // `saveUserChartStyle`'s full-row REPLACE (never a merge)
+                    // silently erase an earlier saved preference for that key
+                    // — e.g. turning off "Waarden tonen" on a line chart,
+                    // saving, then only changing the font on a bar/hbar/area
+                    // chart and saving again wiped the earlier valueLabels
+                    // choice because bar forms lock it. Writing back
+                    // `base[key]` keeps both properties: a form-forced value
+                    // is never persisted, and a value the reader chose on a
+                    // DIFFERENT chart form survives an unrelated save on this
+                    // one.
+                    const chosen = { ...resolved.values } as Partial<typeof resolved.values>;
+                    for (const key of Object.keys(resolved.locks) as (keyof typeof resolved.values)[]) {
+                      (chosen as Record<string, unknown>)[key] = base[key];
+                    }
+                    // WP218 phase 3 (owner B): the last brand applied on any
+                    // chart shown by THIS MOUNTED ChartView (not just
+                    // whichever chart is on screen right now — see
+                    // lastAppliedBrand's own comment) rides along as the
+                    // account-default save's `brandApplied` argument, so the
+                    // persisted default can record which brand it came from.
+                    const r = await saveMyChartStyle(chosen, lastAppliedBrand ?? undefined);
+                    if (r.ok) {
+                      setAccountStyle(chosen);
+                      trackChartStyleEvent('default_saved');
+                    }
+                    return r.ok ? 'saved' : r.reason === 'unavailable' ? 'unavailable' : 'error';
+                  },
+                  onForget: async () => {
+                    const r = await forgetMyChartStyle();
+                    if (r.ok) {
+                      setAccountStyle(null);
+                      trackChartStyleEvent('default_forgotten');
+                    }
+                    return r.ok ? 'forgotten' : 'error';
+                  },
+                }
+              : undefined
+          }
+          // WP218 phase 3 (owner B): same signedIn gate as `account` —
+          // Ontdek/trial gets no Merkkleuren block at all.
+          brand={signedIn ? { lookup: (website) => lookupBrand(website) } : undefined}
+          onBrandApplied={(applied) => {
+            setLastAppliedBrand(applied);
+            trackChartStyleEvent('brand_applied');
+          }}
+        />
+      ) : null}
       {state.form !== 'table' && !state.periodRange && spec.attribution.trendHeadline !== undefined ? (
         <p data-testid="trend-headline" className="mt-1 text-sm text-foreground">
           {spec.attribution.trendHeadline}
