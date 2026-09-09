@@ -9,7 +9,8 @@
 import { createRef } from 'react';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { attributedSvgMarkup, ChartDownloadMenu } from './chart-download.tsx';
+import { attributedSvgMarkup, ChartDownloadMenu, type FrameExportInput } from './chart-download.tsx';
+import { STOCK_PRESENTATION, type FrameValues } from '../lib/chart-presentation.ts';
 
 afterEach(cleanup);
 
@@ -236,5 +237,124 @@ describe('attributedSvgMarkup — paint survives leaving the page (#197)', () =>
       'stroke="var(--series-1)"',
     );
     expect(() => attributedSvgMarkup(svg, 'attributie')).not.toThrow();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Task 4 (design §C3): the frame baked into the export. `pristineFrame` is
+// `STOCK_PRESENTATION`'s frame slice — `isFramePristine` true, no image —
+// the binding case that must stay byte-identical to the pre-frame output.
+// ---------------------------------------------------------------------------
+
+const pristineFrame: FrameValues = {
+  frameBackground: STOCK_PRESENTATION.frameBackground,
+  framePadding: STOCK_PRESENTATION.framePadding,
+  frameCorners: STOCK_PRESENTATION.frameCorners,
+  frameShadow: STOCK_PRESENTATION.frameShadow,
+  frameInset: STOCK_PRESENTATION.frameInset,
+  frameAspect: STOCK_PRESENTATION.frameAspect,
+};
+
+describe('attributedSvgMarkup — frame (Task 4, design §C3)', () => {
+  it('is byte-identical to the unframed export when frame is absent', () => {
+    const withoutFrame = attributedSvgMarkup(sampleSvg(), 'attributie');
+    const withUndefinedFrame = attributedSvgMarkup(sampleSvg(), 'attributie', undefined, undefined);
+    expect(withUndefinedFrame).toBe(withoutFrame);
+  });
+
+  it('is byte-identical to the unframed export when the frame is pristine and has no image', () => {
+    const withoutFrame = attributedSvgMarkup(sampleSvg(), 'attributie');
+    const framed = attributedSvgMarkup(sampleSvg(), 'attributie', undefined, { values: pristineFrame, image: null });
+    expect(framed).toBe(withoutFrame);
+  });
+
+  it('solid background: grows the outer size by padding and draws a filled rect', () => {
+    const frame: FrameExportInput = {
+      values: { ...pristineFrame, framePadding: 'small', frameBackground: { kind: 'solid', hex: '#112233' } },
+      image: null,
+    };
+    const markup = attributedSvgMarkup(sampleSvg(), 'attributie', undefined, frame);
+    // sampleSvg: 400x200 chart, +24 footer = 400x224; +2*16 padding = 432x256.
+    expect(markup).toContain('width="432"');
+    expect(markup).toContain('height="256"');
+    expect(markup).toContain('fill="#112233"');
+  });
+
+  it('gradient background: draws a linearGradient with both stops', () => {
+    const frame: FrameExportInput = {
+      values: { ...pristineFrame, framePadding: 'small', frameBackground: { kind: 'gradient', from: '#ffffff', to: '#000000' } },
+      image: null,
+    };
+    const markup = attributedSvgMarkup(sampleSvg(), 'attributie', undefined, frame);
+    expect(markup).toContain('<linearGradient id="frame-bg"');
+    expect(markup).toContain('gradientTransform="rotate(135)"');
+    expect(markup).toContain('stop-color="#ffffff"');
+    expect(markup).toContain('stop-color="#000000"');
+    expect(markup).toContain('fill="url(#frame-bg)"');
+  });
+
+  it('image background: draws an <image> with the data URL, and a clipPath when corners > 0', () => {
+    const frame: FrameExportInput = {
+      values: { ...pristineFrame, framePadding: 'small', frameCorners: 'rounded', frameBackground: { kind: 'image' } },
+      image: 'data:image/png;base64,AAAA',
+    };
+    const markup = attributedSvgMarkup(sampleSvg(), 'attributie', undefined, frame);
+    expect(markup).toContain('href="data:image/png;base64,AAAA"');
+    expect(markup).toContain('<clipPath');
+    expect(markup).toContain('clip-path="url(#frame-clip)"');
+  });
+
+  it('shadow: draws a feDropShadow filter', () => {
+    const frame: FrameExportInput = {
+      values: { ...pristineFrame, framePadding: 'small', frameBackground: { kind: 'solid', hex: '#ffffff' }, frameShadow: 'soft' },
+      image: null,
+    };
+    const markup = attributedSvgMarkup(sampleSvg(), 'attributie', undefined, frame);
+    expect(markup).toContain('<feDropShadow');
+  });
+
+  it('inset: draws the inner white card rect', () => {
+    const frame: FrameExportInput = {
+      values: { ...pristineFrame, framePadding: 'small', frameBackground: { kind: 'solid', hex: '#112233' }, frameInset: 'small' },
+      image: null,
+    };
+    const markup = attributedSvgMarkup(sampleSvg(), 'attributie', undefined, frame);
+    // Two fills: the frame background and the white inset card.
+    expect(markup).toContain('fill="#112233"');
+    expect(markup).toContain('fill="#ffffff"');
+  });
+
+  it('1:1 aspect on a wide chart: outer height equals outer width, and the nested svg is vertically centred', () => {
+    const frame: FrameExportInput = {
+      values: { ...pristineFrame, frameAspect: '1:1' },
+      image: null,
+    };
+    const markup = attributedSvgMarkup(sampleSvg(), 'attributie', undefined, frame);
+    const outerWidthMatch = markup.match(/^<svg[^>]*\swidth="(\d+(?:\.\d+)?)"/);
+    const outerHeightMatch = markup.match(/^<svg[^>]*\sheight="(\d+(?:\.\d+)?)"/);
+    expect(outerWidthMatch).not.toBeNull();
+    expect(outerHeightMatch).not.toBeNull();
+    expect(outerWidthMatch![1]).toBe(outerHeightMatch![1]);
+    const nestedYMatch = markup.match(/<svg[^>]*\sy="(\d+(?:\.\d+)?)"/);
+    expect(nestedYMatch).not.toBeNull();
+    expect(Number(nestedYMatch![1])).toBeGreaterThan(0);
+  });
+
+  it('the attribution text node is present exactly once, and textContent matches the unframed export', () => {
+    const frame: FrameExportInput = {
+      values: { ...pristineFrame, framePadding: 'medium', frameBackground: { kind: 'solid', hex: '#112233' }, frameCorners: 'rounded', frameInset: 'small', frameShadow: 'soft' },
+      image: null,
+    };
+    const unframedMarkup = attributedSvgMarkup(sampleSvg(), 'attributie');
+    const framedMarkup = attributedSvgMarkup(sampleSvg(), 'attributie', undefined, frame);
+    // jsdom's XML parser mishandles this markup's nested <svg>, so parse via
+    // a container in the HTML parser instead (case-insensitive, but the tags
+    // here are already lower-case).
+    const unframedHost = document.createElement('div');
+    unframedHost.innerHTML = unframedMarkup;
+    const framedHost = document.createElement('div');
+    framedHost.innerHTML = framedMarkup;
+    expect(framedHost.querySelectorAll('text')).toHaveLength(1);
+    expect(framedHost.textContent).toBe(unframedHost.textContent);
   });
 });

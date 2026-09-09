@@ -19,10 +19,29 @@
 
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type RefObject } from 'react';
 import { t, type Lang } from '../lib/i18n/messages.ts';
+import {
+  FRAME_CORNER_PX,
+  FRAME_GRADIENT_ANGLE,
+  FRAME_INSET_PX,
+  FRAME_PADDING_PX,
+  FRAME_SHADOW,
+  frameAspectRatio,
+  isFramePristine,
+  type FrameValues,
+} from '../lib/chart-presentation.ts';
 
 const FOOTER_HEIGHT = 24;
 const FOOTER_FONT = 'system-ui, -apple-system, sans-serif';
 const PNG_SCALE = 2;
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+/** What's needed to bake the on-screen frame into an export: the resolved
+ * frame values (chart-presentation.ts) plus the chosen background image, if
+ * any — the same two pieces of state ChartFrame (Task 3) renders from. */
+export interface FrameExportInput {
+  values: FrameValues;
+  image: string | null;
+}
 
 /** The one place chart export dimensions are derived — downloadPng reuses
  * this rather than re-deriving width/height itself, so the canvas it
@@ -96,35 +115,32 @@ function inlineComputedPaint(original: SVGSVGElement, clone: SVGSVGElement, reso
   }
 }
 
-/** Clones the live chart SVG and bakes a footer attribution line into the
- * markup itself (never left to on-page text alone) — the whole point of
- * #170(3) is a shareable image that still carries proof of source once it
- * leaves this page. Exported for direct testing: constructing a plain SVG
- * element needs no Recharts/ResizeObserver setup at all. `resolvePaint`
- * defaults to the page's computed styles; tests inject a deterministic one. */
-export function attributedSvgMarkup(
+/** Builds the attributed chart clone (paint inlined, white bg rect + footer
+ * text baked in) WITHOUT serializing it — the part of the old
+ * `attributedSvgMarkup` shared by the unframed and framed paths. */
+function buildAttributedClone(
   svg: SVGSVGElement,
   attributionText: string,
-  resolvePaint: PaintResolver = defaultResolvePaint,
-): string {
+  resolvePaint: PaintResolver,
+): { clone: SVGSVGElement; width: number; totalHeight: number } {
   const { width, totalHeight } = measureSvg(svg);
 
   const clone = svg.cloneNode(true) as SVGSVGElement;
   // Resolve paint BEFORE adding the footer nodes, so clone and original still
   // line up element for element.
   inlineComputedPaint(svg, clone, resolvePaint);
-  clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  clone.setAttribute('xmlns', SVG_NS);
   clone.setAttribute('width', String(width));
   clone.setAttribute('height', String(totalHeight));
   clone.setAttribute('viewBox', `0 0 ${width} ${totalHeight}`);
 
-  const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  const bg = document.createElementNS(SVG_NS, 'rect');
   bg.setAttribute('width', String(width));
   bg.setAttribute('height', String(totalHeight));
   bg.setAttribute('fill', '#ffffff');
   clone.insertBefore(bg, clone.firstChild);
 
-  const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  const text = document.createElementNS(SVG_NS, 'text');
   text.setAttribute('x', '12');
   text.setAttribute('y', String(totalHeight - 8));
   text.setAttribute('font-family', FOOTER_FONT);
@@ -133,7 +149,215 @@ export function attributedSvgMarkup(
   text.textContent = attributionText;
   clone.appendChild(text);
 
-  return new XMLSerializer().serializeToString(clone);
+  return { clone, width, totalHeight };
+}
+
+function svgEl(tag: string): Element {
+  return document.createElementNS(SVG_NS, tag);
+}
+
+/** Builds the OUTER framed svg around an already-attributed chart clone
+ * (design §C3). Geometry mirrors ChartFrame (Task 3, chart-frame.tsx) —
+ * same px maps, same shadow spec — so the export can never drift from what
+ * is shown on screen. Returns the outer svg element plus its pixel size and
+ * the fill `downloadPng` should use behind it (solid colour, else `null` =
+ * transparent). */
+function buildFrame(
+  chartClone: SVGSVGElement,
+  chartWidth: number,
+  chartHeight: number,
+  frame: FrameExportInput,
+): { outer: SVGSVGElement; outerW: number; outerH: number; canvasFill: string | null } {
+  const values = frame.values;
+  const padding = FRAME_PADDING_PX[values.framePadding];
+  const corner = FRAME_CORNER_PX[values.frameCorners];
+  const inset = FRAME_INSET_PX[values.frameInset];
+  const shadow = FRAME_SHADOW[values.frameShadow];
+  const shadowMargin = shadow ? shadow.blur + Math.abs(shadow.dy) : 0;
+  const aspect = frameAspectRatio(values.frameAspect);
+
+  const naturalW = chartWidth + 2 * (padding + inset + shadowMargin);
+  const naturalH = chartHeight + 2 * (padding + inset + shadowMargin);
+
+  // Never crop: whichever dimension the aspect ratio demands more of is
+  // extended, the other stays put, and the natural content is centred in
+  // the extra room.
+  let outerW = naturalW;
+  let outerH = naturalH;
+  if (aspect !== null) {
+    if (naturalW / naturalH > aspect) {
+      outerH = naturalW / aspect;
+    } else {
+      outerW = naturalH * aspect;
+    }
+  }
+  const extraX = (outerW - naturalW) / 2;
+  const extraY = (outerH - naturalH) / 2;
+
+  const bgX = shadowMargin + extraX;
+  const bgY = shadowMargin + extraY;
+  const bgW = naturalW - 2 * shadowMargin;
+  const bgH = naturalH - 2 * shadowMargin;
+  const contentX = padding + inset + shadowMargin + extraX;
+  const contentY = padding + inset + shadowMargin + extraY;
+
+  const outer = svgEl('svg') as SVGSVGElement;
+  outer.setAttribute('xmlns', SVG_NS);
+  outer.setAttribute('width', String(outerW));
+  outer.setAttribute('height', String(outerH));
+  outer.setAttribute('viewBox', `0 0 ${outerW} ${outerH}`);
+
+  const bg = values.frameBackground;
+  let defs: Element | null = null;
+  function ensureDefs(): Element {
+    if (defs === null) {
+      defs = svgEl('defs');
+      outer.appendChild(defs);
+    }
+    return defs;
+  }
+
+  if (bg !== 'none' && bg.kind === 'gradient') {
+    const gradient = svgEl('linearGradient');
+    gradient.setAttribute('id', 'frame-bg');
+    gradient.setAttribute('gradientTransform', `rotate(${FRAME_GRADIENT_ANGLE})`);
+    const stop1 = svgEl('stop');
+    stop1.setAttribute('offset', '0%');
+    stop1.setAttribute('stop-color', bg.from);
+    const stop2 = svgEl('stop');
+    stop2.setAttribute('offset', '100%');
+    stop2.setAttribute('stop-color', bg.to);
+    gradient.appendChild(stop1);
+    gradient.appendChild(stop2);
+    ensureDefs().appendChild(gradient);
+  }
+
+  if (shadow !== null) {
+    const filter = svgEl('filter');
+    filter.setAttribute('id', 'frame-shadow');
+    // Generous filter region so the blur is never clipped at the filter's
+    // own default (-10%..110%) bounding box.
+    filter.setAttribute('x', '-50%');
+    filter.setAttribute('y', '-50%');
+    filter.setAttribute('width', '200%');
+    filter.setAttribute('height', '200%');
+    const dropShadow = svgEl('feDropShadow');
+    dropShadow.setAttribute('dx', String(shadow.dx));
+    dropShadow.setAttribute('dy', String(shadow.dy));
+    dropShadow.setAttribute('stdDeviation', String(shadow.blur / 2));
+    dropShadow.setAttribute('flood-opacity', String(shadow.alpha));
+    filter.appendChild(dropShadow);
+    ensureDefs().appendChild(filter);
+  }
+
+  let canvasFill: string | null = null;
+
+  if (bg !== 'none') {
+    if (bg.kind === 'image') {
+      // `{ kind: 'image' }` with no image chosen yet renders as 'none'
+      // (chart-frame.tsx's backgroundStyle does the same on screen).
+      if (frame.image !== null) {
+        let clipId: string | null = null;
+        if (corner > 0) {
+          clipId = 'frame-clip';
+          const clipPath = svgEl('clipPath');
+          clipPath.setAttribute('id', clipId);
+          const clipRect = svgEl('rect');
+          clipRect.setAttribute('x', String(bgX));
+          clipRect.setAttribute('y', String(bgY));
+          clipRect.setAttribute('width', String(bgW));
+          clipRect.setAttribute('height', String(bgH));
+          clipRect.setAttribute('rx', String(corner));
+          clipPath.appendChild(clipRect);
+          ensureDefs().appendChild(clipPath);
+        }
+        const image = svgEl('image');
+        image.setAttribute('href', frame.image);
+        image.setAttribute('x', String(bgX));
+        image.setAttribute('y', String(bgY));
+        image.setAttribute('width', String(bgW));
+        image.setAttribute('height', String(bgH));
+        image.setAttribute('preserveAspectRatio', 'xMidYMid slice');
+        if (clipId !== null) image.setAttribute('clip-path', `url(#${clipId})`);
+        if (shadow !== null) image.setAttribute('filter', 'url(#frame-shadow)');
+        outer.appendChild(image);
+      }
+    } else {
+      const rect = svgEl('rect');
+      rect.setAttribute('x', String(bgX));
+      rect.setAttribute('y', String(bgY));
+      rect.setAttribute('width', String(bgW));
+      rect.setAttribute('height', String(bgH));
+      rect.setAttribute('rx', String(corner));
+      rect.setAttribute('fill', bg.kind === 'solid' ? bg.hex : 'url(#frame-bg)');
+      if (shadow !== null) rect.setAttribute('filter', 'url(#frame-shadow)');
+      outer.appendChild(rect);
+      if (bg.kind === 'solid') canvasFill = bg.hex;
+    }
+  }
+
+  if (values.frameInset !== 'none') {
+    const card = svgEl('rect');
+    card.setAttribute('x', String(bgX + padding));
+    card.setAttribute('y', String(bgY + padding));
+    card.setAttribute('width', String(chartWidth + 2 * inset));
+    card.setAttribute('height', String(chartHeight + 2 * inset));
+    card.setAttribute('rx', String(corner));
+    card.setAttribute('fill', '#ffffff');
+    outer.appendChild(card);
+  }
+
+  chartClone.setAttribute('x', String(contentX));
+  chartClone.setAttribute('y', String(contentY));
+  outer.appendChild(chartClone);
+
+  return { outer, outerW, outerH, canvasFill };
+}
+
+export interface FramedExport {
+  markup: string;
+  width: number;
+  height: number;
+  /** Fill for the PNG canvas: a solid colour, or `null` for transparent. */
+  canvasFill: string | null;
+}
+
+/** The one place both `attributedSvgMarkup` and `downloadPng` derive the
+ * framed (or unframed) export from — so a PNG and an SVG of the same chart,
+ * framed the same way, can never show different geometry. With no `frame`,
+ * or a pristine frame and no image, the output is byte-identical to the
+ * pre-frame export (pinned by test): the outer svg IS the attributed chart
+ * clone, nothing wrapped around it. */
+export function framedSvgMarkup(
+  svg: SVGSVGElement,
+  attributionText: string,
+  resolvePaint: PaintResolver = defaultResolvePaint,
+  frame?: FrameExportInput,
+): FramedExport {
+  const { clone, width, totalHeight } = buildAttributedClone(svg, attributionText, resolvePaint);
+  if (frame === undefined || (isFramePristine(frame.values) && frame.image === null)) {
+    return { markup: new XMLSerializer().serializeToString(clone), width, height: totalHeight, canvasFill: '#ffffff' };
+  }
+  const { outer, outerW, outerH, canvasFill } = buildFrame(clone, width, totalHeight, frame);
+  return { markup: new XMLSerializer().serializeToString(outer), width: outerW, height: outerH, canvasFill };
+}
+
+/** Clones the live chart SVG and bakes a footer attribution line into the
+ * markup itself (never left to on-page text alone) — the whole point of
+ * #170(3) is a shareable image that still carries proof of source once it
+ * leaves this page. Exported for direct testing: constructing a plain SVG
+ * element needs no Recharts/ResizeObserver setup at all. `resolvePaint`
+ * defaults to the page's computed styles; tests inject a deterministic one.
+ * `frame` (Task 4, design §C3) bakes the on-screen frame into the markup —
+ * absent, or a pristine frame with no image, and the output is byte-
+ * identical to before frames existed. */
+export function attributedSvgMarkup(
+  svg: SVGSVGElement,
+  attributionText: string,
+  resolvePaint: PaintResolver = defaultResolvePaint,
+  frame?: FrameExportInput,
+): string {
+  return framedSvgMarkup(svg, attributionText, resolvePaint, frame).markup;
 }
 
 function triggerDownload(blob: Blob, filename: string): void {
@@ -150,9 +374,10 @@ function downloadSvg(
   attributionText: string,
   filenameBase: string,
   onFailure: () => void,
+  frame?: FrameExportInput,
 ): void {
   try {
-    const markup = attributedSvgMarkup(svg, attributionText);
+    const markup = attributedSvgMarkup(svg, attributionText, undefined, frame);
     triggerDownload(new Blob([markup], { type: 'image/svg+xml;charset=utf-8' }), `${filenameBase}.svg`);
   } catch {
     // Matches downloadPng: every failure surfaces the same user-visible
@@ -162,16 +387,18 @@ function downloadSvg(
 }
 
 // Mirrors StatCard's downloadPng exactly (SVG -> Image -> canvas -> PNG blob),
-// rasterizing the SAME attributed markup the SVG download serializes, at 2x
-// for crisper downloads on high-DPI screens.
+// rasterizing the SAME attributed (and, when framed, same framed) markup the
+// SVG download serializes, at 2x for crisper downloads on high-DPI screens.
+// Canvas size is the OUTER svg size × PNG_SCALE, from `framedSvgMarkup` — so
+// the PNG can never disagree with the SVG about how big the frame is.
 function downloadPng(
   svg: SVGSVGElement,
   attributionText: string,
   filenameBase: string,
   onFailure: () => void,
+  frame?: FrameExportInput,
 ): void {
-  const { width, totalHeight: height } = measureSvg(svg);
-  const markup = attributedSvgMarkup(svg, attributionText);
+  const { markup, width, height, canvasFill } = framedSvgMarkup(svg, attributionText, undefined, frame);
   const svgUrl = URL.createObjectURL(new Blob([markup], { type: 'image/svg+xml;charset=utf-8' }));
   const image = new Image();
   image.onerror = () => {
@@ -188,8 +415,10 @@ function downloadPng(
       onFailure();
       return;
     }
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    if (canvasFill !== null) {
+      ctx.fillStyle = canvasFill;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
     ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
     URL.revokeObjectURL(svgUrl);
     canvas.toBlob((png) => {
@@ -210,6 +439,8 @@ export function ChartDownloadMenu({
   attributionText,
   filenameBase,
   lang = 'nl',
+  frame,
+  frameImage = null,
 }: {
   /** The element WRAPPING the chart's ResponsiveContainer — Recharts renders
    * its own <svg> dynamically, so the live node is found at click time
@@ -221,7 +452,14 @@ export function ChartDownloadMenu({
    * — defaults to 'nl' so an existing direct render (a test with no `lang`)
    * keeps its current Dutch output. */
   lang?: Lang;
+  /** Task 4 (design §C3): the resolved frame values — same `pres` ChartFrame
+   * (Task 3) renders from — so PNG/SVG exports carry the same frame shown on
+   * screen. Optional: an existing direct render (a test with no `frame`)
+   * keeps today's unframed export byte-identical. */
+  frame?: FrameValues;
+  frameImage?: string | null;
 }) {
+  const frameInput: FrameExportInput | undefined = frame === undefined ? undefined : { values: frame, image: frameImage };
   const [open, setOpen] = useState(false);
   const [failed, setFailed] = useState(false);
   const menuId = useId();
@@ -302,7 +540,9 @@ export function ChartDownloadMenu({
             type="button"
             role="menuitem"
             className={MENU_ITEM_CLASS}
-            onClick={() => withLiveSvg((svg) => downloadPng(svg, attributionText, filenameBase, () => setFailed(true)))}
+            onClick={() =>
+              withLiveSvg((svg) => downloadPng(svg, attributionText, filenameBase, () => setFailed(true), frameInput))
+            }
           >
             {t(lang, 'chart.download.png')}
           </button>
@@ -312,7 +552,7 @@ export function ChartDownloadMenu({
             role="menuitem"
             className={MENU_ITEM_CLASS}
             onClick={() =>
-              withLiveSvg((svg) => downloadSvg(svg, attributionText, filenameBase, () => setFailed(true)))
+              withLiveSvg((svg) => downloadSvg(svg, attributionText, filenameBase, () => setFailed(true), frameInput))
             }
           >
             {t(lang, 'chart.download.svg')}

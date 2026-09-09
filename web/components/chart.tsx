@@ -2663,6 +2663,8 @@ export function ChartView({
             attributionText={`${displayAttributionLine} checkdecijfers.nl${viewDisclosure}`}
             filenameBase={`checkdecijfers-${spec.attribution.tableId}`}
             lang={chartLang}
+            frame={pres}
+            frameImage={frameImage}
           />
         ) : null}
       </div>
