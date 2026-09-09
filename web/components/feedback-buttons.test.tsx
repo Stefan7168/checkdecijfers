@@ -110,3 +110,14 @@ describe('FeedbackButtons — en', () => {
     expect(screen.getByRole('button', { name: 'Not helpful' })).toBeInTheDocument();
   });
 });
+
+describe('FeedbackButtons — inside the answer-card footer (session 91 review)', () => {
+  it('marks its 👎 panel so the flex parents can grow to full width, and its root grows with it', () => {
+    render(<FeedbackButtons auditId={1} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Niet nuttig' }));
+    const panel = document.querySelector('[data-slot="feedback-panel"]');
+    expect(panel).not.toBeNull();
+    expect(panel!.className).toContain('basis-full');
+    expect(panel!.parentElement!.className).toContain('has-[[data-slot=feedback-panel]]:basis-full');
+  });
+});

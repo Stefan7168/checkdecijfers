@@ -887,7 +887,12 @@ export function Chat({
                     * panel's own order-last basis-full (answer-proof.tsx)
                     * spans the whole footer instead of just this group's
                     * shrink-to-fit width. */}
-                  <div className="flex flex-wrap items-center gap-1 has-[[role=region]]:basis-full">
+                  {/* …and the same for the 👎 panel (data-slot="feedback-panel",
+                    * feedback-buttons.tsx), which the answer-card review found
+                    * squeezed to the group's width: FeedbackButtons' own root
+                    * grows to basis-full when its panel is open, and so does
+                    * this group, so the panel spans the whole footer. */}
+                  <div className="flex flex-wrap items-center gap-1 has-[[role=region]]:basis-full has-[[data-slot=feedback-panel]]:basis-full">
                     {message.auditId !== null ? <FeedbackButtons auditId={message.auditId} /> : null}
                     {message.proof !== null ? <AnswerProof proof={message.proof} /> : null}
                     {message.citation !== null ? <CopyCitationButton citation={message.citation} /> : null}

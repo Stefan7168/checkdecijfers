@@ -53,7 +53,7 @@ export function FeedbackButtons({
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2 has-[[data-slot=feedback-panel]]:basis-full">
       <Button
         type="button"
         variant={chosen === 'up' ? 'secondary' : 'outline'}
@@ -87,7 +87,7 @@ export function FeedbackButtons({
         <span className="text-xs text-muted-foreground">{t('feedback.failed')}</span>
       ) : null}
       {panelOpen ? (
-        <div className="mt-2 flex w-full max-w-md basis-full flex-col gap-2">
+        <div data-slot="feedback-panel" className="mt-2 flex w-full max-w-md basis-full flex-col gap-2">
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
