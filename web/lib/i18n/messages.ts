@@ -534,6 +534,7 @@ const nl = {
   'chart.panel.frameImageBadType': 'Kies een PNG, JPEG of WebP.',
   'chart.panel.frameImageNotSaved': 'De afbeelding wordt niet bewaard in je standaard.',
   'chart.panel.frameReset': 'Kader wissen',
+  'chart.panel.frameBgRefused': 'Deze achtergrond maakt een reeks onleesbaar. Kies een andere kleur of zet de kaart aan.',
   'chart.panel.close': 'Sluiten',
   'chart.panel.dialogLabel': 'Opmaak',
 };
@@ -982,6 +983,7 @@ const en: Messages = {
   'chart.panel.frameImageBadType': 'Choose a PNG, JPEG or WebP.',
   'chart.panel.frameImageNotSaved': 'The image is not kept in your default.',
   'chart.panel.frameReset': 'Clear frame',
+  'chart.panel.frameBgRefused': 'This background would make a series unreadable. Choose another colour or turn the inset card on.',
   'chart.panel.close': 'Close',
   'chart.panel.dialogLabel': 'Style',
 };

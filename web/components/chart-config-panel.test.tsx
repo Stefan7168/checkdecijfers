@@ -1136,9 +1136,15 @@ describe('ChartConfigPanel — Frame tab', () => {
     expect(screen.getByRole('button', { name: 'Oceaan' })).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: 'Van (hex)' })).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: 'Naar (hex)' })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Oceaan' }));
+    // 'Leisteen' (slate), not 'Oceaan': Fix 5's contrast guard now refuses a
+    // preset that would hide a series colour, and Rotterdam's palette green
+    // (#82ca9d) is too close to Oceaan's light-blue stop (contrast ~1.11,
+    // under COLOR_REFUSE_BELOW) — slate is legible against both fixture
+    // series colours, so this stays a clean "preset click emits its own
+    // colours" test rather than exercising the refusal path.
+    fireEvent.click(screen.getByRole('button', { name: 'Leisteen' }));
     expect(onChange).toHaveBeenCalledWith({
-      frameBackground: { kind: 'gradient', from: '#38bdf8', to: '#1e3a8a' },
+      frameBackground: { kind: 'gradient', from: '#e2e8f0', to: '#334155' },
     });
   });
 
@@ -1162,6 +1168,88 @@ describe('ChartConfigPanel — Frame tab', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('De afbeelding is te groot. Kies een kleinere.');
     expect(onFrameImage).not.toHaveBeenCalled();
     expect(onChange).not.toHaveBeenCalledWith({ frameBackground: { kind: 'image' } });
+  });
+
+  // Final-review fix (Fix 7): FRAME_IMAGE_MAX_BYTES lowered from 5 MB to
+  // 2 MB — a 3 MB file (under the old limit, over the new one) must now be
+  // refused.
+  // Fix 5 exact scenarios: setting solid background #8884d8 when palette
+  // series index 0 is also #8884d8 (identical colours, contrast ratio 1).
+  it('refuses a solid background matching a series colour when inset is off: alert shown, onChange not called', () => {
+    const onChange = vi.fn();
+    render(
+      <Harness
+        resolved={resolvePresentation(lineCtx, { frameBackground: { kind: 'solid', hex: '#ffffff' }, frameInset: 'none' })}
+        seriesMeta={colorMeta}
+        onChange={onChange}
+        onReset={vi.fn()}
+        idPrefix="fr11"
+      />,
+    );
+    openFrameTab();
+    const hexField = screen.getByRole('textbox', { name: 'Achtergrond (hex)' }) as HTMLInputElement;
+    fireEvent.change(hexField, { target: { value: '#8884d8' } });
+    fireEvent.blur(hexField);
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Deze achtergrond maakt een reeks onleesbaar. Kies een andere kleur of zet de kaart aan.',
+    );
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('accepts the same solid background when inset is on (backdrops are the card colours, not the background)', () => {
+    const onChange = vi.fn();
+    render(
+      <Harness
+        resolved={resolvePresentation(lineCtx, { frameBackground: { kind: 'solid', hex: '#ffffff' }, frameInset: 'small' })}
+        seriesMeta={colorMeta}
+        onChange={onChange}
+        onReset={vi.fn()}
+        idPrefix="fr12"
+      />,
+    );
+    openFrameTab();
+    const hexField = screen.getByRole('textbox', { name: 'Achtergrond (hex)' }) as HTMLInputElement;
+    fireEvent.change(hexField, { target: { value: '#8884d8' } });
+    fireEvent.blur(hexField);
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(onChange).toHaveBeenCalledWith({ frameBackground: { kind: 'solid', hex: '#8884d8' } });
+  });
+
+  it('Own image: a 3 MB file is refused now that the limit is 2 MB', () => {
+    const onChange = vi.fn();
+    const onFrameImage = vi.fn();
+    render(
+      <Harness
+        resolved={resolvePresentation(lineCtx, { frameBackground: { kind: 'image' } })}
+        seriesMeta={colorMeta}
+        onChange={onChange}
+        onReset={vi.fn()}
+        idPrefix="fr5b"
+        onFrameImage={onFrameImage}
+      />,
+    );
+    openFrameTab();
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const threeMb = makeFile('mid.png', 'image/png', 3 * 1024 * 1024);
+    fireEvent.change(input, { target: { files: [threeMb] } });
+    expect(screen.getByRole('alert')).toHaveTextContent('De afbeelding is te groot. Kies een kleinere.');
+    expect(onFrameImage).not.toHaveBeenCalled();
+  });
+
+  it('Own image: the hidden file input is not tab-reachable (tabIndex -1)', () => {
+    render(
+      <Harness
+        resolved={resolvePresentation(lineCtx, { frameBackground: { kind: 'image' } })}
+        seriesMeta={colorMeta}
+        onChange={vi.fn()}
+        onReset={vi.fn()}
+        idPrefix="fr5c"
+        onFrameImage={vi.fn()}
+      />,
+    );
+    openFrameTab();
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    expect(input.tabIndex).toBe(-1);
   });
 
   it('Own image: a bad mime type is refused with an alert and nothing is emitted', () => {
@@ -1316,7 +1404,13 @@ describe('ChartConfigPanel — Frame tab', () => {
     void rerender;
   });
 
-  it('the panel is now offered in table form — only the Frame tab has controls, the others render nothing applicable', () => {
+  // Final-review fix: table form has NO frame and NO Style panel at all —
+  // in practice chart.tsx never mounts ChartConfigPanel there. This test
+  // documents what the panel itself would render if it WERE mounted with a
+  // table-form `resolved`: since `resolvePresentation` now makes only
+  // `language` applicable for table form, none of the tabs — including the
+  // Frame ("Kader") tab — offer any controls.
+  it('table-form resolved: no tab (including Kader) has controls, since only language is applicable', () => {
     render(
       <Harness
         resolved={resolvePresentation(tableCtx, {})}
@@ -1333,8 +1427,7 @@ describe('ChartConfigPanel — Frame tab', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'Lettertype' }));
     expect(screen.queryByRole('combobox', { name: 'Lettertype' })).toBeNull();
     fireEvent.click(screen.getByRole('tab', { name: 'Kader' }));
-    expect(screen.getByRole('radiogroup', { name: 'Achtergrond' })).toBeInTheDocument();
-    fireEvent.click(within(screen.getByRole('radiogroup', { name: 'Ruimte rondom' })).getByRole('radio', { name: 'Groot' }));
+    expect(screen.queryByRole('radiogroup', { name: 'Achtergrond' })).toBeNull();
   });
 
   it('English: labels translate and stay digit-free', () => {

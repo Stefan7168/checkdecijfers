@@ -34,17 +34,16 @@ export interface ChartPresentation {
    * the chart regardless of the app's own switch. Applicable on every form
    * the panel is actually offered on and never locked — unlike every other
    * key here it has no honesty consequence, so no form ever overrides or
-   * disables it. Final-review fix: NOT applicable in table form — the panel
-   * itself is never mounted there (`chart.tsx`: `state.form !== 'table'`),
-   * so nothing in `ChartPresentation` is reachable through it, this key
-   * included; the resolver used to claim otherwise (dead code, no user-
-   * visible bug, but a contradiction with ADR 039's own "hidden in Tabel
-   * form"). */
+   * disables it. NOT applicable in table form — the panel itself is never
+   * mounted there (`chart.tsx`: `state.form !== 'table'`), so nothing in
+   * `ChartPresentation` is reachable through it, this key included. */
   language: Lang | null;
   /** The Frame tab (design §C2): the chart sits inside this background,
    * padding, corner radius, drop shadow, card inset and export aspect ratio.
-   * Unlike every key above, the frame IS applicable in table form — a table
-   * gets the same frame as any other chart form. */
+   * Final-review fix: table form has NO frame and NO Style panel (as
+   * before) — a framed table would need its own export path, so the frame
+   * keys are not applicable in table form either, exactly like every other
+   * key above. */
   frameBackground: FrameBackground;
   framePadding: FramePadding;
   frameCorners: FrameCorners;
@@ -210,15 +209,14 @@ export function resolvePresentation(
   };
   const locks: Partial<Record<PresentationKey, string>> = {};
   const applicable = new Set<PresentationKey>();
-  // Final-review fix: in table form the ChartConfigPanel's style/colour/font
-  // controls are never mounted (`chart.tsx`: `{state.form !== 'table' ?
-  // <ChartConfigPanel …/> : null}`), so none of `ALL_KEYS` is reachable
-  // through it there. Design §C2: the Frame tab is the one deliberate
-  // exception — a table gets the same frame as any other chart form — so the
-  // six frame keys (and `language`, below) are added to `applicable`
-  // regardless of form.
+  // In table form the ChartConfigPanel is never mounted at all (`chart.tsx`:
+  // `{state.form !== 'table' ? <ChartConfigPanel …/> : null}`), so none of
+  // `ALL_KEYS` or the frame keys is reachable through it there — only
+  // `language` stays applicable in every form (below), matching ADR 039's
+  // "hidden in Tabel form".
   if (ctx.form !== 'table') {
     for (const key of ALL_KEYS) applicable.add(key);
+    for (const key of FRAME_KEYS) applicable.add(key);
     if (ctx.form === 'bar' || ctx.form === 'hbar') {
       applicable.delete('lineWidth');
       applicable.delete('markers');
@@ -244,12 +242,8 @@ export function resolvePresentation(
   }
   // WP218 phase 4: unlike every other key, `language` has no honesty
   // consequence for any chart form — it is offered, never locked, on every
-  // form, table included (design §C2: the frame tab, where `language`'s
-  // header select lives, is offered in table form too).
+  // form, table included.
   applicable.add('language');
-  // Design §C2: the frame is applicable in every chart form, including
-  // table — the resolver applies no locks to any of the six frame keys.
-  for (const key of FRAME_KEYS) applicable.add(key);
   const pristine = Object.keys(clean).every((k) => k === 'seriesColors' && Object.keys(clean.seriesColors ?? {}).length === 0);
   return { values, locks, applicable, pristine };
 }

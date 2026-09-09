@@ -41,12 +41,9 @@ import {
 } from 'recharts';
 import type { ChartPoint, ChartSpec } from '../backend/chart/types.ts';
 import {
-  COLOR_REFUSE_BELOW,
-  contrastRatio,
   dotGeometry,
   findFont,
   fontStack,
-  frameBackdrops,
   LINE_WIDTH_PX,
   RECHARTS_PALETTE,
   resolvePresentation,
@@ -1926,20 +1923,20 @@ export function ChartView({
         ) : null}
         {/* Review fix (chart-panel-layout, option A): the "Opmaak" trigger
           * renders directly here as a row-mate of the Weergave tablist — no
-          * portal, no placeholder node. Task 5 (design §C2): unlike before,
-          * this is no longer gated on `state.form !== 'table'` — the Frame
-          * tab applies in table form too (chart-presentation.ts's resolver
-          * adds the six frame keys to `applicable` unconditionally), so the
-          * trigger/panel are now offered on every form, not just line/bar/
-          * area/hbar. Kept in lockstep with the ChartConfigPanel mount
-          * further down, which lost the same gate. */}
-        <ChartConfigTrigger
-          open={styleOpen}
-          onToggle={toggleStylePanel}
-          controlsId={styleControlsId}
-          triggerId={styleTriggerId}
-          lang={chartLang}
-        />
+          * portal, no placeholder node. Final-review fix: table form gets NO
+          * frame and NO Style panel (as before the Frame-tab feature) — a
+          * framed table would need its own export path, so the trigger stays
+          * gated on `state.form !== 'table'` exactly like the ChartConfigPanel
+          * mount further down. */}
+        {state.form !== 'table' ? (
+          <ChartConfigTrigger
+            open={styleOpen}
+            onToggle={toggleStylePanel}
+            controlsId={styleControlsId}
+            triggerId={styleTriggerId}
+            lang={chartLang}
+          />
+        ) : null}
         {/* Story mode (session 92): the colourful trigger sits in the same
           * row as Opmaak — a code-built story is offered whenever there is
           * one (storyAvailable, computed above next to styleControlsId). */}
@@ -2069,8 +2066,17 @@ export function ChartView({
           // the 2026-09-05 final review). With a frame aspect ratio set,
           // ChartFrame's own inner area (min-h-0 flex-1) is what sizes the
           // box now, so this container grows to fill it (h-full) instead of
-          // claiming a fixed height of its own.
-          (pres.frameAspect !== 'auto' ? 'h-full' : smallMultiples && smallMultiplesAvailable ? 'h-auto' : 'h-64')
+          // claiming a fixed height of its own. Final-review fix: small
+          // multiples lays out its own grid and must keep growing with it
+          // (h-auto) even when a frame aspect ratio is set — h-full would
+          // instead force the small-multiples grid into the frame's fixed
+          // aspect box, clipping panels past a handful of series exactly
+          // like the original h-64 bug this comment describes.
+          (pres.frameAspect !== 'auto' && !(smallMultiples && smallMultiplesAvailable)
+            ? 'h-full'
+            : smallMultiples && smallMultiplesAvailable
+              ? 'h-auto'
+              : 'h-64')
         }
         data-tooltip-trigger={tooltipTrigger}
         // WP218: SVG <text> inherits font-family via CSS, so setting it once
@@ -2460,12 +2466,10 @@ export function ChartView({
         * state exactly as it always has — `open` itself is `styleOpen`
         * above, reset separately in the spec-swap block instead of via this
         * remount. */}
-      {/* Task 5 (design §C2): no longer gated on `state.form !== 'table'` —
-        * the Frame tab is applicable (and its controls functional) in table
-        * form too; the panel's other tabs already render nothing when their
-        * own key(s) are outside `resolved.applicable`, which table form now
-        * exercises for real instead of never mounting the panel at all. */}
-      {(
+      {/* Final-review fix: table form gets no Style panel at all (as before
+        * the Frame-tab feature) — a framed table would need its own export
+        * path, so the mount stays gated on `state.form !== 'table'`. */}
+      {state.form !== 'table' ? (
         <ChartConfigPanel
           key={chartEpoch}
           resolved={resolved}
@@ -2477,31 +2481,13 @@ export function ChartView({
           frameImage={frameImage}
           onFrameImage={setFrameImage}
           onChange={(patch) => {
-            // Task 5 (design §C2) — the contrast guard: a frame background/
-            // inset change can turn what was a legible series colour into
-            // one that's now indistinguishable from the frame (or from the
-            // inset card) — re-judge every PER-CHART colour override
-            // against the new frame backdrops and drop any that now fail,
-            // falling back to the palette colour (the Kleuren tab's own
-            // warning-line/re-sync mechanism picks this up for free, since
-            // it always re-derives from the effective colour, never a
-            // stored verdict).
-            let finalPatch = patch;
-            if ('frameBackground' in patch || 'frameInset' in patch) {
-              const nextFrameValues = { ...pres, ...patch };
-              const backdrops = frameBackdrops(nextFrameValues);
-              const currentOverrides = state.presentation.seriesColors ?? {};
-              const nextOverrides: Record<number, string> = { ...currentOverrides };
-              let dropped = false;
-              for (const [idxStr, hex] of Object.entries(currentOverrides)) {
-                if (backdrops.some((bg) => contrastRatio(hex, bg) < COLOR_REFUSE_BELOW)) {
-                  delete nextOverrides[Number(idxStr)];
-                  dropped = true;
-                }
-              }
-              if (dropped) finalPatch = { ...patch, seriesColors: nextOverrides };
-            }
-            dispatch({ type: 'setPresentation', patch: finalPatch });
+            // Final-review fix (Fix 5): ChartConfigPanel now refuses a
+            // frame background/inset change UP FRONT (its own contrast
+            // guard, before ever calling this onChange) whenever it would
+            // make a series colour illegible — so there is nothing left for
+            // this callback to silently drop or adjust afterwards. Series
+            // colours are never changed by the frame feature.
+            dispatch({ type: 'setPresentation', patch });
             trackChartStyleEvent('option_changed');
             // Task 5: every frame control change ALSO counts as its own
             // frame_changed event, in addition to (never instead of) the
@@ -2596,7 +2582,7 @@ export function ChartView({
             trackChartStyleEvent('brand_applied');
           }}
         />
-      )}
+      ) : null}
       {state.form !== 'table' && !state.periodRange && spec.attribution.trendHeadline !== undefined ? (
         <p data-testid="trend-headline" className="mt-1 text-sm text-foreground">
           {spec.attribution.trendHeadline}

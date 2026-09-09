@@ -46,7 +46,7 @@ export function ChartFrame({ frame, image, children }: { frame: FrameValues; ima
     borderRadius: corner,
     boxShadow: shadow ? `${shadow.dx}px ${shadow.dy}px ${shadow.blur}px rgba(0, 0, 0, ${shadow.alpha})` : undefined,
     ...backgroundStyle(frame, image),
-    ...(aspect !== null ? { aspectRatio: `${frame.frameAspect.split(':')[0]} / ${frame.frameAspect.split(':')[1] ?? '1'}`, display: 'flex', flexDirection: 'column' } : {}),
+    ...(aspect !== null ? { aspectRatio: String(aspect), display: 'flex', flexDirection: 'column' } : {}),
   };
 
   const inset = FRAME_INSET_PX[frame.frameInset];

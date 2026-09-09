@@ -304,7 +304,8 @@ not a centred window and not the panel under the chart.
 ### C2. The Frame tab — presentation keys (extend `ChartPresentation`, ADR 039)
 
 All keys are plain enums or hex strings; `sanitizeOverrides` allow-lists them; the resolver applies no
-locks (a frame is applicable in every chart form, including Tabel — the table gets the same frame).
+locks. Tabel form has no frame and no Style panel (as before) — decided in the final review: a framed
+table would need its own export path.
 
 | key | values | default |
 |---|---|---|

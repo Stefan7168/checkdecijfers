@@ -122,6 +122,12 @@ function buildAttributedClone(
   svg: SVGSVGElement,
   attributionText: string,
   resolvePaint: PaintResolver,
+  // Final-review fix: when a non-pristine frame is active (or an image
+  // background is set), the frame's own background must show through the
+  // chart area exactly as it does on screen — so the unconditional white
+  // ground this clone used to paint first is skipped in that case. Defaults
+  // to true so the unframed/pristine export stays byte-identical to before.
+  paintWhiteBg = true,
 ): { clone: SVGSVGElement; width: number; totalHeight: number } {
   const { width, totalHeight } = measureSvg(svg);
 
@@ -134,11 +140,13 @@ function buildAttributedClone(
   clone.setAttribute('height', String(totalHeight));
   clone.setAttribute('viewBox', `0 0 ${width} ${totalHeight}`);
 
-  const bg = document.createElementNS(SVG_NS, 'rect');
-  bg.setAttribute('width', String(width));
-  bg.setAttribute('height', String(totalHeight));
-  bg.setAttribute('fill', '#ffffff');
-  clone.insertBefore(bg, clone.firstChild);
+  if (paintWhiteBg) {
+    const bg = document.createElementNS(SVG_NS, 'rect');
+    bg.setAttribute('width', String(width));
+    bg.setAttribute('height', String(totalHeight));
+    bg.setAttribute('fill', '#ffffff');
+    clone.insertBefore(bg, clone.firstChild);
+  }
 
   const text = document.createElementNS(SVG_NS, 'text');
   text.setAttribute('x', '12');
@@ -157,24 +165,31 @@ function svgEl(tag: string): Element {
 }
 
 /** Converts a CSS `linear-gradient(<angle>deg, from, to)` angle into SVG
- * `objectBoundingBox` gradient endpoints that reproduce the same on-screen
- * direction. CSS's angle convention is 0deg = to top, 90deg = to right
- * (clockwise from "up"), so the direction unit vector is (sin a, -cos a).
- * SVG's `gradientTransform="rotate(...)"` instead rotates about the
- * bounding box's top-left corner, which does NOT match a CSS
- * `linear-gradient` (centre-based) — so the gradient line is built directly
- * from explicit x1/y1/x2/y2 instead, centred on (0.5, 0.5). Exported for
- * direct unit testing. */
-export function gradientEndpoints(angleDeg: number): { x1: number; y1: number; x2: number; y2: number } {
+ * `userSpaceOnUse` gradient endpoints, in PIXELS, that reproduce the same
+ * on-screen direction AND geometry (the standard CSS gradient-line formula —
+ * https://www.w3.org/TR/css-images-3/#linear-gradients). CSS's angle
+ * convention is 0deg = to top, 90deg = to right (clockwise from "up"), so the
+ * direction unit vector is (sin a, -cos a); the gradient line's length is
+ * `|W sin a| + |H cos a|`, centred on the box's own centre. Final-review fix:
+ * this replaces the old `objectBoundingBox` (0..1) approximation, which only
+ * matched CSS exactly for a square box — `userSpaceOnUse` in px is exact for
+ * any W×H. Returned for a box positioned at the origin; the caller adds the
+ * rect's actual x/y offset. Exported for direct unit testing. */
+export function gradientEndpoints(angleDeg: number, width: number, height: number): { x1: number; y1: number; x2: number; y2: number } {
   const rad = (angleDeg * Math.PI) / 180;
   const dx = Math.sin(rad);
   const dy = -Math.cos(rad);
-  const round3 = (n: number): number => Math.round(n * 1000) / 1000;
+  const length = Math.abs(width * dx) + Math.abs(height * dy);
+  const cx = width / 2;
+  const cy = height / 2;
+  // `+ 0` normalizes a `-0` result (e.g. cos of a right angle can land on
+  // -0) to plain `0`, so callers never see the sign-bit distinction.
+  const round3 = (n: number): number => Math.round(n * 1000) / 1000 + 0;
   return {
-    x1: round3(0.5 - dx / 2),
-    y1: round3(0.5 - dy / 2),
-    x2: round3(0.5 + dx / 2),
-    y2: round3(0.5 + dy / 2),
+    x1: round3(cx - (dx * length) / 2),
+    y1: round3(cy - (dy * length) / 2),
+    x2: round3(cx + (dx * length) / 2),
+    y2: round3(cy + (dy * length) / 2),
   };
 }
 
@@ -251,11 +266,12 @@ function buildFrame(
   if (bg !== 'none' && bg.kind === 'gradient') {
     const gradient = svgEl('linearGradient');
     gradient.setAttribute('id', 'frame-bg');
-    const { x1, y1, x2, y2 } = gradientEndpoints(FRAME_GRADIENT_ANGLE);
-    gradient.setAttribute('x1', String(x1));
-    gradient.setAttribute('y1', String(y1));
-    gradient.setAttribute('x2', String(x2));
-    gradient.setAttribute('y2', String(y2));
+    gradient.setAttribute('gradientUnits', 'userSpaceOnUse');
+    const { x1, y1, x2, y2 } = gradientEndpoints(FRAME_GRADIENT_ANGLE, bgW, bgH);
+    gradient.setAttribute('x1', String(x1 + bgX));
+    gradient.setAttribute('y1', String(y1 + bgY));
+    gradient.setAttribute('x2', String(x2 + bgX));
+    gradient.setAttribute('y2', String(y2 + bgY));
     const stop1 = svgEl('stop');
     stop1.setAttribute('offset', '0%');
     stop1.setAttribute('stop-color', bg.from);
@@ -315,8 +331,20 @@ function buildFrame(
         image.setAttribute('height', String(bgH));
         image.setAttribute('preserveAspectRatio', 'xMidYMid slice');
         if (clipId !== null) image.setAttribute('clip-path', `url(#${clipId})`);
-        if (shadow !== null) image.setAttribute('filter', 'url(#frame-shadow)');
-        outer.appendChild(image);
+        // Final-review fix: a `filter` on the SAME element as a `clip-path`
+        // applies to the CLIPPED result, so a drop-shadow's blur/offset
+        // would itself get clipped away at the rounded corner — wrong, the
+        // shadow needs to escape the clip. Wrapping the clipped <image> in a
+        // <g filter="..."> applies the filter to the group AFTER clipping,
+        // so the shadow reads correctly outside the rounded corners.
+        if (shadow !== null) {
+          const group = svgEl('g');
+          group.setAttribute('filter', 'url(#frame-shadow)');
+          group.appendChild(image);
+          outer.appendChild(group);
+        } else {
+          outer.appendChild(image);
+        }
       }
     } else {
       const rect = svgEl('rect');
@@ -332,6 +360,17 @@ function buildFrame(
     }
   }
 
+  // Final-review fix: a background paints its OWN shadow-carrying rect/image
+  // above, but with no background at all (`'none'`, or `'image'` with
+  // nothing chosen yet) nothing was emitted for the shadow filter to attach
+  // to — so the shadow silently vanished. Priority: the inset card, if any,
+  // is already an opaque white rect, so the shadow filter goes there;
+  // otherwise a dedicated white ground rect (matching the frame's chart-area
+  // bounding box) is emitted just to carry the shadow — this deliberately
+  // uses white even though the chart itself is transparent on screen in
+  // this case (documented: docs/open-questions.md, docs/decisions/039).
+  const noBackgroundPainted = bg === 'none' || (bg.kind === 'image' && frame.image === null);
+
   if (values.frameInset !== 'none') {
     const card = svgEl('rect');
     card.setAttribute('x', String(bgX + padding));
@@ -340,7 +379,18 @@ function buildFrame(
     card.setAttribute('height', String(chartHeight + 2 * inset));
     card.setAttribute('rx', String(corner));
     card.setAttribute('fill', '#ffffff');
+    if (shadow !== null && noBackgroundPainted) card.setAttribute('filter', 'url(#frame-shadow)');
     outer.appendChild(card);
+  } else if (shadow !== null && noBackgroundPainted) {
+    const shadowGround = svgEl('rect');
+    shadowGround.setAttribute('x', String(bgX));
+    shadowGround.setAttribute('y', String(bgY));
+    shadowGround.setAttribute('width', String(bgW));
+    shadowGround.setAttribute('height', String(bgH));
+    shadowGround.setAttribute('rx', String(corner));
+    shadowGround.setAttribute('fill', '#ffffff');
+    shadowGround.setAttribute('filter', 'url(#frame-shadow)');
+    outer.appendChild(shadowGround);
   }
 
   chartClone.setAttribute('x', String(contentX));
@@ -370,11 +420,16 @@ export function framedSvgMarkup(
   resolvePaint: PaintResolver = defaultResolvePaint,
   frame?: FrameExportInput,
 ): FramedExport {
-  const { clone, width, totalHeight } = buildAttributedClone(svg, attributionText, resolvePaint);
-  if (frame === undefined || (isFramePristine(frame.values) && frame.image === null)) {
+  const isFramed = frame !== undefined && !(isFramePristine(frame.values) && frame.image === null);
+  // Final-review fix: a non-pristine frame (or an image background) means
+  // the frame's own background must show through the chart area, matching
+  // on-screen behaviour — so the clone's own unconditional white ground is
+  // skipped whenever a frame is actually active.
+  const { clone, width, totalHeight } = buildAttributedClone(svg, attributionText, resolvePaint, !isFramed);
+  if (!isFramed) {
     return { markup: new XMLSerializer().serializeToString(clone), width, height: totalHeight, canvasFill: '#ffffff' };
   }
-  const { outer, outerW, outerH, canvasFill } = buildFrame(clone, width, totalHeight, frame);
+  const { outer, outerW, outerH, canvasFill } = buildFrame(clone, width, totalHeight, frame!);
   return { markup: new XMLSerializer().serializeToString(outer), width: outerW, height: outerH, canvasFill };
 }
 

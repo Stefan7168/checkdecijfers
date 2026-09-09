@@ -46,23 +46,42 @@ describe('attributedSvgMarkup', () => {
 
 describe('gradientEndpoints', () => {
   // CSS linear-gradient angle convention: 0deg = to top, 90deg = to right,
-  // 135deg = towards bottom-right — the gradient line is centred on
-  // (0.5, 0.5), matching centre-based CSS gradients (not the SVG
-  // gradientTransform rotate-about-top-left-corner convention).
+  // 135deg = towards bottom-right. Final-review fix: this is now the exact
+  // CSS gradient-line formula in px (userSpaceOnUse), not the old 0..1
+  // objectBoundingBox approximation — direction d = (sin a, -cos a), line
+  // length L = |W sin a| + |H cos a|, centred on the box's own centre.
   it('0deg points to top: bottom-centre to top-centre', () => {
-    expect(gradientEndpoints(0)).toEqual({ x1: 0.5, y1: 1, x2: 0.5, y2: 0 });
+    expect(gradientEndpoints(0, 200, 100)).toEqual({ x1: 100, y1: 100, x2: 100, y2: 0 });
   });
 
-  it('90deg points to right: left-centre to right-centre', () => {
-    expect(gradientEndpoints(90)).toEqual({ x1: 0, y1: 0.5, x2: 1, y2: 0.5 });
+  it('90deg on any WxH box: purely horizontal, vertically centred, from left edge to right edge', () => {
+    for (const [w, h] of [[200, 100], [50, 300], [1, 1]]) {
+      expect(gradientEndpoints(90, w, h)).toEqual({ x1: 0, y1: h / 2, x2: w, y2: h / 2 });
+    }
   });
 
-  it('135deg points to bottom-right: top-left to bottom-right', () => {
-    expect(gradientEndpoints(135)).toEqual({ x1: 0.146, y1: 0.146, x2: 0.854, y2: 0.854 });
+  it('135deg on a 200x100 box matches the CSS gradient-line formula computed independently', () => {
+    const angleDeg = 135;
+    const width = 200;
+    const height = 100;
+    const rad = (angleDeg * Math.PI) / 180;
+    const dx = Math.sin(rad);
+    const dy = -Math.cos(rad);
+    const length = Math.abs(width * dx) + Math.abs(height * dy);
+    const cx = width / 2;
+    const cy = height / 2;
+    const round3 = (n: number) => Math.round(n * 1000) / 1000;
+    const expected = {
+      x1: round3(cx - (dx * length) / 2),
+      y1: round3(cy - (dy * length) / 2),
+      x2: round3(cx + (dx * length) / 2),
+      y2: round3(cy + (dy * length) / 2),
+    };
+    expect(gradientEndpoints(angleDeg, width, height)).toEqual(expected);
   });
 
   it('180deg points to bottom: top-centre to bottom-centre', () => {
-    expect(gradientEndpoints(180)).toEqual({ x1: 0.5, y1: 0, x2: 0.5, y2: 1 });
+    expect(gradientEndpoints(180, 200, 100)).toEqual({ x1: 100, y1: 0, x2: 100, y2: 100 });
   });
 });
 
@@ -302,20 +321,22 @@ describe('attributedSvgMarkup — frame (Task 4, design §C3)', () => {
     expect(markup).toContain('fill="#112233"');
   });
 
-  it('gradient background: draws a linearGradient with both stops', () => {
+  it('gradient background: draws a userSpaceOnUse linearGradient with both stops, endpoints matching gradientEndpoints in px', () => {
     const frame: FrameExportInput = {
       values: { ...pristineFrame, framePadding: 'small', frameBackground: { kind: 'gradient', from: '#ffffff', to: '#000000' } },
       image: null,
     };
     const markup = attributedSvgMarkup(sampleSvg(), 'attributie', undefined, frame);
     expect(markup).toContain('<linearGradient id="frame-bg"');
-    // CSS's 135deg convention (centre-based), NOT gradientTransform (which
-    // rotates about the bounding box's top-left corner and would not match
-    // the on-screen CSS linear-gradient).
-    expect(markup).toContain('x1="0.146"');
-    expect(markup).toContain('y1="0.146"');
-    expect(markup).toContain('x2="0.854"');
-    expect(markup).toContain('y2="0.854"');
+    expect(markup).toContain('gradientUnits="userSpaceOnUse"');
+    // sampleSvg: 400x200 chart, +24 footer = 400x224; +small(16) padding on
+    // each side = 432x256 outer; with no shadow the bg rect fills the whole
+    // outer box (432x256) at (0,0) — chart-download.tsx's own bgX/bgY.
+    const { x1, y1, x2, y2 } = gradientEndpoints(135, 432, 256);
+    expect(markup).toContain(`x1="${x1}"`);
+    expect(markup).toContain(`y1="${y1}"`);
+    expect(markup).toContain(`x2="${x2}"`);
+    expect(markup).toContain(`y2="${y2}"`);
     expect(markup).not.toContain('gradientTransform');
     expect(markup).toContain('stop-color="#ffffff"');
     expect(markup).toContain('stop-color="#000000"');
@@ -338,6 +359,26 @@ describe('attributedSvgMarkup — frame (Task 4, design §C3)', () => {
     expect(markup).toContain(`clip-path="url(#${clipMatch![1]})"`);
   });
 
+  // Final-review fix (Fix 6): a `filter` on the same element as a
+  // `clip-path` clips the shadow too — the drop-shadow must instead sit on a
+  // <g> wrapping the clipped <image>, so the filter applies AFTER clipping.
+  it('image + rounded corners + shadow: the filter sits on a <g> wrapping the clipped <image>', () => {
+    const frame: FrameExportInput = {
+      values: { ...pristineFrame, framePadding: 'small', frameCorners: 'rounded', frameBackground: { kind: 'image' }, frameShadow: 'soft' },
+      image: 'data:image/png;base64,AAAA',
+    };
+    const markup = attributedSvgMarkup(sampleSvg(), 'attributie', undefined, frame);
+    const host = document.createElement('div');
+    host.innerHTML = markup;
+    const image = host.querySelector('image');
+    expect(image).not.toBeNull();
+    expect(image!.getAttribute('clip-path')).toMatch(/^url\(#frame-clip-\d+\)$/);
+    expect(image!.hasAttribute('filter')).toBe(false);
+    const group = image!.closest('g[filter]');
+    expect(group).not.toBeNull();
+    expect(group!.getAttribute('filter')).toBe('url(#frame-shadow)');
+  });
+
   it('uses a different clip id on consecutive exports so they never collide', () => {
     const frame: FrameExportInput = {
       values: { ...pristineFrame, framePadding: 'small', frameCorners: 'rounded', frameBackground: { kind: 'image' } },
@@ -348,6 +389,23 @@ describe('attributedSvgMarkup — frame (Task 4, design §C3)', () => {
     const firstId = first.match(/<clipPath id="(frame-clip-\d+)"/)![1];
     const secondId = second.match(/<clipPath id="(frame-clip-\d+)"/)![1];
     expect(firstId).not.toBe(secondId);
+  });
+
+  // Final-review fix (Fix 4): with no background at all, the frame's own
+  // background/inset rect used to be the only thing that could carry the
+  // shadow filter — so no background meant no shadow, even with
+  // frameShadow set. With inset off, a dedicated white shadow-casting rect
+  // must now be emitted (an intentional screen/export asymmetry: the chart
+  // stays transparent on screen, but the export needs an opaque ground for
+  // the shadow to read against).
+  it('shadow with no background and inset off: still emits feDropShadow and a rect using the shadow filter', () => {
+    const frame: FrameExportInput = {
+      values: { ...pristineFrame, framePadding: 'small', frameBackground: 'none', frameShadow: 'soft', frameInset: 'none' },
+      image: null,
+    };
+    const markup = attributedSvgMarkup(sampleSvg(), 'attributie', undefined, frame);
+    expect(markup).toContain('<feDropShadow');
+    expect(markup).toMatch(/<rect[^>]*filter="url\(#frame-shadow[^)]*\)"/);
   });
 
   it('shadow: draws a feDropShadow filter', () => {
@@ -368,6 +426,26 @@ describe('attributedSvgMarkup — frame (Task 4, design §C3)', () => {
     // Two fills: the frame background and the white inset card.
     expect(markup).toContain('fill="#112233"');
     expect(markup).toContain('fill="#ffffff"');
+  });
+
+  // Final-review fix (Fix 1): the chart clone used to always paint its own
+  // unconditional white ground first — wrong once a frame is active, since
+  // the frame's own background (or transparency, with inset off) must show
+  // through the chart area exactly as on screen.
+  it('framed solid background: exactly one fill="#ffffff" when inset is on (the inset card), none when inset is off', () => {
+    const withInset: FrameExportInput = {
+      values: { ...pristineFrame, framePadding: 'small', frameBackground: { kind: 'solid', hex: '#112233' }, frameInset: 'small' },
+      image: null,
+    };
+    const withInsetMarkup = attributedSvgMarkup(sampleSvg(), 'attributie', undefined, withInset);
+    expect(withInsetMarkup.match(/fill="#ffffff"/g)?.length ?? 0).toBe(1);
+
+    const withoutInset: FrameExportInput = {
+      values: { ...pristineFrame, framePadding: 'small', frameBackground: { kind: 'solid', hex: '#112233' }, frameInset: 'none' },
+      image: null,
+    };
+    const withoutInsetMarkup = attributedSvgMarkup(sampleSvg(), 'attributie', undefined, withoutInset);
+    expect(withoutInsetMarkup.match(/fill="#ffffff"/g)?.length ?? 0).toBe(0);
   });
 
   it('1:1 aspect on a wide chart: outer height equals outer width, and the nested svg is vertically centred', () => {

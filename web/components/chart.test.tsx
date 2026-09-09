@@ -1957,31 +1957,35 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
     );
   });
 
-  // Task 5 (design §C2): the Frame tab is applicable in Tabel form too (a
-  // table gets the same frame as any other chart form), so the panel is now
-  // offered there — only its Frame tab has controls, the others render
-  // nothing (resolved.applicable is empty for them in table form).
-  it('the panel IS offered in Tabel form (Frame tab only) and lives outside the export container', () => {
-    const { container } = render(<ChartView spec={threePointSpec()} />);
+  // Final-review fix: table form gets NO frame and NO Style panel (as
+  // before the Frame-tab feature) — a framed table would need its own
+  // export path. Neither the "Opmaak" trigger nor its dialog is offered in
+  // Tabel form; switching back to Lijn restores both.
+  it('the panel is NOT offered in Tabel form (no frame, no Style panel)', () => {
+    render(<ChartView spec={threePointSpec()} />);
     fireEvent.click(screen.getByRole('tab', { name: 'Tabel' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    const region = screen.getByRole('dialog', { name: 'Opmaak van de grafiek' });
-    expect(within(region).queryAllByRole('radio')).toHaveLength(0);
-    fireEvent.click(within(region).getByRole('tab', { name: 'Kader' }));
-    expect(within(region).getByRole('radiogroup', { name: 'Achtergrond' })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    expect(screen.queryByRole('button', { name: 'Opmaak' })).toBeNull();
+    expect(screen.queryByRole('dialog', { name: 'Opmaak van de grafiek' })).toBeNull();
 
     fireEvent.click(screen.getByRole('tab', { name: 'Lijn' }));
+    expect(screen.getByRole('button', { name: 'Opmaak' })).toBeInTheDocument();
+  });
+
+  // Final-review fix (Fix 7): with a frame aspect ratio set AND small
+  // multiples on, the container must keep growing with the small-multiples
+  // grid (h-auto) rather than being forced into the frame's fixed aspect
+  // box (h-full) — which would clip panels past a handful of series, the
+  // exact bug h-auto was originally added to avoid.
+  it('small multiples stays h-auto even when a frame aspect ratio is set', () => {
+    render(<ChartView spec={twoSeriesLineSpec()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Kleine grafieken' }));
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    // Not screen.getByRole('tabpanel', { name: 'Grafiek' }): the panel's own
-    // "Grafiek" sub-tab labels ITS tabpanel via aria-labelledby pointing at
-    // that tab button's text, which is also "Grafiek" — the exact same
-    // accessible name as the chart's own tabpanel. An attribute selector on
-    // the literal aria-label sidesteps that collision.
-    const chartTabpanel = container.querySelector('[role="tabpanel"][aria-label="Grafiek"]') as HTMLElement;
-    expect(chartTabpanel).not.toBeNull();
-    expect(within(chartTabpanel).queryByRole('region', { name: 'Opmaak van de grafiek' })).toBeNull();
-    expect(screen.getByRole('dialog', { name: 'Opmaak van de grafiek' })).toBeInTheDocument();
+    const dialog = screen.getByRole('dialog', { name: 'Opmaak van de grafiek' });
+    fireEvent.click(within(dialog).getByRole('tab', { name: 'Kader' }));
+    fireEvent.click(within(dialog).getByRole('radio', { name: 'Vierkant' }));
+    const panel = screen.getByRole('tabpanel', { name: 'Grafiek' });
+    expect(panel.className).toContain('h-auto');
+    expect(panel.className).not.toContain('h-full');
   });
 
   it('option A layout: the region follows the chart tabpanel, the trigger stays in the Weergave tablist row, and opening the panel does not move or remount the chart', () => {
@@ -3165,14 +3169,14 @@ describe('Task 5 — Frame tab wiring in chart.tsx', () => {
     }
   });
 
-  // Contrast guard: a per-chart series colour override that's perfectly
-  // legible on the ordinary light/dark cards can still become illegible
-  // against a reader-chosen frame background — a gradient whose own two
-  // ends are set to that EXACT hex is guaranteed unreadable against itself
-  // (contrast ratio 1, well under the refusal threshold) regardless of the
-  // hex's absolute luminance, so this never depends on which colour is used.
-  it('a frame background that would hide a per-chart series colour drops that override back to the palette', () => {
-    const onChange = vi.fn();
+  // Final-review fix (Fix 5): a frame background that would hide a
+  // per-chart series colour is now REFUSED UP FRONT by ChartConfigPanel's
+  // own contrast guard, before chart.tsx ever sees the change — so
+  // chart.tsx no longer silently drops or rewrites a series colour
+  // override. A gradient whose own two ends are set to the EXACT series hex
+  // is guaranteed unreadable against itself (contrast ratio 1, well under
+  // the refusal threshold) regardless of the hex's absolute luminance.
+  it('a frame background that would hide a per-chart series colour is refused; the series override is left untouched', () => {
     render(<ChartView spec={threePointSpec()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
     fireEvent.click(screen.getByRole('tab', { name: 'Kleuren' }));
@@ -3192,12 +3196,16 @@ describe('Task 5 — Frame tab wiring in chart.tsx', () => {
     fireEvent.change(to, { target: { value: '#446688' } });
     fireEvent.blur(to);
 
-    // The series override is gone — the Kleuren tab now shows the palette
-    // default again, not the refused '#446688'.
+    // Refused: an alert is shown, in the digit-free exact wording.
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Deze achtergrond maakt een reeks onleesbaar. Kies een andere kleur of zet de kaart aan.',
+    );
+
+    // The series override is left exactly as the reader set it — chart.tsx
+    // never got a change to apply, so there is nothing to drop or rewrite.
     fireEvent.click(screen.getByRole('tab', { name: 'Kleuren' }));
     const hexAfter = screen.getByRole('textbox', { name: 'Kleur van Nederland (hex-code)' }) as HTMLInputElement;
-    expect(hexAfter.value).toBe(RECHARTS_PALETTE[0]);
-    void onChange;
+    expect(hexAfter.value).toBe('#446688');
   });
 
   it('save-default: an effective "Own image" frame background is saved as none, with the extra digit-free caveat appended to the saved status', async () => {

@@ -135,7 +135,11 @@ describe('ChartFrame', () => {
       </ChartFrame>,
     );
     const wrapper = container.querySelector('[data-slot="chart-frame"]') as HTMLElement;
-    expect(wrapper.style.aspectRatio).toBe('16 / 9');
+    // Final-review fix: aspectRatio is now `String(frameAspectRatio(...))` —
+    // a plain numeric CSS aspect-ratio, computed the same way
+    // chart-presentation.ts derives it, rather than a manually split
+    // "W / H" string. jsdom's CSSOM normalizes a bare number to "<n> / 1".
+    expect(wrapper.style.aspectRatio).toBe(`${16 / 9} / 1`);
     expect(wrapper.style.display).toBe('flex');
     expect(wrapper.style.flexDirection).toBe('column');
     const child = container.querySelector('[data-testid="child"]') as HTMLElement;

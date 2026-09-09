@@ -169,17 +169,19 @@ describe('resolvePresentation', () => {
     expect(resolvePresentation(barCtx, {}).applicable.has('xLabels')).toBe(true);
   });
 
-  // Final-review fix: the panel (ChartConfigPanel, which is where fontFamily
-  // and language are actually offered) is never mounted in Tabel form
-  // (chart.tsx: `state.form !== 'table'`), so nothing but the frame keys and
-  // language is applicable there — the frame panel IS offered in table form
-  // (a table gets the same frame as any other chart form), and unlike every
-  // other key language has no honesty consequence to hide.
-  it('table form: only the frame keys and language are applicable — the style panel is never offered there', () => {
-    const r = resolvePresentation(tableCtx, { lineWidth: 'thick', fontFamily: 'Roboto', language: 'en' });
-    expect([...r.applicable].sort()).toEqual(
-      ['frameAspect', 'frameBackground', 'frameCorners', 'frameInset', 'framePadding', 'frameShadow', 'language'].sort(),
-    );
+  // Final-review fix: the Style panel (ChartConfigPanel, which is where
+  // fontFamily, language and the Frame tab are all offered) is never mounted
+  // in Tabel form (chart.tsx: `state.form !== 'table'`) — table form gets NO
+  // frame and NO Style panel, as before the Frame-tab feature. Only
+  // `language` stays applicable there, since it has no honesty consequence.
+  it('table form: only language is applicable — the style panel (including the frame) is never offered there', () => {
+    const r = resolvePresentation(tableCtx, {
+      lineWidth: 'thick',
+      fontFamily: 'Roboto',
+      language: 'en',
+      frameBackground: { kind: 'solid', hex: '#ff0000' },
+    });
+    expect([...r.applicable].sort()).toEqual(['language']);
   });
 
   it('WP218 phase 4: language is applicable and never locked on every form the panel is offered on — including table', () => {
@@ -190,7 +192,7 @@ describe('resolvePresentation', () => {
     }
   });
 
-  it('table form: the six frame keys pass through unchanged, exactly like line/bar form', () => {
+  it('frame keys pass through unchanged and applicable on every non-table form, but NOT in table form', () => {
     const overrides = {
       frameBackground: { kind: 'solid' as const, hex: '#ff0000' },
       framePadding: 'large' as const,
@@ -199,7 +201,7 @@ describe('resolvePresentation', () => {
       frameInset: 'large' as const,
       frameAspect: '16:9' as const,
     };
-    for (const ctx of [lineCtx, barCtx, tableCtx]) {
+    for (const ctx of [lineCtx, barCtx]) {
       const r = resolvePresentation(ctx, overrides);
       expect(r.values.frameBackground).toEqual(overrides.frameBackground);
       expect(r.values.framePadding).toBe('large');
@@ -210,6 +212,12 @@ describe('resolvePresentation', () => {
       for (const key of ['frameBackground', 'framePadding', 'frameCorners', 'frameShadow', 'frameInset', 'frameAspect'] as const) {
         expect(r.applicable.has(key)).toBe(true);
       }
+    }
+    // Table form: values still pass through the resolver unmolested (they're
+    // just not `applicable` — the panel that would offer them is unmounted).
+    const tableResult = resolvePresentation(tableCtx, overrides);
+    for (const key of ['frameBackground', 'framePadding', 'frameCorners', 'frameShadow', 'frameInset', 'frameAspect'] as const) {
+      expect(tableResult.applicable.has(key)).toBe(false);
     }
   });
 

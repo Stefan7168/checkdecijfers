@@ -31,8 +31,11 @@ import { Fragment, useEffect, useRef, useState, type KeyboardEvent, type ReactNo
 import { createPortal } from 'react-dom';
 import { SlidersHorizontal, X } from 'lucide-react';
 import {
+  COLOR_REFUSE_BELOW,
+  contrastRatio,
   FONT_OPTIONS,
   FRAME_GRADIENT_PRESETS,
+  frameBackdrops,
   HEX_COLOR,
   isFramePristine,
   judgeColor,
@@ -169,6 +172,7 @@ function buildPanelCopy(lang: Lang) {
     frameImageBadType: t(lang, 'chart.panel.frameImageBadType'),
     frameImageNotSaved: t(lang, 'chart.panel.frameImageNotSaved'),
     frameReset: t(lang, 'chart.panel.frameReset'),
+    frameBgRefused: t(lang, 'chart.panel.frameBgRefused'),
   };
 }
 type PanelCopy = ReturnType<typeof buildPanelCopy>;
@@ -846,7 +850,31 @@ export function ChartConfigPanel({
   // re-derive this from.
   const [frameImageAlert, setFrameImageAlert] = useState<'tooLarge' | 'badType' | null>(null);
   const frameFileInputRef = useRef<HTMLInputElement>(null);
-  const FRAME_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
+
+  // Final-review fix (Fix 5): a frame background (solid, gradient) or
+  // turning the inset card OFF can hide a series entirely — refuse up
+  // front, before ever calling onChange, rather than silently applying it
+  // and letting chart.tsx drop the series colour override afterwards. Every
+  // EFFECTIVE series colour (seriesMeta[i].color, palette-derived included)
+  // is checked against every candidate backdrop for the WOULD-BE values —
+  // `frameBackdrops` already resolves exactly what "the backdrop" means for
+  // a given inset/background combination.
+  const [frameBgRefused, setFrameBgRefused] = useState(false);
+
+  function tryFrameChange(patch: PresentationOverrides): void {
+    const nextValues = { ...resolved.values, ...patch };
+    const backdrops = frameBackdrops(nextValues);
+    const hidesASeries = seriesMeta.some((series) =>
+      backdrops.some((backdrop) => contrastRatio(series.color, backdrop) < COLOR_REFUSE_BELOW),
+    );
+    if (hidesASeries) {
+      setFrameBgRefused(true);
+      return;
+    }
+    setFrameBgRefused(false);
+    onChange(patch);
+  }
+  const FRAME_IMAGE_MAX_BYTES = 2 * 1024 * 1024;
   const FRAME_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
 
   function handleFrameFile(file: File): void {
@@ -1425,11 +1453,12 @@ export function ChartConfigPanel({
         </div>
       ) : null}
 
-      {/* Task 5 (design §C2): the Frame tab — applicable on every chart
-        * form, table included (chart-presentation.ts's resolver adds the
-        * six frame keys to `applicable` unconditionally), so this tabpanel
-        * never needs an `applicable` gate of its own. */}
-      {activeTab === 'frame' ? (
+      {/* Final-review fix: the Frame tab is NOT applicable in table form —
+        * table form has no frame and no Style panel at all, exactly like
+        * every other tab here. Gated on `applicable` for consistency with
+        * the rest of the panel, even though in practice chart.tsx never
+        * mounts this panel at all in table form. */}
+      {activeTab === 'frame' && resolved.applicable.has('frameBackground') ? (
         <div
           id={panelId('frame')}
           role="tabpanel"
@@ -1483,7 +1512,7 @@ export function ChartConfigPanel({
                       <FrameHexField
                         key={bg.hex}
                         value={bg.hex}
-                        onCommit={(hex) => onChange({ frameBackground: { kind: 'solid', hex } })}
+                        onCommit={(hex) => tryFrameChange({ frameBackground: { kind: 'solid', hex } })}
                         ariaLabelHex={`${copy.frameBackground} (hex)`}
                         ariaLabelPicker={copy.frameBackground}
                       />
@@ -1497,7 +1526,7 @@ export function ChartConfigPanel({
                               type="button"
                               aria-label={frameGradientLabels[preset.id]}
                               aria-pressed={bg.from === preset.from && bg.to === preset.to}
-                              onClick={() => onChange({ frameBackground: { kind: 'gradient', from: preset.from, to: preset.to } })}
+                              onClick={() => tryFrameChange({ frameBackground: { kind: 'gradient', from: preset.from, to: preset.to } })}
                               style={{ backgroundImage: `linear-gradient(135deg, ${preset.from}, ${preset.to})` }}
                               className="size-6 rounded-md border border-border"
                             />
@@ -1508,7 +1537,7 @@ export function ChartConfigPanel({
                           <FrameHexField
                             key={`from-${bg.from}`}
                             value={bg.from}
-                            onCommit={(hex) => onChange({ frameBackground: { kind: 'gradient', from: hex, to: bg.to } })}
+                            onCommit={(hex) => tryFrameChange({ frameBackground: { kind: 'gradient', from: hex, to: bg.to } })}
                             ariaLabelHex={`${copy.frameFrom} (hex)`}
                             ariaLabelPicker={copy.frameFrom}
                           />
@@ -1516,7 +1545,7 @@ export function ChartConfigPanel({
                           <FrameHexField
                             key={`to-${bg.to}`}
                             value={bg.to}
-                            onCommit={(hex) => onChange({ frameBackground: { kind: 'gradient', from: bg.from, to: hex } })}
+                            onCommit={(hex) => tryFrameChange({ frameBackground: { kind: 'gradient', from: bg.from, to: hex } })}
                             ariaLabelHex={`${copy.frameTo} (hex)`}
                             ariaLabelPicker={copy.frameTo}
                           />
@@ -1529,6 +1558,7 @@ export function ChartConfigPanel({
                           <input
                             ref={frameFileInputRef}
                             type="file"
+                            tabIndex={-1}
                             accept="image/png,image/jpeg,image/webp"
                             aria-label={copy.frameImagePick}
                             className="sr-only"
@@ -1565,8 +1595,23 @@ export function ChartConfigPanel({
             })()}
 
             {frameRadioGroups.map((group) =>
-              frameRadioRow(idPrefix, group, resolved.values[group.key] as string, (value) => emit(group.key, value)),
+              frameRadioRow(idPrefix, group, resolved.values[group.key] as string, (value) => {
+                // Final-review fix (Fix 5): only turning the inset card OFF
+                // needs the contrast guard — turning it ON changes the
+                // backdrop to the card colours, which the resolver's own
+                // colour guard already keeps series legible against.
+                if (group.key === 'frameInset' && value === 'none') {
+                  tryFrameChange({ frameInset: 'none' });
+                  return;
+                }
+                emit(group.key, value);
+              }),
             )}
+            {frameBgRefused ? (
+              <p role="alert" className="w-full text-destructive">
+                {copy.frameBgRefused}
+              </p>
+            ) : null}
           </div>
 
           <div className="mt-1 flex items-center justify-between gap-2 border-t border-border pt-3 w-full">
