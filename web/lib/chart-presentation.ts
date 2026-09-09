@@ -29,14 +29,14 @@ export interface ChartPresentation {
   seriesColors: Record<number, string>;
   /** A family name from FONT_OPTIONS (or, later, a brand font); null = the page font. */
   fontFamily: string | null;
-  /** WP218 phase 4 (#219, design §4): the language THIS chart's card copy is
+  /** WP218 phase 4 (design §4): the language THIS chart's card copy is
    * shown in. null = follow the app language (`useLang()`); 'nl'/'en' pins
-   * the chart regardless of the app's own switch. Applicable on every form
-   * the panel is actually offered on and never locked — unlike every other
-   * key here it has no honesty consequence, so no form ever overrides or
-   * disables it. NOT applicable in table form — the panel itself is never
-   * mounted there (`chart.tsx`: `state.form !== 'table'`), so nothing in
-   * `ChartPresentation` is reachable through it, this key included. */
+   * the chart regardless of the app's own switch. Applicable on EVERY form,
+   * table included, and never locked — unlike every other key here it has
+   * no honesty consequence, so no form ever overrides or disables it. The
+   * Style panel itself is never mounted in table form (`chart.tsx`:
+   * `state.form !== 'table'`), but `language` is still reachable there
+   * through its own separate control, not the panel. */
   language: Lang | null;
   /** The Frame tab (design §C2): the chart sits inside this background,
    * padding, corner radius, drop shadow, card inset and export aspect ratio.
@@ -312,16 +312,27 @@ export type ColorVerdict = { ok: true; warning: 'light' | 'dark' | 'both' | null
 export const COLOR_REFUSAL =
   'Deze kleur is niet toegepast: de open markering voor voorlopige cijfers zou in een van de thema’s onzichtbaar worden.';
 
+/** Round-2: same refuse/warn semantics as `judgeColor`, but against an
+ * arbitrary set of backdrops rather than the fixed light/dark card pair —
+ * so a series colour (or a brand palette entry) can be judged against
+ * whatever is ACTUALLY behind the chart right now (`frameBackdrops`),
+ * not only the two card colours. Refuses if contrast is below
+ * COLOR_REFUSE_BELOW against ANY backdrop; warns if below COLOR_WARN_BELOW
+ * against any (per light/dark card wording only when those two backdrops
+ * are exactly the cards — otherwise a generic 'both' reads best). */
+export function judgeColorAgainst(hex: string, backdrops: string[]): ColorVerdict {
+  const ratios = backdrops.map((backdrop) => contrastRatio(hex, backdrop));
+  if (ratios.some((r) => r < COLOR_REFUSE_BELOW)) return { ok: false, reason: COLOR_REFUSAL };
+  const weakLight = contrastRatio(hex, CARD_LIGHT) < COLOR_WARN_BELOW;
+  const weakDark = contrastRatio(hex, CARD_DARK) < COLOR_WARN_BELOW;
+  return { ok: true, warning: weakLight && weakDark ? 'both' : weakLight ? 'light' : weakDark ? 'dark' : null };
+}
+
 /** Owner decision B with the R11 guard: a colour that would hide the hollow
  * provisional ring on EITHER theme's card is refused; a weak one is applied
  * with a per-theme warning. Every stock palette colour passes (pinned). */
 export function judgeColor(hex: string): ColorVerdict {
-  const light = contrastRatio(hex, CARD_LIGHT);
-  const dark = contrastRatio(hex, CARD_DARK);
-  if (light < COLOR_REFUSE_BELOW || dark < COLOR_REFUSE_BELOW) return { ok: false, reason: COLOR_REFUSAL };
-  const weakLight = light < COLOR_WARN_BELOW;
-  const weakDark = dark < COLOR_WARN_BELOW;
-  return { ok: true, warning: weakLight && weakDark ? 'both' : weakLight ? 'light' : weakDark ? 'dark' : null };
+  return judgeColorAgainst(hex, [CARD_LIGHT, CARD_DARK]);
 }
 
 // --- fonts -------------------------------------------------------------------

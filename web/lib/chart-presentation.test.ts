@@ -20,6 +20,7 @@ import {
   frameBackdrops,
   isFramePristine,
   judgeColor,
+  judgeColorAgainst,
   normalizeHex,
   resolvePresentation,
   sanitizeOverrides,
@@ -365,6 +366,16 @@ describe('colours — normalise, contrast, judge', () => {
     expect(judgeColor('#3a3a3a')).toEqual({ ok: true, warning: 'dark' });
     expect(judgeColor('#ff0000')).toEqual({ ok: true, warning: null });
     expect(contrastRatio('#ffc658', CARD_LIGHT)).toBeLessThan(3);
+  });
+  it('judgeColor(hex) is byte-identical to judgeColorAgainst(hex, [CARD_LIGHT, CARD_DARK])', () => {
+    for (const hex of [...RECHARTS_PALETTE, '#fefefe', CARD_DARK, '#ffc658', '#3a3a3a']) {
+      expect(judgeColor(hex)).toEqual(judgeColorAgainst(hex, [CARD_LIGHT, CARD_DARK]));
+    }
+  });
+  it('judgeColorAgainst refuses when contrast is below COLOR_REFUSE_BELOW against ANY given backdrop', () => {
+    expect(judgeColorAgainst('#8884d8', ['#8884d8']).ok).toBe(false);
+    expect(judgeColorAgainst('#8884d8', ['#8884d8', CARD_LIGHT]).ok).toBe(false);
+    expect(judgeColorAgainst('#8884d8', [CARD_LIGHT, CARD_DARK]).ok).toBe(true);
   });
 });
 

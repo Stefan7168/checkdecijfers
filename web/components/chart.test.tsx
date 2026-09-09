@@ -1971,6 +1971,20 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
     expect(screen.getByRole('button', { name: 'Opmaak' })).toBeInTheDocument();
   });
 
+  // Round 2: switching TO Tabel form must close the Style panel itself
+  // (setOpenPanel(null)), not just skip rendering it while on Tabel — else
+  // `openPanel` stays stuck on 'style' and the panel silently reappears the
+  // moment the user switches back to a chart form, with no click to open it.
+  it('round 2: selecting Tabel closes the Style panel, and it does not reappear on its own when switching back to a chart form', () => {
+    render(<ChartView spec={threePointSpec()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    expect(screen.getByRole('dialog', { name: 'Opmaak van de grafiek' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('tab', { name: 'Tabel' }));
+    expect(screen.queryByRole('dialog', { name: 'Opmaak van de grafiek' })).toBeNull();
+    fireEvent.click(screen.getByRole('tab', { name: 'Lijn' }));
+    expect(screen.queryByRole('dialog', { name: 'Opmaak van de grafiek' })).toBeNull();
+  });
+
   // Final-review fix (Fix 7): with a frame aspect ratio set AND small
   // multiples on, the container must keep growing with the small-multiples
   // grid (h-auto) rather than being forced into the frame's fixed aspect

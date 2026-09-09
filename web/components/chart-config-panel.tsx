@@ -39,6 +39,7 @@ import {
   HEX_COLOR,
   isFramePristine,
   judgeColor,
+  judgeColorAgainst,
   normalizeHex,
   type PresentationKey,
   type PresentationOverrides,
@@ -804,7 +805,7 @@ export function ChartConfigPanel({
       const limit = Math.min(colors.length, seriesMeta.length);
       for (let i = 0; i < limit; i++) {
         const hex = colors[i]!;
-        if (judgeColor(hex).ok) accepted[i] = hex;
+        if (judgeColorAgainst(hex, frameBackdrops(resolved.values)).ok) accepted[i] = hex;
       }
       // One onChange call for the whole apply — seriesColors here is the
       // COMPLETE new colour scheme (like Standaardkleuren's `{}`), not
@@ -874,6 +875,7 @@ export function ChartConfigPanel({
     setFrameBgRefused(false);
     onChange(patch);
   }
+
   const FRAME_IMAGE_MAX_BYTES = 2 * 1024 * 1024;
   const FRAME_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
 
@@ -918,6 +920,10 @@ export function ChartConfigPanel({
 
   function pickFrameBackgroundKind(kind: 'none' | 'solid' | 'gradient' | 'image'): void {
     const bg = resolved.values.frameBackground;
+    // Round 2: switching the background KIND is never itself a refusable
+    // change (only a specific colour/gradient/image can hide a series), so
+    // any stale refusal from before is cleared here too.
+    setFrameBgRefused(false);
     if (kind === 'none') {
       onChange({ frameBackground: 'none' });
       return;
@@ -996,7 +1002,7 @@ export function ChartConfigPanel({
       });
       return;
     }
-    const verdict = judgeColor(hex);
+    const verdict = judgeColorAgainst(hex, frameBackdrops(resolved.values));
     if (!verdict.ok) {
       setColorDrafts((d) => {
         const next = { ...d };
@@ -1047,6 +1053,9 @@ export function ChartConfigPanel({
 
   function selectTab(next: TabKey): void {
     setActiveTab(next);
+    // Round 2: a stale frame-background refusal from a previous tab must
+    // not keep showing once the user has moved on to something else.
+    setFrameBgRefused(false);
     tabRefs[next].current?.focus();
   }
 
@@ -1520,17 +1529,36 @@ export function ChartConfigPanel({
                     {bgKind === 'gradient' && bg !== 'none' && bg.kind === 'gradient' ? (
                       <div className="flex w-full flex-col gap-2">
                         <div role="group" aria-label={copy.frameGradientPreset} className="flex flex-wrap gap-1.5">
-                          {FRAME_GRADIENT_PRESETS.map((preset) => (
-                            <button
-                              key={preset.id}
-                              type="button"
-                              aria-label={frameGradientLabels[preset.id]}
-                              aria-pressed={bg.from === preset.from && bg.to === preset.to}
-                              onClick={() => tryFrameChange({ frameBackground: { kind: 'gradient', from: preset.from, to: preset.to } })}
-                              style={{ backgroundImage: `linear-gradient(135deg, ${preset.from}, ${preset.to})` }}
-                              className="size-6 rounded-md border border-border"
-                            />
-                          ))}
+                          {FRAME_GRADIENT_PRESETS.map((preset) => {
+                            const wouldBackdrops = frameBackdrops({
+                              ...resolved.values,
+                              frameBackground: { kind: 'gradient', from: preset.from, to: preset.to },
+                            });
+                            const refused = seriesMeta.some((series) =>
+                              wouldBackdrops.some((backdrop) => contrastRatio(series.color, backdrop) < COLOR_REFUSE_BELOW),
+                            );
+                            const describedById = refused ? `${idPrefix}-frame-preset-refused-${preset.id}` : undefined;
+                            return (
+                              <Fragment key={preset.id}>
+                                <button
+                                  type="button"
+                                  aria-label={frameGradientLabels[preset.id]}
+                                  aria-pressed={bg.from === preset.from && bg.to === preset.to}
+                                  disabled={refused}
+                                  title={refused ? copy.frameBgRefused : undefined}
+                                  aria-describedby={describedById}
+                                  onClick={() => tryFrameChange({ frameBackground: { kind: 'gradient', from: preset.from, to: preset.to } })}
+                                  style={{ backgroundImage: `linear-gradient(135deg, ${preset.from}, ${preset.to})` }}
+                                  className={cn('size-6 rounded-md border border-border', refused && 'cursor-not-allowed opacity-40')}
+                                />
+                                {refused ? (
+                                  <span id={describedById} hidden>
+                                    {copy.frameBgRefused}
+                                  </span>
+                                ) : null}
+                              </Fragment>
+                            );
+                          })}
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="text-xs text-muted-foreground">{copy.frameFrom}</span>

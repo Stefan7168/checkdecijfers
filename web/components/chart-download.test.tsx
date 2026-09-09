@@ -9,7 +9,7 @@
 import { createRef } from 'react';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { attributedSvgMarkup, ChartDownloadMenu, gradientEndpoints, type FrameExportInput } from './chart-download.tsx';
+import { attributedSvgMarkup, ChartDownloadMenu, framedSvgMarkup, gradientEndpoints, type FrameExportInput } from './chart-download.tsx';
 import { STOCK_PRESENTATION, type FrameValues } from '../lib/chart-presentation.ts';
 
 afterEach(cleanup);
@@ -446,6 +446,20 @@ describe('attributedSvgMarkup — frame (Task 4, design §C3)', () => {
     };
     const withoutInsetMarkup = attributedSvgMarkup(sampleSvg(), 'attributie', undefined, withoutInset);
     expect(withoutInsetMarkup.match(/fill="#ffffff"/g)?.length ?? 0).toBe(0);
+  });
+
+  // Round-2 fix: a frame with only padding/corners/aspect set (nothing that
+  // actually paints behind the chart — no bg, inset off) must keep the white
+  // chart ground: previously ANY non-pristine frame dropped it, leaving a
+  // transparent chart area with nothing painted behind it.
+  it('padding-only frame (no bg, inset off): keeps the white chart ground and a white PNG canvas fill', () => {
+    const frame: FrameExportInput = {
+      values: { ...pristineFrame, framePadding: 'large' },
+      image: null,
+    };
+    const result = framedSvgMarkup(sampleSvg(), 'attributie', undefined, frame);
+    expect(result.markup).toContain('fill="#ffffff"');
+    expect(result.canvasFill).toBe('#ffffff');
   });
 
   it('1:1 aspect on a wide chart: outer height equals outer width, and the nested svg is vertically centred', () => {

@@ -441,6 +441,48 @@ describe('ChartConfigPanel — Kleuren tab', () => {
     expect(onChange).toHaveBeenCalledWith({ seriesColors: { 0: '#0088fe' } });
   });
 
+  // Round 2: series colours must be judged against the ACTIVE frame's
+  // backdrops, not only the fixed light/dark card pair — a colour matching
+  // a solid frame background is invisible against it even though it would
+  // pass against the cards.
+  it('refuses a series colour matching a solid frame background when inset is off', () => {
+    const onChange = vi.fn();
+    render(
+      <Harness
+        resolved={resolvePresentation(lineCtx, { frameBackground: { kind: 'solid', hex: '#8884d8' }, frameInset: 'none' })}
+        seriesMeta={colorMeta}
+        onChange={onChange}
+        onReset={vi.fn()}
+        idPrefix="k3b"
+      />,
+    );
+    openTab('Kleuren');
+    const hex = screen.getByRole('textbox', { name: 'Kleur van Rotterdam (hex-code)' }) as HTMLInputElement;
+    fireEvent.change(hex, { target: { value: '#8884d8' } });
+    fireEvent.blur(hex);
+    expect(onChange).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert').textContent).toMatch(/voorlopige cijfers/);
+  });
+
+  it('accepts the same series colour when inset is on (the card, not the frame background, is behind it)', () => {
+    const onChange = vi.fn();
+    render(
+      <Harness
+        resolved={resolvePresentation(lineCtx, { frameBackground: { kind: 'solid', hex: '#8884d8' }, frameInset: 'small' })}
+        seriesMeta={colorMeta}
+        onChange={onChange}
+        onReset={vi.fn()}
+        idPrefix="k3c"
+      />,
+    );
+    openTab('Kleuren');
+    const hex = screen.getByRole('textbox', { name: 'Kleur van Rotterdam (hex-code)' }) as HTMLInputElement;
+    fireEvent.change(hex, { target: { value: '#8884d8' } });
+    fireEvent.blur(hex);
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(onChange).toHaveBeenCalledWith({ seriesColors: { 1: '#8884d8' } });
+  });
+
   it('a colour that would hide the hollow provisional ring is refused with a reason and not emitted', () => {
     const onChange = vi.fn();
     render(
@@ -1148,6 +1190,50 @@ describe('ChartConfigPanel — Frame tab', () => {
     });
   });
 
+  it('round 2: a preset that would refuse (Oceaan, inset off) is disabled with the reason accessible via aria-describedby; a legible one (Leisteen) stays enabled', () => {
+    render(
+      <Harness
+        resolved={resolvePresentation(lineCtx, { frameBackground: { kind: 'gradient', from: '#fde68a', to: '#f472b6' } })}
+        seriesMeta={colorMeta}
+        onChange={vi.fn()}
+        onReset={vi.fn()}
+        idPrefix="fr4c"
+      />,
+    );
+    openFrameTab();
+    const oceaan = screen.getByRole('button', { name: 'Oceaan' });
+    expect(oceaan).toBeDisabled();
+    expect(oceaan.getAttribute('title')).toBe(
+      'Deze achtergrond maakt een reeks onleesbaar. Kies een andere kleur of zet de kaart aan.',
+    );
+    const describedById = oceaan.getAttribute('aria-describedby');
+    expect(describedById).toBeTruthy();
+    expect(document.getElementById(describedById!)?.textContent).toBe(
+      'Deze achtergrond maakt een reeks onleesbaar. Kies een andere kleur of zet de kaart aan.',
+    );
+    const leisteen = screen.getByRole('button', { name: 'Leisteen' });
+    expect(leisteen).not.toBeDisabled();
+  });
+
+  it('round 2: with the inset card on, every preset pill is enabled', () => {
+    render(
+      <Harness
+        resolved={resolvePresentation(lineCtx, {
+          frameBackground: { kind: 'gradient', from: '#fde68a', to: '#f472b6' },
+          frameInset: 'small',
+        })}
+        seriesMeta={colorMeta}
+        onChange={vi.fn()}
+        onReset={vi.fn()}
+        idPrefix="fr4d"
+      />,
+    );
+    openFrameTab();
+    for (const name of ['Dageraad', 'Oceaan', 'Bos', 'Bes', 'Leisteen', 'Zand']) {
+      expect(screen.getByRole('button', { name })).not.toBeDisabled();
+    }
+  });
+
   it('Own image: a 6 MB file is refused with an alert and nothing is emitted', () => {
     const onChange = vi.fn();
     const onFrameImage = vi.fn();
@@ -1194,6 +1280,49 @@ describe('ChartConfigPanel — Frame tab', () => {
       'Deze achtergrond maakt een reeks onleesbaar. Kies een andere kleur of zet de kaart aan.',
     );
     expect(onChange).not.toHaveBeenCalled();
+  });
+
+  // Round 2: the refusal alert must not linger once the user has moved on —
+  // switching tabs, or a later frame change that actually succeeds, both
+  // clear it.
+  it('round 2: the frame refusal alert clears when the user switches tabs', () => {
+    render(
+      <Harness
+        resolved={resolvePresentation(lineCtx, { frameBackground: { kind: 'solid', hex: '#ffffff' }, frameInset: 'none' })}
+        seriesMeta={colorMeta}
+        onChange={vi.fn()}
+        onReset={vi.fn()}
+        idPrefix="fr11b"
+      />,
+    );
+    openFrameTab();
+    const hexField = screen.getByRole('textbox', { name: 'Achtergrond (hex)' }) as HTMLInputElement;
+    fireEvent.change(hexField, { target: { value: '#8884d8' } });
+    fireEvent.blur(hexField);
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('tab', { name: 'Kleuren' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Kader' }));
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('round 2: the frame refusal alert clears once a later frame change succeeds', () => {
+    render(
+      <Harness
+        resolved={resolvePresentation(lineCtx, { frameBackground: { kind: 'solid', hex: '#ffffff' }, frameInset: 'none' })}
+        seriesMeta={colorMeta}
+        onChange={vi.fn()}
+        onReset={vi.fn()}
+        idPrefix="fr11c"
+      />,
+    );
+    openFrameTab();
+    const hexField = screen.getByRole('textbox', { name: 'Achtergrond (hex)' }) as HTMLInputElement;
+    fireEvent.change(hexField, { target: { value: '#8884d8' } });
+    fireEvent.blur(hexField);
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    const bgGroup = screen.getByRole('radiogroup', { name: 'Achtergrond' });
+    fireEvent.click(within(bgGroup).getByRole('radio', { name: 'Geen' }));
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 
   it('accepts the same solid background when inset is on (backdrops are the card colours, not the background)', () => {

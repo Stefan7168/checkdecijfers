@@ -397,6 +397,14 @@ function buildFrame(
   chartClone.setAttribute('y', String(contentY));
   outer.appendChild(chartClone);
 
+  // Round-2 fix: when nothing paints behind the chart (no background, inset
+  // off) the chart clone keeps its own white ground — so the PNG canvas
+  // behind the whole export must be white too, matching that ground rather
+  // than leaving the canvas transparent around it.
+  if (canvasFill === null && noBackgroundPainted && values.frameInset === 'none') {
+    canvasFill = '#ffffff';
+  }
+
   return { outer, outerW, outerH, canvasFill };
 }
 
@@ -421,11 +429,18 @@ export function framedSvgMarkup(
   frame?: FrameExportInput,
 ): FramedExport {
   const isFramed = frame !== undefined && !(isFramePristine(frame.values) && frame.image === null);
-  // Final-review fix: a non-pristine frame (or an image background) means
-  // the frame's own background must show through the chart area, matching
-  // on-screen behaviour — so the clone's own unconditional white ground is
-  // skipped whenever a frame is actually active.
-  const { clone, width, totalHeight } = buildAttributedClone(svg, attributionText, resolvePaint, !isFramed);
+  // Round-2 fix: the clone's own white ground is skipped only when
+  // something actually paints behind the chart — a solid/gradient
+  // background, an image background with an image actually chosen, or the
+  // inset card (which supplies its own white). A frame that only touches
+  // padding/corners/aspect paints nothing, so the white ground must stay —
+  // otherwise the chart area exports transparent with nothing behind it.
+  const bg = isFramed ? frame!.values.frameBackground : 'none';
+  const backgroundPaints =
+    bg !== 'none' && (bg.kind === 'solid' || bg.kind === 'gradient' || (bg.kind === 'image' && frame!.image !== null));
+  const insetEnabled = isFramed && frame!.values.frameInset !== 'none';
+  const paintWhiteBg = !(backgroundPaints || insetEnabled);
+  const { clone, width, totalHeight } = buildAttributedClone(svg, attributionText, resolvePaint, paintWhiteBg);
   if (!isFramed) {
     return { markup: new XMLSerializer().serializeToString(clone), width, height: totalHeight, canvasFill: '#ffffff' };
   }

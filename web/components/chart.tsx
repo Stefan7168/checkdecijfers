@@ -1713,6 +1713,11 @@ export function ChartView({
     // goes false for the new form (which would otherwise strand the panel
     // open with no way to reach it, per the review finding).
     if (openPanel === 'story') closeStory();
+    // Round 2: table form has no frame and no Style panel at all — switching
+    // TO it must close the panel itself (not just skip rendering it while on
+    // Tabel), or `openPanel` stays stuck on 'style' and the panel silently
+    // reappears the moment the user switches back to a chart form.
+    if (next === 'table') setOpenPanel(null);
     dispatch({ type: 'setForm', form: next });
     formTabRef[next].current?.focus();
   }
