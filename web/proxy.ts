@@ -35,6 +35,7 @@ const PUBLIC_EXACT_PATHS = [
   // The public, noindexed architecture reference page — no DB reads, no
   // account needed, reachable via the footer's gear icon by design.
   '/systeemoverzicht',
+  '/preview-answer-card', // THROWAWAY (session 91 design preview) — removed with the preview route
 ];
 
 const PUBLIC_PATH_PREFIXES = [
