@@ -100,12 +100,20 @@ const MONTHS_NL_TO_EN: Record<string, string> = {
 
 const QUARTER_LABEL_RE = /^(\d{4}) (\d)e kwartaal$/;
 const MONTH_LABEL_RE = new RegExp(`^(\\d{4}) (${Object.keys(MONTHS_NL_TO_EN).join('|')})$`);
+// A cumulative partial year ('2026 januari-april' — table 85429NED's current
+// year, src/registry/defaults.ts): the year first, then a month RANGE. Kept
+// as '2026 January-April' (year first, the range reads the same in English).
+const MONTH_RANGE_LABEL_RE = new RegExp(
+  `^(\\d{4}) (${Object.keys(MONTHS_NL_TO_EN).join('|')})-(${Object.keys(MONTHS_NL_TO_EN).join('|')})$`,
+);
 
 export function translatePeriodLabel(label: string): string {
   const quarter = QUARTER_LABEL_RE.exec(label);
   if (quarter) return `${quarter[1]} Q${quarter[2]}`;
   const month = MONTH_LABEL_RE.exec(label);
   if (month) return `${MONTHS_NL_TO_EN[month[2]!]} ${month[1]}`;
+  const range = MONTH_RANGE_LABEL_RE.exec(label);
+  if (range) return `${range[1]} ${MONTHS_NL_TO_EN[range[2]!]}-${MONTHS_NL_TO_EN[range[3]!]}`;
   return label;
 }
 

@@ -147,3 +147,11 @@ describe('digit invariance (design §4: a converter never touches a numeric toke
     });
   }
 });
+
+describe('translatePeriodLabel — cumulative partial year (P4 task-4 review gap)', () => {
+  it('translates a month range and keeps every digit', () => {
+    expect(translatePeriodLabel('2026 januari-april')).toBe('2026 January-April');
+    expect(translatePeriodLabel('2026 januari-april').match(/\d[\d.,]*/g)).toEqual(['2026']);
+    expect(translatePeriodLabel('2026 januari-x')).toBe('2026 januari-x');
+  });
+});
