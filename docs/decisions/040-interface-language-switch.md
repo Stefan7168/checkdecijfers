@@ -31,7 +31,7 @@ Two things are deliberately NOT interface text: everything the backend builds (a
 
 ## Addendum 2026-09-09 (session 92, owner present) — the chart-language select preselects the current language
 
-The "Zoals de app / Same as the app" option is gone (owner: "same as the app, to preselect the current language"): the select shows the language the chart currently uses (the app language unless overridden) and any pick stores an explicit per-chart choice. Following the app remains the untouched default — decision A's "preselected to the app language" as literally built.
+The "Zoals de app / Same as the app" option is gone (owner: "same as the app, to preselect the current language"): the select shows the language the chart currently uses (the app language unless overridden) and any pick stores an explicit per-chart choice. Following the app remains the untouched default — decision A's "preselected to the app language" as literally built. A chart pinned to a language through the select returns to "follow the app" only through the panel's Standaard reset; the select itself no longer emits that state.
 
 ## Revisit triggers
 

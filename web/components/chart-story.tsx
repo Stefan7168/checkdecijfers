@@ -84,11 +84,19 @@ export function ChartStoryPanel({ steps, index, onIndexChange, open, onClose, tr
   // subscribes only once per open (see that effect's comment).
   const indexRef = useRef(index);
   const onIndexChangeRef = useRef(onIndexChange);
-  indexRef.current = index;
-  onIndexChangeRef.current = onIndexChange;
   const regionId = `${idPrefix}-story`;
   const headingId = `${idPrefix}-story-heading`;
   const last = steps.length - 1;
+
+  // Final-review fix: these two used to be plain assignments right here,
+  // during the render phase. Moved into their own dependency-free Effect —
+  // runs after every render, on commit, strictly before the observer
+  // effect's own callback could ever fire (Effects commit in declaration
+  // order) — so the refs the observer reads are never assigned mid-render.
+  useEffect(() => {
+    indexRef.current = index;
+    onIndexChangeRef.current = onIndexChange;
+  });
 
   function clearProgrammaticGuard(): void {
     programmatic.current = false;
@@ -225,6 +233,11 @@ export function ChartStoryPanel({ steps, index, onIndexChange, open, onClose, tr
         <span className="text-xs text-muted-foreground">{t(lang, 'chart.story.hint')}</span>
       </div>
       <div ref={scrollRef} className="mt-2 max-h-40 space-y-2 overflow-y-auto pr-1">
+        {/* Final-review fix (a11y): no `onClick` here — the Vorige/Volgende
+          * buttons and the dots below already reach every step, so a
+          * non-focusable, clickable `<article>` was a keyboard trap risk
+          * (a sighted mouse user could click a card no keyboard user could
+          * ever "click" the same way). */}
         {steps.map((step, i) => (
           <article
             key={step.id}
@@ -233,7 +246,6 @@ export function ChartStoryPanel({ steps, index, onIndexChange, open, onClose, tr
             }}
             data-story-step={i}
             aria-current={i === index ? 'step' : undefined}
-            onClick={() => go(i)}
             className={
               'rounded-md border px-3 py-2 transition-colors ' +
               (i === index ? 'border-foreground/40 bg-muted' : 'border-border bg-background text-muted-foreground')
@@ -254,13 +266,19 @@ export function ChartStoryPanel({ steps, index, onIndexChange, open, onClose, tr
         <ol aria-label={t(lang, 'chart.story.stepsLabel')} className="ml-auto flex items-center gap-1">
           {steps.map((step, i) => (
             <li key={step.id}>
+              {/* Final-review fix (a11y): a bare size-2.5 (10px) dot was
+                * below the ~24px minimum touch/click target — the button
+                * itself now reserves a size-6 (24px) hit area, with the
+                * small coloured dot as an inner, non-interactive span. */}
               <button
                 type="button"
                 aria-label={step.title}
                 aria-current={i === index ? 'step' : undefined}
                 onClick={() => go(i)}
-                className={'block size-2.5 rounded-full ' + (i === index ? 'bg-foreground' : 'bg-border hover:bg-muted-foreground')}
-              />
+                className="flex size-6 items-center justify-center"
+              >
+                <span className={'block size-2.5 rounded-full ' + (i === index ? 'bg-foreground' : 'bg-border hover:bg-muted-foreground')} />
+              </button>
             </li>
           ))}
         </ol>

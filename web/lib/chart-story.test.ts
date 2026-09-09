@@ -192,6 +192,55 @@ describe('buildStorySteps — several series', () => {
     expectDigitsBound(multiSeries(3), 'nl');
     expectDigitsBound(multiSeries(3), 'en');
   });
+
+  // Final-review fix: the provisional suffix used to check only the LAST
+  // plotted point — a series whose provisional point was its FIRST (already
+  // firmed up by the last one) silently lost the disclosure.
+  it('marks a series caption provisional when only its FIRST point is (not just its last)', () => {
+    const s = spec({
+      series: [
+        {
+          label: 'Regio A',
+          regionCode: 'PV0',
+          points: [
+            point({ resultId: 'a1', periodCode: '2022JJ00', periodLabel: '2022', value: 1, formattedValue: '1,0', provisional: true, status: 'Voorlopig' }),
+            point({ resultId: 'a2', periodCode: '2024JJ00', periodLabel: '2024', value: 2, formattedValue: '2,0' }),
+          ],
+        },
+        {
+          label: 'Regio B',
+          regionCode: 'PV1',
+          points: [
+            point({ resultId: 'b1', periodCode: '2022JJ00', periodLabel: '2022', value: 3, formattedValue: '3,0' }),
+            point({ resultId: 'b2', periodCode: '2024JJ00', periodLabel: '2024', value: 4, formattedValue: '4,0' }),
+          ],
+        },
+      ],
+    });
+    const steps = buildStorySteps(s, 'nl');
+    expect(steps[1]).toMatchObject({ title: 'Regio A', caption: '2022: 1,0 → 2024: 2,0 % (voorlopig cijfer)' });
+    // Its neighbour, with neither endpoint provisional, stays undecorated —
+    // the fix must not mark every series regardless of its own points.
+    expect(steps[2]).toMatchObject({ title: 'Regio B', caption: '2022: 3,0 → 2024: 4,0 %' });
+  });
+
+  // Pins the single-plotted-point branch of a series caption (previously
+  // untested): `points.length === 1` uses the plain point caption, never the
+  // "from → to" range template (which would repeat the same period twice).
+  it('a series with exactly one plotted point uses the point caption, not the range caption', () => {
+    const s = spec({
+      series: [
+        { label: 'Regio A', regionCode: 'PV0', points: [point({ resultId: 'a1', periodCode: '2022JJ00', periodLabel: '2022', value: 1, formattedValue: '1,0' })] },
+        { label: 'Regio B', regionCode: 'PV1', points: [point({ resultId: 'b1', periodCode: '2022JJ00', periodLabel: '2022', value: 2, formattedValue: '2,0' })] },
+      ],
+    });
+    const steps = buildStorySteps(s, 'nl');
+    expect(steps[1]).toMatchObject({ title: 'Regio A', caption: '2022: 1,0 %', point: { seriesKey: 's0', periodCode: '2022JJ00' } });
+  });
+
+  it('yields nothing for a spec with no series at all', () => {
+    expect(buildStorySteps(spec({ series: [] }), 'nl')).toEqual([]);
+  });
 });
 
 describe('buildStorySteps — a comparison of bars', () => {

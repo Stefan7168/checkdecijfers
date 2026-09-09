@@ -762,8 +762,15 @@ function SeriesDot(
     const resultId = payload[`${seriesKey}_resultId`];
     const color = props.stroke ?? 'currentColor';
     const isEnd = endLabel !== undefined && payload.periodCode === endLabel.periodCode;
-    const hiddenFinal = geometry.hideFinal && !provisional;
     const isStory = storyPeriodCode !== null && payload.periodCode === storyPeriodCode;
+    // Final-review fix (R11): a ringed point must never look like the
+    // hollow provisional marker (opacity 0, `data-marker="hidden"`) — the
+    // ring itself already carries its own dashed stroke (below) as a
+    // distinct visual channel, but the point's OWN filled marker also has
+    // to stay visible inside it, so `hideFinal` (the "alleen voorlopige"
+    // marker mode) is suppressed for the point the story is currently
+    // pointing at.
+    const hiddenFinal = geometry.hideFinal && !provisional && !isStory;
     // Task 6 keyboard-operability fix (#212 follow-up): a synthetic
     // role="button" on an SVG element gets no native Enter/Space activation
     // from the browser the way a real <button> would, so onKeyDown has to
@@ -787,6 +794,7 @@ function SeriesDot(
             fill="none"
             stroke={color}
             strokeWidth={2}
+            strokeDasharray="4 3"
             strokeOpacity={opacity}
             pointerEvents="none"
             data-story-marker={resultId == null ? 'true' : String(resultId)}
@@ -862,6 +870,14 @@ function SeriesBar(
   seriesLabel?: string,
   onPointClick?: (point: PendingPoint) => void,
   lang: Lang = 'nl',
+  // Story mode (session 92) final-review fix: mirrors SeriesDot's own
+  // `storyPeriodCode` param — a single-series time series shown as Staaf
+  // (bar) never reacted to the story before this fix, because only
+  // SeriesDot (Lijn/Vlak) had this thread. The periodCode of the point the
+  // active story step tells about, or null. Draws a dashed outline `<rect>`
+  // AROUND the bar (never `data-point`, `pointerEvents="none"`) rather than
+  // reusing the dot ring — a bar has no point for a ring to surround.
+  storyPeriodCode: string | null = null,
 ) {
   return function Shape(props: { x?: number; y?: number; width?: number; height?: number; payload?: Row }) {
     const { x, y, width, height, payload } = props;
@@ -872,6 +888,7 @@ function SeriesBar(
     const resultId = payload[`${seriesKey}_resultId`];
     const label = labelByPeriod.get(String(payload.periodCode));
     const negative = typeof value === 'number' && value < 0;
+    const isStory = storyPeriodCode !== null && payload.periodCode === storyPeriodCode;
     // Task 6 keyboard-operability fix (#212 follow-up): same rationale as
     // SeriesDot's `activate` above — a synthetic role="button" on an SVG
     // element gets no native Enter/Space activation, so onKeyDown has to
@@ -937,6 +954,20 @@ function SeriesBar(
           >
             {label.text}
           </text>
+        ) : null}
+        {isStory ? (
+          <rect
+            x={x - 3}
+            y={y - 3}
+            width={width + 6}
+            height={Math.max(height + 6, 6)}
+            fill="none"
+            stroke={color}
+            strokeWidth={2}
+            strokeDasharray="4 3"
+            pointerEvents="none"
+            data-story-marker={resultId == null ? 'true' : String(resultId)}
+          />
         ) : null}
       </g>
     );
@@ -1199,7 +1230,20 @@ export function ChartView({
   // boolean (`styleOpen` is derived, every existing read of it is unchanged).
   const [openPanel, setOpenPanel] = useState<'style' | 'story' | null>(null);
   const styleOpen = openPanel === 'style';
-  const setStyleOpen = (open: boolean): void => setOpenPanel(open ? 'style' : null);
+  // Final-review fix: a derived setter must route a `false` through the
+  // story exactly like `toggleStylePanel` already does — restoring the
+  // reader's own snapshot (`closeStory`) rather than just switching
+  // `openPanel` straight to `null` and leaving the snapshot stranded.
+  // `closeStory` is a function declaration further down this component, so
+  // JS hoists it before this component body runs — calling it here, ahead
+  // of its own textual definition, is safe.
+  const setStyleOpen = (open: boolean): void => {
+    if (!open && openPanel === 'story') {
+      closeStory();
+      return;
+    }
+    setOpenPanel(open ? 'style' : null);
+  };
   const [storyIndex, setStoryIndex] = useState(0);
   // The reader's own hidden/highlight/zoom state, taken when the story opens
   // and put back when it closes (the story drives highlight itself and needs
@@ -1297,6 +1341,15 @@ export function ChartView({
   // dispatch, Y-axis domain and label-plan kind below, so the honesty rule
   // and the rendered chart can never drift apart (WP12 review lesson).
   const effectiveKind: ChartSpec['kind'] = activeForm === 'table' ? spec.kind : activeForm === 'line' || activeForm === 'area' ? 'line' : 'bar';
+  // Final-review fix (defensive snapshot guard, session 92 follow-up):
+  // hoisted from just above the small-multiples toggle below — moved here,
+  // ABOVE the schemaVersion guard, so `storyAvailable` (right below) can
+  // feed the stranded-snapshot Effect that must itself sit above the guard
+  // (same Rules-of-Hooks reasoning as `activeForm`/the font Effect above).
+  // `spec.series.length`, not `seriesMeta.length`: identical count, per the
+  // note on `canUseArea` above — `seriesMeta` isn't built until `buildRows`
+  // runs, further below this guard.
+  const smallMultiplesAvailable = activeForm === 'line' && spec.series.length > 1;
 
   // WP218 (ADR 039) Phase 0: the presentation resolver, run once per render
   // with the ACTUAL rendered form (`activeForm`, not raw `state.form` — the
@@ -1369,6 +1422,25 @@ export function ChartView({
     () => buildStorySteps(translateSpecForDisplay(spec, chartLang), chartLang),
     [spec, chartLang],
   );
+  // Story mode (session 92): hoisted from next to `storyTriggerId`/
+  // `storyControlsId` below — needed here, above the guard, so the
+  // stranded-snapshot Effect right after it can itself run unconditionally
+  // (every input — `state.form`, `smallMultiples`, `smallMultiplesAvailable`,
+  // `storySteps.length` — is already available above this line).
+  const storyAvailable =
+    state.form !== 'table' && !(smallMultiples && smallMultiplesAvailable) && storySteps.length >= 3;
+  // Final-review fix (defensive snapshot guard): every reachable UI path
+  // already closes the story before `storyAvailable` could go false while
+  // still open (`selectForm`, `toggleStylePanel`, and the small-multiples
+  // toggle is `disabled={storyOpen}`) — this Effect is a backstop for any
+  // future path that forgets to, so a snapshot (the reader's hidden/
+  // highlighted/zoom state, taken in `openStory`) is never left stranded
+  // with no way back to it. `closeStory` is a function declaration (hoisted
+  // by JS before this component body runs), so referencing it here, ahead
+  // of its own textual definition, is safe.
+  useEffect(() => {
+    if (openPanel === 'story' && !storyAvailable) closeStory();
+  }, [openPanel, storyAvailable]);
 
   if (spec.schemaVersion !== 1) {
     // Renderers dispatch on the schema version (ADR 007); this one only
@@ -1494,8 +1566,9 @@ export function ChartView({
   // === 'line'` — area's effectiveKind is ALSO 'line' (same data model,
   // reused verbatim below), but small multiples stays a line-only view by
   // owner design; without this narrowing it would silently become
-  // reachable from the Vlak tab too.
-  const smallMultiplesAvailable = activeForm === 'line' && seriesMeta.length > 1;
+  // reachable from the Vlak tab too. (`smallMultiplesAvailable` itself now
+  // lives above the schemaVersion guard, next to `effectiveKind` — see the
+  // comment there.)
   const hiddenDisclosure =
     state.hiddenKeys.size > 0
       ? ` ${t(chartLang, 'chart.hiddenSeriesDisclosure', { n: state.hiddenKeys.size, m: seriesMeta.length })}.`
@@ -1628,8 +1701,9 @@ export function ChartView({
   // owns — mirrors styleTriggerId/styleControlsId immediately above.
   const storyTriggerId = `${domId}-story-trigger`;
   const storyControlsId = `${domId}-story`;
-  const storyAvailable =
-    state.form !== 'table' && !(smallMultiples && smallMultiplesAvailable) && storySteps.length >= 3;
+  // `storyAvailable` itself now lives above the schemaVersion guard, next to
+  // `storySteps` — see the comment there (needed by the stranded-snapshot
+  // Effect, which must run unconditionally).
   const storyOpen = openPanel === 'story' && storyAvailable;
   const activeStoryStep: StoryStep | null = storyOpen ? (storySteps[storyIndex] ?? null) : null;
   // Review fix (controller decision): while the story is open, every reader
@@ -2284,6 +2358,7 @@ export function ChartView({
                         s.label,
                         (p) => setPendingPoint(p),
                         chartLang,
+                        activeStoryStep?.point?.seriesKey === s.key ? activeStoryStep.point.periodCode : null,
                       )}
                     />
                   );
@@ -2312,10 +2387,17 @@ export function ChartView({
       {/* Review fix (controller decision): the ONE reason every locked
         * control's aria-describedby points at — legend buttons, the
         * Vanaf/Tot selects, the small-multiples toggle. Rendered once here,
-        * near the panel it explains, rather than duplicated per control. */}
-      <span id={storyLockId} className="sr-only">
-        {t(chartLang, 'chart.story.controlsLocked')}
-      </span>
+        * near the panel it explains, rather than duplicated per control.
+        * Final-review fix: every `aria-describedby` that points at this id
+        * is already gated on `storyOpen` (undefined when closed), so the
+        * span itself only needs to exist while the story is open too — a
+        * stray `sr-only` node with a stale id otherwise sits in the DOM
+        * permanently, described by nothing. */}
+      {storyOpen ? (
+        <span id={storyLockId} className="sr-only">
+          {t(chartLang, 'chart.story.controlsLocked')}
+        </span>
+      ) : null}
       {/* Chart-panel-layout refactor (owner: option A — "first the graph on
         * top, then the design settings"): the Opmaak region renders directly
         * after the chart's own tabpanel above (`chartContainerRef`'s parent),

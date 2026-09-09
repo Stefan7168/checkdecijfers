@@ -47,7 +47,7 @@ disclosure) applies: the embed bakes the same disclosure text the download bakes
 
 - A `ChartStoryTrigger` button rendered as a row-mate of the Weergave tablist, directly after
   `ChartConfigTrigger` (Style), in `ChartView`. Gated exactly like the Style trigger
-  (`state.form !== 'table'`) AND on `storySteps.length >= 2` (a chart with one point has no story).
+  (`state.form !== 'table'`) AND on `storySteps.length >= 3` (a chart with one point has no story).
 - Look (the owner's ask: "colourful border, magic wand or stars, to show something exciting will
   happen"): a 2 px gradient ring (conic or linear, purple → pink → amber, via a wrapper with the
   gradient as background and the button inset 2 px with the card background), the lucide
@@ -126,9 +126,11 @@ Rules (docs/05: R1/R3/R6/R10/R11 — every digit token on the card must be a spe
 - Usage counter (#220, no schema change beyond the file-only migration 028 the owner still has to
   apply): two new `CHART_STYLE_EVENTS` — `story_open`, `story_step` — recorded through the existing
   `trackChartStyleEvent` sink. Counts nothing until migration 028 runs (by design).
-- Export: the story's zoom uses `periodRange`, so the existing `viewDisclosure` line already
-  travels into a download taken mid-story; the story ring and panel live outside the export
-  container and can never be exported. Test-pinned.
+- Export: the story panel lives outside the export container and can never be exported; the story
+  ring (a dashed outline around the step's point or bar) IS on screen and therefore IS exported,
+  like the highlight dimming (#46(c): the export shows what is on screen); no zoom is used, so no
+  disclosure line changes during a story — the decision that ring + dimming need no disclosure is
+  recorded in ADR 039's addendum. Test-pinned.
 - Tests: `chart-story.test.ts` (steps for the four spec shapes, the null/tie rules, the digit
   rule: every digit token in every caption ∈ spec strings), `chart-story.test.tsx` (open/close,
   Next/Previous, Escape refocus, restore-on-close, the marker's DOM, the digit scan with the

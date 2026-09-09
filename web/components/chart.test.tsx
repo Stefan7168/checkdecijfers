@@ -2887,6 +2887,41 @@ describe('Story mode (session 92): a code-built story under the chart', () => {
     expect(Number(ring.getAttribute('r'))).toBeGreaterThan(Number(dot.getAttribute('r')));
   });
 
+  // Final-review fix: `activeStoryStep` only ever threaded into SeriesDot
+  // (Lijn/Vlak) — a single-series time series shown as Staaf never reacted
+  // to the story at all, since SeriesBar had no equivalent thread.
+  it('a single-series time series shown as Staaf reacts to the story too, with a dashed outline around the bar', () => {
+    const { container } = render(<ChartView spec={threePointSpec()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
+    const beforeStory = container.querySelectorAll('[data-point]').length;
+    fireEvent.click(screen.getByRole('button', { name: 'Verhaal' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Volgende' }));
+    const markers = container.querySelectorAll('[data-story-marker]');
+    expect(markers).toHaveLength(1);
+    expect(markers[0]!.tagName.toLowerCase()).toBe('rect');
+    expect(markers[0]!.getAttribute('data-point')).toBeNull();
+    expect(container.querySelectorAll('[data-point]')).toHaveLength(beforeStory);
+  });
+
+  // Final-review fix (R11): a ringed point must never look like the hollow
+  // "alleen voorlopige" marker — the ring itself carries a dashed stroke as
+  // a distinct visual channel, and the ringed point's own filled marker must
+  // stay visible even while every other final marker is hidden.
+  it('the story ring never looks like the hollow provisional marker, even in "alleen voorlopige" mode', () => {
+    const { container } = render(<ChartView spec={threePointSpec()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Alleen voorlopige' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Verhaal' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Volgende' }));
+    const ring = container.querySelector('[data-story-marker]')!;
+    expect(ring.getAttribute('stroke-dasharray')).toBeTruthy();
+    const ringedDot = container.querySelector('[data-result-id="lo"]')!;
+    expect(ringedDot.getAttribute('data-marker')).not.toBe('hidden');
+    expect(ringedDot.getAttribute('opacity')).not.toBe('0');
+    expect(container.querySelector('[data-result-id="mid"]')!.getAttribute('data-marker')).toBe('hidden');
+    expect(container.querySelector('[data-result-id="hi"]')!.getAttribute('data-marker')).toBe('hidden');
+  });
+
   // Resolution note (story-task-4-brief): getByRole('button', { name: /Utrecht/ })
   // matches two legend buttons (the toggle and "Markeer Utrecht"); the exact
   // name 'Utrecht' — what every other legend test in this file uses — is the
@@ -2964,7 +2999,7 @@ describe('Story mode (session 92): a code-built story under the chart', () => {
     scanForUnboundDigits(en.container, strings);
   });
 
-  it('nothing of the story enters the SVG export', () => {
+  it('only the story ring — never the panel text — enters the SVG export', () => {
     const { container } = render(<ChartView spec={threePointSpec()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Verhaal' }));
     fireEvent.click(screen.getByRole('button', { name: 'Volgende' }));
@@ -3002,6 +3037,19 @@ describe('Story mode (session 92): a code-built story under the chart', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Sluiten' }));
     expect(screen.getByRole('button', { name: 'Utrecht' })).not.toBeDisabled();
     expect(screen.getByLabelText('Vanaf')).not.toBeDisabled();
+  });
+
+  // Final-review fix: every `aria-describedby` pointing at the lock-reason
+  // span is already gated on `storyOpen`, so the span itself should only
+  // exist in the DOM while the story is open too — not sit there
+  // permanently, described by nothing, once the story closes.
+  it('the lock-reason span only exists while the story is open', () => {
+    const { container } = render(<ChartView spec={twoSeriesFourYearLineSpec()} />);
+    expect(container.querySelector('[id$="-story-lock"]')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Verhaal' }));
+    expect(container.querySelector('[id$="-story-lock"]')).not.toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Sluiten' }));
+    expect(container.querySelector('[id$="-story-lock"]')).toBeNull();
   });
 
   it("choosing another chart form closes the story and restores the reader's own view", () => {

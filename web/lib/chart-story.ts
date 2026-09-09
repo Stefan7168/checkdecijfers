@@ -130,7 +130,13 @@ function multiSeriesSteps(spec: ChartSpec, lang: Lang): StoryStep[] {
             toPeriod: last.periodLabel,
             toValue: last.formattedValue,
             unit: spec.unit,
-          }) + provisionalSuffix(last, lang);
+          }) +
+          // Final-review fix: a two-point (or more) series caption only
+          // named `last` as provisional, so a series whose FIRST point was
+          // the provisional one (and whose last point had already firmed
+          // up) silently dropped the disclosure — either endpoint being
+          // provisional must say so.
+          (first.provisional || last.provisional ? t(lang, 'chart.story.provisional') : '');
     steps.push({
       id: `series-${key}`,
       kind: 'series',
