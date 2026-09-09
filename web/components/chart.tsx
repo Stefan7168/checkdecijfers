@@ -633,6 +633,8 @@ function SeriesLegend({
   onToggle,
   onHighlight,
   lang,
+  disabled = false,
+  disabledReasonId,
 }: {
   seriesMeta: SeriesMeta[];
   hiddenKeys: Set<string>;
@@ -640,7 +642,17 @@ function SeriesLegend({
   onToggle: (key: string) => void;
   onHighlight: (key: string | null) => void;
   lang: Lang;
+  // Story mode (session 92 review fix): while the story is open, the chart
+  // must keep showing exactly what the active step's caption describes —
+  // hiding or highlighting a series out from under a live caption would
+  // contradict it. `disabled` locks both buttons per series; `disabledReasonId`
+  // points at the one shared `${domId}-story-lock` span rendered near the
+  // panel, so every locked control shares the same reason via
+  // aria-describedby instead of duplicating the string per button.
+  disabled?: boolean;
+  disabledReasonId?: string;
 }) {
+  const lockedTitle = disabled ? t(lang, 'chart.story.controlsLocked') : undefined;
   return (
     <div role="group" aria-label={t(lang, 'chart.seriesGroupLabel')} className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
       {seriesMeta.map((s) => {
@@ -657,9 +669,12 @@ function SeriesLegend({
                * elsewhere in this codebase for the same mistake (see
                * chart-toggle.tsx). */
               aria-pressed={!hidden}
+              disabled={disabled}
               onClick={() => onToggle(s.key)}
+              title={lockedTitle}
+              aria-describedby={disabled ? disabledReasonId : undefined}
               className={
-                'inline-flex min-h-6 items-center gap-1.5 rounded-md px-1.5 text-xs hover:bg-muted ' +
+                'inline-flex min-h-6 items-center gap-1.5 rounded-md px-1.5 text-xs hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40 ' +
                 (hidden ? 'text-muted-foreground line-through' : 'text-foreground')
               }
             >
@@ -673,9 +688,15 @@ function SeriesLegend({
             <button
               type="button"
               aria-pressed={highlighted}
-              disabled={hidden}
+              disabled={hidden || disabled}
               onClick={() => onHighlight(highlighted ? null : s.key)}
-              title={t(lang, 'chart.highlightTitle', { label: s.label })}
+              /* A locked legend takes priority over the plain highlight-title
+               * (kept only while NOT locked, per the review fix's own note
+               * that a control already carrying a `title` keeps the lock
+               * reason in aria-describedby and sets `title` only while
+               * locked). */
+              title={disabled ? lockedTitle : t(lang, 'chart.highlightTitle', { label: s.label })}
+              aria-describedby={disabled ? disabledReasonId : undefined}
               className={
                 'min-h-6 rounded-md px-1 text-xs hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40 ' +
                 (highlighted ? 'text-foreground font-semibold' : 'text-muted-foreground')
@@ -1573,6 +1594,14 @@ export function ChartView({
   const hbarDisabledReason = t(chartLang, 'chart.formReason.hbarTimeSeries');
 
   function selectForm(next: ChartForm): void {
+    // Review fix (controller decision): a story is only ever meaningful for
+    // the chart form it was opened against — switching Weergave tabs while
+    // it's open must restore the reader's own snapshot FIRST (closeStory),
+    // same as toggleStylePanel already does before switching to Style,
+    // rather than leaving `openPanel` stuck on 'story' once `storyAvailable`
+    // goes false for the new form (which would otherwise strand the panel
+    // open with no way to reach it, per the review finding).
+    if (openPanel === 'story') closeStory();
     dispatch({ type: 'setForm', form: next });
     formTabRef[next].current?.focus();
   }
@@ -1603,6 +1632,14 @@ export function ChartView({
     state.form !== 'table' && !(smallMultiples && smallMultiplesAvailable) && storySteps.length >= 3;
   const storyOpen = openPanel === 'story' && storyAvailable;
   const activeStoryStep: StoryStep | null = storyOpen ? (storySteps[storyIndex] ?? null) : null;
+  // Review fix (controller decision): while the story is open, every reader
+  // view control that could contradict its active caption — the legend's
+  // hide/highlight buttons, the Vanaf/Tot zoom selects, the small-multiples
+  // toggle — gets disabled with ONE shared, digit-free reason exposed via
+  // both `title` (pointer) and `aria-describedby` (screen reader), pointing
+  // at the single hidden span rendered once near the panel below.
+  const storyLockId = `${domId}-story-lock`;
+  const storyLockedTitle = storyOpen ? t(chartLang, 'chart.story.controlsLocked') : undefined;
 
   function openStory(): void {
     storySnapshot.current = { hiddenKeys: state.hiddenKeys, highlightedKey: state.highlightedKey, periodRange: state.periodRange };
@@ -1807,6 +1844,9 @@ export function ChartView({
             id={`${domId}-from`}
             aria-label={t(chartLang, 'chart.from')}
             value={state.periodRange?.[0] ?? allPeriodCodes[0]}
+            disabled={storyOpen}
+            title={storyLockedTitle}
+            aria-describedby={storyOpen ? storyLockId : undefined}
             onChange={(e) => {
               const [from, clampedTo] = clampVanafChange(
                 e.target.value,
@@ -1820,7 +1860,7 @@ export function ChartView({
                     : [from, clampedTo],
               });
             }}
-            className="rounded-md border border-border bg-background px-1.5 py-0.5 text-foreground"
+            className="rounded-md border border-border bg-background px-1.5 py-0.5 text-foreground disabled:cursor-not-allowed disabled:opacity-60"
           >
             {allPeriodCodes.map((code) => (
               <option key={code} value={code}>
@@ -1833,6 +1873,9 @@ export function ChartView({
             id={`${domId}-to`}
             aria-label={t(chartLang, 'chart.to')}
             value={state.periodRange?.[1] ?? allPeriodCodes[allPeriodCodes.length - 1]}
+            disabled={storyOpen}
+            title={storyLockedTitle}
+            aria-describedby={storyOpen ? storyLockId : undefined}
             onChange={(e) => {
               const [clampedFrom, to] = clampTotChange(
                 state.periodRange?.[0] ?? allPeriodCodes[0],
@@ -1846,7 +1889,7 @@ export function ChartView({
                     : [clampedFrom, to],
               });
             }}
-            className="rounded-md border border-border bg-background px-1.5 py-0.5 text-foreground"
+            className="rounded-md border border-border bg-background px-1.5 py-0.5 text-foreground disabled:cursor-not-allowed disabled:opacity-60"
           >
             {allPeriodCodes.map((code) => (
               <option key={code} value={code}>
@@ -2266,6 +2309,13 @@ export function ChartView({
           lang={chartLang}
         />
       ) : null}
+      {/* Review fix (controller decision): the ONE reason every locked
+        * control's aria-describedby points at — legend buttons, the
+        * Vanaf/Tot selects, the small-multiples toggle. Rendered once here,
+        * near the panel it explains, rather than duplicated per control. */}
+      <span id={storyLockId} className="sr-only">
+        {t(chartLang, 'chart.story.controlsLocked')}
+      </span>
       {/* Chart-panel-layout refactor (owner: option A — "first the graph on
         * top, then the design settings"): the Opmaak region renders directly
         * after the chart's own tabpanel above (`chartContainerRef`'s parent),
@@ -2382,6 +2432,8 @@ export function ChartView({
             onToggle={(key) => dispatch({ type: 'toggleSeries', key })}
             onHighlight={(key) => dispatch({ type: 'setHighlight', key })}
             lang={chartLang}
+            disabled={storyOpen}
+            disabledReasonId={storyLockId}
           />
           {state.hiddenKeys.size > 0 ? (
             <p className="mt-1 text-xs text-muted-foreground">
@@ -2399,8 +2451,11 @@ export function ChartView({
           <button
             type="button"
             aria-pressed={smallMultiples}
+            disabled={storyOpen}
+            title={storyLockedTitle}
+            aria-describedby={storyOpen ? storyLockId : undefined}
             onClick={() => setSmallMultiples((v) => !v)}
-            className={tabClass(smallMultiples)}
+            className={tabClass(smallMultiples) + (storyOpen ? ' cursor-not-allowed opacity-60' : '')}
           >
             {t(chartLang, 'chart.smallMultiplesToggle')}
           </button>

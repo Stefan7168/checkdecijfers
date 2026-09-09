@@ -2978,4 +2978,42 @@ describe('Story mode (session 92): a code-built story under the chart', () => {
     expect(svg.textContent).not.toContain('Hoogste punt');
     expect(svg.textContent).not.toContain('Begin');
   });
+
+  // Review fix: while the story is open, every reader view control that
+  // could contradict the active caption (hide/highlight the narrated
+  // series, zoom it out of view, switch to small multiples) must be locked
+  // — the story drives the chart while it's open.
+  it('locks the legend, the zoom selects and the small-multiples toggle while the story is open, with a readable reason', () => {
+    render(<ChartView spec={twoSeriesFourYearLineSpec()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Verhaal' }));
+    // Scoped to the legend's own group: once the story is open, its step-jump
+    // dots (chart-story.tsx) can carry a step title that collides with a
+    // series label ("Utrecht") — the SAME collision the pre-existing
+    // "a series step highlights..." test's resolution note describes for
+    // the highlight button, just from a different element this time.
+    const legend = within(screen.getByRole('group', { name: 'Reeksen' }));
+    const utrecht = legend.getByRole('button', { name: 'Utrecht' });
+    expect(utrecht).toBeDisabled();
+    expect(utrecht).toHaveAttribute('title', 'Sluit het verhaal om dit te wijzigen.');
+    expect(document.getElementById(utrecht.getAttribute('aria-describedby')!)).toHaveTextContent('Sluit het verhaal om dit te wijzigen.');
+    expect(screen.getByLabelText('Vanaf')).toBeDisabled();
+    expect(screen.getByLabelText('Tot')).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Kleine grafieken' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Sluiten' }));
+    expect(screen.getByRole('button', { name: 'Utrecht' })).not.toBeDisabled();
+    expect(screen.getByLabelText('Vanaf')).not.toBeDisabled();
+  });
+
+  it("choosing another chart form closes the story and restores the reader's own view", () => {
+    const { container } = render(<ChartView spec={twoSeriesFourYearLineSpec()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Utrecht' }));
+    expect(container.querySelectorAll('.recharts-line')).toHaveLength(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Verhaal' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Volgende' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
+    expect(screen.queryByRole('region', { name: 'Verhaal bij de grafiek' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Verhaal' })).toHaveAttribute('aria-expanded', 'false');
+    fireEvent.click(screen.getByRole('tab', { name: 'Lijn' }));
+    expect(container.querySelectorAll('.recharts-line')).toHaveLength(1);
+  });
 });
