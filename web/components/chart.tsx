@@ -219,6 +219,45 @@ export function buildRows(
   return { rows, seriesMeta };
 }
 
+/**
+ * WP218 phase 5: the transposed row set for the horizontal-bar form — a
+ * comparison's spec has one series PER REGION and exactly one point per
+ * series (one period), so unlike `buildRows` (one row per period, one
+ * column per series) this is one row PER SERIES, read from that series'
+ * FIRST point. Spec order is preserved verbatim (R6: a comparison's series
+ * order is never re-sorted by value here — any ranking display is a refused
+ * chart type, see the phase-5 plan's Global Constraints), and a series with
+ * no point at all degrades to a null row rather than throwing, mirroring
+ * `buildRows`' own null-safety for a missing point.
+ */
+export interface RegionRow {
+  label: string;
+  value: number | null;
+  value_display: string | null;
+  value_provisional: boolean;
+  value_resultId: string | null;
+  colorIndex: number;
+}
+
+export function buildRegionRows(
+  spec: PlottableSpec,
+  colorFor: (index: number) => string,
+): { rows: RegionRow[]; colors: string[] } {
+  const rows: RegionRow[] = spec.series.map((series, i) => {
+    const point = series.points[0] ?? null;
+    return {
+      label: series.label,
+      value: point ? point.value : null,
+      value_display: point ? point.formattedValue : null,
+      value_provisional: point ? point.provisional : false,
+      value_resultId: point ? point.resultId : null,
+      colorIndex: i,
+    };
+  });
+  const colors = spec.series.map((_, i) => colorFor(i));
+  return { rows, colors };
+}
+
 /** #170(4): which curated annotations to draw, resolved to the exact
  * `periodLabel` string Recharts' categorical x-axis (dataKey="periodLabel")
  * matches on — looked up from `rows`, never reformatted or recomputed here.
@@ -978,7 +1017,15 @@ export function ChartView({
   // rule is about the chart's true shape, not the current zoom window).
   const canUseLine = lineFormAllowed(spec, spec.series.length);
   const activeForm: ChartForm = state.form === 'line' && !canUseLine ? 'bar' : state.form;
-  const effectiveKind: ChartSpec['kind'] = activeForm === 'table' ? spec.kind : activeForm;
+  // WP218 phase 5 (Task 1 of 3, type-only note): `ChartForm` now also has
+  // 'area'/'hbar', so `activeForm` no longer narrows to `ChartSpec['kind']`
+  // by itself. Nothing produces 'area'/'hbar' here yet — FORM_ORDER/
+  // formTabRef below don't offer them, and no control dispatches
+  // `setForm: 'area' | 'hbar'` until Task 2 wires the real tabs — so this
+  // cast changes no current behaviour; Task 2 replaces it with the real
+  // mapping ('line' for line/area, 'bar' for bar/hbar, spec.kind for table),
+  // per the phase-5 plan.
+  const effectiveKind: ChartSpec['kind'] = activeForm === 'table' ? spec.kind : (activeForm as ChartSpec['kind']);
 
   // WP218 (ADR 039) Phase 0: the presentation resolver, run once per render
   // with the ACTUAL rendered form (`activeForm`, not raw `state.form` — the
@@ -1171,7 +1218,19 @@ export function ChartView({
   // arrow-key navigation never lands on a control the pointer can't activate
   // either.
   const FORM_ORDER: ChartForm[] = canUseLine ? ['line', 'bar', 'table'] : ['bar', 'table'];
-  const formTabRef: Record<ChartForm, typeof lineTabRef> = { line: lineTabRef, bar: barTabRef, table: tableTabRef };
+  // WP218 phase 5 (Task 1 of 3): `ChartForm` now also has 'area'/'hbar', so
+  // this `Record<ChartForm, ...>` needs an entry for each to keep `tsc`
+  // green — neither is reachable yet (FORM_ORDER above doesn't offer them,
+  // and nothing dispatches `setForm: 'area' | 'hbar'` until Task 2 wires the
+  // real tabs), so the mapping is a placeholder only: closest existing tab
+  // (area -> the line tab, hbar -> the bar tab).
+  const formTabRef: Record<ChartForm, typeof lineTabRef> = {
+    line: lineTabRef,
+    area: lineTabRef,
+    bar: barTabRef,
+    hbar: barTabRef,
+    table: tableTabRef,
+  };
 
   function selectForm(next: ChartForm): void {
     dispatch({ type: 'setForm', form: next });

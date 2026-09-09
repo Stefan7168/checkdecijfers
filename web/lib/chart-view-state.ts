@@ -6,7 +6,7 @@
 import type { ChartSpec } from '../backend/chart/types.ts';
 import type { PresentationOverrides } from './chart-presentation.ts';
 
-export type ChartForm = 'line' | 'bar' | 'table';
+export type ChartForm = 'line' | 'area' | 'bar' | 'hbar' | 'table';
 
 export interface ChartViewState {
   form: ChartForm;
@@ -77,6 +77,49 @@ export function chartViewReducer(state: ChartViewState, action: ChartViewAction)
  */
 export function lineFormAllowed(spec: Pick<ChartSpec, 'kind'>, seriesCount: number): boolean {
   return !(spec.kind === 'bar' && seriesCount > 1);
+}
+
+/**
+ * WP218 phase 5 (Global Constraints): a filled area encodes magnitude, so it
+ * is offered ONLY for a single time series — a multi-series area would cover
+ * other series' markers and gaps, and a comparison (bar-kind) has no time
+ * axis for a fill to trace across.
+ */
+export function areaFormAllowed(spec: Pick<ChartSpec, 'kind'>, seriesCount: number): boolean {
+  return spec.kind === 'line' && seriesCount === 1;
+}
+
+/**
+ * WP218 phase 5 (Global Constraints): a horizontal bar is offered ONLY for a
+ * comparison (bar-kind spec) — a time series reads chronologically
+ * left-to-right, which a category axis of regions would break.
+ */
+export function hbarFormAllowed(spec: Pick<ChartSpec, 'kind'>): boolean {
+  return spec.kind === 'bar';
+}
+
+/**
+ * WP218 phase 5 (Global Constraints): "presentation carries over on a type
+ * switch ... a form that becomes disallowed after a same-instance spec swap
+ * falls back exactly like the existing line->bar guard." One function so
+ * both the render (Task 2) and every test share the SAME fallback policy —
+ * area falls back to line when line still fits, else bar; hbar falls back
+ * to bar; line falls back to bar exactly as before this phase; bar/table are
+ * never gated and pass through unchanged.
+ */
+export function fallbackForm(form: ChartForm, spec: Pick<ChartSpec, 'kind'>, seriesCount: number): ChartForm {
+  switch (form) {
+    case 'area':
+      if (areaFormAllowed(spec, seriesCount)) return 'area';
+      return lineFormAllowed(spec, seriesCount) ? 'line' : 'bar';
+    case 'hbar':
+      return hbarFormAllowed(spec) ? 'hbar' : 'bar';
+    case 'line':
+      return lineFormAllowed(spec, seriesCount) ? 'line' : 'bar';
+    case 'bar':
+    case 'table':
+      return form;
+  }
 }
 
 /**

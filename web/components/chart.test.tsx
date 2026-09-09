@@ -26,6 +26,7 @@ const chartStyleActions = vi.hoisted(() => ({
 vi.mock('../app/chart-style-actions.ts', () => chartStyleActions);
 import {
   annotationMarkers,
+  buildRegionRows,
   buildRows,
   ChartTooltip,
   ChartView,
@@ -36,6 +37,7 @@ import {
   tableModel,
   valueLabelPlan,
   yAxisDomain,
+  type PlottableSpec,
 } from './chart.tsx';
 
 afterEach(cleanup);
@@ -188,6 +190,82 @@ describe('buildRows', () => {
     expect(r23[`${b}_resultId`]).toBe('cell-b-2023');
     expect(r24[`${a}_resultId`]).toBeNull();
     expect(r24[`${b}_resultId`]).toBe('cell-b-2024');
+  });
+});
+
+// WP218 phase 5 (Task 1): the pure row-builder for the horizontal-bar form —
+// one row per series (region), the series' FIRST point (a comparison has
+// exactly one period per region), spec order NEVER reordered (R6), null-safe
+// for a series with no point at all. Mirrors buildRows' own test shape but
+// against a minimal `PlottableSpec` literal (buildRegionRows only needs
+// `kind`/`series`/`label`/`points`, same structural subset buildRows uses).
+function regionSpec(series: PlottableSpec['series']): PlottableSpec {
+  return { kind: 'bar', series };
+}
+
+describe('buildRegionRows', () => {
+  it('builds one row per series in SPEC ORDER (R6 — never sorted, even when labels would sort differently)', () => {
+    const s = regionSpec([
+      { label: 'Zeeland', points: [{ periodCode: '2024JJ00', periodLabel: '2024', value: 3, formattedValue: '3,0', provisional: false, resultId: 'r-zeeland' }] },
+      { label: 'Amsterdam', points: [{ periodCode: '2024JJ00', periodLabel: '2024', value: 9, formattedValue: '9,0', provisional: false, resultId: 'r-amsterdam' }] },
+    ]);
+    const { rows } = buildRegionRows(s, (i) => `color-${i}`);
+    expect(rows.map((r) => r.label)).toEqual(['Zeeland', 'Amsterdam']);
+  });
+
+  it("carries value_display/value_provisional/value_resultId verbatim from each series' FIRST point", () => {
+    const s = regionSpec([
+      {
+        label: 'Utrecht',
+        points: [
+          { periodCode: '2024JJ00', periodLabel: '2024', value: 42, formattedValue: '42,0', provisional: true, resultId: 'r-utrecht' },
+          // A comparison has exactly one period per region — a second point
+          // must never be read; pinning this catches an accidental [1] or
+          // last-wins swap.
+          { periodCode: '2025JJ00', periodLabel: '2025', value: 99, formattedValue: '99,0', provisional: false, resultId: 'r-utrecht-2' },
+        ],
+      },
+    ]);
+    const { rows } = buildRegionRows(s, (i) => `color-${i}`);
+    expect(rows[0]).toEqual({
+      label: 'Utrecht',
+      value: 42,
+      value_display: '42,0',
+      value_provisional: true,
+      value_resultId: 'r-utrecht',
+      colorIndex: 0,
+    });
+  });
+
+  it('a series with no point at all becomes a null row (null-safe), not a thrown error', () => {
+    const s = regionSpec([{ label: 'Empty region', points: [] }]);
+    const { rows } = buildRegionRows(s, (i) => `color-${i}`);
+    expect(rows[0]).toEqual({
+      label: 'Empty region',
+      value: null,
+      value_display: null,
+      value_provisional: false,
+      value_resultId: null,
+      colorIndex: 0,
+    });
+  });
+
+  it("colorIndex is the series' position, and colors[i] is colorFor(i) for every series", () => {
+    const s = regionSpec([
+      { label: 'A', points: [{ periodCode: '2024JJ00', periodLabel: '2024', value: 1, formattedValue: '1,0', provisional: false, resultId: 'r-a' }] },
+      { label: 'B', points: [{ periodCode: '2024JJ00', periodLabel: '2024', value: 2, formattedValue: '2,0', provisional: false, resultId: 'r-b' }] },
+      { label: 'C', points: [] },
+    ]);
+    const colorFor = vi.fn((i: number) => `#color${i}`);
+    const { rows, colors } = buildRegionRows(s, colorFor);
+    expect(rows.map((r) => r.colorIndex)).toEqual([0, 1, 2]);
+    expect(colors).toEqual(['#color0', '#color1', '#color2']);
+  });
+
+  it('an empty series list yields empty rows and colors', () => {
+    const { rows, colors } = buildRegionRows(regionSpec([]), (i) => `color-${i}`);
+    expect(rows).toEqual([]);
+    expect(colors).toEqual([]);
   });
 });
 

@@ -6,6 +6,7 @@
 // audit record — it projects an unchanged server-built spec for display,
 // exactly like windowSpec in chart-view-state.ts.
 import { z } from 'zod';
+import type { ChartForm } from './chart-view-state.ts';
 import type { Lang } from './i18n/messages.ts';
 
 export type LineWidth = 'thin' | 'normal' | 'thick' | 'extraThick';
@@ -123,7 +124,7 @@ export function withAccountDefault(account: unknown): ChartPresentation {
 
 export interface PresentationContext {
   kind: 'line' | 'bar';
-  form: 'line' | 'bar' | 'table';
+  form: ChartForm;
   seriesCount: number;
   hasProvisional: boolean;
 }
@@ -143,6 +144,10 @@ export interface ResolvedPresentation {
 export const LOCK_REASONS = {
   valueLabelsBar: 'Zonder waarden heeft een staafdiagram geen schaal: de as toont bewust geen eigen getallen.',
   zeroBaselineBar: 'Een staafdiagram begint altijd bij nul.',
+  // WP218 phase 5: a filled area encodes magnitude the same way a bar does,
+  // so it gets its OWN reason (not zeroBaselineBar) even though the effect
+  // — force zero, lock the toggle — is identical in shape to the bar case.
+  zeroBaselineArea: 'Een gevuld vlak begint altijd bij nul.',
 } as const;
 
 const ALL_KEYS: PresentationKey[] = ['lineWidth', 'markers', 'grid', 'xLabels', 'axisLines', 'valueLabels', 'zeroBaseline', 'seriesColors', 'fontFamily'];
@@ -164,7 +169,7 @@ export function resolvePresentation(
     applicable.add('fontFamily');
   } else {
     for (const key of ALL_KEYS) applicable.add(key);
-    if (ctx.form === 'bar') {
+    if (ctx.form === 'bar' || ctx.form === 'hbar') {
       applicable.delete('lineWidth');
       applicable.delete('markers');
       applicable.delete('zeroBaseline');
@@ -172,6 +177,19 @@ export function resolvePresentation(
       locks.valueLabels = LOCK_REASONS.valueLabelsBar;
       values.zeroBaseline = 'zero';
       locks.zeroBaseline = LOCK_REASONS.zeroBaselineBar;
+      // WP218 phase 5: horizontal bar puts region labels on the CATEGORY
+      // (y) axis, not the number axis — there is no x-axis label orientation
+      // to offer, unlike a vertical bar's period labels.
+      if (ctx.form === 'hbar') applicable.delete('xLabels');
+    } else if (ctx.form === 'area') {
+      // WP218 phase 5: otherwise identical to 'line' (lineWidth/markers/grid/
+      // xLabels/etc. stay applicable and unforced) — only the baseline is
+      // forced to zero, because a fill encodes magnitude exactly like a bar
+      // does. Left IN `applicable` (unlike bar's zeroBaseline) so the panel
+      // can show the toggle locked with its own reason, rather than hiding
+      // it outright.
+      values.zeroBaseline = 'zero';
+      locks.zeroBaseline = LOCK_REASONS.zeroBaselineArea;
     }
   }
   // WP218 phase 4: unlike every other key, `language` has no honesty

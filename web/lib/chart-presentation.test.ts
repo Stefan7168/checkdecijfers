@@ -4,6 +4,7 @@ import {
   CARD_LIGHT,
   FONT_OPTIONS,
   LINE_WIDTH_PX,
+  LOCK_REASONS,
   RECHARTS_PALETTE,
   STOCK_PRESENTATION,
   contrastRatio,
@@ -24,6 +25,10 @@ import {
 const lineCtx: PresentationContext = { kind: 'line', form: 'line', seriesCount: 2, hasProvisional: false };
 const barCtx: PresentationContext = { kind: 'bar', form: 'bar', seriesCount: 3, hasProvisional: false };
 const tableCtx: PresentationContext = { kind: 'line', form: 'table', seriesCount: 2, hasProvisional: false };
+// WP218 phase 5: area is a single-series line-kind spec shown as a filled
+// area; hbar is a bar-kind (comparison) spec shown as horizontal bars.
+const areaCtx: PresentationContext = { kind: 'line', form: 'area', seriesCount: 1, hasProvisional: false };
+const hbarCtx: PresentationContext = { kind: 'bar', form: 'hbar', seriesCount: 3, hasProvisional: false };
 
 describe('STOCK_PRESENTATION — the session-87 stock look, pinned', () => {
   it('deep-equals the literals chart.tsx drew before this module existed', () => {
@@ -76,13 +81,53 @@ describe('resolvePresentation', () => {
     expect(r.applicable.has('grid')).toBe(true);
   });
 
+  it('WP218 phase 5: area form behaves like line but forces zeroBaseline to zero with its own digit-free reason', () => {
+    const r = resolvePresentation(areaCtx, { zeroBaseline: 'auto', lineWidth: 'thick', markers: 'provisionalOnly' });
+    expect(r.values.zeroBaseline).toBe('zero');
+    expect(r.locks.zeroBaseline).toBe(LOCK_REASONS.zeroBaselineArea);
+    expect(r.locks.zeroBaseline).not.toMatch(/\d/);
+    // "Like line" otherwise: lineWidth/markers/grid/xLabels/etc. are neither
+    // forced nor removed from applicable — only zeroBaseline is touched.
+    expect(r.values.lineWidth).toBe('thick');
+    expect(r.values.markers).toBe('provisionalOnly');
+    expect([...r.applicable].sort()).toEqual(
+      ['axisLines', 'fontFamily', 'grid', 'language', 'lineWidth', 'markers', 'seriesColors', 'valueLabels', 'xLabels', 'zeroBaseline'].sort(),
+    );
+    expect(r.locks.valueLabels).toBeUndefined();
+  });
+
+  it('WP218 phase 5: area\'s zeroBaseline reason is distinct from the bar reason (own copy, own key)', () => {
+    expect(LOCK_REASONS.zeroBaselineArea).not.toBe(LOCK_REASONS.zeroBaselineBar);
+    expect(LOCK_REASONS.zeroBaselineArea).toMatch(/nul/);
+  });
+
+  it('WP218 phase 5: hbar behaves like bar (value labels + zero baseline locked, lineWidth/markers not applicable), reusing the SAME bar reasons', () => {
+    const r = resolvePresentation(hbarCtx, { valueLabels: 'hidden', zeroBaseline: 'auto' });
+    expect(r.values.valueLabels).toBe('shown');
+    expect(r.values.zeroBaseline).toBe('zero');
+    expect(r.locks.valueLabels).toBe(LOCK_REASONS.valueLabelsBar);
+    expect(r.locks.zeroBaseline).toBe(LOCK_REASONS.zeroBaselineBar);
+    expect(r.applicable.has('lineWidth')).toBe(false);
+    expect(r.applicable.has('markers')).toBe(false);
+    expect(r.applicable.has('zeroBaseline')).toBe(false);
+    expect(r.applicable.has('grid')).toBe(true);
+    expect(r.applicable.has('seriesColors')).toBe(true);
+  });
+
+  it('WP218 phase 5: hbar additionally makes xLabels not applicable — labels sit on the category axis, not the number axis', () => {
+    const r = resolvePresentation(hbarCtx, {});
+    expect(r.applicable.has('xLabels')).toBe(false);
+    // ...whereas plain bar keeps xLabels applicable, unchanged by this phase.
+    expect(resolvePresentation(barCtx, {}).applicable.has('xLabels')).toBe(true);
+  });
+
   it('table form: only the font and the chart language are applicable', () => {
     const r = resolvePresentation(tableCtx, { lineWidth: 'thick' });
     expect([...r.applicable]).toEqual(['fontFamily', 'language']);
   });
 
   it('WP218 phase 4: language is always applicable and never locked, on every form', () => {
-    for (const ctx of [lineCtx, barCtx, tableCtx]) {
+    for (const ctx of [lineCtx, barCtx, tableCtx, areaCtx, hbarCtx]) {
       const r = resolvePresentation(ctx, {});
       expect(r.applicable.has('language')).toBe(true);
       expect(r.locks.language).toBeUndefined();
