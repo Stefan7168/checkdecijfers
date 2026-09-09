@@ -73,6 +73,15 @@ source badge, and the PNG/SVG export. A CBS `ChartView` renders **frameless insi
 card is the one thing this direction avoids); a user-data `UserChartView` keeps its **dashed frame everywhere**
 — that frame is the user-data-vs-CBS distinction (ADR 037 H2), not decoration.
 
+**Built, session 91 (2026-09-09), branch `wp218-chart-styling`, not merged/live yet — WP218, ADR
+[039](decisions/039-chart-presentation-panel.md):** the stock look above is now the test-pinned
+`STOCK_PRESENTATION` constant in [web/lib/chart-presentation.ts](../web/lib/chart-presentation.ts) (the
+`RECHARTS_PALETTE` moved there too, re-exported from `chart.tsx` so nothing else changes). A reader can
+restyle a chart through the "Opmaak" panel — thickness, markers, grid, axis lines, label angle, value
+labels, baseline, colours and fonts — with a colour guard (`judgeColor`) that refuses any pick which would
+make the hollow provisional marker illegible. The Weergave switch now offers five forms: **Lijn · Vlak ·
+Staaf · Liggend · Tabel** (line, area, bar, horizontal bar, table).
+
 ## House rules (current)
 
 1. **Tokens, not colours.** Surfaces/text/borders come from the shadcn utilities above; no hex, no raw
@@ -87,10 +96,15 @@ card is the one thing this direction avoids); a user-data `UserChartView` keeps 
 5. **Attribution/definition lines under answers stay quiet:** `text-xs text-muted-foreground` with a
    `border-t border-border` — present, honest, never shouting (R4 inline attribution is sacred; styling may
    not hide it). Caveats read like caveats: `text-sm text-warning`, above the smaller source credit (#92).
-6. **Copy is English for new UI surfaces (owner override, 2026-09-06, session 84)**, calm and concrete; the
-   CBS chat/answer pipeline's own Dutch output and existing shipped Dutch strings are unchanged unless a change
-   is explicitly asked for — restyling never rewrites copy. The two removals in this restyle ("Over dit
-   project" block, example chips on the chat screen) were explicit owner decisions in the spec.
+6. **Copy lives in the message catalogue with a Dutch and an English entry (superseded 2026-09-09, session
+   91, ADR [040](decisions/040-interface-language-switch.md); was "Copy is English for new UI surfaces,
+   owner override, 2026-09-06, session 84").** `web/lib/i18n/messages.ts` holds both languages for every
+   interface string, switched by the header's NL/EN control; new interface work adds both languages, never
+   just English. The CBS chat/answer pipeline's own Dutch output and backend-built text (answer prose,
+   refusals, chart notes and definitions) stay Dutch regardless of the interface language — restyling or
+   translating the interface never rewrites that output. The two removals in the session-84 restyle ("Over
+   dit project" block, example chips on the chat screen) were explicit owner decisions in that spec and are
+   unaffected by this change.
 
 ## Voice of the product (unchanged)
 
