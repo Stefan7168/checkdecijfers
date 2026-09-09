@@ -190,8 +190,52 @@ describe('Chat — GatedResponse branches', () => {
   });
 });
 
-describe('Chat — WP20 citation copy (#78)', () => {
-  it('offers "Kopieer" under an answer and copies the built citation', async () => {
+// Task 2 (chat polish batch, owner ask): "Copy" now copies the WHOLE
+// answer (body + disclosure lines + attribution, hyperlinked to the source
+// deep link + the citation's own flags line), not just the bare R4 citation
+// string — via the rich `navigator.clipboard.write([ClipboardItem])` path
+// when available, falling back to `writeText` (plain text only) when
+// `ClipboardItem` is undefined (jsdom has none by default) or the rich
+// write throws.
+describe('Chat — copy the whole answer with the source link (owner ask)', () => {
+  afterEach(() => {
+    // jsdom has no ClipboardItem at all; remove whatever a test defined so
+    // the next test starts from the same "undefined" baseline.
+    delete (globalThis as unknown as Record<string, unknown>).ClipboardItem;
+  });
+
+  it('offers "Kopieer" and writes a rich clipboard item: HTML with the linked source, text with the body/definition/URL', async () => {
+    class FakeClipboardItem {
+      constructor(public items: Record<string, Blob>) {}
+    }
+    (globalThis as unknown as { ClipboardItem: unknown }).ClipboardItem = FakeClipboardItem;
+    const write = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { value: { write }, configurable: true });
+    const response = fakeAnswerResponse({
+      body: 'Nederland telt 18.044.027 inwoners.',
+      definitionLine: 'Dit betreft de standaardpopulatie.',
+    });
+    askQuestion.mockResolvedValue(
+      outcome({ kind: 'ok', auditId: 1, netCost: 20, response: response as ComposedResponse }),
+    );
+    render(<Chat />);
+    await submit('Hoeveel inwoners heeft Nederland?');
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Kopieer' }));
+    expect(await screen.findByText('Gekopieerd!')).toBeInTheDocument();
+    expect(write).toHaveBeenCalledTimes(1);
+    const item = write.mock.calls[0]![0]![0] as FakeClipboardItem;
+    const html = await item.items['text/html']!.text();
+    const text = await item.items['text/plain']!.text();
+
+    expect(html).toContain('<a href="https://opendata.cbs.nl/statline/#/CBS/nl/dataset/86141NED/table">');
+    expect(html).toContain(response.answer.attributionLine);
+    expect(text).toContain('Nederland telt 18.044.027 inwoners.');
+    expect(text).toContain('Dit betreft de standaardpopulatie.');
+    expect(text).toContain('https://opendata.cbs.nl/statline/#/CBS/nl/dataset/86141NED/table');
+  });
+
+  it('falls back to writeText with the plain-text flavor when ClipboardItem is undefined', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
     askQuestion.mockResolvedValue(outcome(fakeAnswer('Nederland telt 18.044.027 inwoners.')));
@@ -200,12 +244,16 @@ describe('Chat — WP20 citation copy (#78)', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: 'Kopieer' }));
     expect(await screen.findByText('Gekopieerd!')).toBeInTheDocument();
-    expect(writeText).toHaveBeenCalledWith(
+    expect(writeText).toHaveBeenCalledTimes(1);
+    const text = writeText.mock.calls[0]![0] as string;
+    expect(text).toContain('Nederland telt 18.044.027 inwoners.');
+    expect(text).toContain('https://opendata.cbs.nl/statline/#/CBS/nl/dataset/86141NED/table');
+    expect(text).toContain(
       'Nederland telt 18.044.027 inwoners. (CBS StatLine, tabel 86141NED, gesynchroniseerd 3 juli 2026)',
     );
   });
 
-  it('offers no citation button on a non-answer (clarification) message', async () => {
+  it('offers no copy button on a non-answer (clarification) message', async () => {
     askQuestion.mockResolvedValue(outcome(fakeClarification('Welke gemeente bedoel je?')));
     render(<Chat />);
     await submit('Hoeveel werklozen zijn er?');

@@ -25,20 +25,22 @@ import type { GatedResponse } from '../backend/billing/index.ts';
 // unverified-web outcome the message renders below the CBS body. Both are
 // imported from PURE LEAVES (registry.ts / websearch/types.ts) — never a
 // barrel that pulls the Anthropic SDK into the client bundle.
-import { SOURCES } from '../backend/sources/registry.ts';
+import { SOURCES, sourceKeyForTableId } from '../backend/sources/registry.ts';
 import type { WebSection } from '../backend/websearch/types.ts';
 import { buildAnswerProof } from '../lib/answer-proof.ts';
 import { buildCitation } from '../lib/citation.ts';
+import { buildAnswerCopy, escapeHtml as escapeHtmlForCopy } from '../lib/copy-answer.ts';
 import { buildAnswerCsv } from '../lib/csv.ts';
 import type { AnswerCsv } from '../lib/csv.ts';
 import { useT } from '../lib/i18n/lang-provider.tsx';
 import type { MessageKey } from '../lib/i18n/messages.ts';
+import { sourceTableUrl } from '../lib/statline.ts';
 import { statCardData } from '../lib/stat-card-data.ts';
 // WP135 (ADR 033 ⟨A3⟩): the ChatMessage/AnswerView shape and the meta/smalltalk
 // kind reclassification live in a shared pure leaf so thread replay
 // (web/lib/replay-assemble.ts, called from a Server Action) reconstructs the
 // SAME messages this live path appends — byte-identity by construction.
-import type { ChatMessage } from '../lib/chat-message.ts';
+import type { AnswerView, ChatMessage } from '../lib/chat-message.ts';
 import { messageKind } from '../lib/chat-message.ts';
 // WP135 (ADR 033 D4): the right-pane dock derives its tabs from these same
 // messages; Chat renders an in-flow reference chip (instead of the inline
@@ -197,7 +199,10 @@ function DownloadCsvButton({ csv }: { csv: AnswerCsv }) {
   );
 }
 
-/** WP20 #78: copies the citation; flips to a transient confirmation. */
+/** WP20 #78: copies the citation; flips to a transient confirmation. Kept
+ * for the deploy-window-skew fallback path below (a replayed answer too old
+ * for a structural answerView — replay-assemble.ts's extractAnswerView
+ * returns null then), which has no AnswerView to build the rich copy from. */
 function CopyCitationButton({ citation }: { citation: string }) {
   const [copied, setCopied] = useState(false);
   const t = useT();
@@ -214,6 +219,62 @@ function CopyCitationButton({ citation }: { citation: string }) {
         } catch {
           // Clipboard unavailable (permissions/insecure context): keep the
           // label so the user can retry; nothing else to break.
+        }
+      }}
+    >
+      <Copy aria-hidden className="size-3.5" />
+      {copied ? t('chat.copyCitationCopied') : t('chat.copyCitation')}
+    </Button>
+  );
+}
+
+/** Task 2 (chat polish batch, owner ask): "Copy" now copies the WHOLE
+ * answer — body, the structural disclosure lines, the R4 attribution
+ * sentence (hyperlinked to the source deep link when one exists), and the
+ * citation's own flags line (provisional/derived — a quote must keep them).
+ * Tries the rich `ClipboardItem` write first (so a paste into a doc/email
+ * keeps the clickable source link); falls back to `writeText` with the
+ * plain-text flavor when `ClipboardItem` is unavailable (jsdom, some older
+ * browsers) or the rich write throws. */
+function CopyAnswerButton({
+  view,
+  sourceUrl,
+  citation,
+}: {
+  view: AnswerView;
+  sourceUrl: string | null;
+  citation: string | null;
+}) {
+  const [copied, setCopied] = useState(false);
+  const t = useT();
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="xs"
+      onClick={async () => {
+        const { text: bodyText, html: bodyHtml } = buildAnswerCopy(view, sourceUrl);
+        const text = citation !== null ? `${bodyText}\n\n${citation}` : bodyText;
+        const html = citation !== null ? `${bodyHtml}<p>${escapeHtmlForCopy(citation)}</p>` : bodyHtml;
+        try {
+          if (typeof ClipboardItem === 'undefined') throw new Error('no ClipboardItem');
+          await navigator.clipboard.write([
+            new ClipboardItem({
+              'text/html': new Blob([html], { type: 'text/html' }),
+              'text/plain': new Blob([text], { type: 'text/plain' }),
+            }),
+          ]);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        } catch {
+          try {
+            await navigator.clipboard.writeText(text);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+          } catch {
+            // Clipboard unavailable (permissions/insecure context): keep the
+            // label so the user can retry; nothing else to break.
+          }
         }
       }}
     >
@@ -895,7 +956,23 @@ export function Chat({
                   <div className="flex flex-wrap items-center gap-1 has-[[role=region]]:basis-full has-[[data-slot=feedback-panel]]:basis-full">
                     {message.auditId !== null ? <FeedbackButtons auditId={message.auditId} /> : null}
                     {message.proof !== null ? <AnswerProof proof={message.proof} /> : null}
-                    {message.citation !== null ? <CopyCitationButton citation={message.citation} /> : null}
+                    {/* Task 2 (chat polish batch, owner ask): "Copy" copies
+                      * the whole card — body, disclosure lines, attribution
+                      * (hyperlinked), citation flags — whenever there's an
+                      * AnswerView to build it from, not only when `citation`
+                      * happens to be non-null (it's ALWAYS non-null for a
+                      * real answer envelope — this widens the gate to match
+                      * intent, not a behavior change today). */}
+                    {message.answerView !== null ? (
+                      <CopyAnswerButton
+                        view={message.answerView}
+                        sourceUrl={sourceTableUrl(
+                          message.answerView.source ?? sourceKeyForTableId(message.answerView.tableId),
+                          message.answerView.tableId,
+                        )}
+                        citation={message.citation}
+                      />
+                    ) : null}
                     {message.csv !== null ? <DownloadCsvButton csv={message.csv} /> : null}
                     {message.cost !== null ? (
                       <span className="text-xs text-muted-foreground tnum">
