@@ -70,9 +70,16 @@ BRANCH, VERIFIED, OPENED AS A PULL REQUEST. NOTHING MERGED OR LIVE.**
     `810c5a6`), panel layout (`e4eee7b`; the portaled trigger never worked in the real browser →
     `d2eabca`, plain controlled button), throwaway preview route reverted (`cafcafe`). Verified: web
     1132/1132, typechecks, build; answer card in the browser light + dark; the panel by tests.
-12. **Owner-facing open items:** merge the PR (or say "merge"); apply migrations 028 + 029;
-    decide on Brandfetch (100 free lookups in total, then ≈ $99/month); "do it" on the three CI
-    minute-saving changes proposed in chat.
+12. **Merge + go-live (owner: "fix the trigger and then merge everything"):** the trigger had
+    already been replaced (`d2eabca`); the three CI minute-saving changes went in as `c10b874`
+    (docs-only pushes skip CI, branches gate through their PR, superseded runs cancelled). PR #7
+    merged with a merge commit `05ec8ed`; `main`'s CI run `34329626769` gate + deploy green;
+    `/api/health` `{"ok":true}`; production checked in the owner's Chrome, light + dark: the
+    answer card (thumbs first, white/border/shadow), the Style panel under the chart in the dock
+    (two-column grid, language select in the header, note + Default in the footer, "Save as my
+    default" row), the NL | EN switch (his browser prefers English, so the app opened in English),
+    the five chart-type tabs with "Horizontal bar" greyed on a time series. **Still the owner's:**
+    migrations 028 + 029 (`npm run db:migrate`) and, optionally, `BRANDFETCH_API_KEY`.
 
 **Session 90 (2026-09-09, owner present) — #218 CHART-CONFIGURATION ARCHITECTURE PANEL RUN, OWNER
 DECISIONS A–H COLLECTED, WP218 PROGRAMME DOCUMENTED (NOT BUILT); COMPOSER LAYOUT MOVE, "LINK WITH

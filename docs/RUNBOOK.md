@@ -820,6 +820,8 @@ the RE-RUN/refill reference:
 
 ## ⚠ Two CI runs in flight on `main` — the LAST deploy to finish owns production (measured 2026-09-03, session 71)
 
+**Closed 2026-09-09 (session 91, `c10b874`):** the workflow now has a `concurrency` group per ref with `cancel-in-progress`, so a newer push to `main` cancels the older run before it can deploy — the last push always owns production. Kept below as the record of the measured race.
+
 Every push to `main` runs `gate` and then `deploy`, and `deploy` aliases **its own commit** to
 `checkdecijfers.vercel.app`. Two runs overlap whenever a second push lands while the first is still in
 its ~15-minute gate — typically a docs-only push right after a merge. Whichever deploy job finishes LAST

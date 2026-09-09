@@ -9,11 +9,14 @@
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
 
-**▶ SESSION 91 (2026-09-09, AUTONOMOUS — the owner's last words were "Start executing, work
-autonomously … when I come back I expect everything to be done") — THE WHOLE WP218 CHART STYLING
-PROGRAMME (ALL SIX PHASES) BUILT, REVIEWED AND VERIFIED ON BRANCH `wp218-chart-styling`, OPENED AS
-A PULL REQUEST FOR THE OWNER'S REVIEW (CLAUDE.md #118 rule (b): autonomous → branch + PR). NOTHING
-MERGED, NOTHING LIVE.**
+**▶ SESSION 91 (2026-09-09, started AUTONOMOUS — "Start executing, work autonomously … I expect
+everything to be done" — the owner returned in the same session) — THE WHOLE WP218 CHART STYLING
+PROGRAMME (ALL SIX PHASES) + THE OWNER'S TWO DESIGN PICKS BUILT, REVIEWED, VERIFIED, AND — ON THE
+OWNER'S "merge everything" — MERGED INTO `main` (`05ec8ed`, the PR's merge commit) AND LIVE: CI run
+`34329626769` gate green + deploy green, `/api/health` `{"ok":true}` (7 checks), checked on production
+in the owner's logged-in Chrome light + dark (answer card with the thumbs first; the chart's Style
+panel opening under the chart in the dock as a two-column grid; NL | EN switch; Line · Area · Bar ·
+Horizontal bar · Table tabs). Migrations 028 + 029 and the Brandfetch key remain the owner's steps.**
 - **Built (41 commits, `867393d`..`eab25b6`, Subagent-Driven Development: 20 implementation tasks
   on Sonnet, a fresh Sonnet reviewer per task, one Opus whole-branch review + fix round):**
   phase 0/1 the "Opmaak" panel on every chart (Grafiek / Kleuren / Lettertype tabs; thickness in
@@ -59,9 +62,11 @@ MERGED, NOTHING LIVE.**
   1132/1132, typechecks clean, `next build` clean; the answer card verified in the local browser
   (light + dark, thumbs first, full-width panels); the panel layout verified by tests + DOM order
   (the hidden Browser pane never hydrates the chart subtree — lessons-learned).
-- **Owner question answered in chat:** GitHub's monthly newsletter is not relevant to us; our
-  GitHub cost is Actions minutes (~10 min per push to `main`); three cheap CI changes proposed
-  (skip docs-only pushes, cancel superseded runs, no double run for PR branches) — awaiting "do it".
+- **CI minutes (owner question about GitHub's newsletter → three cheap changes, BUILT `c10b874`):**
+  our GitHub cost is Actions minutes (~10 min per run); now docs-only pushes skip CI, a feature branch
+  gets its gate through its pull request (no double run per push), and a newer push cancels the
+  superseded run on the same ref (so the last push on `main` always owns the deploy — the RUNBOOK's
+  "two runs in flight" race is closed). Recorded in CLAUDE.md Conventions.
 - Unchanged: WP202a go-live steps 2–6 pending (RUNBOOK); #216, #217, #172, #214, #215 tracked.
 Full session entry: [status-archive.md](status-archive.md).
 
