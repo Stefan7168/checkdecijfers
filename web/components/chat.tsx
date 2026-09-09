@@ -12,7 +12,7 @@
 // branch here explicitly and must never fall into the generic catch below.
 'use client';
 
-import { Check, Database, FileSpreadsheet, Globe, Link2, Paperclip, Plug } from 'lucide-react';
+import { Check, Copy, Database, Download, FileSpreadsheet, Globe, Link2, Paperclip, Plug } from 'lucide-react';
 import { unstable_isUnrecognizedActionError } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { askQuestion, replyToClarification } from '../app/actions.ts';
@@ -52,6 +52,7 @@ import { AnswerSkeleton } from './loading-skeletons.tsx';
 import { SourceBadge } from './source-badge.tsx';
 import { StatCard } from './stat-card.tsx';
 import { Button } from './ui/button.tsx';
+import { Card, CardContent, CardFooter } from './ui/card.tsx';
 import { Input } from './ui/input.tsx';
 
 // Session 87 visual redesign (owner decision, docs/superpowers/specs/
@@ -169,8 +170,8 @@ function DownloadCsvButton({ csv }: { csv: AnswerCsv }) {
     <>
       <Button
         type="button"
-        variant="link"
-        size="sm"
+        variant="ghost"
+        size="xs"
         onClick={() => {
           try {
             const url = URL.createObjectURL(
@@ -186,6 +187,7 @@ function DownloadCsvButton({ csv }: { csv: AnswerCsv }) {
           }
         }}
       >
+        <Download aria-hidden className="size-3.5" />
         {t('chat.downloadCsv')}
       </Button>
       {failed ? (
@@ -202,8 +204,8 @@ function CopyCitationButton({ citation }: { citation: string }) {
   return (
     <Button
       type="button"
-      variant="link"
-      size="sm"
+      variant="ghost"
+      size="xs"
       onClick={async () => {
         try {
           await navigator.clipboard.writeText(citation);
@@ -215,6 +217,7 @@ function CopyCitationButton({ citation }: { citation: string }) {
         }
       }}
     >
+      <Copy aria-hidden className="size-3.5" />
       {copied ? t('chat.copyCitationCopied') : t('chat.copyCitation')}
     </Button>
   );
@@ -816,103 +819,133 @@ export function Chat({
               * card aligned right; assistant text is plain, aligned left. A
               * clarification keeps its amber wash (#84: it must read as a
               * question back, not as an answer). */}
-            <div
-              className={
-                'max-w-full whitespace-pre-wrap text-sm ' +
-                (message.role === 'user'
-                  ? 'max-w-[85%] rounded-lg border border-border bg-background px-3.5 py-2.5 text-left text-foreground'
-                  : message.kind === 'clarification'
-                    ? 'inline-block rounded-lg border border-warning/30 bg-warning-soft px-3.5 py-2.5 text-foreground'
-                    : 'text-[15px] leading-relaxed text-foreground')
-              }
-            >
-              {message.answerView ? message.answerView.body : message.text}
-            </div>
-            {/* WP23 (#90): the structural lines an answer's text used to
-              * carry inline — nothing may be lost (R5/R11 surfaces). */}
-            {/* WP26 mechanism B (ADR 024): the defaulted-axis disclosure. It
-              * sits directly under the body and at BODY-adjacent weight, not as
-              * muted fine print: it qualifies the number the reader just read
-              * ("this is the national figure") and carries the correction path.
-              * Burying it would keep the letter of the safelist and lose its
-              * point. */}
-            {message.answerView?.assumptionLine ? (
-              <p className="mt-1 text-sm text-muted-foreground">{message.answerView.assumptionLine}</p>
-            ) : null}
-            {message.answerView?.stalenessWarning ? (
-              <p className="mt-1 text-sm text-warning">{message.answerView.stalenessWarning}</p>
-            ) : null}
-            {message.answerView?.definitionLine ? (
-              <p className="mt-1 text-xs text-muted-foreground">{message.answerView.definitionLine}</p>
-            ) : null}
-            {/* #39: the alternate-reading disclosure — plain text under the
-              * definition it qualifies (the clickable affordance is #89,
-              * deliberately not built here). */}
-            {message.answerView?.alternatesLine ? (
-              <p className="mt-1 text-xs text-muted-foreground">{message.answerView.alternatesLine}</p>
-            ) : null}
-            {message.answerView?.markingLine ? (
-              <p className="mt-1 text-xs text-muted-foreground">{message.answerView.markingLine}</p>
-            ) : null}
-            {message.answerView ? (
-              <div className="mt-1 flex max-w-full flex-wrap items-center gap-2 border-t border-border pt-1">
-                {/* WP23 (#71): the voorlopig pill at message level. */}
-                {message.provisional ? (
-                  <span className="rounded-full bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning">
-                    {t('chat.provisionalBadge')}
+            {/* Session 91 (owner-chosen "Option B — answer card"): a
+              * validated ANSWER renders inside a shadcn Card — body + the
+              * WP23/#90 structural lines in CardContent, the source +
+              * actions in a CardFooter (the old border-t attribution row
+              * collapses into it; R4 attribution stays fully visible, never
+              * shortened). Every other message kind (refusal / clarification
+              * / info) keeps exactly today's plain bubble below. */}
+            {message.kind === 'answer' && message.answerView ? (
+              <Card size="sm" className="max-w-full">
+                <CardContent className="flex flex-col gap-1">
+                  <div className="max-w-full whitespace-pre-wrap text-sm text-[15px] leading-relaxed text-foreground">
+                    {message.answerView.body}
+                  </div>
+                  {/* WP26 mechanism B (ADR 024): the defaulted-axis
+                    * disclosure. It sits directly under the body and at
+                    * BODY-adjacent weight, not as muted fine print: it
+                    * qualifies the number the reader just read ("this is the
+                    * national figure") and carries the correction path.
+                    * Burying it would keep the letter of the safelist and
+                    * lose its point. */}
+                  {message.answerView.assumptionLine ? (
+                    <p className="text-sm text-muted-foreground">{message.answerView.assumptionLine}</p>
+                  ) : null}
+                  {message.answerView.stalenessWarning ? (
+                    <p className="text-sm text-warning">{message.answerView.stalenessWarning}</p>
+                  ) : null}
+                  {message.answerView.definitionLine ? (
+                    <p className="text-xs text-muted-foreground">{message.answerView.definitionLine}</p>
+                  ) : null}
+                  {/* #39: the alternate-reading disclosure — plain text under
+                    * the definition it qualifies (the clickable affordance is
+                    * #89, deliberately not built here). */}
+                  {message.answerView.alternatesLine ? (
+                    <p className="text-xs text-muted-foreground">{message.answerView.alternatesLine}</p>
+                  ) : null}
+                  {message.answerView.markingLine ? (
+                    <p className="text-xs text-muted-foreground">{message.answerView.markingLine}</p>
+                  ) : null}
+                </CardContent>
+                <CardFooter className="flex flex-wrap items-center justify-between gap-2 border-t border-border bg-muted/40">
+                  {/* LEFT: the source — the voorlopig pill (#71), the FULL
+                    * R4 attribution sentence (always visible, never
+                    * shortened — Huisstijl rule 7: quiet, text-xs
+                    * text-muted-foreground), and the #86/#170(1) SourceBadge
+                    * deep link. */}
+                  <span className="inline-flex max-w-full flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                    {message.provisional ? (
+                      <span className="rounded-full bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning">
+                        {t('chat.provisionalBadge')}
+                      </span>
+                    ) : null}
+                    <span>{message.answerView.attribution}</span>
+                    <SourceBadge
+                      tableId={message.answerView.tableId}
+                      source={message.answerView.source}
+                      syncedAt={message.answerView.syncedAt}
+                    />
                   </span>
+                  {/* RIGHT: the actions — feedback FIRST (#128; only real
+                    * answers with a stored audit row get them — an answer
+                    * whose audit write failed, auditId null, gets none), then
+                    * the #70/#79/#89 drill-through trigger, citation, CSV,
+                    * then the cost line last. `has-[[role=region]]:basis-full`
+                    * grows this group to the footer's full width the moment
+                    * the proof panel (role="region") opens inside it, so the
+                    * panel's own order-last basis-full (answer-proof.tsx)
+                    * spans the whole footer instead of just this group's
+                    * shrink-to-fit width. */}
+                  <div className="flex flex-wrap items-center gap-1 has-[[role=region]]:basis-full">
+                    {message.auditId !== null ? <FeedbackButtons auditId={message.auditId} /> : null}
+                    {message.proof !== null ? <AnswerProof proof={message.proof} /> : null}
+                    {message.citation !== null ? <CopyCitationButton citation={message.citation} /> : null}
+                    {message.csv !== null ? <DownloadCsvButton csv={message.csv} /> : null}
+                    {message.cost !== null ? (
+                      <span className="text-xs text-muted-foreground tnum">
+                        {t('chat.costCredits', { n: message.cost })}
+                      </span>
+                    ) : null}
+                  </div>
+                </CardFooter>
+              </Card>
+            ) : (
+              <>
+                <div
+                  className={
+                    'max-w-full whitespace-pre-wrap text-sm ' +
+                    (message.role === 'user'
+                      ? 'max-w-[85%] rounded-lg border border-border bg-background px-3.5 py-2.5 text-left text-foreground'
+                      : message.kind === 'clarification'
+                        ? 'inline-block rounded-lg border border-warning/30 bg-warning-soft px-3.5 py-2.5 text-foreground'
+                        : 'text-[15px] leading-relaxed text-foreground')
+                  }
+                >
+                  {message.text}
+                </div>
+                {message.cost !== null ? (
+                  <div className="mt-0.5 text-xs text-muted-foreground tnum">
+                    {t('chat.costCredits', { n: message.cost })}
+                    {/* WP20 #82(c): the reply's price, stated AT the
+                      * clarifying question — client-side caption; the
+                      * pipeline's own deterministic message text stays
+                      * untouched. */}
+                    {message.kind === 'clarification' && pricing
+                      ? t('chat.replyCostSuffix', { price: pricing.simple })
+                      : ''}
+                  </div>
                 ) : null}
-                {/* WP23 (#90) + #170(1): the source chip — the FULL R4
-                  * sentence, always visible; the #86 deep-link now rides the
-                  * SourceBadge (table id + measured sync date, same pinned
-                  * URL builder). Huisstijl rule 7: attribution stays quiet —
-                  * text-xs text-muted-foreground. */}
-                <span className="inline-flex max-w-full flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                  <span>{message.answerView.attribution}</span>
-                  <SourceBadge
-                    tableId={message.answerView.tableId}
-                    source={message.answerView.source}
-                    syncedAt={message.answerView.syncedAt}
-                  />
-                </span>
-              </div>
-            ) : null}
-            {/* WP128 (#128): feedback buttons — only real answers with a
-              * stored audit row get them; refusals, clarifications, info
-              * messages and answers whose audit write failed (auditId null)
-              * do not. Self-contained child: its state and its fail-soft
-              * behavior can never affect the answer display above. */}
-            {message.kind === 'answer' && message.auditId !== null ? (
-              <FeedbackButtons auditId={message.auditId} />
-            ) : null}
-            {message.cost !== null ? (
-              <div className="mt-0.5 text-xs text-muted-foreground tnum">
-                {t('chat.costCredits', { n: message.cost })}
-                {/* WP20 #82(c): the reply's price, stated AT the clarifying
-                  * question — client-side caption; the pipeline's own
-                  * deterministic message text stays untouched. */}
-                {message.kind === 'clarification' && pricing
-                  ? t('chat.replyCostSuffix', { price: pricing.simple })
-                  : ''}
-              </div>
-            ) : null}
-            {message.citation !== null || message.csv !== null || message.proof !== null ? (
-              <div className="mt-0.5 flex flex-wrap items-center gap-3">
-                {/* Session 72 design brief (#70/#79/#89): the drill-through
-                  * trigger is FIRST in this row, same label style as the
-                  * citation/CSV buttons; its panel (self-managed open state)
-                  * wraps onto its own line directly under the row via
-                  * basis-full — and `order-last` (orchestrator review round
-                  * 1) keeps the trigger/citation/CSV buttons together on the
-                  * row's first line regardless of the panel's DOM position,
-                  * so opening it pushes nothing out of the row itself, only
-                  * the panel wraps beneath — still before the chart / dock
-                  * chip / suggestion chips / web section below (D5). */}
-                {message.proof !== null ? <AnswerProof proof={message.proof} /> : null}
-                {message.citation !== null ? <CopyCitationButton citation={message.citation} /> : null}
-                {message.csv !== null ? <DownloadCsvButton csv={message.csv} /> : null}
-              </div>
-            ) : null}
+                {/* Deploy-window-skew fallback (A1): an 'answer' whose
+                  * stored/replayed envelope is too old/minimal for a
+                  * structural answerView (backend/threads/replay.ts's
+                  * extractAnswerView returns null when body/attributionLine
+                  * are missing) still gets its feedback + drill-through +
+                  * citation + CSV actions — just without the card/footer
+                  * treatment, exactly as before the WP218 card redesign. */}
+                {message.kind === 'answer' && message.auditId !== null ? (
+                  <FeedbackButtons auditId={message.auditId} />
+                ) : null}
+                {message.kind === 'answer' &&
+                (message.citation !== null || message.csv !== null || message.proof !== null) ? (
+                  <div className="mt-0.5 flex flex-wrap items-center gap-3">
+                    {message.proof !== null ? <AnswerProof proof={message.proof} /> : null}
+                    {message.citation !== null ? <CopyCitationButton citation={message.citation} /> : null}
+                    {message.csv !== null ? <DownloadCsvButton csv={message.csv} /> : null}
+                  </div>
+                ) : null}
+              </>
+            )}
             {!dockMode && message.chart ? <ChartView spec={message.chart} /> : null}
             {/* WP135 (ADR 033 D4): the in-flow reference chip standing in for a
               * docked visual — clicking activates its dock tab ("in het paneel").

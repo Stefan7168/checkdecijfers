@@ -13,6 +13,7 @@
 // set on the trigger regardless of open state, the controlled element only
 // exists in the DOM once open). Closed by default (D1: inline disclosure,
 // not a side panel).
+import { ShieldCheck } from 'lucide-react';
 import { memo, useId, useState } from 'react';
 import { DERIVED_DATA_MARKING } from '../backend/query/types.ts';
 import { useT } from '../lib/i18n/lang-provider.tsx';
@@ -99,12 +100,13 @@ export const AnswerProof = memo(function AnswerProof({ proof }: { proof: AnswerP
     <>
       <Button
         type="button"
-        variant="link"
-        size="sm"
+        variant="ghost"
+        size="xs"
         aria-expanded={open}
         aria-controls={panelId}
         onClick={() => setOpen((o) => !o)}
       >
+        <ShieldCheck aria-hidden className="size-3.5" />
         {triggerLabel}
       </Button>
       {open ? (

@@ -12,6 +12,7 @@ import type { ConversationContext } from '../backend/answer/context/index.ts';
 import type { ComposedResponse } from '../backend/answer/respond/types.ts';
 import type { WebSection } from '../backend/websearch/types.ts';
 import { UnrecognizedActionError } from 'next/dist/client/components/unrecognized-action-error';
+import type { ChatMessage } from '../lib/chat-message.ts';
 import { buildAnswerCsv } from '../lib/csv.ts';
 import { LangProvider } from '../lib/i18n/lang-provider.tsx';
 import { fakeAnswerResponse, fakeCell } from '../test/fake-answer.ts';
@@ -1006,6 +1007,134 @@ describe('Chat — WP128 feedback buttons (#128)', () => {
     await screen.findByText('Bedankt voor je feedback.');
     // The anchor is the reply-path answer's auditId (fakeAnswer -> 1).
     expect(submitAnswerFeedback).toHaveBeenCalledWith(1, 'up', undefined);
+  });
+});
+
+// Session 91 (owner-chosen "Option B — answer card"): an answer message now
+// renders inside a shadcn Card, with a CardFooter carrying the source (left)
+// and the actions — feedback, proof, citation, CSV, cost — in that order
+// (right). These pin the new structure; the honesty-line pins above (body,
+// staleness, attribution, feedback wiring, etc.) already prove nothing was
+// lost in the move.
+describe('Chat — WP218 answer card (Option B)', () => {
+  function fullAnswer(): GatedResponse {
+    return {
+      kind: 'ok',
+      auditId: 1,
+      netCost: 20,
+      response: fakeAnswerResponse({
+        body: 'De inflatie in 2024 was 3,3%.',
+        shape: 'single',
+        cells: [fakeCell()],
+      }) as ComposedResponse,
+    };
+  }
+
+  it('renders an answer inside a card with a card footer', async () => {
+    askQuestion.mockResolvedValue(outcome(fullAnswer()));
+    render(<Chat />);
+    await submit('Wat was de inflatie in 2024?');
+    await screen.findByText('De inflatie in 2024 was 3,3%.');
+    const card = document.querySelector('[data-slot="card"]');
+    expect(card).not.toBeNull();
+    const footer = card!.querySelector('[data-slot="card-footer"]');
+    expect(footer).not.toBeNull();
+    // The attribution + feedback + actions all live inside that same card.
+    expect(card).toContainElement(screen.getByText(/^Bron: CBS StatLine/));
+    expect(card).toContainElement(screen.getByRole('button', { name: 'Nuttig antwoord' }));
+  });
+
+  it('orders the footer actions: feedback before proof, citation and CSV (DOM order)', async () => {
+    askQuestion.mockResolvedValue(outcome(fullAnswer()));
+    render(<Chat />);
+    await submit('Wat was de inflatie in 2024?');
+    await screen.findByText('De inflatie in 2024 was 3,3%.');
+    const up = screen.getByRole('button', { name: 'Nuttig antwoord' });
+    const proof = screen.getByRole('button', { name: 'Bewijs dit cijfer' });
+    const citation = screen.getByRole('button', { name: 'Kopieer als citaat' });
+    const csv = screen.getByRole('button', { name: 'Download als CSV' });
+    // node.compareDocumentPosition(other) & DOCUMENT_POSITION_FOLLOWING is
+    // truthy exactly when `other` comes AFTER `node` in the DOM.
+    expect(up.compareDocumentPosition(proof) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(up.compareDocumentPosition(citation) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(up.compareDocumentPosition(csv) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(proof.compareDocumentPosition(citation) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(citation.compareDocumentPosition(csv) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('the proof panel still opens from inside the card footer (aria-expanded toggles, region stays in the DOM)', async () => {
+    askQuestion.mockResolvedValue(outcome(fullAnswer()));
+    render(<Chat />);
+    await submit('Wat was de inflatie in 2024?');
+    const trigger = await screen.findByRole('button', { name: 'Bewijs dit cijfer' });
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    fireEvent.click(trigger);
+    expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('region')).toBeInTheDocument();
+    fireEvent.click(trigger);
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('region')).toBeNull();
+  });
+
+  it('the feedback buttons carry visible labels and lucide icons — no emoji anywhere', async () => {
+    askQuestion.mockResolvedValue(outcome(fullAnswer()));
+    render(<Chat />);
+    await submit('Wat was de inflatie in 2024?');
+    const up = await screen.findByRole('button', { name: 'Nuttig antwoord' });
+    const down = screen.getByRole('button', { name: 'Niet nuttig' });
+    expect(up.textContent).toContain('Nuttig antwoord');
+    expect(down.textContent).toContain('Niet nuttig');
+    expect(up.querySelector('svg.lucide-thumbs-up')).not.toBeNull();
+    expect(down.querySelector('svg.lucide-thumbs-down')).not.toBeNull();
+    expect(document.body.textContent).not.toContain('👍');
+    expect(document.body.textContent).not.toContain('👎');
+  });
+
+  it('a refusal message does NOT render a card', async () => {
+    const refusal = {
+      kind: 'refusal',
+      reason: 'forecast',
+      text: 'CBS publiceert gerealiseerde cijfers, geen voorspellingen.',
+    } as unknown as ComposedResponse;
+    askQuestion.mockResolvedValue(outcome({ kind: 'ok', auditId: 3, netCost: 0, response: refusal }));
+    render(<Chat />);
+    await submit('Hoe hoog wordt de inflatie volgend jaar?');
+    await screen.findByText('CBS publiceert gerealiseerde cijfers, geen voorspellingen.');
+    expect(document.querySelector('[data-slot="card"]')).toBeNull();
+  });
+
+  // Deploy-window-skew fallback (A1): backend/threads/replay.ts's
+  // extractAnswerView returns null for an 'answer' response whose stored
+  // envelope is too old/minimal (no body/attributionLine) — replay-assemble.ts
+  // then builds a ChatMessage with kind: 'answer' but answerView: null. Before
+  // the WP218 card redesign, feedback/citation/CSV/proof rode their OWN
+  // null-checks (never answerView's), so this case still got them; a naive
+  // card-only rewrite would have silently dropped all four actions here.
+  it('an answer with no structural answerView (legacy/minimal replay) still gets its actions, without a card', () => {
+    const legacyMessage: ChatMessage = {
+      role: 'assistant',
+      kind: 'answer',
+      text: 'Nederland telt 18.044.027 inwoners.',
+      chart: null,
+      cost: 20,
+      citation: 'Nederland telt 18.044.027 inwoners. (CBS StatLine, tabel 86141NED)',
+      card: null,
+      csv: { filename: 'antwoord.csv', content: 'a,b\n1,2\n' },
+      proof: null,
+      answerView: null,
+      provisional: false,
+      suggestions: [],
+      auditId: 9,
+      webSection: null,
+      carrier: null,
+    };
+    render(<Chat initialMessages={[legacyMessage]} />);
+    expect(screen.getByText('Nederland telt 18.044.027 inwoners.')).toBeInTheDocument();
+    expect(document.querySelector('[data-slot="card"]')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Nuttig antwoord' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Niet nuttig' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Kopieer als citaat' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Download als CSV' })).toBeInTheDocument();
   });
 });
 

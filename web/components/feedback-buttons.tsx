@@ -9,6 +9,7 @@
 // Fail-soft mirror of the action: a failed submit shows the muted Dutch
 // line, resets busy so retry stays possible, and never touches the answer
 // display above it.
+import { ThumbsDown, ThumbsUp } from 'lucide-react';
 import { useState } from 'react';
 import { submitAnswerFeedback } from '../app/actions.ts';
 import { useT } from '../lib/i18n/lang-provider.tsx';
@@ -52,39 +53,41 @@ export function FeedbackButtons({
   }
 
   return (
-    <div className="mt-1">
-      <div className="flex flex-wrap items-center gap-2">
-        <Button
-          type="button"
-          variant={chosen === 'up' ? 'secondary' : 'outline'}
-          size="icon-xs"
-          aria-label={t('feedback.helpful')}
-          aria-pressed={chosen === 'up'}
-          disabled={busy}
-          onClick={() => send('up')}
-        >
-          👍
-        </Button>
-        <Button
-          type="button"
-          variant={chosen === 'down' ? 'secondary' : 'outline'}
-          size="icon-xs"
-          aria-label={t('feedback.notHelpful')}
-          aria-pressed={chosen === 'down'}
-          disabled={busy}
-          onClick={() => setPanelOpen(true)}
-        >
-          👎
-        </Button>
-        {status === 'thanks' ? (
-          <span className="text-xs text-muted-foreground">{t('feedback.thanks')}</span>
-        ) : null}
-        {status === 'failed' ? (
-          <span className="text-xs text-muted-foreground">{t('feedback.failed')}</span>
-        ) : null}
-      </div>
+    <div className="flex flex-wrap items-center gap-2">
+      <Button
+        type="button"
+        variant={chosen === 'up' ? 'secondary' : 'outline'}
+        size="xs"
+        className={chosen === 'up' ? undefined : 'bg-background shadow-sm'}
+        aria-label={t('feedback.helpful')}
+        aria-pressed={chosen === 'up'}
+        disabled={busy}
+        onClick={() => send('up')}
+      >
+        <ThumbsUp aria-hidden className="size-3.5" />
+        {t('feedback.helpful')}
+      </Button>
+      <Button
+        type="button"
+        variant={chosen === 'down' ? 'secondary' : 'outline'}
+        size="xs"
+        className={chosen === 'down' ? undefined : 'bg-background shadow-sm'}
+        aria-label={t('feedback.notHelpful')}
+        aria-pressed={chosen === 'down'}
+        disabled={busy}
+        onClick={() => setPanelOpen(true)}
+      >
+        <ThumbsDown aria-hidden className="size-3.5" />
+        {t('feedback.notHelpful')}
+      </Button>
+      {status === 'thanks' ? (
+        <span className="text-xs text-muted-foreground">{t('feedback.thanks')}</span>
+      ) : null}
+      {status === 'failed' ? (
+        <span className="text-xs text-muted-foreground">{t('feedback.failed')}</span>
+      ) : null}
       {panelOpen ? (
-        <div className="mt-2 flex max-w-md flex-col gap-2">
+        <div className="mt-2 flex w-full max-w-md basis-full flex-col gap-2">
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
