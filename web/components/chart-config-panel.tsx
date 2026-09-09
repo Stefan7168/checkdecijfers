@@ -1000,6 +1000,10 @@ export function ChartConfigPanel({
   function onRegionKeyDown(event: KeyboardEvent<HTMLElement>): void {
     if (event.key === 'Escape') {
       event.preventDefault();
+      // The portaled dialog is still a React-tree child of ChartView: stop
+      // the synthetic event here so no ancestor (the story region, the page)
+      // ever sees this Escape as its own.
+      event.stopPropagation();
       closeAndRefocus();
     }
   }
@@ -1093,7 +1097,7 @@ export function ChartConfigPanel({
       aria-labelledby={headingId}
       tabIndex={-1}
       onKeyDown={onRegionKeyDown}
-      className="fixed inset-x-0 bottom-0 z-40 max-h-[60vh] overflow-y-auto rounded-t-lg border-t border-border bg-card p-3 text-xs shadow-lg lg:inset-x-auto lg:bottom-auto lg:right-4 lg:top-20 lg:w-[22rem] lg:max-h-[calc(100vh-6rem)] lg:rounded-lg lg:rounded-t-lg lg:border"
+      className="fixed inset-x-0 bottom-0 z-40 max-h-[60vh] overflow-y-auto rounded-t-lg border-t border-border bg-card p-3 text-xs shadow-lg lg:inset-x-auto lg:bottom-auto lg:right-4 lg:top-20 lg:w-[22rem] lg:max-h-[calc(100vh-6rem)] lg:rounded-lg lg:border"
     >
       <h2 id={headingId} className="sr-only">
         {copy.regionLabel}
