@@ -65,7 +65,6 @@ export function FeedbackButtons({
         onClick={() => send('up')}
       >
         <ThumbsUp aria-hidden className="size-3.5" />
-        {t('feedback.helpful')}
       </Button>
       <Button
         type="button"
@@ -78,7 +77,6 @@ export function FeedbackButtons({
         onClick={() => setPanelOpen(true)}
       >
         <ThumbsDown aria-hidden className="size-3.5" />
-        {t('feedback.notHelpful')}
       </Button>
       {status === 'thanks' ? (
         <span className="text-xs text-muted-foreground">{t('feedback.thanks')}</span>

@@ -975,7 +975,9 @@ export function Chat({
               * behavior verbatim: fill the input, never send. The user sees
               * the pre-send cost line (#82) and presses Verstuur themselves. */}
             {message.suggestions.length > 0 ? (
-              <div className="mt-2 flex flex-wrap gap-2">
+              <>
+                <p className="mt-2 text-xs text-muted-foreground">{t('chat.suggestionsHint')}</p>
+                <div className="mt-1 flex flex-wrap gap-2">
                 {message.suggestions.map((question) => (
                   <button
                     key={question}
@@ -1002,7 +1004,8 @@ export function Chat({
                     {question}
                   </button>
                 ))}
-              </div>
+                </div>
+              </>
             ) : null}
             {/* WP129+130 (#130, ADR 032): the unverified-web section — LAST in
               * the bubble, BELOW the validated CBS body / refusal text and every

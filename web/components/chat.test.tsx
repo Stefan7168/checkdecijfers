@@ -191,14 +191,14 @@ describe('Chat — GatedResponse branches', () => {
 });
 
 describe('Chat — WP20 citation copy (#78)', () => {
-  it('offers "Kopieer als citaat" under an answer and copies the built citation', async () => {
+  it('offers "Kopieer" under an answer and copies the built citation', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
     askQuestion.mockResolvedValue(outcome(fakeAnswer('Nederland telt 18.044.027 inwoners.')));
     render(<Chat />);
     await submit('Hoeveel inwoners heeft Nederland?');
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Kopieer als citaat' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Kopieer' }));
     expect(await screen.findByText('Gekopieerd!')).toBeInTheDocument();
     expect(writeText).toHaveBeenCalledWith(
       'Nederland telt 18.044.027 inwoners. (CBS StatLine, tabel 86141NED, gesynchroniseerd 3 juli 2026)',
@@ -210,7 +210,7 @@ describe('Chat — WP20 citation copy (#78)', () => {
     render(<Chat />);
     await submit('Hoeveel werklozen zijn er?');
     expect(await screen.findByText('Welke gemeente bedoel je?')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Kopieer als citaat' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Kopieer' })).toBeNull();
   });
 });
 
@@ -248,7 +248,7 @@ describe('Chat — WP21 CSV export (#52)', () => {
     delete (URL as unknown as Record<string, unknown>).revokeObjectURL;
   });
 
-  it('offers "Download als CSV" under an answer and downloads exactly the built file', async () => {
+  it('offers "CSV" under an answer and downloads exactly the built file', async () => {
     const blobs: Blob[] = [];
     (URL as unknown as Record<string, unknown>).createObjectURL = vi.fn((blob: Blob) => {
       blobs.push(blob);
@@ -274,7 +274,7 @@ describe('Chat — WP21 CSV export (#52)', () => {
     render(<Chat />);
     await submit('Wat was de inflatie in 2024?');
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Download als CSV' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'CSV' }));
 
     const expected = buildAnswerCsv(response);
     expect(clicked).toEqual([{ href: 'blob:mock-csv', download: expected.filename }]);
@@ -295,7 +295,7 @@ describe('Chat — WP21 CSV export (#52)', () => {
     render(<Chat />);
     await submit('Hoeveel werklozen zijn er?');
     expect(await screen.findByText('Welke gemeente bedoel je?')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Download als CSV' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'CSV' })).toBeNull();
   });
 
   it('shows the honest failure note when the browser API throws (jsdom default: no createObjectURL)', async () => {
@@ -304,7 +304,7 @@ describe('Chat — WP21 CSV export (#52)', () => {
     askQuestion.mockResolvedValue(outcome(fakeAnswer('Nederland telt 18.044.027 inwoners.')));
     render(<Chat />);
     await submit('Hoeveel inwoners heeft Nederland?');
-    fireEvent.click(await screen.findByRole('button', { name: 'Download als CSV' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'CSV' }));
     expect(await screen.findByText('Downloaden lukte niet in deze browser.')).toBeInTheDocument();
   });
 });
@@ -733,6 +733,33 @@ describe('Chat — WP29 follow-up suggestion chips (#73)', () => {
     expect(screen.queryByRole('button', { name: /Wat was .*\?/ })).toBeNull();
     expect(screen.queryByRole('button', { name: /Hoe ontwikkelde .*\?/ })).toBeNull();
   });
+
+  it('shows the follow-up hint above the chips when suggestions are present', async () => {
+    askQuestion.mockResolvedValue(
+      outcome(
+        answerWithSuggestions('De inflatie bedroeg in 2024 3,3%.', [
+          'Wat was inflatie in 2025?',
+        ]),
+      ),
+    );
+    render(<Chat />);
+    await submit('Wat was de inflatie in 2024?');
+    const chip = await screen.findByRole('button', { name: 'Wat was inflatie in 2025?' });
+    const hint = screen.getByText('Suggesties voor een vervolgvraag:');
+    expect(
+      hint.compareDocumentPosition(chip) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it('shows no follow-up hint when there are no suggestions', async () => {
+    askQuestion.mockResolvedValue(
+      outcome(answerWithSuggestions('De inflatie bedroeg in 2024 3,3%.', [])),
+    );
+    render(<Chat />);
+    await submit('Wat was de inflatie in 2024?');
+    await screen.findByText('De inflatie bedroeg in 2024 3,3%.');
+    expect(screen.queryByText('Suggesties voor een vervolgvraag:')).toBeNull();
+  });
 });
 
 // #134(a) (ADR 029, refusal-side variant): a period-coverage refusal
@@ -1051,8 +1078,8 @@ describe('Chat — WP218 answer card (Option B)', () => {
     await screen.findByText('De inflatie in 2024 was 3,3%.');
     const up = screen.getByRole('button', { name: 'Nuttig antwoord' });
     const proof = screen.getByRole('button', { name: 'Bewijs dit cijfer' });
-    const citation = screen.getByRole('button', { name: 'Kopieer als citaat' });
-    const csv = screen.getByRole('button', { name: 'Download als CSV' });
+    const citation = screen.getByRole('button', { name: 'Kopieer' });
+    const csv = screen.getByRole('button', { name: 'CSV' });
     // node.compareDocumentPosition(other) & DOCUMENT_POSITION_FOLLOWING is
     // truthy exactly when `other` comes AFTER `node` in the DOM.
     expect(up.compareDocumentPosition(proof) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -1076,14 +1103,14 @@ describe('Chat — WP218 answer card (Option B)', () => {
     expect(screen.queryByRole('region')).toBeNull();
   });
 
-  it('the feedback buttons carry visible labels and lucide icons — no emoji anywhere', async () => {
+  it('the feedback buttons are icon-only with an aria-label and lucide icons — no emoji anywhere', async () => {
     askQuestion.mockResolvedValue(outcome(fullAnswer()));
     render(<Chat />);
     await submit('Wat was de inflatie in 2024?');
     const up = await screen.findByRole('button', { name: 'Nuttig antwoord' });
     const down = screen.getByRole('button', { name: 'Niet nuttig' });
-    expect(up.textContent).toContain('Nuttig antwoord');
-    expect(down.textContent).toContain('Niet nuttig');
+    expect(up.textContent).toBe('');
+    expect(down.textContent).toBe('');
     expect(up.querySelector('svg.lucide-thumbs-up')).not.toBeNull();
     expect(down.querySelector('svg.lucide-thumbs-down')).not.toBeNull();
     expect(document.body.textContent).not.toContain('👍');
@@ -1133,8 +1160,8 @@ describe('Chat — WP218 answer card (Option B)', () => {
     expect(document.querySelector('[data-slot="card"]')).toBeNull();
     expect(screen.getByRole('button', { name: 'Nuttig antwoord' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Niet nuttig' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Kopieer als citaat' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Download als CSV' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Kopieer' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'CSV' })).toBeInTheDocument();
   });
 });
 
@@ -1805,8 +1832,8 @@ describe('Chat — attachment entry points (#201/#202, session 83 scoping; ADR 0
     render(<Chat />);
     for (const [name, hint] of [
       ['Bestand uploaden', 'upload een bestand'],
-      ['Koppel een spreadsheet', 'koppel een spreadsheet'],
-      ['Database koppelen', 'verbind een databron'],
+      ['Sheet koppelen', 'koppel een spreadsheet'],
+      ['Data koppelen', 'verbind een databron'],
     ] as const) {
       const button = screen.getByRole('button', { name });
       expect(button).toBeDisabled();
@@ -1817,17 +1844,17 @@ describe('Chat — attachment entry points (#201/#202, session 83 scoping; ADR 0
     expect(linkButton).not.toHaveAttribute('title');
   });
 
-  it('"Link with sheet" sits directly before "Connect database" in the chip row (owner request, session 90)', () => {
+  it('"Link sheet" sits directly before "Connect data" in the chip row (owner request, session 90)', () => {
     render(<Chat />);
-    const sheet = screen.getByRole('button', { name: 'Koppel een spreadsheet' });
-    const database = screen.getByRole('button', { name: 'Database koppelen' });
+    const sheet = screen.getByRole('button', { name: 'Sheet koppelen' });
+    const database = screen.getByRole('button', { name: 'Data koppelen' });
     expect(sheet.nextElementSibling).toBe(database);
     expect(sheet.className).toBe(database.className);
   });
 
-  it('"Connect database" no longer shows a "Soon" badge (owner feedback, session 88)', () => {
+  it('"Connect data" no longer shows a "Soon" badge (owner feedback, session 88)', () => {
     render(<Chat />);
-    const button = screen.getByRole('button', { name: 'Database koppelen' });
+    const button = screen.getByRole('button', { name: 'Data koppelen' });
     expect(within(button).queryByText('Soon')).toBeNull();
   });
 
@@ -1887,10 +1914,10 @@ describe('Chat — attachment entry points (#201/#202, session 83 scoping; ADR 0
     expect(await screen.findByText('This file is too large.')).toBeInTheDocument();
   });
 
-  it('"Connect database" stays disabled even when attachments is present; "Add link" stays clickable', () => {
+  it('"Connect data" stays disabled even when attachments is present; "Add link" stays clickable', () => {
     const onUploadFile = vi.fn();
     render(<Chat attachments={{ enabled: true, onUploadFile }} />);
-    expect(screen.getByRole('button', { name: 'Database koppelen' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Data koppelen' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Link toevoegen' })).not.toBeDisabled();
   });
 });
@@ -1954,7 +1981,7 @@ describe('Chat — en', () => {
     );
     expect(screen.getByRole('button', { name: 'Add link' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Upload file' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Link with sheet' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Connect database' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Link sheet' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Connect data' })).toBeInTheDocument();
   });
 });

@@ -33,9 +33,9 @@ const nl = {
   // chat.tsx (the CBS chat loop). Task 2 (WP218 phase 4, #219).
   'chat.placeholder': 'Stel een vraag…',
   'chat.send': 'Verstuur',
-  'chat.copyCitation': 'Kopieer als citaat',
+  'chat.copyCitation': 'Kopieer',
   'chat.copyCitationCopied': 'Gekopieerd!',
-  'chat.downloadCsv': 'Download als CSV',
+  'chat.downloadCsv': 'CSV',
   'chat.downloadCsvFailed': 'Downloaden lukte niet in deze browser.',
   'chat.webSectionHeader': 'Van het web (niet door checkdecijfers geverifieerd)',
   'chat.webSectionFailedInsufficientBalance':
@@ -65,6 +65,7 @@ const nl = {
   'chat.staleDeploySuffix': 'en stel je vraag daarna opnieuw.',
   'chat.genericError': 'Er ging iets mis bij het ophalen van het antwoord. Probeer het opnieuw.',
   'chat.nothingSelectedHint': 'Selecteer minstens één bron.',
+  'chat.suggestionsHint': 'Suggesties voor een vervolgvraag:',
   // "data" is the same loanword in Dutch, so the value is identical in both
   // languages; still catalogued (every literal string goes through t()).
   'chat.sourceDataSuffix': '{name} data',
@@ -72,9 +73,9 @@ const nl = {
   'chat.addLink': 'Link toevoegen',
   'chat.uploadFile': 'Bestand uploaden',
   'chat.uploadFileComingSoonTitle': 'Binnenkort beschikbaar: upload een bestand (bijv. PDF)',
-  'chat.linkWithSheet': 'Koppel een spreadsheet',
+  'chat.linkWithSheet': 'Sheet koppelen',
   'chat.linkWithSheetComingSoonTitle': 'Binnenkort beschikbaar: koppel een spreadsheet (bijv. Google Sheets)',
-  'chat.connectDatabase': 'Database koppelen',
+  'chat.connectDatabase': 'Data koppelen',
   'chat.connectDatabaseComingSoonTitle': 'Binnenkort beschikbaar: verbind een databron (bijv. een Postgres-database)',
   // A URL example, not language-dependent prose — same value both languages.
   'chat.linkUrlPlaceholder': 'https://example.com/page-with-a-table',
@@ -516,9 +517,9 @@ const en: Messages = {
 
   'chat.placeholder': 'Ask a question…',
   'chat.send': 'Send',
-  'chat.copyCitation': 'Copy as citation',
+  'chat.copyCitation': 'Copy',
   'chat.copyCitationCopied': 'Copied!',
-  'chat.downloadCsv': 'Download as CSV',
+  'chat.downloadCsv': 'CSV',
   'chat.downloadCsvFailed': 'Download did not work in this browser.',
   'chat.webSectionHeader': 'From the web (not verified by checkdecijfers)',
   'chat.webSectionFailedInsufficientBalance':
@@ -544,14 +545,15 @@ const en: Messages = {
   'chat.staleDeploySuffix': 'and ask your question again.',
   'chat.genericError': 'Something went wrong getting the answer. Please try again.',
   'chat.nothingSelectedHint': 'Select at least one source.',
+  'chat.suggestionsHint': 'Suggested follow-up questions:',
   'chat.sourceDataSuffix': '{name} data',
   'chat.internetChip': 'Internet',
   'chat.addLink': 'Add link',
   'chat.uploadFile': 'Upload file',
   'chat.uploadFileComingSoonTitle': 'Coming soon: upload a file (e.g. PDF)',
-  'chat.linkWithSheet': 'Link with sheet',
+  'chat.linkWithSheet': 'Link sheet',
   'chat.linkWithSheetComingSoonTitle': 'Coming soon: connect a spreadsheet (e.g. Google Sheets)',
-  'chat.connectDatabase': 'Connect database',
+  'chat.connectDatabase': 'Connect data',
   'chat.connectDatabaseComingSoonTitle': 'Coming soon: connect a data source (e.g. a Postgres database)',
   'chat.linkUrlPlaceholder': 'https://example.com/page-with-a-table',
   'chat.fetchButton': 'Fetch',

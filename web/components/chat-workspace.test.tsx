@@ -98,8 +98,8 @@ function envelopeSignature(): string[] {
     // Session 72 design brief (#70/#79/#89): the drill-through trigger is
     // FIRST in the citation/CSV row (D5) — statCardAnswer() is one cell.
     screen.getByRole('button', { name: 'Bewijs dit cijfer' }).textContent ?? '',
-    screen.getByRole('button', { name: 'Kopieer als citaat' }).textContent ?? '',
-    screen.getByRole('button', { name: 'Download als CSV' }).textContent ?? '',
+    screen.getByRole('button', { name: 'Kopieer' }).textContent ?? '',
+    screen.getByRole('button', { name: 'CSV' }).textContent ?? '',
     screen.getByRole('button', { name: SUGGESTION }).textContent ?? '',
     screen.getByText(WEB_HEADER).textContent ?? '',
     screen.getByText('Een webbevinding.').textContent ?? '',
