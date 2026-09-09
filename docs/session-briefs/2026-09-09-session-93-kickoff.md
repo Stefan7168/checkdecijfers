@@ -18,6 +18,11 @@ work; Parts A and C are built) → ADR 039 (both session-92 addenda) + ADR 040.
   the aspect-ratio sizing at a phone width. Do this first, with the owner, on a chart answer.
 
 ## Do first
+-1. **Alert 2026-09-09 22:44 (audit row 302):** the main Anthropic key hit its monthly usage cap ("regain access on
+   2026-10-01") — every model question refuses honestly and emails the owner. Owner step: raise the cap in the
+   Anthropic console or wait for 1 October. ALSO check: that question came from a follow-up chip (a zero-LLM click
+   take) yet reached the model — sent via a scripted chip click + Send in the owner's Chrome; verify the click-take
+   carrier path still fires for a chip clicked by a real user before assuming a regression.
 0. Interactive production check above (owner's Chrome, light + dark, desktop + 375 px). Fix anything found.
 1. **Embed (spec Part B)** — the single next build: `superpowers:writing-plans` → SDD. Owner-set at
    go-live (never by the session): `EMBED_TOKEN_SECRET` (a long random string, Vercel, Sensitive) and
