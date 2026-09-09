@@ -34,9 +34,10 @@ export interface ChartPresentation {
    * the chart regardless of the app's own switch. Applicable on EVERY form,
    * table included, and never locked — unlike every other key here it has
    * no honesty consequence, so no form ever overrides or disables it. The
-   * Style panel itself is never mounted in table form (`chart.tsx`:
-   * `state.form !== 'table'`), but `language` is still reachable there
-   * through its own separate control, not the panel. */
+   * Style panel — the only control that sets it — is never mounted in table
+   * form (`chart.tsx`: `state.form !== 'table'`), so in table form the key
+   * still APPLIES (a value chosen on a chart form keeps translating the
+   * table's card copy) but cannot be changed until a chart form is shown. */
   language: Lang | null;
   /** The Frame tab (design §C2): the chart sits inside this background,
    * padding, corner radius, drop shadow, card inset and export aspect ratio.
@@ -323,9 +324,16 @@ export const COLOR_REFUSAL =
 export function judgeColorAgainst(hex: string, backdrops: string[]): ColorVerdict {
   const ratios = backdrops.map((backdrop) => contrastRatio(hex, backdrop));
   if (ratios.some((r) => r < COLOR_REFUSE_BELOW)) return { ok: false, reason: COLOR_REFUSAL };
-  const weakLight = contrastRatio(hex, CARD_LIGHT) < COLOR_WARN_BELOW;
-  const weakDark = contrastRatio(hex, CARD_DARK) < COLOR_WARN_BELOW;
-  return { ok: true, warning: weakLight && weakDark ? 'both' : weakLight ? 'light' : weakDark ? 'dark' : null };
+  // The warning names a theme only when the backdrops ARE the two cards
+  // (judgeColor's call); against frame backdrops a weak contrast is a plain
+  // 'both' — there is no light/dark side to a solid or a gradient.
+  const isCardPair = backdrops.length === 2 && backdrops[0] === CARD_LIGHT && backdrops[1] === CARD_DARK;
+  if (isCardPair) {
+    const weakLight = ratios[0]! < COLOR_WARN_BELOW;
+    const weakDark = ratios[1]! < COLOR_WARN_BELOW;
+    return { ok: true, warning: weakLight && weakDark ? 'both' : weakLight ? 'light' : weakDark ? 'dark' : null };
+  }
+  return { ok: true, warning: ratios.some((r) => r < COLOR_WARN_BELOW) ? 'both' : null };
 }
 
 /** Owner decision B with the R11 guard: a colour that would hide the hollow
