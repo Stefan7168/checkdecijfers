@@ -51,7 +51,9 @@ export function ChartFrame({ frame, image, children }: { frame: FrameValues; ima
   useEffect(() => {
     if (aspect === null || typeof ResizeObserver === 'undefined' || !ref.current) return undefined;
     const observer = new ResizeObserver((entries) => {
-      const width = entries[0]?.contentRect.width ?? 0;
+      // Border-box width (contentRect excludes the frame's own padding, which
+      // skewed the ratio by the padding on both sides — battle test round 5).
+      const width = entries[0]?.target.getBoundingClientRect().width ?? 0;
       setMeasuredWidth((current) => (Math.abs(current - width) < 0.5 ? current : width));
     });
     observer.observe(ref.current);
@@ -77,7 +79,11 @@ export function ChartFrame({ frame, image, children }: { frame: FrameValues; ima
           maxWidth: '100%',
           minWidth: 0,
           boxSizing: 'border-box',
-          minHeight: Math.max(naturalHeight, Math.round(measuredWidth / aspect)),
+          // An explicit HEIGHT (not min-height): chart.tsx's container is
+          // `h-full` inside this box, and a percentage height resolves only
+          // against a definite height — with min-height alone the chart
+          // collapsed to nothing (battle test round 6).
+          height: Math.max(naturalHeight, Math.round(measuredWidth / aspect)),
           display: 'flex',
           flexDirection: 'column',
         }
