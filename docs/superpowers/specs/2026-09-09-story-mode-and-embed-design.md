@@ -68,14 +68,16 @@ disclosure) applies: the embed bakes the same disclosure text the download bakes
   Previous / Next buttons and a dotted step list (the mock-up in session 92). Arrow keys on the
   region move steps; Escape closes and refocuses the trigger. Prefers-reduced-motion: no smooth
   scrolling.
-- Active step = the card nearest the scroll area's vertical centre (an IntersectionObserver with
+- Active step = the card with the largest visible share of the scroll area, at least half (an IntersectionObserver with
   `root` = the scroll area, thresholds at 0.5; jsdom fallback: the buttons drive the index
   directly). Previous/Next scroll the card into view AND set the index — both paths call the same
   `setStep(i)`.
 - On step change the panel dispatches the existing `setHighlight` per step (zoom is NOT used in v1 — see the Global Constraints of the plan and ADR 039's addendum; one new action `setView` restores the reader's view on close). A point step additionally renders a marker on the chart:
   `ChartView` passes `storyPoint: { seriesKey, periodCode } | null` into the render, which draws a
-  filled ring around that point using `dotGeometry` (R11: the hollow provisional ring stays
-  visible inside the story ring — the story ring is 4 px outside it, never on top of it).
+  dashed, unfilled ring around that point using `dotGeometry` (R11: the hollow provisional ring
+  stays visible inside the story ring — the story ring is 5 px outside it, never on top of it, and
+  the dash keeps it from ever reading as a provisional marker); in bar form a dashed outline
+  around the bar plays the same role (as built, final review).
 - Closing the story (trigger, Escape, or a spec swap through the reducer `reset`) restores the
   view state the user had before opening (the panel snapshots `periodRange` + `highlightedKey`
   on open and restores on close; a user who changed nothing gets the untouched chart back).

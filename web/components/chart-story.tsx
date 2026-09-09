@@ -12,7 +12,7 @@
 // the position, so the card's whole-text digit scans stay exemption-free.
 // House ARIA: role="region", aria-expanded/aria-controls on the trigger,
 // Escape closes and refocuses the trigger.
-import { useEffect, useRef, type KeyboardEvent, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, type KeyboardEvent, type ReactNode } from 'react';
 import { WandSparkles } from 'lucide-react';
 import type { StoryStep } from '../lib/chart-story.ts';
 import { t, type Lang } from '../lib/i18n/messages.ts';
@@ -90,10 +90,10 @@ export function ChartStoryPanel({ steps, index, onIndexChange, open, onClose, tr
 
   // Final-review fix: these two used to be plain assignments right here,
   // during the render phase. Moved into their own dependency-free Effect —
-  // runs after every render, on commit, strictly before the observer
+  // runs synchronously on commit (layout phase), strictly before the observer
   // effect's own callback could ever fire (Effects commit in declaration
   // order) — so the refs the observer reads are never assigned mid-render.
-  useEffect(() => {
+  useLayoutEffect(() => {
     indexRef.current = index;
     onIndexChangeRef.current = onIndexChange;
   });
