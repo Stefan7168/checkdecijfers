@@ -46,6 +46,19 @@ contrast check at design time
 - **The backend suite still needs the machine to itself** (~35 min solo, 2198 tests); the web suite and
   `next build` run fine beside reviewers. Sequence the day so the backend run overlaps with a brainstorm,
   not with agents.
+- **Playwright MCP against production's PUBLIC charts is the real-browser check this project lacked.** The
+  hidden Browser pane never hydrates the chart subtree and the owner's Chrome had no chart thread, but the
+  logged-out homepage carries five live charts: Playwright drove Story mode, the floating panel, the Frame
+  tab, PNG/SVG downloads (`page.waitForEvent('download')`) and a file upload at 1280 and 375 px with zero
+  API spend. It found a defect no test had: CSS `aspect-ratio` on the frame shrank the chart, then grew the
+  frame sideways, then widened the page on a phone, then (with only a min-height) collapsed the chart's
+  `h-full` to nothing — six rounds. Lesson: a ratio must set an explicit HEIGHT from the measured width,
+  never the width; and any layout feature gets a Playwright pass on production before it is called done.
+- **Do not edit a test file while a background job runs the suite on it.** Round 5's job read a test
+  mid-edit, reported one failure, and still committed/pushed (the failure was inside a `| grep` pipe, so
+  `&&` did not stop the chain) — CI for that commit was cancelled by the next push. Gate pushes on the
+  test command's own exit code (`set -o pipefail`), and never touch files a background verification is
+  reading.
 - **Brainstorm mock-ups via the inline widget beat prose for this owner:** "Where do I look?" was the reply
   to a text-only design; the two inline mock-ups (story panel, embed pop-up) got approvals within minutes.
 

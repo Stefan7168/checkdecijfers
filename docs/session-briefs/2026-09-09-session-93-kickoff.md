@@ -8,7 +8,7 @@ work; Parts A and C are built) → ADR 039 (both session-92 addenda) + ADR 040.
 
 ## What is true right now (verified 2026-09-09)
 
-- `main` = `1f13e78` (after the Playwright battle test's six aspect-ratio fixes, `e18c01f`…`1f13e78`), clean,
+- `main` = the session-92 wrap-up commit on top of `1f13e78` (after the Playwright battle test's six aspect-ratio fixes, `e18c01f`…`1f13e78`), clean,
   pushed; CI `34379480807` gate + deploy green; `/api/health` `{"ok":true}`.
 - LIVE since session 92: Story mode, the chat polish batch (eight owner asks), frame styling + the
   floating Style panel, the chart-language select preselecting the current language.

@@ -35,8 +35,16 @@ EMBED DESIGNED (NOT BUILT).**
 6. **Docs:** ADR 039 (Story mode + Frame addenda), ADR 040 addendum, #221, #222, 03-mvp-scope,
    04-architecture, 12-huisstijl (+ stale "not merged" WP218 wording fixed, `46d22ed`), the spec, three
    plans, lessons-learned (session 92), memory, STATUS, this entry, the session-93 kickoff.
-7. **Left for the owner:** the interactive production check (story panel, floating Style panel, Frame
-   tab, aspect ratio on a phone); migrations 028 + 029; Brandfetch key (optional); WP202a steps 2–6.
+7. **Battle test (owner: "use Playwright to battle test everything"), 2026-09-09/10:** Playwright MCP on
+   production's public homepage charts, desktop + 375 px: floating panel (portal, fixed right / bottom
+   sheet), Story mode, Frame tab, gradient + own-image PNG/SVG exports all pass; one defect — the aspect
+   ratio — fixed in six rounds `e18c01f`, `2690bd0`, `4d9134b`, `9540447`, `c6a7390`, `1f13e78` (CI
+   `34379480807` green; `34379343745` for `c6a7390` cancelled by the next push). Final rule in
+   `chart-frame.tsx`: explicit height = max(chart height + padding + inset, measured width ÷ ratio).
+   Docs `e2b1a30` + the wrap-up commit. Also: the chart question the check needed hit the Anthropic
+   monthly usage cap (alert, audit row 302) — owner step; a follow-up chip reaching the model is a check
+   for session 93.
+8. **Left for the owner:** a dark-mode glance on production; migrations 028 + 029; Brandfetch key (optional); WP202a steps 2–6.
    Next build: Embed (Part B).
 
 **Session 91 (2026-09-09, AUTONOMOUS) — THE WHOLE WP218 CHART STYLING PROGRAMME (PHASES 0–6) BUILT

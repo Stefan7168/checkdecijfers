@@ -275,6 +275,14 @@ FIRST** (`npm run db:migrate`, owner-present window; the running old code ignore
 still serves, **then** push the code. Plus the standard per-migration check when a migration adds a TABLE
 (grants/RLS, migration-011 queries); a column on an existing RLS-locked table inherits its table's posture.
 
+## Real-browser check of chart features without spend (added 2026-09-10, session 92)
+
+The Browser pane never hydrates the chart subtree while hidden, and the owner's Chrome only has charts in
+threads that cost credits. The logged-out homepage carries five live CBS charts: drive them with the
+Playwright MCP (`browser_run_code_unsafe`) — Story mode, the Style panel, downloads via
+`page.waitForEvent('download')`, file uploads via `setInputFiles`, at 1280 and 375 px. Zero API spend.
+Always cache-bust the URL (`?v=<timestamp>`) right after a deploy.
+
 ## WP218 chart styling — the supervised go-live (⏳ NOT YET RUN, written 2026-09-09, session 91, autonomous)
 
 **Status when this section was written:** the whole programme (phases 0–6: the Opmaak panel, the
