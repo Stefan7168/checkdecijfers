@@ -2373,3 +2373,318 @@ describe('WP218 phase 4 — charts follow the app language, per-chart, via the C
     expect(screen.getByRole('heading', { name: 'Consumentenvertrouwen' })).toBeInTheDocument();
   });
 });
+
+// ---------------------------------------------------------------------------
+// WP218 phase 5, Task 2 (owner D): two more Weergave tabs — Vlak (area) and
+// Liggend (horizontal bar) — over the SAME five-tab switch, in order Lijn /
+// Vlak / Staaf / Liggend / Tabel. S1/S2/S3 mirror chart-view-state.test.ts's
+// own fixtures for the guard functions this render wires up:
+//   S1 = threePointSpec()   — single-series time series (kind line, count 1)
+//   S2 = twoSeriesLineSpec() — multi-series time series (kind line, count 2)
+//   S3 = multiRegionBarSpec() — multi-region comparison (kind bar, count 3)
+// ---------------------------------------------------------------------------
+
+describe('ChartView form switch — WP218 phase 5 (Vlak/Liggend tabs)', () => {
+  it('offers all five tabs, in order Lijn, Vlak, Staaf, Liggend, Tabel', () => {
+    render(<ChartView spec={threePointSpec()} />);
+    const tabs = screen.getAllByRole('tab').map((el) => el.textContent);
+    expect(tabs).toEqual(['Lijn', 'Vlak', 'Staaf', 'Liggend', 'Tabel']);
+  });
+
+  it('S1 (single-series time series): only Liggend is disabled, with a reason', () => {
+    render(<ChartView spec={threePointSpec()} />);
+    expect(screen.getByRole('tab', { name: 'Lijn' })).not.toBeDisabled();
+    expect(screen.getByRole('tab', { name: 'Vlak' })).not.toBeDisabled();
+    expect(screen.getByRole('tab', { name: 'Staaf' })).not.toBeDisabled();
+    const hbarTab = screen.getByRole('tab', { name: 'Liggend' });
+    expect(hbarTab).toBeDisabled();
+    expect(hbarTab).toHaveAttribute('title', expect.stringContaining('regio'));
+  });
+
+  it('S2 (multi-series time series): Vlak and Liggend are both disabled, each with its own reason', () => {
+    render(<ChartView spec={twoSeriesLineSpec()} />);
+    expect(screen.getByRole('tab', { name: 'Lijn' })).not.toBeDisabled();
+    const areaTab = screen.getByRole('tab', { name: 'Vlak' });
+    expect(areaTab).toBeDisabled();
+    expect(areaTab).toHaveAttribute('title', expect.stringContaining('reeksen'));
+    const hbarTab = screen.getByRole('tab', { name: 'Liggend' });
+    expect(hbarTab).toBeDisabled();
+    expect(hbarTab).toHaveAttribute('title', expect.stringContaining('regio'));
+  });
+
+  it('S3 (multi-region comparison): Lijn and Vlak are both disabled, each with its own reason; Liggend is allowed', () => {
+    render(<ChartView spec={multiRegionBarSpec()} />);
+    expect(screen.getByRole('tab', { name: 'Lijn' })).toBeDisabled();
+    const areaTab = screen.getByRole('tab', { name: 'Vlak' });
+    expect(areaTab).toBeDisabled();
+    expect(areaTab).toHaveAttribute('title', expect.stringContaining('tijd'));
+    expect(screen.getByRole('tab', { name: 'Staaf' })).not.toBeDisabled();
+    expect(screen.getByRole('tab', { name: 'Liggend' })).not.toBeDisabled();
+  });
+
+  it('a disabled tab\'s reason is reachable by keyboard/AT via aria-describedby, not just the pointer title', () => {
+    render(<ChartView spec={twoSeriesLineSpec()} />);
+    const areaTab = screen.getByRole('tab', { name: 'Vlak' });
+    const describedBy = areaTab.getAttribute('aria-describedby')!;
+    expect(describedBy).toBeTruthy();
+    expect(document.getElementById(describedBy)?.textContent).toBe(
+      'Een gevuld vlak per reeks zou de reeksen over elkaar leggen en gaten verbergen.',
+    );
+  });
+
+  it('S2: arrow-key order skips the disabled Vlak/Liggend tabs entirely (Lijn -> Staaf -> Tabel -> Lijn)', () => {
+    render(<ChartView spec={twoSeriesLineSpec()} />);
+    const lineTab = screen.getByRole('tab', { name: 'Lijn' });
+    lineTab.focus();
+    fireEvent.keyDown(lineTab, { key: 'ArrowRight' });
+    expect(screen.getByRole('tab', { name: 'Staaf' })).toHaveFocus();
+    fireEvent.keyDown(screen.getByRole('tab', { name: 'Staaf' }), { key: 'ArrowRight' });
+    expect(screen.getByRole('tab', { name: 'Tabel' })).toHaveFocus();
+    fireEvent.keyDown(screen.getByRole('tab', { name: 'Tabel' }), { key: 'ArrowRight' });
+    expect(screen.getByRole('tab', { name: 'Lijn' })).toHaveFocus();
+  });
+
+  it('S3: arrow-key order skips the disabled Lijn/Vlak tabs entirely (Staaf -> Liggend -> Tabel -> Staaf)', () => {
+    render(<ChartView spec={multiRegionBarSpec()} />);
+    const barTab = screen.getByRole('tab', { name: 'Staaf' });
+    barTab.focus();
+    fireEvent.keyDown(barTab, { key: 'ArrowRight' });
+    expect(screen.getByRole('tab', { name: 'Liggend' })).toHaveFocus();
+    fireEvent.keyDown(screen.getByRole('tab', { name: 'Liggend' }), { key: 'ArrowRight' });
+    expect(screen.getByRole('tab', { name: 'Tabel' })).toHaveFocus();
+    fireEvent.keyDown(screen.getByRole('tab', { name: 'Tabel' }), { key: 'ArrowRight' });
+    expect(screen.getByRole('tab', { name: 'Staaf' })).toHaveFocus();
+  });
+
+  it('a spec swap from an area-chosen S1 to a disallowed S2 falls back to line', () => {
+    const { container, rerender } = render(<ChartView spec={threePointSpec()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Vlak' }));
+    expect(container.querySelector('.recharts-area')).not.toBeNull();
+
+    rerender(<ChartView spec={twoSeriesLineSpec()} />);
+    expect(container.querySelector('.recharts-area')).toBeNull();
+    expect(container.querySelector('.recharts-line')).not.toBeNull();
+    expect(screen.getByRole('tab', { name: 'Lijn' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Vlak' })).toHaveAttribute('aria-selected', 'false');
+  });
+
+  it('a spec swap from an hbar-chosen S3 to a disallowed S1 falls back to bar', () => {
+    const { container, rerender } = render(<ChartView spec={multiRegionBarSpec()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Liggend' }));
+    expect(container.querySelector('[data-role="region-axis-tick"]')).not.toBeNull();
+
+    rerender(<ChartView spec={threePointSpec()} />);
+    expect(container.querySelector('[data-role="region-axis-tick"]')).toBeNull();
+    expect(container.querySelector('.recharts-bar')).not.toBeNull();
+    expect(container.querySelector('.recharts-line')).toBeNull();
+    expect(screen.getByRole('tab', { name: 'Staaf' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Liggend' })).toHaveAttribute('aria-selected', 'false');
+  });
+});
+
+describe('ChartView — area form (WP218 phase 5)', () => {
+  beforeEach(() => vi.unstubAllGlobals());
+
+  function areaSpec(overrides: Partial<ChartSpec> = {}): ChartSpec {
+    return threePointSpec({
+      series: [
+        {
+          label: 'Nederland',
+          regionCode: 'NL01',
+          points: [
+            point({ resultId: 'lo', periodCode: '2022JJ00', periodLabel: '2022', value: 1.5, formattedValue: '1,5' }),
+            point({
+              resultId: 'mid',
+              periodCode: '2023JJ00',
+              periodLabel: '2023',
+              value: 2,
+              formattedValue: '2,0',
+              provisional: true,
+            }),
+            point({ resultId: 'hi', periodCode: '2024JJ00', periodLabel: '2024', value: 3.25, formattedValue: '3,3' }),
+          ],
+        },
+      ],
+      ...overrides,
+    });
+  }
+
+  it('renders a filled Area element (Recharts 3\'s own class) in the series colour for a single time series', () => {
+    const { container } = render(<ChartView spec={areaSpec()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Vlak' }));
+    const area = container.querySelector('.recharts-area-area');
+    expect(area).not.toBeNull();
+    expect(area?.getAttribute('fill')).toBe(RECHARTS_PALETTE[0]);
+    expect(area?.getAttribute('fill-opacity')).toBe('0.25');
+  });
+
+  it('draws a hollow marker on the provisional point, same R11 convention as the line form', () => {
+    const { container } = render(<ChartView spec={areaSpec()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Vlak' }));
+    const hollow = container.querySelector('circle[data-point="value"][data-result-id="mid"]');
+    expect(hollow?.getAttribute('fill')).toBe('var(--card)');
+    const finalDot = container.querySelector('circle[data-point="value"][data-result-id="lo"]');
+    expect(finalDot?.getAttribute('fill')).toBe(RECHARTS_PALETTE[0]);
+  });
+
+  it('floors the Y-axis at zero (the area lock) — the same kind of large, meaningful shift the line form\'s own zero-baseline toggle produces', () => {
+    const s = areaSpec({
+      series: [
+        {
+          label: 'Nederland',
+          regionCode: 'NL01',
+          points: [
+            point({ resultId: 'lo', periodCode: '2022JJ00', periodLabel: '2022', value: 50, formattedValue: '50' }),
+            point({ resultId: 'hi', periodCode: '2024JJ00', periodLabel: '2024', value: 60, formattedValue: '60' }),
+          ],
+        },
+      ],
+    });
+    const { container } = render(<ChartView spec={s} />);
+    const autoY = Number(container.querySelector('[data-role="axis-tick"][data-label-for="lo"]')?.getAttribute('y'));
+    fireEvent.click(screen.getByRole('tab', { name: 'Vlak' }));
+    const zeroY = Number(container.querySelector('[data-role="axis-tick"][data-label-for="lo"]')?.getAttribute('y'));
+    expect(zeroY).toBeLessThan(autoY - 50);
+  });
+
+  it('locks Y-as vanaf nul with its own area-specific reason rather than hiding the control (unlike bar, which deletes it)', () => {
+    render(<ChartView spec={areaSpec()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Vlak' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    const toggle = screen.getByRole('button', { name: 'Y-as vanaf nul' });
+    expect(toggle).toBeDisabled();
+    const reasonId = toggle.getAttribute('aria-describedby')!;
+    expect(document.getElementById(reasonId)?.textContent).toBe('Een gevuld vlak begint altijd bij nul.');
+  });
+
+  it('the whole-card membership scan passes in area form (no digit on screen without a source in the spec\'s own strings)', () => {
+    const s = areaSpec({
+      provisionalNote: 'Voorlopige cijfers zijn gemarkeerd met *.',
+      nullNotes: ['2021: geen gegevens beschikbaar (geheim).'],
+      definitionLine: 'Definitie: testdefinitie 2020.',
+    });
+    const { container } = render(<ChartView spec={s} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Vlak' }));
+    const specStrings = [
+      s.title,
+      s.unit,
+      s.attributionLine,
+      s.attribution.tableId,
+      s.attribution.syncedAt,
+      s.definitionLine ?? '',
+      s.provisionalNote ?? '',
+      ...s.nullNotes,
+      ...Object.keys(s.dimLabels),
+      ...Object.values(s.dimLabels),
+      ...s.series.flatMap((se) => se.points.flatMap((p) => [p.formattedValue ?? '', p.periodLabel])),
+    ].filter(Boolean);
+    scanForUnboundDigits(container, specStrings);
+  });
+});
+
+describe('ChartView — horizontal bar form (WP218 phase 5)', () => {
+  beforeEach(() => vi.unstubAllGlobals());
+
+  it('renders one rect[data-point] per region, in the spec\'s own order, never sorted (R6)', () => {
+    const { container } = render(<ChartView spec={multiRegionBarSpec()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Liggend' }));
+    const bars = container.querySelectorAll('rect[data-point="value"]');
+    expect(bars).toHaveLength(3);
+    expect([...bars].map((b) => b.getAttribute('data-result-id'))).toEqual(['gr-2021', 'fr-2021', 'dr-2021']);
+  });
+
+  it('shows region labels as y-axis text nodes (a custom tick — Recharts\' own default axis text renders nothing in jsdom)', () => {
+    const { container } = render(<ChartView spec={multiRegionBarSpec()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Liggend' }));
+    const regionTicks = [...container.querySelectorAll('[data-role="region-axis-tick"]')].map((t) => t.textContent);
+    expect(regionTicks).toEqual(['Groningen', 'Friesland', 'Drenthe']);
+  });
+
+  it('binds each bar\'s own value label to its resultId', () => {
+    const { container } = render(<ChartView spec={multiRegionBarSpec()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Liggend' }));
+    expect(container.querySelector('[data-role="bar-label"][data-label-for="gr-2021"]')?.textContent).toBe('10');
+    expect(container.querySelector('[data-role="bar-label"][data-label-for="fr-2021"]')?.textContent).toBe('20');
+    expect(container.querySelector('[data-role="bar-label"][data-label-for="dr-2021"]')?.textContent).toBe('15');
+  });
+
+  it('hiding a region via the legend drops its row entirely (order kept for the rest)', () => {
+    const { container } = render(<ChartView spec={multiRegionBarSpec()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Liggend' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Friesland' }));
+    const bars = container.querySelectorAll('rect[data-point="value"]');
+    expect([...bars].map((b) => b.getAttribute('data-result-id'))).toEqual(['gr-2021', 'dr-2021']);
+  });
+
+  it('highlighting one region dims the fill-opacity of the others', () => {
+    const { container } = render(<ChartView spec={multiRegionBarSpec()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Liggend' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Markeer Groningen' }));
+    const bars = [...container.querySelectorAll('rect[data-point="value"]')];
+    const groningen = bars.find((b) => b.getAttribute('data-result-id') === 'gr-2021')!;
+    const friesland = bars.find((b) => b.getAttribute('data-result-id') === 'fr-2021')!;
+    expect(groningen.getAttribute('fill-opacity')).toBe('1');
+    expect(friesland.getAttribute('fill-opacity')).toBe('0.25');
+  });
+
+  it('a provisional region is hatched, not just noted in prose', () => {
+    const s = multiRegionBarSpec();
+    s.series[1]!.points[0] = point({
+      resultId: 'fr-2021',
+      periodCode: '2021',
+      periodLabel: '2021',
+      value: 20,
+      formattedValue: '20',
+      provisional: true,
+    });
+    const { container } = render(<ChartView spec={s} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Liggend' }));
+    const bar = container.querySelector('rect[data-point="value"][data-result-id="fr-2021"]');
+    expect(bar?.getAttribute('fill')).toMatch(/^url\(#/);
+    const finalBar = container.querySelector('rect[data-point="value"][data-result-id="gr-2021"]');
+    expect(finalBar?.getAttribute('fill')).toBe(RECHARTS_PALETTE[0]);
+  });
+
+  it('the whole-card membership scan passes in hbar form', () => {
+    const s = multiRegionBarSpec();
+    const { container } = render(<ChartView spec={s} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Liggend' }));
+    const specStrings = [
+      s.title,
+      s.unit,
+      s.attributionLine,
+      s.attribution.tableId,
+      s.attribution.syncedAt,
+      ...Object.keys(s.dimLabels),
+      ...Object.values(s.dimLabels),
+      ...s.series.flatMap((se) => [se.label, ...se.points.flatMap((p) => [p.formattedValue ?? '', p.periodLabel])]),
+    ].filter(Boolean);
+    scanForUnboundDigits(container, specStrings);
+  });
+
+  it('the SVG export contains the region labels and the value labels', async () => {
+    let capturedBlob: Blob | undefined;
+    (URL as unknown as Record<string, unknown>).createObjectURL = vi.fn((blob: Blob) => {
+      capturedBlob = blob;
+      return 'blob:mock';
+    });
+    (URL as unknown as Record<string, unknown>).revokeObjectURL = vi.fn();
+
+    render(<ChartView spec={multiRegionBarSpec()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Liggend' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Download' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Download als SVG' }));
+
+    expect(capturedBlob).toBeDefined();
+    const markup = await capturedBlob!.text();
+    expect(markup).toContain('Groningen');
+    expect(markup).toContain('Friesland');
+    expect(markup).toContain('Drenthe');
+    expect(markup).toMatch(/>10</);
+    expect(markup).toMatch(/>20</);
+    expect(markup).toMatch(/>15</);
+
+    delete (URL as unknown as Record<string, unknown>).createObjectURL;
+    delete (URL as unknown as Record<string, unknown>).revokeObjectURL;
+  });
+});

@@ -337,6 +337,14 @@ const nl = {
   'chart.tabBar': 'Staaf',
   'chart.tabTable': 'Tabel',
   'chart.lineDisabledReason': 'Een lijn tussen regio’s zou een trend suggereren die niet is gemeten.',
+  // WP218 phase 5 (owner D): two more Weergave tabs — Vlak (area) and
+  // Liggend (horizontal bar) — plus their own disabled-tab reasons.
+  'chart.form.area': 'Vlak',
+  'chart.form.hbar': 'Liggend',
+  'chart.formReason.areaMultiSeries':
+    'Een gevuld vlak per reeks zou de reeksen over elkaar leggen en gaten verbergen.',
+  'chart.formReason.areaComparison': 'Een vlak past alleen bij een reeks in de tijd.',
+  'chart.formReason.hbarTimeSeries': 'Liggende staven passen alleen bij een vergelijking tussen regio’s.',
   'chart.from': 'Vanaf',
   'chart.to': 'Tot',
   'chart.graphPanelLabel': 'Grafiek',
@@ -719,6 +727,12 @@ const en: Messages = {
   'chart.tabBar': 'Bar',
   'chart.tabTable': 'Table',
   'chart.lineDisabledReason': 'A line between regions would suggest a trend that was never measured.',
+  'chart.form.area': 'Area',
+  'chart.form.hbar': 'Horizontal bar',
+  'chart.formReason.areaMultiSeries':
+    'A filled area per series would stack the series on top of each other and hide gaps.',
+  'chart.formReason.areaComparison': 'An area chart only fits a single series over time.',
+  'chart.formReason.hbarTimeSeries': 'Horizontal bars only fit a comparison between regions.',
   'chart.from': 'From',
   'chart.to': 'To',
   'chart.graphPanelLabel': 'Chart',
