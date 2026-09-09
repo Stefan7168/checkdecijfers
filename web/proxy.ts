@@ -12,6 +12,7 @@
 // anyone noticing.
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import { isLang } from './lib/i18n/messages.ts';
 
 // Paths reachable WITHOUT a Supabase session. Each entry here authenticates
 // itself (or needs no auth): /login + /auth/callback are the auth flow;
@@ -45,6 +46,23 @@ const PUBLIC_PATH_PREFIXES = [
   // it exposes only what the public product already shows on every answer
   // (table ids, titles, sync dates).
   '/llms.txt',
+  // Fix round (Task 5 review, Piece 1 — CRITICAL): the public, no-auth
+  // /embed/[token] route (web/app/embed/[token]/page.tsx) was built and
+  // shipped WITHOUT ever being added here — every anonymous third-party
+  // reader of an embedded chart was silently 307'd to /login instead of
+  // seeing the chart, making the entire feature unreachable by the public
+  // it exists for. Invisible to every route test, which calls EmbedPage()
+  // directly in jsdom and never goes through this proxy at all. Same class
+  // of reasoning as /login and /llms.txt above: the SIGNED TOKEN in the URL
+  // (verifyEmbedToken, Task 1) is this route's own authorization — there is
+  // no "current user" here to check a session against. Prefix, not exact,
+  // and deliberately WITH the trailing slash: unlike the EXACT-match API
+  // routes above (where a bare `startsWith` risked an unintended sibling
+  // inheriting the exemption, e.g. `/api/health-debug`), a stray path under
+  // `/embed/` that names no real token just 404s inside the route itself
+  // (verifyEmbedToken/loadAuditRecord both fail closed) — there is nothing
+  // under this prefix for an accidental sibling to expose.
+  '/embed/',
 ];
 
 /** True when `pathname` may be reached without a Supabase session. Exported so
@@ -66,7 +84,50 @@ export function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 }
 
+/** Fix round (Task 5 review, Piece 2): the extra request headers this proxy
+ * adds for an /embed/[token] request, so web/app/layout.tsx (via
+ * next/headers' headers()) can render a clean, chart-only page for it (spec
+ * Part B3 — no site header/footer) without a second root layout / route
+ * group. `x-embed-lang` carries the route's OWN resolved `?lang=` — validated
+ * with the real isLang guard, never trusted raw — so <html lang> can match it
+ * even when it disagrees with the visitor's cookie/Accept-Language (an
+ * anonymous third-party reader has no checkdecijfers.nl cookie of their own
+ * for that resolution to mean anything). A non-embed path or an absent/
+ * invalid ?lang= gets no corresponding key, leaving layout.tsx's existing
+ * behaviour (SiteFooter shown, getLang()'s cookie/Accept-Language chain)
+ * unchanged. Exported and unit-tested directly, same reason as isPublicPath
+ * above: this pure decision is one layer proxy()'s own route-handler tests
+ * can't see, and proxy() itself needs a real NextRequest/Supabase client to
+ * exercise, which this doesn't. */
+export function embedRequestHeaders(pathname: string, searchParams: URLSearchParams): Record<string, string> {
+  if (!pathname.startsWith('/embed/')) return {};
+  const headers: Record<string, string> = { 'x-embed-route': '1' };
+  const lang = searchParams.get('lang');
+  if (isLang(lang)) headers['x-embed-lang'] = lang;
+  return headers;
+}
+
 export async function proxy(request: NextRequest) {
+  // Computed once, right here, and applied by MUTATING the one shared
+  // `request.headers` Headers instance — not by cloning it into a second
+  // object reused at both `NextResponse.next({ request })` call sites below.
+  // The second call site (inside Supabase's `setAll`) deliberately rebuilds
+  // its response from `request` AFTER `request.cookies.set(...)` has run, so
+  // a just-refreshed session cookie reaches this SAME request's downstream
+  // render; a static Headers clone taken once up top and handed to both
+  // call sites would freeze that snapshot BEFORE the refresh and silently
+  // drop it there on the very requests where it matters most. Confirmed
+  // against NextResponse.next's own implementation
+  // (node_modules/next/dist/server/web/spec-extension/response.js): it reads
+  // `init.request.headers` with a live `for...of` at call time, so both call
+  // sites below automatically pick up this mutation the moment it happens,
+  // with no snapshot to go stale.
+  for (const [key, value] of Object.entries(
+    embedRequestHeaders(request.nextUrl.pathname, request.nextUrl.searchParams),
+  )) {
+    request.headers.set(key, value);
+  }
+
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(

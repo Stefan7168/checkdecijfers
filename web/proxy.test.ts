@@ -8,7 +8,7 @@
 // while the route-handler + job tests all stayed green. isPublicPath is the
 // pure decision the proxy makes; pinning it here fails that regression loudly.
 import { describe, expect, it } from 'vitest';
-import { isPublicPath } from './proxy.ts';
+import { embedRequestHeaders, isPublicPath } from './proxy.ts';
 
 describe('proxy isPublicPath allowlist', () => {
   it('allows the self-authenticating API routes (Bearer / signature, no session cookie)', () => {
@@ -64,5 +64,80 @@ describe('proxy isPublicPath allowlist', () => {
     expect(isPublicPath('/geschiedenis')).toBe(false);
     // A different API route is NOT blanket-public — only the explicit entries.
     expect(isPublicPath('/api/something-else')).toBe(false);
+  });
+
+  // Fix round (Task 5 review, Piece 1 — CRITICAL): the public, no-auth
+  // /embed/[token] route was shipped without ever being added to this
+  // allowlist, so an anonymous third-party reader of an embedded chart was
+  // silently 307'd to /login instead of seeing the chart — invisible to
+  // every existing test because the route's own tests call EmbedPage()
+  // directly in jsdom, never through this proxy. Pinned here the same way
+  // the WP16 go-live regression (the comment at the top of this file) is.
+  it('#5(1): /embed/[token] is public — the signed token IS the authorization, not a session', () => {
+    expect(isPublicPath('/embed/42.abc123')).toBe(true);
+    // A second token, to prove this is a genuine prefix match (ANY token
+    // string after the slash), not a fluke of this one fixture value.
+    expect(isPublicPath('/embed/999.deadbeef')).toBe(true);
+  });
+
+  it('#5(1): the bare prefix with nothing after it is also public (lenient by design)', () => {
+    // No real token names anything under `/embed/` alone — the route itself
+    // 404s on a missing/invalid token (verifyEmbedToken fails closed) — so
+    // there is no harm in the proxy being lenient here rather than trying to
+    // shape-validate the token in TWO places. Documented explicitly (not an
+    // oversight) since every other prefix entry in PUBLIC_PATH_PREFIXES
+    // happens to also be meaningful on its own.
+    expect(isPublicPath('/embed/')).toBe(true);
+  });
+
+  it('#5(1): a sibling path that only STARTS WITH "/embed" (no slash) stays private', () => {
+    // Guards the trailing-slash discipline itself: without it, a future
+    // route like `/embedded-surveys` would inherit this exemption by
+    // accident — the exact class of mistake `/api/health-debug` guards
+    // against above, for the same PUBLIC_PATH_PREFIXES mechanism.
+    expect(isPublicPath('/embedded-surveys')).toBe(false);
+  });
+
+  // Fix round (Task 5 review, Piece 1 — CRITICAL): re-asserted here, right
+  // next to the new /embed/ entry, as a direct spot-check that widening
+  // PUBLIC_PATH_PREFIXES didn't also widen anything else — not a
+  // replacement for the "keeps protected paths private" block above, which
+  // stays the general regression pin.
+  it('#5(1): existing protected routes are unaffected by the new /embed/ prefix', () => {
+    expect(isPublicPath('/credits')).toBe(false);
+    expect(isPublicPath('/geschiedenis')).toBe(false);
+  });
+});
+
+// Fix round (Task 5 review, Piece 2): the pure request-header decision behind
+// the embed page's clean, chart-only layout (web/app/layout.tsx skips
+// SiteFooter, and prefers this <html lang> over getLang()'s cookie/
+// Accept-Language chain) when it's present — proxy() itself needs a real
+// NextRequest/Supabase client to exercise end to end, but this decision does
+// not, the same reason isPublicPath is unit-tested directly above rather than
+// only indirectly through proxy().
+describe('embedRequestHeaders (fix round, Piece 2)', () => {
+  it('sets x-embed-route for an /embed/ path with no ?lang=', () => {
+    expect(embedRequestHeaders('/embed/42.sig', new URLSearchParams())).toEqual({ 'x-embed-route': '1' });
+  });
+
+  it('adds x-embed-lang when ?lang= is a real, valid Lang', () => {
+    expect(embedRequestHeaders('/embed/42.sig', new URLSearchParams('lang=en'))).toEqual({
+      'x-embed-route': '1',
+      'x-embed-lang': 'en',
+    });
+    expect(embedRequestHeaders('/embed/42.sig', new URLSearchParams('lang=nl'))).toEqual({
+      'x-embed-route': '1',
+      'x-embed-lang': 'nl',
+    });
+  });
+
+  it('ignores an unrecognised ?lang= value — no x-embed-lang key at all, so layout.tsx falls through to getLang()', () => {
+    expect(embedRequestHeaders('/embed/42.sig', new URLSearchParams('lang=fr'))).toEqual({ 'x-embed-route': '1' });
+  });
+
+  it('returns no headers at all for a non-embed path, even with a lang param', () => {
+    expect(embedRequestHeaders('/credits', new URLSearchParams('lang=en'))).toEqual({});
+    expect(embedRequestHeaders('/', new URLSearchParams())).toEqual({});
   });
 });

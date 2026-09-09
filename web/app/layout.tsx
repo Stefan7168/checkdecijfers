@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import { Geist_Mono, Inter } from "next/font/google";
+import { headers } from "next/headers";
 import "./globals.css";
 import { ChartUsageTracker } from "../components/chart-usage-tracker.tsx";
 import { SiteFooter } from "../components/site-footer.tsx";
 import { ThemeProvider } from "../components/theme-provider.tsx";
 import { getLang } from "../lib/i18n/server.ts";
-import { t } from "../lib/i18n/messages.ts";
+import { isLang, t } from "../lib/i18n/messages.ts";
 import { LangProvider } from "../lib/i18n/lang-provider.tsx";
 import { StylePanelOwnerProvider } from "../lib/style-panel-owner.tsx";
 
@@ -49,11 +50,29 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Fix round (Task 5 review, Piece 2): web/proxy.ts marks every /embed/
+  // [token] request with `x-embed-route` (Piece 1 made that route PUBLIC —
+  // this makes it a genuinely clean, chart-only iframe per spec Part B3, "no
+  // site header/footer", without a second root layout / route group, since
+  // it's the only route that needs to differ). `x-embed-lang` carries that
+  // same route's OWN resolved `?lang=` (proxy.ts validates it with the real
+  // isLang guard before ever setting the header) — it wins over the cookie/
+  // Accept-Language resolution below ONLY when present, since an anonymous
+  // embed reader has no checkdecijfers.nl cookie of their own for getLang()
+  // to meaningfully read anyway. Both headers are read here, above
+  // getLang(), so the embed branch can skip that call entirely rather than
+  // resolve a value it's just going to discard.
+  const headerList = await headers();
+  const isEmbedRoute = headerList.get("x-embed-route") === "1";
+  const embedLang = headerList.get("x-embed-lang");
+
   // WP218 phase 4 (#219): cookie -> Accept-Language -> 'nl'
   // (docs/superpowers/specs/2026-09-09-language-switch-design.md §2.4). The
   // layout was already dynamic (every page reads the Supabase session), so
-  // this adds no new dynamic-rendering behaviour.
-  const lang = await getLang();
+  // this adds no new dynamic-rendering behaviour. Skipped in favour of the
+  // embed route's own `?lang=` above when that's present and valid — see
+  // the comment above this block.
+  const lang = isEmbedRoute && isLang(embedLang) ? embedLang : await getLang();
 
   return (
     // suppressHydrationWarning: next-themes writes the `dark` class onto <html>
@@ -81,7 +100,11 @@ export default async function RootLayout({
                   every page, not tied to any one chart mount. */}
               <ChartUsageTracker />
               <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">{children}</div>
-              <SiteFooter />
+              {/* Fix round (Task 5 review, Piece 2): the embed iframe is
+                  meant to be a clean, chart-only surface (spec Part B3) — the
+                  site-wide footer has no business appearing inside a
+                  third-party page's embedded chart. */}
+              {!isEmbedRoute ? <SiteFooter /> : null}
             </StylePanelOwnerProvider>
           </ThemeProvider>
         </LangProvider>
