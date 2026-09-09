@@ -2847,3 +2847,135 @@ describe('ChartView — horizontal bar form (WP218 phase 5)', () => {
     delete (URL as unknown as Record<string, unknown>).revokeObjectURL;
   });
 });
+
+describe('Story mode (session 92): a code-built story under the chart', () => {
+  it('offers the colourful Verhaal trigger next to Opmaak on a chart with a story, not on Tabel, not on a one-point chart', () => {
+    const { container, unmount } = render(<ChartView spec={threePointSpec()} />);
+    const trigger = screen.getByRole('button', { name: 'Verhaal' });
+    expect(container.querySelector('[data-story-trigger-ring]')).toContainElement(trigger);
+    expect(trigger.querySelector('svg')).not.toBeNull();
+    fireEvent.click(screen.getByRole('tab', { name: 'Tabel' }));
+    expect(screen.queryByRole('button', { name: 'Verhaal' })).toBeNull();
+    unmount();
+    render(<ChartView spec={spec()} />);
+    expect(screen.queryByRole('button', { name: 'Verhaal' })).toBeNull();
+  });
+
+  it('opening the story closes Opmaak and vice versa (one panel under the chart)', () => {
+    render(<ChartView spec={threePointSpec()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    expect(screen.getByRole('region', { name: 'Opmaak van de grafiek' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Verhaal' }));
+    expect(screen.queryByRole('region', { name: 'Opmaak van de grafiek' })).toBeNull();
+    expect(screen.getByRole('region', { name: 'Verhaal bij de grafiek' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    expect(screen.queryByRole('region', { name: 'Verhaal bij de grafiek' })).toBeNull();
+  });
+
+  it('a point step rings exactly that point outside its own marker, and never carries data-point', () => {
+    const { container } = render(<ChartView spec={threePointSpec()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Verhaal' }));
+    expect(container.querySelector('[data-story-marker]')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Volgende' }));
+    const rings = container.querySelectorAll('[data-story-marker]');
+    expect(rings).toHaveLength(1);
+    const ring = rings[0]!;
+    expect(ring.getAttribute('data-point')).toBeNull();
+    expect(ring.getAttribute('data-story-marker')).toBe('lo');
+    expect(container.querySelectorAll('[data-point]')).toHaveLength(3);
+    const dot = container.querySelector('[data-result-id="lo"]')!;
+    expect(Number(ring.getAttribute('r'))).toBeGreaterThan(Number(dot.getAttribute('r')));
+  });
+
+  // Resolution note (story-task-4-brief): getByRole('button', { name: /Utrecht/ })
+  // matches two legend buttons (the toggle and "Markeer Utrecht"); the exact
+  // name 'Utrecht' — what every other legend test in this file uses — is the
+  // plain toggle button, whose accessible name is the series label alone.
+  it("a series step highlights that series (others dim) and closing restores the reader's own view", () => {
+    const { container } = render(<ChartView spec={twoSeriesFourYearLineSpec()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Utrecht' }));
+    expect(container.querySelectorAll('.recharts-line')).toHaveLength(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Verhaal' }));
+    expect(container.querySelectorAll('.recharts-line')).toHaveLength(2);
+    fireEvent.click(screen.getByRole('button', { name: 'Volgende' }));
+    expect(container.querySelectorAll('[data-series-dimmed="true"]')).toHaveLength(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Sluiten' }));
+    expect(container.querySelectorAll('[data-series-dimmed="true"]')).toHaveLength(0);
+    expect(container.querySelectorAll('.recharts-line')).toHaveLength(1);
+  });
+
+  it('a comparison story highlights the highest bar', () => {
+    const { container } = render(<ChartView spec={multiRegionBarSpec()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Verhaal' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Volgende' }));
+    expect(screen.getByRole('region', { name: 'Verhaal bij de grafiek' })).toHaveTextContent('Friesland: 20 %');
+    expect(container.querySelectorAll('[data-series-dimmed="true"]').length).toBeGreaterThan(0);
+  });
+
+  it('a spec swap on the same instance closes the story and starts the next one at the first step', () => {
+    const { rerender } = render(<ChartView spec={threePointSpec()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Verhaal' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Volgende' }));
+    rerender(<ChartView spec={twoSeriesFourYearLineSpec()} />);
+    expect(screen.queryByRole('region', { name: 'Verhaal bij de grafiek' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Verhaal' }));
+    expect(screen.getAllByRole('article')[0]).toHaveAttribute('aria-current', 'step');
+  });
+
+  it('counts story_open once per open and story_step per landed step', () => {
+    const events: ChartStyleEvent[] = [];
+    setChartUsageSink((e) => {
+      events.push(e);
+    });
+    try {
+      render(<ChartView spec={threePointSpec()} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Verhaal' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Volgende' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Volgende' }));
+      expect(events).toEqual(['story_open', 'story_step', 'story_step']);
+    } finally {
+      setChartUsageSink(null);
+    }
+  });
+
+  it('with the story open the whole card still shows only spec digits, in Dutch and in English', () => {
+    const s = threePointSpec({ provisionalNote: 'Voorlopige cijfers (2024) zijn gemarkeerd met *.' });
+    const strings = [
+      s.title,
+      s.unit,
+      s.attributionLine,
+      s.attribution.tableId,
+      s.attribution.syncedAt,
+      s.provisionalNote ?? '',
+      ...s.series.flatMap((se) => se.points.flatMap((p) => [p.formattedValue ?? '', p.periodLabel])),
+    ].filter(Boolean);
+    const nl = render(<ChartView spec={s} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Verhaal' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Volgende' }));
+    scanForUnboundDigits(nl.container, strings);
+    nl.unmount();
+    const en = render(
+      <LangProvider lang="en">
+        <ChartView spec={s} />
+      </LangProvider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Story mode' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+    scanForUnboundDigits(en.container, strings);
+  });
+
+  it('nothing of the story enters the SVG export', () => {
+    const { container } = render(<ChartView spec={threePointSpec()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Verhaal' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Volgende' }));
+    // Scoped to the chart's own tabpanel, mirroring EXACTLY what
+    // ChartDownloadMenu itself reads (containerRef.current.querySelector
+    // ('svg') — chart-download.tsx) — a plain container-wide `svg` selector
+    // would instead match the Opmaak/Verhaal trigger buttons' own icon
+    // <svg>, which render earlier in the DOM than the chart's.
+    const svg = container.querySelector('[role="tabpanel"] svg')!;
+    expect(svg.querySelector('[data-story-marker]')).not.toBeNull();
+    expect(svg.textContent).not.toContain('Hoogste punt');
+    expect(svg.textContent).not.toContain('Begin');
+  });
+});

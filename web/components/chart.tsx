@@ -24,7 +24,7 @@
 // emits, so stored specs (R8) and `reconstruct.ts` are untouched.
 'use client';
 
-import { useEffect, useId, useReducer, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useId, useMemo, useReducer, useRef, useState, type KeyboardEvent } from 'react';
 import {
   Area,
   AreaChart,
@@ -70,6 +70,8 @@ import { forgetMyChartStyle, lookupBrand, saveMyChartStyle } from '../app/chart-
 import { ensureFontLoaded } from '../lib/font-loader.ts';
 import { ChartConfigPanel, ChartConfigTrigger } from './chart-config-panel.tsx';
 import { ChartDownloadMenu } from './chart-download.tsx';
+import { buildStorySteps, type StoryStep } from '../lib/chart-story.ts';
+import { ChartStoryPanel, ChartStoryTrigger } from './chart-story.tsx';
 import { ChartNotes, type ChartNote, type PendingPoint } from './chart-notes.tsx';
 import { ChartSmallMultiples } from './chart-small-multiples.tsx';
 import { SourceBadge } from './source-badge.tsx';
@@ -82,6 +84,7 @@ import {
   lineFormAllowed,
   windowSpec,
   type ChartForm,
+  type ChartViewState,
 } from '../lib/chart-view-state.ts';
 
 /**
@@ -721,6 +724,13 @@ function SeriesDot(
   // every existing call site/test keeps its current arity and rendering.
   geometry: { r: number; ring: number; hideFinal: boolean } = { ...dotGeometry('normal'), hideFinal: false },
   lang: Lang = 'nl',
+  // Story mode (session 92): the periodCode of the point the active story
+  // step tells about, or null. Draws ONE extra ring OUTSIDE the point's own
+  // marker (r + 5) so the hollow provisional ring (R11) stays fully visible
+  // inside it. Not a data point: no data-point attribute, no role, no
+  // handlers, pointer-events none — the [data-point] count and keyboard
+  // walking are unchanged.
+  storyPeriodCode: string | null = null,
 ) {
   return function Dot(props: { cx?: number; cy?: number; payload?: Row; stroke?: string }) {
     const { cx, cy, payload } = props;
@@ -732,6 +742,7 @@ function SeriesDot(
     const color = props.stroke ?? 'currentColor';
     const isEnd = endLabel !== undefined && payload.periodCode === endLabel.periodCode;
     const hiddenFinal = geometry.hideFinal && !provisional;
+    const isStory = storyPeriodCode !== null && payload.periodCode === storyPeriodCode;
     // Task 6 keyboard-operability fix (#212 follow-up): a synthetic
     // role="button" on an SVG element gets no native Enter/Space activation
     // from the browser the way a real <button> would, so onKeyDown has to
@@ -747,6 +758,19 @@ function SeriesDot(
     };
     return (
       <g>
+        {isStory ? (
+          <circle
+            cx={cx}
+            cy={cy}
+            r={geometry.r + 5}
+            fill="none"
+            stroke={color}
+            strokeWidth={2}
+            strokeOpacity={opacity}
+            pointerEvents="none"
+            data-story-marker={resultId == null ? 'true' : String(resultId)}
+          />
+        ) : null}
         <circle
           cx={cx}
           cy={cy}
@@ -852,6 +876,18 @@ function SeriesBar(
           strokeOpacity={provisional ? opacity : undefined}
           strokeWidth={provisional ? 1 : undefined}
           data-point="value"
+          // Story mode (session 92) finding: the doc comment above already
+          // says `data-series-dimmed` must be forwarded explicitly onto the
+          // drawn `<rect>` — fillOpacity was, this marker itself was not.
+          // The gap was invisible until now because the only prior test for
+          // a dimmed BAR asserted `fill-opacity` directly (see the "Liggend"
+          // RegionBar tests below); a code-built story's "highest bar"
+          // step is the first one to need the SAME marker Line/Area's own
+          // paths already carry (there, Recharts forwards it natively).
+          // `opacity` only ever carries the two values (1 or the 0.25 dim)
+          // every call site of SeriesBar passes, so deriving from it is
+          // exactly the caller's own dimmed boolean, not a guess.
+          data-series-dimmed={opacity < 1 ? 'true' : undefined}
           data-result-id={resultId == null ? undefined : String(resultId)}
           role={onPointClick ? 'button' : undefined}
           tabIndex={onPointClick ? 0 : undefined}
@@ -1137,7 +1173,17 @@ export function ChartView({
   // portal version, this state now lives in THIS component, not in the
   // remounted-per-epoch ChartConfigPanel, so it would otherwise survive a
   // spec swap on its own.
-  const [styleOpen, setStyleOpen] = useState(false);
+  // Story mode (session 92): Style and Story share the slot under the chart —
+  // one open at a time, so a single discriminated value replaces the old
+  // boolean (`styleOpen` is derived, every existing read of it is unchanged).
+  const [openPanel, setOpenPanel] = useState<'style' | 'story' | null>(null);
+  const styleOpen = openPanel === 'style';
+  const setStyleOpen = (open: boolean): void => setOpenPanel(open ? 'style' : null);
+  const [storyIndex, setStoryIndex] = useState(0);
+  // The reader's own hidden/highlight/zoom state, taken when the story opens
+  // and put back when it closes (the story drives highlight itself and needs
+  // the full, unhidden, unzoomed chart so every step's point is on screen).
+  const storySnapshot = useRef<Pick<ChartViewState, 'hiddenKeys' | 'highlightedKey' | 'periodRange'> | null>(null);
   // WP218 phase 3 (owner B): the last brand a signed-in visitor actually
   // applied via "Pas merkkleuren toe" — deliberately NOT reset by the spec-
   // swap block below (unlike notes/pendingPoint), because it describes
@@ -1161,7 +1207,9 @@ export function ChartView({
     setAxisMode('shared');
     setNotes([]);
     setPendingPoint(null);
-    setStyleOpen(false);
+    setOpenPanel(null);
+    setStoryIndex(0);
+    storySnapshot.current = null;
   }
 
   // Task 3: a real three-way Lijn/Staaf/Tabel switch. Computed here, ABOVE
@@ -1291,6 +1339,15 @@ export function ChartView({
   // select on/off. `pres.language` (null = follow the app) wins when set.
   const appLang = useLang();
   const chartLang: Lang = pres.language ?? appLang;
+  // Story mode (session 92): built from the FULL spec (never the zoomed
+  // viewSpec) in the chart's language, so every step's point exists on the
+  // chart the story shows. This Hook must run unconditionally on every
+  // render — ABOVE the schemaVersion guard below, same reason as the font
+  // Effect and `chartLang` itself above it.
+  const storySteps: StoryStep[] = useMemo(
+    () => buildStorySteps(translateSpecForDisplay(spec, chartLang), chartLang),
+    [spec, chartLang],
+  );
 
   if (spec.schemaVersion !== 1) {
     // Renderers dispatch on the schema version (ADR 007); this one only
@@ -1537,13 +1594,56 @@ export function ChartView({
   const styleTriggerId = `${domId}-style-trigger`;
   const styleControlsId = `${domId}-style`;
 
+  // Story mode (session 92): the trigger/panel ids, availability and the
+  // controls chart.tsx (not the dumb, controlled chart-story.tsx components)
+  // owns — mirrors styleTriggerId/styleControlsId immediately above.
+  const storyTriggerId = `${domId}-story-trigger`;
+  const storyControlsId = `${domId}-story`;
+  const storyAvailable =
+    state.form !== 'table' && !(smallMultiples && smallMultiplesAvailable) && storySteps.length >= 3;
+  const storyOpen = openPanel === 'story' && storyAvailable;
+  const activeStoryStep: StoryStep | null = storyOpen ? (storySteps[storyIndex] ?? null) : null;
+
+  function openStory(): void {
+    storySnapshot.current = { hiddenKeys: state.hiddenKeys, highlightedKey: state.highlightedKey, periodRange: state.periodRange };
+    // setView BEFORE setOpenPanel: so the first render of the OPEN story
+    // already shows the first step's own highlight/full-range view, never a
+    // stray frame with the reader's own state still showing.
+    dispatch({ type: 'setView', view: { hiddenKeys: new Set(), highlightedKey: storySteps[0]?.highlight ?? null, periodRange: null } });
+    setStoryIndex(0);
+    setOpenPanel('story');
+    trackChartStyleEvent('story_open');
+  }
+
+  function closeStory(): void {
+    const snapshot = storySnapshot.current;
+    storySnapshot.current = null;
+    if (snapshot) dispatch({ type: 'setView', view: snapshot });
+    setOpenPanel(null);
+  }
+
+  function toggleStory(): void {
+    if (storyOpen) closeStory();
+    else openStory();
+  }
+
+  function onStoryIndexChange(next: number): void {
+    setStoryIndex(next);
+    dispatch({ type: 'setHighlight', key: storySteps[next]?.highlight ?? null });
+    trackChartStyleEvent('story_step');
+  }
+
   function toggleStylePanel(): void {
     // Side effect outside the state updater: React may invoke an updater
     // twice (Strict Mode) and requires it to be pure — the usage counter
     // must fire exactly once per open (task-5 review finding, carried over
     // from the panel's own former toggleOpen).
-    if (!styleOpen) trackChartStyleEvent('panel_open');
-    setStyleOpen((wasOpen) => !wasOpen);
+    // Story mode: Style and Story share this one slot — opening Style while
+    // the story is showing must first restore the reader's own snapshot
+    // (closeStory), never leave it stranded mid-story.
+    if (openPanel === 'story') closeStory();
+    if (openPanel !== 'style') trackChartStyleEvent('panel_open');
+    setOpenPanel(openPanel === 'style' ? null : 'style');
   }
 
   // Session 87 (mockup Option B): the Grafiek/Tabel switch is a shadcn-style
@@ -1684,6 +1784,18 @@ export function ChartView({
             onToggle={toggleStylePanel}
             controlsId={styleControlsId}
             triggerId={styleTriggerId}
+            lang={chartLang}
+          />
+        ) : null}
+        {/* Story mode (session 92): the colourful trigger sits in the same
+          * row as Opmaak — a code-built story is offered whenever there is
+          * one (storyAvailable, computed above next to styleControlsId). */}
+        {storyAvailable ? (
+          <ChartStoryTrigger
+            open={storyOpen}
+            onToggle={toggleStory}
+            controlsId={storyControlsId}
+            triggerId={storyTriggerId}
             lang={chartLang}
           />
         ) : null}
@@ -1899,6 +2011,7 @@ export function ChartView({
                         (p) => setPendingPoint(p),
                         { ...dotGeometry(pres.lineWidth), hideFinal: pres.markers === 'provisionalOnly' },
                         chartLang,
+                        activeStoryStep?.point?.seriesKey === s.key ? activeStoryStep.point.periodCode : null,
                       )}
                       isAnimationActive={false}
                     />
@@ -1974,6 +2087,7 @@ export function ChartView({
                         (p) => setPendingPoint(p),
                         { ...dotGeometry(pres.lineWidth), hideFinal: pres.markers === 'provisionalOnly' },
                         chartLang,
+                        activeStoryStep?.point?.seriesKey === s.key ? activeStoryStep.point.periodCode : null,
                       )}
                       activeDot={false}
                       isAnimationActive={false}
@@ -2137,6 +2251,21 @@ export function ChartView({
         )}
       </div>
       )}
+      {/* Story mode (session 92): the same slot as the Opmaak region — chart
+        * first, the story under it — and, like ChartNotes, OUTSIDE
+        * chartContainerRef so no caption can ever enter an export. */}
+      {storyAvailable ? (
+        <ChartStoryPanel
+          steps={storySteps}
+          index={storyIndex}
+          onIndexChange={onStoryIndexChange}
+          open={storyOpen}
+          onClose={closeStory}
+          triggerId={storyTriggerId}
+          idPrefix={domId}
+          lang={chartLang}
+        />
+      ) : null}
       {/* Chart-panel-layout refactor (owner: option A — "first the graph on
         * top, then the design settings"): the Opmaak region renders directly
         * after the chart's own tabpanel above (`chartContainerRef`'s parent),
