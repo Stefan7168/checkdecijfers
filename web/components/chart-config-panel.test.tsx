@@ -10,7 +10,7 @@
 // that edits it — no digit ever appears in the panel's rendered text, open,
 // in either language.
 import { useState, type ReactNode } from 'react';
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { FONT_OPTIONS, resolvePresentation, type PresentationContext } from '../lib/chart-presentation.ts';
 import { ChartConfigPanel, ChartConfigTrigger, type ChartConfigPanelProps } from './chart-config-panel.tsx';
@@ -67,7 +67,7 @@ function openTab(tab: 'Kleuren' | 'Lettertype'): void {
 }
 
 describe('ChartConfigPanel — Grafiek tab', () => {
-  it('is closed by default and opens into a labelled region with three tabs', () => {
+  it('is closed by default and opens into a labelled region with four tabs', () => {
     render(
       <Harness
         resolved={resolvePresentation(lineCtx, {})}
@@ -87,6 +87,7 @@ describe('ChartConfigPanel — Grafiek tab', () => {
       'Grafiek',
       'Kleuren',
       'Lettertype',
+      'Kader',
     ]);
   });
 
@@ -1019,6 +1020,340 @@ describe('ChartConfigPanel — Lettertype tab', () => {
     expect(select.value).toBe('Poppins');
     const optionLabels = Array.from(select.options).map((o) => o.textContent);
     expect(optionLabels).toEqual(['Standaard', ...FONT_OPTIONS.map((f) => f.family), 'Poppins']);
+  });
+});
+
+// Task 5 (design §C2): the Frame tab — background (None/Colour/Gradient/Own
+// image), padding, corners, shadow, inset card, aspect ratio.
+const tableCtx: PresentationContext = { kind: 'line', form: 'table', seriesCount: 2, hasProvisional: false };
+
+function openFrameTab(): void {
+  fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+  fireEvent.click(screen.getByRole('tab', { name: 'Kader' }));
+}
+
+function makeFile(name: string, type: string, sizeBytes: number): File {
+  const bytes = new Uint8Array(sizeBytes);
+  return new File([bytes], name, { type });
+}
+
+describe('ChartConfigPanel — Frame tab', () => {
+  it('pre-fills the background radiogroup and the five plain radiogroups from resolved values', () => {
+    const resolved = resolvePresentation(lineCtx, {
+      frameBackground: { kind: 'solid', hex: '#336699' },
+      framePadding: 'large',
+      frameCorners: 'rounded',
+      frameShadow: 'soft',
+      frameInset: 'small',
+      frameAspect: '16:9',
+    });
+    render(
+      <Harness resolved={resolved} seriesMeta={colorMeta} onChange={vi.fn()} onReset={vi.fn()} idPrefix="fr1" />,
+    );
+    openFrameTab();
+    expect(screen.getByRole('radio', { name: 'Kleur' })).toHaveAttribute('aria-checked', 'true');
+    expect(within(screen.getByRole('radiogroup', { name: 'Ruimte rondom' })).getByRole('radio', { name: 'Groot' })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    );
+    expect(screen.getByRole('radio', { name: 'Rond' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('radio', { name: 'Zacht' })).toHaveAttribute('aria-checked', 'true');
+    expect(within(screen.getByRole('radiogroup', { name: 'Kaart' })).getByRole('radio', { name: 'Klein' })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    );
+    expect(screen.getByRole('radio', { name: 'Breedbeeld' })).toHaveAttribute('aria-checked', 'true');
+  });
+
+  it('each plain radiogroup emits exactly its own key', () => {
+    const onChange = vi.fn();
+    render(
+      <Harness
+        resolved={resolvePresentation(lineCtx, {})}
+        seriesMeta={colorMeta}
+        onChange={onChange}
+        onReset={vi.fn()}
+        idPrefix="fr2"
+      />,
+    );
+    openFrameTab();
+    fireEvent.click(within(screen.getByRole('radiogroup', { name: 'Ruimte rondom' })).getByRole('radio', { name: 'Groot' }));
+    expect(onChange).toHaveBeenCalledWith({ framePadding: 'large' });
+    fireEvent.click(screen.getByRole('radio', { name: 'Extra rond' }));
+    expect(onChange).toHaveBeenCalledWith({ frameCorners: 'veryRounded' });
+    fireEvent.click(screen.getByRole('radio', { name: 'Sterk' }));
+    expect(onChange).toHaveBeenCalledWith({ frameShadow: 'strong' });
+    fireEvent.click(screen.getByRole('radio', { name: 'Vierkant' }));
+    expect(onChange).toHaveBeenCalledWith({ frameAspect: '1:1' });
+  });
+
+  it('choosing Kleur reveals a hex field that emits a solid frameBackground', () => {
+    const onChange = vi.fn();
+    render(
+      <Harness
+        resolved={resolvePresentation(lineCtx, {})}
+        seriesMeta={colorMeta}
+        onChange={onChange}
+        onReset={vi.fn()}
+        idPrefix="fr3"
+      />,
+    );
+    openFrameTab();
+    fireEvent.click(screen.getByRole('radio', { name: 'Kleur' }));
+    expect(onChange).toHaveBeenCalledWith({ frameBackground: { kind: 'solid', hex: '#ffffff' } });
+  });
+
+  it('choosing Verloop emits the default (dawn) preset colours as a gradient frameBackground', () => {
+    const onChange = vi.fn();
+    render(
+      <Harness
+        resolved={resolvePresentation(lineCtx, {})}
+        seriesMeta={colorMeta}
+        onChange={onChange}
+        onReset={vi.fn()}
+        idPrefix="fr4"
+      />,
+    );
+    openFrameTab();
+    fireEvent.click(screen.getByRole('radio', { name: 'Verloop' }));
+    expect(onChange).toHaveBeenCalledWith({
+      frameBackground: { kind: 'gradient', from: '#fde68a', to: '#f472b6' },
+    });
+  });
+
+  it('with a gradient already active, the six presets and From/To fields show, and a preset click emits its own colours', () => {
+    const onChange = vi.fn();
+    render(
+      <Harness
+        resolved={resolvePresentation(lineCtx, { frameBackground: { kind: 'gradient', from: '#fde68a', to: '#f472b6' } })}
+        seriesMeta={colorMeta}
+        onChange={onChange}
+        onReset={vi.fn()}
+        idPrefix="fr4b"
+      />,
+    );
+    openFrameTab();
+    expect(screen.getByRole('button', { name: 'Oceaan' })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Van (hex)' })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Naar (hex)' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Oceaan' }));
+    expect(onChange).toHaveBeenCalledWith({
+      frameBackground: { kind: 'gradient', from: '#38bdf8', to: '#1e3a8a' },
+    });
+  });
+
+  it('Own image: a 6 MB file is refused with an alert and nothing is emitted', () => {
+    const onChange = vi.fn();
+    const onFrameImage = vi.fn();
+    render(
+      <Harness
+        resolved={resolvePresentation(lineCtx, { frameBackground: { kind: 'image' } })}
+        seriesMeta={colorMeta}
+        onChange={onChange}
+        onReset={vi.fn()}
+        idPrefix="fr5"
+        onFrameImage={onFrameImage}
+      />,
+    );
+    openFrameTab();
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const big = makeFile('big.png', 'image/png', 6 * 1024 * 1024);
+    fireEvent.change(input, { target: { files: [big] } });
+    expect(screen.getByRole('alert')).toHaveTextContent('De afbeelding is te groot. Kies een kleinere.');
+    expect(onFrameImage).not.toHaveBeenCalled();
+    expect(onChange).not.toHaveBeenCalledWith({ frameBackground: { kind: 'image' } });
+  });
+
+  it('Own image: a bad mime type is refused with an alert and nothing is emitted', () => {
+    const onChange = vi.fn();
+    const onFrameImage = vi.fn();
+    render(
+      <Harness
+        resolved={resolvePresentation(lineCtx, { frameBackground: { kind: 'image' } })}
+        seriesMeta={colorMeta}
+        onChange={onChange}
+        onReset={vi.fn()}
+        idPrefix="fr5b"
+        onFrameImage={onFrameImage}
+      />,
+    );
+    openFrameTab();
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const bad = makeFile('doc.pdf', 'application/pdf', 1024);
+    fireEvent.change(input, { target: { files: [bad] } });
+    expect(screen.getByRole('alert')).toHaveTextContent('Kies een PNG, JPEG of WebP.');
+    expect(onFrameImage).not.toHaveBeenCalled();
+    expect(onChange).not.toHaveBeenCalledWith({ frameBackground: { kind: 'image' } });
+  });
+
+  it('Own image: a valid small PNG calls onFrameImage with a data:image/png URL and emits kind:image', async () => {
+    const onChange = vi.fn();
+    const onFrameImage = vi.fn();
+    render(
+      <Harness
+        resolved={resolvePresentation(lineCtx, { frameBackground: { kind: 'image' } })}
+        seriesMeta={colorMeta}
+        onChange={onChange}
+        onReset={vi.fn()}
+        idPrefix="fr6"
+        onFrameImage={onFrameImage}
+      />,
+    );
+    openFrameTab();
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const small = makeFile('small.png', 'image/png', 1024);
+    fireEvent.change(input, { target: { files: [small] } });
+    await waitFor(() => expect(onFrameImage).toHaveBeenCalled());
+    expect((onFrameImage.mock.calls[0]![0] as string)).toMatch(/^data:image\/png/);
+    expect(onChange).toHaveBeenCalledWith({ frameBackground: { kind: 'image' } });
+  });
+
+  it('Own image: Remove clears both the image and the background', () => {
+    const onChange = vi.fn();
+    const onFrameImage = vi.fn();
+    render(
+      <Harness
+        resolved={resolvePresentation(lineCtx, { frameBackground: { kind: 'image' } })}
+        seriesMeta={colorMeta}
+        onChange={onChange}
+        onReset={vi.fn()}
+        idPrefix="fr7"
+        frameImage="data:image/png;base64,AAAA"
+        onFrameImage={onFrameImage}
+      />,
+    );
+    openFrameTab();
+    fireEvent.click(screen.getByRole('button', { name: 'Verwijder afbeelding' }));
+    expect(onFrameImage).toHaveBeenCalledWith(null);
+    expect(onChange).toHaveBeenCalledWith({ frameBackground: 'none' });
+  });
+
+  it('switching away from Own image and back still shows the Remove button — the image stays in memory', () => {
+    // A real background-kind switch re-resolves through the caller's own
+    // reducer (chart.tsx); this harness stands in for that with an explicit
+    // rerender, exactly like the Kleuren tab's own re-sync tests above.
+    const { rerender } = render(
+      <Harness
+        resolved={resolvePresentation(lineCtx, { frameBackground: { kind: 'image' } })}
+        seriesMeta={colorMeta}
+        onChange={vi.fn()}
+        onReset={vi.fn()}
+        idPrefix="fr8"
+        frameImage="data:image/png;base64,AAAA"
+        onFrameImage={vi.fn()}
+      />,
+    );
+    openFrameTab();
+    expect(screen.getByRole('button', { name: 'Verwijder afbeelding' })).toBeInTheDocument();
+
+    rerender(
+      <Harness
+        resolved={resolvePresentation(lineCtx, { frameBackground: 'none' })}
+        seriesMeta={colorMeta}
+        onChange={vi.fn()}
+        onReset={vi.fn()}
+        idPrefix="fr8"
+        frameImage="data:image/png;base64,AAAA"
+        onFrameImage={vi.fn()}
+      />,
+    );
+    expect(screen.queryByRole('button', { name: 'Verwijder afbeelding' })).toBeNull();
+
+    rerender(
+      <Harness
+        resolved={resolvePresentation(lineCtx, { frameBackground: { kind: 'image' } })}
+        seriesMeta={colorMeta}
+        onChange={vi.fn()}
+        onReset={vi.fn()}
+        idPrefix="fr8"
+        frameImage="data:image/png;base64,AAAA"
+        onFrameImage={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole('button', { name: 'Verwijder afbeelding' })).toBeInTheDocument();
+  });
+
+  it('Kader wissen is disabled while pristine and no image, emits the six stock values and clears the image otherwise', () => {
+    const onChange = vi.fn();
+    const onFrameImage = vi.fn();
+    const { rerender } = render(
+      <Harness
+        resolved={resolvePresentation(lineCtx, {})}
+        seriesMeta={colorMeta}
+        onChange={onChange}
+        onReset={vi.fn()}
+        idPrefix="fr9"
+        onFrameImage={onFrameImage}
+      />,
+    );
+    openFrameTab();
+    expect(screen.getByRole('button', { name: 'Kader wissen' })).toBeDisabled();
+
+    cleanup();
+    render(
+      <Harness
+        resolved={resolvePresentation(lineCtx, { frameShadow: 'strong' })}
+        seriesMeta={colorMeta}
+        onChange={onChange}
+        onReset={vi.fn()}
+        idPrefix="fr9b"
+        onFrameImage={onFrameImage}
+      />,
+    );
+    openFrameTab();
+    const resetButton = screen.getByRole('button', { name: 'Kader wissen' });
+    expect(resetButton).not.toBeDisabled();
+    fireEvent.click(resetButton);
+    expect(onChange).toHaveBeenCalledWith({
+      frameBackground: 'none',
+      framePadding: 'none',
+      frameCorners: 'square',
+      frameShadow: 'none',
+      frameInset: 'none',
+      frameAspect: 'auto',
+    });
+    expect(onFrameImage).toHaveBeenCalledWith(null);
+    void rerender;
+  });
+
+  it('the panel is now offered in table form — only the Frame tab has controls, the others render nothing applicable', () => {
+    render(
+      <Harness
+        resolved={resolvePresentation(tableCtx, {})}
+        seriesMeta={colorMeta}
+        onChange={vi.fn()}
+        onReset={vi.fn()}
+        idPrefix="fr10"
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    expect(within(screen.getByRole('tabpanel')).queryAllByRole('radio')).toHaveLength(0);
+    fireEvent.click(screen.getByRole('tab', { name: 'Kleuren' }));
+    expect(screen.queryByRole('group')).toBeNull();
+    fireEvent.click(screen.getByRole('tab', { name: 'Lettertype' }));
+    expect(screen.queryByRole('combobox', { name: 'Lettertype' })).toBeNull();
+    fireEvent.click(screen.getByRole('tab', { name: 'Kader' }));
+    expect(screen.getByRole('radiogroup', { name: 'Achtergrond' })).toBeInTheDocument();
+    fireEvent.click(within(screen.getByRole('radiogroup', { name: 'Ruimte rondom' })).getByRole('radio', { name: 'Groot' }));
+  });
+
+  it('English: labels translate and stay digit-free', () => {
+    const onChange = vi.fn();
+    render(
+      <Harness
+        lang="en"
+        resolved={resolvePresentation(lineCtx, {})}
+        seriesMeta={colorMeta}
+        onChange={onChange}
+        onReset={vi.fn()}
+        idPrefix="fr11"
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Style' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Frame' }));
+    expect(screen.getByRole('radiogroup', { name: 'Background' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('radio', { name: 'Widescreen' }));
+    expect(onChange).toHaveBeenCalledWith({ frameAspect: '16:9' });
   });
 });
 

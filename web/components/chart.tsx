@@ -41,9 +41,12 @@ import {
 } from 'recharts';
 import type { ChartPoint, ChartSpec } from '../backend/chart/types.ts';
 import {
+  COLOR_REFUSE_BELOW,
+  contrastRatio,
   dotGeometry,
   findFont,
   fontStack,
+  frameBackdrops,
   LINE_WIDTH_PX,
   RECHARTS_PALETTE,
   resolvePresentation,
@@ -1891,20 +1894,21 @@ export function ChartView({
           </span>
         ) : null}
         {/* Review fix (chart-panel-layout, option A): the "Opmaak" trigger
-          * now renders directly here as a row-mate of the Weergave tablist —
-          * no portal, no placeholder node. Gated on `state.form !== 'table'`
-          * exactly like the ChartConfigPanel mount further down (Tabel form
-          * offers no styling at all — chart-presentation.ts's `applicable`
-          * is empty for it), so the two stay in lockstep. */}
-        {state.form !== 'table' ? (
-          <ChartConfigTrigger
-            open={styleOpen}
-            onToggle={toggleStylePanel}
-            controlsId={styleControlsId}
-            triggerId={styleTriggerId}
-            lang={chartLang}
-          />
-        ) : null}
+          * renders directly here as a row-mate of the Weergave tablist — no
+          * portal, no placeholder node. Task 5 (design §C2): unlike before,
+          * this is no longer gated on `state.form !== 'table'` — the Frame
+          * tab applies in table form too (chart-presentation.ts's resolver
+          * adds the six frame keys to `applicable` unconditionally), so the
+          * trigger/panel are now offered on every form, not just line/bar/
+          * area/hbar. Kept in lockstep with the ChartConfigPanel mount
+          * further down, which lost the same gate. */}
+        <ChartConfigTrigger
+          open={styleOpen}
+          onToggle={toggleStylePanel}
+          controlsId={styleControlsId}
+          triggerId={styleTriggerId}
+          lang={chartLang}
+        />
         {/* Story mode (session 92): the colourful trigger sits in the same
           * row as Opmaak — a code-built story is offered whenever there is
           * one (storyAvailable, computed above next to styleControlsId). */}
@@ -2429,7 +2433,12 @@ export function ChartView({
         * exactly as it always has — `open` itself is no longer this
         * component's state (it's `styleOpen` above), so it's reset
         * separately in the spec-swap block instead of via this remount. */}
-      {state.form !== 'table' ? (
+      {/* Task 5 (design §C2): no longer gated on `state.form !== 'table'` —
+        * the Frame tab is applicable (and its controls functional) in table
+        * form too; the panel's other tabs already render nothing when their
+        * own key(s) are outside `resolved.applicable`, which table form now
+        * exercises for real instead of never mounting the panel at all. */}
+      {(
         <ChartConfigPanel
           key={chartEpoch}
           resolved={resolved}
@@ -2438,9 +2447,41 @@ export function ChartView({
           open={styleOpen}
           onOpenChange={setStyleOpen}
           triggerId={styleTriggerId}
+          frameImage={frameImage}
+          onFrameImage={setFrameImage}
           onChange={(patch) => {
-            dispatch({ type: 'setPresentation', patch });
+            // Task 5 (design §C2) — the contrast guard: a frame background/
+            // inset change can turn what was a legible series colour into
+            // one that's now indistinguishable from the frame (or from the
+            // inset card) — re-judge every PER-CHART colour override
+            // against the new frame backdrops and drop any that now fail,
+            // falling back to the palette colour (the Kleuren tab's own
+            // warning-line/re-sync mechanism picks this up for free, since
+            // it always re-derives from the effective colour, never a
+            // stored verdict).
+            let finalPatch = patch;
+            if ('frameBackground' in patch || 'frameInset' in patch) {
+              const nextFrameValues = { ...pres, ...patch };
+              const backdrops = frameBackdrops(nextFrameValues);
+              const currentOverrides = state.presentation.seriesColors ?? {};
+              const nextOverrides: Record<number, string> = { ...currentOverrides };
+              let dropped = false;
+              for (const [idxStr, hex] of Object.entries(currentOverrides)) {
+                if (backdrops.some((bg) => contrastRatio(hex, bg) < COLOR_REFUSE_BELOW)) {
+                  delete nextOverrides[Number(idxStr)];
+                  dropped = true;
+                }
+              }
+              if (dropped) finalPatch = { ...patch, seriesColors: nextOverrides };
+            }
+            dispatch({ type: 'setPresentation', patch: finalPatch });
             trackChartStyleEvent('option_changed');
+            // Task 5: every frame control change ALSO counts as its own
+            // frame_changed event, in addition to (never instead of) the
+            // option_changed every panel change already fires.
+            if (Object.keys(patch).some((key) => key.startsWith('frame'))) {
+              trackChartStyleEvent('frame_changed');
+            }
           }}
           onReset={() => {
             dispatch({ type: 'resetPresentation' });
@@ -2483,6 +2524,16 @@ export function ChartView({
                     for (const key of Object.keys(resolved.locks) as (keyof typeof resolved.values)[]) {
                       (chosen as Record<string, unknown>)[key] = base[key];
                     }
+                    // Task 5 (design §C2): an "Own image" background is a
+                    // data URL held only in THIS component's `frameImage`
+                    // state, never written to the account-default row — so
+                    // it never rides along with a save. Saved as 'none'
+                    // instead of the image kind (never simply omitted,
+                    // matching the locked-key precedent just above: a key
+                    // this save cannot honour still gets an explicit,
+                    // digit-free stock value written back, not a silent gap).
+                    const droppedImage = chosen.frameBackground !== undefined && chosen.frameBackground !== 'none' && chosen.frameBackground.kind === 'image';
+                    if (droppedImage) chosen.frameBackground = 'none';
                     // WP218 phase 3 (owner B): the last brand applied on any
                     // chart shown by THIS MOUNTED ChartView (not just
                     // whichever chart is on screen right now — see
@@ -2494,7 +2545,8 @@ export function ChartView({
                       setAccountStyle(chosen);
                       trackChartStyleEvent('default_saved');
                     }
-                    return r.ok ? 'saved' : r.reason === 'unavailable' ? 'unavailable' : 'error';
+                    if (!r.ok) return r.reason === 'unavailable' ? 'unavailable' : 'error';
+                    return droppedImage ? 'savedImageDropped' : 'saved';
                   },
                   onForget: async () => {
                     const r = await forgetMyChartStyle();
@@ -2515,7 +2567,7 @@ export function ChartView({
             trackChartStyleEvent('brand_applied');
           }}
         />
-      ) : null}
+      )}
       {state.form !== 'table' && !state.periodRange && spec.attribution.trendHeadline !== undefined ? (
         <p data-testid="trend-headline" className="mt-1 text-sm text-foreground">
           {spec.attribution.trendHeadline}

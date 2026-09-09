@@ -1956,10 +1956,19 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
     );
   });
 
-  it('the panel is not offered in Tabel form and lives outside the export container', () => {
+  // Task 5 (design §C2): the Frame tab is applicable in Tabel form too (a
+  // table gets the same frame as any other chart form), so the panel is now
+  // offered there — only its Frame tab has controls, the others render
+  // nothing (resolved.applicable is empty for them in table form).
+  it('the panel IS offered in Tabel form (Frame tab only) and lives outside the export container', () => {
     const { container } = render(<ChartView spec={threePointSpec()} />);
     fireEvent.click(screen.getByRole('tab', { name: 'Tabel' }));
-    expect(screen.queryByRole('button', { name: 'Opmaak' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    const region = screen.getByRole('region', { name: 'Opmaak van de grafiek' });
+    expect(within(region).queryAllByRole('radio')).toHaveLength(0);
+    fireEvent.click(within(region).getByRole('tab', { name: 'Kader' }));
+    expect(within(region).getByRole('radiogroup', { name: 'Achtergrond' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
 
     fireEvent.click(screen.getByRole('tab', { name: 'Lijn' }));
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
@@ -3112,5 +3121,117 @@ describe('Story mode (session 92): a code-built story under the chart', () => {
     expect(screen.getByRole('button', { name: 'Verhaal' })).toHaveAttribute('aria-expanded', 'false');
     fireEvent.click(screen.getByRole('tab', { name: 'Lijn' }));
     expect(container.querySelectorAll('.recharts-line')).toHaveLength(1);
+  });
+});
+
+// Task 5 (design §C2): the Frame tab wired into chart.tsx — frame_changed
+// counted alongside option_changed, the contrast guard re-checking every
+// per-chart series colour override against the new frame backdrops, and the
+// account-default save dropping an "Own image" background.
+describe('Task 5 — Frame tab wiring in chart.tsx', () => {
+  beforeEach(() => {
+    chartStyleActions.saveMyChartStyle.mockReset();
+  });
+
+  it('a frame control change fires frame_changed in addition to option_changed', () => {
+    const events: ChartStyleEvent[] = [];
+    setChartUsageSink((e) => {
+      events.push(e);
+    });
+    try {
+      render(<ChartView spec={threePointSpec()} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+      fireEvent.click(screen.getByRole('tab', { name: 'Kader' }));
+      fireEvent.click(screen.getByRole('radio', { name: 'Kleur' }));
+      expect(events).toEqual(['panel_open', 'option_changed', 'frame_changed']);
+    } finally {
+      setChartUsageSink(null);
+    }
+  });
+
+  it('a plain (non-frame) control change fires only option_changed, never frame_changed', () => {
+    const events: ChartStyleEvent[] = [];
+    setChartUsageSink((e) => {
+      events.push(e);
+    });
+    try {
+      render(<ChartView spec={threePointSpec()} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+      fireEvent.click(screen.getByRole('radio', { name: 'Dik' }));
+      expect(events).toEqual(['panel_open', 'option_changed']);
+    } finally {
+      setChartUsageSink(null);
+    }
+  });
+
+  // Contrast guard: a per-chart series colour override that's perfectly
+  // legible on the ordinary light/dark cards can still become illegible
+  // against a reader-chosen frame background — a gradient whose own two
+  // ends are set to that EXACT hex is guaranteed unreadable against itself
+  // (contrast ratio 1, well under the refusal threshold) regardless of the
+  // hex's absolute luminance, so this never depends on which colour is used.
+  it('a frame background that would hide a per-chart series colour drops that override back to the palette', () => {
+    const onChange = vi.fn();
+    render(<ChartView spec={threePointSpec()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Kleuren' }));
+    const hex = screen.getByRole('textbox', { name: 'Kleur van Nederland (hex-code)' }) as HTMLInputElement;
+    fireEvent.change(hex, { target: { value: '#446688' } });
+    fireEvent.keyDown(hex, { key: 'Enter' });
+    // The override committed cleanly (no refusal alert — legible on both
+    // ordinary cards).
+    expect(screen.queryByRole('alert')).toBeNull();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Kader' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Verloop' }));
+    const from = screen.getByRole('textbox', { name: 'Van (hex)' }) as HTMLInputElement;
+    fireEvent.change(from, { target: { value: '#446688' } });
+    fireEvent.blur(from);
+    const to = screen.getByRole('textbox', { name: 'Naar (hex)' }) as HTMLInputElement;
+    fireEvent.change(to, { target: { value: '#446688' } });
+    fireEvent.blur(to);
+
+    // The series override is gone — the Kleuren tab now shows the palette
+    // default again, not the refused '#446688'.
+    fireEvent.click(screen.getByRole('tab', { name: 'Kleuren' }));
+    const hexAfter = screen.getByRole('textbox', { name: 'Kleur van Nederland (hex-code)' }) as HTMLInputElement;
+    expect(hexAfter.value).toBe(RECHARTS_PALETTE[0]);
+    void onChange;
+  });
+
+  it('save-default: an effective "Own image" frame background is saved as none, with the extra digit-free caveat appended to the saved status', async () => {
+    chartStyleActions.saveMyChartStyle.mockResolvedValue({ ok: true });
+    render(
+      <ChartStyleProvider initial={{}}>
+        <ChartView spec={threePointSpec()} />
+      </ChartStyleProvider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Kader' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Eigen afbeelding' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Bewaar als mijn standaard' }));
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'Opgeslagen. De afbeelding wordt niet bewaard in je standaard.',
+    );
+    const saved = chartStyleActions.saveMyChartStyle.mock.calls[0]![0] as Record<string, unknown>;
+    expect(saved).toHaveProperty('frameBackground', 'none');
+  });
+
+  it('save-default: an ordinary (non-image) frame background saves plainly, no caveat appended', async () => {
+    chartStyleActions.saveMyChartStyle.mockResolvedValue({ ok: true });
+    render(
+      <ChartStyleProvider initial={{}}>
+        <ChartView spec={threePointSpec()} />
+      </ChartStyleProvider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Kader' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Kleur' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Bewaar als mijn standaard' }));
+    const status = await screen.findByRole('status');
+    expect(status).toHaveTextContent('Opgeslagen.');
+    expect(status.textContent).not.toMatch(/afbeelding/);
+    const saved = chartStyleActions.saveMyChartStyle.mock.calls[0]![0] as Record<string, unknown>;
+    expect(saved).toHaveProperty('frameBackground', { kind: 'solid', hex: '#ffffff' });
   });
 });

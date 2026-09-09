@@ -31,7 +31,9 @@ import { Fragment, useRef, useState, type KeyboardEvent, type ReactNode } from '
 import { SlidersHorizontal } from 'lucide-react';
 import {
   FONT_OPTIONS,
+  FRAME_GRADIENT_PRESETS,
   HEX_COLOR,
+  isFramePristine,
   judgeColor,
   normalizeHex,
   type PresentationKey,
@@ -63,6 +65,7 @@ function buildPanelCopy(lang: Lang) {
     tabChart: t(lang, 'chart.panel.tabChart'),
     tabColors: t(lang, 'chart.panel.tabColors'),
     tabFont: t(lang, 'chart.panel.tabFont'),
+    tabFrame: t(lang, 'chart.panel.tabFrame'),
     reset: t(lang, 'chart.panel.reset'),
     /** Kleuren tab. `colourOf`/`hexSuffix`/`pickSuffix` assemble into the
      * per-row accessible names: "{colourOf} {label} {hexSuffix}" for the hex
@@ -123,12 +126,53 @@ function buildPanelCopy(lang: Lang) {
      * three "on/off" toggles (Aslijnen/Waarden/Y-as vanaf nul), now shortened
      * since "Tonen" already says what the group does. */
     showGroup: t(lang, 'chart.panel.showGroup'),
+    /** Task 5 (design §C2): the Frame tab — background (None/Colour/
+     * Gradient/Own image), padding/corners/shadow/inset/aspect ratio. */
+    frameBackground: t(lang, 'chart.panel.frameBackground'),
+    frameBgNone: t(lang, 'chart.panel.frameBgNone'),
+    frameBgSolid: t(lang, 'chart.panel.frameBgSolid'),
+    frameBgGradient: t(lang, 'chart.panel.frameBgGradient'),
+    frameBgImage: t(lang, 'chart.panel.frameBgImage'),
+    frameGradientPreset: t(lang, 'chart.panel.frameGradientPreset'),
+    frameGradientDawn: t(lang, 'chart.panel.frameGradientDawn'),
+    frameGradientOcean: t(lang, 'chart.panel.frameGradientOcean'),
+    frameGradientForest: t(lang, 'chart.panel.frameGradientForest'),
+    frameGradientBerry: t(lang, 'chart.panel.frameGradientBerry'),
+    frameGradientSlate: t(lang, 'chart.panel.frameGradientSlate'),
+    frameGradientSand: t(lang, 'chart.panel.frameGradientSand'),
+    frameFrom: t(lang, 'chart.panel.frameFrom'),
+    frameTo: t(lang, 'chart.panel.frameTo'),
+    framePadding: t(lang, 'chart.panel.framePadding'),
+    frameCorners: t(lang, 'chart.panel.frameCorners'),
+    frameShadow: t(lang, 'chart.panel.frameShadow'),
+    frameInset: t(lang, 'chart.panel.frameInset'),
+    frameAspect: t(lang, 'chart.panel.frameAspect'),
+    sizeNone: t(lang, 'chart.panel.sizeNone'),
+    sizeSmall: t(lang, 'chart.panel.sizeSmall'),
+    sizeMedium: t(lang, 'chart.panel.sizeMedium'),
+    sizeLarge: t(lang, 'chart.panel.sizeLarge'),
+    cornersSquare: t(lang, 'chart.panel.cornersSquare'),
+    cornersRounded: t(lang, 'chart.panel.cornersRounded'),
+    cornersVeryRounded: t(lang, 'chart.panel.cornersVeryRounded'),
+    shadowSoft: t(lang, 'chart.panel.shadowSoft'),
+    shadowStrong: t(lang, 'chart.panel.shadowStrong'),
+    aspectAuto: t(lang, 'chart.panel.aspectAuto'),
+    aspectWide: t(lang, 'chart.panel.aspectWide'),
+    aspectPortrait: t(lang, 'chart.panel.aspectPortrait'),
+    aspectSquare: t(lang, 'chart.panel.aspectSquare'),
+    aspectSocial: t(lang, 'chart.panel.aspectSocial'),
+    frameImagePick: t(lang, 'chart.panel.frameImagePick'),
+    frameImageRemove: t(lang, 'chart.panel.frameImageRemove'),
+    frameImageTooLarge: t(lang, 'chart.panel.frameImageTooLarge'),
+    frameImageBadType: t(lang, 'chart.panel.frameImageBadType'),
+    frameImageNotSaved: t(lang, 'chart.panel.frameImageNotSaved'),
+    frameReset: t(lang, 'chart.panel.frameReset'),
   };
 }
 type PanelCopy = ReturnType<typeof buildPanelCopy>;
 
-type TabKey = 'chart' | 'colors' | 'font';
-const TAB_ORDER: readonly TabKey[] = ['chart', 'colors', 'font'];
+type TabKey = 'chart' | 'colors' | 'font' | 'frame';
+const TAB_ORDER: readonly TabKey[] = ['chart', 'colors', 'font', 'frame'];
 
 type RadioKey = 'lineWidth' | 'markers' | 'grid' | 'xLabels';
 interface RadioGroupDef {
@@ -184,6 +228,206 @@ function buildRadioGroups(lang: Lang): RadioGroupDef[] {
     label: t(lang, groupLabelKey),
     options: options.map(({ value, labelKey }) => ({ value, label: t(lang, labelKey) })),
   }));
+}
+
+// Task 5 (design §C2): the Frame tab's five plain radiogroups — padding,
+// corners, shadow, inset, aspect ratio. `frameAspect`'s VALUES are the
+// digit-carrying ratio strings the resolver itself uses ('16:9' etc.) — they
+// only ever reach the DOM as a `value` attribute (never rendered text), so
+// the panel's digit-free-text invariant holds; every LABEL below is a plain
+// word (Breedbeeld/Widescreen, and so on).
+type FrameRadioKey = 'framePadding' | 'frameCorners' | 'frameShadow' | 'frameInset' | 'frameAspect';
+interface FrameRadioGroupDef {
+  key: FrameRadioKey;
+  label: string;
+  options: { value: string; label: string }[];
+}
+
+const FRAME_RADIO_GROUPS: readonly { key: FrameRadioKey; groupLabelKey: MessageKey; options: readonly { value: string; labelKey: MessageKey }[] }[] = [
+  {
+    key: 'framePadding',
+    groupLabelKey: 'chart.panel.framePadding',
+    options: [
+      { value: 'none', labelKey: 'chart.panel.sizeNone' },
+      { value: 'small', labelKey: 'chart.panel.sizeSmall' },
+      { value: 'medium', labelKey: 'chart.panel.sizeMedium' },
+      { value: 'large', labelKey: 'chart.panel.sizeLarge' },
+    ],
+  },
+  {
+    key: 'frameCorners',
+    groupLabelKey: 'chart.panel.frameCorners',
+    options: [
+      { value: 'square', labelKey: 'chart.panel.cornersSquare' },
+      { value: 'rounded', labelKey: 'chart.panel.cornersRounded' },
+      { value: 'veryRounded', labelKey: 'chart.panel.cornersVeryRounded' },
+    ],
+  },
+  {
+    key: 'frameShadow',
+    groupLabelKey: 'chart.panel.frameShadow',
+    options: [
+      { value: 'none', labelKey: 'chart.panel.sizeNone' },
+      { value: 'soft', labelKey: 'chart.panel.shadowSoft' },
+      { value: 'strong', labelKey: 'chart.panel.shadowStrong' },
+    ],
+  },
+  {
+    key: 'frameInset',
+    groupLabelKey: 'chart.panel.frameInset',
+    options: [
+      { value: 'none', labelKey: 'chart.panel.sizeNone' },
+      { value: 'small', labelKey: 'chart.panel.sizeSmall' },
+      { value: 'large', labelKey: 'chart.panel.sizeLarge' },
+    ],
+  },
+  {
+    key: 'frameAspect',
+    groupLabelKey: 'chart.panel.frameAspect',
+    options: [
+      { value: 'auto', labelKey: 'chart.panel.aspectAuto' },
+      { value: '16:9', labelKey: 'chart.panel.aspectWide' },
+      { value: '4:5', labelKey: 'chart.panel.aspectPortrait' },
+      { value: '1:1', labelKey: 'chart.panel.aspectSquare' },
+      { value: '1.91:1', labelKey: 'chart.panel.aspectSocial' },
+    ],
+  },
+];
+
+function buildFrameRadioGroups(lang: Lang): FrameRadioGroupDef[] {
+  return FRAME_RADIO_GROUPS.map(({ key, groupLabelKey, options }) => ({
+    key,
+    label: t(lang, groupLabelKey),
+    options: options.map(({ value, labelKey }) => ({ value, label: t(lang, labelKey) })),
+  }));
+}
+
+/** A plain, never-locked radiogroup row for the Frame tab — the same
+ * label+pills Fragment shape as the Grafiek tab's own rows (`GRID_CLASS`),
+ * minus the lock/reason machinery those need and this tab's keys never do
+ * (chart-presentation.ts's resolver applies no locks to any frame key). */
+function frameRadioRow(idPrefix: string, group: FrameRadioGroupDef, current: string, onPick: (value: string) => void): ReactNode {
+  const groupLabelId = `${idPrefix}-style-label-${group.key}`;
+  return (
+    <Fragment key={group.key}>
+      <span id={groupLabelId} className="text-xs text-muted-foreground pt-1">
+        {group.label}
+      </span>
+      <div role="radiogroup" aria-labelledby={groupLabelId} onKeyDown={onRadioGroupKeyDown} className="flex flex-wrap gap-1.5">
+        {group.options.map((opt) => {
+          const checked = current === opt.value;
+          return (
+            <button
+              key={opt.value}
+              type="button"
+              role="radio"
+              aria-checked={checked}
+              tabIndex={checked ? 0 : -1}
+              onClick={() => onPick(opt.value)}
+              className={pillClass(checked)}
+            >
+              {opt.label}
+            </button>
+          );
+        })}
+      </div>
+    </Fragment>
+  );
+}
+
+/** The swatch-free hex-textbox + native colour-picker pair shared by the
+ * Kleuren tab's per-series rows and the Frame tab's background colour/
+ * gradient fields — extracted so the two never duplicate this markup.
+ * Purely presentational/controlled: every value and every commit is the
+ * caller's, this component owns no state of its own. */
+function ColorField({
+  textValue,
+  pickerValue,
+  onTextChange,
+  onBlur,
+  onKeyDown,
+  onPickerChange,
+  ariaLabelHex,
+  ariaLabelPicker,
+  ariaDescribedBy,
+  className,
+}: {
+  textValue: string;
+  pickerValue: string;
+  onTextChange: (value: string) => void;
+  onBlur: (value: string) => void;
+  onKeyDown?: (value: string, key: string) => void;
+  onPickerChange: (value: string) => void;
+  ariaLabelHex: string;
+  ariaLabelPicker: string;
+  ariaDescribedBy?: string;
+  className?: string;
+}): ReactNode {
+  return (
+    <>
+      <Input
+        type="text"
+        inputMode="text"
+        aria-label={ariaLabelHex}
+        aria-describedby={ariaDescribedBy}
+        value={textValue}
+        onChange={(e) => onTextChange(e.target.value)}
+        onBlur={(e) => onBlur(e.target.value)}
+        onKeyDown={(e) => onKeyDown?.(e.currentTarget.value, e.key)}
+        className={className ?? 'w-24'}
+      />
+      <input
+        type="color"
+        aria-label={ariaLabelPicker}
+        value={pickerValue}
+        onChange={(e) => onPickerChange(e.target.value)}
+      />
+    </>
+  );
+}
+
+/** A Frame-tab hex field: unlike the Kleuren tab's rows (which need a live
+ * per-keystroke draft so a warning can update as the reader types), this one
+ * only needs to show what's typed and commit a normalised hex on blur/Enter
+ * — so it owns a tiny local text buffer, discarded and reseeded from `value`
+ * whenever the caller keys it by that same value (a successful commit, a
+ * gradient preset pick, or a Reset all remount it with the new committed
+ * text; an in-progress invalid edit that never committed is simply dropped,
+ * matching the Kleuren tab's own "garbage snaps back silently" behaviour). */
+function FrameHexField({
+  value,
+  onCommit,
+  ariaLabelHex,
+  ariaLabelPicker,
+}: {
+  value: string;
+  onCommit: (hex: string) => void;
+  ariaLabelHex: string;
+  ariaLabelPicker: string;
+}): ReactNode {
+  const [text, setText] = useState(value);
+  function commit(raw: string): void {
+    const hex = normalizeHex(raw);
+    if (hex === null) {
+      setText(value);
+      return;
+    }
+    onCommit(hex);
+  }
+  return (
+    <ColorField
+      textValue={text}
+      pickerValue={value}
+      onTextChange={setText}
+      onBlur={commit}
+      onKeyDown={(v, key) => {
+        if (key === 'Enter') commit(v);
+      }}
+      onPickerChange={commit}
+      ariaLabelHex={ariaLabelHex}
+      ariaLabelPicker={ariaLabelPicker}
+    />
+  );
 }
 
 type ToggleKey = 'axisLines' | 'valueLabels' | 'zeroBaseline';
@@ -306,7 +550,12 @@ export interface ChartConfigPanelAccount {
    * whether "Vergeet mijn standaard" is offered at all, and (with
    * `resolved.pristine`) whether the "Mijn standaard is actief." hint shows. */
   hasDefault: boolean;
-  onSave: () => Promise<'saved' | 'unavailable' | 'error'>;
+  /** `'savedImageDropped'` (Task 5, design §C2): the effective frame
+   * background was `{ kind: 'image' }` — a data URL never rides along with
+   * the saved default (`chart.panel.frameImageNotSaved` says so on the
+   * status line) — everything else about the save still succeeded exactly
+   * like a plain `'saved'`. */
+  onSave: () => Promise<'saved' | 'savedImageDropped' | 'unavailable' | 'error'>;
   onForget: () => Promise<'forgotten' | 'error'>;
 }
 
@@ -402,6 +651,13 @@ export interface ChartConfigPanelProps {
    * brand it was — chart.tsx remembers it and hands it to `saveMyChartStyle`
    * as `brandApplied` on the next account-default save. */
   onBrandApplied?: (applied: AppliedBrand) => void;
+  /** Task 5 (design §C2): the Frame tab's "Own image" background — a data
+   * URL (or `null`), chart.tsx's own state (Task 3), not part of `pres`/
+   * `resolvePresentation`'s account-default machinery. Optional/defaulted so
+   * every existing test render call (none of which touch the Frame tab)
+   * keeps compiling unchanged, mirroring `account`/`brand` above. */
+  frameImage?: string | null;
+  onFrameImage?: (dataUrl: string | null) => void;
 }
 
 /** The "Opmaak"/"Style" trigger button — split out of `ChartConfigPanel` by
@@ -457,6 +713,8 @@ export function ChartConfigPanel({
   account,
   brand,
   onBrandApplied,
+  frameImage = null,
+  onFrameImage = () => {},
 }: ChartConfigPanelProps): ReactNode {
   const copy = buildPanelCopy(lang);
   const [activeTab, setActiveTab] = useState<TabKey>('chart');
@@ -466,7 +724,9 @@ export function ChartConfigPanel({
   // attempt, matching the Kleuren tab's own "state survives until something
   // changes it" pattern rather than auto-clearing on a timer.
   const [accountBusy, setAccountBusy] = useState(false);
-  const [accountStatus, setAccountStatus] = useState<'saved' | 'forgotten' | 'unavailable' | 'error' | null>(null);
+  const [accountStatus, setAccountStatus] = useState<
+    'saved' | 'savedImageDropped' | 'forgotten' | 'unavailable' | 'error' | null
+  >(null);
 
   async function handleAccountSave(): Promise<void> {
     if (!account) return;
@@ -488,8 +748,12 @@ export function ChartConfigPanel({
     }
   }
 
-  function accountStatusText(status: 'saved' | 'forgotten' | 'unavailable' | 'error'): string {
+  function accountStatusText(status: 'saved' | 'savedImageDropped' | 'forgotten' | 'unavailable' | 'error'): string {
     if (status === 'saved') return copy.accountSaved;
+    // Task 5 (design §C2): the image itself never rides along with the
+    // saved default — appended (not swapped in), so the reader still sees
+    // "Opgeslagen." plus this one extra sentence, never just the caveat.
+    if (status === 'savedImageDropped') return `${copy.accountSaved} ${copy.frameImageNotSaved}`;
     if (status === 'forgotten') return copy.accountForgotten;
     if (status === 'unavailable') return copy.accountUnavailable;
     return copy.accountError;
@@ -565,11 +829,81 @@ export function ChartConfigPanel({
   const chartTabRef = useRef<HTMLButtonElement>(null);
   const colorsTabRef = useRef<HTMLButtonElement>(null);
   const fontTabRef = useRef<HTMLButtonElement>(null);
+  const frameTabRef = useRef<HTMLButtonElement>(null);
   const tabRefs: Record<TabKey, typeof chartTabRef> = {
     chart: chartTabRef,
     colors: colorsTabRef,
     font: fontTabRef,
+    frame: frameTabRef,
   };
+
+  // Task 5 (design §C2): the Frame tab's "Own image" refusal lines — which
+  // of the two (too large / wrong type) to show, or neither. Local, not
+  // derived from `frameImage`: a refusal never changes `frameImage` at all
+  // (nothing valid was ever offered), so there is nothing in the props to
+  // re-derive this from.
+  const [frameImageAlert, setFrameImageAlert] = useState<'tooLarge' | 'badType' | null>(null);
+  const frameFileInputRef = useRef<HTMLInputElement>(null);
+  const FRAME_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
+  const FRAME_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
+
+  function handleFrameFile(file: File): void {
+    if (file.size > FRAME_IMAGE_MAX_BYTES) {
+      setFrameImageAlert('tooLarge');
+      return;
+    }
+    if (!FRAME_IMAGE_TYPES.includes(file.type)) {
+      setFrameImageAlert('badType');
+      return;
+    }
+    setFrameImageAlert(null);
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        onFrameImage(reader.result);
+        onChange({ frameBackground: { kind: 'image' } });
+      }
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function handleFrameImageRemove(): void {
+    setFrameImageAlert(null);
+    onFrameImage(null);
+    onChange({ frameBackground: 'none' });
+  }
+
+  function handleFrameReset(): void {
+    setFrameImageAlert(null);
+    onChange({
+      frameBackground: 'none',
+      framePadding: 'none',
+      frameCorners: 'square',
+      frameShadow: 'none',
+      frameInset: 'none',
+      frameAspect: 'auto',
+    });
+    onFrameImage(null);
+  }
+
+  function pickFrameBackgroundKind(kind: 'none' | 'solid' | 'gradient' | 'image'): void {
+    const bg = resolved.values.frameBackground;
+    if (kind === 'none') {
+      onChange({ frameBackground: 'none' });
+      return;
+    }
+    if (kind === 'solid') {
+      const hex = bg !== 'none' && bg.kind === 'solid' ? bg.hex : '#ffffff';
+      onChange({ frameBackground: { kind: 'solid', hex } });
+      return;
+    }
+    if (kind === 'gradient') {
+      const preset = bg !== 'none' && bg.kind === 'gradient' ? { from: bg.from, to: bg.to } : FRAME_GRADIENT_PRESETS[0]!;
+      onChange({ frameBackground: { kind: 'gradient', from: preset.from, to: preset.to } });
+      return;
+    }
+    onChange({ frameBackground: { kind: 'image' } });
+  }
 
   // Kleuren tab: a local edit buffer per series KEY (not index — an index
   // can point at a different series after a spec swap). `seriesMeta[i]
@@ -686,6 +1020,15 @@ export function ChartConfigPanel({
 
   const radioGroups = buildRadioGroups(lang);
   const toggles = buildToggles(lang);
+  const frameRadioGroups = buildFrameRadioGroups(lang);
+  const frameGradientLabels: Record<(typeof FRAME_GRADIENT_PRESETS)[number]['id'], string> = {
+    dawn: copy.frameGradientDawn,
+    ocean: copy.frameGradientOcean,
+    forest: copy.frameGradientForest,
+    berry: copy.frameGradientBerry,
+    slate: copy.frameGradientSlate,
+    sand: copy.frameGradientSand,
+  };
 
   function tabButton(key: TabKey, label: string): ReactNode {
     return (
@@ -739,6 +1082,7 @@ export function ChartConfigPanel({
           {tabButton('chart', copy.tabChart)}
           {tabButton('colors', copy.tabColors)}
           {tabButton('font', copy.tabFont)}
+          {tabButton('frame', copy.tabFrame)}
         </div>
         {/* WP218 phase 4 (#219, design §4), owner ask (2026-09-09): the select
           * preselects the chart's CURRENT language — `resolved.values.language
@@ -907,29 +1251,23 @@ export function ChartConfigPanel({
                       className="inline-block size-4 rounded-full border border-border"
                     />
                     <span className="font-medium text-foreground">{series.label}</span>
-                    <Input
-                      type="text"
-                      inputMode="text"
-                      aria-label={`${copy.colourOf} ${series.label} ${copy.hexSuffix}`}
-                      aria-describedby={alert ? alertId : warning ? warnId : undefined}
-                      value={displayText}
-                      onChange={(e) =>
+                    <ColorField
+                      ariaLabelHex={`${copy.colourOf} ${series.label} ${copy.hexSuffix}`}
+                      ariaLabelPicker={`${copy.colourOf} ${series.label} ${copy.pickSuffix}`}
+                      ariaDescribedBy={alert ? alertId : warning ? warnId : undefined}
+                      textValue={displayText}
+                      pickerValue={series.color}
+                      onTextChange={(v) =>
                         setColorDrafts((d) => ({
                           ...d,
-                          [series.key]: { text: e.target.value, forColor: series.color, committed: false },
+                          [series.key]: { text: v, forColor: series.color, committed: false },
                         }))
                       }
-                      onBlur={(e) => commitColor(series.key, index, series.color, e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') commitColor(series.key, index, series.color, e.currentTarget.value);
+                      onBlur={(v) => commitColor(series.key, index, series.color, v)}
+                      onKeyDown={(v, key) => {
+                        if (key === 'Enter') commitColor(series.key, index, series.color, v);
                       }}
-                      className="w-24"
-                    />
-                    <input
-                      type="color"
-                      aria-label={`${copy.colourOf} ${series.label} ${copy.pickSuffix}`}
-                      value={series.color}
-                      onChange={(e) => commitColor(series.key, index, series.color, e.target.value)}
+                      onPickerChange={(v) => commitColor(series.key, index, series.color, v)}
                     />
                     {warning ? (
                       <p id={warnId} className="w-full text-muted-foreground">
@@ -1012,31 +1350,197 @@ export function ChartConfigPanel({
           aria-labelledby={tabId('font')}
           className="mt-3 flex flex-wrap items-center gap-2"
         >
-          <label htmlFor={`${idPrefix}-style-font`}>{copy.font}</label>
-          <select
-            id={`${idPrefix}-style-font`}
-            aria-label={copy.font}
-            value={resolved.values.fontFamily ?? ''}
-            onChange={(e) => onChange({ fontFamily: e.target.value || null })}
-            className="rounded-md border border-border bg-background px-1.5 py-0.5 text-foreground"
-          >
-            <option value="">{copy.fontDefault}</option>
-            {FONT_OPTIONS.map((f) => (
-              <option key={f.family} value={f.family}>
-                {f.family}
-              </option>
-            ))}
-            {/* Final-review fix: an applied brand font (phase 3's
-              * `pickBrandFont`) can be any family outside the seven
-              * curated FONT_OPTIONS — without this, `value` above
-              * matches none of the options and the select silently
-              * renders blank, so touching it (even without changing
-              * anything) looked like it discarded the brand font. */}
-            {resolved.values.fontFamily !== null &&
-            !FONT_OPTIONS.some((f) => f.family === resolved.values.fontFamily) ? (
-              <option value={resolved.values.fontFamily}>{resolved.values.fontFamily}</option>
-            ) : null}
-          </select>
+          {/* Table form (design §C2): `fontFamily` is outside `applicable`
+            * there (same gate the Grafiek/Kleuren tabs already use) — the
+            * Frame tab is the one control set table form actually offers. */}
+          {resolved.applicable.has('fontFamily') ? (
+            <>
+              <label htmlFor={`${idPrefix}-style-font`}>{copy.font}</label>
+              <select
+                id={`${idPrefix}-style-font`}
+                aria-label={copy.font}
+                value={resolved.values.fontFamily ?? ''}
+                onChange={(e) => onChange({ fontFamily: e.target.value || null })}
+                className="rounded-md border border-border bg-background px-1.5 py-0.5 text-foreground"
+              >
+                <option value="">{copy.fontDefault}</option>
+                {FONT_OPTIONS.map((f) => (
+                  <option key={f.family} value={f.family}>
+                    {f.family}
+                  </option>
+                ))}
+                {/* Final-review fix: an applied brand font (phase 3's
+                  * `pickBrandFont`) can be any family outside the seven
+                  * curated FONT_OPTIONS — without this, `value` above
+                  * matches none of the options and the select silently
+                  * renders blank, so touching it (even without changing
+                  * anything) looked like it discarded the brand font. */}
+                {resolved.values.fontFamily !== null &&
+                !FONT_OPTIONS.some((f) => f.family === resolved.values.fontFamily) ? (
+                  <option value={resolved.values.fontFamily}>{resolved.values.fontFamily}</option>
+                ) : null}
+              </select>
+            </>
+          ) : null}
+        </div>
+      ) : null}
+
+      {/* Task 5 (design §C2): the Frame tab — applicable on every chart
+        * form, table included (chart-presentation.ts's resolver adds the
+        * six frame keys to `applicable` unconditionally), so this tabpanel
+        * never needs an `applicable` gate of its own. */}
+      {activeTab === 'frame' ? (
+        <div
+          id={panelId('frame')}
+          role="tabpanel"
+          aria-labelledby={tabId('frame')}
+          className="mt-3 flex flex-col items-start gap-3"
+        >
+          <div className={GRID_CLASS}>
+            {(() => {
+              const bg = resolved.values.frameBackground;
+              const bgKind = bg === 'none' ? 'none' : bg.kind;
+              const bgGroupLabelId = `${idPrefix}-style-label-frameBackground`;
+              return (
+                <Fragment key="frameBackground">
+                  <span id={bgGroupLabelId} className="text-xs text-muted-foreground pt-1">
+                    {copy.frameBackground}
+                  </span>
+                  <div
+                    role="radiogroup"
+                    aria-labelledby={bgGroupLabelId}
+                    onKeyDown={onRadioGroupKeyDown}
+                    className="flex flex-wrap gap-1.5"
+                  >
+                    {(
+                      [
+                        ['none', copy.frameBgNone],
+                        ['solid', copy.frameBgSolid],
+                        ['gradient', copy.frameBgGradient],
+                        ['image', copy.frameBgImage],
+                      ] as const
+                    ).map(([kind, label]) => {
+                      const checked = bgKind === kind;
+                      return (
+                        <button
+                          key={kind}
+                          type="button"
+                          role="radio"
+                          aria-checked={checked}
+                          tabIndex={checked ? 0 : -1}
+                          onClick={() => pickFrameBackgroundKind(kind)}
+                          className={pillClass(checked)}
+                        >
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <span aria-hidden />
+                  <div className="flex w-full flex-wrap items-center gap-2">
+                    {bgKind === 'solid' && bg !== 'none' && bg.kind === 'solid' ? (
+                      <FrameHexField
+                        key={bg.hex}
+                        value={bg.hex}
+                        onCommit={(hex) => onChange({ frameBackground: { kind: 'solid', hex } })}
+                        ariaLabelHex={`${copy.frameBackground} (hex)`}
+                        ariaLabelPicker={copy.frameBackground}
+                      />
+                    ) : null}
+                    {bgKind === 'gradient' && bg !== 'none' && bg.kind === 'gradient' ? (
+                      <div className="flex w-full flex-col gap-2">
+                        <div role="group" aria-label={copy.frameGradientPreset} className="flex flex-wrap gap-1.5">
+                          {FRAME_GRADIENT_PRESETS.map((preset) => (
+                            <button
+                              key={preset.id}
+                              type="button"
+                              aria-label={frameGradientLabels[preset.id]}
+                              aria-pressed={bg.from === preset.from && bg.to === preset.to}
+                              onClick={() => onChange({ frameBackground: { kind: 'gradient', from: preset.from, to: preset.to } })}
+                              style={{ backgroundImage: `linear-gradient(135deg, ${preset.from}, ${preset.to})` }}
+                              className="size-6 rounded-md border border-border"
+                            />
+                          ))}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-xs text-muted-foreground">{copy.frameFrom}</span>
+                          <FrameHexField
+                            key={`from-${bg.from}`}
+                            value={bg.from}
+                            onCommit={(hex) => onChange({ frameBackground: { kind: 'gradient', from: hex, to: bg.to } })}
+                            ariaLabelHex={`${copy.frameFrom} (hex)`}
+                            ariaLabelPicker={copy.frameFrom}
+                          />
+                          <span className="text-xs text-muted-foreground">{copy.frameTo}</span>
+                          <FrameHexField
+                            key={`to-${bg.to}`}
+                            value={bg.to}
+                            onCommit={(hex) => onChange({ frameBackground: { kind: 'gradient', from: bg.from, to: hex } })}
+                            ariaLabelHex={`${copy.frameTo} (hex)`}
+                            ariaLabelPicker={copy.frameTo}
+                          />
+                        </div>
+                      </div>
+                    ) : null}
+                    {bgKind === 'image' ? (
+                      <div className="flex w-full flex-col gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <input
+                            ref={frameFileInputRef}
+                            type="file"
+                            accept="image/png,image/jpeg,image/webp"
+                            aria-label={copy.frameImagePick}
+                            className="sr-only"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              e.target.value = '';
+                              if (file) handleFrameFile(file);
+                            }}
+                          />
+                          <Button type="button" variant="outline" size="xs" onClick={() => frameFileInputRef.current?.click()}>
+                            {copy.frameImagePick}
+                          </Button>
+                          {frameImage !== null ? (
+                            <Button type="button" variant="outline" size="xs" onClick={handleFrameImageRemove}>
+                              {copy.frameImageRemove}
+                            </Button>
+                          ) : null}
+                        </div>
+                        {frameImageAlert === 'tooLarge' ? (
+                          <p role="alert" className="w-full text-destructive">
+                            {copy.frameImageTooLarge}
+                          </p>
+                        ) : null}
+                        {frameImageAlert === 'badType' ? (
+                          <p role="alert" className="w-full text-destructive">
+                            {copy.frameImageBadType}
+                          </p>
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </div>
+                </Fragment>
+              );
+            })()}
+
+            {frameRadioGroups.map((group) =>
+              frameRadioRow(idPrefix, group, resolved.values[group.key] as string, (value) => emit(group.key, value)),
+            )}
+          </div>
+
+          <div className="mt-1 flex items-center justify-between gap-2 border-t border-border pt-3 w-full">
+            <span />
+            <Button
+              type="button"
+              variant="outline"
+              size="xs"
+              disabled={isFramePristine(resolved.values) && frameImage === null}
+              onClick={handleFrameReset}
+            >
+              {copy.frameReset}
+            </Button>
+          </div>
         </div>
       ) : null}
 
