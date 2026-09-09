@@ -41,7 +41,28 @@ export interface ChartPresentation {
    * visible bug, but a contradiction with ADR 039's own "hidden in Tabel
    * form"). */
   language: Lang | null;
+  /** The Frame tab (design §C2): the chart sits inside this background,
+   * padding, corner radius, drop shadow, card inset and export aspect ratio.
+   * Unlike every key above, the frame IS applicable in table form — a table
+   * gets the same frame as any other chart form. */
+  frameBackground: FrameBackground;
+  framePadding: FramePadding;
+  frameCorners: FrameCorners;
+  frameShadow: FrameShadow;
+  frameInset: FrameInset;
+  frameAspect: FrameAspect;
 }
+
+export type FramePadding = 'none' | 'small' | 'medium' | 'large';
+export type FrameCorners = 'square' | 'rounded' | 'veryRounded';
+export type FrameShadow = 'none' | 'soft' | 'strong';
+export type FrameInset = 'none' | 'small' | 'large';
+export type FrameAspect = 'auto' | '16:9' | '4:5' | '1:1' | '1.91:1';
+export type FrameBackground =
+  | 'none'
+  | { kind: 'solid'; hex: string }
+  | { kind: 'gradient'; from: string; to: string }
+  | { kind: 'image' };
 export type PresentationOverrides = Partial<ChartPresentation>;
 export type PresentationKey = keyof ChartPresentation;
 
@@ -65,6 +86,12 @@ export const STOCK_PRESENTATION: ChartPresentation = {
   seriesColors: {},
   fontFamily: null,
   language: null,
+  frameBackground: 'none',
+  framePadding: 'none',
+  frameCorners: 'square',
+  frameShadow: 'none',
+  frameInset: 'none',
+  frameAspect: 'auto',
 };
 
 export const HEX_COLOR = /^#[0-9a-f]{6}$/;
@@ -73,6 +100,12 @@ export const HEX_COLOR = /^#[0-9a-f]{6}$/;
 export const FONT_FAMILY_NAME = /^[A-Za-z0-9 ]{1,40}$/;
 
 const hexSchema = z.string().transform((s) => s.toLowerCase()).pipe(z.string().regex(HEX_COLOR));
+const frameBackgroundSchema = z.union([
+  z.literal('none'),
+  z.object({ kind: z.literal('solid'), hex: hexSchema }).strict(),
+  z.object({ kind: z.literal('gradient'), from: hexSchema, to: hexSchema }).strict(),
+  z.object({ kind: z.literal('image') }).strict(),
+]);
 const overridesSchema = z.object({
   lineWidth: z.enum(['thin', 'normal', 'thick', 'extraThick']).optional(),
   markers: z.enum(['all', 'provisionalOnly']).optional(),
@@ -84,6 +117,12 @@ const overridesSchema = z.object({
   seriesColors: z.record(z.string(), z.unknown()).optional(),
   fontFamily: z.string().regex(FONT_FAMILY_NAME).nullable().optional(),
   language: z.enum(['nl', 'en']).nullable().optional(),
+  frameBackground: frameBackgroundSchema.optional(),
+  framePadding: z.enum(['none', 'small', 'medium', 'large']).optional(),
+  frameCorners: z.enum(['square', 'rounded', 'veryRounded']).optional(),
+  frameShadow: z.enum(['none', 'soft', 'strong']).optional(),
+  frameInset: z.enum(['none', 'small', 'large']).optional(),
+  frameAspect: z.enum(['auto', '16:9', '4:5', '1:1', '1.91:1']).optional(),
 });
 
 /** Allow-list parse of anything claiming to be overrides (a reducer patch, a
@@ -156,6 +195,7 @@ export const LOCK_REASONS = {
 } as const;
 
 const ALL_KEYS: PresentationKey[] = ['lineWidth', 'markers', 'grid', 'xLabels', 'axisLines', 'valueLabels', 'zeroBaseline', 'seriesColors', 'fontFamily'];
+const FRAME_KEYS: PresentationKey[] = ['frameBackground', 'framePadding', 'frameCorners', 'frameShadow', 'frameInset', 'frameAspect'];
 
 export function resolvePresentation(
   ctx: PresentationContext,
@@ -170,13 +210,13 @@ export function resolvePresentation(
   };
   const locks: Partial<Record<PresentationKey, string>> = {};
   const applicable = new Set<PresentationKey>();
-  // Final-review fix: table form's `applicable` is EMPTY, not just
-  // `fontFamily` — the ChartConfigPanel is never mounted in Tabel form
-  // (`chart.tsx`: `{state.form !== 'table' ? <ChartConfigPanel …/> : null}`),
-  // so nothing here — including `fontFamily` and (below) `language` — is
-  // ever reachable through it. Leaving `fontFamily` "applicable" for a form
-  // that offers no panel was unreachable dead code that also contradicted
-  // ADR 039's own "hidden in Tabel form".
+  // Final-review fix: in table form the ChartConfigPanel's style/colour/font
+  // controls are never mounted (`chart.tsx`: `{state.form !== 'table' ?
+  // <ChartConfigPanel …/> : null}`), so none of `ALL_KEYS` is reachable
+  // through it there. Design §C2: the Frame tab is the one deliberate
+  // exception — a table gets the same frame as any other chart form — so the
+  // six frame keys (and `language`, below) are added to `applicable`
+  // regardless of form.
   if (ctx.form !== 'table') {
     for (const key of ALL_KEYS) applicable.add(key);
     if (ctx.form === 'bar' || ctx.form === 'hbar') {
@@ -204,10 +244,12 @@ export function resolvePresentation(
   }
   // WP218 phase 4: unlike every other key, `language` has no honesty
   // consequence for any chart form — it is offered, never locked, on every
-  // form the panel is actually mounted on. Final-review fix: guarded by the
-  // same `ctx.form !== 'table'` as the block above — table form gets NOTHING
-  // (the panel is never mounted there), not "everything except the locks".
-  if (ctx.form !== 'table') applicable.add('language');
+  // form, table included (design §C2: the frame tab, where `language`'s
+  // header select lives, is offered in table form too).
+  applicable.add('language');
+  // Design §C2: the frame is applicable in every chart form, including
+  // table — the resolver applies no locks to any of the six frame keys.
+  for (const key of FRAME_KEYS) applicable.add(key);
   const pristine = Object.keys(clean).every((k) => k === 'seriesColors' && Object.keys(clean.seriesColors ?? {}).length === 0);
   return { values, locks, applicable, pristine };
 }
@@ -305,6 +347,61 @@ export const FONT_OPTIONS: readonly FontOption[] = [
   { family: 'Georgia', source: 'system', stack: `"Georgia", ${SERIF}` },
   { family: 'Arial', source: 'system', stack: `"Arial", ${SANS}` },
 ];
+// --- frame (design §C2) -------------------------------------------------------
+export const FRAME_PADDING_PX: Record<FramePadding, number> = { none: 0, small: 16, medium: 32, large: 56 };
+export const FRAME_CORNER_PX: Record<FrameCorners, number> = { square: 0, rounded: 12, veryRounded: 28 };
+export const FRAME_INSET_PX: Record<FrameInset, number> = { none: 0, small: 12, large: 24 };
+/** One shadow definition used by CSS (box-shadow) and SVG (feDropShadow) alike. */
+export const FRAME_SHADOW: Record<FrameShadow, { dx: number; dy: number; blur: number; alpha: number } | null> = {
+  none: null,
+  soft: { dx: 0, dy: 4, blur: 12, alpha: 0.18 },
+  strong: { dx: 0, dy: 10, blur: 28, alpha: 0.32 },
+};
+export const FRAME_GRADIENT_ANGLE = 135;
+export const FRAME_GRADIENT_PRESETS: readonly { id: 'dawn' | 'ocean' | 'forest' | 'berry' | 'slate' | 'sand'; from: string; to: string }[] = [
+  { id: 'dawn', from: '#fde68a', to: '#f472b6' },
+  { id: 'ocean', from: '#38bdf8', to: '#1e3a8a' },
+  { id: 'forest', from: '#bbf7d0', to: '#166534' },
+  { id: 'berry', from: '#f9a8d4', to: '#7e22ce' },
+  { id: 'slate', from: '#e2e8f0', to: '#334155' },
+  { id: 'sand', from: '#fef3c7', to: '#b45309' },
+];
+
+const FRAME_ASPECT_RATIOS: Record<Exclude<FrameAspect, 'auto'>, number> = {
+  '16:9': 16 / 9,
+  '4:5': 4 / 5,
+  '1:1': 1,
+  '1.91:1': 1.91,
+};
+
+export function frameAspectRatio(aspect: FrameAspect): number | null {
+  return aspect === 'auto' ? null : FRAME_ASPECT_RATIOS[aspect];
+}
+
+/** The colours the series must stay legible against: the inset card colour
+ * when inset is on (card light/dark), else the solid hex or both gradient
+ * ends; 'none'/'image' → the card colours (today's behaviour). */
+export function frameBackdrops(values: Pick<ChartPresentation, 'frameBackground' | 'frameInset'>): string[] {
+  if (values.frameInset !== 'none') return [CARD_LIGHT, CARD_DARK];
+  const bg = values.frameBackground;
+  if (bg === 'none' || bg.kind === 'image') return [CARD_LIGHT, CARD_DARK];
+  if (bg.kind === 'solid') return [bg.hex];
+  return [bg.from, bg.to];
+}
+
+export type FrameValues = Pick<ChartPresentation, 'frameBackground' | 'framePadding' | 'frameCorners' | 'frameShadow' | 'frameInset' | 'frameAspect'>;
+
+export function isFramePristine(values: FrameValues): boolean {
+  return (
+    values.frameBackground === 'none' &&
+    values.framePadding === 'none' &&
+    values.frameCorners === 'square' &&
+    values.frameShadow === 'none' &&
+    values.frameInset === 'none' &&
+    values.frameAspect === 'auto'
+  );
+}
+
 export function findFont(family: string | null): FontOption | undefined {
   return family === null ? undefined : FONT_OPTIONS.find((f) => f.family === family);
 }

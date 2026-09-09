@@ -3,6 +3,11 @@ import {
   CARD_DARK,
   CARD_LIGHT,
   FONT_OPTIONS,
+  FRAME_CORNER_PX,
+  FRAME_GRADIENT_PRESETS,
+  FRAME_INSET_PX,
+  FRAME_PADDING_PX,
+  FRAME_SHADOW,
   LINE_WIDTH_PX,
   LOCK_REASONS,
   RECHARTS_PALETTE,
@@ -11,6 +16,9 @@ import {
   dotGeometry,
   findFont,
   fontStack,
+  frameAspectRatio,
+  frameBackdrops,
+  isFramePristine,
   judgeColor,
   normalizeHex,
   resolvePresentation,
@@ -43,6 +51,12 @@ describe('STOCK_PRESENTATION — the session-87 stock look, pinned', () => {
       seriesColors: {},
       fontFamily: null,
       language: null,
+      frameBackground: 'none',
+      framePadding: 'none',
+      frameCorners: 'square',
+      frameShadow: 'none',
+      frameInset: 'none',
+      frameAspect: 'auto',
     });
     expect(LINE_WIDTH_PX.normal).toBe(2);
     expect(RECHARTS_PALETTE).toEqual(['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#0088fe', '#00c49f', '#ffbb28', '#ff8042']);
@@ -56,7 +70,24 @@ describe('resolvePresentation', () => {
     expect(r.locks).toEqual({});
     expect(r.pristine).toBe(true);
     expect([...r.applicable].sort()).toEqual(
-      ['axisLines', 'fontFamily', 'grid', 'language', 'lineWidth', 'markers', 'seriesColors', 'valueLabels', 'xLabels', 'zeroBaseline'].sort(),
+      [
+        'axisLines',
+        'fontFamily',
+        'frameAspect',
+        'frameBackground',
+        'frameCorners',
+        'frameInset',
+        'framePadding',
+        'frameShadow',
+        'grid',
+        'language',
+        'lineWidth',
+        'markers',
+        'seriesColors',
+        'valueLabels',
+        'xLabels',
+        'zeroBaseline',
+      ].sort(),
     );
   });
 
@@ -91,7 +122,24 @@ describe('resolvePresentation', () => {
     expect(r.values.lineWidth).toBe('thick');
     expect(r.values.markers).toBe('provisionalOnly');
     expect([...r.applicable].sort()).toEqual(
-      ['axisLines', 'fontFamily', 'grid', 'language', 'lineWidth', 'markers', 'seriesColors', 'valueLabels', 'xLabels', 'zeroBaseline'].sort(),
+      [
+        'axisLines',
+        'fontFamily',
+        'frameAspect',
+        'frameBackground',
+        'frameCorners',
+        'frameInset',
+        'framePadding',
+        'frameShadow',
+        'grid',
+        'language',
+        'lineWidth',
+        'markers',
+        'seriesColors',
+        'valueLabels',
+        'xLabels',
+        'zeroBaseline',
+      ].sort(),
     );
     expect(r.locks.valueLabels).toBeUndefined();
   });
@@ -123,21 +171,46 @@ describe('resolvePresentation', () => {
 
   // Final-review fix: the panel (ChartConfigPanel, which is where fontFamily
   // and language are actually offered) is never mounted in Tabel form
-  // (chart.tsx: `state.form !== 'table'`), so NOTHING is applicable there —
-  // this used to say `['fontFamily', 'language']`, unreachable dead code
-  // that also contradicted ADR 039's own "hidden in Tabel form".
-  it('table form: nothing is applicable — the panel is never offered there', () => {
+  // (chart.tsx: `state.form !== 'table'`), so nothing but the frame keys and
+  // language is applicable there — the frame panel IS offered in table form
+  // (a table gets the same frame as any other chart form), and unlike every
+  // other key language has no honesty consequence to hide.
+  it('table form: only the frame keys and language are applicable — the style panel is never offered there', () => {
     const r = resolvePresentation(tableCtx, { lineWidth: 'thick', fontFamily: 'Roboto', language: 'en' });
-    expect([...r.applicable]).toEqual([]);
+    expect([...r.applicable].sort()).toEqual(
+      ['frameAspect', 'frameBackground', 'frameCorners', 'frameInset', 'framePadding', 'frameShadow', 'language'].sort(),
+    );
   });
 
-  it('WP218 phase 4: language is applicable and never locked on every form the panel is offered on — but not table', () => {
-    for (const ctx of [lineCtx, barCtx, areaCtx, hbarCtx]) {
+  it('WP218 phase 4: language is applicable and never locked on every form the panel is offered on — including table', () => {
+    for (const ctx of [lineCtx, barCtx, areaCtx, hbarCtx, tableCtx]) {
       const r = resolvePresentation(ctx, {});
       expect(r.applicable.has('language')).toBe(true);
       expect(r.locks.language).toBeUndefined();
     }
-    expect(resolvePresentation(tableCtx, {}).applicable.has('language')).toBe(false);
+  });
+
+  it('table form: the six frame keys pass through unchanged, exactly like line/bar form', () => {
+    const overrides = {
+      frameBackground: { kind: 'solid' as const, hex: '#ff0000' },
+      framePadding: 'large' as const,
+      frameCorners: 'veryRounded' as const,
+      frameShadow: 'strong' as const,
+      frameInset: 'large' as const,
+      frameAspect: '16:9' as const,
+    };
+    for (const ctx of [lineCtx, barCtx, tableCtx]) {
+      const r = resolvePresentation(ctx, overrides);
+      expect(r.values.frameBackground).toEqual(overrides.frameBackground);
+      expect(r.values.framePadding).toBe('large');
+      expect(r.values.frameCorners).toBe('veryRounded');
+      expect(r.values.frameShadow).toBe('strong');
+      expect(r.values.frameInset).toBe('large');
+      expect(r.values.frameAspect).toBe('16:9');
+      for (const key of ['frameBackground', 'framePadding', 'frameCorners', 'frameShadow', 'frameInset', 'frameAspect'] as const) {
+        expect(r.applicable.has(key)).toBe(true);
+      }
+    }
   });
 
   it('WP218 phase 4: a language override is not pristine, exactly like any other chosen value', () => {
@@ -212,6 +285,29 @@ describe('sanitizeOverrides — allow-list, never throws', () => {
     expect(sanitizeOverrides({ language: 'fr' })).toEqual({});
     expect(sanitizeOverrides({ language: 1 })).toEqual({});
   });
+
+  it('accepts each valid frame value', () => {
+    expect(sanitizeOverrides({ frameBackground: 'none' })).toEqual({ frameBackground: 'none' });
+    expect(sanitizeOverrides({ frameBackground: { kind: 'solid', hex: '#ABCDEF' } })).toEqual({
+      frameBackground: { kind: 'solid', hex: '#abcdef' },
+    });
+    expect(sanitizeOverrides({ frameBackground: { kind: 'gradient', from: '#fde68a', to: '#f472b6' } })).toEqual({
+      frameBackground: { kind: 'gradient', from: '#fde68a', to: '#f472b6' },
+    });
+    expect(sanitizeOverrides({ frameBackground: { kind: 'image' } })).toEqual({ frameBackground: { kind: 'image' } });
+    expect(sanitizeOverrides({ framePadding: 'large' })).toEqual({ framePadding: 'large' });
+    expect(sanitizeOverrides({ frameCorners: 'veryRounded' })).toEqual({ frameCorners: 'veryRounded' });
+    expect(sanitizeOverrides({ frameShadow: 'strong' })).toEqual({ frameShadow: 'strong' });
+    expect(sanitizeOverrides({ frameInset: 'small' })).toEqual({ frameInset: 'small' });
+    expect(sanitizeOverrides({ frameAspect: '4:5' })).toEqual({ frameAspect: '4:5' });
+  });
+
+  it('drops invalid frame values without throwing', () => {
+    expect(sanitizeOverrides({ framePadding: 'huge' })).toEqual({});
+    expect(sanitizeOverrides({ frameBackground: { kind: 'solid', hex: '#abc' } })).toEqual({});
+    expect(sanitizeOverrides({ frameBackground: { kind: 'gradient', from: '#fde68a' } })).toEqual({});
+    expect(sanitizeOverrides({ frameBackground: { kind: 'image', extra: 'nope' } })).toEqual({});
+  });
 });
 
 describe('geometry helpers', () => {
@@ -261,6 +357,79 @@ describe('colours — normalise, contrast, judge', () => {
     expect(judgeColor('#3a3a3a')).toEqual({ ok: true, warning: 'dark' });
     expect(judgeColor('#ff0000')).toEqual({ ok: true, warning: null });
     expect(contrastRatio('#ffc658', CARD_LIGHT)).toBeLessThan(3);
+  });
+});
+
+describe('frame', () => {
+  it('frameAspectRatio maps each named aspect, auto is null', () => {
+    expect(frameAspectRatio('auto')).toBeNull();
+    expect(frameAspectRatio('16:9')).toBeCloseTo(16 / 9, 5);
+    expect(frameAspectRatio('4:5')).toBeCloseTo(4 / 5, 5);
+    expect(frameAspectRatio('1:1')).toBe(1);
+    expect(frameAspectRatio('1.91:1')).toBeCloseTo(1.91, 5);
+  });
+
+  it('FRAME_PADDING_PX / FRAME_CORNER_PX / FRAME_INSET_PX / FRAME_SHADOW match the brief', () => {
+    expect(FRAME_PADDING_PX).toEqual({ none: 0, small: 16, medium: 32, large: 56 });
+    expect(FRAME_CORNER_PX).toEqual({ square: 0, rounded: 12, veryRounded: 28 });
+    expect(FRAME_INSET_PX).toEqual({ none: 0, small: 12, large: 24 });
+    expect(FRAME_SHADOW.none).toBeNull();
+    expect(FRAME_SHADOW.soft).toEqual({ dx: 0, dy: 4, blur: 12, alpha: 0.18 });
+    expect(FRAME_SHADOW.strong).toEqual({ dx: 0, dy: 10, blur: 28, alpha: 0.32 });
+  });
+
+  it('FRAME_GRADIENT_PRESETS carries the six named lowercase-hex pairs', () => {
+    expect(FRAME_GRADIENT_PRESETS).toEqual([
+      { id: 'dawn', from: '#fde68a', to: '#f472b6' },
+      { id: 'ocean', from: '#38bdf8', to: '#1e3a8a' },
+      { id: 'forest', from: '#bbf7d0', to: '#166534' },
+      { id: 'berry', from: '#f9a8d4', to: '#7e22ce' },
+      { id: 'slate', from: '#e2e8f0', to: '#334155' },
+      { id: 'sand', from: '#fef3c7', to: '#b45309' },
+    ]);
+  });
+
+  it('frameBackdrops: inset on returns the card colours, regardless of background', () => {
+    expect(frameBackdrops({ frameBackground: 'none', frameInset: 'small' })).toEqual([CARD_LIGHT, CARD_DARK]);
+    expect(frameBackdrops({ frameBackground: { kind: 'solid', hex: '#ff0000' }, frameInset: 'large' })).toEqual([CARD_LIGHT, CARD_DARK]);
+  });
+
+  it('frameBackdrops: solid background with no inset returns its hex', () => {
+    expect(frameBackdrops({ frameBackground: { kind: 'solid', hex: '#ff0000' }, frameInset: 'none' })).toEqual(['#ff0000']);
+  });
+
+  it('frameBackdrops: gradient background with no inset returns both ends', () => {
+    expect(
+      frameBackdrops({ frameBackground: { kind: 'gradient', from: '#fde68a', to: '#f472b6' }, frameInset: 'none' }),
+    ).toEqual(['#fde68a', '#f472b6']);
+  });
+
+  it('frameBackdrops: none/image with no inset falls back to the card colours', () => {
+    expect(frameBackdrops({ frameBackground: 'none', frameInset: 'none' })).toEqual([CARD_LIGHT, CARD_DARK]);
+    expect(frameBackdrops({ frameBackground: { kind: 'image' }, frameInset: 'none' })).toEqual([CARD_LIGHT, CARD_DARK]);
+  });
+
+  it('isFramePristine is true only at the stock frame values', () => {
+    expect(
+      isFramePristine({
+        frameBackground: 'none',
+        framePadding: 'none',
+        frameCorners: 'square',
+        frameShadow: 'none',
+        frameInset: 'none',
+        frameAspect: 'auto',
+      }),
+    ).toBe(true);
+    expect(
+      isFramePristine({
+        frameBackground: 'none',
+        framePadding: 'small',
+        frameCorners: 'square',
+        frameShadow: 'none',
+        frameInset: 'none',
+        frameAspect: 'auto',
+      }),
+    ).toBe(false);
   });
 });
 
