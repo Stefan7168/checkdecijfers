@@ -6,6 +6,49 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 91 — 2026-09-09 — autonomous, six-phase build (WP218) via Subagent-Driven Development:
+per-task reviews caught one real defect per task on average; three harness gotchas (Turbopack
+and the `web/backend` symlink, a hidden Browser pane, the automation's "Return" key); the SDD
+brief script's file names collide across plans
+
+- **Per-task reviews earned their cost — and several findings were against the PLAN's own text,
+  not the implementer's.** Twenty implementation tasks, each followed by a fresh Sonnet reviewer
+  reading a packaged diff. The reviews found, among others: "Bewaar als mijn standaard" saving the
+  bar-forced zero baseline into a default that then applied to every LINE chart (the plan literally
+  said "save the effective values" — the reviewer flagged the plan, the fix drops locked keys);
+  `need_website` rendered as a failure line at the exact moment the panel should just ask for a
+  website; per-row colour drafts surviving a spec swap because series keys are positional;
+  a missing English render test; an unhandled period-label shape (`2026 januari-april`, a real
+  registered table); an exported tooltip with zero tests. **Lesson:** never tell a reviewer what
+  not to flag, and let a plan-mandated behaviour be a finding — the plan author (this session) was
+  wrong twice.
+- **Token shape of the work:** roughly 9–10 M subagent tokens for six phases (implementers 110k–
+  500k each; reviewers 95k–230k; one Opus final review). Tasks whose brief carried complete code
+  (the pure modules) cost ~110k; UI sweeps with prose specs cost 400–500k. The i18n sweep tasks
+  were the most expensive by far (two files at 415k and 455k) — a string sweep across 20 files is
+  not "mechanical" for a model, it is 200+ tool calls of careful reading.
+- **Two implementers never in parallel, but an implementer beside a read-only reviewer is fine** —
+  that overlap roughly halved wall-clock time with no conflicts across 20 tasks.
+- **Turbopack's dev server does not see NEW files behind the `web/backend → ../src` symlink that
+  were created after it started** (`Module not found: Can't resolve '../backend/chart/user-styles.ts'`
+  while `next build` and the tests were green). Restarting the dev server fixed it. Recorded in the
+  RUNBOOK's local-dev section.
+- **The Browser pane goes hidden when nobody watches; clicks then time out (30 s) but `javascript_tool`
+  still works.** Drive verification through JS (`button.click()`, DOM geometry) instead of screenshots;
+  it is also cheaper and more precise (the tilted-label clipping fix was verified by measuring the
+  first tick's bounding box, not by eye).
+- **The `computer` key action's "Return" is not "Enter":** a keydown handler checking `event.key ===
+  'Enter'` never fired for "Return"; use `key: "Enter"`.
+- **The SDD `task-brief` script writes `task-N-brief.md` regardless of the plan** — running it for a
+  second plan silently overwrites the first plan's briefs. Rename per plan (`p2-task-N-brief.md`)
+  right after extraction.
+- **The wrap-up hook fires on background-task notifications.** A system notification containing
+  the word "session" tripped the "SESSION WRAP-UP SIGNAL DETECTED" hook mid-build. It is a hook
+  false positive, not an owner signal; the ritual still runs once at the real end.
+- **Research agents that cannot write files return the deliverable as text** (the Explore agent type
+  has no Write tool); the controller has to save it — budget for that when the deliverable is long.
+- **A `docs/` test forbids "PR #<n>" links**; write "the PR" in docs.
+
 ## Session 90 — 2026-09-09 — owner-present: an owner-facing decision list written in shorthand
 stalled the decision; a logged-in local visual check is structurally blocked on this machine; two
 harness gotchas around `.env`; a Workflow script's template literal cannot contain backticks

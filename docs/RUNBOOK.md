@@ -936,6 +936,11 @@ logged-in workspace renders "DATABASE_URL is not set" errors. To run it against 
   audit rows; deleting a chat locally redacts real rows. Read-only browsing is fine; anything that
   writes is a real write.
 
+**Gotcha (session 91, 2026-09-09):** Turbopack's dev server does NOT pick up NEW files under
+`src/` (reached as `web/backend/…` through the symlink) that are created after it started — the
+page 500s with `Module not found: Can't resolve '../backend/<new file>'` while `next build` and the
+tests are green. Restart the dev server (`preview_stop` + `preview_start`, or Ctrl-C and rerun).
+
 ## Resuming after a long pause (written 2026-08-15, at the ~2-month halt)
 
 **✅ RUN 2026-08-26 (session 62, autonomous) — ~11 days into the pause, not the full ~2 months, by owner
