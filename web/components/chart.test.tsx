@@ -1880,6 +1880,22 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
     expect(container.querySelector('.recharts-line-curve')?.getAttribute('stroke-width')).toBe('2');
   });
 
+  // Review fix (chart-panel-layout, option A): `styleOpen` is now this
+  // component's own state (not remounted-away with the panel's old internal
+  // `open`), so a spec swap must reset it explicitly — proven directly here,
+  // not just inferred from the per-row-state test above.
+  it('a spec swap on the same mounted chart closes the Opmaak panel', () => {
+    const { rerender } = render(<ChartView spec={threePointSpec()} />);
+    const trigger = screen.getByRole('button', { name: 'Opmaak' });
+    fireEvent.click(trigger);
+    expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('region', { name: 'Opmaak van de grafiek' })).toBeInTheDocument();
+
+    rerender(<ChartView spec={threePointSpec({ title: 'Een andere grafiek' })} />);
+    expect(screen.getByRole('button', { name: 'Opmaak' })).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('region', { name: 'Opmaak van de grafiek' })).toBeNull();
+  });
+
   it('Standaard restores the byte-identical stock svg', () => {
     const { container } = render(<ChartView spec={threePointSpec()} />);
     // WP218 phase 1: scoped past the Opmaak trigger's own icon <svg> — see

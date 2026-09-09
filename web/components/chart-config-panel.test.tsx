@@ -9,14 +9,41 @@
 // trigger; and — the resolver's own honesty invariant, extended to the UI
 // that edits it — no digit ever appears in the panel's rendered text, open,
 // in either language.
+import { useState, type ReactNode } from 'react';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { FONT_OPTIONS, resolvePresentation, type PresentationContext } from '../lib/chart-presentation.ts';
-import { ChartConfigPanel } from './chart-config-panel.tsx';
+import { ChartConfigPanel, ChartConfigTrigger, type ChartConfigPanelProps } from './chart-config-panel.tsx';
 
 afterEach(() => {
   cleanup();
 });
+
+// Review fix (chart-panel-layout, option A): ChartConfigPanel is now a fully
+// controlled component (no more internal open state, no more portaled
+// trigger) — chart.tsx owns the boolean and renders ChartConfigTrigger
+// separately in its own tablist row. This tiny harness plays that same role
+// for the tests below, so every existing assertion (find the "Opmaak"/
+// "Style" button, click it, expect aria-expanded/the region to open) keeps
+// working unchanged: it holds the one boolean and wires the trigger and the
+// panel to the same triggerId/controlsId pair chart.tsx uses.
+function Harness(props: Omit<ChartConfigPanelProps, 'open' | 'onOpenChange' | 'triggerId'>): ReactNode {
+  const [open, setOpen] = useState(false);
+  const triggerId = `${props.idPrefix}-style-trigger`;
+  const controlsId = `${props.idPrefix}-style`;
+  return (
+    <>
+      <ChartConfigTrigger
+        open={open}
+        onToggle={() => setOpen((wasOpen) => !wasOpen)}
+        controlsId={controlsId}
+        triggerId={triggerId}
+        lang={props.lang}
+      />
+      <ChartConfigPanel {...props} open={open} onOpenChange={setOpen} triggerId={triggerId} />
+    </>
+  );
+}
 
 const lineCtx: PresentationContext = { kind: 'line', form: 'line', seriesCount: 2, hasProvisional: false };
 const barCtx: PresentationContext = { kind: 'bar', form: 'bar', seriesCount: 3, hasProvisional: false };
@@ -42,7 +69,7 @@ function openTab(tab: 'Kleuren' | 'Lettertype'): void {
 describe('ChartConfigPanel — Grafiek tab', () => {
   it('is closed by default and opens into a labelled region with three tabs', () => {
     render(
-      <ChartConfigPanel
+      <Harness
         resolved={resolvePresentation(lineCtx, {})}
         seriesMeta={meta}
         onChange={vi.fn()}
@@ -65,7 +92,7 @@ describe('ChartConfigPanel — Grafiek tab', () => {
 
   it('option A layout: each group label is its radiogroup\'s aria-labelledby target and sits in the same grid as the pills, and Tonen groups the three toggles', () => {
     render(
-      <ChartConfigPanel
+      <Harness
         resolved={resolvePresentation(lineCtx, {})}
         seriesMeta={meta}
         onChange={vi.fn()}
@@ -105,7 +132,7 @@ describe('ChartConfigPanel — Grafiek tab', () => {
   it('pre-fills every control from the resolved values, not from a stored default', () => {
     const resolved = resolvePresentation(lineCtx, { lineWidth: 'thick', grid: 'none', axisLines: 'hidden' });
     render(
-      <ChartConfigPanel resolved={resolved} seriesMeta={meta} onChange={vi.fn()} onReset={vi.fn()} idPrefix="c" />,
+      <Harness resolved={resolved} seriesMeta={meta} onChange={vi.fn()} onReset={vi.fn()} idPrefix="c" />,
     );
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
     expect(screen.getByRole('radio', { name: 'Dik' })).toHaveAttribute('aria-checked', 'true');
@@ -116,7 +143,7 @@ describe('ChartConfigPanel — Grafiek tab', () => {
   it('emits a patch for exactly the changed key', () => {
     const onChange = vi.fn();
     render(
-      <ChartConfigPanel
+      <Harness
         resolved={resolvePresentation(lineCtx, {})}
         seriesMeta={meta}
         onChange={onChange}
@@ -134,7 +161,7 @@ describe('ChartConfigPanel — Grafiek tab', () => {
   it('bar form: locked controls are disabled with a readable reason; inapplicable ones are absent', () => {
     const resolved = resolvePresentation(barCtx, {});
     render(
-      <ChartConfigPanel resolved={resolved} seriesMeta={meta} onChange={vi.fn()} onReset={vi.fn()} idPrefix="c" />,
+      <Harness resolved={resolved} seriesMeta={meta} onChange={vi.fn()} onReset={vi.fn()} idPrefix="c" />,
     );
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
     const values = screen.getByRole('button', { name: 'Waarden' });
@@ -146,7 +173,7 @@ describe('ChartConfigPanel — Grafiek tab', () => {
 
   it('Standaard is disabled while pristine and calls onReset otherwise', () => {
     const { unmount } = render(
-      <ChartConfigPanel
+      <Harness
         resolved={resolvePresentation(lineCtx, {})}
         seriesMeta={meta}
         onChange={vi.fn()}
@@ -160,7 +187,7 @@ describe('ChartConfigPanel — Grafiek tab', () => {
 
     const onReset = vi.fn();
     render(
-      <ChartConfigPanel
+      <Harness
         resolved={resolvePresentation(lineCtx, { lineWidth: 'thick' })}
         seriesMeta={meta}
         onChange={vi.fn()}
@@ -177,7 +204,7 @@ describe('ChartConfigPanel — Grafiek tab', () => {
 
   it('Escape closes the region and returns focus to the trigger', () => {
     render(
-      <ChartConfigPanel
+      <Harness
         resolved={resolvePresentation(lineCtx, {})}
         seriesMeta={meta}
         onChange={vi.fn()}
@@ -197,7 +224,7 @@ describe('ChartConfigPanel — Grafiek tab', () => {
   it('contains no digit in any text node, open, in either language', () => {
     for (const lang of ['nl', 'en'] as const) {
       const { container, unmount } = render(
-        <ChartConfigPanel
+        <Harness
           lang={lang}
           resolved={resolvePresentation(lineCtx, {})}
           seriesMeta={meta}
@@ -222,7 +249,7 @@ describe('ChartConfigPanel — Grafiek tab', () => {
   it('WP218 phase 4: the "Taal van de grafiek" select offers Zoals de app/Nederlands/English and emits the chosen language', () => {
     const onChange = vi.fn();
     render(
-      <ChartConfigPanel
+      <Harness
         resolved={resolvePresentation(lineCtx, {})}
         seriesMeta={meta}
         onChange={onChange}
@@ -243,7 +270,7 @@ describe('ChartConfigPanel — Grafiek tab', () => {
   it('WP218 phase 4: the language select pre-fills from the resolved value and renders in English under lang="en"', () => {
     const resolved = resolvePresentation(lineCtx, { language: 'en' });
     render(
-      <ChartConfigPanel lang="en" resolved={resolved} seriesMeta={meta} onChange={vi.fn()} onReset={vi.fn()} idPrefix="c2" />,
+      <Harness lang="en" resolved={resolved} seriesMeta={meta} onChange={vi.fn()} onReset={vi.fn()} idPrefix="c2" />,
     );
     fireEvent.click(screen.getByRole('button', { name: 'Style' }));
     const select = screen.getByRole('combobox', { name: 'Chart language' }) as HTMLSelectElement;
@@ -253,7 +280,7 @@ describe('ChartConfigPanel — Grafiek tab', () => {
 
   it('WP218 phase 5: the "why no pie or stacked chart" note is collapsed by default and opens on click', () => {
     render(
-      <ChartConfigPanel
+      <Harness
         resolved={resolvePresentation(lineCtx, {})}
         seriesMeta={meta}
         onChange={vi.fn()}
@@ -286,7 +313,7 @@ describe('ChartConfigPanel — Grafiek tab', () => {
 
   it('WP218 phase 5: the "why no pie or stacked chart" note renders in English under lang="en"', () => {
     render(
-      <ChartConfigPanel
+      <Harness
         lang="en"
         resolved={resolvePresentation(lineCtx, {})}
         seriesMeta={meta}
@@ -303,12 +330,43 @@ describe('ChartConfigPanel — Grafiek tab', () => {
       ),
     ).toBeInTheDocument();
   });
+
+  // Review finding: the footer (the "why not pie" note + the full "Standaard"
+  // reset) is a property of the Grafiek tab only now — on Kleuren it used to
+  // sit right beside "Standaardkleuren", showing two resets side by side.
+  it('the footer\'s Standaard (and the "why not" note) shows only on the Grafiek tab, not on Kleuren or Lettertype', () => {
+    render(
+      <Harness
+        resolved={resolvePresentation(lineCtx, { lineWidth: 'thick' })}
+        seriesMeta={colorMeta}
+        onChange={vi.fn()}
+        onReset={vi.fn()}
+        idPrefix="footer1"
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    expect(screen.getByRole('button', { name: 'Standaard' })).toBeInTheDocument();
+    expect(screen.getByText('Waarom geen taart- of gestapelde grafiek?')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Kleuren' }));
+    expect(screen.queryByRole('button', { name: 'Standaard' })).toBeNull();
+    expect(screen.queryByText('Waarom geen taart- of gestapelde grafiek?')).toBeNull();
+    // Kleuren keeps its own, separate reset.
+    expect(screen.getByRole('button', { name: 'Standaardkleuren' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Lettertype' }));
+    expect(screen.queryByRole('button', { name: 'Standaard' })).toBeNull();
+    expect(screen.queryByText('Waarom geen taart- of gestapelde grafiek?')).toBeNull();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
+    expect(screen.getByRole('button', { name: 'Standaard' })).toBeInTheDocument();
+  });
 });
 
 describe('ChartConfigPanel — Kleuren tab', () => {
   it('an untouched default colour never warns, even a weak palette entry (the stock look is the owner\'s accepted trade-off)', () => {
     render(
-      <ChartConfigPanel
+      <Harness
         resolved={resolvePresentation(lineCtx, {})}
         seriesMeta={colorMeta}
         onChange={vi.fn()}
@@ -322,7 +380,7 @@ describe('ChartConfigPanel — Kleuren tab', () => {
 
   it('one row per series with swatch, hex input and colour picker pre-filled with the effective colour', () => {
     render(
-      <ChartConfigPanel
+      <Harness
         resolved={resolvePresentation(lineCtx, {})}
         seriesMeta={colorMeta}
         onChange={vi.fn()}
@@ -342,7 +400,7 @@ describe('ChartConfigPanel — Kleuren tab', () => {
   it('a valid hex commits on Enter as a per-index patch; a weak colour also shows a per-theme warning', () => {
     const onChange = vi.fn();
     render(
-      <ChartConfigPanel
+      <Harness
         resolved={resolvePresentation(lineCtx, {})}
         seriesMeta={colorMeta}
         onChange={onChange}
@@ -362,7 +420,7 @@ describe('ChartConfigPanel — Kleuren tab', () => {
   it('a valid hex also commits on blur (no Enter needed)', () => {
     const onChange = vi.fn();
     render(
-      <ChartConfigPanel
+      <Harness
         resolved={resolvePresentation(lineCtx, {})}
         seriesMeta={colorMeta}
         onChange={onChange}
@@ -380,7 +438,7 @@ describe('ChartConfigPanel — Kleuren tab', () => {
   it('a colour that would hide the hollow provisional ring is refused with a reason and not emitted', () => {
     const onChange = vi.fn();
     render(
-      <ChartConfigPanel
+      <Harness
         resolved={resolvePresentation(lineCtx, {})}
         seriesMeta={colorMeta}
         onChange={onChange}
@@ -400,7 +458,7 @@ describe('ChartConfigPanel — Kleuren tab', () => {
   it('garbage in the hex box is ignored and snaps back', () => {
     const onChange = vi.fn();
     render(
-      <ChartConfigPanel
+      <Harness
         resolved={resolvePresentation(lineCtx, {})}
         seriesMeta={colorMeta}
         onChange={onChange}
@@ -420,7 +478,7 @@ describe('ChartConfigPanel — Kleuren tab', () => {
   it('the colour picker commits through the same judge path as the hex box', () => {
     const onChange = vi.fn();
     render(
-      <ChartConfigPanel
+      <Harness
         resolved={resolvePresentation(lineCtx, {})}
         seriesMeta={colorMeta}
         onChange={onChange}
@@ -438,7 +496,7 @@ describe('ChartConfigPanel — Kleuren tab', () => {
 
   it('Standaardkleuren is disabled while no colour override exists', () => {
     render(
-      <ChartConfigPanel
+      <Harness
         resolved={resolvePresentation(lineCtx, {})}
         seriesMeta={colorMeta}
         onChange={vi.fn()}
@@ -453,7 +511,7 @@ describe('ChartConfigPanel — Kleuren tab', () => {
   it('Standaardkleuren clears all colour overrides', () => {
     const onChange = vi.fn();
     render(
-      <ChartConfigPanel
+      <Harness
         resolved={resolvePresentation(lineCtx, { seriesColors: { 0: '#ffc658' } })}
         seriesMeta={colorMeta}
         onChange={onChange}
@@ -470,7 +528,7 @@ describe('ChartConfigPanel — Kleuren tab', () => {
 
   it('hex codes never appear as text nodes (only as input values)', () => {
     const { container } = render(
-      <ChartConfigPanel
+      <Harness
         resolved={resolvePresentation(lineCtx, {})}
         seriesMeta={colorMeta}
         onChange={vi.fn()}
@@ -491,7 +549,7 @@ describe('ChartConfigPanel — Kleuren tab', () => {
   it('re-syncs the hex textbox and clears the warning once the effective colour resets to the palette default (Standaardkleuren)', () => {
     const onChange = vi.fn();
     const { rerender } = render(
-      <ChartConfigPanel
+      <Harness
         resolved={resolvePresentation(lineCtx, {})}
         seriesMeta={colorMeta}
         onChange={onChange}
@@ -508,7 +566,7 @@ describe('ChartConfigPanel — Kleuren tab', () => {
     // The parent applies the patch and re-resolves (the real chart.tsx
     // flow): the effective colour for Amsterdam now reflects the commit.
     rerender(
-      <ChartConfigPanel
+      <Harness
         resolved={resolvePresentation(lineCtx, { seriesColors: { 0: '#ffc658' } })}
         seriesMeta={[{ ...colorMeta[0]!, color: '#ffc658' }, colorMeta[1]!]}
         onChange={onChange}
@@ -519,7 +577,7 @@ describe('ChartConfigPanel — Kleuren tab', () => {
 
     // Standaardkleuren: overrides cleared, Amsterdam back to its default.
     rerender(
-      <ChartConfigPanel
+      <Harness
         resolved={resolvePresentation(lineCtx, {})}
         seriesMeta={colorMeta}
         onChange={onChange}
@@ -539,7 +597,7 @@ describe('ChartConfigPanel — Kleuren tab', () => {
   it('a warning shown right after a commit disappears once the effective colour changes to something else', () => {
     const onChange = vi.fn();
     const { rerender } = render(
-      <ChartConfigPanel
+      <Harness
         resolved={resolvePresentation(lineCtx, {})}
         seriesMeta={colorMeta}
         onChange={onChange}
@@ -555,7 +613,7 @@ describe('ChartConfigPanel — Kleuren tab', () => {
     expect(within(amsterdamRow()).getByText('Deze kleur is slecht leesbaar in het lichte thema.')).toBeInTheDocument();
 
     rerender(
-      <ChartConfigPanel
+      <Harness
         resolved={resolvePresentation(lineCtx, { seriesColors: { 0: '#ff0000' } })}
         seriesMeta={[{ ...colorMeta[0]!, color: '#ff0000' }, colorMeta[1]!]}
         onChange={onChange}
@@ -569,7 +627,7 @@ describe('ChartConfigPanel — Kleuren tab', () => {
   it('a refusal alert clears once the effective colour changes from outside', () => {
     const onChange = vi.fn();
     const { rerender } = render(
-      <ChartConfigPanel
+      <Harness
         resolved={resolvePresentation(lineCtx, {})}
         seriesMeta={colorMeta}
         onChange={onChange}
@@ -584,7 +642,7 @@ describe('ChartConfigPanel — Kleuren tab', () => {
     expect(screen.getByRole('alert')).toBeInTheDocument();
 
     rerender(
-      <ChartConfigPanel
+      <Harness
         resolved={resolvePresentation(lineCtx, { seriesColors: { 0: '#ff0000' } })}
         seriesMeta={[{ ...colorMeta[0]!, color: '#ff0000' }, colorMeta[1]!]}
         onChange={onChange}
@@ -598,7 +656,7 @@ describe('ChartConfigPanel — Kleuren tab', () => {
   it('Enter followed by blur with the identical value commits only once', () => {
     const onChange = vi.fn();
     render(
-      <ChartConfigPanel
+      <Harness
         resolved={resolvePresentation(lineCtx, {})}
         seriesMeta={colorMeta}
         onChange={onChange}
@@ -617,7 +675,7 @@ describe('ChartConfigPanel — Kleuren tab', () => {
   it('the colour picker also refuses a bad colour without emitting onChange', () => {
     const onChange = vi.fn();
     render(
-      <ChartConfigPanel
+      <Harness
         resolved={resolvePresentation(lineCtx, {})}
         seriesMeta={colorMeta}
         onChange={onChange}
@@ -641,7 +699,7 @@ describe('ChartConfigPanel — Kleuren tab', () => {
 describe('ChartConfigPanel — WP218 phase 3 (owner B): Merkkleuren block', () => {
   it('no brand prop → no block at all', () => {
     render(
-      <ChartConfigPanel
+      <Harness
         resolved={resolvePresentation(lineCtx, {})}
         seriesMeta={colorMeta}
         onChange={vi.fn()}
@@ -669,7 +727,7 @@ describe('ChartConfigPanel — WP218 phase 3 (owner B): Merkkleuren block', () =
       },
     });
     render(
-      <ChartConfigPanel
+      <Harness
         resolved={resolvePresentation(lineCtx, {})}
         seriesMeta={colorMeta}
         onChange={onChange}
@@ -710,7 +768,7 @@ describe('ChartConfigPanel — WP218 phase 3 (owner B): Merkkleuren block', () =
       },
     });
     render(
-      <ChartConfigPanel
+      <Harness
         resolved={resolvePresentation(lineCtx, {})}
         seriesMeta={colorMeta}
         onChange={onChange}
@@ -732,7 +790,7 @@ describe('ChartConfigPanel — WP218 phase 3 (owner B): Merkkleuren block', () =
   it('need_website shows NO failure line — it just asks for the website (P3 task-4 review)', async () => {
     const lookup = vi.fn().mockResolvedValue({ ok: false, reason: 'need_website' });
     render(
-      <ChartConfigPanel
+      <Harness
         resolved={resolvePresentation(lineCtx, {})}
         seriesMeta={colorMeta}
         onChange={vi.fn()}
@@ -754,7 +812,7 @@ describe('ChartConfigPanel — WP218 phase 3 (owner B): Merkkleuren block', () =
       brand: { name: 'Drie BV', domain: 'drie.nl', colors: ['#ff7300', '#0088fe', '#00c49f'], font: null, fetchedAt: '2026-01-01T00:00:00.000Z', cached: false },
     });
     render(
-      <ChartConfigPanel
+      <Harness
         resolved={resolvePresentation(lineCtx, {})}
         seriesMeta={colorMeta}
         onChange={onChange}
@@ -786,7 +844,7 @@ describe('ChartConfigPanel — WP218 phase 3 (owner B): Merkkleuren block', () =
         },
       });
     render(
-      <ChartConfigPanel
+      <Harness
         resolved={resolvePresentation(lineCtx, {})}
         seriesMeta={colorMeta}
         onChange={vi.fn()}
@@ -819,7 +877,7 @@ describe('ChartConfigPanel — WP218 phase 3 (owner B): Merkkleuren block', () =
       const onChange = vi.fn();
       const lookup = vi.fn().mockResolvedValue({ ok: false, reason });
       const { unmount } = render(
-        <ChartConfigPanel
+        <Harness
           resolved={resolvePresentation(lineCtx, {})}
           seriesMeta={colorMeta}
           onChange={onChange}
@@ -845,7 +903,7 @@ describe('ChartConfigPanel — WP218 phase 3 (owner B): Merkkleuren block', () =
         }),
     );
     render(
-      <ChartConfigPanel
+      <Harness
         resolved={resolvePresentation(lineCtx, {})}
         seriesMeta={colorMeta}
         onChange={vi.fn()}
@@ -876,7 +934,7 @@ describe('ChartConfigPanel — WP218 phase 3 (owner B): Merkkleuren block', () =
       },
     });
     render(
-      <ChartConfigPanel
+      <Harness
         lang="en"
         resolved={resolvePresentation(lineCtx, {})}
         seriesMeta={colorMeta}
@@ -903,7 +961,7 @@ describe('ChartConfigPanel — Lettertype tab', () => {
   it('lists Standaard + the curated families and emits fontFamily', () => {
     const onChange = vi.fn();
     render(
-      <ChartConfigPanel
+      <Harness
         resolved={resolvePresentation(lineCtx, {})}
         seriesMeta={colorMeta}
         onChange={onChange}
@@ -922,7 +980,7 @@ describe('ChartConfigPanel — Lettertype tab', () => {
   it('pre-fills from the resolved font, and choosing Standaard clears it', () => {
     const onChange = vi.fn();
     render(
-      <ChartConfigPanel
+      <Harness
         resolved={resolvePresentation(lineCtx, { fontFamily: 'Lato' })}
         seriesMeta={colorMeta}
         onChange={onChange}
@@ -939,7 +997,7 @@ describe('ChartConfigPanel — Lettertype tab', () => {
 
   it('final-review fix: a fontFamily outside the curated FONT_OPTIONS (a brand font) shows as its own selected option, not a blank select', () => {
     render(
-      <ChartConfigPanel
+      <Harness
         resolved={resolvePresentation(lineCtx, { fontFamily: 'Poppins' })}
         seriesMeta={colorMeta}
         onChange={vi.fn()}
@@ -963,7 +1021,7 @@ describe('ChartConfigPanel — Lettertype tab', () => {
 describe('ChartConfigPanel — WP218 phase 2 (owner C): account default row', () => {
   it('no account prop → no row at all (Ontdek/trial)', () => {
     render(
-      <ChartConfigPanel
+      <Harness
         resolved={resolvePresentation(lineCtx, {})}
         seriesMeta={meta}
         onChange={vi.fn()}
@@ -978,7 +1036,7 @@ describe('ChartConfigPanel — WP218 phase 2 (owner C): account default row', ()
 
   it('hasDefault false: only the save button is offered', () => {
     render(
-      <ChartConfigPanel
+      <Harness
         resolved={resolvePresentation(lineCtx, {})}
         seriesMeta={meta}
         onChange={vi.fn()}
@@ -996,7 +1054,7 @@ describe('ChartConfigPanel — WP218 phase 2 (owner C): account default row', ()
   it('hasDefault true + pristine: the hint shows above the Grafiek controls; a per-chart tweak hides it again', () => {
     const account = { hasDefault: true, onSave: vi.fn(), onForget: vi.fn() };
     const { rerender } = render(
-      <ChartConfigPanel
+      <Harness
         resolved={resolvePresentation(lineCtx, {})}
         seriesMeta={meta}
         onChange={vi.fn()}
@@ -1010,7 +1068,7 @@ describe('ChartConfigPanel — WP218 phase 2 (owner C): account default row', ()
     expect(screen.getByRole('button', { name: 'Vergeet mijn standaard' })).toBeInTheDocument();
 
     rerender(
-      <ChartConfigPanel
+      <Harness
         resolved={resolvePresentation(lineCtx, { lineWidth: 'thick' })}
         seriesMeta={meta}
         onChange={vi.fn()}
@@ -1025,7 +1083,7 @@ describe('ChartConfigPanel — WP218 phase 2 (owner C): account default row', ()
   it('save flow: Opgeslagen. on ok, calls onSave exactly once', async () => {
     const onSave = vi.fn().mockResolvedValue('saved');
     render(
-      <ChartConfigPanel
+      <Harness
         resolved={resolvePresentation(lineCtx, {})}
         seriesMeta={meta}
         onChange={vi.fn()}
@@ -1043,7 +1101,7 @@ describe('ChartConfigPanel — WP218 phase 2 (owner C): account default row', ()
   it('save flow: the digit-free "unavailable" line on that outcome', async () => {
     const onSave = vi.fn().mockResolvedValue('unavailable');
     render(
-      <ChartConfigPanel
+      <Harness
         resolved={resolvePresentation(lineCtx, {})}
         seriesMeta={meta}
         onChange={vi.fn()}
@@ -1060,7 +1118,7 @@ describe('ChartConfigPanel — WP218 phase 2 (owner C): account default row', ()
   it('save flow: the generic error line on a thrown/failed outcome', async () => {
     const onSave = vi.fn().mockResolvedValue('error');
     render(
-      <ChartConfigPanel
+      <Harness
         resolved={resolvePresentation(lineCtx, {})}
         seriesMeta={meta}
         onChange={vi.fn()}
@@ -1077,7 +1135,7 @@ describe('ChartConfigPanel — WP218 phase 2 (owner C): account default row', ()
   it('forget flow: Vergeten. on success, calls onForget exactly once', async () => {
     const onForget = vi.fn().mockResolvedValue('forgotten');
     render(
-      <ChartConfigPanel
+      <Harness
         resolved={resolvePresentation(lineCtx, {})}
         seriesMeta={meta}
         onChange={vi.fn()}
@@ -1101,7 +1159,7 @@ describe('ChartConfigPanel — WP218 phase 2 (owner C): account default row', ()
         }),
     );
     render(
-      <ChartConfigPanel
+      <Harness
         resolved={resolvePresentation(lineCtx, {})}
         seriesMeta={meta}
         onChange={vi.fn()}
@@ -1125,7 +1183,7 @@ describe('ChartConfigPanel — WP218 phase 2 (owner C): account default row', ()
   it('English: row + hint copy, and every text node stays digit-free with the row shown', async () => {
     const onSave = vi.fn().mockResolvedValue('saved');
     render(
-      <ChartConfigPanel
+      <Harness
         lang="en"
         resolved={resolvePresentation(lineCtx, {})}
         seriesMeta={meta}

@@ -28,7 +28,6 @@
 // them (the Colours tab needs `seriesMeta`, unused by this task's Grafiek
 // tab but already part of the props contract so Task 6 is additive).
 import { Fragment, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
-import { createPortal } from 'react-dom';
 import { SlidersHorizontal } from 'lucide-react';
 import {
   FONT_OPTIONS,
@@ -371,26 +370,25 @@ export interface ChartConfigPanelProps {
   onReset: () => void;
   idPrefix: string;
   lang?: PanelLang;
-  /** Chart-panel-layout refactor (owner: option A — the "Opmaak" trigger
-   * stays in the Weergave tablist row, the region it opens now renders below
-   * the chart instead of wrapping under that same row). A component's
-   * return value is one subtree at one place in its caller's tree, so this
-   * component can't place its own trigger and region in two different spots
-   * of chart.tsx's JSX by itself — `triggerSlot`, when given, is a DOM node
-   * chart.tsx renders inside its Weergave tablist row; the trigger button
-   * portals into it (`react-dom`'s `createPortal`) instead of rendering
-   * inline, while the region still renders in place (wherever chart.tsx
-   * mounts this component — right after the chart's own tabpanel). Optional:
-   * omitted, this component renders exactly as it did before this refactor
-   * (trigger and region as adjacent siblings) — chart-config-panel.test.tsx
-   * never passes it, so every existing assertion keeps finding the trigger
-   * inline. chart.tsx keeps mounting this component with `key={chartEpoch}`
-   * exactly as before — the remount-per-chart behaviour (open/colour-draft/
-   * brand-status state reset on a spec swap) is unchanged by this prop. */
-  triggerSlot?: HTMLElement | null;
-  /** WP218 phase 6: fired once each time the panel opens; optional and
-   * unused by this task (no phase-6 consumer exists yet). */
-  onOpen?: () => void;
+  /** Review fix (chart-panel-layout, option A): the previous version of this
+   * refactor tried to keep one mounted instance's trigger inside the
+   * Weergave tablist row via `createPortal` into a `triggerSlot` DOM node —
+   * verified in a real browser, the portaled node never actually moved into
+   * that row and the trigger was inert (`aria-expanded` never changed on
+   * click), so the panel could not be opened at all in production. Fixed by
+   * lifting the open/closed boolean itself to the caller (chart.tsx's
+   * `styleOpen`) and splitting the trigger into its own `ChartConfigTrigger`
+   * component below, which the caller renders directly inside the tablist
+   * row — no portal, no placeholder node. This component is now fully
+   * controlled: it never decides whether the region is open, only what's
+   * inside it once it is. */
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  /** The trigger's own DOM id — the caller builds it once and hands the
+   * same string to both `ChartConfigTrigger` and here, since the only thing
+   * this component needs it for is refocusing the trigger when Escape
+   * closes the region. */
+  triggerId: string;
   /** WP218 phase 2 (owner C): present only for a signed-in visitor
    * (chart.tsx passes it exactly when `useChartStyle().signedIn`) — absent
    * for Ontdek/trial, which renders no account-default row at all. */
@@ -405,6 +403,46 @@ export interface ChartConfigPanelProps {
   onBrandApplied?: (applied: AppliedBrand) => void;
 }
 
+/** The "Opmaak"/"Style" trigger button — split out of `ChartConfigPanel` by
+ * the review fix above so the caller can render it directly wherever it
+ * belongs (chart.tsx: the Weergave tablist row) with no portal involved. A
+ * plain controlled button: `open` drives `aria-expanded`, `onToggle` is the
+ * caller's own toggle handler (also where the caller fires its
+ * once-per-open `panel_open` usage-counter event — this component has no
+ * opinion on that). `controlsId` must be the exact same string
+ * `ChartConfigPanel` builds its region's `id` from (`${idPrefix}-style`) so
+ * `aria-controls` actually resolves to it. */
+export interface ChartConfigTriggerProps {
+  open: boolean;
+  onToggle: () => void;
+  controlsId: string;
+  triggerId: string;
+  lang?: PanelLang;
+}
+
+export function ChartConfigTrigger({
+  open,
+  onToggle,
+  controlsId,
+  triggerId,
+  lang = 'nl',
+}: ChartConfigTriggerProps): ReactNode {
+  return (
+    <Button
+      id={triggerId}
+      type="button"
+      variant="ghost"
+      size="sm"
+      aria-expanded={open}
+      aria-controls={controlsId}
+      onClick={onToggle}
+    >
+      <SlidersHorizontal aria-hidden="true" />
+      {t(lang, 'chart.panel.trigger')}
+    </Button>
+  );
+}
+
 export function ChartConfigPanel({
   resolved,
   seriesMeta,
@@ -412,14 +450,14 @@ export function ChartConfigPanel({
   onReset,
   idPrefix,
   lang = 'nl',
-  triggerSlot,
-  onOpen,
+  open,
+  onOpenChange,
+  triggerId,
   account,
   brand,
   onBrandApplied,
 }: ChartConfigPanelProps): ReactNode {
   const copy = buildPanelCopy(lang);
-  const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabKey>('chart');
   // WP218 phase 2: shared by both account-row buttons — a save/forget round
   // trip disables both while pending (never two in flight for the same
@@ -611,21 +649,12 @@ export function ChartConfigPanel({
     onChange({ seriesColors: { ...currentColors, [index]: hex } });
   }
 
-  const triggerId = `${idPrefix}-style-trigger`;
   const regionId = `${idPrefix}-style`;
   const tabId = (key: TabKey) => `${idPrefix}-style-tab-${key}`;
   const panelId = (key: TabKey) => `${idPrefix}-style-panel-${key}`;
 
-  function toggleOpen(): void {
-    // Side effect outside the state updater: React may invoke an updater
-    // twice (Strict Mode) and requires it to be pure — `onOpen` must fire
-    // exactly once per open (task-5 review finding).
-    if (!open) onOpen?.();
-    setOpen(!open);
-  }
-
   function closeAndRefocus(): void {
-    setOpen(false);
+    onOpenChange(false);
     document.getElementById(triggerId)?.focus();
   }
 
@@ -684,33 +713,13 @@ export function ChartConfigPanel({
   const visibleToggles = toggles.filter((toggle) => resolved.applicable.has(toggle.key));
   const showGroupLabelId = `${idPrefix}-style-label-show`;
 
-  const triggerNode = (
-    <Button
-      id={triggerId}
-      type="button"
-      variant="ghost"
-      size="sm"
-      aria-expanded={open}
-      aria-controls={regionId}
-      onClick={toggleOpen}
-    >
-      <SlidersHorizontal aria-hidden="true" />
-      {copy.trigger}
-    </Button>
-  );
-  // `triggerSlot`'s own comment on ChartConfigPanelProps: portal the trigger
-  // there when chart.tsx supplies one (option A layout), else render it
-  // inline exactly as before — the branch chart-config-panel.test.tsx
-  // exercises, since it never passes `triggerSlot`.
-  const trigger = triggerSlot ? createPortal(triggerNode, triggerSlot) : triggerNode;
-
   const region = open ? (
     <section
       id={regionId}
       role="region"
       aria-label={copy.regionLabel}
       onKeyDown={onRegionKeyDown}
-      className="basis-full mt-2 rounded-lg border border-border bg-muted/40 p-3 text-xs"
+      className="mt-2 rounded-lg border border-border bg-muted/40 p-3 text-xs"
     >
       {/* Layout refactor (owner: option A): the region's header row is now
         * common to every tab — the Grafiek/Kleuren/Lettertype tablist on the
@@ -1024,28 +1033,29 @@ export function ChartConfigPanel({
         </div>
       ) : null}
 
-      {/* Owner decision (option A, compact grid): a footer row visible
-        * regardless of the active tab, the same "whole panel, not any one
-        * tab" reasoning as the account row just below (and, before this
-        * layout refactor, Standaard/the "why not" note lived inside the
-        * Grafiek tabpanel only — Standaard resets EVERY tab's overrides, not
-        * just Grafiek's, per `resolved.pristine`'s own definition, so moving
-        * it here means a reader can reset from Kleuren/Lettertype too). */}
-      <div className="mt-3 flex items-center justify-between gap-2 border-t border-border pt-3">
-        {/* WP218 phase 5 (chart-types plan, Task 3): one collapsed note
-          * explaining why pie/donut, stacked, scatter and sorted-by-value
-          * forms are never offered — collapsed by default so it doesn't
-          * compete with the controls above, plain <details>/<summary> rather
-          * than a JS-driven disclosure (cheapest mechanism first: the
-          * browser already does open/close). */}
-        <details className="text-xs text-muted-foreground">
-          <summary>{copy.whyNotTitle}</summary>
-          <p>{copy.whyNotBody}</p>
-        </details>
-        <Button type="button" variant="outline" size="xs" disabled={resolved.pristine} onClick={onReset}>
-          {copy.reset}
-        </Button>
-      </div>
+      {/* Review fix: this footer (the "why not pie" note + the full
+        * "Standaard" reset) renders only on the Grafiek tab now — on Kleuren
+        * it used to sit beside "Standaardkleuren", showing two resets side
+        * by side. `resolved.pristine` still reflects EVERY tab's overrides
+        * (Standaard, when shown, still resets all of them), this only
+        * changes which tab the button itself is visible on. */}
+      {activeTab === 'chart' ? (
+        <div className="mt-3 flex items-center justify-between gap-2 border-t border-border pt-3">
+          {/* WP218 phase 5 (chart-types plan, Task 3): one collapsed note
+            * explaining why pie/donut, stacked, scatter and sorted-by-value
+            * forms are never offered — collapsed by default so it doesn't
+            * compete with the controls above, plain <details>/<summary> rather
+            * than a JS-driven disclosure (cheapest mechanism first: the
+            * browser already does open/close). */}
+          <details className="text-xs text-muted-foreground">
+            <summary>{copy.whyNotTitle}</summary>
+            <p>{copy.whyNotBody}</p>
+          </details>
+          <Button type="button" variant="outline" size="xs" disabled={resolved.pristine} onClick={onReset}>
+            {copy.reset}
+          </Button>
+        </div>
+      ) : null}
 
       {/* WP218 phase 2 (owner C): a footer row visible regardless of the
         * active tab (unlike the tabpanel bodies above) — the account
@@ -1078,10 +1088,5 @@ export function ChartConfigPanel({
     </section>
   ) : null;
 
-  return (
-    <>
-      {trigger}
-      {region}
-    </>
-  );
+  return region;
 }

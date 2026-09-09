@@ -68,7 +68,7 @@ import { t, type Lang } from '../lib/i18n/messages.ts';
 // header for why (the usage-actions.ts precedent this mirrors).
 import { forgetMyChartStyle, lookupBrand, saveMyChartStyle } from '../app/chart-style-actions.ts';
 import { ensureFontLoaded } from '../lib/font-loader.ts';
-import { ChartConfigPanel } from './chart-config-panel.tsx';
+import { ChartConfigPanel, ChartConfigTrigger } from './chart-config-panel.tsx';
 import { ChartDownloadMenu } from './chart-download.tsx';
 import { ChartNotes, type ChartNote, type PendingPoint } from './chart-notes.tsx';
 import { ChartSmallMultiples } from './chart-small-multiples.tsx';
@@ -1120,18 +1120,24 @@ export function ChartView({
   // chart's series. The panel is remounted per chart via this epoch — the
   // same "each chart starts fresh" the reducer's `reset` gives the overrides.
   const [chartEpoch, setChartEpoch] = useState(0);
-  // Chart-panel-layout refactor (owner: option A — the "Opmaak" trigger
-  // stays in the Weergave tablist row, the region it opens now renders below
-  // the chart instead of wrapping under that same row). ChartConfigPanel
-  // mounts once, below the chart (see its own JSX further down), and portals
-  // its trigger button into this DOM node instead of rendering it inline —
-  // the node itself is a placeholder rendered inside the tablist row, set via
-  // a callback ref once React actually mounts it (hence the state: a portal
-  // needs a real, already-mounted DOM node, which isn't available on the
-  // very first render). Declared here, well above the `schemaVersion` guard
-  // below, so this `useState` call itself is never conditionally skipped —
-  // the same reason `chartLang`'s `useLang()` sits above that guard too.
-  const [triggerSlot, setTriggerSlot] = useState<HTMLElement | null>(null);
+  // Review fix (chart-panel-layout, option A): the previous version of this
+  // refactor tried to keep the "Opmaak" trigger inside the Weergave tablist
+  // row by portaling it into a placeholder DOM node set via a callback ref —
+  // verified in a real browser, the portaled node never actually moved into
+  // that row and the trigger did nothing when clicked (`aria-expanded` never
+  // changed), so the panel could not be opened at all in production. Fixed
+  // by lifting just the open/closed boolean here instead: `ChartConfigPanel`
+  // is now a fully controlled component and `ChartConfigTrigger` (also
+  // exported by chart-config-panel.tsx) renders directly in the tablist row
+  // below — no portal, no placeholder node. Declared here, well above the
+  // `schemaVersion` guard below, so this `useState` call itself is never
+  // conditionally skipped — the same reason `chartLang`'s `useLang()` sits
+  // above that guard too. Reset to `false` in the spec-swap block right
+  // below (owner decision E: each chart starts fresh) — unlike the old
+  // portal version, this state now lives in THIS component, not in the
+  // remounted-per-epoch ChartConfigPanel, so it would otherwise survive a
+  // spec swap on its own.
+  const [styleOpen, setStyleOpen] = useState(false);
   // WP218 phase 3 (owner B): the last brand a signed-in visitor actually
   // applied via "Pas merkkleuren toe" — deliberately NOT reset by the spec-
   // swap block below (unlike notes/pendingPoint), because it describes
@@ -1155,6 +1161,7 @@ export function ChartView({
     setAxisMode('shared');
     setNotes([]);
     setPendingPoint(null);
+    setStyleOpen(false);
   }
 
   // Task 3: a real three-way Lijn/Staaf/Tabel switch. Computed here, ABOVE
@@ -1522,6 +1529,23 @@ export function ChartView({
     selectForm(FORM_ORDER[nextIdx]);
   }
 
+  // Review fix (chart-panel-layout, option A): these two ids are the ONLY
+  // link between the trigger rendered here and the region ChartConfigPanel
+  // renders further down — `styleControlsId` must equal exactly what
+  // ChartConfigPanel builds internally from its own `idPrefix` prop
+  // (`${idPrefix}-style`) so the trigger's `aria-controls` actually resolves.
+  const styleTriggerId = `${domId}-style-trigger`;
+  const styleControlsId = `${domId}-style`;
+
+  function toggleStylePanel(): void {
+    // Side effect outside the state updater: React may invoke an updater
+    // twice (Strict Mode) and requires it to be pure — the usage counter
+    // must fire exactly once per open (task-5 review finding, carried over
+    // from the panel's own former toggleOpen).
+    if (!styleOpen) trackChartStyleEvent('panel_open');
+    setStyleOpen((wasOpen) => !wasOpen);
+  }
+
   // Session 87 (mockup Option B): the Grafiek/Tabel switch is a shadcn-style
   // segment (muted track, raised active segment); the small-multiples and
   // axis toggles are quiet pills.
@@ -1547,11 +1571,11 @@ export function ChartView({
       <div className="text-xs text-muted-foreground">{displaySpec.unit}</div>
       {/* WP218 phase 1 (Task 7), updated by the option-A layout refactor: the
         * Weergave tablist and the Opmaak trigger share one row — the trigger
-        * itself is portaled in from ChartConfigPanel, mounted further down
-        * (see `triggerSlot` below and the panel's own mount point after the
-        * chart) — the tablist's own `mt-3` moved up onto this wrapper so the
-        * row keeps its original top spacing regardless of whether the
-        * trigger is offered. */}
+        * (`ChartConfigTrigger`, rendered directly here — see the review-fix
+        * comment on `styleOpen` above) is a plain row-mate of the tablist,
+        * not a child of it — the tablist's own `mt-3` moved up onto this
+        * wrapper so the row keeps its original top spacing regardless of
+        * whether the trigger is offered. */}
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <div
           role="tablist"
@@ -1648,18 +1672,21 @@ export function ChartView({
             {hbarDisabledReason}
           </span>
         ) : null}
-        {/* Chart-panel-layout refactor (owner: option A): the "Opmaak"
-          * trigger's portal target — ChartConfigPanel mounts below the chart
-          * (see its own JSX further down) and portals its trigger button
-          * here, so it still reads as part of THIS row even though the
-          * component that owns it now renders elsewhere. `contents` (not a
-          * plain span) so this wrapper contributes no box of its own — the
-          * portaled Button becomes a flex item of THIS row exactly as if it
-          * were still a direct child. Always rendered (not gated on
-          * `state.form`): an empty slot is a zero-size no-op, and keeping it
-          * mounted unconditionally means the portal target's own identity
-          * never changes across a Grafiek/Tabel switch. */}
-        <span ref={setTriggerSlot} className="contents" />
+        {/* Review fix (chart-panel-layout, option A): the "Opmaak" trigger
+          * now renders directly here as a row-mate of the Weergave tablist —
+          * no portal, no placeholder node. Gated on `state.form !== 'table'`
+          * exactly like the ChartConfigPanel mount further down (Tabel form
+          * offers no styling at all — chart-presentation.ts's `applicable`
+          * is empty for it), so the two stay in lockstep. */}
+        {state.form !== 'table' ? (
+          <ChartConfigTrigger
+            open={styleOpen}
+            onToggle={toggleStylePanel}
+            controlsId={styleControlsId}
+            triggerId={styleTriggerId}
+            lang={chartLang}
+          />
+        ) : null}
       </div>
       {zoomAvailable ? (
         <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
@@ -2114,21 +2141,26 @@ export function ChartView({
         * top, then the design settings"): the Opmaak region renders directly
         * after the chart's own tabpanel above (`chartContainerRef`'s parent),
         * ahead of the trend headline/legend/small-multiples toggles below —
-        * chart first, settings under it. Its trigger button still lives in
-        * the Weergave tablist row (portaled into `triggerSlot`, set above);
-        * mounting the component itself HERE, not there, is what makes the
-        * `role="region"` this renders land in this position in the DOM,
-        * since a component's own JSX return is one subtree at one place in
-        * its caller's tree. `key={chartEpoch}` is unchanged from before this
-        * refactor: a spec swap still fully remounts the panel, resetting its
-        * open/colour-draft/brand-status state exactly as it always has. */}
+        * chart first, settings under it. Its trigger button lives in the
+        * Weergave tablist row instead (rendered directly there now — see the
+        * review-fix comment on `styleOpen` above); mounting the panel itself
+        * HERE, not there, is what makes the `role="region"` it renders land
+        * in this position in the DOM, since a component's own JSX return is
+        * one subtree at one place in its caller's tree. `key={chartEpoch}`
+        * is unchanged from before this refactor: a spec swap still fully
+        * remounts the panel, resetting its colour-draft/brand-status state
+        * exactly as it always has — `open` itself is no longer this
+        * component's state (it's `styleOpen` above), so it's reset
+        * separately in the spec-swap block instead of via this remount. */}
       {state.form !== 'table' ? (
         <ChartConfigPanel
           key={chartEpoch}
           resolved={resolved}
           seriesMeta={seriesMeta}
           lang={chartLang}
-          triggerSlot={triggerSlot}
+          open={styleOpen}
+          onOpenChange={setStyleOpen}
+          triggerId={styleTriggerId}
           onChange={(patch) => {
             dispatch({ type: 'setPresentation', patch });
             trackChartStyleEvent('option_changed');
@@ -2142,7 +2174,6 @@ export function ChartView({
             // actually touch — systematically under-counted resets.
             trackChartStyleEvent('option_changed');
           }}
-          onOpen={() => trackChartStyleEvent('panel_open')}
           idPrefix={domId}
           account={
             signedIn
