@@ -18,6 +18,7 @@ import {
   recordChartStyleEvent,
   saveUserChartStyle,
   setAppliedBrand,
+  sumChartStyleEventsInMonth,
   USER_CHART_STYLE_MAX_JSON,
 } from '../../src/chart/user-styles.ts';
 import type { Db } from '../../src/db/types.ts';
@@ -296,6 +297,60 @@ describe('recordChartStyleEvent', () => {
         { event: 'option_changed', day: '2026-01-01', count: 1 },
         { event: 'option_changed', day: '2026-01-02', count: 1 },
       ]);
+    });
+  });
+});
+
+describe('sumChartStyleEventsInMonth', () => {
+  it('sums only the current UTC calendar month for the given event', async () => {
+    await withDb(async (db) => {
+      await recordChartStyleEvent(db, 'brand_fetch', new Date('2026-09-01T00:00:00.000Z'));
+      await recordChartStyleEvent(db, 'brand_fetch', new Date('2026-09-09T12:00:00.000Z'));
+      await recordChartStyleEvent(db, 'brand_fetch', new Date('2026-09-30T23:59:59.000Z'));
+
+      const total = await sumChartStyleEventsInMonth(db, 'brand_fetch', new Date('2026-09-15T00:00:00.000Z'));
+
+      expect(total).toBe(3);
+    });
+  });
+
+  it('ignores rows from last month and next month', async () => {
+    await withDb(async (db) => {
+      await recordChartStyleEvent(db, 'brand_fetch', new Date('2026-08-31T23:59:59.000Z'));
+      await recordChartStyleEvent(db, 'brand_fetch', new Date('2026-09-15T00:00:00.000Z'));
+      await recordChartStyleEvent(db, 'brand_fetch', new Date('2026-10-01T00:00:00.000Z'));
+
+      const total = await sumChartStyleEventsInMonth(db, 'brand_fetch', new Date('2026-09-15T00:00:00.000Z'));
+
+      expect(total).toBe(1);
+    });
+  });
+
+  it('ignores other events entirely', async () => {
+    await withDb(async (db) => {
+      await recordChartStyleEvent(db, 'panel_open', new Date('2026-09-01T00:00:00.000Z'));
+      await recordChartStyleEvent(db, 'brand_applied', new Date('2026-09-02T00:00:00.000Z'));
+
+      const total = await sumChartStyleEventsInMonth(db, 'brand_fetch', new Date('2026-09-15T00:00:00.000Z'));
+
+      expect(total).toBe(0);
+    });
+  });
+
+  it('is 0, not null, when the table exists but has no matching rows', async () => {
+    await withDb(async (db) => {
+      const total = await sumChartStyleEventsInMonth(db, 'brand_fetch', new Date('2026-09-15T00:00:00.000Z'));
+      expect(total).toBe(0);
+    });
+  });
+
+  it('returns null (fail-closed, not 0) when chart_style_usage is gone', async () => {
+    await withDb(async (db) => {
+      await db.query('drop table if exists chart_style_usage cascade', []);
+
+      const total = await sumChartStyleEventsInMonth(db, 'brand_fetch', new Date('2026-09-15T00:00:00.000Z'));
+
+      expect(total).toBeNull();
     });
   });
 });

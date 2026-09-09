@@ -14,10 +14,13 @@
 'use server';
 
 import {
+  BRAND_FETCHES_PER_MONTH,
   bumpBrandLookups,
   deleteUserChartStyle,
+  recordChartStyleEvent,
   saveUserChartStyle,
   setAppliedBrand,
+  sumChartStyleEventsInMonth,
 } from '../backend/chart/user-styles.ts';
 import { getCachedBrand, putCachedBrand } from '../backend/chart/brand-cache.ts';
 import {
@@ -130,6 +133,7 @@ export type LookupBrandResponse =
         | 'not_found'
         | 'rate_limited'
         | 'daily_cap'
+        | 'monthly_cap'
         | 'error';
     };
 
@@ -195,12 +199,25 @@ export async function lookupBrand(rawWebsite?: unknown): Promise<LookupBrandResp
       };
     }
 
+    // Global monthly cap (owner decision 2026-09-09), checked BEFORE the
+    // per-user daily cap and BEFORE any fetch: `null` means the counter
+    // table is absent, so the cap cannot be enforced — fail closed rather
+    // than let a paid call through uncounted, same discipline the rest of
+    // this module's absent-table paths already follow.
+    const used = await sumChartStyleEventsInMonth(db, 'brand_fetch', now);
+    if (used === null || used >= BRAND_FETCHES_PER_MONTH) {
+      return { ok: false, reason: 'monthly_cap' };
+    }
+
     // Same UTC YYYY-MM-DD convention recordChartStyleEvent uses, computed
     // once from the single `now` this call already has.
     const today = now.toISOString().slice(0, 10);
     const bump = await bumpBrandLookups(db, userId, today);
     if (!bump.allowed) return { ok: false, reason: 'daily_cap' };
 
+    // Counted right before the real call, not after: a failed Brandfetch
+    // call still counts against the monthly cap — it was already billed.
+    await recordChartStyleEvent(db, 'brand_fetch', now);
     const fetchResult = await fetchBrand(domain, { apiKey });
     if (!fetchResult.ok) {
       if (fetchResult.reason === 'unauthorized') {

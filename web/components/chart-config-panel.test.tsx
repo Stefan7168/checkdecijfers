@@ -870,6 +870,10 @@ describe('ChartConfigPanel — WP218 phase 3 (owner B): Merkkleuren block', () =
       ['invalid_domain', 'Dat ziet er niet uit als een website.'],
       ['rate_limited', 'Probeer het later nog eens.'],
       ['daily_cap', 'Probeer het later nog eens.'],
+      [
+        'monthly_cap',
+        'Merkkleuren ophalen is deze maand niet meer beschikbaar; vanaf de volgende maand weer.',
+      ],
       ['error', 'Er ging iets mis. Probeer het later opnieuw.'],
       ['unauthenticated', 'Merkkleuren ophalen is op dit moment niet mogelijk.'],
     ];

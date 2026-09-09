@@ -91,7 +91,7 @@ A fresh machine needs to know which login owns each provider to rotate a secret 
 | `TRIAL_IP_HASH_SECRET` | Vercel env store only (**✅ SET 2026-07-17, Production — #53 go-live, session 52; generated and piped straight into `vercel env add`, value never displayed anywhere**) | Real secret you invent yourself (password-manager generator, long random string). Used ONLY to HMAC visitor IPs for the per-IP trial limit — raw IPs never persist. Rotation: replace in Vercel + redeploy; consequence is benign (per-IP counts restart) |
 | `TRIAL_ENABLED` | Vercel env store only (**✅ SET `1` 2026-07-17, Production — #53 go-live, session 52**) | Not secret — the literal value `1`. The trial master switch: while unset the whole homepage trial renders NOTHING (dormant, byte-identical landing). **Removing it is the instant kill-switch** |
 | `SLOT_PHRASING_ENABLED` | Nowhere (**NOT SET — PERMANENTLY; the [#162](open-questions.md) slot-phrasing experiment CLOSED 2026-09-06, session 83, owner: "Accept as final"**) | Not secret — the literal value `1`. The number-free-phrasing experiment rung ([session-briefs/2026-07-19-adr-draft-slot-filling.md](session-briefs/2026-07-19-adr-draft-slot-filling.md)): while unset every compose call runs the see-and-echo ladder **byte-identically** (test-pinned). **Do NOT set it — the owner-supervised A/B ran twice (rounds 4 and 5) and FAILED both phrasing gates both times, round 5 worse than round 4; the owner accepted round 5 as the experiment's final verdict.** The ADR-draft is NOT promoted to an accepted ADR. This is a closed experiment, not a paused one — re-opening it would be a fresh decision, not a "finish what's pending" continuation. Unsetting is (and remains) a complete rollback (the legacy fixtures never left the repo) |
-| `BRANDFETCH_API_KEY` | Nowhere yet (**NOT SET — WP218 phase 3, built 2026-09-09, session 91; the owner sets it in the WP218 go-live section further down, only if brand lookup is wanted**) | Real secret. developers.brandfetch.com → register (free, no card) → Developer Dashboard → API key → Vercel env store (Production, Sensitive) → redeploy. Rotation: new key in the dashboard → replace in Vercel → redeploy → revoke the old one. Without it the Kleuren tab says brand lookup is not possible; nothing else changes. Spend belt: one call per website per 30 days (cache), five lookups per user per day, signed-in only; the free tier is 100 lookups in total |
+| `BRANDFETCH_API_KEY` | Nowhere yet (**NOT SET — WP218 phase 3, built 2026-09-09, session 91; the owner sets it in the WP218 go-live section further down, only if brand lookup is wanted**) | Real secret. developers.brandfetch.com → register (free, no card) → Developer Dashboard → API key → Vercel env store (Production, Sensitive) → redeploy. Rotation: new key in the dashboard → replace in Vercel → redeploy → revoke the old one. Without it the Kleuren tab says brand lookup is not possible; nothing else changes. Spend belt: one call per website per 30 days (cache), five lookups per user per day, signed-in only, **and a hard global cap of 100 real lookups per calendar month across all users (owner decision 2026-09-09) — the app enforces this itself, counted in `chart_style_usage` (event `brand_fetch`), so the free tier is never exceeded and no paid plan is needed.** |
 
 **Note on `NEXT_PUBLIC_*` vars and the Vercel env store (2026-07-04, production outage post-mortem):** this Vercel team enforces the **sensitive environment-variables policy** — every env var added to the project becomes write-only, no matter how it is added (dashboard or CLI; verified against the API: every var reports `type: sensitive`). Write-only is fine for real runtime secrets (`DATABASE_URL`, `ANTHROPIC_API_KEY`, `STRIPE_*` — Vercel injects them into the running functions), but it is **fatally incompatible with `NEXT_PUBLIC_*`** vars: those must be readable at *build* time, and our builds run in GitHub Actions via `vercel pull`, which receives sensitive values as **empty strings**. Result: the middleware was compiled with empty Supabase credentials and every route returned Internal Server Error — while the deploy job stayed green (a build succeeding says nothing about the app running; the CI deploy job now ends with a post-deploy smoke check for exactly this). The three public values therefore live in **`web/.env.production`, committed to git on purpose** (they ship in every browser bundle by design — same reasoning as the committed CA certificate, ADR 018). Never add a `NEXT_PUBLIC_` var to the Vercel env store expecting CI builds to see it, and never put a real secret in `web/.env.production`.
 
@@ -299,13 +299,21 @@ panel, the language switch, the new chart types. Three things wait for you, in t
    as every prior new-table go-live).
 3. **Brandfetch (only if you want "Pas merkkleuren toe" to work):** sign up at
    developers.brandfetch.com (free, no card), copy the API key from the Developer Dashboard, then
-   in Vercel add `BRANDFETCH_API_KEY` (Production, mark Sensitive) and redeploy. **Cost facts
-   (read 2026-09-09, see
-   [session-briefs/2026-09-09-session-91-brandfetch-research.md](session-briefs/2026-09-09-session-91-brandfetch-research.md)):** the free tier is 100 lookups
-   IN TOTAL (not per month); the first paid plan is about $99 a month for 2 500 lookups — re-check
-   the pricing page before paying. The app keeps calls low: one call per organisation website per
-   30 days (the cache), at most five lookups per user per day, signed-in users only. Without the
-   key the Kleuren tab simply says brand lookup is not possible; everything else works.
+   in Vercel add `BRANDFETCH_API_KEY` (Production, mark Sensitive) and redeploy. **Cost control
+   (owner decision 2026-09-09): the app itself enforces a hard cap of 100 real lookups per
+   calendar month, counted in `chart_style_usage` (event `brand_fetch`) — once reached, every
+   lookup refuses with a plain message until the next month, and the app also refuses (fails
+   closed) if the counter table itself is ever absent, so a real Brandfetch call can never happen
+   uncounted. This means the free tier is never exceeded and no paid plan is ever needed — the
+   owner decided customers may simply miss the "Pas merkkleuren toe" button for the rest of a
+   month once the cap is hit.** One caveat: Brandfetch's OWN free tier may be 100 lookups IN TOTAL
+   rather than per month (read 2026-09-09, UNCONFIRMED, see
+   [session-briefs/2026-09-09-session-91-brandfetch-research.md](session-briefs/2026-09-09-session-91-brandfetch-research.md)) —
+   if so, the button stops working for good after the first 100 lookups regardless of our own
+   monthly counter, and the owner decides then (a paid plan, or leaving the button dormant). The
+   app also still keeps calls low on its own: one call per organisation website per 30 days (the
+   cache), at most five lookups per user per day, signed-in users only. Without the key the
+   Kleuren tab simply says brand lookup is not possible; everything else works.
 
 **Smoke test after step 1 (you, logged in, on a chart):** open Opmaak → change something → "Bewaar
 als mijn standaard" → the line reads "Opgeslagen."; reload → the chart opens with your default and

@@ -104,6 +104,7 @@ function buildPanelCopy(lang: Lang) {
     brandNotFound: t(lang, 'chart.panel.brandNotFound'),
     brandInvalidDomain: t(lang, 'chart.panel.brandInvalidDomain'),
     brandTryLater: t(lang, 'chart.panel.brandTryLater'),
+    brandMonthlyCap: t(lang, 'chart.panel.brandMonthlyCap'),
     brandError: t(lang, 'chart.panel.brandError'),
     /** WP218 phase 4: the new "Taal van de grafiek" select. `languageNl`/
      * `languageEn` are the languages' own self-names — identical in both
@@ -344,6 +345,7 @@ export type BrandLookupOutcome =
         | 'not_found'
         | 'rate_limited'
         | 'daily_cap'
+        | 'monthly_cap'
         | 'error';
     };
 
@@ -553,6 +555,7 @@ export function ChartConfigPanel({
     if (reason === 'not_found') return copy.brandNotFound;
     if (reason === 'invalid_domain') return copy.brandInvalidDomain;
     if (reason === 'rate_limited' || reason === 'daily_cap') return copy.brandTryLater;
+    if (reason === 'monthly_cap') return copy.brandMonthlyCap;
     if (reason === 'error') return copy.brandError;
     // 'unavailable' and 'unauthenticated' — the latter should never actually
     // reach this panel (chart.tsx only offers `brand` when signed in), but a

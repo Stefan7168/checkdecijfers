@@ -31,6 +31,11 @@ const store = vi.hoisted(() => ({
   deleteUserChartStyle: vi.fn(),
   bumpBrandLookups: vi.fn(),
   setAppliedBrand: vi.fn(),
+  // Global monthly Brandfetch cap (owner decision 2026-09-09): the real
+  // constant, plus the counter functions lookupBrand calls around it.
+  BRAND_FETCHES_PER_MONTH: 100,
+  sumChartStyleEventsInMonth: vi.fn(),
+  recordChartStyleEvent: vi.fn(),
 }));
 vi.mock('../backend/chart/user-styles.ts', () => store);
 
@@ -235,6 +240,8 @@ describe('lookupBrand (WP218 phase 3, Task 3)', () => {
 
     brandCache.getCachedBrand.mockResolvedValue(null);
     brandCache.putCachedBrand.mockResolvedValue(undefined);
+    store.sumChartStyleEventsInMonth.mockResolvedValue(0);
+    store.recordChartStyleEvent.mockResolvedValue(undefined);
     store.bumpBrandLookups.mockResolvedValue({ allowed: true, count: 1 });
     fetchBrand.mockResolvedValue({ ok: true, brand: SAMPLE_BRAND });
   });
@@ -335,12 +342,21 @@ describe('lookupBrand (WP218 phase 3, Task 3)', () => {
     });
   });
 
-  it('cache miss: bumps the cap, then fetches with the key, then caches the result', async () => {
+  it('cache miss: checks the monthly cap, bumps the daily cap, records brand_fetch BEFORE the real call, then fetches and caches', async () => {
     const result = await lookupBrand('example.com');
 
+    expect(store.sumChartStyleEventsInMonth).toHaveBeenCalledWith(fakeDb, 'brand_fetch', new Date(NOW_ISO));
     expect(store.bumpBrandLookups).toHaveBeenCalledWith(fakeDb, 'user-1', TODAY);
+    expect(store.recordChartStyleEvent).toHaveBeenCalledWith(fakeDb, 'brand_fetch', new Date(NOW_ISO));
     expect(fetchBrand).toHaveBeenCalledWith('example.com', { apiKey: 'test-key' });
     expect(brandCache.putCachedBrand).toHaveBeenCalledWith(fakeDb, 'example.com', SAMPLE_BRAND, new Date(NOW_ISO));
+
+    // Order matters: brand_fetch is counted BEFORE the real call fires — a
+    // failed call still counts, since it was already billed.
+    const recordOrder = store.recordChartStyleEvent.mock.invocationCallOrder[0]!;
+    const fetchOrder = fetchBrand.mock.invocationCallOrder[0]!;
+    expect(recordOrder).toBeLessThan(fetchOrder);
+
     expect(result).toEqual({
       ok: true,
       brand: {
@@ -375,6 +391,65 @@ describe('lookupBrand (WP218 phase 3, Task 3)', () => {
 
     expect(fetchBrand).not.toHaveBeenCalled();
     expect(brandCache.putCachedBrand).not.toHaveBeenCalled();
+  });
+
+  describe('global monthly cap (owner decision 2026-09-09)', () => {
+    it('cap reached: monthly_cap, and neither the daily cap nor the fetch is ever touched', async () => {
+      store.sumChartStyleEventsInMonth.mockResolvedValue(100);
+
+      await expect(lookupBrand('example.com')).resolves.toEqual({ ok: false, reason: 'monthly_cap' });
+
+      expect(store.bumpBrandLookups).not.toHaveBeenCalled();
+      expect(store.recordChartStyleEvent).not.toHaveBeenCalled();
+      expect(fetchBrand).not.toHaveBeenCalled();
+      expect(brandCache.putCachedBrand).not.toHaveBeenCalled();
+    });
+
+    it('cap exceeded: still monthly_cap (>= the cap, not only ==)', async () => {
+      store.sumChartStyleEventsInMonth.mockResolvedValue(101);
+
+      await expect(lookupBrand('example.com')).resolves.toEqual({ ok: false, reason: 'monthly_cap' });
+    });
+
+    it('counter table absent (null): fails CLOSED to monthly_cap, never a paid call that cannot be counted', async () => {
+      store.sumChartStyleEventsInMonth.mockResolvedValue(null);
+
+      await expect(lookupBrand('example.com')).resolves.toEqual({ ok: false, reason: 'monthly_cap' });
+
+      expect(store.bumpBrandLookups).not.toHaveBeenCalled();
+      expect(fetchBrand).not.toHaveBeenCalled();
+    });
+
+    it('under the cap: the fetch proceeds normally', async () => {
+      store.sumChartStyleEventsInMonth.mockResolvedValue(99);
+
+      const result = await lookupBrand('example.com');
+
+      expect(fetchBrand).toHaveBeenCalledWith('example.com', { apiKey: 'test-key' });
+      expect(result).toEqual({ ok: true, brand: expect.objectContaining({ domain: 'example.com' }) });
+    });
+
+    it('a cache hit still succeeds even when the monthly cap is already reached — cache hits are never counted', async () => {
+      store.sumChartStyleEventsInMonth.mockResolvedValue(100);
+      brandCache.getCachedBrand.mockResolvedValue({ brand: SAMPLE_BRAND, fetchedAt: NOW_ISO });
+
+      const result = await lookupBrand('example.com');
+
+      expect(result).toEqual({
+        ok: true,
+        brand: {
+          name: 'Example Inc',
+          domain: 'example.com',
+          colors: ['#112233'],
+          font: { family: 'Inter', origin: 'google' },
+          fetchedAt: NOW_ISO,
+          cached: true,
+        },
+      });
+      expect(store.sumChartStyleEventsInMonth).not.toHaveBeenCalled();
+      expect(store.bumpBrandLookups).not.toHaveBeenCalled();
+      expect(fetchBrand).not.toHaveBeenCalled();
+    });
   });
 
   it('unauthorized (a bad key): unavailable to the caller, but reportError fires so the owner sees it in the logs', async () => {

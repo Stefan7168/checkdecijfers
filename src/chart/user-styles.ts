@@ -24,6 +24,11 @@ export const CHART_STYLE_EVENTS = [
   'default_forgotten',
   // WP218 phase 3 (owner B): fired once per successful "Pas merkkleuren toe".
   'brand_applied',
+  // Owner decision (2026-09-09, global monthly Brandfetch cap): fired once
+  // per REAL Brandfetch API call (never a cache hit) — the event
+  // `sumChartStyleEventsInMonth` sums to enforce `BRAND_FETCHES_PER_MONTH`
+  // below.
+  'brand_fetch',
 ] as const;
 export type ChartStyleEvent = (typeof CHART_STYLE_EVENTS)[number];
 
@@ -274,6 +279,42 @@ export async function recordChartStyleEvent(db: Db, event: ChartStyleEvent, day:
     );
   } catch (err) {
     if (isUndefinedTableError(err)) return;
+    throw err;
+  }
+}
+
+/** Global cap on REAL Brandfetch calls per UTC calendar month, across ALL
+ * users — owner decision 2026-09-09 ("max it at 100 per month, and then
+ * disable it until the new cycle, so we avoid paying"). Distinct from
+ * `BRAND_LOOKUPS_PER_DAY`, which bounds a single user's calls in a day; this
+ * one bounds the whole app's spend regardless of who is asking. Counted via
+ * the same anonymous `chart_style_usage` counter, event `'brand_fetch'`. */
+export const BRAND_FETCHES_PER_MONTH = 100;
+
+/**
+ * Sums `chart_style_usage.count` for `event` over the UTC calendar month
+ * containing `now` (`day >= first-of-month and day < first-of-next-month`).
+ * `null` when the table is absent — deliberately NOT 0: a cap this feeds
+ * must fail closed on a missing counter (never a paid call that can't be
+ * counted), and 0 would read as "under the cap" instead of "unknowable".
+ */
+export async function sumChartStyleEventsInMonth(
+  db: Db,
+  event: ChartStyleEvent,
+  now: Date,
+): Promise<number | null> {
+  if (!(await chartStyleUsageTablePresent(db))) return null;
+  const monthStart = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1);
+  const nextMonthStart = Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1);
+  try {
+    const { rows } = await db.query(
+      `select coalesce(sum(count), 0) as total from chart_style_usage
+       where event = $1 and day >= $2 and day < $3`,
+      [event, new Date(monthStart).toISOString().slice(0, 10), new Date(nextMonthStart).toISOString().slice(0, 10)],
+    );
+    return Number(rows[0]?.total ?? 0);
+  } catch (err) {
+    if (isUndefinedTableError(err)) return null;
     throw err;
   }
 }

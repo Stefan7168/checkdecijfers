@@ -446,6 +446,11 @@ const nl = {
   'chart.panel.brandNotFound': 'Voor dit domein is geen merk gevonden.',
   'chart.panel.brandInvalidDomain': 'Dat ziet er niet uit als een website.',
   'chart.panel.brandTryLater': 'Probeer het later nog eens.',
+  // Global monthly Brandfetch cap (owner decision 2026-09-09) — digit-free
+  // per the panel's own honesty scan, deliberately vague about the reset
+  // moment rather than naming a date or a count.
+  'chart.panel.brandMonthlyCap':
+    'Merkkleuren ophalen is deze maand niet meer beschikbaar; vanaf de volgende maand weer.',
   'chart.panel.brandError': 'Er ging iets mis. Probeer het later opnieuw.',
   // WP218 phase 4: the new "Taal van de grafiek" select (design §4). The
   // other two option labels are the languages' own self-names ('Nederlands',
@@ -835,6 +840,7 @@ const en: Messages = {
   'chart.panel.brandNotFound': 'No brand was found for this domain.',
   'chart.panel.brandInvalidDomain': "That doesn't look like a website.",
   'chart.panel.brandTryLater': 'Try again later.',
+  'chart.panel.brandMonthlyCap': 'Brand colours are no longer available this month; they return next month.',
   'chart.panel.brandError': 'Something went wrong. Try again later.',
   'chart.panel.languageLabel': 'Chart language',
   'chart.panel.languageFollowApp': 'Same as the app',
