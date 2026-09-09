@@ -73,7 +73,7 @@ source badge, and the PNG/SVG export. A CBS `ChartView` renders **frameless insi
 card is the one thing this direction avoids); a user-data `UserChartView` keeps its **dashed frame everywhere**
 — that frame is the user-data-vs-CBS distinction (ADR 037 H2), not decoration.
 
-**Built, session 91 (2026-09-09), branch `wp218-chart-styling`, not merged/live yet — WP218, ADR
+**Built, session 91 (2026-09-09), branch `wp218-chart-styling`, merged as `05ec8ed` and live — WP218, ADR
 [039](decisions/039-chart-presentation-panel.md):** the stock look above is now the test-pinned
 `STOCK_PRESENTATION` constant in [web/lib/chart-presentation.ts](../web/lib/chart-presentation.ts) (the
 `RECHARTS_PALETTE` moved there too, re-exported from `chart.tsx` so nothing else changes). A reader can
