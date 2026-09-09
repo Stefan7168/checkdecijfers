@@ -58,6 +58,12 @@ export function ChartFrame({ frame, image, children }: { frame: FrameValues; ima
     ...(aspect !== null
       ? {
           aspectRatio: String(aspect),
+          // Battle test round 2: with only aspect-ratio + min-height the box
+          // grew SIDEWAYS to keep the ratio and overflowed the card; a definite
+          // width makes the ratio yield to the min-height instead.
+          width: '100%',
+          maxWidth: '100%',
+          boxSizing: 'border-box',
           minHeight: CHART_MIN_HEIGHT_PX + 2 * (FRAME_PADDING_PX[frame.framePadding] + FRAME_INSET_PX[frame.frameInset]),
           display: 'flex',
           flexDirection: 'column',

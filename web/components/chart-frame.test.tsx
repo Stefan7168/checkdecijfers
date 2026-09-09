@@ -156,6 +156,9 @@ describe('ChartFrame', () => {
     );
     const wrapper = container.querySelector('[data-slot="chart-frame"]') as HTMLElement;
     expect(wrapper.style.minHeight).toBe(`${CHART_MIN_HEIGHT_PX + 2 * (FRAME_PADDING_PX.large + FRAME_INSET_PX.small)}px`);
+    // …and never grows sideways past the card to keep the ratio.
+    expect(wrapper.style.width).toBe('100%');
+    expect(wrapper.style.maxWidth).toBe('100%');
   });
 
   it('auto aspect (default) sets no aspect-ratio style', () => {
