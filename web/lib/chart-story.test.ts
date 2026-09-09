@@ -77,7 +77,7 @@ function specStrings(s: ChartSpec): string[] {
 function expectDigitsBound(s: ChartSpec, lang: 'nl' | 'en'): void {
   const strings = specStrings(s);
   for (const step of buildStorySteps(s, lang)) {
-    const tokens = `${step.title} ${step.caption}`.match(/\d[\d,]*/g) ?? [];
+    const tokens = `${step.title} ${step.caption}`.match(/\d[\d.,]*/g) ?? [];
     for (const tok of tokens) {
       expect(strings.some((str) => str.includes(tok)), `token "${tok}" in "${step.caption}" is not a spec string`).toBe(true);
     }
@@ -88,7 +88,7 @@ describe('buildStorySteps — a single time series', () => {
   it('tells overview, start, highest, lowest, latest, explore in that order with the points\' own strings', () => {
     const steps = buildStorySteps(fourPointSpec(), 'nl');
     expect(steps.map((s) => s.kind)).toEqual(['overview', 'start', 'high', 'low', 'latest', 'explore']);
-    expect(steps[0]).toMatchObject({ title: 'Overzicht', caption: 'Van 2021 tot 2024.', highlight: null, point: null });
+    expect(steps[0]).toMatchObject({ title: 'Overzicht', caption: 'Van 2021 tot 2024', highlight: null, point: null });
     expect(steps[1]).toMatchObject({ title: 'Begin', caption: '2021: 2,0 %', point: { seriesKey: 's0', periodCode: '2021JJ00' } });
     expect(steps[2]).toMatchObject({ title: 'Hoogste punt', caption: '2022: 3,5 %', point: { seriesKey: 's0', periodCode: '2022JJ00' } });
     expect(steps[3]).toMatchObject({ title: 'Laagste punt', caption: '2023: 1,5 %', point: { seriesKey: 's0', periodCode: '2023JJ00' } });
@@ -139,7 +139,7 @@ describe('buildStorySteps — a single time series', () => {
     const steps = buildStorySteps(s, 'nl');
     expect(steps.map((k) => k.kind)).toEqual(['overview', 'start', 'latest', 'explore']);
     expect(steps[1]?.point?.periodCode).toBe('2022JJ00');
-    expect(steps[0]?.caption).toBe('Van 2022 tot 2024.');
+    expect(steps[0]?.caption).toBe('Van 2022 tot 2024');
   });
 
   it('yields nothing for a series with fewer than two plotted values', () => {
@@ -148,7 +148,7 @@ describe('buildStorySteps — a single time series', () => {
 
   it('translates titles and templates to English, keeping the spec strings verbatim', () => {
     const steps = buildStorySteps(fourPointSpec(), 'en');
-    expect(steps[0]).toMatchObject({ title: 'Overview', caption: 'From 2021 to 2024.' });
+    expect(steps[0]).toMatchObject({ title: 'Overview', caption: 'From 2021 to 2024' });
     expect(steps[4]).toMatchObject({ title: 'Latest', caption: '2024: 2,5 % (provisional figure)' });
     expect(steps[5]?.title).toBe('Explore yourself');
   });
