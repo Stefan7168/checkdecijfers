@@ -92,8 +92,19 @@ function ttlCutoff(now: Date): Date {
  * terms — the migration comment's "kept ≤ 30 days"; a row exactly at the
  * boundary still counts as fresh), the stored payload no longer parses as a
  * brand (see module header), or the table doesn't exist yet.
+ *
+ * Returns the row's OWN `fetched_at` alongside the brand (final-review
+ * fix): a cache hit on a 29-day-old row is still a hit, but the caller must
+ * report ITS real age, not the moment of this read — `lookupBrand` used to
+ * discard this value and stamp `now` instead, so a stale-but-fresh-enough
+ * cached lookup could claim "fetched today" all the way into the persisted
+ * `brand.applied` provenance.
  */
-export async function getCachedBrand(db: Db, domain: string, now: Date): Promise<BrandInfo | null> {
+export async function getCachedBrand(
+  db: Db,
+  domain: string,
+  now: Date,
+): Promise<{ brand: BrandInfo; fetchedAt: string } | null> {
   if (!(await brandCacheTablePresent(db))) return null;
   try {
     const { rows } = await db.query(`select payload, fetched_at from brand_cache where domain = $1`, [
@@ -105,7 +116,9 @@ export async function getCachedBrand(db: Db, domain: string, now: Date): Promise
     const fetchedAt = row.fetched_at instanceof Date ? row.fetched_at : new Date(String(row.fetched_at));
     if (fetchedAt.getTime() < ttlCutoff(now).getTime()) return null;
 
-    return parseBrandPayload(decodeJsonb(row.payload), domain);
+    const brand = parseBrandPayload(decodeJsonb(row.payload), domain);
+    if (brand === null) return null;
+    return { brand, fetchedAt: fetchedAt.toISOString() };
   } catch (err) {
     if (isUndefinedTableError(err)) return null;
     throw err;

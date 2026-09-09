@@ -897,6 +897,23 @@ describe('ChartConfigPanel — Lettertype tab', () => {
     fireEvent.change(select, { target: { value: '' } });
     expect(onChange).toHaveBeenCalledWith({ fontFamily: null });
   });
+
+  it('final-review fix: a fontFamily outside the curated FONT_OPTIONS (a brand font) shows as its own selected option, not a blank select', () => {
+    render(
+      <ChartConfigPanel
+        resolved={resolvePresentation(lineCtx, { fontFamily: 'Poppins' })}
+        seriesMeta={colorMeta}
+        onChange={vi.fn()}
+        onReset={vi.fn()}
+        idPrefix="f3"
+      />,
+    );
+    openTab('Lettertype');
+    const select = screen.getByRole('combobox', { name: 'Lettertype' }) as HTMLSelectElement;
+    expect(select.value).toBe('Poppins');
+    const optionLabels = Array.from(select.options).map((o) => o.textContent);
+    expect(optionLabels).toEqual(['Standaard', ...FONT_OPTIONS.map((f) => f.family), 'Poppins']);
+  });
 });
 
 // WP218 phase 2 (#218 chart styling, owner C): the account-default footer

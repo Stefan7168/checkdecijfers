@@ -304,7 +304,7 @@ describe('lookupBrand (WP218 phase 3, Task 3)', () => {
   });
 
   it('cache hit: skips the fetch AND the daily cap entirely', async () => {
-    brandCache.getCachedBrand.mockResolvedValue(SAMPLE_BRAND);
+    brandCache.getCachedBrand.mockResolvedValue({ brand: SAMPLE_BRAND, fetchedAt: NOW_ISO });
 
     const result = await lookupBrand('example.com');
 
@@ -320,6 +320,18 @@ describe('lookupBrand (WP218 phase 3, Task 3)', () => {
         fetchedAt: NOW_ISO,
         cached: true,
       },
+    });
+  });
+
+  it('cache hit reports the CACHE ROW\'s own fetchedAt, not the moment of this read (final-review fix)', async () => {
+    const staleFetchedAt = '2026-08-15T00:00:00.000Z';
+    brandCache.getCachedBrand.mockResolvedValue({ brand: SAMPLE_BRAND, fetchedAt: staleFetchedAt });
+
+    const result = await lookupBrand('example.com');
+
+    expect(result).toEqual({
+      ok: true,
+      brand: expect.objectContaining({ fetchedAt: staleFetchedAt }),
     });
   });
 

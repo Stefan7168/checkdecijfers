@@ -956,6 +956,16 @@ export function ChartConfigPanel({
                     {f.family}
                   </option>
                 ))}
+                {/* Final-review fix: an applied brand font (phase 3's
+                  * `pickBrandFont`) can be any family outside the seven
+                  * curated FONT_OPTIONS — without this, `value` above
+                  * matches none of the options and the select silently
+                  * renders blank, so touching it (even without changing
+                  * anything) looked like it discarded the brand font. */}
+                {resolved.values.fontFamily !== null &&
+                !FONT_OPTIONS.some((f) => f.family === resolved.values.fontFamily) ? (
+                  <option value={resolved.values.fontFamily}>{resolved.values.fontFamily}</option>
+                ) : null}
               </select>
             </div>
           ) : null}

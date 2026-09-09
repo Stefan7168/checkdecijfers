@@ -174,17 +174,22 @@ export async function lookupBrand(rawWebsite?: unknown): Promise<LookupBrandResp
     const now = new Date();
 
     // Cache first — a hit never touches the daily cap (only a real
-    // Brandfetch call does).
-    const cachedBrand = await getCachedBrand(db, domain, now);
-    if (cachedBrand !== null) {
+    // Brandfetch call does). Final-review fix: report the CACHE ROW's own
+    // fetchedAt, not `now` — a cache hit can be up to BRAND_CACHE_TTL_DAYS
+    // old, and this value rides through onBrandApplied → lastAppliedBrand
+    // → saveMyChartStyle's brandApplied argument into the persisted
+    // `brand.applied` column, so stamping `now` here would misreport a
+    // 29-day-old cached payload as "fetched today".
+    const cacheHit = await getCachedBrand(db, domain, now);
+    if (cacheHit !== null) {
       return {
         ok: true,
         brand: {
-          name: cachedBrand.name,
+          name: cacheHit.brand.name,
           domain,
-          colors: pickBrandColours(cachedBrand),
-          font: pickBrandFont(cachedBrand),
-          fetchedAt: now.toISOString(),
+          colors: pickBrandColours(cacheHit.brand),
+          font: pickBrandFont(cacheHit.brand),
+          fetchedAt: cacheHit.fetchedAt,
           cached: true,
         },
       };

@@ -121,17 +121,23 @@ describe('resolvePresentation', () => {
     expect(resolvePresentation(barCtx, {}).applicable.has('xLabels')).toBe(true);
   });
 
-  it('table form: only the font and the chart language are applicable', () => {
-    const r = resolvePresentation(tableCtx, { lineWidth: 'thick' });
-    expect([...r.applicable]).toEqual(['fontFamily', 'language']);
+  // Final-review fix: the panel (ChartConfigPanel, which is where fontFamily
+  // and language are actually offered) is never mounted in Tabel form
+  // (chart.tsx: `state.form !== 'table'`), so NOTHING is applicable there —
+  // this used to say `['fontFamily', 'language']`, unreachable dead code
+  // that also contradicted ADR 039's own "hidden in Tabel form".
+  it('table form: nothing is applicable — the panel is never offered there', () => {
+    const r = resolvePresentation(tableCtx, { lineWidth: 'thick', fontFamily: 'Roboto', language: 'en' });
+    expect([...r.applicable]).toEqual([]);
   });
 
-  it('WP218 phase 4: language is always applicable and never locked, on every form', () => {
-    for (const ctx of [lineCtx, barCtx, tableCtx, areaCtx, hbarCtx]) {
+  it('WP218 phase 4: language is applicable and never locked on every form the panel is offered on — but not table', () => {
+    for (const ctx of [lineCtx, barCtx, areaCtx, hbarCtx]) {
       const r = resolvePresentation(ctx, {});
       expect(r.applicable.has('language')).toBe(true);
       expect(r.locks.language).toBeUndefined();
     }
+    expect(resolvePresentation(tableCtx, {}).applicable.has('language')).toBe(false);
   });
 
   it('WP218 phase 4: a language override is not pristine, exactly like any other chosen value', () => {

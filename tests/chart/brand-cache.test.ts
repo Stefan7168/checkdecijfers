@@ -47,12 +47,28 @@ describe('getCachedBrand / putCachedBrand', () => {
     });
   });
 
-  it('put then get round-trips the full brand, including fonts', async () => {
+  it('put then get round-trips the full brand, including fonts, alongside the row\'s own fetchedAt', async () => {
     await withDb(async (db) => {
       const now = new Date('2026-09-09T12:00:00.000Z');
       await putCachedBrand(db, 'example.com', SAMPLE_BRAND, now);
 
-      expect(await getCachedBrand(db, 'example.com', now)).toEqual(SAMPLE_BRAND);
+      expect(await getCachedBrand(db, 'example.com', now)).toEqual({
+        brand: SAMPLE_BRAND,
+        fetchedAt: now.toISOString(),
+      });
+    });
+  });
+
+  it('a cache hit reports the STORED fetched_at, not the read-time `now` (final-review fix)', async () => {
+    await withDb(async (db) => {
+      const storedAt = new Date('2026-08-15T00:00:00.000Z');
+      await putCachedBrand(db, 'example.com', SAMPLE_BRAND, storedAt);
+
+      const readAt = new Date('2026-09-09T12:00:00.000Z');
+      const result = await getCachedBrand(db, 'example.com', readAt);
+
+      expect(result?.fetchedAt).toBe(storedAt.toISOString());
+      expect(result?.fetchedAt).not.toBe(readAt.toISOString());
     });
   });
 
@@ -62,7 +78,10 @@ describe('getCachedBrand / putCachedBrand', () => {
       await putCachedBrand(db, 'example.com', SAMPLE_BRAND, fetchedAt);
 
       const atBoundary = new Date(fetchedAt.getTime() + BRAND_CACHE_TTL_DAYS * MS_PER_DAY);
-      expect(await getCachedBrand(db, 'example.com', atBoundary)).toEqual(SAMPLE_BRAND);
+      expect(await getCachedBrand(db, 'example.com', atBoundary)).toEqual({
+        brand: SAMPLE_BRAND,
+        fetchedAt: fetchedAt.toISOString(),
+      });
 
       const pastBoundary = new Date(atBoundary.getTime() + 1000);
       expect(await getCachedBrand(db, 'example.com', pastBoundary)).toBeNull();
@@ -88,7 +107,10 @@ describe('getCachedBrand / putCachedBrand', () => {
       const second = new Date('2026-02-01T00:00:00.000Z');
       await putCachedBrand(db, 'example.com', updated, second);
 
-      expect(await getCachedBrand(db, 'example.com', second)).toEqual(updated);
+      expect(await getCachedBrand(db, 'example.com', second)).toEqual({
+        brand: updated,
+        fetchedAt: second.toISOString(),
+      });
 
       const { rows } = await db.query('select domain from brand_cache', []);
       expect(rows).toHaveLength(1);

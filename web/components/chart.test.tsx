@@ -1116,6 +1116,18 @@ describe('ChartView — small multiples toggle (idea 8)', () => {
     expect(screen.getByRole('button', { name: 'Download' })).toBeInTheDocument();
   });
 
+  it('final-review fix: leaving small multiples on and switching to Staaf brings the download menu back (it no longer stays hidden on an ordinary bar chart)', () => {
+    render(<ChartView spec={twoSeriesSpec()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Kleine grafieken' }));
+    expect(screen.queryByRole('button', { name: 'Download' })).toBeNull();
+    // smallMultiplesAvailable goes false on Staaf (it's a line-only view),
+    // but the `smallMultiples` state itself is still true — the download
+    // menu must key off BOTH, exactly like the container/render branch do,
+    // not `smallMultiples` alone.
+    fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
+    expect(screen.getByRole('button', { name: 'Download' })).toBeInTheDocument();
+  });
+
   it('a series hidden via the legend (idea 6) has no small-multiples panel either (shared hiddenKeys, not a separate copy)', () => {
     const { container } = render(<ChartView spec={twoSeriesSpec()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Utrecht' }));
@@ -1993,6 +2005,14 @@ describe('WP218 phase 6 — anonymous style-panel usage counter', () => {
     fireEvent.click(screen.getByRole('radio', { name: 'Dik' }));
     expect(sink).toHaveBeenCalledTimes(2);
     expect(sink).toHaveBeenNthCalledWith(2, 'option_changed');
+
+    // Final-review fix: "Standaard" (the full reset) is counted too, exactly
+    // like "Standaardkleuren" (a partial reset via onChange) already was —
+    // before the fix, a full reset fired nothing, so the counter
+    // systematically under-counted resets.
+    fireEvent.click(screen.getByRole('button', { name: 'Standaard' }));
+    expect(sink).toHaveBeenCalledTimes(3);
+    expect(sink).toHaveBeenNthCalledWith(3, 'option_changed');
   });
 });
 
@@ -2065,7 +2085,7 @@ describe('WP218 phase 2 — account default for chart styling (owner C)', () => 
     expect(screen.queryByText('Mijn standaard is actief.')).toBeNull();
   });
 
-  it('save flow: keys the resolver locked for the current form are NOT saved (a bar-forced zero baseline never becomes a line chart\'s default)', async () => {
+  it('save flow: a key the resolver locked for the current form is saved as the ACCOUNT DEFAULT, never the form-forced value (a bar-forced zero baseline never becomes a line chart\'s default)', async () => {
     chartStyleActions.saveMyChartStyle.mockResolvedValue({ ok: true });
     render(
       <ChartStyleProvider initial={{}}>
@@ -2077,9 +2097,36 @@ describe('WP218 phase 2 — account default for chart styling (owner C)', () => 
     fireEvent.click(screen.getByRole('button', { name: 'Bewaar als mijn standaard' }));
     expect(await screen.findByRole('status')).toHaveTextContent('Opgeslagen.');
     const saved = chartStyleActions.saveMyChartStyle.mock.calls[0][0] as Record<string, unknown>;
-    expect(saved).not.toHaveProperty('zeroBaseline');
-    expect(saved).not.toHaveProperty('valueLabels');
+    // Bar form forces zeroBaseline to 'zero' on screen; the account had no
+    // saved default (STOCK_PRESENTATION's 'auto') and the bar-forced value
+    // must never be baked in as the new account default (final-review fix:
+    // the key is still SAVED — as the base value — never simply omitted).
+    expect(saved).toHaveProperty('zeroBaseline', 'auto');
     expect(saved).toHaveProperty('grid', 'both');
+  });
+
+  it('final-review fix: saving from Staaf never wipes an earlier-saved valueLabels default — a locked key saves back the ACCOUNT DEFAULT, not the bar-forced value', async () => {
+    chartStyleActions.saveMyChartStyle.mockResolvedValue({ ok: true });
+    render(
+      <ChartStyleProvider initial={{ valueLabels: 'hidden' }}>
+        <ChartView spec={threePointSpec()} />
+      </ChartStyleProvider>,
+    );
+    fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    // An unrelated tweak (the font) is what a reader actually does before
+    // re-saving — this must not disturb the valueLabels default at all.
+    fireEvent.click(screen.getByRole('tab', { name: 'Lettertype' }));
+    fireEvent.change(screen.getByRole('combobox', { name: 'Lettertype' }), { target: { value: 'Roboto' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Bewaar als mijn standaard' }));
+    expect(await screen.findByRole('status')).toHaveTextContent('Opgeslagen.');
+    const saved = chartStyleActions.saveMyChartStyle.mock.calls[0][0] as Record<string, unknown>;
+    // Bar form forces valueLabels to 'shown' on screen; the account default
+    // was 'hidden' (set on an earlier line chart) and must survive this
+    // save untouched — the bug saved the whole row with the key OMITTED,
+    // which reloaded as 'shown' (the stock default), silently losing it.
+    expect(saved).toHaveProperty('valueLabels', 'hidden');
+    expect(saved).toHaveProperty('fontFamily', 'Roboto');
   });
 
   it('save flow: a successful mocked save shows Opgeslagen. and the usage sink receives default_saved', async () => {
@@ -2132,6 +2179,43 @@ describe('WP218 phase 2 — account default for chart styling (owner C)', () => 
     } finally {
       setChartUsageSink(null);
     }
+  });
+});
+
+// Final-review fix (WP218 chart styling): `findFont` only recognises the
+// seven curated FONT_OPTIONS, but a brand font (phase 3's `pickBrandFont`)
+// can put any Google-origin family straight into `fontFamily` without ever
+// being curated — the effect used to skip loading it entirely, so the chart
+// silently fell back to the system font while the panel claimed the brand
+// font was applied.
+describe('WP218 final-review fix — an uncurated (brand) font family is still loaded', () => {
+  afterEach(() => {
+    document.head.querySelectorAll('link[data-font-family]').forEach((n) => n.remove());
+  });
+
+  it('a fontFamily outside FONT_OPTIONS gets its own Google Fonts <link>', () => {
+    render(
+      <ChartStyleProvider initial={{ fontFamily: 'Poppins' }}>
+        <ChartView spec={threePointSpec()} />
+      </ChartStyleProvider>,
+    );
+    const link = document.head.querySelector('link[data-font-family="Poppins"]');
+    expect(link).not.toBeNull();
+    expect(link?.getAttribute('rel')).toBe('stylesheet');
+  });
+
+  it('a curated font is unaffected — loaded exactly as before, no duplicate link', () => {
+    render(
+      <ChartStyleProvider initial={{ fontFamily: 'Roboto' }}>
+        <ChartView spec={threePointSpec()} />
+      </ChartStyleProvider>,
+    );
+    expect(document.head.querySelectorAll('link[data-font-family="Roboto"]')).toHaveLength(1);
+  });
+
+  it('the stock look (no fontFamily override) loads nothing', () => {
+    render(<ChartView spec={threePointSpec()} />);
+    expect(document.head.querySelector('link[data-font-family]')).toBeNull();
   });
 });
 
@@ -2297,7 +2381,7 @@ describe('WP218 phase 4 — charts follow the app language, per-chart, via the C
     expect(screen.getByRole('button', { name: 'Utrecht' })).toBeInTheDocument(); // untranslated municipality
     expect(
       screen.getByText(
-        'Source: CBS StatLine, table 83693NED — Consumentenvertrouwen. Data synced on 2026-09-01. Period: 2021 1e kwartaal. License: CC BY 4.0.',
+        'Source: CBS StatLine, table 83693NED — Consumentenvertrouwen. Data synced on 2026-09-01. Period: 2021 Q1. License: CC BY 4.0.',
       ),
     ).toBeInTheDocument();
   });
@@ -2374,7 +2458,7 @@ describe('WP218 phase 4 — charts follow the app language, per-chart, via the C
     expect(capturedBlob).toBeDefined();
     const markup = await capturedBlob!.text();
     expect(markup).toContain(
-      'Source: CBS StatLine, table 83693NED — Consumentenvertrouwen. Data synced on 2026-09-01. Period: 2021 1e kwartaal. License: CC BY 4.0.',
+      'Source: CBS StatLine, table 83693NED — Consumentenvertrouwen. Data synced on 2026-09-01. Period: 2021 Q1. License: CC BY 4.0.',
     );
 
     delete (URL as unknown as Record<string, unknown>).createObjectURL;

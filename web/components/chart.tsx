@@ -1123,9 +1123,13 @@ export function ChartView({
   // WP218 phase 3 (owner B): the last brand a signed-in visitor actually
   // applied via "Pas merkkleuren toe" — deliberately NOT reset by the spec-
   // swap block below (unlike notes/pendingPoint), because it describes
-  // something about the ACCOUNT, not this one chart, exactly like
-  // `accountStyle` itself. Handed to `saveMyChartStyle` as `brandApplied` on
-  // the next "Bewaar als mijn standaard", whichever chart that happens on.
+  // something that outlives a single CHART (a spec swap), not a single
+  // ACCOUNT. Final-review fix: this is `useState` inside `ChartView`, so
+  // it's scoped to THIS MOUNTED INSTANCE only — a brand applied on the
+  // inline chat chart is invisible to the dock's own separately-mounted
+  // ChartView. Handed to `saveMyChartStyle` as `brandApplied` on the next
+  // "Bewaar als mijn standaard" on THIS instance, whichever chart (via a
+  // spec swap) that happens to be showing by then.
   const [lastAppliedBrand, setLastAppliedBrand] = useState<{
     domain: string;
     name: string;
@@ -1239,8 +1243,26 @@ export function ChartView({
   // swap on this same mounted instance (see the specIdentity block above)
   // could otherwise flip between renders and skip this call on some of them.
   useEffect(() => {
-    const font = findFont(pres.fontFamily);
-    if (font && font.source === 'google') ensureFontLoaded(font);
+    const family = pres.fontFamily;
+    const font = findFont(family);
+    if (font && font.source === 'google') {
+      ensureFontLoaded(font);
+    } else if (font === undefined && family !== null) {
+      // Final-review fix: `findFont` only matches the seven curated
+      // FONT_OPTIONS, but a brand font (phase 3's `pickBrandFont`) can put
+      // ANY family name straight into `fontFamily` without ever being
+      // curated — previously that family was applied as CSS (`fontStack`
+      // below) with no `<link>` ever created, so the chart silently
+      // rendered in the fallback system font while the panel's status line
+      // still said the brand font was applied. `fontFamily` doesn't carry
+      // the brand's own origin (google/system) past `handleApplyBrand`, so
+      // this speculatively requests it from Google Fonts — a family the
+      // reader's OS already has installed (a true system font) simply
+      // 404s here, which is harmless: `ensureFontLoaded` only ever adds a
+      // `<link>`, and the browser renders the already-installed family
+      // regardless of whether that link resolves.
+      ensureFontLoaded({ family, source: 'google', stack: fontStack(family)! });
+    }
   }, [pres.fontFamily]);
   // WP218 phase 4 (#219, design §4): the chart's own language. `useLang()`
   // is called UNCONDITIONALLY (its own statement, same reason as the Hook
@@ -1622,7 +1644,15 @@ export function ChartView({
               dispatch({ type: 'setPresentation', patch });
               trackChartStyleEvent('option_changed');
             }}
-            onReset={() => dispatch({ type: 'resetPresentation' })}
+            onReset={() => {
+              dispatch({ type: 'resetPresentation' });
+              // Final-review fix: "Standaardkleuren" (a partial reset) goes
+              // through onChange and was already counted; "Standaard" (the
+              // full reset) fired nothing, so the #220 usage counter — whose
+              // whole point is telling the owner which options readers
+              // actually touch — systematically under-counted resets.
+              trackChartStyleEvent('option_changed');
+            }}
             onOpen={() => trackChartStyleEvent('panel_open')}
             idPrefix={domId}
             account={
@@ -1634,18 +1664,34 @@ export function ChartView({
                       // tweaks are currently showing) become the new
                       // account default — "what's on screen" is what
                       // "Bewaar als mijn standaard" promises to save —
-                      // MINUS the keys the resolver LOCKED for this form
+                      // EXCEPT the keys the resolver LOCKED for this form
                       // (P2 task-4 review): saving while a bar chart is on
                       // screen must not bake the bar-forced zero baseline
                       // into every future line chart. A locked value was
-                      // never the reader's choice, so it is not saved.
-                      const chosen = Object.fromEntries(
-                        Object.entries(resolved.values).filter(([key]) => !(key in resolved.locks)),
-                      ) as Partial<typeof resolved.values>;
+                      // never the reader's choice, so it is not saved AS THE
+                      // LOCK'S VALUE — but final-review fix: it must still be
+                      // saved as whatever `base` (the account default already
+                      // in scope) already held for that key, not dropped
+                      // outright. Omitting the key made `saveUserChartStyle`'s
+                      // full-row REPLACE (never a merge) silently erase an
+                      // earlier saved preference for that key — e.g. turning
+                      // off "Waarden tonen" on a line chart, saving, then only
+                      // changing the font on a bar/hbar/area chart and saving
+                      // again wiped the earlier valueLabels choice because bar
+                      // forms lock it. Writing back `base[key]` keeps both
+                      // properties: a form-forced value is never persisted,
+                      // and a value the reader chose on a DIFFERENT chart form
+                      // survives an unrelated save on this one.
+                      const chosen = { ...resolved.values } as Partial<typeof resolved.values>;
+                      for (const key of Object.keys(resolved.locks) as (keyof typeof resolved.values)[]) {
+                        (chosen as Record<string, unknown>)[key] = base[key];
+                      }
                       // WP218 phase 3 (owner B): the last brand applied on
-                      // ANY chart (not just this one — see lastAppliedBrand's
-                      // own comment) rides along as the account-default
-                      // save's `brandApplied` argument, so the persisted
+                      // any chart shown by THIS MOUNTED ChartView (not just
+                      // whichever chart is on screen right now — see
+                      // lastAppliedBrand's own comment) rides along as the
+                      // account-default save's `brandApplied` argument, so
+                      // the persisted
                       // default can record which brand it came from.
                       const r = await saveMyChartStyle(chosen, lastAppliedBrand ?? undefined);
                       if (r.ok) {
@@ -2252,7 +2298,15 @@ export function ChartView({
           * the same risk #46(c) already names for exports. Same precedent
           * as the Tabel view below, which has never offered a download
           * either. */}
-        {state.form !== 'table' && !smallMultiples ? (
+        {/* Final-review fix: gated on the SAME compound the container/render
+          * branch use (`smallMultiples && smallMultiplesAvailable`), not on
+          * `smallMultiples` alone — leaving small multiples on in Lijn form
+          * and then switching to Staaf (or Vlak) makes
+          * `smallMultiplesAvailable` false while `smallMultiples` state is
+          * still true, so the old `!smallMultiples` guard hid Download on
+          * an ordinary bar/area chart with no way back except returning to
+          * Lijn and toggling small multiples off. */}
+        {state.form !== 'table' && !(smallMultiples && smallMultiplesAvailable) ? (
           <ChartDownloadMenu
             containerRef={chartContainerRef}
             attributionText={`${displayAttributionLine} checkdecijfers.nl${viewDisclosure}`}

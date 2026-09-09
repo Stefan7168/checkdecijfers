@@ -139,9 +139,31 @@ export function translatePeriodLabel(label: string): string {
 const ATTRIBUTION_LINE_RE =
   /^Bron: (.+?), tabel (\S+) — (.+?)\. Gegevens gesynchroniseerd op (\d{4}-\d{2}-\d{2})\. Periode: (.+?)\. Licentie: (.+)\.$/;
 
+/** `format.ts`'s own `${from} t/m ${to}` join (line 316) — the ONLY multi-
+ * period shape this template's `period` field ever takes, so this is a
+ * plain literal split, not a general Dutch-range parser. */
+const PERIOD_RANGE_SEP = ' t/m ';
+
+/** Final-review fix: an English chart's attribution line used to keep the
+ * Dutch period text verbatim ('Periode: 2021 1e kwartaal.') while the axis
+ * beside it (`ChartView`'s `displaySpec`) showed the translated form — the
+ * one place the mixed languages collided on the same card. Runs the
+ * captured period through the SAME `translatePeriodLabel` the axis already
+ * uses, splitting a `t/m` range on each side first; a single period (no
+ * `t/m`) is translated as one label. Digit-invariance holds by construction
+ * — `translatePeriodLabel` itself never touches a digit token, and neither
+ * does this split. */
+function translateAttributionPeriod(period: string): string {
+  const sepIndex = period.indexOf(PERIOD_RANGE_SEP);
+  if (sepIndex === -1) return translatePeriodLabel(period);
+  const from = period.slice(0, sepIndex);
+  const to = period.slice(sepIndex + PERIOD_RANGE_SEP.length);
+  return `${translatePeriodLabel(from)} to ${translatePeriodLabel(to)}`;
+}
+
 export function translateAttributionLine(line: string): string {
   const match = ATTRIBUTION_LINE_RE.exec(line);
   if (!match) return line;
   const [, label, tableId, tableTitle, date, period, license] = match;
-  return `Source: ${label}, table ${tableId} — ${tableTitle}. Data synced on ${date}. Period: ${period}. License: ${license}.`;
+  return `Source: ${label}, table ${tableId} — ${tableTitle}. Data synced on ${date}. Period: ${translateAttributionPeriod(period)}. License: ${license}.`;
 }

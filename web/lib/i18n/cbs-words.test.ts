@@ -92,9 +92,9 @@ describe('translateAttributionLine', () => {
   const nl =
     'Bron: CBS StatLine, tabel 83693NED — Consumentenvertrouwen. Gegevens gesynchroniseerd op 2026-09-01. Periode: 2021 1e kwartaal. Licentie: CC BY 4.0.';
 
-  it('rewrites the fixed skeleton words, keeping id/date/title/period/licence byte-identical', () => {
+  it('rewrites the fixed skeleton words, keeping id/date/title/licence byte-identical, and translates the period exactly like translatePeriodLabel does (final-review fix: the period text used to stay Dutch while the axis beside it showed the translated form)', () => {
     expect(translateAttributionLine(nl)).toBe(
-      'Source: CBS StatLine, table 83693NED — Consumentenvertrouwen. Data synced on 2026-09-01. Period: 2021 1e kwartaal. License: CC BY 4.0.',
+      'Source: CBS StatLine, table 83693NED — Consumentenvertrouwen. Data synced on 2026-09-01. Period: 2021 Q1. License: CC BY 4.0.',
     );
   });
 
@@ -103,6 +103,22 @@ describe('translateAttributionLine', () => {
       'Bron: CBS StatLine, tabel 85773NED — Gemiddelde verkoopprijs. Gegevens gesynchroniseerd op 2026-01-15. Periode: 2024. Licentie: CC BY 4.0.';
     expect(translateAttributionLine(single)).toBe(
       'Source: CBS StatLine, table 85773NED — Gemiddelde verkoopprijs. Data synced on 2026-01-15. Period: 2024. License: CC BY 4.0.',
+    );
+  });
+
+  it('final-review fix: translates BOTH sides of a "t/m" period range, joined with "to"', () => {
+    const range =
+      'Bron: CBS StatLine, tabel 83693NED — Consumentenvertrouwen. Gegevens gesynchroniseerd op 2026-09-01. Periode: 2021 1e kwartaal t/m 2023 4e kwartaal. Licentie: CC BY 4.0.';
+    expect(translateAttributionLine(range)).toBe(
+      'Source: CBS StatLine, table 83693NED — Consumentenvertrouwen. Data synced on 2026-09-01. Period: 2021 Q1 to 2023 Q4. License: CC BY 4.0.',
+    );
+  });
+
+  it('final-review fix: a multi-period range using bare years (no month/quarter shape) translates verbatim on each side, still joined with "to"', () => {
+    const range =
+      'Bron: CBS StatLine, tabel 85773NED — Gemiddelde verkoopprijs. Gegevens gesynchroniseerd op 2026-01-15. Periode: 2024 september t/m 2026 augustus. Licentie: CC BY 4.0.';
+    expect(translateAttributionLine(range)).toBe(
+      'Source: CBS StatLine, table 85773NED — Gemiddelde verkoopprijs. Data synced on 2026-01-15. Period: September 2024 to August 2026. License: CC BY 4.0.',
     );
   });
 
@@ -135,14 +151,32 @@ describe('digit invariance (design §4: a converter never touches a numeric toke
     '2021',
     '2024*',
     'Bron: CBS StatLine, tabel 83693NED — Consumentenvertrouwen. Gegevens gesynchroniseerd op 2026-09-01. Periode: 2021 1e kwartaal. Licentie: CC BY 4.0.',
+    // Final-review fix: a "t/m" period range must be just as digit-invariant
+    // as a single-period line — added alongside the fix that made this
+    // range's period text translate at all (it used to stay Dutch).
+    'Bron: CBS StatLine, tabel 83693NED — Consumentenvertrouwen. Gegevens gesynchroniseerd op 2026-09-01. Periode: 2021 1e kwartaal t/m 2023 4e kwartaal. Licentie: CC BY 4.0.',
     'iets heel anders met 7 cijfers',
   ];
+
+  // Final-review fix: `translateAttributionLine` now translates the period
+  // text (see above), and a translated period/quarter/month label can end
+  // in a bare digit right where the template's OWN sentence-final "."
+  // follows it (e.g. Dutch "...1e kwartaal." keeps the digit buffered by the
+  // word "kwartaal"; English "...Q1." does not) — a cosmetic shift in where
+  // a SENTENCE punctuation mark lands, not a fabricated or altered digit.
+  // Stripping at most one trailing "." before comparing keeps the guard's
+  // real property (every digit VALUE survives untouched) without failing on
+  // this boundary artifact; a genuine digit change inside the token (e.g.
+  // "4.0" become "4.5") still differs and still fails.
+  function digitTokens(s: string): string[] {
+    return (s.match(/\d[\d.,]*/g) ?? []).map((t) => t.replace(/\.$/, ''));
+  }
 
   for (const [name, fn] of converters) {
     it(`${name} never adds, drops or changes a digit token`, () => {
       for (const input of samples) {
         const output = fn(input);
-        expect(output.match(/\d[\d.,]*/g)).toEqual(input.match(/\d[\d.,]*/g));
+        expect(digitTokens(output)).toEqual(digitTokens(input));
       }
     });
   }

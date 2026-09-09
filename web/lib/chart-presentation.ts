@@ -31,10 +31,15 @@ export interface ChartPresentation {
   fontFamily: string | null;
   /** WP218 phase 4 (#219, design §4): the language THIS chart's card copy is
    * shown in. null = follow the app language (`useLang()`); 'nl'/'en' pins
-   * the chart regardless of the app's own switch. Always applicable
-   * (offered on every form, table included) and never locked — unlike every
-   * other key here it has no honesty consequence, so no form ever overrides
-   * or disables it. */
+   * the chart regardless of the app's own switch. Applicable on every form
+   * the panel is actually offered on and never locked — unlike every other
+   * key here it has no honesty consequence, so no form ever overrides or
+   * disables it. Final-review fix: NOT applicable in table form — the panel
+   * itself is never mounted there (`chart.tsx`: `state.form !== 'table'`),
+   * so nothing in `ChartPresentation` is reachable through it, this key
+   * included; the resolver used to claim otherwise (dead code, no user-
+   * visible bug, but a contradiction with ADR 039's own "hidden in Tabel
+   * form"). */
   language: Lang | null;
 }
 export type PresentationOverrides = Partial<ChartPresentation>;
@@ -165,9 +170,14 @@ export function resolvePresentation(
   };
   const locks: Partial<Record<PresentationKey, string>> = {};
   const applicable = new Set<PresentationKey>();
-  if (ctx.form === 'table') {
-    applicable.add('fontFamily');
-  } else {
+  // Final-review fix: table form's `applicable` is EMPTY, not just
+  // `fontFamily` — the ChartConfigPanel is never mounted in Tabel form
+  // (`chart.tsx`: `{state.form !== 'table' ? <ChartConfigPanel …/> : null}`),
+  // so nothing here — including `fontFamily` and (below) `language` — is
+  // ever reachable through it. Leaving `fontFamily` "applicable" for a form
+  // that offers no panel was unreachable dead code that also contradicted
+  // ADR 039's own "hidden in Tabel form".
+  if (ctx.form !== 'table') {
     for (const key of ALL_KEYS) applicable.add(key);
     if (ctx.form === 'bar' || ctx.form === 'hbar') {
       applicable.delete('lineWidth');
@@ -193,9 +203,11 @@ export function resolvePresentation(
     }
   }
   // WP218 phase 4: unlike every other key, `language` has no honesty
-  // consequence for any chart form — it is always offered, never locked, on
-  // a table exactly like on a line or bar chart.
-  applicable.add('language');
+  // consequence for any chart form — it is offered, never locked, on every
+  // form the panel is actually mounted on. Final-review fix: guarded by the
+  // same `ctx.form !== 'table'` as the block above — table form gets NOTHING
+  // (the panel is never mounted there), not "everything except the locks".
+  if (ctx.form !== 'table') applicable.add('language');
   const pristine = Object.keys(clean).every((k) => k === 'seriesColors' && Object.keys(clean.seriesColors ?? {}).length === 0);
   return { values, locks, applicable, pristine };
 }
