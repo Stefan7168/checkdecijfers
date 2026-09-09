@@ -34,6 +34,8 @@ export const CHART_STYLE_EVENTS = [
   // counts only, like every other event here.
   'story_open',
   'story_step',
+  // WP218 phase 5 (frame task 2): fired once per frame change.
+  'frame_changed',
 ] as const;
 export type ChartStyleEvent = (typeof CHART_STYLE_EVENTS)[number];
 

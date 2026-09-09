@@ -311,6 +311,13 @@ describe('recordChartStyleEvent', () => {
       ]);
     });
   });
+
+  it('accepts the frame_changed event', async () => {
+    await withDb(async (db) => {
+      await recordChartStyleEvent(db, 'frame_changed', new Date('2026-01-03T14:00:00Z'));
+      expect(await usageRows(db)).toEqual([{ event: 'frame_changed', day: '2026-01-03', count: 1 }]);
+    });
+  });
 });
 
 describe('sumChartStyleEventsInMonth', () => {
