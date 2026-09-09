@@ -155,6 +155,10 @@ function comparisonSteps(spec: ChartSpec, lang: Lang): StoryStep[] {
     if (bar.point.value > high.point.value) high = bar;
     if (bar.point.value < low.point.value) low = bar;
   }
+  // Every bar equal: there is no highest or lowest to tell — no story
+  // rather than the same bar told twice (the time-series branch's
+  // `low !== high` guard, applied to comparisons).
+  if (high === low) return [];
   const barStep = (kind: 'high' | 'low', titleKey: 'chart.story.highTitle' | 'chart.story.lowTitle', bar: typeof high): StoryStep => ({
     id: `${kind}-${seriesKey(bar.index)}`,
     kind,

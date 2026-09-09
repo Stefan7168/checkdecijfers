@@ -228,4 +228,26 @@ describe('buildStorySteps — a comparison of bars', () => {
     expectDigitsBound(bars(), 'nl');
     expectDigitsBound(bars(), 'en');
   });
+
+  it('yields nothing when every bar has the same value (no highest or lowest to tell)', () => {
+    const flat = spec({
+      kind: 'bar',
+      series: bars().series.map((s) => ({ ...s, points: s.points.map((p) => ({ ...p, value: 12, formattedValue: '12', provisional: false, status: 'Definitief' })) })),
+    });
+    expect(buildStorySteps(flat, 'nl')).toEqual([]);
+  });
+
+  it('a partial tie keeps the first bar in spec order as the highest', () => {
+    const tied = spec({
+      kind: 'bar',
+      series: [
+        bars().series[0]!,
+        { ...bars().series[1]!, points: bars().series[1]!.points.map((p) => ({ ...p, value: 20, formattedValue: '20', provisional: false, status: 'Definitief' })) },
+        { ...bars().series[2]!, points: bars().series[2]!.points.map((p) => ({ ...p, value: 20, formattedValue: '20' })) },
+      ],
+    });
+    const steps = buildStorySteps(tied, 'nl');
+    expect(steps[1]).toMatchObject({ kind: 'high', title: 'Hoogste punt', caption: 'Friesland: 20 %', highlight: 's1' });
+    expect(steps[2]).toMatchObject({ kind: 'low', caption: 'Groningen: 10 %', highlight: 's0' });
+  });
 });
