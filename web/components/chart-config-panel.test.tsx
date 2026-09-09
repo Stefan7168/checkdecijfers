@@ -211,6 +211,59 @@ describe('ChartConfigPanel — Grafiek tab', () => {
     expect(select.value).toBe('en');
     expect([...select.options].map((o) => o.textContent)).toEqual(['Same as the app', 'Nederlands', 'English']);
   });
+
+  it('WP218 phase 5: the "why no pie or stacked chart" note is collapsed by default and opens on click', () => {
+    render(
+      <ChartConfigPanel
+        resolved={resolvePresentation(lineCtx, {})}
+        seriesMeta={meta}
+        onChange={vi.fn()}
+        onReset={vi.fn()}
+        idPrefix="c"
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    const summary = screen.getByText('Waarom geen taart- of gestapelde grafiek?');
+    const details = summary.closest('details');
+    expect(details).not.toBeNull();
+    expect(details).not.toHaveAttribute('open');
+    // The body text is present in the DOM either way (jsdom does not apply
+    // the UA `display: none` that a real browser would use to hide a closed
+    // <details>'s content) — the load-bearing assertion is the `open`
+    // attribute above, not text presence.
+    expect(
+      screen.getByText(
+        'Een taart- of gestapelde grafiek tekent een totaal of een aandeel dat in geen enkele CBS-cel staat. Een spreidingsgrafiek heeft twee meetwaarden per punt nodig, en deze grafiek heeft er één. Sorteren op waarde is een rangorde die niet gemeten is.',
+      ),
+    ).toBeInTheDocument();
+    fireEvent.click(summary);
+    expect(details).toHaveAttribute('open');
+    expect(
+      screen.getByText(
+        'Een taart- of gestapelde grafiek tekent een totaal of een aandeel dat in geen enkele CBS-cel staat. Een spreidingsgrafiek heeft twee meetwaarden per punt nodig, en deze grafiek heeft er één. Sorteren op waarde is een rangorde die niet gemeten is.',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('WP218 phase 5: the "why no pie or stacked chart" note renders in English under lang="en"', () => {
+    render(
+      <ChartConfigPanel
+        lang="en"
+        resolved={resolvePresentation(lineCtx, {})}
+        seriesMeta={meta}
+        onChange={vi.fn()}
+        onReset={vi.fn()}
+        idPrefix="c"
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Style' }));
+    expect(screen.getByText('Why no pie or stacked chart?')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'A pie or a stacked chart draws a total or a share that no CBS cell contains. A scatter plot needs two measures per point, and this chart has one. Sorting by value asserts a ranking that was never measured.',
+      ),
+    ).toBeInTheDocument();
+  });
 });
 
 describe('ChartConfigPanel — Kleuren tab', () => {

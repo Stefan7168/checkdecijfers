@@ -451,6 +451,13 @@ const nl = {
   'chart.panel.languageFollowApp': 'Zoals de app',
   'chart.panel.languageNl': 'Nederlands',
   'chart.panel.languageEn': 'English',
+  // WP218 phase 5 (chart-types plan, Task 3): the Grafiek tab's collapsed
+  // note explaining why pie/donut, stacked, scatter and sorted-by-value
+  // charts are never offered as a form — digit-free per the resolver's own
+  // honesty invariant ('één'/'twee' are words, not numerals).
+  'chart.panel.whyNotTitle': 'Waarom geen taart- of gestapelde grafiek?',
+  'chart.panel.whyNotBody':
+    'Een taart- of gestapelde grafiek tekent een totaal of een aandeel dat in geen enkele CBS-cel staat. Een spreidingsgrafiek heeft twee meetwaarden per punt nodig, en deze grafiek heeft er één. Sorteren op waarde is een rangorde die niet gemeten is.',
 };
 
 // `Messages` is derived from the (widened, non-`const`) Dutch object above,
@@ -828,6 +835,9 @@ const en: Messages = {
   'chart.panel.languageFollowApp': 'Same as the app',
   'chart.panel.languageNl': 'Nederlands',
   'chart.panel.languageEn': 'English',
+  'chart.panel.whyNotTitle': 'Why no pie or stacked chart?',
+  'chart.panel.whyNotBody':
+    'A pie or a stacked chart draws a total or a share that no CBS cell contains. A scatter plot needs two measures per point, and this chart has one. Sorting by value asserts a ranking that was never measured.',
 };
 
 export const MESSAGES = { nl, en } as const satisfies Record<Lang, Messages>;

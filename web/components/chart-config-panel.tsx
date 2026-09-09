@@ -112,6 +112,10 @@ function buildPanelCopy(lang: Lang) {
     languageFollowApp: t(lang, 'chart.panel.languageFollowApp'),
     languageNl: t(lang, 'chart.panel.languageNl'),
     languageEn: t(lang, 'chart.panel.languageEn'),
+    /** WP218 phase 5 (chart-types plan, Task 3): the collapsed "why no pie
+     * or stacked chart" note at the end of the Grafiek tab. */
+    whyNotTitle: t(lang, 'chart.panel.whyNotTitle'),
+    whyNotBody: t(lang, 'chart.panel.whyNotBody'),
   };
 }
 type PanelCopy = ReturnType<typeof buildPanelCopy>;
@@ -789,6 +793,17 @@ export function ChartConfigPanel({
               <Button type="button" variant="outline" size="xs" disabled={resolved.pristine} onClick={onReset}>
                 {copy.reset}
               </Button>
+
+              {/* WP218 phase 5 (chart-types plan, Task 3): one collapsed note
+                * explaining why pie/donut, stacked, scatter and sorted-by-
+                * value forms are never offered — collapsed by default so it
+                * doesn't compete with the controls above, plain <details>/
+                * <summary> rather than a JS-driven disclosure (cheapest
+                * mechanism first: the browser already does open/close). */}
+              <details className="text-xs text-muted-foreground">
+                <summary>{copy.whyNotTitle}</summary>
+                <p>{copy.whyNotBody}</p>
+              </details>
             </div>
           ) : null}
 
