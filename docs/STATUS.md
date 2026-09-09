@@ -38,11 +38,14 @@ Horizontal bar · Table tabs). Migrations 028 + 029 and the Brandfetch key remai
   and 375 px (one real bug found + fixed: tilted labels clipped left), the language switch (cookie,
   `<html lang>`, English headings via the word list), the five tabs with reasons, the chart-language
   select and the "why no pie chart" note.
-- **Owner steps (RUNBOOK § "WP218 chart styling — the supervised go-live"):** review + merge the
-  PR; apply migrations 028 + 029 (`npm run db:migrate`); optionally set `BRANDFETCH_API_KEY`
-  (free tier = 100 lookups in TOTAL, then ≈ $99/month — re-check before paying). Until the
-  migrations run: saving a default says "not possible", the counter counts nothing, brand lookup is
-  refused — by design, no error pages.
+- **Owner steps (RUNBOOK § "WP218 chart styling — the supervised go-live"):** apply migrations 028 +
+  029 (`npm run db:migrate`); optionally set `BRANDFETCH_API_KEY`. **Owner decision, end of session:
+  Brandfetch lookups are hard-capped at 100 real calls per calendar month (`03488d6`, counted in
+  `chart_style_usage` as `brand_fetch`, fail-closed when that table is absent; CI run `34332236454`
+  gate + deploy green, health ok) — the free tier is never
+  exceeded and no paid plan is needed; customers may miss the button for the rest of a month.** Until
+  the migrations run: saving a default says "not possible", the counter counts nothing, brand lookup
+  is refused — by design, no error pages.
 - **Decisions taken under "document, don't escalate"** (each with a rollback in ADR 039/040): a
   two-year retention window for a saved style; a 30-day brand cache; the citation stays Dutch;
   backend prose stays Dutch on an English chart; first visit follows the browser's language;

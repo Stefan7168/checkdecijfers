@@ -81,6 +81,13 @@ PICKS AND MERGED INTO `main` (`05ec8ed`) AND LIVE THE SAME DAY (items 11–12).*
     default" row), the NL | EN switch (his browser prefers English, so the app opened in English),
     the five chart-type tabs with "Horizontal bar" greyed on a time series. **Still the owner's:**
     migrations 028 + 029 (`npm run db:migrate`) and, optionally, `BRANDFETCH_API_KEY`.
+13. **Last decision of the session (owner, plain English: "max it at 100 per month, then disable it
+    until the new cycle, so we avoid paying"):** a hard cap of 100 real Brandfetch calls per UTC
+    calendar month, counted in `chart_style_usage` (event `brand_fetch`), checked after the cache and
+    before the per-user cap, fail-closed when the counter table is absent; the panel says the button
+    is back next month (`03488d6`, pushed direct to `main`, owner present; chart suite 175/175, web
+    1138/1138, typechecks, build, docs test; CI run `34332236454` gate + deploy green, health ok).
+    Wrap-up on "wrap up this session".
 
 **Session 90 (2026-09-09, owner present) — #218 CHART-CONFIGURATION ARCHITECTURE PANEL RUN, OWNER
 DECISIONS A–H COLLECTED, WP218 PROGRAMME DOCUMENTED (NOT BUILT); COMPOSER LAYOUT MOVE, "LINK WITH

@@ -3,7 +3,7 @@
 Written 2026-09-09 at the end of session 91 (autonomous). Every fact below was verified against
 `git log`, `git status`, the test runs and `gh` at the time of writing — not recalled. Read in this
 order before doing anything: `CLAUDE.md` → `docs/STATUS.md` (top block is the truth) → this file →
-`docs/status-archive.md` (session-91 entry, top, 11 items) → `docs/lessons-learned.md` (session-91
+`docs/status-archive.md` (session-91 entry, top, 13 items) → `docs/lessons-learned.md` (session-91
 entries, top) → `docs/RUNBOOK.md` § "WP218 chart styling — the supervised go-live" →
 `docs/decisions/039-chart-presentation-panel.md` + `040-interface-language-switch.md`.
 
@@ -14,6 +14,9 @@ entries, top) → `docs/RUNBOOK.md` § "WP218 chart styling — the supervised g
   chart in a compact grid — STATUS session-91 block), 48+ commits on top of `main`'s `867393d`, **MERGED into `main` as `05ec8ed` and LIVE** (CI run `34329626769`
   gate + deploy green, production checked in the owner's Chrome light + dark). The account default,
   the usage counter and brand lookup stay dormant until the owner's steps below.
+- Last commit of the session, owner present: `03488d6` — a hard cap of 100 real Brandfetch lookups
+  per calendar month, fail-closed (owner: "max it at 100 per month, then disable it until the new
+  cycle, so we avoid paying"). Pushed direct to `main`; CI run `34332236454` gate + deploy green.
 - Verification: at the WP218 head `eab25b6` — typecheck ×2 clean, web 1121/1121, backend 2191/2191,
   benchmark suite 28/28, `next build` clean, docs test 11/11, Opus whole-branch review + fix round +
   re-review Approved, LOW-effort review pass 0 findings. The later design-pick commits (`0de0390`…
@@ -27,9 +30,11 @@ entries, top) → `docs/RUNBOOK.md` § "WP218 chart styling — the supervised g
 1. ~~Merge the PR~~ — done, `05ec8ed`.
 2. Apply migrations 028 + 029 with `npm run db:migrate` (owner present; RUNBOOK § WP218 go-live has
    the verification queries and the smoke test).
-3. Brandfetch: sign up + set the key only if he wants brand colours; the free tier is 100 lookups in
-   TOTAL, then ≈ $99/month (re-check the pricing page); the endpoint path form is UNCONFIRMED without
-   a key (one constant in `src/chart/brandfetch.ts`).
+3. Brandfetch: sign up + set the key only if he wants brand colours. The app now hard-caps real
+   lookups at 100 per calendar month (`03488d6`, owner decision) so no paid plan is ever needed; the
+   endpoint path form is UNCONFIRMED without a key (one constant in `src/chart/brandfetch.ts`), and
+   Brandfetch's own free tier may be 100 in total rather than monthly (unconfirmed) — the button then
+   simply stops working after the first 100 and the owner decides.
 4. ~~The three CI minute-saving changes~~ — built (`c10b874`): docs-only pushes now skip CI, so a
    docs-only push to `main` shows NO run — that is expected, not a failure.
 5. WP202a go-live steps 2–6 (RUNBOOK § WP202) remain pending from before.
