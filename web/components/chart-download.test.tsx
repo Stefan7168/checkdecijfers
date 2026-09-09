@@ -9,7 +9,7 @@
 import { createRef } from 'react';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { attributedSvgMarkup, ChartDownloadMenu, type FrameExportInput } from './chart-download.tsx';
+import { attributedSvgMarkup, ChartDownloadMenu, gradientEndpoints, type FrameExportInput } from './chart-download.tsx';
 import { STOCK_PRESENTATION, type FrameValues } from '../lib/chart-presentation.ts';
 
 afterEach(cleanup);
@@ -41,6 +41,28 @@ describe('attributedSvgMarkup', () => {
   it('preserves the original chart content (the source rect) in the clone', () => {
     const markup = attributedSvgMarkup(sampleSvg(), 'attributie');
     expect(markup).toContain('<rect width="10" height="10"');
+  });
+});
+
+describe('gradientEndpoints', () => {
+  // CSS linear-gradient angle convention: 0deg = to top, 90deg = to right,
+  // 135deg = towards bottom-right — the gradient line is centred on
+  // (0.5, 0.5), matching centre-based CSS gradients (not the SVG
+  // gradientTransform rotate-about-top-left-corner convention).
+  it('0deg points to top: bottom-centre to top-centre', () => {
+    expect(gradientEndpoints(0)).toEqual({ x1: 0.5, y1: 1, x2: 0.5, y2: 0 });
+  });
+
+  it('90deg points to right: left-centre to right-centre', () => {
+    expect(gradientEndpoints(90)).toEqual({ x1: 0, y1: 0.5, x2: 1, y2: 0.5 });
+  });
+
+  it('135deg points to bottom-right: top-left to bottom-right', () => {
+    expect(gradientEndpoints(135)).toEqual({ x1: 0.146, y1: 0.146, x2: 0.854, y2: 0.854 });
+  });
+
+  it('180deg points to bottom: top-centre to bottom-centre', () => {
+    expect(gradientEndpoints(180)).toEqual({ x1: 0.5, y1: 0, x2: 0.5, y2: 1 });
   });
 });
 
@@ -287,7 +309,14 @@ describe('attributedSvgMarkup — frame (Task 4, design §C3)', () => {
     };
     const markup = attributedSvgMarkup(sampleSvg(), 'attributie', undefined, frame);
     expect(markup).toContain('<linearGradient id="frame-bg"');
-    expect(markup).toContain('gradientTransform="rotate(135)"');
+    // CSS's 135deg convention (centre-based), NOT gradientTransform (which
+    // rotates about the bounding box's top-left corner and would not match
+    // the on-screen CSS linear-gradient).
+    expect(markup).toContain('x1="0.146"');
+    expect(markup).toContain('y1="0.146"');
+    expect(markup).toContain('x2="0.854"');
+    expect(markup).toContain('y2="0.854"');
+    expect(markup).not.toContain('gradientTransform');
     expect(markup).toContain('stop-color="#ffffff"');
     expect(markup).toContain('stop-color="#000000"');
     expect(markup).toContain('fill="url(#frame-bg)"');
@@ -299,9 +328,26 @@ describe('attributedSvgMarkup — frame (Task 4, design §C3)', () => {
       image: 'data:image/png;base64,AAAA',
     };
     const markup = attributedSvgMarkup(sampleSvg(), 'attributie', undefined, frame);
+    // Declares xmlns:xlink for the xlink:href fallback below.
+    expect(markup).toContain('xmlns:xlink="http://www.w3.org/1999/xlink"');
     expect(markup).toContain('href="data:image/png;base64,AAAA"');
+    expect(markup).toContain('xlink:href="data:image/png;base64,AAAA"');
     expect(markup).toContain('<clipPath');
-    expect(markup).toContain('clip-path="url(#frame-clip)"');
+    const clipMatch = markup.match(/<clipPath id="(frame-clip-\d+)"/);
+    expect(clipMatch).not.toBeNull();
+    expect(markup).toContain(`clip-path="url(#${clipMatch![1]})"`);
+  });
+
+  it('uses a different clip id on consecutive exports so they never collide', () => {
+    const frame: FrameExportInput = {
+      values: { ...pristineFrame, framePadding: 'small', frameCorners: 'rounded', frameBackground: { kind: 'image' } },
+      image: 'data:image/png;base64,AAAA',
+    };
+    const first = attributedSvgMarkup(sampleSvg(), 'attributie', undefined, frame);
+    const second = attributedSvgMarkup(sampleSvg(), 'attributie', undefined, frame);
+    const firstId = first.match(/<clipPath id="(frame-clip-\d+)"/)![1];
+    const secondId = second.match(/<clipPath id="(frame-clip-\d+)"/)![1];
+    expect(firstId).not.toBe(secondId);
   });
 
   it('shadow: draws a feDropShadow filter', () => {
@@ -335,9 +381,16 @@ describe('attributedSvgMarkup — frame (Task 4, design §C3)', () => {
     expect(outerWidthMatch).not.toBeNull();
     expect(outerHeightMatch).not.toBeNull();
     expect(outerWidthMatch![1]).toBe(outerHeightMatch![1]);
+    const outerHeight = Number(outerHeightMatch![1]);
+    // sampleSvg is 400x200 chart, +24 footer = 400x224 natural height (no
+    // padding/inset/shadow in pristineFrame), which is the nested svg's
+    // natural (un-widened) height.
+    const naturalHeight = 224;
     const nestedYMatch = markup.match(/<svg[^>]*\sy="(\d+(?:\.\d+)?)"/);
     expect(nestedYMatch).not.toBeNull();
-    expect(Number(nestedYMatch![1])).toBeGreaterThan(0);
+    const nestedY = Number(nestedYMatch![1]);
+    expect(nestedY).toBeGreaterThan(0);
+    expect(Math.abs(nestedY - (outerHeight - naturalHeight) / 2)).toBeLessThanOrEqual(1);
   });
 
   it('the attribution text node is present exactly once, and textContent matches the unframed export', () => {

@@ -156,6 +156,33 @@ function svgEl(tag: string): Element {
   return document.createElementNS(SVG_NS, tag);
 }
 
+/** Converts a CSS `linear-gradient(<angle>deg, from, to)` angle into SVG
+ * `objectBoundingBox` gradient endpoints that reproduce the same on-screen
+ * direction. CSS's angle convention is 0deg = to top, 90deg = to right
+ * (clockwise from "up"), so the direction unit vector is (sin a, -cos a).
+ * SVG's `gradientTransform="rotate(...)"` instead rotates about the
+ * bounding box's top-left corner, which does NOT match a CSS
+ * `linear-gradient` (centre-based) — so the gradient line is built directly
+ * from explicit x1/y1/x2/y2 instead, centred on (0.5, 0.5). Exported for
+ * direct unit testing. */
+export function gradientEndpoints(angleDeg: number): { x1: number; y1: number; x2: number; y2: number } {
+  const rad = (angleDeg * Math.PI) / 180;
+  const dx = Math.sin(rad);
+  const dy = -Math.cos(rad);
+  const round3 = (n: number): number => Math.round(n * 1000) / 1000;
+  return {
+    x1: round3(0.5 - dx / 2),
+    y1: round3(0.5 - dy / 2),
+    x2: round3(0.5 + dx / 2),
+    y2: round3(0.5 + dy / 2),
+  };
+}
+
+/** Per-module export counter so consecutive exports never collide on the
+ * same clipPath id when multiple framed SVGs coexist in the DOM (e.g. two
+ * chart exports rendered/inspected side by side). */
+let clipIdCounter = 0;
+
 /** Builds the OUTER framed svg around an already-attributed chart clone
  * (design §C3). Geometry mirrors ChartFrame (Task 3, chart-frame.tsx) —
  * same px maps, same shadow spec — so the export can never drift from what
@@ -203,6 +230,10 @@ function buildFrame(
 
   const outer = svgEl('svg') as SVGSVGElement;
   outer.setAttribute('xmlns', SVG_NS);
+  // Declared via setAttributeNS (not setAttribute) so the serializer
+  // recognizes it as the actual namespace declaration for the xlink:href
+  // set below with setAttributeNS, rather than emitting an ns1: prefix.
+  outer.setAttributeNS('http://www.w3.org/2000/xmlns/', 'xmlns:xlink', 'http://www.w3.org/1999/xlink');
   outer.setAttribute('width', String(outerW));
   outer.setAttribute('height', String(outerH));
   outer.setAttribute('viewBox', `0 0 ${outerW} ${outerH}`);
@@ -220,7 +251,11 @@ function buildFrame(
   if (bg !== 'none' && bg.kind === 'gradient') {
     const gradient = svgEl('linearGradient');
     gradient.setAttribute('id', 'frame-bg');
-    gradient.setAttribute('gradientTransform', `rotate(${FRAME_GRADIENT_ANGLE})`);
+    const { x1, y1, x2, y2 } = gradientEndpoints(FRAME_GRADIENT_ANGLE);
+    gradient.setAttribute('x1', String(x1));
+    gradient.setAttribute('y1', String(y1));
+    gradient.setAttribute('x2', String(x2));
+    gradient.setAttribute('y2', String(y2));
     const stop1 = svgEl('stop');
     stop1.setAttribute('offset', '0%');
     stop1.setAttribute('stop-color', bg.from);
@@ -259,7 +294,7 @@ function buildFrame(
       if (frame.image !== null) {
         let clipId: string | null = null;
         if (corner > 0) {
-          clipId = 'frame-clip';
+          clipId = `frame-clip-${++clipIdCounter}`;
           const clipPath = svgEl('clipPath');
           clipPath.setAttribute('id', clipId);
           const clipRect = svgEl('rect');
@@ -273,6 +308,7 @@ function buildFrame(
         }
         const image = svgEl('image');
         image.setAttribute('href', frame.image);
+        image.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', frame.image);
         image.setAttribute('x', String(bgX));
         image.setAttribute('y', String(bgY));
         image.setAttribute('width', String(bgW));
