@@ -2,7 +2,8 @@
 
 **Session 91 (2026-09-09, AUTONOMOUS) — THE WHOLE WP218 CHART STYLING PROGRAMME (PHASES 0–6) BUILT
 VIA SUBAGENT-DRIVEN DEVELOPMENT ON BRANCH `wp218-chart-styling`, REVIEWED TASK BY TASK AND AS A WHOLE
-BRANCH, VERIFIED, OPENED AS A PULL REQUEST. NOTHING MERGED OR LIVE.**
+BRANCH, VERIFIED, OPENED AS A PULL REQUEST — AND, THE OWNER BACK IN CHAT, EXTENDED WITH HIS TWO DESIGN
+PICKS AND MERGED INTO `main` (`05ec8ed`) AND LIVE THE SAME DAY (items 11–12).**
 
 1. **The go:** after the session-90 compaction the owner wrote "Start executing, work autonomously,
    use subagents with the best model for the job (beware to save tokens…), work for hours and
