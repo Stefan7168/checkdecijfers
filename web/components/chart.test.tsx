@@ -3358,11 +3358,42 @@ describe('embed mode (spec Part B3)', () => {
     expect(screen.queryByRole('textbox')).toBeNull();
   });
 
+  // Review fix: ChartNotes (the notes PANEL) was already gated off above, but
+  // onPointClick was still passed unconditionally at every marker call site,
+  // so each chart point stayed a focusable, ARIA-labeled phantom control with
+  // nothing to open -- a confusing dead end for keyboard/screen-reader users
+  // on the public embed page, and a direct contradiction of embedMode's own
+  // JSDoc. This asserts the point sheds role/tabIndex/aria-label entirely,
+  // not just that clicking it does nothing.
+  it('a chart point loses its role, tabIndex and note aria-label in embedMode', () => {
+    const s = threePointSpec();
+    render(<ChartView spec={s} />);
+    const dotBefore = document.querySelector('circle[data-point="value"]')!;
+    expect(dotBefore).toHaveAttribute('role', 'button');
+    expect(dotBefore).toHaveAttribute('tabindex', '0');
+    expect(dotBefore.getAttribute('aria-label')).toMatch(/voeg notitie toe/i);
+    cleanup();
+
+    render(<ChartView spec={s} embedMode embedFooter="x" />);
+    const dotAfter = document.querySelector('circle[data-point="value"]')!;
+    expect(dotAfter).not.toHaveAttribute('role');
+    expect(dotAfter).not.toHaveAttribute('tabindex');
+    expect(dotAfter).not.toHaveAttribute('aria-label');
+    expect(screen.queryByRole('button', { name: /voeg notitie toe/i })).toBeNull();
+  });
+
   it('renders the embedFooter sentence with a checkdecijfers.nl backlink when embedMode is on', () => {
     render(<ChartView spec={threePointSpec()} embedMode embedFooter="Frozen on 10 September 2026 ·" />);
     expect(screen.getByText(/Frozen on 10 September 2026/)).toBeInTheDocument();
     const link = screen.getByRole('link', { name: /checkdecijfers\.nl/i });
     expect(link).toHaveAttribute('href', 'https://checkdecijfers.nl');
+    // Review fix: this link is the ONE way out of a third-party <iframe> (the
+    // whole point of the embed feature) -- without target="_blank" it loads
+    // checkdecijfers.nl INTO the iframe box instead of the reader's top page,
+    // trapping the site in a chart-sized frame. Same convention as
+    // SourceBadge's own outbound link (source-badge.tsx).
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link.getAttribute('rel')).toMatch(/noopener/);
   });
 
   it('renders NO embed footer when embedMode is false, regardless of embedFooter', () => {

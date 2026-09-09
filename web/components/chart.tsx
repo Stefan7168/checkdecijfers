@@ -1157,12 +1157,15 @@ export function ChartView({
    * button) — ChartEmbedButton's own render guard enforces this too. */
   embed?: { auditId: number };
   /** Spec Part B3: true ONLY for the /embed/[token] public route's own
-   * render. Strips every interactive control this component owns (the
-   * Weergave tablist, Style/Story triggers, zoom selects, small multiples,
-   * click-to-annotate notes, Download, Embed) and renders `embedFooter`
-   * instead of all of them. The chart, its title/unit, the R4 attribution
-   * line and SourceBadge are UNCHANGED — an embed is the same honest card,
-   * minus the controls a third-party page has no business exposing. */
+   * render. Strips the Weergave tablist, the Opmaak/Verhaal (Style/Story)
+   * triggers, the zoom selects, the small-multiples toggle, the
+   * click-to-annotate affordance, Download and Embed, replacing them with
+   * `embedFooter`. The chart, its title/unit, the R4 attribution line and
+   * SourceBadge are UNCHANGED — and SeriesLegend's hide/highlight buttons
+   * intentionally STAY interactive (a reading aid; the spec only bars the
+   * embed URL from ENCODING a hide/highlight selection, not disabling one
+   * during viewing). An embed is the same honest card, minus the controls
+   * a third-party page has no business exposing. */
   embedMode?: boolean;
   /** Spec Part B3: the embed page's own footer sentence, built by the
    * ROUTE (it alone knows frozen-vs-live and the relevant date) — e.g.
@@ -1197,6 +1200,17 @@ export function ChartView({
   // clicks must not carry over another chart's notes).
   const [notes, setNotes] = useState<ChartNote[]>([]);
   const [pendingPoint, setPendingPoint] = useState<PendingPoint | null>(null);
+  // Review fix (spec Part B3): hoisted once so every SeriesDot/SeriesBar/
+  // RegionBar call site shares the SAME handler, rather than each of the
+  // four sites re-deriving its own `embedMode ? undefined : ...` ternary.
+  // A truthy onPointClick is what makes those components render
+  // role="button"/tabIndex/the note aria-label/a pointer cursor (see each
+  // function's own ternaries) — undefined here removes all of that at
+  // once. Without this, embedMode still left every chart point a
+  // focusable, ARIA-labeled phantom control with nothing to open, since
+  // ChartNotes (the panel, gated below) is a different thing from the
+  // per-point click/focus affordance built into the markers themselves.
+  const onPointClick = embedMode ? undefined : (p: PendingPoint) => setPendingPoint(p);
   // Final review finding: a new note's id used to be
   // `${resultId}-${prev.length}`, but `prev.length` is not monotonic — it
   // shrinks on delete — so two notes on the same point could end up with the
@@ -2215,7 +2229,7 @@ export function ChartView({
                         pres.valueLabels === 'shown' ? endLabelByKey.get(s.key) : undefined,
                         dimmed ? 0.25 : 1,
                         s.label,
-                        (p) => setPendingPoint(p),
+                        onPointClick,
                         { ...dotGeometry(pres.lineWidth), hideFinal: pres.markers === 'provisionalOnly' },
                         chartLang,
                         activeStoryStep?.point?.seriesKey === s.key ? activeStoryStep.point.periodCode : null,
@@ -2291,7 +2305,7 @@ export function ChartView({
                         pres.valueLabels === 'shown' ? endLabelByKey.get(s.key) : undefined,
                         dimmed ? 0.25 : 1,
                         s.label,
-                        (p) => setPendingPoint(p),
+                        onPointClick,
                         { ...dotGeometry(pres.lineWidth), hideFinal: pres.markers === 'provisionalOnly' },
                         chartLang,
                         activeStoryStep?.point?.seriesKey === s.key ? activeStoryStep.point.periodCode : null,
@@ -2365,7 +2379,7 @@ export function ChartView({
               <Bar
                 dataKey="value"
                 isAnimationActive={false}
-                shape={RegionBar(regionPeriodLabel, hbarLabelsShown, (p) => setPendingPoint(p), chartLang)}
+                shape={RegionBar(regionPeriodLabel, hbarLabelsShown, onPointClick, chartLang)}
               />
             </BarChart>
           ) : (
@@ -2446,7 +2460,7 @@ export function ChartView({
                         barLabelsByKey.get(s.key) ?? new Map<string, PointLabel>(),
                         dimmed ? 0.25 : 1,
                         s.label,
-                        (p) => setPendingPoint(p),
+                        onPointClick,
                         chartLang,
                         activeStoryStep?.point?.seriesKey === s.key ? activeStoryStep.point.periodCode : null,
                       )}
@@ -2777,7 +2791,13 @@ export function ChartView({
       {embedMode && embedFooter ? (
         <p className="mt-1 text-xs text-muted-foreground">
           {embedFooter}{' '}
-          <a href="https://checkdecijfers.nl" className="underline">
+          {/* Review fix: this link is the ONE way out of a third-party
+            * <iframe> (the whole point of the embed feature) -- without
+            * target="_blank" it would load checkdecijfers.nl INTO the
+            * iframe box instead of the reader's top page, trapping the
+            * site in a chart-sized frame. Same convention as SourceBadge's
+            * own outbound link (source-badge.tsx). */}
+          <a href="https://checkdecijfers.nl" target="_blank" rel="noopener noreferrer" className="underline">
             checkdecijfers.nl
           </a>
         </p>
