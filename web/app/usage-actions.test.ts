@@ -20,6 +20,8 @@ vi.mock('../backend/chart/user-styles.ts', () => ({
   // joined the same enum with the global monthly Brandfetch cap (owner
   // decision 2026-09-09). 'story_open' and 'story_step' joined for story
   // mode (session 92). 'frame_changed' joined for the frame task (phase 5).
+  // 'stage_open' and 'stage_autoplay' joined for the full-viewport Story
+  // stage (ADR 044, Story-stage plan Task 4).
   CHART_STYLE_EVENTS: [
     'panel_open',
     'option_changed',
@@ -36,6 +38,8 @@ vi.mock('../backend/chart/user-styles.ts', () => ({
     'template_presentation',
     'template_social',
     'template_minimal',
+    'stage_open',
+    'stage_autoplay',
   ],
 }));
 
@@ -73,6 +77,8 @@ describe('countChartStyleEvent', () => {
     'template_presentation',
     'template_social',
     'template_minimal',
+    'stage_open',
+    'stage_autoplay',
   ] as const)(
     'records a valid event (%s) via the store, using the real db and a fresh date',
     async (event) => {
