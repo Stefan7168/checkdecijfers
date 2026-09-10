@@ -32,6 +32,11 @@ export interface ChartStoryStageProps {
   onAutoplay?(): void;
 }
 
+// Fix round 1 (item A): focus containment for the `aria-modal` dialog.
+// There is no `inert` on the rest of the page (cheapest mechanism, per the
+// brief) — instead Tab/Shift+Tab wrap at the dialog's own edges.
+const FOCUSABLE_SELECTOR = 'button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+
 function useReducedMotion(): boolean {
   const [reduced, setReduced] = useState(false);
   useEffect(() => {
@@ -127,6 +132,25 @@ export function ChartStoryStage({ open, spec, steps, index, onIndexChange, onClo
       event.preventDefault();
       setAutoplay(false);
       go(index + (event.key === 'ArrowRight' || event.key === 'ArrowDown' ? 1 : -1));
+      return;
+    }
+    if (event.key === 'Tab') {
+      const dialog = dialogRef.current;
+      if (!dialog) return;
+      const focusable = Array.from(dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
+      if (focusable.length === 0) return;
+      const firstFocusable = focusable[0]!;
+      const lastFocusable = focusable[focusable.length - 1]!;
+      const active = document.activeElement;
+      if (event.shiftKey) {
+        if (active === firstFocusable || active === dialog) {
+          event.preventDefault();
+          lastFocusable.focus();
+        }
+      } else if (active === lastFocusable) {
+        event.preventDefault();
+        firstFocusable.focus();
+      }
     }
   }
 
@@ -141,7 +165,6 @@ export function ChartStoryStage({ open, spec, steps, index, onIndexChange, onClo
 
   // The entry tilt runs over the FIRST step's progress only; from step two on the plane is flat.
   const entry = entranceStyle(index === 0 ? scroll.progress : 1, reduced);
-  const chartOverrides = overrides;
 
   return createPortal(
     <div
@@ -176,7 +199,7 @@ export function ChartStoryStage({ open, spec, steps, index, onIndexChange, onClo
             data-stage-plane="true"
           >
             <div ref={chartBoxRef} className="relative">
-              <ChartView spec={spec} stage={{ step, overrides: chartOverrides }} />
+              <ChartView spec={spec} stage={{ step, overrides }} />
               {spot && !reduced ? (
                 <div
                   aria-hidden="true"
@@ -191,7 +214,7 @@ export function ChartStoryStage({ open, spec, steps, index, onIndexChange, onClo
         {/* The steps: one full-height panel each; the scroll position picks the step. */}
         <div className="px-4 pb-[40vh] lg:px-10 lg:pt-[20vh]">
           <p className="mb-2 text-xs text-muted-foreground">{t(lang, 'chart.stage.scrollHint')}</p>
-          <ol aria-label={t(lang, 'chart.stage.stepsLabel')} className="m-0 list-none p-0">
+          <ol role="list" aria-label={t(lang, 'chart.stage.stepsLabel')} className="m-0 list-none p-0">
             {steps.map((s, i) => {
               const distance = i === index ? (i === last ? 0 : scroll.progress) : i === index + 1 ? 1 - scroll.progress : 1;
               const style = captionStyle(distance, reduced);
@@ -216,7 +239,7 @@ export function ChartStoryStage({ open, spec, steps, index, onIndexChange, onClo
         </div>
       </div>
       {/* Position dots — never "N of M". */}
-      <ol aria-label={t(lang, 'chart.stage.stepsLabel')} className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1">
+      <ol role="list" aria-label={t(lang, 'chart.stage.positionLabel')} className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1">
         {steps.map((s, i) => (
           <li key={s.id}>
             <button type="button" aria-label={s.title} aria-current={i === index ? 'step' : undefined} onClick={() => { setAutoplay(false); go(i); }} className="flex size-6 items-center justify-center">

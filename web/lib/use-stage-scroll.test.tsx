@@ -11,6 +11,11 @@ function Probe({ enabled }: { enabled: boolean }) {
     'div',
     { ref: container, 'data-testid': 'scroller' },
     createElement('span', { 'data-testid': 'out' }, `${s.index}:${s.progress}`),
+    // Fix round 1 (item B): a button exposing the hook's own
+    // `beginProgrammatic()` so a test can drive a programmatic scroll the
+    // same way a real caller (dots/keys/auto-play in chart-story-stage.tsx)
+    // does, without reaching into the hook's internals.
+    createElement('button', { type: 'button', 'data-testid': 'begin-programmatic', onClick: () => s.beginProgrammatic() }),
     ...[0, 1, 2].map((i) => createElement('section', { key: i, ref: (el: HTMLElement | null) => { panels.current[i] = el; }, 'data-testid': `p${i}` })),
   );
 }
@@ -74,5 +79,48 @@ describe('useStageScroll', () => {
     s2.scrollTop = 1600;
     act(() => { s2.dispatchEvent(new Event('scroll')); vi.advanceTimersByTime(20); });
     expect(off.getByTestId('out').textContent).toBe('0:0');
+  });
+
+  // Fix round 1 (item B): the settle window closing used to just flip a
+  // flag — `measure()` never ran, so index/progress stayed stale after a
+  // programmatic jump (dots/arrow keys/auto-play) until some LATER,
+  // non-programmatic scroll happened to change them. A manual scroll back
+  // to the very step the programmatic jump landed on produced no DOM change
+  // at all (no state change → no re-render → chart/caption desync).
+  it('re-measures once the settle window closes after a programmatic scroll, so a later scroll back is not dropped', () => {
+    const { getByTestId } = render(<Probe enabled />);
+    const scroller = getByTestId('scroller');
+    Object.defineProperty(scroller, 'clientHeight', { value: 800, configurable: true });
+    layout(getByTestId('p0'), 0, 800);
+    layout(getByTestId('p1'), 800, 800);
+    layout(getByTestId('p2'), 1600, 800);
+    expect(getByTestId('out').textContent).toBe('0:0');
+
+    // A programmatic jump to the third panel (mirrors chart-story-stage.tsx's
+    // `go()`: beginProgrammatic() then scrollIntoView, which here is just the
+    // scrollTop write below).
+    act(() => {
+      (getByTestId('begin-programmatic') as HTMLButtonElement).click();
+    });
+    scroller.scrollTop = 1600;
+    act(() => {
+      scroller.dispatchEvent(new Event('scroll'));
+    });
+    // Ignored while programmatic — no re-measure yet.
+    expect(getByTestId('out').textContent).toBe('0:0');
+
+    act(() => {
+      vi.advanceTimersByTime(150); // the settle window
+      vi.advanceTimersByTime(20); // a frame, in case a measure were rAF-scheduled
+    });
+    expect(getByTestId('out').textContent).toBe('2:0');
+
+    // A later, real manual scroll back to the same step must not be dropped.
+    scroller.scrollTop = 0;
+    act(() => {
+      scroller.dispatchEvent(new Event('scroll'));
+      vi.advanceTimersByTime(20);
+    });
+    expect(getByTestId('out').textContent).toBe('0:0');
   });
 });

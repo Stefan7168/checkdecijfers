@@ -11,9 +11,17 @@ import { useState, type ReactNode } from 'react';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ChartSpec } from '../backend/chart/types.ts';
-import { entranceStyle, STAGE_AUTOPLAY_MS } from '../lib/chart-stage.ts';
+import { entranceStyle, spotlightStyle, STAGE_AUTOPLAY_MS } from '../lib/chart-stage.ts';
 import type { StoryStep } from '../lib/chart-story.ts';
 import { ChartStoryStage, type ChartStoryStageProps } from './chart-story-stage.tsx';
+
+// Fix round 1 (item A): the same focusable-elements query the component's
+// own Tab-wrap handler uses, so the test asserts against the real DOM order
+// rather than a hardcoded guess at which controls exist.
+const FOCUSABLE_SELECTOR = 'button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+function focusables(dialog: HTMLElement): HTMLElement[] {
+  return Array.from(dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
+}
 
 afterEach(() => {
   cleanup();
@@ -270,6 +278,75 @@ describe('ChartStoryStage', () => {
         ...steps.map((s) => s.caption),
       ].filter(Boolean),
     );
+  });
+
+  // Fix round 1 (item A): Tab used to escape the dialog onto the page
+  // behind it (invisible under the full-viewport overlay), and Escape then
+  // stopped working because the keydown handler lives on the dialog div.
+  it('Tab wraps from the last focusable element to the first, Shift+Tab wraps back, and Escape still closes from an inner button', () => {
+    const onClose = vi.fn();
+    render(<ChartStoryStage {...baseProps({ onClose })} />);
+    const dialog = screen.getByRole('dialog');
+    const items = focusables(dialog);
+    expect(items.length).toBeGreaterThan(1);
+    const first = items[0]!;
+    const last = items[items.length - 1]!;
+
+    last.focus();
+    fireEvent.keyDown(last, { key: 'Tab' });
+    expect(document.activeElement).toBe(first);
+
+    first.focus();
+    fireEvent.keyDown(first, { key: 'Tab', shiftKey: true });
+    expect(document.activeElement).toBe(last);
+
+    const autoplayButton = screen.getByRole('button', { name: 'Automatisch afspelen' });
+    autoplayButton.focus();
+    fireEvent.keyDown(autoplayButton, { key: 'Escape' });
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  // Fix round 1 (item C.3): the spotlight centres on the ringed marker's own
+  // centre (left + width/2, top + height/2 — see chart-story-stage.tsx's
+  // useLayoutEffect), as a percentage of the chart box. `156`/`60` (rather
+  // than the marker's raw `left`/`top` of `160`/`64`) account for that
+  // half-width/half-height offset so the centre lands at exactly 25% on
+  // both axes, which is what's asserted below via the real spotlightStyle().
+  //
+  // Rendering note: the initial mount opens with step 0 ('overview', no
+  // `point`, so no ring yet) and only THEN moves to step 1 ('high-s0', the
+  // ring). Recharts' ResponsiveContainer discovers its real size
+  // asynchronously on first mount (still inside `render()`'s own `act()`);
+  // starting directly at the ringed step races that discovery and the
+  // spotlight effect (which only re-reads the DOM on `step?.id` change, by
+  // design — see the effect's own comment) can fire before the ring exists.
+  // Landing on it via `rerender` — a plain step-index change, exactly what a
+  // real "Volgende"/dot click does — sidesteps the race without weakening
+  // what's asserted.
+  it('the spotlight centres on the ringed marker, as a percentage of the chart box', () => {
+    const original = Element.prototype.getBoundingClientRect;
+    const chartBoxRect = { left: 0, top: 0, width: 640, height: 256, right: 640, bottom: 256, x: 0, y: 0, toJSON: () => ({}) } as DOMRect;
+    const markerRect = { left: 156, top: 60, width: 8, height: 8, right: 164, bottom: 68, x: 156, y: 60, toJSON: () => ({}) } as DOMRect;
+    Element.prototype.getBoundingClientRect = function (this: Element) {
+      if (this.matches('[data-story-marker]')) return markerRect;
+      if (this.matches('[data-stage-plane] > div')) return chartBoxRect;
+      return original.call(this);
+    };
+    try {
+      // steps[1] ('high-s0') is the only step with a `point`, and it matches
+      // threePointSpec's 'hi' point — the same fixture Task 3's own
+      // ChartView stage-mode tests use to get exactly one [data-story-marker].
+      const { rerender } = render(<ChartStoryStage {...baseProps({ index: 0 })} />);
+      rerender(<ChartStoryStage {...baseProps({ index: 1 })} />);
+      const spotlight = document.querySelector('[data-stage-spotlight]');
+      expect(spotlight).not.toBeNull();
+      const background = (spotlight as HTMLElement).style.background;
+      expect(background).toContain('25%');
+      const expected = spotlightStyle({ cx: 160, cy: 64 }, { width: 640, height: 256 });
+      expect(background).toContain(`${expected!.left} ${expected!.top}`);
+    } finally {
+      Element.prototype.getBoundingClientRect = original;
+    }
   });
 
   it('honors prefers-reduced-motion: the chart plane wrapper sits at its flat resting transform', () => {

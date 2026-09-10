@@ -447,6 +447,9 @@ const nl = {
   'chart.stage.scrollHint': 'Scroll om verder te gaan',
   'chart.stage.autoplay': 'Automatisch afspelen',
   'chart.stage.stepsLabel': 'Stappen',
+  // Fix round 1: the dots list needs its own accessible name, distinct from
+  // the steps list — both were sharing `chart.stage.stepsLabel`.
+  'chart.stage.positionLabel': 'Positie in het verhaal',
   'chart.panel.tabsLabel': 'Opmaak-onderdelen',
   'chart.panel.tabChart': 'Grafiek',
   'chart.panel.tabColors': 'Kleuren',
@@ -944,6 +947,7 @@ const en: Messages = {
   'chart.stage.scrollHint': 'Scroll to continue',
   'chart.stage.autoplay': 'Auto-play',
   'chart.stage.stepsLabel': 'Steps',
+  'chart.stage.positionLabel': 'Position in the story',
   'chart.panel.tabsLabel': 'Style sections',
   'chart.panel.tabChart': 'Chart',
   'chart.panel.tabColors': 'Colours',
