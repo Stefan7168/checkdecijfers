@@ -85,6 +85,48 @@ function usable(value: string | undefined): value is string {
   return typeof value === 'string' && value.length > 0 && !value.includes('var(') && value !== 'currentColor';
 }
 
+/** #222: an export must always be readable, never dark mode's light-on-dark
+ * text baked onto this file's own white export ground (buildAttributedClone
+ * paints white unconditionally in the unframed/no-background case, and even
+ * a framed export's inset card is white — see that function and buildFrame).
+ * Scope boundary, not covered by this fix: a CUSTOM frame background colour
+ * (buildFrame, session 92, ADR 039) has no per-property contrast guard
+ * against axis/grid text (`AXIS_COLOR` in chart.tsx, `var(--muted-
+ * foreground)`) the way series colours already are (`judgeColor`, ADR 039's
+ * R11 guard) — a dark custom frame background could still end up low-
+ * contrast against light-theme-forced axis text after this fix, same as it
+ * already could against light-mode axis text before this fix ever existed.
+ * Pre-existing, narrower than #222, and orthogonal to it; not fixed here.
+ * Forces DOM style resolution to the LIGHT theme for the duration of `fn`,
+ * regardless of the page's own active theme: dark mode here is a `.dark`
+ * class on <html> (next-themes, attribute="class" — theme-provider.tsx;
+ * web/app/globals.css's `@custom-variant dark (&:is(.dark *))`), so
+ * temporarily removing it makes every `getComputedStyle` call inside `fn`
+ * resolve against the light-mode CSS rules instead — the same class next-
+ * themes itself would flip via its own documented `forcedTheme` prop (not
+ * used by this codebase today; applied here directly via the DOM since this
+ * runs outside React), rather than a second, hand-maintained light-colour
+ * token map. Restored synchronously (even if `fn` throws) before this
+ * returns, so nothing outside this call — the visible page included — ever
+ * observes the theme actually changing; a no-op when already light.
+ * `fn` MUST be synchronous: the restore runs the instant `fn()` returns, not
+ * after anything it returns settles, so a future async `fn` would resolve
+ * its OWN paint past the first `await` against the restored (possibly dark
+ * again) theme — today's only caller is a plain synchronous loop, so this
+ * is a contract on future callers, not a live bug. Exported for direct
+ * testing. */
+export function withLightThemeResolution<T>(fn: () => T): T {
+  if (typeof document === 'undefined') return fn();
+  const root = document.documentElement;
+  if (!root.classList.contains('dark')) return fn();
+  root.classList.remove('dark');
+  try {
+    return fn();
+  } finally {
+    root.classList.add('dark');
+  }
+}
+
 /** Rewrites token-based paint on the clone to the ORIGINAL element's computed
  * paint, element by element (clone and original share tree order). Text
  * additionally gets its computed font so the file does not fall back to the
@@ -133,8 +175,9 @@ function buildAttributedClone(
 
   const clone = svg.cloneNode(true) as SVGSVGElement;
   // Resolve paint BEFORE adding the footer nodes, so clone and original still
-  // line up element for element.
-  inlineComputedPaint(svg, clone, resolvePaint);
+  // line up element for element. #222: always resolved against light theme —
+  // see withLightThemeResolution.
+  withLightThemeResolution(() => inlineComputedPaint(svg, clone, resolvePaint));
   clone.setAttribute('xmlns', SVG_NS);
   clone.setAttribute('width', String(width));
   clone.setAttribute('height', String(totalHeight));

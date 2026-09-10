@@ -9,7 +9,14 @@
 import { createRef } from 'react';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { attributedSvgMarkup, ChartDownloadMenu, framedSvgMarkup, gradientEndpoints, type FrameExportInput } from './chart-download.tsx';
+import {
+  attributedSvgMarkup,
+  ChartDownloadMenu,
+  framedSvgMarkup,
+  gradientEndpoints,
+  withLightThemeResolution,
+  type FrameExportInput,
+} from './chart-download.tsx';
 import { STOCK_PRESENTATION, type FrameValues } from '../lib/chart-presentation.ts';
 
 afterEach(cleanup);
@@ -278,6 +285,69 @@ describe('attributedSvgMarkup — paint survives leaving the page (#197)', () =>
       'stroke="var(--series-1)"',
     );
     expect(() => attributedSvgMarkup(svg, 'attributie')).not.toThrow();
+  });
+});
+
+describe('withLightThemeResolution (#222: exports must stay readable in dark mode)', () => {
+  afterEach(() => {
+    document.documentElement.classList.remove('dark');
+  });
+
+  it('runs fn without touching the class when the page is already light', () => {
+    expect(withLightThemeResolution(() => 'result')).toBe('result');
+    expect(document.documentElement.classList.contains('dark')).toBe(false);
+  });
+
+  it('removes the dark class for the duration of fn, then restores it', () => {
+    document.documentElement.classList.add('dark');
+    let sawDuringCall: boolean | null = null;
+    const result = withLightThemeResolution(() => {
+      sawDuringCall = document.documentElement.classList.contains('dark');
+      return 'result';
+    });
+    expect(sawDuringCall).toBe(false);
+    expect(result).toBe('result');
+    expect(document.documentElement.classList.contains('dark')).toBe(true);
+  });
+
+  it('restores the dark class even when fn throws', () => {
+    document.documentElement.classList.add('dark');
+    expect(() =>
+      withLightThemeResolution(() => {
+        throw new Error('boom');
+      }),
+    ).toThrow('boom');
+    expect(document.documentElement.classList.contains('dark')).toBe(true);
+  });
+});
+
+describe('attributedSvgMarkup — paint resolves against light theme even in dark mode (#222)', () => {
+  afterEach(() => {
+    document.documentElement.classList.remove('dark');
+  });
+
+  function svgNeedingResolve(): SVGSVGElement {
+    const svg = sampleSvg();
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('stroke', 'var(--series-1)');
+    svg.appendChild(path);
+    return svg;
+  }
+
+  it('resolves paint with the dark class removed, so a dark-mode export never bakes light-on-dark text onto the white export ground', () => {
+    document.documentElement.classList.add('dark');
+    let sawDarkDuringResolve: boolean | null = null;
+    attributedSvgMarkup(svgNeedingResolve(), 'attributie', () => {
+      sawDarkDuringResolve = document.documentElement.classList.contains('dark');
+      return { stroke: 'rgb(30, 64, 175)', fill: 'none' };
+    });
+    expect(sawDarkDuringResolve).toBe(false);
+  });
+
+  it('leaves the page in dark mode after the export is built', () => {
+    document.documentElement.classList.add('dark');
+    attributedSvgMarkup(svgNeedingResolve(), 'attributie', () => ({ stroke: 'rgb(30, 64, 175)', fill: 'none' }));
+    expect(document.documentElement.classList.contains('dark')).toBe(true);
   });
 });
 
