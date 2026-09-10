@@ -79,10 +79,10 @@ describe('ChartConfigPanel — Grafiek tab', () => {
     );
     const trigger = screen.getByRole('button', { name: 'Opmaak' });
     expect(trigger).toHaveAttribute('aria-expanded', 'false');
-    expect(screen.queryByRole('dialog', { name: 'Opmaak van de grafiek' })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Opmaak van de grafiek' })).toBeNull();
     fireEvent.click(trigger);
     expect(trigger).toHaveAttribute('aria-expanded', 'true');
-    const region = screen.getByRole('dialog', { name: 'Opmaak van de grafiek' });
+    const region = screen.getByRole('region', { name: 'Opmaak van de grafiek' });
     expect(within(region).getAllByRole('tab').map((t) => t.textContent)).toEqual([
       'Grafiek',
       'Kleuren',
@@ -215,10 +215,10 @@ describe('ChartConfigPanel — Grafiek tab', () => {
     );
     const trigger = screen.getByRole('button', { name: 'Opmaak' });
     fireEvent.click(trigger);
-    const region = screen.getByRole('dialog', { name: 'Opmaak van de grafiek' });
+    const region = screen.getByRole('region', { name: 'Opmaak van de grafiek' });
     fireEvent.keyDown(region, { key: 'Escape' });
     expect(trigger).toHaveAttribute('aria-expanded', 'false');
-    expect(screen.queryByRole('dialog', { name: 'Opmaak van de grafiek' })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Opmaak van de grafiek' })).toBeNull();
     expect(document.activeElement).toBe(trigger);
   });
 
@@ -1770,10 +1770,11 @@ describe('ChartConfigPanel — WP218 phase 2 (owner C): account default row', ()
   });
 });
 
-// Task 6 (chart frame plan): the panel is now a floating, non-modal dialog
-// portaled into document.body rather than an inline region under the chart.
-describe('ChartConfigPanel — floating dialog', () => {
-  it('portals its dialog directly into document.body, not into the render root', () => {
+// Owner ask (session 94): the panel is an inline region under the chart, in
+// its own card — no more portaling into document.body (Task 6's earlier
+// floating-dialog design, superseded).
+describe('ChartConfigPanel — inline region', () => {
+  it('renders inline, inside the render root — not portaled elsewhere', () => {
     const { container } = render(
       <Harness
         resolved={resolvePresentation(lineCtx, {})}
@@ -1784,12 +1785,10 @@ describe('ChartConfigPanel — floating dialog', () => {
       />,
     );
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    const dialog = screen.getByRole('dialog', { name: 'Opmaak van de grafiek' });
-    // Testing Library's screen queries reach the portal fine; what this
-    // proves is that the dialog node itself is NOT a descendant of the
-    // component's own render root, i.e. it really did move to document.body.
-    expect(container.contains(dialog)).toBe(false);
-    expect(document.body.contains(dialog)).toBe(true);
+    const region = screen.getByRole('region', { name: 'Opmaak van de grafiek' });
+    // The region is a plain descendant of the component's own render root —
+    // no portal moves it to document.body any more.
+    expect(container.contains(region)).toBe(true);
   });
 
   it('has a Close button that closes the dialog and returns focus to the trigger', () => {
@@ -1806,7 +1805,7 @@ describe('ChartConfigPanel — floating dialog', () => {
     fireEvent.click(trigger);
     fireEvent.click(screen.getByRole('button', { name: 'Sluiten' }));
     expect(trigger).toHaveAttribute('aria-expanded', 'false');
-    expect(screen.queryByRole('dialog', { name: 'Opmaak van de grafiek' })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Opmaak van de grafiek' })).toBeNull();
     expect(document.activeElement).toBe(trigger);
   });
 
@@ -1824,7 +1823,7 @@ describe('ChartConfigPanel — floating dialog', () => {
     fireEvent.click(trigger);
     const controlsId = trigger.getAttribute('aria-controls');
     expect(controlsId).toBeTruthy();
-    const dialog = screen.getByRole('dialog', { name: 'Opmaak van de grafiek' });
+    const dialog = screen.getByRole('region', { name: 'Opmaak van de grafiek' });
     expect(dialog).toHaveAttribute('id', controlsId);
   });
 
@@ -1839,7 +1838,7 @@ describe('ChartConfigPanel — floating dialog', () => {
       />,
     );
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    const dialog = screen.getByRole('dialog', { name: 'Opmaak van de grafiek' });
+    const dialog = screen.getByRole('region', { name: 'Opmaak van de grafiek' });
     expect(document.activeElement).toBe(dialog);
   });
 });

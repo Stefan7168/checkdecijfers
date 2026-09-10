@@ -12,7 +12,7 @@
 // branch here explicitly and must never fall into the generic catch below.
 'use client';
 
-import { Check, Copy, Database, Download, FileSpreadsheet, Globe, Link2, Paperclip, Plug } from 'lucide-react';
+import { Check, Copy, Database, Download, FileSpreadsheet, Globe, Link2, PanelRight, Paperclip, Plug } from 'lucide-react';
 import { unstable_isUnrecognizedActionError } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { askQuestion, replyToClarification } from '../app/actions.ts';
@@ -836,7 +836,7 @@ export function Chat({
     // nothing above the composer (bare chat, no example chips).
     <div className="flex h-full min-h-0 w-full flex-1 flex-col">
       <div className="min-h-0 flex-1 overflow-y-auto px-3 py-6 tnum">
-        <div className="mx-auto flex w-full max-w-2xl flex-col gap-5">
+        <div className="mx-auto flex w-full max-w-4xl flex-col gap-5">
         {messages.map((message, i) => {
           // WP135 ⟨A7⟩: a redacted row replays as ONE muted placeholder — no
           // user+assistant sentinel pair, no envelope (the chat-side isDeleted
@@ -888,30 +888,8 @@ export function Chat({
               * shortened). Every other message kind (refusal / clarification
               * / info) keeps exactly today's plain bubble below. */}
             {message.kind === 'answer' && message.answerView ? (
-              <Card size="sm" className="max-w-full">
+              <Card size="sm" className="mb-2 max-w-full">
                 <CardContent className="flex flex-col gap-1">
-                  {/* Task 3 (chat polish batch, owner ask): the docked-visual
-                    * reference pill moves INTO the answer card, top-right,
-                    * with body text wrapping around it — first child of
-                    * CardContent, floated right, no clearing on the body
-                    * div below so text flows beside/under it. Only answer
-                    * cards get this; refusal/clarification bubbles keep the
-                    * pill where it was (rendered further below, unchanged). */}
-                  {docked ? (
-                    <button
-                      type="button"
-                      onClick={() => onActivateVisual?.(visualId(i))}
-                      aria-pressed={activeVisualId === visualId(i)}
-                      className={
-                        'float-right ml-3 mb-1 inline-flex items-center gap-1 ' +
-                        (activeVisualId === visualId(i)
-                          ? 'rounded-full border border-transparent bg-secondary px-3 py-1 text-xs text-foreground'
-                          : PILL)
-                      }
-                    >
-                      {message.chart !== null ? t('chat.dockedChipChart') : t('chat.dockedChipCard')}
-                    </button>
-                  ) : null}
                   <div className="max-w-full whitespace-pre-wrap text-sm text-[15px] leading-relaxed text-foreground">
                     {message.answerView.body}
                   </div>
@@ -941,7 +919,7 @@ export function Chat({
                     <p className="text-xs text-muted-foreground">{message.answerView.markingLine}</p>
                   ) : null}
                 </CardContent>
-                <CardFooter className="clear-both flex flex-wrap items-center justify-between gap-2 border-t border-border bg-muted/40">
+                <CardFooter className="flex flex-wrap items-center justify-between gap-2 border-t border-border bg-muted/40">
                   {/* LEFT: the source — the voorlopig pill (#71), the FULL
                     * R4 attribution sentence (always visible, never
                     * shortened — Huisstijl rule 7: quiet, text-xs
@@ -978,6 +956,25 @@ export function Chat({
                   <div className="flex flex-wrap items-center gap-1 has-[[role=region]]:basis-full has-[[data-slot=feedback-panel]]:basis-full">
                     {message.auditId !== null ? <FeedbackButtons auditId={message.auditId} /> : null}
                     {message.proof !== null ? <AnswerProof proof={message.proof} /> : null}
+                    {/* Owner ask (session 94): the docked-visual reference
+                      * trigger moves out of the floated top-of-card pill and
+                      * into this action row, styled like every other footer
+                      * button (shared Button, the same toggle-variant pattern
+                      * FeedbackButtons already uses — outline/secondary by
+                      * aria-pressed — rather than a bespoke rounded pill),
+                      * placed immediately left of Copy. */}
+                    {docked ? (
+                      <Button
+                        type="button"
+                        variant={activeVisualId === visualId(i) ? 'secondary' : 'outline'}
+                        size="xs"
+                        onClick={() => onActivateVisual?.(visualId(i))}
+                        aria-pressed={activeVisualId === visualId(i)}
+                      >
+                        <PanelRight aria-hidden className="size-3.5" />
+                        {message.chart !== null ? t('chat.dockedChipChart') : t('chat.dockedChipCard')}
+                      </Button>
+                    ) : null}
                     {/* Task 2 (chat polish batch, owner ask): "Copy" copies
                       * the whole card — body, disclosure lines, attribution
                       * (hyperlinked), citation flags — whenever there's an
@@ -1059,9 +1056,10 @@ export function Chat({
             {/* WP135 (ADR 033 D4): the in-flow reference chip standing in for a
               * docked visual — clicking activates its dock tab ("in het paneel").
               * The web section still renders below this (ADR 032). */}
-            {/* Task 3: the answer card now renders its own docked pill as the
-              * first child of CardContent (above). Refusal/clarification/info
-              * messages (no answerView) keep the pill here, unchanged. */}
+            {/* Task 3 / superseded session 94: an answer card renders its own
+              * docked trigger in the CardFooter action row instead (below) —
+              * not here. Refusal/clarification/info messages (no answerView)
+              * keep the in-flow chip here, unchanged. */}
             {docked && !(message.kind === 'answer' && message.answerView) ? (
               <button
                 type="button"
@@ -1158,7 +1156,7 @@ export function Chat({
         </div>
       </div>
       <div className="shrink-0 border-t border-border px-3 pt-3 pb-4" data-testid="chat-composer">
-        <div className="mx-auto flex w-full max-w-2xl flex-col gap-2">
+        <div className="mx-auto flex w-full max-w-4xl flex-col gap-2">
       {/* WP129+130 (#129, ADR 032): the source-tags chips — one per registered
         * source (label "<displayName> data", PRE-checked) plus the "Internet"
         * channel (default OFF). Toggle buttons carry aria-pressed; a selected
