@@ -133,6 +133,17 @@ describe('ChartSmallMultiples', () => {
     expect(container.textContent).not.toContain('Utrecht');
   });
 
+  it('each panel draws the ADR 042 hairline baseline on its (hidden) x-axis with the default presentation', () => {
+    const { container } = render(
+      <ChartSmallMultiples spec={threeSeriesSpec()} hiddenKeys={new Set()} axisMode="shared" presentation={STOCK_PRESENTATION} />,
+    );
+    const lines = container.querySelectorAll('.recharts-xAxis .recharts-cartesian-axis-line');
+    expect(lines.length).toBe(3);
+    for (const line of lines) {
+      expect(line.getAttribute('stroke')).toBe('var(--border)');
+    }
+  });
+
   it('"eigen assen" labels each panel with its OWN min/max, bound to its own points -- never a foreign or invented number', () => {
     const { container } = render(
       <ChartSmallMultiples spec={twoPointSeriesSpec()} hiddenKeys={new Set()} axisMode="own" presentation={STOCK_PRESENTATION} />,

@@ -1316,9 +1316,10 @@ export function ChartConfigPanel({
               {seriesMeta.map((series, index) => {
                 const draft = liveDrafts[series.key];
                 const displayText = draft !== undefined ? draft.text : series.color;
-                // Warn only about a colour the reader CHOSE: the stock palette's own
-                // weak entries (e.g. the yellow on white) are the owner's accepted
-                // session-87 trade-off, not something to nag about untouched.
+                // Warn only about a colour the reader CHOSE: every DEFAULT_PALETTE
+                // entry clears the warning line untouched (test-pinned) — the rule
+                // exists because the Classic palette (RECHARTS_PALETTE, e.g. its
+                // yellow on white) has weak entries, and a chosen colour may too.
                 const settled = settledColorFor(series.key, series.color);
                 const chosen = resolved.values.seriesColors[index] !== undefined || settled !== series.color;
                 const warning = chosen ? warningFor(settled) : null;

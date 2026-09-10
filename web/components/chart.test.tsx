@@ -834,6 +834,8 @@ describe('ADR 042 — the designed default renders its literals', () => {
     expect(byId('c').getAttribute('data-marker')).toBe('hidden');
     expect(byId('d').getAttribute('data-marker')).toBeNull();
     expect(byId('d').getAttribute('fill')).toBe('var(--card)');
+    expect(byId('b').getAttribute('opacity')).toBe('0');
+    expect(byId('a').getAttribute('opacity')).toBeNull();
   });
   it('value labels are 12 px with a card-coloured halo (paint-order stroke) — end label on a line, bar label on a bar', () => {
     const line = render(<ChartView spec={threePointSpec()} />).container;
@@ -900,7 +902,7 @@ describe('ADR 042 — the designed default renders its literals', () => {
       expect(c).toContain('strokeOpacity: 0.35');
     }
   });
-  it('height follows width: unmeasured (jsdom) keeps the 256 px class; a measured 700 px card gets an explicit 360 px height, 400 px gets 256 px; a frame aspect ratio switches it off', () => {
+  it('height follows width: unmeasured (jsdom) keeps the 256 px class and no inline height', () => {
     const { container } = render(<ChartView spec={threePointSpec()} />);
     const panel = () => container.querySelector('[role="tabpanel"]') as HTMLElement;
     expect(panel().className).toContain('h-64');
@@ -960,6 +962,19 @@ describe('ADR 042 — height follows width once measured', () => {
     panel.getBoundingClientRect = () => ({ width: 400 }) as DOMRect;
     fireResize(panel);
     expect(panel.style.height).toBe('256px');
+  });
+  it('a frame aspect ratio switches the measured height off — the frame sizes the box and the container goes h-full with no inline height', () => {
+    const { container } = render(<ChartView spec={threePointSpec()} />);
+    const panel = container.querySelector('[role="tabpanel"]') as HTMLElement;
+    panel.getBoundingClientRect = () => ({ width: 700 }) as DOMRect;
+    fireResize(panel);
+    expect(panel.style.height).toBe('360px');
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Kader' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Breedbeeld' }));
+    const after = container.querySelector('[role="tabpanel"]') as HTMLElement;
+    expect(after.style.height).toBe('');
+    expect(after.className).toContain('h-full');
   });
   it('the export container carries the entrance utilities, with the reduced-motion opt-out', () => {
     const { container } = render(<ChartView spec={threePointSpec()} />);

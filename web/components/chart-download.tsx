@@ -241,8 +241,11 @@ function buildAttributedClone(
   withLightThemeResolution(() => inlineComputedPaint(svg, clone, resolvePaint));
   // ADR 042: never bake the tooltip's hover/tap cursor into a file — on a
   // touch device the last tapped point's dashed crosshair can still be
-  // active at download time and would read as an annotation line.
-  for (const cursor of clone.querySelectorAll('.recharts-tooltip-cursor')) cursor.remove();
+  // active at download time and would read as an annotation line. The same
+  // touch device also leaves Recharts' active dot behind: a filled disc with
+  // a white ring marking the last tapped point, which would be drawn ON TOP
+  // of the hollow provisional marker (R11) in the file.
+  for (const cursor of clone.querySelectorAll('.recharts-tooltip-cursor, .recharts-active-dot')) cursor.remove();
   clone.setAttribute('xmlns', SVG_NS);
   clone.setAttribute('width', String(width));
   clone.setAttribute('height', String(totalHeight));

@@ -1,6 +1,9 @@
 // WP218 (ADR 039): the chart PRESENTATION layer — pure, no React, no Recharts.
-// A presentation is a set of plain user overrides on top of the session-87
-// stock look; `resolvePresentation` turns (chart context, overrides) into the
+// A presentation is a set of plain user overrides on top of the ADR 042
+// designed default (2026-09-11: horizontal grid, hidden axis lines with a
+// hairline baseline, DEFAULT_PALETTE) — the session-87 stock look survives
+// only as the Classic look; `resolvePresentation` turns (chart context,
+// overrides) into the
 // EFFECTIVE values Recharts draws from plus the per-option honesty locks the
 // panel explains. Nothing here ever enters a ChartSpec, buildChartSpec or an
 // audit record — it projects an unchanged server-built spec for display,

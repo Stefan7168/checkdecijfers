@@ -17,9 +17,10 @@ import {
 } from '../lib/chart-presentation.ts';
 import { useElementWidth } from '../lib/use-element-width.ts';
 
-// chart.tsx's `h-64` — the chart container's normal height, which a frame
-// aspect ratio may never undercut. Re-exported here (ADR 042) since it now
-// lives in chart-presentation.ts alongside chartHeightForWidth, but
+// chart.tsx's `h-64` — now the FLOOR of chart.tsx's 256-360px
+// height-follows-width rule (`chartHeightForWidth`, ADR 042), which a frame
+// aspect ratio may never undercut. Re-exported here since it now lives in
+// chart-presentation.ts alongside chartHeightForWidth, but
 // chart-frame.test.tsx still imports it from this module.
 export { CHART_MIN_HEIGHT_PX };
 

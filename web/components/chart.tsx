@@ -48,7 +48,6 @@ import {
   fontStack,
   LINE_WIDTH_PX,
   markerVisible,
-  RECHARTS_PALETTE,
   resolvePresentation,
   seriesColor,
   withAccountDefault,
@@ -152,10 +151,14 @@ export function seriesStyle(index: number): { color: string } {
 // Axis + grid colours (session 87 deep review): Recharts' own defaults are
 // literal light-mode greys (#666 axis/ticks, #ccc grid) that it hardcodes on
 // the SVG, so in dark mode the x-axis period labels rendered at ~3:1 against
-// the card and the grid became the brightest thing on the chart. The
-// geometry stays Recharts-default (the "basic Recharts look"); only the
-// colours ride the theme tokens, like every other text in the product. One
-// definition, reused by UserChartView and ChartSmallMultiples.
+// the card and the grid became the brightest thing on the chart — these two
+// colours ride the theme tokens, like every other text in the product. The
+// geometry itself is now the ADR 042 designed default (2026-09-11):
+// horizontal-only grid, axis lines hidden by default with a hairline
+// baseline in their place (`baselineAxisLine` below), and `DEFAULT_PALETTE`
+// for series colour. Session 87's "basic Recharts look" survives only as
+// the Classic look. One definition, reused by UserChartView and
+// ChartSmallMultiples.
 export const AXIS_COLOR = 'var(--muted-foreground)';
 export const GRID_COLOR = 'var(--border)';
 
@@ -2161,7 +2164,7 @@ export function ChartView({
           // outside the exported <svg>, so a download can never capture it;
           // Recharts' own animation stays off (the recorded refusal).
           // motion-reduce: honours prefers-reduced-motion.
-          'chart-enter animate-in fade-in slide-in-from-bottom-1 duration-300 motion-reduce:animate-none mt-2 w-full touch-pan-y ' +
+          'animate-in fade-in slide-in-from-bottom-1 duration-300 motion-reduce:animate-none mt-2 w-full touch-pan-y ' +
           // The combined chart's ResponsiveContainer sizes to 100% of a
           // fixed-height parent; small multiples lays out its own h-24
           // panels in a grid and needs the parent to grow with them
@@ -2214,11 +2217,14 @@ export function ChartView({
               desc={t(chartLang, 'chart.keyboardHint')}
               aria-label={accessibleName}
             >
-              {/* Recharts' own default grid + axis geometry (session 87: the
-                * "basic Recharts look") in theme colours (AXIS_COLOR/GRID_COLOR:
-                * dark mode); only the honesty-bound custom ticks and labels
-                * below are ours. WP218: horizontal/vertical/no-grid-at-all
-                * follow `pres.grid`. */}
+              {/* ADR 042 designed default (2026-09-11): the grid honours
+                * `pres.grid` (horizontal/vertical/none, WP218) and the
+                * category axis line follows `baselineAxisLine` — hidden by
+                * default with a hairline baseline in its place — all in
+                * theme colours (AXIS_COLOR/GRID_COLOR: dark mode). The
+                * session-87 "basic Recharts look" survives only as the
+                * Classic look; only the honesty-bound custom ticks and
+                * labels below are ours. */}
               {pres.grid !== 'none' ? (
                 <CartesianGrid
                   strokeDasharray="3 3"
@@ -2491,12 +2497,17 @@ export function ChartView({
                   </pattern>
                 ))}
               </defs>
-              {/* Recharts' own default grid + axis geometry (session 87: the
-                * "basic Recharts look") in theme colours (AXIS_COLOR/GRID_COLOR:
-                * dark mode); only the honesty-bound custom ticks and labels
-                * below are ours. WP218: grid/axis props mirror the line
-                * branch above; the Y domain stays unconditionally zero-based
-                * here (bar honesty rule, never overridden by zeroBaseline). */}
+              {/* ADR 042 designed default (2026-09-11): the grid honours
+                * `pres.grid` (horizontal/vertical/none, WP218) and the
+                * category axis line follows `baselineAxisLine` — hidden by
+                * default with a hairline baseline in its place — all in
+                * theme colours (AXIS_COLOR/GRID_COLOR: dark mode). The
+                * session-87 "basic Recharts look" survives only as the
+                * Classic look; only the honesty-bound custom ticks and
+                * labels below are ours. WP218: grid/axis props mirror the
+                * line branch above; the Y domain stays unconditionally
+                * zero-based here (bar honesty rule, never overridden by
+                * zeroBaseline). */}
               {pres.grid !== 'none' ? (
                 <CartesianGrid
                   strokeDasharray="3 3"

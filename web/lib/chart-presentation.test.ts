@@ -397,6 +397,9 @@ describe('sanitizeOverrides — allow-list, never throws', () => {
 });
 
 describe('geometry helpers', () => {
+  it('LINE_WIDTH_PX pins the four line-width presets in px', () => {
+    expect(LINE_WIDTH_PX).toEqual({ thin: 1, normal: 2, thick: 3, extraThick: 4 });
+  });
   it('dotGeometry keeps the hollow ring legible at every width (r = max(4, px + 2), ring 2)', () => {
     expect(dotGeometry('thin')).toEqual({ r: 4, ring: 2 });
     expect(dotGeometry('normal')).toEqual({ r: 4, ring: 2 });
