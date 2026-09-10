@@ -2221,11 +2221,11 @@ export function ChartView({
                 axisLine={pres.axisLines === 'shown'}
                 tickLine={pres.axisLines === 'shown'}
               />
-              {/* ADR 042: a muted crosshair; the export drops it (chart-download.tsx). */}
+              {/* ADR 042: a faint SOLID crosshair — never dashed, so it can't be read as the dashed event marker or the dashed story ring; the export drops it anyway (chart-download.tsx). */}
               <Tooltip
                 trigger={tooltipTrigger}
                 content={<ChartTooltip seriesMeta={seriesMeta} />}
-                cursor={{ stroke: 'var(--muted-foreground)', strokeDasharray: '3 3', strokeOpacity: 0.6 }}
+                cursor={{ stroke: 'var(--muted-foreground)', strokeWidth: 1, strokeOpacity: 0.35 }}
               />
               {/* #170(4): curated event markers — drawn before the series so
                 * they sit visually behind the data (paint order = JSX order
@@ -2327,7 +2327,7 @@ export function ChartView({
               <Tooltip
                 trigger={tooltipTrigger}
                 content={<ChartTooltip seriesMeta={seriesMeta} />}
-                cursor={{ stroke: 'var(--muted-foreground)', strokeDasharray: '3 3', strokeOpacity: 0.6 }}
+                cursor={{ stroke: 'var(--muted-foreground)', strokeWidth: 1, strokeOpacity: 0.35 }}
               />
               {markers.map((m) => (
                 <ReferenceLine key={m.periodLabel} x={m.periodLabel} stroke="var(--muted-foreground)" strokeDasharray="3 3" />

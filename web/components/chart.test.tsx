@@ -890,6 +890,16 @@ describe('ADR 042 — the designed default renders its literals', () => {
     expect(container.querySelector('.recharts-yAxis .recharts-cartesian-axis-line')?.getAttribute('stroke')).toBe('var(--border)');
     expect(container.querySelector('.recharts-xAxis .recharts-cartesian-axis-line')).toBeNull();
   });
+  it('the tooltip crosshair is a solid hairline, never the dashed 3 3 of an event marker or the 4 3 of the story ring (source pin)', () => {
+    const __dirname = dirname(fileURLToPath(import.meta.url));
+    const src = readFileSync(join(__dirname, './chart.tsx'), 'utf8');
+    const cursors = src.match(/cursor=\{\{[^}]*stroke: 'var\(--muted-foreground\)'[^}]*\}\}/g) ?? [];
+    expect(cursors.length).toBe(2);
+    for (const c of cursors) {
+      expect(c).not.toContain('strokeDasharray');
+      expect(c).toContain('strokeOpacity: 0.35');
+    }
+  });
 });
 
 describe('RegionTooltip (WP218 phase 5, Liggend) — binding, not just membership', () => {
