@@ -15,6 +15,7 @@ import {
   framedSvgMarkup,
   gradientEndpoints,
   withLightThemeResolution,
+  wrapAttributionText,
   type FrameExportInput,
 } from './chart-download.tsx';
 import { STOCK_PRESENTATION, type FrameValues } from '../lib/chart-presentation.ts';
@@ -48,6 +49,68 @@ describe('attributedSvgMarkup', () => {
   it('preserves the original chart content (the source rect) in the clone', () => {
     const markup = attributedSvgMarkup(sampleSvg(), 'attributie');
     expect(markup).toContain('<rect width="10" height="10"');
+  });
+});
+
+describe('wrapAttributionText (#223: the footer must never cut text off)', () => {
+  it('keeps short text on one line, unchanged', () => {
+    expect(wrapAttributionText('kort', 200)).toEqual(['kort']);
+  });
+
+  it('greedily wraps onto a narrow budget, never combining words past it', () => {
+    // maxChars = floor(70 / 6.5) = 10.
+    expect(wrapAttributionText('Bron CBS StatLine tabel', 70)).toEqual(['Bron CBS', 'StatLine', 'tabel']);
+  });
+
+  it('never breaks a single word, even one that alone exceeds the budget', () => {
+    expect(wrapAttributionText('averylongunbreakabletoken', 20)).toEqual(['averylongunbreakabletoken']);
+  });
+
+  it('reproduces the original text when lines are rejoined with spaces (nothing lost)', () => {
+    const text = 'Bron: CBS StatLine, tabel 85999NED, publicatiedatum 15 augustus 2026. checkdecijfers.nl';
+    expect(wrapAttributionText(text, 80).join(' ')).toBe(text);
+  });
+
+  it('degrades to one empty line for empty input, never an empty array', () => {
+    expect(wrapAttributionText('', 100)).toEqual(['']);
+  });
+});
+
+describe('attributedSvgMarkup — footer wraps instead of cutting off on a narrow chart (#223)', () => {
+  function narrowSvg(width: number): SVGSVGElement {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg') as SVGSVGElement;
+    svg.setAttribute('width', String(width));
+    svg.setAttribute('height', '200');
+    return svg;
+  }
+
+  const longAttribution = 'Bron: CBS StatLine, tabel 85999NED, publicatiedatum 15 augustus 2026. checkdecijfers.nl';
+
+  it('renders the same single-line footer as before this fix when the text already fits', () => {
+    const markup = attributedSvgMarkup(sampleSvg(), 'attributie');
+    expect((markup.match(/<text/g) ?? []).length).toBe(1);
+    expect(markup).toContain('height="224"');
+  });
+
+  it('wraps a long attribution across more than one <text> line on a narrow chart, and grows the height to fit', () => {
+    const markup = attributedSvgMarkup(narrowSvg(150), longAttribution);
+    const lineCount = (markup.match(/<text/g) ?? []).length;
+    expect(lineCount).toBeGreaterThan(1);
+    // height = 200 (chart) + 24 (one-line footer) + (lineCount - 1) * 14.
+    expect(markup).toContain(`height="${200 + 24 + (lineCount - 1) * 14}"`);
+  });
+
+  it('the same long attribution needs fewer (or equally many) lines on a wider chart', () => {
+    const narrowLines = (attributedSvgMarkup(narrowSvg(150), longAttribution).match(/<text/g) ?? []).length;
+    const wideLines = (attributedSvgMarkup(narrowSvg(800), longAttribution).match(/<text/g) ?? []).length;
+    expect(wideLines).toBeLessThanOrEqual(narrowLines);
+  });
+
+  it('loses no words when wrapping — every word in the source attribution appears in the markup', () => {
+    const markup = attributedSvgMarkup(narrowSvg(150), longAttribution);
+    for (const word of longAttribution.split(' ')) {
+      expect(markup).toContain(word);
+    }
   });
 });
 

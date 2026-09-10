@@ -32,6 +32,10 @@ import {
 
 const FOOTER_HEIGHT = 24;
 const FOOTER_FONT = 'system-ui, -apple-system, sans-serif';
+// #223: extra vertical room per wrapped attribution line beyond the first —
+// the single-line FOOTER_HEIGHT above already covers one line's own height.
+const FOOTER_LINE_HEIGHT = 14;
+const FOOTER_TEXT_MARGIN_X = 12; // the footer text's x position AND its right-edge inset — one constant for both, so they can't drift apart
 const PNG_SCALE = 2;
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -43,9 +47,12 @@ export interface FrameExportInput {
   image: string | null;
 }
 
-/** The one place chart export dimensions are derived — downloadPng reuses
- * this rather than re-deriving width/height itself, so the canvas it
- * rasterizes into can never drift out of step with the SVG it's sized from. */
+/** The base chart width/height (chart plus a single-line footer) — the only
+ * caller, buildAttributedClone, grows `totalHeight` further from here when
+ * wrapAttributionText (#223) needs more than one footer line; downloadPng
+ * reuses buildAttributedClone's own final width/height rather than calling
+ * this directly, so the canvas it rasterizes into can never drift out of
+ * step with the SVG it's sized from. */
 function measureSvg(svg: SVGSVGElement): { width: number; totalHeight: number } {
   const width = svg.clientWidth || Number(svg.getAttribute('width')) || 600;
   const height = svg.clientHeight || Number(svg.getAttribute('height')) || 300;
@@ -157,6 +164,54 @@ function inlineComputedPaint(original: SVGSVGElement, clone: SVGSVGElement, reso
   }
 }
 
+/** #223: the footer attribution line used to be a single `<text>` element
+ * that ran off the right edge on a narrow chart (SVG text does not wrap).
+ * Estimates how many characters of the footer's 11px sans-serif fit in
+ * `maxWidth` px and greedy-word-wraps onto that budget — **Assumption:**
+ * `AVG_CHAR_WIDTH` is a conservative estimate, not a measured value: this
+ * environment has no real font metrics to measure against (jsdom's canvas
+ * is a no-op without the `canvas` npm package this repo doesn't install,
+ * per chart-download.test.tsx's own header comment), and a per-character
+ * estimate is open-questions #223's own explicitly-sanctioned alternative
+ * to a canvas measurement — worth a real-browser spot-check, not done
+ * here. Pinned to 6.5, matching `chart.tsx`'s `labelWidthPx` (the same
+ * 11px label font's own established per-character estimate) rather than a
+ * second, independently hand-tuned number for the identical measurement.
+ * **Known residual gap, not fully closed by this fix:** a single WORD
+ * longer than one line's own character budget is never broken (breaking
+ * a CBS category name mid-syllable would be its own readability bug), so
+ * an unusually long single word — e.g. a compound Dutch term like
+ * "Consumentenvertrouwen." — can still slightly exceed its own line's
+ * estimated width on a very narrow chart, the same failure mode as #223
+ * itself at a smaller scale. Multi-word overflow (the reported bug) is
+ * fully fixed; this narrower single-word case is accepted, not solved,
+ * because character-accurate wrapping is structurally impossible without
+ * real font metrics this environment cannot get. Exported for direct
+ * testing. */
+export function wrapAttributionText(text: string, maxWidth: number): string[] {
+  const AVG_CHAR_WIDTH = 6.5;
+  const maxChars = Math.max(1, Math.floor(maxWidth / AVG_CHAR_WIDTH));
+  // Precondition: `text` is single-spaced (no leading/trailing/double
+  // spaces) — true of every caller today (chart.tsx, user-chart.tsx build
+  // attribution lines from fixed templates). A run of spaces would split
+  // into empty-string "words" that can silently collapse across a forced
+  // line break; not guarded against, since nothing reachable produces one.
+  const words = text.split(' ');
+  const lines: string[] = [];
+  let current = '';
+  for (const word of words) {
+    const candidate = current === '' ? word : `${current} ${word}`;
+    if (current === '' || candidate.length <= maxChars) {
+      current = candidate;
+    } else {
+      lines.push(current);
+      current = word;
+    }
+  }
+  if (current !== '') lines.push(current);
+  return lines.length > 0 ? lines : [''];
+}
+
 /** Builds the attributed chart clone (paint inlined, white bg rect + footer
  * text baked in) WITHOUT serializing it — the part of the old
  * `attributedSvgMarkup` shared by the unframed and framed paths. */
@@ -171,7 +226,13 @@ function buildAttributedClone(
   // to true so the unframed/pristine export stays byte-identical to before.
   paintWhiteBg = true,
 ): { clone: SVGSVGElement; width: number; totalHeight: number } {
-  const { width, totalHeight } = measureSvg(svg);
+  const { width, totalHeight: baseHeight } = measureSvg(svg);
+  // #223: FOOTER_HEIGHT (baked into baseHeight by measureSvg) already fits
+  // one line; only lines beyond the first grow the footer, so a short
+  // attribution that already fit stays byte-identical to before this fix.
+  const footerLines = wrapAttributionText(attributionText, width - FOOTER_TEXT_MARGIN_X * 2);
+  const extraLines = Math.max(0, footerLines.length - 1);
+  const totalHeight = baseHeight + extraLines * FOOTER_LINE_HEIGHT;
 
   const clone = svg.cloneNode(true) as SVGSVGElement;
   // Resolve paint BEFORE adding the footer nodes, so clone and original still
@@ -191,14 +252,24 @@ function buildAttributedClone(
     clone.insertBefore(bg, clone.firstChild);
   }
 
-  const text = document.createElementNS(SVG_NS, 'text');
-  text.setAttribute('x', '12');
-  text.setAttribute('y', String(totalHeight - 8));
-  text.setAttribute('font-family', FOOTER_FONT);
-  text.setAttribute('font-size', '11');
-  text.setAttribute('fill', '#71717a');
-  text.textContent = attributionText;
-  clone.appendChild(text);
+  // Lines stack upward from the same baseline the single-line footer always
+  // used (totalHeight - 8) — the LAST line sits there, earlier lines above
+  // it, so a single-line footer's own line is completely unmoved.
+  footerLines.forEach((line, i) => {
+    const text = document.createElementNS(SVG_NS, 'text');
+    text.setAttribute('x', String(FOOTER_TEXT_MARGIN_X));
+    const fromBottom = (footerLines.length - 1 - i) * FOOTER_LINE_HEIGHT;
+    text.setAttribute('y', String(totalHeight - 8 - fromBottom));
+    text.setAttribute('font-family', FOOTER_FONT);
+    text.setAttribute('font-size', '11');
+    text.setAttribute('fill', '#71717a');
+    // Single line: use attributionText verbatim (byte-identical to before
+    // this fix), never the word-split-and-rejoined form, so a stray double
+    // space or other whitespace quirk in the source string can never change
+    // the common case's output.
+    text.textContent = footerLines.length === 1 ? attributionText : line;
+    clone.appendChild(text);
+  });
 
   return { clone, width, totalHeight };
 }

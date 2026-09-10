@@ -2532,9 +2532,22 @@ describe('WP218 phase 4 — charts follow the app language, per-chart, via the C
 
     expect(capturedBlob).toBeDefined();
     const markup = await capturedBlob!.text();
-    expect(markup).toContain(
-      'Source: CBS StatLine, table 83693NED — Consumentenvertrouwen. Data synced on 2026-09-01. Period: 2021 Q1. License: CC BY 4.0.',
-    );
+    // #223: this attribution line is long enough to wrap across more than
+    // one footer <text> line at this chart's width — checked word by word
+    // (order aside) rather than as one contiguous substring, so the
+    // assertion survives wrapping while still proving every word of the
+    // English attribution reached the export, not the Dutch original.
+    // Review fix: bare '2021' is excluded — it also appears in the
+    // chart's own x-axis tick ('2021 Q1', no trailing period, per the
+    // sibling test above), so it alone would pass even if the footer word
+    // were dropped. 'Q1.' (WITH the trailing period the footer has and the
+    // axis tick does not) stays in the list as the footer-specific proof
+    // that spot covers.
+    for (const word of 'Source: CBS StatLine, table 83693NED — Consumentenvertrouwen. Data synced on 2026-09-01. Period: Q1. License: CC BY 4.0.'.split(
+      ' ',
+    )) {
+      expect(markup).toContain(word);
+    }
 
     delete (URL as unknown as Record<string, unknown>).createObjectURL;
     delete (URL as unknown as Record<string, unknown>).revokeObjectURL;
