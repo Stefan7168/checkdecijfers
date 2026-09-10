@@ -24,7 +24,7 @@
 // emits, so stored specs (R8) and `reconstruct.ts` are untouched.
 'use client';
 
-import { useEffect, useId, useMemo, useReducer, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useId, useMemo, useReducer, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import {
   Area,
   AreaChart,
@@ -41,6 +41,7 @@ import {
 } from 'recharts';
 import type { ChartPoint, ChartSpec } from '../backend/chart/types.ts';
 import {
+  chartHeightForWidth,
   DEFAULT_PALETTE,
   dotGeometry,
   findFont,
@@ -55,6 +56,7 @@ import {
   xLabelOverhang,
 } from '../lib/chart-presentation.ts';
 import type { ChartPresentation, MarkerMode, SeriesEndpoints } from '../lib/chart-presentation.ts';
+import { useElementWidth } from '../lib/use-element-width.ts';
 import { useChartStyle } from '../lib/chart-style-context.tsx';
 import { trackChartStyleEvent } from '../lib/chart-usage-client.ts';
 import {
@@ -690,9 +692,14 @@ function SeriesLegend({
               onClick={() => onToggle(s.key)}
               title={lockedTitle}
               aria-describedby={disabled ? disabledReasonId : undefined}
+              // ADR 042: the series (hide/show) button is a chip — rounded-
+              // full, bordered — so the legend reads as a set of toggleable
+              // tags rather than plain text links. The highlight button
+              // right below keeps its quiet text style; only this one
+              // becomes a chip.
               className={
-                'inline-flex min-h-6 items-center gap-1.5 rounded-md px-1.5 text-xs hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40 ' +
-                (hidden ? 'text-muted-foreground line-through' : 'text-foreground')
+                'inline-flex min-h-6 items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-40 ' +
+                (hidden ? 'border-border text-muted-foreground line-through' : 'border-border bg-background text-foreground hover:bg-muted')
               }
             >
               <span
@@ -1438,6 +1445,14 @@ export function ChartView({
     base,
   );
   const pres = resolved.values;
+  // ADR 042: the chart's height follows the card's measured width (a pure
+  // rule, chartHeightForWidth) whenever nothing else sizes the box — no
+  // frame aspect ratio (ChartFrame sets the height then), no small
+  // multiples (its own grid grows), not the table. 0 until measured →
+  // the h-64 floor, so SSR/jsdom render exactly as before.
+  const autoHeight = pres.frameAspect === 'auto' && !(smallMultiples && smallMultiplesAvailable) && state.form !== 'table';
+  const measuredWidth = useElementWidth(chartContainerRef, autoHeight);
+  const autoHeightPx = autoHeight && measuredWidth > 0 ? chartHeightForWidth(measuredWidth) : null;
   // This is the one Hook `pres` feeds, so it must run unconditionally on
   // every render — ABOVE the schemaVersion guard below, which a live spec
   // swap on this same mounted instance (see the specIdentity block above)
@@ -1882,18 +1897,26 @@ export function ChartView({
     (active
       ? 'border-transparent bg-secondary text-foreground'
       : 'border-border text-muted-foreground hover:bg-muted hover:text-foreground');
+  // ADR 042: the export container's font override and auto height merged
+  // into one style object — `undefined` (not `{}`) when neither applies, so
+  // the stock DOM stays attribute-identical to before this task.
+  const containerStyle: CSSProperties = {
+    ...(fontStack(pres.fontFamily) ? { fontFamily: fontStack(pres.fontFamily) } : {}),
+    ...(autoHeightPx !== null ? { height: autoHeightPx } : {}),
+  };
 
   return (
     <div className={frameClass}>
-      <div role="heading" aria-level={3} className="text-sm font-semibold text-foreground">
+      <div role="heading" aria-level={3} className="text-base font-semibold leading-snug text-foreground">
         {displaySpec.title}
       </div>
-      {dimEntries.length > 0 ? (
-        <div className="text-xs text-muted-foreground">
-          {dimEntries.map(([k, v]) => `${k}: ${v}`).join(' · ')}
-        </div>
-      ) : null}
-      <div className="text-xs text-muted-foreground">{displaySpec.unit}</div>
+      {/* ADR 042: one muted subtitle line — the unit first, then the pinned
+        * dimensions — as separate spans (tests and the digit scan read them
+        * per text node). */}
+      <div className="mt-0.5 flex flex-wrap gap-x-2 text-xs text-muted-foreground">
+        <span>{displaySpec.unit}</span>
+        {dimEntries.length > 0 ? <span>{dimEntries.map(([k, v]) => `${k}: ${v}`).join(' · ')}</span> : null}
+      </div>
       {/* WP218 phase 1 (Task 7), updated by the option-A layout refactor: the
         * Weergave tablist and the Opmaak trigger share one row — the trigger
         * (`ChartConfigTrigger`, rendered directly here — see the review-fix
@@ -2134,7 +2157,11 @@ export function ChartView({
         aria-label={t(chartLang, 'chart.graphPanelLabel')}
         ref={chartContainerRef}
         className={
-          'mt-2 w-full touch-pan-y ' +
+          // ADR 042: a 300 ms fade/rise of the export CONTAINER on mount —
+          // outside the exported <svg>, so a download can never capture it;
+          // Recharts' own animation stays off (the recorded refusal).
+          // motion-reduce: honours prefers-reduced-motion.
+          'chart-enter animate-in fade-in slide-in-from-bottom-1 duration-300 motion-reduce:animate-none mt-2 w-full touch-pan-y ' +
           // The combined chart's ResponsiveContainer sizes to 100% of a
           // fixed-height parent; small multiples lays out its own h-24
           // panels in a grid and needs the parent to grow with them
@@ -2147,12 +2174,17 @@ export function ChartView({
           // (h-auto) even when a frame aspect ratio is set — h-full would
           // instead force the small-multiples grid into the frame's fixed
           // aspect box, clipping panels past a handful of series exactly
-          // like the original h-64 bug this comment describes.
+          // like the original h-64 bug this comment describes. ADR 042:
+          // once the card's own width is measured, `autoHeightPx` sets an
+          // explicit height (below) and no class needs to claim one here —
+          // until then (SSR/jsdom, or unmeasured) the h-64 floor stands.
           (pres.frameAspect !== 'auto' && !(smallMultiples && smallMultiplesAvailable)
             ? 'h-full'
             : smallMultiples && smallMultiplesAvailable
               ? 'h-auto'
-              : 'h-64')
+              : autoHeightPx !== null
+                ? ''
+                : 'h-64')
         }
         data-tooltip-trigger={tooltipTrigger}
         // WP218: SVG <text> inherits font-family via CSS, so setting it once
@@ -2160,8 +2192,10 @@ export function ChartView({
         // drawn below; chart-download.tsx's inlineComputedPaint writes the
         // computed family onto every text node, so the PNG/SVG export
         // carries it too. undefined (the stock look: no font override)
-        // leaves the page's own font untouched, same as today.
-        style={fontStack(pres.fontFamily) ? { fontFamily: fontStack(pres.fontFamily) } : undefined}
+        // leaves the page's own font untouched, same as today. ADR 042:
+        // merged with the auto height (also undefined when absent, so the
+        // stock DOM stays attribute-identical when neither applies).
+        style={Object.keys(containerStyle).length > 0 ? containerStyle : undefined}
       >
         {smallMultiples && smallMultiplesAvailable ? (
           <ChartSmallMultiples

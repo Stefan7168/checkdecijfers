@@ -5,7 +5,7 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ChartSpec } from '../backend/chart/types.ts';
 import type { ChartStyleEvent } from '../backend/chart/user-styles.ts';
@@ -898,6 +898,94 @@ describe('ADR 042 — the designed default renders its literals', () => {
     for (const c of cursors) {
       expect(c).not.toContain('strokeDasharray');
       expect(c).toContain('strokeOpacity: 0.35');
+    }
+  });
+  it('height follows width: unmeasured (jsdom) keeps the 256 px class; a measured 700 px card gets an explicit 360 px height, 400 px gets 256 px; a frame aspect ratio switches it off', () => {
+    const { container } = render(<ChartView spec={threePointSpec()} />);
+    const panel = () => container.querySelector('[role="tabpanel"]') as HTMLElement;
+    expect(panel().className).toContain('h-64');
+    expect(panel().style.height).toBe('');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ADR 042: the remaining Task 4 literals (height-follows-width once
+// measured, the mount entrance, the header hierarchy, the chip legend) — a
+// sibling of the describe block above rather than sharing its body, because
+// the "unmeasured (jsdom)" test just above depends on NO ResizeObserver
+// being stubbed while every test here needs `FakeResizeObserver` stubbed —
+// two contradictory `beforeEach`es would fight over the same block.
+// ---------------------------------------------------------------------------
+
+describe('ADR 042 — height follows width once measured', () => {
+  type ResizeCallback = (entries: { target: Element }[]) => void;
+  // Recharts' own ResponsiveContainer ALSO constructs a ResizeObserver (on
+  // its own inner wrapper div, a descendant of the tabpanel) once the
+  // global is stubbed, and — as a child — its effect commits before
+  // ChartView's own `useElementWidth` effect (React fires child effects
+  // before parent effects), so a plain "callbacks[0]" would fire Recharts'
+  // own handler instead of ours and crash (it reads `entry.contentRect`,
+  // which this fake never provides). Recording each instance's own
+  // `observe()` target lets the test pick out the ONE observer that was
+  // pointed at the tabpanel itself, regardless of how many others exist.
+  let resizeObservers: Array<{ cb: ResizeCallback; target: Element | null }> = [];
+  class FakeResizeObserver {
+    private readonly entry: { cb: ResizeCallback; target: Element | null };
+    constructor(cb: ResizeCallback) {
+      this.entry = { cb, target: null };
+      resizeObservers.push(this.entry);
+    }
+    observe(target: Element): void { this.entry.target = target; }
+    disconnect(): void { resizeObservers = resizeObservers.filter((e) => e !== this.entry); }
+  }
+  function fireResize(target: Element): void {
+    const entry = resizeObservers.find((e) => e.target === target);
+    if (!entry) throw new Error('no FakeResizeObserver was pointed at this element');
+    act(() => entry.cb([{ target }]));
+  }
+
+  beforeEach(() => {
+    resizeObservers = [];
+    vi.stubGlobal('ResizeObserver', FakeResizeObserver);
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('a measured width sets the explicit height (700 → 360, 400 → 256) and the class no longer pins h-64', () => {
+    const { container } = render(<ChartView spec={threePointSpec()} />);
+    const panel = container.querySelector('[role="tabpanel"]') as HTMLElement;
+    panel.getBoundingClientRect = () => ({ width: 700 }) as DOMRect;
+    fireResize(panel);
+    expect(panel.style.height).toBe('360px');
+    expect(panel.className).not.toContain('h-64');
+    panel.getBoundingClientRect = () => ({ width: 400 }) as DOMRect;
+    fireResize(panel);
+    expect(panel.style.height).toBe('256px');
+  });
+  it('the export container carries the entrance utilities, with the reduced-motion opt-out', () => {
+    const { container } = render(<ChartView spec={threePointSpec()} />);
+    const panel = container.querySelector('[role="tabpanel"]') as HTMLElement;
+    for (const cls of ['animate-in', 'fade-in', 'slide-in-from-bottom-1', 'duration-300', 'motion-reduce:animate-none']) {
+      expect(panel.className).toContain(cls);
+    }
+  });
+  it('the card header: a semibold base-size title, then the unit and the pinned dimensions on one muted line', () => {
+    const s = spec({ dimLabels: { Geslacht: 'Totaal' } });
+    const { container } = render(<ChartView spec={s} />);
+    const heading = container.querySelector('[role="heading"][aria-level="3"]') as HTMLElement;
+    expect(heading.className).toContain('text-base');
+    expect(heading.className).toContain('font-semibold');
+    const subtitle = heading.nextElementSibling as HTMLElement;
+    expect(subtitle.className).toContain('text-muted-foreground');
+    expect(subtitle.textContent).toContain(s.unit);
+    expect(subtitle.textContent).toContain('Geslacht: Totaal');
+  });
+  it('legend entries are chips (rounded-full, bordered) and keep their toggle semantics', () => {
+    const { container } = render(<ChartView spec={twoSeriesSpec()} />);
+    const legendButtons = [...container.querySelectorAll('[role="group"] button[aria-pressed="true"]')];
+    expect(legendButtons.length).toBeGreaterThan(0);
+    for (const b of legendButtons) {
+      expect(b.className).toContain('rounded-full');
+      expect(b.className).toContain('border');
     }
   });
 });
