@@ -41,10 +41,12 @@ import {
 } from 'recharts';
 import type { ChartPoint, ChartSpec } from '../backend/chart/types.ts';
 import {
+  DEFAULT_PALETTE,
   dotGeometry,
   findFont,
   fontStack,
   LINE_WIDTH_PX,
+  markerVisible,
   RECHARTS_PALETTE,
   resolvePresentation,
   seriesColor,
@@ -52,6 +54,7 @@ import {
   xAxisHeight,
   xLabelOverhang,
 } from '../lib/chart-presentation.ts';
+import type { MarkerMode, SeriesEndpoints } from '../lib/chart-presentation.ts';
 import { useChartStyle } from '../lib/chart-style-context.tsx';
 import { trackChartStyleEvent } from '../lib/chart-usage-client.ts';
 import {
@@ -128,21 +131,20 @@ export interface SeriesMeta {
   color: string;
 }
 
-// Series palette — session 87 visual redesign (owner decision, docs/
-// superpowers/specs/2026-09-07-chat-chart-visual-redesign-design.md): "use the
-// basic Recharts style". Recharts has no built-in categorical palette (every
-// series would default to the same #3182bd), so "basic Recharts" means the
-// colours its own documentation examples use — the look everyone recognises
-// as a stock Recharts chart. This supersedes the #197 colour-blind-safe token
-// palette + dash patterns (session 69): the owner accepted that the default
-// palette may be colour-blind-unsafe as a trade-off of this decision; the
-// hollow/hatched provisional marker (R11) is untouched — that is honesty, not
-// styling. The palette cycles for series nine and up; the Tabel view remains
-// the honest surface for many series.
-export { RECHARTS_PALETTE } from '../lib/chart-presentation.ts';
+// Series palette — ADR 042 (2026-09-11): the default is now `DEFAULT_PALETTE`,
+// a colour-blind-safe set (Okabe-Ito's first four, hand-tuned entries beyond
+// that) chosen for the designed default look. The session-87 "basic
+// Recharts" palette (owner decision, docs/superpowers/specs/2026-09-07-chat-
+// chart-visual-redesign-design.md — the colours Recharts' own documentation
+// examples use) is kept as `RECHARTS_PALETTE` for the Classic look and the
+// continuity pins that still exercise it. The hollow/hatched provisional
+// marker (R11) is unchanged either way — that is honesty, not styling. The
+// palette cycles for series nine and up; the Tabel view remains the honest
+// surface for many series.
+export { RECHARTS_PALETTE, DEFAULT_PALETTE } from '../lib/chart-presentation.ts';
 
 export function seriesStyle(index: number): { color: string } {
-  return { color: RECHARTS_PALETTE[index % RECHARTS_PALETTE.length]! };
+  return { color: DEFAULT_PALETTE[index % DEFAULT_PALETTE.length]! };
 }
 
 // Axis + grid colours (session 87 deep review): Recharts' own defaults are
@@ -715,6 +717,14 @@ function SeriesLegend({
   );
 }
 
+// ADR 042: value labels are 12 px with a card-coloured halo (paint-order
+// stroke), so they stay legible where they cross a line or bar; the export
+// inliner resolves var(--card) against the light card (#222). Shared by all
+// three value-label `<text>` elements below (SeriesDot's end label,
+// SeriesBar's bar label, RegionBar's bar label) so the five attributes never
+// drift apart between them.
+const VALUE_LABEL_PROPS = { fontSize: 12, paintOrder: 'stroke', stroke: 'var(--card)', strokeWidth: 3, strokeLinejoin: 'round' } as const;
+
 /** Line-chart point marker: filled in the series colour, hollow when
  * provisional (R11, same convention as render.ts), plus the #197 end-of-line
  * label on the series' last plotted point. Recharts passes the Line's own
@@ -739,15 +749,17 @@ function SeriesDot(
   opacity = 1,
   seriesLabel?: string,
   onPointClick?: (point: PendingPoint) => void,
-  // WP218 (ADR 039) Phase 0: r/ring follow the resolved line width (R11: the
-  // hollow ring must stay legible at every stroke width — see `dotGeometry`)
-  // and `hideFinal` draws every NON-provisional marker invisible
-  // (opacity 0, never removed from the DOM) when the "alleen voorlopig"
-  // marker mode is chosen, so the `[data-point]` count, keyboard walking
-  // (#212) and click-to-annotate all keep working identically either way.
-  // Defaulted to today's literal geometry (r 4, ring 2, hideFinal false) so
-  // every existing call site/test keeps its current arity and rendering.
-  geometry: { r: number; ring: number; hideFinal: boolean } = { ...dotGeometry('normal'), hideFinal: false },
+  // WP218 (ADR 039) Phase 0 / ADR 042: r/ring follow the resolved line width
+  // (R11: the hollow ring must stay legible at every stroke width — see
+  // `dotGeometry`); `markers`/`ends` together decide which NON-provisional
+  // markers draw invisible (opacity 0, never removed from the DOM) via the
+  // pure `markerVisible` (all / ends / provisionalOnly), so the
+  // `[data-point]` count, keyboard walking (#212) and click-to-annotate all
+  // keep working identically regardless of mode. Defaulted to today's
+  // literal geometry (r 4, ring 2) with `markers: 'all'`/`ends: null` (every
+  // marker visible) so every existing call site/test keeps its current
+  // arity and rendering.
+  geometry: { r: number; ring: number; markers: MarkerMode; ends: SeriesEndpoints | null } = { ...dotGeometry('normal'), markers: 'all', ends: null },
   lang: Lang = 'nl',
   // Story mode (session 92): the periodCode of the point the active story
   // step tells about, or null. Draws ONE extra ring OUTSIDE the point's own
@@ -767,14 +779,10 @@ function SeriesDot(
     const color = props.stroke ?? 'currentColor';
     const isEnd = endLabel !== undefined && payload.periodCode === endLabel.periodCode;
     const isStory = storyPeriodCode !== null && payload.periodCode === storyPeriodCode;
-    // Final-review fix (R11): a ringed point must never look like the
-    // hollow provisional marker (opacity 0, `data-marker="hidden"`) — the
-    // ring itself already carries its own dashed stroke (below) as a
-    // distinct visual channel, but the point's OWN filled marker also has
-    // to stay visible inside it, so `hideFinal` (the "alleen voorlopige"
-    // marker mode) is suppressed for the point the story is currently
-    // pointing at.
-    const hiddenFinal = geometry.hideFinal && !provisional && !isStory;
+    // ADR 042: which markers are drawn follows the resolved marker mode
+    // (all / ends / provisionalOnly) via the pure `markerVisible`; the point
+    // the story ring is on is always drawn (final-review fix, kept).
+    const hiddenFinal = !markerVisible(geometry.markers, Boolean(provisional), String(payload.periodCode), geometry.ends) && !isStory;
     // Task 6 keyboard-operability fix (#212 follow-up): a synthetic
     // role="button" on an SVG element gets no native Enter/Space activation
     // from the browser the way a real <button> would, so onKeyDown has to
@@ -836,7 +844,7 @@ function SeriesDot(
           <text
             x={cx + 8}
             y={cy + 4}
-            fontSize={11}
+            {...VALUE_LABEL_PROPS}
             fill="var(--foreground)"
             textAnchor="start"
             data-role="end-label"
@@ -950,7 +958,7 @@ function SeriesBar(
           <text
             x={x + width / 2}
             y={negative ? y + height + 12 : y - 4}
-            fontSize={11}
+            {...VALUE_LABEL_PROPS}
             fill="var(--foreground)"
             textAnchor="middle"
             data-role="bar-label"
@@ -1044,7 +1052,7 @@ function RegionBar(
           <text
             x={x + width + 4}
             y={y + height / 2 + 4}
-            fontSize={11}
+            {...VALUE_LABEL_PROPS}
             fill="var(--foreground)"
             textAnchor="start"
             data-role="bar-label"
@@ -1593,6 +1601,13 @@ export function ChartView({
   const plan = valueLabelPlan({ ...displaySpec, kind: effectiveKind });
   const tickByValue = new Map(plan.axisTicks.map((t) => [t.value, t]));
   const endLabelByKey = new Map(plan.endLabels.map((l) => [l.seriesKey, l]));
+  // ADR 042 ('ends' marker mode): the first and last PLOTTED point per series,
+  // from the DISPLAYED spec (a zoomed window's own ends get the markers).
+  const endpointsByKey = new Map<string, SeriesEndpoints>();
+  displaySpec.series.forEach((series, i) => {
+    const plotted = series.points.filter((p) => p.value !== null && p.formattedValue !== null);
+    if (plotted.length > 0) endpointsByKey.set(`s${i}`, { first: plotted[0]!.periodCode, last: plotted[plotted.length - 1]!.periodCode });
+  });
   const barLabelsByKey = new Map<string, Map<string, PointLabel>>();
   for (const label of plan.barLabels) {
     const byPeriod = barLabelsByKey.get(label.seriesKey) ?? new Map<string, PointLabel>();
@@ -2232,7 +2247,7 @@ export function ChartView({
                         dimmed ? 0.25 : 1,
                         s.label,
                         (p) => setPendingPoint(p),
-                        { ...dotGeometry(pres.lineWidth), hideFinal: pres.markers === 'provisionalOnly' },
+                        { ...dotGeometry(pres.lineWidth), markers: pres.markers, ends: endpointsByKey.get(s.key) ?? null },
                         chartLang,
                         activeStoryStep?.point?.seriesKey === s.key ? activeStoryStep.point.periodCode : null,
                       )}
@@ -2258,6 +2273,18 @@ export function ChartView({
               desc={t(chartLang, 'chart.keyboardHint')}
               aria-label={accessibleName}
             >
+              {/* ADR 042: a vertical gradient fill per series (colour at the
+                * top, almost nothing at the zero baseline). The <defs> ride
+                * inside the exported <svg>, so the PNG/SVG keeps it; `url(#…)`
+                * needs no paint resolution (chart-download.tsx). */}
+              <defs>
+                {seriesMeta.map((s) => (
+                  <linearGradient key={s.key} id={`fill-${domId}-${s.key}`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={s.color} stopOpacity={0.28} />
+                    <stop offset="100%" stopColor={s.color} stopOpacity={0.02} />
+                  </linearGradient>
+                ))}
+              </defs>
               {pres.grid !== 'none' ? (
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} horizontal vertical={pres.grid === 'both'} />
               ) : null}
@@ -2296,8 +2323,8 @@ export function ChartView({
                       dataKey={s.key}
                       name={s.label}
                       stroke={s.color}
-                      fill={s.color}
-                      fillOpacity={dimmed ? 0.1 : 0.25}
+                      fill={pres.areaFill === 'gradient' ? `url(#fill-${domId}-${s.key})` : s.color}
+                      fillOpacity={pres.areaFill === 'gradient' ? (dimmed ? 0.4 : 1) : dimmed ? 0.1 : 0.25}
                       strokeWidth={LINE_WIDTH_PX[pres.lineWidth]}
                       strokeOpacity={dimmed ? 0.25 : 1}
                       data-series-dimmed={dimmed ? 'true' : undefined}
@@ -2308,7 +2335,7 @@ export function ChartView({
                         dimmed ? 0.25 : 1,
                         s.label,
                         (p) => setPendingPoint(p),
-                        { ...dotGeometry(pres.lineWidth), hideFinal: pres.markers === 'provisionalOnly' },
+                        { ...dotGeometry(pres.lineWidth), markers: pres.markers, ends: endpointsByKey.get(s.key) ?? null },
                         chartLang,
                         activeStoryStep?.point?.seriesKey === s.key ? activeStoryStep.point.periodCode : null,
                       )}
