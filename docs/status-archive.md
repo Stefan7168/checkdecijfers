@@ -154,9 +154,10 @@ TASKS, A WHOLE-BRANCH REVIEW, ONE FINAL FIX WAVE, PUSHED AS A PR AGAINST `main` 
 7. **Pushed and opened as a PR, not merged** (autonomous session, #118(b)): branch `embed-charts` pushed
    to `origin`; the PR opened against `main` with a full summary (the Live-gated-closed limitation
    stated first, before anything else) — the session avoided writing the literal PR number into any
-   `docs/` file per this repo's own doc-convention test. CI was running on the PR at session close;
-   its result was not yet known when this entry was written — check it directly rather than trust this
-   line.
+   `docs/` file per this repo's own doc-convention test. A wrap-up docs-only commit (`ec99486`, adding
+   the lessons/archive/STATUS entries + a RUNBOOK fix caught on re-read — see item 8) superseded and
+   cancelled the first CI run; the second run (`34433304606`) completed green: `gate` passed in
+   10m16s, `deploy` correctly did not run (PRs never deploy, only a push to `main` does, per ADR 018).
 8. **Docs:** ADR 041 (+ the final-review corrections), 03-mvp-scope, 06-roadmap, open-questions (#224
    through #229), RUNBOOK (2 new secret rows + an "Embed go-live" section), README + web/README, the
    original spec doc's own as-built correction, STATUS (this entry + the lean top block), lessons-

@@ -36,8 +36,8 @@ TASKS + A WHOLE-BRANCH REVIEW + ONE FINAL FIX WAVE), PUSHED AS A PR, NOT MERGED.
   solo, ~10.5 min), benchmark 14/14 + 6/6 + 0 fabricated GATE PASS, real `next build`, docs 11/11 — all
   run once more, together, as one final pass after every fix.
 - **Pushed as branch `embed-charts`; the PR is open against `main` for owner review** (autonomous
-  session, #118(b) — not merged). CI running on the PR at session close; check its result before
-  assuming green.
+  session, #118(b) — not merged). CI's `gate` job green (run `34433304606`); `deploy` correctly did not
+  run (PRs never deploy, only pushes to `main` do, per ADR 018).
 - **New tracked residuals (open-questions):** [#224](open-questions.md) (the Pro-owner-email lookup,
   the big one), [#225](open-questions.md) (a trusted-header hygiene fix, done), [#226](open-questions.md)
   (the `?theme=` fix, done), [#227](open-questions.md) (`isRedacted` triplicated across 3 files, not
