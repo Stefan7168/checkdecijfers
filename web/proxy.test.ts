@@ -8,7 +8,7 @@
 // while the route-handler + job tests all stayed green. isPublicPath is the
 // pure decision the proxy makes; pinning it here fails that regression loudly.
 import { describe, expect, it } from 'vitest';
-import { embedRequestHeaders, isPublicPath } from './proxy.ts';
+import { applyEmbedRequestHeaders, embedRequestHeaders, isPublicPath } from './proxy.ts';
 
 describe('proxy isPublicPath allowlist', () => {
   it('allows the self-authenticating API routes (Bearer / signature, no session cookie)', () => {
@@ -139,5 +139,95 @@ describe('embedRequestHeaders (fix round, Piece 2)', () => {
   it('returns no headers at all for a non-embed path, even with a lang param', () => {
     expect(embedRequestHeaders('/credits', new URLSearchParams('lang=en'))).toEqual({});
     expect(embedRequestHeaders('/', new URLSearchParams())).toEqual({});
+  });
+
+  // Final review (Fix 2): `?theme=` -> `x-embed-theme`, validated down to
+  // EXACTLY 'light'/'dark'. 'auto' is the dialog's third option but
+  // deliberately sets no header at all — it means "follow the reader's own
+  // system preference", which is next-themes' own default with nothing to
+  // override, so there is nothing for layout.tsx's forcedTheme to force.
+  it('adds x-embed-theme when ?theme= is exactly "light" or "dark"', () => {
+    expect(embedRequestHeaders('/embed/42.sig', new URLSearchParams('theme=dark'))).toEqual({
+      'x-embed-route': '1',
+      'x-embed-theme': 'dark',
+    });
+    expect(embedRequestHeaders('/embed/42.sig', new URLSearchParams('theme=light'))).toEqual({
+      'x-embed-route': '1',
+      'x-embed-theme': 'light',
+    });
+  });
+
+  it('sets no x-embed-theme key at all for ?theme=auto, absent, or an invalid value', () => {
+    expect(embedRequestHeaders('/embed/42.sig', new URLSearchParams('theme=auto'))).toEqual({
+      'x-embed-route': '1',
+    });
+    expect(embedRequestHeaders('/embed/42.sig', new URLSearchParams())).toEqual({ 'x-embed-route': '1' });
+    expect(embedRequestHeaders('/embed/42.sig', new URLSearchParams('theme=blue'))).toEqual({
+      'x-embed-route': '1',
+    });
+    // Case sensitivity: 'Dark'/'DARK' are not the validated values either —
+    // same discipline as isLang's own exact-match convention elsewhere.
+    expect(embedRequestHeaders('/embed/42.sig', new URLSearchParams('theme=Dark'))).toEqual({
+      'x-embed-route': '1',
+    });
+  });
+
+  it('combines x-embed-lang and x-embed-theme when both ?lang= and ?theme= are valid', () => {
+    expect(embedRequestHeaders('/embed/42.sig', new URLSearchParams('lang=en&theme=dark'))).toEqual({
+      'x-embed-route': '1',
+      'x-embed-lang': 'en',
+      'x-embed-theme': 'dark',
+    });
+  });
+});
+
+// Bundle A (final review): the trusted-header-stripping hygiene fix.
+// embedRequestHeaders above only ever ADDS x-embed-route/x-embed-lang/
+// x-embed-theme for a genuine /embed/ path; applyEmbedRequestHeaders is the
+// function that ALSO strips any client-supplied value under those same
+// names first, on every path, before conditionally re-setting them — takes
+// a plain Headers instance so it's exercised directly, the same reason
+// isPublicPath/embedRequestHeaders are unit-tested without a real
+// NextRequest/Supabase client.
+describe('applyEmbedRequestHeaders (Bundle A, final review)', () => {
+  it('strips a spoofed x-embed-route/x-embed-lang/x-embed-theme header on a NON-embed path — none survive', () => {
+    const headers = new Headers({
+      'x-embed-route': '1',
+      'x-embed-lang': 'en',
+      'x-embed-theme': 'dark',
+    });
+    applyEmbedRequestHeaders(headers, '/credits', new URLSearchParams());
+    expect(headers.get('x-embed-route')).toBeNull();
+    expect(headers.get('x-embed-lang')).toBeNull();
+    expect(headers.get('x-embed-theme')).toBeNull();
+  });
+
+  it('strips a spoofed value on the homepage too', () => {
+    const headers = new Headers({ 'x-embed-route': '1' });
+    applyEmbedRequestHeaders(headers, '/', new URLSearchParams());
+    expect(headers.get('x-embed-route')).toBeNull();
+  });
+
+  it('on a genuine /embed/ path, a pre-existing (spoofed) value is replaced by the real resolved one, never merged with it', () => {
+    const headers = new Headers({ 'x-embed-lang': 'fr', 'x-embed-theme': 'dark' });
+    applyEmbedRequestHeaders(headers, '/embed/42.sig', new URLSearchParams('lang=en&theme=light'));
+    expect(headers.get('x-embed-route')).toBe('1');
+    expect(headers.get('x-embed-lang')).toBe('en');
+    expect(headers.get('x-embed-theme')).toBe('light');
+  });
+
+  it('on a genuine /embed/ path with no ?lang=/?theme=, a spoofed prior value is removed and NOT reinstated', () => {
+    const headers = new Headers({ 'x-embed-lang': 'fr', 'x-embed-theme': 'dark' });
+    applyEmbedRequestHeaders(headers, '/embed/42.sig', new URLSearchParams());
+    expect(headers.get('x-embed-route')).toBe('1');
+    expect(headers.get('x-embed-lang')).toBeNull();
+    expect(headers.get('x-embed-theme')).toBeNull();
+  });
+
+  it('leaves unrelated headers on the same Headers instance untouched', () => {
+    const headers = new Headers({ 'x-embed-route': 'spoofed', cookie: 'session=abc', accept: 'text/html' });
+    applyEmbedRequestHeaders(headers, '/credits', new URLSearchParams());
+    expect(headers.get('cookie')).toBe('session=abc');
+    expect(headers.get('accept')).toBe('text/html');
   });
 });

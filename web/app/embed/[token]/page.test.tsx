@@ -106,11 +106,16 @@ function params(token: string) {
 }
 
 // Fix round (Task 5 review, Piece 3): widened from `{ lang?: string }` to the
-// route's real full searchParams shape so ?theme=/?form= tests below don't
-// need a cast at every call site — every EXISTING call site that only ever
-// passed `{ lang }` stays valid unchanged (a narrower object literal is
-// still assignable to this wider optional-fields type).
-function search(query: { lang?: string; theme?: string; form?: string; live?: string } = {}) {
+// route's real full searchParams shape so `?form=` tests below don't need a
+// cast at every call site — every EXISTING call site that only ever passed
+// `{ lang }` stays valid unchanged (a narrower object literal is still
+// assignable to this wider optional-fields type).
+//
+// Final review (Fix 2): `theme` dropped from this shape — EmbedPage's own
+// searchParams type no longer declares it either (the route has no use for
+// it any more; see page.tsx's file header comment), so keeping it here would
+// silently drift from what the route itself actually accepts.
+function search(query: { lang?: string; form?: string; live?: string } = {}) {
   return Promise.resolve(query);
 }
 
@@ -149,6 +154,34 @@ describe('/embed/[token] — frozen render', () => {
     verifyEmbedToken.mockReturnValue(42);
     loadAuditRecord.mockResolvedValue(answerRecord({ response: { kind: 'answer', chart: null, redacted: true } }));
     const { container } = render(await EmbedPage({ params: params('42.sig'), searchParams: search({ lang: 'en' }) }));
+    expect(screen.getByText(/no longer available/i)).toBeInTheDocument();
+    expect(notFound).not.toHaveBeenCalled();
+    expect(container.textContent).not.toMatch(/\d/);
+  });
+
+  // Final review (Important #3): the test above (and "defaults the
+  // not-available text to Dutch..." below) both set BOTH `chart: null` AND
+  // `redacted: true` at once, so the route's guard
+  // (`response.chart === null || isRedacted(response)`) passes on EITHER
+  // half alone — neither half is actually pinned in isolation by those two
+  // fixtures. The chart-less half IS already isolated elsewhere ("shows the
+  // not-available page for a chart-less answer row (no redacted flag
+  // needed)" below), but the isRedacted half never was, until now. Worse:
+  // the REAL production redaction path
+  // (src/answer/audit/retention.ts's `redactedResponse()`) returns an
+  // envelope with the `chart` key OMITTED ENTIRELY (`undefined`, never
+  // `null`) — so `response.chart === null` never actually fires on a genuine
+  // redacted row in production; `isRedacted` alone is what protects this
+  // PUBLIC, no-auth route from ever serving redacted content. This fixture
+  // matches that real shape exactly (no `chart` key at all, not `chart:
+  // null`), proving `isRedacted` alone does real, necessary work.
+  it('shows the not-available page for a REAL-shaped redacted envelope (chart key absent, not null) — isRedacted alone must catch this', async () => {
+    process.env.EMBED_TOKEN_SECRET = 's3cr3t';
+    verifyEmbedToken.mockReturnValue(42);
+    loadAuditRecord.mockResolvedValue(answerRecord({ response: { kind: 'answer', redacted: true } }));
+    const { container } = render(
+      await EmbedPage({ params: params('42.sig'), searchParams: search({ lang: 'en' }) }),
+    );
     expect(screen.getByText(/no longer available/i)).toBeInTheDocument();
     expect(notFound).not.toHaveBeenCalled();
     expect(container.textContent).not.toMatch(/\d/);
@@ -215,11 +248,18 @@ describe('/embed/[token] — frozen render', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Fix round (Task 5 review, Piece 3): `?theme=` and `?form=`, both already
-// emitted by Task 4's embed dialog (chart-embed-dialog.tsx) but previously
-// never read by this route at all.
+// Fix round (Task 5 review, Piece 3): `?form=` — already emitted by Task 4's
+// embed dialog (chart-embed-dialog.tsx) — is read and applied here.
+//
+// Final review (Fix 2): the `?theme=` coverage that used to live in this
+// block is gone — `?theme=` moved entirely to web/proxy.ts
+// (embedRequestHeaders/applyEmbedRequestHeaders, see proxy.test.ts) and
+// web/app/layout.tsx (resolveEmbedForcedTheme + the <ThemeProvider
+// forcedTheme={...}> wiring, see layout.test.ts); this route no longer reads
+// `?theme=` at all (page.tsx's own file header comment explains why), so
+// there is nothing left to test about it here.
 // ---------------------------------------------------------------------------
-describe('/embed/[token] — ?theme= and ?form= (fix round, Piece 3)', () => {
+describe('/embed/[token] — ?form= (fix round, Piece 3)', () => {
   it('?form=bar results in the bar (Staaf) form actually rendering, for a spec that allows it', async () => {
     process.env.EMBED_TOKEN_SECRET = 's3cr3t';
     verifyEmbedToken.mockReturnValue(42);
@@ -241,24 +281,22 @@ describe('/embed/[token] — ?theme= and ?form= (fix round, Piece 3)', () => {
     expect(container.querySelector('.recharts-line')).not.toBeNull();
   });
 
-  it('?theme=dark wraps the chart in a "dark" class, forcing Tailwind\'s dark-mode variant', async () => {
+  // Bundle B (final review): 'table' IS a real ChartForm (isChartForm
+  // accepts it) and ChartView's own initialFormOverride effect never gates
+  // it either ('bar'/'table' are "never gated", by that effect's own
+  // design) — so before this guard, a hand-crafted `?form=table` URL could
+  // reach the Tabel view even though the embed dialog itself can never
+  // generate one (its Embed button is hidden whenever state.form ===
+  // 'table'). This plan's own spec says table form is never embeddable.
+  it('?form=table is ignored — table form is never embeddable, even via a hand-crafted URL', async () => {
     process.env.EMBED_TOKEN_SECRET = 's3cr3t';
     verifyEmbedToken.mockReturnValue(42);
-    loadAuditRecord.mockResolvedValue(answerRecord());
+    loadAuditRecord.mockResolvedValue(answerRecord()); // kind: 'line' -> defaults to Lijn, never Tabel
     const { container } = render(
-      await EmbedPage({ params: params('42.sig'), searchParams: search({ theme: 'dark' }) }),
+      await EmbedPage({ params: params('42.sig'), searchParams: search({ form: 'table' }) }),
     );
-    expect(container.querySelector('main > div.dark')).not.toBeNull();
-  });
-
-  it.each(['light', 'auto', undefined])('?theme=%s renders with no "dark" wrapper', async (theme) => {
-    process.env.EMBED_TOKEN_SECRET = 's3cr3t';
-    verifyEmbedToken.mockReturnValue(42);
-    loadAuditRecord.mockResolvedValue(answerRecord());
-    const { container } = render(
-      await EmbedPage({ params: params('42.sig'), searchParams: search(theme ? { theme } : {}) }),
-    );
-    expect(container.querySelector('main > div.dark')).toBeNull();
+    expect(container.querySelector('.recharts-line')).not.toBeNull();
+    expect(screen.queryByRole('table')).toBeNull();
   });
 });
 

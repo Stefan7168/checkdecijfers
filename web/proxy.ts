@@ -84,27 +84,73 @@ export function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 }
 
-/** Fix round (Task 5 review, Piece 2): the extra request headers this proxy
- * adds for an /embed/[token] request, so web/app/layout.tsx (via
- * next/headers' headers()) can render a clean, chart-only page for it (spec
- * Part B3 — no site header/footer) without a second root layout / route
- * group. `x-embed-lang` carries the route's OWN resolved `?lang=` — validated
- * with the real isLang guard, never trusted raw — so <html lang> can match it
- * even when it disagrees with the visitor's cookie/Accept-Language (an
- * anonymous third-party reader has no checkdecijfers.nl cookie of their own
- * for that resolution to mean anything). A non-embed path or an absent/
- * invalid ?lang= gets no corresponding key, leaving layout.tsx's existing
- * behaviour (SiteFooter shown, getLang()'s cookie/Accept-Language chain)
- * unchanged. Exported and unit-tested directly, same reason as isPublicPath
- * above: this pure decision is one layer proxy()'s own route-handler tests
- * can't see, and proxy() itself needs a real NextRequest/Supabase client to
- * exercise, which this doesn't. */
+/** Fix round (Task 5 review, Piece 2; final review Fix 2 adds the third key):
+ * the extra request headers this proxy adds for an /embed/[token] request, so
+ * web/app/layout.tsx (via next/headers' headers()) can render a clean,
+ * chart-only page for it (spec Part B3 — no site header/footer) without a
+ * second root layout / route group. `x-embed-lang` carries the route's OWN
+ * resolved `?lang=` — validated with the real isLang guard, never trusted
+ * raw — so <html lang> can match it even when it disagrees with the
+ * visitor's cookie/Accept-Language (an anonymous third-party reader has no
+ * checkdecijfers.nl cookie of their own for that resolution to mean anything
+ * either). `x-embed-theme` carries the route's OWN `?theme=`, validated down
+ * to exactly 'light'/'dark' — 'auto' deliberately gets NO header at all
+ * (that option means "follow the reader's own system preference", which is
+ * next-themes' own default behaviour with nothing to override), and neither
+ * does an absent or unrecognised value. layout.tsx passes this straight
+ * through as next-themes' `forcedTheme` prop — see that file for why this
+ * closes the bug the old `?theme=` handling had (a per-route wrapper `<div
+ * className="dark">` could not stop next-themes' own unconditional
+ * `<ThemeProvider>` from reading the READER's OS/browser preference, so
+ * `?theme=light` — the embed dialog's own DEFAULT option — silently did
+ * nothing on a dark-mode reader). A non-embed path or an absent/invalid
+ * `?lang=`/`?theme=` gets no corresponding key, leaving layout.tsx's existing
+ * behaviour (SiteFooter shown, getLang()'s cookie/Accept-Language chain, no
+ * forced theme) unchanged. Exported and unit-tested directly, same reason as
+ * isPublicPath above: this pure decision is one layer proxy()'s own
+ * route-handler tests can't see, and proxy() itself needs a real
+ * NextRequest/Supabase client to exercise, which this doesn't. */
 export function embedRequestHeaders(pathname: string, searchParams: URLSearchParams): Record<string, string> {
   if (!pathname.startsWith('/embed/')) return {};
   const headers: Record<string, string> = { 'x-embed-route': '1' };
   const lang = searchParams.get('lang');
   if (isLang(lang)) headers['x-embed-lang'] = lang;
+  const theme = searchParams.get('theme');
+  if (theme === 'light' || theme === 'dark') headers['x-embed-theme'] = theme;
   return headers;
+}
+
+/** The complete set of keys `embedRequestHeaders` ever sets — the ONE place
+ * that list is written, so `applyEmbedRequestHeaders` below can never fall
+ * out of sync with it (a fourth key added to one and not the other would
+ * silently reopen the exact spoofing gap this closes). */
+const TRUSTED_EMBED_HEADER_KEYS = ['x-embed-route', 'x-embed-lang', 'x-embed-theme'] as const;
+
+/** Bundle A (final review): `embedRequestHeaders` above only ever ADDS these
+ * keys for a genuine `/embed/`-prefixed path — it never stripped a
+ * client-supplied value under the same names first, on any OTHER path. A
+ * request to a non-embed route carrying a hand-set `x-embed-route: 1` (or
+ * `x-embed-lang`/`x-embed-theme`) header would previously pass straight
+ * through unmodified, since `request.headers.set(...)` below only ever ran
+ * for the keys `embedRequestHeaders` actually returned — never a `.delete()`
+ * for the ones it didn't. Harmless in practice today (open-questions #225 /
+ * ADR 041 Consequences: nothing security-relevant reads these headers, and
+ * no response is cached keyed on them — see those docs for what a forged
+ * value CAN actually do, corrected in the same commit as this fix), but a
+ * real trusted-header-injection hygiene gap worth closing on general
+ * principle: mutates `headers` in place, unconditionally deleting all three
+ * keys FIRST, then re-applying whatever `embedRequestHeaders` decides for
+ * THIS request — so a spoofed value can never survive on any path,
+ * regardless of what `embedRequestHeaders` itself returns. Takes a plain
+ * `Headers` instance (not a `NextRequest`) so it is unit-tested directly,
+ * same reason `isPublicPath`/`embedRequestHeaders` are: `proxy()` itself
+ * needs a real `NextRequest`/Supabase client to exercise, which this mutation
+ * does not. */
+export function applyEmbedRequestHeaders(headers: Headers, pathname: string, searchParams: URLSearchParams): void {
+  for (const key of TRUSTED_EMBED_HEADER_KEYS) headers.delete(key);
+  for (const [key, value] of Object.entries(embedRequestHeaders(pathname, searchParams))) {
+    headers.set(key, value);
+  }
 }
 
 export async function proxy(request: NextRequest) {
@@ -122,11 +168,12 @@ export async function proxy(request: NextRequest) {
   // `init.request.headers` with a live `for...of` at call time, so both call
   // sites below automatically pick up this mutation the moment it happens,
   // with no snapshot to go stale.
-  for (const [key, value] of Object.entries(
-    embedRequestHeaders(request.nextUrl.pathname, request.nextUrl.searchParams),
-  )) {
-    request.headers.set(key, value);
-  }
+  //
+  // Bundle A (final review): `applyEmbedRequestHeaders` deletes all three
+  // trusted keys BEFORE conditionally re-setting them, so a client-supplied
+  // spoofed value under any of these names can never survive on any path —
+  // see that function's own comment above.
+  applyEmbedRequestHeaders(request.headers, request.nextUrl.pathname, request.nextUrl.searchParams);
 
   let response = NextResponse.next({ request });
 

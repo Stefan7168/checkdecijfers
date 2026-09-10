@@ -40,7 +40,15 @@ import { t, type Lang, type MessageKey } from '../lib/i18n/messages.ts';
 import { Button } from './ui/button.tsx';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from './ui/dialog.tsx';
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://checkdecijfers.nl';
+// Exported (final review, Important #1): chart.tsx's own embed-footer
+// backlink needs this SAME resolved origin — before this fix it hardcoded
+// `https://checkdecijfers.nl` directly, which currently resolves to
+// Namecheap's parked nameservers, not this app (production is
+// `https://checkdecijfers.vercel.app`; the real domain isn't even confirmed
+// yet, docs/open-questions.md #7) — making every embed's only outbound link
+// dead on arrival. One shared constant means the iframe `src` this dialog
+// generates and the backlink `href` chart.tsx renders can never disagree.
+export const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://checkdecijfers.nl';
 
 type ColourOption = 'light' | 'dark' | 'auto';
 type ChartTypeOption = 'as-shown' | 'default';

@@ -72,7 +72,7 @@ import { ensureFontLoaded } from '../lib/font-loader.ts';
 import { ChartConfigPanel, ChartConfigTrigger } from './chart-config-panel.tsx';
 import { ChartFrame } from './chart-frame.tsx';
 import { ChartDownloadMenu } from './chart-download.tsx';
-import { ChartEmbedButton } from './chart-embed-dialog.tsx';
+import { APP_URL, ChartEmbedButton } from './chart-embed-dialog.tsx';
 import { buildStorySteps, type StoryStep } from '../lib/chart-story.ts';
 import { ChartStoryPanel, ChartStoryTrigger } from './chart-story.tsx';
 import { ChartNotes, type ChartNote, type PendingPoint } from './chart-notes.tsx';
@@ -2832,8 +2832,18 @@ export function ChartView({
             * target="_blank" it would load checkdecijfers.nl INTO the
             * iframe box instead of the reader's top page, trapping the
             * site in a chart-sized frame. Same convention as SourceBadge's
-            * own outbound link (source-badge.tsx). */}
-          <a href="https://checkdecijfers.nl" target="_blank" rel="noopener noreferrer" className="underline">
+            * own outbound link (source-badge.tsx).
+            *
+            * Final review (Important #1): `href` is the SAME resolved
+            * `NEXT_PUBLIC_APP_URL` origin the embed dialog already uses for
+            * its iframe `src` (chart-embed-dialog.tsx's exported `APP_URL`)
+            * -- not a hardcoded `https://checkdecijfers.nl`, which today
+            * resolves to Namecheap's parked nameservers, not this app. The
+            * VISIBLE label stays the brand name regardless (same convention
+            * as that dialog's own generated `title="checkdecijfers.nl —
+            * ..."` attribute, independent of what APP_URL actually
+            * resolves to). */}
+          <a href={APP_URL} target="_blank" rel="noopener noreferrer" className="underline">
             checkdecijfers.nl
           </a>
         </p>

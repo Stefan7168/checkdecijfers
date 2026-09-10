@@ -31,6 +31,22 @@ vi.mock('../app/chart-style-actions.ts', () => chartStyleActions);
 // wiring tests below never touch a real db/auth boundary.
 const { createEmbedCode } = vi.hoisted(() => ({ createEmbedCode: vi.fn() }));
 vi.mock('../app/embed-actions.ts', () => ({ createEmbedCode }));
+// Final review (Important #1): chart-embed-dialog.tsx's exported `APP_URL`
+// is a MODULE-SCOPE constant (`process.env.NEXT_PUBLIC_APP_URL ?? '...'`),
+// computed once when that module first loads — vitest leaves
+// NEXT_PUBLIC_APP_URL unset in this suite, so without this stub APP_URL
+// would resolve to the SAME hardcoded fallback string
+// ('https://checkdecijfers.nl') the embed-footer backlink used to hardcode
+// directly, making a naive "not the old hardcode" assertion pass even on a
+// reverted regression. `vi.hoisted` runs before any import below is
+// evaluated (the same mechanism the two blocks above rely on), so this
+// genuinely lands before chart-embed-dialog.tsx's `const APP_URL = ...`
+// line runs — proving the backlink really reads through the env var, not
+// just happening to match its own fallback.
+vi.hoisted(() => {
+  process.env.NEXT_PUBLIC_APP_URL = 'https://embed-test.example';
+});
+import { APP_URL } from './chart-embed-dialog.tsx';
 import {
   annotationMarkers,
   buildRegionRows,
@@ -3388,11 +3404,21 @@ describe('embed mode (spec Part B3)', () => {
     expect(screen.queryByRole('button', { name: /voeg notitie toe/i })).toBeNull();
   });
 
-  it('renders the embedFooter sentence with a checkdecijfers.nl backlink when embedMode is on', () => {
+  it('renders the embedFooter sentence with a backlink to the real app URL, not the hardcoded parked domain', () => {
     render(<ChartView spec={threePointSpec()} embedMode embedFooter="Frozen on 10 September 2026 ·" />);
     expect(screen.getByText(/Frozen on 10 September 2026/)).toBeInTheDocument();
     const link = screen.getByRole('link', { name: /checkdecijfers\.nl/i });
-    expect(link).toHaveAttribute('href', 'https://checkdecijfers.nl');
+    // Final review (Important #1): the file-top vi.hoisted stub set
+    // NEXT_PUBLIC_APP_URL to a distinctive, non-default value BEFORE
+    // chart-embed-dialog.tsx's module-scope APP_URL constant was computed —
+    // asserting against BOTH the literal stubbed value and the imported
+    // APP_URL constant proves the backlink genuinely reads through the env
+    // var (the same one the embed dialog's iframe src already uses), not
+    // just happening to match a hardcoded fallback by coincidence.
+    expect(APP_URL).toBe('https://embed-test.example');
+    expect(link).toHaveAttribute('href', 'https://embed-test.example');
+    expect(link).toHaveAttribute('href', APP_URL);
+    expect(link.getAttribute('href')).not.toBe('https://checkdecijfers.nl');
     // Review fix: this link is the ONE way out of a third-party <iframe> (the
     // whole point of the embed feature) -- without target="_blank" it loads
     // checkdecijfers.nl INTO the iframe box instead of the reader's top page,

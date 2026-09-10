@@ -21,9 +21,26 @@
 // round, Piece 1/2) — this file only ever owned its OWN strings (the
 // footer, the not-available message).
 //
-// Fix round (Task 5 review, Piece 3): `?theme=` and `?form=` — both already
-// emitted by Task 4's embed dialog (chart-embed-dialog.tsx) — are now read
-// and applied here.
+// Fix round (Task 5 review, Piece 3): `?form=` — already emitted by Task 4's
+// embed dialog (chart-embed-dialog.tsx) — is read and applied here.
+//
+// Final review (Fix 2): `?theme=` is deliberately NOT read anywhere in this
+// file (any more). It used to be handled by a local `<div className="dark">`
+// wrapper around the chart, which only ever flipped Tailwind's dark-mode-
+// scoped tokens for markup INSIDE that div and did nothing to stop
+// web/app/layout.tsx's unconditional `<ThemeProvider>` from resolving the
+// READER's own OS/browser prefers-color-scheme regardless of what `?theme=`
+// said — so `?theme=light` (the embed dialog's own DEFAULT option) silently
+// did nothing on a dark-mode reader, and `?theme=dark` never painted the
+// page's own background. Both directions are now fixed at the ROOT instead:
+// web/proxy.ts validates `?theme=` into an `x-embed-theme` request header
+// (only for 'light'/'dark' — 'auto' correctly sets nothing, since that means
+// "follow the reader's own system preference", next-themes' own default
+// behaviour with no override needed), and web/app/layout.tsx reads that
+// header and passes it as `<ThemeProvider forcedTheme={...}>` — next-themes'
+// own documented API for exactly this override case. See that file's own
+// comment for the full mechanism and why it correctly reaches the page
+// background this file's old wrapper never did.
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { loadAuditRecord } from '../../../backend/answer/audit/index.ts';
@@ -110,7 +127,11 @@ export default async function EmbedPage({
   searchParams,
 }: {
   params: Promise<{ token: string }>;
-  searchParams: Promise<{ lang?: string; theme?: string; form?: string; live?: string }>;
+  // `theme` deliberately excluded (final review, Fix 2): `?theme=` is now
+  // entirely proxy.ts/layout.tsx-owned (see the file header comment) — this
+  // component itself has no use for it, even though the real URL this route
+  // serves legitimately carries the param.
+  searchParams: Promise<{ lang?: string; form?: string; live?: string }>;
 }) {
   const { token } = await params;
   const query = await searchParams;
@@ -218,7 +239,18 @@ export default async function EmbedPage({
   // lineFormAllowed/areaFormAllowed/hbarFormAllowed guards (applied inside
   // its initialFormOverride effect) are the SECOND, spec-aware check; this
   // one only confirms the string names a real ChartForm at all.
-  const formOverride: ChartForm | undefined = isChartForm(query.form) ? query.form : undefined;
+  //
+  // Final review (Bundle B): 'table' is excluded here explicitly even though
+  // isChartForm accepts it (it IS a real ChartForm member) and even though
+  // ChartView's own initialFormOverride effect never gates it either
+  // ('bar'/'table' are "never gated", by that effect's own design/comment).
+  // This plan's own spec says table form is never embeddable — the embed
+  // dialog's own Embed button is hidden whenever state.form === 'table', so
+  // the dialog itself can never GENERATE a `?form=table` URL — but nothing
+  // stopped a hand-crafted one from reaching this public route and
+  // rendering the Tabel view anyway, before this guard.
+  const formOverride: ChartForm | undefined =
+    isChartForm(query.form) && query.form !== 'table' ? query.form : undefined;
 
   const chartView = (
     <ChartView
@@ -230,20 +262,10 @@ export default async function EmbedPage({
     />
   );
 
-  return (
-    <main className="p-2">
-      {/* `?theme=dark`: Tailwind's dark-mode class strategy (app/globals.css's
-          `@custom-variant dark (&:is(.dark *));`) means everything NESTED
-          inside a `.dark` ancestor renders in dark styling regardless of the
-          page's own root class — a best-effort override, not a guarantee,
-          since `?theme=light`/`auto`/absent instead falls through to
-          `prefers-color-scheme` (most third-party iframe contexts get a
-          fresh, unpartitioned storage state, so there is no
-          checkdecijfers.nl `next-themes` localStorage entry to read there
-          anyway) — a known, accepted, narrow limitation for the rare case
-          where a visitor's browser somehow carries over a dark preference
-          for our own domain into the iframe context. */}
-      {query.theme === 'dark' ? <div className="dark">{chartView}</div> : chartView}
-    </main>
-  );
+  // Final review (Fix 2): the old `<div className="dark">` wrapper (keyed
+  // on `?theme=dark`) is gone — see the file header comment for why, and
+  // web/proxy.ts + web/app/layout.tsx for where that responsibility now
+  // lives (the `x-embed-theme` request header -> `<ThemeProvider
+  // forcedTheme={...}>`, applied at the root, not per-route here).
+  return <main className="p-2">{chartView}</main>;
 }
