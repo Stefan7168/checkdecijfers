@@ -404,6 +404,9 @@ describe('/embed/[token] — ?live=1 (Task 6)', () => {
     const liveSpec = chartSpec();
     liveSpec.attribution.syncedAt = '2026-09-09'; // deliberately different from record.createdAt (2026-09-10)
     rerunLive.mockResolvedValue(liveSpec);
+    // The frozen chart rendered here is answerRecord()'s default chartSpec(),
+    // whose own attribution.syncedAt is '2026-08-26' — the fix-round
+    // assertion below leans on that literal.
     loadAuditRecord.mockResolvedValue(answerRecord({ userId: 'user-1' }));
     render(await EmbedPage({ params: params('42.sig'), searchParams: search({ live: '1', lang: 'en' }) }));
     expect(screen.getByText(/live · data as of/i)).toBeInTheDocument();
@@ -414,6 +417,23 @@ describe('/embed/[token] — ?live=1 (Task 6)', () => {
     // same "two occurrences" shape as this file's own frozen-render test.)
     expect(screen.getAllByText(/2026-09-09/).length).toBeGreaterThanOrEqual(1);
     expect(screen.queryByText(/2026-09-10/)).not.toBeInTheDocument();
+    // Fix round (Important #1, Task 6 review): the two assertions above only
+    // ever prove something about the FOOTER's own text, which page.tsx builds
+    // from liveSpec.attribution.syncedAt regardless of which spec is actually
+    // handed to <ChartView spec={...} /> — they would still both pass even if
+    // `spec={finalSpec}` were silently reverted to `spec={spec}` (the frozen
+    // one), since the frozen fixture's own date ('2026-08-26', chartSpec()'s
+    // default) never collides with '2026-09-10' either. This assertion closes
+    // that gap: it reads SourceBadge's own rendered text
+    // (web/components/source-badge.tsx's syncDateLabel, sourced straight from
+    // spec.attribution.syncedAt of whichever spec is actually passed to
+    // ChartView, independent of the footer string above) and proves the
+    // FROZEN spec's own syncedAt is genuinely absent from the render — the
+    // one signal that only changes when the wrong spec is actually rendered
+    // in the chart body, not just mislabeled in the footer sentence. Verified
+    // by temporarily reverting `spec={finalSpec}` to `spec={spec}` in
+    // page.tsx: this assertion (and only this one of the three) then fails.
+    expect(screen.queryByText(/2026-08-26/)).not.toBeInTheDocument();
   });
 
   it('defaults the live-success footer to Dutch ("Live · gegevens van") when ?lang is absent', async () => {

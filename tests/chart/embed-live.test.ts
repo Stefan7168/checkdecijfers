@@ -86,6 +86,26 @@ describe('parseStoredIntent', () => {
     expect(parseStoredIntent({})).toBeNull();
   });
 
+  // Fix round (Important #2, Task 6 review): the bare `[]` case just above is
+  // rejected via the schemaVersion check alone (an empty array has no own
+  // `.schemaVersion` property, so `r.schemaVersion !== INTENT_SCHEMA_VERSION`
+  // is true regardless of whether the entry guard's own `Array.isArray(raw)`
+  // check exists) — it would still return null even with that check deleted,
+  // so it doesn't actually prove the check is load-bearing. This test does:
+  // an array carrying every VALID field as an own property would pass EVERY
+  // downstream structural check (schemaVersion/target/period/derivation all
+  // present and well-formed) if arrays weren't explicitly rejected up front —
+  // only Array.isArray(raw) stops it. Mutation-tested: temporarily deleting
+  // `|| Array.isArray(raw)` from parseStoredIntent's entry guard makes this
+  // test (and only this one) fail, returning the copied fields as a
+  // "StructuredIntent" instead of null; restoring the guard makes it pass
+  // again.
+  it('rejects a JS array carrying every valid field as an own property (proves Array.isArray is load-bearing, not the schemaVersion check coincidentally)', () => {
+    const arrayIntent: unknown = Object.assign([], VALID);
+    expect(Array.isArray(arrayIntent)).toBe(true); // sanity: still a real array, not coerced away by Object.assign
+    expect(parseStoredIntent(arrayIntent)).toBeNull();
+  });
+
   it('rejects a schemaVersion that does not match INTENT_SCHEMA_VERSION', () => {
     expect(parseStoredIntent({ ...VALID, schemaVersion: 2 })).toBeNull();
     expect(parseStoredIntent({ ...VALID, schemaVersion: '1' })).toBeNull();
@@ -121,6 +141,20 @@ describe('parseStoredIntent', () => {
       parseStoredIntent({
         ...VALID,
         target: { kind: 'explicit', tableId: '82235NED', measure: 'M001', dims: null },
+      }),
+    ).toBeNull();
+    // Fix round (Important #2, Task 6 review): dims should be a plain object
+    // of string key/value pairs, never an array — and this case is not
+    // vacuous: `Object.values([]).every(...)` on an empty array is vacuously
+    // TRUE, so without isValidDims's own `|| Array.isArray(v)` check, an
+    // empty-array dims would be wrongly accepted as a well-formed (empty)
+    // dims object. Mutation-tested: temporarily deleting `|| Array.isArray(v)`
+    // from isValidDims makes this assertion (and only this one) fail;
+    // restoring it makes it pass again.
+    expect(
+      parseStoredIntent({
+        ...VALID,
+        target: { kind: 'explicit', tableId: '82235NED', measure: 'M001', dims: [] },
       }),
     ).toBeNull();
   });
