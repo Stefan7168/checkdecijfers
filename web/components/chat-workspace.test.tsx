@@ -231,29 +231,29 @@ describe('Chat — WP135 onVisualsChange reporting', () => {
   });
 });
 
-// Task 3 (chat polish batch, owner ask): the docked-visual reference pill
-// moves INTO the answer card (top-right, text wraps) instead of sitting
-// below it.
-describe('Chat — Task 3 docked pill lives inside the answer card', () => {
-  it('renders the pill as the first child of CardContent, before the body text', async () => {
+// Owner ask (session 94): the docked-visual reference trigger moved OUT of
+// the floated top-of-card pill (Task 3, chat polish batch — superseded) and
+// into the CardFooter action row, styled like the other footer buttons,
+// immediately left of Copy.
+describe('Chat — docked reference trigger lives in the CardFooter action row', () => {
+  it('renders immediately before the Copy button, inside the same footer action group', async () => {
     askQuestion.mockResolvedValue(outcome(statCardAnswer()));
     render(<Chat dockMode onThreadId={vi.fn()} onVisualsChange={vi.fn()} />);
     await submit('Wat was de inflatie in 2024?');
     await screen.findByText(BODY);
 
-    const pill = screen.getByText(/Kaart in het paneel/).closest('button')!;
-    const cardContent = pill.closest('[data-slot="card-content"]');
-    expect(cardContent).not.toBeNull();
-    // First child of CardContent.
-    expect(cardContent!.firstElementChild).toBe(pill);
-    // Body text is a later sibling inside the same CardContent.
-    const bodyEl = screen.getByText(BODY);
-    expect(cardContent!.contains(bodyEl)).toBe(true);
-    const children = Array.from(cardContent!.children);
-    expect(children.indexOf(pill)).toBeLessThan(children.indexOf(bodyEl.closest('div')!));
+    const trigger = screen.getByText(/Kaart in het paneel/).closest('button')!;
+    const cardFooter = trigger.closest('[data-slot="card-footer"]');
+    expect(cardFooter).not.toBeNull();
+    const copyButton = screen.getByRole('button', { name: 'Kopieer' });
+    expect(cardFooter!.contains(copyButton)).toBe(true);
+    // Same action-row parent, trigger comes first.
+    expect(trigger.parentElement).toBe(copyButton.parentElement);
+    const children = Array.from(trigger.parentElement!.children);
+    expect(children.indexOf(trigger)).toBeLessThan(children.indexOf(copyButton));
   });
 
-  it('the pill floats (float-right) instead of being absolutely positioned, so a long body wraps around it', async () => {
+  it('renders as a plain toggle button (the shared Button component), not a floated pill', async () => {
     const longBody = 'Dit is een lang antwoord. '.repeat(30).trim();
     askQuestion.mockResolvedValue(
       outcome({
@@ -270,9 +270,10 @@ describe('Chat — Task 3 docked pill lives inside the answer card', () => {
     await submit('Wat was de inflatie in 2024?');
     await screen.findByText(longBody);
 
-    const pill = screen.getByText(/Kaart in het paneel/).closest('button')!;
-    expect(pill.className.split(/\s+/)).toContain('float-right');
-    expect(pill.className).not.toMatch(/(^|\s)absolute(\s|$)/);
+    const trigger = screen.getByText(/Kaart in het paneel/).closest('button')!;
+    expect(trigger).toHaveAttribute('data-slot', 'button');
+    expect(trigger.className.split(/\s+/)).not.toContain('float-right');
+    expect(trigger).toHaveAttribute('aria-pressed', 'false');
   });
 });
 

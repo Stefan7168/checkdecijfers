@@ -1890,7 +1890,7 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
     const trigger = screen.getByRole('button', { name: 'Opmaak' });
     fireEvent.click(trigger);
     expect(trigger).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByRole('dialog', { name: 'Opmaak van de grafiek' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Opmaak van de grafiek' })).toBeInTheDocument();
 
     rerender(<ChartView spec={threePointSpec({ title: 'Een andere grafiek' })} />);
     expect(screen.getByRole('button', { name: 'Opmaak' })).toHaveAttribute('aria-expanded', 'false');
@@ -1965,7 +1965,7 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
     render(<ChartView spec={threePointSpec()} />);
     fireEvent.click(screen.getByRole('tab', { name: 'Tabel' }));
     expect(screen.queryByRole('button', { name: 'Opmaak' })).toBeNull();
-    expect(screen.queryByRole('dialog', { name: 'Opmaak van de grafiek' })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Opmaak van de grafiek' })).toBeNull();
 
     fireEvent.click(screen.getByRole('tab', { name: 'Lijn' }));
     expect(screen.getByRole('button', { name: 'Opmaak' })).toBeInTheDocument();
@@ -1978,11 +1978,11 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
   it('round 2: selecting Tabel closes the Style panel, and it does not reappear on its own when switching back to a chart form', () => {
     render(<ChartView spec={threePointSpec()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    expect(screen.getByRole('dialog', { name: 'Opmaak van de grafiek' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Opmaak van de grafiek' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('tab', { name: 'Tabel' }));
-    expect(screen.queryByRole('dialog', { name: 'Opmaak van de grafiek' })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Opmaak van de grafiek' })).toBeNull();
     fireEvent.click(screen.getByRole('tab', { name: 'Lijn' }));
-    expect(screen.queryByRole('dialog', { name: 'Opmaak van de grafiek' })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Opmaak van de grafiek' })).toBeNull();
   });
 
   // Final-review fix (Fix 7): with a frame aspect ratio set AND small
@@ -1994,7 +1994,7 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
     render(<ChartView spec={twoSeriesLineSpec()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Kleine grafieken' }));
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    const dialog = screen.getByRole('dialog', { name: 'Opmaak van de grafiek' });
+    const dialog = screen.getByRole('region', { name: 'Opmaak van de grafiek' });
     fireEvent.click(within(dialog).getByRole('tab', { name: 'Kader' }));
     fireEvent.click(within(dialog).getByRole('radio', { name: 'Vierkant' }));
     const panel = screen.getByRole('tabpanel', { name: 'Grafiek' });
@@ -2016,7 +2016,7 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
     expect((tablist.parentElement as HTMLElement).contains(trigger)).toBe(true);
 
     fireEvent.click(trigger);
-    const region = screen.getByRole('dialog', { name: 'Opmaak van de grafiek' });
+    const region = screen.getByRole('region', { name: 'Opmaak van de grafiek' });
     // "First the graph on top, then the design settings" (owner): the region
     // is a FOLLOWING sibling of the chart's own tabpanel, never a preceding
     // one — the pre-refactor layout wrapped the panel under the Weergave row
@@ -2892,7 +2892,7 @@ describe('Story mode (session 92): a code-built story under the chart', () => {
   it('opening the story closes Opmaak and vice versa (one panel under the chart)', () => {
     render(<ChartView spec={threePointSpec()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    expect(screen.getByRole('dialog', { name: 'Opmaak van de grafiek' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Opmaak van de grafiek' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Verhaal' }));
     expect(screen.queryByRole('region', { name: 'Opmaak van de grafiek' })).toBeNull();
     expect(screen.getByRole('region', { name: 'Verhaal bij de grafiek' })).toBeInTheDocument();
@@ -3316,12 +3316,12 @@ describe('ChartView — StylePanelOwnerProvider (one Style panel per page)', () 
     const [triggerA, triggerB] = screen.getAllByRole('button', { name: 'Opmaak' });
     fireEvent.click(triggerA!);
     expect(triggerA).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getAllByRole('dialog', { name: 'Opmaak van de grafiek' })).toHaveLength(1);
+    expect(screen.getAllByRole('region', { name: 'Opmaak van de grafiek' })).toHaveLength(1);
 
     fireEvent.click(triggerB!);
     expect(triggerB).toHaveAttribute('aria-expanded', 'true');
     expect(triggerA).toHaveAttribute('aria-expanded', 'false');
-    expect(screen.getAllByRole('dialog', { name: 'Opmaak van de grafiek' })).toHaveLength(1);
+    expect(screen.getAllByRole('region', { name: 'Opmaak van de grafiek' })).toHaveLength(1);
   });
 
   it('without a provider (the default), two charts each keep their own panel open independently', () => {
@@ -3336,6 +3336,6 @@ describe('ChartView — StylePanelOwnerProvider (one Style panel per page)', () 
     fireEvent.click(triggerB!);
     expect(triggerA).toHaveAttribute('aria-expanded', 'true');
     expect(triggerB).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getAllByRole('dialog', { name: 'Opmaak van de grafiek' })).toHaveLength(2);
+    expect(screen.getAllByRole('region', { name: 'Opmaak van de grafiek' })).toHaveLength(2);
   });
 });

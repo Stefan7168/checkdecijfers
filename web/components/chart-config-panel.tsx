@@ -28,7 +28,6 @@
 // them (the Colours tab needs `seriesMeta`, unused by this task's Grafiek
 // tab but already part of the props contract so Task 6 is additive).
 import { Fragment, useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
-import { createPortal } from 'react-dom';
 import { SlidersHorizontal, X } from 'lucide-react';
 import {
   COLOR_REFUSE_BELOW,
@@ -1034,17 +1033,17 @@ export function ChartConfigPanel({
   function onRegionKeyDown(event: KeyboardEvent<HTMLElement>): void {
     if (event.key === 'Escape') {
       event.preventDefault();
-      // The portaled dialog is still a React-tree child of ChartView: stop
-      // the synthetic event here so no ancestor (the story region, the page)
+      // React's synthetic events bubble the REACT tree (this region is a
+      // React-tree child of ChartView regardless of DOM position): stop the
+      // synthetic event here so no ancestor (the story region, the page)
       // ever sees this Escape as its own.
       event.stopPropagation();
       closeAndRefocus();
     }
   }
 
-  // Task 6 (floating Style panel): the dialog receives focus itself when it
-  // opens (never trapped — Tab can still leave it, matching "no focus trap"
-  // in the brief), so a keyboard user landing here after activating the
+  // The region receives focus itself when it opens (never trapped — Tab can
+  // still leave it), so a keyboard user landing here after activating the
   // trigger doesn't have to hunt for it.
   const dialogRef = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -1111,30 +1110,35 @@ export function ChartConfigPanel({
   const visibleToggles = toggles.filter((toggle) => resolved.applicable.has(toggle.key));
   const showGroupLabelId = `${idPrefix}-style-label-show`;
 
-  // Task 6 (floating Style panel): the panel is now a floating, non-modal
-  // dialog beside the chart, not an inline region under it — `role="dialog"`
-  // (never `aria-modal`: no outside-click close, no focus trap, the chart
-  // stays fully interactive behind it) and `createPortal`ed into
-  // `document.body` so its fixed positioning isn't clipped by an ancestor's
-  // `overflow`/`transform`. Owner call: `aria-labelledby` keeps pointing at
-  // `copy.regionLabel` ("Opmaak van de grafiek"/"Chart style"), not the new
-  // `chart.panel.dialogLabel` string the brief sketched — every existing
-  // test queries `getByRole('region'|'dialog', { name: 'Opmaak van de
-  // grafiek' })`, and there is no product reason for the two accessible
-  // names to differ, so keeping the established one avoids a needless
-  // string split. Below `lg`, the dialog becomes a bottom sheet instead of
-  // the right-side floating box — a deliberate deviation from spec §C1's
-  // "small chart preview on top" for phones, chosen to avoid mounting a
-  // second chart instance; recorded in the docs task.
+  // Owner ask (session 94): an INLINE region below the chart, in its own
+  // card — not a floating/portaled dialog (Task 6's earlier design, now
+  // superseded). `role="region"` (there was never an outside-click close or
+  // a focus trap — "the chart stays fully interactive behind it" was always
+  // true, it's just no longer a "behind" at all, so "dialog" semantics no
+  // longer fit). `aria-labelledby` keeps pointing at `copy.regionLabel`
+  // ("Opmaak van de grafiek"/"Chart style") — unchanged, so no existing
+  // accessible-name assumption breaks. Renders identically at every
+  // viewport width now (no more `lg:`-gated floating-box-vs-bottom-sheet
+  // split): it flows with the page, the same "chart first, panel under it"
+  // slot the Story panel already uses right below this one.
+  // Known, pre-existing gap `role="region"` makes more visible than
+  // `role="dialog"` did: `copy.regionLabel` is one fixed string, not unique
+  // per chart instance, so a page with several charts open at once (no
+  // `StylePanelOwnerProvider`, e.g. the homepage) can show multiple regions
+  // sharing the identical accessible name "Opmaak van de grafiek" in a
+  // screen reader's landmark/region list, with no way to tell them apart.
+  // Not introduced by this change (the same non-unique name already existed
+  // under "dialog"); worth a per-instance name if it turns out to matter in
+  // practice — not fixed here.
   const dialogContent = open ? (
     <section
       ref={dialogRef}
       id={regionId}
-      role="dialog"
+      role="region"
       aria-labelledby={headingId}
       tabIndex={-1}
       onKeyDown={onRegionKeyDown}
-      className="fixed inset-x-0 bottom-0 z-40 max-h-[60vh] overflow-y-auto rounded-t-lg border-t border-border bg-card p-3 text-xs shadow-lg lg:inset-x-auto lg:bottom-auto lg:right-4 lg:top-20 lg:w-[22rem] lg:max-h-[calc(100vh-6rem)] lg:rounded-lg lg:border"
+      className="mt-3 w-full rounded-lg border border-border bg-card p-3 text-xs shadow-sm"
     >
       <h2 id={headingId} className="sr-only">
         {copy.regionLabel}
@@ -1712,5 +1716,5 @@ export function ChartConfigPanel({
     </section>
   ) : null;
 
-  return dialogContent && typeof document !== 'undefined' ? createPortal(dialogContent, document.body) : null;
+  return dialogContent;
 }

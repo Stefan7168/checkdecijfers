@@ -25,7 +25,9 @@ FRAME STYLING + THE FLOATING STYLE PANEL. Embed is DESIGNED (spec Part B), not b
   the whole answer with the source link (HTML + text); "CSV"; the "Chart in panel →" pill inside the
   answer card with text wrapping; a "Suggested follow-up questions:" hint; narrower side padding; more
   room under the price line; "Connect data" / "Link sheet". Merged `0b161eb`, CI `34356558637` green.
-  Seen live in the owner's Chrome (light).
+  Seen live in the owner's Chrome (light). **Superseded 2026-09-10 (owner UI feedback, session 94):** the
+  pill moved OUT of the answer card's top (no more float-right) and into the CardFooter action row as a
+  plain Button, styled like Copy/CSV, positioned immediately left of Copy.
 - **Frame styling + floating Style panel (ADR 039 addendum; spec Part C; plan
   `2026-09-09-chart-frame.md`):** a Frame tab (background colour / gradient presets / own image kept
   only in the browser, padding, corners, shadow, inset card, aspect ratio) drawn on screen AND baked
@@ -35,7 +37,11 @@ FRAME STYLING + THE FLOATING STYLE PANEL. Embed is DESIGNED (spec Part B), not b
   disabled; no frame in table form (final-review decision). Merged `1a23aa1`, CI `34369657966` gate +
   deploy green, `/api/health` ok. Two whole-branch review rounds (opus) found and fixed two Criticals
   (a white rectangle behind the chart in framed exports; a half-built table path) — lessons-learned.
-  [#222](open-questions.md): dark-mode exports were always low-contrast (pre-existing).
+  [#222](open-questions.md): dark-mode exports were always low-contrast (pre-existing, **fixed
+  2026-09-10, session 94** — exports now always resolve paint against light theme regardless of page
+  theme). **Superseded 2026-09-10 (owner UI feedback, session 94):** the Style panel is no longer a
+  floating dialog — it's an inline region (`role="region"`) rendered in its own card directly below the
+  chart, identically at every viewport width (no more portal, no more bottom-sheet-on-phone split).
 - **Verification before each merge:** typecheck ×2, web suite (last 1275/1275, 87 files), backend
   2198/2198 (solo), benchmark 28/28, real `next build`, docs 11/11, `/code-review` LOW 0 findings.
 - **Production check:** the chat polish verified in the owner's Chrome; the five homepage charts render
