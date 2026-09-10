@@ -1507,3 +1507,13 @@ themselves are verified hermetically on the gate (`tests/chart/curated.test.ts`)
   (the pane has none → "Page not found"); a `file://` page opens as a "static snapshot" that none of the read
   tools can inspect while the pane is hidden; scrolled screenshots come back blank (session-68 lesson) — use
   a tall `resize_window` + one screenshot, and verify interactions through `javascript_tool` DOM queries.
+
+## The designed default chart look (ADR 042) — what changes on merge (written 2026-09-11, session 95, autonomous)
+
+Nothing to apply: no migration, no secret, no flag. On merge + deploy every chart on every surface (chat,
+dock, the homepage's five "Ontdek" charts, the trial, history, the embed once PR #9 is in) switches to the
+designed default at once. **One thing to know:** if you saved a chart style as your account default before
+this change ("Bewaar als mijn standaard"), that saved default pins the OLD geometry (grid both, all markers,
+axis lines) on top of the new palette — press "Standaard" or "Vergeet mijn standaard" in the Style panel
+once to see the new look. Rollback is a `git revert` of the branch's commits; stored defaults are unaffected
+either way (the sanitiser drops any key an older build does not know).

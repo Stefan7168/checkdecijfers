@@ -6,6 +6,55 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 95 — 2026-09-11 — autonomous overnight: the designed default chart look (ADR 042) via SDD —
+palette design as arithmetic, a plan literal overruled in review, a hidden-but-focusable a11y trap, cross-file
+literal pins, a stale `.next` cache, and fix rounds without SendMessage
+
+- **Design a palette with a script, not with taste alone — and turn the script into the test.** A 60-line
+  node script (WCAG contrast against both card colours + Machado 2009 colour-vision-deficiency matrices +
+  OKLab distance) settled the default palette in three iterations: it showed that five of eight stock
+  colours warn on one card, that the first Okabe–Ito four pass everything with margin, that two of the six
+  gradient presets would REFUSE the new palette (one of them — `sand` — against the FIRST colour, i.e. on
+  every chart), and which candidate hues were out of the sRGB gamut. The same arithmetic became three
+  pinned tests. Lesson: whenever a design decision has a measurable property (contrast, distance, gamut),
+  compute it before choosing and pin it after — the session-92 "presets need a contrast check at design
+  time" lesson, made the default.
+- **A pure-module change with literal pins in OTHER test files needs the neighbouring suites run, not just
+  its own.** Task 1 retuned a gradient preset's hex and ran only `chart-presentation.test.ts`; the panel's
+  test file pinned the old hex in four places and stayed red until Task 4's implementer noticed it. Cheap to
+  avoid: a brief that changes a shared constant lists every test file that mentions the literal (`grep -rn
+  '#f472b6' web`) as part of its verification step.
+- **A plan's own literal can be wrong, and only a reviewer told not to spare the plan finds it.** The plan
+  specified a dashed `3 3` crosshair for the tooltip — byte-identical to the curated event marker's dash and
+  close to the dashed story ring; on a touch device (click trigger) the cursor persists after a tap, so a
+  screenshot could show a fake annotation. The top-tier task reviewer flagged it as plan-mandated; the
+  ruling made the crosshair solid and fainter. Lesson (again): never pre-judge findings for a reviewer, and
+  give every chart-vocabulary element (dash patterns, ring sizes) a distinct signature.
+- **"Keep it in the DOM at opacity 0" is an honesty mechanism that needs an accessibility companion.**
+  Making first-and-last markers the default meant every interior point is invisible yet still
+  `role="button"`/`tabIndex=0` — keyboard focus landed on nothing visible. `circle[data-marker="hidden"]:
+  focus-visible { opacity: 1 }` (a CSS rule outranks the SVG attribute) closed it in four lines. Lesson:
+  whenever something is hidden visually but kept interactive for a good reason, add a focus reveal in the
+  same change.
+- **The whole-branch review found three seam defects the per-task reviews structurally could not:** the new
+  export guard stripped the tooltip cursor but not Recharts' active dot (a filled disc with a white ring
+  drawn OVER the hollow provisional marker in a touch-device export — a pre-existing R11 gap the guard made
+  obvious); a height-follows-width rule inside an `overflow-y-auto` container without `scrollbar-gutter:
+  stable` oscillates on non-overlay scrollbars (Windows/Linux — invisible on the owner's Mac, so a browser
+  pass would not have caught it); small multiples still drew Recharts' default axis line while the combined
+  chart drew a hairline. Budget the final review on the most capable tier — third session in a row it paid.
+- **No `SendMessage` in this harness → a fix round is a FRESH implementer with the brief, the report file and
+  the findings verbatim.** Worked well at the cheapest tier for mechanical fixes (three rounds, ~80–90k
+  tokens each, all addressed first time). The report file is the persistent memory; the skill's fallback
+  path is the real path here.
+- **A stale `web/.next` from another branch produces a phantom typecheck error.** `.next/types/validator.ts`
+  referenced `app/embed/[token]/page.js` (a route that exists only on `embed-charts`); `tsc --noEmit` failed
+  on a file no branch commit owns. Delete `web/.next` after switching branches before trusting a typecheck.
+- **Two review-derived rules of thumb for Recharts honesty:** (1) anything Recharts draws itself on hover/tap
+  (`recharts-tooltip-cursor`, `recharts-active-dot`) can persist on touch devices and WILL be in a cloned
+  export unless stripped AFTER the paint inliner (which pairs clone and original by index); (2) an `axisLine`
+  prop accepts SVG props, so a "hairline baseline in the grid colour" is one object, not a second axis.
+
 ## Session 94 — 2026-09-10 — owner present: Insights (AI-phrased outlier findings) replaces Story mode's
 selection; a parallel-branch ADR/open-questions numbering collision (hit twice); hand-tracing the scoring
 math before writing tests caught a real bug; asking one tight question beat guessing on a genuinely
