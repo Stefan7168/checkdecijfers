@@ -136,8 +136,10 @@ checks that prove every number on a chart is a real CBS cell.
   commit `1f8d25b` on this branch, not yet on `main`), bakes the frame into an outer SVG, and rasterises
   the PNG through `<img>` → canvas at 2×. `measureSvg` reads `clientWidth`/`clientHeight`, which CSS
   transforms on an ancestor do **not** change — verified in the source; it matters for §3 (a transformed
-  wrapper cannot corrupt an export's size). Known limits already on record: a PNG cannot load a web font
-  (#218 as built), the attribution line can be cut off on a narrow chart ([#223](../open-questions.md)).
+  wrapper cannot corrupt an export's size). Known limit still on record: a PNG cannot load a web font
+  (#218 as built). The narrow-chart attribution cutoff ([#223](../open-questions.md)) was fixed later the
+  same session (`wrapAttributionText`, a conservative per-character estimate) — after this document's
+  own research pass, which is why it is listed as a "known limit" nowhere else in this file.
 - **The honesty scans are the hard constraint.** Backend: R6's export-side scan asserts that the rendered
   SVG shows no numeric token that is not a spec string and that marker geometry is an exact affine image
   of the values (`tests/chart/`, `tests/invariants/`). Web: `web/components/chart.test.tsx` walks **every
@@ -620,4 +622,51 @@ it goes after the cheap wins and after the Embed merge decision has settled `cha
    **three to five specific things you liked** ("the chart tilts as it enters", "the numbers count up",
    "the background moves slower than the chart", "the dark gradient look").
 3. **Where** you want the stage to appear first: chat answers, the dock, the homepage charts, or all.
+
+## 12. Addendum, same day: what the demo actually is (found via the Vercel API, not viewed)
+
+The site is still un-fetchable (egress-blocked, §0), but `checkdecijfers-3d-demo` turned out to be its own
+project in the **same Vercel team** this session already has API access to (`prj_w2tZ4OHLayMbFliqcjZ6T9tMMEKc`,
+team `stefanpeek01-3883's projects`) — no linked git repo (`list_deployments` shows `link: null`, so no
+source browsing), but 20 production deployments' **commit messages** are real, verified signal, not a
+guess, and change §3's picture materially:
+
+- **It genuinely uses Three.js** — one commit reads "static three.js files via import map" — confirming
+  §3.3 Option E is a real, working technique here, not a hypothetical. But what it's used FOR narrows §9
+  item 4 usefully: commits describe a **3D map of Dutch municipalities** ("3D gemeente map"), not 3D
+  chart marks — "focus camera altitude for dense skylines", "focus camera opposite the tallest neighbour",
+  "pin tooltip on the gemeente a story step is about". **This is a materially better case for real 3D than
+  extruded bars**: a map has actual geographic height/position to represent, so R6's "marker geometry must
+  be an affine image of the VALUE" concern (§3.2) does not obviously apply the same way to a terrain-style
+  map as it would to a bar chart — a 3D Netherlands relief/choropleth map is a **different, more defensible
+  proposal** than anything §3 evaluated, and worth its own follow-up pass once the source can be read
+  (does height encode a real CBS value 1:1, or is it decorative relief? — that answer decides whether it
+  fits R6 at all). Not folded into §3's recommendation because it's a new proposal, not a refinement of
+  the existing one.
+- **A working generator + embed runtime already exists there**: one commit reads "generator (maak) and
+  embed runtime with map, line and units templates on live CBS data" — independently confirming §5's whole
+  premise (a template gallery: map / line / units) was already prototyped once, by the owner, outside this
+  codebase. Strengthens §5's recommendation; still nothing to import (no source access), but the owner has
+  already thought through this shape once.
+- **Scroll-driven story on the map**: "v5: 'Nederland vergrijst' [Netherlands aging] scroll story on the
+  3D gemeente map with CBS prognose" — a real, shipped instance of exactly the scrollytelling skeleton §3.1
+  describes, just on a map rather than a chart.
+- **Three interactive mini-apps beyond charts/stories**: "Waar past jij?" (Where do you fit?), "Raad het
+  cijfer" (Guess the number), "Jouw gemeente in 60 seconden" (Your municipality in 60 seconds) — a category
+  §3–§5 don't cover at all: light, game-like engagement pieces over CBS data. Worth a owner read on whether
+  "next level" includes this category or is chart/story-scoped only — **new decision, not in §9's list**.
+- **News-recreation pages** ("japan-quake", "gulf-energy" — a tsunami liveblog on NOAA bathymetry with USGS
+  aftershocks, animated strikes with trajectories, a six-month replay, "original article and data-source
+  links") confirm the Pudding/Bloomberg-style data-journalism framing §3.1 already used as the genre
+  reference, concretely rather than by analogy — though these are CURRENT-EVENTS recreations, a different
+  content model from this product's own CBS-statistics chat answers.
+- **Commit author confirms the #208 identification**: `marketing@social.plus`, matching open-questions
+  #208's `stefan@social.plus` account exactly — §0's "Assumption" is now a verified fact, not a guess.
+
+**What this changes about §9's decisions:** item 4 (does "3D" mean depth/tilt or extruded objects?) gains a
+third real answer this plan didn't offer: **a 3D map**, which the owner may have been picturing all along
+given the demo leans on it heavily. Worth putting to him directly before phase 3 locks in the "flat chart,
+CSS depth" reading. Item 14 (share the demo) is now MORE valuable, not less — a commit log proves what
+exists; only the source shows exactly how, and whether the map's height is a real bound CBS value (fits R6)
+or decorative (does not, needs its own honesty design).
 4. Your answers to §9 — items 1, 4, 8 and 13 unlock the most.
