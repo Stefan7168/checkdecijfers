@@ -15,7 +15,16 @@ const clamp01 = (n: number): number => (Number.isFinite(n) ? Math.min(1, Math.ma
 
 /** The step whose panel centre is nearest the viewport centre, and how far
  * the viewport centre has travelled from that centre toward the next one
- * (0 on the last step). Degenerate input never throws. */
+ * (0 on the last step). Degenerate input never throws.
+ *
+ * Nearest-centre semantics, stated exactly (the doc comment used to imply a
+ * full 0→1 sweep per step, which this function has never produced): the
+ * NEAREST panel is the active one, so `progress` is 0 at that panel's own
+ * centre and only reaches ~0.5 at the boundary with the next panel — the
+ * moment the next panel becomes the nearest and `progress` restarts near 0.
+ * Anything that wants a continuous 0→1 ramp must scale it (the stage's
+ * captions use `2 * progress`) or use `entryProgress` below. Behaviour is
+ * unchanged: `useStageScroll` and its tests pin these exact numbers. */
 export function stageProgress(scrollTop: number, viewportHeight: number, offsets: number[], heights: number[]): StageProgress {
   const n = Math.min(offsets.length, heights.length);
   if (n === 0) return { index: 0, progress: 0 };
@@ -28,6 +37,27 @@ export function stageProgress(scrollTop: number, viewportHeight: number, offsets
   const span = centres[index + 1]! - centres[index]!;
   const progress = span > 0 ? clamp01((centre - centres[index]!) / span) : 0;
   return { index, progress };
+}
+
+/** How far the plane's ENTRY has run: 0 at the top of the steps column, 1
+ * once the FIRST panel's centre has reached the viewport centre — i.e. the
+ * plane is guaranteed flat by the moment the first finding is centred and
+ * read. (`stageProgress`'s nearest-centre `progress` caps at ~0.5 and
+ * restarts at every boundary, so driving the tilt with it made the plane pop
+ * 4°→0° at step one and left the first number to be read at a full 8° tilt —
+ * the geometry defect this function exists to remove.)
+ *
+ * No panels → 1 (nothing to tilt for). First panel already centred at
+ * scrollTop 0 → 1: a settled plane from the start, never a tilted first
+ * finding. */
+export function entryProgress(scrollTop: number, viewportHeight: number, offsets: number[], heights: number[]): number {
+  const n = Math.min(offsets.length, heights.length);
+  if (n === 0) return 1;
+  const vh = Math.max(1, viewportHeight);
+  const firstCentre = offsets[0]! + heights[0]! / 2;
+  const travel = firstCentre - vh / 2;
+  if (travel <= 0) return 1;
+  return clamp01(scrollTop / travel);
 }
 
 const REST_SHADOW = '0 8px 24px rgba(0, 0, 0, 0.18)';

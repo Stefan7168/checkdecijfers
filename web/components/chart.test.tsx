@@ -31,6 +31,7 @@ const chartStyleActions = vi.hoisted(() => ({
 vi.mock('../app/chart-style-actions.ts', () => chartStyleActions);
 import {
   annotationMarkers,
+  BAR_LABEL_MAX,
   baselineAxisLine,
   buildRegionRows,
   buildRows,
@@ -3525,8 +3526,16 @@ function scanBodyForUnboundDigits(specStrings: string[]): void {
 describe('Story-stage plan Task 5 — Present button opens the Story stage', () => {
   // jsdom has no scrollIntoView; ChartStoryStage's own `go()` calls it on
   // every index change once the stage is open (chart-story-stage.tsx).
+  // Fix round 2 (item 10, test hygiene): the stub sits on the shared
+  // `Element.prototype`, so it is put back after each test rather than left
+  // for every later suite in this worker to inherit.
+  let originalScrollIntoView: typeof Element.prototype.scrollIntoView;
   beforeEach(() => {
+    originalScrollIntoView = Element.prototype.scrollIntoView;
     Element.prototype.scrollIntoView = vi.fn();
+  });
+  afterEach(() => {
+    Element.prototype.scrollIntoView = originalScrollIntoView;
   });
 
   it('Presenteren opens a dialog in document.body carrying the same step titles as the compact panel', () => {
@@ -3605,6 +3614,47 @@ describe('Story-stage plan Task 5 — Present button opens the Story stage', () 
       fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
       fireEvent.click(screen.getByRole('button', { name: 'Presenteren' }));
       expect(events).toEqual(['story_open', 'stage_open']);
+    } finally {
+      setChartUsageSink(null);
+    }
+  });
+
+  // Fix round 2 (item 7): the compact panel stays mounted behind the
+  // full-screen stage, and its IntersectionObserver keeps firing there on any
+  // reflow — every fire overwriting the step the presenter is on. While the
+  // stage is open the panel's index reporting is inert (jsdom has no
+  // IntersectionObserver, so its dots stand in for the same code path: both
+  // reach the shared index through the panel's `onIndexChange`).
+  it('with the stage open the compact panel can no longer move the shared step', () => {
+    render(<ChartView spec={threePointSpec()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
+    const region = screen.getByRole('region', { name: 'Inzichten bij de grafiek' });
+    fireEvent.click(screen.getByRole('button', { name: 'Presenteren' }));
+    const dialog = screen.getByRole('dialog');
+    expect(dialog.querySelector('[data-stage-step="0"]')).toHaveAttribute('aria-current', 'step');
+
+    const dots = within(region).getByRole('list', { name: 'Stappen' });
+    const secondDot = within(dots).getAllByRole('button')[1]!;
+    fireEvent.click(secondDot);
+
+    expect(dialog.querySelector('[data-stage-step="0"]')).toHaveAttribute('aria-current', 'step');
+    expect(dialog.querySelector('[data-stage-step="1"]')).not.toHaveAttribute('aria-current');
+  });
+
+  // Fix round 2 (item 10): the count used to fire inside the `setAutoplay`
+  // updater, which React may run twice (Strict Mode) — an activation could
+  // be counted twice.
+  it('the stage auto-play toggle records stage_autoplay exactly once per activation', () => {
+    const events: ChartStyleEvent[] = [];
+    setChartUsageSink((e) => {
+      events.push(e);
+    });
+    try {
+      render(<ChartView spec={threePointSpec()} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Presenteren' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Automatisch afspelen' }));
+      expect(events).toEqual(['story_open', 'stage_open', 'stage_autoplay']);
     } finally {
       setChartUsageSink(null);
     }
@@ -3916,5 +3966,55 @@ describe('ChartView stage mode (ADR 044) — chrome-less, driven by a step', () 
       p.getAttribute('stroke-opacity') === '0.25' || (p as any).style.strokeOpacity === '0.25'
     );
     expect(dimmedPathsAfter.length).toBe(0); // nothing is dimmed
+  });
+
+  // Fix round 2 (item 9): a presentation slide carries the chart, the
+  // caveats and the source — not the chat answer's reference prose. The
+  // trend headline competes with the very caption being presented, and on a
+  // phone both of them pushed the source line out of the pinned area.
+  it('drops the definition line and the trend headline, and still shows the caveats and the source line', () => {
+    const base = threePointSpec();
+    const s = threePointSpec({
+      definitionLine: 'Definitie: het gaat om personen van vijftien jaar en ouder.',
+      nullNotes: ['Voor twee gemeenten ontbreken cijfers.'],
+      attribution: { ...base.attribution, trendHeadline: 'Nederland steeg gestaag.' },
+    });
+    const { container } = render(<ChartView spec={s} stage={{ step: null, overrides: {} }} />);
+    expect(container.querySelector('[data-testid="trend-headline"]')).toBeNull();
+    expect(container.textContent).not.toContain(s.definitionLine!);
+    expect(container.textContent).toContain(s.nullNotes[0]!);
+    expect(container.textContent).toContain(s.attributionLine);
+  });
+
+  // Fix round 2 (item 10): the ">15 series opens on the table" rule is a
+  // CHAT-chart rule. In the stage it produced a presentation with no chart
+  // at all — nothing for a step to highlight, ring or spotlight, and no form
+  // tabs to switch back with.
+  it('a many-series spec opens on the chart in stage mode, never on the table', () => {
+    const labels = 'ABCDEFGHIJKLMNOPQR'.split('');
+    expect(labels.length).toBeGreaterThan(BAR_LABEL_MAX);
+    const many = spec({
+      series: labels.map((label, i) => ({
+        label: `Reeks ${label}`,
+        regionCode: `GM${label}`,
+        points: [point({ resultId: `s${label}`, value: i + 1, formattedValue: `${i + 1},0` })],
+      })),
+    });
+    const stageRender = render(<ChartView spec={many} stage={{ step: null, overrides: {} }} />);
+    expect(stageRender.container.querySelector('table')).toBeNull();
+    expect(stageRender.container.querySelector('svg.recharts-surface, .recharts-responsive-container')).not.toBeNull();
+    stageRender.unmount();
+
+    // The chat chart is unchanged: the same spec still opens on the table.
+    const chatRender = render(<ChartView spec={many} />);
+    expect(chatRender.container.querySelector('table')).not.toBeNull();
+  });
+
+  // Fix round 2 (item 10): a `tabpanel` with no tablist is a broken ARIA
+  // relationship — stage mode renders no form tabs.
+  it('the export container is a plain div in stage mode: no tabpanel role without a tablist', () => {
+    const { container } = render(<ChartView spec={s} stage={{ step: null, overrides: {} }} />);
+    expect(container.querySelector('[role="tabpanel"]')).toBeNull();
+    expect(container.querySelector('[role="tablist"]')).toBeNull();
   });
 });

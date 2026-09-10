@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { captionStyle, entranceStyle, spotlightStyle, STAGE_AUTOPLAY_MS, STAGE_TILT_DEG, stageProgress } from './chart-stage.ts';
+import { captionStyle, entranceStyle, entryProgress, spotlightStyle, STAGE_AUTOPLAY_MS, STAGE_TILT_DEG, stageProgress } from './chart-stage.ts';
 
 describe('stageProgress — which step the viewport centre is on, and how far toward the next', () => {
   const offsets = [0, 800, 1600, 2400];
@@ -22,6 +22,35 @@ describe('stageProgress — which step the viewport centre is on, and how far to
   it('degenerate inputs never throw: no panels → index 0; a zero-height viewport is treated as one pixel', () => {
     expect(stageProgress(0, 800, [], [])).toEqual({ index: 0, progress: 0 });
     expect(stageProgress(0, 0, offsets, heights).index).toBe(0);
+  });
+});
+
+// Fix round 2 (items 3+4): the entry ramp is its own function, because
+// `stageProgress`'s nearest-centre `progress` never reaches 1 — driving the
+// tilt with it popped the plane 4°→0° at the first boundary and left the
+// first finding to be read at a full tilt. `entryProgress` is 1 by the time
+// the first panel's centre reaches the viewport centre, i.e. before any
+// number is centred for reading.
+describe('entryProgress — the plane has settled before the first caption is centred', () => {
+  // The first panel starts one viewport below the top: its centre (1200) is
+  // 800 px of scrolling away from the viewport centre (scrollTop + 400).
+  const offsets = [800, 1600, 2400];
+  const heights = [800, 800, 800];
+  it('is 0 at the top of the steps column', () => {
+    expect(entryProgress(0, 800, offsets, heights)).toBe(0);
+  });
+  it('is one half halfway to the first panel’s centre', () => {
+    expect(entryProgress(400, 800, offsets, heights)).toBeCloseTo(0.5, 5);
+  });
+  it('is 1 exactly when the first panel’s centre reaches the viewport centre, and stays 1 beyond it', () => {
+    expect(entryProgress(800, 800, offsets, heights)).toBe(1);
+    expect(entryProgress(4000, 800, offsets, heights)).toBe(1);
+  });
+  it('with no panels there is nothing to enter: 1', () => {
+    expect(entryProgress(0, 800, [], [])).toBe(1);
+  });
+  it('a first panel already centred at scrollTop 0 starts settled — the first finding is never read tilted', () => {
+    expect(entryProgress(0, 800, [0, 800], [800, 800])).toBe(1);
   });
 });
 

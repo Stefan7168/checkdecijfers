@@ -15,10 +15,22 @@
 // re-measures once it actually fires. `measure` is defined inside the
 // effect (it closes over the current panel refs), so it's exposed to
 // `armSettle` — which is stable across renders — through a ref.
+//
+// Fix round 2 (items 3+4): the hook now also reports `entry` — how far the
+// plane's entry animation has run (`entryProgress`), which unlike `progress`
+// ramps once, continuously, from the top of the column to the moment the
+// first caption is centred. `progress` stays exactly as it was.
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
-import { stageProgress, type StageProgress } from './chart-stage.ts';
+import { entryProgress, stageProgress, type StageProgress } from './chart-stage.ts';
 
-export interface StageScroll extends StageProgress {
+/** The scroll state the stage reads: the active step, the progress toward
+ * the next (nearest-centre semantics — see `stageProgress`), and the 0→1
+ * entry ramp that settles the chart plane before the first caption is read. */
+export interface StageState extends StageProgress {
+  entry: number;
+}
+
+export interface StageScroll extends StageState {
   beginProgrammatic(): void;
 }
 
@@ -30,7 +42,7 @@ export function useStageScroll(
   stepCount: number,
   enabled: boolean,
 ): StageScroll {
-  const [state, setState] = useState<StageProgress>({ index: 0, progress: 0 });
+  const [state, setState] = useState<StageState>({ index: 0, progress: 0, entry: 0 });
   const programmatic = useRef(false);
   const settle = useRef<ReturnType<typeof setTimeout> | null>(null);
   const frame = useRef<number | null>(null);
@@ -56,8 +68,11 @@ export function useStageScroll(
       const panels = (panelRefs.current ?? []).slice(0, stepCount);
       const offsets = panels.map((p) => p?.offsetTop ?? 0);
       const heights = panels.map((p) => p?.offsetHeight ?? 0);
-      const next = stageProgress(el.scrollTop, el.clientHeight, offsets, heights);
-      setState((current) => (current.index === next.index && current.progress === next.progress ? current : next));
+      const step = stageProgress(el.scrollTop, el.clientHeight, offsets, heights);
+      const next: StageState = { ...step, entry: entryProgress(el.scrollTop, el.clientHeight, offsets, heights) };
+      setState((current) =>
+        current.index === next.index && current.progress === next.progress && current.entry === next.entry ? current : next,
+      );
     };
     measureRef.current = measure;
     const onScroll = (): void => {
@@ -76,8 +91,17 @@ export function useStageScroll(
     measure();
     return () => {
       el.removeEventListener('scroll', onScroll);
+      // Fix round 2 (item 10): reset every ref, not just the listener. A
+      // teardown mid-programmatic-scroll (the stage closing while a dot jump
+      // is still settling) used to leave `programmatic.current` true and the
+      // timer/frame ids dangling — the next open then silently dropped the
+      // reader's first scrolls until some later scroll happened to re-arm
+      // the settle timer.
       if (frame.current !== null) cancelAnimationFrame(frame.current);
+      frame.current = null;
       if (settle.current) clearTimeout(settle.current);
+      settle.current = null;
+      programmatic.current = false;
     };
   }, [containerRef, panelRefs, stepCount, enabled, armSettle]);
 

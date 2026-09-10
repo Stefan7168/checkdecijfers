@@ -11,6 +11,10 @@ function Probe({ enabled }: { enabled: boolean }) {
     'div',
     { ref: container, 'data-testid': 'scroller' },
     createElement('span', { 'data-testid': 'out' }, `${s.index}:${s.progress}`),
+    // Fix round 2 (items 3+4): the entry ramp, reported alongside index and
+    // progress. Its own node so the existing `out` assertions keep pinning
+    // exactly what they always did.
+    createElement('span', { 'data-testid': 'entry' }, `${s.entry}`),
     // Fix round 1 (item B): a button exposing the hook's own
     // `beginProgrammatic()` so a test can drive a programmatic scroll the
     // same way a real caller (dots/keys/auto-play in chart-story-stage.tsx)
@@ -79,6 +83,29 @@ describe('useStageScroll', () => {
     s2.scrollTop = 1600;
     act(() => { s2.dispatchEvent(new Event('scroll')); vi.advanceTimersByTime(20); });
     expect(off.getByTestId('out').textContent).toBe('0:0');
+  });
+
+  // Fix round 2 (items 3+4): the plane's entry ramp is reported by the same
+  // measurement pass, so the stage never has to derive it from `progress`
+  // (which is nearest-centre and caps at ~0.5 — the popping tilt this
+  // replaces). The panels here start one viewport down the column, so the
+  // first panel's centre is 800 px of scrolling away.
+  it('reports the entry ramp alongside the index: 0 at the top, one half halfway, 1 once the first panel is centred', () => {
+    const { getByTestId } = render(<Probe enabled />);
+    const scroller = getByTestId('scroller');
+    Object.defineProperty(scroller, 'clientHeight', { value: 800, configurable: true });
+    layout(getByTestId('p0'), 800, 800);
+    layout(getByTestId('p1'), 1600, 800);
+    layout(getByTestId('p2'), 2400, 800);
+    scroller.scrollTop = 0;
+    act(() => { scroller.dispatchEvent(new Event('scroll')); vi.advanceTimersByTime(20); });
+    expect(getByTestId('entry').textContent).toBe('0');
+    scroller.scrollTop = 400;
+    act(() => { scroller.dispatchEvent(new Event('scroll')); vi.advanceTimersByTime(20); });
+    expect(getByTestId('entry').textContent).toBe('0.5');
+    scroller.scrollTop = 800;
+    act(() => { scroller.dispatchEvent(new Event('scroll')); vi.advanceTimersByTime(20); });
+    expect(getByTestId('entry').textContent).toBe('1');
   });
 
   // Fix round 1 (item B): the settle window closing used to just flip a

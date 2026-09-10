@@ -11,7 +11,7 @@ import { useState, type ReactNode } from 'react';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ChartSpec } from '../backend/chart/types.ts';
-import { entranceStyle, spotlightStyle, STAGE_AUTOPLAY_MS } from '../lib/chart-stage.ts';
+import { captionStyle, entranceStyle, spotlightStyle, STAGE_AUTOPLAY_MS } from '../lib/chart-stage.ts';
 import type { StoryStep } from '../lib/chart-story.ts';
 import { ChartStoryStage, type ChartStoryStageProps } from './chart-story-stage.tsx';
 
@@ -147,6 +147,11 @@ function Harness(props: Partial<ChartStoryStageProps> & { onAdvance?: (i: number
   );
 }
 
+// Fix round 2 (item 10, test hygiene): the stub is installed on the shared
+// `Element.prototype`, so it leaks into every OTHER suite in the same worker
+// unless it is put back. Saved here, restored in afterEach.
+let originalScrollIntoView: typeof Element.prototype.scrollIntoView;
+
 beforeEach(() => {
   const trigger = document.createElement('button');
   trigger.id = 'trigger-1';
@@ -155,14 +160,55 @@ beforeEach(() => {
   // jsdom has no scrollIntoView by default; the component guards with
   // typeof, but stub it anyway so a real call never throws across jsdom
   // versions (per the task brief).
+  originalScrollIntoView = Element.prototype.scrollIntoView;
   Element.prototype.scrollIntoView = vi.fn();
 });
 
 afterEach(() => {
+  Element.prototype.scrollIntoView = originalScrollIntoView;
   document.getElementById('trigger-1')?.remove();
   document.body.style.overflow = '';
   vi.useRealTimers();
 });
+
+// Fix round 2 (items 3+4): jsdom lays nothing out, so a stage under test has
+// every panel at offsetTop 0 — which reads as "the first caption is already
+// centred" and settles the entry ramp instantly. These helpers give the
+// scroller a real geometry (three 800 px panels starting one 800 px viewport
+// down the column) and drive the hook exactly as the reader's wheel does, so
+// the tilt and the caption hand-over can be asserted at real scroll offsets.
+function useStageScrollTimers(): void {
+  vi.useFakeTimers();
+  vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => setTimeout(() => cb(0), 16) as unknown as number);
+  vi.stubGlobal('cancelAnimationFrame', (id: number) => clearTimeout(id));
+}
+
+function layoutStage(): HTMLElement {
+  const scroller = document.querySelector('[data-stage-scroller]') as HTMLElement;
+  Object.defineProperty(scroller, 'clientHeight', { value: 800, configurable: true });
+  for (let i = 0; i < steps.length; i++) {
+    const panel = document.querySelector(`[data-stage-step="${i}"]`) as HTMLElement;
+    Object.defineProperty(panel, 'offsetTop', { value: 800 + i * 800, configurable: true });
+    Object.defineProperty(panel, 'offsetHeight', { value: 800, configurable: true });
+  }
+  return scroller;
+}
+
+function scrollStage(scroller: HTMLElement, top: number): void {
+  scroller.scrollTop = top;
+  act(() => {
+    scroller.dispatchEvent(new Event('scroll'));
+    vi.advanceTimersByTime(20);
+  });
+}
+
+function plane(): HTMLElement {
+  return document.querySelector('[data-stage-plane]') as HTMLElement;
+}
+
+function caption(i: number): HTMLElement {
+  return document.querySelector(`[data-stage-step="${i}"] > div`) as HTMLElement;
+}
 
 describe('ChartStoryStage', () => {
   it('renders nothing when closed', () => {
@@ -329,6 +375,12 @@ describe('ChartStoryStage', () => {
     const markerRect = { left: 156, top: 60, width: 8, height: 8, right: 164, bottom: 68, x: 156, y: 60, toJSON: () => ({}) } as DOMRect;
     Element.prototype.getBoundingClientRect = function (this: Element) {
       if (this.matches('[data-story-marker]')) return markerRect;
+      // Fix round 2 (item 8): the vignette is confined to the PLOT box
+      // (`[data-slot="chart-frame"]`, the export container's wrapper) and its
+      // percentages are measured against THAT box, so the stub now covers it
+      // too. Here the plot fills the chart box exactly, which is why the
+      // expected 25 % / 25 % is unchanged from before the fix.
+      if (this.matches('[data-slot="chart-frame"]')) return chartBoxRect;
       if (this.matches('[data-stage-plane] > div')) return chartBoxRect;
       return original.call(this);
     };
@@ -362,6 +414,219 @@ describe('ChartStoryStage', () => {
       expect(plane!.style.transform).toBe(entranceStyle(0, true).transform);
     } finally {
       vi.unstubAllGlobals();
+    }
+  });
+
+  // ─── Fix round 2 ────────────────────────────────────────────────────────
+  // The whole-branch review's findings, each pinned by the behaviour it
+  // restores rather than by the implementation that restores it.
+
+  // Item 1: the stage used to open on panel one no matter which finding the
+  // reader was on (the panels only moved when the scroll hook reported a
+  // CHANGE), and the same unguarded sync dragged the shared index back to 0
+  // on every open — so presenting from finding three, or re-opening after
+  // stepping through the story, silently restarted it.
+  it('opens at the step the reader is on, scrolls that panel into view, and never drags the index back to the first finding', () => {
+    const targets: Element[] = [];
+    Element.prototype.scrollIntoView = vi.fn(function (this: Element) {
+      targets.push(this);
+    });
+    const onIndexChange = vi.fn();
+    render(<ChartStoryStage {...baseProps({ index: 2, onIndexChange })} />);
+    const dialog = screen.getByRole('dialog');
+    const current = dialog.querySelector('[data-stage-step="2"]');
+    expect(current).toHaveAttribute('aria-current', 'step');
+    expect(dialog.querySelector('[data-stage-step="0"]')).not.toHaveAttribute('aria-current');
+    expect(targets).toContain(current);
+    expect(onIndexChange).not.toHaveBeenCalledWith(0);
+  });
+
+  // Item 2: ADR 044 decision 4 gates the depth effects on `lg` AND a fine
+  // pointer AND reduced motion; only the reduced-motion third was built, so
+  // a phone got a tilting, shadow-lifting, vignetted 50 vh chart.
+  it.each([['(hover: none)'], ['(max-width: 1023px)']])(
+    'renders statically when %s matches: a flat plane, no transition, no spotlight',
+    (query) => {
+      vi.stubGlobal('matchMedia', (q: string) => ({
+        matches: q === query,
+        addEventListener() {},
+        removeEventListener() {},
+      }));
+      useStageScrollTimers();
+      try {
+        render(<ChartStoryStage {...baseProps()} />);
+        const scroller = layoutStage();
+        // At the very top of the column the animated path would sit at the
+        // full entry tilt; the static path is flat there and everywhere.
+        scrollStage(scroller, 0);
+        expect(plane().style.transform).toBe(entranceStyle(0, true).transform);
+        expect(plane().className).not.toContain('transition-[transform,box-shadow]');
+        expect(document.querySelector('[data-stage-spotlight]')).toBeNull();
+      } finally {
+        vi.unstubAllGlobals();
+        vi.useRealTimers();
+      }
+    },
+  );
+
+  // Items 3 + 4: the entry used to be driven by `stageProgress`'s
+  // nearest-centre `progress`, which caps at ~0.5 and restarts at every
+  // boundary — the plane popped 4°→0° at step one and the first finding was
+  // read at the full 8° tilt. `entry` ramps once, and is settled by the time
+  // the first caption reaches the viewport centre.
+  it('the plane settles continuously and is flat by the time the first caption is centred', () => {
+    useStageScrollTimers();
+    try {
+      render(<ChartStoryStage {...baseProps()} />);
+      const scroller = layoutStage();
+      scrollStage(scroller, 0);
+      expect(plane().style.transform).toBe(entranceStyle(0, false).transform);
+      scrollStage(scroller, 400);
+      expect(plane().style.transform).toBe(entranceStyle(0.5, false).transform);
+      // 800 px: the first panel's centre has reached the viewport centre.
+      scrollStage(scroller, 800);
+      expect(plane().style.transform).toBe(entranceStyle(1, false).transform);
+      expect(plane().className).toContain('transition-[transform,box-shadow]');
+    } finally {
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
+  it('the captions hand over continuously instead of popping at each boundary', () => {
+    useStageScrollTimers();
+    try {
+      render(<ChartStoryStage {...baseProps()} />);
+      const scroller = layoutStage();
+      // Centred on the first panel: fully shown, untranslated.
+      scrollStage(scroller, 800);
+      expect(caption(0).style.opacity).toBe('1');
+      expect(caption(1).style.opacity).toBe(String(captionStyle(1, false).opacity));
+      // A quarter of the way to the next panel: `progress` 0.25, so the
+      // active caption's distance is 0.5 and the next one's is also 0.5 —
+      // the crossing point of the hand-over.
+      scrollStage(scroller, 1000);
+      expect(Number(caption(0).style.opacity)).toBeLessThan(1);
+      expect(caption(0).style.opacity).toBe(String(captionStyle(0.5, false).opacity));
+      expect(caption(1).style.opacity).toBe(String(captionStyle(0.5, false).opacity));
+    } finally {
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
+  // Item 5: Recharts measures itself asynchronously, so the marker often
+  // does not exist yet when the step effect reads it on open — the first
+  // step of every presentation came up with no vignette at all.
+  it('re-reads the spotlight on a resize tick, so a point-first step is not left without its vignette', () => {
+    // Recharts' own ResponsiveContainer also constructs a ResizeObserver, so
+    // the stub records WHICH element each observer watches and the test only
+    // fires the one watching the stage's chart box (firing Recharts' with an
+    // empty entry list just crashes its callback).
+    const observers: { cb: (entries: unknown[]) => void; targets: Element[] }[] = [];
+    class StubResizeObserver {
+      private readonly record: { cb: (entries: unknown[]) => void; targets: Element[] };
+      constructor(cb: (entries: unknown[]) => void) {
+        this.record = { cb, targets: [] };
+        observers.push(this.record);
+      }
+      observe(target: Element): void {
+        this.record.targets.push(target);
+      }
+      unobserve(): void {}
+      disconnect(): void {}
+    }
+    vi.stubGlobal('ResizeObserver', StubResizeObserver);
+    const original = Element.prototype.getBoundingClientRect;
+    try {
+      // A point-first story: the very first step carries the ring.
+      const pointFirst = [steps[1]!, steps[0]!, steps[2]!];
+      render(<ChartStoryStage {...baseProps({ steps: pointFirst })} />);
+      // Nothing has a size yet (jsdom rects are all zero) → no vignette.
+      expect(document.querySelector('[data-stage-spotlight]')).toBeNull();
+      const chartBox = document.querySelector('[data-stage-plane] > div') as Element;
+      const watching = observers.filter((o) => o.targets.includes(chartBox));
+      expect(watching.length).toBe(1);
+
+      const chartBoxRect = { left: 0, top: 0, width: 640, height: 256, right: 640, bottom: 256, x: 0, y: 0, toJSON: () => ({}) } as DOMRect;
+      const markerRect = { left: 156, top: 60, width: 8, height: 8, right: 164, bottom: 68, x: 156, y: 60, toJSON: () => ({}) } as DOMRect;
+      Element.prototype.getBoundingClientRect = function (this: Element) {
+        if (this.matches('[data-story-marker]')) return markerRect;
+        if (this.matches('[data-slot="chart-frame"]')) return chartBoxRect;
+        if (this.matches('[data-stage-plane] > div')) return chartBoxRect;
+        return original.call(this);
+      };
+      // First tick: every observer learns its size — including Recharts'
+      // own ResponsiveContainer, which is exactly why the marker did not
+      // exist yet when the step effect ran on open (the defect).
+      act(() => {
+        for (const observer of observers) {
+          observer.cb([{ target: observer.targets[0], contentRect: { width: 640, height: 256 } }]);
+        }
+      });
+      expect(document.querySelector('[data-story-marker]')).not.toBeNull();
+      // Second tick: the chart box's own observer fires now that the chart
+      // inside it has a size — the stage re-reads the marker and the
+      // vignette appears without any step change.
+      act(() => {
+        for (const observer of watching) observer.cb([{ target: chartBox, contentRect: chartBoxRect }]);
+      });
+      expect(document.querySelector('[data-stage-spotlight]')).not.toBeNull();
+    } finally {
+      Element.prototype.getBoundingClientRect = original;
+      vi.unstubAllGlobals();
+    }
+  });
+
+  // Item 6: ADR 044 decision 7 promises auto-play stops "on any user
+  // scroll/key" — only the key half existed, so a reader who took over with
+  // the wheel kept being yanked to the next finding every four seconds.
+  it('auto-play stops the moment the reader scrolls the stage', () => {
+    vi.useFakeTimers();
+    const onAdvance = vi.fn();
+    render(<Harness onAdvance={onAdvance} />);
+    const toggle = screen.getByRole('button', { name: 'Automatisch afspelen' });
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-pressed', 'true');
+
+    fireEvent.wheel(document.querySelector('[data-stage-scroller]') as HTMLElement);
+    expect(screen.getByRole('button', { name: 'Automatisch afspelen' })).toHaveAttribute('aria-pressed', 'false');
+
+    act(() => {
+      vi.advanceTimersByTime(STAGE_AUTOPLAY_MS * 3);
+    });
+    expect(onAdvance).not.toHaveBeenCalled();
+  });
+
+  // Item 8: the vignette used to cover the whole card — the title, the
+  // legend and the source line dimmed along with the chart. It is now
+  // positioned over the plot box alone.
+  it('the vignette is confined to the plot box, never the title or the source line', () => {
+    const original = Element.prototype.getBoundingClientRect;
+    const chartBoxRect = { left: 0, top: 0, width: 640, height: 400, right: 640, bottom: 400, x: 0, y: 0, toJSON: () => ({}) } as DOMRect;
+    const plotRect = { left: 0, top: 40, width: 640, height: 256, right: 640, bottom: 296, x: 0, y: 40, toJSON: () => ({}) } as DOMRect;
+    const markerRect = { left: 156, top: 100, width: 8, height: 8, right: 164, bottom: 108, x: 156, y: 100, toJSON: () => ({}) } as DOMRect;
+    Element.prototype.getBoundingClientRect = function (this: Element) {
+      if (this.matches('[data-story-marker]')) return markerRect;
+      if (this.matches('[data-slot="chart-frame"]')) return plotRect;
+      if (this.matches('[data-stage-plane] > div')) return chartBoxRect;
+      return original.call(this);
+    };
+    try {
+      const { rerender } = render(<ChartStoryStage {...baseProps({ index: 0 })} />);
+      rerender(<ChartStoryStage {...baseProps({ index: 1 })} />);
+      const spotlight = document.querySelector('[data-stage-spotlight]') as HTMLElement | null;
+      expect(spotlight).not.toBeNull();
+      expect(spotlight!.style.top).toBe('40px');
+      expect(spotlight!.style.height).toBe('256px');
+      expect(spotlight!.style.left).toBe('0px');
+      expect(spotlight!.style.width).toBe('640px');
+      // The centre is measured against the PLOT box: the marker's centre
+      // (160, 104) sits 64 px below the plot's own top edge.
+      const expected = spotlightStyle({ cx: 160, cy: 64 }, { width: 640, height: 256 });
+      expect(spotlight!.style.background).toContain(`${expected!.left} ${expected!.top}`);
+    } finally {
+      Element.prototype.getBoundingClientRect = original;
     }
   });
 });

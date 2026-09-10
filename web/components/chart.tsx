@@ -1241,7 +1241,12 @@ export function ChartView({
   // #197 step 2: chart or table. A comparison with more bars than the chart
   // can label opens on the table — the idea bank's >15-categories rule, the
   // honest view for many series.
-  const initialForm = spec.series.length > BAR_LABEL_MAX ? 'table' : spec.kind;
+  // Fix round 2 (item 10): the >15-series table rule is a CHAT-chart rule.
+  // The stage has no form tabs, so a many-series story that opened on the
+  // table showed a presentation with no chart in it at all — no highlight,
+  // no ring, no spotlight, nothing for a step to drive. In stage mode the
+  // spec's own kind always wins.
+  const initialForm = inStage ? spec.kind : spec.series.length > BAR_LABEL_MAX ? 'table' : spec.kind;
   const [state, dispatch] = useReducer(chartViewReducer, initialForm, initialViewState);
   const lineTabRef = useRef<HTMLButtonElement>(null);
   const areaTabRef = useRef<HTMLButtonElement>(null);
@@ -2251,8 +2256,12 @@ export function ChartView({
       <ChartFrame frame={pres} image={frameImage}>
       <div
         id={panelId}
-        role="tabpanel"
-        aria-label={t(chartLang, 'chart.graphPanelLabel')}
+        // Fix round 2 (item 10): a `tabpanel` with no tablist is a broken
+        // ARIA relationship — stage mode renders no form tabs, so the export
+        // container is a plain div there and a screen reader is not told to
+        // look for tabs that do not exist.
+        role={inStage ? undefined : 'tabpanel'}
+        aria-label={inStage ? undefined : t(chartLang, 'chart.graphPanelLabel')}
         ref={chartContainerRef}
         className={
           // ADR 042: a 300 ms fade/rise of the export CONTAINER on mount —
@@ -2678,7 +2687,14 @@ export function ChartView({
         <ChartStoryPanel
           steps={storySteps}
           index={storyIndex}
-          onIndexChange={onStoryIndexChange}
+          // Fix round 2 (item 7): while the stage is open the compact panel
+          // must not move the shared index. It is still mounted behind the
+          // full-screen overlay, and its IntersectionObserver keeps firing
+          // on any reflow there (a classic scrollbar appearing/disappearing
+          // is enough) — each fire overwriting the step the presenter is
+          // actually on. A no-op keeps the panel rendering, invisible and
+          // inert, until the stage closes.
+          onIndexChange={stageOpen ? () => {} : onStoryIndexChange}
           open={storyOpen}
           onClose={closeStory}
           triggerId={storyTriggerId}
@@ -2859,7 +2875,12 @@ export function ChartView({
           }}
         />
       ) : null}
-      {state.form !== 'table' && !state.periodRange && spec.attribution.trendHeadline !== undefined ? (
+      {/* Fix round 2 (item 9): no trend headline in the stage. The stage's own
+        * caption IS the sentence being presented; a second, differently
+        * phrased headline under the same chart competes with the step the
+        * reader is on (and on a phone it pushed the source line out of the
+        * pinned area entirely). */}
+      {!inStage && state.form !== 'table' && !state.periodRange && spec.attribution.trendHeadline !== undefined ? (
         <p data-testid="trend-headline" className="mt-1 text-sm text-foreground">
           {spec.attribution.trendHeadline}
         </p>
@@ -2942,7 +2963,12 @@ export function ChartView({
           {note}
         </p>
       ))}
-      {spec.definitionLine ? <p className="mt-2 text-xs text-muted-foreground">{spec.definitionLine}</p> : null}
+      {/* Fix round 2 (item 9): the definition line is reference prose for a
+        * chat answer, not something anyone reads off a presentation slide —
+        * dropped in stage mode. The caveats that carry data-quality meaning
+        * (nullNotes, the provisional sentence and its marker key, the event
+        * markers) and the attribution stay, in the stage as everywhere. */}
+      {!inStage && spec.definitionLine ? <p className="mt-2 text-xs text-muted-foreground">{spec.definitionLine}</p> : null}
       {/* #170(4): curated event markers, always-visible text (never
         * hover-only — see the ReferenceLine comment above). Neutral tone
         * (text-muted-foreground), distinct from the #92 amber caveats above: this
