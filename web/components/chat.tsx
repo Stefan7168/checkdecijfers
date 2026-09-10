@@ -836,7 +836,7 @@ export function Chat({
     // nothing above the composer (bare chat, no example chips).
     <div className="flex h-full min-h-0 w-full flex-1 flex-col">
       <div className="min-h-0 flex-1 overflow-y-auto px-3 py-6 tnum">
-        <div className="mx-auto flex w-full max-w-4xl flex-col gap-5">
+        <div className="mx-auto flex w-full max-w-3xl flex-col gap-5">
         {messages.map((message, i) => {
           // WP135 ⟨A7⟩: a redacted row replays as ONE muted placeholder — no
           // user+assistant sentinel pair, no envelope (the chat-side isDeleted
@@ -1151,7 +1151,7 @@ export function Chat({
         </div>
       </div>
       <div className="shrink-0 border-t border-border px-3 pt-3 pb-4" data-testid="chat-composer">
-        <div className="mx-auto flex w-full max-w-4xl flex-col gap-2">
+        <div className="mx-auto flex w-full max-w-3xl flex-col gap-2">
       {/* WP129+130 (#129, ADR 032): the source-tags chips — one per registered
         * source (label "<displayName> data", PRE-checked) plus the "Internet"
         * channel (default OFF). Toggle buttons carry aria-pressed; a selected

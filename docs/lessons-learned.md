@@ -6,6 +6,62 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 94 — 2026-09-10 — owner present: Insights (AI-phrased outlier findings) replaces Story mode's
+selection; a parallel-branch ADR/open-questions numbering collision; hand-tracing the scoring math before
+writing tests caught a real bug; asking one tight question beat guessing on a genuinely ambiguous UI ask
+
+- **Hand-trace the algorithm's math BEFORE writing its tests — it catches bugs tests alone would only
+  reveal as a confusing failure.** Tracing `chart-insights.ts`'s z-score kind-assignment by hand for a
+  4-point fixture surfaced a real bug: every NON-extreme point (neither the series' high nor low) was
+  unconditionally labelled `'recordHigh'` regardless of whether it was actually above or below the mean —
+  a leftover from writing the "is this the low point?" ternary before generalizing to non-record points.
+  The fix (compare against the series mean, not "is this literally the record") was obvious once traced by
+  hand; found via a live-tests-would-eventually-fail approach it would have looked like an unrelated
+  off-by-one in a caption string, much slower to root-cause. Lesson: for any scoring/ranking function, do
+  one full manual trace on a concrete fixture BEFORE writing the test suite that will exercise it — the
+  trace IS the spec, and writing it forces exactly the edge case a rushed implementation glosses over.
+- **A pure function's right home depends on how many independent callers it has, not just its precedent's
+  location.** `chart-story.ts` (the direct precedent for the new "find interesting points" logic) lives in
+  `web/lib/` — but it has exactly ONE caller (chart.tsx). The new `scoreFindings` has TWO independent
+  callers that must never disagree (the client's instant render AND the server action's LLM payload,
+  which deliberately re-derives from the spec rather than trusting client-sent finding data —
+  `answer/compose/prompt.ts`'s own stated R2 prompt-injection discipline). That second caller forces
+  backend placement (`src/chart/`) so both sides import the SAME algorithm via the `web/backend` symlink,
+  never two hand-maintained copies. Initially built it in `web/lib/` by pattern-matching the precedent
+  alone, without asking "does this need a second caller the precedent never had?" — caught and moved
+  before it shipped, but cost a real rewrite. Ask that question before placing any new pure module.
+- **Reusing a proven mechanism beats adapting a tightly-coupled one, even when the adaptation looks
+  smaller at first glance.** The obvious first instinct for "AI phrase these numbers safely" was to adapt
+  `answer/compose/validate.ts`'s digit-scanning validator (1000+ lines, adversarially hardened against real
+  fabrication attempts) to a chart finding's shape. Reading it made the real shape of the problem clear:
+  it's built entirely around `ValidatedResult`'s cells/derivations/regions, and a chart finding has none of
+  that structure — adapting it would mean either loosening genuinely load-bearing checks or duplicating the
+  hardening for a different input shape. The SLOT-FILLING mechanism already in the same codebase
+  (`answer/compose/slots.ts`, behind its own flag) turned out to be the right-sized tool: it needs no
+  fabrication DETECTION at all, because fabrication is structurally impossible (the model cannot emit a
+  digit outside a placeholder, period). Recognizing "this problem has already been solved more simply
+  elsewhere in this exact codebase" saved what would likely have been the single largest chunk of this
+  session's effort, and produced a smaller, safer result.
+- **A parallel, unmerged branch's ADR numbering silently collides — caught only by trying to link to the
+  file.** This session's own branch used ADR 041 for a new decision (chart-insights); the still-unmerged
+  `embed-charts` branch (a DIFFERENT session) had already used 041 for Embed. Writing a build-plan.md
+  cross-reference to `decisions/041-public-embed-pages.md` would have been a broken link on this branch
+  (the file only exists on `embed-charts`) — caught by noticing the reference pointed at a file that
+  hadn't actually been read/confirmed to exist HERE, not by any tooling. `docs/open-questions.md` already
+  had a real, resolved version of this same collision class this session (rows #224-229 landing on `main`
+  from `embed-charts` while this branch independently continued past #223) — ADRs have the identical
+  exposure and no existing convention names it. Lesson: when citing an ADR/open-questions number from a
+  DIFFERENT branch's PR body or docs, verify the file actually exists on the current branch before linking
+  it — don't assume a number seen in a PR description is safe to reference locally.
+- **One tight clarifying question beats three guesses on a genuinely ambiguous UI ask — and "never mind"
+  is a complete, valid answer.** "Make sure the graph always shows first, and the card comes second" had
+  at least three materially different, defensible readings (swap the panel's left/right position; reorder
+  the mobile-stacked content; just make the graph panel wider/more prominent) discoverable only by reading
+  the actual component tree — no amount of re-reading the sentence alone would have resolved it. Asking
+  one multiple-choice question (grounded in the real UI, not abstract) let the owner say "never mind" in
+  one word rather than making me guess wrong, watch them notice, and re-explain from scratch — the more
+  expensive failure mode this rule exists to avoid.
+
 ## Session 92 — 2026-09-09 — owner present: three features shipped in one session (Story mode, the chat
 polish batch, frame styling + the floating Style panel) via Subagent-Driven Development; the whole-branch
 review earned its cost twice; two agents "went background" and edited the same tree; presets need a

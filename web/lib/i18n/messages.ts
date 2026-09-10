@@ -397,8 +397,15 @@ const nl = {
   // Story mode (session 92 design, spec 2026-09-09-story-mode-and-embed-design.md
   // Part A). Digit-free by construction: every number a caption shows is a
   // spec string filled into a placeholder, never part of the template.
-  'chart.story.trigger': 'Verhaal',
-  'chart.story.regionLabel': 'Verhaal bij de grafiek',
+  // Superseded 2026-09-10 (session 94, owner ask): the trigger/panel now
+  // present as "Insights" — genuine outlier findings (chart-insights.ts),
+  // optionally AI-phrased — rather than the old chronological Start/High/
+  // Low/Latest story. Key NAMES stay `chart.story.*` (chart.tsx/chart-
+  // story.tsx and their tests reference them by string) — only the shown
+  // VALUES changed; see open-questions.md for the chart-story.ts cleanup
+  // this left tracked.
+  'chart.story.trigger': 'Inzichten',
+  'chart.story.regionLabel': 'Inzichten bij de grafiek',
   'chart.story.hint': 'Scroll of gebruik de pijlen',
   'chart.story.prev': 'Vorige',
   'chart.story.next': 'Volgende',
@@ -417,6 +424,17 @@ const nl = {
   'chart.story.seriesCaption': '{fromPeriod}: {fromValue} → {toPeriod}: {toValue} {unit}',
   'chart.story.barCaption': '{label}: {value} {unit}',
   'chart.story.provisional': ' (voorlopig cijfer)',
+  // Insights (session 94): the 4 finding kinds chart-insights.ts selects.
+  // {series} is the series/region label — omitted from the sentence itself
+  // on a single-series chart (buildComparePrompt's own title-only usage).
+  'chart.insights.recordHighTitle': 'Uitschieter naar boven',
+  'chart.insights.recordLowTitle': 'Uitschieter naar beneden',
+  'chart.insights.jumpUpTitle': 'Sterke stijging',
+  'chart.insights.jumpDownTitle': 'Sterke daling',
+  // A multi-series finding's caption has no other way to say WHICH series it
+  // is about (chart.story.pointCaption/seriesCaption only ever name the
+  // period) — this prefixes it. Single-series and bar findings never use it.
+  'chart.insights.seriesLabelPrefix': '{series} — ',
   'chart.story.exploreTitle': 'Verken zelf',
   'chart.story.exploreCaption': 'Wissel van weergave met de tabs, kies een periode met Vanaf en Tot, of pas de opmaak aan.',
   'chart.story.controlsLocked': 'Sluit het verhaal om dit te wijzigen.',
@@ -861,8 +879,8 @@ const en: Messages = {
   'chart.panel.trigger': 'Style',
   'chart.panel.regionLabel': 'Chart style',
 
-  'chart.story.trigger': 'Story mode',
-  'chart.story.regionLabel': 'Story for this chart',
+  'chart.story.trigger': 'Insights',
+  'chart.story.regionLabel': 'Insights for this chart',
   'chart.story.hint': 'Scroll or use the arrows',
   'chart.story.prev': 'Previous',
   'chart.story.next': 'Next',
@@ -881,6 +899,11 @@ const en: Messages = {
   'chart.story.seriesCaption': '{fromPeriod}: {fromValue} → {toPeriod}: {toValue} {unit}',
   'chart.story.barCaption': '{label}: {value} {unit}',
   'chart.story.provisional': ' (provisional figure)',
+  'chart.insights.recordHighTitle': 'Notable high',
+  'chart.insights.recordLowTitle': 'Notable low',
+  'chart.insights.jumpUpTitle': 'Sharp rise',
+  'chart.insights.jumpDownTitle': 'Sharp drop',
+  'chart.insights.seriesLabelPrefix': '{series} — ',
   'chart.story.exploreTitle': 'Explore yourself',
   'chart.story.exploreCaption': 'Switch the view with the tabs, pick a period with From and To, or change the style.',
   'chart.story.controlsLocked': 'Close the story to change this.',

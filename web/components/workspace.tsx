@@ -443,7 +443,7 @@ export function Workspace({
             {showDock ? (
               <>
                 <ResizableHandle withHandle className="mx-1" />
-                <ResizablePanel id="dock-panel" defaultSize="33" minSize="18" maxSize="40">
+                <ResizablePanel id="dock-panel" defaultSize="40" minSize="18" maxSize="40">
                   <VisualDock busy={chatBusy} visuals={visuals} activeVisualId={activeVisualId} onSelect={activateVisual} />
                 </ResizablePanel>
               </>

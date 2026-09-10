@@ -211,7 +211,7 @@ export function DatasetChat({
     // messages scroll in the middle, composer in a bottom band.
     <section aria-label={displayName} className="flex h-full min-h-0 w-full flex-1 flex-col">
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-6 tnum">
-        <div className="mx-auto flex w-full max-w-4xl flex-col gap-5">
+        <div className="mx-auto flex w-full max-w-3xl flex-col gap-5">
         {messages.map((message, i) => {
           if (message.role === 'redacted') {
             return (
@@ -285,7 +285,7 @@ export function DatasetChat({
         </div>
       </div>
       <div className="shrink-0 border-t border-border px-4 py-3">
-        <form onSubmit={(e) => void handleSubmit(e)} className="mx-auto flex w-full max-w-4xl gap-2">
+        <form onSubmit={(e) => void handleSubmit(e)} className="mx-auto flex w-full max-w-3xl gap-2">
           <Input
             type="text"
             value={input}

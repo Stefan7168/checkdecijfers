@@ -629,7 +629,30 @@ addenda (Story mode; Frame styling + floating panel), ADR [040](decisions/040-in
 **Next WP: Embed (Part B)** — write its plan with writing-plans, build via SDD; owner-set env vars `EMBED_TOKEN_SECRET`
 (signing secret) and optionally `PRO_ACCOUNT_EMAILS` (the Pro demo switch) at go-live; framing headers; a public
 `/embed/[token]` route; the Live toggle Pro-gated (#205). Follow-ups recorded in the spec (story in the embed, map chart
-type, homepage embeds, sizes).
+type, homepage embeds, sizes). **Superseded 2026-09-10 (session 93/94): Embed is BUILT** (session 93,
+autonomous, branch `embed-charts`, its own ADR 041 "public-embed-pages" on THAT branch — not yet
+merged, PR #9 open for owner review; a session-94 push to `main` put a real conflict on it, resolved and
+pushed `da6b328`, PR mergeable again). **Numbering note:** this session's own branch independently used
+ADR number 041 for a different decision (chart-insights, below) — the two 041s will collide at merge
+time and one needs renumbering then; not fixable now since the other file doesn't exist on this branch.
+
+## Session 94 (2026-09-10) — three owner UI fixes ✅ LIVE, PR #9 conflict resolved, the visual "next level" plan
+written (not built), two export fixes (#222 ✅/#223 mostly) ✅ LIVE, Insights ✅ BUILT (own branch, not yet on `main`)
+
+Owner-present, continuing session 93's embed-charts PR review. Three small UI fixes (Style panel floating→inline,
+the docked-chart chip restyled into the footer action row, answer-box margin, chat width `2xl→4xl→3xl` after
+owner feedback) merged to `main` directly (owner: "yes push to main"). **Visual plan** (not built):
+[session-briefs/2026-09-10-visual-next-level-plan.md](session-briefs/2026-09-10-visual-next-level-plan.md) —
+Fable 5.1's brief for a CSS-3D/scroll "Story stage", a designed default chart, a template system; its own
+addendum identifies the reference demo as a 3D municipality map + scroll story + generator, via the Vercel API.
+**Insights** (owner ask, replacing Story mode's selection; ADR [041](decisions/041-chart-insights.md), own
+branch `claude/checkdecijfers-embed-pr-review-acbrd5`, not yet merged to `main`): `src/chart/insights.ts`
+(deterministic outlier/jump ranking) + `src/chart/insights-phrase.ts` (AI phrasing via the digit-free
+slot-filling mechanism `answer/compose/slots.ts` proved) + `web/app/chart-insights-actions.ts` (the server
+action) + `chart.tsx` wiring (the existing `ChartStoryPanel` shell reused unchanged). Follow-ups tracked, not
+built here: [#224](open-questions.md) delete `chart-story.ts`'s now-dead selection code; [#225](open-questions.md)
+no rate limit on Insights generation yet. Full verification block still running as of this entry — see
+[STATUS.md](STATUS.md) for the measured result once it completes.
 
 ## WP218 — chart styling programme (owner decisions on [#218](open-questions.md), session 90, 2026-09-09) — ✅ BUILT (all six phases, session 91, 2026-09-09, autonomous, branch `wp218-chart-styling`, PR for owner review) — owner steps pending: apply migrations 028 + 029, optionally set `BRANDFETCH_API_KEY` (RUNBOOK § WP218 go-live)
 
