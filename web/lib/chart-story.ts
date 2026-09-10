@@ -14,10 +14,22 @@
 // translated by translateSpecForDisplay for the chart language), so period
 // labels and units arrive in the right language while periodCodes — the
 // keys the chart marks points by — are untouched.
+//
+// Superseded 2026-09-10 (session 94, owner ask): chart.tsx no longer calls
+// buildStorySteps below — the panel's SELECTION now comes from chart-
+// insights.ts's buildFindings (real outlier findings, optionally AI-phrased)
+// instead of this file's chronological Start/High/Low/Latest. The functions
+// below are kept, unused, only because StoryStepKind/StoryStep are still the
+// shared type ChartStoryPanel/chart.tsx build against (widened just below to
+// also accept FindingKind) — see open-questions.md for the tracked follow-up
+// to delete buildStorySteps/timeSeriesSteps/multiSeriesSteps/
+// comparisonSteps/exploreStep and this file's own test suite once that
+// cleanup gets its own pass.
 import type { ChartPoint, ChartSpec } from '../backend/chart/types.ts';
 import { t, type Lang } from './i18n/messages.ts';
+import type { FindingKind } from './chart-insights.ts';
 
-export type StoryStepKind = 'overview' | 'start' | 'high' | 'low' | 'latest' | 'series' | 'explore';
+export type StoryStepKind = 'overview' | 'start' | 'high' | 'low' | 'latest' | 'series' | 'explore' | FindingKind;
 
 export interface StoryStep {
   /** Stable per chart: `${kind}-${seriesKey}-${periodCode}` or the kind alone. */

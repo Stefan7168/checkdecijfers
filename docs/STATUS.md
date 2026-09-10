@@ -8,6 +8,52 @@
 > **Convention (since 2026-07-12, session 41):** at session wrap-up, PREPEND the full session entry to
 > [status-archive.md](status-archive.md) and update only the lean top block below. Keep STATUS.md readable in one
 > Read call: hard-wrap every line at ~150 chars, no kilobyte-long lines.
+> **Known debt (found 2026-09-10, session 94):** the blocks below this line (session 92 downward) were
+> never actually archived per the convention above — this file has grown into a multi-session dump
+> instead of staying lean. Not fixed here (out of scope for this session's own work); a future session
+> should migrate everything below the session-94 block into status-archive.md and leave only a lean
+> pointer, the way this convention has always intended.
+
+**▶ SESSION 94 (2026-09-10, owner present, continuing session 93's embed-charts branch review) — PR #9
+MERGE-CONFLICT RESOLVED, THREE OWNER UI FIXES, THE "NEXT LEVEL" VISUAL PLAN DOC, TWO EXPORT FIXES
+(#222/#223), AND INSIGHTS (ADR 041) BUILT.**
+- **PR #9 (embed-charts) conflict resolved:** this session's own direct push to `main` (owner: "yes push
+  to main") put a real conflict on PR #9, isolated to `docs/open-questions.md`. Hand-merged both sides,
+  pushed `da6b328` to `origin/embed-charts`; PR mergeable again, CI green on the merge commit.
+- **Three owner UI fixes, all live on `main`:** Style panel moved from a floating dialog to an inline
+  region below the chart (own card, no portal); the "chart in panel" pill restyled to match footer
+  buttons, moved into the `CardFooter` action row left of Copy; margin added below the answer box; chat
+  container width first enlarged (`max-w-2xl`→`max-w-4xl` per owner ask), then **dialed back to
+  `max-w-3xl`** after owner feedback it was too wide.
+- **"Next level" visual plan** ([session-briefs/2026-09-10-visual-next-level-plan.md](session-briefs/2026-09-10-visual-next-level-plan.md),
+  Fable 5.1): Story mode → a CSS-3D/scroll-driven "Story stage" (not literal 3D chart marks — R6), a
+  designed default chart look, a template system. Written, not built. Addendum: the reference demo
+  (`checkdecijfers-3d-demo`) is a 3D MUNICIPALITY MAP with a scroll story, a working generator/embed
+  runtime, and 3 mini-apps — identified via the Vercel API (the site itself is egress-blocked from
+  this environment) rather than assumed from the URL alone.
+- **[#222](open-questions.md) dark-mode exports ✅ RESOLVED; [#223](open-questions.md) attribution
+  word-wrap mostly resolved** (a single overlong word can still slightly overflow — residual, tracked).
+- **Insights** (owner ask: "top 3-5 most interesting findings / uitschieters ... for a journalist,"
+  replacing Story mode's dry Start/High/Low/Latest selection; ADR [041](decisions/041-chart-insights.md)):
+  `src/chart/insights.ts` ranks real outliers (level z-score + period-over-period jump z-score, capped
+  at 5) — deterministic, backend, shared by both the client's instant fallback and the server action, so
+  the two can never disagree. `src/chart/insights-phrase.ts` AI-phrases each finding via the SAME
+  digit-free slot-filling mechanism `answer/compose/slots.ts` proved (a fabricated number is
+  unrepresentable, not merely caught); fail-closed PER FINDING to the caption already on screen, never a
+  whole-batch failure. Fired on panel-open only (not eager), Dutch-only prose (matches the core
+  pipeline's convention) regardless of chart display language. The existing `ChartStoryPanel` UI shell —
+  keyboard nav, point-ring, series-highlight, snapshot/restore — is UNCHANGED; only the content source
+  swapped. Trigger threshold lowered `>=3` steps → `>=1` finding (every Insights finding is real content;
+  the old count included non-data overview/explore filler). Left deliberately open, tracked:
+  [#230](open-questions.md) `chart-story.ts`'s old selection code is now dead (kept for now, not deleted
+  in this change); [#231](open-questions.md) no server-side rate/spend cap on Insights generation yet.
+  (Renumbered from #224/#225 at merge — Embed's branch had already claimed those numbers for its own,
+  unrelated open questions; see the numbering note in [08-build-plan.md](08-build-plan.md).)
+- **Verification (this session, own branch `claude/checkdecijfers-embed-pr-review-acbrd5`), full block,
+  all green:** typecheck ×2 clean; web suite 88 files / 1304 tests; backend suite (solo) 143 files / 2211
+  tests; hermetic benchmark 14/14 answerable + 6/6 refusal/clarify + 0 fabricated, GATE PASS; real
+  `next build` clean; `test:docs` 11/11; `/code-review` LOW pass — 0 findings. Merged to `main` same
+  session (owner present, confirmed via AskUserQuestion: push straight to `main` once green, per #118).
 
 **▶ SESSION 93 (2026-09-10, autonomous — owner away for the build, checked in once mid-session: "ok
 wrap up when done") — THE WHOLE EMBED FEATURE (spec Part B) BUILT VIA SUBAGENT-DRIVEN DEVELOPMENT (8

@@ -2879,41 +2879,48 @@ describe('ChartView — horizontal bar form (WP218 phase 5)', () => {
 });
 
 describe('Story mode (session 92): a code-built story under the chart', () => {
-  it('offers the colourful Verhaal trigger next to Opmaak on a chart with a story, not on Tabel, not on a one-point chart', () => {
+  it('offers the colourful Inzichten trigger next to Opmaak on a chart with findings, not on Tabel, not on a one-point chart', () => {
     const { container, unmount } = render(<ChartView spec={threePointSpec()} />);
-    const trigger = screen.getByRole('button', { name: 'Verhaal' });
+    const trigger = screen.getByRole('button', { name: 'Inzichten' });
     expect(container.querySelector('[data-story-trigger-ring]')).toContainElement(trigger);
     expect(trigger.querySelector('svg')).not.toBeNull();
     fireEvent.click(screen.getByRole('tab', { name: 'Tabel' }));
-    expect(screen.queryByRole('button', { name: 'Verhaal' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Inzichten' })).toBeNull();
     unmount();
     render(<ChartView spec={spec()} />);
-    expect(screen.queryByRole('button', { name: 'Verhaal' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Inzichten' })).toBeNull();
   });
 
   it('opening the story closes Opmaak and vice versa (one panel under the chart)', () => {
     render(<ChartView spec={threePointSpec()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
     expect(screen.getByRole('region', { name: 'Opmaak van de grafiek' })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Verhaal' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
     expect(screen.queryByRole('region', { name: 'Opmaak van de grafiek' })).toBeNull();
-    expect(screen.getByRole('region', { name: 'Verhaal bij de grafiek' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Inzichten bij de grafiek' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    expect(screen.queryByRole('region', { name: 'Verhaal bij de grafiek' })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Inzichten bij de grafiek' })).toBeNull();
   });
 
   it('a point step rings exactly that point outside its own marker, and never carries data-point', () => {
+    // threePointSpec's findings (chart-insights.ts, hand-verified): every
+    // point is a real finding here (recordLow@2022 "lo", jumpUp@2023 "mid",
+    // jumpUp@2024 "hi") — unlike the old buildStorySteps, there is no
+    // non-data "overview" step wasting the first slot, so the ring is
+    // already on the FIRST finding's point the moment the panel opens.
     const { container } = render(<ChartView spec={threePointSpec()} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Verhaal' }));
-    expect(container.querySelector('[data-story-marker]')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
+    const openRings = container.querySelectorAll('[data-story-marker]');
+    expect(openRings).toHaveLength(1);
+    expect(openRings[0]!.getAttribute('data-story-marker')).toBe('lo');
     fireEvent.click(screen.getByRole('button', { name: 'Volgende' }));
     const rings = container.querySelectorAll('[data-story-marker]');
     expect(rings).toHaveLength(1);
     const ring = rings[0]!;
     expect(ring.getAttribute('data-point')).toBeNull();
-    expect(ring.getAttribute('data-story-marker')).toBe('lo');
+    expect(ring.getAttribute('data-story-marker')).toBe('mid');
     expect(container.querySelectorAll('[data-point]')).toHaveLength(3);
-    const dot = container.querySelector('[data-result-id="lo"]')!;
+    const dot = container.querySelector('[data-result-id="mid"]')!;
     expect(Number(ring.getAttribute('r'))).toBeGreaterThan(Number(dot.getAttribute('r')));
   });
 
@@ -2924,7 +2931,7 @@ describe('Story mode (session 92): a code-built story under the chart', () => {
     const { container } = render(<ChartView spec={threePointSpec()} />);
     fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
     const beforeStory = container.querySelectorAll('[data-point]').length;
-    fireEvent.click(screen.getByRole('button', { name: 'Verhaal' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
     fireEvent.click(screen.getByRole('button', { name: 'Volgende' }));
     const markers = container.querySelectorAll('[data-story-marker]');
     expect(markers).toHaveLength(1);
@@ -2941,8 +2948,10 @@ describe('Story mode (session 92): a code-built story under the chart', () => {
     const { container } = render(<ChartView spec={threePointSpec()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
     fireEvent.click(screen.getByRole('radio', { name: 'Alleen voorlopige' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Verhaal' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Volgende' }));
+    // threePointSpec's first finding (chart-insights.ts) already rings "lo"
+    // the moment the panel opens — no "Volgende" click needed (unlike the
+    // old buildStorySteps, whose first step was a non-data overview).
+    fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
     const ring = container.querySelector('[data-story-marker]')!;
     expect(ring.getAttribute('stroke-dasharray')).toBeTruthy();
     const ringedDot = container.querySelector('[data-result-id="lo"]')!;
@@ -2960,7 +2969,7 @@ describe('Story mode (session 92): a code-built story under the chart', () => {
     const { container } = render(<ChartView spec={twoSeriesFourYearLineSpec()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Utrecht' }));
     expect(container.querySelectorAll('.recharts-line')).toHaveLength(1);
-    fireEvent.click(screen.getByRole('button', { name: 'Verhaal' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
     expect(container.querySelectorAll('.recharts-line')).toHaveLength(2);
     fireEvent.click(screen.getByRole('button', { name: 'Volgende' }));
     expect(container.querySelectorAll('[data-series-dimmed="true"]')).toHaveLength(1);
@@ -2971,19 +2980,19 @@ describe('Story mode (session 92): a code-built story under the chart', () => {
 
   it('a comparison story highlights the highest bar', () => {
     const { container } = render(<ChartView spec={multiRegionBarSpec()} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Verhaal' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
     fireEvent.click(screen.getByRole('button', { name: 'Volgende' }));
-    expect(screen.getByRole('region', { name: 'Verhaal bij de grafiek' })).toHaveTextContent('Friesland: 20 %');
+    expect(screen.getByRole('region', { name: 'Inzichten bij de grafiek' })).toHaveTextContent('Friesland: 20 %');
     expect(container.querySelectorAll('[data-series-dimmed="true"]').length).toBeGreaterThan(0);
   });
 
   it('a spec swap on the same instance closes the story and starts the next one at the first step', () => {
     const { rerender } = render(<ChartView spec={threePointSpec()} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Verhaal' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
     fireEvent.click(screen.getByRole('button', { name: 'Volgende' }));
     rerender(<ChartView spec={twoSeriesFourYearLineSpec()} />);
-    expect(screen.queryByRole('region', { name: 'Verhaal bij de grafiek' })).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Verhaal' }));
+    expect(screen.queryByRole('region', { name: 'Inzichten bij de grafiek' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
     expect(screen.getAllByRole('article')[0]).toHaveAttribute('aria-current', 'step');
   });
 
@@ -2994,7 +3003,7 @@ describe('Story mode (session 92): a code-built story under the chart', () => {
     });
     try {
       render(<ChartView spec={threePointSpec()} />);
-      fireEvent.click(screen.getByRole('button', { name: 'Verhaal' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
       fireEvent.click(screen.getByRole('button', { name: 'Volgende' }));
       fireEvent.click(screen.getByRole('button', { name: 'Volgende' }));
       expect(events).toEqual(['story_open', 'story_step', 'story_step']);
@@ -3007,7 +3016,7 @@ describe('Story mode (session 92): a code-built story under the chart', () => {
     const s = threePointSpec({ provisionalNote: 'Voorlopige cijfers (2024) zijn gemarkeerd met *.' });
     const strings = harvestSpecStrings(s);
     const nl = render(<ChartView spec={s} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Verhaal' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
     fireEvent.click(screen.getByRole('button', { name: 'Volgende' }));
     scanForUnboundDigits(nl.container, strings);
     nl.unmount();
@@ -3016,7 +3025,7 @@ describe('Story mode (session 92): a code-built story under the chart', () => {
         <ChartView spec={s} />
       </LangProvider>,
     );
-    fireEvent.click(screen.getByRole('button', { name: 'Story mode' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Insights' }));
     fireEvent.click(screen.getByRole('button', { name: 'Next' }));
     scanForUnboundDigits(en.container, strings);
   });
@@ -3047,12 +3056,12 @@ describe('Story mode (session 92): a code-built story under the chart', () => {
 
   it('only the story ring — never the panel text — enters the SVG export', () => {
     const { container } = render(<ChartView spec={threePointSpec()} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Verhaal' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
     fireEvent.click(screen.getByRole('button', { name: 'Volgende' }));
     // Scoped to the chart's own tabpanel, mirroring EXACTLY what
     // ChartDownloadMenu itself reads (containerRef.current.querySelector
     // ('svg') — chart-download.tsx) — a plain container-wide `svg` selector
-    // would instead match the Opmaak/Verhaal trigger buttons' own icon
+    // would instead match the Opmaak/Inzichten trigger buttons' own icon
     // <svg>, which render earlier in the DOM than the chart's.
     const svg = container.querySelector('[role="tabpanel"] svg')!;
     expect(svg.querySelector('[data-story-marker]')).not.toBeNull();
@@ -3071,7 +3080,7 @@ describe('Story mode (session 92): a code-built story under the chart', () => {
       </ChartStyleProvider>,
     );
     expect(container.querySelector('[data-slot="chart-frame"]')).not.toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Verhaal' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
     expect(screen.getAllByRole('article')[0]).toHaveAttribute('aria-current', 'step');
     fireEvent.click(screen.getByRole('button', { name: 'Volgende' }));
     const svg = container.querySelector('[role="tabpanel"] svg')!;
@@ -3084,7 +3093,7 @@ describe('Story mode (session 92): a code-built story under the chart', () => {
   // — the story drives the chart while it's open.
   it('locks the legend, the zoom selects and the small-multiples toggle while the story is open, with a readable reason', () => {
     render(<ChartView spec={twoSeriesFourYearLineSpec()} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Verhaal' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
     // Scoped to the legend's own group: once the story is open, its step-jump
     // dots (chart-story.tsx) can carry a step title that collides with a
     // series label ("Utrecht") — the SAME collision the pre-existing
@@ -3110,7 +3119,7 @@ describe('Story mode (session 92): a code-built story under the chart', () => {
   it('the lock-reason span only exists while the story is open', () => {
     const { container } = render(<ChartView spec={twoSeriesFourYearLineSpec()} />);
     expect(container.querySelector('[id$="-story-lock"]')).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Verhaal' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
     expect(container.querySelector('[id$="-story-lock"]')).not.toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Sluiten' }));
     expect(container.querySelector('[id$="-story-lock"]')).toBeNull();
@@ -3120,11 +3129,11 @@ describe('Story mode (session 92): a code-built story under the chart', () => {
     const { container } = render(<ChartView spec={twoSeriesFourYearLineSpec()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Utrecht' }));
     expect(container.querySelectorAll('.recharts-line')).toHaveLength(1);
-    fireEvent.click(screen.getByRole('button', { name: 'Verhaal' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
     fireEvent.click(screen.getByRole('button', { name: 'Volgende' }));
     fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
-    expect(screen.queryByRole('region', { name: 'Verhaal bij de grafiek' })).toBeNull();
-    expect(screen.getByRole('button', { name: 'Verhaal' })).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('region', { name: 'Inzichten bij de grafiek' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Inzichten' })).toHaveAttribute('aria-expanded', 'false');
     fireEvent.click(screen.getByRole('tab', { name: 'Lijn' }));
     expect(container.querySelectorAll('.recharts-line')).toHaveLength(1);
   });
@@ -3331,7 +3340,7 @@ describe('ChartView — StylePanelOwnerProvider (one Style panel per page)', () 
 // Task 3 (embed, spec Part B3): ChartView grows embed/embedMode/embedFooter.
 // embedMode is true ONLY for the public /embed/[token] route's own render
 // (Tasks 5/6 build that route) and strips every interactive control this
-// component owns — the Weergave tablist, the Opmaak/Verhaal triggers, the
+// component owns — the Weergave tablist, the Opmaak/Inzichten triggers, the
 // Vanaf/Tot zoom selects, the small-multiples toggle, click-to-annotate
 // notes, and Download — replacing them with the route-built `embedFooter`
 // sentence plus a checkdecijfers.nl backlink. The chart itself, its title/
@@ -3344,18 +3353,18 @@ describe('ChartView — StylePanelOwnerProvider (one Style panel per page)', () 
 // ---------------------------------------------------------------------------
 
 describe('embed mode (spec Part B3)', () => {
-  it('hides the Weergave tablist, the Opmaak trigger and the Verhaal trigger in embedMode', () => {
+  it('hides the Weergave tablist, the Opmaak trigger and the Inzichten trigger in embedMode', () => {
     const s = threePointSpec();
     render(<ChartView spec={s} />);
     expect(screen.getByRole('tablist')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Opmaak' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Verhaal' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Inzichten' })).toBeInTheDocument();
     cleanup();
 
     render(<ChartView spec={s} embedMode embedFooter="x" />);
     expect(screen.queryByRole('tablist')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Opmaak' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Verhaal' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Inzichten' })).toBeNull();
   });
 
   it('hides Download in embedMode, even when an embed prop is also passed', () => {

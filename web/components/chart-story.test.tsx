@@ -42,14 +42,14 @@ function Harness(props: Partial<ChartStoryPanelProps> & { onIndexChange?: (i: nu
 }
 
 describe('ChartStoryTrigger + ChartStoryPanel', () => {
-  it('is closed by default; the trigger names Story mode and opens a labelled region', () => {
+  it('is closed by default; the trigger names Insights and opens a labelled region', () => {
     render(<Harness />);
-    const trigger = screen.getByRole('button', { name: 'Verhaal' });
+    const trigger = screen.getByRole('button', { name: 'Inzichten' });
     expect(trigger).toHaveAttribute('aria-expanded', 'false');
-    expect(screen.queryByRole('region', { name: 'Verhaal bij de grafiek' })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Inzichten bij de grafiek' })).toBeNull();
     fireEvent.click(trigger);
     expect(trigger).toHaveAttribute('aria-expanded', 'true');
-    const region = screen.getByRole('region', { name: 'Verhaal bij de grafiek' });
+    const region = screen.getByRole('region', { name: 'Inzichten bij de grafiek' });
     expect(region.id).toBe('c1-story');
     expect(trigger).toHaveAttribute('aria-controls', 'c1-story');
   });
@@ -57,8 +57,8 @@ describe('ChartStoryTrigger + ChartStoryPanel', () => {
   it('renders every step as a card, marks the active one, and walks with Next/Previous without leaving the ends', () => {
     const onIndexChange = vi.fn();
     render(<Harness onIndexChange={onIndexChange} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Verhaal' }));
-    const region = screen.getByRole('region', { name: 'Verhaal bij de grafiek' });
+    fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
+    const region = screen.getByRole('region', { name: 'Inzichten bij de grafiek' });
     const cards = within(region).getAllByRole('article');
     expect(cards).toHaveLength(3);
     expect(cards[0]).toHaveAttribute('aria-current', 'step');
@@ -74,9 +74,9 @@ describe('ChartStoryTrigger + ChartStoryPanel', () => {
 
   it('the dotted step list jumps to a step by its title; arrow keys walk; Escape closes and refocuses the trigger', () => {
     render(<Harness />);
-    const trigger = screen.getByRole('button', { name: 'Verhaal' });
+    const trigger = screen.getByRole('button', { name: 'Inzichten' });
     fireEvent.click(trigger);
-    const region = screen.getByRole('region', { name: 'Verhaal bij de grafiek' });
+    const region = screen.getByRole('region', { name: 'Inzichten bij de grafiek' });
     const dots = within(within(region).getByRole('list', { name: 'Stappen' })).getAllByRole('button');
     expect(dots.map((d) => d.getAttribute('aria-label'))).toEqual(['Overzicht', 'Hoogste punt', 'Verken zelf']);
     fireEvent.click(dots[2]!);
@@ -86,14 +86,14 @@ describe('ChartStoryTrigger + ChartStoryPanel', () => {
     fireEvent.keyDown(region, { key: 'ArrowRight' });
     expect(within(region).getAllByRole('article')[2]).toHaveAttribute('aria-current', 'step');
     fireEvent.keyDown(region, { key: 'Escape' });
-    expect(screen.queryByRole('region', { name: 'Verhaal bij de grafiek' })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Inzichten bij de grafiek' })).toBeNull();
     expect(document.activeElement).toBe(trigger);
   });
 
   it('speaks English when asked', () => {
     render(<Harness lang="en" />);
-    fireEvent.click(screen.getByRole('button', { name: 'Story mode' }));
-    expect(screen.getByRole('region', { name: 'Story for this chart' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Insights' }));
+    expect(screen.getByRole('region', { name: 'Insights for this chart' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Next' })).toBeInTheDocument();
     expect(screen.getByText('Scroll or use the arrows')).toBeInTheDocument();
   });
@@ -122,9 +122,9 @@ describe('ChartStoryTrigger + ChartStoryPanel', () => {
     try {
       const onIndexChange = vi.fn();
       render(<Harness onIndexChange={onIndexChange} />);
-      fireEvent.click(screen.getByRole('button', { name: 'Verhaal' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
       expect(observe).toHaveBeenCalledTimes(3);
-      const region = screen.getByRole('region', { name: 'Verhaal bij de grafiek' });
+      const region = screen.getByRole('region', { name: 'Inzichten bij de grafiek' });
       const cards = within(region).getAllByRole('article');
       fireEvent.click(screen.getByRole('button', { name: 'Volgende' }));
       expect(onIndexChange).toHaveBeenLastCalledWith(1);
@@ -147,7 +147,7 @@ describe('ChartStoryTrigger + ChartStoryPanel', () => {
 
   it('shows no digit that is not one of the steps\' own strings (no "step 2 of 3" anywhere)', () => {
     const { container } = render(<Harness />);
-    fireEvent.click(screen.getByRole('button', { name: 'Verhaal' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
     const allowed = steps.flatMap((s) => [s.title, s.caption]);
     const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
     const tokens: string[] = [];

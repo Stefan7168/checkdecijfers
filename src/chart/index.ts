@@ -15,5 +15,7 @@ export { renderChartSvg } from './render.ts';
 export type { RenderChartOptions } from './render.ts';
 export { chartSpecSchema } from './schema.ts';
 export type { ParsedChartSpec } from './schema.ts';
+export { INSIGHTS_MAX_FINDINGS, scoreFindings } from './insights.ts';
+export type { FindingKind, ScoredFinding } from './insights.ts';
 export { CHART_SPEC_VERSION } from './types.ts';
 export type { ChartAnnotation, ChartAttribution, ChartPoint, ChartSeries, ChartSpec } from './types.ts';

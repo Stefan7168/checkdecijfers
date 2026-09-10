@@ -634,7 +634,34 @@ exist yet ([#224](open-questions.md)). Owner steps pending: set `EMBED_TOKEN_SEC
 `PRO_ACCOUNT_EMAILS`) and merge the branch (RUNBOOK § "Embed go-live"). Full mechanism: ADR
 [041](decisions/041-public-embed-pages.md). Follow-ups recorded in the spec and in ADR 041's Revisit
 triggers (story in the embed, map chart type, homepage embeds, sizes, per-embed revocation, the real
-#205 Pro plan).
+#205 Pro plan). **Numbering note:** a second, unrelated ADR 041 ("chart-insights", session 94, below)
+exists on a different branch that also merges here — two different files both numbered 041
+(`041-public-embed-pages.md` / `041-chart-insights.md`); harmless as distinct filenames, but a future
+session should renumber one to keep the sequence clean.
+
+## Session 94 (2026-09-10) — three owner UI fixes ✅ LIVE, PR #9 conflict resolved (twice — once here, at
+this same merge), the visual "next level" plan written (not built), two export fixes (#222 ✅/#223 mostly)
+✅ LIVE, Insights ✅ BUILT (own branch, merged to `main`)
+
+Owner-present, continuing session 93's embed-charts PR review. Three small UI fixes (Style panel floating→inline,
+the docked-chart chip restyled into the footer action row, answer-box margin, chat width `2xl→4xl→3xl` after
+owner feedback) merged to `main` directly (owner: "yes push to main"). **Visual plan** (not built):
+[session-briefs/2026-09-10-visual-next-level-plan.md](session-briefs/2026-09-10-visual-next-level-plan.md) —
+Fable 5.1's brief for a CSS-3D/scroll "Story stage", a designed default chart, a template system; its own
+addendum identifies the reference demo as a 3D municipality map + scroll story + generator, via the Vercel API.
+**Insights** (owner ask, replacing Story mode's selection; ADR [041](decisions/041-chart-insights.md), built
+on branch `claude/checkdecijfers-embed-pr-review-acbrd5`, merged to `main`): `src/chart/insights.ts`
+(deterministic outlier/jump ranking) + `src/chart/insights-phrase.ts` (AI phrasing via the digit-free
+slot-filling mechanism `answer/compose/slots.ts` proved) + `web/app/chart-insights-actions.ts` (the server
+action) + `chart.tsx` wiring (the existing `ChartStoryPanel` shell reused unchanged). Follow-ups tracked, not
+built here: [#230](open-questions.md) delete `chart-story.ts`'s now-dead selection code; [#231](open-questions.md)
+no rate limit on Insights generation yet. Full verification block green (typecheck ×2, web 1304 tests,
+backend 2211 tests solo, benchmark 14/14+6/6+0 fabricated, real build, docs 11/11, code-review LOW 0
+findings) — see [STATUS.md](STATUS.md) for the exact numbers. **This push put PR #9 (embed-charts) into a
+real conflict TWICE** — once on the first push (docs/open-questions.md only, resolved same session), and
+again on this second push (this file, lessons-learned.md, open-questions.md, and chart.tsx — resolved in
+this same merge, including renumbering #224/#225 to #230/#231 to avoid colliding with Embed's own
+pre-existing #224-229 range).
 
 ## WP218 — chart styling programme (owner decisions on [#218](open-questions.md), session 90, 2026-09-09) — ✅ BUILT (all six phases, session 91, 2026-09-09, autonomous, branch `wp218-chart-styling`, PR for owner review) — owner steps pending: apply migrations 028 + 029, optionally set `BRANDFETCH_API_KEY` (RUNBOOK § WP218 go-live)
 

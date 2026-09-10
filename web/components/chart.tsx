@@ -68,12 +68,14 @@ import { t, type Lang } from '../lib/i18n/messages.ts';
 // OWN tiny-import-graph file, never web/app/actions.ts — see that file's own
 // header for why (the usage-actions.ts precedent this mirrors).
 import { forgetMyChartStyle, lookupBrand, saveMyChartStyle } from '../app/chart-style-actions.ts';
+import { generateInsights } from '../app/chart-insights-actions.ts';
 import { ensureFontLoaded } from '../lib/font-loader.ts';
 import { ChartConfigPanel, ChartConfigTrigger } from './chart-config-panel.tsx';
 import { ChartFrame } from './chart-frame.tsx';
 import { ChartDownloadMenu } from './chart-download.tsx';
 import { APP_URL, ChartEmbedButton } from './chart-embed-dialog.tsx';
-import { buildStorySteps, type StoryStep } from '../lib/chart-story.ts';
+import { buildFindings } from '../lib/chart-insights.ts';
+import type { StoryStep } from '../lib/chart-story.ts';
 import { ChartStoryPanel, ChartStoryTrigger } from './chart-story.tsx';
 import { ChartNotes, type ChartNote, type PendingPoint } from './chart-notes.tsx';
 import { ChartSmallMultiples } from './chart-small-multiples.tsx';
@@ -1524,22 +1526,49 @@ export function ChartView({
   // select on/off. `pres.language` (null = follow the app) wins when set.
   const appLang = useLang();
   const chartLang: Lang = pres.language ?? appLang;
-  // Story mode (session 92): built from the FULL spec (never the zoomed
-  // viewSpec) in the chart's language, so every step's point exists on the
-  // chart the story shows. This Hook must run unconditionally on every
-  // render — ABOVE the schemaVersion guard below, same reason as the font
-  // Effect and `chartLang` itself above it.
-  const storySteps: StoryStep[] = useMemo(
-    () => buildStorySteps(translateSpecForDisplay(spec, chartLang), chartLang),
+  // Insights (session 94, superseding Story mode's selection): built from
+  // the FULL spec (never the zoomed viewSpec) in the chart's language, so
+  // every finding's point exists on the chart the panel shows. This Hook
+  // must run unconditionally on every render — ABOVE the schemaVersion guard
+  // below, same reason as the font Effect and `chartLang` itself above it.
+  const findings = useMemo(
+    () => buildFindings(translateSpecForDisplay(spec, chartLang), chartLang),
     [spec, chartLang],
+  );
+  // The AI-phrased upgrade, keyed by finding id — null until openStory's
+  // generateInsights call resolves (or is never attempted, or fails). Reset
+  // whenever `findings` itself changes (a new spec/language means the old
+  // phrasing no longer applies to anything on screen). A finding id absent
+  // from this map simply keeps its own deterministic caption below — never
+  // an error state, never a loading placeholder that could read as "no
+  // number" (R3): the panel is always complete from the first open.
+  const [phrasedCaptions, setPhrasedCaptions] = useState<Map<string, string> | null>(null);
+  useEffect(() => {
+    setPhrasedCaptions(null);
+  }, [findings]);
+  const storySteps: StoryStep[] = useMemo(
+    () =>
+      findings.map((f) => ({
+        id: f.id,
+        kind: f.kind,
+        title: f.title,
+        caption: phrasedCaptions?.get(f.id) ?? f.caption,
+        highlight: f.seriesKey,
+        point: f.point,
+      })),
+    [findings, phrasedCaptions],
   );
   // Story mode (session 92): hoisted from next to `storyTriggerId`/
   // `storyControlsId` below — needed here, above the guard, so the
   // stranded-snapshot Effect right after it can itself run unconditionally
   // (every input — `state.form`, `smallMultiples`, `smallMultiplesAvailable`,
   // `storySteps.length` — is already available above this line).
+  // Threshold lowered from the old >= 3 (session 92: every step counted,
+  // including the non-data "overview"/"explore" filler steps) to >= 1
+  // (session 94: every Insights finding is real content — a 2-point chart
+  // with one genuine finding still deserves to show it).
   const storyAvailable =
-    state.form !== 'table' && !(smallMultiples && smallMultiplesAvailable) && storySteps.length >= 3;
+    state.form !== 'table' && !(smallMultiples && smallMultiplesAvailable) && storySteps.length >= 1;
   // Final-review fix (defensive snapshot guard): every reachable UI path
   // already closes the story before `storyAvailable` could go false while
   // still open (`selectForm`, `toggleStylePanel`, and the small-multiples
@@ -1840,6 +1869,22 @@ export function ChartView({
     setStoryIndex(0);
     setOpenPanel('story');
     trackChartStyleEvent('story_open');
+    // Insights (session 94): fired once per findings set (the null check),
+    // on open rather than eagerly on every render — cheapest-viable-
+    // mechanism (a chart nobody opens the panel for never spends a token).
+    // Deliberately the RAW spec, never translateSpecForDisplay's
+    // output: the AI phrasing is Dutch prose either way (matching the core
+    // answer pipeline's own Dutch-only convention), so an English-displayed
+    // chart's deterministic titles/captions stay English while an upgraded
+    // caption, once it lands, is Dutch — a known, accepted v1 limitation
+    // (open-questions.md) rather than a second English prompt. Finding ids
+    // are translation-invariant (built from periodCode/kind/seriesKey, never
+    // a label), so they still map back onto `findings` correctly either way.
+    if (phrasedCaptions === null && findings.length > 0) {
+      void generateInsights(spec).then((result) => {
+        if (result.ok) setPhrasedCaptions(new Map(Object.entries(result.phrased)));
+      });
+    }
   }
 
   function closeStory(): void {
