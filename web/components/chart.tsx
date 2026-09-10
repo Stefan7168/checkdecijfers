@@ -58,6 +58,7 @@ import type { ChartPresentation, MarkerMode, SeriesEndpoints } from '../lib/char
 import { useElementWidth } from '../lib/use-element-width.ts';
 import { useChartStyle } from '../lib/chart-style-context.tsx';
 import { trackChartStyleEvent } from '../lib/chart-usage-client.ts';
+import { templateById } from '../lib/chart-templates.ts';
 import {
   translateAttributionLine,
   translateMeasureTitle,
@@ -2645,6 +2646,18 @@ export function ChartView({
             if (Object.keys(patch).some((key) => key.startsWith('frame'))) {
               trackChartStyleEvent('frame_changed');
             }
+          }}
+          onApplyTemplate={(id) => {
+            // ADR 043: a template REPLACES the reader's per-chart tweaks (a
+            // look is a whole, not a layer), then applies as ordinary
+            // overrides — every honesty lock re-runs per render exactly as
+            // for a hand-picked value. The uploaded frame image is cleared
+            // like the full reset does. Owner decision E is untouched: this
+            // chart only; the account default is the only persistence.
+            dispatch({ type: 'resetPresentation' });
+            dispatch({ type: 'setPresentation', patch: templateById(id).overrides });
+            setFrameImage(null);
+            trackChartStyleEvent(`template_${id}`);
           }}
           onReset={() => {
             dispatch({ type: 'resetPresentation' });
