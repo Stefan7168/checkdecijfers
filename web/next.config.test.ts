@@ -141,10 +141,11 @@ describe('framing headers (ADR 041)', () => {
     // `Content-Security-Policy: frame-ancestors *` on the same response, and
     // per the CSP spec browsers ignore X-Frame-Options whenever
     // frame-ancestors is present — so that response was technically
-    // framable, even though /embed itself serves no real content (just the
-    // default 404 shell). `/embed/:path+` (one-or-more) requires a segment,
-    // so bare `/embed` now falls out of the embed group entirely and only
-    // the catch-all (DENY, unopposed) applies.
+    // framable, even though /embed itself never reaches real embed content
+    // (in this local run it 307-redirects to /login, the same generic
+    // handling as any other unrecognized path). `/embed/:path+` (one-or-more)
+    // requires a segment, so bare `/embed` now falls out of the embed group
+    // entirely and only the catch-all (DENY, unopposed) applies.
     //
     // Verified directly against next/dist/compiled/path-to-regexp before
     // writing this assertion: compiling the OLD source '/embed/:path*'
@@ -167,7 +168,9 @@ describe('framing headers (ADR 041)', () => {
     // helper above) — that's Next's own default, not something this config
     // opts into — while this app's actual file-based routing for
     // app/embed/[token]/page.tsx is case-sensitive, so `/EMBED/abc123` (or
-    // any other-cased variant) 404s for real but still gets the permissive
+    // any other-cased variant) can never reach that real route — it gets
+    // whatever generic handling applies to an unrecognized path (in this
+    // local run, a 307 redirect to /login) — yet still gets the permissive
     // `frame-ancestors *` header at the headers-matching layer. This is the
     // same "gets the permissive header, serves nothing real" shape as the
     // bare-/embed case above, just via case rather than path shape. Closing

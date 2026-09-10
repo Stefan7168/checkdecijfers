@@ -29,9 +29,10 @@ const nextConfig: NextConfig = {
   // next.config.test.ts for the proof that the exclusion actually holds
   // against Next's own path-to-regexp matcher, not just by inspection.
   //
-  // Two known, accepted quirks remain on paths that are never real pages —
-  // both are "gets the permissive header, but 404s anyway" shapes, not
-  // security regressions, and neither is worth closing given the cost:
+  // Two known, accepted quirks remain on paths that never reach the real
+  // embed page — both are "gets the permissive header, but no real embed
+  // content behind it" shapes, not security regressions, and neither is
+  // worth closing given the cost:
   //   1. Bare `/embed` (no token at all) is why `:path+` matters: with the
   //      earlier `:path*` (zero-or-more) it matched BOTH groups at once —
   //      confirmed live, `curl -sI /embed` returned both `X-Frame-Options:
@@ -39,16 +40,22 @@ const nextConfig: NextConfig = {
   //      X-Frame-Options whenever frame-ancestors is present, so that
   //      response was technically framable. `:path+` requires a segment, so
   //      bare `/embed` now falls out of the embed group entirely and only
-  //      the catch-all (DENY) applies.
+  //      the catch-all (DENY) applies. (In this local run bare `/embed`
+  //      307-redirects to /login, same as any other unrecognized path — not
+  //      that it particularly matters what it does, since it's the HEADERS
+  //      that this fix is about.)
   //   2. Header-source matching is case-INSENSITIVE by Next's own default
   //      (`sensitive: false` — see next.config.test.ts), while this app's
   //      real `[token]` route matching is case-SENSITIVE. So `/EMBED/<any>`
   //      (or any other-cased variant) still matches this embed group and
-  //      gets `frame-ancestors *`, even though that exact path always 404s
-  //      (no real page is ever served there). Closing this structurally
-  //      would need `experimental.caseSensitiveRoutes: true`, which has a
-  //      much broader blast radius than this one route — out of scope here.
-  //      Pinned as expected, current behavior in next.config.test.ts.
+  //      gets `frame-ancestors *`, even though the case-sensitive dynamic
+  //      route can never match it — so it never reaches the real embed page
+  //      (confirmed live: currently a 307 redirect to /login, same generic
+  //      handling as any other unrecognized path). Closing this
+  //      structurally would need `experimental.caseSensitiveRoutes: true`,
+  //      which has a much broader blast radius than this one route — out of
+  //      scope here. Pinned as expected, current behavior in
+  //      next.config.test.ts.
   async headers() {
     return [
       {
