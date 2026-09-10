@@ -15,11 +15,30 @@
 > pointer, the way this convention has always intended.
 
 **▶ SESSION 94 (2026-09-10, owner present, continuing session 93's embed-charts branch review) — PR #9
-MERGE-CONFLICT RESOLVED, THREE OWNER UI FIXES, THE "NEXT LEVEL" VISUAL PLAN DOC, TWO EXPORT FIXES
-(#222/#223), AND INSIGHTS (ADR 041) BUILT.**
-- **PR #9 (embed-charts) conflict resolved:** this session's own direct push to `main` (owner: "yes push
-  to main") put a real conflict on PR #9, isolated to `docs/open-questions.md`. Hand-merged both sides,
-  pushed `da6b328` to `origin/embed-charts`; PR mergeable again, CI green on the merge commit.
+MERGE-CONFLICT RESOLVED TWICE, THREE OWNER UI FIXES, THE "NEXT LEVEL" VISUAL PLAN DOC, TWO EXPORT FIXES
+(#222/#223), AND INSIGHTS (ADR 041) BUILT AND MERGED TO `main`.**
+- **PR #9 (embed-charts) conflict resolved — twice, both caused by this session's own pushes to `main`:**
+  (1) the UI-fixes/export-fixes push (`7cea0ad..2c2652e`) put a real conflict on PR #9, isolated to
+  `docs/open-questions.md`. Hand-merged both sides, pushed `da6b328` to `origin/embed-charts`; PR
+  mergeable again (`gate` check green on that commit, confirmed via GitHub check-runs). (2) The Insights
+  merge to `main` (`2c2652e..a724b70`) put a SECOND, larger conflict on PR #9 — this time in
+  `docs/08-build-plan.md`, `docs/lessons-learned.md`, `docs/open-questions.md` (a real numbering
+  collision: this session's own new rows #224/#225 vs. Embed's pre-existing #224-229 — renumbered this
+  session's rows to #230/#231 on the merged branch only, main's own open-questions.md is unaffected and
+  still correctly uses #224/#225 here) and `web/components/chart.tsx` (a trivial import-line merge, no
+  logic change). Resolved, merged commit `a557c69`, pushed to `origin/embed-charts`. Full web suite
+  (92 files / 1408 tests) and both typechecks verified green on the merged state. **Not independently
+  re-verified before session end: the backend suite on this exact merged commit** — a first attempt was
+  invalidated by switching branches mid-run (see lessons-learned), a clean re-run was started but not
+  finished before wrap-up; no backend files had any conflict in this merge (both sides' backend suites —
+  2211 tests here, 2229 tests on embed-charts per its own PR body — were independently green going in,
+  over disjoint files), so risk is assessed as low, but this is not the same as a confirmed re-run.
+  **`main`'s own CI on `a724b70` (run `34490244850`) confirmed GREEN** (`conclusion: "success"`, checked
+  directly). **PR #9's `gate` check on `a557c69` was still `in_progress` as of session end** (started
+  14:45:32 UTC, not yet finished ~5 min later when last checked — a larger suite than main's own, so this
+  alone isn't a bad sign) and `mergeable_state` was "unstable" (pending checks, not a conflict — the merge
+  itself resolved cleanly). The existing PR #9 watch (`send_later`, ~90 min cadence) will catch the final
+  result; verify it directly rather than assuming green.
 - **Three owner UI fixes, all live on `main`:** Style panel moved from a floating dialog to an inline
   region below the chart (own card, no portal); the "chart in panel" pill restyled to match footer
   buttons, moved into the `CardFooter` action row left of Copy; margin added below the answer box; chat

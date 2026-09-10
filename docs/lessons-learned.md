@@ -7,8 +7,9 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 on top.
 
 ## Session 94 — 2026-09-10 — owner present: Insights (AI-phrased outlier findings) replaces Story mode's
-selection; a parallel-branch ADR/open-questions numbering collision; hand-tracing the scoring math before
-writing tests caught a real bug; asking one tight question beat guessing on a genuinely ambiguous UI ask
+selection; a parallel-branch ADR/open-questions numbering collision (hit twice); hand-tracing the scoring
+math before writing tests caught a real bug; asking one tight question beat guessing on a genuinely
+ambiguous UI ask; never switch branches while a background verification is still running
 
 - **Hand-trace the algorithm's math BEFORE writing its tests — it catches bugs tests alone would only
   reveal as a confusing failure.** Tracing `chart-insights.ts`'s z-score kind-assignment by hand for a
@@ -61,6 +62,18 @@ writing tests caught a real bug; asking one tight question beat guessing on a ge
   one multiple-choice question (grounded in the real UI, not abstract) let the owner say "never mind" in
   one word rather than making me guess wrong, watch them notice, and re-explain from scratch — the more
   expensive failure mode this rule exists to avoid.
+- **Never switch git branches while a background verification command is still running against the
+  currently-checked-out tree — it can silently read a mixed/wrong state.** While resolving PR #9's second
+  merge conflict (on `embed-charts`, a branch this session doesn't own), a full backend suite was kicked
+  off in the background, and then — before it finished — `git checkout` was run back to this session's own
+  designated branch. Both operations share the SAME physical working directory (`/home/user/checkdecijfers`),
+  so the checkout swapped the files on disk out from under the still-running test process; whatever result
+  it would have produced could no longer be trusted as a valid verification of either branch's state. Caught
+  before relying on the result (by noticing the branch switch had happened mid-run, not by any tooling
+  flagging it), the run was killed and redone cleanly: checkout first, THEN start the background verification,
+  and stay put until it finishes. Lesson: a `run_in_background` command and any `git checkout`/`switch` are
+  never safe to interleave in the same repo — either wait out the background command first, or don't start
+  it until you're done changing branches.
 
 ## Session 92 — 2026-09-09 — owner present: three features shipped in one session (Story mode, the chat
 polish batch, frame styling + the floating Style panel) via Subagent-Driven Development; the whole-branch
