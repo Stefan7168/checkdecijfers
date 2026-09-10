@@ -81,6 +81,7 @@ import { ChartDownloadMenu } from './chart-download.tsx';
 import { buildFindings } from '../lib/chart-insights.ts';
 import type { StoryStep } from '../lib/chart-story.ts';
 import { ChartStoryPanel, ChartStoryTrigger } from './chart-story.tsx';
+import { ChartStoryStage } from './chart-story-stage.tsx';
 import { ChartNotes, type ChartNote, type PendingPoint } from './chart-notes.tsx';
 import { ChartSmallMultiples } from './chart-small-multiples.tsx';
 import { SourceBadge } from './source-badge.tsx';
@@ -1360,6 +1361,12 @@ export function ChartView({
     setOpenPanel((current) => (current === 'style' ? null : current));
   }, [stylePanelOwner, domId]);
   const [storyIndex, setStoryIndex] = useState(0);
+  // Task 5 (Story-stage plan): whether the full-viewport Story stage
+  // (ChartStoryStage) is open — a separate boolean from `openPanel`/
+  // `storyOpen` because the compact panel stays open (and its index shared)
+  // while the stage is up; declared here, above the schemaVersion guard,
+  // like every other Hook in this component.
+  const [stageOpen, setStageOpen] = useState(false);
   // The reader's own hidden/highlight/zoom state, taken when the story opens
   // and put back when it closes (the story drives highlight itself and needs
   // the full, unhidden, unzoomed chart so every step's point is on screen).
@@ -1394,6 +1401,7 @@ export function ChartView({
     setPendingPoint(null);
     setOpenPanel(null);
     setStoryIndex(0);
+    setStageOpen(false);
     storySnapshot.current = null;
     setFrameImage(null);
   }
@@ -1933,11 +1941,26 @@ export function ChartView({
     storySnapshot.current = null;
     if (snapshot) dispatch({ type: 'setView', view: snapshot });
     setOpenPanel(null);
+    // Task 5 (Story-stage plan): closing the compact story also closes the
+    // stage — there is no "story closed, stage still up" state.
+    setStageOpen(false);
   }
 
   function toggleStory(): void {
     if (storyOpen) closeStory();
     else openStory();
+  }
+
+  // Task 5 (Story-stage plan): the Present button (chart-story.tsx) opens
+  // this. The stage shares `storyIndex`/`onStoryIndexChange` with the
+  // compact panel — presenting never resets or forks the step.
+  function openStage(): void {
+    setStageOpen(true);
+    trackChartStyleEvent('stage_open');
+  }
+
+  function closeStage(): void {
+    setStageOpen(false);
   }
 
   function onStoryIndexChange(next: number): void {
@@ -2661,6 +2684,25 @@ export function ChartView({
           triggerId={storyTriggerId}
           idPrefix={domId}
           lang={chartLang}
+          onPresent={!inStage ? openStage : undefined}
+        />
+      ) : null}
+      {/* Task 5 (Story-stage plan): the full Story stage — a portal, mounted
+        * next to the compact panel and NEVER inside chartContainerRef (like
+        * the panel above, its own text must never enter an svg export).
+        * Never offered in stage mode itself: a stage never opens a stage. */}
+      {storyAvailable && !inStage ? (
+        <ChartStoryStage
+          open={stageOpen}
+          spec={spec}
+          steps={storySteps}
+          index={storyIndex}
+          onIndexChange={onStoryIndexChange}
+          onClose={closeStage}
+          triggerId={`${domId}-story-present`}
+          overrides={state.presentation}
+          lang={chartLang}
+          onAutoplay={() => trackChartStyleEvent('stage_autoplay')}
         />
       ) : null}
       {/* Review fix (controller decision): the ONE reason every locked

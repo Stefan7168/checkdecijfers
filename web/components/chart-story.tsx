@@ -63,9 +63,13 @@ export interface ChartStoryPanelProps {
   triggerId: string;
   idPrefix: string;
   lang?: Lang;
+  /** Task 5 (Story-stage plan): opens the full Story stage. Undefined
+   * renders no Present button at all — chart.tsx passes it only when this
+   * chart itself isn't already the stage (a stage never opens a stage). */
+  onPresent?(): void;
 }
 
-export function ChartStoryPanel({ steps, index, onIndexChange, open, onClose, triggerId, idPrefix, lang = 'nl' }: ChartStoryPanelProps): ReactNode {
+export function ChartStoryPanel({ steps, index, onIndexChange, open, onClose, triggerId, idPrefix, lang = 'nl', onPresent }: ChartStoryPanelProps): ReactNode {
   const regionRef = useRef<HTMLElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<(HTMLElement | null)[]>([]);
@@ -263,6 +267,11 @@ export function ChartStoryPanel({ steps, index, onIndexChange, open, onClose, tr
         <Button type="button" variant="outline" size="sm" disabled={index >= last} onClick={() => go(index + 1)}>
           {t(lang, 'chart.story.next')}
         </Button>
+        {onPresent ? (
+          <Button type="button" variant="outline" size="sm" id={`${idPrefix}-story-present`} onClick={onPresent}>
+            {t(lang, 'chart.stage.present')}
+          </Button>
+        ) : null}
         <ol aria-label={t(lang, 'chart.story.stepsLabel')} className="ml-auto flex items-center gap-1">
           {steps.map((step, i) => (
             <li key={step.id}>

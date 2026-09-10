@@ -3489,6 +3489,154 @@ describe('Story mode (session 92): a code-built story under the chart', () => {
   });
 });
 
+// The dialog is a portal directly into document.body (outside the RTL
+// `container`), so proving its digits are honest needs a scan of the body
+// itself — but Recharts appends its OWN off-screen text-measurement helper
+// (`#recharts_measurement_span`, aria-hidden, position: -20000px) as a
+// singleton DIRECT CHILD of document.body too (recharts/lib/util/DOMUtils.js
+// `measureTextWithDOM`), mutates its textContent on every chart render, and
+// never removes it — so it is never part of any React tree RTL's cleanup()
+// can unmount, and it can carry a stale digit-string left over from whatever
+// chart last measured text in this file's jsdom. It is not rendered content
+// (aria-hidden, off-screen) — excluding it from the scan doesn't weaken what
+// "every digit a reader can see" actually protects.
+function scanBodyForUnboundDigits(specStrings: string[]): void {
+  const measurementSpan = document.getElementById('recharts_measurement_span');
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+    acceptNode: (node) => (measurementSpan?.contains(node) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT),
+  });
+  const tokens: string[] = [];
+  for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+    tokens.push(...((node.textContent ?? '').match(/\d[\d.,]*/g) ?? []));
+  }
+  expect(tokens.length).toBeGreaterThan(0);
+  for (const tok of tokens) {
+    expect(
+      specStrings.some((str) => str.includes(tok)),
+      `numeric token "${tok}" in the rendered DOM (document.body) has no source in the spec's own strings`,
+    ).toBe(true);
+  }
+}
+
+// Story-stage plan, Task 5: the Present button (chart-story.tsx) wired into
+// ChartView opens the full Story stage (ChartStoryStage, chart-story-stage.tsx)
+// as a portal into document.body — sharing the exact same index/onIndexChange
+// as the compact Insights panel (ADR 044), so the two stay in lockstep.
+describe('Story-stage plan Task 5 — Present button opens the Story stage', () => {
+  // jsdom has no scrollIntoView; ChartStoryStage's own `go()` calls it on
+  // every index change once the stage is open (chart-story-stage.tsx).
+  beforeEach(() => {
+    Element.prototype.scrollIntoView = vi.fn();
+  });
+
+  it('Presenteren opens a dialog in document.body carrying the same step titles as the compact panel', () => {
+    render(<ChartView spec={threePointSpec()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
+    const region = screen.getByRole('region', { name: 'Inzichten bij de grafiek' });
+    const compactTitles = within(region)
+      .getAllByRole('article')
+      .map((article) => article.querySelector('p')?.textContent);
+    expect(screen.queryByRole('dialog')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Presenteren' }));
+    const dialog = screen.getByRole('dialog');
+    expect(dialog.parentElement).toBe(document.body);
+    // getAllByText, not getByText: two findings can legitimately share a
+    // title (e.g. two "Sterke stijging" steps) — the assertion is presence,
+    // not uniqueness.
+    for (const title of compactTitles) {
+      expect(within(dialog).getAllByText(title!).length).toBeGreaterThan(0);
+    }
+  });
+
+  it('ArrowRight inside the dialog moves the stage and the compact panel to the same step', () => {
+    render(<ChartView spec={threePointSpec()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
+    const region = screen.getByRole('region', { name: 'Inzichten bij de grafiek' });
+    fireEvent.click(screen.getByRole('button', { name: 'Presenteren' }));
+    const dialog = screen.getByRole('dialog');
+    fireEvent.keyDown(dialog, { key: 'ArrowRight' });
+    expect(dialog.querySelector('[data-stage-step="1"]')).toHaveAttribute('aria-current', 'step');
+    expect(dialog.querySelector('[data-stage-step="0"]')).not.toHaveAttribute('aria-current');
+    expect(within(region).getAllByRole('article')[1]).toHaveAttribute('aria-current', 'step');
+  });
+
+  it('Escape closes the dialog and returns focus to the Present button', () => {
+    render(<ChartView spec={threePointSpec()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
+    const present = screen.getByRole('button', { name: 'Presenteren' });
+    fireEvent.click(present);
+    const dialog = screen.getByRole('dialog');
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(document.activeElement).toBe(present);
+  });
+
+  // Facts from the task brief: closeStory() must also close the stage —
+  // there is no "compact story closed, stage still up" state. Scoped to the
+  // compact panel's own region: both `chart.story.close` and
+  // `chart.stage.close` translate to the same Dutch word ("Sluiten"), so an
+  // unscoped query would be ambiguous while the stage is open.
+  it('closing the compact story (Sluiten in the panel) also closes the stage', () => {
+    render(<ChartView spec={threePointSpec()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
+    const region = screen.getByRole('region', { name: 'Inzichten bij de grafiek' });
+    fireEvent.click(screen.getByRole('button', { name: 'Presenteren' }));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    fireEvent.click(within(region).getByRole('button', { name: 'Sluiten' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('a spec swap on the same instance closes the stage', () => {
+    const { rerender } = render(<ChartView spec={threePointSpec()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Presenteren' }));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    rerender(<ChartView spec={twoSeriesFourYearLineSpec()} />);
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('counts stage_open once, alongside story_open', () => {
+    const events: ChartStyleEvent[] = [];
+    setChartUsageSink((e) => {
+      events.push(e);
+    });
+    try {
+      render(<ChartView spec={threePointSpec()} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Presenteren' }));
+      expect(events).toEqual(['story_open', 'stage_open']);
+    } finally {
+      setChartUsageSink(null);
+    }
+  });
+
+  it('with the stage open the whole card (document.body) still shows only spec digits, in Dutch and in English', () => {
+    const s = threePointSpec({ provisionalNote: 'Voorlopige cijfers (2024) zijn gemarkeerd met *.' });
+    const strings = [
+      s.title,
+      s.unit,
+      s.attributionLine,
+      s.attribution.tableId,
+      s.attribution.syncedAt,
+      s.provisionalNote ?? '',
+      ...s.series.flatMap((se) => se.points.flatMap((p) => [p.formattedValue ?? '', p.periodLabel])),
+    ].filter(Boolean);
+    const nl = render(<ChartView spec={s} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Presenteren' }));
+    scanBodyForUnboundDigits(strings);
+    nl.unmount();
+    const en = render(
+      <LangProvider lang="en">
+        <ChartView spec={s} />
+      </LangProvider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Insights' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Present' }));
+    scanBodyForUnboundDigits(strings);
+  });
+});
+
 // Task 5 (design §C2): the Frame tab wired into chart.tsx — frame_changed
 // counted alongside option_changed, the contrast guard re-checking every
 // per-chart series colour override against the new frame backdrops, and the

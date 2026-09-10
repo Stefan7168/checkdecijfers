@@ -36,6 +36,7 @@ function Harness(props: Partial<ChartStoryPanelProps> & { onIndexChange?: (i: nu
         triggerId={`${idPrefix}-story-trigger`}
         idPrefix={idPrefix}
         lang={props.lang}
+        onPresent={props.onPresent}
       />
     </>
   );
@@ -143,6 +144,33 @@ describe('ChartStoryTrigger + ChartStoryPanel', () => {
       HTMLElement.prototype.scrollIntoView = originalScrollIntoView;
       vi.useRealTimers();
     }
+  });
+
+  // Task 5 (Story-stage plan): the Present button that opens the full
+  // Story stage. It is the panel's own concern only to offer the button and
+  // forward the click — chart.tsx owns what "present" actually does.
+  it('offers no Present button when onPresent is not given', () => {
+    render(<Harness />);
+    fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
+    expect(screen.queryByRole('button', { name: 'Presenteren' })).toBeNull();
+  });
+
+  it('with onPresent given, renders a Present button between Volgende and the dots, calling onPresent and carrying id "<idPrefix>-story-present"', () => {
+    const onPresent = vi.fn();
+    render(<Harness onPresent={onPresent} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
+    const region = screen.getByRole('region', { name: 'Inzichten bij de grafiek' });
+    const present = screen.getByRole('button', { name: 'Presenteren' });
+    expect(present).toHaveAttribute('id', 'c1-story-present');
+    // Order: Vorige, Volgende, Presenteren, then the dotted step list.
+    const controls = within(region).getAllByRole('button');
+    const volgende = screen.getByRole('button', { name: 'Volgende' });
+    const dots = within(within(region).getByRole('list', { name: 'Stappen' })).getAllByRole('button');
+    expect(controls.indexOf(volgende)).toBeLessThan(controls.indexOf(present));
+    expect(controls.indexOf(present)).toBeLessThan(controls.indexOf(dots[0]!));
+    expect(onPresent).not.toHaveBeenCalled();
+    fireEvent.click(present);
+    expect(onPresent).toHaveBeenCalledTimes(1);
   });
 
   it('shows no digit that is not one of the steps\' own strings (no "step 2 of 3" anywhere)', () => {
