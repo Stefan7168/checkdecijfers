@@ -349,6 +349,19 @@ describe('attributedSvgMarkup — paint survives leaving the page (#197)', () =>
     );
     expect(() => attributedSvgMarkup(svg, 'attributie')).not.toThrow();
   });
+
+  it('drops any Recharts tooltip cursor from the export — a touch device\'s active crosshair must never bake into a PNG as a fake annotation line', () => {
+    const svg = sampleSvg();
+    const cursor = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    cursor.setAttribute('class', 'recharts-tooltip-cursor');
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('stroke', 'var(--muted-foreground)');
+    cursor.appendChild(line);
+    svg.appendChild(cursor);
+    const markup = attributedSvgMarkup(svg, 'Bron: CBS', () => null);
+    expect(markup).not.toContain('recharts-tooltip-cursor');
+    expect(svg.querySelector('.recharts-tooltip-cursor')).not.toBeNull(); // the live chart is untouched
+  });
 });
 
 describe('withLightThemeResolution (#222: exports must stay readable in dark mode)', () => {

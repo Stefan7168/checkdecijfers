@@ -239,6 +239,10 @@ function buildAttributedClone(
   // line up element for element. #222: always resolved against light theme —
   // see withLightThemeResolution.
   withLightThemeResolution(() => inlineComputedPaint(svg, clone, resolvePaint));
+  // ADR 042: never bake the tooltip's hover/tap cursor into a file — on a
+  // touch device the last tapped point's dashed crosshair can still be
+  // active at download time and would read as an annotation line.
+  for (const cursor of clone.querySelectorAll('.recharts-tooltip-cursor')) cursor.remove();
   clone.setAttribute('xmlns', SVG_NS);
   clone.setAttribute('width', String(width));
   clone.setAttribute('height', String(totalHeight));

@@ -30,6 +30,7 @@ const chartStyleActions = vi.hoisted(() => ({
 vi.mock('../app/chart-style-actions.ts', () => chartStyleActions);
 import {
   annotationMarkers,
+  baselineAxisLine,
   buildRegionRows,
   buildRows,
   ChartTooltip,
@@ -854,6 +855,40 @@ describe('ADR 042 — the designed default renders its literals', () => {
     const globalsCssPath = join(currentDir, '../app/globals.css');
     const css = readFileSync(globalsCssPath, 'utf8');
     expect(css).toMatch(/circle\[data-marker="hidden"\]:focus-visible\s*\{\s*opacity:\s*1;?\s*\}/);
+  });
+  it('a hairline baseline in the grid colour replaces the x-axis line by default; Aslijnen on draws real axis lines; grid Geen removes the baseline too', () => {
+    const { container } = render(<ChartView spec={threePointSpec()} />);
+    const xLine = () => container.querySelector('.recharts-xAxis .recharts-cartesian-axis-line');
+    const yLine = () => container.querySelector('.recharts-yAxis .recharts-cartesian-axis-line');
+    expect(xLine()?.getAttribute('stroke')).toBe('var(--border)');
+    expect(yLine()).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Aslijnen' }));
+    expect(xLine()?.getAttribute('stroke')).toBe('var(--muted-foreground)');
+    expect(yLine()?.getAttribute('stroke')).toBe('var(--muted-foreground)');
+    fireEvent.click(screen.getByRole('button', { name: 'Aslijnen' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Geen' }));
+    expect(xLine()).toBeNull();
+  });
+  it('baselineAxisLine: full axis line when shown; a grid-coloured hairline when hidden but a grid exists; nothing when neither', () => {
+    expect(baselineAxisLine({ axisLines: 'shown', grid: 'none' })).toBe(true);
+    expect(baselineAxisLine({ axisLines: 'hidden', grid: 'horizontal' })).toEqual({ stroke: 'var(--border)' });
+    expect(baselineAxisLine({ axisLines: 'hidden', grid: 'both' })).toEqual({ stroke: 'var(--border)' });
+    expect(baselineAxisLine({ axisLines: 'hidden', grid: 'none' })).toBe(false);
+  });
+  it('the bar and horizontal-bar forms get the same hairline baseline on their category axis', () => {
+    const cmp = spec({
+      kind: 'bar',
+      series: [
+        { label: 'Amsterdam', regionCode: 'GM0363', points: [point({ resultId: 'a', periodCode: '2023JJ00', periodLabel: '2023', value: 1, formattedValue: '1,0' })] },
+        { label: 'Rotterdam', regionCode: 'GM0599', points: [point({ resultId: 'r', periodCode: '2023JJ00', periodLabel: '2023', value: 2, formattedValue: '2,0' })] },
+      ],
+    });
+    const { container } = render(<ChartView spec={cmp} />);
+    expect(container.querySelector('.recharts-xAxis .recharts-cartesian-axis-line')?.getAttribute('stroke')).toBe('var(--border)');
+    fireEvent.click(screen.getByRole('tab', { name: 'Liggend' }));
+    expect(container.querySelector('.recharts-yAxis .recharts-cartesian-axis-line')?.getAttribute('stroke')).toBe('var(--border)');
+    expect(container.querySelector('.recharts-xAxis .recharts-cartesian-axis-line')).toBeNull();
   });
 });
 
@@ -1821,18 +1856,14 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
     expect(hollow?.getAttribute('opacity')).not.toBe('0');
   });
 
-  it('grid Geen removes the grid; Aslijnen toggles axis lines (hidden by default, ADR 042); Schuin tilts the x labels and reserves height', () => {
+  it('grid Geen removes the grid; Aslijnen toggles the axis lines; Schuin tilts the x labels and reserves height', () => {
     const { container } = render(<ChartView spec={threePointSpec()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    // ADR 042: axis lines are hidden by default, so the y-axis line doesn't
-    // exist to measure yet — turn it on first (this ALSO covers "Aslijnen
-    // reveals axis lines", the mirror of the off-again assertion below).
+    // ADR 042: axis lines are off by default — switch them on to measure the plot bottom off the y-axis line.
     fireEvent.click(screen.getByRole('button', { name: 'Aslijnen' }));
     const flatBottom = Number(
       container.querySelector('.recharts-yAxis .recharts-cartesian-axis-line')?.getAttribute('y2'),
     );
-
-    fireEvent.click(screen.getByRole('radio', { name: 'Schuin' }));
     // Recharts' own default axis <Text> renders nothing in jsdom (see this
     // file's #197 top-of-file comment), so the tilt itself can't be read off
     // a tick's own transform here — xAxisHeight's pixel math is unit-pinned
@@ -1840,6 +1871,7 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
     // reserved height actually reaching the render: tilting reserves MORE
     // x-axis height, so the plot area — and the y-axis line drawn across it
     // — shrinks.
+    fireEvent.click(screen.getByRole('radio', { name: 'Schuin' }));
     const tiltedBottom = Number(
       container.querySelector('.recharts-yAxis .recharts-cartesian-axis-line')?.getAttribute('y2'),
     );

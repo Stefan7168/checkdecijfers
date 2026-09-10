@@ -54,7 +54,7 @@ import {
   xAxisHeight,
   xLabelOverhang,
 } from '../lib/chart-presentation.ts';
-import type { MarkerMode, SeriesEndpoints } from '../lib/chart-presentation.ts';
+import type { ChartPresentation, MarkerMode, SeriesEndpoints } from '../lib/chart-presentation.ts';
 import { useChartStyle } from '../lib/chart-style-context.tsx';
 import { trackChartStyleEvent } from '../lib/chart-usage-client.ts';
 import {
@@ -169,6 +169,17 @@ export const GRID_COLOR = 'var(--border)';
 // start at zero.
 export function yAxisDomain(kind: ChartSpec['kind']): [0 | 'auto', 'auto'] {
   return kind === 'bar' ? [0, 'auto'] : ['auto', 'auto'];
+}
+
+/** ADR 042: the category (period/region) axis line. With Aslijnen on it is
+ * the full axis line in AXIS_COLOR (Recharts' `true`); with Aslijnen off a
+ * hairline BASELINE in the grid colour is still drawn as long as any grid
+ * is shown — a quiet chart keeps its ground; grid none + axis lines off is
+ * a bare plot, as a reader would expect. The number axis follows
+ * `axisLines` alone. Recharts accepts SVG props for `axisLine`. */
+export function baselineAxisLine(pres: Pick<ChartPresentation, 'axisLines' | 'grid'>): boolean | { stroke: string } {
+  if (pres.axisLines === 'shown') return true;
+  return pres.grid === 'none' ? false : { stroke: GRID_COLOR };
 }
 
 /** Keeps a Vanaf/Tot period-range selection always non-empty: moving one
@@ -2189,7 +2200,7 @@ export function ChartView({
                 dataKey="periodLabel"
                 stroke={AXIS_COLOR}
                 tick={{ fill: AXIS_COLOR }}
-                axisLine={pres.axisLines === 'shown'}
+                axisLine={baselineAxisLine(pres)}
                 tickLine={pres.axisLines === 'shown'}
                 angle={pres.xLabels === 'tilted' ? -45 : 0}
                 textAnchor={pres.xLabels === 'tilted' ? 'end' : 'middle'}
@@ -2210,7 +2221,12 @@ export function ChartView({
                 axisLine={pres.axisLines === 'shown'}
                 tickLine={pres.axisLines === 'shown'}
               />
-              <Tooltip trigger={tooltipTrigger} content={<ChartTooltip seriesMeta={seriesMeta} />} />
+              {/* ADR 042: a muted crosshair; the export drops it (chart-download.tsx). */}
+              <Tooltip
+                trigger={tooltipTrigger}
+                content={<ChartTooltip seriesMeta={seriesMeta} />}
+                cursor={{ stroke: 'var(--muted-foreground)', strokeDasharray: '3 3', strokeOpacity: 0.6 }}
+              />
               {/* #170(4): curated event markers — drawn before the series so
                 * they sit visually behind the data (paint order = JSX order
                 * in Recharts' own layering). No inline Recharts label: the
@@ -2292,7 +2308,7 @@ export function ChartView({
                 dataKey="periodLabel"
                 stroke={AXIS_COLOR}
                 tick={{ fill: AXIS_COLOR }}
-                axisLine={pres.axisLines === 'shown'}
+                axisLine={baselineAxisLine(pres)}
                 tickLine={pres.axisLines === 'shown'}
                 angle={pres.xLabels === 'tilted' ? -45 : 0}
                 textAnchor={pres.xLabels === 'tilted' ? 'end' : 'middle'}
@@ -2308,7 +2324,11 @@ export function ChartView({
                 axisLine={pres.axisLines === 'shown'}
                 tickLine={pres.axisLines === 'shown'}
               />
-              <Tooltip trigger={tooltipTrigger} content={<ChartTooltip seriesMeta={seriesMeta} />} />
+              <Tooltip
+                trigger={tooltipTrigger}
+                content={<ChartTooltip seriesMeta={seriesMeta} />}
+                cursor={{ stroke: 'var(--muted-foreground)', strokeDasharray: '3 3', strokeOpacity: 0.6 }}
+              />
               {markers.map((m) => (
                 <ReferenceLine key={m.periodLabel} x={m.periodLabel} stroke="var(--muted-foreground)" strokeDasharray="3 3" />
               ))}
@@ -2401,10 +2421,14 @@ export function ChartView({
                 interval={0}
                 tick={RegionAxisTick}
                 stroke={AXIS_COLOR}
-                axisLine={pres.axisLines === 'shown'}
+                axisLine={baselineAxisLine(pres)}
                 tickLine={pres.axisLines === 'shown'}
               />
-              <Tooltip trigger={tooltipTrigger} content={<RegionTooltip periodLabel={regionPeriodLabel} />} />
+              <Tooltip
+                trigger={tooltipTrigger}
+                content={<RegionTooltip periodLabel={regionPeriodLabel} />}
+                cursor={{ fill: 'var(--muted)', fillOpacity: 0.6 }}
+              />
               <Bar
                 dataKey="value"
                 isAnimationActive={false}
@@ -2454,7 +2478,7 @@ export function ChartView({
                 dataKey="periodLabel"
                 stroke={AXIS_COLOR}
                 tick={{ fill: AXIS_COLOR }}
-                axisLine={pres.axisLines === 'shown'}
+                axisLine={baselineAxisLine(pres)}
                 tickLine={pres.axisLines === 'shown'}
                 angle={pres.xLabels === 'tilted' ? -45 : 0}
                 textAnchor={pres.xLabels === 'tilted' ? 'end' : 'middle'}
@@ -2468,7 +2492,11 @@ export function ChartView({
                 axisLine={pres.axisLines === 'shown'}
                 tickLine={pres.axisLines === 'shown'}
               />
-              <Tooltip trigger={tooltipTrigger} content={<ChartTooltip seriesMeta={seriesMeta} />} />
+              <Tooltip
+                trigger={tooltipTrigger}
+                content={<ChartTooltip seriesMeta={seriesMeta} />}
+                cursor={{ fill: 'var(--muted)', fillOpacity: 0.6 }}
+              />
               {seriesMeta
                 .filter((s) => !state.hiddenKeys.has(s.key))
                 .map((s) => {
