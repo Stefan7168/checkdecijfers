@@ -14,6 +14,7 @@ import { ChartStyleProvider } from '../lib/chart-style-context.tsx';
 import { LangProvider } from '../lib/i18n/lang-provider.tsx';
 import { StylePanelOwnerProvider } from '../lib/style-panel-owner.tsx';
 import { attributedSvgMarkup } from './chart-download.tsx';
+import type { StoryStep } from '../lib/chart-story.ts';
 
 // WP218 phase 2 (owner C): chart.tsx imports the account-default Server
 // Actions from THIS tiny file, never web/app/actions.ts (see chart-style-
@@ -3682,5 +3683,48 @@ describe('ChartView — StylePanelOwnerProvider (one Style panel per page)', () 
     expect(triggerA).toHaveAttribute('aria-expanded', 'true');
     expect(triggerB).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getAllByRole('region', { name: 'Opmaak van de grafiek' })).toHaveLength(2);
+  });
+});
+
+describe('ChartView stage mode (ADR 044) — chrome-less, driven by a step', () => {
+  const s = threePointSpec();
+  it('renders the chart, title, unit and attribution but no tabs, no triggers, no selects, no notes, no download', () => {
+    const { container } = render(<ChartView spec={s} stage={{ step: null, overrides: {} }} />);
+    expect(container.querySelector('svg.recharts-surface, .recharts-responsive-container')).not.toBeNull();
+    expect(container.querySelector('[role="heading"][aria-level="3"]')?.textContent).toBe(s.title);
+    expect(container.textContent).toContain(s.attributionLine);
+    expect(container.querySelector('[role="tablist"]')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Opmaak' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Inzichten' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Download/ })).toBeNull();
+    expect(container.querySelector('select')).toBeNull();
+    expect(container.querySelector('circle[data-point][role="button"]')).toBeNull();
+  });
+  it('the step drives the highlight and the dashed ring, and the stage wears the given overrides', () => {
+    const step = { id: 'x', kind: 'recordHigh', title: 'Piek', caption: 'Piek in 2024', highlight: 's0', point: { seriesKey: 's0', periodCode: '2024JJ00' } } as StoryStep;
+    const { container, rerender } = render(<ChartView spec={s} stage={{ step, overrides: { lineWidth: 'thick' } }} />);
+    expect(container.querySelector('[data-story-marker]')).not.toBeNull();
+    expect(container.querySelector('.recharts-line-curve')?.getAttribute('stroke-width')).toBe('3');
+    rerender(<ChartView spec={s} stage={{ step: null, overrides: { lineWidth: 'thick' } }} />);
+    expect(container.querySelector('[data-story-marker]')).toBeNull();
+  });
+  it('a multi-series stage shows legend chips, never legend buttons, and the whole card stays digit-free apart from spec strings', () => {
+    const multi = twoSeriesSpec();
+    const { container } = render(<ChartView spec={multi} stage={{ step: null, overrides: {} }} />);
+    expect(container.querySelector('[role="group"] button')).toBeNull();
+    expect(container.textContent).toContain(multi.series[0]!.label);
+    scanForUnboundDigits(
+      container,
+      [
+        multi.title,
+        multi.unit,
+        multi.attributionLine,
+        multi.attribution.tableId,
+        multi.attribution.syncedAt,
+        ...Object.keys(multi.dimLabels),
+        ...Object.values(multi.dimLabels),
+        ...multi.series.flatMap((se) => se.points.flatMap((p) => [p.formattedValue ?? '', p.periodLabel])),
+      ].filter(Boolean),
+    );
   });
 });

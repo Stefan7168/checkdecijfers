@@ -54,7 +54,7 @@ import {
   xAxisHeight,
   xLabelOverhang,
 } from '../lib/chart-presentation.ts';
-import type { ChartPresentation, MarkerMode, SeriesEndpoints } from '../lib/chart-presentation.ts';
+import type { ChartPresentation, MarkerMode, PresentationOverrides, SeriesEndpoints } from '../lib/chart-presentation.ts';
 import { useElementWidth } from '../lib/use-element-width.ts';
 import { useChartStyle } from '../lib/chart-style-context.tsx';
 import { trackChartStyleEvent } from '../lib/chart-usage-client.ts';
@@ -739,6 +739,31 @@ function SeriesLegend({
   );
 }
 
+/** Task 3 (Story-stage plan, ADR 044): stage mode's legend — the same
+ * swatch/label pairing as `SeriesLegend` above, but plain `<span>` chips with
+ * no `aria-pressed`, no handlers, no highlight button: the stage offers no
+ * hide/highlight controls, so nothing here is interactive. */
+function StageLegend({ seriesMeta, lang }: { seriesMeta: SeriesMeta[]; lang: Lang }) {
+  return (
+    <div role="list" aria-label={t(lang, 'chart.seriesGroupLabel')} className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
+      {seriesMeta.map((s) => (
+        <span
+          key={s.key}
+          role="listitem"
+          className="inline-flex items-center gap-1.5 rounded-full border border-border px-2 py-0.5 text-xs"
+        >
+          <span
+            aria-hidden="true"
+            style={{ backgroundColor: s.color }}
+            className="inline-block h-2.5 w-2.5 rounded-full"
+          />
+          {s.label}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 // ADR 042: value labels are 12 px with a card-coloured halo (paint-order
 // stroke), so they stay legible where they cross a line or bar; the export
 // inliner resolves var(--card) against the light card (#222). Shared by all
@@ -1170,9 +1195,23 @@ function labelWidthPx(text: string): number {
   return Math.ceil(text.length * 6.5) + 12;
 }
 
+/** Task 3 (Story-stage plan, ADR 044): drives a second, chrome-less
+ * `ChartView` instance from a given story step, for the full-screen stage
+ * overlay Task 4 renders. `step` is the active step (null = overview,
+ * nothing highlighted); `overrides` are the chat chart's current per-chart
+ * presentation overrides (template included), so the stage wears the same
+ * look. */
+export interface ChartStageMode {
+  /** The active step: drives the highlight (`step.highlight`) and the dashed ring (`step.point`); null = overview (nothing highlighted). */
+  step: StoryStep | null;
+  /** The chat chart's current per-chart overrides, so the stage wears the same look (template included). */
+  overrides: PresentationOverrides;
+}
+
 export function ChartView({
   spec,
   frameless = false,
+  stage,
 }: {
   spec: ChartSpec;
   /** Session 87 (purely presentational): drop the component's own card frame
@@ -1180,9 +1219,21 @@ export function ChartView({
    * card is the one thing the shadcn direction says not to do. Inline in the
    * conversation and on Ontdek the frame stays. */
   frameless?: boolean;
+  /** Task 3 (ADR 044): when present, this instance renders in stage mode —
+   * chrome-less (no tablist/triggers/selects/toggles/panels/notes/legend
+   * buttons/download), driven purely by `stage.step`, wearing
+   * `stage.overrides` instead of the reader's own per-chart tweaks. See
+   * `ChartStageMode` above. */
+  stage?: ChartStageMode;
 }) {
+  // Stage mode (Task 3, ADR 044): a single `inStage` boolean gates every
+  // piece of chat-chart chrome below (one `!inStage`/`inStage` check per
+  // site, no per-gate comment) — the stage renders the same spec through
+  // the same component, minus every control a full-screen, step-driven view
+  // has no use for. See `ChartStageMode` above for what stage mode is.
+  const inStage = stage !== undefined;
   const chartContainerRef = useRef<HTMLDivElement>(null);
-  const frameClass = frameless ? '' : 'mt-3 rounded-xl border border-border bg-card p-4 text-card-foreground';
+  const frameClass = frameless || inStage ? '' : 'mt-3 rounded-xl border border-border bg-card p-4 text-card-foreground';
   const rawId = useId();
   const domId = rawId.replace(/[^a-zA-Z0-9_-]/g, '');
   const coarsePointer = useCoarsePointer();
@@ -1445,7 +1496,7 @@ export function ChartView({
   const base = withAccountDefault(accountStyle);
   const resolved = resolvePresentation(
     { kind: spec.kind, form: activeForm, seriesCount: spec.series.length, hasProvisional },
-    state.presentation,
+    inStage ? stage.overrides : state.presentation,
     base,
   );
   const pres = resolved.values;
@@ -1483,6 +1534,17 @@ export function ChartView({
       ensureFontLoaded({ family, source: 'google', stack: fontStack(family)! });
     }
   }, [pres.fontFamily]);
+  // Stage mode (Task 3, ADR 044): the stage's own view state (highlight,
+  // never hidden/zoomed) follows the given step directly — no reducer
+  // action from any control, since stage mode offers none. Must run
+  // unconditionally, same reason as the font Effect above it: ABOVE the
+  // schemaVersion guard below.
+  useEffect(() => {
+    if (stage) {
+      dispatch({ type: 'setView', view: { hiddenKeys: new Set(), highlightedKey: stage.step?.highlight ?? null, periodRange: null } });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stage?.step?.id]);
   // WP218 phase 4 (#219, design §4): the chart's own language. `useLang()`
   // is called UNCONDITIONALLY (its own statement, same reason as the Hook
   // above it) — writing `pres.language ?? useLang()` directly would only
@@ -1823,6 +1885,10 @@ export function ChartView({
   // Effect, which must run unconditionally).
   const storyOpen = openPanel === 'story' && storyAvailable;
   const activeStoryStep: StoryStep | null = storyOpen ? (storySteps[storyIndex] ?? null) : null;
+  // Stage mode (Task 3, ADR 044): the stage has no story panel/index of its
+  // own — the given step drives the ring directly, in place of the compact
+  // Insights story's own active step.
+  const ringStep: StoryStep | null = inStage ? stage.step : activeStoryStep;
   // Review fix (controller decision): while the story is open, every reader
   // view control that could contradict its active caption — the legend's
   // hide/highlight buttons, the Vanaf/Tot zoom selects, the small-multiples
@@ -1928,6 +1994,7 @@ export function ChartView({
         * not a child of it — the tablist's own `mt-3` moved up onto this
         * wrapper so the row keeps its original top spacing regardless of
         * whether the trigger is offered. */}
+      {!inStage ? (
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <div
           role="tablist"
@@ -2053,7 +2120,8 @@ export function ChartView({
           />
         ) : null}
       </div>
-      {zoomAvailable ? (
+      ) : null}
+      {!inStage && zoomAvailable ? (
         <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
           <label htmlFor={`${domId}-from`}>{t(chartLang, 'chart.from')}</label>
           <select
@@ -2303,10 +2371,10 @@ export function ChartView({
                         pres.valueLabels === 'shown' ? endLabelByKey.get(s.key) : undefined,
                         dimmed ? 0.25 : 1,
                         s.label,
-                        (p) => setPendingPoint(p),
+                        inStage ? undefined : (p) => setPendingPoint(p),
                         { ...dotGeometry(pres.lineWidth), markers: pres.markers, ends: endpointsByKey.get(s.key) ?? null },
                         chartLang,
-                        activeStoryStep?.point?.seriesKey === s.key ? activeStoryStep.point.periodCode : null,
+                        ringStep?.point?.seriesKey === s.key ? ringStep.point.periodCode : null,
                       )}
                       isAnimationActive={false}
                     />
@@ -2395,10 +2463,10 @@ export function ChartView({
                         pres.valueLabels === 'shown' ? endLabelByKey.get(s.key) : undefined,
                         dimmed ? 0.25 : 1,
                         s.label,
-                        (p) => setPendingPoint(p),
+                        inStage ? undefined : (p) => setPendingPoint(p),
                         { ...dotGeometry(pres.lineWidth), markers: pres.markers, ends: endpointsByKey.get(s.key) ?? null },
                         chartLang,
-                        activeStoryStep?.point?.seriesKey === s.key ? activeStoryStep.point.periodCode : null,
+                        ringStep?.point?.seriesKey === s.key ? ringStep.point.periodCode : null,
                       )}
                       activeDot={false}
                       isAnimationActive={false}
@@ -2473,7 +2541,7 @@ export function ChartView({
               <Bar
                 dataKey="value"
                 isAnimationActive={false}
-                shape={RegionBar(regionPeriodLabel, hbarLabelsShown, (p) => setPendingPoint(p), chartLang)}
+                shape={RegionBar(regionPeriodLabel, hbarLabelsShown, inStage ? undefined : (p) => setPendingPoint(p), chartLang)}
               />
             </BarChart>
           ) : (
@@ -2563,9 +2631,9 @@ export function ChartView({
                         barLabelsByKey.get(s.key) ?? new Map<string, PointLabel>(),
                         dimmed ? 0.25 : 1,
                         s.label,
-                        (p) => setPendingPoint(p),
+                        inStage ? undefined : (p) => setPendingPoint(p),
                         chartLang,
-                        activeStoryStep?.point?.seriesKey === s.key ? activeStoryStep.point.periodCode : null,
+                        ringStep?.point?.seriesKey === s.key ? ringStep.point.periodCode : null,
                       )}
                     />
                   );
@@ -2580,7 +2648,7 @@ export function ChartView({
       {/* Story mode (session 92): the same slot as the Opmaak region — chart
         * first, the story under it — and, like ChartNotes, OUTSIDE
         * chartContainerRef so no caption can ever enter an export. */}
-      {storyAvailable ? (
+      {!inStage && storyAvailable ? (
         <ChartStoryPanel
           steps={storySteps}
           index={storyIndex}
@@ -2601,7 +2669,7 @@ export function ChartView({
         * span itself only needs to exist while the story is open too — a
         * stray `sr-only` node with a stale id otherwise sits in the DOM
         * permanently, described by nothing. */}
-      {storyOpen ? (
+      {!inStage && storyOpen ? (
         <span id={storyLockId} className="sr-only">
           {t(chartLang, 'chart.story.controlsLocked')}
         </span>
@@ -2620,7 +2688,7 @@ export function ChartView({
       {/* Final-review fix: table form gets no Style panel at all (as before
         * the Frame-tab feature) — a framed table would need its own export
         * path, so the mount stays gated on `state.form !== 'table'`. */}
-      {state.form !== 'table' ? (
+      {!inStage && state.form !== 'table' ? (
         <ChartConfigPanel
           key={chartEpoch}
           resolved={resolved}
@@ -2752,29 +2820,33 @@ export function ChartView({
         </p>
       ) : null}
       {state.form !== 'table' && seriesMeta.length > 1 ? (
-        <>
-          <SeriesLegend
-            seriesMeta={seriesMeta}
-            hiddenKeys={state.hiddenKeys}
-            highlightedKey={state.highlightedKey}
-            onToggle={(key) => dispatch({ type: 'toggleSeries', key })}
-            onHighlight={(key) => dispatch({ type: 'setHighlight', key })}
-            lang={chartLang}
-            disabled={storyOpen}
-            disabledReasonId={storyLockId}
-          />
-          {state.hiddenKeys.size > 0 ? (
-            <p className="mt-1 text-xs text-muted-foreground">
-              {t(chartLang, 'chart.hiddenSeriesDisclosure', { n: state.hiddenKeys.size, m: seriesMeta.length })}
-            </p>
-          ) : null}
-        </>
+        inStage ? (
+          <StageLegend seriesMeta={seriesMeta} lang={chartLang} />
+        ) : (
+          <>
+            <SeriesLegend
+              seriesMeta={seriesMeta}
+              hiddenKeys={state.hiddenKeys}
+              highlightedKey={state.highlightedKey}
+              onToggle={(key) => dispatch({ type: 'toggleSeries', key })}
+              onHighlight={(key) => dispatch({ type: 'setHighlight', key })}
+              lang={chartLang}
+              disabled={storyOpen}
+              disabledReasonId={storyLockId}
+            />
+            {state.hiddenKeys.size > 0 ? (
+              <p className="mt-1 text-xs text-muted-foreground">
+                {t(chartLang, 'chart.hiddenSeriesDisclosure', { n: state.hiddenKeys.size, m: seriesMeta.length })}
+              </p>
+            ) : null}
+          </>
+        )
       ) : null}
       {/* Task 4: shown whenever a period-range zoom is active, independent of
         * the series-legend block above (which only renders for >1 series) —
         * a single-series chart can be zoomed too. */}
       {zoomDisclosure ? <p className="mt-1 text-xs text-muted-foreground">{zoomDisclosure.trim()}</p> : null}
-      {state.form !== 'table' && smallMultiplesAvailable ? (
+      {!inStage && state.form !== 'table' && smallMultiplesAvailable ? (
         <div className="mt-2 flex flex-wrap items-center gap-3">
           <button
             type="button"
@@ -2843,7 +2915,7 @@ export function ChartView({
         * construction, with no separate exemption to maintain. Only offered
         * for chart forms (state.form !== 'table'): notes anchor to a clicked
         * chart point, not a table cell. */}
-      {state.form !== 'table' ? (
+      {!inStage && state.form !== 'table' ? (
         <ChartNotes
           notes={notes}
           pendingPoint={pendingPoint}
@@ -2887,7 +2959,7 @@ export function ChartView({
           * still true, so the old `!smallMultiples` guard hid Download on
           * an ordinary bar/area chart with no way back except returning to
           * Lijn and toggling small multiples off. */}
-        {state.form !== 'table' && !(smallMultiples && smallMultiplesAvailable) ? (
+        {!inStage && state.form !== 'table' && !(smallMultiples && smallMultiplesAvailable) ? (
           <ChartDownloadMenu
             containerRef={chartContainerRef}
             attributionText={`${displayAttributionLine} checkdecijfers.nl${viewDisclosure}`}
