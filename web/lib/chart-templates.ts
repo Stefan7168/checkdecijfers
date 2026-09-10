@@ -20,7 +20,8 @@ export interface ChartTemplate {
   id: ChartTemplateId;
   nameKey: MessageKey;
   descriptionKey: MessageKey;
-  /** Partial<ChartPresentation>, sanitizeOverrides-safe (pinned); `{}` for standard. */
+  /** Partial<ChartPresentation>, sanitizeOverrides-safe (pinned); for standard the
+   * explicit stock look (see STOCK_LOOK below), never `{}`. */
   overrides: PresentationOverrides;
 }
 

@@ -745,8 +745,8 @@ export function ChartConfigPanel({
   const copy = buildPanelCopy(lang);
   // ADR 043: which of the six named looks (if any) the resolved values
   // currently match — drives the "Huidig" badge and each card's
-  // aria-pressed. Recomputed every render straight from resolved.values, no
-  // local copy of the pick.
+  // aria-checked (the gallery is a radiogroup). Recomputed every render
+  // straight from resolved.values, no local copy of the pick.
   const currentTemplate = matchTemplate(resolved.values);
   const [activeTab, setActiveTab] = useState<TabKey>('chart');
   // WP218 phase 2: shared by both account-row buttons — a save/forget round

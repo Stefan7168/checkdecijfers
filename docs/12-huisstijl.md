@@ -72,7 +72,15 @@ measured, never CSS `aspect-ratio`); a 300 ms fade/rise of the chart container o
 honoured; Recharts' own animation stays off); a `text-base font-semibold` title over one muted unit + dims
 line; chip-style legend entries; a faint solid crosshair (never dashed — the dashed vocabulary belongs to
 event markers and the story ring). The session-87 "basic Recharts" look survives as `CLASSIC_PRESENTATION` /
-`RECHARTS_PALETTE` for the Classic template. Everything below this paragraph is the history of that decision.
+`RECHARTS_PALETTE` for the Classic template. **Templates v1 (session 95, ADR
+[043](decisions/043-chart-templates.md), same PR chain):** the Style panel's first tab is "Sjablonen/Templates"
+— a radiogroup of six cards with derived, digit-free SVG thumbnails: Basis/Standard (the designed default,
+applied explicitly), Klassiek/Classic (the session-87 look incl. its palette), Redactie/Newsroom (3 px line,
+no markers but the honesty ring, 16:9), Presentatie/Presentation (dark slate gradient + inset card),
+Sociaal/Social (ocean gradient + inset card, 4:5), Minimaal/Minimal (no grid, no axes); plus a Brand card for
+signed-in visitors that points to the Colours tab. A template is a bundle of the panel's own options — never
+a spec change — and the panel still opens on Grafiek. Everything below this paragraph is the history of the
+session-87 decision.
 
 **Superseded (session 87 → session 95):** Owner decision (session 87): **use Recharts' basic/default styling.** Grid, axes and tick text use Recharts'
 own defaults; series colours are the palette from Recharts' documentation examples
@@ -98,7 +106,7 @@ Staaf · Liggend · Tabel** (line, area, bar, horizontal bar, table).
 ## Answer card and chart panel layout (session 91, owner-chosen from design canvases)
 
 - **Answers** in the chat render as a shadcn `Card` (`web/components/chat.tsx`): the answer text and its honesty lines in the body; a footer (`border-t`, `bg-muted/40`) with the full source sentence + source badge on the left and the actions on the right — like/dislike FIRST (outline buttons on `bg-background` with `shadow-sm`, lucide thumbs + visible labels), then proof, then (when docked) the "Chart/Card in panel" reference trigger (outline/secondary toggle via `aria-pressed`, mirroring the thumbs' toggle pattern), then citation / CSV as `ghost` buttons with icons, then the cost. Refusals and clarifications keep their plain rendering. **Superseded 2026-09-10 (owner UI feedback, session 94):** the docked reference trigger used to be a `float-right` pill at the top of the card body — it moved into this footer row.
-- **The chart's Opmaak panel** is an inline region (`role="region"`) rendered in its own card directly below the chart — identically at every viewport width — with a fourth tab Kader/Frame — background (None / Colour / Gradient / Own image), padding (None / Small / Medium / Large), corners (Square / Rounded / Very rounded), shadow (None / Soft / Strong), inset (None / Small / Large), aspect ratio (Auto / 16:9 / 4:5 / 1:1 / 1.91:1). The chart-language select sits in the panel header, the "why no pie chart" note + `Standaard` in a footer on the Grafiek tab only. **Superseded 2026-09-10 (owner UI feedback, session 94):** the panel used to float beside the chart as a portaled non-modal dialog (bottom sheet on phones below `lg`) — see ADR 039's dated addendum for the as-built detail.
+- **The chart's Opmaak panel** is an inline region (`role="region"`) rendered in its own card directly below the chart — identically at every viewport width — with (since session 95, ADR 043) a first tab Sjablonen/Templates ahead of Grafiek/Kleuren/Lettertype, and a fourth tab Kader/Frame — background (None / Colour / Gradient / Own image), padding (None / Small / Medium / Large), corners (Square / Rounded / Very rounded), shadow (None / Soft / Strong), inset (None / Small / Large), aspect ratio (Auto / 16:9 / 4:5 / 1:1 / 1.91:1). The chart-language select sits in the panel header, the "why no pie chart" note + `Standaard` in a footer on the Grafiek tab only. **Superseded 2026-09-10 (owner UI feedback, session 94):** the panel used to float beside the chart as a portaled non-modal dialog (bottom sheet on phones below `lg`) — see ADR 039's dated addendum for the as-built detail.
 - **Story mode (session 92):** the "Verhaal / Story mode" trigger is the product's ONE gradient — a 2 px ring (`linear-gradient(135deg, #7c3aed, #ec4899, #f59e0b)`) around a ghost button with the lucide `WandSparkles` icon, a row-mate of the Weergave tabs after Opmaak. The story panel opens in the Opmaak slot under the chart (one open at a time) as bordered step cards in a short scroll area with Previous / Next and a dotted step list. No other control gets a gradient.
 
 ## House rules (current)
