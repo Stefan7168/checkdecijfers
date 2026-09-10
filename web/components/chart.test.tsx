@@ -3711,7 +3711,10 @@ describe('ChartView stage mode (ADR 044) — chrome-less, driven by a step', () 
   it('a multi-series stage shows legend chips, never legend buttons, and the whole card stays digit-free apart from spec strings', () => {
     const multi = twoSeriesSpec();
     const { container } = render(<ChartView spec={multi} stage={{ step: null, overrides: {} }} />);
-    expect(container.querySelector('[role="group"] button')).toBeNull();
+    const list = container.querySelector('[role="list"]')!;
+    expect(list).not.toBeNull();
+    expect(list.querySelectorAll('[role="listitem"]').length).toBe(multi.series.length);
+    expect(list.querySelector('button')).toBeNull();
     expect(container.textContent).toContain(multi.series[0]!.label);
     scanForUnboundDigits(
       container,
@@ -3726,5 +3729,44 @@ describe('ChartView stage mode (ADR 044) — chrome-less, driven by a step', () 
         ...multi.series.flatMap((se) => se.points.flatMap((p) => [p.formattedValue ?? '', p.periodLabel])),
       ].filter(Boolean),
     );
+  });
+  it('the step drives the highlight: the other series is dimmed while a step highlights one series, nothing is dimmed on a null step', () => {
+    // Create a fixture with multiple points and multiple series for line chart rendering
+    const multi = spec({
+      series: [
+        {
+          label: 'Nederland',
+          regionCode: 'NL01',
+          points: [
+            point({ resultId: 's0p1', periodCode: '2022JJ00', periodLabel: '2022', value: 1, formattedValue: '1,0' }),
+            point({ resultId: 's0p2', periodCode: '2023JJ00', periodLabel: '2023', value: 2, formattedValue: '2,0' }),
+          ],
+        },
+        {
+          label: 'Utrecht',
+          regionCode: 'GM0344',
+          points: [
+            point({ resultId: 's1p1', periodCode: '2022JJ00', periodLabel: '2022', value: 1.5, formattedValue: '1,5' }),
+            point({ resultId: 's1p2', periodCode: '2023JJ00', periodLabel: '2023', value: 2.5, formattedValue: '2,5' }),
+          ],
+        },
+      ],
+    });
+    const step = { id: 'high-s1', kind: 'recordHigh', title: 'Piek', caption: 'Piek', highlight: 's1', point: null } as StoryStep;
+    const { container, rerender } = render(<ChartView spec={multi} stage={{ step, overrides: {} }} />);
+    // The step Effect dispatches setView with highlightedKey, which dims non-highlighted series via strokeOpacity=0.25
+    const paths = container.querySelectorAll('.recharts-line-curve');
+    expect(paths.length).toBeGreaterThan(0); // at least one line rendered
+    // Check for SVG attribute stroke-opacity (Recharts might set it as an attribute, not a style)
+    const dimmedPaths = Array.from(paths).filter(p =>
+      p.getAttribute('stroke-opacity') === '0.25' || (p as any).style.strokeOpacity === '0.25'
+    );
+    expect(dimmedPaths.length).toBeGreaterThan(0); // at least one series is dimmed
+    rerender(<ChartView spec={multi} stage={{ step: null, overrides: {} }} />);
+    const pathsAfter = container.querySelectorAll('.recharts-line-curve');
+    const dimmedPathsAfter = Array.from(pathsAfter).filter(p =>
+      p.getAttribute('stroke-opacity') === '0.25' || (p as any).style.strokeOpacity === '0.25'
+    );
+    expect(dimmedPathsAfter.length).toBe(0); // nothing is dimmed
   });
 });

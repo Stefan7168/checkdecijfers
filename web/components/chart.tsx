@@ -1538,13 +1538,16 @@ export function ChartView({
   // never hidden/zoomed) follows the given step directly — no reducer
   // action from any control, since stage mode offers none. Must run
   // unconditionally, same reason as the font Effect above it: ABOVE the
-  // schemaVersion guard below.
+  // schemaVersion guard below. Re-runs on spec swap because step ids
+  // repeat across specs (e.g. 'overview', 'high-s0'), so the step Effect
+  // must re-fire to re-apply the highlight when a mounted stage instance
+  // receives a new spec (whose `reset` clears the highlight).
   useEffect(() => {
     if (stage) {
       dispatch({ type: 'setView', view: { hiddenKeys: new Set(), highlightedKey: stage.step?.highlight ?? null, periodRange: null } });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stage?.step?.id]);
+  }, [stage?.step?.id, specIdentity]);
   // WP218 phase 4 (#219, design §4): the chart's own language. `useLang()`
   // is called UNCONDITIONALLY (its own statement, same reason as the Hook
   // above it) — writing `pres.language ?? useLang()` directly would only
