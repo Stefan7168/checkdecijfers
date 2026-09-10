@@ -47,9 +47,11 @@ MERGE-CONFLICT RESOLVED, THREE OWNER UI FIXES, THE "NEXT LEVEL" VISUAL PLAN DOC,
   the old count included non-data overview/explore filler). Left deliberately open, tracked:
   [#224](open-questions.md) `chart-story.ts`'s old selection code is now dead (kept for now, not deleted
   in this change); [#225](open-questions.md) no server-side rate/spend cap on Insights generation yet.
-- **Verification (this session, own branch `claude/checkdecijfers-embed-pr-review-acbrd5`):** typecheck
-  ×2 clean, web suite 88 files / 1304 tests green, backend suite run solo — **see next update for the
-  result**, benchmark/build/docs/code-review still to run before push.
+- **Verification (this session, own branch `claude/checkdecijfers-embed-pr-review-acbrd5`), full block,
+  all green:** typecheck ×2 clean; web suite 88 files / 1304 tests; backend suite (solo) 143 files / 2211
+  tests; hermetic benchmark 14/14 answerable + 6/6 refusal/clarify + 0 fabricated, GATE PASS; real
+  `next build` clean; `test:docs` 11/11; `/code-review` LOW pass — 0 findings. Merged to `main` same
+  session (owner present, confirmed via AskUserQuestion: push straight to `main` once green, per #118).
 
 **▶ SESSION 92 (2026-09-09, owner present all day) — THREE FEATURES BUILT, REVIEWED, VERIFIED AND LIVE
 ON `main` THE SAME DAY, EACH VIA SUBAGENT-DRIVEN DEVELOPMENT: STORY MODE, THE CHAT POLISH BATCH,

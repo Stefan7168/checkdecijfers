@@ -651,8 +651,9 @@ branch `claude/checkdecijfers-embed-pr-review-acbrd5`, not yet merged to `main`)
 slot-filling mechanism `answer/compose/slots.ts` proved) + `web/app/chart-insights-actions.ts` (the server
 action) + `chart.tsx` wiring (the existing `ChartStoryPanel` shell reused unchanged). Follow-ups tracked, not
 built here: [#224](open-questions.md) delete `chart-story.ts`'s now-dead selection code; [#225](open-questions.md)
-no rate limit on Insights generation yet. Full verification block still running as of this entry — see
-[STATUS.md](STATUS.md) for the measured result once it completes.
+no rate limit on Insights generation yet. Full verification block green (typecheck ×2, web 1304 tests,
+backend 2211 tests solo, benchmark 14/14+6/6+0 fabricated, real build, docs 11/11, code-review LOW 0
+findings) — see [STATUS.md](STATUS.md) for the exact numbers. Merged to `main` same session.
 
 ## WP218 — chart styling programme (owner decisions on [#218](open-questions.md), session 90, 2026-09-09) — ✅ BUILT (all six phases, session 91, 2026-09-09, autonomous, branch `wp218-chart-styling`, PR for owner review) — owner steps pending: apply migrations 028 + 029, optionally set `BRANDFETCH_API_KEY` (RUNBOOK § WP218 go-live)
 
