@@ -14,6 +14,42 @@
 > should migrate everything below the session-94 block into status-archive.md and leave only a lean
 > pointer, the way this convention has always intended.
 
+**▶ NEXT SESSION STARTS HERE (written 2026-09-11, session 95, autonomous overnight).** Read
+[session-briefs/2026-09-11-session-96-kickoff.md](session-briefs/2026-09-11-session-96-kickoff.md).
+Current state: **visual upgrade phase 1 — the designed default chart look (ADR
+[042](decisions/042-designed-default-chart.md)) — is BUILT on branch `visual-designed-default`, PR #10
+open for the owner's review (not merged, not live).** Phase 2 (templates v1) has a written plan
+([superpowers/plans/2026-09-11-chart-templates-v1.md](superpowers/plans/2026-09-11-chart-templates-v1.md));
+phase 3 (the Story stage) follows. PR #9 (embed) is still open too — the two PRs touch the same tracker
+docs and `chart.tsx`; whichever merges second needs the session-94 conflict playbook. Owner steps unchanged:
+migrations 028 + 029 (`npm run db:migrate`), optional `BRANDFETCH_API_KEY`.
+
+**▶ SESSION 95 (2026-09-11, AUTONOMOUS overnight — the owner's kickoff pre-resolved the plan's open
+decisions) — VISUAL UPGRADE PHASE 1 BUILT: THE DESIGNED DEFAULT CHART LOOK (ADR 042), PR #10 OPEN.**
+- **Built via SDD** (plan [superpowers/plans/2026-09-11-designed-default-chart.md](superpowers/plans/2026-09-11-designed-default-chart.md),
+  5 tasks, a reviewer per task, a whole-branch review + one fix wave): `DEFAULT_PALETTE` (Okabe–Ito-anchored;
+  every colour ≥ 3:1 on both cards, first four colour-blind-safe under simulation — both test-pinned),
+  `STOCK_PRESENTATION` = ends markers / horizontal grid / no axis lines / gradient area fill, a hairline
+  baseline, haloed 12 px value labels, height follows width (256–360 px, measured — never CSS
+  `aspect-ratio`), a reduced-motion-aware entrance, header hierarchy, chip legend, a faint SOLID crosshair
+  (the plan's dashed one was overruled in review: identical to the event marker), an export guard that
+  strips the tooltip cursor AND Recharts' active dot (a pre-existing R11-in-export gap), two presets
+  retuned, the panel's "Eerste en laatste" option + area-fill toggle, `scrollbar-gutter: stable` on the
+  dock/app scroll containers, a `:focus-visible` reveal for hidden markers. The session-87 literals survive
+  as `CLASSIC_PRESENTATION`/`RECHARTS_PALETTE`. Zero backend/schema/prompt/bundle change.
+- **Verification (measured, on the final code commit `e498e0d`):** root + web typecheck clean; backend
+  142 files / 2200 tests green (solo run, docs excluded) + `test:docs` 11/11; hermetic benchmark 14/14
+  answerable, 6/6 refusal/clarify, 0 fabricated; web 89 files / 1338 tests green; real `next build`
+  clean; `/code-review` LOW 0 findings. Real browser (local dev server against the live DB, the homepage's
+  five charts): light + dark at 1280 px, phone at 375 px — hydration, the measured-height path, hollow
+  provisional markers, halo and baseline confirmed. **CI on PR #10: pending at the time of writing —
+  verify with `gh pr checks 10`.**
+- **Docs:** ADR 042 (new) + ADR 014 note; 12-huisstijl (Charts rewritten, history kept); the session-87
+  redesign spec (superseded note); 08-build-plan ("Visual upgrade programme" section + WP218 note);
+  03-mvp-scope; 04-architecture row; open-questions #232–#234; RUNBOOK go-live note; lessons (session 95);
+  three before/after PNGs in `session-briefs/assets/` for the PR; the phase-2 plan.
+- **Known debt carried:** this file is still the multi-session dump session 94 flagged; not fixed here.
+
 **▶ SESSION 94 (2026-09-10, owner present, continuing session 93's embed-charts branch review) — PR #9
 MERGE-CONFLICT RESOLVED FOUR TIMES, THREE OWNER UI FIXES, THE "NEXT LEVEL" VISUAL PLAN DOC, TWO EXPORT
 FIXES (#222/#223), AND INSIGHTS (ADR 041) BUILT AND MERGED TO `main`.**
