@@ -13,6 +13,7 @@ import { useState, type ReactNode } from 'react';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { FONT_OPTIONS, resolvePresentation, type PresentationContext } from '../lib/chart-presentation.ts';
+import { templateById } from '../lib/chart-templates.ts';
 import { ChartConfigPanel, ChartConfigTrigger, type ChartConfigPanelProps } from './chart-config-panel.tsx';
 
 afterEach(() => {
@@ -61,7 +62,7 @@ const colorMeta = [
 
 /** Opens the panel and switches to the given tab — shared by every
  * Kleuren/Lettertype test below. */
-function openTab(tab: 'Kleuren' | 'Lettertype'): void {
+function openTab(tab: 'Kleuren' | 'Lettertype' | 'Sjablonen'): void {
   fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
   fireEvent.click(screen.getByRole('tab', { name: tab }));
 }
@@ -84,6 +85,7 @@ describe('ChartConfigPanel — Grafiek tab', () => {
     expect(trigger).toHaveAttribute('aria-expanded', 'true');
     const region = screen.getByRole('region', { name: 'Opmaak van de grafiek' });
     expect(within(region).getAllByRole('tab').map((t) => t.textContent)).toEqual([
+      'Sjablonen',
       'Grafiek',
       'Kleuren',
       'Lettertype',
@@ -1867,5 +1869,63 @@ describe('ChartConfigPanel — inline region', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
     const dialog = screen.getByRole('region', { name: 'Opmaak van de grafiek' });
     expect(document.activeElement).toBe(dialog);
+  });
+});
+
+describe('ChartConfigPanel — Sjablonen (templates) tab (ADR 043)', () => {
+  it('is the first tab, the panel still opens on Grafiek, and the gallery lists the six templates in order with their descriptions', () => {
+    render(<Harness resolved={resolvePresentation(lineCtx, {})} seriesMeta={meta} onChange={vi.fn()} onReset={vi.fn()} idPrefix="t" onApplyTemplate={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    const tabs = screen.getAllByRole('tab').map((t) => t.textContent);
+    expect(tabs[0]).toBe('Sjablonen');
+    expect(screen.getByRole('tab', { name: 'Grafiek' })).toHaveAttribute('aria-selected', 'true');
+    fireEvent.click(screen.getByRole('tab', { name: 'Sjablonen' }));
+    const cards = screen.getAllByRole('button', { name: /^(Basis|Klassiek|Redactie|Presentatie|Sociaal|Minimaal)$/ });
+    expect(cards.map((c) => c.getAttribute('aria-label'))).toEqual(['Basis', 'Klassiek', 'Redactie', 'Presentatie', 'Sociaal', 'Minimaal']);
+    expect(screen.getByText('Publicatieklaar: stevige lijn, geen franje, liggend formaat.')).toBeTruthy();
+  });
+  it('marks the current template with aria-pressed and a "Huidig" badge: standard when pristine, newsroom when the chart wears it, none when tweaked', () => {
+    const { unmount } = render(<Harness resolved={resolvePresentation(lineCtx, {})} seriesMeta={meta} onChange={vi.fn()} onReset={vi.fn()} idPrefix="t" onApplyTemplate={vi.fn()} />);
+    openTab('Sjablonen');
+    expect(screen.getByRole('button', { name: 'Basis' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getAllByText('Huidig').length).toBe(1);
+    unmount();
+    render(<Harness resolved={resolvePresentation(lineCtx, templateById('newsroom').overrides)} seriesMeta={meta} onChange={vi.fn()} onReset={vi.fn()} idPrefix="t" onApplyTemplate={vi.fn()} />);
+    openTab('Sjablonen');
+    expect(screen.getByRole('button', { name: 'Redactie' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Basis' })).toHaveAttribute('aria-pressed', 'false');
+  });
+  it('clicking a card emits onApplyTemplate with its id and nothing else', () => {
+    const onApplyTemplate = vi.fn();
+    const onChange = vi.fn();
+    render(<Harness resolved={resolvePresentation(lineCtx, {})} seriesMeta={meta} onChange={onChange} onReset={vi.fn()} idPrefix="t" onApplyTemplate={onApplyTemplate} />);
+    openTab('Sjablonen');
+    fireEvent.click(screen.getByRole('button', { name: 'Sociaal' }));
+    expect(onApplyTemplate).toHaveBeenCalledWith('social');
+    expect(onChange).not.toHaveBeenCalled();
+  });
+  it('the Brand card appears only for a signed-in visitor (brand prop present) and switches to the Kleuren tab', () => {
+    const { unmount } = render(<Harness resolved={resolvePresentation(lineCtx, {})} seriesMeta={meta} onChange={vi.fn()} onReset={vi.fn()} idPrefix="t" onApplyTemplate={vi.fn()} />);
+    openTab('Sjablonen');
+    expect(screen.queryByText('Merk')).toBeNull();
+    unmount();
+    render(<Harness resolved={resolvePresentation(lineCtx, {})} seriesMeta={meta} onChange={vi.fn()} onReset={vi.fn()} idPrefix="t" onApplyTemplate={vi.fn()} brand={{ lookup: vi.fn() as never }} />);
+    openTab('Sjablonen');
+    expect(screen.getByText('Merk')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Naar Kleuren' }));
+    expect(screen.getByRole('tab', { name: 'Kleuren' })).toHaveAttribute('aria-selected', 'true');
+  });
+  it('English: Templates / Standard … Minimal / Current / Go to Colours', () => {
+    render(<Harness lang="en" resolved={resolvePresentation(lineCtx, {})} seriesMeta={meta} onChange={vi.fn()} onReset={vi.fn()} idPrefix="t" onApplyTemplate={vi.fn()} brand={{ lookup: vi.fn() as never }} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Style' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Templates' }));
+    expect(screen.getByRole('button', { name: 'Standard' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByText('Current')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Go to Colours' })).toBeTruthy();
+  });
+  it('the whole tab is digit-free (no ratio numbers leak into text)', () => {
+    const { container } = render(<Harness resolved={resolvePresentation(lineCtx, {})} seriesMeta={meta} onChange={vi.fn()} onReset={vi.fn()} idPrefix="t" onApplyTemplate={vi.fn()} brand={{ lookup: vi.fn() as never }} />);
+    openTab('Sjablonen');
+    expect(container.textContent ?? '').not.toMatch(/\d/);
   });
 });
