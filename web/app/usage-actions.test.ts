@@ -30,6 +30,12 @@ vi.mock('../backend/chart/user-styles.ts', () => ({
     'story_open',
     'story_step',
     'frame_changed',
+    'template_standard',
+    'template_classic',
+    'template_newsroom',
+    'template_presentation',
+    'template_social',
+    'template_minimal',
   ],
 }));
 
@@ -61,6 +67,12 @@ describe('countChartStyleEvent', () => {
     'story_open',
     'story_step',
     'frame_changed',
+    'template_standard',
+    'template_classic',
+    'template_newsroom',
+    'template_presentation',
+    'template_social',
+    'template_minimal',
   ] as const)(
     'records a valid event (%s) via the store, using the real db and a fresh date',
     async (event) => {
