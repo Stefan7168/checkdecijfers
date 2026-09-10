@@ -67,6 +67,18 @@ literal pins, a stale `.next` cache, and fix rounds without SendMessage
   `Record<Union, …>`'s union without updating the object literal** threw a TypeError on click that vitest
   still reported green (the throw happened inside an event handler); the implementer caught it by reading
   the output, not the exit code — pristine output is a finding for a reason.
+- **Phase 3 (the Story stage) lessons, same night.** (1) **Never overlap a verification chain's `next
+  build` with an implementer's RED step** — the build's TypeScript pass saw a test file importing a module
+  that did not exist yet and failed; the phase-2 build had to be re-run solo on its exact head. A chain that
+  includes a typecheck or a build needs the tree frozen for its whole duration, not just for the backend
+  suite. (2) **A test that cannot fail if the code under test is deleted is not a test** — the stage's
+  step Effect (the ONLY step reaction for comparison charts) shipped with a single-series fixture that could
+  never show dimming; the reviewer's "delete the Effect, everything still passes" argument is the right
+  bar. Ask it of every Effect test. (3) **An assertion on the ABSENCE of something is vacuous when the
+  whole container is gone** — "no legend buttons" passed because stage mode removed the legend group
+  entirely; assert the presence of the replacement first, then the absence inside it. (4) **A brief that
+  says "four call sites" when the code has three is a brief bug the implementer should report, not
+  absorb** — this one did, and the reviewer confirmed the fourth site never existed.
 
 ## Session 94 — 2026-09-10 — owner present: Insights (AI-phrased outlier findings) replaces Story mode's
 selection; a parallel-branch ADR/open-questions numbering collision (hit twice); hand-tracing the scoring
