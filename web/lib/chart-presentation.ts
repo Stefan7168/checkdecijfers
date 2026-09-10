@@ -11,11 +11,12 @@ import type { Lang } from './i18n/messages.ts';
 
 export type LineWidth = 'thin' | 'normal' | 'thick' | 'extraThick';
 export const LINE_WIDTH_PX: Record<LineWidth, number> = { thin: 1, normal: 2, thick: 3, extraThick: 4 };
-export type MarkerMode = 'all' | 'provisionalOnly';
+export type MarkerMode = 'all' | 'ends' | 'provisionalOnly';
 export type GridMode = 'both' | 'horizontal' | 'none';
 export type XLabelMode = 'flat' | 'tilted';
 export type OnOff = 'shown' | 'hidden';
 export type BaselineMode = 'auto' | 'zero';
+export type AreaFill = 'gradient' | 'flat';
 
 export interface ChartPresentation {
   lineWidth: LineWidth;
@@ -25,6 +26,10 @@ export interface ChartPresentation {
   axisLines: OnOff;
   valueLabels: OnOff;
   zeroBaseline: BaselineMode;
+  /** ADR 042: area form only — a vertical gradient fill (colour at the top
+   * fading to almost nothing at the baseline) or the flat fill. Honest
+   * either way because the area form already forces a zero baseline. */
+  areaFill: AreaFill;
   /** Series index → lowercase '#rrggbb'. Absent index = palette colour. */
   seriesColors: Record<number, string>;
   /** A family name from FONT_OPTIONS (or, later, a brand font); null = the page font. */
@@ -66,16 +71,27 @@ export type FrameBackground =
 export type PresentationOverrides = Partial<ChartPresentation>;
 export type PresentationKey = keyof ChartPresentation;
 
-// Series palette — session 87 visual redesign (owner decision, docs/
-// superpowers/specs/2026-09-07-chat-chart-visual-redesign-design.md): "use the
-// basic Recharts style" = the colours Recharts' own documentation examples
-// use. Moved here from chart.tsx (re-exported there) so the pure resolver can
-// own the default colour without importing React.
+// Series palettes.
+// `RECHARTS_PALETTE` — the session-87 "basic Recharts" look (the colours
+// Recharts' own documentation examples use). Since ADR 042 (2026-09-11) it
+// is no longer the default: it stays for the Classic look and for the
+// continuity pins.
 export const RECHARTS_PALETTE: readonly string[] = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#0088fe', '#00c49f', '#ffbb28', '#ff8042'];
+// `DEFAULT_PALETTE` — the designed default (ADR 042). The first four are
+// Okabe–Ito's blue / vermillion / bluish green / reddish purple (the
+// standard colour-blind-safe set); the other four are hand-tuned to the
+// same luminance band. Every entry is ≥ 3.0:1 against BOTH card colours
+// (no judgeColor warning on either theme — pinned) and the first four stay
+// ≥ 0.07 apart in OKLab under simulated protanopia / deuteranopia /
+// tritanopia (pinned). One palette for both themes: no theme hook, and the
+// export (which resolves against the light theme, #222) needs no special
+// case. Cycles for series nine and up; the Tabel view remains the honest
+// surface for many series.
+export const DEFAULT_PALETTE: readonly string[] = ['#0072b2', '#d55e00', '#009e73', '#cc79a7', '#b8860b', '#3a8fc4', '#6a5acd', '#6f8d2a'];
 
-/** Today's literals (chart.tsx before WP218) — the stock look is pinned by a
- * deep-equal test so the session-87 decision cannot drift without an edit. */
-export const STOCK_PRESENTATION: ChartPresentation = {
+/** The session-87 literals (chart.tsx before WP218) — the "Classic" look,
+ * kept verbatim for the Classic template and pinned by a test. */
+export const CLASSIC_PRESENTATION: ChartPresentation = {
   lineWidth: 'normal',
   markers: 'all',
   grid: 'both',
@@ -83,6 +99,33 @@ export const STOCK_PRESENTATION: ChartPresentation = {
   axisLines: 'shown',
   valueLabels: 'shown',
   zeroBaseline: 'auto',
+  areaFill: 'flat',
+  seriesColors: {},
+  fontFamily: null,
+  language: null,
+  frameBackground: 'none',
+  framePadding: 'none',
+  frameCorners: 'square',
+  frameShadow: 'none',
+  frameInset: 'none',
+  frameAspect: 'auto',
+};
+
+/** The product's stock look = the designed default (ADR 042, 2026-09-11):
+ * markers on the first and last point only, a quiet horizontal grid, no
+ * axis lines (a hairline baseline is drawn by chart.tsx whenever a grid
+ * is shown), a gradient area fill. Deep-equal pinned by a test so the
+ * decision cannot drift without an edit. Colour comes from DEFAULT_PALETTE
+ * via `seriesColor` (an empty `seriesColors` map = the palette). */
+export const STOCK_PRESENTATION: ChartPresentation = {
+  lineWidth: 'normal',
+  markers: 'ends',
+  grid: 'horizontal',
+  xLabels: 'flat',
+  axisLines: 'hidden',
+  valueLabels: 'shown',
+  zeroBaseline: 'auto',
+  areaFill: 'gradient',
   seriesColors: {},
   fontFamily: null,
   language: null,
@@ -108,12 +151,13 @@ const frameBackgroundSchema = z.union([
 ]);
 const overridesSchema = z.object({
   lineWidth: z.enum(['thin', 'normal', 'thick', 'extraThick']).optional(),
-  markers: z.enum(['all', 'provisionalOnly']).optional(),
+  markers: z.enum(['all', 'ends', 'provisionalOnly']).optional(),
   grid: z.enum(['both', 'horizontal', 'none']).optional(),
   xLabels: z.enum(['flat', 'tilted']).optional(),
   axisLines: z.enum(['shown', 'hidden']).optional(),
   valueLabels: z.enum(['shown', 'hidden']).optional(),
   zeroBaseline: z.enum(['auto', 'zero']).optional(),
+  areaFill: z.enum(['gradient', 'flat']).optional(),
   seriesColors: z.record(z.string(), z.unknown()).optional(),
   fontFamily: z.string().regex(FONT_FAMILY_NAME).nullable().optional(),
   language: z.enum(['nl', 'en']).nullable().optional(),
@@ -194,7 +238,7 @@ export const LOCK_REASONS = {
   zeroBaselineArea: 'Een gevuld vlak begint altijd bij nul.',
 } as const;
 
-const ALL_KEYS: PresentationKey[] = ['lineWidth', 'markers', 'grid', 'xLabels', 'axisLines', 'valueLabels', 'zeroBaseline', 'seriesColors', 'fontFamily'];
+const ALL_KEYS: PresentationKey[] = ['lineWidth', 'markers', 'grid', 'xLabels', 'axisLines', 'valueLabels', 'zeroBaseline', 'areaFill', 'seriesColors', 'fontFamily'];
 const FRAME_KEYS: PresentationKey[] = ['frameBackground', 'framePadding', 'frameCorners', 'frameShadow', 'frameInset', 'frameAspect'];
 
 export function resolvePresentation(
@@ -218,6 +262,8 @@ export function resolvePresentation(
   if (ctx.form !== 'table') {
     for (const key of ALL_KEYS) applicable.add(key);
     for (const key of FRAME_KEYS) applicable.add(key);
+    // ADR 042: the fill is a property of the area form alone.
+    if (ctx.form !== 'area') applicable.delete('areaFill');
     if (ctx.form === 'bar' || ctx.form === 'hbar') {
       applicable.delete('lineWidth');
       applicable.delete('markers');
@@ -255,6 +301,38 @@ export function dotGeometry(w: LineWidth): { r: number; ring: number } {
   return { r: Math.max(4, LINE_WIDTH_PX[w] + 2), ring: 2 };
 }
 
+/** The first and last PLOTTED point of one series (periodCodes) — the
+ * anchors of the 'ends' marker mode. Built by chart.tsx from the DISPLAYED
+ * (possibly zoomed) spec so the visible window's own ends get markers. */
+export interface SeriesEndpoints {
+  first: string;
+  last: string;
+}
+
+/** ADR 042: which point markers are drawn. A provisional point is ALWAYS
+ * visible (R11 — the hollow ring is honesty, not styling); 'all' draws every
+ * point; 'ends' the first and last plotted point; 'provisionalOnly' none
+ * else. Hidden markers stay in the DOM at opacity 0 (chart.tsx), so the
+ * [data-point] count, keyboard walking and click-to-annotate never change. */
+export function markerVisible(mode: MarkerMode, provisional: boolean, periodCode: string, ends: SeriesEndpoints | null): boolean {
+  if (provisional || mode === 'all') return true;
+  if (mode === 'provisionalOnly') return false;
+  return ends !== null && (periodCode === ends.first || periodCode === ends.last);
+}
+
+/** ADR 042: the chart's height follows the card's measured width — 9:16 of
+ * it, never below 256 px (the pre-ADR-042 fixed `h-64`) nor above 360 px —
+ * so a wide dock or chat chart stops looking squat. An unmeasured width
+ * (SSR, jsdom, 0) keeps the 256 px floor. Applied by chart.tsx as an
+ * explicit height from a ResizeObserver, never via CSS aspect-ratio (the
+ * session-92 battle-test lesson). */
+export const CHART_MIN_HEIGHT_PX = 256;
+export const CHART_MAX_HEIGHT_PX = 360;
+export function chartHeightForWidth(width: number): number {
+  if (!Number.isFinite(width) || width <= 0) return CHART_MIN_HEIGHT_PX;
+  return Math.max(CHART_MIN_HEIGHT_PX, Math.min(CHART_MAX_HEIGHT_PX, Math.round(width * (9 / 16))));
+}
+
 /** Tilted x labels need reserved axis height or the export clips them (the
  * svg height is fixed by the container). 6.5 px/char at the 11 px label font
  * (labelWidthPx in chart.tsx) × sin 45° ≈ 0.71, plus padding, capped. */
@@ -274,7 +352,7 @@ export function xAxisHeight(mode: XLabelMode, longestLabel: string): number | un
 }
 
 export function seriesColor(values: Pick<ChartPresentation, 'seriesColors'>, index: number): string {
-  return values.seriesColors[index] ?? RECHARTS_PALETTE[index % RECHARTS_PALETTE.length]!;
+  return values.seriesColors[index] ?? DEFAULT_PALETTE[index % DEFAULT_PALETTE.length]!;
 }
 
 // --- colours -----------------------------------------------------------------
@@ -371,13 +449,16 @@ export const FRAME_SHADOW: Record<FrameShadow, { dx: number; dy: number; blur: n
   strong: { dx: 0, dy: 10, blur: 28, alpha: 0.32 },
 };
 export const FRAME_GRADIENT_ANGLE = 135;
+// ADR 042: dawn's and sand's dark ends were retuned so no preset refuses any
+// DEFAULT_PALETTE colour (the old sand end refused the first default colour,
+// i.e. every chart) — gated by a test.
 export const FRAME_GRADIENT_PRESETS: readonly { id: 'dawn' | 'ocean' | 'forest' | 'berry' | 'slate' | 'sand'; from: string; to: string }[] = [
-  { id: 'dawn', from: '#fde68a', to: '#f472b6' },
+  { id: 'dawn', from: '#fde68a', to: '#f9a8d4' },
   { id: 'ocean', from: '#38bdf8', to: '#1e3a8a' },
   { id: 'forest', from: '#bbf7d0', to: '#166534' },
   { id: 'berry', from: '#f9a8d4', to: '#7e22ce' },
   { id: 'slate', from: '#e2e8f0', to: '#334155' },
-  { id: 'sand', from: '#fef3c7', to: '#b45309' },
+  { id: 'sand', from: '#fef3c7', to: '#92400e' },
 ];
 
 const FRAME_ASPECT_RATIOS: Record<Exclude<FrameAspect, 'auto'>, number> = {
