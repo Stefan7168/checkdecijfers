@@ -206,6 +206,7 @@ const RADIO_GROUPS: readonly { key: RadioKey; groupLabelKey: MessageKey; options
     groupLabelKey: 'chart.panel.markers',
     options: [
       { value: 'all', labelKey: 'chart.panel.markersOption.all' },
+      { value: 'ends', labelKey: 'chart.panel.markersOption.ends' },
       { value: 'provisionalOnly', labelKey: 'chart.panel.markersOption.provisionalOnly' },
     ],
   },
@@ -436,7 +437,7 @@ function FrameHexField({
   );
 }
 
-type ToggleKey = 'axisLines' | 'valueLabels' | 'zeroBaseline';
+type ToggleKey = 'axisLines' | 'valueLabels' | 'zeroBaseline' | 'areaFill';
 interface ToggleDef {
   key: ToggleKey;
   label: string;
@@ -449,6 +450,7 @@ function buildToggles(lang: Lang): ToggleDef[] {
     { key: 'axisLines', label: t(lang, 'chart.panel.axisLines'), onValue: 'shown', offValue: 'hidden' },
     { key: 'valueLabels', label: t(lang, 'chart.panel.valueLabels'), onValue: 'shown', offValue: 'hidden' },
     { key: 'zeroBaseline', label: t(lang, 'chart.panel.zeroBaseline'), onValue: 'zero', offValue: 'auto' },
+    { key: 'areaFill', label: t(lang, 'chart.panel.areaFill'), onValue: 'gradient', offValue: 'flat' },
   ];
 }
 
