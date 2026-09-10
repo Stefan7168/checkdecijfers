@@ -6,6 +6,96 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 93 — 2026-09-10 — autonomous (owner away "many hours", checked in once mid-session to say
+"wrap up when done"): the whole Embed feature (spec Part B) built via Subagent-Driven Development, 8
+tasks + a whole-branch review + one final fix wave, pushed as a PR; a harness quirk cost one duplicate
+dispatch; the API-key-cap alert from session 92 turned out to be a testing-methodology artifact, not
+a regression
+
+- **A whole-branch review at opus tier found a Critical the entire 8-task plan never accounted for:
+  the feature was completely non-functional for its actual audience.** `web/proxy.ts`'s auth
+  middleware had no allowlist entry for `/embed/*` — every anonymous visitor (the whole point of a
+  *public* embed) was redirected to `/login` instead of seeing the chart. Every per-task test suite
+  stayed green because the route's own unit tests call the page function directly in jsdom, bypassing
+  middleware entirely; only a review that thought about the REQUEST PATH as a whole, not just the
+  route file, could catch it. Lesson: when a plan adds a new public surface to an app that already has
+  session-gating middleware, the middleware's own allowlist is part of that surface's scope by
+  necessity — name it explicitly in the plan next time, don't rely on review to catch the omission.
+- **The same review pattern repeated at smaller scale three more times**: a dead backlink (hardcoded to
+  a domain that resolves to registrar parking, not the real app — the literal string came from the
+  plan's own code sketch, not an implementer slip), a chart-type/theme option the dialog had already
+  shipped that the route silently ignored (twice — `?theme=`/`?form=` the first time, only `?form=`
+  circled back correctly; `?theme=light`, the dialog's own DEFAULT, was still silently broken the
+  *second* time because the real cause was `next-themes` reading the reader's OS preference, not the
+  `frameless` card background the first fix's own comment blamed), and a redaction-guard test whose
+  two fixtures both set `chart: null` AND `redacted: true`, so neither the code path nor the test ever
+  distinguished them, and the REAL production redaction envelope has `chart` absent, not null — meaning
+  the untested half was the only one actually load-bearing in production. **Lesson: "the UI already
+  promises a control, does the backend actually honor it" is worth checking explicitly as its own
+  review pass on any feature with a dialog/route split — it recurred 3 times in one branch and each
+  instance had a different root cause, so it isn't a single bug class to grep for, it's a shape of bug
+  to keep asking about.**
+- **A subagent's own internally-backgrounded shell command can make it look permanently stuck when it
+  isn't — twice, differently, in the same session.** Task 6's implementer ended its turn mid-way
+  through a ~35-minute backend suite it had started with `run_in_background`; the task-notification
+  system's own doc string ("fires when this agent stops with no live background children") reads as
+  "this agent is done," but a subagent's OS-level background process is apparently NOT tracked as a
+  "live child" by that system, so the notification fires while real work is still running unsupervised.
+  Assumed it was orphaned (no way to resume a specific subagent in this harness), verified via
+  `ps`/`git status` that its background process really was still running, waited it out with a
+  controller-owned wait-loop, then dispatched a fresh completion agent — which turned out to be an
+  unintended duplicate, because the ORIGINAL agent woke back up on its own and finished the job for
+  real (commit and all) while the replacement was still in its first few tool calls. Caught cheaply via
+  `TaskStop` before any conflicting commit happened, only because `git log`/`git status`/`ps aux` were
+  checked directly rather than trusted from either agent's own narration. **Lesson: when a subagent's
+  final message describes itself as "waiting for a background job," check the ACTUAL repo/process
+  state yourself before concluding it's stuck and dispatching a replacement — it may resume and
+  re-notify on its own, and if it does, running a second agent on the same task risks a genuine
+  conflict, not just wasted compute. The later verification-block dispatch hit the identical pattern a
+  third time and was left alone rather than replaced, on this same reasoning, and it also finished on
+  its own.**
+- **The session-92 alert (the Anthropic key hitting its monthly cap right as a follow-up chip fired)
+  was a testing-methodology artifact, not a product regression — confirmed by reading the code, not by
+  reproducing it (the key was still capped, so reproduction was never an option).** This session's
+  kickoff flagged it as "a follow-up chip (a zero-LLM click take) reached the model — verify before
+  assuming a regression." Reading `web/components/chat.tsx`'s own extensive inline history comments
+  settled it directly: there are TWO structurally different chip mechanisms sharing one render path —
+  WP26's clarification-option chips (a genuine zero-LLM deterministic resolution, gated on an OPEN
+  `pending` clarification round) and WP29's "Suggested follow-up questions" chips (shown under an
+  ordinary ANSWER, which only ever fill the input — sending one is exactly like typing a brand-new
+  question, by design, and always parses through the model). The kickoff's framing conflated the two.
+  Given the battle-testing session asked many real chart questions across desktop/mobile/light/dark/
+  gradient/image-export combinations, the most likely account is that ordinary LLM usage from that
+  extensive a session simply used up an already-nearly-exhausted monthly quota, and the very last call
+  happened to be a WP29 chip click — not evidence of a broken zero-LLM path. **Lesson: when this
+  project's own code comments already fully explain a mechanism (and they usually do, at real length,
+  in this codebase), read them before assuming an external report's framing is accurate — the kickoff
+  brief itself can be the thing that's slightly wrong, not just the code.**
+- **A one-line vitest config gap (a missing `exclude` for the `web/backend -> ../src` symlink) only
+  surfaced the moment a NEW test file landed in a `src/` subdirectory that had never had one before** —
+  it silently affected zero pre-existing tests, so it was invisible until this branch's very first
+  task added `src/chart/embed-token.test.ts`. An implementer flagged it correctly as real but then
+  spawned an out-of-scope task chip for a SEPARATE session to fix it later — the right instinct
+  (flagging, not silently patching) applied to the wrong bucket, since every later task in this exact
+  plan was about to add more `src/` test files and would have hit the identical failure repeatedly.
+  **Lesson: "is this in scope for THIS task" and "is this in scope for THIS session/plan" are different
+  questions — a config bug that will recur on every remaining task of the very plan you're executing is
+  never "someone else's session" material, even when it's technically outside the one task that found
+  it.**
+- **Reviews at the highest available model tier (opus) earned their cost repeatedly on this branch,
+  specifically on the files/mechanisms carrying the most risk** (`chart.tsx`, `proxy.ts`'s auth
+  allowlist, the public `/embed/[token]` route, the final whole-branch pass) — every one of those
+  reviews found at least one Important-or-above finding that a same-tier sonnet pass on an earlier,
+  smaller task had NOT surfaced on comparable code. The reviews also repeatedly went and independently
+  *reproduced* a claim rather than reading it — starting a real built server and curling it, reading an
+  installed dependency's actual minified source to trace a prop through three code paths, running a
+  probe script against Node's real `timingSafeEqual`/`path-to-regexp` behavior — rather than trusting
+  either the implementer's report or the reviewer's own first-pass reasoning. **Lesson: budget the
+  highest tier specifically for the request-boundary and rendering-boundary files on any web app with
+  session middleware, not just for files this project already knows are historically bug-prone (like
+  `chart.tsx`) — the proxy/auth-allowlist Critical this session found was in a file with NO prior
+  history of hiding bugs, precisely because nothing had ever added a new public route before.**
+
 ## Session 92 — 2026-09-09 — owner present: three features shipped in one session (Story mode, the chat
 polish batch, frame styling + the floating Style panel) via Subagent-Driven Development; the whole-branch
 review earned its cost twice; two agents "went background" and edited the same tree; presets need a
