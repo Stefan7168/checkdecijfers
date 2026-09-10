@@ -91,6 +91,14 @@ On top of the phase-3 per-user daily cap, `lookupBrand` (`web/app/chart-style-ac
 
 ## Addendum 2026-09-09 (session 92, owner present) — Story mode, as built
 
+**Superseded 2026-09-10 (session 94, owner ask) — the SELECTION mechanism only:** `buildStorySteps`
+below (chronological overview/start/highest/lowest/latest/explore) is no longer called by `chart.tsx` —
+replaced by `chart-insights.ts`'s `buildFindings` (real outlier/jump ranking, optionally AI-phrased). The
+UI/chart-reaction mechanism described below (the trigger, the panel, the point ring, snapshot/restore,
+locked controls) is UNCHANGED and still accurate — only the CONTENT feeding it changed. Full detail: ADR
+[041](041-chart-insights.md). The trigger's shown text also changed ("Verhaal"/"Story mode" →
+"Inzichten"/"Insights"), referenced below by its OLD text — historical, not current.
+
 The owner asked for a "Story mode" button with a colourful border and a magic-wand icon, "to show something exciting will happen", and chose (from three options) a scroll story IN the chat: the chart stays, short steps scroll past it. Design: [superpowers/specs/2026-09-09-story-mode-and-embed-design.md](../superpowers/specs/2026-09-09-story-mode-and-embed-design.md) Part A.
 
 - **Mechanism:** `web/lib/chart-story.ts` — `buildStorySteps(displayedSpec, lang)`, pure — turns the chart's own spec into steps (time series: overview · start · highest · lowest · latest · explore, duplicates dropped; several series: overview · one step per series up to five · explore; comparison: overview · highest · lowest · explore). A caption is a message template filled ONLY with spec strings (`periodLabel`, `formattedValue`, `unit`, a series label, `trendHeadline`); the whole-card digit scans run with the story open in both languages. "Highest/lowest" is a selection over the spec's values (the caption repeats that point's own `formattedValue`), the same class as highlight — **Assumption**, open-questions #221. Ties → the earliest period; null points skipped; a provisional point says so in words. A comparison whose bars are all equal, or a series with fewer than two plotted values, has no story and shows no trigger.

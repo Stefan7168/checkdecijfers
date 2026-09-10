@@ -1,5 +1,115 @@
 # STATUS archive — the session log
 
+**Session 94 (2026-09-10, owner present, continuing session 93's embed-charts PR review) — THREE OWNER
+UI FIXES LIVE, THE "NEXT LEVEL" VISUAL PLAN WRITTEN, TWO EXPORT FIXES (#222 ✅/#223 MOSTLY), INSIGHTS
+(ADR 041) BUILT AND MERGED TO `main`, PR #9's MERGE CONFLICT RESOLVED TWICE.**
+
+1. **Kickoff:** continued from a prior session's PR #9 (Embed) review. Owner reacted to jargon-heavy
+   summaries ("i have no idea what your saying") — switched to plain language. Confirmed context-window
+   framing, then "never mind start working."
+2. **Three UI fixes (owner feedback, given directly):** the Style panel moved from a floating dialog to
+   an inline region below the chart (`chart-config-panel.tsx`, own card, no `createPortal`); the "chart
+   in panel" pill restyled to match the other footer buttons and moved into the `CardFooter` action row,
+   left of Copy (`chat.tsx`); margin added below the answer box; chat container width enlarged
+   `max-w-2xl`→`max-w-4xl`. Pushed to `main` directly (owner: "yes push to main") as part of commit
+   `3047d47`.
+3. **This push conflicted PR #9 for the first time** (`web/components/chart.tsx`/`chat.tsx` auto-merged
+   clean; only `docs/open-questions.md` conflicted). Resolved by hand-merging both sides' rows in their
+   original relative order, pushed `da6b328` to `origin/embed-charts`; PR #9 back to mergeable
+   (`gate` check green on that commit).
+4. **Two export fixes:** [#222](open-questions.md) dark-mode exports (`chart-download.tsx`'s
+   `withLightThemeResolution` temporarily strips the page's `.dark` class around paint resolution,
+   restored even on throw) — ✅ RESOLVED, commit `1f8d25b`. [#223](open-questions.md) attribution-line
+   word wrap (`wrapAttributionText`, greedy word-wrap across multiple `<text>` lines,
+   `AVG_CHAR_WIDTH = 6.5px` matching `chart.tsx`'s own `labelWidthPx` convention) — mostly resolved,
+   commit `c1327dc`; a single word longer than one line's budget can still slightly overflow (rare,
+   documented, not closed).
+5. **"Next level" visual plan** (owner ask, referencing an external demo site): spawned a Fable 5.1 agent
+   to write [session-briefs/2026-09-10-visual-next-level-plan.md](session-briefs/2026-09-10-visual-next-level-plan.md)
+   — Story mode → a CSS-3D/scroll-driven "Story stage" (explicitly against literal 3D chart marks, R6), a
+   designed default chart look, a template system, zero added LLM/API cost throughout. Written, not
+   built. The reference demo (`checkdecijfers-3d-demo.vercel.app`) was unreachable directly (egress
+   policy blocks it); identified instead via the Vercel API (same team's project) as a 3D Dutch-
+   municipality MAP with a scroll story, a working generator/embed runtime, and 3 mini-apps — added as an
+   addendum, since a map sidesteps the plan's own R6 concern about literal 3D chart marks more cleanly
+   than assumed.
+6. **Owner UI/product notes (mid-turn):** Story mode's existing "Insights" text steps should be preserved
+   as the design evolves (clarified via AskUserQuestion, confirmed already covered by the plan). A
+   logged-in homepage "Dashboard" button was requested; investigation found the user was seeing the
+   old/plain interface, consistent with `WORKSPACE_ENABLED` not actually being set in production despite
+   docs claiming otherwise — flagged honestly (no tool available to read the live env var value; flipping
+   it is owner-supervised) rather than assumed fixed.
+7. **Insights** (owner ask: "top 3-5 most interesting findings / uitschieters ... for a journalist,"
+   replacing Story mode's dry chronological Start/High/Low/Latest selection; full design in ADR
+   [041](decisions/041-chart-insights.md)): `src/chart/insights.ts`'s `scoreFindings` ranks real
+   statistical outliers (level z-score + period-over-period jump z-score against the series' own
+   mean/spread, capped at 5) — deterministic, placed in the BACKEND (not `web/lib`, unlike chart-story.ts's
+   own precedent) because both the client's instant render and the server action's LLM payload need the
+   identical selection, and the server re-derives it from the received spec rather than trusting any
+   client-sent finding data in the LLM prompt (`answer/compose/prompt.ts`'s own R2 discipline).
+   `src/chart/insights-phrase.ts` AI-phrases each finding via the SAME digit-free slot-filling mechanism
+   `answer/compose/slots.ts` already proved for the core answer pipeline — the model cannot emit a digit
+   outside a placeholder, so a fabricated number is structurally unrepresentable, not merely caught by a
+   validator; one stricter retry over only the findings still missing a valid sentence; whatever remains
+   missing after that simply has no entry, and the caller's own already-rendered deterministic caption
+   (the R3 floor) covers it — never a whole-panel failure. `web/app/chart-insights-actions.ts` is the
+   server action (auth-gated, re-derives findings server-side). `chart.tsx`'s existing `ChartStoryPanel`/
+   `ChartStoryTrigger` shell — keyboard nav, point-ring, series-highlight, snapshot/restore — is reused
+   completely UNCHANGED; only the content source swapped (a small adapter maps `Finding[]` → the same
+   `StoryStep[]` shape the panel already consumed). AI phrasing fires once per findings set, only when the
+   panel is opened (never eager), and is always Dutch prose regardless of the chart's own display language
+   (matches the core pipeline's Dutch-only convention). Trigger threshold lowered from the old `>=3` steps
+   (which counted non-data overview/explore filler) to `>=1` finding (every Insights finding is real
+   content). A hand-traced 4-point fixture caught a real kind-assignment bug before it shipped (a
+   non-extreme point was unconditionally labelled "recordHigh" regardless of being above or below the
+   mean) — fixed before any test was written against the buggy version. Left deliberately open, tracked:
+   [#224](open-questions.md) `chart-story.ts`'s now-orphaned old selection functions (kept, not deleted —
+   deleting cleanly also means rewriting/deleting its 302-line test file and pruning now-unused i18n keys,
+   separable follow-up work); [#225](open-questions.md) no server-side rate/spend cap on Insights
+   generation yet (accepted bounded risk — authenticated-only, click-triggered, cheap model tier).
+8. **Verification (own branch `claude/checkdecijfers-embed-pr-review-acbrd5`), full block, all green:**
+   typecheck ×2 clean; web suite 88 files / 1304 tests; backend suite (solo) 143 files / 2211 tests;
+   hermetic benchmark 14/14 answerable + 6/6 refusal/clarify + 0 fabricated, GATE PASS; real `next build`
+   clean; `test:docs` 11/11; `/code-review` LOW pass, 0 findings. Committed `02321b7` (the feature) +
+   `a724b70` (measured verification results), merged (fast-forward) to `main`, pushed. Owner confirmed via
+   AskUserQuestion: push straight to `main` once green, matching CLAUDE.md #118's owner-present
+   convention.
+9. **This second push conflicted PR #9 again**, this time more substantially: `docs/08-build-plan.md`,
+   `docs/lessons-learned.md`, `docs/open-questions.md` (a real numbering collision — this session's own
+   new open-questions rows #224/#225 vs. Embed's pre-existing #224-229, from session 93, already
+   cross-referenced across many docs) and `web/components/chart.tsx` (a trivial import-line merge, no
+   logic change — Embed's own `ChartEmbedButton`/`APP_URL` import alongside this session's `buildFindings`
+   import). Resolved by keeping Embed's #224-229 untouched and renumbering this session's two new rows to
+   #230/#231 (on the merged `embed-charts` branch only — main's own open-questions.md has no such
+   collision and correctly keeps #224/#225 here), reconciling both sessions' own narrative additions to
+   `08-build-plan.md`/`lessons-learned.md` (kept both, newest-first), and taking the import-line union in
+   `chart.tsx`. Merge commit `a557c69`, pushed to `origin/embed-charts`. Full web suite re-verified green
+   on the merged state (92 files / 1408 tests) plus both typechecks; the backend suite was NOT
+   successfully re-verified before session end — a first attempt was invalidated by switching branches
+   while it was still running against the checked-out tree (caught, killed, and written up as a lessons-
+   learned item), and a clean re-run was started but not finished before wrap-up. No backend file had any
+   conflict in this merge (both sides' backend suites were independently green going in, over disjoint
+   files), so risk is assessed as low but not confirmed.
+10. **End-of-session state:** `main`'s own CI on `a724b70` (run `34490244850`) confirmed GREEN
+    (`conclusion: "success"`, checked directly, ~14:49 UTC). PR #9's `gate` check on `a557c69` was
+    re-checked directly (GitHub API) and CONFIRMED GREEN too (`conclusion: "success"`, completed
+    `2026-09-10T14:57:08Z`) — the `in_progress` status flagged at first session-end was just it still
+    running, not a real problem. `mergeable_state` returned to "unstable" only from pending-checks timing,
+    never a real conflict at that point — the merge itself had already resolved cleanly.
+11. **A third conflict** hit immediately after: the session-94 wrap-up's own docs-only push to `main`
+    (`6609cce`) conflicted `embed-charts` again on `docs/03-mvp-scope.md` (the Visualisatie Studio
+    non-goal row — both branches had appended their own session addendum to the same row) and this file
+    (both branches had appended their own session-94-narrative additions to item 10/11 above). Resolved
+    the same way as the prior two: combined both sides' content rather than discarding either, then
+    corrected item 10 above from "still in_progress" to the confirmed-green result once it was actually
+    known. No code files were touched by this conflict, so no re-verification beyond the repo-wide
+    conflict-marker sweep was needed.
+12. **Docs:** ADR [041](decisions/041-chart-insights.md) (new); #221 updated (the "LLM captions on
+    measured demand" follow-up it named is now built); #224/#225 added (this session, main's numbering);
+    #230/#231 (embed-charts' renumbered view of the same two rows); 04-architecture (Insights capability
+    row + presentation-panel row superseded note); 08-build-plan (session-94 section + Embed status
+    correction); lessons-learned (session 94, 6 entries); STATUS; this entry; the session-95 kickoff.
+
 **Session 93 (2026-09-10, autonomous — owner away for the build, "Be gone for many hours... work
 autonomously... don't stop until I give you the sign to stop"; checked in once mid-session with "ok
 wrap up when done") — THE WHOLE EMBED FEATURE (spec Part B) BUILT VIA SUBAGENT-DRIVEN DEVELOPMENT: 8
