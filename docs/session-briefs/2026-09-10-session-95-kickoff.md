@@ -9,34 +9,33 @@ current), then this file. Confirm back to me: current phase, benchmark gate, and
 - **`main` is at `a724b70`** (session 94: Insights, ADR 041, three owner UI fixes, two export fixes).
   Verify with `git log --oneline -3` against `origin/main`.
 - **PR #9 (`embed-charts` → `main`, Embed feature, session 93) is open, NOT merged, awaiting the owner's
-  review.** Its head is `a557c69` — a merge commit resolving a SECOND conflict this session's own push to
-  `main` caused (the first, `da6b328`, was resolved earlier the same session). **`main`'s own CI on
-  `a724b70` (run `34490244850`) is CONFIRMED GREEN** (`conclusion: "success"`, checked directly before
-  session end). **PR #9's `gate` check on `a557c69` was still `in_progress` at last check** (started
-  14:45:32 UTC, ~14:50 UTC when last checked — a larger suite than main's own, so still running isn't
-  alarming on its own, but wasn't confirmed either way by session end). **First thing to do:** check it
-  via `mcp__github__pull_request_read` (method `get_check_runs`) or `gh pr checks 9` before assuming
-  anything. If it's red, fix it — you're driving PR #9 to green under this repo's "watched but not owned,
-  conflict-causing push was this session's own action, so lean toward fixing" rule (see the system
-  prompt's PR-babysitting section) — `main`'s own CI is yours
-  outright since you pushed it.
-- **The backend test suite was never successfully re-verified on PR #9's final merged state (`a557c69`).**
-  Two attempts this session were invalidated (branch-switch-mid-run, then killed for time). No backend
-  file had any conflict in that merge (both sides' backend suites were independently green going in, over
-  disjoint files) so risk is low, but "low risk" isn't "verified" — if you have time, run it properly:
-  `git checkout -b embed-charts origin/embed-charts && npm test` (root, solo, ~10-35 min) and **do not
-  switch branches or touch the working tree until it finishes** (see lessons-learned session 94 — this is
-  what went wrong twice already).
-- **A real numbering collision will very likely recur when PR #9 actually merges into `main`.** This
-  session's branch used open-questions rows #224/#225 for its own new questions (chart-story.ts cleanup,
-  no rate limit on Insights) — `main`'s own open-questions.md still correctly has them there. PR #9's
-  branch independently claimed #224-229 for ITS OWN, unrelated, heavily cross-referenced questions
-  (they're already linked from RUNBOOK.md, 06-roadmap.md, 03-mvp-scope.md, and PR #9's own body). When PR
-  #9 merges, git will very likely conflict on `docs/open-questions.md` a third time. The fix is already
-  known and already applied once on the `embed-charts` branch's own merge commit (`a557c69`): keep Embed's
-  #224-229 untouched, renumber this session's two rows to #230/#231. If GitHub's own merge button can't
-  resolve it cleanly, that's expected — don't be alarmed, just redo the same renumbering on whatever the
-  final merge needs.
+  review.** As of 2026-09-10 ~15:57 UTC its head is `340062c9` — a merge commit resolving a THIRD conflict
+  (docs-only: `docs/03-mvp-scope.md` + `docs/status-archive.md`, caused by session 94's own wrap-up docs
+  push to `main`, `6609cce`). **Both `main`'s own CI and PR #9's `gate` check are CONFIRMED GREEN**
+  (`gate` conclusion `"success"`, completed `2026-09-10T15:17:29Z`) and **`mergeable_state` is `"clean"`**
+  — fully mergeable, nothing blocking, purely awaiting the owner's own review/merge. Re-verify this
+  directly before trusting it (`mcp__github__pull_request_read` method `get`/`get_check_runs`, or
+  `gh pr checks 9` + `gh pr view 9 --json mergeable,mergeStateStatus`) since more time may have passed
+  than this file expects. A standing `send_later` check-in is scheduled ~90 min out from session end
+  (re-arms itself silently while still green) — if it's still running when you start, you don't need to
+  duplicate it.
+- **The backend test suite was never successfully re-verified on PR #9's merged state.** Two attempts in
+  session 94 were invalidated (branch-switch-mid-run, then killed for time), and it was not re-attempted
+  in the brief follow-up work after that (the third conflict was docs-only, touched no backend files). No
+  backend file had any conflict across any of the three merges (all three sessions' backend suites were
+  independently green going in, over disjoint files) so risk is low, but "low risk" isn't "verified" — if
+  you have time, run it properly: `git checkout -b embed-charts origin/embed-charts && npm test` (root,
+  solo, ~10-35 min) and **do not switch branches or touch the working tree until it finishes** (see
+  lessons-learned session 94 — this is what went wrong twice already).
+- **The open-questions numbering collision predicted here already happened and was already resolved** —
+  not a future risk anymore, just a fact to know: this session's branch used rows #224/#225 for its own
+  new questions (chart-story.ts cleanup, no rate limit on Insights) — `main`'s own open-questions.md still
+  correctly has them there. PR #9's branch independently claimed #224-229 for ITS OWN, unrelated, heavily
+  cross-referenced questions (linked from RUNBOOK.md, 06-roadmap.md, 03-mvp-scope.md, PR #9's own body).
+  Resolved on the `embed-charts` branch's own merge commits: kept Embed's #224-229 untouched, renumbered
+  this session's two rows to #230/#231 there. If a FOURTH conflict arises before the owner merges (e.g.
+  from a future doc-only push to `main`), the same pattern applies — it isn't a one-time fix, it recurs on
+  every conflicting merge until PR #9 is actually merged and the branches converge for good.
 - **ADR numbering also collides**: `docs/decisions/041-chart-insights.md` (this session) and
   `docs/decisions/041-public-embed-pages.md` (PR #9) are two different files both claiming ADR 041 — no
   git conflict (different filenames) but worth renumbering one once both are on `main`, for the sequence
