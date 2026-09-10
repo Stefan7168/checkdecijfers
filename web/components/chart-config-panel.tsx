@@ -1220,12 +1220,15 @@ export function ChartConfigPanel({
         * charts) — the gallery itself never renders a control that would be
         * a no-op, matching every other tabpanel's applicability gate. */}
       {activeTab === 'templates' && resolved.applicable.has('grid') ? (
-        <div id={panelId('templates')} role="tabpanel" aria-labelledby={tabId('templates')} className="mt-3">
+        <div id={panelId('templates')} role="tabpanel" aria-labelledby={tabId('templates')} className="mt-3 @container">
           <div
             role="radiogroup"
             aria-label={copy.templateGalleryLabel}
             onKeyDown={onRadioGroupKeyDown}
-            className="grid grid-cols-2 gap-2 sm:grid-cols-3"
+            // Browser-pass fix (ADR 043): the card, not the viewport, decides the
+            // column count — a homepage chart card is ~320 px wide at a 1280 px
+            // viewport, where three columns left no room for a name + badge.
+            className="grid grid-cols-2 gap-2 @md:grid-cols-3"
           >
             {CHART_TEMPLATES.map((template, index) => {
               const current = currentTemplate === template.id;

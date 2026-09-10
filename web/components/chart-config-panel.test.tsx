@@ -1883,6 +1883,12 @@ describe('ChartConfigPanel — Sjablonen (templates) tab (ADR 043)', () => {
     const cards = screen.getAllByRole('radio', { name: /^(Basis|Klassiek|Redactie|Presentatie|Sociaal|Minimaal)$/ });
     expect(cards.map((c) => c.getAttribute('aria-label'))).toEqual(['Basis', 'Klassiek', 'Redactie', 'Presentatie', 'Sociaal', 'Minimaal']);
     expect(screen.getByText('Publicatieklaar: stevige lijn, geen franje, liggend formaat.')).toBeTruthy();
+    // Browser-pass fix: the column count follows the CARD's width (a container query), not the viewport.
+    const gallery = screen.getByRole('radiogroup', { name: 'Sjablonen' });
+    expect(gallery.className).toContain('grid-cols-2');
+    expect(gallery.className).toContain('@md:grid-cols-3');
+    expect(gallery.className).not.toContain('sm:grid-cols-3');
+    expect(gallery.parentElement?.className).toContain('@container');
   });
   it('marks the current template with aria-checked and a "Huidig" badge: standard when pristine, newsroom when the chart wears it, none when tweaked', () => {
     const { unmount } = render(<Harness resolved={resolvePresentation(lineCtx, {})} seriesMeta={meta} onChange={vi.fn()} onReset={vi.fn()} idPrefix="t" onApplyTemplate={vi.fn()} />);
