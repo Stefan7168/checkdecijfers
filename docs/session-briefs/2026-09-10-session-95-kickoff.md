@@ -6,26 +6,32 @@ current), then this file. Confirm back to me: current phase, benchmark gate, and
 
 ## Where things actually stand (verify before trusting — don't take this file's word for it)
 
-- **`main` is at `a724b70`** (session 94: Insights, ADR 041, three owner UI fixes, two export fixes).
-  Verify with `git log --oneline -3` against `origin/main`.
+- **`main` is at `5c0d5c9`** (session 94: Insights, ADR 041, three owner UI fixes, two export fixes, plus
+  a same-day continuation of docs fixes). Verify with `git log --oneline -3` against `origin/main`.
 - **PR #9 (`embed-charts` → `main`, Embed feature, session 93) is open, NOT merged, awaiting the owner's
-  review.** As of 2026-09-10 ~15:57 UTC its head is `340062c9` — a merge commit resolving a THIRD conflict
-  (docs-only: `docs/03-mvp-scope.md` + `docs/status-archive.md`, caused by session 94's own wrap-up docs
-  push to `main`, `6609cce`). **Both `main`'s own CI and PR #9's `gate` check are CONFIRMED GREEN**
-  (`gate` conclusion `"success"`, completed `2026-09-10T15:17:29Z`) and **`mergeable_state` is `"clean"`**
-  — fully mergeable, nothing blocking, purely awaiting the owner's own review/merge. Re-verify this
-  directly before trusting it (`mcp__github__pull_request_read` method `get`/`get_check_runs`, or
-  `gh pr checks 9` + `gh pr view 9 --json mergeable,mergeStateStatus`) since more time may have passed
-  than this file expects. A standing `send_later` check-in is scheduled ~90 min out from session end
-  (re-arms itself silently while still green) — if it's still running when you start, you don't need to
-  duplicate it.
-- **The backend test suite was never successfully re-verified on PR #9's merged state.** Two attempts in
-  session 94 were invalidated (branch-switch-mid-run, then killed for time), and it was not re-attempted
-  in the brief follow-up work after that (the third conflict was docs-only, touched no backend files). No
-  backend file had any conflict across any of the three merges (all three sessions' backend suites were
-  independently green going in, over disjoint files) so risk is low, but "low risk" isn't "verified" — if
-  you have time, run it properly: `git checkout -b embed-charts origin/embed-charts && npm test` (root,
-  solo, ~10-35 min) and **do not switch branches or touch the working tree until it finishes** (see
+  review.** As of 2026-09-10 ~17:44 UTC its head is `ecd7590` — a merge commit resolving a FOURTH conflict
+  (docs-only, same pattern as the first three: this session's own push to `main` editing tracker docs
+  `embed-charts` had also independently edited). `gate` was just re-triggered on that commit and had not
+  yet reported a result as of this writing — **do not assume green, check
+  `mcp__github__pull_request_read` method `get_check_runs` first.** **This pattern will very likely
+  recur if `main` gets ANY more docs pushes before the owner merges PR #9** — `docs/status-archive.md`,
+  `docs/STATUS.md`, `docs/open-questions.md`, and `docs/lessons-learned.md` are the recurring collision
+  points (both branches keep independently appending to the same trackers). If you hit a fifth conflict,
+  it's not a sign something is broken — resolve it the same way the first four were: combine both sides'
+  additions, and where the SAME item was independently rewritten on both sides (this has happened twice
+  now, in `status-archive.md`), prefer whichever wording is more accurate/complete rather than trying to
+  keep both. One specific trap already hit once: `main`'s `status-archive.md` legitimately has NO "Session
+  93" entry (Session 93/Embed was never merged to `main`, only built on this PR's own branch) — don't
+  treat that as data loss or try to reconstruct it, just preserve `embed-charts`' own copy of it.
+  A standing `send_later` check-in is scheduled ~20 min out from this writing (re-arms itself silently
+  while still green) — if it's still running when you start, you don't need to duplicate it.
+- **The backend test suite was never successfully re-verified on PR #9's merged state, across any of the
+  four merges so far.** Two attempts in session 94 were invalidated (branch-switch-mid-run, then killed
+  for time), and it was not re-attempted since (conflicts 3 and 4 were both docs-only, touched no backend
+  files). No backend file had any conflict across any of the four merges (all sessions' backend suites
+  were independently green going in, over disjoint files) so risk is low, but "low risk" isn't "verified"
+  — if you have time, run it properly: `git checkout -b embed-charts origin/embed-charts && npm test`
+  (root, solo, ~10-35 min) and **do not switch branches or touch the working tree until it finishes** (see
   lessons-learned session 94 — this is what went wrong twice already).
 - **The open-questions numbering collision predicted here already happened and was already resolved** —
   not a future risk anymore, just a fact to know: this session's branch used rows #224/#225 for its own
