@@ -190,6 +190,10 @@ export function ChartStoryStage({ open, spec, steps, index, onIndexChange, onClo
   // the hook's index reports as reader-driven (item 1). Registered whenever
   // the stage is open rather than only while auto-play is on: one listener
   // set serves both jobs, and the updater is a no-op while auto-play is off.
+  // Fix 3: a scrollbar-thumb drag fires only the `scroll` event, not
+  // wheel/touch/pointer, so it was not guarded. The passive scroll listener
+  // catches it too (the hook's mount-time measure is a direct call, not a
+  // scroll event, so mount-time index-0 suppression stays intact).
   useEffect(() => {
     if (!open) return undefined;
     const el = scrollRef.current;
@@ -201,10 +205,12 @@ export function ChartStoryStage({ open, spec, steps, index, onIndexChange, onClo
     el.addEventListener('wheel', onReaderScroll, { passive: true });
     el.addEventListener('touchmove', onReaderScroll, { passive: true });
     el.addEventListener('pointerdown', onReaderScroll, { passive: true });
+    el.addEventListener('scroll', onReaderScroll, { passive: true });
     return () => {
       el.removeEventListener('wheel', onReaderScroll);
       el.removeEventListener('touchmove', onReaderScroll);
       el.removeEventListener('pointerdown', onReaderScroll);
+      el.removeEventListener('scroll', onReaderScroll);
     };
   }, [open]);
 
@@ -324,10 +330,13 @@ export function ChartStoryStage({ open, spec, steps, index, onIndexChange, onClo
           * and the caveat notes off the bottom on a phone, exactly the
           * strings R4/R11 require to stay readable. `lg:h-screen` unchanged
           * (with `lg:max-h-none`, or the cap would beat the height there). */}
-        <div className="sticky top-0 z-0 flex max-h-[50vh] items-center overflow-y-auto bg-background px-4 lg:h-screen lg:max-h-none lg:overflow-visible lg:px-10">
+        {/* Fix 3: `items-start` + `my-auto` on the child keeps the card's top
+          * reachable when taller than the max-h cap — prevents both-ends
+          * overflow on a scroll container. */}
+        <div className="sticky top-0 z-0 flex max-h-[50vh] items-start overflow-y-auto bg-background px-4 lg:h-screen lg:max-h-none lg:overflow-visible lg:px-10">
           <div
             className={
-              'relative w-full rounded-xl bg-card p-4 text-card-foreground' +
+              'relative w-full rounded-xl bg-card p-4 text-card-foreground my-auto' +
               // Fix round 2 (items 3+4): `transform` joins the transition so
               // a programmatic jump (a dot, an arrow key, auto-play) eases
               // instead of snapping. Static mode has nothing to ease.

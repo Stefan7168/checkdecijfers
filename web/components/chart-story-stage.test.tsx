@@ -629,4 +629,28 @@ describe('ChartStoryStage', () => {
       Element.prototype.getBoundingClientRect = original;
     }
   });
+
+  // Fix 3: scrollbar-thumb drags fire only the `scroll` event, not
+  // wheel/touch/pointer, so the reader-scroll guard was not armed. A passive
+  // scroll listener now catches it. The hook's mount-time measure is a direct
+  // call (not a scroll event), so mount-time index-0 suppression stays intact.
+  it('reader scrolls via scrollbar → the step follows; opening alone does not trigger onIndexChange', () => {
+    useStageScrollTimers();
+    try {
+      const onIndexChange = vi.fn();
+      render(<ChartStoryStage {...baseProps({ index: 0, onIndexChange })} />);
+      const scroller = layoutStage();
+      // Open at index 0 with no scroll event: onIndexChange should not be
+      // called at all (the mount-time measure is suppressed).
+      expect(onIndexChange).not.toHaveBeenCalledWith(0);
+
+      // Reader scrolls to the second panel's centre via scrollbar (scroll event
+      // only, no wheel/touch/pointer): this should arm the guard and trigger a
+      // step change.
+      scrollStage(scroller, 1600);
+      expect(onIndexChange).toHaveBeenCalledWith(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
