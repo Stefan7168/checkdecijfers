@@ -2,6 +2,9 @@
 // every displayed numeric STRING must be a point's own formattedValue, and
 // periods must sort chronologically by code, not label/insertion order —
 // mirroring the checks ADR 014's SVG-renderer test suite already runs.
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ChartSpec } from '../backend/chart/types.ts';
@@ -573,10 +576,10 @@ function twoSeriesSpec(overrides: Partial<ChartSpec> = {}): ChartSpec {
   });
 }
 
-// Session 87 visual redesign (owner decision: "use the basic Recharts style")
-// superseded the #197 colour-blind-safe token palette + dash patterns.
-describe('seriesStyle (session 87: the stock Recharts example palette)', () => {
-  it('draws series in the Recharts documentation palette, in order, as literal hex (no theme tokens)', () => {
+// ADR 042 (2026-09-11): the colour-blind-safe DEFAULT_PALETTE is the default;
+// the session-87 "basic Recharts" palette (RECHARTS_PALETTE) is kept for the Classic look.
+describe('seriesStyle (ADR 042: the designed default palette)', () => {
+  it('draws series in DEFAULT_PALETTE, in order, as literal hex', () => {
     const colors = [0, 1, 2, 3].map((i) => seriesStyle(i).color);
     expect(colors).toEqual(DEFAULT_PALETTE.slice(0, 4));
     expect(DEFAULT_PALETTE[0]).toBe('#0072b2');
@@ -783,13 +786,11 @@ describe('ChartView — #197 step 1, rendered against the real svg', () => {
 });
 
 // ---------------------------------------------------------------------------
-// WP218 (ADR 039) Phase 0: ChartView now reads every one of these literals
-// from the presentation resolver (chart-presentation.ts) instead of hardcoding
-// them, but with NO overrides applied (state.presentation starts `{}`) the
-// resolver's effective values equal STOCK_PRESENTATION exactly — so the
-// stock render must stay byte-identical to what these literals were before
-// this task. This is the regression guard for that refactor, not a test of
-// the resolver itself (that's chart-presentation.test.ts).
+// ADR 042 (2026-09-11): ChartView draws the designed default from the
+// presentation resolver with no overrides — these are the default's literals
+// (ends markers, horizontal grid, no y-axis line, 2 px lines, r 4 markers),
+// pinned so the look cannot drift silently. The resolver's constants
+// themselves are pinned by chart-presentation.test.ts.
 // ---------------------------------------------------------------------------
 
 describe('ADR 042 — the designed default renders its literals', () => {
@@ -847,6 +848,12 @@ describe('ADR 042 — the designed default renders its literals', () => {
     expect(barLabel.getAttribute('font-size')).toBe('12');
     expect(barLabel.getAttribute('paint-order')).toBe('stroke');
     expect(barLabel.getAttribute('stroke')).toBe('var(--card)');
+  });
+  it('a marker hidden by the marker mode becomes visible while it holds keyboard focus (globals.css rule pinned)', () => {
+    const currentDir = dirname(fileURLToPath(import.meta.url));
+    const globalsCssPath = join(currentDir, '../app/globals.css');
+    const css = readFileSync(globalsCssPath, 'utf8');
+    expect(css).toMatch(/circle\[data-marker="hidden"\]:focus-visible\s*\{\s*opacity:\s*1;?\s*\}/);
   });
 });
 

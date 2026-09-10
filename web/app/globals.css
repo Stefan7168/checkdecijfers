@@ -172,6 +172,14 @@
   }
 }
 
+/* ADR 042: a point marker hidden by the marker mode (opacity 0 via its
+   attribute) stays keyboard-reachable — show it while it holds focus so
+   the focus ring never sits on an invisible target. A CSS rule outranks
+   the SVG presentation attribute. */
+circle[data-marker="hidden"]:focus-visible {
+  opacity: 1;
+}
+
 /* Every number in this product lines up (#91, owner-approved): tabular
  * figures, global instead of per-component. A product convention, not part
  * of the retired editorial identity — it survives the restyle. */
