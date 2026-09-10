@@ -11,7 +11,14 @@
 
 **▶ SESSION 92 (2026-09-09, owner present all day) — THREE FEATURES BUILT, REVIEWED, VERIFIED AND LIVE
 ON `main` THE SAME DAY, EACH VIA SUBAGENT-DRIVEN DEVELOPMENT: STORY MODE, THE CHAT POLISH BATCH,
-FRAME STYLING + THE FLOATING STYLE PANEL. Embed is DESIGNED (spec Part B), not built — the next build.**
+FRAME STYLING + THE FLOATING STYLE PANEL. Embed (spec Part B) DESIGNED this session — BUILT since,
+not yet merged; see correction below.**
+- **Embed correction (session 93, 2026-09-10):** the line above is stale — Embed (spec Part B) is since
+  BUILT, REVIEWED AND TESTED (all 8 plan tasks) on branch `embed-charts` (NOT merged to `main` — an
+  autonomous-session branch awaiting a PR, per #118(b)). Frozen embed render ships; **Live re-render is
+  real, tested and shipped in code but GATED CLOSED** (cannot activate for anyone) because the
+  Pro-owner-email lookup it depends on doesn't exist yet ([#224](open-questions.md)). Full detail: ADR
+  [041](decisions/041-public-embed-pages.md); owner go-live steps in RUNBOOK § "Embed go-live".
 - **Kickoff item 0:** Dependabot's sharp bump merged (`474d62b`, CI `34334007143` green, health ok).
 - **Story mode (ADR 039 addendum; spec Part A; plan `2026-09-09-story-mode.md`):** a gradient-ring
   "Verhaal / Story mode" trigger beside Style opens a story panel under the chart — code-built steps
@@ -52,8 +59,9 @@ FRAME STYLING + THE FLOATING STYLE PANEL. Embed is DESIGNED (spec Part B), not b
   chart present, no horizontal overflow. Remaining observation: the exported attribution line is one
   line and can be cut off at the right on a narrow chart (pre-existing; a follow-up).
 - **Owner steps unchanged:** migrations 028 + 029 (`npm run db:migrate`), optional `BRANDFETCH_API_KEY`,
-  WP202a go-live steps 2–6. **Next build:** Embed (spec Part B) — needs the owner to set
-  `EMBED_TOKEN_SECRET` (+ optionally `PRO_ACCOUNT_EMAILS`) when it ships.
+  WP202a go-live steps 2–6. Embed (spec Part B) is BUILT since (see correction above, branch
+  `embed-charts`) — owner go-live steps are `EMBED_TOKEN_SECRET` (+ optionally `PRO_ACCOUNT_EMAILS`)
+  plus merging the branch; Live re-render stays gated closed regardless ([#224](open-questions.md)).
 Full session entry: [status-archive.md](status-archive.md).
 
 **▶ SESSION 91 (2026-09-09, started AUTONOMOUS — "Start executing, work autonomously … I expect

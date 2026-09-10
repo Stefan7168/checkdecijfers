@@ -620,16 +620,21 @@ entries.
   owner-supervised), then the owner-supervised migration apply + the actual
   `ATTACHMENTS_ENABLED=1` flip + go-live.
 
-## Session 92 (2026-09-09) — Story mode ✅ LIVE, chat polish ✅ LIVE, frame styling + floating Style panel ✅ LIVE; Embed DESIGNED, next
+## Session 92 (2026-09-09) — Story mode ✅ LIVE, chat polish ✅ LIVE, frame styling + floating Style panel ✅ LIVE; Embed ✅ BUILT (session 93, 2026-09-10, branch `embed-charts`, not merged — see below)
 
 Spec: [superpowers/specs/2026-09-09-story-mode-and-embed-design.md](superpowers/specs/2026-09-09-story-mode-and-embed-design.md)
 (Part A Story mode, Part B Embed, Part C Frame). Plans: `2026-09-09-story-mode.md`, `2026-09-09-chat-polish.md`,
 `2026-09-09-chart-frame.md` under [superpowers/plans/](superpowers/plans/). As built: ADR [039](decisions/039-chart-presentation-panel.md)
 addenda (Story mode; Frame styling + floating panel), ADR [040](decisions/040-interface-language-switch.md) addendum.
-**Next WP: Embed (Part B)** — write its plan with writing-plans, build via SDD; owner-set env vars `EMBED_TOKEN_SECRET`
-(signing secret) and optionally `PRO_ACCOUNT_EMAILS` (the Pro demo switch) at go-live; framing headers; a public
-`/embed/[token]` route; the Live toggle Pro-gated (#205). Follow-ups recorded in the spec (story in the embed, map chart
-type, homepage embeds, sizes).
+**Embed (Part B) — ✅ BUILT**, all 8 plan tasks (token signing, the dialog, framing headers, the public
+`/embed/[token]` route with a frozen render): session 93 (2026-09-10), autonomous, branch `embed-charts`,
+not yet merged, PR for owner review. The Live re-render path is real, tested and code-complete but
+**GATED CLOSED** — it cannot turn on for anyone because the Pro-owner-email lookup it depends on doesn't
+exist yet ([#224](open-questions.md)). Owner steps pending: set `EMBED_TOKEN_SECRET` (+ optionally
+`PRO_ACCOUNT_EMAILS`) and merge the branch (RUNBOOK § "Embed go-live"). Full mechanism: ADR
+[041](decisions/041-public-embed-pages.md). Follow-ups recorded in the spec and in ADR 041's Revisit
+triggers (story in the embed, map chart type, homepage embeds, sizes, per-embed revocation, the real
+#205 Pro plan).
 
 ## WP218 — chart styling programme (owner decisions on [#218](open-questions.md), session 90, 2026-09-09) — ✅ BUILT (all six phases, session 91, 2026-09-09, autonomous, branch `wp218-chart-styling`, PR for owner review) — owner steps pending: apply migrations 028 + 029, optionally set `BRANDFETCH_API_KEY` (RUNBOOK § WP218 go-live)
 
