@@ -177,10 +177,24 @@ afterEach(() => {
 // scroller a real geometry (three 800 px panels starting one 800 px viewport
 // down the column) and drive the hook exactly as the reader's wheel does, so
 // the tilt and the caption hand-over can be asserted at real scroll offsets.
+//
+// jsdom has no requestAnimationFrame. Recharts' store (Redux Toolkit) decides
+// ONCE, when the store is created, whether to schedule its notifications
+// through rAF — with a real-timer fallback whose callback calls
+// `cancelAnimationFrame` — or through a plain timeout. Stubbing rAF per test
+// with `vi.stubGlobal` and unstubbing it in `finally` left every store created
+// under the stub calling a `cancelAnimationFrame` that no longer existed once
+// `cleanup()` unmounted the chart under real timers: 28 unhandled
+// ReferenceErrors and a red suite (vitest exits 1 on unhandled errors even
+// with every test green). So the polyfill is installed once for this file
+// (vitest isolates each test file's globals) and never removed; the helper
+// below only switches the timers to fake ones — the polyfill resolves
+// `setTimeout` at call time, so it is faked along with everything else.
+globalThis.requestAnimationFrame ??= ((cb: FrameRequestCallback) => setTimeout(() => cb(0), 16) as unknown as number) as typeof requestAnimationFrame;
+globalThis.cancelAnimationFrame ??= ((id: number) => clearTimeout(id)) as typeof cancelAnimationFrame;
+
 function useStageScrollTimers(): void {
   vi.useFakeTimers();
-  vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => setTimeout(() => cb(0), 16) as unknown as number);
-  vi.stubGlobal('cancelAnimationFrame', (id: number) => clearTimeout(id));
 }
 
 function layoutStage(): HTMLElement {
@@ -596,6 +610,34 @@ describe('ChartStoryStage', () => {
       vi.advanceTimersByTime(STAGE_AUTOPLAY_MS * 3);
     });
     expect(onAdvance).not.toHaveBeenCalled();
+  });
+
+  // `/code-review` LOW finding after the post-loop fix: binding the
+  // scroller's `scroll` event to the gesture handler made auto-play stop
+  // ITSELF — its own advance (`go()` → `scrollIntoView`) fires `scroll` on
+  // that element in a real browser. jsdom stubs `scrollIntoView`, so this
+  // test raises the `scroll` the browser would: auto-play must keep going.
+  it('auto-play survives the scroll events its own advances raise (a bare `scroll` never stops it)', () => {
+    vi.useFakeTimers();
+    const onAdvance = vi.fn();
+    render(<Harness onAdvance={onAdvance} />);
+    const scroller = document.querySelector('[data-stage-scroller]') as HTMLElement;
+    fireEvent.click(screen.getByRole('button', { name: 'Automatisch afspelen' }));
+
+    act(() => {
+      vi.advanceTimersByTime(STAGE_AUTOPLAY_MS);
+    });
+    expect(onAdvance).toHaveBeenNthCalledWith(1, 1);
+    // The programmatic scroll the advance would cause in a browser.
+    act(() => {
+      scroller.dispatchEvent(new Event('scroll'));
+    });
+    expect(screen.getByRole('button', { name: 'Automatisch afspelen' })).toHaveAttribute('aria-pressed', 'true');
+
+    act(() => {
+      vi.advanceTimersByTime(STAGE_AUTOPLAY_MS);
+    });
+    expect(onAdvance).toHaveBeenNthCalledWith(2, 2);
   });
 
   // Item 8: the vignette used to cover the whole card — the title, the

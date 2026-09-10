@@ -198,19 +198,29 @@ export function ChartStoryStage({ open, spec, steps, index, onIndexChange, onClo
     if (!open) return undefined;
     const el = scrollRef.current;
     if (!el) return undefined;
-    const onReaderScroll = (): void => {
+    const onReaderGesture = (): void => {
       readerScrolled.current = true;
       setAutoplay((on) => (on ? false : on));
     };
-    el.addEventListener('wheel', onReaderScroll, { passive: true });
-    el.addEventListener('touchmove', onReaderScroll, { passive: true });
-    el.addEventListener('pointerdown', onReaderScroll, { passive: true });
-    el.addEventListener('scroll', onReaderScroll, { passive: true });
+    // `scroll` fires for the stage's OWN moves too — `go()` → `scrollIntoView`
+    // (auto-play, dots, arrow keys) and the open-at-step scroll — so it may
+    // only arm the reader-scroll guard, never stop auto-play: bound to the
+    // gesture handler it switched auto-play off after its first advance
+    // (jsdom stubs `scrollIntoView`, which is why no test caught it).
+    // Accepted gap: a scrollbar-thumb drag arms the guard without stopping
+    // auto-play on browsers where no pointerdown reaches the scroller.
+    const onAnyScroll = (): void => {
+      readerScrolled.current = true;
+    };
+    el.addEventListener('wheel', onReaderGesture, { passive: true });
+    el.addEventListener('touchmove', onReaderGesture, { passive: true });
+    el.addEventListener('pointerdown', onReaderGesture, { passive: true });
+    el.addEventListener('scroll', onAnyScroll, { passive: true });
     return () => {
-      el.removeEventListener('wheel', onReaderScroll);
-      el.removeEventListener('touchmove', onReaderScroll);
-      el.removeEventListener('pointerdown', onReaderScroll);
-      el.removeEventListener('scroll', onReaderScroll);
+      el.removeEventListener('wheel', onReaderGesture);
+      el.removeEventListener('touchmove', onReaderGesture);
+      el.removeEventListener('pointerdown', onReaderGesture);
+      el.removeEventListener('scroll', onAnyScroll);
     };
   }, [open]);
 
