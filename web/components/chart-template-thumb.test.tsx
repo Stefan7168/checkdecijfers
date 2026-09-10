@@ -28,6 +28,14 @@ describe('TemplateThumb — a digit-free thumbnail derived from the template', (
     expect(standard.querySelectorAll('[data-thumb="point"]').length).toBe(2);
     expect(standard.querySelector('[data-thumb="grid-h"]')).not.toBeNull();
     expect(standard.querySelector('[data-thumb="grid-v"]')).toBeNull();
+    // Stock = axis lines hidden + a horizontal grid, so standard draws the
+    // baseline stand-in, never the axis lines; classic (axisLines: shown)
+    // draws the axis instead. ADR 043: standard now carries the stock look
+    // explicitly, so this pins that the thumb reflects it.
+    expect(standard.querySelector('[data-thumb="baseline"]')).not.toBeNull();
+    expect(standard.querySelector('[data-thumb="axis"]')).toBeNull();
+    expect(classic.querySelector('[data-thumb="axis"]')).not.toBeNull();
+    expect(classic.querySelector('[data-thumb="baseline"]')).toBeNull();
     const social = render(<TemplateThumb template={templateById('social')} />).container;
     expect(social.querySelector('linearGradient')).not.toBeNull();
     expect(social.querySelector('[data-thumb="card"]')).not.toBeNull();

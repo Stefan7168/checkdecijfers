@@ -8,6 +8,7 @@ import type { MessageKey } from './i18n/messages.ts';
 import {
   FRAME_GRADIENT_PRESETS,
   RECHARTS_PALETTE,
+  STOCK_PRESENTATION,
   type ChartPresentation,
   type PresentationKey,
   type PresentationOverrides,
@@ -29,9 +30,14 @@ function template(id: ChartTemplateId, overrides: PresentationOverrides): ChartT
   return { id, nameKey: `chart.template.${id}` as MessageKey, descriptionKey: `chart.template.${id}Description` as MessageKey, overrides };
 }
 
+// ADR 043: Basis applies the designed default EXPLICITLY (not `{}`, which
+// would merely reset to the resolver's base — a signed-in user's saved
+// account default). Colours/font/language are left to the base.
+const { seriesColors: _c, fontFamily: _f, language: _l, ...STOCK_LOOK } = STOCK_PRESENTATION;
+
 export const CHART_TEMPLATES: readonly ChartTemplate[] = [
-  // The designed default itself (ADR 042).
-  template('standard', {}),
+  // The designed default itself (ADR 043) — the full stock look, explicitly.
+  template('standard', STOCK_LOOK),
   // The session-87 "basic Recharts" look, colours included — continuity.
   template('classic', {
     lineWidth: 'normal',
@@ -88,16 +94,15 @@ function sameValue(a: unknown, b: unknown): boolean {
 }
 
 /** The most specific template whose EVERY override equals the effective
- * value — a tweaked chart matches nothing (it is no longer that look);
- * 'standard' only when the chart is pristine and nothing else matches. */
-export function matchTemplate(values: ChartPresentation, pristine: boolean): ChartTemplateId | null {
+ * value — a tweaked chart matches nothing (it is no longer that look).
+ * 'standard' is just the template with the most keys (the full stock
+ * look), so it wins on its own merits only when the chart wears it. */
+export function matchTemplate(values: ChartPresentation): ChartTemplateId | null {
   let best: ChartTemplate | null = null;
   for (const t of CHART_TEMPLATES) {
-    if (t.id === 'standard') continue;
     const keys = Object.keys(t.overrides) as PresentationKey[];
     const wears = keys.every((key) => sameValue(values[key], t.overrides[key]));
     if (wears && (best === null || keys.length > Object.keys(best.overrides).length)) best = t;
   }
-  if (best !== null) return best.id;
-  return pristine ? 'standard' : null;
+  return best?.id ?? null;
 }

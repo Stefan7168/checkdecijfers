@@ -2118,42 +2118,50 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
     });
     const { container: lineContainer } = render(<ChartView spec={lineSpec} />);
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    for (const tab of screen.getAllByRole('tab', { name: /Grafiek|Kleuren|Lettertype|Sjablonen/ })) fireEvent.click(tab);
-    scanForUnboundDigits(
-      lineContainer,
-      [
-        lineSpec.title,
-        lineSpec.unit,
-        lineSpec.attributionLine,
-        lineSpec.attribution.tableId,
-        lineSpec.attribution.syncedAt,
-        lineSpec.definitionLine ?? '',
-        lineSpec.provisionalNote ?? '',
-        ...lineSpec.nullNotes,
-        ...Object.keys(lineSpec.dimLabels),
-        ...Object.values(lineSpec.dimLabels),
-        ...lineSpec.series.flatMap((se) => se.points.flatMap((p) => [p.formattedValue ?? '', p.periodLabel])),
-      ].filter(Boolean),
-    );
+    // Whole-branch review fix: only one tabpanel is ever mounted at a time,
+    // so scanning once AFTER the loop only ever sees the LAST tab clicked
+    // (Kader) — scan after each click so every tab's own mounted content is
+    // actually visited, Sjablonen included.
+    for (const tab of screen.getAllByRole('tab', { name: /Grafiek|Kleuren|Lettertype|Sjablonen/ })) {
+      fireEvent.click(tab);
+      scanForUnboundDigits(
+        lineContainer,
+        [
+          lineSpec.title,
+          lineSpec.unit,
+          lineSpec.attributionLine,
+          lineSpec.attribution.tableId,
+          lineSpec.attribution.syncedAt,
+          lineSpec.definitionLine ?? '',
+          lineSpec.provisionalNote ?? '',
+          ...lineSpec.nullNotes,
+          ...Object.keys(lineSpec.dimLabels),
+          ...Object.values(lineSpec.dimLabels),
+          ...lineSpec.series.flatMap((se) => se.points.flatMap((p) => [p.formattedValue ?? '', p.periodLabel])),
+        ].filter(Boolean),
+      );
+    }
     cleanup();
 
     const barSpec = multiRegionBarSpec();
     const { container: barContainer } = render(<ChartView spec={barSpec} />);
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    for (const tab of screen.getAllByRole('tab', { name: /Grafiek|Kleuren|Lettertype|Sjablonen/ })) fireEvent.click(tab);
-    scanForUnboundDigits(
-      barContainer,
-      [
-        barSpec.title,
-        barSpec.unit,
-        barSpec.attributionLine,
-        barSpec.attribution.tableId,
-        barSpec.attribution.syncedAt,
-        ...Object.keys(barSpec.dimLabels),
-        ...Object.values(barSpec.dimLabels),
-        ...barSpec.series.flatMap((se) => se.points.flatMap((p) => [p.formattedValue ?? '', p.periodLabel])),
-      ].filter(Boolean),
-    );
+    for (const tab of screen.getAllByRole('tab', { name: /Grafiek|Kleuren|Lettertype|Sjablonen/ })) {
+      fireEvent.click(tab);
+      scanForUnboundDigits(
+        barContainer,
+        [
+          barSpec.title,
+          barSpec.unit,
+          barSpec.attributionLine,
+          barSpec.attribution.tableId,
+          barSpec.attribution.syncedAt,
+          ...Object.keys(barSpec.dimLabels),
+          ...Object.values(barSpec.dimLabels),
+          ...barSpec.series.flatMap((se) => se.points.flatMap((p) => [p.formattedValue ?? '', p.periodLabel])),
+        ].filter(Boolean),
+      );
+    }
   });
 
   // Final-review fix: table form gets NO frame and NO Style panel (as
@@ -2261,27 +2269,27 @@ describe('templates (ADR 043) — applying a look from the Sjablonen tab', () =>
     const { container } = render(<ChartView spec={threePointSpec()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
     fireEvent.click(screen.getByRole('tab', { name: 'Sjablonen' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Klassiek' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Klassiek' }));
     expect(container.querySelector('.recharts-cartesian-grid-vertical')).not.toBeNull();
     expect(container.querySelector('.recharts-yAxis .recharts-cartesian-axis-line')).not.toBeNull();
     expect(container.querySelectorAll('circle[data-marker="hidden"]').length).toBe(0);
     expect(container.querySelector('.recharts-line-curve')?.getAttribute('stroke')).toBe(RECHARTS_PALETTE[0]);
-    expect(screen.getByRole('button', { name: 'Klassiek' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('radio', { name: 'Klassiek' })).toHaveAttribute('aria-checked', 'true');
     expect(events).toContain('template_classic');
-    fireEvent.click(screen.getByRole('button', { name: 'Basis' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Basis' }));
     expect(container.querySelector('.recharts-cartesian-grid-vertical')).toBeNull();
     expect(container.querySelector('.recharts-line-curve')?.getAttribute('stroke')).toBe(DEFAULT_PALETTE[0]);
     expect(events).toContain('template_standard');
     setChartUsageSink(null);
   });
 
-  it('a template replaces earlier tweaks (reset first) and clears an uploaded frame image; Standaard afterwards returns to the default', () => {
+  it('a template replaces earlier tweaks (reset first); Standaard afterwards returns to the default', () => {
     const { container } = render(<ChartView spec={threePointSpec()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
     fireEvent.click(screen.getByRole('radio', { name: 'Dun' }));
     expect(container.querySelector('.recharts-line-curve')?.getAttribute('stroke-width')).toBe('1');
     fireEvent.click(screen.getByRole('tab', { name: 'Sjablonen' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Minimaal' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Minimaal' }));
     expect(container.querySelector('.recharts-line-curve')?.getAttribute('stroke-width')).toBe('2');
     expect(container.querySelector('.recharts-cartesian-grid-horizontal')).toBeNull();
     fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
@@ -2298,6 +2306,37 @@ describe('templates (ADR 043) — applying a look from the Sjablonen tab', () =>
     const { container } = render(<ChartView spec={lineSpec} />);
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
     fireEvent.click(screen.getByRole('tab', { name: 'Sjablonen' }));
+    scanForUnboundDigits(
+      container,
+      [
+        lineSpec.title,
+        lineSpec.unit,
+        lineSpec.attributionLine,
+        lineSpec.attribution.tableId,
+        lineSpec.attribution.syncedAt,
+        lineSpec.definitionLine ?? '',
+        lineSpec.provisionalNote ?? '',
+        ...lineSpec.nullNotes,
+        ...Object.keys(lineSpec.dimLabels),
+        ...Object.values(lineSpec.dimLabels),
+        ...lineSpec.series.flatMap((se) => se.points.flatMap((p) => [p.formattedValue ?? '', p.periodLabel])),
+      ].filter(Boolean),
+    );
+  });
+
+  it('the whole card stays digit-free apart from spec strings with the Templates tab open, in English', () => {
+    const lineSpec = threePointSpec({
+      provisionalNote: 'Voorlopige cijfers (2024) zijn gemarkeerd met *.',
+      nullNotes: ['2021: geen gegevens beschikbaar (geheim).'],
+      definitionLine: 'Definitie: testdefinitie 2020.',
+    });
+    const { container } = render(
+      <LangProvider lang="en">
+        <ChartView spec={lineSpec} />
+      </LangProvider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Style' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Templates' }));
     scanForUnboundDigits(
       container,
       [

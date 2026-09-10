@@ -68,7 +68,7 @@ function openTab(tab: 'Kleuren' | 'Lettertype' | 'Sjablonen'): void {
 }
 
 describe('ChartConfigPanel — Grafiek tab', () => {
-  it('is closed by default and opens into a labelled region with four tabs', () => {
+  it('is closed by default and opens into a labelled region with five tabs', () => {
     render(
       <Harness
         resolved={resolvePresentation(lineCtx, {})}
@@ -1880,27 +1880,27 @@ describe('ChartConfigPanel — Sjablonen (templates) tab (ADR 043)', () => {
     expect(tabs[0]).toBe('Sjablonen');
     expect(screen.getByRole('tab', { name: 'Grafiek' })).toHaveAttribute('aria-selected', 'true');
     fireEvent.click(screen.getByRole('tab', { name: 'Sjablonen' }));
-    const cards = screen.getAllByRole('button', { name: /^(Basis|Klassiek|Redactie|Presentatie|Sociaal|Minimaal)$/ });
+    const cards = screen.getAllByRole('radio', { name: /^(Basis|Klassiek|Redactie|Presentatie|Sociaal|Minimaal)$/ });
     expect(cards.map((c) => c.getAttribute('aria-label'))).toEqual(['Basis', 'Klassiek', 'Redactie', 'Presentatie', 'Sociaal', 'Minimaal']);
     expect(screen.getByText('Publicatieklaar: stevige lijn, geen franje, liggend formaat.')).toBeTruthy();
   });
-  it('marks the current template with aria-pressed and a "Huidig" badge: standard when pristine, newsroom when the chart wears it, none when tweaked', () => {
+  it('marks the current template with aria-checked and a "Huidig" badge: standard when pristine, newsroom when the chart wears it, none when tweaked', () => {
     const { unmount } = render(<Harness resolved={resolvePresentation(lineCtx, {})} seriesMeta={meta} onChange={vi.fn()} onReset={vi.fn()} idPrefix="t" onApplyTemplate={vi.fn()} />);
     openTab('Sjablonen');
-    expect(screen.getByRole('button', { name: 'Basis' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('radio', { name: 'Basis' })).toHaveAttribute('aria-checked', 'true');
     expect(screen.getAllByText('Huidig').length).toBe(1);
     unmount();
     render(<Harness resolved={resolvePresentation(lineCtx, templateById('newsroom').overrides)} seriesMeta={meta} onChange={vi.fn()} onReset={vi.fn()} idPrefix="t" onApplyTemplate={vi.fn()} />);
     openTab('Sjablonen');
-    expect(screen.getByRole('button', { name: 'Redactie' })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('button', { name: 'Basis' })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('radio', { name: 'Redactie' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('radio', { name: 'Basis' })).toHaveAttribute('aria-checked', 'false');
   });
   it('clicking a card emits onApplyTemplate with its id and nothing else', () => {
     const onApplyTemplate = vi.fn();
     const onChange = vi.fn();
     render(<Harness resolved={resolvePresentation(lineCtx, {})} seriesMeta={meta} onChange={onChange} onReset={vi.fn()} idPrefix="t" onApplyTemplate={onApplyTemplate} />);
     openTab('Sjablonen');
-    fireEvent.click(screen.getByRole('button', { name: 'Sociaal' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Sociaal' }));
     expect(onApplyTemplate).toHaveBeenCalledWith('social');
     expect(onChange).not.toHaveBeenCalled();
   });
@@ -1919,7 +1919,7 @@ describe('ChartConfigPanel — Sjablonen (templates) tab (ADR 043)', () => {
     render(<Harness lang="en" resolved={resolvePresentation(lineCtx, {})} seriesMeta={meta} onChange={vi.fn()} onReset={vi.fn()} idPrefix="t" onApplyTemplate={vi.fn()} brand={{ lookup: vi.fn() as never }} />);
     fireEvent.click(screen.getByRole('button', { name: 'Style' }));
     fireEvent.click(screen.getByRole('tab', { name: 'Templates' }));
-    expect(screen.getByRole('button', { name: 'Standard' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('radio', { name: 'Standard' })).toHaveAttribute('aria-checked', 'true');
     expect(screen.getByText('Current')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Go to Colours' })).toBeTruthy();
   });
@@ -1927,5 +1927,14 @@ describe('ChartConfigPanel — Sjablonen (templates) tab (ADR 043)', () => {
     const { container } = render(<Harness resolved={resolvePresentation(lineCtx, {})} seriesMeta={meta} onChange={vi.fn()} onReset={vi.fn()} idPrefix="t" onApplyTemplate={vi.fn()} brand={{ lookup: vi.fn() as never }} />);
     openTab('Sjablonen');
     expect(container.textContent ?? '').not.toMatch(/\d/);
+  });
+  it('pins the tabRefs.templates fix: from Sjablonen, ArrowRight on the tablist moves focus to Grafiek', () => {
+    render(<Harness resolved={resolvePresentation(lineCtx, {})} seriesMeta={meta} onChange={vi.fn()} onReset={vi.fn()} idPrefix="t" onApplyTemplate={vi.fn()} />);
+    openTab('Sjablonen');
+    const tablist = screen.getByRole('tablist');
+    fireEvent.keyDown(tablist, { key: 'ArrowRight' });
+    const grafiekTab = screen.getByRole('tab', { name: 'Grafiek' });
+    expect(document.activeElement).toBe(grafiekTab);
+    expect(grafiekTab).toHaveAttribute('aria-selected', 'true');
   });
 });

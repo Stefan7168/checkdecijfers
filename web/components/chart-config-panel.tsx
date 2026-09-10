@@ -747,7 +747,7 @@ export function ChartConfigPanel({
   // currently match — drives the "Huidig" badge and each card's
   // aria-pressed. Recomputed every render straight from resolved.values, no
   // local copy of the pick.
-  const currentTemplate = matchTemplate(resolved.values, resolved.pristine);
+  const currentTemplate = matchTemplate(resolved.values);
   const [activeTab, setActiveTab] = useState<TabKey>('chart');
   // WP218 phase 2: shared by both account-row buttons — a save/forget round
   // trip disables both while pending (never two in flight for the same
@@ -1221,15 +1221,26 @@ export function ChartConfigPanel({
         * a no-op, matching every other tabpanel's applicability gate. */}
       {activeTab === 'templates' && resolved.applicable.has('grid') ? (
         <div id={panelId('templates')} role="tabpanel" aria-labelledby={tabId('templates')} className="mt-3">
-          <div role="group" aria-label={copy.templateGalleryLabel} className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            {CHART_TEMPLATES.map((template) => {
+          <div
+            role="radiogroup"
+            aria-label={copy.templateGalleryLabel}
+            onKeyDown={onRadioGroupKeyDown}
+            className="grid grid-cols-2 gap-2 sm:grid-cols-3"
+          >
+            {CHART_TEMPLATES.map((template, index) => {
               const current = currentTemplate === template.id;
+              // Roving tabindex: the current card is the tab stop; if none
+              // is current (a tweaked chart matches no template), the first
+              // card takes the fallback stop so the group stays reachable.
+              const tabIndex = current || (currentTemplate === null && index === 0) ? 0 : -1;
               return (
                 <button
                   key={template.id}
                   type="button"
+                  role="radio"
                   aria-label={t(lang, template.nameKey)}
-                  aria-pressed={current}
+                  aria-checked={current}
+                  tabIndex={tabIndex}
                   onClick={() => onApplyTemplate?.(template.id)}
                   className={cn(
                     'flex flex-col items-start gap-1 rounded-lg border p-2 text-left text-xs transition-colors hover:bg-muted',

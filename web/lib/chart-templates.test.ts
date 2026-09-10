@@ -24,8 +24,12 @@ describe('CHART_TEMPLATES — the v1 roster (ADR 043), pinned', () => {
       expect(t.descriptionKey).toBe(`chart.template.${t.id}Description`);
     }
   });
-  it('standard is the designed default itself (no overrides); classic is the session-87 look with the classic colours', () => {
-    expect(templateById('standard').overrides).toEqual({});
+  it('standard is the designed default itself, applied explicitly (the stock look minus colour/font/language); classic is the session-87 look with the classic colours', () => {
+    const { seriesColors: _c, fontFamily: _f, language: _l, ...stockLook } = STOCK_PRESENTATION;
+    expect(templateById('standard').overrides).toEqual(stockLook);
+    expect(templateById('standard').overrides).not.toHaveProperty('seriesColors');
+    expect(templateById('standard').overrides).not.toHaveProperty('fontFamily');
+    expect(templateById('standard').overrides).not.toHaveProperty('language');
     const classic = templateById('classic').overrides;
     expect(classic).toEqual({
       lineWidth: 'normal',
@@ -90,20 +94,28 @@ describe('CHART_TEMPLATES — the v1 roster (ADR 043), pinned', () => {
 });
 
 describe('matchTemplate — which template the chart currently wears', () => {
-  it('a pristine chart is standard; a chart wearing a template matches it; a tweaked chart matches nothing', () => {
-    expect(matchTemplate(STOCK_PRESENTATION, true)).toBe('standard');
+  it('a chart wearing the exact stock look is standard; a chart wearing another template matches it; a tweaked chart matches nothing', () => {
+    expect(matchTemplate(STOCK_PRESENTATION)).toBe('standard');
     for (const t of CHART_TEMPLATES) {
       if (t.id === 'standard') continue;
       const values = resolvePresentation(lineCtx, t.overrides).values;
-      expect(matchTemplate(values, false), t.id).toBe(t.id);
+      expect(matchTemplate(values), t.id).toBe(t.id);
     }
     const tweaked = resolvePresentation(lineCtx, { ...templateById('newsroom').overrides, lineWidth: 'thin' }).values;
-    expect(matchTemplate(tweaked, false)).toBeNull();
+    expect(matchTemplate(tweaked)).toBeNull();
   });
-  it('a non-pristine chart that happens to equal the stock values is not standard, and the most specific match wins', () => {
-    expect(matchTemplate(STOCK_PRESENTATION, false)).toBeNull();
+  it('a chart equal to stock but with one tweak matches nothing, and the most specific match wins', () => {
+    const almostStock: typeof STOCK_PRESENTATION = { ...STOCK_PRESENTATION, lineWidth: 'thin' };
+    expect(matchTemplate(almostStock)).toBeNull();
     // minimal ⊂ nothing else, but a chart with minimal's keys AND newsroom's extra keys is neither
     const both = resolvePresentation(lineCtx, { ...templateById('minimal').overrides, framePadding: 'small' }).values;
-    expect(matchTemplate(both, false)).toBe('minimal');
+    expect(matchTemplate(both)).toBe('minimal');
+  });
+  it('an account default shaped like Klassiek is matched as classic; applying standard on top of it matches standard', () => {
+    const classicBase = { ...STOCK_PRESENTATION, ...templateById('classic').overrides };
+    const values = resolvePresentation(lineCtx, {}, classicBase).values;
+    expect(matchTemplate(values)).toBe('classic');
+    const standardOnClassicBase = resolvePresentation(lineCtx, templateById('standard').overrides, classicBase).values;
+    expect(matchTemplate(standardOnClassicBase)).toBe('standard');
   });
 });
