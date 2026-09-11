@@ -93,7 +93,11 @@ export function VisualDock({
           );
         })}
       </div>
-      <div className="min-h-0 min-w-0 flex-1 overflow-y-auto p-4">
+      {/* ADR 042: the chart's height now follows its measured width, so a
+          scrollbar appearing/disappearing here would change the width and
+          re-trigger a height change — a stable gutter keeps the width
+          constant (a no-op with overlay scrollbars). */}
+      <div className="min-h-0 min-w-0 flex-1 overflow-y-auto p-4 [scrollbar-gutter:stable]">
         {busy ? (
           <ChartSkeleton />
         ) : active.kind === 'chart' && active.chart !== null ? (

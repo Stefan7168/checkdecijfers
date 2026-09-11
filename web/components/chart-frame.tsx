@@ -3,8 +3,9 @@
 // `resolvePresentation` (Task 1, chart-presentation.ts) — this component
 // reads the px maps and shadow spec from there so no frame literal is ever
 // duplicated here.
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { useRef, type CSSProperties, type ReactNode } from 'react';
 import {
+  CHART_MIN_HEIGHT_PX,
   FRAME_CORNER_PX,
   FRAME_GRADIENT_ANGLE,
   FRAME_INSET_PX,
@@ -14,9 +15,14 @@ import {
   isFramePristine,
   type FrameValues,
 } from '../lib/chart-presentation.ts';
+import { useElementWidth } from '../lib/use-element-width.ts';
 
-/** chart.tsx's `h-64` — the chart container's normal height, which a frame aspect ratio may never undercut. */
-export const CHART_MIN_HEIGHT_PX = 256;
+// chart.tsx's `h-64` — now the FLOOR of chart.tsx's 256-360px
+// height-follows-width rule (`chartHeightForWidth`, ADR 042), which a frame
+// aspect ratio may never undercut. Re-exported here since it now lives in
+// chart-presentation.ts alongside chartHeightForWidth, but
+// chart-frame.test.tsx still imports it from this module.
+export { CHART_MIN_HEIGHT_PX };
 
 function backgroundStyle(frame: FrameValues, image: string | null): Pick<CSSProperties, 'backgroundColor' | 'backgroundImage' | 'backgroundSize' | 'backgroundPosition'> {
   const bg = frame.frameBackground;
@@ -44,21 +50,13 @@ export function ChartFrame({ frame, image, children }: { frame: FrameValues; ima
   // applied to the HEIGHT only, from the frame's MEASURED width: height =
   // max(the chart's normal height + padding + inset, width ÷ ratio). The width
   // is always the card's; the export honours the exact ratio by widening its
-  // own canvas (chart-download.tsx), never by cropping.
+  // own canvas (chart-download.tsx), never by cropping. Border-box width
+  // (excludes the frame's own padding, which skewed the ratio by the
+  // padding on both sides — battle test round 5): ADR 042's shared
+  // useElementWidth hook.
   const ref = useRef<HTMLDivElement>(null);
-  const [measuredWidth, setMeasuredWidth] = useState(0);
   const aspect = frameAspectRatio(frame.frameAspect);
-  useEffect(() => {
-    if (aspect === null || typeof ResizeObserver === 'undefined' || !ref.current) return undefined;
-    const observer = new ResizeObserver((entries) => {
-      // Border-box width (contentRect excludes the frame's own padding, which
-      // skewed the ratio by the padding on both sides — battle test round 5).
-      const width = entries[0]?.target.getBoundingClientRect().width ?? 0;
-      setMeasuredWidth((current) => (Math.abs(current - width) < 0.5 ? current : width));
-    });
-    observer.observe(ref.current);
-    return () => observer.disconnect();
-  }, [aspect]);
+  const measuredWidth = useElementWidth(ref, aspect !== null);
 
   if (isFramePristine(frame)) {
     return <div data-slot="chart-frame">{children}</div>;

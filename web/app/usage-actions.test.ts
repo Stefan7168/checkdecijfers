@@ -21,7 +21,9 @@ vi.mock('../backend/chart/user-styles.ts', () => ({
   // decision 2026-09-09). 'story_open' and 'story_step' joined for story
   // mode (session 92). 'frame_changed' joined for the frame task (phase 5).
   // 'embed_open'/'embed_copy' joined for the embed feature (Task 4, spec
-  // Part B1).
+  // Part B1). 'template_*' joined for chart templates (ADR 043). 'stage_open'
+  // and 'stage_autoplay' joined for the full-viewport Story stage (ADR 044,
+  // Story-stage plan Task 4).
   CHART_STYLE_EVENTS: [
     'panel_open',
     'option_changed',
@@ -34,6 +36,14 @@ vi.mock('../backend/chart/user-styles.ts', () => ({
     'frame_changed',
     'embed_open',
     'embed_copy',
+    'template_standard',
+    'template_classic',
+    'template_newsroom',
+    'template_presentation',
+    'template_social',
+    'template_minimal',
+    'stage_open',
+    'stage_autoplay',
   ],
 }));
 
@@ -67,6 +77,14 @@ describe('countChartStyleEvent', () => {
     'frame_changed',
     'embed_open',
     'embed_copy',
+    'template_standard',
+    'template_classic',
+    'template_newsroom',
+    'template_presentation',
+    'template_social',
+    'template_minimal',
+    'stage_open',
+    'stage_autoplay',
   ] as const)(
     'records a valid event (%s) via the store, using the real db and a fresh date',
     async (event) => {

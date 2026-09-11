@@ -14,10 +14,90 @@
 > should migrate everything below the session-94 block into status-archive.md and leave only a lean
 > pointer, the way this convention has always intended.
 
+**▶ NEXT SESSION STARTS HERE (written 2026-09-11, session 95, autonomous overnight — refreshed at the end
+of the night).** Read [session-briefs/2026-09-11-session-96-kickoff.md](session-briefs/2026-09-11-session-96-kickoff.md).
+Current state: **the whole overnight visual-upgrade programme is BUILT and verified, in three STACKED pull
+requests waiting for the owner — none merged, none live:** PR #10 = phase 1, the designed default chart
+look (ADR [042](decisions/042-designed-default-chart.md), branch `visual-designed-default`, base `main`);
+PR #11 = phase 2, templates v1 (ADR [043](decisions/043-chart-templates.md), branch `visual-templates-v1`,
+base = PR #10's branch); PR #12 = phase 3, the Story stage (ADR [044](decisions/044-story-stage.md), branch
+`visual-story-stage`, base = PR #11's branch). Merge in that order. PR #9 (embed) is still open too — it
+touches the same tracker docs and `chart.tsx`; whichever merges second needs the session-94 conflict
+playbook. Owner steps unchanged: migrations 028 + 029 (`npm run db:migrate`), optional `BRANDFETCH_API_KEY`.
+
+**▶ SESSION 95 (2026-09-11, AUTONOMOUS overnight — the owner's kickoff pre-resolved the plan's open
+decisions) — VISUAL UPGRADE PHASE 1 BUILT: THE DESIGNED DEFAULT CHART LOOK (ADR 042), PR #10 OPEN.**
+- **Built via SDD** (plan [superpowers/plans/2026-09-11-designed-default-chart.md](superpowers/plans/2026-09-11-designed-default-chart.md),
+  5 tasks, a reviewer per task, a whole-branch review + one fix wave): `DEFAULT_PALETTE` (Okabe–Ito-anchored;
+  every colour ≥ 3:1 on both cards, first four colour-blind-safe under simulation — both test-pinned),
+  `STOCK_PRESENTATION` = ends markers / horizontal grid / no axis lines / gradient area fill, a hairline
+  baseline, haloed 12 px value labels, height follows width (256–360 px, measured — never CSS
+  `aspect-ratio`), a reduced-motion-aware entrance, header hierarchy, chip legend, a faint SOLID crosshair
+  (the plan's dashed one was overruled in review: identical to the event marker), an export guard that
+  strips the tooltip cursor AND Recharts' active dot (a pre-existing R11-in-export gap), two presets
+  retuned, the panel's "Eerste en laatste" option + area-fill toggle, `scrollbar-gutter: stable` on the
+  dock/app scroll containers, a `:focus-visible` reveal for hidden markers. The session-87 literals survive
+  as `CLASSIC_PRESENTATION`/`RECHARTS_PALETTE`. Zero backend/schema/prompt/bundle change.
+- **Verification (measured, on the final code commit `e498e0d`):** root + web typecheck clean; backend
+  142 files / 2200 tests green (solo run, docs excluded) + `test:docs` 11/11; hermetic benchmark 14/14
+  answerable, 6/6 refusal/clarify, 0 fabricated; web 89 files / 1338 tests green; real `next build`
+  clean; `/code-review` LOW 0 findings. Real browser (local dev server against the live DB, the homepage's
+  five charts): light + dark at 1280 px, phone at 375 px — hydration, the measured-height path, hollow
+  provisional markers, halo and baseline confirmed. **CI on PR #10: gate PASS (10m20s) on its head `4b66379` — verified
+  with `gh pr checks 10` at the end of the night.**
+- **Docs:** ADR 042 (new) + ADR 014 note; 12-huisstijl (Charts rewritten, history kept); the session-87
+  redesign spec (superseded note); 08-build-plan ("Visual upgrade programme" section + WP218 note);
+  03-mvp-scope; 04-architecture row; open-questions #232–#234; RUNBOOK go-live note; lessons (session 95);
+  three before/after PNGs in `session-briefs/assets/` for the PR; the phase-2 plan.
+- **Phase 2 — templates v1 (ADR [043](decisions/043-chart-templates.md)) — BUILT the same night, branch
+  `visual-templates-v1` stacked on phase 1, PR #11 open for the owner's review (base = PR #10's branch).**
+  Six looks (Basis applies the stock look EXPLICITLY — `{}` was a no-op for users with a saved default;
+  Klassiek; Redactie/Newsroom; Presentatie; Sociaal; Minimaal) + a Brand card; the Sjablonen tab FIRST in
+  the Style panel (it still opens on Grafiek); a radiogroup gallery with derived, digit-free SVG thumbs; a
+  design-time contrast gate as a test; six `template_*` counter events. SDD: 4 tasks (1+2 batched), reviews
+  clean, a fable whole-branch review + one fix wave (Basis explicit; radiogroup; the digit scan really visits
+  the Sjablonen tab in NL + EN; four small test items), then one browser-pass fix (gallery columns follow the
+  CARD's width via a container query — three columns crowded the name + badge at a 320 px card).
+  **Verification on the branch (measured):** root + web tsc clean; backend 142 files / 2200 tests (solo,
+  docs excluded); benchmark 14/14 + 6/6 + 0 fabricated; web 91 files / 1366 tests; real `next build` clean
+  (re-run solo on the phase-2 head after an overlapping phase-3 RED step invalidated the chain's first build
+  result); `/code-review` LOW 0 findings; the Templates tab and an applied Presentatie look checked in a real
+  browser on the dev server. **CI on PR #11: gate PASS (11m23s) on its head `c1df16c` — verified with `gh pr checks 11`.**
+- **Phase 3 — the Story stage (ADR [044](decisions/044-story-stage.md)) — BUILT the same night, branch
+  `visual-story-stage` stacked on phase 2, PR #12 open for the owner's review (base = PR #11's branch).**
+  "Present" on the Insights panel opens a full-screen, scroll-driven presentation: the chart pinned left as
+  a second chrome-less `ChartView` driven by the active finding (highlight + the dashed ring + a spotlight
+  vignette confined to the plot), captions as full-height panels that crossfade continuously, an 8° entry
+  tilt that settles flat BEFORE the first caption is centred (off below `lg`, on touch, with reduced
+  motion), dots, an auto-play toggle off by default (four seconds a step; stops on wheel/touch/pointer/key
+  and at the last finding), Escape/focus wrap/scroll lock, a phone layout (the card pinned in a 50vh area
+  that scrolls inside itself), `stage_open`/`stage_autoplay` counter events. Zero libraries, no export, no
+  AI cost. SDD: 5 tasks (plan [superpowers/plans/2026-09-11-story-stage-v1.md](superpowers/plans/2026-09-11-story-stage-v1.md)),
+  reviewers per task (two fix rounds), a fable whole-branch review — eight Important (open-at-step desync,
+  tilt not gated, boundary pops, first finding on a tilted plane, no spotlight at open, auto-play not
+  stopping on scroll, the compact observer fighting the stage, the vignette washing the attribution) fixed
+  in one opus wave, a scoped re-review (one phone clip → a two-line fix), then TWO defects the mandatory
+  `/code-review` LOW pass + the full test log caught after three review seats: auto-play stopped itself on
+  its own `scrollIntoView` scroll, and the web suite was EXITING 1 with 28 unhandled
+  `cancelAnimationFrame` errors (rAF stubbed per test; Recharts' store captures it) — both fixed in `6718c4a`.
+  **Verification (measured): on `5b754e3` (solo chain) root tsc clean; backend 142 files / 2200 tests;
+  benchmark 14/14 + 6/6 + 0 fabricated; `test:docs` 11/11. On the final `6718c4a` (web-only change; solo):
+  web 94 files / 1428 tests, 0 unhandled errors, exit 0; web tsc clean; real `next build` clean;
+  `/code-review` LOW: the one finding fixed. Real browser (Browser pane + `web-db` dev server, after
+  diagnosing the hidden pane — React 19's streaming reveal waits on rAF, see lessons): open from finding 3
+  lands on 3; boundary scroll crossfades captions with the plane flat; auto-play 1→2→3 across a `scroll`
+  event, stops on wheel, off at the last finding; Escape/focus/lock; phone 375 px (50vh pinned area,
+  card scrolls inside, top reachable, no tilt, no overflow); dark legible; desktop entry tilt 8° at the top.
+  Not checked: classic scrollbars, smooth-scroll motion itself. CI on PR #12: gate PASS (11m27s) on `7f57f40`, verified with
+  `gh pr checks 12`; a docs-only commit follows it.**
+- **Known debt carried:** this file is still the multi-session dump session 94 flagged; not fixed here.
+
 **▶ SESSION 94 (2026-09-10, owner present, continuing session 93's embed-charts branch review) — PR #9
-MERGE-CONFLICT RESOLVED TWICE, THREE OWNER UI FIXES, THE "NEXT LEVEL" VISUAL PLAN DOC, TWO EXPORT FIXES
-(#222/#223), AND INSIGHTS (ADR 041) BUILT AND MERGED TO `main`.**
-- **PR #9 (embed-charts) conflict resolved — twice, both caused by this session's own pushes to `main`:**
+MERGE-CONFLICT RESOLVED FOUR TIMES, THREE OWNER UI FIXES, THE "NEXT LEVEL" VISUAL PLAN DOC, TWO EXPORT
+FIXES (#222/#223), AND INSIGHTS (ADR 041) BUILT AND MERGED TO `main`.**
+- **PR #9 (embed-charts) conflict resolved — four times so far, every one caused by this session's own
+  pushes to `main` (this is a standing pattern, not a fluke: ANY docs push to `main` while this PR sits
+  unmerged risks another one, since both branches keep editing the same tracker docs independently):**
   (1) the UI-fixes/export-fixes push (`7cea0ad..2c2652e`) put a real conflict on PR #9, isolated to
   `docs/open-questions.md`. Hand-merged both sides, pushed `da6b328` to `origin/embed-charts`; PR
   mergeable again (`gate` check green on that commit, confirmed via GitHub check-runs). (2) The Insights
@@ -47,8 +127,20 @@ MERGE-CONFLICT RESOLVED TWICE, THREE OWNER UI FIXES, THE "NEXT LEVEL" VISUAL PLA
   note:** a direct `git push origin <branch>:main` was blocked by the auto-mode classifier even under this
   session's standing owner authorization; the fix was a normal fast-forward (`git checkout` a local `main`
   tracking `origin/main`, `git merge --ff-only <branch>`, `git push origin main`), not the colon-refspec
-  form. Two more PR #9 check-ins since (16:49, ongoing 90-min cadence) found it unchanged and still green,
-  just awaiting the owner's review/merge — re-armed silently each time, nothing to report.
+  form. One PR #9 check-in since (16:49) found it unchanged and still green — re-armed silently.
+- **A FOURTH conflict hit right after that**, caused by this session's OWN correction push (`37b689a` →
+  `5c0d5c9`, fixing the third conflict's own stale wording that had landed on `embed-charts` but never on
+  `main`). This one needed real judgment, not just combining both sides: `main`'s `status-archive.md` has
+  no "Session 93" entry at all (Session 93/Embed was never merged into `main` — it only exists on this PR's
+  own branch, correctly, since the PR itself is unmerged), so the fix kept `main`'s more-accurate session-94
+  item 10-12 wording plus `embed-charts`' own full Session 93 narrative, which has no counterpart on `main`
+  to conflict with. Merge commit `ecd7590` pushed to `origin/embed-charts`; `gate` re-ran (started
+  17:44:08 UTC). **Deliberately NOT pushing a fifth docs-only commit to `main` to record this** — the
+  commit history and the scheduled check-in already capture it, and each additional main push while this
+  PR sits open risks yet another conflict (the same recursive-chase this session already declined once
+  before, after the second conflict). The next session (or the owner, on merging PR #9) should expect this
+  pattern to have possibly continued past this point — verify PR #9's actual live state rather than
+  trusting this count as final.
 - **Three owner UI fixes, all live on `main`:** Style panel moved from a floating dialog to an inline
   region below the chart (own card, no portal); the "chart in panel" pill restyled to match footer
   buttons, moved into the `CardFooter` action row left of Copy; margin added below the answer box; chat

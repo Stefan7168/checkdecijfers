@@ -349,6 +349,43 @@ describe('attributedSvgMarkup — paint survives leaving the page (#197)', () =>
     );
     expect(() => attributedSvgMarkup(svg, 'attributie')).not.toThrow();
   });
+
+  it('drops any Recharts tooltip cursor from the export — a touch device\'s active crosshair must never bake into a PNG as a fake annotation line', () => {
+    const svg = sampleSvg();
+    const cursor = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    cursor.setAttribute('class', 'recharts-tooltip-cursor');
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('stroke', 'var(--muted-foreground)');
+    cursor.appendChild(line);
+    svg.appendChild(cursor);
+
+    // An element placed AFTER the cursor node, so removing cursor/active-dot
+    // nodes (which happens AFTER inlineComputedPaint pairs clone/original by
+    // index) can't be shown to desync the paint walk: it must still resolve.
+    const marker = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    marker.setAttribute('stroke', 'var(--x)');
+    svg.appendChild(marker);
+
+    // Also drops Recharts' active dot: on a touch device the last tapped
+    // point's active dot (a filled disc with a white ring) also persists and
+    // would be drawn ON TOP of the hollow provisional marker (R11).
+    const activeDot = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    activeDot.setAttribute('class', 'recharts-active-dot');
+    const dotCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    dotCircle.setAttribute('stroke', '#ffffff');
+    activeDot.appendChild(dotCircle);
+    svg.appendChild(activeDot);
+
+    const markup = attributedSvgMarkup(svg, 'Bron: CBS', (element) =>
+      element.getAttribute('stroke') === 'var(--x)' ? { stroke: '#123456' } : null,
+    );
+    expect(markup).not.toContain('recharts-tooltip-cursor');
+    expect(markup).not.toContain('recharts-active-dot');
+    expect(markup).toContain('stroke="#123456"');
+    // the live chart is untouched
+    expect(svg.querySelector('.recharts-tooltip-cursor')).not.toBeNull();
+    expect(svg.querySelector('.recharts-active-dot')).not.toBeNull();
+  });
 });
 
 describe('withLightThemeResolution (#222: exports must stay readable in dark mode)', () => {

@@ -45,9 +45,11 @@ import {
   type ResolvedPresentation,
 } from '../lib/chart-presentation.ts';
 import { t, type Lang, type MessageKey } from '../lib/i18n/messages.ts';
+import { CHART_TEMPLATES, matchTemplate, type ChartTemplateId } from '../lib/chart-templates.ts';
 import { cn } from '../lib/utils.ts';
 import { Button } from './ui/button.tsx';
 import { Input } from './ui/input.tsx';
+import { TemplateThumb } from './chart-template-thumb.tsx';
 
 /** Kept as a re-export (not a fresh alias) so the one existing external
  * mention (chart-presentation.ts's LOCK_REASONS comment) and any future
@@ -67,6 +69,7 @@ function buildPanelCopy(lang: Lang) {
     regionLabel: t(lang, 'chart.panel.regionLabel'),
     close: t(lang, 'chart.panel.close'),
     tabsLabel: t(lang, 'chart.panel.tabsLabel'),
+    tabTemplates: t(lang, 'chart.panel.tabTemplates'),
     tabChart: t(lang, 'chart.panel.tabChart'),
     tabColors: t(lang, 'chart.panel.tabColors'),
     tabFont: t(lang, 'chart.panel.tabFont'),
@@ -173,12 +176,21 @@ function buildPanelCopy(lang: Lang) {
     frameImageNotSaved: t(lang, 'chart.panel.frameImageNotSaved'),
     frameReset: t(lang, 'chart.panel.frameReset'),
     frameBgRefused: t(lang, 'chart.panel.frameBgRefused'),
+    /** ADR 043: the Sjablonen (templates) tab. */
+    templateCurrent: t(lang, 'chart.template.current'),
+    templateGalleryLabel: t(lang, 'chart.template.galleryLabel'),
+    templateBrand: t(lang, 'chart.template.brand'),
+    templateBrandDescription: t(lang, 'chart.template.brandDescription'),
+    templateBrandOpen: t(lang, 'chart.template.brandOpen'),
   };
 }
 type PanelCopy = ReturnType<typeof buildPanelCopy>;
 
-type TabKey = 'chart' | 'colors' | 'font' | 'frame';
-const TAB_ORDER: readonly TabKey[] = ['chart', 'colors', 'font', 'frame'];
+type TabKey = 'templates' | 'chart' | 'colors' | 'font' | 'frame';
+// ADR 043: Sjablonen is first in the tab ORDER (gallery-first discovery) but
+// the panel still OPENS on Grafiek — `activeTab`'s initial state below stays
+// 'chart', deliberately not the first entry here.
+const TAB_ORDER: readonly TabKey[] = ['templates', 'chart', 'colors', 'font', 'frame'];
 
 type RadioKey = 'lineWidth' | 'markers' | 'grid' | 'xLabels';
 interface RadioGroupDef {
@@ -206,6 +218,7 @@ const RADIO_GROUPS: readonly { key: RadioKey; groupLabelKey: MessageKey; options
     groupLabelKey: 'chart.panel.markers',
     options: [
       { value: 'all', labelKey: 'chart.panel.markersOption.all' },
+      { value: 'ends', labelKey: 'chart.panel.markersOption.ends' },
       { value: 'provisionalOnly', labelKey: 'chart.panel.markersOption.provisionalOnly' },
     ],
   },
@@ -436,7 +449,7 @@ function FrameHexField({
   );
 }
 
-type ToggleKey = 'axisLines' | 'valueLabels' | 'zeroBaseline';
+type ToggleKey = 'axisLines' | 'valueLabels' | 'zeroBaseline' | 'areaFill';
 interface ToggleDef {
   key: ToggleKey;
   label: string;
@@ -449,6 +462,7 @@ function buildToggles(lang: Lang): ToggleDef[] {
     { key: 'axisLines', label: t(lang, 'chart.panel.axisLines'), onValue: 'shown', offValue: 'hidden' },
     { key: 'valueLabels', label: t(lang, 'chart.panel.valueLabels'), onValue: 'shown', offValue: 'hidden' },
     { key: 'zeroBaseline', label: t(lang, 'chart.panel.zeroBaseline'), onValue: 'zero', offValue: 'auto' },
+    { key: 'areaFill', label: t(lang, 'chart.panel.areaFill'), onValue: 'gradient', offValue: 'flat' },
   ];
 }
 
@@ -536,12 +550,16 @@ const ARROW_KEYS = ['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp'];
  * ref-based versions elsewhere (chart.tsx, chart-toggle.tsx) in behaviour. */
 function onRadioGroupKeyDown(event: KeyboardEvent<HTMLDivElement>): void {
   if (!ARROW_KEYS.includes(event.key)) return;
-  event.preventDefault();
   const radios = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="radio"]'));
-  if (radios.length === 0) return;
-  const dir = event.key === 'ArrowRight' || event.key === 'ArrowDown' ? 1 : -1;
   const currentIdx = radios.indexOf(document.activeElement as HTMLButtonElement);
-  const nextIdx = ((currentIdx === -1 ? 0 : currentIdx) + dir + radios.length) % radios.length;
+  // Focus isn't on one of this group's own radios (e.g. the Templates tab's
+  // non-radio Brand card button) — an arrow key there isn't this handler's
+  // to act on; treating -1 as "the first radio" used to silently move focus
+  // to, and CLICK, an arbitrary template whenever the key bubbled up.
+  if (currentIdx === -1) return;
+  event.preventDefault();
+  const dir = event.key === 'ArrowRight' || event.key === 'ArrowDown' ? 1 : -1;
+  const nextIdx = (currentIdx + dir + radios.length) % radios.length;
   radios[nextIdx].focus();
   radios[nextIdx].click();
 }
@@ -664,6 +682,11 @@ export interface ChartConfigPanelProps {
    * keeps compiling unchanged, mirroring `account`/`brand` above. */
   frameImage?: string | null;
   onFrameImage?: (dataUrl: string | null) => void;
+  /** ADR 043: fired when a Sjablonen card is clicked, with just the picked
+   * template's id — chart.tsx owns reset + apply + its usage counter; this
+   * panel only reports the pick, it never resolves or applies anything
+   * itself. Optional so every existing render call keeps compiling. */
+  onApplyTemplate?: (id: ChartTemplateId) => void;
 }
 
 /** The "Opmaak"/"Style" trigger button — split out of `ChartConfigPanel` by
@@ -721,8 +744,14 @@ export function ChartConfigPanel({
   onBrandApplied,
   frameImage = null,
   onFrameImage = () => {},
+  onApplyTemplate,
 }: ChartConfigPanelProps): ReactNode {
   const copy = buildPanelCopy(lang);
+  // ADR 043: which of the six named looks (if any) the resolved values
+  // currently match — drives the "Huidig" badge and each card's
+  // aria-checked (the gallery is a radiogroup). Recomputed every render
+  // straight from resolved.values, no local copy of the pick.
+  const currentTemplate = matchTemplate(resolved.values, resolved.locks);
   const [activeTab, setActiveTab] = useState<TabKey>('chart');
   // WP218 phase 2: shared by both account-row buttons — a save/forget round
   // trip disables both while pending (never two in flight for the same
@@ -832,11 +861,13 @@ export function ChartConfigPanel({
     return copy.brandUnavailable;
   }
 
+  const templatesTabRef = useRef<HTMLButtonElement>(null);
   const chartTabRef = useRef<HTMLButtonElement>(null);
   const colorsTabRef = useRef<HTMLButtonElement>(null);
   const fontTabRef = useRef<HTMLButtonElement>(null);
   const frameTabRef = useRef<HTMLButtonElement>(null);
   const tabRefs: Record<TabKey, typeof chartTabRef> = {
+    templates: templatesTabRef,
     chart: chartTabRef,
     colors: colorsTabRef,
     font: fontTabRef,
@@ -1157,6 +1188,7 @@ export function ChartConfigPanel({
           onKeyDown={onTabsKeyDown}
           className="inline-flex items-center gap-0.5 rounded-lg bg-muted p-0.5"
         >
+          {tabButton('templates', copy.tabTemplates)}
           {tabButton('chart', copy.tabChart)}
           {tabButton('colors', copy.tabColors)}
           {tabButton('font', copy.tabFont)}
@@ -1186,6 +1218,63 @@ export function ChartConfigPanel({
           <X aria-hidden="true" />
         </Button>
       </div>
+
+      {/* ADR 043: gated on `grid` (present for every non-table form) rather
+        * than a chart-shape-specific key like `lineWidth` (absent for bar
+        * charts) — the gallery itself never renders a control that would be
+        * a no-op, matching every other tabpanel's applicability gate. */}
+      {activeTab === 'templates' && resolved.applicable.has('grid') ? (
+        <div id={panelId('templates')} role="tabpanel" aria-labelledby={tabId('templates')} className="mt-3 @container">
+          <div
+            role="radiogroup"
+            aria-label={copy.templateGalleryLabel}
+            onKeyDown={onRadioGroupKeyDown}
+            // Browser-pass fix (ADR 043): the card, not the viewport, decides the
+            // column count — a homepage chart card is ~320 px wide at a 1280 px
+            // viewport, where three columns left no room for a name + badge.
+            className="grid grid-cols-2 gap-2 @md:grid-cols-3"
+          >
+            {CHART_TEMPLATES.map((template, index) => {
+              const current = currentTemplate === template.id;
+              // Roving tabindex: the current card is the tab stop; if none
+              // is current (a tweaked chart matches no template), the first
+              // card takes the fallback stop so the group stays reachable.
+              const tabIndex = current || (currentTemplate === null && index === 0) ? 0 : -1;
+              return (
+                <button
+                  key={template.id}
+                  type="button"
+                  role="radio"
+                  aria-label={t(lang, template.nameKey)}
+                  aria-checked={current}
+                  tabIndex={tabIndex}
+                  onClick={() => onApplyTemplate?.(template.id)}
+                  className={cn(
+                    'flex flex-col items-start gap-1 rounded-lg border p-2 text-left text-xs transition-colors hover:bg-muted',
+                    current ? 'border-foreground bg-secondary' : 'border-border',
+                  )}
+                >
+                  <TemplateThumb template={template} />
+                  <span className="flex w-full items-center justify-between gap-1">
+                    <span className="font-medium text-foreground">{t(lang, template.nameKey)}</span>
+                    {current ? <span className="rounded-full bg-foreground px-1.5 text-[10px] text-background">{copy.templateCurrent}</span> : null}
+                  </span>
+                  <span className="text-muted-foreground">{t(lang, template.descriptionKey)}</span>
+                </button>
+              );
+            })}
+            {brand ? (
+              <div className="flex flex-col items-start gap-1 rounded-lg border border-dashed border-border p-2 text-xs">
+                <span className="font-medium text-foreground">{copy.templateBrand}</span>
+                <span className="text-muted-foreground">{copy.templateBrandDescription}</span>
+                <Button type="button" variant="outline" size="xs" onClick={() => setActiveTab('colors')}>
+                  {copy.templateBrandOpen}
+                </Button>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
 
       {activeTab === 'chart' ? (
         <div
@@ -1314,9 +1403,10 @@ export function ChartConfigPanel({
               {seriesMeta.map((series, index) => {
                 const draft = liveDrafts[series.key];
                 const displayText = draft !== undefined ? draft.text : series.color;
-                // Warn only about a colour the reader CHOSE: the stock palette's own
-                // weak entries (e.g. the yellow on white) are the owner's accepted
-                // session-87 trade-off, not something to nag about untouched.
+                // Warn only about a colour the reader CHOSE: every DEFAULT_PALETTE
+                // entry clears the warning line untouched (test-pinned) — the rule
+                // exists because the Classic palette (RECHARTS_PALETTE, e.g. its
+                // yellow on white) has weak entries, and a chosen colour may too.
                 const settled = settledColorFor(series.key, series.color);
                 const chosen = resolved.values.seriesColors[index] !== undefined || settled !== series.color;
                 const warning = chosen ? warningFor(settled) : null;

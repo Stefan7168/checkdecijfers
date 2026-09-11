@@ -187,3 +187,17 @@ describe('VisualDock — en', () => {
     expect(screen.getByRole('tablist', { name: 'Visualizations' })).toBeInTheDocument();
   });
 });
+
+// ADR 042: the chart's height now follows its measured width — a scrollbar
+// appearing/disappearing in this scroll container would change the measured
+// width and re-trigger a height change, so the gutter must stay reserved.
+describe('VisualDock — scroll container reserves a stable scrollbar gutter (ADR 042)', () => {
+  it('the scroll container class list contains [scrollbar-gutter:stable]', () => {
+    const { container } = render(
+      <VisualDock visuals={[chartVisual()]} activeVisualId="visual-0" onSelect={vi.fn()} busy={false} />,
+    );
+    const scrollContainer = container.querySelector('.overflow-y-auto.p-4') as HTMLElement | null;
+    expect(scrollContainer).not.toBeNull();
+    expect(scrollContainer!.className).toContain('[scrollbar-gutter:stable]');
+  });
+});

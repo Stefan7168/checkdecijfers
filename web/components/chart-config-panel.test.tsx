@@ -13,6 +13,7 @@ import { useState, type ReactNode } from 'react';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { FONT_OPTIONS, resolvePresentation, type PresentationContext } from '../lib/chart-presentation.ts';
+import { templateById } from '../lib/chart-templates.ts';
 import { ChartConfigPanel, ChartConfigTrigger, type ChartConfigPanelProps } from './chart-config-panel.tsx';
 
 afterEach(() => {
@@ -61,13 +62,13 @@ const colorMeta = [
 
 /** Opens the panel and switches to the given tab — shared by every
  * Kleuren/Lettertype test below. */
-function openTab(tab: 'Kleuren' | 'Lettertype'): void {
+function openTab(tab: 'Kleuren' | 'Lettertype' | 'Sjablonen'): void {
   fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
   fireEvent.click(screen.getByRole('tab', { name: tab }));
 }
 
 describe('ChartConfigPanel — Grafiek tab', () => {
-  it('is closed by default and opens into a labelled region with four tabs', () => {
+  it('is closed by default and opens into a labelled region with five tabs', () => {
     render(
       <Harness
         resolved={resolvePresentation(lineCtx, {})}
@@ -84,6 +85,7 @@ describe('ChartConfigPanel — Grafiek tab', () => {
     expect(trigger).toHaveAttribute('aria-expanded', 'true');
     const region = screen.getByRole('region', { name: 'Opmaak van de grafiek' });
     expect(within(region).getAllByRole('tab').map((t) => t.textContent)).toEqual([
+      'Sjablonen',
       'Grafiek',
       'Kleuren',
       'Lettertype',
@@ -157,6 +159,33 @@ describe('ChartConfigPanel — Grafiek tab', () => {
     expect(onChange).toHaveBeenCalledWith({ lineWidth: 'extraThick' });
     fireEvent.click(screen.getByRole('button', { name: 'Waarden' }));
     expect(onChange).toHaveBeenCalledWith({ valueLabels: 'hidden' });
+  });
+
+  it('the Punten radiogroup offers three modes in order — Alle punten, Eerste en laatste, Alleen voorlopige — and emits ends', () => {
+    const onChange = vi.fn();
+    render(<ChartConfigPanel resolved={resolvePresentation(lineCtx, {})} seriesMeta={[]} onChange={onChange} onReset={() => {}} idPrefix="p" open onOpenChange={() => {}} triggerId="t" />);
+    const group = screen.getByRole('radiogroup', { name: 'Punten' });
+    const names = [...group.querySelectorAll('[role="radio"]')].map((r) => r.textContent);
+    expect(names).toEqual(['Alle punten', 'Eerste en laatste', 'Alleen voorlopige']);
+    expect(screen.getByRole('radio', { name: 'Eerste en laatste' })).toHaveAttribute('aria-checked', 'true');
+    fireEvent.click(screen.getByRole('radio', { name: 'Alle punten' }));
+    expect(onChange).toHaveBeenCalledWith({ markers: 'all' });
+  });
+  it('the area-fill toggle is offered in area form only, pressed by default, and emits flat', () => {
+    const onChange = vi.fn();
+    const { unmount } = render(<ChartConfigPanel resolved={resolvePresentation({ ...lineCtx, form: 'area' }, {})} seriesMeta={[]} onChange={onChange} onReset={() => {}} idPrefix="p" open onOpenChange={() => {}} triggerId="t" />);
+    const toggle = screen.getByRole('button', { name: 'Verloop in het vlak' });
+    expect(toggle).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(toggle);
+    expect(onChange).toHaveBeenCalledWith({ areaFill: 'flat' });
+    unmount();
+    render(<ChartConfigPanel resolved={resolvePresentation(lineCtx, {})} seriesMeta={[]} onChange={onChange} onReset={() => {}} idPrefix="p" open onOpenChange={() => {}} triggerId="t" />);
+    expect(screen.queryByRole('button', { name: 'Verloop in het vlak' })).toBeNull();
+  });
+  it('English: the new option and toggle read First and last / Gradient fill', () => {
+    render(<ChartConfigPanel lang="en" resolved={resolvePresentation({ ...lineCtx, form: 'area' }, {})} seriesMeta={[]} onChange={() => {}} onReset={() => {}} idPrefix="p" open onOpenChange={() => {}} triggerId="t" />);
+    expect(screen.getByRole('radio', { name: 'First and last' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Gradient fill' })).toBeTruthy();
   });
 
   it('bar form: locked controls are disabled with a readable reason; inapplicable ones are absent', () => {
@@ -1159,7 +1188,7 @@ describe('ChartConfigPanel — Frame tab', () => {
     openFrameTab();
     fireEvent.click(screen.getByRole('radio', { name: 'Verloop' }));
     expect(onChange).toHaveBeenCalledWith({
-      frameBackground: { kind: 'gradient', from: '#fde68a', to: '#f472b6' },
+      frameBackground: { kind: 'gradient', from: '#fde68a', to: '#f9a8d4' },
     });
   });
 
@@ -1167,7 +1196,7 @@ describe('ChartConfigPanel — Frame tab', () => {
     const onChange = vi.fn();
     render(
       <Harness
-        resolved={resolvePresentation(lineCtx, { frameBackground: { kind: 'gradient', from: '#fde68a', to: '#f472b6' } })}
+        resolved={resolvePresentation(lineCtx, { frameBackground: { kind: 'gradient', from: '#fde68a', to: '#f9a8d4' } })}
         seriesMeta={colorMeta}
         onChange={onChange}
         onReset={vi.fn()}
@@ -1193,7 +1222,7 @@ describe('ChartConfigPanel — Frame tab', () => {
   it('round 2: a preset that would refuse (Oceaan, inset off) is disabled with the reason accessible via aria-describedby; a legible one (Leisteen) stays enabled', () => {
     render(
       <Harness
-        resolved={resolvePresentation(lineCtx, { frameBackground: { kind: 'gradient', from: '#fde68a', to: '#f472b6' } })}
+        resolved={resolvePresentation(lineCtx, { frameBackground: { kind: 'gradient', from: '#fde68a', to: '#f9a8d4' } })}
         seriesMeta={colorMeta}
         onChange={vi.fn()}
         onReset={vi.fn()}
@@ -1219,7 +1248,7 @@ describe('ChartConfigPanel — Frame tab', () => {
     render(
       <Harness
         resolved={resolvePresentation(lineCtx, {
-          frameBackground: { kind: 'gradient', from: '#fde68a', to: '#f472b6' },
+          frameBackground: { kind: 'gradient', from: '#fde68a', to: '#f9a8d4' },
           frameInset: 'small',
         })}
         seriesMeta={colorMeta}
@@ -1840,5 +1869,78 @@ describe('ChartConfigPanel — inline region', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
     const dialog = screen.getByRole('region', { name: 'Opmaak van de grafiek' });
     expect(document.activeElement).toBe(dialog);
+  });
+});
+
+describe('ChartConfigPanel — Sjablonen (templates) tab (ADR 043)', () => {
+  it('is the first tab, the panel still opens on Grafiek, and the gallery lists the six templates in order with their descriptions', () => {
+    render(<Harness resolved={resolvePresentation(lineCtx, {})} seriesMeta={meta} onChange={vi.fn()} onReset={vi.fn()} idPrefix="t" onApplyTemplate={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    const tabs = screen.getAllByRole('tab').map((t) => t.textContent);
+    expect(tabs[0]).toBe('Sjablonen');
+    expect(screen.getByRole('tab', { name: 'Grafiek' })).toHaveAttribute('aria-selected', 'true');
+    fireEvent.click(screen.getByRole('tab', { name: 'Sjablonen' }));
+    const cards = screen.getAllByRole('radio', { name: /^(Basis|Klassiek|Redactie|Presentatie|Sociaal|Minimaal)$/ });
+    expect(cards.map((c) => c.getAttribute('aria-label'))).toEqual(['Basis', 'Klassiek', 'Redactie', 'Presentatie', 'Sociaal', 'Minimaal']);
+    expect(screen.getByText('Publicatieklaar: stevige lijn, geen franje, liggend formaat.')).toBeTruthy();
+    // Browser-pass fix: the column count follows the CARD's width (a container query), not the viewport.
+    const gallery = screen.getByRole('radiogroup', { name: 'Sjablonen' });
+    expect(gallery.className).toContain('grid-cols-2');
+    expect(gallery.className).toContain('@md:grid-cols-3');
+    expect(gallery.className).not.toContain('sm:grid-cols-3');
+    expect(gallery.parentElement?.className).toContain('@container');
+  });
+  it('marks the current template with aria-checked and a "Huidig" badge: standard when pristine, newsroom when the chart wears it, none when tweaked', () => {
+    const { unmount } = render(<Harness resolved={resolvePresentation(lineCtx, {})} seriesMeta={meta} onChange={vi.fn()} onReset={vi.fn()} idPrefix="t" onApplyTemplate={vi.fn()} />);
+    openTab('Sjablonen');
+    expect(screen.getByRole('radio', { name: 'Basis' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getAllByText('Huidig').length).toBe(1);
+    unmount();
+    render(<Harness resolved={resolvePresentation(lineCtx, templateById('newsroom').overrides)} seriesMeta={meta} onChange={vi.fn()} onReset={vi.fn()} idPrefix="t" onApplyTemplate={vi.fn()} />);
+    openTab('Sjablonen');
+    expect(screen.getByRole('radio', { name: 'Redactie' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('radio', { name: 'Basis' })).toHaveAttribute('aria-checked', 'false');
+  });
+  it('clicking a card emits onApplyTemplate with its id and nothing else', () => {
+    const onApplyTemplate = vi.fn();
+    const onChange = vi.fn();
+    render(<Harness resolved={resolvePresentation(lineCtx, {})} seriesMeta={meta} onChange={onChange} onReset={vi.fn()} idPrefix="t" onApplyTemplate={onApplyTemplate} />);
+    openTab('Sjablonen');
+    fireEvent.click(screen.getByRole('radio', { name: 'Sociaal' }));
+    expect(onApplyTemplate).toHaveBeenCalledWith('social');
+    expect(onChange).not.toHaveBeenCalled();
+  });
+  it('the Brand card appears only for a signed-in visitor (brand prop present) and switches to the Kleuren tab', () => {
+    const { unmount } = render(<Harness resolved={resolvePresentation(lineCtx, {})} seriesMeta={meta} onChange={vi.fn()} onReset={vi.fn()} idPrefix="t" onApplyTemplate={vi.fn()} />);
+    openTab('Sjablonen');
+    expect(screen.queryByText('Merk')).toBeNull();
+    unmount();
+    render(<Harness resolved={resolvePresentation(lineCtx, {})} seriesMeta={meta} onChange={vi.fn()} onReset={vi.fn()} idPrefix="t" onApplyTemplate={vi.fn()} brand={{ lookup: vi.fn() as never }} />);
+    openTab('Sjablonen');
+    expect(screen.getByText('Merk')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Naar Kleuren' }));
+    expect(screen.getByRole('tab', { name: 'Kleuren' })).toHaveAttribute('aria-selected', 'true');
+  });
+  it('English: Templates / Standard … Minimal / Current / Go to Colours', () => {
+    render(<Harness lang="en" resolved={resolvePresentation(lineCtx, {})} seriesMeta={meta} onChange={vi.fn()} onReset={vi.fn()} idPrefix="t" onApplyTemplate={vi.fn()} brand={{ lookup: vi.fn() as never }} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Style' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Templates' }));
+    expect(screen.getByRole('radio', { name: 'Standard' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByText('Current')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Go to Colours' })).toBeTruthy();
+  });
+  it('the whole tab is digit-free (no ratio numbers leak into text)', () => {
+    const { container } = render(<Harness resolved={resolvePresentation(lineCtx, {})} seriesMeta={meta} onChange={vi.fn()} onReset={vi.fn()} idPrefix="t" onApplyTemplate={vi.fn()} brand={{ lookup: vi.fn() as never }} />);
+    openTab('Sjablonen');
+    expect(container.textContent ?? '').not.toMatch(/\d/);
+  });
+  it('pins the tabRefs.templates fix: from Sjablonen, ArrowRight on the tablist moves focus to Grafiek', () => {
+    render(<Harness resolved={resolvePresentation(lineCtx, {})} seriesMeta={meta} onChange={vi.fn()} onReset={vi.fn()} idPrefix="t" onApplyTemplate={vi.fn()} />);
+    openTab('Sjablonen');
+    const tablist = screen.getByRole('tablist');
+    fireEvent.keyDown(tablist, { key: 'ArrowRight' });
+    const grafiekTab = screen.getByRole('tab', { name: 'Grafiek' });
+    expect(document.activeElement).toBe(grafiekTab);
+    expect(grafiekTab).toHaveAttribute('aria-selected', 'true');
   });
 });
