@@ -1,5 +1,41 @@
 # STATUS archive — the session log
 
+**Session 97 (2026-09-12, AUTONOMOUS — the owner's kickoff: "work autonomously for hours, multiple agents, big
+steps") — THE JOURNEY PROGRAMME BUILT (phases 0, 1, 3, 4, 5; ADR 045), BRANCH `journey-programme`, PR FOR THE OWNER.**
+
+1. **Plan** ([superpowers/plans/2026-09-12-journey-programme.md](superpowers/plans/2026-09-12-journey-programme.md)):
+   five work packages in five parallel git worktrees (symlinked node_modules), Sonnet implementers, TDD per package,
+   then merged into one branch (four `messages.ts` tail conflicts, all keep-both). Phase 2 / R3 (the money path)
+   deliberately NOT built — explicit owner go required; the larger grant, the 028 apply and the audit re-run are
+   owner steps.
+2. **Built:** WP-A the read-only usage report (`npm run usage:report`, `src/usage/report.ts`, 11 tests, aggregates
+   only; trial→signup conversion honestly "not measurable"; fetch spend NET of refunds) — RUN ONCE against the live
+   DB: 4 signups, 2 users with questions, 4 fetches (3 delivered / 1 failed / 300 net credits), 7 `internal`
+   refusals all-time; WP-B `/werkwijze` + `/privacy` as visibly-marked drafts + footer links + the Ontdek caption + a
+   fourth landing step "Publiceer"; WP-C credits-page per-pack copy (server-side maths), the purchase poll (3 s ×
+   10, hidden-tab aware), the phone header (#214 → Account menu), Sjablonen as the opening tab for an untweaked
+   chart without a saved default, the anonymous Insights login line; WP-D chip captions by kind, the linked
+   insufficient-credits message naming the covering pack, the amber low-balance line (#69 rule), the 8-second
+   honest waiting line, one-click clarification options (revises #75 for one kind), the four inert chips → one
+   "Eigen data (binnenkort)"; WP-E the collapsed coverage disclosure (registry read, 30-min cache, one example per
+   table, Eurostat "binnenkort" only) under the price line and as "Dit weten we nu" on the landing.
+3. **Reviews:** an Opus whole-branch review (3 HIGH / 3 MEDIUM / 5 LOW — all fixed in one Opus fix wave: the poll
+   listener leak, the wrong-carrier one-click send + double-send latch, the privacy cookie overclaim, the saved-default
+   panel tab, the templates-tab gate, net fetch spend, metadata, locale euro format, the link's accessible name, the
+   D10 className pin) and an Opus scoped review of WP-E (the example-frame grammar, fixed by the session). `/code-review`
+   LOW: 0 findings.
+4. **Verification (measured):** full block on `8c3fc38` — root + web tsc clean; backend 144 files / 2222 tests;
+   benchmark 14/14 answerable, 6/6 refusal/clarify, 0 fabricated, GATE PASS; web 98 files / 1492 tests; `next build`
+   clean. After the three browser-pass commits (web-only): web tsc clean, web 98 files / 1492 tests, `next build`
+   clean on `ff8fbda`. Real browser (local `next dev -p 3010` against the live DB), light + dark, 1280 px + 375 px:
+   landing coverage section + example questions, both trust pages (after the proxy fix), footer links, Ontdek caption,
+   step 4, the Style panel opening on Templates, the anonymous Insights login line. NOT walked in a browser (needs a
+   login; covered by tests only): the chat chips/captions, the credits page, the purchase poll, the phone header.
+5. **Docs:** ADR 045 (new); open-questions #14(d), #75, #207, #211, #214, #238; build plan; 12-huisstijl; 04-architecture
+   row; RUNBOOK "Usage report"; the ADR 043 decision-6 note; lessons; this entry; the session-98 kickoff.
+6. **Observed, not this session's scope:** PR #13 (`visual-story-motion`, Story stage motion pass) appeared after the
+   kickoff and is open, MERGEABLE; `refusal (internal) 7` all-time in the report deserves a look (error log).
+
 **Session 96 (2026-09-11, owner present throughout — started as "how do we obliterate LocalFocus") — STRATEGY,
 ICP, RESEARCH, SANITY CHECK; DOCS ONLY, NO CODE.**
 

@@ -14,20 +14,24 @@
 > should migrate everything below the session-94 block into status-archive.md and leave only a lean
 > pointer, the way this convention has always intended.
 
-**▶ NEXT SESSION STARTS HERE (written 2026-09-11, session 96, owner present).** Read
-[session-briefs/2026-09-11-session-97-kickoff.md](session-briefs/2026-09-11-session-97-kickoff.md).
-Current state (all verified against GitHub / `main` / production on 2026-09-11): **the whole visual-upgrade
-programme is MERGED + LIVE** — PR #10 `ca5ba19`, PR #11 `696c1c3`, PR #12 `29aadde`, CI green on each, production
-answering (200). WP218 (PR #7, `05ec8ed`) live since 2026-09-09. **Still open: PR #9 (embed) — `MERGEABLE` / `CLEAN`
-at head `d427cdd`; Live re-render inside it stays gated closed until a creator-email lookup exists.** Owner steps
-unchanged: migrations 028 + 029 (`npm run db:migrate`), optional `BRANDFETCH_API_KEY`, `EMBED_TOKEN_SECRET` on merge.
-**Next up = the Journey programme** ([08-build-plan.md § Journey programme](08-build-plan.md), [#238](open-questions.md)):
-phase 0 first (apply 028, the read-only usage report, decide the audit re-run), then the first-question bundle; the
-money-path item R3 needs an explicit owner go. **In parallel, the positioning thread** ([#237](open-questions.md)):
-the ICP now lives in [01-product-vision.md](01-product-vision.md) (defined by the job; four segments in go-to-market
-order; direction = chat from official-statistics research to an embedded, sourced chart, CBS first, Eurostat second);
-it still needs its own ADR + roadmap re-phasing, the [#205](open-questions.md) Pro-plan brainstorm (live embeds =
-the Pro reason), and a landing page + public gallery as the cheapest test of the message.
+**▶ NEXT SESSION STARTS HERE (written 2026-09-12, session 97, autonomous).** Read
+[session-briefs/2026-09-12-session-98-kickoff.md](session-briefs/2026-09-12-session-98-kickoff.md).
+Current state (verified against `main` / GitHub on 2026-09-12): the visual-upgrade programme (PRs #10–#12) and
+WP218 (PR #7) are LIVE; **the Journey programme phases 0, 1, 3, 4, 5 are BUILT on branch `journey-programme`
+(ADR [045](decisions/045-journey-programme-first-five-minutes.md)) — PR open for the owner, NOT merged, NOT live.**
+Also open: PR #9 (embed, `EMBED_TOKEN_SECRET` on merge) and PR #13 (Story stage motion pass). Owner steps
+unchanged: migrations 028 + 029 (`npm run db:migrate`), optional `BRANDFETCH_API_KEY`; new: read the two draft
+trust pages (`/werkwijze`, `/privacy`, contact e-mail placeholder), run `npm run usage:report` once after 028.
+**Deliberately NOT built: phase 2 / R3 (confirm before a 100-credit fetch) — the money path needs an explicit owner
+go; the larger signup grant (decision 5) is a config value for the owner.** Next up after the merge: R3 with the
+owner's go, phase 6 (re-run the report), and the positioning thread ([#237](open-questions.md)).
+
+**▶ SESSION 97 (2026-09-12, AUTONOMOUS) — JOURNEY PROGRAMME BUILT, BRANCH + PR.** Five parallel worktrees, five
+work packages (usage report; trust pages + landing; credits/poll/header/panel/insights; the chat bundle; the
+coverage disclosure), an Opus whole-branch review (3 HIGH fixed) + a scoped WP-E review, `/code-review` LOW 0,
+the full verification block green (backend 144 files / 2222 tests, benchmark PASS, web 98 files / 1492 tests,
+`next build`), a real-browser pass that found three more defects (fixed). Full entry:
+[status-archive.md](status-archive.md).
 
 **▶ SESSION 96 (2026-09-11, owner present) — STRATEGY + SANITY CHECK, DOCS ONLY (no code).** Competitive brief on
 LocalFocus + Flourish (two Sonnet research agents), a `/deep-research` run (105 agents; its verify + synthesize
