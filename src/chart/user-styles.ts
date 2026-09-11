@@ -36,6 +36,19 @@ export const CHART_STYLE_EVENTS = [
   'story_step',
   // WP218 phase 5 (frame task 2): fired once per frame change.
   'frame_changed',
+  // ADR 043: one event per template picked, so the counter can say which
+  // looks people choose.
+  'template_standard',
+  'template_classic',
+  'template_newsroom',
+  'template_presentation',
+  'template_social',
+  'template_minimal',
+  // ADR 044: the full-viewport Story stage — once per stage opened, once per
+  // auto-play switched on (never per advance; a full play-through of a
+  // 6-step story is one event, not six).
+  'stage_open',
+  'stage_autoplay',
 ] as const;
 export type ChartStyleEvent = (typeof CHART_STYLE_EVENTS)[number];
 

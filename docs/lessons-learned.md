@@ -6,6 +6,111 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 95 — 2026-09-11 — autonomous overnight: the designed default chart look (ADR 042) via SDD —
+palette design as arithmetic, a plan literal overruled in review, a hidden-but-focusable a11y trap, cross-file
+literal pins, a stale `.next` cache, and fix rounds without SendMessage
+
+- **Design a palette with a script, not with taste alone — and turn the script into the test.** A 60-line
+  node script (WCAG contrast against both card colours + Machado 2009 colour-vision-deficiency matrices +
+  OKLab distance) settled the default palette in three iterations: it showed that five of eight stock
+  colours warn on one card, that the first Okabe–Ito four pass everything with margin, that two of the six
+  gradient presets would REFUSE the new palette (one of them — `sand` — against the FIRST colour, i.e. on
+  every chart), and which candidate hues were out of the sRGB gamut. The same arithmetic became three
+  pinned tests. Lesson: whenever a design decision has a measurable property (contrast, distance, gamut),
+  compute it before choosing and pin it after — the session-92 "presets need a contrast check at design
+  time" lesson, made the default.
+- **A pure-module change with literal pins in OTHER test files needs the neighbouring suites run, not just
+  its own.** Task 1 retuned a gradient preset's hex and ran only `chart-presentation.test.ts`; the panel's
+  test file pinned the old hex in four places and stayed red until Task 4's implementer noticed it. Cheap to
+  avoid: a brief that changes a shared constant lists every test file that mentions the literal (`grep -rn
+  '#f472b6' web`) as part of its verification step.
+- **A plan's own literal can be wrong, and only a reviewer told not to spare the plan finds it.** The plan
+  specified a dashed `3 3` crosshair for the tooltip — byte-identical to the curated event marker's dash and
+  close to the dashed story ring; on a touch device (click trigger) the cursor persists after a tap, so a
+  screenshot could show a fake annotation. The top-tier task reviewer flagged it as plan-mandated; the
+  ruling made the crosshair solid and fainter. Lesson (again): never pre-judge findings for a reviewer, and
+  give every chart-vocabulary element (dash patterns, ring sizes) a distinct signature.
+- **"Keep it in the DOM at opacity 0" is an honesty mechanism that needs an accessibility companion.**
+  Making first-and-last markers the default meant every interior point is invisible yet still
+  `role="button"`/`tabIndex=0` — keyboard focus landed on nothing visible. `circle[data-marker="hidden"]:
+  focus-visible { opacity: 1 }` (a CSS rule outranks the SVG attribute) closed it in four lines. Lesson:
+  whenever something is hidden visually but kept interactive for a good reason, add a focus reveal in the
+  same change.
+- **The whole-branch review found three seam defects the per-task reviews structurally could not:** the new
+  export guard stripped the tooltip cursor but not Recharts' active dot (a filled disc with a white ring
+  drawn OVER the hollow provisional marker in a touch-device export — a pre-existing R11 gap the guard made
+  obvious); a height-follows-width rule inside an `overflow-y-auto` container without `scrollbar-gutter:
+  stable` oscillates on non-overlay scrollbars (Windows/Linux — invisible on the owner's Mac, so a browser
+  pass would not have caught it); small multiples still drew Recharts' default axis line while the combined
+  chart drew a hairline. Budget the final review on the most capable tier — third session in a row it paid.
+- **No `SendMessage` in this harness → a fix round is a FRESH implementer with the brief, the report file and
+  the findings verbatim.** Worked well at the cheapest tier for mechanical fixes (three rounds, ~80–90k
+  tokens each, all addressed first time). The report file is the persistent memory; the skill's fallback
+  path is the real path here.
+- **A stale `web/.next` from another branch produces a phantom typecheck error.** `.next/types/validator.ts`
+  referenced `app/embed/[token]/page.js` (a route that exists only on `embed-charts`); `tsc --noEmit` failed
+  on a file no branch commit owns. Delete `web/.next` after switching branches before trusting a typecheck.
+- **Two review-derived rules of thumb for Recharts honesty:** (1) anything Recharts draws itself on hover/tap
+  (`recharts-tooltip-cursor`, `recharts-active-dot`) can persist on touch devices and WILL be in a cloned
+  export unless stripped AFTER the paint inliner (which pairs clone and original by index); (2) an `axisLine`
+  prop accepts SVG props, so a "hairline baseline in the grid colour" is one object, not a second axis.
+- **Phase 2 (templates) lessons, same night.** (1) **An "empty overrides" preset is not "the default" once an
+  account default exists** — `{}` resets to the resolver's BASE, which for a signed-in user is their saved
+  default, so the Basis card was a no-op for exactly the users who had saved Classic; the fix was to apply
+  the stock look explicitly and derive it from the constant. Whenever a layer sits between "reset" and
+  "stock", a preset must state its values. (2) **"Click every tab, then scan" scans only the last tab** —
+  one tabpanel is mounted at a time, so the plan's own instruction to "extend the every-tab digit scan"
+  produced a test whose title lied; the scan has to run inside the loop after each click. Read the loop
+  before trusting a test's title. (3) **"Exactly one of N is current" is a radiogroup, not N toggle
+  buttons** — the first build used `aria-pressed`; the whole-branch review pointed out a pressed toggle
+  implies un-pressing. The panel already had the radiogroup pattern; reuse it. (4) **Widening a
+  `Record<Union, …>`'s union without updating the object literal** threw a TypeError on click that vitest
+  still reported green (the throw happened inside an event handler); the implementer caught it by reading
+  the output, not the exit code — pristine output is a finding for a reason.
+- **Phase 3 (the Story stage) lessons, same night.** (1) **Never overlap a verification chain's `next
+  build` with an implementer's RED step** — the build's TypeScript pass saw a test file importing a module
+  that did not exist yet and failed; the phase-2 build had to be re-run solo on its exact head. A chain that
+  includes a typecheck or a build needs the tree frozen for its whole duration, not just for the backend
+  suite. (2) **A test that cannot fail if the code under test is deleted is not a test** — the stage's
+  step Effect (the ONLY step reaction for comparison charts) shipped with a single-series fixture that could
+  never show dimming; the reviewer's "delete the Effect, everything still passes" argument is the right
+  bar. Ask it of every Effect test. (3) **An assertion on the ABSENCE of something is vacuous when the
+  whole container is gone** — "no legend buttons" passed because stage mode removed the legend group
+  entirely; assert the presence of the replacement first, then the absence inside it. (4) **A brief that
+  says "four call sites" when the code has three is a brief bug the implementer should report, not
+  absorb** — this one did, and the reviewer confirmed the fourth site never existed. (5) **The hidden
+  Browser pane can show a page that never "arrives" — zero-width chart containers, no Recharts svg, JS
+  calls timing out at 45 s — and the cause is React 19's streaming, not the pane.** Diagnosed at the end of
+  the night: the page's Suspense boundary was still a `<template id="B:0">` + `<div hidden id="S:0">` pair;
+  React's inline `$RC` reveal function batches boundaries and schedules the actual swap (`$RV($RB)`) through
+  `requestAnimationFrame` — which NEVER fires in a hidden document, so a background tab shows the shell
+  forever (the `main` element lays out, the streamed content stays `display: none`). The synthetic-`resize`
+  trick only fixes the second failure mode (Recharts measuring at width 0 after a reveal). Workaround that
+  worked: `const rb = $RB; $RB = []; $RV(rb.slice(0, 2));` from `javascript_tool`, then the resize loop —
+  the content reveals, Recharts measures, hydration completes. Also keep a page-level rAF shim
+  (`requestAnimationFrame = cb => setTimeout(() => cb(performance.now()), 16)`) for rAF-driven code under
+  test in a hidden tab, and expect timers throttled to ≥ 1 s. Next time: run the browser pass EARLY in a
+  phase and again right after the fix wave, and when a page "never renders" in the pane, check for a
+  pending `template[id^="B:"]` before blaming the pane. (6) **The cheap `/code-review` LOW pass found a real bug
+  after three review seats had passed it** — the post-loop two-line fix bound the scroller's `scroll`
+  event to the shared gesture handler, so auto-play's OWN advance (`go()` → `scrollIntoView` → `scroll`)
+  switched auto-play off after its first step in a real browser; jsdom stubs `scrollIntoView`, so every
+  test stayed green. A diff-only read with no plan context saw what the reviewers reading the whole
+  component did not: an event fired by the code's own action reaching a handler meant for the user. Two
+  lessons: any listener on an event the component itself can raise must distinguish self-raised from
+  user-raised (or be split); and a "tiny post-loop fix the controller reads itself" is exactly where
+  the mandatory LOW pass earns its keep — never skip it for a diff that looks too small to matter.
+  (7) **"Every test green" and "the suite passed" are different claims — vitest exits 1 on UNHANDLED
+  errors even with 0 failed tests.** The branch's web suite reported 1427 passed AND `Errors 28 errors`
+  (exit 1) for two commits; the verification chain printed only the `Tests` summary line, so nobody
+  saw it and CI would have gone red on the PR. Cause: the fix wave stubbed `requestAnimationFrame` per
+  test with `vi.stubGlobal` and unstubbed it in `finally`, but Recharts' Redux Toolkit store captures rAF
+  at creation and its real-timer fallback calls the global `cancelAnimationFrame` after `cleanup()` has
+  unmounted the chart under real timers (afterEach hooks run in stack order, so the file-level cleanup
+  runs AFTER `vi.useRealTimers()`). Fix: polyfill rAF/cAF once per test file and never remove it. Rules:
+  a verification chain must print the exit code of every step (`EXIT=$?`) and grep for `Errors` next to
+  `Tests`; never `vi.stubGlobal` an API a third-party store captures at creation time.
+
 ## Session 94 — 2026-09-10 — owner present: Insights (AI-phrased outlier findings) replaces Story mode's
 selection; a parallel-branch ADR/open-questions numbering collision (hit twice); hand-tracing the scoring
 math before writing tests caught a real bug; asking one tight question beat guessing on a genuinely

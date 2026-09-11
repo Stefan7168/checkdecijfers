@@ -9,7 +9,7 @@ import { CartesianGrid, Line, LineChart, ResponsiveContainer, XAxis, YAxis } fro
 import type { ChartSpec } from '../backend/chart/types.ts';
 import { dotGeometry, LINE_WIDTH_PX, seriesColor, type ChartPresentation } from '../lib/chart-presentation.ts';
 import { t, type Lang } from '../lib/i18n/messages.ts';
-import { AXIS_COLOR, AxisTick, buildRows, GRID_COLOR, type Row, valueLabelPlan, yAxisDomain } from './chart.tsx';
+import { AXIS_COLOR, AxisTick, baselineAxisLine, buildRows, GRID_COLOR, type Row, valueLabelPlan, yAxisDomain } from './chart.tsx';
 
 /** R11 (WP218 gap fix): the hollow provisional marker, same convention as
  * chart.tsx's SeriesDot — but ONLY for a provisional point; a final point
@@ -109,12 +109,15 @@ export function ChartSmallMultiples({
             <div className="h-24 w-full" data-panel-for={s.key}>
               <ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 200, height: 96 }}>
                 <LineChart data={rows} margin={{ top: 4, right: 4, left: 4, bottom: 4 }}>
-                  {/* Recharts' own default grid/axis geometry (session 87:
-                    * "basic Recharts look") in theme colours (AXIS_COLOR/
-                    * GRID_COLOR, chart.tsx — the literal #666/#ccc defaults
-                    * are illegible in dark mode); only the honesty-bound tick
-                    * mechanism is custom. WP218: grid on/off follows
-                    * `presentation.grid`, same as the combined chart. */}
+                  {/* ADR 042 designed default (2026-09-11): the grid honours
+                    * `presentation.grid` and the category axis line follows
+                    * `baselineAxisLine` — hidden by default with a hairline
+                    * baseline in its place — same as the combined chart, all
+                    * in theme colours (AXIS_COLOR/GRID_COLOR, chart.tsx — the
+                    * literal #666/#ccc Recharts defaults are illegible in
+                    * dark mode). The session-87 "basic Recharts look"
+                    * survives only as the Classic look; only the
+                    * honesty-bound tick mechanism is custom. */}
                   {presentation.grid !== 'none' ? (
                     <CartesianGrid
                       strokeDasharray="3 3"
@@ -126,7 +129,7 @@ export function ChartSmallMultiples({
                       vertical={presentation.grid === 'both'}
                     />
                   ) : null}
-                  <XAxis dataKey="periodLabel" tick={false} stroke={AXIS_COLOR} />
+                  <XAxis dataKey="periodLabel" tick={false} stroke={AXIS_COLOR} axisLine={baselineAxisLine(presentation)} />
                   <YAxis
                     ticks={ownTicks.map((t) => t.value)}
                     interval={0}

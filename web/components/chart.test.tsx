@@ -2,7 +2,10 @@
 // every displayed numeric STRING must be a point's own formattedValue, and
 // periods must sort chronologically by code, not label/insertion order —
 // mirroring the checks ADR 014's SVG-renderer test suite already runs.
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ChartSpec } from '../backend/chart/types.ts';
 import type { ChartStyleEvent } from '../backend/chart/user-styles.ts';
@@ -11,6 +14,7 @@ import { ChartStyleProvider } from '../lib/chart-style-context.tsx';
 import { LangProvider } from '../lib/i18n/lang-provider.tsx';
 import { StylePanelOwnerProvider } from '../lib/style-panel-owner.tsx';
 import { attributedSvgMarkup } from './chart-download.tsx';
+import type { StoryStep } from '../lib/chart-story.ts';
 
 // WP218 phase 2 (owner C): chart.tsx imports the account-default Server
 // Actions from THIS tiny file, never web/app/actions.ts (see chart-style-
@@ -27,12 +31,15 @@ const chartStyleActions = vi.hoisted(() => ({
 vi.mock('../app/chart-style-actions.ts', () => chartStyleActions);
 import {
   annotationMarkers,
+  BAR_LABEL_MAX,
+  baselineAxisLine,
   buildRegionRows,
   buildRows,
   ChartTooltip,
   ChartView,
   clampTotChange,
   clampVanafChange,
+  DEFAULT_PALETTE,
   RECHARTS_PALETTE,
   seriesStyle,
   tableModel,
@@ -572,19 +579,19 @@ function twoSeriesSpec(overrides: Partial<ChartSpec> = {}): ChartSpec {
   });
 }
 
-// Session 87 visual redesign (owner decision: "use the basic Recharts style")
-// superseded the #197 colour-blind-safe token palette + dash patterns.
-describe('seriesStyle (session 87: the stock Recharts example palette)', () => {
-  it('draws series in the Recharts documentation palette, in order, as literal hex (no theme tokens)', () => {
+// ADR 042 (2026-09-11): the colour-blind-safe DEFAULT_PALETTE is the default;
+// the session-87 "basic Recharts" palette (RECHARTS_PALETTE) is kept for the Classic look.
+describe('seriesStyle (ADR 042: the designed default palette)', () => {
+  it('draws series in DEFAULT_PALETTE, in order, as literal hex', () => {
     const colors = [0, 1, 2, 3].map((i) => seriesStyle(i).color);
-    expect(colors).toEqual(RECHARTS_PALETTE.slice(0, 4));
-    expect(RECHARTS_PALETTE[0]).toBe('#8884d8');
+    expect(colors).toEqual(DEFAULT_PALETTE.slice(0, 4));
+    expect(DEFAULT_PALETTE[0]).toBe('#0072b2');
     for (const c of RECHARTS_PALETTE) expect(c).toMatch(/^#[0-9a-f]{6}$/);
   });
 
   it('cycles the palette for series beyond its length — still a distinct, deterministic colour per index', () => {
-    expect(seriesStyle(RECHARTS_PALETTE.length).color).toBe(RECHARTS_PALETTE[0]);
-    expect(seriesStyle(RECHARTS_PALETTE.length + 1).color).toBe(RECHARTS_PALETTE[1]);
+    expect(seriesStyle(DEFAULT_PALETTE.length).color).toBe(DEFAULT_PALETTE[0]);
+    expect(seriesStyle(DEFAULT_PALETTE.length + 1).color).toBe(DEFAULT_PALETTE[1]);
     expect(new Set(RECHARTS_PALETTE).size).toBe(RECHARTS_PALETTE.length);
   });
 });
@@ -708,7 +715,7 @@ describe('ChartView — #197 step 1, rendered against the real svg', () => {
     const provisionalBar = container.querySelector('svg [data-point="value"][data-result-id="utr"]');
     expect(provisionalBar?.getAttribute('fill')).toMatch(/^url\(#/);
     const finalBar = container.querySelector('svg [data-point="value"][data-result-id="ams"]');
-    expect(finalBar?.getAttribute('fill')).toBe(RECHARTS_PALETTE[0]);
+    expect(finalBar?.getAttribute('fill')).toBe(DEFAULT_PALETTE[0]);
   });
 
   it('gives the chart an accessible name from spec strings and a keyboard hint in its <desc>', () => {
@@ -782,19 +789,17 @@ describe('ChartView — #197 step 1, rendered against the real svg', () => {
 });
 
 // ---------------------------------------------------------------------------
-// WP218 (ADR 039) Phase 0: ChartView now reads every one of these literals
-// from the presentation resolver (chart-presentation.ts) instead of hardcoding
-// them, but with NO overrides applied (state.presentation starts `{}`) the
-// resolver's effective values equal STOCK_PRESENTATION exactly — so the
-// stock render must stay byte-identical to what these literals were before
-// this task. This is the regression guard for that refactor, not a test of
-// the resolver itself (that's chart-presentation.test.ts).
+// ADR 042 (2026-09-11): ChartView draws the designed default from the
+// presentation resolver with no overrides — these are the default's literals
+// (ends markers, horizontal grid, no y-axis line, 2 px lines, r 4 markers),
+// pinned so the look cannot drift silently. The resolver's constants
+// themselves are pinned by chart-presentation.test.ts.
 // ---------------------------------------------------------------------------
 
-describe('WP218 phase 0 — the stock look still renders exactly today\'s literals', () => {
+describe('ADR 042 — the designed default renders its literals', () => {
   beforeEach(() => vi.unstubAllGlobals());
 
-  it('line stroke-width 2, dot r 4 ring 2, grid both, axis lines on', () => {
+  it('line stroke-width 2, dot r 4 ring 2, horizontal grid only, no y-axis line', () => {
     const { container } = render(<ChartView spec={threePointSpec()} />);
     const path = container.querySelector('.recharts-line-curve');
     expect(path?.getAttribute('stroke-width')).toBe('2');
@@ -802,8 +807,203 @@ describe('WP218 phase 0 — the stock look still renders exactly today\'s litera
     expect(dot?.getAttribute('r')).toBe('4');
     expect(dot?.getAttribute('stroke-width')).toBe('2');
     expect(container.querySelector('.recharts-cartesian-grid-horizontal')).not.toBeNull();
-    expect(container.querySelector('.recharts-cartesian-grid-vertical')).not.toBeNull();
-    expect(container.querySelector('.recharts-xAxis .recharts-cartesian-axis-line')).not.toBeNull();
+    expect(container.querySelector('.recharts-cartesian-grid-vertical')).toBeNull();
+    expect(container.querySelector('.recharts-yAxis .recharts-cartesian-axis-line')).toBeNull();
+  });
+  it('ends markers by default: the first and last plotted point are drawn, the middle one is hidden (opacity 0, still a data point), a provisional middle point stays visible', () => {
+    const s = spec({
+      series: [
+        {
+          label: 'Nederland',
+          regionCode: null,
+          points: [
+            point({ resultId: 'a', periodCode: '2022JJ00', periodLabel: '2022', value: 1, formattedValue: '1,0' }),
+            point({ resultId: 'b', periodCode: '2023JJ00', periodLabel: '2023', value: 2, formattedValue: '2,0' }),
+            point({ resultId: 'c', periodCode: '2024JJ00', periodLabel: '2024', value: 3, formattedValue: '3,0' }),
+            point({ resultId: 'd', periodCode: '2025JJ00', periodLabel: '2025', value: 4, formattedValue: '4,0', provisional: true, status: 'Voorlopig' }),
+            point({ resultId: 'e', periodCode: '2026JJ00', periodLabel: '2026', value: 5, formattedValue: '5,0' }),
+          ],
+        },
+      ],
+    });
+    const { container } = render(<ChartView spec={s} />);
+    const dots = [...container.querySelectorAll('circle[data-point="value"]')];
+    expect(dots.length).toBe(5);
+    const byId = (id: string) => dots.find((d) => d.getAttribute('data-result-id') === id)!;
+    expect(byId('a').getAttribute('data-marker')).toBeNull();
+    expect(byId('e').getAttribute('data-marker')).toBeNull();
+    expect(byId('b').getAttribute('data-marker')).toBe('hidden');
+    expect(byId('c').getAttribute('data-marker')).toBe('hidden');
+    expect(byId('d').getAttribute('data-marker')).toBeNull();
+    expect(byId('d').getAttribute('fill')).toBe('var(--card)');
+    expect(byId('b').getAttribute('opacity')).toBe('0');
+    expect(byId('a').getAttribute('opacity')).toBeNull();
+  });
+  it('value labels are 12 px with a card-coloured halo (paint-order stroke) — end label on a line, bar label on a bar', () => {
+    const line = render(<ChartView spec={threePointSpec()} />).container;
+    const end = line.querySelector('text[data-role="end-label"]')!;
+    expect(end.getAttribute('font-size')).toBe('12');
+    expect(end.getAttribute('paint-order')).toBe('stroke');
+    expect(end.getAttribute('stroke')).toBe('var(--card)');
+    expect(end.getAttribute('stroke-width')).toBe('3');
+    const axisTick = line.querySelector('text[data-role="axis-tick"]')!;
+    expect(axisTick.getAttribute('font-size')).toBe('11');
+    const bar = render(<ChartView spec={spec({ kind: 'bar', series: [{ label: 'Amsterdam', regionCode: 'GM0363', points: [point({ resultId: 'x', periodCode: '2023JJ00', periodLabel: '2023', value: 1, formattedValue: '1,0' })] }] })} />).container;
+    const barLabel = bar.querySelector('text[data-role="bar-label"]')!;
+    expect(barLabel.getAttribute('font-size')).toBe('12');
+    expect(barLabel.getAttribute('paint-order')).toBe('stroke');
+    expect(barLabel.getAttribute('stroke')).toBe('var(--card)');
+  });
+  it('a marker hidden by the marker mode becomes visible while it holds keyboard focus (globals.css rule pinned)', () => {
+    const currentDir = dirname(fileURLToPath(import.meta.url));
+    const globalsCssPath = join(currentDir, '../app/globals.css');
+    const css = readFileSync(globalsCssPath, 'utf8');
+    expect(css).toMatch(/circle\[data-marker="hidden"\]:focus-visible\s*\{\s*opacity:\s*1;?\s*\}/);
+  });
+  it('a hairline baseline in the grid colour replaces the x-axis line by default; Aslijnen on draws real axis lines; grid Geen removes the baseline too', () => {
+    const { container } = render(<ChartView spec={threePointSpec()} />);
+    const xLine = () => container.querySelector('.recharts-xAxis .recharts-cartesian-axis-line');
+    const yLine = () => container.querySelector('.recharts-yAxis .recharts-cartesian-axis-line');
+    expect(xLine()?.getAttribute('stroke')).toBe('var(--border)');
+    expect(yLine()).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Aslijnen' }));
+    expect(xLine()?.getAttribute('stroke')).toBe('var(--muted-foreground)');
+    expect(yLine()?.getAttribute('stroke')).toBe('var(--muted-foreground)');
+    fireEvent.click(screen.getByRole('button', { name: 'Aslijnen' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Geen' }));
+    expect(xLine()).toBeNull();
+  });
+  it('baselineAxisLine: full axis line when shown; a grid-coloured hairline when hidden but a grid exists; nothing when neither', () => {
+    expect(baselineAxisLine({ axisLines: 'shown', grid: 'none' })).toBe(true);
+    expect(baselineAxisLine({ axisLines: 'hidden', grid: 'horizontal' })).toEqual({ stroke: 'var(--border)' });
+    expect(baselineAxisLine({ axisLines: 'hidden', grid: 'both' })).toEqual({ stroke: 'var(--border)' });
+    expect(baselineAxisLine({ axisLines: 'hidden', grid: 'none' })).toBe(false);
+  });
+  it('the bar and horizontal-bar forms get the same hairline baseline on their category axis', () => {
+    const cmp = spec({
+      kind: 'bar',
+      series: [
+        { label: 'Amsterdam', regionCode: 'GM0363', points: [point({ resultId: 'a', periodCode: '2023JJ00', periodLabel: '2023', value: 1, formattedValue: '1,0' })] },
+        { label: 'Rotterdam', regionCode: 'GM0599', points: [point({ resultId: 'r', periodCode: '2023JJ00', periodLabel: '2023', value: 2, formattedValue: '2,0' })] },
+      ],
+    });
+    const { container } = render(<ChartView spec={cmp} />);
+    expect(container.querySelector('.recharts-xAxis .recharts-cartesian-axis-line')?.getAttribute('stroke')).toBe('var(--border)');
+    fireEvent.click(screen.getByRole('tab', { name: 'Liggend' }));
+    expect(container.querySelector('.recharts-yAxis .recharts-cartesian-axis-line')?.getAttribute('stroke')).toBe('var(--border)');
+    expect(container.querySelector('.recharts-xAxis .recharts-cartesian-axis-line')).toBeNull();
+  });
+  it('the tooltip crosshair is a solid hairline, never the dashed 3 3 of an event marker or the 4 3 of the story ring (source pin)', () => {
+    const __dirname = dirname(fileURLToPath(import.meta.url));
+    const src = readFileSync(join(__dirname, './chart.tsx'), 'utf8');
+    const cursors = src.match(/cursor=\{\{[^}]*stroke: 'var\(--muted-foreground\)'[^}]*\}\}/g) ?? [];
+    expect(cursors.length).toBe(2);
+    for (const c of cursors) {
+      expect(c).not.toContain('strokeDasharray');
+      expect(c).toContain('strokeOpacity: 0.35');
+    }
+  });
+  it('height follows width: unmeasured (jsdom) keeps the 256 px class and no inline height', () => {
+    const { container } = render(<ChartView spec={threePointSpec()} />);
+    const panel = () => container.querySelector('[role="tabpanel"]') as HTMLElement;
+    expect(panel().className).toContain('h-64');
+    expect(panel().style.height).toBe('');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ADR 042: the remaining Task 4 literals (height-follows-width once
+// measured, the mount entrance, the header hierarchy, the chip legend) — a
+// sibling of the describe block above rather than sharing its body, because
+// the "unmeasured (jsdom)" test just above depends on NO ResizeObserver
+// being stubbed while every test here needs `FakeResizeObserver` stubbed —
+// two contradictory `beforeEach`es would fight over the same block.
+// ---------------------------------------------------------------------------
+
+describe('ADR 042 — height follows width once measured', () => {
+  type ResizeCallback = (entries: { target: Element }[]) => void;
+  // Recharts' own ResponsiveContainer ALSO constructs a ResizeObserver (on
+  // its own inner wrapper div, a descendant of the tabpanel) once the
+  // global is stubbed, and — as a child — its effect commits before
+  // ChartView's own `useElementWidth` effect (React fires child effects
+  // before parent effects), so a plain "callbacks[0]" would fire Recharts'
+  // own handler instead of ours and crash (it reads `entry.contentRect`,
+  // which this fake never provides). Recording each instance's own
+  // `observe()` target lets the test pick out the ONE observer that was
+  // pointed at the tabpanel itself, regardless of how many others exist.
+  let resizeObservers: Array<{ cb: ResizeCallback; target: Element | null }> = [];
+  class FakeResizeObserver {
+    private readonly entry: { cb: ResizeCallback; target: Element | null };
+    constructor(cb: ResizeCallback) {
+      this.entry = { cb, target: null };
+      resizeObservers.push(this.entry);
+    }
+    observe(target: Element): void { this.entry.target = target; }
+    disconnect(): void { resizeObservers = resizeObservers.filter((e) => e !== this.entry); }
+  }
+  function fireResize(target: Element): void {
+    const entry = resizeObservers.find((e) => e.target === target);
+    if (!entry) throw new Error('no FakeResizeObserver was pointed at this element');
+    act(() => entry.cb([{ target }]));
+  }
+
+  beforeEach(() => {
+    resizeObservers = [];
+    vi.stubGlobal('ResizeObserver', FakeResizeObserver);
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('a measured width sets the explicit height (700 → 360, 400 → 256) and the class no longer pins h-64', () => {
+    const { container } = render(<ChartView spec={threePointSpec()} />);
+    const panel = container.querySelector('[role="tabpanel"]') as HTMLElement;
+    panel.getBoundingClientRect = () => ({ width: 700 }) as DOMRect;
+    fireResize(panel);
+    expect(panel.style.height).toBe('360px');
+    expect(panel.className).not.toContain('h-64');
+    panel.getBoundingClientRect = () => ({ width: 400 }) as DOMRect;
+    fireResize(panel);
+    expect(panel.style.height).toBe('256px');
+  });
+  it('a frame aspect ratio switches the measured height off — the frame sizes the box and the container goes h-full with no inline height', () => {
+    const { container } = render(<ChartView spec={threePointSpec()} />);
+    const panel = container.querySelector('[role="tabpanel"]') as HTMLElement;
+    panel.getBoundingClientRect = () => ({ width: 700 }) as DOMRect;
+    fireResize(panel);
+    expect(panel.style.height).toBe('360px');
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Kader' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Breedbeeld' }));
+    const after = container.querySelector('[role="tabpanel"]') as HTMLElement;
+    expect(after.style.height).toBe('');
+    expect(after.className).toContain('h-full');
+  });
+  it('the export container carries the entrance utilities, with the reduced-motion opt-out', () => {
+    const { container } = render(<ChartView spec={threePointSpec()} />);
+    const panel = container.querySelector('[role="tabpanel"]') as HTMLElement;
+    for (const cls of ['animate-in', 'fade-in', 'slide-in-from-bottom-1', 'duration-300', 'motion-reduce:animate-none']) {
+      expect(panel.className).toContain(cls);
+    }
+  });
+  it('the card header: a semibold base-size title, then the unit and the pinned dimensions on one muted line', () => {
+    const s = spec({ dimLabels: { Geslacht: 'Totaal' } });
+    const { container } = render(<ChartView spec={s} />);
+    const heading = container.querySelector('[role="heading"][aria-level="3"]') as HTMLElement;
+    expect(heading.className).toContain('text-base');
+    expect(heading.className).toContain('font-semibold');
+    const subtitle = heading.nextElementSibling as HTMLElement;
+    expect(subtitle.className).toContain('text-muted-foreground');
+    expect(subtitle.textContent).toContain(s.unit);
+    expect(subtitle.textContent).toContain('Geslacht: Totaal');
+  });
+  it('legend entries are chips (rounded-full, bordered) and keep their toggle semantics', () => {
+    const { container } = render(<ChartView spec={twoSeriesSpec()} />);
+    const legendButtons = [...container.querySelectorAll('[role="group"] button[aria-pressed="true"]')];
+    expect(legendButtons.length).toBeGreaterThan(0);
+    for (const b of legendButtons) {
+      expect(b.className).toContain('rounded-full');
+      expect(b.className).toContain('border');
+    }
   });
 });
 
@@ -1771,14 +1971,14 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
     expect(hollow?.getAttribute('opacity')).not.toBe('0');
   });
 
-  it('grid Geen removes the grid; Aslijnen off removes axis lines; Schuin tilts the x labels and reserves height', () => {
+  it('grid Geen removes the grid; Aslijnen toggles the axis lines; Schuin tilts the x labels and reserves height', () => {
     const { container } = render(<ChartView spec={threePointSpec()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    // ADR 042: axis lines are off by default — switch them on to measure the plot bottom off the y-axis line.
+    fireEvent.click(screen.getByRole('button', { name: 'Aslijnen' }));
     const flatBottom = Number(
       container.querySelector('.recharts-yAxis .recharts-cartesian-axis-line')?.getAttribute('y2'),
     );
-
-    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    fireEvent.click(screen.getByRole('radio', { name: 'Schuin' }));
     // Recharts' own default axis <Text> renders nothing in jsdom (see this
     // file's #197 top-of-file comment), so the tilt itself can't be read off
     // a tick's own transform here — xAxisHeight's pixel math is unit-pinned
@@ -1786,6 +1986,7 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
     // reserved height actually reaching the render: tilting reserves MORE
     // x-axis height, so the plot area — and the y-axis line drawn across it
     // — shrinks.
+    fireEvent.click(screen.getByRole('radio', { name: 'Schuin' }));
     const tiltedBottom = Number(
       container.querySelector('.recharts-yAxis .recharts-cartesian-axis-line')?.getAttribute('y2'),
     );
@@ -1919,42 +2120,50 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
     });
     const { container: lineContainer } = render(<ChartView spec={lineSpec} />);
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    for (const tab of screen.getAllByRole('tab', { name: /Grafiek|Kleuren|Lettertype/ })) fireEvent.click(tab);
-    scanForUnboundDigits(
-      lineContainer,
-      [
-        lineSpec.title,
-        lineSpec.unit,
-        lineSpec.attributionLine,
-        lineSpec.attribution.tableId,
-        lineSpec.attribution.syncedAt,
-        lineSpec.definitionLine ?? '',
-        lineSpec.provisionalNote ?? '',
-        ...lineSpec.nullNotes,
-        ...Object.keys(lineSpec.dimLabels),
-        ...Object.values(lineSpec.dimLabels),
-        ...lineSpec.series.flatMap((se) => se.points.flatMap((p) => [p.formattedValue ?? '', p.periodLabel])),
-      ].filter(Boolean),
-    );
+    // Whole-branch review fix: only one tabpanel is ever mounted at a time,
+    // so scanning once AFTER the loop only ever sees the LAST tab clicked
+    // (Kader) — scan after each click so every tab's own mounted content is
+    // actually visited, Sjablonen included.
+    for (const tab of screen.getAllByRole('tab', { name: /Grafiek|Kleuren|Lettertype|Sjablonen/ })) {
+      fireEvent.click(tab);
+      scanForUnboundDigits(
+        lineContainer,
+        [
+          lineSpec.title,
+          lineSpec.unit,
+          lineSpec.attributionLine,
+          lineSpec.attribution.tableId,
+          lineSpec.attribution.syncedAt,
+          lineSpec.definitionLine ?? '',
+          lineSpec.provisionalNote ?? '',
+          ...lineSpec.nullNotes,
+          ...Object.keys(lineSpec.dimLabels),
+          ...Object.values(lineSpec.dimLabels),
+          ...lineSpec.series.flatMap((se) => se.points.flatMap((p) => [p.formattedValue ?? '', p.periodLabel])),
+        ].filter(Boolean),
+      );
+    }
     cleanup();
 
     const barSpec = multiRegionBarSpec();
     const { container: barContainer } = render(<ChartView spec={barSpec} />);
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    for (const tab of screen.getAllByRole('tab', { name: /Grafiek|Kleuren|Lettertype/ })) fireEvent.click(tab);
-    scanForUnboundDigits(
-      barContainer,
-      [
-        barSpec.title,
-        barSpec.unit,
-        barSpec.attributionLine,
-        barSpec.attribution.tableId,
-        barSpec.attribution.syncedAt,
-        ...Object.keys(barSpec.dimLabels),
-        ...Object.values(barSpec.dimLabels),
-        ...barSpec.series.flatMap((se) => se.points.flatMap((p) => [p.formattedValue ?? '', p.periodLabel])),
-      ].filter(Boolean),
-    );
+    for (const tab of screen.getAllByRole('tab', { name: /Grafiek|Kleuren|Lettertype|Sjablonen/ })) {
+      fireEvent.click(tab);
+      scanForUnboundDigits(
+        barContainer,
+        [
+          barSpec.title,
+          barSpec.unit,
+          barSpec.attributionLine,
+          barSpec.attribution.tableId,
+          barSpec.attribution.syncedAt,
+          ...Object.keys(barSpec.dimLabels),
+          ...Object.values(barSpec.dimLabels),
+          ...barSpec.series.flatMap((se) => se.points.flatMap((p) => [p.formattedValue ?? '', p.periodLabel])),
+        ].filter(Boolean),
+      );
+    }
   });
 
   // Final-review fix: table form gets NO frame and NO Style panel (as
@@ -2051,6 +2260,104 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
     const svg = container.querySelector('svg.recharts-surface') as unknown as SVGSVGElement;
     const markup = attributedSvgMarkup(svg, 'x', () => ({}));
     expect(markup).toContain('stroke-width="3"');
+  });
+});
+
+// Task 4 (ADR 043): applying a template from the Sjablonen tab.
+describe('templates (ADR 043) — applying a look from the Sjablonen tab', () => {
+  it('Klassiek: every point drawn, vertical grid, axis lines, classic colour; Basis restores the designed default; the counter records the pick', () => {
+    const events: string[] = [];
+    setChartUsageSink((e) => { events.push(e); });
+    try {
+      const { container } = render(<ChartView spec={threePointSpec()} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+      fireEvent.click(screen.getByRole('tab', { name: 'Sjablonen' }));
+      fireEvent.click(screen.getByRole('radio', { name: 'Klassiek' }));
+      expect(container.querySelector('.recharts-cartesian-grid-vertical')).not.toBeNull();
+      expect(container.querySelector('.recharts-yAxis .recharts-cartesian-axis-line')).not.toBeNull();
+      expect(container.querySelectorAll('circle[data-marker="hidden"]').length).toBe(0);
+      expect(container.querySelector('.recharts-line-curve')?.getAttribute('stroke')).toBe(RECHARTS_PALETTE[0]);
+      expect(screen.getByRole('radio', { name: 'Klassiek' })).toHaveAttribute('aria-checked', 'true');
+      expect(events).toContain('template_classic');
+      fireEvent.click(screen.getByRole('radio', { name: 'Basis' }));
+      expect(container.querySelector('.recharts-cartesian-grid-vertical')).toBeNull();
+      expect(container.querySelector('.recharts-line-curve')?.getAttribute('stroke')).toBe(DEFAULT_PALETTE[0]);
+      expect(events).toContain('template_standard');
+    } finally {
+      setChartUsageSink(null);
+    }
+  });
+
+  it('a template replaces earlier tweaks (reset first); Standaard afterwards returns to the default', () => {
+    const { container } = render(<ChartView spec={threePointSpec()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Dun' }));
+    expect(container.querySelector('.recharts-line-curve')?.getAttribute('stroke-width')).toBe('1');
+    fireEvent.click(screen.getByRole('tab', { name: 'Sjablonen' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Minimaal' }));
+    expect(container.querySelector('.recharts-line-curve')?.getAttribute('stroke-width')).toBe('2');
+    expect(container.querySelector('.recharts-cartesian-grid-horizontal')).toBeNull();
+    fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Standaard' }));
+    expect(container.querySelector('.recharts-cartesian-grid-horizontal')).not.toBeNull();
+  });
+
+  it('the whole card stays digit-free apart from spec strings with the Sjablonen tab open', () => {
+    const lineSpec = threePointSpec({
+      provisionalNote: 'Voorlopige cijfers (2024) zijn gemarkeerd met *.',
+      nullNotes: ['2021: geen gegevens beschikbaar (geheim).'],
+      definitionLine: 'Definitie: testdefinitie 2020.',
+    });
+    const { container } = render(<ChartView spec={lineSpec} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Sjablonen' }));
+    scanForUnboundDigits(
+      container,
+      [
+        lineSpec.title,
+        lineSpec.unit,
+        lineSpec.attributionLine,
+        lineSpec.attribution.tableId,
+        lineSpec.attribution.syncedAt,
+        lineSpec.definitionLine ?? '',
+        lineSpec.provisionalNote ?? '',
+        ...lineSpec.nullNotes,
+        ...Object.keys(lineSpec.dimLabels),
+        ...Object.values(lineSpec.dimLabels),
+        ...lineSpec.series.flatMap((se) => se.points.flatMap((p) => [p.formattedValue ?? '', p.periodLabel])),
+      ].filter(Boolean),
+    );
+  });
+
+  it('the whole card stays digit-free apart from spec strings with the Templates tab open, in English', () => {
+    const lineSpec = threePointSpec({
+      provisionalNote: 'Voorlopige cijfers (2024) zijn gemarkeerd met *.',
+      nullNotes: ['2021: geen gegevens beschikbaar (geheim).'],
+      definitionLine: 'Definitie: testdefinitie 2020.',
+    });
+    const { container } = render(
+      <LangProvider lang="en">
+        <ChartView spec={lineSpec} />
+      </LangProvider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Style' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Templates' }));
+    scanForUnboundDigits(
+      container,
+      [
+        lineSpec.title,
+        lineSpec.unit,
+        lineSpec.attributionLine,
+        lineSpec.attribution.tableId,
+        lineSpec.attribution.syncedAt,
+        lineSpec.definitionLine ?? '',
+        lineSpec.provisionalNote ?? '',
+        ...lineSpec.nullNotes,
+        ...Object.keys(lineSpec.dimLabels),
+        ...Object.values(lineSpec.dimLabels),
+        ...lineSpec.series.flatMap((se) => se.points.flatMap((p) => [p.formattedValue ?? '', p.periodLabel])),
+      ].filter(Boolean),
+    );
   });
 });
 
@@ -2177,7 +2484,10 @@ describe('WP218 phase 2 — account default for chart styling (owner C)', () => 
     // must never be baked in as the new account default (final-review fix:
     // the key is still SAVED — as the base value — never simply omitted).
     expect(saved).toHaveProperty('zeroBaseline', 'auto');
-    expect(saved).toHaveProperty('grid', 'both');
+    // ADR 042: an unrelated key (not forced by the bar form) is still saved
+    // as STOCK_PRESENTATION's own value — 'horizontal', the designed
+    // default, not the pre-ADR-042 'both'.
+    expect(saved).toHaveProperty('grid', 'horizontal');
   });
 
   it('final-review fix: saving from Staaf never wipes an earlier-saved valueLabels default — a locked key saves back the ACCOUNT DEFAULT, not the bar-forced value', async () => {
@@ -2709,13 +3019,16 @@ describe('ChartView — area form (WP218 phase 5)', () => {
     });
   }
 
-  it('renders a filled Area element (Recharts 3\'s own class) in the series colour for a single time series', () => {
+  it('renders a filled Area element (Recharts 3\'s own class) with a gradient url fill by default for a single time series (ADR 042)', () => {
     const { container } = render(<ChartView spec={areaSpec()} />);
     fireEvent.click(screen.getByRole('tab', { name: 'Vlak' }));
     const area = container.querySelector('.recharts-area-area');
     expect(area).not.toBeNull();
-    expect(area?.getAttribute('fill')).toBe(RECHARTS_PALETTE[0]);
-    expect(area?.getAttribute('fill-opacity')).toBe('0.25');
+    // ADR 042: gradient is the default area fill — a literal series colour
+    // would be the OLD (flat) default; see the dedicated gradient test below
+    // for the <linearGradient>/<stop> shape and the flat-mode toggle.
+    expect(area?.getAttribute('fill')).toMatch(/^url\(#/);
+    expect(area?.getAttribute('fill-opacity')).toBe('1');
   });
 
   it('draws a hollow marker on the provisional point, same R11 convention as the line form', () => {
@@ -2724,7 +3037,7 @@ describe('ChartView — area form (WP218 phase 5)', () => {
     const hollow = container.querySelector('circle[data-point="value"][data-result-id="mid"]');
     expect(hollow?.getAttribute('fill')).toBe('var(--card)');
     const finalDot = container.querySelector('circle[data-point="value"][data-result-id="lo"]');
-    expect(finalDot?.getAttribute('fill')).toBe(RECHARTS_PALETTE[0]);
+    expect(finalDot?.getAttribute('fill')).toBe(DEFAULT_PALETTE[0]);
   });
 
   it('floors the Y-axis at zero (the area lock) — the same kind of large, meaningful shift the line form\'s own zero-baseline toggle produces', () => {
@@ -2779,6 +3092,21 @@ describe('ChartView — area form (WP218 phase 5)', () => {
       ...s.series.flatMap((se) => se.points.flatMap((p) => [p.formattedValue ?? '', p.periodLabel])),
     ].filter(Boolean);
     scanForUnboundDigits(container, specStrings);
+  });
+
+  it('area form fills with a vertical gradient by default (a <linearGradient> per series, fill url(#…)), and flat when areaFill is flat', () => {
+    const { container } = render(<ChartView spec={threePointSpec()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Vlak' }));
+    const gradient = container.querySelector('svg defs linearGradient');
+    expect(gradient).not.toBeNull();
+    const stops = gradient!.querySelectorAll('stop');
+    expect(stops.length).toBe(2);
+    expect(stops[0]!.getAttribute('stop-color')).toBe(DEFAULT_PALETTE[0]);
+    const area = container.querySelector('.recharts-area-area');
+    expect(area?.getAttribute('fill')).toBe(`url(#${gradient!.getAttribute('id')})`);
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Verloop in het vlak' }));
+    expect(container.querySelector('.recharts-area-area')?.getAttribute('fill')).toBe(DEFAULT_PALETTE[0]);
   });
 });
 
@@ -2842,7 +3170,7 @@ describe('ChartView — horizontal bar form (WP218 phase 5)', () => {
     const bar = container.querySelector('rect[data-point="value"][data-result-id="fr-2021"]');
     expect(bar?.getAttribute('fill')).toMatch(/^url\(#/);
     const finalBar = container.querySelector('rect[data-point="value"][data-result-id="gr-2021"]');
-    expect(finalBar?.getAttribute('fill')).toBe(RECHARTS_PALETTE[0]);
+    expect(finalBar?.getAttribute('fill')).toBe(DEFAULT_PALETTE[0]);
   });
 
   it('the whole-card membership scan passes in hbar form', () => {
@@ -3165,6 +3493,203 @@ describe('Story mode (session 92): a code-built story under the chart', () => {
   });
 });
 
+// The dialog is a portal directly into document.body (outside the RTL
+// `container`), so proving its digits are honest needs a scan of the body
+// itself — but Recharts appends its OWN off-screen text-measurement helper
+// (`#recharts_measurement_span`, aria-hidden, position: -20000px) as a
+// singleton DIRECT CHILD of document.body too (recharts/lib/util/DOMUtils.js
+// `measureTextWithDOM`), mutates its textContent on every chart render, and
+// never removes it — so it is never part of any React tree RTL's cleanup()
+// can unmount, and it can carry a stale digit-string left over from whatever
+// chart last measured text in this file's jsdom. It is not rendered content
+// (aria-hidden, off-screen) — excluding it from the scan doesn't weaken what
+// "every digit a reader can see" actually protects.
+function scanBodyForUnboundDigits(specStrings: string[]): void {
+  const measurementSpan = document.getElementById('recharts_measurement_span');
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+    acceptNode: (node) => (measurementSpan?.contains(node) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT),
+  });
+  const tokens: string[] = [];
+  for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+    tokens.push(...((node.textContent ?? '').match(/\d[\d.,]*/g) ?? []));
+  }
+  expect(tokens.length).toBeGreaterThan(0);
+  for (const tok of tokens) {
+    expect(
+      specStrings.some((str) => str.includes(tok)),
+      `numeric token "${tok}" in the rendered DOM (document.body) has no source in the spec's own strings`,
+    ).toBe(true);
+  }
+}
+
+// Story-stage plan, Task 5: the Present button (chart-story.tsx) wired into
+// ChartView opens the full Story stage (ChartStoryStage, chart-story-stage.tsx)
+// as a portal into document.body — sharing the exact same index/onIndexChange
+// as the compact Insights panel (ADR 044), so the two stay in lockstep.
+describe('Story-stage plan Task 5 — Present button opens the Story stage', () => {
+  // jsdom has no scrollIntoView; ChartStoryStage's own `go()` calls it on
+  // every index change once the stage is open (chart-story-stage.tsx).
+  // Fix round 2 (item 10, test hygiene): the stub sits on the shared
+  // `Element.prototype`, so it is put back after each test rather than left
+  // for every later suite in this worker to inherit.
+  let originalScrollIntoView: typeof Element.prototype.scrollIntoView;
+  beforeEach(() => {
+    originalScrollIntoView = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = vi.fn();
+  });
+  afterEach(() => {
+    Element.prototype.scrollIntoView = originalScrollIntoView;
+  });
+
+  it('Presenteren opens a dialog in document.body carrying the same step titles as the compact panel', () => {
+    render(<ChartView spec={threePointSpec()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
+    const region = screen.getByRole('region', { name: 'Inzichten bij de grafiek' });
+    const compactTitles = within(region)
+      .getAllByRole('article')
+      .map((article) => article.querySelector('p')?.textContent);
+    expect(screen.queryByRole('dialog')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Presenteren' }));
+    const dialog = screen.getByRole('dialog');
+    expect(dialog.parentElement).toBe(document.body);
+    // getAllByText, not getByText: two findings can legitimately share a
+    // title (e.g. two "Sterke stijging" steps) — the assertion is presence,
+    // not uniqueness.
+    for (const title of compactTitles) {
+      expect(within(dialog).getAllByText(title!).length).toBeGreaterThan(0);
+    }
+  });
+
+  it('ArrowRight inside the dialog moves the stage and the compact panel to the same step', () => {
+    render(<ChartView spec={threePointSpec()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
+    const region = screen.getByRole('region', { name: 'Inzichten bij de grafiek' });
+    fireEvent.click(screen.getByRole('button', { name: 'Presenteren' }));
+    const dialog = screen.getByRole('dialog');
+    fireEvent.keyDown(dialog, { key: 'ArrowRight' });
+    expect(dialog.querySelector('[data-stage-step="1"]')).toHaveAttribute('aria-current', 'step');
+    expect(dialog.querySelector('[data-stage-step="0"]')).not.toHaveAttribute('aria-current');
+    expect(within(region).getAllByRole('article')[1]).toHaveAttribute('aria-current', 'step');
+  });
+
+  it('Escape closes the dialog and returns focus to the Present button', () => {
+    render(<ChartView spec={threePointSpec()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
+    const present = screen.getByRole('button', { name: 'Presenteren' });
+    fireEvent.click(present);
+    const dialog = screen.getByRole('dialog');
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(document.activeElement).toBe(present);
+  });
+
+  // Facts from the task brief: closeStory() must also close the stage —
+  // there is no "compact story closed, stage still up" state. Scoped to the
+  // compact panel's own region: both `chart.story.close` and
+  // `chart.stage.close` translate to the same Dutch word ("Sluiten"), so an
+  // unscoped query would be ambiguous while the stage is open.
+  it('closing the compact story (Sluiten in the panel) also closes the stage', () => {
+    render(<ChartView spec={threePointSpec()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
+    const region = screen.getByRole('region', { name: 'Inzichten bij de grafiek' });
+    fireEvent.click(screen.getByRole('button', { name: 'Presenteren' }));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    fireEvent.click(within(region).getByRole('button', { name: 'Sluiten' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('a spec swap on the same instance closes the stage', () => {
+    const { rerender } = render(<ChartView spec={threePointSpec()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Presenteren' }));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    rerender(<ChartView spec={twoSeriesFourYearLineSpec()} />);
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('counts stage_open once, alongside story_open', () => {
+    const events: ChartStyleEvent[] = [];
+    setChartUsageSink((e) => {
+      events.push(e);
+    });
+    try {
+      render(<ChartView spec={threePointSpec()} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Presenteren' }));
+      expect(events).toEqual(['story_open', 'stage_open']);
+    } finally {
+      setChartUsageSink(null);
+    }
+  });
+
+  // Fix round 2 (item 7): the compact panel stays mounted behind the
+  // full-screen stage, and its IntersectionObserver keeps firing there on any
+  // reflow — every fire overwriting the step the presenter is on. While the
+  // stage is open the panel's index reporting is inert (jsdom has no
+  // IntersectionObserver, so its dots stand in for the same code path: both
+  // reach the shared index through the panel's `onIndexChange`).
+  it('with the stage open the compact panel can no longer move the shared step', () => {
+    render(<ChartView spec={threePointSpec()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
+    const region = screen.getByRole('region', { name: 'Inzichten bij de grafiek' });
+    fireEvent.click(screen.getByRole('button', { name: 'Presenteren' }));
+    const dialog = screen.getByRole('dialog');
+    expect(dialog.querySelector('[data-stage-step="0"]')).toHaveAttribute('aria-current', 'step');
+
+    const dots = within(region).getByRole('list', { name: 'Stappen' });
+    const secondDot = within(dots).getAllByRole('button')[1]!;
+    fireEvent.click(secondDot);
+
+    expect(dialog.querySelector('[data-stage-step="0"]')).toHaveAttribute('aria-current', 'step');
+    expect(dialog.querySelector('[data-stage-step="1"]')).not.toHaveAttribute('aria-current');
+  });
+
+  // Fix round 2 (item 10): the count used to fire inside the `setAutoplay`
+  // updater, which React may run twice (Strict Mode) — an activation could
+  // be counted twice.
+  it('the stage auto-play toggle records stage_autoplay exactly once per activation', () => {
+    const events: ChartStyleEvent[] = [];
+    setChartUsageSink((e) => {
+      events.push(e);
+    });
+    try {
+      render(<ChartView spec={threePointSpec()} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Presenteren' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Automatisch afspelen' }));
+      expect(events).toEqual(['story_open', 'stage_open', 'stage_autoplay']);
+    } finally {
+      setChartUsageSink(null);
+    }
+  });
+
+  it('with the stage open the whole card (document.body) still shows only spec digits, in Dutch and in English', () => {
+    const s = threePointSpec({ provisionalNote: 'Voorlopige cijfers (2024) zijn gemarkeerd met *.' });
+    const strings = [
+      s.title,
+      s.unit,
+      s.attributionLine,
+      s.attribution.tableId,
+      s.attribution.syncedAt,
+      s.provisionalNote ?? '',
+      ...s.series.flatMap((se) => se.points.flatMap((p) => [p.formattedValue ?? '', p.periodLabel])),
+    ].filter(Boolean);
+    const nl = render(<ChartView spec={s} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Presenteren' }));
+    scanBodyForUnboundDigits(strings);
+    nl.unmount();
+    const en = render(
+      <LangProvider lang="en">
+        <ChartView spec={s} />
+      </LangProvider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Insights' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Present' }));
+    scanBodyForUnboundDigits(strings);
+  });
+});
+
 // Task 5 (design §C2): the Frame tab wired into chart.tsx — frame_changed
 // counted alongside option_changed, the contrast guard re-checking every
 // per-chart series colour override against the new frame backdrops, and the
@@ -3359,5 +3884,140 @@ describe('ChartView — StylePanelOwnerProvider (one Style panel per page)', () 
     expect(triggerA).toHaveAttribute('aria-expanded', 'true');
     expect(triggerB).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getAllByRole('region', { name: 'Opmaak van de grafiek' })).toHaveLength(2);
+  });
+});
+
+describe('ChartView stage mode (ADR 044) — chrome-less, driven by a step', () => {
+  const s = threePointSpec();
+  it('renders the chart, title, unit and attribution but no tabs, no triggers, no selects, no notes, no download', () => {
+    const { container } = render(<ChartView spec={s} stage={{ step: null, overrides: {} }} />);
+    expect(container.querySelector('svg.recharts-surface, .recharts-responsive-container')).not.toBeNull();
+    expect(container.querySelector('[role="heading"][aria-level="3"]')?.textContent).toBe(s.title);
+    expect(container.textContent).toContain(s.attributionLine);
+    expect(container.querySelector('[role="tablist"]')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Opmaak' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Inzichten' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Download/ })).toBeNull();
+    expect(container.querySelector('select')).toBeNull();
+    expect(container.querySelector('circle[data-point][role="button"]')).toBeNull();
+  });
+  it('the step drives the highlight and the dashed ring, and the stage wears the given overrides', () => {
+    const step = { id: 'x', kind: 'recordHigh', title: 'Piek', caption: 'Piek in 2024', highlight: 's0', point: { seriesKey: 's0', periodCode: '2024JJ00' } } as StoryStep;
+    const { container, rerender } = render(<ChartView spec={s} stage={{ step, overrides: { lineWidth: 'thick' } }} />);
+    expect(container.querySelector('[data-story-marker]')).not.toBeNull();
+    expect(container.querySelector('.recharts-line-curve')?.getAttribute('stroke-width')).toBe('3');
+    rerender(<ChartView spec={s} stage={{ step: null, overrides: { lineWidth: 'thick' } }} />);
+    expect(container.querySelector('[data-story-marker]')).toBeNull();
+  });
+  it('a multi-series stage shows legend chips, never legend buttons, and the whole card stays digit-free apart from spec strings', () => {
+    const multi = twoSeriesSpec();
+    const { container } = render(<ChartView spec={multi} stage={{ step: null, overrides: {} }} />);
+    const list = container.querySelector('[role="list"]')!;
+    expect(list).not.toBeNull();
+    expect(list.querySelectorAll('[role="listitem"]').length).toBe(multi.series.length);
+    expect(list.querySelector('button')).toBeNull();
+    expect(container.textContent).toContain(multi.series[0]!.label);
+    scanForUnboundDigits(
+      container,
+      [
+        multi.title,
+        multi.unit,
+        multi.attributionLine,
+        multi.attribution.tableId,
+        multi.attribution.syncedAt,
+        ...Object.keys(multi.dimLabels),
+        ...Object.values(multi.dimLabels),
+        ...multi.series.flatMap((se) => se.points.flatMap((p) => [p.formattedValue ?? '', p.periodLabel])),
+      ].filter(Boolean),
+    );
+  });
+  it('the step drives the highlight: the other series is dimmed while a step highlights one series, nothing is dimmed on a null step', () => {
+    // Create a fixture with multiple points and multiple series for line chart rendering
+    const multi = spec({
+      series: [
+        {
+          label: 'Nederland',
+          regionCode: 'NL01',
+          points: [
+            point({ resultId: 's0p1', periodCode: '2022JJ00', periodLabel: '2022', value: 1, formattedValue: '1,0' }),
+            point({ resultId: 's0p2', periodCode: '2023JJ00', periodLabel: '2023', value: 2, formattedValue: '2,0' }),
+          ],
+        },
+        {
+          label: 'Utrecht',
+          regionCode: 'GM0344',
+          points: [
+            point({ resultId: 's1p1', periodCode: '2022JJ00', periodLabel: '2022', value: 1.5, formattedValue: '1,5' }),
+            point({ resultId: 's1p2', periodCode: '2023JJ00', periodLabel: '2023', value: 2.5, formattedValue: '2,5' }),
+          ],
+        },
+      ],
+    });
+    const step = { id: 'high-s1', kind: 'recordHigh', title: 'Piek', caption: 'Piek', highlight: 's1', point: null } as StoryStep;
+    const { container, rerender } = render(<ChartView spec={multi} stage={{ step, overrides: {} }} />);
+    // The step Effect dispatches setView with highlightedKey, which dims non-highlighted series via strokeOpacity=0.25
+    const paths = container.querySelectorAll('.recharts-line-curve');
+    expect(paths.length).toBeGreaterThan(0); // at least one line rendered
+    // Check for SVG attribute stroke-opacity (Recharts might set it as an attribute, not a style)
+    const dimmedPaths = Array.from(paths).filter(p =>
+      p.getAttribute('stroke-opacity') === '0.25' || (p as any).style.strokeOpacity === '0.25'
+    );
+    expect(dimmedPaths.length).toBeGreaterThan(0); // at least one series is dimmed
+    rerender(<ChartView spec={multi} stage={{ step: null, overrides: {} }} />);
+    const pathsAfter = container.querySelectorAll('.recharts-line-curve');
+    const dimmedPathsAfter = Array.from(pathsAfter).filter(p =>
+      p.getAttribute('stroke-opacity') === '0.25' || (p as any).style.strokeOpacity === '0.25'
+    );
+    expect(dimmedPathsAfter.length).toBe(0); // nothing is dimmed
+  });
+
+  // Fix round 2 (item 9): a presentation slide carries the chart, the
+  // caveats and the source — not the chat answer's reference prose. The
+  // trend headline competes with the very caption being presented, and on a
+  // phone both of them pushed the source line out of the pinned area.
+  it('drops the definition line and the trend headline, and still shows the caveats and the source line', () => {
+    const base = threePointSpec();
+    const s = threePointSpec({
+      definitionLine: 'Definitie: het gaat om personen van vijftien jaar en ouder.',
+      nullNotes: ['Voor twee gemeenten ontbreken cijfers.'],
+      attribution: { ...base.attribution, trendHeadline: 'Nederland steeg gestaag.' },
+    });
+    const { container } = render(<ChartView spec={s} stage={{ step: null, overrides: {} }} />);
+    expect(container.querySelector('[data-testid="trend-headline"]')).toBeNull();
+    expect(container.textContent).not.toContain(s.definitionLine!);
+    expect(container.textContent).toContain(s.nullNotes[0]!);
+    expect(container.textContent).toContain(s.attributionLine);
+  });
+
+  // Fix round 2 (item 10): the ">15 series opens on the table" rule is a
+  // CHAT-chart rule. In the stage it produced a presentation with no chart
+  // at all — nothing for a step to highlight, ring or spotlight, and no form
+  // tabs to switch back with.
+  it('a many-series spec opens on the chart in stage mode, never on the table', () => {
+    const labels = 'ABCDEFGHIJKLMNOPQR'.split('');
+    expect(labels.length).toBeGreaterThan(BAR_LABEL_MAX);
+    const many = spec({
+      series: labels.map((label, i) => ({
+        label: `Reeks ${label}`,
+        regionCode: `GM${label}`,
+        points: [point({ resultId: `s${label}`, value: i + 1, formattedValue: `${i + 1},0` })],
+      })),
+    });
+    const stageRender = render(<ChartView spec={many} stage={{ step: null, overrides: {} }} />);
+    expect(stageRender.container.querySelector('table')).toBeNull();
+    expect(stageRender.container.querySelector('svg.recharts-surface, .recharts-responsive-container')).not.toBeNull();
+    stageRender.unmount();
+
+    // The chat chart is unchanged: the same spec still opens on the table.
+    const chatRender = render(<ChartView spec={many} />);
+    expect(chatRender.container.querySelector('table')).not.toBeNull();
+  });
+
+  // Fix round 2 (item 10): a `tabpanel` with no tablist is a broken ARIA
+  // relationship — stage mode renders no form tabs.
+  it('the export container is a plain div in stage mode: no tabpanel role without a tablist', () => {
+    const { container } = render(<ChartView spec={s} stage={{ step: null, overrides: {} }} />);
+    expect(container.querySelector('[role="tabpanel"]')).toBeNull();
+    expect(container.querySelector('[role="tablist"]')).toBeNull();
   });
 });
