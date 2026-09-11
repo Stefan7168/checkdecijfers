@@ -16,6 +16,7 @@ export const maxDuration = 90;
 
 import {
   getActionClassPrice,
+  getActivePacks,
   getBalance,
   getQuestionHistory,
   getSignupGrantCredits,
@@ -76,7 +77,7 @@ export default async function Home({
   if (process.env.WORKSPACE_ENABLED === '1') {
     // Threads read server-side (like every other page read), handed to the
     // workspace as initialThreads — no client fetch-on-mount.
-    const [wsBalance, wsSimplePrice, wsClarificationPrice, wsThreads, wsWebAddonPrice, wsChartStyle] =
+    const [wsBalance, wsSimplePrice, wsClarificationPrice, wsThreads, wsWebAddonPrice, wsChartStyle, wsPacks] =
       await Promise.all([
         getBalance(db, userId),
         getActionClassPrice(db, 'simple'),
@@ -91,6 +92,11 @@ export default async function Home({
         // down the whole workspace page the way an un-caught Promise.all
         // rejection would.
         getUserChartStyle(db, userId).catch(() => null),
+        // R2.2 (WP-D, #69/#75/#211): the same server read /credits/page.tsx
+        // already does (ADR 006), narrowed to the plain {id, label, credits}
+        // shape Chat's insufficient-credits message needs — never priced
+        // client-side, /credits stays the one place that quotes € amounts.
+        getActivePacks(db),
       ]);
     return (
       <Workspace
@@ -100,6 +106,7 @@ export default async function Home({
         initialThreads={wsThreads}
         purchaseSuccess={purchase === PURCHASE_SUCCESS_VALUE}
         chartStyle={wsChartStyle?.style ?? null}
+        packs={wsPacks.map((pack) => ({ id: pack.id, label: pack.label, credits: pack.credits }))}
         {...(websearchEnabled && wsWebAddonPrice !== null
           ? { websearch: { enabled: true as const, addonPrice: wsWebAddonPrice } }
           : {})}

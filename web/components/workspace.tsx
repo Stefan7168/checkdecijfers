@@ -21,6 +21,7 @@ import type { DockVisual } from '../lib/dock-visuals.ts';
 import { useT } from '../lib/i18n/lang-provider.tsx';
 import { useMediaQuery } from '../lib/use-media-query.ts';
 import { Chat } from './chat.tsx';
+import type { ChatPack } from './chat.tsx';
 import { DatasetChat } from './dataset-chat.tsx';
 import { AnswerSkeleton } from './loading-skeletons.tsx';
 import { SiteHeader } from './site-header.tsx';
@@ -58,6 +59,7 @@ export function Workspace({
   websearch,
   attachments,
   chartStyle,
+  packs,
 }: {
   initialBalance: number;
   simplePrice: number;
@@ -86,6 +88,12 @@ export function Workspace({
    * itself, so an account with no saved style yet still gets offered the
    * "Bewaar als mijn standaard" row. */
   chartStyle?: unknown;
+  /** R2.2 (WP-D, #69/#75/#211): the active credit packs, read server-side
+   * (page.tsx, `getActivePacks`) and passed through unchanged — threaded
+   * into Chat's own `packs` prop for the insufficient-credits message's
+   * covering-pack lookup. Absent/empty ⇒ that message's buy line stays
+   * generic (byte-safe for call sites not yet passing it). */
+  packs?: ChatPack[];
 }) {
   const [balance, setBalance] = useState(initialBalance);
   const [threads, setThreads] = useState<ThreadSummary[]>(initialThreads);
@@ -365,6 +373,7 @@ export function Workspace({
       ) : (
         <Chat
           onOutcome={handleOutcome}
+          packs={packs}
           pricing={{
             simple: simplePrice,
             clarification: clarificationPrice,
