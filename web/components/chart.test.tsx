@@ -29,6 +29,18 @@ const chartStyleActions = vi.hoisted(() => ({
   lookupBrand: vi.fn(),
 }));
 vi.mock('../app/chart-style-actions.ts', () => chartStyleActions);
+// R5 item 3 (experience-improvement-plan, session 96): previously unmocked —
+// every "Inzichten" click in this file ran the REAL generateInsights, whose
+// currentUserId() throws outside a real request scope (no next/headers
+// context in jsdom), landing in its own catch as `{ ok: false, reason:
+// 'error' }`. No prior test asserted on that outcome, so defaulting the mock
+// to the same value keeps every one of them byte-identical; only the new
+// R5 item 3 test below overrides it to exercise the 'unauthenticated' path
+// (chart.tsx's own reason for showing "log in for AI insights") on purpose.
+const chartInsightsActions = vi.hoisted(() => ({
+  generateInsights: vi.fn().mockResolvedValue({ ok: false, reason: 'error' }),
+}));
+vi.mock('../app/chart-insights-actions.ts', () => chartInsightsActions);
 import {
   annotationMarkers,
   BAR_LABEL_MAX,
@@ -3239,6 +3251,18 @@ describe('Story mode (session 92): a code-built story under the chart', () => {
     expect(screen.getByRole('region', { name: 'Inzichten bij de grafiek' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
     expect(screen.queryByRole('region', { name: 'Inzichten bij de grafiek' })).toBeNull();
+  });
+
+  // R5 item 3 (experience-improvement-plan, session 96): chart.tsx's own
+  // wiring — when generateInsights reports 'unauthenticated' (an anonymous
+  // visitor, mocked here for exactly this one call), the panel shows a real
+  // reason to sign up instead of silently falling back with no explanation.
+  it('shows "log in for AI insights" once generateInsights resolves unauthenticated', async () => {
+    chartInsightsActions.generateInsights.mockResolvedValueOnce({ ok: false, reason: 'unauthenticated' });
+    render(<ChartView spec={threePointSpec()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
+    const link = await screen.findByRole('link', { name: 'Log in voor AI-verwoorde inzichten' });
+    expect(link).toHaveAttribute('href', '/login');
   });
 
   it('a point step rings exactly that point outside its own marker, and never carries data-point', () => {

@@ -45,7 +45,14 @@ const pathname = vi.hoisted(() => ({ current: '/' }));
 // WP218 phase 4 (#219): SiteHeader now renders <LanguageSwitch/>, which calls
 // useRouter() (router.refresh() after the language cookie is set) — added
 // here alongside the pre-existing usePathname mock the site footer needs.
-vi.mock('next/navigation', () => ({ usePathname: () => pathname.current, useRouter: () => ({ refresh: vi.fn() }) }));
+// R2 item 4 (session 96): `refresh` is now a SHARED, hoisted spy (real
+// Next.js memoizes the object useRouter() returns across re-renders) rather
+// than a fresh `vi.fn()` per call — the purchase poll's own effect below
+// depends on `router` for its dependency array, and a fresh mock reference
+// every render would make that effect re-fire far more than the real
+// (referentially stable) hook ever would.
+const router = vi.hoisted(() => ({ refresh: vi.fn() }));
+vi.mock('next/navigation', () => ({ usePathname: () => pathname.current, useRouter: () => router }));
 // Landing embeds OntdekCharts, an ASYNC Server Component inside a Suspense
 // boundary. jsdom renders client-side, where React cannot resolve an async
 // component — the boundary never settles and the root's passive effects
@@ -206,6 +213,59 @@ describe('Workspace — WP135 shell (flag on)', () => {
     renderWorkspace([{ id: 1, title: 'Inflatie 2024', lastActivityAt: new Date().toISOString(), kind: 'cbs' }]);
     expect(screen.getByRole('button', { name: 'Nieuwe chat' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Inflatie 2024' })).toBeInTheDocument();
+  });
+});
+
+// R2 item 4 (experience-improvement-plan, session 96): the purchase banner
+// used to tell the reader to refresh the page by hand — it now polls
+// router.refresh() for them instead, honestly bounded rather than run
+// forever.
+describe('Workspace — R2 item 4 purchase-success poll (session 96)', () => {
+  it('shows the "balance appears here" copy, not an instruction to refresh by hand', () => {
+    render(<Workspace initialBalance={100} simplePrice={20} clarificationPrice={10} initialThreads={[]} purchaseSuccess />);
+    expect(screen.getByText(/je saldo verschijnt hier zodra Stripe/)).toBeInTheDocument();
+    expect(screen.queryByText(/Ververs daarna de pagina/)).toBeNull();
+  });
+
+  it('polls router.refresh() on an interval while the banner shows, and stops once dismissed', () => {
+    vi.useFakeTimers();
+    try {
+      render(<Workspace initialBalance={100} simplePrice={20} clarificationPrice={10} initialThreads={[]} purchaseSuccess />);
+      expect(router.refresh).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(3_000);
+      expect(router.refresh).toHaveBeenCalledTimes(1);
+      vi.advanceTimersByTime(3_000);
+      expect(router.refresh).toHaveBeenCalledTimes(2);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Sluiten' }));
+      vi.advanceTimersByTime(10_000);
+      expect(router.refresh).toHaveBeenCalledTimes(2); // no ticks after dismiss
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('stops refreshing once the bounded ~30s ceiling passes, even if the banner is still up', () => {
+    vi.useFakeTimers();
+    try {
+      render(<Workspace initialBalance={100} simplePrice={20} clarificationPrice={10} initialThreads={[]} purchaseSuccess />);
+      vi.advanceTimersByTime(30_000);
+      const callsAtCeiling = router.refresh.mock.calls.length;
+      expect(callsAtCeiling).toBeGreaterThan(0);
+      vi.advanceTimersByTime(9_000);
+      expect(router.refresh).toHaveBeenCalledTimes(callsAtCeiling);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('re-syncs the displayed balance from a fresh initialBalance prop — what a real refresh delivers', () => {
+    const { rerender } = render(
+      <Workspace initialBalance={100} simplePrice={20} clarificationPrice={10} initialThreads={[]} />,
+    );
+    expect(screen.getByText('100 credits')).toBeInTheDocument();
+    rerender(<Workspace initialBalance={250} simplePrice={20} clarificationPrice={10} initialThreads={[]} />);
+    expect(screen.getByText('250 credits')).toBeInTheDocument();
   });
 });
 

@@ -16,6 +16,7 @@ export const maxDuration = 90;
 
 import {
   getActionClassPrice,
+  getActivePacks,
   getBalance,
   getQuestionHistory,
   getSignupGrantCredits,
@@ -76,7 +77,7 @@ export default async function Home({
   if (process.env.WORKSPACE_ENABLED === '1') {
     // Threads read server-side (like every other page read), handed to the
     // workspace as initialThreads — no client fetch-on-mount.
-    const [wsBalance, wsSimplePrice, wsClarificationPrice, wsThreads, wsWebAddonPrice, wsChartStyle] =
+    const [wsBalance, wsSimplePrice, wsClarificationPrice, wsThreads, wsWebAddonPrice, wsChartStyle, wsPacks] =
       await Promise.all([
         getBalance(db, userId),
         getActionClassPrice(db, 'simple'),
@@ -91,6 +92,10 @@ export default async function Home({
         // down the whole workspace page the way an un-caught Promise.all
         // rejection would.
         getUserChartStyle(db, userId).catch(() => null),
+        // R2 item 2 (experience-improvement-plan, session 96): read live so
+        // the insufficient-credits message can name the pack that covers a
+        // shortfall — never hardcoded (ADR 006).
+        getActivePacks(db),
       ]);
     return (
       <Workspace
@@ -100,6 +105,7 @@ export default async function Home({
         initialThreads={wsThreads}
         purchaseSuccess={purchase === PURCHASE_SUCCESS_VALUE}
         chartStyle={wsChartStyle?.style ?? null}
+        creditPacks={wsPacks}
         {...(websearchEnabled && wsWebAddonPrice !== null
           ? { websearch: { enabled: true as const, addonPrice: wsWebAddonPrice } }
           : {})}

@@ -37,6 +37,7 @@ function Harness(props: Partial<ChartStoryPanelProps> & { onIndexChange?: (i: nu
         idPrefix={idPrefix}
         lang={props.lang}
         onPresent={props.onPresent}
+        needsLoginForAi={props.needsLoginForAi}
       />
     </>
   );
@@ -97,6 +98,22 @@ describe('ChartStoryTrigger + ChartStoryPanel', () => {
     expect(screen.getByRole('region', { name: 'Insights for this chart' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Next' })).toBeInTheDocument();
     expect(screen.getByText('Scroll or use the arrows')).toBeInTheDocument();
+  });
+
+  // R5 item 3 (experience-improvement-plan, session 96): a real reason to
+  // sign up, previously invisible — shown only when chart.tsx tells the
+  // panel generateInsights came back 'unauthenticated'.
+  it('shows the log-in-for-AI line only when needsLoginForAi is true', () => {
+    render(<Harness needsLoginForAi />);
+    fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
+    const link = screen.getByRole('link', { name: 'Log in voor AI-verwoorde inzichten' });
+    expect(link).toHaveAttribute('href', '/login');
+  });
+
+  it('renders no login line by default (a logged-in visitor, or one still resolving)', () => {
+    render(<Harness />);
+    fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
+    expect(screen.queryByText('Log in voor AI-verwoorde inzichten')).toBeNull();
   });
 
   it('a chosen step is never overridden by the observer while the programmatic scroll settles', () => {

@@ -1,5 +1,58 @@
 # STATUS archive — the session log
 
+**Session 96 (2026-09-11, owner-present, mixed owner-directed + autonomous) — PR #9's FIFTH CONFLICT
+RESOLVED AND PUSHED (now green/mergeable, awaiting owner review); FIVE QUICK WINS FROM THE EXPERIENCE-
+IMPROVEMENT-PLAN BUILT AND VERIFIED, PUSHED TO `claude/checkdecijfers-embed-pr-review-acbrd5`.**
+
+1. **PR #9's fifth merge conflict** (against `main`, after PR #10/#11/#12's visual-upgrade programme
+   landed — see session 95 below): `git merge origin/main` on `embed-charts` produced conflicts in
+   `chart.tsx` (10 regions — embed-mode gating vs. stage-mode gating, often the exact same JSX
+   conditional), `chart.test.tsx` (a large spliced test block needing manual brace reconstruction),
+   `user-styles.ts`/`layout.tsx`/`usage-actions.test.ts` (small, combined both sides), and three docs
+   trackers (kept `embed-charts`' own open-questions renumbering #230/#231, appended session 95's new
+   #232–#236 rows). One real merge artifact found: git's diff3 showed the same JSX body twice around the
+   tablist/zoom-row boundary because both branches independently re-wrapped the same unwrapped ancestor —
+   resolved by discarding the duplicate and combining `!embedMode && !inStage`. Full verification green:
+   typecheck ×2, web suite 98 files / 1535 tests, **backend suite 146 files / 2242 tests — the FIRST
+   successful backend re-verification across any of the five merges** (sessions 94/95 both failed to
+   complete one), hermetic benchmark 14/14 + 6/6 + 0 fabricated, real `next build`, LOW code-review (one
+   harmless gap found — a sixth `embedMode` gate missing `!inStage` for consistency — fixed). Pushed as
+   `d427cdd`. **CI (`gate`) confirmed PASS on `d427cdd`; `mergeable_state: clean`** — verified via the
+   GitHub API, not assumed from the push succeeding.
+2. **The experience-improvement-plan quick wins**, per the owner's explicit instruction mid-session
+   ("start executing the ones with least effort, highest benefit... autonomously") — five items from
+   [session-briefs/2026-09-11-experience-improvement-plan.md](session-briefs/2026-09-11-experience-improvement-plan.md)
+   ranked as decision-free/low-effort: **R11** (an 8-second honest "taking longer" line under the busy
+   skeleton, `chat.tsx`), **R2** (all four bundled fixes: chip captions by message kind, a real `/credits`
+   link naming the cheapest covering pack on `insufficient_credits`, the #69 low-balance warning restored
+   on the live pricing line — dormant on `AccountPanel`/`Dashboard` before this — and a bounded
+   `router.refresh()` poll replacing "refresh the page" on the purchase-success banner), **R10** (the
+   credits page: €-per-question + "≈N vragen" per pack, "Credits verlopen nooit", the #76 explainer),
+   **R5 items 1 &amp; 3** (an Ontdek caption naming the chart features; "Log in voor AI-verwoorde inzichten"
+   for an anonymous visitor in the Insights panel and the Story stage). Items 2 and 4 of R2/R3/R4/R6–R9/R5
+   correctly left unbuilt — each needs a real owner decision the report itself flags.
+3. **A LOW code-review pass on this diff found 6 real issues, all fixed before push:** the low-balance
+   threshold compared the balance against the plain CBS price even when the quoted price was higher
+   (Internet selected); the covering-pack pick sorted by credits instead of the pack list's own
+   price-ascending order (could recommend a pricier pack); a new `initialBalance`-sync effect could let a
+   stale `router.refresh()` clobber a just-applied chat-spend debit (fixed with a `Math.max` guard); the
+   login-for-AI hint reached the compact Insights panel but not the full-screen Story stage (same
+   captions, same gap — extended to both); a pack's question count was computed twice per row (simplified
+   to once); the purchase-poll's own interval never cleared itself past the 30 s ceiling (now does).
+   Regression tests added for every fix.
+4. **Verification (measured, on the final pushed state):** root + web typecheck clean; web suite 94 files
+   / 1459 tests (up from 1453 pre-review-fixes); backend suite 143 files / 2211 tests (unaffected by these
+   web-only fixes, not re-run a third time — reasoned, not silent, see the session's own notes); hermetic
+   benchmark 14/14 + 6/6 + 0 fabricated; `test:docs` 11/11; real `next build` clean.
+5. **Docs:** this file, STATUS.md top block (PR #10/11/12's actual merged state corrected — the session-95
+   kickoff note had gone stale within hours), open-questions #237 (the session's own discretionary calls,
+   veto-by-exception), and the experience-improvement-plan report itself — a "✅ BUILT" note on each of the
+   five shipped recommendations plus the build-sequence table, so a future session reads current state
+   from the report directly rather than re-deriving it.
+6. **PR #9 subscription**: `subscribe_pr_activity` active this session; a `send_later` check-in is
+   scheduled ~1 hour out to re-verify CI/mergeability/review-comment state and re-arm itself if nothing
+   changed.
+
 **Session 95 (2026-09-11 by the machine clock — GitHub stamps PR #10 as the evening of 2026-09-10 UTC; the
 two clocks disagree by a few hours — AUTONOMOUS overnight, owner asleep) — VISUAL UPGRADE PHASE 1 BUILT:
 THE DESIGNED DEFAULT CHART LOOK (ADR 042), PR #10 OPEN FOR REVIEW; PHASE-2 PLAN WRITTEN.**

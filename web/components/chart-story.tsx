@@ -14,6 +14,7 @@
 // Escape closes and refocuses the trigger.
 import { useEffect, useLayoutEffect, useRef, type KeyboardEvent, type ReactNode } from 'react';
 import { WandSparkles } from 'lucide-react';
+import Link from 'next/link';
 import type { StoryStep } from '../lib/chart-story.ts';
 import { t, type Lang } from '../lib/i18n/messages.ts';
 import { Button } from './ui/button.tsx';
@@ -67,9 +68,25 @@ export interface ChartStoryPanelProps {
    * renders no Present button at all — chart.tsx passes it only when this
    * chart itself isn't already the stage (a stage never opens a stage). */
   onPresent?(): void;
+  /** R5 item 3 (experience-improvement-plan, session 96): true when the last
+   * generateInsights call came back `{ ok: false, reason: 'unauthenticated' }`
+   * — an anonymous visitor, not a transient error. Undefined/false renders
+   * nothing extra, byte-identical to before this prop existed. */
+  needsLoginForAi?: boolean;
 }
 
-export function ChartStoryPanel({ steps, index, onIndexChange, open, onClose, triggerId, idPrefix, lang = 'nl', onPresent }: ChartStoryPanelProps): ReactNode {
+export function ChartStoryPanel({
+  steps,
+  index,
+  onIndexChange,
+  open,
+  onClose,
+  triggerId,
+  idPrefix,
+  lang = 'nl',
+  onPresent,
+  needsLoginForAi = false,
+}: ChartStoryPanelProps): ReactNode {
   const regionRef = useRef<HTMLElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<(HTMLElement | null)[]>([]);
@@ -236,6 +253,17 @@ export function ChartStoryPanel({ steps, index, onIndexChange, open, onClose, tr
         </span>
         <span className="text-xs text-muted-foreground">{t(lang, 'chart.story.hint')}</span>
       </div>
+      {/* R5 item 3 (experience-improvement-plan, session 96): a real reason
+        * to sign up that was previously invisible — an anonymous visitor's
+        * generateInsights call fails closed to these same deterministic
+        * captions with no indication a logged-in visitor gets AI prose. */}
+      {needsLoginForAi ? (
+        <p className="mt-1 text-xs text-muted-foreground">
+          <Link href="/login" className="underline">
+            {t(lang, 'chart.story.loginForAi')}
+          </Link>
+        </p>
+      ) : null}
       <div ref={scrollRef} className="mt-2 max-h-40 space-y-2 overflow-y-auto pr-1">
         {/* Final-review fix (a11y): no `onClick` here — the Vorige/Volgende
           * buttons and the dots below already reach every step, so a

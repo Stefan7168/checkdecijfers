@@ -8,6 +8,7 @@
 import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
+import Link from 'next/link';
 import type { ChartSpec } from '../backend/chart/types.ts';
 import { captionStyle, entranceStyle, spotlightStyle, STAGE_AUTOPLAY_MS } from '../lib/chart-stage.ts';
 import type { PresentationOverrides } from '../lib/chart-presentation.ts';
@@ -53,6 +54,13 @@ export interface ChartStoryStageProps {
   lang?: Lang;
   /** Fired once each time auto-play is switched on. */
   onAutoplay?(): void;
+  /** R5 item 3 (experience-improvement-plan, session 96), review fix: the
+   * same 'unauthenticated' signal the compact ChartStoryPanel shows —
+   * without this the Stage rendered the identical captions with no
+   * indication that logging in unlocks AI-phrased prose, the one gap the
+   * chart.tsx wiring was meant to close. Undefined/false renders nothing
+   * extra, byte-identical to before this prop existed. */
+  needsLoginForAi?: boolean;
 }
 
 // Fix round 1 (item A): focus containment for the `aria-modal` dialog.
@@ -105,7 +113,19 @@ interface PlotBox {
   height: number;
 }
 
-export function ChartStoryStage({ open, spec, steps, index, onIndexChange, onClose, triggerId, overrides, lang = 'nl', onAutoplay }: ChartStoryStageProps): ReactNode {
+export function ChartStoryStage({
+  open,
+  spec,
+  steps,
+  index,
+  onIndexChange,
+  onClose,
+  triggerId,
+  overrides,
+  lang = 'nl',
+  onAutoplay,
+  needsLoginForAi = false,
+}: ChartStoryStageProps): ReactNode {
   const dialogRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const chartBoxRef = useRef<HTMLDivElement>(null);
@@ -409,6 +429,15 @@ export function ChartStoryStage({ open, spec, steps, index, onIndexChange, onClo
         {/* The steps: one full-height panel each; the scroll position picks the step. */}
         <div className="px-4 pb-[40vh] lg:px-10 lg:pt-[20vh]">
           <p className="mb-2 text-xs text-muted-foreground">{t(lang, 'chart.stage.scrollHint')}</p>
+          {/* R5 item 3 (experience-improvement-plan, session 96), review fix:
+            * same hint as the compact ChartStoryPanel, same reason. */}
+          {needsLoginForAi ? (
+            <p className="mb-2 text-xs text-muted-foreground">
+              <Link href="/login" className="underline">
+                {t(lang, 'chart.story.loginForAi')}
+              </Link>
+            </p>
+          ) : null}
           <ol role="list" aria-label={t(lang, 'chart.stage.stepsLabel')} className="m-0 list-none p-0">
             {steps.map((s, i) => {
               // Fix round 2 (items 3+4): `progress` is nearest-centre, so it

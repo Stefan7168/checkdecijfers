@@ -23,6 +23,10 @@ export async function OntdekCharts() {
     <section className="border-b border-border py-12">
       <h2 className="text-2xl text-foreground">{t(lang, 'ontdek.heading')}</h2>
       <p className="mt-3 max-w-xl text-muted-foreground">{t(lang, 'ontdek.body')}</p>
+      {/* R5 item 1 (experience-improvement-plan, session 96): names the chart
+        * features these live charts already carry — placement is unchanged
+        * (ADR 035), this only tells visitors the charts are interactive. */}
+      <p className="mt-1 max-w-xl text-sm text-muted-foreground">{t(lang, 'ontdek.tryItCaption')}</p>
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
         {charts.map((chart) =>
           // #170(4): a chart with a built toggle gets the client switcher;

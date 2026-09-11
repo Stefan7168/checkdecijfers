@@ -44,6 +44,13 @@ const nl = {
   'chat.unauthenticated': 'Je bent niet ingelogd. Log in via /login om een vraag te stellen.',
   'chat.duplicateRequest': 'Deze vraag wordt al verwerkt — even geduld.',
   'chat.insufficientCredits': 'Je hebt niet genoeg credits ({balance} over, {required} nodig). Koop credits via /credits.',
+  // R2 item 2 (experience-improvement-plan, session 96): a real clickable
+  // link alongside the plain message above (which stays byte-identical —
+  // some old text mentions "/credits" as a path, this is the actual link).
+  // The pack variant names the cheapest pack that covers the shortfall,
+  // read live (getActivePacks) — never hardcoded.
+  'chat.buyCreditsLink': 'Credits kopen →',
+  'chat.buyCreditsLinkWithPack': '{packLabel} is genoeg om verder te gaan →',
   'chat.redactedMessage': 'Deze vraag is verwijderd.',
   'chat.refusalHeader': 'Dit kon ik niet beantwoorden',
   'chat.refusalBadge': 'geen antwoord = geen gok',
@@ -59,6 +66,9 @@ const nl = {
   'chat.busyBoth': 'Bezig met het doorzoeken van CBS-cijfers en het web…',
   'chat.busyWebOnly': 'Bezig met het doorzoeken van het web…',
   'chat.busyCbsOnly': 'Bezig met het doorzoeken van CBS-cijfers…',
+  // R11 (experience-improvement-plan, session 96): shown after
+  // BUSY_LONG_WAIT_MS of waiting — an honest line, no fake progress bar.
+  'chat.busyLongWait': 'Dit duurt iets langer dan gewoonlijk; we controleren het antwoord nog.',
   'chat.staleDeployPrefix':
     'De site is net bijgewerkt, waardoor deze vraag niet is verstuurd (er zijn geen credits afgeschreven).',
   'chat.staleDeployButton': 'Ververs de pagina',
@@ -66,6 +76,13 @@ const nl = {
   'chat.genericError': 'Er ging iets mis bij het ophalen van het antwoord. Probeer het opnieuw.',
   'chat.nothingSelectedHint': 'Selecteer minstens één bron.',
   'chat.suggestionsHint': 'Suggesties voor een vervolgvraag:',
+  // R2 item 1 (experience-improvement-plan, session 96): the same
+  // structural `suggestions` field (WP29 + #134(a) + WP26 mechanism A) also
+  // carries a clarification's own OPTIONS and a refusal's one-click retry
+  // chip — captioned generically as follow-up "suggestions" until now,
+  // which read as a non sequitur on those two kinds.
+  'chat.suggestionsHintClarification': 'Kies een optie:',
+  'chat.suggestionsHintRefusal': 'Probeer in plaats daarvan:',
   // "data" is the same loanword in Dutch, so the value is identical in both
   // languages; still catalogued (every literal string goes through t()).
   'chat.sourceDataSuffix': '{name} data',
@@ -91,6 +108,12 @@ const nl = {
     'Een vraag kost ~{addon} credits (er wordt tijdelijk {reserved} gereserveerd) · saldo: {balance} credits.',
   'chat.pricingDefault':
     'Een vraag kost ~{simple} credits · saldo: {balance} credits. Stel ik eerst een verduidelijkingsvraag, dan kost die {clarification} credits en krijg je de rest terug.',
+  // R2 (experience-improvement-plan, session 96): the #69 low-balance rule
+  // (warn when the balance still covers one more simple question but not
+  // two), restored on the reachable pre-send line instead of the dormant
+  // AccountPanel/Dashboard path. Appended, so the three variants above stay
+  // byte-identical when the balance is healthy.
+  'chat.pricingLowBalanceSuffix': ' Nog genoeg voor één vraag.',
 
   // thread-sidebar.tsx.
   'sidebar.collapsedExpandLabel': 'Toon gesprekken',
@@ -116,8 +139,20 @@ const nl = {
   // workspace.tsx.
   'workspace.newChatTitle': 'Nieuwe chat',
   'workspace.chatSectionLabel': 'Chat',
+  // dashboard.tsx has no live poll behind this banner (it is the dormant
+  // pre-workspace path, WORKSPACE_ENABLED !== '1') — "refresh the page"
+  // stays the honest instruction there. Workspace.tsx uses its OWN key
+  // below (R2 item 4) once it added the poll that makes a refresh
+  // unnecessary; the two must never be merged back into one string while
+  // only one of the two mechanisms actually polls.
   'workspace.purchaseSuccessMessage':
     'Betaling gelukt — je credits worden bijgeschreven zodra Stripe de betaling bevestigt (meestal een paar seconden). Ververs daarna de pagina om je nieuwe saldo te zien.',
+  // R2 item 4 (experience-improvement-plan, session 96): the copy stays
+  // honest (the webhook still decides; the page merely looks again) but no
+  // longer tells the reader to refresh by hand — workspace.tsx's own
+  // bounded poll does it instead.
+  'workspace.purchaseSuccessMessageLive':
+    'Betaling gelukt — je saldo verschijnt hier zodra Stripe de betaling bevestigt (meestal een paar seconden).',
   'workspace.purchaseSuccessDismiss': 'Sluiten',
 
   // visual-dock.tsx.
@@ -222,6 +257,13 @@ const nl = {
   'credits.creditsWord': 'credits.',
   'credits.purchaseSuccess': 'Betaling gelukt — je credits worden bijgeschreven zodra Stripe de betaling bevestigt.',
   'credits.purchaseCancelled': 'Betaling geannuleerd.',
+  // R10 (experience-improvement-plan, session 96): the page that asks for
+  // money said the least. Every number here reads the live pricing tables
+  // (ADR 006) — nothing is invented or hardcoded.
+  'credits.neverExpire': 'Credits verlopen nooit. Geen abonnement.',
+  'credits.packQuestions': '≈ {questions} gewone vragen ({perQuestion} per vraag)',
+  // #76 explainer, reused verbatim from account-panel.tsx (its own live path
+  // is dormant — WORKSPACE_ENABLED !== '1' — this page is not).
   'credits.buy': 'Kopen',
   'credits.unknownPack': 'Onbekend of niet meer beschikbaar pakket.',
   'credits.notLoggedIn': 'Je bent niet ingelogd.',
@@ -305,6 +347,11 @@ const nl = {
   'ontdek.heading': 'Ontdek Nederland in grafieken',
   'ontdek.body':
     'Rechtstreeks uit onze database met officiële CBS-cijfers: consumentenvertrouwen, economische groei, inflatie, de gemiddelde verkoopprijs van woningen en de werkloosheid. Elk punt is herleidbaar tot een CBS-tabel — bron en datum staan erbij.',
+  // R5 item 1 (experience-improvement-plan, session 96): these charts are
+  // already the live demo of Opmaak/Inzichten/Presenteren/download — nothing
+  // today invites a visitor to touch them. Naming the verbs is the cheapest
+  // lever (the placement itself was a deliberate ADR choice, not moved).
+  'ontdek.tryItCaption': 'Probeer het meteen: Opmaak (sjablonen), Inzichten, Presenteren — en download als PNG.',
 
   // source-badge.tsx (Client — always rendered from chart.tsx/chat.tsx).
   'sourceBadge.syncedLabel': 'gesynchroniseerd {date}',
@@ -407,6 +454,10 @@ const nl = {
   'chart.story.trigger': 'Inzichten',
   'chart.story.regionLabel': 'Inzichten bij de grafiek',
   'chart.story.hint': 'Scroll of gebruik de pijlen',
+  // R5 item 3 (experience-improvement-plan, session 96): shown only for an
+  // anonymous visitor (generateInsights' own 'unauthenticated' reason) —
+  // never for a logged-in visitor mid-transient-error.
+  'chart.story.loginForAi': 'Log in voor AI-verwoorde inzichten',
   'chart.story.prev': 'Vorige',
   'chart.story.next': 'Volgende',
   'chart.story.close': 'Sluiten',
@@ -623,6 +674,8 @@ const en: Messages = {
   'chat.unauthenticated': 'You are not logged in. Log in via /login to ask a question.',
   'chat.duplicateRequest': 'This question is already being processed — please wait.',
   'chat.insufficientCredits': 'You do not have enough credits ({balance} left, {required} needed). Buy credits via /credits.',
+  'chat.buyCreditsLink': 'Buy credits →',
+  'chat.buyCreditsLinkWithPack': '{packLabel} is enough to continue →',
   'chat.redactedMessage': 'This question has been deleted.',
   'chat.refusalHeader': 'I could not answer this',
   'chat.refusalBadge': 'no answer = no guess',
@@ -634,6 +687,7 @@ const en: Messages = {
   'chat.busyBoth': 'Searching CBS figures and the web…',
   'chat.busyWebOnly': 'Searching the web…',
   'chat.busyCbsOnly': 'Searching CBS figures…',
+  'chat.busyLongWait': 'This is taking a little longer than usual; we are still checking the answer.',
   'chat.staleDeployPrefix':
     'The site was just updated, so this question was not sent (no credits were charged).',
   'chat.staleDeployButton': 'Refresh the page',
@@ -641,6 +695,8 @@ const en: Messages = {
   'chat.genericError': 'Something went wrong getting the answer. Please try again.',
   'chat.nothingSelectedHint': 'Select at least one source.',
   'chat.suggestionsHint': 'Suggested follow-up questions:',
+  'chat.suggestionsHintClarification': 'Pick an option:',
+  'chat.suggestionsHintRefusal': 'Try instead:',
   'chat.sourceDataSuffix': '{name} data',
   'chat.internetChip': 'Internet',
   'chat.addLink': 'Add link',
@@ -661,6 +717,7 @@ const en: Messages = {
     'A question costs ~{addon} credits ({reserved} is temporarily reserved) · balance: {balance} credits.',
   'chat.pricingDefault':
     'A question costs ~{simple} credits · balance: {balance} credits. If I first ask a clarifying question, that costs {clarification} credits and you get the rest back.',
+  'chat.pricingLowBalanceSuffix': ' Still enough for one more question.',
 
   'sidebar.collapsedExpandLabel': 'Show chats',
   'sidebar.collapseLabel': 'Hide chats',
@@ -686,6 +743,8 @@ const en: Messages = {
   'workspace.chatSectionLabel': 'Chat',
   'workspace.purchaseSuccessMessage':
     'Payment successful — your credits will be added once Stripe confirms the payment (usually a few seconds). Refresh the page afterwards to see your new balance.',
+  'workspace.purchaseSuccessMessageLive':
+    'Payment successful — your balance will appear here once Stripe confirms the payment (usually a few seconds).',
   'workspace.purchaseSuccessDismiss': 'Close',
 
   'dock.header': 'Charts',
@@ -778,6 +837,8 @@ const en: Messages = {
   'credits.creditsWord': 'credits.',
   'credits.purchaseSuccess': 'Payment successful — your credits will be added once Stripe confirms the payment.',
   'credits.purchaseCancelled': 'Payment cancelled.',
+  'credits.neverExpire': 'Credits never expire. No subscription.',
+  'credits.packQuestions': '≈ {questions} ordinary questions ({perQuestion} per question)',
   'credits.buy': 'Buy',
   'credits.unknownPack': 'Unknown or no longer available pack.',
   'credits.notLoggedIn': 'You are not logged in.',
@@ -845,6 +906,7 @@ const en: Messages = {
   'ontdek.heading': 'Discover the Netherlands in charts',
   'ontdek.body':
     'Straight from our database of official CBS figures: consumer confidence, economic growth, inflation, the average house sale price and unemployment. Every point is traceable to a CBS table — source and date included.',
+  'ontdek.tryItCaption': 'Try it now: Style (templates), Insights, Present — and download as PNG.',
 
   'sourceBadge.syncedLabel': 'synced {date}',
 
@@ -916,6 +978,7 @@ const en: Messages = {
   'chart.story.trigger': 'Insights',
   'chart.story.regionLabel': 'Insights for this chart',
   'chart.story.hint': 'Scroll or use the arrows',
+  'chart.story.loginForAi': 'Log in for AI-phrased insights',
   'chart.story.prev': 'Previous',
   'chart.story.next': 'Next',
   'chart.story.close': 'Close',

@@ -1588,8 +1588,14 @@ export function ChartView({
   // an error state, never a loading placeholder that could read as "no
   // number" (R3): the panel is always complete from the first open.
   const [phrasedCaptions, setPhrasedCaptions] = useState<Map<string, string> | null>(null);
+  // R5 item 3 (experience-improvement-plan, session 96): true only after
+  // generateInsights itself reports 'unauthenticated' (an anonymous
+  // visitor) — never set on a transient error, so a logged-in visitor is
+  // never told to log in. Reset alongside phrasedCaptions.
+  const [insightsNeedsLogin, setInsightsNeedsLogin] = useState(false);
   useEffect(() => {
     setPhrasedCaptions(null);
+    setInsightsNeedsLogin(false);
   }, [findings]);
   const storySteps: StoryStep[] = useMemo(
     () =>
@@ -1939,6 +1945,7 @@ export function ChartView({
     if (phrasedCaptions === null && findings.length > 0) {
       void generateInsights(spec).then((result) => {
         if (result.ok) setPhrasedCaptions(new Map(Object.entries(result.phrased)));
+        else if (result.reason === 'unauthenticated') setInsightsNeedsLogin(true);
       });
     }
   }
@@ -2704,6 +2711,7 @@ export function ChartView({
           idPrefix={domId}
           lang={chartLang}
           onPresent={!inStage ? openStage : undefined}
+          needsLoginForAi={insightsNeedsLogin}
         />
       ) : null}
       {/* Task 5 (Story-stage plan): the full Story stage — a portal, mounted
@@ -2722,6 +2730,7 @@ export function ChartView({
           overrides={state.presentation}
           lang={chartLang}
           onAutoplay={() => trackChartStyleEvent('stage_autoplay')}
+          needsLoginForAi={insightsNeedsLogin}
         />
       ) : null}
       {/* Review fix (controller decision): the ONE reason every locked

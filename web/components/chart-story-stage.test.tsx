@@ -231,6 +231,20 @@ describe('ChartStoryStage', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
+  // R5 item 3 (experience-improvement-plan, session 96), review fix: the
+  // Stage renders the same captions as the compact ChartStoryPanel — the
+  // login hint must reach both, not just the one the report named.
+  it('shows the log-in-for-AI hint only when needsLoginForAi is true', () => {
+    render(<ChartStoryStage {...baseProps({ needsLoginForAi: true })} />);
+    const link = screen.getByRole('link', { name: 'Log in voor AI-verwoorde inzichten' });
+    expect(link).toHaveAttribute('href', '/login');
+  });
+
+  it('renders no login hint by default', () => {
+    render(<ChartStoryStage {...baseProps()} />);
+    expect(screen.queryByText('Log in voor AI-verwoorde inzichten')).toBeNull();
+  });
+
   it('open: a focused, aria-modal dialog in document.body with one panel per step, the first current', () => {
     render(<ChartStoryStage {...baseProps()} />);
     const dialog = screen.getByRole('dialog');

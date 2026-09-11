@@ -14,16 +14,31 @@
 > should migrate everything below the session-94 block into status-archive.md and leave only a lean
 > pointer, the way this convention has always intended.
 
-**▶ NEXT SESSION STARTS HERE (written 2026-09-11, session 95, autonomous overnight — refreshed at the end
-of the night).** Read [session-briefs/2026-09-11-session-96-kickoff.md](session-briefs/2026-09-11-session-96-kickoff.md).
-Current state: **the whole overnight visual-upgrade programme is BUILT and verified, in three STACKED pull
-requests waiting for the owner — none merged, none live:** PR #10 = phase 1, the designed default chart
-look (ADR [042](decisions/042-designed-default-chart.md), branch `visual-designed-default`, base `main`);
-PR #11 = phase 2, templates v1 (ADR [043](decisions/043-chart-templates.md), branch `visual-templates-v1`,
-base = PR #10's branch); PR #12 = phase 3, the Story stage (ADR [044](decisions/044-story-stage.md), branch
-`visual-story-stage`, base = PR #11's branch). Merge in that order. PR #9 (embed) is still open too — it
-touches the same tracker docs and `chart.tsx`; whichever merges second needs the session-94 conflict
-playbook. Owner steps unchanged: migrations 028 + 029 (`npm run db:migrate`), optional `BRANDFETCH_API_KEY`.
+**▶ NEXT SESSION STARTS HERE (written 2026-09-11, session 96, owner-present — verified against real
+git/GitHub state, not recalled).** Read [session-briefs/2026-09-11-session-96-kickoff.md](session-briefs/2026-09-11-session-96-kickoff.md)
+first (session 95's own kickoff note — its "PR #10/11/12 not merged" line is now STALE, see below).
+**PR #10/#11/#12 (the visual-upgrade programme, ADR 042/043/044) are all MERGED into `main`** — confirmed
+via `gh`/GitHub API: PR #10 `merged_at 2026-09-11T04:01:02Z`, PR #11 and #12 merged the same night in the
+same order (main's own log shows all three merge commits, `ca5ba19`/`696c1c3`/`29aadde`). Owner steps still
+open: migrations 028 + 029 (`npm run db:migrate`), optional `BRANDFETCH_API_KEY` (RUNBOOK).
+**PR #9 (embed, ADR 041) is open, green, and mergeable (`mergeable_state: clean`, `gate: success` on head
+`d427cdd`) — awaiting the owner's own review/merge, not blocked on anything from this session's side.**
+This session resolved PR #9's fifth conflict against `main` (the three visual-upgrade PRs landing) the same
+way as the first four — combine both sides' gates (`!embedMode && !inStage`), hoist `onPointClick` to be
+aware of both — full verification green, LOW code-review clean, pushed as `d427cdd`.
+**Separately, on the owner's explicit instruction ("start executing the ones with least effort, highest
+benefit... autonomously"), this session built five items from
+[session-briefs/2026-09-11-experience-improvement-plan.md](session-briefs/2026-09-11-experience-improvement-plan.md):**
+R11 (honest long-wait line), all four bundled fixes in R2 (chip captions by kind, a real `/credits` link
+naming the covering pack, the restored low-balance warning, the purchase-success poll), R10 (credits-page
+€/question + never-expire copy), and R5 items 1 &amp; 3 (the Ontdek caption, the anonymous-visitor Insights
+login hint) — see the report's own "✅ BUILT" notes on each item for the exact as-built mechanism and the
+review-pass fixes (6 findings, all fixed: a websearch-unaware low-balance threshold, a covering-pack pick by
+credits instead of price, a balance-sync race, a missing Stage-surface hint, plus two cleanups). Full
+verification green (typecheck ×2, web suite 1459 tests, backend suite 2211 tests, benchmark 14/14+6/6+0
+fabricated, real build, LOW code-review). **Not yet pushed as of this writing** — push to
+`claude/checkdecijfers-embed-pr-review-acbrd5` is this session's next step; verify it landed before trusting
+this paragraph's "built" claim from memory.
 
 **▶ SESSION 95 (2026-09-11, AUTONOMOUS overnight — the owner's kickoff pre-resolved the plan's open
 decisions) — VISUAL UPGRADE PHASE 1 BUILT: THE DESIGNED DEFAULT CHART LOOK (ADR 042), PR #10 OPEN.**

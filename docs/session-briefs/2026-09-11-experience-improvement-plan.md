@@ -1,6 +1,11 @@
 # Experience improvement plan — the whole journey of a journalist, now that the chart work is done
 
-**Status: proposal for the owner to react to — nothing in this document is decided, scheduled or built.**
+**Status: proposal for the owner to react to.** Most of it is still undecided/unbuilt — but per an
+owner instruction the same day ("start executing the ones with least effort, highest benefit"), session 96
+autonomously built the five lowest-effort, no-decision-needed items: **R11, all four bundled fixes in R2,
+R10, and items 1 &amp; 3 of R5** — see each recommendation's own "✅ BUILT" note below for what shipped and
+what didn't change. Everything else in this document (R1, R3, R4, R6–R9, R5 items 2 &amp; 4) is still exactly
+what it was when Fable wrote it: a proposal, not a build.
 Written 2026-09-11 by Fable 5.1 on the owner's open-ended ask ("how can we improve the experience"), in the
 same shape as the 2026-09-10 visual plan ([2026-09-10-visual-next-level-plan.md](2026-09-10-visual-next-level-plan.md)).
 This is a plan, not a build: no code, no branch, no other doc was changed for it. Every "as built" statement
@@ -342,6 +347,32 @@ full verification block, a real-browser pass before "done").
   languages.
 - **Decision:** none needed except the caption wording (§9, item 3 asks whether one-click sending is wanted
   too — R7).
+- **✅ BUILT, session 96 (2026-09-11), all four items, autonomous** (`chat.tsx`, `workspace.tsx`,
+  `app/page.tsx`, `messages.ts`). As-built, each differs slightly from the sketch above:
+  1. Caption keys added exactly as specified (`chat.suggestionsHintClarification`/`Refusal`).
+  2. The link (`chat.buyCreditsLinkWithPack`/`buyCreditsLink`) is a real `<Link href="/credits">`, rendered
+     as a separate element below the plain message (not inside `gatedMessageText`'s own string, which stays
+     byte-identical for audit/replay) — the covering pack is threaded through a new optional `creditPacks`
+     prop on `Chat`, fetched in `page.tsx`'s workspace branch. A review pass caught that the first
+     implementation picked the covering pack by fewest CREDITS rather than by price — fixed to take the
+     first match in `creditPacks`' own price-ascending order (`getActivePacks`' `order by price_cents`).
+  3. Built as an appended suffix (`chat.pricingLowBalanceSuffix`, "Nog genoeg voor één vraag.") plus an
+     amber (`text-warning`) tint on the existing pricing line, rather than the full `account.lowBalanceWarning`
+     sentence restated. A review pass caught that the threshold compared the balance against the plain
+     `simple` price even when Internet was selected (quoting 30 while checking against 20) — fixed to compare
+     against the actual quoted price for the current source selection. The #76 explainer landed on `/credits`
+     as part of R10 below, not duplicated here.
+  4. Built as a bounded (~30 s, 3 s interval) `router.refresh()` poll in `workspace.tsx`, plus a same-session
+     fix so a refreshed `initialBalance` prop actually reaches the displayed balance (it hadn't been wired to
+     re-sync client state at all before this). Banner copy split into two keys rather than one rewritten
+     string: `workspace.purchaseSuccessMessage` (the OLD "refresh the page" wording) still serves the dormant
+     pre-workspace `Dashboard`, which has no poll behind it; `workspace.purchaseSuccessMessageLive` (the new
+     "your balance will appear here" wording) is Workspace's own. A review pass caught a race where a stale
+     refresh could clobber a just-applied chat-spend debit — fixed with a `Math.max(current, initialBalance)`
+     guard (a refresh can only ever raise the shown balance, never claw it back down).
+  Full verification green (typecheck ×2, web suite 1459 tests, backend suite 2211 tests, benchmark
+  14/14+6/6+0 fabricated, real build, LOW code-review pass — 6 findings, all fixed, incl. new regression
+  tests for each).
 
 ### R3 — Cost transparency before the 100-credit fetch (owner decision, money path)
 
@@ -411,6 +442,17 @@ full verification block, a real-browser pass before "done").
   placement, so the cheapest lever is telling people, not moving controls.
 - **Cost:** ~½ day for 1–3; item 4 is copy. No code beyond the tab default. **Principle check:** the new strings
   are digit-free (the whole-card scan) and in `messages.ts` in both languages.
+- **✅ BUILT, session 96 (2026-09-11), items 1 &amp; 3 only, autonomous** (`ontdek.tsx`, `chart-story.tsx`,
+  `chart-story-stage.tsx`, `chart.tsx`, `messages.ts`). Items 2 and 4 correctly skipped — both are explicit
+  owner calls per this row's own text (§9 items 7 and 8).
+  1. Built exactly as specified: `ontdek.tryItCaption`, one line under the Ontdek body.
+  3. Built as a `needsLoginForAi` prop threaded from `chart.tsx`'s own `generateInsights` call (true only when
+     it resolves `{ ok: false, reason: 'unauthenticated' }` — never shown for a logged-in visitor mid a
+     transient error). A review pass caught that the hint reached only the compact `ChartStoryPanel`, not the
+     full-screen Story stage (`chart-story-stage.tsx`, opened via "Presenteren") which renders the identical
+     captions — fixed to show the same hint on both surfaces.
+  Full verification green (see R2's BUILT note above for the shared verification block — same session, same
+  push).
 
 ### R6 — The trust paperwork: a methodology page and a privacy policy
 
@@ -474,6 +516,13 @@ full verification block, a real-browser pass before "done").
 - **Why:** §2.5 — the page that asks for money says the least. The copy is a read of `credit_packs` +
   `action_class_prices`; nothing new is invented.
 - **Cost:** ~½ day. **Principle check:** every number on the page comes from the pricing tables (ADR 006).
+- **✅ BUILT, session 96 (2026-09-11), autonomous** (`app/credits/page.tsx`, `messages.ts`). Built exactly as
+  specified: `questionsInPack`/`pricePerQuestionLabel` (both pure, exported, unit-tested directly) read live
+  `simplePrice`/`priceCents`/`credits`; `credits.neverExpire` and the reused `account.explainerWithQuestions`/
+  `explainerNoQuestions` keys (the #76 explainer, same strings AccountPanel already had, now also reachable
+  here) render under the balance. A review pass caught `questionsInPack` being computed twice per pack row
+  (once inside the price-label helper, once in the JSX) — fixed so the JSX computes it once and passes it in.
+  Full verification green (see R2's BUILT note above).
 
 ### R11 — Honest waiting
 
@@ -484,6 +533,12 @@ full verification block, a real-browser pass before "done").
   nobody built it; a 14-second wait with one static line and a skeleton is where a newcomer doubts the product.
   Streaming stays undecided and is **not** recommended (§5).
 - **Cost:** ~2 hours.
+- **✅ BUILT, session 96 (2026-09-11), autonomous** (`chat.tsx`, `messages.ts`). Built exactly as specified: an
+  8-second (`BUSY_LONG_WAIT_MS`) timer resets whenever `busy` clears, showing `chat.busyLongWait` under the
+  existing busy line and skeleton. The 90-second-ceiling half was already existing behavior (⟨W2⟩'s
+  `maxDuration = 90`) — this item only adds the interim honest line, as scoped. No streaming, no fake
+  progress. Full verification green (see R2's BUILT note above), incl. a fake-timers regression test proving
+  the line stays absent through 7999 ms and appears at 8000 ms.
 
 ## 5. Considered and deliberately not recommended now (each with its phase or decision)
 
@@ -528,9 +583,9 @@ re-run's spend; the fetch confirmation on the money path).
 | Phase | What ships | Size | Gate / owner decision before it starts |
 |---|---|---|---|
 | **0 — know (owner + ½ day)** | Apply migration 028; build and run the usage report (R1); decide whether to re-run the July audit. | ½ day | items 1–2 |
-| **1 — the first-question bundle** | R2 (captions, linked `/credits`, low-balance line, purchase poll) + R11 (honest waiting) + R10 (credits page copy). | ~1½ days | item 3 (caption wording) |
+| **1 — the first-question bundle** | R2 (captions, linked `/credits`, low-balance line, purchase poll) + R11 (honest waiting) + R10 (credits page copy). | ~1½ days | item 3 (caption wording) — **✅ all of phase 0's decision-free content BUILT session 96, see each item's own note above** |
 | **2 — the money-path decision** | R3, either the confirm-first chip (recommended) or the price-line stopgap. | ~1–2 days / ~1 hour | items 4–5 |
-| **3 — orientation** | R4 (coverage disclosure) + R5 items 1–3 (Ontdek caption, Sjablonen default, the anonymous Insights line). | ~1½ days | items 6–7 |
+| **3 — orientation** | R4 (coverage disclosure) + R5 items 1–3 (Ontdek caption, Sjablonen default, the anonymous Insights line). | ~1½ days | items 6–7 — **R5 items 1 &amp; 3 ✅ BUILT session 96 (the no-decision ones); R4 and R5 item 2 still unbuilt, both still need item 6/7** |
 | **4 — paperwork** | R6 (methodology + privacy pages, footer links). | ~1 day + owner review | item 9 |
 | **5 — interaction and phone** | R7 (one-click options) + R8 (chips) + R9 (phone pass + header). | ~2 days | items 3, 10, 11 |
 | **6 — re-measure** | Run the R1 report again; only then decide the next round (and the §5 items) on numbers. | — | — |

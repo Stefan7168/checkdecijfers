@@ -78,6 +78,11 @@ describe('OntdekCharts', () => {
     expect(screen.getByText('Gemiddelde verkoopprijs')).toBeInTheDocument();
     expect(screen.getByText(/tabel 86141NED/)).toBeInTheDocument();
     expect(screen.getByText(/tabel 85773NED/)).toBeInTheDocument();
+    // R5 item 1 (experience-improvement-plan, session 96): names the chart
+    // features these live charts already carry.
+    expect(
+      screen.getByText('Probeer het meteen: Opmaak (sjablonen), Inzichten, Presenteren — en download als PNG.'),
+    ).toBeInTheDocument();
   });
 
   it('renders nothing at all when no charts are available (fail-safe)', async () => {
@@ -128,5 +133,6 @@ describe('OntdekCharts — en', () => {
     render(await OntdekCharts());
     expect(screen.getByText('Discover the Netherlands in charts')).toBeInTheDocument();
     expect(screen.getByText(/Straight from our database of official CBS figures/)).toBeInTheDocument();
+    expect(screen.getByText('Try it now: Style (templates), Insights, Present — and download as PNG.')).toBeInTheDocument();
   });
 });

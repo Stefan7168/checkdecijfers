@@ -6,10 +6,11 @@
 // (no privacy link until the #14(d) policy exists — no dead links).
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { deleteMyThread, listMyThreads, loadMyThread } from '../app/actions.ts';
 import { ingestFile } from '../app/dataset-actions.ts';
-import type { GatedResponse } from '../backend/billing/index.ts';
+import type { CreditPack, GatedResponse } from '../backend/billing/index.ts';
 import type { ConversationContext } from '../backend/answer/context/index.ts';
 import type { DatasetChatMessage } from '../backend/attachments/replay.ts';
 import type { RawDatasetState } from '../backend/attachments/respond.ts';
@@ -49,6 +50,16 @@ type Handoff =
 
 const EMPTY_HANDOFF: Handoff = { kind: 'cbs', messages: [], context: null, threadId: null };
 
+// R2 item 4 (experience-improvement-plan, session 96): the same
+// router.refresh() poll as OnboardingLiveStatus (onboarding-live-status.tsx),
+// bounded rather than open-ended — a Stripe webhook confirms in seconds
+// (the banner's own copy), so there is nothing "in flight" on the server to
+// key a stop condition off the way the onboarding poll does; a fixed
+// ceiling both bounds the DB load and never contradicts the "usually a few
+// seconds" claim by polling for minutes.
+const PURCHASE_POLL_INTERVAL_MS = 3_000;
+const PURCHASE_POLL_TIMEOUT_MS = 30_000;
+
 export function Workspace({
   initialBalance,
   simplePrice,
@@ -58,10 +69,17 @@ export function Workspace({
   websearch,
   attachments,
   chartStyle,
+  creditPacks,
 }: {
   initialBalance: number;
   simplePrice: number;
   clarificationPrice: number;
+  /** R2 item 2 (experience-improvement-plan, session 96): the live pack
+   * list (getActivePacks), threaded into Chat so the insufficient-credits
+   * message can name the pack that covers a shortfall — optional so an old
+   * test/caller that hasn't been updated still renders the message text
+   * exactly as before, just without the pack name. */
+  creditPacks?: CreditPack[];
   /** The user's threads, read SERVER-SIDE (page.tsx) like every other page read
    * — no client fetch-on-mount effect; refreshed client-side after a turn. */
   initialThreads: ThreadSummary[];
@@ -97,6 +115,46 @@ export function Workspace({
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showPurchaseBanner, setShowPurchaseBanner] = useState(purchaseSuccess);
   const t = useT();
+  const router = useRouter();
+  // R2 item 4: `balance` is seeded from `initialBalance` once (client
+  // state — WP19's #68 pattern) and otherwise only ever moves via the
+  // gate's own outcome below; without this sync, the purchase poll's
+  // router.refresh() would bring a fresh `initialBalance` prop that never
+  // reaches the displayed balance. Review fix: a refresh is a separate
+  // request that can resolve AFTER a concurrent chat spend's own
+  // handleOutcome update, carrying a balance read from the DB before that
+  // spend committed — Math.max means a refresh can only ever raise the
+  // shown balance (what a purchase poll needs), never claw back a more
+  // current local debit down to a stale snapshot.
+  useEffect(() => {
+    setBalance((current) => Math.max(current, initialBalance));
+  }, [initialBalance]);
+  // The purchase-success banner used to tell the reader to refresh the page
+  // by hand; this polls for them instead, honestly bounded (see
+  // PURCHASE_POLL_TIMEOUT_MS above) rather than left running indefinitely.
+  useEffect(() => {
+    if (!showPurchaseBanner) return;
+    const deadline = Date.now() + PURCHASE_POLL_TIMEOUT_MS;
+    // Review fix: clears its own interval past the deadline, rather than a
+    // no-op tick that would otherwise keep firing every
+    // PURCHASE_POLL_INTERVAL_MS for as long as an undismissed banner stays
+    // mounted.
+    let intervalId: ReturnType<typeof setInterval>;
+    const tick = (): void => {
+      if (document.visibilityState === 'hidden') return;
+      if (Date.now() >= deadline) {
+        clearInterval(intervalId);
+        return;
+      }
+      router.refresh();
+    };
+    intervalId = setInterval(tick, PURCHASE_POLL_INTERVAL_MS);
+    document.addEventListener('visibilitychange', tick);
+    return () => {
+      clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', tick);
+    };
+  }, [showPurchaseBanner, router]);
   // WP135 (blocker fix): the chat reports its in-flight state here so the
   // sidebar's thread-switch / nieuwe-chat controls are disabled while a submit
   // runs — a switch mid-flight would otherwise reset the chat and let the late
@@ -371,6 +429,7 @@ export function Workspace({
             balance,
             ...(websearch ? { websearch } : {}),
           }}
+          creditPacks={creditPacks}
           {...(attachments ? { attachments: { enabled: true, onUploadFile: handleUploadFile } } : {})}
           dockMode={isWide}
           initialMessages={handoff.messages}
@@ -402,7 +461,7 @@ export function Workspace({
         <SiteHeader balance={balance} />
         {showPurchaseBanner ? (
           <div className="mx-2 mt-2 flex items-start justify-between gap-3 rounded-lg border border-border bg-card px-4 py-3 text-sm text-success">
-            <p>{t('workspace.purchaseSuccessMessage')}</p>
+            <p>{t('workspace.purchaseSuccessMessageLive')}</p>
             <button
               type="button"
               onClick={dismissPurchaseBanner}

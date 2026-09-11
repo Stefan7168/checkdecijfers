@@ -6,6 +6,46 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 96 — 2026-09-11 — PR #9's fifth conflict + five experience-improvement-plan quick wins — an
+unmocked server action's real jsdom behavior wasn't what a comment assumed, and three numeric assumptions in
+money-adjacent UI code were quietly wrong until an adversarial review pass caught them
+
+- **Don't assume what an unmocked async dependency resolves to in a test env — check, or mock it and
+  assert.** Writing a new integration test for the "anonymous visitor sees a login hint" wiring, the first
+  draft asserted the REAL (unmocked) `generateInsights` server action resolves `{ ok: false, reason:
+  'unauthenticated' }` in jsdom, reasoning "every other test in this describe block already opens the same
+  panel, so it must already exercise this path safely." It doesn't — `currentUserId()` throws outside a real
+  request scope, landing in the action's own catch as `reason: 'error'`, not `'unauthenticated'`; no prior
+  test had ever asserted on the outcome, so nothing caught it. The fix was to actually mock the action
+  (`vi.hoisted` + a shared `chartInsightsActions` mock, matching the file's own `chartStyleActions`
+  precedent) with a default that reproduces today's real behavior for every untouched test, and override it
+  only in the one new test that needed the other branch. Lesson: "this must already work, nothing else
+  breaks" is not verification — write the test, run it, and let the failure tell you what actually happens.
+- **A LOW `/code-review` pass on a "simple" UI-copy batch found three real correctness bugs, not just
+  style nits — money-adjacent numeric logic deserves the same adversarial read as pipeline code.** Five
+  report items that read as "just add a line of copy" (R2/R10/R11) actually introduced: a low-balance
+  threshold that compared the balance against the wrong price whenever the web-search add-on was selected
+  (quoting 30 credits while checking against 20 — could falsely reassure or falsely warn); a "cheapest
+  covering pack" picker that sorted by CREDITS instead of the price-ascending order the query already
+  returned (packs are hand-managed rows with no constraint that credits and price move together, so this
+  could recommend a pricier pack); and a new balance-resync effect that could let a stale `router.refresh()`
+  clobber a just-applied chat-spend debit in a narrow race. None of these were caught by 1459 passing web
+  tests, because the new tests (written by the same pass that wrote the code) shared the same blind spots as
+  the implementation — monotonic test fixtures, no websearch-selected case, no concurrent-update scenario.
+  Lesson: the mandatory pre-push `/code-review` pass is not a formality for "obviously simple" copy/UI
+  changes — it is exactly where an implementer's own untested assumptions hide, and it is worth writing the
+  regression test for each finding (all six were), not just patching the code.
+- **A one-day report estimate can still hide a real architecture decision.** R2 item 2 ("link `/credits`
+  in the insufficient-credits message") sounded like a one-line change but actually required deciding HOW to
+  make a plain string message clickable, given `ChatMessage.text` is a plain string with no markdown/link
+  rendering (by design — WP23's own "the whole-card digit scan" honesty discipline). The chosen mechanism
+  (a separate, transient local-state element rendered alongside the message, mirroring the existing
+  `staleDeploy`/`error` pattern in the same file, rather than a new field on the shared `ChatMessage` type)
+  kept the change's blast radius to one file instead of touching `chat-message.ts` + `replay-assemble.ts` +
+  every test fixture that constructs a `ChatMessage` literal. Lesson: when a "quick" UI fix needs a new kind
+  of interactive element inside what's currently plain text, look for an existing sibling pattern in the same
+  component before reaching for a shared-type change — the cheaper mechanism is often already there.
+
 ## Session 95 — 2026-09-11 — autonomous overnight: the designed default chart look (ADR 042) via SDD —
 palette design as arithmetic, a plan literal overruled in review, a hidden-but-focusable a11y trap, cross-file
 literal pins, a stale `.next` cache, and fix rounds without SendMessage

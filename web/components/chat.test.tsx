@@ -190,6 +190,72 @@ describe('Chat — GatedResponse branches', () => {
   });
 });
 
+// R2 item 2 (experience-improvement-plan, session 96): the insufficient-
+// credits message gets a real clickable /credits link, naming the cheapest
+// pack that covers the shortfall — read live (creditPacks prop), never
+// hardcoded.
+describe('Chat — R2 item 2 credits link on insufficient_credits (session 96)', () => {
+  const packs = [
+    { id: 'pack_5', label: '€5 — 200 credits', priceCents: 500, currency: 'eur', credits: 200 },
+    { id: 'pack_30', label: '€30 — 2.000 credits', priceCents: 3000, currency: 'eur', credits: 2000 },
+  ];
+
+  it('renders a real /credits link naming the cheapest covering pack', async () => {
+    askQuestion.mockResolvedValue(outcome({ kind: 'insufficient_credits', balance: 0, required: 20 }));
+    render(<Chat creditPacks={packs} />);
+    await submit('Wat was de inflatie in 2024?');
+    const link = await screen.findByRole('link', { name: /is genoeg om verder te gaan/ });
+    expect(link).toHaveAttribute('href', '/credits');
+    expect(link).toHaveTextContent('€5 — 200 credits is genoeg om verder te gaan →');
+  });
+
+  it('falls back to a plain "Credits kopen" link when no pack covers the shortfall', async () => {
+    askQuestion.mockResolvedValue(outcome({ kind: 'insufficient_credits', balance: 0, required: 5000 }));
+    render(<Chat creditPacks={packs} />);
+    await submit('Wat was de inflatie in 2024?');
+    const link = await screen.findByRole('link', { name: 'Credits kopen →' });
+    expect(link).toHaveAttribute('href', '/credits');
+  });
+
+  it('still shows the plain link without a creditPacks prop (old/prop-less call sites)', async () => {
+    askQuestion.mockResolvedValue(outcome({ kind: 'insufficient_credits', balance: 0, required: 20 }));
+    render(<Chat />);
+    await submit('Wat was de inflatie in 2024?');
+    expect(await screen.findByRole('link', { name: 'Credits kopen →' })).toHaveAttribute('href', '/credits');
+  });
+
+  it('clears the link on the next submit (never lingers past a fresh turn)', async () => {
+    askQuestion.mockResolvedValueOnce(outcome({ kind: 'insufficient_credits', balance: 0, required: 20 }));
+    render(<Chat creditPacks={packs} />);
+    await submit('Wat was de inflatie in 2024?');
+    await screen.findByRole('link', { name: /Credits kopen|is genoeg/ });
+
+    askQuestion.mockResolvedValueOnce(outcome(fakeAnswer('Nederland telt 18.044.027 inwoners.')));
+    await submit('Hoeveel inwoners heeft Nederland?');
+    await screen.findByText('Nederland telt 18.044.027 inwoners.');
+    expect(screen.queryByRole('link', { name: /Credits kopen|is genoeg/ })).toBeNull();
+  });
+
+  // Review fix (session 96): creditPacks arrives price-ascending
+  // (getActivePacks' own `order by price_cents`) — the cheapest COVERING
+  // pack is the first match in that order, not the one with the fewest
+  // credits (packs are hand-managed rows with no constraint that credits
+  // and price move together).
+  it('picks the cheapest covering pack by price order, not by credits order', async () => {
+    const nonMonotonicPacks = [
+      { id: 'pack_a', label: 'A: €12 — 300 credits', priceCents: 1200, currency: 'eur', credits: 300 },
+      { id: 'pack_b', label: 'B: €15 — 250 credits', priceCents: 1500, currency: 'eur', credits: 250 },
+    ];
+    // Shortfall of 200 credits: both packs cover it. Pack A is cheaper
+    // (€12 vs €15) despite having MORE credits than pack B.
+    askQuestion.mockResolvedValue(outcome({ kind: 'insufficient_credits', balance: 100, required: 300 }));
+    render(<Chat creditPacks={nonMonotonicPacks} />);
+    await submit('Wat was de inflatie in 2024?');
+    const link = await screen.findByRole('link', { name: /is genoeg om verder te gaan/ });
+    expect(link).toHaveTextContent('A: €12 — 300 credits is genoeg om verder te gaan →');
+  });
+});
+
 // Task 2 (chat polish batch, owner ask): "Copy" now copies the WHOLE
 // answer (body + disclosure lines + attribution, hyperlinked to the source
 // deep link + the citation's own flags line), not just the bare R4 citation
@@ -858,6 +924,48 @@ describe('Chat — #134(a) period-coverage refusal retry chip', () => {
     await screen.findByText('CBS heeft voor inflatie (nog) geen cijfer over deze periode gepubliceerd.');
     expect(screen.queryByRole('button', { name: /Wat was .*\?/ })).toBeNull();
   });
+
+  // R2 item 1 (experience-improvement-plan, session 96): the same
+  // structural `suggestions` field also carries a clarification's own
+  // OPTIONS and a refusal's retry chip — each now gets its own caption
+  // instead of the generic "Suggesties voor een vervolgvraag:".
+  it('captions a refusal\'s retry chip "Probeer in plaats daarvan:", not the answer wording', async () => {
+    askQuestion.mockResolvedValue(
+      outcome(
+        refusalWithSuggestions(
+          'Zo recent heb ik de cijfers over inflatie nog niet.',
+          ['Wat was inflatie in 2025?'],
+        ),
+      ),
+    );
+    render(<Chat />);
+    await submit('Wat was de inflatie in 2027?');
+    await screen.findByRole('button', { name: 'Wat was inflatie in 2025?' });
+    expect(screen.getByText('Probeer in plaats daarvan:')).toBeInTheDocument();
+    expect(screen.queryByText('Suggesties voor een vervolgvraag:')).toBeNull();
+  });
+
+  it('captions a clarification\'s own options "Kies een optie:"', async () => {
+    askQuestion.mockResolvedValue(
+      outcome({
+        kind: 'ok',
+        auditId: 6,
+        netCost: 10,
+        response: {
+          kind: 'clarification',
+          text: 'Welke gemeente bedoel je?',
+          pending: { questionNl: 'Welke gemeente bedoel je?' },
+          suggestions: ['Amsterdam', 'Rotterdam'],
+        } as unknown as ComposedResponse,
+      }),
+    );
+    render(<Chat />);
+    await submit('Hoeveel inwoners heeft die gemeente?');
+    await screen.findByRole('button', { name: 'Amsterdam' });
+    expect(screen.getByText('Kies een optie:')).toBeInTheDocument();
+    expect(screen.queryByText('Suggesties voor een vervolgvraag:')).toBeNull();
+    expect(screen.queryByText('Probeer in plaats daarvan:')).toBeNull();
+  });
 });
 
 describe('Chat — WP22 stale-deploy action failure (#96a)', () => {
@@ -951,6 +1059,53 @@ describe('Chat — WP20 cost transparency (#82)', () => {
     expect(screen.queryByText(/saldo/)).toBeNull();
     expect(await screen.findByText('10 credits')).toBeInTheDocument();
     expect(screen.queryByText(/wedervraag kost/)).toBeNull();
+  });
+
+  // R2 item 3 (experience-improvement-plan, session 96): the #69 low-balance
+  // rule, restored on this reachable line (AccountPanel's own copy is
+  // dormant — WORKSPACE_ENABLED !== '1').
+  it('appends the low-balance suffix and tints the line amber when balance covers one more question but not two', () => {
+    render(<Chat pricing={{ simple: 20, clarification: 10, balance: 25 }} />);
+    const line = screen.getByText(/Nog genoeg voor één vraag\.$/);
+    expect(line).toHaveTextContent('Een vraag kost ~20 credits · saldo: 25 credits.');
+    expect(line).toHaveClass('text-warning');
+  });
+
+  it('shows the plain, untinted line with no suffix when the balance is healthy', () => {
+    render(<Chat pricing={{ simple: 20, clarification: 10, balance: 100 }} />);
+    const line = screen.getByText(/^Een vraag kost/);
+    expect(line).not.toHaveTextContent('Nog genoeg voor één vraag.');
+    expect(line).toHaveClass('text-muted-foreground');
+    expect(line).not.toHaveClass('text-warning');
+  });
+
+  it('does not warn once the balance drops below one question (the existing insufficient_credits refusal takes over instead)', () => {
+    render(<Chat pricing={{ simple: 20, clarification: 10, balance: 10 }} />);
+    const line = screen.getByText(/^Een vraag kost/);
+    expect(line).not.toHaveTextContent('Nog genoeg voor één vraag.');
+  });
+
+  // Review fix (session 96): the threshold must track the QUOTED price for
+  // the current selection (simple+addon with Internet+CBS both on, addon
+  // alone web-only), not always the plain CBS-only `simple` price.
+  it('does not falsely claim "enough for one more" when Internet is on and the balance covers neither', () => {
+    render(<Chat pricing={{ simple: 20, clarification: 10, balance: 25, websearch: { enabled: true, addonPrice: 10 } }} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Internet' }));
+    // Quoted cost is 30 (simple 20 + addon 10); balance 25 does not even
+    // cover it — the old bug compared 25 against simple(20) alone and
+    // wrongly showed the low-balance suffix here.
+    const line = screen.getByText(/^Een vraag kost ~30 credits/);
+    expect(line).not.toHaveTextContent('Nog genoeg voor één vraag.');
+  });
+
+  it('warns in web-only mode using the addon price, not the (irrelevant) simple price', () => {
+    render(<Chat pricing={{ simple: 20, clarification: 10, balance: 15, websearch: { enabled: true, addonPrice: 10 } }} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Internet' })); // web on
+    fireEvent.click(screen.getByRole('button', { name: 'CBS data' })); // cbs off
+    // Quoted cost is 10 (addon only); balance 15 covers one more but not
+    // two — the old bug compared 15 against simple(20) and never warned.
+    const line = screen.getByText(/^Een vraag kost ~10 credits/);
+    expect(line).toHaveTextContent('Nog genoeg voor één vraag.');
   });
 });
 
@@ -1329,6 +1484,30 @@ describe('Chat — WP129+130 source chips (#129)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Verstuur' }));
     await screen.findByText('Bezig met het doorzoeken van CBS-cijfers…');
     expect(document.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThan(0);
+  });
+
+  // R11 (experience-improvement-plan, session 96): an honest line once the
+  // wait crosses the measured-median threshold — no fake progress bar.
+  it('shows the honest long-wait line only after 8s of busy, never before', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      askQuestion.mockReturnValue(new Promise<AskOutcome>(() => {})); // never resolves — stays busy
+      render(<Chat pricing={pricing} />);
+      fireEvent.change(screen.getByPlaceholderText('Stel een vraag…'), { target: { value: 'Hoeveel inwoners?' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Verstuur' }));
+      await screen.findByText('Bezig met het doorzoeken van CBS-cijfers…');
+      expect(screen.queryByText(/Dit duurt iets langer/)).toBeNull();
+
+      await vi.advanceTimersByTimeAsync(7999);
+      expect(screen.queryByText(/Dit duurt iets langer/)).toBeNull();
+
+      await vi.advanceTimersByTimeAsync(1);
+      expect(
+        screen.getByText('Dit duurt iets langer dan gewoonlijk; we controleren het antwoord nog.'),
+      ).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('the answer skeleton is gone once the answer resolves', async () => {

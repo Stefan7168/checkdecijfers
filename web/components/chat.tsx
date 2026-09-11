@@ -13,13 +13,14 @@
 'use client';
 
 import { Check, Copy, Database, Download, FileSpreadsheet, Globe, Link2, PanelRight, Paperclip, Plug } from 'lucide-react';
+import Link from 'next/link';
 import { unstable_isUnrecognizedActionError } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { askQuestion, replyToClarification } from '../app/actions.ts';
 import type { AskOutcome } from '../app/actions.ts';
 import type { ConversationContext } from '../backend/answer/context/index.ts';
 import type { PendingClarification } from '../backend/answer/respond/types.ts';
-import type { GatedResponse } from '../backend/billing/index.ts';
+import type { CreditPack, GatedResponse } from '../backend/billing/index.ts';
 // WP129+130 (#129/#130, ADR 032): the source registry drives the chips (one
 // per registered source, label "<displayName> data"); WebSection is the
 // unverified-web outcome the message renders below the CBS body. Both are
@@ -73,6 +74,11 @@ const CHIP_ACTION = `${CHIP_BASE} border-border bg-background text-foreground ho
 const CHIP_SOON = `${CHIP_BASE} border-dashed border-border bg-background text-muted-foreground opacity-60 disabled:cursor-not-allowed`;
 /** Follow-up chips (#73) and the docked-visual reference chip: pills under a message. */
 const PILL = 'rounded-full border border-border px-3 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground';
+
+/** R11 (experience-improvement-plan, session 96): above the measured median
+ * response time (docs/03-mvp-scope.md's ~10s criterion), so the honest
+ * "taking longer" line never shows on an ordinary turn. */
+const BUSY_LONG_WAIT_MS = 8000;
 
 /** WP20 #82: live pricing for the pre-send cost surfaces — read from the
  * pricing tables by the page (ADR 006), threaded via Dashboard. `balance` is
@@ -310,6 +316,7 @@ function gatedMessageText(
 export function Chat({
   onOutcome,
   pricing,
+  creditPacks,
   attachments,
   // WP135 (ADR 033): workspace wiring. ALL optional — a prop-less / Dashboard
   // call site is byte-identical to today (no threadId ever leaves the client,
@@ -330,6 +337,11 @@ export function Chat({
 }: {
   onOutcome?: (gated: GatedResponse) => void;
   pricing?: ChatPricing;
+  /** R2 item 2 (experience-improvement-plan, session 96): the live pack list
+   * (getActivePacks) — optional so a prop-less/old call site renders the
+   * insufficient-credits message exactly as before, just without a `/credits`
+   * link or a named covering pack. */
+  creditPacks?: CreditPack[];
   attachments?: ChatAttachments;
   /** ≥ lg AND the workspace is active: visuals move to the right-pane dock and
    * render here as an in-flow reference chip instead (each visual exactly
@@ -392,6 +404,19 @@ export function Chat({
   const [context, setContext] = useState<ConversationContext | null>(initialContext ?? null);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
+  // R11 (experience-improvement-plan, session 96): an honest line once a
+  // reply is taking longer than the measured median — no fake progress bar,
+  // just one truthful sentence. Resets the moment busy clears, so it never
+  // lingers into the next turn's own (possibly fast) wait.
+  const [longWait, setLongWait] = useState(false);
+  useEffect(() => {
+    if (!busy) {
+      setLongWait(false);
+      return;
+    }
+    const timer = setTimeout(() => setLongWait(true), BUSY_LONG_WAIT_MS);
+    return () => clearTimeout(timer);
+  }, [busy]);
   const [error, setError] = useState<string | null>(null);
   // WP22 (#96a): a fresh deploy invalidates Server Action ids in already-open
   // tabs -- the first submit then fails with Next's UnrecognizedActionError
@@ -399,6 +424,12 @@ export function Chat({
   // Action"). That case gets its own honest message + refresh affordance
   // instead of the misleading generic error.
   const [staleDeploy, setStaleDeploy] = useState(false);
+  // R2 item 2 (experience-improvement-plan, session 96): a real `/credits`
+  // link + the covering pack's name, shown alongside the insufficient-credits
+  // message. Transient like staleDeploy/error above — not part of ChatMessage
+  // (nothing to replay: this outcome was never billed or audited), cleared on
+  // the next submit.
+  const [creditsShortfall, setCreditsShortfall] = useState<{ balance: number; required: number } | null>(null);
   // WP129+130 (#129, ADR 032): the source-tags selection. Chips render (and a
   // selection payload rides every submit) ONLY when the websearch prop is
   // present — flag off ⇒ this whole block is inert and the calls stay 3-arg,
@@ -491,6 +522,7 @@ export function Chat({
     setInput('');
     setError(null);
     setStaleDeploy(false);
+    setCreditsShortfall(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadNonce]);
 
@@ -577,6 +609,7 @@ export function Chat({
     setBusy(true);
     setError(null);
     setStaleDeploy(false);
+    setCreditsShortfall(null);
 
     try {
       const requestId = crypto.randomUUID();
@@ -674,6 +707,13 @@ export function Chat({
             carrier: null,
           },
         ]);
+        // R2 item 2 (experience-improvement-plan, session 96): a real
+        // `/credits` link + the covering pack's name, rendered alongside the
+        // plain message above (which stays byte-identical — see
+        // gatedMessageText).
+        if (gated.kind === 'insufficient_credits') {
+          setCreditsShortfall({ balance: gated.balance, required: gated.required });
+        }
         // None of these kinds change the pending clarification state;
         // `finally` below still clears `busy`.
         return;
@@ -807,26 +847,61 @@ export function Chat({
   // session 90) for it to sit DIRECTLY UNDER the input box instead, so it is
   // a plain derived string rendered inline again and the context plumbing is
   // gone. Same three text variants, same conditions, same numbers.
+  // Review fix: the quoted price for THIS turn is not always pricing.simple
+  // — Internet-both reserves simple+addon, web-only reserves addon alone.
+  // The three pricingHint branches below already each quote their own
+  // number; this mirrors that same selection so the low-balance check
+  // below warns against what the reader is actually about to be charged,
+  // not always the plain CBS-only price.
+  const quotedPrice =
+    pricing && websearch && webSelected && selectedSources.size > 0
+      ? pricing.simple + websearch.addonPrice
+      : pricing && websearch && webSelected
+        ? websearch.addonPrice
+        : (pricing?.simple ?? 0);
+  // R2 (experience-improvement-plan, session 96): the #69 low-balance rule,
+  // verbatim from AccountPanel (components/account-panel.tsx) — warn exactly
+  // when the balance still covers one more (quoted) question but not two.
+  // AccountPanel itself only renders on the pre-workspace path
+  // (WORKSPACE_ENABLED !== '1'), so the live chat needed its own copy of
+  // this check on the line readers actually see.
+  const lowBalance = !!pricing && quotedPrice > 0 && pricing.balance >= quotedPrice && pricing.balance < quotedPrice * 2;
   const pricingHint = !pricing
     ? null
-    : websearch && webSelected && selectedSources.size > 0
-      ? t('chat.pricingBoth', {
-          total: pricing.simple + websearch.addonPrice,
-          addon: websearch.addonPrice,
-          balance: pricing.balance,
-          clarification: pricing.clarification,
-        })
-      : websearch && webSelected
-        ? t('chat.pricingWebOnly', {
+    : (websearch && webSelected && selectedSources.size > 0
+        ? t('chat.pricingBoth', {
+            total: pricing.simple + websearch.addonPrice,
             addon: websearch.addonPrice,
-            reserved: pricing.simple + websearch.addonPrice,
-            balance: pricing.balance,
-          })
-        : t('chat.pricingDefault', {
-            simple: pricing.simple,
             balance: pricing.balance,
             clarification: pricing.clarification,
-          });
+          })
+        : websearch && webSelected
+          ? t('chat.pricingWebOnly', {
+              addon: websearch.addonPrice,
+              reserved: pricing.simple + websearch.addonPrice,
+              balance: pricing.balance,
+            })
+          : t('chat.pricingDefault', {
+              simple: pricing.simple,
+              balance: pricing.balance,
+              clarification: pricing.clarification,
+            })) + (lowBalance ? t('chat.pricingLowBalanceSuffix') : '');
+
+  // R2 item 2 (experience-improvement-plan, session 96): the cheapest pack
+  // that covers the shortfall — read live (creditPacks = getActivePacks),
+  // never hardcoded. null when no pack list was passed, or when even the
+  // largest pack falls short (the message still shows the plain /credits
+  // link either way).
+  // Review fix: creditPacks already arrives price-ascending
+  // (getActivePacks' own `order by price_cents`) — the FIRST covering pack
+  // in that order is the cheapest one, by price, not by credits. Packs are
+  // hand-managed rows (ADR 006) with no constraint that credits and price
+  // move together, so re-sorting by credits here could recommend a pricier
+  // pack than the true cheapest match.
+  const coveringPack =
+    creditsShortfall && creditPacks
+      ? (creditPacks.find((pack) => pack.credits >= creditsShortfall.required - creditsShortfall.balance) ?? null)
+      : null;
 
   return (
     // Session 87 visual redesign: no frame of its own — the workspace card
@@ -1076,7 +1151,13 @@ export function Chat({
               * the pre-send cost line (#82) and presses Verstuur themselves. */}
             {message.suggestions.length > 0 ? (
               <>
-                <p className="mt-2 text-xs text-muted-foreground">{t('chat.suggestionsHint')}</p>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {message.kind === 'clarification'
+                    ? t('chat.suggestionsHintClarification')
+                    : message.kind === 'refusal'
+                      ? t('chat.suggestionsHintRefusal')
+                      : t('chat.suggestionsHint')}
+                </p>
                 <div className="mt-1 flex flex-wrap gap-2">
                 {message.suggestions.map((question) => (
                   <button
@@ -1130,6 +1211,12 @@ export function Chat({
                   ? t('chat.busyWebOnly')
                   : t('chat.busyCbsOnly')}
             </div>
+            {/* R11: one truthful line once the wait crosses BUSY_LONG_WAIT_MS —
+              * no fake stages, no progress bar, per the plan's "not recommended"
+              * verdict on streaming (the validator hasn't passed partial text). */}
+            {longWait ? (
+              <div className="text-left text-sm text-muted-foreground">{t('chat.busyLongWait')}</div>
+            ) : null}
             <AnswerSkeleton />
           </>
         ) : null}
@@ -1145,6 +1232,17 @@ export function Chat({
               {t('chat.staleDeployButton')}
             </button>{' '}
             {t('chat.staleDeploySuffix')}
+          </div>
+        ) : null}
+        {/* R2 item 2 (experience-improvement-plan, session 96): a real
+          * clickable link alongside the plain insufficient-credits message
+          * above (gatedMessageText, unchanged) — names the covering pack
+          * when the live pack list resolved one. */}
+        {creditsShortfall ? (
+          <div className="text-sm">
+            <Link href="/credits" className="font-medium text-primary underline">
+              {coveringPack ? t('chat.buyCreditsLinkWithPack', { packLabel: coveringPack.label }) : t('chat.buyCreditsLink')}
+            </Link>
           </div>
         ) : null}
         <div ref={bottomRef} />
@@ -1327,7 +1425,9 @@ export function Chat({
           {t('chat.send')}
         </Button>
       </form>
-      {pricingHint ? <p className="mb-2 text-xs text-muted-foreground">{pricingHint}</p> : null}
+      {pricingHint ? (
+        <p className={lowBalance ? 'mb-2 text-xs text-warning' : 'mb-2 text-xs text-muted-foreground'}>{pricingHint}</p>
+      ) : null}
         </div>
       </div>
     </div>
