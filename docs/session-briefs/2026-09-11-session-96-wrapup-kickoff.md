@@ -1,5 +1,12 @@
 # Session 96 wrap-up kickoff — where the next session actually starts (written 2026-09-11, owner present)
 
+> **PARTIALLY SUPERSEDED as the primary entry point** by
+> [session-97-journey-programme-kickoff.md](2026-09-11-session-97-journey-programme-kickoff.md) (written
+> later the same day, after the owner's explicit "work for hours, move the project big steps" mandate) —
+> that file is now what STATUS.md's top block points to. This file's own PR #9/#13 status tracking and the
+> #239 numbering-collision note below are still accurate background, just read the journey-programme
+> kickoff first for the actual task.
+
 Read in this order: [CLAUDE.md](../../CLAUDE.md) → [STATUS.md](../STATUS.md) top block (verify every fact
 below against reality first — the Golden Rule — before repeating any of it to the owner) →
 [08-build-plan.md](../08-build-plan.md) → this file.

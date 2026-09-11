@@ -14,14 +14,18 @@
 > should migrate everything below the session-94 block into status-archive.md and leave only a lean
 > pointer, the way this convention has always intended.
 
-**▶ NEXT SESSION STARTS HERE (rewritten 2026-09-11, end of session 96, owner present — the session ran
-long and did NOT actually end between the two blocks below; "session 96" spans all of it).** Read
-[session-briefs/2026-09-11-session-96-wrapup-kickoff.md](session-briefs/2026-09-11-session-96-wrapup-kickoff.md)
-— the real next-session starting point, written last, after everything below happened. The
-[story-mode-visual-polish-kickoff.md](session-briefs/2026-09-11-story-mode-visual-polish-kickoff.md) doc
-below is now HISTORICAL: its mandate was executed in THIS session (not a fresh one) as **PR #13** — see
-the next paragraph. [session-97-kickoff.md](session-briefs/2026-09-11-session-97-kickoff.md) (Thread B,
-the Journey-programme continuation) is still live, tracked-but-not-yet-started.
+**▶ NEXT SESSION STARTS HERE (rewritten 2026-09-11, end of session 96, owner present).** Read
+[session-briefs/2026-09-11-session-97-journey-programme-kickoff.md](session-briefs/2026-09-11-session-97-journey-programme-kickoff.md)
+— **the owner's explicit mandate: work autonomously for hours, move the project big steps.** It covers
+Journey-programme phases 0 and 3–6 (phase 2/R3 excluded — money path, needs an explicit owner go), and
+opens with a "go big from the start" section written specifically because the immediately preceding
+attempt at exactly this kind of open-ended autonomous ask (Story-mode visuals) started too small and drew
+direct owner pushback before a bigger second wave actually landed as PR #13. Two other kickoff docs in
+this folder are now superseded, kept only for the historical record: the original
+[session-97-kickoff.md](session-briefs/2026-09-11-session-97-kickoff.md) (Thread B's own, earlier and
+less specific version of the same Journey-programme continuation) and
+[story-mode-visual-polish-kickoff.md](session-briefs/2026-09-11-story-mode-visual-polish-kickoff.md)
+(executed the same day it was written, as PR #13, not in a fresh session).
 
 **PR #13 (Story stage motion/atmosphere upgrade, ADR 044's addendum) is open, branch `visual-story-motion`,
 head `9407440`, base `main` `31f258e`.** Built after the owner's direct pushback that a first, smaller

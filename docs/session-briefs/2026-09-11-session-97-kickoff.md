@@ -1,5 +1,11 @@
 # Session 97 kickoff (written 2026-09-11, session 96, owner present)
 
+> **SUPERSEDED.** [session-97-journey-programme-kickoff.md](2026-09-11-session-97-journey-programme-kickoff.md)
+> (written later the same day, after the owner gave an explicit "work for hours, move the project big
+> steps" mandate) is the current, more specific starting point for this same Journey-programme work —
+> phase-by-phase, with the phase-2/R3 money-path exclusion spelled out and a "go big from the start" note.
+> This file's own reading order and context are still accurate background, just not the live entry point.
+
 Read in this order: [CLAUDE.md](../../CLAUDE.md) → [STATUS.md](../STATUS.md) top block → [08-build-plan.md § Journey
 programme](../08-build-plan.md) → [session-briefs/2026-09-11-experience-improvement-plan.md](2026-09-11-experience-improvement-plan.md)
 → [01-product-vision.md § Ideal customer profile](../01-product-vision.md) → [open-questions #237 + #238](../open-questions.md).

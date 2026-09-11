@@ -1,5 +1,18 @@
 # STATUS archive — the session log
 
+**Session 96, final handoff (2026-09-11, owner present) — a big, explicit next-session mandate written after
+the owner asked to wrap up "and make sure the next session works for hours and hours autonomously, and
+moves this project big steps."** Wrote
+[session-briefs/2026-09-11-session-97-journey-programme-kickoff.md](session-briefs/2026-09-11-session-97-journey-programme-kickoff.md):
+Journey-programme phases 0 and 3–6 (phase 2/R3 excluded — money path, needs an explicit owner go), opening
+with a "go big from the start" section that names this same session's own earlier mistake (a too-small
+first wave on the Story-mode ask drew direct pushback before a bigger second wave, PR #13, actually landed)
+so the next session doesn't repeat it. Superseded (banner added at each, not deleted) the two earlier,
+less-specific kickoff docs this same day produced: the original `session-97-kickoff.md` (Thread B's own
+Journey-programme handoff) and `session-96-wrapup-kickoff.md` (a status handoff without a big task attached).
+STATUS.md's top block repointed accordingly. Both PRs (#9, #13) re-verified unchanged, green, mergeable,
+waiting on the owner — no code touched this turn, docs-only.
+
 **Session 96 continued (2026-09-11, owner present) — STORY-MODE VISUAL UPGRADE, PR #13 OPEN. The owner
 asked to move this to "a fresh session," but the same conversation continued instead — see the entry
 below for the first part of session 96 (PR #9's conflicts, the quick wins, the Thread A/B collision) for
