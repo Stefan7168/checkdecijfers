@@ -168,6 +168,20 @@ describe('Workspace — R2.4 purchase poll', () => {
     expect(routerRefresh).toHaveBeenCalledTimes(10);
   });
 
+  // Regression (strong-tier review HIGH-1): `tick` doubles as the
+  // visibilitychange handler, so the bound must stop BOTH the interval and
+  // the listener — otherwise every tab focus after the bound refreshed
+  // forever, since the banner only closes on dismiss.
+  it('does not refresh on a tab focus after the bound is reached', () => {
+    render(<Workspace initialBalance={100} simplePrice={20} clarificationPrice={10} initialThreads={[]} purchaseSuccess />);
+    advance(60_000);
+    expect(routerRefresh).toHaveBeenCalledTimes(10);
+    act(() => {
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+    expect(routerRefresh).toHaveBeenCalledTimes(10);
+  });
+
   it('reflects a refreshed balance without any client-side recomputation', () => {
     const { rerender } = render(
       <Workspace initialBalance={100} simplePrice={20} clarificationPrice={10} initialThreads={[]} purchaseSuccess />,

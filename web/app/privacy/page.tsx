@@ -6,12 +6,23 @@
 // account rows, 90 days for anonymous-trial rows — ADR 036 D4/#181),
 // self-service deletion (Account menu), that questions transit an LLM
 // provider (Anthropic) to be parsed and phrased — never the raw CBS
-// statistics, Stripe as payment processor, no analytics cookies (only the
-// session cookie), and a contact placeholder the owner fills in. Marked
+// statistics, Stripe as payment processor, the cookies and abuse-limit data
+// the build actually uses (session cookie; the anonymous trial's visitor_id
+// cookie + hashed IP, 90 days, ADR 036 D2 / migration 020; aggregate
+// non-identifying per-day usage counts, ADR 039 / #220 — no third-party
+// analytics, no tracking cookies), and a contact placeholder the owner fills
+// in. Marked
 // with a visible draft note (decision 9). Same shell as /credits.
+import type { Metadata } from 'next';
 import { getLang } from '../../lib/i18n/server.ts';
 import { t } from '../../lib/i18n/messages.ts';
 import { SiteHeader } from '../../components/site-header.tsx';
+
+// The page title follows the reader's language, like every other string here:
+// getLang() is a server read, so the title is resolved per request.
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: t(await getLang(), 'privacy.pageTitle') };
+}
 
 export default async function PrivacyPage() {
   const lang = await getLang();

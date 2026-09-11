@@ -75,10 +75,17 @@ function usePurchasePoll(active: boolean): void {
     if (!active) return;
     let ticks = 0;
     const tick = (): void => {
+      // The bound is checked FIRST: `tick` doubles as the visibilitychange
+      // handler, so without this guard a tab focus after the bound would keep
+      // refreshing forever (the banner only closes on dismiss).
+      if (ticks >= PURCHASE_POLL_MAX_TICKS) return;
       if (document.visibilityState === 'hidden') return;
       ticks += 1;
       router.refresh();
-      if (ticks >= PURCHASE_POLL_MAX_TICKS) clearInterval(interval);
+      if (ticks >= PURCHASE_POLL_MAX_TICKS) {
+        clearInterval(interval);
+        document.removeEventListener('visibilitychange', tick);
+      }
     };
     const interval = setInterval(tick, PURCHASE_POLL_INTERVAL_MS);
     document.addEventListener('visibilitychange', tick);

@@ -9,7 +9,7 @@ vi.mock('../../components/site-header.tsx', () => ({ SiteHeader: () => <div data
 const { getLang } = vi.hoisted(() => ({ getLang: vi.fn() }));
 vi.mock('../../lib/i18n/server.ts', () => ({ getLang }));
 
-import WerkwijzePage from './page.tsx';
+import WerkwijzePage, { generateMetadata } from './page.tsx';
 
 beforeEach(() => {
   getLang.mockResolvedValue('nl');
@@ -61,5 +61,13 @@ describe('WerkwijzePage — en', () => {
     getLang.mockResolvedValue('en');
     render(await WerkwijzePage());
     expect(document.body.textContent?.toLowerCase()).not.toContain('hallucination');
+  });
+});
+
+describe('WerkwijzePage — metadata', () => {
+  it('titles the page from the catalogue in the reader\'s language', async () => {
+    expect((await generateMetadata()).title).toBe('Werkwijze — Check de Cijfers');
+    getLang.mockResolvedValue('en');
+    expect((await generateMetadata()).title).toBe('How we work — Check de Cijfers');
   });
 });

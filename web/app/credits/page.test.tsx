@@ -72,9 +72,11 @@ describe('CreditsPage — en', () => {
     expect(screen.getByText(/Your current balance:/)).toHaveTextContent('Your current balance: 80 credits.');
   });
 
-  it('shows each pack\'s ≈N questions and €/question in English', async () => {
+  // The euro amount is formatted with the PAGE language's locale (en-GB here,
+  // nl-NL above) — same price, reader's own decimal/grouping convention.
+  it('shows each pack\'s ≈N questions and €/question in English, formatted en-GB', async () => {
     getLang.mockResolvedValue('en');
     render(await CreditsPage({ searchParams: emptySearch }));
-    expect(screen.getByText('≈ 5 simple questions · € 1,00 per question')).toBeInTheDocument();
+    expect(screen.getByText('≈ 5 simple questions · €1.00 per question')).toBeInTheDocument();
   });
 });

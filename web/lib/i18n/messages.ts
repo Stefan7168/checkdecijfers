@@ -634,7 +634,15 @@ const nl = {
   'privacy.paymentHeading': 'Betalingen',
   'privacy.paymentBody': 'Stripe verwerkt betalingen als onze betaaldienstverlener. Wij slaan geen kaart- of bankgegevens op.',
   'privacy.cookiesHeading': 'Cookies',
-  'privacy.cookiesBody': 'We gebruiken geen trackingcookies of analytics — alleen een noodzakelijk sessiecookie om je ingelogd te houden.',
+  // Strong-tier review HIGH-2: this used to claim "no tracking cookies or
+  // analytics — only a session cookie", which the build contradicts. As
+  // built: the anonymous trial sets a per-browser visitor_id cookie (ADR 036
+  // D2) and stores a hashed IP (trial_questions.ip_hash, migration 020) for
+  // abuse limits, purged after 90 days; the chart-style counter
+  // (app/usage-actions.ts, ADR 039 / #220) records aggregate per-day event
+  // counts with no user id and no IP. All of that is disclosed here.
+  'privacy.cookiesBody':
+    'Om je ingelogd te houden gebruiken we één noodzakelijk sessiecookie. Gebruik je de proefversie zonder account, dan zetten we daarnaast een cookie met een willekeurig bezoekersnummer en bewaren we een versleutelde (gehashte) versie van je IP-adres — allebei alleen om misbruik van de gratis proef te beperken, en na 90 dagen verwijderd. Daarnaast tellen we per dag hoe vaak bepaalde acties gebeuren, als kale aantallen zonder account, gebruikersnaam of IP-adres, dus niet herleidbaar naar een persoon. Verder geen trackingcookies en geen analytics van derden.',
   'privacy.contactHeading': 'Contact',
   'privacy.contactBody': 'Vragen over je gegevens? Mail [contact e-mail — eigenaar vult dit aan].',
   'landing.ontdekCaption': 'Probeer het meteen: Opmaak (sjablonen), Inzichten, Presenteren — en download als PNG.',
@@ -1217,7 +1225,9 @@ const en: Messages = {
   'privacy.paymentHeading': 'Payments',
   'privacy.paymentBody': 'Stripe processes payments as our payment provider. We do not store card or bank details.',
   'privacy.cookiesHeading': 'Cookies',
-  'privacy.cookiesBody': 'We do not use tracking cookies or analytics — only a necessary session cookie to keep you logged in.',
+  // Mirrors the Dutch block above (strong-tier review HIGH-2).
+  'privacy.cookiesBody':
+    'To keep you signed in we use one necessary session cookie. If you use the trial without an account, we also set a cookie holding a random visitor number and store an encrypted (hashed) version of your IP address — both only to limit abuse of the free trial, and deleted after 90 days. We also count how often certain actions happen per day, as bare totals with no account, user name or IP address, so they cannot be traced back to a person. Beyond that: no tracking cookies and no third-party analytics.',
   'privacy.contactHeading': 'Contact',
   'privacy.contactBody': 'Questions about your data? E-mail [contact e-mail — owner fills in].',
   'landing.ontdekCaption': 'Try it right away: Format (templates), Insights, Present — and download as PNG.',

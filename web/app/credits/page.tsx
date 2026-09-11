@@ -15,7 +15,13 @@ import { BuyButton } from './buy-button.tsx';
 // client recomputation (CLAUDE.md: the client never recomputes a cost or
 // balance) and never hardcoded (ADR 006). floor() understates rather than
 // overpromises, mirroring account-panel.tsx's grantQuestions convention.
-const EUR_FORMAT = new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' });
+// The number format follows the page language rather than being pinned to
+// nl-NL: an English reader gets en-GB grouping/decimals for the same euro
+// amount. Currency stays EUR — the price itself is not language-dependent.
+const EUR_FORMATS = {
+  nl: new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' }),
+  en: new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'EUR' }),
+} as const;
 
 export default async function CreditsPage({
   searchParams,
@@ -36,6 +42,7 @@ export default async function CreditsPage({
   ]);
   const { purchase } = await searchParams;
   const lang = await getLang();
+  const eurFormat = EUR_FORMATS[lang];
 
   // WP135 (ADR 033 ⟨A5⟩): the shell rides the SAME WORKSPACE_ENABLED flag as the
   // workspace. Flag off ⇒ NO header, byte-identical to today; flag on ⇒ the
@@ -87,7 +94,7 @@ export default async function CreditsPage({
                   <span className="text-xs text-muted-foreground tnum">
                     {t(lang, 'credits.packQuestions', { n: packQuestions })}
                     {pricePerQuestion !== null
-                      ? ` · ${t(lang, 'credits.packPricePerQuestion', { price: EUR_FORMAT.format(pricePerQuestion) })}`
+                      ? ` · ${t(lang, 'credits.packPricePerQuestion', { price: eurFormat.format(pricePerQuestion) })}`
                       : ''}
                   </span>
                 ) : null}

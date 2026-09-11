@@ -11,9 +11,16 @@
 // pattern as /credits: SiteHeader only when WORKSPACE_ENABLED is on, else
 // none; robots noindex is inherited from the global layout.tsx metadata
 // (no per-page override needed, whole site is blanket-noindexed pre-launch).
+import type { Metadata } from 'next';
 import { getLang } from '../../lib/i18n/server.ts';
 import { t } from '../../lib/i18n/messages.ts';
 import { SiteHeader } from '../../components/site-header.tsx';
+
+// The page title follows the reader's language, like every other string here:
+// getLang() is a server read, so the title is resolved per request.
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: t(await getLang(), 'werkwijze.pageTitle') };
+}
 
 export default async function WerkwijzePage() {
   const lang = await getLang();
