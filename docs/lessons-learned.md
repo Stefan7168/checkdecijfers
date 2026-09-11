@@ -54,6 +54,19 @@ literal pins, a stale `.next` cache, and fix rounds without SendMessage
   (`recharts-tooltip-cursor`, `recharts-active-dot`) can persist on touch devices and WILL be in a cloned
   export unless stripped AFTER the paint inliner (which pairs clone and original by index); (2) an `axisLine`
   prop accepts SVG props, so a "hairline baseline in the grid colour" is one object, not a second axis.
+- **Phase 2 (templates) lessons, same night.** (1) **An "empty overrides" preset is not "the default" once an
+  account default exists** — `{}` resets to the resolver's BASE, which for a signed-in user is their saved
+  default, so the Basis card was a no-op for exactly the users who had saved Classic; the fix was to apply
+  the stock look explicitly and derive it from the constant. Whenever a layer sits between "reset" and
+  "stock", a preset must state its values. (2) **"Click every tab, then scan" scans only the last tab** —
+  one tabpanel is mounted at a time, so the plan's own instruction to "extend the every-tab digit scan"
+  produced a test whose title lied; the scan has to run inside the loop after each click. Read the loop
+  before trusting a test's title. (3) **"Exactly one of N is current" is a radiogroup, not N toggle
+  buttons** — the first build used `aria-pressed`; the whole-branch review pointed out a pressed toggle
+  implies un-pressing. The panel already had the radiogroup pattern; reuse it. (4) **Widening a
+  `Record<Union, …>`'s union without updating the object literal** threw a TypeError on click that vitest
+  still reported green (the throw happened inside an event handler); the implementer caught it by reading
+  the output, not the exit code — pristine output is a finding for a reason.
 
 ## Session 94 — 2026-09-10 — owner present: Insights (AI-phrased outlier findings) replaces Story mode's
 selection; a parallel-branch ADR/open-questions numbering collision (hit twice); hand-tracing the scoring

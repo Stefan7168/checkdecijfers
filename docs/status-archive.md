@@ -41,9 +41,23 @@ THE DESIGNED DEFAULT CHART LOOK (ADR 042), PR #10 OPEN FOR REVIEW; PHASE-2 PLAN 
 7. **Docs:** ADR 042 (new), ADR 014 note, 12-huisstijl, the session-87 spec's superseded note,
    08-build-plan (new "Visual upgrade programme" section + WP218 invariant note), 03-mvp-scope,
    04-architecture, open-questions #232–#234, RUNBOOK go-live note, lessons-learned session 95.
-8. **Phase 2 plan written, not built at this entry:**
-   [superpowers/plans/2026-09-11-chart-templates-v1.md](superpowers/plans/2026-09-11-chart-templates-v1.md)
-   (six looks + a Brand card, Templates tab first, six `template_*` counter events, derived thumbs).
+8. **Phase 2 — templates v1 — BUILT the same night** (branch `visual-templates-v1` from PR #10's head
+   `4b66379`, PR #11 opened with base = `visual-designed-default`): plan
+   [superpowers/plans/2026-09-11-chart-templates-v1.md](superpowers/plans/2026-09-11-chart-templates-v1.md),
+   ADR [043](decisions/043-chart-templates.md). Commits `dae46d0`/`937df58` (roster + catalogue/events,
+   batched), `6de58c7` (Templates tab + derived thumbs; the implementer caught a real TypeError-on-click the
+   brief missed — `tabRefs` lacked `templates`), `040d5fc` (apply wiring), fix wave `29d3bdc` (Basis applies the
+   stock look explicitly; radiogroup cards; the digit scan really visits the Sjablonen tab in NL+EN; test
+   items), docs `b3be3fe`, phase-3 plan `6eae5a5`, browser-pass fix `3e3771b` (container-query columns),
+   gallery PNG `43764a4`. Verification on the branch: root + web tsc clean; backend 142/2200 (solo, docs
+   excluded); benchmark 14/14 + 6/6 + 0; web 91/1366; `next build` clean (re-run solo on `6eae5a5` after an
+   overlapping phase-3 RED step invalidated the chain's first build); `/code-review` LOW 0. Browser: the
+   Templates tab + Presentatie applied, on the dev server. **CI on PR #11 pending when written.**
+9. **Phase 3 — the Story stage:** plan
+   [superpowers/plans/2026-09-11-story-stage-v1.md](superpowers/plans/2026-09-11-story-stage-v1.md) + ADR
+   [044](decisions/044-story-stage.md) written; build started on `visual-story-stage` (stacked on phase 2):
+   Task 1 (pure geometry) and Task 2 (the scroll hook) built + reviewed clean, Task 3 (ChartView stage mode)
+   built — state at wrap-up is in STATUS.md's top block and the branch itself, never in this entry.
 
 **Session 94 (2026-09-10, owner present, continuing session 93's embed-charts PR review) — THREE OWNER
 UI FIXES LIVE, THE "NEXT LEVEL" VISUAL PLAN WRITTEN, TWO EXPORT FIXES (#222 ✅/#223 MOSTLY), INSIGHTS

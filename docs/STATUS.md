@@ -48,6 +48,23 @@ decisions) — VISUAL UPGRADE PHASE 1 BUILT: THE DESIGNED DEFAULT CHART LOOK (AD
   redesign spec (superseded note); 08-build-plan ("Visual upgrade programme" section + WP218 note);
   03-mvp-scope; 04-architecture row; open-questions #232–#234; RUNBOOK go-live note; lessons (session 95);
   three before/after PNGs in `session-briefs/assets/` for the PR; the phase-2 plan.
+- **Phase 2 — templates v1 (ADR [043](decisions/043-chart-templates.md)) — BUILT the same night, branch
+  `visual-templates-v1` stacked on phase 1, PR #11 open for the owner's review (base = PR #10's branch).**
+  Six looks (Basis applies the stock look EXPLICITLY — `{}` was a no-op for users with a saved default;
+  Klassiek; Redactie/Newsroom; Presentatie; Sociaal; Minimaal) + a Brand card; the Sjablonen tab FIRST in
+  the Style panel (it still opens on Grafiek); a radiogroup gallery with derived, digit-free SVG thumbs; a
+  design-time contrast gate as a test; six `template_*` counter events. SDD: 4 tasks (1+2 batched), reviews
+  clean, a fable whole-branch review + one fix wave (Basis explicit; radiogroup; the digit scan really visits
+  the Sjablonen tab in NL + EN; four small test items), then one browser-pass fix (gallery columns follow the
+  CARD's width via a container query — three columns crowded the name + badge at a 320 px card).
+  **Verification on the branch (measured):** root + web tsc clean; backend 142 files / 2200 tests (solo,
+  docs excluded); benchmark 14/14 + 6/6 + 0 fabricated; web 91 files / 1366 tests; real `next build` clean
+  (re-run solo on the phase-2 head after an overlapping phase-3 RED step invalidated the chain's first build
+  result); `/code-review` LOW 0 findings; the Templates tab and an applied Presentatie look checked in a real
+  browser on the dev server. **CI on PR #11: pending at the time of writing — `gh pr checks 11`.**
+- **Phase 3 — the Story stage: plan written ([superpowers/plans/2026-09-11-story-stage-v1.md](superpowers/plans/2026-09-11-story-stage-v1.md))
+  and ADR [044](decisions/044-story-stage.md) drafted; build started on branch `visual-story-stage` (stacked on
+  phase 2) — see the branch's own ledger/PR for how far it got; NOT in PR #10/#11.**
 - **Known debt carried:** this file is still the multi-session dump session 94 flagged; not fixed here.
 
 **▶ SESSION 94 (2026-09-10, owner present, continuing session 93's embed-charts branch review) — PR #9
