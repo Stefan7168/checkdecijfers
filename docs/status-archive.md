@@ -56,7 +56,7 @@ THE DESIGNED DEFAULT CHART LOOK (ADR 042), PR #10 OPEN FOR REVIEW; PHASE-2 PLAN 
 9. **Phase 3 — the Story stage — BUILT the same night** (branch `visual-story-stage` from PR #11's head
    `c1df16c`, PR #12 opened with base = `visual-templates-v1`): plan
    [superpowers/plans/2026-09-11-story-stage-v1.md](superpowers/plans/2026-09-11-story-stage-v1.md), ADR
-   [044](decisions/044-story-stage.md) (decision + as-built addendum). Commits `be8b564..6718c4a` (14):
+   [044](decisions/044-story-stage.md) (decision + as-built addendum). Commits `be8b564..6718c4a` (14 through the last code fix; the wrap-up docs commits `7f57f40` and later follow):
    geometry `be8b564` · scroll hook `6fefc18` · `ChartView` stage mode `ee5c507` + fix `7b0097c` · ADR
    `c364c57` · overlay `6cffc14` + fix `c3335c2` · docs `7fd6494` · Present wiring `364d23a` · whole-branch
    fix wave `d88604b` · phone/guard fix `32ddc16` · docs `64a2b1f`, `5b754e3` · auto-play + test-env fix
