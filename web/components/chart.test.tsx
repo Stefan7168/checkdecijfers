@@ -2266,21 +2266,24 @@ describe('templates (ADR 043) — applying a look from the Sjablonen tab', () =>
   it('Klassiek: every point drawn, vertical grid, axis lines, classic colour; Basis restores the designed default; the counter records the pick', () => {
     const events: string[] = [];
     setChartUsageSink((e) => { events.push(e); });
-    const { container } = render(<ChartView spec={threePointSpec()} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    fireEvent.click(screen.getByRole('tab', { name: 'Sjablonen' }));
-    fireEvent.click(screen.getByRole('radio', { name: 'Klassiek' }));
-    expect(container.querySelector('.recharts-cartesian-grid-vertical')).not.toBeNull();
-    expect(container.querySelector('.recharts-yAxis .recharts-cartesian-axis-line')).not.toBeNull();
-    expect(container.querySelectorAll('circle[data-marker="hidden"]').length).toBe(0);
-    expect(container.querySelector('.recharts-line-curve')?.getAttribute('stroke')).toBe(RECHARTS_PALETTE[0]);
-    expect(screen.getByRole('radio', { name: 'Klassiek' })).toHaveAttribute('aria-checked', 'true');
-    expect(events).toContain('template_classic');
-    fireEvent.click(screen.getByRole('radio', { name: 'Basis' }));
-    expect(container.querySelector('.recharts-cartesian-grid-vertical')).toBeNull();
-    expect(container.querySelector('.recharts-line-curve')?.getAttribute('stroke')).toBe(DEFAULT_PALETTE[0]);
-    expect(events).toContain('template_standard');
-    setChartUsageSink(null);
+    try {
+      const { container } = render(<ChartView spec={threePointSpec()} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+      fireEvent.click(screen.getByRole('tab', { name: 'Sjablonen' }));
+      fireEvent.click(screen.getByRole('radio', { name: 'Klassiek' }));
+      expect(container.querySelector('.recharts-cartesian-grid-vertical')).not.toBeNull();
+      expect(container.querySelector('.recharts-yAxis .recharts-cartesian-axis-line')).not.toBeNull();
+      expect(container.querySelectorAll('circle[data-marker="hidden"]').length).toBe(0);
+      expect(container.querySelector('.recharts-line-curve')?.getAttribute('stroke')).toBe(RECHARTS_PALETTE[0]);
+      expect(screen.getByRole('radio', { name: 'Klassiek' })).toHaveAttribute('aria-checked', 'true');
+      expect(events).toContain('template_classic');
+      fireEvent.click(screen.getByRole('radio', { name: 'Basis' }));
+      expect(container.querySelector('.recharts-cartesian-grid-vertical')).toBeNull();
+      expect(container.querySelector('.recharts-line-curve')?.getAttribute('stroke')).toBe(DEFAULT_PALETTE[0]);
+      expect(events).toContain('template_standard');
+    } finally {
+      setChartUsageSink(null);
+    }
   });
 
   it('a template replaces earlier tweaks (reset first); Standaard afterwards returns to the default', () => {
