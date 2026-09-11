@@ -1,8 +1,12 @@
 # STATUS archive — the session log
 
-**Session 96 (2026-09-11, owner-present, mixed owner-directed + autonomous) — PR #9's FIFTH CONFLICT
-RESOLVED AND PUSHED (now green/mergeable, awaiting owner review); FIVE QUICK WINS FROM THE EXPERIENCE-
-IMPROVEMENT-PLAN BUILT AND VERIFIED, PUSHED TO `claude/checkdecijfers-embed-pr-review-acbrd5`.**
+**Session 96 (2026-09-11) — TWO CONCURRENT THREADS ON THE SAME REPO THE SAME DAY: PR #9's FIFTH AND SIXTH
+CONFLICTS RESOLVED + FIVE EXPERIENCE-IMPROVEMENT-PLAN QUICK WINS BUILT (Thread A, owner-present, this
+session), AND STRATEGY/ICP/RESEARCH DOCS-ONLY WORK (Thread B, a parallel session, same day) — see
+[lessons-learned.md](lessons-learned.md) session 96 Thread A/B collision entry for how the two were
+discovered and reconciled.**
+
+### Thread A (owner-present, this session)
 
 1. **PR #9's fifth merge conflict** (against `main`, after PR #10/#11/#12's visual-upgrade programme
    landed — see session 95 below): `git merge origin/main` on `embed-charts` produced conflicts in
@@ -44,14 +48,75 @@ IMPROVEMENT-PLAN BUILT AND VERIFIED, PUSHED TO `claude/checkdecijfers-embed-pr-r
    / 1459 tests (up from 1453 pre-review-fixes); backend suite 143 files / 2211 tests (unaffected by these
    web-only fixes, not re-run a third time — reasoned, not silent, see the session's own notes); hermetic
    benchmark 14/14 + 6/6 + 0 fabricated; `test:docs` 11/11; real `next build` clean.
-5. **Docs:** this file, STATUS.md top block (PR #10/11/12's actual merged state corrected — the session-95
-   kickoff note had gone stale within hours), open-questions #237 (the session's own discretionary calls,
-   veto-by-exception), and the experience-improvement-plan report itself — a "✅ BUILT" note on each of the
-   five shipped recommendations plus the build-sequence table, so a future session reads current state
-   from the report directly rather than re-deriving it.
-6. **PR #9 subscription**: `subscribe_pr_activity` active this session; a `send_later` check-in is
-   scheduled ~1 hour out to re-verify CI/mergeability/review-comment state and re-arm itself if nothing
-   changed.
+5. **PR #9's sixth merge conflict**, discovered mid-wrap-up via a routine `mergeable_state` check flipping
+   from `clean` to `dirty` with unchanged head/base SHAs — investigated rather than assumed stale, and
+   correctly diagnosed as `main` itself having moved: Thread B (below) had pushed 4 more docs-only commits.
+   `git merge origin/main` on `embed-charts` produced 2 conflicts, both docs trackers (`04-architecture.md`,
+   `open-questions.md`) — the same #224/#225-vs-#230/#231-style numbering collision as the fourth conflict
+   above, resolved the same way; Thread B's new #237/#238 rows merged in cleanly. Confirmed docs-only via
+   `git status`, ran `test:docs` (11/11) rather than the full block (reasoned in the commit message: no code
+   files touched), pushed as `6f80459`. CI (`gate`) was still `in_progress` as of the last check this
+   session — **not independently confirmed green**; left for the next session to verify.
+6. **Docs:** this file, STATUS.md top block (PR #10/11/12's actual merged state corrected — the session-95
+   kickoff note had gone stale within hours; later rewritten again post-discovery to cover Thread B, the
+   sixth conflict, and the held-off Journey-programme phases), open-questions #237 renumbered to **#239**
+   (Thread B independently used #237 for its own ICP row — kept Thread B's #237/#238, renumbered this
+   session's row, added a cross-reference both ways), and the experience-improvement-plan report itself —
+   a "✅ BUILT" note on each of the five shipped recommendations plus the build-sequence table, so a future
+   session reads current state from the report directly rather than re-deriving it. **This work is exactly
+   [08-build-plan.md § Journey programme](08-build-plan.md) Phase 1** (see Thread B item 7 below) — built
+   independently, before the two rows were reconciled; #238's Phase 1 row should point at #239 rather than
+   re-describe it.
+7. **PR #9 subscription**: `subscribe_pr_activity` active this session; a `send_later` check-in
+   (`trig_012hdotm2BomGzZQ3HNXtnTh`, firing ~2026-09-11T12:02:00Z) was scheduled ~1 hour out to re-verify
+   CI/mergeability/review-comment state and re-arm itself if nothing changed — still armed at session end;
+   the next session should treat it as a bonus signal, not a substitute for its own PR #9 check.
+8. **Session wrap-up**: ended on the owner's explicit "Let's do it in a fresh session, wrap up", triggered
+   by the owner asking to spawn multiple autonomous agents on Story-mode/Story-stage visual polish "for
+   hours and hours" in a fresh session (self-interrupted once — "wait this context window is large" — then
+   confirmed as a fresh-session task). Full CLAUDE.md wrap-up ritual run; kickoff written to
+   [session-briefs/2026-09-11-story-mode-visual-polish-kickoff.md](session-briefs/2026-09-11-story-mode-visual-polish-kickoff.md)
+   (distinct from Thread B's own `2026-09-11-session-97-kickoff.md`, which describes the Journey programme,
+   not this mandate — the two were kept separate deliberately, see lessons-learned).
+
+### Thread B (a parallel session, same day): strategy / research, docs only, no code
+
+1. **Competitive brief** (marketing:competitive-brief skill; two Sonnet research agents): LocalFocus (ANP; €530/€890
+   per month for 3/5 seats; LocalFocus Connect auto-updating open datasets since 2015; a human Nieuwsdienst; no Q&A,
+   no AI, no self-serve paid tier) and Flourish (Canva; free tier with attribution; Stories; SDK). One agent
+   over-claim caught by the owner asking for the source page: the SVDJ Incubator 2026 AI-licensing project is a
+   co-founder's separate venture, NOT a LocalFocus product — corrected in chat and in the brief.
+2. **Owner steer:** agreed with all recommendations; "live embeds = the Pro monthly plan's reason" ([#205](open-questions.md));
+   then a repositioning idea ("data → graph/storytelling → embed, CBS as a subcategory") which the session pushed
+   back on (buries the moat) → landed on **"chat your way from official-statistics research to an embedded, sourced
+   chart" over European + Dutch official data, CBS first, Eurostat second, RIVM/Kadaster after.**
+3. **`/deep-research`** (market, Eurostat feasibility, competitors; 105 agents, 6.6M tokens): 13 claims verified 3-0;
+   the verify + synthesize phases then hit the account's weekly usage limit (resets 18:00 Bangkok / 13:00 NL). The
+   session re-verified the 10 Eurostat claims itself via WebFetch on ec.europa.eu (4 APIs; CC-BY 4.0 with "Source:
+   [DOI], [access date]"; twice-daily refresh 11:00/23:00 CET; NO versioning of past data; sync <500k cells / async
+   to 5M / 413 above; fair-use forces async) and found both "refuted" claims were in fact TRUE on the live pages
+   (Flourish Assistant + Flourish Connector (MCP) on every tier; CBS "Cijfers op de Kaart" + "Overzicht regionale
+   Statistieken"). Market: NVJ 2025 ~10,300 salaried journalists, DPG+Mediahuis 30%; Datawrapper Pro $21/seat/month
+   (2026-07); ANP sells municipalities live election embeds; VNG Waarstaatjegemeente is the free municipal incumbent.
+4. **ICP** (brainstorming skill, short path): owner chose "all four segments" → ICP defined by the job (publish an
+   official figure with its source, under time pressure, no data team), four segments in go-to-market order,
+   "not our customer" list. Owner: "yes". Written into [01-product-vision.md](01-product-vision.md) § Ideal customer
+   profile + [open-questions #237](open-questions.md) + the research brief
+   [session-briefs/2026-09-11-competitive-research-localfocus-flourish-eurostat.md](session-briefs/2026-09-11-competitive-research-localfocus-flourish-eurostat.md)
+   — commit `fcf5c4f` (pushed to `main` from a scratch worktree; the checkout was on `visual-story-stage`).
+5. **The parallel session's work** surfaced by the owner: the experience improvement plan (commit `2bcc201`, Fleur's
+   journey, R1–R11, 12 decisions). Cross-linked (`79f62e3`). Correction issued in chat: PRs #10–#12 were by then
+   MERGED (`ca5ba19`, `696c1c3`, `29aadde`), not "waiting" as the session had said from the stale STATUS block.
+6. **Sanity check (owner: "do a complete sanity check, update the build plan accordingly"):** a Sonnet agent
+   re-verified all 11 of the plan's code claims against `origin/main` — 11/11 TRUE with file + line evidence (the
+   agent read the wrong key for the "refresh the page" banner; the session checked `workspace.purchaseSuccessMessage`
+   itself: it does say "Ververs daarna de pagina"). `gh run list`: CI green on `main` through `29aadde`; production
+   200; PR #9 `MERGEABLE`/`CLEAN` at `d427cdd`. Two stale lines found and fixed in the build plan: the visual
+   programme heading still said "three stacked PRs open", and WP218's order-built paragraph still said "Nothing is
+   merged or live yet" (PR #7 merged 2026-09-09, `05ec8ed`, despite commit `46d22ed` claiming to have fixed exactly that).
+7. **Docs written this session:** STATUS top block; this entry; [08-build-plan.md](08-build-plan.md) § Journey
+   programme (phases 0–6 + the positioning items, the 12 decisions as working defaults, R3 = explicit owner go);
+   open-questions #237 + #238; the session-97 kickoff. No code, no CI run (docs-only pushes skip CI).
 
 **Session 95 (2026-09-11 by the machine clock — GitHub stamps PR #10 as the evening of 2026-09-10 UTC; the
 two clocks disagree by a few hours — AUTONOMOUS overnight, owner asleep) — VISUAL UPGRADE PHASE 1 BUILT:

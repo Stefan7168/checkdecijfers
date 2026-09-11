@@ -14,31 +14,63 @@
 > should migrate everything below the session-94 block into status-archive.md and leave only a lean
 > pointer, the way this convention has always intended.
 
-**▶ NEXT SESSION STARTS HERE (written 2026-09-11, session 96, owner-present — verified against real
-git/GitHub state, not recalled).** Read [session-briefs/2026-09-11-session-96-kickoff.md](session-briefs/2026-09-11-session-96-kickoff.md)
-first (session 95's own kickoff note — its "PR #10/11/12 not merged" line is now STALE, see below).
+**▶ NEXT SESSION STARTS HERE (written 2026-09-11, end of session 96, owner present — reconciling two
+concurrent threads on this repo the same day; verified against real git/GitHub state, not recalled).** Read
+[session-briefs/2026-09-11-story-mode-visual-polish-kickoff.md](session-briefs/2026-09-11-story-mode-visual-polish-kickoff.md)
+— the next session's actual mandate (Story-mode/Story-stage visual polish, multi-agent, owner-directed,
+"for hours and hours") is there. **Note the two kickoff docs in this directory are NOT the same thing:**
+[session-briefs/2026-09-11-session-97-kickoff.md](session-briefs/2026-09-11-session-97-kickoff.md) was
+written by a *parallel* session (Thread B below) and describes the Journey-programme continuation
+(Phase 0 then Phase 1) — that is tracked-but-not-the-focus for the next session, not its mandate.
+
 **PR #10/#11/#12 (the visual-upgrade programme, ADR 042/043/044) are all MERGED into `main`** — confirmed
-via `gh`/GitHub API: PR #10 `merged_at 2026-09-11T04:01:02Z`, PR #11 and #12 merged the same night in the
-same order (main's own log shows all three merge commits, `ca5ba19`/`696c1c3`/`29aadde`). Owner steps still
-open: migrations 028 + 029 (`npm run db:migrate`), optional `BRANDFETCH_API_KEY` (RUNBOOK).
-**PR #9 (embed, ADR 041) is open, green, and mergeable (`mergeable_state: clean`, `gate: success` on head
-`d427cdd`) — awaiting the owner's own review/merge, not blocked on anything from this session's side.**
-This session resolved PR #9's fifth conflict against `main` (the three visual-upgrade PRs landing) the same
-way as the first four — combine both sides' gates (`!embedMode && !inStage`), hoist `onPointClick` to be
-aware of both — full verification green, LOW code-review clean, pushed as `d427cdd`.
-**Separately, on the owner's explicit instruction ("start executing the ones with least effort, highest
-benefit... autonomously"), this session built five items from
-[session-briefs/2026-09-11-experience-improvement-plan.md](session-briefs/2026-09-11-experience-improvement-plan.md):**
-R11 (honest long-wait line), all four bundled fixes in R2 (chip captions by kind, a real `/credits` link
-naming the covering pack, the restored low-balance warning, the purchase-success poll), R10 (credits-page
-€/question + never-expire copy), and R5 items 1 &amp; 3 (the Ontdek caption, the anonymous-visitor Insights
-login hint) — see the report's own "✅ BUILT" notes on each item for the exact as-built mechanism and the
-review-pass fixes (6 findings, all fixed: a websearch-unaware low-balance threshold, a covering-pack pick by
-credits instead of price, a balance-sync race, a missing Stage-surface hint, plus two cleanups). Full
-verification green (typecheck ×2, web suite 1459 tests, backend suite 2211 tests, benchmark 14/14+6/6+0
-fabricated, real build, LOW code-review). **Not yet pushed as of this writing** — push to
-`claude/checkdecijfers-embed-pr-review-acbrd5` is this session's next step; verify it landed before trusting
-this paragraph's "built" claim from memory.
+via the GitHub API: PR #10 `merged_at 2026-09-11T04:01:02Z`, PR #11 `696c1c3`, PR #12 `29aadde`, CI green on
+each. WP218 (chart styling, ADR 039/040) has been live since 2026-09-09. Owner steps still open: migrations
+028 + 029 (`npm run db:migrate`), optional `BRANDFETCH_API_KEY`.
+
+**PR #9 (embed, ADR 041) is open, head `6f80459`, base `main` `31f258e` — CONFIRMED GREEN AND MERGEABLE**
+(re-checked via the GitHub API at the end of this session: `mergeable_state: "clean"`, `gate` check
+`conclusion: "success"`, completed `2026-09-11T11:45:54Z`). It is now waiting on the owner's review/merge —
+not on any further session action. This session resolved TWO more conflicts against `main` on this PR (its
+fifth and sixth since it opened): the fifth combined embed/stage-mode chart.tsx gates and pushed as
+`d427cdd`; main then gained 4 more commits from a **parallel session working the same repo** (see below),
+producing a sixth, docs-only conflict, resolved by keeping this branch's own open-questions renumbering
+over main's independent duplicate numbers and preferring main's more-current "MERGED + LIVE" wording —
+pushed as `6f80459`. Full code-verification block ran once (on `d427cdd`); the sixth (docs-only) merge
+relied on `test:docs` alone, reasoned explicitly in that commit's own message. The armed `send_later`
+check-in (`trig_012hdotm2BomGzZQ3HNXtnTh`, ~2026-09-11T12:02:00Z) is now just a bonus confirmation, not a
+blocker — merging PR #9 still needs the owner to set `EMBED_TOKEN_SECRET` (see the PR body).
+
+**A parallel session was active on `main` for part of this session, discovered only via a routine PR
+mergeable-state check** — see [lessons-learned.md](lessons-learned.md) session 96 Thread A/B collision entry
+for the mechanism and the standing lesson (fetch + skim `origin/main` before starting new autonomous work).
+It wrote a competitive-research brief (LocalFocus/Flourish/Eurostat) and an ICP/repositioning direction the
+owner confirmed in chat ([#237](open-questions.md); ICP now in
+[01-product-vision.md](01-product-vision.md)), then adopted the experience-improvement-plan into
+[08-build-plan.md § Journey programme](08-build-plan.md) as NEXT UP with working defaults for its 12 owner
+decisions ([#238](open-questions.md)) — R3 (the money-path fetch-confirmation chip) still needs an explicit
+owner go before build.
+
+**This session (owner-present, on the owner's explicit "start executing the ones with least effort, highest
+benefit... autonomously") independently built exactly the Journey programme's Phase 1** — five items from
+[session-briefs/2026-09-11-experience-improvement-plan.md](session-briefs/2026-09-11-experience-improvement-plan.md):
+R11 (honest long-wait line), all four bundled R2 fixes (chip captions by kind, a real `/credits` link naming
+the covering pack, the restored low-balance warning, the purchase-success poll), R10 (credits-page
+€/question + never-expire copy), R5 items 1 &amp; 3 (the Ontdek caption, the anonymous-visitor Insights login
+hint) — see the report's own "✅ BUILT" notes for the as-built mechanism and the review-pass fixes (6
+findings, all fixed: a websearch-unaware low-balance threshold, a covering-pack pick by credits instead of
+price, a balance-sync race, a missing Stage-surface hint, plus two cleanups). Full verification green
+(typecheck ×2, web suite 1459 tests, backend suite 2211 tests, benchmark 14/14+6/6+0 fabricated, real build,
+LOW code-review). **Pushed to `claude/checkdecijfers-embed-pr-review-acbrd5` as `038ecd9`, still on that
+branch — not on `main`, no PR opened for it.** When [#238](open-questions.md)'s Journey-programme Phase 1
+row is next touched, point it at [#239](open-questions.md) (this work) instead of re-describing/re-building
+it — the two rows describe the identical scope.
+
+**Journey programme phases NOT yet built:** Phase 0 (usage report + migration 028 apply + one owner-supervised
+audit re-run), the rest of Phase 3 (R4 coverage disclosure, R5 item 2 Sjablonen-default-tab, the "Publiceer"
+landing step), Phase 2 (R3, explicit owner go required), Phases 4–5 (paperwork, one-click options, phone).
+This session deliberately held off building further into the plan given the live parallel-session risk just
+discovered — see the lessons entry.
 
 **▶ SESSION 95 (2026-09-11, AUTONOMOUS overnight — the owner's kickoff pre-resolved the plan's open
 decisions) — VISUAL UPGRADE PHASE 1 BUILT: THE DESIGNED DEFAULT CHART LOOK (ADR 042), PR #10 OPEN.**

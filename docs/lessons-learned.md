@@ -6,9 +6,14 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
-## Session 96 — 2026-09-11 — PR #9's fifth conflict + five experience-improvement-plan quick wins — an
-unmocked server action's real jsdom behavior wasn't what a comment assumed, and three numeric assumptions in
-money-adjacent UI code were quietly wrong until an adversarial review pass caught them
+## Session 96 — 2026-09-11 — two concurrent threads on the same repo the same day: PR #9's conflicts +
+experience-improvement-plan quick wins (this sub-section), and a parallel strategy/research session (next
+sub-section) — the collision between them is itself the last lesson below
+
+### Thread A (owner-present, this session): PR #9's fifth/sixth conflicts + five experience-improvement-plan
+quick wins — an unmocked server action's real jsdom behavior wasn't what a comment assumed, and three
+numeric assumptions in money-adjacent UI code were quietly wrong until an adversarial review pass caught
+them
 
 - **Don't assume what an unmocked async dependency resolves to in a test env — check, or mock it and
   assert.** Writing a new integration test for the "anonymous visitor sees a login hint" wiring, the first
@@ -45,6 +50,46 @@ money-adjacent UI code were quietly wrong until an adversarial review pass caugh
   every test fixture that constructs a `ChatMessage` literal. Lesson: when a "quick" UI fix needs a new kind
   of interactive element inside what's currently plain text, look for an existing sibling pattern in the same
   component before reaching for a shared-type change — the cheaper mechanism is often already there.
+
+### Thread B (a parallel session, same day): strategy / research session, docs only
+
+- **A research agent's "related" is not "theirs".** A Sonnet agent reported a co-founder's SVDJ Incubator project as
+  "LocalFocus's only 2025–2026 news"; the session repeated it in the brief. Only the owner asking "show me the page"
+  exposed it: the article says Kamsma *earlier* founded LocalFocus. Rule: any claim that ties a person's side project
+  to a company gets the page opened and read by the session before it lands in a brief.
+- **The `/deep-research` harness can run out of budget mid-verify.** 105 agents, 6.6M tokens; the verify + synthesize
+  phases died on the account's *weekly* usage limit. The unverified claims were all recoverable with five WebFetch
+  calls by the session itself — cheaper than the harness's 3-vote panel and, this time, more accurate: both claims the
+  panel had "refuted" (Flourish's AI Assistant/Connector, CBS's map tools) were TRUE on the live pages. Treat a
+  refutation by a single low-vote panel as "re-check", never as "delete".
+- **A stale STATUS block produced a wrong statement to the owner.** The session told the owner PRs #10–#12 were
+  "waiting" because the top block said so; they had been merged hours earlier. `gh pr list` before any status claim,
+  even mid-conversation — the Golden Rule is not only for wrap-up.
+- **"Fixed the stale wording" commits can miss a copy.** `46d22ed` ("WP218 rows say merged and live") left the
+  order-built paragraph in the build plan still saying "Nothing is merged or live yet". The stale-doc sweep must grep
+  for the *sentence*, not just the rows one remembers editing.
+- **Owner answers "all" to an ICP question.** Reframing the ICP by the job-to-be-done (instead of the segment) kept it a
+  real ICP while honouring the answer; the segments became the go-to-market order. Worth reusing when a single-choice
+  question gets a plural answer.
+- **Docs pushed to `main` from a scratch worktree while the checkout sat on a feature branch** — clean and quick
+  (`git worktree add <scratch> origin/main -b tmp; commit; push origin HEAD:main; worktree remove`). Beats switching
+  the working tree back and forth.
+
+### Thread A/B collision: two sessions can independently build/plan the SAME work, unaware of each other,
+because neither reads the other's in-flight changes until a `git fetch` forces the question
+
+Thread A built exactly what Thread B's Journey-programme Phase 1 (R2+R10+R11) independently specified as
+"NEXT UP" — same report, same recommendations, arrived at separately within hours of each other, on
+different branches (`claude/checkdecijfers-embed-pr-review-acbrd5` vs. direct pushes to `main`). No time or
+correctness was actually lost (Thread A's work and Thread B's plan turned out to describe the identical
+scope, and reconciling was a mechanical docs-numbering fix, [#239](open-questions.md)) — but it was luck,
+not design: a `mergeable_state` flip from clean to dirty (a routine PR check-in) was the only thing that
+surfaced Thread B's existence to Thread A at all. Lesson: a long-running session on a feature branch should
+re-`git fetch origin main` and skim the new commits' subjects **before** starting a new chunk of autonomous
+work, not only when a stale-mergeable-state notification forces the question — a two-line `git log
+HEAD..origin/main --oneline` check is cheap insurance against building (or worse, deciding) the same thing
+twice. When it does happen anyway, the fix is the ordinary renumbering playbook already used all session for
+open-questions collisions, not a redo of either side's work.
 
 ## Session 95 — 2026-09-11 — autonomous overnight: the designed default chart look (ADR 042) via SDD —
 palette design as arithmetic, a plan literal overruled in review, a hidden-but-focusable a11y trap, cross-file
