@@ -9,7 +9,7 @@ import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState, type K
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import type { ChartSpec } from '../backend/chart/types.ts';
-import { captionStyle, entranceStyle, spotlightStyle, STAGE_AUTOPLAY_MS } from '../lib/chart-stage.ts';
+import { captionStyle, entranceStyle, planeDriftPx, planeTransform, spotlightStyle, STAGE_AUTOPLAY_MS } from '../lib/chart-stage.ts';
 import type { PresentationOverrides } from '../lib/chart-presentation.ts';
 import type { StoryStep } from '../lib/chart-story.ts';
 import { t, type Lang } from '../lib/i18n/messages.ts';
@@ -361,6 +361,18 @@ export function ChartStoryStage({ open, spec, steps, index, onIndexChange, onClo
   // plane snapped 4°→0° at the first boundary and the first finding was read
   // at the full 8° tilt, the opposite of what ADR 044 decision 4 promises.
   const entry = entranceStyle(scroll.entry, staticMotion);
+  // The v1 "no parallax" substitute (ADR 044 §"As built"): a small vertical
+  // breathing drift on the SAME plane, driven by `scroll.progress` — the
+  // PER-STEP nearest-centre progress, deliberately NOT `scroll.entry` above
+  // (that ramp is fully spent on the tilt). `stageProgress` clamps a step's
+  // own progress to 0 until the viewport centre passes that step's own
+  // centre, which is exactly when `entry` reaches 1 — so the drift is always
+  // 0 while the plane is still tilting, and `planeTransform` is
+  // byte-identical to `entry.transform` at that point; only once the plane is
+  // flat does a `translateY` get appended. Gated on the same `staticMotion`
+  // the entry tilt already uses, not a second motion switch.
+  const drift = planeDriftPx(scroll.progress, staticMotion);
+  const planeStyleTransform = planeTransform(entry.transform, drift);
 
   return createPortal(
     <div
@@ -406,7 +418,7 @@ export function ChartStoryStage({ open, spec, steps, index, onIndexChange, onClo
               // instead of snapping. Static mode has nothing to ease.
               (staticMotion ? '' : ' transition-[transform,box-shadow] duration-200 ease-out')
             }
-            style={{ transform: entry.transform, boxShadow: entry.boxShadow, transformStyle: 'preserve-3d', willChange: 'transform' }}
+            style={{ transform: planeStyleTransform, boxShadow: entry.boxShadow, transformStyle: 'preserve-3d', willChange: 'transform' }}
             data-stage-plane="true"
           >
             <div ref={chartBoxRef} className="relative">

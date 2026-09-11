@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { captionStyle, entranceStyle, entryProgress, spotlightStyle, STAGE_AUTOPLAY_MS, STAGE_TILT_DEG, stageProgress } from './chart-stage.ts';
+import {
+  captionStyle,
+  entranceStyle,
+  entryProgress,
+  planeDriftPx,
+  planeTransform,
+  spotlightStyle,
+  STAGE_AUTOPLAY_MS,
+  STAGE_TILT_DEG,
+  stageProgress,
+} from './chart-stage.ts';
 
 describe('stageProgress — which step the viewport centre is on, and how far toward the next', () => {
   const offsets = [0, 800, 1600, 2400];
@@ -70,6 +80,59 @@ describe('entranceStyle — tilted and lifted on entry, flat once read', () => {
   it('reduced motion is the flat resting state at every progress', () => {
     expect(entranceStyle(0, true)).toEqual(entranceStyle(1, false));
     expect(entranceStyle(0.4, true)).toEqual(entranceStyle(1, false));
+  });
+});
+
+// ADR 044 §"As built": the plan's §3.4 parallax was not built. This is the
+// small, safe substitute — a per-step vertical "breathing" drift on the SAME
+// plane wrapper the entry tilt uses, driven by `stageProgress`'s per-step
+// progress rather than `entryProgress`. The exact curve is pinned at every
+// progress the brief calls out (0, 0.25, 0.5, 0.75, 1) since this is exactly
+// the kind of motion a real browser check cannot get from jsdom.
+describe('planeDriftPx — a small vertical breathing drift, never a rotation, never a pan toward a point', () => {
+  it('is 0 at a step’s own centre, peaks at 5px around the boundary with the next step, and returns to 0', () => {
+    expect(planeDriftPx(0, false)).toBe(0);
+    expect(planeDriftPx(0.25, false)).toBe(3.54);
+    expect(planeDriftPx(0.5, false)).toBe(5);
+    expect(planeDriftPx(0.75, false)).toBe(3.54);
+    expect(planeDriftPx(1, false)).toBe(0);
+  });
+  it('is symmetric around progress 0.5 (the sine shape, not a linear ramp)', () => {
+    expect(planeDriftPx(0.3, false)).toBe(planeDriftPx(0.7, false));
+    expect(planeDriftPx(0.1, false)).toBe(planeDriftPx(0.9, false));
+  });
+  it('never exceeds the small peak (well under the caption/lift magnitudes elsewhere in this module)', () => {
+    for (let p = 0; p <= 1; p += 0.05) expect(planeDriftPx(p, false)).toBeLessThanOrEqual(5);
+  });
+  it('clamps progress outside [0, 1] exactly like the other stage functions', () => {
+    expect(planeDriftPx(-3, false)).toBe(planeDriftPx(0, false));
+    expect(planeDriftPx(7, false)).toBe(planeDriftPx(1, false));
+  });
+  it('reduced motion is always 0, at every progress — the same gate entranceStyle honours, not a second mechanism', () => {
+    expect(planeDriftPx(0, true)).toBe(0);
+    expect(planeDriftPx(0.5, true)).toBe(0);
+    expect(planeDriftPx(1, true)).toBe(0);
+  });
+});
+
+describe('planeTransform — composes the drift onto the entry transform as a further translateY', () => {
+  const entry = entranceStyle(1, false).transform; // the settled, flat entry transform
+
+  it('is byte-identical to the entry transform when there is no drift (0px): the entry’s own behaviour is unaffected', () => {
+    expect(planeTransform(entry, 0)).toBe(entry);
+  });
+  it('appends a translateY for a non-zero drift, leaving the entry transform’s own text untouched', () => {
+    const composed = planeTransform(entry, 3.54);
+    expect(composed).toBe(`${entry} translateY(3.54px)`);
+    expect(composed.startsWith(entry)).toBe(true);
+  });
+  it('composes with the tilted (non-flat) entry transform exactly the same way', () => {
+    const tilted = entranceStyle(0, false).transform;
+    expect(planeTransform(tilted, 5)).toBe(`${tilted} translateY(5px)`);
+  });
+  it('round-trips a full step boundary: settled entry + the peak drift', () => {
+    expect(planeTransform(entry, planeDriftPx(0.5, false))).toBe(`${entry} translateY(5px)`);
+    expect(planeTransform(entry, planeDriftPx(0, false))).toBe(entry);
   });
 });
 
