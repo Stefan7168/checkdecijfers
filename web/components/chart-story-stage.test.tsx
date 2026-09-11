@@ -11,7 +11,7 @@ import { useState, type ReactNode } from 'react';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ChartSpec } from '../backend/chart/types.ts';
-import { captionStyle, entranceStyle, planeDriftPx, planeTransform, spotlightStyle, STAGE_AUTOPLAY_MS } from '../lib/chart-stage.ts';
+import { atmosphereState, captionStyle, entranceStyle, planeDriftPx, planeTransform, spotlightStyle, STAGE_AUTOPLAY_MS } from '../lib/chart-stage.ts';
 import type { StoryStep } from '../lib/chart-story.ts';
 import { ChartStoryStage, type ChartStoryStageProps } from './chart-story-stage.tsx';
 
@@ -841,5 +841,96 @@ describe('ChartStoryStage', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  // ─── Ambient atmosphere layer (visual upgrade, task 1 of a chain) ───────
+  // Colour-resolution and the reduced-motion branch are pinned exactly in
+  // chart-stage.test.ts (the brief's own testable surface); these prove the
+  // WIRING — that the component actually sets `--stage-accent` from
+  // `atmosphereState`, updates it when the active step changes, and gates
+  // the blobs' animation the same way. Real motion, blur and contrast in a
+  // browser are out of reach here — see the task's report.
+
+  it('sets --stage-accent on the dialog root to the active step’s own highlighted-series colour — the shared infrastructure later tasks reuse', () => {
+    // steps[1] ('high-s0') highlights 's0'; with no overrides that resolves
+    // through the DEFAULT_PALETTE, exactly like atmosphereState itself.
+    render(<ChartStoryStage {...baseProps({ index: 1 })} />);
+    const dialog = screen.getByRole('dialog');
+    expect(dialog.style.getPropertyValue('--stage-accent')).toBe(atmosphereState({}, 's0', false).accent);
+  });
+
+  it('an overview step (no highlight) still sets a real --stage-accent — the first series’ own colour, never missing or invented', () => {
+    // steps[0] ('overview') and steps[2] ('explore') both have highlight: null.
+    render(<ChartStoryStage {...baseProps({ index: 0 })} />);
+    const dialog = screen.getByRole('dialog');
+    const accent = dialog.style.getPropertyValue('--stage-accent');
+    expect(accent).toBe(atmosphereState({}, null, false).accent);
+    expect(accent).not.toBe('');
+  });
+
+  it('the accent follows the ACTIVE step’s own highlighted series and updates the moment the step changes', () => {
+    const twoHighlights: StoryStep[] = [
+      { id: 'a', kind: 'series', title: 'Serie A', caption: 'a', highlight: 's0', point: null },
+      { id: 'b', kind: 'series', title: 'Serie B', caption: 'b', highlight: 's1', point: null },
+    ];
+    const overrides = { seriesColors: { 0: '#111111', 1: '#222222' } };
+    const { rerender } = render(<ChartStoryStage {...baseProps({ steps: twoHighlights, index: 0, overrides })} />);
+    const dialog = screen.getByRole('dialog');
+    expect(dialog.style.getPropertyValue('--stage-accent')).toBe('#111111');
+    rerender(<ChartStoryStage {...baseProps({ steps: twoHighlights, index: 1, overrides })} />);
+    expect(dialog.style.getPropertyValue('--stage-accent')).toBe('#222222');
+  });
+
+  it('the atmosphere layer sits behind everything (first child, negative z-index) and is purely decorative: aria-hidden, unclickable, never focusable', () => {
+    render(<ChartStoryStage {...baseProps()} />);
+    const dialog = screen.getByRole('dialog');
+    const layer = dialog.firstElementChild as HTMLElement;
+    expect(layer).toHaveAttribute('data-stage-atmosphere', 'true');
+    expect(layer).toHaveAttribute('aria-hidden', 'true');
+    expect(layer.className).toContain('pointer-events-none');
+    expect(layer.className).toContain('-z-10');
+    expect(focusables(dialog)).not.toContain(layer);
+  });
+
+  it('animated motion runs a continuous drift loop and a background-colour transition on every blob', () => {
+    render(<ChartStoryStage {...baseProps()} />);
+    const blobs = Array.from(document.querySelectorAll('[data-stage-atmosphere-blob]')) as HTMLElement[];
+    expect(blobs.length).toBeGreaterThanOrEqual(2);
+    for (const blob of blobs) {
+      expect(blob.style.animation).not.toBe('none');
+      expect(blob.style.animation).toContain('infinite');
+      expect(blob.style.transition).toContain('background-color');
+      expect(blob.style.backgroundColor).toContain('color-mix(');
+      expect(blob.style.backgroundColor).toContain('var(--stage-accent)');
+    }
+  });
+
+  it('under static motion (reduced motion / (hover: none) / < lg — the SAME gate the entry tilt uses) the atmosphere shows an instant tint, never a broken or missing layer', () => {
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: query.includes('reduce'),
+      addEventListener() {},
+      removeEventListener() {},
+    }));
+    try {
+      render(<ChartStoryStage {...baseProps()} />);
+      const blobs = Array.from(document.querySelectorAll('[data-stage-atmosphere-blob]')) as HTMLElement[];
+      expect(blobs.length).toBeGreaterThanOrEqual(2);
+      for (const blob of blobs) {
+        expect(blob.style.animation).toBe('none');
+        expect(blob.style.transition).toBe('none');
+        // Still a real, visible tint — never an empty/missing background.
+        expect(blob.style.backgroundColor).toContain('color-mix(');
+      }
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('the atmosphere keyframes live in document.head, never document.body — the whole-card digit scan (chart.test.tsx) walks only document.body’s own text nodes', () => {
+    render(<ChartStoryStage {...baseProps()} />);
+    const headStyles = Array.from(document.head.querySelectorAll('style'));
+    expect(headStyles.some((s) => s.textContent?.includes('stage-atmosphere-drift'))).toBe(true);
+    const bodyStyles = Array.from(document.body.querySelectorAll('style'));
+    expect(bodyStyles.some((s) => s.textContent?.includes('stage-atmosphere-drift'))).toBe(false);
   });
 });

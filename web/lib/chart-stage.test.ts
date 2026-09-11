@@ -1,12 +1,19 @@
 import { describe, expect, it } from 'vitest';
+import { DEFAULT_PALETTE, seriesColor } from './chart-presentation.ts';
 import {
+  atmosphereState,
+  ATMOSPHERE_INTENSITY_ACTIVE,
+  ATMOSPHERE_INTENSITY_OVERVIEW,
+  ATMOSPHERE_MIX_MAX_PERCENT,
   captionStyle,
   entranceStyle,
   entryProgress,
+  highlightSeriesIndex,
   planeDriftPx,
   planeTransform,
   spotlightStyle,
   STAGE_AUTOPLAY_MS,
+  STAGE_ATMOSPHERE_TRANSITION_MS,
   STAGE_TILT_DEG,
   stageProgress,
 } from './chart-stage.ts';
@@ -158,5 +165,73 @@ describe('constants', () => {
   it('auto-play advances every four seconds; the tilt stays under the spec cap', () => {
     expect(STAGE_AUTOPLAY_MS).toBe(4000);
     expect(STAGE_TILT_DEG).toBeLessThanOrEqual(12);
+  });
+  it('the atmosphere colour transition is within the brief’s 400-600ms band, and its peak mix stays conservative (a glow, never a wash)', () => {
+    expect(STAGE_ATMOSPHERE_TRANSITION_MS).toBeGreaterThanOrEqual(400);
+    expect(STAGE_ATMOSPHERE_TRANSITION_MS).toBeLessThanOrEqual(600);
+    expect(ATMOSPHERE_MIX_MAX_PERCENT).toBeGreaterThan(0);
+    expect(ATMOSPHERE_MIX_MAX_PERCENT).toBeLessThanOrEqual(40);
+  });
+});
+
+// Ambient atmosphere layer (visual upgrade, task 1 of a chain): only the
+// colour-resolution logic and the reduced-motion branch are testable
+// without a browser — the brief's own instruction. The actual drifting,
+// blurred CSS this feeds is asserted only for WIRING in
+// chart-story-stage.test.tsx (e.g. that `--stage-accent` is set to exactly
+// what this module resolves); its motion and contrast in a real browser are
+// out of reach here — see the task's report.
+describe('highlightSeriesIndex — a story step’s highlight key (s<index>) to the series index seriesColor wants', () => {
+  it('parses s<N> for any series index', () => {
+    expect(highlightSeriesIndex('s0')).toBe(0);
+    expect(highlightSeriesIndex('s3')).toBe(3);
+    expect(highlightSeriesIndex('s12')).toBe(12);
+  });
+  it('an overview step (highlight null) falls back to the first series — never a different, invented index', () => {
+    expect(highlightSeriesIndex(null)).toBe(0);
+  });
+  it('a malformed key falls back to the first series rather than throwing or returning NaN', () => {
+    expect(highlightSeriesIndex('nope')).toBe(0);
+    expect(highlightSeriesIndex('s')).toBe(0);
+    expect(highlightSeriesIndex('sX')).toBe(0);
+    expect(highlightSeriesIndex('')).toBe(0);
+  });
+});
+
+describe('atmosphereState — the ambient layer’s colour, intensity and motion gate (never an invented colour)', () => {
+  it('resolves the accent through the SAME seriesColor the chart itself draws from, for a custom series colour', () => {
+    const overrides = { seriesColors: { 1: '#123456' } };
+    expect(atmosphereState(overrides, 's1', false).accent).toBe(seriesColor({ seriesColors: overrides.seriesColors }, 1));
+    expect(atmosphereState(overrides, 's1', false).accent).toBe('#123456');
+  });
+  it('an un-overridden series falls back to the same DEFAULT_PALETTE entry the chart itself uses, for every series index', () => {
+    for (let i = 0; i < DEFAULT_PALETTE.length; i++) {
+      expect(atmosphereState({}, `s${i}`, false).accent).toBe(DEFAULT_PALETTE[i]);
+    }
+  });
+  it('an overview step (highlight null) uses the FIRST series’ own colour, at reduced intensity — never a different hue', () => {
+    const overview = atmosphereState({ seriesColors: { 0: '#abcdef' } }, null, false);
+    expect(overview.accent).toBe('#abcdef');
+    expect(overview.intensity).toBe(ATMOSPHERE_INTENSITY_OVERVIEW);
+    expect(overview.intensity).toBeLessThan(ATMOSPHERE_INTENSITY_ACTIVE);
+  });
+  it('a step that highlights a real series gets full intensity', () => {
+    expect(atmosphereState({}, 's0', false).intensity).toBe(ATMOSPHERE_INTENSITY_ACTIVE);
+    expect(atmosphereState({}, 's4', false).intensity).toBe(ATMOSPHERE_INTENSITY_ACTIVE);
+  });
+  it('the reduced-motion branch: animated is false exactly when staticMotion is true, independent of the highlight or colour', () => {
+    expect(atmosphereState({}, 's0', true).animated).toBe(false);
+    expect(atmosphereState({}, null, true).animated).toBe(false);
+    expect(atmosphereState({}, 's0', false).animated).toBe(true);
+    expect(atmosphereState({}, null, false).animated).toBe(true);
+  });
+  it('static motion never changes the colour or intensity — only whether it animates', () => {
+    const overrides = { seriesColors: { 2: '#654321' } };
+    const animated = atmosphereState(overrides, 's2', false);
+    const staticVariant = atmosphereState(overrides, 's2', true);
+    expect(staticVariant.accent).toBe(animated.accent);
+    expect(staticVariant.intensity).toBe(animated.intensity);
+    expect(staticVariant.animated).toBe(false);
+    expect(animated.animated).toBe(true);
   });
 });

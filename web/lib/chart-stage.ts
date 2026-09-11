@@ -2,7 +2,10 @@
 // the stage animates is a wrapper OUTSIDE the exported <svg> (the honesty
 // scans and the export never see a transform); these functions turn a scroll
 // position into (a) the active step + progress toward the next, (b) the
-// chart plane's entry tilt, (c) a caption's reveal, (d) the spotlight centre.
+// chart plane's entry tilt, (c) a caption's reveal, (d) the spotlight centre,
+// (e) the ambient atmosphere layer's colour + motion gate.
+import { seriesColor, type PresentationOverrides } from './chart-presentation.ts';
+
 export const STAGE_TILT_DEG = 8; // < the spec's 12° cap; only during the FIRST step's entry
 export const STAGE_AUTOPLAY_MS = 4000;
 
@@ -131,4 +134,84 @@ export function spotlightStyle(marker: { cx: number; cy: number } | null, box: {
   if (marker === null || box.width <= 0 || box.height <= 0) return null;
   const pct = (v: number, max: number): string => `${Math.round(clamp01(v / max) * 100)}%`;
   return { left: pct(marker.cx, box.width), top: pct(marker.cy, box.height) };
+}
+
+// ─── Ambient atmosphere layer (visual upgrade, task 1 of a chain) ──────────
+//
+// A full-viewport, purely decorative backdrop behind the chart/caption
+// content (chart-story-stage.tsx's `data-stage-atmosphere` layer) — the
+// brief was "make the stage feel like a real presentation, not a plain
+// overlay". Only the COLOUR + MOTION-GATE inputs to that CSS live here
+// (pure, testable without a browser); the actual blurred, drifting shapes
+// are plain CSS in the component, because jsdom cannot verify motion at all
+// — see this module's own header comment and the component's doc comments
+// for what is and isn't checked by a test.
+
+/** `StoryStep.highlight` (chart-story.ts) is `s<index>` — buildRows' own
+ * positional series key — or null for an overview step with nothing
+ * highlighted. Parses that key into the series index `seriesColor` wants.
+ * A null or malformed key (there should never be one, but this never
+ * throws) falls back to the FIRST series (index 0) rather than inventing an
+ * index out of thin air — `atmosphereState` below is what actually keeps an
+ * overview step undramatic (reduced intensity), never a different colour. */
+export function highlightSeriesIndex(highlight: string | null): number {
+  if (highlight === null) return 0;
+  const match = /^s(\d+)$/.exec(highlight);
+  return match ? Number(match[1]) : 0;
+}
+
+/** The atmosphere's intensity for an overview step (`highlight` null) —
+ * "reasonable and undramatic": the same colour as an actively highlighted
+ * step would use (never an invented hue), just far less present. */
+export const ATMOSPHERE_INTENSITY_OVERVIEW = 0.4;
+/** The atmosphere's intensity for a step that highlights a real series. */
+export const ATMOSPHERE_INTENSITY_ACTIVE = 1;
+
+/** The atmosphere glow's peak colour-mix percentage (at intensity 1) —
+ * deliberately conservative. Every piece of REAL text this product's R4
+ * requires to stay legible (the source/attribution line, the caveat notes,
+ * the captions) sits inside an OPAQUE `bg-card` container that this layer
+ * never shows through regardless of the percentage chosen here, by
+ * construction — see the component's doc comment. This cap instead bounds
+ * the one thing that ISN'T behind an opaque card: the close/auto-play
+ * button chrome, so a glow passing behind that corner never meaningfully
+ * moves its contrast. Multiplied by `AtmosphereState.intensity`. */
+export const ATMOSPHERE_MIX_MAX_PERCENT = 30;
+
+/** The colour transition's duration when the active step's colour changes —
+ * within the brief's 400-600ms band. */
+export const STAGE_ATMOSPHERE_TRANSITION_MS = 500;
+
+export interface AtmosphereState {
+  /** A raw colour value (e.g. `'#0072b2'`) — never invented: always the
+   * active step's own highlighted-series colour, resolved through the
+   * SAME `seriesColor` the chart itself draws from, so the glow always
+   * matches what is actually drawn. This is the value
+   * chart-story-stage.tsx sets `--stage-accent` to. */
+  accent: string;
+  /** 0-1 multiplier the atmosphere's own colour-mix percentages scale by —
+   * `ATMOSPHERE_INTENSITY_OVERVIEW` for a null highlight (an overview
+   * step), else `ATMOSPHERE_INTENSITY_ACTIVE`. */
+  intensity: number;
+  /** False under the SAME `staticMotion` gate `entranceStyle`/
+   * `captionStyle`/`planeDriftPx` already use (prefers-reduced-motion,
+   * (hover: none), < lg) — not a second motion switch. When false the
+   * component shows an instant, static tint with no drift loop and no
+   * colour-transition animation (never a missing/broken layer). */
+  animated: boolean;
+}
+
+/** Resolves the atmosphere layer's colour, intensity and motion gate from
+ * the active step's `highlight` key, the chart's own series-colour
+ * overrides, and the stage's existing motion gate — pure, so both the
+ * colour-resolution logic and the reduced-motion branch are testable
+ * without a browser (chart-stage.test.ts pins both; the actual drifting,
+ * blurred CSS this feeds cannot be verified outside one — see
+ * chart-story-stage.tsx and this task's own report). */
+export function atmosphereState(overrides: PresentationOverrides, highlight: string | null, staticMotion: boolean): AtmosphereState {
+  return {
+    accent: seriesColor({ seriesColors: overrides.seriesColors ?? {} }, highlightSeriesIndex(highlight)),
+    intensity: highlight === null ? ATMOSPHERE_INTENSITY_OVERVIEW : ATMOSPHERE_INTENSITY_ACTIVE,
+    animated: !staticMotion,
+  };
 }

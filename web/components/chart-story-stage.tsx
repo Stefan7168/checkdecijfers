@@ -5,11 +5,21 @@
 // ChartView (stage mode) driven by the active step; every animated property
 // is a transform/opacity on a wrapper OUTSIDE the exported svg (there is no
 // export here anyway). Zero libraries: CSS 3D + useStageScroll.
-import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import type { ChartSpec } from '../backend/chart/types.ts';
-import { captionStyle, entranceStyle, planeDriftPx, planeTransform, spotlightStyle, STAGE_AUTOPLAY_MS } from '../lib/chart-stage.ts';
+import {
+  atmosphereState,
+  ATMOSPHERE_MIX_MAX_PERCENT,
+  captionStyle,
+  entranceStyle,
+  planeDriftPx,
+  planeTransform,
+  spotlightStyle,
+  STAGE_AUTOPLAY_MS,
+  STAGE_ATMOSPHERE_TRANSITION_MS,
+} from '../lib/chart-stage.ts';
 import type { PresentationOverrides } from '../lib/chart-presentation.ts';
 import type { StoryStep } from '../lib/chart-story.ts';
 import { t, type Lang } from '../lib/i18n/messages.ts';
@@ -104,6 +114,38 @@ interface PlotBox {
   width: number;
   height: number;
 }
+
+// The ambient atmosphere layer (visual upgrade, task 1 of a chain — see the
+// task's own doc comment on the layer below for the full design). Two large,
+// heavily blurred blobs drift in a slow, seamless loop; only the shape of
+// the motion lives here (fixed, no digits that trace to any spec/step — the
+// COLOUR and whether it runs at all are applied per-render via inline
+// `style`, never baked into this string). `@keyframes` can only be defined
+// in a stylesheet, never an inline `style` attribute, so this is portalled
+// into `document.head` — DELIBERATELY NEVER `document.body`, where the
+// dialog itself lives: chart.test.tsx runs a whole-card digit scan over
+// `document.body`'s own text nodes while the stage is open (a `<style>`
+// element's CSS text IS a DOM text node, so `25%`/`24s`/`130px` etc. below
+// would otherwise read as unbound digits with no source in the spec). A
+// future task extending this layer should keep that same split: real
+// content in the dialog (`document.body`), stylesheet text in
+// `document.head`. Hoisted as a module constant — the string never changes
+// across renders.
+const ATMOSPHERE_KEYFRAMES = `
+@keyframes stage-atmosphere-drift-a {
+  0% { transform: translate3d(-6%, -4%, 0) scale(1); }
+  25% { transform: translate3d(5%, 6%, 0) scale(1.1); }
+  50% { transform: translate3d(7%, -3%, 0) scale(0.95); }
+  75% { transform: translate3d(-4%, 5%, 0) scale(1.05); }
+  100% { transform: translate3d(-6%, -4%, 0) scale(1); }
+}
+@keyframes stage-atmosphere-drift-b {
+  0% { transform: translate3d(5%, 5%, 0) scale(1); }
+  33% { transform: translate3d(-6%, -4%, 0) scale(1.08); }
+  66% { transform: translate3d(-3%, 6%, 0) scale(0.93); }
+  100% { transform: translate3d(5%, 5%, 0) scale(1); }
+}
+`;
 
 export function ChartStoryStage({ open, spec, steps, index, onIndexChange, onClose, triggerId, overrides, lang = 'nl', onAutoplay }: ChartStoryStageProps): ReactNode {
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -373,120 +415,199 @@ export function ChartStoryStage({ open, spec, steps, index, onIndexChange, onClo
   // the entry tilt already uses, not a second motion switch.
   const drift = planeDriftPx(scroll.progress, staticMotion);
   const planeStyleTransform = planeTransform(entry.transform, drift);
+  // The ambient atmosphere layer's colour/intensity/motion (pure —
+  // chart-stage.ts). Tied to the ACTIVE step's own highlighted series,
+  // never invented; an overview step (`highlight` null) falls back to the
+  // first series at reduced intensity rather than a different hue.
+  const atmosphere = atmosphereState(overrides, step?.highlight ?? null, staticMotion);
+  const atmosphereMixPct = Math.round(ATMOSPHERE_MIX_MAX_PERCENT * atmosphere.intensity);
+  const atmosphereTransition = atmosphere.animated ? `background-color ${STAGE_ATMOSPHERE_TRANSITION_MS}ms ease` : 'none';
 
-  return createPortal(
-    <div
-      ref={dialogRef}
-      role="dialog"
-      aria-modal="true"
-      aria-label={`${t(lang, 'chart.stage.label')}: ${spec.title}`}
-      tabIndex={-1}
-      onKeyDown={onKeyDown}
-      className="fixed inset-0 z-50 bg-background text-foreground outline-none"
-      data-story-stage="true"
-    >
-      <div className="absolute right-3 top-3 z-10 flex items-center gap-2">
-        <button
-          type="button"
-          aria-pressed={autoplay}
-          onClick={toggleAutoplay}
-          className="min-h-6 rounded-full border border-border bg-background px-2.5 py-1 text-xs text-foreground hover:bg-muted aria-pressed:bg-secondary"
+  return (
+    <>
+      {createPortal(<style>{ATMOSPHERE_KEYFRAMES}</style>, document.head)}
+      {createPortal(
+        <div
+          ref={dialogRef}
+          role="dialog"
+          aria-modal="true"
+          aria-label={`${t(lang, 'chart.stage.label')}: ${spec.title}`}
+          tabIndex={-1}
+          onKeyDown={onKeyDown}
+          className="fixed inset-0 z-50 bg-background text-foreground outline-none"
+          data-story-stage="true"
+          // SHARED INFRASTRUCTURE for the visual-upgrade tasks after this
+          // one: `--stage-accent` always carries the ACTIVE step's own
+          // highlighted-series colour as a raw value (see `atmosphereState`,
+          // lib/chart-stage.ts — never invented), updated on THIS element
+          // every time the active step's colour changes. It inherits to
+          // every descendant below, so reference `var(--stage-accent)` in
+          // your own color-mix()/rgba() expressions rather than re-deriving
+          // the colour; do not re-set it lower in the tree unless a step
+          // genuinely needs a different colour than the stage's own active
+          // step (none does today).
+          style={{ '--stage-accent': atmosphere.accent } as CSSProperties}
         >
-          {t(lang, 'chart.stage.autoplay')}
-        </button>
-        <Button type="button" variant="ghost" size="sm" aria-label={t(lang, 'chart.stage.close')} onClick={closeAndRefocus}>
-          <X aria-hidden="true" />
-        </Button>
-      </div>
-      <div ref={scrollRef} data-stage-scroller="true" className="h-full overflow-y-auto touch-pan-y lg:grid lg:grid-cols-[55%_45%]">
-        {/* The pinned chart: sticky at the top of the scroller, the plane
-          * tilted on entry. Fix round 2 (item 9): below `lg` the pinned area
-          * is a MAXIMUM of half the viewport that scrolls internally when the
-          * card is taller — a fixed `h-[45vh]` clipped the attribution line
-          * and the caveat notes off the bottom on a phone, exactly the
-          * strings R4/R11 require to stay readable. `lg:h-screen` unchanged
-          * (with `lg:max-h-none`, or the cap would beat the height there). */}
-        {/* Fix 3: `items-start` + `my-auto` on the child keeps the card's top
-          * reachable when taller than the max-h cap — prevents both-ends
-          * overflow on a scroll container. */}
-        <div className="sticky top-0 z-0 flex max-h-[50vh] items-start overflow-y-auto bg-background px-4 lg:h-screen lg:max-h-none lg:overflow-visible lg:px-10">
-          <div
-            className={
-              'relative w-full rounded-xl bg-card p-4 text-card-foreground my-auto' +
-              // Fix round 2 (items 3+4): `transform` joins the transition so
-              // a programmatic jump (a dot, an arrow key, auto-play) eases
-              // instead of snapping. Static mode has nothing to ease.
-              (staticMotion ? '' : ' transition-[transform,box-shadow] duration-200 ease-out')
-            }
-            style={{ transform: planeStyleTransform, boxShadow: entry.boxShadow, transformStyle: 'preserve-3d', willChange: 'transform' }}
-            data-stage-plane="true"
-          >
-            <div ref={chartBoxRef} className="relative">
-              <StageChart spec={spec} step={step} overrides={overrides} />
-              {spot && plot && !staticMotion ? (
-                <div
-                  aria-hidden="true"
-                  data-stage-spotlight="true"
-                  className="pointer-events-none absolute rounded-lg"
-                  style={{
-                    // Item 8: over the PLOT only — the title, the legend and
-                    // the source line stay at full contrast.
-                    left: `${plot.left}px`,
-                    top: `${plot.top}px`,
-                    width: `${plot.width}px`,
-                    height: `${plot.height}px`,
-                    background: `radial-gradient(circle at ${spot.left} ${spot.top}, transparent 0, transparent 22%, color-mix(in oklab, var(--card) 55%, transparent) 60%)`,
-                  }}
-                />
-              ) : null}
+          {/* The ambient atmosphere: a purely decorative, full-viewport
+            * backdrop behind the scroll container and the buttons — the
+            * brief was "make the stage feel like a real presentation, not
+            * a plain overlay". aria-hidden + pointer-events-none: no
+            * semantic content, never a click target, both buttons and the
+            * scroller stay fully interactive. Two large, heavily blurred
+            * blobs (`stage-atmosphere-drift-a`/`-b`, the keyframes
+            * portalled into document.head above) drift slowly and
+            * continuously in a seamless loop; their colour transitions
+            * smoothly (background-color only — deliberately not the
+            * gradient itself, which is not reliably interpolable across
+            * browsers) when the active step's colour changes.
+            *
+            * CONTRAST (R4): every piece of real text this product requires
+            * to stay legible — the source/attribution line, the caveat
+            * notes, the captions, the chart itself — sits inside an OPAQUE
+            * `bg-card` container (below), so this layer can never reduce
+            * its contrast regardless of the colour or percentage chosen:
+            * it is only ever visible in the surrounding margin. The one
+            * exposed piece of chrome is the close/auto-play corner (the
+            * autoplay pill has its own `bg-background`; the close button
+            * is a transparent `ghost` button) — ATMOSPHERE_MIX_MAX_PERCENT
+            * is kept conservative for that reason, and both blobs are
+            * anchored away from the top-right corner.
+            *
+            * STACKING: `-z-10` (not DOM order) puts this behind every
+            * sibling here regardless of any sibling's own `position` — the
+            * scroll container below is `position: static`, so a static,
+            * non-positioned box actually paints BEFORE an auto/0-z-index
+            * positioned one in CSS's own paint order; only a NEGATIVE
+            * z-index is guaranteed to paint first regardless. The
+            * close/auto-play buttons keep their existing `z-10`.
+            * `overflow-hidden` keeps a mid-drift blob from ever bleeding
+            * past the dialog's own edge. NOT verified in a real browser in
+            * this task — see the task's report for what a human should
+            * re-check (both themes, both motion states). */}
+          <div aria-hidden="true" data-stage-atmosphere="true" className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+            <div
+              data-stage-atmosphere-blob="a"
+              className="absolute -left-[15%] -top-[10%] h-[75%] w-[65%] rounded-full blur-[130px]"
+              style={{
+                backgroundColor: `color-mix(in oklab, var(--stage-accent) ${atmosphereMixPct}%, var(--background))`,
+                animation: atmosphere.animated ? 'stage-atmosphere-drift-a 24s ease-in-out infinite' : 'none',
+                transition: atmosphereTransition,
+              }}
+            />
+            <div
+              data-stage-atmosphere-blob="b"
+              className="absolute -bottom-[15%] -right-[10%] h-[70%] w-[60%] rounded-full blur-[130px]"
+              style={{
+                backgroundColor: `color-mix(in oklab, var(--stage-accent) ${Math.round(atmosphereMixPct * 0.7)}%, var(--background))`,
+                animation: atmosphere.animated ? 'stage-atmosphere-drift-b 29s ease-in-out infinite' : 'none',
+                transition: atmosphereTransition,
+              }}
+            />
+          </div>
+          <div className="absolute right-3 top-3 z-10 flex items-center gap-2">
+            <button
+              type="button"
+              aria-pressed={autoplay}
+              onClick={toggleAutoplay}
+              className="min-h-6 rounded-full border border-border bg-background px-2.5 py-1 text-xs text-foreground hover:bg-muted aria-pressed:bg-secondary"
+            >
+              {t(lang, 'chart.stage.autoplay')}
+            </button>
+            <Button type="button" variant="ghost" size="sm" aria-label={t(lang, 'chart.stage.close')} onClick={closeAndRefocus}>
+              <X aria-hidden="true" />
+            </Button>
+          </div>
+          <div ref={scrollRef} data-stage-scroller="true" className="h-full overflow-y-auto touch-pan-y lg:grid lg:grid-cols-[55%_45%]">
+            {/* The pinned chart: sticky at the top of the scroller, the plane
+              * tilted on entry. Fix round 2 (item 9): below `lg` the pinned area
+              * is a MAXIMUM of half the viewport that scrolls internally when the
+              * card is taller — a fixed `h-[45vh]` clipped the attribution line
+              * and the caveat notes off the bottom on a phone, exactly the
+              * strings R4/R11 require to stay readable. `lg:h-screen` unchanged
+              * (with `lg:max-h-none`, or the cap would beat the height there). */}
+            {/* Fix 3: `items-start` + `my-auto` on the child keeps the card's top
+              * reachable when taller than the max-h cap — prevents both-ends
+              * overflow on a scroll container. */}
+            <div className="sticky top-0 z-0 flex max-h-[50vh] items-start overflow-y-auto bg-background px-4 lg:h-screen lg:max-h-none lg:overflow-visible lg:px-10">
+              <div
+                className={
+                  'relative w-full rounded-xl bg-card p-4 text-card-foreground my-auto' +
+                  // Fix round 2 (items 3+4): `transform` joins the transition so
+                  // a programmatic jump (a dot, an arrow key, auto-play) eases
+                  // instead of snapping. Static mode has nothing to ease.
+                  (staticMotion ? '' : ' transition-[transform,box-shadow] duration-200 ease-out')
+                }
+                style={{ transform: planeStyleTransform, boxShadow: entry.boxShadow, transformStyle: 'preserve-3d', willChange: 'transform' }}
+                data-stage-plane="true"
+              >
+                <div ref={chartBoxRef} className="relative">
+                  <StageChart spec={spec} step={step} overrides={overrides} />
+                  {spot && plot && !staticMotion ? (
+                    <div
+                      aria-hidden="true"
+                      data-stage-spotlight="true"
+                      className="pointer-events-none absolute rounded-lg"
+                      style={{
+                        // Item 8: over the PLOT only — the title, the legend and
+                        // the source line stay at full contrast.
+                        left: `${plot.left}px`,
+                        top: `${plot.top}px`,
+                        width: `${plot.width}px`,
+                        height: `${plot.height}px`,
+                        background: `radial-gradient(circle at ${spot.left} ${spot.top}, transparent 0, transparent 22%, color-mix(in oklab, var(--card) 55%, transparent) 60%)`,
+                      }}
+                    />
+                  ) : null}
+                </div>
+              </div>
+            </div>
+            {/* The steps: one full-height panel each; the scroll position picks the step. */}
+            <div className="px-4 pb-[40vh] lg:px-10 lg:pt-[20vh]">
+              <p className="mb-2 text-xs text-muted-foreground">{t(lang, 'chart.stage.scrollHint')}</p>
+              <ol role="list" aria-label={t(lang, 'chart.stage.stepsLabel')} className="m-0 list-none p-0">
+                {steps.map((s, i) => {
+                  // Fix round 2 (items 3+4): `progress` is nearest-centre, so it
+                  // runs 0 → ~0.5 across a step and restarts — the captions used
+                  // it raw and therefore only ever half-faded before popping to
+                  // the next panel. Doubling it gives the intended continuous
+                  // hand-over: the active caption fades out as its own centre is
+                  // left behind (2 × progress) exactly as the next one fades in
+                  // (1 − 2 × progress). `captionStyle` clamps either way.
+                  const distance = i === index ? 2 * scroll.progress : i === index + 1 ? 1 - 2 * scroll.progress : 1;
+                  const style = captionStyle(distance, staticMotion);
+                  return (
+                    <li
+                      key={s.id}
+                      ref={(el) => {
+                        panelRefs.current[i] = el;
+                      }}
+                      data-stage-step={i}
+                      aria-current={i === index ? 'step' : undefined}
+                      className="flex min-h-[85vh] flex-col justify-center"
+                    >
+                      <div className="max-w-md rounded-lg border border-border bg-card p-4" style={style}>
+                        <p className="text-base font-semibold text-foreground">{s.title}</p>
+                        <p className="mt-1 text-sm text-muted-foreground">{s.caption}</p>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ol>
             </div>
           </div>
-        </div>
-        {/* The steps: one full-height panel each; the scroll position picks the step. */}
-        <div className="px-4 pb-[40vh] lg:px-10 lg:pt-[20vh]">
-          <p className="mb-2 text-xs text-muted-foreground">{t(lang, 'chart.stage.scrollHint')}</p>
-          <ol role="list" aria-label={t(lang, 'chart.stage.stepsLabel')} className="m-0 list-none p-0">
-            {steps.map((s, i) => {
-              // Fix round 2 (items 3+4): `progress` is nearest-centre, so it
-              // runs 0 → ~0.5 across a step and restarts — the captions used
-              // it raw and therefore only ever half-faded before popping to
-              // the next panel. Doubling it gives the intended continuous
-              // hand-over: the active caption fades out as its own centre is
-              // left behind (2 × progress) exactly as the next one fades in
-              // (1 − 2 × progress). `captionStyle` clamps either way.
-              const distance = i === index ? 2 * scroll.progress : i === index + 1 ? 1 - 2 * scroll.progress : 1;
-              const style = captionStyle(distance, staticMotion);
-              return (
-                <li
-                  key={s.id}
-                  ref={(el) => {
-                    panelRefs.current[i] = el;
-                  }}
-                  data-stage-step={i}
-                  aria-current={i === index ? 'step' : undefined}
-                  className="flex min-h-[85vh] flex-col justify-center"
-                >
-                  <div className="max-w-md rounded-lg border border-border bg-card p-4" style={style}>
-                    <p className="text-base font-semibold text-foreground">{s.title}</p>
-                    <p className="mt-1 text-sm text-muted-foreground">{s.caption}</p>
-                  </div>
-                </li>
-              );
-            })}
+          {/* Position dots — never "N of M". */}
+          <ol role="list" aria-label={t(lang, 'chart.stage.positionLabel')} className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1">
+            {steps.map((s, i) => (
+              <li key={s.id}>
+                <button type="button" aria-label={s.title} aria-current={i === index ? 'step' : undefined} onClick={() => { setAutoplay(false); go(i); }} className="flex size-6 items-center justify-center">
+                  <span className={'block size-2.5 rounded-full ' + (i === index ? 'bg-foreground' : 'bg-border hover:bg-muted-foreground')} />
+                </button>
+              </li>
+            ))}
           </ol>
-        </div>
-      </div>
-      {/* Position dots — never "N of M". */}
-      <ol role="list" aria-label={t(lang, 'chart.stage.positionLabel')} className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1">
-        {steps.map((s, i) => (
-          <li key={s.id}>
-            <button type="button" aria-label={s.title} aria-current={i === index ? 'step' : undefined} onClick={() => { setAutoplay(false); go(i); }} className="flex size-6 items-center justify-center">
-              <span className={'block size-2.5 rounded-full ' + (i === index ? 'bg-foreground' : 'bg-border hover:bg-muted-foreground')} />
-            </button>
-          </li>
-        ))}
-      </ol>
-    </div>,
-    document.body,
+        </div>,
+        document.body,
+      )}
+    </>
   );
 }
