@@ -53,7 +53,10 @@ export default async function Home({
     // Session-51 owner decision: '/' is the product's public face. A
     // logged-out visitor gets the landing (no chargeable entry point; its
     // only data reads are the cached, fail-safe Ontdek discovery charts —
-    // session 52, ADR 035) instead of a context-free login redirect;
+    // session 52, ADR 035 — and, since the journey programme (session 97,
+    // R4), the equally cached, fail-safe coverage disclosure: one registry
+    // read + one freshest-period read per measure every 30 minutes, never
+    // per request) instead of a context-free login redirect;
     // proxy.ts allowlists '/' exact-match to let them reach it.
     return <Landing coverage={coverage} />;
   }

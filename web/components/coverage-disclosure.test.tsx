@@ -25,8 +25,12 @@ function coverage(): CoverageDisclosure {
 
 describe('CoverageDisclosureView — nl (default)', () => {
   it('renders the collapsed summary and, once opened, the table + sync date + concepts', () => {
-    render(<CoverageDisclosureView coverage={coverage()} />);
+    const { container } = render(<CoverageDisclosureView coverage={coverage()} />);
     expect(screen.getByText('Welke bronnen zijn ingebouwd?')).toBeInTheDocument();
+    // Collapsed by default — the composer stays bare (owner, session 87);
+    // jsdom exposes <details> children regardless of `open`, so pin the
+    // attribute itself.
+    expect(container.querySelector('details')).not.toHaveAttribute('open');
     expect(screen.getByText(/Consumentenprijzen; prijsindex 2015=100/)).toBeInTheDocument();
     expect(screen.getByText(/gesynchroniseerd 2026-07-03/)).toBeInTheDocument();
     expect(screen.getByText('inflatie (CPI), consumentenprijsindex')).toBeInTheDocument();

@@ -39,6 +39,7 @@ export function CoverageDisclosureView({
                 table.concepts.length > 6
                   ? `${table.concepts.slice(0, 6).join(', ')}…`
                   : table.concepts.join(', ');
+              const example = table.example;
               return (
                 <li key={table.id}>
                   <p className="text-foreground">
@@ -46,17 +47,17 @@ export function CoverageDisclosureView({
                     {table.syncedOn !== null ? ` — ${t('coverage.syncedOn', { date: table.syncedOn })}` : ''}
                   </p>
                   {concepts.length > 0 ? <p>{concepts}</p> : null}
-                  {table.example !== null ? (
+                  {example !== null ? (
                     onPickExample ? (
                       <button
                         type="button"
-                        onClick={() => onPickExample(table.example as string)}
+                        onClick={() => onPickExample(example)}
                         className={`${PILL} mt-1`}
                       >
-                        {table.example}
+                        {example}
                       </button>
                     ) : (
-                      <p className="mt-1">{t('coverage.exampleLabel', { question: table.example })}</p>
+                      <p className="mt-1">{t('coverage.exampleLabel', { question: example })}</p>
                     )
                   ) : null}
                 </li>

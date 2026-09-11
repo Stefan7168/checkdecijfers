@@ -697,6 +697,9 @@ const nl = {
   'coverage.summary': 'Welke bronnen zijn ingebouwd?',
   'coverage.cbsHeading': 'CBS',
   'coverage.syncedOn': 'gesynchroniseerd {date}',
+  // The example question itself stays DUTCH in both languages: the answer
+  // pipeline parses Dutch (CLAUDE.md language carve-out) — translating it
+  // would break the parse, not localise it.
   'coverage.exampleLabel': 'bijvoorbeeld: {question}',
   'coverage.onRequestLine': 'Andere CBS-onderwerpen halen we op verzoek op.',
   'coverage.eurostatHeading': 'Eurostat — binnenkort',

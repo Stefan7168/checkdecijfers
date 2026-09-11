@@ -56,18 +56,28 @@ function dateOnly(iso: string | null): string | null {
   return match ? match[0] : null;
 }
 
-/** One answerable example per table (frame: "Wat was de {everydayTerm or
- * definitionLabel} in {periodCodeToNl(freshest)}?"), reusing exactly the
- * building blocks refusals.ts's exampleQuestionNl uses — never invented.
- * Picks the first canonical measure registered for the table that has a
- * freshest period; a table with none gets no example (principle c). */
+/** One answerable example per table, reusing exactly the building blocks
+ * refusals.ts's exampleQuestionNl uses (the registry's everyday term + the
+ * measure's own freshest loaded period) — never invented. Two frames:
+ * the inflation measure keeps refusals.ts's proven "Wat was de inflatie in
+ * {periode}?"; every other measure gets the article-free "Wat zijn de
+ * cijfers over {term} in {periode}?" — Dutch articles (de/het) are not in
+ * the registry, so "Wat was de {term}" reads as broken Dutch for most
+ * tables ("Wat was de inwoners…"; review finding, session 97). The example
+ * stays Dutch in the English UI: the pipeline parses Dutch (CLAUDE.md
+ * language carve-out). Picks the first canonical measure registered for
+ * the table that has a freshest period; a table with none gets no example
+ * (principle c). */
 async function exampleForTable(tableId: string): Promise<string | null> {
   const candidates = CANONICAL_MEASURES.filter((m) => m.tableId === tableId);
   for (const measure of candidates) {
     const freshest = await freshestForCanonical(getDb(), measure.key);
     if (freshest === null) continue;
     const subject = measure.everydayTerms[0] ?? measure.definitionLabel;
-    return `Wat was de ${subject} in ${periodCodeToNl(freshest.periodCode)}?`;
+    const period = periodCodeToNl(freshest.periodCode);
+    return measure.key === 'cpi_yearly_inflation'
+      ? `Wat was de ${subject} in ${period}?`
+      : `Wat zijn de cijfers over ${subject} in ${period}?`;
   }
   return null;
 }

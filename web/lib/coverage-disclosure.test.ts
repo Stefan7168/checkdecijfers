@@ -29,6 +29,12 @@ vi.mock('../backend/registry/defaults.ts', () => ({
       definitionLabel: 'werkloosheidspercentage, seizoengecorrigeerd',
       everydayTerms: ['werkloosheid'],
     },
+    {
+      key: 'population_on_1_january',
+      tableId: '03759ned',
+      definitionLabel: 'bevolking op 1 januari',
+      everydayTerms: ['inwoners', 'bevolking'],
+    },
   ],
 }));
 
@@ -95,6 +101,21 @@ describe('loadCoverageDisclosure', () => {
     freshestForCanonical.mockResolvedValue({ periodCode: '2025JJ00', status: 'Definitief' });
     const disclosure = await loadCoverageDisclosure();
     expect(disclosure!.tables[0]!.example).toBe('Wat was de inflatie in 2025?');
+  });
+
+  it('uses the article-free frame for every measure other than inflation (no "Wat was de inwoners")', async () => {
+    const r = report();
+    r.tables[0] = {
+      id: '03759ned',
+      title: 'Bevolking op 1 januari',
+      status: 'active',
+      lastSyncAt: '2026-07-03T12:00:00.000Z',
+      measures: [{ key: 'population_on_1_january', label: 'bevolking op 1 januari' }],
+    };
+    buildCoverageReport.mockResolvedValue(r);
+    freshestForCanonical.mockResolvedValue({ periodCode: '2025JJ00', status: 'Definitief' });
+    const disclosure = await loadCoverageDisclosure();
+    expect(disclosure!.tables[0]!.example).toBe('Wat zijn de cijfers over inwoners in 2025?');
   });
 
   it('omits the example when the freshest period is unknown — never a guessed example', async () => {
