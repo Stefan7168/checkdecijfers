@@ -36,8 +36,8 @@ THE DESIGNED DEFAULT CHART LOOK (ADR 042), PR #10 OPEN FOR REVIEW; PHASE-2 PLAN 
    baseline confirmed; the hidden pane needed a synthetic `resize` event before Recharts measured.
    Three PNGs (before/after) rasterised from the live SVGs with `sharp` for the PR.
 6. **PR #10** opened against `main` ("Visual upgrade phase 1: the designed default chart look (ADR
-   042)"), plain-English body with the images. **CI: pending when this entry was written — check
-   `gh pr checks 10`.**
+   042)"), plain-English body with the images. **CI: gate PASS (10m20s) on the PR head `4b66379`, verified with
+   `gh pr checks 10` at the end of the night.**
 7. **Docs:** ADR 042 (new), ADR 014 note, 12-huisstijl, the session-87 spec's superseded note,
    08-build-plan (new "Visual upgrade programme" section + WP218 invariant note), 03-mvp-scope,
    04-architecture, open-questions #232–#234, RUNBOOK go-live note, lessons-learned session 95.
@@ -52,12 +52,27 @@ THE DESIGNED DEFAULT CHART LOOK (ADR 042), PR #10 OPEN FOR REVIEW; PHASE-2 PLAN 
    gallery PNG `43764a4`. Verification on the branch: root + web tsc clean; backend 142/2200 (solo, docs
    excluded); benchmark 14/14 + 6/6 + 0; web 91/1366; `next build` clean (re-run solo on `6eae5a5` after an
    overlapping phase-3 RED step invalidated the chain's first build); `/code-review` LOW 0. Browser: the
-   Templates tab + Presentatie applied, on the dev server. **CI on PR #11 pending when written.**
-9. **Phase 3 — the Story stage:** plan
-   [superpowers/plans/2026-09-11-story-stage-v1.md](superpowers/plans/2026-09-11-story-stage-v1.md) + ADR
-   [044](decisions/044-story-stage.md) written; build started on `visual-story-stage` (stacked on phase 2):
-   Task 1 (pure geometry) and Task 2 (the scroll hook) built + reviewed clean, Task 3 (ChartView stage mode)
-   built — state at wrap-up is in STATUS.md's top block and the branch itself, never in this entry.
+   Templates tab + Presentatie applied, on the dev server. **CI on PR #11: gate PASS (11m23s) on its head `c1df16c`, verified with `gh pr checks 11`.**
+9. **Phase 3 — the Story stage — BUILT the same night** (branch `visual-story-stage` from PR #11's head
+   `c1df16c`, PR #12 opened with base = `visual-templates-v1`): plan
+   [superpowers/plans/2026-09-11-story-stage-v1.md](superpowers/plans/2026-09-11-story-stage-v1.md), ADR
+   [044](decisions/044-story-stage.md) (decision + as-built addendum). Commits `be8b564..6718c4a` (14 through the last code fix; the wrap-up docs commits `7f57f40` and later follow):
+   geometry `be8b564` · scroll hook `6fefc18` · `ChartView` stage mode `ee5c507` + fix `7b0097c` · ADR
+   `c364c57` · overlay `6cffc14` + fix `c3335c2` · docs `7fd6494` · Present wiring `364d23a` · whole-branch
+   fix wave `d88604b` · phone/guard fix `32ddc16` · docs `64a2b1f`, `5b754e3` · auto-play + test-env fix
+   `6718c4a`. Reviews: per task (opus on `chart.tsx`/overlay, two fix rounds), a fable whole-branch review
+   (eight Important, one opus fix wave), a scoped re-review (one new Important: a phone clip), a controller-
+   read two-line fix; then `/code-review` LOW found auto-play stopping itself on its own `scroll` and the
+   full web log showed the suite EXITING 1 on 28 unhandled `cancelAnimationFrame` errors (a per-test rAF
+   stub that Recharts' store had captured) — both fixed in `6718c4a` with a deliberate-break check.
+   Verification: on `5b754e3` (solo chain) root tsc clean, backend 142/2200, benchmark 14/14 + 6/6 + 0,
+   `test:docs` 11/11; on `6718c4a` web 94 files / 1428 tests, 0 unhandled errors, exit 0, web tsc clean,
+   `next build` clean. Real browser on the final code (the hidden pane's "no charts" was React 19's
+   streaming reveal waiting on rAF — worked around with `$RV($RB)`, recorded in lessons): open from
+   finding 3, boundary crossfade with a flat plane, auto-play across its own scroll + wheel stop + off at
+   the end, Escape/focus/lock, phone 375 px, dark, desktop tilt 8° at the top. **CI on PR #12: gate PASS
+   (11m27s) on `7f57f40`, verified with `gh pr checks 12`; one docs-only commit follows it.** Docs: ADR 044 addendum, 12-huisstijl, 08-build-plan row, 04-architecture row, open-questions
+   #236, lessons (phase-3 bullets 1–7), the session-96 kickoff.
 
 **Session 94 (2026-09-10, owner present, continuing session 93's embed-charts PR review) — THREE OWNER
 UI FIXES LIVE, THE "NEXT LEVEL" VISUAL PLAN WRITTEN, TWO EXPORT FIXES (#222 ✅/#223 MOSTLY), INSIGHTS

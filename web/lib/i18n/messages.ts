@@ -438,6 +438,18 @@ const nl = {
   'chart.story.exploreTitle': 'Verken zelf',
   'chart.story.exploreCaption': 'Wissel van weergave met de tabs, kies een periode met Vanaf en Tot, of pas de opmaak aan.',
   'chart.story.controlsLocked': 'Sluit het verhaal om dit te wijzigen.',
+  // ADR 044 (Task 4): the full-viewport Story stage — its own dialog chrome,
+  // distinct from the compact panel's `chart.story.*` strings above (which
+  // stay for the panel; the stage is a separate surface).
+  'chart.stage.present': 'Presenteren',
+  'chart.stage.label': 'Presentatie van de inzichten',
+  'chart.stage.close': 'Sluiten',
+  'chart.stage.scrollHint': 'Scroll om verder te gaan',
+  'chart.stage.autoplay': 'Automatisch afspelen',
+  'chart.stage.stepsLabel': 'Stappen',
+  // Fix round 1: the dots list needs its own accessible name, distinct from
+  // the steps list — both were sharing `chart.stage.stepsLabel`.
+  'chart.stage.positionLabel': 'Positie in het verhaal',
   'chart.panel.tabsLabel': 'Opmaak-onderdelen',
   'chart.panel.tabChart': 'Grafiek',
   'chart.panel.tabColors': 'Kleuren',
@@ -929,6 +941,13 @@ const en: Messages = {
   'chart.story.exploreTitle': 'Explore yourself',
   'chart.story.exploreCaption': 'Switch the view with the tabs, pick a period with From and To, or change the style.',
   'chart.story.controlsLocked': 'Close the story to change this.',
+  'chart.stage.present': 'Present',
+  'chart.stage.label': 'Insights presentation',
+  'chart.stage.close': 'Close',
+  'chart.stage.scrollHint': 'Scroll to continue',
+  'chart.stage.autoplay': 'Auto-play',
+  'chart.stage.stepsLabel': 'Steps',
+  'chart.stage.positionLabel': 'Position in the story',
   'chart.panel.tabsLabel': 'Style sections',
   'chart.panel.tabChart': 'Chart',
   'chart.panel.tabColors': 'Colours',
