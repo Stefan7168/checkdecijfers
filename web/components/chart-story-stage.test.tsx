@@ -11,7 +11,7 @@ import { useState, type ReactNode } from 'react';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ChartSpec } from '../backend/chart/types.ts';
-import { captionStyle, entranceStyle, spotlightStyle, STAGE_AUTOPLAY_MS } from '../lib/chart-stage.ts';
+import { captionStyle, entranceStyle, planeDriftPx, planeTransform, spotlightStyle, STAGE_AUTOPLAY_MS } from '../lib/chart-stage.ts';
 import type { StoryStep } from '../lib/chart-story.ts';
 import { ChartStoryStage, type ChartStoryStageProps } from './chart-story-stage.tsx';
 
@@ -516,6 +516,72 @@ describe('ChartStoryStage', () => {
       scrollStage(scroller, 800);
       expect(plane().style.transform).toBe(entranceStyle(1, false).transform);
       expect(plane().className).toContain('transition-[transform,box-shadow]');
+    } finally {
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
+  // Task: the story-stage motion plane drift (ADR 044 §"As built" — v1 has no
+  // parallax; this is the small, safe substitute). Driven by `scroll.progress`
+  // (per-step, nearest-centre), deliberately not `scroll.entry` — so it must
+  // never show up while the entry above is still tilting, and only ever
+  // appear as an appended `translateY` once the plane is flat. The exact
+  // curve itself is pinned in chart-stage.test.ts; this proves the hook,
+  // `planeDriftPx` and `planeTransform` are wired together correctly here.
+  it('drifts the settled plane a few px toward each step boundary, and never while the entry is still tilting', () => {
+    useStageScrollTimers();
+    try {
+      render(<ChartStoryStage {...baseProps()} />);
+      const scroller = layoutStage();
+      const settled = entranceStyle(1, false).transform;
+
+      // Still inside the entry window: `stageProgress` clamps a step's own
+      // progress to 0 for as long as `entry` has not yet reached 1 (proven in
+      // chart-stage.ts's own doc comment), so no drift term is appended —
+      // byte-identical to the plain (tilted) entry transform.
+      scrollStage(scroller, 400);
+      expect(plane().style.transform).toBe(entranceStyle(0.5, false).transform);
+
+      // Entry has just settled, still at the first step's own centre
+      // (progress 0): no drift yet either.
+      scrollStage(scroller, 800);
+      expect(plane().style.transform).toBe(settled);
+      expect(plane().style.transform).toBe(planeTransform(settled, planeDriftPx(0, false)));
+
+      // A quarter of the way to the next step's centre (progress 0.25): a
+      // small translateY is now appended, matching `planeDriftPx` exactly.
+      scrollStage(scroller, 1000);
+      const quarterDrift = planeDriftPx(0.25, false);
+      expect(quarterDrift).toBeGreaterThan(0);
+      expect(plane().style.transform).toBe(planeTransform(settled, quarterDrift));
+      expect(plane().style.transform).toBe(`${settled} translateY(${quarterDrift}px)`);
+
+      // The boundary itself (progress 0.5): the peak of the breathing curve.
+      scrollStage(scroller, 1200);
+      const peakDrift = planeDriftPx(0.5, false);
+      expect(peakDrift).toBeGreaterThan(quarterDrift);
+      expect(plane().style.transform).toBe(planeTransform(settled, peakDrift));
+    } finally {
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
+  it('reduced motion suppresses the drift too, on the same staticMotion gate the entry tilt already uses', () => {
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: query.includes('reduce'),
+      addEventListener() {},
+      removeEventListener() {},
+    }));
+    useStageScrollTimers();
+    try {
+      render(<ChartStoryStage {...baseProps()} />);
+      const scroller = layoutStage();
+      // The same scroll position that produced the peak 5px drift above.
+      scrollStage(scroller, 1200);
+      expect(plane().style.transform).toBe(entranceStyle(0, true).transform);
+      expect(plane().style.transform).not.toContain('translateY(');
     } finally {
       vi.unstubAllGlobals();
       vi.useRealTimers();

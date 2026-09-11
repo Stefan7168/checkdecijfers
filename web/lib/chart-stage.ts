@@ -75,6 +75,47 @@ export function entranceStyle(progress: number, reducedMotion: boolean): { trans
   };
 }
 
+// The plan's §3.4 wanted continued motion "between steps" too (parallax);
+// ADR 044 §"As built" recorded that as not built — a full multi-layer
+// parallax needs Recharts to stop being one SVG. What follows is the small,
+// safe substitute: a per-step vertical "breathing" drift on the SAME plane
+// wrapper the entry tilt already uses, so the plane is not perfectly static
+// for the whole reading. It is driven by `stageProgress`'s PER-STEP
+// nearest-centre progress, never `entryProgress` (that ramp is fully spent
+// settling the entry tilt before the first caption is read — see above) —
+// and it is a translateY only, never rotateX: the tilt stays confined to the
+// entry window exactly as ADR 044 decision 4 requires, and this never
+// touches it.
+const PLANE_DRIFT_PEAK_PX = 5; // small "breathing" peak, well inside the brief's 4-6px band
+
+/** How far the chart plane drifts vertically once it has settled: 0 at a
+ * step's own centre (`progress` 0), peaking at `PLANE_DRIFT_PEAK_PX` around
+ * the boundary with the next step (`progress` 0.5), back to 0 at `progress`
+ * 1 — a sine keeps the motion smooth at both ends so it never pops. Nothing
+ * here reads a marker's position (unlike the dropped translate-to-centre pan,
+ * ADR 044 decision 5): the direction and magnitude depend only on scroll
+ * progress, never on where anything is drawn, so it cannot drift toward a
+ * data point. Because `stageProgress` clamps a step's own `progress` to 0
+ * until the viewport centre passes that step's centre, this is also always
+ * exactly 0 for the whole entry window (`entryProgress` < 1) — the drift and
+ * the tilt never run at the same time by construction, not by a guard here. */
+export function planeDriftPx(progress: number, reducedMotion: boolean): number {
+  if (reducedMotion) return 0;
+  const p = clamp01(progress);
+  return Math.round(Math.sin(p * Math.PI) * PLANE_DRIFT_PEAK_PX * 100) / 100;
+}
+
+/** Composes the drift onto the entry transform as a further `translateY`.
+ * Appending is equivalent to folding the px into the entry's own
+ * `translate3d` Y component (pure translations commute), but keeps
+ * `entranceStyle`'s own string untouched so a future change to one cannot
+ * silently break the other — and is byte-identical to `entryTransform` when
+ * there is no drift to apply (0 px, or reduced motion), so the entry's own
+ * behaviour is provably unaffected in that case. */
+export function planeTransform(entryTransform: string, driftPx: number): string {
+  return driftPx === 0 ? entryTransform : `${entryTransform} translateY(${driftPx}px)`;
+}
+
 /** A caption panel fades and rises into place as its centre approaches the
  * viewport centre (`distance` in viewport heights). */
 export function captionStyle(distance: number, reducedMotion: boolean): { opacity: number; transform: string } {
