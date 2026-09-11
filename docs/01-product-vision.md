@@ -21,6 +21,19 @@ Out of scope for v1 but deliberately kept alive (see [06-roadmap.md](06-roadmap.
 
 ## Who it's for
 
+### Ideal customer profile (owner decision, 2026-09-11, session 96 — binding; supersedes nothing above, sharpens it)
+
+**Defined by the job, not the job title** (the owner chose "all four segments" when asked for one; the ICP is therefore the shared job):
+
+- **The person:** someone who has to publish an official figure, with its source, under time pressure, and has no data team behind them. They write for a public audience: an article, a council page, a policy brief, a company report, a social post.
+- **Their situation today:** they know the number exists at CBS or Eurostat but not where. Finding it takes 30–60 minutes of StatLine or Eurostat clicking, or one risky question to a general chatbot. Then they rebuild the chart by hand in Excel, Datawrapper or Flourish and paste a source line they hope is right.
+- **What they need:** the right number in under a minute; a chart that looks publishable without design work; a source line they can defend; an embed or image that goes straight into their page; and an honest "this data does not exist" instead of a guess.
+- **What they will pay:** a few euros per figure without needing approval, or a modest monthly plan when they publish weekly and want charts that stay current (live embeds — the Pro reason, [open-questions #205](open-questions.md)).
+- **Go-to-market order of the segments:** (1) freelance and regional journalists in the Netherlands — sharpest pain, fastest to reach, credit packs; (2) small newsroom data desks — the same people with a budget: the Pro plan and house style; (3) municipal and policy communicators — annual buyers of embeds and maps, once live embeds and maps exist (ANP already sells them election embeds); (4) corporate and NGO communications teams — reached through Eurostat and English, last.
+- **Not our customer:** data scientists with their own pipelines; large newsroom data teams on LocalFocus contracts; anyone who wants a blank chart canvas for their own spreadsheets without an official source.
+
+**Strategic direction recorded the same day (owner, in chat, not yet an ADR):** the company specialises in *"chat your way from official-statistics research to an embedded, sourced chart"* over **European and Dutch official data — CBS first, Eurostat next, other Dutch sources (RIVM, Kadaster) after**, one source at a time, each proven by the benchmark before the next is named publicly. Sources are the roadmap and the marketing; CBS is the first built-in source, never a "subcategory". Research behind it: [session-briefs/2026-09-11-competitive-research-localfocus-flourish-eurostat.md](session-briefs/2026-09-11-competitive-research-localfocus-flourish-eurostat.md); tracking row [open-questions #237](open-questions.md). Needs its own ADR + roadmap re-phasing before a session builds toward it. **Companion document, same day:** the [experience improvement plan](session-briefs/2026-09-11-experience-improvement-plan.md) walks segment 1's (Fleur's) whole journey — arriving, first question, trust, publishing, paying, coming back — and is the ICP's first segment in practice.
+
 **v1 audience: Dutch journalists — freelancers and small newsrooms first** (interview Q2). The Netherlands has roughly 15,000–17,000 active journalists; the underserved segment is freelancers and small/regional newsrooms for whom LocalFocus-style corporate contracts are out of reach. Their documented buying behavior anchors the business model: **€5–7.50 is the maximum for an everyday article; anything under €10 fits newsroom "kleine onkosten" expense rules without approval.** Their alternative — 45 minutes of self-searching StatLine — costs a newsroom €30–45 in time.
 
 Large newsrooms (NOS, DPG Media, Mediahuis) are a later enterprise tier, not v1.
