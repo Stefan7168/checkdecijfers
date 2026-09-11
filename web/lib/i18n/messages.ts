@@ -651,6 +651,34 @@ const nl = {
   'credits.packPricePerQuestion': '{price} per vraag',
   'credits.neverExpires': 'Credits verlopen nooit. Geen abonnement.',
   'chart.story.loginForInsights': 'Log in voor AI-verwoorde inzichten.',
+  // ---- WP-D (journey programme, 2026-09-12, session 97) -----------------
+  // R2.1: the chip caption now varies by message kind — a clarification's
+  // chips are the WP26 options ("kies een optie"), a refusal retry chip
+  // offers an alternative ("probeer dit in plaats daarvan"), an answer's
+  // follow-up chips keep the existing `chat.suggestionsHint` unchanged.
+  'chat.clarificationOptionsHint': 'Kies een optie:',
+  'chat.refusalRetryHint': 'Probeer in plaats daarvan:',
+  // R2.2 (#69/#75/#211): the insufficient-credits message, split into a
+  // base sentence (unchanged numbers, `chat.insufficientCredits` below kept
+  // for the deploy-window / generic fallback) and a buy line that renders
+  // `/credits` as a REAL link — with or without a named covering pack,
+  // depending on whether `packs` was threaded in.
+  'chat.insufficientCreditsBase': 'Je hebt niet genoeg credits ({balance} over, {required} nodig).',
+  'chat.insufficientCreditsBuyPack': 'Koop bijvoorbeeld {packLabel} via',
+  'chat.insufficientCreditsBuyGeneric': 'Koop credits via',
+  // R2.3 (#69): appended to the pre-send price line, amber-tinted, only when
+  // `simple <= balance < 2 * simple` — the #68 rule allows comparing the
+  // server's own numbers, never recomputing a cost.
+  'chat.lowBalanceSuffix': ' Genoeg voor nog één vraag.',
+  // R11: an honest elapsed-time reassurance line — real wait time, never a
+  // fabricated pipeline stage (#211 addendum) — after 8 real seconds of busy.
+  'chat.slowWaitNotice': 'Dit duurt iets langer dan gewoonlijk; we controleren het antwoord nog.',
+  // R8: the collapsed "own data" entry point when `attachments` is off —
+  // replaces the four separate Link/Sheet/Database/Upload chips with one
+  // honest disabled chip (session 86's per-chip titles retired with it).
+  'chat.ownDataComingSoon': 'Eigen data (binnenkort)',
+  'chat.ownDataComingSoonTitle':
+    'Binnenkort beschikbaar: koppel eigen data (bestand, spreadsheet of database)',
 };
 
 // `Messages` is derived from the (widened, non-`const`) Dutch object above,
@@ -1186,6 +1214,16 @@ const en: Messages = {
   'credits.packPricePerQuestion': '{price} per question',
   'credits.neverExpires': 'Credits never expire. No subscription.',
   'chart.story.loginForInsights': 'Log in for AI-phrased insights.',
+  // ---- WP-D (journey programme, 2026-09-12, session 97) -----------------
+  'chat.clarificationOptionsHint': 'Pick an option:',
+  'chat.refusalRetryHint': 'Try instead:',
+  'chat.insufficientCreditsBase': 'You do not have enough credits ({balance} left, {required} needed).',
+  'chat.insufficientCreditsBuyPack': 'Buy e.g. {packLabel} via',
+  'chat.insufficientCreditsBuyGeneric': 'Buy credits via',
+  'chat.lowBalanceSuffix': ' Enough for one more question.',
+  'chat.slowWaitNotice': 'This is taking a little longer than usual; we are still checking the answer.',
+  'chat.ownDataComingSoon': 'Own data (coming soon)',
+  'chat.ownDataComingSoonTitle': 'Coming soon: connect your own data (file, spreadsheet or database)',
 };
 
 export const MESSAGES = { nl, en } as const satisfies Record<Lang, Messages>;
