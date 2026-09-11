@@ -164,6 +164,85 @@ export function spotlightStyle(marker: { cx: number; cy: number } | null, box: {
   return { left: pct(marker.cx, box.width), top: pct(marker.cy, box.height) };
 }
 
+// ─── Spotlight glow motion (theatrical camera move between findings) ──────
+//
+// A plain CSS `transition` does not reliably interpolate between two
+// different `radial-gradient(...)` VALUES across browsers — the exact
+// reason the ambient atmosphere layer below transitions a solid
+// `background-color` instead of its own gradient (see
+// STAGE_ATMOSPHERE_TRANSITION_MS's doc comment, and the matching one in
+// chart-story-stage.tsx). The spotlight's moving glow follows the same
+// principle: its gradient shape never changes
+// (`STAGE_SPOTLIGHT_GLOW_BACKGROUND` below is always `at 50% 50%` of
+// ITSELF), and the marker's position instead drives a `transform:
+// translate3d(...)` on the glow element — an ordinary, universally,
+// smoothly animatable property, the same one the chart plane's own
+// entry/drift transition already relies on (chart-story-stage.tsx).
+
+// × the plot box's larger side. Big enough that the fixed 22%/60% gradient
+// stops below still read as a natural circular falloff wherever the marker
+// sits, including a corner — the glow's own container stays clipped to the
+// plot box exactly as before (`overflow: hidden` in chart-story-stage.tsx),
+// so a corner marker's glow crops at the plot edge exactly as the old
+// single-gradient version did (that was always painted directly onto an
+// identically plot-sized box, so it was already cropped there too — this
+// preserves that same character through a different mechanism, not a new
+// one).
+const SPOTLIGHT_GLOW_DIAMETER_FACTOR = 1.3;
+
+/** The glow's own fixed size and its `transform: translate3d(...)` — the
+ * ONLY thing that changes between two calls with a different `spot`, and
+ * therefore the only thing that needs a CSS transition (chart-story-stage.tsx
+ * puts one on `transform` alone). `spot` is `spotlightStyle`'s own output
+ * (percentages of the plot box); `box` is that same plot box in pixels —
+ * both already held in the component's existing `spot`/`plot` state, so
+ * this needs no new DOM read (`readSpot` itself is unchanged, per the
+ * brief). Null exactly when there is nothing to show (no marker, or a
+ * zero/negative box) — the same cases the caller already gates rendering
+ * on. */
+export function spotlightGlowStyle(
+  spot: { left: string; top: string } | null,
+  box: { width: number; height: number } | null,
+): { width: string; height: string; transform: string } | null {
+  if (spot === null || box === null || box.width <= 0 || box.height <= 0) return null;
+  const fx = clamp01(Number.parseFloat(spot.left) / 100);
+  const fy = clamp01(Number.parseFloat(spot.top) / 100);
+  const diameter = Math.max(box.width, box.height) * SPOTLIGHT_GLOW_DIAMETER_FACTOR;
+  const x = Math.round(fx * box.width - diameter / 2);
+  const y = Math.round(fy * box.height - diameter / 2);
+  return {
+    width: `${Math.round(diameter)}px`,
+    height: `${Math.round(diameter)}px`,
+    transform: `translate3d(${x}px, ${y}px, 0)`,
+  };
+}
+
+/** How strongly the vignette's dim colour leans toward `--stage-accent`
+ * (the rest is `--card`, the same neutral base the vignette always dimmed
+ * toward). Conservative and fixed, so the dim reads as a subtly COLOURED
+ * stage light, not a colour wash, and never independently invents a hue:
+ * always a minority blend of the SAME accent the atmosphere layer sets. */
+export const STAGE_SPOTLIGHT_ACCENT_MIX_PERCENT = 20;
+
+/** The glow's own gradient: fixed shape, fixed colour formula, always
+ * centred on ITSELF (`circle at 50% 50%`) — the element's own `transform`
+ * carries the marker's position instead (`spotlightGlowStyle` above), so
+ * this string never changes across a step change and therefore never needs
+ * to be the thing that gets transitioned. */
+export const STAGE_SPOTLIGHT_GLOW_BACKGROUND = `radial-gradient(circle at 50% 50%, transparent 0, transparent 22%, color-mix(in oklab, color-mix(in oklab, var(--stage-accent) ${STAGE_SPOTLIGHT_ACCENT_MIX_PERCENT}%, var(--card)) 55%, transparent) 60%)`;
+
+/** The glow's move between findings — within the brief's 300–500ms family
+ * (the plane's own entry/drift transition: 200ms; the atmosphere colour
+ * transition: 500ms). */
+export const STAGE_SPOTLIGHT_TRANSITION_MS = 400;
+/** A slight "ease-out-back" overshoot: the glow eases toward the new
+ * marker and settles very slightly past it before easing back — a small,
+ * free "arrival" flourish from the curve alone. A separate size/brightness
+ * pulse was considered (the brief's own suggestion) and deliberately
+ * skipped: one eased, overshooting move already reads as a deliberate
+ * camera move without stacking a second animated property on top of it. */
+export const STAGE_SPOTLIGHT_TRANSITION_EASING = 'cubic-bezier(0.34, 1.56, 0.64, 1)';
+
 // ─── Ambient atmosphere layer (visual upgrade, task 1 of a chain) ──────────
 //
 // A full-viewport, purely decorative backdrop behind the chart/caption

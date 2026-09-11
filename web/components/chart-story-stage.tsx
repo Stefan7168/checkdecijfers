@@ -16,9 +16,13 @@ import {
   entranceStyle,
   planeDriftPx,
   planeTransform,
+  spotlightGlowStyle,
   spotlightStyle,
   STAGE_AUTOPLAY_MS,
   STAGE_ATMOSPHERE_TRANSITION_MS,
+  STAGE_SPOTLIGHT_GLOW_BACKGROUND,
+  STAGE_SPOTLIGHT_TRANSITION_EASING,
+  STAGE_SPOTLIGHT_TRANSITION_MS,
 } from '../lib/chart-stage.ts';
 import type { PresentationOverrides } from '../lib/chart-presentation.ts';
 import type { StoryStep } from '../lib/chart-story.ts';
@@ -422,6 +426,11 @@ export function ChartStoryStage({ open, spec, steps, index, onIndexChange, onClo
   const atmosphere = atmosphereState(overrides, step?.highlight ?? null, staticMotion);
   const atmosphereMixPct = Math.round(ATMOSPHERE_MIX_MAX_PERCENT * atmosphere.intensity);
   const atmosphereTransition = atmosphere.animated ? `background-color ${STAGE_ATMOSPHERE_TRANSITION_MS}ms ease` : 'none';
+  // The spotlight glow's fixed size + moving `transform` (chart-stage.ts) —
+  // derived from the SAME `spot`/`plot` state `readSpot` already produces
+  // (no new DOM read), recomputed on every render so it always reflects the
+  // current marker and plot-box size.
+  const glow = spotlightGlowStyle(spot, plot);
 
   return (
     <>
@@ -543,10 +552,34 @@ export function ChartStoryStage({ open, spec, steps, index, onIndexChange, onClo
                 <div ref={chartBoxRef} className="relative">
                   <StageChart spec={spec} step={step} overrides={overrides} />
                   {spot && plot && !staticMotion ? (
+                    // Spotlight-motion task: two elements now, not one. A plain
+                    // CSS `transition` does not reliably interpolate between two
+                    // different `radial-gradient(...)` VALUES across browsers —
+                    // the same reason the ambient atmosphere layer above
+                    // transitions a solid `background-color` rather than its own
+                    // gradient. So the OUTER element stays exactly what it
+                    // always was — confined to the plot box, `left/top/width/
+                    // height` in px, the whole confinement guarantee the
+                    // "confined to the plot box" test checks — plus a new
+                    // `overflow-hidden`, which now also clips the glow below (a
+                    // corner marker's glow crops at the plot edge exactly as the
+                    // old single-gradient version did: that was always painted
+                    // onto an identically plot-sized box, so it was already
+                    // cropped there too). The INNER glow is fixed-size and
+                    // fixed-shape (`STAGE_SPOTLIGHT_GLOW_BACKGROUND`,
+                    // chart-stage.ts — always centred on ITSELF) and MOVES via
+                    // `transform: translate3d(...)` (`spotlightGlowStyle`) — an
+                    // ordinary, always-smoothly-animatable property, matching
+                    // the chart plane's own transition idiom elsewhere in this
+                    // file. The easing overshoots slightly before settling — a
+                    // small, free "arrival" flourish from the curve alone; a
+                    // separate size/brightness pulse was considered and skipped
+                    // as one animated property too many for what the eased move
+                    // alone already reads as.
                     <div
                       aria-hidden="true"
                       data-stage-spotlight="true"
-                      className="pointer-events-none absolute rounded-lg"
+                      className="pointer-events-none absolute overflow-hidden rounded-lg"
                       style={{
                         // Item 8: over the PLOT only — the title, the legend and
                         // the source line stay at full contrast.
@@ -554,9 +587,25 @@ export function ChartStoryStage({ open, spec, steps, index, onIndexChange, onClo
                         top: `${plot.top}px`,
                         width: `${plot.width}px`,
                         height: `${plot.height}px`,
-                        background: `radial-gradient(circle at ${spot.left} ${spot.top}, transparent 0, transparent 22%, color-mix(in oklab, var(--card) 55%, transparent) 60%)`,
                       }}
-                    />
+                    >
+                      {glow ? (
+                        <div
+                          data-stage-spotlight-glow="true"
+                          className="absolute rounded-full"
+                          style={{
+                            left: '0px',
+                            top: '0px',
+                            width: glow.width,
+                            height: glow.height,
+                            transform: glow.transform,
+                            background: STAGE_SPOTLIGHT_GLOW_BACKGROUND,
+                            transition: `transform ${STAGE_SPOTLIGHT_TRANSITION_MS}ms ${STAGE_SPOTLIGHT_TRANSITION_EASING}`,
+                            willChange: 'transform',
+                          }}
+                        />
+                      ) : null}
+                    </div>
                   ) : null}
                 </div>
               </div>

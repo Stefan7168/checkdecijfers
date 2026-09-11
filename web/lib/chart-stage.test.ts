@@ -11,9 +11,14 @@ import {
   highlightSeriesIndex,
   planeDriftPx,
   planeTransform,
+  spotlightGlowStyle,
   spotlightStyle,
   STAGE_AUTOPLAY_MS,
   STAGE_ATMOSPHERE_TRANSITION_MS,
+  STAGE_SPOTLIGHT_ACCENT_MIX_PERCENT,
+  STAGE_SPOTLIGHT_GLOW_BACKGROUND,
+  STAGE_SPOTLIGHT_TRANSITION_EASING,
+  STAGE_SPOTLIGHT_TRANSITION_MS,
   STAGE_TILT_DEG,
   stageProgress,
 } from './chart-stage.ts';
@@ -200,6 +205,56 @@ describe('spotlightStyle — the vignette centre as percentages of the chart box
   });
 });
 
+// Spotlight-motion task: `spotlightGlowStyle` turns `spotlightStyle`'s own
+// percentage output into the moving glow's fixed size + `transform`. Real
+// motion (does the eased translate3d actually read as a camera move) is not
+// checkable here — see this task's own report — but the geometry is pure
+// and fully pinned: a fixed square, generously larger than the box, and an
+// UNDISTORTED px mapping of the marker's position (asserted two ways below:
+// worked examples for one box, and a box-independent delta check).
+describe('spotlightGlowStyle — the moving glow’s fixed size and transform toward the marker', () => {
+  const box = { width: 640, height: 256 };
+
+  it('null exactly when there is nothing to show: no spot, no box, or a zero/negative box', () => {
+    expect(spotlightGlowStyle(null, box)).toBeNull();
+    expect(spotlightGlowStyle({ left: '25%', top: '25%' }, null)).toBeNull();
+    expect(spotlightGlowStyle({ left: '25%', top: '25%' }, { width: 0, height: 0 })).toBeNull();
+    expect(spotlightGlowStyle({ left: '25%', top: '25%' }, { width: -10, height: 256 })).toBeNull();
+  });
+
+  it('is always a square, and generous — larger than the box’s own larger side, so the fixed gradient stops (chart-story-stage.tsx) read as a natural circle even with the marker at a corner', () => {
+    const g = spotlightGlowStyle({ left: '10%', top: '90%' }, box);
+    expect(g).not.toBeNull();
+    expect(g!.width).toBe(g!.height);
+    expect(Number.parseFloat(g!.width)).toBeGreaterThan(Math.max(box.width, box.height));
+  });
+
+  it('places the glow by an exact px offset for a known marker position (640×256 box)', () => {
+    // diameter = max(640, 256) × the fixed factor = 832 — an exact integer
+    // for this box, so no rounding ambiguity muddies the worked numbers.
+    expect(spotlightGlowStyle({ left: '0%', top: '0%' }, box)).toEqual({ width: '832px', height: '832px', transform: 'translate3d(-416px, -416px, 0)' });
+    expect(spotlightGlowStyle({ left: '50%', top: '50%' }, box)).toEqual({ width: '832px', height: '832px', transform: 'translate3d(-96px, -288px, 0)' });
+    expect(spotlightGlowStyle({ left: '100%', top: '100%' }, box)).toEqual({ width: '832px', height: '832px', transform: 'translate3d(224px, -160px, 0)' });
+  });
+
+  it('moving the marker across the full width/height moves the transform by exactly that many px — an undistorted, direct mapping (holds regardless of the diameter factor’s own value)', () => {
+    const parse = (t: string): [number, number] => {
+      const m = /translate3d\((-?\d+)px, (-?\d+)px, 0\)/.exec(t);
+      return [Number(m![1]), Number(m![2])];
+    };
+    const [leftX] = parse(spotlightGlowStyle({ left: '0%', top: '50%' }, box)!.transform);
+    const [rightX] = parse(spotlightGlowStyle({ left: '100%', top: '50%' }, box)!.transform);
+    const [, topY] = parse(spotlightGlowStyle({ left: '50%', top: '0%' }, box)!.transform);
+    const [, bottomY] = parse(spotlightGlowStyle({ left: '50%', top: '100%' }, box)!.transform);
+    expect(rightX - leftX).toBe(box.width);
+    expect(bottomY - topY).toBe(box.height);
+  });
+
+  it('clamps an out-of-range percentage to the box edge, exactly like spotlightStyle’s own clamp', () => {
+    expect(spotlightGlowStyle({ left: '150%', top: '-20%' }, box)).toEqual(spotlightGlowStyle({ left: '100%', top: '0%' }, box));
+  });
+});
+
 describe('constants', () => {
   it('auto-play advances every four seconds; the tilt stays under the spec cap', () => {
     expect(STAGE_AUTOPLAY_MS).toBe(4000);
@@ -210,6 +265,17 @@ describe('constants', () => {
     expect(STAGE_ATMOSPHERE_TRANSITION_MS).toBeLessThanOrEqual(600);
     expect(ATMOSPHERE_MIX_MAX_PERCENT).toBeGreaterThan(0);
     expect(ATMOSPHERE_MIX_MAX_PERCENT).toBeLessThanOrEqual(40);
+  });
+  it('the spotlight glow’s move is within the brief’s 300-500ms family, eased (not linear), and its accent tint stays a conservative minority blend of the SAME --stage-accent the atmosphere layer sets', () => {
+    expect(STAGE_SPOTLIGHT_TRANSITION_MS).toBeGreaterThanOrEqual(300);
+    expect(STAGE_SPOTLIGHT_TRANSITION_MS).toBeLessThanOrEqual(500);
+    expect(STAGE_SPOTLIGHT_TRANSITION_EASING).not.toBe('linear');
+    expect(STAGE_SPOTLIGHT_TRANSITION_EASING).toContain('cubic-bezier');
+    expect(STAGE_SPOTLIGHT_ACCENT_MIX_PERCENT).toBeGreaterThan(0);
+    expect(STAGE_SPOTLIGHT_ACCENT_MIX_PERCENT).toBeLessThanOrEqual(30);
+    expect(STAGE_SPOTLIGHT_GLOW_BACKGROUND).toContain('var(--stage-accent)');
+    expect(STAGE_SPOTLIGHT_GLOW_BACKGROUND).toContain('var(--card)');
+    expect(STAGE_SPOTLIGHT_GLOW_BACKGROUND).toContain('circle at 50% 50%');
   });
 });
 

@@ -11,7 +11,7 @@ import { useState, type ReactNode } from 'react';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ChartSpec } from '../backend/chart/types.ts';
-import { atmosphereState, captionStyle, entranceStyle, planeDriftPx, planeTransform, spotlightStyle, STAGE_AUTOPLAY_MS } from '../lib/chart-stage.ts';
+import { atmosphereState, captionStyle, entranceStyle, planeDriftPx, planeTransform, spotlightGlowStyle, spotlightStyle, STAGE_AUTOPLAY_MS } from '../lib/chart-stage.ts';
 import type { StoryStep } from '../lib/chart-story.ts';
 import { ChartStoryStage, type ChartStoryStageProps } from './chart-story-stage.tsx';
 
@@ -398,7 +398,14 @@ describe('ChartStoryStage', () => {
   // Landing on it via `rerender` — a plain step-index change, exactly what a
   // real "Volgende"/dot click does — sidesteps the race without weakening
   // what's asserted.
-  it('the spotlight centres on the ringed marker, as a percentage of the chart box', () => {
+  //
+  // Spotlight-motion task: the marker's position is no longer embedded in
+  // `[data-stage-spotlight]`'s own `background` (that element is now just
+  // the plot-box confinement box — see the "confined to the plot box" test
+  // below) — it drives the CHILD glow's `transform` instead
+  // (`[data-stage-spotlight-glow]`), via the real `spotlightGlowStyle`, the
+  // same self-consistency style this test already used for `spotlightStyle`.
+  it('the spotlight glow centres on the ringed marker, as a transform derived from the chart box', () => {
     const original = Element.prototype.getBoundingClientRect;
     const chartBoxRect = { left: 0, top: 0, width: 640, height: 256, right: 640, bottom: 256, x: 0, y: 0, toJSON: () => ({}) } as DOMRect;
     const markerRect = { left: 156, top: 60, width: 8, height: 8, right: 164, bottom: 68, x: 156, y: 60, toJSON: () => ({}) } as DOMRect;
@@ -419,12 +426,14 @@ describe('ChartStoryStage', () => {
       // ChartView stage-mode tests use to get exactly one [data-story-marker].
       const { rerender } = render(<ChartStoryStage {...baseProps({ index: 0 })} />);
       rerender(<ChartStoryStage {...baseProps({ index: 1 })} />);
-      const spotlight = document.querySelector('[data-stage-spotlight]');
-      expect(spotlight).not.toBeNull();
-      const background = (spotlight as HTMLElement).style.background;
-      expect(background).toContain('25%');
-      const expected = spotlightStyle({ cx: 160, cy: 64 }, { width: 640, height: 256 });
-      expect(background).toContain(`${expected!.left} ${expected!.top}`);
+      const glow = document.querySelector('[data-stage-spotlight-glow]') as HTMLElement | null;
+      expect(glow).not.toBeNull();
+      const expectedSpot = spotlightStyle({ cx: 160, cy: 64 }, { width: 640, height: 256 });
+      expect(expectedSpot).toEqual({ left: '25%', top: '25%' });
+      const expectedGlow = spotlightGlowStyle(expectedSpot, { width: 640, height: 256 });
+      expect(glow!.style.transform).toBe(expectedGlow!.transform);
+      expect(glow!.style.width).toBe(expectedGlow!.width);
+      expect(glow!.style.height).toBe(expectedGlow!.height);
     } finally {
       Element.prototype.getBoundingClientRect = original;
     }
@@ -884,6 +893,19 @@ describe('ChartStoryStage', () => {
   // Item 8: the vignette used to cover the whole card — the title, the
   // legend and the source line dimmed along with the chart. It is now
   // positioned over the plot box alone.
+  //
+  // Spotlight-motion task: this geometry contract is split, deliberately,
+  // across the two elements the confinement now actually lives in — the
+  // OUTER `[data-stage-spotlight]` box (unchanged: still exactly the plot
+  // box in px, still `overflow-hidden` so nothing can bleed past it) and the
+  // INNER `[data-stage-spotlight-glow]`, whose moving `transform` is what
+  // the old single element's `background` used to encode. Both are checked
+  // below, so "confined to the plot box, never the title or the source
+  // line" still holds in full — the outer box's geometry, unchanged, AND
+  // the fact that the visible glow is clipped to that same box via
+  // `overflow: hidden` (the glow's own size/position routinely exceed the
+  // box — that's `SPOTLIGHT_GLOW_DIAMETER_FACTOR`, by design — so it is the
+  // CROP, not the glow's own bounds, that keeps the promise now).
   it('the vignette is confined to the plot box, never the title or the source line', () => {
     const original = Element.prototype.getBoundingClientRect;
     const chartBoxRect = { left: 0, top: 0, width: 640, height: 400, right: 640, bottom: 400, x: 0, y: 0, toJSON: () => ({}) } as DOMRect;
@@ -904,10 +926,18 @@ describe('ChartStoryStage', () => {
       expect(spotlight!.style.height).toBe('256px');
       expect(spotlight!.style.left).toBe('0px');
       expect(spotlight!.style.width).toBe('640px');
+      // `overflow-hidden` is a Tailwind CLASS (compiled stylesheet), not an
+      // inline style — jsdom's `.style` never sees it; `.className` is the
+      // established way this file checks a Tailwind-only property (see the
+      // plane's own `transition-[...]` class assertions above).
+      expect(spotlight!.className).toContain('overflow-hidden');
       // The centre is measured against the PLOT box: the marker's centre
       // (160, 104) sits 64 px below the plot's own top edge.
       const expected = spotlightStyle({ cx: 160, cy: 64 }, { width: 640, height: 256 });
-      expect(spotlight!.style.background).toContain(`${expected!.left} ${expected!.top}`);
+      const glow = spotlight!.querySelector('[data-stage-spotlight-glow]') as HTMLElement | null;
+      expect(glow).not.toBeNull();
+      const expectedGlow = spotlightGlowStyle(expected, { width: 640, height: 256 });
+      expect(glow!.style.transform).toBe(expectedGlow!.transform);
     } finally {
       Element.prototype.getBoundingClientRect = original;
     }
