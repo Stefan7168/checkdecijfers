@@ -53,8 +53,12 @@ export interface ChatMessage {
    * live receive path, which only appends 'user'/'assistant'. */
   role: 'user' | 'assistant' | 'redacted';
   /** WP23 (#84): message-type styling. Null on user messages; 'info' for
-   * the gated non-'ok' kinds and the meta/smalltalk/onboarding acknowledgments. */
-  kind: 'answer' | 'clarification' | 'refusal' | 'info' | null;
+   * the gated non-'ok' kinds and the meta/smalltalk/onboarding acknowledgments.
+   * 'insufficient_credits' (WP-D, R2.2, #69) is the one gated kind that gets
+   * its OWN render branch instead of the generic 'info' bubble — set directly
+   * by chat.tsx (never via `messageKind`, which only classifies real
+   * ComposedResponse kinds), so it never appears on a replayed message. */
+  kind: 'answer' | 'clarification' | 'refusal' | 'info' | 'insufficient_credits' | null;
   text: string;
   chart: ChartSpec | null;
   /** Credits charged for this turn (GatedResponse.netCost live; the ledger
@@ -110,6 +114,13 @@ export interface ChatMessage {
    * `threadId` state or null at send time, so a click-time carrier lookup
    * needs no thread id of its own — chat.tsx sends the live `threadId`. */
   carrier: { pending: PendingClarification } | null;
+  /** R2.2 (WP-D, #69/#75/#211): the balance/required snapshot from THIS
+   * turn's `insufficient_credits` GatedResponse — present only when
+   * `kind === 'insufficient_credits'`, so the dedicated render branch can
+   * name the covering pack and link `/credits` without a second read. `null`
+   * on every other message, including every other 'info' message and every
+   * replayed message (an old stored turn never had this kind live). */
+  insufficientCredits: { balance: number; required: number } | null;
 }
 
 export type MessageKind = 'answer' | 'clarification' | 'refusal' | 'info';
